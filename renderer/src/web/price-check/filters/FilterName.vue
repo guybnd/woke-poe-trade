@@ -41,16 +41,7 @@
             :filter="influence" :text="influence.value" :img="`/images/influence-${influence.value}.png`" />
         </template>
         <!-- woke: gear steps its rarity: Any, Magic (bases to recombine or fracture), Rare. -->
-        <button v-if="filters.rarity && rarityChip" type="button" data-rarity-chip
-          class="filter-name-corrupted filter-name-rarity" :data-step="rarityNow" :class="{ clash: !!rarityClash }"
-          :title="rarityTitle"
-          @click="nextRarity(filters.rarity)">
-          <w-icon item="Orb of Transmutation" size="sm" title="" />
-          <span class="filter-name-corrupted-labels">
-            <span v-for="step of RARITY_STEPS" :key="step.value"
-              :class="{ shown: step.value === rarityNow }">{{ step.label }}</span>
-          </span>
-        </button>
+        <rarity-chip v-if="filters.rarity && rarityChip" :rarity="filters.rarity" :stats="stats" />
         <filter-btn-logical v-else-if="filters.rarity?.value === 'magic'"
           :filter="filters.rarity" text="Magic" />
         <filter-btn-logical v-if="filters.unidentified"
@@ -107,7 +98,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, computed } from 'vue'
+import { defineAsyncComponent, defineComponent, PropType, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ItemCategory, ItemRarity, type ParsedItem } from '@/parser'
 import type { CorruptedSearch, ItemFilters } from './interfaces'
@@ -115,9 +106,8 @@ import { CATEGORY_TO_TRADE_ID } from '../trade/pathofexile-trade'
 import { WIcon } from '@/web/woke/ui'
 import FilterBtnNumeric from './FilterBtnNumeric.vue'
 import { NUMERIC_LIMITS } from './numeric-limits'
-import { socketColourFilters } from './create-item-filters'
+import { socketColourFilters, hasRarityChip } from './create-item-filters'
 import FilterBtnLogical from './FilterBtnLogical.vue'
-import { RARITY_STEPS, hasRarityChip, rarityStep, nextRarity, magicAffixClash } from './rarity-chip'
 import { poeOn } from '@/web/woke/price-insight/window-style'
 import type { FilterOrGroup } from './interfaces'
 import { clusterSizeOf } from '@/web/woke/cluster-type/apply'
@@ -127,7 +117,14 @@ const SOCKET_COLOURS = ['r', 'g', 'b', 'w'] as const
 
 export default defineComponent({
   name: 'FilterName',
-  components: { FilterBtnNumeric, FilterBtnLogical, WIcon, ClusterTypePick },
+  components: {
+    FilterBtnNumeric,
+    FilterBtnLogical,
+    WIcon,
+    ClusterTypePick,
+    // woke: loaded on demand, to keep startup JS in budget.
+    RarityChip: defineAsyncComponent(() => import('./RarityChip.vue'))
+  },
   props: {
     filters: {
       type: Object as PropType<ItemFilters>,
@@ -219,23 +216,11 @@ export default defineComponent({
     })
 
     const rarityChip = computed(() => hasRarityChip(props.item))
-    const rarityNow = computed(() => props.filters.rarity ? rarityStep(props.filters.rarity) : 'nonunique')
-    const rarityClash = computed(() => rarityNow.value === 'magic' ? magicAffixClash(props.stats) : null)
-    const rarityTitle = computed(() => {
-      const now = RARITY_STEPS.find(step => step.value === rarityNow.value)!
-      const base = `Rarity filter: searching ${now.what}. Click to change: Any, Magic (bases to recombine or fracture), Rare.`
-      return rarityClash.value ? `${rarityClash.value} ${base}` : base
-    })
 
     return {
       t,
       poe: poeOn,
-      RARITY_STEPS,
       rarityChip,
-      rarityNow,
-      rarityClash,
-      rarityTitle,
-      nextRarity,
       SOCKET_COLOURS,
       toggleColourTiles,
       clusterSize,
@@ -328,10 +313,6 @@ export default defineComponent({
   border-color: var(--w-down);
   color: var(--w-down);
 }
-/* woke: the rarity chip takes the rarity's colour; amber when Magic can't match the ticked mods. */
-.filter-name-rarity[data-step="magic"] { border-color: var(--w-r-magic); color: var(--w-r-magic); }
-.filter-name-rarity[data-step="rare"] { border-color: var(--w-r-rare); color: var(--w-r-rare); }
-.filter-name-rarity.clash { border-color: var(--w-warn); color: var(--w-warn); }
 .filter-name-links, .filter-name-scol { display: inline-flex; }
 /* The colour tiles' letters in their socket colour. */
 .filter-name-scol.r :is(.w-poe-nlab, [class*="label"]) { color: #e0645c; }

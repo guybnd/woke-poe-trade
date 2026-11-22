@@ -9,10 +9,10 @@ vi.mock('@/web/Config', () => ({
 }))
 
 /* eslint-disable import-x/first */
-import { createFilters } from '@/web/price-check/filters/create-item-filters'
+import { createFilters, hasRarityChip } from '@/web/price-check/filters/create-item-filters'
 import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
-import { hasRarityChip, nextRarity, rarityStep, magicAffixClash } from '@/web/price-check/filters/rarity-chip'
+import { nextRarity, rarityStep, magicAffixClash } from '@/web/price-check/filters/rarity-chip'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 /* eslint-enable import-x/first */
 

@@ -1,7 +1,5 @@
-// woke: the rarity chip on non-unique gear: search any non-unique, magic only
+// woke: the rarity chip on non-unique gear (RarityChip.vue, loaded on demand): search any non-unique, magic only
 // (bases to recombine or fracture) or rare only.
-import { ItemCategory, ItemRarity, type ParsedItem } from '@/parser'
-import { ARMOUR, WEAPON, JEWELLERY } from '@/parser/meta'
 import type { FilterOrGroup, ItemFilters, StatFilter } from './interfaces'
 
 type ParsedModifier = StatFilter['sources'][number]['modifier']
@@ -13,24 +11,6 @@ export const RARITY_STEPS: Array<{ value: RarityStep, label: string, what: strin
   { value: 'magic', label: 'Magic', what: 'magic items only' },
   { value: 'rare', label: 'Rare', what: 'rare items only' }
 ]
-
-const GEAR = new Set<ItemCategory>([
-  ...ARMOUR,
-  ...WEAPON,
-  ...JEWELLERY,
-  ItemCategory.Quiver,
-  ItemCategory.Jewel,
-  ItemCategory.AbyssJewel,
-  ItemCategory.ClusterJewel
-])
-
-export function hasRarityChip (item: ParsedItem): boolean {
-  return item.category != null && GEAR.has(item.category) && (
-    item.rarity === ItemRarity.Normal ||
-    item.rarity === ItemRarity.Magic ||
-    item.rarity === ItemRarity.Rare
-  )
-}
 
 // What the search sends: a turned-off filter is any non-unique.
 export function rarityStep (rarity: NonNullable<ItemFilters['rarity']>): RarityStep {
