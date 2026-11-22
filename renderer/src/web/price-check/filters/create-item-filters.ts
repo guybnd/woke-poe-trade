@@ -1,6 +1,7 @@
 import type { ItemFilters } from './interfaces'
 import { ParsedItem, ItemCategory, ItemRarity, type SocketColours } from '@/parser'
 import { MAGIC_ONLY_OR_UNIQUE_ITEM, CONSUMABLE_CRAFTABLE_ITEM, JEWELLERY, WEAPON, ARMOUR } from '@/parser/meta'
+import { hasRarityChip } from './rarity-chip'
 import { getPropQuality } from '@/parser/calc-q20'
 import { tradeTag } from '../trade/common'
 import { ModifierType, ModifierMechanic } from '@/parser/modifiers'
@@ -348,6 +349,11 @@ export function createFilters (
       value: 'nonunique',
       disabled: false
     }
+  }
+
+  // woke: gear always gets the rarity chip (Any / Magic / Rare), to hunt magic bases.
+  if (!filters.rarity && hasRarityChip(item)) {
+    filters.rarity = { value: 'nonunique', disabled: false }
   }
 
   if (item.isMirrored) {

@@ -40,7 +40,18 @@
           <filter-btn-logical v-for="influence of filters.influences" :key="influence.value"
             :filter="influence" :text="influence.value" :img="`/images/influence-${influence.value}.png`" />
         </template>
-        <filter-btn-logical v-if="filters.rarity?.value === 'magic'"
+        <!-- woke: gear steps its rarity: Any, Magic (bases to recombine or fracture), Rare. -->
+        <button v-if="filters.rarity && rarityChip" type="button" data-rarity-chip
+          class="filter-name-corrupted filter-name-rarity" :data-step="rarityNow" :class="{ clash: !!rarityClash }"
+          :title="rarityTitle"
+          @click="nextRarity(filters.rarity)">
+          <w-icon item="Orb of Transmutation" size="sm" title="" />
+          <span class="filter-name-corrupted-labels">
+            <span v-for="step of RARITY_STEPS" :key="step.value"
+              :class="{ shown: step.value === rarityNow }">{{ step.label }}</span>
+          </span>
+        </button>
+        <filter-btn-logical v-else-if="filters.rarity?.value === 'magic'"
           :filter="filters.rarity" text="Magic" />
         <filter-btn-logical v-if="filters.unidentified"
           :filter="filters.unidentified" :text="t('item.unidentified')" />
@@ -106,6 +117,7 @@ import FilterBtnNumeric from './FilterBtnNumeric.vue'
 import { NUMERIC_LIMITS } from './numeric-limits'
 import { socketColourFilters } from './create-item-filters'
 import FilterBtnLogical from './FilterBtnLogical.vue'
+import { RARITY_STEPS, hasRarityChip, rarityStep, nextRarity, magicAffixClash } from './rarity-chip'
 import { poeOn } from '@/web/woke/price-insight/window-style'
 import type { FilterOrGroup } from './interfaces'
 import { clusterSizeOf } from '@/web/woke/cluster-type/apply'
@@ -206,9 +218,24 @@ export default defineComponent({
       return clusterSizeOf(item.info.refName)
     })
 
+    const rarityChip = computed(() => hasRarityChip(props.item))
+    const rarityNow = computed(() => props.filters.rarity ? rarityStep(props.filters.rarity) : 'nonunique')
+    const rarityClash = computed(() => rarityNow.value === 'magic' ? magicAffixClash(props.stats) : null)
+    const rarityTitle = computed(() => {
+      const now = RARITY_STEPS.find(step => step.value === rarityNow.value)!
+      const base = `Rarity filter: searching ${now.what}. Click to change: Any, Magic (bases to recombine or fracture), Rare.`
+      return rarityClash.value ? `${rarityClash.value} ${base}` : base
+    })
+
     return {
       t,
       poe: poeOn,
+      RARITY_STEPS,
+      rarityChip,
+      rarityNow,
+      rarityClash,
+      rarityTitle,
+      nextRarity,
       SOCKET_COLOURS,
       toggleColourTiles,
       clusterSize,
@@ -301,6 +328,10 @@ export default defineComponent({
   border-color: var(--w-down);
   color: var(--w-down);
 }
+/* woke: the rarity chip takes the rarity's colour; amber when Magic can't match the ticked mods. */
+.filter-name-rarity[data-step="magic"] { border-color: var(--w-r-magic); color: var(--w-r-magic); }
+.filter-name-rarity[data-step="rare"] { border-color: var(--w-r-rare); color: var(--w-r-rare); }
+.filter-name-rarity.clash { border-color: var(--w-warn); color: var(--w-warn); }
 .filter-name-links, .filter-name-scol { display: inline-flex; }
 /* The colour tiles' letters in their socket colour. */
 .filter-name-scol.r :is(.w-poe-nlab, [class*="label"]) { color: #e0645c; }
