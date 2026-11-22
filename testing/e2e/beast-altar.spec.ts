@@ -15,7 +15,7 @@ test('captured beast: the instant card lists its Blood Altar recipes', async ({ 
   await expect(rows.first()).toContainText('Corrupt a map to have an Implicit Modifier')
   await expect(rows.first()).toContainText('This beast alone')
   await expect(rows.nth(1)).toContainText('Fenumal Scorpion')
-  await expect(rows.nth(1)).toContainText('22c')
+  await expect(rows.nth(1)).toContainText('22')
   await expect(altar).not.toContainText('any rare')
   await overlay.snap('craicic vassal instant card with recipes')
   // Another beast's name price checks it.

@@ -9,7 +9,9 @@
     </div>
     <div :class="$style.list">
       <div v-for="rec in recipes" :key="`${rec.g}: ${rec.r}`" :class="$style.row" data-testid="beast-altar-recipe">
-        <span :class="$style.what" :title="[`${rec.g}: ${rec.r}`, ...(rec.n ?? [])].join('\n')">{{ recipeTitle(rec) }}</span>
+        <!-- A currency result is an item: its tooltip, not the recipe text. -->
+        <span v-if="recipeItem(rec)" v-item-tip="{ name: recipeItem(rec)! }" :class="$style.what">{{ recipeTitle(rec) }}</span>
+        <span v-else :class="$style.what" :title="[`${rec.g}: ${rec.r}`, ...(rec.n ?? [])].join('\n')">{{ recipeTitle(rec) }}</span>
         <span :class="$style.needs">
           <template v-if="others(rec).length || rec.red">
             <span class="w-faint">+</span>
@@ -39,7 +41,7 @@ import { usePoeninja } from '@/web/background/Prices'
 import { WPrice, vItemTip } from '../ui'
 import { priceCheckRequest } from '../ui/tooltip/item-price-check'
 import type { PriceCheckInput } from '../ui/tooltip/item-menu-logic'
-import { beastsCost, recipeTitle, recipesWith, shortBeast } from '../search/lookups/bestiary'
+import { beastsCost, recipeItem, recipeTitle, recipesWith, shortBeast } from '../search/lookups/bestiary'
 import type { BeastRecipe } from '../search/lookups/bestiary'
 import { bestiaryData, loadBestiary } from '../search/lookups/bestiary-load'
 
@@ -70,6 +72,7 @@ async function check (name: string) {
 
 <style module>
 .wrapper {
+  flex-shrink: 0;
   width: 17.5rem;
   max-width: 100%;
   margin-top: 1.5rem;

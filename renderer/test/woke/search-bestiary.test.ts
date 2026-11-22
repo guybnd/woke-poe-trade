@@ -1,6 +1,6 @@
 // Search palette Blood Altar recipes, on the real table from poedb.
 import { describe, it, expect } from 'vitest'
-import { beastsCost, bestiaryLookup, denOf, recipeNeeds, recipeTitle, recipesMaking, recipesWith } from '@/web/woke/search/lookups/bestiary'
+import { beastsCost, bestiaryLookup, denOf, recipeItem, recipeNeeds, recipeTitle, recipesMaking, recipesWith } from '@/web/woke/search/lookups/bestiary'
 import type { BestiaryData } from '@/web/woke/search/lookups/bestiary'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
 import { foldAccents } from '@/web/woke/search/search'
@@ -40,6 +40,9 @@ describe('bestiary data', () => {
     expect(vassal).toEqual([['Corrupt a map to have an Implicit Modifier', ''], ['Corrupt a map twice', 'Fenumal Scorpion']])
     expect(data.recipes.some(r => /Orbs of Regret/.test(r.r))).toBe(true)
     expect(data.recipes.find(r => r.g === 'Create a Unique' && r.r === 'Talisman')?.b).toEqual(['Black Mórrigan'])
+    // Currency results name their item, for the tooltip.
+    const made = data.recipes.map(recipeItem).filter(Boolean).sort()
+    expect(made).toEqual(["Jeweller's Orb", 'Orb of Fusing', 'Orb of Regret', 'Orb of Unmaking'])
   })
 })
 

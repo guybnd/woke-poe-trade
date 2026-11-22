@@ -51,6 +51,15 @@ export function recipeTitle (rec: BeastRecipe): string {
 
 export const shortBeast = (name: string) => name.split(',')[0]
 
+// The item a currency recipe makes, for its tooltip: "A stack of 2 Orbs of
+// Regret" -> "Orb of Regret", "Orb of Fusing". Null for anything else.
+export function recipeItem (rec: BeastRecipe): string | null {
+  if (rec.g !== 'Create Currency Items' || /random/i.test(rec.r)) return null
+  return rec.r.replace(/^A stack of \d+ /i, '')
+    .replace(/^Orbs of /, 'Orb of ')
+    .replace(/ Orbs$/, ' Orb')
+}
+
 // "Craicic Sand Spitter + Craicic Shield Crab", "1 red beast"; '' when the
 // beast left out is the whole recipe.
 export function recipeNeeds (rec: BeastRecipe, without?: string): string {

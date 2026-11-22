@@ -2,7 +2,8 @@
   <div :class="$style.box">
     <div :class="[$style.row, $style.head]"><span>{{ heading }}</span><span>{{ me ? 'Also needs' : 'Needs' }}</span><span class="text-right">Beasts</span></div>
     <div v-for="rec in recipes" :key="recipeTitle(rec)" :class="$style.row">
-      <button tabindex="-1" :class="$style.make" :title="`${rec.g}: ${rec.r}`" @click="emit('recipe', rec)">{{ recipeTitle(rec) }}</button>
+      <button v-if="recipeItem(rec)" v-item-tip="{ name: recipeItem(rec)! }" tabindex="-1" :class="$style.make" @click="emit('recipe', rec)">{{ recipeTitle(rec) }}</button>
+      <button v-else tabindex="-1" :class="$style.make" :title="`${rec.g}: ${rec.r}`" @click="emit('recipe', rec)">{{ recipeTitle(rec) }}</button>
       <span :class="$style.needs">
         <template v-for="(b, i) in rec.b.filter(b => b !== me)" :key="b">
           <span v-if="i" class="w-faint">+</span>
@@ -27,7 +28,7 @@
 // unique (the portal to the den that drops it). A beast's name looks it up,
 // the magnifier searches trade for it, and a recipe opens its own card.
 import { WPrice, vItemTip } from '../ui'
-import { beastsCost, recipeTitle, shortBeast } from './lookups/bestiary'
+import { beastsCost, recipeItem, recipeTitle, shortBeast } from './lookups/bestiary'
 import type { BeastRecipe } from './lookups/bestiary'
 
 defineProps<{
