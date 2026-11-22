@@ -1,5 +1,12 @@
 <template>
-  <div v-if="!error" class="layout-column min-h-0" :class="{ 'w-pc-results-stale': stale }" style="height: auto;">
+  <div v-if="!error" class="layout-column min-h-0" :class="{ 'w-pc-results-stale': dim }" style="height: auto;">
+    <!-- woke: in the Search row, while the results are filtered here (Guy's pick C). -->
+    <teleport v-if="statusSlot && stale && list && narrow" :to="statusSlot">
+      <span class="w-pc-status w-pc-status-local"
+        :title="`Filtered from the ${loadedCount} listings already loaded, without a new search. They're still the cheapest that fit; the search found ${list.total}.`">
+        <span class="w-pc-status-note">Matched</span><b>{{ fitCount }} of {{ loadedCount }} here</b>
+      </span>
+    </teleport>
     <div v-if="item.info.exchangeable" :class="$style.legacyMessage">
       {{ t(':legacy_bulk_xchg_msg') }}
     </div>
@@ -27,7 +34,7 @@
         :divine="divine"
         :loading="!list || tableLoading"
         :total="list ? list.total : null"
-        :log-key="logKey"
+        :log-key="narrow ? null : logKey"
         :league="filters.trade.league"
         :blank-search="blankSearch"
         :skips-top-mods="skipsTop"
@@ -69,10 +76,10 @@
               <div class="px-2">Sockets</div>
             </th>
             <th v-for="col in shownColumns" :key="col.key" :class="[$style.tableHeading, 'w-pc-stat-head']" :title="col.title">
-              <div>{{ col.label }}</div>
+              <div>{{ col.label }}<span v-if="localRange(col)" class="w-pc-local-chip" :title="`Filtered here: ${localRange(col)}`">{{ localRange(col) }}</span></div>
             </th>
             <th v-if="hiddenColumns.length" :class="[$style.tableHeading, 'w-pc-stat-head']" :title="hiddenColumns.map(col => col.title).join('\n')">
-              <div class="w-pc-stat-more">+{{ hiddenColumns.length }}</div>
+              <div class="w-pc-stat-more">+{{ hiddenColumns.length }}<span v-for="col in hiddenColumns.filter(c => localRange(c))" :key="col.key" class="w-pc-local-chip" :title="`${col.title}: filtered here, ${localRange(col)}`">{{ col.label }} {{ localRange(col) }}</span></div>
             </th>
             <th v-if="showSeller" class="w-full" :class="$style.tableHeading">
               <div class="px-2">{{ t(':seller') }}</div>
@@ -164,12 +171,22 @@
                 </span>
               </td>
             </tr>
+            <!-- woke: few rows fit: load the last search's next page (a click, no new search), or suggest a search. -->
+            <tr v-if="shortList" class="w-pc-local-hint">
+              <td colspan="100" class="px-2">
+                <span>{{ fitCount ? `Only ${fitCount}` : 'None' }} of the {{ loadedCount }} {{ allLoaded ? 'listings the search found' : 'loaded' }} fit{{ allLoaded ? ': searching again finds no more' : '' }}.</span>
+                <button v-if="morePages" type="button" class="w-pc-status-btn" :disabled="fetching" @click="loadNextPage">{{ fetching ? 'Loading…' : 'Load 10 more' }}</button>
+                <span v-if="morePages" class="w-pc-local-faint">from the last search</span>
+                <span v-else-if="!allLoaded" class="w-pc-local-go">Search for these filters ↑</span>
+                <span v-if="loadNote" class="w-pc-local-faint">{{ loadNote }}</span>
+              </td>
+            </tr>
           </template>
         </tbody>
       </table>
     </div>
     <div v-if="improved || bulk" class="w-pc-foot" :class="{ invisible: !(listSettled && list && (rows.length || bulk)) }"
-      title="Prices come from the cheapest listings the trade site returned"><template v-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
+      title="Prices come from the cheapest listings the trade site returned"><template v-if="list && narrow">{{ fitCount }} of {{ loadedCount }} loaded listings fit · the search found {{ list.total }}{{ list.inexact ? '+' : '' }}</template><template v-else-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
   </div>
   <ui-error-box v-else>
     <template #name>{{ t(':error') }}</template>
@@ -212,6 +229,7 @@ import { priceView } from '@/web/woke/price-insight/view'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
 import { buildInsight, FIX_TAG, toChaos } from '@/web/woke/price-insight/insight'
 import { groupListings, sortByValue, rowTitle, ListingRow } from '@/web/woke/price-insight/listing-rows'
+import type { ResultsState } from '@/web/woke/price-insight/local-filter'
 import { pickStatColumns, listingStatValue, listingStatLabel, formatStatValue, statTone, statColumnsThatFit, StatColumn } from '@/web/woke/price-insight/stat-columns'
 import { bulkOnly, bulkSellerCount, BULK_ENOUGH } from '@/web/woke/price-insight/bulk-sellers'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
@@ -230,6 +248,8 @@ const SIX_SOCKETS = new Set<string>([ItemCategory.BodyArmour, ItemCategory.Bow, 
 const slowdown = artificialSlowdown(900)
 
 const SKELETON_ROWS = 8
+// woke: fewer rows than this after filtering here gets Load more or a Search hint.
+const SHORT_LIST = 5
 const COINS: Record<string, string> = { chaos: '/images/chaos.png', divine: '/images/divine.png', exalted: '/images/exa.png' }
 const API_FETCH_LIMIT = 100
 const MIN_NOT_GROUPED = 7
@@ -418,7 +438,7 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
 
 export default defineComponent({
   components: { OnlineFilter, TradeLinks, UiErrorBox, PriceVerdict, PriceDrivers: defineAsyncComponent(loadDrivers) },
-  emits: ['reset'],
+  emits: ['reset', 'glow'],
   props: {
     filters: {
       type: Object as PropType<ItemFilters>,
@@ -432,10 +452,20 @@ export default defineComponent({
       type: Object as PropType<ParsedItem>,
       required: true
     },
-    // Filters changed since this search: the results stay, dimmed, so nothing moves.
+    // Filters changed since this search: the Search row takes the toolbar's place.
     stale: {
       type: Boolean,
       default: false
+    },
+    // woke: the change needs a new search: the results stay, dimmed, so nothing moves.
+    dim: {
+      type: Boolean,
+      default: false
+    },
+    // woke: only tighter ranges: the loaded listings are filtered here (local-filter.ts).
+    narrow: {
+      type: Object as PropType<Extract<ResultsState, { kind: 'narrowed' }> | null>,
+      default: null
     }
   },
   setup (props, ctx) {
@@ -446,7 +476,8 @@ export default defineComponent({
       slowdown.reset(item)
     }, { immediate: true })
 
-    const allColumns = computed(() => pickStatColumns(props.stats))
+    // A newly ticked stat that filters here gets its column too.
+    const allColumns = computed(() => pickStatColumns(props.narrow?.stats ?? props.stats))
     const statValue = (listing: PricingResult, col: StatColumn) =>
       listingStatValue(listing.listedItem, col, props.item.category)
 
@@ -463,13 +494,21 @@ export default defineComponent({
     if (swap) watch(groupedResults, (list) => { swap.resultsChanged(list, props.stats) })
 
     // woke: improved view reads the same listings, nothing extra is requested
-    const { insight, divine, options: insightOptions } = useInsight(groupedResults, computed(() => props.filters.trade.league))
+    // woke: tighter ranges hide what no longer fits; the verdict reads what's left.
+    const fits = (listing: PricingResult) => !props.narrow || props.narrow.fits(listing.listedItem, props.item.category)
+    const fitResults = computed(() => props.narrow ? groupedResults.value.filter(fits) : groupedResults.value)
+    const loadedCount = computed(() => fetchResults.value.filter(r => r != null).length)
+    const fitCount = computed(() => props.narrow ? fetchResults.value.filter(r => r != null && fits(r)).length : loadedCount.value)
+    const statusSlot = inject<ShallowRef<HTMLElement | null>>('price-search-status-slot', shallowRef(null))
+
+    const { insight, divine, options: insightOptions } = useInsight(fitResults, computed(() => props.filters.trade.league))
 
     // woke: listings found without a rare's mods say nothing about its price.
     const blankSearch = computed(() => isBlankRareSearch(props.item, props.filters, props.stats))
     const verdictInsight = computed(() => blankSearch.value ? buildInsight([], insightOptions.value) : insight.value)
 
-    const logKey = useCheckLog(props, searchResult, verdictInsight, slowdown.isReady)
+    // A verdict from listings filtered here isn't the search's: it isn't logged under it.
+    const logKey = useCheckLog(props, searchResult, verdictInsight, slowdown.isReady, computed(() => props.narrow != null))
 
     const showBrowser = inject<(url: string) => void>('builtin-browser')!
     const verdictSlot = inject<ShallowRef<HTMLElement | null>>('price-verdict-slot', shallowRef(null))
@@ -536,7 +575,9 @@ export default defineComponent({
     })
     // A seller's copies only add up when they'd share a row: same stats, both corrupted or clean.
     const sameKind = (r: PricingResult) => [corruptKind(r), ...allColumns.value.map(col => formatStatValue(statValue(r, col), col))].join('|')
-    const tableListings = computed(() => bulk.value ? bulkOnly(groupedResults.value, sameKind) : groupedResults.value)
+    const tableListings = computed(() => bulk.value
+      ? bulkOnly(fitResults.value, sameKind)
+      : fitResults.value)
     async function toggleBulk () {
       bulk.value = !bulk.value
       bulkNote.value = ''
@@ -578,8 +619,35 @@ export default defineComponent({
       return Boolean(range && chaos != null && !row.dropped && chaos >= range.low && chaos <= range.high)
     }
 
-    const tableLoading = computed(() => !slowdown.isReady.value || (fetching.value && !rows.value.length))
+    // A page loaded for a filtered list keeps its hint row up, not loading rows.
+    const tableLoading = computed(() => !slowdown.isReady.value || (fetching.value && !rows.value.length && !props.narrow))
     const listSettled = computed(() => !tableLoading.value && !fetching.value)
+
+    // woke: a filtered list this short gets the next page or a search suggested.
+    const shortList = computed(() => props.narrow != null && !!searchResult.value && !tableLoading.value && fitCount.value < SHORT_LIST)
+    // Every listing the search found is loaded: the filter here is exact, a search finds nothing more.
+    const allLoaded = computed(() => !!searchResult.value && !morePages.value && loadedCount.value >= searchResult.value.total)
+    const glow = computed(() => props.dim || (shortList.value && !morePages.value && !allLoaded.value && !fetching.value))
+    watch(glow, (on) => { ctx.emit('glow', on) }, { immediate: true })
+    onUnmounted(() => { ctx.emit('glow', false) })
+    const loadNote = shallowRef('')
+    async function loadNextPage () {
+      const before = fetchResults.value.length
+      loadNote.value = ''
+      // One page per click: done once anything new arrived.
+      const note = await loadMore(() => fetchResults.value.length > before)
+      if (note) loadNote.value = note
+    }
+    // The tighter range on a column, for its header.
+    function localRange (col: StatColumn): string | null {
+      const check = props.narrow?.checks.find(c => c.column.key.slice(c.column.key.indexOf('|')) === col.key.slice(col.key.indexOf('|')))
+      if (!check) return null
+      const fmt = (n: number) => formatStatValue(n, col)
+      if (check.min != null && check.max != null) return `${fmt(check.min)}–${fmt(check.max)}`
+      if (check.min != null) return `≥${fmt(check.min)}`
+      if (check.max != null) return `≤${fmt(check.max)}`
+      return 'has'
+    }
 
     // A new search's loading rows take up what the last results did.
     const skeletonRows = shallowRef(SKELETON_ROWS)
@@ -599,6 +667,19 @@ export default defineComponent({
     // An error has nothing to keep on screen, and its Retry would use the old filters.
     watch([() => props.stale, error], ([stale, err]) => { if (stale && err) ctx.emit('reset') })
     watch(error, (err) => { if (err) releaseVerdictHeight() })
+    // Rows filtered here leave their room, so the window doesn't shrink and grow while you type.
+    // The verdict above the mods too: its text changes with what fits, and the mods mustn't move.
+    let heldForNarrow = false
+    function holdTableHeight (hold: boolean) {
+      // Only undo our own hold: a new search holds the verdict's height itself.
+      if (hold === heldForNarrow) return
+      heldForNarrow = hold
+      for (const el of [scrollEl.value, verdictSlot.value]) {
+        if (el) el.style.minHeight = hold ? `${el.offsetHeight}px` : ''
+      }
+    }
+    watch(() => props.narrow != null, (on) => { holdTableHeight(on) }, { flush: 'pre' })
+    watch(searchResult, () => { if (!props.narrow) holdTableHeight(false) })
     onUnmounted(releaseVerdictHeight)
 
     return {
@@ -660,7 +741,16 @@ export default defineComponent({
       bulk,
       bulkNote,
       toggleBulk,
-      bulkSellers: computed(() => bulkSellerCount(groupedResults.value, sameKind)),
+      bulkSellers: computed(() => bulkSellerCount(fitResults.value, sameKind)),
+      shortList,
+      allLoaded,
+      loadNextPage,
+      loadNote,
+      morePages,
+      localRange,
+      loadedCount,
+      fitCount,
+      statusSlot,
       bulkTitle: computed(() => bulk.value
         ? 'Showing sellers with 2 or more copies at one price. Click to show all.'
         : morePages.value

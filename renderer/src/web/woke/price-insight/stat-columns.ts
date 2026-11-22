@@ -118,7 +118,8 @@ function columnSource (filter: StatFilter): ColumnSource | null {
   return {
     kind: 'mod',
     refs: pick ? pick.keys.map(k => k.ref) : [filter.statRef],
-    domains: filter.tradeId.map(tradeId => tradeId.split('.')[0]),
+    // An id can start with a search hint such as {empty}: the domain comes after it.
+    domains: filter.tradeId.map(tradeId => tradeId.replace(/^{[^}]*}/, '').split('.')[0]),
     negated: filter.roll?.isNegated ?? false,
     ...(pick ? { labels: Object.fromEntries(pick.keys.map(k => [k.ref, k.label])) } : {})
   }
