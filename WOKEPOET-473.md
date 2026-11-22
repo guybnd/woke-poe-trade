@@ -14,6 +14,14 @@ history:
     user: Agent
     date: '2026-11-22T06:52:00.439Z'
     comment: Created ticket.
+    id: a-2026-11-22t06-52-00-439z
+  - type: activity
+    user: Agent
+    date: '2026-11-22T06:57:46.685Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/755 open; adversarial
+      review done, 4 findings fixed; waiting on CI.
+    id: a-2026-11-22t06-57-46-685z
 ---
 The Witch (7,075c, really 0.2c) and Rain Tempter (857c, really 0.01c) spiked on poe.ninja 2026-11-22 ~13:50-16:00 Sydney; Guy's 16:00 read had Div cards 107k c, net worth 196k vs ~100k. Both were thin (gaps 6/7). Users report the same skew.
 
