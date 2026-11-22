@@ -4,7 +4,7 @@
 import fs from 'fs'
 import path from 'path'
 import { PNG } from 'pngjs'
-import { test, expect } from './harness'
+import { test, expect, FIXTURES } from './harness'
 
 test.describe.configure({ mode: 'parallel' })
 
@@ -21,7 +21,7 @@ const UNID_CRIMSON = [
 ].join('\n')
 
 // The Crimson Jewel uniques and their icons, as the price check lists them.
-const CRIMSON: Array<{ name: string, icon: string }> = fs.readFileSync(path.join(__dirname, '../../renderer/public/data/en/items.ndjson'), 'utf8')
+const CRIMSON: Array<{ name: string, icon: string }> = fs.readFileSync(path.join(FIXTURES, '../../renderer/public/data/en/items.ndjson'), 'utf8')
   .split('\n').filter(l => l.includes('"Crimson Jewel"') && l.includes('"UNIQUE"'))
   .map(l => JSON.parse(l)).filter(d => d.namespace === 'UNIQUE' && d.unique.base === 'Crimson Jewel')
   .map(d => ({ name: d.name, icon: d.icon }))
@@ -84,6 +84,7 @@ test('the art names the unique: poe.ninja price first, and Change picks another'
     return png ? { status: 200, body: png } : null
   }
   const saved = fakeApp.game.screen
+  const savedCursor = fakeApp.game.cursor
   try {
     await overlay.boot()
     fakeApp.game.cursor = { x: 300, y: 600 }
@@ -120,15 +121,17 @@ test('the art names the unique: poe.ninja price first, and Change picks another'
   } finally {
     fakeApp.site.reply = null
     fakeApp.game.screen = saved
+    fakeApp.game.cursor = savedCursor
   }
 })
 
-test('no art under the mouse: the picker, dearest first with prices', async ({ overlay, fakeApp }) => {
-  const saved = fakeApp.game.screen
+test('no art to read: the picker, dearest first with prices', async ({ overlay, fakeApp }) => {
+  const saved = fakeApp.game.cursor
   try {
     await overlay.boot()
-    fakeApp.game.cursor = { x: 300, y: 600 }
-    screenWith(fakeApp.game, null, { x: 300, y: 600 })
+    // The mouse off the game window (as for an item in a chat link elsewhere): nothing is kept,
+    // whatever icons an earlier test left cached.
+    fakeApp.game.cursor = { x: fakeApp.game.bounds.x + fakeApp.game.bounds.width + 50, y: 600 }
     await overlay.copyItem(UNID_CRIMSON)
     const panel = overlay.widget('price-check')
     const picker = panel.getByTestId('unid-picker')
@@ -143,6 +146,6 @@ test('no art under the mouse: the picker, dearest first with prices', async ({ o
     await tiles.nth(1).click()
     await expect(panel.getByTestId('unid-guess')).toContainText('Your pick')
   } finally {
-    fakeApp.game.screen = saved
+    fakeApp.game.cursor = saved
   }
 })

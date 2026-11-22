@@ -106,6 +106,8 @@ export default defineComponent({
     function select (info: BaseType, byYou: boolean) {
       if (!origin.value) return
       const item = makeIdentifiedUnique(info, origin.value)
+      // A guess still on its way mustn't replace the user's own pick.
+      if (byYou) ask++
       made.value = { item, byYou }
       listOpen.value = false
       ctx.emit('identify', item)
@@ -133,9 +135,9 @@ export default defineComponent({
       }
       guess.value = { state: 'reading' }
       const id = ++ask
-      hostRequest('unid-art-guess', { candidates: list.map(c => ({ name: c.refName, icon: c.icon })) }, 10_000)
+      hostRequest('unid-art-guess', { itemText: item.rawText, candidates: list.map(c => ({ name: c.refName, icon: c.icon })) }, 10_000)
         .then(res => {
-          if (id !== ask || origin.value !== item) return
+          if (id !== ask || origin.value !== item || props.item !== item) return
           if (!res.ranked) {
             guess.value = { state: 'none' }
             return

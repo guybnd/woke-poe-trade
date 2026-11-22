@@ -13,7 +13,8 @@ const SQUARE_CELLS = 3.4
 const KEEP_MS = 20_000
 const ICON_TIMEOUT_MS = 8_000
 
-interface Square { at: number, width: number, height: number, data: Uint8Array, cellPx: number }
+// The item text it was kept for: a check from a menu or a paste is another item.
+interface Square { at: number, text: string, width: number, height: number, data: Uint8Array, cellPx: number }
 let last: Square | null = null
 
 const UNID_UNIQUE = /^Rarity: Unique\r?$/m
@@ -48,11 +49,22 @@ export function keepUnidArt (poeWindow: GameWindow, itemText: string, cursor: { 
       const from = ((y0 + y) * bounds.width + x0) * 4
       data.set(shot.subarray(from, from + width * 4), y * width * 4)
     }
-    last = { at: Date.now(), width, height, data, cellPx }
+    last = { at: Date.now(), text: itemText, width, height, data, cellPx }
     perfRecord('Unid unique: art square', performance.now() - t0)
   } catch {
     last = null
   }
+}
+
+// The renderer's rawText may differ in line endings or trailing space.
+function sameItem (a: string, b: string | undefined): boolean {
+  const norm = (t: string) => t.replace(//g, '').trim()
+  return b != null && norm(a) === norm(b)
+}
+
+/** A failed copy or a copy of another item leaves no square behind. */
+export function forgetUnidArt (): void {
+  last = null
 }
 
 const templates = new Map<string, Promise<Template | null>>()
@@ -84,10 +96,10 @@ async function iconTemplate (url: string): Promise<Template | null> {
 export type UnidArtResult = ArtGuess | { ranked: null, reason: 'no-art' | 'icons' }
 
 /** Ranks the candidates against the kept square. */
-export async function guessUnidArt (args: { candidates?: Array<{ name: string, icon: string }> }): Promise<UnidArtResult> {
+export async function guessUnidArt (args: { itemText?: string, candidates?: Array<{ name: string, icon: string }> }): Promise<UnidArtResult> {
   const square = last
   const list = (args?.candidates ?? []).slice(0, 60)
-  if (!square || Date.now() - square.at > KEEP_MS || list.length < 2) return { ranked: null, reason: 'no-art' }
+  if (!square || Date.now() - square.at > KEEP_MS || list.length < 2 || !sameItem(square.text, args?.itemText)) return { ranked: null, reason: 'no-art' }
   let cands: Candidate[]
   try {
     cands = await Promise.all(list.map(async c => ({ name: String(c.name), art: String(c.icon), template: await iconTemplate(String(c.icon)) })))

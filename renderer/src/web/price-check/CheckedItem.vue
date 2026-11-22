@@ -4,8 +4,8 @@
     <!-- woke: TradeListing puts the improved verdict here, the first thing in the window. -->
     <!-- The verdict's height from the start and through errors, so the mods don't move for either. -->
     <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsDimmed, 'w-pc-verdict-held': verdictHeld }">
-      <div v-if="verdictHeld && !searched" class="w-pc-verdict-wait">Search for listing prices</div>
-      <woke-ninja-verdict v-else-if="ninjaVerdictShown" :item="item" :filters="itemFilters" />
+      <woke-ninja-verdict v-if="ninjaVerdictShown" :item="item" :filters="itemFilters" />
+      <div v-else-if="verdictHeld && !searched" class="w-pc-verdict-wait">Search for listing prices</div>
     </div>
     <filter-name
       ref="nameComponent"
@@ -515,7 +515,8 @@ export default defineComponent({
 
     function handleSearchMouseenter (e: MouseEvent) {
       // woke: an exchange item poe.ninja prices searches only on a click (WOKEPOET-479).
-      if (ninjaChaos.value != null && tradeAPI.value === 'bulk' && widget.value.wokeNinjaFirst !== false) return
+      // An unidentified unique jewel too (WOKEPOET-481).
+      if (ninjaVerdictShown.value || (ninjaChaos.value != null && tradeAPI.value === 'bulk' && widget.value.wokeNinjaFirst !== false)) return
       const from = e.relatedTarget as HTMLElement
       if ((filtersComponent.value.$el as HTMLElement).contains(from) ||
           (nameComponent.value.$el as HTMLElement).contains(from)) {

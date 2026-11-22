@@ -16,7 +16,7 @@ import type { ServerEvents } from '../server'
 import { perfRecord } from '../woke/perf'
 import { liftAltForCopy, restoreAltAfterCopy } from './synthetic-keys'
 import { noteItemText } from '../woke/claude-link/last-item'
-import { cursorInScreenPixels, keepUnidArt } from '../woke/unid-art'
+import { cursorInScreenPixels, forgetUnidArt, keepUnidArt } from '../woke/unid-art'
 
 type UiohookKeyT = keyof typeof UiohookKey
 const FOCUS_SETTLE_MS = 120
@@ -249,6 +249,7 @@ export class Shortcuts {
               }
             }).catch(() => {
               // woke: nothing was under the mouse. Say so, not silence.
+              forgetUnidArt()
               this.server.sendEventTo('last-active', { name: 'MAIN->CLIENT::item-text-failed', payload: { target: action.target } })
             })
 
