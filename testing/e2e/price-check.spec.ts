@@ -86,6 +86,8 @@ test('currency: the locked price check key shows the card too', async ({ overlay
   const card = overlay.page.getByTestId('instant-ninja-card')
   await expect(card).toContainText('180c')
   expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
+  // The game's hotkeys don't reach a focused overlay, so no "again" hint here.
+  await expect(card.getByTestId('instant-ninja-again')).toHaveCount(0)
   // The overlay has the keyboard here, so Space works straight away.
   await overlay.page.keyboard.press('Space')
   await expect(overlay.widget('price-check')).toContainText('Matched: 5')

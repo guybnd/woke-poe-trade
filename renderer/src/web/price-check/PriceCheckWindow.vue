@@ -7,7 +7,7 @@
     'flex-row-reverse': clickPosition === 'inventory'
   }">
     <instant-ninja-card v-if="instant && item?.isOk()" :key="instantKey" :item="item.value" :at="instant"
-      :active="config.wmWants === 'show'" :again-keys="config.hotkey ? `${config.hotkeyHold} + ${config.hotkey}` : null"
+      :active="config.wmWants === 'show'" :again-keys="config.hotkey && !advancedCheck ? `${config.hotkeyHold} + ${config.hotkey}` : null"
       @placed="instantPlaced" @live="openWindow(true)" @details="openWindow(false)" @close="closePriceCheck">
       <related-items :class="[$style.zoomed, $style.instantSide]" :item="item.value" click-position="stash" @check="checkRelated" />
     </instant-ninja-card>
