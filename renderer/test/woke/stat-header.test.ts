@@ -165,8 +165,19 @@ describe('buildStatHeader', () => {
     expect(Number(ar.max)).toBeGreaterThan(Number(ar.text))
     expect(ar.atMax).toBe(false)
     expect(ar.maxNote).toContain("base's top roll")
+    expect(ar.maxNote).toContain('at 20% quality')
     expect(m.bigs.find(c => c.key === 'evasion')!.max).toBe(String(Math.ceil((549 + 87) * 2.1 * 1.2)))
     expect(m.chips.find(c => c.key === 'base')?.max).toBeUndefined()
+  })
+
+  it('armour: an item over 20% quality is counted at its own quality', () => {
+    // (420 + 92) * (1 + 1.05 + 0.28) = 1192, (500 + 85) * 2.33 = 1363.
+    const { m } = lamellar(LAMELLAR
+      .replace('Armour: 1049', 'Quality: +28% (augmented)\nArmour: 1192')
+      .replace('Evasion Rating: 1199', 'Evasion Rating: 1363'))
+    const ar = m.bigs.find(c => c.key === 'armour')!
+    expect(ar.max).toBe(String(Math.ceil((437 + 100) * 2.1 * 1.28)))
+    expect(ar.maxNote).toContain('at 28% quality')
   })
 
   it('armour: a perfect roll reads MAX', () => {

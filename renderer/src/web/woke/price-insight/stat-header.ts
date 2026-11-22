@@ -7,6 +7,7 @@ import type { ParsedItem } from '@/parser'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
 import { ModifierType } from '@/parser/modifiers'
+import { getTradeMaxQuality } from '@/parser/calc-q20'
 import { ADDS_CHAOS, rollFill, weaponDps } from './weapon-dps'
 
 /** The property filters the header stands in for. */
@@ -74,9 +75,12 @@ function fixed (n: number, dp: number) {
   return n.toFixed(dp)
 }
 
-const NOTE_BASE_Q = "the base's top roll and these mods at the top of their tiers, at 20% quality"
-const NOTE_Q = 'these mods at the top of their tiers, at 20% quality'
 const NOTE = 'these mods at the top of their tiers'
+/** The quality the numbers are counted at: 20%, the item's own when higher, none when an enchant stops quality raising them. */
+function qualityNote (item: ParsedItem): string {
+  const q = getTradeMaxQuality(item)
+  return q > 0 ? `, at ${q}% quality` : ''
+}
 
 /**
  * Sets a cell's max from its property filter's range (what the roll bar measures
@@ -120,6 +124,8 @@ export function buildStatHeader (item: ParsedItem, stats: readonly FilterOrGroup
     if (isHeaderFilter(f) && !props.has(f.tradeId[0])) props.set(f.tradeId[0], f)
   }
   if (!props.size) return null
+  const NOTE_Q = NOTE + qualityNote(item)
+  const NOTE_BASE_Q = "the base's top roll and " + NOTE_Q
 
   if (WEAPON.has(cat)) {
     const d = weaponDps(item)
