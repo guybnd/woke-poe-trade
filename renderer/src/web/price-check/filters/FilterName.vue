@@ -40,7 +40,9 @@
           <filter-btn-logical v-for="influence of filters.influences" :key="influence.value"
             :filter="influence" :text="influence.value" :img="`/images/influence-${influence.value}.png`" />
         </template>
-        <filter-btn-logical v-if="filters.rarity?.value === 'magic'"
+        <!-- woke: gear steps its rarity: Any, Magic (bases to recombine or fracture), Rare. -->
+        <rarity-chip v-if="filters.rarity && rarityChip" :rarity="filters.rarity" :stats="stats" />
+        <filter-btn-logical v-else-if="filters.rarity?.value === 'magic'"
           :filter="filters.rarity" text="Magic" />
         <filter-btn-logical v-if="filters.unidentified"
           :filter="filters.unidentified" :text="t('item.unidentified')" />
@@ -96,7 +98,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, computed } from 'vue'
+import { defineAsyncComponent, defineComponent, PropType, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ItemCategory, ItemRarity, type ParsedItem } from '@/parser'
 import type { CorruptedSearch, ItemFilters } from './interfaces'
@@ -104,7 +106,7 @@ import { CATEGORY_TO_TRADE_ID } from '../trade/pathofexile-trade'
 import { WIcon } from '@/web/woke/ui'
 import FilterBtnNumeric from './FilterBtnNumeric.vue'
 import { NUMERIC_LIMITS } from './numeric-limits'
-import { socketColourFilters } from './create-item-filters'
+import { socketColourFilters, hasRarityChip } from './create-item-filters'
 import FilterBtnLogical from './FilterBtnLogical.vue'
 import { poeOn } from '@/web/woke/price-insight/window-style'
 import type { FilterOrGroup } from './interfaces'
@@ -115,7 +117,14 @@ const SOCKET_COLOURS = ['r', 'g', 'b', 'w'] as const
 
 export default defineComponent({
   name: 'FilterName',
-  components: { FilterBtnNumeric, FilterBtnLogical, WIcon, ClusterTypePick },
+  components: {
+    FilterBtnNumeric,
+    FilterBtnLogical,
+    WIcon,
+    ClusterTypePick,
+    // woke: loaded on demand, to keep startup JS in budget.
+    RarityChip: defineAsyncComponent(() => import('./RarityChip.vue'))
+  },
   props: {
     filters: {
       type: Object as PropType<ItemFilters>,
@@ -206,9 +215,12 @@ export default defineComponent({
       return clusterSizeOf(item.info.refName)
     })
 
+    const rarityChip = computed(() => hasRarityChip(props.item))
+
     return {
       t,
       poe: poeOn,
+      rarityChip,
       SOCKET_COLOURS,
       toggleColourTiles,
       clusterSize,

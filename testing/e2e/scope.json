@@ -390,6 +390,11 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
+  "rarity-chip.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/"
+  ],
   "regex-library-edit.spec.ts": [
    "renderer/src/web/woke/regex-library/"
   ],
