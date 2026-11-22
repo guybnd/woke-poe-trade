@@ -59,7 +59,8 @@ const props = defineProps<{
   againKeys: string | null
 }>()
 const emit = defineEmits<{
-  live: []
+  /** `byKey`: Space or Enter, not a click. */
+  live: [byKey?: boolean]
   details: []
   close: []
   /** Where the card ended up, in the overlay's CSS px, so the mouse can be tracked into it. */
@@ -118,7 +119,7 @@ function onKey (e: KeyboardEvent) {
   if (t?.closest('input, textarea, select, [contenteditable]')) return
   if (e.key === ' ' || e.key === 'Enter') {
     e.preventDefault()
-    emit('live')
+    emit('live', true)
   } else if (e.key === 'Escape') {
     emit('close')
   }

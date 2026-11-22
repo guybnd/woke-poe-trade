@@ -8,7 +8,7 @@
   }">
     <instant-ninja-card v-if="instant && item?.isOk()" :key="instantKey" :item="item.value" :at="instant"
       :active="config.wmWants === 'show'" :again-keys="config.hotkey && !advancedCheck ? `${config.hotkeyHold} + ${config.hotkey}` : null"
-      @placed="instantPlaced" @live="openWindow(true)" @details="openWindow(false)" @close="closePriceCheck">
+      @placed="instantPlaced" @live="openWindow(true, $event === true)" @details="openWindow(false)" @close="closePriceCheck">
       <template #verdict>
         <woke-deck-verdict-chip v-if="item.value.info.refName === 'Stacked Deck'" :item="item.value" />
       </template>
@@ -135,6 +135,8 @@ const DRAG_START_PX = 4
 // woke: how long the price check hotkey pressed again on the instant card's item means "live offers".
 const AGAIN_MS = 15_000
 const WINDOW_REM = 28.75
+// The related items' column beside the window: 17.5rem and a margin (RelatedItems.vue).
+const RELATED_REM = 18.5
 // The game art keeps a buffer inside the frame; the window grows by it so the table keeps its room.
 // Screen px: UI size zooms the title bar and body (.zoomed), not the frame.
 function windowWidth () {
@@ -294,9 +296,17 @@ export default defineComponent({
         ? (window.screenX + window.innerWidth) - wm.poePanelWidth.value - width
         : window.screenX + wm.poePanelWidth.value
       const placed = floating.value ? floatingArea(floating.value, screenSize()) : null
-      sendTrackArea(from, placed
+      const area = placed
         ? { ...placed, x: window.screenX + placed.x, y: window.screenY + placed.y }
-        : { x: screenX, y: window.screenY, width, height: window.innerHeight })
+        : { x: screenX, y: window.screenY, width, height: window.innerHeight }
+      // woke: the related items beside the window count as the window, or moving onto
+      // them hands the mouse back to the game and closes it. They sit on the screen's
+      // middle side of it (clickPosition: 'inventory' puts them on the left).
+      const related = RELATED_REM * rootFontPx() * uiZoom()
+      const leftSide = floating.value ? floating.value.side === 'inventory' : (from.x - window.screenX) > window.innerWidth / 2
+      if (leftSide) area.x -= related
+      area.width += related
+      sendTrackArea(from, area)
     }
     function instantPlaced (rect: DOMRect) {
       if (!Host.isElectron || advancedCheck.value || !rect.width) return
@@ -304,10 +314,12 @@ export default defineComponent({
     }
     // From the card to the window: Live offers searches, Details doesn't. The
     // mouse is tracked into the window now, or leaving the card would close it.
-    function openWindow (live: boolean) {
+    // A click on the card already gave the overlay the mouse (and ended the
+    // tracking), so only a key (Space) needs the window tracked from here.
+    function openWindow (live: boolean, byKey = false) {
       liveCheck.value = live
       instant.value = null
-      if (Host.isElectron && !advancedCheck.value) trackWindowArea(trackFrom)
+      if (byKey && Host.isElectron && !advancedCheck.value) trackWindowArea(trackFrom)
     }
 
     function handleIdentification (identified: ParsedItem) {
