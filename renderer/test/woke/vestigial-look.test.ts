@@ -9,6 +9,8 @@ import { poeLook, poeSection, VESTIGIAL_ICON } from '@/web/woke/price-insight/po
 import { listingTipItem } from '@/web/woke/price-insight/listing-tip'
 import type { ListingItem } from '@/web/woke/price-insight/listing-tip'
 import { listingDetail } from '@/web/woke/price-insight/listing-tip-detail'
+import { saleItem } from '@/web/woke/net-worth/sale-tip'
+import type { Sale } from '@/web/woke/net-worth/sales'
 import { loadGameData, parseItem } from '../helpers/game-data'
 
 beforeAll(loadGameData)
@@ -98,9 +100,14 @@ describe('Vestigial unique', () => {
     expect(tip.vestigial).toBe(true)
     expect(tip.base).toBe('Vestigial Great Crown')
     expect(tip.implicits).toEqual(['Elemental Resistances are Zero'])
-    expect(tip.implicitKinds).toEqual(['vestigial'])
     const detail = listingDetail(LISTING)
     expect(detail.implicits[0]).toMatchObject({ kind: 'vestigial', label: 'Vestigial implicit' })
+  })
+
+  it('colours the implicit of a sold Vestigial item, which has no listing detail', () => {
+    const sold = saleItem({ tip: LISTING } as unknown as Sale)!
+    expect(sold.vestigial).toBe(true)
+    expect(sold.implicitKinds).toEqual(['vestigial'])
   })
 
   it('leaves a plain unique alone', () => {

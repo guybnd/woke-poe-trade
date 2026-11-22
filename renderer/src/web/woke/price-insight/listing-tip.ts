@@ -163,7 +163,6 @@ export function listingTipItem (item: ListingItem): PobItem | null {
   const plainText = texts(plain)
   const craftedText = texts(crafted)
   const implicitText = texts(implicits)
-  const implicitKinds = implicits.filter(m => modText(m)).map(m => typeof m !== 'string' && m.flags?.vestigial ? 'vestigial' as const : '' as const)
   const mods = [...fracturedText, ...plainText, ...craftedText]
   if (!mods.length && !implicitText.length) return null
 
@@ -189,7 +188,6 @@ export function listingTipItem (item: ListingItem): PobItem | null {
     ...(item.doubleCorrupted ? { twiceCorrupted: true } : {}),
     mirrored: item.mirrored,
     influences: Object.keys(item.influences ?? {}).map(capitalize),
-    ...(implicitKinds.includes('vestigial') ? { implicitKinds } : {}),
     ...(item.vestigial ? { vestigial: true } : {})
   }
 }

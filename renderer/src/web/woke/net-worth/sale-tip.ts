@@ -1,7 +1,7 @@
 // A sold item's tooltip: gear with its own mods, the way a trade listing's is
 // drawn (the history sends the same item data); gems, currency and cards by
 // name. Nothing is fetched for it. One v-item-tip owns the hover either way.
-import { listingTipItem } from '../price-insight/listing-tip'
+import { listingTipItem, modDomain, modText } from '../price-insight/listing-tip'
 import type { ListingItem } from '../price-insight/listing-tip'
 import type { PobItem } from '../pob-builds/widget'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
@@ -14,9 +14,20 @@ export function saleItem (s: Sale): PobItem | null {
   if (!items.has(s)) {
     let item: PobItem | null = null
     try { item = listingTipItem(s.tip as ListingItem) } catch { item = null }
+    if (item?.vestigial) item.implicitKinds = vestigialKinds(s.tip as ListingItem)
     items.set(s, item)
   }
   return items.get(s)!
+}
+
+// A Vestigial unique's inherited implicit, light purple in the tooltip. A trade
+// listing's tooltip reads it from the listing; a sale has only the item. Kept
+// here, out of the startup code.
+export function vestigialKinds (item: ListingItem): Array<'' | 'vestigial'> {
+  // Same order as listingTipItem's implicits.
+  const of = (domain: string) => (item.explicitMods ?? []).filter(m => modDomain(m) === domain)
+  const implicits = [...(item.enchantMods ?? []), ...of('enchant'), ...(item.implicitMods ?? []), ...of('implicit')]
+  return implicits.filter(m => modText(m)).map(m => typeof m !== 'string' && m.flags?.vestigial ? 'vestigial' : '')
 }
 
 export function saleTip (s: Sale): ItemTipRef {
