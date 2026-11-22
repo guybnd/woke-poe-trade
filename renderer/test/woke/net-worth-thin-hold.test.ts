@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest'
 import { baselineOf, holdJump, valueStash, HOLD_MS } from '@/web/woke/net-worth/valuation'
 import { priceSpikes, seriesFor, valueByTab } from '@/web/woke/net-worth/ledger'
 import { heldNote } from '@/web/woke/net-worth/tips'
+import { pricedOnlyToday } from '@/web/woke/market/parse'
 import type { LedgerPoint } from '@/web/woke/net-worth/ledger'
 import type { Baseline, Priced, PriceOf, StashItemLike } from '@/web/woke/net-worth/valuation'
 
@@ -110,7 +111,8 @@ describe('valuing with the last read', () => {
 describe('one-day prices', () => {
   // poe.ninja on 2026-11-22: The Web was 2.25c (priced daily), dropped off the
   // list for 8 hours, then came back at 28,886c priced on 1 of 7 days.
-  const web = (chaos: number, gaps: number): PriceOf => pricesOf({ 'The Web': { chaos, category: 'cards', thin: gaps >= 3, gaps } })
+  const web = (chaos: number, gaps: number, category: 'cards' | 'gear' = 'cards'): PriceOf =>
+    pricesOf({ 'The Web': { chaos, category, thin: gaps >= 3, gaps, oneDay: gaps === 6 } })
   const webTab = [{ name: 'Cards', id: 't1', items: [card('The Web', 7)] }]
   const none: PriceOf = () => null
   const line = (v: ReturnType<typeof valueStash>) => [...v.lines, ...v.unpricedLines].find(l => l.key === 'The Web')!
@@ -149,10 +151,39 @@ describe('one-day prices', () => {
     expect(line(valueStash(webTab, web(28886, 5), undefined, { before: held, now: T0 + H })).unitChaos).toBe(28886)
   })
 
+  it('leaves gear to the jump rule: a quiet unique or gem keeps its price', () => {
+    expect(line(valueStash(webTab, web(1650, 6, 'gear'), undefined, { before: null, now: T0 })).unitChaos).toBe(1650)
+  })
+
+  it('gives a one-day hold that ends the full 6 hours as a jump', () => {
+    const base = baselineOf(valueStash(webTab, web(2.25, 0), undefined, { before: null, now: T0 }))
+    const oneDay = baselineOf(valueStash(webTab, web(28886, 6), undefined, { before: base, now: T0 }))
+    expect(oneDay['The Web'].heldKind).toBe('one-day')
+    const second = valueStash(webTab, web(28886, 5), undefined, { before: oneDay, now: T0 + 10 * H })
+    expect(line(second).unitChaos).toBe(2.25)
+    expect(line(second).heldKind).toBe('jump')
+    expect(line(second).heldSince).toBe(T0 + 10 * H)
+    expect(baselineOf(second)['The Web'].ref).toBe(2.25)
+  })
+
   it('a held price is never the solid one', () => {
     const base = baselineOf(valueStash(webTab, web(2.25, 0), undefined, { before: null, now: T0 }))
     const v = valueStash(webTab, web(28886, 6), undefined, { before: base, now: T0 })
     expect(baselineOf(v)['The Web'].ref).toBe(2.25)
+  })
+})
+
+describe('pricedOnlyToday', () => {
+  it('is a price today and none before, not an empty or quiet line', () => {
+    expect(pricedOnlyToday([null, null, null, null, null, null, 40])).toBe(true)
+    expect(pricedOnlyToday([40])).toBe(true)
+    expect(pricedOnlyToday([])).toBe(false)
+    expect(pricedOnlyToday([null, null, null, null, null, null, null])).toBe(false)
+    expect(pricedOnlyToday([null, null, 3, null, null, null, 40])).toBe(false)
+    expect(pricedOnlyToday([null, null, null, null, null, 40, null])).toBe(false)
+    // A league's first day has no days before.
+    expect(pricedOnlyToday([40], 1)).toBe(false)
+    expect(pricedOnlyToday([5, null, 40], 2)).toBe(true)
   })
 })
 

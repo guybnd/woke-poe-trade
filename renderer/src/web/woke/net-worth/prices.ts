@@ -3,7 +3,7 @@
 // unpriced.
 import { usePoeninja } from '@/web/background/Prices'
 import { lastWokePrices } from '../market/hook'
-import { feedDays, graphGaps } from '../market/parse'
+import { feedDays, graphGaps, pricedOnlyToday } from '../market/parse'
 import { THIN_GAPS } from '../market/types'
 import { categoryOfSlug, gemVariant, isUniqueFrame } from './valuation'
 import type { Priced, PriceOf, StashItemLike } from './valuation'
@@ -43,6 +43,7 @@ export function ninjaPriceOf (): PriceOf {
       const gaps = gapsOf(p.graph)
       p.gaps = gaps
       if (gaps >= THIN_GAPS) p.thin = true
+      if (pricedOnlyToday(p.graph, days)) p.oneDay = true
     }
     return p
   }

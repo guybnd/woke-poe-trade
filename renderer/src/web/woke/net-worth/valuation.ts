@@ -45,8 +45,10 @@ export interface Priced {
   variant?: string
   // A thin market: poe.ninja had no price on 3+ of its last 7 days.
   thin?: boolean
-  // Days of poe.ninja's last 7 with no price (6: priced only today).
+  // Days of poe.ninja's last 7 with no price.
   gaps?: number
+  // poe.ninja priced it today and on none of the days before (prices.ts).
+  oneDay?: boolean
 }
 export type PriceOf = (item: StashItemLike) => Priced | null
 
@@ -148,7 +150,6 @@ export interface ItemPrice { chaos: number, category: Category, graph?: Array<nu
 export const HOLD_RATIO = 5
 export const HOLD_MIN_JUMP = 1
 export const HOLD_MS = 6 * 3_600_000
-export const ONE_DAY_GAPS = 6
 export const ONE_DAY_MIN = 10
 
 export type HoldKind = 'jump' | 'one-day'
@@ -157,17 +158,21 @@ export type HoldKind = 'jump' | 'one-day'
 export interface HoldGuard { before: Baseline | null, now: number }
 
 // The price to count instead and since when, or null to take poe.ninja's.
-export function holdJump (ninja: number, p: { thin?: boolean, gaps?: number }, prev: Baseline[string] | undefined, now: number): { chaos: number, since: number, kind: HoldKind } | null {
-  const since = prev?.heldSince ?? now
+// Gear (uniques, gems) is left to the jump rule: many trade on so few days
+// that poe.ninja's line is mostly empty, and those were real prices.
+export function holdJump (ninja: number, p: { thin?: boolean, oneDay?: boolean, category?: Category }, prev: Baseline[string] | undefined, now: number): { chaos: number, since: number, kind: HoldKind } | null {
+  const sinceFor = (kind: HoldKind) => prev?.heldSince != null && (prev.heldKind ?? 'jump') === kind ? prev.heldSince : now
   // Only a solid price vouches for a one-day one: an older baseline's price
   // may itself have been a fake.
   const ref = prev?.ref != null && prev.ref > 0 ? prev.ref : null
-  if ((p.gaps ?? 0) >= ONE_DAY_GAPS && ninja >= ONE_DAY_MIN && (ref == null || ninja >= ref * HOLD_RATIO)) {
-    return { chaos: ref ?? 0, since, kind: 'one-day' }
+  if (p.oneDay && p.category !== 'gear' && ninja >= ONE_DAY_MIN && (ref == null || ninja >= ref * HOLD_RATIO)) {
+    return { chaos: ref ?? 0, since: sinceFor('one-day'), kind: 'one-day' }
   }
   if (!p.thin || !prev || prev.mine) return null
   const base = ref ?? prev.unitChaos
   if (!(base > 0) || ninja < base * HOLD_RATIO || ninja - base < HOLD_MIN_JUMP) return null
+  // A one-day hold that ended gets the full 6 hours as a jump.
+  const since = sinceFor('jump')
   return now - since < HOLD_MS ? { chaos: base, since, kind: 'jump' } : null
 }
 
@@ -186,7 +191,7 @@ export function priceItem (item: StashItemLike, priceOf: PriceOf, prefs: PricePr
   if (held) {
     out.heldSince = held.since
     out.heldKind = held.kind
-  } else if ((ninja.gaps ?? 0) < ONE_DAY_GAPS) out.solid = true
+  } else if (!ninja.oneDay) out.solid = true
   return out
 }
 
@@ -289,7 +294,7 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
 // heldSince: the price is held (holdJump) since then.
 // mine: unitChaos is your own price, so it isn't the last poe.ninja price.
 // ref: the last solid poe.ninja price (ValuedLine.refChaos); older baselines lack it.
-export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number, cat?: Category, heldSince?: number, mine?: boolean, ref?: number }>
+export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number, cat?: Category, heldSince?: number, heldKind?: HoldKind, mine?: boolean, ref?: number }>
 
 // Marks a baseline that holds unpriced and ignored items too (see diffStash).
 export const BASELINE_V2 = '\u0000v2'
@@ -303,6 +308,8 @@ export function baselineOf (v: Valuation): Baseline {
     out[l.key] = { name: l.name, icon: l.icon, count: (had?.count ?? 0) + l.count, unitChaos: Math.max(had?.unitChaos ?? 0, l.unitChaos), cat: l.category }
     const since = l.heldSince ?? had?.heldSince
     if (since != null) out[l.key].heldSince = since
+    const kind = l.heldKind ?? had?.heldKind
+    if (kind) out[l.key].heldKind = kind
     if (l.mine || had?.mine) out[l.key].mine = true
     const ref = l.refChaos ?? had?.ref
     if (ref != null) out[l.key].ref = ref
