@@ -72,6 +72,36 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await overlay.snap('net worth after a read')
     expect(fakeApp.site.requests.some(u => u.includes('tabIndex=1'))).toBe(true)
 
+    // Sections fold to their title line, and the bar under the middle row
+    // gives it a height its lists scroll inside. Both are saved.
+    const details = panel.getByRole('button', { name: /^Details/ })
+    if (await details.getAttribute('aria-expanded') !== 'true') await details.click()
+    const bar = panel.getByTitle("Drag to change this row's height · double-click to fit")
+    const row = panel.locator('section', { has: bar }).last()
+    const before = (await row.boundingBox())!.height
+    const at = (await bar.boundingBox())!
+    await overlay.page.mouse.move(at.x + at.width / 2, at.y + at.height / 2)
+    await overlay.page.mouse.down()
+    await overlay.page.mouse.move(at.x + at.width / 2, at.y + at.height / 2 + 80, { steps: 4 })
+    await overlay.page.mouse.up()
+    await expect.poll(async () => Math.round((await row.boundingBox())!.height)).toBeGreaterThan(before + 60)
+    await overlay.snap('net worth middle row dragged taller')
+    // Double-click fits it to what's in it again.
+    await bar.dblclick()
+    await expect.poll(async () => Math.round((await row.boundingBox())!.height)).toBeLessThan(before + 10)
+    // Folded, Where it is keeps its title and drops its rows.
+    const where = panel.getByRole('button', { name: 'Where it is' })
+    // A category row: a button with its share bar (an <i>) right inside.
+    const catRows = panel.locator('button[aria-pressed]:has(> i)')
+    await expect(where).toHaveAttribute('aria-expanded', 'true')
+    expect(await catRows.count()).toBeGreaterThan(0)
+    await where.click()
+    await expect(where).toHaveAttribute('aria-expanded', 'false')
+    await expect(catRows).toHaveCount(0)
+    await overlay.snap('net worth where it is folded')
+    await where.click()
+    await expect(where).toHaveAttribute('aria-expanded', 'true')
+
     // The Sales view: a header click sorts the table, a second click flips it.
     // Price compares by value: 44c sorts under 1 div though 44 > 1.
     await panel.getByRole('tab', { name: 'Sales' }).click()

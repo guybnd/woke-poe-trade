@@ -57,9 +57,13 @@
       <template v-if="detailsOpen && anyDetails">
         <!-- Two halves: the chart | per hour of play (H), with what each colour
              of the time bar is under it. -->
-        <section v-if="shown.chart || shown.perHour" :class="[$style.halves, { [$style.one]: !(shown.chart && shown.perHour) }]">
+        <section v-if="shown.chart || shown.perHour" ref="topEl" :class="[$style.halves, { [$style.one]: !(shown.chart && shown.perHour) }]" :style="halvesStyle">
           <section v-if="shown.chart" :class="$style.chartBlock">
-            <div :class="$style.chartHead">
+            <div v-if="fold.chart" :class="$style.chartHead">
+              <button type="button" :class="$style.foldHead" :aria-expanded="false" title="Open the chart" @click="flipFold('chart')"><i class="fas fa-chevron-right" /><span :class="$style.caps">Chart</span></button>
+            </div>
+            <div v-else :class="$style.chartHead">
+              <button type="button" :class="$style.fold" :aria-expanded="true" title="Fold the chart" aria-label="Fold the chart" @click="flipFold('chart')"><i class="fas fa-chevron-down" /></button>
               <TextTabs v-model="chartMode" :options="MODE_OPTIONS" />
               <span v-if="goal" class="text-xs" :class="$style.goalLine">
                 {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }}<Coin /> ·
@@ -69,24 +73,29 @@
               </span>
               <TextTabs v-model="range" :options="RANGE_OPTIONS" />
             </div>
-            <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="shown.perHour ? undefined : chartH" :class="{ [$style.chartFill]: shown.perHour }" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" @spend="onChartSpend" />
-            <div v-if="chartMode === 'category'" :class="$style.legend">
+            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="chartHShown" :class="{ [$style.chartFill]: chartHShown == null }" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" @spend="onChartSpend" />
+            <div v-if="chartMode === 'category' && !fold.chart" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
             </div>
-            <SplitHandle v-if="!shown.perHour" dir="y" @start="startDrag" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
+            <SplitHandle v-if="!fold.chart" dir="y" @start="startDrag" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
           </section>
           <div v-if="shown.perHour" :class="$style.box">
-            <div :class="$style.boxHead">
+            <div v-if="fold.perHour" :class="$style.boxHead">
+              <button type="button" :class="$style.foldHead" :aria-expanded="false" title="Open Per hour" @click="flipFold('perHour')"><i class="fas fa-chevron-right" /><span :class="$style.caps">Per hour</span></button>
+              <b class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b>
+            </div>
+            <div v-else :class="$style.boxHead">
+              <button type="button" :class="$style.fold" :aria-expanded="true" title="Fold Per hour" aria-label="Fold Per hour" @click="flipFold('perHour')"><i class="fas fa-chevron-down" /></button>
               <TextTabs v-model="rateWindow" :options="WINDOW_OPTIONS" />
               <label :class="$style.check" :title="timeNote"><input v-model="leaveOutHub" type="checkbox">Leave out hideout</label>
             </div>
-            <div :class="$style.tiles">
+            <div v-if="!fold.perHour" :class="$style.tiles">
               <div><span :class="$style.caps">Per hour</span><b :class="[$style.bigRate, tone(rateShown.div)]" class="w-num" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b></div>
               <div><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b></div>
               <div title="The middle map's time: short visits barely move it"><span :class="$style.caps">Median map</span><b class="w-num">{{ rateShown.r.medianMapMs != null ? shortSpan(rateShown.r.medianMapMs) : '—' }}</b></div>
               <div :title="leaveOutHub ? 'Time in maps and other areas' : 'Time in maps, other areas and hideout'"><span :class="$style.caps">Played</span><b class="w-num">{{ span(rateShown.r.playMs) }}</b></div>
             </div>
-            <template v-if="splitTotal > 0">
+            <template v-if="splitTotal > 0 && !fold.perHour">
               <div :class="[$style.split, { [$style.splitPick]: splitLabel }]" @mouseleave="pickSplit(null)">
                 <span v-for="(x, i) in splitParts" :key="x.id" :class="[$style[x.id], { [$style.segOn]: splitPick === x.id, [$style.segFirst]: i === 0, [$style.segLast]: i === splitParts.length - 1 }]" :style="{ flexGrow: x.ms }" @mouseenter="pickSplit(x.id)" />
                 <span v-if="splitLabel" :class="$style.splitLabel" class="w-num" :style="splitLabel.style">{{ splitLabel.text }}</span>
@@ -96,18 +105,19 @@
               </div>
             </template>
           </div>
+          <SplitHandle v-if="shown.chart && shown.perHour" dir="x" :style="{ left: topEdge }" title="Drag to resize · double-click to reset" @start="startDrag" @move="dragTopEdge" @end="saveLayout" @reset="resetLayout('top')" />
         </section>
 
-        <section v-if="showChanges || showSide" ref="colsEl" :class="$style.cols" :style="{ gridTemplateColumns: colsTemplate }">
+        <section v-if="showChanges || showSide" ref="colsEl" :class="[$style.cols, { [$style.colsFixed]: midFixed }]" :style="{ gridTemplateColumns: colsTemplate, height: midFixed ? midHShown + 'px' : undefined }">
           <div v-if="showChanges" :class="$style.changesCol">
             <div :class="$style.colHead">
-              <span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} maps` : 'Since last refresh' }}</span>
+              <button type="button" :class="$style.foldHead" :aria-expanded="!fold.changes" :title="fold.changes ? 'Open' : 'Fold'" @click="flipFold('changes')"><i :class="fold.changes ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} maps` : 'Since last refresh' }}</span></button>
               <b v-if="session" class="w-num" :class="tone(session.div)">{{ signed(session.div) }}<Coin :chaos="!divine" /><template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}<Coin :chaos="!divine" />/h</template></b>
               <span v-if="session && session.spent > 0" :class="$style.spendNote" class="w-num" title="Purchases in this session: left out of its profit">spent {{ div(session.spent) }}<Coin :chaos="!divine" /></span>
             </div>
             <!-- The newest groups; the two latest open, the rest one row each. The
                  list scrolls inside, never stretching the window. -->
-            <div :class="$style.scrollBox">
+            <div v-if="!fold.changes" :class="$style.scrollBox">
               <div :class="$style.scroll">
                 <div v-for="(g, i) in groups.slice(0, groupLimit)" :key="g.key" :class="$style.group">
                   <button type="button" :class="$style.groupHead" :aria-expanded="groupOpen(g.key, i)" @click="toggleGroup(g.key, i)">
@@ -137,39 +147,43 @@
                 <button v-if="groups.length > groupLimit" type="button" :class="$style.clear" class="text-xs" @click="groupLimit += GROUP_STEP">Show older ({{ groups.length - groupLimit }})</button>
               </div>
             </div>
-            <div v-if="session" :class="$style.sessionFoot">
+            <div v-if="session && !fold.changes" :class="$style.sessionFoot">
               <span class="w-dim text-xs">Gains are read when you enter your hideout</span>
               <WButton v-if="session.endable" size="sm" @click="endSession">End session</WButton>
             </div>
           </div>
           <div v-if="showSide" :class="$style.sideCol">
             <div v-if="showSold">
-              <button type="button" :class="$style.soldHead" title="Open the Sales view" @click="view = 'sales'">
-                <span :class="$style.caps">Sold</span>
-                <span class="w-num text-xs w-dim">today <b :class="$style.saleNum">{{ div(soldToday.chaos) }}</b> · 7 days <b :class="$style.saleNum">{{ div(soldWeek.chaos) }}</b><Coin :chaos="!divine" /></span>
-              </button>
-              <div v-for="s in recentSales" :key="s.id" :class="$style.moveRow">
+              <div :class="$style.sideHead">
+                <button type="button" :class="$style.fold" :aria-expanded="!fold.sold" :title="fold.sold ? 'Open Sold' : 'Fold Sold'" :aria-label="fold.sold ? 'Open Sold' : 'Fold Sold'" @click="flipFold('sold')"><i :class="fold.sold ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /></button>
+                <button type="button" :class="$style.soldHead" title="Open the Sales view" @click="view = 'sales'">
+                  <span :class="$style.caps">Sold</span>
+                  <span class="w-num text-xs w-dim">today <b :class="$style.saleNum">{{ div(soldToday.chaos) }}</b> · 7 days <b :class="$style.saleNum">{{ div(soldWeek.chaos) }}</b><Coin :chaos="!divine" /></span>
+                </button>
+              </div>
+              <div v-for="s in fold.sold ? [] : recentSales" :key="s.id" :class="$style.moveRow">
                 <span :class="$style.moveName"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" /><span v-item-tip="saleTip(s)" class="w-trunc">{{ saleName(s) }}</span><span v-if="marketOf(s) != null" :class="[$style.saleTag, marketTone(s)]">{{ marketText(marketOf(s)) }}</span></span>
                 <span class="w-num" :class="$style.saleNum" :title="saleTitle(s)">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /> · {{ clockOf(s.at) }}</span>
               </div>
             </div>
             <div v-if="shown.where">
-              <div :class="$style.caps" style="margin-bottom: 6px">Where it is</div>
-              <button v-for="c in cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
+              <button type="button" :class="[$style.foldHead, $style.sideTitle]" :aria-expanded="!fold.where" :title="fold.where ? 'Open' : 'Fold'" @click="flipFold('where')"><i :class="fold.where ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">Where it is</span></button>
+              <button v-for="c in fold.where ? [] : cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
                 :aria-pressed="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">
                 <span :class="$style.catName"><img v-if="c.icon" :src="c.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
               </button>
             </div>
             <div v-if="showMoves" :class="$style.movesCol">
-              <div :class="$style.caps" style="margin-bottom: 4px">Price moves today</div>
-              <div v-for="m in moves.slice(0, 8)" :key="m.key" :class="$style.moveRow">
+              <button type="button" :class="[$style.foldHead, $style.sideTitle]" :aria-expanded="!fold.moves" :title="fold.moves ? 'Open' : 'Fold'" @click="flipFold('moves')"><i :class="fold.moves ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">Price moves today</span></button>
+              <div v-for="m in fold.moves ? [] : moves.slice(0, 8)" :key="m.key" :class="$style.moveRow">
                 <span :class="$style.moveName"><img v-if="m.icon" :src="m.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" /><span v-item-tip="tipFor(tips, m.key, m.name)" class="w-trunc">{{ m.name }}</span></span>
                 <span class="w-num" :class="tone(m.change)" :title="inChaos(m.valueChaos)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span>
               </div>
-              <div v-if="moves.length > 8" :class="$style.more" :title="moves.slice(8).map(moveText).join('\n')">+{{ moves.length - 8 }} more</div>
+              <div v-if="moves.length > 8 && !fold.moves" :class="$style.more" :title="moves.slice(8).map(moveText).join('\n')">+{{ moves.length - 8 }} more</div>
             </div>
           </div>
           <SplitHandle v-for="(e, i) in colEdges" :key="i" dir="x" :style="{ left: e * 100 + '%' }" @start="startDrag" @move="dragCol(i, $event)" @end="saveLayout" @reset="resetLayout('cols')" />
+          <SplitHandle v-if="!midAllFolded" dir="y" :style="{ top: '100%' }" title="Drag to change this row's height · double-click to fit" @start="startDrag" @move="dragMidH" @end="saveLayout" @reset="resetLayout('midH')" />
         </section>
       </template>
 
@@ -259,8 +273,8 @@ import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection, valueFl
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { UNREADABLE } from './tab-picker'
 import { rateTip, shortSpan, span } from './play-time'
-import { chartHOf, clampChartH, colWeights, dragCols, edges } from './layout'
-import type { ColId, PanelLayout } from './layout'
+import { chartHOf, clampChartH, clampMidH, colWeights, dragCols, dragTop, edges, foldedOf, hasChartH, midHOf, toggleFold, topOf } from './layout'
+import type { ColId, FoldId, PanelLayout } from './layout'
 import SplitHandle from './SplitHandle.vue'
 import TextTabs from './TextTabs.vue'
 import type { RateWindow } from './play-time'
@@ -412,9 +426,29 @@ const colIds = computed<ColId[]>(() => [
   showSide.value ? 'side' : null
 ].filter((x): x is ColId => x != null))
 // cols: the columns' weights, for the columns shown when the drag began.
-const draft = shallowRef<{ cols?: { ids: ColId[], w: number[] }, chartH?: number } | null>(null)
-let dragBase: { ids: ColId[], cols: number[], chartH: number } | null = null
+const draft = shallowRef<{ cols?: { ids: ColId[], w: number[] }, chartH?: number, top?: number, midH?: number } | null>(null)
+let dragBase: { ids: ColId[], cols: number[], chartH: number, top: number, midH: number } | null = null
 const chartH = computed(() => draft.value?.chartH ?? chartHOf(props.config.layout))
+// Beside Per hour the chart fills its half until a height is dragged.
+const chartHShown = computed(() => draft.value?.chartH != null || hasChartH(props.config.layout) || !shown.value.perHour ? chartH.value : undefined)
+const chartComp = shallowRef<{ $el?: HTMLElement } | null>(null)
+// The halves: the chart's share of the row.
+const top = computed(() => draft.value?.top ?? topOf(props.config.layout))
+const halvesStyle = computed(() => shown.value.chart && shown.value.perHour ? { gridTemplateColumns: `minmax(0, ${top.value}fr) minmax(0, ${1 - top.value}fr)` } : undefined)
+// The handle sits in the gap between the halves (padding var(--w-pad), gap var(--w-s2)).
+const topEdge = computed(() => `calc(var(--w-pad) + (100% - 2 * var(--w-pad) - var(--w-s2)) * ${top.value} + var(--w-s2) / 2)`)
+const topEl = shallowRef<HTMLElement | null>(null)
+// Folded sections show only their title line.
+const fold = computed(() => foldedOf(props.config.layout))
+function flipFold (id: FoldId) {
+  props.config.layout = { ...props.config.layout, folded: toggleFold(props.config.layout?.folded, id) }
+}
+// The middle row: a dragged height, its lists scrolling inside. Every
+// section in it folded: as short as their titles.
+const midAllFolded = computed(() => (!showChanges.value || fold.value.changes) &&
+  (!showSold.value || fold.value.sold) && (!shown.value.where || fold.value.where) && (!showMoves.value || fold.value.moves))
+const midHShown = computed(() => draft.value?.midH ?? midHOf(props.config.layout))
+const midFixed = computed(() => midHShown.value != null && !midAllFolded.value)
 const sameIds = (a: readonly ColId[], b: readonly ColId[]) => a.length === b.length && a.every((x, i) => x === b[i])
 // A column shown or hidden mid-drag (a read landing) drops that drag's widths.
 const weights = computed(() => {
@@ -424,12 +458,18 @@ const weights = computed(() => {
 const colsTemplate = computed(() => weights.value.map(w => `minmax(0, ${w}fr)`).join(' '))
 const colEdges = computed(() => edges(weights.value))
 const colsEl = shallowRef<HTMLElement | null>(null)
+// What's on screen when a drag begins: a height not saved yet is measured.
+function snapshot () {
+  const el = chartComp.value?.$el
+  const chartPx = chartHShown.value ?? (el instanceof HTMLElement && el.clientHeight > 0 ? el.clientHeight : chartH.value)
+  return { ids: [...colIds.value], cols: [...weights.value], chartH: chartPx, top: top.value, midH: midHShown.value ?? colsEl.value?.offsetHeight ?? 200 }
+}
 function startDrag () {
   draft.value = null
-  dragBase = { ids: [...colIds.value], cols: [...weights.value], chartH: chartH.value }
+  dragBase = snapshot()
 }
 function base () {
-  dragBase ??= { ids: [...colIds.value], cols: [...weights.value], chartH: chartH.value }
+  dragBase ??= snapshot()
   return dragBase
 }
 function dragCol (i: number, px: number) {
@@ -440,12 +480,22 @@ function dragCol (i: number, px: number) {
 function dragChartH (px: number) {
   draft.value = { ...draft.value, chartH: clampChartH(base().chartH + px) }
 }
+function dragTopEdge (px: number) {
+  const el = topEl.value
+  const w = el ? el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft) - parseFloat(getComputedStyle(el).paddingRight) : 0
+  draft.value = { ...draft.value, top: dragTop(base().top, px, w) }
+}
+function dragMidH (px: number) {
+  draft.value = { ...draft.value, midH: clampMidH(base().midH + px) }
+}
 function saveLayout () {
   const d = draft.value
   dragBase = null
   if (!d) return
   const l: PanelLayout = { ...props.config.layout }
   if (d.chartH != null) l.chartH = d.chartH
+  if (d.top != null) l.top = Math.round(d.top * 1000) / 1000
+  if (d.midH != null) l.midH = d.midH
   const dc = d.cols
   if (dc) {
     const cols = { ...l.cols }
@@ -849,6 +899,23 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .legend { display: flex; gap: var(--w-s2); flex-wrap: wrap; font-size: var(--w-fs-xs); color: var(--w-dim); }
 .legend i { display: inline-block; width: 8px; height: 8px; margin-right: 4px; opacity: .7; }
 .cols { position: relative; display: grid; border-bottom: 1px solid var(--w-line); }
+/* A dragged height: each column scrolls inside it. */
+.colsFixed { grid-template-rows: minmax(0, 1fr); }
+.colsFixed > div:not([role=separator]) { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.colsFixed .changesCol { overflow: hidden; }
+.colsFixed .scrollBox { overflow-y: auto; overscroll-behavior: contain; }
+.colsFixed .scroll { max-height: none; overflow: visible; }
+.halves { position: relative; }
+.fold { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 14px; color: var(--w-dim); cursor: pointer; }
+.fold:hover { color: var(--w-fg); }
+.fold i, .foldHead i { font-size: calc(8px * var(--w-text-scale, 1)); }
+.foldHead { display: inline-flex; align-items: center; gap: 5px; min-width: 0; text-align: left; cursor: pointer; }
+.foldHead:hover .caps, .foldHead:hover i { color: var(--w-fg); }
+.foldHead i { width: 9px; color: var(--w-dim); flex: none; }
+.foldHead .caps { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sideTitle { margin-bottom: 4px; }
+.sideHead { display: flex; align-items: baseline; gap: 2px; }
+.sideHead .soldHead { flex: 1 1 auto; min-width: 0; }
 .cols > div:not([role=separator]) { padding: var(--w-s2) var(--w-pad); min-width: 0; }
 .cols > div:not([role=separator]) + div:not([role=separator]) { border-left: 1px solid var(--w-line); }
 .colHead { display: flex; justify-content: space-between; gap: 2px var(--w-s2); flex-wrap: wrap; min-width: 0; margin-bottom: 2px; }
