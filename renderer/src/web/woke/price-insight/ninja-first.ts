@@ -14,9 +14,17 @@ export interface HoldOptions {
   live: boolean
   /** poe.ninja's chaos price for the exact item, if it has one. */
   chaos: number | null | undefined
+  /** An unidentified unique jewel, priced by poe.ninja too: its trade search waits for a click (WOKEPOET-481). */
+  unidJewel?: boolean
 }
 
-/** True when the first exchange search waits for a click. */
+/** True when the first exchange (or unidentified jewel) search waits for a click. */
 export function holdBulkSearch (o: HoldOptions): boolean {
-  return o.enabled !== false && !o.live && o.api === 'bulk' && o.chaos != null && o.chaos > 0
+  return o.enabled !== false && !o.live && (o.api === 'bulk' || o.unidJewel === true) && o.chaos != null && o.chaos > 0
+}
+
+/** An unidentified unique jewel the price check has a unique for (picked or guessed). */
+export function isUnidUniqueJewel (item: { rarity?: string, isUnidentified: boolean, uniqueBase?: unknown, category?: string }): boolean {
+  return item.rarity === 'Unique' && item.isUnidentified && item.uniqueBase != null &&
+    (item.category === 'Jewel' || item.category === 'Abyss Jewel')
 }

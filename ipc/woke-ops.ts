@@ -200,6 +200,8 @@ export interface WokeOps {
   'essence-scan-auto-start': Op<NoArgs, ScanStatus>
   'essence-scan-auto-stop': Op<NoArgs, ScanStatus>
   'essence-scan-once': Op<NoArgs, { labels: Array<{ lines: string[], at: { x: number, y: number } }> }>
+  // Which unique an unidentified item is, from its art at the hotkey (main/src/woke/unid-art.ts).
+  'unid-art-guess': Op<{ candidates: Array<{ name: string, icon: string }> }, { ranked: Array<{ name: string, score: number }>, sure: boolean } | { ranked: null, reason: 'no-art' | 'icons' }>
   'area-mods-read': Op<{ delayMs?: number }, { lines: string[] | null, ocrMissing?: boolean }>
   'stash-read': Op<NoArgs, Json>
   'stash-watch-stop': Op<NoArgs, null>

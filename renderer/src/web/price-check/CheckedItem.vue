@@ -163,7 +163,7 @@ import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { priceView, ninjaCardOpen } from '@/web/woke/price-insight/view'
-import { holdBulkSearch } from '@/web/woke/price-insight/ninja-first'
+import { holdBulkSearch, isUnidUniqueJewel } from '@/web/woke/price-insight/ninja-first'
 import { exactDetailsId } from './trends/getDetailsId'
 import { usePoeninja } from '@/web/background/Prices'
 import { poeMode, poeOn, loadPoeKit } from '@/web/woke/price-insight/window-style'
@@ -363,7 +363,7 @@ export default defineComponent({
       ninjaChaos.value = readNinjaChaos(item)
       waitingForPrices = false
       if (!doSearch.value) return
-      const hold = { api: tradeAPI.value, enabled: widget.value.wokeNinjaFirst, live: props.live }
+      const hold = { api: tradeAPI.value, enabled: widget.value.wokeNinjaFirst, live: props.live, unidJewel: isUnidUniqueJewel(item) }
       if (holdBulkSearch({ ...hold, chaos: ninjaChaos.value })) {
         doSearch.value = false
       } else if (ninjaChaos.value == null && pricesPending() && holdBulkSearch({ ...hold, chaos: 1 })) {
@@ -552,9 +552,11 @@ export default defineComponent({
     // woke: before an exchange search, poe.ninja's price is the verdict.
     // In Classic view too: it holds the search the same way.
     const ninjaVerdictShown = computed(() => !doSearch.value && ninjaChaos.value != null &&
-      widget.value.wokeNinjaFirst !== false && tradeAPI.value === 'bulk' &&
+      widget.value.wokeNinjaFirst !== false && (
+      // An unidentified unique jewel: poe.ninja's price, unidentified listings on a click.
+      isUnidUniqueJewel(props.item) || (tradeAPI.value === 'bulk' &&
       // A ticked stat makes the next search an item search, which the card doesn't offer.
-      apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'bulk')
+      apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'bulk')))
 
     return {
       proposeSearchName,

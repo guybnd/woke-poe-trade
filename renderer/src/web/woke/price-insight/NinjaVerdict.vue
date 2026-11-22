@@ -2,7 +2,7 @@
   <!-- The verdict for an exchange item before any search: poe.ninja's cached price (ninja-first.ts). -->
   <div v-if="info" :class="$style.card" data-testid="ninja-verdict">
     <div :class="$style.eyebrow">
-      <span :class="$style.badge" title="poe.ninja's price from the exchange, cached in the app. No trade search was used.">POE.NINJA</span>
+      <span :class="$style.badge" title="poe.ninja's price, cached in the app. No trade search was used.">POE.NINJA</span>
       <span>Cached price<template v-if="age">, updated {{ age }}</template></span>
       <span class="flex-1" />
       <template v-if="weekChange != null">
@@ -18,7 +18,7 @@
       <button type="button" class="btn w-pc-primary" :class="$style.live" data-testid="ninja-verdict-live" @click="search">
         Check live offers<w-kbd v-if="poeOn" keys="Enter" class="ml-2" />
       </button>
-      <span class="w-dim">uses one exchange search</span>
+      <span class="w-dim">uses one {{ unidJewel ? 'trade' : 'exchange' }} search</span>
     </div>
   </div>
 </template>
@@ -31,6 +31,7 @@ import { usePoeninja, displayRounding } from '@/web/background/Prices'
 import { WSpark, WKbd, agoPhrase } from '../ui'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { poeOn } from './window-style'
+import { isUnidUniqueJewel } from './ninja-first'
 
 const props = defineProps<{
   item: ParsedItem
@@ -54,6 +55,8 @@ function amount (chaos: number): string {
   return `${displayRounding(p.min)}${p.currency === 'div' ? ' div' : 'c'}`
 }
 
+// An unidentified unique jewel searches the item trade (unidentified listings), not the exchange.
+const unidJewel = computed(() => isUnidUniqueJewel(props.item))
 const have = computed(() => props.filters.stackSize?.value ?? 1)
 const each = computed(() => info.value ? amount(info.value.chaos) : '')
 const stack = computed(() => info.value && have.value > 1 ? amount(info.value.chaos * have.value) : null)

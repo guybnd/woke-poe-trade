@@ -30,6 +30,7 @@ import { docHandlers } from './data-files'
 import { browsePath, pathStat } from './settings-files'
 import { cachedLiveData, checkLiveData } from './live-data'
 import { initPersonal } from './personal'
+import { guessUnidArt } from './unid-art'
 import { initClaudeLink } from './claude-link'
 import { userIssue } from './crash-reports'
 import type { WokeHandler, WokeHandlers, WokeOp } from '../../../ipc/woke-ops'
@@ -70,6 +71,7 @@ const handlers: Partial<WokeHandlers> = {
   'live-data-cached': cachedLiveData,
   'live-data-check': async (args) => await checkLiveData(args, async (url, signal) => await net.fetch(url, { signal })),
   'browse-path': browsePath,
+  'unid-art-guess': guessUnidArt,
   ...marketHandlers,
   ...sessionHandlers,
   ...tradeLogHandlers,

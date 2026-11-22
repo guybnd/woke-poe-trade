@@ -73,27 +73,41 @@ export const dialog = {
 export const Menu = { buildFromTemplate: () => ({}), setApplicationMenu () {} }
 export class BrowserWindow { constructor () { throw new Error('No windows in the fake app') } }
 // Pictures pasted into the overlay (PNG data: URLs), as BGRA like Electron's.
+function bgraImage (png: Buffer) {
+  const img = PNG.sync.read(png)
+  const px = Buffer.from(img.data)
+  for (let i = 0; i < px.length; i += 4) { const t = px[i]; px[i] = px[i + 2]; px[i + 2] = t }
+  return { getSize: () => ({ width: img.width, height: img.height }), toBitmap: () => px }
+}
 export const nativeImage = {
   createFromPath: () => ({}),
   createFromDataURL (url: string) {
     const m = /^data:image\/png;base64,(.*)$/.exec(url)
     if (!m) return { getSize: () => ({ width: 0, height: 0 }), toBitmap: () => Buffer.alloc(0) }
-    const png = PNG.sync.read(Buffer.from(m[1], 'base64'))
-    const px = Buffer.from(png.data)
-    for (let i = 0; i < px.length; i += 4) { const t = px[i]; px[i] = px[i + 2]; px[i + 2] = t }
-    return { getSize: () => ({ width: png.width, height: png.height }), toBitmap: () => px }
+    return bgraImage(Buffer.from(m[1], 'base64'))
+  },
+  // Item icons main downloads (unid-art.ts).
+  createFromBuffer (buf: Buffer) {
+    return bgraImage(buf)
   }
 }
 export class Tray {}
 // pathofexile.com as main's own requests see it (the stash reader: /my-account
 // and get-stash-items). A test sets `reply`; any URL it answers null for has
 // no network, as before. Redirects aren't followed, like sessionFetch asks.
-export interface SiteReply { status: number, headers?: Record<string, string>, body: string }
+export interface SiteReply { status: number, headers?: Record<string, string>, body: string | Uint8Array }
 export const site = {
   reply: null as null | ((url: string) => SiteReply | null),
   requests: [] as string[]
 }
 export const net = {
+  // net.fetch, answered the same way (item icons for unid-art.ts).
+  async fetch (url: string) {
+    const r = site.reply?.(url) ?? null
+    if (!r) throw new Error('No network in the fake app')
+    site.requests.push(url)
+    return new Response(typeof r.body === 'string' ? r.body : Buffer.from(r.body), { status: r.status, headers: r.headers })
+  },
   request (opts: { url: string } | string) {
     const url = typeof opts === 'string' ? opts : opts.url
     const r = site.reply?.(url) ?? null
@@ -111,7 +125,7 @@ export const net = {
           }
           const res = Object.assign(new EventEmitter(), { statusCode: r.status, headers: r.headers ?? {} })
           req.emit('response', res)
-          res.emit('data', Buffer.from(r.body, 'utf8'))
+          res.emit('data', typeof r.body === 'string' ? Buffer.from(r.body, 'utf8') : Buffer.from(r.body))
           res.emit('end')
         })
       }
