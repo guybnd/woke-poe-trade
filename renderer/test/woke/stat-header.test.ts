@@ -166,7 +166,7 @@ describe('buildStatHeader', () => {
     // The lowest: base 380, +81 to Armour, 101%.
     expect(ar.min).toBe(String(Math.floor((380 + 81) * 2.01 * 1.2)))
     expect(ar.atMax).toBe(false)
-    expect(ar.maxNote).toContain("base's top roll")
+    expect(ar.maxNote).toContain('the base and these mods at their top rolls')
     expect(ar.maxNote).toContain('at 20% quality')
     expect(m.bigs.find(c => c.key === 'evasion')!.max).toBe(String(Math.ceil((549 + 87) * 2.1 * 1.2)))
     expect(m.chips.find(c => c.key === 'base')?.max).toBeUndefined()
@@ -206,6 +206,9 @@ describe('buildStatHeader', () => {
     expect(m.bigs[0].max).toBe('706')
     expect(m.bigs[0].min).toBe('634')
     expect(m.chips.find(c => c.key === 'crit')!.max).toBe('7.4%')
+    // Its crit mod rolled 34 of 30-34.
+    expect(m.chips.find(c => c.key === 'crit')!.atMax).toBe(true)
+    expect(m.bigs[0].atMax).toBe(false)
     // Nothing rolls this sword's phys or aps: no max.
     expect(m.legend!.find(c => c.key === 'phys')!.max).toBeUndefined()
     expect(m.chips.find(c => c.key === 'aps')!.max).toBeUndefined()
