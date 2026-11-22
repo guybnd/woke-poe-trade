@@ -28,6 +28,8 @@ const BONUS_QUERY = [
   new RegExp(`^${KINDS} map mods?$`)
 ]
 const MIN_QUERY = 4
+const MOD_WORDS = /\b(?:map )?mods?\b/
+const MOD_WORDS_ALL = /\b(?:map )?mods?\b/g
 const MAX_CARDS = 3
 const MAX_ROWS = 12
 
@@ -87,11 +89,16 @@ export function mapBonusLookup (data: MapBonusData | null): Lookup {
       const card = bonusCard(data, MORE_WORDS[bonus[1]], ctx)
       return card ? [card] : []
     }
+    // "map mod", "mods" and the like ask for map mods; without one, only an
+    // affix's exact name does, so ordinary searches ("chaos", "power") stay clean.
+    const asked = MOD_WORDS.test(q)
+    const rest = q.replace(MOD_WORDS_ALL, ' ').replace(/\s+/g, ' ').trim()
+    if (rest.length < 3) return []
     // By affix name: one card per name, every tier's version on it.
     const byName = new Map<string, MapBonusMod[]>()
     for (const m of data.mods) {
-      const rank = matchRank(m.n, q)
-      if (rank < 0 || rank > 1) continue
+      const rank = matchRank(m.n, rest)
+      if (asked ? rank < 0 || rank > 1 : m.n.toLowerCase() !== rest) continue
       const list = byName.get(m.n)
       if (list) list.push(m)
       else byName.set(m.n, [m])
@@ -100,8 +107,8 @@ export function mapBonusLookup (data: MapBonusData | null): Lookup {
       return [...byName].slice(0, MAX_CARDS).map(([name, mods]) => modCard(`map-bonus:name:${name}`, `Map mod: ${name}`, mods, ctx))
     }
     // By the mod's text.
-    if (q.length < 5) return []
-    const hits = data.mods.filter(m => m.lines.some(l => l.toLowerCase().includes(q)))
-    return hits.length ? [modCard(`map-bonus:text:${q}`, `Map mods with "${query.trim()}"`, hits, ctx)] : []
+    if (!asked) return []
+    const hits = data.mods.filter(m => m.lines.some(l => l.toLowerCase().includes(rest)))
+    return hits.length ? [modCard(`map-bonus:text:${rest}`, `Map mods with "${rest}"`, hits, ctx)] : []
   }
 }

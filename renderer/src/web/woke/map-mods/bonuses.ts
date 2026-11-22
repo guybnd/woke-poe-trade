@@ -141,6 +141,20 @@ export function rowBonus (mods: MapBonusMod[]): RowBonus | null {
   return { d: shown.d, r: shown.r, p: shown.p, more: [...more].map(([kind, v]) => ({ kind, ...v })) }
 }
 
+// What a row sorts by: the numbers it shows for Atlas Drops / rarity / pack
+// size, the best more-X tag for the rest.
+export function sortValue (mods: MapBonusMod[], key: BonusKey): number {
+  if (key === 'd' || key === 'r' || key === 'p') return rowBonus(mods)?.[key] ?? 0
+  return bestBonus(mods, key)
+}
+
+// Whether "want all" may take a line for a more-X bonus: only when a mod that
+// gives it is the line's own. A line a T17 mod shares with a regular one would
+// light up regular maps that give nothing.
+export function wantsFor (mods: MapBonusMod[], kind: MoreKind): boolean {
+  return mods.some(m => (m.m?.[kind] ?? 0) > 0) && mods.every(m => m.t.includes('t17'))
+}
+
 export function bonusWords (mod: MapBonusMod): string {
   const parts = [`${mod.d}% Atlas Drops`, `${mod.r}% rarity`, `${mod.p}% pack size`]
   for (const [kind, pct] of Object.entries(mod.m ?? {}) as Array<[MoreKind, number]>) parts.push(`${pct}% more ${MORE_LABEL[kind]}`)

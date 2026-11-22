@@ -199,8 +199,8 @@ import type { JuiceWeights, MapModPreset, ModMode, ModRating } from './rules'
 import { MAX_SEARCH_LENGTH, MIN_LABELS, tokenCost } from './regex'
 import type { MinStat } from './regex'
 import { modsForMode, tier17Mods } from './data'
-import { BONUS_LABEL, MORE_LABEL, bestBonus, bonusTip, loadMapBonuses, mapBonusData, modsOfLine, rowBonus } from './bonuses'
-import type { BonusKey, RowBonus } from './bonuses'
+import { BONUS_LABEL, MORE_LABEL, bonusTip, loadMapBonuses, mapBonusData, modsOfLine, rowBonus, sortValue, wantsFor } from './bonuses'
+import type { BonusKey, MoreKind, RowBonus } from './bonuses'
 import { profileRegex } from './search'
 import { activeProfile, rewardsAsk } from './widget'
 import type { MapModsWidget } from './widget'
@@ -345,14 +345,14 @@ const sorted = computed(() => {
   const key = sortBy.value
   const data = mapBonusData.value
   if (mode.value !== 'maps' || key === 'rated' || !data) return filtered.value
-  const value = new Map(filtered.value.map(m => [m, bestBonus(modsOfLine(data, m, withT17.value), key)]))
+  const value = new Map(filtered.value.map(m => [m, sortValue(modsOfLine(data, m, withT17.value), key)]))
   return [...filtered.value].sort((a, b) => value.get(b)! - value.get(a)!)
 })
 const wantable = computed(() => {
   const key = sortBy.value
   const data = mapBonusData.value
   if (mode.value !== 'maps' || key === 'rated' || !MORE_KEYS.includes(key) || !data) return []
-  return filtered.value.filter(m => !ratings.value[m] && bestBonus(modsOfLine(data, m, withT17.value), key) > 0)
+  return filtered.value.filter(m => !ratings.value[m] && wantsFor(modsOfLine(data, m, withT17.value), key as MoreKind))
 })
 function wantAll () {
   setModRatings(profile.value, mode.value, withRating(ratings.value, wantable.value, 'good'))

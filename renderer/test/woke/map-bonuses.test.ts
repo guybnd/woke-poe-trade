@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadGameData } from '../helpers/game-data'
 import { allAreaMods, tier17Mods } from '@/web/woke/map-mods/data'
-import { bestBonus, bonusTip, modsOfLine, rowBonus } from '@/web/woke/map-mods/bonuses'
+import { bestBonus, bonusTip, modsOfLine, rowBonus, sortValue, wantsFor } from '@/web/woke/map-mods/bonuses'
 import type { MapBonusData } from '@/web/woke/map-mods/bonuses'
 import { mapBonusLookup } from '@/web/woke/search/lookups/map-bonus'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
@@ -52,6 +52,20 @@ describe('row numbers', () => {
     expect(rowBonus(regular)!.more).toEqual([])
   })
 
+  it('sorts by the numbers the row shows', () => {
+    // of Giants shows 13 Atlas Drops; T17 Magnifying's 19 shares the line.
+    const mods = modsOfLine(data, 'Monsters have #% increased Area of Effect')
+    expect(sortValue(mods, 'd')).toBe(rowBonus(mods)!.d)
+    expect(sortValue(mods, 'd')).toBeLessThan(bestBonus(mods, 'd'))
+  })
+
+  it('want all skips lines a T17 mod shares with a regular one', () => {
+    expect(wantsFor(modsOfLine(data, '#% more Monster Life'), 'currency')).toBe(false)
+    const saw = [...tier17Mods()].find(l => l.startsWith('Players are assaulted by Bloodstained Sawblades'))!
+    expect(wantsFor(modsOfLine(data, saw), 'currency')).toBe(true)
+    expect(wantsFor(modsOfLine(data, saw), 'maps')).toBe(false)
+  })
+
   it('the tooltip names each mod, its tiers, lines and bonuses', () => {
     const tip = bonusTip(modsOfLine(data, '#% more Monster Life'), '2026-11-23')
     expect(tip).toContain('Fecund (T17)\n(90-100)% more Monster Life\n13% Atlas Drops · 8% rarity · 5% pack size · 47% more Currency')
@@ -75,6 +89,11 @@ describe('search palette', () => {
     const [card] = lookup('fecund', ctx)
     expect(card.name).toBe('Map mod: Fecund')
     expect(card.sections.map(s => s.label)).toContain('Fecund · T17')
-    expect(lookup('grasping vines', ctx)[0].name).toBe('Map mods with "grasping vines"')
+    expect(lookup('grasping vines mod', ctx)[0].name).toBe('Map mods with "grasping vines"')
+    expect(lookup('map mods of ven', ctx)[0].name).toBe('Map mod: of Venom')
+  })
+
+  it('stays out of ordinary searches', () => {
+    for (const q of ['chaos', 'power', 'flask', 'grasping vines', 'solar guard']) expect(lookup(q, ctx), q).toEqual([])
   })
 })
