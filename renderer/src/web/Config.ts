@@ -27,6 +27,7 @@ import type { WokeModulesConfig } from './woke/modules'
 import type { ItemCheckWidget } from './item-check/widget'
 import { BOOKMARKS_TARGET } from './woke/item-lookup/lookup'
 import { registry as widgetRegistry } from './overlay/widget-registry.js'
+import { keepZorderUnderCap } from './overlay/zorder'
 
 const _config = shallowRef<Config | null>(null)
 // The last saved settings as JSON: comparing text is far cheaper than a deep
@@ -589,6 +590,8 @@ function upgradeConfig (_config: Config): Config {
   renameOldDefaultTitles(config.widgets as Array<{ wmType: string, wmTitle?: string }>)
   // woke: panels still on their old default spot open in the new one.
   movePopupsToNewSpot(config.widgets as Array<Record<string, any> & { wmType: string }>)
+  // woke: panels whose z-order grew past the item tooltip's come back under it.
+  keepZorderUnderCap(config.widgets as Array<{ wmZorder: number | 'exclusive' | null }>)
   // woke: the fix-ups above are safe to rerun. One that isn't checks
   // `(modules.woke.version ?? 0) < N`, runs once, and WOKE_CONFIG_VERSION goes to N.
   if (modules.woke) modules.woke.version = Math.max(modules.woke.version ?? 0, WOKE_CONFIG_VERSION)
