@@ -25,12 +25,15 @@ export function useCheckLog (
   props: { filters: ItemFilters, stats: FilterOrGroup[], item: ParsedItem },
   list: Ref<SearchResult | null>,
   insight: Ref<Insight>,
-  ready: Ref<boolean>
+  ready: Ref<boolean>,
+  // A verdict filtered here isn't the search's; a log already on its way still goes.
+  paused?: Ref<boolean>
 ) {
   const key = computed(() => list.value ? searchLogKey(props.filters.trade.league, props.filters, props.stats) : null)
 
   let timer: ReturnType<typeof setTimeout> | undefined
   watch([key, insight, ready], () => {
+    if (paused?.value) return
     clearTimeout(timer)
     const k = key.value
     const r = insight.value.range

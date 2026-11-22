@@ -1,5 +1,18 @@
 <template>
-  <div v-if="!error" class="layout-column min-h-0" :class="{ 'w-pc-results-stale': stale }" style="height: auto;">
+  <div v-if="!error" class="layout-column min-h-0" :class="{ 'w-pc-results-stale': dim }" style="height: auto;">
+    <!-- woke: in the Search row: whether these results were filtered here or need a new search. -->
+    <teleport v-if="statusSlot && stale && list && (narrow || dim)" :to="statusSlot">
+      <span v-if="narrow" class="w-pc-status w-pc-status-local"
+        :title="`Filtered from the ${loadedCount} listings already loaded, without a new search. They're still the cheapest that fit. Search for the full count.`">
+        <b>Filtered here</b><span class="w-pc-status-note">{{ fitCount }} of {{ loadedCount }} loaded fit</span>
+        <button v-if="fitCount < loadedCount" type="button" class="w-pc-status-btn" :aria-pressed="showHidden"
+          @click="showHidden = !showHidden">{{ showHidden ? 'Hide' : 'Show' }} {{ loadedCount - fitCount }}</button>
+      </span>
+      <span v-else class="w-pc-status w-pc-status-stale"
+        title="These results are from the last search. A wider range, an unticked mod or another filter can match listings that were never loaded.">
+        <b>Needs a new search</b><span class="w-pc-status-note">results are from the old filters</span>
+      </span>
+    </teleport>
     <div v-if="item.info.exchangeable" :class="$style.legacyMessage">
       {{ t(':legacy_bulk_xchg_msg') }}
     </div>
@@ -103,12 +116,16 @@
             </tr>
           </template>
           <template v-else>
+            <tr v-if="narrow && !rows.length">
+              <td colspan="100" class="px-2 w-pc-local-empty">None of the {{ loadedCount }} loaded listings fit. Search to look further.</td>
+            </tr>
             <tr v-for="row in rows" :key="row.key"
               :class="{
                 'w-pc-ignored': improved && row.dropped,
                 'w-pc-in-range': improved && inRange(row),
                 'w-pc-aging': improved && (row.band === 'aging' || (allStale && row.band === 'stale')),
-                'w-pc-stale': improved && row.band === 'stale' && !row.dropped && !allStale
+                'w-pc-stale': improved && row.band === 'stale' && !row.dropped && !allStale,
+                'w-pc-local-out': narrow && !fits(row.lead)
               }"
               :title="improved && !row.lead.tipItem ? rowTitle(row) : undefined"
               :data-item-tip="row.lead.tipItem ? '' : undefined"
@@ -169,7 +186,7 @@
       </table>
     </div>
     <div v-if="improved || bulk" class="w-pc-foot" :class="{ invisible: !(listSettled && list && (rows.length || bulk)) }"
-      title="Prices come from the cheapest listings the trade site returned"><template v-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
+      title="Prices come from the cheapest listings the trade site returned"><template v-if="list && narrow">{{ fitCount }} of {{ loadedCount }} loaded listings fit · the search found {{ list.total }}{{ list.inexact ? '+' : '' }}</template><template v-else-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
   </div>
   <ui-error-box v-else>
     <template #name>{{ t(':error') }}</template>
@@ -212,6 +229,7 @@ import { priceView } from '@/web/woke/price-insight/view'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
 import { buildInsight, FIX_TAG, toChaos } from '@/web/woke/price-insight/insight'
 import { groupListings, sortByValue, rowTitle, ListingRow } from '@/web/woke/price-insight/listing-rows'
+import { listingFits, LocalCheck } from '@/web/woke/price-insight/local-filter'
 import { pickStatColumns, listingStatValue, listingStatLabel, formatStatValue, statTone, statColumnsThatFit, StatColumn } from '@/web/woke/price-insight/stat-columns'
 import { bulkOnly, bulkSellerCount, BULK_ENOUGH } from '@/web/woke/price-insight/bulk-sellers'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
@@ -432,10 +450,20 @@ export default defineComponent({
       type: Object as PropType<ParsedItem>,
       required: true
     },
-    // Filters changed since this search: the results stay, dimmed, so nothing moves.
+    // Filters changed since this search: the Search row takes the toolbar's place.
     stale: {
       type: Boolean,
       default: false
+    },
+    // woke: the change needs a new search: the results stay, dimmed, so nothing moves.
+    dim: {
+      type: Boolean,
+      default: false
+    },
+    // woke: only tighter ranges: the loaded listings are filtered here (local-filter.ts).
+    narrow: {
+      type: Object as PropType<{ checks: LocalCheck[], stats: FilterOrGroup[] } | null>,
+      default: null
     }
   },
   setup (props, ctx) {
@@ -446,7 +474,8 @@ export default defineComponent({
       slowdown.reset(item)
     }, { immediate: true })
 
-    const allColumns = computed(() => pickStatColumns(props.stats))
+    // A newly ticked stat that filters here gets its column too.
+    const allColumns = computed(() => pickStatColumns(props.narrow?.stats ?? props.stats))
     const statValue = (listing: PricingResult, col: StatColumn) =>
       listingStatValue(listing.listedItem, col, props.item.category)
 
@@ -463,13 +492,22 @@ export default defineComponent({
     if (swap) watch(groupedResults, (list) => { swap.resultsChanged(list, props.stats) })
 
     // woke: improved view reads the same listings, nothing extra is requested
-    const { insight, divine, options: insightOptions } = useInsight(groupedResults, computed(() => props.filters.trade.league))
+    // woke: tighter ranges hide what no longer fits; the verdict reads what's left.
+    const fits = (listing: PricingResult) => !props.narrow || listingFits(listing.listedItem, props.narrow.checks, props.item.category)
+    const fitResults = computed(() => props.narrow ? groupedResults.value.filter(fits) : groupedResults.value)
+    const showHidden = shallowRef(false)
+    watch(() => props.narrow == null, (none) => { if (none) showHidden.value = false })    const loadedCount = computed(() => fetchResults.value.filter(r => r != null).length)
+    const fitCount = computed(() => props.narrow ? fetchResults.value.filter(r => r != null && fits(r)).length : loadedCount.value)
+    const statusSlot = inject<ShallowRef<HTMLElement | null>>('price-search-status-slot', shallowRef(null))
+
+    const { insight, divine, options: insightOptions } = useInsight(fitResults, computed(() => props.filters.trade.league))
 
     // woke: listings found without a rare's mods say nothing about its price.
     const blankSearch = computed(() => isBlankRareSearch(props.item, props.filters, props.stats))
     const verdictInsight = computed(() => blankSearch.value ? buildInsight([], insightOptions.value) : insight.value)
 
-    const logKey = useCheckLog(props, searchResult, verdictInsight, slowdown.isReady)
+    // A verdict from listings filtered here isn't the search's: it isn't logged under it.
+    const logKey = useCheckLog(props, searchResult, verdictInsight, slowdown.isReady, computed(() => props.narrow != null))
 
     const showBrowser = inject<(url: string) => void>('builtin-browser')!
     const verdictSlot = inject<ShallowRef<HTMLElement | null>>('price-verdict-slot', shallowRef(null))
@@ -536,7 +574,9 @@ export default defineComponent({
     })
     // A seller's copies only add up when they'd share a row: same stats, both corrupted or clean.
     const sameKind = (r: PricingResult) => [corruptKind(r), ...allColumns.value.map(col => formatStatValue(statValue(r, col), col))].join('|')
-    const tableListings = computed(() => bulk.value ? bulkOnly(groupedResults.value, sameKind) : groupedResults.value)
+    const tableListings = computed(() => bulk.value
+      ? bulkOnly(fitResults.value, sameKind)
+      : showHidden.value ? groupedResults.value : fitResults.value)
     async function toggleBulk () {
       bulk.value = !bulk.value
       bulkNote.value = ''
@@ -599,6 +639,13 @@ export default defineComponent({
     // An error has nothing to keep on screen, and its Retry would use the old filters.
     watch([() => props.stale, error], ([stale, err]) => { if (stale && err) ctx.emit('reset') })
     watch(error, (err) => { if (err) releaseVerdictHeight() })
+    // Rows filtered here leave their room, so the window doesn't shrink and grow while you type.
+    function holdTableHeight (hold: boolean) {
+      const el = scrollEl.value
+      if (el) el.style.minHeight = hold ? `${el.offsetHeight}px` : ''
+    }
+    watch(() => props.narrow != null, (on, was) => { if (on !== was) holdTableHeight(on) }, { flush: 'pre' })
+    watch(searchResult, () => { holdTableHeight(false) })
     onUnmounted(releaseVerdictHeight)
 
     return {
@@ -660,7 +707,12 @@ export default defineComponent({
       bulk,
       bulkNote,
       toggleBulk,
-      bulkSellers: computed(() => bulkSellerCount(groupedResults.value, sameKind)),
+      bulkSellers: computed(() => bulkSellerCount(fitResults.value, sameKind)),
+      fits,
+      showHidden,
+      loadedCount,
+      fitCount,
+      statusSlot,
       bulkTitle: computed(() => bulk.value
         ? 'Showing sellers with 2 or more copies at one price. Click to show all.'
         : morePages.value

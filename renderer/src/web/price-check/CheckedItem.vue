@@ -3,7 +3,7 @@
   <div v-if="show && (!poeMode || poeOn)" class="p-4 layout-column min-h-0">
     <!-- woke: TradeListing puts the improved verdict here, the first thing in the window. -->
     <!-- The verdict's height from the start and through errors, so the mods don't move for either. -->
-    <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsStale, 'w-pc-verdict-held': verdictHeld }">
+    <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsDimmed, 'w-pc-verdict-held': verdictHeld }">
       <div v-if="verdictHeld && !searched" class="w-pc-verdict-wait">Search for listing prices</div>
     </div>
     <filter-name
@@ -70,6 +70,8 @@
       <button v-if="canSearchBulk" class="btn ml-1 mr-auto whitespace-nowrap" data-search-bulk
         title="Search, then show only sellers with 2 or more copies at one price. Loads more listings (up to 100) if fewer than 10 sellers show."
         @click="cancelSearchHover(); searchBulk()">Search bulk</button>
+      <!-- woke: TradeListing says here whether the old results were filtered here or need a search. -->
+      <div ref="searchStatusSlot" class="w-pc-status-slot" />
       <!-- woke: the prefix / suffix caps ride the results bar; here while it waits for Search,
            at the same spot (the hidden refresh button keeps them there), so a scroll stays on them. -->
       <template v-if="itemFilters.affixCaps && tradeAPI === 'trade'">
@@ -94,6 +96,8 @@
       :stats="searched.stats"
       :item="item"
       :stale="resultsStale"
+      :narrow="narrowed"
+      :dim="resultsDimmed"
       @reset="resetTradeResults">
       <template v-if="itemFilters.affixCaps" #toolbar>
         <filter-affix-caps class="w-pc-caps" :caps="itemFilters.affixCaps" />
@@ -149,6 +153,7 @@ import { provideCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { WTabs } from '@/web/woke/ui'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
 import { rawClone } from '@/web/woke/raw-clone'
+import { compareToSearched, ResultsState } from '@/web/woke/price-insight/local-filter'
 import { AppConfig } from '@/web/Config'
 import { isModuleOn } from '@/web/woke/modules'
 import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
@@ -207,6 +212,8 @@ export default defineComponent({
 
     const verdictSlot = shallowRef<HTMLElement | null>(null)
     provide('price-verdict-slot', verdictSlot)
+    const searchStatusSlot = shallowRef<HTMLElement | null>(null)
+    provide('price-search-status-slot', searchStatusSlot)
     provide('price-check-search', () => { nextTick(() => { doSearch.value = true }) })
 
     const presets = ref<{ active: string, presets: FilterPreset[] }>(null!)
@@ -390,13 +397,21 @@ export default defineComponent({
     }
     // Taken from the live rows when the search starts: the snapshot's copies lose
     // what the request reads off the rows themselves, so they never compare equal.
-    let searchedQuery: string | null = null
-    watch(() => searched.value, (snap) => { searchedQuery = snap && tradeAPI.value === 'trade' ? liveQuery() : null }, { flush: 'sync' })
+    const searchedQuery = shallowRef<string | null>(null)
+    watch(() => searched.value, (snap) => { searchedQuery.value = snap && tradeAPI.value === 'trade' ? liveQuery() : null }, { flush: 'sync' })
     watch(() => searched.value && tradeAPI.value === 'trade' ? liveQuery() : null, (now) => {
-      if (now != null && doSearch.value && searchedQuery != null && now !== searchedQuery) {
+      if (now != null && doSearch.value && searchedQuery.value != null && now !== searchedQuery.value) {
         doSearch.value = false
       }
     })
+    // woke: tighter ranges filter the listings already loaded (no search spent);
+    // anything the old search couldn't have returned keeps them dimmed for a new search.
+    const resultsState = computed<ResultsState | null>(() => {
+      if (!resultsStale.value || !searched.value) return null
+      return compareToSearched(searchedQuery.value, searched.value.stats, itemFilters.value, itemStats.value)
+    })
+    const narrowed = computed(() => resultsState.value?.kind === 'narrowed' ? resultsState.value : null)
+    const resultsDimmed = computed(() => resultsStale.value && resultsState.value?.kind === 'stale')
 
     watch(() => [props.item, JSON.stringify(itemFilters.value.trade)], (curr, prev) => {
       const cItem = curr[0]; const pItem = prev[0]
@@ -489,6 +504,10 @@ export default defineComponent({
       stripProps,
       searched,
       resultsStale,
+      resultsState,
+      resultsDimmed,
+      narrowed,
+      searchStatusSlot,
       doSearch,
       canSearchBulk: computed(() => apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'trade'),
       searchBulk () {
