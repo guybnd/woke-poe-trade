@@ -233,6 +233,18 @@ export default defineComponent({
     const poeninja = usePoeninja()
     // woke: poe.ninja's price for the exact item, read when the item comes in.
     const ninjaChaos = shallowRef<number | null>(null)
+    let waitingForPrices = false
+    function readNinjaChaos (item: ParsedItem): number | null {
+      const q = exactDetailsId(item)
+      if (!q || itemFilters.value.trade.league !== leagues.selectedId.value) return null
+      return poeninja.findPriceByQuery(q)?.chaos || null
+    }
+    // poe.ninja loads for this league (Prices.ts) and hasn't yet.
+    function pricesPending (): boolean {
+      const league = leagues.selected.value
+      return poeninja.updatedAt.value == null && Boolean(league?.isPopular) && league?.realm === 'pc-ggg' &&
+        itemFilters.value.trade.league === league?.id
+    }
 
     const presets = ref<{ active: string, presets: FilterPreset[] }>(null!)
     const itemFilters = computed(() => presets.value.presets.find(preset => preset.id === presets.value.active)!.filters)
@@ -348,19 +360,29 @@ export default defineComponent({
 
       // woke: an exchange item poe.ninja prices exactly shows that price and
       // searches only on a click (ninja-first.ts, WOKEPOET-479).
-      const ninjaQuery = exactDetailsId(item)
-      ninjaChaos.value = (ninjaQuery &&
-        itemFilters.value.trade.league === leagues.selectedId.value &&
-        poeninja.findPriceByQuery(ninjaQuery)?.chaos) || null
-      if (doSearch.value && holdBulkSearch({
-        api: tradeAPI.value,
-        enabled: widget.value.wokeNinjaFirst,
-        live: props.live,
-        chaos: ninjaChaos.value
-      })) {
+      ninjaChaos.value = readNinjaChaos(item)
+      waitingForPrices = false
+      if (!doSearch.value) return
+      const hold = { api: tradeAPI.value, enabled: widget.value.wokeNinjaFirst, live: props.live }
+      if (holdBulkSearch({ ...hold, chaos: ninjaChaos.value })) {
         doSearch.value = false
+      } else if (ninjaChaos.value == null && pricesPending() && holdBulkSearch({ ...hold, chaos: 1 })) {
+        // poe.ninja hasn't loaded yet (app start, league change): wait for it
+        // rather than spend a search it might make unneeded (watcher below).
+        doSearch.value = false
+        waitingForPrices = true
       }
     }, { immediate: true })
+
+    // woke: prices arrived for an exchange item held while they loaded. Priced:
+    // the verdict shows; not priced: the search it would have run starts now.
+    watch(() => poeninja.updatedAt.value, (at) => {
+      if (at == null || !waitingForPrices) return
+      waitingForPrices = false
+      if (doSearch.value || searched.value) return
+      ninjaChaos.value = readNinjaChaos(props.item)
+      if (ninjaChaos.value == null) doSearch.value = true
+    })
 
     // woke: swappable mods (harvest-swap/). Made after the presets exist.
     const swap = provideSwap(computed(() => props.item), itemFilters, itemStats, computed(() => tradeAPI.value === 'trade'))
@@ -492,6 +514,8 @@ export default defineComponent({
     })
 
     function handleSearchMouseenter (e: MouseEvent) {
+      // woke: an exchange item poe.ninja prices searches only on a click (WOKEPOET-479).
+      if (ninjaChaos.value != null && tradeAPI.value === 'bulk' && widget.value.wokeNinjaFirst !== false) return
       const from = e.relatedTarget as HTMLElement
       if ((filtersComponent.value.$el as HTMLElement).contains(from) ||
           (nameComponent.value.$el as HTMLElement).contains(from)) {
@@ -526,8 +550,11 @@ export default defineComponent({
 
     const wokeVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value != null)
     // woke: before an exchange search, poe.ninja's price is the verdict.
-    const ninjaVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'bulk' &&
-      !doSearch.value && ninjaChaos.value != null && widget.value.wokeNinjaFirst !== false)
+    // In Classic view too: it holds the search the same way.
+    const ninjaVerdictShown = computed(() => !doSearch.value && ninjaChaos.value != null &&
+      widget.value.wokeNinjaFirst !== false && tradeAPI.value === 'bulk' &&
+      // A ticked stat makes the next search an item search, which the card doesn't offer.
+      apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'bulk')
 
     return {
       proposeSearchName,
