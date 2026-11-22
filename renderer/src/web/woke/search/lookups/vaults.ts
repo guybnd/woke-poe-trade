@@ -9,6 +9,12 @@ import type { Lookup, LookupCard, LookupContext, LookupRow, LookupSection } from
 
 // "vaul", "vault", "vaults", "templar vaults".
 const OVERVIEW = /^((templar|memory) vaults?|vaul|vaults?)$/i
+// The display cases inside a vault are labelled "Forbidden Reliquary" in game.
+// That's not an item, so the item search finds nothing: send it to the vaults
+// card. From 6 letters ("forbid", "reliqu") so "forb" stays Forbidden Flame.
+const RELIQUARY = ['forbidden reliquary', 'forbidden reliquaries', 'reliquary', 'reliquaries']
+const MIN_RELIQUARY = 6
+const RELIQUARY_SUB = 'Forbidden Reliquary = a vault display case. Search the item on its label for its price.'
 const MIN_QUERY = 4
 const WIKI = 'https://www.poewiki.net/wiki/Templar_Vault'
 
@@ -34,7 +40,12 @@ function vaultSection (v: Vault, table: VaultTable, ctx: LookupContext): LookupS
   }
 }
 
-function vaultsCard (table: VaultTable, ctx: LookupContext, first: Vault | null): LookupCard {
+function isReliquary (query: string): boolean {
+  const q = query.toLowerCase().replace(/\s+/g, ' ')
+  return q.length >= MIN_RELIQUARY && RELIQUARY.some(n => n.startsWith(q))
+}
+
+function vaultsCard (table: VaultTable, ctx: LookupContext, first: Vault | null, sub?: string): LookupCard {
   const ranked = [...table.vaults].sort((a, b) => (typicalPick(b, ctx.price) ?? -1) - (typicalPick(a, ctx.price) ?? -1))
   // A searched vault leads; the rest follow, best first.
   const order = first ? [first, ...ranked.filter(v => v !== first)] : ranked
@@ -43,7 +54,7 @@ function vaultsCard (table: VaultTable, ctx: LookupContext, first: Vault | null)
     group: 'Atlas',
     name: first ? first.name : 'Templar Vaults',
     title: 'Templar Vaults',
-    sub: first ? `${first.quadrant} · all four vaults' rewards` : `Best: ${shortName(ranked[0])} · take 1 of ${OFFERS}`,
+    sub: sub ?? (first ? `${first.quadrant} · all four vaults' rewards` : `Best: ${shortName(ranked[0])} · take 1 of ${OFFERS}`),
     icon: 'fas fa-dungeon',
     sections: [
       ...order.map(v => vaultSection(v, table, ctx)),
@@ -59,6 +70,7 @@ export function vaultLookup (table: VaultTable | null): Lookup {
     const q = query.trim()
     if (q.length < 3) return []
     if (OVERVIEW.test(q)) return [vaultsCard(table, ctx, null)]
+    if (isReliquary(q)) return [vaultsCard(table, ctx, null, RELIQUARY_SUB)]
     if (q.length < MIN_QUERY) return []
     const hit = table.vaults.find(v => [v.name, shortName(v), shortName(v).replace(/'s$/, '')].some(n => { const r = matchRank(n, q); return r === 0 || r === 1 }))
     return hit ? [vaultsCard(table, ctx, hit)] : []

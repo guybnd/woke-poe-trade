@@ -145,6 +145,18 @@ describe('search', () => {
     expect(vaultSections.find(s => s.label!.startsWith("Zealot's"))!.rows![0].label).toBe('From The Shaper, Uber Elder, Venarius; Citadel and Fortress Nightmare maps')
   })
 
+  it('"forbidden reliquary", the display case label, gives the vaults card', () => {
+    for (const q of ['forbidden re', 'Forbidden Reliquary', 'reliquary', 'forbid']) {
+      const cards = lookup(q, ctx)
+      expect(cards).toHaveLength(1)
+      expect(cards[0].name).toBe('Templar Vaults')
+      expect(cards[0].sub).toMatch(/display case/)
+    }
+    expect(lookup('forb', ctx)).toEqual([])
+    expect(lookup('forbidden flame', ctx)).toEqual([])
+    expect(lookup('reliquary key', ctx)).toEqual([])
+  })
+
   it('a vault name puts that vault first, with every reward', () => {
     const [card] = lookup('zealot', ctx)
     expect(card.name).toBe("Zealot's Vault")
