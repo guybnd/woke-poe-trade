@@ -189,7 +189,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('scroll', unhover, true)
   document.removeEventListener('dragstart', unhover, true)
 })
-// Every vault, the ones these maps spawn first, best typical pick first.
+// Every vault: the best map's vault first, then the other maps' in their order.
 const vaultBlocks = computed(() => {
   const t = vaultTable.value
   if (!t) return []
@@ -201,7 +201,7 @@ const vaultBlocks = computed(() => {
     maps: nightmareMapsFor(t, v),
     typical: typicalPick(v, priceOf),
     rewards: v.rewards
-      .map(r => ({ text: r.text, kind: r.kind, rare: !!r.rare, note: r.note, chaos: rewardPrice(r, priceOf), icon: rewardIcon(r), item: r.items?.length === 1 ? r.items[0].name : null }))
+      .map(r => ({ text: r.text, kind: r.kind, rare: !!r.rare, note: r.note, chaos: rewardPrice(r, priceOf), icon: rewardIcon(r), item: r.items?.length === 1 ? { name: r.items[0].name, variant: r.items[0].variant } : null }))
       .sort((a, b) => (b.chaos ?? -1) - (a.chaos ?? -1))
   })
   // The best map's vault first, then the other maps' in their order, then the rest.
@@ -283,7 +283,7 @@ const fragRows = computed(() => UBER_FRAGMENTS
 .vaults { margin-top: 4px; }
 .vchips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-bottom: 5px; }
 .vchip { display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 3px 4px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); color: var(--w-dim); font-size: var(--w-fs-xs); line-height: 1.25; }
-.vchip b { color: var(--w-fg); font-family: var(--w-caps-face); font-weight: 400; font-size: var(--w-fs-sm); }
+.vchip b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--w-fg); font-family: var(--w-caps-face); font-weight: 400; font-size: var(--w-fs-sm); }
 .vchip span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vchip:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
 .vchipOn { border-color: var(--w-gold); color: var(--w-fg); }
