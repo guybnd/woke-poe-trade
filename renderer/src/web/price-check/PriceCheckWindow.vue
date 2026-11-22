@@ -7,7 +7,9 @@
     'flex-row-reverse': clickPosition === 'inventory'
   }">
     <instant-ninja-card v-if="instant && item?.isOk()" :item="item.value" :at="instant"
-      @placed="instantPlaced" @live="openWindow(true)" @details="openWindow(false)" @close="closePriceCheck" />
+      @placed="instantPlaced" @live="openWindow(true)" @details="openWindow(false)" @close="closePriceCheck">
+      <related-items :class="[$style.zoomed, $style.instantSide]" :item="item.value" click-position="stash" @check="checkRelated" />
+    </instant-ninja-card>
     <template v-else>
     <div v-if="!isBrowserShown" class="layout-column shrink-0"
       :style="{ width: floating ? `${floating.gap}px` : 'var(--game-panel)' }">
@@ -514,6 +516,8 @@ export default defineComponent({
 :global(#price-window [data-price-title-text]) { margin-left: auto; }
 .edgeX, .edgeY, .corner { position: absolute; z-index: 2; }
 .zoomed { zoom: var(--w-ui-size, 1); }
+/* Under the instant card, close to it. */
+.zoomed.instantSide { margin-top: 6px; }
 .edgeX { top: 8px; bottom: 8px; right: 0; width: 5px; cursor: ew-resize; }
 .edgeY { left: 8px; right: 8px; bottom: 0; height: 5px; cursor: ns-resize; }
 .corner { right: 0; bottom: 0; width: 12px; height: 12px; cursor: nwse-resize; }

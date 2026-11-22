@@ -27,11 +27,13 @@
         <button type="button" class="btn" :class="$style.btn" data-testid="instant-ninja-details" @click="$emit('details')">Details</button>
       </div>
     </div>
+    <!-- Related items (the item's family, what drops it), as beside the window. -->
+    <slot />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, shallowRef } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
 import { usePoeninja, displayRounding } from '@/web/background/Prices'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
@@ -76,13 +78,23 @@ const weekChange = computed(() => spark.value.length ? Math.round(spark.value[sp
 
 // Left of the cursor when the right side has no room, above it when the bottom has none.
 const el = shallowRef<HTMLElement | null>(null)
-const flipX = shallowRef(false)
-const flipY = shallowRef(false)
-const anchorStyle = computed(() => ({
-  left: `${props.at.x + (flipX.value ? -GAP : GAP)}px`,
-  top: `${props.at.y + (flipY.value ? -GAP : GAP)}px`,
-  transform: `translate(${flipX.value ? '-100%' : '0'}, ${flipY.value ? '-100%' : '0'})`
-}))
+const pos = shallowRef({ left: props.at.x + GAP, top: props.at.y + GAP })
+const anchorStyle = computed(() => ({ left: `${pos.value.left}px`, top: `${pos.value.top}px` }))
+
+// Right of and below the cursor; left of it when the right has no room, and up
+// as far as the screen needs when the bottom has none.
+function place () {
+  const node = el.value
+  if (!node) return
+  const w = node.offsetWidth
+  const h = node.offsetHeight
+  const { x, y } = props.at
+  const left = x + GAP + w <= window.innerWidth ? x + GAP : Math.max(0, x - GAP - w)
+  const top = y + GAP + h <= window.innerHeight ? y + GAP : Math.max(0, window.innerHeight - h)
+  if (left !== pos.value.left || top !== pos.value.top) pos.value = { left, top }
+}
+// Related items load after the card, and change its size.
+let resize: ResizeObserver | undefined
 
 function onKey (e: KeyboardEvent) {
   if (e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return
@@ -94,19 +106,27 @@ function onKey (e: KeyboardEvent) {
   }
 }
 
-onMounted(async () => {
-  document.addEventListener('keydown', onKey)
-  const r = el.value!.getBoundingClientRect()
-  flipX.value = r.right > window.innerWidth
-  flipY.value = r.bottom > window.innerHeight
+async function placeAndReport () {
+  place()
   await nextTick()
-  emit('placed', el.value!.getBoundingClientRect())
+  if (el.value) emit('placed', el.value.getBoundingClientRect())
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', onKey)
+  placeAndReport()
+  resize = new ResizeObserver(() => { placeAndReport() })
+  resize.observe(el.value!)
 })
-onUnmounted(() => document.removeEventListener('keydown', onKey))
+watch(() => props.at, placeAndReport)
+onUnmounted(() => {
+  document.removeEventListener('keydown', onKey)
+  resize?.disconnect()
+})
 </script>
 
 <style module>
-.anchor { position: absolute; pointer-events: auto; z-index: 5; }
+.anchor { position: absolute; pointer-events: auto; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; max-height: 100%; }
 .card {
   zoom: var(--w-ui-size, 1);
   display: flex;
