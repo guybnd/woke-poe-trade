@@ -80,6 +80,32 @@ test('currency: the price check hotkey again on the same item opens live offers'
   await expect(overlay.widget('price-check')).toContainText('Matched: 5')
 })
 
+test('currency: the locked price check key shows the card too', async ({ overlay, fakeApp }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/currency-divine.txt', 'Ctrl + Alt + D')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card).toContainText('180c')
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
+  // The game's hotkeys don't reach a focused overlay, so no "again" hint here.
+  await expect(card.getByTestId('instant-ninja-again')).toHaveCount(0)
+  // The overlay has the keyboard here, so Space works straight away.
+  await overlay.page.keyboard.press('Space')
+  await expect(overlay.widget('price-check')).toContainText('Matched: 5')
+})
+
+test('currency: once the card closed, the hotkey on the same item shows the card again', async ({ overlay, fakeApp }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/currency-divine.txt')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card).toBeVisible()
+  // The mouse moved away: main hides the price check.
+  fakeApp.sendToOverlay({ name: 'MAIN->OVERLAY::hide-exclusive-widget', payload: undefined })
+  await expect(card).toBeHidden()
+  await overlay.copyItem('items/currency-divine.txt')
+  await expect(card).toBeVisible()
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
+})
+
 test('currency: with poe.ninja first off, Ctrl+D searches right away', async ({ overlay }) => {
   await overlay.boot({
     patch: (config: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any

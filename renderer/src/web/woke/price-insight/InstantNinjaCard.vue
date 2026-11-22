@@ -58,7 +58,12 @@ const emit = defineEmits<{
 }>()
 
 // Keeps clear of the cursor and the game's own tooltip, which opens up and to the right of it.
-const GAP = 18
+// The pointer (about 20 x 32 px at 100%) hangs down and right of its hotspot:
+// the card starts right of it, its top a little above the hotspot. On the left
+// side the pointer is no obstacle, so a small gap does.
+const RIGHT_GAP = 40
+const LEFT_GAP = 16
+const ABOVE = 12
 
 const { findPriceByQuery, autoCurrency, updatedAt } = usePoeninja()
 const info = computed(() => {
@@ -83,7 +88,7 @@ const weekChange = computed(() => spark.value.length ? Math.round(spark.value[sp
 
 // Left of the cursor when the right side has no room, above it when the bottom has none.
 const el = shallowRef<HTMLElement | null>(null)
-const pos = shallowRef({ left: props.at.x + GAP, top: props.at.y + GAP })
+const pos = shallowRef({ left: props.at.x + RIGHT_GAP, top: props.at.y - ABOVE })
 const anchorStyle = computed(() => ({ left: `${pos.value.left}px`, top: `${pos.value.top}px` }))
 
 // Right of and below the cursor; left of it when the right has no room, and up
@@ -94,8 +99,8 @@ function place () {
   const w = node.offsetWidth
   const h = node.offsetHeight
   const { x, y } = props.at
-  const left = x + GAP + w <= window.innerWidth ? x + GAP : Math.max(0, x - GAP - w)
-  const top = y + GAP + h <= window.innerHeight ? y + GAP : Math.max(0, window.innerHeight - h)
+  const left = x + RIGHT_GAP + w <= window.innerWidth ? x + RIGHT_GAP : Math.max(0, x - LEFT_GAP - w)
+  const top = Math.max(0, Math.min(y - ABOVE, window.innerHeight - h))
   if (left !== pos.value.left || top !== pos.value.top) pos.value = { left, top }
 }
 // Related items load after the card, and change its size.
