@@ -62,7 +62,10 @@
         </div>
       </section>
       <section :class="$style.pane" data-testid="map-planner-search">
-        <span class="w-group-label" style="padding: 0;">Stash search</span>
+        <div class="flex items-center gap-2">
+          <span class="w-group-label flex-1" style="padding: 0;">Stash search</span>
+          <WInfo v-if="search.text" :text="tokenInfo" />
+        </div>
         <code :class="[$style.regex, { 'w-dim': !search.text }]" :title="search.text">{{ search.text || search.problem || 'Tick mods to build a search' }}</code>
         <div :class="$style.meter">
           <span :class="$style.bar"><span :class="{ [$style.over]: search.tooLong }" :style="{ width: `${Math.min(100, search.length / MAX_SEARCH_LENGTH * 100)}%` }" /></span>
@@ -91,7 +94,7 @@ import { computed } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { useLeagues } from '@/web/background/Leagues'
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
-import { WButton, WChip, WEmpty, WField, WSelect, toast } from '../ui'
+import { WButton, WChip, WEmpty, WField, WInfo, WSelect, toast } from '../ui'
 import { useCopy } from '../ui/copy'
 import { tradeUrl } from '../search/search'
 import { priceCheckTradeStatus } from '../shared/trade-status'
@@ -145,6 +148,11 @@ const universe = computed(() => planUniverse(data.value))
 // Mods you rated avoid that the list leaves out are still avoided.
 const alsoAvoid = computed(() => ratedAvoid(data.value, rows.value, props.ratings))
 const search = computed(() => planStashSearch(rows.value, ticked.value, state.value, universe.value, allMapNames(), alsoAvoid.value))
+const tokenInfo = computed(() => search.value.minToken > 3
+  ? `There was room, so each mod is searched by at least ${search.value.minToken} letters of its text instead of the shortest 3. ` +
+    'Longer text is less likely to also match a rare map\'s random name. It shortens again by itself when you tick more mods.'
+  : 'Each mod is searched by the shortest text (3 letters or more) that no other T17 mod has, so the search fits. ' +
+    'Text that short can, rarely, also match a rare map\'s random name. Tick fewer mods and it uses longer text by itself.')
 const usable = computed(() => !!search.value.text && !search.value.tooLong)
 
 const { copied, copy: copyText } = useCopy(1200)

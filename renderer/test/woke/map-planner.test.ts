@@ -105,6 +105,16 @@ describe('planner searches', () => {
     for (const k of pick) expect(s.tokens[k], k).toBeTruthy()
   })
 
+  it('uses longer text when there is room, and the shortest only when it must', () => {
+    const one = planStashSearch(rows, new Set(['Fecund']), { ...DEFAULT_PLANNER, need: 1 }, planUniverse(data), allMapNames())
+    expect(one.minToken).toBe(6)
+    expect(one.tooLong).toBe(false)
+    const six = new Set(['of Defiance', 'Fecund', 'Stalwart', 'Ultimate', 'of the Juggernaut', 'of Imbibing'])
+    const tight = planStashSearch(rows, six, { ...DEFAULT_PLANNER, need: 2, total: 100 }, planUniverse(data), allMapNames())
+    expect(tight.minToken).toBeLessThan(6)
+    expect(tight.tooLong).toBe(false)
+  })
+
   it('short T17-only tokens fit 2 of 6 with an avoid and a total', () => {
     const six = new Set(['of Defiance', 'Fecund', 'Stalwart', 'Ultimate', 'of the Juggernaut', 'of Imbibing'])
     const s = planStashSearch(rows, six, { ...DEFAULT_PLANNER, need: 2, total: 100 }, planUniverse(data), allMapNames())

@@ -184,12 +184,27 @@ export interface PlanSearch {
   // Why there's no search.
   problem?: string
   tokens: Record<string, string>
+  // The shortest text each mod was allowed: above 3 when there was room for
+  // longer, safer text (less chance to hit a rare map's random name).
+  minToken: number
 }
 
-// `universe`: every map mod line, `extra`: other tooltip text (map names).
+// Longest-first: the safest text that still fits.
+const TOKEN_LENGTHS = [6, 5, 4, 3]
+
+// `universe`: every line a T17 map can show, `extra`: other tooltip text (map names).
 export function planStashSearch (rows: PlanRow[], ticked: Set<string>, state: PlannerState, universe: string[], extra: string[], alsoAvoid: PlanRow[] = []): PlanSearch {
+  let res: PlanSearch | null = null
+  for (const len of TOKEN_LENGTHS) {
+    res = stashSearchAt(len, rows, ticked, state, universe, extra, alsoAvoid)
+    if (res.problem || !res.tooLong) return res
+  }
+  return res!
+}
+
+function stashSearchAt (minToken: number, rows: PlanRow[], ticked: Set<string>, state: PlannerState, universe: string[], extra: string[], alsoAvoid: PlanRow[]): PlanSearch {
   const tokens: Record<string, string> = {}
-  const none = (problem: string, tooLong = false): PlanSearch => ({ text: '', length: 0, tooLong, problem, tokens })
+  const none = (problem: string, tooLong = false): PlanSearch => ({ text: '', length: 0, tooLong, problem, tokens, minToken })
   const problem = planProblem(rows, ticked, state)
   if (problem) return none(problem)
   const tokenOf = (r: PlanRow): string | null => {
@@ -197,7 +212,7 @@ export function planStashSearch (rows: PlanRow[], ticked: Set<string>, state: Pl
     const others = [...universe.filter(u => !mine.has(u.toLowerCase())), ...TOOLTIP_LINES, ...extra]
     // The first line that has a token of its own stands for the mod.
     for (const m of r.matchers) {
-      const t = uniqueToken(m, others)
+      const t = uniqueToken(m, others, minToken)
       if (t) { tokens[r.key] = t; return t }
     }
     return null
@@ -219,7 +234,7 @@ export function planStashSearch (rows: PlanRow[], ticked: Set<string>, state: Pl
   if (avoid.length) terms.push(`"!${[...new Set(avoid)].join('|')}"`)
   if (state.total > 0) terms.push(`"${MIN_PREFIX[GOAL_MIN[state.goal]]}${atLeast(state.total)}%"`)
   const text = [...new Set(terms)].join(' ')
-  return { text, length: text.length, tooLong: text.length > MAX_SEARCH_LENGTH, tokens }
+  return { text, length: text.length, tooLong: text.length > MAX_SEARCH_LENGTH, tokens, minToken }
 }
 
 // MAX filters the trade site takes in one search.
