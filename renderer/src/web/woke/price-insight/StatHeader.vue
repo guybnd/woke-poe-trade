@@ -8,14 +8,15 @@
       <component :is="c.filter ? 'button' : 'span'" v-for="c of model.bigs" :key="c.key"
         :type="c.filter ? 'button' : undefined" :data-cell="c.key"
         :class="[$style.big, cellClass(c)]" :title="cellTitle(c)">
-        <span><span :class="$style.v">{{ c.text }}</span> <MaxMark :c="c" /> <span :class="$style.k">{{ c.label }}</span></span>
+        <span><span :class="$style.v">{{ c.text }}</span> <span :class="$style.k">{{ c.label }}</span></span>
         <span :class="[$style.track, { [$style.off]: c.fill == null }]"><b :style="barStyle(c)" /></span>
+        <span v-if="c.max" :class="$style.ends" data-range><span>{{ c.min }}</span><span :class="[$style.hi, { [$style.atmax]: c.atMax }]">{{ c.max }}</span></span>
       </component>
       <span v-if="model.chips.length" :class="$style.chips">
         <component :is="c.filter ? 'button' : 'span'" v-for="c of model.chips" :key="c.key"
           :type="c.filter ? 'button' : undefined" :data-cell="c.key"
           :class="[$style.chip, cellClass(c)]" :title="cellTitle(c)">
-          <span>{{ c.text }} <MaxMark :c="c" /> <span :class="$style.ck">{{ c.label }}</span></span>
+          <span>{{ c.text }} <span :class="$style.ck">{{ c.label }}</span></span>
           <span :class="[$style.track, { [$style.off]: c.fill == null }]"><b :style="barStyle(c)" /></span>
         </component>
       </span>
@@ -27,7 +28,7 @@
       <component :is="c.filter ? 'button' : 'span'" v-for="c of model.legend" :key="c.key"
         :type="c.filter ? 'button' : undefined" :data-cell="c.key"
         :class="[$style.mini, cellClass(c)]" :title="cellTitle(c)">
-        <span><i :class="$style.sw" :style="{ background: c.color }" /><span :class="$style.n">{{ c.text }}</span> <MaxMark :c="c" /> {{ c.label }}</span>
+        <span><i :class="$style.sw" :style="{ background: c.color }" /><span :class="$style.n">{{ c.text }}</span> {{ c.label }}</span>
         <span :class="[$style.track, { [$style.off]: c.fill == null }]"><b :style="barStyle(c)" /></span>
       </component>
     </div>
@@ -35,21 +36,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, useCssModule, type FunctionalComponent } from 'vue'
+import { computed, useCssModule } from 'vue'
 import type { HeaderCell, HeaderModel } from './stat-header'
 import { notePick, pickFixed } from './stat-header'
 
 const props = defineProps<{ model: HeaderModel }>()
 const $style = useCssModule()
-
-// The max after a number: a quiet "/ 2410", or a MAX tag once it's there.
-const MaxMark: FunctionalComponent<{ c: HeaderCell }> = ({ c }) => {
-  if (!c.max) return null
-  return c.atMax
-    ? h('span', { class: $style.atmax, 'data-max': c.max }, 'MAX')
-    : h('span', { class: $style.mx, 'data-max': c.max }, ['/ ', h('b', c.max)])
-}
-MaxMark.props = ['c']
 
 const cells = computed(() => {
   const m = props.model
@@ -62,11 +54,11 @@ function cellClass (c: HeaderCell) {
 
 function cellTitle (c: HeaderCell) {
   const name = c.name ?? c.label
-  const max = c.max
-    ? (c.atMax ? `${name} ${c.text}: at its max (${c.maxNote}).
-` : `${name} ${c.text} of a possible ${c.max}: max is ${c.maxNote}.
-`)
-    : ''
+  const max = !c.max
+    ? ''
+    : c.atMax
+      ? `${name} ${c.text} is at its max: ${c.maxNote}.\n`
+      : `${name} ${c.text}, from ${c.min} to ${c.max} on this item. Max: ${c.maxNote}.\n`
   if (!c.filter) return max + `${name}: nothing on this item can change it`
   if (c.fixed && c.filter.disabled) return `${name} is the same on every copy unless a corruption, enchant or quality raised it. Click to search at least yours.`
   const bar = (c.fill == null) ? ' Grey bar: nothing on this item can roll it.' : ' Bar: how close its rolls came to their max.'
@@ -114,7 +106,7 @@ function onClick (e: MouseEvent) {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  min-width: 90px;
+  min-width: 110px;
   padding: 2px 4px;
   text-align: left;
 }
@@ -131,23 +123,18 @@ function onClick (e: MouseEvent) {
   color: var(--w-dim);
 }
 .ck { letter-spacing: .05em; }
-/* The max after a number: quieter than the number, never competing with it. */
-.mx {
-  font: 500 var(--w-fs-sm, 12px) var(--w-num);
+/* B: the lowest and highest this item could be, under a big number's bar. */
+.ends {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font: 500 var(--w-fs-xs) var(--w-num);
   font-variant-numeric: tabular-nums;
+  line-height: 1;
   color: var(--w-faint);
-  white-space: nowrap;
 }
-.mx > b { font-weight: 500; color: var(--w-dim); }
-.atmax {
-  font: 700 var(--w-fs-xs) var(--w-small);
-  letter-spacing: .08em;
-  padding: 0 4px;
-  border-radius: var(--w-r-sm, 2px);
-  color: var(--w-accent-fg);
-  background: var(--w-gold-hi);
-  vertical-align: 2px;
-}
+.ends .hi { color: var(--w-dim); }
+.ends .atmax { color: var(--w-gold-hi); }
 .chips { margin-left: auto; display: flex; gap: 6px; }
 .chip {
   display: flex;

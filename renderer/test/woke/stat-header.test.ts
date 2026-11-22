@@ -163,6 +163,8 @@ describe('buildStatHeader', () => {
     // Base 437, +# to Armour tops at 100, the hybrid % at 110.
     expect(ar.max).toBe(String(Math.ceil((437 + 100) * (1 + 110 / 100) * 1.2)))
     expect(Number(ar.max)).toBeGreaterThan(Number(ar.text))
+    // The lowest: base 380, +81 to Armour, 101%.
+    expect(ar.min).toBe(String(Math.floor((380 + 81) * 2.01 * 1.2)))
     expect(ar.atMax).toBe(false)
     expect(ar.maxNote).toContain("base's top roll")
     expect(ar.maxNote).toContain('at 20% quality')
@@ -202,6 +204,7 @@ describe('buildStatHeader', () => {
     expect(m.legend!.find(c => c.key === 'chaos')!.max).toBe(d.chaos.max.toFixed(0))
     expect(m.legend!.find(c => c.key === 'ele')!.max).toBe('379')
     expect(m.bigs[0].max).toBe('706')
+    expect(m.bigs[0].min).toBe('634')
     expect(m.chips.find(c => c.key === 'crit')!.max).toBe('7.4%')
     // Nothing rolls this sword's phys or aps: no max.
     expect(m.legend!.find(c => c.key === 'phys')!.max).toBeUndefined()

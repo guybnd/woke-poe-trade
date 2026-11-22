@@ -30,7 +30,8 @@ export interface HeaderCell {
   filter?: StatFilter
   /** The same on every copy of this unique unless something raised it (set by finish). */
   fixed?: boolean
-  /** The most it could be with this item's base and mods at their top rolls, as shown text; unset when nothing can roll it. */
+  /** The least and most it could be with this item's base and mods at their lowest / top rolls, as shown text; unset when nothing can roll it. */
+  min?: string
   max?: string
   /** What the max counts, for the hover text. */
   maxNote?: string
@@ -82,13 +83,17 @@ function qualityNote (item: ParsedItem): string {
   return q > 0 ? `, at ${q}% quality` : ''
 }
 
+// A filter-backed cell with a fill always has bounds; this only stands in.
+const NO_RANGE = { min: 0, max: 0 }
+
 /**
  * Sets a cell's max from its property filter's range (what the roll bar measures
  * against) or, without one, the computed roll. A cell whose roll can't vary gets none.
  */
-function withMax (c: HeaderCell, computedMax: number, f: StatFilter | undefined, dp: number, note: string, suffix = ''): HeaderCell {
+function withMax (c: HeaderCell, computed: { min: number, max: number }, f: StatFilter | undefined, dp: number, note: string, suffix = ''): HeaderCell {
   if (c.fill == null) return c
-  const max = (f && isHeaderFilter(f) && f.roll?.bounds) ? f.roll.bounds.max : computedMax
+  const range = (f && isHeaderFilter(f) && f.roll?.bounds) ? f.roll.bounds : computed
+  const max = range.max
   const value = Number(c.text.replace(/[^\d.-]/g, ''))
   const step = Math.pow(10, -dp)
   // Over the max means something we don't count raised it (a mod we can't read, old base
@@ -97,7 +102,7 @@ function withMax (c: HeaderCell, computedMax: number, f: StatFilter | undefined,
   // The game rounds the tooltip number down and the max is rounded up, so a perfect
   // roll can read a couple short of it (1352 of 1354 at 20% quality).
   const atMax = value >= max - 2 * step || c.fill >= 0.99
-  return { ...c, max: fixed(Math.max(max, value), dp) + suffix, maxNote: note, atMax }
+  return { ...c, min: fixed(Math.min(range.min, value), dp) + suffix, max: fixed(Math.max(max, value), dp) + suffix, maxNote: note, atMax }
 }
 
 /**
@@ -144,7 +149,7 @@ export function buildStatHeader (item: ParsedItem, stats: readonly FilterOrGroup
       fill: rollFill(p.roll),
       color: COLORS[p.key],
       filter: p.filter
-    }, p.roll.max, p.filter, 0, p.key === 'phys' ? NOTE_Q : NOTE))
+    }, p.roll, p.filter, 0, p.key === 'phys' ? NOTE_Q : NOTE))
     // The big number searches Total DPS; a weapon with one damage type has none, so its part's filter.
     const bigFilter = props.get('item.total_dps') ?? (present.length === 1 ? present[0].filter : undefined)
     const bigs: HeaderCell[] = [withMax({
@@ -154,12 +159,12 @@ export function buildStatHeader (item: ParsedItem, stats: readonly FilterOrGroup
       fill: rollFill(d.total),
       color: COLORS.plain,
       filter: bigFilter
-    }, d.total.max, bigFilter, 0, d.phys.value > 0 ? NOTE_Q : NOTE)]
+    }, d.total, bigFilter, 0, d.phys.value > 0 ? NOTE_Q : NOTE)]
     const chips: HeaderCell[] = []
     const aps = props.get('item.aps')
-    if (aps?.roll) chips.push(withMax({ key: 'aps', label: 'aps', text: fixed(aps.roll.value, 2), fill: rollFill(d.aps), color: COLORS.plain, filter: aps }, d.aps.max, aps, 2, NOTE))
+    if (aps?.roll) chips.push(withMax({ key: 'aps', label: 'aps', text: fixed(aps.roll.value, 2), fill: rollFill(d.aps), color: COLORS.plain, filter: aps }, d.aps, aps, 2, NOTE))
     const crit = props.get('item.crit')
-    if (crit?.roll) chips.push(withMax({ key: 'crit', label: 'crit', text: `${fixed(crit.roll.value, 1)}%`, fill: filterFill(crit), color: COLORS.plain, filter: crit }, crit.roll.value, crit, 1, NOTE, '%'))
+    if (crit?.roll) chips.push(withMax({ key: 'crit', label: 'crit', text: `${fixed(crit.roll.value, 1)}%`, fill: filterFill(crit), color: COLORS.plain, filter: crit }, NO_RANGE, crit, 1, NOTE, '%'))
     const s = d.split
     const split = (['phys', 'fire', 'cold', 'lightning', 'ele', 'chaos'] as const)
       .map(key => ({ key, share: s[key], color: COLORS[key] }))
@@ -178,11 +183,11 @@ export function buildStatHeader (item: ParsedItem, stats: readonly FilterOrGroup
     for (const def of DEF) {
       const f = props.get(def.id)
       if (!f?.roll) continue
-      bigs.push(withMax({ key: def.key, label: def.label, text: fixed(f.roll.value, 0), fill: filterFill(f), color: def.color, filter: f }, f.roll.value, f, 0, NOTE_BASE_Q))
+      bigs.push(withMax({ key: def.key, label: def.label, text: fixed(f.roll.value, 0), fill: filterFill(f), color: def.color, filter: f }, NO_RANGE, f, 0, NOTE_BASE_Q))
     }
     const chips: HeaderCell[] = []
     const block = props.get('item.block')
-    if (block?.roll) chips.push(withMax({ key: 'block', label: 'block', text: `${fixed(block.roll.value, 0)}%`, fill: filterFill(block), color: COLORS.plain, filter: block }, block.roll.value, block, 0, NOTE, '%'))
+    if (block?.roll) chips.push(withMax({ key: 'block', label: 'block', text: `${fixed(block.roll.value, 0)}%`, fill: filterFill(block), color: COLORS.plain, filter: block }, NO_RANGE, block, 0, NOTE, '%'))
     const base = props.get('item.base_percentile')
     // Base percentile is itself a 0-100 roll.
     if (base?.roll) chips.push({ key: 'base', label: 'base', text: `${fixed(base.roll.value, 0)}%`, fill: rollFill({ value: base.roll.value, min: 0, max: 100 }), color: COLORS.plain, filter: base })
@@ -232,6 +237,7 @@ function finish (model: HeaderModel, item: ParsedItem): HeaderModel {
     // quality can still raise it, so "at least yours" finds those copies.
     if (f && isFixed(f)) c.fixed = true
     if (c.fixed || !ranges) {
+      c.min = undefined
       c.max = undefined
       c.maxNote = undefined
       c.atMax = undefined
