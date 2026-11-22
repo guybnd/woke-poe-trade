@@ -44,13 +44,15 @@
                 <span :class="rarityClass(selected.group.type)">{{ selected.group.name }}</span>
                 <span class="w-dim" :class="$style.small">{{ kindLabel(selected.group.type, selected.group.name) }}</span>
               </div>
-              <div :class="[$style.grid, $style.gridHead]"><span>Variant</span><span class="text-right">Now</span><span class="text-right">24h ago</span><span class="text-right">7d ago</span><span class="text-right">24h</span><span class="text-right">7d</span><span /></div>
-              <div v-for="v in selected.group.variants" :key="key(v)" v-item-tip="v" :class="[$style.grid, $style.row, { [$style.rowPicked]: shownVariant != null && v.variant === shownVariant }]">
+              <div :class="[$style.grid, $style.gridHead, { [$style.gridExtra]: extraRange }]"><span>Variant</span><span class="text-right">Now</span><span v-if="extraRange" class="text-right" :title="extraTitle">{{ extraRange.label }} ago</span><span class="text-right">24h ago</span><span class="text-right">7d ago</span><span v-if="extraRange" class="text-right" :title="extraTitle">{{ extraRange.label }}</span><span class="text-right">24h</span><span class="text-right">7d</span><span /></div>
+              <div v-for="v in selected.group.variants" :key="key(v)" v-item-tip="v" :class="[$style.grid, $style.row, { [$style.rowPicked]: shownVariant != null && v.variant === shownVariant, [$style.gridExtra]: extraRange }]">
                 <span class="w-trunc">{{ v.variant || selected.group.name }}
                   <i v-if="isThin(v)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(v)" /></span>
                 <WPrice bulk :chaos="v.chaos" :divine="divine" class="text-right" />
+                <WPrice v-if="extraRange" bulk :chaos="extraThen(v)" :divine="divine" class="text-right w-dim" />
                 <WPrice bulk :chaos="v.d1" :divine="divine" class="text-right w-dim" />
                 <WPrice bulk :chaos="v.d7" :divine="divine" class="text-right w-dim" />
+                <WDelta v-if="extraRange" :value="changeSince(v.chaos, extraThen(v))" class="text-right" />
                 <WDelta :value="changeSince(v.chaos, v.d1)" class="text-right" />
                 <WDelta :value="changeSince(v.chaos, v.d7)" class="text-right" />
                 <span :class="$style.rowBtns">
@@ -151,6 +153,8 @@ import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { MARKET_TRACKER_TYPE, marketSearchRequest } from '../market/widget'
 import type { MarketTrackerWidget } from '../market/widget'
 import { isThin, itemKey, thinTitle } from '../market/types'
+import { rangeInfo } from '../market/ranges'
+import { savedPriceSeries } from '../market/db'
 import type { CorruptedFilter, PriceItem } from '../market/types'
 import { pickRow } from '../shared/price-row'
 import { usePriceText } from '../shared/price'
@@ -1105,6 +1109,33 @@ function togglePin (item: PriceItem) {
 
 // ---- Market ----
 const tracker = computed(() => wm.widgets.value.find(w => w.wmType === MARKET_TRACKER_TYPE && isWidgetTypeOn(AppConfig(), w.wmType)) as MarketTrackerWidget | undefined)
+
+// The Market Prices tab's range, as two more columns, when it's one this table
+// doesn't already show (24h and 7d) and the app saved prices for it.
+const extraRange = computed(() => {
+  const r = rangeInfo(tracker.value?.priceRange)
+  return r.local && r.id !== '24h' ? r : null
+})
+const extraTitle = computed(() => extraRange.value ? `${extraRange.value.long}, from the prices this app saves about every 30 minutes (the Market window's range)` : undefined)
+const extraPrices = shallowRef<Record<string, number>>({})
+let extraSeq = 0
+watch([() => selected.value?.kind === 'price' ? selected.value.group : null, extraRange, () => snapshot.value?.ts], async ([group, r]) => {
+  const mine = ++extraSeq
+  const league = leagues.selectedId.value
+  if (!group || !r || !league) { extraPrices.value = {}; return }
+  try {
+    const got = await savedPriceSeries(league, group.type, r.ms, [group.name])
+    if (mine !== extraSeq) return
+    const out: Record<string, number> = {}
+    for (const [k, line] of Object.entries(got.rows)) if (line[0] != null && line[0] > 0) out[k] = line[0]
+    extraPrices.value = out
+  } catch {
+    if (mine === extraSeq) extraPrices.value = {}
+  }
+}, { immediate: true })
+function extraThen (v: PriceItem): number | null {
+  return extraPrices.value[`${v.name}\u0000${v.variant}`] ?? null
+}
 function isWatched (item: PriceItem) {
   return tracker.value?.watchlist?.some(w => itemKey(w) === key(item)) ?? false
 }
@@ -1369,6 +1400,7 @@ const dataNote = computed(() => {
 .detail { padding: var(--w-s3) var(--w-s4); min-width: 0; }
 .title { display: flex; align-items: center; gap: var(--w-s2); margin-bottom: var(--w-s2); font-size: var(--w-fs-lg); }
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) 88px 88px 88px 52px 52px 50px; column-gap: 6px; align-items: center; }
+.gridExtra { grid-template-columns: minmax(0, 1fr) 88px 88px 88px 88px 52px 52px 52px 50px; }
 .gridHead { min-height: calc(24px * var(--w-text-scale, 1)); font-size: var(--w-fs-caps); font-weight: var(--w-caps-weight); letter-spacing: 0.05em; text-transform: var(--w-caps-case); color: var(--w-dim); border-bottom: 1px solid var(--w-line); font-family: var(--w-caps-face); }
 .row { min-height: var(--w-row-h); border-bottom: 1px solid var(--w-line-soft); }
 .rowPicked { background: var(--w-panel-2); }

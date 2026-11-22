@@ -51,6 +51,13 @@ export async function snapshotAtOrBefore (league: string, ts: number): Promise<S
   return await (hostRequest('market-at', { league, ts }, SLOW_MS) as Promise<Snapshot | null>)
 }
 
+// One category's saved prices over the last `span` ms, keyed "name\u0000variant"
+// (main/src/woke/market-series.ts). `names` keeps only those items.
+export async function savedPriceSeries (league: string, type: string, span: number, names?: string[]): Promise<{ times: number[], rows: Record<string, Array<number | null>> }> {
+  await importOldHistory()
+  return await hostRequest('market-series', { league, type, span, names }, SLOW_MS)
+}
+
 export async function dailyRowsForDate (league: string, date: string): Promise<DailyRow[]> {
   await importOldHistory()
   return await (hostRequest('market-daily-date', { league, date }, SLOW_MS) as Promise<DailyRow[]>)

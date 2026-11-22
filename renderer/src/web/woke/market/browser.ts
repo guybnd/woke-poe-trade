@@ -152,6 +152,8 @@ export interface MarketRow {
   // Change since the day before, in %. Null without both days.
   dayChange: number | null
   gaps: number
+  // poe.ninja's 7 daily values, for the shorter ranges (ranges.ts).
+  graph?: unknown
 }
 
 // One category's rows. poe.ninja's graph is 7 daily values, % change against
@@ -191,7 +193,8 @@ function readRows (type: string, chunk: DenseChunk, days: number): MarketRow[] {
             trend,
             change: weekChange(info.graph),
             dayChange: dayChange(info.graph),
-            gaps: 0
+            gaps: 0,
+            graph: info.graph
           })
           graphs.push(info.graph)
         }

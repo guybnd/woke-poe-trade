@@ -9,6 +9,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { dataDir, readJson, safeName, writeAtomic } from './data-files'
 import type { WokeHandlers } from '../../../ipc/woke-ops'
+import { priceSeries } from './market-series'
 
 // Same as the renderer's types (market/types.ts); kept loose here.
 interface Snapshot { league: string, ts: number, items: unknown[], divine: number | null }
@@ -206,6 +207,14 @@ export const marketHandlers: Partial<WokeHandlers> = {
   'market-at': async ({ league, ts }) => {
     const t = (await snapshotTimes(league as string)).find(x => x <= Number(ts))
     return t != null ? await readSnapshot(league as string, t) : null
+  },
+  // One category's prices over the last `span` ms, for the Prices tab's short ranges.
+  'market-series': async ({ league, type, span, names }) => {
+    const l = league as string
+    return await priceSeries(l, type, Number(span), Date.now(), {
+      times: () => snapshotTimes(l),
+      snapshot: ts => readSnapshot(l, ts)
+    }, names)
   },
   'market-daily-date': async ({ league, date }) => {
     return (await loadDaily(league as string)).get(date as string) ?? []

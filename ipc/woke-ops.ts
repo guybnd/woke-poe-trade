@@ -232,6 +232,9 @@ export interface WokeOps {
   'market-save': Op<{ snapshot: Json, daily?: Json[] }, Ok>
   'market-latest': Op<League & { count: number }, Json[]>
   'market-at': Op<League & { ts: number }, Json>
+  // One category's prices at snapshots spread over the last `span` ms
+  // (main/src/woke/market-series.ts); `names` keeps only those items.
+  'market-series': Op<League & { type: string, span: number, names?: string[] }, { times: number[], rows: Record<string, Array<number | null>> }>
   'market-daily-date': Op<League & { date: string }, Json[]>
   'market-daily-item': Op<League & { type: string, name: string, variant?: string }, Json[]>
   'market-daily-all': Op<League, Json[]>
