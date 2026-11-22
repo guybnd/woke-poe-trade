@@ -3,7 +3,7 @@
     <div :class="$style['modinfo']">{{ modText }}</div>
     <div v-for="stat of stats" :key="stat.text" class="flex items-baseline">
       <!-- woke: a line of the mod that feeds another filter, dimmed with its roll, not struck through as "#%". -->
-      <ItemModifierText :text="stat.text" :roll="stat.roll" :rolls="stat.rolls" :class="{ [$style.other]: !stat.contributes }" />
+      <ItemModifierText :text="stat.text" :roll="stat.roll" :class="{ [$style.other]: !stat.contributes }" />
       <!-- The share of a total, or a share unlike the roll (a pseudo counts "to all" three times). -->
       <div v-if="stat.contributes && stat.contribution && (filter.sources.length >= 2 || stat.contribution !== stat.roll)" :class="$style['contribution']">{{ stat.contribution }}</div>
     </div>
@@ -19,14 +19,6 @@ import type { StatCalculated } from '@/parser/modifiers'
 import type { StatFilter } from './interfaces'
 
 import ItemModifierText from '@/web/ui/ItemModifierText.vue'
-import { searchesFirstNumber } from '@/parser/stat-translations'
-import type { ParsedStat } from '@/parser/stat-translations'
-
-// woke: a line searched by its first number keeps its roll there; both its
-// numbers read as rolled ("50% chance ... 200 Life", not "... 50 Life").
-function firstNumberPair (parsed: ParsedStat): readonly number[] | undefined {
-  return (parsed.roll?.pair && !parsed.translation.negate && searchesFirstNumber(parsed.stat)) ? parsed.roll.pair : undefined
-}
 
 const props = defineProps<{
   source: StatCalculated['sources'][number]
@@ -69,7 +61,6 @@ const stats = computed(() => {
       return {
         text: parsed.translation.string,
         roll: parsed.roll ? roundRoll(parsed.roll.value * (parsed.translation.negate ? -1 : 1), parsed.roll.dp) : undefined,
-        rolls: firstNumberPair(parsed),
         contributes: false
       }
     }
@@ -86,7 +77,6 @@ const stats = computed(() => {
     return {
       text: parsed.translation.string,
       roll: roundRoll(rollValue, parsed.roll.dp),
-      rolls: firstNumberPair(parsed),
       contribution: contribution!,
       contributes: true
     }

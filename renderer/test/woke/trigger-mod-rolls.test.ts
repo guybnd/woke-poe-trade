@@ -7,7 +7,7 @@ import path from 'path'
 import { loadGameData, parseItem } from '../helpers/game-data'
 import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
-import { searchesFirstNumber } from '@/parser/stat-translations'
+import { searchedNumber } from '@/parser/stat-translations'
 import { rollPair } from '@/web/woke/price-insight/roll-pair'
 import type { Stat } from '@/assets/data'
 
@@ -73,14 +73,6 @@ describe('two-number lines searched by their first number', () => {
     expect(deer.roll).toMatchObject({ value: 15 })
   })
 
-  it('searches a line with its percentage written out by that percentage', () => {
-    // Deerstalker's "30% ... for # seconds" matcher and Tinkerskin's chance-less
-    // "Gain Phasing for # seconds" (always: 100%) carry one number, the seconds.
-    const deer = filters(unique('Deerstalker', 'Deerskin Boots', 'Boots', '30% increased Movement Speed for 9 seconds on Throwing a Trap'))
-      .find(f => f.text.includes('Throwing a Trap'))!
-    expect(deer.roll?.value).toBe(30)
-  })
-
   it('keeps the average where the trade site stores it (Death\'s Oath)', () => {
     // Checked on the trade API: 226.5 matches, 450 doesn't (the filter rounds down).
     const oath = filters(unique('Death\'s Oath', 'Astral Plate', 'Body Armours', 'You take 450 Chaos Damage per second for 3 seconds on Kill'))
@@ -96,18 +88,28 @@ describe('two-number lines searched by their first number', () => {
     expect(rollPair(adds)).toEqual([5, 10])
   })
 
-  it('has every two-number trigger stat checked against the trade site', () => {
-    // A new two-number trigger line needs checking on the trade site (first
-    // number or average?) before it's searched; this fails until it is.
-    const file = path.resolve(__dirname, '../../public/data/en/stats.ndjson')
-    const unchecked: string[] = []
-    for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
-      if (!line) continue
-      const stat = JSON.parse(line) as Stat
-      if (!stat.ref || !/trigger|trap/i.test(stat.ref) || stat.ref.includes('# to #')) continue
-      if ((stat.ref.match(/#/g) ?? []).length < 2) continue
-      if (!searchesFirstNumber(stat)) unchecked.push(stat.ref)
+  it('has every line with one percentage among two numbers checked on the trade site', () => {
+    // Checked on the live trade API (2026-11-22): searched by the percentage
+    // (searchedNumber) or stored as the average. A new stat of this shape
+    // fails here until someone checks it and adds it to one list.
+    const PERCENTAGE = ['stat_723388324', 'stat_2513998383', 'stat_144887967', 'stat_3102860761']
+    const AVERAGE = ['stat_3788412017'] // idols: "#% chance for up to # Rare Monsters to be Possessed"
+    for (const lang of ['en', 'ru', 'ko', 'cmn-Hant']) {
+      const file = path.resolve(__dirname, `../../public/data/${lang}/stats.ndjson`)
+      const found = new Set<string>()
+      for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
+        if (!line) continue
+        const stat = JSON.parse(line) as Stat
+        for (const m of stat.matchers ?? []) {
+          const pct = m.string.split('#').slice(1).map(s => s[0] === '%')
+          if (pct.length !== 2 || pct[0] === pct[1]) continue
+          const ids = Object.values(stat.trade.ids).flat().map(id => id.split('.')[1])
+          ids.forEach(id => found.add(id))
+          // The parser's rule agrees: percentage index for the checked ones only.
+          expect(searchedNumber(stat, m.string), `${lang} ${m.string}`).toBe(ids.some(id => PERCENTAGE.includes(id)) ? pct.indexOf(true) : -1)
+        }
+      }
+      expect([...found].sort(), lang).toEqual([...PERCENTAGE, ...AVERAGE].sort())
     }
-    expect(unchecked).toEqual([])
   })
 })

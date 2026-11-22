@@ -19,8 +19,8 @@ export interface ParsedStat {
     value: number
     min: number
     max: number
-    /** woke: both numbers of a two-number line ("Adds # to #": value is their
-     * average; a first-number stat like Kitava's trigger: value is the first). */
+    /** woke: both numbers of a two-number line, in text order ("Adds # to #":
+     * value is their average; a searchedNumber line: value is its percentage). */
     pair?: [number, number]
     /** woke: each number's own range, in text order, when the copy shows ranges. */
     ranges?: Array<{ min: number, max: number }>
@@ -158,8 +158,7 @@ export function tryParseTranslation (
     }
 
     // Modifiers must be upgraded to the new values with a Divine Orb
-    // woke: per number, so a line searched by one number asks only that one.
-    const legacy = new Set<object>()
+    let legacyStatRolls = false
 
     if (found.matcher.negate) {
       for (const stat of combination.values) {
@@ -195,11 +194,11 @@ export function tryParseTranslation (
 
       if (stat.roll > stat.bounds.max) {
         stat.bounds.max = stat.roll
-        legacy.add(stat)
+        legacyStatRolls = true
       }
       if (stat.roll < stat.bounds.min) {
         stat.bounds.min = stat.roll
-        legacy.add(stat)
+        legacyStatRolls = true
       }
     }
 
@@ -214,9 +213,9 @@ export function tryParseTranslation (
       }]
     }
 
-    // woke: the number the trade site searches this stat by.
-    const searched = tradeValues(found.stat, found.matcher, combination.stat, combination.values)
-    const legacyStatRolls = searched.some(v => legacy.has(v))
+    // woke: the number the trade site searches the line by (searchedNumber).
+    const pct = searchedNumber(found.stat, found.matcher.string)
+    const searched = (pct < 0 || combination.values.length < 2) ? combination.values : [combination.values[pct]]
 
     return {
       stat: found.stat,
@@ -241,39 +240,21 @@ export function tryParseTranslation (
   }
 }
 
-// woke: two-number lines the trade site searches by one number only (the
-// percentage, first in English) instead of their average.
-// Checked one by one on the live trade API (2026-11-22): Kitava's Thirst's
-// "50% chance ... 100 Mana" matches 50, not the average 75, so the Foulborn
-// "50% chance ... 200 Life" searched 125 and found nothing. Not a general
-// rule: Death's Oath's "450 Chaos Damage per second for 3 seconds" is stored
-// as the average 226.5, so only stats checked on the trade site go here.
-// Keyed by the trade hash so every language and mod type shares it.
-const FIRST_NUMBER_STATS = new Set([
-  'stat_723388324', // #% chance to Trigger Socketed Spells when you Spend at least # Mana ... (Kitava's Thirst)
-  'stat_2513998383', // #% chance to Trigger Socketed Spells when you Spend at least # Life ... (Foulborn Kitava's Thirst)
-  'stat_144887967', // #% chance to gain Phasing for # seconds when your Trap is triggered by an Enemy (Tinkerskin)
-  'stat_3102860761' // #% increased Movement Speed for # seconds on Throwing a Trap (Deerstalker)
-])
-
-export function searchesFirstNumber (stat: Stat): boolean {
-  return Object.values(stat.trade.ids).some(ids => ids.some(id => FIRST_NUMBER_STATS.has(id.split('.')[1])))
-}
-
-interface StatValue { roll: number, decimal: boolean, bounds?: { min: number, max: number } }
-
-// The searched number is the line's percentage in every language (ko and
-// cmn-Hant put Kitava's Life/Mana and Deerstalker's seconds first in the
-// text). A matcher with that number written out ("30% increased Movement
-// Speed for # seconds", or Tinkerskin's chance-less "Gain Phasing for #
-// seconds", value 100) searches the written number, not the seconds.
-function tradeValues<T extends StatValue> (stat: Stat, matcher: StatMatcher, matchStr: string, values: T[]): T[] {
-  if (!values.length || !searchesFirstNumber(stat)) return values
-  const parts = matcher.string.split('#').slice(1)
-  const pct = parts.findIndex(rest => rest.startsWith('%'))
-  if (pct !== -1) return (parts.length === values.length) ? [values[pct]] : values
-  const fixed = matcher.value ?? Number(matchStr.match(/([\d.]+)\s*%/)?.[1])
-  return Number.isNaN(fixed) ? values : [{ roll: fixed, decimal: false, bounds: { min: fixed, max: fixed } } as T]
+// woke: two-number lines the trade site searches by their percentage, not
+// their average: the Foulborn Kitava's Thirst's "50% chance ... at least 200
+// Life" searched 125 and found nothing. Checked one by one on the live trade
+// API (2026-11-22), as it isn't a rule: Death's Oath's "450 Chaos Damage per
+// second for 3 seconds" and the idols' "100% chance for up to 5 Rare Monsters
+// to be Possessed" are stored as the average. Kitava's Thirst (Mana, Life),
+// Tinkerskin's Phasing, Deerstalker's Movement Speed. The percentage comes
+// first in English, not in ko and cmn-Hant. Returns its index among the
+// line's numbers, or -1. Picked by the English ref, which every language's
+// data keeps; test/woke/trigger-mod-rolls.test.ts checks that this finds
+// exactly those four and fails on a new stat of this shape until it's checked.
+export function searchedNumber (stat: Stat, text: string): number {
+  return /Upfront|Trap/.test(stat.ref)
+    ? text.split('#').slice(1).findIndex(s => s[0] === '%')
+    : -1
 }
 
 export function getRollOrMinmaxAvg (values: number[]): number {
