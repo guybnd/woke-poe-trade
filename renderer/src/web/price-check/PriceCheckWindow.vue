@@ -10,7 +10,9 @@
       :active="config.wmWants === 'show'" :again-keys="config.hotkey && !advancedCheck ? `${config.hotkeyHold} + ${config.hotkey}` : null"
       @placed="instantPlaced" @live="openWindow(true, $event === true)" @details="openWindow(false)" @close="closePriceCheck">
       <template #verdict>
-        <woke-deck-verdict-chip v-if="item.value.info.refName === 'Stacked Deck'" :item="item.value" />
+        <div v-if="item.value.info.refName === 'Stacked Deck'" :class="$style.instantVerdict">
+          <woke-deck-verdict-chip :item="item.value" />
+        </div>
       </template>
       <related-items :class="[$style.zoomed, $style.instantSide]" :item="item.value" click-position="stash" @check="checkRelated" />
     </instant-ninja-card>
@@ -302,14 +304,24 @@ export default defineComponent({
       // woke: the related items beside the window count as the window, or moving onto
       // them hands the mouse back to the game and closes it. They sit on the screen's
       // middle side of it (clickPosition: 'inventory' puts them on the left).
+      // Clipped short of where the item was checked, which stays the game's.
       const related = RELATED_REM * rootFontPx() * uiZoom()
+      const clear = 2.5 * rootFontPx() * uiZoom()
       const leftSide = floating.value ? floating.value.side === 'inventory' : (from.x - window.screenX) > window.innerWidth / 2
-      if (leftSide) area.x -= related
-      area.width += related
+      if (leftSide) {
+        const edge = from.x < area.x ? Math.max(area.x - related, from.x + clear) : area.x - related
+        const grow = Math.max(0, area.x - edge)
+        area.x -= grow
+        area.width += grow
+      } else {
+        const right = area.x + area.width
+        const edge = from.x > right ? Math.min(right + related, from.x - clear) : right + related
+        area.width += Math.max(0, edge - right)
+      }
       sendTrackArea(from, area)
     }
     function instantPlaced (rect: DOMRect) {
-      if (!Host.isElectron || advancedCheck.value || !rect.width) return
+      if (!Host.isElectron || advancedCheck.value || !rect.width || props.config.wmWants !== 'show') return
       sendTrackArea(trackFrom, { x: window.screenX + rect.x, y: window.screenY + rect.y, width: rect.width, height: rect.height })
     }
     // From the card to the window: Live offers searches, Details doesn't. The
@@ -553,6 +565,8 @@ export default defineComponent({
 .zoomed { zoom: var(--w-ui-size, 1); }
 /* Under the instant card, close to it. */
 .zoomed.instantSide { margin-top: 6px; }
+.instantVerdict { display: flex; }
+.instantVerdict > * { margin-left: 0; }
 .edgeX { top: 8px; bottom: 8px; right: 0; width: 5px; cursor: ew-resize; }
 .edgeY { left: 8px; right: 8px; bottom: 0; height: 5px; cursor: ns-resize; }
 .corner { right: 0; bottom: 0; width: 12px; height: 12px; cursor: nwse-resize; }

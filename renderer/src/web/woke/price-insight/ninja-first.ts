@@ -62,7 +62,7 @@ export function fixedPriceItem (item: FixedItem): boolean {
 // ---- How a poe.ninja price reads on the instant card and the verdict ----
 
 function num (v: number): string {
-  if (v >= 1000) return Math.round(v).toLocaleString('en-US')
+  if (Math.round(v) >= 1000) return Math.round(v).toLocaleString('en-US')
   if (v >= 100) return String(Math.round(v))
   if (v >= 10) return String(Number(v.toFixed(1)))
   return String(Number(v.toPrecision(2)))
@@ -79,6 +79,7 @@ export interface NinjaPrice {
 
 /** One item at `chaos`, with `rate` chaos to a divine (unknown: undefined). A Divine Orb reads in chaos. */
 export function ninjaPrice (chaos: number, rate: number | undefined, divine = false): NinjaPrice {
+  if (!(chaos > 0)) return { main: '—', each: false, sub: null }
   if (divine) return { main: `${num(chaos)}c`, each: true, sub: null }
   // Under a chaos "0c" says nothing: how many a chaos buys does.
   if (chaos < 1) return { main: `${num(1 / chaos)} per c`, each: false, sub: rate ? `${num(rate / chaos)} per div` : null }
@@ -89,7 +90,7 @@ export function ninjaPrice (chaos: number, rate: number | undefined, divine = fa
 /** What a stack is worth: "238c", "1.4 div", "0.07c". */
 export function ninjaTotal (chaos: number, rate: number | undefined): string {
   if (rate && chaos >= rate * 0.94) return `${num(chaos / rate)} div`
-  if (chaos < 1) return `${Number(chaos.toFixed(2))}c`
+  if (chaos < 1) return `${num(chaos)}c`
   return `${num(chaos)}c`
 }
 

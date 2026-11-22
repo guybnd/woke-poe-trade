@@ -78,7 +78,8 @@ const ABOVE = 12
 const { findPriceByQuery, xchgRate, updatedAt } = usePoeninja()
 const info = computed(() => {
   const q = exactDetailsId(props.item)
-  return (q && findPriceByQuery(q)) || null
+  const row = q && findPriceByQuery(q)
+  return row && row.chaos > 0 ? row : null
 })
 
 const isDivine = computed(() => props.item.info.refName === 'Divine Orb')
@@ -128,10 +129,13 @@ function onKey (e: KeyboardEvent) {
 // Room around the card and its related items that still counts as on them, so
 // a move between the two (or along an edge) doesn't hand the mouse back to the game.
 const TRACK_PAD = 24
+const CURSOR_CLEAR = 12
 
 // Everything the card shows: the card and the related items under it, which can
 // reach past the anchor's own box (it's capped at the screen's height).
-function shownRect (node: HTMLElement): DOMRect {
+function shownRect (node: HTMLElement): DOMRect | null {
+  // Hidden (the widget is display:none): nothing to track.
+  if (!node.offsetWidth) return null
   let { left, top, right, bottom } = node.getBoundingClientRect()
   for (const child of node.querySelectorAll(':scope > *, :scope .w-pc-side')) {
     const r = child.getBoundingClientRect()
@@ -139,7 +143,12 @@ function shownRect (node: HTMLElement): DOMRect {
     left = Math.min(left, r.left); top = Math.min(top, r.top)
     right = Math.max(right, r.right); bottom = Math.max(bottom, r.bottom)
   }
-  return new DOMRect(left - TRACK_PAD, top - TRACK_PAD, right - left + 2 * TRACK_PAD, bottom - top + 2 * TRACK_PAD)
+  left -= TRACK_PAD; right += TRACK_PAD; top -= TRACK_PAD; bottom += TRACK_PAD
+  // Never over the item that was checked: a click or move there is for the game.
+  const { x } = props.at
+  if (left > x - TRACK_PAD) left = Math.max(left, x + CURSOR_CLEAR)
+  else right = Math.min(right, x - CURSOR_CLEAR)
+  return new DOMRect(left, top, right - left, bottom - top)
 }
 
 async function placeAndReport () {
@@ -147,7 +156,8 @@ async function placeAndReport () {
   await new Promise(resolve => requestAnimationFrame(resolve))
   place()
   await nextTick()
-  if (el.value) emit('placed', shownRect(el.value))
+  const rect = el.value && shownRect(el.value)
+  if (rect) emit('placed', rect)
 }
 
 onMounted(() => {

@@ -66,11 +66,16 @@ describe('ninjaPrice', () => {
   it('reads div items in div with the chaos under it', () => {
     expect(ninjaPrice(900, 180)).toEqual({ main: '5 div', each: true, sub: '900c' })
   })
+  it('shows a dash, not infinity, for no price', () => {
+    expect(ninjaPrice(0, 180).main).toBe('—')
+    expect(ninjaPrice(NaN, 180).main).toBe('—')
+  })
   it('reads a Divine Orb in chaos', () => {
     expect(ninjaPrice(180, 180, true)).toEqual({ main: '180c', each: true, sub: null })
   })
   it('totals a cheap stack without rounding it to 0', () => {
-    expect(ninjaTotal(19 * 0.003565, 180)).toBe('0.07c')
+    expect(ninjaTotal(19 * 0.003565, 180)).toBe('0.068c')
+    expect(ninjaTotal(2 * 0.002, 180)).toBe('0.004c')
     expect(ninjaTotal(238, 180)).toBe('1.3 div')
   })
   it('splits a divine into chaos', () => {
