@@ -1,7 +1,7 @@
 <template>
   <div v-if="!error" class="layout-column min-h-0" style="height: auto;">
     <teleport v-if="improved && verdictSlot" :to="verdictSlot">
-      <bulk-verdict :insight="bulkInsight" :unit="selectedCurr === 'xchgChaos' ? 'c' : 'div'" :need="need" :loading="tableLoading" :ninja="ninjaEach" />
+      <bulk-verdict :insight="bulkInsight" :unit="selectedCurr === 'xchgChaos' ? 'c' : 'div'" :need="need" :loading="tableLoading" :ninja="ninjaEach" :other="otherMarket" :divine-in-chaos="divineInChaos" />
     </teleport>
     <div :class="$style.legacyMessage">
       {{ t(':legacy_bulk_xchg_msg') }}
@@ -13,12 +13,12 @@
         <span v-if="!result" class="text-gray-600">...</span>
         <div v-else class="flex items-center">
           <button class="btn flex items-center mr-1" :style="{ background: selectedCurr !== 'xchgChaos' ? 'transparent' : undefined }"
-            @click="selectedCurr = 'xchgChaos'">
+            @click="pickCurr('xchgChaos')">
             <img src="/images/chaos.png" :class="$style.currencyIcon">
             <span>{{ result.xchgChaos.listed.value?.total ?? '?' }}</span>
           </button>
           <button class="btn flex items-center mr-1" :style="{ background: selectedCurr !== 'xchgStable' ? 'transparent' : undefined }"
-            @click="selectedCurr = 'xchgStable'">
+            @click="pickCurr('xchgStable')">
             <img src="/images/divine.png" :class="$style.currencyIcon">
             <span>{{ result.xchgStable.listed.value?.total ?? '?' }}</span>
           </button>
@@ -36,7 +36,7 @@
               <div class="px-2">{{ t(':price') }}</div>
             </th>
             <th :class="$style.tableHeading">
-              <div class="w-pc-ratio-head pl-1 pr-2 flex text-xs" style="line-height: calc(1.3125rem * var(--w-text-scale, 1));"><span :class="$style.ratioCell" class="text-right -ml-px mr-px">{{ (selectedCurr === 'xchgChaos') ? 'chaos' : 'div' }}</span><span>{{ '\u2009' }}/{{ '\u2009' }}</span><span :class="$style.ratioCell">{{ t(':bulk') }}</span></div>
+              <div class="w-pc-ratio-head pl-1 pr-2 flex text-xs" style="line-height: calc(1.3125rem * var(--w-text-scale, 1));"><span :class="[$style.ratioCell, $style.ratioPay]" class="text-right -ml-px mr-px">pay</span><span>{{ '\u2009' }}/{{ '\u2009' }}</span><span :class="$style.ratioCell">get</span></div>
             </th>
             <th :class="$style.tableHeading">
               <div class="px-1">{{ t(':stock') }}</div>
@@ -61,8 +61,8 @@
           <template v-else>
             <tr v-for="result in selectedResults" :key="result.id"
               :class="{ [$style.marketRatioRow]: ('marketRatio' in result) }">
-              <td class="px-2">{{ Number((result.exchangeAmount / result.itemAmount).toFixed(4)) }}</td>
-              <td class="pl-1 whitespace-nowrap"><span :class="$style.ratioCell" class="text-right">{{ Number(result.exchangeAmount.toFixed(1)) }}</span><span>{{ '\u2009' }}/{{ '\u2009' }}</span><span :class="$style.ratioCell">{{ Number(result.itemAmount.toFixed(1)) }}</span></td>
+              <td class="px-2 whitespace-nowrap" data-testid="bulk-each">{{ Number((result.exchangeAmount / result.itemAmount).toFixed(4)) }}{{ unitSuffix }}</td>
+              <td class="pl-1 whitespace-nowrap"><span :class="[$style.ratioCell, $style.ratioPay]" class="text-right">{{ Number(result.exchangeAmount.toFixed(1)) }}{{ unitSuffix }}</span><span>{{ '\u2009' }}/{{ '\u2009' }}</span><span :class="$style.ratioCell">{{ Number(result.itemAmount.toFixed(1)) }}</span></td>
               <template v-if="'marketRatio' in result">
                 <td class="pl-1 pr-2 whitespace-nowrap text-center" :colspan="showSeller ? 4 : 3">{{ t(':market_ratio') }}</td>
               </template>
@@ -117,7 +117,7 @@ import { useRetryCountdown } from './retry-countdown'
 import OnlineFilter from './OnlineFilter.vue'
 import TradeLinks from './TradeLinks.vue'
 import BulkVerdict from '@/web/woke/price-insight/BulkVerdict.vue'
-import { buildBulkInsight } from '@/web/woke/price-insight/bulk-insight'
+import { buildBulkInsight, pickBulkMarket } from '@/web/woke/price-insight/bulk-insight'
 import { priceView } from '@/web/woke/price-insight/view'
 import '@/web/woke/price-insight/price-table.css'
 
@@ -125,10 +125,17 @@ const slowdown = artificialSlowdown(900)
 const SKELETON_ROWS = 8
 
 function useBulkApi () {
-  type BulkSearchExtended = Record<'xchgChaos' | 'xchgStable', {
+  type BulkSide = {
     listed: Ref<BulkSearch | null>
     listedLazy: ComputedRef<readonly PricingResult[]>
-  }>
+    /** Loads this side if it isn't yet. Quiet: a failure only marks it failed. */
+    load: (quiet?: boolean) => void
+    failed: Ref<boolean>
+  }
+  type BulkSearchExtended = Record<'xchgChaos' | 'xchgStable', BulkSide> & {
+    /** The first search asked for both currencies (not a Chaos or Divine Orb). */
+    both: boolean
+  }
 
   let searchId = 0
   const error = shallowRef<string | null>(null)
@@ -153,7 +160,8 @@ function useBulkApi () {
       if (_searchId === searchId) {
         result.value = {
           xchgStable: getResultsByHave(item, filters, optimisticSearch, 'divine'),
-          xchgChaos: getResultsByHave(item, filters, optimisticSearch, 'chaos')
+          xchgChaos: getResultsByHave(item, filters, optimisticSearch, 'chaos'),
+          both: have.length > 1
         }
       }
     } catch (err) {
@@ -173,35 +181,46 @@ function useBulkApi () {
         ? shallowReactive(preloaded.find(res => res?.haveTag === have)!)
         : null)
     const items = shallowRef<PricingResult[]>(_result.value?.listed ?? [])
+    const failed = shallowRef(false)
     let requested: boolean = (_result.value != null)
 
-    const listedLazy = computed(() => {
-      if (!requested) {
-        // woke: a newer search replaces this one's results, so this has nothing to add.
-        const _searchId = searchId
-        ;(async function () {
-          try {
-            requested = true
-            const found = (await execBulkSearch(
-              item, filters, [have], { accountName: AppConfig().accountName }))[0]!
-            if (_searchId !== searchId) return
-            _result.value = shallowReactive(found)
-            items.value = _result.value.listed
-            const otherHave = (have === 'divine')
-              ? result.value!.xchgChaos.listed.value!
-              : result.value!.xchgStable.listed.value!
-            // fix best guess we did while making optimistic search
-            otherHave.total -= _result.value.total
-          } catch (err) {
-            if (_searchId === searchId) error.value = (err as Error).message
+    function load (quiet = false) {
+      if (requested) return
+      requested = true
+      failed.value = false
+      // woke: a newer search replaces this one's results, so this has nothing to add.
+      const _searchId = searchId
+      ;(async function () {
+        try {
+          const found = (await execBulkSearch(
+            item, filters, [have], { accountName: AppConfig().accountName }))[0]!
+          if (_searchId !== searchId) return
+          _result.value = shallowReactive(found)
+          items.value = _result.value.listed
+          const otherHave = (have === 'divine')
+            ? result.value!.xchgChaos.listed.value
+            : result.value!.xchgStable.listed.value
+          // fix best guess we did while making optimistic search
+          if (otherHave) otherHave.total -= _result.value.total
+        } catch (err) {
+          if (_searchId !== searchId) return
+          if (quiet) {
+            // woke: loaded only to compare prices; a click on this side tries again.
+            requested = false
+            failed.value = true
+          } else {
+            error.value = (err as Error).message
           }
-        })()
-      }
+        }
+      })()
+    }
 
+    const listedLazy = computed(() => {
+      if (!requested) load()
       return items.value
     })
 
-    return { listed: _result, listedLazy }
+    return { listed: _result, listedLazy, load, failed }
   }
 
   return { error, result, search }
@@ -297,6 +316,12 @@ export default defineComponent({
     const showBrowser = inject<(url: string) => void>('builtin-browser')!
 
     const selectedCurr = shallowRef<'xchgChaos' | 'xchgStable'>('xchgChaos')
+    // woke: once you pick a currency, the price comparison leaves it alone.
+    let userPicked = false
+    function pickCurr (curr: 'xchgChaos' | 'xchgStable') {
+      userPicked = true
+      selectedCurr.value = curr
+    }
 
     watch(() => props.item, (item) => {
       slowdown.reset(item)
@@ -327,32 +352,57 @@ export default defineComponent({
       const rate = poeninja.xchgRate.value
       return rate ? chaos / rate : null
     })
+    // woke: both currencies' offers, to lead with the cheaper (WOKEPOET-487).
+    const sideInsight = (curr: 'xchgChaos' | 'xchgStable') => computed(() => {
+      const listed = result.value?.[curr].listed.value?.listed
+      return listed ? buildBulkInsight(listed, need.value) : null
+    })
+    const insights = { xchgChaos: sideInsight('xchgChaos'), xchgStable: sideInsight('xchgStable') }
+    // Both sides are in (or one failed), so the cheaper can be told.
+    const marketsSettled = computed(() => {
+      const r = result.value
+      if (!r) return false
+      if (!r.both) return true
+      return (['xchgChaos', 'xchgStable'] as const).every(c => r[c].listed.value != null || r[c].failed.value)
+    })
     const bulkInsight = computed(() => {
-      if (!slowdown.isReady.value || !result.value) return null
-      return buildBulkInsight(result.value[selectedCurr.value].listedLazy.value, need.value)
+      if (!slowdown.isReady.value || !result.value || !marketsSettled.value) return null
+      // Read first: this is what starts the other currency's search when it is picked.
+      const listed = result.value[selectedCurr.value].listedLazy.value
+      return buildBulkInsight(listed, need.value)
+    })
+    const otherMarket = computed(() => {
+      if (!bulkInsight.value) return null
+      const curr = selectedCurr.value === 'xchgChaos' ? 'xchgStable' : 'xchgChaos'
+      const insight = insights[curr].value
+      return insight ? { unit: curr === 'xchgChaos' ? 'c' : 'div', fair: insight.fair, sellers: insight.sellers } : null
     })
 
     // woke: real rows only once loaded, with placeholder rows until then.
     const tableLoading = computed(() => {
       // Read first: this is what starts the other currency's search when it is picked.
       const shown = selectedResults.value
-      if (!slowdown.isReady.value || !result.value) return true
+      if (!slowdown.isReady.value || !result.value || !marketsSettled.value) return true
       return shown.length === 0 || 'marketRatio' in shown[0]
         ? result.value[selectedCurr.value].listed.value == null
         : false
     })
 
-    watch(result, () => {
-      const stableTotal = result.value?.xchgStable.listed.value?.total
-      const chaosTotal = result.value?.xchgChaos.listed.value?.total
-      if (stableTotal == null) {
-        selectedCurr.value = 'xchgChaos'
-      } else if (chaosTotal == null) {
-        selectedCurr.value = 'xchgStable'
-      } else {
-        selectedCurr.value = (stableTotal > chaosTotal) ? 'xchgStable' : 'xchgChaos'
-      }
+    watch(result, (r) => {
+      userPicked = false
+      // The first search held the chaos side back: load it to compare prices.
+      if (r?.both && r.xchgChaos.listed.value == null) r.xchgChaos.load(true)
+      if (r?.both && r.xchgStable.listed.value == null) r.xchgStable.load(true)
     })
+    watch(() => marketsSettled.value && result.value
+      ? pickBulkMarket(
+        { insight: insights.xchgChaos.value, total: result.value.xchgChaos.listed.value?.total ?? null },
+        { insight: insights.xchgStable.value, total: result.value.xchgStable.listed.value?.total ?? null },
+        poeninja.xchgRate.value)
+      : null,
+    (market) => {
+      if (market && !userPicked) selectedCurr.value = market
+    }, { immediate: true })
 
     function makeTradeLink (_have?: string[]) {
       const have = _have ?? ((selectedCurr.value === 'xchgStable') ? ['divine'] : ['chaos'])
@@ -370,6 +420,11 @@ export default defineComponent({
       need,
       ninjaEach,
       bulkInsight,
+      otherMarket,
+      // woke: every price says its currency (WOKEPOET-487).
+      unitSuffix: computed(() => selectedCurr.value === 'xchgChaos' ? 'c' : ' div'),
+      divineInChaos: computed(() => poeninja.xchgRate.value ?? null),
+      pickCurr,
       error,
       retryIn,
       rateLimited,
@@ -420,6 +475,11 @@ export default defineComponent({
 .ratioCell {
   display: inline-block;
   width: calc(2rem * (1 + (var(--w-text-scale, 1) - 1) / 2)); /* half the text growth: the table must fit the window */
+}
+
+/* The paid side carries its currency: "178c", "1 div". */
+.ratioPay {
+  width: calc(3.25rem * (1 + (var(--w-text-scale, 1) - 1) / 2));
 }
 
 .currencyIcon {

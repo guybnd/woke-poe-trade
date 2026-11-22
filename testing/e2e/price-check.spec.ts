@@ -36,7 +36,7 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   const panel = overlay.widget('price-check')
   // The five recorded exchange offers, cheapest first.
   await expect(panel).toContainText('Matched: 5')
-  await expect(panel).toContainText('178 / 1')
+  await expect(panel).toContainText('178c / 1')
   // The live verdict says how far it is from poe.ninja.
   await expect(panel.getByTestId('bulk-verdict-ninja')).toContainText('poe.ninja 180c each')
   // The game copied with Ctrl held (advanced mod text), and nothing else was typed.
@@ -468,4 +468,53 @@ test('an item price check can\'t read offers its copied text to copy', async ({ 
   await expect(panel.getByRole('button', { name: 'Copy text' })).toBeVisible()
   // No Rarity line, so there's no name to search by.
   await expect(panel.getByRole('button', { name: 'Search on trade' })).toHaveCount(0)
+})
+
+// Sellers asking divines often ask "1 div" for items worth a few chaos. The first
+// search (both currencies, sorted by the raw number) then holds the chaos side
+// back; the check loads it and leads with the cheaper market (WOKEPOET-487).
+test('bulk: leads with the cheaper chaos offers when divine sellers ask 1 div each', async ({ overlay }) => {
+  const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
+  const offer = (id: string, currency: string, amount: number, stock: number) => ({
+    id,
+    item: null,
+    listing: {
+      indexed: new Date().toISOString(),
+      account: { name: `${id}#1`, lastCharacterName: `${id}c`, online: { league: 'Testleague' } },
+      offers: [{ exchange: { currency, amount, whisper: '' }, item: { currency: 'originators-exalted-orb', amount: 1, stock, id, whisper: '' } }],
+      whisper: ''
+    }
+  })
+  const haves: string[][] = []
+  await overlay.page.route('**/api/trade/exchange/**', (route) => {
+    const have: string[] = JSON.parse(route.request().postData()!).query.have
+    haves.push(have)
+    const rows = have.length > 1
+      ? [...Array.from({ length: 85 }, (_, i) => offer(`d${i}`, 'divine', 1, 10 + i)), ...Array.from({ length: 15 }, (_, i) => offer(`c${i}`, 'chaos', 1, 5 + i))]
+      : Array.from({ length: 30 }, (_, i) => offer(`c${i}`, 'chaos', 1 + Math.floor(i / 10), 5 + i))
+    return route.fulfill({
+      contentType: 'application/json',
+      headers: LIMITS,
+      body: JSON.stringify({ id: 'xq', total: have.length > 1 ? 1222 : 911, result: Object.fromEntries(rows.map(r => [r.id, r])) })
+    })
+  })
+  await overlay.boot()
+  await overlay.copyItem('items/currency-originators-exalted.txt')
+  const panel = overlay.widget('price-check')
+  const price = panel.getByTestId('bulk-verdict-price')
+  await expect(price).toHaveText('1c')
+  await expect(panel).toContainText('Chaos offers, with stock for your 3')
+  // The divine offers are named, with their chaos value.
+  await expect(panel.getByTestId('bulk-verdict-other')).toHaveText('Divine offers ask 1 div each (≈ 180c), 180× as much')
+  // Every price in the table says its currency.
+  await expect(panel.getByTestId('bulk-each').first()).toHaveText('1c')
+  await expect(panel).toContainText('1c / 1')
+  expect(haves).toEqual([['divine', 'chaos'], ['chaos']])
+  await overlay.snap('bulk check leads with chaos offers')
+  // Picking divine shows those offers, priced in div with their chaos value.
+  await panel.locator('.w-pc-matched button').nth(1).click()
+  await expect(price).toHaveText('1 div')
+  await expect(panel).toContainText('each ≈ 180c')
+  await expect(panel.getByTestId('bulk-verdict-other')).toContainText('Chaos offers ask 1c each')
+  await expect(panel.getByTestId('bulk-each').first()).toHaveText('1 div')
 })
