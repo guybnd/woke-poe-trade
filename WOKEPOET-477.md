@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-477
 title: 'Market Prices: more time ranges (3h to 7d) for sparkline and % change'
-status: In Progress
+status: Done
 priority: Medium
 effort: M
 assignee: unassigned
@@ -32,11 +32,49 @@ history:
       Mockups for Guy to pick from:
       https://claude.ai/artifact/F8HcJFKDjGuhpaGCh5ECVm (building A meanwhile)
     id: a-2026-11-22t10-14-28-912z
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged in PR 760 (master 40414aee): range picker 3h–7d on Market Prices,
+      remembered; Ctrl+Space extra columns. Review fixes in, CI green.
+    date: '2026-11-22T10:39:09.136Z'
+    completionComment: true
+    id: c-2026-11-22t10-39-09-136z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-22T10:39:09.136Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Prices tab range picker 3h/6h/12h/24h/2d/3d/7d (option A, remembered).
+      Under 3d from the app's own snapshots via new market-series host op; 3d/7d
+      poe.ninja daily; 1h not offered. Ctrl+Space extra columns for
+      3h/6h/12h/2d. Review fixes in; CI green.
+    completionComment: true
+    date: '2026-11-22T10:39:16.816Z'
+    id: c-2026-11-22t10-39-16-816z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-22T10:39:17.382Z'
 needsAction: null
-claim:
-  holder: claude-code@guy-pc
-  claimedAt: '2026-11-22T10:10:44.583Z'
-  expiresAt: '2026-11-22T10:40:44.583Z'
+reviewState: approved
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/760'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy wants the Market window's Prices tab to offer more ranges than "Last 7 days", for both the sparkline and the % change. Remember the chosen range; surface the new info in Ctrl+Space search; every row keeps its hover tooltip.
 
