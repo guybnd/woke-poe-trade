@@ -64,7 +64,7 @@
       <section :class="$style.pane" data-testid="map-planner-search">
         <div class="flex items-center gap-2">
           <span class="w-group-label flex-1" style="padding: 0;">Stash search</span>
-          <WInfo v-if="search.text" :text="tokenInfo" />
+          <WInfo v-if="search.text && !search.tooLong" :text="tokenInfo" />
         </div>
         <code :class="[$style.regex, { 'w-dim': !search.text }]" :title="search.text">{{ search.text || search.problem || 'Tick mods to build a search' }}</code>
         <div :class="$style.meter">
@@ -149,9 +149,9 @@ const universe = computed(() => planUniverse(data.value))
 const alsoAvoid = computed(() => ratedAvoid(data.value, rows.value, props.ratings))
 const search = computed(() => planStashSearch(rows.value, ticked.value, state.value, universe.value, allMapNames(), alsoAvoid.value))
 const tokenInfo = computed(() => search.value.minToken > 3
-  ? `There was room, so each mod is searched by at least ${search.value.minToken} letters of its text instead of the shortest 3. ` +
+  ? `There was room, so each mod is searched by ${search.value.minToken} or more characters of its text where its text allows, instead of the shortest 3. ` +
     'Longer text is less likely to also match a rare map\'s random name. It shortens again by itself when you tick more mods.'
-  : 'Each mod is searched by the shortest text (3 letters or more) that no other T17 mod has, so the search fits. ' +
+  : 'Each mod is searched by the shortest text (3 characters or more) that no other T17 mod has, so the search fits. ' +
     'Text that short can, rarely, also match a rare map\'s random name. Tick fewer mods and it uses longer text by itself.')
 const usable = computed(() => !!search.value.text && !search.value.tooLong)
 
