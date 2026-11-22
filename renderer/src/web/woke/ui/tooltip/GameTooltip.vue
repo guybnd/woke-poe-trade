@@ -2,7 +2,7 @@
   <Teleport to="body">
     <div v-if="tip" ref="el" :class="[$style.tip, frame, { [$style.wide]: listing || swap || itemCompare }]" :style="pos" role="tooltip">
       <header :class="[$style.head, { [$style.double]: lines.length > 1, [$style.art]: headArt }]" :style="headArt">
-        <img v-for="(src, i) in influenceArt" :key="i" :src="src" alt="" :class="[$style.influence, i ? $style.right : $style.left]">
+        <img v-for="(src, i) in plateArt" :key="i" :src="src" alt="" :class="[$style.influence, i ? $style.right : $style.left]">
         <div v-for="(l, i) in lines" :key="i">{{ l }}</div>
       </header>
 
@@ -82,7 +82,7 @@
           <div><span :class="$style.label">Item Level: </span><span :class="$style.value">{{ item.itemLevel }}</span></div>
         </section>
         <section v-if="item.implicits.length" :class="$style.block">
-          <div v-for="(m, i) in item.implicits" :key="i" :class="$style.mod">{{ m }}</div>
+          <div v-for="(m, i) in item.implicits" :key="i" :class="item.implicitKinds?.[i] === 'vestigial' ? $style.vestigial : $style.mod">{{ m }}</div>
         </section>
         <section v-if="tieredMods" :class="$style.block">
           <ListingModGroup :group="{ heading: '', lines: tieredMods }" />
@@ -314,7 +314,13 @@ const headArt = computed(() => {
   return { backgroundImage: `${file('left')}, ${file('right')}, ${file('middle')}` }
 })
 
-const influenceArt = computed(() => (item.value?.influences ?? []).slice(0, 2).map(i => `/images/influence-${i}.png`))
+// The nameplate's icons: influences, or a Vestigial unique's crystal at both ends, as in the game.
+const isVestigial = computed(() => Boolean(item.value?.vestigial || item.value?.base?.startsWith('Vestigial ')))
+const plateArt = computed(() => {
+  const influences = (item.value?.influences ?? []).slice(0, 2).map(i => `/images/influence-${i}.png`)
+  if (influences.length || !isVestigial.value) return influences
+  return ['/images/vestigial.png', '/images/vestigial.png']
+})
 
 const itemProps = computed(() => {
   const i = item.value
@@ -520,6 +526,7 @@ onUnmounted(() => {
 .mod { color: var(--w-r-magic); }
 .crafted { color: var(--w-mod-crafted); }
 .fractured { color: var(--w-mod-fractured); }
+.vestigial { color: var(--w-mod-vestigial); }
 .corrupted { color: var(--w-down); }
 .note { color: var(--w-dim); font-family: var(--w-body); font-size: var(--w-fs-sm); white-space: pre-line; }
 .sockets { display: flex; align-items: center; justify-content: center; gap: 8px; }

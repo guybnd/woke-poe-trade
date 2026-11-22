@@ -671,8 +671,9 @@ export default defineComponent({
   @apply bg-orange-600 text-white; }
 .tag-foulborn {
   @apply bg-pink-700 text-white; }
+/* The game's light purple for a Vestigial implicit. */
 .tag-vestigial {
-  @apply bg-purple-600 text-purple-100; }
+  background: var(--w-mod-vestigial); color: #1d1228; }
 .tag-enchant {
   @apply bg-indigo-200 text-black; }
 .tag-pseudo,

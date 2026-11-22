@@ -6,7 +6,7 @@ import { ModifierType } from '@/parser/modifiers'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
 
-export type PoeKind = 'local' | 'pseudo' | 'enchant' | 'implicit' | 'explicit' | 'crafted' | 'fractured' | 'scourge' | 'foulborn'
+export type PoeKind = 'local' | 'pseudo' | 'enchant' | 'implicit' | 'explicit' | 'crafted' | 'fractured' | 'scourge' | 'foulborn' | 'vestigial'
 export type PoeSection = 'property' | 'enchant' | 'implicit' | 'explicit'
 
 export interface PoeLook {
@@ -18,6 +18,9 @@ export interface PoeLook {
   /** The red diamond of a corruption implicit. */
   corrupted?: boolean
 }
+
+/** The crystal the game puts on a Vestigial unique's nameplate. */
+export const VESTIGIAL_ICON = '/images/vestigial.png'
 
 const ICONS: Partial<Record<string, [string, string]>> = {
   [FilterTag.Shaper]: ['/images/influence-Shaper.png', 'Shaper'],
@@ -61,6 +64,8 @@ export function poeLook (filter: StatFilter): PoeLook {
     case FilterTag.Scourge: return { kind: 'scourge', label: 'Scourge modifier' }
     // A unique's mod the Genesis Tree mutated: it sets the price, so it stands out.
     case FilterTag.Foulborn: return { kind: 'foulborn', label: 'Foulborn modifier' }
+    // A Timeless Conflict variant's inherited implicit: light purple, with the game's crystal.
+    case FilterTag.Vestigial: return { kind: 'vestigial', label: 'Vestigial implicit', icon: VESTIGIAL_ICON }
     case FilterTag.Corruption: return { kind: 'implicit', label: 'Corruption implicit', corrupted: true }
     case FilterTag.Synthesised: return { kind: 'implicit', label: 'Synthesised implicit' }
     case FilterTag.Eldritch: return { kind: 'implicit', label: 'Eldritch implicit' }

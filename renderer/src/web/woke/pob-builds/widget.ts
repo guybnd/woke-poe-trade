@@ -172,7 +172,8 @@ export interface PobItem {
   mods: string[]
   // Older app versions don't send the rest.
   modKinds?: Array<'' | 'crafted' | 'fractured'>
-  implicitKinds?: Array<'' | 'crafted' | 'fractured'>
+  // 'vestigial': a Vestigial unique's inherited implicit (trade listings only).
+  implicitKinds?: Array<'' | 'crafted' | 'fractured' | 'vestigial'>
   quality?: number
   armour?: number
   evasion?: number
@@ -186,6 +187,8 @@ export interface PobItem {
   twiceCorrupted?: boolean
   mirrored?: boolean
   influences?: string[]
+  // A Vestigial unique: the game's crystal on both ends of its nameplate.
+  vestigial?: boolean
 }
 
 export interface PobItemSet {

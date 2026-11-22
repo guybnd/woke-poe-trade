@@ -28,7 +28,7 @@ export interface ModPart {
 export interface ModLine {
   parts: ModPart[]
   tags: string[]
-  kind: '' | 'crafted' | 'fractured' | 'enchant' | 'scourge'
+  kind: '' | 'crafted' | 'fractured' | 'enchant' | 'scourge' | 'vestigial'
   // An eldritch implicit's trade stat and roll range, to look up its altar and tier.
   eldritch?: EldritchKey
   // A corrupted item's implicit, checked against the corruption implicits.
@@ -427,7 +427,10 @@ function implicitLine (item: ListingItem, mod: ListingMod, catalyst: Catalyst | 
   const line = buildLine(mod, '', catalyst, true)
   const key = eldritchKey(item, mod)
   const corruption = corruptionKey(item, mod)
-  if (key) line.eldritch = key
+  if (typeof mod !== 'string' && mod.flags?.vestigial) {
+    line.kind = 'vestigial'
+    line.label = 'Vestigial implicit'
+  } else if (key) line.eldritch = key
   else if (corruption) line.corruption = corruption
   else if (item.synthesised) line.label = 'Synthesised implicit'
   return line

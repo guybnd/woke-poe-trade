@@ -77,7 +77,9 @@ function kindClass (line: ModLine) {
       ? $style.fractured
       : line.kind === 'enchant'
         ? $style.enchant
-        : line.kind === 'scourge' ? $style.scourge : $style.mod
+        : line.kind === 'scourge'
+          ? $style.scourge
+          : line.kind === 'vestigial' ? $style.vestigial : $style.mod
 }
 
 function tierOf (tag: string) {
@@ -131,6 +133,7 @@ function rollColour (quality: number) {
 .fractured { color: var(--w-mod-fractured); }
 .enchant { color: var(--w-mod-enchant); }
 .scourge { color: var(--w-mod-scourge); }
+.vestigial { color: var(--w-mod-vestigial); }
 /* Before the line, outside it, so the text stays centred. */
 .corrupt { position: absolute; right: 100%; top: .45em; width: 7px; height: 7px; margin-right: 7px; transform: rotate(45deg); background: var(--w-mod-corrupted); }
 .icon { position: absolute; right: 100%; top: 50%; display: block; width: 16px; height: 16px; margin: -9px 5px 0 0; }
