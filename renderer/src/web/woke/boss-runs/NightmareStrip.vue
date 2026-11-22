@@ -25,20 +25,24 @@
     </button>
     <WSegmented v-if="open && gridOpen && vaultTable" v-model="bigTab" :class="$style.tabs" data-nightmare-tabs
       :options="[{ value: 'frags', label: 'Fragments' }, { value: 'vaults', label: 'Vaults' }]" />
+    <!-- Guy's pick A (2026-11-22): a button per vault, the chosen vault's rewards below as icon rows. -->
     <div v-if="open && gridOpen && bigTab === 'vaults' && vaultTable" :class="$style.vaults" data-nightmare-vaults>
-      <div v-for="v in vaultBlocks" :key="v.id" :class="$style.vblock" :data-nightmare-vault-block="v.id">
-        <div :class="$style.vhead">
-          <span :class="$style.vtitle">{{ v.name }}</span>
-          <span class="w-dim">{{ v.quadrant }} · {{ v.maps.join(', ') || 'no Nightmare map' }}</span>
-          <span class="flex-1" />
-          <span :class="$style.est" :title="TYPICAL_TIP">~{{ chaos(v.typical) }}</span>
-        </div>
-        <div v-for="r in v.rewards" :key="r.text" :class="$style.vrow">
-          <span :class="r.rare ? $style.rare : undefined">{{ r.text }}{{ r.rare ? ' · rare' : '' }}</span>
-          <span v-if="r.chaos != null">{{ chaos(r.chaos) }}</span>
-          <span v-else class="w-faint" :title="r.note">varies</span>
-        </div>
+      <div :class="$style.vchips">
+        <button v-for="v in vaultBlocks" :key="v.id" type="button" :class="[$style.vchip, shownVault?.id === v.id && $style.vchipOn]"
+          :aria-pressed="shownVault?.id === v.id" :data-nightmare-vault-pick="v.id" @click="pickedVault = v.id">
+          <b>{{ v.short }}</b>
+          <span>{{ v.maps.join(', ') || 'no map' }}</span>
+        </button>
       </div>
+      <template v-if="shownVault">
+        <div :class="$style.vhead" :data-nightmare-vault-block="shownVault.id">
+          <span :class="$style.vtitle">{{ shownVault.name }}</span>
+          <span class="w-dim">{{ shownVault.quadrant }}</span>
+          <span class="flex-1" />
+          <span :class="$style.est" :title="TYPICAL_TIP">~{{ chaos(shownVault.typical) }} typical</span>
+        </div>
+        <VaultRewardRows :rewards="shownVault.rewards" fit />
+      </template>
     </div>
     <div v-if="open && gridOpen && (bigTab === 'frags' || !vaultTable)" :class="$style.wrap">
       <table :class="$style.grid">
@@ -100,6 +104,7 @@ import { AppConfig } from '@/web/Config'
 import WIcon from '../ui/WIcon.vue'
 import WSegmented from '../ui/WSegmented.vue'
 import VaultHoverCard from '../vaults/VaultHoverCard.vue'
+import VaultRewardRows from '../vaults/VaultRewardRows.vue'
 import { itemArt } from '../ui/game-icons'
 import { usePriceIndex } from '../market/price-index'
 import { evaluateBoss, priceResolver } from './calc'
@@ -191,15 +196,21 @@ const vaultBlocks = computed(() => {
   const block = (v: Vault) => ({
     id: v.id,
     name: v.name,
+    short: shortName(v),
     quadrant: v.quadrant,
     maps: nightmareMapsFor(t, v),
     typical: typicalPick(v, priceOf),
     rewards: v.rewards
-      .map(r => ({ text: r.text, kind: r.kind, rare: !!r.rare, note: r.note, chaos: rewardPrice(r, priceOf), icon: rewardIcon(r) }))
+      .map(r => ({ text: r.text, kind: r.kind, rare: !!r.rare, note: r.note, chaos: rewardPrice(r, priceOf), icon: rewardIcon(r), item: r.items?.length === 1 ? r.items[0].name : null }))
       .sort((a, b) => (b.chaos ?? -1) - (a.chaos ?? -1))
   })
-  return t.vaults.map(block).sort((a, b) => (b.maps.length ? 1 : 0) - (a.maps.length ? 1 : 0) || (b.typical ?? -1) - (a.typical ?? -1))
+  // The best map's vault first, then the other maps' in their order, then the rest.
+  const rank = (id: string) => { const i = cols.value.findIndex(c => c.vault?.id === id); return i < 0 ? 99 : i }
+  return t.vaults.map(block).sort((a, b) => rank(a.id) - rank(b.id) || (b.typical ?? -1) - (a.typical ?? -1))
 })
+// The vault the Vaults tab shows: the one you clicked, else the best map's.
+const pickedVault = shallowRef<string | null>(null)
+const shownVault = computed(() => vaultBlocks.value.find(b => b.id === pickedVault.value) ?? vaultBlocks.value[0] ?? null)
 
 // Column heads: five fit side by side in the price check.
 const SHORT: Record<string, string> = {
@@ -269,13 +280,16 @@ const fragRows = computed(() => UBER_FRAGMENTS
 .barDown { background: var(--w-down); }
 .vault { color: var(--w-faint); font-size: var(--w-fs-xs); white-space: nowrap; }
 .tabs { align-self: flex-start; margin-top: 4px; }
-/* Scrolls inside, so a tall list doesn't push the rest of the price check out of the window. */
-.vaults { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; max-height: 16em; overflow-y: auto; }
-.vblock { border-top: 1px solid var(--w-line); padding-top: 3px; }
-.vhead { display: flex; align-items: baseline; gap: 6px; }
+.vaults { margin-top: 4px; }
+.vchips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-bottom: 5px; }
+.vchip { display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 3px 4px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); color: var(--w-dim); font-size: var(--w-fs-xs); line-height: 1.25; }
+.vchip b { color: var(--w-fg); font-family: var(--w-caps-face); font-weight: 400; font-size: var(--w-fs-sm); }
+.vchip span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vchip:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
+.vchipOn { border-color: var(--w-gold); color: var(--w-fg); }
+.vchipOn b { color: var(--w-gold); }
+.vhead { display: flex; align-items: baseline; gap: 6px; padding-bottom: 2px; border-bottom: 1px solid var(--w-line); }
 .vtitle { color: var(--w-gold); font-family: var(--w-caps-face); }
-.vrow { display: flex; justify-content: space-between; gap: 8px; padding-left: 8px; font-variant-numeric: tabular-nums; }
-.rare { color: var(--w-r-unique); }
 .gridToggle { align-self: flex-start; margin-top: 4px; color: var(--w-faint); font-size: var(--w-fs-xs); }
 .gridToggle:hover { color: var(--w-fg); }
 /* Fixed columns, every map cell centred: headers, chances, unique, loot and

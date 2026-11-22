@@ -3,18 +3,13 @@
        on one line and the price (Guy's pick A, 2026-11-21). Outside the panel,
        so no edge cuts it off. -->
   <Teleport to="body">
-    <div v-if="vault && anchor" ref="el" data-w-popup :class="$style.card" :style="pos" role="tooltip" data-vault-hover>
+    <div v-if="vault && anchor" ref="el" data-w-popup data-no-item-tip="already a tooltip: the vault hover card" :class="$style.card" :style="pos" role="tooltip" data-vault-hover>
       <div :class="$style.head">
         <span :class="$style.name">{{ vault.name }}</span>
         <span class="w-dim">{{ vault.quadrant }}</span>
         <span :class="$style.typical">~{{ chaos(vault.typical) }} typical</span>
       </div>
-      <div v-for="r in vault.rewards" :key="r.text" :class="$style.row" :data-vault-reward="r.text">
-        <WIcon :src="r.icon ? (itemArt({ name: r.icon }) ?? undefined) : undefined" :fallback="r.kind === 'unique' ? 'fas fa-ring' : 'fas fa-cube'" size="md" :class="r.kind === 'unique' && !r.icon ? $style.uniq : undefined" />
-        <span :class="$style.text">{{ r.text }}<span v-if="r.rare" :class="$style.rare">rare</span></span>
-        <span v-if="r.chaos != null" :class="$style.price">{{ chaos(r.chaos) }}</span>
-        <span v-else :class="[$style.price, $style.varies]">varies</span>
-      </div>
+      <VaultRewardRows :rewards="vault.rewards" />
       <div :class="$style.foot">~ typical = the best of four offers; no reward weights are published. Unpriced rewards count as nothing. Gems at level 1.</div>
     </div>
   </Teleport>
@@ -22,15 +17,15 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import WIcon from '../ui/WIcon.vue'
-import { itemArt } from '../ui/game-icons'
+import VaultRewardRows from './VaultRewardRows.vue'
+import type { RewardRow } from './VaultRewardRows.vue'
 import { placeHelp } from '../ui/help-tip'
 
 export interface VaultHover {
   name: string
   quadrant: string
   typical: number | null
-  rewards: Array<{ text: string, kind: string, rare: boolean, chaos: number | null, icon: string | null }>
+  rewards: RewardRow[]
 }
 
 const props = defineProps<{ vault: VaultHover | null, anchor: DOMRect | null }>()
@@ -80,12 +75,5 @@ function chaos (n: number | null | undefined) {
 .head { display: flex; align-items: baseline; gap: 8px; padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid var(--w-line); white-space: nowrap; }
 .name { color: var(--w-gold); font-family: var(--w-caps-face); font-size: var(--w-fs-md, 1.05em); }
 .typical { margin-left: auto; padding-left: 16px; font-style: italic; font-variant-numeric: tabular-nums; }
-.row { display: flex; align-items: center; gap: 8px; min-height: 28px; white-space: nowrap; }
-.row + .row { border-top: 1px solid var(--w-line-soft); }
-.text { flex: 1 1 auto; padding-right: 16px; }
-.rare { margin-left: 6px; padding: 0 3px; border: 1px solid var(--w-r-unique); border-radius: var(--w-r-sm); color: var(--w-r-unique); font-size: var(--w-fs-xs); }
-.uniq { color: var(--w-r-unique); }
-.price { font-variant-numeric: tabular-nums; }
-.varies { color: var(--w-faint); font-style: italic; }
 .foot { max-width: 380px; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--w-line); color: var(--w-faint); font-size: var(--w-fs-xs); line-height: 1.4; }
 </style>
