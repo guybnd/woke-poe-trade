@@ -218,7 +218,3 @@ describe('priceSpikes', () => {
     expect([...priceSpikes([p(1, 1000, 0), p(2, 400, 0), p(3, 990, 0)])]).toEqual([2])
   })
 })
-
-// The Baseline type still reads an old baseline (no heldSince).
-const old: Baseline = { 'The Witch': { name: 'The Witch', icon: '', count: 13, unitChaos: 1 } }
-void old

@@ -66,9 +66,9 @@ const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour: 'numer
 export function heldNote (l: Pick<ValuedLine, 'heldSince' | 'heldKind' | 'ninjaChaos' | 'unitChaos'>, price: (chaos: number) => string): string | undefined {
   if (l.heldSince == null || l.ninjaChaos == null) return undefined
   if (l.heldKind === 'one-day') {
-    return `${l.unitChaos > 0 ? "Held at its last solid price" : 'Not counted'}. poe.ninja says ${price(l.ninjaChaos)}, but it has priced this on only one of the last 7 days` +
+    return `${l.unitChaos > 0 ? 'Held at its last solid price' : 'Not counted'}. poe.ninja says ${price(l.ninjaChaos)}, but it has priced this on only one of the last 7 days` +
       `${l.unitChaos > 0 ? `, at ${HOLD_RATIO}× or more its earlier price` : ` (${ONE_DAY_MIN}c or more, with no earlier price to check it against)`}. ` +
-      "Prices like this have been fakes. Counts once poe.ninja prices it on a second day. Right-click to set your own price"
+      'Prices like this have been fakes. Counts once poe.ninja prices it on a second day. Right-click to set your own price'
   }
   return `Held at the last read's price. poe.ninja says ${price(l.ninjaChaos)}, a jump of ${HOLD_RATIO}× or more in a thin market ` +
     `(no price on 3+ of the last 7 days), which one fake listing can cause. Takes poe.ninja's price at ${clock(l.heldSince + HOLD_MS)} ` +
