@@ -6,7 +6,8 @@
     'flex-row': clickPosition === 'stash',
     'flex-row-reverse': clickPosition === 'inventory'
   }">
-    <instant-ninja-card v-if="instant && item?.isOk()" :item="item.value" :at="instant"
+    <instant-ninja-card v-if="instant && item?.isOk()" :key="instantKey" :item="item.value" :at="instant"
+      :active="config.wmWants === 'show'"
       @placed="instantPlaced" @live="openWindow(true)" @details="openWindow(false)" @close="closePriceCheck">
       <related-items :class="[$style.zoomed, $style.instantSide]" :item="item.value" click-position="stash" @check="checkRelated" />
     </instant-ninja-card>
@@ -209,29 +210,14 @@ export default defineComponent({
       closeBrowser()
       // woke: an exchange item poe.ninja prices gets the small card by the item (instant check).
       const parsed = (e.item ? ok(e.item as ParsedItem) : parseClipboard(e.clipboard))
-      const quick = !e.live && parsed.isOk() && instantCheck(parsed.value)
+      // Only for the in-game hotkey: a locked check or a pasted item opens the window.
+      const quick = !e.live && !e.focusOverlay && parsed.isOk() && instantCheck(parsed.value)
+      instantKey.value += 1
       instant.value = quick ? { x: e.position.x - window.screenX, y: e.position.y - window.screenY } : null
       trackFrom = e.position
       // The card's area is sent once it's placed (instantPlaced).
       if (Host.isElectron && !e.focusOverlay && !quick) {
-        // everything in CSS pixels
-        const width = windowWidth()
-        const screenX = ((e.position.x - window.screenX) > window.innerWidth / 2)
-          ? (window.screenX + window.innerWidth) - wm.poePanelWidth.value - width
-          : window.screenX + wm.poePanelWidth.value
-        const placed = floating.value ? floatingArea(floating.value, screenSize()) : null
-        MainProcess.sendEvent({
-          name: 'OVERLAY->MAIN::track-area',
-          payload: {
-            holdKey: props.config.hotkeyHold,
-            closeThreshold: 2.5 * rootFontPx() * uiZoom(),
-            from: e.position,
-            area: placed
-              ? { ...placed, x: window.screenX + placed.x, y: window.screenY + placed.y }
-              : { x: screenX, y: window.screenY, width, height: window.innerHeight },
-            dpr: window.devicePixelRatio
-          }
-        })
+        trackWindowArea(e.position)
       }
       wm.show(props.config.wmId)
       checkPosition.value = e.position
@@ -269,23 +255,41 @@ export default defineComponent({
       const q = exactDetailsId(it)
       return Boolean(q && (poeninja.findPriceByQuery(q)?.chaos ?? 0) > 0)
     }
-    function instantPlaced (rect: DOMRect) {
-      if (!Host.isElectron || advancedCheck.value) return
+    // A new card each check, so it measures itself and reports its area again.
+    const instantKey = shallowRef(0)
+    function sendTrackArea (from: { x: number, y: number }, area: { x: number, y: number, width: number, height: number }) {
       MainProcess.sendEvent({
         name: 'OVERLAY->MAIN::track-area',
         payload: {
           holdKey: props.config.hotkeyHold,
           closeThreshold: 2.5 * rootFontPx() * uiZoom(),
-          from: trackFrom,
-          area: { x: window.screenX + rect.x, y: window.screenY + rect.y, width: rect.width, height: rect.height },
+          from,
+          area,
           dpr: window.devicePixelRatio
         }
       })
     }
-    // From the card to the window: Live offers searches, Details doesn't.
+    // The mouse is tracked into the window (docked or where it was moved), everything in CSS pixels.
+    function trackWindowArea (from: { x: number, y: number }) {
+      const width = windowWidth()
+      const screenX = ((from.x - window.screenX) > window.innerWidth / 2)
+        ? (window.screenX + window.innerWidth) - wm.poePanelWidth.value - width
+        : window.screenX + wm.poePanelWidth.value
+      const placed = floating.value ? floatingArea(floating.value, screenSize()) : null
+      sendTrackArea(from, placed
+        ? { ...placed, x: window.screenX + placed.x, y: window.screenY + placed.y }
+        : { x: screenX, y: window.screenY, width, height: window.innerHeight })
+    }
+    function instantPlaced (rect: DOMRect) {
+      if (!Host.isElectron || advancedCheck.value || !rect.width) return
+      sendTrackArea(trackFrom, { x: window.screenX + rect.x, y: window.screenY + rect.y, width: rect.width, height: rect.height })
+    }
+    // From the card to the window: Live offers searches, Details doesn't. The
+    // mouse is tracked into the window now, or leaving the card would close it.
     function openWindow (live: boolean) {
       liveCheck.value = live
       instant.value = null
+      if (Host.isElectron && !advancedCheck.value) trackWindowArea(trackFrom)
     }
 
     function handleIdentification (identified: ParsedItem) {
@@ -497,6 +501,7 @@ export default defineComponent({
       advancedCheck,
       liveCheck,
       instant,
+      instantKey,
       instantPlaced,
       openWindow,
       handleIdentification,

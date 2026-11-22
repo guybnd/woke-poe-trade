@@ -43,6 +43,8 @@ const props = defineProps<{
   item: ParsedItem
   /** The cursor when the item was checked, in the overlay's CSS px. */
   at: { x: number, y: number }
+  /** The price check is showing: a hidden card (widgets hide with v-show) takes no keys. */
+  active: boolean
 }>()
 const emit = defineEmits<{
   live: []
@@ -97,7 +99,11 @@ function place () {
 let resize: ResizeObserver | undefined
 
 function onKey (e: KeyboardEvent) {
-  if (e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return
+  if (!props.active || e.defaultPrevented || e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return
+  // Typing in another panel (Ctrl+Space search, Settings) is never for the card.
+  const t = e.target as HTMLElement | null
+  if (t && t !== document.body && !el.value?.contains(t)) return
+  if (t?.closest('input, textarea, select, [contenteditable]')) return
   if (e.key === ' ' || e.key === 'Enter') {
     e.preventDefault()
     emit('live')
@@ -107,6 +113,8 @@ function onKey (e: KeyboardEvent) {
 }
 
 async function placeAndReport () {
+  // The widget can still be display:none in the flush that mounts the card.
+  await new Promise(resolve => requestAnimationFrame(resolve))
   place()
   await nextTick()
   if (el.value) emit('placed', el.value.getBoundingClientRect())
