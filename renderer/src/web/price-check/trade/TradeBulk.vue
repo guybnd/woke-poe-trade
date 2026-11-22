@@ -61,8 +61,8 @@
           <template v-else>
             <tr v-for="result in selectedResults" :key="result.id"
               :class="{ [$style.marketRatioRow]: ('marketRatio' in result) }">
-              <td class="px-2 whitespace-nowrap" data-testid="bulk-each">{{ Number((result.exchangeAmount / result.itemAmount).toFixed(4)) }}{{ unitSuffix }}</td>
-              <td class="pl-1 whitespace-nowrap"><span :class="[$style.ratioCell, $style.ratioPay]" class="text-right">{{ Number(result.exchangeAmount.toFixed(1)) }}{{ unitSuffix }}</span><span>{{ '\u2009' }}/{{ '\u2009' }}</span><span :class="$style.ratioCell">{{ Number(result.itemAmount.toFixed(1)) }}</span></td>
+              <td class="px-2 whitespace-nowrap" data-testid="bulk-each">{{ Number((result.exchangeAmount / result.itemAmount).toFixed(4)) }}<img :src="unitIcon" :alt="unitName" :title="unitName" :class="$style.unitIcon"></td>
+              <td class="pl-1 whitespace-nowrap"><span :class="[$style.ratioCell, $style.ratioPay]" class="text-right">{{ Number(result.exchangeAmount.toFixed(1)) }}<img :src="unitIcon" :alt="unitName" :title="unitName" :class="$style.unitIcon"></span><span>{{ '\u2009' }}/{{ '\u2009' }}</span><span :class="$style.ratioCell">{{ Number(result.itemAmount.toFixed(1)) }}</span></td>
               <template v-if="'marketRatio' in result">
                 <td class="pl-1 pr-2 whitespace-nowrap text-center" :colspan="showSeller ? 4 : 3">{{ t(':market_ratio') }}</td>
               </template>
@@ -422,7 +422,8 @@ export default defineComponent({
       bulkInsight,
       otherMarket,
       // woke: every price says its currency (WOKEPOET-487).
-      unitSuffix: computed(() => selectedCurr.value === 'xchgChaos' ? 'c' : ' div'),
+      unitIcon: computed(() => selectedCurr.value === 'xchgChaos' ? '/images/chaos.png' : '/images/divine.png'),
+      unitName: computed(() => selectedCurr.value === 'xchgChaos' ? 'chaos' : 'divine'),
       divineInChaos: computed(() => poeninja.xchgRate.value ?? null),
       pickCurr,
       error,
@@ -477,9 +478,17 @@ export default defineComponent({
   width: calc(2rem * (1 + (var(--w-text-scale, 1) - 1) / 2)); /* half the text growth: the table must fit the window */
 }
 
-/* The paid side carries its currency: "178c", "1 div". */
+/* The paid side carries its currency icon. */
 .ratioPay {
-  width: calc(3.25rem * (1 + (var(--w-text-scale, 1) - 1) / 2));
+  width: calc(3rem * (1 + (var(--w-text-scale, 1) - 1) / 2));
+}
+
+.unitIcon {
+  display: inline-block;
+  width: 1.125em;
+  height: 1.125em;
+  margin-left: 0.125em;
+  vertical-align: -0.2em;
 }
 
 .currencyIcon {

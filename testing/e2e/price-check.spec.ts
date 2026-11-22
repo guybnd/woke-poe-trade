@@ -36,7 +36,7 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   const panel = overlay.widget('price-check')
   // The five recorded exchange offers, cheapest first.
   await expect(panel).toContainText('Matched: 5')
-  await expect(panel).toContainText('178c / 1')
+  await expect(panel).toContainText('178 / 1')
   // The live verdict says how far it is from poe.ninja.
   await expect(panel.getByTestId('bulk-verdict-ninja')).toContainText('poe.ninja 180c each')
   // The game copied with Ctrl held (advanced mod text), and nothing else was typed.
@@ -506,9 +506,10 @@ test('bulk: leads with the cheaper chaos offers when divine sellers ask 1 div ea
   await expect(panel).toContainText('Chaos offers, with stock for your 3')
   // The divine offers are named, with their chaos value.
   await expect(panel.getByTestId('bulk-verdict-other')).toHaveText('Divine offers ask 1 div each (≈ 180c), 180× as much')
-  // Every price in the table says its currency.
-  await expect(panel.getByTestId('bulk-each').first()).toHaveText('1c')
-  await expect(panel).toContainText('1c / 1')
+  // Every price in the table carries its currency's icon.
+  const each = panel.getByTestId('bulk-each').first()
+  await expect(each).toHaveText('1')
+  await expect(each.locator('img')).toHaveAttribute('alt', 'chaos')
   expect(haves).toEqual([['divine', 'chaos'], ['chaos']])
   await overlay.snap('bulk check leads with chaos offers')
   // Picking divine shows those offers, priced in div with their chaos value.
@@ -516,5 +517,5 @@ test('bulk: leads with the cheaper chaos offers when divine sellers ask 1 div ea
   await expect(price).toHaveText('1 div')
   await expect(panel).toContainText('each ≈ 180c')
   await expect(panel.getByTestId('bulk-verdict-other')).toContainText('Chaos offers ask 1c each')
-  await expect(panel.getByTestId('bulk-each').first()).toHaveText('1 div')
+  await expect(each.locator('img')).toHaveAttribute('alt', 'divine')
 })
