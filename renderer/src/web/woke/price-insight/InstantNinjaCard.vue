@@ -26,6 +26,7 @@
         </button>
         <button type="button" class="btn" :class="$style.btn" data-testid="instant-ninja-details" @click="$emit('details')">Details</button>
       </div>
+      <div v-if="againKeys" :class="$style.dim" data-testid="instant-ninja-again">Live offers: <w-kbd :keys="againKeys" /> again</div>
     </div>
     <!-- Related items (the item's family, what drops it), as beside the window. -->
     <slot />
@@ -45,6 +46,8 @@ const props = defineProps<{
   at: { x: number, y: number }
   /** The price check is showing: a hidden card (widgets hide with v-show) takes no keys. */
   active: boolean
+  /** The price check hotkey: pressed again on the item, it opens live offers. */
+  againKeys: string | null
 }>()
 const emit = defineEmits<{
   live: []

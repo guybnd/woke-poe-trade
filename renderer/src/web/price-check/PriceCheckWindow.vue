@@ -7,7 +7,7 @@
     'flex-row-reverse': clickPosition === 'inventory'
   }">
     <instant-ninja-card v-if="instant && item?.isOk()" :key="instantKey" :item="item.value" :at="instant"
-      :active="config.wmWants === 'show'"
+      :active="config.wmWants === 'show'" :again-keys="config.hotkey ? `${config.hotkeyHold} + ${config.hotkey}` : null"
       @placed="instantPlaced" @live="openWindow(true)" @details="openWindow(false)" @close="closePriceCheck">
       <related-items :class="[$style.zoomed, $style.instantSide]" :item="item.value" click-position="stash" @check="checkRelated" />
     </instant-ninja-card>
@@ -127,6 +127,8 @@ type ParseError = { name: string; message: string; rawText: ParsedItem['rawText'
 const UNSUPPORTED = 'woke.unsupported'
 
 const DRAG_START_PX = 4
+// woke: how long the price check hotkey pressed again on the instant card's item means "live offers".
+const AGAIN_MS = 15_000
 const WINDOW_REM = 28.75
 // The game art keeps a buffer inside the frame; the window grows by it so the table keeps its room.
 // Screen px: UI size zooms the title bar and body (.zoomed), not the frame.
@@ -211,7 +213,12 @@ export default defineComponent({
       // woke: an exchange item poe.ninja prices gets the small card by the item (instant check).
       const parsed = (e.item ? ok(e.item as ParsedItem) : parseClipboard(e.clipboard))
       // Only for the in-game hotkey: a locked check or a pasted item opens the window.
-      const quick = !e.live && !e.focusOverlay && parsed.isOk() && instantCheck(parsed.value)
+      // The hotkey again on the item the card shows: live offers, without moving to the card.
+      const again = instant.value != null && !e.focusOverlay && e.clipboard === instantText &&
+        Date.now() - instantAt < AGAIN_MS
+      const quick = !again && !e.live && !e.focusOverlay && parsed.isOk() && instantCheck(parsed.value)
+      instantText = quick ? e.clipboard : ''
+      instantAt = Date.now()
       instantKey.value += 1
       instant.value = quick ? { x: e.position.x - window.screenX, y: e.position.y - window.screenY } : null
       trackFrom = e.position
@@ -222,7 +229,7 @@ export default defineComponent({
       wm.show(props.config.wmId)
       checkPosition.value = e.position
       advancedCheck.value = e.focusOverlay
-      liveCheck.value = e.live === true
+      liveCheck.value = e.live === true || again
 
       item.value = parsed
         .andThen(item => (
@@ -257,6 +264,8 @@ export default defineComponent({
     }
     // A new card each check, so it measures itself and reports its area again.
     const instantKey = shallowRef(0)
+    let instantText = ''
+    let instantAt = 0
     function sendTrackArea (from: { x: number, y: number }, area: { x: number, y: number, width: number, height: number }) {
       MainProcess.sendEvent({
         name: 'OVERLAY->MAIN::track-area',

@@ -58,6 +58,16 @@ test('currency: Space on the instant card searches, Details opens the window wit
   await expect(panel).toContainText('Matched: 5')
 })
 
+test('currency: the price check hotkey again on the same item opens live offers', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/currency-divine.txt')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card.getByTestId('instant-ninja-again')).toContainText('Ctrl')
+  await overlay.copyItem('items/currency-divine.txt')
+  await expect(card).toHaveCount(0)
+  await expect(overlay.widget('price-check')).toContainText('Matched: 5')
+})
+
 test('currency: with poe.ninja first off, Ctrl+D searches right away', async ({ overlay }) => {
   await overlay.boot({
     patch: (config: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
