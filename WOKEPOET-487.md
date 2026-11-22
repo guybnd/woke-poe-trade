@@ -24,6 +24,13 @@ history:
       Mockups (A recommended, building A):
       https://claude.ai/artifact/1QJTgUJpZtA3NNXXtL1iCw
     id: a-2026-11-22t23-18-42-374z
+  - type: activity
+    user: Agent
+    date: '2026-11-22T23:32:44.915Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/774 open; review fixes
+      pushed (a55c95e9 + master merge). Waiting on CI.
+    id: a-2026-11-22t23-32-44-915z
 ---
 Discord report via Guy: price checking Originator's Exalted Orb (stack 3) shows "1 div each", table "1 / div / bulk 1/1".
 
