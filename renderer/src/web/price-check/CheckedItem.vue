@@ -5,6 +5,7 @@
     <!-- The verdict's height from the start and through errors, so the mods don't move for either. -->
     <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsDimmed, 'w-pc-verdict-held': verdictHeld }">
       <div v-if="verdictHeld && !searched" class="w-pc-verdict-wait">Search for listing prices</div>
+      <woke-ninja-verdict v-else-if="ninjaVerdictShown" :item="item" :filters="itemFilters" />
     </div>
     <filter-name
       ref="nameComponent"
@@ -42,7 +43,7 @@
     <template v-if="!wokeVerdictShown">
       <price-prediction v-if="showPredictedPrice" class="mb-4"
         :item="item" />
-      <price-trend v-else-if="ninjaCardOpen"
+      <price-trend v-else-if="ninjaCardOpen && !ninjaVerdictShown"
         :item="item"
         :filters="itemFilters" />
     </template>
@@ -162,6 +163,9 @@ import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { priceView, ninjaCardOpen } from '@/web/woke/price-insight/view'
+import { holdBulkSearch } from '@/web/woke/price-insight/ninja-first'
+import { exactDetailsId } from './trends/getDetailsId'
+import { usePoeninja } from '@/web/background/Prices'
 import { poeMode, poeOn, loadPoeKit } from '@/web/woke/price-insight/window-style'
 
 let _showSupportLinksCounter = 0
@@ -180,6 +184,8 @@ export default defineComponent({
     WokeVaalChip: defineAsyncComponent(() => import('@/web/woke/gem-versions/VaalChip.vue')),
     WokeVisceraStrip: defineAsyncComponent(() => import('@/web/woke/wickerman/VisceraStrip.vue')),
     WokeNightmareStrip: defineAsyncComponent(() => import('@/web/woke/boss-runs/NightmareStrip.vue')),
+    // The poe.ninja verdict before an exchange search (WOKEPOET-479).
+    WokeNinjaVerdict: defineAsyncComponent(() => import('@/web/woke/price-insight/NinjaVerdict.vue')),
     WTabs,
     // woke: chips for a few kinds of item load with their first check (the startup JS budget).
     WokeDustChip: defineAsyncComponent(() => import('@/web/woke/price-insight/DustChip.vue')),
@@ -207,6 +213,11 @@ export default defineComponent({
     advancedCheck: {
       type: Boolean,
       required: true
+    },
+    /** woke: asked for from inside the overlay (a menu's Price check, Ctrl+Space), so it wants listings. */
+    live: {
+      type: Boolean,
+      default: false
     }
   },
   setup (props) {
@@ -218,6 +229,10 @@ export default defineComponent({
     const searchStatusSlot = shallowRef<HTMLElement | null>(null)
     provide('price-search-status-slot', searchStatusSlot)
     provide('price-check-search', () => { nextTick(() => { doSearch.value = true }) })
+
+    const poeninja = usePoeninja()
+    // woke: poe.ninja's price for the exact item, read when the item comes in.
+    const ninjaChaos = shallowRef<number | null>(null)
 
     const presets = ref<{ active: string, presets: FilterPreset[] }>(null!)
     const itemFilters = computed(() => presets.value.presets.find(preset => preset.id === presets.value.active)!.filters)
@@ -330,6 +345,21 @@ export default defineComponent({
       }
 
       tradeAPI.value = apiToSatisfySearch(props.item, itemStats.value, itemFilters.value)
+
+      // woke: an exchange item poe.ninja prices exactly shows that price and
+      // searches only on a click (ninja-first.ts, WOKEPOET-479).
+      const ninjaQuery = exactDetailsId(item)
+      ninjaChaos.value = (ninjaQuery &&
+        itemFilters.value.trade.league === leagues.selectedId.value &&
+        poeninja.findPriceByQuery(ninjaQuery)?.chaos) || null
+      if (doSearch.value && holdBulkSearch({
+        api: tradeAPI.value,
+        enabled: widget.value.wokeNinjaFirst,
+        live: props.live,
+        chaos: ninjaChaos.value
+      })) {
+        doSearch.value = false
+      }
     }, { immediate: true })
 
     // woke: swappable mods (harvest-swap/). Made after the presets exist.
@@ -495,6 +525,9 @@ export default defineComponent({
     const { t } = useI18n()
 
     const wokeVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value != null)
+    // woke: before an exchange search, poe.ninja's price is the verdict.
+    const ninjaVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'bulk' &&
+      !doSearch.value && ninjaChaos.value != null && widget.value.wokeNinjaFirst !== false)
 
     return {
       proposeSearchName,
@@ -508,7 +541,8 @@ export default defineComponent({
       isViscera: computed(() => props.item.category === ItemCategory.Viscera),
       isNightmareMap: computed(() => props.item.info.refName === 'Nightmare Map' && isModuleOn(AppConfig(), 'boss-runs')),
       ninjaCardOpen,
-      showTrendCard: computed(() => !wokeVerdictShown.value && !showPredictedPrice.value),
+      ninjaVerdictShown,
+      showTrendCard: computed(() => !wokeVerdictShown.value && !ninjaVerdictShown.value && !showPredictedPrice.value),
       verdictHeld: computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade'),
       t,
       itemFilters,

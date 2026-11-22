@@ -60,6 +60,8 @@ export interface PriceCheckWidget extends Widget {
   wokeWindowStyle?: 'standard' | 'poe'
   // woke: the right-click menu's Always tick / Never tick, by row kind and stat (price-insight/tick-prefs.ts).
   wokeTickPrefs?: Record<string, 'on' | 'off'>
+  // woke: exchange items poe.ninja prices show that price and search only on a click (unset = on; price-insight/ninja-first.ts).
+  wokeNinjaFirst?: boolean
 }
 
 export interface StopwatchWidget extends Widget {

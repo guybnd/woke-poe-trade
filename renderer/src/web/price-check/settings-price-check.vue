@@ -97,6 +97,10 @@
             <span class="bg-gray-900 text-gray-500 rounded px-2">{{ hotkeyLocked }}</span>
           </ui-toggle>
         </div>
+        <!-- woke: WOKEPOET-479 -->
+        <ui-toggle v-model="ninjaFirst" class="mb-4" data-setting="poe.ninja price first">
+          poe.ninja price first for currency and other exchange items: search live only on a click
+        </ui-toggle>
       </div>
       <div class="mb-2 mx-2">
         <div class="flex-1 mb-1">{{ t(':extra_delay') }}</div>
@@ -162,6 +166,10 @@ export default defineComponent({
       hotkeyLocked: computed(() => configWidget.value.hotkeyLocked),
       smartInitialSearch: configModelValue(() => configWidget.value, 'smartInitialSearch'),
       lockedInitialSearch: configModelValue(() => configWidget.value, 'lockedInitialSearch'),
+      ninjaFirst: computed<boolean>({
+        get: () => configWidget.value.wokeNinjaFirst !== false,
+        set: (value) => { configWidget.value.wokeNinjaFirst = value }
+      }),
       searchStatRange: computed<number>({
         get () {
           return configWidget.value.searchStatRange

@@ -51,7 +51,7 @@ export function elementPoint (e: MouseEvent): ScreenPoint {
 export function dispatchPriceCheck (input: PriceCheckInput, position: ScreenPoint) {
   Host.selfDispatch({
     name: 'MAIN->CLIENT::item-text',
-    payload: { clipboard: input.clipboard, item: input.item, position, focusOverlay: true, target: 'price-check' }
+    payload: { clipboard: input.clipboard, item: input.item, position, focusOverlay: true, target: 'price-check', live: true }
   })
 }
 

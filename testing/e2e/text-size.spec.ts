@@ -8,6 +8,8 @@ test('Text size grows the text of price check and panels, not their width', asyn
   const page = overlay.page
   const panel = page.locator('#price-window')
   await expect(panel).toContainText('Divine Orb')
+  // An exchange item poe.ninja prices waits for a click before searching (WOKEPOET-479).
+  await panel.getByTestId('ninja-verdict-live').click()
   const row = page.getByText('178 / 1').first()
   const size = () => row.evaluate(el => parseFloat(getComputedStyle(el).fontSize))
   const before = await size()

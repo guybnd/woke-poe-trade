@@ -53,7 +53,7 @@
         <template v-else-if="item?.isOk()">
           <unidentified-resolver :item="item.value" @identify="handleIdentification($event)" />
           <checked-item v-if="isLeagueSelected"
-            :item="item.value" :advanced-check="advancedCheck" />
+            :item="item.value" :advanced-check="advancedCheck" :live="liveCheck" />
         </template>
         <div v-if="isBrowserShown" class="bg-gray-900 px-6 py-2 truncate">
           <i18n-t keypath="app.toggle_browser_hint" tag="div">
@@ -190,6 +190,7 @@ export default defineComponent({
 
     const item = shallowRef<null | Result<ParsedItem, ParseError>>(null)
     const advancedCheck = shallowRef(false)
+    const liveCheck = shallowRef(false)
     const checkPosition = shallowRef({ x: 1, y: 1 })
 
     MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {
@@ -221,6 +222,7 @@ export default defineComponent({
       wm.show(props.config.wmId)
       checkPosition.value = e.position
       advancedCheck.value = e.focusOverlay
+      liveCheck.value = e.live === true
 
       item.value = (e.item ? ok(e.item as ParsedItem) : parseClipboard(e.clipboard))
         .andThen(item => (
@@ -447,6 +449,7 @@ export default defineComponent({
       checkPosition,
       item,
       advancedCheck,
+      liveCheck,
       handleIdentification,
       overlayKey,
       isLeagueSelected,

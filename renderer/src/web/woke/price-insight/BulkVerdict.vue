@@ -17,6 +17,7 @@
         <span><span class="w-dim">Sell fast</span> {{ amount(fast) }} each</span>
         <span v-if="amount(insight.fair) !== amount(fast)"><span class="w-dim">Patient</span> {{ amount(insight.fair) }} each</span>
       </div>
+      <div v-if="ninjaNote" :class="$style.note" data-testid="bulk-verdict-ninja">{{ ninjaNote }}</div>
     </template>
     <div v-else :class="$style.eyebrow">
       <span :class="$style.badge">{{ loading ? '…' : 'NO DATA' }}</span>
@@ -37,6 +38,8 @@ const props = defineProps<{
   unit: string
   need: number
   loading: boolean
+  /** poe.ninja's price each, in the same currency, to compare with (WOKEPOET-479). */
+  ninja?: number | null
 }>()
 
 const CONFIDENCE_LABEL: Record<Confidence, string> = { high: 'SOLID', medium: 'OK', low: 'THIN', none: 'NO DATA' }
@@ -50,6 +53,16 @@ const CONFIDENCE_HINT: Record<Confidence, string> = {
 function amount (value: number) {
   return `${bulkAmount(value)}${props.unit === 'c' ? 'c' : ' div'}`
 }
+
+// poe.ninja's price next to the live one, and how far apart they are.
+const ninjaNote = computed(() => {
+  const ninja = props.ninja
+  const fair = props.insight?.fair
+  if (!ninja || !fair) return null
+  const pct = Math.round((fair / ninja - 1) * 100)
+  const gap = pct === 0 ? 'the same as live' : `live is ${Math.abs(pct)}% ${pct < 0 ? 'under' : 'over'} it`
+  return `poe.ninja ${amount(ninja)} each · ${gap}`
+})
 
 // Just under the floor. Under 10 a cut of 3% isn't a price anyone types.
 const fast = computed(() => {

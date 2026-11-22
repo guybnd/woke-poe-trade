@@ -1,7 +1,7 @@
 <template>
   <div v-if="!error" class="layout-column min-h-0" style="height: auto;">
     <teleport v-if="improved && verdictSlot" :to="verdictSlot">
-      <bulk-verdict :insight="bulkInsight" :unit="selectedCurr === 'xchgChaos' ? 'c' : 'div'" :need="need" :loading="tableLoading" />
+      <bulk-verdict :insight="bulkInsight" :unit="selectedCurr === 'xchgChaos' ? 'c' : 'div'" :need="need" :loading="tableLoading" :ninja="ninjaEach" />
     </teleport>
     <div :class="$style.legacyMessage">
       {{ t(':legacy_bulk_xchg_msg') }}
@@ -108,7 +108,7 @@ import { getTradeEndpoint } from './common'
 import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
-import { getDetailsId } from '../trends/getDetailsId'
+import { getDetailsId, exactDetailsId } from '../trends/getDetailsId'
 import { ItemFilters } from '../filters/interfaces'
 import { ParsedItem } from '@/parser'
 import { PriceCheckWidget } from '@/web/overlay/interfaces'
@@ -315,6 +315,18 @@ export default defineComponent({
     // woke: the verdict's slot sits above the mods, as for item listings.
     const verdictSlot = inject<ShallowRef<HTMLElement | null>>('price-verdict-slot', shallowRef(null))
     const need = computed(() => props.item.stackSize?.value ?? 1)
+    // woke: poe.ninja's price in the offers' currency, for the verdict to compare (WOKEPOET-479).
+    const poeninja = usePoeninja()
+    const { selected: selectedLeague } = useLeagues()
+    const ninjaEach = computed(() => {
+      if (props.filters.trade.league !== selectedLeague.value?.id) return null
+      const q = exactDetailsId(props.item)
+      const chaos = q ? poeninja.findPriceByQuery(q)?.chaos : null
+      if (!chaos) return null
+      if (selectedCurr.value === 'xchgChaos') return chaos
+      const rate = poeninja.xchgRate.value
+      return rate ? chaos / rate : null
+    })
     const bulkInsight = computed(() => {
       if (!slowdown.isReady.value || !result.value) return null
       return buildBulkInsight(result.value[selectedCurr.value].listedLazy.value, need.value)
@@ -356,6 +368,7 @@ export default defineComponent({
       improved: computed(() => priceView.value === 'improved'),
       verdictSlot,
       need,
+      ninjaEach,
       bulkInsight,
       error,
       retryIn,

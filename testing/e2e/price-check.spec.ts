@@ -7,15 +7,24 @@ import { test, expect } from './harness'
 // and shards (one file alone otherwise sets how short a shard can be).
 test.describe.configure({ mode: 'parallel' })
 
-test('currency: Ctrl+D shows the poe.ninja price and bulk exchange offers', async ({ overlay, fakeApp }) => {
+test('currency: Ctrl+D shows the poe.ninja price, and bulk exchange offers on a click', async ({ overlay, fakeApp }) => {
   await overlay.boot()
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.widget('price-check')
   await expect(panel).toContainText('Divine Orb')
-  await expect(panel).toContainText('180')
+  // poe.ninja's cached price is the verdict, and no exchange search ran (WOKEPOET-479).
+  const verdict = panel.getByTestId('ninja-verdict')
+  await expect(verdict).toContainText('POE.NINJA')
+  await expect(verdict).toContainText('180c')
+  await overlay.snap('divine orb ninja first')
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
+  await panel.getByTestId('ninja-verdict-live').click()
+  await expect(verdict).toHaveCount(0)
   // The five recorded exchange offers, cheapest first.
   await expect(panel).toContainText('Matched: 5')
   await expect(panel).toContainText('178 / 1')
+  // The live verdict says how far it is from poe.ninja.
+  await expect(panel.getByTestId('bulk-verdict-ninja')).toContainText('poe.ninja 180c each')
   // The game copied with Ctrl held (advanced mod text), and nothing else was typed.
   expect(fakeApp.game.keyTaps).toEqual([{ key: 'C', mods: ['Ctrl'] }])
   await overlay.snap('divine orb price check')
@@ -29,6 +38,8 @@ test('the window can be dragged, resized, saved and put back', async ({ overlay,
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.page.locator('#price-window')
   await expect(panel).toContainText('Divine Orb')
+  // An exchange item poe.ninja prices waits for a click before searching (WOKEPOET-479).
+  await panel.getByTestId('ninja-verdict-live').click()
   // Offers arriving later would grow the window between measuring and resizing.
   await expect(panel).toContainText('Matched: 5')
   const box = async () => (await panel.boundingBox())!
@@ -94,6 +105,8 @@ test('a price check right after closing the window draws no broken chart', async
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.widget('price-check')
   const chart = panel.locator('.apexcharts-canvas svg')
+  // An exchange item poe.ninja prices waits for a click before searching (WOKEPOET-479).
+  await panel.getByTestId('ninja-verdict-live').click()
   // The poe.ninja card starts folded onto the name row; open it to draw the chart.
   await panel.getByTitle(/^poe\.ninja price/).click()
   await expect(chart).toBeVisible()
@@ -102,6 +115,7 @@ test('a price check right after closing the window draws no broken chart', async
   await expect(panel).toBeHidden()
 
   await overlay.copyItem('items/currency-divine.txt')
+  await panel.getByTestId('ninja-verdict-live').click()
   await expect(chart).toBeVisible()
   await expect(chart).toHaveAttribute('width', /^\d+(\.\d+)?$/)
 })
@@ -312,6 +326,8 @@ test('the poe.ninja card folds onto the name row and stays as left', async ({ ov
   const panel = overlay.widget('price-check')
   const chip = panel.getByTitle(/^poe\.ninja price/)
   const fold = panel.getByTitle('Fold onto the name row')
+  // Before a search the poe.ninja verdict shows the price; the chip is for after it.
+  await panel.getByTestId('ninja-verdict-live').click()
   // Folded by default: the price sits on the name row, the same height as the title.
   await expect(chip).toBeVisible()
   await expect(fold).toHaveCount(0)
@@ -322,6 +338,7 @@ test('the poe.ninja card folds onto the name row and stays as left', async ({ ov
   await chip.click()
   await expect(fold).toBeVisible()
   await overlay.copyItem('items/currency-divine.txt')
+  await panel.getByTestId('ninja-verdict-live').click()
   await expect(fold).toBeVisible()
   expect(await overlay.page.evaluate(() => localStorage.getItem('woke.ninjaCardOpen'))).toBe('1')
 
