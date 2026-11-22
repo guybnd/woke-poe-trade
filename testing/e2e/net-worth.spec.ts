@@ -77,7 +77,8 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const details = panel.getByRole('button', { name: /^Details/ })
     if (await details.getAttribute('aria-expanded') !== 'true') await details.click()
     const bar = panel.getByTitle("Drag to change this row's height · double-click to fit")
-    const row = panel.locator('section', { has: bar }).last()
+    // The bar sits right inside the row it sizes.
+    const row = bar.locator('xpath=..')
     const before = (await row.boundingBox())!.height
     await bar.scrollIntoViewIfNeeded()
     const at = (await bar.boundingBox())!
