@@ -8,7 +8,7 @@ assignee: unassigned
 tags:
   - price-check
 createdBy: Agent
-updatedBy: claude-code@guy-pc
+updatedBy: Agent
 history:
   - type: activity
     user: Agent
@@ -25,6 +25,14 @@ history:
     to: In Progress
     user: claude-code@guy-pc
     date: '2026-11-22T11:06:37.340Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Mockups with pick buttons (A recommended, being built):
+      https://claude.ai/artifact/RzCo6AUkASKWzLAABZuVtp
+    date: '2026-11-22T11:09:38.136Z'
+    selfAttested: true
+    id: c-2026-11-22t11-09-38-136z
 needsAction: null
 claim:
   holder: claude-code@guy-pc
