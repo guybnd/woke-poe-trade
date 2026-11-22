@@ -15,6 +15,7 @@
         </div>
       </template>
       <related-items :class="[$style.zoomed, $style.instantSide]" :item="item.value" click-position="stash" @check="checkRelated" />
+      <beast-altar v-if="isBeast" :class="[$style.zoomed, $style.instantSide]" :item="item.value" @check="checkRelated" />
     </instant-ninja-card>
     <template v-else>
     <div v-if="!isBrowserShown" class="layout-column shrink-0"
@@ -87,8 +88,11 @@
         'flex-row': clickPosition === 'stash',
         'flex-row-reverse': clickPosition === 'inventory'
       }">
-        <related-items v-if="item?.isOk()" class="pointer-events-auto"
-          :item="item.value" :click-position="clickPosition" @check="checkRelated" />
+        <div v-if="item?.isOk()" class="layout-column">
+          <related-items class="pointer-events-auto"
+            :item="item.value" :click-position="clickPosition" @check="checkRelated" />
+          <beast-altar v-if="isBeast" :item="item.value" @check="checkRelated" />
+        </div>
         <rate-limiter-state class="pointer-events-auto" />
       </div>
     </div>
@@ -189,6 +193,8 @@ export default defineComponent({
     // Only for items the game data doesn't know yet: loaded on first use.
     NewItemSearch: defineAsyncComponent(() => import('@/web/woke/new-item/NewItemSearch.vue')),
     InstantNinjaCard: defineAsyncComponent(() => import('@/web/woke/price-insight/InstantNinjaCard.vue')),
+    // A captured beast's Blood Altar recipes (WOKEPOET-485).
+    BeastAltar: defineAsyncComponent(() => import('@/web/woke/price-insight/BeastAltar.vue')),
     // A Stacked Deck's open-or-sell verdict on its instant card.
     WokeDeckVerdictChip: defineAsyncComponent(() => import('@/web/woke/stacked-decks/DeckVerdictChip.vue')),
     UnreadableItem,
@@ -275,6 +281,11 @@ export default defineComponent({
     }
     // A new card each check, so it measures itself and reports its area again.
     const instantKey = shallowRef(0)
+    // A captured beast gets its Blood Altar recipes beside the check.
+    const isBeast = computed(() => {
+      const it = item.value
+      return it != null && it.isOk() && it.value.info.namespace === 'CAPTURED_BEAST'
+    })
     // woke: the overlay doesn't darken the game behind the card (OverlayWindow.vue), on the locked key too.
     watch(() => instant.value != null && props.config.wmWants === 'show', (on) => { instantCardShown.value = on }, { immediate: true })
     let instantText = ''
@@ -544,6 +555,7 @@ export default defineComponent({
       liveCheck,
       instant,
       instantKey,
+      isBeast,
       instantPlaced,
       openWindow,
       handleIdentification,

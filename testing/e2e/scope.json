@@ -13,6 +13,13 @@
    "renderer/src/web/woke/atlas/",
    "renderer/src/web/woke/regex-library/"
   ],
+  "beast-altar.spec.ts": [
+   "renderer/public/data/bestiary-data.json",
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/price-insight/",
+   "renderer/src/web/woke/search/lookups/"
+  ],
   "boss-unid-prices.spec.ts": [
    "main/src/woke/trade-log.ts",
    "renderer/src/web/woke/boss-runs/",
