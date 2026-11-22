@@ -18,7 +18,7 @@
       <button type="button" class="btn w-pc-primary" :class="$style.live" data-testid="ninja-verdict-live" @click="search">
         Check live offers<w-kbd v-if="poeOn" keys="Enter" class="ml-2" />
       </button>
-      <span class="w-dim">uses one exchange search</span>
+      <span class="w-dim">uses one {{ api === 'bulk' ? 'exchange' : 'trade' }} search</span>
     </div>
   </div>
 </template>
@@ -35,6 +35,7 @@ import { poeOn } from './window-style'
 const props = defineProps<{
   item: ParsedItem
   filters: ItemFilters
+  api?: 'trade' | 'bulk'
 }>()
 
 const { findPriceByQuery, autoCurrency, updatedAt } = usePoeninja()

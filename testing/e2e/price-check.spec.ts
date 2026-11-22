@@ -58,6 +58,18 @@ test('currency: Space on the instant card searches, Details opens the window wit
   await expect(panel).toContainText('Matched: 5')
 })
 
+test('divination card: the instant card shows poe.ninja's price and no trade search runs', async ({ overlay, fakeApp }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/card-the-doctor.txt')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card).toContainText('The Doctor')
+  await expect(card).toContainText('for your 2')
+  await overlay.snap('the doctor instant check')
+  await card.getByTestId('instant-ninja-details').click()
+  await expect(overlay.widget('price-check').getByTestId('ninja-verdict')).toContainText('uses one trade search')
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/search/'))).toBe(false)
+})
+
 test('currency: the price check hotkey again on the same item opens live offers', async ({ overlay }) => {
   await overlay.boot()
   await overlay.copyItem('items/currency-divine.txt')

@@ -122,6 +122,7 @@ import '@/web/woke/price-insight/poe-mode.css'
 import { floatingArea, floatingLayout, movedPosition, resizedPosition } from './window-position'
 import { dispatchPriceCheck } from '@/web/woke/ui/tooltip/item-price-check'
 import { exactDetailsId } from './trends/getDetailsId'
+import { fixedPriceItem } from '@/web/woke/price-insight/ninja-first'
 
 type ParseError = { name: string; message: string; rawText: ParsedItem['rawText']; unsupported?: boolean }
 const UNSUPPORTED = 'woke.unsupported'
@@ -256,7 +257,7 @@ export default defineComponent({
     function instantCheck (it: ParsedItem): boolean {
       const cfg = props.config
       if (cfg.wokeNinjaFirst === false || cfg.wokeNinjaInstant === false) return false
-      if (!it.info.tradeTag || !leagues.selectedId.value) return false
+      if (!(it.info.tradeTag || fixedPriceItem(it.info)) || !leagues.selectedId.value) return false
       // Its window says whether to open or sell them (stacked-decks/), which the card can't.
       if (it.info.refName === 'Stacked Deck') return false
       const q = exactDetailsId(it)
