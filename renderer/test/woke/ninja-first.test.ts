@@ -43,7 +43,7 @@ describe('fixedPriceItem', () => {
     expect(fixedPriceItem({ namespace: 'ITEM', refName: 'Chronicle of Atzoatl' })).toBe(false)
   })
 
-  it('holds a fixed item's trade search', () => {
+  it('holds the trade search of a fixed item', () => {
     expect(holdBulkSearch({ ...base, api: 'trade', fixed: true })).toBe(true)
   })
 })

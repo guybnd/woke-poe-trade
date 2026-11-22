@@ -58,7 +58,7 @@ test('currency: Space on the instant card searches, Details opens the window wit
   await expect(panel).toContainText('Matched: 5')
 })
 
-test('divination card: the instant card shows poe.ninja's price and no trade search runs', async ({ overlay, fakeApp }) => {
+test('divination card: the instant card shows the poe.ninja price and no trade search runs', async ({ overlay, fakeApp }) => {
   await overlay.boot()
   await overlay.copyItem('items/card-the-doctor.txt')
   const card = overlay.page.getByTestId('instant-ninja-card')
