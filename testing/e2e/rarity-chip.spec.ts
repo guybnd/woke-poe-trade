@@ -60,6 +60,7 @@ test('rare armour: Magic with two prefixes ticked turns the chip amber', async (
   // Life and Stun and Block Recovery are two prefixes: tick both if they're off.
   for (const text of ['total maximum Life', 'Stun and Block Recovery']) {
     const row = panel.locator('[data-stat-row]').filter({ hasText: text }).first()
+    await expect(row).toBeVisible()
     const box = row.locator('.w-pc-check').first()
     if (await box.locator('.fa-square').count()) await box.click()
   }

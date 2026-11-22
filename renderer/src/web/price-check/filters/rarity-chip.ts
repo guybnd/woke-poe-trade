@@ -2,8 +2,9 @@
 // (bases to recombine or fracture) or rare only.
 import { ItemCategory, ItemRarity, type ParsedItem } from '@/parser'
 import { ARMOUR, WEAPON, JEWELLERY } from '@/parser/meta'
-import type { ParsedModifier } from '@/parser/modifiers'
-import type { FilterOrGroup, ItemFilters } from './interfaces'
+import type { FilterOrGroup, ItemFilters, StatFilter } from './interfaces'
+
+type ParsedModifier = StatFilter['sources'][number]['modifier']
 
 export type RarityStep = 'nonunique' | 'magic' | 'rare'
 
