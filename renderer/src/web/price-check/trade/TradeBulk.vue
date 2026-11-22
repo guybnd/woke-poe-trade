@@ -396,9 +396,9 @@ export default defineComponent({
     })
     watch(() => marketsSettled.value && result.value
       ? pickBulkMarket(
-        { insight: insights.xchgChaos.value, total: result.value.xchgChaos.listed.value?.total ?? null },
-        { insight: insights.xchgStable.value, total: result.value.xchgStable.listed.value?.total ?? null },
-        poeninja.xchgRate.value)
+          { insight: insights.xchgChaos.value, total: result.value.xchgChaos.listed.value?.total ?? null },
+          { insight: insights.xchgStable.value, total: result.value.xchgStable.listed.value?.total ?? null },
+          poeninja.xchgRate.value)
       : null,
     (market) => {
       if (market && !userPicked) selectedCurr.value = market
