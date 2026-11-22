@@ -11,7 +11,8 @@ import type { Lookup, LookupCard, LookupContext, LookupRow, LookupSection } from
 const OVERVIEW = /^((templar|memory) vaults?|vaul|vaults?)$/i
 // The display cases inside a vault are labelled "Forbidden Reliquary" in game.
 // That's not an item, so the item search finds nothing: send it to the vaults
-// card. From 6 letters ("forbid", "reliqu") so "forb" stays Forbidden Flame.
+// card. From 6 letters ("forbid", "reliqu"); the card sits below matching
+// items (Forbidden Flame, Reliquary Keys), so it never pushes them down.
 const RELIQUARY = ['forbidden reliquary', 'forbidden reliquaries', 'reliquary', 'reliquaries']
 const MIN_RELIQUARY = 6
 const RELIQUARY_SUB = 'Forbidden Reliquary = a vault display case. Search the item on its label for its price.'
