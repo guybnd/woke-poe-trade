@@ -73,6 +73,14 @@ describe('two-number lines searched by their first number', () => {
     expect(deer.roll).toMatchObject({ value: 15 })
   })
 
+  it('searches a line with its percentage written out by that percentage', () => {
+    // Deerstalker's "30% ... for # seconds" matcher and Tinkerskin's chance-less
+    // "Gain Phasing for # seconds" (always: 100%) carry one number, the seconds.
+    const deer = filters(unique('Deerstalker', 'Deerskin Boots', 'Boots', '30% increased Movement Speed for 9 seconds on Throwing a Trap'))
+      .find(f => f.text.includes('Throwing a Trap'))!
+    expect(deer.roll?.value).toBe(30)
+  })
+
   it('keeps the average where the trade site stores it (Death\'s Oath)', () => {
     // Checked on the trade API: 226.5 matches, 450 doesn't (the filter rounds down).
     const oath = filters(unique('Death\'s Oath', 'Astral Plate', 'Body Armours', 'You take 450 Chaos Damage per second for 3 seconds on Kill'))
@@ -96,7 +104,7 @@ describe('two-number lines searched by their first number', () => {
     for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
       if (!line) continue
       const stat = JSON.parse(line) as Stat
-      if (!stat.ref || !/trigger/i.test(stat.ref) || stat.ref.includes('# to #')) continue
+      if (!stat.ref || !/trigger|trap/i.test(stat.ref) || stat.ref.includes('# to #')) continue
       if ((stat.ref.match(/#/g) ?? []).length < 2) continue
       if (!searchesFirstNumber(stat)) unchecked.push(stat.ref)
     }

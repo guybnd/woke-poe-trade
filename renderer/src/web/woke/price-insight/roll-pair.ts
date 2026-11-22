@@ -13,7 +13,7 @@ export function rollPair (filter: StatFilter): [number, number] | undefined {
   const first = searchesFirstNumber(filter.sources[0].stat.stat)
   if (!first && !filter.text.includes('# to #')) return undefined
   // Two first-number mods on one row have no one pair to show.
-  if (first && filter.sources.length !== 1) return undefined
+  if (first && (filter.sources.length !== 1 || filter.sources[0].stat.translation.negate)) return undefined
   let lo = 0
   let hi = 0
   for (const source of filter.sources) {
