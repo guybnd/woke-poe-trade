@@ -8,7 +8,7 @@ assignee: unassigned
 tags:
   - market
 createdBy: Agent
-updatedBy: claude-code@guy-pc
+updatedBy: Agent
 history:
   - type: activity
     user: Agent
@@ -25,6 +25,13 @@ history:
     to: In Progress
     user: claude-code@guy-pc
     date: '2026-11-22T10:10:44.583Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-22T10:14:28.912Z'
+    comment: >-
+      Mockups for Guy to pick from:
+      https://claude.ai/artifact/F8HcJFKDjGuhpaGCh5ECVm (building A meanwhile)
+    id: a-2026-11-22t10-14-28-912z
 needsAction: null
 claim:
   holder: claude-code@guy-pc
