@@ -58,7 +58,7 @@ export function keepUnidArt (poeWindow: GameWindow, itemText: string, cursor: { 
 
 // The renderer's rawText may differ in line endings or trailing space.
 function sameItem (a: string, b: string | undefined): boolean {
-  const norm = (t: string) => t.replace(//g, '').trim()
+  const norm = (t: string) => t.replace(/\r/g, '').trim()
   return b != null && norm(a) === norm(b)
 }
 
