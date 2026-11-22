@@ -13,6 +13,7 @@
     "bestiary-data": "node scripts/build-bestiary-data.mjs",
     "pantheon-data": "node scripts/build-pantheon-data.mjs",
     "mod-tiers": "node scripts/build-mod-tiers.mjs",
+    "map-bonuses": "node scripts/build-map-bonuses.mjs",
     "drop-data": "node scripts/build-drop-data.mjs",
     "tree-data": "node scripts/build-tree-data.mjs",
     "ninja-icons": "node scripts/build-ninja-icons.mjs",

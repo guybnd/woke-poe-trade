@@ -182,7 +182,7 @@ import { beastKindLabel } from '../mechanics/beast-kinds'
 import UniqueDetails from './UniqueDetails.vue'
 import { uniqueDetails, uniqueFacts } from './unique-details'
 import { isImageIcon } from './lookups/types'
-import type { LookupAction, LookupCard, LookupContext } from './lookups/types'
+import type { Lookup, LookupAction, LookupCard, LookupContext } from './lookups/types'
 import { countdownLookup, currencyLookup, currencyNamer, webLookup } from './lookups/answers'
 import { calcLookup } from './lookups/calc'
 import { bossLookup, dropLookupWith } from './lookups/bosses'
@@ -566,6 +566,22 @@ function loadCrafts () {
     .catch(() => {})
     .finally(() => { craftLoading = false })
 }
+// What map mods give (map-mods/bonuses.ts, from poedb): the data file and the
+// lookup, both fetched on first open.
+const mapBonusLookupFn = shallowRef<Lookup | null>(null)
+const noLookup: Lookup = () => []
+let mapBonusLoading = false
+function loadMapBonusLookup () {
+  if (mapBonusLookupFn.value || mapBonusLoading) return
+  mapBonusLoading = true
+  Promise.all([import('./lookups/map-bonus'), import('../map-mods/bonuses')])
+    .then(async ([lookup, bonuses]) => {
+      const data = await bonuses.loadMapBonuses()
+      if (data) mapBonusLookupFn.value = lookup.mapBonusLookup(data)
+    })
+    .catch(() => {})
+    .finally(() => { mapBonusLoading = false })
+}
 // Blood Altar recipes, from poedb, fetched on first open like the crafts.
 const bestiaryData = shallowRef<BestiaryData | null>(null)
 let bestiaryLoading = false
@@ -719,7 +735,7 @@ function flipsConfig (): ScarabFlipWidget | null {
   if (!isWidgetTypeOn(config, SCARAB_FLIP_TYPE)) return null
   return (config.widgets.find(w => w.wmType === SCARAB_FLIP_TYPE) as ScarabFlipWidget | undefined) ?? null
 }
-const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), salesLookup(salesList.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
+const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value ?? noLookup, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), salesLookup(salesList.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -1303,6 +1319,7 @@ function start (text: string) {
   whenIdle(loadCards)
   whenIdle(loadGems)
   whenIdle(loadCrafts)
+  whenIdle(loadMapBonusLookup)
   whenIdle(loadBestiary)
   whenIdle(loadTree)
   whenIdle(loadVisceraTable)

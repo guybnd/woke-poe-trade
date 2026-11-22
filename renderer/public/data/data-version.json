@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "version": 29,
+  "version": 30,
   "files": {
     "en": {
       "items": "4cb2d22ac9922d0906ed453b0a7e051819a4f1f2ca41daea95ebbc8099922a91",
@@ -30,6 +30,7 @@
     "league/viscera.json": "19a5a302f48ebac4d3437da7967665fe046dde9e0375ba04390b7c551b4738e3",
     "mod-tiers.json": "7af03e052d6501fec96b5d1295df79728efebf752db852105fb3d35f58280dd6",
     "league/ninja-icons.json": "556bf6fb65d7a17b6f54af14cbd2adeb8b7c375440a1331c1669bd24917d7976",
-    "league/vaults.json": "7caa59205b0d7eb0a4d5712acffb2879819679156376b4c28ffe4d2b6e17b665"
+    "league/vaults.json": "7caa59205b0d7eb0a4d5712acffb2879819679156376b4c28ffe4d2b6e17b665",
+    "map-bonuses.json": "9e98cff9464d479a8145390c939ea7bdda8fb5391b54853f1eebf0bc87a6d226"
   }
 }
