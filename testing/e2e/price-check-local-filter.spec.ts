@@ -89,12 +89,13 @@ test('a raised min filters the loaded listings here; a lowered one asks for a ne
   await expect(status).toContainText('5 of 30 here')
   expect(calls.fetch).toBe(fetches + 1)
 
-  // Nothing left to load: the hint points at Search, which glows.
+  // All 30 the search found are loaded: a search would find no more, so it isn't suggested.
   await lifeMin.fill('150')
-  await expect(hint).toContainText('Search for these filters')
+  await expect(hint).toContainText('None of the 30 listings the search found fit')
   await expect(hint.getByRole('button', { name: 'Load 10 more' })).toHaveCount(0)
-  await expect(search).toHaveClass(/w-pc-glow/)
-  await overlay.snap('short list, nothing more to load')
+  await expect(hint).not.toContainText('Search for these filters')
+  await expect(search).not.toHaveClass(/w-pc-glow/)
+  await overlay.snap('short list, all loaded')
 
   // Lower than the search went: those listings were never loaded.
   await lifeMin.fill('100')
