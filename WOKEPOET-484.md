@@ -39,6 +39,14 @@ history:
       into PR 770 with A; second adversarial review fixed; all checks green.
       Waiting on Guy's "merge".
     id: a-2026-11-22t16-38-32-764z
+  - type: activity
+    user: Agent
+    date: '2026-11-22T17:16:47.686Z'
+    comment: >-
+      Guy asked for shorter regexes and a pack size goal: done (T17-only token
+      universe, 2-of-6 366->182 chars; pack size goal with map_packsize trade
+      filter). Reviewed, checks green. Waiting on Guy's "merge" for PR 770.
+    id: a-2026-11-22t17-16-47-686z
 ---
 Guy asked for a planner from poedb map mod tables. Option A (recommended, built while his A/B/C pick is pending): bonus numbers + more-X tag + tooltip on every Map mods row, sort by bonus, "Want all with <bonus>", Ctrl+Space lookup. Data: script snapshots poedb Maps_low/mid/top/uber_tier embedded JSON into bundled data once per patch.
 
