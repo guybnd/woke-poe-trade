@@ -12,6 +12,10 @@ export function toolsContext (): string {
   return `Tools on: ${on.length ? on.join(', ') : 'none'}`
 }
 
+// The players' Discord server (Guy's permanent invite): Settings, About and Ctrl+Space.
+export const DISCORD_URL = 'https://discord.gg/XrUcvXrt4e'
+export function openDiscord () { window.open(DISCORD_URL) }
+
 // "Report an issue" dialog: open or not, shown while the overlay is.
 export const reportDialogOpen = shallowRef(false)
 export function openReportDialog () { reportDialogOpen.value = true }

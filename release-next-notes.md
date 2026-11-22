@@ -1,5 +1,6 @@
 # Next release notes
 
+- There's now a Woke PoE Trade Discord server for questions and ideas: Join the Discord is in Settings › Install & updates, Settings › About and Ctrl+Space search ("discord").
 - Price check: rare, magic and white gear and jewels get a rarity chip beside Corrupted: click it to search Any (non-unique), Magic only or Rare only. Magic finds bases with the mods you ticked, to recombine or fracture. With Magic picked, the chip turns amber when more than one prefix or suffix is ticked, since a magic item has one of each.
 - Price check: hovering POE.NINJA on the small price card says what it is and shows the key for live data (the price check key again, or Space).
 - Price check: a captured beast now lists the Blood Altar recipes it's used in, under its small poe.ninja card and beside the full window: what each recipe makes, the other beast it needs with its price, and the total. Click another beast to price check it. A Craicic Vassal, for example, corrupts a map to have an implicit modifier on its own. Recipes no longer say "+ 3 any rare" (here and in Ctrl+Space search): since 3.30 a recipe needs only the beasts it names. The Black Mórrigan's unique Talisman recipe is listed too.
