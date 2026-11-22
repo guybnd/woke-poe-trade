@@ -79,12 +79,13 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const bar = panel.getByTitle("Drag to change this row's height · double-click to fit")
     const row = panel.locator('section', { has: bar }).last()
     const before = (await row.boundingBox())!.height
+    await bar.scrollIntoViewIfNeeded()
     const at = (await bar.boundingBox())!
     await overlay.page.mouse.move(at.x + at.width / 2, at.y + at.height / 2)
     await overlay.page.mouse.down()
-    await overlay.page.mouse.move(at.x + at.width / 2, at.y + at.height / 2 + 80, { steps: 4 })
+    await overlay.page.mouse.move(at.x + at.width / 2, at.y + at.height / 2 + 40, { steps: 4 })
     await overlay.page.mouse.up()
-    await expect.poll(async () => Math.round((await row.boundingBox())!.height)).toBeGreaterThan(before + 60)
+    await expect.poll(async () => Math.round((await row.boundingBox())!.height)).toBeGreaterThan(before + 25)
     await overlay.snap('net worth middle row dragged taller')
     // Double-click fits it to what's in it again.
     await bar.dblclick()

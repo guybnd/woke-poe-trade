@@ -73,7 +73,7 @@
               </span>
               <TextTabs v-model="range" :options="RANGE_OPTIONS" />
             </div>
-            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="chartHShown" :class="{ [$style.chartFill]: chartHShown == null }" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" @spend="onChartSpend" />
+            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" @spend="onChartSpend" />
             <div v-if="chartMode === 'category' && !fold.chart" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
             </div>
@@ -105,7 +105,7 @@
               </div>
             </template>
           </div>
-          <SplitHandle v-if="shown.chart && shown.perHour" dir="x" :style="{ left: topEdge }" title="Drag to resize · double-click to reset" @start="startDrag" @move="dragTopEdge" @end="saveLayout" @reset="resetLayout('top')" />
+          <SplitHandle v-if="shown.chart && shown.perHour" dir="x" :style="{ left: topEdge }" title="Drag to resize · double-click to reset" @start="startDrag" @move="dragTopEdge" @end="saveLayout" @reset="resetLayout('half')" />
         </section>
 
         <section v-if="showChanges || showSide" ref="colsEl" :class="[$style.cols, { [$style.colsFixed]: midFixed }]" :style="{ gridTemplateColumns: colsTemplate, height: midFixed ? midHShown + 'px' : undefined }">
@@ -426,14 +426,14 @@ const colIds = computed<ColId[]>(() => [
   showSide.value ? 'side' : null
 ].filter((x): x is ColId => x != null))
 // cols: the columns' weights, for the columns shown when the drag began.
-const draft = shallowRef<{ cols?: { ids: ColId[], w: number[] }, chartH?: number, top?: number, midH?: number } | null>(null)
+const draft = shallowRef<{ cols?: { ids: ColId[], w: number[] }, chartH?: number, half?: number, midH?: number } | null>(null)
 let dragBase: { ids: ColId[], cols: number[], chartH: number, top: number, midH: number } | null = null
 const chartH = computed(() => draft.value?.chartH ?? chartHOf(props.config.layout))
 // Beside Per hour the chart fills its half until a height is dragged.
 const chartHShown = computed(() => draft.value?.chartH != null || hasChartH(props.config.layout) || !shown.value.perHour ? chartH.value : undefined)
 const chartComp = shallowRef<{ $el?: HTMLElement } | null>(null)
 // The halves: the chart's share of the row.
-const top = computed(() => draft.value?.top ?? topOf(props.config.layout))
+const top = computed(() => draft.value?.half ?? topOf(props.config.layout))
 const halvesStyle = computed(() => shown.value.chart && shown.value.perHour ? { gridTemplateColumns: `minmax(0, ${top.value}fr) minmax(0, ${1 - top.value}fr)` } : undefined)
 // The handle sits in the gap between the halves (padding var(--w-pad), gap var(--w-s2)).
 const topEdge = computed(() => `calc(var(--w-pad) + (100% - 2 * var(--w-pad) - var(--w-s2)) * ${top.value} + var(--w-s2) / 2)`)
@@ -461,7 +461,8 @@ const colsEl = shallowRef<HTMLElement | null>(null)
 // What's on screen when a drag begins: a height not saved yet is measured.
 function snapshot () {
   const el = chartComp.value?.$el
-  const chartPx = chartHShown.value ?? (el instanceof HTMLElement && el.clientHeight > 0 ? el.clientHeight : chartH.value)
+  // What's drawn: beside Per hour the chart can be taller than its minimum.
+  const chartPx = el instanceof HTMLElement && el.clientHeight > 0 ? el.clientHeight : chartHShown.value ?? chartH.value
   return { ids: [...colIds.value], cols: [...weights.value], chartH: chartPx, top: top.value, midH: midHShown.value ?? colsEl.value?.offsetHeight ?? 200 }
 }
 function startDrag () {
@@ -482,8 +483,10 @@ function dragChartH (px: number) {
 }
 function dragTopEdge (px: number) {
   const el = topEl.value
-  const w = el ? el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft) - parseFloat(getComputedStyle(el).paddingRight) : 0
-  draft.value = { ...draft.value, top: dragTop(base().top, px, w) }
+  const cs = el ? getComputedStyle(el) : null
+  // The grid tracks' width: the row less its padding and the gap.
+  const w = el && cs ? el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (parseFloat(cs.columnGap) || 0) : 0
+  draft.value = { ...draft.value, half: dragTop(base().top, px, w) }
 }
 function dragMidH (px: number) {
   draft.value = { ...draft.value, midH: clampMidH(base().midH + px) }
@@ -494,7 +497,7 @@ function saveLayout () {
   if (!d) return
   const l: PanelLayout = { ...props.config.layout }
   if (d.chartH != null) l.chartH = d.chartH
-  if (d.top != null) l.top = Math.round(d.top * 1000) / 1000
+  if (d.half != null) l.half = Math.round(d.half * 1000) / 1000
   if (d.midH != null) l.midH = d.midH
   const dc = d.cols
   if (dc) {
@@ -902,7 +905,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 /* A dragged height: each column scrolls inside it. */
 .colsFixed { grid-template-rows: minmax(0, 1fr); }
 .colsFixed > div:not([role=separator]) { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-.colsFixed .changesCol { overflow: hidden; }
 .colsFixed .scrollBox { overflow-y: auto; overscroll-behavior: contain; }
 .colsFixed .scroll { max-height: none; overflow: visible; }
 .halves { position: relative; }

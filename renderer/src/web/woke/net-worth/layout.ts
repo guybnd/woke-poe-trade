@@ -6,8 +6,9 @@ export type ColId = 'changes' | 'side'
 export type FoldId = 'chart' | 'perHour' | 'changes' | 'sold' | 'where' | 'moves'
 
 export interface PanelLayout {
-  // The left half's share of the top row (the chart's side).
-  top?: number
+  // The left half's share of the top row (the chart's side). A new key:
+  // an old "top" from an earlier, removed version of this drag is ignored.
+  half?: number
   // The columns' widths, relative to each other.
   cols?: Partial<Record<ColId, number>>
   // The chart's height, px.
@@ -30,7 +31,7 @@ export const clampChartH = (h: number) => Math.min(320, Math.max(48, Math.round(
 export const clampMidH = (h: number) => Math.min(900, Math.max(60, Math.round(h)))
 
 export function topOf (l: PanelLayout | undefined): number {
-  return ok(l?.top) ? clampTop(l.top) : TOP_DEFAULT
+  return ok(l?.half) ? clampTop(l.half) : TOP_DEFAULT
 }
 
 export function chartHOf (l: PanelLayout | undefined): number {
