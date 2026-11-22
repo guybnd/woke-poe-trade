@@ -19,7 +19,8 @@ export interface ParsedStat {
     value: number
     min: number
     max: number
-    /** woke: both rolled numbers of an "Adds # to #" line; value is their average. */
+    /** woke: both numbers of a two-number line ("Adds # to #": value is their
+     * average; a first-number stat like Kitava's trigger: value is the first). */
     pair?: [number, number]
     /** woke: each number's own range, in text order, when the copy shows ranges. */
     ranges?: Array<{ min: number, max: number }>
@@ -212,6 +213,9 @@ export function tryParseTranslation (
       }]
     }
 
+    // woke: the number the trade site searches this stat by.
+    const searched = tradeValues(found.stat, combination.values)
+
     return {
       stat: found.stat,
       translation: found.matcher,
@@ -219,10 +223,10 @@ export function tryParseTranslation (
         ? {
             unscalable: stat.unscalable,
             generation: (legacyStatRolls) ? 'legacy' : undefined,
-            dp: found.stat.dp || combination.values.some(stat => stat.decimal),
-            value: getRollOrMinmaxAvg(combination.values.map(stat => stat.roll)),
-            min: getRollOrMinmaxAvg(combination.values.map(stat => stat.bounds?.min ?? stat.roll)),
-            max: getRollOrMinmaxAvg(combination.values.map(stat => stat.bounds?.max ?? stat.roll)),
+            dp: found.stat.dp || searched.some(stat => stat.decimal),
+            value: getRollOrMinmaxAvg(searched.map(stat => stat.roll)),
+            min: getRollOrMinmaxAvg(searched.map(stat => stat.bounds?.min ?? stat.roll)),
+            max: getRollOrMinmaxAvg(searched.map(stat => stat.bounds?.max ?? stat.roll)),
             pair: (combination.values.length === 2)
               ? [combination.values[0].roll, combination.values[1].roll]
               : undefined,
@@ -233,6 +237,33 @@ export function tryParseTranslation (
         : undefined
     }
   }
+}
+
+// woke: two-number lines the trade site searches by their first number only.
+// Checked one by one on the live trade API (2026-11-22): Kitava's Thirst's
+// "50% chance ... 100 Mana" matches 50, not the average 75, so the Foulborn
+// "50% chance ... 200 Life" searched 125 and found nothing. Not a general
+// rule: Death's Oath's "450 Chaos Damage per second for 3 seconds" is stored
+// as the average 226.5, so only stats checked on the trade site go here.
+// Keyed by the trade hash so every language and mod type shares it.
+const FIRST_NUMBER_STATS = new Set([
+  'stat_723388324', // #% chance to Trigger Socketed Spells when you Spend at least # Mana ... (Kitava's Thirst)
+  'stat_2513998383', // #% chance to Trigger Socketed Spells when you Spend at least # Life ... (Foulborn Kitava's Thirst)
+  'stat_144887967', // #% chance to gain Phasing for # seconds when your Trap is triggered by an Enemy (Tinkerskin)
+  'stat_3102860761' // #% increased Movement Speed for # seconds on Throwing a Trap (Deerstalker)
+])
+
+export function searchesFirstNumber (stat: Stat): boolean {
+  for (const ids of Object.values(stat.trade.ids)) {
+    for (const id of ids) {
+      if (FIRST_NUMBER_STATS.has(id.slice(id.indexOf('.') + 1))) return true
+    }
+  }
+  return false
+}
+
+function tradeValues<T> (stat: Stat, values: T[]): T[] {
+  return (values.length === 2 && searchesFirstNumber(stat)) ? [values[0]] : values
 }
 
 export function getRollOrMinmaxAvg (values: number[]): number {

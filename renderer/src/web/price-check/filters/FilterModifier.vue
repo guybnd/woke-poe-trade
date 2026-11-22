@@ -24,8 +24,8 @@
               <component :is="poeModText" class="w-pc-modtext" :text="text" :roll="roll?.value" :rolls="poePair" :ranges="poeRanges?.ranges" :top="poeRanges?.top" />
             </span>
             <div v-else class="search-text flex-1 relative flex min-w-0" style="line-height: calc(1rem * var(--w-text-scale, 1));">
-              <span class="truncate"><item-modifier-text :text="text" :roll="roll?.value" /></span>
-              <span class="search-text-full whitespace-pre-wrap"><item-modifier-text :text="text" :roll="roll?.value" /></span>
+              <span class="truncate"><item-modifier-text :text="text" :roll="roll?.value" :rolls="rolls" /></span>
+              <span class="search-text-full whitespace-pre-wrap"><item-modifier-text :text="text" :roll="roll?.value" :rolls="rolls" /></span>
             </div>
           </button>
           <cluster-spot-tag v-if="filter.clusterSpot" :spot="filter.clusterSpot" />
@@ -146,6 +146,14 @@ import { FilterTag, StatFilter, INTERNAL_TRADE_IDS, ItemHasEmptyModifier } from 
 import { SearchMode as MercSearchMode } from './pseudo/mercenary.js'
 import { ModifierType } from '@/parser/modifiers'
 import { poeKit } from '@/web/woke/price-insight/window-style'
+import { searchesFirstNumber } from '@/parser/stat-translations'
+
+function firstNumberPair (filter: StatFilter): readonly number[] | undefined {
+  const src = filter.sources[0]
+  if (!src.stat.roll?.pair || !searchesFirstNumber(src.stat.stat)) return undefined
+  if (src.contributes?.value !== src.stat.roll.value) return undefined
+  return src.stat.roll.pair
+}
 
 export default defineComponent({
   components: { WokeModWorthTag, ClusterSpotTag: defineAsyncComponent(() => import('@/web/woke/cluster-type/ClusterSpotTag.vue')), WokeSwapMarker: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapMarker.vue')), WokeSwapElement: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapElementPick.vue')), WokeRollPick, ItemModifierText, ModifierAnointment: defineAsyncComponent(() => import('./FilterModifierAnointment.vue')), FilterModifierOptions, FilterModifierTiers, StatRollSlider, UiPopover },
@@ -369,6 +377,8 @@ export default defineComponent({
       // A unique's ranges in the line, as the game's Alt view shows them (pick C, WOKEPOET-420).
       poeRanges: computed(() => kit?.uniqueLineRanges(props.filter, props.item)),
       poePair: computed(() => kit?.rollPair(props.filter)),
+      // Standard mode: a first-number line (Kitava's trigger) shows both its numbers.
+      rolls: computed(() => !props.poe && props.filter.sources.length === 1 ? firstNumberPair(props.filter) : undefined),
       poeModText: kit?.PoeModText,
       poeEldritch: computed(() => kit?.eldritchMark(props.filter) ?? null),
       poeEldritchMark: kit?.EldritchMark,
