@@ -19,6 +19,8 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   const card = overlay.page.getByTestId('instant-ninja-card')
   await expect(card).toContainText('Divine Orb')
   await expect(card).toContainText('180c')
+  // A divine's parts in chaos, for paying in div.
+  await expect(card.getByTestId('instant-ninja-parts')).toContainText('0.1 18c')
   await expect(overlay.page.locator('#price-window')).toHaveCount(0)
   await overlay.snap('divine orb instant check')
   // The mouse is tracked into the card, not the window.

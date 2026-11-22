@@ -1,5 +1,7 @@
 # Next release notes
 
+- Price check, the small poe.ninja card: items worth under a chaos (Rogue's Markers, lifeforce) read as how many a chaos buys ("281 per c") instead of "0c", and every price also says how many a divine buys (or, for div items, the chaos price). Your stack's total no longer rounds to 0 either. A Divine Orb shows what 0.1, 0.25, 0.5 and 0.75 div are in chaos.
+- Price check: Stacked Decks get the small card too, with their open-or-sell verdict on it. The locked key (Ctrl+Alt+D) no longer darkens the game behind the card. Moving from the card to its related items no longer closes it.
 - Price check: the small poe.ninja card sits further right of the mouse pointer, so the pointer no longer covers its price.
 - Price check: the locked price check key (Ctrl+Alt+D by default) now shows the small poe.ninja card too, not just the quick one. Pasting an item into the menu or Ctrl+Space search opens the window and searches, as a menu's Price check does.
 - Price check: pressing the price check key again on an item only opens live offers while its poe.ninja card is still showing. If the card already closed (the mouse moved away), the key shows the card again instead of opening the full window.

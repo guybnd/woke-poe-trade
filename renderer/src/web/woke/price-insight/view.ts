@@ -54,3 +54,7 @@ watch(ninjaCardOpen, (v) => {
 window.addEventListener('storage', (e) => {
   if (e.key === NINJA_KEY) ninjaCardOpen.value = e.newValue === '1'
 })
+
+// The instant poe.ninja card is showing (PriceCheckWindow.vue): the overlay
+// leaves the game undarkened behind it, as for the quick key.
+export const instantCardShown = shallowRef(false)

@@ -9,6 +9,9 @@
     <instant-ninja-card v-if="instant && item?.isOk()" :key="instantKey" :item="item.value" :at="instant"
       :active="config.wmWants === 'show'" :again-keys="config.hotkey && !advancedCheck ? `${config.hotkeyHold} + ${config.hotkey}` : null"
       @placed="instantPlaced" @live="openWindow(true)" @details="openWindow(false)" @close="closePriceCheck">
+      <template #verdict>
+        <woke-deck-verdict-chip v-if="item.value.info.refName === 'Stacked Deck'" :item="item.value" />
+      </template>
       <related-items :class="[$style.zoomed, $style.instantSide]" :item="item.value" click-position="stash" @check="checkRelated" />
     </instant-ninja-card>
     <template v-else>
@@ -122,6 +125,7 @@ import '@/web/woke/price-insight/poe-mode.css'
 import { floatingArea, floatingLayout, movedPosition, resizedPosition } from './window-position'
 import { dispatchPriceCheck } from '@/web/woke/ui/tooltip/item-price-check'
 import { exactDetailsId } from './trends/getDetailsId'
+import { instantCardShown } from '@/web/woke/price-insight/view'
 import { fixedPriceItem } from '@/web/woke/price-insight/ninja-first'
 
 type ParseError = { name: string; message: string; rawText: ParsedItem['rawText']; unsupported?: boolean }
@@ -181,6 +185,8 @@ export default defineComponent({
     // Only for items the game data doesn't know yet: loaded on first use.
     NewItemSearch: defineAsyncComponent(() => import('@/web/woke/new-item/NewItemSearch.vue')),
     InstantNinjaCard: defineAsyncComponent(() => import('@/web/woke/price-insight/InstantNinjaCard.vue')),
+    // A Stacked Deck's open-or-sell verdict on its instant card.
+    WokeDeckVerdictChip: defineAsyncComponent(() => import('@/web/woke/stacked-decks/DeckVerdictChip.vue')),
     UnreadableItem,
     PriceStyleMenu,
     UiPopover
@@ -260,13 +266,13 @@ export default defineComponent({
       const cfg = props.config
       if (cfg.wokeNinjaFirst === false || cfg.wokeNinjaInstant === false) return false
       if (!(it.info.tradeTag || fixedPriceItem(it)) || !leagues.selectedId.value) return false
-      // Its window says whether to open or sell them (stacked-decks/), which the card can't.
-      if (it.info.refName === 'Stacked Deck') return false
       const q = exactDetailsId(it)
       return Boolean(q && (poeninja.findPriceByQuery(q)?.chaos ?? 0) > 0)
     }
     // A new card each check, so it measures itself and reports its area again.
     const instantKey = shallowRef(0)
+    // woke: the overlay doesn't darken the game behind the card (OverlayWindow.vue), on the locked key too.
+    watch(() => instant.value != null && props.config.wmWants === 'show', (on) => { instantCardShown.value = on }, { immediate: true })
     let instantText = ''
     let instantAt = 0
     function sendTrackArea (from: { x: number, y: number }, area: { x: number, y: number, width: number, height: number }) {
