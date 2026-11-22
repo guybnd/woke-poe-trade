@@ -29,7 +29,7 @@
           </span>
         </td>
         <td v-else class="w-num" :class="l.mine ? '' : 'w-dim'" :title="unitTitle(l)">
-          <i v-if="l.mine" class="fas fa-thumbtack" :class="$style.pin" />{{ l.state === 'unpriced' ? '—' : show('unit', l.unitChaos) }}
+          <i v-if="l.mine" class="fas fa-thumbtack" :class="$style.pin" /><i v-else-if="l.heldSince != null" class="fas fa-pause-circle" :class="$style.held" />{{ l.state === 'unpriced' ? '—' : show('unit', l.unitChaos) }}
         </td>
         <td class="w-num" :title="l.state === 'unpriced' ? undefined : other('chaos', l.chaos)">{{ l.state === 'unpriced' ? '—' : show('chaos', l.chaos) }}</td>
         <td :class="$style.shareCell" :title="l.state ? undefined : `${shareText(l.chaos)} of your net worth`">
@@ -60,7 +60,7 @@ import type { ItemMenuRef } from '../ui/tooltip/item-menu'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import type { ValuedLine } from './valuation'
 import Coin from './Coin.vue'
-import { lineTip } from './tips'
+import { heldNote, lineTip } from './tips'
 import { isUniqueFrame } from './valuation'
 
 const props = defineProps<{
@@ -183,7 +183,9 @@ function colourOf (l: ValuedLine) {
 
 function tipOf (l: ValuedLine): ItemTipRef {
   const tabs = l.tabIds.map(nameOfTab)
-  return lineTip(l, l.count, tabs.length ? `In ${tabs.join(', ')}` : undefined)
+  const held = l.heldSince != null && l.ninjaChaos != null ? `Price held: poe.ninja's jumped to ${show('unit', l.ninjaChaos)} ${inChaos('unit') ? 'c' : 'd'} in a thin market` : undefined
+  const note = [tabs.length ? `In ${tabs.join(', ')}` : '', held ?? ''].filter(Boolean).join('. ')
+  return lineTip(l, l.count, note || undefined)
 }
 // ---------- your price, ignore (the row menu) ----------
 const editing = shallowRef<string | null>(null)
@@ -241,6 +243,8 @@ function save (l: ValuedLine) {
 function unitTitle (l: ValuedLine) {
   if (l.mine) return `Your price (poe.ninja: ${l.ninjaChaos != null ? `${show('unit', l.ninjaChaos)} ${inChaos('unit') ? 'c' : 'd'}` : 'none'})`
   if (l.state === 'unpriced') return 'No poe.ninja price. Right-click to set yours'
+  const held = heldNote(l, c => `${show('unit', c)} ${inChaos('unit') ? 'c' : 'd'}`)
+  if (held) return held
   return other('unit', l.unitChaos)
 }
 
@@ -281,6 +285,7 @@ function menuOf (l: ValuedLine): ItemMenuRef {
 .unitBtn:focus-visible { outline: 1px solid var(--w-accent); }
 .dim td { opacity: .55; }
 .pin { font-size: calc(9px * var(--w-text-scale, 1)); color: var(--w-gold); margin-right: 4px; }
+.held { font-size: calc(9px * var(--w-text-scale, 1)); color: var(--w-warn); margin-right: 4px; }
 .editCell { padding: 0 2px !important; }
 .edit { display: inline-flex; align-items: center; gap: 2px; justify-content: flex-end; width: 100%; }
 .editInput { width: 100%; min-width: 0; max-width: 64px; font: inherit; font-family: var(--w-num); text-align: right; color: var(--w-fg); background: var(--w-panel-3); border: 1px solid var(--w-gold); border-radius: var(--w-r-sm); padding: 0 3px; }

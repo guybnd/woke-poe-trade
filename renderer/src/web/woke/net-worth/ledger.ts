@@ -2,7 +2,7 @@
 // chart's points, big refreshes, liquid vs locked, price moves on what you
 // hold, the goal's ETA and gains grouped per map. Pure: no Vue, no requests.
 import { dayOf, emptyPrefs, itemKey, priceItem } from './valuation'
-import type { Category, DaySnapshot, DiffLine, PriceOf, PricePrefs, StashDiff, StashItemLike, Valuation, ValuedLine } from './valuation'
+import type { Category, DaySnapshot, DiffLine, HoldGuard, PriceOf, PricePrefs, StashDiff, StashItemLike, Valuation, ValuedLine } from './valuation'
 
 // ---------- per tab (D5) ----------
 
@@ -10,14 +10,14 @@ export interface TabLike { id: string, name: string, type?: string, colour?: str
 export interface TabValue { id: string, name: string, type: string, colour: string | null, chaos: number }
 
 // Your prices count; ignored items don't.
-export function valueByTab (tabs: TabLike[], priceOf: PriceOf, prefs: PricePrefs = emptyPrefs()): TabValue[] {
+export function valueByTab (tabs: TabLike[], priceOf: PriceOf, prefs: PricePrefs = emptyPrefs(), guard?: HoldGuard): TabValue[] {
   const ignored = new Set(prefs.ignored)
   return tabs.map(t => {
     let chaos = 0
     for (const item of t.items) {
       const key = itemKey(item)
       if (ignored.has(key)) continue
-      const p = priceItem(item, priceOf, prefs, key)
+      const p = priceItem(item, priceOf, prefs, key, guard)
       if (p && p.chaos > 0) chaos += p.chaos * item.stack
     }
     return { id: t.id, name: t.name, type: t.type ?? '', colour: t.colour ?? null, chaos }
@@ -102,9 +102,35 @@ const toDiv = (chaos: number, rate: number | null, fallback: number | null) => {
   return r ? chaos / r : chaos
 }
 
+// A read whose value a price glitch moved and the next read moved back: the
+// price change into it (value change minus what came in) and out of it go
+// opposite ways, each over 25% of the value, and the second undoes at least
+// half the first. The Witch at 7,075c for one read doubled a net worth.
+const SPIKE_SHARE = 0.25
+const SPIKE_UNDONE = 0.5
+
+export function priceSpikes (points: LedgerPoint[]): Set<number> {
+  const out = new Set<number>()
+  for (let i = 1; i < points.length - 1; i++) {
+    const [a, p, b] = [points[i - 1], points[i], points[i + 1]]
+    if (out.has(a.at) || p.netChaos == null || b.netChaos == null) continue
+    const into = p.chaos - a.chaos - p.netChaos
+    const back = b.chaos - p.chaos - b.netChaos
+    const base = Math.max(a.chaos, b.chaos)
+    if (!(base > 0) || Math.sign(into) === Math.sign(back)) continue
+    if (Math.abs(into) < base * SPIKE_SHARE || Math.abs(back) < base * SPIKE_SHARE) continue
+    if (Math.min(Math.abs(into), Math.abs(back)) < Math.max(Math.abs(into), Math.abs(back)) * SPIKE_UNDONE) continue
+    out.add(p.at)
+  }
+  return out
+}
+
 // Refresh points in range, with days before the first one filled from the
-// daily snapshots. Values in divines, each at its own day's rate.
-export function seriesFor (points: LedgerPoint[], days: Record<string, DaySnapshot>, range: ChartRange, now: number, divineNow: number | null): SeriesPoint[] {
+// daily snapshots. Values in divines, each at its own day's rate. Price
+// glitches (priceSpikes) are left out.
+export function seriesFor (allPoints: LedgerPoint[], days: Record<string, DaySnapshot>, range: ChartRange, now: number, divineNow: number | null): SeriesPoint[] {
+  const spikes = priceSpikes(allPoints)
+  const points = spikes.size ? allPoints.filter(p => !spikes.has(p.at)) : allPoints
   const from = now - RANGE_MS[range]
   const firstPoint = points[0]?.at ?? Infinity
   const out: SeriesPoint[] = []

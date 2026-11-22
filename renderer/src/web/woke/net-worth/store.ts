@@ -42,6 +42,10 @@ const stash = shallowRef<CachedStash | null>(null)
 const history = shallowRef<NetWorthHistory>(emptyHistory())
 const ledgerRef = shallowRef<Ledger>(emptyLedger())
 const prefs = shallowRef<PricePrefs>(emptyPrefs())
+// The last counted read's items and prices: a thin item's price jump is held
+// against it (valuation.ts holdJump).
+const baseline = shallowRef<Baseline | null>(null)
+const guardNow = () => ({ before: baseline.value, now: Date.now() })
 // Every refresh's net change (gains.ts), for the purchase switch.
 const gainsRef = shallowRef<StashGain[]>([])
 // The league those prefs are for: none while another league loads.
@@ -55,7 +59,7 @@ const ninja = usePoeninja()
 export const valuation = computed<Valuation | null>(() => {
   // Read so a new price download values again.
   if (ninja.updatedAt.value == null || !stash.value) return null
-  return valueStash(stash.value.tabs, ninjaPriceOf(), prefs.value)
+  return valueStash(stash.value.tabs, ninjaPriceOf(), prefs.value, guardNow())
 })
 
 export const divine = computed(() => ninja.xchgRate.value ?? null)
@@ -126,7 +130,7 @@ export const glance = shallowRef<Glance | null>(null)
 // Each tab's value now (live prices), in tab order.
 export const tabValues = computed<TabValue[]>(() => {
   if (ninja.updatedAt.value == null || !stash.value) return []
-  return valueByTab(stash.value.tabs, ninjaPriceOf(), prefs.value)
+  return valueByTab(stash.value.tabs, ninjaPriceOf(), prefs.value, guardNow())
 })
 export const readerStatus = computed(() => status.value)
 export const gainsNow = computed(() => gainsRef.value)
@@ -136,14 +140,16 @@ async function loadLeague (id: string) {
   if (loadedFor === id) return
   loadedFor = id
   prefsFor = null
-  const [saved, cache, led, own, gains] = await Promise.all([
+  const [saved, cache, led, own, gains, base] = await Promise.all([
     (hostRequest('doc-get', { collection: COLLECTION, key: id }) as Promise<NetWorthHistory | null>).catch(() => null),
     (hostRequest('stash-cache', { league: id }) as Promise<CachedStash | null>).catch(() => null),
     (hostRequest('doc-get', { collection: COLLECTION, key: ledgerKey(id) }) as Promise<Ledger | null>).catch(() => null),
     (hostRequest('doc-get', { collection: COLLECTION, key: prefsKey(id) }) as Promise<PricePrefs | null>).catch(() => undefined),
-    stashGains(id)
+    stashGains(id),
+    (hostRequest('doc-get', { collection: COLLECTION, key: `${id}-baseline` }) as Promise<Baseline | null>).catch(() => null)
   ])
   if (loadedFor !== id) return
+  baseline.value = base
   gainsRef.value = gains
   history.value = { ...emptyHistory(), ...(saved ?? {}) }
   ledgerRef.value = { ...emptyLedger(), ...(led ?? {}) }
@@ -208,7 +214,9 @@ async function countRead (id: string, readAt: number) {
   await hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(id), value: g }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: id, value: next }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: ledgerKey(id), value: nextLedger }).catch(() => {})
-  await hostRequest('doc-put', { collection: COLLECTION, key: baseKey, value: baselineOf(v) }).catch(() => {})
+  const nextBase = baselineOf(v)
+  if (loadedFor === id) baseline.value = nextBase
+  await hostRequest('doc-put', { collection: COLLECTION, key: baseKey, value: nextBase }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: tabsKey, value: tabs }).catch(() => {})
 }
 

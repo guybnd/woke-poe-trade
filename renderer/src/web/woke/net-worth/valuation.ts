@@ -43,6 +43,8 @@ export interface Priced {
   graph?: Array<number | null>
   // The poe.ninja variant priced (gems), for the tooltip.
   variant?: string
+  // A thin market: poe.ninja had no price on 3+ of its last 7 days.
+  thin?: boolean
 }
 export type PriceOf = (item: StashItemLike) => Priced | null
 
@@ -67,6 +69,9 @@ export interface ValuedLine {
   ninjaChaos?: number | null
   // Shown dimmed, outside the totals: no price at all, or ignored.
   state?: 'unpriced' | 'ignored'
+  // poe.ninja's price jumped in a thin market: unitChaos is the last read's
+  // price, held since then (see holdJump). ninjaChaos is the jumped one.
+  heldSince?: number
 }
 
 export interface Valuation {
@@ -115,17 +120,44 @@ function categoryOfFrame (frame: number): Category {
   return frame >= 1 && frame <= 4 ? 'gear' : 'other'
 }
 
-export interface ItemPrice { chaos: number, category: Category, graph?: Array<number | null>, ninja: number | null, mine: boolean, variant?: string }
+export interface ItemPrice { chaos: number, category: Category, graph?: Array<number | null>, ninja: number | null, mine: boolean, variant?: string, heldSince?: number }
+
+// ---------- price jumps in thin markets ----------
+// One fake listing can set a thin item's poe.ninja price: The Witch read
+// 7,075c (really 0.2c) for two hours. A thin item whose price jumps to 5x the
+// last read's, and by at least 1c, keeps the last read's price for up to 6
+// hours. It takes the new price sooner once poe.ninja's comes back down or
+// the market stops being thin. Backtested on 3 days of poe.ninja prices: 2 in
+// 3 fakes were gone within 6 hours; a real rise shows up at most 6 hours late.
+export const HOLD_RATIO = 5
+export const HOLD_MIN_JUMP = 1
+export const HOLD_MS = 6 * 3_600_000
+
+// The last read's price for an item, and since when it was held.
+export interface HoldGuard { before: Baseline | null, now: number }
+
+// The held price and since when, or null to take poe.ninja's.
+export function holdJump (ninja: number, thin: boolean | undefined, prev: Baseline[string] | undefined, now: number): { chaos: number, since: number } | null {
+  if (!thin || !prev || !(prev.unitChaos > 0)) return null
+  if (ninja < prev.unitChaos * HOLD_RATIO || ninja - prev.unitChaos < HOLD_MIN_JUMP) return null
+  const since = prev.heldSince ?? now
+  return now - since < HOLD_MS ? { chaos: prev.unitChaos, since } : null
+}
 
 // One item's price with your prices on top. null: no price.
-export function priceItem (item: StashItemLike, priceOf: PriceOf, prefs: PricePrefs, key = itemKey(item)): ItemPrice | null {
+// `guard`: the last read, so a jump in a thin market is held (holdJump).
+export function priceItem (item: StashItemLike, priceOf: PriceOf, prefs: PricePrefs, key = itemKey(item), guard?: HoldGuard): ItemPrice | null {
   const ninja = priceOf(item)
   const ninjaChaos = ninja && ninja.chaos > 0 ? ninja.chaos : null
   const own = prefs.prices[key]
   if (typeof own === 'number' && Number.isFinite(own) && own >= 0) {
     return { chaos: own, category: ninja?.category ?? categoryOfFrame(item.frame), graph: ninja?.graph, ninja: ninjaChaos, mine: true, variant: ninja?.variant }
   }
-  return ninja && ninjaChaos != null ? { chaos: ninjaChaos, category: ninja.category, graph: ninja.graph, ninja: ninjaChaos, mine: false, variant: ninja.variant } : null
+  if (!ninja || ninjaChaos == null) return null
+  const held = guard ? holdJump(ninjaChaos, ninja.thin, guard.before?.[key], guard.now) : null
+  const out: ItemPrice = { chaos: held?.chaos ?? ninjaChaos, category: ninja.category, graph: ninja.graph, ninja: ninjaChaos, mine: false, variant: ninja.variant }
+  if (held) out.heldSince = held.since
+  return out
 }
 
 // Gems by poe.ninja's variant ("1", "20", "21/20c", "1/20"), as price check
@@ -164,7 +196,7 @@ export function itemLabel (item: StashItemLike): string {
 
 const emptyCats = (): Record<Category, number> => ({ currency: 0, fragments: 0, cards: 0, gear: 0, other: 0 })
 
-export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: PricePrefs = emptyPrefs()): Valuation {
+export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: PricePrefs = emptyPrefs(), guard?: HoldGuard): Valuation {
   const lines = new Map<string, ValuedLine>()
   const unpricedLines = new Map<string, ValuedLine>()
   const ignoredLines = new Map<string, ValuedLine>()
@@ -173,7 +205,7 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
   for (const tab of tabs) {
     for (const item of tab.items) {
       const key = itemKey(item)
-      const price = priceItem(item, priceOf, prefs, key)
+      const price = priceItem(item, priceOf, prefs, key, guard)
       const off = ignored.has(key)
       if (!price && !off) unpriced++
       const into = off ? ignoredLines : price ? lines : unpricedLines
@@ -197,6 +229,7 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
           ninjaChaos: price?.ninja ?? null,
           state: off ? 'ignored' : price ? undefined : 'unpriced'
         }
+        if (price?.heldSince != null && !off) line.heldSince = price.heldSince
         into.set(key, line)
       }
       if (tab.id && !line.tabIds.includes(tab.id)) line.tabIds.push(tab.id)
@@ -217,7 +250,8 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
 
 // What a read held, small enough to keep: count and unit price per thing.
 // cat: where the item belongs (older baselines lack it).
-export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number, cat?: Category }>
+// heldSince: the price is held (holdJump) since then.
+export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number, cat?: Category, heldSince?: number }>
 
 // Marks a baseline that holds unpriced and ignored items too (see diffStash).
 export const BASELINE_V2 = '\u0000v2'
@@ -229,6 +263,8 @@ export function baselineOf (v: Valuation): Baseline {
   for (const l of [...v.lines, ...(v.unpricedLines ?? []), ...(v.ignoredLines ?? [])]) {
     const had = out[l.key]
     out[l.key] = { name: l.name, icon: l.icon, count: (had?.count ?? 0) + l.count, unitChaos: Math.max(had?.unitChaos ?? 0, l.unitChaos), cat: l.category }
+    const since = l.heldSince ?? had?.heldSince
+    if (since != null) out[l.key].heldSince = since
   }
   return out
 }

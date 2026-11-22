@@ -4,7 +4,7 @@
 // name. Pure: no Vue.
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import type { ValuedLine } from './valuation'
-import { isUniqueFrame } from './valuation'
+import { HOLD_MS, HOLD_RATIO, isUniqueFrame } from './valuation'
 
 type TipLine = Pick<ValuedLine, 'key' | 'name' | 'tipName' | 'variant' | 'frame'>
 
@@ -57,4 +57,15 @@ export function parseTop (s: string): { count: number, name: string } {
   const m = /^(−?)(?:([\d,]+) × )?(.+)$/.exec(s)!
   const n = m[2] ? Number(m[2].replace(/,/g, '')) : 1
   return { count: (m[1] ? -1 : 1) * (Number.isFinite(n) ? n : 1), name: m[3] }
+}
+
+const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+
+// Why a held price (valuation.ts holdJump) isn't poe.ninja's. `price` writes
+// a chaos amount in the table's unit.
+export function heldNote (l: Pick<ValuedLine, 'heldSince' | 'ninjaChaos' | 'unitChaos'>, price: (chaos: number) => string): string | undefined {
+  if (l.heldSince == null || l.ninjaChaos == null) return undefined
+  return `Held at the last read's price. poe.ninja says ${price(l.ninjaChaos)}, a jump of ${HOLD_RATIO}� or more in a thin market ` +
+    `(no price on 3+ of the last 7 days), which one fake listing can cause. Takes poe.ninja's price at ${clock(l.heldSince + HOLD_MS)} ` +
+    'if it stays up, sooner if it falls back. Right-click to set your own price'
 }
