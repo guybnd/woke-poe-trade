@@ -24,11 +24,18 @@ export function holdBulkSearch (o: HoldOptions): boolean {
   return o.enabled !== false && !o.live && (o.api === 'bulk' || o.fixed === true) && o.chaos != null && o.chaos > 0
 }
 
-export interface FixedItemInfo {
-  namespace: string
-  refName: string
-  craftable?: unknown
-  tradeTag?: string
+export interface FixedItem {
+  info: {
+    namespace: string
+    refName: string
+    craftable?: unknown
+    tradeTag?: string
+  }
+  // What the trade site prices some of them by, which poe.ninja's one row by name doesn't know.
+  areaLevel?: number
+  storedExperience?: number
+  mapArea?: unknown
+  itemLevel?: number
 }
 
 // Their price is in their text, not their name, so poe.ninja's price isn't theirs.
@@ -37,10 +44,17 @@ const PRICED_BY_TEXT = new Set(['Chronicle of Atzoatl', 'Expedition Logbook', 'M
 /**
  * Not sold on the exchange, but one fixed thing poe.ninja prices by name
  * (Guy's picks, WOKEPOET-480): divination cards, captured beasts, and items
- * such as reliquary keys, Wombgifts, Ducats, Facetor's Lens, Forbidden Tome.
+ * such as reliquary keys, Wombgifts and Ducats. Not one whose price follows an
+ * area level (Forbidden Tome), stored experience (Facetor's Lens), map area
+ * (Scrying Orb) or item level (corpses): poe.ninja's row by name isn't its price.
  */
-export function fixedPriceItem (info: FixedItemInfo): boolean {
+export function fixedPriceItem (item: FixedItem): boolean {
+  const { info } = item
   if (info.tradeTag || PRICED_BY_TEXT.has(info.refName)) return false
+  // A beast's copy can show a level the search never uses.
   if (info.namespace === 'DIVINATION_CARD' || info.namespace === 'CAPTURED_BEAST') return true
-  return info.namespace === 'ITEM' && !info.craftable
+  if (info.namespace !== 'ITEM' || info.craftable) return false
+  if (item.areaLevel != null || (item.storedExperience ?? 0) > 0 || item.mapArea != null) return false
+  // A Wombgift's level band is part of its poe.ninja row (getDetailsId).
+  return item.itemLevel == null || info.refName.endsWith('Wombgift')
 }

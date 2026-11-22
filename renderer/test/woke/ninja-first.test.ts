@@ -30,17 +30,25 @@ describe('holdBulkSearch', () => {
 
 describe('fixedPriceItem', () => {
   it('takes cards, beasts and fixed items poe.ninja prices by name', () => {
-    expect(fixedPriceItem({ namespace: 'DIVINATION_CARD', refName: 'The Doctor' })).toBe(true)
-    expect(fixedPriceItem({ namespace: 'CAPTURED_BEAST', refName: 'Fenumal Plagued Arachnid' })).toBe(true)
-    expect(fixedPriceItem({ namespace: 'ITEM', refName: 'Decaying Reliquary Key' })).toBe(true)
+    expect(fixedPriceItem({ info: { namespace: 'DIVINATION_CARD', refName: 'The Doctor' } })).toBe(true)
+    expect(fixedPriceItem({ info: { namespace: 'CAPTURED_BEAST', refName: 'Fenumal Plagued Arachnid' } })).toBe(true)
+    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Decaying Reliquary Key' } })).toBe(true)
   })
 
   it('leaves out exchange items, craftable bases, uniques, gems and items priced by their text', () => {
-    expect(fixedPriceItem({ namespace: 'ITEM', refName: 'Divine Orb', tradeTag: 'divine' })).toBe(false)
-    expect(fixedPriceItem({ namespace: 'ITEM', refName: 'Leather Belt', craftable: {} })).toBe(false)
-    expect(fixedPriceItem({ namespace: 'UNIQUE', refName: 'Headhunter' })).toBe(false)
-    expect(fixedPriceItem({ namespace: 'GEM', refName: 'Enlighten Support' })).toBe(false)
-    expect(fixedPriceItem({ namespace: 'ITEM', refName: 'Chronicle of Atzoatl' })).toBe(false)
+    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Divine Orb', tradeTag: 'divine' } })).toBe(false)
+    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Leather Belt', craftable: {} } })).toBe(false)
+    expect(fixedPriceItem({ info: { namespace: 'UNIQUE', refName: 'Headhunter' } })).toBe(false)
+    expect(fixedPriceItem({ info: { namespace: 'GEM', refName: 'Enlighten Support' } })).toBe(false)
+    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Chronicle of Atzoatl' } })).toBe(false)
+  })
+
+  it('leaves out fixed items whose price follows their text', () => {
+    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Forbidden Tome' }, areaLevel: 70 })).toBe(false)
+    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: "Facetor's Lens" }, storedExperience: 5e9 })).toBe(false)
+    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Scrying Orb' }, mapArea: {} })).toBe(false)
+    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Perfect Hydra' }, itemLevel: 84 })).toBe(false)
+    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Ancient Wombgift' }, itemLevel: 84 })).toBe(true)
   })
 
   it('holds the trade search of a fixed item', () => {

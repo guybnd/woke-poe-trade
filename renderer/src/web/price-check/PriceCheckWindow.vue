@@ -257,7 +257,7 @@ export default defineComponent({
     function instantCheck (it: ParsedItem): boolean {
       const cfg = props.config
       if (cfg.wokeNinjaFirst === false || cfg.wokeNinjaInstant === false) return false
-      if (!(it.info.tradeTag || fixedPriceItem(it.info)) || !leagues.selectedId.value) return false
+      if (!(it.info.tradeTag || fixedPriceItem(it)) || !leagues.selectedId.value) return false
       // Its window says whether to open or sell them (stacked-decks/), which the card can't.
       if (it.info.refName === 'Stacked Deck') return false
       const q = exactDetailsId(it)

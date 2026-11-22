@@ -363,7 +363,7 @@ export default defineComponent({
       ninjaChaos.value = readNinjaChaos(item)
       waitingForPrices = false
       if (!doSearch.value) return
-      const hold = { api: tradeAPI.value, enabled: widget.value.wokeNinjaFirst, live: props.live, fixed: fixedPriceItem(item.info) }
+      const hold = { api: tradeAPI.value, enabled: widget.value.wokeNinjaFirst, live: props.live, fixed: fixedPriceItem(item) }
       if (holdBulkSearch({ ...hold, chaos: ninjaChaos.value })) {
         doSearch.value = false
       } else if (ninjaChaos.value == null && pricesPending() && holdBulkSearch({ ...hold, chaos: 1 })) {
@@ -551,7 +551,7 @@ export default defineComponent({
     const wokeVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value != null)
     // woke: before an exchange search, poe.ninja's price is the verdict.
     // In Classic view too: it holds the search the same way.
-    const isFixed = computed(() => fixedPriceItem(props.item.info))
+    const isFixed = computed(() => fixedPriceItem(props.item))
     // An item poe.ninja prices whose search waits for a click: exchange items, and fixed ones (cards, beasts, keys).
     const ninjaHolds = computed(() => ninjaChaos.value != null && widget.value.wokeNinjaFirst !== false &&
       (tradeAPI.value === 'bulk' || isFixed.value))
