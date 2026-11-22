@@ -155,7 +155,10 @@ import { provideCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { WTabs } from '@/web/woke/ui'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
 import { rawClone } from '@/web/woke/raw-clone'
-import { compareToSearched, ResultsState } from '@/web/woke/price-insight/local-filter'
+import type { ResultsState } from '@/web/woke/price-insight/local-filter'
+// woke: loaded with the first search, not at startup (the startup JS budget).
+type LocalFilter = typeof import('@/web/woke/price-insight/local-filter')
+const loadLocalFilter = () => import('@/web/woke/price-insight/local-filter')
 import { AppConfig } from '@/web/Config'
 import { isModuleOn } from '@/web/woke/modules'
 import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
@@ -408,9 +411,15 @@ export default defineComponent({
     })
     // woke: tighter ranges filter the listings already loaded (no search spent);
     // anything the old search couldn't have returned keeps them dimmed for a new search.
+    const localFilter = shallowRef<LocalFilter | null>(null)
+    watch(searched, (snap) => {
+      if (snap && !localFilter.value) loadLocalFilter().then(mod => { localFilter.value = mod }, () => {})
+    })
     const resultsState = computed<ResultsState | null>(() => {
       if (!resultsStale.value || !searched.value) return null
-      return compareToSearched(searchedQuery.value, searched.value.stats, itemFilters.value, itemStats.value)
+      // Until it loads, the results need a search as before.
+      if (!localFilter.value) return { kind: 'stale' }
+      return localFilter.value.compareToSearched(searchedQuery.value, searched.value.stats, itemFilters.value, itemStats.value)
     })
     const narrowed = computed(() => resultsState.value?.kind === 'narrowed' ? resultsState.value : null)
     const resultsDimmed = computed(() => resultsStale.value && resultsState.value?.kind === 'stale')

@@ -21,8 +21,8 @@ export interface LocalCheck {
 export type ResultsState =
   /** The filters search for exactly what's on screen. */
   | { kind: 'current' }
-  /** Only tighter ranges: the loaded listings can be filtered here. */
-  | { kind: 'narrowed', checks: LocalCheck[], stats: FilterOrGroup[] }
+  /** Only tighter ranges: the loaded listings can be filtered here, with `fits`. */
+  | { kind: 'narrowed', checks: LocalCheck[], stats: FilterOrGroup[], fits: (item: ListingItem | undefined, category: ItemCategory | undefined) => boolean }
   /** The results can't answer the filters: search again. */
   | { kind: 'stale' }
 
@@ -116,7 +116,7 @@ export function compareToSearched (
   }
   // Only numbers the search ignores changed: it would return the same listings.
   if (!checks.length) return { kind: 'current' }
-  return { kind: 'narrowed', checks, stats }
+  return { kind: 'narrowed', checks, stats, fits: (item, category) => listingFits(item, checks, category) }
 }
 
 /** Whether a loaded listing would still come back with the tighter ranges. */

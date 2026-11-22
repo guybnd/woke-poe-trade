@@ -229,7 +229,7 @@ import { priceView } from '@/web/woke/price-insight/view'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
 import { buildInsight, FIX_TAG, toChaos } from '@/web/woke/price-insight/insight'
 import { groupListings, sortByValue, rowTitle, ListingRow } from '@/web/woke/price-insight/listing-rows'
-import { listingFits, LocalCheck } from '@/web/woke/price-insight/local-filter'
+import type { ResultsState } from '@/web/woke/price-insight/local-filter'
 import { pickStatColumns, listingStatValue, listingStatLabel, formatStatValue, statTone, statColumnsThatFit, StatColumn } from '@/web/woke/price-insight/stat-columns'
 import { bulkOnly, bulkSellerCount, BULK_ENOUGH } from '@/web/woke/price-insight/bulk-sellers'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
@@ -464,7 +464,7 @@ export default defineComponent({
     },
     // woke: only tighter ranges: the loaded listings are filtered here (local-filter.ts).
     narrow: {
-      type: Object as PropType<{ checks: LocalCheck[], stats: FilterOrGroup[] } | null>,
+      type: Object as PropType<Extract<ResultsState, { kind: 'narrowed' }> | null>,
       default: null
     }
   },
@@ -495,7 +495,7 @@ export default defineComponent({
 
     // woke: improved view reads the same listings, nothing extra is requested
     // woke: tighter ranges hide what no longer fits; the verdict reads what's left.
-    const fits = (listing: PricingResult) => !props.narrow || listingFits(listing.listedItem, props.narrow.checks, props.item.category)
+    const fits = (listing: PricingResult) => !props.narrow || props.narrow.fits(listing.listedItem, props.item.category)
     const fitResults = computed(() => props.narrow ? groupedResults.value.filter(fits) : groupedResults.value)
     const loadedCount = computed(() => fetchResults.value.filter(r => r != null).length)
     const fitCount = computed(() => props.narrow ? fetchResults.value.filter(r => r != null && fits(r)).length : loadedCount.value)
