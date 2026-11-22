@@ -44,6 +44,7 @@ import { WokeOverlay } from '@/web/woke'
 import { isModuleOn, isWidgetTypeOn } from '@/web/woke/modules'
 import { addEssenceScanWidget } from '@/web/woke/essence-scan/widget'
 import { requestRestore } from '@/web/woke/ui/window-anchor'
+import { keepZorderUnderCap } from './zorder'
 // ---
 import { usePoeninja } from '@/web/background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
@@ -195,6 +196,8 @@ export default defineComponent({
       const widget = AppConfig().widgets.find(_ => _.wmId === wmId)!
       if (widget.wmZorder !== 'exclusive') {
         widget.wmZorder = (topmostWidget.value.wmZorder as number) + 1
+        // woke: past the cap a panel covers the item tooltip and pop-ups.
+        keepZorderUnderCap(AppConfig().widgets)
       }
     }
 

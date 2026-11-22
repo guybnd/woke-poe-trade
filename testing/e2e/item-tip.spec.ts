@@ -6,6 +6,7 @@ import path from 'node:path'
 import zlib from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 import { test, expect } from './harness'
+import type { Page } from '@playwright/test'
 
 type Row = [type: string, name: string, variant: string, chaos: number, graph: Array<number | null>, shows: string]
 
@@ -19,6 +20,23 @@ const ROWS: Row[] = [
   ['SkillGem', 'Pact of Lycia', '1', 692, [null, 0, -8.33, 0, 16.17, 8.33, 3838], 'Empowers the next 3 Channelling Spells'],
   ['SkillGem', 'Increased Critical Strikes Support', '20/20c', 814, [0, -0.99, -24.63, -23.03, -29.06, 23.15, 903.4], '117% increased Critical Strike Chance']
 ]
+
+// Whether the tooltip is drawn over everything at its middle and corners, not
+// behind a window. It takes no pointer events, so it's let take them for the check.
+async function tipOnTop (page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const tip = document.querySelector<HTMLElement>('[role="tooltip"]')
+    if (!tip) return false
+    tip.style.pointerEvents = 'auto'
+    try {
+      const r = tip.getBoundingClientRect()
+      const points = [[r.left + r.width / 2, r.top + r.height / 2], [r.left + 4, r.top + 4], [r.right - 4, r.top + 4], [r.left + 4, r.bottom - 4], [r.right - 4, r.bottom - 4]]
+      return points.every(([x, y]) => tip.contains(document.elementFromPoint(x, y)))
+    } finally {
+      tip.style.pointerEvents = ''
+    }
+  })
+}
 
 const DENSE = fileURLToPath(new URL('../fixtures/http/poe.ninja/poe1/api/economy/current/dense/overviews.json', import.meta.url))
 
@@ -59,6 +77,7 @@ test('hovering a market row shows the item at the cursor, with its price', async
     await row.hover()
     await expect(tip).toContainText(name)
     await expect(tip).toContainText(shows)
+    expect(await tipOnTop(overlay.page), `${name}'s tooltip is drawn over its window`).toBe(true)
     // Beside the cursor, and it follows.
     const r = (await row.boundingBox())!
     const near = async (x: number, y: number) => {
@@ -130,4 +149,47 @@ test('a base in a unique tier lists the uniques it can drop as, with their price
   await expect(tip).toContainText('worth it')
   await expect(tip).toContainText('Cyclopean Coil')
   await overlay.snap('unique base')
+})
+
+// Bringing a panel to the front gave it the top z-order plus one, for good: in
+// Guy's config Net worth reached 1004, over the tooltip's 1000, so its rows'
+// tooltips opened behind the window.
+test('a panel brought to the front a thousand times still draws under the tooltip of its rows (on load)', async ({ overlay }) => {
+  const recorded = fs.readFileSync(DENSE, 'utf8')
+  const [type, name, , chaos, graph] = ROWS[2]
+  await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: recorded.replace(/\[\s*\{"type":"/, () => `[{"type":"${type}","lines":[${JSON.stringify({ name, chaos, graph })}]},{"type":"`)
+  }))
+  await overlay.boot({
+    overlayActive: true,
+    patch: (config) => {
+      config.widgets.push({
+        wmId: 9001,
+        wmType: 'woke-market-tracker',
+        wmTitle: 'Market',
+        wmWants: 'show',
+        wmZorder: 1004,
+        wmFlags: [],
+        anchor: { pos: 'tl', x: 15, y: 15 },
+        view: 'watchlist',
+        period: '24h',
+        minChaos: 5,
+        typeFilter: '',
+        watchlist: [{ type, name, variant: '' }]
+      })
+    }
+  })
+  const panel = overlay.widget('woke-market-tracker')
+  const row = panel.locator('.w-row', { hasText: name })
+  await expect(row).toBeVisible()
+  // The z-index is on the widget's inner box (Widget.vue), not its outer div.
+  const z = await panel.evaluate(el => getComputedStyle(el.firstElementChild!).zIndex)
+  expect(Number(z)).toBeLessThan(900)
+  // Near the row's top-left, so the tooltip (at the cursor + 16px) lands over the panel.
+  await row.hover({ position: { x: 8, y: 2 } })
+  const tip = overlay.page.getByRole('tooltip')
+  await expect(tip).toContainText(name)
+  expect(await tipOnTop(overlay.page)).toBe(true)
+  expect(overlay.errors).toEqual([])
 })

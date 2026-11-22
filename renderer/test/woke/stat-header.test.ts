@@ -147,6 +147,89 @@ describe('buildStatHeader', () => {
     expect(m.chips.find(c => c.key === 'base')?.filter).toBe(prop('item.base_percentile'))
   })
 
+  // Triumphant Lamellar's base rolls 380-437 Armour, 477-549 Evasion. Base 420 / 500 here:
+  // (420 + 92) * 2.05 = 1049, (500 + 85) * 2.05 = 1199, at 0% quality.
+  const LAMELLAR = fixture('items/rare-body-armour-ar-ev.txt')
+    .replace('Armour: 1650', 'Armour: 1049')
+    .replace('Evasion Rating: 1820', 'Evasion Rating: 1199')
+  function lamellar (text = LAMELLAR) {
+    const item = parseItem(text)
+    return { item, m: buildStatHeader(item, initUiModFilters(item, { searchStatRange: 10 }))! }
+  }
+
+  it('armour: each defence shows its max with the base and mods at their top rolls, at 20% quality', () => {
+    const { m } = lamellar()
+    const ar = m.bigs.find(c => c.key === 'armour')!
+    // Base 437, +# to Armour tops at 100, the hybrid % at 110.
+    expect(ar.max).toBe(String(Math.ceil((437 + 100) * (1 + 110 / 100) * 1.2)))
+    expect(Number(ar.max)).toBeGreaterThan(Number(ar.text))
+    // The lowest: base 380, +81 to Armour, 101%.
+    expect(ar.min).toBe(String(Math.floor((380 + 81) * 2.01 * 1.2)))
+    expect(ar.atMax).toBe(false)
+    expect(ar.maxNote).toContain('the base and these mods at their top rolls')
+    expect(ar.maxNote).toContain('at 20% quality')
+    expect(m.bigs.find(c => c.key === 'evasion')!.max).toBe(String(Math.ceil((549 + 87) * 2.1 * 1.2)))
+    expect(m.chips.find(c => c.key === 'base')?.max).toBeUndefined()
+  })
+
+  it('armour: an item over 20% quality is counted at its own quality', () => {
+    // (420 + 92) * (1 + 1.05 + 0.28) = 1192, (500 + 85) * 2.33 = 1363.
+    const { m } = lamellar(LAMELLAR
+      .replace('Armour: 1049', 'Quality: +28% (augmented)\nArmour: 1192')
+      .replace('Evasion Rating: 1199', 'Evasion Rating: 1363'))
+    const ar = m.bigs.find(c => c.key === 'armour')!
+    expect(ar.max).toBe(String(Math.ceil((437 + 100) * 2.1 * 1.28)))
+    expect(ar.maxNote).toContain('at 28% quality')
+  })
+
+  it('armour: a perfect roll reads MAX', () => {
+    // Base 437 and every mod at its top: (437 + 100) * 2.10 = 1127, (549 + 87) * 2.10 = 1335.
+    const { m } = lamellar(LAMELLAR
+      .replace('Armour: 1049', 'Armour: 1127').replace('Evasion Rating: 1199', 'Evasion Rating: 1335')
+      .replace('+92(81-100)', '+100(81-100)').replace('+85(73-87)', '+87(73-87)').replace('105(101-110)', '110(101-110)'))
+    for (const c of m.bigs) expect(c.atMax).toBe(true)
+  })
+
+  it('armour: no max when the number is over what its base and mods allow', () => {
+    // The plain fixture's 1650 Armour can't come from this base and these mods.
+    const { item, stats } = load('rare-body-armour-ar-ev.txt')
+    const m = buildStatHeader(item, stats)!
+    expect(m.bigs.find(c => c.key === 'armour')!.max).toBeUndefined()
+  })
+
+  it('weapon: DPS and its rolling parts show a max; chaos from its mod range', () => {
+    const { item, stats } = load('rare-sword-ele-chaos.txt')
+    const m = buildStatHeader(item, stats)!
+    const d = weaponDps(item)
+    expect(m.legend!.find(c => c.key === 'chaos')!.max).toBe(d.chaos.max.toFixed(0))
+    expect(m.legend!.find(c => c.key === 'ele')!.max).toBe('379')
+    expect(m.bigs[0].max).toBe('706')
+    expect(m.bigs[0].min).toBe('634')
+    expect(m.chips.find(c => c.key === 'crit')!.max).toBe('7.4%')
+    // Its crit mod rolled 34 of 30-34.
+    expect(m.chips.find(c => c.key === 'crit')!.atMax).toBe(true)
+    expect(m.bigs[0].atMax).toBe(false)
+    // Nothing rolls this sword's phys or aps: no max.
+    expect(m.legend!.find(c => c.key === 'phys')!.max).toBeUndefined()
+    expect(m.chips.find(c => c.key === 'aps')!.max).toBeUndefined()
+  })
+
+  it("no max on a unique's fixed number", () => {
+    const { item, stats } = load('unique-kaoms-heart.txt')
+    const m = buildStatHeader(item, stats)!
+    expect(m.bigs.find(c => c.key === 'armour')!.max).toBeUndefined()
+  })
+
+  it('no max when the copy has no roll ranges (a plain paste)', () => {
+    const text = LAMELLAR
+      .replace(/\(\d+-\d+\)/g, '')
+      .replace(/ \(Tier: \d+\)/g, '')
+    const item = parseItem(text)
+    const m = buildStatHeader(item, initUiModFilters(item, { searchStatRange: 10 }))!
+    expect(m.bigs.length).toBeGreaterThan(0)
+    for (const c of m.bigs) expect(c.max).toBeUndefined()
+  })
+
   it('no header for an item without property filters', () => {
     const { item, stats } = load('rare-ring.txt')
     expect(buildStatHeader(item, stats)).toBeNull()
