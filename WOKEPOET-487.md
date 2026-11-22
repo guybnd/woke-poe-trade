@@ -16,6 +16,14 @@ history:
     user: Agent
     date: '2026-11-22T23:15:54.362Z'
     comment: Created ticket.
+    id: a-2026-11-22t23-15-54-362z
+  - type: activity
+    user: Agent
+    date: '2026-11-22T23:18:42.374Z'
+    comment: >-
+      Mockups (A recommended, building A):
+      https://claude.ai/artifact/1QJTgUJpZtA3NNXXtL1iCw
+    id: a-2026-11-22t23-18-42-374z
 ---
 Discord report via Guy: price checking Originator's Exalted Orb (stack 3) shows "1 div each", table "1 / div / bulk 1/1".
 
