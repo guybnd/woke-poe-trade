@@ -52,7 +52,9 @@ export default defineComponent({
               y: window.screenY + from.y + from.height / 2
             },
             focusOverlay: true,
-            target: 'price-check'
+            target: 'price-check',
+            // woke: a pasted item wants listings, like a menu's Price check.
+            live: true
           }
         })
       }

@@ -1238,7 +1238,7 @@ function onPaste (e: ClipboardEvent) {
   e.preventDefault()
   Host.selfDispatch({
     name: 'MAIN->CLIENT::item-text',
-    payload: { clipboard: text, position: { x: window.screenX + window.innerWidth / 2, y: window.screenY + 100 }, focusOverlay: true, target: 'price-check' }
+    payload: { clipboard: text, position: { x: window.screenX + window.innerWidth / 2, y: window.screenY + 100 }, focusOverlay: true, target: 'price-check', live: true }
   })
 }
 

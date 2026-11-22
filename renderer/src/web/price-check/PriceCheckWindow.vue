@@ -213,12 +213,13 @@ export default defineComponent({
       closeBrowser()
       // woke: an exchange item poe.ninja prices gets the small card by the item (instant check).
       const parsed = (e.item ? ok(e.item as ParsedItem) : parseClipboard(e.clipboard))
-      // Only for the in-game hotkey: a locked check or a pasted item opens the window.
+      // For both price check hotkeys (quick and locked). A check started in the overlay
+      // (a menu, Ctrl+Space, a pasted item) comes with `live` and opens the window.
       // The hotkey again on the item the card shows: live offers, without moving to the card.
       // Only while the card is up: once it closed (the mouse moved away), the hotkey shows it again.
-      const again = instant.value != null && props.config.wmWants === 'show' && !e.focusOverlay &&
+      const again = instant.value != null && props.config.wmWants === 'show' &&
         e.clipboard === instantText && Date.now() - instantAt < AGAIN_MS
-      const quick = !again && !e.live && !e.focusOverlay && parsed.isOk() && instantCheck(parsed.value)
+      const quick = !again && !e.live && parsed.isOk() && instantCheck(parsed.value)
       instantText = quick ? e.clipboard : ''
       instantAt = Date.now()
       instantKey.value += 1

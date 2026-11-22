@@ -80,6 +80,17 @@ test('currency: the price check hotkey again on the same item opens live offers'
   await expect(overlay.widget('price-check')).toContainText('Matched: 5')
 })
 
+test('currency: the locked price check key shows the card too', async ({ overlay, fakeApp }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/currency-divine.txt', 'Ctrl + Alt + D')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card).toContainText('180c')
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
+  // The overlay has the keyboard here, so Space works straight away.
+  await overlay.page.keyboard.press('Space')
+  await expect(overlay.widget('price-check')).toContainText('Matched: 5')
+})
+
 test('currency: once the card closed, the hotkey on the same item shows the card again', async ({ overlay, fakeApp }) => {
   await overlay.boot()
   await overlay.copyItem('items/currency-divine.txt')
