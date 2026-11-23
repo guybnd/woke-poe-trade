@@ -28,7 +28,7 @@ test('a div card says which maps it drops in, and a map chip lists its cards', a
   await panel.getByRole('button', { name: /The Doctor/ }).first().click()
   const drops = panel.locator('[data-card-drops]')
   await expect(drops).toContainText('Drops in')
-  await expect(drops).toContainText('Area level 75+')
+  await expect(drops).toContainText('Area level 75+ · 1 in 121k cards')
   const chip = drops.locator('[data-card-drop-map]', { hasText: 'Waste Pool' })
   await expect(chip).toContainText('T8')
   await expect(drops.locator('[data-card-drop-map]', { hasText: 'Burial Chambers' })).toBeVisible()
@@ -43,9 +43,12 @@ test('a div card says which maps it drops in, and a map chip lists its cards', a
 
 test('a map name lists the cards that drop there, dearest first', async ({ overlay }) => {
   const { panel, box } = await openSearch(overlay)
-  await box.fill('burial chambers')
+  // The drop data loads a moment after the palette opens: type again until it's in.
   const result = panel.getByText(/^Burial Chambers: \d+ cards$/)
-  await expect(result).toBeVisible()
+  await expect(async () => {
+    await box.fill('burial chambers')
+    await expect(result).toBeVisible({ timeout: 1000 })
+  }).toPass({ timeout: 20_000 })
   await result.click()
   await expect(panel.getByText('Cards in Burial Chambers (tier 6)')).toBeVisible()
   const doctor = panel.getByText('The Doctor', { exact: true })

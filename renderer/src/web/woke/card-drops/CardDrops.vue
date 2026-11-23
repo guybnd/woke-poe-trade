@@ -7,7 +7,8 @@
         {{ m.label }}<span v-if="m.tier != null" :class="$style.tier">T{{ m.tier }}</span>
       </WChip>
       <span v-if="compact && !maps.length && !facts.other.length" class="w-dim">{{ facts.disabled ? 'no longer drops' : 'no verified source yet' }}</span>
-      <span v-if="compact && facts.other.length" :class="$style.more" :title="facts.other.join('\n')">{{ maps.length ? `+${facts.other.length} more` : facts.other.join(', ') }}</span>
+      <!-- One line on the small card: the first source, the rest on hover. -->
+      <span v-if="compact && facts.other.length" :class="$style.more" :title="facts.other.join('\n')">{{ compactOther }}</span>
     </div>
     <template v-if="!compact">
       <div v-for="o in facts.other" :key="o" :class="$style.other">{{ o }}</div>
@@ -26,7 +27,7 @@
 // Where a divination card drops: its atlas maps as chips (each with the map's
 // tooltip: its tier and every card in it), other sources, area level and
 // rarity. Ctrl+Space shows it in full, the price check in one line.
-import { computed, shallowRef } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
 import { WButton, WChip, vItemTip } from '../ui'
 import { formatChaos } from '../ui/format'
 import { usePrice } from '../shared/price'
@@ -36,12 +37,21 @@ import type { CardDropData } from './card-drops'
 const props = defineProps<{ name: string, compact?: boolean }>()
 
 const data = shallowRef<CardDropData | null>(null)
-loadCardDrops().then(d => { data.value = d }).catch(() => {})
+function load () {
+  if (!data.value) loadCardDrops().then(d => { if (d) data.value = d }).catch(() => {})
+}
+// A failed read is tried again for the next card.
+watch(() => props.name, load, { immediate: true })
 
 const { priceOf, divine } = usePrice()
 const price = (card: string) => priceOf(card, { ns: 'DIVINATION_CARD' })?.chaos ?? null
 
 const facts = computed(() => cardDropFacts(data.value, props.name))
+const compactOther = computed(() => {
+  const other = facts.value?.other ?? []
+  if (maps.value.length) return `+${other.length} more`
+  return other.length > 1 ? `${other[0]} +${other.length - 1} more` : other[0] ?? ''
+})
 const line = computed(() => facts.value ? factLine(facts.value) : '')
 const maps = computed(() => {
   const d = data.value

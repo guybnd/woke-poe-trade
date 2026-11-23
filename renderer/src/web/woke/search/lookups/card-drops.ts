@@ -28,7 +28,7 @@ export function mapCardsCard (data: CardDropData, map: string, ctx: LookupContex
     icon: 'fas fa-map',
     tip: { name: map, content },
     sections: [
-      { label: `Cards in ${label}${tier != null ? ` (tier ${tier})` : ''}`, rows },
+      { label: `Cards in ${label}${tier ? ` (tier ${tier})` : ''}`, rows },
       { text: ['Drop sources from the community Divcord sheet. Prices are poe.ninja\'s, per card.'] }
     ],
     actions: [

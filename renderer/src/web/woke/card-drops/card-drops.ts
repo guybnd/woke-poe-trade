@@ -21,7 +21,7 @@ export interface CardDrop {
 export interface CardDropData {
   // The league the weights are from, e.g. "3.29".
   season: string | null
-  // Map name to its tier.
+  // Map name to its tier; 0 for unique maps.
   maps: Record<string, number>
   cards: Record<string, CardDrop>
 }
@@ -61,7 +61,7 @@ export interface CardDropFacts {
 export const mapLabel = (name: string) => name.replace(/ Map$/, '')
 
 export function dropMap (data: CardDropData, name: string): DropMap {
-  return { name, label: mapLabel(name), tier: data.maps[name] ?? null }
+  return { name, label: mapLabel(name), tier: data.maps[name] || null }
 }
 
 export function cardDropFacts (data: CardDropData | null, card: string): CardDropFacts | null {
@@ -83,12 +83,13 @@ export function oneInText (n: number): string {
   return `1 in ${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
 }
 
-// A short line under the maps: "Area level 75+ · 1 in 121k card drops".
+// A short line under the maps: "Area level 75+ · 1 in 121k cards". The
+// share is of stacked-deck draws (drop weights), not a drop rate in maps.
 export function factLine (f: CardDropFacts): string {
   if (f.disabled) return 'No longer drops'
   const parts: string[] = []
   if (f.level) parts.push(`Area level ${f.level}+`)
-  if (f.oneIn) parts.push(`${oneInText(f.oneIn)} card drops`)
+  if (f.oneIn) parts.push(`${oneInText(f.oneIn)} cards`)
   return parts.join(' · ')
 }
 
@@ -101,14 +102,18 @@ export function cardsInMap (data: CardDropData, map: string): string[] {
   return out
 }
 
-// Map names a query names: whole words of the name, at least 3 letters.
+// Lower case, no accents ("Maelström" = "maelstrom").
+const fold = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+// Map names a query names: the start of the name, or (4 letters or more) a
+// phrase from the start of any word in it ("coward's trial", "chambers").
 export function mapsMatching (data: CardDropData, query: string): string[] {
-  const q = query.trim().toLowerCase().replace(/\s+map$/, '')
+  const q = fold(query.trim()).replace(/\s+/g, ' ').replace(/ m(a(p)?)?$/, '')
   if (q.length < 3) return []
   const out: Array<[string, number]> = []
   for (const name of Object.keys(data.maps)) {
-    const label = mapLabel(name).toLowerCase()
-    const rank = label === q ? 0 : label.startsWith(q) ? 1 : label.split(/[\s']+/).some(w => w.startsWith(q)) ? 2 : -1
+    const label = fold(mapLabel(name))
+    const rank = label === q ? 0 : label.startsWith(q) ? 1 : q.length >= 4 && ` ${label}`.includes(` ${q}`) ? 2 : -1
     if (rank >= 0) out.push([name, rank])
   }
   return out.sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : 1)).map(([n]) => n)
@@ -128,8 +133,9 @@ export function mapTip (data: CardDropData, map: string, price: (card: string) =
     kind: 'lookup',
     model: {
       name: map,
-      base: tier != null ? `Map Tier ${tier}` : undefined,
-      frame: 'normal',
+      base: tier ? `Map Tier ${tier}` : undefined,
+      // Unique maps have no tier.
+      frame: tier ? 'normal' : 'unique',
       sections: [
         [[{ text: 'Divination cards here', tone: 'label' }]],
         lines.length ? lines : [[{ text: 'No cards listed', tone: 'dim' }]]

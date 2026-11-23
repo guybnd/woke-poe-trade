@@ -39,7 +39,8 @@ export function sourceText (src, acts) {
     return a ? `${a.name} (Act ${a.act})` : null
   }
   if (src.type === 'Map') return src.id
-  if (src.id === src.type || src.id.includes(src.type)) return src.id
+  // "Delve chest" (Chest), "Omniphobia (maps only)" (Maps Only): the name says it.
+  if (src.id.toLowerCase().includes(src.type.toLowerCase()) || src.id.endsWith(')')) return src.id
   return `${src.id} (${src.type})`
 }
 

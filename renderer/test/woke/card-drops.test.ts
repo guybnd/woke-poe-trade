@@ -9,14 +9,15 @@ import { buildCardDrops, sourceText } from '../../scripts/build-card-drops.mjs'
 
 const DATA: CardDropData = {
   season: '3.29',
-  maps: { 'Waste Pool Map': 8, 'Burial Chambers Map': 6, 'Fields Map': 5, 'Pit of the Chimera Map': 16 },
+  maps: { 'Waste Pool Map': 8, 'Burial Chambers Map': 6, 'Fields Map': 5, 'Pit of the Chimera Map': 16, 'Cortex': 0, 'The Coward\'s Trial': 0, 'Maelström of Chaos': 0 },
   cards: {
     'The Doctor': { m: ['Waste Pool Map', 'Burial Chambers Map'], l: 75, w: 120689 },
     'The Summoner': { m: ['Burial Chambers Map'], l: 68, w: 900 },
     'The Incantation': { m: ['Burial Chambers Map'], l: 68 },
     'Rain of Chaos': { m: ['Fields Map'], s: ['The Imperial Fields (Act 8)'], l: 23, w: 12 },
     'Birth of the Three': { m: ['Burial Chambers Map'], x: 1 },
-    'House of Mirrors': { l: 80, w: 991491 }
+    'House of Mirrors': { l: 80, w: 991491 },
+    'A Dusty Memory': { m: ['Cortex'] }
   }
 }
 const PRICES: Record<string, number> = { 'The Doctor': 33, 'The Summoner': 2 }
@@ -27,7 +28,7 @@ describe('card drop facts', () => {
     const f = cardDropFacts(DATA, 'Rain of Chaos')!
     expect(f.maps).toEqual([{ name: 'Fields Map', label: 'Fields', tier: 5 }])
     expect(f.other).toEqual(['The Imperial Fields (Act 8)'])
-    expect(factLine(f)).toBe('Area level 23+ · 1 in 12 card drops')
+    expect(factLine(f)).toBe('Area level 23+ · 1 in 12 cards')
   })
   it('says when a card no longer drops, and knows nothing of an unknown card', () => {
     expect(factLine(cardDropFacts(DATA, 'Birth of the Three')!)).toBe('No longer drops')
@@ -56,11 +57,28 @@ describe('cards in a map', () => {
     expect(mapsMatching(DATA, 'ield')).toEqual([])
     expect(mapsMatching(DATA, 'fi')).toEqual([])
   })
+  it('finds a phrase from any word, without accents or a half-typed "map"', () => {
+    expect(mapsMatching(DATA, "coward's trial")).toEqual(["The Coward's Trial"])
+    expect(mapsMatching(DATA, 'maelstrom')).toEqual(['Maelström of Chaos'])
+    expect(mapsMatching(DATA, 'waste pool ma')).toEqual(['Waste Pool Map'])
+    // Short words only match a name's start: "the" isn't every "The ..." map.
+    expect(mapsMatching(DATA, 'the')).toEqual(["The Coward's Trial"])
+    expect(mapsMatching(DATA, 'cha')).toEqual([])
+  })
   it("the map's tooltip lists its cards, dearest first", () => {
     const tip = mapTip(DATA, 'Burial Chambers Map', n => PRICES[n] ?? null, c => `${c} c`)
     expect(tip.model.base).toBe('Map Tier 6')
     expect(tip.model.sections[1].map(l => l[0].text)).toEqual(['The Doctor', 'The Summoner', 'The Incantation'])
     expect(tip.model.sections[1][0][1].text.trim()).toBe('33 c')
+  })
+})
+
+describe('unique maps', () => {
+  it('have no tier and a unique frame', () => {
+    expect(cardDropFacts(DATA, 'A Dusty Memory')!.maps[0].tier).toBeNull()
+    const tip = mapTip(DATA, 'Cortex', () => null, c => `${c}`)
+    expect(tip.model.base).toBeUndefined()
+    expect(tip.model.frame).toBe('unique')
   })
 })
 
@@ -118,5 +136,7 @@ describe('build-card-drops', () => {
     expect(sourceText({ type: 'Act', id: '1_4_1', kind: 'source' }, acts)).toBe('The Aqueduct (Act 4)')
     expect(sourceText({ type: 'Act', id: '9_9_9', kind: 'source' }, acts)).toBeNull()
     expect(sourceText({ type: 'Map Boss', id: 'Rose', kind: 'source' }, acts)).toBe('Rose (Map Boss)')
+    expect(sourceText({ type: 'Chest', id: 'Delve chest', kind: 'source' }, acts)).toBe('Delve chest')
+    expect(sourceText({ type: 'Maps Only', id: 'Omniphobia, Fear Manifest (maps only)', kind: 'source' }, acts)).toBe('Omniphobia, Fear Manifest (maps only)')
   })
 })
