@@ -8,17 +8,17 @@
         <span :class="$style.count">{{ insight.sellers }} {{ insight.sellers === 1 ? 'seller' : 'sellers' }}</span>
       </div>
       <div :class="$style.value">
-        <span :class="$style.headline" data-testid="bulk-verdict-price"><img :src="unit === 'c' ? '/images/chaos.png' : '/images/divine.png'" :alt="unit === 'c' ? 'chaos' : 'divine'" :class="$style.icon">{{ amount(insight.fair) }}</span>
-        <span :class="$style.each">each<template v-if="unit !== 'c' && divineInChaos"> ≈ {{ bulkAmount(insight.fair * divineInChaos) }}c</template><template v-if="need > 1 && !insight.fewWithStock"> · {{ amount(insight.fair * need) }} for {{ need }}</template><template v-if="insight.fewWithStock && need > 1"> · small stacks counted</template><WInfo v-if="insight.fewWithStock && need > 1" class="ml-1" :text="`Few of the cheapest offers have stock for ${need}, so smaller ones are counted too.`" /></span>
+        <span :class="$style.headline" data-testid="bulk-verdict-price"><w-price-text :text="amount(insight.fair)" /></span>
+        <span :class="$style.each">each<template v-if="unit !== 'c' && divineInChaos"> ≈ <w-price-text :text="`${bulkAmount(insight.fair * divineInChaos)}c`" /></template><template v-if="need > 1 && !insight.fewWithStock"> · <w-price-text :text="amount(insight.fair * need)" /> for {{ need }}</template><template v-if="insight.fewWithStock && need > 1"> · small stacks counted</template><WInfo v-if="insight.fewWithStock && need > 1" class="ml-1" :text="`Few of the cheapest offers have stock for ${need}, so smaller ones are counted too.`" /></span>
       </div>
-      <div v-if="insight.floor > insight.low" :class="$style.note">An offer at {{ amount(insight.low) }} sits far under the rest, so it may be worth buying</div>
+      <div v-if="insight.floor > insight.low" :class="$style.note">An offer at <w-price-text :text="amount(insight.low)" /> sits far under the rest, so it may be worth buying</div>
       <div v-if="insight.lowStock" :class="$style.note">{{ insight.lowStock }} {{ insight.lowStock === 1 ? 'offer' : 'offers' }} with under {{ need }} in stock left out</div>
       <div :class="$style.prices">
-        <span><span class="w-dim">Sell fast</span> {{ amount(fast) }} each</span>
-        <span v-if="amount(insight.fair) !== amount(fast)"><span class="w-dim">Patient</span> {{ amount(insight.fair) }} each</span>
+        <span><span class="w-dim">Sell fast</span> <w-price-text :text="amount(fast)" /> each</span>
+        <span v-if="amount(insight.fair) !== amount(fast)"><span class="w-dim">Patient</span> <w-price-text :text="amount(insight.fair)" /> each</span>
       </div>
-      <div v-if="otherNote" :class="$style.other" data-testid="bulk-verdict-other"><img :src="other!.unit === 'c' ? '/images/chaos.png' : '/images/divine.png'" alt="" :class="$style.otherIcon">{{ otherNote }}</div>
-      <div v-if="ninjaNote" :class="$style.note" data-testid="bulk-verdict-ninja">{{ ninjaNote }}</div>
+      <div v-if="otherNote" :class="$style.other" data-testid="bulk-verdict-other"><span><w-price-text :text="otherNote" /></span></div>
+      <div v-if="ninjaNote" :class="$style.note" data-testid="bulk-verdict-ninja"><w-price-text :text="ninjaNote" /></div>
     </template>
     <div v-else :class="$style.eyebrow">
       <span :class="$style.badge">{{ loading ? '…' : 'NO DATA' }}</span>
@@ -29,6 +29,7 @@
 
 <script setup lang="ts">
 import WInfo from '../ui/WInfo.vue'
+import WPriceText from '../ui/WPriceText.vue'
 import { computed } from 'vue'
 import type { Confidence } from './insight'
 import { bulkAmount, BulkInsight } from './bulk-insight'
@@ -141,8 +142,6 @@ const fast = computed(() => {
 .headline { font-family: var(--w-num); font-size: calc(28px * var(--w-text-scale, 1)); line-height: calc(32px * var(--w-text-scale, 1)); font-weight: 600; color: var(--w-accent); white-space: nowrap; }
 .each { color: var(--w-dim); font-size: var(--w-fs-sm); }
 .note { color: var(--w-dim); font-size: var(--w-fs-sm); line-height: calc(17px * var(--w-text-scale, 1)); }
-.icon { width: calc(26px * var(--w-text-scale, 1)); height: calc(26px * var(--w-text-scale, 1)); margin: 0 4px 0 -2px; vertical-align: -4px; display: inline-block; }
 .other { display: flex; align-items: center; gap: 4px; color: var(--w-dim); font-size: var(--w-fs-sm); line-height: calc(17px * var(--w-text-scale, 1)); border-top: 1px dashed var(--w-line-soft); padding-top: 5px; }
-.otherIcon { flex: none; width: calc(18px * var(--w-text-scale, 1)); height: calc(18px * var(--w-text-scale, 1)); }
 .prices { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--w-fs-sm); }
 </style>

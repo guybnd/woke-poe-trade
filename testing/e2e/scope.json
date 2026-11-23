@@ -180,6 +180,10 @@
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/loot-filter/"
   ],
+  "map-history.spec.ts": [
+   "renderer/src/web/woke/analytics/",
+   "renderer/src/web/woke/session-story/"
+  ],
   "map-mod-search.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/price-check/",

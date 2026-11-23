@@ -10,7 +10,7 @@
         <span :class="$style.badge" data-testid="instant-ninja-badge" :title="badgeTip" :data-tip-keys="againKeys ?? 'Space'">POE.NINJA</span>
       </div>
       <div :class="$style.value">
-        <span :class="$style.headline" data-testid="instant-ninja-price">{{ price?.main }}</span>
+        <span :class="$style.headline" data-testid="instant-ninja-price"><w-price-text :text="price?.main" /></span>
         <span v-if="price?.each" :class="$style.dim">each</span>
         <template v-if="weekChange != null">
           <span class="flex-1" />
@@ -19,11 +19,11 @@
         </template>
       </div>
       <div v-if="price?.sub || stack" :class="$style.dim">
-        <template v-if="stack"><span :class="$style.fg">{{ stack }}</span> for your {{ have }}</template><template v-if="stack && price?.sub"> · </template>{{ price?.sub }}
+        <template v-if="stack"><span :class="$style.fg"><w-price-text :text="stack" /></span> for your {{ have }}</template><template v-if="stack && price?.sub"> · </template><w-price-text :text="price?.sub" />
       </div>
       <!-- A Divine Orb: its parts in chaos, for paying in div. -->
       <div v-if="parts" :class="$style.parts" data-testid="instant-ninja-parts">
-        <span v-for="p in parts" :key="p.part"><span :class="$style.dim">{{ p.part }}</span> {{ p.chaos }}</span>
+        <span v-for="p in parts" :key="p.part"><span :class="$style.dim">{{ p.part }}</span> <w-price-text :text="p.chaos" /></span>
       </div>
       <!-- The item's own verdict, where it has one (Stacked Deck: open or sell). -->
       <slot name="verdict" />
@@ -50,7 +50,7 @@ import { ItemCategory } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
 import { ninjaPrice, ninjaTotal, divineParts } from './ninja-first'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
-import { WSpark, WKbd, agoPhrase, vItemTip } from '../ui'
+import { WSpark, WKbd, WPriceText, agoPhrase, vItemTip } from '../ui'
 
 const CardDrops = defineAsyncComponent(() => import('../card-drops/CardDrops.vue'))
 
