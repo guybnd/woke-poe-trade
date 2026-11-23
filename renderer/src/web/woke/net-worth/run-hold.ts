@@ -5,7 +5,8 @@ import { parseClipboard, ItemRarity } from '@/parser'
 import type { ParsedItem } from '@/parser'
 import { toast } from '../ui/layer'
 import { ninjaPriceOf } from './prices'
-import { itemKey } from './valuation'
+import { isRolledMap, itemKey } from './valuation'
+import { CURRENCY_ITEM } from './faustus'
 import type { StashItemLike } from './valuation'
 import { editRun, loadRuns, runsDoc } from './run-store'
 import type { HeldItem } from './faustus'
@@ -37,6 +38,7 @@ export function stashLike (item: ParsedItem): StashItemLike {
   }
 }
 
+const CURRENCY_ITEM_NAMES = new Set(Object.values(CURRENCY_ITEM))
 let seq = 0
 
 export async function holdHovered (clipboard: string, league: string, points: readonly LedgerPoint[], divine: number | null): Promise<void> {
@@ -46,7 +48,12 @@ export async function holdHovered (clipboard: string, league: string, points: re
   const live = runsDoc.value.live
   if (!live || live.league !== league) { toast('No run going: start one in Net worth › Runs'); return }
   const s = stashLike(parsed)
+  // Rares have no price and no name listings share; currency is counted by
+  // the stash and sales already.
+  if ((s.frame === 1 || s.frame === 2) && !isRolledMap(s)) { toast("Rares and magic items can't be held: they have no price. Stash or list it"); return }
+  if (CURRENCY_ITEM_NAMES.has(s.typeLine)) { toast('Currency is counted when it reaches your stash'); return }
   const priced = ninjaPriceOf()(s)
+  if (!priced || !(priced.chaos > 0)) { toast(`No price for ${s.name || s.typeLine}: not held`); return }
   const key = itemKey(s)
   const item: HeldItem = {
     id: `h${Date.now().toString(36)}${(seq++).toString(36)}`,
@@ -54,13 +61,13 @@ export async function holdHovered (clipboard: string, league: string, points: re
     name: s.name || s.typeLine,
     icon: s.icon,
     count: s.stack,
-    unitChaos: priced?.chaos ?? 0,
+    unitChaos: priced.chaos,
     at: Date.now(),
     tallyAdded: live.tally[key]?.added ?? 0
   }
   await editRun(league, live.id, r => ({ ...r, held: [...(r.held ?? []), item] }), points, divine)
   const value = item.unitChaos * item.count
-  const price = value > 0 ? (divine && value >= divine ? `${(value / divine).toFixed(1)} div` : `${Math.round(value)} c`) : 'no price yet'
+  const price = divine && value >= divine ? `${(value / divine).toFixed(1)} div` : `${Math.round(value)} c`
   toast(`Added to ${live.name}: ${s.stack > 1 ? `${s.stack} × ` : ''}${item.name} · ${price} · held outside`, {
     undo: () => { editRun(league, live.id, r => ({ ...r, held: (r.held ?? []).filter(h => h.id !== item.id) }), points, divine).catch(() => {}) }
   })

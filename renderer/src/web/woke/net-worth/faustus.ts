@@ -133,9 +133,11 @@ export function heldLeft (run: OutsideRun, listings: readonly Sale[], sales: rea
   const all = [...(run.carried ?? []).map(item => ({ item, carried: true })), ...(run.held ?? []).map(item => ({ item, carried: false }))]
   const rows = all.map(({ item, carried }) => {
     let left = item.count
-    const came = Math.max(0, (run.tally?.[item.key]?.added ?? 0) - (carried ? 0 : item.tallyAdded) - (stashUsed.get(item.key) ?? 0))
+    // What came in after it was added, less what earlier holds of the key took.
+    const prior = stashUsed.get(item.key) ?? 0
+    const came = Math.max(0, (run.tally?.[item.key]?.added ?? 0) - (carried ? prior : Math.max(item.tallyAdded, prior)))
     const stashed = Math.min(left, came)
-    stashUsed.set(item.key, (stashUsed.get(item.key) ?? 0) + stashed)
+    stashUsed.set(item.key, (carried ? prior : Math.max(item.tallyAdded, prior)) + stashed)
     left -= stashed
     for (const o of others) {
       if (left <= 0) break
@@ -181,12 +183,10 @@ export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: R
   const atStart = new Set(run.startListings ?? [])
   const runListings = (run.faustus?.listings ?? []).filter(l => inRun(run, l.at) && !soldIds.has(l.id) && !atStart.has(l.id))
   // Held items: a listing or sale of a carried one is from before.
-  const held = heldLeft(run, runListings, sold.filter(s => inRun(run, s.at)))
-  const carriedUsed = new Set<string>()
-  {
-    const carriedOnly = heldLeft({ ...run, held: [] }, runListings, sold.filter(s => inRun(run, s.at)))
-    for (const id of carriedOnly.used) carriedUsed.add(id)
-  }
+  // Sales of items listed before the run take no held item.
+  const runSold = sold.filter(s => inRun(run, s.at) && !isBefore(run, s))
+  const held = heldLeft(run, runListings, runSold)
+  const carriedUsed = heldLeft({ ...run, held: [] }, runListings, runSold).used
   const listed = runListings.filter(l => !carriedUsed.has(l.id)).sort((a, b) => b.at - a.at)
   const got = collectedOf(run, sold)
   let listedChaos = 0
@@ -220,10 +220,11 @@ export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: R
 
 // What a stopped run leaves to the next (H1): held items not yet in the
 // stash, listed or sold, and sales not yet collected.
+// Only the run's own: what it carried in itself isn't passed on again.
 export function leftOver (run: OutsideRun, sales: readonly Sale[], rates: Rates): Pick<OutsideRun, 'carried' | 'carriedSales'> {
   const o = outsideTotals(run, sales, rates)
-  const carried = o.held.map(h => ({ ...h.item, count: h.left, tallyAdded: 0 }))
-  const carriedSales = o.sold.filter(r => !r.collected).map(r => r.item.id)
+  const carried = o.held.filter(h => !h.carried && h.item.unitChaos > 0).map(h => ({ ...h.item, count: h.left, tallyAdded: 0 }))
+  const carriedSales = o.sold.filter(r => !r.collected && !r.before && inRun(run, r.item.at)).map(r => r.item.id)
   return { ...(carried.length ? { carried } : {}), ...(carriedSales.length ? { carriedSales } : {}) }
 }
 

@@ -93,7 +93,7 @@
           <img v-if="h.item.icon" :src="h.item.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
           <span v-item-tip="{ name: h.item.name, count: h.left }" class="w-trunc">{{ h.left > 1 ? `${h.left} × ` : '' }}{{ h.item.name }}</span>
           <span class="w-dim text-xs">{{ h.carried ? 'held, from the last run' : `held since ${clock(h.item.at)}` }}</span>
-          <span><button v-if="!h.carried" type="button" :class="$style.x" :aria-label="`Remove ${h.item.name}`" title="Remove" @click="removeHeld(h.item.id)"><i class="fas fa-times" /></button></span>
+          <span><button type="button" :class="$style.x" :aria-label="`Remove ${h.item.name}`" title="Remove (gone: used, sold elsewhere)" @click="removeHeld(h.item.id, h.carried)"><i class="fas fa-times" /></button></span>
           <span class="w-num text-xs" :class="[$style.right, h.carried ? 'w-dim' : 'w-up']" :title="h.carried ? 'Not counted: from before this run' : undefined">{{ h.carried ? '' : '+' }}{{ amount(h.chaos) }}<Coin :chaos="!divine" /></span>
         </div>
         <button v-if="outside.listed.length > listedShown" type="button" :class="$style.link" class="text-xs" @click="listedShown += 10">+{{ outside.listed.length - listedShown }} more listed</button>
@@ -232,7 +232,9 @@ const soldSign = (r: OutsideRow) => r.before ? (r.collected ? '−' : '') : (r.c
 const soldTone = (r: OutsideRow) => r.before ? (r.collected ? 'w-down' : 'w-dim') : (r.collected ? 'w-dim' : 'w-up')
 function markBefore (id: string, before: boolean) { edit(r => setBefore(r, id, before)) }
 const holdKey = computed(() => { const w = AppConfig().widgets.find(x => x.wmType === NET_WORTH_TYPE) as NetWorthWidget | undefined; return w ? runHotkeyOf(w) : null })
-function removeHeld (id: string) { edit(r => ({ ...r, held: (r.held ?? []).filter(h => h.id !== id) })) }
+function removeHeld (id: string, carried: boolean) {
+  edit(r => carried ? { ...r, carried: (r.carried ?? []).filter(h => h.id !== id) } : { ...r, held: (r.held ?? []).filter(h => h.id !== id) })
+}
 const faustusReading = shallowRef(false)
 async function readFaustusInto (r: Run): Promise<void> {
   const read = await readFaustus(props.league, r.startAt)
@@ -279,7 +281,8 @@ async function start () {
   starting.value = true
   // H1: what the last run left outside the stash comes along, not counted.
   const last = doc.value.live ?? doc.value.done[0]
-  let extra: Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales'> = last ? leftOver(last, sales.value, rates.value) : {}
+  const taken = last && [doc.value.live, ...doc.value.done].some(r => r?.carriedFrom === last.id)
+  let extra: Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales' | 'carriedFrom'> = last && !taken ? { ...leftOver(last, sales.value, rates.value), carriedFrom: last.id } : {}
   try {
     const read = await readFaustus(league, 0)
     const after = read.listings.filter(l => l.at > at)

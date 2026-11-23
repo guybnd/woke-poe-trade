@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { arrivalsOf, leftOver, listingsQuery, outsideTotals, setBefore, toListing } from '@/web/woke/net-worth/faustus'
-import type { HeldItem } from '@/web/woke/net-worth/faustus'
-import type { OutsideRun } from '@/web/woke/net-worth/faustus'
+import type { HeldItem, OutsideRun } from '@/web/woke/net-worth/faustus'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { addToTally, emptyRun, runTotals } from '@/web/woke/net-worth/runs'
 
@@ -110,6 +109,17 @@ describe('held outside the stash (the run hotkey)', () => {
     const h = held('h', 'Reality Fragment', T0 + M, 50, { count: 2, tallyAdded: 3 })
     expect(outsideTotals(run({ held: [h], tally: { 'Reality Fragment': { added: 3 } } }), [], RATES).heldChaos).toBe(100)
     expect(outsideTotals(run({ held: [h], tally: { 'Reality Fragment': { added: 4 } } }), [], RATES).heldChaos).toBe(50)
+  })
+  it('a second hold of the same item after the first was stashed', () => {
+    const a = held('a', 'The Doctor', T0 + M, 100)
+    const b = held('b', 'The Doctor', T0 + 3 * M, 100, { tallyAdded: 1 })
+    expect(outsideTotals(run({ held: [a, b], tally: { 'The Doctor': { added: 1 } } }), [], RATES).heldChaos).toBe(100)
+    expect(outsideTotals(run({ held: [a, b], tally: { 'The Doctor': { added: 2 } } }), [], RATES).heldChaos).toBe(0)
+  })
+  it('carries over once: the next run passes on only its own', () => {
+    const first = run({ held: [held('h', 'Manastorm', T0 + M, 300)] })
+    const second = run({ startAt: T0 + H, ...leftOver(first, [], RATES) })
+    expect(leftOver(second, [], RATES)).toEqual({})
   })
   it('a left over item carries to the next run, not counted: its stash arrival, listing and sale are from before', () => {
     const last = run({ held: [held('h', 'Manastorm', T0 + M, 300)] })

@@ -133,7 +133,7 @@ const newId = () => `${Date.now().toString(36)}${(idSeq++).toString(36)}`
 // Starts a run at a chart point (the last read for "now"). A run going
 // already is stopped first. Earlier reads' changes come from the kept diffs.
 // `extra`: what Start read of your Faustus listings (RunsView).
-export function startRun (league: string, name: string, startAt: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null, costs: CostLine[] = [], extra: Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales'> = {}) {
+export function startRun (league: string, name: string, startAt: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null, costs: CostLine[] = [], extra: Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales' | 'carriedFrom'> = {}) {
   return queue(async () => {
     await loadRuns(league)
     const doc = runsDoc.value
@@ -179,7 +179,8 @@ export function editRun (league: string, id: string, fn: (r: Run) => Run, points
     const doc = runsDoc.value
     const done = await Promise.all(doc.done.map(r => r.id === id ? withFinal(fn(r), points) : r))
     const next: RunsDoc = { live: doc.live?.id === id ? fn(doc.live) : doc.live, done }
-    if (await save(league, next) && next.live?.id === id) await saveGlance(league, next.live, points, divine)
+    // No points (Net worth not loaded yet): the glance would read 0.
+    if (await save(league, next) && next.live?.id === id && points.length) await saveGlance(league, next.live, points, divine)
   })
 }
 

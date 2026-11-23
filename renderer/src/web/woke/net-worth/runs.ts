@@ -71,6 +71,8 @@ export interface Run {
   // Left over from the last run (H1): held items, sales not collected.
   carried?: HeldItem[]
   carriedSales?: string[]
+  // The run those came from (it carries over once).
+  carriedFrom?: string
 }
 
 export interface RunFinal { profitChaos: number, maps: number, perMapChaos: number | null, perHourChaos: number | null, faustusChaos?: number }
