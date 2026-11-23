@@ -308,7 +308,7 @@
 
 /* The currency chip: coins and label each keep every state's room, so nothing shifts. */
 .w-pc-toolbar .w-pc-currency { display: inline-flex; align-items: center; gap: 3px; }
-.w-pc-currency-coins { display: inline-flex; justify-content: center; width: 1.7em; }
+.w-pc-currency-coins { display: inline-flex; justify-content: center; width: 1.9em; }
 .w-pc-currency-coins img { width: 1.15em; height: 1.15em; display: none; }
 .w-pc-currency-coins img.shown { display: block; }
 .w-pc-currency[data-step="all"] .w-pc-currency-coins img + img { margin-left: -.45em; }

@@ -23,7 +23,8 @@
            Every label stays in one grid cell, so the chip keeps its width under the mouse. -->
       <button v-if="currencyChoice" type="button" class="w-pc-bulk w-pc-currency" data-currency-chip
         :class="{ invisible: !list, on: currency !== 'all' }" :data-step="currency"
-        :title="currencyTitle" @click="stepCurrency">
+        :title="currencyTitle" :aria-label="`Listing currency: ${currency === 'all' ? 'All' : currency === 'divine' ? 'Divine' : 'Chaos'}`"
+        :aria-pressed="currency !== 'all'" @click="stepCurrency">
         <span class="w-pc-currency-coins">
           <img v-for="coin of ['chaos', 'divine']" :key="coin" :src="coinFor(coin)" alt=""
             :class="{ shown: currency === 'all' || currency === coin }">
@@ -185,7 +186,7 @@
               </td>
             </tr>
             <!-- woke: the currency chip left nothing to show. -->
-            <tr v-if="currency !== 'all' && !rows.length && listSettled && list" class="w-pc-local-hint" data-currency-empty>
+            <tr v-if="currency !== 'all' && !bulk && !narrow && !currencyCount && loadedCount && listSettled && list" class="w-pc-local-hint" data-currency-empty>
               <td colspan="100" class="px-2">No listings priced in {{ currency === 'divine' ? 'divines' : 'chaos' }} among the {{ loadedCount }} loaded.</td>
             </tr>
             <!-- woke: few rows fit: suggest a search, unless the search's every listing is already here. -->
@@ -200,7 +201,7 @@
       </table>
     </div>
     <div v-if="improved || bulk || currency !== 'all'" class="w-pc-foot" :class="{ invisible: !(listSettled && list && (rows.length || bulk || currency !== 'all')) }"
-      title="Prices come from the cheapest listings the trade site returned"><template v-if="list && narrow">{{ fitCount }} of {{ loadedCount }} loaded listings fit · the search found {{ list.total }}{{ list.inexact ? '+' : '' }}</template><template v-else-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="currency !== 'all'">{{ currencyCount || 'None' }} in {{ currency === 'divine' ? 'divines' : 'chaos' }} · </template><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
+      title="Prices come from the cheapest listings the trade site returned"><template v-if="list && narrow"><template v-if="currency !== 'all'">{{ currencyCount || 'None' }} in {{ currency === 'divine' ? 'divines' : 'chaos' }} · </template>{{ fitCount }} of {{ loadedCount }} loaded listings fit · the search found {{ list.total }}{{ list.inexact ? '+' : '' }}</template><template v-else-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="currency !== 'all'">{{ currencyCount || 'None' }} in {{ currency === 'divine' ? 'divines' : 'chaos' }} · </template><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
   </div>
   <ui-error-box v-else>
     <template #name>{{ t(':error') }}</template>
@@ -579,11 +580,16 @@ export default defineComponent({
     // woke: Bulk keeps sellers with two or more copies at a price. Off for each new search.
     const bulk = shallowRef(false)
     const bulkNote = shallowRef('')
+    const currency = shallowRef<CurrencyView>('all')
+    const currencyNote = shallowRef('')
     // Search bulk asks for it with the search itself; any other search starts with it off.
     let bulkNext = false
     watch(searchResult, (result) => {
       bulk.value = false
       bulkNote.value = ''
+      // The currency chip starts on All too, so a new search shows every listing it found.
+      currency.value = 'all'
+      currencyNote.value = ''
       if (!result || !bulkNext) return
       bulkNext = false
       toggleBulk()
@@ -593,8 +599,6 @@ export default defineComponent({
     // woke: the currency chip shows only listings priced in chaos, or in divines. The verdict
     // still reads every listing: what the item is worth doesn't change with the currency asked.
     const currencyChoice = computed(() => hasCurrencyChoice(props.filters.trade.currency))
-    const currency = shallowRef<CurrencyView>('all')
-    const currencyNote = shallowRef('')
     const currencyView = computed<CurrencyView>(() => currencyChoice.value ? currency.value : 'all')
     const currencyResults = computed(() => currencyView.value === 'all'
       ? fitResults.value
@@ -608,12 +612,17 @@ export default defineComponent({
       // Too few in that currency: load more pages of the same search, as Bulk does.
       const want = currency.value
       const forSearch = searchResult.value
-      const note = await loadMore(() => currency.value !== want ||
-        groupedResults.value.filter(r => fits(r) && inCurrency(r, want)).length >= CURRENCY_ENOUGH)
+      const note = await loadMore(() => currency.value !== want || enoughShown())
       if (note && currency.value === want && searchResult.value === forSearch) {
         currencyNote.value = note
         setTimeout(() => { if (currencyNote.value === note) currencyNote.value = '' }, 3000)
       }
+    }
+    // Loading more pages stops once the table, with Bulk and the currency both applied, has enough.
+    function enoughShown () {
+      return bulk.value
+        ? bulkSellerCount(currencyResults.value, sameKind) >= BULK_ENOUGH
+        : currencyResults.value.length >= CURRENCY_ENOUGH
     }
     const tableListings = computed(() => bulk.value
       ? bulkOnly(currencyResults.value, sameKind)
@@ -623,7 +632,7 @@ export default defineComponent({
       bulkNote.value = ''
       if (!bulk.value) return
       const forSearch = searchResult.value
-      const note = await loadMore(() => !bulk.value || bulkSellerCount(groupedResults.value, sameKind) >= BULK_ENOUGH)
+      const note = await loadMore(() => !bulk.value || enoughShown())
       if (note && bulk.value && searchResult.value === forSearch) {
         bulkNote.value = note
         setTimeout(() => { if (bulkNote.value === note) bulkNote.value = '' }, 3000)

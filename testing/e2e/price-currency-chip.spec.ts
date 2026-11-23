@@ -94,5 +94,14 @@ test('currency chip: Chaos, then Divine, filters the loaded listings without a s
   await expect(foot).toContainText('40 of 60 listings')
   await expect(foot).not.toContainText('divines')
   expect(fetches.searches).toHaveLength(1)
+  await expect(chip).toHaveAttribute('aria-label', 'Listing currency: All')
+
+  // A new search starts on All, as Bulk starts off.
+  await chip.click()
+  await expect(chip).toHaveAttribute('aria-pressed', 'true')
+  await panel.locator('button.w-icon-btn').filter({ has: overlay.page.locator('.fa-sync-alt') }).click()
+  await expect.poll(() => fetches.searches.length).toBe(2)
+  await expect(chip.locator('.w-pc-currency-labels span.shown')).toHaveText('All')
+  await expect(chip).toHaveAttribute('aria-pressed', 'false')
   expect(overlay.errors).toEqual([])
 })
