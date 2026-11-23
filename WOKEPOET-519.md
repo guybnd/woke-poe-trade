@@ -27,6 +27,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-23T15:13:21.601Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up merged: https://github.com/guybnd/woke-poe-trade/pull/820 makes
+      the Rarity chip on map price checks start on by default.
+    date: '2026-11-23T16:21:48.671Z'
+    selfAttested: true
+    id: c-2026-11-23t16-21-48-671z
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/816'
