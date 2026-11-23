@@ -50,6 +50,15 @@ history:
     date: '2026-11-23T09:22:24.126Z'
     selfAttested: true
     id: c-2026-11-23t09-22-24-126z
+  - type: comment
+    user: Agent
+    comment: >-
+      Also https://github.com/guybnd/woke-poe-trade/pull/800 (6631c269): the Net
+      worth chart's 7D/24H views no longer carry a glitched value past the
+      glitch's end (plateau fix). Dev build reloaded on 6631c269.
+    date: '2026-11-23T11:00:07.412Z'
+    selfAttested: true
+    id: c-2026-11-23t11-00-07-412z
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/797'
