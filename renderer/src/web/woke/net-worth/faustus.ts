@@ -39,10 +39,33 @@ export interface SaleMark {
 // is collected when an arrival after the sale covers it.
 export interface Arrival { at: number, c: string, n: number }
 
+// An item you added with the hotkey (K1): in your inventory or headed for
+// Faustus, worth its price until the stash, a listing or a sale shows it.
+export interface HeldItem {
+  id: string
+  // Its stash key (valuation.ts itemKey): a read that sees it come in takes it.
+  key: string
+  // Its name as listings and sales give it (a unique's name, else its base).
+  name: string
+  icon: string
+  count: number
+  // Each, in chaos, when added (poe.ninja's, or your price).
+  unitChaos: number
+  at: number
+  // The run's tally of its key when added: what comes in after is it.
+  tallyAdded: number
+}
+
 // What a run needs of this (runs.ts Run has these fields).
 export interface OutsideRun {
   startAt: number
   stoppedAt?: number
+  tally?: Record<string, { added: number }>
+  // Held outside the stash: added this run, and left over from the last (H1).
+  held?: HeldItem[]
+  carried?: HeldItem[]
+  // The last run's sales not collected yet: their currency is no profit.
+  carriedSales?: string[]
   faustus?: FaustusRead
   // Item ids listed at Faustus when the run started: their sales are from before.
   startListings?: string[]
@@ -58,16 +81,21 @@ export interface OutsideRow {
   collected: boolean
 }
 
+export interface HeldRow { item: HeldItem, left: number, chaos: number, carried: boolean }
+
 export interface OutsideTotals {
   listed: OutsideRow[]
   sold: OutsideRow[]
+  held: HeldRow[]
+  // Held items not yet in the stash, listed or sold.
+  heldChaos: number
   // Asking prices of listings made during the run.
   listedChaos: number
   // Sales of the run not collected yet.
   waitingChaos: number
   // Sales of items from before the run, collected: off profit.
   beforeChaos: number
-  // listed + waiting: the "In Faustus" line.
+  // listed + waiting + held: the "Outside the stash" line.
   faustusChaos: number
   // Listings or sales with no price in chaos (a currency poe.ninja lacks).
   unpriced: number
@@ -90,7 +118,34 @@ function inRun (run: OutsideRun, at: number): boolean {
 }
 
 export function isBefore (run: OutsideRun, s: Sale): boolean {
-  return run.saleMarks?.[s.id]?.before ?? (run.startListings?.includes(s.id) ?? false)
+  return run.saleMarks?.[s.id]?.before ?? ((run.startListings?.includes(s.id) || run.carriedSales?.includes(s.id)) ?? false)
+}
+
+const nameOf = (s: Sale) => s.name || s.typeLine
+
+// What's left of each held item: a stash read that saw its key come in after
+// it was added, or a listing or sale of the same name after it, takes it.
+// Carried items go first (they're older); each listing or sale takes one item.
+export function heldLeft (run: OutsideRun, listings: readonly Sale[], sales: readonly Sale[]): { rows: Array<{ item: HeldItem, left: number, stashed: number, carried: boolean }>, used: Set<string> } {
+  const used = new Set<string>()
+  const stashUsed = new Map<string, number>()
+  const others = [...listings, ...sales].sort((a, b) => a.at - b.at)
+  const all = [...(run.carried ?? []).map(item => ({ item, carried: true })), ...(run.held ?? []).map(item => ({ item, carried: false }))]
+  const rows = all.map(({ item, carried }) => {
+    let left = item.count
+    const came = Math.max(0, (run.tally?.[item.key]?.added ?? 0) - (carried ? 0 : item.tallyAdded) - (stashUsed.get(item.key) ?? 0))
+    const stashed = Math.min(left, came)
+    stashUsed.set(item.key, (stashUsed.get(item.key) ?? 0) + stashed)
+    left -= stashed
+    for (const o of others) {
+      if (left <= 0) break
+      if (used.has(o.id) || nameOf(o) !== item.name || (!carried && o.at <= item.at)) continue
+      used.add(o.id)
+      left -= Math.min(left, o.stack)
+    }
+    return { item, left, stashed, carried }
+  })
+  return { rows, used }
 }
 
 // Which sales' currency the stash has seen come in: each arrival covers
@@ -118,22 +173,33 @@ export function collectedOf (run: OutsideRun, sales: readonly Sale[]): Set<strin
 }
 
 export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: Rates): OutsideTotals {
-  const sold = sales.filter(s => inRun(run, s.at)).sort((a, b) => b.at - a.at)
+  const carriedSales = new Set(run.carriedSales ?? [])
+  const sold = sales.filter(s => inRun(run, s.at) || (carriedSales.has(s.id) && s.at <= run.startAt)).sort((a, b) => b.at - a.at)
   const soldIds = new Set(sold.map(s => s.id))
   // A listing that sold since the read is a sale now: it counts there. One
   // listed at the start was repriced (its listed time moved): not the run's.
   const atStart = new Set(run.startListings ?? [])
-  const listed = (run.faustus?.listings ?? []).filter(l => inRun(run, l.at) && !soldIds.has(l.id) && !atStart.has(l.id)).sort((a, b) => b.at - a.at)
+  const runListings = (run.faustus?.listings ?? []).filter(l => inRun(run, l.at) && !soldIds.has(l.id) && !atStart.has(l.id))
+  // Held items: a listing or sale of a carried one is from before.
+  const held = heldLeft(run, runListings, sold.filter(s => inRun(run, s.at)))
+  const carriedUsed = new Set<string>()
+  {
+    const carriedOnly = heldLeft({ ...run, held: [] }, runListings, sold.filter(s => inRun(run, s.at)))
+    for (const id of carriedOnly.used) carriedUsed.add(id)
+  }
+  const listed = runListings.filter(l => !carriedUsed.has(l.id)).sort((a, b) => b.at - a.at)
   const got = collectedOf(run, sold)
   let listedChaos = 0
   let waitingChaos = 0
   let beforeChaos = 0
+  let heldChaos = 0
   let unpriced = 0
   const row = (item: Sale, isSale: boolean): OutsideRow => {
     const chaos = saleChaos(item, rates)
     if (chaos == null) unpriced++
     const collected = isSale && got.has(item.id)
-    return { item, chaos, before: isSale && isBefore(run, item), collected }
+    const before = isSale && (run.saleMarks?.[item.id]?.before ?? (isBefore(run, item) || carriedUsed.has(item.id)))
+    return { item, chaos, before, collected }
   }
   const listedRows = listed.map(l => row(l, false))
   for (const r of listedRows) listedChaos += r.chaos ?? 0
@@ -142,7 +208,23 @@ export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: R
     const c = r.chaos ?? 0
     if (r.before) { if (r.collected) beforeChaos += c } else if (!r.collected) waitingChaos += c
   }
-  return { listed: listedRows, sold: soldRows, listedChaos, waitingChaos, beforeChaos, faustusChaos: listedChaos + waitingChaos, unpriced }
+  const heldRows: HeldRow[] = []
+  for (const h of held.rows) {
+    // A carried item that came into the stash: the stash counted it, the run shouldn't.
+    if (h.carried) beforeChaos += h.stashed * h.item.unitChaos
+    else heldChaos += h.left * h.item.unitChaos
+    if (h.left > 0) heldRows.push({ item: h.item, left: h.left, chaos: h.left * h.item.unitChaos, carried: h.carried })
+  }
+  return { listed: listedRows, sold: soldRows, held: heldRows, heldChaos, listedChaos, waitingChaos, beforeChaos, faustusChaos: listedChaos + waitingChaos + heldChaos, unpriced }
+}
+
+// What a stopped run leaves to the next (H1): held items not yet in the
+// stash, listed or sold, and sales not yet collected.
+export function leftOver (run: OutsideRun, sales: readonly Sale[], rates: Rates): Pick<OutsideRun, 'carried' | 'carriedSales'> {
+  const o = outsideTotals(run, sales, rates)
+  const carried = o.held.map(h => ({ ...h.item, count: h.left, tallyAdded: 0 }))
+  const carriedSales = o.sold.filter(r => !r.collected).map(r => r.item.id)
+  return { ...(carried.length ? { carried } : {}), ...(carriedSales.length ? { carriedSales } : {}) }
 }
 
 // Your override: the sale's item was from before the run, or not.

@@ -3,6 +3,8 @@
     <div class="grid gap-2 items-center" style="grid-template-columns: auto 1fr;">
       <span>Hotkey: show or hide net worth</span>
       <w-hotkey-cell v-model="hotkey" />
+      <span>Hotkey: add the hovered item to the run going (held outside the stash)</span>
+      <w-hotkey-cell v-model="runHotkey" />
       <span>"Hide &lt;" in divines</span>
       <w-field v-model="hideBelow" type="number" suffix="div" />
       <span>"Hide &lt;" in chaos</span>
@@ -26,7 +28,7 @@ import WField from '../ui/WField.vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
 import WToggle from '../ui/WToggle.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
-import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection } from './widget'
+import { SECTIONS, hideBelowChaosOf, hideBelowOf, runHotkeyOf, sectionOn, setSection } from './widget'
 import type { NetWorthWidget } from './widget'
 
 export default defineComponent({
@@ -40,6 +42,10 @@ export default defineComponent({
       sectionOn,
       setSection,
       hotkey: configModelValue(() => props.configWidget, 'hotkey'),
+      runHotkey: computed({
+        get: () => runHotkeyOf(w()),
+        set: (v: string | null) => { w().runHotkey = v }
+      }),
       dockIcon: computed({
         get: () => w().dockIcon !== false,
         set: (v: boolean) => { w().dockIcon = v }

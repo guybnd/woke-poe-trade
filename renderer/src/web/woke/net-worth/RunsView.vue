@@ -33,8 +33,8 @@
         <span title="Typed costs, plus what the stash says was used up of maps, scarabs and fragments, per map"><span :class="$style.caps">Cost / map</span> {{ totals.costPerMapChaos != null ? amount(totals.costPerMapChaos) : '—' }}<Coin v-if="totals.costPerMapChaos != null" :chaos="!divine" /></span>
       </div>
       <div v-if="totals.faustusChaos" :class="$style.stats" class="w-num" data-run-total>
-        <span title="Listed at Faustus during the run, at your asking price, and sales whose currency you haven't collected yet"><span :class="$style.caps">In Faustus</span> <span class="w-up">+{{ amount(totals.faustusChaos) }}</span><Coin :chaos="!divine" /></span>
-        <span title="Profit plus In Faustus"><span :class="$style.caps">Total</span> <b :class="tone(totals.totalChaos)">{{ signed(totals.totalChaos) }}</b><Coin :chaos="!divine" /></span>
+        <span title="Listed at Faustus during the run (your asking price), sales whose currency hasn't come into your stash yet, and items you hold (the run hotkey)"><span :class="$style.caps">Outside the stash</span> <span class="w-up">+{{ amount(totals.faustusChaos) }}</span><Coin :chaos="!divine" /></span>
+        <span title="Profit plus outside the stash"><span :class="$style.caps">Total</span> <b :class="tone(totals.totalChaos)">{{ signed(totals.totalChaos) }}</b><Coin :chaos="!divine" /></span>
         <span v-if="totals.maps"><span :class="$style.caps">Total / map</span> <span :class="tone(totals.totalChaos)">{{ signed(totals.totalChaos / totals.maps) }}</span><Coin :chaos="!divine" /></span>
       </div>
 
@@ -89,6 +89,13 @@
           <span />
           <span class="w-num text-xs" :class="$style.right"><template v-if="r.chaos != null">+{{ amount(r.chaos) }}<Coin :chaos="!divine" /></template><span v-else class="w-dim">{{ r.item.price.amount }} {{ r.item.price.currency }}</span></span>
         </div>
+        <div v-for="h in outside.held" :key="'h' + h.item.id" :class="$style.out" data-run-held>
+          <img v-if="h.item.icon" :src="h.item.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
+          <span v-item-tip="{ name: h.item.name, count: h.left }" class="w-trunc">{{ h.left > 1 ? `${h.left} × ` : '' }}{{ h.item.name }}</span>
+          <span class="w-dim text-xs">{{ h.carried ? 'held, from the last run' : `held since ${clock(h.item.at)}` }}</span>
+          <span><button v-if="!h.carried" type="button" :class="$style.x" :aria-label="`Remove ${h.item.name}`" title="Remove" @click="removeHeld(h.item.id)"><i class="fas fa-times" /></button></span>
+          <span class="w-num text-xs" :class="[$style.right, h.carried ? 'w-dim' : 'w-up']" :title="h.carried ? 'Not counted: from before this run' : undefined">{{ h.carried ? '' : '+' }}{{ amount(h.chaos) }}<Coin :chaos="!divine" /></span>
+        </div>
         <button v-if="outside.listed.length > listedShown" type="button" :class="$style.link" class="text-xs" @click="listedShown += 10">+{{ outside.listed.length - listedShown }} more listed</button>
         <div v-for="r in outside.sold.slice(0, soldShown)" :key="'s' + r.item.id" :class="$style.out" data-run-sold>
           <img v-if="r.item.icon" :src="r.item.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
@@ -105,6 +112,7 @@
           <template v-if="shownRun.faustus">Listings read {{ clock(shownRun.faustus.at) }}<template v-if="shownRun.faustus.more">: over 100 since the start, only the newest 100 count</template>. </template>
           <template v-else-if="shownRun === live">Listings are read when you press Stop. </template>
           A sale is collected when a stash read sees its currency come in.
+          <template v-if="holdKey && shownRun === live"> Hover an item and press <WKbd :keys="holdKey" /> to hold it here until it reaches your stash or Faustus.</template>
           <template v-if="outside.unpriced">{{ outside.unpriced }} without a price in chaos aren't counted. </template>
         </div>
       </div>
@@ -154,7 +162,10 @@
 // the last read or a chart point, see profit since then with what got used
 // up, type the costs the stash can't see, and look back at finished runs.
 import { computed, onUnmounted, shallowRef, watch } from 'vue'
-import { WButton, vItemTip, toast } from '../ui'
+import { WButton, WKbd, vItemTip, toast } from '../ui'
+import { AppConfig } from '@/web/Config'
+import { NET_WORTH_TYPE, runHotkeyOf } from './widget'
+import type { NetWorthWidget } from './widget'
 import { formatAmount, nowMinute } from '../ui/format'
 import { tipFor } from './tips'
 import type { TipIndex } from './tips'
@@ -163,7 +174,7 @@ import Coin from './Coin.vue'
 import { leftOf, lineCost, mapsIn, runTotals, tallyRows } from './runs'
 import type { CostLine, Run } from './runs'
 import { addCost, addOnce, deleteRun, editRun, loadRuns, refreshRunMaps, runMaps, runsDoc, setOutside, startRun, stopRun } from './run-store'
-import { outsideTotals, setBefore } from './faustus'
+import { leftOver, outsideTotals, setBefore } from './faustus'
 import type { OutsideRow } from './faustus'
 import { readFaustus } from './faustus-read'
 import { loadSales, ninjaEach, rates, sales } from './sales-store'
@@ -220,6 +231,8 @@ const ninjaOf = (l: Sale) => { const each = ninjaEach(l); return each != null ? 
 const soldSign = (r: OutsideRow) => r.before ? (r.collected ? '−' : '') : (r.collected ? '' : '+')
 const soldTone = (r: OutsideRow) => r.before ? (r.collected ? 'w-down' : 'w-dim') : (r.collected ? 'w-dim' : 'w-up')
 function markBefore (id: string, before: boolean) { edit(r => setBefore(r, id, before)) }
+const holdKey = computed(() => { const w = AppConfig().widgets.find(x => x.wmType === NET_WORTH_TYPE) as NetWorthWidget | undefined; return w ? runHotkeyOf(w) : null })
+function removeHeld (id: string) { edit(r => ({ ...r, held: (r.held ?? []).filter(h => h.id !== id) })) }
 const faustusReading = shallowRef(false)
 async function readFaustusInto (r: Run): Promise<void> {
   const read = await readFaustus(props.league, r.startAt)
@@ -264,11 +277,13 @@ async function start () {
   // What the run starts from, as it is now (the read can take a while).
   const { league, diffs, points, divine } = props
   starting.value = true
-  let extra: Pick<Run, 'startListings' | 'faustus'> = {}
+  // H1: what the last run left outside the stash comes along, not counted.
+  const last = doc.value.live ?? doc.value.done[0]
+  let extra: Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales'> = last ? leftOver(last, sales.value, rates.value) : {}
   try {
     const read = await readFaustus(league, 0)
     const after = read.listings.filter(l => l.at > at)
-    extra = { startListings: read.listings.filter(l => l.at <= at).map(l => l.id), ...(after.length ? { faustus: { at: read.at, listings: after } } : {}) }
+    extra = { ...extra, startListings: read.listings.filter(l => l.at <= at).map(l => l.id), ...(after.length ? { faustus: { at: read.at, listings: after } } : {}) }
   } catch (e) {
     toast(`Started without your Faustus listings: ${(e as Error).message}`)
   } finally { starting.value = false }

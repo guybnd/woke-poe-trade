@@ -8,7 +8,7 @@
 // over its item: that item's own stash change is left out, so it never
 // counts twice. Pure: no Vue, no IO.
 import { arrivalsOf } from './faustus'
-import type { Arrival, FaustusRead, SaleMark } from './faustus'
+import type { Arrival, FaustusRead, HeldItem, SaleMark } from './faustus'
 import type { LedgerPoint } from './ledger'
 import type { StashDiff } from './valuation'
 
@@ -66,6 +66,11 @@ export interface Run {
   arrivals?: Arrival[]
   // Your overrides on sales during the run, by sale id.
   saleMarks?: Record<string, SaleMark>
+  // Added with the hotkey: held outside the stash (faustus.ts).
+  held?: HeldItem[]
+  // Left over from the last run (H1): held items, sales not collected.
+  carried?: HeldItem[]
+  carriedSales?: string[]
 }
 
 export interface RunFinal { profitChaos: number, maps: number, perMapChaos: number | null, perHourChaos: number | null, faustusChaos?: number }

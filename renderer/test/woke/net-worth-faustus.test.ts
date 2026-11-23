@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { arrivalsOf, listingsQuery, outsideTotals, setBefore, toListing } from '@/web/woke/net-worth/faustus'
+import { arrivalsOf, leftOver, listingsQuery, outsideTotals, setBefore, toListing } from '@/web/woke/net-worth/faustus'
+import type { HeldItem } from '@/web/woke/net-worth/faustus'
 import type { OutsideRun } from '@/web/woke/net-worth/faustus'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { addToTally, emptyRun, runTotals } from '@/web/woke/net-worth/runs'
 
 const M = 60_000
+const H = 3_600_000
 const T0 = 1_000_000_000
 const RATES = { chaos: 1, divine: 200 }
 const item = (id: string, at: number, amount: number, currency = 'chaos'): Sale =>
@@ -85,6 +87,49 @@ describe('outside the stash', () => {
     const d = { at: 5, added: [{ key: 'Divine Orb', name: '', icon: '', count: 3, chaos: 600 }, { key: 'Chaos Orb', name: '', icon: '', count: 10, chaos: 10 }], removed: [{ key: 'Divine Orb', name: '', icon: '', count: 1, chaos: 200 }, { key: 'Chaos Orb', name: '', icon: '', count: 20, chaos: 20 }], netChaos: 0 }
     expect(arrivalsOf(d)).toEqual([{ at: 5, c: 'divine', n: 2 }])
     expect(addToTally(emptyRun('r', 'L', 'x', 1), d).arrivals).toEqual([{ at: 5, c: 'divine', n: 2 }])
+  })
+})
+
+const held = (id: string, name: string, at: number, unitChaos: number, extra: Partial<HeldItem> = {}): HeldItem =>
+  ({ id, key: name, name, icon: '', count: 1, unitChaos, at, tallyAdded: 0, ...extra })
+
+describe('held outside the stash (the run hotkey)', () => {
+  it('counts until the stash, a listing or a sale shows it', () => {
+    const h = held('h', 'The Dark Seer', T0 + M, 800)
+    expect(outsideTotals(run({ held: [h] }), [], RATES).heldChaos).toBe(800)
+    // Stashed: the stash counts it now.
+    expect(outsideTotals(run({ held: [h], tally: { 'The Dark Seer': { added: 1 } } }), [], RATES).heldChaos).toBe(0)
+    // Listed: the listing counts it.
+    const listedRun = run({ held: [h], faustus: { at: T0 + 9 * M, listings: [item('The Dark Seer', T0 + 2 * M, 900)] } })
+    const o = outsideTotals(listedRun, [], RATES)
+    expect([o.heldChaos, o.listedChaos]).toEqual([0, 900])
+    // Sold: the sale counts it.
+    expect(outsideTotals(run({ held: [h] }), [item('The Dark Seer', T0 + 3 * M, 850)], RATES).faustusChaos).toBe(850)
+  })
+  it('a stack already in the stash when added doesn\'t take it', () => {
+    const h = held('h', 'Reality Fragment', T0 + M, 50, { count: 2, tallyAdded: 3 })
+    expect(outsideTotals(run({ held: [h], tally: { 'Reality Fragment': { added: 3 } } }), [], RATES).heldChaos).toBe(100)
+    expect(outsideTotals(run({ held: [h], tally: { 'Reality Fragment': { added: 4 } } }), [], RATES).heldChaos).toBe(50)
+  })
+  it('a left over item carries to the next run, not counted: its stash arrival, listing and sale are from before', () => {
+    const last = run({ held: [held('h', 'Manastorm', T0 + M, 300)] })
+    const carry = leftOver(last, [], RATES)
+    expect(carry.carried?.map(c => c.name)).toEqual(['Manastorm'])
+    const next = run({ startAt: T0 + H, ...carry })
+    expect(outsideTotals(next, [], RATES).faustusChaos).toBe(0)
+    expect(outsideTotals({ ...next, tally: { Manastorm: { added: 1 } } }, [], RATES).beforeChaos).toBe(300)
+    const sold = outsideTotals(next, [item('Manastorm', T0 + H + M, 320)], RATES)
+    expect(sold.sold[0].before).toBe(true)
+    expect(sold.faustusChaos).toBe(0)
+    const listed = outsideTotals({ ...next, faustus: { at: T0 + 2 * H, listings: [item('Manastorm', T0 + H + M, 320)] } }, [], RATES)
+    expect(listed.listedChaos).toBe(0)
+  })
+  it('sales left uncollected carry over: collected in the next run, off its profit', () => {
+    const s = item('s', T0 + M, 100)
+    const carry = leftOver(run(), [s], RATES)
+    expect(carry.carriedSales).toEqual(['s'])
+    const next = run({ startAt: T0 + H, ...carry, arrivals: [{ at: T0 + H + M, c: 'chaos', n: 100 }] })
+    expect(outsideTotals(next, [s], RATES).beforeChaos).toBe(100)
   })
 })
 

@@ -39,7 +39,7 @@ import { hideWhilePlaying, openSettingsPage, showWithOverlay } from '../dock/doc
 import { popupAnchor } from '../ui/window-anchor'
 import { agoPhrase, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
-import { parseHotkeyTarget } from './widget'
+import { RUN_HOLD_TARGET, parseHotkeyTarget } from './widget'
 import { DOCS, GLANCE_LABELS, glanceFromPoints, glanceKey, glanceText, isGlance, ledgerKey, nextShows } from './glance'
 import type { Glance } from './glance'
 import { isRunGlance, runGlanceKey } from './runs'
@@ -139,6 +139,21 @@ watch(leagueId, (league) => {
     .catch(() => {})
 }, { immediate: true })
 const liveRun = computed(() => runG.value && runG.value.league === leagueId.value ? runG.value : null)
+// The run hotkey (K1, run-hold.ts): listened to only while a run goes.
+let holdListener: AbortController | null = null
+watch(() => !!liveRun.value, (on) => {
+  holdListener?.abort()
+  holdListener = null
+  if (!on) return
+  holdListener = MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {
+    const league = leagueId.value
+    if (e.target !== RUN_HOLD_TARGET || !league) return
+    Promise.all([import('./run-hold'), store ? Promise.resolve(store) : import('./store')])
+      .then(([hold, s]) => hold.holdHovered(e.clipboard, league, s.ledger.value.points, s.divine.value))
+      .catch(() => {})
+  })
+}, { immediate: true })
+onUnmounted(() => { holdListener?.abort() })
 const stack = computed(() => {
   const r = liveRun.value
   if (r) return glanceText({ league: r.league, at: r.at, chaos: r.profitChaos, netChaos: r.profitChaos, divine: r.divine }, 'change', nowMinute.value)

@@ -143,6 +143,16 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await panel.getByRole('button', { name: 'Per map', exact: true }).click()
     await expect(card.getByLabel('Strand Map per map')).toHaveValue('1')
     await overlay.snap('net worth strategy run')
+    // The run hotkey: the hovered item is held outside the stash, counted
+    // until the stash, a listing or a sale shows it.
+    fakeApp.focusGame(true)
+    await overlay.copyItem('items/card-the-doctor.txt', 'Alt + H')
+    await overlay.pressHotkey(overlay.config.overlayKey)
+    const heldRow = card.locator('[data-run-held]')
+    await expect(heldRow).toContainText('The Doctor')
+    await heldRow.getByText('The Doctor').hover()
+    await expect(overlay.page.getByRole('tooltip')).toContainText('The Doctor')
+    await overlay.page.mouse.move(0, 0)
     // Listed during the run, before Stop.
     listings = [listing('l1', 'Mageblood', 'Heavy Belt', new Date(Date.now() - 1000).toISOString(), 2), ...listings]
     await card.getByRole('button', { name: 'Stop' }).click()
@@ -154,7 +164,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const listed = panel.locator('[data-run-listed]')
     await expect(listed).toHaveCount(1)
     await expect(listed).toContainText('Mageblood')
-    await expect(panel.locator('[data-run-total]')).toContainText('In Faustus')
+    await expect(panel.locator('[data-run-total]')).toContainText('Outside the stash')
     await listed.getByText('Mageblood').hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('Mageblood')
     await overlay.page.mouse.move(0, 0)

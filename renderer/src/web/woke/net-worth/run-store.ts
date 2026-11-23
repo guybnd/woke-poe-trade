@@ -133,7 +133,7 @@ const newId = () => `${Date.now().toString(36)}${(idSeq++).toString(36)}`
 // Starts a run at a chart point (the last read for "now"). A run going
 // already is stopped first. Earlier reads' changes come from the kept diffs.
 // `extra`: what Start read of your Faustus listings (RunsView).
-export function startRun (league: string, name: string, startAt: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null, costs: CostLine[] = [], extra: Pick<Run, 'startListings' | 'faustus'> = {}) {
+export function startRun (league: string, name: string, startAt: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null, costs: CostLine[] = [], extra: Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales'> = {}) {
   return queue(async () => {
     await loadRuns(league)
     const doc = runsDoc.value
