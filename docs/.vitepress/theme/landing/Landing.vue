@@ -114,11 +114,13 @@ onMounted(() => {
   motion.value = !matchMedia('(prefers-reduced-motion: reduce)').matches
   watcher = new IntersectionObserver((entries) => {
     for (const e of entries) {
-      if (e.isIntersecting) onScreen.add(e.target.id)
+      // On screen: 15% of it or more. A 900px-tall window shows only 31% of
+      // the first section under the hero at load.
+      if (e.isIntersecting && e.intersectionRatio >= 0.15) onScreen.add(e.target.id)
       else onScreen.delete(e.target.id)
     }
     playClips()
-  }, { threshold: 0.35 })
+  }, { threshold: [0, 0.15] })
   for (const el of document.querySelectorAll('.landing section.highlight[id]')) watcher.observe(el)
   nextTick(playClips)
 })
