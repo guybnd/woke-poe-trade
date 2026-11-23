@@ -638,7 +638,18 @@ async function doImport () {
       }
     } else {
       importing.value = true
-      const full = await expandShortTreeLinks(text, fetchProxied).finally(() => { importing.value = false })
+      let full: string
+      try {
+        full = await expandShortTreeLinks(text, fetchProxied)
+        // hypostasis.faith links only read against the tree: made into GGG's.
+        if (/hypostasis\.faith\//i.test(full)) {
+          if (!atlasTree.value && (atlasTreeError.value || atlasDataError.value)) throw new Error(atlasTreeError.value || atlasDataError.value)
+          const { rewriteHypostasisLinks } = await import('./hypostasis')
+          full = rewriteHypostasisLinks(full, atlasTree.value)
+        }
+      } finally {
+        importing.value = false
+      }
       const lone = !/\s/.test(full) && extractTreeCode(full)
       const parsed = lone ? { name: 'Imported tree', treeUrl: full } : parseGuideText(full)
       const s: AtlasStrategy = { ...emptyStrategy(props.config.strategies), ...parsed, folder: into }
