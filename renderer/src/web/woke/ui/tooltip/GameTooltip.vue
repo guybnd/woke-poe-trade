@@ -192,7 +192,7 @@ import WDelta from '../WDelta.vue'
 import WPrice from '../WPrice.vue'
 import { bulkPerDivine, formatAmount } from '../format'
 import WSpark from '../WSpark.vue'
-import { hideTip, tip } from './tooltip'
+import { hideTip, hideTipOnScroll, tip } from './tooltip'
 import { loadTipBases } from './item-tip'
 import type { TipPack } from './tip-content'
 import { weaponBaseIn, weaponStats } from './weapon-stats'
@@ -442,14 +442,14 @@ onMounted(() => {
   // A drag sends no mouse events, so the tooltip would freeze over the targets.
   window.addEventListener('dragstart', hideTip, true)
   window.addEventListener('blur', hideTip)
-  window.addEventListener('scroll', hideTip, true)
+  window.addEventListener('scroll', hideTipOnScroll, true)
 })
 onUnmounted(() => {
   window.removeEventListener('mousemove', onPointer, true)
   window.removeEventListener('mouseover', onPointer, true)
   window.removeEventListener('dragstart', hideTip, true)
   window.removeEventListener('blur', hideTip)
-  window.removeEventListener('scroll', hideTip, true)
+  window.removeEventListener('scroll', hideTipOnScroll, true)
   hideTip()
 })
 </script>
