@@ -97,6 +97,8 @@ describe('Ctrl+Space: listed', () => {
     expect(cards[0].sections[0].rows![0].chaos).toBe(650)
     expect(cards[0].sections[1].rows![0].label).toBe('Mageblood · 4d')
     expect(cards[0].sections[1].rows![0].item?.name).toBe('Mageblood')
+    expect(cards[0].sub).toContain('counted in your net worth')
+    expect(listedLookup(doc, [], 3, false)('listed', ctx)[0].sub).toContain('left out of your net worth')
   })
   it('finds a listed item by name', () => {
     const cards = listedLookup(doc, [], 3)('mageblood', ctx)

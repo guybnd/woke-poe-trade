@@ -24,6 +24,7 @@ export const NEWS: NewsItem[] = [
   { id: 'map-mods-t17-planner', wmType: 'woke-map-mods', name: 'Map mods', note: 'New: a Planner tab for T17 maps, and what each mod adds to a map' },
   { id: 'net-worth-listed', wmType: 'woke-net-worth', name: 'Net worth', note: 'New: a Listed tab: what you have up at Faustus, unsold, and for how long' },
   { id: 'net-worth-strategy-runs', wmType: 'woke-net-worth', name: 'Net worth', note: 'New: strategy runs. Start one from the icon\'s card to see what a farm earns' },
+  { id: 'net-worth-faustus-box', wmType: 'woke-net-worth', name: 'Net worth', note: 'New: tick the box on At Faustus to count your listings in the total, or leave them out' },
   { id: 'atlas-planner-links', wmType: 'woke-atlas-strategies', name: 'Atlas strategies', note: 'New: imports poeatlasplanner.com links' }
 ]
 
