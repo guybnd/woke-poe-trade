@@ -15,6 +15,8 @@
       <w-field v-model="goalDiv" type="number" suffix="div" />
     </div>
     <w-toggle v-model="dockIcon">Show an icon in the dock</w-toggle>
+    <w-toggle v-model="countListed">Count your unsold Faustus listings in your net worth (at poe.ninja's price where known)</w-toggle>
+    <w-toggle v-model="listedAuto">Auto-refresh your Faustus listings in hideout, at most every 30 min (one trade search; starts after your first Refresh on the Listed tab)</w-toggle>
     <div class="flex flex-col gap-1">
       <span>Sections in the window</span>
       <w-toggle v-for="s in SECTIONS" :key="s.id" :model-value="sectionOn(configWidget, s.id)" @update:model-value="setSection(configWidget, s.id, $event)">{{ s.label }}</w-toggle>
@@ -45,6 +47,14 @@ export default defineComponent({
       runHotkey: computed({
         get: () => runHotkeyOf(w()),
         set: (v: string | null) => { w().runHotkey = v }
+      }),
+      countListed: computed({
+        get: () => w().countListed !== false,
+        set: (v: boolean) => { w().countListed = v }
+      }),
+      listedAuto: computed({
+        get: () => w().listedAuto !== false,
+        set: (v: boolean) => { w().listedAuto = v }
       }),
       dockIcon: computed({
         get: () => w().dockIcon !== false,

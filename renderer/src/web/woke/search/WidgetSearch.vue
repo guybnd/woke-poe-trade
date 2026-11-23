@@ -249,6 +249,9 @@ import { runsLookup } from './lookups/runs'
 import { isRunGlance, runGlanceKey } from '../net-worth/runs'
 import type { RunGlance } from '../net-worth/runs'
 import { salesLookup } from './lookups/sales'
+import { listedLookup } from './lookups/listed'
+import { isPendingDoc, pendingKey } from '../net-worth/pending'
+import type { PendingDoc } from '../net-worth/pending'
 import type { Sale } from '../net-worth/sales'
 import { mapsLookup, sessionStoryLookup } from './lookups/session-story'
 import { useNights } from '../session-story/store'
@@ -673,9 +676,14 @@ function loadNetWorthGlance () {
 // Your sales (Net worth's trade history): the file main keeps, read on open
 // while Net worth is on. The stash reader off: no answer, no card.
 const salesList = shallowRef<Sale[] | null>(null)
+// Your Faustus listings as Net worth last read them (Sales › Listed).
+const listedDoc = shallowRef<PendingDoc | null>(null)
 function loadSales () {
   const league = AppConfig().leagueId
-  if (!league || !isWidgetTypeOn(AppConfig(), NET_WORTH_TYPE)) { salesList.value = null; return }
+  if (!league || !isWidgetTypeOn(AppConfig(), NET_WORTH_TYPE)) { salesList.value = null; listedDoc.value = null; return }
+  hostRequest('doc-get', { collection: NET_WORTH_DOCS, key: pendingKey(league) })
+    .then((d) => { listedDoc.value = isPendingDoc(d) && d.league === league ? d : null })
+    .catch(() => { listedDoc.value = null })
   hostRequest('trade-history', { league, read: 'none' })
     .then((r) => {
       const list = r && typeof r === 'object' ? (r as { league?: unknown, sales?: unknown }) : null
@@ -790,7 +798,7 @@ function flipsConfig (): ScarabFlipWidget | null {
   if (!isWidgetTypeOn(config, SCARAB_FLIP_TYPE)) return null
   return (config.widgets.find(w => w.wmType === SCARAB_FLIP_TYPE) as ScarabFlipWidget | undefined) ?? null
 }
-const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), runsLookup(runGlance.value), salesLookup(salesList.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
+const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), runsLookup(runGlance.value), salesLookup(salesList.value), listedLookup(listedDoc.value, salesList.value, (AppConfig().widgets.find(w => w.wmType === NET_WORTH_TYPE) as { staleDays?: number } | undefined)?.staleDays), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))

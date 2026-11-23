@@ -178,6 +178,7 @@ import { stopLiveRun } from './run-stop'
 import { leftOver, outsideTotals, setBefore } from './faustus'
 import type { OutsideRow } from './faustus'
 import { readFaustus } from './faustus-read'
+import { notePendingRead } from './pending-store'
 import { loadSales, ninjaEach, rates, sales } from './sales-store'
 import { saleName } from './sales'
 import type { Sale } from './sales'
@@ -286,6 +287,8 @@ async function start () {
   let extra: Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales' | 'carriedFrom'> = last && !taken ? { ...leftOver(last, sales.value, rates.value), carriedFrom: last.id } : {}
   try {
     const read = await readFaustus(league, 0)
+    // The same read keeps Sales › Listed up to date (pending-store.ts).
+    notePendingRead(league, read).catch(() => {})
     const after = read.listings.filter(l => l.at > at)
     extra = { ...extra, startListings: read.listings.filter(l => l.at <= at).map(l => l.id), ...(after.length ? { faustus: { at: read.at, listings: after } } : {}) }
   } catch (e) {

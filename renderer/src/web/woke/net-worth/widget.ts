@@ -43,10 +43,16 @@ export interface NetWorthWidget extends Widget {
   layout?: PanelLayout
   // What the window shows: your stash (default) or your sales (pick C), and
   // the Sales view's range.
-  view?: 'holdings' | 'sales' | 'runs'
+  view?: 'holdings' | 'sales' | 'listed' | 'runs'
   salesRange?: SaleRange
   // The Sales table's sort (default When, newest first).
   salesSort?: SaleSort
+  // A listing unsold this many days counts as stale (default 3).
+  staleDays?: number
+  // Listings refresh on entering your hideout, at most every 30 min (undefined: on).
+  listedAuto?: boolean
+  // Your Faustus listings count in the total (undefined: yes).
+  countListed?: boolean
 }
 
 export type Section = 'chart' | 'perHour' | 'numbers' | 'moves' | 'changes' | 'sold' | 'where' | 'tabs'

@@ -114,3 +114,4 @@
 - Website: a new Profit section shows how stash reads, map times, trade history and strategy runs add up to profit per map and per hour, with a short clip.
 - README: clicking a picture opens it full screen on the website (GitHub itself only shows the raw file).
 - Price check: the listed time's age colour now shows in the Classic listings view and on Currency Exchange (bulk) offers too, not only in Improved.
+- Net worth: a new Listed tab shows what you have listed at Faustus and haven't sold yet, with what it's worth, a suggested price from poe.ninja, and how long each has sat. Listings unsold for 3+ days (you can change that) show as a count on the dock icon. The list refreshes itself when you enter your hideout, at most every 30 min (a switch on the tab), your listings now count in your net worth total, and Ctrl+Space answers "listed".
