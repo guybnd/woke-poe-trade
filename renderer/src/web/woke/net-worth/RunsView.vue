@@ -52,7 +52,7 @@
           <div :class="$style.colHead"><span :class="$style.colTitle">Out</span><span class="w-num w-down">{{ outSum > 0 ? '−' : '' }}{{ amount(outSum) }}<Coin :chaos="!divine" /></span>
             <span v-if="totals.costPerMapChaos != null" class="w-dim w-num text-xs" title="Typed costs, plus maps, scarabs and fragments used up, per map">{{ amount(totals.costPerMapChaos) }} a map</span></div>
           <RunRow v-for="c in shownRun.costs" :key="c.id" :name="c.name" :tip="tipOf(c.key, c.name)" :count="c.qty" :each="c.unitChaos" :chaos="lineCost(c, totals.maps)" sign="−" :sub="costSub(c)" :divine="divine" :bought="c.bought ?? null" :can-leave-out="false" removable data-run-cost
-            @edit="setCost(c.id, { qty: $event.count, unitChaos: $event.each, bought: $event.bought ?? undefined })" @remove="removeCost(c.id)" />
+            @edit="editCost(c.id, $event)" @remove="removeCost(c.id)" />
           <RunRow v-for="o in shownRun.once" :key="o.id" :name="o.name" :tip="tipOf(null, o.name)" :count="null" :chaos="o.chaos" sign="−" sub="once" :divine="divine" :editable="false" :can-leave-out="false" removable @remove="removeOnce(o.id)" />
           <RunRow v-for="m in manualOut" :key="m.id" :icon="m.icon" :name="m.name" :tip="tipOf(m.key ?? null, m.name, m.count)" :count="m.count" :chaos="m.count * m.each" :each="m.each" sign="−" sub="added" :divine="divine" :can-leave-out="false" removable
             @edit="editManual(m.id, $event)" @remove="removeManual(m.id)" />
@@ -192,7 +192,7 @@ const editOf = (key: string) => shownRun.value?.edits?.[key]
 const isOut = (key: string) => editOf(key)?.out === true
 const isEdited = (key: string) => { const e = editOf(key); return e != null && (e.count != null || e.each != null) }
 function leaveOut (key: string, out: boolean) { edit(r => setEdit(r, key, { out })) }
-function editRow (key: string, v: { count: number, each: number }) { edit(r => setEdit(r, key, { count: v.count, each: v.each })) }
+function editRow (key: string, v: { count?: number, each?: number }) { edit(r => setEdit(r, key, { ...(v.count != null ? { count: v.count } : {}), ...(v.each != null ? { each: v.each } : {}) })) }
 function resetRow (key: string) { edit(r => setEdit(r, key, { count: undefined, each: undefined })) }
 const tallyVal = (r: TallyRow) => tallyValue(r.line, editOf(rowKey.tally(r.key)))
 const tallyCount = (r: TallyRow) => editOf(rowKey.tally(r.key))?.count ?? Math.abs(r.net)
@@ -203,7 +203,7 @@ function addManual (side: 'in' | 'out', l: AddedLine) {
   const m: ManualLine = { id: `m${Date.now().toString(36)}${(manualSeq++).toString(36)}`, name: l.name, key: l.key, ...(l.icon ? { icon: l.icon } : {}), count: l.count, each: l.each, side }
   edit(r => ({ ...r, manual: [...(r.manual ?? []), m] }))
 }
-function editManual (id: string, v: { count: number, each: number }) { edit(r => ({ ...r, manual: (r.manual ?? []).map(m => m.id === id ? { ...m, count: v.count, each: v.each } : m) })) }
+function editManual (id: string, v: { count?: number, each?: number }) { edit(r => ({ ...r, manual: (r.manual ?? []).map(m => m.id === id ? { ...m, count: v.count ?? m.count, each: v.each ?? m.each } : m) })) }
 function removeManual (id: string) { edit(r => ({ ...r, manual: (r.manual ?? []).filter(m => m.id !== id) })) }
 const inSum = computed(() => rows.value.came.reduce((s, r) => s + Math.max(0, tallyVal(r)), 0) + manualIn.value.reduce((s, m) => s + m.count * m.each, 0))
 const outSum = computed(() => {
@@ -226,6 +226,7 @@ const profitTitle = computed(() => {
   if (t.beforeChaos) parts.push(`sold from before the run −${amount(t.beforeChaos)}`)
   if (t.editChaos) parts.push(`your edits ${signed(t.editChaos)}`)
   if (t.manualChaos) parts.push(`added by hand ${signed(t.manualChaos)}`)
+  if (outside.value.leftOutCollectedChaos) parts.push(`left-out sales collected −${amount(outside.value.leftOutCollectedChaos)}`)
   return parts.join(', ') + '. Profit counts from each stash read.'
 })
 
@@ -332,6 +333,9 @@ function edit (fn: (r: Run) => Run) {
 }
 function setCost (id: string, patch: Partial<CostLine>) {
   edit(r => ({ ...r, costs: r.costs.map(c => { if (c.id !== id) return c; const n = { ...c, ...patch }; if (n.bought == null) delete n.bought; return n }) }))
+}
+function editCost (id: string, v: { count?: number, each?: number, bought?: number | null }) {
+  setCost(id, { ...(v.count != null ? { qty: v.count } : {}), ...(v.each != null ? { unitChaos: v.each } : {}), ...(v.bought !== undefined ? { bought: v.bought ?? undefined } : {}) })
 }
 function removeCost (id: string) { edit(r => ({ ...r, costs: r.costs.filter(c => c.id !== id) })) }
 function removeOnce (id: string) { edit(r => ({ ...r, once: r.once.filter(o => o.id !== id) })) }

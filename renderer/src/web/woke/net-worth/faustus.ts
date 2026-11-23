@@ -110,7 +110,8 @@ export interface OutsideRow {
   edited: boolean
 }
 
-export interface HeldRow { item: HeldItem, left: number, chaos: number, carried: boolean, leftOut: boolean, edited: boolean }
+// `left`: with your edit; `read`: as the stash, listings and sales say.
+export interface HeldRow { item: HeldItem, left: number, read: number, chaos: number, carried: boolean, leftOut: boolean, edited: boolean }
 
 export interface OutsideTotals {
   listed: OutsideRow[]
@@ -259,12 +260,13 @@ export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: R
   for (const h of held.rows) {
     const e = h.carried ? undefined : edits[rowKey.held(h.item.id)]
     const isOut = e?.out === true
-    const v = edited(e, h.left, h.left * h.item.unitChaos)
+    // Nothing left outside (stashed, listed, sold): your edit no longer applies.
+    const v = h.left > 0 ? edited(e, h.left, h.left * h.item.unitChaos) : { count: 0, chaos: 0 }
     // A carried item that came into the stash: the stash counted it, the run shouldn't.
     if (h.carried) beforeChaos += h.stashed * h.item.unitChaos
     else if (isOut) leftOutChaos += v.chaos
     else heldChaos += v.chaos
-    if (h.left > 0) heldRows.push({ item: h.item, left: v.count, chaos: v.chaos, carried: h.carried, leftOut: isOut, edited: e?.count != null || e?.each != null })
+    if (h.left > 0) heldRows.push({ item: h.item, left: v.count, read: h.left, chaos: v.chaos, carried: h.carried, leftOut: isOut, edited: e?.count != null || e?.each != null })
   }
   return { listed: listedRows, sold: soldRows, held: heldRows, heldChaos, listedChaos, waitingChaos, beforeChaos, faustusChaos: listedChaos + waitingChaos + heldChaos, leftOutChaos, leftOutCollectedChaos, unpriced }
 }
@@ -279,7 +281,7 @@ export function outsideSums (o: OutsideTotals) {
 // Only the run's own: what it carried in itself isn't passed on again.
 export function leftOver (run: OutsideRun, sales: readonly Sale[], rates: Rates): Pick<OutsideRun, 'carried' | 'carriedSales'> {
   const o = outsideTotals(run, sales, rates)
-  const carried = o.held.filter(h => !h.carried && h.item.unitChaos > 0).map(h => ({ ...h.item, count: h.left, tallyAdded: 0 }))
+  const carried = o.held.filter(h => !h.carried && h.item.unitChaos > 0).map(h => ({ ...h.item, count: h.read, tallyAdded: 0 }))
   const carriedSales = o.sold.filter(r => !r.collected && !r.before && inRun(run, r.item.at)).map(r => r.item.id)
   return { ...(carried.length ? { carried } : {}), ...(carriedSales.length ? { carriedSales } : {}) }
 }

@@ -61,7 +61,7 @@ const props = withDefaults(defineProps<{
   each?: number | null
 }>(), { sign: '', sub: undefined, icon: undefined, out: false, edited: false, editable: true, canLeaveOut: true, removable: false, bought: undefined, each: null })
 const emit = defineEmits<{
-  (e: 'edit', v: { count: number, each: number, bought?: number | null }): void
+  (e: 'edit', v: { count?: number, each?: number, bought?: number | null }): void
   (e: 'out', v: boolean): void
   (e: 'reset' | 'remove'): void
 }>()
@@ -79,6 +79,8 @@ const countDraft = shallowRef(0)
 const eachDraft = shallowRef(0)
 const boughtDraft = shallowRef<string | number>('')
 const countEl = shallowRef<HTMLInputElement | null>(null)
+// What the editor opened with: only what you change is saved.
+let opened = { count: 0, each: 0, bought: '' as string | number }
 const round = (n: number) => Math.round(n * 10000) / 10000
 function startEdit () {
   const n = props.count ?? 1
@@ -86,15 +88,24 @@ function startEdit () {
   countDraft.value = n
   eachDraft.value = round(toDiv(each))
   boughtDraft.value = props.bought ?? ''
+  opened = { count: countDraft.value, each: eachDraft.value, bought: boughtDraft.value }
   editing.value = true
   nextTick(() => { countEl.value?.select() }).catch(() => {})
 }
+const valid = (v: unknown) => v !== '' && v != null && Number.isFinite(Number(v)) && Number(v) >= 0
 function save () {
+  // A cleared field is a mistake, not a zero.
+  if (!valid(countDraft.value) || !valid(eachDraft.value)) return
   const count = Number(countDraft.value)
   const each = Number(eachDraft.value)
-  if (!Number.isFinite(count) || count < 0 || !Number.isFinite(each) || each < 0) return
-  const b = boughtDraft.value === '' ? null : Number(boughtDraft.value)
-  emit('edit', { count, each: fromDiv(each), ...(props.bought !== undefined ? { bought: b != null && Number.isFinite(b) && b >= 0 ? Math.round(b) : null } : {}) })
+  const v: { count?: number, each?: number, bought?: number | null } = {}
+  if (count !== opened.count) v.count = count
+  if (each !== opened.each) v.each = fromDiv(each)
+  if (props.bought !== undefined && String(boughtDraft.value) !== String(opened.bought)) {
+    const b = boughtDraft.value === '' ? null : Number(boughtDraft.value)
+    v.bought = b != null && Number.isFinite(b) && b >= 0 ? Math.round(b) : null
+  }
+  if (Object.keys(v).length) emit('edit', v)
   editing.value = false
 }
 </script>

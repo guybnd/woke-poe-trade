@@ -158,7 +158,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await cameRow.locator('[data-run-edit]').click()
     await cameRow.getByLabel(/how many/).fill('5')
     await cameRow.getByRole('button', { name: 'Save' }).click()
-    await expect(cameRow).toContainText('5 ×')
+    await expect(cameRow).toContainText('5 × The Apothecary')
     // The run hotkey: the hovered item is held outside the stash, counted
     // until the stash, a listing or a sale shows it.
     fakeApp.focusGame(true)
