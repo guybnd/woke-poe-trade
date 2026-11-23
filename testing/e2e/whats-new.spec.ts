@@ -3,6 +3,7 @@
 // dismiss each line.
 import { test, expect } from './harness'
 import { NEWS } from '../../renderer/src/web/woke/tab-bar/news'
+import { gotoTargets } from '../../renderer/src/web/woke/tab-bar/goto-targets'
 
 test('players who update get a What\'s new icon in the dock; a hover lists the lines', async ({ overlay }) => {
   await overlay.boot({ whatsNew: true })
@@ -40,3 +41,18 @@ test('a fresh install gets no What\'s new icon, even before setup is finished', 
   await overlay.page.waitForTimeout(1000)
   await expect(overlay.dockIcon('whats-new')).toHaveCount(0)
 })
+
+// Every line's Show me lands on the tab it names (tab-bar/goto.ts). Net worth's
+// lines go to its switch in Settings here, since the stash reader is off.
+for (const n of NEWS.filter(n => n.goto && n.wmType !== 'woke-net-worth')) {
+  test(`Show me on "${n.id}" opens ${n.name} on its tab`, async ({ overlay }) => {
+    await overlay.boot({ overlayActive: true, whatsNew: true })
+    const icon = overlay.dockIcon('whats-new')
+    await icon.click()
+    await overlay.page.mouse.move(5, 5)
+    const line = icon.locator('[data-whats-new-line]').filter({ hasText: n.note.replace(/^New: /, '').slice(1, 30) })
+    await line.getByRole('button', { name: 'Show me' }).click()
+    const label = gotoTargets(n.wmType)![n.goto!]
+    await expect(overlay.page.getByRole('tab', { name: label, selected: true }).first()).toBeVisible()
+  })
+}

@@ -187,6 +187,8 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, shallowRef, watch } from 'vue'
+import { useGoto } from '../tab-bar/goto'
+import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import type { ComponentPublicInstance } from 'vue'
 import { useFold } from '../ui/fold'
 import { MainProcess } from '@/web/background/IPC'
@@ -280,6 +282,15 @@ const tab = computed<string>({
   }
 })
 
+// What's new's Show me opens a tab by name (Scan only in the scanning window).
+useGoto(props.config, 'woke-map-mods', {
+  maps: () => { tab.value = 'maps' },
+  heist: () => { tab.value = 'heist' },
+  charts: () => { tab.value = 'charts' },
+  planner: () => { tab.value = 'planner' },
+  scan: () => { if (scanOwner.value) tab.value = 'scan' }
+})
+
 // Mods the player hurts themselves with vs. mods that add monsters/rewards.
 function isDanger (m: string) {
   return /^(Monsters|Players|Rare Monsters|Unique Boss|Monster |Buffs on Players|Auras)/.test(m) &&
@@ -292,17 +303,19 @@ const tabOptions = computed(() => searchOptions(profile.value, mode.value))
 const modeMods = computed(() => modsForMode(mode.value, profile.value))
 const searchHint = computed(() => `Search ${modeMods.value.length} ${MODE_NOUN[mode.value]} mods`)
 
-const modeOptions = computed(() => ([['maps', 'Maps'], ['heist', 'Heist'], ['charts', 'Charts']] as Array<[ModMode, string]>).map(([value, label]) => ({
+// Tab labels shared with What's new's Show me (tab-bar/goto.ts).
+const TAB = GOTO_TARGETS['woke-map-mods']
+const modeOptions = computed(() => (['maps', 'heist', 'charts'] as const).map(value => ({
   value,
-  label,
+  label: TAB[value],
   count: modsForMode(value, profile.value).filter(m => modRatings(profile.value, value)[m]).length
 })))
 
 const tabList = computed(() => [
   ...modeOptions.value,
-  { value: 'planner', label: 'Planner', title: 'Pick a bonus and how many T17 mods give it, get a stash and trade search' },
+  { value: 'planner', label: TAB.planner, title: 'Pick a bonus and how many T17 mods give it, get a stash and trade search' },
   ...(scanOwner.value
-    ? [{ value: 'scan', label: 'Scan', count: scanEntries.value.length || undefined, title: 'Map scan: read hovered maps on screen and see each verdict' }]
+    ? [{ value: 'scan', label: TAB.scan, count: scanEntries.value.length || undefined, title: 'Map scan: read hovered maps on screen and see each verdict' }]
     : [])
 ])
 

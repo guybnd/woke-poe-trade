@@ -273,6 +273,7 @@
 // sections flyout to switch parts off.
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
+import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import { usePoeninja } from '@/web/background/Prices'
 import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSpark, WTabs, openMenu, toast, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
@@ -785,7 +786,8 @@ function onIgnore (key: string, name: string, on: boolean) {
 }
 
 // ---------- sales (pick A: Sold section, sale lines, chart dots; pick C: the Sales view) ----------
-const VIEW_OPTIONS = [{ value: 'holdings', label: 'Holdings' }, { value: 'sales', label: 'Sales' }, { value: 'listed', label: 'Listed' }, { value: 'runs', label: 'Runs' }]
+// Labels shared with What's new's Show me (tab-bar/goto.ts).
+const VIEW_OPTIONS = (['holdings', 'sales', 'listed', 'runs'] as const).map(value => ({ value, label: GOTO_TARGETS['woke-net-worth'][value] }))
 const view = computed<string>({
   get: () => props.config.view === 'sales' || props.config.view === 'runs' || props.config.view === 'listed' ? props.config.view : 'holdings',
   set: (x) => { props.config.view = x === 'sales' || x === 'runs' || x === 'listed' ? x : 'holdings' }

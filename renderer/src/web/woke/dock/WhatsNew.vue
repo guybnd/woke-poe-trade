@@ -31,6 +31,7 @@ import { markNewsSeen, unseenNews } from '../tab-bar/news'
 import type { NewsItem } from '../tab-bar/news'
 import { WButton } from '../ui'
 import { personalOn } from '../personal'
+import { requestGoto } from '../tab-bar/goto'
 import DockItem from './DockItem.vue'
 import { openSettingsPage, showWithOverlay } from './dock'
 import type { DockMenuAction } from './dock'
@@ -70,6 +71,8 @@ function show (n: NewsItem) {
     forgetRailSlot(w.wmId)
   }
   const wmId = w.wmId
+  // On the tab the line is about (goto.ts).
+  if (n.goto) requestGoto(wmId, n.goto)
   nextTick(() => nextTick(() => {
     showWithOverlay(wm, wmId)
     pushHostConfig()
