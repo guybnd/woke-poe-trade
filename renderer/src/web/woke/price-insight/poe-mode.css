@@ -130,7 +130,9 @@
 #price-window.w-poe .w-poe-head .w-swap-icon { position: absolute; top: 0; right: 12px; margin: 0; }
 #price-window.w-poe .w-poe-head .filter-name-label { font-family: var(--w-label); font-size: calc(19px * var(--w-text-scale, 1)); letter-spacing: .03em; }
 #price-window.w-poe .w-poe-head .filter-name-chips { order: 2; flex: initial; }
-#price-window.w-poe .w-poe-head .filter-name-tiles { order: 3; max-width: none; align-items: center; justify-content: flex-start; }
+/* The numbers may shrink to the row and wrap inside it: with Links' colour tiles open they
+   are wider than the window, and a fixed-width row ran off its right edge. */
+#price-window.w-poe .w-poe-head .filter-name-tiles { order: 3; flex: 0 1 auto; min-width: 0; max-width: 100%; align-items: center; justify-content: flex-start; }
 #price-window.w-poe .w-poe-head-aside { order: 4; margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
 #price-window.w-poe .w-poe-head-aside:empty,
 #price-window.w-poe .w-poe-head-aside:not(:has(> :not(.w-swap-icon))) { display: contents; }
