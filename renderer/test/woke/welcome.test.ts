@@ -46,3 +46,14 @@ describe("what's new", () => {
     expect(other.seenNews).toEqual([first.id])
   })
 })
+
+describe('starter pins', () => {
+  it('takes the first five tools that are on', async () => {
+    const { pickStarterPins, STARTER_PIN_COUNT } = await import('@/web/woke/tab-bar/tools')
+    expect(pickStarterPins(() => true)).toHaveLength(STARTER_PIN_COUNT)
+    // Leveling: no market or map mods.
+    const leveling = pickStarterPins(t => !['woke-market-tracker', 'woke-map-mods', 'woke-atlas-strategies', 'woke-trade', 'woke-scarab-flip', 'woke-trade-searches'].includes(t))
+    expect(leveling).toEqual(['woke-pob-builds', 'woke-run-timer', 'woke-lab', 'woke-regex-library', 'woke-challenges'])
+    expect(pickStarterPins(() => false)).toEqual([])
+  })
+})

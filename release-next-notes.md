@@ -1,6 +1,7 @@
 # Next release notes
 
 - New players: the first time the overlay opens after setup, a Getting started card beside the rail shows the price check and search keys, where All tools and Settings are, and how to turn on Net worth (Got it closes it for good). The next 3 opens name the rail's buttons beside them. Players who updated don't get either.
+- New players' rail starts with 5 of their tools (from the preset they picked in setup: Market, Map mods, Atlas strategies, PoB builds and Trades for Everything). Each loads only when you click it, then stays pinned.
 - What's new, in game: All tools marks tools with something new with a NEW seal until you point at one (its note shows along the bottom), and the rail's All tools button counts them. Net worth is now listed in All tools while it's off; clicking it opens its switch in Settings.
 - Net worth chart (7D, 24H, League): after one price glitch was taken out, the refreshes that followed could draw at the glitched value until the next one (17 hours at 1,960 div for 470). Fixed.
 - Net worth chart: a fake price that lasted several refreshes no longer draws a spike. Before, only a one-refresh glitch was taken out; Rain Tempter's 98 div price lifted an hour of points to 1,947 div. Those points now show their real value (what came in and went still shows), for points already saved too.

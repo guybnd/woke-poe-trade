@@ -84,3 +84,32 @@ test('a fresh install has nothing new', async ({ overlay }) => {
   await expect(overlay.page.getByRole('button', { name: 'All tools' })).toBeVisible()
   await expect(overlay.page.locator('[data-news-count]')).toHaveCount(0)
 })
+
+// ---- Starter pins (tab-bar/tools.ts pickStarterPins) ----
+
+test('a fresh install starts with tools on the rail, loaded only once clicked', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ overlayActive: true, patch: c => { c.woke.welcome = { due: true, labelOpens: 0 } } })
+  const page = overlay.page
+  const starters = page.locator('[data-starter-pin]')
+  await expect(starters).toHaveCount(5)
+  await expect(page.locator('[data-starter-pin="woke-market-tracker"]')).toBeVisible()
+  // Nothing placed yet.
+  expect(overlay.config.widgets.some((w: { wmType: string }) => w.wmType === 'woke-market-tracker')).toBe(false)
+  await overlay.snap('starter pins on a fresh rail')
+
+  await page.locator('[data-starter-pin="woke-market-tracker"]').click()
+  await expect(page.getByRole('button', { name: 'Market', exact: true })).toHaveClass(/open/)
+  await expect(starters).toHaveCount(4)
+  await expect.poll(() => {
+    const c = fakeApp.readConfig()
+    const market = c?.widgets.find((w: { wmType: string }) => w.wmType === 'woke-market-tracker')
+    const menu = c?.widgets.find((w: { wmType: string }) => w.wmType === 'menu')
+    return !!market && menu.pinned.includes(market.wmId) && !menu.starterPins.includes('woke-market-tracker')
+  }).toBe(true)
+})
+
+test('players who updated keep their rail as it was', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true })
+  await expect(overlay.page.getByRole('button', { name: 'All tools' })).toBeVisible()
+  await expect(overlay.page.locator('[data-starter-pin]')).toHaveCount(0)
+})

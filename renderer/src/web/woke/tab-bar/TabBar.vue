@@ -36,6 +36,15 @@
       </button>
     </template>
 
+    <!-- A fresh install's first tools: placed and loaded only once clicked. -->
+    <template v-if="starterTabs.length">
+      <span v-if="!pinTabs.length" :class="$style.sep" />
+      <button v-for="tab in starterTabs" :key="tab.wmType" :data-starter-pin="tab.wmType" :class="$style.ic" :aria-label="tab.name"
+        @click="openStarter(tab.wmType)" @mouseenter="showTip(tab.name, false, $event)" @mouseleave="hideTip">
+        <tool-icon :art="tab.art" :icon="tab.icon" />
+      </button>
+    </template>
+
     <template v-if="openUnpinned.length">
       <span :class="$style.sep" />
       <button v-for="tab in openUnpinned" :key="tab.wmId" :class="[$style.ic, $style.open]" :aria-label="tab.name"
@@ -211,7 +220,7 @@ import { useI18n } from 'vue-i18n'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import ToolIcon from './ToolIcon.vue'
 import { MAX_UI_SIZE, MIN_UI_SIZE, nudgeUiSize, uiSize } from '../ui/ui-size'
-import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, toolDescription } from './tools'
+import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, pickStarterPins, toolDescription } from './tools'
 import { pastedItemText } from '../search/pasted-item'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
 import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
@@ -311,6 +320,30 @@ const pinnedTabs = computed(() => {
 const fixedTabs = computed(() => pinnedTabs.value.filter(tab => tab.iconOnly))
 const pinTabs = computed(() => pinnedTabs.value.filter(tab => !tab.iconOnly))
 const openUnpinned = computed(() => tabs.value.filter(tab => !tab.pinned && tab.open))
+
+// ---- Starter pins (a fresh install) ----
+// Picked once, when the first-run help starts, from the tools that are on.
+watch(() => AppConfig().woke?.welcome?.due, due => {
+  if (due && props.config.starterPins == null) props.config.starterPins = pickStarterPins(type => isWidgetTypeOn(AppConfig(), type))
+}, { immediate: true })
+const starterTabs = computed(() => (props.config.starterPins ?? [])
+  .filter(type => isWidgetTypeOn(AppConfig(), type) && !AppConfig().widgets.some(w => w.wmType === type))
+  .map(type => ({ wmType: type, name: typeName(type), icon: iconFor(type), art: artFor(type) })))
+// Placed by any path (its icon, the launcher, search): it becomes a real pin.
+watch(() => tabs.value.map(tab => tab.wmId).join(), () => {
+  const starters = props.config.starterPins
+  if (!starters?.length) return
+  for (const type of starters) {
+    const tab = tabs.value.find(t => t.wmType === type)
+    if (!tab) continue
+    if (!tab.pinned) props.config.pinned = [...(props.config.pinned ?? []), tab.wmId]
+    props.config.starterPins = props.config.starterPins!.filter(x => x !== type)
+  }
+})
+function openStarter (wmType: string) {
+  hideTip()
+  placeAndOpen(wmType)
+}
 
 // Two actions on one key, or a key another program holds: either way one
 // of them silently does nothing, so say so where it's always seen.
