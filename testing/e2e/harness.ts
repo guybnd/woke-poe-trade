@@ -18,7 +18,7 @@ import { createRequire } from 'module'
 import { fileURLToPath } from 'url'
 import { installTipAudit, itemNames } from './tip-audit'
 import type { TipGap } from './tip-audit'
-import { installLayoutAudit } from './layout-audit'
+import { installLayoutAudit, GATED_RULES, gateKey } from './layout-audit'
 import type { LayoutIssue } from './layout-audit'
 import crypto from 'crypto'
 
@@ -109,12 +109,17 @@ export class Overlay {
     // Every item named on screen has the item tooltip (tip-audit.ts).
     this.auditReady = page.addInitScript(installTipAudit, itemNames())
     // WOKE_LAYOUT_AUDIT=<folder> records layout faults (layout-audit.ts).
+    // WOKE_LAYOUT_GATE fails a test on a new layout fault (layout-baseline.json).
     const layoutDir = process.env.WOKE_LAYOUT_AUDIT
-    if (layoutDir) {
+    if (layoutDir || process.env.WOKE_LAYOUT_GATE) {
       this.auditReady = Promise.all([
         this.auditReady,
-        page.addInitScript(installLayoutAudit),
-        page.exposeBinding('__wokeLayoutIssue', async (_src, issue: LayoutIssue) => this.saveLayoutIssue(layoutDir, issue))
+        page.addInitScript(installLayoutAudit, { marks: !!layoutDir }),
+        page.exposeBinding('__wokeLayoutIssue', async (_src, issue: LayoutIssue) => {
+          const widget = this.config?.widgets.find((w: { wmId: number }) => `widget-${w.wmId}` === issue.widget)?.wmType ?? issue.widget
+          if (GATED_RULES.includes(issue.rule)) this.layoutFaults.push({ key: gateKey(issue.rule, widget, issue.where), text: issue.text, detail: issue.detail })
+          if (layoutDir) await this.saveLayoutIssue(layoutDir, issue)
+        })
       ])
     }
   }
@@ -157,6 +162,8 @@ export class Overlay {
   }
 
   private auditReady: Promise<unknown>
+  // Gated layout faults seen in this test (layout-audit.ts).
+  readonly layoutFaults: Array<{ key: string, text: string, detail: string }> = []
 
   // Gaps from pages a test has since left (a second boot reloads the page).
   private pastGaps: TipGap[] = []
@@ -375,6 +382,12 @@ export class Overlay {
   }
 }
 
+let baseline: Set<string> | undefined
+function layoutBaseline () {
+  baseline ??= new Set(JSON.parse(fs.readFileSync(path.join(here, 'layout-baseline.json'), 'utf-8')) as string[])
+  return baseline
+}
+
 export const test = base.extend<{ overlay: Overlay }, { fakeApp: FakeApp }>({
   fakeApp: [async ({}, use, workerInfo) => { // eslint-disable-line no-empty-pattern
     const userData = fs.mkdtempSync(path.join(os.tmpdir(), `woke-e2e-${workerInfo.workerIndex}-`))
@@ -404,6 +417,19 @@ export const test = base.extend<{ overlay: Overlay }, { fakeApp: FakeApp }>({
     // name that rightly has none.
     const gaps = (await overlay.tipGaps()).map(g => `${g.name} — in ${g.widget ?? 'the page'}: ${g.where}`)
     expect(gaps, 'items shown without the item tooltip (testing/e2e/tip-audit.ts)').toEqual([])
+    // Layout gate: no new text cut off, box out of its window, sideways
+    // scrollbar, wrapped button row or text under 11px (layout-audit.ts).
+    const gate = process.env.WOKE_LAYOUT_GATE
+    if (gate) {
+      const known = layoutBaseline()
+      const fresh = [...new Map(overlay.layoutFaults.filter(f => !known.has(f.key)).map(f => [f.key, f])).values()]
+      if (gate === 'write') {
+        for (const f of fresh) fs.appendFileSync(path.join(here, 'layout-baseline.new'), f.key + '\n')
+      } else {
+        expect(fresh.map(f => `${f.key}  "${f.text}" (${f.detail})`),
+          'new layout faults: fix them, or mark a deliberate one with data-layout-ok="<why>" (testing/e2e/layout-audit.ts)').toEqual([])
+      }
+    }
   }
 })
 

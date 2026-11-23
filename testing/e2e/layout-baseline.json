@@ -1,0 +1,8 @@
+[
+  "clipped | woke-pob-builds | div#overlay-window.overflow-hidden.relative.w-full > div#widget > div.$widget.$draggable > div.flex.gap-2.min-h-0 > div.w-surface.$panel",
+  "row-wrap | price-check | div#price-window.layout-column.shrink-0.text-gray-200 > div.grow.layout-column.min-h-0 > div.p-4.layout-column.min-h-0 > div > div.$statHead.$open",
+  "row-wrap | price-check | div.grow.layout-column.min-h-0 > div.p-4.layout-column.min-h-0 > div.filter-name > div.filter-name-main > div.filter-name-chips",
+  "row-wrap | woke-atlas-strategies | div#widget > div.$widget.$draggable > div.flex.gap-2.min-h-0 > div.w-surface.$panel > div.w-toolbar.$toolbar",
+  "row-wrap | woke-disenchant | div#overlay-window.overflow-hidden.relative.w-full > div#widget > div.$widget.$draggable > div.w-surface.$panel > div.w-toolbar.$toolbar",
+  "row-wrap | woke-market-tracker | div.w-surface.$panel > div.$body.$bodyFill > div.$split > div.$main > div.$tools"
+]

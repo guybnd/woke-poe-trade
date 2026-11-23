@@ -9,6 +9,12 @@
 // fault is seen its window is saved to <folder>/shots/ with the fault boxed in
 // red. `node tools/layout-report.mjs <folder>` groups them.
 //
+// The gate (WOKE_LAYOUT_GATE=1, on in CI): the faults in GATED_RULES fail the
+// test unless they are in layout-baseline.json, the faults the app had when
+// the gate came in. The list only shrinks: fix a fault and take its line out.
+// `WOKE_LAYOUT_GATE=write` adds the faults a run finds to the list (for a
+// fault that is right as it is, use data-layout-ok instead).
+//
 // An element (or a parent) with `data-layout-ok="<why>"` is skipped: a
 // deliberate sideways scroller, decoration that's meant to bleed.
 
@@ -25,6 +31,15 @@ export type LayoutRule =
   | 'overlap' // two texts drawn over each other
   | 'widow' // a paragraph's last line is one short word
 
+// Faults that fail a test: text cut off with nothing to show the rest, a box
+// out of its window, a sideways scrollbar, a button row on two lines, text
+// under 11px. The others are only reported by the audit.
+export const GATED_RULES: LayoutRule[] = ['clipped', 'spill', 'scroll-x', 'row-wrap', 'tiny-text']
+
+// The baseline key: the rule, the widget type and where (widget ids vary).
+export const gateKey = (rule: string, widget: string | null, where: string) =>
+  `${rule} | ${widget ?? 'page'} | ${where.replace(/#widget-\d+/g, '#widget')}`
+
 export interface LayoutIssue {
   rule: LayoutRule
   // #widget-N it was in; the harness maps it to the widget type.
@@ -39,11 +54,16 @@ export interface LayoutIssue {
 
 // Runs in the page (page.addInitScript). Calls window.__wokeLayoutIssue for
 // each new fault; the harness saves it.
-export function installLayoutAudit () {
+export function installLayoutAudit (opts: { marks: boolean } = { marks: true }) {
   type W = { __wokeLayoutIssue?: (i: LayoutIssue) => Promise<void>, __wokeLayoutScan?: () => void }
   const w = window as unknown as W
   const seen = new Set<string>()
   let busy = false
+  // A fault counts once it is still there on the next scan (at least 0.7s
+  // later), so a window mid-animation or mid-resize isn't reported.
+  let before = new Set<string>()
+  let now = new Set<string>()
+  let confirm: ReturnType<typeof setTimeout> | undefined
 
   const CONTROL = 'button, a[href], [role="button"], input:not([type="hidden"]), select, .w-btn, .w-chip, .w-seg'
 
@@ -69,7 +89,8 @@ export function installLayoutAudit () {
     el.closest('[data-w-panel], [role="tooltip"], [role="menu"], [role="dialog"], [id^="widget-"]')
 
   const skip = (el: Element) => {
-    if (el.closest('[data-layout-audit], script, style, svg, option, select, textarea')) return true
+    // .sr-only: text for screen readers, drawn in a 1px box on purpose.
+    if (el.closest('[data-layout-audit], script, style, svg, option, select, textarea, .sr-only')) return true
     const ok = el.closest('[data-layout-ok]')
     return !!ok && !!ok.getAttribute('data-layout-ok')?.trim()
   }
@@ -86,6 +107,8 @@ export function installLayoutAudit () {
     const text = textOf(el)
     const key = `${rule}|${where}|${text}`
     if (seen.has(key)) return
+    now.add(key)
+    if (!before.has(key)) return
     seen.add(key)
     const frame = frameOf(el)
     const issue: LayoutIssue = {
@@ -108,6 +131,7 @@ export function installLayoutAudit () {
     try {
       while (queue.length) {
         const issue = queue.shift()!
+        if (!opts.marks) { try { await w.__wokeLayoutIssue(issue) } catch {} continue }
         // Box the fault in red for the screenshot, then take it away.
         const mark = document.createElement('div')
         mark.setAttribute('data-layout-audit', '')
@@ -140,6 +164,8 @@ export function installLayoutAudit () {
 
   const scan = () => {
     if (!document.body || busy) return
+    clearTimeout(confirm)
+    now = new Set()
     const vw = window.innerWidth
     const vh = window.innerHeight
     const all = document.body.querySelectorAll('*')
@@ -252,6 +278,10 @@ export function installLayoutAudit () {
         }
       }
     }
+    // Faults seen for the first time get a second look.
+    const fresh = [...now].some(k => !before.has(k) && !seen.has(k))
+    before = now
+    if (fresh) confirm = setTimeout(() => { last = Date.now(); scan() }, 700)
     flush()
   }
 

@@ -246,6 +246,8 @@ jobs:
       working-directory: ./testing
       env:
         SCOPE: ${{ needs.changes.outputs.e2e }}
+        # New layout faults fail the test (testing/e2e/layout-audit.ts).
+        WOKE_LAYOUT_GATE: '1'
     - name: Upload this part's report
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

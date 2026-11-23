@@ -69,6 +69,15 @@ and `WOKE_TEXT_SCALE=125` run the tests on a bigger screen or with bigger
 text. A deliberate exception takes `data-layout-ok="<why>"`
 (`e2e/layout-audit.ts`).
 
+Layout gate: in CI (`WOKE_LAYOUT_GATE=1`) a test fails on a new layout fault
+of the worst kinds: text cut off with nothing to show the rest, a box out of
+its window, a sideways scrollbar, a button row on two lines, text under 11px.
+A fault only counts if it's still there 0.7s later, so animations don't trip
+it. The faults the app already had are in `e2e/layout-baseline.json`; that
+list only shrinks, so take a line out when you fix it. Fix a new fault, or
+mark a deliberate one with `data-layout-ok`. `WOKE_LAYOUT_GATE=write` writes
+what a run finds to `e2e/layout-baseline.new` instead of failing.
+
 ## Fixtures
 
 - `client-logs/`: Client.txt excerpts. Real ones are best: copy the lines

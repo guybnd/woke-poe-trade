@@ -451,3 +451,40 @@ test("a unique's details: variants, Foulborn kinds with what they replace, and i
   await expect(panel.getByText('Majestic Plate · Level 53', { exact: false })).toBeVisible()
   await overlay.snap('search-unique-details-utula')
 })
+
+test('the palette resizes from its corner, adding room, and keeps its size', async ({ overlay }) => {
+  await overlay.boot(bootOptions())
+  await overlay.pressHotkey(SEARCH_KEY)
+  const palette = overlay.widget('woke-search')
+  const panel = palette.locator('[data-w-panel]')
+  await expect(palette.getByRole('textbox', { name: 'Search', exact: true })).toBeVisible()
+  const before = (await panel.boundingBox())!
+  const font = await palette.locator('[data-search-palette]').evaluate(el => getComputedStyle(el).fontSize)
+  const grip = panel.locator('[title^="Drag to resize"]').last()
+  const g = (await grip.boundingBox())!
+  const page = overlay.page
+  await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(g.x + 120, g.y + 80, { steps: 6 })
+  await page.mouse.up()
+  const after = (await panel.boundingBox())!
+  expect(after.width).toBeGreaterThan(before.width + 60)
+  expect(after.height).toBeGreaterThan(before.height + 40)
+  // More room, not bigger text.
+  expect(await palette.locator('[data-search-palette]').evaluate(el => getComputedStyle(el).fontSize)).toBe(font)
+  await overlay.snap('search-resized')
+
+  // Closed and opened again, it keeps the size.
+  await page.keyboard.press('Escape')
+  await expect(panel).toBeHidden()
+  await overlay.pressHotkey(SEARCH_KEY)
+  await expect(panel).toBeVisible()
+  const again = (await panel.boundingBox())!
+  expect(Math.abs(again.width - after.width)).toBeLessThan(2)
+  expect(Math.abs(again.height - after.height)).toBeLessThan(2)
+
+  // Right-click, Reset size: back to where it started.
+  await palette.locator('[data-search-palette] [class*="detail"]').first().click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Reset size' }).click()
+  await expect.poll(async () => Math.round((await panel.boundingBox())!.width)).toBe(Math.round(before.width))
+})
