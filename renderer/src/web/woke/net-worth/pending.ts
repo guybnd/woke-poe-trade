@@ -28,6 +28,8 @@ export interface PendingDoc {
 }
 
 export const pendingKey = (league: string) => `${league}-pending`
+// First times kept for listings past the newest 100.
+const MAX_KEPT = 500
 
 export { DEFAULT_STALE_DAYS, DAY_MS }
 
@@ -44,6 +46,13 @@ export function mergeRead (prev: PendingDoc | null, league: string, read: Faustu
   const old = prev?.league === league ? prev : null
   if (old && read.at < old.readAt) return old
   const firstSeen: Record<string, number> = {}
+  // A read cut at 100 listings didn't see the older ones: they keep their
+  // first time, so a reprice that brings one back doesn't make it new.
+  if (read.more && old) {
+    const oldest = read.listings.reduce((m, l) => Math.min(m, l.at), Infinity)
+    const kept = Object.entries(old.firstSeen).filter(([, at]) => at < oldest).sort((a, b) => b[1] - a[1]).slice(0, MAX_KEPT)
+    for (const [id, at] of kept) firstSeen[id] = at
+  }
   for (const l of read.listings) {
     const was = old?.firstSeen[l.id]
     firstSeen[l.id] = was != null && was < l.at ? was : l.at

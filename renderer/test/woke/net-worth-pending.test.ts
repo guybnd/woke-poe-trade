@@ -29,6 +29,15 @@ describe('pending sales', () => {
     expect(mergeRead(next, 'L', { at: T0 - D, listings: [] })).toBe(next)
   })
 
+  it('a read cut at 100 keeps the first times of older listings it did not see', () => {
+    const first = mergeRead(null, 'L', { at: T0, listings: [item('old', T0 - 5 * D, 1), item('new', T0 - H, 1)] })
+    const cut = mergeRead(first, 'L', { at: T0 + H, listings: [item('new', T0 - H, 1)], more: true })
+    expect(cut.firstSeen.old).toBe(T0 - 5 * D)
+    // The old one repriced comes back: still 5 days old.
+    const back = mergeRead(cut, 'L', { at: T0 + 2 * H, listings: [item('old', T0 + 2 * H, 1)] })
+    expect(back.firstSeen.old).toBe(T0 - 5 * D)
+  })
+
   it('drops sold items, flags stale ones and sums the asking prices', () => {
     const doc = mergeRead(null, 'L', { at: T0, listings: [item('a', T0 - 4 * D, 2, 'divine'), item('b', T0 - H, 50), item('c', T0 - 5 * D, 30)] })
     // c sold after it was listed; an older sale of the same id (relisted) doesn't count.

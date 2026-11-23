@@ -1,6 +1,6 @@
 <template>
   <WPanel size-key="net-worth" :title="config.wmTitle || 'Net worth'" icon="divine" width="44rem" max-height="85vh"
-    :hotkey="config.hotkey" :busy="view === 'sales' ? salesReading : view === 'listed' ? pendingReading : status?.running === true" :stale="view === 'sales' ? !!salesError : !!status?.error && !!v">
+    :hotkey="config.hotkey" :busy="view === 'sales' ? salesReading : view === 'listed' ? pendingReading : status?.running === true" :stale="view === 'sales' ? !!salesError : view === 'listed' ? false : !!status?.error && !!v">
     <template #actions>
       <!-- The read's age is in the footer: beside the title it ran into the game look's plaque. -->
       <WButton v-if="view === 'listed'" size="sm" icon="fas fa-sync-alt" :disabled="pendingReading || !salesLeague" title="Read your Faustus listings: one trade search" @click="refreshListed">Refresh</WButton>
@@ -823,7 +823,11 @@ const listedWorth = computed(() => props.config.countListed === false ? 0 : list
 const totalTitle = computed(() => {
   const stash = v.value?.chaos ?? 0
   const lines = [`${inChaos(stash + listedWorth.value)}`, `Stash ${div(stash)} ${unit.value} · liquid ${div(liquid.value)} ${unit.value}`]
-  if (listedWorth.value) lines.push(`At Faustus ${div(listedWorth.value)} ${unit.value} (${listed.value.count} unsold)`)
+  if (listedWorth.value) {
+    lines.push(`At Faustus ${div(listedWorth.value)} ${unit.value} (${listed.value.count} unsold)`)
+    // A sale shows in your trade history only at the next sales read.
+    lines.push('A listing that sold and was collected counts twice until your sales are read again')
+  }
   return lines.join('\n')
 })
 const listedTitle = computed(() => {

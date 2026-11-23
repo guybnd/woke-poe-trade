@@ -6,6 +6,7 @@ import { NINJA_CURRENCY, saleName } from '../../net-worth/sales'
 import type { Rates, Sale } from '../../net-worth/sales'
 import { ageText, pendingRows, pendingTotals, sortPending } from '../../net-worth/pending'
 import type { PendingDoc, PendingRow } from '../../net-worth/pending'
+import { saleTip } from '../../net-worth/sale-tip'
 import type { Lookup, LookupCard, LookupRow } from './types'
 
 const WORDS = ['listed', 'listings', 'my listings', 'pending', 'pending sales', 'unsold', 'faustus listings']
@@ -18,7 +19,9 @@ function wantsTotals (query: string): boolean {
 function row (r: PendingRow): LookupRow {
   const l = r.item
   const label = `${saleName(l)} · ${ageText(r.ageMs)}`
-  const item = { name: l.name || l.typeLine, ...(l.name ? { type: l.typeLine } : {}) }
+  // The same tooltip as the Listed tab's row (gear with its own mods).
+  const tip = saleTip(l)
+  const item = { name: tip.name, ...(tip.type ? { type: tip.type } : {}), ...(tip.content ? { content: tip.content } : {}) }
   return r.chaos == null
     ? { label, value: `${l.price.amount} ${l.price.currency}`, item }
     : { label, chaos: r.chaos, item }
@@ -48,7 +51,7 @@ export function listedLookup (doc: PendingDoc | null, sales: Sale[] | null, stal
         icon: 'fas fa-store',
         sections: [
           { rows: [{ label: `Asking · ${t.count}`, chaos: t.askChaos }, ...(t.stale ? [{ label: `Stale · ${t.stale}`, chaos: t.staleChaos }] : [])] },
-          { label: 'Longest unsold', rows: rows.slice(0, 6).map(row) }
+          { label: 'Longest unsold', rows: [...rows].sort((a, b) => a.firstAt - b.firstAt).slice(0, 6).map(row) }
         ],
         actions: [{ label: 'Open Net worth', tool: NET_WORTH_TYPE }]
       })

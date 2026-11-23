@@ -13,6 +13,9 @@ export interface PendingGlance { league: string, readAt: number, items: Array<[i
 export const pendingGlanceKey = (league: string) => `${league}-pending-glance`
 // The latest glance: the shell loads it, a listings read replaces it.
 export const listedGlance = shallowRef<PendingGlance | null>(null)
+// The window's sales (sales-store.ts) once it has them, so a Refresh there
+// updates the icon's count too.
+export const keptSales = shallowRef<{ league: string, sales: ReadonlyArray<{ id: string, at: number }> } | null>(null)
 
 export function isPendingGlance (x: unknown): x is PendingGlance {
   return x != null && typeof x === 'object' && typeof (x as PendingGlance).league === 'string' &&
