@@ -51,6 +51,13 @@ test('a listing shows tiers, rolls and its numbers on hover', async ({ overlay }
   await expect(tip).toContainText('84%')
   await expect(tip).toContainText('pDPS 411')
   await expect(tip).toContainText('at 20% quality')
+  // The first tooltip grows as its mod groups load: it's placed again, so it
+  // stays on screen (it ran off the bottom at 1080p).
+  await expect.poll(async () => {
+    const b = await tip.boundingBox()
+    const vh = overlay.page.viewportSize()!.height
+    return b != null && b.y >= 0 && b.y + b.height <= vh
+  }).toBe(true)
   await overlay.snap('listing tooltip weapon')
   // Every line that rolls has an underline, filled to its roll.
   await expect(tip.locator('i i')).toHaveCount(5)
