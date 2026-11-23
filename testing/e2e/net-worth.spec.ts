@@ -139,10 +139,26 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await came.hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('The Apothecary')
     await overlay.page.mouse.move(0, 0)
-    await panel.getByLabel('Cost item').fill('Strand Map')
-    await panel.getByRole('button', { name: 'Per map', exact: true }).click()
-    await expect(card.getByLabel('Strand Map per map')).toHaveValue('1')
+    // A cost by hand, per map (Out column).
+    await card.locator('[data-run-out] [data-run-add]').click()
+    await card.getByLabel('Add a cost: item').fill('Strand Map')
+    await card.getByLabel('Add a cost: price each').fill('1')
+    await card.getByRole('button', { name: 'Per map', exact: true }).click()
+    await expect(card.locator('[data-run-cost]')).toContainText('Strand Map')
+    // A long shot: left out, then counted again.
+    const cameRow = card.locator('[data-run-came]').first()
+    await cameRow.hover()
+    await cameRow.locator('[data-run-leave-out]').click()
+    await expect(panel.locator('[data-run-left-out]')).toBeVisible()
     await overlay.snap('net worth strategy run')
+    await cameRow.locator('[data-run-leave-out]').click()
+    await expect(panel.locator('[data-run-left-out]')).toHaveCount(0)
+    // Your count on a row.
+    await cameRow.hover()
+    await cameRow.locator('[data-run-edit]').click()
+    await cameRow.getByLabel(/how many/).fill('5')
+    await cameRow.getByRole('button', { name: 'Save' }).click()
+    await expect(cameRow).toContainText('5 ×')
     // The run hotkey: the hovered item is held outside the stash, counted
     // until the stash, a listing or a sale shows it.
     fakeApp.focusGame(true)
@@ -186,7 +202,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const listed = panel.locator('[data-run-listed]')
     await expect(listed).toHaveCount(1)
     await expect(listed).toContainText('Mageblood')
-    await expect(panel.locator('[data-run-total]')).toContainText('Outside the stash')
+    await expect(panel.locator('[data-run-total]')).toContainText('With Faustus')
     await listed.getByText('Mageblood').hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('Mageblood')
     await overlay.page.mouse.move(0, 0)

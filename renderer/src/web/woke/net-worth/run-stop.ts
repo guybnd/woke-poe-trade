@@ -4,7 +4,7 @@
 // the Runs view (which hands its own in) isn't open.
 import { AppConfig } from '@/web/Config'
 import { toast } from '../ui/layer'
-import { outsideTotals } from './faustus'
+import { outsideSums, outsideTotals } from './faustus'
 import { readFaustus } from './faustus-read'
 import { editRun, loadRuns, runsDoc, setOutside, stopRun } from './run-store'
 import { loadSales, rates, sales } from './sales-store'
@@ -28,7 +28,7 @@ export async function stopLiveRun (league: string, points: readonly LedgerPoint[
     // The league switched meanwhile: the runs doc is the other league's now.
     const cur = AppConfig().leagueId
     if (cur && cur !== league) { toast('League changed: the run was not stopped'); return }
-    const mine = (x: Run): Outside => { const o = outsideTotals(x, sales.value, rates.value); return { beforeChaos: o.beforeChaos, faustusChaos: o.faustusChaos } }
+    const mine = (x: Run): Outside => outsideSums(outsideTotals(x, sales.value, rates.value))
     const was = setOutside(mine)
     try { await stopRun(league, points, divine, r.id, at) } finally {
       // The Runs view opened or closed meanwhile: its hook stands.

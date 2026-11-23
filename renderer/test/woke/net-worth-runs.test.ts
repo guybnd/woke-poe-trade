@@ -112,3 +112,27 @@ describe('maps and the saved doc', () => {
     expect(cleanDoc({ live: { id: 1 }, done: [run(), 'x'] }).done).toHaveLength(1)
   })
 })
+
+describe('your edits (long shots, counts, prices, added by hand)', () => {
+  const tally = { Mirror: { name: 'Mirror', icon: '', added: 1, removed: 0, addedChaos: 4000, removedChaos: 0 }, Map: { name: 'Map', icon: '', added: 0, removed: 10, addedChaos: 0, removedChaos: 100 } }
+  const points = [point(T0 + M, 3900)]
+  it('a stash item left out comes off profit, and shows as left out', () => {
+    const t = runTotals(run({ tally, edits: { 'tally:Mirror': { out: true } } }), points, 10, T0 + H)
+    expect(t.profitChaos).toBe(-100)
+    expect(t.leftOutChaos).toBe(4000)
+  })
+  it('a used-up item left out adds its cost back', () => {
+    expect(runTotals(run({ tally, edits: { 'tally:Map': { out: true } } }), points, 10, T0 + H).profitChaos).toBe(4000)
+  })
+  it('your count and price replace what the stash says, keeping the sign', () => {
+    expect(runTotals(run({ tally, edits: { 'tally:Mirror': { each: 3000 } } }), points, 10, T0 + H).profitChaos).toBe(2900)
+    expect(runTotals(run({ tally, edits: { 'tally:Map': { count: 5 } } }), points, 10, T0 + H).profitChaos).toBe(3950)
+    expect(runTotals(run({ tally, edits: { 'tally:Map': { count: 5 } } }), points, 10, T0 + H, new Set(['Map'])).costPerMapChaos).toBe(5)
+  })
+  it('items added by hand: in adds, out takes off', () => {
+    const manual = [{ id: 'a', name: 'Headhunter', count: 1, each: 1000, side: 'in' as const }, { id: 'b', name: 'Scarab', count: 10, each: 5, side: 'out' as const }]
+    const t = runTotals(run({ tally, manual }), points, 10, T0 + H)
+    expect(t.manualChaos).toBe(950)
+    expect(t.profitChaos).toBe(4850)
+  })
+})

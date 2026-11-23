@@ -7,8 +7,8 @@
 // stash can't see, like maps bought into the inventory. A typed line takes
 // over its item: that item's own stash change is left out, so it never
 // counts twice. Pure: no Vue, no IO.
-import { arrivalsOf } from './faustus'
-import type { Arrival, FaustusRead, HeldItem, SaleMark } from './faustus'
+import { arrivalsOf, edited, rowKey } from './faustus'
+import type { Arrival, FaustusRead, HeldItem, RowEdit, SaleMark } from './faustus'
 import type { LedgerPoint } from './ledger'
 import type { StashDiff } from './valuation'
 
@@ -73,13 +73,21 @@ export interface Run {
   carriedSales?: string[]
   // The run those came from (it carries over once).
   carriedFrom?: string
+  // Your edits on rows (faustus.ts rowKey): left out, count, price.
+  edits?: Record<string, RowEdit>
+  // Items you added by hand: came in (in) or went out (out).
+  manual?: ManualLine[]
 }
+
+export interface ManualLine { id: string, name: string, key?: string | null, icon?: string, count: number, each: number, side: 'in' | 'out' }
 
 export interface RunFinal { profitChaos: number, maps: number, perMapChaos: number | null, perHourChaos: number | null, faustusChaos?: number }
 
 // Outside the stash (faustus.ts outsideTotals): sales of items from before
 // the run that were collected come off profit; the Faustus line is apart.
-export interface Outside { beforeChaos: number, faustusChaos: number }
+// `leftOutChaos`: left-out sales whose currency the stash counted (off profit);
+// `leftOutShownChaos`: everything left out outside the stash (shown only).
+export interface Outside { beforeChaos: number, faustusChaos: number, leftOutChaos?: number, leftOutShownChaos?: number }
 
 // What a run's view and the dock icon show.
 export interface RunTotals {
@@ -96,6 +104,12 @@ export interface RunTotals {
   faustusChaos: number
   // profit + faustus
   totalChaos: number
+  // Left out of the run (long shots): items that came in, listings, holds
+  // and sales you marked. Shown apart; none of it counts.
+  leftOutChaos: number
+  // Your edits on stash rows, and items added by hand (in minus out).
+  editChaos: number
+  manualChaos: number
   maps: number
   perMapChaos: number | null
   // What a map costs: typed lines, plus what the stash says was used up of
@@ -175,13 +189,26 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], maps: numbe
   const costChaos = run.costs.reduce((s, c) => s + lineCost(c, maps), 0)
   const onceChaos = run.once.reduce((s, o) => s + Math.max(0, o.chaos), 0)
   const beforeChaos = outside.beforeChaos
-  const profitChaos = stashChaos - takenOverChaos - costChaos - onceChaos - beforeChaos
+  // Your edits on stash rows (count, price, left out) change what they add.
+  let editChaos = 0
+  let leftOutStash = 0
+  for (const [k, t] of Object.entries(run.tally)) {
+    const e = run.edits?.[rowKey.tally(k)]
+    if (!e || typedKeys.has(k)) continue
+    const was = netOf(t)
+    const now = tallyValue(t, e)
+    editChaos += now - was
+    if (e.out) leftOutStash += Math.abs(was)
+  }
+  const manualChaos = (run.manual ?? []).reduce((s, m) => s + (m.side === 'in' ? 1 : -1) * Math.max(0, m.count) * Math.max(0, m.each), 0)
+  const leftOutChaos = leftOutStash + (outside.leftOutShownChaos ?? 0)
+  const profitChaos = stashChaos - takenOverChaos - costChaos - onceChaos - beforeChaos + editChaos + manualChaos - (outside.leftOutChaos ?? 0)
   const faustusChaos = outside.faustusChaos
   // Used up from the stash: map-cost items that went down, not typed.
   let usedChaos = 0
   for (const [k, t] of Object.entries(run.tally)) {
     if (typedKeys.has(k) || !mapCostKeys.has(k)) continue
-    const net = netOf(t)
+    const net = tallyValue(t, run.edits?.[rowKey.tally(k)])
     if (net < 0) usedChaos += -net
   }
   const end = run.stoppedAt ?? now
@@ -195,12 +222,24 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], maps: numbe
     profitChaos,
     faustusChaos,
     totalChaos: profitChaos + faustusChaos,
+    leftOutChaos,
+    editChaos,
+    manualChaos,
     maps,
     perMapChaos: maps > 0 ? profitChaos / maps : null,
     costPerMapChaos: maps > 0 ? (costChaos + usedChaos) / maps : null,
     ms,
     perHourChaos: ms >= MIN_RATE_MS ? profitChaos / (ms / 3_600_000) : null
   }
+}
+
+// A stash row's value with your edit: signed as it went (in +, used up −).
+export function tallyValue (t: TallyLine, e: RowEdit | undefined): number {
+  const was = netOf(t)
+  if (!e) return was
+  if (e.out) return 0
+  const n = Math.abs(t.added - t.removed)
+  return Math.sign(was || 1) * edited(e, n, Math.abs(was)).chaos
 }
 
 export interface TallyRow { key: string, line: TallyLine, netChaos: number, net: number }
