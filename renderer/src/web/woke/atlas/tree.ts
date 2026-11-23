@@ -22,9 +22,15 @@ function base64UrlToBytes (code: string): Uint8Array {
   return out
 }
 
+// A link pasted at the end of a sentence ("…/atlas-skill-tree/AAAA." or
+// "…#t=xyz,") takes the sentence's punctuation with it; that isn't the link's.
+export function trimLinkEnd (link: string): string {
+  return link.replace(/[.,;:!?]+$/, '')
+}
+
 // Accepts a full pathofexile.com tree link or just its code.
 export function extractTreeCode (input: string): string | null {
-  const trimmed = input.trim()
+  const trimmed = trimLinkEnd(input.trim())
   if (!trimmed) return null
   let code = trimmed
   try {

@@ -3,6 +3,7 @@
 import { NET_WORTH_TYPE } from '../../net-worth/widget'
 import { NINJA_CURRENCY, inRange, saleChaos, saleName, searchSales, totals } from '../../net-worth/sales'
 import type { Rates, Sale } from '../../net-worth/sales'
+import { saleLookupTip } from '../../net-worth/sale-tip'
 import type { Lookup, LookupCard, LookupRow } from './types'
 
 const WORDS = ['sold', 'sales', 'my sales', 'sold items', 'trade history']
@@ -20,9 +21,11 @@ const when = (at: number, now: number) => {
 
 function row (s: Sale, rates: Rates, now: number): LookupRow {
   const chaos = saleChaos(s, rates)
+  // The same tooltip as the Sales tab's row.
+  const item = saleLookupTip(s)
   return chaos == null
-    ? { label: saleName(s), value: `${s.price.amount} ${s.price.currency} · ${when(s.at, now)}` }
-    : { label: `${saleName(s)} · ${when(s.at, now)}`, chaos }
+    ? { label: saleName(s), value: `${s.price.amount} ${s.price.currency} · ${when(s.at, now)}`, item }
+    : { label: `${saleName(s)} · ${when(s.at, now)}`, chaos, item }
 }
 
 // `sales`: the league's kept sales, or null with Net worth or the stash reader off.
@@ -61,6 +64,7 @@ export function salesLookup (sales: Sale[] | null): Lookup {
           id: `sales:${first.name || first.typeLine}`,
           group: 'Your sales',
           name: `Sold ${saleName(first)}`,
+          tip: saleLookupTip(first),
           sub: `${found.length === 8 ? '8+' : found.length} matching ${found.length === 1 ? 'sale' : 'sales'}, last ${when(first.at, ctx.now)}`,
           icon: first.icon || 'fas fa-coins',
           sections: [{ rows: found.map(s => row(s, rates, ctx.now)) }],

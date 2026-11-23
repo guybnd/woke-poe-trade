@@ -24,6 +24,8 @@
 // After an update, the dock lists what's new until each line is dismissed or
 // shown (tab-bar/news.ts). A fresh install has seen it all, so it never shows there.
 import { computed, inject, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { registry } from '@/web/overlay/widget-registry'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { AppConfig, pushHostConfig, saveConfigQuietly } from '@/web/Config'
 import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '../modules'
@@ -34,9 +36,16 @@ import { personalOn } from '../personal'
 import { requestGoto } from '../tab-bar/goto'
 import DockItem from './DockItem.vue'
 import { openSettingsPage, showWithOverlay } from './dock'
+import { moduleSettingsPage } from '../tab-bar/tools'
 import type { DockMenuAction } from './dock'
 
 const wm = inject<WidgetManager>('wm')!
+const { t } = useI18n()
+// The tool's name as Settings lists it (TabBar's typeName).
+function typeName (wmType: string): string {
+  const spec = registry.widgets.find(w => w.widget.type === wmType)?.widget
+  return spec?.trNameKey ? t(spec.trNameKey) : wmType
+}
 const lines = computed(() => unseenNews(AppConfig().woke))
 // "New: a Planner tab…" reads "A Planner tab…" under the tool's name.
 function sentence (note: string) {
@@ -66,8 +75,9 @@ function show (n: NewsItem) {
     return
   }
   let w = wm.widgets.value.find(w => w.wmType === n.wmType)
+  // A dock-only tool has no window: its own page in Settings, as the rail does.
   if (w?.wmFlags.includes('menu::skip')) {
-    openSettingsPage(wm, 'All modules')
+    openSettingsPage(wm, moduleSettingsPage(n.wmType, typeName))
     return
   }
   if (!w) {

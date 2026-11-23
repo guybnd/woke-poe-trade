@@ -189,6 +189,15 @@ describe('strategy folders', () => {
 })
 
 describe('guide text and costs', () => {
+  it('leaves trailing punctuation off tree links in guide text', () => {
+    const url = encodeAtlasTree([31581], {})
+    for (const p of ['.', ',', ';', ':', '!', '?']) {
+      expect(parseGuideText(`Breach juice\nTree: ${url}${p}`).treeUrl).toBe(url)
+      expect(extractTreeCode(`${url}${p}`)).toBe(extractTreeCode(url))
+      expect(decodeTree(`${url}${p}`).nodes).toEqual([31581])
+    }
+  })
+
   it('reads Thread lines', () => {
     const s = parseGuideText('Breach juice\n8x Breach Thread\nRitual Threads x4\n1x Vaal Orb')
     expect(s.threads).toEqual([{ type: 'Breach', count: 8 }, { type: 'Ritual', count: 4 }])

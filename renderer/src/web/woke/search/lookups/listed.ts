@@ -6,7 +6,7 @@ import { NINJA_CURRENCY, saleName } from '../../net-worth/sales'
 import type { Rates, Sale } from '../../net-worth/sales'
 import { ageText, pendingRows, pendingTotals, sortPending } from '../../net-worth/pending'
 import type { PendingDoc, PendingRow } from '../../net-worth/pending'
-import { saleTip } from '../../net-worth/sale-tip'
+import { saleLookupTip } from '../../net-worth/sale-tip'
 import type { Lookup, LookupCard, LookupRow } from './types'
 
 const WORDS = ['listed', 'listings', 'my listings', 'pending', 'pending sales', 'unsold', 'faustus listings']
@@ -20,8 +20,7 @@ function row (r: PendingRow): LookupRow {
   const l = r.item
   const label = `${saleName(l)} · ${ageText(r.ageMs)}`
   // The same tooltip as the Listed tab's row (gear with its own mods).
-  const tip = saleTip(l)
-  const item = { name: tip.name, ...(tip.type ? { type: tip.type } : {}), ...(tip.content ? { content: tip.content } : {}) }
+  const item = saleLookupTip(l)
   return r.chaos == null
     ? { label, value: `${l.price.amount} ${l.price.currency}`, item }
     : { label, chaos: r.chaos, item }
@@ -66,6 +65,8 @@ export function listedLookup (doc: PendingDoc | null, sales: Sale[] | null, stal
           id: `listed:${first.name || first.typeLine}`,
           group: 'Your sales',
           name: `Listed ${saleName(first)}`,
+          // The result and its heading are the item's: same tooltip as its row.
+          tip: saleLookupTip(first),
           sub: `At Faustus ${ageText(found[0].ageMs)}, asking ${first.price.amount} ${first.price.currency}`,
           icon: first.icon || 'fas fa-store',
           sections: [{ rows: found.map(row) }],

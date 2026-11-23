@@ -121,7 +121,7 @@ import SavedTree from '../shared/SavedTree.vue'
 import { usePriceText } from '../shared/price'
 import { FARMING_TYPE, strategyStats } from '../farming/farming'
 import type { FarmingWidget } from '../farming/farming'
-import { expandShortTreeLinks, extractTreeCode } from './tree'
+import { expandShortTreeLinks, extractTreeCode, trimLinkEnd } from './tree'
 import type { ShotRead } from './shot-import'
 // Not lazy: a paste right after the Import box opens must reach it.
 import ShotTray from './ShotTray.vue'
@@ -651,7 +651,7 @@ async function doImport () {
         importing.value = false
       }
       const lone = !/\s/.test(full) && extractTreeCode(full)
-      const parsed = lone ? { name: 'Imported tree', treeUrl: full } : parseGuideText(full)
+      const parsed = lone ? { name: 'Imported tree', treeUrl: trimLinkEnd(full) } : parseGuideText(full)
       const s: AtlasStrategy = { ...emptyStrategy(props.config.strategies), ...parsed, folder: into }
       if (importName.value.trim()) s.name = importName.value.trim()
       fileImported(s, [])

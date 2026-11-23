@@ -1,6 +1,7 @@
 // Log lines are in the real Client.txt's shape (see death-recap.test.ts).
 import { describe, expect, it } from 'vitest'
-import { MapLog, keepMap, npcOf, tierText, usualMapMs } from '@/web/woke/session-story/map-log'
+import { MapLog, keepMap, mapItemName, npcOf, tierText, usualMapMs } from '@/web/woke/session-story/map-log'
+import type { BaseType } from '@/assets/data/interfaces'
 import { chipLines, clampToastSize, compareMap } from '@/web/woke/session-story/chip'
 import type { MapRecord } from '@/web/woke/session-story/map-log'
 
@@ -213,5 +214,21 @@ describe('map toast', () => {
     expect(clampToastSize({ w: 5000, h: 9000 })).toEqual({ w: 960, h: 600 })
     expect(clampToastSize({ w: 512.4, h: 180.6 })).toEqual({ w: 512, h: 181 })
     expect(clampToastSize({ w: 500, h: -3 })).toEqual({ w: 500 })
+  })
+})
+
+describe('the item a map run is', () => {
+  const data: Record<string, Partial<BaseType>> = {
+    'AREA:Strand': { name: 'Strand', namespace: 'AREA' },
+    'UNIQUE:Maelström of Chaos': { name: 'Maelström of Chaos', namespace: 'UNIQUE', unique: { base: 'Map' } as BaseType['unique'] },
+    'UNIQUE:Cortex': { name: 'Cortex', namespace: 'UNIQUE', unique: { base: 'Map' } as BaseType['unique'] }
+  }
+  const lookup = (ns: BaseType['namespace'], name: string) => data[`${ns}:${name}`] ? [data[`${ns}:${name}`] as BaseType] : undefined
+
+  it('is the map base for a normal map, the unique itself for a unique map', () => {
+    expect(mapItemName('Strand', lookup)).toBe('Strand Map')
+    expect(mapItemName('Maelström of Chaos', lookup)).toBe('Maelström of Chaos')
+    expect(mapItemName('Cortex', lookup)).toBe('Cortex')
+    expect(mapItemName('Unknown Place', lookup)).toBe('Unknown Place Map')
   })
 })

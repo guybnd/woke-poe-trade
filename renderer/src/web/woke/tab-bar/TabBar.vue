@@ -220,7 +220,7 @@ import { useI18n } from 'vue-i18n'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import ToolIcon from './ToolIcon.vue'
 import { MAX_UI_SIZE, MIN_UI_SIZE, nudgeUiSize, uiSize } from '../ui/ui-size'
-import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, pickStarterPins, toolDescription } from './tools'
+import { ICON_TOOL_NAMES, moduleSettingsPage, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, pickStarterPins, toolDescription } from './tools'
 import { pastedItemText } from '../search/pasted-item'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
 import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
@@ -799,11 +799,10 @@ function turnOn (wmType: string) {
   }
 }
 // A dock-only tool has no window to open, so its settings are the way in.
-const DOCK_ONLY_PAGES: Record<string, string> = { 'woke-campaign': 'Campaign & run timer' }
 function openModuleSettings (wmType: string) {
   const settings = wm.widgets.value.find(w => w.wmType === 'settings')
   if (!settings) return
-  wm.setFlag(settings.wmId, `settings::page=${DOCK_ONLY_PAGES[wmType] ?? typeName(wmType)}`, true)
+  wm.setFlag(settings.wmId, `settings::page=${moduleSettingsPage(wmType, typeName)}`, true)
   wm.show(settings.wmId)
 }
 // Once it's mounted: its default hotkeys are set then, and whether a running

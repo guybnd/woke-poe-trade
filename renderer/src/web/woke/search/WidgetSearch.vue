@@ -1507,6 +1507,10 @@ function start (text: string) {
   query.value = text
   corrupted.value = 'any'
   chip.value = 'all'
+  // As a new query does: the same query again (an empty one, say) doesn't
+  // fire the query watch, so groups opened last time would stay open.
+  expanded.value = new Set()
+  groupsOpen.value = false
   selected.value = entries.value[0] ?? null
   wm.show(props.config.wmId)
   focusInput(true)

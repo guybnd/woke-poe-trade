@@ -14,6 +14,7 @@
 // same links, start and type order as atlas-tree.ts reads (checked 2026-11-23).
 import { encodeAtlasTree } from './atlas-tree'
 import type { AtlasTreeModel } from './atlas-tree'
+import { trimLinkEnd } from './tree'
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
 const SUM = 4
@@ -84,8 +85,10 @@ export function hypostasisToLink (model: AtlasTreeModel, link: string): string |
     // As their viewer reads it: passives only, at most MAX_PICK, and only
     // what joins the start (an old link's islands are dropped).
     const listed = long[1].split(',').filter(Boolean).map(part => {
-      const [id, c] = part.split(':').map(Number)
-      return [id, Number.isFinite(c) ? c : undefined] as Item
+      // "3:" (an empty pick) is no pick, not type 0.
+      const [id, pick] = part.split(':')
+      const c = pick ? Number(pick) : NaN
+      return [Number(id), Number.isFinite(c) ? c : undefined] as Item
     }).filter(([id]) => model.nodes.has(id) && model.nodes.get(id)!.kind !== 'mastery' && id !== model.start).slice(0, MAX_PICK)
     const want = new Map(listed)
     const reach = new Set<number>()
@@ -110,13 +113,16 @@ export function hypostasisToLink (model: AtlasTreeModel, link: string): string |
 // Every hypostasis.faith link in the text swapped for a pathofexile.com one.
 // Throws when one can't be read.
 export function rewriteHypostasisLinks (text: string, model: AtlasTreeModel | null): string {
-  return text.replace(ANY_LINK, (link) => {
+  return text.replace(ANY_LINK, (match) => {
+    // Punctuation after the link ("…#t=abc." ) is the sentence's: kept, not read.
+    const link = trimLinkEnd(match)
+    const tail = match.slice(link.length)
     if (/\/ruthless\.html/i.test(link)) throw new Error('That hypostasis.faith link is a Ruthless atlas tree; only the normal tree can be imported.')
     if (!/#[st]=/.test(link)) throw new Error('That hypostasis.faith link has no tree in it (pick passives there first, then copy the link).')
     if (!TREE_PAGE.test(link)) throw new Error('That hypostasis.faith link isn\'t one of its atlas tree pages.')
     if (!model) throw new Error('The atlas tree data is still loading. Try again in a moment.')
     const out = hypostasisToLink(model, link)
     if (!out) throw new Error('That hypostasis.faith link doesn\'t fit this league\'s atlas tree (made on an older tree, or cut short).')
-    return out
+    return out + tail
   })
 }
