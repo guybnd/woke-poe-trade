@@ -58,7 +58,15 @@ export interface PricingResult {
 
 const cache = new Cache()
 
-async function requestTradeResultList (body: TradeRequest, leagueId: string, wait = false): Promise<SearchResult> {
+/** woke: thrown, without sending, when a search's turn comes after a newer search replaced it. */
+export const BULK_SEARCH_STALE = 'Bulk search replaced by a newer one'
+
+export async function requestTradeResultList (
+  body: TradeRequest,
+  leagueId: string,
+  wait = false,
+  isCurrent?: () => boolean
+): Promise<SearchResult> {
   let data = cache.get<SearchResult>([body, leagueId])
 
   if (!data) {
@@ -70,6 +78,8 @@ async function requestTradeResultList (body: TradeRequest, leagueId: string, wai
     }
 
     await RateLimiter.waitMulti(RATE_LIMIT_RULES.EXCHANGE)
+    // woke: the player checked another item while this waited its turn: don't spend a search on it.
+    if (isCurrent && !isCurrent()) throw new Error(BULK_SEARCH_STALE)
     // A penalty can start while this request waits for its slot.
     throwIfRestricted(RATE_LIMIT_RULES.EXCHANGE)
 
@@ -152,12 +162,13 @@ export async function execBulkSearch (
   item: ParsedItem,
   filters: ItemFilters,
   have: string[],
-  opts: { accountName: string, wait?: boolean }
+  opts: { accountName: string, wait?: boolean, isCurrent?: () => boolean }
 ): Promise<Array<BulkSearch | null>> {
   const query = await requestTradeResultList(
     createTradeRequest(filters, item, have),
     filters.trade.league,
-    opts.wait
+    opts.wait,
+    opts.isCurrent
   )
 
   const offer = 0
@@ -167,8 +178,10 @@ export async function execBulkSearch (
   const resultByHave = have.map(tradeTag => {
     const resultsTag = results.filter(result => result.listing.offers[offer].exchange.currency === tradeTag)
 
+    // Only held back when divines shared the search: a chaos-only search has nothing else to show.
     const loadedOnDemand = (
       tradeTag === 'chaos' &&
+      have.length > 1 &&
       resultsTag.length < SHOW_RESULTS &&
       query.total > API_FETCH_LIMIT
     )

@@ -43,7 +43,7 @@ const props = defineProps<{
   /** poe.ninja's price each, in the same currency, to compare with (WOKEPOET-479). */
   ninja?: number | null
   /** The other currency's offers, to show next to these (WOKEPOET-487). */
-  other?: { unit: string, fair?: number, sellers?: number, failed?: boolean } | null
+  other?: { unit: string, fair?: number, sellers?: number, failed?: boolean, unsearched?: boolean } | null
   /** One divine in chaos, from poe.ninja. */
   divineInChaos?: number | null
 }>()
@@ -71,6 +71,7 @@ const otherNote = computed(() => {
   if (!other || !fair) return null
   const name = other.unit === 'c' ? 'Chaos' : 'Divine'
   if (other.failed) return `${name} offers didn't load, so this may not be the cheaper side. Click its button above to try again.`
+  if (other.unsearched) return `${name} offers weren't searched yet, so this may not be the cheaper side. Click its button above to load them.`
   if (other.fair == null || other.sellers == null) return null
   const price = amountIn(other.fair, other.unit)
   if (!rate) return `${name} offers ask ${price} each`

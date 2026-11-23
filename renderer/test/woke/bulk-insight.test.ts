@@ -1,6 +1,6 @@
 // What sellers with enough stock ask per item on the exchange.
 import { describe, expect, it } from 'vitest'
-import { buildBulkInsight, bulkAmount, pickBulkMarket } from '@/web/woke/price-insight/bulk-insight'
+import { buildBulkInsight, bulkAmount, bulkSideWaiting, pickBulkMarket } from '@/web/woke/price-insight/bulk-insight'
 import type { BulkListing } from '@/web/woke/price-insight/bulk-insight'
 
 let id = 0
@@ -123,5 +123,25 @@ describe('pickBulkMarket', () => {
     expect(pickBulkMarket(side(1, 5, 10), side(1, 5, 40), null)).toBe('xchgStable')
     expect(pickBulkMarket({ insight: null, total: null }, { insight: null, total: 3 }, 209)).toBe('xchgStable')
     expect(pickBulkMarket({ insight: null, total: 3 }, { insight: null, total: null }, 209)).toBe('xchgChaos')
+  })
+
+  it('leads with divine when the first search held the chaos side back, without needing chaos loaded', () => {
+    expect(pickBulkMarket({ insight: null, total: null }, side(1, 5, 300), 209)).toBe('xchgStable')
+    expect(pickBulkMarket({ insight: null, total: null }, { insight: null, total: 0 }, 209)).toBe('xchgStable')
+  })
+})
+
+describe('bulkSideWaiting', () => {
+  it('waits only while the side\'s own search runs', () => {
+    expect(bulkSideWaiting({ loaded: false, failed: false, loading: true })).toBe(true)
+  })
+
+  it('never waits for a side held back and not asked for (no search runs by itself)', () => {
+    expect(bulkSideWaiting({ loaded: false, failed: false, loading: false })).toBe(false)
+  })
+
+  it('stops waiting once loaded or failed', () => {
+    expect(bulkSideWaiting({ loaded: true, failed: false, loading: false })).toBe(false)
+    expect(bulkSideWaiting({ loaded: false, failed: true, loading: false })).toBe(false)
   })
 })

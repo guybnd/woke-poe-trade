@@ -132,3 +132,20 @@ export function pickBulkMarket (chaos: BulkMarketSide, stable: BulkMarketSide, d
   if (cThin !== sThin && gap < MAX_THIN_GAP) return cThin ? 'xchgStable' : 'xchgChaos'
   return cheaper
 }
+
+export interface BulkSideState {
+  /** The side's offers are in, from the first search or its own. */
+  loaded: boolean
+  failed: boolean
+  /** The side's own search is running (it only starts from a click). */
+  loading: boolean
+}
+
+/**
+ * Whether the offers table and verdict wait for this side, showing placeholders.
+ * Only while its search runs: a side the first search held back loads on a click,
+ * never by itself, so waiting for it otherwise would wait forever.
+ */
+export function bulkSideWaiting (side: BulkSideState): boolean {
+  return !side.loaded && !side.failed && side.loading
+}
