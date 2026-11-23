@@ -175,7 +175,7 @@
                 <span v-if="row.lead.isMine" class="w-pc-you">{{ t('You') }}</span>
                 <span v-else class="w-pc-age" style="text-align: left;">{{ showSeller === 'ign' ? row.lead.ign : row.lead.accountName }}</span>
               </td>
-              <td class="px-2 w-pc-age" :class="improved && row.tone && `w-pc-age-${row.tone}`">
+              <td class="px-2 w-pc-age" :class="row.tone && `w-pc-age-${row.tone}`">
                 <span v-if="!showSeller && row.lead.isMine" class="w-pc-you mr-1">{{ t('You') }}</span>
                 <span v-if="travelNote(travelState(row.lead.hideoutToken))" class="w-pc-travel-note"
                   :class="{ 'w-pc-travel-warn': travelNote(travelState(row.lead.hideoutToken))!.tone === 'warn' }"

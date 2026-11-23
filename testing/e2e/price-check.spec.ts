@@ -415,6 +415,8 @@ test('unique: improved merges same prices with a count, classic lists every list
   await setPriceView(overlay.page, 'classic')
   await expect.poll(() => rows.count()).toBeGreaterThan(merged)
   await expect(panel.locator('.w-pc-foot')).toHaveCount(0)
+  // Classic colours the listed time by age too.
+  await expect(rows.locator('td.w-pc-age:is(.w-pc-age-new, .w-pc-age-day, .w-pc-age-week, .w-pc-age-old)').first()).toBeVisible()
   await setPriceView(overlay.page, 'improved')
 
   // The toolbar fits: nothing runs past the window, the toggle's labels aren't clipped.
@@ -498,11 +500,11 @@ test('an item price check can\'t read offers its copied text to copy', async ({ 
 // search (both currencies, sorted by the raw number) then holds the chaos side
 // back; the check loads it and leads with the cheaper market (WOKEPOET-487).
 const XCHG_LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
-const xchgOffer = (id: string, currency: string, amount: number, stock: number) => ({
+const xchgOffer = (id: string, currency: string, amount: number, stock: number, ageDays = 0) => ({
   id,
   item: null,
   listing: {
-    indexed: new Date().toISOString(),
+    indexed: new Date(Date.now() - ageDays * 86400_000).toISOString(),
     account: { name: `${id}#1`, lastCharacterName: `${id}c`, online: { league: 'Testleague' } },
     offers: [{ exchange: { currency, amount, whisper: '' }, item: { currency: 'originators-exalted-orb', amount: 1, stock, id, whisper: '' } }],
     whisper: ''
@@ -523,7 +525,7 @@ async function fakeOriginatorExchange (page: Page, failChaos = 0) {
     }
     const rows = have.length > 1
       ? [...Array.from({ length: 85 }, (_, i) => xchgOffer(`d${i}`, 'divine', 1, 10 + i)), ...Array.from({ length: 15 }, (_, i) => xchgOffer(`c${i}`, 'chaos', 1, 5 + i))]
-      : Array.from({ length: 30 }, (_, i) => xchgOffer(`c${i}`, 'chaos', 1 + Math.floor(i / 10), 5 + i))
+      : Array.from({ length: 30 }, (_, i) => xchgOffer(`c${i}`, 'chaos', 1 + Math.floor(i / 10), 5 + i, i % 3 === 1 ? 10 : 0))
     return route.fulfill({
       contentType: 'application/json',
       headers: XCHG_LIMITS,
@@ -548,6 +550,9 @@ test('bulk: leads with the cheaper chaos offers when divine sellers ask 1 div ea
   await expect(each).toHaveText('1')
   await expect(each.locator('img')).toHaveAttribute('alt', 'chaos')
   expect(haves).toEqual([['divine', 'chaos'], ['chaos']])
+  // The listed time is coloured by age, as in the listings table: green for new, red past a week.
+  await expect(panel.locator('.w-pc-table td.w-pc-age.w-pc-age-new').first()).toBeVisible()
+  await expect(panel.locator('.w-pc-table td.w-pc-age.w-pc-age-old').first()).toBeVisible()
   await overlay.snap('bulk check leads with chaos offers')
   // Picking divine shows those offers, priced in div with their chaos value.
   await panel.locator('.w-pc-matched button').nth(1).click()

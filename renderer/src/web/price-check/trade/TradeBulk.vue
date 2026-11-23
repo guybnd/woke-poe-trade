@@ -76,7 +76,7 @@
                   <span v-if="result.isMine" class="w-pc-you">{{ t('You') }}</span>
                   <span v-else class="w-pc-age" style="text-align: left;">{{ showSeller === 'ign' ? result.ign : result.accountName }}</span>
                 </td>
-                <td class="px-2 w-pc-age">
+                <td class="px-2 w-pc-age" :class="bulkAgeClass(result)">
                   <span v-if="!showSeller && result.isMine" class="w-pc-you mr-1">{{ t('You') }}</span>
                   <span class="w-pc-age-inner">
                     <span :class="[$style.accountStatus, $style[result.accountStatus]]"></span>
@@ -123,6 +123,7 @@ import BulkVerdict from '@/web/woke/price-insight/BulkVerdict.vue'
 import { buildBulkInsight, pickBulkMarket } from '@/web/woke/price-insight/bulk-insight'
 import { priceView } from '@/web/woke/price-insight/view'
 import { chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
+import { ageTone } from '@/web/woke/price-insight/listing-rows'
 import '@/web/woke/price-insight/price-table.css'
 
 const slowdown = artificialSlowdown(900)
@@ -421,6 +422,12 @@ export default defineComponent({
     return {
       t,
       improved: computed(() => priceView.value === 'improved'),
+      // woke: the listed time's colour, as in the listings table.
+      bulkAgeClass: (r: PricingResult) => {
+        const at = r.indexedAt ? Date.parse(r.indexedAt) : NaN
+        const tone = Number.isNaN(at) ? null : ageTone(Math.max(0, Date.now() - at))
+        return tone ? `w-pc-age-${tone}` : undefined
+      },
       verdictSlot,
       need,
       ninjaEach,

@@ -111,3 +111,4 @@
 - Website: the feature clips play again in Chrome. Their WebM versions failed to decode there, so each clip stayed on its first frame.
 - Website: a new Profit section shows how stash reads, map times, trade history and strategy runs add up to profit per map and per hour, with a short clip.
 - README: clicking a picture opens it full screen on the website (GitHub itself only shows the raw file).
+- Price check: the listed time's age colour now shows in the Classic listings view and on Currency Exchange (bulk) offers too, not only in Improved.

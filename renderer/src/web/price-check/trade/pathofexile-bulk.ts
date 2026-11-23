@@ -45,6 +45,8 @@ interface FetchResult {
 export interface PricingResult {
   id: string
   relativeDate: string
+  /** When the offer was listed (ISO), for the age colour. */
+  indexedAt?: string
   exchangeAmount: number
   itemAmount: number
   stock: number
@@ -103,6 +105,7 @@ function toPricingResult (
   return {
     id: result.id,
     relativeDate: DateTime.fromISO(result.listing.indexed).toRelative({ style: 'short' }) ?? '',
+    indexedAt: result.listing.indexed,
     exchangeAmount: result.listing.offers[offer].exchange.amount,
     itemAmount: result.listing.offers[offer].item.amount,
     stock: result.listing.offers[offer].item.stock,
