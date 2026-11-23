@@ -134,7 +134,7 @@ describe('turn-on confirm', () => {
   it('keeps the agreed wording', () => {
     expect(COPY.confirmTitle).toBe('Turn on the stash reader?')
     expect(UNLOCKED_TOAST).toBe('Experimental settings unlocked')
-    expect(COPY.warnBody).toContain('Your login stays in the app and is never shared.')
+    expect(COPY.confirmBody).toContain('Your login stays in the app and is never shared.')
     expect(COPY.confirmBody).toContain('No bans are known')
   })
 })
@@ -163,7 +163,8 @@ describe('stash reader on and off at runtime', () => {
     const html = await renderToString(createSSRApp({ render: () => h(ModuleList, { config, showStatus: true, includeApt: true }) }))
     expect(html).toContain('Net worth')
     expect(html).toContain('data-stash-reader')
-    expect(html).not.toContain(COPY.warnTitle)
+    expect(html).toContain(COPY.descOff)
+    expect(html).not.toContain('EXP')
     expect(html).not.toContain('data-experimental')
     expect(html).not.toContain('Hide experimental')
   })
@@ -211,7 +212,7 @@ describe('stash reader on and off at runtime', () => {
     expect(preset.woke.off).toContain('market')
 
     const on = await renderToString(createSSRApp({ render: () => h(ModuleList, { config, showStatus: true, includeApt: true }) }))
-    expect(on).toContain(COPY.warnTitle)
+    expect(on).toContain(COPY.descOn)
     // Its own row, not a second plain module row.
     expect(on.match(/aria-label="Net worth"/g)).toHaveLength(1)
   }, 60_000)
