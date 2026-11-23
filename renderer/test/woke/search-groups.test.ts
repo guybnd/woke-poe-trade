@@ -67,6 +67,14 @@ describe('shapeSections', () => {
     expect(shapeSections('x', [s], { Settings: 'off' }, new Set(['Settings'])).sections[0]).toMatchObject({ hidden: 0 })
     expect(shapeSections('x', [s], undefined, new Set(['Settings'])).sections[0].entries).toHaveLength(5)
   })
+  it('leaves out a small off group too', () => {
+    expect(shapeSections('x', [{ label: 'Bosses', entries: rows('a') }], { Bosses: 'off' }, none).off).toEqual([{ label: 'Bosses', count: 1 }])
+  })
+  it('keeps the name-first order when a folded group is opened', () => {
+    const viscera = { label: 'Viscera', entries: rows('Diseased Wing', 'Bloated Gut', "Eradicator's Head", "Chaos Golem's Core") }
+    const out = shapeSections('chaos', [viscera], undefined, new Set(['Viscera'])).sections[0]
+    expect(out.entries.map(e => e.name)).toEqual(["Chaos Golem's Core", 'Diseased Wing', 'Bloated Gut', "Eradicator's Head"])
+  })
   it('drops empty groups', () => {
     expect(shapeSections('x', [{ label: 'Bosses', entries: [] }], undefined, none).sections).toEqual([])
   })

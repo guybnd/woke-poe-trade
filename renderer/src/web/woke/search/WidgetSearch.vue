@@ -191,7 +191,7 @@ import { MAP_MODS_TYPE } from '../map-mods/widget'
 import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../essence-scan/widget'
 import { RUN_TIMER_TYPE, hotkeyTarget as timerTarget } from '../campaign/run-timer'
 import { isFoulborn } from '../shared/item-identity'
-import { CHIPS, GROUP_CAP, chipOf, shapeSections } from './groups'
+import { CHIPS, GROUP_CAP, chipOf, groupMode, shapeSections } from './groups'
 import type { ChipId, GroupMode } from './groups'
 import SearchGroups from './SearchGroups.vue'
 import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, bestName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
@@ -883,10 +883,13 @@ const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: b
 // What each group shows (groups.ts): its best rows, then a "+N more" row; a
 // folded group is that one row. Groups you open stay open until the query changes.
 const expanded = shallowRef<ReadonlySet<string>>(new Set())
-watch(query, () => { expanded.value = new Set() })
-function expand (label: string, first: Entry | null) {
+watch(query, () => {
+  expanded.value = new Set()
+  groupsOpen.value = false
+})
+function expand (labels: string | string[], first: Entry | null) {
   if (first) wantEntry = e => e.id === first.id
-  expanded.value = new Set([...expanded.value, label])
+  expanded.value = new Set([...expanded.value, ...(Array.isArray(labels) ? labels : [labels])])
   focusInput()
 }
 const groupsOpen = shallowRef(false)
@@ -904,12 +907,20 @@ const chip = shallowRef<ChipId>('all')
 const chips = computed(() => {
   if (!queryOk.value || helpOpen.value) return []
   const counts = new Map<ChipId, number>()
+  // All counts what All lists: groups switched off aren't in it.
+  let all = 0
   for (const s of rawSections.value) {
     const c = chipOf(s.label)
     counts.set(c, (counts.get(c) ?? 0) + s.entries.length)
+    if (groupMode(s.label, props.config.groups) !== 'off') all += s.entries.length
   }
-  return CHIPS.filter(c => c.id === 'all' || c.id === chip.value || counts.get(c.id))
-    .map(c => ({ ...c, count: c.id === 'all' ? [...counts.values()].reduce((a, b) => a + b, 0) : counts.get(c.id) ?? 0 }))
+  return CHIPS.filter(c => c.id === 'all' || counts.get(c.id))
+    .map(c => ({ ...c, count: c.id === 'all' ? all : counts.get(c.id) ?? 0 }))
+})
+// A chip with nothing for the new query goes back to All, so the list is never
+// empty while other results wait behind it.
+watch(chips, (list) => {
+  if (chip.value !== 'all' && list.length && !list.some(c => c.id === chip.value)) chip.value = 'all'
 })
 function stepChip (dir: 1 | -1) {
   const list = chips.value
@@ -954,7 +965,10 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
         icon: 'fas fa-eye-slash',
         about: `Switched off in the cog: ${names.join(', ')}. ${shaped.off.reduce((n, o) => n + o.count, 0)} results there.`,
         verb: 'Show them',
-        action: () => { expanded.value = new Set([...expanded.value, ...names]); focusInput() }
+        action: () => {
+          const first = raw.find(r => r.label === names[0])?.entries[0] ?? null
+          expand(names, first)
+        }
       }]
     })
   }
@@ -1120,6 +1134,7 @@ function reveal (want: (e: Entry) => boolean): Entry | undefined {
     const e = s.entries.find(want)
     if (e) {
       if (!expanded.value.has(s.label)) expanded.value = new Set([...expanded.value, s.label])
+      if (chip.value !== 'all' && chipOf(s.label) !== chip.value) chip.value = 'all'
       return e
     }
   }
@@ -1136,6 +1151,16 @@ function move (dir: 1 | -1) {
 }
 
 function onKey (e: KeyboardEvent) {
+  // The cog's list covers the results: Enter or Esc closes it, and the hidden
+  // list takes no keys meanwhile.
+  if (groupsOpen.value) {
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
+      toggleGroups()
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') e.preventDefault()
+    return
+  }
   if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.ctrlKey && !e.shiftKey && !e.altKey && chips.value.length > 1) {
     e.preventDefault()
     stepChip(e.key === 'ArrowRight' ? 1 : -1)
@@ -1219,8 +1244,15 @@ const beastBox = computed(() => {
 })
 function jumpTo (q: string, want: (e: Entry) => boolean) {
   // The same query doesn't rebuild the list: pick from it now.
-  if (query.value === q) selected.value = entries.value.find(want) ?? selected.value
-  else {
+  if (query.value === q) {
+    const own = entries.value.find(want)
+    if (own) selected.value = own
+    else {
+      // In a folded group or behind a chip: open it, and pick it once the list is rebuilt.
+      const hidden = reveal(want)
+      if (hidden) { wantEntry = want; selected.value = hidden }
+    }
+  } else {
     wantEntry = want
     query.value = q
   }

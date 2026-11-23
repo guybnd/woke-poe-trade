@@ -86,11 +86,15 @@ export function shapeSections<E extends { name: string }> (
   const off: Array<{ label: string, count: number }> = []
   for (const s of sections) {
     if (!s.entries.length) continue
-    const mode = expanded.has(s.label) ? 'open' : groupMode(s.label, modes)
-    if (mode === 'off') { off.push({ label: s.label, count: s.entries.length }); continue }
-    if (mode === 'open' || s.entries.length <= GROUP_CAP) { out.push({ ...s, hidden: 0, firstHidden: null }); continue }
+    const set = groupMode(s.label, modes)
+    if (set === 'open') { out.push({ ...s, hidden: 0, firstHidden: null }); continue }
+    // Folded, or off: rows named like the query first. A folded group opened
+    // with "+N more" keeps that order, so the three shown stay on top.
     const named = s.entries.filter(e => matchRank(e.name, query) === 0)
-    const ordered = [...named, ...s.entries.filter(e => !named.includes(e))]
+    const ordered = named.length ? [...named, ...s.entries.filter(e => !named.includes(e))] : s.entries
+    const opened = expanded.has(s.label)
+    if (set === 'off' && !opened) { off.push({ label: s.label, count: s.entries.length }); continue }
+    if (opened || s.entries.length <= GROUP_CAP) { out.push({ ...s, entries: ordered, hidden: 0, firstHidden: null }); continue }
     const rest = ordered.slice(GROUP_CAP)
     out.push({ label: s.label, entries: ordered.slice(0, GROUP_CAP), capped: s.capped, hidden: rest.length, firstHidden: rest[0] ?? null })
   }

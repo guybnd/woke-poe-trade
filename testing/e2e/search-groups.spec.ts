@@ -79,9 +79,11 @@ test('the cog sets a group Open or Off, and an off group is one click away', asy
   await overlay.snap('search-groups-cog')
   await list.locator('[data-group="Passive tree"]').getByRole('button', { name: 'Open', exact: true }).click()
   await list.locator('[data-group="Other items"]').getByRole('button', { name: 'Off', exact: true }).click()
-  await list.getByRole('button', { name: 'Done' }).click()
+  // Enter closes the list; it never runs the result hidden behind it.
+  await box.press('Enter')
   await expect(list).toBeHidden()
   await expect(box).toBeFocused()
+  await expect(overlay.widget('woke-search').getByRole('textbox', { name: 'Search', exact: true })).toBeVisible()
 
   expect((await groupRows(overlay, 'Passive tree')).length).toBeGreaterThan(3)
   expect(await groupRows(overlay, 'Other items')).toEqual([])
@@ -136,6 +138,13 @@ test('chips show one kind of result in full, and Ctrl + Left / Right steps throu
   await panel.locator('button[data-item-tip]').filter({ hasText: 'Fire Trap' }).first().hover()
   await expect(overlay.page.getByRole('tooltip')).toContainText('Fire Trap')
 
+  // A chip with nothing for the new query goes back to All.
+  await box.fill('hotkey')
+  await chips.filter({ hasText: 'Settings' }).click()
+  await expect(chips.filter({ hasText: 'Settings' })).toHaveAttribute('aria-pressed', 'true')
+  await box.fill('the coast')
+  await expect(chips.first()).toHaveAttribute('aria-pressed', 'true')
+  await expect(chips.filter({ hasText: 'Settings' })).toHaveCount(0)
   // A new search starts on All again.
   await box.press('Escape')
   await overlay.pressHotkey(SEARCH_KEY)
@@ -144,10 +153,10 @@ test('chips show one kind of result in full, and Ctrl + Left / Right steps throu
   expect(overlay.errors).toEqual([])
 })
 
-test('Settings > Search (Ctrl Space) holds the same list, found from the search box', async ({ overlay }) => {
+test('Settings > Search holds the same list, found from the search box', async ({ overlay }) => {
   const { panel, box } = await openPalette(overlay)
   await box.fill('what search shows')
-  const hit = panel.getByRole('button', { name: /What search shows\s*Setting · Search \(Ctrl Space\)$/ })
+  const hit = panel.getByRole('button', { name: /What search shows\s*Setting · Search$/ })
   await expect(hit).toBeVisible()
   await hit.click()
   await box.press('Enter')
