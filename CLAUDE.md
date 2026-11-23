@@ -24,4 +24,5 @@ Guy's standing rule: a PR that adds a feature a player would want to know about 
 - `wmType`: the tool that "Show me" opens. Set `settingsPage` instead when the feature lives in Settings.
 - `name`: the tool's name. `note`: one short line, starting "New: ".
 - Bug fixes and polish don't get a line. Take lines out after a release or two.
-- `renderer/test/woke/news.test.ts` checks that every line is well formed.
+- `renderer/test/woke/news.test.ts` checks that every line is well formed. Tests read `NEWS` instead of counting lines, so adding one breaks nothing.
+- One feature, one line: a tool can have several (Net worth has three), and each shows on its own in the dock.
