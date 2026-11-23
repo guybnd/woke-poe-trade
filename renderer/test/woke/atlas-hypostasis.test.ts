@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { describe, it, expect } from 'vitest'
-import { readAtlasTree } from '@/web/woke/atlas/atlas-tree'
+import { pathTo, readAtlasTree } from '@/web/woke/atlas/atlas-tree'
 import { decodeTree } from '@/web/woke/atlas/tree'
 import { decodeShort, hypostasisToLink, rewriteHypostasisLinks } from '@/web/woke/atlas/hypostasis'
 
@@ -40,11 +40,29 @@ describe('hypostasis.faith atlas links', () => {
   it('reads the long form (#s=id,id:choice) with picked types', () => {
     const notable = [...model.variants.keys()][0]
     const effect = model.variants.get(notable)![1].effect
-    const near = model.links.get(model.start)![0]
-    const url = hypostasisToLink(model, `https://hypostasis.faith/atlas/data.html#s=${near},${notable}:1`)!
+    // The path out to it, the notable listed last with its pick.
+    const path = pathTo(model, new Set([model.start]), notable).reverse().filter(id => id !== notable)
+    const url = hypostasisToLink(model, `https://hypostasis.faith/atlas/data.html#s=${[...path, `${notable}:1`].join(',')}`)!
     const t = decodeTree(url)
-    expect(t.nodes).toEqual([near, notable])
+    expect(t.nodes).toEqual([...path, notable])
     expect(t.masteries).toEqual([{ node: notable, effect }])
+  })
+
+  it('reads the long form as their viewer does: no masteries, no islands', () => {
+    const near = model.links.get(model.start)![0]
+    const mastery = [...model.nodes.values()].find(n => n.kind === 'mastery')!.id
+    // A passive nowhere near the start, joined to nothing listed.
+    const far = [...model.links.keys()].find(id => id !== model.start && !model.links.get(model.start)!.includes(id) && !model.links.get(near)!.includes(id))!
+    const t = decodeTree(hypostasisToLink(model, `https://hypostasis.faith/atlas/#s=${near},${mastery},${far}`)!)
+    expect(t.nodes).toEqual([near])
+  })
+
+  it('refuses Ruthless trees, links with no tree, and other pages', () => {
+    const code = LINK.split('#')[1]
+    expect(() => rewriteHypostasisLinks(`https://hypostasis.faith/atlas/ruthless.html#${code}`, model)).toThrow(/Ruthless/)
+    expect(() => rewriteHypostasisLinks('https://hypostasis.faith/atlas/', model)).toThrow(/no tree/)
+    expect(() => rewriteHypostasisLinks(`https://hypostasis.faith/other/x.html#${code}`, model)).toThrow(/isn't one of its atlas tree pages/)
+    expect(rewriteHypostasisLinks(`https://hypostasis.faith/atlas/#${code}`, model)).toMatch(/pathofexile\.com/)
   })
 
   it('swaps the link inside guide text', () => {

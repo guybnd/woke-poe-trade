@@ -18,7 +18,13 @@ import type { AtlasTreeModel } from './atlas-tree'
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
 const SUM = 4
 
-export const HYPOSTASIS_LINK = /https?:\/\/(?:www\.)?hypostasis\.faith\/atlas\/[^\s)"'#]*#[st]=[\w,:-]+/gi
+// Any hypostasis.faith link, to say what's wrong with one that isn't read.
+const ANY_LINK = /https?:\/\/(?:www\.)?hypostasis\.faith\/[^\s)"']*/gi
+// The normal atlas tree's page (data.html, or the folder); ruthless.html is
+// another tree, refused below.
+const TREE_PAGE = /^https?:\/\/(?:www\.)?hypostasis\.faith\/atlas\/(?:data\.html|index\.html)?(?:\?[^#]*)?#[st]=[\w,:-]+$/i
+// Their viewer's cap (MAX_PICK).
+const MAX_PICK = 150
 
 type Item = [id: number, choice: number | undefined]
 
@@ -75,10 +81,19 @@ export function hypostasisToLink (model: AtlasTreeModel, link: string): string |
   const long = /#s=([\d,:]+)/.exec(hash)
   if (short) items = decodeShort(model, short[1])
   else if (long) {
-    items = long[1].split(',').filter(Boolean).map(part => {
+    // As their viewer reads it: passives only, at most MAX_PICK, and only
+    // what joins the start (an old link's islands are dropped).
+    const listed = long[1].split(',').filter(Boolean).map(part => {
       const [id, c] = part.split(':').map(Number)
       return [id, Number.isFinite(c) ? c : undefined] as Item
-    })
+    }).filter(([id]) => model.nodes.has(id) && model.nodes.get(id)!.kind !== 'mastery' && id !== model.start).slice(0, MAX_PICK)
+    const want = new Map(listed)
+    const reach = new Set<number>()
+    const queue = [model.start]
+    for (let i = 0; i < queue.length; i++) {
+      for (const n of model.links.get(queue[i]) ?? []) if (want.has(n) && !reach.has(n)) { reach.add(n); queue.push(n) }
+    }
+    items = listed.filter(([id]) => reach.has(id))
   }
   if (!items?.length) return null
   const nodes: number[] = []
@@ -95,7 +110,10 @@ export function hypostasisToLink (model: AtlasTreeModel, link: string): string |
 // Every hypostasis.faith link in the text swapped for a pathofexile.com one.
 // Throws when one can't be read.
 export function rewriteHypostasisLinks (text: string, model: AtlasTreeModel | null): string {
-  return text.replace(HYPOSTASIS_LINK, (link) => {
+  return text.replace(ANY_LINK, (link) => {
+    if (/\/ruthless\.html/i.test(link)) throw new Error('That hypostasis.faith link is a Ruthless atlas tree; only the normal tree can be imported.')
+    if (!/#[st]=/.test(link)) throw new Error('That hypostasis.faith link has no tree in it (pick passives there first, then copy the link).')
+    if (!TREE_PAGE.test(link)) throw new Error('That hypostasis.faith link isn\'t one of its atlas tree pages.')
     if (!model) throw new Error('The atlas tree data is still loading. Try again in a moment.')
     const out = hypostasisToLink(model, link)
     if (!out) throw new Error('That hypostasis.faith link doesn\'t fit this league\'s atlas tree (made on an older tree, or cut short).')
