@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-484
 title: 'Map mods: show each mod''s bonuses (Atlas Drops/rarity/pack, more-X)'
-status: In Progress
+status: Done
 priority: Medium
 effort: M
 assignee: unassigned
@@ -55,6 +55,50 @@ history:
       longest that fits, with a ? explaining it (Guy's ask). Reviewed, checks
       green. Still waiting on Guy's "merge" for PR 770.
     id: a-2026-11-22t23-17-18-340z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 770 merged on Guy's "merge" (bonus numbers on Map mods rows, Ctrl+Space
+      lookup, Planner tab). All checks green, three adversarial reviews fixed.
+    date: '2026-11-23T00:40:00.172Z'
+    completionComment: true
+    id: c-2026-11-23t00-40-00-172z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-23T00:40:00.172Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged PR 770: bonus numbers/tooltips/sort/want-all on Map mods rows,
+      Ctrl+Space lookup, Planner tab (more Currency/Maps/Threads/pack size
+      goals, at least N of ticked, prefix/suffix minimums, map total, stash
+      k-of-n search with T17-only tokens lengthened when there's room, trade
+      search). Data: renderer/scripts/build-map-bonuses.mjs ->
+      public/data/map-bonuses.json (shared live-data file).
+    completionComment: true
+    date: '2026-11-23T00:40:12.337Z'
+    id: c-2026-11-23t00-40-12-337z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-23T00:40:12.794Z'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/770'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy asked for a planner from poedb map mod tables. Option A (recommended, built while his A/B/C pick is pending): bonus numbers + more-X tag + tooltip on every Map mods row, sort by bonus, "Want all with <bonus>", Ctrl+Space lookup. Data: script snapshots poedb Maps_low/mid/top/uber_tier embedded JSON into bundled data once per patch.
 
