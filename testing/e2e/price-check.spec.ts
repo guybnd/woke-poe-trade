@@ -384,7 +384,8 @@ test('unique: improved merges same prices with a count, classic lists every list
   const panel = overlay.widget('price-check')
   const rows = panel.locator('.w-pc-table tbody tr')
   await expect(panel.locator('.w-pc-foot')).toContainText('listings')
-  await expect(panel.locator('.w-pc-count-n').first()).toContainText('×')
+  // Rows without a count keep an empty slot, so the tags after it line up.
+  await expect(panel.locator('.w-pc-count-n').filter({ hasText: '×' }).first()).toBeVisible()
   const merged = await rows.count()
 
   // The switch lives in Settings > Price check > Listings, not in the window.
