@@ -3,7 +3,7 @@
 // comes from Client.txt zone lines. Pure: no Vue, no requests.
 import { isTownLike, parseLogLine } from '../campaign/log-parse'
 import { lineTime } from '../campaign/log-tail'
-import { isMapArea, isMapSideArea } from '../farming/farming'
+import { isFarmedMap, isMapSideArea } from '../farming/farming'
 
 // map: in a map (its side areas too); play: any other area (campaign, boss
 // arenas); hub: hideout, town and the like; off: the game closed (between a
@@ -47,7 +47,7 @@ function push (marks: PlayMarks['marks'], at: number, s: PlayState) {
 
 export function stateOfArea (areaId: string): PlayState {
   if (isTownLike(areaId)) return 'hub'
-  return isMapArea(areaId) || isMapSideArea(areaId) ? 'map' : 'play'
+  return isFarmedMap(areaId) || isMapSideArea(areaId) ? 'map' : 'play'
 }
 
 // Adds lines from 'game-log-range' (with sessions), oldest first.
@@ -77,7 +77,7 @@ export function feedMarks (m: PlayMarks, lines: readonly string[]): PlayMarks {
       if (ev?.kind === 'area') {
         here = stateOfArea(ev.areaId)
         push(marks, at, here)
-        if (isMapArea(ev.areaId)) {
+        if (isFarmedMap(ev.areaId)) {
           const key = `${ev.areaId}:${ev.seed ?? ''}`
           // Without a seed a map can't be told apart: every entry counts.
           if (!ev.seed || !recent.includes(key)) maps.push(at)

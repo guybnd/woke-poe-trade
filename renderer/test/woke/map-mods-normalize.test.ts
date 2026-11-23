@@ -1,4 +1,4 @@
-// Regression: opening Settings > Map mods & map scan froze the app. The editor
+// Regression: opening Settings > Map mods froze the app. The editor
 // normalized the widget on every render and normalizing always wrote a new
 // weights object, so the render re-triggered itself forever.
 import { describe, it, expect, vi } from 'vitest'

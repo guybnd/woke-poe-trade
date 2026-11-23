@@ -13,6 +13,13 @@
    "renderer/src/web/woke/atlas/",
    "renderer/src/web/woke/regex-library/"
   ],
+  "beast-altar.spec.ts": [
+   "renderer/public/data/bestiary-data.json",
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/price-insight/",
+   "renderer/src/web/woke/search/lookups/"
+  ],
   "boss-unid-prices.spec.ts": [
    "main/src/woke/trade-log.ts",
    "renderer/src/web/woke/boss-runs/",
@@ -20,6 +27,14 @@
   ],
   "campaign.spec.ts": [
    "renderer/src/web/woke/campaign/"
+  ],
+  "card-drops.spec.ts": [
+   "renderer/src/web/woke/card-drops/",
+   "renderer/src/web/woke/search/",
+   "renderer/src/web/woke/price-insight/",
+   "renderer/src/web/price-check/",
+   "renderer/src/parser/",
+   "renderer/public/data/card-drops.json"
   ],
   "catalyst-slider.spec.ts": [
    "renderer/src/parser/",
@@ -83,6 +98,11 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/gem-versions/"
+  ],
+  "glance-bar.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/session-story/"
   ],
   "harvest-swap.spec.ts": [
    "renderer/src/parser/",
@@ -165,6 +185,10 @@
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/map-mods/"
   ],
+  "map-mods-bonuses.spec.ts": [
+   "renderer/public/data/map-bonuses.json",
+   "renderer/src/web/woke/map-mods/"
+  ],
   "map-mods-rewards.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",
@@ -175,6 +199,13 @@
   "map-mods-save.spec.ts": [
    "renderer/src/web/woke/map-mods/",
    "renderer/src/web/woke/regex-library/"
+  ],
+  "map-mods-scan.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/map-mods/",
+   "renderer/src/web/woke/search/",
+   "renderer/src/web/woke/settings/"
   ],
   "map-mods-tabs.spec.ts": [
    "main/src/woke/map-scan-vision.ts",
@@ -188,6 +219,9 @@
    "main/src/woke/map-scan-vision.ts",
    "main/src/woke/map-scan.ts",
    "renderer/src/web/woke/map-mods/"
+  ],
+  "map-toast-resize.spec.ts": [
+   "renderer/src/web/woke/session-story/"
   ],
   "market-browser.spec.ts": [
    "main/src/woke/market-store.ts",
@@ -294,6 +328,18 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
+  "price-check-bulk.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/price-insight/"
+  ],
+  "price-check-local-filter.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/price-insight/"
+  ],
   "price-check-poe-first.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",
@@ -315,6 +361,16 @@
    "renderer/src/parser/",
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
+  ],
+  "price-check-unid-guess.spec.ts": [
+   "main/src/shortcuts/",
+   "main/src/woke/unid-art-match.ts",
+   "main/src/woke/unid-art.ts",
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/price-insight/",
+   "testing/fake-host/"
   ],
   "price-check-unique-by-name.spec.ts": [
    "renderer/src/parser/",
@@ -346,6 +402,11 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
+  "rarity-chip.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/"
+  ],
   "regex-library-edit.spec.ts": [
    "renderer/src/web/woke/regex-library/"
   ],
@@ -356,6 +417,13 @@
    "renderer/src/parser/",
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
+  ],
+  "report-issue.spec.ts": [
+   "ipc/issue-report.ts",
+   "main/src/woke/crash-reports.ts",
+   "renderer/src/web/woke/app/",
+   "renderer/src/web/woke/search/",
+   "renderer/src/web/woke/settings/"
   ],
   "run-timeline.spec.ts": [
    "renderer/src/web/woke/campaign/"
@@ -381,7 +449,8 @@
    "renderer/src/web/woke/trade-searches/"
   ],
   "scarab-flip.spec.ts": [
-   "renderer/src/web/woke/scarab-flip/"
+   "renderer/src/web/woke/scarab-flip/",
+   "renderer/src/web/woke/search/lookups/flips.ts"
   ],
   "search-price-check.spec.ts": [
    "main/src/woke/market-store.ts",
@@ -392,10 +461,17 @@
    "renderer/src/web/woke/search/",
    "renderer/src/web/woke/wickerman/"
   ],
+  "search-settings.spec.ts": [
+   "main/src/woke/update-check.ts",
+   "renderer/src/web/woke/search/",
+   "renderer/src/web/woke/settings/"
+  ],
   "search.spec.ts": [
    "main/src/woke/market-store.ts",
    "renderer/src/web/woke/market/",
-   "renderer/src/web/woke/search/"
+   "renderer/src/web/woke/search/",
+   "renderer/src/web/woke/shared/trade-status.ts",
+   "renderer/src/web/woke/ui/tooltip/item-menu-logic.ts"
   ],
   "stacked-decks.spec.ts": [
    "renderer/src/parser/",
@@ -430,6 +506,11 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
+  "title-tip.spec.ts": [
+   "renderer/src/web/woke/ui/page-hooks.ts",
+   "renderer/src/web/woke/ui/poe-frame.css",
+   "renderer/src/web/woke/ui/title-tip.ts"
+  ],
   "toolkit.spec.ts": [
    "main/src/woke/essence-scan-vision.ts",
    "main/src/woke/market-store.ts",
@@ -452,6 +533,24 @@
   "trade.spec.ts": [
    "main/src/woke/trade-log.ts",
    "renderer/src/web/woke/trade/"
+  ],
+  "twice-corrupted.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/ui/tooltip/"
+  ],
+  "ui-size.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/pins/"
+  ],
+  "valdo-map.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/valdo/",
+   "renderer/src/web/woke/map-mods/"
   ],
   "viscera-versions.spec.ts": [
    "renderer/src/parser/",

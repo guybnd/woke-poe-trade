@@ -3,6 +3,7 @@
 import { matchRank } from '../search'
 import type { GemColour, GemSource } from '../../pob-builds/gems'
 import type { Lookup, LookupCard, LookupRow } from './types'
+import { gemDrop, VOIDSTONE_NOTE } from './gem-drops'
 
 export type GemTable = Record<string, { l: number, a?: GemColour, s: GemSource[] }>
 
@@ -39,7 +40,10 @@ export function gemCard (name: string, table: GemTable): LookupCard | null {
     if (rewards.length) sections.push({ label: 'Quest reward (free)', rows: rewards.map(s => ({ label: `Act ${s[0]} · ${s[1]}`, value: classList(s[4]) })) })
     if (vendors.length) sections.push({ label: 'Sold by', rows: vendors.map(s => ({ label: `Act ${s[0]} · ${s[2]}, after ${s[1]}`, value: classList(s[4]) })) })
     const vaalOf = name.startsWith('Vaal ') && table[name.slice(5)] ? name.slice(5) : null
-    if (!rewards.length && !vendors.length) {
+    const drop = !rewards.length && !vendors.length ? gemDrop(name, n => !!table[n]) : null
+    if (drop) {
+      sections.push({ label: 'Where it drops', text: drop.voidstone ? [...drop.text, VOIDSTONE_NOTE] : drop.text })
+    } else if (!rewards.length && !vendors.length) {
       sections.push({
         text: [vaalOf
           ? `No quest or vendor gives it: corrupt a ${vaalOf} with a Vaal Orb (it may turn into this), find one, or buy one.`
@@ -47,7 +51,7 @@ export function gemCard (name: string, table: GemTable): LookupCard | null {
       })
     }
     const first = rewards[0] ?? vendors[0]
-    sub = first ? `${first[3] === 'q' ? 'Reward' : `Sold by ${first[2]}`}, Act ${first[0]}` : 'Not in the campaign'
+    sub = first ? `${first[3] === 'q' ? 'Reward' : `Sold by ${first[2]}`}, Act ${first[0]}` : drop?.sub ?? 'Not in the campaign'
   }
   return {
     id: `gem:${name}`,

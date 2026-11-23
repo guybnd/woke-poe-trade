@@ -7,7 +7,8 @@
       <p class="text-gray-500">Built on <a class="border-b" href="https://github.com/SnosMe/awakened-poe-trade" target="_blank">Awakened PoE Trade</a> by SnosMe</p>
       <div class="flex gap-2">
         <a class="border-b" href="https://github.com/guybnd/woke-poe-trade/releases" target="_blank">{{ t('app.release_notes') }}</a>
-        <a class="border-b" href="#" @click.prevent="reportProblem()">{{ t('app.report_bug') }}</a>
+        <a class="border-b" href="#" @click.prevent="openReportDialog()">{{ t('app.report_bug') }}</a>
+        <a class="border-b" :href="DISCORD_URL" target="_blank">Join the Discord</a>
         <a class="border-b" href="#" @click.prevent="openCrashFolder()">Crash reports folder</a>
       </div>
     </div>
@@ -32,7 +33,7 @@ import { defineComponent, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Host } from '@/web/background/IPC'
 import { DateTime } from 'luxon'
-import { reportProblem, openCrashFolder } from '@/web/woke/app/report'
+import { openReportDialog, openCrashFolder, DISCORD_URL } from '@/web/woke/app/report'
 import { AppConfig } from '@/web/Config'
 import { appIconUrl } from '@/web/woke/ui/app-icon'
 import RollbackRows from '@/web/woke/app/RollbackRows.vue'
@@ -91,7 +92,8 @@ export default defineComponent({
       info,
       version: Host.version,
       markUrl: computed(() => appIconUrl(AppConfig().appIcon)),
-      reportProblem,
+      openReportDialog,
+      DISCORD_URL,
       openCrashFolder
     }
   }

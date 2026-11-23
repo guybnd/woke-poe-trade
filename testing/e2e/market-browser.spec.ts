@@ -49,6 +49,19 @@ test('the Prices tab lists every category and filters and sorts one', async ({ o
   await overlay.page.mouse.click(1800, 1000)
   await expect(menu).toHaveCount(0)
 
+  // Other time ranges: 3 days from poe.ninja's daily line, 3 hours from the
+  // prices this app saved (none in a fresh profile, so "Not enough data").
+  const trendHead = panel.locator('.w-row--head button').nth(2)
+  await expect(trendHead).toHaveText('Last 7 days')
+  await panel.getByRole('button', { name: '3d', exact: true }).click()
+  await expect(trendHead).toHaveText('Last 3 days')
+  await expect(panel.locator('.w-row', { hasText: 'Divine Orb' }).first().locator('svg')).toHaveCount(1)
+  await panel.getByRole('button', { name: '3h', exact: true }).click()
+  await expect(trendHead).toHaveText('Last 3 hours')
+  await expect(panel.locator('.w-row', { hasText: 'Divine Orb' }).first()).toContainText('Not enough data')
+  await panel.getByRole('button', { name: '7d', exact: true }).click()
+  await expect(trendHead).toHaveText('Last 7 days')
+
   // Value, highest first: the first row is worth at least the second.
   const values = async () => panel.locator('.w-row:not(.w-row--head)').evaluateAll(rows =>
     rows.slice(0, 5).map(r => r.querySelector('span:nth-child(2)')?.textContent ?? ''))

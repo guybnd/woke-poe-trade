@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, net } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import type { ServerEvents } from './server'
 import type { Logger } from './RemoteLogger'
@@ -11,7 +11,8 @@ import {
   type InstallVerdict, type UpdaterEvent
 } from './woke/update-install'
 import { Rollback, clearUpdateNote, isSkipped, takeUpdateNote, trayEntry, writeUpdateNote } from './woke/rollback'
-import type { WokeRollbackState } from '../../ipc/woke-ops'
+import type { WokeRollbackState, WokeUpdateCheck } from '../../ipc/woke-ops'
+import { checkLatestRelease, fromUpdaterInfo } from './woke/update-check'
 
 // electron-updater keeps these protected; read only, for the checks below.
 interface UpdaterInternals { installerPath?: string | null, quitAndInstallCalled?: boolean }
@@ -498,6 +499,20 @@ export class AppUpdater {
       this._checkedAtStartup = true
       this.check()
     }
+  }
+
+  // woke: "Check for updates". An installed build asks electron-updater now
+  // (its events set info); a portable or development build, which updates by
+  // hand, asks GitHub for the latest release.
+  async checkNow (): Promise<WokeUpdateCheck> {
+    const current = app.getVersion()
+    if (!app.isPackaged || this.noAutoUpdatesReason === 'not-supported') {
+      return await checkLatestRelease(current, async (url, init) => await net.fetch(url, init))
+    }
+    await this.check()
+    // The version this check skipped, while it is still skipped.
+    const skipped = this.loggedSkip != null && isSkipped(this.loggedSkip, this.rollback.skipped) ? this.loggedSkip : null
+    return fromUpdaterInfo(this._info, current, skipped)
   }
 
   private check = async () => {

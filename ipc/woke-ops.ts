@@ -41,6 +41,18 @@ export interface WokePathStat {
   modified: number | null
 }
 
+// "Check for updates" (main/src/woke/update-check.ts). An installed build
+// reports what electron-updater did; a portable or development build compares
+// with GitHub's latest release and links to its page.
+export type WokeUpdateCheck =
+  // skipped: a newer version automatic updates skip (gone back from it).
+  { kind: 'up-to-date', current: string, skipped?: string } |
+  { kind: 'available', current: string, version: string, url: string } |
+  { kind: 'downloading', current: string, version: string } |
+  // blocked: waits while going back to the previous version.
+  { kind: 'downloaded', current: string, version: string, whenClosed: boolean, blocked?: boolean } |
+  { kind: 'error', current: string, message: string }
+
 // Going back to the previous release (main/src/woke/rollback.ts).
 export interface WokeRollbackState {
   // An installed build: the portable exe and dev builds can't go back.
@@ -56,6 +68,30 @@ export interface WokeRollbackState {
   error: string | null
   // Automatic updates skip this version and older.
   skip: string | null
+}
+
+export interface WokeIssueRequest {
+  kind: 'bug' | 'idea'
+  title: string
+  text: string
+  includeInfo: boolean
+  includeLog: boolean
+  // Modules on, league.
+  info?: string[]
+  // Account and character names to hide.
+  names?: string[]
+  open: boolean
+}
+
+export interface WokeIssue {
+  url: string
+  title: string
+  body: string
+  labels: string
+  // The whole log, put on the clipboard when only its end fits in the link.
+  clipboard: string | null
+  logLines: number
+  logLinesShown: number
 }
 
 export interface WokePendingCrash {
@@ -135,6 +171,7 @@ export interface WokeOps {
   'setup-prefs-set': Op<Record<string, unknown>, Json>
   'setup-open': Op<NoArgs, Ok>
   'app-restart': Op<NoArgs, Ok>
+  'update-check': Op<NoArgs, WokeUpdateCheck>
   'rollback-state': Op<NoArgs, WokeRollbackState>
   'rollback-start': Op<NoArgs, WokeRollbackState>
   'rollback-cancel': Op<NoArgs, WokeRollbackState>
@@ -142,8 +179,10 @@ export interface WokeOps {
   'setup-finish': Op<NoArgs, Ok>
   'crash-pending': Op<NoArgs, WokePendingCrash | null>
   'crash-dismiss': Op<NoArgs, Ok>
-  'crash-report': Op<{ id?: string | null, context?: string }, Ok>
+  'crash-report': Op<{ id?: string | null, context?: string, names?: string[] }, Ok>
   'crash-folder': Op<NoArgs, Ok>
+  // "Report an issue": builds the GitHub link (open: false, for the preview) or opens it.
+  'issue-report': Op<WokeIssueRequest, WokeIssue>
   'renderer-error': Op<{ text: string }, Ok>
 
   // Screen readers
@@ -161,6 +200,8 @@ export interface WokeOps {
   'essence-scan-auto-start': Op<NoArgs, ScanStatus>
   'essence-scan-auto-stop': Op<NoArgs, ScanStatus>
   'essence-scan-once': Op<NoArgs, { labels: Array<{ lines: string[], at: { x: number, y: number } }> }>
+  // Which unique an unidentified item is, from its art at the hotkey (main/src/woke/unid-art.ts).
+  'unid-art-guess': Op<{ itemText: string, candidates: Array<{ name: string, icon: string }> }, { ranked: Array<{ name: string, score: number }>, sure: boolean } | { ranked: null, reason: 'no-art' | 'icons' }>
   'area-mods-read': Op<{ delayMs?: number }, { lines: string[] | null, ocrMissing?: boolean }>
   'stash-read': Op<NoArgs, Json>
   'stash-watch-stop': Op<NoArgs, null>
@@ -193,6 +234,9 @@ export interface WokeOps {
   'market-save': Op<{ snapshot: Json, daily?: Json[] }, Ok>
   'market-latest': Op<League & { count: number }, Json[]>
   'market-at': Op<League & { ts: number }, Json>
+  // One category's prices at snapshots spread over the last `span` ms
+  // (main/src/woke/market-series.ts); `names` keeps only those items.
+  'market-series': Op<League & { type: string, span: number, names?: string[] }, { times: number[], rows: Record<string, Array<number | null>> }>
   'market-daily-date': Op<League & { date: string }, Json[]>
   'market-daily-item': Op<League & { type: string, name: string, variant?: string }, Json[]>
   'market-daily-all': Op<League, Json[]>
@@ -228,6 +272,7 @@ export interface WokeOps {
   'stash-tab-set-delete': Op<{ league: string | undefined, name: string }, Json>
   'worn-items': Op<{ character?: string }, Json>
   'character-sync': Op<{ character?: string, auto?: boolean, read?: 'now' }, Json>
+  'trade-history': Op<{ league?: string, read?: 'manual' | 'auto' | 'none' }, Json>
 
   // Claude link (Settings › Experimental) and its Suggestions card
   'claude-link-state': Op<NoArgs, ClaudeLinkState>

@@ -15,6 +15,7 @@
       <div :class="$style.tools">
         <WField v-model="query" icon="fas fa-search" :placeholder="category ? `Filter ${category.label}` : 'Filter'" class="grow" />
         <WSegmented v-model="unit" title="Show values in chaos or divines" :options="[{ value: 'chaos', label: 'c' }, { value: 'div', label: 'div' }]" />
+        <WSegmented v-model="range" aria-label="Time range for the price line and change" :options="rangeOptions" />
         <WCorruptedFilter v-if="category?.type === 'SkillGem'" v-model="corrupted" />
         <WChip clickable :active="config.priceSkipThin" title="Leave out items poe.ninja had no price for on 3 or more of the last 7 days. Their prices are easy to fake."
           @click="config.priceSkipThin = !config.priceSkipThin">Skip low confidence</WChip>
@@ -27,7 +28,7 @@
           <div class="w-row w-row--head" :class="$style.grid">
             <button type="button" :class="$style.sortBtn" @click="sortBy('name')">Name<i v-if="config.priceSort === 'name'" :class="sortIcon" /></button>
             <button type="button" :class="[$style.sortBtn, $style.right]" @click="sortBy('value')">Value<i v-if="config.priceSort === 'value'" :class="sortIcon" /></button>
-            <button type="button" :class="[$style.sortBtn, $style.right]" title="poe.ninja's price line and change over the last 7 days" @click="sortBy('change')">Last 7 days<i v-if="config.priceSort === 'change'" :class="sortIcon" /></button>
+            <button type="button" :class="[$style.sortBtn, $style.right]" :title="rangeTitle" @click="sortBy('change')">{{ rangeLong }}<i v-if="config.priceSort === 'change'" :class="sortIcon" /></button>
           </div>
           <WEmpty v-if="!shown.length" icon="fas fa-search">No {{ category.label.toLowerCase() }} match<template v-if="query.trim()"> "{{ query.trim() }}"</template>.</WEmpty>
           <div v-for="r in shown" :key="r.key" v-item-tip="r" class="w-row" :class="$style.grid" @contextmenu="rowMenu($event, r)">
@@ -48,7 +49,8 @@
                 <WSpark v-if="r.trend.length >= 2" :values="r.trend" :width="64" />
                 <WDelta :value="r.change / 100" :class="$style.delta" />
               </template>
-              <span v-else class="w-faint text-xs">Not enough data</span>
+              <span v-else-if="savedLoading" class="w-faint text-xs">…</span>
+              <span v-else class="w-faint text-xs" :title="noDataTitle">Not enough data</span>
             </span>
           </div>
           <div v-if="filtered.length > ROW_LIMIT" class="w-faint text-xs" :class="$style.note">
@@ -69,18 +71,22 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { usePoeninja } from '@/web/background/Prices'
 import { ninjaArt } from './ninja-icons'
-import { WChip, WDelta, WEmpty, WField, WIcon, WPrice, WSegmented, WSkeleton, WSpark, ninjaIcon, openMenu, vItemTip } from '../ui'
+import { WChip, WDelta, WEmpty, WField, WIcon, WPrice, WSegmented, WSkeleton, WSpark, itemArt, ninjaIcon, openMenu, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui/layer'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { rarityClass } from '../search/search'
 import { lastWokePrices, onWokePricesLoaded } from './hook'
 import { feedDays } from './parse'
 import type { DenseChunk } from './parse'
-import { ICON_ITEMS, categoryGroups, filterRows, parseCategory, sortRows } from './browser'
+import { ICON_ITEMS, categoryGroups, filterRows, parseCategory, sortRows, weekChange } from './browser'
 import type { Category, MarketRow, MarketSort } from './browser'
 import type { MarketTrackerWidget } from './widget'
 import { isCorrupted, isThin, namespaceForType } from './types'
 import type { CorruptedFilter } from './types'
+import { PRICE_RANGES, rangeInfo, rowRange } from './ranges'
+import type { PriceRange } from './ranges'
+import { savedPriceSeries } from './db'
+import { useCollectorState } from './collector'
 
 // The Market window's Prices tab: poe.ninja's categories, like its economy pages.
 const props = defineProps<{ config: MarketTrackerWidget, open: boolean }>()
@@ -125,7 +131,68 @@ const category = computed(() => {
   return all.find(c => c.type === props.config.priceCategory) ?? all[0] ?? null
 })
 const leagueDays = computed(() => chunks.value ? feedDays(chunks.value) : 7)
-const rows = computed<MarketRow[]>(() => category.value ? parseCategory(category.value.type, category.value.chunk, leagueDays.value) : [])
+const parsed = computed<MarketRow[]>(() => category.value ? parseCategory(category.value.type, category.value.chunk, leagueDays.value) : [])
+
+// The time range of the line and % change. Under 3 days it reads the prices
+// this app saved (main/src/woke/market-series.ts); poe.ninja has daily ones only.
+const range = computed({
+  get: (): PriceRange => rangeInfo(props.config.priceRange).id,
+  set: (v: string) => { props.config.priceRange = rangeInfo(v).id }
+})
+const rangeOptions = PRICE_RANGES.map(r => ({
+  value: r.id,
+  label: r.label,
+  title: `${r.long}: ${r.local ? 'from the prices this app saved' : "from poe.ninja's daily prices"}`
+}))
+const rangeLong = computed(() => rangeInfo(range.value).long)
+const rangeTitle = computed(() => rangeInfo(range.value).local
+  ? `Price line and change over the ${rangeLong.value.toLowerCase()}, from the prices this app saves about every 30 minutes. Click to sort.`
+  : `poe.ninja's price line and change over the ${rangeLong.value.toLowerCase()}. Click to sort.`)
+const noDataTitle = computed(() => rangeInfo(range.value).local
+  ? "No saved price from the start of this range: the app wasn't running then, or the item is new."
+  : 'poe.ninja has too few prices for this item.')
+
+const collector = useCollectorState()
+const saved = shallowRef<Record<string, Array<number | null>> | null>(null)
+const savedLoading = shallowRef(false)
+let savedSeq = 0
+let savedFor = ''
+watch([isOpen, leagueId, () => category.value?.type, range, collector.revision], async ([open, league, type, r]) => {
+  const mine = ++savedSeq
+  const info = rangeInfo(r)
+  // 7d is poe.ninja's own line; the others try saved prices first.
+  if (!open || !league || !type || !info.local) {
+    savedFor = ''
+    saved.value = null
+    savedLoading.value = false
+    return
+  }
+  // A new save keeps the old line on screen while it's read; a new
+  // category or range must not show the last one's line.
+  const key = `${league}\u0000${type}\u0000${info.id}`
+  if (key !== savedFor || !saved.value) {
+    savedFor = key
+    saved.value = null
+    savedLoading.value = true
+  }
+  try {
+    const got = await savedPriceSeries(league, type, info.ms)
+    if (mine === savedSeq) saved.value = got.rows
+  } catch {
+    if (mine === savedSeq) saved.value = null
+  } finally {
+    if (mine === savedSeq) savedLoading.value = false
+  }
+}, { immediate: true })
+
+const rows = computed<MarketRow[]>(() => {
+  const r = range.value
+  if (r === '7d') return parsed.value
+  const own = saved.value
+  // While saved prices load, show "…" rather than poe.ninja's numbers first.
+  if (savedLoading.value && rangeInfo(r).local) return parsed.value.map(row => ({ ...row, trend: [], change: null }))
+  return parsed.value.map(row => ({ ...row, ...rowRange(row, r, own) }))
+})
 const divine = computed(() => chunks.value ? poeninja.xchgRate.value || null : null)
 
 const query = shallowRef('')
@@ -184,9 +251,14 @@ function rowIcon (r: MarketRow): string | undefined {
 }
 
 // poe.ninja's art for the category: its chosen item, or its first with art.
+// The chosen item may live in another namespace (Forbidden Flame is a unique).
 function categoryIcon (c: Category): string | undefined {
-  for (const name of [ICON_ITEMS[c.type], ...c.sample]) {
-    if (!name) continue
+  const chosen = ICON_ITEMS[c.type]
+  if (chosen) {
+    const src = ninjaIcon(c.type, chosen) ?? ninjaArt(c.type, chosen) ?? itemArt({ name: chosen })
+    if (src) return src
+  }
+  for (const name of c.sample) {
     const src = ninjaIcon(c.type, name) ?? ninjaArt(c.type, name)
     if (src) return src
   }
@@ -198,10 +270,12 @@ const pct = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v) >= 10 ? Math.ro
 // Right-click: the item strip (watch, trade, wiki…) from v-item-tip, then
 // what poe.ninja says about the row.
 function rowMenu (e: MouseEvent, r: MarketRow) {
+  const week = weekChange(r.graph)
   const page = poeninja.findPriceByQuery({ ns: namespaceForType(r.type), name: r.name, variant: r.variant || undefined })?.url
   const items: MenuEntry[] = [
     { label: `1 day: ${r.dayChange == null ? 'not enough data' : pct(r.dayChange)}`, icon: 'fas fa-chart-line', disabled: true, action: () => {} },
-    { label: `7 days: ${r.change == null ? 'not enough data' : pct(r.change)}`, icon: 'fas fa-chart-line', disabled: true, action: () => {} },
+    { label: `7 days: ${week == null ? 'not enough data' : pct(week)}`, icon: 'fas fa-chart-line', disabled: true, action: () => {} },
+    ...(range.value === '7d' ? [] : [{ label: `${rangeLong.value}: ${r.change == null ? 'not enough data' : pct(r.change)}`, icon: 'fas fa-chart-line', disabled: true, action: () => {} }]),
     { label: r.gaps ? `No price on about ${r.gaps} of every 7 days` : 'Priced every day', icon: 'far fa-calendar', disabled: true, action: () => {} },
     { separator: true },
     { label: 'Open on poe.ninja', icon: 'fas fa-external-link-alt', disabled: !page, action: () => { if (page) window.open(page) } }
@@ -213,10 +287,13 @@ function rowMenu (e: MouseEvent, r: MarketRow) {
 <style module>
 .split { display: flex; min-height: 0; height: 100%; }
 .side {
-  width: 12.5rem; flex: none; overflow-y: auto; padding: var(--w-s1);
+  /* As wide as the longest name, so none is cut off, but never more than a
+     third of a narrow window: the price table needs the room more. */
+  width: max-content; min-width: 11rem; max-width: min(18rem, 35%); flex: none;
+  overflow-y: auto; scrollbar-gutter: stable; padding: var(--w-s1);
   display: flex; flex-direction: column; gap: 1px; border-right: 1px solid var(--w-line);
 }
-.sec { padding: var(--w-s2) var(--w-s2) 2px; }
+.sec { padding: var(--w-s2) var(--w-s2) 2px; white-space: nowrap; }
 .cat {
   display: flex; align-items: center; gap: var(--w-s2); width: 100%; min-height: var(--w-row-h);
   padding: 0 var(--w-s2); border-radius: var(--w-r-sm); text-align: left; color: var(--w-dim);
@@ -224,7 +301,7 @@ function rowMenu (e: MouseEvent, r: MarketRow) {
 .cat:hover { background: var(--w-accent-soft); color: var(--w-fg); }
 .cat:focus-visible { outline: 1px solid var(--w-accent); }
 .on { background: var(--w-accent-soft); box-shadow: inset 2px 0 0 var(--w-accent); color: var(--w-fg); }
-.n { margin-left: auto; font-family: var(--w-num); font-size: var(--w-fs-xs); color: var(--w-faint); }
+.n { margin-left: auto; min-width: 4ch; text-align: right; font-family: var(--w-num); font-size: var(--w-fs-xs); color: var(--w-faint); }
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
 .tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); }
 .rows { flex: 1; min-height: 0; overflow-y: auto; }

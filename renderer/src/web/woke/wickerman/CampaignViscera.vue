@@ -2,7 +2,7 @@
   <div v-for="v in here" :key="v.name" :class="$style.box" data-woke-viscera-campaign>
     <div :class="$style.head">
       <span :class="$style.label">Viscera</span>
-      <span class="min-w-0 w-trunc">{{ v.name }}</span>
+      <span v-item-tip="{ name: v.name, type: 'Viscera' }" class="min-w-0 w-trunc">{{ v.name }}</span>
       <span class="w-dim whitespace-nowrap">· {{ v.slot }}</span>
       <span class="ml-auto w-dim whitespace-nowrap" :class="v.act!.unsure && $style.unsure"
         :title="v.act!.unsure ? 'Not confirmed' : undefined">{{ v.act!.boss }}</span>
@@ -15,6 +15,7 @@
 </template>
 
 <script setup lang="ts">
+import { vItemTip } from '@/web/woke/ui/tooltip/item-tip'
 import { computed, onBeforeUnmount, shallowRef, watchEffect } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { isModuleOn } from '../modules'

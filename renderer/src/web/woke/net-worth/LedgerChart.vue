@@ -11,6 +11,10 @@
       <line v-if="goalY != null" x1="0" :x2="W" :y1="goalY" :y2="goalY" :class="$style.goal" vector-effect="non-scaling-stroke" />
     </svg>
     <span v-for="m in marks" :key="m.at" :class="$style.mark" :style="{ left: m.x + '%', top: m.y + '%' }" />
+    <!-- Purchases (spend.ts): a dashed line, so a drop that isn't a loss reads as one. -->
+    <span v-for="m in spends" :key="'s' + m.at" :class="$style.spend" :style="{ left: m.x + '%' }" />
+    <!-- Sales (sales.ts): a gold dot on the line where each sold. -->
+    <span v-for="(m, i) in saleDots" :key="'d' + i + ':' + m.at" :class="$style.sale" :style="{ left: m.x + '%', top: m.y + '%' }" />
     <template v-if="shown">
       <span :class="$style.dot" :style="{ left: shown.x + '%', top: shown.y + '%' }" />
       <!-- Follows the mouse; a click keeps it open (pinned), and then its item
@@ -22,7 +26,18 @@
           <template v-for="(t, i) in shown.p.top" :key="i"><span v-item-tip="pinned && tipOf ? topTip(t) : null" :class="{ [$style.item]: !!pinned }">{{ t }}</span><template v-if="i < shown.p.top.length - 1">, </template></template>
         </span>
         <span v-else-if="shown.p.daily" class="w-dim">That day's last read</span>
-        <span v-if="!pinned && shown.p.top.length && tipOf" class="w-dim">Click to keep this open</span>
+        <span v-if="shownSales" :class="$style.saleText">Sold: {{ shownSales }}</span>
+        <span v-if="shown.p.spentDiv" :class="$style.spendText">Purchase: {{ fmt(shown.p.spentDiv) }}<Coin /> spent, not counted as a loss</span>
+        <span v-if="!pinned && (shown.p.top.length && tipOf || (!shown.p.daily && shown.p.netDiv != null && spendAction?.(shown.p.at)))" class="w-dim">Click to keep this open</span>
+        <!-- Purchases (spend.ts): mark a losing refresh as one, with how much,
+             or say a purchase wasn't one. -->
+        <div v-if="pinAction" :class="$style.spendBar">
+          <template v-if="pinAction.mark === 'spend'">
+            <label :class="$style.spendAmount">Spent <input v-model.number="amountDiv" type="number" min="0" step="0.1" :class="$style.spendInput" aria-label="Amount spent"><Coin /></label>
+            <button type="button" :class="$style.spendBtn" @click="markSpend('spend', amountDiv)">Mark as purchase</button>
+          </template>
+          <button v-else type="button" :class="$style.spendBtn" @click="markSpend(pinAction.mark)">{{ pinAction.label }}</button>
+        </div>
       </div>
     </template>
     <div v-if="series.length < 2" :class="$style.empty" class="w-dim text-xs">The line fills in as you refresh.</div>
@@ -41,6 +56,7 @@ import Coin from './Coin.vue'
 import { tipPlacement } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { Category } from './valuation'
+import type { SpendMark } from './spend'
 
 const props = defineProps<{
   series: SeriesPoint[]
@@ -54,7 +70,13 @@ const props = defineProps<{
   // Always open the hover card below the line (the dock card scrolls, so
   // one above the chart would be cut off).
   tipBelow?: boolean
+  // A clicked point's purchase switch (spend.ts); left out: none.
+  spendAction?: (at: number) => { label: string, mark: SpendMark | null } | null
+  // Your sales: a dot each, and the hover card names those since the point before.
+  sales?: Array<{ at: number, text: string }>
 }>()
+// Mark or unmark a refresh as a purchase; amount in the chart's unit.
+const emit = defineEmits<{ spend: [at: number, mark: SpendMark | null, amount?: number] }>()
 
 const W = 400
 const H = 80
@@ -76,6 +98,24 @@ const pinned = shallowRef<At | null>(null)
 const shown = computed(() => pinned.value ?? hover.value)
 const tipEl = shallowRef<HTMLElement | null>(null)
 const topTip = (t: string) => { const x = parseTop(t); return props.tipOf!(x.name, Math.abs(x.count)) }
+
+const pinAction = computed(() => {
+  const p = pinned.value?.p
+  if (!p || p.daily || p.netDiv == null || !props.spendAction) return null
+  return props.spendAction(p.at)
+})
+// The amount box starts at the whole drop.
+const amountDiv = shallowRef(0)
+watch(() => pinned.value?.p.at, () => {
+  const n = pinned.value?.p.netDiv
+  amountDiv.value = n != null && n < 0 ? Math.round(-n * 10) / 10 : 0
+})
+function markSpend (mark: SpendMark | null, amount?: number) {
+  const p = pinned.value?.p
+  if (!p) return
+  emit('spend', p.at, mark, amount != null && Number.isFinite(amount) && amount >= 0 ? amount : undefined)
+  pinned.value = null
+}
 
 function onClick (e: MouseEvent) {
   if (tipEl.value?.contains(e.target as Node)) return
@@ -152,6 +192,29 @@ const marks = computed(() => props.mode !== 'total'
   ? []
   : props.series.filter(p => props.big.has(p.at)).map(p => ({ at: p.at, x: xOf(p.at) / W * 100, y: yOf(p.div) / H * 100 })))
 
+// Each sale on the line, between the points either side of it.
+const saleDots = computed(() => {
+  const s = props.series
+  if (props.mode !== 'total' || s.length < 2 || !props.sales?.length) return []
+  return props.sales.filter(x => x.at >= span.value.t0 && x.at <= span.value.t1).map(x => {
+    const i = s.findIndex(p => p.at >= x.at)
+    const b = s[Math.max(0, i)]
+    const a = s[Math.max(0, i - 1)]
+    const t = b.at === a.at ? 1 : (x.at - a.at) / (b.at - a.at)
+    return { at: x.at, x: xOf(x.at) / W * 100, y: yOf(a.div + (b.div - a.div) * t) / H * 100 }
+  })
+})
+const shownSales = computed(() => {
+  const p = shown.value?.p
+  if (!p || !props.sales?.length) return ''
+  const i = props.series.findIndex(q => q.at === p.at)
+  const from = i > 0 ? props.series[i - 1].at : -Infinity
+  const list = props.sales.filter(x => x.at > from && x.at <= p.at)
+  return list.length > 3 ? `${list.slice(0, 3).map(x => x.text).join(', ')} +${list.length - 3} more` : list.map(x => x.text).join(', ')
+})
+
+const spends = computed(() => props.series.filter(p => p.spentDiv).map(p => ({ at: p.at, x: xOf(p.at) / W * 100 })))
+
 function onMove (e: MouseEvent) {
   const el = box.value
   const s = props.series
@@ -181,6 +244,14 @@ function when (at: number) {
 .band { opacity: .55; }
 .goal { stroke: var(--w-up); stroke-width: 1; stroke-dasharray: 4 3; }
 .mark { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--w-up); transform: translate(-50%, -50%); pointer-events: none; }
+.spend { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--w-info); opacity: .8; pointer-events: none; }
+.spendText { color: var(--w-info); }
+.sale { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--w-gold); box-shadow: 0 0 0 1px var(--w-panel-solid); transform: translate(-50%, -50%); pointer-events: none; }
+.saleText { color: var(--w-gold); }
+.spendBar { display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap; }
+.spendAmount { display: inline-flex; align-items: center; gap: 4px; color: var(--w-dim); }
+.spendInput { width: 56px; background: var(--w-panel-solid); color: var(--w-fg); border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); padding: 0 4px; font: inherit; }
+.spendBtn { color: var(--w-accent); text-decoration: underline; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }
 .dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--w-fg); box-shadow: 0 0 0 2px var(--w-panel-solid), 0 0 0 3px var(--w-gold); transform: translate(-50%, -50%); pointer-events: none; }
 .tip {
   position: absolute; z-index: 5; pointer-events: none;

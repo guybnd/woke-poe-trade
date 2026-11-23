@@ -113,6 +113,8 @@
     "info": "Проверка предмета",
     "corrupted": "Осквернен",
     "not_corrupted": "Не осквернен",
+    "twice_corrupted": "Дважды осквернен",
+    "not_catalysed": "Не катализировано",
     "corrupted_any": "Любой",
     "mod_tier": "Уровень: {0}",
     "mod_rank": "Ранг: {0}",

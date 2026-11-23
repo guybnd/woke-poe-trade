@@ -2,6 +2,9 @@
 // Never a trade search: rares and other gear without a poe.ninja row stay
 // unpriced.
 import { usePoeninja } from '@/web/background/Prices'
+import { lastWokePrices } from '../market/hook'
+import { feedDays, graphGaps, pricedOnlyToday } from '../market/parse'
+import { THIN_GAPS } from '../market/types'
 import { categoryOfSlug, gemVariant, isUniqueFrame } from './valuation'
 import type { Priced, PriceOf, StashItemLike } from './valuation'
 
@@ -27,8 +30,25 @@ export function ninjaPriceOf (): PriceOf {
   const ninja = usePoeninja()
   const cache = new Map<string, Priced | null>()
   const divine = ninja.xchgRate.value ?? null
+  // Days the league has prices for, so a new league's items aren't all thin.
+  const loaded = lastWokePrices()
+  const days = loaded ? feedDays(loaded.chunks) : undefined
+  // Thin market (poe.ninja had no price on 3+ of the last 7 days): one fake
+  // listing can set its price (valuation.ts holds a sudden jump).
+  const gapsOf = (graph: unknown) => graphGaps(graph, days)
 
   function lookup (item: StashItemLike): Priced | null {
+    const p = find(item)
+    if (p) {
+      const gaps = gapsOf(p.graph)
+      p.gaps = gaps
+      if (gaps >= THIN_GAPS) p.thin = true
+      if (pricedOnlyToday(p.graph, days)) p.oneDay = true
+    }
+    return p
+  }
+
+  function find (item: StashItemLike): Priced | null {
     if (item.typeLine === 'Chaos Orb') return { chaos: 1, category: 'currency' }
     if (item.typeLine === 'Divine Orb' && divine) return { chaos: divine, category: 'currency' }
     if (item.frame === 6) {

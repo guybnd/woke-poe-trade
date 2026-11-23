@@ -25,6 +25,8 @@ async function rightClickGivesStrip (page: Page, row: Locator, name: string | Re
   await expect(menu).toBeVisible()
   await expect(menu).toContainText(name)
   await expect(menu.getByRole('menuitem', { name: 'Price check' })).toBeVisible()
+  // The item's own menu: the window around it doesn't add its entries.
+  await expect(menu.getByRole('menuitem', { name: /window/ })).toHaveCount(0)
   await page.keyboard.press('Escape')
   await expect(menu).toBeHidden()
 }
@@ -36,7 +38,7 @@ test('Search: a base\'s uniques show their tooltip and menu, a click opens the u
   await overlay.pressHotkey('Ctrl + Space')
   const page = overlay.page
   const panel = overlay.widget('woke-search')
-  const box = panel.getByRole('textbox', { name: 'Search' })
+  const box = panel.getByRole('textbox', { name: 'Search', exact: true })
   await expect(async () => {
     await box.fill('headhunter')
     await expect(panel.getByRole('button', { name: /Headhunter/ }).first()).toBeVisible({ timeout: 500 })
@@ -87,6 +89,8 @@ test('price check side window: a row shows its tooltip and menu, a click price c
   await overlay.boot()
   await overlay.copyItem('items/essence-deafening-misery.txt')
   const page = overlay.page
+  // poe.ninja prices it, so the instant card shows, with the related items under it (WOKEPOET-480).
+  await expect(page.getByTestId('instant-ninja-card').locator('.w-pc-side')).toBeVisible({ timeout: 20_000 })
   const side = page.locator('.w-pc-side')
   await expect(side).toBeVisible({ timeout: 20_000 })
   const row = side.getByText(/^Shrieking Essence of Misery$/).first()

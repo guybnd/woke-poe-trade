@@ -310,8 +310,8 @@ function parseMap (section: string[], item: ParsedItem) {
     } else if (line.startsWith(_$.MAP_MORE_MAPS)) {
       item.mapMoreMaps = parseInt(line.slice(_$.MAP_MORE_MAPS.length), 10)
       isParsed = 'SECTION_PARSED'
-    } else if (line.startsWith(_$.MAP_MORE_SCARABS)) {
-      item.mapMoreScarabs = parseInt(line.slice(_$.MAP_MORE_SCARABS.length), 10)
+    } else if (line.startsWith(_$.MAP_MORE_THREADS)) {
+      item.mapMoreThreads = parseInt(line.slice(_$.MAP_MORE_THREADS.length), 10)
       isParsed = 'SECTION_PARSED'
     } else if (line.startsWith(_$.MAP_MORE_CURRENCY)) {
       item.mapMoreCurrency = parseInt(line.slice(_$.MAP_MORE_CURRENCY.length), 10)
@@ -497,13 +497,17 @@ function parseCorrupted (section: string[], item: ParsedItem) {
   // woke: a double-corrupted item prints "Twice Corrupted" in place of the
   // plain line (seen in trade copies), so accept a one-line section of one capitalised
   // word and it. A mod such as "... while Corrupted" stays a mod.
-  if (section[0] === _$.CORRUPTED || (
+  if (section[0] === _$.CORRUPTED) {
+    item.isCorrupted = true
+    return 'SECTION_PARSED'
+  } else if (section[0] === _$.TWICE_CORRUPTED || (
     section.length === 1 &&
     section[0].length > _$.CORRUPTED.length &&
     section[0].endsWith(_$.CORRUPTED) &&
     /^\p{Lu}\S*[\s-]$/u.test(section[0].slice(0, -_$.CORRUPTED.length))
   )) {
     item.isCorrupted = true
+    item.isTwiceCorrupted = true
     return 'SECTION_PARSED'
   } else if (section[0] === _$.UNMODIFIABLE) {
     item.isCorrupted = true

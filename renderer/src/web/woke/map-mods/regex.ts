@@ -23,13 +23,13 @@ export type MinStat = 'quantity' | 'rarity' | 'packSize' | 'quality' | 'currency
 // The tail of each map property line ("Atlas Drops: +112%"), picked so it
 // matches only that line. `.` stands in for the `+`. 'quantity' is the 3.30
 // Atlas Drops line, which replaced Item Quantity on every map, old ones too.
-const MIN_PREFIX: Record<MinStat, string> = {
+export const MIN_PREFIX: Record<MinStat, string> = {
   quantity: 'ops: .',
   rarity: 'rity: .',
   packSize: 'ze: .',
   quality: 'lity: .',
   currency: 'ncy: .',
-  scarabs: 'abs: .',
+  scarabs: 'eads: .',
   maps: 'aps: .',
   divCards: 'rds: .'
 }
@@ -40,7 +40,7 @@ export const MIN_LABELS: Record<MinStat, string> = {
   packSize: 'Pack size',
   quality: 'Quality',
   currency: 'More currency',
-  scarabs: 'More scarabs',
+  scarabs: 'More threads',
   maps: 'More maps',
   divCards: 'More div cards'
 }
@@ -58,7 +58,7 @@ export const TOOLTIP_LINES = [
   'monster pack size: +100%',
   'quality: +20%',
   'more currency: +100%',
-  'more scarabs: +100%',
+  'more threads: +100%',
   'more maps: +100%',
   'more divination cards: +100%',
   'item level: 83',

@@ -25,6 +25,18 @@
 .w-pc-toolbar .w-pc-matched b { font-weight: 600; color: var(--w-fg); font-variant-numeric: tabular-nums; }
 /* The filter's label gives way first, so the controls on the right never clip. */
 .w-pc-toolbar .w-pc-online { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+/* Bulk: a small bordered chip like the affix caps; lit while on. */
+.w-pc-toolbar .w-pc-bulk {
+  padding: 0 6px;
+  border: 1px solid var(--w-chip-line);
+  border-radius: 3px;
+  color: var(--w-dim);
+  font-family: var(--w-label);
+  font-size: .85em;
+  line-height: 1.5;
+}
+.w-pc-toolbar .w-pc-bulk:hover { color: var(--w-fg); }
+.w-pc-toolbar .w-pc-bulk.on { color: var(--w-gold-hi, var(--w-fg)); border-color: var(--w-gold); }
 
 :root:not([data-woke-theme="classic"]) .w-pc-online-btn {
   display: inline-flex;
@@ -207,6 +219,37 @@
 .w-pc-search-row { min-height: calc(24px * var(--w-text-scale, 1)); margin-bottom: var(--w-s2, 0.5rem); }
 .w-pc-search-row .btn { height: calc(24px * var(--w-text-scale, 1)); padding-top: 0; padding-bottom: 0; }
 
+/* woke: results filtered here (local-filter.ts, Guy's pick C). The Search row's
+   Matched count, one line in the row's own height, so nothing below moves. */
+/* No margins of its own: an empty slot takes no room, so the caps beside it stay put. */
+.w-pc-status-slot { flex: 1 1 0; min-width: 0; display: flex; }
+.w-pc-status {
+  display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; max-width: 100%; overflow: hidden; margin: 0 var(--w-s2, 0.5rem);
+  white-space: nowrap; font-size: var(--w-fs-sm);
+}
+.w-pc-status b { font-weight: 400; }
+.w-pc-status-note { color: var(--w-dim); }
+.w-pc-status-local { color: var(--w-info); }
+/* The column a tighter range filters, and the mod row it comes from. */
+.w-pc-local-chip {
+  margin-left: 3px; padding: 0 3px; border: 1px solid color-mix(in srgb, var(--w-info) 60%, transparent);
+  color: var(--w-info); font-size: 0.85em; white-space: nowrap;
+}
+.w-pc-local-row { box-shadow: inset 2px 0 0 var(--w-info); }
+/* A short filtered list: a Search hint. */
+.w-pc-local-hint > td {
+  padding-top: 6px; padding-bottom: 6px; white-space: normal;
+  border-top: 1px dashed var(--w-line); background: color-mix(in srgb, var(--w-info) 7%, transparent);
+}
+.w-pc-local-hint > td > * { margin-right: 8px; vertical-align: middle; }
+.w-pc-local-go { color: var(--w-accent); }
+/* Only a new search can help: Search glows. */
+.btn.w-pc-glow { box-shadow: 0 0 0 1px var(--w-accent), 0 0 10px 2px color-mix(in srgb, var(--w-accent) 55%, transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  .btn.w-pc-glow { animation: w-pc-glow 1.6s ease-in-out infinite; }
+  @keyframes w-pc-glow { 50% { box-shadow: 0 0 0 1px var(--w-accent), 0 0 4px 0 color-mix(in srgb, var(--w-accent) 30%, transparent); } }
+}
+
 .w-pc-verdict-slot.w-pc-verdict-held {
   margin: -1rem -1rem 8px;
   min-height: 33px;
@@ -258,6 +301,7 @@
 }
 .w-pc-travel:hover, .w-pc-travel.w-pc-travel-on { color: var(--w-accent); border-color: var(--w-line-strong); background: var(--w-accent-soft); }
 .w-pc-travel:disabled { cursor: progress; }
+.w-pc-travel-gap { display: inline-block; flex: none; width: 1.25rem; }
 .w-pc-travel:focus-visible { outline: 1px solid var(--w-accent); outline-offset: 1px; }
 .w-pc-travel-note { display: inline-block; max-width: 11em; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; color: var(--w-accent); }
 .w-pc-travel-note.w-pc-travel-warn { color: var(--w-warn); }

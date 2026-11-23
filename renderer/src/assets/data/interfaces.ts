@@ -19,6 +19,7 @@ export interface Stat {
   matchers: StatMatcher[]
   better: StatBetter
   modFamily?: string[]
+  reminderText?: string
   fromAreaMods?: 'yes' | 'ubermap_exclusive' | 'heist_exclusive'
   anointments?: Array<{ roll: number, oils: string }>
   mercenary?: { icon?: string, supports?: string[], tier?: number, canonical?: string, syntheticFamily?: true }
@@ -138,7 +139,7 @@ export interface TranslationDict {
   MAP_ITEM_RARITY: string
   MAP_MONSTER_PACK_SIZE: string
   MAP_MORE_MAPS: string
-  MAP_MORE_SCARABS: string
+  MAP_MORE_THREADS: string
   MAP_MORE_CURRENCY: string
   MAP_MORE_DIVINATION_CARDS: string
   MAP_COMPLETION_REWARD: RegExp
@@ -164,6 +165,7 @@ export interface TranslationDict {
   TAG_WARD: string
   BLOCK_CHANCE: string
   CORRUPTED: string
+  TWICE_CORRUPTED: string
   UNIDENTIFIED: string
   ITEM_SUPERIOR: RegExp
   MAP_BLIGHTED: RegExp

@@ -31,6 +31,7 @@ const PROP_LABELS: Array<[keyof ScannedMap['props'] | 'tier', string]> = [
   ['packSize', 'monster pack size'],
   ['quality', 'quality'],
   ['currency', 'more currency'],
+  ['scarabs', 'more threads'],
   ['scarabs', 'more scarabs'],
   ['maps', 'more maps'],
   ['divCards', 'more divination cards']

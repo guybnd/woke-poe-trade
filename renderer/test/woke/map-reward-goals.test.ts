@@ -21,7 +21,7 @@ describe('rewardGoals', () => {
 
   it('reads a missing stat as 0, so the minimum is missed', () => {
     expect(rewardGoals(map({}), { scarabs: 10 })).toEqual([
-      { stat: 'scarabs', label: 'More scarabs', need: 10, value: 0, met: false }
+      { stat: 'scarabs', label: 'More threads', need: 10, value: 0, met: false }
     ])
   })
 

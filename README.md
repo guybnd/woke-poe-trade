@@ -73,8 +73,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Area | Module | What it does |
 | --- | --- | --- |
 | Economy | Market | Every poe.ninja price by category, plus movers and a watchlist |
-| Economy | Investments | League-start buys ranked from past leagues |
-| Economy | Flips | Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more |
+| Economy | Flips | Vendor recipes and Harvest rerolls worth doing: threads, catalysts, delirium orbs and more |
 | Economy | Disenchant | Uniques with the most Thaumaturgic Dust per chaos, to buy and disenchant |
 | Economy | Wealthy Exile | The Wealthy Exile net worth site in an overlay window |
 | Economy | Drop counter | A tally of the drops you choose, and maps run |
@@ -82,10 +81,8 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Economy | Session analytics | Profit per map, strategy and hour over time |
 | Economy | Wickerman (3.30) | Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one |
 | Economy | Boss runs | Profit per boss kill |
-| Mapping | Map mods | Danger strip on price check and map regex |
-| Mapping | Farming | Session profit per hour |
-| Mapping | Map scan | Reads map tooltips on screen |
-| Mapping | Session story | A card of the night, a line on each map you finish, and your map history |
+| Mapping | Map mods | Danger strip on price check, map regex, and map scan (reads hovered maps on screen) |
+| Mapping | Session story | A summary card when you log off, a per map run toast, and your map history |
 | Mapping | Death recap | Where you died, and the mods of maps you checked |
 | Mapping | Essence scan | Reads essence monoliths and flags MEDS |
 | Mapping | Loot filter editor | Edit the NeverSink rule for a sampled item |
@@ -111,7 +108,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 2. The setup wizard finds your game folder and asks how you play.
 3. In game, `Ctrl + D` prices the item under the cursor and `Shift + Space` opens the overlay. The rail on the left edge holds every tool.
 
-Run Path of Exile in Windowed or Windowed Fullscreen. The game can be in English, Russian, Korean or Traditional Chinese; the newer tools are in English only for now. The [help pages](https://guybnd.github.io/woke-poe-trade/issues) cover the common problems.
+Run Path of Exile in Windowed or Windowed Fullscreen. The game can be in English, Russian, Korean or Traditional Chinese; the newer tools are in English only for now. The [help pages](https://guybnd.github.io/woke-poe-trade/issues) cover the common problems, and the [Discord](https://discord.gg/XrUcvXrt4e) is there for questions and ideas.
 
 ## Privacy and safety
 

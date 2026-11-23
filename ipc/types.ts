@@ -183,6 +183,8 @@ type IpcItemText =
     item?: unknown
     position: { x: number, y: number }
     focusOverlay: boolean
+    // woke: asked for from inside the overlay, so it wants live listings.
+    live?: boolean
   }>
 
 type IpcGameLog =

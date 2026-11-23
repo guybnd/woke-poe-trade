@@ -123,6 +123,7 @@ export function initSetup (appUpdater: AppUpdater) {
   })
   registerWokeHandler('setup-open', async () => { openSetupWindow(); return true })
   registerWokeHandler('app-restart', async () => { restartApp(); return true })
+  registerWokeHandler('update-check', async () => await appUpdater.checkNow())
   // Going back to the previous release (Settings › About).
   registerWokeHandler('rollback-state', async () => await appUpdater.rollbackState())
   registerWokeHandler('rollback-start', async () => appUpdater.startRollback())
@@ -137,8 +138,9 @@ export function initSetup (appUpdater: AppUpdater) {
 
   registerWokeHandler('crash-pending', async () => pendingCrash())
   registerWokeHandler('crash-dismiss', async () => { dismissCrashes(); return true })
-  registerWokeHandler('crash-report', async (args: { id?: string | null, context?: string }) => {
-    await openReport(args?.id ?? null, args?.context)
+  registerWokeHandler('crash-report', async (args: { id?: string | null, context?: string, names?: string[] }) => {
+    const names = Array.isArray(args?.names) ? args.names.filter(n => typeof n === 'string') : []
+    await openReport(args?.id ?? null, args?.context, names)
     return true
   })
   registerWokeHandler('crash-folder', async () => { await openCrashFolder(); return true })

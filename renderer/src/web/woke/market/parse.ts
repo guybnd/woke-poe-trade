@@ -133,6 +133,15 @@ export function graphGaps (graph: unknown, days = GRAPH_DAYS): number {
   return Math.round(gaps * GRAPH_DAYS / window)
 }
 
+// poe.ninja's 7-day line holds a price today and none on the days before
+// (The Web after it dropped off poe.ninja and came back). An empty line is
+// just a quiet item, not this, and a league's first day has nothing before.
+export function pricedOnlyToday (graph: unknown, days = 7): boolean {
+  if (!Array.isArray(graph) || days < 2) return false
+  const tail = graph.slice(-Math.min(7, days))
+  return tail.length > 0 && tail[tail.length - 1] != null && tail.slice(0, -1).every(v => v == null)
+}
+
 export function findDivinePrice (items: PriceItem[]): number | null {
   const divine = items.find(i => i.type === 'Currency' && i.name === 'Divine Orb' && !i.variant)
   return divine && divine.chaos >= 1 ? divine.chaos : null

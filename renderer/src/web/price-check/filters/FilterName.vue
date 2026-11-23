@@ -2,7 +2,7 @@
   <!-- woke: PoE mode puts the same parts in a 2x2 grid: name | poe.ninja, scope and chips | numbers. -->
   <div class="filter-name" :class="{ 'w-poe-head': poe }">
     <div class="filter-name-main">
-      <div class="filter-name-title">
+      <div class="filter-name-title" data-no-item-tip="the price check's own item, which the player is already hovering in game">
         <!-- woke: with a Generic/Base choice, clicking the name switches it: the category, or this base type. -->
         <!-- woke: a cluster jewel's title picks another size and type (WOKEPOET-366). -->
         <cluster-type-pick v-if="clusterSize && stats" :item="item" :filters="filters" :stats="stats" :own-size="clusterSize" />
@@ -20,25 +20,29 @@
           @click="setScope(filters.searchRelaxed.disabled ? 'generic' : 'base')">{{ filters.searchRelaxed.disabled ? 'This size' : 'Any size' }}</button>
         <button v-if="filters.corrupted" type="button" data-corrupted-chip
           class="filter-name-corrupted" :class="{ on: filters.corrupted.search === 'corrupted' }"
-          title="Corrupted filter. Click to change: Any, Corr (corrupted only), Not (uncorrupted only)."
+          :title="filters.corrupted.twice
+            ? 'This item is twice corrupted. Corrupted filter: click to change: Any, Twice Corrupted (corrupted only, once or twice), Not (uncorrupted only).'
+            : 'Corrupted filter. Click to change: Any, Corr (corrupted only), Not (uncorrupted only).'"
           @click="cycleCorrupted">
           <!-- The Vaal Orb says what the chip is about. Every label stays in the grid cell,
                so the chip keeps its width and stays under the mouse. -->
           <w-icon item="Vaal Orb" size="sm" title="" />
           <span class="filter-name-corrupted-labels">
             <span v-for="state of corruptedStates" :key="state.search"
-              :class="{ shown: state.search === filters.corrupted.search }">{{ state.label }}</span>
+              :class="{ shown: state.search === filters.corrupted.search }">{{ (state.search === 'corrupted' && filters.corrupted.twice) ? t('item.twice_corrupted') : state.label }}</span>
           </span>
         </button>
         <filter-btn-logical v-if="searchSub"
           :filter="searchSub" :text="searchSub.name ?? searchSub.baseType!" />
-        <filter-btn-logical v-if="filters.mapCompletionReward" readonly
+        <filter-btn-logical v-if="filters.mapCompletionReward && !filters.mapCompletionReward.disabled" readonly
           :filter="{ disabled: false }" :text="t('item.map_foil_reward', [filters.mapCompletionReward.name])" />
         <template v-if="filters.influences">
           <filter-btn-logical v-for="influence of filters.influences" :key="influence.value"
             :filter="influence" :text="influence.value" :img="`/images/influence-${influence.value}.png`" />
         </template>
-        <filter-btn-logical v-if="filters.rarity?.value === 'magic'"
+        <!-- woke: gear steps its rarity: Any, Magic (bases to recombine or fracture), Rare. -->
+        <rarity-chip v-if="filters.rarity && rarityChip" :rarity="filters.rarity" :stats="stats" />
+        <filter-btn-logical v-else-if="filters.rarity?.value === 'magic'"
           :filter="filters.rarity" text="Magic" />
         <filter-btn-logical v-if="filters.unidentified"
           :filter="filters.unidentified" :text="t('item.unidentified')" />
@@ -48,6 +52,9 @@
           :filter="filters.foil" :text="t('item.foil_unique')" />
         <filter-btn-logical v-if="filters.mirrored && !filters.mirrored.hidden" active
           :filter="filters.mirrored" :text="t(filters.mirrored.disabled ? 'item.not_mirrored' : 'item.mirrored')" />
+        <filter-btn-logical v-if="filters.notCatalysed" data-not-catalysed
+          title="Only items without catalyst quality."
+          :filter="filters.notCatalysed" :text="t('item.not_catalysed')" />
         <filter-btn-logical v-if="filters.split && !filters.split.hidden" active
           :filter="filters.split" :text="t(filters.split.disabled ? 'item.not_split' : 'item.split')" />
         <slot name="meta" />
@@ -91,7 +98,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, computed } from 'vue'
+import { defineAsyncComponent, defineComponent, PropType, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ItemCategory, ItemRarity, type ParsedItem } from '@/parser'
 import type { CorruptedSearch, ItemFilters } from './interfaces'
@@ -99,7 +106,7 @@ import { CATEGORY_TO_TRADE_ID } from '../trade/pathofexile-trade'
 import { WIcon } from '@/web/woke/ui'
 import FilterBtnNumeric from './FilterBtnNumeric.vue'
 import { NUMERIC_LIMITS } from './numeric-limits'
-import { socketColourFilters } from './create-item-filters'
+import { socketColourFilters, hasRarityChip } from './create-item-filters'
 import FilterBtnLogical from './FilterBtnLogical.vue'
 import { poeOn } from '@/web/woke/price-insight/window-style'
 import type { FilterOrGroup } from './interfaces'
@@ -110,7 +117,14 @@ const SOCKET_COLOURS = ['r', 'g', 'b', 'w'] as const
 
 export default defineComponent({
   name: 'FilterName',
-  components: { FilterBtnNumeric, FilterBtnLogical, WIcon, ClusterTypePick },
+  components: {
+    FilterBtnNumeric,
+    FilterBtnLogical,
+    WIcon,
+    ClusterTypePick,
+    // woke: loaded on demand, to keep startup JS in budget.
+    RarityChip: defineAsyncComponent(() => import('./RarityChip.vue'))
+  },
   props: {
     filters: {
       type: Object as PropType<ItemFilters>,
@@ -156,7 +170,8 @@ export default defineComponent({
 
     const baseName = computed(() => {
       const { item, filters } = props
-      if (item.uniqueBase) return item.uniqueBase.name
+      // The game names the base "Vestigial Great Crown".
+      if (item.uniqueBase) return item.isVestigial ? `Vestigial ${item.uniqueBase.name}` : item.uniqueBase.name
       if (filters.searchRelaxed) return ''
       return (item.info.name !== label.value) ? item.info.name : ''
     })
@@ -200,9 +215,12 @@ export default defineComponent({
       return clusterSizeOf(item.info.refName)
     })
 
+    const rarityChip = computed(() => hasRarityChip(props.item))
+
     return {
       t,
       poe: poeOn,
+      rarityChip,
       SOCKET_COLOURS,
       toggleColourTiles,
       clusterSize,

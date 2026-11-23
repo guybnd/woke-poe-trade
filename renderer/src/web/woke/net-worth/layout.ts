@@ -1,18 +1,26 @@
 // The Net worth window's resizable sections: the two halves, the columns
-// under them, and the chart's height. Pure: no Vue.
+// under them, the chart's and the middle row's heights, and which sections
+// are folded to their title line. Pure: no Vue.
 
 export type ColId = 'changes' | 'side'
+export type FoldId = 'chart' | 'perHour' | 'changes' | 'sold' | 'where' | 'moves'
 
 export interface PanelLayout {
-  // The left half's share of the top row (the chart's side).
-  top?: number
+  // The left half's share of the top row (the chart's side). A new key:
+  // an old "top" from an earlier, removed version of this drag is ignored.
+  half?: number
   // The columns' widths, relative to each other.
   cols?: Partial<Record<ColId, number>>
   // The chart's height, px.
   chartH?: number
+  // The middle row's height, px (unset: as tall as what's in it). Its lists
+  // scroll inside.
+  midH?: number
+  // Sections folded to their title line.
+  folded?: FoldId[]
 }
 
-export const TOP_DEFAULT = 0.6
+export const TOP_DEFAULT = 0.5
 export const CHART_H_DEFAULT = 60
 export const COL_DEFAULT: Record<ColId, number> = { changes: 1.3, side: 1 }
 
@@ -20,13 +28,38 @@ const ok = (n: unknown): n is number => typeof n === 'number' && Number.isFinite
 
 export const clampTop = (t: number) => Math.min(0.8, Math.max(0.3, t))
 export const clampChartH = (h: number) => Math.min(320, Math.max(48, Math.round(h)))
+export const clampMidH = (h: number) => Math.min(900, Math.max(60, Math.round(h)))
 
 export function topOf (l: PanelLayout | undefined): number {
-  return ok(l?.top) ? clampTop(l.top) : TOP_DEFAULT
+  return ok(l?.half) ? clampTop(l.half) : TOP_DEFAULT
 }
 
 export function chartHOf (l: PanelLayout | undefined): number {
   return ok(l?.chartH) ? clampChartH(l.chartH) : CHART_H_DEFAULT
+}
+
+// A height dragged and saved: true. Left unset, the chart beside Per hour
+// fills its half.
+export const hasChartH = (l: PanelLayout | undefined) => ok(l?.chartH)
+
+export function midHOf (l: PanelLayout | undefined): number | null {
+  return ok(l?.midH) ? clampMidH(l.midH) : null
+}
+
+// The halves' edge moved by dx px, in a row widthPx wide.
+export function dragTop (top: number, dx: number, widthPx: number): number {
+  return widthPx > 0 ? clampTop(top + dx / widthPx) : clampTop(top)
+}
+
+const FOLDS: readonly FoldId[] = ['chart', 'perHour', 'changes', 'sold', 'where', 'moves']
+export function foldedOf (l: PanelLayout | undefined): Record<FoldId, boolean> {
+  const list = Array.isArray(l?.folded) ? l.folded : []
+  return Object.fromEntries(FOLDS.map(id => [id, list.includes(id)])) as Record<FoldId, boolean>
+}
+export function toggleFold (list: readonly FoldId[] | undefined, id: FoldId): FoldId[] {
+  const all = Array.isArray(list) ? list : []
+  const rest = all.filter(x => x !== id && FOLDS.includes(x))
+  return all.includes(id) ? rest : [...rest, id]
 }
 
 export function colWeights (l: PanelLayout | undefined, ids: readonly ColId[]): number[] {

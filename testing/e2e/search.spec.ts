@@ -12,7 +12,7 @@ const SEARCH_KEY = 'Ctrl + Space'
 // Prices are saved a moment after they load.
 async function waitForPrices (overlay: Overlay) {
   const panel = overlay.widget('woke-search')
-  const box = panel.getByRole('textbox', { name: 'Search' })
+  const box = panel.getByRole('textbox', { name: 'Search', exact: true })
   await expect(async () => {
     await box.fill('headhunter')
     await expect(panel.getByRole('button', { name: /Headhunter/ }).first()).toBeVisible({ timeout: 500 })
@@ -34,7 +34,7 @@ test('the hotkey opens the palette ready to type, and Esc leaves it', async ({ o
 
   await overlay.pressHotkey(SEARCH_KEY)
   const palette = overlay.widget('woke-search')
-  const box = palette.getByRole('textbox', { name: 'Search' })
+  const box = palette.getByRole('textbox', { name: 'Search', exact: true })
   await expect(box).toBeVisible()
   await expect(box).toBeFocused()
   await overlay.snap('search-opened')
@@ -60,10 +60,24 @@ test('prices are grouped, and the detail shows every variant and its actions', a
   await overlay.pressHotkey(SEARCH_KEY)
   const { panel, box } = await waitForPrices(overlay)
 
-  await expect(panel.getByText('Trade site')).toBeVisible()
+  await expect(panel.getByRole('button', { name: /^Trade site/ })).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Wiki', exact: true })).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Price check', exact: true })).toBeVisible()
+  // Trade site leads; Open in Market comes last, as a quiet link.
+  const acts = panel.locator('[data-item-actions] button')
+  await expect(acts.first()).toContainText('Trade site')
+  await expect(acts.last()).toHaveText('Market')
+  await expect(panel.getByRole('button', { name: 'Copy name', exact: true })).toBeVisible()
   await overlay.snap('search-unique')
+
+  // Enter does what the main button does: the trade site, not the Market window.
+  await overlay.page.evaluate(() => {
+    const w = window as unknown as { open: (url: string) => null, __opened?: string }
+    w.open = (url: string) => { w.__opened = url; return null }
+  })
+  await box.press('Enter')
+  const opened = await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')
+  expect(opened).toContain('/trade/search/')
 
   // A gem: the Vaal orb button narrows it to corrupted variants.
   await box.fill('enlighten')
@@ -87,7 +101,7 @@ test('prices are grouped, and the detail shows every variant and its actions', a
 
   await box.fill('market')
   await expect(panel.getByRole('button', { name: /Market\s*Tool/ })).toBeVisible()
-  await expect(panel.getByRole('button', { name: /Market & investments/ })).toBeVisible()
+  await expect(panel.getByRole('button', { name: /Market & flips\s*Settings page/ })).toBeVisible()
   await overlay.snap('search-tools')
 
   await box.fill('astral plate')
@@ -112,8 +126,8 @@ test('the launcher lists prices, and a click opens the palette on them', async (
 
   await overlay.page.getByRole('button', { name: /Headhunter/ }).click()
   const palette = overlay.widget('woke-search')
-  await expect(palette.getByRole('textbox', { name: 'Search' })).toHaveValue('Headhunter')
-  await expect(palette.getByText('Trade site')).toBeVisible()
+  await expect(palette.getByRole('textbox', { name: 'Search', exact: true })).toHaveValue('Headhunter')
+  await expect(palette.getByRole('button', { name: /^Trade site/ })).toBeVisible()
   expect(overlay.errors).toEqual([])
 })
 
@@ -371,6 +385,38 @@ test('a base lists its uniques with their prices', async ({ overlay }) => {
   await overlay.snap('search-priced-base')
 })
 
+test("Trade site opens the price check's listings: Instant buyout, no Foulborn copies for a plain unique, a unique map on its Map base", async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+  await overlay.page.evaluate(() => {
+    const w = window as unknown as { open: (url: string) => null, __opened?: string }
+    w.open = (url: string) => { w.__opened = url; return null }
+  })
+  const opened = async () => {
+    await panel.getByRole('button', { name: /^Trade site/ }).click()
+    const url = await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')
+    return JSON.parse(new URL(url).searchParams.get('q') ?? '{}') as { query: Record<string, unknown> }
+  }
+
+  // A plain unique: Instant buyout (price check's default), Foulborn copies left out.
+  await box.fill('mageblood')
+  await panel.getByRole('button', { name: /^Mageblood/ }).first().click()
+  const plain = (await opened()).query
+  expect(plain.status).toEqual({ option: 'securable' })
+  expect(plain.filters).toEqual({ misc_filters: { filters: { foulborn_item: { option: 'false' } } } })
+
+  // A unique map: by name on the Map base, each with the "map" discriminator.
+  await box.fill('cortex')
+  await panel.getByRole('button', { name: /^Cortex/ }).first().click()
+  const map = (await opened()).query
+  expect(map.name).toEqual({ option: 'Cortex', discriminator: 'map' })
+  expect(map.type).toEqual({ option: 'Map', discriminator: 'map' })
+  expect(map.status).toEqual({ option: 'securable' })
+})
+
 test("a unique's details: variants, Foulborn kinds with what they replace, and its Vestigial mod", async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await overlay.boot(bootOptions())
@@ -393,7 +439,7 @@ test("a unique's details: variants, Foulborn kinds with what they replace, and i
     w.open = (url: string) => { w.__opened = url; return null }
   })
   await panel.getByRole('button', { name: /^4 Flasks Rightmost/ }).click()
-  await panel.getByText('Trade site').click()
+  await panel.getByRole('button', { name: /^Trade site/ }).click()
   const url = await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')
   expect(decodeURIComponent(url)).toContain('"foulborn_item":{"option":"true"}')
 

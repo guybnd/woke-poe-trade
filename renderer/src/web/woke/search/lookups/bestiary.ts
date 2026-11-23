@@ -11,11 +11,10 @@ export interface BeastRecipe {
   r: string
   // Conditions and the mod it adds, one line each.
   n?: string[]
-  // Named beasts, in altar order.
+  // Named beasts, in altar order. Since 3.30 that's the whole recipe: yellow
+  // beasts left every recipe, so there are no "any rare" slots.
   b: string[]
-  // Slots any rare beast fills.
-  a: number
-  // Slots only a red (unique) beast fills.
+  // Slots any red beast fills (the flask recipes).
   red?: number
 }
 export interface BestiaryData {
@@ -52,12 +51,21 @@ export function recipeTitle (rec: BeastRecipe): string {
 
 export const shortBeast = (name: string) => name.split(',')[0]
 
-// "Farric Tiger Alpha + 3 any rare"
+// The item a currency recipe makes, for its tooltip: "A stack of 2 Orbs of
+// Regret" -> "Orb of Regret", "Orb of Fusing". Null for anything else.
+export function recipeItem (rec: BeastRecipe): string | null {
+  if (rec.g !== 'Create Currency Items' || /random/i.test(rec.r)) return null
+  return rec.r.replace(/^A stack of \d+ /i, '')
+    .replace(/^Orbs of /, 'Orb of ')
+    .replace(/ Orbs$/, ' Orb')
+}
+
+// "Craicic Sand Spitter + Craicic Shield Crab", "1 red beast"; '' when the
+// beast left out is the whole recipe.
 export function recipeNeeds (rec: BeastRecipe, without?: string): string {
   const named = rec.b.filter(b => b !== without).map(shortBeast)
   const red = rec.red ? `${rec.red} red beast` : ''
-  const any = rec.a ? `${rec.a} any rare` : ''
-  return [...named, red, any].filter(Boolean).join(' + ')
+  return [...named, red].filter(Boolean).join(' + ')
 }
 
 // The named beasts' total, or null when one has no price.
@@ -123,7 +131,6 @@ function card (data: BestiaryData, rec: BeastRecipe, ctx: LookupContext): Lookup
     action: { label: `Search trade for ${b}`, trade: b }
   }))
   if (rec.red) rows.push({ label: `${rec.red} red beast${rec.red > 1 ? 's' : ''} of any kind`, dim: true, value: 'any red' })
-  if (rec.a) rows.push({ label: `${rec.a} any rare beast${rec.a > 1 ? 's' : ''}`, dim: true, value: 'any' })
   const total = beastsCost(rec, ctx.price)
   if (rec.b.length > 1 && total != null) rows.push({ label: 'Named beasts', chaos: total })
   const sections: LookupCard['sections'] = [

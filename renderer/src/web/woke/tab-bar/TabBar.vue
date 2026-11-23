@@ -79,7 +79,7 @@
           </label>
           <div v-if="priceGroups.length" :class="$style.prices">
             <div :class="$style.head">Prices</div>
-            <button v-for="g in priceGroups" :key="groupKey(g)" :class="$style.priceRow" @click="openSearch(g.name)">
+            <button v-for="g in priceGroups" :key="groupKey(g)" v-item-tip="groupTip(g)" :class="$style.priceRow" @click="openSearch(g.name)">
               <WIcon :src="ninjaIcon(g.type, g.name) ?? undefined" size="md" />
               <span :class="[$style.rowName, rarityClass(g.type)]">{{ g.name }}</span>
               <span :class="$style.priceSub">{{ g.variants.length > 1 ? `${g.variants.length} prices` : g.variants[0].variant }}</span>
@@ -120,10 +120,8 @@
 
         <!-- the rail's own layout and size -->
         <div v-if="popup?.kind === 'layout'" ref="popupEl" data-w-popup :class="[$style.menu, $style.layoutMenu]" :style="popupStyle" data-rail-layout @contextmenu.prevent>
-          <div :class="$style.chipHead">Theme</div>
-          <div :class="[$style.chips, $style.chipsWrap]" data-rail-theme>
-            <button v-for="t in WOKE_LOOKS" :key="t.id" type="button" class="w-chip" :class="[$style.chip, { on: isLookPicked(t) }]" :aria-pressed="isLookPicked(t)" :title="`${t.label}: ${t.hint}`" @click="pickLook(t)">{{ t.short }}</button>
-          </div>
+          <!-- The toolbar's own layout and size first; then what changes every tool. -->
+          <div :class="$style.sectionHead">Toolbar layout and size</div>
           <div :class="$style.chipHead">Layout</div>
           <div :class="$style.chips">
             <button type="button" class="w-chip" :class="[$style.chip, { on: !flat }]" :aria-pressed="!flat" @click="setFlat(false)">Vertical</button>
@@ -134,8 +132,22 @@
             <button v-for="s in RAIL_SIZES" :key="s" type="button" class="w-chip" :class="[$style.chip, { on: (config.railSize ?? RAIL_DEFAULT_SIZE) === s }]" :aria-pressed="(config.railSize ?? RAIL_DEFAULT_SIZE) === s" @click="setSize(s)">{{ s.toUpperCase() }}</button>
           </div>
           <hr :class="$style.rule">
-          <button :class="$style.item" @click="resetRail(); closePopup()"><i class="fas fa-undo" />Reset position and size</button>
-          <div :class="$style.hint">Ctrl + scroll on the rail changes size. Drag icons to reorder.</div>
+          <div :class="$style.sectionHead">Tools look and size</div>
+          <div :class="$style.chipHead">Theme</div>
+          <div :class="[$style.chips, $style.chipsWrap]" data-rail-theme>
+            <button v-for="t in WOKE_LOOKS" :key="t.id" type="button" class="w-chip" :class="[$style.chip, { on: isLookPicked(t) }]" :aria-pressed="isLookPicked(t)" :title="`${t.label}: ${t.hint}`" @click="pickLook(t)">{{ t.short }}</button>
+          </div>
+          <div :class="$style.chipHead">UI size <span :class="$style.chipNote">panels, price check, pins</span></div>
+          <div :class="$style.chips" data-rail-ui-size>
+            <button type="button" class="w-chip" :class="$style.chip" aria-label="Everything smaller" title="Everything smaller"
+              :disabled="uiSize <= MIN_UI_SIZE" @click="nudgeUiSize(-1)"><i class="fas fa-minus" /></button>
+            <span class="w-num" :class="$style.uiSizePct" data-rail-ui-size-pct>{{ uiSize }}%</span>
+            <button type="button" class="w-chip" :class="$style.chip" aria-label="Everything bigger" title="Everything bigger"
+              :disabled="uiSize >= MAX_UI_SIZE" @click="nudgeUiSize(1)"><i class="fas fa-plus" /></button>
+          </div>
+          <hr :class="$style.rule">
+          <button :class="$style.item" @click="resetRail(); closePopup()"><i class="fas fa-undo" />Reset toolbar position and size</button>
+          <div :class="$style.hint">Ctrl + scroll on the toolbar changes its size. Drag icons to reorder.</div>
         </div>
 
         <!-- right-click menu -->
@@ -188,16 +200,17 @@ import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { registry } from '@/web/overlay/widget-registry'
 import { AppConfig, pushHostConfig } from '@/web/Config'
 import { appIconUrl } from '../ui/app-icon'
-import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '@/web/woke/modules'
+import { MODULES, ensureWokeConfig, isRetiredWidgetType, isWidgetTypeOn, setModuleOn } from '@/web/woke/modules'
 import { useI18n } from 'vue-i18n'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import ToolIcon from './ToolIcon.vue'
+import { MAX_UI_SIZE, MIN_UI_SIZE, nudgeUiSize, uiSize } from '../ui/ui-size'
 import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, toolDescription } from './tools'
 import { pastedItemText } from '../search/pasted-item'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
-import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook } from '../ui'
+import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
-import { groupKey, rarityClass, searchPrices } from '../search/search'
+import { groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import { searchRequest } from '../search/widget'
 import { usePriceText } from '../shared/price'
 
@@ -634,7 +647,8 @@ const launcherQuery = computed(() => query.value.trim().replace(/\s+/g, ' ').toL
 // Every tool: what's placed, what isn't yet, and what's switched off.
 const launcherAll = computed(() => launcherEntries(
   registry.widgets
-    .filter(({ widget }) => widget.instances === 'multi' && widget.type !== 'stash-search')
+    // Retired tools (modules.ts) aren't offered at all, not even switched off.
+    .filter(({ widget }) => widget.instances === 'multi' && widget.type !== 'stash-search' && !isRetiredWidgetType(widget.type))
     .map(({ widget }) => ({ type: widget.type, name: typeName(widget.type) })),
   tabs.value,
   wmType => !isWidgetTypeOn(AppConfig(), wmType),
@@ -1042,6 +1056,9 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 .danger, .danger > i { color: var(--w-down); }
 .rule { border: 0; border-top: 1px solid var(--w-line); margin: 4px 2px; }
 .chipHead { padding: 5px 8px 3px; font-size: var(--w-fs-sm); color: var(--w-dim); }
+.sectionHead { padding: 6px 8px 0; font-size: var(--w-fs-md); color: var(--w-fg); font-weight: 600; }
+.chipNote { color: var(--w-faint); font-size: var(--w-fs-xs); }
+.uiSizePct { flex: 1 1 0; display: grid; place-items: center; font-size: var(--w-fs-md); color: var(--w-fg); }
 .chips { display: flex; gap: 4px; padding: 0 6px 5px; }
 .chipsWrap { flex-wrap: wrap; }
 .chipsWrap > .chip { flex: 1 1 calc(33% - 4px); }

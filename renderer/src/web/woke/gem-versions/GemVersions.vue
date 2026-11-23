@@ -10,38 +10,50 @@
     </button>
     <table v-if="open" :class="$style.table">
       <thead>
-        <tr><th>Level</th><th>Quality</th><th></th><th :class="$style.r">poe.ninja</th><th></th></tr>
+        <tr>
+          <th>Lv / Q</th>
+          <th :class="$style.r">Clean</th>
+          <th :class="$style.r">Corrupted</th>
+          <th v-if="hasVaal" :class="$style.r">Vaal</th>
+          <th :class="$style.r">{{ hasOwnPrice ? 'vs yours' : '' }}</th>
+        </tr>
       </thead>
       <tbody>
-        <WItemRow v-for="v of versions" :key="rowKey(v)" as="tr" :item="tipOf(v)" :art="false" action="pick"
-          :class="[$style.click, { [$style.own]: v.own, [$style.on]: isSearched(v) }]"
-          :aria-current="isSearched(v) ? 'true' : undefined"
-          @pick="search(v)">
-          <td>{{ v.level }}</td>
-          <td>{{ v.quality }}</td>
-          <td :class="$style.corr">{{ v.vaal ? 'Vaal' : v.corrupted ? 'corr' : '' }}</td>
-          <td :class="$style.r"><w-price :chaos="v.chaos" :divine="divine" /></td>
-          <td :class="$style.r">
-            <span v-if="isSearched(v)" :class="$style.mark">searched</span>
-            <span v-else-if="v.own" class="w-dim">yours</span>
+        <tr v-for="r of rows" :key="`${r.level}/${r.quality}`" :class="{ [$style.newLevel]: r.firstOfLevel }" :data-version-row="`${r.level}/${r.quality}`">
+          <td :class="$style.lq">{{ r.level }}/{{ r.quality }}</td>
+          <template v-for="col of cols" :key="col">
+            <WItemRow v-if="r[col]" as="td" :item="tipOf(r[col]!)" :art="false" action="pick"
+              :class="[$style.cell, $style[col], { [$style.own]: r[col]!.own, [$style.on]: isSearched(r[col]!) }]"
+              :data-version="rowKey(r[col]!)"
+              :aria-current="isSearched(r[col]!) ? 'true' : undefined"
+              @pick="search(r[col]!)">
+              <w-price :chaos="r[col]!.chaos" :divine="divine" />
+            </WItemRow>
+            <td v-else :class="[$style.r, $style.none]">–</td>
+          </template>
+          <td :class="[$style.r, $style.note]">
+            <span v-if="rowSearched(r)" :class="$style.mark">searched</span>
+            <span v-else-if="r.own" class="w-dim">yours</span>
+            <span v-else-if="r.delta != null" :class="r.delta > 0 ? 'w-up' : r.delta < 0 ? 'w-down' : 'w-faint'">{{ signed(r.delta) }}</span>
           </td>
-        </WItemRow>
+        </tr>
       </tbody>
     </table>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref, shallowRef, watch } from 'vue'
+import { computed, inject, shallowRef, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
 import type { ItemFilters } from '@/web/price-check/filters/interfaces'
-import { usePoeninja } from '@/web/background/Prices'
-import { useInsight } from '@/web/woke/price-insight/useInsight'
 import { AppConfig } from '@/web/Config'
 import WPrice from '@/web/woke/ui/WPrice.vue'
 import WItemRow from '@/web/woke/ui/WItemRow.vue'
 import type { ItemTipRef } from '@/web/woke/ui/tooltip/item-tip'
-import { gemForms, listVersions, versionFilters, type GemForms, type GemVersion, type NinjaGemRow } from './versions'
+import { versionFilters, type GemForms, type GemVersion } from './versions'
+import { useGemVersions } from './useVersions'
+import { versionRows, type VersionRow } from './table'
+import { formatChaos } from '../ui/format'
 import { gemVersionsOpen as open } from './open'
 import { rawClone } from '@/web/woke/raw-clone'
 
@@ -50,31 +62,23 @@ const props = defineProps<{
   filters: ItemFilters
 }>()
 
-const ninja = usePoeninja()
-const league = computed(() => props.filters.trade.league)
-const { divine } = useInsight(ref([]), league)
 // The price check's own search: runs on the next tick, with the filters a click set.
 const runSearch = inject<() => void>('price-check-search', () => {})
 
-const forms = computed(() => gemForms(props.item))
+const { forms, versions, divine } = useGemVersions(() => props.item, () => props.filters.trade.league)
+const rows = computed(() => versionRows(versions.value))
+const hasVaal = computed(() => versions.value.some(v => v.vaal))
+const hasOwnPrice = computed(() => versions.value.some(v => v.own))
+const cols = computed<Array<'clean' | 'corrupted' | 'vaal'>>(() => hasVaal.value ? ['clean', 'corrupted', 'vaal'] : ['clean', 'corrupted'])
 
-const versions = computed<GemVersion[]>(() => {
-  // poe.ninja's rows are for the league picked in settings only; updatedAt
-  // also re-reads them each time poe.ninja loads.
-  if (divine.value == null || ninja.updatedAt.value == null) return []
-  const f = forms.value
-  if (!f) return []
-  const ownVaal = !!props.item.info.gem?.vaal || !!props.item.vaalGem?.gem?.vaal
-  return listVersions(
-    ninja.findPricesByName('GEM', f.base.refName) as NinjaGemRow[],
-    f.vaal ? ninja.findPricesByName('GEM', f.vaal.refName) as NinjaGemRow[] : [],
-    {
-      vaal: ownVaal,
-      level: props.item.gemLevel ?? 1,
-      quality: props.item.quality ?? 0,
-      corrupted: !!props.item.isCorrupted
-    })
-})
+function signed (n: number): string {
+  const t = formatChaos(Math.abs(n), divine.value)
+  return n > 0 ? `+${t}` : n < 0 ? `−${t}` : '0'
+}
+
+function rowSearched (r: VersionRow): boolean {
+  return [r.clean, r.corrupted, r.vaal].some(v => v != null && isSearched(v))
+}
 
 const low = computed(() => Math.min(...versions.value.map(v => v.chaos)))
 const high = computed(() => Math.max(...versions.value.map(v => v.chaos)))
@@ -150,14 +154,22 @@ function search (v: GemVersion) {
 .caret { width: 0.8em; }
 .count { color: var(--w-fg); }
 .table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.table th { text-align: left; font-weight: 400; color: var(--w-dim); padding: 1px 4px; border-bottom: 1px solid var(--w-line); }
-.table td { padding: 1px 4px; border-bottom: 1px solid var(--w-line-soft); }
+.table th {
+  text-align: left; font-weight: 400; color: var(--w-faint); padding: 1px 6px;
+  border-bottom: 1px solid var(--w-line);
+  font-size: var(--w-fs-caps); text-transform: var(--w-caps-case); letter-spacing: 0.06em; font-family: var(--w-caps-face);
+}
+.table td { padding: 2px 6px; border-bottom: 1px solid var(--w-line-soft); }
 .table .r { text-align: right; }
-.table td.r > * { justify-content: flex-end; }
-.corr { color: var(--w-mod-corrupted); }
-.click { cursor: pointer; }
-.click:hover td { background: var(--w-chip-ground); }
-.own td { color: var(--w-gold-hi); }
-.on td { background: var(--w-accent-soft); }
+.table tr.newLevel td { border-top: 1px solid var(--w-line); }
+.lq { color: var(--w-fg); }
+.table td.cell { width: auto; text-align: right; cursor: pointer; border-radius: 2px; }
+.table td.cell > * { justify-content: flex-end; }
+.table td.cell:hover { background: var(--w-chip-ground); box-shadow: inset 0 0 0 1px var(--w-line-strong); }
+.corrupted, .vaal { color: var(--w-mod-corrupted); }
+.none { color: var(--w-faint); opacity: 0.5; }
+.table td.own, .table td.own:hover { box-shadow: inset 0 0 0 1px var(--w-gold-hi); color: var(--w-gold-hi); }
+.table td.on { background: var(--w-accent-soft); }
+.note { font-size: var(--w-fs-xs); white-space: nowrap; }
 .mark { color: var(--w-gold-hi); }
 </style>

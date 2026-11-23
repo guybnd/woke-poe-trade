@@ -172,7 +172,8 @@ export interface PobItem {
   mods: string[]
   // Older app versions don't send the rest.
   modKinds?: Array<'' | 'crafted' | 'fractured'>
-  implicitKinds?: Array<'' | 'crafted' | 'fractured'>
+  // 'vestigial': a Vestigial unique's inherited implicit (trade listings only).
+  implicitKinds?: Array<'' | 'crafted' | 'fractured' | 'vestigial'>
   quality?: number
   armour?: number
   evasion?: number
@@ -182,8 +183,12 @@ export interface PobItem {
   levelReq?: number
   catalystQuality?: number
   corrupted?: boolean
+  // A trade listing that is twice corrupted (3.30).
+  twiceCorrupted?: boolean
   mirrored?: boolean
   influences?: string[]
+  // A Vestigial unique (Timeless Conflict variant).
+  vestigial?: boolean
 }
 
 export interface PobItemSet {

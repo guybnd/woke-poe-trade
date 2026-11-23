@@ -228,6 +228,7 @@
 #price-window.w-poe .w-poe-k-fractured { color: var(--w-mod-fractured); }
 #price-window.w-poe .w-poe-k-scourge { color: var(--w-mod-scourge); }
 #price-window.w-poe .w-poe-k-foulborn { color: var(--w-mod-foulborn); }
+#price-window.w-poe .w-poe-k-vestigial { color: var(--w-mod-vestigial); }
 /* ItemModifierText's own greys and fonts give way to the line's colour. */
 #price-window.w-poe .w-pc-modtext,
 #price-window.w-poe .w-pc-modtext > span { color: inherit !important; font-family: inherit; font-weight: inherit; }

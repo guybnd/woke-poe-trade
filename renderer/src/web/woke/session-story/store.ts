@@ -11,10 +11,16 @@ import { ledgerKey } from '../net-worth/glance'
 import { NIGHT_GAP_MS, bestDrop, hasMaps, isNightStory, keepNight, summarize } from './story'
 import type { NightDraft, NightStory } from './story'
 import { isMapRecord, keepMap } from './map-log'
+import { isSkippedArea, skipVersion } from './skip-areas'
 import type { MapRecord } from './map-log'
 
 export const NIGHTS_COLLECTION = 'session-story'
 export const NIGHTS_KEY = 'nights'
+const DRAFT_KEY = 'tonight'
+function isNightDraft (v: unknown): v is NightDraft {
+  const d = v as NightDraft | null
+  return !!d && typeof d.startedAt === 'number' && typeof d.lastAt === 'number' && Array.isArray(d.segs) && Array.isArray(d.deaths)
+}
 // One small file per day of maps (map-history/2026-11-20.json): saving a map
 // rewrites only its day. Memory holds only the last RECENT maps, also kept in
 // their own small file, for the chip's average, Ctrl+Space and where the log
@@ -49,6 +55,8 @@ export const useNights = createGlobalState(() => {
   let loading: Promise<void> | null = null
   // The last RECENT maps, newest first.
   const maps = shallowRef<MapRecord[]>([])
+  // The newest map saved, vaults included, for Map history while it's open.
+  const lastSaved = shallowRef<MapRecord | null>(null)
   const mapsError = shallowRef('')
   let mapsLoading: Promise<void> | null = null
   let recentBad = false
@@ -82,8 +90,11 @@ export const useNights = createGlobalState(() => {
     const key = dayKey(rec.enteredAt)
     const league = useLeagues().selectedId.value
     const row = { ...rec, npcs: [...rec.npcs], ...(league ? { league } : {}) }
-    maps.value = keepMap(maps.value, row).slice(0, RECENT)
-    if (!recentBad) await hostRequest('doc-put', { collection: NIGHTS_COLLECTION, key: RECENT_KEY, value: maps.value }).catch(() => {})
+    // Vaults go to their day only: the recent list feeds the toast's averages.
+    if (!isSkippedArea(row.name)) {
+      maps.value = keepMap(maps.value, row).slice(0, RECENT)
+      if (!recentBad) await hostRequest('doc-put', { collection: NIGHTS_COLLECTION, key: RECENT_KEY, value: maps.value }).catch(() => {})
+    }
     let day: MapRecord[]
     try {
       day = await readMapDay(key, true)
@@ -92,7 +103,10 @@ export const useNights = createGlobalState(() => {
       mapsError.value = e instanceof Error ? e.message : String(e)
       return
     }
-    await hostRequest('doc-put', { collection: MAPS_COLLECTION, key, value: keepMap(day, row) }).catch(() => {})
+    const merged = keepMap(day, row)
+    const ok = await hostRequest('doc-put', { collection: MAPS_COLLECTION, key, value: merged }).then(() => true, () => false)
+    // As saved: merged with an earlier visit to the same map.
+    if (ok) lastSaved.value = merged.find(m => m.key === row.key) ?? row
   }
 
   function addMap (rec: MapRecord): Promise<void> {
@@ -139,16 +153,39 @@ export const useNights = createGlobalState(() => {
   // again carries on with it.
   let draft: NightDraft | null = null
   let liveSig = ''
+  // The night being read is also saved as it goes, so an app
+  // restart carries on with it: the log's start-up tail only reaches back
+  // about 256 KB, a dozen maps or so.
+  let savedSig = ''
+  // Nothing is written until the saved one has been read (a write first would wipe it).
+  let draftRead = false
+  function saveDraft (d: NightDraft | null) {
+    if (!draftRead) return
+    // On an area change, and at most once a minute otherwise (long hideout stretches).
+    const sig = d ? `${d.startedAt}:${d.segs.length}:${Math.floor(d.lastAt / 60_000)}` : ''
+    if (sig === savedSig) return
+    savedSig = sig
+    hostRequest('doc-put', { collection: NIGHTS_COLLECTION, key: DRAFT_KEY, value: d && hasMaps(d) ? d : null }).catch(() => {})
+  }
+  // The saved night, unless it's one already finished.
+  async function readDraft (): Promise<NightDraft | null> {
+    const saved = await (hostRequest('doc-get', { collection: NIGHTS_COLLECTION, key: DRAFT_KEY }) as Promise<unknown>).catch(() => null)
+    draftRead = true
+    if (!isNightDraft(saved)) return null
+    if (nights.value.some(n => n.startedAt === saved.startedAt || n.endedAt >= saved.lastAt)) return null
+    return saved
+  }
   function setLive (d: NightDraft | null) {
     draft = d
+    saveDraft(d)
     // Once a minute at most while nothing changes, so Ctrl+Space doesn't redo
     // its answers on every log line.
-    const sig = d ? `${d.startedAt}:${d.segs.length}:${d.deaths.length}:${d.levels?.length ?? 0}:${d.segs[d.segs.length - 1]?.name}:${Math.floor(d.lastAt / 60_000)}` : ''
+    const sig = d ? `${skipVersion()}:${d.startedAt}:${d.segs.length}:${d.deaths.length}:${d.levels?.length ?? 0}:${d.segs[d.segs.length - 1]?.name}:${Math.floor(d.lastAt / 60_000)}` : ''
     if (sig === liveSig) return
     liveSig = sig
     live.value = d && hasMaps(d) ? summarize(d) : null
   }
   const keptDraft = () => draft
 
-  return { nights, live, loadError, finished, load, finish, setLive, keptDraft, maps, mapsError, loadMaps, addMap }
+  return { nights, live, loadError, finished, load, finish, setLive, keptDraft, readDraft, maps, lastSaved, mapsError, loadMaps, addMap }
 })

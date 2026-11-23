@@ -19,7 +19,8 @@ export interface ParsedStat {
     value: number
     min: number
     max: number
-    /** woke: both rolled numbers of an "Adds # to #" line; value is their average. */
+    /** woke: both numbers of a two-number line, in text order ("Adds # to #":
+     * value is their average; a searchedNumber line: value is its percentage). */
     pair?: [number, number]
     /** woke: each number's own range, in text order, when the copy shows ranges. */
     ranges?: Array<{ min: number, max: number }>
@@ -212,6 +213,10 @@ export function tryParseTranslation (
       }]
     }
 
+    // woke: the number the trade site searches the line by (searchedNumber).
+    const pct = searchedNumber(found.stat, found.matcher.string)
+    const searched = (pct < 0 || combination.values.length < 2) ? combination.values : [combination.values[pct]]
+
     return {
       stat: found.stat,
       translation: found.matcher,
@@ -219,10 +224,10 @@ export function tryParseTranslation (
         ? {
             unscalable: stat.unscalable,
             generation: (legacyStatRolls) ? 'legacy' : undefined,
-            dp: found.stat.dp || combination.values.some(stat => stat.decimal),
-            value: getRollOrMinmaxAvg(combination.values.map(stat => stat.roll)),
-            min: getRollOrMinmaxAvg(combination.values.map(stat => stat.bounds?.min ?? stat.roll)),
-            max: getRollOrMinmaxAvg(combination.values.map(stat => stat.bounds?.max ?? stat.roll)),
+            dp: found.stat.dp || searched.some(stat => stat.decimal),
+            value: getRollOrMinmaxAvg(searched.map(stat => stat.roll)),
+            min: getRollOrMinmaxAvg(searched.map(stat => stat.bounds?.min ?? stat.roll)),
+            max: getRollOrMinmaxAvg(searched.map(stat => stat.bounds?.max ?? stat.roll)),
             pair: (combination.values.length === 2)
               ? [combination.values[0].roll, combination.values[1].roll]
               : undefined,
@@ -233,6 +238,23 @@ export function tryParseTranslation (
         : undefined
     }
   }
+}
+
+// woke: two-number lines the trade site searches by their percentage, not
+// their average: the Foulborn Kitava's Thirst's "50% chance ... at least 200
+// Life" searched 125 and found nothing. Checked one by one on the live trade
+// API (2026-11-22), as it isn't a rule: Death's Oath's "450 Chaos Damage per
+// second for 3 seconds" and the idols' "100% chance for up to 5 Rare Monsters
+// to be Possessed" are stored as the average. Kitava's Thirst (Mana, Life),
+// Tinkerskin's Phasing, Deerstalker's Movement Speed. The percentage comes
+// first in English, not in ko and cmn-Hant. Returns its index among the
+// line's numbers, or -1. Picked by the English ref, which every language's
+// data keeps; test/woke/trigger-mod-rolls.test.ts checks that this finds
+// exactly those four and fails on a new stat of this shape until it's checked.
+export function searchedNumber (stat: Stat, text: string): number {
+  return /Upfront|Trap/.test(stat.ref)
+    ? text.split('#').slice(1).findIndex(s => s[0] === '%')
+    : -1
 }
 
 export function getRollOrMinmaxAvg (values: number[]): number {

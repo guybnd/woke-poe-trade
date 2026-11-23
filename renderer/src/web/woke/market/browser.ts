@@ -69,7 +69,17 @@ export const ICON_ITEMS: Record<string, string> = {
   Essence: 'Deafening Essence of Greed',
   Fossil: 'Pristine Fossil',
   Resonator: 'Prime Chaotic Resonator',
-  Vial: 'Vial of Fate'
+  Vial: 'Vial of Fate',
+  // Rows named after something with no art of its own (a map layout, a
+  // jewel's passive, a map tier): the item they come from.
+  ScryingOrb: 'Scrying Orb',
+  ForbiddenJewel: 'Forbidden Flame',
+  BlightedMap: 'Blighted Map',
+  BlightRavagedMap: 'Blight-ravaged Map',
+  IncursionTemple: 'Chronicle of Atzoatl',
+  ValdoMap: "Valdo's Puzzle Box",
+  Scarab: 'Ambush Scarab',
+  Memory: 'Memory of Reverence'
 }
 
 const NAME_AT = /\{"name":"((?:[^"\\]|\\.)*)"/g
@@ -152,6 +162,8 @@ export interface MarketRow {
   // Change since the day before, in %. Null without both days.
   dayChange: number | null
   gaps: number
+  // poe.ninja's 7 daily values, for the shorter ranges (ranges.ts).
+  graph?: unknown
 }
 
 // One category's rows. poe.ninja's graph is 7 daily values, % change against
@@ -191,7 +203,8 @@ function readRows (type: string, chunk: DenseChunk, days: number): MarketRow[] {
             trend,
             change: weekChange(info.graph),
             dayChange: dayChange(info.graph),
-            gaps: 0
+            gaps: 0,
+            graph: info.graph
           })
           graphs.push(info.graph)
         }

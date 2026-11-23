@@ -60,6 +60,15 @@ npm run test:perf                        # performance checks (perf/README.md)
 `WOKE_SNAP_DIR=some/folder npx playwright test` also saves every
 `overlay.snap()` screenshot as a file.
 
+Layout audit: `WOKE_LAYOUT_AUDIT=some/folder npx playwright test` records
+layout faults on every screen the tests show (text cut off, sideways
+scrollbars, button rows that wrap or mix heights, text under 11px, a lone word
+on a paragraph's last line), with a screenshot of each, and
+`node tools/layout-report.mjs some/folder` lists them. `WOKE_VIEWPORT=2560x1440`
+and `WOKE_TEXT_SCALE=125` run the tests on a bigger screen or with bigger
+text. A deliberate exception takes `data-layout-ok="<why>"`
+(`e2e/layout-audit.ts`).
+
 ## Fixtures
 
 - `client-logs/`: Client.txt excerpts. Real ones are best: copy the lines

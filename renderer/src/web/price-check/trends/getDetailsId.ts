@@ -16,6 +16,13 @@ export function isValuableBasetype (item: ParsedItem): boolean {
   )
 }
 
+// woke: the poe.ninja row for this exact item, or null where poe.ninja prices
+// only its base (rares) or a map tier.
+export function exactDetailsId (item: ParsedItem) {
+  if (isValuableBasetype(item) || item.category === ItemCategory.Map) return null
+  return getDetailsId(item) ?? null
+}
+
 export function getDetailsId (item: ParsedItem) {
   if (item.category === ItemCategory.Gem) {
     return forSkillGem(item)

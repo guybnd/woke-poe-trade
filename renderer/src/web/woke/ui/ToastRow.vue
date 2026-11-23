@@ -10,7 +10,7 @@
 // One done/undo note. One from a dock menu takes the mouse while it's over it, so
 // Undo can be clicked while the game has focus. Others don't: a note can come up
 // on its own, and mustn't catch clicks meant for the game.
-import { onMounted, shallowRef } from 'vue'
+import { onMounted, onUnmounted, shallowRef } from 'vue'
 import WKbd from './WKbd.vue'
 import { undoToast, type Toast } from './layer'
 import { useHoverZone } from '../shared/hover'
@@ -25,16 +25,27 @@ const GAP = 6
 const place = shallowRef<Record<string, string>>({ left: '0px', top: '0px' })
 
 // Only the note knows its size, which depends on the text, the panel size setting
-// and the wrapping. With CSS zoom, left and top are in zoomed units.
-onMounted(() => {
-  const box = el.value!.getBoundingClientRect()
+// and the wrapping. With CSS zoom, left and top are in zoomed units. Placed again
+// when its size changes: the game font can load after the first measure and wrap
+// the text onto another line, which would push a note above a low icon onto it.
+function placeNote () {
+  const node = el.value
+  if (!node) return
+  const box = node.getBoundingClientRect()
   const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--w-ui-scale')) || 1
   const { x, y, beside } = props.toast
   const wanted = !beside ? y : beside.top - GAP - box.height >= EDGE ? beside.top - GAP - box.height : beside.bottom + GAP
   const left = Math.max(EDGE, Math.min(window.innerWidth - box.width - EDGE, x - box.width / 2))
   const top = Math.max(EDGE, Math.min(window.innerHeight - box.height - EDGE, wanted))
   place.value = { left: `${left / scale}px`, top: `${top / scale}px` }
+}
+let sizes: ResizeObserver | null = null
+onMounted(() => {
+  placeNote()
+  sizes = new ResizeObserver(placeNote)
+  sizes.observe(el.value!)
 })
+onUnmounted(() => { sizes?.disconnect() })
 </script>
 
 <style module>

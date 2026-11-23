@@ -35,8 +35,15 @@ export interface ItemFilters {
   whiteSockets?: FilterNumeric
   // woke: one tile per socket colour, each "at least this many" (Guy's pick B).
   socketColours?: Record<keyof SocketColours, FilterNumeric>
+  // Jewellery: on, the search asks for no quality (no catalyst).
+  notCatalysed?: {
+    disabled: boolean
+  }
   corrupted?: {
     search: CorruptedSearch
+    // The item is twice corrupted: the chip says so. The search still finds
+    // once and twice corrupted items alike (Guy's pick).
+    twice?: true
   }
   fractured?: {
     value: false
@@ -74,6 +81,8 @@ export interface ItemFilters {
   mapCompletionReward?: {
     name: string
     nameTrade: string
+    /** woke: Any reward, from the Valdo strip (ValdoStrip.vue). */
+    disabled?: boolean
   }
   itemLevel?: FilterNumeric
   stackSize?: FilterNumeric
@@ -149,10 +158,13 @@ export interface StatFilter {
   tag: FilterTag
   oils?: string[]
   mercenary?: { icon?: string, tier?: number, maxTier?: boolean }
+  reminderText?: string
   sources: StatCalculated['sources']
   not?: true
   /** woke: one of a map's mods, set Any / Has / Not on the map strip (MapModStrip.vue), not listed in the rows. */
   mapMod?: true
+  /** woke: a Valdo map's "sent to the Void" mod, set Any / Void / No void on the Valdo strip (ValdoStrip.vue), not listed in the rows. */
+  valdoVoid?: true
   roll?: {
     value: number
     min: number | '' | undefined // NOTE: mutable in UI

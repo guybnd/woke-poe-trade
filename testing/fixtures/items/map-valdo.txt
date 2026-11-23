@@ -1,0 +1,39 @@
+Item Class: Maps
+Rarity: Rare
+Festering Sanctuary
+Valdo Map
+--------
+Map Area: Moon Temple
+Reward: Foil Nimis
+Atlas Drops: +50% (augmented)
+Item Rarity: +28% (augmented)
+Monster Pack Size: +23% (augmented)
+--------
+Chance for dropped Maps to convert to:
+Shaper Map: 9% (augmented)
+Elder Map: 9% (augmented)
+Conqueror Map: 9% (augmented)
+Unique Map: 10% (augmented)
+Threads: 28% (augmented)
+--------
+Item Level: 100
+--------
+Monster Level: 84
+--------
+{ Unique Modifier }
+Rare and Unique Monsters in Area are Possessed by 3 to 4 Tormented Spirits and their Minions are Touched
+{ Unique Modifier }
+Area contains The Feared
+{ Unique Modifier }
+Players deal 10% less Damage per Equipped Item
+Players' Minions deal 10% less Damage per Item Equipped by their Master
+{ Unique Modifier }
+Players cannot gain Flask Charges — Unscalable Value
+{ Unique Modifier }
+Players cannot Suppress Spell Damage
+--------
+Travel to this Map by using it in a personal Map Device. Maps can only be used once. Defeat 90% of all monsters in this Map, including all Rare and Unique enemies to obtain the Reward. The area created is not affected by your Atlas Passive Tree, and cannot be augmented via the Map Device.
+--------
+Unmodifiable
+--------
+Foil (Celestial Emerald)

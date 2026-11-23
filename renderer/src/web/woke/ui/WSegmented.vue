@@ -1,7 +1,7 @@
 <template>
   <span class="w-seg">
     <button v-for="opt in options" :key="opt.value" type="button"
-      :aria-pressed="opt.value === modelValue"
+      :aria-pressed="opt.value === modelValue" :title="opt.title"
       @click="emit('update:modelValue', opt.value)">{{ opt.label }}</button>
   </span>
 </template>
@@ -10,7 +10,7 @@
 // The look is in controls.css (.w-seg).
 defineProps<{
   modelValue: string
-  options: Array<{ value: string, label: string }>
+  options: Array<{ value: string, label: string, title?: string }>
 }>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>()
 </script>

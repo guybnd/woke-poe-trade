@@ -5,7 +5,7 @@ import { pobItemText } from '@/web/woke/pob-builds/item-text'
 import { swapCheck } from '@/web/woke/pob-builds/swap-check'
 import fs from 'fs'
 import path from 'path'
-import { cleanMod, parseWornItems, pickCharacter, WornReader } from '../../../main/src/woke/personal/worn-items'
+import { cleanMod, parseWornItems, pickCharacter, wornItem, WornReader } from '../../../main/src/woke/personal/worn-items'
 import { loadGameData } from '../helpers/game-data'
 
 beforeAll(loadGameData)
@@ -189,5 +189,23 @@ describe('worn reader', () => {
     expect(pickCharacter(JSON.stringify(list), 'Stranger', 'Keepers')).toBe('Main')
     expect(pickCharacter(JSON.stringify(list), '', null)).toBe('Std')
     expect(pickCharacter('nope', 'X', null)).toBeNull()
+  })
+})
+
+describe('a worn Vestigial unique', () => {
+  it('marks the item and its inherited implicit, and keeps the plain base', () => {
+    const item = wornItem({
+      frameType: 3,
+      name: "Geofri's Crest",
+      typeLine: 'Vestigial Great Crown',
+      baseType: 'Great Crown',
+      vestigial: true,
+      inventoryId: 'Helm',
+      implicitMods: [{ description: '10% increased Movement Speed', flags: { vestigial: true } }],
+      explicitMods: ['+29% to Fire Resistance']
+    })
+    expect(item.vestigial).toBe(true)
+    expect(item.base).toBe('Great Crown')
+    expect(item.implicitKinds).toEqual(['vestigial'])
   })
 })

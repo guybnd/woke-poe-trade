@@ -1,4 +1,104 @@
 {
+ "beast-craicic-vassal.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Craicic Vassal"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Craicic Vassal"
+  }
+ },
+ "card-the-doctor.txt": {
+  "opened": {
+   "status": {
+    "option": "available"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "The Doctor"
+  },
+  "allTicked": {
+   "status": {
+    "option": "available"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "The Doctor"
+  }
+ },
  "chart-sandy-seabed.txt": {
   "opened": {
    "status": {
@@ -231,6 +331,56 @@
     }
    },
    "type": "Divine Orb"
+  }
+ },
+ "currency-originators-exalted.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Originator's Exalted Orb"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Originator's Exalted Orb"
   }
  },
  "currency-stacked-deck.txt": {
@@ -1185,6 +1335,174 @@
     "discriminator": "map",
     "option": "Map"
    }
+  }
+ },
+ "map-valdo-void.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_1095765106",
+       "value": {},
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_completion_reward": {
+       "option": "Nimis"
+      }
+     }
+    }
+   },
+   "type": "Valdo Map"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_1095765106",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_completion_reward": {
+       "option": "Nimis"
+      }
+     }
+    }
+   },
+   "type": "Valdo Map"
+  }
+ },
+ "map-valdo.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_completion_reward": {
+       "option": "Nimis"
+      }
+     }
+    }
+   },
+   "type": "Valdo Map"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_completion_reward": {
+       "option": "Nimis"
+      }
+     }
+    }
+   },
+   "type": "Valdo Map"
   }
  },
  "rare-belt-catalysed.txt": {
@@ -3518,6 +3836,118 @@
    },
    "name": "Auxium",
    "type": "Crystal Belt"
+  }
+ },
+ "unique-belt-twice-corrupted.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_4080418644",
+       "value": {
+        "min": 75
+       },
+       "disabled": true
+      },
+      {
+       "id": "implicit.stat_983749596",
+       "value": {
+        "min": 5
+       },
+       "disabled": false
+      },
+      {
+       "id": "implicit.stat_2901986750",
+       "value": {
+        "min": 13
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3910859570",
+       "value": {},
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "true"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "String of Servitude",
+   "type": "Heavy Belt"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_4080418644",
+       "value": {
+        "min": 75
+       },
+       "disabled": false
+      },
+      {
+       "id": "implicit.stat_983749596",
+       "value": {
+        "min": 5
+       },
+       "disabled": false
+      },
+      {
+       "id": "implicit.stat_2901986750",
+       "value": {
+        "min": 13
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3910859570",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "true"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "String of Servitude",
+   "type": "Heavy Belt"
   }
  },
  "unique-brutal-restraint-330.txt": {

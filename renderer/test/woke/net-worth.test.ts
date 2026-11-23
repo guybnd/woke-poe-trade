@@ -191,7 +191,7 @@ describe('stash gains', () => {
     gains = addGain(gains, gainOf(diff(300, 1000), 200, null))
     gains = addGain(gains, gainOf(diff(200, -100), 100, 200))
     expect(gains).toHaveLength(3)
-    expect(gainsBetween(gains, 100, 250)).toEqual({ chaos: 300, divine: 1.5, reads: 2, first: 100, last: 200 })
+    expect(gainsBetween(gains, 100, 250)).toEqual({ chaos: 300, divine: 1.5, spent: 0, reads: 2, first: 100, last: 200 })
     expect(gainsBetween(gains, 0, 1000).divine).toBeNull()
     expect(gainsBetween(gains, 400, 500).reads).toBe(0)
   })

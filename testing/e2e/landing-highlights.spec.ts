@@ -167,7 +167,7 @@ test('price check: competing listings, each stat against yours', async ({ overla
   await backdrop(overlay, 'frames/town-inventory.jpg')
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(panel.locator('tr.w-pc-yours')).toContainText('Yours')
   await expect(panel.locator('tbody')).toContainText('1268', { timeout: 15_000 })
   await overlay.page.mouse.move(100, 1000)
@@ -180,7 +180,7 @@ test('price check: a listing\'s tooltip, tiers and rolls', async ({ overlay }) =
   await backdrop(overlay, 'frames/town-inventory.jpg')
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(panel.locator('.w-pc-foot')).toBeVisible()
   await panel.locator('.w-pc-table tbody tr').nth(2).hover()
   const tip = overlay.page.getByRole('tooltip')
@@ -205,7 +205,7 @@ async function liveNinja (page: Page) {
 async function searchFor (overlay: Overlay, query: string, expected: RegExp) {
   await overlay.pressHotkey('Ctrl + Space')
   const panel = overlay.widget('woke-search')
-  const box = panel.getByRole('textbox', { name: 'Search' })
+  const box = panel.getByRole('textbox', { name: 'Search', exact: true })
   await expect(async () => {
     await box.fill(query)
     await expect(panel.getByRole('button', { name: expected }).first()).toBeVisible({ timeout: 500 })
@@ -228,7 +228,7 @@ test('search: any price, now and a week ago', async ({ overlay }) => {
   await overlay.boot()
   await backdrop(overlay, 'frames/hideout.jpg')
   const { panel, palette } = await searchFor(overlay, 'mageblood', /Mageblood/)
-  await expect(panel.getByText('Trade site')).toBeVisible()
+  await expect(panel.getByRole('button', { name: /^Trade site/ })).toBeVisible()
   // First shot of a run, so the item art is still on its way from the CDN.
   if (!process.env.WOKE_SHOTS_OFFLINE) await expect.poll(() => palette.locator('img').evaluateAll(imgs => imgs.length > 0 && imgs.every(i => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth > 0)), { timeout: 20_000 }).toBe(true)
   await overlay.page.mouse.move(1900, 1060)
@@ -360,7 +360,7 @@ test('pob: a checked item against the one your build wears', async ({ overlay })
   await chip.hover()
   const tip = overlay.page.getByRole('tooltip')
   await expect(tip).toContainText('Against your body armour')
-  await saveAround(overlay, 'hl-pob-swap', [panel.getByText('Body Armour'), panel.getByRole('button', { name: 'Search' }), tip], 1000)
+  await saveAround(overlay, 'hl-pob-swap', [panel.getByText('Body Armour'), panel.getByRole('button', { name: 'Search', exact: true }), tip], 1000)
 })
 
 test('pob: the build in use, on one small icon', async ({ overlay }) => {
@@ -539,10 +539,11 @@ test('pob: the passive tree in the overlay', async ({ overlay }) => {
 // ---- 4. Market ----
 
 test('market: the flips window', async ({ overlay }) => {
-  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-scarab-flip', wmWants: 'show', anchor: { pos: 'tl', x: 8, y: 8 } } as never] })
+  await deliriumPrices(overlay.page)
+  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-scarab-flip', wmWants: 'show', family: 'delirium', anchor: { pos: 'tl', x: 8, y: 8 } } as never] })
   await backdrop(overlay, 'frames/town.jpg')
   const panel = overlay.widget('woke-scarab-flip')
-  await expect(panel.getByText(/\d+ scarabs? worth vendoring/)).toBeVisible()
+  await expect(panel.getByText(/ worth (vendoring|rerolling|upgrading)$/)).toBeVisible()
   await overlay.page.mouse.move(1800, 1000)
   await saveAround(overlay, 'hl-flips', [panel.locator('[data-w-panel]')], 1280)
 })
@@ -557,10 +558,10 @@ test('market: uniques worth disenchanting', async ({ overlay }) => {
   await saveAround(overlay, 'hl-disenchant', [panel.locator('[data-w-panel]')], 1280)
 })
 
-test('market: scarabs to buy, outlined in your stash', async ({ overlay }) => {
+test('market: flips to buy, outlined in your stash', async ({ overlay }) => {
+  await deliriumPrices(overlay.page)
   await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J', stashTotals: false } as never] })
-  await overlay.showScreen('screens/stash-scarab-real.png')
-  await backdrop(overlay, 'frames/stash-scarabs.jpg')
+  await overlay.showScreen('screens/stash-delirium-real.png')
   await overlay.pressHotkey('Alt + J')
   const layer = overlay.page.locator('[data-stash-outlines]')
   await expect(layer).toBeVisible()
@@ -879,7 +880,7 @@ test('filter: today\'s prices, and the moves to pick from', async ({ overlay }) 
 
 test('maps: map scan marks what your build can\'t run', async ({ overlay }) => {
   test.skip(!haveOcr, 'OCR files missing: npm run get:ocr')
-  await overlay.boot({ widgets: [{ wmType: 'woke-map-scan' }, { wmType: 'woke-map-mods' }] })
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
   await overlay.showScreen('screens/map-real-07.png')
   await backdrop(overlay, 'landing/screenshot-0007.jpg')
   const cursor = cursorOf('map-real-07')
@@ -963,7 +964,8 @@ test('on screen: Betrayal, the slots worth having', async ({ overlay }) => {
   await saveAround(overlay, 'hl-betrayal', [w.locator('[data-w-panel]').first()], 1280)
 })
 
-test('market: league-start investments', async ({ overlay }) => {
+// League investments is retired for now (modules.ts RETIRED_MODULES).
+test.skip('market: league-start investments', async ({ overlay }) => {
   await livePrices(overlay)
   await overlay.boot({
     overlayActive: true,
@@ -1013,7 +1015,7 @@ test('price check: right-click a mod for its menu', async ({ overlay }) => {
   await backdrop(overlay, 'frames/town-inventory.jpg')
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(panel.locator('tbody')).toContainText('1268', { timeout: 15_000 })
   const life = panel.getByRole('button', { name: /maximum Life$/ }).first()
   await life.click({ button: 'right' })
@@ -1060,7 +1062,7 @@ test('price check: socket colour tiles', async ({ overlay }) => {
   await overlay.copyItem('items/unique-skin-of-the-lords.txt')
   const panel = overlay.widget('price-check')
   await expect(panel.locator('[data-socket-colour]')).toHaveCount(4)
-  const search = panel.getByRole('button', { name: 'Search' })
+  const search = panel.getByRole('button', { name: 'Search', exact: true })
   if (await search.isVisible()) await search.click()
   await expect(panel.locator('.w-pc-sdots').nth(1).locator('.w-pc-sdot')).toHaveCount(6)
   await overlay.page.mouse.move(1900, 1060)
@@ -1124,7 +1126,7 @@ test('price check: a gem\'s other versions, priced', async ({ overlay }) => {
   await backdrop(overlay, 'frames/town-inventory.jpg')
   await overlay.copyItem(TRANSIENCE)
   const panel = overlay.widget('price-check')
-  await expect(panel.locator('[data-gem-versions]').getByRole('row')).toHaveCount(8)
+  await expect(panel.locator('[data-gem-versions]').getByRole('row')).toHaveCount(7)
   await expect(panel.locator('tbody').last()).toContainText('34', { timeout: 15_000 })
   await overlay.page.mouse.move(1900, 1060)
   await allflameLabel(overlay.page.locator('body'))
@@ -1137,13 +1139,13 @@ test('price check: open affixes and any mod', async ({ overlay }) => {
   await backdrop(overlay, 'frames/town-inventory.jpg')
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
-  const search = panel.getByRole('button', { name: 'Search' })
+  const search = panel.getByRole('button', { name: 'Search', exact: true })
   if (await search.isVisible()) await search.click()
   await expect(panel).toContainText('Matched', { timeout: 20_000 })
   const prefix = panel.locator('[data-affix-cap="prefix"]:visible')
   await prefix.locator('input').fill('2')
   await prefix.locator('input').press('Tab')
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(panel.locator('tbody').last()).toContainText('1268', { timeout: 15_000 })
   const box = panel.getByRole('combobox', { name: 'Add a mod to search for' })
   await box.click()
@@ -1614,7 +1616,7 @@ test.describe('clips', () => {
     await clip.moveTo(1582, 300, 700, 'game', game)
     await clip.keys(['Ctrl', 'D'], 1500, 390, () => overlay.copyItem('items/rare-body-armour-es.txt'))
     const panel = overlay.widget('price-check')
-    const search = panel.getByRole('button', { name: 'Search' })
+    const search = panel.getByRole('button', { name: 'Search', exact: true })
     await expect(search).toBeVisible()
     await allflameLabel(panel)
     const sb = (await search.boundingBox())!

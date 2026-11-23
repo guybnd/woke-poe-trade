@@ -1,21 +1,45 @@
 // Price check (APT) with the toolkit's additions, from the hotkey press in
 // game to the panel: the item is copied by the fake game, priced from
 // recorded trade site and poe.ninja responses.
+import type { Page } from '@playwright/test'
 import { test, expect } from './harness'
 
 // Each test boots its own overlay: the file's tests can spread over workers
 // and shards (one file alone otherwise sets how short a shard can be).
 test.describe.configure({ mode: 'parallel' })
 
-test('currency: Ctrl+D shows the poe.ninja price and bulk exchange offers', async ({ overlay, fakeApp }) => {
+// The full window for currency, not the instant card by the item (WOKEPOET-480).
+const windowCheck = (config: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeNinjaInstant = false
+}
+
+test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offers on a click', async ({ overlay, fakeApp }) => {
   await overlay.boot()
   await overlay.copyItem('items/currency-divine.txt')
+  // The instant check: a small card by the item, no window and no search (WOKEPOET-480).
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card).toContainText('Divine Orb')
+  await expect(card).toContainText('180c')
+  // Its badge says what the price is and which key gets live data.
+  const badge = card.getByTestId('instant-ninja-badge')
+  await expect(badge).toHaveAttribute('title', /instant pricing without any delay\. For live data, press the price check key again/)
+  await expect(badge).toHaveAttribute('data-tip-keys', 'Ctrl + D')
+  // A divine's parts in chaos, for paying in div.
+  await expect(card.getByTestId('instant-ninja-parts')).toContainText('0.1 18c')
+  await expect(overlay.page.locator('#price-window')).toHaveCount(0)
+  await overlay.snap('divine orb instant check')
+  // The mouse is tracked into the card, not the window.
+  const tracked = await fakeApp.waitForReceived('OVERLAY->MAIN::track-area') as { area: { width: number } }
+  expect(tracked.area.width).toBeLessThan(400)
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
+  await card.getByTestId('instant-ninja-live').click()
+  await expect(card).toHaveCount(0)
   const panel = overlay.widget('price-check')
-  await expect(panel).toContainText('Divine Orb')
-  await expect(panel).toContainText('180')
   // The five recorded exchange offers, cheapest first.
   await expect(panel).toContainText('Matched: 5')
   await expect(panel).toContainText('178 / 1')
+  // The live verdict says how far it is from poe.ninja.
+  await expect(panel.getByTestId('bulk-verdict-ninja')).toContainText('poe.ninja 180c each')
   // The game copied with Ctrl held (advanced mod text), and nothing else was typed.
   expect(fakeApp.game.keyTaps).toEqual([{ key: 'C', mods: ['Ctrl'] }])
   await overlay.snap('divine orb price check')
@@ -24,11 +48,91 @@ test('currency: Ctrl+D shows the poe.ninja price and bulk exchange offers', asyn
   expect(JSON.parse(posted!.body).query.want).toEqual(['divine'])
 })
 
-test('the window can be dragged, resized, saved and put back', async ({ overlay, fakeApp }) => {
+test('currency: Space on the instant card searches, Details opens the window without a search', async ({ overlay, fakeApp }) => {
   await overlay.boot()
+  await overlay.copyItem('items/currency-divine.txt')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card).toBeVisible()
+  await card.getByTestId('instant-ninja-details').click()
+  const panel = overlay.widget('price-check')
+  // The window, with poe.ninja's price as its verdict and still no search.
+  await expect(panel.getByTestId('ninja-verdict')).toContainText('180c')
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
+
+  await overlay.copyItem('items/currency-divine.txt')
+  await expect(card).toBeVisible()
+  await overlay.page.keyboard.press('Space')
+  await expect(panel).toContainText('Matched: 5')
+})
+
+test('divination card: the instant card shows the poe.ninja price and no trade search runs', async ({ overlay, fakeApp }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/card-the-doctor.txt')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card).toContainText('The Doctor')
+  await expect(card).toContainText('for your 2')
+  await overlay.snap('the doctor instant check')
+  await card.getByTestId('instant-ninja-details').click()
+  await expect(overlay.widget('price-check').getByTestId('ninja-verdict')).toContainText('uses one trade search')
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/search/'))).toBe(false)
+})
+
+test('currency: the price check hotkey again on the same item opens live offers', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/currency-divine.txt')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card.getByTestId('instant-ninja-again')).toContainText('Ctrl')
+  await overlay.copyItem('items/currency-divine.txt')
+  await expect(card).toHaveCount(0)
+  await expect(overlay.widget('price-check')).toContainText('Matched: 5')
+})
+
+test('currency: the locked price check key shows the card too', async ({ overlay, fakeApp }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/currency-divine.txt', 'Ctrl + Alt + D')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card).toContainText('180c')
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
+  // The game's hotkeys don't reach a focused overlay, so no "again" hint here.
+  await expect(card.getByTestId('instant-ninja-again')).toHaveCount(0)
+  // The overlay has the keyboard here, so Space works straight away.
+  await overlay.page.keyboard.press('Space')
+  await expect(overlay.widget('price-check')).toContainText('Matched: 5')
+})
+
+test('currency: once the card closed, the hotkey on the same item shows the card again', async ({ overlay, fakeApp }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/currency-divine.txt')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card).toBeVisible()
+  // The mouse moved away: main hides the price check.
+  fakeApp.sendToOverlay({ name: 'MAIN->OVERLAY::hide-exclusive-widget', payload: undefined })
+  await expect(card).toBeHidden()
+  await overlay.copyItem('items/currency-divine.txt')
+  await expect(card).toBeVisible()
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
+})
+
+test('currency: with poe.ninja first off, Ctrl+D searches right away', async ({ overlay }) => {
+  await overlay.boot({
+    patch: (config: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeNinjaFirst = false
+    }
+  })
+  await overlay.copyItem('items/currency-divine.txt')
+  const panel = overlay.widget('price-check')
+  await expect(panel).toContainText('Matched: 5')
+  await expect(overlay.page.getByTestId('instant-ninja-card')).toHaveCount(0)
+  await expect(panel.getByTestId('ninja-verdict')).toHaveCount(0)
+})
+
+test('the window can be dragged, resized, saved and put back', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ patch: windowCheck })
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.page.locator('#price-window')
   await expect(panel).toContainText('Divine Orb')
+  // An exchange item poe.ninja prices waits for a click before searching (WOKEPOET-479).
+  await panel.getByTestId('ninja-verdict-live').click()
   // Offers arriving later would grow the window between measuring and resizing.
   await expect(panel).toContainText('Matched: 5')
   const box = async () => (await panel.boundingBox())!
@@ -72,9 +176,13 @@ test('the window can be dragged, resized, saved and put back', async ({ overlay,
   const again = await box()
   // The mouse enters the window where it is now, not the docked spot.
   const tracked = await fakeApp.waitForReceived('OVERLAY->MAIN::track-area') as { area: { x: number, y: number, width: number } }
-  expect(Math.abs(tracked.area.x - resized.x)).toBeLessThan(2)
+  // The area holds the window, and the related items' column beside it on one side.
+  const right = tracked.area.x + tracked.area.width
   expect(Math.abs(tracked.area.y - resized.y)).toBeLessThan(2)
-  expect(Math.abs(tracked.area.width - resized.width)).toBeLessThan(2)
+  expect(tracked.area.x).toBeLessThanOrEqual(resized.x + 2)
+  expect(right).toBeGreaterThanOrEqual(resized.x + resized.width - 2)
+  expect(Math.abs(tracked.area.x - resized.x) < 2 || Math.abs(right - resized.x - resized.width) < 2).toBe(true)
+  expect(tracked.area.width).toBeGreaterThan(resized.width)
   expect(Math.abs(again.x - resized.x)).toBeLessThan(2)
   expect(Math.abs(again.y - resized.y)).toBeLessThan(2)
   expect(Math.abs(again.width - resized.width)).toBeLessThan(2)
@@ -90,10 +198,12 @@ test('the window can be dragged, resized, saved and put back', async ({ overlay,
 // Hiding the window starts a delayed chart redraw. A new check removes the chart first,
 // and the redraw then has nothing to measure: NaN in the svg, page errors.
 test('a price check right after closing the window draws no broken chart', async ({ overlay, fakeApp }) => {
-  await overlay.boot()
+  await overlay.boot({ patch: windowCheck })
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.widget('price-check')
   const chart = panel.locator('.apexcharts-canvas svg')
+  // An exchange item poe.ninja prices waits for a click before searching (WOKEPOET-479).
+  await panel.getByTestId('ninja-verdict-live').click()
   // The poe.ninja card starts folded onto the name row; open it to draw the chart.
   await panel.getByTitle(/^poe\.ninja price/).click()
   await expect(chart).toBeVisible()
@@ -102,6 +212,7 @@ test('a price check right after closing the window draws no broken chart', async
   await expect(panel).toBeHidden()
 
   await overlay.copyItem('items/currency-divine.txt')
+  await panel.getByTestId('ninja-verdict-live').click()
   await expect(chart).toBeVisible()
   await expect(chart).toHaveAttribute('width', /^\d+(\.\d+)?$/)
 })
@@ -307,11 +418,13 @@ test('Settings > Price check > Listings switches Classic and Improved', async ({
 })
 
 test('the poe.ninja card folds onto the name row and stays as left', async ({ overlay }) => {
-  await overlay.boot()
+  await overlay.boot({ patch: windowCheck })
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.widget('price-check')
   const chip = panel.getByTitle(/^poe\.ninja price/)
   const fold = panel.getByTitle('Fold onto the name row')
+  // Before a search the poe.ninja verdict shows the price; the chip is for after it.
+  await panel.getByTestId('ninja-verdict-live').click()
   // Folded by default: the price sits on the name row, the same height as the title.
   await expect(chip).toBeVisible()
   await expect(fold).toHaveCount(0)
@@ -322,6 +435,7 @@ test('the poe.ninja card folds onto the name row and stays as left', async ({ ov
   await chip.click()
   await expect(fold).toBeVisible()
   await overlay.copyItem('items/currency-divine.txt')
+  await panel.getByTestId('ninja-verdict-live').click()
   await expect(fold).toBeVisible()
   expect(await overlay.page.evaluate(() => localStorage.getItem('woke.ninjaCardOpen'))).toBe('1')
 
@@ -355,4 +469,83 @@ test('an item price check can\'t read offers its copied text to copy', async ({ 
   await expect(panel.getByRole('button', { name: 'Copy text' })).toBeVisible()
   // No Rarity line, so there's no name to search by.
   await expect(panel.getByRole('button', { name: 'Search on trade' })).toHaveCount(0)
+})
+
+// Sellers asking divines often ask "1 div" for items worth a few chaos. The first
+// search (both currencies, sorted by the raw number) then holds the chaos side
+// back; the check loads it and leads with the cheaper market (WOKEPOET-487).
+const XCHG_LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
+const xchgOffer = (id: string, currency: string, amount: number, stock: number) => ({
+  id,
+  item: null,
+  listing: {
+    indexed: new Date().toISOString(),
+    account: { name: `${id}#1`, lastCharacterName: `${id}c`, online: { league: 'Testleague' } },
+    offers: [{ exchange: { currency, amount, whisper: '' }, item: { currency: 'originators-exalted-orb', amount: 1, stock, id, whisper: '' } }],
+    whisper: ''
+  }
+})
+
+// The exchange for Originator's Exalted Orb as seen live: the first search (both
+// currencies) is mostly "1 div" rows, the chaos one is 1-3c. failChaos: the chaos
+// search fails `failChaos` times first.
+async function fakeOriginatorExchange (page: Page, failChaos = 0) {
+  const haves: string[][] = []
+  await page.route('**/api/trade/exchange/**', (route) => {
+    const have: string[] = JSON.parse(route.request().postData()!).query.have
+    haves.push(have)
+    if (have.length === 1 && failChaos > 0) {
+      failChaos--
+      return route.fulfill({ status: 400, contentType: 'application/json', headers: XCHG_LIMITS, body: JSON.stringify({ error: { code: 1, message: 'Test failure' } }) })
+    }
+    const rows = have.length > 1
+      ? [...Array.from({ length: 85 }, (_, i) => xchgOffer(`d${i}`, 'divine', 1, 10 + i)), ...Array.from({ length: 15 }, (_, i) => xchgOffer(`c${i}`, 'chaos', 1, 5 + i))]
+      : Array.from({ length: 30 }, (_, i) => xchgOffer(`c${i}`, 'chaos', 1 + Math.floor(i / 10), 5 + i))
+    return route.fulfill({
+      contentType: 'application/json',
+      headers: XCHG_LIMITS,
+      body: JSON.stringify({ id: 'xq', total: have.length > 1 ? 1222 : 911, result: Object.fromEntries(rows.map(r => [r.id, r])) })
+    })
+  })
+  return haves
+}
+
+test('bulk: leads with the cheaper chaos offers when divine sellers ask 1 div each', async ({ overlay }) => {
+  const haves = await fakeOriginatorExchange(overlay.page)
+  await overlay.boot()
+  await overlay.copyItem('items/currency-originators-exalted.txt')
+  const panel = overlay.widget('price-check')
+  const price = panel.getByTestId('bulk-verdict-price')
+  await expect(price).toHaveText('1c')
+  await expect(panel).toContainText('Chaos offers, with stock for your 3')
+  // The divine offers are named, with their chaos value.
+  await expect(panel.getByTestId('bulk-verdict-other')).toHaveText('Divine offers ask 1 div each (≈ 180c), 180× as much')
+  // Every price in the table carries its currency's icon.
+  const each = panel.getByTestId('bulk-each').first()
+  await expect(each).toHaveText('1')
+  await expect(each.locator('img')).toHaveAttribute('alt', 'chaos')
+  expect(haves).toEqual([['divine', 'chaos'], ['chaos']])
+  await overlay.snap('bulk check leads with chaos offers')
+  // Picking divine shows those offers, priced in div with their chaos value.
+  await panel.locator('.w-pc-matched button').nth(1).click()
+  await expect(price).toHaveText('1 div')
+  await expect(panel).toContainText('each ≈ 180c')
+  await expect(panel.getByTestId('bulk-verdict-other')).toContainText('Chaos offers ask 1c each')
+  await expect(each.locator('img')).toHaveAttribute('alt', 'divine')
+})
+
+test('bulk: when the chaos offers fail to load, the verdict says so and a click loads them', async ({ overlay }) => {
+  const haves = await fakeOriginatorExchange(overlay.page, 1)
+  await overlay.boot()
+  await overlay.copyItem('items/currency-originators-exalted.txt')
+  const panel = overlay.widget('price-check')
+  await expect(panel.getByTestId('bulk-verdict-price')).toHaveText('1 div')
+  await expect(panel.getByTestId('bulk-verdict-other')).toContainText("Chaos offers didn't load")
+  // The divine count isn't double-reduced: the first search's total less the chaos rows it had.
+  await expect(panel.locator('.w-pc-matched button').nth(1)).toContainText('1207')
+  await panel.locator('.w-pc-matched button').nth(0).click()
+  await expect(panel.getByTestId('bulk-verdict-price')).toHaveText('1c')
+  expect(haves).toEqual([['divine', 'chaos'], ['chaos'], ['chaos']])
+  // Once chaos loaded, divine's count is the first search's total less chaos's.
+  await expect(panel.locator('.w-pc-matched button').nth(1)).toContainText('311')
 })

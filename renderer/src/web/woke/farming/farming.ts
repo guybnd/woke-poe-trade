@@ -201,6 +201,17 @@ export function totals (
   }
 }
 
+// Session story's skip list (the 3.30 vaults), by area id, handed in when
+// that module loads so its code stays out of startup JS; until then the vaults.
+// Areas added to the list by name are left out in Session story only.
+let skipArea = (areaId: string) => /^MapWorldsMemoryVault\d$/.test(areaId)
+export function setAreaSkip (check: (areaId: string) => boolean): void { skipArea = check }
+
+// A map you farm: not on the skip list.
+export function isFarmedMap (areaId: string): boolean {
+  return isMapArea(areaId) && !skipArea(areaId)
+}
+
 // Endgame maps are generated with an area id starting with "Map"
 // (e.g. "MapWorldsStrand"); hideouts, towns and campaign areas are not, and
 // neither are pinnacle boss arenas (MapWorldsShapersRealm...).

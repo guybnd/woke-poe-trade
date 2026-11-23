@@ -119,3 +119,17 @@ export function rowTitle<T extends RowListing> (row: ListingRow<T>): string | un
   }
   return lines.length ? lines.join('\n') : undefined
 }
+
+/**
+ * Orders items cheapest first by their value in chaos. The trade site sorts by its
+ * own currency ratios, so a 150c listing can land after a 1 div one when divines
+ * are worth more than it thinks. `chaosOf` converts at poe.ninja's rate; items it
+ * can't value keep the trade site's order and go after the valued ones. Without
+ * a divine rate (`chaosOf` null) nothing can be compared, so the order stays.
+ */
+export function sortByValue<T> (items: readonly T[], chaosOf: ((item: T) => number | null) | null): T[] {
+  if (!chaosOf) return [...items]
+  // Unvalued items count as Infinity; two of them give NaN, which falls back to index order.
+  const value = items.map(item => chaosOf(item) ?? Infinity)
+  return items.map((_, i) => i).sort((a, b) => (value[a] - value[b]) || (a - b)).map(i => items[i])
+}

@@ -92,6 +92,19 @@ test('Nightmare Map price check: five maps ranked by fragment value', async ({ o
   await expect(unique).toContainText('~5%')
   await expect(strip).toContainText('~ is an estimate')
   await overlay.snap('nightmare map price check')
+  // Vaults tab: a button per vault, the best map's vault (Ziggurat: Scholar's) shown first.
+  const tabs = strip.locator('[data-nightmare-tabs]')
+  await tabs.getByRole('button', { name: 'Vaults' }).click()
+  const vaults = strip.locator('[data-nightmare-vaults]')
+  await expect(vaults.locator('[data-nightmare-vault-pick]')).toHaveCount(4, SLOW)
+  await expect(vaults.locator('[data-nightmare-vault-block]')).toContainText("Scholar's Vault")
+  await expect(vaults.locator('[data-vault-reward="Reflecting Mist"]')).toBeVisible()
+  await overlay.snap('nightmare map vaults tab')
+  await vaults.locator('[data-nightmare-vault-pick="MapWorldsMemoryVault2"]').click()
+  await expect(vaults.locator('[data-nightmare-vault-block]')).toContainText("Zealot's Vault")
+  await expect(vaults.locator('[data-vault-reward="Greater Multistrike Support"]')).toContainText('rare')
+  await tabs.getByRole('button', { name: 'Fragments' }).click()
+  await expect(maps).toHaveCount(5)
   // Folds to one line with the best map, and opens again.
   await strip.locator('[data-nightmare-fold]').click()
   await expect(maps).toHaveCount(0)
@@ -103,7 +116,7 @@ test('Nightmare Map price check: five maps ranked by fragment value', async ({ o
   expect(overlay.errors).toEqual([])
 })
 
-test('Nightmare Map with Map mods: Run it?, Worth running, Trade search in that order', async ({ overlay }) => {
+test('Nightmare Map with Map mods: the map section, then Worth running', async ({ overlay }) => {
   const searches = await setup(overlay, false, true)
   await overlay.copyItem('items/map-nightmare-330.txt')
   const panel = overlay.widget('price-check')
@@ -111,17 +124,18 @@ test('Nightmare Map with Map mods: Run it?, Worth running, Trade search in that 
   await expect(strip.locator('[data-woke-nightmare] [data-nightmare-bars]')).toContainText('Zigg', SLOW)
   const order = await strip.evaluate(el => [...el.querySelectorAll('[data-map-run], [data-woke-nightmare], [data-map-trade]')].map(n =>
     n.hasAttribute('data-map-run') ? 'run' : n.hasAttribute('data-woke-nightmare') ? 'worth' : 'trade'))
-  expect(order).toEqual(['run', 'worth', 'trade'])
+  // Guy's pick A (2026-11-20): verdict and trade search are one section.
+  expect(order).toEqual(['run', 'worth'])
   // Only one Nightmare grid on the page.
   await expect(panel.locator('[data-woke-nightmare]')).toHaveCount(1)
-  // One section open at a time: opening Trade search folds Worth running, and back.
+  // One section open at a time: opening the map's mods folds Worth running, and back.
   await strip.locator('[data-map-trade] > button').first().click()
   await expect(strip.locator('[data-nightmare-bars]')).toHaveCount(0)
   await expect(strip.locator('[data-map-trade] > button').first()).toHaveAttribute('aria-expanded', 'true')
   await strip.locator('[data-nightmare-fold]').click()
   await expect(strip.locator('[data-nightmare-bars]')).toBeVisible()
   await expect(strip.locator('[data-map-trade] > button').first()).toHaveAttribute('aria-expanded', 'false')
-  await overlay.snap('nightmare map holistic A')
+  await overlay.snap('nightmare map one section')
   expect(searches).toEqual([])
   expect(overlay.errors).toEqual([])
 })

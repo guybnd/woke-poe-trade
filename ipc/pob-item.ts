@@ -22,7 +22,8 @@ export interface PobItem {
   // Same length as mods when any mod is crafted or fractured.
   modKinds?: PobModKind[]
   // Same length as implicits when PoB marks any as crafted, meaning an enchant.
-  implicitKinds?: PobModKind[]
+  // 'vestigial': a Vestigial unique's inherited implicit (the game's own item data).
+  implicitKinds?: Array<PobModKind | 'vestigial'>
   quality?: number
   armour?: number
   evasion?: number
@@ -36,6 +37,8 @@ export interface PobItem {
   mirrored?: boolean
   // Shaper, Elder, Crusader, Hunter, Redeemer, Warlord
   influences?: string[]
+  // A Vestigial unique (Timeless Conflict variant).
+  vestigial?: boolean
 }
 
 export type PobModKind = '' | 'crafted' | 'fractured'

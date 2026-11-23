@@ -103,7 +103,7 @@ const dropText = computed(() => {
 .foul { color: var(--w-mod-foulborn); }
 .gone { color: var(--w-dim); text-decoration: line-through; }
 .vestRow { display: flex; gap: var(--w-s2); align-items: baseline; }
-.vest { display: block; color: var(--w-mod-enchant); }
+.vest { display: block; color: var(--w-mod-vestigial); }
 .facts { color: var(--w-dim); font-size: var(--w-fs-sm); }
 .restricted { color: var(--w-mod-corrupted); }
 </style>

@@ -17,8 +17,7 @@ Woke PoE Trade is a set of tools on one overlay. Each one is a module you can sw
 | Area | Module | What it does |
 | --- | --- | --- |
 | Economy | Market | Every poe.ninja price by category, plus movers and a watchlist |
-| Economy | Investments | League-start buys ranked from past leagues |
-| Economy | Flips | Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more |
+| Economy | Flips | Vendor recipes and Harvest rerolls worth doing: threads, catalysts, delirium orbs and more |
 | Economy | Disenchant | Uniques with the most Thaumaturgic Dust per chaos, to buy and disenchant |
 | Economy | Wealthy Exile | The Wealthy Exile net worth site in an overlay window |
 | Economy | Drop counter | A tally of the drops you choose, and maps run |
@@ -26,10 +25,8 @@ Woke PoE Trade is a set of tools on one overlay. Each one is a module you can sw
 | Economy | Session analytics | Profit per map, strategy and hour over time |
 | Economy | Wickerman (3.30) | Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one |
 | Economy | Boss runs | Profit per boss kill |
-| Mapping | Map mods | Danger strip on price check and map regex |
-| Mapping | Farming | Session profit per hour |
-| Mapping | Map scan | Reads map tooltips on screen |
-| Mapping | Session story | A card of the night, a line on each map you finish, and your map history |
+| Mapping | Map mods | Danger strip on price check, map regex, and map scan (reads hovered maps on screen) |
+| Mapping | Session story | A summary card when you log off, a per map run toast, and your map history |
 | Mapping | Death recap | Where you died, and the mods of maps you checked |
 | Mapping | Essence scan | Reads essence monoliths and flags MEDS |
 | Mapping | Loot filter editor | Edit the NeverSink rule for a sampled item |
@@ -51,7 +48,7 @@ Woke PoE Trade is a set of tools on one overlay. Each one is a module you can sw
 
 ### What tools need
 
-- **Client.txt:** tools that follow your zones or chat read the game's log file: campaign, run timer, farming, drop counter, stacked decks, boss runs, death recap, essence scan, loot filter editor, league mechanics and trades. The setup window finds it; change it under Settings, **Game & league**.
+- **Client.txt:** tools that follow your zones or chat read the game's log file: campaign, run timer, drop counter, stacked decks, boss runs, death recap, essence scan, loot filter editor, league mechanics and trades. The setup window finds it; change it under Settings, **Game & league**.
 - **Screen reading:** map scan, essence scan and death recap read the game screen. The installer ships everything they need.
 - **Hotkeys:** each tool's keys are on its Settings page. A few tools start with an Alt key (map mods, map scan, essence scan, loot filter) and search uses `Ctrl + Space`; most others have none until you set one.
 - **Prices** come from poe.ninja and the official trade site for the league picked under **Game & league**.

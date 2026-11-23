@@ -1,10 +1,12 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
     <WPanel ref="panel" :keys="windowKeys.help" :title="config.wmTitle || 'Session analytics'" :icon="panelIcon" width="34rem" :busy="busy">
-      <template v-if="store.error.value" #banner>
-        <WBanner>Couldn't read your saved sessions: {{ store.error.value }}
+      <template v-if="store.error.value || storyOn" #banner>
+        <WBanner v-if="store.error.value">Couldn't read your saved sessions: {{ store.error.value }}
           <template #actions><WButton size="sm" @click="reload">Retry</WButton></template>
         </WBanner>
+        <!-- Tonight's strip and totals stay on top of every tab (Session story's card). -->
+        <div v-if="storyOn" :class="$style.tonight" data-analytics-tonight><TonightBand pickable :selected="focusAt" :night-id="nightId" @pick="pickMap" /></div>
       </template>
       <template #tabs>
         <WTabs v-model="tab" :options="tabOptions" />
@@ -23,7 +25,7 @@
         <!-- ===== Strategies (A1) ===== -->
         <template v-else-if="tab === 'strategies'">
           <WEmpty v-if="!rows.length" :art="{ mechanic: 'map' }">
-            Maps show here after you end a session in Farming.
+            Strategies came from Farming sessions. Farming is retired for now, so only past sessions show here.
           </WEmpty>
           <template v-else>
             <div>
@@ -32,7 +34,7 @@
               </div>
               <button v-for="row in rows" :key="row.key" class="w-row px-0 w-full text-left" :class="[$style.stratGrid, row.key === selectedRow?.key ? $style.sel : '']"
                 @click="selectedKey = row.key" @contextmenu="strategyMenu($event, row)">
-                <span class="w-trunc">
+                <span class="w-trunc" data-no-item-tip="a strategy's name; some are named after the card or item they farm">
                   <WIcon v-if="row.kind === 'boss'" mechanic="maven" title="Boss run" class="mr-1" />{{ row.strategy }}
                 </span>
                 <span class="text-right w-num w-dim">{{ row.kind === 'boss' ? row.units.length : row.maps }}<span v-if="row.kind === 'boss'" class="w-faint text-xs"> k</span></span>
@@ -112,7 +114,7 @@
               <button v-for="sum in sessionList" :key="sum.s.id" class="w-row px-0 w-full text-left w-focusable" :class="$style.sessGrid" @click="openId = sum.s.id"
                 @contextmenu="sessionMenu($event, sum.s)" @keydown.delete.prevent="deleteSession(sum.s)">
                 <span class="w-trunc w-dim">{{ formatSessionDate(sum.s.startedAt) }}</span>
-                <span class="w-trunc">{{ sum.s.strategy || 'Unnamed' }}<i v-if="sum.s.imported" class="fas fa-box-archive w-faint text-xs ml-1" title="From Farming's old history: totals only" /></span>
+                <span class="w-trunc" data-no-item-tip="a strategy's name; some are named after the card or item they farm">{{ sum.s.strategy || 'Unnamed' }}<i v-if="sum.s.imported" class="fas fa-box-archive w-faint text-xs ml-1" title="From Farming's old history: totals only" /></span>
                 <span class="text-right w-num">{{ sum.s.maps }}</span>
                 <span class="text-right w-num w-dim">{{ formatDuration(sum.s.durationMs) }}</span>
                 <span class="text-right w-num" :class="(sum.profit ?? 0) >= 0 ? 'w-up' : 'w-down'">{{ maybe(sum.profit, true) }}</span>
@@ -183,8 +185,12 @@
           </template>
         </template>
 
+        <!-- ===== Nights (Session story) ===== -->
+        <NightsList v-else-if="tab === 'nights'" :selected="nightId" @open="openNight" />
+
         <!-- ===== Stacked decks (woke/stacked-decks) ===== -->
-        <MapHistory v-else-if="tab === 'history'" :range="config.range" :league="league" :now="now" />
+        <!-- Only while the window is open: it reads every map day from disk, and the window mounts hidden at startup. -->
+        <template v-else-if="tab === 'history'"><MapHistory v-if="config.wmWants === 'show'" :range="config.range" :league="league" :now="now" :focus="focusAt" @select="focusAt = $event" /></template>
         <DeckHistory v-else-if="tab === 'decks'" :range="config.range" :unit="config.unit" :league="league" :now="now" />
 
         <!-- ===== Maps ===== -->
@@ -218,7 +224,7 @@ export default { widget: widgetSessionAnalyticsSpec }
 
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
-import { inject, computed, shallowRef, watch } from 'vue'
+import { defineAsyncComponent, inject, computed, nextTick, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { formatDuration } from '../ui/format'
@@ -236,10 +242,12 @@ import { BOSS_RUNS_TYPE } from '../boss-runs/widget'
 import type { BossRunsWidget } from '../boss-runs/widget'
 import { evaluateBoss, priceResolver } from '../boss-runs/calc'
 import { useSessionStore } from './store'
+import { onSavedOpen } from '../shared/saved-open'
+import { ANALYTICS_TYPE } from './types'
 import { tradeTotals, tradesInRange, useTradeLog } from '../trade/log-store'
 import { isModuleOn } from '../modules'
-import DeckHistory from '../stacked-decks/DeckHistory.vue'
 import MapHistory from '../session-story/MapHistory.vue'
+import DeckHistory from '../stacked-decks/DeckHistory.vue'
 import { useVisibleClock } from '../shared/visible-clock'
 import {
   MIN_UNITS_FOR_RANGE, buildRow, chanceBetter, exportRows, filterSessions, formatSessionDate,
@@ -247,6 +255,10 @@ import {
 } from './stats'
 import type { StrategyRow, Unit } from './stats'
 import type { AnalyticsWidget, MapRun, SessionRecord } from './types'
+// Tonight's card, from Session story's own chunk (already loaded when Session
+// story is on), so it adds nothing to startup.
+const TonightBand = defineAsyncComponent(() => import('../session-story/WidgetSessionStory.vue').then(m => m.TonightBand))
+const NightsList = defineAsyncComponent(() => import('../session-story/WidgetSessionStory.vue').then(m => m.NightsList))
 // The header shows the module's own art, the same as the dock and tab bar.
 const panelIcon = moduleIcon('session-analytics').art ?? 'divine'
 
@@ -266,12 +278,45 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   wm.show(props.config.wmId)
 }
 
-const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'history' | 'decks'>('strategies')
+const storyOn = computed(() => isModuleOn(AppConfig(), 'session-story'))
+// With Session story on, the window opens on the maps you ran: tonight's strip sits above them.
+const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'history' | 'nights' | 'decks'>(storyOn.value ? 'history' : 'sessions')
+// A map picked on tonight's strip (or its row): Map history shows and scrolls to it.
+const focusAt = shallowRef<number | null>(null)
+// A saved night picked in Nights, shown on top; null: tonight.
+const nightId = shallowRef<string | null>(null)
+function openNight (id: string) {
+  nightId.value = id
+  // A map picked on the night before isn't on this one's strip.
+  focusAt.value = null
+}
+function pickMap (enteredAt: number) {
+  tab.value = 'history'
+  // The same map again still scrolls back to it.
+  focusAt.value = null
+  nextTick(() => { focusAt.value = enteredAt })
+}
+// Ctrl+Space ("Open Map history", a map's Show button: "map:<entered at>") and
+// Session story's dock icon ("history", or "nights" from its menu).
+onSavedOpen(ANALYTICS_TYPE, (id) => {
+  if (!storyOn.value) return
+  wm.show(props.config.wmId)
+  nightId.value = null
+  if (id.startsWith('map:')) pickMap(Number(id.slice(4)))
+  else tab.value = id === 'nights' ? 'nights' : 'history'
+})
+// Session story turned off while its tab shows: back to Sessions.
+watch(storyOn, (on) => {
+  if (on) return
+  if (tab.value === 'history' || tab.value === 'nights') tab.value = 'sessions'
+  nightId.value = null
+})
 const tabOptions = computed(() => [
-  { value: 'strategies', label: 'Strategies' },
+  ...(storyOn.value ? [{ value: 'history', label: 'Map history' }, { value: 'nights', label: 'Nights' }] : []),
+  // Strategies is retired (Guy, Nov 2026): it only had Farming's sessions.
+  // Its tab body stays below for when Farming comes back.
   { value: 'sessions', label: 'Sessions' },
   { value: 'maps', label: 'Maps' },
-  ...(isModuleOn(AppConfig(), 'session-story') ? [{ value: 'history', label: 'Map history' }] : []),
   ...(isModuleOn(AppConfig(), 'stacked-decks') ? [{ value: 'decks', label: 'Stacked decks' }] : [])
 ])
 const rangeOptions = [{ value: '7d', label: '7 days' }, { value: 'league', label: 'League' }, { value: 'all', label: 'All' }]
@@ -543,6 +588,7 @@ const tiles = computed(() => mapTileRows(inView.value, props.config.unit, divine
 </script>
 
 <style module>
+.tonight:not(:empty) { padding: 2px 0 8px; border-bottom: 1px solid var(--w-line); }
 .stratGrid { grid-template-columns: minmax(0, 1fr) 40px 40px 136px 52px; gap: 6px; }
 .sessGrid { grid-template-columns: 104px minmax(0, 1fr) 36px 52px 56px 52px; gap: 6px; }
 .tileGrid { grid-template-columns: minmax(0, 1fr) 36px 56px 56px 56px 48px; gap: 6px; }

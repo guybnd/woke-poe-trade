@@ -44,10 +44,12 @@ import { WokeOverlay } from '@/web/woke'
 import { isModuleOn, isWidgetTypeOn } from '@/web/woke/modules'
 import { addEssenceScanWidget } from '@/web/woke/essence-scan/widget'
 import { requestRestore } from '@/web/woke/ui/window-anchor'
+import { keepZorderUnderCap } from './zorder'
 // ---
 import { usePoeninja } from '@/web/background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
 import { handleLine } from '@/web/client-log/client-log'
+import { instantCardShown } from '@/web/woke/price-insight/view'
 
 type WMID = Widget['wmId']
 
@@ -195,6 +197,8 @@ export default defineComponent({
       const widget = AppConfig().widgets.find(_ => _.wmId === wmId)!
       if (widget.wmZorder !== 'exclusive') {
         widget.wmZorder = (topmostWidget.value.wmZorder as number) + 1
+        // woke: past the cap a panel covers the item tooltip and pop-ups.
+        keepZorderUnderCap(AppConfig().widgets)
       }
     }
 
@@ -281,6 +285,8 @@ export default defineComponent({
 
     const overlayBackground = computed<string | undefined>(() => {
       if (!active.value) return undefined
+      // woke: nothing behind the small poe.ninja card (Guy, 2026-11-22).
+      if (instantCardShown.value) return undefined
       return AppConfig().overlayBackground
     })
 

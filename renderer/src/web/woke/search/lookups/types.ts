@@ -1,4 +1,5 @@
 import type { PriceItem } from '../../market/types'
+import type { TipContent } from '../../ui/tooltip/tooltip'
 
 // Answers the search palette shows as cards: currency maths, countdowns, boss
 // and recipe facts and the like. Each lookup is a plain function from the
@@ -10,7 +11,9 @@ export interface LookupRow {
   value?: string
   // A price in chaos, drawn as chaos or divines.
   chaos?: number | null
-  item?: { name: string, type?: string }
+  // `content`: a tooltip of the lookup's own, for a name the item data
+  // doesn't have (a map's cards).
+  item?: { name: string, type?: string, content?: TipContent }
   dim?: boolean
   // `chaos` is one item's price: under 1c it reads "1 div / N". Leave it off
   // for totals (qty × each, sets, costs, profits).
@@ -59,7 +62,7 @@ export interface LookupCard {
   sections: LookupSection[]
   actions: LookupAction[]
   // Hovering the result shows this item's tooltip.
-  tip?: { name: string, type?: string }
+  tip?: { name: string, type?: string, content?: TipContent }
 }
 
 export interface LookupContext {

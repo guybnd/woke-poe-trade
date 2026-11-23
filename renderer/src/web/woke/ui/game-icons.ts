@@ -69,7 +69,7 @@ export function mechanicIcon (id: string): { src: string | null, fa: string } {
 export function ninjaIcon (type: string, name: string): string | null {
   if (name === 'Chaos Orb') return CURRENCY_ICONS.chaos
   if (name === 'Divine Orb') return CURRENCY_ICONS.divine
-  const ns: Ns = /^Unique/.test(type) ? 'UNIQUE' : /Gem/.test(type) ? 'GEM' : type === 'DivinationCard' ? 'DIVINATION_CARD' : 'ITEM'
+  const ns: Ns = /^Unique/.test(type) ? 'UNIQUE' : /Gem/.test(type) ? 'GEM' : type === 'DivinationCard' ? 'DIVINATION_CARD' : type === 'Beast' ? 'CAPTURED_BEAST' : 'ITEM'
   // The item data has no Foulborn uniques: they look like the original.
   return gameIcon(name, ns) ?? (ns === 'UNIQUE' && isFoulborn(name) ? gameIcon(dataUniqueName(name), ns) : null)
 }

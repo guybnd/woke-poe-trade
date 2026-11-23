@@ -63,22 +63,22 @@
 }
 
 /* ---------- Close: the game's coin with an X ---------- */
-:root[data-woke-art] :is([data-w-panel] > [data-widget-drag] button:has(> .fa-times), [data-w-settings] > header button[title="Close"]) {
+:root[data-woke-art] :is([data-w-panel] > [data-widget-drag] button:has(> .fa-times), [data-w-settings] > header button:has(> .fa-times)) {
   width: 22px;
   height: 22px;
   background: var(--art-close) center / contain no-repeat;
   border: 0;
   box-shadow: none;
 }
-:root[data-woke-art] :is([data-w-panel] > [data-widget-drag] button:has(> .fa-times), [data-w-settings] > header button[title="Close"]):hover {
+:root[data-woke-art] :is([data-w-panel] > [data-widget-drag] button:has(> .fa-times), [data-w-settings] > header button:has(> .fa-times)):hover {
   background-image: var(--art-close-hover);
 }
-:root[data-woke-art] :is([data-w-panel] > [data-widget-drag] button:has(> .fa-times), [data-w-settings] > header button[title="Close"]) > i {
+:root[data-woke-art] :is([data-w-panel] > [data-widget-drag] button:has(> .fa-times), [data-w-settings] > header button:has(> .fa-times)) > i {
   visibility: hidden;
 }
 
 /* Settings' title bar keeps to the title and search: the carved ends need the room. */
-:root[data-woke-look="game"] [data-w-settings] > header > :last-child > :not(button[title="Close"]) {
+:root[data-woke-look="game"] [data-w-settings] > header > :last-child > :not(button:has(> .fa-times)) {
   display: none;
 }
 
@@ -137,7 +137,7 @@
 }
 
 /* ---------- The close coin sits in the dark socket of the bar's right end, as on the game's windows ---------- */
-:root[data-woke-art] :is([data-w-panel] > [data-widget-drag] button:has(> .fa-times), [data-w-settings] > header button[title="Close"]) {
+:root[data-woke-art] :is([data-w-panel] > [data-widget-drag] button:has(> .fa-times), [data-w-settings] > header button:has(> .fa-times)) {
   position: absolute;
   right: calc(var(--w-socket-right) - 11px);
   top: var(--w-socket-top);

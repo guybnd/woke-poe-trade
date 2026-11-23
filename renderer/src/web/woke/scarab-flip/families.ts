@@ -1,6 +1,6 @@
 // Every flip the panel prices. Recipes and costs: poewiki.net's Vendor recipe
 // system and Harvest crafting pages.
-import { RARE_SHARE, averageWeight, buyList, familyQuotes, flipModel, scarabWeight, shortScarab, upgradeRows } from './calc'
+import { averageWeight, buyList, familyQuotes, flipModel, upgradeRows } from './calc'
 import type { ExchangeQuotes, FlipModel, FlipOptions, FlipRecipe, FlipRow, ItemWeight, Quote, UpgradeRow, WeightSource } from './calc'
 import { CATALYST_WEIGHTS, DEAFENING_ESSENCE_WEIGHTS, DELIRIUM_WEIGHTS, FOSSIL_WEIGHTS, RUNEGRAFT_WEIGHTS } from './family-weights'
 import type { PriceItem } from '../market/types'
@@ -52,6 +52,8 @@ export interface FlipFamily {
   // The same in a few words, for a row in Settings.
   sourceShort?: string
   lowConfidence?: string
+  // An item that opens to a random one of the family, priced as the average.
+  opener?: string
 }
 
 const vendor3 = (excludeInput: boolean): FlipMethod => ({ id: 'vendor', label: 'Vendor 3 for 1', inputs: 3, excludeInput })
@@ -70,26 +72,35 @@ const ESSENCE_WEIGHTS: Record<string, number> = {
 }
 const ESSENCE_TYPES = Object.keys(ESSENCE_WEIGHTS).map(n => n.replace('Deafening Essence of ', ''))
 
+// poewiki's drop-disabled Delirium Orbs as of 3.30.
+const RETIRED_DELIRIUM = new Set(['Abyssal', 'Challenging', 'Foreboding', 'Fossilised', 'Fragmented', 'Imperial', 'Kalguuran', 'Obscured', 'Portentous', 'Primal', 'Skittering', 'Timeless'].map(n => `${n} Delirium Orb`))
+
 export const FAMILIES: FlipFamily[] = [
   {
-    id: 'scarabs',
-    label: 'Scarabs',
-    noun: 'scarab',
-    ninjaType: 'Scarab',
-    match: name => name.includes('Scarab'),
+    id: 'threads',
+    label: 'Threads',
+    noun: 'thread',
+    ninjaType: 'Thread',
+    // Frayed Thread opens to a random Thread but isn't one, and has no price.
+    match: name => name.endsWith(' Thread') && name !== 'Frayed Thread',
+    // 3.30.0c added a vendor recipe for Threads. Taken to work like the scarab
+    // one it replaces: 3 in, 1 of a different type back.
     methods: [vendor3(true)],
-    weightOf: scarabWeight,
-    estimateMissing: true,
-    rareShare: RARE_SHARE,
-    sourceShort: 'PoeData 3.28',
-    source: 'Weights: 22,431 vendor rolls from version 3.28, from PoeData.dev. Very rare scarabs rest on only a few rolls. Scarabs it missed use the average.'
+    // No one has measured the recipe yet, so every Thread counts the same.
+    weightOf: () => ({ weight: 1, source: 'estimate' }),
+    rareShare: null,
+    sourceShort: 'None measured',
+    source: 'Weights: none measured yet, so every Thread counts as equally likely.',
+    lowConfidence: 'Low confidence: no measured weights yet, so every Thread counts as equally likely. Set your own in Settings.',
+    opener: 'Frayed Thread'
   },
   {
     id: 'catalysts',
     label: 'Catalysts',
     noun: 'catalyst',
     ninjaType: 'Currency',
-    match: name => name.endsWith(' Catalyst') && name !== 'Tainted Catalyst',
+    // Tainted, Sinistral and Dextral can't come out of a recipe or a reroll.
+    match: name => name.endsWith(' Catalyst') && !/^(Tainted|Sinistral|Dextral) /.test(name),
     // The vendor recipe says only "random", so the same type can come back.
     methods: [vendor3(false), harvest('Vivid')],
     weights: CATALYST_WEIGHTS,
@@ -102,13 +113,15 @@ export const FAMILIES: FlipFamily[] = [
     label: 'Delirium',
     noun: 'orb',
     ninjaType: 'DeliriumOrb',
-    match: name => name.endsWith(' Delirium Orb'),
+    // Orbs 3.30 stopped dropping can still be priced in Standard, but a
+    // reroll can't give them.
+    match: name => name.endsWith(' Delirium Orb') && !RETIRED_DELIRIUM.has(name),
     methods: [harvest('Primal')],
     weights: DELIRIUM_WEIGHTS,
     sourceShort: 'PoeData 3.22',
     estimateMissing: true,
     rareShare: null,
-    source: 'Weights: PoeData.dev, 5 datasets, version 3.22.'
+    source: 'Weights: PoeData.dev, 5 datasets, version 3.22, cut to the 11 orbs that drop in 3.30. Threaded is the renamed Skittering, with its weight.'
   },
   {
     id: 'fossils',
@@ -166,8 +179,8 @@ export const FAMILIES: FlipFamily[] = [
 
 // The tab already says the family, so rows can drop it.
 export function shortName (name: string): string {
-  return shortScarab(name)
-    .replace(/ (Delirium Orb|Fossil|Catalyst)$/, '')
+  return name
+    .replace(/ (Delirium Orb|Fossil|Catalyst|Thread)$/, '')
     .replace(/^(\S+) Essence of /, '$1 ')
     .replace(/^Runegraft of (the )?/, '')
 }
@@ -176,8 +189,13 @@ export function familyById (id: string | undefined): FlipFamily {
   return FAMILIES.find(f => f.id === id) ?? FAMILIES[0]
 }
 
-// The families poe.ninja prices in this league. Scarabs leave the game in 3.30
-// and league items like Runegrafts come and go, so a family with no prices gets
+// A stash tab the reader knows but Flips no longer prices (the old Scarab tab).
+export function knownFamily (id: string | undefined): FlipFamily | null {
+  return FAMILIES.find(f => f.id === id) ?? null
+}
+
+// The families poe.ninja prices in this league. League items like Runegrafts
+// come and go, so a family with no prices gets
 // no tab. With no prices at all yet, every family stays, so the panel can still
 // say what it is waiting for.
 export function pricedFamilies (items: PriceItem[] | null | undefined): FlipFamily[] {

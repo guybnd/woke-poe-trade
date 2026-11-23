@@ -12,7 +12,7 @@ export type ListingMod = string | {
   domain?: string
   // The trade stat, "stat.implicit.stat_1880071428".
   hash?: string
-  flags?: { fractured?: boolean, crafted?: boolean }
+  flags?: { fractured?: boolean, crafted?: boolean, vestigial?: boolean }
   // The mods behind this line: usually one, two when they share a stat. Uniques
   // and implicits have no name or tier. Tier is P1, S3, or R2 for a crafted mod.
   mods?: Array<{
@@ -32,6 +32,7 @@ export interface ListingItem {
   rarity?: string
   ilvl?: number
   corrupted?: boolean
+  doubleCorrupted?: boolean
   mirrored?: boolean
   influences?: Record<string, boolean>
   implicitMods?: ListingMod[]
@@ -43,6 +44,8 @@ export interface ListingItem {
   sockets?: Array<{ group: number, sColour: string }>
   fractured?: boolean
   synthesised?: boolean
+  // A Vestigial unique (base "Vestigial Great Crown"); its inherited implicit has flags.vestigial.
+  vestigial?: boolean
   // Eldritch implicits: from the Searing Exarch's altar, the Eater of Worlds', or both.
   searing?: boolean
   tangled?: boolean
@@ -182,7 +185,9 @@ export function listingTipItem (item: ListingItem): PobItem | null {
     ward: propNumber(item, p => p.name === 'Ward'),
     itemLevel: item.ilvl,
     corrupted: item.corrupted,
+    ...(item.doubleCorrupted ? { twiceCorrupted: true } : {}),
     mirrored: item.mirrored,
-    influences: Object.keys(item.influences ?? {}).map(capitalize)
+    influences: Object.keys(item.influences ?? {}).map(capitalize),
+    ...(item.vestigial ? { vestigial: true } : {})
   }
 }

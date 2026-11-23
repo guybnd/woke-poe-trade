@@ -1,5 +1,12 @@
 <template>
-  <div v-if="!error" class="layout-column min-h-0" :class="{ 'w-pc-results-stale': stale }" style="height: auto;">
+  <div v-if="!error" class="layout-column min-h-0" :class="{ 'w-pc-results-stale': dim }" style="height: auto;">
+    <!-- woke: in the Search row, while the results are filtered here (Guy's pick C). -->
+    <teleport v-if="statusSlot && stale && list && narrow" :to="statusSlot">
+      <span class="w-pc-status w-pc-status-local"
+        :title="`Filtered from the ${loadedCount} listings already loaded, without a new search. They're still the cheapest that fit; the search found ${list.total}.`">
+        <span class="w-pc-status-note">Matched</span><b>{{ fitCount }} of {{ loadedCount }} here</b>
+      </span>
+    </teleport>
     <div v-if="item.info.exchangeable" :class="$style.legacyMessage">
       {{ t(':legacy_bulk_xchg_msg') }}
     </div>
@@ -10,6 +17,8 @@
         <b v-else class="font-normal">{{ list.total }}{{ list.inexact ? '+' : '' }}</b>
       </div>
       <online-filter class="w-pc-online" :class="{ invisible: !list }" :filters="filters" api="trade" />
+      <button type="button" class="w-pc-bulk" :class="{ invisible: !list, on: bulk }" :aria-pressed="bulk"
+        :title="bulkTitle" @click="toggleBulk">Bulk<span v-if="bulkNote" class="ml-1">{{ bulkNote }}</span></button>
       <div class="w-pc-grow flex-1"></div>
       <!-- woke: the price check's prefix / suffix caps, editing its live filters. -->
       <slot name="toolbar" />
@@ -25,7 +34,7 @@
         :divine="divine"
         :loading="!list || tableLoading"
         :total="list ? list.total : null"
-        :log-key="logKey"
+        :log-key="narrow ? null : logKey"
         :league="filters.trade.league"
         :blank-search="blankSearch"
         :skips-top-mods="skipsTop"
@@ -67,10 +76,10 @@
               <div class="px-2">Sockets</div>
             </th>
             <th v-for="col in shownColumns" :key="col.key" :class="[$style.tableHeading, 'w-pc-stat-head']" :title="col.title">
-              <div>{{ col.label }}</div>
+              <div>{{ col.label }}<span v-if="localRange(col)" class="w-pc-local-chip" :title="`Filtered here: ${localRange(col)}`">{{ localRange(col) }}</span></div>
             </th>
             <th v-if="hiddenColumns.length" :class="[$style.tableHeading, 'w-pc-stat-head']" :title="hiddenColumns.map(col => col.title).join('\n')">
-              <div class="w-pc-stat-more">+{{ hiddenColumns.length }}</div>
+              <div class="w-pc-stat-more">+{{ hiddenColumns.length }}<span v-for="col in hiddenColumns.filter(c => localRange(c))" :key="col.key" class="w-pc-local-chip" :title="`${col.title}: filtered here, ${localRange(col)}`">{{ col.label }} {{ localRange(col) }}</span></div>
             </th>
             <th v-if="showSeller" class="w-full" :class="$style.tableHeading">
               <div class="px-2">{{ t(':seller') }}</div>
@@ -109,6 +118,7 @@
                 'w-pc-stale': improved && row.band === 'stale' && !row.dropped && !allStale
               }"
               :title="improved && !row.lead.tipItem ? rowTitle(row) : undefined"
+              :data-item-tip="row.lead.tipItem ? '' : undefined"
               @mouseenter="showRowTip($event, row)"
               @mouseleave="hideTip"
               @contextmenu="row.lead.tipItem && openItemMenu($event, pobMenuRef(row.lead.tipItem))">
@@ -121,8 +131,7 @@
               </td>
               <td class="px-2">
                 <span class="w-pc-count">
-                  <span v-if="showCountBar" class="w-pc-count-bar" :class="{ invisible: row.count < 2 }"><span :style="{ width: Math.round(row.count / maxCount * 100) + '%' }" /></span>
-                  <span v-if="row.count >= (improved ? 2 : 3)" class="w-pc-count-n"><span class="font-sans">×</span>{{ row.count }}</span>
+                  <!-- woke: the hideout / stash icon first, so it stays in one place whatever the count. -->
                   <span v-if="!row.lead.hasFee" :class="$style.stashListing" :title="row.lead.hasNote ? 'Stash listing' : 'Stash listing without a price note'">
                     <img :class="$style.stashIcon" src="/images/stash.png">
                     <i v-if="!row.lead.hasNote" class="fas fa-question" />
@@ -132,8 +141,11 @@
                     :disabled="travelState(row.lead.hideoutToken)?.kind === 'sending'"
                     title="Travel to the seller's hideout" aria-label="Travel to the seller's hideout"
                     @click.stop="travel(row.lead)"><i class="fas fa-door-open" /></button>
+                  <span v-else-if="anyIcon" class="w-pc-travel-gap" aria-hidden="true" />
+                  <span v-if="showCountBar" class="w-pc-count-bar" :class="{ invisible: row.count < 2 }"><span :style="{ width: Math.round(row.count / maxCount * 100) + '%' }" /></span>
+                  <span v-if="row.count >= (improved ? 2 : 3)" class="w-pc-count-n"><span class="font-sans">×</span>{{ row.count }}</span>
                   <span v-if="improved && row.dropped && FIX_TAG[row.dropped]" class="w-pc-tag">{{ FIX_TAG[row.dropped] }}</span>
-                  <span v-if="row.lead.corrupted" class="w-pc-tag">Corrupted</span>
+                  <span v-if="row.lead.corrupted" class="w-pc-tag">{{ row.lead.twiceCorrupted ? 'Twice Corrupted' : 'Corrupted' }}</span>
                 </span>
               </td>
               <td v-if="item.stackSize" class="px-2 text-right">{{ row.lead.stackSize }}</td>
@@ -159,12 +171,19 @@
                 </span>
               </td>
             </tr>
+            <!-- woke: few rows fit: suggest a search, unless the search's every listing is already here. -->
+            <tr v-if="shortList" class="w-pc-local-hint">
+              <td colspan="100" class="px-2">
+                <span>{{ fitCount ? `Only ${fitCount}` : 'None' }} of the {{ loadedCount }} {{ allLoaded ? 'listings the search found' : 'loaded' }} fit{{ allLoaded ? ': searching again finds no more' : '' }}.</span>
+                <span v-if="!allLoaded" class="w-pc-local-go">Search for these filters ↑</span>
+              </td>
+            </tr>
           </template>
         </tbody>
       </table>
     </div>
-    <div v-if="improved" class="w-pc-foot" :class="{ invisible: !(listSettled && list && rows.length) }"
-      title="Prices come from the cheapest listings the trade site returned"><template v-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
+    <div v-if="improved || bulk" class="w-pc-foot" :class="{ invisible: !(listSettled && list && (rows.length || bulk)) }"
+      title="Prices come from the cheapest listings the trade site returned"><template v-if="list && narrow">{{ fitCount }} of {{ loadedCount }} loaded listings fit · the search found {{ list.total }}{{ list.inexact ? '+' : '' }}</template><template v-else-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
   </div>
   <ui-error-box v-else>
     <template #name>{{ t(':error') }}</template>
@@ -179,7 +198,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, watch, onUnmounted, PropType, inject, shallowReactive, shallowRef, ShallowRef } from 'vue'
+import { defineAsyncComponent, defineComponent, computed, watch, onUnmounted, PropType, inject, shallowReactive, shallowRef, ShallowRef } from 'vue'
 import { useElementSize } from '@vueuse/core'
 import { hideTip, showTip } from '@/web/woke/ui/tooltip/tooltip'
 import { openItemMenu } from '@/web/woke/ui/tooltip/item-menu'
@@ -203,12 +222,13 @@ import OnlineFilter from './OnlineFilter.vue'
 import TradeLinks from './TradeLinks.vue'
 import { proposeSearchName } from '@/web/woke/trade-searches/propose-name'
 import PriceVerdict from '@/web/woke/price-insight/PriceVerdict.vue'
-import PriceDrivers from '@/web/woke/price-insight/PriceDrivers.vue'
 import { priceView } from '@/web/woke/price-insight/view'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
-import { buildInsight, FIX_TAG } from '@/web/woke/price-insight/insight'
-import { groupListings, rowTitle, ListingRow } from '@/web/woke/price-insight/listing-rows'
+import { buildInsight, FIX_TAG, toChaos } from '@/web/woke/price-insight/insight'
+import { groupListings, sortByValue, rowTitle, ListingRow } from '@/web/woke/price-insight/listing-rows'
+import type { ResultsState } from '@/web/woke/price-insight/local-filter'
 import { pickStatColumns, listingStatValue, listingStatLabel, formatStatValue, statTone, statColumnsThatFit, StatColumn } from '@/web/woke/price-insight/stat-columns'
+import { bulkOnly, bulkSellerCount, BULK_ENOUGH } from '@/web/woke/price-insight/bulk-sellers'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { nowMinute } from '@/web/woke/ui/format'
 import { textScale } from '@/web/woke/ui/text-scale'
@@ -217,11 +237,16 @@ import { useCheckLog } from '@/web/woke/price-insight/useCheckLog'
 import { travelState, travelToHideout, travelNote } from '@/web/woke/hideout-travel/travel'
 import { isBlankRareSearch, ninjaFitsSearch, skipsTopMods, socketColoursOn } from '@/web/woke/price-insight/search-scope'
 
+// woke: the drivers load with the first price check, not at startup; results take longer.
+const loadDrivers = () => import('@/web/woke/price-insight/PriceDrivers.vue')
+
 const SIX_SOCKETS = new Set<string>([ItemCategory.BodyArmour, ItemCategory.Bow, ItemCategory.Staff, ItemCategory.Warstaff, ItemCategory.TwoHandedAxe, ItemCategory.TwoHandedMace, ItemCategory.TwoHandedSword])
 
 const slowdown = artificialSlowdown(900)
 
 const SKELETON_ROWS = 8
+// woke: fewer rows than this after filtering here gets Load more or a Search hint.
+const SHORT_LIST = 5
 const COINS: Record<string, string> = { chaos: '/images/chaos.png', divine: '/images/divine.png', exalted: '/images/exa.png' }
 const API_FETCH_LIMIT = 100
 const MIN_NOT_GROUPED = 7
@@ -234,6 +259,10 @@ const WIDTH_NUMBER_COLUMN = 44
 const WIDTH_SOCKET_DOTS = 40
 const WIDTH_SELLER = 90
 const WIDTH_TAG = 60
+// "Twice Corrupted" is longer than the other tags.
+const WIDTH_TAG_TWICE = 40
+// Clean, corrupted and twice-corrupted copies sell differently: they never share a row.
+const corruptKind = (r: PricingResult) => r.corrupted ? (r.twiceCorrupted ? 2 : 1) : 0
 const WIDTH_STASH_ICON = 24
 
 // sameStats: a seller's listings only count as one when their stat columns match.
@@ -254,7 +283,7 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
         continue
       }
       // woke: a seller's corrupted and clean copies stay apart.
-      const existingRes = out.find((added, idx) => Boolean(added.corrupted) === Boolean(result.corrupted) && sameStats(added, result) && (
+      const existingRes = out.find((added, idx) => corruptKind(added) === corruptKind(result) && sameStats(added, result) && (
         (
           added.accountName === result.accountName &&
           added.priceCurrency === result.priceCurrency &&
@@ -278,15 +307,38 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
     return out
   })
 
+  // The search the pages below belong to, and how many of its ids are fetched.
+  let fetched = 0
+  let pages: Promise<void> = Promise.resolve()
+  const morePages = shallowRef(false)
+
+  function fetchPage (_searchId: number, _searchResult: SearchResult, into: PricingResult[]) {
+    const ids = _searchResult.result.slice(fetched, fetched + 10)
+    fetched += 10
+    return requestResults(_searchResult.id, ids, { accountName: AppConfig().accountName })
+      .then(
+        results => { if (_searchId === searchId) into.push(...results) },
+        // A failed page can be asked for again.
+        err => { if (_searchId === searchId) fetched -= 10; throw err })
+  }
+
+  function canFetchMore (_searchResult: SearchResult) {
+    return fetched < _searchResult.result.length && fetched < API_FETCH_LIMIT
+  }
+
   async function search (filters: ItemFilters, stats: FilterOrGroup[]) {
     searchId += 1
     const _searchId = searchId
     fetching.value = true
+    morePages.value = false
+    let done!: () => void
+    pages = new Promise(resolve => { done = resolve })
     try {
       error.value = null
       searchResult.value = null
       const _fetchResults: PricingResult[] = shallowReactive([])
       fetchResults.value = _fetchResults
+      fetched = 0
 
       const request = createTradeRequest(filters, stats)
       const _searchResult = await requestTradeResultList(request, filters.trade.league)
@@ -307,17 +359,18 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
               .then(results => r1
                 .then(() => { _fetchResults.push(...results) }))
           : Promise.resolve()
+        fetched = 20
         // woke: a failed second page leaves the first on screen. Loading further pages
         // would leave a hole in the prices, so stop there.
-        const pages = await Promise.allSettled([r1, r2])
-        const failed = pages.find((page): page is PromiseRejectedResult => page.status === 'rejected')
+        const settled = await Promise.allSettled([r1, r2])
+        const failed = settled.find((page): page is PromiseRejectedResult => page.status === 'rejected')
         if (failed) {
           if (!_fetchResults.length) throw failed.reason
+          if (_searchId === searchId) fetched = API_FETCH_LIMIT
           return
         }
       }
 
-      let fetched = 20
       async function fetchMore (): Promise<void> {
         if (_searchId !== searchId) return
         const totalGrouped = groupedResults.value.length
@@ -325,30 +378,64 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
           res.listedTimes <= 2 ? len + 1 : len, 0)
         if (
           (totalNotGrouped < MIN_NOT_GROUPED || totalGrouped < MIN_GROUPED) &&
-          fetched < _searchResult.result.length &&
-          fetched < API_FETCH_LIMIT
+          canFetchMore(_searchResult)
         ) {
-          await requestResults(_searchResult.id, _searchResult.result.slice(fetched, fetched + 10), { accountName: AppConfig().accountName })
-            .then(results => { _fetchResults.push(...results) })
-          fetched += 10
+          await fetchPage(_searchId, _searchResult, _fetchResults)
           return fetchMore()
         }
       }
       // A later page failing leaves what already loaded on screen.
-      await fetchMore().catch((err) => { if (!_fetchResults.length) throw err })
+      await fetchMore().catch((err) => {
+        if (_searchId === searchId) fetched = API_FETCH_LIMIT
+        if (!_fetchResults.length) throw err
+      })
     } catch (err) {
       if (_searchId === searchId) error.value = (err as Error).message
     } finally {
-      if (_searchId === searchId) fetching.value = false
+      if (_searchId === searchId) {
+        fetching.value = false
+        morePages.value = searchResult.value != null && canFetchMore(searchResult.value)
+      }
+      done()
     }
   }
 
-  return { error, searchResult, groupedResults, fetchResults, fetching, search }
+  // woke: on a click only (the Bulk toggle): pulls further pages of the same search,
+  // ten listings each, until enough() holds or the search runs out. Searches nothing new.
+  // Resolves with a note when the trade site stopped it, else null.
+  function loadMore (enough: () => boolean): Promise<string | null> {
+    const _searchId = searchId
+    const run = pages.then(async (): Promise<string | null> => {
+      const _searchResult = searchResult.value
+      if (_searchId !== searchId || !_searchResult || error.value) return null
+      const into = fetchResults.value
+      fetching.value = true
+      try {
+        for (;;) {
+          if (_searchId !== searchId || enough() || !canFetchMore(_searchResult)) break
+          preventQueueCreation([{ count: 1, limiters: RATE_LIMIT_RULES.FETCH }])
+          await fetchPage(_searchId, _searchResult, into)
+        }
+        return null
+      } catch (err) {
+        return (err as Error).message
+      } finally {
+        if (_searchId === searchId) {
+          fetching.value = false
+          morePages.value = canFetchMore(_searchResult)
+        }
+      }
+    })
+    pages = run.then(() => {})
+    return run
+  }
+
+  return { error, searchResult, groupedResults, fetchResults, fetching, morePages, search, loadMore }
 }
 
 export default defineComponent({
-  components: { OnlineFilter, TradeLinks, UiErrorBox, PriceVerdict, PriceDrivers },
-  emits: ['reset'],
+  components: { OnlineFilter, TradeLinks, UiErrorBox, PriceVerdict, PriceDrivers: defineAsyncComponent(loadDrivers) },
+  emits: ['reset', 'glow'],
   props: {
     filters: {
       type: Object as PropType<ItemFilters>,
@@ -362,24 +449,36 @@ export default defineComponent({
       type: Object as PropType<ParsedItem>,
       required: true
     },
-    // Filters changed since this search: the results stay, dimmed, so nothing moves.
+    // Filters changed since this search: the Search row takes the toolbar's place.
     stale: {
       type: Boolean,
       default: false
+    },
+    // woke: the change needs a new search: the results stay, dimmed, so nothing moves.
+    dim: {
+      type: Boolean,
+      default: false
+    },
+    // woke: only tighter ranges: the loaded listings are filtered here (local-filter.ts).
+    narrow: {
+      type: Object as PropType<Extract<ResultsState, { kind: 'narrowed' }> | null>,
+      default: null
     }
   },
   setup (props, ctx) {
     const widget = computed(() => AppConfig<PriceCheckWidget>('price-check')!)
 
+    loadDrivers().catch(() => {})
     watch(() => props.item, (item) => {
       slowdown.reset(item)
     }, { immediate: true })
 
-    const allColumns = computed(() => pickStatColumns(props.stats))
+    // A newly ticked stat that filters here gets its column too.
+    const allColumns = computed(() => pickStatColumns(props.narrow?.stats ?? props.stats))
     const statValue = (listing: PricingResult, col: StatColumn) =>
       listingStatValue(listing.listedItem, col, props.item.category)
 
-    const { error, searchResult, groupedResults, fetchResults, fetching, search } = useTradeApi((a, b) =>
+    const { error, searchResult, groupedResults, fetchResults, fetching, morePages, search, loadMore } = useTradeApi((a, b) =>
       allColumns.value.every(col => formatStatValue(statValue(a, col), col) === formatStatValue(statValue(b, col), col)))
     const { retryIn, rateLimited } = useRetryCountdown(error)
     const refreshNote = shallowRef('')
@@ -392,13 +491,21 @@ export default defineComponent({
     if (swap) watch(groupedResults, (list) => { swap.resultsChanged(list, props.stats) })
 
     // woke: improved view reads the same listings, nothing extra is requested
-    const { insight, divine, options: insightOptions } = useInsight(groupedResults, computed(() => props.filters.trade.league))
+    // woke: tighter ranges hide what no longer fits; the verdict reads what's left.
+    const fits = (listing: PricingResult) => !props.narrow || props.narrow.fits(listing.listedItem, props.item.category)
+    const fitResults = computed(() => props.narrow ? groupedResults.value.filter(fits) : groupedResults.value)
+    const loadedCount = computed(() => fetchResults.value.filter(r => r != null).length)
+    const fitCount = computed(() => props.narrow ? fetchResults.value.filter(r => r != null && fits(r)).length : loadedCount.value)
+    const statusSlot = inject<ShallowRef<HTMLElement | null>>('price-search-status-slot', shallowRef(null))
+
+    const { insight, divine, options: insightOptions } = useInsight(fitResults, computed(() => props.filters.trade.league))
 
     // woke: listings found without a rare's mods say nothing about its price.
     const blankSearch = computed(() => isBlankRareSearch(props.item, props.filters, props.stats))
     const verdictInsight = computed(() => blankSearch.value ? buildInsight([], insightOptions.value) : insight.value)
 
-    const logKey = useCheckLog(props, searchResult, verdictInsight, slowdown.isReady)
+    // A verdict from listings filtered here isn't the search's: it isn't logged under it.
+    const logKey = useCheckLog(props, searchResult, verdictInsight, slowdown.isReady, computed(() => props.narrow != null))
 
     const showBrowser = inject<(url: string) => void>('builtin-browser')!
     const verdictSlot = inject<ShallowRef<HTMLElement | null>>('price-verdict-slot', shallowRef(null))
@@ -425,6 +532,8 @@ export default defineComponent({
     const scrollEl = shallowRef<HTMLElement | null>(null)
     const { width: tableWidth } = useElementSize(scrollEl)
 
+    // A row without a stash or hideout icon keeps its room, so the counts line up.
+    const anyIcon = computed(() => groupedResults.value.some(r => !r.hasFee || (r.hideoutToken && !r.isMine)))
     // A tag or stash icon in the count column leaves less room, so check every listing.
     const otherColumnsWidth = computed(() => {
       const listings = groupedResults.value
@@ -437,7 +546,8 @@ export default defineComponent({
       if (showSockets.value && showColours.value) width += WIDTH_SOCKET_DOTS
       if (widget.value.showSeller) width += WIDTH_SELLER
       if (listings.some(r => r.corrupted || insight.value.dropped.has(r.id))) width += WIDTH_TAG
-      if (listings.some(r => !r.hasFee || r.hideoutToken)) width += WIDTH_STASH_ICON
+      if (listings.some(r => r.corrupted && r.twiceCorrupted)) width += WIDTH_TAG_TWICE
+      if (anyIcon.value) width += WIDTH_STASH_ICON
       return width
     })
     const columnCap = computed(() =>
@@ -446,13 +556,44 @@ export default defineComponent({
     const hiddenColumns = computed(() => allColumns.value.slice(columnCap.value))
 
     // woke: improved merges a price into one row; classic stays one row per listing.
-    const rows = computed(() => groupListings(groupedResults.value, {
+    // The trade site orders by its own currency ratios; re-sort what's fetched by
+    // poe.ninja's rates so chaos and divine prices interleave by real value.
+    // woke: Bulk keeps sellers with two or more copies at a price. Off for each new search.
+    const bulk = shallowRef(false)
+    const bulkNote = shallowRef('')
+    // Search bulk asks for it with the search itself; any other search starts with it off.
+    let bulkNext = false
+    watch(searchResult, (result) => {
+      bulk.value = false
+      bulkNote.value = ''
+      if (!result || !bulkNext) return
+      bulkNext = false
+      toggleBulk()
+    })
+    // A seller's copies only add up when they'd share a row: same stats, both corrupted or clean.
+    const sameKind = (r: PricingResult) => [corruptKind(r), ...allColumns.value.map(col => formatStatValue(statValue(r, col), col))].join('|')
+    const tableListings = computed(() => bulk.value
+      ? bulkOnly(fitResults.value, sameKind)
+      : fitResults.value)
+    async function toggleBulk () {
+      bulk.value = !bulk.value
+      bulkNote.value = ''
+      if (!bulk.value) return
+      const forSearch = searchResult.value
+      const note = await loadMore(() => !bulk.value || bulkSellerCount(groupedResults.value, sameKind) >= BULK_ENOUGH)
+      if (note && bulk.value && searchResult.value === forSearch) {
+        bulkNote.value = note
+        setTimeout(() => { if (bulkNote.value === note) bulkNote.value = '' }, 3000)
+      }
+    }
+
+    const rows = computed(() => sortByValue(groupListings(tableListings.value, {
       now: nowMinute.value,
       merge: improved.value,
       dropped: insight.value.dropped,
       detail: (r) => {
         // Corrupted and clean copies sell differently, so they keep their own rows.
-        const parts: unknown[] = [Boolean(r.corrupted)]
+        const parts: unknown[] = [corruptKind(r)]
         if (props.item.stackSize) parts.push(r.stackSize)
         if (showItemLevel.value) parts.push(r.itemLevel)
         if (props.item.category === 'Gem') parts.push(r.level)
@@ -462,7 +603,7 @@ export default defineComponent({
         for (const col of shownColumns.value) parts.push(formatStatValue(statValue(r, col), col))
         return parts.join('|')
       }
-    }))
+    }), insightOptions.value.divine ? (row) => toChaos(row.lead.priceAmount, row.lead.priceCurrency, insightOptions.value) : null))
 
     // Fading only helps when something stays bright: a dead market gets a note instead.
     const allStale = computed(() => rows.value.length > 0 && rows.value.every(r => r.band === 'stale'))
@@ -477,6 +618,24 @@ export default defineComponent({
 
     const tableLoading = computed(() => !slowdown.isReady.value || (fetching.value && !rows.value.length))
     const listSettled = computed(() => !tableLoading.value && !fetching.value)
+
+    // woke: a filtered list this short suggests a search (Search glows).
+    const shortList = computed(() => props.narrow != null && !!searchResult.value && !tableLoading.value && fitCount.value < SHORT_LIST)
+    // Every listing the search found is loaded: the filter here is exact, a search finds nothing more.
+    const allLoaded = computed(() => !!searchResult.value && loadedCount.value >= searchResult.value.total)
+    const glow = computed(() => props.dim || (shortList.value && !allLoaded.value))
+    watch(glow, (on) => { ctx.emit('glow', on) }, { immediate: true })
+    onUnmounted(() => { ctx.emit('glow', false) })
+    // The tighter range on a column, for its header.
+    function localRange (col: StatColumn): string | null {
+      const check = props.narrow?.checks.find(c => c.column.key.slice(c.column.key.indexOf('|')) === col.key.slice(col.key.indexOf('|')))
+      if (!check) return null
+      const fmt = (n: number) => formatStatValue(n, col)
+      if (check.min != null && check.max != null) return `${fmt(check.min)}–${fmt(check.max)}`
+      if (check.min != null) return `≥${fmt(check.min)}`
+      if (check.max != null) return `≤${fmt(check.max)}`
+      return 'has'
+    }
 
     // A new search's loading rows take up what the last results did.
     const skeletonRows = shallowRef(SKELETON_ROWS)
@@ -496,6 +655,19 @@ export default defineComponent({
     // An error has nothing to keep on screen, and its Retry would use the old filters.
     watch([() => props.stale, error], ([stale, err]) => { if (stale && err) ctx.emit('reset') })
     watch(error, (err) => { if (err) releaseVerdictHeight() })
+    // Rows filtered here leave their room, so the window doesn't shrink and grow while you type.
+    // The verdict above the mods too: its text changes with what fits, and the mods mustn't move.
+    let heldForNarrow = false
+    function holdTableHeight (hold: boolean) {
+      // Only undo our own hold: a new search holds the verdict's height itself.
+      if (hold === heldForNarrow) return
+      heldForNarrow = hold
+      for (const el of [scrollEl.value, verdictSlot.value]) {
+        if (el) el.style.minHeight = hold ? `${el.offsetHeight}px` : ''
+      }
+    }
+    watch(() => props.narrow != null, (on) => { holdTableHeight(on) }, { flush: 'pre' })
+    watch(searchResult, () => { if (!props.narrow) holdTableHeight(false) })
     onUnmounted(releaseVerdictHeight)
 
     return {
@@ -535,6 +707,7 @@ export default defineComponent({
       allStale,
       allInstant: computed(() => rows.value.every(r => r.lead.hasFee)),
       // The stat columns need the bar's room.
+      anyIcon,
       showCountBar: computed(() => improved.value && maxCount.value > 1 && !shownColumns.value.length),
       showItemLevel,
       showQuality,
@@ -553,10 +726,27 @@ export default defineComponent({
         return tone ? { '--w-pc-stat-k': tone.strength } : undefined
       },
       shownCount: computed(() => fetchResults.value.filter(r => r != null).length),
+      bulk,
+      bulkNote,
+      toggleBulk,
+      bulkSellers: computed(() => bulkSellerCount(fitResults.value, sameKind)),
+      shortList,
+      allLoaded,
+      localRange,
+      loadedCount,
+      fitCount,
+      statusSlot,
+      bulkTitle: computed(() => bulk.value
+        ? 'Showing sellers with 2 or more copies at one price. Click to show all.'
+        : morePages.value
+          ? `Only sellers with 2 or more copies at one price. Loads more listings if fewer than ${BULK_ENOUGH} sellers show (up to ${API_FETCH_LIMIT}).`
+          : 'Only sellers with 2 or more copies at one price.'),
       tableLoading,
       listSettled,
       slowdownReady: slowdown.isReady,
-      execSearch: () => {
+      // bulk: Search bulk was clicked. (Retry passes its click event, which isn't true.)
+      execSearch: (bulk?: unknown) => {
+        bulkNext = bulk === true
         holdVerdictHeight()
         search(props.filters, props.stats)
       },
@@ -576,6 +766,7 @@ export default defineComponent({
         clearTradeCache()
         clearDriverCaches()
         measuredDrivers.value = null
+        bulkNext = bulk.value
         holdVerdictHeight()
         search(props.filters, props.stats)
       },
@@ -638,7 +829,9 @@ export default defineComponent({
   filter: grayscale(1) opacity(0.5);
   display: inline-block;
   max-width: none;
+  width: 1.25rem;
   height: 1.25rem;
+  object-fit: contain;
   vertical-align: bottom;
 }
 

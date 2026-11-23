@@ -14,7 +14,6 @@ import DisenchantVerdictSetting from '../disenchant/DisenchantVerdictSetting.vue
 import ModulesSettings from '../switchboard/ModulesSettings.vue'
 import GamePage from './GamePage.vue'
 import HotkeysPage from './HotkeysPage.vue'
-import LookPage from './LookPage.vue'
 import ScreenPage from './ScreenPage.vue'
 import InstallPage from './InstallPage.vue'
 import AboutPage from './AboutPage.vue'
@@ -95,9 +94,10 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     name: 'Look & icon row',
     group: 'general',
     icon: { fa: 'fas fa-paint-brush' },
-    description: 'Theme, app colours, text size, panel opacity, the overlay backdrop and the row of icons you see while playing.',
-    parts: [LookPage],
-    find: ['Theme', 'PoE 1', 'PoE 2', 'Window art', 'App colours', 'Colours', 'Colors', 'Accent', 'App icon', 'Tray icon', 'Panel size', 'Font size', 'Text size', 'Price check window size', 'Window size', 'Overlay background', 'Panel opacity', 'Transparency', 'See-through', 'Darken the game', 'Restore clipboard', 'Window title', 'Overlay ready notice', 'Icon row', 'Peek', 'Dock'],
+    description: 'UI size, theme, app colours, text size, panel opacity, the overlay backdrop and the row of icons you see while playing.',
+    // Loaded when opened: kept out of the startup JS (perf budget).
+    parts: [defineAsyncComponent(() => import('./LookPage.vue'))],
+    find: ['Theme', 'PoE 1', 'PoE 2', 'Window art', 'App colours', 'Colours', 'Colors', 'Accent', 'App icon', 'Tray icon', 'UI size', 'Bigger', 'Smaller', 'Zoom', 'Scale', 'Panel size', 'Pinned size', 'Font size', 'Text size', 'Price check window size', 'Window size', 'Overlay background', 'Panel opacity', 'Transparency', 'See-through', 'Darken the game', 'Restore clipboard', 'Window title', 'Overlay ready notice', 'Icon row', 'Peek', 'Dock'],
     aliases: ['Appearance', 'Icon row']
   },
   {
@@ -140,7 +140,7 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     description: 'Prices for the item under your cursor.',
     modules: ['apt-price-check'],
     parts: [SettingsPricecheck, DisenchantVerdictSetting, defineAsyncComponent(() => import('../harvest-swap/SwapSetting.vue'))],
-    find: ['Window style', 'PoE mode', 'Listings', 'Classic', 'Improved', 'Disenchant or sell', 'Dust per chaos', 'Show seller', 'Fill rolls', 'Stock filter', 'Price prediction', 'Built-in browser', 'Auto search', 'Collapse listings'],
+    find: ['Window style', 'PoE mode', 'Listings', 'Classic', 'Improved', 'Disenchant or sell', 'Dust per chaos', 'Show seller', 'Fill rolls', 'Stock filter', 'Price prediction', 'Built-in browser', 'Auto search', 'poe.ninja price first', 'Instant price card', 'Collapse listings'],
     aliases: ['price_check.name']
   },
   {
@@ -179,14 +179,14 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
   },
   {
     id: 'market',
-    name: 'Market & investments',
+    name: 'Market & flips',
     group: 'modules',
     sub: 'Trade & prices',
     icon: modulePageIcon('market'),
-    description: 'Movers, watchlist, league-start investments, flips and dust from poe.ninja, and Wealthy Exile.',
-    modules: ['market', 'league-invest', 'scarab-flip', 'disenchant', 'wealthy-exile'],
-    widgets: ['woke-market-tracker', 'woke-league-invest', 'woke-scarab-flip', 'woke-disenchant', 'woke-wealthy-exile'],
-    find: ['Market', 'Watchlist', 'Investments', 'League day', 'Flips', 'Scarab flip', 'Scarab vendor recipe', 'Harvest reroll', 'Lifeforce', 'Stash outlines', 'Catalyst', 'Delirium orb', 'Disenchant', 'Thaumaturgic Dust', 'Kingsmarch', 'Gold fee', 'Wealthy Exile', 'Net worth']
+    description: 'Movers, watchlist, flips and dust from poe.ninja, and Wealthy Exile.',
+    modules: ['market', 'scarab-flip', 'disenchant', 'wealthy-exile'],
+    widgets: ['woke-market-tracker', 'woke-scarab-flip', 'woke-disenchant', 'woke-wealthy-exile'],
+    find: ['Market', 'Watchlist', 'Flips', 'Scarab flip', 'Scarab vendor recipe', 'Harvest reroll', 'Lifeforce', 'Stash outlines', 'Catalyst', 'Delirium orb', 'Disenchant', 'Thaumaturgic Dust', 'Kingsmarch', 'Gold fee', 'Wealthy Exile', 'Net worth']
   },
   {
     id: 'campaign',
@@ -223,14 +223,14 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
   },
   {
     id: 'map-mods',
-    name: 'Map mods & map scan',
+    name: 'Map mods',
     group: 'modules',
     sub: 'Maps & atlas',
     icon: modulePageIcon('map-mods'),
-    description: 'Danger strip for map mods, profiles and weights, the on-screen map scan, and the death recap.',
-    modules: ['map-mods', 'map-scan', 'death-recap'],
-    widgets: ['woke-map-mods', 'woke-map-scan'],
-    find: ['Death recap', 'Map mod weights', 'Profiles', 'Danger strip', 'Map regex', 'Rolling mode', 'Alert when a map passes', 'Map check', 'Heist', 'Charts', 'T17', 'Nightmare'],
+    description: 'Danger strip for map mods, profiles and weights, map scan (reads hovered maps on screen), and the death recap.',
+    modules: ['map-mods', 'death-recap'],
+    widgets: ['woke-map-mods'],
+    find: ['Death recap', 'Map scan', 'Scan mode', 'Map mod weights', 'Profiles', 'Danger strip', 'Map regex', 'Rolling mode', 'Alert when a map passes', 'Map check', 'Heist', 'Charts', 'T17', 'Nightmare'],
     aliases: ['map_check.name']
   },
   {
@@ -268,14 +268,14 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
   },
   {
     id: 'farming',
-    name: 'Farming & sessions',
+    name: 'Sessions',
     group: 'modules',
     sub: 'Maps & atlas',
-    icon: modulePageIcon('farming'),
-    description: 'Profit per hour now, per map and strategy over time, and a card of each night.',
-    modules: ['farming', 'session-analytics', 'session-story'],
-    widgets: ['woke-farming', 'woke-session-analytics', 'woke-session-story'],
-    find: ['Bulk price', 'Junk below', 'Auto pause', 'Session analytics', 'Session story', 'Map chip', 'Middle of the screen']
+    icon: modulePageIcon('session-analytics'),
+    description: 'Profit per map and strategy over time, and a card of each night.',
+    modules: ['session-analytics', 'session-story'],
+    widgets: ['woke-session-analytics', 'woke-session-story'],
+    find: ['Session analytics', 'Session story', 'Map chip', 'Middle of the screen']
   },
   {
     id: 'drop-counter',
@@ -350,9 +350,9 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     name: 'Install & updates',
     group: 'app',
     icon: { fa: 'fas fa-download' },
-    description: 'Updates, starting with Windows, crash reports and the setup window.',
+    description: 'Updates, starting with Windows, crash reports, reporting an issue, the Discord and the setup window.',
     parts: [InstallPage],
-    find: ['Auto update', 'Start with Windows', 'Crash reports', 'Setup window', 'Version']
+    find: ['Auto update', 'Check for updates', 'Start with Windows', 'Crash reports', 'Report an issue', 'Discord', 'Setup window', 'Version']
   },
   {
     id: 'performance',

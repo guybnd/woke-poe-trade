@@ -2,11 +2,12 @@
   <!-- 3.30 Wickerman module: one line per Viscera this zone's boss drops; versions on hover. -->
   <div v-for="h in here" :key="h.v.name" :class="$style.line" :title="versions(h.v)" data-woke-wickerman-line>
     <span :class="$style.label">Wickerman</span>
-    <span class="min-w-0 w-trunc">{{ h.boss }} drops <span class="w-accent">{{ h.v.name }}</span> <span class="w-dim">· {{ h.v.slot }}</span></span>
+    <span class="min-w-0 w-trunc">{{ h.boss }} drops <span v-item-tip="{ name: h.v.name, type: 'Viscera' }" class="w-accent">{{ h.v.name }}</span> <span class="w-dim">· {{ h.v.slot }}</span></span>
   </div>
 </template>
 
 <script setup lang="ts">
+import { vItemTip } from '@/web/woke/ui/tooltip/item-tip'
 import { useVisceraHere } from './here'
 import type { Viscera } from './viscera'
 

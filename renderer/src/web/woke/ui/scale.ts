@@ -3,6 +3,7 @@
 // or tiny at 4K. Stored like the theme: per origin in localStorage, shared by
 // the overlay and settings windows through the storage event.
 import { shallowRef, watch } from 'vue'
+import { uiSize } from './ui-size'
 
 export const MIN_SCALE = 70
 export const MAX_SCALE = 160
@@ -28,8 +29,13 @@ export function autoScale (height = window.innerHeight): number {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, pct))
 }
 
-export function effectiveScale (): number {
+// Panel size alone, before UI size multiplies it.
+export function baseScale (): number {
   return uiScale.value === 'auto' ? autoScale() : uiScale.value
+}
+
+export function effectiveScale (): number {
+  return baseScale() * uiSize.value / 100
 }
 
 function apply () {
@@ -37,6 +43,7 @@ function apply () {
 }
 
 apply()
+watch(uiSize, apply)
 watch(uiScale, (v) => {
   apply()
   try { localStorage.setItem(STORAGE_KEY, String(v)) } catch {}

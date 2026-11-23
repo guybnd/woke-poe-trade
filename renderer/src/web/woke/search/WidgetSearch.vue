@@ -21,7 +21,7 @@
           <div ref="listEl" :class="$style.list" class="w-scroll">
             <template v-for="section in sections" :key="section.label">
               <div :class="$style.head">{{ section.label }}<template v-if="section.capped"> · first {{ PRICE_GROUP_LIMIT }}, keep typing</template></div>
-              <button v-for="e in section.entries" :key="e.id" v-item-tip="tipOf(e)" tabindex="-1" :class="[$style.res, { [$style.sel]: e === selected }]"
+              <button v-for="e in section.entries" :key="e.id" v-item-tip="tipOf(e)" :data-no-item-tip="e.kind === 'setting' ? 'a setting named after a mechanic or item, not the item itself' : undefined" tabindex="-1" :class="[$style.res, { [$style.sel]: e === selected }]"
                 :data-selected="e === selected || undefined" @click="selected = e" @dblclick="run(e)">
                 <WIcon v-if="e.kind === 'price'" :src="ninjaIcon(e.group.type, e.group.name) ?? ninjaArt(e.group.type, e.group.name)" size="md" />
                 <WIcon v-else-if="e.kind === 'item'" :src="e.info.icon" size="md" />
@@ -39,18 +39,20 @@
           </div>
           <div :class="$style.detail" class="w-scroll">
             <template v-if="selected?.kind === 'price'">
-              <div :class="$style.title">
+              <div v-item-tip="groupTip(selected.group)" :class="$style.title">
                 <WIcon :src="ninjaIcon(selected.group.type, selected.group.name) ?? ninjaArt(selected.group.type, selected.group.name)" size="lg" />
                 <span :class="rarityClass(selected.group.type)">{{ selected.group.name }}</span>
                 <span class="w-dim" :class="$style.small">{{ kindLabel(selected.group.type, selected.group.name) }}</span>
               </div>
-              <div :class="[$style.grid, $style.gridHead]"><span>Variant</span><span class="text-right">Now</span><span class="text-right">24h ago</span><span class="text-right">7d ago</span><span class="text-right">24h</span><span class="text-right">7d</span><span /></div>
-              <div v-for="v in selected.group.variants" :key="key(v)" v-item-tip="v" :class="[$style.grid, $style.row, { [$style.rowPicked]: shownVariant != null && v.variant === shownVariant }]">
+              <div :class="[$style.grid, $style.gridHead, { [$style.gridExtra]: extraRange }]"><span>Variant</span><span class="text-right">Now</span><span v-if="extraRange" class="text-right" :title="extraTitle">{{ extraRange.label }} ago</span><span class="text-right">24h ago</span><span class="text-right">7d ago</span><span v-if="extraRange" class="text-right" :title="extraTitle">{{ extraRange.label }}</span><span class="text-right">24h</span><span class="text-right">7d</span><span /></div>
+              <div v-for="v in selected.group.variants" :key="key(v)" v-item-tip="v" :class="[$style.grid, $style.row, { [$style.rowPicked]: shownVariant != null && v.variant === shownVariant, [$style.gridExtra]: extraRange }]">
                 <span class="w-trunc">{{ v.variant || selected.group.name }}
                   <i v-if="isThin(v)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(v)" /></span>
                 <WPrice bulk :chaos="v.chaos" :divine="divine" class="text-right" />
+                <WPrice v-if="extraRange" bulk :chaos="extraThen(v)" :divine="divine" class="text-right w-dim" />
                 <WPrice bulk :chaos="v.d1" :divine="divine" class="text-right w-dim" />
                 <WPrice bulk :chaos="v.d7" :divine="divine" class="text-right w-dim" />
+                <WDelta v-if="extraRange" :value="changeSince(v.chaos, extraThen(v))" class="text-right" />
                 <WDelta :value="changeSince(v.chaos, v.d1)" class="text-right" />
                 <WDelta :value="changeSince(v.chaos, v.d7)" class="text-right" />
                 <span :class="$style.rowBtns">
@@ -59,8 +61,9 @@
                 </span>
               </div>
               <!-- Rolled uniques drop unidentified: poe.ninja's row stands for that; a click checks real listings. -->
-              <div v-if="unidName" :class="[$style.grid, $style.row]" :title="unidTitle">
+              <div v-if="unidName" :class="[$style.grid, $style.row, { [$style.gridExtra]: extraRange }]" :title="unidTitle">
                 <span class="w-trunc">Unidentified on trade</span>
+                <span v-if="extraRange" />
                 <WPrice v-if="unidQuote" bulk :chaos="unidQuote.chaos" :divine="divine" class="text-right" />
                 <span v-else-if="tradePrices.pending(unidName)" class="text-right w-faint">…</span>
                 <span v-else class="text-right"><button class="w-icon-btn" title="Search trade for unidentified copies" aria-label="Search trade for unidentified copies" @click="lookUpUnid"><i class="fas fa-search" /></button></span>
@@ -68,6 +71,7 @@
               <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" no-price="No poe.ninja price" @pick="pickUnique" />
               <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
+              <CardDrops v-if="cardDropName" :name="cardDropName" />
               <div v-if="conv" :class="$style.convBox" :style="{ '--conv-cols': convCols }">
                 <div :class="[$style.conv, $style.gridHead]"><span>{{ selected.group.name }}</span><span v-if="conv.rows[0].chaos != null" class="text-right">Chaos</span><span v-if="conv.rows[0].div != null" class="text-right">Divines</span></div>
                 <div v-for="r in conv.rows" :key="r.amount" :class="[$style.conv, $style.row]">
@@ -77,30 +81,20 @@
                 </div>
                 <div v-if="conv.perDivine" class="w-dim" :class="$style.small">1 Divine Orb buys {{ convNumber(conv.perDivine) }}</div>
               </div>
-              <div :class="$style.acts">
-                <WButton v-if="tracker" size="sm" @click="openInMarket(selected.group.name)">Open in Market</WButton>
-                <WButton v-if="infoFor(selected)" size="sm" @click="openLookup(selected, 'wiki')">Wiki</WButton>
-                <WButton v-if="infoFor(selected)" size="sm" @click="openLookup(selected, 'poedb')">poedb</WButton>
-                <WButton v-if="canPriceCheck(selected)" size="sm" @click="priceCheck(selected, $event)">Price check</WButton>
-                <WButton size="sm" @click="openTrade(selected)">Trade site</WButton>
-                <WButton size="sm" @click="findInStash(selected.name)">Find in stash</WButton>
-                <WButton size="sm" @click="copyName(selected.name)">Copy name</WButton>
-              </div>
+              <ItemActions :name="selected.name" :lookups="!!infoFor(selected)" :can-price="canPriceCheck(selected)" :market="!!tracker"
+                @trade="openTrade(selected)" @price="priceCheck(selected, cursorPoint($event))" @wiki="openLookup(selected, 'wiki')" @poedb="openLookup(selected, 'poedb')"
+                @stash="findInStash(selected.name)" @copy="copyName(selected.name)" @market="openInMarket(selected.group.name)" />
             </template>
             <template v-else-if="selected?.kind === 'item'">
-              <div :class="$style.title"><WIcon :src="selected.info.icon" size="lg" /><span>{{ selected.name }}</span></div>
+              <div v-item-tip="{ name: selected.info.refName }" :class="$style.title"><WIcon :src="selected.info.icon" size="lg" /><span>{{ selected.name }}</span></div>
               <p class="w-dim">{{ snapshot ? "poe.ninja has no price for this. Rares, bases, flasks and cluster jewels aren't in the saved prices." : 'No saved prices yet, so this has no price here.' }}</p>
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" :no-price="snapshot ? 'No poe.ninja price' : 'No price'" @pick="pickUnique" />
               <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
               <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
-              <div :class="$style.acts">
-                <WButton size="sm" @click="openLookup(selected, 'wiki')">Wiki</WButton>
-                <WButton size="sm" @click="openLookup(selected, 'poedb')">poedb</WButton>
-                <WButton v-if="canPriceCheck(selected)" size="sm" @click="priceCheck(selected, $event)">Price check</WButton>
-                <WButton size="sm" @click="openTrade(selected)">Trade site</WButton>
-                <WButton size="sm" @click="findInStash(selected.name)">Find in stash</WButton>
-                <WButton size="sm" @click="copyName(selected.name)">Copy name</WButton>
-              </div>
+              <CardDrops v-if="cardDropName" :name="cardDropName" />
+              <ItemActions :name="selected.name" lookups :can-price="canPriceCheck(selected)" :market="false"
+                @trade="openTrade(selected)" @price="priceCheck(selected, cursorPoint($event))" @wiki="openLookup(selected, 'wiki')" @poedb="openLookup(selected, 'poedb')"
+                @stash="findInStash(selected.name)" @copy="copyName(selected.name)" />
             </template>
             <LookupDetail v-else-if="selected?.kind === 'lookup'" :card="selected.card" :divine="divine" @act="act" />
             <template v-else-if="selected">
@@ -112,7 +106,8 @@
         </div>
         <div :class="$style.foot">
           <span><WKbd keys="Up" /> <WKbd keys="Down" /> move</span>
-          <span><WKbd keys="Enter" /> open</span>
+          <span><WKbd keys="Enter" /> {{ itemEntry() ? 'trade site' : 'open' }}</span>
+          <span v-if="itemEntry()"><WKbd keys="Ctrl + F" /> find in stash</span>
           <span><WKbd keys="Ctrl + P" /> pin to compare</span>
           <span><WKbd keys="Esc" /> back to game</span>
           <span class="ml-auto">{{ dataNote }}</span>
@@ -143,7 +138,7 @@ import { notableOils, oilNames } from '@/web/price-check/filters/pseudo/anointme
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import type { BaseType } from '@/assets/data/interfaces'
 import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
-import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, ninjaIcon, nowMinute, toast, vItemTip } from '../ui'
+import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, itemRefFromName, ninjaIcon, nowMinute, toast, vItemTip } from '../ui'
 import { ninjaArt } from '../market/ninja-icons'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
@@ -151,48 +146,64 @@ import { convNumber, currencyConversions } from './conversions'
 import { MODULES, isModuleOn, isWidgetTypeOn } from '../modules'
 import { pressedKeys, sortKeys, isHotkeyTail, isModifierCode } from '../loot-filter/hotkey-match'
 import { whenIdle } from '../shared/perf'
+import { nudgeUiSize, uiSize } from '../ui/ui-size'
 import { PAGES } from '../settings/pages'
+import { settingsHits } from './settings-index'
+import { runUpdateCheck } from '../settings/update-check'
 import { ICON_TOOL_NAMES, iconFor, parseWidgetTitle } from '../tab-bar/tools'
 import { pastedItemText } from './pasted-item'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { MARKET_TRACKER_TYPE, marketSearchRequest } from '../market/widget'
 import type { MarketTrackerWidget } from '../market/widget'
 import { isThin, itemKey, thinTitle } from '../market/types'
+import { rangeInfo } from '../market/ranges'
+import { savedPriceSeries } from '../market/db'
 import type { CorruptedFilter, PriceItem } from '../market/types'
 import { pickRow } from '../shared/price-row'
 import { usePriceText } from '../shared/price'
 import { lookupRequest } from '../item-lookup/lookup'
-import { tradeQuery, virtualUnique } from '../ui/tooltip/item-menu-logic'
+import { tradeSearch, virtualUnique } from '../ui/tooltip/item-menu-logic'
+import { priceCheckTradeStatus } from '../shared/trade-status'
 import { canPriceCheck as canCheckByName, cursorPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
+import type { ScreenPoint } from '../ui/tooltip/item-price-check'
+import ItemActions from './ItemActions.vue'
 import type { LookupTab } from '../item-lookup/lookup'
 import { LOOT_FILTER_TYPE, reloadHotkeyTarget, strictnessHotkeyTarget } from '../loot-filter/widget'
-import { MAP_SCAN_TYPE, scanHotkeyTarget } from '../map-mods/scan'
+import { rollHotkeyTarget, scanHotkeyTarget } from '../map-mods/scan'
+import { MAP_MODS_TYPE } from '../map-mods/widget'
 import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../essence-scan/widget'
 import { RUN_TIMER_TYPE, hotkeyTarget as timerTarget } from '../campaign/run-timer'
 import { isFoulborn } from '../shared/item-identity'
-import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
+import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, bestName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
 import { basesOfUnique, hasUniques, uniquesOnBase } from '../shared/uniques-on-base'
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
 import BaseUniques from './BaseUniques.vue'
 import BeastRecipes from './BeastRecipes.vue'
+import CardDrops from '../card-drops/CardDrops.vue'
+import { loadCardDrops } from '../card-drops/card-drops'
+import type { CardDropData } from '../card-drops/card-drops'
 import { beastKindLabel } from '../mechanics/beast-kinds'
 import UniqueDetails from './UniqueDetails.vue'
 import { uniqueDetails, uniqueFacts } from './unique-details'
 import { isImageIcon } from './lookups/types'
-import type { LookupAction, LookupCard, LookupContext } from './lookups/types'
-import { countdownLookup, currencyLookup, webLookup } from './lookups/answers'
+import type { Lookup, LookupAction, LookupCard, LookupContext } from './lookups/types'
+import { countdownLookup, currencyLookup, currencyNamer, webLookup } from './lookups/answers'
+import { calcLookup } from './lookups/calc'
 import { bossLookup, dropLookupWith } from './lookups/bosses'
 import { nightmareLookup } from './lookups/nightmare'
 import { BOSS_RUNS_TYPE } from '../boss-runs/widget'
 import type { BossRunsWidget } from '../boss-runs/widget'
 import { cardLookup } from './lookups/cards'
+import { mapCardsLookup } from './lookups/card-drops'
 import { recipeLookup } from './lookups/recipes'
 import { craftLookup } from './lookups/craft'
 import type { CraftData } from './lookups/craft'
+import { bestiaryData, loadBestiary } from './lookups/bestiary-load'
 import { BLOOD_ALTAR, bestiaryLookup, denOf, recipeTitle, recipesMaking, recipesWith } from './lookups/bestiary'
-import type { BeastRecipe, BestiaryData } from './lookups/bestiary'
+import type { BeastRecipe } from './lookups/bestiary'
 import { gemLookup, transfiguredBase } from './lookups/gems'
+import { vaalGemLookup } from './lookups/vaal-gem'
 import { keystoneUniques, passiveList, treeLookup, withOils } from './lookups/tree'
 import { megaloLookup } from './lookups/megalo'
 import { ringAnointLookup, ringAnoints } from './lookups/rings'
@@ -214,6 +225,8 @@ import type { PobBuildsWidget } from '../pob-builds/widget'
 import { ATLAS_TYPE } from '../atlas/strategies'
 import type { AtlasWidget } from '../atlas/strategies'
 import { netWorthLookup } from './lookups/net-worth'
+import { salesLookup } from './lookups/sales'
+import type { Sale } from '../net-worth/sales'
 import { mapsLookup, sessionStoryLookup } from './lookups/session-story'
 import { useNights } from '../session-story/store'
 import { SESSION_STORY_TYPE } from '../session-story/widget'
@@ -222,6 +235,12 @@ import { NET_WORTH_TYPE } from '../net-worth/widget'
 import { DOCS as NET_WORTH_DOCS, glanceKey, isGlance } from '../net-worth/glance'
 import type { Glance } from '../net-worth/glance'
 import { visceraLookup } from './lookups/viscera'
+import { flipsLookup } from './lookups/flips'
+import { SCARAB_FLIP_TYPE } from '../scarab-flip/widget'
+import type { ScarabFlipWidget } from '../scarab-flip/widget'
+import { vaultLookup } from './lookups/vaults'
+import { loadVaults } from '../vaults/vaults'
+import type { VaultTable } from '../vaults/vaults'
 import { loadViscera, visceraByName, visceraItemText } from '../wickerman/viscera'
 import type { VisceraTable } from '../wickerman/viscera'
 import { HELP_QUERY, exampleCards } from './lookups/examples'
@@ -232,6 +251,7 @@ import type { GemTable } from './lookups/gems'
 import type { CardInfo } from './lookups/cards'
 import { loadTipBases, loadTipDrops, loadTipItems, loadTipUniques, loadTipVestigial } from '../ui/tooltip/item-tip'
 import { onSharedDataChange } from '../app/live-data'
+import { openDiscord, openReportDialog } from '../app/report'
 import { dropOf } from '../ui/tooltip/tip-content'
 import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
 import { SEARCH_TARGET, searchRequest } from './widget'
@@ -249,7 +269,7 @@ const snapshot = useSearchSnapshot()
 interface Base { id: string, name: string, sub: string }
 interface PriceEntry extends Base { kind: 'price', group: PriceGroup }
 interface ItemEntry extends Base { kind: 'item', info: BaseType }
-interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting', icon: string, about: string, verb: string, keys?: string | null, action: () => void }
+interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting', icon: string, about: string, verb: string, keys?: string | null, aliases?: string[], action: () => void }
 interface LookupEntry extends Base { kind: 'lookup', icon: string, card: LookupCard }
 type Entry = PriceEntry | ItemEntry | ActionEntry | LookupEntry
 
@@ -295,7 +315,8 @@ function gameItems (): BaseType[] {
 function tipOf (entry: Entry) {
   if (entry.kind === 'price') return groupTip(entry.group)
   if (entry.kind === 'item') return { name: entry.info.refName }
-  if (entry.kind === 'lookup') return entry.card.tip ?? null
+  // A card about an item (a Viscera, a gem, a div card) shows that item.
+  if (entry.kind === 'lookup') return entry.card.tip ?? itemRefFromName(entry.card.title ?? entry.card.name)
   return null
 }
 
@@ -344,6 +365,10 @@ function pickUnique (entry: { id: string }) {
 watch(query, () => { pickedId = null })
 
 // ---- tools, commands, settings ----
+// Old names of tools folded into another: searching one finds the tool now.
+const TOOL_ALIASES: Record<string, string[]> = {
+  [MAP_MODS_TYPE]: ['Map scan', 'Map check', 'Map planner']
+}
 function toolEntries (): ActionEntry[] {
   return wm.widgets.value
     .filter(w => !w.wmFlags.includes('menu::skip') && w.wmType !== 'item-search' && w.wmType !== 'settings' && isWidgetTypeOn(AppConfig(), w.wmType))
@@ -358,6 +383,7 @@ function toolEntries (): ActionEntry[] {
         sub: 'Tool',
         icon: `fas ${iconFor(w.wmType)}`,
         about: mod?.description ?? '',
+        aliases: TOOL_ALIASES[w.wmType],
         verb: 'Open',
         action: () => { wm.show(w.wmId) }
       }
@@ -390,8 +416,10 @@ function commandEntries (): ActionEntry[] {
     if (w.wmType === LOOT_FILTER_TYPE && w.neversink?.on) {
       add(w, 'Make the loot filter stricter', 'stricterHotkey', strictnessHotkeyTarget(w.wmId, 'stricter'))
       add(w, 'Make the loot filter looser', 'looserHotkey', strictnessHotkeyTarget(w.wmId, 'looser'))
-    } else if (w.wmType === MAP_SCAN_TYPE) {
-      add(w, 'Map scan on or off', 'hotkey', scanHotkeyTarget(w.wmId))
+    } else if (w.wmType === MAP_MODS_TYPE && w.wmId === wm.widgets.value.find(_ => _.wmType === MAP_MODS_TYPE)?.wmId) {
+      // Map scan runs in the first Map mods window only.
+      add(w, 'Map scan on or off', 'scanHotkey', scanHotkeyTarget(w.wmId))
+      add(w, 'Map scan: rolling mode on or off', 'scanRollHotkey', rollHotkeyTarget(w.wmId))
     } else if (w.wmType === ESSENCE_SCAN_TYPE) {
       add(w, 'Essence scan on or off', 'hotkey', essenceHotkeyTarget(w.wmId))
       add(w, 'Read every essence once', 'onceHotkey', essenceOnceTarget(w.wmId))
@@ -399,22 +427,89 @@ function commandEntries (): ActionEntry[] {
       add(w, 'Pause or resume the run timer', 'hotkeyPause', timerTarget(w.wmId, 'pause'))
     }
   }
+  // Check for updates: the Install & updates page shows the answer on its row.
+  out.push({
+    kind: 'command',
+    id: 'c:check-updates',
+    name: 'Check for updates',
+    sub: `Version ${Host.version.value}`,
+    icon: 'fas fa-download',
+    about: 'Asks for a new version now and opens Settings > Install & updates with the answer.',
+    verb: 'Check now',
+    action: () => {
+      runUpdateCheck().catch(() => {})
+      const settings = wm.widgets.value.find(w => w.wmType === 'settings')
+      if (!settings) return
+      wm.setFlag(settings.wmId, 'settings::page=install', true)
+      wm.setFlag(settings.wmId, 'settings::find=Check for updates', true)
+      wm.show(settings.wmId)
+    }
+  })
+  // UI size, one step at a time. The palette stays open: it grows with the
+  // rest, so the next step is one Enter away.
+  for (const [dir, steps] of [['bigger', 1], ['smaller', -1]] as const) {
+    out.push({
+      kind: 'command',
+      id: `c:ui-size-${dir}`,
+      name: `Make everything ${dir} (UI size)`,
+      sub: `UI size ${uiSize.value}%`,
+      icon: dir === 'bigger' ? 'fas fa-search-plus' : 'fas fa-search-minus',
+      about: `UI size one step ${dir}: panels, the price check, pinned things, menus and tooltips. Fine-tune in Settings > Look & icon row.`,
+      verb: 'Do it',
+      action: () => {
+        nudgeUiSize(steps)
+        toast(`UI size ${uiSize.value}%`, { ms: 1800 })
+      }
+    })
+  }
+  // The palette steps aside; the overlay stays open for the form.
+  out.push({
+    kind: 'command',
+    id: 'c:report-issue',
+    name: 'Report an issue',
+    sub: 'Bug or idea, on GitHub',
+    icon: 'fas fa-bug',
+    aliases: ['report', 'bug', 'issue', 'feedback', 'github', 'idea'],
+    about: 'Write up a bug or an idea. Opens a pre-filled GitHub issue in your browser; nothing is sent by itself.',
+    verb: 'Open',
+    action: () => {
+      wm.hide(props.config.wmId)
+      openReportDialog()
+    }
+  })
+  out.push({
+    kind: 'command',
+    id: 'c:discord',
+    name: 'Join the Discord',
+    sub: 'Questions and ideas, with other players',
+    icon: 'fab fa-discord',
+    aliases: ['discord', 'community', 'chat', 'help', 'support', 'server'],
+    about: 'The Woke PoE Trade Discord server. Opens the invite in your browser.',
+    verb: 'Open',
+    action: () => {
+      wm.hide(props.config.wmId)
+      openDiscord()
+    }
+  })
   return out
 }
 
-function settingEntries (): ActionEntry[] {
-  return PAGES.map(page => ({
+function settingEntries (q: string): ActionEntry[] {
+  return settingsHits(PAGES, q).map(hit => ({
     kind: 'setting' as const,
-    id: `s:${page.id}`,
-    name: page.name,
-    sub: 'Settings page',
-    icon: 'fas fa-cog',
-    about: `The ${page.name} page in Settings.`,
-    verb: 'Open settings',
+    id: hit.id,
+    name: hit.name,
+    sub: hit.sub,
+    icon: hit.label ? 'fas fa-sliders' : 'fas fa-cog',
+    about: hit.label
+      ? `${hit.label}, on the ${hit.page!.name} page in Settings.`
+      : hit.page ? `The ${hit.page.name} page in Settings. ${hit.page.description}` : 'The settings window, where you left it.',
+    verb: hit.label ? 'Go to the setting' : 'Open settings',
     action: () => {
       const settings = wm.widgets.value.find(w => w.wmType === 'settings')
       if (!settings) return
-      wm.setFlag(settings.wmId, `settings::page=${page.name}`, true)
+      if (hit.page) wm.setFlag(settings.wmId, `settings::page=${hit.page.id}`, true)
+      if (hit.label) wm.setFlag(settings.wmId, `settings::find=${hit.label}`, true)
       wm.show(settings.wmId)
     }
   }))
@@ -461,6 +556,18 @@ const cards = computed(() => {
   }
   return out
 })
+// Where cards drop (Divcord), fetched on first open: a map name lists its cards.
+const cardDrops = shallowRef<CardDropData | null>(null)
+function loadDrops () {
+  if (!cardDrops.value) loadCardDrops().then(d => { if (d) cardDrops.value = d }).catch(() => {})
+}
+// The div card the detail shows, for where it drops.
+const cardDropName = computed(() => {
+  const e = selected.value
+  if (e?.kind === 'price') return e.group.type === 'DivinationCard' ? e.group.name : null
+  if (e?.kind === 'item') return e.info.namespace === 'DIVINATION_CARD' ? e.info.refName : null
+  return null
+})
 // Campaign gem sources, from the PoB tool's data, loaded on first open.
 const gemTable = shallowRef<GemTable | null>(null)
 const gemNames = shallowRef<string[]>([])
@@ -492,23 +599,40 @@ function loadCrafts () {
     .catch(() => {})
     .finally(() => { craftLoading = false })
 }
-// Blood Altar recipes, from poedb, fetched on first open like the crafts.
-const bestiaryData = shallowRef<BestiaryData | null>(null)
-let bestiaryLoading = false
-function loadBestiary () {
-  if (bestiaryData.value || bestiaryLoading) return
-  bestiaryLoading = true
-  fetch(`${import.meta.env.BASE_URL}data/bestiary-data.json`)
-    .then(r => r.json())
-    .then(d => { bestiaryData.value = d as BestiaryData })
+// What map mods give (map-mods/bonuses.ts, from poedb): the data file and the
+// lookup, both fetched on first open.
+// The lookup is built from the live data, so a newer download shows up.
+const mapBonusMods = shallowRef<{ lookup: typeof import('./lookups/map-bonus'), bonuses: typeof import('../map-mods/bonuses') } | null>(null)
+const noLookup: Lookup = () => []
+let mapBonusLoading = false
+function loadMapBonusLookup () {
+  if (mapBonusMods.value || mapBonusLoading) return
+  mapBonusLoading = true
+  Promise.all([import('./lookups/map-bonus'), import('../map-mods/bonuses')])
+    .then(async ([lookup, bonuses]) => {
+      // A failed read is tried again on the next open.
+      if (await bonuses.loadMapBonuses()) mapBonusMods.value = { lookup, bonuses }
+    })
     .catch(() => {})
-    .finally(() => { bestiaryLoading = false })
+    .finally(() => { mapBonusLoading = false })
 }
+const mapBonusLookupFn = computed<Lookup>(() => {
+  const mods = mapBonusMods.value
+  const data = mods?.bonuses.mapBonusData.value
+  return mods && data ? mods.lookup.mapBonusLookup(data) : noLookup
+})
+// Blood Altar recipes, from poedb, fetched on first open like the crafts (bestiary-load.ts).
 // 3.30 Wickerman module: Viscera facts, a data file read on open while it's on.
 const visceraTable = shallowRef<VisceraTable | null>(null)
 function loadVisceraTable () {
   if (visceraTable.value || !isModuleOn(AppConfig(), 'wickerman')) return
   loadViscera().then(t => { visceraTable.value = t }).catch(() => {})
+}
+// Templar Vaults: rewards from a data file, read on open.
+const vaultTable = shallowRef<VaultTable | null>(null)
+function loadVaultTable () {
+  if (vaultTable.value) return
+  loadVaults().then(t => { vaultTable.value = t }).catch(() => {})
 }
 // Net worth's per hour numbers: its small saved glance, read on open while it's on.
 const netWorthGlance = shallowRef<Glance | null>(null)
@@ -518,6 +642,19 @@ function loadNetWorthGlance () {
   hostRequest('doc-get', { collection: NET_WORTH_DOCS, key: glanceKey(league) })
     .then((g) => { netWorthGlance.value = isGlance(g) && g.league === league ? g : null })
     .catch(() => {})
+}
+// Your sales (Net worth's trade history): the file main keeps, read on open
+// while Net worth is on. The stash reader off: no answer, no card.
+const salesList = shallowRef<Sale[] | null>(null)
+function loadSales () {
+  const league = AppConfig().leagueId
+  if (!league || !isWidgetTypeOn(AppConfig(), NET_WORTH_TYPE)) { salesList.value = null; return }
+  hostRequest('trade-history', { league, read: 'none' })
+    .then((r) => {
+      const list = r && typeof r === 'object' ? (r as { league?: unknown, sales?: unknown }) : null
+      salesList.value = list?.league === league && Array.isArray(list.sales) ? list.sales as Sale[] : null
+    })
+    .catch(() => { salesList.value = null })
 }
 // Session story's nights: its store, shared with the dock icon. Loaded on
 // open while it's on (the window loads it too).
@@ -611,13 +748,22 @@ const stopDataWatch = onSharedDataChange(() => {
   tipItems.value = null
   passives.value = null
   visceraTable.value = null
+  vaultTable.value = null
   treeLoads++
 })
 onBeforeUnmount(stopDataWatch)
 const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
 // Boss runs' settings for the Nightmare cards; null with the module off.
 const bossPrefs = computed(() => isModuleOn(AppConfig(), 'boss-runs') ? (toolOn<BossRunsWidget>(BOSS_RUNS_TYPE) ?? {} as BossRunsWidget) : null)
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
+// The calculator takes only whole currency words: "50d / 7", never "50 har".
+const exactCurrency = computed(() => { const n = currencyNamer(currencyNames.value); return (word: string) => n(word, true) })
+// The Flips panel's settings, while it's switched on.
+function flipsConfig (): ScarabFlipWidget | null {
+  const config = AppConfig()
+  if (!isWidgetTypeOn(config, SCARAB_FLIP_TYPE)) return null
+  return (config.widgets.find(w => w.wmType === SCARAB_FLIP_TYPE) as ScarabFlipWidget | undefined) ?? null
+}
+const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), salesLookup(salesList.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -644,7 +790,12 @@ function act (action: LookupAction) {
     const w = wm.widgets.value.find(w => w.wmType === action.tool)
     if (w) wm.show(w.wmId)
   } else if ('open' in action) {
-    // The tool shows it; the palette steps aside.
+    // The tool shows it; the palette steps aside. No window of that tool yet
+    // (never placed): say so and stay open.
+    if (!wm.widgets.value.some(w => w.wmType === action.open.tool)) {
+      toast('Place that window from the dock first.', { ms: 2500 })
+      return
+    }
     savedOpenRequest.value = { ...action.open, at: Date.now() }
     wm.hide(props.config.wmId)
   } else if ('trade' in action) tradeBeast(action.trade)
@@ -690,6 +841,9 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
     .filter(g => !listed.has(groupKey(g)))
   const shownBases = new Set(bases.map(b => b.refName))
   const cards = lookupCards(q)
+  const commands = searchNamed(commandEntries(), q, e => bestName([e.name, ...(e.aliases ?? [])], q))
+  // A command and a setting row of the same name ("Check for updates"): the command does more.
+  const commandNames = new Set(commands.map(c => c.name.toLowerCase()))
   return arrangeSections<Entry>(q, {
     answer: cardSections(cards, ['Answer']),
     items: [
@@ -698,10 +852,10 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
       { label: 'Other items', entries: other as Entry[] }
     ],
     cards: cardSections(cards, null, ['Answer', 'Search the web']),
-    tools: searchNamed(toolEntries(), q, e => e.name),
+    tools: searchNamed(toolEntries(), q, e => bestName([e.name, ...(e.aliases ?? [])], q)),
     rest: [
-      { label: 'Do it now', entries: searchNamed(commandEntries(), q, e => e.name) as Entry[] },
-      { label: 'Settings', entries: searchNamed(settingEntries(), q, e => e.name) as Entry[] }
+      { label: 'Do it now', entries: commands as Entry[] },
+      { label: 'Settings', entries: settingEntries(q).filter(e => !commandNames.has(e.name.toLowerCase())) as Entry[] }
     ],
     web: cardSections(cards, ['Search the web'])
   })
@@ -830,11 +984,14 @@ const details = computed(() => {
   }
 })
 const convCols = computed(() => conv.value ? (conv.value.rows[0].chaos != null ? 1 : 0) + (conv.value.rows[0].div != null ? 1 : 0) : 1)
-// The same result stays selected as you keep typing, while it still matches.
+// Each new query picks the top result, so Enter does what the first row says.
 // After picking an example, its answer card is what it was picked for.
 let showAnswer = false
 // A jump from a beast's recipes picks this entry once the list has it.
 let wantEntry: ((e: Entry) => boolean) | null = null
+// The query the list was last built for, and the row picked only for being on top.
+let listQuery = ''
+let autoTop: Entry | null = null
 watch(entries, (list) => {
   const id = selected.value?.id
   const wanted = wantEntry ? list.find(wantEntry) : undefined
@@ -842,7 +999,16 @@ watch(entries, (list) => {
   const answer = showAnswer ? list.find(e => e.kind === 'lookup' && !['Search the web', 'Things to try'].includes(e.card.group)) : undefined
   showAnswer = false
   const picked = id != null && id === pickedId ? selected.value : null
-  selected.value = wanted ?? answer ?? list.find(e => e.id === id) ?? picked ?? list[0] ?? null
+  // Each keystroke picks the top result. A refresh with the same query
+  // (prices landing, a ticking countdown) keeps a row you moved to, but not
+  // one that was only on top: "50d/c" typed before prices load still ends
+  // on its answer once they do.
+  const typed = query.value !== listQuery
+  listQuery = query.value
+  const chosen = selected.value != null && selected.value !== autoTop
+  const keep = typed || !chosen ? undefined : list.find(e => e.id === id)
+  selected.value = wanted ?? answer ?? keep ?? picked ?? list[0] ?? null
+  autoTop = !wanted && !answer && !keep && !picked ? selected.value : null
 })
 
 function move (dir: 1 | -1) {
@@ -859,9 +1025,22 @@ function onKey (e: KeyboardEvent) {
     e.preventDefault()
     e.stopPropagation()
     move(e.key === 'ArrowDown' ? 1 : -1)
+  } else if (e.key === 'Enter' && e.ctrlKey && itemEntry()) {
+    e.preventDefault()
+    if (e.repeat) return
+    const entry = itemEntry()!
+    // From the keyboard there's no pointer: near the top of the window, as a paste opens it.
+    if (canPriceCheck(entry)) priceCheck(entry, { x: window.screenX + window.innerWidth / 2, y: window.screenY + 100 })
   } else if (e.key === 'Enter') {
     e.preventDefault()
-    if (selected.value) run(selected.value)
+    // Held down: one trade tab, not one per repeat.
+    if (selected.value && !e.repeat) run(selected.value)
+  } else if (e.code === 'KeyF' && e.ctrlKey && !e.shiftKey && !e.altKey && itemEntry()) {
+    e.preventDefault()
+    if (!e.repeat) findInStash(itemEntry()!.name)
+  } else if (e.code === 'KeyC' && e.ctrlKey && e.shiftKey && !e.altKey && itemEntry()) {
+    e.preventDefault()
+    if (!e.repeat) copyName(itemEntry()!.name)
   } else if (e.key === 'Escape') {
     // Main takes Esc first in the app; this is for the browser.
     e.stopPropagation()
@@ -872,13 +1051,17 @@ function onKey (e: KeyboardEvent) {
   }
 }
 
+// The selected row when it's an item, for the item actions' shortcuts.
+function itemEntry (): PriceEntry | ItemEntry | null {
+  const e = selected.value
+  return e?.kind === 'price' || e?.kind === 'item' ? e : null
+}
+
 function run (entry: Entry) {
   remember(entry)
-  if (entry.kind === 'price') {
-    if (tracker.value) openInMarket(entry.group.name)
-    else openTrade(entry)
-  } else if (entry.kind === 'item') {
-    openLookup(entry, 'wiki')
+  // An item: Trade site, the detail pane's main button.
+  if (entry.kind === 'price' || entry.kind === 'item') {
+    openTrade(entry)
   } else if (entry.kind === 'lookup') {
     if (entry.card.actions[0]) act(entry.card.actions[0])
   } else {
@@ -905,7 +1088,7 @@ const beastBox = computed(() => {
       recipes,
       me: e.group.name,
       heading: `${BLOOD_ALTAR} · ${recipes.length} recipe${recipes.length > 1 ? 's' : ''}`,
-      note: 'Any rare beast fills the "any rare" slots, so they’re left out of the cost.'
+      note: 'Since 3.30 a recipe needs only the beasts it names.'
     }
   }
   const unique = e?.kind === 'price' && nsOf(e.group.type) === 'UNIQUE'
@@ -941,7 +1124,7 @@ function tradeBeast (name: string) {
   }
   // The international site takes the English name, a regional one its own.
   const type = poeWebApi() === 'www.pathofexile.com' ? name : ITEM_BY_REF('CAPTURED_BEAST', name)?.[0]?.name ?? name
-  window.open(tradeUrl(league, { type }, getTradeEndpoint()))
+  window.open(tradeUrl(league, { type, status: priceCheckTradeStatus() }, getTradeEndpoint()))
 }
 
 // ---- recent lookups, saved with the window ----
@@ -971,6 +1154,33 @@ function togglePin (item: PriceItem) {
 
 // ---- Market ----
 const tracker = computed(() => wm.widgets.value.find(w => w.wmType === MARKET_TRACKER_TYPE && isWidgetTypeOn(AppConfig(), w.wmType)) as MarketTrackerWidget | undefined)
+
+// The Market Prices tab's range, as two more columns, when it's one this table
+// doesn't already show (24h and 7d) and the app saved prices for it.
+const extraRange = computed(() => {
+  const r = rangeInfo(tracker.value?.priceRange)
+  return r.local && r.id !== '24h' ? r : null
+})
+const extraTitle = computed(() => extraRange.value ? `${extraRange.value.long}, from the prices this app saves about every 30 minutes (the Market window's range)` : undefined)
+const extraPrices = shallowRef<Record<string, number>>({})
+let extraSeq = 0
+watch([() => selected.value?.kind === 'price' ? selected.value.group : null, extraRange, () => snapshot.value?.ts, leagues.selectedId], async ([group, r]) => {
+  const mine = ++extraSeq
+  const league = leagues.selectedId.value
+  if (!group || !r || !league) { extraPrices.value = {}; return }
+  try {
+    const got = await savedPriceSeries(league, group.type, r.ms, [group.name])
+    if (mine !== extraSeq) return
+    const out: Record<string, number> = {}
+    for (const [k, line] of Object.entries(got.rows)) if (line[0] != null && line[0] > 0) out[k] = line[0]
+    extraPrices.value = out
+  } catch {
+    if (mine === extraSeq) extraPrices.value = {}
+  }
+}, { immediate: true })
+function extraThen (v: PriceItem): number | null {
+  return extraPrices.value[`${v.name}\u0000${v.variant}`] ?? null
+}
 function isWatched (item: PriceItem) {
   return tracker.value?.watchlist?.some(w => itemKey(w) === key(item)) ?? false
 }
@@ -1019,26 +1229,26 @@ function openLookup (entry: PriceEntry | ItemEntry, tab: LookupTab) {
   if (!info) return
   lookupRequest.value = { item: info.namespace === 'UNIQUE' ? virtualUnique(info) : createVirtualItem({ rarity: ItemRarity.Normal, info }), tab }
 }
-async function priceCheck (entry: PriceEntry | ItemEntry, e: MouseEvent) {
+async function priceCheck (entry: PriceEntry | ItemEntry, at: ScreenPoint) {
   remember(entry)
   // A Viscera: priced as a copy of that version, so its strip can switch versions.
   const viscera = visceraOf(entry)
   if (viscera) {
     // The name as listed: poe.ninja calls a pinnacle Uber version "Greater ...".
     const name = entry.kind === 'price' ? entry.group.name : entry.info.refName
-    await openPriceCheck({ name, text: visceraItemText(viscera.v, viscera.tier, name) }, cursorPoint(e))
+    await openPriceCheck({ name, text: visceraItemText(viscera.v, viscera.tier, name) }, at)
     return
   }
   const info = infoFor(entry)
   if (info?.namespace !== 'UNIQUE') {
     // Gems, cards, currency, beasts: as the item menu's Price check does.
-    await openPriceCheck(menuRef(entry), cursorPoint(e), info)
+    await openPriceCheck(menuRef(entry), at, info)
     return
   }
   // Its mods as stat rows (English data only); one price row says which variant.
   // A Foulborn row is priced as its unique (the data has no Foulborn uniques).
   const variant = entry.kind === 'price' && entry.group.variants.length === 1 ? entry.group.variants[0].variant || undefined : undefined
-  await openPriceCheck({ name: info.refName, rarity: 'unique', variant }, cursorPoint(e), info)
+  await openPriceCheck({ name: info.refName, rarity: 'unique', variant }, at, info)
 }
 function openTrade (entry: PriceEntry | ItemEntry) {
   remember(entry)
@@ -1053,12 +1263,12 @@ function openTrade (entry: PriceEntry | ItemEntry) {
   // and a unique on several bases by name alone.
   const ns = info?.namespace ?? (entry.kind === 'price' ? nsOf(entry.group.type) : 'ITEM')
   const kind = ns === 'UNIQUE' ? 'unique' : ns === 'GEM' ? 'gem' : ns === 'DIVINATION_CARD' ? 'card' : 'item'
-  const q = tradeQuery({ name }, kind, info, AppConfig().language === 'en')
-  // A Foulborn row, or a Foulborn kind picked under the unique: Foulborn copies only.
-  const foulborn = kind === 'unique' && (isFoulborn(name) || (pickedFoul.value != null && detailName.value === baseUniqueName(name)))
-  window.open(tradeUrl(league, foulborn ? { ...q, filters: FOULBORN_ONLY } : q, getTradeEndpoint()))
+  // A Foulborn row, or a Foulborn kind picked under the unique: Foulborn
+  // copies only. Any other unique: none of them.
+  const foulborn = isFoulborn(name) || (pickedFoul.value != null && detailName.value === baseUniqueName(name))
+  const q = tradeSearch({ name }, kind, info, AppConfig().language === 'en', foulborn)
+  window.open(tradeUrl(league, { ...q, status: priceCheckTradeStatus(info) }, getTradeEndpoint()))
 }
-const FOULBORN_ONLY = { misc_filters: { filters: { foulborn_item: { option: 'true' } } } }
 function findInStash (name: string) {
   Host.sendEvent({ name: 'CLIENT->MAIN::user-action', payload: { action: 'stash-search', text: JSON.stringify(name) } })
 }
@@ -1072,7 +1282,7 @@ function onPaste (e: ClipboardEvent) {
   e.preventDefault()
   Host.selfDispatch({
     name: 'MAIN->CLIENT::item-text',
-    payload: { clipboard: text, position: { x: window.screenX + window.innerWidth / 2, y: window.screenY + 100 }, focusOverlay: true, target: 'price-check' }
+    payload: { clipboard: text, position: { x: window.screenX + window.innerWidth / 2, y: window.screenY + 100 }, focusOverlay: true, target: 'price-check', live: true }
   })
 }
 
@@ -1135,12 +1345,16 @@ function start (text: string) {
   focusInput(true)
   whenIdle(gameItems)
   whenIdle(loadCards)
+  whenIdle(loadDrops)
   whenIdle(loadGems)
   whenIdle(loadCrafts)
+  whenIdle(loadMapBonusLookup)
   whenIdle(loadBestiary)
   whenIdle(loadTree)
   whenIdle(loadVisceraTable)
+  whenIdle(loadVaultTable)
   whenIdle(loadNetWorthGlance)
+  whenIdle(loadSales)
   whenIdle(loadNights)
   whenIdle(loadZones)
   whenIdle(loadPantheon)
@@ -1233,6 +1447,7 @@ const dataNote = computed(() => {
 .detail { padding: var(--w-s3) var(--w-s4); min-width: 0; }
 .title { display: flex; align-items: center; gap: var(--w-s2); margin-bottom: var(--w-s2); font-size: var(--w-fs-lg); }
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) 88px 88px 88px 52px 52px 50px; column-gap: 6px; align-items: center; }
+.gridExtra { grid-template-columns: minmax(0, 1fr) 88px 88px 88px 88px 52px 52px 52px 50px; }
 .gridHead { min-height: calc(24px * var(--w-text-scale, 1)); font-size: var(--w-fs-caps); font-weight: var(--w-caps-weight); letter-spacing: 0.05em; text-transform: var(--w-caps-case); color: var(--w-dim); border-bottom: 1px solid var(--w-line); font-family: var(--w-caps-face); }
 .row { min-height: var(--w-row-h); border-bottom: 1px solid var(--w-line-soft); }
 .rowPicked { background: var(--w-panel-2); }

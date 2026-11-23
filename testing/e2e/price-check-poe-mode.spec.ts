@@ -8,7 +8,10 @@ import { test, expect } from './harness'
 test.describe.configure({ mode: 'parallel' })
 
 const poe = (config: any) => {
-  config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeWindowStyle = 'poe'
+  const pc = config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check')
+  pc.wokeWindowStyle = 'poe'
+  // The window for currency too, not the instant card by the item (WOKEPOET-480).
+  pc.wokeNinjaInstant = false
 }
 
 // A config that never picked a style, as a new install or an update has.

@@ -1,5 +1,6 @@
 // Map mods: pure rating logic, no Vue. Shared by the verdict card,
 // the slim strip on APT's price check and the stash regex builder.
+import type { PlannerState } from './planner'
 import type { MinStat } from './regex'
 
 export type ModRating = 'deadly' | 'warn' | 'good' | 'ok'
@@ -34,6 +35,8 @@ export interface MapModProfile {
   // The T17 switch is off: T17 mods leave the Maps list and the stash regex.
   // Their ratings stay, and a check of a T17 map still flags them.
   hideT17?: boolean
+  // The Planner tab's goal, ticks and counts (planner.ts).
+  planner?: PlannerState
 }
 
 export interface JuiceWeights {

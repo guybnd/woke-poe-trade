@@ -13,7 +13,7 @@ test('a unique priced from search searches on the first check in PoE mode', asyn
   await overlay.showScreen('screens/map-real-01.png')
   await overlay.pressHotkey('Ctrl + Space')
   const panel = overlay.widget('woke-search')
-  await panel.getByRole('textbox', { name: 'Search' }).fill('mortem morsu')
+  await panel.getByRole('textbox', { name: 'Search', exact: true }).fill('mortem morsu')
   const result = panel.getByRole('button', { name: /Mortem Morsu/ }).first()
   await expect(result).toBeVisible({ timeout: 20_000 })
   await result.click({ button: 'right' })

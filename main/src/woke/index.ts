@@ -30,7 +30,9 @@ import { docHandlers } from './data-files'
 import { browsePath, pathStat } from './settings-files'
 import { cachedLiveData, checkLiveData } from './live-data'
 import { initPersonal } from './personal'
+import { guessUnidArt } from './unid-art'
 import { initClaudeLink } from './claude-link'
+import { userIssue } from './crash-reports'
 import type { WokeHandler, WokeHandlers, WokeOp } from '../../../ipc/woke-ops'
 
 // Typed by ipc/woke-ops.ts. Partial: some are added later (setup window,
@@ -69,6 +71,7 @@ const handlers: Partial<WokeHandlers> = {
   'live-data-cached': cachedLiveData,
   'live-data-check': async (args) => await checkLiveData(args, async (url, signal) => await net.fetch(url, { signal })),
   'browse-path': browsePath,
+  'unid-art-guess': guessUnidArt,
   ...marketHandlers,
   ...sessionHandlers,
   ...tradeLogHandlers,
@@ -91,6 +94,8 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
       .catch((e: unknown) => { logger.write(`error [market] Trimming old snapshots failed: ${String(e)}`) })
   }, TRIM_AFTER_START_MS).unref?.()
   registerWokeHandler('game-log-tail', async (args) => await readGameLogTail(gameLog, args ?? undefined))
+  // "Report an issue" (Settings, Ctrl+Space): builds or opens the GitHub link.
+  registerWokeHandler('issue-report', async (args) => await userIssue(args, logger))
   registerWokeHandler('game-log-range', async (args) => await readLogRange(gameLog.actualPath, Number(args?.from), Number(args?.to), args?.sessions === true))
   // Follow the running game's Client.txt (another drive, another Steam
   // library) instead of a stale copy in a default folder.

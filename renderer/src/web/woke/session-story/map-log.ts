@@ -7,6 +7,7 @@ import { lineTime } from '../campaign/log-tail'
 import { parseLogLine, slainName, speakerOf } from '../campaign/log-parse'
 import { isMapArea, mapNameFromArea } from '../farming/farming'
 import { staysInRun } from '../death-recap/death-log'
+import { isSkippedArea, knownAreaName } from './skip-areas'
 import { NIGHT_GAP_MS } from './story'
 
 const OPENING = '***** LOG FILE OPENING *****'
@@ -28,7 +29,8 @@ export interface MapRecord {
   leftAt: number
   mapMs: number
   deaths: number
-  // Mechanics whose NPC spoke in the map: "Einhar", "Delirium"…
+  // Mechanics seen in the map: an NPC spoke ("Einhar", "Delirium"…), or you
+  // stepped into a Mirage or a Starfall Crater.
   npcs: string[]
   char: string | null
   className: string | null
@@ -52,6 +54,25 @@ const NPCS: Array<[RegExp, string]> = [
   [/^(Tujen|Rog|Dannig|Gwennen)\b/, 'Expedition']
 ]
 
+// Stepping into a Mirage reloads the same map instance, and only the
+// loading screen tells: "[LOADING SCREEN] (Mirage of Fortress) Duration = …".
+// Checked against a real Client.txt.
+const MIRAGE_RE = /\[INFO Client \d+\] \[LOADING SCREEN\] \(Mirage of [^)]+\)/
+export const MIRAGE = 'Mirage'
+
+export function isMirageLoad (line: string): boolean {
+  return MIRAGE_RE.test(line)
+}
+
+// A Settlers fallen star in a map opens Starfall Crater (the Black Knight):
+// its own area with its own seed, then back to the map's seed. It stays in the
+// run as a side area (`staysInRun`). Checked against a real Client.txt.
+export const STARFALL = 'Starfall Crater'
+
+export function isStarfallArea (areaId: string): boolean {
+  return /^SettlersBossFallenStar/i.test(areaId)
+}
+
 export function npcOf (speaker: string): string | null {
   for (const [re, label] of NPCS) if (re.test(speaker)) return label
   return null
@@ -67,6 +88,8 @@ export interface MapLogEvents {
   onLeave: (rec: MapRecord) => void
   // The map is over: another map started, or the night ended.
   onDone: (rec: MapRecord) => void
+  // Into a map (a new one, or back through a portal).
+  onEnter?: () => void
 }
 
 export class MapLog {
@@ -81,6 +104,11 @@ export class MapLog {
 
   constructor (private readonly events: MapLogEvents) {}
 
+  // Inside a counted map right now (not a vault on the skip list), and since when
+  // (this time through the portal). Read by the glance bar.
+  get inCountedMap (): boolean { return this.inMap && !!this.current && !this.skipped }
+  get enteredThisTime (): number { return this.since }
+
   feed (line: string, fallbackAt: number): void {
     const at = lineTime(line) ?? fallbackAt
     // The game was closed, or nothing was written for a long time: the map
@@ -92,14 +120,20 @@ export class MapLog {
     if (ev?.kind === 'area') {
       this.naming = false
       const side = staysInRun(ev.areaId) && this.inMap
-      if (side) return
+      if (side) {
+        if (isStarfallArea(ev.areaId)) this.mark(STARFALL)
+        return
+      }
       if (isMapArea(ev.areaId)) {
+        // A vault on the skip list is still saved (Map history can show it),
+        // but gets no toast and fires no map entry: see `skipped`.
+        const known = knownAreaName(ev.areaId)
         const key = `${ev.areaId}:${ev.seed ?? ''}`
         if (this.current?.key !== key) {
           this.finish(at)
           this.current = {
             key,
-            name: mapNameFromArea(ev.areaId),
+            name: known ?? mapNameFromArea(ev.areaId),
             areaLevel: ev.areaLevel,
             enteredAt: at,
             leftAt: at,
@@ -116,6 +150,7 @@ export class MapLog {
         // Back from a side area: still the same stretch inside.
         if (!this.inMap) {
           this.inMap = true
+          if (!this.skipped) this.events.onEnter?.()
           this.since = at
         }
         return
@@ -125,7 +160,9 @@ export class MapLog {
     }
     if (ev?.kind === 'zone') {
       // "You have entered Strand." names the map just generated.
-      if (this.naming && this.inMap && this.current) this.current.name = ev.name
+      if (this.naming && this.inMap && this.current) {
+        this.current.name = ev.name
+      }
       this.naming = false
       return
     }
@@ -154,8 +191,18 @@ export class MapLog {
       return
     }
     const speaker = speakerOf(line)
-    const npc = speaker && /\[INFO Client \d+\]/.test(line) ? npcOf(speaker) : null
-    if (npc && this.inMap && this.current && !this.current.npcs.includes(npc)) this.current.npcs.push(npc)
+    const npc = speaker && /\[INFO Client \d+\]/.test(line) ? npcOf(speaker) : isMirageLoad(line) ? MIRAGE : null
+    if (npc && this.inMap) this.mark(npc)
+  }
+
+  // Adds a mechanic to the map you're in, once.
+  private mark (label: string): void {
+    if (this.current && !this.current.npcs.includes(label)) this.current.npcs.push(label)
+  }
+
+  // The current record is an area on the skip list (a vault): kept, never toasted.
+  private get skipped (): boolean {
+    return !!this.current && isSkippedArea(this.current.name)
   }
 
   private leave (at: number): void {
@@ -163,7 +210,7 @@ export class MapLog {
     this.current.mapMs += Math.max(0, at - this.since)
     this.current.leftAt = at
     this.inMap = false
-    this.events.onLeave(this.current)
+    if (!this.skipped) this.events.onLeave(this.current)
   }
 
   // Ends the current map (the night is over, or another map started).
@@ -181,7 +228,7 @@ export class MapLog {
 
 // Mean time of the last few finished maps before this one, or null with too few.
 export function usualMapMs (history: readonly MapRecord[], n = USUAL_OF): number | null {
-  const recent = history.filter(m => m.mapMs > 30_000).slice(0, n)
+  const recent = history.filter(m => m.mapMs > 30_000 && !isSkippedArea(m.name)).slice(0, n)
   if (recent.length < 3) return null
   return recent.reduce((s, m) => s + m.mapMs, 0) / recent.length
 }

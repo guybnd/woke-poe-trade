@@ -1,6 +1,6 @@
 // Search palette Blood Altar recipes, on the real table from poedb.
 import { describe, it, expect } from 'vitest'
-import { beastsCost, bestiaryLookup, denOf, recipeNeeds, recipeTitle, recipesMaking, recipesWith } from '@/web/woke/search/lookups/bestiary'
+import { beastsCost, bestiaryLookup, denOf, recipeItem, recipeNeeds, recipeTitle, recipesMaking, recipesWith } from '@/web/woke/search/lookups/bestiary'
 import type { BestiaryData } from '@/web/woke/search/lookups/bestiary'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
 import { foldAccents } from '@/web/woke/search/search'
@@ -24,11 +24,25 @@ describe('bestiary data', () => {
     expect(data.recipes.length).toBeGreaterThan(60)
     expect(Object.keys(data.dens).sort()).toEqual(['Craiceann', 'Farrul', 'Fenumus', 'Saqawal'])
     expect(data.dens.Farrul).toContain("Farrul's Fur")
-    for (const r of data.recipes) expect(r.b.length + r.a + (r.red ?? 0)).toBe(4)
-    // Flask mods want one red beast plus any three rare ones.
+    // 3.30: no "any rare" slots; a recipe is its named beasts, or a red slot.
+    for (const r of data.recipes) {
+      expect(r).not.toHaveProperty('a')
+      expect(r.b.length + (r.red ?? 0)).toBeGreaterThan(0)
+      expect(r.b.length + (r.red ?? 0)).toBeLessThanOrEqual(2)
+    }
+    // Flask mods want one red beast of any kind.
     const flask = data.recipes.filter(r => /Flask/.test(r.g))
     expect(flask).toHaveLength(11)
-    for (const r of flask) expect([r.red, r.a, recipeNeeds(r)]).toEqual([1, 3, '1 red beast + 3 any rare'])
+    for (const r of flask) expect([r.red, recipeNeeds(r)]).toEqual([1, '1 red beast'])
+  })
+  it('has the 3.30 recipes Guy asked about', () => {
+    const vassal = recipesWith(data, 'Craicic Vassal').map(r => [recipeTitle(r), recipeNeeds(r, 'Craicic Vassal')])
+    expect(vassal).toEqual([['Corrupt a map to have an Implicit Modifier', ''], ['Corrupt a map twice', 'Fenumal Scorpion']])
+    expect(data.recipes.some(r => /Orbs of Regret/.test(r.r))).toBe(true)
+    expect(data.recipes.find(r => r.g === 'Create a Unique' && r.r === 'Talisman')?.b).toEqual(['Black Mórrigan'])
+    // Currency results name their item, for the tooltip.
+    const made = data.recipes.map(recipeItem).filter(Boolean).sort()
+    expect(made).toEqual(["Jeweller's Orb", 'Orb of Fusing', 'Orb of Regret', 'Orb of Unmaking'])
   })
 })
 
@@ -53,7 +67,7 @@ describe('recipes', () => {
   it('costs the named beasts only, and only when all are priced', () => {
     const lvl30 = recipesWith(data, 'Black Mórrigan').find(r => r.b.includes('Farrul, First of the Plains'))!
     expect(beastsCost(lvl30, price)).toBe(162)
-    expect(recipeNeeds(lvl30, 'Black Mórrigan')).toBe('Farrul + 2 any rare')
+    expect(recipeNeeds(lvl30, 'Black Mórrigan')).toBe('Farrul')
     const lynx = data.recipes.find(r => r.b.includes('Farric Lynx Alpha'))!
     expect(beastsCost(lynx, price)).toBeNull()
   })
@@ -82,7 +96,7 @@ describe('bestiaryLookup', () => {
     expect(card.actions[0]).toEqual({ label: 'Trade: Farric Tiger Alpha', trade: 'Farric Tiger Alpha' })
     const beasts = card.sections[1].rows!
     expect(beasts[0]).toMatchObject({ label: 'Farric Tiger Alpha', chaos: 8, action: { trade: 'Farric Tiger Alpha' } })
-    expect(beasts[1]).toMatchObject({ label: '3 any rare beasts', dim: true })
+    expect(beasts).toHaveLength(1)
     expect(card.sections[2].label).toBe('Farrul drops')
     expect(card.sections[2].rows!.find(r => r.label === "Farrul's Fur")?.chaos).toBe(101)
   })

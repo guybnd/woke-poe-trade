@@ -22,7 +22,7 @@
         <span v-for="r in readouts" :key="r.id" class="w-num" :class="[$style.read, r.tone && $style['read-' + r.tone]]">{{ r.text }}</span>
       </template>
       <span v-if="stack" class="w-num" :class="[$style.stack, stack.tone && $style['stack-' + stack.tone]]">{{ stack.text }}</span>
-      <span v-if="badge != null && badge !== ''" :class="[$style.badge, $style['tone-' + (host.props.tone ?? 'accent')]]">{{ badge }}</span>
+      <span v-if="badge != null && badge !== ''" data-layout-ok="the badge sits on the icon's corner" :class="[$style.badge, $style['tone-' + (host.props.tone ?? 'accent')]]">{{ badge }}</span>
       <span v-if="host.props.led" :class="[$style.led, $style['led-' + host.props.led]]" />
       <i v-if="offDock" class="fas fa-thumbtack" :class="$style.pinMark" title="Pinned: the card is on screen" />
     </span>
@@ -454,7 +454,9 @@ const styles = useCssModule()
   color: var(--w-faint);
   font-family: var(--w-caps-face);
 }
-.open { display: block; width: 100%; padding: 4px var(--w-pad); text-align: left; font-size: calc(12px * var(--w-text-scale, 1)); color: var(--w-accent); border-top: 1px solid var(--w-line); }
+.open { display: block; width: 100%; padding: var(--w-s1) var(--w-pad); text-align: left; font-size: var(--w-fs-sm); color: var(--w-accent); border-top: 1px solid var(--w-line); }
+:global([data-woke-look="game"]) .open { font-family: var(--w-label); font-size: var(--w-fs-md); letter-spacing: 0.03em; color: var(--w-gold); }
+:global([data-woke-look="game"]) .open:hover { color: var(--w-gold-hi); }
 .open i { font-size: 0.8em; margin-left: 2px; }
 .open:hover { background: var(--w-accent-soft); }
 .open:focus-visible { outline: 2px solid var(--w-accent); outline-offset: -2px; }

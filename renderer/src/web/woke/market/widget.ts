@@ -2,6 +2,7 @@ import { shallowRef } from 'vue'
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import type { CorruptedFilter } from './types'
 import type { MarketSort } from './browser'
+import type { PriceRange } from './ranges'
 
 export const MARKET_TRACKER_TYPE = 'woke-market-tracker'
 // A separate Market window existed briefly (2026-11-15) before the Prices tab;
@@ -58,6 +59,8 @@ export interface MarketTrackerWidget extends Widget {
   priceDesc?: boolean
   priceSkipThin?: boolean
   priceCorrupted?: CorruptedFilter
+  // The Prices tab's time range for the line and % change (ranges.ts).
+  priceRange?: PriceRange
 }
 
 // Opens the tracker on a search, from the search palette.

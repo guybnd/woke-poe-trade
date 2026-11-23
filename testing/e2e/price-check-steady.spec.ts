@@ -45,7 +45,7 @@ test('ticking and unticking mods leaves everything where it is', async ({ overla
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
   const stunBeforeSearch = await top(panel.locator('[data-stat-row]').getByText('18% increased Stun and Block Recovery').first())
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   // Through the first search too: loading, then the verdict arriving.
   expect(await top(panel.locator('[data-stat-row]').getByText('18% increased Stun and Block Recovery').first())).toBe(stunBeforeSearch)
   await expect(panel).toContainText('Matched: 12')
@@ -64,8 +64,9 @@ test('ticking and unticking mods leaves everything where it is', async ({ overla
     windowHeight: Math.round((await window.boundingBox())!.height)
   }
 
-  // Tick, untick, tick: a row that moves puts the next click on the wrong mod.
-  for (let i = 0; i < 3; i += 1) {
+  // Tick, untick, tick, untick: a row that moves puts the next click on the wrong mod.
+  // (A ticked mod filters the loaded listings here; see price-check-local-filter.spec.ts.)
+  for (let i = 0; i < 4; i += 1) {
     await stun.click()
     await overlay.page.waitForTimeout(50)
     expect(await top(stun)).toBe(before.stun)
@@ -73,6 +74,12 @@ test('ticking and unticking mods leaves everything where it is', async ({ overla
     expect(await top(window)).toBe(before.windowTop)
     expect(Math.round((await window.boundingBox())!.height)).toBe(before.windowHeight)
   }
+  // Unticking a mod can match listings that were never loaded: a new search is needed.
+  await life.click()
+  await overlay.page.waitForTimeout(50)
+  expect(await top(stun)).toBe(before.stun)
+  expect(await top(window)).toBe(before.windowTop)
+  expect(Math.round((await window.boundingBox())!.height)).toBe(before.windowHeight)
   await overlay.snap('after changing filters')
 
   // Old results stay on screen, marked as out of date, until you search again.
@@ -87,7 +94,7 @@ test('ticking and unticking mods leaves everything where it is', async ({ overla
   await stun.hover()
 
   // Passing over Search on the way to the results doesn't search.
-  const search = (await panel.getByRole('button', { name: 'Search' }).boundingBox())!
+  const search = (await panel.getByRole('button', { name: 'Search', exact: true }).boundingBox())!
   await overlay.page.mouse.move(search.x + search.width / 2, search.y + search.height / 2)
   await overlay.page.mouse.move(search.x + search.width / 2, search.y + search.height + 40)
   await overlay.page.waitForTimeout(300)

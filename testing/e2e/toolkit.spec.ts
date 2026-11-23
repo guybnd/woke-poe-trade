@@ -14,8 +14,9 @@ test('every module\'s widget mounts and shows without errors', async ({ overlay 
   for (const wmType of WIDGET_TYPES) {
     await expect(overlay.widget(wmType), wmType).toBeAttached()
     // Dock icon until opened: mechanics in a league mechanic zone, the campaign
-    // tracker during the campaign (its panel went in #117).
-    if (wmType === 'woke-mechanics' || wmType === 'woke-campaign') continue
+    // tracker during the campaign (its panel went in #117). Session story has
+    // only its dock icon (its window is Session analytics).
+    if (wmType === 'woke-mechanics' || wmType === 'woke-campaign' || wmType === 'woke-session-story') continue
     // Each panel draws something (not an empty shell).
     await expect.poll(async () => (await overlay.widget(wmType).innerText()).trim().length, { message: wmType }).toBeGreaterThan(0)
   }
@@ -25,11 +26,11 @@ test('every module\'s widget mounts and shows without errors', async ({ overlay 
 
 test('a module switched off: no widget, no hotkeys', async ({ overlay, fakeApp }) => {
   await overlay.boot({
-    widgets: [{ wmType: 'woke-map-scan' }, { wmType: 'woke-essence-scan' }],
-    off: ['map-scan', 'apt-price-check']
+    widgets: [{ wmType: 'woke-map-mods' }, { wmType: 'woke-essence-scan' }],
+    off: ['map-mods', 'apt-price-check']
   })
   await expect(overlay.widget('woke-essence-scan')).toBeAttached()
-  await expect(overlay.widget('woke-map-scan')).not.toBeAttached()
+  await expect(overlay.widget('woke-map-mods')).not.toBeAttached()
   await expect.poll(() => fakeApp.registeredHotkeys()).toContain('Alt+E')
   const keys = fakeApp.registeredHotkeys()
   expect(keys).not.toContain('Alt+S') // map scan
@@ -51,7 +52,7 @@ test('first run: the setup window picks tools; the overlay shows no second picke
   await page.getByRole('radio', { name: 'Leveling' }).click()
   await overlay.snap('setup window, Leveling picked')
   await page.getByRole('button', { name: 'Next' }).click()
-  await expect.poll(() => fakeApp.readConfig()?.woke?.off ?? []).toContain('map-scan')
+  await expect.poll(() => fakeApp.readConfig()?.woke?.off ?? []).toContain('map-mods')
   const off: string[] = fakeApp.readConfig().woke.off
   expect(off).toContain('market')
   expect(off).not.toContain('campaign')

@@ -143,6 +143,12 @@ describe('farming', () => {
     expect(bossAreaIds('MapWorldsPrimordialBoss4')).toEqual(['eater', 'uber-eater'])
     expect(zoneKind('MapWorldsPrimordialBoss4', '')).toBe('boss')
     expect(arenaBosses('MapWorldsShapersRealm', "The Shaper's Realm")).toEqual(['shaper', 'uber-shaper'])
+    // 3.30 Incarnation arenas are boss fights, not maps (MapWorldsMemoryBoss3 from a real Client.txt).
+    expect(isMapArea('MapWorldsMemoryBoss3')).toBe(false)
+    expect(isMapArea('MapWorldsMemoryBoss1_Uber')).toBe(false)
+    expect(arenaBosses('MapWorldsMemoryBoss3', 'Moment of Reverence')).toEqual(['incarnation-of-dread', 'uber-incarnation-of-dread'])
+    expect(arenaBosses('MapWorldsMemoryBoss2_Uber', 'Moment of Loneliness')).toEqual(['incarnation-of-neglect', 'uber-incarnation-of-neglect'])
+    expect(arenaBosses('', 'Moment of Trauma')).toEqual(['incarnation-of-fear', 'uber-incarnation-of-fear'])
     // Area id and name pairs from real Client.txt logs.
     expect(arenaBosses('MapWorldsPrimordialBoss3', 'Absence of Patience and Wisdom')).toEqual(['exarch', 'uber-exarch'])
     expect(arenaBosses('MapWorldsPrimordialBoss4', 'Absence of Symmetry and Harmony')).toEqual(['eater', 'uber-eater'])

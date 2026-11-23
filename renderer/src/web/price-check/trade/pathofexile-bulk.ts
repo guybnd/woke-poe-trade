@@ -56,13 +56,16 @@ export interface PricingResult {
 
 const cache = new Cache()
 
-async function requestTradeResultList (body: TradeRequest, leagueId: string): Promise<SearchResult> {
+async function requestTradeResultList (body: TradeRequest, leagueId: string, wait = false): Promise<SearchResult> {
   let data = cache.get<SearchResult>([body, leagueId])
 
   if (!data) {
-    preventQueueCreation([
-      { count: 1, limiters: RATE_LIMIT_RULES.EXCHANGE }
-    ])
+    // woke: a search the app makes by itself (wait) takes its turn instead of failing.
+    if (!wait) {
+      preventQueueCreation([
+        { count: 1, limiters: RATE_LIMIT_RULES.EXCHANGE }
+      ])
+    }
 
     await RateLimiter.waitMulti(RATE_LIMIT_RULES.EXCHANGE)
     // A penalty can start while this request waits for its slot.
@@ -116,6 +119,8 @@ export interface BulkSearch {
   queryId: string
   haveTag: string
   total: number
+  /** The trade site's count for the whole search, every currency asked for. */
+  queryTotal: number
   listed: PricingResult[]
 }
 
@@ -144,11 +149,12 @@ export async function execBulkSearch (
   item: ParsedItem,
   filters: ItemFilters,
   have: string[],
-  opts: { accountName: string }
+  opts: { accountName: string, wait?: boolean }
 ): Promise<Array<BulkSearch | null>> {
   const query = await requestTradeResultList(
     createTradeRequest(filters, item, have),
-    filters.trade.league
+    filters.trade.league,
+    opts.wait
   )
 
   const offer = 0
@@ -181,6 +187,7 @@ export async function execBulkSearch (
     return {
       queryId: query.id,
       haveTag: tradeTag,
+      queryTotal: query.total,
       // this is a best guess when making request with multiple `have` currencies
       total: (chaosIsLoaded)
         ? resultsTag.length

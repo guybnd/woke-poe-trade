@@ -90,3 +90,45 @@ export function bulkAmount (value: number): string {
   if (value >= 10) return String(Number(value.toFixed(1)))
   return String(Number(value.toPrecision(2)))
 }
+
+export type BulkMarket = 'xchgChaos' | 'xchgStable'
+
+export interface BulkMarketSide {
+  insight: BulkInsight | null
+  /** Offers the trade site counts, or null when this side isn't loaded. */
+  total: number | null
+}
+
+/** Fewer sellers than this is too thin to beat a busier market on price alone. */
+const MIN_MARKET_SELLERS = 3
+/** Past this price gap, the cheaper side wins however thin. */
+const MAX_THIN_GAP = 3
+
+/**
+ * Which currency's offers to lead with: the cheaper one, compared in chaos.
+ * Sellers on the divine side often ask "1 div" for items worth a few chaos, so
+ * the side with more offers isn't the price (WOKEPOET-487). A side with only a
+ * seller or two loses to a busier one when the prices are within 3×. Without a divine rate, or without offers
+ * on either side, the side with more offers wins, as before.
+ */
+export function pickBulkMarket (chaos: BulkMarketSide, stable: BulkMarketSide, divineInChaos: number | null | undefined): BulkMarket {
+  const byCount = (): BulkMarket => {
+    if (stable.total == null) return 'xchgChaos'
+    if (chaos.total == null) return 'xchgStable'
+    return stable.total > chaos.total ? 'xchgStable' : 'xchgChaos'
+  }
+  const c = chaos.insight
+  const s = stable.insight
+  if (c && !s) return 'xchgChaos'
+  if (s && !c) return 'xchgStable'
+  if (!c || !s || !divineInChaos) return byCount()
+  const sChaos = s.fair * divineInChaos
+  const cheaper: BulkMarket = sChaos < c.fair ? 'xchgStable' : 'xchgChaos'
+  // A thin side only loses when the prices are close: a few sellers far
+  // under the rest still are the price.
+  const gap = Math.max(sChaos, c.fair) / Math.min(sChaos, c.fair)
+  const cThin = c.sellers < MIN_MARKET_SELLERS
+  const sThin = s.sellers < MIN_MARKET_SELLERS
+  if (cThin !== sThin && gap < MAX_THIN_GAP) return cThin ? 'xchgStable' : 'xchgChaos'
+  return cheaper
+}

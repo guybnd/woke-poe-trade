@@ -61,7 +61,7 @@ test('a seller\'s stash listings with different stats keep their own rows', asyn
   await overlay.boot()
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(panel).toContainText('Matched: 2')
   await expect(panel.locator('tbody tr:not(.w-pc-yours)')).toHaveCount(2)
   await expect(panel.locator('tbody')).toContainText('1192')
@@ -73,7 +73,7 @@ test('ticked stats get columns, coloured against the checked item', async ({ ove
   await overlay.boot()
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(panel).toContainText('Matched: 5')
 
   const yours = panel.locator('tr.w-pc-yours')
@@ -108,7 +108,7 @@ test('ticked stats get columns, coloured against the checked item', async ({ ove
   await panel.locator('[data-stat-row]').getByText('18% increased Stun and Block Recovery').first().click()
   // Moving from a filter onto Search runs the search and removes the button,
   // so Playwright's click or hover would wait for it forever.
-  const search = (await panel.getByRole('button', { name: 'Search' }).boundingBox())!
+  const search = (await panel.getByRole('button', { name: 'Search', exact: true }).boundingBox())!
   await overlay.page.mouse.move(search.x + search.width / 2, search.y + search.height / 2)
   await expect(panel.locator('thead th.w-pc-stat-head')).toHaveText(['ES', 'Res', 'Chaos', '+2'])
   await overlay.snap('stat columns over the cap')

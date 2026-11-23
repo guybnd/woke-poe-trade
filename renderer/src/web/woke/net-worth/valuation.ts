@@ -1,6 +1,8 @@
 // Net worth data layer: values stash items, sums them by category, diffs two
 // reads and keeps daily snapshots. Knows nothing about how the stash was read
 // (the personal reader today; another source later) or about Vue.
+import { resolveSpends } from './spend'
+import type { SpendKind, SpendMark } from './spend'
 
 // The item fields valuing needs. The personal reader's records fit it.
 export interface StashItemLike {
@@ -41,6 +43,12 @@ export interface Priced {
   graph?: Array<number | null>
   // The poe.ninja variant priced (gems), for the tooltip.
   variant?: string
+  // A thin market: poe.ninja had no price on 3+ of its last 7 days.
+  thin?: boolean
+  // Days of poe.ninja's last 7 with no price.
+  gaps?: number
+  // poe.ninja priced it today and on none of the days before (prices.ts).
+  oneDay?: boolean
 }
 export type PriceOf = (item: StashItemLike) => Priced | null
 
@@ -65,6 +73,15 @@ export interface ValuedLine {
   ninjaChaos?: number | null
   // Shown dimmed, outside the totals: no price at all, or ignored.
   state?: 'unpriced' | 'ignored'
+  // poe.ninja's price jumped in a thin market: unitChaos is the last read's
+  // price, held since then (see holdJump). ninjaChaos is the jumped one.
+  heldSince?: number
+  // 'jump': a thin price jump, held up to 6 hours. 'one-day': a price poe.ninja
+  // has on only one day, not counted until it has a second (see holdJump).
+  heldKind?: HoldKind
+  // The last price from poe.ninja that could be trusted, kept through reads
+  // with no price or a held one (saved in the baseline as ref).
+  refChaos?: number
 }
 
 export interface Valuation {
@@ -113,17 +130,69 @@ function categoryOfFrame (frame: number): Category {
   return frame >= 1 && frame <= 4 ? 'gear' : 'other'
 }
 
-export interface ItemPrice { chaos: number, category: Category, graph?: Array<number | null>, ninja: number | null, mine: boolean, variant?: string }
+export interface ItemPrice { chaos: number, category: Category, graph?: Array<number | null>, ninja: number | null, mine: boolean, variant?: string, heldSince?: number, heldKind?: HoldKind, solid?: boolean }
+
+// ---------- price jumps in thin markets ----------
+// One fake listing can set a thin item's poe.ninja price: The Witch read
+// 7,075c (really 0.2c) for two hours. A thin item whose price jumps to 5x the
+// last read's, and by at least 1c, keeps the last read's price for up to 6
+// hours. It takes the new price sooner once poe.ninja's comes back down or
+// the market stops being thin. Backtested on 3 days of poe.ninja prices: 2 in
+// 3 fakes were gone within 6 hours; a real rise shows up at most 6 hours late.
+//
+// A price poe.ninja has on only one of the last 7 days, at 10c or more, is
+// worse: The Web dropped off poe.ninja, came back at 28,886c (really 2c) and
+// stayed for over a day; an Alteration Shard read 214c for 29 hours. Such a
+// price doesn't count at all while it's 5x or more over the item's last solid
+// price (ref), or there is none, until poe.ninja prices it on a second day.
+// In 3 days of prices every card that did this was fake, and real one-day
+// prices (maps, scrying orbs) stayed near their earlier price.
+export const HOLD_RATIO = 5
+export const HOLD_MIN_JUMP = 1
+export const HOLD_MS = 6 * 3_600_000
+export const ONE_DAY_MIN = 10
+
+export type HoldKind = 'jump' | 'one-day'
+
+// The last read's price for an item, and since when it was held.
+export interface HoldGuard { before: Baseline | null, now: number }
+
+// The price to count instead and since when, or null to take poe.ninja's.
+// Gear (uniques, gems) is left to the jump rule: many trade on so few days
+// that poe.ninja's line is mostly empty, and those were real prices.
+export function holdJump (ninja: number, p: { thin?: boolean, oneDay?: boolean, category?: Category }, prev: Baseline[string] | undefined, now: number): { chaos: number, since: number, kind: HoldKind } | null {
+  const sinceFor = (kind: HoldKind) => prev?.heldSince != null && (prev.heldKind ?? 'jump') === kind ? prev.heldSince : now
+  // Only a solid price vouches for a one-day one: an older baseline's price
+  // may itself have been a fake.
+  const ref = prev?.ref != null && prev.ref > 0 ? prev.ref : null
+  if (p.oneDay && p.category !== 'gear' && ninja >= ONE_DAY_MIN && (ref == null || ninja >= ref * HOLD_RATIO)) {
+    return { chaos: ref ?? 0, since: sinceFor('one-day'), kind: 'one-day' }
+  }
+  if (!p.thin || !prev || prev.mine) return null
+  const base = ref ?? prev.unitChaos
+  if (!(base > 0) || ninja < base * HOLD_RATIO || ninja - base < HOLD_MIN_JUMP) return null
+  // A one-day hold that ended gets the full 6 hours as a jump.
+  const since = sinceFor('jump')
+  return now - since < HOLD_MS ? { chaos: base, since, kind: 'jump' } : null
+}
 
 // One item's price with your prices on top. null: no price.
-export function priceItem (item: StashItemLike, priceOf: PriceOf, prefs: PricePrefs, key = itemKey(item)): ItemPrice | null {
+// `guard`: the last read, so a jump in a thin market is held (holdJump).
+export function priceItem (item: StashItemLike, priceOf: PriceOf, prefs: PricePrefs, key = itemKey(item), guard?: HoldGuard): ItemPrice | null {
   const ninja = priceOf(item)
   const ninjaChaos = ninja && ninja.chaos > 0 ? ninja.chaos : null
   const own = prefs.prices[key]
   if (typeof own === 'number' && Number.isFinite(own) && own >= 0) {
     return { chaos: own, category: ninja?.category ?? categoryOfFrame(item.frame), graph: ninja?.graph, ninja: ninjaChaos, mine: true, variant: ninja?.variant }
   }
-  return ninja && ninjaChaos != null ? { chaos: ninjaChaos, category: ninja.category, graph: ninja.graph, ninja: ninjaChaos, mine: false, variant: ninja.variant } : null
+  if (!ninja || ninjaChaos == null) return null
+  const held = guard ? holdJump(ninjaChaos, ninja, guard.before?.[key], guard.now) : null
+  const out: ItemPrice = { chaos: held?.chaos ?? ninjaChaos, category: ninja.category, graph: ninja.graph, ninja: ninjaChaos, mine: false, variant: ninja.variant }
+  if (held) {
+    out.heldSince = held.since
+    out.heldKind = held.kind
+  } else if (!ninja.oneDay) out.solid = true
+  return out
 }
 
 // Gems by poe.ninja's variant ("1", "20", "21/20c", "1/20"), as price check
@@ -162,7 +231,7 @@ export function itemLabel (item: StashItemLike): string {
 
 const emptyCats = (): Record<Category, number> => ({ currency: 0, fragments: 0, cards: 0, gear: 0, other: 0 })
 
-export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: PricePrefs = emptyPrefs()): Valuation {
+export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: PricePrefs = emptyPrefs(), guard?: HoldGuard): Valuation {
   const lines = new Map<string, ValuedLine>()
   const unpricedLines = new Map<string, ValuedLine>()
   const ignoredLines = new Map<string, ValuedLine>()
@@ -171,8 +240,9 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
   for (const tab of tabs) {
     for (const item of tab.items) {
       const key = itemKey(item)
-      const price = priceItem(item, priceOf, prefs, key)
       const off = ignored.has(key)
+      // An ignored item counts for nothing: no hold, so it can't outlive it.
+      const price = priceItem(item, priceOf, prefs, key, off ? undefined : guard)
       if (!price && !off) unpriced++
       const into = off ? ignoredLines : price ? lines : unpricedLines
       let line = into.get(key)
@@ -195,6 +265,12 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
           ninjaChaos: price?.ninja ?? null,
           state: off ? 'ignored' : price ? undefined : 'unpriced'
         }
+        if (price?.heldSince != null) {
+          line.heldSince = price.heldSince
+          line.heldKind = price.heldKind
+        }
+        const ref = price?.solid ? price.chaos : guard?.before?.[key]?.ref
+        if (ref != null && ref > 0) line.refChaos = ref
         into.set(key, line)
       }
       if (tab.id && !line.tabIds.includes(tab.id)) line.tabIds.push(tab.id)
@@ -214,7 +290,11 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
 }
 
 // What a read held, small enough to keep: count and unit price per thing.
-export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number }>
+// cat: where the item belongs (older baselines lack it).
+// heldSince: the price is held (holdJump) since then.
+// mine: unitChaos is your own price, so it isn't the last poe.ninja price.
+// ref: the last solid poe.ninja price (ValuedLine.refChaos); older baselines lack it.
+export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number, cat?: Category, heldSince?: number, heldKind?: HoldKind, mine?: boolean, ref?: number }>
 
 // Marks a baseline that holds unpriced and ignored items too (see diffStash).
 export const BASELINE_V2 = '\u0000v2'
@@ -225,7 +305,14 @@ export function baselineOf (v: Valuation): Baseline {
   const out: Baseline = { [BASELINE_V2]: { name: '', icon: '', count: 0, unitChaos: 0 } }
   for (const l of [...v.lines, ...(v.unpricedLines ?? []), ...(v.ignoredLines ?? [])]) {
     const had = out[l.key]
-    out[l.key] = { name: l.name, icon: l.icon, count: (had?.count ?? 0) + l.count, unitChaos: Math.max(had?.unitChaos ?? 0, l.unitChaos) }
+    out[l.key] = { name: l.name, icon: l.icon, count: (had?.count ?? 0) + l.count, unitChaos: Math.max(had?.unitChaos ?? 0, l.unitChaos), cat: l.category }
+    const since = l.heldSince ?? had?.heldSince
+    if (since != null) out[l.key].heldSince = since
+    const kind = l.heldKind ?? had?.heldKind
+    if (kind) out[l.key].heldKind = kind
+    if (l.mine || had?.mine) out[l.key].mine = true
+    const ref = l.refChaos ?? had?.ref
+    if (ref != null) out[l.key].ref = ref
   }
   return out
 }
@@ -238,6 +325,9 @@ export interface StashDiff {
   removed: DiffLine[]
   // Added minus removed, at today's prices. Price moves alone don't count.
   netChaos: number
+  // The currency part of netChaos (spend.ts tells purchases from losses).
+  // Older diffs lack it.
+  cashChaos?: number
 }
 
 // Items that came or went between two reads (moving between tabs isn't a change).
@@ -250,22 +340,29 @@ export function diffStash (before: Baseline, after: Valuation, at: number): Stas
   // A baseline from before your prices lacks unpriced items: one you priced
   // since isn't new.
   const old = !before[BASELINE_V2]
+  let cash = 0
   for (const l of after.lines) {
     if (old && l.mine && before[l.key] == null) continue
     const had = before[l.key]?.count ?? 0
-    if (l.count > had && l.unitChaos > 0) added.push({ key: l.key, name: l.name, icon: l.icon, count: l.count - had, chaos: (l.count - had) * l.unitChaos })
+    if (l.count > had && l.unitChaos > 0) {
+      added.push({ key: l.key, name: l.name, icon: l.icon, count: l.count - had, chaos: (l.count - had) * l.unitChaos })
+      if (l.category === 'currency') cash += (l.count - had) * l.unitChaos
+    }
   }
   for (const [key, b] of Object.entries(before)) {
     if (key === BASELINE_V2 || ignored.has(key)) continue
     const left = now.get(key)
     const has = left?.count ?? 0
     const unit = left ? left.unitChaos : after.ownPrices?.[key] ?? b.unitChaos
-    if (has < b.count && unit > 0) removed.push({ key, name: b.name, icon: b.icon, count: b.count - has, chaos: (b.count - has) * unit })
+    if (has < b.count && unit > 0) {
+      removed.push({ key, name: b.name, icon: b.icon, count: b.count - has, chaos: (b.count - has) * unit })
+      if ((left?.category ?? b.cat) === 'currency') cash -= (b.count - has) * unit
+    }
   }
   const sum = (xs: DiffLine[]) => xs.reduce((s, x) => s + x.chaos, 0)
   added.sort((a, b) => b.chaos - a.chaos)
   removed.sort((a, b) => b.chaos - a.chaos)
-  return { at, added, removed, netChaos: sum(added) - sum(removed) }
+  return { at, added, removed, netChaos: sum(added) - sum(removed), cashChaos: cash }
 }
 
 // ---------- daily snapshots (for a profit graph later) ----------
@@ -334,12 +431,21 @@ export interface StashGain {
   netDivine: number | null
   added: number
   removed: number
+  // Purchases and their returns (spend.ts). Older gains lack them.
+  cashChaos?: number
+  auto?: SpendKind
+  mark?: SpendMark
+  markChaos?: number
+  topAddChaos?: number
 }
 
 const MAX_GAINS = 2000
 
-export function gainOf (diff: StashDiff, since: number | null, divine: number | null): StashGain {
+export function gainOf (diff: StashDiff, since: number | null, divine: number | null, guess: Pick<StashGain, 'auto'> = {}): StashGain {
   return {
+    ...guess,
+    cashChaos: diff.cashChaos,
+    topAddChaos: diff.added[0]?.chaos ?? 0,
     at: diff.at,
     since,
     netChaos: diff.netChaos,
@@ -354,12 +460,23 @@ export function addGain (gains: StashGain[], gain: StashGain): StashGain[] {
 }
 
 // Refreshes whose read landed in [from, to], summed. Gains are only seen at a
-// read, so a session's profit counts the reads inside it.
+// read, so a session's profit counts the reads inside it. Purchases count at
+// most 0 (spend.ts); `spent` is what they left out.
 export function gainsBetween (gains: StashGain[], from: number, to: number) {
+  // Worked out over every gain: a purchase before `from` can be cancelled inside.
+  const share = resolveSpends(gains)
   const inside = gains.filter(g => g.at >= from && g.at <= to)
-  const chaos = inside.reduce((s, g) => s + g.netChaos, 0)
-  const divine = inside.every(g => g.netDivine != null) ? inside.reduce((s, g) => s + g.netDivine!, 0) : null
-  return { chaos, divine, reads: inside.length, first: inside[0]?.at ?? null, last: inside[inside.length - 1]?.at ?? null }
+  const counted = (g: StashGain) => share.get(g.at)?.counted ?? g.netChaos
+  const chaos = inside.reduce((s, g) => s + counted(g), 0)
+  const spent = inside.reduce((s, g) => s + (share.get(g.at)?.spent ?? 0), 0)
+  // Each gain in divines at its own read's rate.
+  const divOf = (g: StashGain) => {
+    const c = counted(g)
+    if (c === g.netChaos) return g.netDivine!
+    return g.netChaos ? g.netDivine! * c / g.netChaos : 0
+  }
+  const divine = inside.every(g => g.netDivine != null) ? inside.reduce((s, g) => s + divOf(g), 0) : null
+  return { chaos, divine, spent, reads: inside.length, first: inside[0]?.at ?? null, last: inside[inside.length - 1]?.at ?? null }
 }
 
 // Which tabs a read covered: a baseline only compares with a read of the same tabs.

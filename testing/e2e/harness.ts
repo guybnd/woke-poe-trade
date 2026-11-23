@@ -16,6 +16,11 @@ import os from 'os'
 import path from 'path'
 import { createRequire } from 'module'
 import { fileURLToPath } from 'url'
+import { installTipAudit, itemNames } from './tip-audit'
+import type { TipGap } from './tip-audit'
+import { installLayoutAudit } from './layout-audit'
+import type { LayoutIssue } from './layout-audit'
+import crypto from 'crypto'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 export const FIXTURES = path.resolve(here, '../fixtures')
@@ -65,6 +70,10 @@ export interface BootOptions {
   patch?: (config: any) => void // eslint-disable-line @typescript-eslint/no-explicit-any
   // Start with the overlay active (Shift+Space) instead of the game focused.
   overlayActive?: boolean
+  // Title hovers in the app's card (title-tip.ts). Off by default: it takes a
+  // hovered element's title off while the card shows, so getByTitle would miss
+  // whatever the mouse rests on. title-tip.spec.ts turns it on.
+  titleTips?: boolean
   // Client.txt lines written before the app starts (a fixture path or lines),
   // as when you played before opening the toolkit.
   logBefore?: string | string[]
@@ -97,7 +106,60 @@ export class Overlay {
       this.errors.push(`${e.message}\n${e.stack ?? ''}`)
     })
     page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) this.errors.push(m.text()) })
+    // Every item named on screen has the item tooltip (tip-audit.ts).
+    this.auditReady = page.addInitScript(installTipAudit, itemNames())
+    // WOKE_LAYOUT_AUDIT=<folder> records layout faults (layout-audit.ts).
+    const layoutDir = process.env.WOKE_LAYOUT_AUDIT
+    if (layoutDir) {
+      this.auditReady = Promise.all([
+        this.auditReady,
+        page.addInitScript(installLayoutAudit),
+        page.exposeBinding('__wokeLayoutIssue', async (_src, issue: LayoutIssue) => this.saveLayoutIssue(layoutDir, issue))
+      ])
+    }
   }
+
+  private async saveLayoutIssue (dir: string, issue: LayoutIssue) {
+    const widget = this.config?.widgets.find((w: { wmId: number }) => `widget-${w.wmId}` === issue.widget)?.wmType ?? issue.widget
+    const key = crypto.createHash('sha1').update(`${issue.rule}|${widget}|${issue.where}|${issue.text}`).digest('hex').slice(0, 12)
+    const vp = this.page.viewportSize()
+    const shots = path.join(dir, 'shots')
+    fs.mkdirSync(shots, { recursive: true })
+    const shot = path.join(shots, `${key}.png`)
+    if (!fs.existsSync(shot)) {
+      const f = issue.frame ?? issue.rect
+      const pad = 24
+      const x = Math.max(0, Math.min(f.x, issue.rect.x) - pad)
+      const y = Math.max(0, Math.min(f.y, issue.rect.y) - pad)
+      const right = Math.min(vp?.width ?? 1920, Math.max(f.x + f.w, issue.rect.x + issue.rect.w) + pad)
+      const bottom = Math.min(vp?.height ?? 1080, Math.max(f.y + f.h, issue.rect.y + issue.rect.h) + pad)
+      if (right - x > 4 && bottom - y > 4) {
+        await this.page.screenshot({ path: shot, clip: { x, y, width: right - x, height: bottom - y }, animations: 'disabled' }).catch(() => {})
+      }
+    }
+    fs.appendFileSync(path.join(dir, 'issues.jsonl'), JSON.stringify({
+      ...issue, widget, key, viewport: vp ? `${vp.width}x${vp.height}` : null,
+      textScale: process.env.WOKE_TEXT_SCALE ?? '100', test: this.testInfo.titlePath.join(' › ')
+    }) + '\n')
+  }
+
+  // Items shown without the item tooltip on hover, since the page last loaded
+  // (tip-audit.ts). The harness fails a test that leaves any.
+  async tipGaps (): Promise<TipGap[]> {
+    if (this.page.isClosed() || this.page.url() === 'about:blank') return this.pastGaps
+    const now = await this.page.evaluate(() => {
+      const w = window as unknown as { __wokeTipGaps?: TipGap[], __wokeTipAudit?: () => void }
+      w.__wokeTipAudit?.()
+      return w.__wokeTipGaps ?? []
+    }).catch(() => [] as TipGap[])
+    const type = (id: string | null) => this.config?.widgets.find((w: { wmId: number }) => `widget-${w.wmId}` === id)?.wmType ?? id
+    return [...this.pastGaps, ...now.map(g => ({ ...g, widget: type(g.widget) }))]
+  }
+
+  private auditReady: Promise<unknown>
+
+  // Gaps from pages a test has since left (a second boot reloads the page).
+  private pastGaps: TipGap[] = []
 
   // The config APT writes on first start (defaults + upgrades), captured once.
   private async defaultConfig (): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -121,15 +183,23 @@ export class Overlay {
   // Starts the overlay with this setup: writes config.json, loads the page
   // and waits until it has connected and sent its hotkeys to the app.
   async boot (opts: BootOptions = {}) {
+    await this.auditReady
     // WOKE_UI_ART=poe1|poe2|simple runs a test in that UI style, to look over each.
     const art = process.env.WOKE_UI_ART
     if (art) await this.page.addInitScript(a => { try { localStorage.setItem('woke.uiArt', a) } catch {} }, art)
+    // WOKE_TEXT_SCALE=125 runs a test with Settings > Text size at 125%.
+    const textScale = process.env.WOKE_TEXT_SCALE
+    if (textScale) await this.page.addInitScript(v => { try { localStorage.setItem('woke.textScale', v) } catch {} }, textScale)
+    if (!opts.titleTips) await this.page.addInitScript(() => { (window as unknown as { __wokeNativeTitles?: boolean }).__wokeNativeTitles = true })
     const config = await this.defaultConfig()
     config.leagueId = 'Testleague'
     config.woke = { ...(config.woke ?? {}), setupDone: !opts.firstRun, off: opts.off ?? [] }
     let nextId = Math.max(0, ...config.widgets.map((w: { wmId: number }) => w.wmId)) + 1
+    const seeded: number[] = []
     for (const seed of opts.widgets ?? []) {
       const { wmType, wmWants, wmFlags, ...rest } = seed
+      // A widget of a module switched off never mounts (module ids are mostly the type's name).
+      if (!opts.off?.includes(wmType.replace(/^woke-/, ''))) seeded.push(nextId)
       config.widgets.push({
         wmId: nextId++,
         wmType,
@@ -148,6 +218,8 @@ export class Overlay {
     // boot) first: it can still save its own settings on the way out, which
     // would land over the config written here.
     if (this.page.url() !== 'about:blank') {
+      // Only a booted page's: the default-config capture isn't any test's screen.
+      this.pastGaps = this.config ? await this.tipGaps() : []
       await this.page.goto('about:blank')
       await this.app.settled(300, 5000)
     }
@@ -174,6 +246,13 @@ export class Overlay {
     await this.page.waitForTimeout(150)
     // Hotkeys register once the game window is attached and focused.
     await expect.poll(() => this.app.registeredHotkeys().length).toBeGreaterThan(0)
+    // A placed widget's hotkeys register from the saved config, before its lazy
+    // chunk has loaded and it listens; a key pressed in between is lost (the
+    // loot filter editor flake, under CI load). Its element appears once it
+    // has mounted. Bounded: a widget that renders nothing never shows one.
+    for (const id of seeded) {
+      await this.page.locator(`#widget-${id}`).waitFor({ state: 'attached', timeout: 15_000 }).catch(() => {})
+    }
     if (opts.overlayActive) await this.pressHotkey(config.overlayKey)
     this.config = config
     return config
@@ -320,6 +399,11 @@ export const test = base.extend<{ overlay: Overlay }, { fakeApp: FakeApp }>({
     }
     fakeApp.requests.length = 0
     expect(overlay.errors, 'errors in the overlay page').toEqual([])
+    // Guy's rule: an item named on screen shows the item tooltip on hover.
+    // Put v-item-tip (or WItemRow) on its row; see tip-audit.ts for the rare
+    // name that rightly has none.
+    const gaps = (await overlay.tipGaps()).map(g => `${g.name} — in ${g.widget ?? 'the page'}: ${g.where}`)
+    expect(gaps, 'items shown without the item tooltip (testing/e2e/tip-audit.ts)').toEqual([])
   }
 })
 

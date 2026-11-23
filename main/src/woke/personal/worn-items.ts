@@ -46,7 +46,7 @@ type Raw = Record<string, unknown>
 const str = (v: unknown) => typeof v === 'string' ? v : ''
 // Mod lines come as plain strings, or (3.30's replies) as { description,
 // flags: { crafted, fractured } } objects.
-interface ModLine { text: string, kind: PobModKind }
+interface ModLine { text: string, kind: PobModKind, vestigial?: boolean }
 function modLines (v: unknown, kind: PobModKind = ''): ModLine[] {
   if (!Array.isArray(v)) return []
   const out: ModLine[] = []
@@ -60,7 +60,7 @@ function modLines (v: unknown, kind: PobModKind = ''): ModLine[] {
       const flags = ((x as Raw).flags ?? {}) as Raw
       const k: PobModKind = flags.fractured === true ? 'fractured' : flags.crafted === true ? 'crafted' : kind
       const text = cleanMod(((x as Raw).description as string).replace(/\r\n/g, '\n'))
-      if (text) out.push({ text, kind: k })
+      if (text) out.push({ text, kind: k, ...(flags.vestigial === true ? { vestigial: true } : {}) })
     }
   }
   return out
@@ -123,7 +123,10 @@ export function wornItem (raw: Raw): PobItem {
   const named = rarity === 'RARE' || rarity === 'UNIQUE' || rarity === 'RELIC'
 
   const enchants = lines(raw.enchantMods)
-  const implicits = lines(raw.implicitMods)
+  // A Vestigial unique's inherited implicit is flagged. Its base stays the plain
+  // one, for PoB text and weapon stats.
+  const implicitLines = modLines(raw.implicitMods)
+  const implicits = implicitLines.map(m => m.text)
   // Older replies list fractured and crafted mods apart; newer ones flag them
   // among the explicit ones. Fractured first, crafted last, as PoB orders them.
   // Foulborn uniques' mutated mods, and a flask's utility mods, count like any other.
@@ -151,7 +154,7 @@ export function wornItem (raw: Raw): PobItem {
     sockets: socketText(raw),
     // item-text.ts writes implicits PoB marks crafted as enchants.
     implicits: [...enchants, ...implicits],
-    implicitKinds: [...enchants.map(() => 'crafted' as const), ...implicits.map(() => '' as const)],
+    implicitKinds: [...enchants.map(() => 'crafted' as const), ...implicitLines.map(m => m.vestigial ? 'vestigial' as const : '' as const)],
     mods,
     modKinds,
     itemLevel: typeof raw.ilvl === 'number' ? raw.ilvl : undefined,
@@ -163,7 +166,8 @@ export function wornItem (raw: Raw): PobItem {
     ward: property(raw, 'Ward'),
     corrupted: raw.corrupted === true || undefined,
     mirrored: raw.duplicated === true || undefined,
-    influences: influences.length ? influences : undefined
+    influences: influences.length ? influences : undefined,
+    vestigial: raw.vestigial === true || undefined
   }
   return item
 }

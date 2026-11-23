@@ -10,6 +10,7 @@
         :class="[$style.big, cellClass(c)]" :title="cellTitle(c)">
         <span><span :class="$style.v">{{ c.text }}</span> <span :class="$style.k">{{ c.label }}</span></span>
         <span :class="[$style.track, { [$style.off]: c.fill == null }]"><b :style="barStyle(c)" /></span>
+        <span v-if="c.max" :class="$style.ends" data-range><span>{{ c.min }}</span><span :class="[$style.hi, { [$style.atmax]: c.atMax }]">{{ c.max }}</span></span>
       </component>
       <span v-if="model.chips.length" :class="$style.chips">
         <component :is="c.filter ? 'button' : 'span'" v-for="c of model.chips" :key="c.key"
@@ -53,10 +54,15 @@ function cellClass (c: HeaderCell) {
 
 function cellTitle (c: HeaderCell) {
   const name = c.name ?? c.label
-  if (!c.filter) return `${name}: nothing on this item can change it`
+  const max = !c.max
+    ? ''
+    : c.atMax
+      ? `${name} ${c.text} is at its max: ${c.maxNote}.\n`
+      : `${name} ${c.text}, from ${c.min} to ${c.max} on this item. Max: ${c.maxNote}.\n`
+  if (!c.filter) return max + `${name}: nothing on this item can change it`
   if (c.fixed && c.filter.disabled) return `${name} is the same on every copy unless a corruption, enchant or quality raised it. Click to search at least yours.`
   const bar = (c.fill == null) ? ' Grey bar: nothing on this item can roll it.' : ' Bar: how close its rolls came to their max.'
-  return (c.filter.disabled
+  return max + (c.filter.disabled
     ? `Click to search ${name}. Searches only when you press Search.`
     : `Click to stop searching ${name}.`) + bar
 }
@@ -100,7 +106,7 @@ function onClick (e: MouseEvent) {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  min-width: 90px;
+  min-width: 110px;
   padding: 2px 4px;
   text-align: left;
 }
@@ -117,6 +123,18 @@ function onClick (e: MouseEvent) {
   color: var(--w-dim);
 }
 .ck { letter-spacing: .05em; }
+/* B: the lowest and highest this item could be, under a big number's bar. */
+.ends {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font: 500 var(--w-fs-xs) var(--w-num);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--w-faint);
+}
+.ends .hi { color: var(--w-dim); }
+.ends .atmax { color: var(--w-gold-hi); }
 .chips { margin-left: auto; display: flex; gap: 6px; }
 .chip {
   display: flex;

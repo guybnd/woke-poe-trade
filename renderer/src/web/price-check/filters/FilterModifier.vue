@@ -69,7 +69,7 @@
         </slot>
       </div>
       <div class="flex pt-px" v-if="!miniFilter">
-        <div class="w-5 flex items-start">
+        <div class="w-5 flex flex-shrink-0 items-start">
           <ui-popover v-if="isHidden" tag-name="div" class="flex" placement="right-start" boundary="#price-window" append-to="#price-window">
             <template #target>
               <span class="text-xs leading-none text-gray-600 cursor-pointer">
@@ -111,6 +111,9 @@
         />
         <woke-roll-pick v-if="showRollPick" :filter="filter" />
         <div v-else style="width: calc(2*3rem + 1px)" />
+      </div>
+      <div v-if="filter.reminderText && !miniFilter" :class="$style.reminderText" data-reminder-text>
+        <div>{{ filter.reminderText }}</div>
       </div>
       <div v-if="catOnly && !miniFilter && roll?.plain" :class="$style.catHint" data-catalyst-hint>{{ catOnly === 'above'
         ? `Above ${roll.plain.max}: only catalysed items match.`
@@ -400,7 +403,6 @@ export default defineComponent({
       miniFilter: computed(() => !props.filter.hidden && (
         props.filter.tag === FilterTag.MercenarySupport ||
         (props.filter.tag === FilterTag.Property && props.item.info.refName === 'Mercenary Warrant') ||
-        props.item.info.refName === 'Chronicle of Atzoatl' ||
         props.item.info.refName === 'Mirrored Tablet' ||
         props.item.info.refName === 'Filled Coffin' ||
         props.item.category === ItemCategory.Gem
@@ -669,8 +671,9 @@ export default defineComponent({
   @apply bg-orange-600 text-white; }
 .tag-foulborn {
   @apply bg-pink-700 text-white; }
+/* The game's light purple for a Vestigial implicit. */
 .tag-vestigial {
-  @apply bg-purple-600 text-purple-100; }
+  background: var(--w-mod-vestigial); color: #1d1228; }
 .tag-enchant {
   @apply bg-indigo-200 text-black; }
 .tag-pseudo,
@@ -682,6 +685,37 @@ export default defineComponent({
 .rollInput.catOnly {
   color: var(--w-r-magic);
   border-color: color-mix(in srgb, var(--w-r-magic) 55%, transparent);
+}
+/* Room reminder text (temple rooms): one line, full text on hover. */
+.reminderText {
+  font-style: italic;
+  white-space: pre;
+  cursor: default;
+  position: relative;
+  margin-left: 1.25rem;
+
+  & > div {
+    color: var(--w-dim);
+    background: var(--w-pc-window);
+    min-width: min-content;
+    box-sizing: content-box;
+    padding-right: theme('spacing.2');
+  }
+
+  &::after {
+    position: absolute;
+    inset: 0;
+    content: '';
+    pointer-events: none;
+    background: linear-gradient(to left, var(--w-pc-window), transparent 6rem);
+  }
+
+  .filter:not(:hover) & {
+    overflow: hidden;
+  }
+  .filter:hover &::after {
+    opacity: 0;
+  }
 }
 .catHint {
   font-size: var(--w-fs-xs);

@@ -21,7 +21,7 @@
           <button type="button" :class="[$style.row, open === v.name && $style.on, hereNames.has(v.name) && $style.here]"
             :title="versionsTitle(v)" data-woke-wickerman-row
             @click="open = open === v.name ? null : v.name">
-            <span class="min-w-0 w-trunc">{{ v.name }}</span>
+            <span v-item-tip="{ name: v.name, type: 'Viscera' }" class="min-w-0 w-trunc">{{ v.name }}</span>
             <span class="w-dim whitespace-nowrap">{{ v.slot }}</span>
             <span class="min-w-0 w-dim w-trunc text-xs">{{ sources(v) }}</span>
             <span :class="$style.mod">{{ v.tiers[levelTier(v, level)]?.text }}</span>
@@ -55,6 +55,7 @@ export default { widget: widgetWickermanSpec }
 
 <script setup lang="ts">
 // 3.30 Wickerman module: every Viscera by slot, with search. Remove with the league.
+import { vItemTip } from '@/web/woke/ui/tooltip/item-tip'
 import { computed, inject, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'

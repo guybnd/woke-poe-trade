@@ -26,7 +26,10 @@ function decode (s) {
 }
 const strip = (s) => decode(s.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim()
 
-// Each recipe: { g: "Create a Unique", r: "Ring", n: [notes], b: [named beasts], a: any rare slots, red?: red beast slots }
+// Each recipe: { g: "Create a Unique", r: "Ring", n: [notes], b: [named beasts], red?: red beast slots }
+// poedb still draws the old "any rare creature" slots, but 3.30 took yellow
+// beasts out of every recipe ("they are no longer a requirement for any
+// Beastcrafting Recipes"), so only the named beasts and red slots are kept.
 async function recipes () {
   const html = await get('https://poedb.tw/us/Bestiary_Recipe')
   const at = html.search(/Bestiary Recipe \/\d+/)
@@ -48,9 +51,8 @@ async function recipes () {
     const b = [...cells[1].matchAll(/<a [^>]*href="\/us\/([^"]+)"/g)].map(m => decodeURIComponent(m[1]).replace(/_/g, ' '))
     // Flask recipes start with a slot for any red (unique) beast, drawn with the same art.
     const red = (cells[1].match(/title="AnyRedBeast/g) ?? []).length
-    const a = (cells[1].match(/AspectAll\.webp/g) ?? []).length - red
-    if (!b.length && !a && !red) continue
-    out.push({ g, r, ...(n.length ? { n } : {}), b, a, ...(red ? { red } : {}) })
+    if (!b.length && !red) continue
+    out.push({ g, r, ...(n.length ? { n } : {}), b, ...(red ? { red } : {}) })
   }
   return out
 }
@@ -70,7 +72,17 @@ async function denDrops () {
   return drops
 }
 
+// Recipes poedb's table lacks. 3.29 added "a new Beast-crafting recipe to
+// create a new Talisman, which requires The Black Mórrigan" (patch notes; the
+// wiki's recipe table lists it as Create a Unique: Talisman).
+const EXTRA = [
+  { g: 'Create a Unique', r: 'Talisman', b: ['Black Mórrigan'] }
+]
+
 const list = await recipes()
+for (const rec of EXTRA) {
+  if (!list.some(r => r.g === rec.g && r.r === rec.r)) list.push(rec)
+}
 const dens = await denDrops()
 if (list.length < 60) throw new Error(`too few recipes: ${list.length}`)
 if (Object.keys(dens).length < 4) throw new Error(`too few dens: ${Object.keys(dens).join(', ')}`)

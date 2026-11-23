@@ -42,8 +42,8 @@
         </div>
         <div v-for="(g, i) in result.gear" :key="i" :class="$style.gear">
           <span class="w-dim">{{ g.slot }}</span>
-          <span class="w-trunc" :class="rarity(g.a)" :title="itemName(g.a)">{{ itemName(g.a) }}</span>
-          <span class="w-trunc" :class="rarity(g.b)" :title="itemName(g.b)">{{ itemName(g.a) === itemName(g.b) ? 'Same base, other mods' : itemName(g.b) }}</span>
+          <span class="w-trunc" :class="rarity(g.a)" :data-item-tip="g.a ? '' : undefined" @mouseenter="g.a && showTip($event, { kind: 'item', item: g.a })" @mouseleave="hideTip">{{ itemName(g.a) }}</span>
+          <span class="w-trunc" :class="rarity(g.b)" :data-item-tip="g.b ? '' : undefined" @mouseenter="g.b && showTip($event, { kind: 'item', item: g.b })" @mouseleave="hideTip">{{ itemName(g.a) === itemName(g.b) ? 'Same base, other mods' : itemName(g.b) }}</span>
         </div>
         <div v-if="result.gear.length < result.gearTotal" class="w-dim pt-1">All the other gear is the same.</div>
       </template>
@@ -65,6 +65,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue'
 import { WEmpty, WInfo, WPanel, WSelect } from '../ui'
+import { hideTip, showTip } from '../ui/tooltip/tooltip'
 import { compareBuilds, treeSentence } from './compare-builds'
 import { loadPassiveTree } from './passive-tree'
 import type { BuildCompare } from './compare-builds'

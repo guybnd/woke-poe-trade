@@ -270,6 +270,12 @@ export function createFilters (
     }
   }
 
+  // Jewellery without catalyst quality: a chip to find only uncatalysed copies.
+  // Off by default (Guy's pick; upstream has it on).
+  if (JEWELLERY.has(item.category!) && !item.quality) {
+    filters.notCatalysed = { disabled: true }
+  }
+
   if (item.quality && item.quality >= 20 && !JEWELLERY.has(item.category!)) {
     if (
       item.category === ItemCategory.Flask || item.category === ItemCategory.Tincture ||
@@ -282,7 +288,7 @@ export function createFilters (
     }
   }
   // Any item that takes quality gets the box, so you can ask for more than it has (a 27% Twilight Regalia).
-  if (!filters.quality && takesQuality(item)) {
+  if (!filters.quality && takesQuality(item) && !item.mapCompletionReward) {
     filters.quality = suggestedQuality(item.quality ?? 0)
   }
 
@@ -313,7 +319,8 @@ export function createFilters (
     // has one is priced against other corrupted items.
     const corruptImplicit = item.newMods.some(mod => mod.info.mechanic === ModifierMechanic.Corruption)
     filters.corrupted = {
-      search: !item.isCorrupted ? 'not-corrupted' : (forAdornedJewel || corruptImplicit) ? 'corrupted' : 'any'
+      search: !item.isCorrupted ? 'not-corrupted' : (forAdornedJewel || corruptImplicit) ? 'corrupted' : 'any',
+      ...(item.isTwiceCorrupted ? { twice: true as const } : {})
     }
   }
 
@@ -341,6 +348,11 @@ export function createFilters (
       value: 'nonunique',
       disabled: false
     }
+  }
+
+  // woke: gear always gets the rarity chip (Any / Magic / Rare), to hunt magic bases.
+  if (!filters.rarity && hasRarityChip(item)) {
+    filters.rarity = { value: 'nonunique', disabled: false }
   }
 
   if (item.isMirrored) {
@@ -532,7 +544,8 @@ function createGemFilters (
   }
 
   filters.corrupted = {
-    search: item.isCorrupted ? 'any' : 'not-corrupted'
+    search: item.isCorrupted ? 'any' : 'not-corrupted',
+    ...(item.isTwiceCorrupted ? { twice: true as const } : {})
   }
 
   if (!item.imbuedGem && item.isCorrupted && item.gemLevel! >= 20) {
@@ -610,4 +623,23 @@ function ceilToBracket (value: number, brackets: readonly number[]) {
     }
   }
   return prev
+}
+
+// woke: gear that gets the rarity chip (Any / Magic / Rare, RarityChip.vue).
+const RARITY_CHIP_ITEM = new Set<ItemCategory>([
+  ...ARMOUR,
+  ...WEAPON,
+  ...JEWELLERY,
+  ItemCategory.Quiver,
+  ItemCategory.Jewel,
+  ItemCategory.AbyssJewel,
+  ItemCategory.ClusterJewel
+])
+
+export function hasRarityChip (item: ParsedItem): boolean {
+  return item.category != null && RARITY_CHIP_ITEM.has(item.category) && (
+    item.rarity === ItemRarity.Normal ||
+    item.rarity === ItemRarity.Magic ||
+    item.rarity === ItemRarity.Rare
+  )
 }

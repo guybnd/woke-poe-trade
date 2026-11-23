@@ -78,13 +78,19 @@ art wherever the game has it, readable fonts (nothing under 11px).
 
 Helpers: `ago(ts)` / `freshness(ts)` (one shared clock), `gameIcon(name, ns)`.
 
+## Title hovers
+
+Text cut short with "…" (`.w-trunc`, Tailwind's `truncate`) shows its whole text in the same card on hover, with nothing to add. A plain `title="…"` (or `:title`) on any element shows in the app's own card (the `WInfo` card's look), under the pointer, after a short wait and at once when moving straight from one title to the next. Nothing to import: `title-tip.ts` listens once for the whole overlay. Line breaks in the title stay. Use it for short labels; longer explanations go in `WInfo`. `title=""` silences a title further up, as in the browser, and `data-native-title` on an element or parent keeps the browser's own tooltip. The card never covers a `WInfo` card or the item tooltip. It loads with `page-hooks.ts`, outside startup JS.
+
 ## Item tooltip
 
 Put `v-item-tip="{ name, type?, variant?, prices?, noPrice? }"` on a row or name to show the game-style tooltip at the cursor, with the item's text and a poe.ninja price strip. `type` is the poe.ninja row type; without it the kind comes from the name. Any market row works as is: `v-item-tip="m"`. The text lives in `public/data/tips` and loads on the first hover; rebuild it each league with `npm run tip-data -- <league>`.
 
+Every row that names an item must have it (Guy's rule; see the repo's CLAUDE.md). Use `WItemRow` for list rows: it brings the tooltip, the item menu and the art. The directive marks its element with `data-item-tip`, and every fake-game test fails on an item name shown outside such an element (`testing/e2e/tip-audit.ts`). If you call `showTip` with an item yourself, put `data-item-tip` on the hovered element. A name that rightly has no tooltip takes `data-no-item-tip="<why>"`.
+
 ## Utility classes
 
-`w-verdict` (a verdict strip: gold wash and small caps headline `<b>` in the game look), `w-corners` (lit corner marks on a framed window that isn't a WPanel), `w-row` (grid row; set `grid-template-columns` yourself), `w-row--head`,
+`w-verdict` (a verdict strip: gold wash and small caps headline `<b>` in the game look), `w-corners` (lit corner marks on a framed window that isn't a WPanel), `w-actions` (a row of buttons: one line, middles lined up, one gap; `<span class="grow" />` pushes the rest right; a rarely used action becomes an icon button with a title, never a wrapped second line), `w-row` (grid row; set `grid-template-columns` yourself), `w-row--head`,
 `w-group-label`, `w-num` (tabular mono digits), `w-dim`, `w-faint`, `w-up`,
 `w-down`, `w-mono`, `w-stale`, `w-enter`, `w-flash`, `w-focusable` (keyboard-reachable row), `w-accent`, `w-trunc`, `w-icon-btn`, `w-surface`, and item colours
 `w-rarity-{normal,magic,rare,unique,gem,currency,divination}`; gem names by

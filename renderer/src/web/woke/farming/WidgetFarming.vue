@@ -192,7 +192,7 @@ import { useLeagues } from '@/web/background/Leagues'
 import { useSessionStore } from '../analytics/store'
 import { ANALYTICS_TYPE } from '../analytics/types'
 import type { AtlasWidget } from '../atlas/widget'
-import { FARMING_LOOT_TARGET, onEndSessionRequest, addLoot as addLootTo, costsForStrategy, countNewMap, currentRun, elapsed, historyToRecords, initFarmingData, isMapArea, isMapCostItem, isMapSideArea, lineValue, maybeAutoPause, nameRun, pauseSession, newSession, onZoneChange, rememberCosts, removeLoot, sellPrice, sellRules, startRun, strategyStats, toSessionRecord, totals, withScarabCosts } from './farming'
+import { FARMING_LOOT_TARGET, onEndSessionRequest, addLoot as addLootTo, costsForStrategy, countNewMap, currentRun, elapsed, historyToRecords, initFarmingData, isFarmedMap, isMapCostItem, isMapSideArea, lineValue, maybeAutoPause, nameRun, pauseSession, newSession, onZoneChange, rememberCosts, removeLoot, sellPrice, sellRules, startRun, strategyStats, toSessionRecord, totals, withScarabCosts } from './farming'
 import type { CostLine, LiveRun, LootLine, PricedRef } from './farming'
 
 const props = defineProps<{
@@ -467,7 +467,8 @@ onGameLog((lines) => {
     }
     if (ev?.kind !== 'area') continue
     const nowTs = Date.now()
-    const inMap = isMapArea(ev.areaId)
+    // Vaults on Session story's skip list are neither maps nor map time.
+    const inMap = isFarmedMap(ev.areaId)
     onZoneChange(sess, inMap || isMapSideArea(ev.areaId), nowTs)
     if (inMap && sess.runningSince != null && props.config.autoCountMaps && countNewMap(sess, ev.areaId, ev.seed)) {
       sess.maps++

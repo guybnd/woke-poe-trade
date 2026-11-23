@@ -6,13 +6,25 @@
     'flex-row': clickPosition === 'stash',
     'flex-row-reverse': clickPosition === 'inventory'
   }">
+    <instant-ninja-card v-if="instant && item?.isOk()" :key="instantKey" :item="item.value" :at="instant"
+      :active="config.wmWants === 'show'" :again-keys="config.hotkey && !advancedCheck ? `${config.hotkeyHold} + ${config.hotkey}` : null"
+      @placed="instantPlaced" @live="openWindow(true, $event === true)" @details="openWindow(false)" @close="closePriceCheck">
+      <template #verdict>
+        <div v-if="item.value.info.refName === 'Stacked Deck'" :class="$style.instantVerdict">
+          <woke-deck-verdict-chip :item="item.value" />
+        </div>
+      </template>
+      <related-items :class="[$style.zoomed, $style.instantSide]" :item="item.value" click-position="stash" @check="checkRelated" />
+      <beast-altar v-if="isBeast" :class="[$style.zoomed, $style.instantSide]" :item="item.value" @check="checkRelated" />
+    </instant-ninja-card>
+    <template v-else>
     <div v-if="!isBrowserShown" class="layout-column shrink-0"
       :style="{ width: floating ? `${floating.gap}px` : 'var(--game-panel)' }">
     </div>
     <div id="price-window" ref="windowEl" class="layout-column shrink-0 text-gray-200 pointer-events-auto relative"
       :class="{ [$style.movable]: !isBrowserShown, 'w-poe': poeOn }" :style="windowStyle" @mousedown="startMove"
       v-on="poeOn ? { keydown: onEsc } : {}">
-      <AppTitleBar @close="closePriceCheck" @click="openLeagueSelection" :title="title">
+      <AppTitleBar :class="$style.zoomed" @close="closePriceCheck" @click="openLeagueSelection" :title="title">
         <button v-if="floating" data-testid="price-window-dock" title="Back to the side of the screen" @click="dock">
           <i class="fas fa-columns" />
         </button>
@@ -34,7 +46,7 @@
         <div v-else class="w-8" />
         <template #end><price-style-menu /></template>
       </AppTitleBar>
-      <div class="grow layout-column min-h-0 bg-gray-800">
+      <div class="grow layout-column min-h-0 bg-gray-800" :class="$style.zoomed">
         <background-info />
         <check-position-circle v-if="showCheckPos"
           :position="checkPosition" style="z-index: -1;" />
@@ -53,7 +65,7 @@
         <template v-else-if="item?.isOk()">
           <unidentified-resolver :item="item.value" @identify="handleIdentification($event)" />
           <checked-item v-if="isLeagueSelected"
-            :item="item.value" :advanced-check="advancedCheck" />
+            :item="item.value" :advanced-check="advancedCheck" :live="liveCheck" />
         </template>
         <div v-if="isBrowserShown" class="bg-gray-900 px-6 py-2 truncate">
           <i18n-t keypath="app.toggle_browser_hint" tag="div">
@@ -72,19 +84,24 @@
       width="100%" height="100%" />
     <div v-else class="layout-column flex-1 min-w-0">
       <div class="flex" :class="{
+        [$style.zoomed]: true,
         'flex-row': clickPosition === 'stash',
         'flex-row-reverse': clickPosition === 'inventory'
       }">
-        <related-items v-if="item?.isOk()" class="pointer-events-auto"
-          :item="item.value" :click-position="clickPosition" @check="checkRelated" />
+        <div v-if="item?.isOk()" class="layout-column">
+          <related-items class="pointer-events-auto"
+            :item="item.value" :click-position="clickPosition" @check="checkRelated" />
+          <beast-altar v-if="isBeast" :item="item.value" @check="checkRelated" />
+        </div>
         <rate-limiter-state class="pointer-events-auto" />
       </div>
     </div>
+    </template>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, inject, PropType, shallowRef, watch, computed, nextTick, provide } from 'vue'
+import { defineAsyncComponent, defineComponent, inject, PropType, shallowRef, watch, computed, nextTick, provide } from 'vue'
 import { Result, ok, err } from 'neverthrow'
 import { useI18n } from 'vue-i18n'
 import UiErrorBox from '@/web/ui/UiErrorBox.vue'
@@ -94,13 +111,11 @@ import BackgroundInfo from './BackgroundInfo.vue'
 import { MainProcess, Host } from '@/web/background/IPC'
 import { usePoeninja } from '../background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
-import { AppConfig } from '@/web/Config'
+import { AppConfig, rootFontPx } from '@/web/Config'
 import { ItemCategory, ItemRarity, parseClipboard, ParsedItem } from '@/parser'
 import RelatedItems from './related-items/RelatedItems.vue'
 import RateLimiterState from './trade/RateLimiterState.vue'
-import UnidentifiedResolver from './unidentified-resolver/UnidentifiedResolver.vue'
 import CheckPositionCircle from './CheckPositionCircle.vue'
-import NewItemSearch from '@/web/woke/new-item/NewItemSearch.vue'
 import UnreadableItem from '@/web/woke/new-item/UnreadableItem.vue'
 import { newItemQuery } from '@/web/woke/new-item/query'
 import AppTitleBar from '@/web/ui/AppTitlebar.vue'
@@ -110,18 +125,27 @@ import { PriceCheckWidget, WidgetManager, WidgetSpec } from '../overlay/interfac
 import { clampDrag, clearGuides, releaseWebviewsForDrag, snapEdge, snapMove, swallowNextClick } from '@/web/woke/ui/snap'
 import { poeOn } from '@/web/woke/price-insight/window-style'
 import { artShown, ART_FRAME_INSET } from '@/web/woke/ui/theme'
+import { uiZoom } from '@/web/woke/ui/ui-size'
 import '@/web/woke/price-insight/poe-mode.css'
 import { floatingArea, floatingLayout, movedPosition, resizedPosition } from './window-position'
 import { dispatchPriceCheck } from '@/web/woke/ui/tooltip/item-price-check'
+import { exactDetailsId } from './trends/getDetailsId'
+import { instantCardShown } from '@/web/woke/price-insight/view'
+import { fixedPriceItem } from '@/web/woke/price-insight/ninja-first'
 
 type ParseError = { name: string; message: string; rawText: ParsedItem['rawText']; unsupported?: boolean }
 const UNSUPPORTED = 'woke.unsupported'
 
 const DRAG_START_PX = 4
+// woke: how long the price check hotkey pressed again on the instant card's item means "live offers".
+const AGAIN_MS = 15_000
 const WINDOW_REM = 28.75
+// The related items' column beside the window: 17.5rem and a margin (RelatedItems.vue).
+const RELATED_REM = 18.5
 // The game art keeps a buffer inside the frame; the window grows by it so the table keeps its room.
+// Screen px: UI size zooms the title bar and body (.zoomed), not the frame.
 function windowWidth () {
-  return WINDOW_REM * AppConfig().fontSize + (artShown() ? 2 * ART_FRAME_INSET : 0)
+  return WINDOW_REM * rootFontPx() * uiZoom() + (artShown() ? 2 * ART_FRAME_INSET : 0)
 }
 
 export default defineComponent({
@@ -158,14 +182,21 @@ export default defineComponent({
   components: {
     AppTitleBar,
     CheckedItem,
-    UnidentifiedResolver,
+    // woke: loaded on the first price check, not at startup (it guesses from the art, WOKEPOET-481).
+    UnidentifiedResolver: defineAsyncComponent(() => import('./unidentified-resolver/UnidentifiedResolver.vue')),
     BackgroundInfo,
     RelatedItems,
     RateLimiterState,
     CheckPositionCircle,
     ItemQuickPrice,
     UiErrorBox,
-    NewItemSearch,
+    // Only for items the game data doesn't know yet: loaded on first use.
+    NewItemSearch: defineAsyncComponent(() => import('@/web/woke/new-item/NewItemSearch.vue')),
+    InstantNinjaCard: defineAsyncComponent(() => import('@/web/woke/price-insight/InstantNinjaCard.vue')),
+    // A captured beast's Blood Altar recipes (WOKEPOET-485).
+    BeastAltar: defineAsyncComponent(() => import('@/web/woke/price-insight/BeastAltar.vue')),
+    // A Stacked Deck's open-or-sell verdict on its instant card.
+    WokeDeckVerdictChip: defineAsyncComponent(() => import('@/web/woke/stacked-decks/DeckVerdictChip.vue')),
     UnreadableItem,
     PriceStyleMenu,
     UiPopover
@@ -187,6 +218,7 @@ export default defineComponent({
 
     const item = shallowRef<null | Result<ParsedItem, ParseError>>(null)
     const advancedCheck = shallowRef(false)
+    const liveCheck = shallowRef(false)
     const checkPosition = shallowRef({ x: 1, y: 1 })
 
     MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {
@@ -195,31 +227,30 @@ export default defineComponent({
       // First, so the area below is for the window as it will show: an open
       // browser forces the docked layout.
       closeBrowser()
-      if (Host.isElectron && !e.focusOverlay) {
-        // everything in CSS pixels
-        const width = windowWidth()
-        const screenX = ((e.position.x - window.screenX) > window.innerWidth / 2)
-          ? (window.screenX + window.innerWidth) - wm.poePanelWidth.value - width
-          : window.screenX + wm.poePanelWidth.value
-        const placed = floating.value ? floatingArea(floating.value, screenSize()) : null
-        MainProcess.sendEvent({
-          name: 'OVERLAY->MAIN::track-area',
-          payload: {
-            holdKey: props.config.hotkeyHold,
-            closeThreshold: 2.5 * AppConfig().fontSize,
-            from: e.position,
-            area: placed
-              ? { ...placed, x: window.screenX + placed.x, y: window.screenY + placed.y }
-              : { x: screenX, y: window.screenY, width, height: window.innerHeight },
-            dpr: window.devicePixelRatio
-          }
-        })
+      // woke: an exchange item poe.ninja prices gets the small card by the item (instant check).
+      const parsed = (e.item ? ok(e.item as ParsedItem) : parseClipboard(e.clipboard))
+      // For both price check hotkeys (quick and locked). A check started in the overlay
+      // (a menu, Ctrl+Space, a pasted item) comes with `live` and opens the window.
+      // The hotkey again on the item the card shows: live offers, without moving to the card.
+      // Only while the card is up: once it closed (the mouse moved away), the hotkey shows it again.
+      const again = instant.value != null && props.config.wmWants === 'show' &&
+        e.clipboard === instantText && Date.now() - instantAt < AGAIN_MS
+      const quick = !again && !e.live && parsed.isOk() && instantCheck(parsed.value)
+      instantText = quick ? e.clipboard : ''
+      instantAt = Date.now()
+      instantKey.value += 1
+      instant.value = quick ? { x: e.position.x - window.screenX, y: e.position.y - window.screenY } : null
+      trackFrom = e.position
+      // The card's area is sent once it's placed (instantPlaced).
+      if (Host.isElectron && !e.focusOverlay && !quick) {
+        trackWindowArea(e.position)
       }
       wm.show(props.config.wmId)
       checkPosition.value = e.position
       advancedCheck.value = e.focusOverlay
+      liveCheck.value = e.live === true || again
 
-      item.value = (e.item ? ok(e.item as ParsedItem) : parseClipboard(e.clipboard))
+      item.value = parsed
         .andThen(item => (
           (item.category === ItemCategory.Sentinel && item.rarity !== ItemRarity.Unique))
           // woke: a known item that's not priced, so not searched by name either.
@@ -236,6 +267,83 @@ export default defineComponent({
         queuePricesFetch()
       }
     })
+
+    // woke: the instant check (InstantNinjaCard.vue): where the card sits, or null for the window.
+    const instant = shallowRef<{ x: number, y: number } | null>(null)
+    let trackFrom = { x: 0, y: 0 }
+    const poeninja = usePoeninja()
+    function instantCheck (it: ParsedItem): boolean {
+      const cfg = props.config
+      if (cfg.wokeNinjaFirst === false || cfg.wokeNinjaInstant === false) return false
+      if (!(it.info.tradeTag || fixedPriceItem(it)) || !leagues.selectedId.value) return false
+      const q = exactDetailsId(it)
+      return Boolean(q && (poeninja.findPriceByQuery(q)?.chaos ?? 0) > 0)
+    }
+    // A new card each check, so it measures itself and reports its area again.
+    const instantKey = shallowRef(0)
+    // A captured beast gets its Blood Altar recipes beside the check.
+    const isBeast = computed(() => {
+      const it = item.value
+      return it != null && it.isOk() && it.value.info.namespace === 'CAPTURED_BEAST'
+    })
+    // woke: the overlay doesn't darken the game behind the card (OverlayWindow.vue), on the locked key too.
+    watch(() => instant.value != null && props.config.wmWants === 'show', (on) => { instantCardShown.value = on }, { immediate: true })
+    let instantText = ''
+    let instantAt = 0
+    function sendTrackArea (from: { x: number, y: number }, area: { x: number, y: number, width: number, height: number }) {
+      MainProcess.sendEvent({
+        name: 'OVERLAY->MAIN::track-area',
+        payload: {
+          holdKey: props.config.hotkeyHold,
+          closeThreshold: 2.5 * rootFontPx() * uiZoom(),
+          from,
+          area,
+          dpr: window.devicePixelRatio
+        }
+      })
+    }
+    // The mouse is tracked into the window (docked or where it was moved), everything in CSS pixels.
+    function trackWindowArea (from: { x: number, y: number }) {
+      const width = windowWidth()
+      const screenX = ((from.x - window.screenX) > window.innerWidth / 2)
+        ? (window.screenX + window.innerWidth) - wm.poePanelWidth.value - width
+        : window.screenX + wm.poePanelWidth.value
+      const placed = floating.value ? floatingArea(floating.value, screenSize()) : null
+      const area = placed
+        ? { ...placed, x: window.screenX + placed.x, y: window.screenY + placed.y }
+        : { x: screenX, y: window.screenY, width, height: window.innerHeight }
+      // woke: the related items beside the window count as the window, or moving onto
+      // them hands the mouse back to the game and closes it. They sit on the screen's
+      // middle side of it (clickPosition: 'inventory' puts them on the left).
+      // Clipped short of where the item was checked, which stays the game's.
+      const related = RELATED_REM * rootFontPx() * uiZoom()
+      const clear = 2.5 * rootFontPx() * uiZoom()
+      const leftSide = floating.value ? floating.value.side === 'inventory' : (from.x - window.screenX) > window.innerWidth / 2
+      if (leftSide) {
+        const edge = from.x < area.x ? Math.max(area.x - related, from.x + clear) : area.x - related
+        const grow = Math.max(0, area.x - edge)
+        area.x -= grow
+        area.width += grow
+      } else {
+        const right = area.x + area.width
+        const edge = from.x > right ? Math.min(right + related, from.x - clear) : right + related
+        area.width += Math.max(0, edge - right)
+      }
+      sendTrackArea(from, area)
+    }
+    function instantPlaced (rect: DOMRect) {
+      if (!Host.isElectron || advancedCheck.value || !rect.width || props.config.wmWants !== 'show') return
+      sendTrackArea(trackFrom, { x: window.screenX + rect.x, y: window.screenY + rect.y, width: rect.width, height: rect.height })
+    }
+    // From the card to the window: Live offers searches, Details doesn't. The
+    // mouse is tracked into the window now, or leaving the card would close it.
+    // A click on the card already gave the overlay the mouse (and ended the
+    // tracking), so only a key (Space) needs the window tracked from here.
+    function openWindow (live: boolean, byKey = false) {
+      liveCheck.value = live
+      instant.value = null
+      if (byKey && Host.isElectron && !advancedCheck.value) trackWindowArea(trackFrom)
+    }
 
     function handleIdentification (identified: ParsedItem) {
       item.value = ok(identified)
@@ -444,6 +552,12 @@ export default defineComponent({
       checkPosition,
       item,
       advancedCheck,
+      liveCheck,
+      instant,
+      instantKey,
+      isBeast,
+      instantPlaced,
+      openWindow,
       handleIdentification,
       overlayKey,
       isLeagueSelected,
@@ -460,6 +574,11 @@ export default defineComponent({
 /* With the style menu's own auto margin, the league sits centred between the side controls. */
 :global(#price-window [data-price-title-text]) { margin-left: auto; }
 .edgeX, .edgeY, .corner { position: absolute; z-index: 2; }
+.zoomed { zoom: var(--w-ui-size, 1); }
+/* Under the instant card, close to it. */
+.zoomed.instantSide { margin-top: 6px; }
+.instantVerdict { display: flex; }
+.instantVerdict > * { margin-left: 0; }
 .edgeX { top: 8px; bottom: 8px; right: 0; width: 5px; cursor: ew-resize; }
 .edgeY { left: 8px; right: 8px; bottom: 0; height: 5px; cursor: ns-resize; }
 .corner { right: 0; bottom: 0; width: 12px; height: 12px; cursor: nwse-resize; }

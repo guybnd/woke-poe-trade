@@ -1,6 +1,6 @@
 // What sellers with enough stock ask per item on the exchange.
 import { describe, expect, it } from 'vitest'
-import { buildBulkInsight, bulkAmount } from '@/web/woke/price-insight/bulk-insight'
+import { buildBulkInsight, bulkAmount, pickBulkMarket } from '@/web/woke/price-insight/bulk-insight'
 import type { BulkListing } from '@/web/woke/price-insight/bulk-insight'
 
 let id = 0
@@ -92,5 +92,36 @@ describe('bulkAmount', () => {
     expect(bulkAmount(18)).toBe('18')
     expect(bulkAmount(17.46)).toBe('17.5')
     expect(bulkAmount(720.4)).toBe('720')
+  })
+})
+
+describe('pickBulkMarket', () => {
+  const side = (fair: number, sellers: number, total: number | null = 100) => ({
+    insight: { low: fair, fair, high: fair, floor: fair, confidence: 'high' as const, lowStock: 0, fewWithStock: false, sellers },
+    total
+  })
+
+  it('leads with chaos when divine sellers ask 1 div for a 1c item, though divine has more offers (WOKEPOET-487)', () => {
+    expect(pickBulkMarket(side(1, 24, 911), side(1, 30, 1207), 209)).toBe('xchgChaos')
+  })
+
+  it('leads with divine when it is cheaper in chaos', () => {
+    expect(pickBulkMarket(side(230, 10, 300), side(1, 20, 50), 209)).toBe('xchgStable')
+  })
+
+  it('a market with a seller or two loses to a busier one when the prices are close', () => {
+    expect(pickBulkMarket(side(150, 2), side(1, 20), 209)).toBe('xchgStable')
+    expect(pickBulkMarket(side(150, 2), side(1, 2), 209)).toBe('xchgChaos')
+  })
+
+  it('a thin side far under the rest still wins', () => {
+    expect(pickBulkMarket(side(1, 2), side(1, 20), 180)).toBe('xchgChaos')
+  })
+
+  it('takes the only side with offers, and falls back to the offer count without a rate', () => {
+    expect(pickBulkMarket({ insight: null, total: 40 }, side(1, 5, 10), 209)).toBe('xchgStable')
+    expect(pickBulkMarket(side(1, 5, 10), side(1, 5, 40), null)).toBe('xchgStable')
+    expect(pickBulkMarket({ insight: null, total: null }, { insight: null, total: 3 }, 209)).toBe('xchgStable')
+    expect(pickBulkMarket({ insight: null, total: 3 }, { insight: null, total: null }, 209)).toBe('xchgChaos')
   })
 })

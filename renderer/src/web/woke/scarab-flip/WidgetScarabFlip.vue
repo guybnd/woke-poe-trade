@@ -32,6 +32,9 @@
         <span class="w-dim">{{ verdictSub }}</span>
       </div>
       <div v-if="warning" :class="[$style.note, $style.warning]">{{ warning }}</div>
+      <div v-if="openerValue != null" :class="$style.note" class="w-num">
+        <span v-item-tip="{ name: family.opener!, type: family.ninjaType }">{{ family.opener }}</span> opens to {{ fmt(openerValue) }} on average<template v-if="family.lowConfidence && !countOf('yours')">, with every result counted as equally likely</template>. It has no price to buy at.
+      </div>
 
       <WSkeleton v-if="!snapshot" :rows="8" />
       <WEmpty v-else-if="!flip" icon="fas fa-recycle">poe.ninja has no {{ family.noun }} prices yet.</WEmpty>
@@ -51,7 +54,7 @@
             </span>
           </div>
           <div v-for="r in buy" :key="r.name" class="w-row" :class="$style.buyGrid" @contextmenu="rowMenu($event, itemName(r))">
-            <FlipName :name="r.name" :item="itemName(r)" :rare-cheap="'rareCheap' in r && r.rareCheap" :source="'weightSource' in r ? r.weightSource : undefined" />
+            <FlipName :name="r.name" :item="itemName(r)" :type="family.ninjaType" :rare-cheap="'rareCheap' in r && r.rareCheap" :source="'weightSource' in r ? r.weightSource : undefined" />
             <WPrice :chaos="r.chaos" :divine="divine" class="text-right" />
             <span class="text-right w-up w-num">+{{ amount(r.profitEach) }}c</span>
             <span v-if="hasVolume" class="text-right">{{ supplyLevel(r.supplyPerDay) ?? '' }}</span>
@@ -100,7 +103,7 @@
             <span v-if="hasVolume" class="text-right" :title="SUPPLY_TITLE">Supply</span>
           </div>
           <div v-for="r in rareCheap" :key="r.name" class="w-row" :class="$style.rareGrid" @contextmenu="rowMenu($event, r.name)">
-            <FlipName :name="r.name" :item="r.name" :rare-cheap="r.rareCheap" :source="r.weightSource" />
+            <FlipName :name="r.name" :item="r.name" :type="family.ninjaType" :rare-cheap="r.rareCheap" :source="r.weightSource" />
             <WPrice :chaos="r.chaos" :divine="divine" class="text-right" />
             <span class="text-right w-dim w-num">1 in {{ Math.round(1 / r.share).toLocaleString('en-US') }}</span>
             <span v-if="hasVolume" class="text-right">{{ supplyLevel(r.supplyPerDay) ?? '' }}</span>
@@ -123,7 +126,7 @@ export default { widget: widgetScarabFlipSpec }
 
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
-import { computed, defineComponent, h, inject, onUnmounted, shallowRef, watch } from 'vue'
+import { computed, defineComponent, h, inject, onUnmounted, shallowRef, watch, withDirectives } from 'vue'
 import type { PropType } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
@@ -144,7 +147,7 @@ import type { DockMenuAction } from '../dock/dock'
 import { useZone } from '../shared/zone'
 import { DEFAULT_FLIP_SORT, JACKPOT_CHAOS, SUPPLY_HIGH, SUPPLY_MEDIUM, buyList, firstSortDir, isTraded, flipOdds, parseExchange, rareCheapList, sortFlips, supplyLevel } from './calc'
 import type { FlipRow, FlipSortKey, UpgradeRow, WeightSource } from './calc'
-import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, bestFlip, familyById, parseLifeforce, priceFlip, pricedFamilies, shortName, shownFamily, unpricedShare } from './families'
+import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, bestFlip, knownFamily, parseLifeforce, priceFlip, pricedFamilies, shortName, shownFamily, unpricedShare } from './families'
 import type { Exchanges, FlipMethodId } from './families'
 import { stashHotkeyTarget } from './widget'
 import type { ScarabFlipWidget } from './widget'
@@ -308,6 +311,8 @@ function sortLabel (c: { key: FlipSortKey, label: string }) {
 const buy = computed(() => sortFlips<FlipRow | UpgradeRow>(buyList(rows.value, props.config.hideUntraded), sort.value, shortName))
 const rareCheap = computed(() => pool.value ? rareCheapList(pool.value) : [])
 const odds = computed(() => pool.value ? flipOdds(pool.value) : null)
+// What the family's opener is worth used: the average result, after the sell discount.
+const openerValue = computed(() => family.value.opener && odds.value && odds.value.saleValue > 0 ? odds.value.saleValue : null)
 // Both bars use one scale, so a long value bar means more than a long chance bar.
 const oddsScale = computed(() => Math.max(...(odds.value?.buckets ?? []).flatMap(b => [b.chance, b.valueShare]), 0.0001))
 
@@ -329,7 +334,7 @@ const verdictSub = computed(() => {
 const profitTitle = computed(() => {
   const { inputs } = method.value
   if (method.value.id === 'upgrade') return `What each item you put in makes: the price of the next tier after your sell discount, minus ${inputs} of this one, divided by ${inputs}.`
-  if (method.value.lifeforce) return 'What each item makes: the return of a reroll, minus the item and the lifeforce. Lifeforce per item is in Settings, under Market & investments.'
+  if (method.value.lifeforce) return 'What each item makes: the return of a reroll, minus the item and the lifeforce. Lifeforce per item is in Settings, under Market & flips.'
   return `What each item you put in makes: the return of a recipe, minus its ${inputs} items, divided by ${inputs}.`
 })
 
@@ -389,6 +394,8 @@ const FlipName = defineComponent({
   props: {
     name: { type: String, required: true },
     item: { type: String, required: true },
+    // The poe.ninja row type, for the tooltip and its menu.
+    type: { type: String, default: undefined },
     rareCheap: { type: Boolean, default: false },
     source: { type: String as PropType<WeightSource>, default: undefined }
   },
@@ -397,12 +404,13 @@ const FlipName = defineComponent({
       const icon = gameIcon(p.item)
       return h('span', { class: 'flex items-center gap-1 min-w-0', title: p.item }, [
         icon ? h('img', { src: icon, style: 'width: 20px; height: 20px; object-fit: contain; flex: none;', alt: '', loading: 'lazy', decoding: 'async', draggable: 'false' }) : null,
-        h('span', { class: 'w-trunc' }, shortName(p.name)),
+        // The name carries the item tooltip; the chips after it keep their own hints.
+        withDirectives(h('span', { class: 'w-trunc' }, shortName(p.name)), [[vItemTip, { name: p.item, type: p.type }]]),
         p.rareCheap
           ? h('i', { class: 'fas fa-star w-warn', style: 'flex: none; font-size: calc(11px * var(--w-text-scale, 1));', title: 'Exceptionally rare and cheap: it may rise later, so think before flipping it' })
           : null,
         p.source === 'estimate'
-          ? h('span', { class: 'w-num', style: WEIGHT_CHIP + 'color: var(--w-warn);', title: 'No measured weight: uses the average of the others. Change it in Settings.' }, 'EST')
+          ? h('span', { class: 'w-num', style: WEIGHT_CHIP + 'color: var(--w-warn);', title: 'No measured weight, so this is an estimate. Change it in Settings.' }, 'EST')
           : null,
         p.source === 'yours'
           ? h('span', { class: 'w-num', style: WEIGHT_CHIP + 'color: var(--w-info);', title: 'Your own weight, from Settings.' }, 'YOURS')
@@ -436,13 +444,19 @@ async function toggleOutlines () {
     readingStash = false
   }
   if (!read.found) {
-    stashNote("Can't read this tab. Outlines work on Scarab, Delirium, Delve, Essence and Blight tabs, mouse off them. All but Scarab need a game window 1080p or taller.")
+    stashNote("Can't read this tab. Outlines work on Delirium, Delve, Essence and Blight tabs, mouse off them, in a game window 1080p or taller.")
+    hostRequest('stash-watch-stop', null).catch(() => {})
+    return
+  }
+  // The old Scarab tab still reads, but scarabs left the game in 3.30.
+  const tabFamily = knownFamily(read.family)
+  if (!tabFamily) {
+    stashNote('Scarabs left the game in 3.30, so there is nothing to outline here')
     hostRequest('stash-watch-stop', null).catch(() => {})
     return
   }
   // The method the panel has picked for this family, and the same advice as the
   // panel: no untraded prices, and hold rare and cheap ones.
-  const tabFamily = familyById(read.family)
   const picked = props.config.methods?.[tabFamily.id]
   const tabMethod = tabFamily.methods.find(m => m.id === picked) ?? tabFamily.methods[0]
   const priced = priceFlip(tabFamily, tabMethod, prices.items, exchanges.value, options.value, lifeforcePerItem.value, props.config.weights)

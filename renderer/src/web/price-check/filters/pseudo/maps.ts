@@ -6,7 +6,7 @@ import { noSourcePseudoToFilter, propToFilter } from './item-property'
 import { findAndResolveByRef, statToNotFilter } from './utils'
 
 const PSEUDO = {
-  MORE_SCARABS: stat('More Scarabs: #%'),
+  MORE_THREADS: stat('More Scarabs: #%'),
   MORE_MAPS: stat('More Maps: #%'),
   MORE_DIVINATION_CARDS: stat('More Divination Cards: #%'),
   MORE_CURRENCY: stat('More Currency: #%'),
@@ -69,7 +69,7 @@ export function mapProps (bulk: boolean, ctx: FiltersCreationContext): void {
   if (item.category !== ItemCategory.Map || item.mapCompletionReward || item.rarity === ItemRarity.Unique) return
 
   if (!bulk) {
-    const hasValuableDrops = Boolean(item.mapMoreScarabs || item.mapMoreCurrency || item.mapMoreDivCards)
+    const hasValuableDrops = Boolean(item.mapMoreThreads || item.mapMoreCurrency || item.mapMoreDivCards)
 
     areaProps({
       disabled: {
@@ -86,10 +86,10 @@ export function mapProps (bulk: boolean, ctx: FiltersCreationContext): void {
         disabled: true
       }, ctx))
     }
-    if (item.mapMoreScarabs) {
+    if (item.mapMoreThreads) {
       ctx.filters.push(noSourcePseudoToFilter({
-        pseudo: pseudoStatByRef(PSEUDO.MORE_SCARABS)!,
-        roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreScarabs },
+        pseudo: pseudoStatByRef(PSEUDO.MORE_THREADS)!,
+        roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreThreads },
         disabled: false
       }, ctx))
     }
@@ -145,18 +145,22 @@ export function chartProps (bulk: boolean, ctx: FiltersCreationContext): void {
   }
 }
 
+// woke: one filter for the Void mod on every Valdo map: a void map searches
+// void maps, any other searches maps without it. The Valdo strip (ValdoStrip.vue)
+// switches it Any / Void / No void.
 export function valdoBadMods (ctx: FiltersCreationContext): void {
   if (!ctx.item.mapCompletionReward) return
 
   for (const lethalStatRef of VALDO_LETHAL_STATS) {
-    if (ctx.item.statsByType.some(calc => calc.stat.ref === lethalStatRef)) continue
-
+    const has = ctx.item.statsByType.some(calc => calc.stat.ref === lethalStatRef)
     const lethalStat = findAndResolveByRef(lethalStatRef, ModifierType.Explicit, ctx.item.category)
     const filter = statToNotFilter({
       stat: lethalStat,
       type: ModifierType.Explicit,
       disabled: false
     })
+    if (has) filter.not = undefined
+    filter.valdoVoid = true
     ctx.filters.push(filter)
   }
 }

@@ -3,8 +3,9 @@
   <div v-if="show && (!poeMode || poeOn)" class="p-4 layout-column min-h-0">
     <!-- woke: TradeListing puts the improved verdict here, the first thing in the window. -->
     <!-- The verdict's height from the start and through errors, so the mods don't move for either. -->
-    <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsStale, 'w-pc-verdict-held': verdictHeld }">
-      <div v-if="verdictHeld && !searched" class="w-pc-verdict-wait">Search for listing prices</div>
+    <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsDimmed, 'w-pc-verdict-held': verdictHeld }">
+      <woke-ninja-verdict v-if="ninjaVerdictShown" :item="item" :filters="itemFilters" :api="tradeAPI" />
+      <div v-else-if="verdictHeld && !searched" class="w-pc-verdict-wait">Search for listing prices</div>
     </div>
     <filter-name
       ref="nameComponent"
@@ -17,7 +18,9 @@
       </template>
       <woke-build-fit-chip :item="item" />
       <woke-filter-verdict-chip :item="item" />
-      <woke-deck-verdict-chip :item="item" />
+      <woke-deck-verdict-chip v-if="item.info.refName === 'Stacked Deck'" :item="item" />
+      <!-- woke: Vaal it? on a max-level 20% one of this gem; outcomes on hover (Guy's pick V3, 2026-11-21). -->
+      <woke-vaal-chip v-if="isGem && tradeAPI === 'trade'" :item="item" :league="itemFilters.trade.league" />
       <woke-high-roll-chip v-if="item.rarity === 'Unique'" :item="item" :stats="itemStats" @search="searchAfterPreset" />
       <!-- woke: the poe.ninja price folded onto the name row; its chevron opens the card below. -->
       <price-trend v-if="showTrendCard && !ninjaCardOpen" inline
@@ -25,20 +28,24 @@
         :filters="itemFilters" />
     </filter-name>
     <woke-map-strip :item="item" :stats="itemStats" :filters="itemFilters" :worth="isNightmareMap" :add-mods="!presets.some(p => p.active && p.id === 'filters.preset_bulk')" class="mb-2">
-      <!-- woke: a Nightmare Map's worth sits between Run it? and Trade search (Guy's pick A). -->
+      <!-- woke: a Nightmare Map's worth sits under the map section (Guy's pick A, 2026-11-21). -->
       <template v-if="isNightmareMap" #worth><woke-nightmare-strip :item="item" /></template>
     </woke-map-strip>
+    <!-- woke: a Valdo map: Void and Reward for the trade search, and its mods. -->
+    <woke-valdo-strip v-if="item.mapCompletionReward" :item="item" :stats="itemStats" :filters="itemFilters" class="mb-2" />
     <!-- woke: the gem's other versions with poe.ninja prices; a row searches trade only when clicked. -->
     <woke-gem-versions v-if="isGem && tradeAPI === 'trade'" :item="item" :filters="itemFilters" class="mb-2" />
     <!-- woke: 3.30 Wickerman module, Viscera versions and drop sources (remove with the league). -->
     <woke-viscera-strip v-if="isViscera" :item="item" class="mb-2" />
+    <!-- woke: where a divination card drops (Divcord). -->
+    <woke-card-drops v-if="isDivCard" :name="item.info.refName" compact class="mb-2" />
     <!-- woke: a Nightmare Map goes into any of the five T17 maps; boss fragment value of each (Boss runs module). -->
     <woke-nightmare-strip v-if="isNightmareMap && !stripProps" :item="item" class="mb-2" />
     <!-- woke: the improved verdict below shows poeprices and poe.ninja once listings load. -->
     <template v-if="!wokeVerdictShown">
       <price-prediction v-if="showPredictedPrice" class="mb-4"
         :item="item" />
-      <price-trend v-else-if="ninjaCardOpen"
+      <price-trend v-else-if="ninjaCardOpen && !ninjaVerdictShown"
         :item="item"
         :filters="itemFilters" />
     </template>
@@ -46,7 +53,8 @@
       ref="filtersComponent"
       :filters="itemFilters"
       :stats="rowStats"
-      :on-strip="!!stripProps"
+      :local-rows="localRows"
+      :on-strip="!!stripProps || !!item.mapCompletionReward"
       :item="item"
       :presets="presets"
       @preset="selectPreset"
@@ -57,10 +65,17 @@
     </filters-block>
     <!-- woke: over the old results' toolbar, so the listings stay where they are. -->
     <div v-if="!doSearch" class="flex justify-between items-center" :class="{ 'w-pc-search-row': resultsStale }">
-      <div class="flex w-40" @mouseenter="handleSearchMouseenter" @mouseleave="cancelSearchHover">
+      <div class="flex" @mouseenter="handleSearchMouseenter" @mouseleave="cancelSearchHover">
         <!-- woke: a click drops the hover's pending search, or an edit made right after re-searches. -->
-        <button class="btn w-pc-primary" @click="cancelSearchHover(); doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
+        <button class="btn w-pc-primary" :class="{ 'w-pc-glow': searchGlow }" @click="cancelSearchHover(); doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
       </div>
+      <!-- woke: one search that shows only sellers with 2+ copies, loading more listings as needed.
+           Outside the hover area above, so reaching it doesn't start a plain search. -->
+      <button v-if="canSearchBulk" class="btn ml-1 mr-auto whitespace-nowrap" data-search-bulk
+        title="Search, then show only sellers with 2 or more copies at one price. Loads more listings (up to 100) if fewer than 10 sellers show."
+        @click="cancelSearchHover(); searchBulk()">Search bulk</button>
+      <!-- woke: TradeListing says here whether the old results were filtered here or need a search. -->
+      <div ref="searchStatusSlot" class="w-pc-status-slot" />
       <!-- woke: the prefix / suffix caps ride the results bar; here while it waits for Search,
            at the same spot (the hidden refresh button keeps them there), so a scroll stays on them. -->
       <template v-if="itemFilters.affixCaps && tradeAPI === 'trade'">
@@ -85,6 +100,9 @@
       :stats="searched.stats"
       :item="item"
       :stale="resultsStale"
+      :narrow="narrowed"
+      :dim="resultsDimmed"
+      @glow="searchGlow = $event"
       @reset="resetTradeResults">
       <template v-if="itemFilters.affixCaps" #toolbar>
         <filter-affix-caps class="w-pc-caps" :caps="itemFilters.affixCaps" />
@@ -112,11 +130,10 @@
 </template>
 
 <script lang="ts">
-import { defineAsyncComponent, defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, onUnmounted, ComponentPublicInstance } from 'vue'
+import { defineAsyncComponent, defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, onUnmounted, ComponentPublicInstance, toRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ItemRarity, ItemCategory, ParsedItem } from '@/parser'
 import TradeListing from './trade/TradeListing.vue'
-import TradeBulk from './trade/TradeBulk.vue'
 import TradeLinks from './trade/TradeLinks.vue'
 import { proposeSearchName } from '@/web/woke/trade-searches/propose-name'
 import { apiToSatisfySearch, getTradeEndpoint } from './trade/common'
@@ -126,12 +143,9 @@ import FilterAffixCaps from './filters/FilterAffixCaps.vue'
 import { createPresets } from './filters/create-presets'
 import PricePrediction from './price-prediction/PricePrediction.vue'
 import StackValue from './expected-value/StackValue.vue'
-import WokeDustChip from '@/web/woke/price-insight/DustChip.vue'
-import WokeDustVerdictChip from '@/web/woke/disenchant/DustVerdictChip.vue'
 import WokeRollPresets from '@/web/woke/price-insight/RollPresets.vue'
 import WokeBuildFitChip from '@/web/woke/pob-builds/BuildFitChip.vue'
 import WokeFilterVerdictChip from '@/web/woke/loot-filter/FilterVerdictChip.vue'
-import WokeDeckVerdictChip from '@/web/woke/stacked-decks/DeckVerdictChip.vue'
 import FilterName from './filters/FilterName.vue'
 import { provideSwap } from '@/web/woke/harvest-swap/useSwap'
 import { provideStatActions } from '@/web/woke/price-insight/stat-actions'
@@ -140,12 +154,19 @@ import { provideCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { WTabs } from '@/web/woke/ui'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
 import { rawClone } from '@/web/woke/raw-clone'
+import type { ResultsState } from '@/web/woke/price-insight/local-filter'
+// woke: loaded with the first search, not at startup (the startup JS budget).
+type LocalFilter = typeof import('@/web/woke/price-insight/local-filter')
+const loadLocalFilter = () => import('@/web/woke/price-insight/local-filter')
 import { AppConfig } from '@/web/Config'
 import { isModuleOn } from '@/web/woke/modules'
 import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { priceView, ninjaCardOpen } from '@/web/woke/price-insight/view'
+import { holdBulkSearch, fixedPriceItem, isUnidUniqueJewel } from '@/web/woke/price-insight/ninja-first'
+import { exactDetailsId } from './trends/getDetailsId'
+import { usePoeninja } from '@/web/background/Prices'
 import { poeMode, poeOn, loadPoeKit } from '@/web/woke/price-insight/window-style'
 
 let _showSupportLinksCounter = 0
@@ -157,22 +178,29 @@ export default defineComponent({
   components: {
     // woke: lazy, so the map strip and its checks stay out of the startup bundle.
     WokeMapStrip: defineAsyncComponent(() => import('@/web/woke/map-mods/MapModStrip.vue')),
+    WokeValdoStrip: defineAsyncComponent(() => import('@/web/woke/valdo/ValdoStrip.vue')),
     // Loads when the Flip tab is first opened.
     WokeSwapFlip: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapFlip.vue')),
     WokeGemVersions: defineAsyncComponent(() => import('@/web/woke/gem-versions/GemVersions.vue')),
+    WokeVaalChip: defineAsyncComponent(() => import('@/web/woke/gem-versions/VaalChip.vue')),
     WokeVisceraStrip: defineAsyncComponent(() => import('@/web/woke/wickerman/VisceraStrip.vue')),
+    WokeCardDrops: defineAsyncComponent(() => import('@/web/woke/card-drops/CardDrops.vue')),
     WokeNightmareStrip: defineAsyncComponent(() => import('@/web/woke/boss-runs/NightmareStrip.vue')),
+    // The poe.ninja verdict before an exchange search (WOKEPOET-479).
+    WokeNinjaVerdict: defineAsyncComponent(() => import('@/web/woke/price-insight/NinjaVerdict.vue')),
     WTabs,
-    WokeDustChip,
-    WokeDustVerdictChip,
+    // woke: chips for a few kinds of item load with their first check (the startup JS budget).
+    WokeDustChip: defineAsyncComponent(() => import('@/web/woke/price-insight/DustChip.vue')),
+    WokeDustVerdictChip: defineAsyncComponent(() => import('@/web/woke/disenchant/DustVerdictChip.vue')),
     WokeRollPresets,
     WokeBuildFitChip,
     WokeHighRollChip: defineAsyncComponent(() => import('@/web/woke/price-insight/HighRollChip.vue')),
     WokeFilterVerdictChip,
-    WokeDeckVerdictChip,
+    WokeDeckVerdictChip: defineAsyncComponent(() => import('@/web/woke/stacked-decks/DeckVerdictChip.vue')),
     PricePrediction,
     TradeListing,
-    TradeBulk,
+    // woke: only exchange items need it, so it loads when one is checked (startup JS budget).
+    TradeBulk: defineAsyncComponent(() => import('./trade/TradeBulk.vue')),
     TradeLinks,
     PriceTrend,
     FiltersBlock,
@@ -188,6 +216,11 @@ export default defineComponent({
     advancedCheck: {
       type: Boolean,
       required: true
+    },
+    /** woke: asked for from inside the overlay (a menu's Price check, Ctrl+Space), so it wants listings. */
+    live: {
+      type: Boolean,
+      default: false
     }
   },
   setup (props) {
@@ -196,7 +229,25 @@ export default defineComponent({
 
     const verdictSlot = shallowRef<HTMLElement | null>(null)
     provide('price-verdict-slot', verdictSlot)
+    const searchStatusSlot = shallowRef<HTMLElement | null>(null)
+    provide('price-search-status-slot', searchStatusSlot)
     provide('price-check-search', () => { nextTick(() => { doSearch.value = true }) })
+
+    const poeninja = usePoeninja()
+    // woke: poe.ninja's price for the exact item, read when the item comes in.
+    const ninjaChaos = shallowRef<number | null>(null)
+    let waitingForPrices = false
+    function readNinjaChaos (item: ParsedItem): number | null {
+      const q = exactDetailsId(item)
+      if (!q || itemFilters.value.trade.league !== leagues.selectedId.value) return null
+      return poeninja.findPriceByQuery(q)?.chaos || null
+    }
+    // poe.ninja loads for this league (Prices.ts) and hasn't yet.
+    function pricesPending (): boolean {
+      const league = leagues.selected.value
+      return poeninja.updatedAt.value == null && Boolean(league?.isPopular) && league?.realm === 'pc-ggg' &&
+        itemFilters.value.trade.league === league?.id
+    }
 
     const presets = ref<{ active: string, presets: FilterPreset[] }>(null!)
     const itemFilters = computed(() => presets.value.presets.find(preset => preset.id === presets.value.active)!.filters)
@@ -207,7 +258,8 @@ export default defineComponent({
     provide('map-strip-owns', stripProps)
     const rowStats = computed(() => {
       // Only while the strip is up: with Map mods off, the map's mods stay rows.
-      const onStrip = (s: FilterOrGroup) => !s.group && stripProps.value != null && (!!s.mapMod || stripProps.value.has(s.tradeId[0]))
+      // A Valdo map's Void filter is on the Valdo strip, which is always up.
+      const onStrip = (s: FilterOrGroup) => !s.group && (!!s.valdoVoid || (stripProps.value != null && (!!s.mapMod || stripProps.value.has(s.tradeId[0]))))
       return itemStats.value.some(onStrip) ? itemStats.value.filter(s => !onStrip(s)) : itemStats.value
     })
     const doSearch = ref(false)
@@ -248,9 +300,12 @@ export default defineComponent({
     const tradeAPI = ref<'trade' | 'bulk'>('bulk')
 
     // TradeListing.vue OR TradeBulk.vue
-    const tradeService = ref<{ execSearch(): void } | null>(null)
+    const tradeService = ref<{ execSearch(bulk?: boolean): void } | null>(null)
     // woke: a search started before the trade listing was there to run it (see below).
     let searchWaiting = false
+    // woke: Search bulk's click, for the search it starts (and one still waiting for the listing).
+    let bulkClick = false
+    let bulkWaiting = false
     // FiltersBlock.vue
     const filtersComponent = ref<ComponentPublicInstance>(null!)
     // FilterName.vue, which holds the tiles and chips
@@ -305,7 +360,32 @@ export default defineComponent({
       }
 
       tradeAPI.value = apiToSatisfySearch(props.item, itemStats.value, itemFilters.value)
+
+      // woke: an exchange item poe.ninja prices exactly shows that price and
+      // searches only on a click (ninja-first.ts, WOKEPOET-479).
+      ninjaChaos.value = readNinjaChaos(item)
+      waitingForPrices = false
+      if (!doSearch.value) return
+      const hold = { api: tradeAPI.value, enabled: widget.value.wokeNinjaFirst, live: props.live, fixed: fixedPriceItem(item) || isUnidUniqueJewel(item) }
+      if (holdBulkSearch({ ...hold, chaos: ninjaChaos.value })) {
+        doSearch.value = false
+      } else if (ninjaChaos.value == null && pricesPending() && holdBulkSearch({ ...hold, chaos: 1 })) {
+        // poe.ninja hasn't loaded yet (app start, league change): wait for it
+        // rather than spend a search it might make unneeded (watcher below).
+        doSearch.value = false
+        waitingForPrices = true
+      }
     }, { immediate: true })
+
+    // woke: prices arrived for an exchange item held while they loaded. Priced:
+    // the verdict shows; not priced: the search it would have run starts now.
+    watch(() => poeninja.updatedAt.value, (at) => {
+      if (at == null || !waitingForPrices) return
+      waitingForPrices = false
+      if (doSearch.value || searched.value) return
+      ninjaChaos.value = readNinjaChaos(props.item)
+      if (ninjaChaos.value == null) doSearch.value = true
+    })
 
     // woke: swappable mods (harvest-swap/). Made after the presets exist.
     const swap = provideSwap(computed(() => props.item), itemFilters, itemStats, computed(() => tradeAPI.value === 'trade'))
@@ -320,6 +400,8 @@ export default defineComponent({
     watch(() => [props.item, doSearch.value], () => {
       // A new item or a cancelled search drops one still waiting for the listing.
       searchWaiting = false
+      const bulk = bulkClick
+      bulkClick = false
       if (doSearch.value === false) return
 
       tradeAPI.value = apiToSatisfySearch(props.item, itemStats.value, itemFilters.value)
@@ -333,9 +415,10 @@ export default defineComponent({
       nextTick(() => {
         if (tradeService.value) {
           searchWaiting = false
-          tradeService.value.execSearch()
+          tradeService.value.execSearch(bulk)
         } else {
           searchWaiting = true
+          bulkWaiting = bulk
         }
       })
     }, { deep: false, immediate: true })
@@ -347,7 +430,8 @@ export default defineComponent({
       if (!service) return
       if (!searchWaiting || !doSearch.value) return
       searchWaiting = false
-      service.execSearch()
+      service.execSearch(bulkWaiting)
+      bulkWaiting = false
     })
 
     watch(() => [props.item, doSearch.value, itemStats.value, itemFilters.value], (curr, prev) => {
@@ -371,13 +455,31 @@ export default defineComponent({
     }
     // Taken from the live rows when the search starts: the snapshot's copies lose
     // what the request reads off the rows themselves, so they never compare equal.
-    let searchedQuery: string | null = null
-    watch(() => searched.value, (snap) => { searchedQuery = snap && tradeAPI.value === 'trade' ? liveQuery() : null }, { flush: 'sync' })
+    const searchedQuery = shallowRef<string | null>(null)
+    watch(() => searched.value, (snap) => { searchedQuery.value = snap && tradeAPI.value === 'trade' ? liveQuery() : null }, { flush: 'sync' })
     watch(() => searched.value && tradeAPI.value === 'trade' ? liveQuery() : null, (now) => {
-      if (now != null && doSearch.value && searchedQuery != null && now !== searchedQuery) {
+      if (now != null && doSearch.value && searchedQuery.value != null && now !== searchedQuery.value) {
         doSearch.value = false
       }
     })
+    // woke: tighter ranges filter the listings already loaded (no search spent);
+    // anything the old search couldn't have returned keeps them dimmed for a new search.
+    const localFilter = shallowRef<LocalFilter | null>(null)
+    watch(searched, (snap) => {
+      if (snap && !localFilter.value) loadLocalFilter().then(mod => { localFilter.value = mod }, () => {})
+    })
+    const resultsState = computed<ResultsState | null>(() => {
+      if (!resultsStale.value || !searched.value) return null
+      // Until it loads, the results need a search as before.
+      if (!localFilter.value) return { kind: 'stale' }
+      return localFilter.value.compareToSearched(searchedQuery.value, searched.value.stats, itemFilters.value, itemStats.value)
+    })
+    const narrowed = computed(() => resultsState.value?.kind === 'narrowed' ? resultsState.value : null)
+    const resultsDimmed = computed(() => resultsStale.value && resultsState.value?.kind === 'stale')
+    // The rows filtering here get a mark in the filters.
+    const localRows = computed(() => narrowed.value?.checks.map(c => toRaw(c.row)) ?? [])
+    // Search glows when only a new search can help: dimmed results, or a filtered list with nothing left to load.
+    const searchGlow = ref(false)
 
     watch(() => [props.item, JSON.stringify(itemFilters.value.trade)], (curr, prev) => {
       const cItem = curr[0]; const pItem = prev[0]
@@ -415,6 +517,8 @@ export default defineComponent({
     })
 
     function handleSearchMouseenter (e: MouseEvent) {
+      // woke: an exchange item poe.ninja prices searches only on a click (WOKEPOET-479).
+      if (ninjaHolds.value) return
       const from = e.relatedTarget as HTMLElement
       if ((filtersComponent.value.$el as HTMLElement).contains(from) ||
           (nameComponent.value.$el as HTMLElement).contains(from)) {
@@ -448,6 +552,18 @@ export default defineComponent({
     const { t } = useI18n()
 
     const wokeVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value != null)
+    // woke: before an exchange search, poe.ninja's price is the verdict.
+    // In Classic view too: it holds the search the same way.
+    // An unidentified unique jewel too (WOKEPOET-481): poe.ninja's price, unidentified listings on a click.
+    const isFixed = computed(() => fixedPriceItem(props.item) || isUnidUniqueJewel(props.item))
+    // An item poe.ninja prices whose search waits for a click: exchange items, and fixed ones (cards, beasts, keys).
+    const ninjaHolds = computed(() => ninjaChaos.value != null && widget.value.wokeNinjaFirst !== false &&
+      (tradeAPI.value === 'bulk' || isFixed.value))
+    const ninjaVerdictShown = computed(() => !doSearch.value && ninjaHolds.value && (isFixed.value
+      // A fixed item's listings bring their own verdict.
+      ? searched.value == null
+      // A ticked stat makes the next search an item search, which the card doesn't offer.
+      : apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'bulk'))
 
     return {
       proposeSearchName,
@@ -459,9 +575,11 @@ export default defineComponent({
       wokeVerdictShown,
       isGem: computed(() => props.item.category === ItemCategory.Gem),
       isViscera: computed(() => props.item.category === ItemCategory.Viscera),
+      isDivCard: computed(() => props.item.category === ItemCategory.DivinationCard),
       isNightmareMap: computed(() => props.item.info.refName === 'Nightmare Map' && isModuleOn(AppConfig(), 'boss-runs')),
       ninjaCardOpen,
-      showTrendCard: computed(() => !wokeVerdictShown.value && !showPredictedPrice.value),
+      ninjaVerdictShown,
+      showTrendCard: computed(() => !wokeVerdictShown.value && !ninjaVerdictShown.value && !showPredictedPrice.value),
       verdictHeld: computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade'),
       t,
       itemFilters,
@@ -470,7 +588,18 @@ export default defineComponent({
       stripProps,
       searched,
       resultsStale,
+      resultsState,
+      resultsDimmed,
+      narrowed,
+      localRows,
+      searchGlow,
+      searchStatusSlot,
       doSearch,
+      canSearchBulk: computed(() => apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'trade'),
+      searchBulk () {
+        bulkClick = true
+        doSearch.value = true
+      },
       tradeAPI,
       tradeService,
       filtersComponent,

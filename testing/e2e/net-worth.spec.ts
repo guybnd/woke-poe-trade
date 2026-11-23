@@ -7,12 +7,22 @@ import { test, expect, FIXTURES } from './harness'
 
 const LIST = fs.readFileSync(path.join(FIXTURES, 'stash/tab-list.json'), 'utf8')
 const DUMP = fs.readFileSync(path.join(FIXTURES, 'stash/tab-dump.json'), 'utf8')
+// Three sales from the trade history: newest first, priced in chaos and divines.
+const ago = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString()
+const SALES = JSON.stringify({
+  result: [
+    { time: ago(1), item_id: 's1', price: { amount: 44, currency: 'chaos' }, item: { typeLine: 'Empower Support', baseType: 'Empower Support', frameType: 4, icon: '', properties: [{ name: 'Level', values: [['4', 0]] }, { name: 'Quality', values: [['+20%', 1]] }] } },
+    { time: ago(2), item_id: 's2', price: { amount: 1, currency: 'divine' }, item: { typeLine: "Maven's Writ", baseType: "Maven's Writ", frameType: 0, icon: '' } },
+    { time: ago(3), item_id: 's3', price: { amount: 2, currency: 'divine' }, item: { name: 'Headhunter', typeLine: 'Leather Belt', baseType: 'Leather Belt', frameType: 3, icon: '' } }
+  ]
+})
 
 test('the stash reader turns on, reads the picked tabs, and Net worth prices them', async ({ overlay, fakeApp }) => {
   fakeApp.site.reply = (url) => {
     const u = new URL(url)
     if (u.pathname === '/my-account') return { status: 200, body: '<html><title>View Profile - Path of Exile - Tester#1234</title></html>' }
     if (u.pathname === '/character-window/get-stash-items') return { status: 200, body: u.searchParams.get('tabIndex') === '0' ? LIST : DUMP }
+    if (u.pathname.startsWith('/api/trade/history/')) return { status: 200, body: SALES }
     return null
   }
   try {
@@ -61,6 +71,64 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect(panel.getByText('Dump', { exact: true }).first()).toBeVisible()
     await overlay.snap('net worth after a read')
     expect(fakeApp.site.requests.some(u => u.includes('tabIndex=1'))).toBe(true)
+
+    // Sections fold to their title line, and the bar under the middle row
+    // gives it a height its lists scroll inside. Both are saved.
+    const details = panel.getByRole('button', { name: /^Details/ })
+    if (await details.getAttribute('aria-expanded') !== 'true') await details.click()
+    const bar = panel.getByTitle("Drag to change this row's height · double-click to fit")
+    // The bar sits right inside the row it sizes.
+    const row = bar.locator('xpath=..')
+    const before = (await row.boundingBox())!.height
+    await bar.scrollIntoViewIfNeeded()
+    const at = (await bar.boundingBox())!
+    await overlay.page.mouse.move(at.x + at.width / 2, at.y + at.height / 2)
+    await overlay.page.mouse.down()
+    await overlay.page.mouse.move(at.x + at.width / 2, at.y + at.height / 2 + 40, { steps: 4 })
+    await overlay.page.mouse.up()
+    await expect.poll(async () => Math.round((await row.boundingBox())!.height)).toBeGreaterThan(before + 25)
+    await overlay.snap('net worth middle row dragged taller')
+    // Double-click fits it to what's in it again.
+    await bar.dblclick()
+    await expect.poll(async () => Math.round((await row.boundingBox())!.height)).toBeLessThan(before + 10)
+    // Folded, Where it is keeps its title and drops its rows.
+    const where = panel.getByRole('button', { name: 'Where it is' })
+    // A category row: a button with its share bar (an <i>) right inside.
+    const catRows = panel.locator('button[aria-pressed]:has(> i)')
+    await expect(where).toHaveAttribute('aria-expanded', 'true')
+    expect(await catRows.count()).toBeGreaterThan(0)
+    await where.click()
+    await expect(where).toHaveAttribute('aria-expanded', 'false')
+    await expect(catRows).toHaveCount(0)
+    await overlay.snap('net worth where it is folded')
+    await where.click()
+    await expect(where).toHaveAttribute('aria-expanded', 'true')
+
+    // The Sales view: a header click sorts the table, a second click flips it.
+    // Price compares by value: 44c sorts under 1 div though 44 > 1.
+    await panel.getByRole('tab', { name: 'Sales' }).click()
+    await panel.getByRole('button', { name: 'Refresh' }).click()
+    const rows = panel.locator('tbody tr')
+    const names = () => rows.locator('td:first-child').allInnerTexts()
+    await expect(rows).toHaveCount(3, { timeout: 10_000 })
+    await expect.poll(names).toEqual(['Empower Support 4/20', "Maven's Writ", 'Headhunter'])
+    const price = panel.getByRole('button', { name: 'Price', exact: true })
+    await price.click()
+    await expect.poll(names).toEqual(['Headhunter', "Maven's Writ", 'Empower Support 4/20'])
+    await expect(panel.locator('th[aria-sort="descending"]')).toContainText('Price')
+    await price.click()
+    await expect.poll(names).toEqual(['Empower Support 4/20', "Maven's Writ", 'Headhunter'])
+    await expect(panel.locator('th[aria-sort="ascending"]')).toContainText('Price')
+    // hover() scrolls the table to the row, and a scroll hides the tooltip:
+    // scroll first and let the event pass, then hover (as item-tip.spec does).
+    const hh = rows.filter({ hasText: 'Headhunter' }).getByText('Headhunter', { exact: true })
+    await hh.scrollIntoViewIfNeeded()
+    await overlay.page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    await hh.hover()
+    await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
+    await overlay.snap('net worth sales sorted by price')
+    await panel.getByRole('button', { name: 'When', exact: true }).click()
+    await panel.getByRole('tab', { name: 'Holdings' }).click()
 
     // Off again, without asking, and the window goes. The fake app lives on
     // for the next test in this worker, so it must find the reader off.

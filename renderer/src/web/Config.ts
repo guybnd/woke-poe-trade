@@ -1,4 +1,4 @@
-import { reactive as deepReactive, shallowRef, toRaw } from 'vue'
+import { reactive as deepReactive, shallowRef, toRaw, watch } from 'vue'
 import { configForDisk } from './woke/shared/config-disk'
 import { Host } from '@/web/background/IPC'
 import { HostConfig, ShortcutAction } from '@ipc/types'
@@ -22,10 +22,12 @@ import { carryRewordedRatings } from './woke/map-mods/rules'
 import type { ModRating } from './woke/map-mods/rules'
 import { movePopupsToNewSpot } from './woke/ui/window-anchor'
 import { foldMarketWindow } from './woke/market/widget'
+import { foldMapScan } from './woke/map-mods/scan'
 import type { WokeModulesConfig } from './woke/modules'
 import type { ItemCheckWidget } from './item-check/widget'
 import { BOOKMARKS_TARGET } from './woke/item-lookup/lookup'
 import { registry as widgetRegistry } from './overlay/widget-registry.js'
+import { keepZorderUnderCap } from './overlay/zorder'
 
 const _config = shallowRef<Config | null>(null)
 // The last saved settings as JSON: comparing text is far cheaper than a deep
@@ -51,9 +53,19 @@ export function updateConfig (updates: Config) {
   applyFontSize()
 }
 
-function applyFontSize () {
-  document.documentElement.style.fontSize = `${_config.value!.fontSize}px`
+// The root font size sizes the price check, map check and settings window
+// (they are in rem): Settings > Look > Price check window size.
+export function rootFontPx (): number {
+  return _config.value?.fontSize ?? 16
 }
+
+function applyFontSize () {
+  if (!_config.value || typeof document === 'undefined') return
+  document.documentElement.style.fontSize = `${rootFontPx()}px`
+}
+// Also when the price check's palette changes the size: the save (and its
+// echo) waits until the price check closes.
+watch(() => _config.value?.fontSize, applyFontSize)
 
 export function saveConfig (opts?: { isTemporary: boolean }) {
   const rawConfig = toRaw(_config.value!)
@@ -509,33 +521,24 @@ function upgradeConfig (_config: Config): Config {
     itemCheck.bookmarksKey ??= null
     itemCheck.bookmarks ??= []
   }
-  // woke: single-instance windows are only created on a fresh config.
-  if (!config.widgets.some(w => w.wmType === MAP_CHECK_TYPE)) {
-    config.widgets.push(initMapCheckWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
-  }
-  if (!config.widgets.some(w => w.wmType === DEATH_RECAP_TYPE)) {
-    config.widgets.push(initDeathRecapWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
-    // New to this config: stays off for anyone who has Map mods off, like "Price check only".
+  // woke: single-instance windows are only created on a fresh config. One new
+  // to this config stays off for anyone who has the module it follows off,
+  // like "Price check only" (death recap: even before any module choice).
+  {
     const woke = config as unknown as { woke?: WokeModulesConfig, widgets: Array<{ wmType: string }> }
-    if (!isModuleOn(woke, 'map-mods')) ensureWokeConfig(woke).woke.off.push('death-recap')
-  }
-  if (!config.widgets.some(w => w.wmType === SESSION_STORY_TYPE)) {
-    config.widgets.push(initSessionStoryWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
-    // New to this config: stays off for anyone who has Farming off, like "Price check only".
-    const woke = config as unknown as { woke?: WokeModulesConfig, widgets: Array<{ wmType: string }> }
-    if (woke.woke && !isModuleOn(woke, 'farming')) woke.woke.off.push('session-story')
-  }
-  if (!config.widgets.some(w => w.wmType === STACKED_DECKS_TYPE)) {
-    config.widgets.push(initStackedDecksWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
-    // New to this config: stays off for anyone who has Farming off, like "Price check only".
-    const woke = config as unknown as { woke?: WokeModulesConfig, widgets: Array<{ wmType: string }> }
-    if (woke.woke && !isModuleOn(woke, 'farming')) woke.woke.off.push('stacked-decks')
-  }
-  if (!config.widgets.some(w => w.wmType === POE_RE_TYPE)) {
-    config.widgets.push(initPoeReWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
-  }
-  if (!config.widgets.some(w => w.wmType === MEGALO_TYPE)) {
-    config.widgets.push(initMegaloWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
+    const singles: Array<[string, (wmId: number) => unknown, string?, string?, boolean?]> = [
+      [MAP_CHECK_TYPE, initMapCheckWidget],
+      [DEATH_RECAP_TYPE, initDeathRecapWidget, 'death-recap', 'map-mods', true],
+      [SESSION_STORY_TYPE, initSessionStoryWidget, 'session-story', 'farming'],
+      [STACKED_DECKS_TYPE, initStackedDecksWidget, 'stacked-decks', 'farming'],
+      [POE_RE_TYPE, initPoeReWidget],
+      [MEGALO_TYPE, initMegaloWidget]
+    ]
+    for (const [type, init, module, follows, always] of singles) {
+      if (config.widgets.some(w => w.wmType === type)) continue
+      config.widgets.push(init(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1) as typeof config.widgets[number])
+      if (module && follows && (always || woke.woke) && !isModuleOn(woke, follows)) ensureWokeConfig(woke).woke.off.push(module)
+    }
   }
   for (const w of config.widgets) {
     if (w.wmType === MEGALO_TYPE && w.wmFlags.includes('menu::skip')) w.wmFlags = w.wmFlags.filter((f: string) => f !== 'menu::skip')
@@ -578,10 +581,17 @@ function upgradeConfig (_config: Config): Config {
   if ((modules.woke?.version ?? 0) < 3) {
     foldMarketWindow(config.widgets as unknown as Array<Record<string, unknown> & { wmId: number, wmType: string }>)
   }
+  // woke: Map scan is part of Map mods; its keys move there once.
+  // A config with no woke block (APT's own) has never had a Map scan window.
+  if (modules.woke && (modules.woke.version ?? 0) < 4) {
+    foldMapScan(config as unknown as Parameters<typeof foldMapScan>[0])
+  }
   // woke: each tool has one name now.
   renameOldDefaultTitles(config.widgets as Array<{ wmType: string, wmTitle?: string }>)
   // woke: panels still on their old default spot open in the new one.
   movePopupsToNewSpot(config.widgets as Array<Record<string, any> & { wmType: string }>)
+  // woke: panels whose z-order grew past the item tooltip's come back under it.
+  keepZorderUnderCap(config.widgets as Array<{ wmZorder: number | 'exclusive' | null }>)
   // woke: the fix-ups above are safe to rerun. One that isn't checks
   // `(modules.woke.version ?? 0) < N`, runs once, and WOKE_CONFIG_VERSION goes to N.
   if (modules.woke) modules.woke.version = Math.max(modules.woke.version ?? 0, WOKE_CONFIG_VERSION)

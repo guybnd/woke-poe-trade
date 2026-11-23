@@ -16,12 +16,35 @@
         <span :title="c.name">{{ c.short }}</span>
         <span :class="$style.bar"><i :class="(c.profit ?? c.loot) >= 0 ? $style.barUp : $style.barDown" :style="{ width: barWidth(c) }" /></span>
         <b :class="(c.profit ?? c.loot) >= 0 ? 'w-up' : 'w-down'">{{ c.profit == null ? chaos(c.loot) : signed(c.profit) }}</b>
+        <!-- The vault this map can spawn; a tag, not in profit (Guy's pick, 2026-11-21). -->
+        <span :class="$style.vault" :data-nightmare-vault="c.id" @mouseenter="hoverVault(c.vault, $event)" @mouseleave="hovered = null">{{ c.vault?.short ?? '' }}</span>
       </template>
     </div>
     <button v-if="open" type="button" :class="$style.gridToggle" :aria-expanded="gridOpen" data-nightmare-grid @click="gridOpen = !gridOpen">
       {{ estimated && !gridOpen ? '~ estimates · ' : '' }}{{ gridOpen ? 'Back to the profit bars' : 'Show the fragment × map grid' }} <i class="fas" :class="gridOpen ? 'fa-chart-bar' : 'fa-table'" />
     </button>
-    <div v-if="open && gridOpen" :class="$style.wrap">
+    <WSegmented v-if="open && gridOpen && vaultTable" v-model="bigTab" :class="$style.tabs" data-nightmare-tabs
+      :options="[{ value: 'frags', label: 'Fragments' }, { value: 'vaults', label: 'Vaults' }]" />
+    <!-- Guy's pick A (2026-11-22): a button per vault, the chosen vault's rewards below as icon rows. -->
+    <div v-if="open && gridOpen && bigTab === 'vaults' && vaultTable" :class="$style.vaults" data-nightmare-vaults>
+      <div :class="$style.vchips">
+        <button v-for="v in vaultBlocks" :key="v.id" type="button" :class="[$style.vchip, shownVault?.id === v.id && $style.vchipOn]"
+          :aria-pressed="shownVault?.id === v.id" :data-nightmare-vault-pick="v.id" @click="pickedVault = v.id">
+          <b>{{ v.short }}</b>
+          <span>{{ v.maps.join(', ') || 'no map' }}</span>
+        </button>
+      </div>
+      <template v-if="shownVault">
+        <div :class="$style.vhead" :data-nightmare-vault-block="shownVault.id">
+          <span :class="$style.vtitle">{{ shownVault.name }}</span>
+          <span class="w-dim">{{ shownVault.quadrant }}</span>
+          <span class="flex-1" />
+          <span :class="$style.est" :title="TYPICAL_TIP">~{{ chaos(shownVault.typical) }} typical</span>
+        </div>
+        <VaultRewardRows :rewards="shownVault.rewards" fit />
+      </template>
+    </div>
+    <div v-if="open && gridOpen && (bigTab === 'frags' || !vaultTable)" :class="$style.wrap">
       <table :class="$style.grid">
         <thead>
           <tr>
@@ -46,6 +69,10 @@
               </template>
             </td>
           </tr>
+          <tr v-if="cols.some(c => c.vault)" :class="$style.sep" data-nightmare-vault-row>
+            <td class="w-dim">Vault</td>
+            <td v-for="c in cols" :key="c.id" @mouseenter="hoverVault(c.vault, $event)" @mouseleave="hovered = null">{{ c.vault?.short ?? '' }}</td>
+          </tr>
           <tr :class="$style.sep">
             <td class="w-dim">Loot</td>
             <td v-for="c in cols" :key="c.id" :class="estimated && $style.est">{{ estimated ? '~' : '' }}{{ chaos(c.loot) }}</td>
@@ -60,18 +87,24 @@
         </tbody>
       </table>
     </div>
-    <div v-if="open && gridOpen" :class="$style.note">
+    <div v-if="open && gridOpen && (bigTab === 'frags' || !vaultTable)" :class="$style.note">
       <template v-if="estimated">~ is an estimate: no drop rates are published. {{ perKill }} fragments a kill, % = copies a kill; the unique's 5% is a 3.29 guide's figure.</template>
       Fragments a kill and your kill log live in Boss runs › Nightmare.
     </div>
+    <VaultHoverCard :vault="hoverCard" :anchor="hovered?.rect ?? null" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, inject, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
+import type { WidgetManager } from '@/web/overlay/interfaces'
+import { onSharedDataChange } from '../app/live-data'
 import { useFold } from '../ui/fold'
 import { AppConfig } from '@/web/Config'
 import WIcon from '../ui/WIcon.vue'
+import WSegmented from '../ui/WSegmented.vue'
+import VaultHoverCard from '../vaults/VaultHoverCard.vue'
+import VaultRewardRows from '../vaults/VaultRewardRows.vue'
 import { itemArt } from '../ui/game-icons'
 import { usePriceIndex } from '../market/price-index'
 import { evaluateBoss, priceResolver } from './calc'
@@ -79,6 +112,8 @@ import type { BossPrefs, DropRow } from './calc'
 import { DEFAULT_FRAGMENTS_PER_KILL, NIGHTMARE_MAP, NIGHTMARE_MAPS, nightmareBosses, UBER_FRAGMENTS } from './nightmare'
 import { BOSS_RUNS_TYPE } from './widget'
 import type { BossRunsWidget } from './widget'
+import { loadVaults, nightmareMapsFor, rewardIcon, rewardPrice, shortName, typicalPick, vaultForNightmare } from '../vaults/vaults'
+import type { Vault, VaultTable } from '../vaults/vaults'
 
 const open = useFold('nightmare-strip', true)
 const gridOpen = useFold('nightmare-grid', false)
@@ -123,6 +158,60 @@ const results = computed(() => {
 })
 const estimated = computed(() => results.value.some(r => r.estimated))
 
+// Templar Vaults (woke/vaults): the one each map spawns, and the big view's Vaults tab.
+const vaultTable = shallowRef<VaultTable | null>(null)
+function readVaults () { loadVaults().then(t => { vaultTable.value = t }).catch(() => {}) }
+onMounted(readVaults)
+// A data update brings a new table; a failed read tries again then too.
+onBeforeUnmount(onSharedDataChange(() => { vaultTable.value = null; readVaults() }))
+const bigTab = shallowRef<'frags' | 'vaults'>('frags')
+const TYPICAL_TIP = '~ = the estimated typical pick: the best of four offers, no weights are published.'
+const priceOf = (name: string, variant?: string) => px.value.price(name, variant)
+// The hover card: the vault's reward options with art and prices, dearest
+// first (Guy, 2026-11-21).
+const hovered = shallowRef<{ id: string, rect: DOMRect } | null>(null)
+function hoverVault (v: { id: string } | null, e: MouseEvent) {
+  hovered.value = v ? { id: v.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } : null
+}
+const hoverCard = computed(() => vaultBlocks.value.find(b => b.id === hovered.value?.id) ?? null)
+// Folding or switching views removes the tag under the pointer without a mouseleave.
+watch([open, gridOpen, bigTab], () => { hovered.value = null })
+// Never leave the card over the game: the overlay closing, the window losing
+// focus, a scroll or a drag all drop it (as VaalChip and HelpCard do).
+const wm = inject<WidgetManager | undefined>('wm', undefined)
+watch(() => wm?.active.value, (active) => { if (!active) hovered.value = null })
+const unhover = () => { hovered.value = null }
+window.addEventListener('blur', unhover)
+document.addEventListener('scroll', unhover, true)
+document.addEventListener('dragstart', unhover, true)
+onBeforeUnmount(() => {
+  window.removeEventListener('blur', unhover)
+  document.removeEventListener('scroll', unhover, true)
+  document.removeEventListener('dragstart', unhover, true)
+})
+// Every vault: the best map's vault first, then the other maps' in their order.
+const vaultBlocks = computed(() => {
+  const t = vaultTable.value
+  if (!t) return []
+  const block = (v: Vault) => ({
+    id: v.id,
+    name: v.name,
+    short: shortName(v),
+    quadrant: v.quadrant,
+    maps: nightmareMapsFor(t, v),
+    typical: typicalPick(v, priceOf),
+    rewards: v.rewards
+      .map(r => ({ text: r.text, kind: r.kind, rare: !!r.rare, note: r.note, chaos: rewardPrice(r, priceOf), icon: rewardIcon(r), item: r.items?.length === 1 ? { name: r.items[0].name, variant: r.items[0].variant } : null }))
+      .sort((a, b) => (b.chaos ?? -1) - (a.chaos ?? -1))
+  })
+  // The best map's vault first, then the other maps' in their order, then the rest.
+  const rank = (id: string) => { const i = cols.value.findIndex(c => c.vault?.id === id); return i < 0 ? 99 : i }
+  return t.vaults.map(block).sort((a, b) => rank(a.id) - rank(b.id) || (b.typical ?? -1) - (a.typical ?? -1))
+})
+// The vault the Vaults tab shows: the one you clicked, else the best map's.
+const pickedVault = shallowRef<string | null>(null)
+const shownVault = computed(() => vaultBlocks.value.find(b => b.id === pickedVault.value) ?? vaultBlocks.value[0] ?? null)
+
 // Column heads: five fit side by side in the price check.
 const SHORT: Record<string, string> = {
   'nightmare-abomination': 'Abom',
@@ -135,6 +224,10 @@ const SHORT: Record<string, string> = {
 const pct = (n: number) => n >= 0.01 ? String(Math.round(n * 100)) : (n * 100).toFixed(1).replace(/\.0$/, '')
 const copies = (d: DropRow) => (d.chance ?? 0) * d.qty
 
+function vaultOf (mapId: string) {
+  const v = vaultTable.value ? vaultForNightmare(vaultTable.value, mapId) : null
+  return v ? { id: v.id, name: v.name, short: shortName(v), typical: typicalPick(v, priceOf) } : null
+}
 const cols = computed(() => results.value.map(r => {
   const map = NIGHTMARE_MAPS.find(m => m.id === r.boss.id)!
   const u = r.drops.find(d => d.name === map.unique)
@@ -145,6 +238,7 @@ const cols = computed(() => results.value.map(r => {
     favoured: map.favoured,
     drops: new Map(r.drops.map(d => [d.name, d])),
     unique: u ? { name: u.name, pct: pct(copies(u)), estimate: u.rateSource === 'estimate', price: u.price } : null,
+    vault: vaultOf(r.boss.id),
     loot: r.loot,
     profit: r.entryMissing.length ? null : r.profit
   }
@@ -179,11 +273,23 @@ const fragRows = computed(() => UBER_FRAGMENTS
 .wrap { overflow-x: auto; margin-top: 3px; }
 .fold { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; font-size: var(--w-fs-sm); }
 .title { color: var(--w-gold); font-family: var(--w-caps-face); }
-.bars { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) auto; gap: 3px 8px; align-items: center; margin-top: 4px; font-size: var(--w-fs-xs); }
+.bars { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) auto auto; gap: 3px 8px; align-items: center; margin-top: 4px; font-size: var(--w-fs-xs); }
 .bar { height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-2); overflow: hidden; }
 .bar i { display: block; height: 100%; }
 .barUp { background: var(--w-up); }
 .barDown { background: var(--w-down); }
+.vault { color: var(--w-faint); font-size: var(--w-fs-xs); white-space: nowrap; }
+.tabs { align-self: flex-start; margin-top: 4px; }
+.vaults { margin-top: 4px; }
+.vchips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-bottom: 5px; }
+.vchip { display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 3px 4px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); color: var(--w-dim); font-size: var(--w-fs-xs); line-height: 1.25; }
+.vchip b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--w-fg); font-family: var(--w-caps-face); font-weight: 400; font-size: var(--w-fs-sm); }
+.vchip span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vchip:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
+.vchipOn { border-color: var(--w-gold); color: var(--w-fg); }
+.vchipOn b { color: var(--w-gold); }
+.vhead { display: flex; align-items: baseline; gap: 6px; padding-bottom: 2px; border-bottom: 1px solid var(--w-line); }
+.vtitle { color: var(--w-gold); font-family: var(--w-caps-face); }
 .gridToggle { align-self: flex-start; margin-top: 4px; color: var(--w-faint); font-size: var(--w-fs-xs); }
 .gridToggle:hover { color: var(--w-fg); }
 /* Fixed columns, every map cell centred: headers, chances, unique, loot and
