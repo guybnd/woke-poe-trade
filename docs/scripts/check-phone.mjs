@@ -6,10 +6,7 @@
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
-import { HIGHLIGHTS, CHAPTERS } from '../.vitepress/theme/landing/content.js'
-
-// Each chapter shows its first highlight until a tab is picked.
-const SHOWN = CHAPTERS.map(c => HIGHLIGHTS.find(h => h.id === c.highlights[0]))
+import { HIGHLIGHTS } from '../.vitepress/theme/landing/content.js'
 
 const PORT = 4179
 const SITE = `http://localhost:${PORT}/woke-poe-trade/`
@@ -50,7 +47,7 @@ try {
     if (wide > 0) fail(`${name}: the page is ${wide}px wider than the screen`)
 
     const pictures = await page.$$eval('.stage picture.on img', imgs => imgs.map(i => ({ src: i.currentSrc, w: i.naturalWidth })))
-    if (pictures.length !== CHAPTERS.length) fail(`${name}: ${pictures.length} pictures on show, want one for each of the ${CHAPTERS.length} chapters`)
+    if (pictures.length !== HIGHLIGHTS.length) fail(`${name}: ${pictures.length} pictures on show, want one for each of the ${HIGHLIGHTS.length} highlights`)
     for (const p of pictures) {
       const want = phone ? '/shots/phone/' : '/shots/1280/'
       if (!p.src.includes(want)) fail(`${name}: showed ${p.src}, not a picture from ${want}`)
@@ -64,11 +61,9 @@ try {
       const s = i.closest('.strip').getBoundingClientRect()
       return { src: i.getAttribute('src'), w: i.naturalWidth, shown: r.right > s.left && r.left < s.right }
     }))
-    const wantThumbs = SHOWN.filter(h => h.slides.length > 1).reduce((n, h) => n + h.slides.length, 0)
+    const wantThumbs = HIGHLIGHTS.filter(h => h.slides.length > 1).reduce((n, h) => n + h.slides.length, 0)
     if (thumbs.length !== wantThumbs) fail(`${name}: ${thumbs.length} thumbnails in the strips, want ${wantThumbs}`)
     for (const t of thumbs) if (t.shown && !t.w) fail(`${name}: thumbnail ${t.src} did not load`)
-    // Market is a tab in its chapter: open it first.
-    await page.click(`#${CHAPTERS.find(c => c.highlights.includes('market')).id} .tabs .tab:has-text("Market")`)
     await page.click('#market .strip .thumb:nth-child(2)')
     if (await page.$eval('#market .plates [aria-pressed="true"]', b => b.textContent.trim()) !== HIGHLIGHTS.find(h => h.id === 'market').slides[1].label) {
       fail(`${name}: the second thumbnail did not pick the second slide`)
@@ -76,7 +71,7 @@ try {
     await page.click('#market .strip .thumb:nth-child(1)')
 
     // The first highlight's clip plays once it is on screen; clips elsewhere wait.
-    const clipped = SHOWN.filter(h => h.slides[0].clip)
+    const clipped = HIGHLIGHTS.filter(h => h.slides[0].clip)
     if (clipped.length) {
       await page.$eval(`#${clipped[0].id}`, el => el.scrollIntoView({ block: 'center' }))
       await page.waitForFunction((id) => {
@@ -111,7 +106,7 @@ try {
       if (!await page.$eval('dialog.viewer', d => d.open && !!d.querySelector('img'))) fail(`${name}: "Whole screen" did not open the shot`)
       await page.keyboard.press('Escape')
 
-      const withTip = SHOWN.find(h => h.slides.some(s => s.more))
+      const withTip = HIGHLIGHTS.find(h => h.slides.some(s => s.more))
       if (withTip) {
         await page.click(`#${withTip.id} .plates button:nth-child(${withTip.slides.findIndex(s => s.more) + 1})`)
         await page.click(`#${withTip.id} .say-more`)
