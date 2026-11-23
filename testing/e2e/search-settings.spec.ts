@@ -17,6 +17,8 @@ test('"settings" lists Open settings and every page, and a page opens', async ({
   await expect(box).toBeFocused()
 
   await box.fill('settings')
+  // Settings shows its top 3 under All; its chip shows every page.
+  await panel.locator('[data-search-chips] button').filter({ hasText: 'Settings' }).click()
   await expect(panel.getByRole('button', { name: /\sOpen settings\s*Settings$/ })).toBeVisible()
   for (const name of ['Game & league', 'Hotkeys', 'Performance', 'About']) {
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

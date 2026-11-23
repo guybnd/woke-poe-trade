@@ -15,6 +15,8 @@ export interface SearchWidget extends Widget {
   keyMoved?: boolean
   // Items you looked up, newest first.
   recent?: Array<{ type: string, name: string }>
+  // Result groups set apart from their defaults (groups.ts): open, folded or off.
+  groups?: Record<string, 'open' | 'folded' | 'off'>
 }
 
 export function initSearchWidget (wmId: number, taken: string[] = []): SearchWidget {
