@@ -283,6 +283,56 @@
    }
   }
  },
+ "currency-chaos.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Chaos Orb"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Chaos Orb"
+  }
+ },
  "currency-divine.txt": {
   "opened": {
    "status": {

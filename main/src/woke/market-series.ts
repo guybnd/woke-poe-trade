@@ -31,10 +31,10 @@ export function seriesTolerance (span: number): number {
 // The snapshots to read for a line over the last `span` ms: the nearest one to
 // each evenly spaced moment, within the tolerance, each used once. Empty when
 // none is near the start, since the change would then cover less than asked.
-export function pickTimes (times: number[], now: number, span: number): number[] {
+export function pickTimes (times: number[], now: number, span: number, points?: number): number[] {
   const asc = [...times].sort((a, b) => a - b)
   const tol = seriesTolerance(span)
-  const n = seriesPoints(span)
+  const n = points != null ? Math.max(2, Math.min(MAX_POINTS, Math.round(points))) : seriesPoints(span)
   const out: number[] = []
   for (let i = 0; i < n; i++) {
     const target = now - span + (span * i) / (n - 1)
@@ -119,9 +119,10 @@ export async function priceSeries (
   span: number,
   now: number,
   read: { times: () => Promise<number[]>, snapshot: (ts: number) => Promise<{ items: unknown[] } | null> },
-  names?: string[]
+  names?: string[],
+  points?: number
 ): Promise<PriceSeries> {
-  const wanted = pickTimes(await read.times(), now, span)
+  const wanted = pickTimes(await read.times(), now, span, points)
   if (!wanted.length) return { times: [], rows: {} }
   let prices = leagues.get(league)
   if (!prices) {

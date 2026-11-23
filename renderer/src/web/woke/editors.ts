@@ -26,6 +26,7 @@ import { MARKET_TRACKER_TYPE } from './market/widget'
 import { LEAGUE_INVEST_TYPE } from './league-invest/widget'
 import { DISENCHANT_TYPE } from './disenchant/widget'
 import { WEALTHY_EXILE_TYPE } from './wealthy-exile/widget'
+import { SEARCH_TYPE } from './search/widget'
 const RegexLibraryEditor = defineAsyncComponent(() => import('./regex-library/regex-library-editor.vue'))
 const TradeSearchesEditor = defineAsyncComponent(() => import('./trade-searches/trade-searches-editor.vue'))
 const PobBuildsEditor = defineAsyncComponent(() => import('./pob-builds/pob-builds-editor.vue'))
@@ -50,6 +51,7 @@ const MarketEditor = defineAsyncComponent(() => import('./market/market-editor.v
 const LeagueInvestEditor = defineAsyncComponent(() => import('./league-invest/league-invest-editor.vue'))
 const DisenchantEditor = defineAsyncComponent(() => import('./disenchant/disenchant-editor.vue'))
 const WealthyExileEditor = defineAsyncComponent(() => import('./wealthy-exile/wealthy-exile-editor.vue'))
+const SearchEditor = defineAsyncComponent(() => import('./search/search-editor.vue'))
 
 const editors: Record<string, Component> = {
   [REGEX_LIBRARY_TYPE]: RegexLibraryEditor,
@@ -75,7 +77,8 @@ const editors: Record<string, Component> = {
   [MARKET_TRACKER_TYPE]: MarketEditor,
   [LEAGUE_INVEST_TYPE]: LeagueInvestEditor,
   [DISENCHANT_TYPE]: DisenchantEditor,
-  [WEALTHY_EXILE_TYPE]: WealthyExileEditor
+  [WEALTHY_EXILE_TYPE]: WealthyExileEditor,
+  [SEARCH_TYPE]: SearchEditor
 }
 
 // Opt-in widgets (the stash reader, personal.ts) add theirs when turned on.

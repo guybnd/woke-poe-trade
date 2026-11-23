@@ -90,6 +90,15 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     aliases: ['Hotkey list', 'settings.hotkeys']
   },
   {
+    id: 'search',
+    name: 'Search',
+    group: 'general',
+    icon: { fa: 'fas fa-search' },
+    description: 'Which kinds of results the search box (Ctrl Space) shows: every row, the top 3 with "+N more", or none. The cog in the search bar opens the same list.',
+    widgets: ['woke-search'],
+    find: ['Search', 'Ctrl Space', 'Ctrl + Space', 'Search results', 'Result groups', 'What search shows', 'Folded', 'Search the web']
+  },
+  {
     id: 'look',
     name: 'Look & icon row',
     group: 'general',

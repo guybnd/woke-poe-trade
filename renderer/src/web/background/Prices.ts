@@ -144,6 +144,8 @@ export const usePoeninja = createGlobalState(() => {
 
       return {
         ...info,
+        // woke: poe.ninja's category slug (types.ts typeForSlug).
+        slug: url,
         url: `https://poe.ninja/poe1/economy/${selectedLeagueToUrl()}/${url}/${denseInfoToDetailsId(info)}`
       }
     }

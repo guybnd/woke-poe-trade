@@ -121,7 +121,11 @@ test('Join the Discord: from Ctrl+Space', async ({ overlay }) => {
   const box = panel.getByRole('textbox', { name: 'Search', exact: true })
   await expect(box).toBeFocused()
   await box.fill('discord')
-  await panel.getByRole('button', { name: /\sJoin the Discord\s*Questions and ideas, with other players$/ }).click()
+  // The passive tree loads while you type and can push the row down under the click.
+  await expect(async () => {
+    await panel.getByRole('button', { name: /\sJoin the Discord\s*Questions and ideas, with other players$/ }).click()
+    await expect(panel.locator('[data-selected]')).toContainText('Join the Discord', { timeout: 500 })
+  }).toPass({ timeout: 10_000 })
   await box.press('Enter')
   await expect.poll(opened).toEqual([DISCORD])
 })

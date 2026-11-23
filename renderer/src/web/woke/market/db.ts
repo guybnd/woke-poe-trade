@@ -53,9 +53,10 @@ export async function snapshotAtOrBefore (league: string, ts: number): Promise<S
 
 // One category's saved prices over the last `span` ms, keyed "name\u0000variant"
 // (main/src/woke/market-series.ts). `names` keeps only those items.
-export async function savedPriceSeries (league: string, type: string, span: number, names?: string[]): Promise<{ times: number[], rows: Record<string, Array<number | null>> }> {
+// `points` (2 to 13) sets how many snapshots the line reads; `timeoutMs` how long to wait.
+export async function savedPriceSeries (league: string, type: string, span: number, names?: string[], points?: number, timeoutMs = SLOW_MS): Promise<{ times: number[], rows: Record<string, Array<number | null>> }> {
   await importOldHistory()
-  return await hostRequest('market-series', { league, type, span, names }, SLOW_MS)
+  return await hostRequest('market-series', { league, type, span, names, points }, timeoutMs)
 }
 
 export async function dailyRowsForDate (league: string, date: string): Promise<DailyRow[]> {
