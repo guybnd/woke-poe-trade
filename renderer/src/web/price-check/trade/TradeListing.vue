@@ -146,6 +146,9 @@
               <td class="px-2">
                 <span class="w-pc-count">
                   <!-- woke: the hideout / stash icon first, so it stays in one place whatever the count. -->
+                  <!-- woke: with any door in the list, the door and the count sit in a zone as wide as
+                       the slid-out "Travel", so it covers only them, never the tags after. -->
+                  <span class="w-pc-travel-zone" :class="{ 'w-pc-travel-zone-wide': anyTravel }">
                   <span v-if="!row.lead.hasFee" :class="$style.stashListing" :title="row.lead.hasNote ? 'Stash listing' : 'Stash listing without a price note'">
                     <img :class="$style.stashIcon" src="/images/stash.png">
                     <i v-if="!row.lead.hasNote" class="fas fa-question" />
@@ -154,11 +157,12 @@
                     :class="{ 'w-pc-travel-on': !!travelState(row.lead.hideoutToken) }"
                     :disabled="travelState(row.lead.hideoutToken)?.kind === 'sending'"
                     title="Travel to the seller's hideout" aria-label="Travel to the seller's hideout"
-                    @click.stop="travel(row.lead)"><i class="fas fa-door-open" /></button>
+                    @click.stop="travel(row.lead)"><span class="w-pc-travel-face"><i class="fas fa-door-open" /><span class="w-pc-travel-label">Travel</span></span></button>
                   <span v-else-if="anyIcon" class="w-pc-travel-gap" aria-hidden="true" />
                   <span v-if="showCountBar" class="w-pc-count-bar" :class="{ invisible: row.count < 2 }"><span :style="{ width: Math.round(row.count / maxCount * 100) + '%' }" /></span>
                   <!-- woke: the count keeps its slot on every row, so the tags after it line up. -->
                   <span v-if="countSlot" class="w-pc-count-n"><template v-if="row.count >= countFrom"><span class="font-sans">×</span>{{ row.count }}</template></span>
+                  </span>
                   <span v-if="improved && row.dropped && FIX_TAG[row.dropped]" class="w-pc-tag">{{ FIX_TAG[row.dropped] }}</span>
                   <span v-if="row.lead.corrupted" class="w-pc-tag" :class="{ 'w-pc-tag-fit': anyTwice }" :data-fit="anyTwice ? 'Twice Corrupted' : undefined">{{ row.lead.twiceCorrupted ? 'Twice Corrupted' : 'Corrupted' }}</span>
                 </span>
@@ -284,6 +288,10 @@ const WIDTH_TAG_TWICE = 40
 // Clean, corrupted and twice-corrupted copies sell differently: they never share a row.
 const corruptKind = (r: PricingResult) => r.corrupted ? (r.twiceCorrupted ? 2 : 1) : 0
 const WIDTH_STASH_ICON = 24
+// Room the hovered door's "Travel" needs past the door (24, above): all of it
+// with no count beside it, less where the count already takes some.
+const WIDTH_TRAVEL_LABEL = 44
+const WIDTH_TRAVEL_LABEL_BY_COUNT = 12
 
 // sameStats: a seller's listings only count as one when their stat columns match.
 function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean) {
@@ -565,6 +573,10 @@ export default defineComponent({
 
     // A row without a stash or hideout icon keeps its room, so the counts line up.
     const anyIcon = computed(() => groupedResults.value.some(r => !r.hasFee || (r.hideoutToken && !r.isMine)))
+    // A row with a door: hovering anywhere on it slides the door out to read
+    // "Travel", over the count beside it. The cell keeps room for that, so it
+    // never spills into the next column.
+    const anyTravel = computed(() => groupedResults.value.some(r => r.hasFee && r.hideoutToken && !r.isMine))
     // A tag or stash icon in the count column leaves less room, so check every listing.
     const otherColumnsWidth = computed(() => {
       const listings = groupedResults.value
@@ -579,6 +591,7 @@ export default defineComponent({
       if (listings.some(r => r.corrupted || insight.value.dropped.has(r.id))) width += WIDTH_TAG
       if (listings.some(r => r.corrupted && r.twiceCorrupted)) width += WIDTH_TAG_TWICE
       if (anyIcon.value) width += WIDTH_STASH_ICON
+      if (anyTravel.value) width += countSlot.value ? WIDTH_TRAVEL_LABEL_BY_COUNT : WIDTH_TRAVEL_LABEL
       return width
     })
     const columnCap = computed(() =>
@@ -779,6 +792,7 @@ export default defineComponent({
       allInstant: computed(() => rows.value.every(r => r.lead.hasFee)),
       // The stat columns need the bar's room.
       anyIcon,
+      anyTravel,
       showCountBar: computed(() => improved.value && maxCount.value > 1 && !shownColumns.value.length),
       showItemLevel,
       showQuality,
@@ -867,6 +881,8 @@ export default defineComponent({
 <style lang="postcss" module>
 .tableHeading {
   @apply sticky top-0;
+  /* woke: above the rows' slid-out travel door and the sticky Yours row. */
+  z-index: 2;
   @apply bg-gray-800;
   @apply p-0 m-0;
   white-space: nowrap;

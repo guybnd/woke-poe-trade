@@ -322,7 +322,37 @@
   vertical-align: bottom;
   cursor: pointer;
 }
+.w-pc-travel { position: relative; }
+.w-pc-travel-face { display: inline-flex; align-items: center; gap: 4px; }
+.w-pc-travel-label { display: none; }
 .w-pc-travel:hover, .w-pc-travel.w-pc-travel-on { color: var(--w-accent); border-color: var(--w-line-strong); background: var(--w-accent-soft); }
+/* Hovering anywhere on the row (or tabbing to the door) slides the door out to
+ * read "Travel". The face is drawn over the count beside it, so nothing moves:
+ * the button keeps its width, and the zone holding the door and the count is
+ * as wide as the face, so the tags after it stay clear. No z-index: it paints
+ * over the count as a positioned box, and under the sticky header and Yours row. */
+.w-pc-travel-zone { display: flex; align-items: center; gap: 5px; flex: none; }
+.w-pc-travel-zone-wide { min-width: calc(64px * var(--w-text-scale, 1)); }
+.w-pc-table tbody tr:hover .w-pc-travel,
+.w-pc-travel:focus-visible { border-color: transparent; background: none; }
+.w-pc-table tbody tr:hover .w-pc-travel .w-pc-travel-face,
+.w-pc-travel:focus-visible .w-pc-travel-face {
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  height: 1.25rem;
+  padding: 0 6px 0 4px;
+  border: 1px solid var(--w-line-strong);
+  border-radius: var(--w-r-sm);
+  color: var(--w-accent);
+  /* Solid, so the count under it doesn't show through. */
+  background-color: var(--w-pc-window, var(--w-panel-solid, #15120f));
+  background-image: linear-gradient(var(--w-accent-soft), var(--w-accent-soft));
+  white-space: nowrap;
+}
+.w-pc-table tbody tr:hover .w-pc-travel .w-pc-travel-label,
+.w-pc-travel:focus-visible .w-pc-travel-label { display: inline; }
+.w-pc-table tbody .w-pc-travel:hover .w-pc-travel-face { background-image: linear-gradient(var(--w-accent-soft), var(--w-accent-soft)), linear-gradient(var(--w-accent-soft), var(--w-accent-soft)); }
 .w-pc-travel:disabled { cursor: progress; }
 .w-pc-travel-gap { display: inline-block; flex: none; width: 1.25rem; }
 .w-pc-travel:focus-visible { outline: 1px solid var(--w-accent); outline-offset: 1px; }

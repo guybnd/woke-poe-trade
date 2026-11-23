@@ -371,6 +371,13 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
+  "price-check-travel.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/hideout-travel/",
+   "renderer/src/web/woke/price-insight/"
+  ],
   "price-check-unid-guess.spec.ts": [
    "main/src/shortcuts/",
    "main/src/woke/unid-art-match.ts",
