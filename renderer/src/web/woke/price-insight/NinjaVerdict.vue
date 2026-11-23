@@ -44,7 +44,7 @@ const search = inject<() => void>('price-check-search', () => {})
 
 const info = computed(() => {
   const q = exactDetailsId(props.item)
-  const row = chaosOrbRow(props.item) ?? (q ? findPriceByQuery(q) : null)
+  const row = chaosOrbRow(props.item, xchgRate.value) ?? (q ? findPriceByQuery(q) : null)
   return row && row.chaos > 0 ? row : null
 })
 

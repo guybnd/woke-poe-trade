@@ -277,7 +277,7 @@ export default defineComponent({
       if (cfg.wokeNinjaFirst === false || cfg.wokeNinjaInstant === false) return false
       if (!(it.info.tradeTag || fixedPriceItem(it)) || !leagues.selectedId.value) return false
       const q = exactDetailsId(it)
-      return Boolean(chaosOrbRow(it) ?? (q && (poeninja.findPriceByQuery(q)?.chaos ?? 0) > 0))
+      return Boolean(chaosOrbRow(it, poeninja.xchgRate.value) ?? (q && (poeninja.findPriceByQuery(q)?.chaos ?? 0) > 0))
     }
     // A new card each check, so it measures itself and reports its area again.
     const instantKey = shallowRef(0)

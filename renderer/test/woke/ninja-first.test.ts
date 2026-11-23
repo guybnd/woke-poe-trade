@@ -81,8 +81,11 @@ describe('ninjaPrice', () => {
   it('splits a divine into chaos', () => {
     expect(divineParts(180)).toEqual([{ part: '0.1 div', chaos: '18c' }, { part: '0.25 div', chaos: '45c' }, { part: '0.5 div', chaos: '90c' }, { part: '0.75 div', chaos: '135c' }])
     // A Chaos Orb, the other way round.
-    expect(chaosParts(180)).toEqual([{ part: '10c', chaos: '0.056 div' }, { part: '50c', chaos: '0.28 div' }, { part: '100c', chaos: '0.56 div' }, { part: '1 div', chaos: '180c' }])
-    expect(chaosOrbRow({ info: { refName: 'Chaos Orb', namespace: 'ITEM' } })?.chaos).toBe(1)
-    expect(chaosOrbRow({ info: { refName: 'Divine Orb', namespace: 'ITEM' } })).toBeNull()
+    expect(chaosParts(180)).toEqual([{ part: '10c', chaos: '0.056 div' }, { part: '50c', chaos: '0.28 div' }, { part: '100c', chaos: '0.56 div' }])
+    expect(divineParts(2500)[3].chaos).toBe('1,875c')
+    expect(chaosOrbRow({ info: { refName: 'Chaos Orb', namespace: 'ITEM' } }, 180)?.chaos).toBe(1)
+    // Without poe.ninja's rate (not loaded, or a league it doesn't cover) it checks like other currency.
+    expect(chaosOrbRow({ info: { refName: 'Chaos Orb', namespace: 'ITEM' } }, undefined)).toBeNull()
+    expect(chaosOrbRow({ info: { refName: 'Divine Orb', namespace: 'ITEM' } }, 180)).toBeNull()
   })
 })

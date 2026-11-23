@@ -92,7 +92,7 @@ const ABOVE = 12
 const { findPriceByQuery, xchgRate, updatedAt } = usePoeninja()
 const info = computed(() => {
   const q = exactDetailsId(props.item)
-  const row = chaosOrbRow(props.item) ?? (q && findPriceByQuery(q))
+  const row = chaosOrbRow(props.item, xchgRate.value) ?? (q && findPriceByQuery(q))
   return row && row.chaos > 0 ? row : null
 })
 

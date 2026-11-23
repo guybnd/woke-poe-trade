@@ -240,7 +240,7 @@ export default defineComponent({
     function readNinjaChaos (item: ParsedItem): number | null {
       const q = exactDetailsId(item)
       if (!q || itemFilters.value.trade.league !== leagues.selectedId.value) return null
-      return (chaosOrbRow(item) ?? poeninja.findPriceByQuery(q))?.chaos || null
+      return (chaosOrbRow(item, poeninja.xchgRate.value) ?? poeninja.findPriceByQuery(q))?.chaos || null
     }
     // poe.ninja loads for this league (Prices.ts) and hasn't yet.
     function pricesPending (): boolean {

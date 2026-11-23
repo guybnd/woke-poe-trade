@@ -59,7 +59,7 @@ test('currency: a Chaos Orb gets the instant card with its div fraction chips', 
   await expect(card.getByTestId('instant-ninja-price')).toHaveText('1c')
   const parts = card.getByTestId('instant-ninja-parts')
   await expect(parts).toContainText('10c 0.056 div')
-  await expect(parts).toContainText('1 div 180c')
+  await expect(card).toContainText('180 per div')
   await overlay.snap('chaos orb instant check')
   expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
 })
