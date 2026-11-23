@@ -1,6 +1,5 @@
 [
   "clipped | price-check | div#price-window.layout-column.shrink-0.text-gray-200 > div.grow.layout-column.min-h-0 > div.p-4.layout-column.min-h-0 > div.layout-column.min-h-0 > div.w-pc-scroll.layout-column.overflow-y-auto",
-  "clipped | price-check | div.grow.layout-column.min-h-0 > div.p-4.layout-column.min-h-0 > div.flex.justify-between.items-center > div.w-pc-status-slot > span.w-pc-status.w-pc-status-local",
   "clipped | woke-pob-builds | div#overlay-window.overflow-hidden.relative.w-full > div#widget > div.$widget.$draggable > div.flex.gap-2.min-h-0 > div.w-surface.$panel",
   "clipped | woke-wickerman | div#app.text-sm.font-poe-sc > div#overlay-window.overflow-hidden.relative.w-full > div#widget > div.$widget.$draggable > div.w-surface.$panel",
   "row-wrap | price-check | div#price-window.layout-column.shrink-0.text-gray-200 > div.grow.layout-column.min-h-0 > div.p-4.layout-column.min-h-0 > div > div.$statHead.$open",

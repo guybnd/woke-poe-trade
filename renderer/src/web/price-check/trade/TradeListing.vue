@@ -4,7 +4,10 @@
     <teleport v-if="statusSlot && stale && list && narrow" :to="statusSlot">
       <span class="w-pc-status w-pc-status-local"
         :title="`Filtered from the ${loadedCount} listings already loaded, without a new search. They're still the cheapest that fit; the search found ${list.total}.`">
-        <span class="w-pc-status-note">Matched</span><b>{{ fitCount }} of {{ loadedCount }} here</b>
+        <!-- The full line where the row has room, "14/20" where it doesn't, nothing where even that won't fit
+             (the table's foot says it too). The title has it all. -->
+        <span class="w-pc-status-full"><span class="w-pc-status-note">Matched</span> <b>{{ fitCount }} of {{ loadedCount }} here</b></span>
+        <b class="w-pc-status-short">{{ fitCount }}/{{ loadedCount }}</b>
       </span>
     </teleport>
     <div v-if="item.info.exchangeable" :class="$style.legacyMessage">
@@ -126,7 +129,6 @@
               :class="{
                 'w-pc-ignored': improved && row.dropped,
                 'w-pc-in-range': improved && inRange(row),
-                'w-pc-aging': improved && (row.band === 'aging' || (allStale && row.band === 'stale')),
                 'w-pc-stale': improved && row.band === 'stale' && !row.dropped && !allStale
               }"
               :title="improved && !row.lead.tipItem ? rowTitle(row) : undefined"
@@ -173,7 +175,7 @@
                 <span v-if="row.lead.isMine" class="w-pc-you">{{ t('You') }}</span>
                 <span v-else class="w-pc-age" style="text-align: left;">{{ showSeller === 'ign' ? row.lead.ign : row.lead.accountName }}</span>
               </td>
-              <td class="px-2 w-pc-age">
+              <td class="px-2 w-pc-age" :class="improved && row.tone && `w-pc-age-${row.tone}`">
                 <span v-if="!showSeller && row.lead.isMine" class="w-pc-you mr-1">{{ t('You') }}</span>
                 <span v-if="travelNote(travelState(row.lead.hideoutToken))" class="w-pc-travel-note"
                   :class="{ 'w-pc-travel-warn': travelNote(travelState(row.lead.hideoutToken))!.tone === 'warn' }"

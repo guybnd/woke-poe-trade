@@ -87,6 +87,9 @@ test('currency chip: Chaos, then Divine, filters the loaded listings without a s
   await row.hover()
   await expect(overlay.page.getByRole('tooltip')).toBeVisible()
   await overlay.snap('price check divine only')
+  // The listed time is coloured by age: these were all listed just now.
+  await expect(row.locator('td.w-pc-age')).toHaveClass(/w-pc-age-new/)
+  expect(await row.locator('td.w-pc-age').evaluate(el => getComputedStyle(el).color)).not.toBe(await panel.locator('.w-pc-matched').evaluate(el => getComputedStyle(el).color))
 
   // All again: every listing, no search spent at any step.
   await chip.click()

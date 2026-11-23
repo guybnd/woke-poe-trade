@@ -18,6 +18,8 @@ export interface RowListing {
 }
 
 export type AgeBand = 'fresh' | 'aging' | 'stale'
+/** The listed time's colour: under an hour, under a day, under a week, older. */
+export type AgeTone = 'new' | 'day' | 'week' | 'old'
 
 export interface ListingRow<T extends RowListing> {
   key: string
@@ -31,6 +33,8 @@ export interface ListingRow<T extends RowListing> {
   status: RowListing['accountStatus']
   /** Age of the freshest listing, which decides how the row reads: one live listing is enough to buy. */
   band: AgeBand
+  /** Colour of the listed time, from the youngest listing; null when the listings carry no time. */
+  tone: AgeTone | null
   /** "2h" or "2h–25d"; empty when the listings carry no time. */
   ageText: string
   dropped?: DropReason
@@ -46,6 +50,14 @@ export function ageBand (ageMs: number | null): AgeBand {
   if (ageMs > STALE_MS) return 'stale'
   if (ageMs > AGING_MS) return 'aging'
   return 'fresh'
+}
+
+export function ageTone (ageMs: number | null): AgeTone | null {
+  if (ageMs == null) return null
+  if (ageMs <= HOUR) return 'new'
+  if (ageMs <= AGING_MS) return 'day'
+  if (ageMs <= STALE_MS) return 'week'
+  return 'old'
 }
 
 export function shortAge (ageMs: number): string {
@@ -101,6 +113,7 @@ function buildRow<T extends RowListing> (key: string, members: T[], opts: GroupO
     status: members.reduce<RowListing['accountStatus']>((best, m) =>
       STATUS_RANK[m.accountStatus] > STATUS_RANK[best] ? m.accountStatus : best, 'offline'),
     band: ageBand(youngest),
+    tone: ageTone(youngest),
     ageText: low === high ? low : `${low}–${high}`,
     dropped: opts.dropped?.get(members[0].id)
   }

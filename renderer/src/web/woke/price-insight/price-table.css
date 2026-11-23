@@ -129,9 +129,13 @@
 .w-pc-table tbody tr.w-pc-in-range td:first-child { box-shadow: inset 2px 0 0 var(--w-accent); }
 .w-pc-table tbody tr.w-pc-in-range .w-pc-amount { color: var(--w-accent); }
 
-/* Older listings recede: they are the ones most likely to be gone. */
-.w-pc-table tbody tr.w-pc-aging .w-pc-age { color: var(--w-faint); }
-.w-pc-table tbody tr.w-pc-stale > td { opacity: 0.5; }
+/* The listed time says how fresh it is: green under an hour, plain under a day,
+ * amber under a week, red older. Older listings also recede (below). */
+.w-pc-table tbody .w-pc-age.w-pc-age-new { color: var(--w-up); }
+.w-pc-table tbody .w-pc-age.w-pc-age-week { color: var(--w-warn); }
+.w-pc-table tbody .w-pc-age.w-pc-age-old { color: var(--w-down); }
+/* The time keeps full strength, so its colour stays readable. */
+.w-pc-table tbody tr.w-pc-stale > td:not(.w-pc-age) { opacity: 0.5; }
 
 /* The verdict can grow (details, chart, drivers). It scrolls by itself, so the
  * toolbar and listings under it stay on screen. Bleeds to the window's edges. */
@@ -231,10 +235,20 @@
 /* woke: results filtered here (local-filter.ts, Guy's pick C). The Search row's
    Matched count, one line in the row's own height, so nothing below moves. */
 /* No margins of its own: an empty slot takes no room, so the caps beside it stay put. */
-.w-pc-status-slot { flex: 1 1 0; min-width: 0; display: flex; }
+/* Sized by the row, not its text: the status picks the form that fits (below). */
+.w-pc-status-slot { flex: 1 1 0; min-width: 0; display: flex; container-type: inline-size; }
 .w-pc-status {
-  display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; max-width: 100%; overflow: hidden; margin: 0 var(--w-s2, 0.5rem);
+  display: inline-flex; align-items: baseline; min-width: 0; max-width: 100%; overflow: hidden; margin: 0 4px;
   white-space: nowrap; font-size: var(--w-fs-sm);
+}
+.w-pc-status-short { display: none; }
+/* Between Search bulk and the affix caps there can be little room: a short count, or nothing. */
+@container (max-width: 140px) {
+  .w-pc-status-full { display: none; }
+  .w-pc-status-short { display: inline; }
+}
+@container (max-width: 36px) {
+  .w-pc-status { display: none; }
 }
 .w-pc-status b { font-weight: 400; }
 .w-pc-status-note { color: var(--w-dim); }
