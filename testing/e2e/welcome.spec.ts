@@ -17,6 +17,10 @@ test('first open after setup: the welcome card, then the rail names its buttons'
   // Net worth is off: the card says where to turn it on.
   await expect(card.getByText(/Net worth tracks what your stash is worth/)).toBeVisible()
   await overlay.snap('welcome card beside the rail')
+  // Hovering the buttons it points at keeps it up.
+  await page.locator('[aria-label="All tools"]').hover()
+  await page.waitForTimeout(400)
+  await expect(card).toBeVisible()
 
   await card.getByRole('button', { name: 'Got it' }).click()
   await expect(card).toHaveCount(0)
@@ -106,6 +110,15 @@ test('a fresh install starts with tools on the rail, loaded only once clicked', 
     const menu = c?.widgets.find((w: { wmType: string }) => w.wmType === 'menu')
     return !!market && menu.pinned.includes(market.wmId) && !menu.starterPins.includes('woke-market-tracker')
   }).toBe(true)
+})
+
+test('a starter tool a fresh config already places is pinned at once', async ({ overlay }) => {
+  // Leveling picks: Regex library is in the five, and a fresh config places it.
+  await overlay.boot({ overlayActive: true, off: ['market', 'map-mods', 'atlas', 'trade', 'scarab-flip', 'trade-searches'], patch: c => { c.woke.welcome = { due: true, labelOpens: 0 } } })
+  const page = overlay.page
+  await expect(page.locator('[data-starter-pin]')).toHaveCount(4)
+  await expect(page.locator('[data-starter-pin="woke-regex-library"]')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Regex library', exact: true })).toBeVisible()
 })
 
 test('players who updated keep their rail as it was', async ({ overlay }) => {

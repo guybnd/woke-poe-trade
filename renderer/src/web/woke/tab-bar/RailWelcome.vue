@@ -26,8 +26,10 @@ const props = defineProps<{
   rail: HTMLElement | null
   flat: boolean
   onRight: boolean
-  // Something else of the rail's is up: a popup, a hover tip, a dragged icon.
+  // A rail popup is up (hides the card and labels).
   busy: boolean
+  // Also a hover tip or a dragged icon (hides the labels only).
+  labelsBusy: boolean
   // A tool window is open (not Settings or search).
   toolOpen: boolean
   // Changes when the rail moves or resizes.
@@ -42,7 +44,7 @@ const exclusiveUp = computed(() => wm.widgets.value.some(w => w.wmZorder === 'ex
 const cardOn = computed(() => wm.active.value && phase.value === 'card' && !exclusiveUp.value && !props.busy)
 // Not on the open the card was on: the labels start with the next one.
 const cardThisOpen = ref(false)
-const labelsOn = computed(() => wm.active.value && phase.value === 'labels' && !cardThisOpen.value && !exclusiveUp.value && !props.busy)
+const labelsOn = computed(() => wm.active.value && phase.value === 'labels' && !cardThisOpen.value && !exclusiveUp.value && !props.labelsBusy)
 const cardPos = ref<Record<string, string> | null>(null)
 const labels = ref<Array<{ text: string, keys: string | null, x: number, y: number, left: boolean }>>([])
 let labelsSeen = false

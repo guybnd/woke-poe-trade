@@ -78,7 +78,7 @@
         </div>
 
         <!-- First-run help (welcome.ts): loaded only while there's some to show. -->
-        <rail-welcome v-if="welcomeDue" :rail="railEl" :flat="flat" :on-right="onRight" :busy="!!popup || !!tip || !!iconDrag?.active"
+        <rail-welcome v-if="welcomeDue" :rail="railEl" :flat="flat" :on-right="onRight" :busy="!!popup" :labels-busy="!!popup || !!tip || !!iconDrag?.active"
           :tool-open="tabs.some(tab => tab.open && !tab.iconOnly)" :layout="[config.railSize, config.anchor]" />
 
         <div v-if="popup" :class="$style.backdrop" @mousedown="closePopup" @contextmenu.prevent="closePopup" />
@@ -324,13 +324,17 @@ const openUnpinned = computed(() => tabs.value.filter(tab => !tab.pinned && tab.
 // ---- Starter pins (a fresh install) ----
 // Picked once, when the first-run help starts, from the tools that are on.
 watch(() => AppConfig().woke?.welcome?.due, due => {
-  if (due && props.config.starterPins == null) props.config.starterPins = pickStarterPins(type => isWidgetTypeOn(AppConfig(), type))
+  if (!due || props.config.starterPins != null) return
+  props.config.starterPins = pickStarterPins(type => isWidgetTypeOn(AppConfig(), type))
+  // A type a fresh config already places (Regex library) is pinned right away.
+  pinPlacedStarters()
 }, { immediate: true })
 const starterTabs = computed(() => (props.config.starterPins ?? [])
   .filter(type => isWidgetTypeOn(AppConfig(), type) && !AppConfig().widgets.some(w => w.wmType === type))
   .map(type => ({ wmType: type, name: typeName(type), icon: iconFor(type), art: artFor(type) })))
 // Placed by any path (its icon, the launcher, search): it becomes a real pin.
-watch(() => tabs.value.map(tab => tab.wmId).join(), () => {
+watch(() => tabs.value.map(tab => tab.wmId).join(), () => { pinPlacedStarters() })
+function pinPlacedStarters () {
   const starters = props.config.starterPins
   if (!starters?.length) return
   for (const type of starters) {
@@ -339,7 +343,7 @@ watch(() => tabs.value.map(tab => tab.wmId).join(), () => {
     if (!tab.pinned) props.config.pinned = [...(props.config.pinned ?? []), tab.wmId]
     props.config.starterPins = props.config.starterPins!.filter(x => x !== type)
   }
-})
+}
 function openStarter (wmType: string) {
   hideTip()
   placeAndOpen(wmType)
