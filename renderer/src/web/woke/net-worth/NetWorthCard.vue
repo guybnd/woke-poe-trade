@@ -223,12 +223,13 @@ onUnmounted(() => { clearTimeout(confirmTimer) })
 watch(() => props.run ? props.league : null, (l) => { if (l) loadRuns(l).catch(() => {}) }, { immediate: true })
 const liveDoc = computed(() => props.run && runsDoc.value.live?.league === props.league && runsDoc.value.live.startAt === props.run.startAt ? runsDoc.value.live : null)
 const topCame = computed(() => liveDoc.value ? tallyRows(liveDoc.value).came.slice(0, 3) : [])
-// Time in each state since the start, read once each time the card opens.
+// Time in each state from the start to the last stash read (the stretch the
+// run's profit covers): read when the card opens and after each read.
 const spent = shallowRef<Record<'map' | 'play' | 'hub' | 'off', number> | null>(null)
-watch(() => props.run?.startAt, (at) => {
-  spent.value = null
-  if (at == null) return
-  runTimeIn(at, Date.now()).then((t) => { if (props.run?.startAt === at) spent.value = t }).catch(() => {})
+watch(() => props.run ? [props.run.startAt, props.run.at] as const : null, (span) => {
+  if (!span) { spent.value = null; return }
+  const [from, to] = span
+  runTimeIn(from, to).then((t) => { if (props.run?.startAt === from && props.run.at === to) spent.value = t }).catch(() => {})
 }, { immediate: true })
 const time = computed(() => {
   const t = spent.value
@@ -241,12 +242,13 @@ const time = computed(() => {
   return parts.length ? { parts, ...t } : null
 })
 const withHub = computed(() => props.runWithHub !== false)
-// Hideout left out: the run's profit over its time less hideout and town.
+// Hideout left out: profit over the time in maps and other zones only
+// (away, closed or AFK, is left out too).
 const perHour = computed(() => {
   const r = props.run
   if (!r) return null
   if (withHub.value || !spent.value) return r.perHourChaos
-  const ms = Math.max(0, now.value - r.startAt) - spent.value.hub
+  const ms = spent.value.map + spent.value.play
   return ms >= 10 * 60_000 ? r.profitChaos / (ms / 3_600_000) : null
 })
 

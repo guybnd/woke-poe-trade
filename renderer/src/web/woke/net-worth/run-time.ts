@@ -6,7 +6,7 @@ import { emptyMarks, feedMarks, timeIn } from './play-time'
 import type { PlayMarks, PlayState } from './play-time'
 
 // The zone you were in at the start needs the line before it.
-const LOOKBACK_MS = 2 * 3_600_000
+const LOOKBACK_MS = 6 * 3_600_000
 
 let kept: { startAt: number, path: string | null, marks: PlayMarks } | null = null
 
