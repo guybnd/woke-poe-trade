@@ -9,6 +9,7 @@
 // `fakeApp` is the app's main process running on the fake game
 // (fake-host/app.ts): hotkeys, Client.txt, screenshots, saved settings.
 // `overlay` is the overlay page in Chromium, booted with a given config.
+import { NEWS } from '../../renderer/src/web/woke/tab-bar/news'
 import { test as base, expect } from '@playwright/test'
 import type { Page, TestInfo } from '@playwright/test'
 import fs from 'fs'
@@ -66,6 +67,9 @@ export interface BootOptions {
   off?: string[]
   // Show the first-run module setup (default: already done).
   firstRun?: boolean
+  // Leave What's new unseen (tab-bar/news.ts), as after an update. Off by
+  // default, so the dock and rail look as they do once it's been read.
+  whatsNew?: boolean
   // Any other changes to the saved config.
   patch?: (config: any) => void // eslint-disable-line @typescript-eslint/no-explicit-any
   // Start with the overlay active (Shift+Space) instead of the game focused.
@@ -208,6 +212,7 @@ export class Overlay {
     const config = await this.defaultConfig()
     config.leagueId = 'Testleague'
     config.woke = { ...(config.woke ?? {}), setupDone: !opts.firstRun, off: opts.off ?? [] }
+    if (!opts.whatsNew) config.woke.seenNews = NEWS.map(n => n.id)
     let nextId = Math.max(0, ...config.widgets.map((w: { wmId: number }) => w.wmId)) + 1
     const seeded: number[] = []
     for (const seed of opts.widgets ?? []) {

@@ -65,7 +65,7 @@ test('players who updated get no welcome card', async ({ overlay }) => {
 // ---- What's new (tab-bar/news.ts) ----
 
 test('All tools counts what is new; pointing at a tool clears its seal; Net worth is listed while off', async ({ overlay, fakeApp }) => {
-  await overlay.boot({ overlayActive: true })
+  await overlay.boot({ overlayActive: true, whatsNew: true })
   const page = overlay.page
   const count = page.locator('[data-news-count]')
   const tools = new Set(NEWS.map(n => n.wmType)).size
@@ -86,7 +86,7 @@ test('All tools counts what is new; pointing at a tool clears its seal; Net wort
 })
 
 test('a fresh install has nothing new', async ({ overlay }) => {
-  await overlay.boot({ overlayActive: true, patch: c => { c.woke.seenNews = NEWS.map(n => n.id) } })
+  await overlay.boot({ overlayActive: true })
   await expect(overlay.page.getByRole('button', { name: 'All tools' })).toBeVisible()
   await expect(overlay.page.locator('[data-news-count]')).toHaveCount(0)
 })

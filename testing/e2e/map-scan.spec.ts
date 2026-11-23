@@ -30,7 +30,7 @@ test('Alt+S scans the hovered map: a map with max res down gets Risky with its f
   await overlay.moveMouse(cursor.x, cursor.y)
   await overlay.pressHotkey('Alt + S')
 
-  const badge = overlay.page.locator('[class*="badge"]').first()
+  const badge = overlay.page.locator('[data-testid="map-scan-badge"]')
   await expect(badge).toBeVisible({ timeout: 20_000 })
   await expect(badge).toContainText('Risky')
   await expect(badge).toContainText(/maximum Resistances|max res/i)

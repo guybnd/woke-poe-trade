@@ -4,10 +4,8 @@
 import { test, expect } from './harness'
 import { NEWS } from '../../renderer/src/web/woke/tab-bar/news'
 
-const ALL_SEEN = NEWS.map(n => n.id)
-
 test('players who update get a What\'s new icon in the dock; a hover lists the lines', async ({ overlay }) => {
-  await overlay.boot()
+  await overlay.boot({ whatsNew: true })
   const icon = overlay.dockIcon('whats-new')
   await expect(icon).toBeVisible()
   await overlay.hoverDockIcon('whats-new')
@@ -17,7 +15,7 @@ test('players who update get a What\'s new icon in the dock; a hover lists the l
 })
 
 test('with the overlay open: Show me opens the tool, dismiss takes a line off, the last one takes the icon', async ({ overlay }) => {
-  await overlay.boot({ overlayActive: true })
+  await overlay.boot({ overlayActive: true, whatsNew: true })
   const icon = overlay.dockIcon('whats-new')
   await icon.click()
   await overlay.page.mouse.move(5, 5)
@@ -38,7 +36,7 @@ test('with the overlay open: Show me opens the tool, dismiss takes a line off, t
 })
 
 test('a fresh install gets no What\'s new icon', async ({ overlay }) => {
-  await overlay.boot({ patch: c => { c.woke.seenNews = ALL_SEEN } })
+  await overlay.boot()
   await overlay.page.waitForTimeout(1000)
   await expect(overlay.dockIcon('whats-new')).toHaveCount(0)
 })

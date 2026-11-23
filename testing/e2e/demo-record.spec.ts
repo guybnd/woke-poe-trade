@@ -161,7 +161,7 @@ test('record the demo', async ({ overlay, fakeApp }) => {
   await overlay.moveMouse(cursor.x, cursor.y)
   await record('map-scan', async () => {
     await overlay.pressHotkey('Alt + S')
-    await expect(page.locator('[class*="badge"]').first()).toContainText('Risky', { timeout: 20_000 })
+    await expect(page.locator('[data-testid="map-scan-badge"]')).toContainText('Risky', { timeout: 20_000 })
   })
   await record('map-scan-stop', async () => { await overlay.pressHotkey('Alt + S') })
 
