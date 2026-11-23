@@ -132,7 +132,6 @@ import { defineAsyncComponent, defineComponent, PropType, watch, ref, nextTick, 
 import { useI18n } from 'vue-i18n'
 import { ItemRarity, ItemCategory, ParsedItem } from '@/parser'
 import TradeListing from './trade/TradeListing.vue'
-import TradeBulk from './trade/TradeBulk.vue'
 import TradeLinks from './trade/TradeLinks.vue'
 import { proposeSearchName } from '@/web/woke/trade-searches/propose-name'
 import { apiToSatisfySearch, getTradeEndpoint } from './trade/common'
@@ -197,7 +196,8 @@ export default defineComponent({
     WokeDeckVerdictChip: defineAsyncComponent(() => import('@/web/woke/stacked-decks/DeckVerdictChip.vue')),
     PricePrediction,
     TradeListing,
-    TradeBulk,
+    // woke: only exchange items need it, so it loads when one is checked (startup JS budget).
+    TradeBulk: defineAsyncComponent(() => import('./trade/TradeBulk.vue')),
     TradeLinks,
     PriceTrend,
     FiltersBlock,
