@@ -30,6 +30,14 @@ history:
     date: '2026-11-23T11:56:45.753Z'
     selfAttested: true
     id: c-2026-11-23t11-56-45-753z
+  - type: comment
+    user: Agent
+    comment: >-
+      Part 1 PR 803; part 2 (Faustus listings, sales tags, held items, hotkey)
+      next
+    date: '2026-11-23T12:28:48.244Z'
+    selfAttested: true
+    id: c-2026-11-23t12-28-48-244z
 ---
 From the thread "Track strategy farm profit and costs".
 
