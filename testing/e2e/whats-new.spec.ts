@@ -56,3 +56,39 @@ for (const n of NEWS.filter(n => n.goto && n.wmType !== 'woke-net-worth')) {
     await expect(overlay.page.getByRole('tab', { name: label, selected: true }).first()).toBeVisible()
   })
 }
+
+test('Show me on a switched-off tool turns it on and opens the line\'s tab', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true, whatsNew: true, off: ['map-mods'] })
+  const icon = overlay.dockIcon('whats-new')
+  await icon.click()
+  await overlay.page.mouse.move(5, 5)
+  await icon.locator('[data-whats-new-line]').filter({ hasText: 'Map mods' }).first().getByRole('button', { name: 'Show me' }).click()
+  await expect(overlay.page.getByRole('tab', { name: 'Planner', selected: true }).first()).toBeVisible()
+})
+
+test('with the stash reader on, each Net worth line\'s Show me opens its tab', async ({ overlay, fakeApp }) => {
+  fakeApp.site.reply = (url) => new URL(url).pathname === '/my-account'
+    ? { status: 200, body: '<html><title>View Profile - Path of Exile - Tester#1234</title></html>' }
+    : null
+  await overlay.boot({ overlayActive: true, whatsNew: true })
+  await overlay.widget('menu').locator('.fa-cog').click()
+  const settings = overlay.widget('settings')
+  await settings.getByText('All modules', { exact: true }).first().click()
+  await settings.getByRole('switch', { name: 'Net worth' }).click()
+  await settings.getByRole('button', { name: 'Turn on' }).click()
+  await expect(settings.getByRole('switch', { name: 'Net worth' })).toHaveAttribute('aria-checked', 'true')
+  await settings.getByTitle('Close').first().click()
+  await expect(settings).toBeHidden()
+
+  const icon = overlay.dockIcon('whats-new')
+  for (const n of NEWS.filter(n => n.wmType === 'woke-net-worth' && n.goto)) {
+    if (!await icon.locator('[data-whats-new-line]').first().isVisible()) {
+      await icon.click()
+      await overlay.page.mouse.move(5, 5)
+    }
+    const line = icon.locator('[data-whats-new-line]').filter({ hasText: n.note.replace(/^New: /, '').slice(1, 30) })
+    await line.getByRole('button', { name: 'Show me' }).click()
+    const label = gotoTargets(n.wmType)![n.goto!]
+    await expect(overlay.page.getByRole('tab', { name: label, selected: true }).first(), n.id).toBeVisible()
+  }
+})
