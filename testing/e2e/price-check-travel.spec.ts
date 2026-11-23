@@ -31,19 +31,19 @@ function listing (i: number) {
   }
 }
 
-async function fakeTrade (page: Page) {
+async function fakeTrade (page: Page, total = 17, make = listing) {
   const whispers: Array<{ token: string }> = []
   await page.route('**/api/trade/search/**', route => route.fulfill({
     contentType: 'application/json',
     headers: LIMITS,
-    body: JSON.stringify({ id: 'q', total: 17, result: Array.from({ length: 17 }, (_, i) => `r${i}`) })
+    body: JSON.stringify({ id: 'q', total, result: Array.from({ length: total }, (_, i) => `r${i}`) })
   }))
   await page.route('**/api/trade/fetch/**', (route) => {
     const ids = decodeURIComponent(new URL(route.request().url()).pathname.split('/').pop()!).split(',')
     return route.fulfill({
       contentType: 'application/json',
       headers: LIMITS,
-      body: JSON.stringify({ result: ids.map(id => listing(Number(id.slice(1)))) })
+      body: JSON.stringify({ result: ids.map(id => make(Number(id.slice(1)))) })
     })
   })
   await page.route('**/api/trade/whisper', (route) => {
@@ -89,12 +89,9 @@ test('hovering a buyout row slides its door out to "Travel" without moving anyth
   await expect(panel.locator('.w-pc-travel-label:visible')).toHaveCount(1)
   await overlay.snap('price check travel on row hover')
 
-  // A row without a count to cover still keeps its face inside the cell.
-  const solo = rows.filter({ has: overlay.page.locator('.w-pc-travel') }).first()
-  await solo.locator('.w-pc-price').hover()
-  const soloFace = await solo.locator('.w-pc-travel-face').boundingBox()
-  const soloCell = await solo.locator('td').nth(1).boundingBox()
-  expect(soloFace!.x + soloFace!.width).toBeLessThanOrEqual(soloCell!.x + soloCell!.width)
+  // The face stays inside the zone it covers (door and count).
+  const zone = await bulkRow.locator('.w-pc-travel-zone').boundingBox()
+  expect(face!.x + face!.width).toBeLessThanOrEqual(zone!.x + zone!.width + 0.5)
 
   // Clicking the slid-out label travels.
   await bulkRow.locator('.w-pc-price').hover()
@@ -104,5 +101,30 @@ test('hovering a buyout row slides its door out to "Travel" without moving anyth
   // It sent the ×13 row's own pass (one of r4..r16).
   const n = JSON.parse(Buffer.from(whispers[0].token.split('.')[1], 'base64url').toString()).n
   expect(n).toBeGreaterThanOrEqual(4)
+  expect(overlay.errors).toEqual([])
+})
+
+// No row with a count: the face must not cover the Corrupted tag after the door.
+test('with no count column, the slid-out door leaves the Corrupted tag clear', async ({ overlay }) => {
+  const item = ITEMS[0] as Record<string, unknown>
+  await fakeTrade(overlay.page, 3, i => ({
+    ...listing(i),
+    item: i === 1 ? { ...item, corrupted: true } : item,
+    listing: { ...listing(i).listing, fee: 1, hideout_token: token(i), account: { name: `solo${i}`, lastCharacterName: `solo${i}c` } }
+  }))
+  await overlay.boot()
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const panel = overlay.widget('price-check')
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  const row = panel.locator('.w-pc-table tbody tr:not(.w-pc-yours)').filter({ hasText: 'Corrupted' })
+  await expect(row).toHaveCount(1)
+  await expect(panel.locator('.w-pc-count-n')).toHaveCount(0)
+  const tag = row.locator('.w-pc-tag')
+  const before = await tag.boundingBox()
+  await row.locator('.w-pc-price').hover()
+  await expect(row.locator('.w-pc-travel-label')).toBeVisible()
+  expect(await tag.boundingBox()).toEqual(before)
+  const face = await row.locator('.w-pc-travel-face').boundingBox()
+  expect(face!.x + face!.width).toBeLessThanOrEqual(before!.x)
   expect(overlay.errors).toEqual([])
 })
