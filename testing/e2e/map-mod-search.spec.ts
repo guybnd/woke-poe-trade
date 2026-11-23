@@ -87,8 +87,9 @@ test('map: every number is a chip filter, typed min goes into the search', async
   const maps = panel.locator('[data-map-prop="Maps"]')
   const drops = panel.locator('[data-map-prop="Drops"]')
   await expect(currency).toBeVisible({ timeout: 20_000 })
-  // Currency starts on, Maps and Drops off; all three are buttons.
+  // Currency and Rarity start on (Rarity too, More Currency or not), Maps and Drops off.
   await expect(currency).toHaveAttribute('aria-pressed', 'true')
+  await expect(panel.locator('[data-map-prop="Rarity"]')).toHaveAttribute('aria-pressed', 'true')
   await expect(maps).toHaveAttribute('aria-pressed', 'false')
   await expect(drops).toHaveAttribute('aria-pressed', 'false')
   // Drops says why it's off.

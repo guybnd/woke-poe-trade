@@ -124,3 +124,4 @@
 - Net worth: a new Listed tab shows what you have listed at Faustus and haven't sold yet, with what it's worth, a suggested price from poe.ninja, and how long each has sat. Listings unsold for 3+ days (you can change that) show as a count on the dock icon. The list refreshes itself when you enter your hideout, at most every 30 min (a switch on the tab), your listings now count in your net worth total, Ctrl+Space answers "listed", and a hotkey (set it under Net worth in Settings) opens the tab straight away.
 - What's new now sits in the icon row after an update: each new feature with Show me and a dismiss button.
 - Price check: hover anywhere on an instant buyout listing and its door slides out to read Travel, so you can see where to click to go to the seller's hideout. Nothing in the row moves.
+- Map price check: Rarity now starts on like Pack size, also on maps with More Currency, Scarabs or Div cards.

@@ -69,12 +69,13 @@ export function mapProps (bulk: boolean, ctx: FiltersCreationContext): void {
   if (item.category !== ItemCategory.Map || item.mapCompletionReward || item.rarity === ItemRarity.Unique) return
 
   if (!bulk) {
-    const hasValuableDrops = Boolean(item.mapMoreThreads || item.mapMoreCurrency || item.mapMoreDivCards)
-
+    // woke: Rarity starts on like Pack size, More X or not (Guy, 2026-11-23: a
+    // high Rarity left off looked like a mistake). APT left it off when the map
+    // had More Currency / Scarabs / Div cards.
     areaProps({
       disabled: {
         itemQuantity: false,
-        itemRarity: hasValuableDrops,
+        itemRarity: false,
         packSize: false
       }
     }, ctx)
