@@ -1606,7 +1606,8 @@ test.describe('clips', () => {
         await clip.moveTo(b.x + Math.min(b.width / 2, 50), b.y + b.height / 2, ms)
         await clip.click()
       }
-      await go(/^Tier 3/)
+      // Rare gear moves by its rank in NeverSink's gear table.
+      await go(/^Rank 3$/)
       await clip.hold(500)
       await clip.poster()
       await clip.hold(800)
