@@ -384,7 +384,7 @@ const sourceLine = computed(() => source.value.label)
 </script>
 
 <style module>
-.wrap { display: grid; gap: 10px; font-size: var(--w-fs-sm); }
+.wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; font-size: var(--w-fs-sm); }
 .row { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .sec { display: grid; gap: 5px; }
 .head { display: flex; align-items: center; gap: 6px; color: var(--w-label); border-bottom: 1px solid var(--w-line); padding-bottom: 2px; }
