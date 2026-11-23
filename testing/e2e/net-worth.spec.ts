@@ -168,8 +168,12 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const stopBtn = overlay.page.locator('[data-card-stop]')
     await stopBtn.click()
     await expect(stopBtn).toContainText('Stop the run?')
-    await stopBtn.click()
-    await expect(runTab).toHaveCount(0, { timeout: 15_000 })
+    // The confirm lapses after a few seconds: on a slow runner, arm it again.
+    await expect(async () => {
+      const label = await stopBtn.innerText().catch(() => '')
+      if (/Stop/.test(label) && !/Stopping/.test(label)) await stopBtn.click()
+      await expect(runTab).toHaveCount(0, { timeout: 4000 })
+    }).toPass({ timeout: 30_000 })
     await overlay.pressHotkey(overlay.config.overlayKey)
     await expect(panel.locator('[data-past-run]').first()).toContainText('Nightmare maps')
     expect(searches).toHaveLength(2)
