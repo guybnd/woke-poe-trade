@@ -199,8 +199,10 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
               <video v-if="motion && s.clip" :class="{ on: s === slide(h), playing: playing[s.clip] }" :style="{ objectPosition: clipAt(s) }"
                 muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"
                 @playing="playing[s.clip] = true">
-                <source :src="clipFile(s.clip, 'webm')" type="video/webm">
+                <!-- MP4 first: the WebM files fail to decode in some Chrome builds
+                     (PIPELINE_ERROR_DECODE), and a failed first source isn't retried. -->
                 <source :src="clipFile(s.clip, 'mp4')" type="video/mp4">
+                <source :src="clipFile(s.clip, 'webm')" type="video/webm">
               </video>
             </template>
             <button type="button" class="whole" @click="view(slide(h))">
