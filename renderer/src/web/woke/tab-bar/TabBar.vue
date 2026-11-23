@@ -13,7 +13,7 @@
     <button :class="[$style.ic, $style.tools, { [$style.toolsOn]: popup?.kind === 'launcher' }]" aria-label="All tools"
       @click="openLauncher" @mouseenter="showTip(newsCount ? `All tools · ${newsCount} new` : 'All tools', false, $event)" @mouseleave="hideTip">
       <i class="fas fa-th" />
-      <span v-if="newsCount" :class="[$style.badge, $style.newsBadge]" data-news-count>{{ newsCount }}</span>
+      <span v-if="newsCount" :class="$style.newsCount" data-news-count>{{ newsCount }}</span>
     </button>
 
     <template v-if="fixedTabs.length">
@@ -68,14 +68,9 @@
           {{ tip.text }}<span v-if="tip.open" :class="$style.tipOpen">open</span>
         </div>
 
-        <!-- First-run help (welcome.ts): the card, then the buttons' names. -->
-        <welcome-card v-if="welcomeCardOn && welcomePos" :pos="welcomePos" @done="finishWelcome" @net-worth="welcomeNetWorth" />
-        <template v-if="railLabelsOn">
-          <div v-for="l in railLabels" :key="l.text" data-rail-label :class="[$style.tip, $style.railLabel, { [$style.tipLeft]: l.left, [$style.tipFlat]: flat }]"
-            :style="{ left: `${l.x}px`, top: `${l.y}px` }">
-            {{ l.text }}<w-kbd v-if="l.keys" :keys="l.keys" />
-          </div>
-        </template>
+        <!-- First-run help (welcome.ts): loaded only while there's some to show. -->
+        <rail-welcome v-if="welcomeDue" :rail="railEl" :flat="flat" :on-right="onRight" :busy="!!popup || !!tip || !!iconDrag?.active"
+          :tool-open="tabs.some(tab => tab.open && !tab.iconOnly)" :layout="[config.railSize, config.anchor]" />
 
         <div v-if="popup" :class="$style.backdrop" @mousedown="closePopup" @contextmenu.prevent="closePopup" />
 
@@ -219,20 +214,17 @@ import { MAX_UI_SIZE, MIN_UI_SIZE, nudgeUiSize, uiSize } from '../ui/ui-size'
 import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, toolDescription } from './tools'
 import { pastedItemText } from '../search/pasted-item'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
-import { WIcon, WKbd, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
+import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import { searchRequest } from '../search/widget'
 import { usePriceText } from '../shared/price'
-import { dismissWelcome, labelsShown, welcomePhase } from './welcome'
 import { markNewsSeen, newsFor } from './news'
 import { personalOn } from '../personal'
-import { NET_WORTH_TYPE } from '../net-worth/widget'
 import { openSettingsPage } from '../dock/dock'
-import { SEARCH_TYPE } from '../search/widget'
 
-// Shown once per install: kept out of the startup JS (perf budget).
-const WelcomeCard = defineAsyncComponent(() => import('./WelcomeCard.vue'))
+// First-run help, shown once per install: kept out of the startup JS (perf budget).
+const RailWelcome = defineAsyncComponent(() => import('./RailWelcome.vue'))
 
 const props = defineProps<{ config: TabBarConfig }>()
 const emit = defineEmits<{ (e: 'paste', text: string, from: DOMRect): void }>()
@@ -660,108 +652,10 @@ watch(() => wm.active.value, active => {
 })
 
 // ---- First-run help (welcome.ts) ----
-// The card on the first open after setup, then the rail's buttons named beside
-// them for a few opens. Never over a price check or another exclusive window.
-const welcomeState = computed(() => AppConfig().woke?.welcome)
-const welcomeNow = computed(() => welcomePhase(welcomeState.value))
-const exclusiveUp = computed(() => wm.widgets.value.some(w => w.wmZorder === 'exclusive' && w.wmWants === 'show'))
-const welcomeCardOn = computed(() => wm.active.value && welcomeNow.value === 'card' && !exclusiveUp.value && !popup.value)
-// Not on the open the card was on: the labels start with the next one.
-const cardThisOpen = ref(false)
-const railLabelsOn = computed(() => wm.active.value && welcomeNow.value === 'labels' && !cardThisOpen.value && !exclusiveUp.value && !popup.value && !tip.value && !iconDrag.value?.active)
-const welcomePos = ref<Record<string, string> | null>(null)
-const railLabels = ref<Array<{ text: string, keys: string | null, x: number, y: number, left: boolean }>>([])
-let labelsSeen = false
-
-function placeWelcome () {
-  const r = railEl.value?.getBoundingClientRect()
-  if (!r?.width) { welcomePos.value = null; return }
-  const CARD_W = 380
-  if (flat.value) {
-    const below = r.top < window.innerHeight / 2
-    const left = Math.max(8, Math.min(window.innerWidth - CARD_W - 8, r.left))
-    welcomePos.value = below ? { left: `${left}px`, top: `${r.bottom + 8}px` } : { left: `${left}px`, bottom: `${window.innerHeight - r.top + 8}px` }
-    return
-  }
-  const left = onRight.value ? Math.max(8, r.left - CARD_W - 8) : Math.min(window.innerWidth - CARD_W - 8, r.right + 8)
-  // A rail low on the screen: the card grows up from its foot instead, so Got it stays on screen.
-  welcomePos.value = r.top > window.innerHeight / 2
-    ? { left: `${left}px`, bottom: `${Math.max(8, window.innerHeight - r.bottom)}px` }
-    : { left: `${left}px`, top: `${Math.max(8, r.top)}px` }
-}
-
-function placeRailLabels () {
-  const rail = railEl.value
-  const r = rail?.getBoundingClientRect()
-  if (!rail || !r?.width) { railLabels.value = []; return }
-  const search = AppConfig().widgets.find(w => w.wmType === SEARCH_TYPE) as { hotkey?: string | null } | undefined
-  const wanted: Array<{ label: string, text: string, keys: string | null }> = [
-    { label: 'All tools', text: 'All tools', keys: null },
-    { label: ICON_TOOL_NAMES.settings, text: 'Settings', keys: null },
-    { label: ICON_TOOL_NAMES['item-search'], text: 'Search', keys: search?.hotkey ?? null }
-  ]
-  const out: typeof railLabels.value = []
-  for (const w of wanted) {
-    const el = rail.querySelector<HTMLElement>(`button[aria-label="${w.label}"]`)
-    const b = el?.getBoundingClientRect()
-    if (!b?.width) continue
-    if (flat.value) {
-      const below = r.top < window.innerHeight / 2
-      const x = Math.max(TIP_ROOM, Math.min(window.innerWidth - TIP_ROOM, b.left + b.width / 2))
-      out.push({ text: w.text, keys: w.keys, left: !below, x, y: below ? r.bottom + 18 + out.length * 30 : r.top - 18 - out.length * 30 })
-    } else {
-      out.push({ text: w.text, keys: w.keys, left: onRight.value, x: onRight.value ? r.left - 6 : r.right + 6, y: b.top + b.height / 2 })
-    }
-  }
-  railLabels.value = out
-}
-
-watch([welcomeCardOn, railLabelsOn, flat, onRight, () => props.config.railSize, () => props.config.anchor], () => {
-  // After the rail has been laid out where it is now.
-  nextTick(() => {
-    if (welcomeCardOn.value) {
-      cardThisOpen.value = true
-      placeWelcome()
-    }
-    if (railLabelsOn.value) {
-      labelsSeen = true
-      placeRailLabels()
-    }
-  })
-}, { immediate: true, deep: true })
-
-watch(() => wm.active.value, active => {
-  if (active) return
-  cardThisOpen.value = false
-  if (!labelsSeen) return
-  labelsSeen = false
-  labelsShown(welcomeState.value)
+const welcomeDue = computed(() => {
+  const w = AppConfig().woke?.welcome
+  return !!w && (w.due || w.labelOpens > 0)
 })
-function onWelcomeResize () {
-  if (welcomeCardOn.value) placeWelcome()
-  if (railLabelsOn.value) placeRailLabels()
-}
-window.addEventListener('resize', onWelcomeResize)
-onBeforeUnmount(() => { window.removeEventListener('resize', onWelcomeResize) })
-
-// Opening a tool from the overlay means they've found their way: the card is
-// done. Not a window a hotkey opened during play, before they saw the card.
-watch(() => tabs.value.some(tab => tab.open && !tab.iconOnly), open => {
-  if (open && wm.active.value && welcomeCardOn.value) endWelcomeCard()
-})
-
-// Saved now: an open Settings window holds back the usual save until it closes.
-function endWelcomeCard () {
-  dismissWelcome(welcomeState.value)
-  saveConfigQuietly()
-}
-function finishWelcome () {
-  endWelcomeCard()
-}
-function welcomeNetWorth () {
-  endWelcomeCard()
-  openSettingsPage(wm, 'All modules')
-}
 
 const query = ref('')
 const searchInput = ref<HTMLInputElement | HTMLTextAreaElement>()
@@ -781,7 +675,7 @@ const launcherAll = computed(() => launcherEntries(
 // Net worth's code loads only once its stash reader is on, so while it's off
 // the launcher lists it by hand. Turning it on asks first, in Settings.
 const NET_WORTH_OFF: LauncherEntry<Tab> = {
-  key: 'net-worth-off', wmType: NET_WORTH_TYPE, name: 'Net worth', icon: 'fa-scale-balanced', art: null, state: 'off', tab: null
+  key: 'net-worth-off', wmType: 'woke-net-worth', name: 'Net worth', icon: 'fa-scale-balanced', art: null, state: 'off', tab: null
 }
 function entryHint (entry: LauncherEntry<Tab>): string | undefined {
   if (entry.key === NET_WORTH_OFF.key) return 'Off. Click for its switch in Settings (it asks first)'
@@ -1038,7 +932,6 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 :global([data-woke-art]) .flat .sep { width: 2px; height: 26px; }
 .flat .sep { width: 1px; height: 22px; margin: 0 4px; }
 
-.railLabel { pointer-events: none; }
 .tip {
   position: fixed;
   z-index: 9999;
@@ -1182,8 +1075,20 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 .footName { flex: none; color: var(--w-accent); font-family: var(--w-caps-face); font-size: var(--w-fs-xl); }
 .footText, .footHint { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .footHint { color: var(--w-faint); }
+.newsCount {
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  min-width: 13px;
+  height: calc(13px * var(--w-text-scale, 1));
+  padding: 0 2px;
+  border-radius: var(--w-r-sm);
+  font: var(--w-fs-xs)/calc(13px * var(--w-text-scale, 1)) var(--w-num);
+  text-align: center;
+  color: var(--w-accent-fg);
+  background: var(--w-accent);
+}
 .newSeal { flex: none; padding: 0 4px; font-family: var(--w-caps-face, var(--w-head)); font-size: var(--w-fs-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--w-accent-fg); background: var(--w-accent); border-radius: var(--w-r-sm); }
-.newsBadge { background: var(--w-accent); }
 .rowTag { flex: none; padding: 0 4px; font-size: var(--w-fs-sm); color: var(--w-dim); }
 .rowOff .rowName, .rowOff .rowMain > * { opacity: 0.55; }
 

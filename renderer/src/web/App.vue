@@ -6,8 +6,10 @@
 </template>
 
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import OverlayWindow from './overlay/OverlayWindow.vue'
-import SetupWizard from './woke/setup/SetupWizard.vue'
+// The setup window's own page: kept out of the overlay's startup JS (perf budget).
+const SetupWizard = defineAsyncComponent(() => import('./woke/setup/SetupWizard.vue'))
 // woke: the first-run setup window (main/src/woke/setup.ts) loads index.html#setup.
 const isSetupWindow = window.location.hash === '#setup'
 </script>
