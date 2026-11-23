@@ -581,6 +581,10 @@
    "renderer/src/web/woke/tab-bar/",
    "renderer/src/web/woke/setup/"
   ],
+  "whats-new.spec.ts": [
+   "renderer/src/web/woke/dock/",
+   "renderer/src/web/woke/tab-bar/news.ts"
+  ],
   "wickerman-dock.spec.ts": [
    "renderer/src/web/woke/wickerman/"
   ],

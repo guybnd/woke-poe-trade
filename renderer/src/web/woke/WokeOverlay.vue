@@ -3,6 +3,7 @@
   <Dock />
   <PinLayer />
   <ToolkitHealth />
+  <WhatsNew v-if="newsUnseen" />
   <ClaudeSuggestions />
   <StashOutlines />
   <TreeOverlay />
@@ -36,6 +37,11 @@ import { computed, defineAsyncComponent, onUnmounted } from 'vue'
 import { isModuleOn } from './modules'
 import { toast } from './ui'
 import { LOOT_FILTER_SAMPLE_TARGET } from './loot-filter/widget'
+import { unseenNews } from './tab-bar/news'
+
+// What's new in the dock, loaded only after an update brings some.
+const WhatsNew = defineAsyncComponent(() => import('./dock/WhatsNew.vue'))
+const newsUnseen = computed(() => unseenNews(AppConfig().woke).length > 0)
 
 // Loaded when first opened: kept out of the startup JS (perf budget).
 const ReportDialog = defineAsyncComponent(() => import('./app/ReportDialog.vue'))

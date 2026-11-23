@@ -83,7 +83,7 @@ export interface DockEntry {
 export const DOCK_ORDER = [
   // Retired (modules.ts RETIRED_MODULES), out of the icon lists until they come
   // back: 'farming' sat after 'mechanics', 'league-invest' after 'market'.
-  'toolkit', 'claude', 'trade', 'campaign', 'run-timer', 'lab', 'lab-gems', 'challenges', 'mechanics', 'drop-counter', 'stacked-decks', 'boss-runs', 'death-recap', 'session-story',
+  'toolkit', 'whats-new', 'claude', 'trade', 'campaign', 'run-timer', 'lab', 'lab-gems', 'challenges', 'mechanics', 'drop-counter', 'stacked-decks', 'boss-runs', 'death-recap', 'session-story',
   'map-scan', 'essence-scan', 'trade-live', 'atlas', 'regex-library', 'market', 'scarab-flip', 'wealthy-exile', 'loot-filter', 'wickerman',
   // Last, where they sat before they were listed: an icon missing here can't
   // be brought back once dismissed (dismissedIcons, Settings › Icon row).
@@ -96,6 +96,7 @@ export const DOCK_PEEKS = new Set(['campaign', 'farming', 'session-story', 'drop
 
 export const DOCK_NAMES: Record<string, string> = {
   'toolkit': 'Toolkit health',
+  'whats-new': "What's new",
   'claude': 'Suggestions',
   'trade': 'Trades',
   'campaign': 'Campaign',
