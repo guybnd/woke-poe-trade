@@ -533,7 +533,7 @@ const eta = computed(() => goal.value ? goalEta(seriesFor(ledger.value.points, h
 const tips = computed(() => tipIndex(v.value ? [...v.value.lines, ...v.value.unpricedLines, ...v.value.ignoredLines] : []))
 
 // Your own prices don't move with poe.ninja.
-const changes = computed(() => new Map((v.value?.lines ?? []).map(l => [l.key, l.mine ? null : change24h(l.graph)])))
+const changes = computed(() => new Map((v.value?.lines ?? []).map(l => [l.key, l.mine || l.heldSince != null ? null : change24h(l.graph)])))
 const moves = computed(() => priceMoves(v.value?.lines ?? [], k => changes.value.get(k) ?? null).filter(m => Math.abs(toDiv(m.valueChaos)) >= 0.1))
 
 // ---------- what changed (C2, C1) ----------

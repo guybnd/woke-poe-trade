@@ -1,5 +1,6 @@
 # Next release notes
 
+- Net worth: a price that spikes on poe.ninja is no longer counted, thin market or not. Rain Tempter sat near 4c all week, then poe.ninja priced it at 98.5c (+2,362%) and it read as 76% of a tab. Now a price 5× or more over the rest of its poe.ninja week counts at that week's usual price, with the pause icon and a hover that names poe.ninja's number, until poe.ninja has had it 3 days in a row. Its 24h change shows — while held.
 - Ctrl+Space search can be resized now: drag any edge or corner for more room (the text stays the same size). It keeps its size, and right-click › Reset size puts it back.
 - Price check: when tighter ranges filter the loaded listings, the "Matched 14 of 20 here" note beside Search bulk no longer gets cut to "Mat" in a narrow window: it shortens to "14/20" (full line on hover), or hides when even that won't fit (the table's foot says it too).
 - Price check: the listed time is coloured by age: green under an hour, plain under a day, amber under a week, red after that.

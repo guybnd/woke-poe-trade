@@ -61,7 +61,7 @@ import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import type { ValuedLine } from './valuation'
 import Coin from './Coin.vue'
 import { heldNote, lineTip } from './tips'
-import { isUniqueFrame } from './valuation'
+import { HOLD_RATIO, isUniqueFrame } from './valuation'
 
 const props = defineProps<{
   lines: ValuedLine[]
@@ -188,7 +188,9 @@ function tipOf (l: ValuedLine): ItemTipRef {
     ? undefined
     : l.heldKind === 'one-day'
       ? `${l.unitChaos > 0 ? 'Price held' : 'Not counted'}: poe.ninja's ${ninja} is from only one day this week`
-      : `Price held: poe.ninja's jumped to ${ninja} in a thin market`
+      : l.heldKind === 'spike'
+        ? `Price held: poe.ninja's ${ninja} is ${HOLD_RATIO}× its usual price this week`
+        : `Price held: poe.ninja's jumped to ${ninja} in a thin market`
   const note = [tabs.length ? `In ${tabs.join(', ')}` : '', held ?? ''].filter(Boolean).join('. ')
   return lineTip(l, l.count, note || undefined)
 }

@@ -77,7 +77,8 @@ export interface ValuedLine {
   // price, held since then (see holdJump). ninjaChaos is the jumped one.
   heldSince?: number
   // 'jump': a thin price jump, held up to 6 hours. 'one-day': a price poe.ninja
-  // has on only one day, not counted until it has a second (see holdJump).
+  // has on only one day, not counted until it has a second. 'spike': 5x over
+  // poe.ninja's own week, counted at its median (see holdJump, graphSpike).
   heldKind?: HoldKind
   // The last price from poe.ninja that could be trusted, kept through reads
   // with no price or a held one (saved in the baseline as ref).
@@ -152,15 +153,50 @@ export const HOLD_MIN_JUMP = 1
 export const HOLD_MS = 6 * 3_600_000
 export const ONE_DAY_MIN = 10
 
-export type HoldKind = 'jump' | 'one-day'
+// A spike on poe.ninja's own 7-day line, read or no read: Rain Tempter sat
+// near 4c all week, then poe.ninja priced it at 98.5c (+2,362%) on a market
+// that wasn't thin, so neither rule above caught it. A price 5x or more over
+// the median of the line's earlier priced days (any for cards, currency and
+// the like; 3+ for gear, whose lines are sparse) counts at that median until
+// poe.ninja has had it on 3 days in a row (today and the 2 before within half
+// of it). A real rise counts 2 days late, and shows as held all along.
+export const SPIKE_MIN_DAYS = 1
+export const SPIKE_MIN_DAYS_GEAR = 3
+export const SPIKE_KEEP_DAYS = 3
+
+export type HoldKind = 'jump' | 'one-day' | 'spike'
+
+// poe.ninja's line as chaos per day, today last, from today's price: the line
+// is % change from one reference day, so day / today is the price ratio.
+export function graphChaos (chaos: number, graph: Array<number | null> | undefined): Array<number | null> {
+  if (!Array.isArray(graph) || !graph.length) return []
+  const today = graph[graph.length - 1]
+  if (typeof today !== 'number' || !(1 + today / 100 > 0)) return []
+  return graph.map(v => typeof v === 'number' && 1 + v / 100 > 0 ? chaos * (1 + v / 100) / (1 + today / 100) : null)
+}
+
+// The price to count instead of a spike on poe.ninja's line, or null.
+export function graphSpike (chaos: number, graph: Array<number | null> | undefined, minDays = SPIKE_MIN_DAYS): number | null {
+  const days = graphChaos(chaos, graph)
+  if (days.length < 2) return null
+  const earlier = days.slice(0, -1).filter((v): v is number => v != null).sort((a, b) => a - b)
+  if (!earlier.length || earlier.length < minDays) return null
+  const mid = earlier.length >> 1
+  const base = earlier.length % 2 ? earlier[mid] : (earlier[mid - 1] + earlier[mid]) / 2
+  if (!(base > 0) || chaos < base * HOLD_RATIO || chaos - base < HOLD_MIN_JUMP) return null
+  // Held up on poe.ninja for 3 days in a row: a real rise.
+  const last = days.slice(-SPIKE_KEEP_DAYS)
+  if (last.length === SPIKE_KEEP_DAYS && last.every(v => v != null && v >= chaos / 2)) return null
+  return base
+}
 
 // The last read's price for an item, and since when it was held.
 export interface HoldGuard { before: Baseline | null, now: number }
 
 // The price to count instead and since when, or null to take poe.ninja's.
-// Gear (uniques, gems) is left to the jump rule: many trade on so few days
+// Gear (uniques, gems) is left out of the one-day rule: many trade on so few days
 // that poe.ninja's line is mostly empty, and those were real prices.
-export function holdJump (ninja: number, p: { thin?: boolean, oneDay?: boolean, category?: Category }, prev: Baseline[string] | undefined, now: number): { chaos: number, since: number, kind: HoldKind } | null {
+export function holdJump (ninja: number, p: { thin?: boolean, oneDay?: boolean, category?: Category, graph?: Array<number | null> }, prev: Baseline[string] | undefined, now: number): { chaos: number, since: number, kind: HoldKind } | null {
   const sinceFor = (kind: HoldKind) => prev?.heldSince != null && (prev.heldKind ?? 'jump') === kind ? prev.heldSince : now
   // Only a solid price vouches for a one-day one: an older baseline's price
   // may itself have been a fake.
@@ -168,12 +204,21 @@ export function holdJump (ninja: number, p: { thin?: boolean, oneDay?: boolean, 
   if (p.oneDay && p.category !== 'gear' && ninja >= ONE_DAY_MIN && (ref == null || ninja >= ref * HOLD_RATIO)) {
     return { chaos: ref ?? 0, since: sinceFor('one-day'), kind: 'one-day' }
   }
+  const spike = graphSpike(ninja, p.graph, spikeDays(p.category))
+  if (spike != null) return { chaos: spike, since: sinceFor('spike'), kind: 'spike' }
   if (!p.thin || !prev || prev.mine) return null
   const base = ref ?? prev.unitChaos
   if (!(base > 0) || ninja < base * HOLD_RATIO || ninja - base < HOLD_MIN_JUMP) return null
   // A one-day hold that ended gets the full 6 hours as a jump.
   const since = sinceFor('jump')
   return now - since < HOLD_MS ? { chaos: base, since, kind: 'jump' } : null
+}
+
+const spikeDays = (category?: Category) => category === 'gear' ? SPIKE_MIN_DAYS_GEAR : SPIKE_MIN_DAYS
+
+function spikeOnly (ninja: number, p: { graph?: Array<number | null>, category?: Category }): { chaos: number, since: number, kind: HoldKind } | null {
+  const spike = graphSpike(ninja, p.graph, spikeDays(p.category))
+  return spike == null ? null : { chaos: spike, since: Date.now(), kind: 'spike' }
 }
 
 // One item's price with your prices on top. null: no price.
@@ -186,7 +231,10 @@ export function priceItem (item: StashItemLike, priceOf: PriceOf, prefs: PricePr
     return { chaos: own, category: ninja?.category ?? categoryOfFrame(item.frame), graph: ninja?.graph, ninja: ninjaChaos, mine: true, variant: ninja?.variant }
   }
   if (!ninja || ninjaChaos == null) return null
-  const held = guard ? holdJump(ninjaChaos, ninja, guard.before?.[key], guard.now) : null
+  // With no last read, the spike on poe.ninja's own line still counts.
+  const held = guard
+    ? holdJump(ninjaChaos, ninja, guard.before?.[key], guard.now)
+    : spikeOnly(ninjaChaos, ninja)
   const out: ItemPrice = { chaos: held?.chaos ?? ninjaChaos, category: ninja.category, graph: ninja.graph, ninja: ninjaChaos, mine: false, variant: ninja.variant }
   if (held) {
     out.heldSince = held.since
