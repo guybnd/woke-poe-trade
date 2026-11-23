@@ -39,7 +39,9 @@
     <div v-if="tenths" :class="$style.tenths" data-testid="instant-ninja-tenths">
       <div :class="$style.tenthsHead"><span>Divine in chaos</span></div>
       <table :class="$style.tenthsTable">
-        <tr v-for="t in tenths" :key="t.div"><td><w-price-text :text="t.div" /></td><td><w-price-text :text="t.chaos" /></td></tr>
+        <tbody>
+          <tr v-for="t in tenths" :key="t.div"><td><w-price-text :text="t.div" /></td><td><w-price-text :text="t.chaos" /></td></tr>
+        </tbody>
       </table>
     </div>
     </div>
@@ -283,7 +285,7 @@ onUnmounted(() => {
 .headline { font-family: var(--w-num); font-size: calc(24px * var(--w-text-scale, 1)); line-height: 1.1; font-weight: 600; color: var(--w-accent); white-space: nowrap; }
 .dim { color: var(--w-dim); }
 .fg { color: var(--w-fg); }
-.top { display: flex; align-items: flex-start; gap: 6px; }
+.top { display: flex; align-items: flex-start; gap: calc(6px * var(--w-ui-size, 1)); }
 .tenths {
   zoom: var(--w-ui-size, 1);
   border: 1px solid var(--w-line-strong, var(--w-line));
@@ -296,12 +298,12 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
   overflow: hidden;
 }
-.tenthsHead { padding: 4px 10px; border-bottom: 1px solid var(--w-line); color: var(--w-accent); font-family: var(--w-head, var(--w-body)); white-space: nowrap; }
+.tenthsHead { padding: 4px 10px; border-bottom: 1px solid var(--w-line); color: var(--w-accent); font-family: var(--w-head); letter-spacing: var(--w-head-track, 0); white-space: nowrap; }
 .tenthsTable { border-collapse: collapse; width: 100%; }
-.tenthsTable td { padding: 1px 10px; line-height: calc(18px * var(--w-text-scale, 1)); white-space: nowrap; }
+.tenthsTable td { padding: 0 8px; line-height: calc(16px * var(--w-text-scale, 1)); white-space: nowrap; }
 .tenthsTable td:first-child { color: var(--w-dim); }
 .tenthsTable td:last-child { text-align: right; }
-.tenthsTable tr:nth-child(even) td { background: var(--w-row-alt, rgba(255, 255, 255, .03)); }
+.tenthsTable tr:nth-child(even) td { background: color-mix(in srgb, var(--w-fg) 5%, transparent); }
 .tenthsTable tr:last-child td { color: var(--w-accent); font-weight: 600; }
 .row { display: flex; gap: 6px; margin-top: 2px; }
 .btn { display: inline-flex; align-items: center; }

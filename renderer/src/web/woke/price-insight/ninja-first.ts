@@ -107,7 +107,7 @@ export function ninjaTotal (chaos: number, rate: number | undefined): string {
 export function divineTenths (rate: number): Array<{ div: string, chaos: string }> {
   return Array.from({ length: 10 }, (_, i) => {
     const f = (i + 1) / 10
-    return { div: `${i === 9 ? '1' : f.toFixed(1)} div`, chaos: `${num(Math.round(rate * f))}c` }
+    return { div: `${i === 9 ? '1' : f.toFixed(1)} div`, chaos: `${num(Math.round(rate * (i + 1) / 10))}c` }
   })
 }
 
