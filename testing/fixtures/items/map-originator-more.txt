@@ -1,0 +1,22 @@
+Item Class: Maps
+Rarity: Rare
+Grim Ward
+Map (Tier 16)
+--------
+Atlas Drops: +87% (augmented)
+Item Rarity: +144% (augmented)
+Monster Pack Size: +33% (augmented)
+More Maps: +35% (augmented)
+More Currency: +92% (augmented)
+--------
+Item Level: 83
+--------
+Monster Level: 83
+--------
+Area is Influenced by the Originator's Memories (implicit)
+--------
+Monsters have 50% increased Accuracy Rating
+Monsters Poison on Hit
+Players gain 50% reduced Flask Charges
+--------
+Travel to a Map of this tier or lower by using this in a personal Map Device. Maps can only be used once.

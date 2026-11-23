@@ -15,21 +15,25 @@
           <span class="w-dim text-xs">Juice</span>
           <span class="w-num w-accent font-semibold" data-map-juice>{{ result.juice.score }}</span>
         </template>
-        <WInfo text="The badge and dots are your Map mods ratings. Has finds maps with the mod, Not finds maps without it, Any ignores it; a number chip searches at least its minimum (scroll to change it). These change only this price check's search, and nothing is searched until you press Search." />
+        <WInfo text="The badge and dots are your Map mods ratings. Has finds maps with the mod, Not finds maps without it, Any ignores it; a number chip searches at least its minimum (type or scroll to change it). These change only this price check's search, and nothing is searched until you press Search." />
         <i class="fas w-dim text-xs" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
       </button>
       <div v-if="summary || picked" :class="$style.summary">
         {{ summary }}<template v-if="summary && picked"> · </template><template v-if="picked">Search: <span :class="$style.picked" data-map-mod-picked>{{ picked }}</span></template>
       </div>
       <div :class="$style.chips">
-        <!-- A number with a trade filter is a toggle: on, the search wants at least the min. -->
+        <!-- Guy's pick A (2026-11-23): every number is a chip and every chip is a filter.
+             Off: dashed with +. On: the min, typed in its box or scrolled. -->
         <template v-for="p in result.props" :key="p.label">
-          <button v-if="propFilter(p.label)" type="button" :class="[$style.chip, $style.propChip, !propFilter(p.label)!.disabled && $style.propOn]" class="w-num"
-            :aria-pressed="!propFilter(p.label)!.disabled" :title="propTitle(p.label)" :data-map-prop="p.label"
-            data-own-wheel @click="toggleProp(p.label)" @wheel.prevent.stop="wheelMin(p.label, $event)">
-            {{ p.label }} {{ p.value }}%<template v-if="!propFilter(p.label)!.disabled && minOf(p.label) != null"> ≥{{ minOf(p.label) }}</template>
-          </button>
-          <span v-else :class="$style.chip" class="w-num">{{ p.label }} {{ p.value }}%</span>
+          <span v-if="propFilter(p.label)" :class="[$style.chip, $style.propChip, isOn(p.label) ? $style.propOn : $style.propOff, p.label === 'Drops' && $style.propWarn]"
+            class="w-num" data-own-wheel @wheel.prevent.stop="wheelMin(p.label, $event)">
+            <button type="button" :class="$style.propBtn" :aria-pressed="isOn(p.label)" :title="propTitle(p.label)" :data-map-prop="p.label"
+              @click="toggleProp(p.label)">{{ p.label }} {{ p.value }}%</button>
+            <label v-if="isOn(p.label)" :class="$style.minBox" :title="`Search at least this ${p.label}`">≥<input type="number" min="0" :max="p.value" :value="minOf(p.label) ?? ''"
+              :aria-label="`${p.label} minimum`" :data-map-prop-min="p.label" @change="typeMin(p.label, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()"></label>
+          </span>
+          <!-- The bulk search finds maps by type only, so its numbers aren't filters. -->
+          <span v-else :class="$style.chip" class="w-num" :title="DEAD_TITLE">{{ p.label }} {{ p.value }}%</span>
         </template>
       </div>
       <div v-if="open" :class="$style.list">
@@ -159,6 +163,9 @@ function propFilter (label: string): StatFilter | null {
   if (!id) return null
   return (props.stats ?? []).find((s): s is StatFilter => !s.group && s.tradeId[0] === id) ?? null
 }
+function isOn (label: string): boolean {
+  return !propFilter(label)!.disabled
+}
 function minOf (label: string): number | null {
   const min = propFilter(label)?.roll?.min
   return typeof min === 'number' ? min : null
@@ -167,21 +174,35 @@ function toggleProp (label: string) {
   const f = propFilter(label)
   if (f) f.disabled = !f.disabled
 }
+// Never past the map's own number, or the search leaves this map out.
+function clampMin (f: StatFilter, n: number): number {
+  return Math.min(f.roll!.value, Math.max(0, n))
+}
 // The wheel moves the min, as on the rows it replaced; turns the chip on.
 function wheelMin (label: string, e: WheelEvent) {
   const f = propFilter(label)
   // Sideways scroll and Ctrl+wheel (zoom) aren't a step, as on the other chips.
   if (!f?.roll || e.deltaY === 0 || e.ctrlKey) return
   const now = typeof f.roll.min === 'number' ? f.roll.min : f.roll.value
-  // Never past the map's own number, or the search leaves this map out.
-  f.roll.min = Math.min(f.roll.value, Math.max(0, now + (e.deltaY < 0 ? 1 : -1)))
+  f.roll.min = clampMin(f, now + (e.deltaY < 0 ? 1 : -1))
   f.disabled = false
 }
+// A typed min. Empty searches any amount (the chip stays on).
+function typeMin (label: string, e: Event) {
+  const f = propFilter(label)
+  const box = e.target as HTMLInputElement
+  if (!f?.roll) return
+  const n = box.value.trim() === '' ? NaN : Number(box.value)
+  f.roll.min = Number.isFinite(n) ? clampMin(f, Math.round(n)) : ''
+  // Show the clamped number, not what was typed.
+  box.value = typeof f.roll.min === 'number' ? String(f.roll.min) : ''
+}
+const DEAD_TITLE = 'The bulk search finds maps by type only. Switch to the normal search to use this number.'
 function propTitle (label: string): string {
-  const on = !propFilter(label)!.disabled
+  const on = isOn(label)
   // Checked 2026-11-15: the trade site's Atlas Drops filter matched no listing.
-  if (label === 'Drops') return on ? 'Searching Atlas Drops. The trade site found no listings for this filter in 3.30, so results may be empty.' : 'Search at least this Atlas Drops. The trade site found no listings for this filter in 3.30.'
-  return on ? 'In the search. Scroll to change the minimum, click to leave it out.' : 'Click to search at least this, scroll to set the minimum.'
+  if (label === 'Drops') return on ? 'Searching Atlas Drops. The trade site found no listings for this filter in 3.30, so results may be empty. Click to leave it out.' : 'The trade site found no listings for Atlas Drops in 3.30, so turning this on will likely empty the results.'
+  return on ? 'In the search. Type or scroll the minimum, click to leave it out.' : 'Click to search at least this, or scroll to set the minimum.'
 }
 
 const picked = computed(() => {
@@ -255,9 +276,24 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .seg .on_has { background: color-mix(in srgb, var(--w-up) 28%, transparent); color: var(--w-fg); }
 .seg .on_not { background: color-mix(in srgb, var(--w-down) 28%, transparent); color: var(--w-fg); }
 .picked { color: var(--w-fg); }
-.propChip { cursor: pointer; border: 1px solid transparent; }
+.propChip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid transparent; }
+.propBtn { cursor: pointer; color: inherit; }
+.propOff { border: 1px dashed var(--w-line-strong); }
+.propOff .propBtn::before { content: '+'; margin-right: 3px; color: var(--w-gold); }
 .propChip:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
 .propOn { color: var(--w-fg); background: var(--w-accent-soft); border-color: var(--w-accent); }
+.propOn:hover { border-color: var(--w-accent); }
+/* Atlas Drops: the trade site has no listings for it (pseudo/maps.ts). */
+.propWarn.propOff { border-color: color-mix(in srgb, var(--w-warn) 70%, transparent); color: var(--w-warn); }
+.propWarn.propOff .propBtn::before { content: '!'; color: var(--w-warn); font-weight: 700; }
+.minBox { display: inline-flex; align-items: center; gap: 1px; color: var(--w-dim); }
+.minBox input {
+  width: 3.2em; padding: 0 3px; border-radius: var(--w-r-sm);
+  border: 1px solid var(--w-line-strong); background: var(--w-panel); color: var(--w-accent);
+  font: inherit; text-align: right; -moz-appearance: textfield;
+}
+.minBox input::-webkit-inner-spin-button, .minBox input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.minBox input:focus-visible { outline: 1px solid var(--w-accent); }
 .dot { flex: none; width: 7px; height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-3); }
 .dot.deadly { background: var(--w-down); }
 .dot.warn { background: var(--w-warn); }

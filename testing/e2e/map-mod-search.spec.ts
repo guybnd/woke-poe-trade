@@ -49,10 +49,11 @@ test('map: no search until Search, then each mod searches as has or not', async 
   const pack = panel.locator('[data-map-prop="Pack"]')
   await expect(rarity).toHaveAttribute('aria-pressed', 'true')
   // The wheel moves the min the rows used to edit.
-  const before = await rarity.textContent()
+  const rarityMin = panel.locator('[data-map-prop-min="Rarity"]')
+  const before = await rarityMin.inputValue()
   await rarity.hover()
   await overlay.page.mouse.wheel(0, -100)
-  await expect(rarity).not.toHaveText(before!)
+  await expect(rarityMin).not.toHaveValue(before)
   // Says what the switches do.
   await expect(panel.locator('[data-map-mod] [data-state="not"]').first()).toHaveAttribute('title', 'Trade search finds maps without this mod')
   await pack.click()
@@ -71,5 +72,54 @@ test('map: no search until Search, then each mod searches as has or not', async 
   // Pack size went out of the search with its chip.
   const filters = searches[0].query as unknown as { filters?: { map_filters?: { filters?: Record<string, { min?: number } | undefined> } } }
   expect(filters.filters?.map_filters?.filters?.map_packsize).toBeUndefined()
+  expect(overlay.errors).toEqual([])
+})
+
+// Guy's pick A (2026-11-23): every number on the strip is a chip filter. The
+// More Currency / More Maps totals are chips too, not lines below; off chips
+// say they're clickable, and the min is typed in the chip.
+test('map: every number is a chip filter, typed min goes into the search', async ({ overlay }) => {
+  const searches = await fakeTrade(overlay.page)
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-originator-more.txt')
+  const panel = overlay.widget('price-check')
+  const currency = panel.locator('[data-map-prop="Currency"]')
+  const maps = panel.locator('[data-map-prop="Maps"]')
+  const drops = panel.locator('[data-map-prop="Drops"]')
+  await expect(currency).toBeVisible({ timeout: 20_000 })
+  // Currency starts on, Maps and Drops off; all three are buttons.
+  await expect(currency).toHaveAttribute('aria-pressed', 'true')
+  await expect(maps).toHaveAttribute('aria-pressed', 'false')
+  await expect(drops).toHaveAttribute('aria-pressed', 'false')
+  // Drops says why it's off.
+  await expect(drops).toHaveAttribute('title', /no listings/)
+  // No second control for the same number in the lines below.
+  await expect(panel.getByText(/More Currency: 92%/)).toHaveCount(0)
+  await expect(panel.getByText(/More Maps: 35%/)).toHaveCount(0)
+
+  await maps.click()
+  await expect(maps).toHaveAttribute('aria-pressed', 'true')
+  const curMin = panel.locator('[data-map-prop-min="Currency"]')
+  await curMin.fill('70')
+  await curMin.press('Enter')
+  // Past the map's own number is clamped to it.
+  const mapsMin = panel.locator('[data-map-prop-min="Maps"]')
+  await mapsMin.fill('99')
+  await mapsMin.press('Enter')
+  await expect(mapsMin).toHaveValue('35')
+  await overlay.snap('map chips all filters')
+  expect(searches).toEqual([])
+
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBeGreaterThan(0)
+  const and = searches[0].query.stats.find(g => g.type === 'and')!
+  const byId = (id: string) => and.filters.find(f => f.id === id)
+  expect(byId('pseudo.pseudo_map_more_currency_drops')?.disabled).toBeFalsy()
+  expect(byId('pseudo.pseudo_map_more_currency_drops')?.value).toMatchObject({ min: 70 })
+  expect(byId('pseudo.pseudo_map_more_map_drops')?.disabled).toBeFalsy()
+  expect(byId('pseudo.pseudo_map_more_map_drops')?.value).toMatchObject({ min: 35 })
+  // Atlas Drops stayed out.
+  const q = searches[0].query as unknown as { filters?: { map_filters?: { filters?: Record<string, unknown> } } }
+  expect(q.filters?.map_filters?.filters?.map_bonus).toBeUndefined()
   expect(overlay.errors).toEqual([])
 })

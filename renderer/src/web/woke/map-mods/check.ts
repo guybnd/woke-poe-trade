@@ -163,10 +163,15 @@ export function isUnsure (result: Pick<MapCheckResult, 'unidentified' | 'unknown
 // widget hasn't been added from the overlay menu yet.
 // The trade filter behind each number chip on the map strip (pseudo/maps.ts).
 export const PROP_TRADE_ID: Record<string, string> = {
-  Drops: 'item.map_atlas_drops',
-  Quant: 'item.map_item_quantity',
-  Rarity: 'item.map_item_rarity',
-  Pack: 'item.map_pack_size'
+  'Drops': 'item.map_atlas_drops',
+  'Quant': 'item.map_item_quantity',
+  'Rarity': 'item.map_item_rarity',
+  'Pack': 'item.map_pack_size',
+  // The T17 'More X' totals: trade searches them as pseudo stats (pseudo/maps.ts).
+  'Currency': 'pseudo.pseudo_map_more_currency_drops',
+  'Threads': 'pseudo.pseudo_map_more_scarab_drops',
+  'Maps': 'pseudo.pseudo_map_more_map_drops',
+  'Div cards': 'pseudo.pseudo_map_more_card_drops'
 }
 
 export function findMapModsConfig (): MapModsWidget | null {
