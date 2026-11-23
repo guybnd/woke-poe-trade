@@ -69,7 +69,7 @@ and `WOKE_TEXT_SCALE=125` run the tests on a bigger screen or with bigger
 text. A deliberate exception takes `data-layout-ok="<why>"`
 (`e2e/layout-audit.ts`).
 
-Layout gate: in CI (`WOKE_LAYOUT_GATE=1`) a test fails on a new layout fault
+Layout gate (off in CI for now, until its baseline is made on CI): with `WOKE_LAYOUT_GATE=1` a test fails on a new layout fault
 of the worst kinds: text cut off with nothing to show the rest, a box out of
 its window, a sideways scrollbar, a button row on two lines, text under 11px.
 A fault only counts if it's still there 0.7s later, so animations don't trip

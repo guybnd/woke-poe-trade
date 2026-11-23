@@ -9,7 +9,7 @@
 // fault is seen its window is saved to <folder>/shots/ with the fault boxed in
 // red. `node tools/layout-report.mjs <folder>` groups them.
 //
-// The gate (WOKE_LAYOUT_GATE=1, on in CI): the faults in GATED_RULES fail the
+// The gate (WOKE_LAYOUT_GATE=1; off in CI until its baseline comes from CI): the faults in GATED_RULES fail the
 // test unless they are in layout-baseline.json, the faults the app had when
 // the gate came in. The list only shrinks: fix a fault and take its line out.
 // `WOKE_LAYOUT_GATE=write` adds the faults a run finds to the list (for a
