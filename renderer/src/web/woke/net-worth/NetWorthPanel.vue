@@ -1024,7 +1024,7 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .soldToday { color: var(--w-gold); cursor: pointer; white-space: nowrap; }
 .soldToday:hover { text-decoration: underline; }
 .listedChip { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-.countBox { width: 13px; height: 13px; display: inline-grid; place-items: center; padding: 0; border: 1px solid var(--w-gold); background: transparent; color: var(--w-gold); font-size: 8px; cursor: pointer; }
+.countBox { width: 13px; height: 13px; display: inline-grid; place-items: center; padding: 0; border: 1px solid var(--w-gold); background: transparent; color: var(--w-gold); font-size: calc(9px * var(--w-text-scale, 1)); cursor: pointer; }
 .countBox:hover { background: color-mix(in srgb, var(--w-gold) 18%, transparent); }
 .countBox:focus-visible { outline: 1px solid var(--w-fg); outline-offset: 1px; }
 .leftOut { color: var(--w-dim); text-decoration: line-through; }
