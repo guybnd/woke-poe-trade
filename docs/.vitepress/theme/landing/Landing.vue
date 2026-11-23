@@ -138,7 +138,8 @@ function view (s) {
   viewer.value.showModal()
 }
 
-const withSlide = new Set(HIGHLIGHTS.flatMap(h => h.slides.map(s => s.module)))
+// A slide can stand for more than one module (`modules`).
+const withSlide = new Set(HIGHLIGHTS.flatMap(h => h.slides.flatMap(s => [s.module, ...(s.modules ?? [])])))
 const more = MODULES.filter(m => !withSlide.has(m.id))
 </script>
 
@@ -162,7 +163,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 
     <main>
       <section v-for="h in HIGHLIGHTS" :id="h.id" :key="h.id" class="highlight" :aria-labelledby="`${h.id}-title`">
-        <div class="item" :class="{ 'with-tray': open(h).folder, 'with-strip': h.slides.length > 1 }">
+        <div class="item" :class="{ 'with-tray': open(h).folder, 'with-strip': h.slides.length > 1, 'with-flow': h.flow }">
           <div class="head">
             <i aria-hidden="true"></i>
             <div>
@@ -172,14 +173,19 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
             <i aria-hidden="true"></i>
           </div>
           <div class="plates" role="group" :aria-label="`${h.name} slides`">
-            <button v-for="(s, i) in h.slides" :key="s.label" type="button" class="plate"
-              :class="{ folder: s.folder }" :aria-pressed="i === current(h)"
-              :aria-expanded="s.folder ? i === current(h) : undefined" @click="go(h, i)">
-              <i aria-hidden="true"></i>
-              <span><b v-if="s.folder" class="folder-mark" aria-hidden="true"></b>{{ s.label }}<small v-if="s.folder" class="folder-count">{{ s.folder.length }}</small></span>
-              <i aria-hidden="true"></i>
-            </button>
+            <template v-for="(s, i) in h.slides" :key="s.label">
+              <button type="button" class="plate"
+                :class="{ folder: s.folder }" :aria-pressed="i === current(h)"
+                :aria-expanded="s.folder ? i === current(h) : undefined" @click="go(h, i)">
+                <i aria-hidden="true"></i>
+                <span><b v-if="h.steps" class="step-num" aria-hidden="true">{{ i + 1 }}</b><b v-if="s.folder" class="folder-mark" aria-hidden="true"></b>{{ s.label }}<small v-if="s.folder" class="folder-count">{{ s.folder.length }}</small></span>
+                <i aria-hidden="true"></i>
+              </button>
+              <span v-if="h.steps && i < h.slides.length - 1" class="step-arrow" aria-hidden="true">›</span>
+            </template>
           </div>
+          <!-- A story section: one line on how its steps add up. -->
+          <p v-if="h.flow" class="flow">{{ h.flow }}</p>
           <div v-if="open(h).folder" class="plates sub" role="group" :aria-label="open(h).label">
             <button v-for="(s, j) in open(h).folder" :key="s.label" type="button" class="plate"
               :aria-pressed="j === innerAt(folderKey(h))" @click="go(h, current(h), j)">
@@ -348,7 +354,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
    well under its real size, so it stays sharp. */
 .item {
   --chrome: 180px;
-  --h: min(720px, max(280px, calc(100vh - var(--chrome) - var(--tray, 0px) - var(--strip, 0px))));
+  --h: min(720px, max(280px, calc(100vh - var(--chrome) - var(--tray, 0px) - var(--strip, 0px) - var(--flow, 0px))));
   display: flex;
   flex-direction: column;
   width: min(calc(var(--h) * 16 / 9), 100%);
@@ -408,6 +414,12 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .plate[aria-pressed='true'] .folder-count { color: var(--unique); }
 /* Its row: smaller plates in a tray hung from the row above, like an open
    stash folder. */
+/* A story section (`steps`): each plate numbered, an arrow to the next, and
+   the `flow` line saying how they add up. */
+.step-num { display: inline-grid; place-items: center; flex: none; width: 19px; height: 19px; margin: 0 6px 0 1px; border: 1.5px solid currentColor; border-radius: 50%; font: 12px/1 var(--caps); }
+.step-arrow { align-self: center; padding: 0 3px; color: var(--edge); font: 20px/1 var(--caps); }
+.flow { flex: none; margin: 4px 14px 0; padding: 2px 8px; border-block: 1px solid #3a2814; color: var(--dim); font: 15px/22px var(--caps); text-align: center; }
+.item.with-flow { --flow: 30px; }
 .plates.sub { margin: 4px 14px 2px; padding: 5px 6px 4px; border: 1px solid #4a3218; border-top-color: var(--unique); background: linear-gradient(rgba(175, 96, 37, 0.12), transparent 70%); }
 .plates.sub .plate { height: 28px; font-size: 14.5px; }
 .plates.sub .plate i { width: 20px; background-size: auto 28px; }

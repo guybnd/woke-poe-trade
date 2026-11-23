@@ -110,3 +110,4 @@
 - Net worth › Runs: hover an item and press Alt + H (change it in Net worth's settings) to hold it in the run: it counts at poe.ninja's price under "Outside the stash" until your stash, a Faustus listing or a sale shows it. What a run leaves outside the stash (held items, sales not collected yet) carries over to the next run, not counted again.
 - Website: each section's clip now starts as soon as a bit of it is on screen. On shorter screens the Price Check clip at the top used to sit still until you scrolled.
 - Website: the feature clips play again in Chrome. Their WebM versions failed to decode there, so each clip stayed on its first frame.
+- Website: a new Profit section shows how stash reads, map times, trade history and strategy runs add up to profit per map and per hour, with a short clip.
