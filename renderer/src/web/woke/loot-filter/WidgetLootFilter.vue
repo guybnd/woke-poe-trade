@@ -86,6 +86,7 @@ import FilterEditor from './FilterEditor.vue'
 import { useLootFilter } from './store'
 import { isValidEdit } from './edits'
 import { cleanEdit, setFilterApplier } from '../claude-link/suggestions'
+import { setRuleOpener } from './open-rule'
 import { pressedKeys, sortKeys } from './hotkey-match'
 import { itemFacts } from './item-facts'
 import type { ItemFacts } from './item-facts'
@@ -257,6 +258,14 @@ onUnmounted(() => {
 function close () {
   wm.hide(props.config.wmId)
 }
+
+// "Go to rule" from another window (the price check's filter chip).
+onUnmounted(setRuleOpener((at) => {
+  focus.value = { ...at }
+  mode.value = 'editor'
+  showWithOverlay(wm, props.config.wmId)
+  ensureLoaded()
+}))
 
 function openEditorFromCard (at?: { type: string, tier: string }) {
   const b = match.value?.final?.block
