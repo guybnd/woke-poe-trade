@@ -57,7 +57,14 @@
         <!-- Per hour of play over the window picked under Details. -->
         <span v-if="rateShown.div != null && !(detailsOpen && shown.perHour)" class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h <span class="w-dim">{{ rateWindow === 'today' ? 'today' : rateWindow }}</span></span>
         <button v-if="soldToday.count" type="button" class="w-num" :class="$style.soldToday" :title="`${soldToday.count} ${soldToday.count === 1 ? 'sale' : 'sales'} today. Click for the Sales view`" @click="view = 'sales'">Sold {{ div(soldToday.chaos) }}<Coin :chaos="!divine" /> today</button>
-        <button v-if="listed.count" type="button" class="w-num" :class="$style.soldToday" :title="listedTitle" data-listed-chip @click="view = 'listed'">At Faustus {{ div(listed.worthChaos) }}<Coin :chaos="!divine" /><template v-if="listed.stale"> · <span class="w-warn">{{ listed.stale }} stale</span></template></button>
+        <!-- The box counts your listings in the total or leaves them out
+             (remembered; the same switch as Settings). The words open Listed. -->
+        <span v-if="listed.count" :class="$style.listedChip" data-listed-chip>
+          <button type="button" role="checkbox" :aria-checked="countListed" :class="$style.countBox"
+            :title="countListed ? 'Counted in your total. Click to leave it out' : 'Left out of your total. Click to count it'"
+            aria-label="Count Faustus listings in your total" data-count-listed @click="config.countListed = !countListed"><i v-if="countListed" class="fas fa-check" /></button>
+          <button type="button" class="w-num" :class="$style.soldToday" :title="listedTitle" @click="view = 'listed'"><span :class="{ [$style.leftOut]: !countListed }">At Faustus {{ div(listed.worthChaos) }}<Coin :chaos="!divine" /></span><template v-if="listed.stale"> · <span class="w-warn">{{ listed.stale }} stale</span></template></button>
+        </span>
         <button v-if="runChip" type="button" class="w-num" :class="[$style.soldToday, tone(runChip.profitChaos)]" :title="`Run ${runChip.name}: ${countLabel(runChip.maps, runChip.fights)}. Click for the Runs view`" data-run-chip @click="view = 'runs'">Run {{ signed(toDiv(runChip.profitChaos)) }}<Coin :chaos="!divine" /></button>
         <WSpark v-if="spark.length > 1 && !(detailsOpen && shown.chart)" :values="spark" :width="90" :height="18" :class="$style.spark" />
         <span v-if="detailsOpen && shown.numbers" :class="$style.holdings" class="w-num text-xs">
@@ -820,7 +827,8 @@ const listed = computed(() => {
   const rows = d && d.league === salesLeague.value ? pendingRows(d, sales.value, saleRates.value, ninjaPriced, now.value, props.config.staleDays) : []
   return pendingTotals(rows)
 })
-const listedWorth = computed(() => props.config.countListed === false ? 0 : listed.value.worthChaos)
+const countListed = computed(() => props.config.countListed !== false)
+const listedWorth = computed(() => countListed.value ? listed.value.worthChaos : 0)
 const totalTitle = computed(() => {
   const stash = v.value?.chaos ?? 0
   const lines = [`${inChaos(stash + listedWorth.value)}`, `Stash ${div(stash)} ${unit.value} · liquid ${div(liquid.value)} ${unit.value}`]
@@ -834,7 +842,7 @@ const totalTitle = computed(() => {
 const listedTitle = computed(() => {
   const t = listed.value
   const lines = [`${t.count} ${t.count === 1 ? 'listing' : 'listings'} not sold yet, worth about ${div(t.worthChaos)} ${unit.value} (asking ${div(t.askChaos)} ${unit.value})`]
-  lines.push(props.config.countListed === false ? 'Not counted in your total (Settings)' : 'Counted in your total; the chart counts only your stash')
+  lines.push(countListed.value ? 'Counted in your total; the chart counts only your stash' : 'Left out of your total (tick the box to count it)')
   if (t.stale) lines.push(`${t.stale} unsold ${props.config.staleDays ?? DEFAULT_STALE_DAYS} days or more`)
   lines.push('Click for the Listed view')
   return lines.join('\n')
@@ -1015,6 +1023,11 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .saleNum { color: var(--w-gold); font-weight: 500; }
 .soldToday { color: var(--w-gold); cursor: pointer; white-space: nowrap; }
 .soldToday:hover { text-decoration: underline; }
+.listedChip { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.countBox { width: 13px; height: 13px; display: inline-grid; place-items: center; padding: 0; border: 1px solid var(--w-gold); background: transparent; color: var(--w-gold); font-size: calc(9px * var(--w-text-scale, 1)); cursor: pointer; }
+.countBox:hover { background: color-mix(in srgb, var(--w-gold) 18%, transparent); }
+.countBox:focus-visible { outline: 1px solid var(--w-fg); outline-offset: 1px; }
+.leftOut { color: var(--w-dim); text-decoration: line-through; }
 .soldHead { display: flex; justify-content: space-between; align-items: baseline; gap: var(--w-s2); width: 100%; margin-bottom: 4px; text-align: left; cursor: pointer; }
 .soldHead:hover .caps { color: var(--w-fg); }
 .spendNote { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-info); }

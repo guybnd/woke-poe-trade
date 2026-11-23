@@ -125,3 +125,4 @@
 - What's new now sits in the icon row after an update: each new feature with Show me and a dismiss button.
 - Price check: hover anywhere on an instant buyout listing and its door slides out to read Travel, so you can see where to click to go to the seller's hideout. Nothing in the row moves.
 - Map price check: Rarity now starts on like Pack size, also on maps with More Currency, Scarabs or Div cards.
+- Net worth: a tick box on the At Faustus chip counts your listings in the total or leaves them out, remembered. Ctrl+Space "listed" says which.

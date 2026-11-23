@@ -262,6 +262,17 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await overlay.page.unroute('**/api/trade/search/**')
     await overlay.page.unroute('**/api/trade/fetch/**')
     await panel.getByRole('tab', { name: 'Holdings' }).click()
+    // The box on At Faustus leaves your listings out of the total and back in.
+    const total = panel.locator('[data-net-total]')
+    const countBox = panel.locator('[data-count-listed]')
+    await expect(countBox).toHaveAttribute('aria-checked', 'true')
+    const withListed = await total.innerText()
+    await countBox.click()
+    await expect(countBox).toHaveAttribute('aria-checked', 'false')
+    await expect(total).not.toHaveText(withListed)
+    await countBox.click()
+    await expect(countBox).toHaveAttribute('aria-checked', 'true')
+    await expect(total).toHaveText(withListed)
 
     // The Sales view: a header click sorts the table, a second click flips it.
     // Price compares by value: 44c sorts under 1 div though 44 > 1.

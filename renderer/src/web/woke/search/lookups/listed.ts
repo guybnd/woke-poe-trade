@@ -28,7 +28,8 @@ function row (r: PendingRow): LookupRow {
 }
 
 // `doc`: the league's saved listings, or null with Net worth off or never read.
-export function listedLookup (doc: PendingDoc | null, sales: Sale[] | null, staleDays?: number): Lookup {
+// `counted`: false when Net worth leaves your listings out of its total.
+export function listedLookup (doc: PendingDoc | null, sales: Sale[] | null, staleDays?: number, counted = true): Lookup {
   return (query, ctx) => {
     if (!doc?.listings.length) return []
     const rates: Rates = { chaos: 1 }
@@ -47,7 +48,7 @@ export function listedLookup (doc: PendingDoc | null, sales: Sale[] | null, stal
         id: 'answer:listed',
         group: 'Answer',
         name: `Listed at Faustus: ${t.count} unsold`,
-        sub: t.stale ? `${t.stale} unsold for days` : 'Your listings not sold yet',
+        sub: `${t.stale ? `${t.stale} unsold for days` : 'Your listings not sold yet'} · ${counted ? 'counted in your net worth' : 'left out of your net worth'}`,
         icon: 'fas fa-store',
         sections: [
           { rows: [{ label: `Asking · ${t.count}`, chaos: t.askChaos }, ...(t.stale ? [{ label: `Stale · ${t.stale}`, chaos: t.staleChaos }] : [])] },
