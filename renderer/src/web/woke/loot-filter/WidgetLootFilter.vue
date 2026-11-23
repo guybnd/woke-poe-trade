@@ -262,7 +262,7 @@ function close () {
 onUnmounted(setRuleOpener((at) => {
   focus.value = { ...at }
   mode.value = 'editor'
-  wm.show(props.config.wmId)
+  showWithOverlay(wm, props.config.wmId)
   ensureLoaded()
 }))
 

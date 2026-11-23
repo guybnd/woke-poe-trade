@@ -6,16 +6,22 @@ export interface RuleRef { type: string, tier: string }
 
 type Opener = (at: RuleRef) => void
 
-let opener: Opener | null = null
+// Newest last: with more than one loot filter widget, the latest mounted
+// one opens, and unmounting it hands back to the one before.
+const openers: Opener[] = []
 
 export function setRuleOpener (fn: Opener): () => void {
-  opener = fn
-  return () => { if (opener === fn) opener = null }
+  openers.push(fn)
+  return () => {
+    const i = openers.lastIndexOf(fn)
+    if (i >= 0) openers.splice(i, 1)
+  }
 }
 
 // False when no loot filter widget is mounted to show it.
 export function openRuleInEditor (at: RuleRef): boolean {
-  if (!opener) return false
-  opener(at)
+  const open = openers[openers.length - 1]
+  if (!open) return false
+  open(at)
   return true
 }

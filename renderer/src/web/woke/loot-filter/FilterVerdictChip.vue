@@ -14,6 +14,7 @@
 // only when it matters (hidden, or a valuable item with a small label). Its
 // Fix menu goes to the rule in the editor, or makes the change here.
 import { computed } from 'vue'
+import { ItemRarity } from '@/parser'
 import type { ParsedItem } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
 import { getDetailsId } from '@/web/price-check/trends/getDetailsId'
@@ -62,6 +63,7 @@ const verdict = computed<Verdict | null>(() => {
   const price = chaos.value
   const line = store.config.safetyNet.minChaos
   const base = facts.baseType
+  const unique = props.item.rarity === ItemRarity.Unique
   const canOwn = Boolean(base && b?.type && b.tier && !b.type.startsWith('woke->'))
   const rule = b?.type && b.tier && !b.tier.startsWith('#') ? { type: b.type, tier: b.tier } : undefined
   const own = (visibility: 'Show' | 'Hide', patch: StylePatch, text: string) => () => {
@@ -104,7 +106,14 @@ const verdict = computed<Verdict | null>(() => {
     label: '',
     title: `Your filter shows this: ${where}.`,
     rule,
-    fix: canOwn ? { label: 'Hide it', run: own('Hide', {}, `${base} now hidden`) } : undefined
+    // Never offered on an item worth your safety net line: one click there
+    // would throw away something valuable. The label says how wide it goes:
+    // for a unique, it's every unique on that base.
+    fix: canOwn && !(price != null && price >= line)
+      ? (unique
+          ? { label: `Hide every unique ${base}`, run: own('Hide', {}, `Every unique ${base} now hidden`) }
+          : { label: 'Hide it', run: own('Hide', {}, `${base} now hidden`) })
+      : undefined
   }
 })
 

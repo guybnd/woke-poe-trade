@@ -1083,6 +1083,9 @@ function kaomFilter (hidden: boolean) {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
   fs.writeFileSync(path.join(folder, 'NeverSink.filter'), [
     '# NeverSink test',
+    'Show # $type->currency $tier->t1',
+    '\tBaseType == "Chaos Orb"',
+    '',
     `${hidden ? 'Hide' : 'Show'} # $type->uniques $tier->t3`,
     '\tRarity Unique',
     '\tBaseType == "Glorious Plate"',
@@ -1092,7 +1095,7 @@ function kaomFilter (hidden: boolean) {
 }
 const ownRule = (base: string, vis: 'Show' | 'Hide') => new RegExp(`${vis} # \\$type->woke->own [^\\n]*\\n(\\t[^\\n]*\\n)*\\tBaseType == "${base}"`)
 
-test('price check: a hidden item\'s Fix menu goes to its rule, or shows it', async ({ overlay }) => {
+test('price check: a hidden item\'s Fix menu goes to its rule, or shows it', async ({ overlay, fakeApp }) => {
   test.slow()
   const folder = kaomFilter(true)
   await overlay.boot({ widgets: [{ ...lootFilter(folder), reloadWhenSafe: false }] })
@@ -1120,15 +1123,16 @@ test('price check: a hidden item\'s Fix menu goes to its rule, or shows it', asy
 
   // Go to rule: the editor, on that rule.
   await page.getByRole('menuitem', { name: 'Go to rule' }).click()
-  // In game the click has already given the overlay focus; here, give it.
-  overlay.app.sendToOverlay({ name: 'MAIN->OVERLAY::focus-change', payload: { game: false, overlay: true, usingHotkey: false } })
   const editor = overlay.widget('woke-loot-filter')
   await expect(editor.getByRole('tab', { name: 'Rules' })).toHaveAttribute('aria-selected', 'true')
-  await expect(editor.getByText('Glorious Plate').first()).toBeVisible()
+  // On that rule, not the first one in the file.
+  await expect(editor.getByText('All uniques').first()).toBeVisible()
+  await expect(editor.getByText('Item: Glorious Plate').first()).toBeVisible()
   await overlay.snap('filter chip, Go to rule opened the editor')
 
   // Show it, from the menu, writes the filter.
-  overlay.app.sendToOverlay({ name: 'MAIN->OVERLAY::focus-change', payload: { game: true, overlay: false, usingHotkey: false } })
+  // Back to the game.
+  fakeApp.focusGame(true)
   await overlay.copyItem('items/unique-kaoms-heart.txt')
   await expect(chip).toBeVisible()
   await pc.getByRole('button', { name: /^Fix/ }).click()
@@ -1155,7 +1159,8 @@ test('price check: an item the filter shows gets a quiet icon that can hide it',
   await expect(page.getByRole('menuitem', { name: 'Go to rule' })).toBeVisible()
   await overlay.snap('filter icon, shown item menu')
   expect(fs.existsSync(path.join(folder, 'NeverSink (woke).filter'))).toBe(false)
-  await page.getByRole('menuitem', { name: 'Hide it' }).click()
+  // A unique: it says it hides every unique on that base.
+  await page.getByRole('menuitem', { name: 'Hide every unique Glorious Plate' }).click()
   await expect.poll(() => {
     const out = path.join(folder, 'NeverSink (woke).filter')
     return fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : ''
