@@ -127,3 +127,11 @@
 - Map price check: Rarity now starts on like Pack size, also on maps with More Currency, Scarabs or Div cards.
 - Net worth: a tick box on the At Faustus chip counts your listings in the total or leaves them out, remembered. Ctrl+Space "listed" says which.
 - What's new: Show me now opens the exact tab a line is about (Net worth › Listed, Runs; Map mods › Planner).
+- Price check, bulk items: the check no longer spends a second exchange search on its own to compare chaos with divine offers. When the first search held the chaos offers back, divine leads and says chaos wasn't searched yet; click Chaos to load it. A search still waiting in the queue is dropped when you check another item.
+- Price check, the small poe.ninja card: Enter on a focused button (Details) does that button's job instead of opening Live offers.
+- Price check: a listing exactly 1 hour or 1 day old gets the colour of its "1h" or "1d" label.
+- Net worth: a gear price spike from poe.ninja's line no longer counts at the spiked price for one read every 6 hours. 5- and 6-link items at Faustus and in Sales are priced as linked. Magic maps get the saved-price spike check. After a league switch, the old league's sales no longer show while the new league's load. The Best chip and the chart's Sold names have the item hover.
+- Strategy runs: a rare or magic map held with Alt+H and then listed or sold no longer counts twice. Sales of listings older than the newest 100 no longer count as run profit. After a restart the dock card, Ctrl+Space and the glance bar show the same profit and Faustus line as the Runs view, and the Runs view's per hour matches the card.
+- Atlas strategies: a tree link followed by a full stop or comma in pasted guide text imports. A hypostasis.faith link with an empty mastery pick no longer picks the first one.
+- Map history: unique maps (Cortex, Maelström of Chaos...) show their own item on hover, not a made-up "<name> Map".
+- Ctrl+Space: the "Listed …" and "Sold …" results have the item hover. What's new: Show me on Campaign or Session story opens its own Settings page. Reopening search with the same text starts with the groups folded again. Hovering a tool in All tools clears only the What's new line it shows, so its other new lines stay in the dock.
