@@ -1,6 +1,6 @@
 // Exchange items poe.ninja prices show that price first; the exchange search waits for a click.
 import { describe, expect, it } from 'vitest'
-import { holdBulkSearch, fixedPriceItem, ninjaPrice, ninjaTotal, divineParts, chaosParts, chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
+import { holdBulkSearch, fixedPriceItem, ninjaPrice, ninjaTotal, divineTenths, chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
 
 const base = { api: 'bulk' as const, enabled: undefined, live: false, chaos: 34 }
 
@@ -79,10 +79,13 @@ describe('ninjaPrice', () => {
     expect(ninjaTotal(238, 180)).toBe('1.3 div')
   })
   it('splits a divine into chaos', () => {
-    expect(divineParts(180)).toEqual([{ part: '0.1 div', chaos: '18c' }, { part: '0.25 div', chaos: '45c' }, { part: '0.5 div', chaos: '90c' }, { part: '0.75 div', chaos: '135c' }])
+    const tenths = divineTenths(180)
+    expect(tenths).toHaveLength(10)
+    expect(tenths[0]).toEqual({ div: '0.1 div', chaos: '18c' })
+    expect(tenths[2]).toEqual({ div: '0.3 div', chaos: '54c' })
+    expect(tenths[9]).toEqual({ div: '1 div', chaos: '180c' })
     // A Chaos Orb, the other way round.
-    expect(chaosParts(180)).toEqual([{ part: '10c', chaos: '0.056 div' }, { part: '50c', chaos: '0.28 div' }, { part: '100c', chaos: '0.56 div' }])
-    expect(divineParts(2500)[3].chaos).toBe('1,875c')
+    expect(divineTenths(2500)[6].chaos).toBe('1,750c')
     expect(chaosOrbRow({ info: { refName: 'Chaos Orb', namespace: 'ITEM' } }, 180)?.chaos).toBe(1)
     // Without poe.ninja's rate (not loaded, or a league it doesn't cover) it checks like other currency.
     expect(chaosOrbRow({ info: { refName: 'Chaos Orb', namespace: 'ITEM' } }, undefined)).toBeNull()

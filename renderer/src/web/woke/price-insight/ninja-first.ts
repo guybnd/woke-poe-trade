@@ -100,14 +100,15 @@ export function ninjaTotal (chaos: number, rate: number | undefined): string {
   return `${num(chaos)}c`
 }
 
-/** A Divine Orb's parts in chaos: 0.1, 0.25, 0.5 and 0.75 div. */
-export function divineParts (rate: number): Array<{ part: string, chaos: string }> {
-  return [0.1, 0.25, 0.5, 0.75].map(f => ({ part: `${f} div`, chaos: `${num(Math.round(rate * f))}c` }))
-}
-
-/** For a Chaos Orb, the other way: what 10, 50 and 100c are in div (the price line already says a divine in chaos). */
-export function chaosParts (rate: number): Array<{ part: string, chaos: string }> {
-  return [10, 50, 100].map(c => ({ part: `${c}c`, chaos: `${num(c / rate)} div` }))
+/**
+ * 0.1 to 1 divine in chaos, in tenths: the side panel of the Divine Orb and
+ * Chaos Orb instant cards (Guy, 2026-11-23), for paying part of a divine.
+ */
+export function divineTenths (rate: number): Array<{ div: string, chaos: string }> {
+  return Array.from({ length: 10 }, (_, i) => {
+    const f = (i + 1) / 10
+    return { div: `${i === 9 ? '1' : f.toFixed(1)} div`, chaos: `${num(Math.round(rate * f))}c` }
+  })
 }
 
 /**

@@ -3,6 +3,7 @@
        the item instead of the window (WOKEPOET-480). Space or Live offers opens the window
        and searches; Details opens it without a search. -->
   <div ref="el" :class="$style.anchor" :style="anchorStyle" data-testid="instant-ninja-card">
+    <div :class="$style.top">
     <div :class="$style.card">
       <div :class="$style.eyebrow">
         <span v-item-tip="{ name: item.info.refName }" :class="$style.name">{{ item.info.refName }}</span>
@@ -21,10 +22,6 @@
       <div v-if="price?.sub || stack" :class="$style.dim">
         <template v-if="stack"><span :class="$style.fg"><w-price-text :text="stack" /></span> for your {{ have }}</template><template v-if="stack && price?.sub"> · </template><w-price-text :text="price?.sub" />
       </div>
-      <!-- A Divine Orb's parts in chaos, or a Chaos Orb's amounts in div: chips, for paying in either. -->
-      <div v-if="parts" :class="$style.parts" data-testid="instant-ninja-parts">
-        <span v-for="p in parts" :key="p.part" :class="$style.chip" :title="`${p.part} = ${p.chaos}`"><span :class="$style.dim"><w-price-text :text="p.part" /></span> <w-price-text :text="p.chaos" /></span>
-      </div>
       <!-- The item's own verdict, where it has one (Stacked Deck: open or sell). -->
       <slot name="verdict" />
       <!-- A divination card: where it drops. -->
@@ -38,6 +35,14 @@
       </div>
       <div v-if="againKeys" :class="$style.dim" data-testid="instant-ninja-again">Live offers: <w-kbd :keys="againKeys" /> again</div>
     </div>
+    <!-- A Divine Orb or Chaos Orb: 0.1 to 1 div in chaos beside the card, for paying part of a divine. -->
+    <div v-if="tenths" :class="$style.tenths" data-testid="instant-ninja-tenths">
+      <div :class="$style.tenthsHead"><span>Divine in chaos</span></div>
+      <table :class="$style.tenthsTable">
+        <tr v-for="t in tenths" :key="t.div"><td><w-price-text :text="t.div" /></td><td><w-price-text :text="t.chaos" /></td></tr>
+      </table>
+    </div>
+    </div>
     <!-- Related items (the item's family, what drops it), as beside the window. -->
     <slot />
   </div>
@@ -48,7 +53,7 @@ import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shall
 import type { ParsedItem } from '@/parser'
 import { ItemCategory } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
-import { ninjaPrice, ninjaTotal, divineParts, chaosParts, chaosOrbRow } from './ninja-first'
+import { ninjaPrice, ninjaTotal, divineTenths, chaosOrbRow } from './ninja-first'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { useLeagues } from '@/web/background/Leagues'
 import { savedPriceSeries } from '../market/db'
@@ -103,9 +108,9 @@ const isDivine = computed(() => props.item.info.refName === 'Divine Orb')
 const have = computed(() => props.item.stackSize?.value ?? 1)
 const price = computed(() => info.value ? ninjaPrice(info.value.chaos, xchgRate.value, isDivine.value) : null)
 const stack = computed(() => info.value && have.value > 1 ? ninjaTotal(info.value.chaos * have.value, isDivine.value ? undefined : xchgRate.value) : null)
-const parts = computed(() => {
-  if (isDivine.value && info.value) return divineParts(info.value.chaos)
-  if (props.item.info.refName === 'Chaos Orb' && xchgRate.value) return chaosParts(xchgRate.value)
+const tenths = computed(() => {
+  if (isDivine.value && info.value) return divineTenths(info.value.chaos)
+  if (props.item.info.refName === 'Chaos Orb' && xchgRate.value) return divineTenths(xchgRate.value)
   return null
 })
 const age = computed(() => agoPhrase(updatedAt.value))
@@ -278,8 +283,26 @@ onUnmounted(() => {
 .headline { font-family: var(--w-num); font-size: calc(24px * var(--w-text-scale, 1)); line-height: 1.1; font-weight: 600; color: var(--w-accent); white-space: nowrap; }
 .dim { color: var(--w-dim); }
 .fg { color: var(--w-fg); }
-.parts { display: flex; flex-wrap: wrap; gap: 4px; }
-.chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-solid); font-size: var(--w-fs-sm); line-height: calc(18px * var(--w-text-scale, 1)); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.top { display: flex; align-items: flex-start; gap: 6px; }
+.tenths {
+  zoom: var(--w-ui-size, 1);
+  border: 1px solid var(--w-line-strong, var(--w-line));
+  border-radius: var(--w-r-sm);
+  background: var(--w-pc-well, var(--w-panel-solid));
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .6);
+  color: var(--w-fg);
+  font-family: var(--w-body);
+  font-size: var(--w-fs-sm);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+}
+.tenthsHead { padding: 4px 10px; border-bottom: 1px solid var(--w-line); color: var(--w-accent); font-family: var(--w-head, var(--w-body)); white-space: nowrap; }
+.tenthsTable { border-collapse: collapse; width: 100%; }
+.tenthsTable td { padding: 1px 10px; line-height: calc(18px * var(--w-text-scale, 1)); white-space: nowrap; }
+.tenthsTable td:first-child { color: var(--w-dim); }
+.tenthsTable td:last-child { text-align: right; }
+.tenthsTable tr:nth-child(even) td { background: var(--w-row-alt, rgba(255, 255, 255, .03)); }
+.tenthsTable tr:last-child td { color: var(--w-accent); font-weight: 600; }
 .row { display: flex; gap: 6px; margin-top: 2px; }
 .btn { display: inline-flex; align-items: center; }
 </style>
