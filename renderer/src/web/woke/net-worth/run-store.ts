@@ -88,6 +88,7 @@ export async function refreshRunMaps (run: Run | null, now = Date.now()) {
 // Sales and Faustus listings (faustus.ts) need the sales store, which the
 // Runs view loads; it hands its sum in here. Until then a run's last known
 // one stands (no import of sales-store here: it isn't loaded at startup).
+// The dock's glance works it out itself (glanceOutside), as Stop does.
 let outsideFn: ((r: Run) => Outside) | null = null
 const lastOutside = new Map<string, Outside>()
 export function setOutside (fn: ((r: Run) => Outside) | null) { const was = outsideFn; outsideFn = fn; return was }
@@ -100,6 +101,24 @@ function outsideOf (r: Run): Outside | undefined {
   return lastOutside.get(r.id)
 }
 
+// The live run's outside line for the glance: the Runs view's hook when it's
+// open, else the same sum from the sales file (run-stop.ts does this too), so
+// the dock and Ctrl+Space agree with the Runs view before it's ever opened.
+async function glanceOutside (league: string, r: Run): Promise<Outside | undefined> {
+  if (outsideFn) return outsideOf(r)
+  try {
+    const [store, f] = await Promise.all([import('./sales-store'), import('./faustus')])
+    await store.loadSales(league).catch(() => {})
+    // The Runs view opened meanwhile: its sum.
+    if (outsideFn) return outsideOf(r)
+    const o = f.outsideSums(f.outsideTotals(r, store.sales.value, store.rates.value))
+    lastOutside.set(r.id, o)
+    return o
+  } catch {
+    return lastOutside.get(r.id)
+  }
+}
+
 // Boss fights from Client.txt (run-time.ts, loaded when first needed).
 const runFights = (startAt: number, now: number) => import('./run-time').then(m => m.fightsIn(startAt, now)).catch(() => 0)
 
@@ -110,7 +129,7 @@ async function saveGlance (league: string, run: Run | null, points: readonly Led
     const now = Date.now()
     const maps = mapsIn(run, await readRunMaps(run, now), now)
     const fights = await runFights(run.startAt, now)
-    const t = runTotals(run, points, { maps, fights }, now, undefined, outsideOf(run))
+    const t = runTotals(run, points, { maps, fights }, now, undefined, await glanceOutside(league, run))
     g = { league, name: run.name, startAt: run.startAt, at: now, profitChaos: t.profitChaos, maps, perHourChaos: t.perHourChaos, costPerMapChaos: t.costPerMapChaos, divine }
     if (fights) g.fights = fights
     if (t.faustusChaos) g.faustusChaos = t.faustusChaos

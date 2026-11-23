@@ -4,7 +4,7 @@
 // the stash is carried over (pick H1, not counted). A failed read still starts.
 import { AppConfig } from '@/web/Config'
 import { toast } from '../ui/layer'
-import { leftOver } from './faustus'
+import { leftOver, startListingIds } from './faustus'
 import { readFaustus } from './faustus-read'
 import { loadRuns, runsDoc, startRun } from './run-store'
 import { loadSales, rates, sales } from './sales-store'
@@ -42,14 +42,21 @@ export async function startRunAt (league: string, name: string, at: number, diff
     const last = doc.live ?? doc.done[0]
     const taken = last && [doc.live, ...doc.done].some(r => r?.carriedFrom === last.id)
     let extra: Extra = last && !taken ? { ...leftOver(last, sales.value, rates.value), carriedFrom: last.id } : {}
+    // When the Listed doc first saw each listing: a read holds at most 100,
+    // and an older listing's sale is from before the run too.
+    const seen = await import('./pending-store')
+      .then(async m => { await m.loadPending(league); return m.pendingDoc.value?.league === league ? m.pendingDoc.value.firstSeen : undefined })
+      .catch(() => undefined)
     try {
       const read = await readFaustus(league, 0)
       // The same read keeps the Listed tab up to date (pending-store.ts).
       import('./pending-store').then(m => m.notePendingRead(league, read)).catch(() => {})
       const after = read.listings.filter(l => l.at > at)
-      extra = { ...extra, startListings: read.listings.filter(l => l.at <= at).map(l => l.id), ...(after.length ? { faustus: { at: read.at, listings: after } } : {}) }
+      extra = { ...extra, startListings: startListingIds(read.listings, seen, at), ...(after.length ? { faustus: { at: read.at, listings: after } } : {}) }
     } catch (e) {
       toast(`Started without your Faustus listings: ${(e as Error).message}`)
+      const before = startListingIds([], seen, at)
+      if (before.length) extra = { ...extra, startListings: before }
     }
     // The league switched meanwhile: the runs doc is the other league's now.
     if (!leagueNow()) return false

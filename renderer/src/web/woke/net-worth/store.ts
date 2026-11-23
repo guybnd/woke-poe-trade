@@ -9,7 +9,7 @@ import { ninjaPriceOf } from './prices'
 import { historyRev, loadPriceHistory } from './history'
 import { lastWokePrices } from '../market/hook'
 import {
-  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, isUniqueFrame, recordRead, sinceYesterday, tabSetOf, valueStash
+  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceYesterday, tabSetOf, valueStash
 } from './valuation'
 import { stashGains, gainsKey } from './gains'
 import { classify, resolveSpends } from './spend'
@@ -68,7 +68,7 @@ const ninja = usePoeninja()
 function loadHistory (): Promise<void> {
   const league = lastWokePrices()?.leagueId
   if (!league || !stash.value) return Promise.resolve()
-  const names = stash.value.tabs.flatMap(t => t.items.map(i => isUniqueFrame(i.frame) && i.name ? i.name : i.typeLine))
+  const names = stash.value.tabs.flatMap(t => t.items.map(historyName))
   return loadPriceHistory(league, names)
 }
 watch([stash, () => ninja.updatedAt.value], () => { loadHistory().catch(() => {}) })

@@ -256,6 +256,15 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], count: numb
   }
 }
 
+// Per hour with hideout time counted, for the Runs view: a live run's profit
+// is to the last read, so its time is too, as on the dock card (whose glance
+// is worked out at the read). A stopped run's stands.
+export function readPerHour (run: Pick<Run, 'startAt' | 'stoppedAt'>, t: Pick<RunTotals, 'profitChaos' | 'perHourChaos'>, lastReadAt: number | undefined): number | null {
+  if (run.stoppedAt != null || lastReadAt == null) return t.perHourChaos
+  const ms = Math.max(0, lastReadAt - run.startAt)
+  return ms >= MIN_RATE_MS ? t.profitChaos / (ms / 3_600_000) : null
+}
+
 // A stash row's value with your edit: signed as it went (in +, used up −).
 export function tallyValue (t: TallyLine, e: RowEdit | undefined): number {
   const was = netOf(t)

@@ -41,14 +41,14 @@ const priceOf = computed(() => ninja.updatedAt.value != null ? ninjaPriceOf() : 
 export function ninjaEach (s: Sale): number | null {
   const of = priceOf.value
   if (!of) return null
-  const p = of({ name: s.name, typeLine: s.typeLine, baseType: s.baseType, frame: s.frameType, stack: 1, icon: s.icon, gemLevel: s.gemLevel, quality: s.quality, mapTier: s.mapTier, corrupted: s.corrupted })
+  const p = of({ name: s.name, typeLine: s.typeLine, baseType: s.baseType, frame: s.frameType, stack: 1, icon: s.icon, gemLevel: s.gemLevel, quality: s.quality, mapTier: s.mapTier, corrupted: s.corrupted, links: s.links })
   return p && p.chaos > 0 ? p.chaos : null
 }
 // The same, with poe.ninja's thin-market flag (pending.ts confidence).
 export function ninjaPriced (s: Sale): { chaos: number, thin?: boolean } | null {
   const of = priceOf.value
   if (!of) return null
-  const p = of({ name: s.name, typeLine: s.typeLine, baseType: s.baseType, frame: s.frameType, stack: 1, icon: s.icon, gemLevel: s.gemLevel, quality: s.quality, mapTier: s.mapTier, corrupted: s.corrupted })
+  const p = of({ name: s.name, typeLine: s.typeLine, baseType: s.baseType, frame: s.frameType, stack: 1, icon: s.icon, gemLevel: s.gemLevel, quality: s.quality, mapTier: s.mapTier, corrupted: s.corrupted, links: s.links })
   return p && p.chaos > 0 ? { chaos: p.chaos, ...(p.thin ? { thin: true } : {}) } : null
 }
 export function marketOf (s: Sale): number | null {
@@ -61,6 +61,8 @@ const ok = (r: unknown): r is SalesReply => !!r && typeof r === 'object' && Arra
 export async function loadSales (league: string | null, read: 'none' | 'manual' = 'none') {
   if (!league) { reply.value = null; loadedFor = null; return }
   if (read === 'none' && loadedFor === league && reply.value) return
+  // Another league's sales are never this one's, even if this read fails.
+  if (loadedFor !== league) { reply.value = null; failed.value = null }
   loadedFor = league
   if (read === 'manual') reading.value = true
   try {

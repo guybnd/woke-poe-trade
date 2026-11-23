@@ -69,7 +69,7 @@
         <WSpark v-if="spark.length > 1 && !(detailsOpen && shown.chart)" :values="spark" :width="90" :height="18" :class="$style.spark" />
         <span v-if="detailsOpen && shown.numbers" :class="$style.holdings" class="w-num text-xs">
           <span :title="inChaos(liquid)"><span :class="$style.caps">Liquid</span> {{ div(liquid) }}<Coin :chaos="!divine" /></span>
-          <span v-if="best" class="w-trunc" :title="inChaos(best.chaos)"><span :class="$style.caps">Best</span> {{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></span>
+          <span v-if="best" class="w-trunc" :title="inChaos(best.chaos)"><span :class="$style.caps">Best</span> <span v-item-tip="lineTip(best, best.count)">{{ best.name }}</span> {{ div(best.chaos) }}<Coin :chaos="!divine" /></span>
           <span v-if="session" :class="tone(session.div)"><span :class="$style.caps">Session</span> {{ signed(session.div) }}<Coin :chaos="!divine" /></span>
         </span>
         <button v-if="anyDetails" type="button" :class="$style.toggle" :aria-expanded="detailsOpen" @click="config.detailsOpen = !detailsOpen">
@@ -276,7 +276,7 @@ import { AppConfig } from '@/web/Config'
 import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import { usePoeninja } from '@/web/background/Prices'
 import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSpark, WTabs, openMenu, toast, vItemTip } from '../ui'
-import { tipFor, tipIndex } from './tips'
+import { lineTip, tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { FARMING_TYPE, elapsed, requestEndSession } from '../farming/farming'
@@ -877,7 +877,7 @@ function marketTone (s: Sale) {
   return x == null || Math.abs(x) < 0.03 ? 'w-dim' : x < 0 ? 'w-down' : 'w-up'
 }
 // The chart's dots: each sale, named for the hover card.
-const chartSales = computed(() => sales.value.map(s => ({ at: s.at, text: `${saleName(s)} ${salePrice(s)}${saleChaosOf(s) == null ? '' : ` ${unit.value}`}` })))
+const chartSales = computed(() => sales.value.map(s => ({ at: s.at, text: `${saleName(s)} ${salePrice(s)}${saleChaosOf(s) == null ? '' : ` ${unit.value}`}`, tip: saleTip(s) })))
 // A group's sales: those after the read before its first, up to its last. Their
 // items' removed lines give way to the sale rows.
 const readBefore = computed(() => {

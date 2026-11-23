@@ -38,6 +38,14 @@ describe('item tooltip rule', () => {
     expect(missing).toEqual([])
   })
 
+  it('Net worth\'s Best chip and the chart\'s sold names show the item tooltip', () => {
+    const src = (f: string) => files.find(x => x.file === f)!.text
+    expect(src('woke/net-worth/NetWorthPanel.vue')).toMatch(/<span v-item-tip="[^"]+">\{\{ best\.name \}\}<\/span>/)
+    const chart = src('woke/net-worth/LedgerChart.vue')
+    expect(chart).toMatch(/Sold: <template v-for="\(x, i\) in shownSales\.list"[^>]*><span v-item-tip="x\.tip[^"]*">\{\{ x\.text \}\}/)
+    expect(src('woke/net-worth/NetWorthPanel.vue')).toMatch(/const chartSales = [^\n]*tip: saleTip\(s\)/)
+  })
+
   it('every data-no-item-tip says why', () => {
     const bare: string[] = []
     for (const { file, text } of files) {
