@@ -56,6 +56,9 @@ import { typeForSlug } from '../market/types'
 import { ninjaRange, savedRange } from '../market/ranges'
 
 const DAY_MS = 24 * 3600 * 1000
+// One point every 4 hours.
+const DAY_POINTS = 7
+const SAVED_WAIT_MS = 400
 import { WSpark, WKbd, WPriceText, agoPhrase, vItemTip } from '../ui'
 
 const CardDrops = defineAsyncComponent(() => import('../card-drops/CardDrops.vue'))
@@ -106,9 +109,12 @@ const age = computed(() => agoPhrase(updatedAt.value))
 // minutes when it was running a day ago, else poe.ninja's last two daily prices.
 const leagues = useLeagues()
 const saved = shallowRef<Array<number | null> | null>(null)
+// Waiting for the saved prices: the change shows once they're in, or after a
+// short wait with poe.ninja's, so it never flips while the card is up.
+const savedLoading = shallowRef(false)
 const dayTrend = computed(() => {
   const row = info.value
-  if (!row) return null
+  if (!row || savedLoading.value) return null
   if (saved.value) {
     const own = savedRange(row.chaos, saved.value)
     if (own) return { ...own, from: 'saved' as const }
@@ -121,17 +127,24 @@ const weekChange = computed(() => dayTrend.value?.change != null ? Math.round(da
 const changeTitle = computed(() => dayTrend.value?.from === 'saved'
   ? 'Change over the last 24 hours, from the prices this app saves about every 30 minutes'
   : "Change over the last day, from poe.ninja's daily prices")
+// Types the app's snapshots leave out (market/parse.ts, Prices.ts lookup-only).
+const NOT_SAVED = new Set(['ClusterJewel', 'BaseType'])
 watch(info, async (row) => {
   saved.value = null
+  savedLoading.value = false
   const league = leagues.selectedId.value
-  const slug = row?.url.split('/')[6]
-  const type = slug ? typeForSlug(slug) : undefined
-  if (!row || !league || !type) return
+  const type = row ? typeForSlug(row.slug) : undefined
+  if (!row || !league || !type || NOT_SAVED.has(type)) return
+  savedLoading.value = true
+  const wait = setTimeout(() => { if (info.value === row) savedLoading.value = false }, SAVED_WAIT_MS)
   try {
-    const got = await savedPriceSeries(league, type, DAY_MS, [row.name])
-    if (info.value === row) saved.value = got.rows[`${row.name}\u0000${row.variant ?? ''}`] ?? null
+    const got = await savedPriceSeries(league, type, DAY_MS, [row.name], DAY_POINTS, 5000)
+    if (info.value === row && savedLoading.value) saved.value = got.rows[`${row.name}\u0000${row.variant ?? ''}`] ?? null
   } catch {
     // No saved prices: poe.ninja's daily line stands in.
+  } finally {
+    clearTimeout(wait)
+    if (info.value === row) savedLoading.value = false
   }
 }, { immediate: true })
 
