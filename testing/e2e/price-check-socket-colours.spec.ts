@@ -38,16 +38,22 @@ async function fakeTrade (page: Page) {
   }))
 }
 
-// Every number tile (Links, the colour tiles, iLvl, Quality...) lies inside the price window.
+// Every number tile (Links, the colour tiles, iLvl, Quality...) lies inside the header's
+// content box (the window less its side padding).
 async function expectTilesInside (page: Page, atLeast: number) {
-  const win = await page.locator('#price-window').boundingBox()
+  const win = await page.locator('#price-window .filter-name').evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    const cs = getComputedStyle(el)
+    const left = r.x + parseFloat(cs.paddingLeft)
+    return { x: left, width: r.right - parseFloat(cs.paddingRight) - left }
+  })
   const tiles = page.locator('#price-window .filter-name-tiles > *')
   expect(await tiles.count()).toBeGreaterThanOrEqual(atLeast)
   for (const tile of await tiles.all()) {
     const box = await tile.boundingBox()
     expect(box, await tile.innerText()).not.toBeNull()
-    expect(box!.x, await tile.innerText()).toBeGreaterThanOrEqual(win!.x)
-    expect(box!.x + box!.width, await tile.innerText()).toBeLessThanOrEqual(win!.x + win!.width)
+    expect(box!.x, await tile.innerText()).toBeGreaterThanOrEqual(win.x - 0.5)
+    expect(box!.x + box!.width, await tile.innerText()).toBeLessThanOrEqual(win.x + win.width + 0.5)
   }
 }
 
@@ -97,7 +103,7 @@ test('right-click Links shows colour tiles on any linked item, off until switche
   await panel.locator('[data-links-tile]').click({ button: 'right' })
   await expect(panel.locator('[data-socket-colour]')).toHaveCount(4)
   await overlay.snap('colour tiles from right-click')
-  // The wider number row wraps inside the window: Quality was cut off at its right edge.
+  // The wider number row stays inside the window here too.
   await expectTilesInside(overlay.page, 7)
   // Shown off: nothing about colours is searched until a tile is switched on.
   expect(searches.every(s => s.query.filters.socket_filters?.filters.sockets == null)).toBe(true)
