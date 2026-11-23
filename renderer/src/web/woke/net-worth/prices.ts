@@ -5,10 +5,11 @@ import { usePoeninja } from '@/web/background/Prices'
 import { lastWokePrices } from '../market/hook'
 import { feedDays, graphGaps, pricedOnlyToday } from '../market/parse'
 import { THIN_GAPS } from '../market/types'
+import { priceHistory } from './history'
 import { categoryOfSlug, gemVariant, isUniqueFrame } from './valuation'
 import type { Priced, PriceOf, StashItemLike } from './valuation'
 
-interface Row { chaos: number, variant?: string, graph?: Array<number | null> }
+interface Row { name?: string, chaos: number, variant?: string, graph?: Array<number | null> }
 
 // Gems by poe.ninja's variant (gemVariant), else the cheapest. A gem listed
 // at its own level (Awakened 5, Enlighten 3) is found by that first.
@@ -53,7 +54,7 @@ export function ninjaPriceOf (): PriceOf {
     if (item.typeLine === 'Divine Orb' && divine) return { chaos: divine, category: 'currency' }
     if (item.frame === 6) {
       const row = ninja.findPriceByQuery({ ns: 'DIVINATION_CARD', name: item.typeLine, variant: undefined })
-      return row ? { chaos: row.chaos, category: 'cards', graph: row.graph } : null
+      return row ? { chaos: row.chaos, category: 'cards', graph: row.graph, history: priceHistory('DIVINATION_CARD', item.typeLine) } : null
     }
     if (isUniqueFrame(item.frame)) {
       const name = item.name || item.typeLine
@@ -62,23 +63,23 @@ export function ninjaPriceOf (): PriceOf {
       const links = item.links ?? 0
       const linked = links >= 5 ? rows.find(r => r.variant === `${links}L`) : undefined
       const row = linked ?? exact ?? cheapest(rows.filter(r => !/^\dL$/.test(r.variant ?? '')))
-      return row ? { chaos: row.chaos, category: 'gear', graph: row.graph } : null
+      return row ? { chaos: row.chaos, category: 'gear', graph: row.graph, history: priceHistory('UNIQUE', name, row.variant) } : null
     }
     if (item.frame === 4) {
       const row = gemRow(ninja.findPricesByName('GEM', item.typeLine) as Row[], item) ??
         ninja.findPriceByQuery({ ns: 'GEM', name: item.typeLine, variant: undefined }) ?? undefined
-      return row ? { chaos: row.chaos, category: 'gear', graph: row.graph, variant: row.variant } : null
+      return row ? { chaos: row.chaos, category: 'gear', graph: row.graph, variant: row.variant, history: priceHistory('GEM', item.typeLine, row.variant) } : null
     }
     // Currency, fragments, scarabs, essences, maps...: listed by name.
     const exact = ninja.findPriceByQuery({ ns: 'ITEM', name: item.typeLine, variant: undefined })
     if (exact) {
       // url: https://poe.ninja/poe1/economy/<league>/<category>/<item>
       const slug = exact.url.split('/')[6] ?? ''
-      return { chaos: exact.chaos, category: categoryOfSlug(slug), graph: exact.graph }
+      return { chaos: exact.chaos, category: categoryOfSlug(slug), graph: exact.graph, history: priceHistory('ITEM', item.typeLine) }
     }
     const any = cheapest((ninja.findPricesByName('ITEM', item.typeLine) as Row[])
       .filter(r => !(item.frame === 0 && !item.mapTier && BASE_TYPE_VARIANT.test(r.variant ?? ''))))
-    return any ? { chaos: any.chaos, category: 'other', graph: any.graph } : null
+    return any ? { chaos: any.chaos, category: 'other', graph: any.graph, history: priceHistory('ITEM', item.typeLine, any.variant) } : null
   }
 
   return (item) => {

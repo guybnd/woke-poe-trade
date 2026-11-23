@@ -49,6 +49,9 @@ export interface Priced {
   gaps?: number
   // poe.ninja priced it today and on none of the days before (prices.ts).
   oneDay?: boolean
+  // The app's own saved price on each day before today, oldest first, in
+  // chaos (history.ts): what a spike is checked against.
+  history?: Array<number | null>
 }
 export type PriceOf = (item: StashItemLike) => Priced | null
 
@@ -153,17 +156,23 @@ export const HOLD_MIN_JUMP = 1
 export const HOLD_MS = 6 * 3_600_000
 export const ONE_DAY_MIN = 10
 
-// A spike on poe.ninja's own 7-day line, read or no read: Rain Tempter sat
-// near 4c all week, then poe.ninja priced it at 98.5c (+2,362%) on a market
-// that wasn't thin, so neither rule above caught it. A step up to 5x or more
-// the last priced day before it counts at the median of the days before the
-// step (2+ of them priced; 3+ for gear, whose lines are sparse) until
-// poe.ninja has had the new price on 3 priced days (within half of today's).
-// A steady climb (under 5x a day) is never a step. A real rise counts 2 days
-// late (gear: 6 hours, like a jump), and shows as held all along.
+// A spike: a sudden step up from an item's usual price. Rain Tempter was 1c
+// every day of the app's saved history, then poe.ninja priced it at 20,140c
+// (98 div). poe.ninja's own line only showed +2,362%, because it ran from an
+// earlier fake (818c), and the card was thin, so the 6-hour jump rule let it
+// through. The price is checked against the app's saved daily prices (up to
+// 14 days, history.ts); poe.ninja's % line, anchored at today's price, is only
+// the fallback when the app has none. A step to 5x or more the last day
+// before it counts at the median of the days before the step (2+ of them
+// priced; 3+ for gear) until it has held 3 priced days (within half of today's).
+// A step of 50x or more never counts on time alone: only once under 2 of the
+// window's days are left from before it. A steady climb (under 5x a day)
+// is never a step. Gear priced from poe.ninja's line alone lets go after 6
+// hours, like a jump: its lines are sparse.
 export const SPIKE_MIN_DAYS = 2
 export const SPIKE_MIN_DAYS_GEAR = 3
 export const SPIKE_KEEP_DAYS = 3
+export const SPIKE_NEVER_RATIO = 50
 
 export type HoldKind = 'jump' | 'one-day' | 'spike'
 
@@ -176,10 +185,10 @@ export function graphChaos (chaos: number, graph: Array<number | null> | undefin
   return graph.map(v => typeof v === 'number' && 1 + v / 100 > 0 ? chaos * (1 + v / 100) / (1 + today / 100) : null)
 }
 
-// A step up on poe.ninja's line: 'confirmed' once it has held 3 priced days,
-// else the price to count instead. null: no step.
-export function graphStep (chaos: number, graph: Array<number | null> | undefined, minDays = SPIKE_MIN_DAYS): number | 'confirmed' | null {
-  const priced = graphChaos(chaos, graph).filter((v): v is number => v != null)
+// A step up in a price series (today last, = chaos): 'confirmed' once it has
+// held 3 priced days, else the price to count instead. null: no step.
+export function seriesStep (chaos: number, series: Array<number | null>, minDays = SPIKE_MIN_DAYS): number | 'confirmed' | null {
+  const priced = series.filter((v): v is number => typeof v === 'number' && v > 0)
   if (priced.length < 2) return null
   // The days at the new price, today back to the step (gaps skipped).
   let start = priced.length - 1
@@ -192,7 +201,12 @@ export function graphStep (chaos: number, graph: Array<number | null> | undefine
   const mid = sorted.length >> 1
   const base = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
   if (!(base > 0) || chaos < base * HOLD_RATIO || chaos - base < HOLD_MIN_JUMP) return null
+  if (chaos >= base * SPIKE_NEVER_RATIO) return base
   return priced.length - start >= SPIKE_KEEP_DAYS ? 'confirmed' : base
+}
+
+export function graphStep (chaos: number, graph: Array<number | null> | undefined, minDays = SPIKE_MIN_DAYS): number | 'confirmed' | null {
+  return seriesStep(chaos, graphChaos(chaos, graph), minDays)
 }
 
 // The price to count instead of a spike on poe.ninja's line, or null.
@@ -201,13 +215,22 @@ export function graphSpike (chaos: number, graph: Array<number | null> | undefin
   return typeof step === 'number' ? step : null
 }
 
+// The step check on the app's saved prices when it has enough of them, else
+// on poe.ninja's line. `saved`: which one it used.
+export function priceStep (chaos: number, p: { graph?: Array<number | null>, history?: Array<number | null>, category?: Category }): { step: number | 'confirmed' | null, saved: boolean } {
+  const minDays = p.category === 'gear' ? SPIKE_MIN_DAYS_GEAR : SPIKE_MIN_DAYS
+  const saved = (p.history ?? []).filter(v => typeof v === 'number' && v > 0).length >= minDays
+  if (saved) return { step: seriesStep(chaos, [...p.history!, chaos], minDays), saved }
+  return { step: graphStep(chaos, p.graph, minDays), saved }
+}
+
 // The last read's price for an item, and since when it was held.
 export interface HoldGuard { before: Baseline | null, now: number }
 
 // The price to count instead and since when, or null to take poe.ninja's.
 // Gear (uniques, gems) is left out of the one-day rule: many trade on so few days
 // that poe.ninja's line is mostly empty, and those were real prices.
-export function holdJump (ninja: number, p: { thin?: boolean, oneDay?: boolean, category?: Category, graph?: Array<number | null> }, prev: Baseline[string] | undefined, now: number): { chaos: number, since: number, kind: HoldKind } | null {
+export function holdJump (ninja: number, p: { thin?: boolean, oneDay?: boolean, category?: Category, graph?: Array<number | null>, history?: Array<number | null> }, prev: Baseline[string] | undefined, now: number): { chaos: number, since: number, kind: HoldKind } | null {
   const sinceFor = (kind: HoldKind) => prev?.heldSince != null && (prev.heldKind ?? 'jump') === kind ? prev.heldSince : now
   // Only a solid price vouches for a one-day one: an older baseline's price
   // may itself have been a fake.
@@ -215,11 +238,11 @@ export function holdJump (ninja: number, p: { thin?: boolean, oneDay?: boolean, 
   if (p.oneDay && p.category !== 'gear' && ninja >= ONE_DAY_MIN && (ref == null || ninja >= ref * HOLD_RATIO)) {
     return { chaos: ref ?? 0, since: sinceFor('one-day'), kind: 'one-day' }
   }
-  const step = graphStep(ninja, p.graph, spikeDays(p.category))
+  const { step, saved } = priceStep(ninja, p)
   if (typeof step === 'number') {
     const since = sinceFor('spike')
-    // Gear trades on few days: its hold ends after 6 hours, as a jump's does.
-    if (p.category !== 'gear' || now - since < HOLD_MS) return { chaos: step, since, kind: 'spike' }
+    // Gear on poe.ninja's sparse line alone: its hold ends after 6 hours, as a jump's does.
+    if (saved || p.category !== 'gear' || now - since < HOLD_MS) return { chaos: step, since, kind: 'spike' }
     return null
   }
   // poe.ninja has had it for 3 days: real, never a thin jump to hold again.
@@ -232,11 +255,9 @@ export function holdJump (ninja: number, p: { thin?: boolean, oneDay?: boolean, 
   return now - since < HOLD_MS ? { chaos: base, since, kind: 'jump' } : null
 }
 
-const spikeDays = (category?: Category) => category === 'gear' ? SPIKE_MIN_DAYS_GEAR : SPIKE_MIN_DAYS
-
-function spikeOnly (ninja: number, p: { graph?: Array<number | null>, category?: Category }): { chaos: number, since: number, kind: HoldKind } | null {
-  const spike = graphSpike(ninja, p.graph, spikeDays(p.category))
-  return spike == null ? null : { chaos: spike, since: Date.now(), kind: 'spike' }
+function spikeOnly (ninja: number, p: { graph?: Array<number | null>, history?: Array<number | null>, category?: Category }): { chaos: number, since: number, kind: HoldKind } | null {
+  const { step } = priceStep(ninja, p)
+  return typeof step === 'number' ? { chaos: step, since: Date.now(), kind: 'spike' } : null
 }
 
 // One item's price with your prices on top. null: no price.

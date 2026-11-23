@@ -4,7 +4,7 @@
 // name. Pure: no Vue.
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import type { ValuedLine } from './valuation'
-import { HOLD_MS, HOLD_RATIO, ONE_DAY_MIN, SPIKE_KEEP_DAYS, isUniqueFrame } from './valuation'
+import { HOLD_MS, HOLD_RATIO, ONE_DAY_MIN, SPIKE_KEEP_DAYS, SPIKE_NEVER_RATIO, isUniqueFrame } from './valuation'
 
 type TipLine = Pick<ValuedLine, 'key' | 'name' | 'tipName' | 'variant' | 'frame'>
 
@@ -71,9 +71,13 @@ export function heldNote (l: Pick<ValuedLine, 'heldSince' | 'heldKind' | 'ninjaC
       'Prices like this have been fakes. Counts once poe.ninja prices it on a second day. Right-click to set your own price'
   }
   if (l.heldKind === 'spike') {
-    return `Counted at ${price(l.unitChaos)}, its usual price on poe.ninja this week. poe.ninja says ${price(l.ninjaChaos)} now, ` +
-      `a sudden step of ${HOLD_RATIO}× or more over its earlier days, which a few fake listings can cause. ` +
-      `Counts once poe.ninja has had it ${SPIKE_KEEP_DAYS} days. Right-click to set your own price`
+    const huge = l.unitChaos > 0 && l.ninjaChaos >= l.unitChaos * SPIKE_NEVER_RATIO
+    return `Counted at ${price(l.unitChaos)}, its usual price. poe.ninja says ${price(l.ninjaChaos)} now, ` +
+      `a sudden step of ${huge ? `${SPIKE_NEVER_RATIO}` : HOLD_RATIO}× or more, which a few fake listings can cause. ` +
+      (huge
+        ? 'A step this big counts only once it has been the price for about 2 weeks. '
+        : `Counts once it has held ${SPIKE_KEEP_DAYS} days. `) +
+      'Right-click to set your own price'
   }
   return `Held at the last read's price. poe.ninja says ${price(l.ninjaChaos)}, a jump of ${HOLD_RATIO}× or more in a thin market ` +
     `(no price on 3+ of the last 7 days), which one fake listing can cause. Takes poe.ninja's price at ${clock(l.heldSince + HOLD_MS)} ` +

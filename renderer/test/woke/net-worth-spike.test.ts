@@ -2,7 +2,7 @@
 // usual price. Rain Tempter on 2026-11-23: about 4c all week, then 98.5c
 // (+2,362%) on a market that wasn't thin, so it made 76% of a tab.
 import { describe, it, expect } from 'vitest'
-import { HOLD_MS, baselineOf, graphChaos, graphSpike, graphStep, holdJump, valueStash } from '@/web/woke/net-worth/valuation'
+import { HOLD_MS, baselineOf, graphChaos, graphSpike, graphStep, holdJump, priceStep, seriesStep, valueStash } from '@/web/woke/net-worth/valuation'
 import { heldNote } from '@/web/woke/net-worth/tips'
 import type { Priced, PriceOf, StashItemLike } from '@/web/woke/net-worth/valuation'
 
@@ -138,6 +138,51 @@ describe('valuing Rain Tempter', () => {
     const note = heldNote(l, c => `${c.toFixed(1)}c`)!
     expect(note).toContain('Counted at 4.1c')
     expect(note).toContain('poe.ninja says 98.5c')
-    expect(note).toContain('has had it 3 days')
+    expect(note).toContain('held 3 days')
+  })
+})
+
+// Guy's saved prices (woke-market/Covens/daily), 2026-11-17 to 11-22, and
+// poe.ninja on 11-23: 20,140c (98 div), its line only +2,362% (from an
+// 818c fake), 5 of 7 days empty.
+describe('Rain Tempter, 98 div', () => {
+  const saved = [0.5, 1, 1, 1, 0.11, 1]
+  const ninjaLine = [null, null, null, null, null, 0, 2362]
+  const p: Priced = { chaos: 20140, category: 'cards', graph: ninjaLine, history: saved, thin: true, gaps: 5 }
+  const tab = [{ name: 'Div', id: 't1', items: [card('Rain Tempter', 15)] }]
+
+  it('is a spike against the app\'s saved prices, counted at 1c', () => {
+    expect(priceStep(20140, p)).toEqual({ step: 1, saved: true })
+    for (const guard of [undefined, { before: null, now: T0 }]) {
+      const v = valueStash(tab, pricesOf({ 'Rain Tempter': p }), undefined, guard)
+      expect(line(v).unitChaos).toBe(1)
+      expect(line(v).heldKind).toBe('spike')
+      expect(v.chaos).toBe(15)
+    }
+  })
+
+  it('even when the last read took 857c as solid and its hold ran out', () => {
+    const before = { 'Rain Tempter': { name: 'Rain Tempter', icon: '', count: 15, unitChaos: 857.5, ref: 857.5 } }
+    expect(line(valueStash(tab, pricesOf({ 'Rain Tempter': p }), undefined, { before, now: T0 })).unitChaos).toBe(1)
+  })
+
+  it('says on the hover that a step this big waits about 2 weeks', () => {
+    const v = valueStash(tab, pricesOf({ 'Rain Tempter': p }), undefined, { before: null, now: T0 })
+    expect(heldNote(line(v), c => `${c}c`)).toContain('about 2 weeks')
+  })
+
+  it('poe.ninja\'s line alone could not catch it', () => {
+    expect(graphStep(20140, ninjaLine)).toBeNull()
+  })
+
+  it('a 50x step never counts on time alone', () => {
+    // Fake for 3 days in the saved prices: still held.
+    expect(seriesStep(20140, [1, 1, 1, 1, 1, 20000, 20100, 20140])).toBe(1)
+    // A real 10x rise held 3 days counts.
+    expect(seriesStep(10, [1, 1, 1, 1, 1, 9.5, 10, 10])).toBe('confirmed')
+  })
+
+  it('the saved prices also keep a steady climb counted', () => {
+    expect(priceStep(128, { history: [2, 4, 8, 16, 32, 64], graph: [], category: 'cards' }).step).toBeNull()
   })
 })

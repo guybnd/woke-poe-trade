@@ -76,3 +76,20 @@ describe('price history saves', () => {
     expect(snapshots('Live')).toHaveLength(2)
   })
 })
+
+describe('daily prices for net worth', () => {
+  it('gives the named items\' chaos on the days before a date, oldest first', async () => {
+    const { dailyPrices } = await import('../../main/src/woke/market-store')
+    const row = (date: string, name: string, chaos: number) => ({ league: 'C', date, type: 'DivinationCard', name, variant: '', chaos })
+    const daily = new Map([
+      ['2026-11-21', [row('2026-11-21', 'Rain Tempter', 0.11), row('2026-11-21', 'The Doctor', 900)]],
+      ['2026-11-22', [row('2026-11-22', 'Rain Tempter', 1)]],
+      ['2026-11-23', [row('2026-11-23', 'Rain Tempter', 20140)]],
+      ['2026-11-20', [row('2026-11-20', 'The Doctor', 950)]]
+    ])
+    const out = dailyPrices(daily, ['Rain Tempter'], 14, '2026-11-23')
+    expect(out.dates).toEqual(['2026-11-20', '2026-11-21', '2026-11-22'])
+    expect(out.rows).toEqual({ 'DivinationCard\u0000Rain Tempter\u0000': [null, 0.11, 1] })
+    expect(dailyPrices(daily, ['Rain Tempter'], 1, '2026-11-23').rows).toEqual({ 'DivinationCard\u0000Rain Tempter\u0000': [1] })
+  })
+})

@@ -182,6 +182,23 @@ async function sameAsLast (snap: Snapshot, key: string): Promise<boolean> {
   return last.key === key && last.date === utcDate(snap.ts)
 }
 
+// The named items' daily chaos prices on the `days` dates before `before`
+// (net worth checks poe.ninja's price today against them).
+export function dailyPrices (daily: Map<string, DailyRow[]>, names: string[], days: number, before: string): { dates: string[], rows: Record<string, Array<number | null>> } {
+  const want = new Set(Array.isArray(names) ? names : [])
+  const n = Math.max(1, Math.min(60, Math.floor(days) || 14))
+  const dates = [...daily.keys()].filter(d => d < before).sort().slice(-n)
+  const rows: Record<string, Array<number | null>> = {}
+  dates.forEach((date, i) => {
+    for (const r of daily.get(date) ?? []) {
+      if (!want.has(r.name) || !(typeof r.chaos === 'number' && r.chaos > 0)) continue
+      const key = rowKey(r)
+      ;(rows[key] ??= new Array<number | null>(dates.length).fill(null))[i] = r.chaos
+    }
+  })
+  return { dates, rows }
+}
+
 export const marketHandlers: Partial<WokeHandlers> = {
   'market-save': async ({ snapshot, daily }) => {
     const snap = snapshot as Snapshot
@@ -226,6 +243,9 @@ export const marketHandlers: Partial<WokeHandlers> = {
       if (r) out.push(r)
     }
     return out.sort((a, b) => a.date.localeCompare(b.date))
+  },
+  'market-daily-prices': async ({ league, names, days, before }) => {
+    return dailyPrices(await loadDaily(league as string), names as string[], Number(days), before as string)
   },
   'market-daily-all': async ({ league }) => {
     return [...(await loadDaily(league as string)).values()].flat()

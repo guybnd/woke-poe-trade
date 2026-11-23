@@ -240,6 +240,9 @@ export interface WokeOps {
   'market-daily-date': Op<League & { date: string }, Json[]>
   'market-daily-item': Op<League & { type: string, name: string, variant?: string }, Json[]>
   'market-daily-all': Op<League, Json[]>
+  // The saved daily chaos price of the named items on the `days` UTC days
+  // before `before` (YYYY-MM-DD), oldest first; rows keyed type\u0000name\u0000variant.
+  'market-daily-prices': Op<League & { names: string[], days: number, before: string }, { dates: string[], rows: Record<string, Array<number | null>> }>
   'market-import-status': Op<NoArgs, { imported: boolean }>
   'market-import': Op<{ snapshots?: Json[], daily?: Json[] }, Ok>
   'market-import-done': Op<NoArgs, Ok>

@@ -6,8 +6,10 @@ import { usePoeninja } from '@/web/background/Prices'
 import { hostRequest } from '../shared/host'
 import { toast } from '../ui/layer'
 import { ninjaPriceOf } from './prices'
+import { historyRev, loadPriceHistory } from './history'
+import { lastWokePrices } from '../market/hook'
 import {
-  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, recordRead, sinceYesterday, tabSetOf, valueStash
+  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, isUniqueFrame, recordRead, sinceYesterday, tabSetOf, valueStash
 } from './valuation'
 import { stashGains, gainsKey } from './gains'
 import { classify, resolveSpends } from './spend'
@@ -56,8 +58,20 @@ let busy: Promise<void> = Promise.resolve()
 
 const ninja = usePoeninja()
 
+// The app's saved daily prices for what's in the stash (history.ts): a
+// poe.ninja spike is checked against them. Loaded once a day, or when the
+// stash holds new names; the valuation reads historyRev to value again.
+function loadHistory (): Promise<void> {
+  const league = lastWokePrices()?.leagueId
+  if (!league || !stash.value) return Promise.resolve()
+  const names = stash.value.tabs.flatMap(t => t.items.map(i => isUniqueFrame(i.frame) && i.name ? i.name : i.typeLine))
+  return loadPriceHistory(league, names)
+}
+watch([stash, () => ninja.updatedAt.value], () => { loadHistory().catch(() => {}) })
+
 export const valuation = computed<Valuation | null>(() => {
-  // Read so a new price download values again.
+  // Read so a new price download (or saved history) values again.
+  if (historyRev.value < 0) return null
   if (ninja.updatedAt.value == null || !stash.value) return null
   return valueStash(stash.value.tabs, ninjaPriceOf(), prefs.value, guardNow())
 })
@@ -129,6 +143,7 @@ export const glance = shallowRef<Glance | null>(null)
 
 // Each tab's value now (live prices), in tab order.
 export const tabValues = computed<TabValue[]>(() => {
+  if (historyRev.value < 0) return []
   if (ninja.updatedAt.value == null || !stash.value) return []
   return valueByTab(stash.value.tabs, ninjaPriceOf(), prefs.value, guardNow())
 })
@@ -164,6 +179,8 @@ async function loadLeague (id: string) {
 async function countRead (id: string, readAt: number) {
   if (history.value.countedReadAt != null && history.value.countedReadAt >= readAt) return
   stash.value = await (hostRequest('stash-cache', { league: id }) as Promise<CachedStash | null>).catch(() => stash.value)
+  // Counted with the saved prices a spike is checked against.
+  await loadHistory()
   const v = valuation.value
   if (!v || loadedFor !== id) return
   // A tab never read counts as empty: until every tab has been read once, a
