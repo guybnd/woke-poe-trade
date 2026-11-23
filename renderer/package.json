@@ -15,6 +15,7 @@
     "mod-tiers": "node scripts/build-mod-tiers.mjs",
     "map-bonuses": "node scripts/build-map-bonuses.mjs",
     "drop-data": "node scripts/build-drop-data.mjs",
+    "card-drops": "node scripts/build-card-drops.mjs",
     "tree-data": "node scripts/build-tree-data.mjs",
     "ninja-icons": "node scripts/build-ninja-icons.mjs",
     "viscera-data": "node scripts/build-viscera-data.mjs",

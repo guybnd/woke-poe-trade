@@ -28,6 +28,14 @@
   "campaign.spec.ts": [
    "renderer/src/web/woke/campaign/"
   ],
+  "card-drops.spec.ts": [
+   "renderer/src/web/woke/card-drops/",
+   "renderer/src/web/woke/search/",
+   "renderer/src/web/woke/price-insight/",
+   "renderer/src/web/price-check/",
+   "renderer/src/parser/",
+   "renderer/public/data/card-drops.json"
+  ],
   "catalyst-slider.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",

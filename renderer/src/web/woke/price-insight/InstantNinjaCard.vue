@@ -27,6 +27,8 @@
       </div>
       <!-- The item's own verdict, where it has one (Stacked Deck: open or sell). -->
       <slot name="verdict" />
+      <!-- A divination card: where it drops. -->
+      <CardDrops v-if="item.category === ItemCategory.DivinationCard" :name="item.info.refName" compact />
       <div v-if="age" :class="$style.dim">poe.ninja, updated {{ age }}</div>
       <div :class="$style.row">
         <button type="button" class="btn w-pc-primary" :class="$style.btn" data-testid="instant-ninja-live" @click="$emit('live')">
@@ -42,12 +44,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
+import { ItemCategory } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
 import { ninjaPrice, ninjaTotal, divineParts } from './ninja-first'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { WSpark, WKbd, agoPhrase, vItemTip } from '../ui'
+
+const CardDrops = defineAsyncComponent(() => import('../card-drops/CardDrops.vue'))
 
 const props = defineProps<{
   item: ParsedItem

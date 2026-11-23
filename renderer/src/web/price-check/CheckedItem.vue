@@ -37,6 +37,8 @@
     <woke-gem-versions v-if="isGem && tradeAPI === 'trade'" :item="item" :filters="itemFilters" class="mb-2" />
     <!-- woke: 3.30 Wickerman module, Viscera versions and drop sources (remove with the league). -->
     <woke-viscera-strip v-if="isViscera" :item="item" class="mb-2" />
+    <!-- woke: where a divination card drops (Divcord). -->
+    <woke-card-drops v-if="isDivCard" :name="item.info.refName" compact class="mb-2" />
     <!-- woke: a Nightmare Map goes into any of the five T17 maps; boss fragment value of each (Boss runs module). -->
     <woke-nightmare-strip v-if="isNightmareMap && !stripProps" :item="item" class="mb-2" />
     <!-- woke: the improved verdict below shows poeprices and poe.ninja once listings load. -->
@@ -182,6 +184,7 @@ export default defineComponent({
     WokeGemVersions: defineAsyncComponent(() => import('@/web/woke/gem-versions/GemVersions.vue')),
     WokeVaalChip: defineAsyncComponent(() => import('@/web/woke/gem-versions/VaalChip.vue')),
     WokeVisceraStrip: defineAsyncComponent(() => import('@/web/woke/wickerman/VisceraStrip.vue')),
+    WokeCardDrops: defineAsyncComponent(() => import('@/web/woke/card-drops/CardDrops.vue')),
     WokeNightmareStrip: defineAsyncComponent(() => import('@/web/woke/boss-runs/NightmareStrip.vue')),
     // The poe.ninja verdict before an exchange search (WOKEPOET-479).
     WokeNinjaVerdict: defineAsyncComponent(() => import('@/web/woke/price-insight/NinjaVerdict.vue')),
@@ -572,6 +575,7 @@ export default defineComponent({
       wokeVerdictShown,
       isGem: computed(() => props.item.category === ItemCategory.Gem),
       isViscera: computed(() => props.item.category === ItemCategory.Viscera),
+      isDivCard: computed(() => props.item.category === ItemCategory.DivinationCard),
       isNightmareMap: computed(() => props.item.info.refName === 'Nightmare Map' && isModuleOn(AppConfig(), 'boss-runs')),
       ninjaCardOpen,
       ninjaVerdictShown,

@@ -71,6 +71,7 @@
               <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" no-price="No poe.ninja price" @pick="pickUnique" />
               <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
+              <CardDrops v-if="cardDropName" :name="cardDropName" />
               <div v-if="conv" :class="$style.convBox" :style="{ '--conv-cols': convCols }">
                 <div :class="[$style.conv, $style.gridHead]"><span>{{ selected.group.name }}</span><span v-if="conv.rows[0].chaos != null" class="text-right">Chaos</span><span v-if="conv.rows[0].div != null" class="text-right">Divines</span></div>
                 <div v-for="r in conv.rows" :key="r.amount" :class="[$style.conv, $style.row]">
@@ -90,6 +91,7 @@
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" :no-price="snapshot ? 'No poe.ninja price' : 'No price'" @pick="pickUnique" />
               <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
               <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
+              <CardDrops v-if="cardDropName" :name="cardDropName" />
               <ItemActions :name="selected.name" lookups :can-price="canPriceCheck(selected)" :market="false"
                 @trade="openTrade(selected)" @price="priceCheck(selected, cursorPoint($event))" @wiki="openLookup(selected, 'wiki')" @poedb="openLookup(selected, 'poedb')"
                 @stash="findInStash(selected.name)" @copy="copyName(selected.name)" />
@@ -178,6 +180,9 @@ import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
 import BaseUniques from './BaseUniques.vue'
 import BeastRecipes from './BeastRecipes.vue'
+import CardDrops from '../card-drops/CardDrops.vue'
+import { loadCardDrops } from '../card-drops/card-drops'
+import type { CardDropData } from '../card-drops/card-drops'
 import { beastKindLabel } from '../mechanics/beast-kinds'
 import UniqueDetails from './UniqueDetails.vue'
 import { uniqueDetails, uniqueFacts } from './unique-details'
@@ -190,6 +195,7 @@ import { nightmareLookup } from './lookups/nightmare'
 import { BOSS_RUNS_TYPE } from '../boss-runs/widget'
 import type { BossRunsWidget } from '../boss-runs/widget'
 import { cardLookup } from './lookups/cards'
+import { mapCardsLookup } from './lookups/card-drops'
 import { recipeLookup } from './lookups/recipes'
 import { craftLookup } from './lookups/craft'
 import type { CraftData } from './lookups/craft'
@@ -550,6 +556,18 @@ const cards = computed(() => {
   }
   return out
 })
+// Where cards drop (Divcord), fetched on first open: a map name lists its cards.
+const cardDrops = shallowRef<CardDropData | null>(null)
+function loadDrops () {
+  if (!cardDrops.value) loadCardDrops().then(d => { if (d) cardDrops.value = d }).catch(() => {})
+}
+// The div card the detail shows, for where it drops.
+const cardDropName = computed(() => {
+  const e = selected.value
+  if (e?.kind === 'price') return e.group.type === 'DivinationCard' ? e.group.name : null
+  if (e?.kind === 'item') return e.info.namespace === 'DIVINATION_CARD' ? e.info.refName : null
+  return null
+})
 // Campaign gem sources, from the PoB tool's data, loaded on first open.
 const gemTable = shallowRef<GemTable | null>(null)
 const gemNames = shallowRef<string[]>([])
@@ -745,7 +763,7 @@ function flipsConfig (): ScarabFlipWidget | null {
   if (!isWidgetTypeOn(config, SCARAB_FLIP_TYPE)) return null
   return (config.widgets.find(w => w.wmType === SCARAB_FLIP_TYPE) as ScarabFlipWidget | undefined) ?? null
 }
-const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), salesLookup(salesList.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
+const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), salesLookup(salesList.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -1327,6 +1345,7 @@ function start (text: string) {
   focusInput(true)
   whenIdle(gameItems)
   whenIdle(loadCards)
+  whenIdle(loadDrops)
   whenIdle(loadGems)
   whenIdle(loadCrafts)
   whenIdle(loadMapBonusLookup)
