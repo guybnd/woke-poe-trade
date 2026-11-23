@@ -186,3 +186,25 @@ describe('Rain Tempter, 98 div', () => {
     expect(priceStep(128, { history: [2, 4, 8, 16, 32, 64], graph: [], category: 'cards' }).step).toBeNull()
   })
 })
+
+describe('saved prices', () => {
+  it('a step poe.ninja has also had 3 days counts, a 50x one doesn\'t', () => {
+    const line = [0, 0, 0, 0, 900, 950, 1000]
+    expect(priceStep(10, { history: [1, 1, 1, 1], graph: line, category: 'cards' }).step).toBe('confirmed')
+    expect(priceStep(100, { history: [1, 1, 1, 1], graph: line, category: 'cards' }).step).toBe(1)
+  })
+
+  it('only fresh rows of one type are kept (history.ts)', async () => {
+    const { historyMap } = await import('@/web/woke/net-worth/history')
+    const dates = ['2026-11-18', '2026-11-19', '2026-11-20', '2026-11-22']
+    const m = historyMap(dates, {
+      'DivinationCard\u0000Rain Tempter\u0000': [1, 1, 0.11, 1],
+      'DivinationCard\u0000Old Card\u0000': [5, 5, null, null],
+      'UniqueArmour\u0000Kaom\u0000': [100, 100, 100, 100],
+      'UniqueRelic\u0000Kaom\u0000': [9000, 9000, 9000, 9000]
+    }, '2026-11-21')
+    expect(m.get('DIVINATION_CARD\u0000Rain Tempter\u0000')).toEqual([1, 1, 0.11, 1])
+    expect(m.has('DIVINATION_CARD\u0000Old Card\u0000')).toBe(false)
+    expect(m.has('UNIQUE\u0000Kaom\u0000')).toBe(false)
+  })
+})

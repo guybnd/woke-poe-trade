@@ -182,12 +182,13 @@ async function sameAsLast (snap: Snapshot, key: string): Promise<boolean> {
   return last.key === key && last.date === utcDate(snap.ts)
 }
 
-// The named items' daily chaos prices on the `days` dates before `before`
-// (net worth checks poe.ninja's price today against them).
+// The named items' daily chaos prices on the saved dates among the `days`
+// calendar days before `before` (net worth checks poe.ninja's price today
+// against them).
 export function dailyPrices (daily: Map<string, DailyRow[]>, names: string[], days: number, before: string): { dates: string[], rows: Record<string, Array<number | null>> } {
   const want = new Set(Array.isArray(names) ? names : [])
-  const n = Math.max(1, Math.min(60, Math.floor(days) || 14))
-  const dates = [...daily.keys()].filter(d => d < before).sort().slice(-n)
+  const from = windowStart(before, days)
+  const dates = [...daily.keys()].filter(d => d < before && d >= from).sort()
   const rows: Record<string, Array<number | null>> = {}
   dates.forEach((date, i) => {
     for (const r of daily.get(date) ?? []) {
@@ -197,6 +198,27 @@ export function dailyPrices (daily: Map<string, DailyRow[]>, names: string[], da
     }
   })
   return { dates, rows }
+}
+
+function windowStart (before: string, days: number): string {
+  const n = Math.max(1, Math.min(60, Math.floor(days) || 14))
+  const t = Date.parse(`${before}T00:00:00Z`)
+  return Number.isFinite(t) ? utcDate(t - n * 86_400_000) : before
+}
+
+// Only the window's day files: the whole league's history isn't read for this.
+async function loadDailyWindow (league: string, before: string, days: number): Promise<Map<string, DailyRow[]>> {
+  const cached = dailyCache.get(league)
+  if (cached) return await cached
+  const dir = path.join(leagueDir(league), 'daily')
+  const from = windowStart(before, days)
+  const out = new Map<string, DailyRow[]>()
+  for (const date of await listNames(dir, '.json')) {
+    if (date < from || date >= before) continue
+    const rows = await readJson<DailyRow[]>(path.join(dir, `${date}.json`))
+    if (Array.isArray(rows)) out.set(date, rows)
+  }
+  return out
 }
 
 export const marketHandlers: Partial<WokeHandlers> = {
@@ -245,7 +267,7 @@ export const marketHandlers: Partial<WokeHandlers> = {
     return out.sort((a, b) => a.date.localeCompare(b.date))
   },
   'market-daily-prices': async ({ league, names, days, before }) => {
-    return dailyPrices(await loadDaily(league as string), names as string[], Number(days), before as string)
+    return dailyPrices(await loadDailyWindow(league as string, before as string, Number(days)), names as string[], Number(days), before as string)
   },
   'market-daily-all': async ({ league }) => {
     return [...(await loadDaily(league as string)).values()].flat()

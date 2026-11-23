@@ -215,12 +215,24 @@ export function graphSpike (chaos: number, graph: Array<number | null> | undefin
   return typeof step === 'number' ? step : null
 }
 
+// poe.ninja's line has today's price (within half) on its last 3 priced days.
+function lineHeld (chaos: number, graph: Array<number | null> | undefined): boolean {
+  const days = graphChaos(chaos, graph).filter((v): v is number => v != null)
+  return days.length >= SPIKE_KEEP_DAYS && days.slice(-SPIKE_KEEP_DAYS).every(v => v >= chaos / 2)
+}
+
 // The step check on the app's saved prices when it has enough of them, else
 // on poe.ninja's line. `saved`: which one it used.
 export function priceStep (chaos: number, p: { graph?: Array<number | null>, history?: Array<number | null>, category?: Category }): { step: number | 'confirmed' | null, saved: boolean } {
   const minDays = p.category === 'gear' ? SPIKE_MIN_DAYS_GEAR : SPIKE_MIN_DAYS
   const saved = (p.history ?? []).filter(v => typeof v === 'number' && v > 0).length >= minDays
-  if (saved) return { step: seriesStep(chaos, [...p.history!, chaos], minDays), saved }
+  if (saved) {
+    const step = seriesStep(chaos, [...p.history!, chaos], minDays)
+    // poe.ninja has had it 3 days too (a day the app saved nothing): real,
+    // unless it's a 50x step.
+    if (typeof step === 'number' && chaos < step * SPIKE_NEVER_RATIO && lineHeld(chaos, p.graph)) return { step: 'confirmed', saved }
+    return { step, saved }
+  }
   return { step: graphStep(chaos, p.graph, minDays), saved }
 }
 
