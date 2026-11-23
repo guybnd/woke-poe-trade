@@ -101,6 +101,7 @@ export interface RunTotals {
 // Shorter than this: no per-hour figure (too noisy).
 export const MIN_RATE_MS = 10 * 60_000
 export const MAX_DONE_RUNS = 50
+export const MAX_ARRIVALS = 400
 
 export function emptyRun (id: string, league: string, name: string, startAt: number): Run {
   return { id, league, name: name.trim() || 'Run', startAt, tally: {}, tallyAt: startAt, costs: [], once: [] }
@@ -120,7 +121,8 @@ export function addToTally (run: Run, diff: StashDiff): Run {
     }
   }
   const came = arrivalsOf(diff)
-  return { ...run, tally, tallyAt: diff.at, ...(came.length ? { arrivals: [...(run.arrivals ?? []), ...came] } : {}) }
+  // The newest MAX_ARRIVALS: older ones collected what they could long ago.
+  return { ...run, tally, tallyAt: diff.at, ...(came.length ? { arrivals: [...(run.arrivals ?? []), ...came].slice(-MAX_ARRIVALS) } : {}) }
 }
 
 // The tally for a start in the past, from the diffs the chart kept.

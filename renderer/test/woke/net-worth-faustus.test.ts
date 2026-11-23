@@ -22,12 +22,26 @@ describe('outside the stash', () => {
   it('a sale waits at Faustus until a read sees its currency come in', () => {
     const sales = [item('s', T0 + 3 * M, 2, 'divine')]
     expect(outsideTotals(run(), sales, RATES).waitingChaos).toBe(400)
-    // 1 div came in: half collected. Then 3 more: all of it, the rest is loot.
-    const half = run({ arrivals: [{ at: T0 + 5 * M, c: 'divine', n: 1 }] })
-    expect(outsideTotals(half, sales, RATES).waitingChaos).toBe(200)
-    expect(outsideTotals(half, sales, RATES).sold[0].collected).toBe(0.5)
+    // 1 div isn't the sale's 2: it stays. Then 3 come in: collected.
+    const one = run({ arrivals: [{ at: T0 + 5 * M, c: 'divine', n: 1 }] })
+    expect(outsideTotals(one, sales, RATES).waitingChaos).toBe(400)
     const all = run({ arrivals: [{ at: T0 + 5 * M, c: 'divine', n: 1 }, { at: T0 + 6 * M, c: 'divine', n: 3 }] })
     expect(outsideTotals(all, sales, RATES).waitingChaos).toBe(0)
+    expect(outsideTotals(all, sales, RATES).sold[0].collected).toBe(true)
+  })
+  it('one arrival collects several sales, oldest first, while it has enough', () => {
+    const sales = [item('a', T0 + M, 30), item('b', T0 + 2 * M, 50), item('c', T0 + 3 * M, 10)]
+    const r = run({ arrivals: [{ at: T0 + 5 * M, c: 'chaos', n: 85 }] })
+    // 30 + 50 fit; 10 more doesn't (5 left).
+    expect(outsideTotals(r, sales, RATES).sold.filter(x => x.collected).map(x => x.item.id).sort()).toEqual(['a', 'b'])
+  })
+  it('a run saved with sales ticked collected keeps them', () => {
+    const r = run({ saleMarks: { s: { collected: true } } })
+    expect(outsideTotals(r, [item('s', T0 + M, 10)], RATES).waitingChaos).toBe(0)
+  })
+  it('a listing from the start that was repriced during the run is not the run\'s', () => {
+    const r = run({ startListings: ['x'], faustus: { at: T0 + 9 * M, listings: [item('x', T0 + 5 * M, 40)] } })
+    expect(outsideTotals(r, [], RATES).listedChaos).toBe(0)
   })
   it('currency that came in before the sale, or in another currency, collects nothing', () => {
     const sales = [item('s', T0 + 3 * M, 2, 'divine')]

@@ -95,7 +95,7 @@
           <span v-item-tip="saleTip(r.item)" class="w-trunc">{{ saleName(r.item) }}</span>
           <span class="w-dim text-xs">sold {{ clock(r.item.at) }}</span>
           <span :class="$style.marks">
-            <span class="w-dim text-xs" :title="r.collected >= 1 ? 'Its currency came into your stash' : r.collected > 0 ? 'Part of its currency came into your stash' : 'Its currency is still at Faustus'">{{ r.collected >= 1 ? 'collected' : r.collected > 0 ? 'part collected' : 'at Faustus' }}</span>
+            <span class="w-dim text-xs" :title="r.collected ? 'A stash read saw its currency come in' : 'No stash read has seen its currency come in yet'">{{ r.collected ? 'collected' : 'at Faustus' }}</span>
             <button type="button" :class="[$style.chip, { [$style.on]: r.before }]" :title="r.before ? 'From before the run (it was listed when the run started). Click: it is the run\'s' : 'The run\'s. Click if the item was from before the run'" :aria-pressed="r.before" @click="markBefore(r.item.id, !r.before)">From before</button>
           </span>
           <span class="w-num text-xs" :class="[$style.right, soldTone(r)]"><template v-if="r.chaos != null">{{ soldSign(r) }}{{ amount(r.chaos) }}<Coin :chaos="!divine" /></template><span v-else class="w-dim">{{ r.item.price.amount }} {{ r.item.price.currency }}</span></span>
@@ -217,8 +217,8 @@ const DAY = 86_400_000
 const stale = (l: Sale) => nowMinute.value - l.at > DAY
 const ninjaOf = (l: Sale) => { const each = ninjaEach(l); return each != null ? each * l.stack : null }
 // From before: off profit once collected. The run's: in Faustus until collected.
-const soldSign = (r: OutsideRow) => r.before ? (r.collected > 0 ? '−' : '') : (r.collected < 1 ? '+' : '')
-const soldTone = (r: OutsideRow) => r.before ? (r.collected > 0 ? 'w-down' : 'w-dim') : (r.collected < 1 ? 'w-up' : 'w-dim')
+const soldSign = (r: OutsideRow) => r.before ? (r.collected ? '−' : '') : (r.collected ? '' : '+')
+const soldTone = (r: OutsideRow) => r.before ? (r.collected ? 'w-down' : 'w-dim') : (r.collected ? 'w-dim' : 'w-up')
 function markBefore (id: string, before: boolean) { edit(r => setBefore(r, id, before)) }
 const faustusReading = shallowRef(false)
 async function readFaustusInto (r: Run): Promise<void> {
@@ -261,16 +261,19 @@ async function start () {
   if (at == null || starting.value) return
   const runName = name.value || 'Run'
   const costs = lastCosts.value
+  // What the run starts from, as it is now (the read can take a while).
+  const { league, diffs, points, divine } = props
   starting.value = true
   let extra: Pick<Run, 'startListings' | 'faustus'> = {}
   try {
-    const read = await readFaustus(props.league, 0)
+    const read = await readFaustus(league, 0)
     const after = read.listings.filter(l => l.at > at)
     extra = { startListings: read.listings.filter(l => l.at <= at).map(l => l.id), ...(after.length ? { faustus: { at: read.at, listings: after } } : {}) }
   } catch (e) {
     toast(`Started without your Faustus listings: ${(e as Error).message}`)
   } finally { starting.value = false }
-  startRun(props.league, runName, at, props.diffs, props.points, props.divine, costs, extra).catch(() => {})
+  if (props.league !== league) return
+  startRun(league, runName, at, diffs, points, divine, costs, extra).catch(() => {})
   name.value = ''
 }
 // Stop reads your Faustus listings first; a failed read still stops.
