@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest'
 import { LIT_COLOURS, litColour } from '@/web/woke/atlas/mechanic-colours'
 import { atlasTotals, filterTotals } from '@/web/woke/atlas/totals'
 import { assetUrl, encodeAtlasTree, pathTo, pointsUsed, readAtlasTree, refundSet } from '@/web/woke/atlas/atlas-tree'
-import { decodeTree, expandShortTreeLinks } from '@/web/woke/atlas/tree'
+import { decodeTree, expandShortTreeLinks, extractTreeCode } from '@/web/woke/atlas/tree'
 import { allFolders, claimRegexFolders, dropDraft, isDirty, restoreDrafts, sameTree, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, folderTree, freeRegexFolder, movedFolder, regexFolderOf, emptyStrategy } from '@/web/woke/atlas/strategies'
 import { readStrategyCode, strategyCode } from '@/web/woke/atlas/strategy-code'
 import type { AtlasStrategy } from '@/web/woke/atlas/strategies'
@@ -97,6 +97,24 @@ describe('atlas tree model', () => {
     expect(() => decodeTree('https://poeplanner.com/atlas-tree/' + btoa('\xff\xff\x00\x00\x00\x01\x00'))).toThrow()
     expect(() => decodeTree('BQAeAAD_AF17')).toThrow()
     expect(() => decodeTree(url.replace('/atlas-tree/', '/'))).toThrow()
+  })
+
+  it('reads poeatlasplanner.com links (#p=, varint node steps, picks by index)', () => {
+    // Guy's 3.30 link, 2026-11-23: 150 points, three notable types picked.
+    const url = 'https://poeatlasplanner.com/#p=AgYzLjMwLjAJMy4zMC4wLXIxlgGWAc4BuAvKAasBzwKJC5AB9wrxBZ8KigHnAYsCXj3CCB-IAucF7wSXAiGLCAvpBe0B2gG9BdYBowIakQKbByXDAjOSAaUC8wKqAZUF7gOmAYIC7gE9ogLdAY0E9wQ_iAFZ1RjCB6EC7gchuQKzAcgCpAP8BOMEjwH2Ap0GXbsEaccCiQQhmA4w1AMJbbQCKMYC0AwcsgHsBacB2wFQ4ANb1waIBSmMAq8H6gSwAYsT2gHyBdMDgQZFpgEEA-wECjv8DJMEjQK4AtIBugEzzAKZD4IBlQflB-YIO90BhwLCBhookAE5nAKDAogFuwG6Bzof_AjVAk7eBdUBS02pAroELIkE4gEnAyTKTD7fiAFKgl0'
+    expect(extractTreeCode(url)).toMatch(/^AgYz/)
+    const t = decodeTree(url)
+    expect(t.nodes).toHaveLength(150)
+    expect(t.nodes.slice(0, 3)).toEqual([206, 1670, 1872])
+    expect(t.nodes[t.nodes.length - 1]).toBe(65008)
+    expect(t.masteries).toEqual([
+      { node: 16487, effect: 9802 },
+      { node: 28477, effect: 17503 },
+      { node: 33916, effect: 11906 }
+    ])
+    // Found in guide text too.
+    expect(parseGuideText(`My farm
+${url}`).treeUrl).toBe(url)
   })
 
   it('opens poeplanner short links through its API', async () => {

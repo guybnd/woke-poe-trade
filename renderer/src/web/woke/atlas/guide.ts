@@ -6,7 +6,7 @@ import type { AtlasStrategy, ThreadSlot } from './strategies'
 import { MAX_THREAD_SLOTS, MAX_THREADS, THREAD_TYPES } from './strategies'
 import { parseCostLines, priceLines } from './loadout'
 
-const TREE_URL = /https?:\/\/(?:www\.)?(?:pathofexile\.com\/(?:fullscreen-)?atlas-skill-tree\/[^\s)"']+|poeplanner\.com\/[^\s)"']+)/i
+const TREE_URL = /https?:\/\/(?:www\.)?(?:pathofexile\.com\/(?:fullscreen-)?atlas-skill-tree\/[^\s)"']+|poeplanner\.com\/[^\s)"']+|poeatlasplanner\.com\/[^\s)"']+)/i
 const DEVICE_WORDS = /\b(map device|kirac|atlas memor|memory|sextant|omen|altar|eldritch|maven'?s invitation|delirium orb|map craft|alch|chisel|scour|vaal orb|8.?mod)/i
 // "8x Breach Thread", "Breach Threads x6", "6 Ritual Threads"
 const THREAD_LINE = new RegExp(String.raw`^(?:(\d+)\s*[x×]?\s+)?(` + THREAD_TYPES.join('|') + String.raw`)\s+Threads?(?:\s*[x×]\s*(\d+))?$`, 'i')
