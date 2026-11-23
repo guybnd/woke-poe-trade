@@ -306,12 +306,9 @@
 .w-pc-travel-note { display: inline-block; max-width: 11em; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; color: var(--w-accent); }
 .w-pc-travel-note.w-pc-travel-warn { color: var(--w-warn); }
 
-/* The currency chip: coins and label each keep every state's room, so nothing shifts. */
-.w-pc-toolbar .w-pc-currency { display: inline-flex; align-items: center; gap: 3px; }
+/* The currency chip: coins only; the coin box keeps every state's width, so nothing shifts. */
+.w-pc-toolbar .w-pc-currency { display: inline-flex; align-items: center; padding: 0 3px; }
 .w-pc-currency-coins { display: inline-flex; justify-content: center; width: 1.9em; }
 .w-pc-currency-coins img { width: 1.15em; height: 1.15em; display: none; }
 .w-pc-currency-coins img.shown { display: block; }
 .w-pc-currency[data-step="all"] .w-pc-currency-coins img + img { margin-left: -.45em; }
-.w-pc-currency-labels { display: inline-grid; justify-items: start; }
-.w-pc-currency-labels > span { grid-area: 1 / 1; visibility: hidden; }
-.w-pc-currency-labels > span.shown { visibility: visible; }

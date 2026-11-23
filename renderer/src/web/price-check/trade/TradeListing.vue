@@ -19,8 +19,8 @@
       <online-filter class="w-pc-online" :class="{ invisible: !list }" :filters="filters" api="trade" />
       <button type="button" class="w-pc-bulk" :class="{ invisible: !list, on: bulk }" :aria-pressed="bulk"
         :title="bulkTitle" @click="toggleBulk">Bulk<span v-if="bulkNote" class="ml-1">{{ bulkNote }}</span></button>
-      <!-- woke: which currency the listings ask for: All, Chaos, Divine. Filters what's loaded, never searches.
-           Every label stays in one grid cell, so the chip keeps its width under the mouse. -->
+      <!-- woke: which currency the listings ask for: both coins (All), Chaos, Divine. Filters what's loaded,
+           never searches. Coins only, as the bar has little room; the coin box keeps one width. -->
       <button v-if="currencyChoice" type="button" class="w-pc-bulk w-pc-currency" data-currency-chip
         :class="{ invisible: !list, on: currency !== 'all' }" :data-step="currency"
         :title="currencyTitle" :aria-label="`Listing currency: ${currency === 'all' ? 'All' : currency === 'divine' ? 'Divine' : 'Chaos'}`"
@@ -29,9 +29,7 @@
           <img v-for="coin of ['chaos', 'divine']" :key="coin" :src="coinFor(coin)" alt=""
             :class="{ shown: currency === 'all' || currency === coin }">
         </span>
-        <span class="w-pc-currency-labels">
-          <span v-for="step of CURRENCY_STEPS" :key="step.value" :class="{ shown: step.value === currency }">{{ step.label }}</span>
-        </span><span v-if="currencyNote" class="ml-1">{{ currencyNote }}</span>
+<span v-if="currencyNote" class="ml-1">{{ currencyNote }}</span>
       </button>
       <div class="w-pc-grow flex-1"></div>
       <!-- woke: the price check's prefix / suffix caps, editing its live filters. -->
@@ -247,7 +245,7 @@ import { groupListings, sortByValue, rowTitle, ListingRow } from '@/web/woke/pri
 import type { ResultsState } from '@/web/woke/price-insight/local-filter'
 import { pickStatColumns, listingStatValue, listingStatLabel, formatStatValue, statTone, statColumnsThatFit, StatColumn } from '@/web/woke/price-insight/stat-columns'
 import { bulkOnly, bulkSellerCount, BULK_ENOUGH } from '@/web/woke/price-insight/bulk-sellers'
-import { CURRENCY_STEPS, CURRENCY_ENOUGH, CHAOS_HUNT_LIMIT, chaosMayHide, hasCurrencyChoice, nextCurrencyView, inCurrency, currencyTitle, type CurrencyView } from '@/web/woke/price-insight/price-currency'
+import { CURRENCY_ENOUGH, CHAOS_HUNT_LIMIT, chaosMayHide, hasCurrencyChoice, nextCurrencyView, inCurrency, currencyTitle, type CurrencyView } from '@/web/woke/price-insight/price-currency'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { nowMinute } from '@/web/woke/ui/format'
 import { textScale } from '@/web/woke/ui/text-scale'
@@ -793,7 +791,6 @@ export default defineComponent({
       bulkNote,
       toggleBulk,
       bulkSellers: computed(() => bulkSellerCount(currencyResults.value, sameKind)),
-      CURRENCY_STEPS,
       currency: currencyView,
       currencyChoice,
       currencyNote,

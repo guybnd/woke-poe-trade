@@ -1,7 +1,7 @@
 # Next release notes
 
 - Price check: cheaper chaos listings no longer hide behind divine ones. The trade site sorts by its own divine rate, which can be far under the market (2 div sorted ahead of 337c with a divine at 410c), so the first listings loaded could all be divines. The check now loads further pages of the same search, never a new search, until a chaos listing shows.
-- Price check: a currency chip beside Bulk in the results. Click it to show only listings priced in chaos, then only in divines, then all again. It filters the listings already loaded, so it never spends a search; with fewer than 10 in that currency it loads more of the same search, as Bulk does.
+- Price check: a currency chip (coin icons) beside Bulk in the results. Click it to show only listings priced in chaos, then only in divines, then all again. It filters the listings already loaded, so it never spends a search; with fewer than 10 in that currency it loads more of the same search, as Bulk does.
 - Net worth's stash reader is no longer hidden: its switch is in Settings › Modules › Economy for everyone (Ctrl+Space "net worth" or "stash reader" finds it). It's still off until you turn it on and still asks first, saying it uses a pathofexile.com page GGG doesn't support for tools; the row reads "Unofficial" and the warning banner under it is gone. The 5 clicks on Economy now only show the AI link.
 - Price check: the small poe.ninja card, the poe.ninja verdict and the exchange verdict show chaos and divine prices with the currency's icon instead of "c" and "div".
 - Price check: right-clicking Links for the socket colour tiles no longer pushes iLvl and Quality off the window's right edge; the numbers wrap onto a second row.

@@ -59,7 +59,7 @@ test('currency chip: Chaos, then Divine, filters the loaded listings without a s
 
   const chip = panel.locator('[data-currency-chip]')
   const coins = panel.locator('.w-pc-table tbody tr:not(.w-pc-yours) .w-pc-coin')
-  await expect(chip.locator('.w-pc-currency-labels span.shown')).toHaveText('All')
+  await expect(chip).toHaveAttribute('data-step', 'all')
   await expect(chip).toHaveAttribute('title', /^Showing listings in (chaos and divines|every currency)\./)
   const width = (await chip.boundingBox())!.width
 
@@ -69,7 +69,7 @@ test('currency chip: Chaos, then Divine, filters the loaded listings without a s
 
   // Chaos: 15 of the 20 loaded ask chaos, enough, so nothing more is fetched.
   await chip.click()
-  await expect(chip.locator('.w-pc-currency-labels span.shown')).toHaveText('Chaos')
+  await expect(chip).toHaveAttribute('data-step', 'chaos')
   await expect(chip).toHaveAttribute('data-step', 'chaos')
   await expect(foot).toContainText('15 in chaos · 20 of 60 listings')
   await expect(coins.first()).toHaveAttribute('alt', 'chaos')
@@ -79,7 +79,7 @@ test('currency chip: Chaos, then Divine, filters the loaded listings without a s
 
   // Divine: only 5 loaded, so it fetches pages of the same search until 10 show.
   await chip.click()
-  await expect(chip.locator('.w-pc-currency-labels span.shown')).toHaveText('Divine')
+  await expect(chip).toHaveAttribute('data-step', 'divine')
   await expect(foot).toContainText('10 in divines · 40 of 60 listings')
   expect(fetches).toHaveLength(4)
   expect(await coins.evaluateAll(els => els.every(el => el.getAttribute('alt') === 'divine'))).toBe(true)
@@ -90,7 +90,7 @@ test('currency chip: Chaos, then Divine, filters the loaded listings without a s
 
   // All again: every listing, no search spent at any step.
   await chip.click()
-  await expect(chip.locator('.w-pc-currency-labels span.shown')).toHaveText('All')
+  await expect(chip).toHaveAttribute('data-step', 'all')
   await expect(foot).toContainText('40 of 60 listings')
   await expect(foot).not.toContainText('divines')
   expect(fetches.searches).toHaveLength(1)
@@ -101,7 +101,7 @@ test('currency chip: Chaos, then Divine, filters the loaded listings without a s
   await expect(chip).toHaveAttribute('aria-pressed', 'true')
   await panel.locator('button.w-icon-btn').filter({ has: overlay.page.locator('.fa-sync-alt') }).click()
   await expect.poll(() => fetches.searches.length).toBe(2)
-  await expect(chip.locator('.w-pc-currency-labels span.shown')).toHaveText('All')
+  await expect(chip).toHaveAttribute('data-step', 'all')
   await expect(chip).toHaveAttribute('aria-pressed', 'false')
   expect(overlay.errors).toEqual([])
 })
