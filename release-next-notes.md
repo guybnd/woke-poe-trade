@@ -1,5 +1,6 @@
 # Next release notes
 
+- Net worth chart (7D, 24H, League): after one price glitch was taken out, the refreshes that followed could draw at the glitched value until the next one (17 hours at 1,960 div for 470). Fixed.
 - Net worth chart: a fake price that lasted several refreshes no longer draws a spike. Before, only a one-refresh glitch was taken out; Rain Tempter's 98 div price lifted an hour of points to 1,947 div. Those points now show their real value (what came in and went still shows), for points already saved too.
 - Net worth: a price that spikes on poe.ninja is no longer counted, thin market or not. Rain Tempter read 98 div each (really 1c) and made 76% of a tab. Each price is now checked against the prices this app saved on the last 14 days (poe.ninja's own 7-day line when there are none): a sudden step of 5× or more counts at the usual price, shown with the pause icon and a hover naming poe.ninja's number, until it has held 3 days. A step of 50× or more counts only once it has been the price for about 2 weeks. A steady climb is never held. Its 24h change shows — while held.
 - Ctrl+Space search can be resized now: drag any edge or corner for more room (the text stays the same size). It keeps its size, and right-click › Reset size puts it back.

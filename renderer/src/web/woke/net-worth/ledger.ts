@@ -118,7 +118,7 @@ export function priceGlitches (points: LedgerPoint[]): Map<number, number> {
   const out = new Map<number, number>()
   for (let i = 1; i < points.length - 1; i++) {
     const a = points[i - 1]
-    if (!(a.chaos > 0)) continue
+    if (!(a.chaos > 0) || out.has(a.at)) continue
     const excess: number[] = []
     let net = 0
     let peak = 0
@@ -143,7 +143,8 @@ export function priceGlitches (points: LedgerPoint[]): Map<number, number> {
     }
     if (end === -1) continue
     excess.forEach((e, m) => out.set(points[i + m].at, e))
-    i = end - 1
+    // The next run starts from the read that came back, never from a glitched one.
+    i = end
   }
   return out
 }

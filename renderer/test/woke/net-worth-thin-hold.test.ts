@@ -263,6 +263,14 @@ describe('price glitches over several reads', () => {
     expect(drawn([q(1, 100), q(2, 300), q(3, 180), q(4, 180)])).toEqual([100, 180, 180, 180])
   })
 
+  it('starts the next run from the read that came back, not from a glitched one', () => {
+    // Guy's 7 days: Rain Tempter glitched on 11-22, again on 11-23. The read
+    // after the first glitch was taken as a dip from it, so 17 hours of real
+    // reads drew at 1,960 div.
+    const pts = [q(1, 100), q(2, 300), q(3, 300), q(4, 100), q(5, 102), q(6, 104), q(7, 400), q(8, 104)]
+    expect(drawn(pts)).toEqual([100, 100, 100, 100, 102, 104, 104, 104])
+  })
+
   it('leaves a glitch broken by a tab change, or a rise held over a day', () => {
     expect(priceSpikes([q(1, 100), q(2, 300), q(3, 300, null), q(4, 100)]).size).toBe(0)
     const H = 3_600_000
