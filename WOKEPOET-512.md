@@ -41,6 +41,15 @@ history:
     date: '2026-11-23T09:00:28.496Z'
     selfAttested: true
     id: c-2026-11-23t09-00-28-496z
+  - type: comment
+    user: Agent
+    comment: >-
+      Also https://github.com/guybnd/woke-poe-trade/pull/798 (fdddbccf): the Net
+      worth chart takes out price glitches that last several refreshes. Dev
+      build reloaded on fdddbccf.
+    date: '2026-11-23T09:22:24.126Z'
+    selfAttested: true
+    id: c-2026-11-23t09-22-24-126z
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/797'
