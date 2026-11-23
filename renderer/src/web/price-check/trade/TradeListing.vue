@@ -144,7 +144,7 @@
                 </span>
               </td>
               <td class="px-2">
-                <span class="w-pc-count">
+                <span class="w-pc-count" :class="{ 'w-pc-count-travel': anyTravel }">
                   <!-- woke: the hideout / stash icon first, so it stays in one place whatever the count. -->
                   <span v-if="!row.lead.hasFee" :class="$style.stashListing" :title="row.lead.hasNote ? 'Stash listing' : 'Stash listing without a price note'">
                     <img :class="$style.stashIcon" src="/images/stash.png">
@@ -154,7 +154,7 @@
                     :class="{ 'w-pc-travel-on': !!travelState(row.lead.hideoutToken) }"
                     :disabled="travelState(row.lead.hideoutToken)?.kind === 'sending'"
                     title="Travel to the seller's hideout" aria-label="Travel to the seller's hideout"
-                    @click.stop="travel(row.lead)"><i class="fas fa-door-open" /></button>
+                    @click.stop="travel(row.lead)"><span class="w-pc-travel-face"><i class="fas fa-door-open" /><span class="w-pc-travel-label">Travel</span></span></button>
                   <span v-else-if="anyIcon" class="w-pc-travel-gap" aria-hidden="true" />
                   <span v-if="showCountBar" class="w-pc-count-bar" :class="{ invisible: row.count < 2 }"><span :style="{ width: Math.round(row.count / maxCount * 100) + '%' }" /></span>
                   <!-- woke: the count keeps its slot on every row, so the tags after it line up. -->
@@ -284,6 +284,8 @@ const WIDTH_TAG_TWICE = 40
 // Clean, corrupted and twice-corrupted copies sell differently: they never share a row.
 const corruptKind = (r: PricingResult) => r.corrupted ? (r.twiceCorrupted ? 2 : 1) : 0
 const WIDTH_STASH_ICON = 24
+// Room the hovered door's "Travel" needs when no count sits beside it.
+const WIDTH_TRAVEL_LABEL = 40
 
 // sameStats: a seller's listings only count as one when their stat columns match.
 function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean) {
@@ -565,6 +567,10 @@ export default defineComponent({
 
     // A row without a stash or hideout icon keeps its room, so the counts line up.
     const anyIcon = computed(() => groupedResults.value.some(r => !r.hasFee || (r.hideoutToken && !r.isMine)))
+    // A row with a door: hovering anywhere on it slides the door out to read
+    // "Travel", over the count beside it. The cell keeps room for that, so it
+    // never spills into the next column.
+    const anyTravel = computed(() => groupedResults.value.some(r => r.hasFee && r.hideoutToken && !r.isMine))
     // A tag or stash icon in the count column leaves less room, so check every listing.
     const otherColumnsWidth = computed(() => {
       const listings = groupedResults.value
@@ -579,6 +585,7 @@ export default defineComponent({
       if (listings.some(r => r.corrupted || insight.value.dropped.has(r.id))) width += WIDTH_TAG
       if (listings.some(r => r.corrupted && r.twiceCorrupted)) width += WIDTH_TAG_TWICE
       if (anyIcon.value) width += WIDTH_STASH_ICON
+      if (anyTravel.value && !countSlot.value) width += WIDTH_TRAVEL_LABEL
       return width
     })
     const columnCap = computed(() =>
@@ -779,6 +786,7 @@ export default defineComponent({
       allInstant: computed(() => rows.value.every(r => r.lead.hasFee)),
       // The stat columns need the bar's room.
       anyIcon,
+      anyTravel,
       showCountBar: computed(() => improved.value && maxCount.value > 1 && !shownColumns.value.length),
       showItemLevel,
       showQuality,
