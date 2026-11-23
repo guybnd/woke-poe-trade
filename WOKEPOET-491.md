@@ -20,5 +20,10 @@ subtasks:
   - WOKEPOET-493
   - WOKEPOET-494
   - WOKEPOET-495
+  - WOKEPOET-500
+  - WOKEPOET-501
+  - WOKEPOET-502
+  - WOKEPOET-503
+  - WOKEPOET-504
 ---
 Epic for the cloud thread "Audit and tighten app layouts". Subtasks: audit tool and report, shared action row and card footer, global text wrapping fix, overflow gate in CI.
