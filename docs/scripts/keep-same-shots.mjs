@@ -20,7 +20,7 @@ for (const file of changed) {
   let sum = 0
   for (let i = 0; i < a.data.length; i++) sum += Math.abs(a.data[i] - b.data[i])
   const diff = sum / a.data.length
-  if (diff < SAME) { git('checkout', 'HEAD', '--', file); kept++ }
+  if (diff < SAME) { git('-C', '..', 'checkout', 'HEAD', '--', file); kept++ }
   else console.log(`changed: ${rel} (${diff.toFixed(1)})`)
 }
 console.log(`${changed.length - kept} of ${changed.length} retaken pictures changed; the rest stay as they were.`)

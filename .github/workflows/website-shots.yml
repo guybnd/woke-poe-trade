@@ -80,8 +80,7 @@ jobs:
         grep=$(node tools/shot-parts.mjs --parts "$parts" ${since:+--changed-since "$since"})
         echo "grep=$grep" >> "$GITHUB_OUTPUT"
     # One worker: the specs share one fake app per file, and a full run in
-    # parallel can leave one test's card over another's shot. Stills and clips
-    # both run with WOKE_LANDING_SHOTS set.
+    # parallel can leave one test's card over another's shot.
     - name: Take the pictures and clips
       if: steps.parts.outputs.grep != ''
       run: npx playwright test e2e/landing-highlights.spec.ts e2e/landing-shots.spec.ts -g "$GREP" --workers 1 --retries 1 --trace off --reporter=list,github
@@ -89,6 +88,7 @@ jobs:
       env:
         GREP: ${{ steps.parts.outputs.grep }}
         WOKE_LANDING_SHOTS: '1'
+        WOKE_LANDING_CLIPS: '1'
         WOKE_SAVE_ICONS: '1'
     - name: Keep pictures that look the same
       if: ${{ !cancelled() && steps.parts.outputs.grep != '' }}
