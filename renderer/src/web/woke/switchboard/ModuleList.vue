@@ -18,7 +18,10 @@
           </template>
         </div>
       </div>
-      <experimental-rows v-if="showStatus && group.id === 'economy' && (experimentalUnlocked || personalForced)" />
+      <template v-if="showStatus && isElectron && group.id === 'economy'">
+        <stash-reader-row />
+        <experimental-rows v-if="experimentalUnlocked" />
+      </template>
     </template>
   </div>
 </template>
@@ -30,10 +33,13 @@ import {
 } from '../modules'
 import type { ModuleDef, ModuleGroup, ModuleNeed, WokeModulesConfig } from '../modules'
 import { Host } from '@/web/background/IPC'
-import { experimentalUnlocked, personalForced } from '../personal'
+import { experimentalUnlocked } from '../personal'
 
+// Settings only: kept out of the overlay's startup code.
+const StashReaderRow = defineAsyncComponent(() => import('./StashReaderRow.vue'))
 // Only once unlocked: no cost for everyone else.
 const ExperimentalRows = defineAsyncComponent(() => import('./ExperimentalRows.vue'))
+const isElectron = Host.isElectron
 
 const props = defineProps<{
   config: { woke: WokeModulesConfig, widgets: Array<{ wmType: string }> }
@@ -55,14 +61,14 @@ const STATUS_LABEL = { running: 'Running', idle: 'Not placed', off: 'Off' } as c
 
 const groups = computed(() => MODULE_GROUPS
   .filter(g => props.includeApt || g.id !== 'apt')
-  // The stash reader's module has its own row (ExperimentalRows).
+  // The stash reader's module has its own row (StashReaderRow).
   .map(g => ({ ...g, modules: MODULES.filter(m => m.group === g.id && !m.optIn) })))
 
-// Clicking Economy 5 times in Settings shows the experimental rows
-// (experimental.ts, loaded on the first click).
+// Clicking Economy 5 times in Settings shows the experimental rows, the AI
+// link (experimental.ts, loaded on the first click).
 function onGroupLabel (id: ModuleGroup, e: MouseEvent) {
   if (!props.showStatus || id !== 'economy' || !Host.isElectron) return
-  if (experimentalUnlocked.value || personalForced.value) return
+  if (experimentalUnlocked.value) return
   const at = Date.now()
   const anchor = (e.currentTarget as Element | null)?.closest('[data-w-settings]') ?? null
   import('./experimental').then(m => m.tapEconomy(at, anchor)).catch(() => {})

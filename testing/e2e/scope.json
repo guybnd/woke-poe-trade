@@ -99,6 +99,9 @@
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/gem-versions/"
   ],
+  "glance-bar-drag.spec.ts": [
+   "renderer/src/web/woke/session-story/"
+  ],
   "glance-bar.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/price-check/",

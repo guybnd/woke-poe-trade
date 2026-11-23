@@ -128,7 +128,7 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     icon: { fa: 'fas fa-th-large' },
     description: 'Switch modules on and off, pick a preset, and see what runs in the background.',
     parts: [ModulesSettings],
-    find: ['Modules', 'Presets', 'Shared services', 'Run setup again', 'Hide all toolkit panels'],
+    find: ['Modules', 'Presets', 'Shared services', 'Run setup again', 'Hide all toolkit panels', 'Net worth (stash reader)'],
     aliases: ['Modules']
   },
   {

@@ -1,5 +1,5 @@
 // The stash reader. Shipped in every build but inert: it wakes up only when a
-// player turns it on (Settings > Modules, hidden until unlocked) or a file
+// player turns it on (Settings > Modules > Economy) or a file
 // named personal.flag is in the app's data folder (always on). Off, no handler
 // is registered, nothing listens to the game log, and the overlay is told it's
 // off, so it shows nothing either. Turning it off signs out and undoes all that.
@@ -396,27 +396,21 @@ export function initPersonal (ctx: PersonalContext): PersonalControl {
     return state()
   }
 
-  if (forced || (prefs.get().experimental && prefs.get().stashReader)) turnOn()
+  if (forced || prefs.get().stashReader) turnOn()
 
   return {
     state,
     setOn: async (on) => await serial(async () => {
       if (forced) return
-      // Only from the unlocked row.
-      if (on && !prefs.get().experimental) return
       prefs.set({ stashReader: on })
       if (on) turnOn()
       else await turnOff()
     }),
-    // Hiding the experimental rows turns what's in them off too.
+    // The experimental rows (the AI link). The stash reader's row is shown to
+    // everyone, so hiding them leaves the reader as it is.
     setUnlocked: async (unlocked) => await serial(async () => {
       if (forced) return
-      if (unlocked) {
-        prefs.set({ experimental: true })
-        return
-      }
-      prefs.set({ experimental: false, stashReader: false })
-      await turnOff()
+      prefs.set({ experimental: unlocked })
     })
   }
 }

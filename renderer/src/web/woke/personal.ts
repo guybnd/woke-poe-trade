@@ -1,6 +1,6 @@
 // The stash reader (net worth from your own stash tabs). Off for every player
-// unless they turn it on in Settings › Modules, a row hidden until they click
-// the Economy heading 5 times; personal.flag in the data folder keeps it on.
+// unless they turn it on in Settings › Modules › Economy; personal.flag in the
+// data folder keeps it on.
 // Main owns the switch (woke-app.json). Off, nothing here loads: no module,
 // widget, settings or listeners. On, the code loads as its own chunk.
 import { shallowRef } from 'vue'
@@ -12,7 +12,7 @@ export interface PersonalState {
   on: boolean
   // personal.flag: always on, the switch can't turn it off.
   forced: boolean
-  // The experimental rows are shown.
+  // The experimental rows (the AI link) are shown.
   unlocked: boolean
 }
 
@@ -34,7 +34,7 @@ export function takePersonal (s: Partial<PersonalState> | null | undefined) {
 }
 
 // Runs once at startup, before the overlay mounts. The switch itself is in
-// personal-switch.ts, loaded once experimental settings are shown.
+// personal-switch.ts, loaded with the Settings rows.
 export async function loadPersonal (): Promise<void> {
   if (!Host.isElectron) return
   let s: PersonalState | null = null

@@ -14,7 +14,7 @@
         </div>
       </template>
     </DockItem>
-    <GlanceBar v-if="config.glance" :map="glanceMap" :since="glanceSince" :before="glanceBefore" :editing="placingGlance" :pos="config.glancePos ?? null"
+    <GlanceBar v-if="config.glance" :map="glanceMap" :since="glanceSince" :before="glanceBefore" :editing="placingGlance" :movable="wm.active.value" :pos="config.glancePos ?? null"
       @move="moveGlance" />
     <MapToast :chip="chip" :close-key="config.chipKey || null" :size="toastSize" @close="closeChip" @hold="holdChip" @resize="resizeChip"
       :pos="config.chipPos ?? null" @move="moveChip" />
@@ -146,9 +146,11 @@ const chipKeySub = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
 })
 onUnmounted(() => { chipKeySub.abort() })
 // The glance bar (off unless turned on): the map you're in, from the map log.
-// The glance bar takes the mouse and shows its drag handle only while Settings
-// is open, not over a price check, trade search or any other window. The spot
-// is saved when Settings closes (saveConfig waits while it's open).
+// With the overlay open, the bar in a map takes the mouse and drags (its grip
+// shows on hover only). While Settings is open it also shows outside a map,
+// outlined, so it can be placed before one; not over a price check or trade
+// search out of a map (#744). Saved when the drag ends, or when Settings
+// closes (saveConfig waits while it's open).
 const placingGlance = computed(() => wm.active.value &&
   wm.widgets.value.some(w => w.wmType === 'settings' && w.wmWants === 'show'))
 function moveGlance (pos: { x: number, y: number }, done: boolean) {

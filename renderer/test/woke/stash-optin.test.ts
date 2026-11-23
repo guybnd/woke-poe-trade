@@ -1,5 +1,6 @@
-// The stash reader for players: hidden until Economy is clicked 5 times, asks
-// before turning on, and comes and goes at runtime without a restart.
+// The stash reader for players: its row is in Settings for everyone, it asks
+// before turning on, and comes and goes at runtime without a restart. The
+// experimental rows (the AI link) stay hidden until Economy is clicked 5 times.
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { createSSRApp, h } from 'vue'
 import { renderToString } from 'vue/server-renderer'
@@ -17,11 +18,8 @@ vi.mock('@/web/background/IPC', async (orig) => {
 vi.mock('@/web/woke/shared/host', () => ({
   hostRequest: async (op: string, args: { on?: boolean, unlocked?: boolean } | null) => {
     host.calls.push({ op, args })
-    if (op === 'personal-set' && host.state.unlocked && !host.state.forced) host.state.on = args?.on === true
-    if (op === 'experimental-set' && !host.state.forced) {
-      host.state.unlocked = args?.unlocked === true
-      if (!host.state.unlocked) host.state.on = false
-    }
+    if (op === 'personal-set' && !host.state.forced) host.state.on = args?.on === true
+    if (op === 'experimental-set' && !host.state.forced) host.state.unlocked = args?.unlocked === true
     if (['personal-flag', 'personal-set', 'experimental-set'].includes(op)) return { ...host.state }
     return null
   }
@@ -136,7 +134,8 @@ describe('turn-on confirm', () => {
   it('keeps the agreed wording', () => {
     expect(COPY.confirmTitle).toBe('Turn on the stash reader?')
     expect(UNLOCKED_TOAST).toBe('Experimental settings unlocked')
-    expect(COPY.warnBody).toContain('Your login stays in the app and is never shared.')
+    expect(COPY.confirmBody).toContain('Your login stays in the app and is never shared.')
+    expect(COPY.confirmBody).toContain('No bans are known')
   })
 })
 
@@ -159,11 +158,21 @@ describe('stash reader on and off at runtime', () => {
     expect(isWidgetTypeOn({ woke: { setupDone: true, off: [] }, widgets: [] }, 'woke-net-worth')).toBe(false)
   })
 
-  it('the Modules list shows no experimental row until unlocked', async () => {
+  it('the Modules list shows the Net worth row to everyone, off, but no experimental rows', async () => {
     const config = { woke: { setupDone: true, off: [] }, widgets: [] }
     const html = await renderToString(createSSRApp({ render: () => h(ModuleList, { config, showStatus: true, includeApt: true }) }))
+    expect(html).toContain('Net worth')
+    expect(html).toContain('data-stash-reader')
+    expect(html).toContain(COPY.descOff)
     expect(html).not.toContain('EXP')
-    expect(html).not.toContain('Net worth')
+    expect(html).not.toContain('data-experimental')
+    expect(html).not.toContain('Hide experimental')
+  })
+
+  it('setup (no live status) shows no stash reader row', async () => {
+    const config = { woke: { setupDone: false, off: [] }, widgets: [] }
+    const html = await renderToString(createSSRApp({ render: () => h(ModuleList, { config, includeApt: true }) }))
+    expect(html).not.toContain('data-stash-reader')
   })
 
   it('4 quick clicks on Economy do nothing, the 5th unlocks', async () => {
@@ -180,23 +189,11 @@ describe('stash reader on and off at runtime', () => {
     expect(personal.experimentalUnlocked.value).toBe(false)
   })
 
-  it('turning on is refused while hidden', async () => {
-    await personal.setStashReaderOn(true)
-    expect(personal.personalOn.value).toBe(false)
-    expect(hasModule()).toBe(false)
-  })
-
   // Two server renders of the settings list: about 2 s alone, past 20 s with
   // every core busy, and the tests after it build on this one.
-  it('unlocking shows the row; turning on adds the module, widget and page right away', async () => {
-    await personal.setExperimentalUnlocked(true)
-    expect(personal.experimentalUnlocked.value).toBe(true)
+  it('turning on without unlocking adds the module, widget and page right away', async () => {
+    expect(personal.experimentalUnlocked.value).toBe(false)
     const config = { woke: { setupDone: true, off: [] }, widgets: [] }
-    const html = await renderToString(createSSRApp({ render: () => h(ModuleList, { config, showStatus: true, includeApt: true }) }))
-    expect(html).toContain('Net worth')
-    expect(html).toContain('EXP')
-    expect(html).toContain('Hide experimental')
-    expect(html).not.toContain(COPY.warnTitle)
 
     await personal.setStashReaderOn(true)
     expect(personal.personalOn.value).toBe(true)
@@ -215,7 +212,7 @@ describe('stash reader on and off at runtime', () => {
     expect(preset.woke.off).toContain('market')
 
     const on = await renderToString(createSSRApp({ render: () => h(ModuleList, { config, showStatus: true, includeApt: true }) }))
-    expect(on).toContain(COPY.warnTitle)
+    expect(on).toContain(COPY.descOn)
     // Its own row, not a second plain module row.
     expect(on.match(/aria-label="Net worth"/g)).toHaveLength(1)
   }, 60_000)
@@ -252,10 +249,16 @@ describe('stash reader on and off at runtime', () => {
     expect(cfg.widgets.filter(w => w.wmType === 'woke-net-worth').map(w => w.wmId)).toHaveLength(1)
   })
 
-  it('hiding experimental settings turns it off and hides the row', async () => {
+  it('unlocking shows the experimental rows; hiding them leaves the reader on', async () => {
+    expect(personal.personalOn.value).toBe(true)
+    await personal.setExperimentalUnlocked(true)
+    const config = { woke: { setupDone: true, off: [] }, widgets: [] }
+    const html = await renderToString(createSSRApp({ render: () => h(ModuleList, { config, showStatus: true, includeApt: true }) }))
+    expect(html).toContain('Hide experimental')
+    expect(html.match(/aria-label="Net worth"/g)).toHaveLength(1)
     await personal.setExperimentalUnlocked(false)
-    expect(personal.personalOn.value).toBe(false)
     expect(personal.experimentalUnlocked.value).toBe(false)
-    expect(hasModule()).toBe(false)
-  })
+    expect(personal.personalOn.value).toBe(true)
+    expect(hasModule()).toBe(true)
+  }, 60_000)
 })
