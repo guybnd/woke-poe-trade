@@ -72,8 +72,8 @@ export function heldNote (l: Pick<ValuedLine, 'heldSince' | 'heldKind' | 'ninjaC
   }
   if (l.heldKind === 'spike') {
     return `Counted at ${price(l.unitChaos)}, its usual price on poe.ninja this week. poe.ninja says ${price(l.ninjaChaos)} now, ` +
-      `${HOLD_RATIO}× or more over the rest of its week, which a few fake listings can cause. ` +
-      `Counts once poe.ninja has had it ${SPIKE_KEEP_DAYS} days in a row. Right-click to set your own price`
+      `a sudden step of ${HOLD_RATIO}× or more over its earlier days, which a few fake listings can cause. ` +
+      `Counts once poe.ninja has had it ${SPIKE_KEEP_DAYS} days. Right-click to set your own price`
   }
   return `Held at the last read's price. poe.ninja says ${price(l.ninjaChaos)}, a jump of ${HOLD_RATIO}× or more in a thin market ` +
     `(no price on 3+ of the last 7 days), which one fake listing can cause. Takes poe.ninja's price at ${clock(l.heldSince + HOLD_MS)} ` +

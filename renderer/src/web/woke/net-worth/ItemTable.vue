@@ -189,7 +189,7 @@ function tipOf (l: ValuedLine): ItemTipRef {
     : l.heldKind === 'one-day'
       ? `${l.unitChaos > 0 ? 'Price held' : 'Not counted'}: poe.ninja's ${ninja} is from only one day this week`
       : l.heldKind === 'spike'
-        ? `Price held: poe.ninja's ${ninja} is ${HOLD_RATIO}× its usual price this week`
+        ? `Price held: poe.ninja's ${ninja} is ${HOLD_RATIO}× or more its usual price this week`
         : `Price held: poe.ninja's jumped to ${ninja} in a thin market`
   const note = [tabs.length ? `In ${tabs.join(', ')}` : '', held ?? ''].filter(Boolean).join('. ')
   return lineTip(l, l.count, note || undefined)

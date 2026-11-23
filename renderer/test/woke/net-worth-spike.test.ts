@@ -2,7 +2,7 @@
 // usual price. Rain Tempter on 2026-11-23: about 4c all week, then 98.5c
 // (+2,362%) on a market that wasn't thin, so it made 76% of a tab.
 import { describe, it, expect } from 'vitest'
-import { baselineOf, graphChaos, graphSpike, holdJump, valueStash } from '@/web/woke/net-worth/valuation'
+import { HOLD_MS, baselineOf, graphChaos, graphSpike, graphStep, holdJump, valueStash } from '@/web/woke/net-worth/valuation'
 import { heldNote } from '@/web/woke/net-worth/tips'
 import type { Priced, PriceOf, StashItemLike } from '@/web/woke/net-worth/valuation'
 
@@ -34,22 +34,28 @@ describe('graphSpike', () => {
   it('catches Rain Tempter and gives its usual price', () => {
     expect(graphSpike(RAIN, RAIN_GRAPH)).toBeCloseTo(4.1, 1)
   })
-  it('catches a spike with only one earlier day, but needs 3 for gear', () => {
-    const sparse = [null, null, null, null, 0, null, 2000]
-    expect(graphSpike(200, sparse)).toBeCloseTo(9.5, 1)
-    expect(graphSpike(200, sparse, 3)).toBeNull()
+  it('needs 2 earlier priced days (3 for gear)', () => {
+    expect(graphSpike(200, [null, null, 0, null, 0, null, 2000])).toBeCloseTo(9.5, 1)
+    expect(graphSpike(200, [null, null, null, null, 0, null, 2000])).toBeNull()
+    expect(graphSpike(200, [null, null, 0, null, 0, null, 2000], 3)).toBeNull()
+  })
+  it('never holds a steady climb, even 64x in a week', () => {
+    // 2, 4, 8 ... 128c: a card in a league's first week.
+    expect(graphSpike(128, [0, 100, 300, 700, 1500, 3100, 6300])).toBeNull()
+    expect(graphSpike(1.2, [0, 100, 200, 300, 500, 700, 1100])).toBeNull()
   })
   it('leaves a flat line, a rise under 5x, and a jump under 1c', () => {
     expect(graphSpike(4, [0, 1, 2, 1, 0, 1, 2])).toBeNull()
     expect(graphSpike(19, [0, 0, 0, 0, 0, 0, 375])).toBeNull()
     expect(graphSpike(0.8, [0, 0, 0, 0, 0, 0, 700])).toBeNull()
   })
-  it('takes a rise poe.ninja has held 3 days in a row', () => {
+  it('takes a rise poe.ninja has had on 3 priced days', () => {
+    expect(graphStep(100, [0, 0, 0, 0, 2400, 2300, 2400])).toBe('confirmed')
     expect(graphSpike(100, [0, 0, 0, 0, 2400, 2300, 2400])).toBeNull()
     // Two days isn't enough: a fake can outlast a day (The Web, an Alteration Shard).
     expect(graphSpike(100, [0, 0, 0, 0, 0, 2300, 2400])).toBeCloseTo(4, 1)
-    // A gap in the 3 days keeps it held.
-    expect(graphSpike(100, [0, 0, 0, 0, null, 2300, 2400])).toBeCloseTo(4, 1)
+    // Gaps are skipped: 3 priced days at the new price count.
+    expect(graphStep(100, [0, 0, 0, 2400, null, 2300, 2400])).toBe('confirmed')
   })
   it('needs a line with a price today', () => {
     expect(graphSpike(RAIN, [0, 0, 0, 0, 0, 0, null])).toBeNull()
@@ -104,8 +110,27 @@ describe('valuing Rain Tempter', () => {
   it('never overrides your own price, and catches a unique only with 3+ earlier days', () => {
     expect(line(valueStash(tabs, rain(), { prices: { 'Rain Tempter': 50 }, ignored: [] }, { before: null, now: T0 })).unitChaos).toBe(50)
     const gear = (graph: Array<number | null>) => holdJump(500, { category: 'gear', graph }, undefined, T0)
-    expect(gear([null, null, null, null, null, 0, 2400])).toBeNull()
+    expect(gear([null, null, null, null, 0, 0, 2400])).toBeNull()
     expect(gear([0, null, 0, null, 0, null, 2400])?.chaos).toBeCloseTo(20)
+  })
+
+  it('lets gear go after 6 hours, as a jump', () => {
+    const graph = [0, null, 0, null, 0, null, 2400]
+    const prev = { name: 'x', icon: '', count: 1, unitChaos: 20, ref: 20, heldSince: T0, heldKind: 'spike' as const }
+    expect(holdJump(500, { category: 'gear', graph, thin: true }, prev, T0 + HOLD_MS - 1)?.kind).toBe('spike')
+    expect(holdJump(500, { category: 'gear', graph, thin: true }, prev, T0 + HOLD_MS)).toBeNull()
+  })
+
+  it('starts no thin-market jump hold when a spike is confirmed', () => {
+    const prev = { name: 'x', icon: '', count: 1, unitChaos: 4, ref: 4, heldSince: T0, heldKind: 'spike' as const }
+    expect(holdJump(98, { thin: true, graph: [0, null, 0, null, 2400, 2400, 2400] }, prev, T0 + 50 * H)).toBeNull()
+  })
+
+  it('never holds an ignored item', () => {
+    const v = valueStash(tabs, rain(), { prices: {}, ignored: ['Rain Tempter'] })
+    const l = v.ignoredLines.find(x => x.key === 'Rain Tempter')!
+    expect(l.unitChaos).toBe(98.5)
+    expect(l.heldSince).toBeUndefined()
   })
 
   it('says why on the hover', () => {
@@ -113,6 +138,6 @@ describe('valuing Rain Tempter', () => {
     const note = heldNote(l, c => `${c.toFixed(1)}c`)!
     expect(note).toContain('Counted at 4.1c')
     expect(note).toContain('poe.ninja says 98.5c')
-    expect(note).toContain('3 days in a row')
+    expect(note).toContain('has had it 3 days')
   })
 })
