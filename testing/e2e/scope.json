@@ -177,6 +177,10 @@
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/map-mods/"
   ],
+  "map-mods-bonuses.spec.ts": [
+   "renderer/public/data/map-bonuses.json",
+   "renderer/src/web/woke/map-mods/"
+  ],
   "map-mods-rewards.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",

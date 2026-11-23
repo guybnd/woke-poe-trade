@@ -12,6 +12,8 @@
     <div v-if="scanTab" :class="$style.scanTab" class="w-scroll">
       <MapScanBox :config="config" full />
     </div>
+    <!-- Planner: pick a bonus, tick the T17 mods that give it, say how many a map needs. -->
+    <MapPlanner v-else-if="plannerTab" :profile="profile" :ratings="mapRatings" />
     <div v-else :class="$style.split">
       <!-- Left: find and rate mods. -->
       <div :class="$style.left">
@@ -34,6 +36,15 @@
             </div>
             <WToggle :model-value="!profile.hideT17" @update:model-value="profile.hideT17 = !$event">T17 mods</WToggle>
           </div>
+          <div v-if="mode === 'maps'" class="flex items-center gap-2 w-full text-xs" data-testid="map-mods-sort">
+            <span class="w-dim">Sort</span>
+            <WSelect :model-value="sortBy" :options="SORT_OPTIONS" title="Order the list by what each mod adds to a map"
+              @update:model-value="sortBy = $event as SortKey" />
+            <span class="flex-1" />
+            <WButton v-if="wantable.length" size="sm" icon="fas fa-check" :title="WANT_ALL_TIP" @click="wantAll">
+              Want all {{ wantable.length }} with {{ BONUS_LABEL[sortBy as BonusKey].toLowerCase() }}
+            </WButton>
+          </div>
           <div v-else class="w-dim text-xs w-full">{{ MODE_HINT[mode] }}</div>
           <div v-if="t17Kept" class="w-warn text-xs w-full">T17 picks are kept but left out of the search. Checking a T17 map still flags them.</div>
         </div>
@@ -41,8 +52,12 @@
           <template v-for="row in visible" :key="row.kind === 'head' ? `head:${row.rating}` : row.matcher">
             <div v-if="row.kind === 'head'" :class="[$style.groupHead, $style[row.rating]]">{{ HEAD_LABEL[row.rating] }} · {{ row.count }}</div>
             <div v-else :class="$style.row">
-              <span class="flex-1 min-w-0" :class="{ 'w-dim': !ratings[row.matcher] }">
+              <span class="flex-1 min-w-0" :class="{ 'w-dim': !ratings[row.matcher] }" :title="bonusRows[row.matcher]?.tip ?? row.matcher">
                 {{ row.matcher }}<span v-if="mode === 'maps' && t17.has(row.matcher)" :class="$style.t17">T17</span>
+              </span>
+              <span v-if="bonusRows[row.matcher]" :class="$style.bonus" :title="bonusRows[row.matcher].tip">
+                <span class="w-num">{{ bonusRows[row.matcher].b.d }}/{{ bonusRows[row.matcher].b.r }}/{{ bonusRows[row.matcher].b.p }}</span>
+                <span v-for="x in bonusRows[row.matcher].b.more" :key="x.kind" :class="$style.more">{{ x.t17 ? 'T17 ' : '' }}+{{ x.pct }}% {{ MORE_LABEL[x.kind] }}</span>
               </span>
               <span v-if="regex.tokens[row.matcher]" :class="$style.cost"
                 :title="`Searched as &quot;${regex.tokens[row.matcher]}&quot;, ${tokenCost(regex.tokens[row.matcher])} characters`">{{ regex.tokens[row.matcher] }}</span>
@@ -186,11 +201,14 @@ import type { JuiceWeights, MapModPreset, ModMode, ModRating } from './rules'
 import { MAX_SEARCH_LENGTH, MIN_LABELS, tokenCost } from './regex'
 import type { MinStat } from './regex'
 import { modsForMode, tier17Mods } from './data'
+import { BONUS_LABEL, MORE_LABEL, bonusTip, loadMapBonuses, mapBonusData, modsOfLine, rowBonus, sortValue, wantsFor } from './bonuses'
+import type { BonusKey, MoreKind, RowBonus } from './bonuses'
 import { profileRegex } from './search'
 import { activeProfile, rewardsAsk } from './widget'
 import type { MapModsWidget } from './widget'
 import { moduleIcon } from '../ui/game-icons'
 import MapScanBox from './MapScanBox.vue'
+import MapPlanner from './MapPlanner.vue'
 import { entries as scanEntries, isScanOwner } from './scan-session'
 // The header shows the module's own art, the same as the dock and tab bar.
 const panelIcon = moduleIcon('map-mods').art ?? 'map'
@@ -250,11 +268,15 @@ const scanOwner = computed(() => isScanOwner(props.config))
 // The Scan tab sits beside Maps, Heist and Charts; mode keeps the last of those.
 const scanTab = shallowRef(false)
 watch(scanOwner, (own) => { if (!own) scanTab.value = false })
+// The Planner works on T17 maps, with the Maps ratings.
+const plannerTab = shallowRef(false)
+const mapRatings = computed(() => modRatings(profile.value, 'maps'))
 const tab = computed<string>({
-  get: () => scanTab.value ? 'scan' : mode.value,
+  get: () => scanTab.value ? 'scan' : plannerTab.value ? 'planner' : mode.value,
   set: (v) => {
     scanTab.value = v === 'scan'
-    if (v !== 'scan') mode.value = v as ModMode
+    plannerTab.value = v === 'planner'
+    if (v !== 'scan' && v !== 'planner') mode.value = v as ModMode
   }
 })
 
@@ -278,6 +300,7 @@ const modeOptions = computed(() => ([['maps', 'Maps'], ['heist', 'Heist'], ['cha
 
 const tabList = computed(() => [
   ...modeOptions.value,
+  { value: 'planner', label: 'Planner', title: 'Pick a bonus and how many T17 mods give it, get a stash and trade search' },
   ...(scanOwner.value
     ? [{ value: 'scan', label: 'Scan', count: scanEntries.value.length || undefined, title: 'Map scan: read hovered maps on screen and see each verdict' }]
     : [])
@@ -315,9 +338,50 @@ watch(mode, () => {
 watch([mode, filter, search, () => profile.value.hideT17, () => props.config.activeProfile, () => props.config.wmWants], () => {
   orderBy.value = ratings.value
 })
-const rows = computed(() => modListRows(filtered.value, orderBy.value))
+// What each mod adds to a map (Atlas Drops / rarity / pack size, more-X), from
+// poedb's tables. Sorting by one keeps rated mods grouped on top.
+type SortKey = 'rated' | BonusKey
+const SORT_KEYS: BonusKey[] = ['d', 'r', 'p', 'currency', 'maps', 'threads']
+const MORE_KEYS: BonusKey[] = ['currency', 'maps', 'threads', 'divCards', 'scarabs']
+const SORT_OPTIONS = [{ value: 'rated', label: 'Rated first' }, ...SORT_KEYS.map(k => ({ value: k, label: BONUS_LABEL[k] }))]
+const WANT_ALL_TIP = 'Rates as want every unrated mod in the list that gives this bonus. Mods you rated stay as they are. ' +
+  'A T17 mod and a regular one can share a line, and the stash search can\'t tell them apart.'
+const sortBy = shallowRef<SortKey>('rated')
+loadMapBonuses().catch(() => {})
+const withT17 = computed(() => !profile.value.hideT17)
+const sorted = computed(() => {
+  const key = sortBy.value
+  const data = mapBonusData.value
+  if (mode.value !== 'maps' || key === 'rated' || !data) return filtered.value
+  const value = new Map(filtered.value.map(m => [m, sortValue(modsOfLine(data, m, withT17.value), key)]))
+  return [...filtered.value].sort((a, b) => value.get(b)! - value.get(a)!)
+})
+const wantable = computed(() => {
+  const key = sortBy.value
+  const data = mapBonusData.value
+  if (mode.value !== 'maps' || key === 'rated' || !MORE_KEYS.includes(key) || !data) return []
+  return filtered.value.filter(m => !ratings.value[m] && wantsFor(modsOfLine(data, m, withT17.value), key as MoreKind))
+})
+function wantAll () {
+  setModRatings(profile.value, mode.value, withRating(ratings.value, wantable.value, 'good'))
+  orderBy.value = ratings.value
+}
+watch(sortBy, () => { orderBy.value = ratings.value })
+const rows = computed(() => modListRows(sorted.value, orderBy.value))
 const visible = computed(() => rows.value.slice(0, MAX_ROWS))
 const hiddenCount = computed(() => rows.value.slice(MAX_ROWS).filter(row => row.kind === 'mod').length)
+const bonusRows = computed(() => {
+  const out: Record<string, { b: RowBonus, tip: string }> = {}
+  const data = mapBonusData.value
+  if (mode.value !== 'maps' || !data) return out
+  for (const row of visible.value) {
+    if (row.kind !== 'mod') continue
+    const mods = modsOfLine(data, row.matcher, withT17.value)
+    const b = rowBonus(mods)
+    if (b) out[row.matcher] = { b, tip: `${row.matcher}\n\n${bonusTip(mods, data.built)}` }
+  }
+  return out
+})
 
 const mapRegex = computed(() => profileRegex(profile.value))
 const regex = computed(() => mode.value === 'maps' ? mapRegex.value : profileRegex(profile.value, mode.value))
@@ -386,6 +450,7 @@ const flash = shallowRef(false)
 let flashTimer: ReturnType<typeof setTimeout> | undefined
 watch(rewardsAsk, async () => {
   scanTab.value = false
+  plannerTab.value = false
   mode.value = 'maps'
   await nextTick()
   rewardsEl.value?.scrollIntoView({ block: 'nearest' })
@@ -635,6 +700,15 @@ function paste () {
   white-space: nowrap;
   font-family: var(--w-mono);
 }
+.bonus {
+  display: inline-flex;
+  gap: 6px;
+  flex: none;
+  font-size: var(--w-fs-xs);
+  color: var(--w-faint);
+  white-space: nowrap;
+}
+.more { color: var(--w-accent); font-weight: 600; }
 .rate { display: inline-flex; gap: 3px; flex: none; }
 .rateBtn {
   width: 24px;

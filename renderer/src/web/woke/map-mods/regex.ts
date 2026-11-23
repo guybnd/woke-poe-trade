@@ -23,7 +23,7 @@ export type MinStat = 'quantity' | 'rarity' | 'packSize' | 'quality' | 'currency
 // The tail of each map property line ("Atlas Drops: +112%"), picked so it
 // matches only that line. `.` stands in for the `+`. 'quantity' is the 3.30
 // Atlas Drops line, which replaced Item Quantity on every map, old ones too.
-const MIN_PREFIX: Record<MinStat, string> = {
+export const MIN_PREFIX: Record<MinStat, string> = {
   quantity: 'ops: .',
   rarity: 'rity: .',
   packSize: 'ze: .',
