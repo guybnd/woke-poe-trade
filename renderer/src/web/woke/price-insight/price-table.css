@@ -124,8 +124,11 @@
 .w-pc-table tbody tr.w-pc-in-range td:first-child { box-shadow: inset 2px 0 0 var(--w-accent); }
 .w-pc-table tbody tr.w-pc-in-range .w-pc-amount { color: var(--w-accent); }
 
-/* Older listings recede: they are the ones most likely to be gone. */
-.w-pc-table tbody tr.w-pc-aging .w-pc-age { color: var(--w-faint); }
+/* The listed time says how fresh it is: green under an hour, plain under a day,
+ * amber under a week, red older. Older listings also recede (below). */
+.w-pc-table tbody .w-pc-age.w-pc-age-new { color: var(--w-up); }
+.w-pc-table tbody .w-pc-age.w-pc-age-week { color: var(--w-warn); }
+.w-pc-table tbody .w-pc-age.w-pc-age-old { color: var(--w-down); }
 .w-pc-table tbody tr.w-pc-stale > td { opacity: 0.5; }
 
 /* The verdict can grow (details, chart, drivers). It scrolls by itself, so the

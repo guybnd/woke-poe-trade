@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ageBand, groupListings, rowTitle, shortAge, RowListing } from '@/web/woke/price-insight/listing-rows'
+import { ageBand, ageTone, groupListings, rowTitle, shortAge, RowListing } from '@/web/woke/price-insight/listing-rows'
 import type { DropReason } from '@/web/woke/price-insight/insight'
 
 const NOW = Date.parse('2026-11-05T12:00:00Z')
@@ -152,5 +152,16 @@ describe('rowTitle', () => {
     expect(title).toContain('Ignored by the verdict')
     expect(title).toContain('2 listings from 1 seller')
     expect(title).toContain('over a week old')
+  })
+})
+
+describe('listed time colour', () => {
+  const H = 60 * 60 * 1000
+  it('is new under an hour, day under a day, week under a week, old after', () => {
+    expect(ageTone(null)).toBeNull()
+    expect(ageTone(30 * 60 * 1000)).toBe('new')
+    expect(ageTone(5 * H)).toBe('day')
+    expect(ageTone(3 * 24 * H)).toBe('week')
+    expect(ageTone(9 * 24 * H)).toBe('old')
   })
 })
