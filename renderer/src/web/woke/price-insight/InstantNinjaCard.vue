@@ -15,7 +15,7 @@
         <template v-if="weekChange != null">
           <span class="flex-1" />
           <w-spark :values="spark" :width="32" :height="14" />
-          <span :class="weekChange >= 0 ? 'w-up' : 'w-down'">{{ weekChange >= 0 ? '▲' : '▼' }}{{ Math.abs(weekChange) }}%</span>
+          <span :class="weekChange >= 0 ? 'w-up' : 'w-down'" :title="changeTitle" data-testid="instant-ninja-change">{{ weekChange >= 0 ? '▲' : '▼' }}{{ Math.abs(weekChange) }}%<span :class="$style.range">1d</span></span>
         </template>
       </div>
       <div v-if="price?.sub || stack" :class="$style.dim">
@@ -50,6 +50,12 @@ import { ItemCategory } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
 import { ninjaPrice, ninjaTotal, divineParts } from './ninja-first'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
+import { useLeagues } from '@/web/background/Leagues'
+import { savedPriceSeries } from '../market/db'
+import { typeForSlug } from '../market/types'
+import { ninjaRange, savedRange } from '../market/ranges'
+
+const DAY_MS = 24 * 3600 * 1000
 import { WSpark, WKbd, WPriceText, agoPhrase, vItemTip } from '../ui'
 
 const CardDrops = defineAsyncComponent(() => import('../card-drops/CardDrops.vue'))
@@ -96,8 +102,38 @@ const price = computed(() => info.value ? ninjaPrice(info.value.chaos, xchgRate.
 const stack = computed(() => info.value && have.value > 1 ? ninjaTotal(info.value.chaos * have.value, isDivine.value ? undefined : xchgRate.value) : null)
 const parts = computed(() => isDivine.value && info.value ? divineParts(info.value.chaos) : null)
 const age = computed(() => agoPhrase(updatedAt.value))
-const spark = computed(() => (info.value?.graph ?? []).filter((p): p is number => p != null))
-const weekChange = computed(() => spark.value.length ? Math.round(spark.value[spark.value.length - 1]) : null)
+// The last day (Guy, 2026-11-23): the prices this app saved about every 30
+// minutes when it was running a day ago, else poe.ninja's last two daily prices.
+const leagues = useLeagues()
+const saved = shallowRef<Array<number | null> | null>(null)
+const dayTrend = computed(() => {
+  const row = info.value
+  if (!row) return null
+  if (saved.value) {
+    const own = savedRange(row.chaos, saved.value)
+    if (own) return { ...own, from: 'saved' as const }
+  }
+  const ninja = ninjaRange(row.chaos, row.graph, 1)
+  return ninja.change == null ? null : { ...ninja, from: 'ninja' as const }
+})
+const spark = computed(() => dayTrend.value?.trend ?? [])
+const weekChange = computed(() => dayTrend.value?.change != null ? Math.round(dayTrend.value.change) : null)
+const changeTitle = computed(() => dayTrend.value?.from === 'saved'
+  ? 'Change over the last 24 hours, from the prices this app saves about every 30 minutes'
+  : "Change over the last day, from poe.ninja's daily prices")
+watch(info, async (row) => {
+  saved.value = null
+  const league = leagues.selectedId.value
+  const slug = row?.url.split('/')[6]
+  const type = slug ? typeForSlug(slug) : undefined
+  if (!row || !league || !type) return
+  try {
+    const got = await savedPriceSeries(league, type, DAY_MS, [row.name])
+    if (info.value === row) saved.value = got.rows[`${row.name}\u0000${row.variant ?? ''}`] ?? null
+  } catch {
+    // No saved prices: poe.ninja's daily line stands in.
+  }
+}, { immediate: true })
 
 // Left of the cursor when the right side has no room, above it when the bottom has none.
 const el = shallowRef<HTMLElement | null>(null)
@@ -190,6 +226,7 @@ onUnmounted(() => {
 </script>
 
 <style module>
+.range { margin-left: 3px; color: var(--w-dim); font-size: var(--w-fs-xs); }
 .anchor { position: absolute; pointer-events: auto; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; max-height: 100%; }
 .card {
   zoom: var(--w-ui-size, 1);

@@ -1,5 +1,6 @@
 # Next release notes
 
+- Price check, the small poe.ninja card: the price line and % change now cover the last day and say "1d". They come from the prices this app saves about every 30 minutes when it was running a day ago, otherwise from poe.ninja's last two daily prices; hover the change to see which.
 - Net worth's stash reader is no longer hidden: its switch is in Settings › Modules › Economy for everyone (Ctrl+Space "net worth" or "stash reader" finds it). It's still off until you turn it on and still asks first, saying it uses a pathofexile.com page GGG doesn't support for tools; the row reads "Unofficial" and the warning banner under it is gone. The 5 clicks on Economy now only show the AI link.
 - Price check: the small poe.ninja card, the poe.ninja verdict and the exchange verdict show chaos and divine prices with the currency's icon instead of "c" and "div".
 - Price check: right-clicking Links for the socket colour tiles no longer pushes iLvl and Quality off the window's right edge; the numbers wrap onto a second row.

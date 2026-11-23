@@ -26,6 +26,8 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   await expect(badge).toHaveAttribute('data-tip-keys', 'Ctrl + D')
   // A divine's parts in chaos, for paying in div.
   await expect(card.getByTestId('instant-ninja-parts')).toContainText('0.1 18c')
+  // The change is over the last day, and says so (poe.ninja's last two days: 104% to 105%).
+  await expect(card.getByTestId('instant-ninja-change')).toHaveText('▲1%1d')
   await expect(overlay.page.locator('#price-window')).toHaveCount(0)
   await overlay.snap('divine orb instant check')
   // The mouse is tracked into the card, not the window.
