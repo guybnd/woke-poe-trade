@@ -188,6 +188,8 @@ export interface ModuleGroupOf<T> {
 export function groupByModule<T extends { wmType: string }> (items: T[]): Array<ModuleGroupOf<T>> {
   const groupOf = new Map<string, ModuleGroup>()
   for (const m of MODULES) for (const t of m.widgetTypes) groupOf.set(t, m.group)
+  // Net worth's module is listed only while its stash reader is on; its off row is still Economy.
+  if (!groupOf.has('woke-net-worth')) groupOf.set('woke-net-worth', 'economy')
   const groups: Array<ModuleGroupOf<T>> = MODULE_GROUPS
     .filter(g => g.id !== 'apt')
     .map(g => ({ label: g.label, items: items.filter(i => groupOf.get(i.wmType) === g.id) }))

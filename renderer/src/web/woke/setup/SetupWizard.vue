@@ -176,6 +176,7 @@ import { ensureWokeConfig, WOKE_CONFIG_VERSION } from '../modules'
 import PresetBar from '../switchboard/PresetBar.vue'
 import ModuleList from '../switchboard/ModuleList.vue'
 import { fieldKey, hotkeyFields } from '../settings/hotkey-fields'
+import { startWelcome } from '../tab-bar/welcome'
 
 interface FoundLog { path: string, source: 'running' | 'standalone' | 'steam' | 'folder', modified: number, size: number }
 interface Prefs {
@@ -311,6 +312,7 @@ async function finish () {
   finishing.value = true
   const woke = ensureWokeConfig(AppConfig()).woke
   woke.setupDone = true
+  startWelcome(woke)
   // A fresh config is already in today's shape: no woke fix-up is due on it.
   woke.version ??= WOKE_CONFIG_VERSION
   persist()

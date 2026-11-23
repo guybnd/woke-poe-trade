@@ -11,8 +11,9 @@
     </span>
     <span :class="$style.sep" />
     <button :class="[$style.ic, $style.tools, { [$style.toolsOn]: popup?.kind === 'launcher' }]" aria-label="All tools"
-      @click="openLauncher" @mouseenter="showTip('All tools', false, $event)" @mouseleave="hideTip">
+      @click="openLauncher" @mouseenter="showTip(newsCount ? `All tools · ${newsCount} new` : 'All tools', false, $event)" @mouseleave="hideTip">
       <i class="fas fa-th" />
+      <span v-if="newsCount" :class="[$style.badge, $style.newsBadge]" data-news-count>{{ newsCount }}</span>
     </button>
 
     <template v-if="fixedTabs.length">
@@ -67,6 +68,15 @@
           {{ tip.text }}<span v-if="tip.open" :class="$style.tipOpen">open</span>
         </div>
 
+        <!-- First-run help (welcome.ts): the card, then the buttons' names. -->
+        <welcome-card v-if="welcomeCardOn && welcomePos" :pos="welcomePos" @done="finishWelcome" @net-worth="welcomeNetWorth" />
+        <template v-if="railLabelsOn">
+          <div v-for="l in railLabels" :key="l.text" data-rail-label :class="[$style.tip, $style.railLabel, { [$style.tipLeft]: l.left, [$style.tipFlat]: flat }]"
+            :style="{ left: `${l.x}px`, top: `${l.y}px` }">
+            {{ l.text }}<w-kbd v-if="l.keys" :keys="l.keys" />
+          </div>
+        </template>
+
         <div v-if="popup" :class="$style.backdrop" @mousedown="closePopup" @contextmenu.prevent="closePopup" />
 
         <!-- Tools: every tool, one box for search and item paste -->
@@ -92,11 +102,12 @@
                 <div v-if="group.items.length" :class="['w-category', $style.head, $style.groupHead]">{{ group.label }}</div>
                 <div v-for="entry in group.items" :key="entry.key"
                   :class="[$style.row, { [$style.rowPinned]: entry.tab?.pinned, [$style.rowOff]: entry.state === 'off' }]"
-                  @mouseenter="hovered = entry" @focusin="hovered = entry"
+                  @mouseenter="pointAt(entry)" @focusin="pointAt(entry)"
                   @contextmenu.prevent.stop="entry.tab && openMenu(entry.tab, $event)">
-                  <button :class="$style.rowMain" :aria-label="entry.name" :title="ENTRY_HINT[entry.state]" @click="activate(entry)">
+                  <button :class="$style.rowMain" :aria-label="entry.name" :title="entryHint(entry)" @click="activate(entry)">
                     <tool-icon :art="entry.art" :icon="entry.icon" />
                     <span :class="$style.rowName">{{ entry.name }}</span>
+                    <span v-if="newsOf(entry)" :class="$style.newSeal" data-news-seal>New</span>
                     <span v-if="entry.tab?.open" :class="$style.openDot" title="Window open" />
                     <span v-if="entry.tab && entry.tab.copies > 1" :class="$style.dup" title="Several copies of this tool">×{{ entry.tab.copies }}</span>
                   </button>
@@ -113,7 +124,7 @@
           </div>
           <div v-if="!launcherHasMatch && !priceGroups.length" :class="$style.none">Nothing matches "{{ launcherQuery }}"</div>
           <div v-else :class="$style.foot" data-launcher-foot>
-            <template v-if="hovered"><span :class="$style.footName">{{ hovered.name }}</span><span :class="$style.footText">{{ [toolDescription(hovered.wmType), ENTRY_HINT[hovered.state]].filter(Boolean).join('. ') }}</span></template>
+            <template v-if="hovered"><span :class="$style.footName">{{ hovered.name }}</span><span :class="$style.footText">{{ [hoveredNote ?? toolDescription(hovered.wmType), entryHint(hovered)].filter(Boolean).join('. ') }}</span></template>
             <span v-else :class="$style.footHint">Point at a tool to see what it does. Right-click for more.</span>
           </div>
         </div>
@@ -194,11 +205,11 @@
 
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
-import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, inject, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { registry } from '@/web/overlay/widget-registry'
-import { AppConfig, pushHostConfig } from '@/web/Config'
+import { AppConfig, pushHostConfig, saveConfigQuietly } from '@/web/Config'
 import { appIconUrl } from '../ui/app-icon'
 import { MODULES, ensureWokeConfig, isRetiredWidgetType, isWidgetTypeOn, setModuleOn } from '@/web/woke/modules'
 import { useI18n } from 'vue-i18n'
@@ -208,11 +219,20 @@ import { MAX_UI_SIZE, MIN_UI_SIZE, nudgeUiSize, uiSize } from '../ui/ui-size'
 import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, toolDescription } from './tools'
 import { pastedItemText } from '../search/pasted-item'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
-import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
+import { WIcon, WKbd, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import { searchRequest } from '../search/widget'
 import { usePriceText } from '../shared/price'
+import { dismissWelcome, labelsShown, welcomePhase } from './welcome'
+import { markNewsSeen, newsFor } from './news'
+import { personalOn } from '../personal'
+import { NET_WORTH_TYPE } from '../net-worth/widget'
+import { openSettingsPage } from '../dock/dock'
+import { SEARCH_TYPE } from '../search/widget'
+
+// Shown once per install: kept out of the startup JS (perf budget).
+const WelcomeCard = defineAsyncComponent(() => import('./WelcomeCard.vue'))
 
 const props = defineProps<{ config: TabBarConfig }>()
 const emit = defineEmits<{ (e: 'paste', text: string, from: DOMRect): void }>()
@@ -639,6 +659,93 @@ watch(() => wm.active.value, active => {
   }
 })
 
+// ---- First-run help (welcome.ts) ----
+// The card on the first open after setup, then the rail's buttons named beside
+// them for a few opens. Never over a price check or another exclusive window.
+const welcomeState = computed(() => AppConfig().woke?.welcome)
+const welcomeNow = computed(() => welcomePhase(welcomeState.value))
+const exclusiveUp = computed(() => wm.widgets.value.some(w => w.wmZorder === 'exclusive' && w.wmWants === 'show'))
+const welcomeCardOn = computed(() => wm.active.value && welcomeNow.value === 'card' && !exclusiveUp.value && !popup.value)
+const railLabelsOn = computed(() => wm.active.value && welcomeNow.value === 'labels' && !exclusiveUp.value && !popup.value && !iconDrag.value?.active)
+const welcomePos = ref<Record<string, string> | null>(null)
+const railLabels = ref<Array<{ text: string, keys: string | null, x: number, y: number, left: boolean }>>([])
+let labelsSeen = false
+
+function placeWelcome () {
+  const r = railEl.value?.getBoundingClientRect()
+  if (!r?.width) { welcomePos.value = null; return }
+  const CARD_W = 380
+  if (flat.value) {
+    const below = r.top < window.innerHeight / 2
+    const left = Math.max(8, Math.min(window.innerWidth - CARD_W - 8, r.left))
+    welcomePos.value = below ? { left: `${left}px`, top: `${r.bottom + 8}px` } : { left: `${left}px`, bottom: `${window.innerHeight - r.top + 8}px` }
+    return
+  }
+  const left = onRight.value ? Math.max(8, r.left - CARD_W - 8) : Math.min(window.innerWidth - CARD_W - 8, r.right + 8)
+  welcomePos.value = { left: `${left}px`, top: `${Math.max(8, r.top)}px` }
+}
+
+function placeRailLabels () {
+  const rail = railEl.value
+  const r = rail?.getBoundingClientRect()
+  if (!rail || !r?.width) { railLabels.value = []; return }
+  const search = AppConfig().widgets.find(w => w.wmType === SEARCH_TYPE) as { hotkey?: string | null } | undefined
+  const wanted: Array<{ label: string, text: string, keys: string | null }> = [
+    { label: 'All tools', text: 'All tools', keys: null },
+    { label: ICON_TOOL_NAMES.settings, text: 'Settings', keys: null },
+    { label: ICON_TOOL_NAMES['item-search'], text: 'Search', keys: search?.hotkey ?? null }
+  ]
+  const out: typeof railLabels.value = []
+  for (const w of wanted) {
+    const el = rail.querySelector<HTMLElement>(`button[aria-label="${w.label}"]`)
+    const b = el?.getBoundingClientRect()
+    if (!b?.width) continue
+    if (flat.value) {
+      const below = r.top < window.innerHeight / 2
+      const x = Math.max(TIP_ROOM, Math.min(window.innerWidth - TIP_ROOM, b.left + b.width / 2))
+      out.push({ text: w.text, keys: w.keys, left: !below, x, y: below ? r.bottom + 18 + out.length * 30 : r.top - 18 - out.length * 30 })
+    } else {
+      out.push({ text: w.text, keys: w.keys, left: onRight.value, x: onRight.value ? r.left - 6 : r.right + 6, y: b.top + b.height / 2 })
+    }
+  }
+  railLabels.value = out
+}
+
+watch([welcomeCardOn, railLabelsOn, flat, onRight, () => props.config.railSize, () => props.config.anchor], () => {
+  // After the rail has been laid out where it is now.
+  nextTick(() => {
+    if (welcomeCardOn.value) placeWelcome()
+    if (railLabelsOn.value) {
+      labelsSeen = true
+      placeRailLabels()
+    }
+  })
+}, { immediate: true, deep: true })
+
+watch(() => wm.active.value, active => {
+  if (active || !labelsSeen) return
+  labelsSeen = false
+  labelsShown(welcomeState.value)
+})
+
+// Opening any tool means they've found their way: the card is done.
+watch(() => tabs.value.some(tab => tab.open && !tab.iconOnly), open => {
+  if (open && welcomeNow.value === 'card') endWelcomeCard()
+})
+
+// Saved now: an open Settings window holds back the usual save until it closes.
+function endWelcomeCard () {
+  dismissWelcome(welcomeState.value)
+  saveConfigQuietly()
+}
+function finishWelcome () {
+  endWelcomeCard()
+}
+function welcomeNetWorth () {
+  endWelcomeCard()
+  openSettingsPage(wm, 'All modules')
+}
+
 const query = ref('')
 const searchInput = ref<HTMLInputElement | HTMLTextAreaElement>()
 
@@ -653,7 +760,31 @@ const launcherAll = computed(() => launcherEntries(
   tabs.value,
   wmType => !isWidgetTypeOn(AppConfig(), wmType),
   wmType => AppConfig().widgets.some(w => w.wmType === wmType && w.wmFlags.includes('menu::skip'))
-))
+).concat(personalOn.value ? [] : [NET_WORTH_OFF]))
+// Net worth's code loads only once its stash reader is on, so while it's off
+// the launcher lists it by hand. Turning it on asks first, in Settings.
+const NET_WORTH_OFF: LauncherEntry<Tab> = {
+  key: 'net-worth-off', wmType: NET_WORTH_TYPE, name: 'Net worth', icon: 'fa-scale-balanced', art: null, state: 'off', tab: null
+}
+function entryHint (entry: LauncherEntry<Tab>): string | undefined {
+  if (entry.key === NET_WORTH_OFF.key) return 'Off. Click for its switch in Settings (it asks first)'
+  return ENTRY_HINT[entry.state]
+}
+
+// ---- What's new (news.ts) ----
+const seenNews = computed(() => AppConfig().woke?.seenNews)
+function newsOf (entry: LauncherEntry<Tab>) {
+  return newsFor(entry.wmType, seenNews.value)
+}
+// Counted on what the launcher lists, so a switched-off tool still counts.
+const newsCount = computed(() => new Set(launcherAll.value.map(e => newsOf(e)?.id).filter(Boolean)).size)
+const hoveredNote = shallowRef<string | null>(null)
+function pointAt (entry: LauncherEntry<Tab>) {
+  hovered.value = entry
+  const news = newsOf(entry)
+  hoveredNote.value = news?.note ?? null
+  if (news) markNewsSeen(ensureWokeConfig(AppConfig()).woke, [news.id])
+}
 const ENTRY_HINT: Record<LauncherState, string | undefined> = {
   placed: undefined,
   available: undefined,
@@ -672,7 +803,7 @@ const launcherHasMatch = computed(() => launcherMatches.value.length > 0)
 const launcherColumns = computed(() => groupByModule(launcherMatches.value).map(g => [g]))
 // The tool under the mouse, explained along the launcher's foot.
 const hovered = shallowRef<LauncherEntry<Tab> | null>(null)
-watch([query, () => popup.value?.kind, launcherMatches], () => { hovered.value = null })
+watch([query, () => popup.value?.kind, launcherMatches], () => { hovered.value = null; hoveredNote.value = null })
 // Opening a tool is what the launcher is for, so it steps aside; closing one
 // leaves it up for the next.
 function onRowClick (tab: Tab) {
@@ -682,6 +813,13 @@ function onRowClick (tab: Tab) {
 function activate (entry: LauncherEntry<Tab>) {
   if (entry.tab) {
     onRowClick(entry.tab)
+    return
+  }
+  if (entry.key === NET_WORTH_OFF.key) {
+    closePopup()
+    // An open Settings window holds back the usual save (seen news).
+    saveConfigQuietly()
+    openSettingsPage(wm, 'All modules')
     return
   }
   if (entry.state === 'dock') openModuleSettings(entry.wmType)
@@ -883,6 +1021,7 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 :global([data-woke-art]) .flat .sep { width: 2px; height: 26px; }
 .flat .sep { width: 1px; height: 22px; margin: 0 4px; }
 
+.railLabel { pointer-events: none; }
 .tip {
   position: fixed;
   z-index: 9999;
@@ -1026,6 +1165,8 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 .footName { flex: none; color: var(--w-accent); font-family: var(--w-caps-face); font-size: var(--w-fs-xl); }
 .footText, .footHint { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .footHint { color: var(--w-faint); }
+.newSeal { flex: none; padding: 0 4px; font-family: var(--w-caps-face, var(--w-head)); font-size: var(--w-fs-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--w-accent-fg); background: var(--w-accent); border-radius: var(--w-r-sm); }
+.newsBadge { background: var(--w-accent); }
 .rowTag { flex: none; padding: 0 4px; font-size: var(--w-fs-sm); color: var(--w-dim); }
 .rowOff .rowName, .rowOff .rowMain > * { opacity: 0.55; }
 

@@ -337,12 +337,6 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
-  "price-currency-chip.spec.ts": [
-   "renderer/src/parser/",
-   "renderer/src/web/item-check/",
-   "renderer/src/web/price-check/",
-   "renderer/src/web/woke/price-insight/"
-  ],
   "price-check-bulk.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",
@@ -406,6 +400,12 @@
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/map-mods/",
    "renderer/src/web/woke/trade-searches/"
+  ],
+  "price-currency-chip.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/price-insight/"
   ],
   "price-stat-columns.spec.ts": [
    "renderer/src/parser/",
@@ -576,6 +576,10 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/wickerman/"
+  ],
+  "welcome.spec.ts": [
+   "renderer/src/web/woke/tab-bar/",
+   "renderer/src/web/woke/setup/"
   ],
   "wickerman-dock.spec.ts": [
    "renderer/src/web/woke/wickerman/"

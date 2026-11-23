@@ -154,6 +154,18 @@ export interface WokeModulesConfig {
   // The league list from the last launch that read it, and every league seen,
   // so a failed read keeps a league and a new one can be offered (Leagues.ts).
   leagues?: { list: string[], known: string[] }
+  // First-run help in the overlay (tab-bar/welcome.ts). Set when the setup
+  // window finishes for the first time; older configs never get it.
+  welcome?: WelcomeState
+  // What's new lines (tab-bar/news.ts) the player has pointed at.
+  seenNews?: string[]
+}
+
+export interface WelcomeState {
+  // The welcome card still shows on the next overlay open.
+  due: boolean
+  // Overlay opens left that name the rail's buttons beside them.
+  labelOpens: number
 }
 
 interface ConfigLike {
