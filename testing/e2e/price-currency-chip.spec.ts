@@ -105,3 +105,48 @@ test('currency chip: Chaos, then Divine, filters the loaded listings without a s
   await expect(chip).toHaveAttribute('aria-pressed', 'false')
   expect(overlay.errors).toEqual([])
 })
+
+// The trade site's own divine rate can sort every divine listing ahead of cheaper
+// chaos ones. Opening the check then keeps fetching pages (never searching) until
+// a chaos listing shows, so the cheapest chaos listing makes the table.
+test('only divines on the first pages: later pages load until a chaos listing shows', async ({ overlay }) => {
+  const fetches: string[][] = []
+  const searches: number[] = []
+  await overlay.page.route('**/api/trade/search/**', (route) => {
+    searches.push(1)
+    return route.fulfill({
+      contentType: 'application/json',
+      headers: LIMITS,
+      body: JSON.stringify({ id: 'q', total: TOTAL, result: Array.from({ length: TOTAL }, (_, i) => `r${i}`) })
+    })
+  })
+  // r0..r34 ask 2 div and up; from r35 on, chaos from 337c.
+  await overlay.page.route('**/api/trade/fetch/**', (route) => {
+    const ids = decodeURIComponent(new URL(route.request().url()).pathname.split('/').pop()!).split(',')
+    fetches.push(ids)
+    return route.fulfill({
+      contentType: 'application/json',
+      headers: LIMITS,
+      body: JSON.stringify({
+        result: ids.map(id => {
+          const i = Number(id.slice(1))
+          const row = listing(i)
+          row.listing.price = i < 35 ? { amount: 2 + i / 10, currency: 'divine' } : { amount: 337 + i, currency: 'chaos' }
+          return row
+        })
+      })
+    })
+  })
+  await overlay.boot()
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const panel = overlay.widget('price-check')
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  // Pages of ten until r35..r39 arrive: 40 loaded, one search.
+  await expect(panel.locator('.w-pc-foot')).toContainText('40 of 60 listings')
+  expect(fetches).toHaveLength(4)
+  expect(searches).toHaveLength(1)
+  const chip = panel.locator('[data-currency-chip]')
+  await chip.click()
+  await expect(panel.locator('.w-pc-foot')).toContainText('5 in chaos')
+  expect(overlay.errors).toEqual([])
+})

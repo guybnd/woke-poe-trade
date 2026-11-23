@@ -247,7 +247,7 @@ import { groupListings, sortByValue, rowTitle, ListingRow } from '@/web/woke/pri
 import type { ResultsState } from '@/web/woke/price-insight/local-filter'
 import { pickStatColumns, listingStatValue, listingStatLabel, formatStatValue, statTone, statColumnsThatFit, StatColumn } from '@/web/woke/price-insight/stat-columns'
 import { bulkOnly, bulkSellerCount, BULK_ENOUGH } from '@/web/woke/price-insight/bulk-sellers'
-import { CURRENCY_STEPS, CURRENCY_ENOUGH, hasCurrencyChoice, nextCurrencyView, inCurrency, currencyTitle, type CurrencyView } from '@/web/woke/price-insight/price-currency'
+import { CURRENCY_STEPS, CURRENCY_ENOUGH, CHAOS_HUNT_LIMIT, chaosMayHide, hasCurrencyChoice, nextCurrencyView, inCurrency, currencyTitle, type CurrencyView } from '@/web/woke/price-insight/price-currency'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { nowMinute } from '@/web/woke/ui/format'
 import { textScale } from '@/web/woke/ui/text-scale'
@@ -366,6 +366,7 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
       }
       searchResult.value = _searchResult
       collapseMerchant = filters.trade.collapseMerchant
+      const searchedCurrency = filters.trade.currency
 
       // first two req are parallel, then sequential on demand
       {
@@ -395,10 +396,11 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
         const totalGrouped = groupedResults.value.length
         const totalNotGrouped = groupedResults.value.reduce((len, res) =>
           res.listedTimes <= 2 ? len + 1 : len, 0)
-        if (
-          (totalNotGrouped < MIN_NOT_GROUPED || totalGrouped < MIN_GROUPED) &&
-          canFetchMore(_searchResult)
-        ) {
+        if ((
+          (totalNotGrouped < MIN_NOT_GROUPED || totalGrouped < MIN_GROUPED) ||
+          // woke: only divines so far: cheaper chaos listings may sort behind them (price-currency.ts).
+          (fetched < CHAOS_HUNT_LIMIT && chaosMayHide(_fetchResults, searchedCurrency))
+        ) && canFetchMore(_searchResult)) {
           await fetchPage(_searchId, _searchResult, _fetchResults)
           return fetchMore()
         }

@@ -37,3 +37,24 @@ export function currencyTitle (view: CurrencyView, searched: string | null | und
     : `Showing only listings priced in ${step.what}.`
   return `${now} Click to change: All, Chaos, Divine. Filters the listings already loaded, without a new search.`
 }
+
+/** How far the opening fetch goes looking for chaos listings behind divine ones. */
+export const CHAOS_HUNT_LIMIT = 60
+
+/**
+ * The trade site sorts a mixed chaos and divine search by its own divine rate, which
+ * lags the market: when it's far under poe.ninja's, every divine listing sorts ahead of
+ * cheaper chaos ones (2 div before 337c with a divine at 410c), and the first pages hold
+ * only divines. While that's so, the opening fetch loads further pages of the same search
+ * until a chaos listing shows; from there on chaos listings only get dearer.
+ */
+export function chaosMayHide (listings: ReadonlyArray<{ priceCurrency: string } | null | undefined>, searched: string | null | undefined): boolean {
+  if (!hasCurrencyChoice(searched)) return false
+  let any = false
+  for (const l of listings) {
+    if (l == null) continue
+    if (l.priceCurrency !== 'divine') return false
+    any = true
+  }
+  return any
+}
