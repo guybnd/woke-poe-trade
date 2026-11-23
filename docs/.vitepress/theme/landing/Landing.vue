@@ -39,8 +39,8 @@ const motion = ref(false)
 const onScreen = new Set()
 let watcher = null
 function playClips () {
-  for (const v of document.querySelectorAll('.landing .stage video')) {
-    const want = v.classList.contains('on') && onScreen.has(v.closest('section')?.id)
+  for (const v of document.querySelectorAll('.landing .stage video, .landing .hero video')) {
+    const want = (v.classList.contains('on') || v.classList.contains('hero-clip')) && onScreen.has(v.closest('section, header')?.id)
     if (want && v.paused) v.play().catch(() => {})
     else if (!want && !v.paused) v.pause()
   }
@@ -118,8 +118,8 @@ onMounted(() => {
       else onScreen.delete(e.target.id)
     }
     playClips()
-  }, { threshold: 0.35 })
-  for (const el of document.querySelectorAll('.landing section.highlight[id]')) watcher.observe(el)
+  }, { threshold: 0.15 })
+  for (const el of document.querySelectorAll('.landing section.highlight[id], .landing .hero')) watcher.observe(el)
   nextTick(playClips)
 })
 onBeforeUnmount(() => {
@@ -142,8 +142,14 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 
 <template>
   <div class="landing">
-    <header class="hero">
-      <img class="hero-art" :src="shot('hero-plaza')" alt="" width="1720" height="617">
+    <header id="top" class="hero">
+      <img class="hero-art" :src="shot('hero-loop')" alt="" width="1920" height="1080">
+      <!-- The overlay at work, cut from the highlight clips (docs/scripts/hero-loop.mjs). -->
+      <video v-if="motion" class="hero-art hero-clip" :class="{ playing: playing.hero }" muted loop playsinline autoplay
+        disablepictureinpicture preload="auto" aria-hidden="true" @playing="playing.hero = true">
+        <source :src="clipFile('hero-loop', 'webm')" type="video/webm">
+        <source :src="clipFile('hero-loop', 'mp4')" type="video/mp4">
+      </video>
       <div class="hero-text">
         <h1>Woke PoE Trade</h1>
         <p class="lead">trade macro with extra chromosomes</p>
@@ -313,7 +319,9 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 
 /* ---------- hero ---------- */
 .hero { position: relative; overflow: hidden; background: var(--ground); }
-.hero-art { display: block; width: 100%; height: 620px; object-fit: cover; object-position: center top; opacity: 0.7; }
+.hero-art { display: block; width: 100%; height: 620px; object-fit: cover; object-position: center; opacity: 0.6; }
+.hero-clip { position: absolute; inset: 0 0 auto; opacity: 0; transition: opacity 400ms ease; }
+.hero-clip.playing { opacity: 0.6; }
 .hero::after {
   content: '';
   position: absolute;
