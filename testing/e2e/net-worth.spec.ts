@@ -216,6 +216,28 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await listed.getByText('Mageblood').hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('Mageblood')
     await overlay.page.mouse.move(0, 0)
+    // The next run, started from the dock card (no run going): named like
+    // the last one. Then stopped again from the card.
+    fakeApp.focusGame(true)
+    const startBtn = overlay.page.locator('[data-card-start]')
+    await expect(async () => {
+      await overlay.moveMouse(5, 500)
+      await overlay.hoverDockIcon('net-worth')
+      await expect(startBtn).toBeEnabled({ timeout: 2000 })
+    }).toPass({ timeout: 20_000 })
+    await startBtn.click()
+    await expect(overlay.page.locator('[data-card-start-form] input')).toHaveValue('Nightmare maps')
+    await overlay.snap('net worth dock card start run')
+    await overlay.page.locator('[data-card-start-go]').click()
+    await expect(runTab).toContainText('Nightmare maps', { timeout: 20_000 })
+    await stopBtn.click()
+    await expect(stopBtn).toContainText('Stop the run?')
+    await expect(async () => {
+      const label = await stopBtn.innerText().catch(() => '')
+      if (/Stop/.test(label) && !/Stopping/.test(label)) await stopBtn.click()
+      await expect(runTab).toHaveCount(0, { timeout: 4000 })
+    }).toPass({ timeout: 30_000 })
+    await overlay.pressHotkey(overlay.config.overlayKey)
     await overlay.page.unroute('**/api/trade/search/**')
     await overlay.page.unroute('**/api/trade/fetch/**')
     await panel.getByRole('tab', { name: 'Holdings' }).click()

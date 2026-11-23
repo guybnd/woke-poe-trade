@@ -5,7 +5,7 @@
       <template #card>
         <!-- Its data loads the first time the card opens, never at startup. -->
         <NetWorthCard v-if="cardOpen && personalReady" :status="status" :league="leagueId" :with-hub="config.rateWithHub === true" :rate-window="config.rateWindow ?? '1h'" @window="config.rateWindow = $event" @refresh="refresh" @settings="openSettingsPage(wm, 'Game & league')"
-          :run="liveRun" :stopping="stopping" :run-with-hub="config.runWithHub !== false" @stop="stopLive" @open-run="openRun" @run-hub="config.runWithHub = $event" />
+          :run="liveRun" :stopping="stopping" :starting-run="startingRun" @start="startLive" :run-with-hub="config.runWithHub !== false" @stop="stopLive" @open-run="openRun" @run-hub="config.runWithHub = $event" />
         <div v-else class="w-dim text-xs" style="padding: 6px var(--w-pad);">{{ cardText }}</div>
       </template>
     </DockItem>
@@ -214,6 +214,20 @@ async function stopLive () {
     // The store may not be watched here yet (it loads with the window).
     if (leagueId.value === league) runG.value = s.runGlance.value
   } catch {} finally { stopping.value = false }
+}
+// Start from the card: from the last read, like the Runs view's Start.
+const startingRun = shallowRef(false)
+async function startLive (name: string) {
+  const league = leagueId.value
+  if (!league || startingRun.value) return
+  startingRun.value = true
+  try {
+    const [s, rs] = await Promise.all([import('./store'), import('./run-start')])
+    const led = s.ledger.value
+    const at = led.points[led.points.length - 1]?.at
+    if (at == null) return
+    if (await rs.startRunAt(league, name, at, led.diffs, led.points, s.divine.value) && leagueId.value === league) runG.value = s.runGlance.value
+  } catch {} finally { startingRun.value = false }
 }
 function openRun () {
   props.config.view = 'runs'

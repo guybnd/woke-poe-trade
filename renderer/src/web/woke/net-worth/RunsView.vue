@@ -126,9 +126,10 @@ import RunAdd from './RunAdd.vue'
 import type { AddedLine } from './RunAdd.vue'
 import RunTimeBar from './RunTimeBar.vue'
 import type { RunTime } from './run-time'
-import { addCost, deleteRun, editRun, loadRuns, refreshRunMaps, runMaps, runsDoc, setOutside, startRun } from './run-store'
+import { addCost, deleteRun, editRun, loadRuns, refreshRunMaps, runMaps, runsDoc, setOutside } from './run-store'
 import { stopLiveRun } from './run-stop'
-import { leftOver, outsideSums, outsideTotals, rowKey, setBefore, setEdit } from './faustus'
+import { lastCostsOf, startRunAt } from './run-start'
+import { outsideSums, outsideTotals, rowKey, setBefore, setEdit } from './faustus'
 import type { OutsideRow } from './faustus'
 import { readFaustus } from './faustus-read'
 import { loadSales, ninjaEach, rates, sales } from './sales-store'
@@ -284,31 +285,16 @@ const startAt = computed(() => props.from ?? lastPoint.value)
 const startTitle = 'Reads your Faustus listings (one trade search): what is listed now is from before the run'
 
 // The costs typed for the same name last time come along.
-const lastCosts = computed<CostLine[]>(() => (doc.value.done.find(r => r.name === name.value.trim())?.costs ?? []).map(c => { const x = { ...c }; delete x.bought; return x }))
-// Start reads your Faustus listings (the newest 100): their sales are from
-// before the run. A failed read still starts.
+const lastCosts = computed<CostLine[]>(() => lastCostsOf(name.value))
+// Start reads your Faustus listings (run-start.ts). A failed read still starts.
 const starting = shallowRef(false)
 async function start () {
   const at = startAt.value
   if (at == null || starting.value) return
-  const runName = name.value || 'Run'
-  const costs = lastCosts.value
   // What the run starts from, as it is now (the read can take a while).
   const { league, diffs, points, divine } = props
   starting.value = true
-  // H1: what the last run left outside the stash comes along, not counted.
-  const last = doc.value.live ?? doc.value.done[0]
-  const taken = last && [doc.value.live, ...doc.value.done].some(r => r?.carriedFrom === last.id)
-  let extra: Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales' | 'carriedFrom'> = last && !taken ? { ...leftOver(last, sales.value, rates.value), carriedFrom: last.id } : {}
-  try {
-    const read = await readFaustus(league, 0)
-    const after = read.listings.filter(l => l.at > at)
-    extra = { ...extra, startListings: read.listings.filter(l => l.at <= at).map(l => l.id), ...(after.length ? { faustus: { at: read.at, listings: after } } : {}) }
-  } catch (e) {
-    toast(`Started without your Faustus listings: ${(e as Error).message}`)
-  } finally { starting.value = false }
-  if (props.league !== league) return
-  startRun(league, runName, at, diffs, points, divine, costs, extra).catch(() => {})
+  try { await startRunAt(league, name.value, at, diffs, points, divine) } catch {} finally { starting.value = false }
   name.value = ''
 }
 // Stop reads your Faustus listings first; a failed read still stops.
