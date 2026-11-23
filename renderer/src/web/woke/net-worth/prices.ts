@@ -6,7 +6,7 @@ import { lastWokePrices } from '../market/hook'
 import { feedDays, graphGaps, pricedOnlyToday } from '../market/parse'
 import { THIN_GAPS } from '../market/types'
 import { priceHistory } from './history'
-import { categoryOfSlug, gemVariant, isRolledMap, isUniqueFrame } from './valuation'
+import { categoryOfSlug, gemVariant, isRolledMap, isUniqueFrame, mapBase } from './valuation'
 import type { Priced, PriceOf, StashItemLike } from './valuation'
 
 interface Row { name?: string, chaos: number, variant?: string, graph?: Array<number | null> }
@@ -86,7 +86,7 @@ export function ninjaPriceOf (): PriceOf {
     // Magic and rare maps (Nightmare Maps drop rare): poe.ninja prices a map
     // by its base, whatever its rarity.
     if (isRolledMap(item)) {
-      item = { ...item, name: '', typeLine: item.baseType, frame: 0 }
+      item = { ...item, name: '', typeLine: mapBase(item), frame: 0 }
     }
     // Other magic and rare items: no poe.ninja price, and no trade searches.
     if (item.frame === 1 || item.frame === 2) return null

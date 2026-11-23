@@ -157,12 +157,14 @@ async function withFinal (run: Run, points: readonly LedgerPoint[]): Promise<Run
   return { ...run, final }
 }
 
-export function stopRun (league: string, points: readonly LedgerPoint[], divine: number | null) {
+// `id` and `at`: the run and the moment Stop was pressed (a read in between
+// doesn't move them).
+export function stopRun (league: string, points: readonly LedgerPoint[], divine: number | null, id?: string, at = Date.now()) {
   return queue(async () => {
     await loadRuns(league)
     const live = runsDoc.value.live
-    if (!live) return
-    const stopped = await withFinal({ ...live, stoppedAt: Date.now() }, points)
+    if (!live || (id != null && live.id !== id)) return
+    const stopped = await withFinal({ ...live, stoppedAt: Math.max(live.startAt, at) }, points)
     if (await save(league, { live: null, done: [stopped, ...runsDoc.value.done].slice(0, MAX_DONE_RUNS) })) {
       await saveGlance(league, null, points, divine)
     }

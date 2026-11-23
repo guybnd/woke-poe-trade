@@ -67,6 +67,8 @@ describe('listings read', () => {
     expect(toListing({ ...base, hasFee: true })).toMatchObject({ id: 'i', at: T0, name: 'Mageblood', price: { amount: 3, currency: 'divine' } })
     expect(toListing({ ...base, hasFee: false })).toBeNull()
     expect(toListing({ ...base, hasFee: true, priceCurrency: 'no price' })).toBeNull()
+    // The item's id, as the trade history has it, so a sold listing matches its sale.
+    expect(toListing({ ...base, hasFee: true, listedItem: { ...base.listedItem, id: 'item1' } })?.id).toBe('item1')
   })
   it('asks for your merchant listings, newest first', () => {
     const q = listingsQuery('Guy#1234')

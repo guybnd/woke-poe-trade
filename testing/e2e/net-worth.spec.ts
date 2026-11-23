@@ -131,6 +131,8 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     // first; a listing older than the start ends the read.
     const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
     const searches: string[] = []
+    // Listed during the run, before Stop.
+    const listedAt = new Date(Date.now() - 1000).toISOString()
     await overlay.page.route('**/api/trade/search/**', (route) => {
       searches.push(route.request().postData() ?? '')
       return route.fulfill({ contentType: 'application/json', headers: LIMITS, body: JSON.stringify({ id: 'q', total: 2, result: ['l1', 'l0'] }) })
@@ -140,7 +142,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
       headers: LIMITS,
       body: JSON.stringify({
         result: [
-          { id: 'l1', item: { name: 'Mageblood', typeLine: 'Heavy Belt', baseType: 'Heavy Belt', frameType: 3, icon: '' }, listing: { indexed: new Date().toISOString(), fee: 100, price: { amount: 2, currency: 'divine', type: '~price' }, account: { name: 'Tester#1234', lastCharacterName: 'T' } } },
+          { id: 'l1', item: { name: 'Mageblood', typeLine: 'Heavy Belt', baseType: 'Heavy Belt', frameType: 3, icon: '' }, listing: { indexed: listedAt, fee: 100, price: { amount: 2, currency: 'divine', type: '~price' }, account: { name: 'Tester#1234', lastCharacterName: 'T' } } },
           { id: 'l0', item: { name: 'Headhunter', typeLine: 'Leather Belt', baseType: 'Leather Belt', frameType: 3, icon: '' }, listing: { indexed: ago(48), fee: 100, price: { amount: 9, currency: 'divine', type: '~price' }, account: { name: 'Tester#1234', lastCharacterName: 'T' } } }
         ].filter(r => route.request().url().includes(r.id))
       })

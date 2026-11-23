@@ -110,7 +110,7 @@ export interface FetchedListing {
   priceAmount: number
   priceCurrency: string
   stackSize?: number
-  listedItem?: { name?: string, typeLine?: string, baseType?: string, frameType?: number, icon?: string, ilvl?: number, corrupted?: boolean, stackSize?: number }
+  listedItem?: { id?: string, name?: string, typeLine?: string, baseType?: string, frameType?: number, icon?: string, ilvl?: number, corrupted?: boolean, stackSize?: number }
 }
 
 export function toListing (r: FetchedListing): Listing | null {
@@ -122,7 +122,9 @@ export function toListing (r: FetchedListing): Listing | null {
   const stack = r.stackSize ?? it.stackSize ?? 1
   const gear = frameType <= 3 && stack <= 1
   return {
-    id: r.id,
+    // The item's id, as a sale has it (the trade history's item_id); the
+    // fetch's own id is the listing's.
+    id: it.id ?? r.id,
     at,
     name: it.name ?? '',
     typeLine: it.typeLine ?? '',

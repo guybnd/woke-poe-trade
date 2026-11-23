@@ -315,13 +315,24 @@ export function isRolledMap (item: Pick<StashItemLike, 'frame' | 'mapTier' | 'ba
   return (item.frame === 1 || item.frame === 2) && (!!item.mapTier || /\bMap$/.test(item.baseType))
 }
 
+// A rolled map's base as poe.ninja names it: blighted ones keep "Blighted"
+// ("Blighted Strand Map"), which the API's baseType leaves out.
+export function mapBase (item: Pick<StashItemLike, 'typeLine' | 'baseType'>): string {
+  const blight = /\b(Blight-ravaged|Blighted) /.exec(item.typeLine)?.[1]
+  return blight && !item.baseType.startsWith(blight) ? `${blight} ${item.baseType}` : item.baseType
+}
+
+// Keys of rolled maps (itemKey), which baselines before BASELINE_V3 kept
+// by each map's own name, unpriced.
+const ROLLED_MAP_KEY = /^[MR]:[^|]*\bMap(\|T\d+)?$/
+
 export function itemKey (item: StashItemLike): string {
   // Uniques and rares by name and base (each rare is its own thing). Magic and
   // rare items are marked, so an unidentified rare map is never a normal one.
   // Magic and rare maps go by their base: 40 rare Nightmare Maps are one row.
   const rolledMap = isRolledMap(item)
   const named = (isUniqueFrame(item.frame) || item.frame === 2) && item.name && !rolledMap
-  const name = named ? `${item.name} ${item.typeLine}` : rolledMap ? item.baseType : item.typeLine
+  const name = named ? `${item.name} ${item.typeLine}` : rolledMap ? mapBase(item) : item.typeLine
   const parts = [item.frame === 1 ? `M:${name}` : item.frame === 2 ? `R:${name}` : name]
   if (item.frame === 4) parts.push(`L${item.gemLevel ?? 1}`, `Q${item.quality ?? 0}`, item.corrupted ? 'C' : '')
   if (item.mapTier) parts.push(`T${item.mapTier}`)
@@ -330,7 +341,7 @@ export function itemKey (item: StashItemLike): string {
 }
 
 export function itemLabel (item: StashItemLike): string {
-  const base = isUniqueFrame(item.frame) && item.name ? item.name : isRolledMap(item) ? item.baseType : item.typeLine
+  const base = isUniqueFrame(item.frame) && item.name ? item.name : isRolledMap(item) ? mapBase(item) : item.typeLine
   if (isRolledMap(item)) return `${base} (${item.mapTier ? `T${item.mapTier}, ` : ''}${item.frame === 2 ? 'rare' : 'magic'})`
   if (item.frame === 2 && item.name) return `${item.name}, ${item.typeLine}`
   if (item.frame === 4) return `${base} ${item.gemLevel ?? 1}/${item.quality ?? 0}${item.corrupted ? ' corrupted' : ''}`
@@ -368,7 +379,7 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
           tabs: [],
           tabIds: [],
           frame: item.frame,
-          tipName: isUniqueFrame(item.frame) && item.name ? item.name : item.typeLine,
+          tipName: isUniqueFrame(item.frame) && item.name ? item.name : isRolledMap(item) ? mapBase(item) : item.typeLine,
           variant: item.frame === 4 ? (price?.variant ?? gemVariant(item)) : undefined,
           graph: price?.graph,
           mine: price?.mine || undefined,
@@ -408,11 +419,13 @@ export type Baseline = Record<string, { name: string, icon: string, count: numbe
 
 // Marks a baseline that holds unpriced and ignored items too (see diffStash).
 export const BASELINE_V2 = '\u0000v2'
+// Rolled maps keyed by their base (2026-11-23).
+export const BASELINE_V3 = '\u0000v3'
 
 // Unpriced and ignored items too, so giving one a price or un-ignoring it later
 // isn't booked as new.
 export function baselineOf (v: Valuation): Baseline {
-  const out: Baseline = { [BASELINE_V2]: { name: '', icon: '', count: 0, unitChaos: 0 } }
+  const out: Baseline = { [BASELINE_V2]: { name: '', icon: '', count: 0, unitChaos: 0 }, [BASELINE_V3]: { name: '', icon: '', count: 0, unitChaos: 0 } }
   for (const l of [...v.lines, ...(v.unpricedLines ?? []), ...(v.ignoredLines ?? [])]) {
     const had = out[l.key]
     out[l.key] = { name: l.name, icon: l.icon, count: (had?.count ?? 0) + l.count, unitChaos: Math.max(had?.unitChaos ?? 0, l.unitChaos), cat: l.category }
@@ -450,9 +463,13 @@ export function diffStash (before: Baseline, after: Valuation, at: number): Stas
   // A baseline from before your prices lacks unpriced items: one you priced
   // since isn't new.
   const old = !before[BASELINE_V2]
+  // A baseline from before rolled maps had a price kept them by their own
+  // names: under their new key they aren't new.
+  const oldMaps = !before[BASELINE_V3]
   let cash = 0
   for (const l of after.lines) {
     if (old && l.mine && before[l.key] == null) continue
+    if (oldMaps && before[l.key] == null && ROLLED_MAP_KEY.test(l.key)) continue
     const had = before[l.key]?.count ?? 0
     if (l.count > had && l.unitChaos > 0) {
       added.push({ key: l.key, name: l.name, icon: l.icon, count: l.count - had, chaos: (l.count - had) * l.unitChaos })
@@ -460,7 +477,7 @@ export function diffStash (before: Baseline, after: Valuation, at: number): Stas
     }
   }
   for (const [key, b] of Object.entries(before)) {
-    if (key === BASELINE_V2 || ignored.has(key)) continue
+    if (key === BASELINE_V2 || key === BASELINE_V3 || ignored.has(key)) continue
     const left = now.get(key)
     const has = left?.count ?? 0
     const unit = left ? left.unitChaos : after.ownPrices?.[key] ?? b.unitChaos

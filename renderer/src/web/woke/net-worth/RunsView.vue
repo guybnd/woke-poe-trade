@@ -80,7 +80,7 @@
         <div :class="$style.blockHead">
           <span :class="$style.caps">Outside the stash</span>
           <span class="w-dim text-xs">Profit counts a sale once its currency is in your stash. Until then it's here.</span>
-          <WButton size="sm" variant="ghost" :disabled="faustusReading" title="One trade search on your account, plus a fetch per 10 listings" @click="readListings">{{ faustusReading ? 'Reading…' : 'Read Faustus listings' }}</WButton>
+          <WButton v-if="shownRun === live" size="sm" variant="ghost" :disabled="faustusReading" title="One trade search on your account, plus a fetch per 10 listings" @click="readListings">{{ faustusReading ? 'Reading…' : 'Read Faustus listings' }}</WButton>
         </div>
         <div v-for="r in outside.listed.slice(0, listedShown)" :key="'l' + r.item.id" :class="$style.out" data-run-listed>
           <img v-if="r.item.icon" :src="r.item.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
@@ -96,16 +96,18 @@
           <span class="w-dim text-xs">sold {{ clock(r.item.at) }}</span>
           <span :class="$style.marks">
             <button type="button" :class="[$style.chip, { [$style.on]: r.mark.before }]" title="The item was from before the run: its sale isn't the run's" :aria-pressed="!!r.mark.before" @click="mark(r.item.id, { before: !r.mark.before })">From before</button>
-            <button type="button" :class="[$style.chip, { [$style.on]: r.mark.collected }]" title="Its currency is in your stash now, so the stash counts it" :aria-pressed="!!r.mark.collected" @click="mark(r.item.id, { collected: !r.mark.collected })">Collected</button>
+            <!-- Collected after Stop never reached the run's stash: only while it runs. -->
+            <button v-if="shownRun === live" type="button" :class="[$style.chip, { [$style.on]: r.mark.collected }]" title="Its currency is in your stash now, so the stash counts it" :aria-pressed="!!r.mark.collected" @click="mark(r.item.id, { collected: !r.mark.collected })">Collected</button>
+            <span v-else-if="r.mark.collected" class="w-dim text-xs">collected</span>
           </span>
           <span class="w-num text-xs" :class="[$style.right, soldTone(r)]"><template v-if="r.chaos != null">{{ soldSign(r) }}{{ amount(r.chaos) }}<Coin :chaos="!divine" /></template><span v-else class="w-dim">{{ r.item.price.amount }} {{ r.item.price.currency }}</span></span>
         </div>
         <button v-if="outside.sold.length > soldShown" type="button" :class="$style.link" class="text-xs" @click="soldShown += 10">+{{ outside.sold.length - soldShown }} more sold</button>
         <div class="w-dim text-xs">
           <template v-if="shownRun.faustus">Listings read {{ clock(shownRun.faustus.at) }}<template v-if="shownRun.faustus.more">: over 100 since the start, only the newest 100 count</template>. </template>
-          <template v-else>Listings are read when you press Stop. </template>
+          <template v-else-if="shownRun === live">Listings are read when you press Stop. </template>
           <template v-if="outside.unpriced">{{ outside.unpriced }} without a price in chaos aren't counted. </template>
-          <button v-if="outside.sold.some(r => !r.mark.collected)" type="button" :class="$style.link" @click="collectEverything">Mark all sales collected</button>
+          <button v-if="shownRun === live && outside.sold.some(r => !r.mark.collected)" type="button" :class="$style.link" @click="collectEverything">Mark all sales collected</button>
         </div>
       </div>
 
@@ -233,7 +235,7 @@ async function readListings () {
 }
 
 // Map-cost items: maps, scarabs and fragments (for cost per map).
-const mapCostKeys = computed(() => new Set(props.lines.filter(l => l.category === 'fragments' || /\bMap$/.test(l.name)).map(l => l.key)))
+const mapCostKeys = computed(() => new Set(props.lines.filter(l => l.category === 'fragments' || /\bMap( \(|$)/.test(l.name)).map(l => l.key)))
 const totals = computed(() => {
   const r = shownRun.value
   if (!r) return null
@@ -259,12 +261,14 @@ function start () {
   name.value = ''
 }
 // Stop reads your Faustus listings first; a failed read still stops.
+// The run stops at the press, whatever the read takes.
 async function stop () {
   const r = live.value
   if (!r || faustusReading.value) return
+  const at = Date.now()
   faustusReading.value = true
   try { await readFaustusInto(r) } catch (e) { toast(`Stopped without your Faustus listings: ${(e as Error).message}`) } finally { faustusReading.value = false }
-  stopRun(props.league, props.points, props.divine).catch(() => {})
+  stopRun(props.league, props.points, props.divine, r.id, at).catch(() => {})
 }
 function open (r: Run) {
   opened.value = opened.value === r.id ? null : r.id
