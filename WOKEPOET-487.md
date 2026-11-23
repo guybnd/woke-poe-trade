@@ -3,7 +3,7 @@ id: WOKEPOET-487
 title: >-
   Bulk price check: wrong currency market picked, currency unclear (Originator's
   Exalted)
-status: In Progress
+status: Done
 priority: High
 effort: None
 assignee: unassigned
@@ -31,6 +31,46 @@ history:
       PR https://github.com/guybnd/woke-poe-trade/pull/774 open; review fixes
       pushed (a55c95e9 + master merge). Waiting on CI.
     id: a-2026-11-22t23-32-44-915z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 774 merged (e52c3629): cheaper market first, currency icons,
+      other-market line, review fixes, TradeBulk async for startup budget.
+    date: '2026-11-23T01:07:12.921Z'
+    completionComment: true
+    id: c-2026-11-23t01-07-12-921z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-23T01:07:12.921Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged (e52c3629). Open: Guy's A/B/C mockup pick and the price spread line
+      idea.
+    completionComment: true
+    date: '2026-11-23T01:07:13.913Z'
+    id: c-2026-11-23t01-07-13-913z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-23T01:07:14.207Z'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/774'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Discord report via Guy: price checking Originator's Exalted Orb (stack 3) shows "1 div each", table "1 / div / bulk 1/1".
 
