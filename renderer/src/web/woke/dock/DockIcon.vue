@@ -339,11 +339,11 @@ const styles = useCssModule()
   position: absolute;
   top: -6px;
   right: -8px;
-  min-width: 16px;
-  height: 16px;
+  min-width: calc(16px * var(--w-text-scale, 1));
+  height: calc(16px * var(--w-text-scale, 1));
   padding: 0 4px;
   border-radius: 8px;
-  font: 600 calc(10px * var(--w-text-scale, 1))/calc(16px * var(--w-text-scale, 1)) var(--w-num);
+  font: 600 var(--w-fs-xs)/calc(16px * var(--w-text-scale, 1)) var(--w-num);
   text-align: center;
   white-space: nowrap;
   color: var(--w-accent-fg);

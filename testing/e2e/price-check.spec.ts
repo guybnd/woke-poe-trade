@@ -25,7 +25,9 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   await expect(badge).toHaveAttribute('title', /instant pricing without any delay\. For live data, press the price check key again/)
   await expect(badge).toHaveAttribute('data-tip-keys', 'Ctrl + D')
   // A divine's parts in chaos, for paying in div.
-  await expect(card.getByTestId('instant-ninja-parts')).toContainText('0.1 18c')
+  await expect(card.getByTestId('instant-ninja-parts')).toContainText('0.1 div 18c')
+  // The change is over the last day, and says so (poe.ninja's last two days: 104% to 105%).
+  await expect(card.getByTestId('instant-ninja-change')).toHaveText('▲1%1d')
   await expect(overlay.page.locator('#price-window')).toHaveCount(0)
   await overlay.snap('divine orb instant check')
   // The mouse is tracked into the card, not the window.
@@ -46,6 +48,20 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   const posted = fakeApp.requests.find(r => r.url.includes('/api/trade/exchange/'))
   expect(posted?.url).toContain('/api/trade/exchange/Testleague')
   expect(JSON.parse(posted!.body).query.want).toEqual(['divine'])
+})
+
+// poe.ninja has no row for a Chaos Orb (it prices in chaos): it gets the card
+// anyway, at 1c, with what chaos amounts are in div (Guy, 2026-11-23).
+test('currency: a Chaos Orb gets the instant card with its div fraction chips', async ({ overlay, fakeApp }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/currency-chaos.txt')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card.getByTestId('instant-ninja-price')).toHaveText('1c')
+  const parts = card.getByTestId('instant-ninja-parts')
+  await expect(parts).toContainText('10c 0.056 div')
+  await expect(card).toContainText('180 per div')
+  await overlay.snap('chaos orb instant check')
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
 })
 
 test('currency: Space on the instant card searches, Details opens the window without a search', async ({ overlay, fakeApp }) => {
@@ -384,7 +400,8 @@ test('unique: improved merges same prices with a count, classic lists every list
   const panel = overlay.widget('price-check')
   const rows = panel.locator('.w-pc-table tbody tr')
   await expect(panel.locator('.w-pc-foot')).toContainText('listings')
-  await expect(panel.locator('.w-pc-count-n').first()).toContainText('×')
+  // Rows without a count keep an empty slot, so the tags after it line up.
+  await expect(panel.locator('.w-pc-count-n').filter({ hasText: '×' }).first()).toBeVisible()
   const merged = await rows.count()
 
   // The switch lives in Settings > Price check > Listings, not in the window.

@@ -102,5 +102,23 @@ export function ninjaTotal (chaos: number, rate: number | undefined): string {
 
 /** A Divine Orb's parts in chaos: 0.1, 0.25, 0.5 and 0.75 div. */
 export function divineParts (rate: number): Array<{ part: string, chaos: string }> {
-  return [0.1, 0.25, 0.5, 0.75].map(f => ({ part: String(f), chaos: `${Math.round(rate * f)}c` }))
+  return [0.1, 0.25, 0.5, 0.75].map(f => ({ part: `${f} div`, chaos: `${num(Math.round(rate * f))}c` }))
+}
+
+/** For a Chaos Orb, the other way: what 10, 50 and 100c are in div (the price line already says a divine in chaos). */
+export function chaosParts (rate: number): Array<{ part: string, chaos: string }> {
+  return [10, 50, 100].map(c => ({ part: `${c}c`, chaos: `${num(c / rate)} div` }))
+}
+
+/**
+ * poe.ninja prices everything in chaos, so it has no row for a Chaos Orb
+ * itself. This one lets it get the instant card (Guy, 2026-11-23): 1c, with
+ * how many a divine buys and its fraction chips. Only once poe.ninja's divine
+ * rate is known: without prices (not loaded yet, or a league poe.ninja doesn't
+ * cover) a Chaos Orb checks like any other currency.
+ */
+export function chaosOrbRow (item: { info: { refName: string, namespace: string } }, divineRate: number | null | undefined) {
+  if (!divineRate || item.info.namespace !== 'ITEM' || item.info.refName !== 'Chaos Orb') return null
+  // No slug: poe.ninja has no saved line for it.
+  return { name: 'Chaos Orb', variant: undefined, chaos: 1, graph: [] as Array<number | null>, slug: '', url: 'https://poe.ninja/poe1/economy/currency' }
 }

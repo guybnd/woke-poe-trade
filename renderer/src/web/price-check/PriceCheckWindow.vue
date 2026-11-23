@@ -131,7 +131,7 @@ import { floatingArea, floatingLayout, movedPosition, resizedPosition } from './
 import { dispatchPriceCheck } from '@/web/woke/ui/tooltip/item-price-check'
 import { exactDetailsId } from './trends/getDetailsId'
 import { instantCardShown } from '@/web/woke/price-insight/view'
-import { fixedPriceItem } from '@/web/woke/price-insight/ninja-first'
+import { fixedPriceItem, chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
 
 type ParseError = { name: string; message: string; rawText: ParsedItem['rawText']; unsupported?: boolean }
 const UNSUPPORTED = 'woke.unsupported'
@@ -277,7 +277,7 @@ export default defineComponent({
       if (cfg.wokeNinjaFirst === false || cfg.wokeNinjaInstant === false) return false
       if (!(it.info.tradeTag || fixedPriceItem(it)) || !leagues.selectedId.value) return false
       const q = exactDetailsId(it)
-      return Boolean(q && (poeninja.findPriceByQuery(q)?.chaos ?? 0) > 0)
+      return Boolean(chaosOrbRow(it, poeninja.xchgRate.value) ?? (q && (poeninja.findPriceByQuery(q)?.chaos ?? 0) > 0))
     }
     // A new card each check, so it measures itself and reports its area again.
     const instantKey = shallowRef(0)

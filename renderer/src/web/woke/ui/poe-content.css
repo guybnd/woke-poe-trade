@@ -84,7 +84,7 @@
   overflow: visible;
 }
 :root[data-woke-art] :is(.w-seg, .w-plates) > button {
-  min-height: 28px;
+  min-height: var(--w-ctl-h);
   background: none;
   border: solid transparent;
   border-width: 0 var(--w-btn-end);

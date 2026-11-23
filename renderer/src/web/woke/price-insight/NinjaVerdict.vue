@@ -28,7 +28,7 @@ import { computed, inject } from 'vue'
 import type { ParsedItem } from '@/parser'
 import type { ItemFilters } from '@/web/price-check/filters/interfaces'
 import { usePoeninja } from '@/web/background/Prices'
-import { ninjaPrice, ninjaTotal } from './ninja-first'
+import { ninjaPrice, ninjaTotal, chaosOrbRow } from './ninja-first'
 import { WSpark, WKbd, WPriceText, agoPhrase } from '../ui'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { poeOn } from './window-style'
@@ -44,7 +44,7 @@ const search = inject<() => void>('price-check-search', () => {})
 
 const info = computed(() => {
   const q = exactDetailsId(props.item)
-  const row = q ? findPriceByQuery(q) : null
+  const row = chaosOrbRow(props.item, xchgRate.value) ?? (q ? findPriceByQuery(q) : null)
   return row && row.chaos > 0 ? row : null
 })
 

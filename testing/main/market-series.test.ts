@@ -16,6 +16,12 @@ describe('pickTimes', () => {
     expect(got).toEqual(Array.from({ length: 7 }, (_, i) => NOW - 3 * HOUR + i * 30 * MIN))
   })
 
+  it('reads fewer points when asked: the instant card wants one every 4 hours', () => {
+    const got = pickTimes(every30(60), NOW, 24 * HOUR, 7)
+    expect(got).toHaveLength(7)
+    expect(got[got.length - 1] - got[0]).toBe(24 * HOUR)
+  })
+
   it('caps a long range at 13 points', () => {
     expect(pickTimes(every30(60), NOW, 48 * HOUR)).toHaveLength(13)
   })

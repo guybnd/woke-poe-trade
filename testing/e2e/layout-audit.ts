@@ -197,12 +197,17 @@ export function installLayoutAudit () {
       // Rows of controls.
       if ((cs.display === 'flex' || cs.display === 'inline-flex') && !cs.flexDirection.startsWith('column')) {
         const kids = [...el.children].filter(k => visible(k) && getComputedStyle(k).position !== 'absolute' && getComputedStyle(k).position !== 'fixed')
-        const controls = kids.filter(k => k.matches(CONTROL) && (k.textContent ?? '').trim().length > 1)
+        // A control: a button, chip or field (or a box holding one), named by its text or, icon-only, by aria-label / title.
+        const named = (k: Element) => (k.textContent ?? '').trim().length > 1 || k.hasAttribute('aria-label') || k.hasAttribute('title')
+        const field = (k: Element) => !k.matches(CONTROL) && k.getBoundingClientRect().height < 60 && !!k.querySelector('input:not([type="hidden"]), select')
+        const controls = kids.filter(k => (k.matches(CONTROL) && named(k)) || field(k))
         if (controls.length >= 2) {
           const rects = controls.map(k => k.getBoundingClientRect())
           const tops = new Set(rects.map(b => Math.round(b.top / (Math.min(...rects.map(x => x.height)) * 0.6))))
+          // A cloud of chips (filters, tags) may wrap; a row of buttons may not.
+          const chipsOnly = controls.every(k => !field(k) && k.matches('.w-chip, [role="checkbox"], [aria-pressed]'))
           if (cs.flexWrap !== 'nowrap' && tops.size > 1) {
-            report('row-wrap', el, `${controls.length} controls on ${tops.size} lines`)
+            if (!chipsOnly) report('row-wrap', el, `${controls.length} controls on ${tops.size} lines`)
           } else {
             const mids = rects.map(b => b.top + b.height / 2)
             const spread = Math.max(...mids) - Math.min(...mids)

@@ -27,7 +27,7 @@
     </div>
     <div v-if="$slots.banner" v-show="!minimized"><slot name="banner" /></div>
     <div v-if="$slots.tabs" v-show="!minimized" :class="$style.tabs"><slot name="tabs" /></div>
-    <div v-if="$slots.toolbar" v-show="!minimized" :class="$style.toolbar"><slot name="toolbar" /></div>
+    <div v-if="$slots.toolbar" v-show="!minimized" class="w-toolbar" :class="$style.toolbar"><slot name="toolbar" /></div>
     <div v-if="$slots.meta" v-show="!minimized" :class="$style.meta"><slot name="meta" /></div>
     <div v-show="!minimized" :class="[$style.body, { 'w-scroll': scroll, 'w-stale': stale, [$style.bodyFill]: fill }]"><slot /></div>
     <div v-if="$slots.footer" v-show="!minimized" :class="$style.footer"><slot name="footer" /></div>

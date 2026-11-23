@@ -1083,3 +1083,93 @@ test('prices: a would-move row can go to any tier, not just the one its price sa
   await expect(apply).toBeHidden()
   await expect(page.getByRole('button', { name: /^kept by you · 1$/ })).toBeVisible()
 })
+
+// The price check's filter chip: its Fix menu goes to the rule or changes it
+// there, never in one click; an item the filter shows gets just an icon.
+function kaomFilter (hidden: boolean) {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), [
+    '# NeverSink test',
+    'Show # $type->currency $tier->t1',
+    '\tBaseType == "Chaos Orb"',
+    '',
+    `${hidden ? 'Hide' : 'Show'} # $type->uniques $tier->t3`,
+    '\tRarity Unique',
+    '\tBaseType == "Glorious Plate"',
+    ''
+  ].join('\r\n'))
+  return folder
+}
+const ownRule = (base: string, vis: 'Show' | 'Hide') => new RegExp(`${vis} # \\$type->woke->own [^\\n]*\\n(\\t[^\\n]*\\n)*\\tBaseType == "${base}"`)
+
+test('price check: a hidden item\'s Fix menu goes to its rule, or shows it', async ({ overlay, fakeApp }) => {
+  test.slow()
+  const folder = kaomFilter(true)
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), reloadWhenSafe: false }] })
+  const page = overlay.page
+  await overlay.copyItem('items/unique-kaoms-heart.txt')
+  const pc = overlay.widget('price-check')
+  const chip = pc.getByText('Your filter hides this')
+  await expect(chip).toBeVisible()
+
+  // Hover: says which rule hides it, and nothing is changed by looking.
+  const pill = pc.locator('[title^="Hidden by"]')
+  await expect(pill).toHaveAttribute('title', 'Hidden by All uniques › Tier 3.')
+  await pill.hover()
+  const fix = pc.getByRole('button', { name: /^Fix/ })
+  await expect(fix).toHaveAttribute('title', 'Go to its rule, or change it here')
+  await fix.hover()
+  await overlay.snap('filter chip, hidden item')
+
+  // Clicking Fix only opens the menu: the filter is untouched.
+  await fix.click()
+  await expect(page.getByRole('menuitem', { name: 'Show it' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Go to rule' })).toBeVisible()
+  await overlay.snap('filter chip, Fix menu')
+  expect(fs.existsSync(path.join(folder, 'NeverSink (woke).filter'))).toBe(false)
+
+  // Go to rule: the editor, on that rule.
+  await page.getByRole('menuitem', { name: 'Go to rule' }).click()
+  const editor = overlay.widget('woke-loot-filter')
+  await expect(editor.getByRole('tab', { name: 'Rules' })).toHaveAttribute('aria-selected', 'true')
+  // On that rule, not the first one in the file.
+  await expect(editor.getByText('All uniques').first()).toBeVisible()
+  await expect(editor.getByText('Item: Glorious Plate').first()).toBeVisible()
+  await overlay.snap('filter chip, Go to rule opened the editor')
+
+  // Show it, from the menu, writes the filter.
+  // Back to the game.
+  fakeApp.focusGame(true)
+  await overlay.copyItem('items/unique-kaoms-heart.txt')
+  await expect(chip).toBeVisible()
+  await pc.getByRole('button', { name: /^Fix/ }).click()
+  await page.getByRole('menuitem', { name: 'Show it' }).click()
+  await expect.poll(() => {
+    const out = path.join(folder, 'NeverSink (woke).filter')
+    return fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : ''
+  }).toMatch(ownRule('Glorious Plate', 'Show'))
+})
+
+test('price check: an item the filter shows gets a quiet icon that can hide it', async ({ overlay }) => {
+  test.slow()
+  const folder = kaomFilter(false)
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), reloadWhenSafe: false }] })
+  const page = overlay.page
+  await overlay.copyItem('items/unique-kaoms-heart.txt')
+  const pc = overlay.widget('price-check')
+  const icon = pc.getByRole('button', { name: 'Loot filter: go to rule or hide it' })
+  await expect(icon).toBeVisible()
+  await expect(pc.getByText('Your filter hides this')).toHaveCount(0)
+  await expect(icon).toHaveAttribute('title', /^Your filter shows this: /)
+  await icon.hover()
+  await icon.click()
+  await expect(page.getByRole('menuitem', { name: 'Go to rule' })).toBeVisible()
+  await overlay.snap('filter icon, shown item menu')
+  expect(fs.existsSync(path.join(folder, 'NeverSink (woke).filter'))).toBe(false)
+  // A unique: it says it hides every unique on that base.
+  await page.getByRole('menuitem', { name: 'Hide every unique Glorious Plate' }).click()
+  await expect.poll(() => {
+    const out = path.join(folder, 'NeverSink (woke).filter')
+    return fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : ''
+  }).toMatch(ownRule('Glorious Plate', 'Hide'))
+})

@@ -118,6 +118,8 @@
 
   /* Density (P16): comfortable by default, compact via data-woke-density */
   --w-row-h: calc(28px * var(--w-text-scale, 1));
+  /* Height of every control in a toolbar or row of buttons: plates, segmented choices, chips, fields. */
+  --w-ctl-h: calc(28px * var(--w-text-scale, 1));
   --w-pad: 12px;
 
   /* Motion (P15): quick fade + short rise in, faster out */
@@ -188,7 +190,7 @@
   --w-bad-ground: color-mix(in srgb, var(--w-down) 14%, transparent);
 }
 
-:root[data-woke-density="compact"] { --w-row-h: calc(24px * var(--w-text-scale, 1)); }
+:root[data-woke-density="compact"] { --w-row-h: calc(24px * var(--w-text-scale, 1)); --w-ctl-h: calc(24px * var(--w-text-scale, 1)); }
 @media (prefers-reduced-motion: reduce) {
   :root { --w-dur-in: 0ms; --w-dur-out: 0ms; --w-rise: 0px; }
 }
