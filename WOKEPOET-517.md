@@ -60,6 +60,14 @@ history:
     date: '2026-11-23T15:48:11.388Z'
     selfAttested: true
     id: c-2026-11-23t15-48-11-388z
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up merged: https://github.com/guybnd/woke-poe-trade/pull/823 makes
+      What's new's Show me open the exact tab.
+    date: '2026-11-23T16:57:23.847Z'
+    selfAttested: true
+    id: c-2026-11-23t16-57-23-847z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/814'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
