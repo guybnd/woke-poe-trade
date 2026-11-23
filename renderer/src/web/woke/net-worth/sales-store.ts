@@ -5,6 +5,7 @@ import { computed, shallowRef } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { usePoeninja } from '@/web/background/Prices'
 import { hostRequest } from '../shared/host'
+import { keptSales } from './pending-glance'
 import { ninjaPriceOf } from './prices'
 import { NINJA_CURRENCY, saleChaos, versusMarket } from './sales'
 import type { Rates, Sale, SalesReply } from './sales'
@@ -43,6 +44,13 @@ export function ninjaEach (s: Sale): number | null {
   const p = of({ name: s.name, typeLine: s.typeLine, baseType: s.baseType, frame: s.frameType, stack: 1, icon: s.icon, gemLevel: s.gemLevel, quality: s.quality, mapTier: s.mapTier, corrupted: s.corrupted })
   return p && p.chaos > 0 ? p.chaos : null
 }
+// The same, with poe.ninja's thin-market flag (pending.ts confidence).
+export function ninjaPriced (s: Sale): { chaos: number, thin?: boolean } | null {
+  const of = priceOf.value
+  if (!of) return null
+  const p = of({ name: s.name, typeLine: s.typeLine, baseType: s.baseType, frame: s.frameType, stack: 1, icon: s.icon, gemLevel: s.gemLevel, quality: s.quality, mapTier: s.mapTier, corrupted: s.corrupted })
+  return p && p.chaos > 0 ? { chaos: p.chaos, ...(p.thin ? { thin: true } : {}) } : null
+}
 export function marketOf (s: Sale): number | null {
   return versusMarket(saleChaos(s, rates.value), ninjaEach(s), s.stack)
 }
@@ -61,6 +69,7 @@ export async function loadSales (league: string | null, read: 'none' | 'manual' 
     // Another league's reply (a read for it was under way) isn't this one's.
     if (ok(r) && r.league === league) {
       reply.value = r
+      keptSales.value = { league, sales: r.sales }
       failed.value = null
     } else if (!r && read === 'manual') {
       failed.value = { kind: 'failed', message: "Couldn't read your sales. Is the stash reader on (Settings › Modules)?" }
@@ -73,5 +82,5 @@ export async function loadSales (league: string | null, read: 'none' | 'manual' 
 // Main's quiet read (entering your hideout) found new sales.
 MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data }) => {
   if (topic !== 'trade-history' || !ok(data)) return
-  if (data.league === loadedFor) reply.value = data
+  if (data.league === loadedFor) { reply.value = data; keptSales.value = { league: data.league, sales: data.sales } }
 })

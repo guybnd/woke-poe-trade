@@ -44,6 +44,8 @@ export async function startRunAt (league: string, name: string, at: number, diff
     let extra: Extra = last && !taken ? { ...leftOver(last, sales.value, rates.value), carriedFrom: last.id } : {}
     try {
       const read = await readFaustus(league, 0)
+      // The same read keeps the Listed tab up to date (pending-store.ts).
+      import('./pending-store').then(m => m.notePendingRead(league, read)).catch(() => {})
       const after = read.listings.filter(l => l.at > at)
       extra = { ...extra, startListings: read.listings.filter(l => l.at <= at).map(l => l.id), ...(after.length ? { faustus: { at: read.at, listings: after } } : {}) }
     } catch (e) {

@@ -14,6 +14,8 @@ export interface NetWorthWidget extends Widget {
   // Adds the hovered item to the run going, as held outside the stash
   // (left out: RUN_HOLD_KEY; null: off).
   runHotkey?: string | null
+  // Opens the window straight on the Listed tab (pending sales).
+  listedHotkey?: string | null
   dockIcon: boolean
   // "Hide < N div" and "Hide < N c" in the item table, each on or off. Defaults
   // 1 div and 10 c, both off. On a row's total, not each.
@@ -43,10 +45,16 @@ export interface NetWorthWidget extends Widget {
   layout?: PanelLayout
   // What the window shows: your stash (default) or your sales (pick C), and
   // the Sales view's range.
-  view?: 'holdings' | 'sales' | 'runs'
+  view?: 'holdings' | 'sales' | 'listed' | 'runs'
   salesRange?: SaleRange
   // The Sales table's sort (default When, newest first).
   salesSort?: SaleSort
+  // A listing unsold this many days counts as stale (default 3).
+  staleDays?: number
+  // Listings refresh on entering your hideout, at most every 30 min (undefined: on).
+  listedAuto?: boolean
+  // Your Faustus listings count in the total (undefined: yes).
+  countListed?: boolean
 }
 
 export type Section = 'chart' | 'perHour' | 'numbers' | 'moves' | 'changes' | 'sold' | 'where' | 'tabs'
@@ -97,6 +105,15 @@ export function parseHotkeyTarget (target: string): number | null {
   return m ? Number(m[1]) : null
 }
 
+// The Listed hotkey's target: the window, opened on the Listed tab.
+export function listedTarget (wmId: number): string {
+  return `${NET_WORTH_TYPE}:${wmId}:listed`
+}
+export function parseListedTarget (target: string): number | null {
+  const m = /^woke-net-worth:(\d+):listed$/.exec(target)
+  return m ? Number(m[1]) : null
+}
+
 export const RUN_HOLD_TARGET = 'woke-net-worth-run-hold'
 export const RUN_HOLD_KEY = 'Alt + H'
 export const runHotkeyOf = (w: NetWorthWidget): string | null => w.runHotkey === undefined ? RUN_HOLD_KEY : w.runHotkey
@@ -106,6 +123,7 @@ export function netWorthShortcuts (widget: Widget): ShortcutAction[] {
   const w = widget as NetWorthWidget
   const out: ShortcutAction[] = []
   if (w.hotkey) out.push({ shortcut: w.hotkey, keepModKeys: true, action: { type: 'trigger-event', target: hotkeyTarget(widget.wmId), focusOverlay: true } })
+  if (w.listedHotkey) out.push({ shortcut: w.listedHotkey, keepModKeys: true, action: { type: 'trigger-event', target: listedTarget(widget.wmId), focusOverlay: true } })
   // Strategy runs: the hovered item, held outside the stash (K1).
   const hold = runHotkeyOf(w)
   if (hold) out.push({ shortcut: hold, action: { type: 'copy-item', target: RUN_HOLD_TARGET } })

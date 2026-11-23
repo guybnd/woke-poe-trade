@@ -40,12 +40,14 @@ import { hideWhilePlaying, openSettingsPage, showWithOverlay } from '../dock/doc
 import { popupAnchor } from '../ui/window-anchor'
 import { agoPhrase, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
-import { RUN_HOLD_TARGET, parseHotkeyTarget } from './widget'
+import { RUN_HOLD_TARGET, parseHotkeyTarget, parseListedTarget } from './widget'
 import { DOCS, GLANCE_LABELS, glanceFromPoints, glanceKey, glanceText, isGlance, ledgerKey, nextShows } from './glance'
 import type { Glance } from './glance'
 import { isRunGlance, runGlanceKey } from './runs'
 import type { RunGlance } from './runs'
 import type { LedgerPoint } from './ledger'
+import { isPendingGlance, keptSales, listedGlance, pendingGlanceKey, staleCount } from './pending-glance'
+import { useZone } from '../shared/zone'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 
 const NetWorthPanel = defineAsyncComponent(() => import('./NetWorthPanel.vue'))
@@ -173,6 +175,18 @@ function swapGlance (dir: 1 | -1) {
 }
 
 const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
+  // The Listed hotkey: open on Listed, or close when Listed is already showing.
+  if (parseListedTarget(e.target) === props.config.wmId) {
+    if (onScreen.value && props.config.view === 'listed') {
+      wm.hide(props.config.wmId)
+      Host.sendEvent({ name: 'OVERLAY->MAIN::focus-game', payload: undefined })
+      return
+    }
+    props.config.view = 'listed'
+    wm.show(props.config.wmId)
+    wm.bringToTop(props.config.wmId)
+    return
+  }
   if (parseHotkeyTarget(e.target) !== props.config.wmId) return
   if (onScreen.value) {
     wm.hide(props.config.wmId)
@@ -188,7 +202,51 @@ onUnmounted(() => {
   stopGlance?.()
 })
 
-const badge = computed(() => status.value?.running ? '…' : status.value?.error ? '!' : null)
+// Pending sales (pending-glance.ts): listings unsold past the stale line
+// count on the icon (pick R1: a count, no popup).
+const glanceSales = shallowRef<Array<{ id: string, at: number }>>([])
+watch(leagueId, (league) => {
+  listedGlance.value = null
+  glanceSales.value = []
+  if (!league || !Host.isElectron) return
+  hostRequest('doc-get', { collection: DOCS, key: pendingGlanceKey(league) })
+    .then((g) => { if (leagueId.value === league && listedGlance.value == null && isPendingGlance(g) && g.league === league) listedGlance.value = g })
+    .catch(() => {})
+}, { immediate: true })
+const salesOk = (r: unknown, league: string): r is { league: string, sales: Array<{ id: string, at: number }> } =>
+  !!r && typeof r === 'object' && (r as { league?: unknown }).league === league && Array.isArray((r as { sales?: unknown }).sales)
+// The kept sales (a file read, no request) once there are listings to count.
+watch(() => listedGlance.value?.items.length ? listedGlance.value.league : null, (league) => {
+  if (!league) return
+  hostRequest('trade-history', { league, read: 'none' }, 60_000)
+    .then((r) => { if (salesOk(r, league) && leagueId.value === league) glanceSales.value = r.sales })
+    .catch(() => {})
+}, { immediate: true })
+const salesEvents = MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data }) => {
+  if (topic === 'trade-history' && leagueId.value && salesOk(data, leagueId.value)) glanceSales.value = data.sales
+})
+const staleListed = computed(() => {
+  const g = listedGlance.value
+  if (!g || g.league !== leagueId.value) return 0
+  const kept = keptSales.value?.league === g.league ? keptSales.value.sales : null
+  return staleCount(g, kept ?? glanceSales.value, nowMinute.value, props.config.staleDays)
+})
+// On entering your hideout: the listings' quiet refresh (Guy, 2026-11-23).
+const zoneNow = useZone()
+watch(() => zoneNow.live && zoneNow.kind === 'hideout' ? zoneNow.enteredAt : 0, (at) => {
+  const league = leagueId.value
+  if (!at || !league || props.config.listedAuto === false || !status.value?.account) return
+  // After main's own quiet sales read on the same entry, if you're still there.
+  clearTimeout(autoTimer)
+  autoTimer = setTimeout(() => {
+    if (zoneNow.kind !== 'hideout' || zoneNow.enteredAt !== at || leagueId.value !== league) return
+    import('./pending-store').then(m => m.autoRefreshListed(league)).catch(() => {})
+  }, 5_000)
+})
+let autoTimer: ReturnType<typeof setTimeout> | undefined
+onUnmounted(() => { salesEvents.abort(); clearTimeout(autoTimer) })
+
+const badge = computed(() => status.value?.running ? '…' : status.value?.error ? '!' : staleListed.value || null)
 const cardText = computed(() => {
   const s = status.value
   if (!s) return 'Click to open.'

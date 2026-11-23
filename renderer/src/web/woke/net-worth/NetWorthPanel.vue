@@ -1,11 +1,12 @@
 <template>
   <WPanel size-key="net-worth" :title="config.wmTitle || 'Net worth'" icon="divine" width="44rem" max-height="85vh"
-    :hotkey="config.hotkey" :busy="view === 'sales' ? salesReading : status?.running === true" :stale="view === 'sales' ? !!salesError : !!status?.error && !!v">
+    :hotkey="config.hotkey" :busy="view === 'sales' ? salesReading : view === 'listed' ? pendingReading : status?.running === true" :stale="view === 'sales' ? !!salesError : view === 'listed' ? false : !!status?.error && !!v">
     <template #actions>
       <!-- The read's age is in the footer: beside the title it ran into the game look's plaque. -->
-      <WButton v-if="view === 'sales'" size="sm" icon="fas fa-sync-alt" :disabled="salesReading" :title="salesReadLine ? `Sales ${salesReadLine}` : undefined" @click="refreshSales">Refresh</WButton>
+      <WButton v-if="view === 'listed'" size="sm" icon="fas fa-sync-alt" :disabled="pendingReading || !salesLeague" title="Read your Faustus listings: one trade search" @click="refreshListed">Refresh</WButton>
+      <WButton v-else-if="view === 'sales'" size="sm" icon="fas fa-sync-alt" :disabled="salesReading" :title="salesReadLine ? `Sales ${salesReadLine}` : undefined" @click="refreshSales">Refresh</WButton>
       <WButton v-else size="sm" icon="fas fa-sync-alt" :disabled="status?.running || showPicker" :title="readLine ? `Stash ${readLine}` : undefined" @click="refresh">Refresh</WButton>
-      <WButton v-if="view !== 'sales'" size="sm" variant="ghost" icon="fas fa-layer-group" title="Choose which tabs to read" aria-label="Choose which tabs to read" :disabled="!status?.account || status?.running" @click="picking = true" />
+      <WButton v-if="view !== 'sales' && view !== 'listed'" size="sm" variant="ghost" icon="fas fa-layer-group" title="Choose which tabs to read" aria-label="Choose which tabs to read" :disabled="!status?.account || status?.running" @click="picking = true" />
       <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" title="Sections to show" aria-label="Sections to show" @click="openSections" />
     </template>
     <!-- Your stash or your sales (pick C), as window tabs: in the title bar the
@@ -16,11 +17,21 @@
     <template v-if="view === 'sales' && salesError" #banner>
       <WBanner :tone="salesError?.kind === 'rate-limited' ? 'warn' : 'error'">{{ salesErrorLine }}</WBanner>
     </template>
-    <template v-else-if="view !== 'sales' && status?.error && !showPicker" #banner>
+    <template v-else-if="view !== 'sales' && view !== 'listed' && status?.error && !showPicker" #banner>
       <WBanner :tone="status?.error?.kind === 'rate-limited' ? 'warn' : 'error'">{{ errorLine }}</WBanner>
     </template>
 
-    <div v-if="view === 'sales'" :class="$style.body">
+    <!-- Listed at Faustus and not sold yet (pending.ts, pick B). -->
+    <div v-if="view === 'listed'" :class="$style.body">
+      <WEmpty v-if="!salesLeague" icon="fas fa-store">Pick a league under Settings › Game & league.</WEmpty>
+      <ListedView v-else :league="salesLeague" :divine="divine" :stale-days="config.staleDays" :auto="config.listedAuto !== false"
+        @stale-days="config.staleDays = $event" @auto="config.listedAuto = $event" />
+      <div class="w-dim text-xs" :class="$style.foot">
+        <span>Listings show as of your last read · sold items drop off by themselves</span>
+        <span><template v-if="listedReadLine">Listings {{ listedReadLine }} · </template>poe.ninja · {{ ninjaAge }}</span>
+      </div>
+    </div>
+    <div v-else-if="view === 'sales'" :class="$style.body">
       <WEmpty v-if="!status?.account && !sales.length" icon="fas fa-coins">Sign in under Settings › Game & league, then press Refresh.</WEmpty>
       <SalesView v-else :divine="divine" :range="config.salesRange" @range="config.salesRange = $event" :sort="config.salesSort" @sort="config.salesSort = $event" />
       <div class="w-dim text-xs" :class="$style.foot">
@@ -39,13 +50,14 @@
     <div v-else :class="$style.body">
       <!-- H1: one summary line; the rest folds away under Details -->
       <section :class="$style.summary">
-        <span :class="$style.total" class="w-num" :title="`${inChaos(v.chaos)} · liquid ${div(liquid)} ${unit}`">{{ div(v.chaos) }}<Coin :chaos="!divine" /></span>
+        <span :class="$style.total" class="w-num" :title="totalTitle" data-net-total>{{ div(v.chaos + listedWorth) }}<Coin :chaos="!divine" /></span>
         <span class="w-num" :class="tone(sum?.sinceYesterdayDiv)" :title="todayTip">
           <template v-if="sum?.sinceYesterdayDiv != null">{{ signed(sum.sinceYesterdayDiv) }}<Coin /> today</template><template v-else>— today</template>
         </span>
         <!-- Per hour of play over the window picked under Details. -->
         <span v-if="rateShown.div != null && !(detailsOpen && shown.perHour)" class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h <span class="w-dim">{{ rateWindow === 'today' ? 'today' : rateWindow }}</span></span>
         <button v-if="soldToday.count" type="button" class="w-num" :class="$style.soldToday" :title="`${soldToday.count} ${soldToday.count === 1 ? 'sale' : 'sales'} today. Click for the Sales view`" @click="view = 'sales'">Sold {{ div(soldToday.chaos) }}<Coin :chaos="!divine" /> today</button>
+        <button v-if="listed.count" type="button" class="w-num" :class="$style.soldToday" :title="listedTitle" data-listed-chip @click="view = 'listed'">At Faustus {{ div(listed.worthChaos) }}<Coin :chaos="!divine" /><template v-if="listed.stale"> · <span class="w-warn">{{ listed.stale }} stale</span></template></button>
         <button v-if="runChip" type="button" class="w-num" :class="[$style.soldToday, tone(runChip.profitChaos)]" :title="`Run ${runChip.name}: ${countLabel(runChip.maps, runChip.fights)}. Click for the Runs view`" data-run-chip @click="view = 'runs'">Run {{ signed(toDiv(runChip.profitChaos)) }}<Coin :chaos="!divine" /></button>
         <WSpark v-if="spark.length > 1 && !(detailsOpen && shown.chart)" :values="spark" :width="90" :height="18" :class="$style.spark" />
         <span v-if="detailsOpen && shown.numbers" :class="$style.holdings" class="w-num text-xs">
@@ -287,13 +299,16 @@ import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
 import HideChip from './HideChip.vue'
 import SalesView from './SalesView.vue'
+import ListedView from './ListedView.vue'
+import { loadPending, pendingDoc, pendingReading, refreshPending } from './pending-store'
+import { pendingRows, pendingTotals, DEFAULT_STALE_DAYS } from './pending'
 import RunsView from './RunsView.vue'
 import { loadRuns, runGlance, runsDoc } from './run-store'
 import { countLabel } from './runs'
 import { saleTip } from './sale-tip'
 import { inRange, marketText, saleChaos, saleName, salesInWindow, totals, withoutSold } from './sales'
 import type { Sale } from './sales'
-import { loadSales, marketOf, rates as saleRates, sales, salesFailed, salesReading, salesReply } from './sales-store'
+import { loadSales, marketOf, ninjaPriced, rates as saleRates, sales, salesFailed, salesReading, salesReply } from './sales-store'
 
 const TabPicker = defineAsyncComponent(() => import('./TabPicker.vue'))
 
@@ -763,10 +778,10 @@ function onIgnore (key: string, name: string, on: boolean) {
 }
 
 // ---------- sales (pick A: Sold section, sale lines, chart dots; pick C: the Sales view) ----------
-const VIEW_OPTIONS = [{ value: 'holdings', label: 'Holdings' }, { value: 'sales', label: 'Sales' }, { value: 'runs', label: 'Runs' }]
+const VIEW_OPTIONS = [{ value: 'holdings', label: 'Holdings' }, { value: 'sales', label: 'Sales' }, { value: 'listed', label: 'Listed' }, { value: 'runs', label: 'Runs' }]
 const view = computed<string>({
-  get: () => props.config.view === 'sales' || props.config.view === 'runs' ? props.config.view : 'holdings',
-  set: (x) => { props.config.view = x === 'sales' || x === 'runs' ? x : 'holdings' }
+  get: () => props.config.view === 'sales' || props.config.view === 'runs' || props.config.view === 'listed' ? props.config.view : 'holdings',
+  set: (x) => { props.config.view = x === 'sales' || x === 'runs' || x === 'listed' ? x : 'holdings' }
 })
 
 // ---------- strategy runs (runs.ts, WOKEPOET-515) ----------
@@ -790,6 +805,45 @@ watch(salesLeague, (id) => { loadSales(id).catch(() => {}) }, { immediate: true 
 function refreshSales () {
   loadSales(salesLeague.value, 'manual').catch(() => {})
 }
+function refreshListed () {
+  const league = salesLeague.value
+  if (!league) return
+  refreshPending(league).catch((e) => { toast(`Couldn't read your Faustus listings: ${(e as Error).message}`) })
+  // Sales that came in since drop their listings off.
+  loadSales(league).catch(() => {})
+}
+// Your listings count in your net worth (pick E2): at poe.ninja's price where
+// it can be trusted, else the ask. The chart and per hour stay the stash's.
+watch(salesLeague, (l) => { if (l) loadPending(l).catch(() => {}) }, { immediate: true })
+const listed = computed(() => {
+  const d = pendingDoc.value
+  const rows = d && d.league === salesLeague.value ? pendingRows(d, sales.value, saleRates.value, ninjaPriced, now.value, props.config.staleDays) : []
+  return pendingTotals(rows)
+})
+const listedWorth = computed(() => props.config.countListed === false ? 0 : listed.value.worthChaos)
+const totalTitle = computed(() => {
+  const stash = v.value?.chaos ?? 0
+  const lines = [`${inChaos(stash + listedWorth.value)}`, `Stash ${div(stash)} ${unit.value} · liquid ${div(liquid.value)} ${unit.value}`]
+  if (listedWorth.value) {
+    lines.push(`At Faustus ${div(listedWorth.value)} ${unit.value} (${listed.value.count} unsold)`)
+    // A sale shows in your trade history only at the next sales read.
+    lines.push('A listing that sold and was collected counts twice until your sales are read again')
+  }
+  return lines.join('\n')
+})
+const listedTitle = computed(() => {
+  const t = listed.value
+  const lines = [`${t.count} ${t.count === 1 ? 'listing' : 'listings'} not sold yet, worth about ${div(t.worthChaos)} ${unit.value} (asking ${div(t.askChaos)} ${unit.value})`]
+  lines.push(props.config.countListed === false ? 'Not counted in your total (Settings)' : 'Counted in your total; the chart counts only your stash')
+  if (t.stale) lines.push(`${t.stale} unsold ${props.config.staleDays ?? DEFAULT_STALE_DAYS} days or more`)
+  lines.push('Click for the Listed view')
+  return lines.join('\n')
+})
+const listedReadLine = computed(() => {
+  if (pendingReading.value) return 'reading…'
+  const d = pendingDoc.value
+  return d && d.league === salesLeague.value ? `read ${agoPhrase(d.readAt)}` : ''
+})
 const saleChaosOf = (s: Sale) => saleChaos(s, saleRates.value)
 // In divines (chaos without a rate); a currency poe.ninja can't price as sold.
 function salePrice (s: Sale) {

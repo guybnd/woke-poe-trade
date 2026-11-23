@@ -835,11 +835,17 @@ export function clearTradeCache () {
   cache.clear()
 }
 
+// woke: when the last trade search went out (Net worth's quiet listings
+// refresh stays out of a price check's way).
+let lastSearchAt = 0
+export function lastTradeSearchAt (): number { return lastSearchAt }
+
 // woke: `fresh` skips the cache (Net worth's Faustus read: your listings change).
 export async function requestTradeResultList (body: TradeRequest, leagueId: string, fresh = false): Promise<SearchResult> {
   let data = fresh ? undefined : cache.get<SearchResult>([body, leagueId])
 
   if (!data) {
+    lastSearchAt = Date.now()
     preventQueueCreation([
       { count: 1, limiters: RATE_LIMIT_RULES.SEARCH },
       { count: 1, limiters: RATE_LIMIT_RULES.FETCH }

@@ -240,6 +240,25 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
       await expect(runTab).toHaveCount(0, { timeout: 4000 })
     }).toPass({ timeout: 30_000 })
     await overlay.pressHotkey(overlay.config.overlayKey)
+    // The Listed tab (pending sales): Start's read saved your listings, and
+    // Refresh reads them again (one more search). Each row has its tooltip.
+    await panel.getByRole('tab', { name: 'Listed' }).click()
+    const listedRows = panel.locator('[data-listed-row]')
+    // Both runs' Starts read them: Headhunter and Mageblood.
+    await expect(listedRows).toHaveCount(2)
+    await expect(listedRows.filter({ hasText: 'Headhunter' })).toHaveCount(1)
+    const searchesBefore = searches.length
+    listings = [listing('l2', "Kaom's Heart", 'Glorious Plate', new Date(Date.now() - 500).toISOString(), 3), ...listings]
+    await expect(panel.getByRole('switch', { name: /Auto-refresh in hideout/ })).toHaveAttribute('aria-checked', 'true')
+    await panel.getByRole('button', { name: 'Refresh' }).click()
+    await expect(listedRows).toHaveCount(3)
+    expect(searches).toHaveLength(searchesBefore + 1)
+    // Headhunter was listed two days ago, Kaom's Heart just now: newest first.
+    await expect(listedRows.first()).toContainText("Kaom's Heart")
+    await listedRows.filter({ hasText: 'Headhunter' }).getByText('Headhunter', { exact: true }).hover()
+    await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
+    await overlay.page.mouse.move(0, 0)
+    await overlay.snap('net worth listed')
     await overlay.page.unroute('**/api/trade/search/**')
     await overlay.page.unroute('**/api/trade/fetch/**')
     await panel.getByRole('tab', { name: 'Holdings' }).click()
