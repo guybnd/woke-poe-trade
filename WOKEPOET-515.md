@@ -44,6 +44,12 @@ history:
     date: '2026-11-23T12:33:21.666Z'
     selfAttested: true
     id: c-2026-11-23t12-33-21-666z
+  - type: comment
+    user: Agent
+    comment: Part 2a merged (PR 805)
+    date: '2026-11-23T13:16:09.181Z'
+    selfAttested: true
+    id: c-2026-11-23t13-16-09-181z
 ---
 From the thread "Track strategy farm profit and costs".
 
