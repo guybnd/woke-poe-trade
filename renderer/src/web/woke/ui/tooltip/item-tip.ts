@@ -262,7 +262,6 @@ function watchHover () {
   if (watchingHover) return
   watchingHover = true
   document.addEventListener('mouseover', (e) => {
-    pointer = { x: e.clientX, y: e.clientY }
     const el = tipEl(e.target)
     if (el === hovered) return
     if (el && el === closed) return
@@ -273,30 +272,35 @@ function watchHover () {
   })
   // Out of the window: no mouseover follows.
   document.addEventListener('mouseout', (e) => {
-    if (!e.relatedTarget) {
-      pointer = null
-      if (hovered) { leave(); closed = null }
-    }
+    if (!e.relatedTarget && hovered) { leave(); closed = null }
   })
-  // Any scroll hides the tooltip (GameTooltip), and a row that slid under a
-  // still pointer, or one hovered while a list was still scrolling, got no
-  // tooltip until the pointer left it and came back. Once scrolling stops,
-  // the row under the pointer gets its tooltip.
+  // Any scroll hides the tooltip (GameTooltip), also one that ends after the
+  // pointer reached a row (Ctrl+Space scrolling a row into view, a wheel
+  // still settling). The row is still the hovered one, so no mouseover comes
+  // and it stayed without a tooltip until the pointer left it. Once the
+  // scroll stops, or the pointer moves, it shows again if the row is still
+  // under the pointer. A click or a menu still hides it for good: only a
+  // scroll marks it.
   document.addEventListener('scroll', () => {
-    clearTimeout(scrollSettle)
-    scrollSettle = setTimeout(afterScroll, SCROLL_SETTLE_MS)
+    if (!hovered || !refs.get(hovered)?.name) return
+    stale = true
+    clearTimeout(settle)
+    settle = setTimeout(reshow, SCROLL_SETTLE_MS)
   }, { capture: true, passive: true })
+  document.addEventListener('mousemove', reshow, { passive: true })
 }
 
 const SCROLL_SETTLE_MS = 150
-let pointer: { x: number, y: number } | null = null
-let scrollSettle: ReturnType<typeof setTimeout> | undefined
-function afterScroll () {
-  if (!pointer) return
-  const el = tipEl(document.elementFromPoint(pointer.x, pointer.y))
-  if (hovered && hovered !== el) leave()
-  closed = null
-  if (el) enter(el)
+// The hovered row's tooltip was hidden by a scroll.
+let stale = false
+let settle: ReturnType<typeof setTimeout> | undefined
+function reshow () {
+  if (!stale) return
+  stale = false
+  clearTimeout(settle)
+  // :hover is the browser's own: it clears when the pointer leaves the
+  // window or the row slides away from under it.
+  if (hovered && document.hasFocus() && hovered.matches(':hover')) enter(hovered)
 }
 
 // Dock cards take clicks while the game has focus. Leaving one makes the window

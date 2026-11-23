@@ -192,16 +192,20 @@ test('a row far down the list shows its tooltip when hovered, though the list sc
     await row.hover()
     await expect(tip).toContainText(name)
   }
-  // Scrolling the list under a still pointer: once it stops, the item row now
-  // under the pointer gets its tooltip.
-  await gems.nth(0).hover()
-  await expect(tip).toBeVisible()
-  await overlay.page.mouse.wheel(0, 120)
-  await overlay.page.waitForTimeout(500)
-  const underIsItem = await overlay.page.evaluate(() => {
-    const hovered = document.querySelectorAll(':hover')
-    return !!hovered[hovered.length - 1]?.closest('[data-item-tip]')
+  // A scroll hides the tooltip while the pointer stays on the row (Ctrl+Space
+  // scrolling a row into view). Once it stops, the row shows it again.
+  const row = gems.nth(0)
+  const name = (await row.locator('.w-trunc').first().textContent())!.replace('Where to get ', '').trim()
+  await row.hover()
+  await expect(tip).toContainText(name)
+  const hidden = await row.evaluate(async (el) => {
+    let s = el.parentElement
+    while (s && s.scrollHeight <= s.clientHeight) s = s.parentElement
+    ;(s ?? document).dispatchEvent(new Event('scroll'))
+    await new Promise(resolve => setTimeout(resolve, 50))
+    return !document.querySelector('[role=tooltip]')
   })
-  if (underIsItem) await expect(tip).toBeVisible()
+  expect(hidden).toBe(true)
+  await expect(tip).toContainText(name)
   expect(overlay.errors).toEqual([])
 })
