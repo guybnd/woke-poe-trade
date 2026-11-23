@@ -245,7 +245,7 @@ import type { GemTable } from './lookups/gems'
 import type { CardInfo } from './lookups/cards'
 import { loadTipBases, loadTipDrops, loadTipItems, loadTipUniques, loadTipVestigial } from '../ui/tooltip/item-tip'
 import { onSharedDataChange } from '../app/live-data'
-import { openReportDialog } from '../app/report'
+import { openDiscord, openReportDialog } from '../app/report'
 import { dropOf } from '../ui/tooltip/tip-content'
 import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
 import { SEARCH_TARGET, searchRequest } from './widget'
@@ -469,6 +469,20 @@ function commandEntries (): ActionEntry[] {
     action: () => {
       wm.hide(props.config.wmId)
       openReportDialog()
+    }
+  })
+  out.push({
+    kind: 'command',
+    id: 'c:discord',
+    name: 'Join the Discord',
+    sub: 'Questions and ideas, with other players',
+    icon: 'fab fa-discord',
+    aliases: ['discord', 'community', 'chat', 'help', 'support', 'server'],
+    about: 'The Woke PoE Trade Discord server. Opens the invite in your browser.',
+    verb: 'Open',
+    action: () => {
+      wm.hide(props.config.wmId)
+      openDiscord()
     }
   })
   return out

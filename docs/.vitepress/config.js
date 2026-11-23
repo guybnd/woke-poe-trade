@@ -47,6 +47,11 @@ export default defineConfig({
         text: 'GitHub',
         color: '#181717',
         link: REPO
+      },
+      {
+        text: 'Discord',
+        color: '#5865f2',
+        link: 'https://discord.gg/XrUcvXrt4e'
       }
     ],
     sidebar: [

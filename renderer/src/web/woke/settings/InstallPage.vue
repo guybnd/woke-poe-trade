@@ -34,6 +34,9 @@
       <w-setting-row label="Report an issue" hint="A bug or an idea. Opens a pre-filled GitHub issue in your browser; nothing is sent by itself.">
         <w-button size="sm" icon="fas fa-bug" @click="openReportDialog()">Report an issue…</w-button>
       </w-setting-row>
+      <w-setting-row label="Discord" hint="Ask questions and share ideas with other players. Opens in your browser.">
+        <w-button size="sm" icon="fab fa-discord" data-discord-link @click="openDiscord()">Join the Discord</w-button>
+      </w-setting-row>
     </w-setting-section>
     <w-setting-section title="Setup">
       <w-setting-row label="Setup window" hint="The first-run guide: finds the game log and picks modules. Opens as its own window.">
@@ -49,7 +52,7 @@ import { computed, shallowRef } from 'vue'
 import { WButton, WSettingRow, WSettingSection, WToggle } from '../ui'
 import { hostRequest } from '../shared/host'
 import { checkLine, runUpdateCheck, updateCheck } from './update-check'
-import { openReportDialog } from '../app/report'
+import { openDiscord, openReportDialog } from '../app/report'
 
 interface Prefs {
   version: string
