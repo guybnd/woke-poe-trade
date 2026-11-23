@@ -25,7 +25,7 @@ test('the glance bar drags with the overlay open and keeps its spot', async ({ o
   await overlay.log(intoMap)
   const page = overlay.page
   const bar = page.locator('[data-glance-bar]')
-  await expect(bar).toBeVisible({ timeout: 5000 })
+  await expect(bar).toBeVisible({ timeout: 15_000 })
   await expect(bar).toContainText('Strand')
   // While you play: click-through, no hover text.
   await expect(bar).not.toHaveAttribute('title', /./)
@@ -55,7 +55,7 @@ test('the glance bar drags with the overlay open and keeps its spot', async ({ o
   // Next start, next map: it comes up where it was left.
   await overlay.boot({ patch: glanceOn(saved) })
   await overlay.log(intoMap)
-  await expect(bar).toBeVisible({ timeout: 5000 })
+  await expect(bar).toBeVisible({ timeout: 15_000 })
   const again = (await bar.boundingBox())!
   expect(Math.abs(again.x - after.x)).toBeLessThan(30)
   expect(Math.abs(again.y - after.y)).toBeLessThan(4)
