@@ -16,7 +16,8 @@ type Extra = Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales' 
 
 // The costs typed for this name last time (without what was bought then).
 export function lastCostsOf (name: string): CostLine[] {
-  return (runsDoc.value.done.find(r => r.name === name.trim())?.costs ?? []).map(c => { const x = { ...c }; delete x.bought; return x })
+  const n = name.trim() || 'Run'
+  return (runsDoc.value.done.find(r => r.name === n)?.costs ?? []).map(c => { const x = { ...c }; delete x.bought; return x })
 }
 
 // The names of past runs, newest first.
@@ -28,6 +29,9 @@ let starting = false
 // `at`: the read the run starts from. False when it didn't start.
 export async function startRunAt (league: string, name: string, at: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null): Promise<boolean> {
   if (starting) return false
+  // The league switched (the card's dynamic import can take a moment).
+  const leagueNow = () => { const cur = AppConfig().leagueId; return !cur || cur === league }
+  if (!leagueNow()) return false
   starting = true
   try {
     await loadRuns(league)
@@ -46,8 +50,7 @@ export async function startRunAt (league: string, name: string, at: number, diff
       toast(`Started without your Faustus listings: ${(e as Error).message}`)
     }
     // The league switched meanwhile: the runs doc is the other league's now.
-    const cur = AppConfig().leagueId
-    if (cur && cur !== league) return false
+    if (!leagueNow()) return false
     await startRun(league, runName, at, diffs, points, divine, costs, extra)
     return true
   } finally { starting = false }

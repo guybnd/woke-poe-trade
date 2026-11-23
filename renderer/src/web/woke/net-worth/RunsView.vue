@@ -268,7 +268,7 @@ const totals = computed(() => {
   if (!r) return null
   const now = Math.max(nowMinute.value, props.points[props.points.length - 1]?.at ?? 0)
   // Boss fights (Client.txt) count like maps: per map is per map or fight.
-  return runTotals(r, props.points, { maps: mapsIn(r, runMaps.value, now), fights: spent.value?.fights ?? 0 }, now, mapCostKeys.value, outside.value)
+  return runTotals(r, props.points, { maps: mapsIn(r, runMaps.value, now), fights: spent.value?.fights ?? r.final?.fights ?? 0 }, now, mapCostKeys.value, outside.value)
 })
 const unit = computed(() => totals.value ? unitOf(totals.value.maps, totals.value.fights) : 'map')
 const rows = computed(() => shownRun.value ? tallyRows(shownRun.value) : { used: [], came: [] })

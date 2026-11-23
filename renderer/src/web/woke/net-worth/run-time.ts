@@ -15,11 +15,16 @@ export interface RunTime {
   fights: number
 }
 
-let kept: { startAt: number, path: string | null, marks: PlayMarks } | null = null
+// By the run's start: the live run and a past one opened in the Runs view
+// each keep their own (a few at most).
+interface Kept { path: string | null, marks: PlayMarks }
+const keptBy = new Map<number, Kept>()
+const KEEP = 3
 
 export async function runTimeIn (startAt: number, now: number): Promise<RunTime | null> {
   const from = startAt - LOOKBACK_MS
-  let fresh = !kept || kept.startAt !== startAt || kept.marks.lastAt == null
+  const kept = keptBy.get(startAt)
+  let fresh = !kept || kept.marks.lastAt == null
   let res: { path: string | null, lines: string[] }
   try {
     res = await hostRequest('game-log-range', { from: fresh ? from : kept!.marks.lastAt!, to: now, sessions: true }, 30_000)
@@ -31,8 +36,11 @@ export async function runTimeIn (startAt: number, now: number): Promise<RunTime 
   } catch { return null }
   if (!res.path) return null
   const base = fresh ? emptyMarks(from) : kept!.marks
-  kept = { startAt, path: res.path, marks: feedMarks(base, res.lines) }
-  return { ms: timeIn(kept.marks.marks, startAt, now), fights: kept.marks.fights.filter(at => at >= startAt && at <= now).length }
+  const next: Kept = { path: res.path, marks: feedMarks(base, res.lines) }
+  keptBy.delete(startAt)
+  keptBy.set(startAt, next)
+  while (keptBy.size > KEEP) keptBy.delete(keptBy.keys().next().value!)
+  return { ms: timeIn(next.marks.marks, startAt, now), fights: next.marks.fights.filter(at => at >= startAt && at <= now).length }
 }
 
 // Boss fights only (0 without Client.txt).

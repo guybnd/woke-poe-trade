@@ -230,6 +230,8 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await overlay.snap('net worth dock card start run')
     await overlay.page.locator('[data-card-start-go]').click()
     await expect(runTab).toContainText('Nightmare maps', { timeout: 20_000 })
+    // No second Start while a run goes (it would end this one).
+    await expect(startBtn).toHaveCount(0)
     await stopBtn.click()
     await expect(stopBtn).toContainText('Stop the run?')
     await expect(async () => {

@@ -97,7 +97,7 @@
         <button type="button" :class="$style.x" title="Cancel" aria-label="Cancel" @click="naming = false"><i class="fas fa-times" /></button>
       </div>
       <div :class="$style.foot">
-        <button v-if="!naming && status?.lastReadAt" type="button" :class="[$style.refresh, $style.left]" :disabled="!canStart" :title="canStart ? 'Start a strategy run from the last read' : 'Waiting for Net worth to load'" data-card-start @click="openNaming"><i class="fas fa-play" /> Start run</button>
+        <button v-if="!run && !naming && status?.lastReadAt" type="button" :class="[$style.refresh, $style.left]" :disabled="!canStart" :title="canStart ? 'Start a strategy run from the last read' : 'Waiting for Net worth to load'" data-card-start @click="openNaming"><i class="fas fa-play" /> Start run</button>
         <span class="w-dim text-xs" :class="$style.readEnd">{{ readLine }}</span>
         <button type="button" :class="[$style.refresh, $style.left]" data-card-refresh :disabled="!canRefresh"
           :title="waitMs > 0 ? 'Reads wait 10 minutes after the last one' : 'Read your stash now'" @click="emit('refresh')">
@@ -234,7 +234,7 @@ watch(() => props.league, (l) => { if (l) loadRuns(l).catch(() => {}) }, { immed
 const naming = shallowRef(false)
 const runName = shallowRef('')
 const nameEl = shallowRef<HTMLInputElement | null>(null)
-const canStart = computed(() => sameLeague.value && ledger.value.points.length > 0 && !props.startingRun)
+const canStart = computed(() => !props.run && sameLeague.value && ledger.value.points.length > 0 && !props.startingRun)
 function openNaming () {
   runName.value = runsDoc.value.done.find(r => r.league === props.league)?.name ?? ''
   naming.value = true
