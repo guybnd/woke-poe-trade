@@ -879,6 +879,136 @@
    "type": "Nightmare Map"
   }
  },
+ "map-originator-more.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_tier": {
+       "min": 16,
+       "max": 16
+      },
+      "map_blighted": {
+       "option": "false"
+      },
+      "map_uberblighted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "map",
+    "option": "Map"
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_tier": {
+       "min": 16,
+       "max": 16
+      },
+      "map_blighted": {
+       "option": "false"
+      },
+      "map_uberblighted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "map",
+    "option": "Map"
+   }
+  }
+ },
  "map-rare-t16-330.txt": {
   "opened": {
    "status": {
