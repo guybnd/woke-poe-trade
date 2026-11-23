@@ -3,7 +3,7 @@
     :move-handles="mode === 'card' ? 'none' : 'corners'" :inline-edit="false" :readonly="true">
     <!-- Strictness and anything that needs you, behind one dock icon. -->
     <DockItem :menu="dockMenu" ref="dockRef" id="loot-filter" :art="dockArt" title="Loot filter" :show="dockShow"
-      :badge="dockBadge" :tone="dockTone" :readouts="dockReadouts" :wm-id="config.wmId" card-width="22rem" @activate="openFromDock">
+      :badge="dockBadge" :tone="dockTone" :readouts="dockReadouts" :wm-id="config.wmId" card-width="24rem" @activate="openFromDock">
       <template #card>
         <div :class="$style.dock">
           <template v-if="config.neversink.on">
@@ -20,7 +20,7 @@
                 :title="wantedLevel === i ? `${LEVEL_NAMES[i]}: what auto would pick` : LEVEL_NAMES[i]" :aria-label="LEVEL_NAMES[i]" :aria-pressed="i === shownLevel" @click="pickNow(i)">{{ short }}</button>
             </div>
             <!-- Auto's ladder, each map band under the strictness it picks. -->
-            <div v-if="config.strictAuto.on" :class="$style.ladder" title="Auto picks the strictness above each map band">
+            <div v-if="config.strictAuto.on" :class="$style.ladder">
               <span v-for="(_, i) in LEVEL_SHORT" :key="i" :class="{ [$style.step]: ladderAt[i], [$style.stepOn]: ladderAt[i] && i === config.neversink.level }">{{ ladderAt[i] }}</span>
             </div>
           </template>
@@ -501,8 +501,10 @@ const dockMenu = computed<DockMenuAction[]>(() => [
   margin-top: -2px;
   font-size: var(--w-fs-xs);
   text-align: center;
+  line-height: 1.25;
   color: var(--w-dim);
-  white-space: nowrap;
+  /* Two bands on one strictness, or big text: wrap inside the column, never into the next. */
+  overflow-wrap: anywhere;
 }
 .step { border-top: 3px solid var(--w-line); padding-top: 2px; }
 .stepOn { border-color: var(--w-accent); color: var(--w-fg); font-weight: 600; }

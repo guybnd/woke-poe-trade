@@ -93,3 +93,29 @@ test('text cut short with "…" shows its whole text in the card, and text that 
   await page.waitForTimeout(700)
   await expect(card).toHaveCount(0)
 })
+
+test('a cut label inside a titled button shows the button\'s title, not the label', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true, widgets: [], titleTips: true })
+  const page = overlay.page
+  await page.evaluate(() => {
+    const btn = document.createElement('button')
+    btn.id = 'titled'
+    btn.title = 'Opens the whole list'
+    Object.assign(btn.style, { position: 'fixed', left: '300px', top: '300px', width: '120px', padding: '10px', zIndex: '5000' })
+    const label = document.createElement('span')
+    label.className = 'w-trunc'
+    label.style.display = 'block'
+    label.textContent = 'A label far too long for this button'
+    btn.appendChild(label)
+    document.body.appendChild(btn)
+  })
+  const card = page.getByRole('tooltip')
+  const box = (await page.locator('#titled').boundingBox())!
+  await page.mouse.move(box.x + 3, box.y + 3)
+  await page.mouse.move(box.x + 30, box.y + box.height / 2, { steps: 4 })
+  await expect(card).toHaveText('Opens the whole list')
+  await page.waitForTimeout(300)
+  await expect(card).toHaveText('Opens the whole list')
+  await page.mouse.move(5, 5)
+  expect(await page.locator('#titled').getAttribute('title')).toBe('Opens the whole list')
+})

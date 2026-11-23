@@ -147,7 +147,10 @@ export function installTitleTips (doc: Document = document): () => void {
   // Text ending in "…" under the pointer (the target or a parent close by),
   // when nothing above it has a title or the item tooltip.
   function cutShort (target: EventTarget | null): HTMLElement | null {
-    let node: HTMLElement | null = target instanceof HTMLElement ? target : null
+    // An icon (svg) inside a cut label counts as the label.
+    let node: HTMLElement | null = target instanceof HTMLElement ? target : (target instanceof Element ? target.parentElement : null)
+    // Inside the titled element already showing (its title is off while held): that title wins.
+    if (held && !cut && node && held.contains(node)) return null
     for (let i = 0; node && i < 3; i++) {
       const el: HTMLElement = node
       node = el.parentElement
@@ -166,6 +169,8 @@ export function installTitleTips (doc: Document = document): () => void {
     let found = titled(e.target)
     const short = found ? null : cutShort(e.target)
     if (short) found = short
+    // Moving within the titled element that's showing: its title is off, so titled() can't see it.
+    else if (!found && held && !cut && e.target instanceof Node && held.contains(e.target)) found = held
     if (found !== held) {
       release()
       if (!found || e.buttons !== 0) return
