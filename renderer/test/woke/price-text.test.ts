@@ -20,4 +20,8 @@ describe('splitPriceText', () => {
     expect(joined(s)).toBe(s)
     expect(splitPriceText('2 chaos orbs, 3 divines')).toEqual([{ text: '2 chaos orbs, 3 divines' }])
   })
+  it('needs the unit to stand as its own word after a whole number', () => {
+    for (const s of ['upper c', 'super div', '12 div-cards', 'T16 divine', '2 cé']) expect(splitPriceText(s)).toEqual([{ text: s }])
+    expect(splitPriceText('-5c')).toEqual([{ text: '-5', unit: 'c', raw: 'c' }])
+  })
 })

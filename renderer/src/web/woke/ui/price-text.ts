@@ -4,8 +4,8 @@
 
 export interface PricePart { text: string, unit?: 'c' | 'div', raw?: string }
 
-// A unit only counts after a number or "per".
-const UNIT = /(\d[\d,.]*|per)(\s?)(c|div)(?![a-z])/g
+// A unit only counts after a whole number or the word "per", and as a word of its own.
+const UNIT = /(?<![\p{L}\d.])(-?\d[\d,.]*|per)(\s?)(c|div)(?![\p{L}\d-])/gu
 
 export function splitPriceText (s: string): PricePart[] {
   const out: PricePart[] = []
