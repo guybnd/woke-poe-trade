@@ -27,6 +27,9 @@ test.beforeEach(({}, info) => { // eslint-disable-line no-empty-pattern
   test.skip(!process.env.WOKE_LANDING_SHOTS && !info.title.startsWith('clip:'), 'Set WOKE_LANDING_SHOTS=1 to take the landing page screenshots')
 })
 test.use({ deviceScaleFactor: 2 })
+// Item art from testing/fixtures/icons, so the shots look the same wherever
+// they are taken (web.poecdn.com isn't reachable everywhere).
+test.beforeEach(async ({ overlay }) => { await localIcons(overlay) })
 
 async function backdrop (overlay: Overlay, file: string, place = 'center / cover') {
   const data = fs.readFileSync(path.join(FIXTURES, 'screens', file)).toString('base64')
