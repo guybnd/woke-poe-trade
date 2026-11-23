@@ -16,7 +16,7 @@
         {{ facts.disabled ? 'Not in the game right now.' : 'Divcord has no verified source for this card yet.' }}
       </div>
       <div :class="$style.foot">
-        <span :class="$style.note">From the community Divcord sheet</span>
+        <span :class="$style.note">Sources: Divcord · weights: Prohibited Library</span>
         <WButton size="sm" @click="open">Divcord</WButton>
       </div>
     </template>

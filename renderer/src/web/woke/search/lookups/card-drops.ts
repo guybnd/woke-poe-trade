@@ -29,7 +29,7 @@ export function mapCardsCard (data: CardDropData, map: string, ctx: LookupContex
     tip: { name: map, content },
     sections: [
       { label: `Cards in ${label}${tier ? ` (tier ${tier})` : ''}`, rows },
-      { text: ['Drop sources from the community Divcord sheet. Prices are poe.ninja\'s, per card.'] }
+      { text: ['Sources: Divcord. Prices are poe.ninja\'s, per card.'] }
     ],
     actions: [
       ...(best ? [{ label: `Look up ${best.name}`, search: best.name }] : []),

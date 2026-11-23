@@ -7,7 +7,8 @@
 // Source: the community Divcord sheet (verified drop sources), as parsed by
 // divicards (github.com/shonya3/divicards-site, gen/json): the current atlas
 // maps for each card, verified sources (campaign zones, bosses, league
-// content), the lowest area level and stacked-deck weights.
+// content) and the lowest area level; the weights are the Prohibited
+// Library's stacked-deck sheet, also via divicards.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
