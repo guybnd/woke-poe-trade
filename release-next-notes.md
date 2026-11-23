@@ -115,3 +115,4 @@
 - README: clicking a picture opens it full screen on the website (GitHub itself only shows the raw file).
 - Price check: the listed time's age colour now shows in the Classic listings view and on Currency Exchange (bulk) offers too, not only in Improved.
 - Net worth › Runs: a cleaner run view. Profit, per map, per hour and the total with Faustus sit on one line, with a bar of where the time went (maps, hideout, away). Below, In, Out and Faustus sit side by side. Hover any row to change how many or the price, or to leave it out of the run (a long shot or a lucky one-off: it shows apart as Left out). Add items or costs by hand at the bottom of each column. The long explanations moved into hovers.
+- Net worth runs: boss fights (Maven, Uber Elder and the like) count like maps, so per map and typed per-map costs work on boss runs.

@@ -4,6 +4,7 @@
 import { isTownLike, parseLogLine } from '../campaign/log-parse'
 import { lineTime } from '../campaign/log-tail'
 import { isFarmedMap, isMapSideArea } from '../farming/farming'
+import { isBossArea } from '../shared/boss-areas'
 
 // map: in a map (its side areas too); play: any other area (campaign, boss
 // arenas); hub: hideout, town and the like; off: the game closed (between a
@@ -25,13 +26,16 @@ export interface PlayMarks {
   // last few maps' area and seed, to tell them apart.
   maps: number[]
   recent: string[]
+  // When each boss arena was opened (Maven, Uber Elder...): a fight, which
+  // isn't a map. A portal back into the same arena is the same fight.
+  fights: number[]
 }
 
 // `offFrom`: a fresh read of Client.txt from that time. Until its first zone
 // line the game wasn't running (or you sat in one place since before it).
 export const emptyMarks = (offFrom?: number): PlayMarks => offFrom == null
-  ? { marks: [], lastAt: null, lastLines: [], here: 'play', maps: [], recent: [] }
-  : { marks: [{ at: offFrom, s: 'off' }], lastAt: null, lastLines: [], here: 'off', maps: [], recent: [] }
+  ? { marks: [], lastAt: null, lastLines: [], here: 'play', maps: [], recent: [], fights: [] }
+  : { marks: [{ at: offFrom, s: 'off' }], lastAt: null, lastLines: [], here: 'off', maps: [], recent: [], fights: [] }
 
 const RECENT_MAPS = 16
 const OPENING = '***** LOG FILE OPENING *****'
@@ -54,6 +58,7 @@ export function stateOfArea (areaId: string): PlayState {
 export function feedMarks (m: PlayMarks, lines: readonly string[]): PlayMarks {
   const marks = [...m.marks]
   const maps = [...m.maps]
+  const fights = [...m.fights]
   let recent = m.recent
   let lastAt = m.lastAt
   let lastLines = m.lastLines
@@ -77,17 +82,18 @@ export function feedMarks (m: PlayMarks, lines: readonly string[]): PlayMarks {
       if (ev?.kind === 'area') {
         here = stateOfArea(ev.areaId)
         push(marks, at, here)
-        if (isFarmedMap(ev.areaId)) {
+        const boss = isBossArea(ev.areaId)
+        if (boss || isFarmedMap(ev.areaId)) {
           const key = `${ev.areaId}:${ev.seed ?? ''}`
           // Without a seed a map can't be told apart: every entry counts.
-          if (!ev.seed || !recent.includes(key)) maps.push(at)
+          if (!ev.seed || !recent.includes(key)) (boss ? fights : maps).push(at)
           recent = [...recent.filter(k => k !== key), key].slice(-RECENT_MAPS)
         }
       }
     }
     if (at !== lastAt) { lastAt = at; lastLines = [line] } else lastLines = [...lastLines, line]
   }
-  return { marks, lastAt, lastLines, here, maps, recent }
+  return { marks, lastAt, lastLines, here, maps, recent, fights }
 }
 
 // Drops marks before `from`, keeping the one in force at `from`.
@@ -95,7 +101,9 @@ export function trimMarks (m: PlayMarks, from: number): PlayMarks {
   let i = 0
   while (i + 1 < m.marks.length && m.marks[i + 1].at <= from) i++
   const maps = m.maps.filter(at => at >= from)
-  return i || maps.length !== m.maps.length ? { ...m, marks: m.marks.slice(i), maps } : m
+  const was = m.fights
+  const fights = was.filter(at => at >= from)
+  return i || maps.length !== m.maps.length || fights.length !== was.length ? { ...m, marks: m.marks.slice(i), maps, fights } : m
 }
 
 function stateAt (marks: PlayMarks['marks'], at: number): PlayState | null {

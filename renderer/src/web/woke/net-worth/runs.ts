@@ -81,7 +81,22 @@ export interface Run {
 
 export interface ManualLine { id: string, name: string, key?: string | null, icon?: string, count: number, each: number, side: 'in' | 'out' }
 
-export interface RunFinal { profitChaos: number, maps: number, perMapChaos: number | null, perHourChaos: number | null, faustusChaos?: number }
+// `fights`: boss arenas (Maven, Uber Elder...), which aren't maps. Each counts
+// as one run of the strategy, like a map: per-map figures and typed costs
+// are per map or fight.
+export interface RunFinal { profitChaos: number, maps: number, fights?: number, perMapChaos: number | null, perHourChaos: number | null, faustusChaos?: number }
+
+export interface RunCount { maps: number, fights: number }
+// "4 maps · 2 fights", "1 fight", "0 maps".
+export function countLabel (maps: number, fights = 0): string {
+  const m = `${maps} ${maps === 1 ? 'map' : 'maps'}`
+  const f = `${fights} ${fights === 1 ? 'fight' : 'fights'}`
+  return fights > 0 ? (maps > 0 ? `${m} · ${f}` : f) : m
+}
+// What one "run" is: a map, a boss fight, or either.
+export function unitOf (maps: number, fights = 0): 'map' | 'fight' | 'run' {
+  return fights > 0 ? (maps > 0 ? 'run' : 'fight') : 'map'
+}
 
 // Outside the stash (faustus.ts outsideTotals): sales of items from before
 // the run that were collected come off profit; the Faustus line is apart.
@@ -111,6 +126,9 @@ export interface RunTotals {
   editChaos: number
   manualChaos: number
   maps: number
+  fights: number
+  // maps + fights: what per-map figures and typed costs go by.
+  runs: number
   perMapChaos: number | null
   // What a map costs: typed lines, plus what the stash says was used up of
   // map-cost items per map.
@@ -172,21 +190,24 @@ function netOf (t: TallyLine | undefined): number {
   return t ? t.addedChaos - t.removedChaos : 0
 }
 
-export function lineCost (c: CostLine, maps: number): number {
-  return Math.max(0, c.qty) * Math.max(0, c.unitChaos) * maps
+// `runs`: maps and boss fights.
+export function lineCost (c: CostLine, runs: number): number {
+  return Math.max(0, c.qty) * Math.max(0, c.unitChaos) * runs
 }
 
-// How many of a bought batch are left after `maps` maps.
-export function leftOf (c: CostLine, maps: number): number | null {
-  return c.bought != null ? Math.max(0, c.bought - c.qty * maps) : null
+// How many of a bought batch are left after `runs` maps and fights.
+export function leftOf (c: CostLine, runs: number): number | null {
+  return c.bought != null ? Math.max(0, c.bought - c.qty * runs) : null
 }
 
-export function runTotals (run: Run, points: readonly LedgerPoint[], maps: number, now: number, mapCostKeys: ReadonlySet<string> = new Set(), outside: Outside = { beforeChaos: 0, faustusChaos: 0 }): RunTotals {
+export function runTotals (run: Run, points: readonly LedgerPoint[], count: number | RunCount, now: number, mapCostKeys: ReadonlySet<string> = new Set(), outside: Outside = { beforeChaos: 0, faustusChaos: 0 }): RunTotals {
+  const { maps, fights } = typeof count === 'number' ? { maps: count, fights: 0 } : count
+  const runs = maps + fights
   const stashChaos = stashChange(run, points)
   const typedKeys = new Set(run.costs.map(c => c.key).filter((k): k is string => k != null))
   let takenOverChaos = 0
   for (const k of typedKeys) takenOverChaos += netOf(run.tally[k])
-  const costChaos = run.costs.reduce((s, c) => s + lineCost(c, maps), 0)
+  const costChaos = run.costs.reduce((s, c) => s + lineCost(c, runs), 0)
   const onceChaos = run.once.reduce((s, o) => s + Math.max(0, o.chaos), 0)
   const beforeChaos = outside.beforeChaos
   // Your edits on stash rows (count, price, left out) change what they add.
@@ -226,8 +247,10 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], maps: numbe
     editChaos,
     manualChaos,
     maps,
-    perMapChaos: maps > 0 ? profitChaos / maps : null,
-    costPerMapChaos: maps > 0 ? (costChaos + usedChaos) / maps : null,
+    fights,
+    runs,
+    perMapChaos: runs > 0 ? profitChaos / runs : null,
+    costPerMapChaos: runs > 0 ? (costChaos + usedChaos) / runs : null,
     ms,
     perHourChaos: ms >= MIN_RATE_MS ? profitChaos / (ms / 3_600_000) : null
   }
@@ -290,6 +313,7 @@ export interface RunGlance {
   at: number
   profitChaos: number
   maps: number
+  fights?: number
   perHourChaos: number | null
   costPerMapChaos: number | null
   divine: number | null

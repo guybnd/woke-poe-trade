@@ -9,7 +9,7 @@
     <input v-model.number="each" type="number" min="0" step="any" class="w-input px-1 rounded" :class="$style.num" :aria-label="`${label}: price each`" :title="`Price each, in ${divine ? 'divines' : 'chaos'}`">
     <Coin :chaos="!divine" />
     <WButton size="sm" :disabled="!ok" :title="perMap ? 'Once, for the whole run' : undefined" @click="add">{{ perMap ? 'Once' : 'Add' }}</WButton>
-    <WButton v-if="perMap" size="sm" :disabled="!ok" title="Taken off for every map" @click="addPerMap">Per map</WButton>
+    <WButton v-if="perMap" size="sm" :disabled="!ok" :title="unit === 'map' ? 'Taken off for every map' : 'Taken off for every map and boss fight'" @click="addPerMap">Per {{ unit }}</WButton>
     <button type="button" :class="$style.x" title="Cancel" aria-label="Cancel" @click="close"><i class="fas fa-times" /></button>
   </div>
 </template>
@@ -29,6 +29,8 @@ const props = defineProps<{
   label: string
   // Offers "Per map" (a typed cost) next to once.
   perMap?: boolean
+  // What a run is counted in: maps, boss fights, or both ('run').
+  unit?: 'map' | 'fight' | 'run'
 }>()
 const emit = defineEmits<{ (e: 'add' | 'per-map', v: AddedLine): void }>()
 

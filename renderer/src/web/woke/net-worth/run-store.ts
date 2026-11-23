@@ -100,14 +100,19 @@ function outsideOf (r: Run): Outside | undefined {
   return lastOutside.get(r.id)
 }
 
+// Boss fights from Client.txt (run-time.ts, loaded when first needed).
+const runFights = (startAt: number, now: number) => import('./run-time').then(m => m.fightsIn(startAt, now)).catch(() => 0)
+
 // The dock number and Ctrl+Space's answer for the live run (null: none).
 async function saveGlance (league: string, run: Run | null, points: readonly LedgerPoint[], divine: number | null) {
   let g: RunGlance | null = null
   if (run) {
     const now = Date.now()
     const maps = mapsIn(run, await readRunMaps(run, now), now)
-    const t = runTotals(run, points, maps, now, undefined, outsideOf(run))
+    const fights = await runFights(run.startAt, now)
+    const t = runTotals(run, points, { maps, fights }, now, undefined, outsideOf(run))
     g = { league, name: run.name, startAt: run.startAt, at: now, profitChaos: t.profitChaos, maps, perHourChaos: t.perHourChaos, costPerMapChaos: t.costPerMapChaos, divine }
+    if (fights) g.fights = fights
     if (t.faustusChaos) g.faustusChaos = t.faustusChaos
   }
   await hostRequest('doc-put', { collection: COLLECTION, key: runGlanceKey(league), value: g }).catch(() => {})
@@ -152,8 +157,10 @@ export function startRun (league: string, name: string, startAt: number, diffs: 
 async function withFinal (run: Run, points: readonly LedgerPoint[]): Promise<Run> {
   if (run.stoppedAt == null) return run
   const maps = mapsIn(run, await readRunMaps(run, run.stoppedAt), run.stoppedAt)
-  const t = runTotals(run, points, maps, run.stoppedAt, undefined, outsideOf(run))
+  const fights = await runFights(run.startAt, run.stoppedAt)
+  const t = runTotals(run, points, { maps, fights }, run.stoppedAt, undefined, outsideOf(run))
   const final: Run['final'] = { profitChaos: t.profitChaos, maps, perMapChaos: t.perMapChaos, perHourChaos: t.perHourChaos }
+  if (fights) final.fights = fights
   if (t.faustusChaos) final.faustusChaos = t.faustusChaos
   return { ...run, final }
 }

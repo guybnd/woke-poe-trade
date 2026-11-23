@@ -15,7 +15,8 @@
       <template v-if="run">
         <span :class="$style.sep" />
         <span class="w-dim" data-glance-run>Run</span>
-        <span>{{ run.maps }} {{ run.maps === 1 ? 'map' : 'maps' }}</span>
+        <span v-if="run.maps || !run.fights">{{ run.maps }} {{ run.maps === 1 ? 'map' : 'maps' }}</span>
+        <span v-if="run.fights">{{ run.fights }} {{ run.fights === 1 ? 'fight' : 'fights' }}</span>
         <span :class="run.profitChaos >= 0 ? 'w-up' : 'w-down'">{{ run.profitChaos > 0 ? '+' : '' }}{{ formatChaos(run.profitChaos, run.divine) }}</span>
       </template>
       <template v-else-if="night">
@@ -75,7 +76,7 @@ const profit = computed(() => night.value ? nights.profitOf(night.value) : null)
 
 // The strategy run's saved glance (net-worth/runs.ts RunGlance), read each
 // time you go into a map: it changes only with a stash read.
-interface RunNumbers { name: string, maps: number, profitChaos: number, divine: number | null }
+interface RunNumbers { name: string, maps: number, fights: number, profitChaos: number, divine: number | null }
 const run = shallowRef<RunNumbers | null>(null)
 watch(() => props.map ? props.since : null, (since) => {
   const league = AppConfig().leagueId
@@ -84,7 +85,7 @@ watch(() => props.map ? props.since : null, (since) => {
     .then((g) => {
       const o = g as Partial<RunNumbers> & { league?: string } | null
       run.value = o && o.league === league && typeof o.profitChaos === 'number' && Number.isFinite(o.profitChaos) && typeof o.maps === 'number'
-        ? { name: String(o.name ?? ''), maps: o.maps, profitChaos: o.profitChaos, divine: typeof o.divine === 'number' ? o.divine : null }
+        ? { name: String(o.name ?? ''), maps: o.maps, fights: typeof o.fights === 'number' ? o.fights : 0, profitChaos: o.profitChaos, divine: typeof o.divine === 'number' ? o.divine : null }
         : null
     })
     .catch(() => {})

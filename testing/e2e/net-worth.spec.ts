@@ -132,8 +132,18 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await panel.getByRole('button', { name: 'Start', exact: true }).click()
     const card = panel.locator('[data-run-card]')
     await expect(card).toContainText('Nightmare maps')
+    // A boss fight in the run (Client.txt): it counts like a map, so per
+    // map becomes per fight. A portal back in is the same fight.
+    await overlay.page.waitForTimeout(1100)
+    const p2 = (n: number) => String(n).padStart(2, '0')
+    const d = new Date()
+    const fight = `${d.getFullYear()}/${p2(d.getMonth() + 1)}/${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())} 3725546 1186a8a3 [DEBUG Client 25552] Generating level 85 area "MapWorldsShapersRealm" with seed 4242`
+    await overlay.log([fight, fight])
+    await overlay.page.waitForTimeout(1100)
     dump = DUMP_AFTER
     await panel.getByRole('button', { name: 'Refresh' }).click()
+    await expect(card).toContainText('1 fight', { timeout: 20_000 })
+    await expect(card.locator('[data-run-per]')).toContainText(/Per (fight|run)/)
     const came = card.getByText('The Apothecary', { exact: false }).first()
     await expect(came).toBeVisible({ timeout: 20_000 })
     await came.hover()
@@ -143,7 +153,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await card.locator('[data-run-out] [data-run-add]').click()
     await card.getByLabel('Add a cost: item').fill('Strand Map')
     await card.getByLabel('Add a cost: price each').fill('1')
-    await card.getByRole('button', { name: 'Per map', exact: true }).click()
+    await card.getByRole('button', { name: /^Per (map|fight|run)$/ }).click()
     await expect(card.locator('[data-run-cost]')).toContainText('Strand Map')
     // A long shot: left out, then counted again.
     const cameRow = card.locator('[data-run-came]').first()

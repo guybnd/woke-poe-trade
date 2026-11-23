@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { addToTally, cleanDoc, emptyRun, leftOf, lineCost, mapsIn, runTotals, tallyFrom, tallyRows } from '@/web/woke/net-worth/runs'
+import { addToTally, cleanDoc, countLabel, emptyRun, leftOf, lineCost, mapsIn, runTotals, tallyFrom, tallyRows, unitOf } from '@/web/woke/net-worth/runs'
 import type { Run } from '@/web/woke/net-worth/runs'
+import { runsLookup } from '@/web/woke/search/lookups/runs'
+import type { LookupContext } from '@/web/woke/search/lookups/types'
 import type { LedgerPoint } from '@/web/woke/net-worth/ledger'
 import type { StashDiff } from '@/web/woke/net-worth/valuation'
 
@@ -134,5 +136,34 @@ describe('your edits (long shots, counts, prices, added by hand)', () => {
     const t = runTotals(run({ tally, manual }), points, 10, T0 + H)
     expect(t.manualChaos).toBe(950)
     expect(t.profitChaos).toBe(4850)
+  })
+})
+
+describe('boss fights', () => {
+  it('count like maps for per-map figures and typed costs', () => {
+    const r = run({ costs: [{ id: 'c', name: "Maven's Writ", key: 'writ', qty: 1, unitChaos: 100, bought: 5 }] })
+    const t = runTotals(r, [point(T0, 0), point(T0 + 30 * M, 1000)], { maps: 0, fights: 4 }, T0 + H)
+    expect(t.runs).toBe(4)
+    expect(t.costChaos).toBe(400)
+    expect(t.profitChaos).toBe(600)
+    expect(t.perMapChaos).toBe(150)
+    expect(t.costPerMapChaos).toBe(100)
+    expect(leftOf(r.costs[0], t.runs)).toBe(1)
+  })
+  it('labels', () => {
+    expect(countLabel(3)).toBe('3 maps')
+    expect(countLabel(0, 1)).toBe('1 fight')
+    expect(countLabel(2, 3)).toBe('2 maps · 3 fights')
+    expect([unitOf(2), unitOf(0, 2), unitOf(1, 1)]).toEqual(['map', 'fight', 'run'])
+  })
+})
+
+describe('Ctrl+Space run card', () => {
+  it('shows boss fights and goes per fight', () => {
+    const rows = runsLookup({ league: 'Covens', name: 'Maven', startAt: T0, at: T0 + H, profitChaos: 800, maps: 0, fights: 4, perHourChaos: 800, costPerMapChaos: 50, divine: null })('run', { now: T0 + H, divine: null } as unknown as LookupContext)
+    const cells = rows[0].sections?.[0].rows?.map(r => `${r.label}: ${r.value}`)
+    expect(cells).toContain('Boss fights: 4')
+    expect(cells).toContain('Per fight: +200 c')
+    expect(cells).toContain('Cost per fight: 50 c')
   })
 })
