@@ -310,11 +310,18 @@ export function gemVariant (item: StashItemLike, exactLevel = false): string {
   return v
 }
 
+// A magic or rare map: priced by its base (prices.ts), so counted by it.
+export function isRolledMap (item: Pick<StashItemLike, 'frame' | 'mapTier' | 'baseType'>): boolean {
+  return (item.frame === 1 || item.frame === 2) && (!!item.mapTier || /\bMap$/.test(item.baseType))
+}
+
 export function itemKey (item: StashItemLike): string {
   // Uniques and rares by name and base (each rare is its own thing). Magic and
   // rare items are marked, so an unidentified rare map is never a normal one.
-  const named = (isUniqueFrame(item.frame) || item.frame === 2) && item.name
-  const name = named ? `${item.name} ${item.typeLine}` : item.typeLine
+  // Magic and rare maps go by their base: 40 rare Nightmare Maps are one row.
+  const rolledMap = isRolledMap(item)
+  const named = (isUniqueFrame(item.frame) || item.frame === 2) && item.name && !rolledMap
+  const name = named ? `${item.name} ${item.typeLine}` : rolledMap ? item.baseType : item.typeLine
   const parts = [item.frame === 1 ? `M:${name}` : item.frame === 2 ? `R:${name}` : name]
   if (item.frame === 4) parts.push(`L${item.gemLevel ?? 1}`, `Q${item.quality ?? 0}`, item.corrupted ? 'C' : '')
   if (item.mapTier) parts.push(`T${item.mapTier}`)
@@ -323,7 +330,8 @@ export function itemKey (item: StashItemLike): string {
 }
 
 export function itemLabel (item: StashItemLike): string {
-  const base = isUniqueFrame(item.frame) && item.name ? item.name : item.typeLine
+  const base = isUniqueFrame(item.frame) && item.name ? item.name : isRolledMap(item) ? item.baseType : item.typeLine
+  if (isRolledMap(item)) return `${base} (${item.mapTier ? `T${item.mapTier}, ` : ''}${item.frame === 2 ? 'rare' : 'magic'})`
   if (item.frame === 2 && item.name) return `${item.name}, ${item.typeLine}`
   if (item.frame === 4) return `${base} ${item.gemLevel ?? 1}/${item.quality ?? 0}${item.corrupted ? ' corrupted' : ''}`
   if (item.mapTier && !isUniqueFrame(item.frame)) return `${base} (T${item.mapTier})`

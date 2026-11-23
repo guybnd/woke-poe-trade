@@ -127,8 +127,38 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await panel.getByRole('button', { name: 'Per map', exact: true }).click()
     await expect(card.getByLabel('Strand Map per map')).toHaveValue('1')
     await overlay.snap('net worth strategy run')
+    // Stop reads your Faustus listings: one search on your account, newest
+    // first; a listing older than the start ends the read.
+    const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
+    const searches: string[] = []
+    await overlay.page.route('**/api/trade/search/**', (route) => {
+      searches.push(route.request().postData() ?? '')
+      return route.fulfill({ contentType: 'application/json', headers: LIMITS, body: JSON.stringify({ id: 'q', total: 2, result: ['l1', 'l0'] }) })
+    })
+    await overlay.page.route('**/api/trade/fetch/**', (route) => route.fulfill({
+      contentType: 'application/json',
+      headers: LIMITS,
+      body: JSON.stringify({
+        result: [
+          { id: 'l1', item: { name: 'Mageblood', typeLine: 'Heavy Belt', baseType: 'Heavy Belt', frameType: 3, icon: '' }, listing: { indexed: new Date().toISOString(), fee: 100, price: { amount: 2, currency: 'divine', type: '~price' }, account: { name: 'Tester#1234', lastCharacterName: 'T' } } },
+          { id: 'l0', item: { name: 'Headhunter', typeLine: 'Leather Belt', baseType: 'Leather Belt', frameType: 3, icon: '' }, listing: { indexed: ago(48), fee: 100, price: { amount: 9, currency: 'divine', type: '~price' }, account: { name: 'Tester#1234', lastCharacterName: 'T' } } }
+        ].filter(r => route.request().url().includes(r.id))
+      })
+    }))
     await card.getByRole('button', { name: 'Stop' }).click()
     await expect(panel.locator('[data-past-run]').first()).toContainText('Nightmare maps')
+    expect(searches[0]).toContain('Tester#1234')
+    expect(searches[0]).toContain('securable')
+    await panel.locator('[data-past-run]').first().getByText('Nightmare maps').click()
+    const listed = panel.locator('[data-run-listed]')
+    await expect(listed).toHaveCount(1)
+    await expect(listed).toContainText('Mageblood')
+    await expect(panel.locator('[data-run-total]')).toContainText('In Faustus')
+    await listed.getByText('Mageblood').hover()
+    await expect(overlay.page.getByRole('tooltip')).toContainText('Mageblood')
+    await overlay.page.mouse.move(0, 0)
+    await overlay.page.unroute('**/api/trade/search/**')
+    await overlay.page.unroute('**/api/trade/fetch/**')
     await panel.getByRole('tab', { name: 'Holdings' }).click()
 
     // The Sales view: a header click sorts the table, a second click flips it.

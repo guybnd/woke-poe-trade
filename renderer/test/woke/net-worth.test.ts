@@ -94,6 +94,15 @@ describe('your prices and ignored items', () => {
     expect(itemKey(rare)).not.toBe(itemKey({ ...rare, name: 'Grim Halo' }))
   })
 
+  it('rare and magic maps go by their base: one row, one price', () => {
+    const map = { name: 'Doom Sanctum', typeLine: 'Nightmare Map', baseType: 'Nightmare Map', frame: 2, stack: 1, icon: '', mapTier: 17 }
+    expect(itemKey(map)).toBe(itemKey({ ...map, name: 'Ghastly Ward' }))
+    expect(itemKey(map)).not.toBe(itemKey({ ...map, frame: 0, name: '' }))
+    expect(itemLabel(map)).toBe('Nightmare Map (T17, rare)')
+    const magic = { ...map, name: '', typeLine: 'Burning Nightmare Map of Giants', frame: 1 }
+    expect(itemLabel(magic)).toBe('Nightmare Map (T17, magic)')
+  })
+
   it('ignored items leave the totals and tab values but stay listed', () => {
     const prefs = { prices: {}, ignored: ['Divine Orb', itemKey(rare)] }
     const v = valueStash(tabs, priceOf, prefs)

@@ -7,6 +7,7 @@
 // stash can't see, like maps bought into the inventory. A typed line takes
 // over its item: that item's own stash change is left out, so it never
 // counts twice. Pure: no Vue, no IO.
+import type { FaustusRead, SaleMark } from './faustus'
 import type { LedgerPoint } from './ledger'
 import type { StashDiff } from './valuation'
 
@@ -56,9 +57,17 @@ export interface Run {
   once: OnceCost[]
   // Totals when stopped, for the past runs list (edits after Stop update it).
   final?: RunFinal
+  // Your Faustus listings, last read (faustus.ts).
+  faustus?: FaustusRead
+  // Your marks on sales during the run, by sale id.
+  saleMarks?: Record<string, SaleMark>
 }
 
-export interface RunFinal { profitChaos: number, maps: number, perMapChaos: number | null, perHourChaos: number | null }
+export interface RunFinal { profitChaos: number, maps: number, perMapChaos: number | null, perHourChaos: number | null, faustusChaos?: number }
+
+// Outside the stash (faustus.ts outsideTotals): sales of items from before
+// the run that were collected come off profit; the Faustus line is apart.
+export interface Outside { beforeChaos: number, faustusChaos: number }
 
 // What a run's view and the dock icon show.
 export interface RunTotals {
@@ -68,7 +77,13 @@ export interface RunTotals {
   costChaos: number
   takenOverChaos: number
   onceChaos: number
+  // Collected sales of items from before the run (off profit).
+  beforeChaos: number
   profitChaos: number
+  // Listed at Faustus during the run and sales not collected yet.
+  faustusChaos: number
+  // profit + faustus
+  totalChaos: number
   maps: number
   perMapChaos: number | null
   // What a map costs: typed lines, plus what the stash says was used up of
@@ -137,14 +152,16 @@ export function leftOf (c: CostLine, maps: number): number | null {
   return c.bought != null ? Math.max(0, c.bought - c.qty * maps) : null
 }
 
-export function runTotals (run: Run, points: readonly LedgerPoint[], maps: number, now: number, mapCostKeys: ReadonlySet<string> = new Set()): RunTotals {
+export function runTotals (run: Run, points: readonly LedgerPoint[], maps: number, now: number, mapCostKeys: ReadonlySet<string> = new Set(), outside: Outside = { beforeChaos: 0, faustusChaos: 0 }): RunTotals {
   const stashChaos = stashChange(run, points)
   const typedKeys = new Set(run.costs.map(c => c.key).filter((k): k is string => k != null))
   let takenOverChaos = 0
   for (const k of typedKeys) takenOverChaos += netOf(run.tally[k])
   const costChaos = run.costs.reduce((s, c) => s + lineCost(c, maps), 0)
   const onceChaos = run.once.reduce((s, o) => s + Math.max(0, o.chaos), 0)
-  const profitChaos = stashChaos - takenOverChaos - costChaos - onceChaos
+  const beforeChaos = outside.beforeChaos
+  const profitChaos = stashChaos - takenOverChaos - costChaos - onceChaos - beforeChaos
+  const faustusChaos = outside.faustusChaos
   // Used up from the stash: map-cost items that went down, not typed.
   let usedChaos = 0
   for (const [k, t] of Object.entries(run.tally)) {
@@ -159,7 +176,10 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], maps: numbe
     costChaos,
     takenOverChaos,
     onceChaos,
+    beforeChaos,
     profitChaos,
+    faustusChaos,
+    totalChaos: profitChaos + faustusChaos,
     maps,
     perMapChaos: maps > 0 ? profitChaos / maps : null,
     costPerMapChaos: maps > 0 ? (costChaos + usedChaos) / maps : null,
@@ -219,6 +239,8 @@ export interface RunGlance {
   perHourChaos: number | null
   costPerMapChaos: number | null
   divine: number | null
+  // The Faustus line (left out when nothing is there).
+  faustusChaos?: number
 }
 
 export const runsKey = (league: string) => `${league}-runs`

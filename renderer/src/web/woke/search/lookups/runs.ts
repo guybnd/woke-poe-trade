@@ -27,6 +27,7 @@ export function runsLookup (run: RunGlance | null): Lookup {
     const divine = run.divine ?? ctx.divine
     const rows: LookupRow[] = [
       { label: 'Profit', value: amount(run.profitChaos, divine) },
+      ...(run.faustusChaos ? [{ label: 'In Faustus', value: amount(run.faustusChaos, divine) }, { label: 'Total', value: amount(run.profitChaos + run.faustusChaos, divine) }] : []),
       { label: 'Maps', value: String(run.maps) },
       { label: 'Per map', value: run.maps ? amount(run.profitChaos / run.maps, divine) : '—', dim: !run.maps },
       { label: 'Per hour', value: run.perHourChaos != null ? amount(run.perHourChaos, divine, '/h') : 'under 10 min', dim: run.perHourChaos == null },

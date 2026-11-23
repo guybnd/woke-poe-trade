@@ -8,7 +8,7 @@ import { toast } from '../ui/layer'
 import { readMapDay, dayKey } from '../session-story/store'
 import { isSkippedArea } from '../session-story/skip-areas'
 import { addToTally, cleanDoc, emptyRun, isRunGlance, mapsIn, runGlanceKey, runsKey, runTotals, tallyFrom, MAX_DONE_RUNS } from './runs'
-import type { CostLine, OnceCost, Run, RunGlance, RunsDoc } from './runs'
+import type { CostLine, OnceCost, Outside, Run, RunGlance, RunsDoc } from './runs'
 import type { LedgerPoint } from './ledger'
 import type { StashDiff } from './valuation'
 
@@ -85,14 +85,30 @@ export async function refreshRunMaps (run: Run | null, now = Date.now()) {
   if (seq === mapsSeq) runMaps.value = maps
 }
 
+// Sales and Faustus listings (faustus.ts) need the sales store, which the
+// Runs view loads; it hands its sum in here. Until then a run's last known
+// one stands (no import of sales-store here: it isn't loaded at startup).
+let outsideFn: ((r: Run) => Outside) | null = null
+const lastOutside = new Map<string, Outside>()
+export function setOutside (fn: ((r: Run) => Outside) | null) { outsideFn = fn }
+function outsideOf (r: Run): Outside | undefined {
+  if (outsideFn) {
+    const o = outsideFn(r)
+    lastOutside.set(r.id, o)
+    return o
+  }
+  return lastOutside.get(r.id)
+}
+
 // The dock number and Ctrl+Space's answer for the live run (null: none).
 async function saveGlance (league: string, run: Run | null, points: readonly LedgerPoint[], divine: number | null) {
   let g: RunGlance | null = null
   if (run) {
     const now = Date.now()
     const maps = mapsIn(run, await readRunMaps(run, now), now)
-    const t = runTotals(run, points, maps, now)
+    const t = runTotals(run, points, maps, now, undefined, outsideOf(run))
     g = { league, name: run.name, startAt: run.startAt, at: now, profitChaos: t.profitChaos, maps, perHourChaos: t.perHourChaos, costPerMapChaos: t.costPerMapChaos, divine }
+    if (t.faustusChaos) g.faustusChaos = t.faustusChaos
   }
   await hostRequest('doc-put', { collection: COLLECTION, key: runGlanceKey(league), value: g }).catch(() => {})
   runGlance.value = g
@@ -135,8 +151,10 @@ export function startRun (league: string, name: string, startAt: number, diffs: 
 async function withFinal (run: Run, points: readonly LedgerPoint[]): Promise<Run> {
   if (run.stoppedAt == null) return run
   const maps = mapsIn(run, await readRunMaps(run, run.stoppedAt), run.stoppedAt)
-  const t = runTotals(run, points, maps, run.stoppedAt)
-  return { ...run, final: { profitChaos: t.profitChaos, maps, perMapChaos: t.perMapChaos, perHourChaos: t.perHourChaos } }
+  const t = runTotals(run, points, maps, run.stoppedAt, undefined, outsideOf(run))
+  const final: Run['final'] = { profitChaos: t.profitChaos, maps, perMapChaos: t.perMapChaos, perHourChaos: t.perHourChaos }
+  if (t.faustusChaos) final.faustusChaos = t.faustusChaos
+  return { ...run, final }
 }
 
 export function stopRun (league: string, points: readonly LedgerPoint[], divine: number | null) {
