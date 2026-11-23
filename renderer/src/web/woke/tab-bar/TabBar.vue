@@ -228,7 +228,7 @@ import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import { searchRequest } from '../search/widget'
 import { usePriceText } from '../shared/price'
-import { markNewsSeen, newsFor } from './news'
+import { markNewsSeen, newsFor, seenNewsIds, unseenNewsOf } from './news'
 import { personalOn } from '../personal'
 import { openSettingsPage } from '../dock/dock'
 
@@ -720,7 +720,7 @@ function entryHint (entry: LauncherEntry<Tab>): string | undefined {
 }
 
 // ---- What's new (news.ts) ----
-const seenNews = computed(() => AppConfig().woke?.seenNews)
+const seenNews = computed(() => seenNewsIds(AppConfig().woke))
 function newsOf (entry: LauncherEntry<Tab>) {
   return newsFor(entry.wmType, seenNews.value)
 }
@@ -731,7 +731,8 @@ function pointAt (entry: LauncherEntry<Tab>) {
   hovered.value = entry
   const news = newsOf(entry)
   hoveredNote.value = news?.note ?? null
-  if (news) markNewsSeen(ensureWokeConfig(AppConfig()).woke, [news.id])
+  // A tool with several lines: pointing at it once reads them all.
+  if (news) markNewsSeen(ensureWokeConfig(AppConfig()).woke, unseenNewsOf(entry.wmType, seenNews.value).map(n => n.id))
 }
 const ENTRY_HINT: Record<LauncherState, string | undefined> = {
   placed: undefined,

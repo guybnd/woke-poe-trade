@@ -1,6 +1,7 @@
 // What's new, said in game: a tool with something new gets a "New" seal in
 // All tools until the player points at it, the rail's All tools button counts
-// them, and a What's new icon in the dock lists them until its card is read. Add a line here with a feature that's worth a look; take old
+// them, and a What's new icon in the dock lists each line until it's shown or
+// dismissed. Add a line here with a feature that's worth a look; take old
 // lines out after a release or two. Players who just installed see none.
 import type { WokeModulesConfig } from '../modules'
 
@@ -40,8 +41,20 @@ export function markAllNewsSeen (woke: WokeModulesConfig): void {
   markNewsSeen(woke, NEWS.map(n => n.id))
 }
 
+// What counts as seen. Before setup's first Finish (or with it closed
+// unfinished) it's all of it: a new player has nothing "new".
+export function seenNewsIds (woke: WokeModulesConfig | undefined): readonly string[] {
+  return woke?.setupDone ? (woke.seenNews ?? []) : NEWS.map(n => n.id)
+}
+
 // Lines not seen yet. Like the All tools count, a switched-off tool's line
 // counts too: the launcher lists it, and turning it on is one click.
 export function unseenNews (woke: WokeModulesConfig | undefined): NewsItem[] {
-  return NEWS.filter(n => !woke?.seenNews?.includes(n.id))
+  const seen = seenNewsIds(woke)
+  return NEWS.filter(n => !seen.includes(n.id))
+}
+
+// Every unseen line of one tool (a tool can have several).
+export function unseenNewsOf (wmType: string, seen: readonly string[] | undefined): NewsItem[] {
+  return NEWS.filter(n => n.wmType === wmType && !seen?.includes(n.id))
 }

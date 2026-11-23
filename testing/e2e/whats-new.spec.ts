@@ -22,10 +22,10 @@ test('with the overlay open: Show me opens the tool, dismiss takes a line off, t
   const lines = icon.locator('[data-whats-new-line]')
   await expect(lines).toHaveCount(NEWS.length)
 
-  await lines.filter({ hasText: 'Atlas strategies' }).locator('[data-whats-new-dismiss]').click()
+  await lines.filter({ hasText: 'Atlas strategies' }).first().locator('[data-whats-new-dismiss]').click()
   await expect(lines).toHaveCount(NEWS.length - 1)
 
-  await lines.filter({ hasText: 'Map mods' }).getByRole('button', { name: 'Show me' }).click()
+  await lines.filter({ hasText: 'Map mods' }).first().getByRole('button', { name: 'Show me' }).click()
   await expect(lines).toHaveCount(NEWS.length - 2)
   await expect(overlay.page.getByRole('button', { name: 'Map mods', exact: true })).toHaveClass(/open/)
 
@@ -35,8 +35,8 @@ test('with the overlay open: Show me opens the tool, dismiss takes a line off, t
   await expect(icon).toHaveCount(0)
 })
 
-test('a fresh install gets no What\'s new icon', async ({ overlay }) => {
-  await overlay.boot()
+test('a fresh install gets no What\'s new icon, even before setup is finished', async ({ overlay }) => {
+  await overlay.boot({ firstRun: true, whatsNew: true })
   await overlay.page.waitForTimeout(1000)
   await expect(overlay.dockIcon('whats-new')).toHaveCount(0)
 })

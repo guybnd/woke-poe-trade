@@ -20,6 +20,8 @@ describe("What's new lines", () => {
     markNewsSeen(updated, [NEWS[0].id])
     expect(unseenNews(updated).map(n => n.id)).not.toContain(NEWS[0].id)
     const fresh: WokeModulesConfig = { setupDone: false, off: [] }
+    // Before setup's first Finish: nothing is new yet.
+    expect(unseenNews(fresh)).toEqual([])
     markAllNewsSeen(fresh)
     expect(unseenNews(fresh)).toEqual([])
   })

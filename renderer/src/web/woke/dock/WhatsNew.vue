@@ -2,10 +2,10 @@
   <DockItem id="whats-new" icon="fas fa-gift" :art="null" title="What's new" :show="lines.length > 0"
     :badge="lines.length" :wake="lines.length" card-width="24rem" pinnable :menu="dockMenu">
     <template #card>
-      <div :class="$style.body" data-no-item-tip="Tool names, not items">
+      <div :class="$style.body">
         <div v-for="n in lines" :key="n.id" :class="$style.line" data-whats-new-line>
           <div :class="$style.text">
-            <span :class="$style.name">{{ n.name }}</span>
+            <span :class="$style.name" data-no-item-tip="A tool's name, not an item">{{ n.name }}</span>
             <span>{{ sentence(n.note) }}</span>
           </div>
           <w-button size="sm" variant="ghost" data-whats-new-show @click="show(n)">Show me</w-button>
@@ -25,7 +25,7 @@
 // shown (tab-bar/news.ts). A fresh install has seen it all, so it never shows there.
 import { computed, inject, nextTick } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
-import { AppConfig, pushHostConfig } from '@/web/Config'
+import { AppConfig, pushHostConfig, saveConfigQuietly } from '@/web/Config'
 import { ensureWokeConfig, isWidgetTypeOn } from '../modules'
 import { markNewsSeen, unseenNews } from '../tab-bar/news'
 import type { NewsItem } from '../tab-bar/news'
@@ -43,8 +43,11 @@ function sentence (note: string) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+// Saved now: a click in game (its menu, a pinned card) has no blur to save
+// on, and an open Settings window holds back the usual save.
 function markSeen (items: NewsItem[]) {
   markNewsSeen(ensureWokeConfig(AppConfig()).woke, items.map(n => n.id))
+  saveConfigQuietly()
 }
 
 // Its window, placed first if it isn't yet. A tool that's off (Net worth's
@@ -57,15 +60,29 @@ function show (n: NewsItem) {
     return
   }
   let w = wm.widgets.value.find(w => w.wmType === n.wmType)
+  if (w?.wmFlags.includes('menu::skip')) {
+    openSettingsPage(wm, 'All modules')
+    return
+  }
   if (!w) {
     wm.create(n.wmType)
     w = wm.widgets.value.reduce((a, b) => (a.wmId > b.wmId ? a : b))
+    forgetRailSlot(w.wmId)
   }
   const wmId = w.wmId
   nextTick(() => nextTick(() => {
     showWithOverlay(wm, wmId)
     pushHostConfig()
   }))
+}
+
+// Ids get reused: a removed window's rail pin and label mustn't carry over
+// (as TabBar's placeNew does).
+function forgetRailSlot (wmId: number) {
+  const rail = AppConfig().widgets.find(w => w.wmType === 'menu') as { pinned?: number[], labels?: Record<number, string> } | undefined
+  if (!rail) return
+  if (rail.pinned) rail.pinned = rail.pinned.filter(id => id !== wmId)
+  if (rail.labels?.[wmId] != null) rail.labels = Object.fromEntries(Object.entries(rail.labels).filter(([id]) => Number(id) !== wmId))
 }
 
 const dockMenu = computed<DockMenuAction[]>(() => [
