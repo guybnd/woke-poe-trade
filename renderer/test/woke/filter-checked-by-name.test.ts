@@ -47,4 +47,26 @@ describe('an item price checked by name', () => {
     expect(checkedItemFacts(doc, REAL_EYE, null).itemClass).toBe('Map Fragments')
     expect(checkedItemFacts(doc, stackText('Divine Orb', 'Currency', 'Stackable Currency'), null).itemClass).toBe('Stackable Currency')
   })
+
+  it('keeps its class when the filter names it among others (fossils)', () => {
+    const fossil = stackText('Pristine Fossil', 'Currency', 'Stackable Currency')
+    expect(checkedItemFacts(doc, fossil, null).itemClass).toBe('Stackable Currency')
+  })
+
+  it('takes scarabs as fragments, though the filter no longer lists them', () => {
+    const scarab = stackText('Gilded Ambush Scarab', 'Currency', 'Stackable Currency')
+    expect(checkedItemFacts(doc, scarab, null).itemClass).toBe('Map Fragments')
+  })
+
+  it("ignores the app's own rules, which may carry the old wrong class", () => {
+    const own = parseFilter([
+      'Hide # $type->woke->own $tier->t1',
+      '\tClass == "Stackable Currency"',
+      '\tBaseType == "Zorath\'s Eye of Malevolence"',
+      '',
+      neverSink('1-REGULAR')
+    ].join('\n'))
+    const byName = stackText("Zorath's Eye of Malevolence", 'Currency', 'Stackable Currency')
+    expect(checkedItemFacts(own, byName, null).itemClass).toBe('Map Fragments')
+  })
 })
