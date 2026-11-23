@@ -2,6 +2,7 @@
 // the welcome card on the first open after setup, then the rail's buttons
 // named beside them for a few opens.
 import { test, expect } from './harness'
+import { NEWS } from '../../renderer/src/web/woke/tab-bar/news'
 
 test('first open after setup: the welcome card, then the rail names its buttons', async ({ overlay, fakeApp }) => {
   await overlay.boot({ patch: c => { c.woke.welcome = { due: true, labelOpens: 2 } } })
@@ -64,10 +65,11 @@ test('players who updated get no welcome card', async ({ overlay }) => {
 // ---- What's new (tab-bar/news.ts) ----
 
 test('All tools counts what is new; pointing at a tool clears its seal; Net worth is listed while off', async ({ overlay, fakeApp }) => {
-  await overlay.boot({ overlayActive: true })
+  await overlay.boot({ overlayActive: true, whatsNew: true })
   const page = overlay.page
   const count = page.locator('[data-news-count]')
-  await expect(count).toHaveText('3')
+  const tools = new Set(NEWS.map(n => n.wmType)).size
+  await expect(count).toHaveText(String(tools))
   await page.getByRole('button', { name: 'All tools' }).click()
   const row = (name: string) => page.locator('div').filter({ has: page.getByRole('button', { name, exact: true }) }).last()
   await expect(row('Net worth').locator('[data-news-seal]')).toBeVisible()
@@ -76,7 +78,7 @@ test('All tools counts what is new; pointing at a tool clears its seal; Net wort
   await page.getByRole('button', { name: 'Map mods', exact: true }).hover()
   await expect(page.getByText('a Planner tab for T17 maps', { exact: false })).toBeVisible()
   await expect(row('Map mods').locator('[data-news-seal]')).toHaveCount(0)
-  await expect(count).toHaveText('2')
+  await expect(count).toHaveText(String(tools - 1))
   // Net worth, off: its row goes to the switch in Settings, which asks first.
   await page.getByRole('button', { name: 'Net worth', exact: true }).click()
   await expect(page.locator('[data-stash-reader]')).toBeVisible()
@@ -84,7 +86,7 @@ test('All tools counts what is new; pointing at a tool clears its seal; Net wort
 })
 
 test('a fresh install has nothing new', async ({ overlay }) => {
-  await overlay.boot({ overlayActive: true, patch: c => { c.woke.seenNews = ['net-worth-public', 'map-mods-t17-planner', 'atlas-planner-links'] } })
+  await overlay.boot({ overlayActive: true })
   await expect(overlay.page.getByRole('button', { name: 'All tools' })).toBeVisible()
   await expect(overlay.page.locator('[data-news-count]')).toHaveCount(0)
 })
