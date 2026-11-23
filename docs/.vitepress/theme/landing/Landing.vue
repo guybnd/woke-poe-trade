@@ -123,10 +123,13 @@ onMounted(() => {
   }, { threshold: [0, 0.15] })
   for (const el of document.querySelectorAll('.landing section.highlight[id]')) watcher.observe(el)
   nextTick(playClips)
+  nextTick(openShot)
+  window.addEventListener('hashchange', openShot)
 })
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', closeTip)
   document.removeEventListener('keydown', onKey)
+  window.removeEventListener('hashchange', openShot)
   watcher?.disconnect()
 })
 
@@ -136,6 +139,23 @@ const viewing = ref(null)
 function view (s) {
   viewing.value = s
   viewer.value.showModal()
+}
+// A link to "#shot-<name>" (the README's pictures) opens that shot in the
+// viewer, over its section. A shot with no slide opens on its own.
+function openShot () {
+  const name = decodeURIComponent(location.hash.slice(1)).replace(/^shot-/, '')
+  if (!location.hash.startsWith('#shot-') || !/^[\w-]+$/.test(name)) return
+  for (const h of HIGHLIGHTS) {
+    for (const [i, s] of h.slides.entries()) {
+      const j = s.folder ? s.folder.findIndex(f => f.shot === name) : -1
+      if (s.shot !== name && j < 0) continue
+      go(h, i, j)
+      document.getElementById(h.id)?.scrollIntoView()
+      view(j >= 0 ? s.folder[j] : s)
+      return
+    }
+  }
+  view({ shot: name, alt: '' })
 }
 
 // A slide can stand for more than one module (`modules`).
@@ -257,7 +277,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 
     <dialog ref="viewer" class="viewer" aria-label="Whole screen" @click.self="viewer.close()" @close="viewing = null">
       <img v-if="viewing" :src="shot(viewing.shot)" :alt="viewing.alt" width="2560" height="1440">
-      <p>Turn your phone sideways or pinch to zoom.</p>
+      <p class="phone-only">Turn your phone sideways or pinch to zoom.</p>
       <button type="button" class="viewer-close" aria-label="Close" @click="viewer.close()">×</button>
     </dialog>
 
@@ -463,6 +483,8 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .viewer::backdrop { background: #000; }
 .viewer img { display: block; max-width: 100%; max-height: calc(100dvh - 90px); object-fit: contain; }
 .viewer p { padding: 0 16px; font-size: 15px; text-align: center; }
+/* Opened from a README link on a computer, the phone hint has nothing to say. */
+@media (min-width: 601px) { .viewer .phone-only { display: none; } }
 .viewer-close { position: absolute; top: max(8px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); width: 44px; height: 44px; padding: 0; background: none; border: 0; color: var(--text); font: 32px/1 'Fontin', Georgia, serif; cursor: pointer; }
 .phone-note { display: none; }
 

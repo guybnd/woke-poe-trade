@@ -13,56 +13,56 @@ Woke PoE Trade is an overlay for Path of Exile 1, built on [Awakened PoE Trade](
 Every listing beside yours, stat by stat, and each listing's tiers and rolls on hover.
 
 <p>
-  <img src="docs/public/shots/hl-price-columns.webp" width="49%" alt="Price check of a body armour: listings with each stat compared to yours">
-  <img src="docs/public/shots/hl-price-tooltip.webp" width="49%" alt="Tooltip of a listed body armour with the tier and roll quality of each mod">
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-price-columns"><img src="docs/public/shots/hl-price-columns.webp" width="49%" alt="Price check of a body armour: listings with each stat compared to yours"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-price-tooltip"><img src="docs/public/shots/hl-price-tooltip.webp" width="49%" alt="Tooltip of a listed body armour with the tier and roll quality of each mod"></a>
 </p>
 
 ### Loot filter
 Alt+F on an item goes to its rule. Edit any tier in the game and it reloads.
 
 <p>
-  <img src="docs/public/shots/hl-filter-item.webp" width="49%" alt="Rare boots on the ground beside their filter rule card">
-  <img src="docs/public/shots/tour-filter-rules.webp" width="49%" alt="Loot filter editor with game-styled tiers">
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-filter-item"><img src="docs/public/shots/hl-filter-item.webp" width="49%" alt="Rare boots on the ground beside their filter rule card"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-tour-filter-rules"><img src="docs/public/shots/tour-filter-rules.webp" width="49%" alt="Loot filter editor with game-styled tiers"></a>
 </p>
 
 ### Path of Building
 Your gear, gem links and gems by level, from your PoB folder. See what your next tree, gems and gear change and what each stage's uniques cost, open the passive tree in the overlay, draw your build's missing points over the game's own passive tree (Alt+T, or click the build's dock icon with the tree open), price check a build's item, compare a checked item to what you wear, and compare two builds.
 
 <p>
-  <img src="docs/public/shots/hl-pob-gear.webp" width="49%" alt="A build's gear tab with an item tooltip">
-  <img src="docs/public/shots/hl-pob-next.webp" width="49%" alt="A build's Next section with new points, gems and gear">
-  <img src="docs/public/shots/hl-pob-tree.webp" width="49%" alt="Passive tree panel with new points and respecs">
-  <img src="docs/public/shots/hl-pob-swap.webp" width="49%" alt="Price check comparing a body armour to the build's">
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-pob-gear"><img src="docs/public/shots/hl-pob-gear.webp" width="49%" alt="A build's gear tab with an item tooltip"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-pob-next"><img src="docs/public/shots/hl-pob-next.webp" width="49%" alt="A build's Next section with new points, gems and gear"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-pob-tree"><img src="docs/public/shots/hl-pob-tree.webp" width="49%" alt="Passive tree panel with new points and respecs"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-pob-swap"><img src="docs/public/shots/hl-pob-swap.webp" width="49%" alt="Price check comparing a body armour to the build's"></a>
 </p>
 
 ### Market
 Flips that pay today, outlined in your stash tab (Scarab, plus Delirium, Delve, Essence and Blight at 1440p), plus boss runs and lab gems.
 
 <p>
-  <img src="docs/public/shots/hl-flips.webp" width="49%" alt="Flips window: scarabs worth vendoring">
-  <img src="docs/public/shots/hl-stash-outlines.webp" width="49%" alt="A scarab stash tab with the worthwhile stacks outlined">
-  <img src="docs/public/shots/tour-boss-runs.webp" width="49%" alt="Boss runs window: Uber Atziri profit and luck check">
-  <img src="docs/public/shots/hl-lab-gems.webp" width="49%" alt="Lab gems window: gem values by colour and level">
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-flips"><img src="docs/public/shots/hl-flips.webp" width="49%" alt="Flips window: scarabs worth vendoring"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-stash-outlines"><img src="docs/public/shots/hl-stash-outlines.webp" width="49%" alt="A scarab stash tab with the worthwhile stacks outlined"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-tour-boss-runs"><img src="docs/public/shots/tour-boss-runs.webp" width="49%" alt="Boss runs window: Uber Atziri profit and luck check"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-lab-gems"><img src="docs/public/shots/hl-lab-gems.webp" width="49%" alt="Lab gems window: gem values by colour and level"></a>
 </p>
 
 ### On your screen
 Small icons that open when they matter: trades, league mechanics, campaign, challenges, the lab, your drop tally, your last death.
 
 <p>
-  <img src="docs/public/shots/hl-trade.webp" width="49%" alt="Trade card with buyers and the stash position">
-  <img src="docs/public/shots/hl-expedition.webp" width="49%" alt="Expedition card with vendor currencies priced">
-  <img src="docs/public/shots/hl-campaign.webp" width="49%" alt="Campaign card with the zone and next steps">
-  <img src="docs/public/shots/hl-lab.webp" width="49%" alt="Today's labyrinth layout in a card">
-  <img src="docs/public/shots/hl-drop-counter.webp" width="49%" alt="Drop counter card with drop counts and maps run">
-  <img src="docs/public/shots/hl-death-recap.webp" width="49%" alt="Death recap card with the map's mods">
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-trade"><img src="docs/public/shots/hl-trade.webp" width="49%" alt="Trade card with buyers and the stash position"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-expedition"><img src="docs/public/shots/hl-expedition.webp" width="49%" alt="Expedition card with vendor currencies priced"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-campaign"><img src="docs/public/shots/hl-campaign.webp" width="49%" alt="Campaign card with the zone and next steps"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-lab"><img src="docs/public/shots/hl-lab.webp" width="49%" alt="Today's labyrinth layout in a card"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-drop-counter"><img src="docs/public/shots/hl-drop-counter.webp" width="49%" alt="Drop counter card with drop counts and maps run"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-death-recap"><img src="docs/public/shots/hl-death-recap.webp" width="49%" alt="Death recap card with the map's mods"></a>
 </p>
 
 ### Regex
 Make a map stash search from the mods you pick, and keep your saved strings a click away.
 
 <p>
-  <img src="docs/public/shots/hl-regex-maker.webp" width="49%" alt="Map mods window and the search string it builds">
-  <img src="docs/public/shots/hl-regex-clipboard.webp" width="49%" alt="Regex library with saved stash searches">
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-regex-maker"><img src="docs/public/shots/hl-regex-maker.webp" width="49%" alt="Map mods window and the search string it builds"></a>
+  <a href="https://guybnd.github.io/woke-poe-trade/#shot-hl-regex-clipboard"><img src="docs/public/shots/hl-regex-clipboard.webp" width="49%" alt="Regex library with saved stash searches"></a>
 </p>
 
 ## And many more

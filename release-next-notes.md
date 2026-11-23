@@ -110,3 +110,4 @@
 - Website: each section's clip now starts as soon as a bit of it is on screen. On shorter screens the Price Check clip at the top used to sit still until you scrolled.
 - Website: the feature clips play again in Chrome. Their WebM versions failed to decode there, so each clip stayed on its first frame.
 - Website: a new Profit section shows how stash reads, map times, trade history and strategy runs add up to profit per map and per hour, with a short clip.
+- README: clicking a picture opens it full screen on the website (GitHub itself only shows the raw file).
