@@ -59,10 +59,10 @@
         <button v-if="soldToday.count" type="button" class="w-num" :class="$style.soldToday" :title="`${soldToday.count} ${soldToday.count === 1 ? 'sale' : 'sales'} today. Click for the Sales view`" @click="view = 'sales'">Sold {{ div(soldToday.chaos) }}<Coin :chaos="!divine" /> today</button>
         <!-- The box counts your listings in the total or leaves them out
              (remembered; the same switch as Settings). The words open Listed. -->
-        <span v-if="listed.count" :class="$style.listedChip" data-listed-chip>
-          <button type="button" role="checkbox" :aria-checked="countListed" :class="$style.countBox"
+        <span v-if="listed.count" :class="$style.listedChip" data-listed-chip data-w-switches>
+          <input type="checkbox" :checked="countListed"
             :title="countListed ? 'Counted in your total. Click to leave it out' : 'Left out of your total. Click to count it'"
-            aria-label="Count Faustus listings in your total" data-count-listed @click="config.countListed = !countListed"><i v-if="countListed" class="fas fa-check" /></button>
+            aria-label="Count Faustus listings in your total" data-count-listed @change="config.countListed = !countListed">
           <button type="button" class="w-num" :class="$style.soldToday" :title="listedTitle" @click="view = 'listed'"><span :class="{ [$style.leftOut]: !countListed }">At Faustus {{ div(listed.worthChaos) }}<Coin :chaos="!divine" /></span><template v-if="listed.stale"> · <span class="w-warn">{{ listed.stale }} stale</span></template></button>
         </span>
         <button v-if="runChip" type="button" class="w-num" :class="[$style.soldToday, tone(runChip.profitChaos)]" :title="`Run ${runChip.name}: ${countLabel(runChip.maps, runChip.fights)}. Click for the Runs view`" data-run-chip @click="view = 'runs'">Run {{ signed(toDiv(runChip.profitChaos)) }}<Coin :chaos="!divine" /></button>
@@ -1024,9 +1024,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .soldToday { color: var(--w-gold); cursor: pointer; white-space: nowrap; }
 .soldToday:hover { text-decoration: underline; }
 .listedChip { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-.countBox { width: 13px; height: 13px; display: inline-grid; place-items: center; padding: 0; border: 1px solid var(--w-gold); background: transparent; color: var(--w-gold); font-size: calc(9px * var(--w-text-scale, 1)); cursor: pointer; }
-.countBox:hover { background: color-mix(in srgb, var(--w-gold) 18%, transparent); }
-.countBox:focus-visible { outline: 1px solid var(--w-fg); outline-offset: 1px; }
 .leftOut { color: var(--w-dim); text-decoration: line-through; }
 .soldHead { display: flex; justify-content: space-between; align-items: baseline; gap: var(--w-s2); width: 100%; margin-bottom: 4px; text-align: left; cursor: pointer; }
 .soldHead:hover .caps { color: var(--w-fg); }
