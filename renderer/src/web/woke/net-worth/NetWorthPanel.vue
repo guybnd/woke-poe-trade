@@ -59,7 +59,7 @@
         <button v-if="soldToday.count" type="button" class="w-num" :class="$style.soldToday" :title="`${soldToday.count} ${soldToday.count === 1 ? 'sale' : 'sales'} today. Click for the Sales view`" @click="view = 'sales'">Sold {{ div(soldToday.chaos) }}<Coin :chaos="!divine" /> today</button>
         <!-- The box counts your listings in the total or leaves them out
              (remembered; the same switch as Settings). The words open Listed. -->
-        <span v-if="listed.count" :class="$style.listedChip" data-listed-chip data-w-switches>
+        <span v-if="listed.count" :class="$style.listedChip" data-listed-chip>
           <input type="checkbox" :checked="countListed"
             :title="countListed ? 'Counted in your total. Click to leave it out' : 'Left out of your total. Click to count it'"
             aria-label="Count Faustus listings in your total" data-count-listed @change="config.countListed = !countListed">
