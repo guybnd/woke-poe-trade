@@ -58,7 +58,7 @@
         <span v-if="rateShown.div != null && !(detailsOpen && shown.perHour)" class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h <span class="w-dim">{{ rateWindow === 'today' ? 'today' : rateWindow }}</span></span>
         <button v-if="soldToday.count" type="button" class="w-num" :class="$style.soldToday" :title="`${soldToday.count} ${soldToday.count === 1 ? 'sale' : 'sales'} today. Click for the Sales view`" @click="view = 'sales'">Sold {{ div(soldToday.chaos) }}<Coin :chaos="!divine" /> today</button>
         <button v-if="listed.count" type="button" class="w-num" :class="$style.soldToday" :title="listedTitle" data-listed-chip @click="view = 'listed'">At Faustus {{ div(listed.worthChaos) }}<Coin :chaos="!divine" /><template v-if="listed.stale"> · <span class="w-warn">{{ listed.stale }} stale</span></template></button>
-        <button v-if="runChip" type="button" class="w-num" :class="[$style.soldToday, tone(runChip.profitChaos)]" :title="`Run ${runChip.name}: ${runChip.maps} ${runChip.maps === 1 ? 'map' : 'maps'}. Click for the Runs view`" data-run-chip @click="view = 'runs'">Run {{ signed(toDiv(runChip.profitChaos)) }}<Coin :chaos="!divine" /></button>
+        <button v-if="runChip" type="button" class="w-num" :class="[$style.soldToday, tone(runChip.profitChaos)]" :title="`Run ${runChip.name}: ${countLabel(runChip.maps, runChip.fights)}. Click for the Runs view`" data-run-chip @click="view = 'runs'">Run {{ signed(toDiv(runChip.profitChaos)) }}<Coin :chaos="!divine" /></button>
         <WSpark v-if="spark.length > 1 && !(detailsOpen && shown.chart)" :values="spark" :width="90" :height="18" :class="$style.spark" />
         <span v-if="detailsOpen && shown.numbers" :class="$style.holdings" class="w-num text-xs">
           <span :title="inChaos(liquid)"><span :class="$style.caps">Liquid</span> {{ div(liquid) }}<Coin :chaos="!divine" /></span>
@@ -304,6 +304,7 @@ import { loadPending, pendingDoc, pendingReading, refreshPending } from './pendi
 import { pendingRows, pendingTotals, DEFAULT_STALE_DAYS } from './pending'
 import RunsView from './RunsView.vue'
 import { loadRuns, runGlance, runsDoc } from './run-store'
+import { countLabel } from './runs'
 import { saleTip } from './sale-tip'
 import { inRange, marketText, saleChaos, saleName, salesInWindow, totals, withoutSold } from './sales'
 import type { Sale } from './sales'

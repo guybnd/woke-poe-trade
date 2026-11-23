@@ -188,3 +188,20 @@ describe('Ctrl+Space per hour card', () => {
     expect(netWorthLookup(null)('per hour', ctx)).toEqual([])
   })
 })
+
+describe('boss fights in the zone lines', () => {
+  it('counts each boss arena once, apart from maps', () => {
+    const fight = (min: number, id: string, seed: number) => line(min, `Generating level 85 area "${id}" with seed ${seed}`)
+    const m = feedMarks(emptyMarks(), [
+      area(0, 'MapWorldsStrand'),
+      fight(10, 'MapWorldsShapersRealm', 11),
+      area(15, 'HideoutFoo'),
+      // A portal back into the same fight.
+      fight(16, 'MapWorldsShapersRealm', 11),
+      fight(30, 'MapWorldsElderArenaUber', 12)
+    ])
+    expect(m.maps).toHaveLength(1)
+    expect(m.fights).toEqual([T0 + 10 * MIN, T0 + 30 * MIN])
+    expect(trimMarks(m, T0 + 20 * MIN).fights).toEqual([T0 + 30 * MIN])
+  })
+})

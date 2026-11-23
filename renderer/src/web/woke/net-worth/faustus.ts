@@ -71,6 +71,32 @@ export interface OutsideRun {
   startListings?: string[]
   arrivals?: Arrival[]
   saleMarks?: Record<string, SaleMark>
+  // Your edits on its rows (rowKey): left out (a long shot), or a count or
+  // price of your own.
+  edits?: Record<string, RowEdit>
+}
+
+export interface RowEdit { out?: boolean, count?: number, each?: number }
+// A row's key in `edits`: a listing and its sale share the item id.
+export const rowKey = {
+  item: (id: string) => `item:${id}`,
+  held: (id: string) => `held:${id}`,
+  tally: (key: string) => `tally:${key}`
+}
+// Your edit applied to a row's count and value (value: in chaos, unsigned).
+export function edited (e: RowEdit | undefined, count: number, chaos: number): { count: number, chaos: number } {
+  if (!e || (e.count == null && e.each == null)) return { count, chaos }
+  const n = e.count ?? count
+  const each = e.each ?? (count > 0 ? chaos / count : chaos)
+  return { count: n, chaos: Math.max(0, n) * Math.max(0, each) }
+}
+// Merges a patch into a row's edit (null: back to as read).
+export function setEdit<R extends { edits?: Record<string, RowEdit> }> (run: R, key: string, patch: RowEdit | null): R {
+  const edits = run.edits ?? {}
+  const next: RowEdit = patch == null ? {} : { ...edits[key], ...patch }
+  const kept = Object.fromEntries(Object.entries(next).filter(([, v]) => v != null && v !== false)) as RowEdit
+  const rest = Object.fromEntries(Object.entries(edits).filter(([k]) => k !== key))
+  return { ...run, edits: Object.keys(kept).length ? { ...rest, [key]: kept } : rest }
 }
 
 export interface OutsideRow {
@@ -79,9 +105,13 @@ export interface OutsideRow {
   before: boolean
   // Its currency came into the stash.
   collected: boolean
+  // You left it out of the run (a long shot), or changed its count or price.
+  leftOut: boolean
+  edited: boolean
 }
 
-export interface HeldRow { item: HeldItem, left: number, chaos: number, carried: boolean }
+// `left`: with your edit; `read`: as the stash, listings and sales say.
+export interface HeldRow { item: HeldItem, left: number, read: number, chaos: number, carried: boolean, leftOut: boolean, edited: boolean }
 
 export interface OutsideTotals {
   listed: OutsideRow[]
@@ -97,6 +127,10 @@ export interface OutsideTotals {
   beforeChaos: number
   // listed + waiting + held: the "Outside the stash" line.
   faustusChaos: number
+  // Left out (long shots): all of them, and the part the stash already
+  // counted (collected sales), which comes off profit.
+  leftOutChaos: number
+  leftOutCollectedChaos: number
   // Listings or sales with no price in chaos (a currency poe.ninja lacks).
   unpriced: number
 }
@@ -194,28 +228,52 @@ export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: R
   let beforeChaos = 0
   let heldChaos = 0
   let unpriced = 0
+  const edits = run.edits ?? {}
+  let leftOutChaos = 0
+  let leftOutCollectedChaos = 0
   const row = (item: Sale, isSale: boolean): OutsideRow => {
-    const chaos = saleChaos(item, rates)
-    if (chaos == null) unpriced++
+    const read = saleChaos(item, rates)
     const collected = isSale && got.has(item.id)
     const before = isSale && (run.saleMarks?.[item.id]?.before ?? (isBefore(run, item) || carriedUsed.has(item.id)))
-    return { item, chaos, before, collected }
+    // A collected sale is what the stash got: only leaving it out applies.
+    const e = before ? undefined : edits[rowKey.item(item.id)]
+    const priced = collected || (read == null && e?.each == null) ? null : edited(e, item.stack, read ?? 0)
+    const chaos = priced ? priced.chaos : read
+    if (chaos == null) unpriced++
+    return { item, chaos, before, collected, leftOut: e?.out === true, edited: priced != null && (e?.count != null || e?.each != null) }
   }
   const listedRows = listed.map(l => row(l, false))
-  for (const r of listedRows) listedChaos += r.chaos ?? 0
+  for (const r of listedRows) {
+    if (r.leftOut) leftOutChaos += r.chaos ?? 0
+    else listedChaos += r.chaos ?? 0
+  }
   const soldRows = sold.map(s => row(s, true))
   for (const r of soldRows) {
     const c = r.chaos ?? 0
-    if (r.before) { if (r.collected) beforeChaos += c } else if (!r.collected) waitingChaos += c
+    if (r.before) { if (r.collected) beforeChaos += c } else if (r.leftOut) {
+      leftOutChaos += c
+      // Collected: the stash counted its currency; it comes off profit.
+      if (r.collected) leftOutCollectedChaos += c
+    } else if (!r.collected) waitingChaos += c
   }
   const heldRows: HeldRow[] = []
   for (const h of held.rows) {
+    const e = h.carried ? undefined : edits[rowKey.held(h.item.id)]
+    const isOut = e?.out === true
+    // Nothing left outside (stashed, listed, sold): your edit no longer applies.
+    const v = h.left > 0 ? edited(e, h.left, h.left * h.item.unitChaos) : { count: 0, chaos: 0 }
     // A carried item that came into the stash: the stash counted it, the run shouldn't.
     if (h.carried) beforeChaos += h.stashed * h.item.unitChaos
-    else heldChaos += h.left * h.item.unitChaos
-    if (h.left > 0) heldRows.push({ item: h.item, left: h.left, chaos: h.left * h.item.unitChaos, carried: h.carried })
+    else if (isOut) leftOutChaos += v.chaos
+    else heldChaos += v.chaos
+    if (h.left > 0) heldRows.push({ item: h.item, left: v.count, read: h.left, chaos: v.chaos, carried: h.carried, leftOut: isOut, edited: e?.count != null || e?.each != null })
   }
-  return { listed: listedRows, sold: soldRows, held: heldRows, heldChaos, listedChaos, waitingChaos, beforeChaos, faustusChaos: listedChaos + waitingChaos + heldChaos, unpriced }
+  return { listed: listedRows, sold: soldRows, held: heldRows, heldChaos, listedChaos, waitingChaos, beforeChaos, faustusChaos: listedChaos + waitingChaos + heldChaos, leftOutChaos, leftOutCollectedChaos, unpriced }
+}
+
+// The sums a run's totals need (runs.ts Outside).
+export function outsideSums (o: OutsideTotals) {
+  return { beforeChaos: o.beforeChaos, faustusChaos: o.faustusChaos, leftOutChaos: o.leftOutCollectedChaos, leftOutShownChaos: o.leftOutChaos }
 }
 
 // What a stopped run leaves to the next (H1): held items not yet in the
@@ -223,7 +281,7 @@ export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: R
 // Only the run's own: what it carried in itself isn't passed on again.
 export function leftOver (run: OutsideRun, sales: readonly Sale[], rates: Rates): Pick<OutsideRun, 'carried' | 'carriedSales'> {
   const o = outsideTotals(run, sales, rates)
-  const carried = o.held.filter(h => !h.carried && h.item.unitChaos > 0).map(h => ({ ...h.item, count: h.left, tallyAdded: 0 }))
+  const carried = o.held.filter(h => !h.carried && h.item.unitChaos > 0).map(h => ({ ...h.item, count: h.read, tallyAdded: 0 }))
   const carriedSales = o.sold.filter(r => !r.collected && !r.before && inRun(run, r.item.at)).map(r => r.item.id)
   return { ...(carried.length ? { carried } : {}), ...(carriedSales.length ? { carriedSales } : {}) }
 }

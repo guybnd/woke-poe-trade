@@ -132,17 +132,43 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await panel.getByRole('button', { name: 'Start', exact: true }).click()
     const card = panel.locator('[data-run-card]')
     await expect(card).toContainText('Nightmare maps')
+    // A boss fight in the run (Client.txt): it counts like a map, so per
+    // map becomes per fight. A portal back in is the same fight.
+    await overlay.page.waitForTimeout(1100)
+    const p2 = (n: number) => String(n).padStart(2, '0')
+    const d = new Date()
+    const fight = `${d.getFullYear()}/${p2(d.getMonth() + 1)}/${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())} 3725546 1186a8a3 [DEBUG Client 25552] Generating level 85 area "MapWorldsShapersRealm" with seed 4242`
+    await overlay.log([fight, fight])
+    await overlay.page.waitForTimeout(1100)
     dump = DUMP_AFTER
     await panel.getByRole('button', { name: 'Refresh' }).click()
+    await expect(card).toContainText('1 fight', { timeout: 20_000 })
+    await expect(card.locator('[data-run-per]')).toContainText(/Per (fight|run)/)
     const came = card.getByText('The Apothecary', { exact: false }).first()
     await expect(came).toBeVisible({ timeout: 20_000 })
     await came.hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('The Apothecary')
     await overlay.page.mouse.move(0, 0)
-    await panel.getByLabel('Cost item').fill('Strand Map')
-    await panel.getByRole('button', { name: 'Per map', exact: true }).click()
-    await expect(card.getByLabel('Strand Map per map')).toHaveValue('1')
+    // A cost by hand, per map (Out column).
+    await card.locator('[data-run-out] [data-run-add]').click()
+    await card.getByLabel('Add a cost: item').fill('Strand Map')
+    await card.getByLabel('Add a cost: price each').fill('1')
+    await card.getByRole('button', { name: /^Per (map|fight|run)$/ }).click()
+    await expect(card.locator('[data-run-cost]')).toContainText('Strand Map')
+    // A long shot: left out, then counted again.
+    const cameRow = card.locator('[data-run-came]').first()
+    await cameRow.hover()
+    await cameRow.locator('[data-run-leave-out]').click()
+    await expect(panel.locator('[data-run-left-out]')).toBeVisible()
     await overlay.snap('net worth strategy run')
+    await cameRow.locator('[data-run-leave-out]').click()
+    await expect(panel.locator('[data-run-left-out]')).toHaveCount(0)
+    // Your count on a row.
+    await cameRow.hover()
+    await cameRow.locator('[data-run-edit]').click()
+    await cameRow.getByLabel(/how many/).fill('5')
+    await cameRow.getByRole('button', { name: 'Save' }).click()
+    await expect(cameRow).toContainText('5 × The Apothecary')
     // The run hotkey: the hovered item is held outside the stash, counted
     // until the stash, a listing or a sale shows it.
     fakeApp.focusGame(true)
@@ -186,22 +212,49 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const listed = panel.locator('[data-run-listed]')
     await expect(listed).toHaveCount(1)
     await expect(listed).toContainText('Mageblood')
-    await expect(panel.locator('[data-run-total]')).toContainText('Outside the stash')
+    await expect(panel.locator('[data-run-total]')).toContainText('With Faustus')
     await listed.getByText('Mageblood').hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('Mageblood')
     await overlay.page.mouse.move(0, 0)
+    // The next run, started from the dock card (no run going): named like
+    // the last one. Then stopped again from the card.
+    fakeApp.focusGame(true)
+    const startBtn = overlay.page.locator('[data-card-start]')
+    await expect(async () => {
+      await overlay.moveMouse(5, 500)
+      await overlay.hoverDockIcon('net-worth')
+      await expect(startBtn).toBeEnabled({ timeout: 2000 })
+    }).toPass({ timeout: 20_000 })
+    await startBtn.click()
+    await expect(overlay.page.locator('[data-card-start-form] input')).toHaveValue('Nightmare maps')
+    await overlay.snap('net worth dock card start run')
+    await overlay.page.locator('[data-card-start-go]').click()
+    await expect(runTab).toContainText('Nightmare maps', { timeout: 20_000 })
+    // No second Start while a run goes (it would end this one).
+    await expect(startBtn).toHaveCount(0)
+    await stopBtn.click()
+    await expect(stopBtn).toContainText('Stop the run?')
+    await expect(async () => {
+      const label = await stopBtn.innerText().catch(() => '')
+      if (/Stop/.test(label) && !/Stopping/.test(label)) await stopBtn.click()
+      await expect(runTab).toHaveCount(0, { timeout: 4000 })
+    }).toPass({ timeout: 30_000 })
+    await overlay.pressHotkey(overlay.config.overlayKey)
     // The Listed tab (pending sales): Start's read saved your listings, and
     // Refresh reads them again (one more search). Each row has its tooltip.
     await panel.getByRole('tab', { name: 'Listed' }).click()
     const listedRows = panel.locator('[data-listed-row]')
-    await expect(listedRows).toHaveCount(1)
-    await expect(listedRows).toContainText('Headhunter')
+    // Both runs' Starts read them: Headhunter and Mageblood.
+    await expect(listedRows).toHaveCount(2)
+    await expect(listedRows.filter({ hasText: 'Headhunter' })).toHaveCount(1)
+    const searchesBefore = searches.length
+    listings = [listing('l2', "Kaom's Heart", 'Glorious Plate', new Date(Date.now() - 500).toISOString(), 3), ...listings]
     await expect(panel.getByRole('switch', { name: /Auto-refresh in hideout/ })).toHaveAttribute('aria-checked', 'true')
     await panel.getByRole('button', { name: 'Refresh' }).click()
-    await expect(listedRows).toHaveCount(2)
-    expect(searches).toHaveLength(3)
-    // Headhunter was listed two days ago, Mageblood just now: newest first.
-    await expect(listedRows.first()).toContainText('Mageblood')
+    await expect(listedRows).toHaveCount(3)
+    expect(searches).toHaveLength(searchesBefore + 1)
+    // Headhunter was listed two days ago, Kaom's Heart just now: newest first.
+    await expect(listedRows.first()).toContainText("Kaom's Heart")
     await listedRows.filter({ hasText: 'Headhunter' }).getByText('Headhunter', { exact: true }).hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
     await overlay.page.mouse.move(0, 0)

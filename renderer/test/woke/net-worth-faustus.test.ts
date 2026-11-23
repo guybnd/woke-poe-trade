@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arrivalsOf, leftOver, listingsQuery, outsideTotals, setBefore, toListing } from '@/web/woke/net-worth/faustus'
+import { arrivalsOf, leftOver, listingsQuery, outsideTotals, setBefore, setEdit, toListing } from '@/web/woke/net-worth/faustus'
 import type { HeldItem, OutsideRun } from '@/web/woke/net-worth/faustus'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { addToTally, emptyRun, runTotals } from '@/web/woke/net-worth/runs'
@@ -157,5 +157,28 @@ describe('listings read', () => {
     expect(q.query.status.option).toBe('securable')
     expect(q.query.filters.trade_filters.filters.account.input).toBe('Guy#1234')
     expect(q.sort).toEqual({ indexed: 'desc' })
+  })
+})
+
+describe('long shots and your prices outside the stash', () => {
+  it('a listing left out counts nowhere; its sale stays left out, and once collected comes off profit', () => {
+    const r = run({ faustus: { at: T0 + 10 * M, listings: [item('b', T0 + M, 20, 'divine')] }, edits: { 'item:b': { out: true } } })
+    const o = outsideTotals(r, [], RATES)
+    expect([o.listedChaos, o.leftOutChaos, o.listed[0].leftOut]).toEqual([0, 4000, true])
+    const sold = { ...r, arrivals: [{ at: T0 + 6 * M, c: 'divine', n: 20 }] }
+    const s = outsideTotals(sold, [item('b', T0 + 5 * M, 20, 'divine')], RATES)
+    expect([s.waitingChaos, s.leftOutCollectedChaos]).toEqual([0, 4000])
+  })
+  it('your price on a listing replaces the asking price', () => {
+    const r = run({ faustus: { at: T0 + 10 * M, listings: [item('b', T0 + M, 20, 'divine')] }, edits: { 'item:b': { each: 50 } } })
+    const o = outsideTotals(r, [], RATES)
+    expect(o.listedChaos).toBe(50)
+    expect(o.listed[0].edited).toBe(true)
+  })
+  it('setEdit merges, and clears an edit with nothing left', () => {
+    const a = setEdit(run(), 'item:x', { out: true })
+    expect(a.edits).toEqual({ 'item:x': { out: true } })
+    expect(setEdit(a, 'item:x', { out: false }).edits).toEqual({})
+    expect(setEdit(setEdit(a, 'item:x', { each: 5 }), 'item:x', null).edits).toEqual({})
   })
 })

@@ -5,7 +5,7 @@ import { NET_WORTH_TYPE } from '../../net-worth/widget'
 import type { RunGlance } from '../../net-worth/runs'
 import type { Lookup, LookupRow } from './types'
 
-const WORDS = ['run', 'strategy', 'strategy run', 'farm run', 'cost per map', 'profit per map']
+const WORDS = ['run', 'strategy', 'strategy run', 'farm run', 'boss run', 'cost per map', 'profit per map']
 
 function wanted (query: string, name: string): boolean {
   const q = query.trim().toLowerCase().replace(/\s+/g, ' ')
@@ -25,13 +25,18 @@ export function runsLookup (run: RunGlance | null): Lookup {
   return (query, ctx) => {
     if (!run || !wanted(query, run.name)) return []
     const divine = run.divine ?? ctx.divine
+    // Boss fights count like maps (per map is per map or fight).
+    const fights = run.fights ?? 0
+    const runs = run.maps + fights
+    const unit = fights ? (run.maps ? 'run' : 'fight') : 'map'
     const rows: LookupRow[] = [
       { label: 'Profit', value: amount(run.profitChaos, divine) },
       ...(run.faustusChaos ? [{ label: 'Outside the stash', value: amount(run.faustusChaos, divine) }, { label: 'Total', value: amount(run.profitChaos + run.faustusChaos, divine) }] : []),
       { label: 'Maps', value: String(run.maps) },
-      { label: 'Per map', value: run.maps ? amount(run.profitChaos / run.maps, divine) : '—', dim: !run.maps },
+      ...(fights ? [{ label: 'Boss fights', value: String(fights) }] : []),
+      { label: `Per ${unit}`, value: runs ? amount(run.profitChaos / runs, divine) : '—', dim: !runs },
       { label: 'Per hour', value: run.perHourChaos != null ? amount(run.perHourChaos, divine, '/h') : 'under 10 min', dim: run.perHourChaos == null },
-      { label: 'Cost per map', value: run.costPerMapChaos != null ? amount(run.costPerMapChaos, divine).replace(/^[+−]/, '') : '—', dim: run.costPerMapChaos == null },
+      { label: `Cost per ${unit}`, value: run.costPerMapChaos != null ? amount(run.costPerMapChaos, divine).replace(/^[+−]/, '') : '—', dim: run.costPerMapChaos == null },
       { label: 'Running', value: formatDuration(Math.max(0, ctx.now - run.startAt)) }
     ]
     return [{

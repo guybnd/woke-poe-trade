@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { addToTally, cleanDoc, emptyRun, leftOf, lineCost, mapsIn, runTotals, tallyFrom, tallyRows } from '@/web/woke/net-worth/runs'
+import { addToTally, cleanDoc, countLabel, emptyRun, leftOf, lineCost, mapsIn, runTotals, tallyFrom, tallyRows, unitOf } from '@/web/woke/net-worth/runs'
 import type { Run } from '@/web/woke/net-worth/runs'
+import { runsLookup } from '@/web/woke/search/lookups/runs'
+import type { LookupContext } from '@/web/woke/search/lookups/types'
 import type { LedgerPoint } from '@/web/woke/net-worth/ledger'
 import type { StashDiff } from '@/web/woke/net-worth/valuation'
 
@@ -110,5 +112,58 @@ describe('maps and the saved doc', () => {
   it('cleans a broken doc', () => {
     expect(cleanDoc(null)).toEqual({ live: null, done: [] })
     expect(cleanDoc({ live: { id: 1 }, done: [run(), 'x'] }).done).toHaveLength(1)
+  })
+})
+
+describe('your edits (long shots, counts, prices, added by hand)', () => {
+  const tally = { Mirror: { name: 'Mirror', icon: '', added: 1, removed: 0, addedChaos: 4000, removedChaos: 0 }, Map: { name: 'Map', icon: '', added: 0, removed: 10, addedChaos: 0, removedChaos: 100 } }
+  const points = [point(T0 + M, 3900)]
+  it('a stash item left out comes off profit, and shows as left out', () => {
+    const t = runTotals(run({ tally, edits: { 'tally:Mirror': { out: true } } }), points, 10, T0 + H)
+    expect(t.profitChaos).toBe(-100)
+    expect(t.leftOutChaos).toBe(4000)
+  })
+  it('a used-up item left out adds its cost back', () => {
+    expect(runTotals(run({ tally, edits: { 'tally:Map': { out: true } } }), points, 10, T0 + H).profitChaos).toBe(4000)
+  })
+  it('your count and price replace what the stash says, keeping the sign', () => {
+    expect(runTotals(run({ tally, edits: { 'tally:Mirror': { each: 3000 } } }), points, 10, T0 + H).profitChaos).toBe(2900)
+    expect(runTotals(run({ tally, edits: { 'tally:Map': { count: 5 } } }), points, 10, T0 + H).profitChaos).toBe(3950)
+    expect(runTotals(run({ tally, edits: { 'tally:Map': { count: 5 } } }), points, 10, T0 + H, new Set(['Map'])).costPerMapChaos).toBe(5)
+  })
+  it('items added by hand: in adds, out takes off', () => {
+    const manual = [{ id: 'a', name: 'Headhunter', count: 1, each: 1000, side: 'in' as const }, { id: 'b', name: 'Scarab', count: 10, each: 5, side: 'out' as const }]
+    const t = runTotals(run({ tally, manual }), points, 10, T0 + H)
+    expect(t.manualChaos).toBe(950)
+    expect(t.profitChaos).toBe(4850)
+  })
+})
+
+describe('boss fights', () => {
+  it('count like maps for per-map figures and typed costs', () => {
+    const r = run({ costs: [{ id: 'c', name: "Maven's Writ", key: 'writ', qty: 1, unitChaos: 100, bought: 5 }] })
+    const t = runTotals(r, [point(T0, 0), point(T0 + 30 * M, 1000)], { maps: 0, fights: 4 }, T0 + H)
+    expect(t.runs).toBe(4)
+    expect(t.costChaos).toBe(400)
+    expect(t.profitChaos).toBe(600)
+    expect(t.perMapChaos).toBe(150)
+    expect(t.costPerMapChaos).toBe(100)
+    expect(leftOf(r.costs[0], t.runs)).toBe(1)
+  })
+  it('labels', () => {
+    expect(countLabel(3)).toBe('3 maps')
+    expect(countLabel(0, 1)).toBe('1 fight')
+    expect(countLabel(2, 3)).toBe('2 maps · 3 fights')
+    expect([unitOf(2), unitOf(0, 2), unitOf(1, 1)]).toEqual(['map', 'fight', 'run'])
+  })
+})
+
+describe('Ctrl+Space run card', () => {
+  it('shows boss fights and goes per fight', () => {
+    const rows = runsLookup({ league: 'Covens', name: 'Maven', startAt: T0, at: T0 + H, profitChaos: 800, maps: 0, fights: 4, perHourChaos: 800, costPerMapChaos: 50, divine: null })('run', { now: T0 + H, divine: null } as unknown as LookupContext)
+    const cells = rows[0].sections?.[0].rows?.map(r => `${r.label}: ${r.value}`)
+    expect(cells).toContain('Boss fights: 4')
+    expect(cells).toContain('Per fight: +200 c')
+    expect(cells).toContain('Cost per fight: 50 c')
   })
 })

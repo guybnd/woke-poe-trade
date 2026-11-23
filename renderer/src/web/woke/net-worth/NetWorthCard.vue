@@ -13,7 +13,7 @@
       <template v-if="run && tab === 'run'">
         <div :class="$style.runHead" data-card-run>
           <b class="w-trunc" :class="$style.runName">{{ run.name }}</b>
-          <span class="w-dim w-num text-xs">{{ runFor }} · {{ run.maps }} {{ run.maps === 1 ? 'map' : 'maps' }}</span>
+          <span class="w-dim w-num text-xs">{{ runFor }} · {{ countLabel(run.maps, run.fights) }}</span>
         </div>
         <div :class="$style.total">
           <b class="w-num" :class="tone(run.profitChaos)" data-card-run-profit>{{ signed(toDiv(run.profitChaos)) }}<Coin :chaos="!divineRate" /></b>
@@ -24,9 +24,9 @@
           <div :class="$style.kv" data-card-run-total><span :class="$style.gold">Total</span><span class="w-num" :class="tone(run.profitChaos + run.faustusChaos)">{{ signed(toDiv(run.profitChaos + run.faustusChaos)) }}<Coin :chaos="!divineRate" /></span></div>
         </template>
         <div :class="$style.stats" class="w-dim w-num text-xs" data-card-run-stats>
-          <span v-if="run.maps">{{ signed(toDiv(run.profitChaos / run.maps)) }}<Coin :chaos="!divineRate" />/map</span><span v-else>No maps yet</span>
+          <span v-if="runs">{{ signed(toDiv(run.profitChaos / runs)) }}<Coin :chaos="!divineRate" />/{{ unit }}</span><span v-else>No maps yet</span>
           <span v-if="perHour != null" :title="withHub ? 'Per hour of the whole run' : 'Per hour, hideout and town time left out'">{{ signed(toDiv(perHour)) }}<Coin :chaos="!divineRate" />/h</span><span v-else>Per hour after 10 min</span>
-          <span v-if="run.costPerMapChaos != null">Costs {{ div(run.costPerMapChaos) }}<Coin :chaos="!divineRate" />/map</span>
+          <span v-if="run.costPerMapChaos != null">Costs {{ div(run.costPerMapChaos) }}<Coin :chaos="!divineRate" />/{{ unit }}</span>
         </div>
         <!-- Where the run's time went (Client.txt): maps, hideout and town, away. -->
         <template v-if="time">
@@ -90,9 +90,16 @@
         </template>
       </template>
       <div v-else-if="!status?.running" class="w-dim text-xs">Not read yet</div>
+      <!-- Start a run from here (no run going): from the last read, named like the last one. -->
+      <div v-if="naming" :class="$style.foot" data-card-start-form>
+        <input ref="nameEl" v-model="runName" class="w-input px-1 rounded" :class="$style.runInput" placeholder="Run name" maxlength="40" aria-label="Run name" @keydown.enter="startClick" @keydown.esc="naming = false">
+        <button type="button" :class="[$style.refresh, $style.left]" :disabled="!canStart" data-card-start-go @click="startClick">{{ startingRun ? 'Starting…' : 'Start' }}</button>
+        <button type="button" :class="$style.x" title="Cancel" aria-label="Cancel" @click="naming = false"><i class="fas fa-times" /></button>
+      </div>
       <div :class="$style.foot">
-        <span class="w-dim text-xs">{{ readLine }}</span>
-        <button type="button" :class="$style.refresh" data-card-refresh :disabled="!canRefresh"
+        <button v-if="!run && !naming && status?.lastReadAt" type="button" :class="[$style.refresh, $style.left]" :disabled="!canStart" :title="canStart ? 'Start a strategy run from the last read' : 'Waiting for Net worth to load'" data-card-start @click="openNaming"><i class="fas fa-play" /> Start run</button>
+        <span class="w-dim text-xs" :class="$style.readEnd">{{ readLine }}</span>
+        <button type="button" :class="[$style.refresh, $style.left]" data-card-refresh :disabled="!canRefresh"
           :title="waitMs > 0 ? 'Reads wait 10 minutes after the last one' : 'Read your stash now'" @click="emit('refresh')">
           <i class="fas fa-sync-alt" :class="{ 'fa-spin': status?.running }" />
           {{ status?.running ? (status.progress ? `reading ${status.progress.done}/${status.progress.total}` : 'reading…') : waitMs > 0 ? `in ${Math.ceil(waitMs / 60_000)} min` : 'Refresh' }}
@@ -105,7 +112,7 @@
 
 <script setup lang="ts">
 // Loaded the first time the card opens, with the window's data (store.ts).
-import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { WSegmented, WToggle, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, formatDuration } from '../ui/format'
@@ -114,7 +121,7 @@ import { bigGains, refreshWaitMs, seriesFor, topCardChanges } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { ReaderStatus } from './widget'
 import type { RunGlance } from './runs'
-import { tallyRows } from './runs'
+import { countLabel, tallyRows, unitOf } from './runs'
 import { loadRuns, runsDoc } from './run-store'
 import { runTimeIn } from './run-time'
 import Coin from './Coin.vue'
@@ -135,8 +142,10 @@ const props = defineProps<{
   stopping?: boolean
   // The run's per hour counts hideout and town time.
   runWithHub?: boolean
+  // Start pressed, until the run is saved.
+  startingRun?: boolean
 }>()
-const emit = defineEmits<{ (e: 'refresh' | 'settings' | 'stop' | 'open-run'): void, (e: 'window', w: RateWindow): void, (e: 'run-hub', on: boolean): void }>()
+const emit = defineEmits<{ (e: 'refresh' | 'settings' | 'stop' | 'open-run'): void, (e: 'window', w: RateWindow): void, (e: 'run-hub', on: boolean): void, (e: 'start', name: string): void }>()
 
 // The clock for "in N min" and "3h ago": only while the card is shown.
 const now = shallowRef(Date.now())
@@ -220,16 +229,35 @@ function stopClick () {
 }
 onUnmounted(() => { clearTimeout(confirmTimer) })
 // The run's saved doc, for its tally.
-watch(() => props.run ? props.league : null, (l) => { if (l) loadRuns(l).catch(() => {}) }, { immediate: true })
+watch(() => props.league, (l) => { if (l) loadRuns(l).catch(() => {}) }, { immediate: true })
+// Start (no run going): a name, the last run's to begin with.
+const naming = shallowRef(false)
+const runName = shallowRef('')
+const nameEl = shallowRef<HTMLInputElement | null>(null)
+const canStart = computed(() => !props.run && sameLeague.value && ledger.value.points.length > 0 && !props.startingRun)
+function openNaming () {
+  runName.value = runsDoc.value.done.find(r => r.league === props.league)?.name ?? ''
+  naming.value = true
+  nextTick(() => nameEl.value?.select()).catch(() => {})
+}
+function startClick () {
+  if (!canStart.value) return
+  emit('start', runName.value)
+  naming.value = false
+}
+watch(() => props.run, (r) => { if (r) naming.value = false })
 const liveDoc = computed(() => props.run && runsDoc.value.live?.league === props.league && runsDoc.value.live.startAt === props.run.startAt ? runsDoc.value.live : null)
 const topCame = computed(() => liveDoc.value ? tallyRows(liveDoc.value).came.slice(0, 3) : [])
 // Time in each state from the start to the last stash read (the stretch the
 // run's profit covers): read when the card opens and after each read.
+// Maps and boss fights (each counts as one run of the strategy).
+const runs = computed(() => props.run ? props.run.maps + (props.run.fights ?? 0) : 0)
+const unit = computed(() => props.run ? unitOf(props.run.maps, props.run.fights) : 'map')
 const spent = shallowRef<Record<'map' | 'play' | 'hub' | 'off', number> | null>(null)
 watch(() => props.run ? [props.run.startAt, props.run.at] as const : null, (span) => {
   if (!span) { spent.value = null; return }
   const [from, to] = span
-  runTimeIn(from, to).then((t) => { if (props.run?.startAt === from && props.run.at === to) spent.value = t }).catch(() => {})
+  runTimeIn(from, to).then((t) => { if (props.run?.startAt === from && props.run.at === to) spent.value = t?.ms ?? null }).catch(() => {})
 }, { immediate: true })
 const time = computed(() => {
   const t = spent.value
@@ -288,6 +316,9 @@ const tone = (n: number | null | undefined) => n == null || n === 0 ? 'w-dim' : 
 .left { margin-left: 0; }
 .stop:not(:disabled) { color: var(--w-down); }
 .readEnd { margin-left: auto; }
+.runInput { flex: 1 1 auto; min-width: 0; font-size: var(--w-fs-xs); }
+.x { background: none; border: 0; padding: 0; color: var(--w-dim); cursor: pointer; }
+.x:hover { color: var(--w-down); }
 .timeBar { display: flex; height: 6px; gap: 1px; border-radius: var(--w-r-sm); overflow: hidden; }
 .timeBar i { display: block; min-width: 2px; }
 .map { background: var(--w-up); }
