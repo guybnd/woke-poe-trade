@@ -1,5 +1,5 @@
 <template>
-  <WPanel :title="entry.name" size-key="detail" width="25rem" max-height="70vh">
+  <WPanel :title="entry.name" size-key="detail" width="30rem" max-height="70vh">
     <template #actions>
       <button @click="emit('close')" class="w-icon-btn" title="Close"><i class="fas fa-times" /></button>
     </template>
@@ -7,7 +7,7 @@
       <WButton size="sm" :variant="isActive ? 'default' : 'primary'" :icon="isActive ? 'fas fa-check-circle' : undefined" :disabled="isActive"
         :title="isActive ? 'Other windows use this build' : 'Make other windows use this build'" @click="setActive">{{ isActive ? 'In use' : 'Use build' }}</WButton>
       <WButton size="sm" icon="fas fa-external-link-alt" @click="run(pobApi.open(config, entry.relPath))">Open in PoB</WButton>
-      <WButton v-if="trees.length" size="sm" icon="fas fa-project-diagram" title="This loadout's passive tree" @click="emit('tree', loadout?.tree?.title ?? trees[0].title)">Passive tree</WButton>
+      <WButton v-if="trees.length" size="sm" icon="fas fa-project-diagram" aria-label="Passive tree" title="This loadout's passive tree" @click="emit('tree', loadout?.tree?.title ?? trees[0].title)" />
       <WButton size="sm" variant="ghost" icon="fas fa-ellipsis-h" title="More" @click="moreMenu" />
     </template>
     <template #tabs>

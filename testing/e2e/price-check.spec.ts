@@ -26,6 +26,8 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   await expect(badge).toHaveAttribute('data-tip-keys', 'Ctrl + D')
   // A divine's parts in chaos, for paying in div.
   await expect(card.getByTestId('instant-ninja-parts')).toContainText('0.1 18c')
+  // The change is over the last day, and says so (poe.ninja's last two days: 104% to 105%).
+  await expect(card.getByTestId('instant-ninja-change')).toHaveText('▲1%1d')
   await expect(overlay.page.locator('#price-window')).toHaveCount(0)
   await overlay.snap('divine orb instant check')
   // The mouse is tracked into the card, not the window.
@@ -384,7 +386,8 @@ test('unique: improved merges same prices with a count, classic lists every list
   const panel = overlay.widget('price-check')
   const rows = panel.locator('.w-pc-table tbody tr')
   await expect(panel.locator('.w-pc-foot')).toContainText('listings')
-  await expect(panel.locator('.w-pc-count-n').first()).toContainText('×')
+  // Rows without a count keep an empty slot, so the tags after it line up.
+  await expect(panel.locator('.w-pc-count-n').filter({ hasText: '×' }).first()).toBeVisible()
   const merged = await rows.count()
 
   // The switch lives in Settings > Price check > Listings, not in the window.

@@ -19,6 +19,18 @@
       <online-filter class="w-pc-online" :class="{ invisible: !list }" :filters="filters" api="trade" />
       <button type="button" class="w-pc-bulk" :class="{ invisible: !list, on: bulk }" :aria-pressed="bulk"
         :title="bulkTitle" @click="toggleBulk">Bulk<span v-if="bulkNote" class="ml-1">{{ bulkNote }}</span></button>
+      <!-- woke: which currency the listings ask for: both coins (All), Chaos, Divine. Filters what's loaded,
+           never searches. Coins only, as the bar has little room; the coin box keeps one width. -->
+      <button v-if="currencyChoice" type="button" class="w-pc-bulk w-pc-currency" data-currency-chip
+        :class="{ invisible: !list, on: currency !== 'all' }" :data-step="currency"
+        :title="currencyTitle" :aria-label="`Listing currency: ${currency === 'all' ? 'All' : currency === 'divine' ? 'Divine' : 'Chaos'}`"
+        :aria-pressed="currency !== 'all'" @click="stepCurrency">
+        <span class="w-pc-currency-coins">
+          <img v-for="coin of ['chaos', 'divine']" :key="coin" :src="coinFor(coin)" alt=""
+            :class="{ shown: currency === 'all' || currency === coin }">
+        </span>
+<span v-if="currencyNote" class="ml-1">{{ currencyNote }}</span>
+      </button>
       <div class="w-pc-grow flex-1"></div>
       <!-- woke: the price check's prefix / suffix caps, editing its live filters. -->
       <slot name="toolbar" />
@@ -54,7 +66,7 @@
       <table class="w-pc-table table-stripped w-full">
         <thead>
           <tr class="text-left">
-            <th :class="$style.tableHeading">
+            <th :class="[$style.tableHeading, 'text-right']">
               <div class="px-2">{{ t(':price') }}</div>
             </th>
             <th :class="$style.tableHeading">
@@ -122,7 +134,7 @@
               @mouseenter="showRowTip($event, row)"
               @mouseleave="hideTip"
               @contextmenu="row.lead.tipItem && openItemMenu($event, pobMenuRef(row.lead.tipItem))">
-              <td class="px-2 whitespace-nowrap">
+              <td class="px-2 whitespace-nowrap text-right">
                 <span class="w-pc-price">
                   <span class="w-pc-amount" :class="{ 'line-through': row.lead.priceCurrency === 'exalted' }">{{ row.lead.priceAmount }}</span>
                   <img v-if="coinFor(row.lead.priceCurrency)" class="w-pc-coin" :src="coinFor(row.lead.priceCurrency)" :alt="row.lead.priceCurrency">
@@ -143,9 +155,10 @@
                     @click.stop="travel(row.lead)"><i class="fas fa-door-open" /></button>
                   <span v-else-if="anyIcon" class="w-pc-travel-gap" aria-hidden="true" />
                   <span v-if="showCountBar" class="w-pc-count-bar" :class="{ invisible: row.count < 2 }"><span :style="{ width: Math.round(row.count / maxCount * 100) + '%' }" /></span>
-                  <span v-if="row.count >= (improved ? 2 : 3)" class="w-pc-count-n"><span class="font-sans">×</span>{{ row.count }}</span>
+                  <!-- woke: the count keeps its slot on every row, so the tags after it line up. -->
+                  <span v-if="countSlot" class="w-pc-count-n"><template v-if="row.count >= countFrom"><span class="font-sans">×</span>{{ row.count }}</template></span>
                   <span v-if="improved && row.dropped && FIX_TAG[row.dropped]" class="w-pc-tag">{{ FIX_TAG[row.dropped] }}</span>
-                  <span v-if="row.lead.corrupted" class="w-pc-tag">{{ row.lead.twiceCorrupted ? 'Twice Corrupted' : 'Corrupted' }}</span>
+                  <span v-if="row.lead.corrupted" class="w-pc-tag" :class="{ 'w-pc-tag-fit': anyTwice }" :data-fit="anyTwice ? 'Twice Corrupted' : undefined">{{ row.lead.twiceCorrupted ? 'Twice Corrupted' : 'Corrupted' }}</span>
                 </span>
               </td>
               <td v-if="item.stackSize" class="px-2 text-right">{{ row.lead.stackSize }}</td>
@@ -171,6 +184,10 @@
                 </span>
               </td>
             </tr>
+            <!-- woke: the currency chip left nothing to show. -->
+            <tr v-if="currency !== 'all' && !bulk && !narrow && !currencyCount && loadedCount && listSettled && list" class="w-pc-local-hint" data-currency-empty>
+              <td colspan="100" class="px-2">No listings priced in {{ currency === 'divine' ? 'divines' : 'chaos' }} among the {{ loadedCount }} loaded.</td>
+            </tr>
             <!-- woke: few rows fit: suggest a search, unless the search's every listing is already here. -->
             <tr v-if="shortList" class="w-pc-local-hint">
               <td colspan="100" class="px-2">
@@ -182,8 +199,8 @@
         </tbody>
       </table>
     </div>
-    <div v-if="improved || bulk" class="w-pc-foot" :class="{ invisible: !(listSettled && list && (rows.length || bulk)) }"
-      title="Prices come from the cheapest listings the trade site returned"><template v-if="list && narrow">{{ fitCount }} of {{ loadedCount }} loaded listings fit · the search found {{ list.total }}{{ list.inexact ? '+' : '' }}</template><template v-else-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
+    <div v-if="improved || bulk || currency !== 'all'" class="w-pc-foot" :class="{ invisible: !(listSettled && list && (rows.length || bulk || currency !== 'all')) }"
+      title="Prices come from the cheapest listings the trade site returned"><template v-if="list && narrow"><template v-if="currency !== 'all'">{{ currencyCount || 'None' }} in {{ currency === 'divine' ? 'divines' : 'chaos' }} · </template>{{ fitCount }} of {{ loadedCount }} loaded listings fit · the search found {{ list.total }}{{ list.inexact ? '+' : '' }}</template><template v-else-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="currency !== 'all'">{{ currencyCount || 'None' }} in {{ currency === 'divine' ? 'divines' : 'chaos' }} · </template><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
   </div>
   <ui-error-box v-else>
     <template #name>{{ t(':error') }}</template>
@@ -229,6 +246,7 @@ import { groupListings, sortByValue, rowTitle, ListingRow } from '@/web/woke/pri
 import type { ResultsState } from '@/web/woke/price-insight/local-filter'
 import { pickStatColumns, listingStatValue, listingStatLabel, formatStatValue, statTone, statColumnsThatFit, StatColumn } from '@/web/woke/price-insight/stat-columns'
 import { bulkOnly, bulkSellerCount, BULK_ENOUGH } from '@/web/woke/price-insight/bulk-sellers'
+import { CURRENCY_ENOUGH, CHAOS_HUNT_LIMIT, chaosMayHide, hasCurrencyChoice, nextCurrencyView, inCurrency, currencyTitle, type CurrencyView } from '@/web/woke/price-insight/price-currency'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { nowMinute } from '@/web/woke/ui/format'
 import { textScale } from '@/web/woke/ui/text-scale'
@@ -347,6 +365,7 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
       }
       searchResult.value = _searchResult
       collapseMerchant = filters.trade.collapseMerchant
+      const searchedCurrency = filters.trade.currency
 
       // first two req are parallel, then sequential on demand
       {
@@ -389,6 +408,16 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
         if (_searchId === searchId) fetched = API_FETCH_LIMIT
         if (!_fetchResults.length) throw err
       })
+      // woke: no chaos listing yet: cheaper ones may sort behind the divines (price-currency.ts).
+      // Only while the fetch limit has room; a refused or failed page just ends the hunt.
+      for (;;) {
+        if (_searchId !== searchId || fetched >= CHAOS_HUNT_LIMIT || !canFetchMore(_searchResult) ||
+          !chaosMayHide(_fetchResults, searchedCurrency)) break
+        try {
+          preventQueueCreation([{ count: 1, limiters: RATE_LIMIT_RULES.FETCH }])
+          await fetchPage(_searchId, _searchResult, _fetchResults)
+        } catch { break }
+      }
     } catch (err) {
       if (_searchId === searchId) error.value = (err as Error).message
     } finally {
@@ -561,26 +590,59 @@ export default defineComponent({
     // woke: Bulk keeps sellers with two or more copies at a price. Off for each new search.
     const bulk = shallowRef(false)
     const bulkNote = shallowRef('')
+    const currency = shallowRef<CurrencyView>('all')
+    const currencyNote = shallowRef('')
     // Search bulk asks for it with the search itself; any other search starts with it off.
     let bulkNext = false
     watch(searchResult, (result) => {
       bulk.value = false
       bulkNote.value = ''
+      // The currency chip starts on All too, so a new search shows every listing it found.
+      currency.value = 'all'
+      currencyNote.value = ''
       if (!result || !bulkNext) return
       bulkNext = false
       toggleBulk()
     })
     // A seller's copies only add up when they'd share a row: same stats, both corrupted or clean.
     const sameKind = (r: PricingResult) => [corruptKind(r), ...allColumns.value.map(col => formatStatValue(statValue(r, col), col))].join('|')
+    // woke: the currency chip shows only listings priced in chaos, or in divines. The verdict
+    // still reads every listing: what the item is worth doesn't change with the currency asked.
+    const currencyChoice = computed(() => hasCurrencyChoice(props.filters.trade.currency))
+    const currencyView = computed<CurrencyView>(() => currencyChoice.value ? currency.value : 'all')
+    const currencyResults = computed(() => currencyView.value === 'all'
+      ? fitResults.value
+      : fitResults.value.filter(r => inCurrency(r, currencyView.value)))
+    // Listings, not rows: how many the trade site returned in that currency.
+    const currencyCount = computed(() => fetchResults.value.filter(r => r != null && fits(r) && inCurrency(r, currencyView.value)).length)
+    async function stepCurrency () {
+      currency.value = nextCurrencyView(currency.value)
+      currencyNote.value = ''
+      if (currency.value === 'all') return
+      // Too few in that currency: load more pages of the same search, as Bulk does.
+      const want = currency.value
+      const forSearch = searchResult.value
+      const note = await loadMore(() => currency.value !== want || enoughShown())
+      if (note && currency.value === want && searchResult.value === forSearch) {
+        currencyNote.value = note
+        setTimeout(() => { if (currencyNote.value === note) currencyNote.value = '' }, 3000)
+      }
+    }
+    // Loading more pages stops once the table, with Bulk and the currency both applied, has enough.
+    function enoughShown () {
+      return bulk.value
+        ? bulkSellerCount(currencyResults.value, sameKind) >= BULK_ENOUGH
+        : currencyResults.value.length >= CURRENCY_ENOUGH
+    }
     const tableListings = computed(() => bulk.value
-      ? bulkOnly(fitResults.value, sameKind)
-      : fitResults.value)
+      ? bulkOnly(currencyResults.value, sameKind)
+      : currencyResults.value)
     async function toggleBulk () {
       bulk.value = !bulk.value
       bulkNote.value = ''
       if (!bulk.value) return
       const forSearch = searchResult.value
-      const note = await loadMore(() => !bulk.value || bulkSellerCount(groupedResults.value, sameKind) >= BULK_ENOUGH)
+      const note = await loadMore(() => !bulk.value || enoughShown())
       if (note && bulk.value && searchResult.value === forSearch) {
         bulkNote.value = note
         setTimeout(() => { if (bulkNote.value === note) bulkNote.value = '' }, 3000)
@@ -609,6 +671,10 @@ export default defineComponent({
     const allStale = computed(() => rows.value.length > 0 && rows.value.every(r => r.band === 'stale'))
 
     const maxCount = computed(() => Math.max(1, ...rows.value.map(r => r.count)))
+    // Counts show from 2 copies (3 on the plain table); when any row has one, every row keeps the slot.
+    const countFrom = computed(() => improved.value ? 2 : 3)
+    const countSlot = computed(() => rows.value.some(r => r.count >= countFrom.value))
+    const anyTwice = computed(() => rows.value.some(r => r.lead.corrupted && r.lead.twiceCorrupted))
 
     function inRange (row: ListingRow<PricingResult & { listedTimes: number }>) {
       const range = insight.value.range
@@ -704,6 +770,9 @@ export default defineComponent({
       coinFor: (currency: string) => COINS[currency],
       inRange,
       maxCount,
+      countFrom,
+      countSlot,
+      anyTwice,
       allStale,
       allInstant: computed(() => rows.value.every(r => r.lead.hasFee)),
       // The stat columns need the bar's room.
@@ -729,7 +798,13 @@ export default defineComponent({
       bulk,
       bulkNote,
       toggleBulk,
-      bulkSellers: computed(() => bulkSellerCount(fitResults.value, sameKind)),
+      bulkSellers: computed(() => bulkSellerCount(currencyResults.value, sameKind)),
+      currency: currencyView,
+      currencyChoice,
+      currencyNote,
+      currencyCount,
+      stepCurrency,
+      currencyTitle: computed(() => currencyTitle(currencyView.value, props.filters.trade.currency)),
       shortList,
       allLoaded,
       localRange,

@@ -712,6 +712,13 @@ test('dock card: click or scroll a strictness, then reload from there', async ({
   const out = path.join(folder, 'NeverSink (woke).filter')
   const saved = () => fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : ''
 
+  // Each map band of auto's ladder sits under the strictness it picks.
+  for (const [band, name] of [['Acts', 'Regular'], ['T11-T15', 'Strict'], ['T16+', 'Very strict']]) {
+    const b = (await page.getByText(band, { exact: true }).last().boundingBox())!
+    const l = (await level(name).boundingBox())!
+    expect(Math.abs((b.x + b.width / 2) - (l.x + l.width / 2))).toBeLessThan(3)
+  }
+
   // A click saves, pauses auto and leaves the reload to you.
   await level('Strict').click()
   await expect(level('Strict')).toHaveAttribute('aria-pressed', 'true')

@@ -83,10 +83,10 @@ describe('stash reader gate', () => {
     expect(gameLog.onLines).toBeTypeOf('function')
   })
 
-  it('a stashReader pref without the unlock does not start it', () => {
-    const { ops, ctx } = fakeContext({ experimental: false, stashReader: true })
-    expect(initPersonal(ctx).state().on).toBe(false)
-    expect(ops).toEqual([])
+  it('a stashReader pref starts it without the experimental unlock', () => {
+    const { handlers, ctx } = fakeContext({ experimental: false, stashReader: true })
+    expect(initPersonal(ctx).state()).toEqual({ on: true, forced: false, unlocked: false })
+    expect(handlers.has('stash-reader-read')).toBe(true)
   })
 
   it('never takes the OCR stash read op name', () => {
@@ -96,14 +96,6 @@ describe('stash reader gate', () => {
 })
 
 describe('stash reader on and off at runtime', () => {
-  it('cannot be turned on while experimental settings are hidden', async () => {
-    const { ops, prefs, ctx } = fakeContext()
-    const control = initPersonal(ctx)
-    expect(await control.setOn(true)).toMatchObject({ on: false })
-    expect(ops).toEqual([])
-    expect(prefs.stashReader).toBe(false)
-  })
-
   it('turning on registers the reader and hooks the game log; off removes both and signs out', async () => {
     const { handlers, gameLog, prefs, ctx, signOuts } = fakeContext()
     const control = initPersonal(ctx)
@@ -136,13 +128,21 @@ describe('stash reader on and off at runtime', () => {
     expect(gameLog.onLines).toBe(other)
   })
 
-  it('hiding experimental settings turns the reader off too', async () => {
+  it('turns on while experimental settings are hidden', async () => {
+    const { handlers, prefs, ctx } = fakeContext()
+    const control = initPersonal(ctx)
+    expect(await control.setOn(true)).toEqual({ on: true, forced: false, unlocked: false })
+    expect(prefs).toEqual({ experimental: false, stashReader: true })
+    expect(handlers.size).toBe(READER_OPS.length)
+  })
+
+  it('hiding experimental settings leaves the reader on', async () => {
     const { handlers, prefs, ctx, signOuts } = fakeContext({ experimental: true, stashReader: true })
     const control = initPersonal(ctx)
-    expect(await control.setUnlocked(false)).toEqual({ on: false, forced: false, unlocked: false })
-    expect(prefs).toEqual({ experimental: false, stashReader: false })
-    expect(handlers.size).toBe(0)
-    expect(signOuts()).toBe(1)
+    expect(await control.setUnlocked(false)).toEqual({ on: true, forced: false, unlocked: false })
+    expect(prefs).toEqual({ experimental: false, stashReader: true })
+    expect(handlers.size).toBe(READER_OPS.length)
+    expect(signOuts()).toBe(0)
   })
 
   it('switches apply in order', async () => {

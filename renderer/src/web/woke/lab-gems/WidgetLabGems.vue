@@ -21,7 +21,7 @@
         <WSelect v-model="config.gemState" :options="GEM_STATES.map(s => ({ value: s, label: stateLabel(s) }))" title="Gem level / quality" />
         <template v-if="config.view !== 'color'">
           <WSelect v-model="config.specificMode" title="The font only sometimes offers the choice of version; otherwise it's a random gem of that colour"
-            :options="[{ value: 'choose', label: 'I choose the version (rare offer)' }, { value: 'random', label: 'Random version' }]" />
+            :options="[{ value: 'choose', label: 'I pick the version' }, { value: 'random', label: 'Random version' }]" />
           <WField v-model="config.minProfit" type="number" suffix="c profit min" style="width: 9rem;" />
         </template>
         <WChip clickable :active="!!config.skipThin" title="Leave thin-market gems out: they count as 0 and leave the lists. Most gems are thin, so EVs become a floor."

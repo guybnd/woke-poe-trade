@@ -1,5 +1,5 @@
 // Turning the stash reader on and off at runtime, and showing or hiding the
-// experimental rows. Loaded only from those rows (Settings > Modules).
+// experimental rows. Loaded only from Settings > Modules.
 import { hostRequest } from './shared/host'
 import { personalOn, takePersonal } from './personal'
 import type { PersonalState } from './personal'
@@ -26,7 +26,7 @@ export async function setStashReaderOn (on: boolean): Promise<void> {
   await apply(await hostRequest('personal-set', { on }, 15_000))
 }
 
-// Show or hide the experimental rows. Hiding turns the reader off too.
+// Show or hide the experimental rows (the AI link). Leaves the reader alone.
 export async function setExperimentalUnlocked (unlocked: boolean): Promise<void> {
   await apply(await hostRequest('experimental-set', { unlocked }, 15_000))
 }

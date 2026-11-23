@@ -14,6 +14,10 @@
 // `data-tip-keys="Ctrl + Enter"` on the element adds its shortcut under the
 // text as boxed keys, like WKbd.
 //
+// Text cut short with "…" (text-overflow: ellipsis, as `.w-trunc` and
+// Tailwind's `truncate` do) and no title of its own shows its whole text the
+// same way, so a cut name or mod can always be read.
+//
 // Opt out with `data-native-title` on the element or a parent. The e2e harness
 // turns it off (window.__wokeNativeTitles) so getByTitle finds hovered elements.
 import { watch } from 'vue'
@@ -66,6 +70,8 @@ export function installTitleTips (doc: Document = document): () => void {
   let lastShown = 0
   // No card for `held` until the pointer leaves it (pressed, or cancelled).
   let muted = false
+  // `held` is cut-off text with no title: nothing to take off or put back.
+  let cut = false
 
   const observer = new MutationObserver(() => {
     if (!held) return
@@ -117,7 +123,8 @@ export function installTitleTips (doc: Document = document): () => void {
     hide()
     if (!held) return
     observer.disconnect()
-    if (text != null && !held.hasAttribute('title')) held.setAttribute('title', text)
+    if (!cut && text != null && !held.hasAttribute('title')) held.setAttribute('title', text)
+    cut = false
     held = null
     text = null
     muted = false
@@ -137,18 +144,45 @@ export function installTitleTips (doc: Document = document): () => void {
     return null
   }
 
+  // Text ending in "…" under the pointer (the target or a parent close by),
+  // when nothing above it has a title or the item tooltip.
+  function cutShort (target: EventTarget | null): HTMLElement | null {
+    // An icon (svg) inside a cut label counts as the label.
+    let node: HTMLElement | null = target instanceof HTMLElement ? target : (target instanceof Element ? target.parentElement : null)
+    // Inside the titled element already showing (its title is off while held): that title wins.
+    if (held && !cut && node && held.contains(node)) return null
+    for (let i = 0; node && i < 3; i++) {
+      const el: HTMLElement = node
+      node = el.parentElement
+      if (el.scrollWidth <= el.clientWidth + 1) continue
+      if (win!.getComputedStyle(el).textOverflow !== 'ellipsis') continue
+      if (el.closest('[title], [data-native-title], [data-item-tip]')) return null
+      return el.textContent?.trim() ? el : null
+    }
+    return null
+  }
+
   function onOver (e: MouseEvent) {
     at = { x: e.clientX, y: e.clientY }
     // Dragging (a number, a pin, the rail grip): no tooltips, as in the browser.
     if (e.buttons !== 0 && !held) return
-    const found = titled(e.target)
+    let found = titled(e.target)
+    const short = found ? null : cutShort(e.target)
+    if (short) found = short
+    // Moving within the titled element that's showing: its title is off, so titled() can't see it.
+    else if (!found && held && !cut && e.target instanceof Node && held.contains(e.target)) found = held
     if (found !== held) {
       release()
       if (!found || e.buttons !== 0) return
       held = found
-      text = held.getAttribute('title')
-      take(held)
-      observer.observe(held, { attributes: true, attributeFilter: ['title'] })
+      if (short) {
+        cut = true
+        text = short.textContent!.replace(/\s+/g, ' ')
+      } else {
+        text = held.getAttribute('title')
+        take(held)
+        observer.observe(held, { attributes: true, attributeFilter: ['title'] })
+      }
     }
     if (muted || card || timer) return
     if (Date.now() - lastShown < WARM_MS) show()

@@ -1,5 +1,4 @@
-// The stash reader's switch under Settings > Modules > Economy (ExperimentalRows),
-// loaded only once experimental settings are unlocked.
+// The stash reader's switch under Settings > Modules > Economy (StashReaderRow).
 import { shallowRef } from 'vue'
 
 // The switch's steps: turning on asks first (Cancel / Turn on), turning off
@@ -51,7 +50,7 @@ export function stashSwitch (setOn: (on: boolean) => Promise<void>) {
 
 export const COPY = {
   confirmTitle: 'Turn on the stash reader?',
-  confirmBody: "It uses a pathofexile.com page GGG doesn't support for tools. Their terms don't allow it, and it can stop working any time.",
-  warnTitle: 'Experimental, use at your own risk.',
-  warnBody: "Reads your stash through a pathofexile.com page GGG doesn't support for tools. Their terms don't allow it, and it can stop working any time. Your login stays in the app and is never shared."
+  confirmBody: "It uses a pathofexile.com page GGG doesn't support for tools. Their terms don't allow it. No bans are known, but it can stop working any time. Your login stays in the app and is never shared.",
+  descOff: 'Reads your stash tabs. Unofficial, see the note when you turn it on.',
+  descOn: 'Reads your stash tabs. Unofficial.'
 }

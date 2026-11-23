@@ -209,12 +209,12 @@ export const marketHandlers: Partial<WokeHandlers> = {
     return t != null ? await readSnapshot(league as string, t) : null
   },
   // One category's prices over the last `span` ms, for the Prices tab's short ranges.
-  'market-series': async ({ league, type, span, names }) => {
+  'market-series': async ({ league, type, span, names, points }) => {
     const l = league as string
     return await priceSeries(l, type, Number(span), Date.now(), {
       times: () => snapshotTimes(l),
       snapshot: ts => readSnapshot(l, ts)
-    }, names)
+    }, names, points)
   },
   'market-daily-date': async ({ league, date }) => {
     return (await loadDaily(league as string)).get(date as string) ?? []

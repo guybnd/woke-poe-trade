@@ -14,6 +14,7 @@
       <template #meta>
         <div class="flex flex-wrap items-center gap-1">
           <WSegmented v-model="config.range" :options="rangeOptions" />
+          <span class="text-xs w-dim ml-2">Show in</span>
           <WSegmented v-model="config.unit" :options="unitOptions" />
           <span v-if="config.unit === 'div' && !divineNow" class="text-xs" style="color: var(--w-warn);" title="Sessions saved without a divine rate need today's poe.ninja prices">Waiting for poe.ninja prices.</span>
         </div>
@@ -190,7 +191,7 @@
 
         <!-- ===== Stacked decks (woke/stacked-decks) ===== -->
         <!-- Only while the window is open: it reads every map day from disk, and the window mounts hidden at startup. -->
-        <template v-else-if="tab === 'history'"><MapHistory v-if="config.wmWants === 'show'" :range="config.range" :league="league" :now="now" :focus="focusAt" @select="focusAt = $event" /></template>
+        <template v-else-if="tab === 'history'"><MapHistory v-if="config.wmWants === 'show'" :range="config.range" :league="league" :now="now" :focus="focusAt" :unit="config.unit" :divine="divineNow" @select="focusAt = $event" /></template>
         <DeckHistory v-else-if="tab === 'decks'" :range="config.range" :unit="config.unit" :league="league" :now="now" />
 
         <!-- ===== Maps ===== -->
@@ -320,7 +321,7 @@ const tabOptions = computed(() => [
   ...(isModuleOn(AppConfig(), 'stacked-decks') ? [{ value: 'decks', label: 'Stacked decks' }] : [])
 ])
 const rangeOptions = [{ value: '7d', label: '7 days' }, { value: 'league', label: 'League' }, { value: 'all', label: 'All' }]
-const unitOptions = [{ value: 'div', label: 'div' }, { value: 'chaos', label: 'c' }]
+const unitOptions = [{ value: 'div', label: 'div' }, { value: 'chaos', label: 'chaos' }]
 
 const store = useSessionStore()
 // Re-read when the window opens, in case another copy of the app saved.

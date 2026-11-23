@@ -11,8 +11,8 @@
       </template>
     </div>
     <div :class="$style.value">
-      <span :class="$style.headline">{{ price?.main }}</span>
-      <span :class="$style.each"><template v-if="price?.each">each</template><template v-if="stack">{{ price?.each ? ' · ' : '' }}{{ stack }} for your {{ have }}</template><template v-if="price?.sub"> · {{ price.sub }}</template></span>
+      <span :class="$style.headline"><w-price-text :text="price?.main" /></span>
+      <span :class="$style.each"><template v-if="price?.each">each</template><template v-if="stack">{{ price?.each ? ' · ' : '' }}<w-price-text :text="stack" /> for your {{ have }}</template><template v-if="price?.sub"> · <w-price-text :text="price.sub" /></template></span>
     </div>
     <div :class="$style.row">
       <button type="button" class="btn w-pc-primary" :class="$style.live" data-testid="ninja-verdict-live" @click="search">
@@ -29,7 +29,7 @@ import type { ParsedItem } from '@/parser'
 import type { ItemFilters } from '@/web/price-check/filters/interfaces'
 import { usePoeninja } from '@/web/background/Prices'
 import { ninjaPrice, ninjaTotal } from './ninja-first'
-import { WSpark, WKbd, agoPhrase } from '../ui'
+import { WSpark, WKbd, WPriceText, agoPhrase } from '../ui'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { poeOn } from './window-style'
 

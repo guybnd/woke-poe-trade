@@ -1,5 +1,4 @@
-// Net worth from start to finish: the stash reader unlocked and turned on in
-// Settings, signed in to a fake pathofexile.com, tabs picked, a read, and what
+// Net worth from start to finish: the stash reader turned on in Settings, signed in to a fake pathofexile.com, tabs picked, a read, and what
 // the stash is worth. Main reads the site itself (stubs/electron.ts `site`).
 import fs from 'fs'
 import path from 'path'
@@ -32,12 +31,11 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const settings = overlay.widget('settings')
     await settings.getByText('All modules', { exact: true }).first().click()
 
-    // Hidden until Economy is clicked 5 times.
-    await expect(settings.getByRole('switch', { name: 'Net worth' })).toHaveCount(0)
-    const economy = settings.locator('.w-group-label', { hasText: /^Economy$/ })
-    for (let i = 0; i < 5; i++) await economy.click()
+    // Shown to everyone, off, with no experimental rows (no 5 clicks needed).
     const reader = settings.getByRole('switch', { name: 'Net worth' })
     await expect(reader).toBeVisible()
+    await expect(reader).toHaveAttribute('aria-checked', 'false')
+    await expect(settings.getByRole('button', { name: 'Hide experimental' })).toHaveCount(0)
 
     // Asks first, then signs in by itself: the site says who you are.
     await reader.click()
@@ -137,8 +135,6 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await reader.click()
     await expect(reader).toHaveAttribute('aria-checked', 'false')
     await expect(panel).toHaveCount(0)
-    await settings.getByRole('button', { name: 'Hide experimental' }).click()
-    await expect(reader).toHaveCount(0)
   } finally {
     fakeApp.site.reply = null
     fakeApp.site.requests.length = 0
