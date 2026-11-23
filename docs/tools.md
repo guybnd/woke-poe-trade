@@ -46,6 +46,8 @@ Woke PoE Trade is a set of tools on one overlay. Each one is a module you can sw
 | Price check (Awakened PoE Trade) | Item info hotkeys | Item info, wiki, poedb, Craft of Exile, similar items |
 <!-- modules:end -->
 
+**Net worth** reads your own stash tabs to chart what you're worth and what each map earned. It's off until you turn it on under Settings, **All modules**, Economy, because it signs in to pathofexile.com through a page GGG doesn't support for tools.
+
 ### What tools need
 
 - **Client.txt:** tools that follow your zones or chat read the game's log file: campaign, run timer, drop counter, stacked decks, boss runs, death recap, essence scan, loot filter editor, league mechanics and trades. The setup window finds it; change it under Settings, **Game & league**.

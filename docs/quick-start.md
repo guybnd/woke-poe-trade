@@ -2,42 +2,38 @@
 title: Quick Start
 ---
 
-#### First of all, how does it work? {:style="margin-top: 0;"}
+### 1. Install
 
-When you press `Ctrl + C` Path of Exile copies the item's text (under cursor, if any) to the clipboard.
-All that remains is to parse text in Woke PoE Trade and show to you in a fancy way.
+Download `Woke-PoE-Trade-Setup-<version>.exe` from the [Download](/download) page and run it. The app isn't
+code-signed, so Windows SmartScreen may warn the first time: click **More info > Run anyway**. It updates itself after that.
 
-### Usage
+Run Path of Exile in **Windowed** or **Windowed Fullscreen**.
 
-- Default hotkeys
-{:.no-list}
-  - Press `Ctrl + D` to check the price of the item\
-    *Hold CTRL if you do not want the window to close. As soon as the cursor is within the window, you can release CTRL.*{:.text-sm}
-  - Press `Ctrl + Alt + D` to check the price of the item\
-    *Opens a window, but does not hide it automatically when moving the mouse*{:.text-sm}
-  - `Alt + W` to open the item on Wiki
-  - `Shift + Space` to access overlay with widgets
-- Default chat commands
-  - Press `F5` to go to hideout
-  - Press `F9` to exit to Character selection screen
-- Other
-  - `Ctrl + MouseWheel` to scroll through stash tabs
+### 2. The setup window
 
----
+On first launch a setup window opens. It finds the game's log file (`Client.txt`), asks for your league and game
+language, and lets you pick your tools from a preset (Everything, Mapper, Leveling, Trader or Price check only).
+You can open it again from the tray icon (right-click > Run setup again) or under Settings, **All modules**.
 
-Some functions don't have hotkeys assigned by default to avoid conflicts on your system.
-You can set them and change default hotkeys in the [Settings](/faq).
+### 3. In game
 
-### Price Check Window
+- `Ctrl + D` prices the item under your cursor. Hold `Ctrl` to keep the window open while you move onto it.
+- `Shift + Space` opens the overlay. The rail on the left edge holds **All tools**, Settings and search.
+- `Ctrl + Space` searches from anywhere: any item's price, tools, settings, crafts and more.
+- Small icons appear in the icon row while you play (trades, league mechanics, campaign, the lab).
+  Rest the mouse on one to see its card, and click it to open the full window.
+- `F5` goes to your hideout.
 
-When Price checking this item:
-![Item Example](https://imgur.com/zBOvDWZ.png)
+Every hotkey can be changed under Settings, **Hotkeys**. See [Tools](/tools) for what each tool does.
 
-the following window will appear:
-![Pricing Exmaple](https://imgur.com/HYRmois.png)
+### How price check works
 
-The app does not magically check the price of your item. You tick the checkboxes and relevant filters for the item yourself. Choose stats that synergize well, **this knowledge only comes from playing different build archetypes**.
+When you press the price check key, the app makes Path of Exile copy the item's text, reads it, and searches
+the trade site. Nothing touches the game itself.
 
-You may notice that some stats from the item are missing, this is because they have been grouped into "pseudo" stats. For example, the spell damage from 3 mods on this wand have been grouped together into one pseudo spell damage stat with a value of all the mods combined.
+You pick which stats to search on. Some stats are grouped into "pseudo" stats: spell damage from three mods on a
+wand becomes one total. The numbers beside each stat are the range searched, filled in a little below your roll
+so that similar items show up; change them as you like.
 
-The numbers on the side of each filter indicate the min-max range to search for on the trade site. They are automatically filled in with a slight decrease in the actual roll so that you can find items on the trade. You can always adjust them manually if you have a perfectly rolled T1 mod, for example.
+If nothing happens when you press the key, see [Nothing happens](/nothing-happens). Questions and ideas are welcome on the
+[Discord](https://discord.gg/XrUcvXrt4e).
