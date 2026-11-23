@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dayLabel, dayStart, withDays } from '@/web/woke/session-story/history-days'
+import { dayLabel, dayStart, openIndex, withDays } from '@/web/woke/session-story/history-days'
 import { incomeRows, interleave } from '@/web/woke/session-story/income'
 import type { MapRecord } from '@/web/woke/session-story/map-log'
 
@@ -37,7 +37,7 @@ describe('withDays', () => {
   const items = interleave(maps, reads)
 
   it('puts a header with that day\'s totals above each day', () => {
-    const lines = withDays(items, items.length, skipped)
+    const lines = withDays(items, items.length, skipped).lines
     const days = lines.filter(l => l.kind === 'day')
     expect(days.map(d => d.kind === 'day' && d.at)).toEqual([dayStart(at(23, 0)), dayStart(at(22, 0))])
     const today = days[0]
@@ -55,17 +55,58 @@ describe('withDays', () => {
   })
 
   it('names the character at the top of each day and when it changes', () => {
-    const lines = withDays(items, items.length, skipped)
+    const lines = withDays(items, items.length, skipped).lines
     const chars = lines.filter(l => l.kind === 'char').map(l => l.kind === 'char' && `${l.char} ${l.level}`)
     expect(chars).toEqual(['whekq 98', 'other 90', 'whekq 98', 'whekq 98'])
   })
 
   it('draws only the shown items but totals the whole day', () => {
-    const lines = withDays(items, 1, skipped)
+    const { lines, more } = withDays(items, 1, skipped)
     expect(lines.map(l => l.kind)).toEqual(['day', 'char', 'map'])
+    expect(more).toBe(items.length - 1)
     const day = lines[0]
     if (day.kind !== 'day') throw new Error('day')
     expect(day.maps).toBe(3)
+  })
+})
+
+describe('day totals', () => {
+  it('add up the whole day under a filter, and reads in divines at their own rates', () => {
+    const maps = [map('Fortress', at(23, 13), 4 * MIN, { npcs: ['Einhar'] }), map('Fortress', at(23, 12), 2 * MIN)]
+    const reads = incomeRows([
+      { at: at(23, 12, 30), since: at(23, 11), netChaos: 400, netDivine: 2, added: 0, removed: 0 },
+      { at: at(23, 13, 30), since: at(23, 12, 30), netChaos: 300, netDivine: 1, added: 0, removed: 0 }
+    ], maps)
+    const filtered = interleave(maps.filter(m => m.npcs.includes('Einhar')), reads)
+    const day = withDays(filtered, 100, skipped, new Set(), interleave(maps, reads)).lines[0]
+    if (day.kind !== 'day') throw new Error('day')
+    expect(day.maps).toBe(2)
+    expect(day.avgMs).toBe(3 * MIN)
+    // 400c at 200 and 300c at 300: 3 div, not 700c at the newest rate.
+    expect(day.div).toBe(3)
+  })
+})
+
+describe('folding', () => {
+  const maps = [map('Fortress', at(23, 13), 3 * MIN), map('Fortress', at(22, 20), 3 * MIN), map('Fortress', at(22, 19), 3 * MIN), map('Fortress', at(21, 20), 3 * MIN)]
+  const items = interleave(maps, [])
+  const folded = new Set([dayStart(at(22, 0))])
+
+  it('shows a folded day as its header only, its items not using the page', () => {
+    const { lines } = withDays(items, 2, skipped, folded)
+    expect(lines.map(l => l.kind)).toEqual(['day', 'char', 'map', 'day', 'day', 'char', 'map'])
+  })
+
+  it('stops at the first open item past the page, so order holds', () => {
+    const { lines, more } = withDays(items, 1, skipped, folded)
+    // The folded day before it still shows; the open day after waits for Show more.
+    expect(lines.map(l => l.kind)).toEqual(['day', 'char', 'map', 'day'])
+    expect(more).toBe(1)
+  })
+
+  it('finds an item among the open days only', () => {
+    expect(openIndex(items, folded, it => it.at === at(21, 20))).toBe(1)
+    expect(openIndex(items, folded, it => it.at === at(22, 20))).toBe(-1)
   })
 })
 

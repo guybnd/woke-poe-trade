@@ -16,6 +16,8 @@ export interface DayLine {
   reads: number
   // Chaos per divine from the day's newest read that has one.
   rate: number | null
+  // The reads in divines, each at its own rate; null when a read has no rate.
+  div: number | null
 }
 
 export interface CharLine {
@@ -37,22 +39,30 @@ export function dayStart (ts: number): number {
 // Under this, a map is a quick look in: left out of the average (as the chip does).
 const QUICK_MS = 30_000
 
-// `items` newest first (interleave). `shown`: how many of them are drawn; the
-// day totals still count every item of the day.
-export function withDays (items: readonly HistoryItem[], shown: number, skipped: (name: string) => boolean): HistoryLine[] {
+// `items` newest first (interleave). `shown`: how many items of open days are
+// drawn; a folded day (`folded`, by its midnight) is just its header. The day
+// totals count every item of the day. `more`: items after the page's end.
+// `totals`: what the day headers add up (the list before a filter); `items` by default.
+export function withDays (items: readonly HistoryItem[], shown: number, skipped: (name: string) => boolean,
+  folded: ReadonlySet<number> = new Set(), totals: readonly HistoryItem[] = items): { lines: HistoryLine[], more: number } {
   const days = new Map<number, DayLine>()
   const timed = new Map<number, { ms: number, n: number }>()
-  for (const it of items) {
-    const at = dayStart(it.at)
+  const dayOf = (at: number) => {
     let day = days.get(at)
     if (!day) {
-      day = { kind: 'day', key: `day:${at}`, at, maps: 0, avgMs: null, chaos: 0, reads: 0, rate: null }
+      day = { kind: 'day', key: `day:${at}`, at, maps: 0, avgMs: null, chaos: 0, reads: 0, rate: null, div: 0 }
       days.set(at, day)
     }
+    return day
+  }
+  for (const it of totals) {
+    const at = dayStart(it.at)
+    const day = dayOf(at)
     if (it.kind === 'read') {
       day.chaos += it.read.chaos
       day.reads++
       if (day.rate == null && it.read.rate) day.rate = it.read.rate
+      day.div = day.div != null && it.read.rate ? day.div + it.read.chaos / it.read.rate : null
     } else if (!skipped(it.map.name)) {
       day.maps++
       if (it.map.mapMs > QUICK_MS) {
@@ -64,20 +74,34 @@ export function withDays (items: readonly HistoryItem[], shown: number, skipped:
     }
   }
   for (const [at, t] of timed) days.get(at)!.avgMs = t.ms / t.n
+  // A day with only listed vaults still gets its header.
+  for (const it of items) dayOf(dayStart(it.at))
 
-  const out: HistoryLine[] = []
+  const lines: HistoryLine[] = []
+  let drawn = 0
+  let more = 0
+  let cut = false
   let curDay: number | null = null
   let lastChar: string | null = null
-  for (const it of items.slice(0, shown)) {
+  for (const it of items) {
     const at = dayStart(it.at)
+    const open = !folded.has(at)
+    // Past the page: nothing more is drawn, folded days after it included,
+    // so the list stays in order once "Show more" adds the rest.
+    if (cut || (open && drawn >= shown)) {
+      cut = true
+      more++
+      continue
+    }
     if (at !== curDay) {
-      out.push(days.get(at)!)
+      lines.push(days.get(at)!)
       curDay = at
       lastChar = null
     }
+    if (!open) continue
     if (it.kind === 'map' && it.map.char && it.map.char !== lastChar) {
       lastChar = it.map.char
-      out.push({
+      lines.push({
         kind: 'char',
         key: `char:${it.at}`,
         char: it.map.char,
@@ -85,9 +109,21 @@ export function withDays (items: readonly HistoryItem[], shown: number, skipped:
         level: it.map.charLevel != null ? it.map.charLevel + (it.map.levelsGained ?? 0) : null
       })
     }
-    out.push(it)
+    lines.push(it)
+    drawn++
   }
-  return out
+  return { lines, more }
+}
+
+// Where an item falls among the drawn items of open days (for paging to it), or -1.
+export function openIndex (items: readonly HistoryItem[], folded: ReadonlySet<number>, match: (it: HistoryItem) => boolean): number {
+  let n = 0
+  for (const it of items) {
+    if (folded.has(dayStart(it.at))) continue
+    if (match(it)) return n
+    n++
+  }
+  return -1
 }
 
 // "Today", "Yesterday", else "Sun 22 Nov".

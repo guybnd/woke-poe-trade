@@ -44,4 +44,14 @@ test('map history groups maps by day, names its range and shows the map on hover
   await expect(tip).toContainText('Strand Map')
   await expect(tip).toContainText('in the map')
   await overlay.snap('map history')
+
+  // A day folds to its header and opens again.
+  const day = panel.locator('[data-history-day]').first()
+  await day.click()
+  await expect(panel.locator('[data-map-row]')).toHaveCount(0)
+  await day.click()
+  await expect(panel.locator('[data-map-row]')).toHaveCount(1)
+  // Filters sit behind one button.
+  await panel.locator('[data-history-filter]').click()
+  await expect(overlay.page.getByRole('menu')).toContainText('All maps')
 })
