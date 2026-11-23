@@ -66,7 +66,7 @@
       <table class="w-pc-table table-stripped w-full">
         <thead>
           <tr class="text-left">
-            <th :class="$style.tableHeading">
+            <th :class="[$style.tableHeading, 'text-right']">
               <div class="px-2">{{ t(':price') }}</div>
             </th>
             <th :class="$style.tableHeading">
@@ -134,7 +134,7 @@
               @mouseenter="showRowTip($event, row)"
               @mouseleave="hideTip"
               @contextmenu="row.lead.tipItem && openItemMenu($event, pobMenuRef(row.lead.tipItem))">
-              <td class="px-2 whitespace-nowrap">
+              <td class="px-2 whitespace-nowrap text-right">
                 <span class="w-pc-price">
                   <span class="w-pc-amount" :class="{ 'line-through': row.lead.priceCurrency === 'exalted' }">{{ row.lead.priceAmount }}</span>
                   <img v-if="coinFor(row.lead.priceCurrency)" class="w-pc-coin" :src="coinFor(row.lead.priceCurrency)" :alt="row.lead.priceCurrency">
@@ -155,9 +155,10 @@
                     @click.stop="travel(row.lead)"><i class="fas fa-door-open" /></button>
                   <span v-else-if="anyIcon" class="w-pc-travel-gap" aria-hidden="true" />
                   <span v-if="showCountBar" class="w-pc-count-bar" :class="{ invisible: row.count < 2 }"><span :style="{ width: Math.round(row.count / maxCount * 100) + '%' }" /></span>
-                  <span v-if="row.count >= (improved ? 2 : 3)" class="w-pc-count-n"><span class="font-sans">×</span>{{ row.count }}</span>
+                  <!-- woke: the count keeps its slot on every row, so the tags after it line up. -->
+                  <span v-if="countSlot" class="w-pc-count-n"><template v-if="row.count >= countFrom"><span class="font-sans">×</span>{{ row.count }}</template></span>
                   <span v-if="improved && row.dropped && FIX_TAG[row.dropped]" class="w-pc-tag">{{ FIX_TAG[row.dropped] }}</span>
-                  <span v-if="row.lead.corrupted" class="w-pc-tag">{{ row.lead.twiceCorrupted ? 'Twice Corrupted' : 'Corrupted' }}</span>
+                  <span v-if="row.lead.corrupted" class="w-pc-tag" :class="{ 'w-pc-tag-fit': anyTwice }" :data-fit="anyTwice ? 'Twice Corrupted' : undefined">{{ row.lead.twiceCorrupted ? 'Twice Corrupted' : 'Corrupted' }}</span>
                 </span>
               </td>
               <td v-if="item.stackSize" class="px-2 text-right">{{ row.lead.stackSize }}</td>
@@ -670,6 +671,10 @@ export default defineComponent({
     const allStale = computed(() => rows.value.length > 0 && rows.value.every(r => r.band === 'stale'))
 
     const maxCount = computed(() => Math.max(1, ...rows.value.map(r => r.count)))
+    // Counts show from 2 copies (3 on the plain table); when any row has one, every row keeps the slot.
+    const countFrom = computed(() => improved.value ? 2 : 3)
+    const countSlot = computed(() => rows.value.some(r => r.count >= countFrom.value))
+    const anyTwice = computed(() => rows.value.some(r => r.lead.corrupted && r.lead.twiceCorrupted))
 
     function inRange (row: ListingRow<PricingResult & { listedTimes: number }>) {
       const range = insight.value.range
@@ -765,6 +770,9 @@ export default defineComponent({
       coinFor: (currency: string) => COINS[currency],
       inRange,
       maxCount,
+      countFrom,
+      countSlot,
+      anyTwice,
       allStale,
       allInstant: computed(() => rows.value.every(r => r.lead.hasFee)),
       // The stat columns need the bar's room.

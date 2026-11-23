@@ -240,14 +240,14 @@
             <TierItemChips :items="tierItems" :picked="picked" :price-of="priceOf" :min-chaos="config.safetyNet.minChaos" :tip="baseTip" :locked="movedHere" draggable removable
               chip-title="Click to pick it, shift-click to pick a run. Drag onto a tier to move it, with any others you've picked. Right-click for Move to."
               @pick="pickBase" @menu="baseMenu" @dragstart="onDragStart" @dragend="dragOver = null" @remove="takeOff" />
-            <div v-if="picked.length" :class="$style.bulkBar" role="toolbar" aria-label="Picked items">
+            <div v-if="picked.length" :class="[$style.bulkBar, 'w-actions']" role="toolbar" aria-label="Picked items">
               <b class="text-xs">{{ picked.length }} picked</b>
               <span class="grow" />
               <WButton v-if="targets.length > 1" size="sm" variant="primary" @click="bulkMoveMenu">Move to</WButton>
-              <WButton size="sm" variant="ghost" @click="bulkHide">Hide</WButton>
-              <WButton size="sm" variant="ghost" title="Change the look of just these, using the controls above" @click="bulkLook = true">Own look</WButton>
-              <WButton size="sm" variant="ghost" @click="bulkTakeOff">Take off</WButton>
-              <button type="button" class="w-icon-btn" title="Clear" aria-label="Clear picked items" @click="picked = []"><i aria-hidden="true" class="fas fa-times" /></button>
+              <WButton size="sm" variant="ghost" icon="fas fa-eye-slash" aria-label="Hide" title="Hide these" @click="bulkHide" />
+              <WButton size="sm" variant="ghost" icon="fas fa-paint-brush" aria-label="Own look" title="Change the look of just these, using the controls above" @click="bulkLook = true" />
+              <WButton size="sm" variant="ghost" icon="fas fa-minus-circle" aria-label="Take off" title="Take these off this tier" @click="bulkTakeOff" />
+              <WButton size="sm" variant="ghost" icon="fas fa-times" title="Clear" aria-label="Clear picked items" @click="picked = []" />
             </div>
             <AddItemField v-if="store.doc.value && selType && targets.includes(tier.tier)" :tip-for="baseTip" :key="`${selType}|${tier.tier}`" :doc="store.doc.value" :type="selType" :tier="tier.tier" @add="addItem" />
           </template>
@@ -1816,10 +1816,6 @@ function openFolder () {
 .rowArt { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .chipArt { width: 16px; height: 16px; object-fit: contain; flex: none; }
 .bulkBar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
   margin-top: 6px;
   padding: 4px 6px;
   background: var(--w-panel-3);

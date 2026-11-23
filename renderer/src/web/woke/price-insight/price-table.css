@@ -27,12 +27,17 @@
 .w-pc-toolbar .w-pc-online { flex: 0 1 auto; min-width: 0; overflow: hidden; }
 /* Bulk: a small bordered chip like the affix caps; lit while on. */
 .w-pc-toolbar .w-pc-bulk {
+  /* One height for Bulk and the currency chip beside it. */
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: calc(19px * var(--w-text-scale, 1));
   padding: 0 6px;
   border: 1px solid var(--w-chip-line);
   border-radius: 3px;
   color: var(--w-dim);
   font-family: var(--w-label);
-  font-size: .85em;
+  font-size: max(var(--w-fs-xs), .85em);
   line-height: 1.5;
 }
 .w-pc-toolbar .w-pc-bulk:hover { color: var(--w-fg); }
@@ -113,7 +118,7 @@
 
 /* Count: a bar for how much is for sale at this price. */
 .w-pc-count { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
-.w-pc-count-n { color: var(--w-dim); font-size: var(--w-fs-sm); }
+.w-pc-count-n { min-width: 2.4em; color: var(--w-dim); font-size: var(--w-fs-sm); font-variant-numeric: tabular-nums; }
 .w-pc-count-bar { display: block; width: 28px; height: 3px; border-radius: var(--w-r-sm); background: var(--w-panel-3); overflow: hidden; }
 .w-pc-count-bar > span { display: block; height: 100%; background: var(--w-accent); opacity: 0.75; }
 
@@ -163,6 +168,10 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+/* With a Twice Corrupted row in the list, every corrupted tag takes its width
+   (a hidden copy of the longer text sizes the box), so the tags line up. */
+.w-pc-tag-fit { display: inline-grid; justify-items: center; }
+.w-pc-tag-fit::after { content: attr(data-fit); visibility: hidden; height: 0; overflow: hidden; }
 .w-pc-you {
   margin-left: var(--w-s1);
   padding: 0 4px;

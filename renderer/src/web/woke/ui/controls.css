@@ -69,6 +69,20 @@
 :root[data-woke-look="game"] .w-btn.w-btn--ghost { font-family: var(--w-label); letter-spacing: 0.03em; }
 :root[data-woke-look="game"] .w-btn.w-btn--danger { color: var(--w-bad-fg); border-color: var(--w-bad-line); }
 
+/* One height for every control side by side in a toolbar or a row of buttons,
+   so plates, chips, segmented choices and fields line up (layout audit). */
+/* A chip counts only as the row's own child: a cloud of chips in its own box may
+   wrap, and each line would grow. Lists and menus that open inside a toolbar
+   keep their own sizes. */
+:is(.w-toolbar, .w-actions) > .w-chip,
+:is(.w-toolbar, .w-actions) :is(.w-btn, .w-field, .w-select, .w-input):not(:is([role="listbox"], [role="menu"]) *) {
+  min-height: var(--w-ctl-h);
+}
+/* The group's own 1px border makes up the rest. */
+:is(.w-toolbar, .w-actions) .w-seg > button:not(:is([role="listbox"], [role="menu"]) *) {
+  min-height: calc(var(--w-ctl-h) - 2px);
+}
+
 /* ---------- Chips: tags and toggles ---------- */
 .w-chip {
   display: inline-flex;
