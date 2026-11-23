@@ -7,7 +7,7 @@
       <div :class="$style.eyebrow">
         <span v-item-tip="{ name: item.info.refName }" :class="$style.name">{{ item.info.refName }}</span>
         <span class="flex-1" />
-        <span :class="$style.badge" title="poe.ninja's price from the exchange, cached in the app. No trade search was used.">POE.NINJA</span>
+        <span :class="$style.badge" data-testid="instant-ninja-badge" :title="badgeTip" :data-tip-keys="againKeys ?? 'Space'">POE.NINJA</span>
       </div>
       <div :class="$style.value">
         <span :class="$style.headline" data-testid="instant-ninja-price">{{ price?.main }}</span>
@@ -81,6 +81,9 @@ const info = computed(() => {
   const row = q && findPriceByQuery(q)
   return row && row.chaos > 0 ? row : null
 })
+
+// Guy's wording (2026-11-22); the key shows boxed under it (title-tip.ts).
+const badgeTip = computed(() => `This is used to provide instant pricing without any delay. For live data, press${props.againKeys ? ' the price check key again' : ''}:`)
 
 const isDivine = computed(() => props.item.info.refName === 'Divine Orb')
 const have = computed(() => props.item.stackSize?.value ?? 1)

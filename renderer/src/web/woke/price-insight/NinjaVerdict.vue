@@ -2,7 +2,7 @@
   <!-- The verdict for an exchange item before any search: poe.ninja's cached price (ninja-first.ts). -->
   <div v-if="info" :class="$style.card" data-testid="ninja-verdict">
     <div :class="$style.eyebrow">
-      <span :class="$style.badge" title="poe.ninja's price from the exchange, cached in the app. No trade search was used.">POE.NINJA</span>
+      <span :class="$style.badge" :title="poeOn ? 'This is used to provide instant pricing without any delay. For live data, press:' : 'This is used to provide instant pricing without any delay. For live data, click Check live offers.'" :data-tip-keys="poeOn ? 'Enter' : null">POE.NINJA</span>
       <span>Cached price<template v-if="age">, updated {{ age }}</template></span>
       <span class="flex-1" />
       <template v-if="weekChange != null">

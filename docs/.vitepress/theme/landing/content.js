@@ -15,6 +15,7 @@
 
 export const REPO = 'https://github.com/guybnd/woke-poe-trade'
 export const DOWNLOAD = `${REPO}/releases/latest`
+export const DISCORD = 'https://discord.gg/XrUcvXrt4e'
 
 export const HIGHLIGHTS = [
   {

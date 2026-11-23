@@ -1,0 +1,12 @@
+Item Class: Stackable Currency
+Rarity: Rare
+Gruffmauler the Rumbling
+Craicic Vassal
+--------
+Genus: Shield Crabs
+Group: Cephalopods
+Family: The Deep
+--------
+Item Level: 82
+--------
+Right-click to add this to your bestiary.

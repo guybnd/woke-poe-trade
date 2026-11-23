@@ -7,7 +7,7 @@ import { reactive, ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { withBase } from 'vitepress'
 import { MODULES } from '../../../../renderer/src/web/woke/modules.ts'
 import { CREDIT_GROUPS } from '../../../../renderer/src/web/woke/settings/credits.ts'
-import { REPO, DOWNLOAD, HIGHLIGHTS } from './content.js'
+import { REPO, DOWNLOAD, DISCORD, HIGHLIGHTS } from './content.js'
 
 const shot = (name) => withBase(`/shots/${name}.webp`)
 // Made by docs/scripts/phone-shots.mjs: the shot at 1280px wide, and the 4:5
@@ -151,6 +151,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
         <p class="actions">
           <a class="btn" :href="DOWNLOAD">Download on GitHub</a>
           <a class="btn btn-quiet" :href="REPO">Open source on GitHub</a>
+          <a class="btn btn-quiet" :href="DISCORD">Join the Discord</a>
         </p>
         <p class="unsigned-note">Windows SmartScreen may warn on first run: click More info &gt; Run anyway.</p>
         <p class="phone-note">On a phone? Open this page on your PC to install.</p>
@@ -256,6 +257,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
         <a :href="withBase('/quick-start')">Help</a>
         <a :href="withBase('/faq')">FAQ</a>
         <a :href="REPO">GitHub</a>
+        <a :href="DISCORD">Discord</a>
         <a :href="`${REPO}/blob/master/LICENSE`">MIT licence</a>
       </span>
     </footer>

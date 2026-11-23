@@ -350,6 +350,11 @@ export function createFilters (
     }
   }
 
+  // woke: gear always gets the rarity chip (Any / Magic / Rare), to hunt magic bases.
+  if (!filters.rarity && hasRarityChip(item)) {
+    filters.rarity = { value: 'nonunique', disabled: false }
+  }
+
   if (item.isMirrored) {
     filters.mirrored = { disabled: false, hidden: false }
   } else if (
@@ -618,4 +623,23 @@ function ceilToBracket (value: number, brackets: readonly number[]) {
     }
   }
   return prev
+}
+
+// woke: gear that gets the rarity chip (Any / Magic / Rare, RarityChip.vue).
+const RARITY_CHIP_ITEM = new Set<ItemCategory>([
+  ...ARMOUR,
+  ...WEAPON,
+  ...JEWELLERY,
+  ItemCategory.Quiver,
+  ItemCategory.Jewel,
+  ItemCategory.AbyssJewel,
+  ItemCategory.ClusterJewel
+])
+
+export function hasRarityChip (item: ParsedItem): boolean {
+  return item.category != null && RARITY_CHIP_ITEM.has(item.category) && (
+    item.rarity === ItemRarity.Normal ||
+    item.rarity === ItemRarity.Magic ||
+    item.rarity === ItemRarity.Rare
+  )
 }

@@ -88,3 +88,40 @@ test('from Ctrl+Space: "bug" finds Report an issue, and an idea goes out labelle
   expect(url.searchParams.get('body')).not.toContain('Version:')
   expect(overlay.errors).toEqual([])
 })
+
+// The Discord invite sits beside Report an issue: Settings and Ctrl+Space open it in the browser.
+async function stubOpen (overlay: { page: import('@playwright/test').Page }) {
+  await overlay.page.evaluate(() => {
+    (window as any).__opened = [] as string[]
+    window.open = ((url?: string | URL) => { (window as any).__opened.push(String(url)); return null }) as typeof window.open
+  })
+  return () => overlay.page.evaluate(() => (window as any).__opened as string[])
+}
+const DISCORD = 'https://discord.gg/XrUcvXrt4e'
+
+test('Join the Discord: from Settings', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot({ overlayActive: true })
+  const opened = await stubOpen(overlay)
+  await overlay.widget('menu').locator('.fa-cog').click()
+  const settings = overlay.widget('settings')
+  await settings.getByText('Install & updates', { exact: true }).first().click()
+  await settings.getByRole('button', { name: 'Join the Discord' }).click()
+  await expect.poll(opened).toEqual([DISCORD])
+  await overlay.snap('discord-settings')
+})
+
+test('Join the Discord: from Ctrl+Space', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot({ widgets: [] })
+  const opened = await stubOpen(overlay)
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey('Ctrl + Space')
+  const panel = overlay.widget('woke-search')
+  const box = panel.getByRole('textbox', { name: 'Search', exact: true })
+  await expect(box).toBeFocused()
+  await box.fill('discord')
+  await panel.getByRole('button', { name: /\sJoin the Discord\s*Questions and ideas, with other players$/ }).click()
+  await box.press('Enter')
+  await expect.poll(opened).toEqual([DISCORD])
+})

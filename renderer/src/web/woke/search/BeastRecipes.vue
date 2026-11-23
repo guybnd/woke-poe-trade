@@ -2,18 +2,20 @@
   <div :class="$style.box">
     <div :class="[$style.row, $style.head]"><span>{{ heading }}</span><span>{{ me ? 'Also needs' : 'Needs' }}</span><span class="text-right">Beasts</span></div>
     <div v-for="rec in recipes" :key="recipeTitle(rec)" :class="$style.row">
-      <button tabindex="-1" :class="$style.make" :title="`${rec.g}: ${rec.r}`" @click="emit('recipe', rec)">{{ recipeTitle(rec) }}</button>
+      <button v-if="recipeItem(rec)" v-item-tip="{ name: recipeItem(rec)! }" tabindex="-1" :class="$style.make" @click="emit('recipe', rec)">{{ recipeTitle(rec) }}</button>
+      <button v-else tabindex="-1" :class="$style.make" :title="`${rec.g}: ${rec.r}`" @click="emit('recipe', rec)">{{ recipeTitle(rec) }}</button>
       <span :class="$style.needs">
-        <template v-for="b in rec.b.filter(b => b !== me)" :key="b">
+        <template v-for="(b, i) in rec.b.filter(b => b !== me)" :key="b">
+          <span v-if="i" class="w-faint">+</span>
           <span v-item-tip="{ name: b, type: 'Beast' }" :class="$style.beast">
             <button v-if="price(b) != null" tabindex="-1" :class="$style.link" @click="emit('beast', b)">{{ shortBeast(b) }}</button>
             <span v-else>{{ shortBeast(b) }}</span>
             <WPrice bulk :chaos="price(b)" :divine="divine" class="w-dim" />
             <button class="w-icon-btn" tabindex="-1" :title="`Search trade for ${b}`" :aria-label="`Search trade for ${b}`" @click="emit('trade', b)"><i class="fas fa-search" /></button>
           </span>
-          <span class="w-faint">+</span>
         </template>
-        <span class="w-dim">{{ [rec.red ? `${rec.red} red beast` : '', rec.a ? `${rec.a} any rare` : ''].filter(Boolean).join(' + ') }}</span>
+        <template v-if="rec.red"><span v-if="rec.b.some(b => b !== me)" class="w-faint">+</span><span class="w-dim">{{ rec.red }} red beast</span></template>
+        <span v-else-if="!rec.b.some(b => b !== me)" class="w-dim">This beast alone</span>
       </span>
       <WPrice :chaos="beastsCost(rec, price)" :divine="divine" class="text-right" />
     </div>
@@ -26,7 +28,7 @@
 // unique (the portal to the den that drops it). A beast's name looks it up,
 // the magnifier searches trade for it, and a recipe opens its own card.
 import { WPrice, vItemTip } from '../ui'
-import { beastsCost, recipeTitle, shortBeast } from './lookups/bestiary'
+import { beastsCost, recipeItem, recipeTitle, shortBeast } from './lookups/bestiary'
 import type { BeastRecipe } from './lookups/bestiary'
 
 defineProps<{

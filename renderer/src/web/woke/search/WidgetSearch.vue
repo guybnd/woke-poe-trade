@@ -193,8 +193,9 @@ import { cardLookup } from './lookups/cards'
 import { recipeLookup } from './lookups/recipes'
 import { craftLookup } from './lookups/craft'
 import type { CraftData } from './lookups/craft'
+import { bestiaryData, loadBestiary } from './lookups/bestiary-load'
 import { BLOOD_ALTAR, bestiaryLookup, denOf, recipeTitle, recipesMaking, recipesWith } from './lookups/bestiary'
-import type { BeastRecipe, BestiaryData } from './lookups/bestiary'
+import type { BeastRecipe } from './lookups/bestiary'
 import { gemLookup, transfiguredBase } from './lookups/gems'
 import { vaalGemLookup } from './lookups/vaal-gem'
 import { keystoneUniques, passiveList, treeLookup, withOils } from './lookups/tree'
@@ -244,7 +245,7 @@ import type { GemTable } from './lookups/gems'
 import type { CardInfo } from './lookups/cards'
 import { loadTipBases, loadTipDrops, loadTipItems, loadTipUniques, loadTipVestigial } from '../ui/tooltip/item-tip'
 import { onSharedDataChange } from '../app/live-data'
-import { openReportDialog } from '../app/report'
+import { openDiscord, openReportDialog } from '../app/report'
 import { dropOf } from '../ui/tooltip/tip-content'
 import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
 import { SEARCH_TARGET, searchRequest } from './widget'
@@ -470,6 +471,20 @@ function commandEntries (): ActionEntry[] {
       openReportDialog()
     }
   })
+  out.push({
+    kind: 'command',
+    id: 'c:discord',
+    name: 'Join the Discord',
+    sub: 'Questions and ideas, with other players',
+    icon: 'fab fa-discord',
+    aliases: ['discord', 'community', 'chat', 'help', 'support', 'server'],
+    about: 'The Woke PoE Trade Discord server. Opens the invite in your browser.',
+    verb: 'Open',
+    action: () => {
+      wm.hide(props.config.wmId)
+      openDiscord()
+    }
+  })
   return out
 }
 
@@ -588,18 +603,7 @@ const mapBonusLookupFn = computed<Lookup>(() => {
   const data = mods?.bonuses.mapBonusData.value
   return mods && data ? mods.lookup.mapBonusLookup(data) : noLookup
 })
-// Blood Altar recipes, from poedb, fetched on first open like the crafts.
-const bestiaryData = shallowRef<BestiaryData | null>(null)
-let bestiaryLoading = false
-function loadBestiary () {
-  if (bestiaryData.value || bestiaryLoading) return
-  bestiaryLoading = true
-  fetch(`${import.meta.env.BASE_URL}data/bestiary-data.json`)
-    .then(r => r.json())
-    .then(d => { bestiaryData.value = d as BestiaryData })
-    .catch(() => {})
-    .finally(() => { bestiaryLoading = false })
-}
+// Blood Altar recipes, from poedb, fetched on first open like the crafts (bestiary-load.ts).
 // 3.30 Wickerman module: Viscera facts, a data file read on open while it's on.
 const visceraTable = shallowRef<VisceraTable | null>(null)
 function loadVisceraTable () {
@@ -1066,7 +1070,7 @@ const beastBox = computed(() => {
       recipes,
       me: e.group.name,
       heading: `${BLOOD_ALTAR} · ${recipes.length} recipe${recipes.length > 1 ? 's' : ''}`,
-      note: 'Any rare beast fills the "any rare" slots, so they’re left out of the cost.'
+      note: 'Since 3.30 a recipe needs only the beasts it names.'
     }
   }
   const unique = e?.kind === 'price' && nsOf(e.group.type) === 'UNIQUE'

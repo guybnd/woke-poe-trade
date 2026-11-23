@@ -19,6 +19,10 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   const card = overlay.page.getByTestId('instant-ninja-card')
   await expect(card).toContainText('Divine Orb')
   await expect(card).toContainText('180c')
+  // Its badge says what the price is and which key gets live data.
+  const badge = card.getByTestId('instant-ninja-badge')
+  await expect(badge).toHaveAttribute('title', /instant pricing without any delay\. For live data, press the price check key again/)
+  await expect(badge).toHaveAttribute('data-tip-keys', 'Ctrl + D')
   // A divine's parts in chaos, for paying in div.
   await expect(card.getByTestId('instant-ninja-parts')).toContainText('0.1 18c')
   await expect(overlay.page.locator('#price-window')).toHaveCount(0)
