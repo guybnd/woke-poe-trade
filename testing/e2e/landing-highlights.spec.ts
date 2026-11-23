@@ -14,7 +14,8 @@ import type { Locator, Page } from '@playwright/test'
 import { test, expect, FIXTURES, haveOcr, logFixture, fixtureText } from './harness'
 import { Clip, around } from './clip'
 import type { Rect } from './clip'
-import type { Overlay } from './harness'
+import type { FakeApp, Overlay, WidgetSeed } from './harness'
+import { clearDocs, showcaseSite, firstRead, seedWeek, reload, mapLog, lastLeave, localIcons } from './profit-showcase'
 
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/public/shots')
 const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
@@ -1288,6 +1289,74 @@ test('market: stacked decks, counted from the log', async ({ overlay }) => {
   await saveLow(overlay, 'hl-stacked-decks')
 })
 
+// ---- Profit: Net worth, maps and a strategy run (profit-showcase.ts) ----
+
+// The stash read, a week of chart behind it, the run's maps in the log, and a
+// second read with the maps used up and the drops in. Returns the window.
+async function profitSetup (overlay: Overlay, fakeApp: FakeApp, widgets: WidgetSeed[] = [], toast = false) {
+  clearDocs(fakeApp)
+  await localIcons(overlay)
+  const site = await showcaseSite(fakeApp)
+  await overlay.boot({
+    overlayActive: true,
+    widgets,
+    // The after-map card stays up for the shot.
+    patch: c => { const w = c.widgets.find((w: { wmType: string }) => w.wmType === 'woke-session-story'); if (toast) { w.chipSeconds = 0; w.chipPlace = 'center' } }
+  })
+  await firstRead(overlay)
+  await overlay.page.waitForTimeout(1000)
+  seedWeek(fakeApp, 'Strand farm')
+  // With other windows placed, Net worth stays shut so they are the ones on show.
+  const id = await reload(overlay, widgets.length === 0)
+  await backdrop(overlay, 'frames/hideout.jpg')
+  await overlay.log(mapLog())
+  await overlay.log(lastLeave())
+  const panel = overlay.page.locator(`#${id ?? 'none'}`)
+  return { site, panel }
+}
+
+async function secondRead (overlay: Overlay, site: { after: boolean }, panel: Locator) {
+  site.after = true
+  await panel.getByRole('button', { name: 'Refresh' }).click()
+  await expect(panel.getByText('Stash read just now')).toBeVisible({ timeout: 15_000 })
+  await overlay.page.waitForTimeout(800)
+}
+
+test('profit: buys and sales from the trade history', async ({ overlay, fakeApp }) => {
+  try {
+    const { panel } = await profitSetup(overlay, fakeApp)
+    await panel.getByRole('tab', { name: 'Sales' }).click()
+    await panel.getByRole('button', { name: 'Refresh' }).click()
+    await expect(panel.locator('tbody tr')).toHaveCount(8, { timeout: 10_000 })
+    await saveAround(overlay, 'hl-profit-sales', [panel.locator('[data-w-panel]').first()], 1240)
+  } finally { fakeApp.site.reply = null }
+})
+
+test('profit: a strategy run, from its start to now', async ({ overlay, fakeApp }) => {
+  try {
+    const { site, panel } = await profitSetup(overlay, fakeApp)
+    await secondRead(overlay, site, panel)
+    await panel.getByRole('tab', { name: 'Runs' }).click()
+    await expect(panel.locator('[data-run-card]')).toContainText('Strand farm')
+    // A read the tab starts finishes first.
+    await expect(panel.getByRole('button', { name: 'Refresh' })).toBeEnabled({ timeout: 20_000 })
+    await overlay.page.waitForTimeout(800)
+    await saveAround(overlay, 'hl-profit-run', [panel.locator('[data-w-panel]').first()], 1240)
+  } finally { fakeApp.site.reply = null }
+})
+
+test('profit: every map timed, with stash reads between', async ({ overlay, fakeApp }) => {
+  try {
+    await profitSetup(overlay, fakeApp, [{ wmType: 'woke-session-analytics', wmWants: 'show' as const }], true)
+    const maps = overlay.widget('woke-session-analytics')
+    await maps.getByRole('tab', { name: 'Map history' }).click()
+    await expect(maps.locator('[data-map-row]').first()).toBeVisible({ timeout: 10_000 })
+    const toast = overlay.page.locator('[data-map-toast]')
+    await expect(toast).toBeVisible({ timeout: 10_000 })
+    await saveAround(overlay, 'hl-profit-maps', [maps.locator('[data-w-panel]').first(), toast], 1240)
+  } finally { fakeApp.site.reply = null }
+})
+
 // ---- Clips: the same setups, recorded while the overlay is used ----
 //
 //   WOKE_LANDING_CLIPS=1 npx playwright test landing-highlights -g "clip:"
@@ -1637,5 +1706,57 @@ test.describe('clips', () => {
     await clip.moveTo(...rest, 700)
     await clip.hold(700)
     await clip.save()
+  })
+
+  // Profit, slide 1: a stash read, the run it adds to, and the sales behind it.
+  test('clip: profit, a read and the run it counts toward', async ({ overlay, fakeApp }) => {
+    try {
+      const { site, panel } = await profitSetup(overlay, fakeApp)
+      const page = overlay.page
+      const win = panel.locator('[data-w-panel]').first()
+      const tab = (name: string) => panel.getByRole('tab', { name })
+      // Learn the window's widest box over its three views, then start on Holdings.
+      const seen: Array<Rect | null> = []
+      for (const name of ['Runs', 'Sales', 'Holdings']) {
+        await tab(name).click()
+        if (name === 'Sales') {
+          // Sales read now, so the clip only switches to them.
+          await panel.getByRole('button', { name: 'Refresh' }).click()
+          await expect(panel.locator('tbody tr')).toHaveCount(8, { timeout: 10_000 })
+        }
+        await page.waitForTimeout(400)
+        seen.push(await win.boundingBox())
+      }
+      const view = around(seen, 1240, 24)
+      const refresh = (await panel.getByRole('button', { name: 'Refresh' }).boundingBox())!
+      const rest: [number, number] = [refresh.x - 160, refresh.y + 260]
+      await page.mouse.move(...rest)
+      const clip = await Clip.start(page, 'clip-profit', rest, view)
+      await clip.hold(1200)
+      // The second read: the drops come in.
+      site.after = true
+      await clip.moveTo(refresh.x + refresh.width / 2, refresh.y + refresh.height / 2, 700)
+      await clip.click()
+      await expect(panel.getByText('Stash read just now')).toBeVisible({ timeout: 15_000 })
+      await clip.hold(2200)
+      for (const [name, ms] of [['Runs', 3600], ['Sales', 3000]] as const) {
+        const b = (await tab(name).boundingBox())!
+        await clip.moveTo(b.x + b.width / 2, b.y + b.height / 2, 600)
+        await clip.click()
+        if (name === 'Runs') {
+          await expect(panel.locator('[data-run-card]')).toContainText('Strand farm')
+          await clip.hold(900)
+          await clip.poster()
+          await clip.hold(ms - 900)
+        } else {
+          await clip.hold(ms)
+        }
+      }
+      const h = (await tab('Holdings').boundingBox())!
+      await clip.moveTo(h.x + h.width / 2, h.y + h.height / 2, 600)
+      await clip.click()
+      await clip.hold(900)
+      await clip.save()
+    } finally { fakeApp.site.reply = null }
   })
 })

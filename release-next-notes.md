@@ -109,3 +109,4 @@
 - Net worth: rare and magic maps (Nightmare Maps drop rare) are priced at their base's poe.ninja price and counted as one row, instead of left unpriced.
 - Website: each section's clip now starts as soon as a bit of it is on screen. On shorter screens the Price Check clip at the top used to sit still until you scrolled.
 - Website: the feature clips play again in Chrome. Their WebM versions failed to decode there, so each clip stayed on its first frame.
+- Website: a new Profit section shows how stash reads, map times, trade history and strategy runs add up to profit per map and per hour, with a short clip.
