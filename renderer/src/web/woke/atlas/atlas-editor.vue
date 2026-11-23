@@ -14,7 +14,7 @@
           <button class="leading-none rounded w-btn-soft w-6 h-6" @click="remove(s.id)">
             <i class="fas fa-times w-dim" />
           </button>
-          <input :value="s.treeUrl" @input="setTree(s, $event)" placeholder="Atlas tree link (pathofexile.com/fullscreen-atlas-skill-tree/…)"
+          <input :value="s.treeUrl" @input="setTree(s, $event)" placeholder="Atlas tree link (pathofexile.com, poeplanner or poeatlasplanner)"
             class="rounded px-1 leading-6 col-start-2 col-span-2"
             :class="(s.treeUrl && !treeOk(s.treeUrl)) ? 'w-input w-input-bad' : 'w-input'">
           <input :value="s.tags.join(', ')" @change="setTags(s, $event)" placeholder="tags, comma separated"

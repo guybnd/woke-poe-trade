@@ -198,16 +198,36 @@ function readLink (url: string): Alloc {
   try {
     const t = decodeTree(url)
     let lost = 0
-    for (const id of t.nodes) {
+    for (const id of t.sorted ? takenOrder(t.nodes) : t.nodes) {
       if (props.model.nodes.has(id)) nodes.add(id)
       else lost++
     }
     for (const m of t.masteries) if (props.model.variants.get(m.node)?.some(v => v.effect === m.effect)) variants[m.node] = m.effect
     if (lost) unreadable.value = `${lost} of its passives aren't in this atlas (a link from an older league)`
   } catch {
-    unreadable.value = 'it isn\'t a pathofexile.com or poeplanner atlas tree link'
+    unreadable.value = 'it isn\'t a pathofexile.com, poeplanner or poeatlasplanner atlas tree link'
   }
   return { nodes, variants }
+}
+
+// A link listing its nodes by id (poeatlasplanner) in an order they could be
+// taken: outward from the start, so the points slider grows a joined tree.
+function takenOrder (ids: number[]): number[] {
+  const want = new Set(ids)
+  const out: number[] = []
+  const seen = new Set<number>([props.model.start])
+  const queue = [props.model.start]
+  for (let i = 0; i < queue.length; i++) {
+    for (const next of [...(props.model.links.get(queue[i]) ?? [])].sort((a, b) => a - b)) {
+      if (seen.has(next) || !want.has(next)) continue
+      seen.add(next)
+      out.push(next)
+      queue.push(next)
+    }
+  }
+  // Anything not joined to the start keeps its place at the end.
+  for (const id of ids) if (!seen.has(id)) out.push(id)
+  return out
 }
 
 const alloc = shallowRef<Alloc>(readLink(props.treeUrl))

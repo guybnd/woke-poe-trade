@@ -9,6 +9,8 @@ export interface DecodedTree {
   version: number
   nodes: number[]
   masteries: Array<{ node: number, effect: number }>
+  // The nodes come sorted by id, not in the order taken (poeatlasplanner).
+  sorted?: boolean
 }
 
 function base64UrlToBytes (code: string): Uint8Array {
@@ -28,7 +30,7 @@ export function extractTreeCode (input: string): string | null {
   try {
     const url = new URL(trimmed)
     // poeatlasplanner.com keeps its code in the hash: #p=<code>
-    const planner = /(?:^#|&)p=([^&]+)/.exec(url.hash)
+    const planner = /poeatlasplanner\.com$/i.test(url.hostname) ? /(?:^#|&)p=([^&]+)/.exec(url.hash) : null
     if (planner) return /^[A-Za-z0-9_-]+$/.test(planner[1]) ? planner[1] : null
     const parts = url.pathname.split('/').filter(Boolean)
     code = parts[parts.length - 1] ?? ''
@@ -235,7 +237,10 @@ function isAtlasPlanner (bytes: Uint8Array): boolean {
 
 function decodeAtlasPlanner (bytes: Uint8Array): DecodedTree {
   let pos = 1
-  for (let s = 0; s < 2; s++) pos += 1 + bytes[pos]
+  for (let s = 0; s < 2; s++) {
+    if (pos >= bytes.length || pos + 1 + bytes[pos] > bytes.length) throw new Error('Tree link is cut short')
+    pos += 1 + bytes[pos]
+  }
   const varint = () => {
     let x = 0
     let shift = 0
@@ -248,24 +253,37 @@ function decodeAtlasPlanner (bytes: Uint8Array): DecodedTree {
       if (shift > 28) throw new Error('Not a tree link')
     }
   }
-  varint() // points
-  const count = varint()
-  if (count > 1024) throw new Error('Not a tree link')
-  const nodes: number[] = []
-  let id = 0
-  for (let i = 0; i < count; i++) {
-    id += varint()
-    if (id > 0xffff) throw new Error('Not a tree link')
-    nodes.push(id)
-  }
-  const masteries: Array<{ node: number, effect: number }> = []
-  if (pos < bytes.length) {
-    const picks = varint()
-    for (let i = 0; i < picks; i++) {
-      const at = varint()
-      const effect = varint()
-      if (nodes[at] != null) masteries.push({ node: nodes[at], effect })
+  const head = pos
+  // Points, then the node count; both 150 on a full tree, so which is which
+  // isn't sure: the one that reads the link to its exact end wins.
+  for (const countFirst of [false, true]) {
+    pos = head
+    try {
+      const a = varint()
+      const b = varint()
+      const count = countFirst ? a : b
+      if (count > 1024) throw new Error('Not a tree link')
+      const nodes: number[] = []
+      let id = 0
+      for (let i = 0; i < count; i++) {
+        id += varint()
+        if (id > 0xffff) throw new Error('Not a tree link')
+        nodes.push(id)
+      }
+      const masteries: Array<{ node: number, effect: number }> = []
+      if (pos < bytes.length) {
+        const picks = varint()
+        for (let i = 0; i < picks; i++) {
+          const at = varint()
+          const effect = varint()
+          if (nodes[at] != null) masteries.push({ node: nodes[at], effect })
+        }
+      }
+      if (pos !== bytes.length) throw new Error('Not a tree link')
+      return { version: 6, nodes, masteries, sorted: true }
+    } catch (err) {
+      if (countFirst) throw err
     }
   }
-  return { version: 6, nodes, masteries }
+  throw new Error('Not a tree link')
 }

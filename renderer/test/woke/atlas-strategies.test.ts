@@ -112,6 +112,13 @@ describe('atlas tree model', () => {
       { node: 28477, effect: 17503 },
       { node: 33916, effect: 11906 }
     ])
+    expect(t.sorted).toBe(true)
+    // Cut short inside its header or nodes: refused, never an empty tree.
+    const bytes = Uint8Array.from(atob(url.split('#p=')[1].replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))
+    const cut = (n: number) => 'https://poeatlasplanner.com/#p=' + btoa(String.fromCharCode(...bytes.subarray(0, n))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    for (const n of [5, 12, 40, bytes.length - 1]) expect(() => decodeTree(cut(n)), String(n)).toThrow()
+    // A hash p= on any other site isn't a planner code.
+    expect(extractTreeCode('https://www.pathofexile.com/fullscreen-atlas-skill-tree/AAAABgAAAAA#x&p=abc')).toBe('AAAABgAAAAA')
     // Found in guide text too.
     expect(parseGuideText(`My farm
 ${url}`).treeUrl).toBe(url)

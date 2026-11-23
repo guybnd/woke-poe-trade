@@ -121,7 +121,7 @@
       <div v-if="!treeUrl" class="w-faint">
         Nothing taken yet. <button type="button" class="w-accent hover:underline" @click="emit('show-tree')">Open the tree</button> and click passives, or paste a link:
       </div>
-      <input v-if="editing || !treeUrl" :value="strategy.treeUrl" class="w-field" spellcheck="false" placeholder="pathofexile.com atlas tree link"
+      <input v-if="editing || !treeUrl" :value="strategy.treeUrl" class="w-field" spellcheck="false" placeholder="Atlas tree link (pathofexile.com, poeplanner, poeatlasplanner)"
         @change="pasteLink(($event.target as HTMLInputElement).value)">
       <WSkeleton v-else-if="!atlasData && !decodeError && !atlasDataError" :rows="3" :value="false" />
       <template v-else-if="config.totalsFolded" />
