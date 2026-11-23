@@ -192,7 +192,7 @@ import WDelta from '../WDelta.vue'
 import WPrice from '../WPrice.vue'
 import { bulkPerDivine, formatAmount } from '../format'
 import WSpark from '../WSpark.vue'
-import { hideTip, tip } from './tooltip'
+import { hideTip, hideTipOnScroll, tip } from './tooltip'
 import { loadTipBases } from './item-tip'
 import type { TipPack } from './tip-content'
 import { weaponBaseIn, weaponStats } from './weapon-stats'
@@ -442,14 +442,14 @@ onMounted(() => {
   // A drag sends no mouse events, so the tooltip would freeze over the targets.
   window.addEventListener('dragstart', hideTip, true)
   window.addEventListener('blur', hideTip)
-  window.addEventListener('scroll', hideTip, true)
+  window.addEventListener('scroll', hideTipOnScroll, true)
 })
 onUnmounted(() => {
   window.removeEventListener('mousemove', onPointer, true)
   window.removeEventListener('mouseover', onPointer, true)
   window.removeEventListener('dragstart', hideTip, true)
   window.removeEventListener('blur', hideTip)
-  window.removeEventListener('scroll', hideTip, true)
+  window.removeEventListener('scroll', hideTipOnScroll, true)
   hideTip()
 })
 </script>
@@ -590,7 +590,7 @@ onUnmounted(() => {
 }
 .effectOn { color: var(--w-accent); }
 .uniqueCell { display: flex; align-items: baseline; gap: var(--w-s2); min-width: 0; }
-.noDrop { flex: none; color: var(--w-down); font-size: 0.85em; }
+.noDrop { flex: none; color: var(--w-down); font-size: max(var(--w-fs-xs), 0.85em); }
 /* Not a random drop: listed after the ones that are, faded. */
 .restrictedRow { opacity: 0.6; }
 .g-high { color: var(--w-accent); }

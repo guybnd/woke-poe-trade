@@ -14,14 +14,30 @@
           <input ref="input" v-model="query" :class="$style.input" spellcheck="false" aria-label="Search"
             placeholder="Item, tool or setting. Or paste an item (Ctrl V)" @keydown="onKey" @paste="onPaste">
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': helpOpen }" title="What can I search for?" aria-label="What can I search for?" @click="toggleHelp"><i class="fas fa-question" /></button>
+          <button class="w-icon-btn" :class="{ 'w-icon-btn--on': groupsOpen }" title="What search shows" aria-label="What search shows" data-search-groups-btn @click="toggleGroups"><i class="fas fa-cog" /></button>
           <WCorruptedFilter v-model="corrupted" />
           <WKbd keys="Esc" />
         </label>
+        <div v-if="chips.length && !groupsOpen" :class="$style.chips" data-search-chips>
+          <button v-for="c in chips" :key="c.id" type="button" :class="[$style.chip, { [$style.chipOn]: c.id === chip }]" :aria-pressed="c.id === chip"
+            :title="c.id === 'all' ? 'Everything, each group folded as the cog says' : `Only ${c.label.toLowerCase()}, every group in full`" @click="pickChip(c.id)">
+            {{ c.label }}<span :class="$style.chipN">{{ c.count }}</span>
+          </button>
+          <span :class="$style.chipKeys"><WKbd keys="Ctrl + Left" /> <WKbd keys="Ctrl + Right" /></span>
+        </div>
         <div :class="$style.panes">
-          <div ref="listEl" :class="$style.list" class="w-scroll">
+          <div v-if="groupsOpen" :class="$style.list" class="w-scroll" data-search-groups>
+            <SearchGroups v-model="groupModes" @done="toggleGroups" />
+          </div>
+          <div v-else ref="listEl" :class="$style.list" class="w-scroll">
             <template v-for="section in sections" :key="section.label">
-              <div :class="$style.head">{{ section.label }}<template v-if="section.capped"> · first {{ PRICE_GROUP_LIMIT }}, keep typing</template></div>
-              <button v-for="e in section.entries" :key="e.id" v-item-tip="tipOf(e)" :data-no-item-tip="e.kind === 'setting' ? 'a setting named after a mechanic or item, not the item itself' : undefined" tabindex="-1" :class="[$style.res, { [$style.sel]: e === selected }]"
+              <div v-if="!section.more" :class="$style.head">{{ section.label }}<template v-if="section.capped"> · first {{ PRICE_GROUP_LIMIT }}, keep typing</template></div>
+              <template v-for="e in section.entries" :key="e.id">
+              <button v-if="e.kind === 'more'" tabindex="-1" :class="[section.more ? $style.fold : $style.more, { [$style.sel]: e === selected }]" data-search-more
+                :data-selected="e === selected || undefined" :title="e.about" @click="run(e)">
+                <span :class="section.more ? $style.foldName : undefined">{{ e.name }}</span><span class="w-dim ml-1">{{ section.more ? `${e.sub} · show` : e.sub }}</span>
+              </button>
+              <button v-else v-item-tip="tipOf(e)" :data-no-item-tip="e.kind === 'setting' ? 'a setting named after a mechanic or item, not the item itself' : undefined" tabindex="-1" :class="[$style.res, { [$style.sel]: e === selected }]"
                 :data-selected="e === selected || undefined" @click="selected = e" @dblclick="run(e)">
                 <WIcon v-if="e.kind === 'price'" :src="ninjaIcon(e.group.type, e.group.name) ?? ninjaArt(e.group.type, e.group.name)" size="md" />
                 <WIcon v-else-if="e.kind === 'item'" :src="e.info.icon" size="md" />
@@ -34,6 +50,7 @@
                 <span v-if="e.kind === 'price'" :class="$style.range"><template v-if="e.group.low !== e.group.high"><WPrice :bulk="e.group.high < 1" :chaos="e.group.low" :divine="divine" /> to </template><WPrice :bulk="e.group.high < 1" :chaos="e.group.high" :divine="divine" /></span>
                 <WKbd v-else-if="e.kind === 'command' && e.keys" :keys="e.keys" />
               </button>
+              </template>
             </template>
             <div v-if="!entries.length" :class="$style.none">Type an item, a tool or a setting, or ? for ideas. Items you look up show here next time.</div>
           </div>
@@ -73,7 +90,7 @@
               <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
               <CardDrops v-if="cardDropName" :name="cardDropName" />
               <div v-if="conv" :class="$style.convBox" :style="{ '--conv-cols': convCols }">
-                <div :class="[$style.conv, $style.gridHead]"><span>{{ selected.group.name }}</span><span v-if="conv.rows[0].chaos != null" class="text-right">Chaos</span><span v-if="conv.rows[0].div != null" class="text-right">Divines</span></div>
+                <div :class="[$style.conv, $style.gridHead]"><span v-item-tip="{ name: selected.group.name, type: selected.group.type }">{{ selected.group.name }}</span><span v-if="conv.rows[0].chaos != null" class="text-right">Chaos</span><span v-if="conv.rows[0].div != null" class="text-right">Divines</span></div>
                 <div v-for="r in conv.rows" :key="r.amount" :class="[$style.conv, $style.row]">
                   <span class="w-num">{{ convNumber(r.amount) }}</span>
                   <span v-if="r.chaos != null" class="w-num text-right">{{ convNumber(r.chaos) }} c</span>
@@ -174,6 +191,9 @@ import { MAP_MODS_TYPE } from '../map-mods/widget'
 import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../essence-scan/widget'
 import { RUN_TIMER_TYPE, hotkeyTarget as timerTarget } from '../campaign/run-timer'
 import { isFoulborn } from '../shared/item-identity'
+import { CHIPS, GROUP_CAP, chipOf, groupMode, shapeSections } from './groups'
+import type { ChipId, GroupMode } from './groups'
+import SearchGroups from './SearchGroups.vue'
 import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, bestName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
 import { basesOfUnique, hasUniques, uniquesOnBase } from '../shared/uniques-on-base'
 import type { PriceGroup } from './search'
@@ -269,7 +289,7 @@ const snapshot = useSearchSnapshot()
 interface Base { id: string, name: string, sub: string }
 interface PriceEntry extends Base { kind: 'price', group: PriceGroup }
 interface ItemEntry extends Base { kind: 'item', info: BaseType }
-interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting', icon: string, about: string, verb: string, keys?: string | null, aliases?: string[], action: () => void }
+interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting' | 'more', icon: string, about: string, verb: string, keys?: string | null, aliases?: string[], action: () => void }
 interface LookupEntry extends Base { kind: 'lookup', icon: string, card: LookupCard }
 type Entry = PriceEntry | ItemEntry | ActionEntry | LookupEntry
 
@@ -820,7 +840,7 @@ function liveAnswer (q: string): string | null {
 }
 
 // ---- results ----
-const sections = computed<Array<{ label: string, entries: Entry[], capped?: boolean }>>(() => {
+const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: boolean }>>(() => {
   if (!open.value) return []
   if (helpOpen.value) return cardSections(exampleCards(liveAnswer), null)
   const items = snapshot.value?.items ?? []
@@ -859,6 +879,100 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
     ],
     web: cardSections(cards, ['Search the web'])
   })
+})
+// What each group shows (groups.ts): its best rows, then a "+N more" row; a
+// folded group is that one row. Groups you open stay open until the query changes.
+const expanded = shallowRef<ReadonlySet<string>>(new Set())
+watch(query, () => {
+  expanded.value = new Set()
+  groupsOpen.value = false
+})
+function expand (labels: string | string[], first: Entry | null) {
+  if (first) wantEntry = e => e.id === first.id
+  expanded.value = new Set([...expanded.value, ...(Array.isArray(labels) ? labels : [labels])])
+  focusInput()
+}
+const groupsOpen = shallowRef(false)
+const groupModes = computed({
+  get: () => props.config.groups ?? {},
+  set: (v: Record<string, GroupMode>) => { props.config.groups = Object.keys(v).length ? v : undefined }
+})
+function toggleGroups () {
+  groupsOpen.value = !groupsOpen.value
+  focusInput()
+}
+// The chip row (C): All, or one kind of result with every group under it in
+// full. Ctrl + Left / Right steps through the chips.
+const chip = shallowRef<ChipId>('all')
+const chips = computed(() => {
+  if (!queryOk.value || helpOpen.value) return []
+  const counts = new Map<ChipId, number>()
+  // All counts what All lists: groups switched off aren't in it.
+  let all = 0
+  for (const s of rawSections.value) {
+    const c = chipOf(s.label)
+    counts.set(c, (counts.get(c) ?? 0) + s.entries.length)
+    if (groupMode(s.label, props.config.groups) !== 'off') all += s.entries.length
+  }
+  return CHIPS.filter(c => c.id === 'all' || counts.get(c.id))
+    .map(c => ({ ...c, count: c.id === 'all' ? all : counts.get(c.id) ?? 0 }))
+})
+// A chip with nothing for the new query goes back to All, so the list is never
+// empty while other results wait behind it.
+watch(chips, (list) => {
+  if (chip.value !== 'all' && list.length && !list.some(c => c.id === chip.value)) chip.value = 'all'
+})
+function stepChip (dir: 1 | -1) {
+  const list = chips.value
+  if (list.length < 2) return
+  const at = Math.max(0, list.findIndex(c => c.id === chip.value))
+  chip.value = list[(at + dir + list.length) % list.length].id
+}
+function pickChip (id: ChipId) {
+  chip.value = id
+  focusInput()
+}
+const sections = computed<Array<{ label: string, entries: Entry[], capped?: boolean, more?: boolean }>>(() => {
+  const raw = rawSections.value
+  // The empty box and "?" are short lists of their own.
+  if (!queryOk.value || helpOpen.value) return raw
+  if (chip.value !== 'all') return raw.filter(s => chipOf(s.label) === chip.value)
+  const shaped = shapeSections(query.value, raw, props.config.groups, expanded.value)
+  const out: Array<{ label: string, entries: Entry[], capped?: boolean, more?: boolean }> = shaped.sections.map(s => {
+    if (!s.hidden) return s
+    const more: ActionEntry = {
+      kind: 'more',
+      id: `more:${s.label}`,
+      name: `+${s.hidden} more`,
+      sub: s.label,
+      icon: 'fas fa-angle-down',
+      about: `${s.hidden} more under ${s.label}. The cog in the search bar sets which groups show in full, fold to the top ${GROUP_CAP}, or stay off.`,
+      verb: 'Show them',
+      action: () => { expand(s.label, s.firstHidden) }
+    }
+    return { label: s.label, entries: [...s.entries, more], capped: s.capped }
+  })
+  if (shaped.off.length) {
+    const names = shaped.off.map(o => o.label)
+    out.push({
+      label: 'Off',
+      more: true,
+      entries: [{
+        kind: 'more',
+        id: 'more:off',
+        name: `${names.length} group${names.length > 1 ? 's' : ''} off`,
+        sub: names.join(', '),
+        icon: 'fas fa-eye-slash',
+        about: `Switched off in the cog: ${names.join(', ')}. ${shaped.off.reduce((n, o) => n + o.count, 0)} results there.`,
+        verb: 'Show them',
+        action: () => {
+          const first = raw.find(r => r.label === names[0])?.entries[0] ?? null
+          expand(names, first)
+        }
+      }]
+    })
+  }
+  return out
 })
 const entries = computed(() => sections.value.flatMap(s => s.entries))
 
@@ -994,9 +1108,11 @@ let listQuery = ''
 let autoTop: Entry | null = null
 watch(entries, (list) => {
   const id = selected.value?.id
-  const wanted = wantEntry ? list.find(wantEntry) : undefined
+  const want = wantEntry
+  const wanted = want ? list.find(want) ?? reveal(want) : undefined
   wantEntry = null
-  const answer = showAnswer ? list.find(e => e.kind === 'lookup' && !['Search the web', 'Things to try'].includes(e.card.group)) : undefined
+  const isAnswer = (e: Entry) => e.kind === 'lookup' && !['Search the web', 'Things to try'].includes(e.card.group)
+  const answer = showAnswer ? list.find(isAnswer) ?? reveal(isAnswer) : undefined
   showAnswer = false
   const picked = id != null && id === pickedId ? selected.value : null
   // Each keystroke picks the top result. A refresh with the same query
@@ -1011,6 +1127,20 @@ watch(entries, (list) => {
   autoTop = !wanted && !answer && !keep && !picked ? selected.value : null
 })
 
+// A row a jump asks for in a folded or capped group: open that group. The
+// list is built again with it; this pick is kept by its id.
+function reveal (want: (e: Entry) => boolean): Entry | undefined {
+  for (const s of rawSections.value) {
+    const e = s.entries.find(want)
+    if (e) {
+      if (!expanded.value.has(s.label)) expanded.value = new Set([...expanded.value, s.label])
+      if (chip.value !== 'all' && chipOf(s.label) !== chip.value) chip.value = 'all'
+      return e
+    }
+  }
+  return undefined
+}
+
 function move (dir: 1 | -1) {
   const list = entries.value
   if (!list.length) return
@@ -1021,7 +1151,20 @@ function move (dir: 1 | -1) {
 }
 
 function onKey (e: KeyboardEvent) {
-  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+  // The cog's list covers the results: Enter or Esc closes it, and the hidden
+  // list takes no keys meanwhile.
+  if (groupsOpen.value) {
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
+      toggleGroups()
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') e.preventDefault()
+    return
+  }
+  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.ctrlKey && !e.shiftKey && !e.altKey && chips.value.length > 1) {
+    e.preventDefault()
+    stepChip(e.key === 'ArrowRight' ? 1 : -1)
+  } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault()
     e.stopPropagation()
     move(e.key === 'ArrowDown' ? 1 : -1)
@@ -1101,8 +1244,15 @@ const beastBox = computed(() => {
 })
 function jumpTo (q: string, want: (e: Entry) => boolean) {
   // The same query doesn't rebuild the list: pick from it now.
-  if (query.value === q) selected.value = entries.value.find(want) ?? selected.value
-  else {
+  if (query.value === q) {
+    const own = entries.value.find(want)
+    if (own) selected.value = own
+    else {
+      // In a folded group or behind a chip: open it, and pick it once the list is rebuilt.
+      const hidden = reveal(want)
+      if (hidden) { wantEntry = want; selected.value = hidden }
+    }
+  } else {
     wantEntry = want
     query.value = q
   }
@@ -1340,6 +1490,7 @@ function start (text: string) {
   holdPricesForSearch()
   query.value = text
   corrupted.value = 'any'
+  chip.value = 'all'
   selected.value = entries.value[0] ?? null
   wm.show(props.config.wmId)
   focusInput(true)
@@ -1439,6 +1590,18 @@ const dataNote = computed(() => {
 .head { padding: 8px var(--w-pad) 3px; font-size: var(--w-fs-caps); font-weight: var(--w-caps-weight); letter-spacing: 0.05em; text-transform: var(--w-caps-case); color: var(--w-dim); font-family: var(--w-caps-face); }
 .res { display: flex; align-items: center; gap: var(--w-s2); width: 100%; min-height: 40px; padding: 2px var(--w-pad); text-align: left; }
 .res:hover { background: var(--w-panel-2); }
+/* A group's "+N more" row, and a folded group's one line. */
+.more { display: block; width: 100%; padding: 2px var(--w-pad) 4px calc(var(--w-pad) + var(--w-icon-md) + var(--w-s2)); text-align: left; font-size: var(--w-fs-sm); color: var(--w-accent); }
+.fold { display: block; width: 100%; padding: 6px var(--w-pad) 3px; text-align: left; font-size: var(--w-fs-caps); }
+.foldName { font-weight: var(--w-caps-weight); letter-spacing: 0.05em; text-transform: var(--w-caps-case); color: var(--w-dim); font-family: var(--w-caps-face); }
+.more:hover, .fold:hover { background: var(--w-panel-2); }
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--w-s1); padding: var(--w-s1) var(--w-pad); border-bottom: 1px solid var(--w-line-soft); }
+.chip { display: inline-flex; align-items: baseline; gap: 4px; padding: 0 8px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); font-family: var(--w-caps-face); font-size: var(--w-fs-sm); color: var(--w-dim); line-height: 1.7; }
+.chip:hover { color: var(--w-text); border-color: var(--w-line-strong); }
+.chipOn, .chipOn:hover { color: var(--w-text); border-color: var(--w-accent); background: var(--w-accent-soft); }
+.chipN { font-family: var(--w-num); color: var(--w-faint); }
+.chipKeys { margin-left: auto; color: var(--w-dim); }
+.fold:hover .foldName { color: var(--w-text); }
 .sel, .sel:hover { background: var(--w-accent-soft); box-shadow: inset 2px 0 0 var(--w-accent); }
 .resName { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .small { font-size: var(--w-fs-sm); }

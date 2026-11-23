@@ -122,6 +122,7 @@ import TradeLinks from './TradeLinks.vue'
 import BulkVerdict from '@/web/woke/price-insight/BulkVerdict.vue'
 import { buildBulkInsight, pickBulkMarket } from '@/web/woke/price-insight/bulk-insight'
 import { priceView } from '@/web/woke/price-insight/view'
+import { chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
 import '@/web/woke/price-insight/price-table.css'
 
 const slowdown = artificialSlowdown(900)
@@ -347,7 +348,7 @@ export default defineComponent({
     const ninjaEach = computed(() => {
       if (props.filters.trade.league !== selectedLeague.value?.id) return null
       const q = exactDetailsId(props.item)
-      const chaos = q ? poeninja.findPriceByQuery(q)?.chaos : null
+      const chaos = (chaosOrbRow(props.item, poeninja.xchgRate.value) ?? (q ? poeninja.findPriceByQuery(q) : null))?.chaos
       if (!chaos) return null
       if (selectedCurr.value === 'xchgChaos') return chaos
       const rate = poeninja.xchgRate.value

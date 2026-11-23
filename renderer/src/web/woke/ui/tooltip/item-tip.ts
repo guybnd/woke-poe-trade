@@ -186,11 +186,40 @@ let timer: ReturnType<typeof setTimeout> | undefined
 let hovered: HTMLElement | null = null
 const refs = new WeakMap<HTMLElement, ItemTipRef | null | undefined>()
 
-function cancel () {
+// The row whose tooltip is up or on its way.
+let live: HTMLElement | null = null
+
+// Any scroll hides the tooltip (GameTooltip), also one that ends after the
+// pointer reached a row (Ctrl+Space scrolling a row into view, a wheel still
+// settling). The row is still the hovered one, so no mouseover comes and it
+// stayed without a tooltip until the pointer left it. Now, once the scroll
+// stops (or the pointer moves), it comes back if the row is still shown and
+// under the pointer. Any other hide (a click, a menu, blur, the overlay
+// closing) is final, as before.
+const SCROLL_SETTLE_MS = 150
+let stale: HTMLElement | null = null
+let settle: ReturnType<typeof setTimeout> | undefined
+
+function cancel (scrolled = false) {
   seq++
   clearTimeout(timer)
+  clearTimeout(settle)
+  const was = live
+  live = null
+  if (scrolled && hovered && (was === hovered || stale === hovered)) {
+    stale = hovered
+    settle = setTimeout(reshow, SCROLL_SETTLE_MS)
+  } else stale = null
 }
 onTipHide(cancel)
+
+function reshow () {
+  const el = stale
+  stale = null
+  // :hover is the browser's own: it clears when the pointer leaves the window
+  // or the row slides away from under it.
+  if (el && el === hovered && document.hasFocus() && el.offsetParent !== null && el.matches(':hover')) enter(el)
+}
 
 // A row closed while the pointer is still on it (hidden, re-sorted, right-clicked)
 // stays closed until the pointer goes somewhere else.
@@ -222,6 +251,7 @@ function enter (el: HTMLElement) {
   watchHovered()
   if (!ref?.name) { hideTip(); return }
   cancel()
+  live = el
   const mine = seq
   const own = ref.content
   if (own) {
@@ -274,6 +304,7 @@ function watchHover () {
   document.addEventListener('mouseout', (e) => {
     if (!e.relatedTarget && hovered) { leave(); closed = null }
   })
+  document.addEventListener('mousemove', () => { if (stale) reshow() }, { passive: true })
 }
 
 // Dock cards take clicks while the game has focus. Leaving one makes the window

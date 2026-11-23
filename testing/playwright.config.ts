@@ -18,7 +18,10 @@ export default defineConfig({
     : [['list'], ['html', { open: 'never', outputFolder: 'report' }]],
   outputDir: 'test-results',
   use: {
-    viewport: { width: 1920, height: 1080 },
+    // WOKE_VIEWPORT=2560x1440 runs the tests on a bigger screen (layout audit).
+    viewport: /^\d+x\d+$/i.test(process.env.WOKE_VIEWPORT ?? '')
+      ? { width: Number(process.env.WOKE_VIEWPORT!.split(/x/i)[0]), height: Number(process.env.WOKE_VIEWPORT!.split(/x/i)[1]) }
+      : { width: 1920, height: 1080 },
     // Overlay mode: APT checks for Electron in the user agent.
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) awakened-poe-trade/0.0.0-test Chrome/140.0.0.0 Electron/40.0.0 Safari/537.36',
     screenshot: 'only-on-failure',

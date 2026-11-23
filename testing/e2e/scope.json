@@ -465,6 +465,10 @@
    "renderer/src/web/woke/scarab-flip/",
    "renderer/src/web/woke/search/lookups/flips.ts"
   ],
+  "search-groups.spec.ts": [
+   "renderer/src/web/woke/search/",
+   "renderer/src/web/woke/settings/"
+  ],
   "search-price-check.spec.ts": [
    "main/src/woke/market-store.ts",
    "renderer/src/parser/",
