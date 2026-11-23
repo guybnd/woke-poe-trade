@@ -19,6 +19,14 @@ history:
     date: '2026-11-23T16:16:04.017Z'
     comment: Updated implementation link.
     id: a-2026-11-23t16-16-04-017z
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up merged: https://github.com/guybnd/woke-poe-trade/pull/821
+      switches the At Faustus box to the app's themed checkbox.
+    date: '2026-11-23T16:46:58.406Z'
+    selfAttested: true
+    id: c-2026-11-23t16-46-58-406z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/819'
 ---
 "At Faustus" tick box in Net worth counts listings in the total or leaves them out: https://github.com/guybnd/woke-poe-trade/pull/819
