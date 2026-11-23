@@ -129,7 +129,8 @@
 .w-pc-table tbody .w-pc-age.w-pc-age-new { color: var(--w-up); }
 .w-pc-table tbody .w-pc-age.w-pc-age-week { color: var(--w-warn); }
 .w-pc-table tbody .w-pc-age.w-pc-age-old { color: var(--w-down); }
-.w-pc-table tbody tr.w-pc-stale > td { opacity: 0.5; }
+/* The time keeps full strength, so its colour stays readable. */
+.w-pc-table tbody tr.w-pc-stale > td:not(.w-pc-age) { opacity: 0.5; }
 
 /* The verdict can grow (details, chart, drivers). It scrolls by itself, so the
  * toolbar and listings under it stay on screen. Bleeds to the window's edges. */
