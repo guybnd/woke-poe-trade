@@ -132,13 +132,14 @@ const newId = () => `${Date.now().toString(36)}${(idSeq++).toString(36)}`
 
 // Starts a run at a chart point (the last read for "now"). A run going
 // already is stopped first. Earlier reads' changes come from the kept diffs.
-export function startRun (league: string, name: string, startAt: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null, costs: CostLine[] = []) {
+// `extra`: what Start read of your Faustus listings (RunsView).
+export function startRun (league: string, name: string, startAt: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null, costs: CostLine[] = [], extra: Pick<Run, 'startListings' | 'faustus'> = {}) {
   return queue(async () => {
     await loadRuns(league)
     const doc = runsDoc.value
     const done = doc.live ? [await withFinal({ ...doc.live, stoppedAt: doc.live.stoppedAt ?? Date.now() }, points), ...doc.done] : doc.done
     let run = emptyRun(newId(), league, name, startAt)
-    run = { ...tallyFrom(run, diffs), costs: costs.map(c => ({ ...c, id: newId() })) }
+    run = { ...tallyFrom(run, diffs), costs: costs.map(c => ({ ...c, id: newId() })), ...extra }
     if (!run.tallyPartial) delete run.tallyPartial
     if (await save(league, { live: run, done: done.slice(0, MAX_DONE_RUNS) })) {
       await saveGlance(league, run, points, divine)

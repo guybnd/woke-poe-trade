@@ -835,8 +835,9 @@ export function clearTradeCache () {
   cache.clear()
 }
 
-export async function requestTradeResultList (body: TradeRequest, leagueId: string): Promise<SearchResult> {
-  let data = cache.get<SearchResult>([body, leagueId])
+// woke: `fresh` skips the cache (Net worth's Faustus read: your listings change).
+export async function requestTradeResultList (body: TradeRequest, leagueId: string, fresh = false): Promise<SearchResult> {
+  let data = fresh ? undefined : cache.get<SearchResult>([body, leagueId])
 
   if (!data) {
     preventQueueCreation([
@@ -875,9 +876,9 @@ export async function requestTradeResultList (body: TradeRequest, leagueId: stri
 export async function requestResults (
   queryId: string,
   resultIds: string[],
-  opts: { accountName: string }
+  opts: { accountName: string, fresh?: boolean }
 ): Promise<PricingResult[]> {
-  let data = cache.get<FetchResult[]>(resultIds)
+  let data = opts.fresh ? undefined : cache.get<FetchResult[]>(resultIds)
 
   if (!data) {
     throwIfRestricted(RATE_LIMIT_RULES.FETCH)

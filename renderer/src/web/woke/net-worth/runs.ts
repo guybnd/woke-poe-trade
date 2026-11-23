@@ -7,7 +7,8 @@
 // stash can't see, like maps bought into the inventory. A typed line takes
 // over its item: that item's own stash change is left out, so it never
 // counts twice. Pure: no Vue, no IO.
-import type { FaustusRead, SaleMark } from './faustus'
+import { arrivalsOf } from './faustus'
+import type { Arrival, FaustusRead, SaleMark } from './faustus'
 import type { LedgerPoint } from './ledger'
 import type { StashDiff } from './valuation'
 
@@ -59,7 +60,11 @@ export interface Run {
   final?: RunFinal
   // Your Faustus listings, last read (faustus.ts).
   faustus?: FaustusRead
-  // Your marks on sales during the run, by sale id.
+  // Item ids listed at Faustus at the start (their sales are from before).
+  startListings?: string[]
+  // Currency that came into the stash at each read (collects sales).
+  arrivals?: Arrival[]
+  // Your overrides on sales during the run, by sale id.
   saleMarks?: Record<string, SaleMark>
 }
 
@@ -114,7 +119,8 @@ export function addToTally (run: Run, diff: StashDiff): Run {
       tally[l.key] = t
     }
   }
-  return { ...run, tally, tallyAt: diff.at }
+  const came = arrivalsOf(diff)
+  return { ...run, tally, tallyAt: diff.at, ...(came.length ? { arrivals: [...(run.arrivals ?? []), ...came] } : {}) }
 }
 
 // The tally for a start in the past, from the diffs the chart kept.

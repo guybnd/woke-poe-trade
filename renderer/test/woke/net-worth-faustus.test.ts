@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { collectAll, listingsQuery, outsideTotals, setMark, toListing } from '@/web/woke/net-worth/faustus'
+import { arrivalsOf, listingsQuery, outsideTotals, setBefore, toListing } from '@/web/woke/net-worth/faustus'
 import type { OutsideRun } from '@/web/woke/net-worth/faustus'
 import type { Sale } from '@/web/woke/net-worth/sales'
-import { emptyRun, runTotals } from '@/web/woke/net-worth/runs'
+import { addToTally, emptyRun, runTotals } from '@/web/woke/net-worth/runs'
 
 const M = 60_000
 const T0 = 1_000_000_000
@@ -19,23 +19,38 @@ describe('outside the stash', () => {
     expect(o.listedChaos).toBe(430)
     expect(o.faustusChaos).toBe(430)
   })
-  it('a sale waits in the Faustus line until collected, then the stash counts it', () => {
-    const sales = [item('s', T0 + 3 * M, 100)]
-    expect(outsideTotals(run(), sales, RATES).waitingChaos).toBe(100)
-    const collected = setMark(run(), 's', { collected: true })
-    const o = outsideTotals(collected, sales, RATES)
-    expect(o.waitingChaos).toBe(0)
-    expect(o.beforeChaos).toBe(0)
+  it('a sale waits at Faustus until a read sees its currency come in', () => {
+    const sales = [item('s', T0 + 3 * M, 2, 'divine')]
+    expect(outsideTotals(run(), sales, RATES).waitingChaos).toBe(400)
+    // 1 div came in: half collected. Then 3 more: all of it, the rest is loot.
+    const half = run({ arrivals: [{ at: T0 + 5 * M, c: 'divine', n: 1 }] })
+    expect(outsideTotals(half, sales, RATES).waitingChaos).toBe(200)
+    expect(outsideTotals(half, sales, RATES).sold[0].collected).toBe(0.5)
+    const all = run({ arrivals: [{ at: T0 + 5 * M, c: 'divine', n: 1 }, { at: T0 + 6 * M, c: 'divine', n: 3 }] })
+    expect(outsideTotals(all, sales, RATES).waitingChaos).toBe(0)
   })
-  it('a sale from before the run: nothing waits, and once collected it comes off profit', () => {
+  it('currency that came in before the sale, or in another currency, collects nothing', () => {
+    const sales = [item('s', T0 + 3 * M, 2, 'divine')]
+    const r = run({ arrivals: [{ at: T0 + 2 * M, c: 'divine', n: 5 }, { at: T0 + 4 * M, c: 'chaos', n: 500 }] })
+    expect(outsideTotals(r, sales, RATES).waitingChaos).toBe(400)
+  })
+  it('a sale late in the sales file is still collected by a read after it', () => {
+    // The read came first; the sale shows up in the history later.
+    const r = run({ arrivals: [{ at: T0 + 10 * M, c: 'chaos', n: 100 }] })
+    expect(outsideTotals(r, [item('s', T0 + 5 * M, 100)], RATES).waitingChaos).toBe(0)
+  })
+  it('an item listed when the run started is from before: nothing waits, and once collected it comes off profit', () => {
     const sales = [item('s', T0 + 3 * M, 100)]
-    const before = setMark(run(), 's', { before: true })
-    expect(outsideTotals(before, sales, RATES).faustusChaos).toBe(0)
-    const o = outsideTotals(setMark(before, 's', { collected: true }), sales, RATES)
-    expect(o.beforeChaos).toBe(100)
-    const t = runTotals(emptyRun('r', 'L', 'x', T0), [], 0, T0 + 20 * M, undefined, o)
+    const before = run({ startListings: ['s'] })
+    const o = outsideTotals(before, sales, RATES)
+    expect(o.sold[0].before).toBe(true)
+    expect(o.faustusChaos).toBe(0)
+    const got = outsideTotals({ ...before, arrivals: [{ at: T0 + 4 * M, c: 'chaos', n: 100 }] }, sales, RATES)
+    expect(got.beforeChaos).toBe(100)
+    const t = runTotals(emptyRun('r', 'L', 'x', T0), [], 0, T0 + 20 * M, undefined, got)
     expect(t.profitChaos).toBe(-100)
-    expect(t.totalChaos).toBe(-100)
+    // Your override wins.
+    expect(outsideTotals(setBefore(before, 's', false), sales, RATES).waitingChaos).toBe(100)
   })
   it('a listing that sold since the read counts once, as the sale', () => {
     const r = run({ faustus: { at: T0 + M, listings: [item('x', T0 + M, 40)] } })
@@ -52,12 +67,10 @@ describe('outside the stash', () => {
     expect(o.waitingChaos).toBe(0)
     expect(o.unpriced).toBe(1)
   })
-  it('marks: cleared ones are dropped, all collected', () => {
-    let r = setMark(run(), 'a', { before: true })
-    r = setMark(r, 'a', { before: false })
-    expect(r.saleMarks).toEqual({})
-    r = collectAll(r, [item('a', T0 + M, 1), item('b', T0 - M, 1)])
-    expect(r.saleMarks).toEqual({ a: { collected: true } })
+  it('a read\'s currency arrivals: net in, per currency', () => {
+    const d = { at: 5, added: [{ key: 'Divine Orb', name: '', icon: '', count: 3, chaos: 600 }, { key: 'Chaos Orb', name: '', icon: '', count: 10, chaos: 10 }], removed: [{ key: 'Divine Orb', name: '', icon: '', count: 1, chaos: 200 }, { key: 'Chaos Orb', name: '', icon: '', count: 20, chaos: 20 }], netChaos: 0 }
+    expect(arrivalsOf(d)).toEqual([{ at: 5, c: 'divine', n: 2 }])
+    expect(addToTally(emptyRun('r', 'L', 'x', 1), d).arrivals).toEqual([{ at: 5, c: 'divine', n: 2 }])
   })
 })
 

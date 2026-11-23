@@ -18,13 +18,13 @@ export async function readFaustus (league: string, since: number, now = Date.now
   const account = await ownAccount()
   if (!account) throw new Error('Sign in to the stash reader, or set your account name in Settings, to read your Faustus listings')
   const { requestResults, requestTradeResultList } = await import('@/web/price-check/trade/pathofexile-trade')
-  const search = await requestTradeResultList(listingsQuery(account) as unknown as Parameters<typeof requestTradeResultList>[0], league)
+  const search = await requestTradeResultList(listingsQuery(account) as unknown as Parameters<typeof requestTradeResultList>[0], league, true)
   const listings: Listing[] = []
   let older = false
   for (let i = 0; i < MAX_FETCHES && !older; i++) {
     const ids = search.result.slice(i * 10, i * 10 + 10)
     if (!ids.length) break
-    const got = await requestResults(search.id, ids, { accountName: account })
+    const got = await requestResults(search.id, ids, { accountName: account, fresh: true })
     for (const r of got) {
       if (r.indexedAt && Date.parse(r.indexedAt) <= since) { older = true; continue }
       const l = toListing(r)

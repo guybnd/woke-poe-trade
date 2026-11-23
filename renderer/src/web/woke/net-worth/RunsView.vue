@@ -5,7 +5,7 @@
       <div :class="$style.head"><span :class="$style.caps">Start a run</span></div>
       <div :class="$style.row">
         <input id="run-name" v-model="name" class="w-input px-1 leading-6 rounded" :class="$style.name" placeholder="Name, e.g. Nightmare maps" maxlength="40" aria-label="Run name" @keydown.enter="start">
-        <WButton size="sm" :disabled="startAt == null" @click="start">Start</WButton>
+        <WButton size="sm" :disabled="startAt == null || starting" @click="start">{{ starting ? 'Starting…' : 'Start' }}</WButton>
       </div>
       <div v-if="pastNames.length" :class="$style.chips">
         <button v-for="n in pastNames" :key="n" type="button" :class="[$style.chip, { [$style.on]: n === name }]" @click="name = n">{{ n }}</button>
@@ -95,10 +95,8 @@
           <span v-item-tip="saleTip(r.item)" class="w-trunc">{{ saleName(r.item) }}</span>
           <span class="w-dim text-xs">sold {{ clock(r.item.at) }}</span>
           <span :class="$style.marks">
-            <button type="button" :class="[$style.chip, { [$style.on]: r.mark.before }]" title="The item was from before the run: its sale isn't the run's" :aria-pressed="!!r.mark.before" @click="mark(r.item.id, { before: !r.mark.before })">From before</button>
-            <!-- Collected after Stop never reached the run's stash: only while it runs. -->
-            <button v-if="shownRun === live" type="button" :class="[$style.chip, { [$style.on]: r.mark.collected }]" title="Its currency is in your stash now, so the stash counts it" :aria-pressed="!!r.mark.collected" @click="mark(r.item.id, { collected: !r.mark.collected })">Collected</button>
-            <span v-else-if="r.mark.collected" class="w-dim text-xs">collected</span>
+            <span class="w-dim text-xs" :title="r.collected >= 1 ? 'Its currency came into your stash' : r.collected > 0 ? 'Part of its currency came into your stash' : 'Its currency is still at Faustus'">{{ r.collected >= 1 ? 'collected' : r.collected > 0 ? 'part collected' : 'at Faustus' }}</span>
+            <button type="button" :class="[$style.chip, { [$style.on]: r.before }]" :title="r.before ? 'From before the run (it was listed when the run started). Click: it is the run\'s' : 'The run\'s. Click if the item was from before the run'" :aria-pressed="r.before" @click="markBefore(r.item.id, !r.before)">From before</button>
           </span>
           <span class="w-num text-xs" :class="[$style.right, soldTone(r)]"><template v-if="r.chaos != null">{{ soldSign(r) }}{{ amount(r.chaos) }}<Coin :chaos="!divine" /></template><span v-else class="w-dim">{{ r.item.price.amount }} {{ r.item.price.currency }}</span></span>
         </div>
@@ -106,8 +104,8 @@
         <div class="w-dim text-xs">
           <template v-if="shownRun.faustus">Listings read {{ clock(shownRun.faustus.at) }}<template v-if="shownRun.faustus.more">: over 100 since the start, only the newest 100 count</template>. </template>
           <template v-else-if="shownRun === live">Listings are read when you press Stop. </template>
+          A sale is collected when a stash read sees its currency come in.
           <template v-if="outside.unpriced">{{ outside.unpriced }} without a price in chaos aren't counted. </template>
-          <button v-if="shownRun === live && outside.sold.some(r => !r.mark.collected)" type="button" :class="$style.link" @click="collectEverything">Mark all sales collected</button>
         </div>
       </div>
 
@@ -165,8 +163,8 @@ import Coin from './Coin.vue'
 import { leftOf, lineCost, mapsIn, runTotals, tallyRows } from './runs'
 import type { CostLine, Run } from './runs'
 import { addCost, addOnce, deleteRun, editRun, loadRuns, refreshRunMaps, runMaps, runsDoc, setOutside, startRun, stopRun } from './run-store'
-import { collectAll, outsideTotals, setMark } from './faustus'
-import type { OutsideRow, SaleMark } from './faustus'
+import { outsideTotals, setBefore } from './faustus'
+import type { OutsideRow } from './faustus'
 import { readFaustus } from './faustus-read'
 import { loadSales, ninjaEach, rates, sales } from './sales-store'
 import { saleName } from './sales'
@@ -218,10 +216,10 @@ const soldShown = shallowRef(8)
 const DAY = 86_400_000
 const stale = (l: Sale) => nowMinute.value - l.at > DAY
 const ninjaOf = (l: Sale) => { const each = ninjaEach(l); return each != null ? each * l.stack : null }
-const soldSign = (r: OutsideRow) => r.mark.before ? (r.mark.collected ? '−' : '') : (r.mark.collected ? '' : '+')
-const soldTone = (r: OutsideRow) => r.mark.before ? (r.mark.collected ? 'w-down' : 'w-dim') : (r.mark.collected ? 'w-dim' : 'w-up')
-function mark (id: string, patch: SaleMark) { edit(r => setMark(r, id, patch)) }
-function collectEverything () { edit(r => collectAll(r, sales.value)) }
+// From before: off profit once collected. The run's: in Faustus until collected.
+const soldSign = (r: OutsideRow) => r.before ? (r.collected > 0 ? '−' : '') : (r.collected < 1 ? '+' : '')
+const soldTone = (r: OutsideRow) => r.before ? (r.collected > 0 ? 'w-down' : 'w-dim') : (r.collected < 1 ? 'w-up' : 'w-dim')
+function markBefore (id: string, before: boolean) { edit(r => setBefore(r, id, before)) }
 const faustusReading = shallowRef(false)
 async function readFaustusInto (r: Run): Promise<void> {
   const read = await readFaustus(props.league, r.startAt)
@@ -255,9 +253,24 @@ const lastPoint = computed(() => props.points[props.points.length - 1]?.at ?? nu
 const startAt = computed(() => props.from ?? lastPoint.value)
 // The costs typed for the same name last time come along.
 const lastCosts = computed<CostLine[]>(() => (doc.value.done.find(r => r.name === name.value.trim())?.costs ?? []).map(c => { const x = { ...c }; delete x.bought; return x }))
-function start () {
-  if (startAt.value == null) return
-  startRun(props.league, name.value || 'Run', startAt.value, props.diffs, props.points, props.divine, lastCosts.value).catch(() => {})
+// Start reads your Faustus listings (the newest 100): their sales are from
+// before the run. A failed read still starts.
+const starting = shallowRef(false)
+async function start () {
+  const at = startAt.value
+  if (at == null || starting.value) return
+  const runName = name.value || 'Run'
+  const costs = lastCosts.value
+  starting.value = true
+  let extra: Pick<Run, 'startListings' | 'faustus'> = {}
+  try {
+    const read = await readFaustus(props.league, 0)
+    const after = read.listings.filter(l => l.at > at)
+    extra = { startListings: read.listings.filter(l => l.at <= at).map(l => l.id), ...(after.length ? { faustus: { at: read.at, listings: after } } : {}) }
+  } catch (e) {
+    toast(`Started without your Faustus listings: ${(e as Error).message}`)
+  } finally { starting.value = false }
+  startRun(props.league, runName, at, props.diffs, props.points, props.divine, costs, extra).catch(() => {})
   name.value = ''
 }
 // Stop reads your Faustus listings first; a failed read still stops.

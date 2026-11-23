@@ -6,11 +6,14 @@
 // separate line, and the run's total is profit plus that line:
 // - a listing made during the run: its asking price;
 // - a sale during the run, not collected yet: its price.
-// A sale of an item from before the run is no profit of the run: once its
-// currency is collected, the stash counted it, so it comes off profit.
+// Nothing to tick (Guy: "too manual"): a read that sees the sale's currency
+// come in collects it (collectedOf), and a sale of an item that was listed
+// when the run started is from before: no profit of the run, so once its
+// currency is collected it comes off profit.
 // Pure: no Vue, no IO.
-import { saleChaos } from './sales'
+import { NINJA_CURRENCY, saleChaos } from './sales'
 import type { Rates, Sale } from './sales'
+import type { StashDiff } from './valuation'
 
 // A merchant tab listing, in the sales' shape (its tooltip, name and price
 // work the same). `at` is when it was listed.
@@ -23,23 +26,35 @@ export interface FaustusRead {
   more?: boolean
 }
 
-// Your marks on a sale during the run.
+// Your override on a sale: from before the run or not (left out: the run
+// decides, from the listings read at Start).
 export interface SaleMark {
-  // The item was from before the run.
   before?: boolean
-  // Its currency is in your stash now.
-  collected?: boolean
 }
+
+// Currency that came into the stash at a read (net, whole units), by trade
+// currency id. Each run keeps these (runs.ts addToTally): a sale's currency
+// is collected when an arrival after the sale covers it.
+export interface Arrival { at: number, c: string, n: number }
 
 // What a run needs of this (runs.ts Run has these fields).
 export interface OutsideRun {
   startAt: number
   stoppedAt?: number
   faustus?: FaustusRead
+  // Item ids listed at Faustus when the run started: their sales are from before.
+  startListings?: string[]
+  arrivals?: Arrival[]
   saleMarks?: Record<string, SaleMark>
 }
 
-export interface OutsideRow { item: Sale, chaos: number | null, mark: SaleMark }
+export interface OutsideRow {
+  item: Sale
+  chaos: number | null
+  before: boolean
+  // Share of its price already in the stash, 0 to 1.
+  collected: number
+}
 
 export interface OutsideTotals {
   listed: OutsideRow[]
@@ -56,49 +71,75 @@ export interface OutsideTotals {
   unpriced: number
 }
 
+// Trade currency ids and the stash item each is.
+export const CURRENCY_ITEM: Record<string, string> = { chaos: 'Chaos Orb', divine: 'Divine Orb', ...NINJA_CURRENCY }
+const CURRENCY_OF: Record<string, string> = Object.fromEntries(Object.entries(CURRENCY_ITEM).map(([id, name]) => [name, id]))
+
+// One read's currency arrivals (net in, per currency).
+export function arrivalsOf (diff: StashDiff): Arrival[] {
+  const net: Record<string, number> = {}
+  for (const l of diff.added) { const c = CURRENCY_OF[l.key]; if (c) net[c] = (net[c] ?? 0) + l.count }
+  for (const l of diff.removed) { const c = CURRENCY_OF[l.key]; if (c) net[c] = (net[c] ?? 0) - l.count }
+  return Object.entries(net).filter(([, n]) => n > 0).map(([c, n]) => ({ at: diff.at, c, n }))
+}
+
 function inRun (run: OutsideRun, at: number): boolean {
   return at > run.startAt && (run.stoppedAt == null || at <= run.stoppedAt)
 }
 
+export function isBefore (run: OutsideRun, s: Sale): boolean {
+  return run.saleMarks?.[s.id]?.before ?? (run.startListings?.includes(s.id) ?? false)
+}
+
+// How much of each sale's currency the stash has seen come in: each arrival
+// covers the oldest sales before it in that currency, oldest first. Matching
+// by amount, never by sale: an arrival that was loot only moves money between
+// profit and the Faustus line, the total stays the same.
+export function collectedOf (run: OutsideRun, sales: readonly Sale[]): Map<string, number> {
+  const got = new Map<string, number>()
+  const byTime = [...sales].sort((a, b) => a.at - b.at)
+  for (const a of [...(run.arrivals ?? [])].sort((x, y) => x.at - y.at)) {
+    let left = a.n
+    for (const s of byTime) {
+      if (left <= 0 || s.at >= a.at) break
+      if (s.price.currency !== a.c) continue
+      const had = got.get(s.id) ?? 0
+      const take = Math.min(left, s.price.amount - had)
+      if (take > 0) { got.set(s.id, had + take); left -= take }
+    }
+  }
+  return got
+}
+
 export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: Rates): OutsideTotals {
-  const marks = run.saleMarks ?? {}
   const sold = sales.filter(s => inRun(run, s.at)).sort((a, b) => b.at - a.at)
   const soldIds = new Set(sold.map(s => s.id))
   // A listing that sold since the read is a sale now: it counts there.
   const listed = (run.faustus?.listings ?? []).filter(l => inRun(run, l.at) && !soldIds.has(l.id)).sort((a, b) => b.at - a.at)
+  const got = collectedOf(run, sold)
   let listedChaos = 0
   let waitingChaos = 0
   let beforeChaos = 0
   let unpriced = 0
-  const row = (item: Sale): OutsideRow => {
+  const row = (item: Sale, isSale: boolean): OutsideRow => {
     const chaos = saleChaos(item, rates)
     if (chaos == null) unpriced++
-    return { item, chaos, mark: marks[item.id] ?? {} }
+    const collected = isSale && item.price.amount > 0 ? Math.min(1, (got.get(item.id) ?? 0) / item.price.amount) : 0
+    return { item, chaos, before: isSale && isBefore(run, item), collected }
   }
-  const listedRows = listed.map(row)
+  const listedRows = listed.map(l => row(l, false))
   for (const r of listedRows) listedChaos += r.chaos ?? 0
-  const soldRows = sold.map(row)
+  const soldRows = sold.map(s => row(s, true))
   for (const r of soldRows) {
     const c = r.chaos ?? 0
-    if (r.mark.before) { if (r.mark.collected) beforeChaos += c } else if (!r.mark.collected) waitingChaos += c
+    if (r.before) beforeChaos += c * r.collected; else waitingChaos += c * (1 - r.collected)
   }
   return { listed: listedRows, sold: soldRows, listedChaos, waitingChaos, beforeChaos, faustusChaos: listedChaos + waitingChaos, unpriced }
 }
 
-export function setMark<R extends OutsideRun> (run: R, id: string, patch: SaleMark): R {
-  const next: SaleMark = { ...run.saleMarks?.[id], ...patch }
-  if (!next.before) delete next.before
-  if (!next.collected) delete next.collected
-  const marks = Object.fromEntries(Object.entries(run.saleMarks ?? {}).filter(([k]) => k !== id))
-  if (next.before || next.collected) marks[id] = next
-  return { ...run, saleMarks: marks }
-}
-
-// Every sale of the run marked collected.
-export function collectAll<R extends OutsideRun> (run: R, sales: readonly Sale[]): R {
-  let r = run
-  for (const s of sales) if (inRun(run, s.at) && !run.saleMarks?.[s.id]?.collected) r = setMark(r, s.id, { collected: true })
-  return r
+// Your override: the sale's item was from before the run, or not.
+export function setBefore<R extends OutsideRun> (run: R, id: string, before: boolean): R {
+  return { ...run, saleMarks: { ...run.saleMarks, [id]: { before } } }
 }
 
 // A trade fetch result (pathofexile-trade.ts PricingResult) as a listing.
