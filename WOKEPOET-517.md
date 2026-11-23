@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-517
 title: Onboarding audit for new users
-status: Todo
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -28,6 +28,43 @@ history:
     date: '2026-11-23T14:10:56.298Z'
     comment: Updated implementation link.
     id: a-2026-11-23t14-10-56-298z
-implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/812'
+  - type: comment
+    user: Agent
+    comment: 'Picks A, B, C plus starter pins built in PR 814; D not picked'
+    date: '2026-11-23T15:12:22.333Z'
+    completionComment: true
+    id: c-2026-11-23t15-12-22-333z
+  - type: status_change
+    from: Todo
+    to: Ready
+    user: Agent
+    date: '2026-11-23T15:12:22.333Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Picks A, B, C plus starter pins built in PR 814; D not picked. Website
+      part was PR 812. Dev build reloaded.
+    completionComment: true
+    date: '2026-11-23T15:12:39.448Z'
+    id: c-2026-11-23t15-12-39-448z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-23T15:12:39.957Z'
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/814'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Website part: https://github.com/guybnd/woke-poe-trade/pull/812 (Quick Start rewrite, Net worth line on the Tools page).
