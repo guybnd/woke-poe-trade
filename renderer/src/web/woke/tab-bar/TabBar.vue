@@ -228,7 +228,7 @@ import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import { searchRequest } from '../search/widget'
 import { usePriceText } from '../shared/price'
-import { markNewsSeen, newsFor, seenNewsIds, unseenNewsOf } from './news'
+import { markNewsSeen, newsFor, seenNewsIds } from './news'
 import { personalOn } from '../personal'
 import { openSettingsPage } from '../dock/dock'
 
@@ -728,11 +728,13 @@ function newsOf (entry: LauncherEntry<Tab>) {
 const newsCount = computed(() => new Set(launcherAll.value.map(e => newsOf(e)?.id).filter(Boolean)).size)
 const hoveredNote = shallowRef<string | null>(null)
 function pointAt (entry: LauncherEntry<Tab>) {
+  // mouseenter then focusin on the same row: keep the note already read.
+  if (hovered.value?.key === entry.key && hoveredNote.value != null) return
   hovered.value = entry
   const news = newsOf(entry)
   hoveredNote.value = news?.note ?? null
-  // A tool with several lines: pointing at it once reads them all.
-  if (news) markNewsSeen(ensureWokeConfig(AppConfig()).woke, unseenNewsOf(entry.wmType, seenNews.value).map(n => n.id))
+  // Only the line shown counts as read; a tool's other lines stay in the dock.
+  if (news) markNewsSeen(ensureWokeConfig(AppConfig()).woke, [news.id])
 }
 const ENTRY_HINT: Record<LauncherState, string | undefined> = {
   placed: undefined,
