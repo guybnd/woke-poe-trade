@@ -5,7 +5,7 @@
       <template #card>
         <!-- Its data loads the first time the card opens, never at startup. -->
         <NetWorthCard v-if="cardOpen && personalReady" :status="status" :league="leagueId" :with-hub="config.rateWithHub === true" :rate-window="config.rateWindow ?? '1h'" @window="config.rateWindow = $event" @refresh="refresh" @settings="openSettingsPage(wm, 'Game & league')"
-          :run="liveRun" :stopping="stopping" @stop="stopLive" @open-run="openRun" />
+          :run="liveRun" :stopping="stopping" :run-with-hub="config.runWithHub !== false" @stop="stopLive" @open-run="openRun" @run-hub="config.runWithHub = $event" />
         <div v-else class="w-dim text-xs" style="padding: 6px var(--w-pad);">{{ cardText }}</div>
       </template>
     </DockItem>

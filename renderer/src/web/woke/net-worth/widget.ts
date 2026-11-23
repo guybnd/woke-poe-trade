@@ -37,6 +37,8 @@ export interface NetWorthWidget extends Widget {
   // town time counted as play (default left out).
   rateWindow?: RateWindow
   rateWithHub?: boolean
+  // The dock card's run per hour counts hideout and town time (undefined: yes).
+  runWithHub?: boolean
   // Section sizes dragged under Details (layout.ts).
   layout?: PanelLayout
   // What the window shows: your stash (default) or your sales (pick C), and

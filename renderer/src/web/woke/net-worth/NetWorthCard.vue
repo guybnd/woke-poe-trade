@@ -25,9 +25,28 @@
         </template>
         <div :class="$style.stats" class="w-dim w-num text-xs" data-card-run-stats>
           <span v-if="run.maps">{{ signed(toDiv(run.profitChaos / run.maps)) }}<Coin :chaos="!divineRate" />/map</span><span v-else>No maps yet</span>
-          <span v-if="run.perHourChaos != null">{{ signed(toDiv(run.perHourChaos)) }}<Coin :chaos="!divineRate" />/h</span><span v-else>Per hour after 10 min</span>
+          <span v-if="perHour != null" :title="withHub ? 'Per hour of the whole run' : 'Per hour, hideout and town time left out'">{{ signed(toDiv(perHour)) }}<Coin :chaos="!divineRate" />/h</span><span v-else>Per hour after 10 min</span>
           <span v-if="run.costPerMapChaos != null">Costs {{ div(run.costPerMapChaos) }}<Coin :chaos="!divineRate" />/map</span>
         </div>
+        <!-- Where the run's time went (Client.txt): maps, hideout and town, away. -->
+        <template v-if="time">
+          <div :class="$style.timeBar" data-card-run-time>
+            <i v-for="p in time.parts" :key="p.id" :class="$style[p.id]" :style="{ flexGrow: p.ms }" :title="`${p.label}: ${formatDuration(p.ms)}`" />
+          </div>
+          <div :class="$style.timeKey" class="w-dim w-num text-xs">
+            <span v-for="p in time.parts" :key="p.id"><i :class="[$style.dot, $style[p.id]]" />{{ p.label }} {{ formatDuration(p.ms) }}</span>
+            <WToggle :model-value="withHub" :class="$style.hubToggle" title="Count hideout and town time in the run's per hour" data-card-run-hub @update:model-value="emit('run-hub', $event)">Count hideout</WToggle>
+          </div>
+        </template>
+        <!-- What brought the most in (the stash's tally since the start). -->
+        <template v-if="topCame.length">
+          <div :class="$style.caps">Most income</div>
+          <div v-for="r in topCame" :key="r.key" :class="$style.row" data-card-run-came>
+            <img v-if="r.line.icon" :src="r.line.icon" alt="" :class="$style.art"><span v-else :class="$style.art" />
+            <span v-item-tip="tipFor(tips, r.key, r.line.name, Math.abs(r.net))" class="w-trunc">{{ r.net > 1 ? `${fmt(r.net)} × ` : '' }}{{ r.line.name }}</span>
+            <span class="w-num w-up" :title="inChaos(r.netChaos)">{{ signed(toDiv(r.netChaos)) }}</span>
+          </div>
+        </template>
         <button type="button" :class="$style.fold" title="Show Net worth" data-card-fold @click="tab = 'worth'">
           <span class="w-dim">Net worth</span>
           <b v-if="v" class="w-num">{{ div(v.chaos) }}<Coin :chaos="!divineRate" /></b>
@@ -87,7 +106,7 @@
 <script setup lang="ts">
 // Loaded the first time the card opens, with the window's data (store.ts).
 import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue'
-import { WSegmented, vItemTip } from '../ui'
+import { WSegmented, WToggle, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, formatDuration } from '../ui/format'
 import { divine as divineRate, historyNow, ledger, onStatus, ratesAt, pricePrefs, setLeague, stashNow, summary, valuation, wantPrices } from './store'
@@ -95,6 +114,9 @@ import { bigGains, refreshWaitMs, seriesFor, topCardChanges } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { ReaderStatus } from './widget'
 import type { RunGlance } from './runs'
+import { tallyRows } from './runs'
+import { loadRuns, runsDoc } from './run-store'
+import { runTimeIn } from './run-time'
 import Coin from './Coin.vue'
 import LedgerChart from './LedgerChart.vue'
 import { RATE_WINDOWS, rateTip, startOfDay } from './play-time'
@@ -111,8 +133,10 @@ const props = defineProps<{
   run?: RunGlance | null
   // Stop pressed, until the run is saved stopped.
   stopping?: boolean
+  // The run's per hour counts hideout and town time.
+  runWithHub?: boolean
 }>()
-const emit = defineEmits<{ (e: 'refresh' | 'settings' | 'stop' | 'open-run'): void, (e: 'window', w: RateWindow): void }>()
+const emit = defineEmits<{ (e: 'refresh' | 'settings' | 'stop' | 'open-run'): void, (e: 'window', w: RateWindow): void, (e: 'run-hub', on: boolean): void }>()
 
 // The clock for "in N min" and "3h ago": only while the card is shown.
 const now = shallowRef(Date.now())
@@ -195,6 +219,36 @@ function stopClick () {
   emit('stop')
 }
 onUnmounted(() => { clearTimeout(confirmTimer) })
+// The run's saved doc, for its tally.
+watch(() => props.run ? props.league : null, (l) => { if (l) loadRuns(l).catch(() => {}) }, { immediate: true })
+const liveDoc = computed(() => props.run && runsDoc.value.live?.league === props.league && runsDoc.value.live.startAt === props.run.startAt ? runsDoc.value.live : null)
+const topCame = computed(() => liveDoc.value ? tallyRows(liveDoc.value).came.slice(0, 3) : [])
+// Time in each state since the start, read once each time the card opens.
+const spent = shallowRef<Record<'map' | 'play' | 'hub' | 'off', number> | null>(null)
+watch(() => props.run?.startAt, (at) => {
+  spent.value = null
+  if (at == null) return
+  runTimeIn(at, Date.now()).then((t) => { if (props.run?.startAt === at) spent.value = t }).catch(() => {})
+}, { immediate: true })
+const time = computed(() => {
+  const t = spent.value
+  if (!t) return null
+  const parts = [
+    { id: 'map', label: 'Maps', ms: t.map + t.play },
+    { id: 'hub', label: 'Hideout', ms: t.hub },
+    { id: 'off', label: 'Away', ms: t.off }
+  ].filter(p => p.ms >= 60_000)
+  return parts.length ? { parts, ...t } : null
+})
+const withHub = computed(() => props.runWithHub !== false)
+// Hideout left out: the run's profit over its time less hideout and town.
+const perHour = computed(() => {
+  const r = props.run
+  if (!r) return null
+  if (withHub.value || !spent.value) return r.perHourChaos
+  const ms = Math.max(0, now.value - r.startAt) - spent.value.hub
+  return ms >= 10 * 60_000 ? r.profitChaos / (ms / 3_600_000) : null
+})
 
 const fmt = (n: number) => formatAmount(n)
 const toDiv = (chaos: number) => divineRate.value ? chaos / divineRate.value : chaos
@@ -228,9 +282,17 @@ const tone = (n: number | null | undefined) => n == null || n === 0 ? 'w-dim' : 
 .stats { display: flex; flex-wrap: wrap; gap: 2px 12px; }
 .fold { display: flex; align-items: baseline; gap: 8px; padding: 4px 0 0; border: 0; border-top: 1px solid var(--w-line); background: none; color: var(--w-fg); cursor: pointer; text-align: left; font: inherit; }
 .fold:hover .chev { color: var(--w-gold); }
-.chev { margin-left: auto; font-size: 10px; }
+.chev { margin-left: auto; font-size: var(--w-fs-xs); }
 .left { margin-left: 0; }
 .stop:not(:disabled) { color: var(--w-down); }
 .readEnd { margin-left: auto; }
+.timeBar { display: flex; height: 6px; gap: 1px; border-radius: var(--w-r-sm); overflow: hidden; }
+.timeBar i { display: block; min-width: 2px; }
+.map { background: var(--w-up); }
+.hub { background: var(--w-gold); }
+.off { background: var(--w-line-strong); }
+.timeKey { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
+.hubToggle { margin-left: auto; }
 .link { align-self: flex-start; color: var(--w-gold); text-decoration: underline; cursor: pointer; font-size: var(--w-fs-sm); }
 </style>

@@ -11,7 +11,14 @@
         <span data-glance-time>{{ formatClock(elapsed) }}</span>
       </template>
       <span v-else :class="$style.name">Glance bar</span>
-      <template v-if="night">
+      <!-- A strategy run going (Net worth › Runs): its maps and profit instead of tonight's. -->
+      <template v-if="run">
+        <span :class="$style.sep" />
+        <span class="w-dim" data-glance-run>Run</span>
+        <span>{{ run.maps }} {{ run.maps === 1 ? 'map' : 'maps' }}</span>
+        <span :class="run.profitChaos >= 0 ? 'w-up' : 'w-down'">{{ run.profitChaos > 0 ? '+' : '' }}{{ formatChaos(run.profitChaos, run.divine) }}</span>
+      </template>
+      <template v-else-if="night">
         <span :class="$style.sep" />
         <span class="w-dim">Tonight</span>
         <span>{{ night.maps.length }} {{ night.maps.length === 1 ? 'map' : 'maps' }}</span>
@@ -24,7 +31,9 @@
 
 <script setup lang="ts">
 // Settings › Sessions › "While in a map". Off unless turned on.
-import { computed, onUnmounted, shallowRef } from 'vue'
+import { computed, onUnmounted, shallowRef, watch } from 'vue'
+import { AppConfig } from '@/web/Config'
+import { hostRequest } from '../shared/host'
 import { formatChaos, formatClock } from '../ui/format'
 import { tickWhile } from '../dock/dock'
 import { tierText } from './map-log'
@@ -63,6 +72,23 @@ const elapsed = computed(() => props.before + Math.max(0, now.value - props.sinc
 const nights = useNightList()
 const night = computed(() => nights.shown.value?.live ? nights.shown.value.story : null)
 const profit = computed(() => night.value ? nights.profitOf(night.value) : null)
+
+// The strategy run's saved glance (net-worth/runs.ts RunGlance), read each
+// time you go into a map: it changes only with a stash read.
+interface RunNumbers { name: string, maps: number, profitChaos: number, divine: number | null }
+const run = shallowRef<RunNumbers | null>(null)
+watch(() => props.map ? props.since : null, (since) => {
+  const league = AppConfig().leagueId
+  if (since == null || !league) return
+  hostRequest('doc-get', { collection: 'net-worth', key: `${league}-run-glance` })
+    .then((g) => {
+      const o = g as Partial<RunNumbers> & { league?: string } | null
+      run.value = o && o.league === league && typeof o.profitChaos === 'number' && Number.isFinite(o.profitChaos) && typeof o.maps === 'number'
+        ? { name: String(o.name ?? ''), maps: o.maps, profitChaos: o.profitChaos, divine: typeof o.divine === 'number' ? o.divine : null }
+        : null
+    })
+    .catch(() => {})
+}, { immediate: true })
 </script>
 
 <style module>

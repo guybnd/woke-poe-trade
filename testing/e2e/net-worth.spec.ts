@@ -164,6 +164,9 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     }).toPass({ timeout: 20_000 })
     await expect(runTab).toContainText('Nightmare maps')
     await expect(overlay.page.locator('[data-card-run-total]')).toBeVisible()
+    // What brought the most in, with its item tooltip.
+    await expect(overlay.page.locator('[data-card-run-came]').first()).toContainText('The Apothecary')
+    await expect(overlay.page.locator('[data-card-run-came] [data-item-tip]').first()).toBeVisible()
     await overlay.snap('net worth dock card run')
     const stopBtn = overlay.page.locator('[data-card-stop]')
     await stopBtn.click()
