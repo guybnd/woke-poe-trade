@@ -1,6 +1,6 @@
 // Exchange items poe.ninja prices show that price first; the exchange search waits for a click.
 import { describe, expect, it } from 'vitest'
-import { holdBulkSearch, fixedPriceItem, ninjaPrice, ninjaTotal, divineParts } from '@/web/woke/price-insight/ninja-first'
+import { holdBulkSearch, fixedPriceItem, ninjaPrice, ninjaTotal, divineParts, chaosParts, chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
 
 const base = { api: 'bulk' as const, enabled: undefined, live: false, chaos: 34 }
 
@@ -79,6 +79,10 @@ describe('ninjaPrice', () => {
     expect(ninjaTotal(238, 180)).toBe('1.3 div')
   })
   it('splits a divine into chaos', () => {
-    expect(divineParts(180)).toEqual([{ part: '0.1', chaos: '18c' }, { part: '0.25', chaos: '45c' }, { part: '0.5', chaos: '90c' }, { part: '0.75', chaos: '135c' }])
+    expect(divineParts(180)).toEqual([{ part: '0.1 div', chaos: '18c' }, { part: '0.25 div', chaos: '45c' }, { part: '0.5 div', chaos: '90c' }, { part: '0.75 div', chaos: '135c' }])
+    // A Chaos Orb, the other way round.
+    expect(chaosParts(180)).toEqual([{ part: '10c', chaos: '0.056 div' }, { part: '50c', chaos: '0.28 div' }, { part: '100c', chaos: '0.56 div' }, { part: '1 div', chaos: '180c' }])
+    expect(chaosOrbRow({ info: { refName: 'Chaos Orb', namespace: 'ITEM' } })?.chaos).toBe(1)
+    expect(chaosOrbRow({ info: { refName: 'Divine Orb', namespace: 'ITEM' } })).toBeNull()
   })
 })

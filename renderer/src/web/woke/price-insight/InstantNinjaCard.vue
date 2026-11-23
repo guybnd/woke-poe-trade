@@ -21,9 +21,9 @@
       <div v-if="price?.sub || stack" :class="$style.dim">
         <template v-if="stack"><span :class="$style.fg"><w-price-text :text="stack" /></span> for your {{ have }}</template><template v-if="stack && price?.sub"> · </template><w-price-text :text="price?.sub" />
       </div>
-      <!-- A Divine Orb: its parts in chaos, for paying in div. -->
+      <!-- A Divine Orb's parts in chaos, or a Chaos Orb's amounts in div: chips, for paying in either. -->
       <div v-if="parts" :class="$style.parts" data-testid="instant-ninja-parts">
-        <span v-for="p in parts" :key="p.part"><span :class="$style.dim">{{ p.part }}</span> <w-price-text :text="p.chaos" /></span>
+        <span v-for="p in parts" :key="p.part" :class="$style.chip" :title="`${p.part} = ${p.chaos}`"><span :class="$style.dim"><w-price-text :text="p.part" /></span> <w-price-text :text="p.chaos" /></span>
       </div>
       <!-- The item's own verdict, where it has one (Stacked Deck: open or sell). -->
       <slot name="verdict" />
@@ -48,7 +48,7 @@ import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shall
 import type { ParsedItem } from '@/parser'
 import { ItemCategory } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
-import { ninjaPrice, ninjaTotal, divineParts } from './ninja-first'
+import { ninjaPrice, ninjaTotal, divineParts, chaosParts, chaosOrbRow } from './ninja-first'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { useLeagues } from '@/web/background/Leagues'
 import { savedPriceSeries } from '../market/db'
@@ -92,7 +92,7 @@ const ABOVE = 12
 const { findPriceByQuery, xchgRate, updatedAt } = usePoeninja()
 const info = computed(() => {
   const q = exactDetailsId(props.item)
-  const row = q && findPriceByQuery(q)
+  const row = chaosOrbRow(props.item) ?? (q && findPriceByQuery(q))
   return row && row.chaos > 0 ? row : null
 })
 
@@ -103,7 +103,11 @@ const isDivine = computed(() => props.item.info.refName === 'Divine Orb')
 const have = computed(() => props.item.stackSize?.value ?? 1)
 const price = computed(() => info.value ? ninjaPrice(info.value.chaos, xchgRate.value, isDivine.value) : null)
 const stack = computed(() => info.value && have.value > 1 ? ninjaTotal(info.value.chaos * have.value, isDivine.value ? undefined : xchgRate.value) : null)
-const parts = computed(() => isDivine.value && info.value ? divineParts(info.value.chaos) : null)
+const parts = computed(() => {
+  if (isDivine.value && info.value) return divineParts(info.value.chaos)
+  if (props.item.info.refName === 'Chaos Orb' && xchgRate.value) return chaosParts(xchgRate.value)
+  return null
+})
 const age = computed(() => agoPhrase(updatedAt.value))
 // The last day (Guy, 2026-11-23): the prices this app saved about every 30
 // minutes when it was running a day ago, else poe.ninja's last two daily prices.
@@ -274,7 +278,8 @@ onUnmounted(() => {
 .headline { font-family: var(--w-num); font-size: calc(24px * var(--w-text-scale, 1)); line-height: 1.1; font-weight: 600; color: var(--w-accent); white-space: nowrap; }
 .dim { color: var(--w-dim); }
 .fg { color: var(--w-fg); }
-.parts { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.parts { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-solid); font-size: var(--w-fs-sm); line-height: calc(18px * var(--w-text-scale, 1)); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .row { display: flex; gap: 6px; margin-top: 2px; }
 .btn { display: inline-flex; align-items: center; }
 </style>
