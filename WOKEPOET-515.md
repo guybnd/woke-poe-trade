@@ -24,6 +24,12 @@ history:
     selfAttested: true
     pin: true
     id: c-2026-11-23t11-47-58-754z
+  - type: comment
+    user: Agent
+    comment: 'R1 picked; round 2 picks pending, same link'
+    date: '2026-11-23T11:56:45.753Z'
+    selfAttested: true
+    id: c-2026-11-23t11-56-45-753z
 ---
 From the thread "Track strategy farm profit and costs".
 
