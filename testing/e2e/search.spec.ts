@@ -468,7 +468,9 @@ test('the palette resizes from its corner, adding room, and keeps its size', asy
   await page.mouse.move(g.x + 120, g.y + 80, { steps: 6 })
   await page.mouse.up()
   const after = (await panel.boundingBox())!
-  expect(after.width).toBeGreaterThan(before.width + 60)
+  // The corner stays under the mouse: centred, it grows on both sides.
+  expect(Math.abs((after.x + after.width) - (before.x + before.width + 120))).toBeLessThan(12)
+  expect(after.width).toBeGreaterThan(before.width + 200)
   expect(after.height).toBeGreaterThan(before.height + 40)
   // More room, not bigger text.
   expect(await palette.locator('[data-search-palette]').evaluate(el => getComputedStyle(el).fontSize)).toBe(font)
@@ -482,6 +484,16 @@ test('the palette resizes from its corner, adding room, and keeps its size', asy
   const again = (await panel.boundingBox())!
   expect(Math.abs(again.width - after.width)).toBeLessThan(2)
   expect(Math.abs(again.height - after.height)).toBeLessThan(2)
+
+  // It can't be shrunk past where it still works.
+  const g2 = (await grip.boundingBox())!
+  await page.mouse.move(g2.x + g2.width / 2, g2.y + g2.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(g2.x - 1200, g2.y - 800, { steps: 6 })
+  await page.mouse.up()
+  const small = (await panel.boundingBox())!
+  expect(small.width).toBeGreaterThanOrEqual(570)
+  expect(small.height).toBeGreaterThanOrEqual(280)
 
   // Right-click, Reset size: back to where it started.
   await palette.locator('[data-search-palette] [class*="detail"]').first().click({ button: 'right' })

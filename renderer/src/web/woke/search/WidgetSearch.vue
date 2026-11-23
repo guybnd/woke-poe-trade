@@ -1,6 +1,6 @@
 <template>
   <Widget :config="config" move-handles="none" :removable="false" :inline-edit="false" :readonly="true">
-    <WPanel v-if="open" width="66rem" max-height="72vh" :scroll="false">
+    <WPanel v-if="open" width="66rem" max-height="72vh" :scroll="false" :min-width="576" :min-height="288">
       <div :class="$style.root" data-search-palette @click="keepTyping" @keydown="onHotkey" @keyup="onHotkeyUp" @pointerdown="forgetHeld" @input="forgetHeld">
         <div v-if="pins.length" :class="$style.pins">
           <button v-for="(p, i) in pins" :key="key(p)" v-item-tip="p" :class="[$style.pin, { [$style.pinTop]: i === 0 && pins.length > 1 }]"

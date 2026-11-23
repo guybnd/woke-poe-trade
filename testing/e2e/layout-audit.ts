@@ -55,15 +55,18 @@ export interface LayoutIssue {
 // Runs in the page (page.addInitScript). Calls window.__wokeLayoutIssue for
 // each new fault; the harness saves it.
 export function installLayoutAudit (opts: { marks: boolean } = { marks: true }) {
-  type W = { __wokeLayoutIssue?: (i: LayoutIssue) => Promise<void>, __wokeLayoutScan?: () => void }
+  type W = { __wokeLayoutIssue?: (i: LayoutIssue) => Promise<void>, __wokeLayoutScan?: () => void, __wokeLayoutSettle?: () => Promise<void> }
   const w = window as unknown as W
   const seen = new Set<string>()
   let busy = false
-  // A fault counts once it is still there on the next scan (at least 0.7s
-  // later), so a window mid-animation or mid-resize isn't reported.
-  let before = new Set<string>()
-  let now = new Set<string>()
+  // A fault counts once it has been there 0.7s (seen on a scan at least that
+  // long after the first), so a window mid-animation or mid-resize isn't
+  // reported. Keyed by rule and place, not text: a ticking label stays one fault.
+  const HOLD = 700
+  let firstSeen = new Map<string, number>()
+  let now = new Map<string, number>()
   let confirm: ReturnType<typeof setTimeout> | undefined
+  let waitFor = 0 // ms until the next pending fault is due
 
   const CONTROL = 'button, a[href], [role="button"], input:not([type="hidden"]), select, .w-btn, .w-chip, .w-seg'
 
@@ -107,8 +110,11 @@ export function installLayoutAudit (opts: { marks: boolean } = { marks: true }) 
     const text = textOf(el)
     const key = `${rule}|${where}|${text}`
     if (seen.has(key)) return
-    now.add(key)
-    if (!before.has(key)) return
+    const id = `${rule}|${where}`
+    const since = firstSeen.get(id) ?? Date.now()
+    now.set(id, since)
+    const left = HOLD - (Date.now() - since)
+    if (left > 0) { waitFor = Math.min(waitFor, left); return }
     seen.add(key)
     const frame = frameOf(el)
     const issue: LayoutIssue = {
@@ -124,28 +130,30 @@ export function installLayoutAudit (opts: { marks: boolean } = { marks: true }) 
   }
 
   const queue: LayoutIssue[] = []
-  let sending = false
-  const flush = async () => {
-    if (sending || !w.__wokeLayoutIssue) return
-    sending = true
-    try {
-      while (queue.length) {
-        const issue = queue.shift()!
-        if (!opts.marks) { try { await w.__wokeLayoutIssue(issue) } catch {} continue }
-        // Box the fault in red for the screenshot, then take it away.
-        const mark = document.createElement('div')
-        mark.setAttribute('data-layout-audit', '')
-        Object.assign(mark.style, {
-          position: 'fixed', left: `${issue.rect.x - 2}px`, top: `${issue.rect.y - 2}px`, width: `${issue.rect.w + 4}px`, height: `${issue.rect.h + 4}px`,
-          outline: '2px solid #ff2a2a', zIndex: '2147483647', pointerEvents: 'none'
-        })
-        busy = true
-        document.body.appendChild(mark)
-        try { await w.__wokeLayoutIssue(issue) } catch {}
-        mark.remove()
-        busy = false
-      }
-    } finally { sending = false }
+  let sending: Promise<void> | null = null
+  const flush = (): Promise<void> => {
+    if (!w.__wokeLayoutIssue) return Promise.resolve()
+    sending ??= send().finally(() => { sending = null })
+    return sending
+  }
+  const send = async () => {
+    const post = w.__wokeLayoutIssue!
+    while (queue.length) {
+      const issue = queue.shift()!
+      if (!opts.marks) { try { await post(issue) } catch {} continue }
+      // Box the fault in red for the screenshot, then take it away.
+      const mark = document.createElement('div')
+      mark.setAttribute('data-layout-audit', '')
+      Object.assign(mark.style, {
+        position: 'fixed', left: `${issue.rect.x - 2}px`, top: `${issue.rect.y - 2}px`, width: `${issue.rect.w + 4}px`, height: `${issue.rect.h + 4}px`,
+        outline: '2px solid #ff2a2a', zIndex: '2147483647', pointerEvents: 'none'
+      })
+      busy = true
+      document.body.appendChild(mark)
+      try { await post(issue) } catch {}
+      mark.remove()
+      busy = false
+    }
   }
 
   const lines = (el: Element) => {
@@ -165,7 +173,8 @@ export function installLayoutAudit (opts: { marks: boolean } = { marks: true }) 
   const scan = () => {
     if (!document.body || busy) return
     clearTimeout(confirm)
-    now = new Set()
+    now = new Map()
+    waitFor = Infinity
     const vw = window.innerWidth
     const vh = window.innerHeight
     const all = document.body.querySelectorAll('*')
@@ -279,9 +288,8 @@ export function installLayoutAudit (opts: { marks: boolean } = { marks: true }) 
       }
     }
     // Faults seen for the first time get a second look.
-    const fresh = [...now].some(k => !before.has(k) && !seen.has(k))
-    before = now
-    if (fresh) confirm = setTimeout(() => { last = Date.now(); scan() }, 700)
+    firstSeen = now
+    if (waitFor < Infinity) confirm = setTimeout(recheck, waitFor + 20)
     flush()
   }
 
@@ -293,7 +301,21 @@ export function installLayoutAudit (opts: { marks: boolean } = { marks: true }) 
     if (Date.now() - last > 1500) { last = Date.now(); quiet = setTimeout(scan, 0); return }
     quiet = setTimeout(() => { last = Date.now(); scan() }, 300)
   }
+  // A screenshot in progress (busy) puts the second look off, not away.
+  const recheck = () => { if (busy) confirm = setTimeout(recheck, 200); else { last = Date.now(); scan() } }
   w.__wokeLayoutScan = scan
+  // The harness, before it reads the faults (test end, a reboot): finish any
+  // second look still due and send what it confirms.
+  w.__wokeLayoutSettle = async () => {
+    for (let i = 0; i < 3; i++) {
+      if (sending) await sending
+      if (busy) { await new Promise(r => setTimeout(r, 100)); continue }
+      scan()
+      if (waitFor === Infinity) break
+      await new Promise(r => setTimeout(r, waitFor + 20))
+    }
+    await flush()
+  }
   const start = () => {
     new MutationObserver(later).observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] })
     window.addEventListener('resize', later)

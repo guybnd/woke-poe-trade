@@ -1,8 +1,22 @@
 [
+  "clipped | price-check | div#price-window.layout-column.shrink-0.text-gray-200 > div.grow.layout-column.min-h-0 > div.p-4.layout-column.min-h-0 > div.layout-column.min-h-0 > div.w-pc-scroll.layout-column.overflow-y-auto",
   "clipped | woke-pob-builds | div#overlay-window.overflow-hidden.relative.w-full > div#widget > div.$widget.$draggable > div.flex.gap-2.min-h-0 > div.w-surface.$panel",
+  "clipped | woke-wickerman | div#app.text-sm.font-poe-sc > div#overlay-window.overflow-hidden.relative.w-full > div#widget > div.$widget.$draggable > div.w-surface.$panel",
   "row-wrap | price-check | div#price-window.layout-column.shrink-0.text-gray-200 > div.grow.layout-column.min-h-0 > div.p-4.layout-column.min-h-0 > div > div.$statHead.$open",
+  "row-wrap | price-check | div#price-window.layout-column.shrink-0.text-gray-200 > div.grow.layout-column.min-h-0 > div.p-4.layout-column.min-h-0 > div.filter-name > div.filter-name-tiles",
+  "row-wrap | price-check | div#price-window.layout-column.shrink-0.text-gray-200 > div.grow.layout-column.min-h-0 > div.p-4.layout-column.min-h-0 > div.filter-name.w-poe-head > div.filter-name-tiles",
+  "row-wrap | price-check | div.grow.layout-column.min-h-0 > div.p-4.layout-column.min-h-0 > div > div.mb-3 > div.w-pc-stat-foot.flex.flex-wrap",
   "row-wrap | price-check | div.grow.layout-column.min-h-0 > div.p-4.layout-column.min-h-0 > div.filter-name > div.filter-name-main > div.filter-name-chips",
+  "row-wrap | price-check | div.grow.layout-column.min-h-0 > div.p-4.layout-column.min-h-0 > div.w-pc-verdict-slot.w-pc-verdict-held > div.$card.$low > div.$row",
   "row-wrap | woke-atlas-strategies | div#widget > div.$widget.$draggable > div.flex.gap-2.min-h-0 > div.w-surface.$panel > div.w-toolbar.$toolbar",
+  "row-wrap | woke-atlas-strategies | div#widget > div.$widget.$draggable > div.flex.gap-2.min-h-0 > div.w-surface.$panel.$dirtyFrame > div.w-toolbar.$toolbar",
   "row-wrap | woke-disenchant | div#overlay-window.overflow-hidden.relative.w-full > div#widget > div.$widget.$draggable > div.w-surface.$panel > div.w-toolbar.$toolbar",
-  "row-wrap | woke-market-tracker | div.w-surface.$panel > div.$body.$bodyFill > div.$split > div.$main > div.$tools"
+  "row-wrap | woke-disenchant | div#widget > div.$widget.$draggable > div.w-surface.$panel > div.$meta > span.flex.flex-wrap.gap-2",
+  "row-wrap | woke-lab-gems | div#overlay-window.overflow-hidden.relative.w-full > div#widget > div.$widget.$draggable > div.w-surface.$panel > div.w-toolbar.$toolbar",
+  "row-wrap | woke-map-mods | div.$split > div.$left > div.$tools > div.flex.items-start.gap-2 > div.flex.items-center.gap-1",
+  "row-wrap | woke-market-tracker | div.w-surface.$panel > div.$body.$bodyFill > div.$split > div.$main > div.$tools",
+  "row-wrap | woke-megalo | div.$widget.$draggable > div.w-surface.$panel > div.$body.w-scroll > div.$wrap > div.$foot",
+  "row-wrap | woke-regex-library | div#overlay-window.overflow-hidden.relative.w-full > div#widget > div.$widget.$draggable > div.w-surface.$panel > div.w-toolbar.$toolbar",
+  "row-wrap | woke-search | div.$body > div.$root > div.$panes > div.$detail.w-scroll > div.$acts",
+  "scroll-x | woke-loot-filter | div.w-surface.$panel.$dirtyFrame > div.$body.$bodyFill > div.$rulesPage > div.$layout > div.$side.w-scroll"
 ]

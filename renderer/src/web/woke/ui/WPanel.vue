@@ -93,6 +93,9 @@ const props = withDefaults(defineProps<{
   // Give secondary panels in the same widget their own key.
   resizable?: boolean
   sizeKey?: string
+  // The smallest a resize makes it, in px at 100%.
+  minWidth?: number
+  minHeight?: number
 }>(), {
   title: undefined,
   width: undefined,
@@ -109,7 +112,9 @@ const props = withDefaults(defineProps<{
   busy: false,
   stale: false,
   resizable: true,
-  sizeKey: 'main'
+  sizeKey: 'main',
+  minWidth: 200,
+  minHeight: 120
 })
 
 const root = ref<HTMLElement | null>(null)
@@ -238,15 +243,20 @@ function startResize (e: MouseEvent, hSide: ResizeSide | null, vSide: ResizeSide
     const next = { ...(cfg!.wokeSizes?.[props.sizeKey] ?? {}) }
     if (hSide) {
       const edge = snapEdge('x', xEdge + ev.clientX - e.clientX, snapSelf, ev.altKey)
+      const share = anchorShare(anchor().pos, 'x')
+      // A centred window that can't move grows on both sides: its edge moves
+      // half as far as it grows, so it grows twice the drag to stay under the
+      // mouse, with room for as much as the nearer side allows.
+      const both = !movable && share === 0.5
       const a = resizeAxis({
         side: hSide,
-        delta: edge - xEdge,
+        delta: (edge - xEdge) * (both ? 2 : 1),
         size: r.width,
-        room: hSide === 'start' ? box.left : W - box.right,
+        room: both ? 2 * Math.min(box.left, W - box.right) : hSide === 'start' ? box.left : W - box.right,
         slack: edgeSlack(r, box, others, 'x', hSide),
         scale,
-        min: 200,
-        share: anchorShare(anchor().pos, 'x')
+        min: props.minWidth,
+        share
       })
       next.w = a.size
       if (movable) anchor().x = startX + a.shift / W * 100
@@ -260,7 +270,7 @@ function startResize (e: MouseEvent, hSide: ResizeSide | null, vSide: ResizeSide
         room: vSide === 'start' ? box.top : H - box.bottom,
         slack: edgeSlack(r, box, others, 'y', vSide),
         scale,
-        min: 120,
+        min: props.minHeight,
         share: anchorShare(anchor().pos, 'y')
       })
       next.h = a.size

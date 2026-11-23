@@ -117,7 +117,8 @@ export class Overlay {
         page.addInitScript(installLayoutAudit, { marks: !!layoutDir }),
         page.exposeBinding('__wokeLayoutIssue', async (_src, issue: LayoutIssue) => {
           const widget = this.config?.widgets.find((w: { wmId: number }) => `widget-${w.wmId}` === issue.widget)?.wmType ?? issue.widget
-          if (GATED_RULES.includes(issue.rule)) this.layoutFaults.push({ key: gateKey(issue.rule, widget, issue.where), text: issue.text, detail: issue.detail })
+          // Only a booted page's: the default-config capture isn't any test's screen.
+          if (this.config && GATED_RULES.includes(issue.rule)) this.layoutFaults.push({ key: gateKey(issue.rule, widget, issue.where), text: issue.text, detail: issue.detail })
           if (layoutDir) await this.saveLayoutIssue(layoutDir, issue)
         })
       ])
@@ -162,6 +163,12 @@ export class Overlay {
   }
 
   private auditReady: Promise<unknown>
+
+  // Lets the layout audit finish a second look still due and send its faults.
+  async settleLayout () {
+    if (this.page.isClosed() || this.page.url() === 'about:blank') return
+    await this.page.evaluate(() => (window as unknown as { __wokeLayoutSettle?: () => Promise<void> }).__wokeLayoutSettle?.()).catch(() => {})
+  }
   // Gated layout faults seen in this test (layout-audit.ts).
   readonly layoutFaults: Array<{ key: string, text: string, detail: string }> = []
 
@@ -227,6 +234,7 @@ export class Overlay {
     if (this.page.url() !== 'about:blank') {
       // Only a booted page's: the default-config capture isn't any test's screen.
       this.pastGaps = this.config ? await this.tipGaps() : []
+      if (this.config) await this.settleLayout()
       await this.page.goto('about:blank')
       await this.app.settled(300, 5000)
     }
@@ -245,6 +253,8 @@ export class Overlay {
       this.app.moveMouse(960, 540)
     }
     this.app.focusGame(true)
+    // Set before the page loads, so a fault seen while it boots names its widget type.
+    this.config = config
     await this.page.goto(this.app.url)
     await this.app.waitForReceived('CLIENT->MAIN::update-host-config', undefined, 20_000)
     // A line written before the watcher is following the file counts as old and
@@ -261,7 +271,6 @@ export class Overlay {
       await this.page.locator(`#widget-${id}`).waitFor({ state: 'attached', timeout: 15_000 }).catch(() => {})
     }
     if (opts.overlayActive) await this.pressHotkey(config.overlayKey)
-    this.config = config
     return config
   }
 
@@ -421,6 +430,7 @@ export const test = base.extend<{ overlay: Overlay }, { fakeApp: FakeApp }>({
     // scrollbar, wrapped button row or text under 11px (layout-audit.ts).
     const gate = process.env.WOKE_LAYOUT_GATE
     if (gate) {
+      await overlay.settleLayout()
       const known = layoutBaseline()
       const fresh = [...new Map(overlay.layoutFaults.filter(f => !known.has(f.key)).map(f => [f.key, f])).values()]
       if (gate === 'write') {
