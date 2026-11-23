@@ -90,7 +90,7 @@ export async function refreshRunMaps (run: Run | null, now = Date.now()) {
 // one stands (no import of sales-store here: it isn't loaded at startup).
 let outsideFn: ((r: Run) => Outside) | null = null
 const lastOutside = new Map<string, Outside>()
-export function setOutside (fn: ((r: Run) => Outside) | null) { outsideFn = fn }
+export function setOutside (fn: ((r: Run) => Outside) | null) { const was = outsideFn; outsideFn = fn; return was }
 function outsideOf (r: Run): Outside | undefined {
   if (outsideFn) {
     const o = outsideFn(r)

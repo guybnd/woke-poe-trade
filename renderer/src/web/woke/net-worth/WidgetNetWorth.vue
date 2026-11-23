@@ -4,7 +4,8 @@
       :badge="badge" :stack="stack" :glow="!!liveRun" :wheel="swapGlance" card-width="25rem" :menu="dockMenu" @open-change="cardOpen = $event">
       <template #card>
         <!-- Its data loads the first time the card opens, never at startup. -->
-        <NetWorthCard v-if="cardOpen && personalReady" :status="status" :league="leagueId" :with-hub="config.rateWithHub === true" :rate-window="config.rateWindow ?? '1h'" @window="config.rateWindow = $event" @refresh="refresh" @settings="openSettingsPage(wm, 'Game & league')" />
+        <NetWorthCard v-if="cardOpen && personalReady" :status="status" :league="leagueId" :with-hub="config.rateWithHub === true" :rate-window="config.rateWindow ?? '1h'" @window="config.rateWindow = $event" @refresh="refresh" @settings="openSettingsPage(wm, 'Game & league')"
+          :run="liveRun" :stopping="stopping" @stop="stopLive" @open-run="openRun" />
         <div v-else class="w-dim text-xs" style="padding: 6px var(--w-pad);">{{ cardText }}</div>
       </template>
     </DockItem>
@@ -198,6 +199,25 @@ const cardText = computed(() => {
 
 function refresh () {
   hostRequest('stash-reader-read', null, 15 * 60_000).catch(() => {})
+}
+
+// The card's Run tab (pick Q1): Stop, and Open run (the window's Runs view).
+const stopping = shallowRef(false)
+async function stopLive () {
+  const league = leagueId.value
+  if (!league || stopping.value) return
+  stopping.value = true
+  try {
+    const [s, rs] = await Promise.all([import('./store'), import('./run-stop')])
+    if (!s.ledger.value.points.length) return
+    await rs.stopLiveRun(league, s.ledger.value.points, s.divine.value)
+    // The store may not be watched here yet (it loads with the window).
+    if (leagueId.value === league) runG.value = s.runGlance.value
+  } catch {} finally { stopping.value = false }
+}
+function openRun () {
+  props.config.view = 'runs'
+  showWithOverlay(wm, props.config.wmId)
 }
 
 const dockMenu = computed<DockMenuAction[]>(() => [

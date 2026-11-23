@@ -155,7 +155,22 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await overlay.page.mouse.move(0, 0)
     // Listed during the run, before Stop.
     listings = [listing('l1', 'Mageblood', 'Heavy Belt', new Date(Date.now() - 1000).toISOString(), 2), ...listings]
-    await card.getByRole('button', { name: 'Stop' }).click()
+    // Stop from the dock card's Run tab (pick Q1): two clicks.
+    fakeApp.focusGame(true)
+    const runTab = overlay.page.locator('[data-card-run]')
+    await expect(async () => {
+      await overlay.hoverDockIcon('net-worth')
+      await expect(runTab).toBeVisible({ timeout: 2000 })
+    }).toPass({ timeout: 20_000 })
+    await expect(runTab).toContainText('Nightmare maps')
+    await expect(overlay.page.locator('[data-card-run-total]')).toBeVisible()
+    await overlay.snap('net worth dock card run')
+    const stopBtn = overlay.page.locator('[data-card-stop]')
+    await stopBtn.click()
+    await expect(stopBtn).toContainText('Stop the run?')
+    await stopBtn.click()
+    await expect(runTab).toHaveCount(0, { timeout: 15_000 })
+    await overlay.pressHotkey(overlay.config.overlayKey)
     await expect(panel.locator('[data-past-run]').first()).toContainText('Nightmare maps')
     expect(searches).toHaveLength(2)
     expect(searches[0]).toContain('Tester#1234')

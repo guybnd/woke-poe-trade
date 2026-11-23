@@ -173,7 +173,8 @@ import { span } from './play-time'
 import Coin from './Coin.vue'
 import { leftOf, lineCost, mapsIn, runTotals, tallyRows } from './runs'
 import type { CostLine, Run } from './runs'
-import { addCost, addOnce, deleteRun, editRun, loadRuns, refreshRunMaps, runMaps, runsDoc, setOutside, startRun, stopRun } from './run-store'
+import { addCost, addOnce, deleteRun, editRun, loadRuns, refreshRunMaps, runMaps, runsDoc, setOutside, startRun } from './run-store'
+import { stopLiveRun } from './run-stop'
 import { leftOver, outsideTotals, setBefore } from './faustus'
 import type { OutsideRow } from './faustus'
 import { readFaustus } from './faustus-read'
@@ -297,12 +298,9 @@ async function start () {
 // Stop reads your Faustus listings first; a failed read still stops.
 // The run stops at the press, whatever the read takes.
 async function stop () {
-  const r = live.value
-  if (!r || faustusReading.value) return
-  const at = Date.now()
+  if (!live.value || faustusReading.value) return
   faustusReading.value = true
-  try { await readFaustusInto(r) } catch (e) { toast(`Stopped without your Faustus listings: ${(e as Error).message}`) } finally { faustusReading.value = false }
-  stopRun(props.league, props.points, props.divine, r.id, at).catch(() => {})
+  try { await stopLiveRun(props.league, props.points, props.divine) } catch {} finally { faustusReading.value = false }
 }
 function open (r: Run) {
   opened.value = opened.value === r.id ? null : r.id
