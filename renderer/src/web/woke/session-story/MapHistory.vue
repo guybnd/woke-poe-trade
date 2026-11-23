@@ -9,51 +9,56 @@
       Maps show here as you run them. They're read from the game's log.
     </WEmpty>
     <template v-else>
-      <div class="flex flex-wrap items-center gap-x-3 text-xs w-dim w-num">
-        <span>{{ mapCount }} {{ mapCount === 1 ? 'map' : 'maps' }}<template v-if="skippedCount"> · {{ skippedCount }} {{ skippedCount === 1 ? 'vault' : 'vaults' }}</template></span>
-        <span v-if="counted.length">Average {{ formatClock(avgMs) }}</span>
-        <span>{{ deaths }} {{ deaths === 1 ? 'death' : 'deaths' }}</span>
-        <span class="ml-auto" />
-        <WChip v-for="c in chips" :key="c.id" clickable :active="filter === c.id" data-history-chip @click="filter = filter === c.id ? null : c.id">
-          {{ c.label }} <span class="w-dim">{{ c.count }}</span>
-        </WChip>
-        <WChip clickable :active="showSkipped" data-history-skipped
-          title="Also list vaults and other areas that aren't counted as maps (Settings › Sessions). They stay out of the count and average."
-          @click="showSkipped = !showSkipped">Vaults</WChip>
+      <!-- The range in words, so it isn't read as tonight's figures above. -->
+      <div class="flex flex-wrap items-center gap-x-3">
+      <div class="w-num" data-history-summary>
+        <b>{{ mapCount }}</b> <span class="w-dim">{{ mapCount === 1 ? 'map' : 'maps' }} {{ rangeText }}</span>
+        <template v-if="counted.length"><span class="w-dim"> · avg</span> <b>{{ formatClock(avgMs) }}</b></template>
+        <span class="w-dim"> · </span><b>{{ deaths }}</b> <span class="w-dim">{{ deaths === 1 ? 'death' : 'deaths' }}</span>
+        <template v-if="diedIn"><span class="w-dim"> in</span> <b>{{ diedIn }}</b> <span class="w-dim">{{ diedIn === 1 ? 'map' : 'maps' }}</span></template>
+        <template v-if="skippedCount"><span class="w-dim"> · {{ skippedCount }} {{ skippedCount === 1 ? 'vault' : 'vaults' }} not counted</span></template>
+      </div>
+        <WToggle v-model="showSkipped" data-history-skipped class="text-xs ml-auto"
+          title="Also list vaults and other areas that aren't counted as maps (Settings › Sessions). They stay out of the count and average.">Vaults</WToggle>
+      </div>
+      <div v-if="chips.length" class="flex flex-wrap items-center gap-1 text-xs">
+          <span class="w-dim mr-1">Only maps with</span>
+          <WChip v-for="c in shownChips" :key="c.id" clickable :active="filter === c.id" data-history-chip @click="filter = filter === c.id ? null : c.id">
+            {{ c.label }} <span class="w-dim w-num">{{ c.count }}</span>
+          </WChip>
+          <WChip v-if="chips.length > shownChips.length" clickable data-history-more :title="`Show ${chips.length - shownChips.length} more`" @click="allChips = true">+{{ chips.length - shownChips.length }}</WChip>
       </div>
       <div v-if="notSaved" class="text-xs w-dim" data-history-not-saved>
         {{ notSaved === 'range' ? 'That map is outside this range. Pick League or All above to see it.' : 'That map shows here once you start the next one.' }}
       </div>
-      <div>
-        <div class="w-row w-row--head px-0" :class="$style.grid">
-          <span>When</span><span>Map</span><span class="text-right">Time</span><span>Character</span><span>Met</span>
-        </div>
-        <template v-for="it in visible" :key="it.kind + it.at">
-          <!-- A Net worth stash read: what came in since the read before. -->
-          <div v-if="it.kind === 'read'" class="w-row px-0" :class="[$style.grid, $style.read]" data-income-row>
-            <span class="w-num w-trunc">{{ formatSessionDate(it.read.at) }}</span>
-            <span :class="$style.readText" class="w-num">
-              <span class="w-accent">Stash read</span>
-              <span v-if="it.read.maps" class="w-dim"> · {{ it.read.maps }} {{ it.read.maps === 1 ? 'map' : 'maps' }}</span>
-              <template v-if="it.read.purchase">
-                <span class="w-dim"> · purchase</span><span v-if="it.read.spent" class="w-dim" title="Left out of profit as spent"> ({{ formatChaos(it.read.spent, it.read.rate) }} spent)</span>
-              </template>
-              <span v-if="it.read.perHour != null && !it.read.purchase" class="w-dim"> · {{ formatChaos(it.read.perHour, it.read.rate) }}/h</span>
+      <div data-history-list>
+        <template v-for="line in lines" :key="lineKey(line)">
+          <!-- A day: its date and totals. -->
+          <div v-if="line.kind === 'day'" :class="$style.day" data-history-day>
+            <span class="w-head-font w-accent" :class="$style.dayTitle">{{ dayLabel(line.at, now).title }}</span>
+            <span v-if="dayLabel(line.at, now).date" class="w-dim text-xs">{{ dayLabel(line.at, now).date }}</span>
+            <span class="ml-auto text-xs w-num w-dim">
+              {{ line.maps }} {{ line.maps === 1 ? 'map' : 'maps' }}<template v-if="line.avgMs != null"> · avg {{ formatClock(line.avgMs) }}</template><template v-if="line.reads"> · <span :class="line.chaos >= 0 ? 'w-up' : 'w-down'">{{ signed(line.chaos, line.rate) }}</span></template>
             </span>
-            <span class="text-right w-num" :class="it.read.chaos >= 0 ? 'w-up' : 'w-down'">{{ signed(it.read.chaos, it.read.rate) }}</span>
           </div>
-          <div v-else class="w-row px-0" :class="[$style.grid, $style.mapRow, { [$style.sel]: isFocus(it.map) }]" data-map-row
-            :data-map-at="it.map.enteredAt" @click="emit('select', it.map.enteredAt)">
-            <span class="w-dim w-num w-trunc">{{ formatSessionDate(it.map.enteredAt) }}</span>
-            <span class="w-trunc" :class="{ 'w-dim': skippedRow(it.map) }">{{ it.map.name }} <span class="w-dim">{{ skippedRow(it.map) ? 'not counted' : tierText(it.map.areaLevel) }}</span></span>
+          <!-- The character, at the top of a day and when you switch. -->
+          <div v-else-if="line.kind === 'char'" :class="$style.char" class="text-xs w-num" data-history-char
+            @mouseenter="tip($event, line.className ? `${line.char}, ${line.className}` : line.char)" @mouseleave="untip">
+            {{ line.char }}<template v-if="line.level != null"> · Level {{ line.level }}</template>
+          </div>
+          <!-- A Net worth stash read: what came in since the read before. -->
+          <div v-else-if="line.kind === 'read'" :class="$style.read" class="text-xs w-num" data-income-row
+            @mouseenter="tip($event, readTip(line.read))" @mouseleave="untip">
+            <span class="w-dim">Stash read<template v-if="line.read.maps"> · {{ line.read.maps }} {{ line.read.maps === 1 ? 'map' : 'maps' }}</template><template v-if="line.read.purchase"> · purchase<template v-if="line.read.spent"> ({{ money(line.read.spent, line.read.rate) }} spent)</template></template><template v-if="line.read.perHour != null && !line.read.purchase"> · {{ money(line.read.perHour, line.read.rate) }}/h</template></span>
+            <span class="ml-auto" :class="line.read.chaos >= 0 ? 'w-up' : 'w-down'">{{ signed(line.read.chaos, line.read.rate) }}</span>
+          </div>
+          <div v-else class="w-row px-0" :class="[$style.grid, $style.mapRow, { [$style.sel]: isFocus(line.map) }]" data-map-row
+            :data-map-at="line.map.enteredAt" v-item-tip="mapTip(line.map)" @click="emit('select', line.map.enteredAt)">
+            <span class="w-dim w-num">{{ clockTime(line.map.enteredAt) }}</span>
+            <span class="w-trunc" :class="{ 'w-dim': skippedRow(line.map) }">{{ line.map.name }} <span class="w-dim">{{ skippedRow(line.map) ? 'not counted' : tierText(line.map.areaLevel) }}</span><span v-for="n in line.map.npcs" :key="n" :class="$style.mech">{{ n }}</span><span v-if="line.map.levelsGained" :class="$style.mech" class="w-accent">+{{ line.map.levelsGained }} {{ line.map.levelsGained === 1 ? 'level' : 'levels' }}</span></span>
             <span class="text-right w-num">
-              {{ formatClock(it.map.mapMs) }}<span v-if="it.map.deaths" class="w-down" :title="`${it.map.deaths} ${it.map.deaths === 1 ? 'death' : 'deaths'}`"> ✕{{ it.map.deaths }}</span>
+              {{ formatClock(line.map.mapMs) }}<span v-if="line.map.deaths" class="w-down"> ✕{{ line.map.deaths }}</span>
             </span>
-            <span class="w-trunc" :title="it.map.className ?? undefined">
-              <template v-if="it.map.char">{{ it.map.char }}<span v-if="it.map.charLevel != null" class="w-dim w-num"> {{ levelText(it.map) }}</span></template>
-              <span v-else class="w-faint">—</span>
-            </span>
-            <span class="w-trunc w-dim text-xs">{{ it.map.npcs.join(', ') }}</span>
           </div>
         </template>
         <button v-if="items.length > visible.length" type="button" class="w-accent text-xs pt-1" @click="limit += PAGE">
@@ -66,16 +71,21 @@
 </template>
 <script setup lang="ts">
 // Session analytics' Map history tab: every map read from Client.txt by Session story.
-import { computed, nextTick, shallowRef, watch } from 'vue'
+import { computed, nextTick, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { saveConfig } from '@/web/Config'
-import { WBanner, WChip, WEmpty, WSkeleton } from '../ui'
+import { WBanner, WChip, WEmpty, WSkeleton, WToggle, vItemTip } from '../ui'
+import type { ItemTipRef } from '../ui/tooltip/item-tip'
+import { hideHelp, showHelp } from '../ui/help-tip'
 import { formatChaos, formatClock } from '../ui/format'
-import { formatSessionDate, inRange } from '../analytics/stats'
+import { inRange } from '../analytics/stats'
 import type { AnalyticsRange } from '../analytics/types'
 import { isWidgetTypeOn } from '../modules'
 import { tierText } from './map-log'
 import { incomeRows, interleave } from './income'
+import type { IncomeRow } from './income'
+import { clockTime, dayLabel, withDays } from './history-days'
+import type { HistoryLine } from './history-days'
 import { stashGains } from '../net-worth/gains'
 import type { StashGain } from '../net-worth/valuation'
 import { isSkippedArea } from './skip-areas'
@@ -89,6 +99,9 @@ const props = defineProps<{
   now: number
   // A map picked on tonight's strip, by when you entered it: shown and scrolled to.
   focus?: number | null
+  // The window's div / chaos switch, and today's chaos per divine for reads without their own.
+  unit: 'div' | 'chaos'
+  divine?: number | null
 }>()
 const emit = defineEmits<{ select: [enteredAt: number] }>()
 const root = shallowRef<HTMLElement | null>(null)
@@ -149,12 +162,22 @@ const chips = computed(() => {
   for (const m of maps.value) for (const n of new Set(m.npcs)) count.set(n, (count.get(n) ?? 0) + 1)
   const out = [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([id, n]) => ({ id, label: id, count: n }))
   const died = maps.value.filter(m => m.deaths > 0).length
-  if (died) out.push({ id: DEATHS, label: 'Deaths', count: died })
+  if (died) out.push({ id: DEATHS, label: 'a death', count: died })
   // The picked chip stays while its maps are listed.
   return out
 })
 watch(chips, (list) => { if (filter.value && !list.some(c => c.id === filter.value)) filter.value = null })
 const matches = (m: MapRecord) => !filter.value || (filter.value === DEATHS ? m.deaths > 0 : m.npcs.includes(filter.value))
+// A few chips; the rest behind "+N".
+const CHIPS_SHOWN = 4
+const allChips = shallowRef(false)
+const shownChips = computed(() => {
+  if (allChips.value || chips.value.length <= CHIPS_SHOWN + 1) return chips.value
+  const top = chips.value.slice(0, CHIPS_SHOWN)
+  // The picked chip stays in view.
+  const picked = chips.value.find(c => c.id === filter.value)
+  return picked && !top.includes(picked) ? [...top, picked] : top
+})
 const list = computed(() => (showSkipped.value ? inView.value : maps.value).filter(matches))
 const mapCount = computed(() => maps.value.length)
 const skippedCount = computed(() => showSkipped.value ? inView.value.length - maps.value.length : 0)
@@ -176,6 +199,10 @@ watch(() => [store.lastSaved.value, props.now], () => { if (on.value) readGains(
 const reads = computed(() => incomeRows(gains.value, maps.value).filter(r => inRange(r.at, props.range, props.now)))
 const items = computed(() => interleave(list.value, reads.value))
 const visible = computed(() => items.value.slice(0, limit.value))
+const lines = computed(() => withDays(items.value, limit.value, isSkippedArea))
+const lineKey = (l: HistoryLine) => l.kind === 'day' || l.kind === 'char' ? l.key : `${l.kind}:${l.at}`
+const RANGE_TEXT: Record<AnalyticsRange, string> = { '7d': 'in 7 days', 'league': 'this league', 'all': 'in all leagues' }
+const rangeText = computed(() => RANGE_TEXT[props.range])
 // The strip and the log stamp a map with the same log line's time.
 const isFocus = (m: MapRecord) => props.focus != null && m.enteredAt === props.focus
 // A pick waits for the maps to load, then shows once (later loads don't jump back).
@@ -202,24 +229,79 @@ async function showPick () {
 }
 watch(() => props.focus, (at) => { pending = at ?? null; notSaved.value = false; showPick() }, { immediate: true })
 watch(loading, () => { showPick() })
-const signed = (chaos: number, rate: number | null) => `${chaos > 0 ? '+' : ''}${formatChaos(chaos, rate)}`
+// In the window's unit: a read's own divine rate, else today's.
+const money = (chaos: number, rate: number | null) => formatChaos(chaos, rate ?? props.divine ?? null, props.unit)
+const signed = (chaos: number, rate: number | null) => `${chaos > 0 ? '+' : ''}${money(chaos, rate)}`
 // As the chip counts it: maps under 30 s (a quick look in) left out.
 const counted = computed(() => maps.value.filter(m => m.mapMs > 30_000))
 const avgMs = computed(() => counted.value.reduce((s, m) => s + m.mapMs, 0) / Math.max(1, counted.value.length))
 const deaths = computed(() => maps.value.reduce((s, m) => s + m.deaths, 0))
-function levelText (m: MapRecord): string {
-  return m.levelsGained ? `${m.charLevel} → ${m.charLevel! + m.levelsGained}` : String(m.charLevel)
+const diedIn = computed(() => maps.value.filter(m => m.deaths > 0).length)
+// The map's tooltip ("Fortress Map"), with the run under it. A vault or
+// other area that isn't counted shows just its name and the run.
+function mapTip (m: MapRecord): ItemTipRef {
+  const item = `${m.name} Map`
+  const run = [
+    `Entered ${clockTime(m.enteredAt)} · ${formatClock(m.mapMs)} in the map${m.deaths ? ` · ${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}` : ''}`,
+    ...(m.char ? [`${m.char}${m.className ? `, ${m.className}` : ''}${m.charLevel != null ? `, level ${m.levelsGained ? `${m.charLevel} → ${m.charLevel + m.levelsGained}` : m.charLevel}` : ''}`] : []),
+    ...(m.npcs.length ? [`Met ${m.npcs.join(', ')}`] : [])
+  ].join('\n')
+  // Maps aren't their own items in the item data, so the card is the map's
+  // name and run, with its poe.ninja price when it has one.
+  return skippedRow(m) ? { name: m.name, note: run, noPrice: true, noMenu: true } : { name: item, note: run, noMenu: true }
 }
+function readTip (r: IncomeRow): string {
+  const since = r.since != null ? `since ${clockTime(r.since)}` : 'the first read'
+  return r.purchase
+    ? `Stash read at ${clockTime(r.at)}, ${since}. Marked as a purchase: what was spent is left out of profit.`
+    : `Stash read at ${clockTime(r.at)}: your stash's value changed by ${signed(r.chaos, r.rate)} ${since}.`
+}
+// The app's own tooltip card, not the browser's.
+const tipOwner = {}
+function tip (e: MouseEvent, text: string) { showHelp(tipOwner, e.currentTarget as HTMLElement, text) }
+function untip () { hideHelp(tipOwner) }
+onUnmounted(untip)
 </script>
 <style module>
 .grid {
   display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1.2fr) 4.5rem minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 3rem minmax(0, 1fr) 4.5rem;
   gap: 8px;
   align-items: baseline;
 }
-.read { background: var(--w-accent-soft); }
 .mapRow { cursor: pointer; }
 .sel { box-shadow: inset 2px 0 0 var(--w-accent); background: var(--w-accent-soft); }
-.readText { grid-column: 2 / span 3; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.day {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 2px 0 3px;
+  border-bottom: 1px solid var(--w-line-strong);
+}
+.day:first-child { margin-top: 0; }
+.dayTitle { font-size: 1.05em; }
+.char { padding: 4px 0 1px; color: var(--w-accent); opacity: 0.8; }
+.mech {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 5px;
+  border: 1px solid var(--w-line);
+  border-radius: var(--w-r-sm, 2px);
+  font-size: var(--w-fs-xs);
+  color: var(--w-dim);
+  line-height: 1.4;
+}
+/* A stash read: a thin line between maps, not a row of its own weight. */
+.read {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+.read::before {
+  content: "";
+  flex: 0 0 3rem;
+  border-top: 1px dashed var(--w-line-strong);
+}
 </style>

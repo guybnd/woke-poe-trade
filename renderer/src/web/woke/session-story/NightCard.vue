@@ -2,7 +2,9 @@
   <div data-night-card :class="$style.card">
     <div :class="$style.head">
       <span class="w-head-font w-accent" :class="$style.title">{{ title }}</span>
-      <span class="w-dim text-xs w-num">{{ formatDuration(played) }} · {{ story.maps.length }} {{ story.maps.length === 1 ? 'map' : 'maps' }}</span>
+      <!-- When it began, so "1 map" reads right next to a list of earlier ones. -->
+      <span class="w-dim text-xs w-num" data-night-span>{{ live ? `since ${clock(story.startedAt)}` : `${clock(story.startedAt)} → ${clock(story.endedAt)}` }}</span>
+      <span class="ml-auto text-xs w-num">{{ formatDuration(played) }} · {{ story.maps.length }} {{ story.maps.length === 1 ? 'map' : 'maps' }}</span>
     </div>
     <div :class="$style.strip" data-night-strip>
       <span v-for="(p, i) in story.strip" :key="i"
@@ -10,10 +12,6 @@
         :style="{ flexGrow: p.ms }" @mouseenter="tip($event, partTitle(p))" @mouseleave="untip"
         @click="p.map != null && pickable && emit('pick', story.maps[p.map].enteredAt)" />
       <span v-for="(x, i) in deathMarks" :key="'d' + i" :class="$style.death" :style="{ left: `${x}%` }" />
-    </div>
-    <div :class="$style.axis" class="w-num w-dim">
-      <span>{{ clock(story.startedAt) }}</span>
-      <span>{{ live ? 'now' : clock(story.endedAt) }}</span>
     </div>
     <div :class="$style.totals" class="w-num" data-night-totals>
       <span v-if="profit" @mouseenter="tip($event, profit.from)" @mouseleave="untip"><span class="w-dim">Profit</span> <span :class="profit.chaos >= 0 ? 'w-up' : 'w-down'">{{ signed(profit.chaos) }}</span></span>
@@ -24,8 +22,8 @@
       <span v-if="(story.afkMs ?? 0) >= 60_000" @mouseenter="tip($event, AFK_TIP)" @mouseleave="untip"><span class="w-dim">AFK</span> {{ formatDuration(story.afkMs!) }}</span>
       <span v-if="story.longestBreakMs && story.longestBreakMs >= 60_000"><span class="w-dim">Longest break</span> {{ formatClock(story.longestBreakMs) }}</span>
       <span><span class="w-dim">Deaths</span> {{ story.deathsAt.length }}</span>
+      <WToggle v-model="leaveOutHub" :class="$style.hub" data-night-hub @mouseenter="tip($event, hoursTip)" @mouseleave="untip">Leave out hideout</WToggle>
     </div>
-    <label :class="$style.check" data-night-hub @mouseenter="tip($event, hoursTip)" @mouseleave="untip"><input v-model="leaveOutHub" type="checkbox">Leave out hideout</label>
     <div v-if="story.levelUps?.length" :class="$style.line" class="w-num" data-night-levels>
       <span v-for="l in story.levelUps" :key="l.char"><span class="w-dim">{{ story.levelUps.length > 1 ? l.char : 'Level' }}</span> {{ l.from }} → {{ l.to }}</span>
     </div>
@@ -39,6 +37,8 @@
 import { computed, onUnmounted } from 'vue'
 import { AppConfig, saveConfig } from '@/web/Config'
 import { hideHelp, showHelp } from '../ui/help-tip'
+import WToggle from '../ui/WToggle.vue'
+import { clockTime } from './history-days'
 import { formatChaos, formatClock, formatDuration } from '../ui/format'
 import type { NightStory, StripPart } from './story'
 import { SESSION_STORY_TYPE } from './widget'
@@ -114,9 +114,8 @@ function partTitle (p: StripPart): string {
   const deaths = m.deaths ? ` · ${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}` : ''
   return `${m.name} ${tier(m.level)} · ${formatClock(m.mapMs)} in the map${deaths}`
 }
-function clock (ms: number): string {
-  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-}
+// The same clock as Map history's rows.
+const clock = clockTime
 function signed (chaos: number): string {
   return `${chaos > 0 ? '+' : ''}${formatChaos(chaos, props.story.divine)}`
 }
@@ -124,13 +123,13 @@ function signed (chaos: number): string {
 
 <style module>
 .head { display: flex; align-items: baseline; gap: 8px; padding: 4px var(--w-pad) 0; }
-.title { flex: 1; font-size: 1.1em; }
+.title { font-size: 1.1em; }
 .strip {
   position: relative;
   display: flex;
   gap: 1px;
   height: 18px;
-  margin: 8px var(--w-pad) 2px;
+  margin: 6px var(--w-pad) 2px;
 }
 .map { min-width: 2px; background: var(--w-accent); opacity: 0.75; }
 .map:hover { opacity: 1; }
@@ -142,8 +141,8 @@ function signed (chaos: number): string {
 }
 .skipped { min-width: 1px; background: var(--w-line); opacity: 0.45; }
 .afk { min-width: 1px; }
-.check { display: inline-flex; align-items: center; gap: 5px; padding: 3px var(--w-pad) 0; font-size: var(--w-fs-xs); color: var(--w-dim); cursor: pointer; }
-.check:hover { color: var(--w-fg); }
+.hub { margin-left: auto; font-size: var(--w-fs-xs); color: var(--w-dim); }
+.hub:hover { color: var(--w-fg); }
 .death {
   position: absolute;
   top: -3px;
@@ -153,7 +152,6 @@ function signed (chaos: number): string {
   pointer-events: none;
   z-index: 2;
 }
-.axis { display: flex; justify-content: space-between; padding: 0 var(--w-pad); font-size: 0.8em; }
 .totals {
   display: flex;
   flex-wrap: wrap;
