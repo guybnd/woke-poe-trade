@@ -39,22 +39,26 @@ export function currencyTitle (view: CurrencyView, searched: string | null | und
 }
 
 /** How far the opening fetch goes looking for chaos listings behind divine ones. */
-export const CHAOS_HUNT_LIMIT = 60
+export const CHAOS_HUNT_LIMIT = 50
+/** Above this many divines, nobody lists in chaos anyway: no hunt (a Mageblood stays at two pages). */
+export const CHAOS_HUNT_MAX_DIV = 10
 
 /**
  * The trade site sorts a mixed chaos and divine search by its own divine rate, which
- * lags the market: when it's far under poe.ninja's, every divine listing sorts ahead of
- * cheaper chaos ones (2 div before 337c with a divine at 410c), and the first pages hold
- * only divines. While that's so, the opening fetch loads further pages of the same search
- * until a chaos listing shows; from there on chaos listings only get dearer.
+ * lags the market: when it's far under poe.ninja's, divine listings sort ahead of
+ * cheaper chaos ones (2 div before 337c with a divine at 410c), and the first pages may
+ * hold no chaos listing at all. While that's so, the opening fetch loads further pages
+ * of the same search until a chaos listing shows; the site sorts chaos listings among
+ * themselves by amount, so the first one seen is the cheapest. (The other way round, a
+ * site rate over the market's, hides cheaper divine listings; that's rare and not handled.)
  */
-export function chaosMayHide (listings: ReadonlyArray<{ priceCurrency: string } | null | undefined>, searched: string | null | undefined): boolean {
+export function chaosMayHide (listings: ReadonlyArray<{ priceCurrency: string, priceAmount: number } | null | undefined>, searched: string | null | undefined): boolean {
   if (!hasCurrencyChoice(searched)) return false
-  let any = false
+  let cheapestDiv = Infinity
   for (const l of listings) {
     if (l == null) continue
-    if (l.priceCurrency !== 'divine') return false
-    any = true
+    if (l.priceCurrency === 'chaos') return false
+    if (l.priceCurrency === 'divine') cheapestDiv = Math.min(cheapestDiv, l.priceAmount)
   }
-  return any
+  return cheapestDiv <= CHAOS_HUNT_MAX_DIV
 }

@@ -32,16 +32,20 @@ describe('Price currency chip', () => {
 })
 
 describe('Chaos listings behind divine ones', () => {
-  const d = { priceCurrency: 'divine' }
-  const c = { priceCurrency: 'chaos' }
-  it('keeps loading while a mixed search has shown only divines', () => {
+  const d = { priceCurrency: 'divine', priceAmount: 2 }
+  const c = { priceCurrency: 'chaos', priceAmount: 337 }
+  const ex = { priceCurrency: 'exalted', priceAmount: 30 }
+  it('keeps loading while a mixed search has shown no chaos listing', () => {
     expect(chaosMayHide([d, d, null], 'chaos_divine')).toBe(true)
-    expect(chaosMayHide([d, d], null)).toBe(true)
+    expect(chaosMayHide([d, ex], null)).toBe(true)
   })
   it('stops once a chaos listing shows, or when the search was one currency', () => {
     expect(chaosMayHide([d, c], 'chaos_divine')).toBe(false)
     expect(chaosMayHide([d, d], 'divine')).toBe(false)
     expect(chaosMayHide([], 'chaos_divine')).toBe(false)
     expect(chaosMayHide([c, c], 'chaos_divine')).toBe(false)
+  })
+  it("doesn't hunt for items only ever priced in many divines", () => {
+    expect(chaosMayHide([{ priceCurrency: 'divine', priceAmount: 120 }], 'chaos_divine')).toBe(false)
   })
 })

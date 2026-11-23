@@ -396,11 +396,10 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
         const totalGrouped = groupedResults.value.length
         const totalNotGrouped = groupedResults.value.reduce((len, res) =>
           res.listedTimes <= 2 ? len + 1 : len, 0)
-        if ((
-          (totalNotGrouped < MIN_NOT_GROUPED || totalGrouped < MIN_GROUPED) ||
-          // woke: only divines so far: cheaper chaos listings may sort behind them (price-currency.ts).
-          (fetched < CHAOS_HUNT_LIMIT && chaosMayHide(_fetchResults, searchedCurrency))
-        ) && canFetchMore(_searchResult)) {
+        if (
+          (totalNotGrouped < MIN_NOT_GROUPED || totalGrouped < MIN_GROUPED) &&
+          canFetchMore(_searchResult)
+        ) {
           await fetchPage(_searchId, _searchResult, _fetchResults)
           return fetchMore()
         }
@@ -410,6 +409,16 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
         if (_searchId === searchId) fetched = API_FETCH_LIMIT
         if (!_fetchResults.length) throw err
       })
+      // woke: no chaos listing yet: cheaper ones may sort behind the divines (price-currency.ts).
+      // Only while the fetch limit has room; a refused or failed page just ends the hunt.
+      for (;;) {
+        if (_searchId !== searchId || fetched >= CHAOS_HUNT_LIMIT || !canFetchMore(_searchResult) ||
+          !chaosMayHide(_fetchResults, searchedCurrency)) break
+        try {
+          preventQueueCreation([{ count: 1, limiters: RATE_LIMIT_RULES.FETCH }])
+          await fetchPage(_searchId, _searchResult, _fetchResults)
+        } catch { break }
+      }
     } catch (err) {
       if (_searchId === searchId) error.value = (err as Error).message
     } finally {
