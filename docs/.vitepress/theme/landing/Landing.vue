@@ -1,13 +1,16 @@
 <script setup>
-// The landing page (index.md, layout: landing): the name, then one item tooltip
-// per highlight, built from the game's own frame art, with name plates to step
-// through its slides and a strip of their pictures under the shot, then a plain
-// list of everything else. A slide with a `clip` plays it over its still.
+// The landing page (index.md, layout: landing): the name beside the overlay,
+// then All tools (every highlight and its slides, by chapter), then one item
+// tooltip per chapter, built from the game's own frame art: stash tabs for its
+// highlights, name plates to step through the open one's slides and a strip of
+// their pictures under the shot. Then a plain list of everything else. A slide
+// with a `clip` plays it over its still.
 import { reactive, ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { withBase } from 'vitepress'
 import { MODULES } from '../../../../renderer/src/web/woke/modules.ts'
 import { CREDIT_GROUPS } from '../../../../renderer/src/web/woke/settings/credits.ts'
-import { REPO, DOWNLOAD, DISCORD, HIGHLIGHTS } from './content.js'
+import { NEWS } from '../../../../renderer/src/web/woke/tab-bar/news.ts'
+import { REPO, DOWNLOAD, DISCORD, HIGHLIGHTS, CHAPTERS } from './content.js'
 
 const shot = (name) => withBase(`/shots/${name}.webp`)
 // Made by docs/scripts/phone-shots.mjs: the shot at 1280px wide, and the 4:5
@@ -18,6 +21,15 @@ const thumb = (name) => withBase(`/shots/thumb/${name}.webp`)
 const clipFile = (name, ext) => withBase(`/clips/${name}.${ext}`)
 
 const shown = reactive({})
+// Chapters: each shows one of its highlights at a time, picked by its tabs.
+const byId = Object.fromEntries(HIGHLIGHTS.map(h => [h.id, h]))
+const chapters = CHAPTERS.map(c => ({ ...c, items: c.highlights.map(id => byId[id]) }))
+const chapterOf = Object.fromEntries(chapters.flatMap(c => c.highlights.map(id => [id, c.id])))
+const tab = reactive({})
+const activeIn = (c) => byId[tab[c.id] ?? c.highlights[0]]
+// A NEW seal while the app's What's new list still has the slide's line.
+const newsIds = new Set(NEWS.map(n => n.id))
+const isNew = (s) => !!s.news && newsIds.has(s.news)
 const current = (h) => shown[h.id] ?? 0
 // A plate can be a folder, like one in the stash: picking it opens a row of its
 // own plates under the others. It remembers which of them was open.
@@ -40,6 +52,7 @@ const onScreen = new Set()
 let watcher = null
 function playClips () {
   for (const v of document.querySelectorAll('.landing .stage video')) {
+    // onScreen holds chapters: the section a clip sits in.
     const want = v.classList.contains('on') && onScreen.has(v.closest('section')?.id)
     if (want && v.paused) v.play().catch(() => {})
     else if (!want && !v.paused) v.pause()
@@ -59,6 +72,7 @@ const playing = reactive({})
 
 // Picking a plate, or a plate in the open folder (j).
 function go (h, i, j = -1) {
+  tab[chapterOf[h.id]] = h.id
   shown[h.id] = i
   if (j >= 0) inner[`${h.id}/${i}`] = j
   tip.value = null
@@ -121,7 +135,7 @@ onMounted(() => {
     }
     playClips()
   }, { threshold: [0, 0.15] })
-  for (const el of document.querySelectorAll('.landing section.highlight[id]')) watcher.observe(el)
+  for (const el of document.querySelectorAll('.landing section.chapter[id]')) watcher.observe(el)
   nextTick(playClips)
   nextTick(openShot)
   window.addEventListener('hashchange', openShot)
@@ -150,12 +164,19 @@ function openShot () {
       const j = s.folder ? s.folder.findIndex(f => f.shot === name) : -1
       if (s.shot !== name && j < 0) continue
       go(h, i, j)
-      document.getElementById(h.id)?.scrollIntoView()
+      nextTick(() => document.getElementById(h.id)?.scrollIntoView())
       view(j >= 0 ? s.folder[j] : s)
       return
     }
   }
   view({ shot: name, alt: '' })
+}
+
+// All tools: a click opens that slide in its chapter and scrolls to it.
+function jump (h, i) {
+  go(h, i)
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches
+  nextTick(() => document.getElementById(chapterOf[h.id])?.scrollIntoView({ behavior: still ? 'auto' : 'smooth' }))
 }
 
 // A slide can stand for more than one module (`modules`).
@@ -167,6 +188,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
   <div class="landing">
     <header class="hero">
       <img class="hero-art" :src="shot('hero-plaza')" alt="" width="1720" height="617">
+      <div class="hero-in">
       <div class="hero-text">
         <h1>Woke PoE Trade</h1>
         <p class="lead">trade macro with extra chromosomes</p>
@@ -179,18 +201,53 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
         <p class="unsigned-note">Windows SmartScreen may warn on first run: click More info &gt; Run anyway.</p>
         <p class="phone-note">On a phone? Open this page on your PC to install.</p>
       </div>
+      <figure class="hero-shot">
+        <img :src="sized('clip-price-check')" :srcset="`${sized('clip-price-check')} 1280w, ${shot('clip-price-check')} 2560w`"
+          sizes="(max-width: 860px) calc(100vw - 32px), 760px" width="2560" height="1440"
+          alt="The overlay in game: a price check of a body armour beside the inventory, each listing compared stat by stat">
+      </figure>
+      </div>
     </header>
 
+    <nav class="tools" aria-labelledby="tools-title">
+      <div class="item wide">
+        <div class="head">
+          <i aria-hidden="true"></i>
+          <div><h2 id="tools-title">All Tools</h2><p>Pick one to see it</p></div>
+          <i aria-hidden="true"></i>
+        </div>
+        <div class="tool-cols">
+          <div v-for="c in chapters" :key="c.id" class="tool-col">
+            <h3><a :href="`#${c.id}`">{{ c.name }}</a></h3>
+            <ul>
+              <li v-for="h in c.items" :key="h.id">
+                <button v-if="h.name !== c.name" type="button" class="tool-name" @click="jump(h, 0)">{{ h.name }}</button>
+                <span class="tool-slides">
+                  <template v-for="(s, i) in h.slides" :key="s.label">
+                    <button type="button" class="tool-slide" @click="jump(h, i)">{{ s.label }}<b v-if="isNew(s)" class="seal">New</b></button>
+                  </template>
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </nav>
+
     <main>
-      <section v-for="h in HIGHLIGHTS" :id="h.id" :key="h.id" class="highlight" :aria-labelledby="`${h.id}-title`">
-        <div class="item" :class="{ 'with-tray': open(h).folder, 'with-strip': h.slides.length > 1, 'with-flow': h.flow }">
+      <section v-for="c in chapters" :id="c.id" :key="c.id" class="highlight chapter" :aria-labelledby="`${c.id}-title`">
+        <div v-for="h in [activeIn(c)]" :id="h.id" :key="h.id" class="item" :class="{ 'with-tray': open(h).folder, 'with-strip': h.slides.length > 1, 'with-flow': h.flow, 'with-tabs': c.items.length > 1 }">
           <div class="head">
             <i aria-hidden="true"></i>
             <div>
-              <h2 :id="`${h.id}-title`">{{ h.name }}</h2>
-              <p>{{ h.tag }}</p>
+              <h2 :id="`${c.id}-title`">{{ c.name }}</h2>
+              <p>{{ c.items.length > 1 ? c.tag : h.tag }}</p>
             </div>
             <i aria-hidden="true"></i>
+          </div>
+          <!-- Stash tabs: the chapter's highlights. -->
+          <div v-if="c.items.length > 1" class="tabs" role="group" :aria-label="`${c.name} tools`">
+            <button v-for="x in c.items" :key="x.id" type="button" class="tab" :aria-pressed="x === h" @click="go(x, current(x))">{{ x.name }}</button>
           </div>
           <div class="plates" role="group" :aria-label="`${h.name} slides`">
             <template v-for="(s, i) in h.slides" :key="s.label">
@@ -198,7 +255,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
                 :class="{ folder: s.folder }" :aria-pressed="i === current(h)"
                 :aria-expanded="s.folder ? i === current(h) : undefined" @click="go(h, i)">
                 <i aria-hidden="true"></i>
-                <span><b v-if="h.steps" class="step-num" aria-hidden="true">{{ i + 1 }}</b><b v-if="s.folder" class="folder-mark" aria-hidden="true"></b>{{ s.label }}<small v-if="s.folder" class="folder-count">{{ s.folder.length }}</small></span>
+                <span><b v-if="h.steps" class="step-num" aria-hidden="true">{{ i + 1 }}</b><b v-if="s.folder" class="folder-mark" aria-hidden="true"></b>{{ s.label }}<small v-if="s.folder" class="folder-count">{{ s.folder.length }}</small><b v-if="isNew(s)" class="seal">New</b></span>
                 <i aria-hidden="true"></i>
               </button>
               <span v-if="h.steps && i < h.slides.length - 1" class="step-arrow" aria-hidden="true">›</span>
@@ -341,28 +398,56 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .btn-quiet:hover { background: rgba(7, 6, 5, 0.85); color: #fff3cf !important; }
 .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
 
-/* ---------- hero ---------- */
+/* ---------- hero: the name beside the overlay in game ---------- */
 .hero { position: relative; overflow: hidden; background: var(--ground); }
-.hero-art { display: block; width: 100%; height: 620px; object-fit: cover; object-position: center top; opacity: 0.7; }
+.hero-art { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; opacity: 0.55; }
 .hero::after {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(rgba(7, 6, 5, 0.25), rgba(7, 6, 5, 0.45) 55%, var(--ground));
 }
-.hero-text {
+.hero-in {
+  position: relative;
   z-index: 1;
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 24px;
-  text-align: center;
+  gap: 48px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 64px 24px 48px;
 }
-.hero h1 { font: 92px/1 var(--caps); color: var(--title); text-shadow: 0 2px 18px #000; }
+.hero-text { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; min-width: 0; }
+.hero-text .actions { justify-content: flex-start; gap: 10px; }
+.hero-text .btn { padding: 10px 20px; font-size: 19px; }
+.hero h1 { font: 64px/1 var(--caps); color: var(--title); text-shadow: 0 2px 18px #000; }
+.hero-shot { margin: 0; min-width: 0; border: 1px solid var(--unique); box-shadow: 0 0 40px #000, 0 0 0 1px #000; background: #000; }
+.hero-shot img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
+
+/* ---------- All tools: every highlight and its slides, by chapter ---------- */
+.tools { padding: 8px 16px 20px; }
+.tool-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px 28px; padding: 16px 24px 22px; }
+.tool-col { min-width: 0; }
+.tool-col h3 { margin: 0 0 8px; padding-bottom: 4px; border-bottom: 1px solid #3a2814; font: 20px var(--caps); }
+.tool-col h3 a { color: var(--unique-on); text-decoration: none; }
+.tool-col h3 a:hover { color: #ffc08a; }
+.tool-col li { margin-bottom: 10px; line-height: 1.3; }
+.tool-name, .tool-slide { padding: 0; border: 0; background: none; cursor: pointer; text-align: left; }
+.tool-name { display: block; color: var(--text); font: 17px var(--caps); }
+.tool-name:hover { color: #fff3cf; }
+.tool-slides { display: flex; flex-wrap: wrap; gap: 0 4px; }
+.tool-slide { color: var(--dim); font: 14px/1.5 'Fontin', Georgia, serif; }
+.tool-slide:not(:last-child)::after { content: ' ·'; color: var(--edge); }
+.tool-slide:hover { color: var(--link); }
+.seal { display: inline-block; margin-left: 5px; padding: 0 4px; background: #d6b25e; color: #1a0f05; font: 11px/15px var(--caps); vertical-align: 1px; font-weight: normal; }
+
+/* ---------- a chapter's tabs, like the stash's ---------- */
+.item.with-tabs { --tabs: 46px; }
+.tabs { display: flex; flex: none; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 8px 10px 0; border-bottom: 1px solid #4a3218; }
+.tab { position: relative; bottom: -1px; padding: 6px 16px 5px; border: 1px solid #4a3218; border-bottom-color: transparent; border-radius: 6px 6px 0 0; background: linear-gradient(#2a1d10, #120d08); color: var(--dim); font: 17px var(--caps); cursor: pointer; }
+.tab:hover { color: var(--text); }
+.tab[aria-pressed='true'] { border-color: var(--unique); border-bottom-color: #000; background: linear-gradient(#4a2e14, #000); color: var(--title); }
 .lead { font-size: 26px; font-style: italic; color: var(--text); text-shadow: 0 1px 8px #000; }
 .facts { color: var(--text); text-shadow: 0 1px 8px #000; margin-bottom: 8px; }
 .unsigned-note { color: var(--dim); font-size: 14px; text-shadow: 0 1px 8px #000; margin-top: 10px; }
@@ -374,7 +459,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
    well under its real size, so it stays sharp. */
 .item {
   --chrome: 180px;
-  --h: min(720px, max(280px, calc(100vh - var(--chrome) - var(--tray, 0px) - var(--strip, 0px) - var(--flow, 0px))));
+  --h: min(720px, max(280px, calc(100vh - var(--chrome) - var(--tray, 0px) - var(--strip, 0px) - var(--flow, 0px) - var(--tabs, 0px))));
   display: flex;
   flex-direction: column;
   width: min(calc(var(--h) * 16 / 9), 100%);
@@ -514,15 +599,29 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 }
 .foot-links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
 
+@media (max-width: 1100px) {
+  .hero h1 { font-size: 52px; }
+  .hero-in { gap: 32px; }
+}
 @media (max-width: 860px) {
+  .hero-in { grid-template-columns: minmax(0, 1fr); padding: 40px 16px 28px; }
+  .hero-text { align-items: center; text-align: center; }
+  .hero-text .actions { justify-content: center; }
   .hero h1 { font-size: 54px; }
-  .hero-art { height: 480px; }
+  .item.with-tabs { --tabs: 84px; }
   .more { columns: 1; }
 }
 /* Phones held upright. Landscape phones are wide enough for the layout above. */
 @media (max-width: 600px) {
-  .hero-art { height: 430px; }
   .hero h1 { font-size: 46px; }
+  .tool-cols { padding: 12px 14px 16px; }
+  /* Tabs: one row that slides sideways, as the plates do. */
+  .tabs { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs > :first-child { margin-left: auto; }
+  .tabs > :last-child { margin-right: auto; }
+  .tab { flex: none; min-height: 44px; }
+  .item.with-tabs { --tabs: 54px; }
   .lead { font-size: 21px; }
   /* Plates: one row that slides sideways, like the stash's tab row, faded at the
      edge so it shows there's more. Thumb-sized. */

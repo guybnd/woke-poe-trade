@@ -29,7 +29,8 @@ export const HIGHLIGHTS = [
       { label: 'Sockets', module: 'apt-price-check', shot: 'hl-pc-sockets', focus: [780, 60, 1000], text: 'Socket colours as tiles you can switch off, and each listing\'s sockets as coloured dots. Right-click Links for the tiles on any item.', alt: 'Price check of Skin of the Lords: R, G and B tiles beside the name, and each listing\'s sockets as dots' },
       { label: 'Versions', module: 'apt-price-check', shot: 'hl-pc-versions', focus: [780, 60, 1000], text: 'A gem\'s other levels and qualities with poe.ninja prices. Click one to search it.', alt: 'Price check of a corrupted level 21 gem listing its seven versions with poe.ninja prices' },
       { label: 'Open affixes', module: 'apt-price-check', shot: 'hl-pc-affixes', focus: [760, 200, 900], text: 'Pre ≤ and Suf ≤ find items with a prefix or suffix still open. Add any mod to the search by typing its name.', alt: 'Price check of a body armour with Pre ≤ 2 set and the add-a-mod box listing movement speed mods' },
-      { label: 'Saved searches', module: 'trade-searches', shot: 'hl-trade-searches', focus: [180, 60, 1100], text: 'Save a price check\'s trade search, then reopen it, or its live search, from a folder.', alt: 'Trade searches window: folders of saved searches with when each was last opened, and a pinned live search' }
+      { label: 'Saved searches', module: 'trade-searches', shot: 'hl-trade-searches', focus: [180, 60, 1100], text: 'Save a price check\'s trade search, then reopen it, or its live search, from a folder.', alt: 'Trade searches window: folders of saved searches with when each was last opened, and a pinned live search' },
+      { label: 'Trades', module: 'trade', shot: 'hl-trade', focus: [740, 320, 760], text: 'Whispers become cards with the stash spot. Invite, trade, thank and kick in a click.', alt: 'Trade card in the hideout: buyers with the item, price and stash position' }
     ]
   },
   {
@@ -75,25 +76,24 @@ export const HIGHLIGHTS = [
   },
   {
     id: 'profit',
-    name: 'Profit',
+    name: 'Net Worth',
     tag: 'Stash, maps and trades, one number',
     // A story: numbered plates in order, and a line on how they add up.
     steps: true,
     flow: 'Stash reads + maps + trades = profit per map and per hour',
     slides: [
-      { label: 'Stash reads', shot: 'clip-profit', clip: 'clip-profit', focus: [700, 0, 1152], text: 'Pick your stash tabs. Each read is priced at poe.ninja, so your stash keeps the score.', more: 'A price that jumps 5× or more overnight is held at its usual price until the market agrees, so one fake listing can\'t move your total.', alt: 'Net worth window: a refresh adds a point to the chart, and a strategy run\'s profit goes up' },
+      { label: 'Stash reads', news: 'net-worth-public', shot: 'clip-profit', clip: 'clip-profit', focus: [700, 0, 1152], text: 'Pick your stash tabs. Each read is priced at poe.ninja, so your stash keeps the score.', more: 'A price that jumps 5× or more overnight is held at its usual price until the market agrees, so one fake listing can\'t move your total.', alt: 'Net worth window: a refresh adds a point to the chart, and a strategy run\'s profit goes up' },
       { label: 'Every map', module: 'session-analytics', modules: ['session-story'], shot: 'hl-profit-maps', focus: [600, 120, 1000], text: 'Each map is timed and logged, with a small card after it. Stash reads land between maps, so a change is tied to the maps that made it.', alt: 'Map history grouped by day with stash reads between the maps, and the card after a map with its time against the last hour' },
       { label: 'Buys and sales', shot: 'hl-profit-sales', focus: [700, 120, 1000], text: 'Your trade history is read in, so a sale shows what it went for against the market, and a buy isn\'t counted as a loss.', alt: 'Net worth Sales tab: each sale with its price and how far under the market it went' },
-      { label: 'Strategy run', shot: 'hl-profit-run', focus: [700, 120, 1000], text: 'Name a run and play. Profit since the start, per map and per hour, with what got used up and what came in.', alt: 'A strategy run: Nightmare maps, its profit, per map, per hour and cost per map, with what came in and what was used up' }
+      { label: 'Strategy run', news: 'net-worth-strategy-runs', shot: 'hl-profit-run', focus: [700, 120, 1000], text: 'Name a run and play. Profit since the start, per map and per hour, with what got used up and what came in.', alt: 'A strategy run: Nightmare maps, its profit, per map, per hour and cost per map, with what came in and what was used up' }
     ]
   },
   {
     id: 'on-screen',
-    name: 'On Your Screen',
+    name: 'League Mechanics',
     tag: 'Only when it matters',
     slides: [
       { label: 'Mechanics window', module: 'mechanics', shot: 'clip-on-screen', clip: 'clip-on-screen', focus: [300, 0, 1152], text: 'Every league mechanic in one window: what to pick and what it is worth, a tab each.', alt: 'League mechanics window: clicking through the Delve, Blight, Delirium, Ritual and Harvest tabs, each with its items priced' },
-      { label: 'Trades', module: 'trade', shot: 'hl-trade', focus: [740, 320, 760], text: 'Whispers become cards with the stash spot. Invite, trade, thank and kick in a click.', alt: 'Trade card in the hideout: buyers with the item, price and stash position' },
       {
         label: 'League mechanics',
         module: 'mechanics',
@@ -109,11 +109,8 @@ export const HIGHLIGHTS = [
           { label: 'Bestiary', shot: 'hl-mech-bestiary', focus: [700, 400, 720], text: 'When Einhar shows up, which beasts are worth catching.', alt: 'Bestiary card: Wild Brambleback, Fenumal Plagued Arachnid and Vivid Vulture priced' }
         ]
       },
-      { label: 'Campaign', module: 'campaign', shot: 'hl-campaign', focus: [720, 430, 800], text: 'Your zone, your level against it, the next steps and your run timer.', alt: 'Campaign card: the current zone, level and the next steps' },
-      { label: 'Run timer', module: 'run-timer', shot: 'hl-run-timer', focus: [100, 120, 900], text: 'Splits for every act and zone, your level over time and your deaths, kept for each run.', alt: 'Run timer timeline: act bars, a level chart and the time in each Act 1 zone' },
       { label: 'Wickerman', module: 'wickerman', shot: 'hl-wickerman', focus: [330, 60, 1100], text: 'Every 3.30 Viscera with its mod, the bosses that drop it and where they are.', alt: 'Wickerman window: Viscera by slot, each with its mod and the bosses and maps it drops in' },
       { label: 'Challenges', module: 'challenges', shot: 'hl-challenges', focus: [700, 420, 720], text: 'Your count and what is next, on one small icon.', alt: 'Challenges card under a small icon: 23 of 40 and the next three' },
-      { label: 'Lab run', module: 'lab', shot: 'hl-lab', focus: [900, 65, 1100], text: 'Today\'s layout stays one hover away while you run.', alt: 'Today\'s Normal Labyrinth layout in a card under a small icon' },
       { label: 'Drop counter', module: 'drop-counter', shot: 'hl-drop-counter', focus: [700, 330, 760], text: 'A tally of the drops you care about. Press +1 while you play, and maps count themselves.', alt: 'Drop counter card: maps run, and Divine Orb, Exalted Orb and Annulment counts with how long since the last' },
       { label: 'Death recap', module: 'death-recap', shot: 'hl-death-recap', focus: [720, 220, 900], text: 'Where you died, how long in, and the mods of the map if you checked it first.', alt: 'Death recap card: Cemetery, first death, time since entering and the map\'s mods' }
     ]
@@ -138,7 +135,7 @@ export const HIGHLIGHTS = [
     slides: [
       { label: 'Map scan', module: 'map-scan', shot: 'hl-map-scan', focus: [500, 0, 1152], text: 'Press Alt+S on a map. It reads the tooltip and flags the mods you said to watch.', alt: 'Map scan reading a T16 map tooltip and marking it Risky for max res down' },
       { label: 'Essence scan', module: 'essence-scan', shot: 'hl-essence-scan', focus: [500, 0, 1152], text: 'Press Alt+E on a monolith to see whether corrupting it pays, at today\'s prices.', alt: 'Essence scan beside a monolith, saying CORRUPT with what each essence is worth' },
-      { label: 'Atlas strategies', module: 'atlas', shot: 'hl-atlas', focus: [700, 150, 900], text: 'Each strategy\'s tree, priced scarabs, map device and regex, in one place. Alt+T draws the tree on the game\'s atlas.', alt: 'Atlas strategies window: an essence strategy with its scarabs, map device, notes and what to allocate' }
+      { label: 'Atlas strategies', module: 'atlas', news: 'atlas-planner-links', shot: 'hl-atlas', focus: [700, 150, 900], text: 'Each strategy\'s tree, priced scarabs, map device and regex, in one place. Alt+T draws the tree on the game\'s atlas.', alt: 'Atlas strategies window: an essence strategy with its scarabs, map device, notes and what to allocate' }
     ]
   },
   {
@@ -146,8 +143,18 @@ export const HIGHLIGHTS = [
     name: 'Regex',
     tag: 'Stop typing stash searches',
     slides: [
-      { label: 'Maker', module: 'map-mods', shot: 'hl-regex-maker', focus: [780, 60, 1010], text: 'Rate map mods as avoid, careful or want, set the rewards a map must have, and get the stash search.', alt: 'Map mods window: mods rated careful and want, the Rewards table, and the stash search it builds' },
+      { label: 'Maker', module: 'map-mods', news: 'map-mods-t17-planner', shot: 'hl-regex-maker', focus: [780, 60, 1010], text: 'Rate map mods as avoid, careful or want, set the rewards a map must have, and get the stash search.', alt: 'Map mods window: mods rated careful and want, the Rewards table, and the stash search it builds' },
       { label: 'Clipboard', module: 'regex-library', shot: 'hl-regex-clipboard', focus: [400, 120, 880], text: 'Your saved strings and the classics, one click from the stash search.', alt: 'Regex library with saved stash search strings' }
+    ]
+  },
+  {
+    id: 'levelling',
+    name: 'Levelling',
+    tag: 'Campaign, lab and your splits',
+    slides: [
+      { label: 'Campaign', module: 'campaign', shot: 'hl-campaign', focus: [720, 430, 800], text: 'Your zone, your level against it, the next steps and your run timer.', alt: 'Campaign card: the current zone, level and the next steps' },
+      { label: 'Run timer', module: 'run-timer', shot: 'hl-run-timer', focus: [100, 120, 900], text: 'Splits for every act and zone, your level over time and your deaths, kept for each run.', alt: 'Run timer timeline: act bars, a level chart and the time in each Act 1 zone' },
+      { label: 'Lab run', module: 'lab', shot: 'hl-lab', focus: [900, 65, 1100], text: 'Today\'s layout stays one hover away while you run.', alt: 'Today\'s Normal Labyrinth layout in a card under a small icon' }
     ]
   },
   {
@@ -158,4 +165,17 @@ export const HIGHLIGHTS = [
       { label: 'Pick your tools', shot: 'hl-setup', focus: [0, 0, 1000], text: 'Start from a preset, then switch each tool on or off. A tool that is off does not load, take hotkeys or poll.', alt: 'First-run setup: presets for how you play, and a switch for each tool' }
     ]
   }
+]
+
+// The page in chapters, by what you're doing: each is one box whose tabs are
+// its highlights. The All tools grid under the hero lists them the same way.
+// A slide's `news` is the id of its line in the app's What's new list
+// (renderer/src/web/woke/tab-bar/news.ts): it wears a NEW seal while that line
+// is there, so seals come and go with the app's own.
+export const CHAPTERS = [
+  { id: 'trading', name: 'Trading', tag: 'Price anything without leaving the game', highlights: ['price-check', 'quick-search'] },
+  { id: 'profit', name: 'Profit', tag: 'What your maps really earn', highlights: ['profit', 'market'] },
+  { id: 'mapping', name: 'Mapping', tag: 'Know before you run it', highlights: ['maps', 'regex', 'loot-filter', 'on-screen'] },
+  { id: 'build', name: 'Build and Levelling', tag: 'Your build, no alt-tab', highlights: ['pob', 'levelling'] },
+  { id: 'your-setup', name: 'Your Setup', tag: 'Only the tools you play with', highlights: ['setup'] }
 ]
