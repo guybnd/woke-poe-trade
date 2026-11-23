@@ -12,10 +12,13 @@ async function openPalette (overlay: Overlay) {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await overlay.boot({ widgets: [] })
   await overlay.showScreen('screens/map-real-01.png')
-  await overlay.pressHotkey(SEARCH_KEY)
   const panel = overlay.widget('woke-search')
   const box = panel.getByRole('textbox', { name: 'Search', exact: true })
-  await expect(box).toBeFocused()
+  // The palette mounts lazily: a key pressed before it's there opens nothing.
+  await expect(async () => {
+    if (!await box.isVisible()) await overlay.pressHotkey(SEARCH_KEY)
+    await expect(box).toBeFocused({ timeout: 1000 })
+  }).toPass({ timeout: 15_000 })
   return { panel, box }
 }
 
@@ -167,5 +170,38 @@ test('Settings > Search holds the same list, found from the search box', async (
   await list.locator('[data-group="Viscera"]').getByRole('button', { name: 'Off', exact: true }).click()
   await expect(list.locator('[data-group="Viscera"]').getByRole('button', { name: 'Off', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await overlay.snap('search-groups-settings')
+  expect(overlay.errors).toEqual([])
+})
+
+test('a row far down the list shows its tooltip when hovered, though the list scrolls to it', async ({ overlay }) => {
+  const { panel, box } = await openPalette(overlay)
+  await expect(async () => {
+    await box.fill('fire')
+    expect((await groupRows(overlay, 'Where to get gems')).length).toBeGreaterThan(0)
+  }).toPass({ timeout: 20_000 })
+  // Facts lists every gem card in full, well below the fold.
+  await panel.locator('[data-search-chips] button').filter({ hasText: 'Facts' }).click()
+  const tip = overlay.page.getByRole('tooltip')
+  const gems = panel.locator('button[data-item-tip]').filter({ hasText: /^.?Where to get / })
+  expect(await gems.count()).toBeGreaterThan(2)
+  for (const i of [0, 2]) {
+    const row = gems.nth(i)
+    const name = (await row.locator('.w-trunc').first().textContent())!.replace('Where to get ', '').trim()
+    await overlay.page.mouse.move(5, 5)
+    await expect(tip).toHaveCount(0)
+    await row.hover()
+    await expect(tip).toContainText(name)
+  }
+  // Scrolling the list under a still pointer: once it stops, the item row now
+  // under the pointer gets its tooltip.
+  await gems.nth(0).hover()
+  await expect(tip).toBeVisible()
+  await overlay.page.mouse.wheel(0, 120)
+  await overlay.page.waitForTimeout(500)
+  const underIsItem = await overlay.page.evaluate(() => {
+    const hovered = document.querySelectorAll(':hover')
+    return !!hovered[hovered.length - 1]?.closest('[data-item-tip]')
+  })
+  if (underIsItem) await expect(tip).toBeVisible()
   expect(overlay.errors).toEqual([])
 })

@@ -262,6 +262,7 @@ function watchHover () {
   if (watchingHover) return
   watchingHover = true
   document.addEventListener('mouseover', (e) => {
+    pointer = { x: e.clientX, y: e.clientY }
     const el = tipEl(e.target)
     if (el === hovered) return
     if (el && el === closed) return
@@ -272,8 +273,30 @@ function watchHover () {
   })
   // Out of the window: no mouseover follows.
   document.addEventListener('mouseout', (e) => {
-    if (!e.relatedTarget && hovered) { leave(); closed = null }
+    if (!e.relatedTarget) {
+      pointer = null
+      if (hovered) { leave(); closed = null }
+    }
   })
+  // Any scroll hides the tooltip (GameTooltip), and a row that slid under a
+  // still pointer, or one hovered while a list was still scrolling, got no
+  // tooltip until the pointer left it and came back. Once scrolling stops,
+  // the row under the pointer gets its tooltip.
+  document.addEventListener('scroll', () => {
+    clearTimeout(scrollSettle)
+    scrollSettle = setTimeout(afterScroll, SCROLL_SETTLE_MS)
+  }, { capture: true, passive: true })
+}
+
+const SCROLL_SETTLE_MS = 150
+let pointer: { x: number, y: number } | null = null
+let scrollSettle: ReturnType<typeof setTimeout> | undefined
+function afterScroll () {
+  if (!pointer) return
+  const el = tipEl(document.elementFromPoint(pointer.x, pointer.y))
+  if (hovered && hovered !== el) leave()
+  closed = null
+  if (el) enter(el)
 }
 
 // Dock cards take clicks while the game has focus. Leaving one makes the window
