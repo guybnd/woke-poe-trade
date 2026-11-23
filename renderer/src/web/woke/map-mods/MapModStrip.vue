@@ -32,8 +32,8 @@
             <label v-if="isOn(p.label)" :class="$style.minBox" :title="`Search at least this ${p.label}`">≥<input type="number" min="0" :max="p.value" :value="minOf(p.label) ?? ''"
               :aria-label="`${p.label} minimum`" :data-map-prop-min="p.label" @change="typeMin(p.label, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()"></label>
           </span>
-          <!-- The bulk search finds maps by type only, so its numbers aren't filters. -->
-          <span v-else :class="$style.chip" class="w-num" :title="DEAD_TITLE">{{ p.label }} {{ p.value }}%</span>
+          <!-- No filter: the bulk search finds maps by type only (or the item isn't a map). -->
+          <span v-else :class="$style.chip" class="w-num" :title="addMods === false ? DEAD_TITLE : undefined">{{ p.label }} {{ p.value }}%</span>
         </template>
       </div>
       <div v-if="open" :class="$style.list">
@@ -187,7 +187,8 @@ function wheelMin (label: string, e: WheelEvent) {
   f.roll.min = clampMin(f, now + (e.deltaY < 0 ? 1 : -1))
   f.disabled = false
 }
-// A typed min. Empty searches any amount (the chip stays on).
+// A typed min. Empty searches any amount (the chip stays on). Enter blurs the box, so
+// the min is set first; in PoE mode Enter then searches, as in every number box there.
 function typeMin (label: string, e: Event) {
   const f = propFilter(label)
   const box = e.target as HTMLInputElement
@@ -279,13 +280,13 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .propChip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid transparent; }
 .propBtn { cursor: pointer; color: inherit; }
 .propOff { border: 1px dashed var(--w-line-strong); }
-.propOff .propBtn::before { content: '+'; margin-right: 3px; color: var(--w-gold); }
+.propOff .propBtn::before { content: '+' / ''; margin-right: 3px; color: var(--w-gold); }
 .propChip:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
 .propOn { color: var(--w-fg); background: var(--w-accent-soft); border-color: var(--w-accent); }
 .propOn:hover { border-color: var(--w-accent); }
 /* Atlas Drops: the trade site has no listings for it (pseudo/maps.ts). */
 .propWarn.propOff { border-color: color-mix(in srgb, var(--w-warn) 70%, transparent); color: var(--w-warn); }
-.propWarn.propOff .propBtn::before { content: '!'; color: var(--w-warn); font-weight: 700; }
+.propWarn.propOff .propBtn::before { content: '!' / ''; color: var(--w-warn); font-weight: 700; }
 .minBox { display: inline-flex; align-items: center; gap: 1px; color: var(--w-dim); }
 .minBox input {
   width: 3.2em; padding: 0 3px; border-radius: var(--w-r-sm);
