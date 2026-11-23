@@ -114,11 +114,13 @@ onMounted(() => {
   motion.value = !matchMedia('(prefers-reduced-motion: reduce)').matches
   watcher = new IntersectionObserver((entries) => {
     for (const e of entries) {
-      if (e.isIntersecting) onScreen.add(e.target.id)
+      // On screen: 15% of it or more. A 900px-tall window shows only 31% of
+      // the first section under the hero at load.
+      if (e.isIntersecting && e.intersectionRatio >= 0.15) onScreen.add(e.target.id)
       else onScreen.delete(e.target.id)
     }
     playClips()
-  }, { threshold: 0.15 })
+  }, { threshold: [0, 0.15] })
   for (const el of document.querySelectorAll('.landing section.highlight[id], .landing .hero')) watcher.observe(el)
   nextTick(playClips)
 })
@@ -145,7 +147,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
     <header id="top" class="hero">
       <img class="hero-art" :src="shot('hero-loop')" alt="" width="1920" height="1080">
       <!-- The overlay at work, cut from the highlight clips (docs/scripts/hero-loop.mjs). -->
-      <video v-if="motion" class="hero-art hero-clip" :class="{ playing: playing.hero }" muted loop playsinline autoplay
+      <video v-if="motion" class="hero-art hero-clip" :class="{ playing: playing.hero }" muted loop playsinline
         disablepictureinpicture preload="auto" aria-hidden="true" @playing="playing.hero = true">
         <source :src="clipFile('hero-loop', 'webm')" type="video/webm">
         <source :src="clipFile('hero-loop', 'mp4')" type="video/mp4">
