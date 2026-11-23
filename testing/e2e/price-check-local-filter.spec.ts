@@ -65,6 +65,11 @@ test('a raised min filters the loaded listings here; a lowered one asks for a ne
   // column header and the mod row say it's filtered here.
   const status = panel.locator('.w-pc-status')
   await expect(status).toContainText('14 of 20 here')
+  // Squeezed between Search bulk and the affix caps, it shows the short count, whole, with the full line on hover.
+  await expect(status).toHaveAttribute('title', /Filtered from the 20 listings already loaded/)
+  const shown = await status.evaluate(el => ({ clipped: el.scrollWidth > el.clientWidth + 1, text: (el as HTMLElement).innerText.trim() }))
+  expect(shown.clipped).toBe(false)
+  expect(['Matched 14 of 20 here', '14/20']).toContain(shown.text)
   await expect(listings).toHaveCount(14)
   await expect(panel.locator('.w-pc-results-stale')).toHaveCount(0)
   // Life may sit behind the header's +N: its chip names it there.

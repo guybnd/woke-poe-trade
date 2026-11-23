@@ -4,7 +4,10 @@
     <teleport v-if="statusSlot && stale && list && narrow" :to="statusSlot">
       <span class="w-pc-status w-pc-status-local"
         :title="`Filtered from the ${loadedCount} listings already loaded, without a new search. They're still the cheapest that fit; the search found ${list.total}.`">
-        <span class="w-pc-status-note">Matched</span><b>{{ fitCount }} of {{ loadedCount }} here</b>
+        <!-- The full line where the row has room, "14/20" where it doesn't, nothing where even that won't fit
+             (the table's foot says it too). The title has it all. -->
+        <span class="w-pc-status-full"><span class="w-pc-status-note">Matched</span> <b>{{ fitCount }} of {{ loadedCount }} here</b></span>
+        <b class="w-pc-status-short">{{ fitCount }}/{{ loadedCount }}</b>
       </span>
     </teleport>
     <div v-if="item.info.exchangeable" :class="$style.legacyMessage">

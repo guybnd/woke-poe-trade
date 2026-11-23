@@ -1,5 +1,6 @@
 # Next release notes
 
+- Price check: when tighter ranges filter the loaded listings, the "Matched 14 of 20 here" note beside Search bulk no longer gets cut to "Mat" in a narrow window: it shortens to "14/20" (full line on hover), or hides when even that won't fit (the table's foot says it too).
 - Price check: the listed time is coloured by age: green under an hour, plain under a day, amber under a week, red after that.
 - Item tooltips: a row whose tooltip a scroll hid while the pointer stayed on it (as when Ctrl+Space scrolls a row into view) shows it again once the scroll stops. Before, it showed nothing until you moved off the row and back, so "Where to get <gem>" rows further down Ctrl+Space looked like they had no tooltip.
 - Ctrl+Space search: choose what it shows. Each kind of result (Passive tree, Viscera, Harvest crafts, Settings, Search the web...) now shows its top 3 with a "+N more" row to open the rest, so a word like "fire" no longer lists 38 rows. The cog in the search bar (and Settings › Search) sets each kind to Open (all of it), Folded (top 3) or Off; an Off kind is one click away at the end of the list. Prices and answers always show in full. A chip row above the results (All, Prices, Items, Facts, Tools, Settings, Web) shows one kind in full; Ctrl+Left and Ctrl+Right step through the chips.
