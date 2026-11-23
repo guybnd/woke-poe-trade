@@ -21,16 +21,17 @@ test('first open after setup: the welcome card, then the rail names its buttons'
   await card.getByRole('button', { name: 'Got it' }).click()
   await expect(card).toHaveCount(0)
   await expect.poll(() => fakeApp.readConfig()?.woke?.welcome?.due).toBe(false)
-  // The same open goes on with the buttons' names.
+  // The names wait for the next open.
   const labels = page.locator('[data-rail-label]')
-  await expect(labels).toHaveText(['All tools', 'Settings', /Search/])
-  await overlay.snap('rail buttons named')
+  await expect(labels).toHaveCount(0)
 
   // Two opens with the names, then none.
-  fakeApp.focusGame(true)
-  await expect(labels).toHaveCount(0)
-  await overlay.pressHotkey(overlay.config.overlayKey)
-  await expect(labels).toHaveCount(3)
+  for (let i = 0; i < 2; i++) {
+    fakeApp.focusGame(true)
+    await overlay.pressHotkey(overlay.config.overlayKey)
+    await expect(labels).toHaveText(['All tools', 'Settings', /Search/])
+    if (i === 0) await overlay.snap('rail buttons named')
+  }
   fakeApp.focusGame(true)
   await overlay.pressHotkey(overlay.config.overlayKey)
   await expect(page.locator('[aria-label="All tools"]')).toBeVisible()

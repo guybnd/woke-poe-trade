@@ -311,8 +311,9 @@ function go (i: number) {
 async function finish () {
   finishing.value = true
   const woke = ensureWokeConfig(AppConfig()).woke
+  // Only the first Finish: "Run setup again" isn't a first run.
+  if (!woke.setupDone) startWelcome(woke)
   woke.setupDone = true
-  startWelcome(woke)
   // A fresh config is already in today's shape: no woke fix-up is due on it.
   woke.version ??= WOKE_CONFIG_VERSION
   persist()

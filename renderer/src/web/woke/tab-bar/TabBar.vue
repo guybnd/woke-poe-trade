@@ -666,7 +666,9 @@ const welcomeState = computed(() => AppConfig().woke?.welcome)
 const welcomeNow = computed(() => welcomePhase(welcomeState.value))
 const exclusiveUp = computed(() => wm.widgets.value.some(w => w.wmZorder === 'exclusive' && w.wmWants === 'show'))
 const welcomeCardOn = computed(() => wm.active.value && welcomeNow.value === 'card' && !exclusiveUp.value && !popup.value)
-const railLabelsOn = computed(() => wm.active.value && welcomeNow.value === 'labels' && !exclusiveUp.value && !popup.value && !iconDrag.value?.active)
+// Not on the open the card was on: the labels start with the next one.
+const cardThisOpen = ref(false)
+const railLabelsOn = computed(() => wm.active.value && welcomeNow.value === 'labels' && !cardThisOpen.value && !exclusiveUp.value && !popup.value && !tip.value && !iconDrag.value?.active)
 const welcomePos = ref<Record<string, string> | null>(null)
 const railLabels = ref<Array<{ text: string, keys: string | null, x: number, y: number, left: boolean }>>([])
 let labelsSeen = false
@@ -682,7 +684,10 @@ function placeWelcome () {
     return
   }
   const left = onRight.value ? Math.max(8, r.left - CARD_W - 8) : Math.min(window.innerWidth - CARD_W - 8, r.right + 8)
-  welcomePos.value = { left: `${left}px`, top: `${Math.max(8, r.top)}px` }
+  // A rail low on the screen: the card grows up from its foot instead, so Got it stays on screen.
+  welcomePos.value = r.top > window.innerHeight / 2
+    ? { left: `${left}px`, bottom: `${Math.max(8, window.innerHeight - r.bottom)}px` }
+    : { left: `${left}px`, top: `${Math.max(8, r.top)}px` }
 }
 
 function placeRailLabels () {
@@ -714,7 +719,10 @@ function placeRailLabels () {
 watch([welcomeCardOn, railLabelsOn, flat, onRight, () => props.config.railSize, () => props.config.anchor], () => {
   // After the rail has been laid out where it is now.
   nextTick(() => {
-    if (welcomeCardOn.value) placeWelcome()
+    if (welcomeCardOn.value) {
+      cardThisOpen.value = true
+      placeWelcome()
+    }
     if (railLabelsOn.value) {
       labelsSeen = true
       placeRailLabels()
@@ -723,14 +731,23 @@ watch([welcomeCardOn, railLabelsOn, flat, onRight, () => props.config.railSize, 
 }, { immediate: true, deep: true })
 
 watch(() => wm.active.value, active => {
-  if (active || !labelsSeen) return
+  if (active) return
+  cardThisOpen.value = false
+  if (!labelsSeen) return
   labelsSeen = false
   labelsShown(welcomeState.value)
 })
+function onWelcomeResize () {
+  if (welcomeCardOn.value) placeWelcome()
+  if (railLabelsOn.value) placeRailLabels()
+}
+window.addEventListener('resize', onWelcomeResize)
+onBeforeUnmount(() => { window.removeEventListener('resize', onWelcomeResize) })
 
-// Opening any tool means they've found their way: the card is done.
+// Opening a tool from the overlay means they've found their way: the card is
+// done. Not a window a hotkey opened during play, before they saw the card.
 watch(() => tabs.value.some(tab => tab.open && !tab.iconOnly), open => {
-  if (open && welcomeNow.value === 'card') endWelcomeCard()
+  if (open && wm.active.value && welcomeCardOn.value) endWelcomeCard()
 })
 
 // Saved now: an open Settings window holds back the usual save until it closes.
