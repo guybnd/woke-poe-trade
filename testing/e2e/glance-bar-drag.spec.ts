@@ -19,7 +19,9 @@ function glanceOn (pos?: { x: number, y: number }) {
 }
 
 test('the glance bar drags with the overlay open and keeps its spot', async ({ overlay }) => {
-  await overlay.boot({ patch: glanceOn() })
+  // Started below the top, where the overlay's own notices (an update, a
+  // config warning) can cover its default spot.
+  await overlay.boot({ patch: glanceOn({ x: 0.5, y: 0.3 }) })
   await overlay.log(intoMap)
   const page = overlay.page
   const bar = page.locator('[data-glance-bar]')

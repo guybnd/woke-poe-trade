@@ -17,7 +17,7 @@
         <span>{{ night.maps.length }} {{ night.maps.length === 1 ? 'map' : 'maps' }}</span>
         <span v-if="profit != null" :class="profit >= 0 ? 'w-up' : 'w-down'">{{ profit > 0 ? '+' : '' }}{{ formatChaos(profit, night.divine) }}</span>
       </template>
-      <span v-if="movable || editing" :class="$style.grip" class="w-dim" data-glance-drag><i class="fas fa-grip-vertical" /></span>
+      <span :class="[$style.grip, { [$style.gripOn]: movable || editing }]" class="w-dim" data-glance-drag><i class="fas fa-grip-vertical" /></span>
     </div>
   </Teleport>
 </template>
@@ -87,7 +87,7 @@ const profit = computed(() => night.value ? nights.profitOf(night.value) : null)
 /* With the overlay open: takes the mouse, grip on hover only (it can sit over a price check). */
 .movable { pointer-events: auto; cursor: move; user-select: none; }
 .grip { visibility: hidden; }
-.movable:hover .grip, .editing .grip { visibility: visible; }
+.movable:hover .gripOn, .editing .gripOn { visibility: visible; }
 .movable:hover, .editing { border-color: var(--w-accent); }
 .name { color: var(--w-accent); }
 .sep { width: 1px; align-self: stretch; background: var(--w-line); }

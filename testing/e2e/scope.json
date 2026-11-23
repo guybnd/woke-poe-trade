@@ -100,8 +100,7 @@
    "renderer/src/web/woke/gem-versions/"
   ],
   "glance-bar-drag.spec.ts": [
-   "renderer/src/web/woke/session-story/",
-   "renderer/src/web/woke/ui/drag-spot.ts"
+   "renderer/src/web/woke/session-story/"
   ],
   "glance-bar.spec.ts": [
    "renderer/src/parser/",

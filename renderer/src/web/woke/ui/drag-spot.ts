@@ -11,9 +11,11 @@ export function dragSpot (e: PointerEvent, el: HTMLElement, onMove: (spot: Spot,
   const box = boxEl.getBoundingClientRect()
   const dx = e.clientX - (box.left + box.width / 2)
   const dy = e.clientY - box.top
+  const halfW = Math.min(0.5, box.width / 2 / window.innerWidth)
   try { el.setPointerCapture(e.pointerId) } catch {}
   const at = (ev: PointerEvent): Spot => ({
-    x: Math.min(1, Math.max(0, (ev.clientX - dx) / window.innerWidth)),
+    // Its centre, kept far enough in that no edge leaves the screen.
+    x: Math.min(1 - halfW, Math.max(halfW, (ev.clientX - dx) / window.innerWidth)),
     y: Math.max(0, Math.min(1 - box.height / window.innerHeight, (ev.clientY - dy) / window.innerHeight))
   })
   let last: Spot | null = null
