@@ -39,7 +39,8 @@ const labelStyle = computed(() => {
   const s = style.value
   // Game font sizes run 18-45 (default 32).
   const size = s.fontSize ?? DEFAULT_FONT
-  const px = (9 + (size - 18) * 0.28) * props.scale
+  // The game's smallest label (18) reads at 11px, the app's smallest text (P19).
+  const px = (11 + (size - 18) * 0.28) * props.scale
   return {
     color: css(s.text ?? props.defaultText ?? DEFAULT_TEXT),
     background: css(s.background ?? DEFAULT_BG),
@@ -55,6 +56,7 @@ const labelStyle = computed(() => {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  max-width: 100%;
 }
 .label {
   display: inline-block;
@@ -62,6 +64,10 @@ const labelStyle = computed(() => {
   border: 1px solid transparent;
   font-family: FontinSmallCaps, FrizQuadrataC, Georgia, serif;
   white-space: nowrap;
+  /* A long name in a narrow column ends in "…" instead of being cut mid-letter. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   line-height: 1.35;
   /* Drawn as the filter draws it in game: no shadow from the window around it. */
   text-shadow: none;
@@ -72,6 +78,7 @@ const labelStyle = computed(() => {
 }
 .extras {
   display: inline-flex;
+  flex-shrink: 0;
   white-space: nowrap;
   align-items: center;
   gap: 6px;

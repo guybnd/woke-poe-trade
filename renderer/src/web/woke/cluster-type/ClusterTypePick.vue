@@ -160,7 +160,7 @@ function onKey (e: KeyboardEvent) {
 .w-ctp-opt-name { flex: 1; min-width: 0; }
 .w-ctp-opt.now { color: var(--w-gold-hi, var(--w-fg)); }
 .w-ctp-opt.sel { background: linear-gradient(90deg, rgba(175, 140, 80, .28), rgba(175, 140, 80, .06)); }
-.w-ctp-own { flex: none; font-size: .8em; color: var(--w-dim); }
+.w-ctp-own { flex: none; font-size: max(var(--w-fs-xs), .8em); color: var(--w-dim); }
 .w-ctp-none { padding: 3px 8px; color: var(--w-dim); font-style: italic; }
 .w-ctp-foot {
   display: flex; gap: 12px; padding: 3px 8px;

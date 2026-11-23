@@ -75,3 +75,53 @@ test('twice corrupted: the chip and each such listing say so', async ({ overlay 
   await expect(tip).toContainText('String of Servitude')
   await expect(tip).toContainText('Twice Corrupted')
 })
+
+test('the listings line up: counts keep a slot, corrupted tags share a width, coins share an edge', async ({ overlay }) => {
+  // One seller with 4 copies at 5c (a ×4 row), others with one copy each.
+  const rows: Array<[string, boolean, number]> = [
+    ['bulk', false, 5], ['bulk', false, 5], ['bulk', false, 5], ['bulk', false, 5],
+    ['a', true, 5], ['b', false, 4], ['c', true, 950], ['d', false, 1000]
+  ]
+  await overlay.page.route('**/api/trade/search/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    headers: LIMITS,
+    body: JSON.stringify({ id: 'q', total: rows.length, result: rows.map((_, i) => `r${i}`) })
+  }))
+  await overlay.page.route('**/api/trade/fetch/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    headers: LIMITS,
+    body: JSON.stringify({
+      result: rows.map(([seller, twice, amount], i) => ({
+        id: `r${i}`,
+        item: belt(twice),
+        listing: {
+          indexed: new Date().toISOString(),
+          fee: 1,
+          price: { amount, currency: 'chaos' },
+          account: { name: seller, lastCharacterName: `${seller}c` }
+        }
+      }))
+    })
+  }))
+  await overlay.boot()
+  await overlay.copyItem('items/unique-belt-twice-corrupted.txt')
+  const panel = overlay.widget('price-check')
+  const body = panel.locator('.w-pc-table tbody')
+  await expect(body.locator('.w-pc-count-n').filter({ hasText: '4' })).toHaveCount(1)
+  await expect(body.locator('.w-pc-tag')).toHaveCount(5)
+
+  const boxes = (sel: string) => body.locator(sel).evaluateAll(els => els.map(e => e.getBoundingClientRect()).map(b => ({ x: b.x, w: b.width, r: b.right })))
+  const tags = await boxes('.w-pc-tag')
+  for (const t of tags) {
+    expect(Math.abs(t.x - tags[0].x)).toBeLessThan(1)
+    expect(Math.abs(t.w - tags[0].w)).toBeLessThan(1)
+  }
+  const coins = await boxes('.w-pc-coin')
+  for (const c of coins) expect(Math.abs(c.r - coins[0].r)).toBeLessThan(1)
+  // Bulk and the currency chip beside it: one height, one top.
+  const bulk = await panel.locator('.w-pc-toolbar .w-pc-bulk').evaluateAll(els => els.map(e => e.getBoundingClientRect()).map(b => [b.top, b.height]))
+  expect(bulk).toHaveLength(2)
+  expect(Math.abs(bulk[0][0] - bulk[1][0])).toBeLessThan(1)
+  expect(Math.abs(bulk[0][1] - bulk[1][1])).toBeLessThan(1)
+  await overlay.snap('listings line up')
+})

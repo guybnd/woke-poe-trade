@@ -3,26 +3,25 @@
     :move-handles="mode === 'card' ? 'none' : 'corners'" :inline-edit="false" :readonly="true">
     <!-- Strictness and anything that needs you, behind one dock icon. -->
     <DockItem :menu="dockMenu" ref="dockRef" id="loot-filter" :art="dockArt" title="Loot filter" :show="dockShow"
-      :badge="dockBadge" :tone="dockTone" :readouts="dockReadouts" :wm-id="config.wmId" card-width="22rem" @activate="openFromDock">
+      :badge="dockBadge" :tone="dockTone" :readouts="dockReadouts" :wm-id="config.wmId" card-width="24rem" @activate="openFromDock">
       <template #card>
         <div :class="$style.dock">
           <template v-if="config.neversink.on">
-            <div class="flex items-center gap-2">
-              <span class="whitespace-nowrap">{{ LEVEL_NAMES[shownLevel] }}</span>
-              <span class="w-faint text-xs whitespace-nowrap">{{ config.strictAuto.on ? (config.strictAuto.paused ? 'auto paused' : 'auto') : 'manual' }}</span>
-              <button v-if="config.strictAuto.on && config.strictAuto.paused" type="button" :class="$style.link" @click="backToAuto">Back to auto</button>
-              <WInfo v-if="keysHelp.length" :keys="keysHelp" />
+            <div :class="$style.status">
+              <span :class="$style.levelName">{{ LEVEL_NAMES[shownLevel] }}</span>
+              <span class="w-faint text-xs">{{ config.strictAuto.on ? (config.strictAuto.paused ? 'auto paused' : 'auto') : 'manual' }}</span>
               <span class="grow" />
-              <span v-if="!config.strictAuto.paused" class="w-faint text-xs w-num whitespace-nowrap">NeverSink {{ config.neversink.version }}</span>
+              <span v-if="!(config.strictAuto.on && config.strictAuto.paused)" class="w-faint text-xs w-num">NeverSink {{ config.neversink.version }}</span>
+              <WButton v-else size="sm" variant="ghost" title="Let your map tier pick the strictness again" @click="backToAuto">Back to auto</WButton>
+              <WInfo v-if="keysHelp.length" :keys="keysHelp" />
             </div>
             <div :class="$style.levels" role="group" aria-label="Strictness" @wheel.prevent="onLevelWheel">
               <button v-for="(short, i) in LEVEL_SHORT" :key="i" type="button" :class="{ [$style.levelOn]: i === shownLevel, [$style.levelWanted]: wantedLevel === i }"
                 :title="wantedLevel === i ? `${LEVEL_NAMES[i]}: what auto would pick` : LEVEL_NAMES[i]" :aria-label="LEVEL_NAMES[i]" :aria-pressed="i === shownLevel" @click="pickNow(i)">{{ short }}</button>
             </div>
+            <!-- Auto's ladder, each map band under the strictness it picks. -->
             <div v-if="config.strictAuto.on" :class="$style.ladder">
-              <div v-for="(step, i) in sortedLadder" :key="i" :class="{ [$style.stepOn]: step.level === config.neversink.level }">
-                <b>{{ stepLabel(config.strictAuto.ladder, i) }}</b><span>{{ LEVEL_NAMES[step.level] }}</span>
-              </div>
+              <span v-for="(_, i) in LEVEL_SHORT" :key="i" :class="{ [$style.step]: ladderAt[i], [$style.stepOn]: ladderAt[i] && i === config.neversink.level }">{{ ladderAt[i] }}</span>
             </div>
           </template>
           <div v-if="reloadWaiting" :class="$style.reload">
@@ -33,10 +32,12 @@
             </div>
           </div>
           <div v-for="n in dockNotes" :key="n.id" class="text-xs" :style="n.warn ? 'color: var(--w-warn)' : ''">{{ n.text }}</div>
-          <div v-if="dismissable.length" class="flex flex-wrap items-center gap-1">
+          <div v-if="dismissable.length" class="w-actions">
             <WButton size="sm" variant="primary" @click="seeNotice">{{ noticeAction(dismissable[0]) }}</WButton>
             <WButton size="sm" variant="ghost" @click="gotIt">Got it</WButton>
-            <WButton v-if="dismissable.some(canTurnOff)" size="sm" variant="ghost" title="You can turn it back on in the Prices tab" @click="turnOff">Don't tell me about this</WButton>
+            <span class="grow" />
+            <WButton v-if="dismissable.some(canTurnOff)" size="sm" variant="ghost" icon="fas fa-bell-slash" aria-label="Don't tell me about this"
+              title="Don't tell me about this again. You can turn it back on in the Prices tab" @click="turnOff" />
           </div>
           <div v-if="config.editorHotkey && !config.neversink.on" class="w-faint text-xs">Open the editor with <WKbd :keys="config.editorHotkey" /></div>
         </div>
@@ -317,6 +318,10 @@ onUnmounted(() => {
 })
 const dockArt = computed(() => gameIcon('Orb of Scouring', 'ITEM'))
 const sortedLadder = computed(() => [...props.config.strictAuto.ladder].sort((a, b) => a.from - b.from))
+// The ladder's map bands by the strictness they pick ("" where none does).
+const ladderAt = computed(() => LEVEL_SHORT.map((_, level) => sortedLadder.value
+  .map((step, i) => step.level === level ? stepLabel(props.config.strictAuto.ladder, i) : null)
+  .filter(Boolean).join(', ')))
 const allNotes = computed<Notice[]>(() => {
   const out: Notice[] = []
   const ready = store.updateReady.value
@@ -452,16 +457,14 @@ const dockMenu = computed<DockMenuAction[]>(() => [
   border-radius: var(--w-radius-sm);
   background: var(--w-accent-soft);
 }
-.link {
-  color: var(--w-accent);
-  font-size: var(--w-fs-xs);
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--w-s2);
+  min-height: 26px;
   white-space: nowrap;
-  background: none;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
 }
-.link:hover { text-decoration: underline; }
+.levelName { font-size: var(--w-fs-lg); }
 .levels {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -490,22 +493,19 @@ const dockMenu = computed<DockMenuAction[]>(() => [
   border: 3px solid transparent;
   border-bottom-color: var(--w-accent);
 }
+/* Same columns as the strictness buttons, so each band sits under its pick. */
 .ladder {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 3px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  margin-top: -2px;
   font-size: var(--w-fs-xs);
-}
-.ladder div {
-  display: flex;
-  flex-direction: column;
-  border-top: 3px solid var(--w-line);
-  padding-top: 2px;
+  text-align: center;
+  line-height: 1.25;
   color: var(--w-dim);
+  /* Two bands on one strictness, or big text: wrap inside the column, never into the next. */
+  overflow-wrap: anywhere;
 }
-.ladder b { font-weight: 600; }
-.stepOn {
-  border-color: var(--w-accent) !important;
-  color: var(--w-fg) !important;
-}
+.step { border-top: 3px solid var(--w-line); padding-top: 2px; }
+.stepOn { border-color: var(--w-accent); color: var(--w-fg); font-weight: 600; }
 </style>

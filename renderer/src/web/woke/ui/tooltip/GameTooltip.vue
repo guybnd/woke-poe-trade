@@ -590,7 +590,7 @@ onUnmounted(() => {
 }
 .effectOn { color: var(--w-accent); }
 .uniqueCell { display: flex; align-items: baseline; gap: var(--w-s2); min-width: 0; }
-.noDrop { flex: none; color: var(--w-down); font-size: 0.85em; }
+.noDrop { flex: none; color: var(--w-down); font-size: max(var(--w-fs-xs), 0.85em); }
 /* Not a random drop: listed after the ones that are, faded. */
 .restrictedRow { opacity: 0.6; }
 .g-high { color: var(--w-accent); }

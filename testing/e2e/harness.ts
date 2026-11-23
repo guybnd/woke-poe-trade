@@ -18,6 +18,9 @@ import { createRequire } from 'module'
 import { fileURLToPath } from 'url'
 import { installTipAudit, itemNames } from './tip-audit'
 import type { TipGap } from './tip-audit'
+import { installLayoutAudit } from './layout-audit'
+import type { LayoutIssue } from './layout-audit'
+import crypto from 'crypto'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 export const FIXTURES = path.resolve(here, '../fixtures')
@@ -105,6 +108,39 @@ export class Overlay {
     page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) this.errors.push(m.text()) })
     // Every item named on screen has the item tooltip (tip-audit.ts).
     this.auditReady = page.addInitScript(installTipAudit, itemNames())
+    // WOKE_LAYOUT_AUDIT=<folder> records layout faults (layout-audit.ts).
+    const layoutDir = process.env.WOKE_LAYOUT_AUDIT
+    if (layoutDir) {
+      this.auditReady = Promise.all([
+        this.auditReady,
+        page.addInitScript(installLayoutAudit),
+        page.exposeBinding('__wokeLayoutIssue', async (_src, issue: LayoutIssue) => this.saveLayoutIssue(layoutDir, issue))
+      ])
+    }
+  }
+
+  private async saveLayoutIssue (dir: string, issue: LayoutIssue) {
+    const widget = this.config?.widgets.find((w: { wmId: number }) => `widget-${w.wmId}` === issue.widget)?.wmType ?? issue.widget
+    const key = crypto.createHash('sha1').update(`${issue.rule}|${widget}|${issue.where}|${issue.text}`).digest('hex').slice(0, 12)
+    const vp = this.page.viewportSize()
+    const shots = path.join(dir, 'shots')
+    fs.mkdirSync(shots, { recursive: true })
+    const shot = path.join(shots, `${key}.png`)
+    if (!fs.existsSync(shot)) {
+      const f = issue.frame ?? issue.rect
+      const pad = 24
+      const x = Math.max(0, Math.min(f.x, issue.rect.x) - pad)
+      const y = Math.max(0, Math.min(f.y, issue.rect.y) - pad)
+      const right = Math.min(vp?.width ?? 1920, Math.max(f.x + f.w, issue.rect.x + issue.rect.w) + pad)
+      const bottom = Math.min(vp?.height ?? 1080, Math.max(f.y + f.h, issue.rect.y + issue.rect.h) + pad)
+      if (right - x > 4 && bottom - y > 4) {
+        await this.page.screenshot({ path: shot, clip: { x, y, width: right - x, height: bottom - y }, animations: 'disabled' }).catch(() => {})
+      }
+    }
+    fs.appendFileSync(path.join(dir, 'issues.jsonl'), JSON.stringify({
+      ...issue, widget, key, viewport: vp ? `${vp.width}x${vp.height}` : null,
+      textScale: process.env.WOKE_TEXT_SCALE ?? '100', test: this.testInfo.titlePath.join(' › ')
+    }) + '\n')
   }
 
   // Items shown without the item tooltip on hover, since the page last loaded
@@ -151,6 +187,9 @@ export class Overlay {
     // WOKE_UI_ART=poe1|poe2|simple runs a test in that UI style, to look over each.
     const art = process.env.WOKE_UI_ART
     if (art) await this.page.addInitScript(a => { try { localStorage.setItem('woke.uiArt', a) } catch {} }, art)
+    // WOKE_TEXT_SCALE=125 runs a test with Settings > Text size at 125%.
+    const textScale = process.env.WOKE_TEXT_SCALE
+    if (textScale) await this.page.addInitScript(v => { try { localStorage.setItem('woke.textScale', v) } catch {} }, textScale)
     if (!opts.titleTips) await this.page.addInitScript(() => { (window as unknown as { __wokeNativeTitles?: boolean }).__wokeNativeTitles = true })
     const config = await this.defaultConfig()
     config.leagueId = 'Testleague'

@@ -116,7 +116,7 @@
 
 /* ---------- Buttons: the game's menu buttons, lit on hover and dark when held ---------- */
 :root[data-woke-art] .w-btn:not(.w-btn--ghost) {
-  min-height: 30px;
+  min-height: var(--w-ctl-h);
   color: var(--w-btn-fg);
   background: none;
   border: solid transparent;

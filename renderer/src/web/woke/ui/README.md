@@ -80,7 +80,7 @@ Helpers: `ago(ts)` / `freshness(ts)` (one shared clock), `gameIcon(name, ns)`.
 
 ## Title hovers
 
-A plain `title="…"` (or `:title`) on any element shows in the app's own card (the `WInfo` card's look), under the pointer, after a short wait and at once when moving straight from one title to the next. Nothing to import: `title-tip.ts` listens once for the whole overlay. Line breaks in the title stay. Use it for short labels; longer explanations go in `WInfo`. `title=""` silences a title further up, as in the browser, and `data-native-title` on an element or parent keeps the browser's own tooltip. The card never covers a `WInfo` card or the item tooltip. It loads with `page-hooks.ts`, outside startup JS.
+Text cut short with "…" (`.w-trunc`, Tailwind's `truncate`) shows its whole text in the same card on hover, with nothing to add. A plain `title="…"` (or `:title`) on any element shows in the app's own card (the `WInfo` card's look), under the pointer, after a short wait and at once when moving straight from one title to the next. Nothing to import: `title-tip.ts` listens once for the whole overlay. Line breaks in the title stay. Use it for short labels; longer explanations go in `WInfo`. `title=""` silences a title further up, as in the browser, and `data-native-title` on an element or parent keeps the browser's own tooltip. The card never covers a `WInfo` card or the item tooltip. It loads with `page-hooks.ts`, outside startup JS.
 
 ## Item tooltip
 
@@ -90,7 +90,7 @@ Every row that names an item must have it (Guy's rule; see the repo's CLAUDE.md)
 
 ## Utility classes
 
-`w-verdict` (a verdict strip: gold wash and small caps headline `<b>` in the game look), `w-corners` (lit corner marks on a framed window that isn't a WPanel), `w-row` (grid row; set `grid-template-columns` yourself), `w-row--head`,
+`w-verdict` (a verdict strip: gold wash and small caps headline `<b>` in the game look), `w-corners` (lit corner marks on a framed window that isn't a WPanel), `w-actions` (a row of buttons: one line, middles lined up, one gap; `<span class="grow" />` pushes the rest right; a rarely used action becomes an icon button with a title, never a wrapped second line), `w-row` (grid row; set `grid-template-columns` yourself), `w-row--head`,
 `w-group-label`, `w-num` (tabular mono digits), `w-dim`, `w-faint`, `w-up`,
 `w-down`, `w-mono`, `w-stale`, `w-enter`, `w-flash`, `w-focusable` (keyboard-reachable row), `w-accent`, `w-trunc`, `w-icon-btn`, `w-surface`, and item colours
 `w-rarity-{normal,magic,rare,unique,gem,currency,divination}`; gem names by
