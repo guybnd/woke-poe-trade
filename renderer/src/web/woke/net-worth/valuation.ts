@@ -249,7 +249,7 @@ export function holdJump (ninja: number, p: { thin?: boolean, oneDay?: boolean, 
   const sinceFor = (kind: HoldKind) => prev?.heldSince != null && (prev.heldKind ?? 'jump') === kind
     ? prev.heldSince
     // A gear spike whose hold ran out keeps its start: it isn't held again.
-    : kind === 'spike' && prev?.released != null ? prev.released : now
+    : kind === 'spike' && releasedFor(ninja, prev) != null ? prev!.released! : now
   // Only a solid price vouches for a one-day one: an older baseline's price
   // may itself have been a fake.
   const ref = prev?.ref != null && prev.ref > 0 ? prev.ref : null
@@ -273,6 +273,13 @@ export function holdJump (ninja: number, p: { thin?: boolean, oneDay?: boolean, 
   return now - since < HOLD_MS ? { chaos: base, since, kind: 'jump' } : null
 }
 
+// A released spike's start, while poe.ninja's price is still the one let go:
+// a fresh jump of 5x or more over what the last read counted is a new spike.
+function releasedFor (ninja: number, prev: Baseline[string] | undefined): number | undefined {
+  if (prev?.released == null) return undefined
+  return prev.unitChaos > 0 && ninja >= prev.unitChaos * HOLD_RATIO ? undefined : prev.released
+}
+
 // A gear spike on poe.ninja's line alone that holdJump let go after 6 hours:
 // when its hold began, kept in the baseline so the next read, which finds the
 // same step, doesn't start a fresh hold. undefined: not such a spike.
@@ -280,7 +287,7 @@ export function spikeReleased (ninja: number, p: { category?: Category, graph?: 
   if (p.category !== 'gear') return undefined
   const { step, saved } = priceStep(ninja, p)
   if (typeof step !== 'number' || saved) return undefined
-  const since = prev?.heldSince != null && prev.heldKind === 'spike' ? prev.heldSince : prev?.released
+  const since = prev?.heldSince != null && prev.heldKind === 'spike' ? prev.heldSince : releasedFor(ninja, prev)
   return since != null && now - since >= HOLD_MS ? since : undefined
 }
 

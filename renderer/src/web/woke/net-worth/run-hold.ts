@@ -64,7 +64,7 @@ export async function holdHovered (clipboard: string, league: string, points: re
     unitChaos: priced.chaos,
     at: Date.now(),
     tallyAdded: live.tally[key]?.added ?? 0,
-    ...(isRolledMap(s) ? { base: mapBase(s) } : {})
+    ...(isRolledMap(s) ? { base: mapBase(s), ...(s.mapTier != null ? { mapTier: s.mapTier } : {}) } : {})
   }
   await editRun(league, live.id, r => ({ ...r, held: [...(r.held ?? []), item] }), points, divine)
   const value = item.unitChaos * item.count

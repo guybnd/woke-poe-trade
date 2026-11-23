@@ -136,6 +136,11 @@ describe('valuing Rain Tempter', () => {
     expect(at8.lines[0].unitChaos).toBe(500)
     expect(at8.lines[0].heldSince).toBeUndefined()
     expect(baselineOf(at8)[key].released).toBe(T0)
+    // A fresh spike 5x over the let-go price is held again.
+    const bigger: PriceOf = () => ({ chaos: 5000, category: 'gear', graph: [0, null, 0, null, 0, null, 2400] })
+    const at9 = valueStash(gTabs, bigger, undefined, { before: baselineOf(at8), now: T0 + 9 * H })
+    expect(at9.lines[0].unitChaos).toBeLessThan(5000)
+    expect(at9.lines[0].heldSince).toBe(T0 + 9 * H)
     // Once the step is gone, the marker goes too.
     const flat: PriceOf = () => ({ chaos: 500, category: 'gear', graph: [0, null, 0, null, 0, null, 0] })
     expect(baselineOf(valueStash(gTabs, flat, undefined, { before: baselineOf(at8), now: T0 + 9 * H }))[key].released).toBeUndefined()

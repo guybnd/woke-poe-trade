@@ -59,6 +59,8 @@ export interface HeldItem {
   // name. Its listing or sale goes by the map's own rare name, so it's
   // matched by base instead.
   base?: string
+  // Its map tier, so a held T16 map is not taken by a T14 listing of that base.
+  mapTier?: number
 }
 
 // What a run needs of this (runs.ts Run has these fields).
@@ -163,7 +165,8 @@ export function isBefore (run: OutsideRun, s: Sale): boolean {
 const nameOf = (s: Sale) => s.name || s.typeLine
 // A listing or sale of a held item: a rolled map by its base, else by name.
 const isHeld = (o: Sale, item: HeldItem) => item.base
-  ? isRolledMap({ frame: o.frameType, mapTier: o.mapTier, baseType: o.baseType }) && mapBase(o) === item.base
+  ? isRolledMap({ frame: o.frameType, mapTier: o.mapTier, baseType: o.baseType }) && mapBase(o) === item.base &&
+    (item.mapTier == null || o.mapTier == null || o.mapTier === item.mapTier)
   : nameOf(o) === item.name
 
 // What's left of each held item: a stash read that saw its key come in after

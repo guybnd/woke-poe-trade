@@ -114,6 +114,10 @@ describe('held outside the stash (the run hotkey)', () => {
     expect(outsideTotals(run({ held: [h] }), [magic], RATES).heldChaos).toBe(0)
     // Another base's rare map leaves it held.
     expect(outsideTotals(run({ held: [h] }), [{ ...magic, typeLine: 'Strand Map', baseType: 'Strand Map' }], RATES).heldChaos).toBe(20)
+    // A held T16 map isn't taken by a T14 sale of the same base.
+    const t16 = held('h', 'Cemetery Map', T0 + M, 20, { key: 'R:Cemetery Map|T16', base: 'Cemetery Map', mapTier: 16 })
+    expect(outsideTotals(run({ held: [t16] }), [{ ...magic, mapTier: 14 }], RATES).heldChaos).toBe(20)
+    expect(outsideTotals(run({ held: [t16] }), [magic], RATES).heldChaos).toBe(0)
   })
   it('a stack already in the stash when added doesn\'t take it', () => {
     const h = held('h', 'Reality Fragment', T0 + M, 50, { count: 2, tallyAdded: 3 })
