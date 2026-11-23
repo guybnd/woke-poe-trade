@@ -52,6 +52,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-23T15:12:39.957Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up merged: https://github.com/guybnd/woke-poe-trade/pull/817 adds
+      the What's new icon in the dock, with Show me and dismiss on each line.
+    date: '2026-11-23T15:48:11.388Z'
+    selfAttested: true
+    id: c-2026-11-23t15-48-11-388z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/814'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
