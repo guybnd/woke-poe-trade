@@ -13,6 +13,8 @@
     <span v-for="m in marks" :key="m.at" :class="$style.mark" :style="{ left: m.x + '%', top: m.y + '%' }" />
     <!-- Purchases (spend.ts): a dashed line, so a drop that isn't a loss reads as one. -->
     <span v-for="m in spends" :key="'s' + m.at" :class="$style.spend" :style="{ left: m.x + '%' }" />
+    <!-- The live run's start (runs.ts): a gold line where it counts from. -->
+    <span v-if="runLine != null" :class="$style.runStart" :style="{ left: runLine + '%' }" />
     <!-- Sales (sales.ts): a gold dot on the line where each sold. -->
     <span v-for="(m, i) in saleDots" :key="'d' + i + ':' + m.at" :class="$style.sale" :style="{ left: m.x + '%', top: m.y + '%' }" />
     <template v-if="shown">
@@ -37,6 +39,10 @@
             <button type="button" :class="$style.spendBtn" @click="markSpend('spend', amountDiv)">Mark as purchase</button>
           </template>
           <button v-else type="button" :class="$style.spendBtn" @click="markSpend(pinAction.mark)">{{ pinAction.label }}</button>
+        </div>
+        <!-- Strategy runs (runs.ts): count a run from this read. -->
+        <div v-if="pinned && runFrom && !pinned.p.daily" :class="$style.spendBar">
+          <button type="button" :class="$style.spendBtn" @click="startRunHere">Start a run from here</button>
         </div>
       </div>
     </template>
@@ -74,9 +80,19 @@ const props = defineProps<{
   spendAction?: (at: number) => { label: string, mark: SpendMark | null } | null
   // Your sales: a dot each, and the hover card names those since the point before.
   sales?: Array<{ at: number, text: string }>
+  // Offer "Start a run from here" on a clicked point (runs.ts).
+  runFrom?: boolean
+  // The live run's start, drawn as a line.
+  runStartAt?: number | null
 }>()
 // Mark or unmark a refresh as a purchase; amount in the chart's unit.
-const emit = defineEmits<{ spend: [at: number, mark: SpendMark | null, amount?: number] }>()
+const emit = defineEmits<{ spend: [at: number, mark: SpendMark | null, amount?: number], run: [at: number] }>()
+function startRunHere () {
+  const p = pinned.value?.p
+  if (!p) return
+  emit('run', p.at)
+  pinned.value = null
+}
 
 const W = 400
 const H = 80
@@ -214,6 +230,11 @@ const shownSales = computed(() => {
 })
 
 const spends = computed(() => props.series.filter(p => p.spentDiv).map(p => ({ at: p.at, x: xOf(p.at) / W * 100 })))
+const runLine = computed(() => {
+  const at = props.runStartAt
+  if (at == null || props.series.length < 2 || at < span.value.t0 || at > span.value.t1) return null
+  return xOf(at) / W * 100
+})
 
 function onMove (e: MouseEvent) {
   const el = box.value
@@ -244,6 +265,7 @@ function when (at: number) {
 .band { opacity: .55; }
 .goal { stroke: var(--w-up); stroke-width: 1; stroke-dasharray: 4 3; }
 .mark { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--w-up); transform: translate(-50%, -50%); pointer-events: none; }
+.runStart { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--w-gold); opacity: .7; pointer-events: none; }
 .spend { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--w-info); opacity: .8; pointer-events: none; }
 .spendText { color: var(--w-info); }
 .sale { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--w-gold); box-shadow: 0 0 0 1px var(--w-panel-solid); transform: translate(-50%, -50%); pointer-events: none; }

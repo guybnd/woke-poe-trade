@@ -1,7 +1,7 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
     <DockItem ref="dockEl" id="net-worth" title="Net worth" :show="config.dockIcon !== false" :wm-id="config.wmId"
-      :badge="badge" :stack="stack" :wheel="swapGlance" card-width="25rem" :menu="dockMenu" @open-change="cardOpen = $event">
+      :badge="badge" :stack="stack" :glow="!!liveRun" :wheel="swapGlance" card-width="25rem" :menu="dockMenu" @open-change="cardOpen = $event">
       <template #card>
         <!-- Its data loads the first time the card opens, never at startup. -->
         <NetWorthCard v-if="cardOpen && personalReady" :status="status" :league="leagueId" :with-hub="config.rateWithHub === true" :rate-window="config.rateWindow ?? '1h'" @window="config.rateWindow = $event" @refresh="refresh" @settings="openSettingsPage(wm, 'Game & league')" />
@@ -42,6 +42,8 @@ import { hostRequest } from '../shared/host'
 import { parseHotkeyTarget } from './widget'
 import { DOCS, GLANCE_LABELS, glanceFromPoints, glanceKey, glanceText, isGlance, ledgerKey, nextShows } from './glance'
 import type { Glance } from './glance'
+import { isRunGlance, runGlanceKey } from './runs'
+import type { RunGlance } from './runs'
 import type { LedgerPoint } from './ledger'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 
@@ -82,7 +84,9 @@ async function feed (s: ReaderStatus) {
     firstReadAt ??= s.lastReadAt
     if (!started.value && !readNow) return
     store = await import('./store')
-    stopGlance = watch(store.glance, (g) => { if (g) glance.value = g })
+    const stopA = watch(store.glance, (g) => { if (g) glance.value = g })
+    const stopB = watch(store.runGlance, (g) => { runG.value = g })
+    stopGlance = () => { stopA(); stopB() }
   }
   store.setLeague(leagueId.value)
   store.onStatus(s)
@@ -125,7 +129,19 @@ watch(leagueId, (league) => {
   glanceFor = null
   if (league && Host.isElectron) loadGlance(league).catch(() => {})
 }, { immediate: true })
+// A strategy run going (runs.ts, D2): the icon shows its profit and glows.
+const runG = shallowRef<RunGlance | null>(null)
+watch(leagueId, (league) => {
+  runG.value = null
+  if (!league || !Host.isElectron) return
+  hostRequest('doc-get', { collection: DOCS, key: runGlanceKey(league) })
+    .then((g) => { if (leagueId.value === league && runG.value == null) runG.value = isRunGlance(g) && g.league === league ? g : null })
+    .catch(() => {})
+}, { immediate: true })
+const liveRun = computed(() => runG.value && runG.value.league === leagueId.value ? runG.value : null)
 const stack = computed(() => {
+  const r = liveRun.value
+  if (r) return glanceText({ league: r.league, at: r.at, chaos: r.profitChaos, netChaos: r.profitChaos, divine: r.divine }, 'change', nowMinute.value)
   const g = glance.value
   if (!g || g.league !== leagueId.value) return null
   return glanceText(g, props.config.glanceShows ?? 'change', nowMinute.value)
@@ -133,6 +149,7 @@ const stack = computed(() => {
 // The wheel steps through what the number shows, naming it for a moment.
 const dockEl = shallowRef<{ peek: (text: string, ms?: number) => void } | null>(null)
 function swapGlance (dir: 1 | -1) {
+  if (liveRun.value) { dockEl.value?.peek(`Run: ${liveRun.value.name}`, 1500); return }
   if (!glance.value) return
   const next = nextShows(props.config.glanceShows, dir)
   props.config.glanceShows = next

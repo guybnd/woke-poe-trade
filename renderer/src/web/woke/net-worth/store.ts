@@ -20,8 +20,12 @@ import type { Glance } from './glance'
 import type { LedgerPoint, TabValue } from './ledger'
 import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, StashTabLike, Valuation } from './valuation'
 import type { ReaderStatus } from './widget'
+import { recordRunRead } from './run-store'
 import { emptyMarks, feedMarks, playRates, startOfDay, trimMarks, RATE_WINDOWS } from './play-time'
 import type { PlayMarks, PlayRates } from './play-time'
+
+// The live run's dock number (WidgetNetWorth watches it once this loads).
+export { runGlance } from './run-store'
 
 interface CachedStash { league: string, account: string, skipped?: number, tabs: Array<StashTabLike & { id: string, colour: string | null, readAt: number | null }> }
 
@@ -235,6 +239,8 @@ async function countRead (id: string, readAt: number) {
   if (loadedFor === id) baseline.value = nextBase
   await hostRequest('doc-put', { collection: COLLECTION, key: baseKey, value: nextBase }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: tabsKey, value: tabs }).catch(() => {})
+  // A strategy run going: this read's changes join its tally (run-store.ts).
+  await recordRunRead(id, diff, nextLedger.points, divine.value)
 }
 
 // The dock icon's number at a read (Ctrl+Space reads the saved one).

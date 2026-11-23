@@ -6,6 +6,12 @@ import { test, expect, FIXTURES } from './harness'
 
 const LIST = fs.readFileSync(path.join(FIXTURES, 'stash/tab-list.json'), 'utf8')
 const DUMP = fs.readFileSync(path.join(FIXTURES, 'stash/tab-dump.json'), 'utf8')
+// The dump a map later: the Strand Map used up, two more Apothecary cards.
+const DUMP_AFTER = (() => {
+  const d = JSON.parse(DUMP) as { items: Array<{ typeLine?: string, stackSize?: number }> }
+  d.items = d.items.filter(i => i.typeLine !== 'Strand Map').map(i => i.typeLine === 'The Apothecary' ? { ...i, stackSize: (i.stackSize ?? 1) + 2 } : i)
+  return JSON.stringify(d)
+})()
 // Three sales from the trade history: newest first, priced in chaos and divines.
 const ago = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString()
 const SALES = JSON.stringify({
@@ -17,10 +23,11 @@ const SALES = JSON.stringify({
 })
 
 test('the stash reader turns on, reads the picked tabs, and Net worth prices them', async ({ overlay, fakeApp }) => {
+  let dump = DUMP
   fakeApp.site.reply = (url) => {
     const u = new URL(url)
     if (u.pathname === '/my-account') return { status: 200, body: '<html><title>View Profile - Path of Exile - Tester#1234</title></html>' }
-    if (u.pathname === '/character-window/get-stash-items') return { status: 200, body: u.searchParams.get('tabIndex') === '0' ? LIST : DUMP }
+    if (u.pathname === '/character-window/get-stash-items') return { status: 200, body: u.searchParams.get('tabIndex') === '0' ? LIST : dump }
     if (u.pathname.startsWith('/api/trade/history/')) return { status: 200, body: SALES }
     return null
   }
@@ -101,6 +108,28 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await overlay.snap('net worth where it is folded')
     await where.click()
     await expect(where).toHaveAttribute('aria-expanded', 'true')
+
+    // Strategy runs (WOKEPOET-515): start one from the last read, read again,
+    // and the run shows what came in, its typed costs, and lands in Past runs.
+    await panel.getByRole('tab', { name: 'Runs' }).click()
+    await panel.getByLabel('Run name').fill('Nightmare maps')
+    await panel.getByRole('button', { name: 'Start', exact: true }).click()
+    const card = panel.locator('[data-run-card]')
+    await expect(card).toContainText('Nightmare maps')
+    dump = DUMP_AFTER
+    await panel.getByRole('button', { name: 'Refresh' }).click()
+    const came = card.getByText('The Apothecary', { exact: false }).first()
+    await expect(came).toBeVisible({ timeout: 20_000 })
+    await came.hover()
+    await expect(overlay.page.getByRole('tooltip')).toContainText('The Apothecary')
+    await overlay.page.mouse.move(0, 0)
+    await panel.getByLabel('Cost item').fill('Strand Map')
+    await panel.getByRole('button', { name: 'Per map', exact: true }).click()
+    await expect(card.getByLabel('Strand Map per map')).toHaveValue('1')
+    await overlay.snap('net worth strategy run')
+    await card.getByRole('button', { name: 'Stop' }).click()
+    await expect(panel.locator('[data-past-run]').first()).toContainText('Nightmare maps')
+    await panel.getByRole('tab', { name: 'Holdings' }).click()
 
     // The Sales view: a header click sorts the table, a second click flips it.
     // Price compares by value: 44c sorts under 1 div though 44 > 1.

@@ -38,7 +38,7 @@ export interface NetWorthWidget extends Widget {
   layout?: PanelLayout
   // What the window shows: your stash (default) or your sales (pick C), and
   // the Sales view's range.
-  view?: 'holdings' | 'sales'
+  view?: 'holdings' | 'sales' | 'runs'
   salesRange?: SaleRange
   // The Sales table's sort (default When, newest first).
   salesSort?: SaleSort

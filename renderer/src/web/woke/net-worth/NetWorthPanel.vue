@@ -28,6 +28,9 @@
         <span><template v-if="salesReadLine">Sales {{ salesReadLine }} · </template>poe.ninja · {{ ninjaAge }}</span>
       </div>
     </div>
+    <div v-else-if="view === 'runs' && v && runLeague" :class="$style.body">
+      <RunsView :league="runLeague" :divine="divine" :points="ledger.points" :diffs="ledger.diffs" :lines="v.lines" :tips="tips" :from="runFrom" @clear-from="runFrom = null" />
+    </div>
     <TabPicker v-else-if="showPicker" :key="status?.league ?? ''" :can-cancel="!needsPick" :remove-only="status?.skipped ?? 0" :running="status?.running === true" @done="onPicked" />
     <WEmpty v-else-if="!v && !status?.lastReadAt" icon="fas fa-box-open">
       {{ status?.running ? `Stash ${readLine}` : status?.account ? 'Not read yet. Press Refresh.' : 'Sign in under Settings › Game & league, then press Refresh.' }}
@@ -43,6 +46,7 @@
         <!-- Per hour of play over the window picked under Details. -->
         <span v-if="rateShown.div != null && !(detailsOpen && shown.perHour)" class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h <span class="w-dim">{{ rateWindow === 'today' ? 'today' : rateWindow }}</span></span>
         <button v-if="soldToday.count" type="button" class="w-num" :class="$style.soldToday" :title="`${soldToday.count} ${soldToday.count === 1 ? 'sale' : 'sales'} today. Click for the Sales view`" @click="view = 'sales'">Sold {{ div(soldToday.chaos) }}<Coin :chaos="!divine" /> today</button>
+        <button v-if="runChip" type="button" class="w-num" :class="[$style.soldToday, tone(runChip.profitChaos)]" :title="`Run ${runChip.name}: ${runChip.maps} ${runChip.maps === 1 ? 'map' : 'maps'}. Click for the Runs view`" data-run-chip @click="view = 'runs'">Run {{ signed(toDiv(runChip.profitChaos)) }}<Coin :chaos="!divine" /></button>
         <WSpark v-if="spark.length > 1 && !(detailsOpen && shown.chart)" :values="spark" :width="90" :height="18" :class="$style.spark" />
         <span v-if="detailsOpen && shown.numbers" :class="$style.holdings" class="w-num text-xs">
           <span :title="inChaos(liquid)"><span :class="$style.caps">Liquid</span> {{ div(liquid) }}<Coin :chaos="!divine" /></span>
@@ -73,7 +77,7 @@
               </span>
               <TextTabs v-model="range" :options="RANGE_OPTIONS" />
             </div>
-            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" @spend="onChartSpend" />
+            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
             <div v-if="chartMode === 'category' && !fold.chart" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
             </div>
@@ -283,6 +287,8 @@ import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
 import HideChip from './HideChip.vue'
 import SalesView from './SalesView.vue'
+import RunsView from './RunsView.vue'
+import { loadRuns, runGlance, runsDoc } from './run-store'
 import { saleTip } from './sale-tip'
 import { inRange, marketText, saleChaos, saleName, salesInWindow, totals, withoutSold } from './sales'
 import type { Sale } from './sales'
@@ -756,10 +762,27 @@ function onIgnore (key: string, name: string, on: boolean) {
 }
 
 // ---------- sales (pick A: Sold section, sale lines, chart dots; pick C: the Sales view) ----------
-const VIEW_OPTIONS = [{ value: 'holdings', label: 'Holdings' }, { value: 'sales', label: 'Sales' }]
+const VIEW_OPTIONS = [{ value: 'holdings', label: 'Holdings' }, { value: 'sales', label: 'Sales' }, { value: 'runs', label: 'Runs' }]
 const view = computed<string>({
-  get: () => props.config.view === 'sales' ? 'sales' : 'holdings',
-  set: (x) => { props.config.view = x === 'sales' ? 'sales' : 'holdings' }
+  get: () => props.config.view === 'sales' || props.config.view === 'runs' ? props.config.view : 'holdings',
+  set: (x) => { props.config.view = x === 'sales' || x === 'runs' ? x : 'holdings' }
+})
+
+// ---------- strategy runs (runs.ts, WOKEPOET-515) ----------
+// A chart point's "Start a run from here": the Runs view starts from it.
+const runFrom = shallowRef<number | null>(null)
+function onChartRun (at: number) {
+  runFrom.value = at
+  view.value = 'runs'
+}
+const runLeague = computed(() => props.status?.league ?? leagueNow.value ?? null)
+watch(runLeague, (l) => { if (l) loadRuns(l).catch(() => {}) }, { immediate: true })
+const liveRun = computed(() => runsDoc.value.live && runsDoc.value.live.league === runLeague.value ? runsDoc.value.live : null)
+watch(liveRun, (r) => { if (r) runFrom.value = null })
+// The summary line's run number, from the saved glance (run-store.ts).
+const runChip = computed(() => {
+  const g = runGlance.value
+  return liveRun.value && g && g.league === runLeague.value ? g : null
 })
 const salesLeague = computed(() => props.status?.league ?? leagueNow.value ?? null)
 watch(salesLeague, (id) => { loadSales(id).catch(() => {}) }, { immediate: true })
