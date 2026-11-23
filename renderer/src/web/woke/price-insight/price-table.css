@@ -242,7 +242,7 @@
 /* The column a tighter range filters, and the mod row it comes from. */
 .w-pc-local-chip {
   margin-left: 3px; padding: 0 3px; border: 1px solid color-mix(in srgb, var(--w-info) 60%, transparent);
-  color: var(--w-info); font-size: 0.85em; white-space: nowrap;
+  color: var(--w-info); font-size: max(var(--w-fs-xs), 0.85em); white-space: nowrap;
 }
 .w-pc-local-row { box-shadow: inset 2px 0 0 var(--w-info); }
 /* A short filtered list: a Search hint. */
