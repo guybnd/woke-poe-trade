@@ -247,6 +247,8 @@
    "main/src/woke/stash-scarab-data.ts",
    "main/src/woke/stash-tabs-data.ts",
    "main/src/woke/stash-watch.ts",
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
    "renderer/src/web/woke/net-worth/"
   ],
   "new-league.spec.ts": [
