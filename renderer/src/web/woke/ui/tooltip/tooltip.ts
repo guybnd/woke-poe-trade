@@ -102,13 +102,20 @@ export function showTip (e: Event, content: TipContent) {
 
 // A tooltip still on its way (item-tip.ts) must not appear after a hide: the
 // overlay may have closed, and it would sit over the game.
-let cancelPending: (() => void) | null = null
-export function onTipHide (fn: () => void) {
+let cancelPending: ((scrolled: boolean) => void) | null = null
+export function onTipHide (fn: (scrolled: boolean) => void) {
   cancelPending = fn
 }
 
 export function hideTip () {
-  cancelPending?.()
+  cancelPending?.(false)
+  tip.value = null
+}
+
+// A scroll moved the page under the tooltip. The hovered row may get it back
+// once the scroll stops (item-tip.ts).
+export function hideTipOnScroll () {
+  cancelPending?.(true)
   tip.value = null
 }
 

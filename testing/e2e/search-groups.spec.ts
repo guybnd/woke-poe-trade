@@ -207,5 +207,15 @@ test('a row far down the list shows its tooltip when hovered, though the list sc
   })
   expect(hidden).toBe(true)
   await expect(tip).toContainText(name)
+  // Any other hide is final: after a blur, a scroll doesn't bring it back.
+  await overlay.page.evaluate(() => window.dispatchEvent(new Event('blur')))
+  await expect(tip).toHaveCount(0)
+  await row.evaluate((el) => {
+    let s = el.parentElement
+    while (s && s.scrollHeight <= s.clientHeight) s = s.parentElement
+    ;(s ?? document).dispatchEvent(new Event('scroll'))
+  })
+  await overlay.page.waitForTimeout(400)
+  await expect(tip).toHaveCount(0)
   expect(overlay.errors).toEqual([])
 })
