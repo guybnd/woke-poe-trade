@@ -21,7 +21,7 @@ import { getDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { openMenu, toast } from '../ui'
 import type { MenuEntry } from '../ui'
 import { useActiveFilter } from './active-filter'
-import { itemFacts } from './item-facts'
+import { checkedItemFacts } from './checked-facts'
 import { matchItem } from './match'
 import { conditionSignature, readStyle } from './edits'
 import { ownMatchActions } from './look'
@@ -56,7 +56,7 @@ const verdict = computed<Verdict | null>(() => {
   const store = active.value
   const doc = store?.doc.value
   if (!store || !doc || props.item.rawText === 'VIRTUAL_ITEM' || props.item.rollsFromData) return null
-  const facts = itemFacts(props.item.rawText, props.item)
+  const facts = checkedItemFacts(doc, props.item.rawText, props.item)
   const m = matchItem(doc, { ...facts, areaLevel: store.areaLevel.value ?? store.config.fallbackAreaLevel })
   const b = m.final?.block
   const where = ruleLabel(b?.type ?? null, b?.tier ?? null)

@@ -5,7 +5,8 @@
 // words. No item fits: null, and the preview keeps the class name.
 import type { FilterBlock, FilterDoc } from './parse'
 import type { FilterRarity } from './item-facts'
-import { filterClasses, itemCatalog, searchFacts } from './item-search'
+import { itemCatalog, searchFacts } from './item-search'
+import { filterClassesOf } from './checked-facts'
 import { evalCondition } from './match'
 
 const KIND_KEYS = new Set(['Class', 'BaseType', 'Rarity', 'Width', 'Height', 'Sockets', 'LinkedSockets', 'SocketGroup'])
@@ -19,7 +20,6 @@ const AREA_LEVEL = 83
 // Keyed by what the rule asks for, not the block: the filter is rebuilt (new
 // block objects) on every edit, and the same rule should not scan again.
 const examples = new Map<string, string | null>()
-const classesOf = new WeakMap<FilterDoc, Map<string, string>>()
 
 const kindKey = (block: FilterBlock) => JSON.stringify(block.conditions.filter(c => KIND_KEYS.has(c.key)).map(c => [c.key, c.op, c.count, c.values]))
 
@@ -37,8 +37,7 @@ function find (block: FilterBlock, doc: FilterDoc): string | null | undefined {
   if (!conds.length) return null
   const catalog = itemCatalog()
   if (!catalog.length) return undefined
-  let classes = classesOf.get(doc)
-  if (!classes) classesOf.set(doc, classes = filterClasses(doc))
+  const classes = filterClassesOf(doc)
   // A rule that names no class or base is about gear (sockets, links, size).
   const gearOnly = !conds.some(c => c.key === 'Class' || c.key === 'BaseType')
   const quick = conds.filter(c => c.key === 'Class' || c.key === 'BaseType')
@@ -53,7 +52,7 @@ function find (block: FilterBlock, doc: FilterDoc): string | null | undefined {
       const wearable = item.gear || item.kind === 'Unique'
       if (gearOnly && !wearable) continue
       // Cheap checks first: most of the catalog is the wrong class or base.
-      if (quick.some(c => evalCondition(c, { itemClass: item.itemClass ?? classes!.get(item.baseType), baseType: item.baseType, filterBase: item.filterBase } as Parameters<typeof evalCondition>[1]) === false)) continue
+      if (quick.some(c => evalCondition(c, { itemClass: item.itemClass ?? classes.get(item.baseType), baseType: item.baseType, filterBase: item.filterBase } as Parameters<typeof evalCondition>[1]) === false)) continue
       const facts = searchFacts(item, { areaLevel: AREA_LEVEL, rarity, classes })
       // The most it could roll: every socket it fits, linked, all colours.
       const most = SOCKETED.has(facts.itemClass ?? '') ? Math.min(6, item.w * item.h) : 0

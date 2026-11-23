@@ -80,6 +80,13 @@ export function stackText (name: string, rarity: 'Currency' | 'Divination Card',
   return `Item Class: ${itemClass}\nRarity: ${rarity}\n${name}\n--------\nStack Size: 1/1\n`
 }
 
+// Whether game text is one stackText made, not a real copy: its Item Class is
+// then a guess ("Stackable Currency" for a fragment that trades in bulk).
+const STACK_TEXT = /^Item Class: [^\n]+\nRarity: (?:Currency|Divination Card)\n[^\n]+\n--------\nStack Size: 1\/1\n$/
+export function isStackText (text: string): boolean {
+  return STACK_TEXT.test(text)
+}
+
 export type PriceCheckInput = { clipboard: string, item?: ParsedItem }
 
 // Uniques that only ever drop corrupted (checked on the trade site): priced
