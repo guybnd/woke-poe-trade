@@ -351,6 +351,6 @@ test('flips: Ctrl+Space says whether a Thread is worth flipping', async ({ overl
   }).toPass({ timeout: 20_000 })
   await result.click()
   await expect(search.getByText('One recipe')).toBeVisible()
-  await expect(search.getByText('costs 0.6c, gives back 0.3c to 4c')).toBeVisible()
+  await expect(search.getByText('costs 0.6c, gives back 0.3c to 4c', { exact: true })).toBeVisible()
   await overlay.snap('search flips thread')
 })
