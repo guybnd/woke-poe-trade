@@ -161,9 +161,11 @@ test('map: Base map unticks every chip and mod, and brings them back', async ({ 
   await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBeGreaterThan(0)
   const groups = searches[0].query.stats
-  expect(groups.find(g => g.type === 'not')?.filters.filter(f => !f.disabled) ?? []).toEqual([])
+  // Nothing at all: no mod, no total, no mod count.
+  expect(groups.flatMap(g => g.disabled ? [] : g.filters.filter(f => !f.disabled))).toEqual([])
   const q = searches[0].query as unknown as { filters?: { map_filters?: { filters?: Record<string, unknown> } } }
   expect(q.filters?.map_filters?.filters?.map_iir).toBeUndefined()
   expect(q.filters?.map_filters?.filters?.map_packsize).toBeUndefined()
+  expect(q.filters?.map_filters?.filters?.map_iiq).toBeUndefined()
   expect(overlay.errors).toEqual([])
 })

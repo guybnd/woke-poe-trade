@@ -209,25 +209,30 @@ function propTitle (label: string): string {
   return on ? 'In the search. Type or scroll the minimum, click to leave it out.' : 'Click to search at least this, or scroll to set the minimum.'
 }
 
-// The Base map button: every chip off, every mod Any, added mods off. The picks
-// it cleared come back on a second click (until the next item).
+// The Base map button: every chip and every row below off (the 8-mod count too),
+// every mod Any, added mods off. The picks it cleared come back on a second
+// click (until the next item).
 const propFilters = computed(() => result.value!.props.map(p => propFilter(p.label)).filter((f): f is StatFilter => f != null))
+// Every filter other than the map's own mods (those are Any / Has / Not): chips and rows.
+const plainFilters = computed(() => (props.stats ?? []).filter(s => s.group || !s.mapMod))
+const isOnFilter = (s: FilterOrGroup) => s.group ? !s.meta.disabled : !s.disabled
+const setOnFilter = (s: FilterOrGroup, on: boolean) => { if (s.group) s.meta.disabled = !on; else s.disabled = !on }
 const hasFilters = computed(() => propFilters.value.length > 0 || searchable.value.length > 0)
 const baseOnly = computed(() =>
-  propFilters.value.every(f => f.disabled) &&
+  !plainFilters.value.some(isOnFilter) &&
   searchable.value.every(f => stateOf(f) === 'any') &&
   (props.filters?.addedMods ?? []).every(m => m.disabled))
-interface BaseSnapshot { chips: StatFilter[], mods: Array<[StatFilter, ModState]>, added: AddedMod[] }
+interface BaseSnapshot { on: FilterOrGroup[], mods: Array<[StatFilter, ModState]>, added: AddedMod[] }
 const clearedRef = shallowRef<BaseSnapshot | null>(null)
 watch(() => props.item, () => { clearedRef.value = null })
 function toggleBase () {
   if (!baseOnly.value) {
     const cleared: BaseSnapshot = {
-      chips: propFilters.value.filter(f => !f.disabled),
+      on: plainFilters.value.filter(isOnFilter),
       mods: searchable.value.filter(f => stateOf(f) !== 'any').map(f => [f, stateOf(f)]),
       added: (props.filters?.addedMods ?? []).filter(m => !m.disabled)
     }
-    cleared.chips.forEach(f => { f.disabled = true })
+    cleared.on.forEach(f => { setOnFilter(f, false) })
     cleared.mods.forEach(([f]) => { setState(f, 'any') })
     cleared.added.forEach(m => { m.disabled = true })
     clearedRef.value = cleared
@@ -235,7 +240,7 @@ function toggleBase () {
     const cleared = clearedRef.value
     // Only filters still on show: a preset switch makes new ones.
     const stats = props.stats ?? []
-    cleared.chips.filter(f => stats.includes(f)).forEach(f => { f.disabled = false })
+    cleared.on.filter(f => stats.includes(f)).forEach(f => { setOnFilter(f, true) })
     cleared.mods.filter(([f]) => stats.includes(f)).forEach(([f, state]) => { setState(f, state) })
     const added = props.filters?.addedMods ?? []
     cleared.added.filter(m => added.includes(m)).forEach(m => { m.disabled = false })
@@ -244,7 +249,7 @@ function toggleBase () {
 }
 const baseTitle = computed(() => baseOnly.value
   ? (clearedRef.value ? 'Searching the plain map. Click to bring back the numbers and mods you had ticked.' : 'Searching the plain map: no number or mod is ticked.')
-  : 'Untick every number and mod, to search the plain map. Click again to bring them back. Searches only when you press Search.')
+  : 'Untick every number, mod and line below, to search the plain map. Click again to bring them back. Searches only when you press Search.')
 
 const picked = computed(() => {
   const has = searchable.value.filter(f => stateOf(f) === 'has').length
