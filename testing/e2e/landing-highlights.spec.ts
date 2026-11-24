@@ -1309,6 +1309,8 @@ async function profitSetup (overlay: Overlay, fakeApp: FakeApp, widgets: WidgetS
   await overlay.boot({
     overlayActive: true,
     widgets,
+    // The map log's essences would pop the essence scan's Corrupt card beside the window.
+    off: ['essence-scan'],
     // The after-map card stays up for the shot.
     patch: c => { const w = c.widgets.find((w: { wmType: string }) => w.wmType === 'woke-session-story'); if (toast) { w.chipSeconds = 0; w.chipPlace = 'center' } }
   })
