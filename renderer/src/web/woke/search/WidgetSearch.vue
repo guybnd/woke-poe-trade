@@ -294,7 +294,7 @@ import { dropOf } from '../ui/tooltip/tip-content'
 import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
 import { SEARCH_TARGET, searchRequest } from './widget'
 import { VARIABLE_ITEMS, useTradePrices } from '../shared/unid-prices'
-import { poeWebApi } from '@/web/Config'
+import { poeWebApi, saveConfig } from '@/web/Config'
 import type { SearchWidget } from './widget'
 
 const props = defineProps<{ config: SearchWidget }>()
@@ -1346,6 +1346,10 @@ function remember (entry: Entry | null) {
   const { type, name } = entry.group
   const rest = (props.config.recent ?? []).filter(r => r.type !== type || r.name !== name)
   props.config.recent = [{ type, name }, ...rest].slice(0, RECENT_MAX)
+  // On close the window's own save has already run (the overlay saves as the
+  // palette hides, before this), so the newest lookup would wait for some
+  // later save, and be lost to a restart or another window's save.
+  if (!open.value) saveConfig()
 }
 
 // ---- pins ----
