@@ -704,9 +704,9 @@ test('dock card: click or scroll a strictness, then reload from there', async ({
   const page = overlay.page
   fakeApp.focusGame(true)
   const level = (name: string) => page.getByRole('button', { name, exact: true })
-  // Nothing to apply: no icon while you play. The overlay brings it back, for the picker.
-  await page.waitForTimeout(3000)
-  await expect(overlay.dockIcon('loot-filter')).toHaveCount(0)
+  // The game starts on another filter (a note), so the icon is up while you play;
+  // the end of this test shows it going once that's settled. With the overlay
+  // open it's there for the picker, never with the strictness on it.
   await overlay.pressHotkey(overlay.config.overlayKey)
   await expect(overlay.dockIcon('loot-filter')).toBeVisible({ timeout: 20_000 })
   await expect(overlay.dockIcon('loot-filter')).not.toContainText('SS')
