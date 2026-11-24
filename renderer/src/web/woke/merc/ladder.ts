@@ -6,6 +6,7 @@
 
 import type { FilterOrGroup, FilterGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
+import { SearchMode } from '@/web/price-check/filters/pseudo/mercenary'
 
 export interface SupportRow {
   statRef: string
@@ -48,9 +49,9 @@ export function skillLadders (stats: FilterOrGroup[]): SkillLadder[] {
 // ---- what a support was worth, remembered per skill ----
 
 export interface Worth {
-  /** Fair price of the skill with only this support, chaos. */
+  /** Fair price of warrants with this skill and this support linked to it, chaos. */
   with: number | null
-  /** Fair price of the skill with no supports, chaos (same search for every support). */
+  /** Fair price of warrants with this skill, any supports, chaos (same search for every support). */
   base: number | null
   /** Listings with this support. */
   count: number
@@ -63,6 +64,11 @@ const MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000
 const MAX_ROWS = 300
 
 type Store = Record<string, Worth>
+
+/** A support and its tier: a Greater one searches only Greater, so it has its own worth. */
+export function supportKey (row: SupportRow) {
+  return row.tier != null ? `${row.statRef}#${row.tier}` : row.statRef
+}
 
 export function worthKey (league: string, skillRef: string, supportRef: string) {
   return `${league}|${skillRef}|${supportRef}`
@@ -115,19 +121,27 @@ function clone (stats: FilterOrGroup[]): FilterOrGroup[] {
 }
 
 /**
- * The search for one skill with only `onlySupport` ticked (none for the bare
- * skill). The skill itself is required; every other group, support and
- * 6-link row is left as the player set it, except this skill's supports.
+ * The search for warrants with this skill and, when given, this support
+ * linked to it. Only the skill and that support are searched: every other
+ * skill group, support, "not linked" row and the 6-link row are switched off,
+ * so the answer is the same whatever else the player ticked and can be kept
+ * per skill. Item filters (league, level...) stay as they are.
  */
 export function measureStats (stats: FilterOrGroup[], skillRef: string, onlySupport: string | null): FilterOrGroup[] {
   const out = clone(stats)
   for (const f of out) {
-    if (!('group' in f) || f.group !== 'mercenary' || f.meta.statRef !== skillRef) continue
-    f.meta.disabled = false
+    if (!('group' in f) || !f.group) {
+      f.disabled = true
+      continue
+    }
+    const mine = f.group === 'mercenary' && f.meta.statRef === skillRef
+    f.meta.disabled = !mine
     for (const s of f.stats) {
-      if (s.tag !== FilterTag.MercenarySupport && s.tradeId[0] !== 'item.mercenary_6link') continue
-      if (s.not) continue
-      s.disabled = s.statRef !== onlySupport || s.tradeId[0] === 'item.mercenary_6link'
+      const on = mine && onlySupport != null && s.statRef === onlySupport && !s.not &&
+        s.tag === FilterTag.MercenarySupport
+      s.disabled = !on
+      // An optional gem alone is dropped from the search: make it required.
+      if (on) s.option = { value: SearchMode.Required }
     }
   }
   return out

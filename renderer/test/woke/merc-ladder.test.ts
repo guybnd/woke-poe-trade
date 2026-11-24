@@ -57,8 +57,25 @@ describe('mercenary support ladder', () => {
     expect(g.meta.disabled).toBe(false)
     expect(g.stats.filter(x => !x.disabled).map(x => x.statRef)).toEqual(['Pulverise'])
     expect((stats[0] as FilterGroup).stats[1].disabled).toBe(false)
+    expect(g.stats.find(x => x.statRef === 'Pulverise')!.option).toEqual({ value: 1 })
     const bare = measureStats(stats, 'Shield Crush', null) as FilterGroup[]
     expect(bare[0].stats.filter(x => !x.disabled && !x.not).length).toBe(0)
+  })
+
+  it('measures the same search whatever else the player ticked', () => {
+    const stats = warrant()
+    const g = stats[0] as FilterGroup
+    g.stats[4].disabled = false // a "not linked" row
+    g.stats[0].disabled = false // 6-link
+    const other: FilterGroup = { ...JSON.parse(JSON.stringify(g)), meta: { ...g.meta, statRef: 'Dash', disabled: false } }
+    other.stats[1].disabled = false
+    const notGroup: FilterGroup = { group: 'not', expanded: false, meta: { ...g.meta, statRef: 'not', disabled: false }, stats: [{ ...g.meta, statRef: 'Prismplate', disabled: false }] }
+    const s = measureStats([g, other, notGroup], 'Shield Crush', 'Pulverise') as FilterGroup[]
+    expect(s[0].stats.filter(x => !x.disabled).map(x => x.statRef)).toEqual(['Pulverise'])
+    expect(s[1].meta.disabled).toBe(true)
+    expect(s[1].stats.every(x => x.disabled)).toBe(true)
+    expect(s[2].meta.disabled).toBe(true)
+    expect(s[2].stats.every(x => x.disabled)).toBe(true)
   })
 
   it('calls a thin market narrow', () => {
