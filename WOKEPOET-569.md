@@ -24,5 +24,14 @@ history:
     date: '2026-11-24T14:29:13.554Z'
     selfAttested: true
     id: c-2026-11-24t14-29-13-554z
+  - type: comment
+    user: Agent
+    comment: >-
+      Also flaked once each (PR 894 CI): glance-bar-fields.spec.ts "with the
+      overlay open, the cog opens the bar settings"; dock-menu "undoing one
+      dismissal".
+    date: '2026-11-24T17:26:36.557Z'
+    selfAttested: true
+    id: c-2026-11-24t17-26-36-557z
 ---
 Failed once in shard 2/4 on PR 864's CI run, passed on re-run. Investigate the timing/flake.
