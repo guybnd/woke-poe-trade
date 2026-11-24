@@ -1,6 +1,5 @@
 // Bulk in the price check results: only sellers with 2+ copies at a price. Opening
 // a check never fetches extra pages; the Bulk click does, until 10 sellers show.
-// Bulk is remembered for the next checks (WOKEPOET-539).
 import { readFileSync } from 'fs'
 import type { Page } from '@playwright/test'
 import { test, expect } from './harness'
@@ -83,40 +82,18 @@ test('Bulk shows only multi-copy sellers and loads more pages on the click', asy
   expect(overlay.errors).toEqual([])
 })
 
-test('Bulk stays on for the next check; more pages load only on Load more', async ({ overlay }) => {
+test('Search bulk: one search, Bulk on, more pages loaded right away', async ({ overlay }) => {
   const fetches = await fakeTrade(overlay.page)
   await overlay.boot()
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
-  // One search button: Bulk is the toggle in the results bar.
-  await expect(panel.getByRole('button', { name: 'Search bulk' })).toHaveCount(0)
-  await panel.getByRole('button', { name: 'Search', exact: true }).click()
-  const bulk = panel.getByRole('button', { name: 'Bulk', exact: true })
-  await bulk.click()
+  await panel.getByRole('button', { name: 'Search bulk' }).click()
   const foot = panel.locator('.w-pc-foot')
   await expect(foot).toContainText('10 bulk sellers in 40 of 60 listings')
+  await expect(panel.getByRole('button', { name: 'Bulk', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  expect(fetches.searches).toHaveLength(1)
   expect(fetches).toHaveLength(4)
-
-  // The next check starts with Bulk on, but loads only its usual two pages (20 listings;
-  // the same ids may come from the fetch cache, so the foot is what counts).
-  await overlay.copyItem('items/rare-body-armour-ar-ev.txt')
-  await panel.getByRole('button', { name: 'Search', exact: true }).click()
-  await expect(bulk).toHaveAttribute('aria-pressed', 'true')
-  await expect(foot).toContainText('No bulk sellers in 20 of 60 listings')
-  expect(fetches.searches).toHaveLength(2)
-  const more = foot.getByRole('button', { name: 'Load more' })
-  await overlay.snap('price check bulk remembered')
-  await more.click()
-  await expect(foot).toContainText('10 bulk sellers in 40 of 60 listings')
-  await expect(more).toHaveCount(0)
-  // Nothing past the 40 listings that bring ten sellers was ever fetched.
-  expect(fetches.flat().every(id => Number(id.slice(1)) < 40)).toBe(true)
-
-  // Off is remembered too.
-  await bulk.click()
-  await overlay.copyItem('items/rare-body-armour-es-crusader.txt')
-  await panel.getByRole('button', { name: 'Search', exact: true }).click()
-  await expect(bulk).toHaveAttribute('aria-pressed', 'false')
+  await overlay.snap('price check search bulk')
   expect(overlay.errors).toEqual([])
 })
 

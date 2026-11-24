@@ -212,7 +212,7 @@
       </table>
     </div>
     <div v-if="improved || bulk || currency !== 'all'" class="w-pc-foot" :class="{ invisible: !(listSettled && list && (rows.length || bulk || currency !== 'all')) }"
-      title="Prices come from the cheapest listings the trade site returned"><template v-if="list && narrow"><template v-if="currency !== 'all'">{{ currencyCount || 'None' }} in {{ currency === 'divine' ? 'divines' : 'chaos' }} · </template>{{ fitCount }} of {{ loadedCount }} loaded listings fit · the search found {{ list.total }}{{ list.inexact ? '+' : '' }}</template><template v-else-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="currency !== 'all'">{{ currencyCount || 'None' }} in {{ currency === 'divine' ? 'divines' : 'chaos' }} · </template><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings<template v-if="bulkMore"> · <button type="button" class="w-pc-foot-more" data-bulk-more :disabled="bulkLoading" title="Loads the next listings of this search (no new search), until 10 bulk sellers show" @click="loadBulk">{{ bulkLoading ? 'Loading…' : 'Load more' }}</button></template></template><template v-else>&nbsp;</template></div>
+      title="Prices come from the cheapest listings the trade site returned"><template v-if="list && narrow"><template v-if="currency !== 'all'">{{ currencyCount || 'None' }} in {{ currency === 'divine' ? 'divines' : 'chaos' }} · </template>{{ fitCount }} of {{ loadedCount }} loaded listings fit · the search found {{ list.total }}{{ list.inexact ? '+' : '' }}</template><template v-else-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="currency !== 'all'">{{ currencyCount || 'None' }} in {{ currency === 'divine' ? 'divines' : 'chaos' }} · </template><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
   </div>
   <ui-error-box v-else>
     <template #name>{{ t(':error') }}</template>
@@ -259,7 +259,6 @@ import { groupListings, sortByValue, rowTitle, ListingRow } from '@/web/woke/pri
 import type { ResultsState } from '@/web/woke/price-insight/local-filter'
 import { pickStatColumns, listingStatValue, listingStatLabel, formatStatValue, statTone, statColumnsThatFit, StatColumn } from '@/web/woke/price-insight/stat-columns'
 import { bulkOnly, bulkSellerCount, BULK_ENOUGH } from '@/web/woke/price-insight/bulk-sellers'
-import { bulkRemembered, rememberBulk } from '@/web/woke/price-insight/bulk-pref'
 import { CURRENCY_ENOUGH, CHAOS_HUNT_LIMIT, chaosMayHide, hasCurrencyChoice, nextCurrencyView, inCurrency, currencyTitle, type CurrencyView } from '@/web/woke/price-insight/price-currency'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { nowMinute } from '@/web/woke/ui/format'
@@ -672,21 +671,22 @@ export default defineComponent({
     // woke: improved merges a price into one row; classic stays one row per listing.
     // The trade site orders by its own currency ratios; re-sort what's fetched by
     // poe.ninja's rates so chaos and divine prices interleave by real value.
-    // woke: Bulk keeps sellers with two or more copies at a price. Remembered for the
-    // next checks until turned off (WOKEPOET-539). A remembered Bulk only filters what
-    // a search loaded: more pages load on a click (the toggle, or Load more in the foot).
-    const bulk = shallowRef(bulkRemembered.value)
+    // woke: Bulk keeps sellers with two or more copies at a price. Off for each new search.
+    const bulk = shallowRef(false)
     const bulkNote = shallowRef('')
-    const bulkLoading = shallowRef(false)
     const currency = shallowRef<CurrencyView>('all')
     const currencyNote = shallowRef('')
-    watch(searchResult, () => {
-      bulk.value = bulkRemembered.value
+    // Search bulk asks for it with the search itself; any other search starts with it off.
+    let bulkNext = false
+    watch(searchResult, (result) => {
+      bulk.value = false
       bulkNote.value = ''
-      bulkLoading.value = false
       // The currency chip starts on All too, so a new search shows every listing it found.
       currency.value = 'all'
       currencyNote.value = ''
+      if (!result || !bulkNext) return
+      bulkNext = false
+      toggleBulk()
     })
     // A seller's copies only add up when they'd share a row: same stats, both corrupted or clean.
     const sameKind = (r: PricingResult) => [corruptKind(r), ...allColumns.value.map(col => formatStatValue(statValue(r, col), col))].join('|')
@@ -723,22 +723,13 @@ export default defineComponent({
       : currencyResults.value)
     async function toggleBulk () {
       bulk.value = !bulk.value
-      rememberBulk(bulk.value)
       bulkNote.value = ''
       if (!bulk.value) return
-      await loadBulk()
-    }
-    async function loadBulk () {
       const forSearch = searchResult.value
-      bulkLoading.value = true
-      try {
-        const note = await loadMore(() => !bulk.value || enoughShown())
-        if (note && bulk.value && searchResult.value === forSearch) {
-          bulkNote.value = note
-          setTimeout(() => { if (bulkNote.value === note) bulkNote.value = '' }, 3000)
-        }
-      } finally {
-        if (searchResult.value === forSearch) bulkLoading.value = false
+      const note = await loadMore(() => !bulk.value || enoughShown())
+      if (note && bulk.value && searchResult.value === forSearch) {
+        bulkNote.value = note
+        setTimeout(() => { if (bulkNote.value === note) bulkNote.value = '' }, 3000)
       }
     }
 
@@ -936,10 +927,6 @@ export default defineComponent({
       bulk,
       bulkNote,
       toggleBulk,
-      loadBulk,
-      bulkLoading,
-      // A remembered Bulk with too few sellers loaded: more pages wait for a click.
-      bulkMore: computed(() => bulk.value && morePages.value && bulkSellerCount(currencyResults.value, sameKind) < BULK_ENOUGH),
       bulkSellers: computed(() => bulkSellerCount(currencyResults.value, sameKind)),
       canPricier,
       pricier,
@@ -959,14 +946,16 @@ export default defineComponent({
       fitCount,
       statusSlot,
       bulkTitle: computed(() => bulk.value
-        ? 'Showing sellers with 2 or more copies at one price. Stays on for your next checks. Click to show all.'
+        ? 'Showing sellers with 2 or more copies at one price. Click to show all.'
         : morePages.value
           ? `Only sellers with 2 or more copies at one price. Loads more listings if fewer than ${BULK_ENOUGH} sellers show (up to ${API_FETCH_LIMIT}).`
           : 'Only sellers with 2 or more copies at one price.'),
       tableLoading,
       listSettled,
       slowdownReady: slowdown.isReady,
-      execSearch: () => {
+      // bulk: Search bulk was clicked. (Retry passes its click event, which isn't true.)
+      execSearch: (bulk?: unknown) => {
+        bulkNext = bulk === true
         holdVerdictHeight()
         search(props.filters, props.stats)
       },
@@ -986,6 +975,7 @@ export default defineComponent({
         clearTradeCache()
         clearDriverCaches()
         measuredDrivers.value = null
+        bulkNext = bulk.value
         holdVerdictHeight()
         search(props.filters, props.stats)
       },
