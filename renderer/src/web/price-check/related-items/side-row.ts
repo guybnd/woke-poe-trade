@@ -19,6 +19,8 @@ export interface SideRow {
   // woke: a recipe part's count, and the caption above a recipe's result row.
   qty?: number
   lead?: string
+  // Said after the name ("corrupted" on a card's reward).
+  tag?: string
 }
 
 const KIND_OF_NS: Partial<Record<BaseType['namespace'], Partial<ItemMenuRef>>> = {
