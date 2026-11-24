@@ -5,6 +5,7 @@ import {
 } from '@/web/woke/stacked-decks/deck'
 import type { PriceOf } from '@/web/woke/stacked-decks/deck'
 import { WEIGHTS, isCommonCard } from '@/web/woke/stacked-decks/weights'
+import { guardCardPrice, withoutHeld } from '@/web/woke/stacked-decks/guard'
 
 const PRICES: Record<string, number> = { 'Rain of Chaos': 0.5, 'The Lover': 1, 'Her Mask': 2, 'The Doctor': 900 }
 const price: PriceOf = name => PRICES[name] ?? null
@@ -243,5 +244,37 @@ describe('isBigHit', () => {
     expect(isBigHit(179, 180, 1)).toBe(false)
     expect(isBigHit(900, null, 1)).toBe(false)
     expect(isBigHit(null, 180, 1)).toBe(false)
+  })
+})
+
+describe('guardCardPrice', () => {
+  it("doesn't count a price poe.ninja had on one day only (Thirst for Knowledge at 14,139c)", () => {
+    expect(guardCardPrice(14139, [null, null, null, null, null, null, 0], 30)).toEqual({ ninja: 14139, chaos: null, kind: 'one-day' })
+  })
+
+  it('counts a sudden step at the usual price', () => {
+    // 1c for five days, then 200c.
+    const g = [-99.5, -99.5, -99.5, -99.5, -99.5, -99.5, 0]
+    const h = guardCardPrice(200, g, 30)
+    expect(h?.kind).toBe('spike')
+    expect(h?.chaos).toBeCloseTo(1)
+  })
+
+  it('keeps a steady price, a thin one and a cheap one-day one', () => {
+    expect(guardCardPrice(165.8, [18.69, 35.62, 37.53, 35.85, 32.92, 29.36, 21.21], 30)).toBeNull()
+    expect(guardCardPrice(4, [null, 21.08, 6.87, 193.8, 317.7, 92.19, 500.0], 30)).toBeNull()
+    expect(guardCardPrice(3, [null, null, null, null, null, null, 0], 30)).toBeNull()
+  })
+})
+
+describe('withoutHeld', () => {
+  it("drops a saved price that today's check still calls fake, and only that", () => {
+    const saved: PriceOf = name => ({ 'Thirst for Knowledge': 14000, 'The Doctor': 900, 'Old Card': 3 } as Record<string, number>)[name] ?? null
+    const held = (name: string) => name === 'Thirst for Knowledge' ? { ninja: 14139, chaos: null, kind: 'one-day' as const } : name === 'Old Card' ? { ninja: 400, chaos: 2, kind: 'spike' as const } : null
+    const px = withoutHeld(saved, held)
+    expect(px('Thirst for Knowledge')).toBeNull()
+    expect(px('The Doctor')).toBe(900)
+    // Saved before the spike: its own price stands.
+    expect(px('Old Card')).toBe(3)
   })
 })

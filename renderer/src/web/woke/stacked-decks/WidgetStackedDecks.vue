@@ -5,7 +5,7 @@
       :glow="opening" :wm-id="config.wmId" :menu="dockMenu" card-width="22rem">
       <template #card>
         <div v-if="session" :class="$style.card">
-          <DeckSummary :draws="session.draws" :price="price" :deck-chaos="sessionDeck" :divine="sessionDivine" :filter="filter" :limit="8" :chart-width="320" />
+          <DeckSummary :draws="session.draws" :price="price" :held="held" :deck-chaos="sessionDeck" :divine="sessionDivine" :filter="filter" :limit="8" :chart-width="320" />
           <!-- The dock adds "Open Stacked decks" (the window) under this. -->
           <div :class="$style.actions">
             <button type="button" :class="$style.action" @click="newSession(true)"><i class="fas fa-redo text-xs" /> New session</button>
@@ -28,7 +28,7 @@
             <span class="w-dim text-xs grow">since {{ clock(session.startedAt) }}</span>
             <WButton size="sm" variant="ghost" icon="fas fa-redo" @click="newSession(false)">New session</WButton>
           </div>
-          <DeckSummary :draws="session.draws" :price="price" :deck-chaos="sessionDeck" :divine="sessionDivine" :filter="filter" switchable :luck="luck" @count="setCountCheap" />
+          <DeckSummary :draws="session.draws" :price="price" :held="held" :deck-chaos="sessionDeck" :divine="sessionDivine" :filter="filter" switchable :luck="luck" @count="setCountCheap" />
         </template>
         <WEmpty v-else :art="{ item: STACKED_DECK }">Open a Stacked Deck in game to start a session. It ends after 15 minutes without a card.</WEmpty>
       </div>
@@ -102,7 +102,7 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 const store = useDeckStore()
 store.load()
 const leagues = useLeagues()
-const { price, deckChaos, divine, ready: pricesReady, fetch: fetchPrices } = useDeckPrices()
+const { price, held, deckChaos, divine, ready: pricesReady, fetch: fetchPrices } = useDeckPrices()
 fetchPrices()
 
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
