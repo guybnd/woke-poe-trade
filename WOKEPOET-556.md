@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-556
 title: Mercenary Warrant support ladder
-status: Done
+status: In Progress
 priority: None
 effort: None
 assignee: unassigned
@@ -53,6 +53,20 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T12:33:17.404Z'
+  - type: status_change
+    from: Done
+    to: In Progress
+    user: Agent
+    date: '2026-11-24T12:37:48.374Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Reopened: PR 864 (merged as 93b37f5) is being reverted at Guy's call. Link
+      the revert PR here when it's up.
+    date: '2026-11-24T12:37:52.288Z'
+    selfAttested: true
+    pin: true
+    id: c-2026-11-24t12-37-52-288z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/864'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
