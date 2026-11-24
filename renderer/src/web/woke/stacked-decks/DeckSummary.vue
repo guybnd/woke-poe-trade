@@ -29,14 +29,14 @@
       <WInfo :text="luckInfo" />
     </div>
 
-    <div v-if="t.unpriced" class="text-xs w-faint">{{ t.unpriced }} {{ t.unpriced === 1 ? 'card has' : 'cards have' }} no poe.ninja price and count as 0.</div>
+    <div v-if="t.unpriced" class="text-xs w-faint" :title="NO_PRICE">{{ t.unpriced }} {{ t.unpriced === 1 ? "card isn't" : "cards aren't" }} on poe.ninja (too few trades) and count as 0.</div>
 
     <div v-if="shown.length || t.cheapQty" :class="$style.table">
       <div v-for="r in shown" :key="r.name" :class="$style.row" data-deck="card">
         <WIcon :src="art(r.name)" fallback="fas fa-clone" />
         <span class="w-trunc" v-item-tip="{ type: 'DivinationCard', name: r.name }">{{ r.name }}</span>
         <span class="w-num w-dim">×{{ r.qty }}</span>
-        <span class="w-num text-right">{{ r.each != null ? money(r.total) : '—' }}</span>
+        <span class="w-num text-right" :title="r.each == null ? NO_PRICE : undefined">{{ r.each != null ? money(r.total) : '—' }}</span>
       </div>
       <div v-if="t.rows.length > shown.length" class="text-xs w-faint" :class="$style.more">and {{ t.rows.length - shown.length }} more cards</div>
       <!-- Cards under the cut-off, folded into one line (A). -->
@@ -53,7 +53,7 @@
             <WIcon :src="art(r.name)" fallback="fas fa-clone" />
             <span class="w-trunc" v-item-tip="{ type: 'DivinationCard', name: r.name }">{{ r.name }}</span>
             <span class="w-num">×{{ r.qty }}</span>
-            <span class="w-num text-right">{{ money(r.total) }}</span>
+            <span class="w-num text-right" :title="r.each == null ? NO_PRICE : undefined">{{ r.each != null ? money(r.total) : '—' }}</span>
           </div>
         </template>
       </template>
@@ -73,7 +73,7 @@ import { ninjaIcon } from '../ui/game-icons'
 import ResultChart from './ResultChart.vue'
 import { MIN_CALIBRATION_DECKS, luckText, runningResult, totals } from './deck'
 import type { CardFilter, PriceOf } from './deck'
-import { WEIGHTS_CREDIT } from './weights'
+import { WEIGHTS_CREDIT, isCommonCard } from './weights'
 import type { Luck } from './prices'
 
 const props = withDefaults(defineProps<{
@@ -93,7 +93,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ (e: 'count', v: boolean): void }>()
 const COUNT_OPTIONS = [{ value: 'in', label: 'Hidden, counted' }, { value: 'out', label: 'Not counted' }]
 
-const t = computed(() => totals(props.draws, props.price, props.deckChaos, props.filter))
+const t = computed(() => totals(props.draws, props.price, props.deckChaos, props.filter, isCommonCard))
+const NO_PRICE = 'poe.ninja leaves out cards that trade too rarely to price. Common ones fold with the cheap cards. Counted as 0.'
 const chart = computed(() => runningResult(props.draws, props.price, props.deckChaos, undefined, props.filter))
 const cheapOpen = useFold('decks.cheap')
 const cutOff = computed(() => formatChaos(props.filter?.under ?? 0, null, 'chaos'))

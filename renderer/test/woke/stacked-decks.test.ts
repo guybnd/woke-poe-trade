@@ -4,7 +4,7 @@ import {
   parseCardLine, recordPrice, runningResult, startSession, toRecord, totals
 } from '@/web/woke/stacked-decks/deck'
 import type { PriceOf } from '@/web/woke/stacked-decks/deck'
-import { WEIGHTS } from '@/web/woke/stacked-decks/weights'
+import { WEIGHTS, isCommonCard } from '@/web/woke/stacked-decks/weights'
 
 const PRICES: Record<string, number> = { 'Rain of Chaos': 0.5, 'The Lover': 1, 'Her Mask': 2, 'The Doctor': 900 }
 const price: PriceOf = name => PRICES[name] ?? null
@@ -82,6 +82,26 @@ describe('cheap cards', () => {
     expect(t.top).toBeNull()
     expect(t.result).toBe(-2)
     expect(t.withoutTop).toBe(-2)
+  })
+
+  it('folds a common card poe.ninja leaves out, once other prices are in', () => {
+    const common = (name: string) => name === 'Unknown Card'
+    const t = totals(draws, price, 3, { under: 2, count: true }, common)
+    expect(t.rows.map(r => r.name)).toEqual(['The Doctor', 'Her Mask'])
+    expect(t.cheap.map(r => r.name)).toEqual(['Rain of Chaos', 'Unknown Card'])
+    expect(t.cheapQty).toBe(3)
+    expect(t.cheapChaos).toBe(1)
+    expect(t.unpriced).toBe(1)
+    expect(t.got).toBe(903)
+    // A rare one stays listed; so does every card before prices load.
+    expect(totals(draws, price, 3, { under: 2, count: true }).rows.map(r => r.name)).toContain('Unknown Card')
+    expect(totals(draws, () => null, null, { under: 2, count: true }, () => true).cheap).toEqual([])
+    expect(totals(draws, price, 3, { under: 0, count: true }, common).cheap).toEqual([])
+  })
+
+  it('knows the common deck cards poe.ninja leaves out', () => {
+    for (const name of ['The Carrion Crow', 'Her Mask', 'Thunderous Skies', 'Glimmer of Hope', 'The Inoculated', 'The Deal']) expect(isCommonCard(name)).toBe(true)
+    for (const name of ['The Doctor', 'The Apothecary', 'Unknown Card']) expect(isCommonCard(name)).toBe(false)
   })
 
   it('lists every card at 0', () => {
