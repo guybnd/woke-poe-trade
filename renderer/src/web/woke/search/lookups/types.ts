@@ -48,7 +48,9 @@ export type LookupAction =
   // Opens a tool by its widget type, when it's switched on.
   { label: string, tool: string } |
   // Opens one of your saved items in its tool (shared/saved-open).
-  { label: string, open: { tool: string, id: string } }
+  { label: string, open: { tool: string, id: string } } |
+  // Opens a price check on this item text, as if it was copied in game.
+  { label: string, priceCheck: string }
 
 export interface LookupCard {
   // Unique within the palette's results.
