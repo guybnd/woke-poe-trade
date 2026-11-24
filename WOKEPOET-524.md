@@ -54,6 +54,13 @@ history:
       Guy picked D (full-row tint). Follow-up PR
       https://github.com/guybnd/woke-poe-trade/pull/832
     id: a-2026-11-24t02-40-15-175z
+  - type: activity
+    user: Agent
+    date: '2026-11-24T02:47:07.717Z'
+    comment: >-
+      Pick D merged in https://github.com/guybnd/woke-poe-trade/pull/832 (row
+      tint 30%, hover 36%, unreadable rows 12%).
+    id: a-2026-11-24t02-47-07-717z
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
