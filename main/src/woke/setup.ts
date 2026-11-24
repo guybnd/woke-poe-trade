@@ -11,7 +11,7 @@ import type { AppPrefs } from './app-prefs'
 import { findGameLogs } from './game-log-finder'
 import { migration } from './user-data'
 import { registerWokeHandler } from './index'
-import { dismissCrashes, noteRendererError, openCrashFolder, openReport, pendingCrash } from './crash-reports'
+import { dismissCrashes, noteRendererError, noteUiTrace, openCrashFolder, openReport, pendingCrash } from './crash-reports'
 import { openWebLink } from './web-guard'
 
 let win: BrowserWindow | null = null
@@ -146,6 +146,10 @@ export function initSetup (appUpdater: AppUpdater) {
   registerWokeHandler('crash-folder', async () => { await openCrashFolder(); return true })
   registerWokeHandler('renderer-error', async (args: { text: string }) => {
     if (typeof args?.text === 'string') noteRendererError(args.text)
+    return true
+  })
+  registerWokeHandler('ui-trace', async (args: { text: string }) => {
+    if (typeof args?.text === 'string') noteUiTrace(args.text)
     return true
   })
 }

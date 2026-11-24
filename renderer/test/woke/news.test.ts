@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { NEWS, markAllNewsSeen, markNewsSeen, unseenNews } from '@/web/woke/tab-bar/news'
-import { gotoTargets } from '@/web/woke/tab-bar/goto-targets'
+import { gotoSpots, gotoTargets } from '@/web/woke/tab-bar/goto-targets'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import type { WokeModulesConfig } from '@/web/woke/modules'
+
+// Settings page names and ids, read from pages.ts's text (importing it pulls in
+// every page's window, which doesn't load outside the app).
+const pagesSrc = readFileSync(fileURLToPath(new URL('../../src/web/woke/settings/pages.ts', import.meta.url)), 'utf8')
+const PAGE_NAMES = new Set([
+  ...[...pagesSrc.matchAll(/^\s*(?:id|name): '([^']+)'/gm)].map(m => m[1]),
+  ...[...pagesSrc.matchAll(/^\s*aliases: \[([^\]]*)\]/gm)].flatMap(m => [...m[1].matchAll(/'([^']+)'/g)].map(a => a[1]))
+])
+const pageByName = (name: string) => PAGE_NAMES.has(name) ? name : undefined
 
 describe("What's new lines", () => {
   it('are well formed: unique ids, a tool, a name, a short note', () => {
@@ -15,10 +26,17 @@ describe("What's new lines", () => {
     }
   })
 
+  it('reads the Settings page names', () => {
+    expect(PAGE_NAMES.size).toBeGreaterThan(20)
+    for (const n of ['All modules', 'Sessions', 'Price check', 'farming', 'Modules']) expect(PAGE_NAMES, n).toContain(n)
+  })
+
   it('Show me goes to a real place: the tab a line names exists, and a tool with tabs names one', () => {
     for (const n of NEWS) {
       if (n.settingsPage) {
         expect(n.goto, n.id).toBeUndefined()
+        expect(n.spot, n.id).toBeUndefined()
+        expect(pageByName(n.settingsPage), `${n.id}: no Settings page called "${n.settingsPage}"`).toBeDefined()
         continue
       }
       const targets = gotoTargets(n.wmType)
@@ -27,6 +45,11 @@ describe("What's new lines", () => {
         continue
       }
       expect(Object.keys(targets), `${n.id}: add goto, one of the tool's tabs`).toContain(n.goto)
+      if (n.spot) {
+        const spots = gotoSpots(n.wmType)
+        expect(spots?.[n.spot], `${n.id}: spot "${n.spot}" isn't in GOTO_SPOTS for ${n.wmType}`).toBeDefined()
+        expect(spots![n.spot], `${n.id}: spot "${n.spot}" sits on another tab`).toBe(n.goto)
+      }
     }
   })
 

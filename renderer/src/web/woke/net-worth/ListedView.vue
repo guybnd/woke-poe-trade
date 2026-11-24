@@ -24,7 +24,7 @@
     </section>
 
     <section v-if="rows.length" :class="$style.chips">
-      <WChip v-if="sum.stale" clickable :active="filter === 'stale'" :title="`Unsold ${staleDays} days or more`" @click="toggle('stale')"><span class="w-warn">Stale {{ sum.stale }}</span></WChip>
+      <WChip v-if="sum.stale" data-goto-spot="stale" clickable :active="filter === 'stale'" :title="`Unsold ${staleDays} days or more`" @click="toggle('stale')"><span class="w-warn">Stale {{ sum.stale }}</span></WChip>
       <WChip v-if="undercut" clickable :active="filter === 'undercut'" title="Your last Check found someone cheaper" @click="toggle('undercut')"><span class="w-down">Undercut {{ undercut }}</span></WChip>
       <WChip v-if="over" clickable :active="filter === 'over'" title="Asking 10% or more over poe.ninja's price" @click="toggle('over')">Overpriced {{ over }}</WChip>
       <WChip v-for="t in types" :key="t.id" clickable :active="filter === t.id" @click="toggle(t.id)">{{ t.label }} {{ t.count }}</WChip>
@@ -38,7 +38,7 @@
             <th>Asking</th>
             <th title="poe.ninja's price now, for the whole stack. ~ is rough: its rolls, corruption or a thin market move the price">Suggest</th>
             <th title="Your asking price against poe.ninja's">vs ninja</th>
-            <th title="Still cheapest? One trade search on a click: where your price ranks among other instant buyout listings of it">Cheapest?</th>
+            <th data-goto-spot="still-cheapest" title="Still cheapest? One trade search on a click: where your price ranks among other instant buyout listings of it">Cheapest?</th>
             <th :title="`Since you first listed it (a reprice doesn't reset it). Orange: ${staleDays} days or more`">Listed</th>
           </tr>
         </thead>
@@ -81,6 +81,7 @@ import { ninjaPriced, rates, sales } from './sales-store'
 import { canCheck, checkFor, rankText } from './cheapest'
 import { cheapestBusy, cheapestDoc, cheapestErrors, checkCheapest, loadCheapest } from './cheapest-store'
 import { loadPending, pendingDoc, pendingReading } from './pending-store'
+import { listedFilterAsk } from './listed-ask'
 import { ageText, pendingRows, pendingTotals, sortPending, DEFAULT_STALE_DAYS } from './pending'
 import type { PendingRow } from './pending'
 
@@ -111,6 +112,13 @@ const isUndercut = (r: PendingRow) => (checkOf(r)?.cheaper ?? 0) > 0
 const undercut = computed(() => rows.value.filter(isUndercut).length)
 const types = computed(() => SALE_TYPES.map(t => ({ ...t, count: rows.value.filter(r => saleType(r.item) === t.id).length })).filter(t => t.count > 0))
 function toggle (f: Filter) { filter.value = filter.value === f ? null : f; limit.value = 100 }
+// What's new's Show me asks for a chip (listed-ask.ts).
+watch(listedFilterAsk, f => {
+  if (!f) return
+  filter.value = f
+  limit.value = 100
+  listedFilterAsk.value = null
+}, { immediate: true })
 const shown = computed(() => {
   const f = filter.value
   if (!f) return sorted.value

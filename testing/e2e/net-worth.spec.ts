@@ -3,6 +3,7 @@
 import fs from 'fs'
 import path from 'path'
 import { test, expect, FIXTURES } from './harness'
+import { NEWS } from '../../renderer/src/web/woke/tab-bar/news'
 
 const LIST = fs.readFileSync(path.join(FIXTURES, 'stash/tab-list.json'), 'utf8')
 const DUMP = fs.readFileSync(path.join(FIXTURES, 'stash/tab-dump.json'), 'utf8')
@@ -33,7 +34,9 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
   }
   try {
     await overlay.page.setViewportSize({ width: 2560, height: 1440 })
-    await overlay.boot({ overlayActive: true })
+    // What's new's Listed line stays unseen: its Show me is checked below.
+    // (Pointing at Net worth in All tools reads its first line, Still cheapest.)
+    await overlay.boot({ overlayActive: true, whatsNew: ['listed-still-cheapest', 'net-worth-listed'] })
     await overlay.widget('menu').locator('.fa-cog').click()
     const settings = overlay.widget('settings')
     await settings.getByText('All modules', { exact: true }).first().click()
@@ -282,6 +285,26 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await panel.locator('[data-listed]').getByText(/^Uniques 3$/).click()
     await expect(panel.locator('[data-listed-filtered]')).toHaveCount(0)
     await overlay.snap('net worth listed')
+    // What's new › Show me with Listed already up (it looked dead): it now
+    // picks and flashes the feature itself, here the Stale chip.
+    const news = overlay.dockIcon('whats-new')
+    const showMe = async (id: string) => {
+      const n = NEWS.find(n => n.id === id)!
+      await news.click()
+      await overlay.page.mouse.move(5, 5)
+      await news.locator('[data-whats-new-line]').filter({ hasText: n.note.replace(/^New: /, '').slice(1, 30) }).getByRole('button', { name: 'Show me' }).click()
+    }
+    // Headhunter is 2 days up: stale after 1.
+    await panel.getByLabel('Stale after days').fill('1')
+    const stale = panel.locator('[data-goto-spot="stale"]')
+    await expect(stale).not.toHaveClass(/\bon\b/)
+    await showMe('net-worth-listed')
+    await expect(stale).toHaveClass(/\bon\b/)
+    await expect(stale).toHaveAttribute('data-goto-flashed', '')
+    await expect(listedRows).toHaveCount(1)
+    await stale.click()
+    await expect(listedRows).toHaveCount(3)
+    await panel.getByLabel('Stale after days').fill('3')
     await overlay.page.unroute('**/api/trade/search/**')
     await overlay.page.unroute('**/api/trade/fetch/**')
     await panel.getByRole('tab', { name: 'Holdings' }).click()

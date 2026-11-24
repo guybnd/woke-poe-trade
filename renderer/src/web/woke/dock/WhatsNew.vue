@@ -34,6 +34,7 @@ import type { NewsItem } from '../tab-bar/news'
 import { WButton } from '../ui'
 import { personalOn } from '../personal'
 import { requestGoto } from '../tab-bar/goto'
+import { uiTrace } from '../app/ui-trace'
 import DockItem from './DockItem.vue'
 import { openSettingsPage, showWithOverlay } from './dock'
 import { moduleSettingsPage } from '../tab-bar/tools'
@@ -65,18 +66,21 @@ function markSeen (items: NewsItem[]) {
 // switch in Settings instead, since turning it on asks first.
 function show (n: NewsItem) {
   markSeen([n])
+  uiTrace(`What's new › Show me: ${n.id} (${n.wmType}${n.goto ? ` › ${n.goto}` : ''}${n.spot ? ` › ${n.spot}` : ''}${n.settingsPage ? `, Settings › ${n.settingsPage}` : ''})`)
   if (!n.settingsPage && n.wmType !== 'woke-net-worth' && !isWidgetTypeOn(AppConfig(), n.wmType)) {
     const config = ensureWokeConfig(AppConfig())
     for (const m of MODULES) if (m.widgetTypes.includes(n.wmType)) setModuleOn(config, m.id, true)
   }
   const off = !isWidgetTypeOn(AppConfig(), n.wmType) || (n.wmType === 'woke-net-worth' && !personalOn.value)
   if (n.settingsPage || off) {
+    if (off) uiTrace(`What's new › Show me: ${n.wmType} is off, to Settings`)
     openSettingsPage(wm, n.settingsPage ?? 'All modules')
     return
   }
   let w = wm.widgets.value.find(w => w.wmType === n.wmType)
   // A dock-only tool has no window: its own page in Settings, as the rail does.
   if (w?.wmFlags.includes('menu::skip')) {
+    uiTrace(`What's new › Show me: ${n.wmType} has no window, to its Settings page`)
     openSettingsPage(wm, moduleSettingsPage(n.wmType, typeName))
     return
   }
@@ -87,7 +91,7 @@ function show (n: NewsItem) {
   }
   const wmId = w.wmId
   // On the tab the line is about (goto.ts).
-  if (n.goto) requestGoto(wmId, n.goto)
+  if (n.goto) requestGoto(wmId, n.goto, n.spot)
   nextTick(() => nextTick(() => {
     showWithOverlay(wm, wmId)
     pushHostConfig()
