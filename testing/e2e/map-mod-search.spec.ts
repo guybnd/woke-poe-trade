@@ -191,10 +191,11 @@ test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back'
   expect(searches.length).toBe(2)
   await overlay.snap('map exchange sellers')
 
-  // Back to the listings: a trade search again.
+  // Back to the listings: the same trade search again (from the cache, as it's unchanged).
   await chip.click()
-  await expect.poll(() => searches.length).toBe(3)
   await expect(panel.getByText('1400', { exact: true })).toHaveCount(0)
+  await expect(panel.locator('[data-exchange-chip]')).not.toHaveAttribute('aria-pressed', 'true')
+  await expect(panel.locator('.w-pc-foot, .w-pc-matched').first()).toBeVisible()
   expect(wants.length).toBe(1)
   expect(overlay.errors).toEqual([])
 })
