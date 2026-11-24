@@ -11,7 +11,7 @@
         <span :class="$style.badge" data-testid="instant-ninja-badge" :title="badgeTip" :data-tip-keys="againKeys ?? 'Space'">POE.NINJA</span>
       </div>
       <div :class="$style.value">
-        <span :class="$style.headline" data-testid="instant-ninja-price"><w-price-text :text="price?.main" /></span>
+        <span :class="[$style.headline, { [$style.flip]: price?.flip }]" data-testid="instant-ninja-price" :data-unit="price?.flip ? ninjaCheapUnit : null" :title="flipTitle(price)" @click="flipUnit(price)"><w-price-text :text="price?.main" /></span>
         <span v-if="price?.each" :class="$style.dim">each</span>
         <template v-if="weekChange != null">
           <span class="flex-1" />
@@ -57,7 +57,8 @@ import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shall
 import type { ParsedItem } from '@/parser'
 import { ItemCategory } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
-import { ninjaPrice, ninjaTotal, divineTenths, chaosOrbRow } from './ninja-first'
+import { ninjaPrice, ninjaTotal, divineTenths, chaosOrbRow, flipTitle } from './ninja-first'
+import { ninjaCheapUnit, flipUnit } from './view'
 import { instantCardKey, onKeyboardFocusedControl } from './instant-card-key'
 import { useNinjaDoubt } from './use-ninja-doubt'
 import { doubtText } from './ninja-trust'
@@ -113,7 +114,7 @@ const badgeTip = computed(() => `This is used to provide instant pricing without
 
 const isDivine = computed(() => props.item.info.refName === 'Divine Orb')
 const have = computed(() => props.item.stackSize?.value ?? 1)
-const price = computed(() => info.value ? ninjaPrice(info.value.chaos, xchgRate.value, isDivine.value) : null)
+const price = computed(() => info.value ? ninjaPrice(info.value.chaos, xchgRate.value, isDivine.value, ninjaCheapUnit.value) : null)
 const stack = computed(() => info.value && have.value > 1 ? ninjaTotal(info.value.chaos * have.value, isDivine.value ? undefined : xchgRate.value) : null)
 const tenths = computed(() => {
   if (isDivine.value && info.value) return divineTenths(info.value.chaos)
@@ -291,6 +292,8 @@ onUnmounted(() => {
   color: #7fb2e5;
 }
 .value { display: flex; align-items: baseline; gap: 6px; }
+.flip { cursor: pointer; }
+.flip:hover { filter: brightness(1.2); }
 .headline { font-family: var(--w-num); font-size: calc(24px * var(--w-text-scale, 1)); line-height: 1.1; font-weight: 600; color: var(--w-accent); white-space: nowrap; }
 .dim { color: var(--w-dim); }
 .doubt { color: var(--w-warn, #e0a03c); max-width: 18rem; }

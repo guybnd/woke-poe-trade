@@ -1,6 +1,6 @@
 // Exchange items poe.ninja prices show that price first; the exchange search waits for a click.
 import { describe, expect, it } from 'vitest'
-import { holdBulkSearch, fixedPriceItem, ninjaPrice, ninjaTotal, divineTenths, chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
+import { holdBulkSearch, fixedPriceItem, ninjaPrice, ninjaTotal, divineTenths, chaosOrbRow, flipTitle } from '@/web/woke/price-insight/ninja-first'
 
 const base = { api: 'bulk' as const, enabled: undefined, live: false, chaos: 34 }
 
@@ -58,20 +58,39 @@ describe('fixedPriceItem', () => {
 
 describe('ninjaPrice', () => {
   it('reads cheap items as how many a chaos and a divine buy', () => {
-    expect(ninjaPrice(0.003565, 180)).toEqual({ main: '281 per c', each: false, sub: '50,491 per div' })
+    expect(ninjaPrice(0.003565, 180)).toEqual({ main: '281 per c', each: false, sub: '50,491 per div', flip: 'div' })
   })
   it('reads chaos items with how many a divine buys', () => {
-    expect(ninjaPrice(34, 180)).toEqual({ main: '34c', each: true, sub: '5.3 per div' })
+    expect(ninjaPrice(34, 180)).toEqual({ main: '34c', each: true, sub: '0.19 div', flip: 'div' })
+    expect(ninjaPrice(12, 180)).toEqual({ main: '12c', each: true, sub: '15 per div', flip: 'div' })
   })
   it('reads div items in div with the chaos under it', () => {
-    expect(ninjaPrice(900, 180)).toEqual({ main: '5 div', each: true, sub: '900c' })
+    expect(ninjaPrice(900, 180)).toEqual({ main: '5 div', each: true, sub: '900c', flip: null })
   })
   it('shows a dash, not infinity, for no price', () => {
     expect(ninjaPrice(0, 180).main).toBe('—')
     expect(ninjaPrice(NaN, 180).main).toBe('—')
   })
   it('reads a Divine Orb in chaos', () => {
-    expect(ninjaPrice(180, 180, true)).toEqual({ main: '180c', each: true, sub: null })
+    expect(ninjaPrice(180, 180, true)).toEqual({ main: '180c', each: true, sub: null, flip: null })
+  })
+  it('reads items under a divine per divine when asked, with chaos under it', () => {
+    expect(ninjaPrice(0.003565, 180, false, 'div')).toEqual({ main: '50,491 per div', each: false, sub: '281 per c', flip: 'c' })
+    expect(ninjaPrice(12, 180, false, 'div')).toEqual({ main: '15 per div', each: false, sub: '12c', flip: 'c' })
+    expect(ninjaPrice(34, 180, false, 'div')).toEqual({ main: '0.19 div', each: true, sub: '34c', flip: 'c' })
+  })
+  it('keeps a divine price in div, and a Divine Orb in chaos, whatever the unit', () => {
+    expect(ninjaPrice(900, 180, false, 'div').main).toBe('5 div')
+    expect(ninjaPrice(180, 180, true, 'div').main).toBe('180c')
+  })
+  it('has no switch without a divine rate', () => {
+    expect(ninjaPrice(0.5, undefined, false, 'div')).toEqual({ main: '2 per c', each: false, sub: null, flip: null })
+    expect(ninjaPrice(34, undefined)).toEqual({ main: '34c', each: true, sub: null, flip: null })
+  })
+  it('hints what a click shows', () => {
+    expect(flipTitle(ninjaPrice(34, 180))).toBe('Click to show it in divines')
+    expect(flipTitle(ninjaPrice(34, 180, false, 'div'))).toBe('Click to show it in chaos')
+    expect(flipTitle(ninjaPrice(900, 180))).toBeUndefined()
   })
   it('totals a cheap stack without rounding it to 0', () => {
     expect(ninjaTotal(19 * 0.003565, 180)).toBe('0.068c')
