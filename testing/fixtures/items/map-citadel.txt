@@ -12,7 +12,6 @@ Monster Level: 83
 --------
 { Implicit Modifier }
 Map contains Baran's Citadel
-Item Quantity increases amount of Rewards Baran drops by 20% of its value
 --------
 { Prefix Modifier "Savage" }
 Monsters have 50% increased Accuracy Rating

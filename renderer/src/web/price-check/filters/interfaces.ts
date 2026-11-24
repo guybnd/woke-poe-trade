@@ -168,10 +168,9 @@ export interface StatFilter {
   mapLine?: true
   /** woke: a Valdo map's "sent to the Void" mod, set Any / Void / No void on the Valdo strip (ValdoStrip.vue), not listed in the rows. */
   valdoVoid?: true
-  /** woke: a map kind the checked map isn't (Elder or Shaper, a conqueror, the Originator), searched as "not"
-   * so the search finds only this map's kind; the map strip's Kind switch (pseudo/maps.ts). With options, each
-   * goes into the not group on its own (an option stat with no option matches nothing). */
-  mapKind?: { options?: number[] }
+  /** woke: one family of a map's kind (Elder/Shaper, a conqueror's Citadel, the Originator), searched as
+   * has, not or off; the map strip's Kind menu sets the three together (pseudo/map-kind.ts). */
+  mapKind?: { family: import('./pseudo/map-kind').KindFamily, pick: import('./pseudo/map-kind').FamilyPick }
   /** woke: a map mod with sibling variants (the 3 Evocators, the 3 buried Sentinels):
    * Has searches any of them until narrowed to this one on the map strip (pseudo/maps.ts). */
   anyOf?: { label: string, ids: string[], exact: string[] }

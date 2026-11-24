@@ -10,6 +10,7 @@ import { applyRules as applyAtzoatlRules } from './pseudo/atzoatl-rules'
 import { applyRules as applyMirroredTabletRules } from './pseudo/reflection-rules'
 import { filterEquipmentProps, filterBasePercentile, filterMemoryStrands, filterStoredExperience, BASE_PCTL_AFFECTED_IDS } from './pseudo/item-property'
 import { mapProps, valdoBadMods, chartProps, mapModFamilies } from './pseudo/maps'
+import { isInfluenceLine } from './pseudo/map-kind'
 import { applyFlaskHybridMod } from './pseudo/flasks'
 import { applyHeistRules } from './pseudo/heist'
 import { filterTimelessJewelKeystones } from './pseudo/timeless-jewel'
@@ -109,6 +110,8 @@ export function createExactStatFilters (
       if ((f.tag !== FilterTag.Implicit && f.tag !== FilterTag.Enchant && f.tag !== FilterTag.Variant) || f.mapKind || !f.sources.length) continue
       f.mapLine = true
     }
+    // Its influence lines are the kind's three filters now (pseudo/map-kind.ts).
+    if (item.info.refName === 'Map') ctx.filters = ctx.filters.filter(f => !(f.mapLine && isInfluenceLine(f.statRef)))
     mapModFamilies(ctx)
   }
 
@@ -122,7 +125,7 @@ export function createExactStatFilters (
   }
 
   for (const filter of ctx.filters) {
-    if (filter.not || filter.valdoVoid) continue
+    if (filter.not || filter.valdoVoid || filter.mapKind) continue
 
     filter.hidden = undefined
 

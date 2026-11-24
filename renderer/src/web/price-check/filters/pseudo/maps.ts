@@ -5,6 +5,7 @@ import { FiltersCreationContext } from '../create-stat-filters'
 import { FilterTag } from '../interfaces'
 import { noSourcePseudoToFilter, propToFilter } from './item-property'
 import { findAndResolveByRef, statToNotFilter } from './utils'
+import { mapKindFilters } from './map-kind'
 
 const PSEUDO = {
   MORE_THREADS: stat('More Scarabs: #%'),
@@ -69,7 +70,8 @@ export function mapProps (bulk: boolean, ctx: FiltersCreationContext): void {
   const { item } = ctx
   if (item.category !== ItemCategory.Map || item.mapCompletionReward || item.rarity === ItemRarity.Unique) return
 
-  mapKindFilters(ctx)
+  // woke: the map's kind (pseudo/map-kind.ts): three filters in place of its influence lines.
+  if (item.info.refName === 'Map') ctx.filters.push(...mapKindFilters(item))
 
   if (!bulk) {
     // woke: Rarity starts on like Pack size, More X or not (Guy, 2026-11-23: a
@@ -166,47 +168,6 @@ export function valdoBadMods (ctx: FiltersCreationContext): void {
     if (has) filter.not = undefined
     filter.valdoVoid = true
     ctx.filters.push(filter)
-  }
-}
-
-// woke: a map's kind is its influence: none, the Originator, the Elder or Shaper (an
-// Elder map also has a guardian: "occupied by The Purifier"), a conqueror's Citadel, or
-// the Originator with one of those (Guy, 2026-11-24). Kinds list at
-// different prices (Elder maps carry a guardian and list cheap: 807 of the T16
-// Originator maps in Covens, 2026-11-24, WOKEPOET-523), so the search finds only
-// this map's kind: its own influence lines are searched as "has" (they start on), and
-// one "not" filter per kind it isn't is added here. The map strip's Kind switch
-// turns them all off (Any kind). Nightmare and Valdo maps are other items.
-export const NO_ELDER_TRADE_ID = 'implicit.stat_1792283443'
-export const CITADEL_TRADE_ID = 'implicit.stat_2563183002'
-export const ORIGINATOR_TRADE_ID = 'implicit.stat_2696470877'
-const MAP_KINDS: Array<{ id: string, statRef: string, text: string, options?: number[] }> = [
-  // 1 Shaper, 2 Elder (checked live 2026-11-24).
-  { id: NO_ELDER_TRADE_ID, statRef: 'Area is influenced by The Elder', text: 'Area is influenced by The Elder or The Shaper', options: [1, 2] },
-  // A conqueror's Citadel: 1 Baran, 2 Veritania, 3 Al-Hezmin, 4 Drox (stats data). The Elder's
-  // guardians ("occupied by") come with the Elder, so leaving out the Elder leaves them out too.
-  { id: CITADEL_TRADE_ID, statRef: "Map contains Baran's Citadel", text: "Map contains a conqueror's Citadel", options: [1, 2, 3, 4] },
-  { id: ORIGINATOR_TRADE_ID, statRef: "Area is Influenced by the Originator's Memories", text: "Area is Influenced by the Originator's Memories" }
-]
-export const MAP_KIND_TRADE_IDS: readonly string[] = MAP_KINDS.map(k => k.id)
-
-function mapKindFilters (ctx: FiltersCreationContext): void {
-  const { item } = ctx
-  if (item.info.refName !== 'Map') return
-  for (const kind of MAP_KINDS) {
-    const has = item.statsByType.some(calc =>
-      calc.stat.trade.ids[ModifierType.Implicit]?.some(id => id === kind.id || id.startsWith(`${kind.id}|`)))
-    if (has) continue
-    ctx.filters.push({
-      tradeId: [kind.id],
-      statRef: kind.statRef,
-      text: kind.text,
-      tag: FilterTag.Implicit,
-      sources: [],
-      disabled: false,
-      not: true,
-      mapKind: { options: kind.options }
-    })
   }
 }
 

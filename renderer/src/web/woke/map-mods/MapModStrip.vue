@@ -15,7 +15,7 @@
           <span class="w-dim text-xs">Juice</span>
           <span class="w-num w-accent font-semibold" data-map-juice>{{ result.juice.score }}</span>
         </template>
-        <WInfo text="The badge and dots are your Map mods ratings. Has finds maps with the mod, Not finds maps without it, Any ignores it; a number tile searches at least its minimum (type or scroll to change it). Kind finds only maps with this map's influence. These change only this price check's search, and nothing is searched until you press Search." />
+        <WInfo text="The badge and dots are your Map mods ratings. Has finds maps with the mod, Not finds maps without it, Any ignores it; a number tile searches at least its minimum (type or scroll to change it). Kind finds only maps of this map's kind (its influence); click it to pick another. These change only this price check's search, and nothing is searched until you press Search." />
         <i class="fas w-dim text-xs" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
       </button>
       <div v-if="summary || picked" :class="$style.summary">
@@ -29,22 +29,33 @@
             :class="goal === g && $style.on_any" :data-goal="g" :title="GOAL_TITLE[g]" @click="setGoal(g)">{{ FARM_GOAL_LABEL[g] }}</button>
         </span>
       </div>
-      <!-- Guy (2026-11-24): a map's kind is its influence (normal, Originator, Elder, Shaper, a conqueror,
-           or the Originator with one of those). The search finds only this kind, or any kind. Replaces No Elder. -->
-      <div v-if="kindFilters.length || hasFilters" :class="$style.goalRow" data-map-kind-row>
-        <template v-if="kindFilters.length">
+      <!-- Guy (2026-11-24): a map's kind is its influence: normal, Elder, Shaper, a conqueror's, each with
+           the Originator or without. The search finds only this map's kind; the menu picks another, Any
+           Originator or Any kind. Replaces No Elder. Picking never searches. -->
+      <div v-if="kindFs.length || hasFilters" :class="$style.goalRow" data-map-kind-row>
+        <template v-if="kindFs.length">
           <span class="w-dim text-xs" :class="$style.rowLabel">Kind</span>
-          <span :class="$style.seg" role="radiogroup" aria-label="Map kind to search" data-map-kind>
-            <button type="button" role="radio" :aria-checked="kindState === 'this'" :class="kindState === 'this' && $style.on_any" data-kind="this"
-              :title="kindTitle" @click="setKind(true)">{{ kindLabel }}</button>
-            <button type="button" role="radio" :aria-checked="kindState === 'any'" :class="kindState === 'any' && $style.on_any" data-kind="any"
-              title="Search maps of every kind: normal, Originator, Elder, Shaper, conqueror" @click="setKind(false)">Any kind</button>
+          <span :class="$style.seg" data-map-kind>
+            <button type="button" :class="[$style.kindBtn, current?.key !== 'any' && $style.on_any]" :aria-expanded="kindMenu" data-kind="this"
+              :title="kindTitle" @click="kindMenu = !kindMenu">
+              <KindIcons :icons="iconsFor(shownKind?.key)" />{{ shownKind ? shownKind.label : 'Your pick' }}<i class="fas fa-caret-down w-dim" />
+            </button>
+            <button type="button" :class="current?.key === 'any' && $style.on_any" :aria-pressed="current?.key === 'any'" data-kind="any"
+              title="Search maps of every kind" @click="pickKind(anyChoice)">Any kind</button>
           </span>
         </template>
         <span class="flex-1" />
         <!-- Guy (2026-11-24): one click to search the plain map; again brings the picks back. Never searches. -->
         <button v-if="hasFilters" type="button" :class="[$style.tool, baseOnly && $style.toolOn]" :aria-pressed="baseOnly"
           :title="baseTitle" data-map-base @click="toggleBase"><img :src="MAP_ICON" alt="" :class="$style.ic">Base map</button>
+      </div>
+      <div v-if="kindMenu && kindFs.length" :class="$style.kindMenu" role="menu" data-map-kind-menu>
+        <span :class="$style.kindHead">Search maps that are</span>
+        <button v-for="c in choices" :key="c.key" type="button" role="menuitemradio" :aria-checked="current?.key === c.key"
+          :class="[$style.kindOpt, current?.key === c.key && $style.kindOn, (c.key === 'any' || c.key === 'any-originator') && $style.kindWide]"
+          :data-kind-option="c.key" @click="pickKind(c)">
+          <KindIcons :icons="iconsFor(c.key)" />{{ c.label }}<template v-if="c.key === ownKey"> (this map)</template>
+        </button>
       </div>
       <!-- Guy's pick A (2026-11-23): every number is a filter. Layout A (2026-11-24): a grid of tiles,
            game icon and name on top, the value and its typed minimum below. Off: dashed and faded. -->
@@ -90,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, shallowRef, watch, watchEffect } from 'vue'
+import { computed, h, inject, onBeforeUnmount, shallowRef, watch, watchEffect } from 'vue'
 import type { ShallowRef } from 'vue'
 import { WIcon, WInfo } from '../ui'
 import { useFold } from '../ui/fold'
@@ -98,7 +109,8 @@ import type { ParsedItem } from '@/parser'
 import { shortLabel } from './rules'
 import { VERDICT_LABEL } from './rules'
 import { checkMap, findMapModsConfig, isMapLike, isUnsure, PROP_TRADE_ID } from './check'
-import { MAP_KIND_TRADE_IDS } from '@/web/price-check/filters/pseudo/maps'
+import { MAP_KIND_TRADE_IDS, kindChoices, mapKindOf, ownKindKey, pickOf, samePick, setPick } from '@/web/price-check/filters/pseudo/map-kind'
+import type { KindChoice } from '@/web/price-check/filters/pseudo/map-kind'
 import type { AddedMod, FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
 import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalDisabled } from './goal'
@@ -202,8 +214,7 @@ const rows = computed<Row[]>(() => {
   const rest: Row[] = searchable.value.filter(f => !used.has(f)).map(f => ({
     mod: { text: f.text, matcher: f.statRef, rating: 'ok' }, filter: f
   }))
-  // The influence lines are the Kind switch, not rows.
-  return [...rest, ...rated].filter(r => !r.filter || !isMapIdentity(r.filter))
+  return [...rest, ...rated]
 })
 function isAnyOf (f: StatFilter): boolean {
   return f.tradeId.length > 1
@@ -236,34 +247,46 @@ function setState (f: StatFilter, state: ModState) {
   }
 }
 // The map's "no Elder or Shaper influence" filter (pseudo/maps.ts); none on an influenced map.
-// The map's kind (pseudo/maps.ts): its own influence lines (searched as has) and a "not"
-// for each kind it isn't. This kind: all on; Any kind: all off.
-const kindFilters = computed(() => (props.stats ?? []).filter((s): s is StatFilter =>
-  !s.group && (!!s.mapKind || (!!s.mapLine && isMapIdentity(s)))))
-const kindState = computed<'this' | 'any' | 'mixed'>(() => {
-  const on = kindFilters.value.filter(f => !f.disabled).length
-  return on === kindFilters.value.length ? 'this' : on === 0 ? 'any' : 'mixed'
-})
-function setKind (on: boolean) {
-  for (const f of kindFilters.value) f.disabled = !on
+// The map's kind (pseudo/map-kind.ts): three filters, one per influence family, set together.
+const kindFs = computed(() => (props.stats ?? []).filter((s): s is StatFilter => !s.group && !!s.mapKind))
+const ownKind = computed(() => mapKindOf(props.item))
+const ownKey = computed(() => ownKindKey(ownKind.value))
+const choices = computed(() => kindChoices(ownKind.value))
+const anyChoice = computed(() => choices.value.find(c => c.key === 'any')!)
+const current = computed(() => choices.value.find(c =>
+  kindFs.value.every(f => samePick(pickOf(f), c.picks[f.mapKind!.family]))) ?? null)
+// With Any kind on, the menu button names this map's kind again (Any kind has its own button).
+const shownKind = computed(() => current.value?.key === 'any' ? choices.value.find(c => c.key === ownKey.value) ?? null : current.value)
+const kindMenu = shallowRef(false)
+watch(() => props.item, () => { kindMenu.value = false })
+function pickKind (c: KindChoice) {
+  for (const f of kindFs.value) setPick(f, c.picks[f.mapKind!.family])
+  kindMenu.value = false
 }
-const kindLabel = computed(() => {
-  const refs = kindFilters.value.filter(f => !f.mapKind).map(f => f.statRef)
-  const parts: string[] = []
-  for (const ref of refs) {
-    // The Elder's guardian ("occupied by") goes with the Elder: not a kind of its own.
-    const m = /influenced by The (Elder|Shaper)$/i.exec(ref) ?? /^Map contains (\S+?)'s Citadel/i.exec(ref)
-    if (m) parts.push(m[1])
-  }
-  if (refs.some(r => /Originator/i.test(r))) parts.push('Originator')
-  return `${parts.length ? parts.join(' ') : 'Normal'} map`
-})
 const kindTitle = computed(() => {
-  const leaves = kindFilters.value.filter(f => f.mapKind).map(f =>
-    f.tradeId[0] === MAP_KIND_TRADE_IDS[0] ? 'Elder and Shaper' : f.tradeId[0] === MAP_KIND_TRADE_IDS[1] ? 'conqueror Citadel' : 'Originator')
-  return `Search only this kind of map (${kindLabel.value})` +
-    (leaves.length ? `: leaves out ${leaves.join(', ')} maps.` : '.') + ' Kinds list at different prices.'
+  const c = current.value
+  if (!c) return 'Pick which kind of map to search'
+  if (c.key === 'any') return 'Searching maps of every kind. Click to pick a kind.'
+  return `Searching only ${c.label} maps${c.key === ownKey.value ? ' (this map\'s kind)' : ''}. Kinds list at different prices. Click for the others.`
 })
+// Game art for each kind: the influence's own icon, the Originator's orb, a plain map.
+const CONQUEROR_ART: Record<number, string> = { 1: 'Crusader', 2: 'Redeemer', 3: 'Hunter', 4: 'Warlord' }
+type KindIcon = { src?: string, item?: string }
+function iconsFor (key: string | undefined): KindIcon[] {
+  if (!key) return []
+  const icons: KindIcon[] = []
+  if (key.startsWith('elder')) icons.push({ src: '/images/influence-Elder.png' })
+  else if (key.startsWith('shaper')) icons.push({ src: '/images/influence-Shaper.png' })
+  else if (key.startsWith('citadel')) icons.push({ src: `/images/influence-${CONQUEROR_ART[ownKind.value.citadel ?? 1]}.png` })
+  else if (key.startsWith('normal') && !key.endsWith('Originator')) icons.push({ src: MAP_ICON })
+  if (key.endsWith('Originator') || key === 'any-originator') icons.push({ item: "Originator's Exalted Orb" })
+  if (key === 'any') icons.push({ src: MAP_ICON })
+  return icons
+}
+const KindIcons = (p: { icons: KindIcon[] }) => p.icons.map(i =>
+  h(WIcon, { src: i.src, item: i.item, size: 'sm', title: '', fallback: 'fas fa-map' }))
+KindIcons.props = ['icons']
+
 function propFilter (label: string): StatFilter | null {
   const id = PROP_TRADE_ID[label]
   if (!id) return null
@@ -498,6 +521,13 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .tile.propOff:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
 .goalRow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 .rowLabel { min-width: 3.6em; }
+.kindBtn { display: inline-flex; align-items: center; gap: 4px; }
+.kindMenu { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
+.kindHead { grid-column: 1 / -1; padding: 2px 8px; font-family: var(--w-caps-face); font-size: var(--w-fs-xs); color: var(--w-dim); border-bottom: 1px solid var(--w-line); }
+.kindOpt { display: flex; align-items: center; gap: 4px; padding: 2px 8px; text-align: left; font-size: var(--w-fs-sm); color: var(--w-fg); }
+.kindOpt:hover { background: var(--w-chip-ground); }
+.kindOn { background: var(--w-accent-soft); color: var(--w-accent); }
+.kindWide { grid-column: 1 / -1; border-top: 1px solid var(--w-line); }
 .goalKey { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--w-gold) 45%, transparent); }
 .faded { opacity: 0.55; }
 .faded:hover { opacity: 1; }

@@ -161,9 +161,10 @@ test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back'
   // Guy (2026-11-24): No Elder became the Kind switch: this kind only, or any kind.
   const noElder = panel.locator('[data-map-kind] [data-kind="this"]')
   await expect(noElder).toBeVisible({ timeout: 20_000 })
-  await expect(noElder).toHaveText('Originator map')
-  await expect(noElder).toHaveAttribute('aria-checked', 'true')
-  await expect(noElder).toHaveAttribute('title', /leaves out Elder and Shaper, conqueror Citadel maps/)
+  await expect(noElder).toHaveText('Originator')
+  await expect(noElder).toHaveAttribute('title', /Searching only Originator maps \(this map's kind\)/)
+  const anyKind = panel.locator('[data-map-kind] [data-kind="any"]')
+  await expect(anyKind).toHaveAttribute('aria-pressed', 'false')
   // The switch stands in for the row below.
   await expect(panel.getByText('Area is influenced by The Elder or The Shaper')).toHaveCount(0)
   await overlay.page.waitForTimeout(1000)
@@ -175,13 +176,13 @@ test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back'
   const not = searches[0].query.stats.find(g => g.type === 'not')!
   // Shaper and Elder each by option: with no option it matched nothing.
   expect(not.filters.filter(f => f.id === 'implicit.stat_1792283443')).toEqual([
-    { id: 'implicit.stat_1792283443', value: { option: 1 }, disabled: false },
-    { id: 'implicit.stat_1792283443', value: { option: 2 }, disabled: false }
+    { id: 'implicit.stat_1792283443', value: { option: 1 } },
+    { id: 'implicit.stat_1792283443', value: { option: 2 } }
   ])
 
   // Off: the next search includes them.
-  await panel.locator('[data-map-kind] [data-kind="any"]').click()
-  await expect(noElder).toHaveAttribute('aria-checked', 'false')
+  await anyKind.click()
+  await expect(anyKind).toHaveAttribute('aria-pressed', 'true')
   await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBe(2)
   const not2 = searches[1].query.stats.find(g => g.type === 'not')
@@ -388,8 +389,9 @@ test('map: the kind is one switch, the list holds only mods, and the numbers are
   const panel = overlay.widget('price-check')
   const kind = panel.locator('[data-map-kind] [data-kind="this"]')
   await expect(kind).toBeVisible({ timeout: 20_000 })
-  await expect(kind).toHaveText('Elder Originator map')
-  await expect(kind).toHaveAttribute('aria-checked', 'true')
+  await expect(kind).toHaveText('Elder Originator')
+  // Game art: the Elder's mark and the Originator's orb (and the menu's caret).
+  await expect(kind.locator('img, i')).toHaveCount(3)
   const strip = panel.locator('[data-map-trade] > button').first()
   if (await panel.locator('[data-map-mod]').count() === 0) await strip.click()
   await expect(panel.locator('[data-map-mod]').first()).toBeVisible()
@@ -409,5 +411,17 @@ test('map: the kind is one switch, the list holds only mods, and the numbers are
   await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBe(2)
   expect(onIds(searches[1]).filter(id => id.startsWith('implicit.'))).toEqual([])
+  // The menu: Any Originator searches the Originator only, whatever else the map is.
+  await kind.click()
+  const menu = panel.locator('[data-map-kind-menu]')
+  await expect(menu.locator('[data-kind-option]')).toHaveCount(10)
+  await expect(menu.locator('[data-kind-option="elder Originator"]')).toContainText('(this map)')
+  await overlay.snap('map-kind-menu')
+  await menu.locator('[data-kind-option="any-originator"]').click()
+  await expect(menu).toHaveCount(0)
+  await expect(kind).toHaveText('Any Originator')
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBe(3)
+  expect(onIds(searches[2]).filter(id => id.startsWith('implicit.'))).toEqual([ORIGINATOR])
   expect(overlay.errors).toEqual([])
 })
