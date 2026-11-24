@@ -46,17 +46,15 @@ export function moveSearchKey (widget: SearchWidget, taken: string[]): void {
 
 export const QUERY_MAX = 3
 // The typed searches with this one first, or null when nothing changes. A
-// search that grows or shrinks from another ("tab", then "tabula") replaces it.
+// search that grows from an older one ("tab", then "tabula") replaces it; a
+// shorter one ("ta") leaves the longer ones be.
 export function addQuery (list: readonly string[] | undefined, text: string, skip: readonly string[] = []): string[] | null {
   const q = text.replace(/\s+/g, ' ').trim()
   if (q.length < 2 || skip.includes(q)) return null
   const lower = q.toLowerCase()
   const old = list ?? []
   if (old[0] === q) return null
-  const rest = old.filter(o => {
-    const l = o.toLowerCase()
-    return !l.startsWith(lower) && !lower.startsWith(l)
-  })
+  const rest = old.filter(o => !lower.startsWith(o.toLowerCase()))
   return [q, ...rest].slice(0, QUERY_MAX)
 }
 

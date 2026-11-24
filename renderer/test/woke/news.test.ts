@@ -42,6 +42,8 @@ describe("What's new lines", () => {
     expect(hasShowMe({ id: 'price-check-seller-spread', wmType: 'price-check' })).toBe(true)
     expect(hasShowMe({ id: 'price-check-seller-spread', wmType: 'price-check' }, false)).toBe(false)
     expect(hasShowMe({ id: 'div-card-map-chance', wmType: 'woke-search' }, false)).toBe(true)
+    // Your own past searches: nothing to show until you've searched.
+    expect(hasShowMe({ id: 'search-recent-queries', wmType: 'woke-search' })).toBe(false)
     // Net worth with the stash reader off has nothing to show.
     expect(hasShowMe({ id: 'x', wmType: 'woke-net-worth', goto: 'holdings' }, true, false)).toBe(false)
   })

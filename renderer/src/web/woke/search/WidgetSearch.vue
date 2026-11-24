@@ -12,7 +12,7 @@
         <label :class="$style.find">
           <i class="fas fa-search" />
           <input ref="input" v-model="query" :class="$style.input" spellcheck="false" aria-label="Search"
-            placeholder="Item, tool or setting. Or paste an item (Ctrl V)" @keydown="onKey" @paste="onPaste">
+            placeholder="Item, tool or setting. Or paste an item (Ctrl V)" @keydown="onKey" @paste="onPaste" @input="noteTyped">
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': helpOpen }" title="What can I search for?" aria-label="What can I search for?" @click="toggleHelp"><i class="fas fa-question" /></button>
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': groupsOpen }" title="What search shows" aria-label="What search shows" data-search-groups-btn @click="toggleGroups"><i class="fas fa-cog" /></button>
           <WCorruptedFilter v-model="corrupted" />
@@ -38,7 +38,7 @@
                 <span :class="section.more ? $style.foldName : undefined">{{ e.name }}</span><span class="w-dim ml-1">{{ section.more ? `${e.sub} · show` : e.sub }}</span>
               </button>
               <button v-else v-item-tip="tipOf(e)" :data-no-item-tip="e.kind === 'setting' ? 'a setting named after a mechanic or item, not the item itself' : undefined" tabindex="-1" :class="[$style.res, { [$style.sel]: e === selected }]"
-                :data-selected="e === selected || undefined" @click="e.kind === 'again' ? run(e) : selected = e" @dblclick="run(e)">
+                :data-selected="e === selected || undefined" @click="e.kind === 'again' ? runAgain(e) : selected = e" @dblclick="onDouble(e)">
                 <WIcon v-if="e.kind === 'price'" :src="ninjaIcon(e.group.type, e.group.name) ?? ninjaArt(e.group.type, e.group.name)" size="md" />
                 <WIcon v-else-if="e.kind === 'item'" :src="e.info.icon" size="md" />
                 <WIcon v-else-if="e.kind === 'lookup' && isImageIcon(e.icon)" :src="e.icon" size="md" />
@@ -117,7 +117,7 @@
             </template>
             <LookupDetail v-else-if="selected?.kind === 'lookup'" :card="selected.card" :divine="divine" @act="act" />
             <template v-else-if="selected">
-              <div :class="$style.title"><i :class="selected.icon" /><span>{{ selected.name }}</span></div>
+              <div v-item-tip="tipOf(selected)" :class="$style.title"><i :class="selected.icon" /><span>{{ selected.name }}</span></div>
               <p class="w-dim">{{ selected.about }}</p>
               <div :class="$style.acts"><WButton size="sm" @click="run(selected!)">{{ selected.verb }}</WButton></div>
             </template>
@@ -1353,6 +1353,20 @@ function remember (entry: Entry | null): boolean {
   props.config.recent = [{ type, name }, ...rest].slice(0, RECENT_MAX)
   return true
 }
+// What you typed yourself: not a jump, an example or a What's new sample.
+let ownText = ''
+function noteTyped (e: Event) { ownText = (e.target as HTMLInputElement).value }
+// A past search runs on one click; the second click of a double-click lands
+// on whatever row replaced it, and mustn't run that.
+let againAt = 0
+function runAgain (e: Entry) {
+  againAt = Date.now()
+  run(e)
+}
+function onDouble (e: Entry) {
+  if (Date.now() - againAt < 600) return
+  run(e)
+}
 // What was typed, opened or not: a quick look is a search too.
 function rememberQuery (text: string): boolean {
   const list = addQuery(props.config.queries, text, [HELP_QUERY])
@@ -1368,7 +1382,7 @@ function againEntry (q: string): ActionEntry {
     icon: 'fas fa-history',
     about: 'Puts this search back in the box.',
     verb: 'Search',
-    action: () => { query.value = q; focusInput() }
+    action: () => { query.value = ownText = q; focusInput() }
   }
 }
 
@@ -1567,6 +1581,7 @@ function start (text: string) {
   savedOpenRequest.value = null
   holdPricesForSearch()
   query.value = text
+  ownText = ''
   corrupted.value = 'any'
   chip.value = 'all'
   // As a new query does: the same query again (an empty one, say) doesn't
@@ -1620,11 +1635,11 @@ watch(open, (now) => {
   if (now) focusInput(true)
   else {
     const item = remember(queryOk.value ? selected.value : null)
-    const typed = rememberQuery(query.value)
+    const searched = rememberQuery(ownText)
     // The overlay's own save has already run (it saves as the palette hides,
     // before this). Closing on blur or into a tool brings no later save, so
     // these could be lost to a restart or another window's save.
-    if (item || typed) saveConfig()
+    if (item || searched) saveConfig()
   }
 })
 

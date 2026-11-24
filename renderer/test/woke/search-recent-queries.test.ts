@@ -28,9 +28,9 @@ describe('addQuery', () => {
     expect(addQuery(['tabula', 'chaos', 'divine'], 'chaos')).toEqual(['chaos', 'tabula', 'divine'])
   })
 
-  it('replaces a search this one grows or shrinks from', () => {
+  it('replaces a search this one grows from, and keeps longer ones', () => {
     expect(addQuery(['tab', 'chaos'], 'Tabula')).toEqual(['Tabula', 'chaos'])
-    expect(addQuery(['tabula rasa', 'chaos'], 'tabula')).toEqual(['tabula', 'chaos'])
+    expect(addQuery(['tabula rasa', 'chaos'], 'ta')).toEqual(['ta', 'tabula rasa', 'chaos'])
   })
 
   it('tidies spaces', () => {
