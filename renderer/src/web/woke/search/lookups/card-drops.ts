@@ -10,7 +10,7 @@ export function mapCardsCard (data: CardDropData, map: string, ctx: LookupContex
   const cards = cardsInMap(data, map)
     .map(name => ({ name, chaos: price(name) }))
     .sort((a, b) => (b.chaos ?? -1) - (a.chaos ?? -1) || (a.name < b.name ? -1 : 1))
-  // Each card's chance per card drop here, and the map's average (Guy's pick, veteran review 2026-11-24).
+  // Each card's share of the map's own cards, and their average value (Guy's pick, veteran review 2026-11-24).
   const rows: LookupRow[] = cards.map(c => {
     const oneIn = cardChanceIn(data, c.name, map)
     return {
@@ -30,13 +30,13 @@ export function mapCardsCard (data: CardDropData, map: string, ctx: LookupContex
     group: 'Div cards by map',
     name: `${label}: ${cards.length} card${cards.length === 1 ? '' : 's'}`,
     title: map,
-    sub: best ? `Best: ${best.name}${best.chaos != null ? ` · ${formatChaos(best.chaos, ctx.divine)}` : ''}${perDrop != null ? ` · about ${formatChaos(perDrop, ctx.divine)} per card drop` : ''}` : 'No cards listed',
+    sub: best ? `Best: ${best.name}${best.chaos != null ? ` · ${formatChaos(best.chaos, ctx.divine)}` : ''}${perDrop != null ? ` · about ${formatChaos(perDrop, ctx.divine)} per card` : ''}` : 'No cards listed',
     icon: 'fas fa-map',
     tip: { name: map, content },
     sections: [
       { label: `Cards in ${label}${tier ? ` (tier ${tier})` : ''}`, rows },
-      ...(perDrop != null ? [{ text: [`About ${formatChaos(perDrop, ctx.divine)} per card drop here. 1 in N: how many card drops here it takes, on average, to see that card.`] }] : []),
-      { text: ['Sources: Divcord, weights from the Prohibited Library (an estimate: bosses and league content can add cards). Prices are poe.ninja\'s, per card.'] }
+      ...(perDrop != null ? [{ text: [`About ${formatChaos(perDrop, ctx.divine)} per card from this map's list. 1 in N: how many of this map's own cards it takes, on average, to get that one.`] }] : []),
+      { text: ['Sources: Divcord, weights from the Prohibited Library (by drop weight; cards from bosses and league content are not counted). Prices are poe.ninja\'s, per card.'] }
     ],
     actions: [
       ...(best ? [{ label: `Look up ${best.name}`, search: best.name }] : []),

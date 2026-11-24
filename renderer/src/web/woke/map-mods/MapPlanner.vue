@@ -123,14 +123,15 @@ const data = mapBonusData
 const state = computed<PlannerState>(() => {
   // Until you pick a goal here, it follows the farming goal (goal.ts).
   const farm = plannerGoalFor(farmGoal())
-  const s = { ...DEFAULT_PLANNER, ...(farm ? { goal: farm } : {}), ...props.profile.planner }
+  const saved = { ...DEFAULT_PLANNER, ...props.profile.planner }
+  const s = farm && !saved.goalPicked ? { ...saved, goal: farm } : saved
   return PLAN_GOALS.includes(s.goal) ? s : { ...s, goal: DEFAULT_PLANNER.goal }
 })
 function set (patch: Partial<PlannerState>) {
   props.profile.planner = { ...state.value, ...patch }
 }
 function setGoal (goal: PlanGoal) {
-  set({ goal })
+  set({ goal, goalPicked: true })
 }
 
 const rows = computed(() => planRows(data.value, state.value.goal))

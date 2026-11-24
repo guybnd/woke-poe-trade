@@ -22,7 +22,7 @@
         {{ summary }}<template v-if="summary && picked"> · </template><template v-if="picked">Search: <span :class="$style.picked" data-map-mod-picked>{{ picked }}</span></template>
       </div>
       <!-- Guy's pick (veteran review, 2026-11-24): what you farm decides which numbers start on. Remembered. -->
-      <div v-if="propFilters.length" :class="$style.goalRow" data-map-goal>
+      <div v-if="propFilters.length && isMap" :class="$style.goalRow" data-map-goal>
         <span class="w-dim text-xs">Farming</span>
         <span :class="$style.seg" role="radiogroup" aria-label="Farming goal">
           <button v-for="g in FARM_GOALS" :key="g" type="button" role="radio" :aria-checked="goal === g"
@@ -78,6 +78,8 @@ import type { AddedMod, FilterOrGroup, ItemFilters, StatFilter } from '@/web/pri
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
 import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalDisabled } from './goal'
 import { farmGoal, setFarmGoal } from './goal-config'
+import { tickPref } from '../price-insight/tick-prefs'
+import { ItemCategory } from '@/parser'
 import type { FarmGoal } from './goal'
 
 // addMods: off on the bulk preset, which searches maps by type only.
@@ -234,15 +236,20 @@ const GOAL_TITLE: Record<FarmGoal, string> = {
 function faded (label: string): boolean {
   return goal.value !== 'any' && !goalKeys.value.includes(label) && !isOn(label)
 }
+// Only maps: charts keep their own numbers (pseudo/maps.ts chartProps).
+const isMap = computed(() => props.item.category === ItemCategory.Map)
 function setGoal (g: FarmGoal) {
+  // Base map on: bring its picks back first, so the goal doesn't lose them.
+  if (baseOnly.value && clearedRef.value) toggleBase()
   setFarmGoal(g)
   for (const p of result.value?.props ?? []) {
+    // Atlas Drops is off for every goal (no listings): one you turned on stays on.
+    if (p.label === 'Drops') continue
     const f = propFilter(p.label)
     const off = goalDisabled(p.label, g)
-    if (f && off !== undefined) f.disabled = off
+    // An Always / Never tick you set on a number wins (price-insight/tick-prefs.ts).
+    if (f && off !== undefined && !tickPref(f)) f.disabled = off
   }
-  // Base map's saved picks are stale once the chips change.
-  clearedRef.value = null
 }
 
 // The Base map button: every chip and every row below off (the 8-mod count too),

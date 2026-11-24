@@ -16,7 +16,7 @@
         {{ facts.disabled ? 'Not in the game right now.' : 'Divcord has no verified source for this card yet.' }}
       </div>
       <div :class="$style.foot">
-        <span :class="$style.note">Sources: Divcord · weights: Prohibited Library<template v-if="maps.some(m => m.oneIn)"> · 1 in N: the chance a card drop in that map is this card, estimated from drop weights</template></span>
+        <span :class="$style.note">Sources: Divcord · weights: Prohibited Library<template v-if="maps.some(m => m.oneIn)"> · 1 in N: how many of that map's own cards it takes, on average, to get this one (by drop weight)</template></span>
         <WButton size="sm" @click="open">Divcord</WButton>
       </div>
     </template>

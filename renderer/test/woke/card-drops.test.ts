@@ -88,7 +88,7 @@ describe('Ctrl+Space map lookup', () => {
     const [card] = lookup('burial', ctx)
     expect(card.group).toBe('Div cards by map')
     expect(card.name).toBe('Burial Chambers: 3 cards')
-    expect(card.sub).toBe('Best: The Doctor · 33 c · about 2.2 c per card drop')
+    expect(card.sub).toBe('Best: The Doctor · 33 c · about 2.2 c per card')
     const rows = card.sections[0].rows!
     expect(rows.map(r => r.label)).toEqual(['The Doctor', 'The Summoner', 'The Incantation'])
     expect(rows[0].item).toEqual({ name: 'The Doctor', type: 'DivinationCard' })
@@ -144,13 +144,12 @@ describe('build-card-drops', () => {
 // Guy's pick (veteran review, 2026-11-24): the chance a card drop in a map is
 // the card, from drop weights, and what a card drop there is worth.
 describe('card chance per map', () => {
-  it('counts the map\'s own weighted cards and the anywhere cards its level reaches', () => {
-    // Burial Chambers (tier 6, level 73): The Doctor and The Summoner. The
-    // Incantation has no weight, Birth of the Three no longer drops, House of
-    // Mirrors needs level 80.
+  it('counts only the map\'s own weighted cards', () => {
+    // Burial Chambers: The Doctor and The Summoner. The Incantation has no
+    // weight, Birth of the Three no longer drops.
     expect(mapPool(DATA, 'Burial Chambers Map').cards.map(c => c.name).sort()).toEqual(['The Doctor', 'The Summoner'])
-    // Pit of the Chimera (tier 16, level 83) lets House of Mirrors in.
-    expect(mapPool(DATA, 'Pit of the Chimera Map').cards.map(c => c.name)).toEqual(['House of Mirrors'])
+    // House of Mirrors is tied to no map, so it's in no map's list.
+    expect(mapPool(DATA, 'Pit of the Chimera Map').cards).toEqual([])
   })
   it('gives 1 in N card drops', () => {
     // 1 + 120689 / 900 = 135.1
@@ -175,10 +174,10 @@ describe('card chance per map', () => {
     const tip = mapTip(DATA, 'Burial Chambers Map', n => PRICES[n] ?? null, c => `${c.toFixed(1)}c`)
     const text = JSON.stringify(tip)
     expect(text).toContain('1 in 135')
-    expect(text).toContain('per card drop')
+    expect(text).toContain('per card from this map')
     const card = mapCardsLookup(DATA)('burial chambers', ctx)[0]
     const doctor = card.sections[0].rows!.find(r => r.label === 'The Doctor')!
     expect(doctor.note).toBe('1 in 135')
-    expect(card.sub).toContain('per card drop')
+    expect(card.sub).toContain('per card')
   })
 })
