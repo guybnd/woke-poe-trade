@@ -125,8 +125,9 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect.poll(async () => Math.round((await row.boundingBox())!.height)).toBeLessThan(before + 10)
     // Folded, Where it is keeps its title and drops its rows.
     const where = panel.getByRole('button', { name: 'Where it is' })
-    // A category row: a button with its share bar (an <i>) right inside.
-    const catRows = panel.locator('button[aria-pressed]:has(> i)')
+    // A category row: a button with its share bar (an <i>) right inside
+    // (not a row's leave-out button, which is one too).
+    const catRows = panel.locator('button[aria-pressed]:not([data-line-out]):has(> i)')
     await expect(where).toHaveAttribute('aria-expanded', 'true')
     expect(await catRows.count()).toBeGreaterThan(0)
     await where.click()
