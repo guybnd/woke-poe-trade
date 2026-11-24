@@ -9,7 +9,7 @@ import { ItemCategory, ItemRarity } from '@/parser'
 import type { ParsedItem } from '@/parser'
 
 const ORIGINATOR = "Area is Influenced by the Originator's Memories"
-// "Area is influenced by The Elder / The Shaper" (pseudo/maps.ts NO_ELDER_TRADE_ID).
+// "Area is influenced by The Elder / The Shaper" (ELDER_SHAPER_TRADE_ID in filters/pseudo/map-kind.ts).
 const INFLUENCE_TRADE_ID = 'implicit.stat_1792283443'
 
 // The implicit that puts a map in its own exchange entry.

@@ -44,7 +44,7 @@ export function applyTickPrefs (stats: FilterOrGroup[]) {
   for (const s of stats) {
     if ('group' in s && s.group) continue
     const f = s as StatFilter
-    if (f.not || f.inTotal || f.hidden) continue
+    if (f.not || f.inTotal || f.hidden || f.mapKind) continue
     const pref = prefs[tickKey(f)]
     if (pref) f.disabled = (pref === 'off')
   }

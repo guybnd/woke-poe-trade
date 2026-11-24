@@ -80,3 +80,22 @@ describe('Add a mod', () => {
     expect(and.filters).toContainEqual(expect.objectContaining({ id: 'explicit.stat_2878959938', value: expect.objectContaining({ min: undefined, max: -10 }) }))
   })
 })
+
+// Guy (2026-11-24): on a map, Add a mod offers map mods only, never item mods.
+describe('Add a mod on a map', () => {
+  let map: AddEntry[]
+  beforeAll(async () => {
+    await loadGameData()
+    map = buildAddIndex(STATS_ITERATOR(''), 'map')
+  })
+  it('finds map mods, not item mods', () => {
+    expect(searchAddIndex(map, 'cold damage', 'all', 50).map(h => h.entry.ref)).not.toContain('Adds # to # Cold Damage')
+    expect(searchAddIndex(map, 'block attack', 'all').map(h => h.entry.ref)).toContain('Monsters have +#% Chance to Block Attack Damage')
+    expect(searchAddIndex(map, 'elemental weakness', 'all')[0].entry.ref).toBe('Players are Cursed with Elemental Weakness')
+    expect(searchAddIndex(map, 'maximum life', 'all', 50).map(h => h.entry.ref)).not.toContain('+# to maximum Life')
+  })
+  it('only as prefix/suffix or implicit', () => {
+    expect(map.every(e => Object.keys(e.ids).every(k => k === 'explicit' || k === 'implicit'))).toBe(true)
+    expect(searchAddIndex(map, 'originator', 'all').map(h => h.kind)).toContain('implicit')
+  })
+})

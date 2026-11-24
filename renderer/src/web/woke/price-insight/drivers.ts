@@ -80,7 +80,7 @@ export interface Candidate { statRef: string, text: string, score: number }
 export function pickCandidates (stats: FilterOrGroup[], seed: string[], limit = 3): Candidate[] {
   const out: Candidate[] = []
   for (const f of stats) {
-    if (!isStat(f) || f.disabled || f.hidden || f.not) continue
+    if (!isStat(f) || f.disabled || f.hidden || f.not || f.mapKind) continue
     const rank = seedRank(f.statRef, seed)
     const roll = f.roll?.goodness ?? 0.5
     // A seed match outweighs roll quality; within each, better rolls first.
