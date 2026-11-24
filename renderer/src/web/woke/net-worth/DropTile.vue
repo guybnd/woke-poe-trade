@@ -78,6 +78,9 @@ function onKeys (e: KeyboardEvent) { lineKeys(e, state.value, handlers) }
 
 <style module>
 .drop { display: flex; gap: 6px; align-items: center; border: 1px solid var(--w-line); padding: 3px 4px; min-width: 0; }
+/* On a tile the hover actions keep their own spot at its end, clear of the
+   value and the tag. */
+.drop > :global(.w-line-acts) { position: static; transform: none; flex: none; }
 .art { width: 32px; height: 32px; flex: none; object-fit: contain; }
 .text { display: flex; flex-direction: column; min-width: 0; flex: 1; font-size: var(--w-fs-sm); }
 .sub { display: flex; align-items: baseline; gap: 4px; }

@@ -640,6 +640,9 @@ const tiles = computed(() => mapTileRows(inView.value, props.config.unit, divine
 .stratGrid { grid-template-columns: minmax(0, 1fr) 40px 40px 136px 52px; gap: 6px; }
 .sessGrid { grid-template-columns: 104px minmax(0, 1fr) 36px 52px 56px 52px; gap: 6px; }
 .tileGrid { grid-template-columns: minmax(0, 1fr) 36px 56px 56px 56px 48px; gap: 6px; }
+/* A map row is tall (its loot chips wrap): the hover actions stay under its
+   value, clear of the chips. */
+.runGrid > div:last-child > :global(.w-line-acts) { position: static; transform: none; }
 .runGrid { grid-template-columns: 16px minmax(0, 1fr) auto; gap: 8px; align-items: start; padding-top: 5px; padding-bottom: 5px; }
 .sel { background: var(--w-accent-soft); }
 .struck { text-decoration: line-through; }

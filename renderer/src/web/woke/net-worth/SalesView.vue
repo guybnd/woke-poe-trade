@@ -178,7 +178,9 @@ watch(types, (list) => { if (type.value && !list.some(t => t.id === type.value))
 .search { min-width: 150px; flex: 0 1 220px; }
 .scroll { max-height: 420px; overflow-y: auto; overscroll-behavior: contain; }
 .table { width: 100%; border-collapse: collapse; font-size: var(--w-fs-sm); table-layout: fixed; }
-.table th { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); font-weight: 500; text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--w-line-strong); white-space: nowrap; position: sticky; top: 0; background: var(--w-panel-solid); }
+.table th { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); font-weight: 500; text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--w-line-strong); white-space: nowrap; position: sticky; top: 0; z-index: 3; background: var(--w-panel-solid); }
+/* The last cell is wide enough for the hover actions laid over it. */
+.table td:last-child { min-width: 4.6em; }
 .table th:nth-child(1) { width: 42%; }
 .table td { padding: 2px 6px; text-align: right; border-bottom: 1px solid var(--w-line-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .table tbody tr:hover td { background: var(--w-panel-2); }

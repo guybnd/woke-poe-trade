@@ -559,7 +559,7 @@ function addPerMap (l: AddedLine) {
 .col { display: grid; grid-template-columns: 18px minmax(0, 1fr) max-content; column-gap: 6px; row-gap: 2px; align-content: start; min-width: 0; }
 .col > * { grid-column: 1 / -1; min-width: 0; }
 .col > [data-run-row], .col > .colHead { display: grid; grid-template-columns: subgrid; }
-.col > :not([data-run-row]):not(.colHead) { justify-self: start; }
+.col > button { justify-self: start; }
 .colHead { align-items: baseline; border-bottom: 1px solid var(--w-line-strong); padding-bottom: 2px; margin-bottom: 2px; }
 .colTitleBox { grid-column: 1 / 3; display: flex; align-items: baseline; gap: var(--w-s2); min-width: 0; }
 .colSum { grid-column: 3; text-align: right; white-space: nowrap; }

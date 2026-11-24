@@ -157,6 +157,9 @@ function save () {
    is clicked to change it. */
 /* Each cell on row 1 by hand: the actions share the name's cell. */
 .row > :nth-child(1) { grid-area: 1 / 1; } .row > :nth-child(2) { grid-area: 1 / 2; } .row > :nth-child(3) { grid-area: 1 / 3; }
+/* Hovered, the name makes room for them, so the chips in it (live, before)
+   stay clickable. */
+.row:hover > .name, .row:focus-within > .name { padding-right: 3.6em; }
 .row > :global(.w-line-acts) { position: relative; top: auto; transform: none; grid-column: 2; grid-row: 1; justify-self: end; }
 .icon { width: 18px; height: 18px; object-fit: contain; }
 .name { min-width: 0; display: flex; align-items: baseline; gap: 6px; }

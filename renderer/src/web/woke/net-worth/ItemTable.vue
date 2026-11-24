@@ -302,7 +302,6 @@ function menuOf (l: ValuedLine): ItemMenuRef {
 .editCell { padding: 0 2px !important; }
 .edit { display: inline-flex; align-items: center; gap: 2px; justify-content: flex-end; width: 100%; }
 .editInput { width: 100%; min-width: 0; max-width: 64px; font: inherit; font-family: var(--w-num); text-align: right; color: var(--w-fg); background: var(--w-panel-3); border: 1px solid var(--w-gold); border-radius: var(--w-r-sm); padding: 0 3px; }
-.table th:last-child { width: 3.2em; cursor: default; }
 .struck { text-decoration: line-through; color: var(--w-dim); }
 .tag { flex: none; }
 .tab { max-width: 0; overflow: hidden; text-overflow: ellipsis; }
