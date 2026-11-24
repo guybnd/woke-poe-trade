@@ -235,5 +235,16 @@ export function isFragmentSet (group: DropEntry): boolean {
   return group.query.length === 4 && SET_FIRSTS.has(keyName(group.query[0]).name)
 }
 
+// Upstream groups whose items aren't drops, only things the query items go
+// with: Harvest's lifeforce crafts, Blight's special oils, the Eldritch
+// currencies and Orb of Conflict (poedb: The Maven drops it). Timeless
+// splinters make the emblems, which the splinter recipe shows. Their items
+// are never shown as "Drops from" or "Drops in".
+const NOT_DROPS = new Set(['Essence of Insanity', 'Primal Crystallised Lifeforce', 'Golden Oil', 'Lesser Eldritch Ember', 'Lesser Eldritch Ichor', 'Timeless Eternal Empire Splinter'])
+
+export function dropsAreReal (group: DropEntry): boolean {
+  return !NOT_DROPS.has(keyName(group.query[0]).name)
+}
+
 // For tests: the book is built once per game data load.
 export function resetRecipeCache () { cache = null }

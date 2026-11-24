@@ -2,7 +2,7 @@
 // recipes, upgrades, combines, splinters; card rewards and fragment sets.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { ITEM_BY_REF, ITEM_DROP } from '@/assets/data'
-import { cardsFor, isFragmentSet, recipeBook, recipesOf, recipeSum, recipeTitle, resetRecipeCache, resolveParts } from '@/web/woke/related-family/recipe'
+import { cardsFor, dropsAreReal, isFragmentSet, recipeBook, recipesOf, recipeSum, recipeTitle, resetRecipeCache, resolveParts } from '@/web/woke/related-family/recipe'
 import { loadGameData } from '../helpers/game-data'
 
 beforeAll(async () => { await loadGameData(); resetRecipeCache() })
@@ -105,5 +105,14 @@ describe('card rewards and sets', () => {
   it('knows the fragment sets', () => {
     const sets = ITEM_DROP.filter(isFragmentSet).map(g => g.query[0])
     expect(sets).toEqual(['ITEM::Sacrifice at Dawn', 'ITEM::Mortal Ignorance', 'ITEM::Fragment of the Minotaur', 'ITEM::Fragment of Eradication', 'ITEM::Fragment of Knowledge', "ITEM::Al-Hezmin's Crest"])
+  })
+  it("doesn't call Harvest, oil or Eldritch groups drops", () => {
+    const into = (name: string) => ITEM_DROP.filter(g => g.items.includes(`ITEM::${name}`) && dropsAreReal(g))
+    // Primal lifeforce doesn't drop from corrupted essences (poedb), and
+    // Delirium Orbs, fossils and oils don't drop from lifeforce.
+    expect(into('Primal Crystallised Lifeforce')).toEqual([])
+    for (const n of ["Diviner's Delirium Orb", 'Fractured Fossil', 'Reflective Oil', 'Lesser Eldritch Ichor', 'Lesser Eldritch Ember', 'Timeless Karui Emblem']) expect(into(n)).toEqual([])
+    // Orb of Conflict still drops from The Maven's group.
+    expect(into('Orb of Conflict').map(g => g.query[0])).toEqual(['ITEM::Crescent Splinter'])
   })
 })
