@@ -64,7 +64,8 @@
     <w-setting-section title="Per hour">
       <w-setting-row label="Time counted" show-hint
         hint="Every per hour number uses this: Net worth, strategy runs, Session story, Session analytics and Ctrl+Space. Play only counts maps and other areas. Play + hideout adds hideout and town. All time also counts AFK and the game closed.">
-        <w-segmented :model-value="rateTimeNow" :options="RATE_TIMES" data-rate-time @update:model-value="setRateTime($event as RateTime)" />
+        <!-- The live value, as in every tool (not this window's copy), so both stay in step. -->
+        <RateTimePick data-rate-time />
       </w-setting-row>
     </w-setting-section>
     <StashSignIn v-if="personalOn" />
@@ -76,10 +77,8 @@ import { computed, defineAsyncComponent, shallowRef } from 'vue'
 import type { Config } from '@/web/Config'
 import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
-import { WButton, WField, WPathField, WSegmented, WSelect, WSettingRow, WSettingSection, WToggle, agoPhrase } from '../ui'
-import { RATE_TIMES, rateTimeOf } from '../shared/rate-time'
-import type { RateTime, RateTimeHolder } from '../shared/rate-time'
-import { ensureWokeConfig } from '../modules'
+import { WButton, WField, WPathField, WSelect, WSettingRow, WSettingSection, WToggle, agoPhrase } from '../ui'
+import RateTimePick from '../shared/RateTimePick.vue'
 import { hostRequest } from '../shared/host'
 import { personalOn } from '../personal'
 
@@ -142,12 +141,6 @@ function setCharacter (v: string) {
     const w = widget(t)
     if (w) w.charName = v.trim()
   }
-}
-
-// What every per hour counts (shared/rate-time.ts).
-const rateTimeNow = computed(() => rateTimeOf(props.config as unknown as RateTimeHolder))
-function setRateTime (t: RateTime) {
-  ensureWokeConfig(props.config).woke.rateTime = t
 }
 
 interface FoundLog { path: string, source: string, modified: number }

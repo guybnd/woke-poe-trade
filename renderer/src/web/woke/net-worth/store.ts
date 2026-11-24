@@ -254,6 +254,15 @@ function glanceAt (id: string, at: number, chaos: number, netChaos: number | nul
   return g
 }
 
+// The Per hour choice changed (shared/rate-time.ts): the saved dock number
+// and Ctrl+Space's answer follow now instead of at the next read.
+watch(rateTime, () => {
+  const last = glance.value
+  if (!last || last.league !== loadedFor) return
+  const saved = glanceAt(last.league, last.at, last.chaos, last.netChaos, last.todayChaos ?? null)
+  hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(last.league), value: saved }).catch(() => {})
+})
+
 // The points' purchase fields from the gains, worked out in time order
 // (spend.ts): a flip moves the refreshes after it too.
 function withSpends (points: LedgerPoint[], gains: StashGain[]): LedgerPoint[] {

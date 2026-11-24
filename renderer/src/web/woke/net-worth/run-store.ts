@@ -131,13 +131,16 @@ async function saveGlance (league: string, run: Run | null, points: readonly Led
   if (run) {
     const now = Date.now()
     const maps = mapsIn(run, await readRunMaps(run, now), now)
-    const spent = await runSpent(run.startAt, now)
+    // Profit runs to the last read, so its time does too (Start and edits
+    // save the glance between reads).
+    const timeTo = Math.max(run.startAt, points[points.length - 1]?.at ?? run.startAt)
+    const spent = await runSpent(run.startAt, timeTo)
     const fights = spent?.fights ?? 0
     const time = spent?.ms
     const t = runTotals(run, points, { maps, fights }, now, undefined, await glanceOutside(league, run))
     g = { league, name: run.name, startAt: run.startAt, at: now, profitChaos: t.profitChaos, maps, perHourChaos: t.perHourChaos, costPerMapChaos: t.costPerMapChaos, divine }
     if (fights) g.fights = fights
-    if (time) g.time = time
+    if (time) { g.time = time; g.timeTo = timeTo }
     if (t.faustusChaos) g.faustusChaos = t.faustusChaos
   }
   await hostRequest('doc-put', { collection: COLLECTION, key: runGlanceKey(league), value: g }).catch(() => {})

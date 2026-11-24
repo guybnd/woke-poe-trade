@@ -48,6 +48,8 @@ describe('profit', () => {
     // All time, or no Client.txt: the clock.
     expect(runPerHour(500, H, split, 'all')).toBe(500)
     expect(runPerHour(500, H, null, 'play')).toBe(500)
+    // A Client.txt with nothing written in the run: the clock, not "never".
+    expect(runPerHour(500, H, { map: 0, play: 0, hub: 0, off: H }, 'play')).toBe(500)
     // Under 10 minutes counted: no rate yet.
     expect(runPerHour(500, H, { map: 5 * M, play: 0, hub: 0, off: 55 * M }, 'play')).toBeNull()
   })

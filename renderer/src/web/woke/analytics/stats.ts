@@ -56,7 +56,7 @@ export function rateFor (s: { divine: number | null }, unit: AnalyticsUnit, fall
 // (shared/rate-time.ts). Farming's sessions kept hideout and AFK as one
 // "other" time, so "play" counts the time inside maps only and the others
 // count it all; a session without map detail has only its whole length.
-export function sessionUnits (s: SessionRecord, unit: AnalyticsUnit, fallbackDivine: number | null, keepExcluded = false, time: RateTime = 'hub'): Unit[] {
+export function sessionUnits (s: SessionRecord, unit: AnalyticsUnit, fallbackDivine: number | null, time: RateTime, keepExcluded = false): Unit[] {
   const rate = rateFor(s, unit, fallbackDivine)
   if (!rate) return []
   const total = sessionTotals(s)
@@ -206,7 +206,7 @@ export function buildRow (key: string, strategy: string, kind: 'maps' | 'boss', 
   }
 }
 
-export function strategyRows (sessions: SessionRecord[], unit: AnalyticsUnit, fallbackDivine: number | null, time: RateTime = 'hub'): StrategyRow[] {
+export function strategyRows (sessions: SessionRecord[], unit: AnalyticsUnit, fallbackDivine: number | null, time: RateTime): StrategyRow[] {
   const groups = new Map<string, SessionRecord[]>()
   for (const s of sessions) {
     const name = s.strategy.trim() || 'Unnamed'
@@ -224,9 +224,9 @@ export function strategyRows (sessions: SessionRecord[], unit: AnalyticsUnit, fa
     let mapMs = 0
     let allMs = 0
     for (const s of list) {
-      const u = sessionUnits(s, unit, fallbackDivine, false, time)
+      const u = sessionUnits(s, unit, fallbackDivine, time)
       units.push(...u)
-      const ph = perHour(sessionUnits(s, unit, fallbackDivine, true, time))
+      const ph = perHour(sessionUnits(s, unit, fallbackDivine, time, true))
       if (ph != null) trend.push(ph)
       // Maps left out don't count, as in the averages: their share of the time
       // isn't in `units`, so counting them would inflate maps per hour.
@@ -267,11 +267,11 @@ export interface MapTileRow {
 }
 
 // Results by map tile (Strand, Cemetery…) across sessions with map detail.
-export function mapTileRows (sessions: SessionRecord[], unit: AnalyticsUnit, fallbackDivine: number | null): MapTileRow[] {
+export function mapTileRows (sessions: SessionRecord[], unit: AnalyticsUnit, fallbackDivine: number | null, time: RateTime): MapTileRow[] {
   const groups = new Map<string, Unit[]>()
   for (const s of sessions) {
     if (!s.runs.length) continue
-    for (const u of sessionUnits(s, unit, fallbackDivine)) {
+    for (const u of sessionUnits(s, unit, fallbackDivine, time)) {
       const list = groups.get(u.name)
       if (list) list.push(u)
       else groups.set(u.name, [u])

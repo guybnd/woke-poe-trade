@@ -53,7 +53,7 @@ describe('Farming first mount', () => {
 
 describe('session analytics', () => {
   it('maps you left out do not count in maps per hour or cost per map', () => {
-    const [row] = strategyRows([session({ runs: [run(), run({ excluded: true })] })], 'chaos', null)
+    const [row] = strategyRows([session({ runs: [run(), run({ excluded: true })] })], 'chaos', null, 'hub')
     expect(row.maps).toBe(1)
     expect(row.mapsPerHour).toBeCloseTo(6, 5)
     expect(row.costPerMap).toBe(10)
@@ -81,7 +81,7 @@ describe('session analytics', () => {
   })
 
   it('share of time in maps leaves out maps you left out', () => {
-    const [row] = strategyRows([session({ runs: [run({ otherMs: 600_000 }), run({ excluded: true, otherMs: 0 })] })], 'chaos', null)
+    const [row] = strategyRows([session({ runs: [run({ otherMs: 600_000 }), run({ excluded: true, otherMs: 0 })] })], 'chaos', null, 'hub')
     expect(row.mapShare).toBeCloseTo(0.5, 5)
   })
 

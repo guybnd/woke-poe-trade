@@ -7,12 +7,6 @@
 // Pure: rate-time-now.ts reads the setting.
 
 export type RateTime = 'play' | 'hub' | 'all'
-export const RATE_TIMES: ReadonlyArray<{ value: RateTime, label: string }> = [
-  { value: 'play', label: 'Play only' },
-  { value: 'hub', label: 'Play + hideout' },
-  { value: 'all', label: 'All time' }
-]
-
 export interface RateTimeHolder { woke?: { rateTime?: RateTime }, widgets?: Array<{ wmType: string, rateWithHub?: boolean }> }
 
 // Unset: Net worth's old "Leave out hideout" box, unticked, carries over as
