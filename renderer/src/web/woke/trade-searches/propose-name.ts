@@ -23,7 +23,7 @@ export function shortStatLabel (text: string): string {
 
 function tickedStats (stats: FilterOrGroup[]): StatFilter[] {
   return stats.filter((s): s is StatFilter =>
-    !s.group && !s.disabled && !s.not && !s.hidden && s.tag !== FilterTag.Property && Boolean(s.text))
+    !s.group && !s.disabled && !s.not && !s.mapKind && !s.hidden && s.tag !== FilterTag.Property && Boolean(s.text))
 }
 
 function clip (name: string): string {

@@ -8,6 +8,7 @@ import { TradeResponse, Account, getTradeEndpoint, adjustRateLimits, RATE_LIMIT_
 import { stat, STAT_BY_REF_V2, pseudoStatByRef } from '@/assets/data'
 import { decodeFamilyFromSource as decodeMercenarySupports, SearchMode as MercSearchMode } from '../filters/pseudo/mercenary'
 import { RateLimiter } from './RateLimiter'
+import { kindToQuery } from '../filters/pseudo/map-kind'
 import { ModifierType } from '@/parser/modifiers'
 import { Cache } from './Cache'
 import { listingTipItem, ListingItem } from '@/web/woke/price-insight/listing-tip'
@@ -617,7 +618,7 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
     return stat
   })
 
-  type NoUiStatFilter = Pick<StatFilter, 'not' | 'noElder' | 'fracShare' | keyof BareStatFilter>
+  type NoUiStatFilter = Pick<StatFilter, 'not' | 'mapKind' | 'disabled' | 'fracShare' | keyof BareStatFilter>
   const realStats: NoUiStatFilter[] = stats.filter((stat): stat is StatFilter =>
     !stat.group &&
     !INTERNAL_TRADE_IDS.includes(stat.tradeId[0]))
@@ -798,12 +799,13 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
       const add = (v: number | '' | undefined) => typeof v === 'number' ? v + share : v
       stat = { ...stat, roll: { ...stat.roll, min: add(stat.roll.min), max: add(stat.roll.max) } }
     }
-    if (stat.noElder) {
-      // woke: an option stat with no option matches nothing, so "not" left out nothing.
-      // Each influence goes in by its option (1 Shaper, 2 Elder; checked live 2026-11-24).
-      for (const option of [1, 2]) {
-        qNot.filters.push({ id: stat.tradeId[0], value: { option }, disabled: stat.disabled })
-      }
+    if (stat.mapKind) {
+      // woke: the map's kind (pseudo/map-kind.ts). An option stat with no option matches
+      // nothing, so each influence goes in by its option (1 Shaper, 2 Elder; checked live 2026-11-24).
+      const q = kindToQuery(stat as StatFilter)
+      qAnd.filters.push(...q.and)
+      qNot.filters.push(...q.not)
+      if (q.count) query.stats.push({ type: 'count', value: { min: 1 }, filters: q.count })
     } else if (stat.not) {
       qNot.filters.push(...everyTradeIdToQuery(stat))
     } else {

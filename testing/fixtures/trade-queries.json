@@ -783,6 +783,172 @@
    }
   }
  },
+ "map-citadel.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_2563183002|1",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1588049749",
+       "value": {
+        "min": 50
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_3350803563",
+       "value": {},
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_tier": {
+       "min": 16,
+       "max": 16
+      },
+      "map_blighted": {
+       "option": "false"
+      },
+      "map_uberblighted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "map",
+    "option": "Map"
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_2563183002|1",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1588049749",
+       "value": {
+        "min": 50
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3350803563",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_tier": {
+       "min": 16,
+       "max": 16
+      },
+      "map_blighted": {
+       "option": "false"
+      },
+      "map_uberblighted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "map",
+    "option": "Map"
+   }
+  }
+ },
  "map-nightmare-330.txt": {
   "opened": {
    "status": {
