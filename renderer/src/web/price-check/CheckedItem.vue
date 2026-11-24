@@ -109,6 +109,8 @@
         <button type="button" class="w-pc-bulk ml-1" data-exchange-chip :title="exchangeTitle" @click="searchExchange">Exchange</button>
       </template>
     </trade-listing>
+    <!-- woke: an item you have listed at Faustus: set a new price on it (Net worth › Listed). -->
+    <woke-listed-price-bar v-if="listedBarOn" :item="item" />
     <trade-bulk
       v-if="(tradeAPI === 'bulk' || exchangeView) && doSearch"
       ref="tradeService"
@@ -153,7 +155,6 @@ import { createPresets } from './filters/create-presets'
 import PricePrediction from './price-prediction/PricePrediction.vue'
 import StackValue from './expected-value/StackValue.vue'
 import WokeRollPresets from '@/web/woke/price-insight/RollPresets.vue'
-import WokeBuildFitChip from '@/web/woke/pob-builds/BuildFitChip.vue'
 import WokeFilterVerdictChip from '@/web/woke/loot-filter/FilterVerdictChip.vue'
 import FilterName from './filters/FilterName.vue'
 import { provideSwap } from '@/web/woke/harvest-swap/useSwap'
@@ -168,7 +169,7 @@ import type { ResultsState } from '@/web/woke/price-insight/local-filter'
 type LocalFilter = typeof import('@/web/woke/price-insight/local-filter')
 const loadLocalFilter = () => import('@/web/woke/price-insight/local-filter')
 import { AppConfig } from '@/web/Config'
-import { isModuleOn } from '@/web/woke/modules'
+import { isModuleOn, isWidgetTypeOn } from '@/web/woke/modules'
 import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
@@ -187,6 +188,7 @@ export default defineComponent({
   components: {
     // woke: lazy, so the map strip and its checks stay out of the startup bundle.
     WokeMapStrip: defineAsyncComponent(() => import('@/web/woke/map-mods/MapModStrip.vue')),
+    WokeListedPriceBar: defineAsyncComponent(() => import('@/web/woke/net-worth/ListedPriceBar.vue')),
     WokeValdoStrip: defineAsyncComponent(() => import('@/web/woke/valdo/ValdoStrip.vue')),
     // Loads when the Flip tab is first opened.
     WokeSwapFlip: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapFlip.vue')),
@@ -202,7 +204,8 @@ export default defineComponent({
     WokeDustChip: defineAsyncComponent(() => import('@/web/woke/price-insight/DustChip.vue')),
     WokeDustVerdictChip: defineAsyncComponent(() => import('@/web/woke/disenchant/DustVerdictChip.vue')),
     WokeRollPresets,
-    WokeBuildFitChip,
+    // Loaded on the first check: out of startup (it brings the build model).
+    WokeBuildFitChip: defineAsyncComponent(() => import('@/web/woke/pob-builds/BuildFitChip.vue')),
     WokeHighRollChip: defineAsyncComponent(() => import('@/web/woke/price-insight/HighRollChip.vue')),
     WokeFilterVerdictChip,
     WokeDeckVerdictChip: defineAsyncComponent(() => import('@/web/woke/stacked-decks/DeckVerdictChip.vue')),
@@ -616,6 +619,8 @@ export default defineComponent({
       isGem: computed(() => props.item.category === ItemCategory.Gem),
       isViscera: computed(() => props.item.category === ItemCategory.Viscera),
       isDivCard: computed(() => props.item.category === ItemCategory.DivinationCard),
+      // Net worth's type, written out: its widget module stays out of startup.
+      listedBarOn: computed(() => isWidgetTypeOn(AppConfig(), 'woke-net-worth')),
       isNightmareMap: computed(() => props.item.info.refName === 'Nightmare Map' && isModuleOn(AppConfig(), 'boss-runs')),
       ninjaCardOpen,
       ninjaVerdictShown,

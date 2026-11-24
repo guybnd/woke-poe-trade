@@ -25,6 +25,10 @@ const SALES = JSON.stringify({
 })
 
 test('the stash reader turns on, reads the picked tabs, and Net worth prices them', async ({ overlay, fakeApp }) => {
+  // One long walk: reads, two runs started and stopped (each Stop reads the
+  // stash and your Faustus listings), their summaries, past runs. About 35 s
+  // alone and over 45 s on a loaded runner, so it gets more than the default.
+  test.setTimeout(90_000)
   let dump = DUMP
   fakeApp.site.reply = (url) => {
     const u = new URL(url)
@@ -331,16 +335,17 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await listedRows.filter({ hasText: 'Headhunter' }).getByText('Headhunter', { exact: true }).hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
     await overlay.page.mouse.move(0, 0)
-    // Still cheapest? (WOKEPOET-535): Check runs one search for that item,
-    // instant buyout, cheapest first. One other seller asks less: 2nd.
+    // Still cheapest? (WOKEPOET-535): the quick rank (the bolt) runs one search
+    // by name, instant buyout, cheapest first. One other seller asks less: 2nd.
     const hhCheck = listedRows.filter({ hasText: 'Headhunter' }).locator('[data-listed-check]')
-    await hhCheck.getByRole('button', { name: 'Check' }).click()
+    await listedRows.filter({ hasText: 'Headhunter' }).hover()
+    await hhCheck.locator('[data-listed-quick]').click()
     await expect(hhCheck).toContainText('2nd', { timeout: 15_000 })
     expect(searches).toHaveLength(searchesBefore + 2)
     expect(searches.at(-1)).toContain('"name":"Headhunter"')
     await expect(panel.getByText('Undercut 1')).toBeVisible()
-    // Rows nobody checked still offer Check; no search went out for them.
-    await expect(listedRows.filter({ hasText: "Kaom's Heart" }).locator('[data-listed-check]')).toContainText('Check')
+    // Rows nobody checked offer a price check; no search went out for them.
+    await expect(listedRows.filter({ hasText: "Kaom's Heart" }).locator('[data-listed-check]')).toContainText('Price check')
     // A chip: the head names it and totals its rows (all three are uniques here).
     const head = panel.locator('[data-listed] [data-listed-total]')
     const allAsk = await head.innerText()
@@ -349,6 +354,28 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect(head).toHaveText(allAsk)
     await panel.locator('[data-listed]').getByText(/^Uniques 3$/).click()
     await expect(panel.locator('[data-listed-filtered]')).toHaveCount(0)
+    // Price check (R1, and Guy 2026-11-24): the full price check opens on the
+    // listing, ranks it from what it loaded, and its foot sets a new price
+    // that Listed keeps as a to-do.
+    const hhRow = listedRows.filter({ hasText: 'Headhunter' })
+    await hhRow.locator('[data-listed-reprice]').click()
+    const priceBar = overlay.page.locator('[data-listed-bar]')
+    await expect(priceBar).toBeVisible({ timeout: 20_000 })
+    await expect(hhRow.locator('[data-listed-reprice]')).toHaveAttribute('title', /in your price check/, { timeout: 15_000 })
+    await priceBar.getByLabel('Your price', { exact: true }).fill('7')
+    await priceBar.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(priceBar.locator('[data-listed-bar-target]')).toContainText('set 7 div')
+    await expect(hhRow.locator('[data-listed-target]')).toContainText('7 div')
+    // Closed by its own button (Esc would close the whole overlay).
+    await overlay.page.locator('#price-window [data-price-close]').click()
+    await expect(priceBar).toBeHidden()
+    // Closing the price check gives the game focus back (the fake game takes
+    // it when told), which hides the overlay: then open it again.
+    await expect(panel).toBeHidden()
+    fakeApp.focusGame(true)
+    await overlay.pressHotkey(overlay.config.overlayKey)
+    // (Its outer box measures 0 high after a reshow; its contents show.)
+    await expect(panel.getByRole('tab', { name: 'Listed' })).toBeVisible()
     await overlay.snap('net worth listed')
 
     // Stale after 1 day: Headhunter is. The icon counts it only in your hideout.

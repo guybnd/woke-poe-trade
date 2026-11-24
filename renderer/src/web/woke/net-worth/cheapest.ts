@@ -10,6 +10,7 @@
 import type { Listing } from './faustus'
 import { ROLLED_UNIQUES } from './pending'
 import { saleType } from './sales'
+import type { TargetPrice } from './listed-target'
 
 export interface CheapestCheck {
   at: number
@@ -27,12 +28,18 @@ export interface CheapestCheck {
   total: number
   // Its rolls, corruption or mods move the price: a name search is rough.
   rough?: boolean
+  // From a price check of the listing (its own mods and your filters), not a
+  // search by name: never rough, and not only instant buyout.
+  priceCheck?: true
 }
 
 export interface CheapestDoc {
   league: string
   // Item id → its last check.
   checks: Record<string, CheapestCheck>
+  // Item id → the price you set from the price check, to reprice in game
+  // (listed-target.ts).
+  targets?: Record<string, TargetPrice>
 }
 
 export const cheapestKey = (league: string) => `${league}-cheapest`
@@ -126,7 +133,16 @@ export function checkFor (doc: CheapestDoc | null, l: Listing): CheapestCheck | 
 export function withCheck (doc: CheapestDoc | null, league: string, id: string, check: CheapestCheck): CheapestDoc {
   const old = doc?.league === league ? doc.checks : {}
   const entries = Object.entries({ ...old, [id]: check }).sort((a, b) => b[1].at - a[1].at).slice(0, MAX_KEPT)
-  return { league, checks: Object.fromEntries(entries) }
+  const targets = doc?.league === league ? doc.targets : undefined
+  return { league, checks: Object.fromEntries(entries), ...(targets ? { targets } : {}) }
+}
+
+// A price set (or cleared, null) on a listing; the oldest dropped past MAX_KEPT.
+export function withTarget (doc: CheapestDoc | null, league: string, id: string, target: TargetPrice | null): CheapestDoc {
+  const same = doc?.league === league ? doc : null
+  const rest = Object.entries(same?.targets ?? {}).filter(([k]) => k !== id)
+  const entries = (target ? [...rest, [id, target] as [string, TargetPrice]] : rest).sort((a, b) => b[1].at - a[1].at).slice(0, MAX_KEPT)
+  return { league, checks: same?.checks ?? {}, ...(entries.length ? { targets: Object.fromEntries(entries) } : {}) }
 }
 
 export function ordinal (n: number): string {
@@ -137,4 +153,13 @@ export function ordinal (n: number): string {
 // The cell's short text: "1st", "4th", "11th+".
 export function rankText (c: CheapestCheck): string {
   return `${c.rough ? '~' : ''}${ordinal(c.cheaper + 1)}${c.more ? '+' : ''}`
+}
+
+// A price check of the listing (opened from Listed, or Ctrl+D on it) ranks it
+// from the listings it loaded: no search of its own.
+// `byName`: the check had no item data (a search by name), so as rough as
+// the quick rank; otherwise its own mods were searched (undefined isn't saved).
+export function checkFromAsks (l: Listing, mineEach: number, asks: readonly number[], mine: number, total: number | null, all: boolean, at: number, byName = false): CheapestCheck {
+  const fetched: FetchedAsk[] = [...asks.map(c => ({ chaosEach: c, mine: false })), ...Array.from({ length: mine }, () => ({ chaosEach: null, mine: true }))]
+  return { ...summarize(l, mineEach, fetched, total ?? asks.length + mine, all, at), rough: byName && isRough(l) ? true : undefined, priceCheck: true }
 }
