@@ -1,5 +1,5 @@
 <template>
-  <DockItem id="claude" icon="fas fa-envelope" title="Suggestions" :show="open.length > 0"
+  <DockItem id="claude" icon="fas fa-envelope" :art="gameIcon(DOCK_ART_ITEMS.suggestions)" title="Suggestions" :show="open.length > 0"
     :badge="open.length" :wake="open.length" card-width="24rem" :menu="dockMenu">
     <template #card>
       <div :class="$style.body" data-claude-card>
@@ -24,6 +24,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, shallowRef } from 'vue'
 import DockItem from '../dock/DockItem.vue'
+import { DOCK_ART_ITEMS, gameIcon } from '../ui/game-icons'
 import WButton from '../ui/WButton.vue'
 import { toast } from '../ui'
 import { describeEdit, isValidEdit } from '../loot-filter/edits'

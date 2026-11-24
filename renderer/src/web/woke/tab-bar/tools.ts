@@ -1,7 +1,7 @@
 // Display info for the overlay tab bar: icon, name and group per widget type.
 import { MODULES, MODULE_GROUPS, ModuleGroup } from '@/web/woke/modules'
 import type { Anchor, WidgetMenu } from '@/web/overlay/widgets'
-import { moduleIconForWidget } from '../ui/game-icons'
+import { gameIcon, moduleIconForWidget } from '../ui/game-icons'
 
 // Stored on the menu widget's own config. Older configs have neither field.
 export interface TabBarConfig extends WidgetMenu {
@@ -129,14 +129,24 @@ export function toolDescription (wmType: string): string {
   return MODULES.find(m => m.widgetTypes.includes(wmType))?.description ?? APT_DESCRIPTIONS[wmType] ?? ''
 }
 
+// Tools with no module entry: Net worth while it's off (its code isn't
+// loaded), and Ctrl+Space search. Same art as when they're on.
+const TOOL_ICONS: Record<string, { item?: string, fa: string }> = {
+  'woke-net-worth': { item: 'Mirror of Kalandra', fa: 'fa-scale-balanced' },
+  'woke-search': { fa: 'fa-search' }
+}
+
 export function artFor (wmType: string): string | null {
-  return moduleIconForWidget(wmType)?.art ?? null
+  const mod = moduleIconForWidget(wmType)
+  if (mod) return mod.art
+  const item = TOOL_ICONS[wmType]?.item
+  return item ? gameIcon(item) : null
 }
 
 export function iconFor (wmType: string): string {
   const mod = moduleIconForWidget(wmType)
   if (mod) return mod.fa.replace(/^fa[srb] /, '')
-  return APT_ICONS[wmType] ?? 'fa-window-maximize'
+  return TOOL_ICONS[wmType]?.fa ?? APT_ICONS[wmType] ?? 'fa-window-maximize'
 }
 
 // Only APT's own multi widgets may have several copies (each holds different

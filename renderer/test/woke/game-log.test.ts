@@ -1,11 +1,11 @@
 // Modules that follow Client.txt: the campaign route, farming map counts,
 // league mechanic detection and the lab. Driven by the recorded logs in
 // testing/fixtures/client-logs.
-import { describe, it, expect } from 'vitest'
+import { beforeAll, describe, it, expect } from 'vitest'
 import { fixture } from '../helpers/game-data'
 import { parseLogLine, actFromAreaId, isTown } from '@/web/woke/campaign/log-parse'
 import { pickStage } from '@/web/woke/pob-builds/build-model'
-import { gemData } from '@/web/woke/pob-builds/gems'
+import { gemData, gemsReady } from '@/web/woke/pob-builds/gems'
 import { bundledRoute, routeData } from '@/web/woke/campaign/route-data'
 import { actProgress, advanceOnEnter, resyncTo, DEFAULT_ROUTE_OPTIONS, xpMultiplier } from '@/web/woke/campaign/route-parse'
 import { routeAsleepAfter } from '@/web/woke/campaign/widget'
@@ -17,6 +17,9 @@ import { BOSS_ARENAS, arenaBosses, zoneKind } from '@/web/woke/shared/zone'
 import { BOSSES } from '@/web/woke/boss-runs/bosses'
 import { mechanicForZone } from '@/web/woke/mechanics/data'
 import { difficultyForAreaLevel, labDifficultyOf, isPlazaArea, msUntilLabReset, PLAZA_ZONE, staleLayoutDate } from '@/web/woke/lab/lab'
+
+// The gem table loads as its own chunk.
+beforeAll(() => gemsReady)
 
 function logLines (name: string): string[] {
   return fixture(`client-logs/${name}`).split('\n').filter(l => l && !l.startsWith('#'))

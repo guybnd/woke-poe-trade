@@ -1,12 +1,15 @@
 // Reading items and notes from a PoB build for the build detail panel.
-import { describe, it, expect } from 'vitest'
+import { beforeAll, describe, it, expect } from 'vitest'
 import { parseBuild, parseItemText } from '../../../main/src/woke/pob-parse'
 import { allLinkGroups, buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, itemBase, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine, treeAfter, treeAhead, treeStep, pointsBy } from '@/web/woke/pob-builds/build-model'
 import { moveBuildPins, treePin } from '@/web/woke/pob-builds/build-pins'
 import type { Pin } from '@/web/woke/pins/pins'
-import { gemWhere, nextGems } from '@/web/woke/pob-builds/gems'
+import { gemWhere, gemsReady, nextGems } from '@/web/woke/pob-builds/gems'
 import { PINNED_GROUP, groupBuilds, moveBuildRefs } from '@/web/woke/pob-builds/widget'
 import type { PobBuildEntry, PobBuildsWidget, PobDetails, PobItem, PobItemSet, PobSkillSet } from '@/web/woke/pob-builds/widget'
+
+// The gem table loads as its own chunk.
+beforeAll(() => gemsReady)
 
 describe('mod ranges', () => {
   it('uses the roll PoB saved, inline or by line number, else the middle', () => {
