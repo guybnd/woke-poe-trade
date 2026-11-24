@@ -13,6 +13,7 @@ import { SESSION_STORY_TYPE, initSessionStoryWidget } from './woke/session-story
 import { STACKED_DECKS_TYPE, initStackedDecksWidget } from './woke/stacked-decks/deck'
 import { POE_RE_TYPE, initPoeReWidget } from './woke/regex-library/poe-re-widget'
 import { MEGALO_TYPE, initMegaloWidget } from './woke/megalo/widget'
+import { FORBIDDEN_TYPE, initForbiddenWidget } from './woke/forbidden/widget'
 import { SEARCH_TYPE, initSearchWidget, moveSearchKey } from './woke/search/widget'
 import type { SearchWidget } from './woke/search/widget'
 import { moveStashSearchToLibrary } from './woke/regex-library/apt-import'
@@ -532,7 +533,8 @@ function upgradeConfig (_config: Config): Config {
       [SESSION_STORY_TYPE, initSessionStoryWidget, 'session-story', 'farming'],
       [STACKED_DECKS_TYPE, initStackedDecksWidget, 'stacked-decks', 'farming'],
       [POE_RE_TYPE, initPoeReWidget],
-      [MEGALO_TYPE, initMegaloWidget]
+      [MEGALO_TYPE, initMegaloWidget],
+      [FORBIDDEN_TYPE, initForbiddenWidget]
     ]
     for (const [type, init, module, follows, always] of singles) {
       if (config.widgets.some(w => w.wmType === type)) continue

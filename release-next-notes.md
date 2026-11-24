@@ -1,5 +1,6 @@
 # Next release notes
 
+- New tool, Forbidden pair finder (All tools, a PoB build's ⋯ menu, or Ctrl+Space "forbidden"): lists the ascendancy notables a Forbidden Flame and Flesh pair can give your class, the ones your tree already has dimmed, with poe.ninja's price of each pair. Price runs two trade searches for the real cheapest pair, and Flame or Flesh opens the price check on that jewel. Typing a notable's name in Ctrl+Space shows its pair too.
 - Icon row: the loot filter icon no longer sits on screen all the time with its strictness (VS). While you play it shows only when there's something to apply: a saved filter waiting for a reload, or a note that needs you. With the overlay open it's there as before, for the strictness picker.
 - Net worth icon: the number on it (listings at Faustus unsold for 3+ days) now shows only in your hideout, where you can reprice. Its card says what the number is: Show opens the Listed tab on Stale, and Hide clears the number until another listing goes stale.
 - Glance bar: a strategy run's map count now goes up as each map finishes. Before, it changed only when the stash was read (at most every 10 minutes in hideout), so it could sit at "1 map" after five. The run's profit still comes from the last stash read; hover it to see when that was.
