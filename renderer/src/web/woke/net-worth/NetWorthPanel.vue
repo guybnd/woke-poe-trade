@@ -105,6 +105,10 @@
             <div v-if="chartMode === 'category' && !fold.chart" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
             </div>
+            <!-- What each mark on the line is (Guy, 2026-11-24). -->
+            <div v-if="chartMode === 'total' && !fold.chart && chartLegend.length" :class="$style.legend" data-chart-legend>
+              <span v-for="l in chartLegend" :key="l.id" :title="l.tip"><i :class="[$style.key, $style['key-' + l.id]]" />{{ l.label }}</span>
+            </div>
             <SplitHandle v-if="!fold.chart" dir="y" @start="startDrag" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
           </section>
           <div v-if="shown.perHour" :class="$style.box">
@@ -940,6 +944,19 @@ const chartListed = computed(() => {
   const out = s.map((p, i) => p.listedDiv ?? toDiv(rebuilt[i]))
   return out.some(v => v > 0) ? out : undefined
 })
+// The legend under the line: only the marks this range shows.
+const chartLegend = computed(() => {
+  const s = series.value
+  if (s.length < 2) return []
+  const t0 = s[0].at
+  const out: Array<{ id: string, label: string, tip: string }> = []
+  if (chartListed.value) out.push({ id: 'band', label: 'At Faustus', tip: 'What you have listed at Faustus, on top of your stash' })
+  if (chartSales.value.some(x => x.at >= t0)) out.push({ id: 'sale', label: 'Sold', tip: 'What sold, bigger for more money. Hover a coin for the items' })
+  if (big.value.size) out.push({ id: 'big', label: 'Big gain', tip: 'A refresh that added a lot. Hover it for what came in' })
+  if (s.some(p => p.spentDiv)) out.push({ id: 'spend', label: 'Purchase', tip: 'You bought something: the drop isn\'t counted as a loss' })
+  if (chartMaps.value?.length) out.push({ id: 'maps', label: 'Maps', tip: 'Your maps this session' })
+  return out
+})
 // Your maps behind the line (pick D), each with what the refreshes after it added.
 const mapsOn = computed(() => props.config.chartMaps === true)
 const chartMaps = computed<ChartMap[] | undefined>(() => {
@@ -1060,6 +1077,12 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .chartBlock { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 6px var(--w-pad) 8px; border-bottom: 1px solid var(--w-line); }
 .chartHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 .goalLine { color: var(--w-up); }
+.key { opacity: 1 !important; }
+.key-band { background: color-mix(in srgb, var(--w-higher) 45%, transparent); border-top: 1px dashed var(--w-higher); }
+.key-sale { background: var(--w-accent); border-radius: 50%; }
+.key-big { background: var(--w-up); border-radius: 50%; }
+.key-spend { width: 0 !important; border-left: 1px dashed var(--w-info); }
+.key-maps { background: color-mix(in srgb, var(--w-gold) 25%, transparent); }
 .chartRight { display: inline-flex; align-items: baseline; gap: 10px; }
 .mapsBtn { padding: 0 0 2px; font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-faint); border-bottom: 1px dashed transparent; cursor: pointer; }
 .mapsBtn:hover { color: var(--w-fg); }

@@ -35,14 +35,15 @@ export function coinRadius (div: number | null, most: number): number {
 }
 
 // A coin per slot of time: about `slots` across the chart, on a round step
-// (10 min at 3H, 1 h at 24H, 6 h at 7D). Each coin is its slot's dearest sale,
+// (15 min at 3H, 2 h at 24H, 12 h at 7D). Each coin is its slot's dearest sale,
 // worth the slot's total, with how many sold.
 const STEPS = [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map(m => m * 60_000)
-export function slotOf (t0: number, t1: number, slots = 30): number {
+export function slotOf (t0: number, t1: number, slots = 16): number {
   const want = Math.max(1, t1 - t0) / slots
   return STEPS.find(s => s >= want) ?? STEPS[STEPS.length - 1]
 }
-export function groupSales<T extends ChartSale> (sales: readonly T[], t0: number, t1: number, slots = 30): Array<T & { count: number }> {
+export type SaleSlot<T> = T & { count: number, list: T[] }
+export function groupSales<T extends ChartSale> (sales: readonly T[], t0: number, t1: number, slots = 16): Array<SaleSlot<T>> {
   const step = slotOf(t0, t1, slots)
   const by = new Map<number, T[]>()
   for (const s of sales) {
@@ -54,20 +55,38 @@ export function groupSales<T extends ChartSale> (sales: readonly T[], t0: number
   return [...by.values()].map(list => {
     const top = list.reduce((a, b) => (b.div ?? -1) > (a.div ?? -1) ? b : a)
     const priced = list.filter(x => x.div != null)
-    return { ...top, div: priced.length ? priced.reduce((n, x) => n + x.div!, 0) : null, count: list.length }
+    return { ...top, div: priced.length ? priced.reduce((n, x) => n + x.div!, 0) : null, count: list.length, list: [...list].sort((a, b) => (b.div ?? -1) - (a.div ?? -1)) }
   }).sort((a, b) => a.at - b.at)
 }
 
-// The sales to name: the two dearest, the second only when it isn't on top
-// of the first (x within `gap` % of the chart's width).
-export function labelledSales<T extends { x: number, div?: number | null, name?: string }> (dots: readonly T[], gap = 40): T[] {
+// The sales to name: the dearest coin, and a second only when it isn't on
+// top of the first (x within `gap` % of the chart's width). Guy, 2026-11-24:
+// one label keeps the chart quiet; hovering any coin says what sold.
+export function labelledSales<T extends { x: number, div?: number | null, name?: string }> (dots: readonly T[], gap = 40, most = 1): T[] {
   const priced = dots.filter(d => d.name && d.div != null && d.div > 0).sort((a, b) => b.div! - a.div!)
   const out: T[] = []
   for (const d of priced) {
-    if (out.length >= 2) break
+    if (out.length >= most) break
     if (out.every(o => Math.abs(o.x - d.x) >= gap)) out.push(d)
   }
   return out
+}
+
+// A coin's words: "Sold Greater Multistrike Support" or
+// "Sold Greater Multistrike Support + 29 more".
+export function soldText (name: string, count: number): string {
+  return count > 1 ? `Sold ${name} + ${count - 1} more` : `Sold ${name}`
+}
+
+// The coin nearest the mouse, if the mouse is on it or just beside it (px).
+export function coinAt<T extends { x: number, y: number, r: number }> (coins: readonly T[], mx: number, my: number, width: number, height: number, slack = 6): T | null {
+  let best: T | null = null
+  let bestD = Infinity
+  for (const c of coins) {
+    const d = Math.hypot((c.x - mx) / 100 * width, (c.y - my) / 100 * height)
+    if (d <= Math.max(c.r + slack, 10) && d < bestD) { best = c; bestD = d }
+  }
+  return best
 }
 
 // A read comes in the hideout after a map: the map before it, if the read

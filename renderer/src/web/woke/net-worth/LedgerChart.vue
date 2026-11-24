@@ -23,11 +23,19 @@
     <span v-for="m in spends" :key="'s' + m.at" :class="$style.spend" :style="{ left: m.x + '%' }" />
     <!-- The live run's start (runs.ts): a gold line where it counts from. -->
     <span v-if="runLine != null" :class="$style.runStart" :style="{ left: runLine + '%' }" />
-    <!-- Sales (sales.ts): a gold dot on the line where each sold. -->
-    <!-- Sales (pick B): a coin each, sized by price; the biggest two named. -->
-    <span v-for="(m, i) in saleDots" :key="'d' + i + ':' + m.at" :class="$style.sale" :style="{ left: m.x + '%', top: m.y + '%', width: m.r * 2 + 'px', height: m.r * 2 + 'px' }" />
-    <span v-for="(m, i) in saleLabels" :key="'l' + i + ':' + m.at" v-item-tip="m.tip ?? null" :class="[$style.saleLabel, $style[m.align], { [$style.under]: m.under }]" :style="{ left: m.x + '%', top: m.y + '%', '--r': m.r + 'px' }">{{ m.name }}<template v-if="m.count > 1"> +{{ m.count - 1 }}</template> {{ fmt(m.div!) }}<Coin /></span>
-    <template v-if="shown">
+    <!-- Sales (pick B): a coin per slot of time, sized by what sold; the
+         dearest named. Hover a coin for what sold. -->
+    <span v-for="(m, i) in saleDots" :key="'d' + i + ':' + m.at" :class="[$style.sale, { [$style.saleOn]: shown?.coin?.at === m.at }]" :style="{ left: m.x + '%', top: m.y + '%', width: m.r * 2 + 'px', height: m.r * 2 + 'px' }" />
+    <span v-for="(m, i) in saleLabels" :key="'l' + i + ':' + m.at" v-item-tip="m.tip ?? null" :class="[$style.saleLabel, $style[m.align], { [$style.under]: m.under }]" :style="{ left: m.x + '%', top: m.y + '%', '--r': m.r + 'px' }">{{ soldText(m.name!, m.count) }} · {{ fmt(m.div!) }}<Coin /></span>
+    <!-- On a coin: what sold in its slot. -->
+    <div v-if="shown?.coin" ref="tipEl" :class="[$style.tip, place.below ? $style.below : $style.above, $style[place.align], { [$style.pinned]: !!pinned, [$style.wide]: !!tipBelow }]"
+      :style="{ left: shown.x + '%', top: shown.y + '%' }" data-chart-card data-chart-coin>
+      <b class="w-num">{{ coinHead(shown.coin) }}<template v-if="shown.coin.div != null"> · {{ fmt(shown.coin.div) }}<Coin /></template></b>
+      <span v-for="(x, i) in shown.coin.list.slice(0, COIN_LIST)" :key="i" :class="$style.saleText"><span v-item-tip="x.tip ?? null" :class="{ [$style.item]: !!pinned }">{{ x.text }}</span></span>
+      <span v-if="shown.coin.list.length > COIN_LIST" class="w-dim">+{{ shown.coin.list.length - COIN_LIST }} more</span>
+      <span v-if="!pinned" class="w-dim">Click to keep this open</span>
+    </div>
+    <template v-else-if="shown">
       <span :class="$style.dot" :style="{ left: shown.x + '%', top: shown.y + '%' }" />
       <!-- Follows the mouse; a click keeps it open (pinned), and then its item
            names take the item tooltip and menu. -->
@@ -75,8 +83,8 @@ import { tipPlacement } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { Category } from './valuation'
 import type { SpendMark } from './spend'
-import { coinRadius, groupSales, labelledSales, mapOf } from './chart-marks'
-import type { ChartMap, ChartSale } from './chart-marks'
+import { coinAt, coinRadius, groupSales, labelledSales, mapOf, soldText } from './chart-marks'
+import type { ChartMap, ChartSale, SaleSlot } from './chart-marks'
 
 const props = defineProps<{
   series: SeriesPoint[]
@@ -126,13 +134,20 @@ const CAT_COLOUR: Record<Category, string> = {
 }
 
 const box = shallowRef<HTMLElement | null>(null)
-type At = { p: SeriesPoint, x: number, y: number, listed: number }
+type Coin = SaleSlot<ChartSale> & { x: number, y: number, r: number }
+type At = { p: SeriesPoint, x: number, y: number, listed: number, coin?: Coin }
+// A coin's card lists this many sales, then "+N more".
+const COIN_LIST = 6
+function coinHead (c: Coin) {
+  return c.count > 1 ? `Sold ${c.count} items` : soldText(c.name ?? c.text, 1)
+}
 const hover = shallowRef<At | null>(null)
 // A clicked point's card stays until a click elsewhere, Esc, or new points.
 const pinned = shallowRef<At | null>(null)
 const shown = computed<At | null>(() => {
   const a = pinned.value ?? hover.value
   if (!a) return null
+  if (a.coin) return a
   // Worked out again: the band or the mode can change under a pinned card.
   const i = props.series.findIndex(p => p.at === a.p.at)
   if (i < 0) return a
@@ -143,7 +158,7 @@ const topTip = (t: string) => { const x = parseTop(t); return props.tipOf!(x.nam
 
 const pinAction = computed(() => {
   const p = pinned.value?.p
-  if (!p || p.daily || p.netDiv == null || !props.spendAction) return null
+  if (!p || pinned.value?.coin || p.daily || p.netDiv == null || !props.spendAction) return null
   return props.spendAction(p.at)
 })
 // The amount box starts at the whole drop.
@@ -162,7 +177,7 @@ function markSpend (mark: SpendMark | null, amount?: number) {
 function onClick (e: MouseEvent) {
   if (tipEl.value?.contains(e.target as Node)) return
   const h = hover.value
-  pinned.value = !h || (pinned.value && pinned.value.p.at === h.p.at) ? null : h
+  pinned.value = !h || (pinned.value && pinned.value.p.at === h.p.at && pinned.value.coin?.at === h.coin?.at) ? null : h
 }
 function outside (e: PointerEvent) {
   if (!box.value?.contains(e.target as Node)) pinned.value = null
@@ -269,7 +284,7 @@ const saleDots = computed(() => {
   })
 })
 // Named near the top: below the coin, so it stays off the chart's header.
-const saleLabels = computed(() => labelledSales(saleDots.value).map(m => ({ ...m, align: m.x < 30 ? 'left' as const : m.x > 70 ? 'right' as const : 'center' as const, under: m.y < 35 })))
+const saleLabels = computed(() => labelledSales(saleDots.value).map(m => ({ ...m, align: m.x < 30 ? 'left' as const : m.x > 70 ? 'right' as const : 'center' as const, under: m.y < 20 })))
 // The map columns in view, and the best one named.
 const mapCols = computed(() => {
   const ms = props.maps
@@ -307,6 +322,13 @@ function onMove (e: MouseEvent) {
   const s = props.series
   if (!el || !s.length) return
   const r = el.getBoundingClientRect()
+  // On a coin (or just beside it): its card instead of the nearest read's.
+  const coin = coinAt(saleDots.value, (e.clientX - r.left) / r.width * 100, (e.clientY - r.top) / r.height * 100, r.width, r.height)
+  if (coin) {
+    const near = s.reduce((b, q) => Math.abs(q.at - coin.at) < Math.abs(b.at - coin.at) ? q : b, s[0])
+    hover.value = { p: near, x: coin.x, y: coin.y, listed: 0, coin }
+    return
+  }
   const at = span.value.t0 + (e.clientX - r.left) / r.width * (span.value.t1 - span.value.t0)
   let i = 0
   s.forEach((q, k) => { if (Math.abs(q.at - at) < Math.abs(s[i].at - at)) i = k })
@@ -336,8 +358,9 @@ function when (at: number) {
 .runStart { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--w-gold); opacity: .7; pointer-events: none; }
 .spend { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--w-info); opacity: .8; pointer-events: none; }
 .spendText { color: var(--w-info); }
-.sale { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--w-gold) 55%, var(--w-fg)) 0 18%, var(--w-gold) 50%, color-mix(in srgb, var(--w-gold) 55%, #000) 100%); box-shadow: 0 0 0 1px var(--w-panel-solid), inset 0 0 0 1px color-mix(in srgb, var(--w-panel-solid) 45%, transparent); transform: translate(-50%, -50%); pointer-events: none; }
-.saleLabel { position: absolute; z-index: 1; display: block; white-space: nowrap; font-size: var(--w-fs-xs); line-height: 1; color: var(--w-fg); text-shadow: 0 1px 2px var(--w-panel-solid), 0 0 3px var(--w-panel-solid); cursor: help; max-width: 60%; --ty: calc(-100% - var(--r) - 3px); }
+.sale { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--w-accent); box-shadow: 0 0 0 1px var(--w-panel-solid), inset 0 0 0 1px color-mix(in srgb, #000 35%, transparent); transform: translate(-50%, -50%); pointer-events: none; }
+.saleOn { box-shadow: 0 0 0 1px var(--w-panel-solid), 0 0 0 3px var(--w-fg); }
+.saleLabel { position: absolute; z-index: 1; display: block; white-space: nowrap; font-size: var(--w-fs-xs); line-height: 1; color: var(--w-fg); text-shadow: 0 1px 2px var(--w-panel-solid), 0 0 3px var(--w-panel-solid); cursor: help; width: max-content; max-width: 60%; --ty: calc(-100% - var(--r) - 3px); }
 .saleLabel.under { --ty: calc(var(--r) + 3px); }
 .saleLabel { overflow: hidden; text-overflow: ellipsis; }
 .listed { fill: color-mix(in srgb, var(--w-higher) 24%, transparent); }

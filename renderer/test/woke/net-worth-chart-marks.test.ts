@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coinRadius, groupSales, labelledSales, mapOf, slotOf, COIN_MAX, COIN_MIN } from '@/web/woke/net-worth/chart-marks'
+import { coinAt, coinRadius, groupSales, labelledSales, mapOf, slotOf, soldText, COIN_MAX, COIN_MIN } from '@/web/woke/net-worth/chart-marks'
 import { listedAt } from '@/web/woke/net-worth/pending'
 import type { PendingDoc } from '@/web/woke/net-worth/pending'
 import { addPoint, seriesFor } from '@/web/woke/net-worth/ledger'
@@ -48,7 +48,8 @@ describe('sale coins (pick B)', () => {
       { x: 60, div: 9, name: 'Awakened Multistrike' },
       { x: 90, div: null, name: 'Mirror Shard' }
     ]
-    expect(labelledSales(dots).map(d => d.name)).toEqual(['Forbidden Flame', 'Awakened Multistrike'])
+    expect(labelledSales(dots).map(d => d.name)).toEqual(['Forbidden Flame'])
+    expect(labelledSales(dots, 40, 2).map(d => d.name)).toEqual(['Forbidden Flame', 'Awakened Multistrike'])
   })
 })
 
@@ -65,16 +66,30 @@ describe('map columns (pick D)', () => {
 describe('sale coins by slot', () => {
   it('folds sales in one slot into one coin worth their total', () => {
     const M = 60_000
-    const t0 = 1_000_000_000_000 - (1_000_000_000_000 % (6 * 60 * M))
-    expect(slotOf(t0, t0 + 3 * 60 * M)).toBe(10 * M)
-    expect(slotOf(t0, t0 + 7 * 24 * 60 * M)).toBe(360 * M)
+    const t0 = 1_000_000_000_000 - (1_000_000_000_000 % (12 * 60 * M))
+    expect(slotOf(t0, t0 + 3 * 60 * M)).toBe(15 * M)
+    expect(slotOf(t0, t0 + 7 * 24 * 60 * M)).toBe(720 * M)
     const sales = [
       { at: t0 + M, text: '', name: 'Blunderbore', div: 20 },
       { at: t0 + 2 * M, text: '', name: 'Dusk Scarab', div: 0.5 },
       { at: t0 + 3 * M, text: '', name: 'Odd currency', div: null },
-      { at: t0 + 400 * M, text: '', name: 'Hollow Lands', div: 1.4 }
+      { at: t0 + 2000 * M, text: '', name: 'Hollow Lands', div: 1.4 }
     ]
     const g = groupSales(sales, t0, t0 + 7 * 24 * 60 * M)
     expect(g.map(x => [x.name, x.div, x.count])).toEqual([['Blunderbore', 20.5, 3], ['Hollow Lands', 1.4, 1]])
+  })
+})
+
+describe('coin words and hover', () => {
+  it('says what sold in plain words', () => {
+    expect(soldText('Greater Multistrike Support', 30)).toBe('Sold Greater Multistrike Support + 29 more')
+    expect(soldText('Blunderbore', 1)).toBe('Sold Blunderbore')
+  })
+  it('finds the coin under or beside the mouse', () => {
+    const coins = [{ x: 10, y: 50, r: 4 }, { x: 50, y: 20, r: 6 }]
+    // 400 x 100 px: 1% across is 4 px.
+    expect(coinAt(coins, 11, 50, 400, 100)).toBe(coins[0])
+    expect(coinAt(coins, 52, 25, 400, 100)).toBe(coins[1])
+    expect(coinAt(coins, 30, 50, 400, 100)).toBeNull()
   })
 })
