@@ -1,5 +1,7 @@
 # Next release notes
 
+- Net worth › Runs: a run's costs are a kit now. Pick or type a name and the costs from your last run with that name show under Start, where you can take any off. Costs priced from your stash or poe.ninja follow the price at each stash read while the run goes (the "live" chip; type a price to keep yours) and stay as they were at Stop. Maps bought straight into your inventory still count through the kit.
+- Net worth › Runs: past runs are a table you can sort by maps, profit, per map, per hour, cost a map and per map without the top drop. "By strategy" adds up runs with the same name. A "small sample" mark shows beside per map when a run has under 30 maps or one drop is over half its profit; hover it for the figure without that drop. Ctrl+Space "compare runs" lists your strategies, best per map first.
 - Net worth, "Tabs to read": the tab list is easier to read. Rows use the normal row text size with brighter names, and each tab's colour is now a thick strip down its left edge instead of a small dot.
 - New players: the first time the overlay opens after setup, a Getting started card beside the rail shows the price check and search keys, where All tools and Settings are, and how to turn on Net worth (Got it closes it for good). The next 3 opens name the rail's buttons beside them. Players who updated don't get either.
 - New players' rail starts with 5 of their tools (from the preset they picked in setup: Market, Map mods, Atlas strategies, PoB builds and Trades for Everything). Each loads only when you click it, then stays pinned.
