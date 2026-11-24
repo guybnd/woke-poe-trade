@@ -42,12 +42,16 @@
       <span class="w-dim text-xs w-trunc" data-valdo-saved>{{ savedNote }}</span>
     </div>
     <div v-if="shown.length" :class="$style.list" data-valdo-mods>
-      <div v-for="(m, i) in shown" :key="i" :class="[$style.mod, $style[stateOf(m)]]" :data-valdo-mod="m.split('\n')[0]">
-        <span :class="[$style.dot, buildSkips(m) && $style.deadly]" :title="buildSkips(m) ? 'Your Map mods profile: can\'t run' : undefined" />
+      <div v-for="(m, i) in shown" :key="i" :class="[$style.mod, $style[stateOf(m)]]" :data-valdo-mod="m.split('\n')[0]"
+        :title="canCycle(m) ? 'Click to cycle Has, Not, Any' : undefined" @click="canCycle(m) && cycleState(m)">
+        <!-- As on a normal map: the chip is the mod's rating, clicked through Bad, Care, Want, none; saved to the template. -->
+        <button v-if="m !== VOID_TEXT && canSkip" type="button" :class="[$style.rateChip, $style[`rate_${ratingOf(m)}`]]" :title="rateTitle(m)"
+          :aria-label="`Rating: ${RATE_WORD[ratingOf(m)]}. Click to change`" :data-valdo-rate="ratingOf(m)" @click.stop="rate(m)">{{ RATE_WORD[ratingOf(m)] }}</button>
+        <span v-else :class="$style.rateGap" />
         <span :class="$style.text" :title="m">{{ m.split('\n')[0] }}</span>
         <span v-if="m !== VOID_TEXT && !onMap(m)" :class="$style.sub" title="Not on this map: it still filters the listings">other maps</span>
         <span v-if="m === VOID_TEXT && !hasVoid" :class="$style.sub" title="This map doesn't send you to the Void; the search looks for maps without it until you change it">not on this map</span>
-        <span v-if="m === VOID_TEXT ? !!voidFilter : canSkip" :class="$style.seg" role="radiogroup" :aria-label="`Search ${m.split('\n')[0]}`">
+        <span v-if="m === VOID_TEXT ? !!voidFilter : canSkip" :class="$style.seg" role="radiogroup" @click.stop :aria-label="`Search ${m.split('\n')[0]}`">
           <button v-for="opt in STATES" :key="opt" type="button" role="radio" :aria-checked="stateOf(m) === opt"
             :class="stateOf(m) === opt && $style[`on_${opt}`]" :data-state="opt" :title="stateTitle(m, opt)"
             @click="setState(m, opt)">{{ STATE_LABEL[opt] }}</button>
@@ -77,7 +81,9 @@ import { isModuleOn } from '../modules'
 import type { FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
 import { ensureMapModsConfig } from '../map-mods/check'
 import { activeProfile } from '../map-mods/widget'
-import { isSkipped, profileSkips, rememberSeen, setSkipped, skipKey, valdoConfig, valdoHidden, valdoListingMods, valdoNeed, valdoProfile, VOID_TEXT, takeLookupAsk } from './skips'
+import { nextModRating, withRating } from '../map-mods/rules'
+import type { ModRating } from '../map-mods/rules'
+import { isSkipped, profileSkips, rememberSeen, setSkipped, skipKey, skipLabel, valdoConfig, valdoHidden, valdoListingMods, valdoNeed, valdoProfile, VOID_TEXT, takeLookupAsk } from './skips'
 import type { SkipEntry } from './skips'
 
 const props = defineProps<{ item: ParsedItem, stats: FilterOrGroup[], filters: ItemFilters }>()
@@ -249,8 +255,41 @@ const profile = computed(() => valdoProfile())
 const skips = computed<SkipEntry[]>(() => profile.value ? profileSkips(profile.value) : [])
 // Skipping works while the Map mods module is on (the first Not sets it up).
 const canSkip = computed(() => isModuleOn(AppConfig(), 'map-mods'))
-const autoKeys = computed(() => new Set(skips.value.filter(s => s.auto).map(s => s.key)))
-const buildSkips = (m: string) => m !== VOID_TEXT && autoKeys.value.has(skipKey(m))
+// The template's rating of a mod: Bad (can't run) also sets it Not, as the
+// Map mods window's "can't run" does. Keyed as the Map mods table keys it
+// when it has the mod, else by the mod's text with numbers as "#".
+const RATE_WORD: Record<ModRating, string> = { deadly: 'Bad', warn: 'Care', good: 'Want', ok: '–' }
+const RATE_TITLE: Record<ModRating, string> = { deadly: "Bad: can't run, so set Not", warn: 'Care: risky', good: 'Want', ok: 'Not rated' }
+function ratingKey (ratings: Record<string, ModRating>, m: string): string | undefined {
+  const key = skipKey(m)
+  return Object.keys(ratings).find(k => skipKey(k) === key)
+}
+function ratingOf (m: string): ModRating {
+  const r = profile.value?.ratings ?? {}
+  const k = ratingKey(r, m)
+  return k ? r[k] : 'ok'
+}
+function rateTitle (m: string): string {
+  const name = profile.value?.name
+  return `${RATE_TITLE[ratingOf(m)]}. Click for the next: Bad, Care, Want, none${name ? `; saved to ${name}` : ''}.`
+}
+function rate (m: string) {
+  const w = ensureMapModsConfig()
+  if (!w) return
+  const p = activeProfile(w)
+  const next = nextModRating(ratingOf(m))
+  const key = ratingKey(p.ratings, m) ?? skipLabel(m)
+  p.ratings = withRating(p.ratings, [key], next)
+  // A Bad mod is skipped even if it was set Any before.
+  if (next === 'deadly' && !isSkipped(p, m)) setSkipped(p, m, true)
+  // Kept on the list for this check once touched.
+  if (!onMap(m) && !added.value.includes(m)) added.value = [...added.value, m]
+  flashSaved(p.name)
+}
+// As in the price check: clicking a row goes Has, Not, Any.
+const NEXT_STATE: Record<ModState, ModState> = { any: 'has', has: 'not', not: 'any' }
+const canCycle = (m: string) => m === VOID_TEXT ? !!voidFilter.value : canSkip.value
+function cycleState (m: string) { setState(m, NEXT_STATE[stateOf(m)]) }
 
 function stateOf (m: string): ModState {
   if (m === VOID_TEXT) return voidState.value
@@ -337,12 +376,19 @@ const headline = computed(() => {
 .option { text-align: left; font-size: var(--w-fs-sm); padding: 1px 6px; border-radius: var(--w-r-sm); }
 .option:hover { background: var(--w-chip-ground); }
 .list { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; border-top: 1px solid var(--w-line); }
-.mod { display: flex; align-items: center; gap: 6px; font-size: var(--w-fs-sm); padding: 1px 0; }
+.mod { display: flex; align-items: center; gap: 6px; font-size: var(--w-fs-sm); padding: 1px 2px; border-radius: var(--w-r-sm); }
+.mod[title] { cursor: pointer; }
+.mod[title]:hover { background: var(--w-chip-ground); }
+.rateChip { flex: none; width: 3.4em; padding: 0 2px; text-align: center; font-size: var(--w-fs-xs); line-height: 1.5;
+  border: 1px solid transparent; border-radius: var(--w-r-sm); color: var(--w-dim); cursor: pointer; }
+.rateGap { flex: none; width: 3.4em; }
+.rateChip:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
+.rate_deadly { color: var(--w-down); border-color: color-mix(in srgb, var(--w-down) 55%, transparent); background: color-mix(in srgb, var(--w-down) 14%, transparent); }
+.rate_warn { color: var(--w-warn); border-color: color-mix(in srgb, var(--w-warn) 55%, transparent); background: color-mix(in srgb, var(--w-warn) 14%, transparent); }
+.rate_good { color: var(--w-up); border-color: color-mix(in srgb, var(--w-up) 55%, transparent); background: color-mix(in srgb, var(--w-up) 14%, transparent); }
 .text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .has .text { color: var(--w-up); }
 .not .text { color: var(--w-down); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--w-down) 50%, transparent); }
-.dot { flex: none; width: 7px; height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-3); }
-.dot.deadly { background: var(--w-down); }
 .seg { flex: none; display: inline-flex; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); overflow: hidden; }
 .seg button { padding: 0 6px; font-size: var(--w-fs-xs); color: var(--w-dim); border-left: 1px solid var(--w-line); }
 .seg button:first-child { border-left: 0; }
