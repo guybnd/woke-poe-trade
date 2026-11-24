@@ -56,6 +56,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T03:54:04.426Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up merged: https://github.com/guybnd/woke-poe-trade/pull/853
+      (7f804167) lets notables you already have be priced and checked too.
+    date: '2026-11-24T04:57:27.176Z'
+    selfAttested: true
+    id: c-2026-11-24t04-57-27-176z
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/841'
