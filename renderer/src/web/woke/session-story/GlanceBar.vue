@@ -9,7 +9,7 @@
       <template v-else-if="map">
         <span :class="$style.name">{{ map.name }}</span>
         <span class="w-dim">{{ tierText(map.areaLevel) }}</span>
-        <span data-glance-time>{{ formatClock(elapsed) }}</span>
+        <span v-if="clock" data-glance-time>{{ formatClock(elapsed) }}</span>
       </template>
       <span v-else-if="!after" :class="$style.name">Glance bar</span>
       <!-- A strategy run going (Net worth › Runs): its maps and profit instead of tonight's. -->
@@ -48,6 +48,8 @@ const props = defineProps<{
   map: Pick<MapRecord, 'name' | 'areaLevel'> | null
   // The map you just left, for a few seconds after (its time against your usual).
   after?: string | null
+  // The map's time ticking each second (Settings): off, nothing ticks in a map.
+  clock?: boolean
   // When you went in this time through the portal, and the map's time before that.
   since: number
   before: number
@@ -71,7 +73,7 @@ function startDrag (e: PointerEvent) {
 
 // The map's time so far, like the after-map toast, ticking each second while the bar shows.
 const now = shallowRef(Date.now())
-onUnmounted(tickWhile(() => !!props.map, () => { now.value = Date.now() }, 1000))
+onUnmounted(tickWhile(() => !!props.map && !!props.clock, () => { now.value = Date.now() }, 1000))
 const elapsed = computed(() => props.before + Math.max(0, now.value - props.since))
 const nights = useNightList()
 const night = computed(() => nights.shown.value?.live ? nights.shown.value.story : null)

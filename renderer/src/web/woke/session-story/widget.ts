@@ -29,12 +29,20 @@ export interface SessionStoryWidget extends Widget {
   // While in a map: a thin bar at the top with the map, its time so far and tonight's total.
   // On unless turned off (veteran review, 2026-11-24: one in-map overlay on by default).
   glance?: boolean
+  // The bar's map time ticking each second. Off unless on: a timer and a
+  // layout every second in a map is over the perf budget for a default.
+  // Unset: on for anyone who had turned the bar on themselves before it was a default.
+  glanceClock?: boolean
   // Where the glance bar sits (its top centre, share of the screen), set by dragging it.
   glancePos?: { x: number, y: number }
 }
 
 export function glanceOn (config: Pick<SessionStoryWidget, 'glance'>): boolean {
   return config.glance !== false
+}
+
+export function glanceClockOn (config: Pick<SessionStoryWidget, 'glance' | 'glanceClock'>): boolean {
+  return config.glanceClock ?? config.glance === true
 }
 
 // Where the map line goes. Not picked: on the glance bar while it's on, so one

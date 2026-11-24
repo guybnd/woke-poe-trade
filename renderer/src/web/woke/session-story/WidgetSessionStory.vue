@@ -14,7 +14,7 @@
         </div>
       </template>
     </DockItem>
-    <GlanceBar v-if="glanceOn(config)" :map="glanceMap" :after="barLine" :since="glanceSince" :before="glanceBefore" :editing="placingGlance" :movable="wm.active.value" :pos="config.glancePos ?? null"
+    <GlanceBar v-if="glanceOn(config)" :map="glanceMap" :after="barLine" :clock="glanceClockOn(config)" :since="glanceSince" :before="glanceBefore" :editing="placingGlance" :movable="wm.active.value" :pos="config.glancePos ?? null"
       @move="moveGlance" />
     <MapToast :chip="chip" :close-key="config.chipKey || null" :size="toastSize" @close="closeChip" @hold="holdChip" @resize="resizeChip"
       :pos="config.chipPos ?? null" @move="moveChip" />
@@ -61,7 +61,7 @@ import { savedOpenRequest } from '../shared/saved-open'
 import { ANALYTICS_TYPE } from '../analytics/types'
 import { isSkippedArea, knownAreaName, setSkipAreas } from './skip-areas'
 import { setAreaSkip } from '../farming/farming'
-import { CHIP_CLOSE_TARGET, chipPlaceOf, glanceOn } from './widget'
+import { CHIP_CLOSE_TARGET, chipPlaceOf, glanceClockOn, glanceOn } from './widget'
 import type { SessionStoryWidget } from './widget'
 import { MainProcess } from '@/web/background/IPC'
 import { AppConfig, saveConfig } from '@/web/Config'

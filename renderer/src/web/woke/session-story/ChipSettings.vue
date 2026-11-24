@@ -13,7 +13,11 @@
       </slot>
     </template>
     <span class="w-dim">While in a map</span>
-    <WToggle v-model="glance" title="A thin bar at the top with the map, its time so far and tonight's maps and profit. While you play it never takes the mouse; with the overlay open, drag it to move it.">Bar at the top</WToggle>
+    <WToggle v-model="glance" title="A thin bar at the top with the map and tonight's maps and profit, and each map's time once you leave it. While you play it never takes the mouse; with the overlay open, drag it to move it.">Bar at the top</WToggle>
+    <template v-if="glance">
+      <span class="w-dim">Map clock</span>
+      <WToggle v-model="clock" title="The map's time on the bar, ticking each second. Off: the bar shows the map and tonight, and the map's time once you leave it.">Tick each second</WToggle>
+    </template>
     <template v-if="showMe">
       <span />
       <WButton size="sm" :disabled="place === 'off' || !canShow" @click="showMe">Show me with your last map</WButton>
@@ -30,7 +34,7 @@ import WButton from '../ui/WButton.vue'
 import WSegmented from '../ui/WSegmented.vue'
 import WSelect from '../ui/WSelect.vue'
 import WToggle from '../ui/WToggle.vue'
-import { chipPlaceOf, glanceOn } from './widget'
+import { chipPlaceOf, glanceClockOn, glanceOn } from './widget'
 import type { ChipPlace, SessionStoryWidget } from './widget'
 
 const props = defineProps<{
@@ -72,6 +76,10 @@ const glance = computed({
     props.config.glance = v
     if (props.live) pushHostConfig()
   }
+})
+const clock = computed({
+  get: () => glanceClockOn(props.config),
+  set: (v: boolean) => { props.config.glanceClock = v }
 })
 const seconds = computed({
   get: () => String(props.config.chipSeconds ?? 8),
