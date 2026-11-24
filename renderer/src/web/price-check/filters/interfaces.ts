@@ -165,6 +165,8 @@ export interface StatFilter {
   mapMod?: true
   /** woke: a Valdo map's "sent to the Void" mod, set Any / Void / No void on the Valdo strip (ValdoStrip.vue), not listed in the rows. */
   valdoVoid?: true
+  /** woke: a map's "no Elder or Shaper influence" filter, the No Elder chip on the map strip (pseudo/maps.ts). */
+  noElder?: true
   roll?: {
     value: number
     min: number | '' | undefined // NOTE: mutable in UI

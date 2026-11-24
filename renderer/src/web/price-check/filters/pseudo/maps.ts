@@ -2,6 +2,7 @@ import { stat, pseudoStatByRef } from '@/assets/data'
 import { ItemRarity, ItemCategory } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import { FiltersCreationContext } from '../create-stat-filters'
+import { FilterTag } from '../interfaces'
 import { noSourcePseudoToFilter, propToFilter } from './item-property'
 import { findAndResolveByRef, statToNotFilter } from './utils'
 
@@ -67,6 +68,8 @@ function areaProps (
 export function mapProps (bulk: boolean, ctx: FiltersCreationContext): void {
   const { item } = ctx
   if (item.category !== ItemCategory.Map || item.mapCompletionReward || item.rarity === ItemRarity.Unique) return
+
+  noElderFilter(ctx)
 
   if (!bulk) {
     // woke: Rarity starts on like Pack size, More X or not (Guy, 2026-11-23: a
@@ -164,4 +167,29 @@ export function valdoBadMods (ctx: FiltersCreationContext): void {
     filter.valdoVoid = true
     ctx.filters.push(filter)
   }
+}
+
+// woke: maps also influenced by the Elder (or the Shaper) carry a guardian and
+// list cheap, so they crowd a search for plain or Originator maps (807 of the
+// T16 Originator maps in Covens, 2026-11-24). Left out from the first search
+// when the checked map has no such influence; the map strip's No Elder chip
+// turns it off (WOKEPOET-523). No option: either influence counts.
+export const NO_ELDER_TRADE_ID = 'implicit.stat_1792283443'
+
+function noElderFilter (ctx: FiltersCreationContext): void {
+  const { item } = ctx
+  if (item.info.refName !== 'Map') return
+  const influenced = item.statsByType.some(calc =>
+    calc.stat.trade.ids[ModifierType.Implicit]?.some(id => id.startsWith(NO_ELDER_TRADE_ID)))
+  if (influenced) return
+  ctx.filters.push({
+    tradeId: [NO_ELDER_TRADE_ID],
+    statRef: 'Area is influenced by The Elder',
+    text: 'Area is influenced by The Elder or The Shaper',
+    tag: FilterTag.Implicit,
+    sources: [],
+    disabled: false,
+    not: true,
+    noElder: true
+  })
 }

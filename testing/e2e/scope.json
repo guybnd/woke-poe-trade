@@ -190,7 +190,8 @@
   "map-mod-search.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/price-check/",
-   "renderer/src/web/woke/map-mods/"
+   "renderer/src/web/woke/map-mods/",
+   "renderer/src/web/woke/price-insight/"
   ],
   "map-mods-bonuses.spec.ts": [
    "renderer/public/data/map-bonuses.json",
