@@ -23,9 +23,9 @@
             <span>{{ result.xchgStable.listed.value?.total ?? '?' }}</span>
           </button>
           <span class="ml-1"><online-filter :filters="filters" api="bulk" /></span>
-          <!-- woke: the price check's own chips (a map's Exchange, WOKEPOET-523). -->
-          <span class="ml-1"><slot name="chips" /></span>
         </div>
+        <!-- woke: the price check's own chips (a map's Exchange, WOKEPOET-523), there while it loads too. -->
+        <span class="ml-1"><slot name="chips" /></span>
       </div>
       <trade-links v-if="result"
         :get-link="makeTradeLink" :suggest-name="() => item.info.name" />
@@ -100,12 +100,13 @@
     <template #actions>
       <button class="btn" :disabled="retryIn > 0" @click="execSearch">{{ t('Retry') }}<template v-if="retryIn > 0"> ({{ retryIn }}s)</template></button>
       <button class="btn" @click="openTradeLink">{{ t('Browser') }}</button>
+      <slot name="error-actions" />
     </template>
   </ui-error-box>
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, computed, watch, ComputedRef, Ref, ShallowRef, shallowRef, shallowReactive, inject, readonly } from 'vue'
+import { defineComponent, PropType, computed, watch, ComputedRef, Ref, ShallowRef, shallowRef, shallowReactive, inject, readonly, onUnmounted } from 'vue'
 import { useI18nNs } from '@/web/i18n'
 import UiErrorBox from '@/web/ui/UiErrorBox.vue'
 import { BulkSearch, execBulkSearch, createTradeRequest, PricingResult } from './pathofexile-bulk'
@@ -231,7 +232,10 @@ function useBulkApi () {
     return { listed: _result, listedLazy, load, failed, loading }
   }
 
-  return { error, result, search }
+  // woke: an exchange view closed while its search waits its turn sends nothing (WOKEPOET-523).
+  function cancel () { searchId += 1 }
+
+  return { error, result, search, cancel }
 }
 
 interface MarketRatio extends Pick<PricingResult, 'exchangeAmount' | 'itemAmount'> {
@@ -317,7 +321,8 @@ export default defineComponent({
   },
   setup (props, ctx) {
     const widget = computed(() => AppConfig<PriceCheckWidget>('price-check')!)
-    const { error, result, search } = useBulkApi()
+    const { error, result, search, cancel } = useBulkApi()
+    onUnmounted(cancel)
     const { retryIn, rateLimited } = useRetryCountdown(error)
     const { marketRatio, find: findMarketRatio } = useMarketRatioFinder()
 

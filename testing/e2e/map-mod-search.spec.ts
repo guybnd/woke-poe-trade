@@ -185,7 +185,8 @@ test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back'
   await chip.click()
   await expect.poll(() => wants.length).toBe(1)
   expect(wants[0]).toEqual(['zana-map-tier-16'])
-  await expect(panel.getByText('1400', { exact: true })).toBeVisible()
+  // Stock and the fulfill count both read 1400.
+  await expect(panel.getByText('1400', { exact: true }).first()).toBeVisible()
   await expect(chip).toHaveAttribute('aria-pressed', 'true')
   expect(searches.length).toBe(2)
   await overlay.snap('map exchange sellers')

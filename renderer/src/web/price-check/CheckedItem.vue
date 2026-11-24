@@ -124,6 +124,9 @@
         <button type="button" class="w-pc-bulk on" aria-pressed="true" data-exchange-chip
           :title="`Showing ${mapEx?.label} on the bulk exchange. Click to go back to the listings (a trade search).`" @click="leaveExchange">Exchange</button>
       </template>
+      <template v-if="exchangeView" #error-actions>
+        <button class="btn" @click="leaveExchange">Back to listings</button>
+      </template>
     </trade-bulk>
     <p v-if="showComplexityHint" :class="$style.complexityHint">
       <i class="fas fa-info-circle" />
@@ -474,6 +477,9 @@ export default defineComponent({
       const cIntaracted = curr[1]; const pIntaracted = prev[1]
 
       if (cItem === pItem && cIntaracted === true && pIntaracted === true) {
+        // woke: the exchange search reads none of the item's filters, only the trade
+        // options, which the watcher below re-searches (WOKEPOET-523).
+        if (exchangeView.value) return
         // force user to press Search button on change
         doSearch.value = false
       }
@@ -521,6 +527,11 @@ export default defineComponent({
       const cTrade = curr[1]; const pTrade = prev[1]
 
       if (cItem === pItem && cTrade !== pTrade) {
+        // woke: the online filter on the exchange view searches the exchange again.
+        if (exchangeView.value) {
+          searchExchange()
+          return
+        }
         nextTick(() => {
           doSearch.value = true
         })

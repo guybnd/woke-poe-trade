@@ -9,6 +9,8 @@ import { ItemCategory, ItemRarity } from '@/parser'
 import type { ParsedItem } from '@/parser'
 
 const ORIGINATOR = "Area is Influenced by the Originator's Memories"
+// "Area is influenced by The Elder / The Shaper" (pseudo/maps.ts NO_ELDER_TRADE_ID).
+const INFLUENCE_TRADE_ID = 'implicit.stat_1792283443'
 
 // The implicit that puts a map in its own exchange entry.
 const BY_IMPLICIT: Record<string, MapExchange> = {
@@ -52,6 +54,8 @@ export function mapExchange (item: ParsedItem): MapExchange | null {
   for (const [ref, entry] of Object.entries(BY_IMPLICIT)) {
     if (implicits.has(ref)) return entry
   }
+  // Elder or Shaper influence with no guardian: no entry of its own, and not a plain map.
+  if (item.statsByType.some(calc => calc.stat.trade.ids.implicit?.some(id => id.startsWith(INFLUENCE_TRADE_ID)))) return null
   if (implicits.has(ORIGINATOR)) return { tag: `zana-map-tier-${tier}`, label: `Memory-Influenced Map (Tier ${tier})` }
   return { tag: `map-tier-${tier}`, label: `Map (Tier ${tier})` }
 }
