@@ -700,7 +700,7 @@ test('dock card: click or scroll a strictness, then reload from there', async ({
   fs.mkdirSync(cache, { recursive: true })
   const LEVELS = ['0-SOFT', '1-REGULAR', '2-SEMI-STRICT', '3-STRICT', '4-VERY-STRICT', '5-UBER-STRICT', '6-UBER-PLUS-STRICT']
   for (const l of LEVELS) fs.writeFileSync(path.join(cache, `${l}.filter`), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', `${l}.filter.gz`))))
-  await overlay.boot({ widgets: [{ ...lootFilter(folder), wmFlags: ['invisible-on-blur'], safetyNet: { on: false, minChaos: 20 }, neversink: { on: true, version: '8.20.1', prevVersion: null, style: '', level: 2, latest: null, latestChanges: '', checkedAt: Date.now() } }] })
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), wmFlags: ['invisible-on-blur'], neversink: { on: true, version: '8.20.1', prevVersion: null, style: '', level: 2, latest: null, latestChanges: '', checkedAt: Date.now() } }] })
   const page = overlay.page
   fakeApp.focusGame(true)
   const level = (name: string) => page.getByRole('button', { name, exact: true })
