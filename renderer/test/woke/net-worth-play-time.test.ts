@@ -204,7 +204,18 @@ describe('crafting and selling in the hideout', () => {
   it('with hideout time counted, the hideout-only reads still stay out', () => {
     const r = playRate(points, m, T0, T0 + 90 * MIN, true)
     expect(r.perHour).toBeCloseTo(600)
-    expect(r.playMs).toBe(90 * MIN)
+    // Played is the rate's time; the hour in the hideout is apart.
+    expect(r.playMs).toBe(30 * MIN)
+    expect(r.hubOnlyMs).toBe(60 * MIN)
+  })
+
+  it('an hour of crafting after a map in the same read says No maps', () => {
+    // One read from before the map (0) to after 70 min in the hideout (100).
+    const mk = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand'), area(30, 'HideoutFoo')]).marks
+    const pts = [{ at: T0, netChaos: null }, { at: T0 + 100 * MIN, netChaos: 200 }]
+    const r = playRate(pts, mk, T0 + 40 * MIN, T0 + 100 * MIN)
+    expect(r.perHour).toBeNull()
+    expect(r.hubOnly).toBe(true)
   })
 
   it('the hover says what the no-map time did', () => {

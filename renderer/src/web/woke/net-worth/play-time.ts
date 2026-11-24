@@ -205,7 +205,8 @@ export function playRate (
     chaos += p.netChaos * share
     for (const k of STATES) total[k] += inside[k]
     // Hideout only since the last read (with Client.txt): crafting or trading.
-    const whole = marks.length ? timeIn(marks, start, p.at) : null
+    // Before the first mark is unknown: that read stays in the rate.
+    const whole = marks.length && start >= marks[0].at ? timeIn(marks, start, p.at) : null
     if (whole && whole.map + whole.play === 0) {
       hubChaos += p.netChaos * share
       hubOnlyMs += inside.hub
@@ -222,7 +223,8 @@ export function playRate (
     last = p.at
     if (start < from && marks.length && stateAt(marks, a) === 'map') maps++
   }
-  const playMs = counted(total)
+  // The rate's time: hideout-only reads are apart (hubOnlyMs).
+  const playMs = rateMs
   // Each map's time runs until the next map opens. The newest counts only
   // once you've left it by the last read (a map still running isn't whole).
   const end = last
@@ -233,9 +235,10 @@ export function playRate (
   }).filter(ms => ms > 0).sort((x, y) => x - y)
   const mid = durations.length >> 1
   const medianMapMs = !durations.length ? null : durations.length % 2 ? durations[mid] : (durations[mid - 1] + durations[mid]) / 2
-  const hubOnly = marks.length > 0 && last != null && total.map + total.play === 0 && hubOnlyMs > 0
+  const perHour = rateMs >= MIN_PLAY_MS ? rateChaos / (rateMs / 3_600_000) : null
+  const hubOnly = perHour == null && marks.length > 0 && last != null && total.map + total.play === 0 && total.hub > 0
   return {
-    perHour: rateMs >= MIN_PLAY_MS ? rateChaos / (rateMs / 3_600_000) : null,
+    perHour,
     chaos,
     rateChaos,
     rateMs,
