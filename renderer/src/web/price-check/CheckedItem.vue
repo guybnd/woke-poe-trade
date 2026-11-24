@@ -49,8 +49,6 @@
         :item="item"
         :filters="itemFilters" />
     </template>
-    <!-- woke: a warrant's supports ranked by what the market pays for them (merc thread, option A1). -->
-    <woke-merc-ladder v-if="item.info.refName === 'Mercenary Warrant' && tradeAPI === 'trade'" :stats="itemStats" :filters="itemFilters" />
     <filters-block
       ref="filtersComponent"
       :filters="itemFilters"
@@ -204,7 +202,6 @@ export default defineComponent({
     WokeVisceraStrip: defineAsyncComponent(() => import('@/web/woke/wickerman/VisceraStrip.vue')),
     WokeCardDrops: defineAsyncComponent(() => import('@/web/woke/card-drops/CardDrops.vue')),
     WokeNightmareStrip: defineAsyncComponent(() => import('@/web/woke/boss-runs/NightmareStrip.vue')),
-    WokeMercLadder: defineAsyncComponent(() => import('@/web/woke/merc/MercLadder.vue')),
     // The poe.ninja verdict before an exchange search (WOKEPOET-479).
     WokeNinjaVerdict: defineAsyncComponent(() => import('@/web/woke/price-insight/NinjaVerdict.vue')),
     WTabs,

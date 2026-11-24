@@ -248,11 +248,9 @@
   "mechanics-settings.spec.ts": [
    "renderer/src/web/woke/mechanics/"
   ],
-  "merc-ladder.spec.ts": [
+  "merc-warrant.spec.ts": [
    "renderer/src/parser/",
-   "renderer/src/web/price-check/",
-   "renderer/src/web/woke/price-insight/",
-   "renderer/src/web/woke/merc/"
+   "renderer/src/web/price-check/"
   ],
   "net-worth.spec.ts": [
    "main/src/woke/personal/",

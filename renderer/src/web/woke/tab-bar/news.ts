@@ -32,7 +32,6 @@ export const NEWS: NewsItem[] = [
   { id: 'glance-bar-default', wmType: 'woke-session-analytics', name: 'Session analytics', settingsPage: 'Sessions', note: 'New: a thin bar at the top while mapping. Off in Settings' },
   { id: 'glance-bar-fields', wmType: 'woke-session-analytics', name: 'Session analytics', settingsPage: 'Sessions', note: 'New: pick what the in-map glance bar shows, and keep it up while a run goes' },
   { id: 'forbidden-pair-finder', wmType: 'woke-forbidden', name: 'Forbidden pair finder', note: 'New: the Forbidden Flame and Flesh notables your build can take, with what each pair costs' },
-  { id: 'price-check-merc-supports', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: Mercenary Warrants rank their supports by what buyers pay; Measure finds out' },
   { id: 'price-check-ninja-trust', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: the instant card says when poe.ninja\'s price looks fake, with the item\'s usual price' },
   { id: 'price-check-seller-spread', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: exchange prices show what sellers ask, like "1 to 15c, most ask 10c"' },
   { id: 'price-check-unid-vs-id', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: unid Watcher\'s Eye and other gamble jewels show unid price vs identified versions' },
