@@ -15,43 +15,68 @@
           <span class="w-dim text-xs">Juice</span>
           <span class="w-num w-accent font-semibold" data-map-juice>{{ result.juice.score }}</span>
         </template>
-        <WInfo text="The badge and dots are your Map mods ratings. Has finds maps with the mod, Not finds maps without it, Any ignores it; a number chip searches at least its minimum (type or scroll to change it). These change only this price check's search, and nothing is searched until you press Search." />
+        <WInfo text="The badge and dots are your Map mods ratings. Has finds maps with the mod, Not finds maps without it, Any ignores it; a number tile searches at least its minimum (type or scroll to change it). Kind finds only maps of this map's kind (its influence); click it to pick another. These change only this price check's search, and nothing is searched until you press Search." />
         <i class="fas w-dim text-xs" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
       </button>
       <div v-if="summary || picked" :class="$style.summary">
         {{ summary }}<template v-if="summary && picked"> · </template><template v-if="picked">Search: <span :class="$style.picked" data-map-mod-picked>{{ picked }}</span></template>
       </div>
       <!-- Guy's pick (veteran review, 2026-11-24): what you farm decides which numbers start on. Remembered. -->
-      <div v-if="propFilters.length && isMap" :class="$style.goalRow" data-map-goal>
-        <span class="w-dim text-xs">Farming</span>
-        <span :class="$style.seg" role="radiogroup" aria-label="Farming goal">
+      <div v-if="propFilters.length && isMap" :class="$style.goalRow" data-map-goal-row>
+        <span class="w-dim text-xs" :class="$style.rowLabel">Farming</span>
+        <span :class="$style.seg" role="radiogroup" aria-label="Farming goal" data-map-goal>
           <button v-for="g in FARM_GOALS" :key="g" type="button" role="radio" :aria-checked="goal === g"
             :class="goal === g && $style.on_any" :data-goal="g" :title="GOAL_TITLE[g]" @click="setGoal(g)">{{ FARM_GOAL_LABEL[g] }}</button>
         </span>
       </div>
-      <div :class="$style.chips">
-        <!-- Guy's pick A (2026-11-23): every number is a chip and every chip is a filter.
-             Off: dashed with +. On: the min, typed in its box or scrolled. -->
+      <!-- Guy (2026-11-24): a map's kind is its influence: normal, Elder, Shaper, a conqueror's, each with
+           the Originator or without. The search finds only this map's kind; the menu picks another, Any
+           Originator or Any kind. Replaces No Elder. Picking never searches. -->
+      <div v-if="kindFs.length || hasFilters" :class="$style.goalRow" data-map-kind-row>
+        <template v-if="kindFs.length">
+          <span class="w-dim text-xs" :class="$style.rowLabel">Kind</span>
+          <span :class="$style.seg" data-map-kind>
+            <button type="button" :class="[$style.kindBtn, current?.key !== 'any' && $style.on_any]" :aria-expanded="kindMenu" data-kind="this"
+              :title="kindTitle" @click="kindMenu = !kindMenu">
+              <KindIcons :icons="iconsFor(shownKind?.key)" />{{ shownKind ? shownKind.label : 'Your pick' }}<i class="fas fa-caret-down w-dim" />
+            </button>
+            <button type="button" :class="current?.key === 'any' && $style.on_any" :aria-pressed="current?.key === 'any'" data-kind="any"
+              title="Search maps of every kind" @click="pickKind(anyChoice)">Any kind</button>
+          </span>
+        </template>
+        <span class="flex-1" />
         <!-- Guy (2026-11-24): one click to search the plain map; again brings the picks back. Never searches. -->
-        <button v-if="hasFilters" type="button" :class="[$style.chip, $style.baseBtn, baseOnly && $style.baseOn]" :aria-pressed="baseOnly"
-          :title="baseTitle" data-map-base @click="toggleBase">Base map<template v-if="baseOnly"> ✓</template></button>
+        <button v-if="hasFilters" type="button" :class="[$style.tool, baseOnly && $style.toolOn]" :aria-pressed="baseOnly"
+          :title="baseTitle" data-map-base @click="toggleBase"><img :src="MAP_ICON" alt="" :class="$style.ic">Base map</button>
+      </div>
+      <div v-if="kindMenu && kindFs.length" :class="$style.kindMenu" role="menu" data-map-kind-menu>
+        <span :class="$style.kindHead">Search maps that are</span>
+        <button v-for="c in choices" :key="c.key" type="button" role="menuitemradio" :aria-checked="current?.key === c.key"
+          :class="[$style.kindOpt, current?.key === c.key && $style.kindOn, (c.key === 'any' || c.key === 'any-originator') && $style.kindWide]"
+          :data-kind-option="c.key" @click="pickKind(c)">
+          <KindIcons :icons="iconsFor(c.key)" />{{ c.label }}<template v-if="c.key === ownKey"> (this map)</template>
+        </button>
+      </div>
+      <!-- Guy's pick A (2026-11-23): every number is a filter. Layout A (2026-11-24): a grid of tiles,
+           game icon and name on top, the value and its typed minimum below. Off: dashed and faded. -->
+      <div v-if="result.props.length" :class="$style.tiles">
         <template v-for="p in result.props" :key="p.label">
-          <span v-if="propFilter(p.label)" :class="[$style.chip, $style.propChip, isOn(p.label) ? $style.propOn : $style.propOff, p.label === 'Drops' && $style.propWarn, goalKeys.includes(p.label) && $style.goalKey, faded(p.label) && $style.faded]"
-            class="w-num" data-own-wheel @wheel.prevent.stop="wheelMin(p.label, $event)">
+          <div v-if="propFilter(p.label)" :class="[$style.tile, isOn(p.label) ? $style.propOn : $style.propOff, p.label === 'Drops' && $style.propWarn, goalKeys.includes(p.label) && $style.goalKey, faded(p.label) && $style.faded]"
+            data-own-wheel data-map-tile @wheel.prevent.stop="wheelMin(p.label, $event)">
             <button type="button" :class="$style.propBtn" :aria-pressed="isOn(p.label)" :title="propTitle(p.label)" :data-map-prop="p.label"
-              @click="toggleProp(p.label)">{{ p.label }} {{ p.value }}%</button>
+              @click="toggleProp(p.label)">
+              <span :class="$style.tileHead"><WIcon v-bind="PROP_ICON[p.label] ?? { fallback: 'fas fa-percent' }" size="sm" />{{ p.label }}</span>
+              <span :class="$style.tileVal" class="w-num">{{ p.value }}%</span>
+            </button>
             <label v-if="isOn(p.label)" :class="$style.minBox" :title="`Search at least this ${p.label}`">≥<input type="number" min="0" :max="p.value" :value="minOf(p.label) ?? ''"
               :aria-label="`${p.label} minimum`" :data-map-prop-min="p.label" @change="typeMin(p.label, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()"></label>
-          </span>
+          </div>
           <!-- No filter: the bulk search finds maps by type only (or the item isn't a map). -->
-          <span v-else :class="$style.chip" class="w-num" :title="addMods === false ? DEAD_TITLE : undefined">{{ p.label }} {{ p.value }}%</span>
+          <div v-else :class="[$style.tile, $style.dead]" :title="addMods === false ? DEAD_TITLE : undefined">
+            <span :class="$style.tileHead"><WIcon v-bind="PROP_ICON[p.label] ?? { fallback: 'fas fa-percent' }" size="sm" />{{ p.label }}</span>
+            <span :class="$style.tileVal" class="w-num">{{ p.value }}%</span>
+          </div>
         </template>
-        <!-- WOKEPOET-523: Elder (or Shaper) maps list cheap and crowd the results; on from the start. -->
-        <span v-if="noElder" :class="[$style.chip, $style.propChip, noElder.disabled ? $style.propOff : $style.propOn]">
-          <button type="button" :class="$style.propBtn" :aria-pressed="!noElder.disabled" data-map-no-elder
-            :title="noElder.disabled ? 'Elder and Shaper maps are in the search. Click to leave them out.' : 'Leaves out maps influenced by the Elder or the Shaper (they carry a guardian and list cheap). Click to include them.'"
-            @click="toggleNoElder">No Elder</button>
-        </span>
       </div>
       <div v-if="open" :class="$style.list">
         <div v-for="(row, i) in rows" :key="`${i}:${row.mod.matcher}`" :class="[$style.mod, row.filter && $style[stateOf(row.filter)]]" data-map-mod>
@@ -68,7 +93,7 @@
             :aria-pressed="isAnyOf(row.filter)" :title="anyOfTitle(row.filter)" @click="toggleAnyOf(row.filter)">{{ isAnyOf(row.filter) ? `any ${row.filter.anyOf.label}` : 'this one' }}</button>
         </div>
         <!-- Guy: any other mod goes in from here; the price check's own rows keep only special ones (enchants). -->
-        <FilterAddMod v-if="filters && addMods" :filters="filters" data-map-add-mod />
+        <FilterAddMod v-if="filters && addMods" :filters="filters" map data-map-add-mod />
       </div>
     </section>
     <slot name="worth" />
@@ -76,15 +101,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, shallowRef, watch, watchEffect } from 'vue'
+import { computed, h, inject, onBeforeUnmount, shallowRef, watch, watchEffect } from 'vue'
 import type { ShallowRef } from 'vue'
-import { WInfo } from '../ui'
+import { WIcon, WInfo } from '../ui'
 import { useFold } from '../ui/fold'
 import type { ParsedItem } from '@/parser'
 import { shortLabel } from './rules'
 import { VERDICT_LABEL } from './rules'
 import { checkMap, findMapModsConfig, isMapLike, isUnsure, PROP_TRADE_ID } from './check'
-import { NO_ELDER_TRADE_ID } from '@/web/price-check/filters/pseudo/maps'
+import { MAP_KIND_TRADE_IDS, kindChoices, mapKindOf, ownKindKey, pickOf, samePick, setPick } from '@/web/price-check/filters/pseudo/map-kind'
+import type { KindChoice } from '@/web/price-check/filters/pseudo/map-kind'
 import type { AddedMod, FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
 import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalDisabled } from './goal'
@@ -98,6 +124,20 @@ import type { FarmGoal } from './goal'
 const props = defineProps<{ item: ParsedItem, stats?: FilterOrGroup[], filters?: ItemFilters, addMods?: boolean, worth?: boolean }>()
 
 const open = useFold('map-mod-strip')
+
+// Game art on each number tile (layout A, 2026-11-24): the item players link with what it raises.
+type IconProps = { src?: string, item?: string, fallback: string, title: string }
+const PROP_ICON: Record<string, IconProps> = {
+  'Drops': { src: '/images/increased.png', fallback: 'fas fa-arrow-up', title: '' },
+  'Quant': { src: '/images/increased.png', fallback: 'fas fa-arrow-up', title: '' },
+  'Rarity': { item: 'Orb of Alchemy', fallback: 'fas fa-gem', title: '' },
+  'Pack': { item: 'Bestiary Scarab of the Herd', fallback: 'fas fa-users', title: '' },
+  'Currency': { src: '/images/chaos.png', fallback: 'fas fa-coins', title: '' },
+  'Threads': { item: 'Ambush Scarab', fallback: 'fas fa-bug', title: '' },
+  'Maps': { src: '/images/maps/normal.png', fallback: 'fas fa-map', title: '' },
+  'Div cards': { item: 'Stacked Deck', fallback: 'fas fa-clone', title: '' }
+}
+const MAP_ICON = '/images/maps/normal.png'
 
 const result = computed(() => {
   const config = findMapModsConfig()
@@ -118,7 +158,7 @@ watch(worthOpen, (now) => { if (now && accordion.value) open.value = false })
 
 // Tells the price check which number rows the chips stand in for (CheckedItem.vue).
 const owns = inject<ShallowRef<ReadonlySet<string> | null> | null>('map-strip-owns', null)
-const PROP_IDS: ReadonlySet<string> = new Set([...Object.values(PROP_TRADE_ID), NO_ELDER_TRADE_ID])
+const PROP_IDS: ReadonlySet<string> = new Set([...Object.values(PROP_TRADE_ID), ...MAP_KIND_TRADE_IDS])
 watchEffect(() => { if (owns) owns.value = result.value ? PROP_IDS : null })
 onBeforeUnmount(() => { if (owns) owns.value = null })
 
@@ -156,17 +196,25 @@ const STATE_TITLE: Record<ModState, string> = {
   has: 'Trade search finds maps with this mod',
   not: 'Trade search finds maps without this mod'
 }
-const searchable = computed(() => (props.stats ?? []).filter((s): s is StatFilter => !s.group && !!s.mapMod))
-const rows = computed(() => {
+// The map's own mods and its implicit / enchant lines (influence, an Originator's Evocator): one list.
+const searchable = computed(() => (props.stats ?? []).filter((s): s is StatFilter => !s.group && (!!s.mapMod || !!s.mapLine)))
+interface Row { mod: { text: string, matcher: string, rating: string }, filter: StatFilter | null }
+const rows = computed<Row[]>(() => {
   const used = new Set<StatFilter>()
-  return result.value!.verdict.mods.map(mod => {
+  const rated: Row[] = result.value!.verdict.mods.map(mod => {
     // The verdict names a mod by its wording, the filter by its stat's ref; a
     // stat has several wordings (plural, 100%, reworded), so any of them counts.
-    const filter = searchable.value.find(f => !used.has(f) && (f.statRef === mod.matcher ||
+    // Only the map's own mods: an enchant with the same wording (a Mirage) stays its own line.
+    const filter = searchable.value.find(f => f.mapMod && !used.has(f) && (f.statRef === mod.matcher ||
       f.sources.some(s => s.stat.stat.matchers.some(m => m.string === mod.matcher)))) ?? null
     if (filter) used.add(filter)
     return { mod, filter }
   })
+  // Lines the ratings skip: listed too, so every line is in this one list.
+  const rest: Row[] = searchable.value.filter(f => !used.has(f)).map(f => ({
+    mod: { text: f.text, matcher: f.statRef, rating: 'ok' }, filter: f
+  }))
+  return [...rest, ...rated]
 })
 function isAnyOf (f: StatFilter): boolean {
   return f.tradeId.length > 1
@@ -199,11 +247,64 @@ function setState (f: StatFilter, state: ModState) {
   }
 }
 // The map's "no Elder or Shaper influence" filter (pseudo/maps.ts); none on an influenced map.
-const noElder = computed(() => (props.stats ?? []).find((s): s is StatFilter => !s.group && !!s.noElder) ?? null)
-function toggleNoElder () {
-  const f = noElder.value
-  if (f) f.disabled = !f.disabled
+// The map's kind (pseudo/map-kind.ts): three filters, one per influence family, set together.
+const kindFs = computed(() => (props.stats ?? []).filter((s): s is StatFilter => !s.group && !!s.mapKind))
+const ownKind = computed(() => mapKindOf(props.item))
+const ownKey = computed(() => ownKindKey(ownKind.value))
+const choices = computed(() => kindChoices(ownKind.value))
+const anyChoice = computed(() => choices.value.find(c => c.key === 'any')!)
+const current = computed(() => choices.value.find(c =>
+  kindFs.value.every(f => samePick(pickOf(f), c.picks[f.mapKind!.family]))) ?? null)
+// With Any kind on, the menu button names this map's kind again (Any kind has its own button).
+const shownKind = computed(() => current.value?.key === 'any' ? choices.value.find(c => c.key === ownKey.value) ?? null : current.value)
+const kindMenu = shallowRef(false)
+watch(() => [props.item, props.stats], () => { kindMenu.value = false })
+// The menu closes on a click outside it or Escape.
+function closeKindMenu (e: Event) {
+  if (e instanceof KeyboardEvent ? e.key === 'Escape' : !(e.target as Element | null)?.closest?.('[data-map-kind-menu],[data-map-kind]')) kindMenu.value = false
 }
+watch(kindMenu, (on) => {
+  const fn = on ? document.addEventListener : document.removeEventListener
+  fn.call(document, 'pointerdown', closeKindMenu, true)
+  fn.call(document, 'keydown', closeKindMenu, true)
+})
+onBeforeUnmount(() => { kindMenu.value = false; document.removeEventListener('pointerdown', closeKindMenu, true); document.removeEventListener('keydown', closeKindMenu, true) })
+function pickKind (c: KindChoice) {
+  for (const f of kindFs.value) setPick(f, c.picks[f.mapKind!.family])
+  // The Elder's guardian line is searched only while the kind is Elder: another kind
+  // (or Any kind) has no guardian, so it would find nothing.
+  const elder = c.picks.elder
+  const elderOnly = typeof elder === 'object' && Array.isArray(elder.has) && elder.has.length === 1 && elder.has[0] === 2
+  for (const f of guardianFs.value) f.disabled = !elderOnly
+  kindMenu.value = false
+}
+const guardianFs = computed(() => (props.stats ?? []).filter((s): s is StatFilter =>
+  !s.group && !!s.mapLine && /^Map is occupied by/i.test(s.statRef)))
+const kindTitle = computed(() => {
+  const c = current.value
+  if (!c) return 'Pick which kind of map to search'
+  if (c.key === 'any') return 'Searching maps of every kind. Click to pick a kind.'
+  return `Searching only ${c.label} maps${c.key === ownKey.value ? ' (this map\'s kind)' : ''}. Kinds list at different prices. Click for the others.`
+})
+// Game art for each kind: the influence's own icon, the Originator's orb, a plain map.
+const CONQUEROR_ART: Record<number, string> = { 1: 'Crusader', 2: 'Redeemer', 3: 'Hunter', 4: 'Warlord' }
+type KindIcon = { src?: string, item?: string, fa?: string }
+function iconsFor (key: string | undefined): KindIcon[] {
+  if (!key) return []
+  const icons: KindIcon[] = []
+  if (key.startsWith('elder')) icons.push({ src: '/images/influence-Elder.png' })
+  else if (key.startsWith('shaper')) icons.push({ src: '/images/influence-Shaper.png' })
+  // A map with no Citadel picks any conqueror: a plain citadel, not one conqueror's art.
+  else if (key.startsWith('citadel')) icons.push(ownKind.value.citadel ? { src: `/images/influence-${CONQUEROR_ART[ownKind.value.citadel]}.png` } : { fa: 'fas fa-chess-rook' })
+  else if (key.startsWith('normal') && !key.endsWith('Originator')) icons.push({ src: MAP_ICON })
+  if (key.endsWith('Originator') || key === 'any-originator') icons.push({ item: "Originator's Exalted Orb" })
+  if (key === 'any') icons.push({ src: MAP_ICON })
+  return icons
+}
+const KindIcons = (p: { icons: KindIcon[] }) => p.icons.map(i =>
+  h(WIcon, { src: i.src, item: i.item, size: 'sm', title: '', fallback: i.fa ?? 'fas fa-map' }))
+KindIcons.props = ['icons']
+
 function propFilter (label: string): StatFilter | null {
   const id = PROP_TRADE_ID[label]
   if (!id) return null
@@ -305,13 +406,15 @@ const propFilters = computed(() => result.value!.props.map(p => propFilter(p.lab
 // the base map is (Guy, 2026-11-24), so Base map never touches it.
 const INFLUENCE = /^(Area is influenced by|Map is occupied by|Map contains \S+ Citadel)/i
 const isMapIdentity = (s: FilterOrGroup) => !s.group && INFLUENCE.test(s.statRef)
-const plainFilters = computed(() => (props.stats ?? []).filter(s => s.group || (!s.mapMod && !isMapIdentity(s))))
+const plainFilters = computed(() => (props.stats ?? []).filter(s => s.group || (!s.mapMod && !s.mapLine && !s.mapKind && !isMapIdentity(s))))
+// The lines Base map sets to Any: every one but the influence.
+const baseMods = computed(() => searchable.value.filter(f => !isMapIdentity(f)))
 const isOnFilter = (s: FilterOrGroup) => s.group ? !s.meta.disabled : !s.disabled
 const setOnFilter = (s: FilterOrGroup, on: boolean) => { if (s.group) s.meta.disabled = !on; else s.disabled = !on }
-const hasFilters = computed(() => propFilters.value.length > 0 || searchable.value.length > 0)
+const hasFilters = computed(() => propFilters.value.length > 0 || baseMods.value.length > 0)
 const baseOnly = computed(() =>
   !plainFilters.value.some(isOnFilter) &&
-  searchable.value.every(f => stateOf(f) === 'any') &&
+  baseMods.value.every(f => stateOf(f) === 'any') &&
   (props.filters?.addedMods ?? []).every(m => m.disabled))
 interface BaseSnapshot { on: FilterOrGroup[], mods: Array<[StatFilter, ModState]>, added: AddedMod[] }
 const clearedRef = shallowRef<BaseSnapshot | null>(null)
@@ -320,7 +423,7 @@ function toggleBase () {
   if (!baseOnly.value) {
     const cleared: BaseSnapshot = {
       on: plainFilters.value.filter(isOnFilter),
-      mods: searchable.value.filter(f => stateOf(f) !== 'any').map(f => [f, stateOf(f)]),
+      mods: baseMods.value.filter(f => stateOf(f) !== 'any').map(f => [f, stateOf(f)]),
       added: (props.filters?.addedMods ?? []).filter(m => !m.disabled)
     }
     cleared.on.forEach(f => { setOnFilter(f, false) })
@@ -340,11 +443,12 @@ function toggleBase () {
 }
 const baseTitle = computed(() => baseOnly.value
   ? (clearedRef.value ? 'Searching the plain map. Click to bring back the numbers and mods you had ticked.' : 'Searching the plain map: no number or mod is ticked.')
-  : 'Untick every number, mod and line below, to search the plain map (its influence stays). Click again to bring them back. Searches only when you press Search.')
+  : 'Untick every number, mod and line below, to search the plain map (its kind stays). Click again to bring them back. Searches only when you press Search.')
 
 const picked = computed(() => {
-  const has = searchable.value.filter(f => stateOf(f) === 'has').length
-  const not = searchable.value.filter(f => stateOf(f) === 'not').length
+  // The influence is what the map is, not a pick.
+  const has = baseMods.value.filter(f => stateOf(f) === 'has').length
+  const not = baseMods.value.filter(f => stateOf(f) === 'not').length
   // Mods added from the line below count too, so a folded section still says what it searches.
   const added = (props.filters?.addedMods ?? []).filter(m => !m.disabled).length
   return [has ? `has ${has}` : '', not ? `not ${not}` : '', added ? `+${added} added` : ''].filter(Boolean).join(' · ')
@@ -392,14 +496,31 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .skip .headline { color: var(--w-down); }
 .careful .headline { color: var(--w-warn); }
 .run .headline { color: var(--w-up); }
-.chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.chip {
-  font-size: var(--w-fs-sm);
-  padding: 0 7px;
-  border-radius: var(--w-r-pill);
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.tile {
+  position: relative;
+  display: flex; flex-direction: column; gap: 1px; min-width: 0;
+  padding: 2px 5px 3px;
+  border: 1px solid var(--w-line);
+  border-radius: var(--w-r-sm);
   background: var(--w-panel-2);
   color: var(--w-dim);
+  font-size: var(--w-fs-sm);
 }
+.tile .propBtn { display: flex; flex-direction: column; gap: 1px; min-width: 0; text-align: left; }
+.tileHead { display: flex; align-items: center; gap: 4px; min-width: 0; white-space: nowrap; overflow: hidden; font-family: var(--w-caps-face); font-size: var(--w-fs-xs); }
+.tileVal { color: var(--w-fg); font-weight: 600; }
+/* The min sits beside the value, so a tile stays two lines. */
+.tile .minBox { position: absolute; right: 4px; bottom: 3px; }
+.dead { opacity: 0.7; }
+.tool {
+  flex: none; display: inline-flex; align-items: center; gap: 4px;
+  padding: 0 7px; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm);
+  font-size: var(--w-fs-xs); color: var(--w-dim); background: var(--w-panel-2); cursor: pointer;
+}
+.tool:hover { color: var(--w-fg); }
+.toolOn { color: var(--w-fg); border-color: var(--w-accent); background: var(--w-accent-soft); }
+.ic { width: var(--w-icon-sm); height: var(--w-icon-sm); object-fit: contain; }
 .list { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; border-top: 1px solid var(--w-line); }
 .mod { display: flex; align-items: center; gap: 6px; font-size: var(--w-fs-sm); padding: 1px 0; }
 .text { flex: 1; min-width: 0; }
@@ -413,26 +534,29 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .seg .on_has { background: color-mix(in srgb, var(--w-up) 28%, transparent); color: var(--w-fg); }
 .seg .on_not { background: color-mix(in srgb, var(--w-down) 28%, transparent); color: var(--w-fg); }
 .picked { color: var(--w-fg); }
-.baseBtn { cursor: pointer; border: 1px solid var(--w-gold); color: var(--w-gold); background: transparent; }
-.baseBtn:hover { color: var(--w-fg); }
-.baseOn { background: var(--w-accent-soft); color: var(--w-fg); }
-.propChip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid transparent; }
 .propBtn { cursor: pointer; color: inherit; }
 .propOff { border: 1px dashed var(--w-line-strong); }
-.propOff .propBtn::before { content: '+' / ''; margin-right: 3px; color: var(--w-gold); }
-.propChip:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
-.goalRow { display: flex; align-items: center; gap: 6px; }
-.goalKey { box-shadow: 0 0 0 1px var(--w-gold); }
-.faded { opacity: 0.5; }
+.tile.propOff:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
+.goalRow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.rowLabel { min-width: 3.6em; }
+.kindBtn { display: inline-flex; align-items: center; gap: 4px; }
+.kindMenu { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
+.kindHead { grid-column: 1 / -1; padding: 2px 8px; font-family: var(--w-caps-face); font-size: var(--w-fs-xs); color: var(--w-dim); border-bottom: 1px solid var(--w-line); }
+.kindOpt { display: flex; align-items: center; gap: 4px; padding: 2px 8px; text-align: left; font-size: var(--w-fs-sm); color: var(--w-fg); }
+.kindOpt:hover { background: var(--w-chip-ground); }
+.kindOn { background: var(--w-accent-soft); color: var(--w-accent); }
+.kindWide { grid-column: 1 / -1; border-top: 1px solid var(--w-line); }
+.goalKey { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--w-gold) 45%, transparent); }
+.faded { opacity: 0.55; }
 .faded:hover { opacity: 1; }
 .propOn { color: var(--w-fg); background: var(--w-accent-soft); border-color: var(--w-accent); }
 .propOn:hover { border-color: var(--w-accent); }
 /* Atlas Drops: the trade site has no listings for it (pseudo/maps.ts). */
 .propWarn.propOff { border-color: color-mix(in srgb, var(--w-warn) 70%, transparent); color: var(--w-warn); }
-.propWarn.propOff .propBtn::before { content: '!' / ''; color: var(--w-warn); font-weight: 700; }
-.minBox { display: inline-flex; align-items: center; gap: 1px; color: var(--w-dim); }
+.propWarn.propOff .tileHead::after { content: '!' / ''; margin-left: auto; color: var(--w-warn); font-weight: 700; }
+.minBox { display: inline-flex; align-items: center; gap: 1px; color: var(--w-dim); font-size: var(--w-fs-xs); }
 .minBox input {
-  width: 3.2em; padding: 0 3px; border-radius: var(--w-r-sm);
+  width: 3em; padding: 0 3px; border-radius: var(--w-r-sm);
   border: 1px solid var(--w-line-strong); background: var(--w-panel); color: var(--w-accent);
   font: inherit; text-align: right; -moz-appearance: textfield;
 }

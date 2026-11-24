@@ -255,6 +255,7 @@
 
       <section :class="$style.chips">
         <WField v-model="query" type="search" icon="fas fa-search" placeholder="Search items" :class="$style.search" />
+        <WChip v-if="changedCount" clickable :active="onlyChanged" :title="onlyChanged ? 'Show every item' : 'Only the items you priced yourself or left out'" data-nw-changed @click="onlyChanged = !onlyChanged">Changed {{ changedCount }}</WChip>
         <WChip v-if="cat !== 'all'" clickable active :title="`Only ${catLabel}. Click to show every category`" @click="cat = 'all'">{{ catLabel }} ×</WChip>
         <HideChip v-if="divine" :value="hideBelow" :on="config.hideDivOn === true" :idle="floor.limiting === 'chaos'"
           :title="floor.limiting === 'chaos' ? 'The chaos limit is higher, so it is the one hiding rows' : 'Hide rows worth less in total. Scroll the number or click it to type'"
@@ -274,8 +275,8 @@
             <button type="button" :class="$style.clear" :aria-pressed="showUnpriced" title="List them, to set your own price" @click="showUnpriced = !showUnpriced">{{ showUnpriced ? 'hide' : 'show' }}</button></template>
           <template v-if="hiddenByValue"> · {{ hiddenByValue }} hidden by value
             <button type="button" :class="$style.clear" title="Switch the Hide &lt; limits off" @click="showHidden">show</button></template>
-          <template v-if="ignoredCount"> · {{ ignoredCount }} ignored
-            <button type="button" :class="$style.clear" :aria-pressed="showIgnored" title="List them, to stop ignoring one" @click="showIgnored = !showIgnored">{{ showIgnored ? 'hide' : 'show' }}</button></template>
+          <template v-if="ignoredCount"> · {{ ignoredCount }} left out
+            <button type="button" :class="$style.clear" :aria-pressed="showIgnored" title="List them, to count one again" @click="showIgnored = !showIgnored">{{ showIgnored ? 'hide' : 'show' }}</button></template>
         </span>
         <span><template v-if="readLine">Stash {{ readLine }} · </template>poe.ninja · {{ ninjaAge }}</span>
       </div>
@@ -291,7 +292,7 @@ import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shall
 import { AppConfig } from '@/web/Config'
 import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import { usePoeninja } from '@/web/background/Prices'
-import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSpark, WTabs, openMenu, toast, vItemTip } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
 import { lineTip, tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
@@ -710,6 +711,7 @@ const cat = shallowRef<Category | 'all'>('all')
 // Picked tabs (multi); none is every tab.
 const tabs = shallowRef<string[]>([])
 function clearFilters () {
+  onlyChanged.value = false
   cat.value = 'all'
   tabs.value = []
   query.value = ''
@@ -788,11 +790,24 @@ watch(tabValues, (list) => {
 // Unpriced and ignored items, shown dimmed under the rest from the footer.
 const showUnpriced = shallowRef(false)
 const showIgnored = shallowRef(false)
+// Left out from the table just now: stays in place, dimmed (pick S1).
+const justOut = shallowRef<ReadonlySet<string>>(new Set())
+// The Changed chip: only your own prices and what you left out.
+const onlyChanged = shallowRef(false)
+const changedLines = computed(() => {
+  const val = v.value
+  if (!val) return []
+  return filterLines([...val.lines.filter(l => l.mine), ...val.ignoredLines], { cat: cat.value, tabs: tabs.value, query: query.value, minChaos: 0 })
+})
+const changedCount = computed(() => changedLines.value.length)
+watch(changedCount, (n) => { if (!n) onlyChanged.value = false })
 const tableLines = computed(() => {
   const val = v.value
   if (!val) return []
   const f = { cat: cat.value, tabs: tabs.value, query: query.value, minChaos: floor.value.minChaos }
-  const extra = [...(showUnpriced.value ? val.unpricedLines : []), ...(showIgnored.value ? val.ignoredLines : [])]
+  if (onlyChanged.value) return changedLines.value
+  const out = showIgnored.value ? val.ignoredLines : val.ignoredLines.filter(l => justOut.value.has(l.key))
+  const extra = [...(showUnpriced.value ? val.unpricedLines : []), ...out]
   return [...filterLines(val.lines, f), ...filterLines(extra, { ...f, minChaos: 0 })]
 })
 const ignoredCount = computed(() => v.value?.ignoredLines.length ?? 0)
@@ -808,15 +823,21 @@ function showHidden () {
   props.config.hideChaosOn = false
 }
 watch(ignoredCount, (n) => { if (!n) showIgnored.value = false })
+// The footer's show / hide, a new league or a new read: left-out rows go back
+// to the footer's count.
+watch([showIgnored, () => props.status?.league, () => props.status?.lastReadAt], () => { justOut.value = new Set() })
 
-// ---------- your prices and ignored items (row menu) ----------
+// ---------- your prices and left-out items (the shared line item, ui/line-item.ts) ----------
 const NOT_READY = 'Not loaded yet. Try again in a moment'
 function onPrice (key: string, chaos: number | null) {
   if (!setMyPrice(key, chaos)) toast(NOT_READY)
 }
 function onIgnore (key: string, name: string, on: boolean) {
   if (!setIgnored(key, on)) { toast(NOT_READY); return }
-  toast(on ? `Ignoring ${name}` : `${name} counts again`, { undo: () => { setIgnored(key, !on) } })
+  // Left out (or put back out by Undo): it stays where it was, dimmed.
+  const keep = () => { justOut.value = new Set([...justOut.value, key]) }
+  if (on) keep()
+  lineToast(on ? 'out' : 'in', name, () => { if (setIgnored(key, !on) && !on) keep() })
 }
 
 // ---------- sales (pick A: Sold section, sale lines, chart dots; pick C: the Sales view) ----------

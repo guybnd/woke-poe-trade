@@ -63,7 +63,7 @@
         </template>
         <!-- woke: mods the item doesn't have, to search for on top of its own. -->
         <!-- woke: on a map the strip's mod list holds this (MapModStrip.vue). -->
-        <filter-add-mod v-if="canAddMods && !onStrip" :filters="filters" />
+        <filter-add-mod v-if="canAddMods && !onStrip" :filters="filters" :map="isMap" />
         <input type="submit" class="hidden" />
       </form>
       <!-- woke: the toggles keep their label on one line; with no room one moves to a second line. -->
@@ -186,6 +186,8 @@ export default defineComponent({
 
     // woke: gear, jewels, flasks, maps: anything with rarity has mods the trade site
     // can search for. Gems, currency, cards and the like don't.
+    // A map's Add a mod offers map mods only.
+    const isMap = computed(() => props.item.category === ItemCategory.Map)
     const canAddMods = computed(() =>
       (Object.values(ItemRarity) as string[]).includes(props.item.rarity as string) &&
       !props.presets.some(p => p.active && p.id === 'filters.preset_bulk'))
@@ -306,6 +308,7 @@ export default defineComponent({
       presetOptions: computed(() => props.presets.map(preset => ({ value: preset.id, label: t(preset.id) }))),
       showUnknownMods,
       canAddMods,
+      isMap,
       hasStats: computed(() =>
         props.stats.length ||
         (canAddMods.value && !props.onStrip) ||
