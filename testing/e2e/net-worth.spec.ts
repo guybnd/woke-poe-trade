@@ -119,14 +119,19 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const listing = (id: string, name: string, base: string, at: string, div: number) =>
       ({ id, item: { name, typeLine: base, baseType: base, frameType: 3, icon: '' }, listing: { indexed: at, fee: 100, price: { amount: div, currency: 'divine', type: '~price' }, account: { name: 'Tester#1234', lastCharacterName: 'T' } } })
     let listings = [listing('l0', 'Headhunter', 'Leather Belt', ago(48), 9)]
+    // Other sellers' Headhunters, for Still cheapest? (a search sorted by price).
+    const other = (id: string, div: number) => ({ ...listing(id, 'Headhunter', 'Leather Belt', ago(5), div), listing: { ...listing(id, 'Headhunter', 'Leather Belt', ago(5), div).listing, account: { name: 'Other#1', lastCharacterName: 'O' } } })
+    const market = [other('m1', 8), listing('l0', 'Headhunter', 'Leather Belt', ago(48), 9), other('m2', 10)]
     await overlay.page.route('**/api/trade/search/**', (route) => {
-      searches.push(route.request().postData() ?? '')
-      return route.fulfill({ contentType: 'application/json', headers: LIMITS, body: JSON.stringify({ id: `q${searches.length}`, total: listings.length, result: listings.map(l => l.id) }) })
+      const body = route.request().postData() ?? ''
+      searches.push(body)
+      const list = body.includes('"price":"asc"') ? market : listings
+      return route.fulfill({ contentType: 'application/json', headers: LIMITS, body: JSON.stringify({ id: `q${searches.length}`, total: list.length, result: list.map(l => l.id) }) })
     })
     await overlay.page.route('**/api/trade/fetch/**', (route) => route.fulfill({
       contentType: 'application/json',
       headers: LIMITS,
-      body: JSON.stringify({ result: listings.filter(r => route.request().url().split('/fetch/')[1].split('?')[0].split(',').includes(r.id)) })
+      body: JSON.stringify({ result: [...listings, ...market.filter(m => m.id.startsWith('m'))].filter(r => route.request().url().split('/fetch/')[1].split('?')[0].split(',').includes(r.id)) })
     }))
     await panel.getByLabel('Run name').fill('Nightmare maps')
     await panel.getByRole('button', { name: 'Start', exact: true }).click()
@@ -258,6 +263,16 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await listedRows.filter({ hasText: 'Headhunter' }).getByText('Headhunter', { exact: true }).hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
     await overlay.page.mouse.move(0, 0)
+    // Still cheapest? (WOKEPOET-535): Check runs one search for that item,
+    // instant buyout, cheapest first. One other seller asks less: 2nd.
+    const hhCheck = listedRows.filter({ hasText: 'Headhunter' }).locator('[data-listed-check]')
+    await hhCheck.getByRole('button', { name: 'Check' }).click()
+    await expect(hhCheck).toContainText('2nd', { timeout: 15_000 })
+    expect(searches).toHaveLength(searchesBefore + 2)
+    expect(searches.at(-1)).toContain('"name":"Headhunter"')
+    await expect(panel.getByText('Undercut 1')).toBeVisible()
+    // Rows nobody checked still offer Check; no search went out for them.
+    await expect(listedRows.filter({ hasText: "Kaom's Heart" }).locator('[data-listed-check]')).toContainText('Check')
     // A chip: the head names it and totals its rows (all three are uniques here).
     const head = panel.locator('[data-listed] [data-listed-total]')
     const allAsk = await head.innerText()

@@ -34,6 +34,12 @@
         </span>
 <span v-if="currencyNote" class="ml-1">{{ currencyNote }}</span>
       </button>
+      <!-- woke: the search found more than the 100 it handed back: search again from the
+           top price loaded, adding those listings (Guy's pick 2B, WOKEPOET-523). -->
+      <button v-if="canPricier || pricierNote" type="button" class="w-pc-bulk ml-1" data-pricier :disabled="fetching || !canPricier"
+        :title="pricierTitle" @click="pricier">Pricier<span v-if="pricierNote" class="ml-1">{{ pricierNote }}</span></button>
+      <!-- woke: the price check's own chips beside Bulk (a map's Exchange, WOKEPOET-523). -->
+      <slot name="chips" />
       <div class="w-pc-grow flex-1"></div>
       <!-- woke: the price check's prefix / suffix caps, editing its live filters. -->
       <slot name="toolbar" />
@@ -336,6 +342,10 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
   })
 
   // The search the pages below belong to, and how many of its ids are fetched.
+  // woke: after Pricier, the pages come from its search instead (WOKEPOET-523).
+  let source: SearchResult | null = null
+  // The trade site found more than the ids it handed back (it hands back 100 at most).
+  const sourceCapped = shallowRef(false)
   let fetched = 0
   let pages: Promise<void> = Promise.resolve()
   const morePages = shallowRef(false)
@@ -364,6 +374,8 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
     try {
       error.value = null
       searchResult.value = null
+      source = null
+      sourceCapped.value = false
       const _fetchResults: PricingResult[] = shallowReactive([])
       fetchResults.value = _fetchResults
       fetched = 0
@@ -374,6 +386,8 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
         return
       }
       searchResult.value = _searchResult
+      source = _searchResult
+      sourceCapped.value = _searchResult.total > _searchResult.result.length
       collapseMerchant = filters.trade.collapseMerchant
       const searchedCurrency = filters.trade.currency
 
@@ -433,7 +447,7 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
     } finally {
       if (_searchId === searchId) {
         fetching.value = false
-        morePages.value = searchResult.value != null && canFetchMore(searchResult.value)
+        morePages.value = source != null && canFetchMore(source)
       }
       done()
     }
@@ -445,7 +459,7 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
   function loadMore (enough: () => boolean): Promise<string | null> {
     const _searchId = searchId
     const run = pages.then(async (): Promise<string | null> => {
-      const _searchResult = searchResult.value
+      const _searchResult = source
       if (_searchId !== searchId || !_searchResult || error.value) return null
       const into = fetchResults.value
       fetching.value = true
@@ -469,7 +483,50 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
     return run
   }
 
-  return { error, searchResult, groupedResults, fetchResults, fetching, morePages, search, loadMore }
+  // woke: on a click only (Pricier, WOKEPOET-523): the same search again from `min` up,
+  // its listings added after the ones loaded. One trade search. Resolves with a note
+  // when the trade site stopped it, 'none' when it found nothing not shown already.
+  function loadPricier (filters: ItemFilters, stats: FilterOrGroup[], min: number): Promise<string | null> {
+    const _searchId = searchId
+    const run = pages.then(async (): Promise<string | null> => {
+      if (_searchId !== searchId || !searchResult.value || error.value) return null
+      const into = fetchResults.value
+      fetching.value = true
+      try {
+        const request = createTradeRequest(filters, stats)
+        const price = (request.query.filters.trade_filters ??= { filters: {} }).filters
+        // The price currency the search asked for stays: only the floor is new.
+        price.price = { ...price.price, min } as typeof price.price
+        const found = await requestTradeResultList(request, filters.trade.league)
+        if (_searchId !== searchId) return null
+        const shown = new Set(into.map(r => r.id))
+        const src: SearchResult = { ...found, result: found.result.filter(id => !shown.has(id)) }
+        source = src
+        sourceCapped.value = found.total > found.result.length
+        fetched = 0
+        if (!src.result.length) return 'none'
+        // Two pages, as a search starts with; Bulk and the currency chip load more.
+        // A newer search owns the pager from then on: this stops.
+        for (let page = 0; page < 2; page++) {
+          if (_searchId !== searchId || !canFetchMore(src)) break
+          preventQueueCreation([{ count: 1, limiters: RATE_LIMIT_RULES.FETCH }])
+          await fetchPage(_searchId, src, into)
+        }
+        return null
+      } catch (err) {
+        return (err as Error).message
+      } finally {
+        if (_searchId === searchId) {
+          fetching.value = false
+          morePages.value = source != null && canFetchMore(source)
+        }
+      }
+    })
+    pages = run.then(() => {})
+    return run
+  }
+
+  return { error, searchResult, groupedResults, fetchResults, fetching, morePages, sourceCapped, search, loadMore, loadPricier }
 }
 
 export default defineComponent({
@@ -517,7 +574,7 @@ export default defineComponent({
     const statValue = (listing: PricingResult, col: StatColumn) =>
       listingStatValue(listing.listedItem, col, props.item.category)
 
-    const { error, searchResult, groupedResults, fetchResults, fetching, morePages, search, loadMore } = useTradeApi((a, b) =>
+    const { error, searchResult, groupedResults, fetchResults, fetching, morePages, sourceCapped, search, loadMore, loadPricier } = useTradeApi((a, b) =>
       allColumns.value.every(col => formatStatValue(statValue(a, col), col) === formatStatValue(statValue(b, col), col)))
     const { retryIn, rateLimited } = useRetryCountdown(error)
     const refreshNote = shallowRef('')
@@ -662,6 +719,50 @@ export default defineComponent({
         bulkNote.value = note
         setTimeout(() => { if (bulkNote.value === note) bulkNote.value = '' }, 3000)
       }
+    }
+
+    // woke: Pricier (WOKEPOET-523). The floor is the dearest listing loaded, as its own
+    // amount, never converted: the trade site reads a "chaos or divine" min at its own
+    // divine rate, which lags poe.ninja's (price-currency.ts), so a converted floor
+    // could skip listings. Chaos searches use the dearest chaos listing, divine-only
+    // searches the dearest divine one. Overlap is fine: ids already loaded are dropped.
+    const PRICIER_CURRENCIES = new Set(['', 'chaos', 'chaos_divine', 'divine'])
+    const pricierNote = shallowRef('')
+    // A floor that brought back only listings already shown: the next click starts above it.
+    const pricierPast = shallowRef<number | null>(null)
+    watch(searchResult, () => { pricierNote.value = ''; pricierPast.value = null })
+    const pricierFloor = computed(() => {
+      const inDivine = props.filters.trade.currency === 'divine'
+      const unit = inDivine ? 'divine' : 'chaos'
+      let top = 0
+      for (const r of fetchResults.value) {
+        if (r && r.priceCurrency === unit && r.priceAmount > top) top = r.priceAmount
+      }
+      if (!top) return null
+      const floor = inDivine ? Math.floor(top * 100) / 100 : Math.floor(top)
+      const step = inDivine ? 0.01 : 1
+      const past = pricierPast.value
+      return past != null && floor <= past ? Math.round((past + step) * 100) / 100 : floor
+    })
+    // Shown while the search found more than it handed back; listings it handed back but
+    // not loaded yet sit above the floor, so the new search finds them again.
+    const canPricier = computed(() => !!searchResult.value && sourceCapped.value &&
+      !props.stale && pricierFloor.value != null && PRICIER_CURRENCIES.has(props.filters.trade.currency ?? ''))
+    const priceText = (n: number) => props.filters.trade.currency === 'divine' ? `${n} div` : `${n}c`
+    async function pricier () {
+      const min = pricierFloor.value
+      if (min == null) return
+      pricierNote.value = ''
+      const forSearch = searchResult.value
+      const note = await loadPricier(props.filters, props.stats, min)
+      if (searchResult.value !== forSearch) return
+      if (note === 'none') {
+        pricierPast.value = min
+        pricierNote.value = `none new from ${priceText(min)}`
+      } else if (note) {
+        pricierNote.value = note
+      }
+      if (note) setTimeout(() => { if (pricierNote.value) pricierNote.value = '' }, 4000)
     }
 
     const rows = computed(() => sortByValue(groupListings(tableListings.value, {
@@ -815,6 +916,11 @@ export default defineComponent({
       bulkNote,
       toggleBulk,
       bulkSellers: computed(() => bulkSellerCount(currencyResults.value, sameKind)),
+      canPricier,
+      pricier,
+      pricierNote,
+      pricierTitle: computed(() => pricierFloor.value == null ? ''
+        : `The trade site hands back the cheapest 100 at most, and this search found more. Search again from ${priceText(pricierFloor.value)} up and add those listings (one trade search).`),
       currency: currencyView,
       currencyChoice,
       currencyNote,

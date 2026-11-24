@@ -7,6 +7,8 @@ import type { Rates, Sale } from '../../net-worth/sales'
 import { ageText, pendingRows, pendingTotals, sortPending } from '../../net-worth/pending'
 import type { PendingDoc, PendingRow } from '../../net-worth/pending'
 import { saleLookupTip } from '../../net-worth/sale-tip'
+import { checkFor, rankText } from '../../net-worth/cheapest'
+import type { CheapestDoc } from '../../net-worth/cheapest'
 import type { Lookup, LookupCard, LookupRow } from './types'
 
 const WORDS = ['listed', 'listings', 'my listings', 'pending', 'pending sales', 'unsold', 'faustus listings']
@@ -16,9 +18,15 @@ function wantsTotals (query: string): boolean {
   return q.length >= 4 && WORDS.some(w => w.startsWith(q))
 }
 
-function row (r: PendingRow): LookupRow {
+// "4th cheapest" from your last Still cheapest? check at this price.
+function rankOf (r: PendingRow, checks: CheapestDoc | null): string {
+  const c = checkFor(checks, r.item)
+  return c ? ` · ${rankText(c)} cheapest` : ''
+}
+
+function row (r: PendingRow, checks: CheapestDoc | null): LookupRow {
   const l = r.item
-  const label = `${saleName(l)} · ${ageText(r.ageMs)}`
+  const label = `${saleName(l)} · ${ageText(r.ageMs)}${rankOf(r, checks)}`
   // The same tooltip as the Listed tab's row (gear with its own mods).
   const item = saleLookupTip(l)
   return r.chaos == null
@@ -28,7 +36,8 @@ function row (r: PendingRow): LookupRow {
 
 // `doc`: the league's saved listings, or null with Net worth off or never read.
 // `counted`: false when Net worth leaves your listings out of its total.
-export function listedLookup (doc: PendingDoc | null, sales: Sale[] | null, staleDays?: number, counted = true): Lookup {
+// `checks`: the league's Still cheapest? checks.
+export function listedLookup (doc: PendingDoc | null, sales: Sale[] | null, staleDays?: number, counted = true, checks: CheapestDoc | null = null): Lookup {
   return (query, ctx) => {
     if (!doc?.listings.length) return []
     const rates: Rates = { chaos: 1 }
@@ -51,7 +60,7 @@ export function listedLookup (doc: PendingDoc | null, sales: Sale[] | null, stal
         icon: 'fas fa-store',
         sections: [
           { rows: [{ label: `Asking · ${t.count}`, chaos: t.askChaos }, ...(t.stale ? [{ label: `Stale · ${t.stale}`, chaos: t.staleChaos }] : [])] },
-          { label: 'Longest unsold', rows: [...rows].sort((a, b) => a.firstAt - b.firstAt).slice(0, 6).map(row) }
+          { label: 'Longest unsold', rows: [...rows].sort((a, b) => a.firstAt - b.firstAt).slice(0, 6).map(r => row(r, checks)) }
         ],
         actions: [{ label: 'Open Net worth', tool: NET_WORTH_TYPE }]
       })
@@ -67,9 +76,9 @@ export function listedLookup (doc: PendingDoc | null, sales: Sale[] | null, stal
           name: `Listed ${saleName(first)}`,
           // The result and its heading are the item's: same tooltip as its row.
           tip: saleLookupTip(first),
-          sub: `At Faustus ${ageText(found[0].ageMs)}, asking ${first.price.amount} ${first.price.currency}`,
+          sub: `At Faustus ${ageText(found[0].ageMs)}, asking ${first.price.amount} ${first.price.currency}${rankOf(found[0], checks)}`,
           icon: first.icon || 'fas fa-store',
-          sections: [{ rows: found.map(row) }],
+          sections: [{ rows: found.map(r => row(r, checks)) }],
           actions: [{ label: 'Open Net worth', tool: NET_WORTH_TYPE }]
         })
       }
