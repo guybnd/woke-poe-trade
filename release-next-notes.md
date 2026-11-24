@@ -136,3 +136,4 @@
 - Map history: unique maps (Cortex, Maelström of Chaos...) show their own item on hover, not a made-up "<name> Map".
 - Ctrl+Space: the "Listed …" and "Sold …" results have the item hover. What's new: Show me on Campaign or Session story opens its own Settings page. Reopening search with the same text starts with the groups folded again. Hovering a tool in All tools clears only the What's new line it shows, so its other new lines stay in the dock.
 - Item tooltips: the first listing tooltip in a price check no longer runs off the bottom of the screen. It was placed before its mod lines loaded; it's placed again once they do.
+- Map price check: a Base map button at the start of the Trade search chips unticks every number and mod in one click, to search the plain map. Click it again to bring them back.
