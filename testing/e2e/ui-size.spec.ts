@@ -21,7 +21,7 @@ test('UI size grows the price check window and the panel zoom together, never th
   await expect(panel).toContainText('Divine Orb')
   // An exchange item poe.ninja prices waits for a click before searching (WOKEPOET-479).
   await panel.getByTestId('ninja-verdict-live').click()
-  const row = page.getByText('178 / 1').first()
+  const row = panel.getByTestId('bulk-each').first()
   const width = (await panel.boundingBox())!.width
   const rowHeight = (await row.boundingBox())!.height
   const css = (name: string) => page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n), name)

@@ -59,9 +59,11 @@
       </div>
       <!-- Guy's pick A (2026-11-23): every number is a filter. Layout A (2026-11-24): a grid of tiles,
            game icon and name on top, the value and its typed minimum below. Off: dashed and faded. -->
-      <div v-if="result.props.length" :class="$style.tiles">
+      <!-- Guy (2026-11-24): the + sits beside the tiles as a slim button, not a tile of its own row. -->
+      <div v-if="result.props.length || extras.length" :class="$style.tileRow">
+      <div :class="$style.tiles">
         <template v-for="p in result.props" :key="p.label">
-          <div v-if="propFilter(p.label)" :class="[$style.tile, isOn(p.label) ? $style.propOn : $style.propOff, p.label === 'Drops' && $style.propWarn, goalKeys.includes(p.label) && $style.goalKey, faded(p.label) && $style.faded]"
+          <div v-if="propFilter(p.label)" :class="[$style.tile, isOn(p.label) ? $style.propOn : $style.propOff, goalKeys.includes(p.label) && $style.goalKey, faded(p.label) && $style.faded]"
             data-own-wheel data-map-tile @wheel.prevent.stop="wheelMin(p.label, $event)">
             <button type="button" :class="$style.propBtn" :aria-pressed="isOn(p.label)" :title="propTitle(p.label)" :data-map-prop="p.label"
               @click="toggleProp(p.label)">
@@ -77,10 +79,39 @@
             <span :class="$style.tileVal" class="w-num">{{ p.value }}%</span>
           </div>
         </template>
+        <!-- Guy (2026-11-24): a number this map hasn't got, added from the + tile. -->
+        <div v-for="label in extraOn" :key="'x:' + label" :class="[$style.tile, $style.propOn, $style.extra]"
+          data-own-wheel data-map-tile data-map-extra @wheel.prevent.stop="wheelMin(label, $event)">
+          <button type="button" :class="$style.propBtn" aria-pressed="true" :data-map-prop="label"
+            :title="extraTitle(label)"
+            @click="toggleProp(label)">
+            <span :class="$style.tileHead"><WIcon v-bind="PROP_ICON[label] ?? { fallback: 'fas fa-percent' }" size="sm" />{{ label }}</span>
+            <span :class="$style.tileVal" class="w-dim">added</span>
+          </button>
+          <label :class="$style.minBox" :title="`Search at least this ${label}`">≥<input type="number" min="0" :value="minOf(label) ?? ''"
+            :aria-label="`${label} minimum`" :data-map-prop-min="label" @change="typeMin(label, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()"></label>
+        </div>
+      </div>
+        <div v-if="extraOff.length" :class="$style.addWrap">
+          <button type="button" :class="$style.addTile" :aria-expanded="addMenu" data-map-add-prop aria-label="Add a number"
+            title="Add a number this map hasn't got (Rarity, More Maps...)" @click="addMenu = !addMenu">
+            <i class="fas fa-plus" />
+          </button>
+          <div v-if="addMenu" :class="$style.addMenu" role="menu" data-map-add-prop-menu>
+            <button v-for="label in extraOff" :key="label" type="button" role="menuitem" :class="$style.kindOpt"
+              :data-add-prop="label" @click="addExtra(label)">
+              <WIcon v-bind="PROP_ICON[label] ?? { fallback: 'fas fa-percent' }" size="sm" />{{ label }}
+            </button>
+          </div>
+        </div>
       </div>
       <div v-if="open" :class="$style.list">
-        <div v-for="(row, i) in rows" :key="`${i}:${row.mod.matcher}`" :class="[$style.mod, row.filter && $style[stateOf(row.filter)]]" data-map-mod>
+        <div v-for="(row, i) in rows" :key="`${i}:${row.mod.matcher}`"
+          :class="[$style.mod, row.filter && $style[stateOf(row.filter)], isRareOnly(row) && $style.rareOnly]"
+          :data-rare-only="isRareOnly(row) || undefined" data-map-mod>
           <span :class="[$style.dot, $style[row.mod.rating]]" :title="RATING_TITLE[row.mod.rating]" />
+          <!-- Guy (2026-11-24): rare-only map mods are yellow in game and worth filtering for. -->
+          <span v-if="isRareOnly(row)" :class="$style.rareIcon" title="Rare-only map mod" />
           <span :class="[$style.text, { 'w-dim': row.mod.rating === 'ok' && !row.filter?.disabled }]">{{ row.mod.text }}</span>
           <span v-if="row.filter" :class="$style.seg" role="radiogroup" :aria-label="`Search ${row.mod.text}`">
             <button v-for="opt in STATES" :key="opt" type="button" role="radio" :aria-checked="stateOf(row.filter) === opt"
@@ -112,6 +143,7 @@ import { checkMap, findMapModsConfig, isMapLike, isUnsure, PROP_TRADE_ID } from 
 import { MAP_KIND_TRADE_IDS, kindChoices, mapKindOf, ownKindKey, pickOf, samePick, setPick } from '@/web/price-check/filters/pseudo/map-kind'
 import type { KindChoice } from '@/web/price-check/filters/pseudo/map-kind'
 import type { AddedMod, FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
+import { FilterTag } from '@/web/price-check/filters/interfaces'
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
 import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalDisabled } from './goal'
 import { farmGoal, setFarmGoal } from './goal-config'
@@ -216,6 +248,9 @@ const rows = computed<Row[]>(() => {
   }))
   return [...rest, ...rated]
 })
+function isRareOnly (row: Row): boolean {
+  return row.filter?.tag === FilterTag.RareOnly
+}
 function isAnyOf (f: StatFilter): boolean {
   return f.tradeId.length > 1
 }
@@ -305,6 +340,35 @@ const KindIcons = (p: { icons: KindIcon[] }) => p.icons.map(i =>
   h(WIcon, { src: i.src, item: i.item, size: 'sm', title: '', fallback: i.fa ?? 'fas fa-map' }))
 KindIcons.props = ['icons']
 
+// Numbers this map hasn't got (pseudo/maps.ts): on ones are tiles, off ones fill the + menu.
+const PROP_LABEL: Record<string, string> = Object.fromEntries(Object.entries(PROP_TRADE_ID).map(([l, id]) => [id, l]))
+const extras = computed(() => (props.stats ?? []).filter((s): s is StatFilter => !s.group && !!s.mapExtra && !!PROP_LABEL[s.tradeId[0]]))
+const extraOn = computed(() => extras.value.filter(f => !f.disabled).map(f => PROP_LABEL[f.tradeId[0]]))
+const extraOff = computed(() => extras.value.filter(f => f.disabled).map(f => PROP_LABEL[f.tradeId[0]]))
+const addMenu = shallowRef(false)
+watch(() => [props.item, props.stats], () => { addMenu.value = false })
+watch(() => extraOff.value.length, (n) => { if (!n) addMenu.value = false })
+// One menu at a time; each closes on a click outside it or Escape.
+watch(addMenu, (on) => { if (on) kindMenu.value = false })
+watch(kindMenu, (on) => { if (on) addMenu.value = false })
+function closeAddMenu (e: Event) {
+  if (e instanceof KeyboardEvent ? e.key === 'Escape' : !(e.target as Element | null)?.closest?.('[data-map-add-prop-menu],[data-map-add-prop]')) addMenu.value = false
+}
+watch(addMenu, (on) => {
+  const fn = on ? document.addEventListener : document.removeEventListener
+  fn.call(document, 'pointerdown', closeAddMenu, true)
+  fn.call(document, 'keydown', closeAddMenu, true)
+})
+onBeforeUnmount(() => { document.removeEventListener('pointerdown', closeAddMenu, true); document.removeEventListener('keydown', closeAddMenu, true) })
+function extraTitle (label: string): string {
+  return `${RAISES[label] ? RAISES[label] + '\n\n' : ''}Not on this map: searching maps with at least the minimum. Click to remove it.`
+}
+function addExtra (label: string) {
+  const f = propFilter(label)
+  if (f) f.disabled = false
+  addMenu.value = false
+}
+
 function propFilter (label: string): StatFilter | null {
   const id = PROP_TRADE_ID[label]
   if (!id) return null
@@ -323,7 +387,8 @@ function toggleProp (label: string) {
 }
 // Never past the map's own number, or the search leaves this map out.
 function clampMin (f: StatFilter, n: number): number {
-  return Math.min(f.roll!.value, Math.max(0, n))
+  // An added number isn't on this map: any minimum.
+  return f.mapExtra ? Math.max(0, n) : Math.min(f.roll!.value, Math.max(0, n))
 }
 // The wheel moves the min, as on the rows it replaced; turns the chip on.
 function wheelMin (label: string, e: WheelEvent) {
@@ -341,7 +406,8 @@ function typeMin (label: string, e: Event) {
   const box = e.target as HTMLInputElement
   if (!f?.roll) return
   const n = box.value.trim() === '' ? NaN : Number(box.value)
-  f.roll.min = Number.isFinite(n) ? clampMin(f, Math.round(n)) : ''
+  // An added number with no minimum would search nothing (Rarity, Pack): at least 1.
+  f.roll.min = Number.isFinite(n) ? clampMin(f, Math.round(n)) : (f.mapExtra ? 1 : '')
   // Show the clamped number, not what was typed.
   box.value = typeof f.roll.min === 'number' ? String(f.roll.min) : ''
 }
@@ -349,8 +415,6 @@ const DEAD_TITLE = 'The bulk search finds maps by type only. Switch to the norma
 function propTitle (label: string): string {
   const on = isOn(label)
   const raises = RAISES[label] ? `${RAISES[label]}\n\n` : ''
-  // Checked 2026-11-15: the trade site's Atlas Drops filter matched no listing.
-  if (label === 'Drops') return raises + (on ? 'Searching Atlas Drops. The trade site found no listings for this filter in 3.30, so results may be empty. Click to leave it out.' : 'The trade site found no listings for Atlas Drops in 3.30, so turning this on will likely empty the results.')
   return raises + (on ? 'In the search. Type or scroll the minimum, click to leave it out.' : 'Click to search at least this, or scroll to set the minimum.')
 }
 
@@ -360,7 +424,7 @@ const goal = computed(() => farmGoal())
 const goalKeys = computed(() => GOAL_KEYS[goal.value])
 const GOAL_TITLE: Record<FarmGoal, string> = {
   currency: 'Farming currency: Rarity, Pack size and More Currency start on. Remembered for the next maps.',
-  atlas: 'Farming maps and Threads: Pack size, More Maps and More Threads start on. Atlas Drops matters most but the trade site has no listings for it. Remembered for the next maps.',
+  atlas: 'Farming maps and Threads: Atlas Drops, Pack size, More Maps and More Threads start on. Remembered for the next maps.',
   any: 'No goal: the numbers start as they always did.'
 }
 // Off and not one the goal wants: faded, so the ones that matter stand out.
@@ -377,8 +441,6 @@ function setGoal (g: FarmGoal) {
 }
 function applyGoal (g: FarmGoal) {
   for (const p of result.value?.props ?? []) {
-    // Atlas Drops is off for every goal (no listings): one you turned on stays on.
-    if (p.label === 'Drops') continue
     const f = propFilter(p.label)
     const off = goalDisabled(p.label, g)
     // An Always / Never tick you set on a number wins (price-insight/tick-prefs.ts).
@@ -512,6 +574,14 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .tileVal { color: var(--w-fg); font-weight: 600; }
 /* The min sits beside the value, so a tile stays two lines. */
 .tile .minBox { position: absolute; right: 4px; bottom: 3px; }
+.tileRow { display: flex; gap: 4px; align-items: stretch; }
+.tileRow .tiles { flex: 1; min-width: 0; }
+.addWrap { position: relative; display: flex; }
+.addTile { width: 24px; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--w-line);
+  border-radius: var(--w-r-sm); color: var(--w-dim); cursor: pointer; }
+.addTile:hover, .addTile[aria-expanded="true"] { color: var(--w-fg); border-color: var(--w-line-strong); }
+.addMenu { position: absolute; z-index: 5; top: 100%; right: 0; margin-top: 2px; min-width: 120px; white-space: nowrap; display: flex; flex-direction: column;
+  border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .dead { opacity: 0.7; }
 .tool {
   flex: none; display: inline-flex; align-items: center; gap: 4px;
@@ -551,9 +621,6 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .faded:hover { opacity: 1; }
 .propOn { color: var(--w-fg); background: var(--w-accent-soft); border-color: var(--w-accent); }
 .propOn:hover { border-color: var(--w-accent); }
-/* Atlas Drops: the trade site has no listings for it (pseudo/maps.ts). */
-.propWarn.propOff { border-color: color-mix(in srgb, var(--w-warn) 70%, transparent); color: var(--w-warn); }
-.propWarn.propOff .tileHead::after { content: '!' / ''; margin-left: auto; color: var(--w-warn); font-weight: 700; }
 .minBox { display: inline-flex; align-items: center; gap: 1px; color: var(--w-dim); font-size: var(--w-fs-xs); }
 .minBox input {
   width: 3em; padding: 0 3px; border-radius: var(--w-r-sm);
@@ -564,6 +631,8 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .minBox input:focus-visible { outline: 1px solid var(--w-accent); }
 .anyOf { flex: none; font-size: var(--w-fs-xs); padding: 0 5px; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); color: var(--w-dim); cursor: pointer; }
 .anyOf:hover { color: var(--w-fg); }
+.rareOnly:not(.has):not(.not) .text { color: var(--w-r-rare); }
+.rareIcon { flex: none; width: 14px; height: 14px; background: url('/images/rareonly.png') center / contain no-repeat; }
 .dot { flex: none; width: 7px; height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-3); }
 .dot.deadly { background: var(--w-down); }
 .dot.warn { background: var(--w-warn); }

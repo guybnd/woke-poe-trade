@@ -22,10 +22,12 @@
 }
 
 /* Profit line items (ui/line-item.ts): the hover actions show on hover or
-   focus, and stay on a left-out row so it can be counted again. A left-out
-   row stays in place, dimmed, its number struck (pick S1). */
-.w-line-acts { visibility: hidden; }
-.w-line:hover .w-line-acts, .w-line:focus-within .w-line-acts, .w-line.w-line-out .w-line-acts, .w-line-acts.w-line-acts-on { visibility: visible; }
+   focus, laid over the row's right edge on a shaded backing, so they take no
+   room and never move a number (Guy, 2026-11-24). A left-out row stays in
+   place, dimmed, its number struck (pick S1); hover it to count it again. */
+.w-line { position: relative; }
+.w-line-acts { visibility: hidden; position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 2; }
+.w-line:hover .w-line-acts, .w-line:focus-within .w-line-acts, .w-line-acts.w-line-acts-on { visibility: visible; }
 .w-line.w-line-out .w-line-name { opacity: .5; }
 .w-line-tag { font-size: var(--w-fs-xs); color: var(--w-dim); border: 1px dashed var(--w-line-strong); border-radius: var(--w-r-sm); padding: 0 4px; white-space: nowrap; }
 .w-line:focus-visible { outline: 1px solid var(--w-gold); outline-offset: -1px; }

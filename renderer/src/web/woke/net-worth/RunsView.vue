@@ -52,14 +52,15 @@
       <RunTimeBar :start-at="shownRun.startAt" :end="timeEnd" :maps="totals.runs" :unit="unit" :kept="shownRun.final?.time" @spent="spent = $event" />
 
       <!-- A stopped run's summary (pick W1 + T1): opens on Stop. -->
-      <RunSummary v-if="showSummary && totals" :key="shownRun.id" :run="shownRun" :done="doc.done" :totals="totals" :per-hour="perHour" :spent="spent" :tips="tips" :divine="divine" :map-cost-keys="mapCostKeys" :league="league" @details="summaryId = null" />
+      <RunSummary v-if="showSummary && totals" :key="shownRun.id" :run="shownRun" :done="doc.done" :totals="totals" :per-hour="perHour" :spent="spent" :tips="tips" :divine="divine" :map-cost-keys="mapCostKeys" :league="league" @details="summaryId = null"
+        @drop-price="dropPrice" @drop-out="(d, on) => leaveOut(rowKey.tally(d.key), on, d.name)" @drop-remove="d => d.manualId && removeManual(d.manualId)" />
       <div v-if="!showSummary && changedCount" :class="$style.changedBar">
         <WChip clickable :active="onlyChanged" :title="onlyChanged ? 'Show every row' : 'Only the rows you edited or left out, and the ones you added'" data-run-changed @click="onlyChanged = !onlyChanged">Changed {{ changedCount }}</WChip>
       </div>
       <div v-if="!showSummary" :class="$style.cols">
         <!-- In: what came into the stash, and what you added. -->
         <div :class="$style.col" data-run-in>
-          <div :class="$style.colHead"><span :class="$style.colTitle">{{ isCraft ? 'Made' : 'In' }}</span><span class="w-num w-up">{{ signed(inSum) }}<Coin :chaos="!divine" /></span></div>
+          <div :class="$style.colHead"><span :class="$style.colTitleBox"><span :class="$style.colTitle">{{ isCraft ? 'Made' : 'In' }}</span></span><span class="w-num w-up" :class="$style.colSum">{{ signed(inSum) }}<Coin :chaos="!divine" /></span></div>
           <!-- A crafting run's new unpriced items: price them by hand. -->
           <RunRow v-for="r in madeRows" :key="'m' + r.key" data-run-made :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, r.net)" :count="tallyCount(r)" :chaos="madeVal(r)" sign="+" :sub="isEdited(rowKey.tally(r.key)) ? undefined : 'set price'" :divine="divine"
             :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
@@ -74,8 +75,8 @@
 
         <!-- Out: costs you typed, and what the stash says was used up. -->
         <div :class="$style.col" data-run-out>
-          <div :class="$style.colHead"><span :class="$style.colTitle">{{ isCraft ? 'Used' : 'Out' }}</span><span class="w-num w-down">{{ outSum > 0 ? '−' : '' }}{{ amount(outSum) }}<Coin :chaos="!divine" /></span>
-            <span v-if="totals.costPerMapChaos != null && !isCraft" class="w-dim w-num text-xs" :title="`Typed costs, plus maps, scarabs and fragments used up, per ${unit === 'run' ? 'map or fight' : unit}`">{{ amount(totals.costPerMapChaos) }} a {{ unit }}</span></div>
+          <div :class="$style.colHead"><span :class="$style.colTitleBox"><span :class="$style.colTitle">{{ isCraft ? 'Used' : 'Out' }}</span>
+            <span v-if="totals.costPerMapChaos != null && !isCraft" class="w-dim w-num text-xs" :title="`Typed costs, plus maps, scarabs and fragments used up, per ${unit === 'run' ? 'map or fight' : unit}`">{{ amount(totals.costPerMapChaos) }} a {{ unit }}</span></span><span class="w-num w-down" :class="$style.colSum">{{ outSum > 0 ? '−' : '' }}{{ amount(outSum) }}<Coin :chaos="!divine" /></span></div>
           <RunRow v-for="c in shownRun.costs" :key="c.id" :name="c.name" :tip="tipOf(c.key, c.name)" :count="c.qty" :each="c.unitChaos" :chaos="lineCost(c, totals.runs)" sign="−" :sub="costSub(c)" :divine="divine" :bought="c.bought ?? null" :can-leave-out="false" removable data-run-cost
             @edit="editCost(c.id, $event)" @remove="removeCost(c.id)">
             <template #sub>
@@ -93,8 +94,8 @@
 
         <!-- Faustus: listed and sold, not in your stash yet; items you hold. -->
         <div :class="$style.col" data-run-faustus>
-          <div :class="$style.colHead"><span :class="$style.colTitle">{{ isCraft ? 'Sold' : 'Faustus' }}</span><span class="w-num" :class="totals.faustusChaos ? 'w-up' : 'w-dim'">{{ signed(totals.faustusChaos) }}<Coin :chaos="!divine" /></span>
-            <i class="fas fa-info-circle" :class="$style.info" :title="faustusInfo" /></div>
+          <div :class="$style.colHead"><span :class="$style.colTitleBox"><span :class="$style.colTitle">{{ isCraft ? 'Sold' : 'Faustus' }}</span>
+            <i class="fas fa-info-circle" :class="$style.info" :title="faustusInfo" /></span><span class="w-num" :class="[$style.colSum, totals.faustusChaos ? 'w-up' : 'w-dim']">{{ signed(totals.faustusChaos) }}<Coin :chaos="!divine" /></span></div>
           <RunRow v-for="r in listed.slice(0, listedShown)" :key="'l' + r.item.id" data-run-listed :icon="r.item.icon" :name="saleName(r.item)" :tip="saleTip(r.item)" :count="r.item.stack" :chaos="r.chaos" sign="+" :sub="listedSub(r.item)" :divine="divine"
             :out="r.leftOut" :edited="r.edited" @edit="editRow(rowKey.item(r.item.id), $event)" @out="leaveOut(rowKey.item(r.item.id), $event, saleName(r.item))" @reset="resetRow(rowKey.item(r.item.id))" />
           <RunRow v-for="h in held" :key="'h' + h.item.id" data-run-held :icon="h.item.icon" :name="h.item.name" :tip="{ name: h.item.name, count: h.left }" :count="h.left" :chaos="h.chaos" :sign="h.carried ? '' : '+'" :sub="h.carried ? 'from last run' : 'held'" :divine="divine"
@@ -149,7 +150,7 @@
               <td :class="[$style.num, tone(r.perMapChaos)]" class="w-num">{{ r.perMapChaos != null ? signed(r.perMapChaos) : '—' }}<span v-if="r.sample" :class="$style.small" :title="sampleTextOf(r.runs, r.profitChaos, r.top, r.sample, pastUnit)">small</span></td>
               <td :class="[$style.num, tone(r.perHourChaos)]" class="w-num">{{ r.perHourChaos != null ? signed(r.perHourChaos) : '—' }}</td>
               <td :class="$style.num" class="w-num w-dim">{{ r.costPerMapChaos != null ? amount(r.costPerMapChaos) : '—' }}</td>
-              <td :class="[$style.num, tone(r.perMapNoTopChaos)]" class="w-num" :title="r.top ? `Per ${pastUnit} without ${r.top.name} (${amount(r.top.chaos)})` : undefined">
+              <td :class="[$style.num, tone(r.perMapNoTopChaos)]" class="w-num" :title="r.top ? `Per ${pastUnit} without your best drop (${r.top.name}, ${amountU(r.top.chaos)})` : undefined">
                 {{ r.perMapNoTopChaos != null ? signed(r.perMapNoTopChaos) : '—' }}
               </td>
               <td v-if="!byName"><button type="button" :class="$style.x" :aria-label="`Delete ${r.name}`" title="Delete" @click="removeId(r.id)"><i class="fas fa-trash-alt" /></button></td>
@@ -174,6 +175,7 @@ import type { NetWorthWidget } from './widget'
 import { formatAmount, nowMinute } from '../ui/format'
 import { tipFor } from './tips'
 import type { TipIndex } from './tips'
+import type { SummaryDrop } from './run-summary'
 import { span } from './play-time'
 import Coin from './Coin.vue'
 import { compareRows, countLabel, craftTime, shownFights, shownMaps, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, smallSample, sortCompare, tallyRows, tallyValue, topDrop, unitOf, SAMPLE_MIN_RUNS } from './runs'
@@ -237,6 +239,8 @@ watch(() => props.points.length, () => { if (shownRun.value && !shownRun.value.s
 // ---------- numbers ----------
 const toDiv = (chaos: number) => props.divine ? chaos / props.divine : chaos
 const amount = (chaos: number) => { const d = toDiv(chaos); return Math.abs(d) >= 100 ? formatAmount(d) : d.toFixed(Math.abs(d) < 1 && props.divine ? 2 : 1) }
+// With its unit, for hover text.
+const amountU = (chaos: number) => `${amount(chaos)}${props.divine ? ' div' : 'c'}`
 const signed = (chaos: number) => `${chaos > 0 ? '+' : chaos < 0 ? '−' : ''}${amount(Math.abs(chaos))}`
 const tone = (n: number | null | undefined) => n == null || Math.abs(n) < 0.05 ? '' : n > 0 ? 'w-up' : 'w-down'
 const clock = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -284,6 +288,12 @@ function addManual (side: 'in' | 'out', l: AddedLine) {
   edit(r => ({ ...r, manual: [...(r.manual ?? []), m] }))
 }
 function editManual (id: string, v: { count?: number, each?: number }) { edit(r => ({ ...r, manual: (r.manual ?? []).map(m => m.id === id ? { ...m, count: v.count ?? m.count, each: v.each ?? m.each } : m) })) }
+// The run summary's best drops: your price each, or back to as read.
+function dropPrice (d: SummaryDrop, each: number | null) {
+  if (d.manualId) { if (each != null) editManual(d.manualId, { each }); return }
+  const key = rowKey.tally(d.key)
+  if (each == null) resetRow(key); else editRow(key, { each })
+}
 function removeManual (id: string) {
   const list = shownRun.value?.manual ?? []
   const at = list.findIndex(m => m.id === id)
@@ -376,8 +386,8 @@ function sampleTextOf (runs: number, profit: number, t: TopDrop | null, s: Small
   const u = one === 'run' ? 'maps and fights' : `${one}s`
   const parts: string[] = []
   if (s.few) parts.push(`Only ${runs} ${u}: per ${one} can swing a lot. Over ${SAMPLE_MIN_RUNS} reads steadier.`)
-  if (s.share != null && t) parts.push(`One drop (${t.name}, ${amount(t.chaos)}) is ${Math.round(s.share * 100)}% of the profit.`)
-  if (t && runs > 0) parts.push(`Without it: ${signed((profit - t.chaos) / runs)} a ${one}.`)
+  if (s.share != null && t) parts.push(`Your best drop is ${Math.round(s.share * 100)}% of the profit.`)
+  if (t && runs > 0) parts.push(`Without your best drop (${t.name}, ${amountU(t.chaos)}): ${signed((profit - t.chaos) / runs)}${props.divine ? ' div' : 'c'} a ${one}.`)
   return parts.join(' ')
 }
 const sampleText = computed(() => totals.value && sample.value ? sampleTextOf(totals.value.runs, totals.value.profitChaos, top.value, sample.value) : '')
@@ -462,7 +472,7 @@ const COLUMNS: Array<{ id: CompareSort, label: string, tip: string }> = [
   { id: 'perMap', label: 'Per map', tip: 'Best per map or fight first' },
   { id: 'perHour', label: 'Per hour', tip: 'Best per hour first' },
   { id: 'cost', label: 'Cost', tip: 'Cost a map: typed costs plus maps, scarabs and fragments used up. Cheapest first' },
-  { id: 'noTop', label: 'No top', tip: 'Per map without the single biggest drop. Best first' }
+  { id: 'noTop', label: 'Without best drop', tip: 'Per map without the run\'s single best drop, so one lucky drop doesn\'t decide it. Best first' }
 ]
 const byName = shallowRef(false)
 const sortBy = shallowRef<CompareSort>('new')
@@ -545,8 +555,16 @@ function addPerMap (l: AddedLine) {
 .hero b.big { font-size: calc(24px * var(--w-text-scale, 1)); line-height: 1.1; }
 .changedBar { display: flex; justify-content: flex-end; }
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--w-s2) calc(var(--w-s3) * 1.5); align-items: start; }
-.col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.colHead { display: flex; align-items: baseline; gap: var(--w-s2); border-bottom: 1px solid var(--w-line-strong); padding-bottom: 2px; margin-bottom: 2px; }
+/* One grid per column: every row (RunRow) and the head share its value
+   column (subgrid), so the totals and values line up (Guy, 2026-11-24). The
+   hover actions lie over the row and take no room. */
+.col { display: grid; grid-template-columns: 18px minmax(0, 1fr) max-content; column-gap: 6px; row-gap: 2px; align-content: start; min-width: 0; }
+.col > * { grid-column: 1 / -1; min-width: 0; }
+.col > [data-run-row], .col > .colHead { display: grid; grid-template-columns: subgrid; }
+.col > button { justify-self: start; }
+.colHead { align-items: baseline; border-bottom: 1px solid var(--w-line-strong); padding-bottom: 2px; margin-bottom: 2px; }
+.colTitleBox { grid-column: 1 / 3; display: flex; align-items: baseline; gap: var(--w-s2); min-width: 0; }
+.colSum { grid-column: 3; text-align: right; white-space: nowrap; }
 .colTitle { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); color: var(--w-gold); margin-right: auto; }
 .colFoot { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; margin-top: 4px; }
 .x { background: none; border: 0; color: var(--w-dim); cursor: pointer; padding: 0; }

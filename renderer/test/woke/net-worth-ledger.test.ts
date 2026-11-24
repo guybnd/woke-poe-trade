@@ -146,6 +146,18 @@ describe('what changed', () => {
     expect(groups[1].lines.map(l => [l.name, l.count, l.dir])).toEqual([['Divine Orb', 1, 'add'], ['Chaos Orb', 50, 'add']])
   })
 
+  it('reads after a map\'s first read back home are hideout time, not its loot', () => {
+    // Map 1 ran 1:00 from 1000; read at 70_000 (back home), then sales read
+    // in the hideout at 200_000 and 300_000; map 2 from 400_000.
+    const runs = [{ name: 'City Square', enteredAt: 1000, mapMs: 60_000 }, { name: 'Strand', enteredAt: 400_000, mapMs: 90_000 }]
+    const groups = groupByRuns([d(70_000, 30), d(200_000, 5), d(300_000, 7), d(500_000, 9)], runs, 0)
+    expect(groups.map(g => [g.key, g.title, g.netChaos])).toEqual([
+      ['run:1', 'Map 2 · Strand · 1:30', 9],
+      ['hub:0', 'Hideout after Map 1', 12],
+      ['run:0', 'Map 1 · City Square · 1:00', 30]
+    ])
+  })
+
   it('without a session, one group per refresh, newest first', () => {
     const g = groupByRefresh([d(1, 5), d(2, -3), d(3, 7), d(4, 1)])
     expect(g.map(x => x.netChaos)).toEqual([1, 7, -3])

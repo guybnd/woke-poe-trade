@@ -1,6 +1,7 @@
 <template>
   <!-- A profit line's hover actions (pick A4): ⊘ leave out (or ↺ count it
-       again) and ⋯ for the rest. The row needs the w-line class. -->
+       again) and ⋯ for the rest. The row needs the w-line class: they lie
+       over its right edge on hover, taking no room of their own. -->
   <span class="w-line-acts" :class="$style.acts">
     <button v-if="canLeaveOut" type="button" :class="$style.act" :title="out ? COUNT_AGAIN : `${LEAVE_OUT}: it stops counting`" :aria-label="out ? `${COUNT_AGAIN}: ${name}` : `${LEAVE_OUT} ${name}`" :aria-pressed="out" data-line-out
       @click.stop="emit('out', !out)"><i :class="out ? 'fas fa-undo' : 'fas fa-ban'" /></button>
@@ -41,7 +42,8 @@ function openMore (e: MouseEvent) {
 </script>
 
 <style module>
-.acts { display: inline-flex; justify-content: flex-end; gap: 6px; }
+.acts { display: inline-flex; justify-content: flex-end; align-items: center; gap: 6px; padding: 2px 4px 2px 6px; border-radius: var(--w-r-sm);
+  background: var(--w-panel-solid-base, #0a0806); box-shadow: -10px 0 8px 2px var(--w-panel-solid-base, #0a0806), 0 0 0 1px var(--w-line); }
 .act { background: none; border: 0; padding: 0 1px; color: var(--w-dim); cursor: pointer; font-size: var(--w-fs-xs); line-height: 1; }
 .act:hover, .act:focus-visible { color: var(--w-gold); outline: none; }
 </style>

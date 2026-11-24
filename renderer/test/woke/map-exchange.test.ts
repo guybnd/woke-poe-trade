@@ -181,3 +181,26 @@ describe('a map\'s implicit lines are strip lines', () => {
     expect(stats.filter((s): s is StatFilter => !s.group && !!s.mapKind).map(s => s.mapKind!.family)).toEqual(['elder', 'citadel', 'originator'])
   })
 })
+
+// Guy (2026-11-24): any map number can be searched, also one the map hasn't got.
+describe('a map number this map hasn\'t got', () => {
+  it('starts off and out of the search, and searches its minimum once added', () => {
+    const item = parseItem(fixture('items/map-rare-t16.txt'))
+    const stats = createPresets(item, OPTS).presets.find(p => p.id === 'filters.preset_pseudo')!.stats
+    const extras = stats.filter((s): s is StatFilter => !s.group && !!s.mapExtra)
+    const ids = extras.map(f => f.tradeId[0])
+    expect(ids).toContain('pseudo.pseudo_map_more_map_drops')
+    expect(extras.every(f => f.disabled)).toBe(true)
+    // Never one the map has.
+    const own = stats.filter((s): s is StatFilter => !s.group && !s.mapExtra).map(s => s.tradeId[0])
+    expect(ids.some(id => own.includes(id))).toBe(false)
+    let req = createTradeRequest(createFilters(item, OPTS), stats)
+    // Not sent until added: no clutter in the trade link.
+    expect(JSON.stringify(req)).not.toContain('pseudo_map_more_map_drops')
+    const maps = extras.find(f => f.tradeId[0] === 'pseudo.pseudo_map_more_map_drops')!
+    maps.disabled = false
+    maps.roll!.min = 30
+    req = createTradeRequest(createFilters(item, OPTS), stats)
+    expect(req.query.stats[0].filters).toContainEqual(expect.objectContaining({ id: 'pseudo.pseudo_map_more_map_drops', value: expect.objectContaining({ min: 30 }) }))
+  })
+})

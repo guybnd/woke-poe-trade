@@ -93,6 +93,17 @@ export function factLine (f: CardDropFacts): string {
   return parts.join(' · ')
 }
 
+// How rare the card is among all card drops, by stacked-deck drop weight
+// (the Prohibited Library's research): "1 in 121k cards". Null for a card
+// with no weight or one that no longer drops.
+export function rarityText (f: CardDropFacts | null): string | null {
+  return f && !f.disabled && f.oneIn ? `${oneInText(f.oneIn)} cards` : null
+}
+
+// The hover on the rarity.
+export const rarityWords = (oneIn: number) =>
+  `About ${oneInText(oneIn)} of all divination cards that drop is this one, by drop weight (the Prohibited Library's stacked-deck research)`
+
 // The cards that drop in a map, by name.
 export function cardsInMap (data: CardDropData, map: string): string[] {
   const out: string[] = []

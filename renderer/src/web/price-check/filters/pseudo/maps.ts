@@ -35,15 +35,13 @@ function areaProps (
     }, ctx))
   }
   if (item.areaAtlasDrops) {
-    // Off by default: on 2026-11-15 the trade site's Atlas Drops filter
-    // (map_bonus) matched no listing at all, even at +1%, while Rarity and
-    // Pack size work. Ticking it today would empty the results.
+    // woke: searched like Rarity and Pack (Guy, 2026-11-24: the trade site's filter works).
     ctx.filters.push(propToFilter({
       ref: 'Atlas Drops: +#%',
       tradeId: 'item.map_atlas_drops',
       roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.areaAtlasDrops },
       sources: [],
-      disabled: true
+      disabled: false
     }, ctx))
   }
   if (item.areaItemRarity) {
@@ -63,6 +61,34 @@ function areaProps (
       sources: [],
       disabled: disabled.packSize
     }, ctx))
+  }
+}
+
+// woke: Guy (2026-11-24): any map number can be searched, also one this map hasn't got
+// (a Quantity or More Maps minimum on a map with neither). Each missing one is a filter
+// that starts off, hidden from the rows; the map strip's + tile turns it on with a minimum.
+// Item Quantity is left out: 3.30 maps have none (Atlas Drops took its place).
+const EXTRA_PROPS: Array<{ ref: string, tradeId: 'item.map_atlas_drops' | 'item.map_item_rarity' | 'item.map_pack_size' } | { pseudo: string }> = [
+  { ref: 'Atlas Drops: +#%', tradeId: 'item.map_atlas_drops' },
+  { ref: 'Item Rarity: +#%', tradeId: 'item.map_item_rarity' },
+  { ref: 'Monster Pack Size: +#%', tradeId: 'item.map_pack_size' },
+  { pseudo: PSEUDO.MORE_CURRENCY },
+  { pseudo: PSEUDO.MORE_THREADS },
+  { pseudo: PSEUDO.MORE_MAPS },
+  { pseudo: PSEUDO.MORE_DIVINATION_CARDS }
+]
+function extraProps (ctx: FiltersCreationContext): void {
+  const have = new Set(ctx.filters.map(f => f.tradeId[0]))
+  const roll = { min: 0, max: Number.MAX_SAFE_INTEGER, value: 0 }
+  for (const x of EXTRA_PROPS) {
+    const f = 'pseudo' in x
+      ? noSourcePseudoToFilter({ pseudo: pseudoStatByRef(x.pseudo)!, roll, disabled: true }, ctx)
+      : propToFilter({ ref: x.ref, tradeId: x.tradeId, roll, sources: [], disabled: true }, ctx)
+    if (have.has(f.tradeId[0])) continue
+    f.mapExtra = true
+    f.disabled = true
+    if (f.roll) { f.roll.value = 0; f.roll.min = 1; f.roll.max = '' }
+    ctx.filters.push(f)
   }
 }
 
@@ -114,6 +140,8 @@ export function mapProps (bulk: boolean, ctx: FiltersCreationContext): void {
       }, ctx))
     }
   }
+
+  if (!bulk) extraProps(ctx)
 
   // 3.30 maps can carry a 9th, rare-only mod.
   const explicitMods = item.newMods.filter(mod =>

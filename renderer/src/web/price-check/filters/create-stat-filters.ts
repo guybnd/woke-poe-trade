@@ -98,7 +98,7 @@ export function createExactStatFilters (
 
   if (mapMods) {
     for (const f of ctx.filters) {
-      if (f.tag !== FilterTag.Explicit) continue
+      if (f.tag !== FilterTag.Explicit && f.tag !== FilterTag.RareOnly) continue
       f.mapMod = true
     }
   }
@@ -125,7 +125,7 @@ export function createExactStatFilters (
   }
 
   for (const filter of ctx.filters) {
-    if (filter.not || filter.valdoVoid || filter.mapKind) continue
+    if (filter.not || filter.valdoVoid || filter.mapKind || filter.mapExtra) continue
 
     filter.hidden = undefined
 

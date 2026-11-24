@@ -43,8 +43,8 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   await expect(card).toHaveCount(0)
   const panel = overlay.widget('price-check')
   // The five recorded exchange offers, cheapest first.
-  await expect(panel).toContainText('Matched: 5')
-  await expect(panel).toContainText('178 / 1')
+  await expect(panel).toContainText('Chaos 5')
+  await expect(panel.getByTestId('bulk-each').first()).toHaveText('178')
   // The live verdict says how far it is from poe.ninja.
   await expect(panel.getByTestId('bulk-verdict-ninja')).toContainText('poe.ninja 180c each')
   // The game copied with Ctrl held (advanced mod text), and nothing else was typed.
@@ -67,6 +67,18 @@ test('currency: a Chaos Orb gets the instant card with the same 0.1 to 1 div pan
   await expect(tenths.nth(4)).toHaveText('0.5 div90c')
   await expect(card).toContainText('180 per div')
   await overlay.snap('chaos orb instant check')
+  // A click on the price shows it per divine, and the window keeps that (Guy, 2026-11-24).
+  const price = card.getByTestId('instant-ninja-price')
+  await expect(price).toHaveAttribute('title', 'Click to show it in divines')
+  await price.click()
+  await expect(price).toHaveText('180 per div')
+  await expect(card).toContainText('1c')
+  // The window's cached price follows, and clicks back.
+  await card.getByTestId('instant-ninja-details').click()
+  const verdictPrice = overlay.widget('price-check').getByTestId('ninja-verdict-price')
+  await expect(verdictPrice).toHaveText('180 per div')
+  await verdictPrice.click()
+  await expect(verdictPrice).toHaveText('1c')
   expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
 })
 
@@ -84,7 +96,7 @@ test('currency: Space on the instant card searches, Details opens the window wit
   await overlay.copyItem('items/currency-divine.txt')
   await expect(card).toBeVisible()
   await overlay.page.keyboard.press('Space')
-  await expect(panel).toContainText('Matched: 5')
+  await expect(panel).toContainText('Chaos 5')
 })
 
 test('divination card: the instant card shows the poe.ninja price and no trade search runs', async ({ overlay, fakeApp }) => {
@@ -106,7 +118,7 @@ test('currency: the price check hotkey again on the same item opens live offers'
   await expect(card.getByTestId('instant-ninja-again')).toContainText('Ctrl')
   await overlay.copyItem('items/currency-divine.txt')
   await expect(card).toHaveCount(0)
-  await expect(overlay.widget('price-check')).toContainText('Matched: 5')
+  await expect(overlay.widget('price-check')).toContainText('Chaos 5')
 })
 
 test('currency: the locked price check key shows the card too', async ({ overlay, fakeApp }) => {
@@ -119,7 +131,7 @@ test('currency: the locked price check key shows the card too', async ({ overlay
   await expect(card.getByTestId('instant-ninja-again')).toHaveCount(0)
   // The overlay has the keyboard here, so Space works straight away.
   await overlay.page.keyboard.press('Space')
-  await expect(overlay.widget('price-check')).toContainText('Matched: 5')
+  await expect(overlay.widget('price-check')).toContainText('Chaos 5')
 })
 
 test('currency: once the card closed, the hotkey on the same item shows the card again', async ({ overlay, fakeApp }) => {
@@ -143,7 +155,7 @@ test('currency: with poe.ninja first off, Ctrl+D searches right away', async ({ 
   })
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.widget('price-check')
-  await expect(panel).toContainText('Matched: 5')
+  await expect(panel).toContainText('Chaos 5')
   await expect(overlay.page.getByTestId('instant-ninja-card')).toHaveCount(0)
   await expect(panel.getByTestId('ninja-verdict')).toHaveCount(0)
 })
@@ -156,7 +168,7 @@ test('the window can be dragged, resized, saved and put back', async ({ overlay,
   // An exchange item poe.ninja prices waits for a click before searching (WOKEPOET-479).
   await panel.getByTestId('ninja-verdict-live').click()
   // Offers arriving later would grow the window between measuring and resizing.
-  await expect(panel).toContainText('Matched: 5')
+  await expect(panel).toContainText('Chaos 5')
   const box = async () => (await panel.boundingBox())!
   const page = overlay.page
   const start = await box()

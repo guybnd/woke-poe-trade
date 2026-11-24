@@ -35,7 +35,8 @@
         </span>
         <WButton size="sm" variant="ghost" icon="fas fa-trash" title="You can undo" @click="remove(open)">Delete</WButton>
       </div>
-      <DeckSummary :draws="open.draws" :price="savedPrice(open)" :held="savedHeld(open)" :deck-chaos="open.deckChaos" :divine="open.divine" :filter="filter" :luck="openLuck" />
+      <DeckSummary :draws="open.draws" :price="savedPrice(open)" :held="savedHeld(open)" :deck-chaos="open.deckChaos" :divine="open.divine" :filter="filter" :luck="openLuck" :edits="open.edits" editable
+        @price="(name, chaos) => editCard(open!, name, { each: chaos ?? undefined })" @out="(name, on) => leaveOut(open!, name, on)" />
       <div class="text-xs w-faint">At the prices when the session ended.</div>
     </template>
   </div>
@@ -44,7 +45,7 @@
 <script setup lang="ts">
 // Session analytics' Stacked decks tab: every saved deck session.
 import { computed, shallowRef } from 'vue'
-import { WBanner, WButton, WEmpty, WSkeleton, toast, vItemTip } from '../ui'
+import { WBanner, WButton, WEmpty, WSkeleton, lineToast, toast, vItemTip } from '../ui'
 import { useWindowKeys } from '../ui/window-keys'
 import { formatChaos, formatDuration } from '../ui/format'
 import { formatSessionDate, inRange } from '../analytics/stats'
@@ -52,8 +53,8 @@ import type { AnalyticsRange, AnalyticsUnit } from '../analytics/types'
 import DeckSummary from './DeckSummary.vue'
 import OwnAverageLine from './OwnAverageLine.vue'
 import { AppConfig } from '@/web/Config'
-import { STACKED_DECK, STACKED_DECKS_TYPE, cardFilterOf, recordPrice, totals } from './deck'
-import type { DeckRecord, StackedDecksWidget } from './deck'
+import { STACKED_DECK, STACKED_DECKS_TYPE, cardFilterOf, recordPrice, setCardEdit, totals } from './deck'
+import type { CardEdit, DeckRecord, StackedDecksWidget } from './deck'
 import { luckFor, useDeckPrices } from './prices'
 import { withoutHeld } from './guard'
 import { useDeckStore } from './store'
@@ -86,7 +87,7 @@ const list = computed(() => store.records.value.filter(r =>
   (props.range === 'all' || r.league === props.league) && inRange(r.endedAt, props.range, props.now)))
 // The tracker's cheap-card setting, so results match its window.
 const filter = computed(() => cardFilterOf(AppConfig().widgets.find(w => w.wmType === STACKED_DECKS_TYPE) as StackedDecksWidget | undefined))
-const rows = computed(() => list.value.map(r => ({ r, t: totals(r.draws, savedPrice(r), r.deckChaos, filter.value) })))
+const rows = computed(() => list.value.map(r => ({ r, t: totals(r.draws, savedPrice(r), r.deckChaos, filter.value, undefined, r.edits) })))
 const allDecks = computed(() => list.value.reduce((n, r) => n + r.decks, 0))
 // Each session in divines at its own rate.
 const allResult = computed(() => {
@@ -115,8 +116,18 @@ const openLuck = computed(() => {
   const r = open.value
   if (!r) return null
   const px = savedPrice(r)
-  return luckFor(r.draws, totals(r.draws, px, null).got, r.id, px, store.records.value)
+  return luckFor(r.draws, totals(r.draws, px, null, null, undefined, r.edits).got, r.id, px, store.records.value)
 })
+
+// Your price for a card, or a card left out, on a saved session.
+function editCard (r: DeckRecord, name: string, patch: CardEdit) {
+  const now = store.records.value.find(x => x.id === r.id) ?? r
+  store.save({ ...now, edits: setCardEdit(now.edits, name, patch) }).catch((err: Error) => { toast(`Couldn't save it: ${err.message}`) })
+}
+function leaveOut (r: DeckRecord, name: string, on: boolean) {
+  editCard(r, name, { out: on })
+  lineToast(on ? 'out' : 'in', name, () => { editCard(r, name, { out: !on }) })
+}
 
 function remove (r: DeckRecord) {
   openId.value = null

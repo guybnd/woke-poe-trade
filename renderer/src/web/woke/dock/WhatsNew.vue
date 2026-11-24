@@ -8,7 +8,7 @@
             <span :class="$style.name" data-no-item-tip="A tool's name, not an item"><ToolIcon :art="artFor(n.wmType)" :icon="iconFor(n.wmType)" :class="$style.toolIcon" />{{ n.name }}</span>
             <span>{{ sentence(n.note) }}</span>
           </div>
-          <w-button size="sm" variant="ghost" data-whats-new-show @click="show(n)">Show me</w-button>
+          <w-button v-if="hasShowMe(n, byName, personalOn)" size="sm" variant="ghost" data-whats-new-show @click="show(n, $event)">Show me</w-button>
           <w-button size="sm" variant="ghost" icon="fas fa-times" title="Dismiss" data-whats-new-dismiss @click="markSeen([n])" />
         </div>
         <div :class="$style.foot">
@@ -39,8 +39,14 @@ import ToolIcon from '../tab-bar/ToolIcon.vue'
 import { artFor, iconFor } from '../tab-bar/tools'
 import { personalOn } from '../personal'
 import { requestGoto } from '../tab-bar/goto'
+import { NEWS_SPOTS } from '../tab-bar/goto-targets'
+import { NEWS_DEMOS, hasShowMe } from '../tab-bar/news-demos'
+import { searchRequest } from '../search/widget'
+import { elementPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
+import type { ItemMenuRef } from '../ui/tooltip/item-menu-logic'
+import { uiTrace } from '../app/ui-trace'
 import DockItem from './DockItem.vue'
-import { openSettingsPage, showWithOverlay } from './dock'
+import { openOverlay, openSettingsPage, showWithOverlay } from './dock'
 import { moduleSettingsPage } from '../tab-bar/tools'
 import type { DockMenuAction } from './dock'
 
@@ -52,6 +58,8 @@ function typeName (wmType: string): string {
   return spec?.trNameKey ? t(spec.trNameKey) : wmType
 }
 const lines = computed(() => unseenNews(AppConfig().woke))
+// A sample price check goes by the item's English name.
+const byName = computed(() => AppConfig().language === 'en')
 // "New: a Planner tab…" reads "A Planner tab…" under the tool's name.
 function sentence (note: string) {
   const s = note.replace(/^New: /, '')
@@ -68,20 +76,35 @@ function markSeen (items: NewsItem[]) {
 // Its window on the line's tab, placed first if it isn't yet. A switched-off
 // tool is turned on, as the launcher does. Net worth's reader goes to its
 // switch in Settings instead, since turning it on asks first.
-function show (n: NewsItem) {
+function show (n: NewsItem, e?: MouseEvent) {
   markSeen([n])
+  uiTrace(`What's new › Show me: ${n.id} (${n.wmType}${n.goto ? ` › ${n.goto}` : ''}${NEWS_SPOTS[n.id] ? ` › ${NEWS_SPOTS[n.id]}` : ''}${n.settingsPage ? `, Settings › ${n.settingsPage}` : ''})`)
   if (!n.settingsPage && n.wmType !== 'woke-net-worth' && !isWidgetTypeOn(AppConfig(), n.wmType)) {
     const config = ensureWokeConfig(AppConfig())
     for (const m of MODULES) if (m.widgetTypes.includes(n.wmType)) setModuleOn(config, m.id, true)
   }
+  const demo = NEWS_DEMOS[n.id]
+  if (demo) {
+    // A dock card click in game doesn't open the overlay; the sample needs it.
+    if (!wm.active.value) openOverlay()
+    uiTrace(`What's new › Show me: ${n.id}, sample ${'check' in demo ? `price check of ${demo.check.name}` : `search "${demo.search}"`}`)
+    if ('search' in demo) {
+      const q = demo.search
+      // After a switched-on Search mounts.
+      nextTick(() => { searchRequest.value = { query: q } })
+    } else runCheck(n, demo.check, demo.spot, e).catch(() => {})
+    return
+  }
   const off = !isWidgetTypeOn(AppConfig(), n.wmType) || (n.wmType === 'woke-net-worth' && !personalOn.value)
   if (n.settingsPage || off) {
+    if (off) uiTrace(`What's new › Show me: ${n.wmType} is off, to Settings`)
     openSettingsPage(wm, n.settingsPage ?? 'All modules')
     return
   }
   let w = wm.widgets.value.find(w => w.wmType === n.wmType)
   // A dock-only tool has no window: its own page in Settings, as the rail does.
   if (w?.wmFlags.includes('menu::skip')) {
+    uiTrace(`What's new › Show me: ${n.wmType} has no window, to its Settings page`)
     openSettingsPage(wm, moduleSettingsPage(n.wmType, typeName))
     return
   }
@@ -92,11 +115,23 @@ function show (n: NewsItem) {
   }
   const wmId = w.wmId
   // On the tab the line is about (goto.ts).
-  if (n.goto) requestGoto(wmId, n.goto)
+  if (n.goto) requestGoto(wmId, n.goto, NEWS_SPOTS[n.id])
   nextTick(() => nextTick(() => {
     showWithOverlay(wm, wmId)
     pushHostConfig()
   }))
+}
+
+// A sample price check, then its spot flashed once the results draw.
+async function runCheck (n: NewsItem, ref: ItemMenuRef, spot: string, e?: MouseEvent) {
+  const at = e?.currentTarget ? elementPoint(e) : { x: window.screenX + window.innerWidth / 2, y: window.screenY + window.innerHeight / 2 }
+  if (!await openPriceCheck(ref, at)) {
+    uiTrace(`What's new › Show me: can't price check ${ref.name}`)
+    if (n.settingsPage) openSettingsPage(wm, n.settingsPage)
+    return
+  }
+  const { flashSpot } = await import('../tab-bar/goto-flash')
+  flashSpot(null, spot, 150)
 }
 
 // Ids get reused: a removed window's rail pin and label mustn't carry over

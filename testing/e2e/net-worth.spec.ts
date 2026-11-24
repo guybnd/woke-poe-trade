@@ -3,6 +3,7 @@
 import fs from 'fs'
 import path from 'path'
 import { test, expect, FIXTURES } from './harness'
+import { NEWS } from '../../renderer/src/web/woke/tab-bar/news'
 
 const area = (id: string, seed = '666232010') => `2026/11/05 20:49:09 18884906 1186a8a3 [DEBUG Client 34092] Generating level 83 area "${id}" with seed ${seed}`
 
@@ -39,7 +40,9 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
   }
   try {
     await overlay.page.setViewportSize({ width: 2560, height: 1440 })
-    await overlay.boot({ overlayActive: true })
+    // What's new's Listed line stays unseen: its Show me is checked below.
+    // (Pointing at Net worth in All tools reads its first line, Still cheapest.)
+    await overlay.boot({ overlayActive: true, whatsNew: ['listed-still-cheapest', 'net-worth-listed'] })
     await overlay.widget('menu').locator('.fa-cog').click()
     const settings = overlay.widget('settings')
     await settings.getByText('All modules', { exact: true }).first().click()
@@ -266,7 +269,8 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect(stopBtn).toContainText('Stop the run?')
     // The confirm lapses after a few seconds: on a slow runner, arm it again.
     await expect(async () => {
-      const label = await stopBtn.innerText().catch(() => '')
+      // Once the run has stopped the button is gone: don't wait for it.
+      const label = await stopBtn.innerText({ timeout: 1000 }).catch(() => '')
       if (/Stop/.test(label) && !/Stopping/.test(label)) await stopBtn.click()
       await expect(runTab).toHaveCount(0, { timeout: 4000 })
     }).toPass({ timeout: 30_000 })
@@ -281,6 +285,19 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect(drop).toBeVisible()
     await drop.locator('[data-item-tip]').hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('The Apothecary')
+    await overlay.page.mouse.move(0, 0)
+    // A best drop is the shared line item: your price (gold, pinned), then
+    // back to as read from ⋯ (leave out is the same ⊘ as the Runs rows).
+    await drop.locator('[data-summary-price]').click()
+    const dropBox = drop.getByRole('spinbutton')
+    await dropBox.fill('150')
+    await dropBox.press('Enter')
+    await expect(drop.locator('[data-summary-price] .fa-thumbtack')).toBeVisible()
+    await drop.hover()
+    await expect(drop.locator('[data-line-out]')).toBeVisible()
+    await drop.locator('[data-line-more]').click()
+    await overlay.page.getByRole('menuitem', { name: 'Back to as read' }).click()
+    await expect(drop.locator('[data-summary-price] .fa-thumbtack')).toHaveCount(0)
     await overlay.page.mouse.move(0, 0)
     await expect(summary.locator('[data-summary-vs]')).toContainText('Your first Nightmare maps run')
     await expect(summary.locator('[data-summary-spend]')).toContainText('Spent')
@@ -318,7 +335,8 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await stopBtn.click()
     await expect(stopBtn).toContainText('Stop the run?')
     await expect(async () => {
-      const label = await stopBtn.innerText().catch(() => '')
+      // Once the run has stopped the button is gone: don't wait for it.
+      const label = await stopBtn.innerText({ timeout: 1000 }).catch(() => '')
       if (/Stop/.test(label) && !/Stopping/.test(label)) await stopBtn.click()
       await expect(runTab).toHaveCount(0, { timeout: 4000 })
     }).toPass({ timeout: 30_000 })
@@ -331,7 +349,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await panel.getByRole('tab', { name: 'Runs' }).click()
     const pastRuns = panel.locator('[data-past-run]')
     await expect(pastRuns).toHaveCount(2)
-    await expect(panel.locator('[data-compare]')).toContainText('No top')
+    await expect(panel.locator('[data-compare]')).toContainText('Without best drop')
     await panel.locator('[data-by-strategy]').click()
     await expect(pastRuns).toHaveCount(1)
     await expect(pastRuns.first()).toContainText('2 runs')
@@ -383,6 +401,19 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect(head).toHaveText(allAsk)
     await panel.locator('[data-listed]').getByText(/^Uniques 3$/).click()
     await expect(panel.locator('[data-listed-filtered]')).toHaveCount(0)
+    // A listing is the shared line item: ⊘ leaves it out of the total (it
+    // stays, struck, under a Changed chip), and counts it again.
+    const kaom = listedRows.filter({ hasText: "Kaom's Heart" })
+    await kaom.hover()
+    await kaom.locator('[data-line-out]').click()
+    await expect(kaom).toContainText('left out')
+    await expect(panel.locator('[data-listed-left-out]')).toHaveText('1 left out')
+    await expect(head).not.toHaveText(allAsk)
+    await expect(panel.locator('[data-listed-changed]')).toContainText('Changed 1')
+    await kaom.hover()
+    await kaom.locator('[data-line-out]').click()
+    await expect(kaom).not.toContainText('left out')
+    await expect(head).toHaveText(allAsk)
     // Price check (R1, and Guy 2026-11-24): the full price check opens on the
     // listing, ranks it from what it loaded, and its foot sets a new price
     // that Listed keeps as a to-do.
@@ -423,6 +454,26 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     // Out again before the hideout's quiet listings refresh (5 s).
     await overlay.log([area('MapWorldsStrand')])
     await expect(badge).toHaveCount(0)
+    // What's new › Show me with Listed already up (it looked dead): it now
+    // picks and flashes the feature itself, here the Stale chip.
+    const news = overlay.dockIcon('whats-new')
+    const showMe = async (id: string) => {
+      const n = NEWS.find(n => n.id === id)!
+      // Two workers share the app's port: its notice can sit over the dock.
+      const notice = overlay.page.getByRole('button', { name: 'Dismiss', exact: true })
+      if (await notice.isVisible()) await notice.click()
+      await news.click()
+      await overlay.page.mouse.move(5, 5)
+      await news.locator('[data-whats-new-line]').filter({ hasText: n.note.replace(/^New: /, '').slice(1, 30) }).getByRole('button', { name: 'Show me' }).click()
+    }
+    const stale = panel.locator('[data-goto-spot="stale"]')
+    await expect(stale).not.toHaveClass(/\bon\b/)
+    await showMe('net-worth-listed')
+    await expect(stale).toHaveClass(/\bon\b/)
+    await expect(stale).toHaveAttribute('data-goto-flashed', '')
+    await expect(listedRows).toHaveCount(1)
+    await stale.click()
+    await expect(listedRows).toHaveCount(3)
     await overlay.page.unroute('**/api/trade/search/**')
     await overlay.page.unroute('**/api/trade/fetch/**')
     await panel.getByRole('tab', { name: 'Holdings' }).click()
@@ -444,6 +495,17 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     // A legend under the line names its marks.
     await expect(panel.locator('[data-chart-legend]')).toContainText('At Faustus')
     await overlay.snap('net worth chart with the Faustus band')
+    // The list of changes is the shared profit line too: hover shows ⊘ and ⋯
+    // over the end of the name, taking no room of its own.
+    const feedLine = panel.locator('[data-hold-line]').first()
+    await expect(feedLine).toBeVisible()
+    await feedLine.hover()
+    await expect(feedLine.locator('[data-line-out]')).toBeVisible()
+    await expect(feedLine.locator('[data-line-more]')).toBeVisible()
+    await overlay.snap('net worth change line hover')
+    await panel.locator('tr[data-nw-row]', { hasText: 'Divine Orb' }).hover()
+    await overlay.snap('net worth table row hover')
+    await overlay.page.mouse.move(0, 0)
     // A click on the line pins its card (what changed, with item tooltips); Esc closes it.
     const box = await chart.boundingBox()
     await chart.click({ position: { x: box!.width - 4, y: box!.height / 2 } })
@@ -478,6 +540,16 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await hh.hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
     await overlay.snap('net worth sales sorted by price')
+    // A sale is the shared line item: ⊘ leaves it out of the totals.
+    const hhSale = rows.filter({ hasText: 'Headhunter' })
+    await hhSale.hover()
+    await hhSale.locator('[data-line-out]').click()
+    await expect(hhSale).toContainText('left out')
+    await expect(panel.locator('[data-sales-left-out]')).toHaveText('1 left out')
+    await expect(panel.locator('[data-sales-changed]')).toContainText('Changed 1')
+    await hhSale.hover()
+    await hhSale.locator('[data-line-out]').click()
+    await expect(panel.locator('[data-sales-left-out]')).toHaveCount(0)
     await panel.getByRole('button', { name: 'When', exact: true }).click()
     await panel.getByRole('tab', { name: 'Holdings' }).click()
 

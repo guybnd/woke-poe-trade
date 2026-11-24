@@ -9,7 +9,6 @@
             :title="`In ${inChaos(c.id) ? 'chaos' : 'divines'}. Click for ${inChaos(c.id) ? 'divines' : 'chaos'}`"
             @click.stop="swap(c.id)" @keydown.enter.stop @keydown.space.stop><Coin :chaos="inChaos(c.id)" /></button><Coin v-else-if="c.id === 'unit' || c.id === 'chaos'" chaos /><template v-if="sort === c.id">{{ desc ? ' ▾' : ' ▴' }}</template>
         </th>
-        <th :class="$style.actsHead"><span class="sr-only">Actions</span></th>
       </tr>
     </thead>
     <tbody>
@@ -39,15 +38,14 @@
           <template v-if="!l.state"><span class="w-num w-dim" :class="$style.pctText">{{ shareText(l.chaos) }}</span><span :class="$style.share"><i :style="{ width: Math.min(100, Math.max(2, share(l.chaos) * 100)) + '%' }" /></span></template>
         </td>
         <td class="w-num" :class="tone(changes.get(l.key))">{{ pct(changes.get(l.key)) }}</td>
-        <td class="w-dim w-trunc" :class="$style.tab" :title="l.tabIds.map(nameOfTab).join(', ')">{{ tabText(l) }}</td>
-        <td :class="$style.actsCell"><WLineActs :name="l.name" :out="l.state === 'ignored'" :entries="entriesOf(l)" :head="e => itemMenuHead(menuOf(l), e)" @out="handlersOf(l).out($event)" /></td>
+        <td class="w-dim w-trunc" :class="$style.tab" :title="l.tabIds.length > 1 ? l.tabIds.map(nameOfTab).join(', ') : undefined">{{ tabText(l) }}<WLineActs :name="l.name" :out="l.state === 'ignored'" :entries="entriesOf(l)" :head="e => itemMenuHead(menuOf(l), e)" @out="handlersOf(l).out($event)" /></td>
       </tr>
       <tr v-if="!lines.length">
-        <td colspan="8" class="w-dim" :class="$style.left">
+        <td colspan="7" class="w-dim" :class="$style.left">
           Nothing matches.<WButton v-if="filtered" size="sm" variant="ghost" @click="emit('clear')">Show all</WButton>
         </td>
       </tr>
-      <tr v-if="more > 0"><td colspan="8" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 200">{{ more }} more</WButton></td></tr>
+      <tr v-if="more > 0"><td colspan="7" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 200">{{ more }} more</WButton></td></tr>
     </tbody>
   </table>
 </template>
@@ -304,8 +302,6 @@ function menuOf (l: ValuedLine): ItemMenuRef {
 .editCell { padding: 0 2px !important; }
 .edit { display: inline-flex; align-items: center; gap: 2px; justify-content: flex-end; width: 100%; }
 .editInput { width: 100%; min-width: 0; max-width: 64px; font: inherit; font-family: var(--w-num); text-align: right; color: var(--w-fg); background: var(--w-panel-3); border: 1px solid var(--w-gold); border-radius: var(--w-r-sm); padding: 0 3px; }
-.table th:last-child { width: 3.2em; cursor: default; }
-.actsCell { padding-left: 0 !important; }
 .struck { text-decoration: line-through; color: var(--w-dim); }
 .tag { flex: none; }
 .tab { max-width: 0; overflow: hidden; text-overflow: ellipsis; }

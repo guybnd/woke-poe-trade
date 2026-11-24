@@ -65,6 +65,16 @@ test('cards from the log add up on the dock card, and a big hit pops up', async 
   await expect(stats.locator('[data-stat="result"]')).toHaveText('+5 div')
   await expect(stats.locator('[data-stat="without-top"]')).toHaveText('-7.5 c')
   await expect(icon.locator('[data-deck="card"]').first()).toContainText('The Doctor')
+  // Each card is the shared line item: leave The Doctor out (it stays,
+  // struck) and Result drops it; count it again.
+  const doctor = icon.locator('[data-deck="card"]').filter({ hasText: 'The Doctor' })
+  await doctor.hover()
+  await doctor.locator('[data-line-out]').click()
+  await expect(doctor).toContainText('left out')
+  await expect(stats.locator('[data-stat="result"]')).toHaveText('-7.5 c')
+  await doctor.locator('[data-line-out]').click()
+  await expect(doctor).not.toContainText('left out')
+  await expect(stats.locator('[data-stat="result"]')).toHaveText('+5 div')
   await overlay.snap('stacked decks dock card')
 
   // Saved a moment after the last card.

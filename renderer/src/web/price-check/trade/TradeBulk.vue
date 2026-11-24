@@ -7,55 +7,48 @@
     <div v-if="item.info.exchangeable" :class="$style.legacyMessage">
       {{ t(':legacy_bulk_xchg_msg') }}
     </div>
-    <!-- @TODO: fix "Matched" text jumping (min-height: 22px) -->
-    <div class="w-pc-toolbar mb-2 flex pl-2 justify-between items-baseline" style="min-height: 1.375rem;">
-      <div class="w-pc-matched flex items-center text-gray-500">
-        <span class="mr-1">{{ t(':matched') }}</span>
+    <div class="w-pc-toolbar mb-1 flex pl-2 justify-between items-baseline" style="min-height: 1.375rem;">
+      <div class="w-pc-matched flex items-center flex-wrap text-gray-500">
         <span v-if="!result" class="text-gray-600">...</span>
-        <div v-else class="flex items-center">
-          <button class="btn flex items-center mr-1" :style="{ background: selectedCurr !== 'xchgChaos' ? 'transparent' : undefined }"
+        <!-- woke: which currency's offers show, each with how many there are (Guy, 2026-11-24). -->
+        <div v-else :class="$style.seg" role="group" aria-label="Offers in">
+          <button type="button" :class="{ [$style.segOn]: selectedCurr === 'xchgChaos' }" :aria-pressed="selectedCurr === 'xchgChaos'"
+            :title="`Offers asking chaos: ${result.xchgChaos.listed.value?.total ?? 'not searched yet, click to search'}`"
             :disabled="!result.both && !result.xchgChaos.listed.value" @click="pickCurr('xchgChaos')">
-            <img src="/images/chaos.png" :class="$style.currencyIcon">
-            <span>{{ result.xchgChaos.listed.value?.total ?? '?' }}</span>
+            <img src="/images/chaos.png" :class="$style.segIcon" alt="">Chaos <b>{{ result.xchgChaos.listed.value?.total ?? '?' }}</b>
           </button>
-          <button class="btn flex items-center mr-1" :style="{ background: selectedCurr !== 'xchgStable' ? 'transparent' : undefined }"
+          <button type="button" :class="{ [$style.segOn]: selectedCurr === 'xchgStable' }" :aria-pressed="selectedCurr === 'xchgStable'"
+            :title="`Offers asking divines: ${result.xchgStable.listed.value?.total ?? 'not searched yet, click to search'}`"
             :disabled="!result.both && !result.xchgStable.listed.value" @click="pickCurr('xchgStable')">
-            <img src="/images/divine.png" :class="$style.currencyIcon">
-            <span>{{ result.xchgStable.listed.value?.total ?? '?' }}</span>
+            <img src="/images/divine.png" :class="$style.segIcon" alt="">Divine <b>{{ result.xchgStable.listed.value?.total ?? '?' }}</b>
           </button>
-          <span class="ml-1"><online-filter :filters="filters" api="bulk" /></span>
         </div>
+        <span v-if="result" class="ml-1"><online-filter :filters="filters" api="bulk" /></span>
         <!-- woke: the price check's own chips (a map's Exchange, WOKEPOET-523), there while it loads too. -->
         <span class="ml-1"><slot name="chips" /></span>
-        <!-- woke: how many a row's whisper asks for (WOKEPOET-523). -->
-        <label v-if="result" class="ml-2 flex items-center whitespace-nowrap" title="How many to ask for when you click a seller: rounded to their lot size and capped at their stock">Buy<input v-model.number="buyCount" type="number" min="1" :class="$style.buyBox" data-bulk-buy aria-label="How many to buy"></label>
-        <span v-if="whisperNote" class="ml-2 text-gray-400 whitespace-nowrap" data-bulk-whispered>{{ whisperNote }}</span>
+        <label v-if="result" class="ml-2 flex items-center whitespace-nowrap" title="How many you want: the line below adds up what they cost from the cheapest sellers">Buy<input v-model.number="buyCount" type="number" min="1" :class="$style.buyBox" data-bulk-buy aria-label="How many to buy"></label>
       </div>
       <trade-links v-if="result"
         :get-link="makeTradeLink" :suggest-name="() => item.info.name" />
     </div>
-    <div class="w-pc-scroll layout-column overflow-y-auto overflow-x-hidden">
-      <table class="w-pc-table table-stripped w-full">
+    <!-- woke: what Buy N costs from the cheapest up, and whispering them in turn (Guy, 2026-11-24). -->
+    <div v-if="!tableLoading && plan.picks.length" :class="$style.total" class="px-2 mb-1" data-bulk-total>
+      <span>Buy {{ plan.items }} → <b>{{ amount(plan.cost) }}</b><img :src="unitIcon" :alt="unitName" :class="$style.unitIcon"> total<template v-if="plan.items > 1"> · {{ amount(plan.cost / plan.items) }}<img :src="unitIcon" :alt="unitName" :class="$style.unitIcon"> each</template> · {{ plan.picks.length }} {{ plan.picks.length === 1 ? 'seller' : 'sellers' }}<template v-if="plan.short && moreListed"> · as many as the {{ shownCount }} cheapest offers hold</template><template v-else-if="plan.short"> · only {{ plan.items }} on offer</template></span>
+      <span class="flex-1" />
+      <span v-if="whisperNote" class="text-gray-400 whitespace-nowrap mr-2" data-bulk-whispered>{{ whisperNote }}</span>
+      <span v-else-if="whispers.length && !nextPick" class="text-gray-500 whitespace-nowrap">All {{ whispers.length }} whispered</span>
+      <button v-if="nextPick" type="button" :class="[$style.whisperBtn, $style.nextBtn]" data-bulk-next
+        :title="`Whisper ${sellerName(nextPick.offer)} for ${nextPick.items}: the next cheapest seller for your amount`"
+        @click="whisperNext">Whisper next<template v-if="whispers.length > 1"> ({{ nextIdx + 1 }}/{{ whispers.length }})</template></button>
+    </div>
+    <div ref="tableBox" data-goto-spot="exchange-ladder" class="w-pc-scroll layout-column overflow-y-auto overflow-x-hidden">
+      <table class="w-pc-table w-full" :class="$style.ladder">
         <thead>
           <tr class="text-left">
-            <th :class="$style.tableHeading">
-              <div class="px-2">{{ t(':price') }}</div>
-            </th>
-            <th :class="$style.tableHeading">
-              <div class="w-pc-ratio-head pl-1 pr-2 flex text-xs" style="line-height: calc(1.3125rem * var(--w-text-scale, 1));"><span :class="[$style.ratioCell, $style.ratioPay]" class="text-right -ml-px mr-px">pay</span><span>{{ '\u2009' }}/{{ '\u2009' }}</span><span :class="$style.ratioCell">get</span></div>
-            </th>
-            <th :class="$style.tableHeading">
-              <div class="px-1">{{ t(':stock') }}</div>
-            </th>
-            <th :class="$style.tableHeading">
-              <div class="px-1">{{ t(':fulfill') }}</div>
-            </th>
-            <th v-if="showSeller" class="w-full" :class="$style.tableHeading">
-              <div class="px-2">{{ t(':seller') }}</div>
-            </th>
-            <th :class="[$style.tableHeading, 'text-right', { 'w-full': !showSeller }]">
-              <div class="px-2">{{ t(':listed') }}</div>
-            </th>
+            <th :class="$style.tableHeading"><div class="px-2">Each</div></th>
+            <th :class="$style.tableHeading" class="w-full"><div class="px-2">On offer</div></th>
+            <th :class="$style.tableHeading" class="text-right"><div class="px-2">{{ wide ? 'Seller' : 'Sellers' }}</div></th>
+            <th :class="$style.tableHeading" class="text-right"><div class="px-2" title="When the newest offer at this price was listed. Green: under an hour. Yellow: over a day. Red: over a week.">Newest</div></th>
           </tr>
         </thead>
         <tbody>
@@ -68,32 +61,48 @@
             <td colspan="100" class="px-2 py-1" data-testid="bulk-side-failed">These offers didn't load. <button class="btn" @click="retrySide">Try again</button></td>
           </tr>
           <template v-else>
-            <tr v-for="result in selectedResults" :key="result.id"
-              :class="{ [$style.marketRatioRow]: ('marketRatio' in result), [$style.whisperRow]: canWhisper(result) }"
-              :title="canWhisper(result) ? `Click to whisper: ${whisperText(result)}` : undefined"
-              :data-bulk-whisper="canWhisper(result) ? '' : undefined"
-              @click="canWhisper(result) && whisper(result)">
-              <td class="px-2 whitespace-nowrap" data-testid="bulk-each">{{ Number((result.exchangeAmount / result.itemAmount).toFixed(4)) }}<img :src="unitIcon" :alt="unitName" :title="unitName" :class="$style.unitIcon"></td>
-              <td class="pl-1 whitespace-nowrap"><span :class="[$style.ratioCell, $style.ratioPay]" class="text-right">{{ Number(result.exchangeAmount.toFixed(1)) }}<img :src="unitIcon" :alt="unitName" :title="unitName" :class="$style.unitIcon"></span><span>{{ '\u2009' }}/{{ '\u2009' }}</span><span :class="$style.ratioCell">{{ Number(result.itemAmount.toFixed(1)) }}</span></td>
-              <template v-if="'marketRatio' in result">
-                <td class="pl-1 pr-2 whitespace-nowrap text-center" :colspan="showSeller ? 4 : 3">{{ t(':market_ratio') }}</td>
-              </template>
+            <template v-for="step in steps" :key="(step.ninja ? 'ninja:' : '') + step.key">
+              <tr v-if="step.ninja" :class="$style.marketRatioRow">
+                <td class="px-2 whitespace-nowrap">{{ step.key }}<img :src="unitIcon" :alt="unitName" :class="$style.unitIcon"></td>
+                <td colspan="3" class="px-2 text-gray-400">{{ t(':market_ratio') }}</td>
+              </tr>
               <template v-else>
-                <td class="px-1 text-right">{{ result.stock }}</td>
-                <td class="px-1 text-right"><i v-if="result.stock < result.itemAmount" class="fas fa-exclamation-triangle mr-1 text-gray-500"></i>{{ Math.floor(result.stock / result.itemAmount) }}</td>
-                <td v-if="showSeller" class="px-2 whitespace-nowrap">
-                  <span v-if="result.isMine" class="w-pc-you">{{ t('You') }}</span>
-                  <span v-else class="w-pc-age" style="text-align: left;">{{ showSeller === 'ign' ? result.ign : result.accountName }}</span>
-                </td>
-                <td class="px-2 w-pc-age" :class="bulkAgeClass(result)">
-                  <span v-if="!showSeller && result.isMine" class="w-pc-you mr-1">{{ t('You') }}</span>
-                  <span class="w-pc-age-inner">
-                    <span :class="[$style.accountStatus, $style[result.accountStatus]]"></span>
-                    <span>{{ result.relativeDate }}</span>
-                  </span>
-                </td>
+                <tr :class="[$style.step, { [$style.filled]: step.filled }]" data-bulk-step :aria-expanded="openSteps.has(step.key)"
+                  :title="openSteps.has(step.key) ? undefined : 'Click to see the sellers'" @click="toggleStep(step.key)">
+                  <td class="px-2 whitespace-nowrap"><span :class="$style.chev">{{ openSteps.has(step.key) ? '▾' : '▸' }}</span><span data-testid="bulk-each">{{ step.key }}<img :src="unitIcon" :alt="unitName" :title="unitName" :class="$style.unitIcon"></span></td>
+                  <td class="px-2"><div :class="$style.depth"><span>{{ step.stock }}</span><i :style="{ width: depthWidth(step.stock) }" /></div></td>
+                  <!-- Guy (2026-11-24): the cheapest seller's name where the window has room, else how many. -->
+                  <td class="px-2 text-right whitespace-nowrap" :title="wide ? `${step.sellers} ${step.sellers === 1 ? 'seller' : 'sellers'}` : undefined">
+                    <template v-if="wide"><span :class="$style.name">{{ step.offers[0].isMine ? t('You') : sellerName(step.offers[0]) }}</span><span v-if="step.sellers > 1" class="text-gray-500"> +{{ step.sellers - 1 }}</span></template>
+                    <template v-else>{{ step.sellers }}</template>
+                  </td>
+                  <td class="px-2 w-pc-age" :class="ageClass(step.newest)">{{ step.newestText }}</td>
+                </tr>
+                <template v-if="openSteps.has(step.key)">
+                  <tr v-for="r in step.offers" :key="r.id" :class="$style.seller">
+                    <td colspan="2" class="px-2" :class="$style.sellerCell">
+                      <span v-if="r.isMine" class="w-pc-you">{{ t('You') }}</span>
+                      <span v-else>{{ sellerName(r) }}</span>
+                      <span v-if="r.accountStatus !== 'online'" :class="[$style.status, $style[r.accountStatus]]">{{ r.accountStatus === 'afk' ? 'AFK' : 'offline' }}</span>
+                      <span class="text-gray-500"> · {{ r.stock }} in stock<template v-if="r.itemAmount !== 1"> · {{ amount(r.exchangeAmount) }}<img :src="unitIcon" :alt="unitName" :class="$style.unitIcon"> per {{ amount(r.itemAmount) }}</template></span>
+                    </td>
+                    <td class="px-2 text-right whitespace-nowrap">
+                      <!-- Guy (2026-11-24): pick how many from this seller and whisper them, right on the row. -->
+                      <template v-if="canWhisper(r)">
+                        <input type="number" :class="$style.amountBox" :min="r.itemAmount" :step="r.itemAmount" :max="maxItems(r)"
+                          :value="amountFor(r)" data-bulk-amount :aria-label="`How many from ${sellerName(r)}`"
+                          :title="`How many from ${sellerName(r)}: up to ${maxItems(r)}`"
+                          @click.stop @change="setAmount(r, $event.target as HTMLInputElement)">
+                        <span :class="$style.rowCost">{{ amount(lotsFor(r) * r.exchangeAmount) }}<img :src="unitIcon" :alt="unitName" :class="$style.unitIcon"></span>
+                        <button type="button" :class="$style.whisperBtn" data-bulk-whisper
+                          :title="`Whisper: ${whisperText(r)}`" @click.stop="whisper(r)">Whisper</button>
+                      </template>
+                    </td>
+                    <td class="px-2 w-pc-age" :class="ageClass(ageOf(r))" :title="r.relativeDate">{{ ageOf(r) == null ? r.relativeDate : shortAge(ageOf(r)!) }}</td>
+                  </tr>
+                </template>
               </template>
-            </tr>
+            </template>
           </template>
         </tbody>
       </table>
@@ -113,7 +122,8 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, computed, watch, ComputedRef, Ref, ShallowRef, shallowRef, shallowReactive, inject, readonly, onUnmounted } from 'vue'
+import { defineComponent, PropType, computed, watch, ComputedRef, Ref, ShallowRef, shallowRef, shallowReactive, reactive, inject, readonly, onUnmounted } from 'vue'
+import { useResizeObserver } from '@vueuse/core'
 import { useI18nNs } from '@/web/i18n'
 import UiErrorBox from '@/web/ui/UiErrorBox.vue'
 import { BulkSearch, execBulkSearch, createTradeRequest, PricingResult, bulkWhisper } from './pathofexile-bulk'
@@ -124,7 +134,7 @@ import { usePoeninja } from '@/web/background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
 import { getDetailsId, exactDetailsId } from '../trends/getDetailsId'
 import { ItemFilters } from '../filters/interfaces'
-import { ParsedItem } from '@/parser'
+import { ParsedItem, ItemCategory } from '@/parser'
 import { PriceCheckWidget } from '@/web/overlay/interfaces'
 import { artificialSlowdown } from './artificial-slowdown'
 import { useRetryCountdown } from './retry-countdown'
@@ -134,11 +144,17 @@ import BulkVerdict from '@/web/woke/price-insight/BulkVerdict.vue'
 import { buildBulkInsight, pickBulkMarket, bulkSideWaiting } from '@/web/woke/price-insight/bulk-insight'
 import { priceView } from '@/web/woke/price-insight/view'
 import { chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
-import { ageTone } from '@/web/woke/price-insight/listing-rows'
+import { ageTone, shortAge } from '@/web/woke/price-insight/listing-rows'
+import { ladderSteps, fillPlan, buyable } from '@/web/woke/price-insight/bulk-ladder'
+import { bulkAmount } from '@/web/woke/price-insight/bulk-insight'
 import '@/web/woke/price-insight/price-table.css'
 
 const slowdown = artificialSlowdown(900)
 const SKELETON_ROWS = 8
+// woke: the last Buy amount typed on a map's exchange, kept for the next map checked.
+let lastMapBuy = 1
+// Narrower than this, the Seller column shows only how many sellers.
+const WIDE_PX = 420
 
 function useBulkApi () {
   type BulkSide = {
@@ -251,19 +267,6 @@ interface MarketRatio extends Pick<PricingResult, 'exchangeAmount' | 'itemAmount
   marketRatio: true
 }
 
-function mergeWithMarketRatio (results: readonly PricingResult[], marketRatio: MarketRatio): Array<PricingResult | MarketRatio> {
-  if (!results.length) return [marketRatio]
-
-  const out: Array<PricingResult | MarketRatio> = [...results]
-  let insertIdx = results.findIndex(result =>
-    (result.exchangeAmount / result.itemAmount) >= (marketRatio.exchangeAmount / marketRatio.itemAmount))
-  if (insertIdx === -1) {
-    insertIdx = results.length
-  }
-  out.splice(insertIdx, 0, marketRatio)
-  return out
-}
-
 function useMarketRatioFinder () {
   type MarketRatioMap = Record<'xchgChaos' | 'xchgStable', MarketRatio | undefined>
 
@@ -349,44 +352,112 @@ export default defineComponent({
       slowdown.reset(item)
     }, { immediate: true })
 
-    const selectedResults = computed(() => {
+    const listedNow = computed<readonly PricingResult[]>(() => {
       if (!slowdown.isReady.value || !result.value) return []
-
-      const listed = result.value[selectedCurr.value].listedLazy.value
-      const ratio = marketRatio.value[selectedCurr.value]
-      return (ratio !== undefined)
-        ? mergeWithMarketRatio(listed.slice(0, 19), ratio)
-        : listed
+      return result.value[selectedCurr.value].listedLazy.value
     })
 
     // woke: the verdict's slot sits above the mods, as for item listings.
     const verdictSlot = inject<ShallowRef<HTMLElement | null>>('price-verdict-slot', shallowRef(null))
     const need = computed(() => props.item.stackSize?.value ?? 1)
-    // woke: a click on a seller whispers them, as the trade site's Whisper button
-    // does (WOKEPOET-523). Lots: the seller's own lot size, enough for buyCount,
-    // never more than their stock.
-    const buyCount = shallowRef(need.value)
-    watch(() => props.item, () => { buyCount.value = need.value })
-    const whisperNote = shallowRef('')
-    const lotsFor = (r: PricingResult) => {
-      const want = Math.max(1, Math.floor(Number(buyCount.value) || 1))
-      return Math.max(1, Math.min(Math.ceil(want / r.itemAmount), Math.floor(r.stock / r.itemAmount)))
+    // woke: how many you want (Guy, 2026-11-24): the line above the ladder adds up what that costs
+    // from the cheapest sellers, and each seller's amount starts at what that buy takes from them.
+    // A stack's size leads; a map starts at the last amount typed for a map.
+    const isMap = computed(() => props.item.category === ItemCategory.Map)
+    const startBuy = () => isMap.value ? lastMapBuy : need.value
+    const buyCount = shallowRef(startBuy())
+    watch(() => props.item, () => { buyCount.value = startBuy() })
+    watch(buyCount, (n) => { if (isMap.value && Number(n) >= 1) lastMapBuy = Math.floor(Number(n)) })
+    const want = computed(() => Math.max(1, Math.floor(Number(buyCount.value) || 1)))
+    const plan = computed(() => fillPlan(listedNow.value, want.value))
+
+    // The ladder: one row per price, poe.ninja's price slotted in where it falls.
+    type Step = ReturnType<typeof ladderSteps<PricingResult>>[number] & { filled: boolean, newest: number | null, newestText: string, ninja?: false }
+    type NinjaStep = { key: string, unit: number, ninja: true }
+    const steps = computed<Array<Step | NinjaStep>>(() => {
+      const used = new Set(plan.value.picks.map(p => p.offer))
+      const now = Date.now()
+      const out: Array<Step | NinjaStep> = ladderSteps(listedNow.value).map(step => {
+        const ages = step.offers.map(o => o.indexedAt ? now - Date.parse(o.indexedAt) : NaN).filter(n => !Number.isNaN(n))
+        const newest = ages.length ? Math.max(0, Math.min(...ages)) : null
+        return { ...step, filled: step.offers.some(o => used.has(o)), newest, newestText: newest == null ? '' : shortAge(newest) }
+      })
+      const ratio = marketRatio.value[selectedCurr.value]
+      if (ratio) {
+        const unit = ratio.exchangeAmount / ratio.itemAmount
+        const at = out.findIndex(s => s.unit >= unit)
+        out.splice(at === -1 ? out.length : at, 0, { key: bulkAmount(unit), unit, ninja: true })
+      }
+      return out
+    })
+    // The Seller column names the cheapest seller where the window has room for it.
+    const tableBox = shallowRef<HTMLElement | null>(null)
+    const boxWidth = shallowRef(0)
+    useResizeObserver(tableBox, (entries) => { boxWidth.value = entries[0].contentRect.width })
+    const wide = computed(() => boxWidth.value >= WIDE_PX)
+    const maxStock = computed(() => Math.max(1, ...steps.value.map(s => s.ninja ? 0 : s.stock)))
+    // Square root, so a step of 1 still shows beside one of 1400.
+    const depthWidth = (stock: number) => `${Math.max(2, Math.round(Math.sqrt(stock / maxStock.value) * 100))}%`
+
+    // The cheapest price starts open, so the sellers and their Whisper are in sight.
+    const openSteps = shallowRef(new Set<string>())
+    watch(() => [listedNow.value, selectedCurr.value] as const, () => {
+      const first = steps.value.find(s => !s.ninja)
+      openSteps.value = new Set(first ? [first.key] : [])
+    }, { immediate: true })
+    function toggleStep (key: string) {
+      const next = new Set(openSteps.value)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      openSteps.value = next
     }
+
+    // Each seller's amount: what the buy takes from them, or one lot; typed amounts stay until the results change.
+    const typed = reactive(new Map<string, number>())
+    watch(() => [listedNow.value, want.value], () => { typed.clear() })
+    const maxItems = (r: PricingResult) => Math.floor(r.stock / r.itemAmount) * r.itemAmount
+    const amountFor = (r: PricingResult) => typed.get(r.id) ?? plan.value.picks.find(p => p.offer === r)?.items ?? r.itemAmount
+    // Snapped to the seller's lot size and their stock, and shown as snapped: the box says what Whisper asks for.
+    function setAmount (r: PricingResult, input: HTMLInputElement) {
+      const n = input.valueAsNumber
+      if (Number.isFinite(n) && n >= 1) {
+        typed.set(r.id, Math.min(maxItems(r), Math.ceil(n / r.itemAmount) * r.itemAmount))
+      }
+      input.value = String(amountFor(r))
+    }
+    // Lots: the seller's own lot size, enough for the amount, never more than their stock.
+    const lotsFor = (r: PricingResult) =>
+      Math.max(1, Math.min(Math.ceil(amountFor(r) / r.itemAmount), Math.floor(r.stock / r.itemAmount)))
     const whisperText = (r: PricingResult) => bulkWhisper(r, lotsFor(r)) ?? ''
-    // Not yours, not the poe.ninja ratio row, and a seller with at least one lot in stock.
-    const canWhisper = (r: PricingResult | MarketRatio): r is PricingResult =>
-      !('marketRatio' in r) && !r.isMine && !!r.whisper && r.stock >= r.itemAmount
+    // Not yours, and a seller with at least one lot in stock.
+    const canWhisper = (r: PricingResult) => buyable(r) && !!r.whisper
+    const sellerName = (r: PricingResult) => widget.value.showSeller === 'account' ? r.accountName : r.ign
+    const whisperNote = shallowRef('')
     const showNote = (note: string) => {
       whisperNote.value = note
       setTimeout(() => { if (whisperNote.value === note) whisperNote.value = '' }, 3000)
     }
     let lastWhisper = ''
-    function whisper (r: PricingResult) {
-      const text = whisperText(r)
-      if (!text) return
+    function send (r: PricingResult, text: string) {
       lastWhisper = text
       MainProcess.sendEvent({ name: 'CLIENT->MAIN::user-action', payload: { action: 'paste-in-chat', text, immediate: true } })
       showNote(`Whispered ${r.ign}`)
+    }
+    function whisper (r: PricingResult) {
+      const text = whisperText(r)
+      if (text) send(r, text)
+    }
+    // Whisper next: down the buy's sellers, cheapest first, each for what the buy takes from them.
+    // Each for the amount on their row, which starts at what the buy takes; it stops after the last.
+    const whispers = computed(() => plan.value.picks.filter(p => canWhisper(p.offer)))
+    const nextIdx = shallowRef(0)
+    watch(plan, () => { nextIdx.value = 0 })
+    const nextPick = computed(() => whispers.value[nextIdx.value] ?? null)
+    function whisperNext () {
+      const pick = nextPick.value
+      if (!pick) return
+      whisper(pick.offer)
+      nextIdx.value += 1
     }
     // The game didn't have focus, so the whisper never went out.
     const chatDropped = MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data }) => {
@@ -465,12 +536,12 @@ export default defineComponent({
     return {
       t,
       improved: computed(() => priceView.value === 'improved'),
-      // woke: the listed time's colour, as in the listings table.
-      bulkAgeClass: (r: PricingResult) => {
+      // woke: a listing's age, for its colour and the short time beside it.
+      ageOf: (r: PricingResult) => {
         const at = r.indexedAt ? Date.parse(r.indexedAt) : NaN
-        const tone = Number.isNaN(at) ? null : ageTone(Math.max(0, Date.now() - at))
-        return tone ? `w-pc-age-${tone}` : undefined
+        return Number.isNaN(at) ? null : Math.max(0, Date.now() - at)
       },
+      shortAge,
       verdictSlot,
       need,
       buyCount,
@@ -478,6 +549,27 @@ export default defineComponent({
       whisperText,
       canWhisper,
       whisper,
+      whisperNext,
+      nextPick,
+      nextIdx,
+      whispers,
+      // The exchange loads its cheapest offers only: more are listed than the plan could see.
+      moreListed: computed(() => (result.value?.[selectedCurr.value].listed.value?.total ?? 0) > listedNow.value.length),
+      shownCount: computed(() => listedNow.value.length),
+      plan,
+      steps,
+      depthWidth,
+      openSteps,
+      tableBox,
+      wide,
+      toggleStep,
+      maxItems,
+      amountFor,
+      setAmount,
+      lotsFor,
+      sellerName,
+      amount: (v: number) => bulkAmount(v),
+      ageClass: (ms: number | null) => { const tone = ageTone(ms); return tone ? `w-pc-age-${tone}` : undefined },
       ninjaEach,
       bulkInsight,
       otherMarket,
@@ -492,7 +584,6 @@ export default defineComponent({
       retryIn,
       rateLimited,
       result,
-      selectedResults,
       tableLoading,
       SKELETON_ROWS,
       selectedCurr,
@@ -523,27 +614,86 @@ export default defineComponent({
   }
 }
 
-.accountStatus {
-  display: inline-block;
-  flex: none;
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: 100%;
+/* Chaos | Divine: which currency's offers show. */
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--w-line, theme('colors.gray.700'));
+  border-radius: var(--w-r-sm, 3px);
+  overflow: hidden;
 
-  /* &.online {} */
-  &.offline { @apply bg-red-600; }
-  &.afk { @apply bg-orange-500; }
+  & button {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0 7px;
+    color: var(--w-dim, theme('colors.gray.500'));
+    background: transparent;
+    font-size: var(--w-fs-sm, 12px);
+  }
+  & button:hover:not(:disabled) { color: var(--w-fg, theme('colors.gray.200')); }
+  & button:disabled { opacity: .5; }
+  & button b { font-weight: 600; font-variant-numeric: tabular-nums; }
+}
+.segOn {
+  background: var(--w-chip-ground, rgba(255, 255, 255, .06)) !important;
+  color: var(--w-gold-hi, var(--w-fg, theme('colors.gray.100'))) !important;
+}
+.segIcon { width: 1.125rem; height: 1.125rem; margin: -2px 0; }
+
+.total {
+  display: flex;
+  font-family: var(--w-body);
+  font-size: var(--w-fs-sm, 12px);
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+  color: var(--w-fg, theme('colors.gray.300'));
+
+  & b { color: var(--w-gold-hi, var(--w-accent, theme('colors.yellow.300'))); font-weight: 600; }
+}
+.nextBtn { padding: 0 8px; white-space: nowrap; }
+
+.ladder { font-variant-numeric: tabular-nums; }
+.step { cursor: pointer; }
+.step:hover td { background: var(--w-chip-ground, rgba(255, 255, 255, .06)); }
+/* Prices your Buy amount takes. */
+.filled td { background: var(--w-accent-soft, rgba(200, 163, 90, .12)); }
+.filled td:first-child { box-shadow: inset 2px 0 0 var(--w-accent, theme('colors.yellow.500')); }
+.chev { display: inline-block; width: 0.75em; color: var(--w-dim, theme('colors.gray.500')); font-size: 0.8em; }
+
+.depth {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  & span { min-width: 2.5em; text-align: right; }
+  & i { display: block; height: 5px; max-width: 8rem; flex: none; border-radius: 1px; background: var(--w-line-strong, theme('colors.gray.600')); }
 }
 
-.ratioCell {
-  display: inline-block;
-  width: calc(2rem * (1 + (var(--w-text-scale, 1) - 1) / 2)); /* half the text growth: the table must fit the window */
-}
+.name { display: inline-block; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
 
-/* The paid side carries its currency icon. */
-.ratioPay {
-  width: calc(3rem * (1 + (var(--w-text-scale, 1) - 1) / 2));
+.seller td { font-size: var(--w-fs-sm, 12px); background: var(--w-panel-2, rgba(0, 0, 0, .2)); }
+.sellerCell { padding-left: 1.5em !important; white-space: nowrap; }
+.status {
+  margin-left: 4px;
+  font-size: var(--w-fs-xs, 11px);
+  &.afk { color: theme('colors.orange.400'); }
+  &.offline { color: theme('colors.red.400'); }
 }
+.amountBox {
+  width: 3.5em; padding: 0 3px; text-align: right; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--w-line-strong, #555); border-radius: 3px; background: transparent; color: inherit;
+}
+.rowCost { display: inline-block; min-width: 3em; text-align: right; margin: 0 4px; color: var(--w-dim, theme('colors.gray.400')); }
+.whisperBtn {
+  padding: 0 6px;
+  border: 1px solid var(--w-line-strong, #555);
+  border-radius: 3px;
+  color: var(--w-gold-hi, var(--w-accent, theme('colors.yellow.300')));
+  background: transparent;
+  font-size: var(--w-fs-xs, 11px);
+}
+.whisperBtn:hover { border-color: var(--w-gold, theme('colors.yellow.500')); }
 
 .unitIcon {
   display: inline-block;
@@ -553,14 +703,6 @@ export default defineComponent({
   vertical-align: -0.2em;
 }
 
-.currencyIcon {
-  width: 1.75rem;
-  height: 1.75rem;
-  margin: -0.4375rem;
-  margin-right: 0.125rem;
-  filter: grayscale(1);
-}
-
 .legacyMessage {
   @apply mb-2;
   font-family: var(--w-body);
@@ -568,8 +710,6 @@ export default defineComponent({
   color: var(--w-dim);
 }
 
-.whisperRow { cursor: pointer; }
-.whisperRow:hover td { background: var(--w-chip-ground, rgba(255, 255, 255, .06)); }
 .buyBox {
   width: 3.5em; margin-left: 4px; padding: 0 3px; text-align: right;
   border: 1px solid var(--w-line-strong, #555); border-radius: 3px; background: transparent; color: inherit;

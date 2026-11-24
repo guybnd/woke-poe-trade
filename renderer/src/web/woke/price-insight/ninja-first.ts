@@ -81,16 +81,32 @@ export interface NinjaPrice {
   each: boolean
   /** The other way round: "225 per div", or "2,340c" for a div price. */
   sub: string | null
+  /** The unit a click on `main` switches it to, for an item under a divine (null: no switch). */
+  flip: CheapUnit | null
 }
 
-/** One item at `chaos`, with `rate` chaos to a divine (unknown: undefined). A Divine Orb reads in chaos. */
-export function ninjaPrice (chaos: number, rate: number | undefined, divine = false): NinjaPrice {
-  if (!(chaos > 0)) return { main: '—', each: false, sub: null }
-  if (divine) return { main: `${num(chaos)}c`, each: true, sub: null }
+/**
+ * How an item under a divine reads (Guy, 2026-11-24): 'c' is "34c" or
+ * "281 per c", 'div' is how many a divine buys ("5.3 per div"), or "0.4 div"
+ * from a tenth of a divine up. A price of a divine or more always reads in div.
+ */
+export type CheapUnit = 'c' | 'div'
+
+/**
+ * One item at `chaos`, with `rate` chaos to a divine (unknown: undefined). A
+ * Divine Orb reads in chaos. `unit`: how a price under a divine reads.
+ */
+export function ninjaPrice (chaos: number, rate: number | undefined, divine = false, unit: CheapUnit = 'c'): NinjaPrice {
+  if (!(chaos > 0)) return { main: '—', each: false, sub: null, flip: null }
+  if (divine) return { main: `${num(chaos)}c`, each: true, sub: null, flip: null }
+  if (rate && chaos >= rate * 0.94) return { main: `${num(chaos / rate)} div`, each: true, sub: `${num(chaos)}c`, flip: null }
   // Under a chaos "0c" says nothing: how many a chaos buys does.
-  if (chaos < 1) return { main: `${num(1 / chaos)} per c`, each: false, sub: rate ? `${num(rate / chaos)} per div` : null }
-  if (rate && chaos >= rate * 0.94) return { main: `${num(chaos / rate)} div`, each: true, sub: `${num(chaos)}c` }
-  return { main: `${num(chaos)}c`, each: true, sub: rate ? `${num(rate / chaos)} per div` : null }
+  const inChaos = chaos < 1 ? `${num(1 / chaos)} per c` : `${num(chaos)}c`
+  if (!rate) return { main: inChaos, each: chaos >= 1, sub: null, flip: null }
+  const inDiv = chaos * 10 >= rate ? `${num(chaos / rate)} div` : `${num(rate / chaos)} per div`
+  const divEach = chaos * 10 >= rate
+  if (unit === 'div') return { main: inDiv, each: divEach, sub: inChaos, flip: 'c' }
+  return { main: inChaos, each: chaos >= 1, sub: inDiv, flip: 'div' }
 }
 
 /** What a stack is worth: "238c", "1.4 div", "0.07c". */
@@ -122,4 +138,10 @@ export function chaosOrbRow (item: { info: { refName: string, namespace: string 
   if (!divineRate || item.info.namespace !== 'ITEM' || item.info.refName !== 'Chaos Orb') return null
   // No slug: poe.ninja has no saved line for it.
   return { name: 'Chaos Orb', variant: undefined, chaos: 1, graph: [] as Array<number | null>, slug: '', url: 'https://poe.ninja/poe1/economy/currency' }
+}
+
+/** The hint on a price a click switches (NinjaPrice.flip). */
+export function flipTitle (price: Pick<NinjaPrice, 'flip'> | null | undefined): string | undefined {
+  if (!price?.flip) return undefined
+  return price.flip === 'div' ? 'Click to show it in divines' : 'Click to show it in chaos'
 }

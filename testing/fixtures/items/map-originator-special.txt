@@ -1,0 +1,33 @@
+Item Class: Maps
+Rarity: Rare
+Hate Liturgy
+Map (Tier 16)
+--------
+Atlas Drops: +87% (augmented)
+Item Rarity: +144% (augmented)
+Monster Pack Size: +33% (augmented)
+More Currency: +47% (augmented)
+--------
+Item Level: 85
+--------
+Monster Level: 83
+--------
+{ Implicit Modifier }
+Area is Influenced by the Originator's Memories — Unscalable Value
+--------
+{ Prefix Modifier "Magnifying" (Tier: 1) }
+Monsters have 100% increased Area of Effect
+Monsters fire 2 additional Projectiles
+{ Prefix Modifier "Fecund" (Tier: 1) }
+98(90-100)% more Monster Life
+{ Prefix Modifier "Chaining" (Tier: 1) }
+Monsters' skills Chain 3 additional times
+Monsters' Projectiles can Chain when colliding with Terrain
+{ Rare-only Suffix Modifier "of Unearthed Technology" }
+Area contains a buried Stalker Sentinel — Unscalable Value
+{ Rare-only Suffix Modifier "of Insanity" }
+Area contains a Mirror of Delirium — Unscalable Value
+{ Rare-only Suffix Modifier "of Zarokh" }
+Area contains a Mirage
+--------
+Travel to a Map of this tier or lower by using this in a personal Map Device. Maps can only be used once.

@@ -12,6 +12,10 @@ export interface SavedLoot {
   // Sell value of one (after the bulk discount and junk rule), in chaos.
   // null: poe.ninja had no price.
   chaos: number | null
+  // The shared line item: left out (listed, struck, not counted), and your
+  // price (chaos above), with poe.ninja's from the session's end kept here.
+  out?: true
+  read?: number | null
 }
 
 // One map instance.

@@ -152,13 +152,21 @@ function save () {
 </script>
 
 <style module>
-.row { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; gap: 0 6px; align-items: center; font-size: var(--w-fs-sm); min-height: 22px; }
+.row { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 0 6px; align-items: center; font-size: var(--w-fs-sm); min-height: 22px; }
+/* The hover actions lie over the end of the name, not the value: the value
+   is clicked to change it. */
+/* Each cell on row 1 by hand: the actions share the name's cell. */
+.row > :nth-child(1) { grid-area: 1 / 1; } .row > :nth-child(2) { grid-area: 1 / 2; } .row > :nth-child(3) { grid-area: 1 / 3; }
+/* Hovered, the name makes room for them, so the chips in it (live, before)
+   stay clickable. */
+.row:hover > .name, .row:focus-within > .name { padding-right: 3.6em; }
+.row > :global(.w-line-acts) { position: relative; top: auto; transform: none; grid-column: 2; grid-row: 1; justify-self: end; }
 .icon { width: 18px; height: 18px; object-fit: contain; }
 .name { min-width: 0; display: flex; align-items: baseline; gap: 6px; }
 .nameText { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sub { white-space: nowrap; }
 .value { text-align: right; white-space: nowrap; }
-.editor { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 10px; padding: 4px 0 6px 24px; border-bottom: 1px solid var(--w-line); }
+.editor { grid-column: 1 / -1; grid-row: 2; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 10px; padding: 4px 0 6px 24px; border-bottom: 1px solid var(--w-line); }
 .field { display: flex; flex-direction: column; gap: 1px; }
 .priceBox { display: inline-flex; align-items: center; gap: 4px; }
 .unit { display: inline-flex; border: 1px solid var(--w-line); }

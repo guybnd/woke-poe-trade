@@ -5,7 +5,7 @@
   <div v-else :class="$style.body">
     <section :class="$style.head">
       <span :class="$style.total" class="w-num" :title="inChaos(sum.chaos)">{{ div(sum.chaos) }}<Coin :chaos="!divine" /></span>
-      <span class="w-dim text-xs">{{ sum.count }} {{ sum.count === 1 ? 'sale' : 'sales' }}<template v-if="sum.unpriced"> · {{ sum.unpriced }} in a currency without a price</template></span>
+      <span class="w-dim text-xs">{{ sum.count }} {{ sum.count === 1 ? 'sale' : 'sales' }}<template v-if="sum.unpriced"> · {{ sum.unpriced }} in a currency without a price</template><template v-if="outInRange"> · <span data-sales-left-out>{{ outInRange }} left out</span></template></span>
       <TextTabs v-model="range" :options="RANGES" :class="$style.range" />
     </section>
 
@@ -24,6 +24,7 @@
     <section :class="$style.chips">
       <WField v-model="query" type="search" icon="fas fa-search" placeholder="Search sales" :class="$style.search" />
       <WChip v-if="type" clickable active :title="`Only ${typeLabel}. Click to show every type`" @click="type = null">{{ typeLabel }} ×</WChip>
+      <WChip v-if="outInRange || onlyChanged" clickable :active="onlyChanged" title="Only the sales you left out of the totals" data-sales-changed @click="onlyChanged = !onlyChanged">Changed {{ outInRange }}</WChip>
     </section>
 
     <div :class="$style.scroll">
@@ -39,14 +40,15 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="s in sorted.slice(0, limit)" :key="s.id">
+          <tr v-for="s in sorted.slice(0, limit)" :key="s.id" :class="['w-line', { 'w-line-out': isOut(s) }]" tabindex="0" data-sale-row
+            @contextmenu="onMenu($event, s)" @keydown="onKeys($event, s)">
             <td :class="$style.left">
-              <span :class="$style.name"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(s)" class="w-trunc" :style="{ color: colourOf(s.frameType) }">{{ saleName(s) }}</span></span>
+              <span :class="$style.name"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(s)" class="w-trunc w-line-name" :style="{ color: colourOf(s.frameType) }">{{ saleName(s) }}</span><span v-if="isOut(s)" class="w-line-tag">left out</span></span>
             </td>
             <td class="w-num w-dim">{{ fmt(s.price.amount) }} {{ s.price.currency }}</td>
-            <td class="w-num" :class="$style.sale">{{ chaosOf(s) == null ? '—' : div(chaosOf(s)!) }}</td>
+            <td class="w-num" :class="[$style.sale, { [$style.struck]: isOut(s) }]">{{ chaosOf(s) == null ? '—' : div(chaosOf(s)!) }}</td>
             <td class="w-num" :class="marketTone(s)">{{ marketText(marketOf(s)) || '—' }}</td>
-            <td class="w-num w-dim" :title="new Date(s.at).toLocaleString()">{{ when(s.at) }}</td>
+            <td class="w-num w-dim" :title="new Date(s.at).toLocaleString()">{{ when(s.at) }}<WLineActs :name="saleName(s)" :out="isOut(s)" :entries="entriesOf(s)" :head="e => headOf(s, e)" @out="leaveOut(s, $event)" /></td>
           </tr>
           <tr v-if="!rows.length"><td colspan="5" class="w-dim" :class="$style.left">Nothing matches.</td></tr>
           <tr v-if="rows.length > limit"><td colspan="5" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 100">{{ rows.length - limit }} more</WButton></td></tr>
@@ -60,8 +62,9 @@
 // The Sales view (pick C): your sales for a range, a ranked bar per type that
 // filters the table under it, and every sale kept.
 import { computed, shallowRef, watch } from 'vue'
-import { WButton, WChip, WEmpty, WField, vItemTip } from '../ui'
+import { WButton, WChip, WEmpty, WField, WLineActs, vItemTip } from '../ui'
 import { saleTip } from './sale-tip'
+import { useSaleLines } from './sale-lines'
 import { formatAmount, nowMinute } from '../ui/format'
 import TextTabs from './TextTabs.vue'
 import Coin from './Coin.vue'
@@ -86,12 +89,19 @@ const reading = salesReading
 const all = sales
 // Moves with the minute clock, so Today rolls over at midnight.
 const inR = computed(() => inRange(all.value, range.value, Math.max(nowMinute.value, Date.now())))
-const sum = computed(() => totals(inR.value, rates.value))
-const types = computed(() => byType(inR.value, rates.value))
+// The shared line item (ui/line-item.ts): a sale left out stays listed,
+// struck, and leaves the totals and the bars.
+const { isOut, leaveOut, entriesOf, headOf, onMenu, onKeys } = useSaleLines()
+const counted = computed(() => inR.value.filter(s => !isOut(s)))
+const outInRange = computed(() => inR.value.length - counted.value.length)
+const onlyChanged = shallowRef(false)
+watch(outInRange, (n) => { if (!n) onlyChanged.value = false })
+const sum = computed(() => totals(counted.value, rates.value))
+const types = computed(() => byType(counted.value, rates.value))
 const typeLabel = computed(() => SALE_TYPES.find(t => t.id === type.value)?.label ?? '')
 const rows = computed(() => {
   const words = query.value.toLowerCase().split(/\s+/).filter(Boolean)
-  return inR.value.filter(s => (!type.value || saleType(s) === type.value) &&
+  return inR.value.filter(s => (!type.value || saleType(s) === type.value) && (!onlyChanged.value || isOut(s)) &&
     words.every(w => `${s.name} ${s.typeLine}`.toLowerCase().includes(w)))
 })
 
@@ -168,7 +178,9 @@ watch(types, (list) => { if (type.value && !list.some(t => t.id === type.value))
 .search { min-width: 150px; flex: 0 1 220px; }
 .scroll { max-height: 420px; overflow-y: auto; overscroll-behavior: contain; }
 .table { width: 100%; border-collapse: collapse; font-size: var(--w-fs-sm); table-layout: fixed; }
-.table th { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); font-weight: 500; text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--w-line-strong); white-space: nowrap; position: sticky; top: 0; background: var(--w-panel-solid); }
+.table th { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); font-weight: 500; text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--w-line-strong); white-space: nowrap; position: sticky; top: 0; z-index: 3; background: var(--w-panel-solid); }
+/* The last cell is wide enough for the hover actions laid over it. */
+.table td:last-child { min-width: 4.6em; }
 .table th:nth-child(1) { width: 42%; }
 .table td { padding: 2px 6px; text-align: right; border-bottom: 1px solid var(--w-line-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .table tbody tr:hover td { background: var(--w-panel-2); }
@@ -179,4 +191,5 @@ watch(types, (list) => { if (type.value && !list.some(t => t.id === type.value))
 .name { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .sale { color: var(--w-gold); }
+.struck { text-decoration: line-through; color: var(--w-dim); }
 </style>

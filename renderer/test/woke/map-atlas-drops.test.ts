@@ -20,13 +20,13 @@ describe('3.30 Atlas Drops', () => {
     expect(item.unknownModifiers.map(m => m.text).join('\n')).not.toMatch(/Atlas Drops/)
   })
 
-  it('offers an Atlas Drops filter, off until the trade site indexes it', () => {
+  it('offers an Atlas Drops filter, searched like Rarity and Pack (the trade site filter works)', () => {
     const item = parseItem(fixture('items/map-rare-t16-330.txt'))
     const filters: StatFilter[] = []
     mapProps(false, { item, filters, searchInRange: 10, statsByType: item.statsByType } as never)
     const drops = filters.find(f => f.tradeId[0] === 'item.map_atlas_drops')!
     expect(drops.roll?.value).toBe(72)
-    expect(drops.disabled).toBe(true)
+    expect(drops.disabled).toBe(false)
     expect(filters.find(f => f.tradeId[0] === 'item.map_item_quantity')).toBeUndefined()
     // The rest of the price check still builds.
     expect(() => createExactStatFilters(item, item.statsByType, { searchStatRange: 10, mode: 'props' })).not.toThrow()

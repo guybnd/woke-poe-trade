@@ -53,6 +53,6 @@ test('right-clicking an item gives its strip: price check, stash search, watch',
   await menu.getByRole('menuitem', { name: 'Price check' }).click()
   const check = overlay.widget('price-check')
   await expect(check).toContainText('Divine Orb')
-  await expect(check).toContainText('Matched: 5')
+  await expect(check).toContainText('Chaos 5')
   expect(overlay.errors).toEqual([])
 })
