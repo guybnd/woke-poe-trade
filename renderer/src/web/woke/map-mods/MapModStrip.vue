@@ -93,7 +93,7 @@
             :aria-pressed="isAnyOf(row.filter)" :title="anyOfTitle(row.filter)" @click="toggleAnyOf(row.filter)">{{ isAnyOf(row.filter) ? `any ${row.filter.anyOf.label}` : 'this one' }}</button>
         </div>
         <!-- Guy: any other mod goes in from here; the price check's own rows keep only special ones (enchants). -->
-        <FilterAddMod v-if="filters && addMods" :filters="filters" data-map-add-mod />
+        <FilterAddMod v-if="filters && addMods" :filters="filters" map data-map-add-mod />
       </div>
     </section>
     <slot name="worth" />
