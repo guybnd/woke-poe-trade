@@ -231,6 +231,8 @@ import { gemLookup, transfiguredBase } from './lookups/gems'
 import { vaalGemLookup } from './lookups/vaal-gem'
 import { keystoneUniques, passiveList, treeLookup, withOils } from './lookups/tree'
 import { megaloLookup } from './lookups/megalo'
+import { valdoLookup } from './lookups/valdo'
+import { askLookupAny } from '../valdo/skips'
 import { forbiddenLookup } from './lookups/forbidden'
 import { forbiddenNotables } from '../forbidden/notables'
 import type { ForbiddenNotable } from '../forbidden/notables'
@@ -837,7 +839,7 @@ function flipsConfig (): ScarabFlipWidget | null {
   return (config.widgets.find(w => w.wmType === SCARAB_FLIP_TYPE) as ScarabFlipWidget | undefined) ?? null
 }
 const netWorthWidget = () => AppConfig().widgets.find(w => w.wmType === NET_WORTH_TYPE) as { staleDays?: number, countListed?: boolean } | undefined
-const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, forbiddenLookup(forbidden.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime(), runBoard.value, lastRun.value), salesLookup(salesList.value), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
+const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, forbiddenLookup(forbidden.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime(), runBoard.value, lastRun.value), salesLookup(salesList.value), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), valdoLookup(name => AppConfig().language === 'en' && knownItem('UNIQUE', name)), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -871,6 +873,11 @@ function act (action: LookupAction) {
       return
     }
     savedOpenRequest.value = { ...action.open, at: Date.now() }
+    wm.hide(props.config.wmId)
+  } else if ('priceCheck' in action) {
+    // As if the item was pasted; the palette steps aside for the check.
+    askLookupAny()
+    checkItemText(action.priceCheck)
     wm.hide(props.config.wmId)
   } else if ('trade' in action) tradeBeast(action.trade)
   else if ('copy' in action) copyText(action.copy).then(ok => { if (ok) toast(`Copied ${action.copy}`, { ms: 1800 }) })
@@ -1484,6 +1491,9 @@ function onPaste (e: ClipboardEvent) {
   const text = pastedItemText(e.clipboardData?.getData('text/plain') ?? '')
   if (text == null) return
   e.preventDefault()
+  checkItemText(text)
+}
+function checkItemText (text: string) {
   Host.selfDispatch({
     name: 'MAIN->CLIENT::item-text',
     payload: { clipboard: text, position: { x: window.screenX + window.innerWidth / 2, y: window.screenY + 100 }, focusOverlay: true, target: 'price-check', live: true }

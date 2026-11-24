@@ -34,8 +34,7 @@
         </button>
         <filter-btn-logical v-if="searchSub"
           :filter="searchSub" :text="searchSub.name ?? searchSub.baseType!" />
-        <filter-btn-logical v-if="filters.mapCompletionReward && !filters.mapCompletionReward.disabled" readonly
-          :filter="{ disabled: false }" :text="t('item.map_foil_reward', [filters.mapCompletionReward.name])" />
+        <!-- woke: a Valdo map's reward is on the Valdo strip (ValdoStrip.vue), not here too (Guy: "why twice?"). -->
         <template v-if="filters.influences">
           <filter-btn-logical v-for="influence of filters.influences" :key="influence.value"
             :filter="influence" :text="influence.value" :img="`/images/influence-${influence.value}.png`" />

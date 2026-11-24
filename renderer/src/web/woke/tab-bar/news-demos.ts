@@ -2,6 +2,7 @@
 // Show me runs a sample instead, then flashes the feature in it
 // (goto-flash.ts). Read only by the dock's card, so not at startup.
 import type { ItemMenuRef } from '../ui/tooltip/item-menu-logic'
+import { valdoMapText } from '../valdo/map-text'
 
 export type NewsDemo =
   // A price check of this item (one trade search, as a check is), and the
@@ -18,7 +19,9 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-unique-recipe': { check: { name: 'The Will of Uul-Netol', rarity: 'unique' }, spot: 'related' },
   'div-card-map-chance': { search: 'Strand Map' },
   // A rolled jewel, unidentified: the unid price card (nothing searched until a click).
-  'unid-rolled-unique-price': { check: { name: 'Forbidden Flame', rarity: 'unique' }, spot: 'unid-price' }
+  'unid-rolled-unique-price': { check: { name: 'Forbidden Flame', rarity: 'unique' }, spot: 'unid-price' },
+  'valdo-map-skips': { check: { name: 'Valdo Map', text: valdoMapText('Headhunter') }, spot: 'valdo-strip' },
+  'valdo-map-lookup': { search: 'valdo headhunter' }
 }
 
 // Tools with no window of their own to open: a line about one needs a demo,
