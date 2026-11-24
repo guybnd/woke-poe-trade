@@ -4,6 +4,7 @@ import { ModifierType } from '@/parser/modifiers'
 import { FiltersCreationContext } from '../create-stat-filters'
 import { noSourcePseudoToFilter, propToFilter } from './item-property'
 import { findAndResolveByRef, statToNotFilter } from './utils'
+import { goalDisabled } from '@/web/woke/map-mods/goal'
 
 const PSEUDO = {
   MORE_THREADS: stat('More Scarabs: #%'),
@@ -72,11 +73,12 @@ export function mapProps (bulk: boolean, ctx: FiltersCreationContext): void {
     // woke: Rarity starts on like Pack size, More X or not (Guy, 2026-11-23: a
     // high Rarity left off looked like a mistake). APT left it off when the map
     // had More Currency / Scarabs / Div cards.
+    // woke: the farming goal (map-mods/goal.ts) picks which numbers start on.
     areaProps({
       disabled: {
         itemQuantity: false,
-        itemRarity: false,
-        packSize: false
+        itemRarity: goalDisabled('Rarity') ?? false,
+        packSize: goalDisabled('Pack') ?? false
       }
     }, ctx)
 
@@ -84,28 +86,28 @@ export function mapProps (bulk: boolean, ctx: FiltersCreationContext): void {
       ctx.filters.push(noSourcePseudoToFilter({
         pseudo: pseudoStatByRef(PSEUDO.MORE_MAPS)!,
         roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreMaps },
-        disabled: true
+        disabled: goalDisabled('Maps') ?? true
       }, ctx))
     }
     if (item.mapMoreThreads) {
       ctx.filters.push(noSourcePseudoToFilter({
         pseudo: pseudoStatByRef(PSEUDO.MORE_THREADS)!,
         roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreThreads },
-        disabled: false
+        disabled: goalDisabled('Threads') ?? false
       }, ctx))
     }
     if (item.mapMoreCurrency) {
       ctx.filters.push(noSourcePseudoToFilter({
         pseudo: pseudoStatByRef(PSEUDO.MORE_CURRENCY)!,
         roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreCurrency },
-        disabled: false
+        disabled: goalDisabled('Currency') ?? false
       }, ctx))
     }
     if (item.mapMoreDivCards) {
       ctx.filters.push(noSourcePseudoToFilter({
         pseudo: pseudoStatByRef(PSEUDO.MORE_DIVINATION_CARDS)!,
         roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreDivCards },
-        disabled: false
+        disabled: goalDisabled('Div cards') ?? false
       }, ctx))
     }
   }

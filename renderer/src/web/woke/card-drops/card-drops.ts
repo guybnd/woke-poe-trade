@@ -124,10 +124,15 @@ export function mapTip (data: CardDropData, map: string, price: (card: string) =
   const cards = cardsInMap(data, map)
     .map(name => ({ name, chaos: price(name) }))
     .sort((a, b) => (b.chaos ?? -1) - (a.chaos ?? -1) || (a.name < b.name ? -1 : 1))
-  const lines: TipLine[] = cards.map(c => [
-    { text: c.name, tone: 'card' as const },
-    ...(c.chaos != null ? [{ text: `  ${fmt(c.chaos)}`, tone: 'value' as const }] : [])
-  ])
+  const lines: TipLine[] = cards.map(c => {
+    const oneIn = cardChanceIn(data, c.name, map)
+    return [
+      { text: c.name, tone: 'card' as const },
+      ...(c.chaos != null ? [{ text: `  ${fmt(c.chaos)}`, tone: 'value' as const }] : []),
+      ...(oneIn ? [{ text: `  ${oneInText(oneIn)}`, tone: 'dim' as const }] : [])
+    ]
+  })
+  const perDrop = valuePerCardDrop(data, map, price)
   const tier = data.maps[map]
   return {
     kind: 'lookup',
@@ -138,9 +143,84 @@ export function mapTip (data: CardDropData, map: string, price: (card: string) =
       frame: tier ? 'normal' : 'unique',
       sections: [
         [[{ text: 'Divination cards here', tone: 'label' }]],
-        lines.length ? lines : [[{ text: 'No cards listed', tone: 'dim' }]]
+        lines.length ? lines : [[{ text: 'No cards listed', tone: 'dim' }]],
+        ...(perDrop != null ? [[[{ text: `About ${fmt(perDrop)} per card drop (estimate from drop weights)`, tone: 'dim' as const }]]] : [])
       ]
     },
     market: null
   }
 }
+
+// How likely a card drop in a map is to be a given card (Guy's pick, veteran
+// review 2026-11-24): the card's weight over the total weight of every card
+// that can drop there. That's the map's own Divcord cards plus the cards with
+// no known area (Divcord lists no source, so they count as dropping anywhere)
+// whose lowest area level the map reaches. An estimate: cards with no weight are left
+// out, and bosses and league content can add other cards.
+
+// Area level of a map: tier 1 is 68, tier 16 is 83 (voidstones raise it, so
+// this is the least). Unique maps vary; 83 lets every card in.
+export function mapAreaLevel (data: CardDropData, map: string): number {
+  const tier = data.maps[map]
+  return tier ? 67 + tier : 83
+}
+
+export interface PoolCard { name: string, weight: number }
+export interface MapPool { cards: PoolCard[], total: number }
+
+const poolCache = new WeakMap<CardDropData, Map<string, MapPool>>()
+// Every weighted card that can drop in a map, with its weight (1 / "1 in N").
+export function mapPool (data: CardDropData, map: string): MapPool {
+  let byMap = poolCache.get(data)
+  if (!byMap) { byMap = new Map(); poolCache.set(data, byMap) }
+  let pool = byMap.get(map)
+  if (!pool) {
+    const level = mapAreaLevel(data, map)
+    const cards: PoolCard[] = []
+    for (const [name, e] of Object.entries(data.cards)) {
+      if (e.x || !e.w) continue
+      // Divcord saw a map's own cards drop there, whatever their lowest level;
+      // the anywhere cards need the map's level.
+      const here = e.m ? e.m.includes(map) : !e.s && !(e.l && e.l > level)
+      if (here) cards.push({ name, weight: 1 / e.w })
+    }
+    pool = { cards, total: cards.reduce((s, c) => s + c.weight, 0) }
+    byMap.set(map, pool)
+  }
+  return pool
+}
+
+// About 1 in this many card drops in the map is the card; null when the card
+// has no weight or can't drop there.
+export function cardChanceIn (data: CardDropData, card: string, map: string): number | null {
+  const pool = mapPool(data, map)
+  const c = pool.cards.find(x => x.name === card)
+  return c && pool.total > 0 ? Math.max(1, Math.round(pool.total / c.weight)) : null
+}
+
+// What a card drop in the map is worth on average, in chaos: unpriced cards
+// count as 0. Null when nothing there has a price.
+export function valuePerCardDrop (data: CardDropData, map: string, price: (card: string) => number | null): number | null {
+  const pool = mapPool(data, map)
+  if (!pool.total) return null
+  let sum = 0
+  let priced = false
+  for (const c of pool.cards) {
+    const p = price(c.name)
+    if (p == null) continue
+    priced = true
+    sum += p * c.weight
+  }
+  return priced ? sum / pool.total : null
+}
+
+// A card's maps, likeliest first (unknown chance last, in Divcord's order).
+export function mapsByChance (data: CardDropData, card: string, maps: DropMap[]): Array<DropMap & { oneIn: number | null }> {
+  return maps
+    .map((m, i) => ({ ...m, oneIn: cardChanceIn(data, card, m.name), i }))
+    .sort((a, b) => (a.oneIn ?? Infinity) - (b.oneIn ?? Infinity) || a.i - b.i)
+    .map(({ name, label, tier, oneIn }) => ({ name, label, tier, oneIn }))
+}
+
+// "1 in 22 card drops here".
+export const chanceWords = (oneIn: number) => `${oneInText(oneIn)} card drops here`
