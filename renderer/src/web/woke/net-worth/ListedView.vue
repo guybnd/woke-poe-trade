@@ -17,6 +17,7 @@
         asking<template v-if="filterLabel"> for <span class="w-accent" data-listed-filtered>{{ filterLabel }}</span></template> · {{ head.count }} {{ head.count === 1 ? 'listing' : 'listings' }}<template v-if="head.worthChaos !== head.askChaos"> · worth about {{ div(head.worthChaos) }} {{ unit }}</template>
         <template v-if="head.stale && filter !== 'stale'"> · <span class="w-warn" data-listed-stale>{{ head.stale }} unsold {{ staleDays }}d+</span></template>
         <template v-if="head.unpriced"> · {{ head.unpriced }} in a currency without a price</template>
+        <template v-if="outCount"> · <span data-listed-left-out>{{ outCount }} left out</span></template>
       </span>
       <label :class="$style.days" class="w-dim text-xs" title="A listing unsold this many days counts as stale: the dock icon counts them">
         Stale after <input v-model.number="daysInput" type="number" min="1" max="30" step="1" aria-label="Stale after days" :class="$style.daysIn"> d
@@ -29,6 +30,7 @@
       <WChip v-if="undercut" clickable :active="filter === 'undercut'" title="Your last Check found someone cheaper" @click="toggle('undercut')"><span class="w-down">Undercut {{ undercut }}</span></WChip>
       <WChip v-if="over" clickable :active="filter === 'over'" title="Asking 10% or more over poe.ninja's price" @click="toggle('over')">Overpriced {{ over }}</WChip>
       <WChip v-for="t in types" :key="t.id" clickable :active="filter === t.id" @click="toggle(t.id)">{{ t.label }} {{ t.count }}</WChip>
+      <WChip v-if="outCount" clickable :active="filter === 'changed'" title="Only the listings you left out of the total" data-listed-changed @click="toggle('changed')">Changed {{ outCount }}</WChip>
     </section>
     <WEmpty v-if="!rows.length" icon="fas fa-check">Nothing listed that hasn't sold.</WEmpty>
     <div v-else :class="$style.scroll">
@@ -41,14 +43,16 @@
             <th title="Your asking price against poe.ninja's">vs ninja</th>
             <th data-goto-spot="still-cheapest" title="Still cheapest? Price check a listing with its own mods (your filters) to rank your price, then set a new one at the foot. The bolt is a quick search by name">Cheapest?</th>
             <th :title="`Since you first listed it (a reprice doesn't reset it). Orange: ${staleDays} days or more`">Listed</th>
+            <th :class="$style.acts" />
           </tr>
         </thead>
         <tbody>
-          <tr v-for="r in shown.slice(0, limit)" :key="r.item.id" data-listed-row>
+          <tr v-for="r in shown.slice(0, limit)" :key="r.item.id" :class="['w-line', { 'w-line-out': isOut(r) }]" tabindex="0" data-listed-row
+            @contextmenu="onMenu($event, r)" @keydown="onKeys($event, r)">
             <td :class="$style.left">
-              <span :class="$style.name"><img v-if="r.item.icon" :src="r.item.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(r.item)" class="w-trunc" :style="{ color: colourOf(r.item.frameType) }">{{ saleName(r.item) }}</span></span>
+              <span :class="$style.name"><img v-if="r.item.icon" :src="r.item.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(r.item)" class="w-trunc w-line-name" :style="{ color: colourOf(r.item.frameType) }">{{ saleName(r.item) }}</span><span v-if="isOut(r)" class="w-line-tag">left out</span></span>
             </td>
-            <td class="w-num" :class="$style.ask">
+            <td class="w-num" :class="[$style.ask, { [$style.struck]: isOut(r) }]">
               {{ fmt(r.item.price.amount) }} {{ r.item.price.currency }}<span v-if="targetOf(r)" class="w-warn" :title="`You set ${priceLabel(targetOf(r)!)} from the price check: reprice it at Faustus. It clears once a Refresh sees that price`" data-listed-target> → {{ priceLabel(targetOf(r)!) }}</span>
             </td>
             <td class="w-num" :class="r.confidence === 'rough' ? 'w-dim' : ''" :title="suggestTitle(r)">{{ suggestText(r) }}</td>
@@ -63,9 +67,10 @@
               <WButton v-else-if="checkOf(r)" size="sm" variant="ghost" :class="checkOf(r)!.cheaper ? 'w-down' : 'w-up'" :title="checkTitle(r)" @click="check(r)">{{ checkText(r) }}</WButton>
               <WButton v-else size="sm" variant="ghost" :class="errors[r.item.id] ? 'w-down' : ''" :title="errors[r.item.id] ? `Check failed: ${errors[r.item.id]}. Click to try again` : 'One trade search: where your price ranks among other instant buyout listings of it'" @click="check(r)">{{ errors[r.item.id] ? 'Retry' : 'Check' }}</WButton>
             </td>
-            <td class="w-num" :class="r.stale ? 'w-warn' : 'w-dim'" :title="new Date(r.firstAt).toLocaleString()">{{ ageText(r.ageMs) }}</td>
+            <td class="w-num" :class="r.stale && !isOut(r) ? 'w-warn' : 'w-dim'" :title="new Date(r.firstAt).toLocaleString()">{{ ageText(r.ageMs) }}</td>
+            <td><WLineActs :name="saleName(r.item)" :out="isOut(r)" :entries="entriesOf(r)" :head="e => itemMenuHead(saleMenuRef(r.item), e)" @out="leaveOut(r, $event)" /></td>
           </tr>
-          <tr v-if="shown.length > limit"><td colspan="6" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 100">{{ shown.length - limit }} more</WButton></td></tr>
+          <tr v-if="shown.length > limit"><td colspan="7" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 100">{{ shown.length - limit }} more</WButton></td></tr>
         </tbody>
       </table>
     </div>
@@ -78,10 +83,13 @@
 // Sales › Listed (pending.ts): what's at Faustus and not sold, its asking
 // price against poe.ninja, and how long it has sat.
 import { computed, shallowRef, watch } from 'vue'
-import { WButton, WChip, WEmpty, WToggle, toast, vItemTip } from '../ui'
+import { WButton, WChip, WEmpty, WLineActs, WToggle, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
+import type { MenuEntry } from '../ui'
+import { itemMenuHead } from '../ui/tooltip/item-menu'
+import { lineOutDoc, loadLineOut, outIdsOf, setLineOut } from './line-out-store'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import Coin from './Coin.vue'
-import { saleTip } from './sale-tip'
+import { saleMenuRef, saleTip } from './sale-tip'
 import { saleName, saleType, SALE_TYPES } from './sales'
 import type { SaleType } from './sales'
 import { ninjaPriced, rates, sales } from './sales-store'
@@ -99,7 +107,7 @@ import type { PendingRow } from './pending'
 const props = defineProps<{ wmId: number, league: string, divine: number | null, staleDays?: number, auto: boolean }>()
 const emit = defineEmits<{ 'stale-days': [d: number], 'auto': [on: boolean] }>()
 
-watch(() => props.league, (l) => { loadPending(l).catch(() => {}); loadCheapest(l) }, { immediate: true })
+watch(() => props.league, (l) => { loadPending(l).catch(() => {}); loadCheapest(l); loadLineOut(l).catch(() => {}) }, { immediate: true })
 
 const doc = computed(() => pendingDoc.value?.league === props.league ? pendingDoc.value : null)
 const reading = pendingReading
@@ -110,11 +118,32 @@ const daysInput = computed<number>({
 })
 const rows = computed(() => pendingRows(doc.value, sales.value, rates.value, ninjaPriced, Math.max(nowMinute.value, Date.now()), staleDays.value))
 const sorted = computed(() => sortPending(rows.value))
-const sum = computed(() => pendingTotals(rows.value))
+// The shared line item (ui/line-item.ts): a listing left out stays listed,
+// struck, and leaves the totals and the stale count.
+const outIds = computed(() => outIdsOf(lineOutDoc.value, props.league, 'listed'))
+const isOut = (r: PendingRow) => outIds.value.has(r.item.id)
+const outCount = computed(() => rows.value.filter(isOut).length)
+const sum = computed(() => pendingTotals(rows.value.filter(r => !isOut(r))))
+function leaveOut (r: PendingRow, out: boolean) {
+  const l = props.league
+  const id = r.item.id
+  setLineOut(l, 'listed', id, out).catch(failed)
+  lineToast(out ? 'out' : 'in', saleName(r.item), () => { setLineOut(l, 'listed', id, !out).catch(failed) })
+}
+const failed = (e: Error) => { toast(e.message) }
+const handlersOf = (r: PendingRow) => ({ out: (on: boolean) => { leaveOut(r, on) } })
+const stateOf = (r: PendingRow) => ({ out: isOut(r), editable: false })
+const entriesOf = (r: PendingRow): MenuEntry[] => lineMenu(stateOf(r), handlersOf(r))
+function onMenu (e: MouseEvent, r: PendingRow) {
+  // The row's buttons keep their own clicks; the menu is for the row.
+  if ((e.target as Element).closest('input')) return
+  openMenu(e, entriesOf(r), itemMenuHead(saleMenuRef(r.item), e) ?? undefined)
+}
+function onKeys (e: KeyboardEvent, r: PendingRow) { lineKeys(e, stateOf(r), handlersOf(r)) }
 const limit = shallowRef(100)
 
 // Filter chips: stale, overpriced, or one type.
-type Filter = 'stale' | 'over' | 'undercut' | 'reprice' | SaleType
+type Filter = 'stale' | 'over' | 'undercut' | 'reprice' | 'changed' | SaleType
 const filter = shallowRef<Filter | null>(null)
 const OVER = 0.1
 const isOver = (r: PendingRow) => r.vs != null && r.vs >= OVER
@@ -140,14 +169,15 @@ watch(() => hasListedAsk(props.wmId), has => {
 const shown = computed(() => {
   const f = filter.value
   if (!f) return sorted.value
-  return sorted.value.filter(r => f === 'stale' ? r.stale : f === 'over' ? isOver(r) : f === 'undercut' ? isUndercut(r) : f === 'reprice' ? targetOf(r) != null : saleType(r.item) === f)
+  return sorted.value.filter(r => f === 'changed' ? isOut(r) : f === 'stale' ? r.stale && !isOut(r) : f === 'over' ? isOver(r) : f === 'undercut' ? isUndercut(r) : f === 'reprice' ? targetOf(r) != null : saleType(r.item) === f)
 })
 // The head's numbers: the rows the chip picked, or all of them.
-const head = computed(() => filter.value ? pendingTotals(shown.value) : sum.value)
+// Changed: what the left-out ones ask; any other chip, the counted ones.
+const head = computed(() => filter.value === 'changed' ? pendingTotals(shown.value) : filter.value ? pendingTotals(shown.value.filter(r => !isOut(r))) : sum.value)
 const filterLabel = computed(() => {
   const f = filter.value
   if (!f) return ''
-  return f === 'stale' ? 'stale' : f === 'over' ? 'overpriced' : f === 'undercut' ? 'undercut' : f === 'reprice' ? 'to reprice' : SALE_TYPES.find(t => t.id === f)?.label.toLowerCase() ?? ''
+  return f === 'changed' ? 'left out' : f === 'stale' ? 'stale' : f === 'over' ? 'overpriced' : f === 'undercut' ? 'undercut' : f === 'reprice' ? 'to reprice' : SALE_TYPES.find(t => t.id === f)?.label.toLowerCase() ?? ''
 })
 const headTitle = computed(() => filter.value
   ? `Asking ${inChaos(head.value.askChaos)} for the picked chip (all ${sum.value.count}: ${inChaos(sum.value.askChaos)}). Click the chip again for all`
@@ -260,6 +290,8 @@ function colourOf (frame: number) {
 .table td { padding: 2px 6px; text-align: right; border-bottom: 1px solid var(--w-line-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .table tbody tr:hover td { background: var(--w-panel-2); }
 .left { text-align: left !important; }
+.struck { text-decoration: line-through; color: var(--w-dim); }
+.table th.acts { width: 2.8em; }
 .name { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .ask { color: var(--w-gold); }

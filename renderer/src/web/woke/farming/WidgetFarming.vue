@@ -97,13 +97,8 @@
               </div>
             </div>
             <div>
-              <div v-for="line in s.loot" :key="key(line)" class="w-row px-0" :class="$style.lineGrid">
-                <span v-item-tip="line" class="w-trunc flex items-center gap-1"><WIcon :src="art(line)" fallback="fas fa-coins" />{{ line.name }}<span v-if="line.variant" class="w-dim ml-1">{{ line.variant }}</span></span>
-                <button class="w-icon-btn" @click="changeQty(line, -1)"><i class="fas fa-minus text-xs" /></button>
-                <span class="text-center w-num">{{ line.qty }}</span>
-                <button class="w-icon-btn" @click="changeQty(line, 1)"><i class="fas fa-plus text-xs" /></button>
-                <span class="text-right w-dim w-num">{{ lootPrice(line) }}</span>
-              </div>
+              <LootRow v-for="line in s.loot" :key="key(line)" :line="line" :sell="sellOf(line)" :fmt="fmt"
+                @qty="setQty(line, $event)" @price="setLootPrice(line, $event)" @out="leaveOut(line, $event)" @remove="removeLine(line)" />
               <label class="flex items-center gap-2 w-dim pt-2">
                 Other loot
                 <WField v-model="s.extraChaos" type="number" suffix="c" style="width: 6rem;" />
@@ -171,7 +166,8 @@ import { useVisibleClock } from '../shared/visible-clock'
 import { AppConfig, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WInfo, WPanel, WTabs, WField, WButton, WEmpty, WKbd, WIcon, WBanner, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WField, WButton, WEmpty, WKbd, WIcon, WBanner, lineToast, toast, vItemTip } from '../ui'
+import LootRow from './LootRow.vue'
 import { ninjaIcon } from '../ui/game-icons'
 import { MainProcess } from '@/web/background/IPC'
 import { parseClipboard } from '@/parser'
@@ -192,8 +188,8 @@ import { useLeagues } from '@/web/background/Leagues'
 import { useSessionStore } from '../analytics/store'
 import { ANALYTICS_TYPE } from '../analytics/types'
 import type { AtlasWidget } from '../atlas/widget'
-import { FARMING_LOOT_TARGET, onEndSessionRequest, addLoot as addLootTo, costsForStrategy, countNewMap, currentRun, elapsed, historyToRecords, initFarmingData, isFarmedMap, isMapCostItem, isMapSideArea, lineValue, maybeAutoPause, nameRun, pauseSession, newSession, onZoneChange, rememberCosts, removeLoot, sellPrice, sellRules, startRun, strategyStats, toSessionRecord, totals, withScarabCosts } from './farming'
-import type { CostLine, LiveRun, LootLine, PricedRef } from './farming'
+import { FARMING_LOOT_TARGET, onEndSessionRequest, addLoot as addLootTo, costsForStrategy, countNewMap, currentRun, elapsed, historyToRecords, initFarmingData, isFarmedMap, isMapCostItem, isMapSideArea, lineValue, lootUnit, maybeAutoPause, nameRun, pauseSession, newSession, onZoneChange, rememberCosts, removeLoot, sellPrice, sellRules, startRun, strategyStats, toSessionRecord, totals, withScarabCosts } from './farming'
+import type { CostLine, FarmingSession, LiveRun, LootLine, PricedRef } from './farming'
 
 const props = defineProps<{
   config: FarmingWidget
@@ -303,7 +299,9 @@ function runDrops (r: LiveRun): number {
   return r.loot.reduce((n, l) => n + l.qty, 0)
 }
 function runResult (r: LiveRun): number {
-  return lineValue(r.loot, (x) => sellPrice(x, price(x), rules.value)).total - costPerMap.value
+  const sess = props.config.session
+  const sell = (x: PricedRef) => sellPrice(x, price(x), rules.value)
+  return lineValue(r.loot, x => sess ? lootUnit(sess, x, sell) : sell(x)).total - costPerMap.value
 }
 
 // --- Map costs per strategy, filled from Atlas strategies' scarabs ---
@@ -354,13 +352,6 @@ function openAnalytics () {
   wm.create(ANALYTICS_TYPE)
   const created = wm.widgets.value.reduce((a, b) => (a.wmId > b.wmId ? a : b))
   nextTick(() => nextTick(() => wm.show(created.wmId)))
-}
-
-function lootPrice (line: PricedRef & { qty: number }) {
-  const p = sellPrice(line, price(line), rules.value)
-  if (p == null) return 'no price'
-  if (p === 0) return 'junk'
-  return fmt(p * line.qty)
 }
 
 function linePrice (line: PricedRef & { qty: number }) {
@@ -433,11 +424,52 @@ function addLoot (item: PriceItem) {
   lootQuery.value = ''
 }
 
-function changeQty (line: LootLine, delta: number) {
+// The shared line item (ui/line-item.ts) on a loot line.
+const sellOf = (line: PricedRef) => sellPrice(line, price(line), rules.value)
+function setQty (line: LootLine, n: number) {
   const sess = props.config.session
   if (!sess) return
-  if (delta > 0) addLootTo(sess, line, delta)
-  else removeLoot(sess, line, -delta)
+  if (n <= 0) { removeLine(line); return }
+  if (n > line.qty) addLootTo(sess, line, n - line.qty)
+  else if (n < line.qty) removeLoot(sess, line, line.qty - n)
+}
+function setLootPrice (line: LootLine, chaos: number | null) {
+  if (chaos == null) delete line.each
+  else line.each = chaos
+}
+// Undo acts on the session it was done in.
+function laterOn (fn: (sess: FarmingSession) => void): () => void {
+  const started = props.config.session?.startedAt
+  return () => { const sess = props.config.session; if (sess && sess.startedAt === started) fn(sess) }
+}
+function leaveOut (line: LootLine, on: boolean) {
+  const k = key(line)
+  const set = (sess: FarmingSession, v: boolean) => { const l = sess.loot.find(x => key(x) === k); if (l) { if (v) l.out = true; else delete l.out } }
+  const sess = props.config.session
+  if (!sess) return
+  set(sess, on)
+  lineToast(on ? 'out' : 'in', line.name, laterOn(x => { set(x, !on) }), panel.value?.el)
+}
+function removeLine (line: LootLine) {
+  const sess = props.config.session
+  if (!sess) return
+  // Undo puts back only this line: its count in each map and your edits.
+  const k = key(line)
+  const was = JSON.parse(JSON.stringify(line)) as LootLine
+  const perRun = (sess.runs ?? []).map((r, i) => ({ i, qty: r.loot.find(l => key(l) === k)?.qty ?? 0 })).filter(x => x.qty > 0)
+  removeLoot(sess, line, line.qty)
+  lineToast('remove', line.name, laterOn((x) => {
+    const inSession = x.loot.find(l => key(l) === k)
+    if (inSession) inSession.qty += was.qty
+    else x.loot.push({ ...was })
+    for (const { i, qty } of perRun) {
+      const run = x.runs?.[i]
+      if (!run) continue
+      const rl = run.loot.find(l => key(l) === k)
+      if (rl) rl.qty += qty
+      else run.loot.push({ type: was.type, name: was.name, variant: was.variant, qty })
+    }
+  }), panel.value?.el)
 }
 
 function addCost (item: PriceItem) {
@@ -557,7 +589,6 @@ const dockMenu = computed<DockMenuAction[]>(() => s.value
   align-items: center;
   gap: 2px 12px;
 }
-.lineGrid { grid-template-columns: minmax(0, 1fr) 22px 28px 22px 72px; gap: 4px; }
 .costGrid { grid-template-columns: minmax(0, 1fr) 56px 72px 22px; }
 .mapLine {
   display: flex;

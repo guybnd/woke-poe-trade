@@ -49,6 +49,19 @@ export interface CostLine extends PricedRef {
 
 export interface LootLine extends PricedRef {
   qty: number
+  // The shared line item (on the session's loot): left out (listed, struck,
+  // not counted) and your price for one, in chaos.
+  out?: true
+  each?: number
+}
+
+// What one of a session's loot line sells for, with your edits: your price,
+// 0 when left out (the per-map lines take the edits of the session's line).
+export function lootUnit (s: FarmingSession, ref: PricedRef, sell: (r: PricedRef) => number | null): number | null {
+  const k = itemKey(ref)
+  const e = s.loot.find(l => itemKey(l) === k)
+  if (e?.out) return 0
+  return e?.each ?? sell(ref)
 }
 
 // One map instance in a running session (saved for Session analytics).
@@ -185,7 +198,8 @@ export function totals (
   rules?: SellRules
 ): Totals {
   const c = lineValue(costs, price)
-  const l = lineValue(session.loot, rules ? (r) => sellPrice(r, price(r), rules) : price)
+  const sell = rules ? (r: PricedRef) => sellPrice(r, price(r), rules) : price
+  const l = lineValue(session.loot, r => lootUnit(session, r, sell))
   const cost = c.total * session.maps
   const loot = l.total + session.extraChaos
   const profit = loot - cost
@@ -378,7 +392,19 @@ export function toSessionRecord (
   info: { now: number, league: string, divine: number | null, strategy: string }
 ): SessionRecord {
   const unitPrice = (r: PricedRef) => sellPrice(r, price(r), rules)
-  const save = (l: LootLine): SavedLoot => ({ type: l.type, name: l.name, variant: l.variant, qty: l.qty, chaos: unitPrice(l) })
+  // Your edits go along: your price (poe.ninja's kept as read) and left out.
+  const save = (l: LootLine): SavedLoot => {
+    const e = s.loot.find(x => itemKey(x) === itemKey(l))
+    return {
+      type: l.type,
+      name: l.name,
+      variant: l.variant,
+      qty: l.qty,
+      chaos: e?.each ?? unitPrice(l),
+      ...(e?.each != null ? { read: unitPrice(l) } : {}),
+      ...(e?.out ? { out: true as const } : {})
+    }
+  }
   const runs = (s.runs ?? []).map(r => ({
     areaId: r.areaId,
     name: r.name,

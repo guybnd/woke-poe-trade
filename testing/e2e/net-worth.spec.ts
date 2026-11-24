@@ -401,6 +401,19 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect(head).toHaveText(allAsk)
     await panel.locator('[data-listed]').getByText(/^Uniques 3$/).click()
     await expect(panel.locator('[data-listed-filtered]')).toHaveCount(0)
+    // A listing is the shared line item: ⊘ leaves it out of the total (it
+    // stays, struck, under a Changed chip), and counts it again.
+    const kaom = listedRows.filter({ hasText: "Kaom's Heart" })
+    await kaom.hover()
+    await kaom.locator('[data-line-out]').click()
+    await expect(kaom).toContainText('left out')
+    await expect(panel.locator('[data-listed-left-out]')).toHaveText('1 left out')
+    await expect(head).not.toHaveText(allAsk)
+    await expect(panel.locator('[data-listed-changed]')).toContainText('Changed 1')
+    await kaom.hover()
+    await kaom.locator('[data-line-out]').click()
+    await expect(kaom).not.toContainText('left out')
+    await expect(head).toHaveText(allAsk)
     // Price check (R1, and Guy 2026-11-24): the full price check opens on the
     // listing, ranks it from what it loaded, and its foot sets a new price
     // that Listed keeps as a to-do.
@@ -516,6 +529,16 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await hh.hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
     await overlay.snap('net worth sales sorted by price')
+    // A sale is the shared line item: ⊘ leaves it out of the totals.
+    const hhSale = rows.filter({ hasText: 'Headhunter' })
+    await hhSale.hover()
+    await hhSale.locator('[data-line-out]').click()
+    await expect(hhSale).toContainText('left out')
+    await expect(panel.locator('[data-sales-left-out]')).toHaveText('1 left out')
+    await expect(panel.locator('[data-sales-changed]')).toContainText('Changed 1')
+    await hhSale.hover()
+    await hhSale.locator('[data-line-out]').click()
+    await expect(panel.locator('[data-sales-left-out]')).toHaveCount(0)
     await panel.getByRole('button', { name: 'When', exact: true }).click()
     await panel.getByRole('tab', { name: 'Holdings' }).click()
 
