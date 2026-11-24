@@ -245,6 +245,26 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
       await expect(runTab).toHaveCount(0, { timeout: 4000 })
     }).toPass({ timeout: 30_000 })
     await overlay.pressHotkey(overlay.config.overlayKey)
+    // Past runs compared (pick C2): one row a run, By strategy adds up the
+    // two Nightmare maps runs. One fight is a small sample (pick S1).
+    await panel.getByRole('tab', { name: 'Runs' }).click()
+    const pastRuns = panel.locator('[data-past-run]')
+    await expect(pastRuns).toHaveCount(2)
+    await expect(panel.locator('[data-compare]')).toContainText('No top')
+    await panel.locator('[data-by-strategy]').click()
+    await expect(pastRuns).toHaveCount(1)
+    await expect(pastRuns.first()).toContainText('2 runs')
+    await expect(pastRuns.first()).toContainText('small')
+    await overlay.snap('net worth runs compared')
+    // The kit (pick K1): the name brings last time's per-map cost to Start.
+    await panel.getByLabel('Run name').fill('Nightmare maps')
+    const kitLine = panel.locator('[data-run-kit-line]')
+    await expect(kitLine).toContainText('Strand Map')
+    await expect(kitLine).toContainText('typed')
+    await kitLine.getByText('Strand Map').hover()
+    await expect(overlay.page.getByRole('tooltip')).toContainText('Strand Map')
+    await overlay.page.mouse.move(0, 0)
+    await panel.getByLabel('Run name').fill('')
     // The Listed tab (pending sales): Start's read saved your listings, and
     // Refresh reads them again (one more search). Each row has its tooltip.
     await panel.getByRole('tab', { name: 'Listed' }).click()
