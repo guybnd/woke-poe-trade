@@ -204,6 +204,19 @@ describe('parseMarkup', () => {
   it('leaves stray braces and angle brackets as text', () => {
     expect(parseMarkup('a < b } c').map(text)).toEqual(['a < b } c'])
   })
+
+  it('shows a keyword link as its shown text', () => {
+    expect(parseMarkup('[Enshroud|Enshrouds] Unique Body Armours').map(text)).toEqual(['Enshrouds Unique Body Armours'])
+    expect(parseMarkup('Grants [Onslaught]').map(text)).toEqual(['Grants Onslaught'])
+    const tip = buildTip({ items: { Crystal: { d: '[Enshroud|Enshrouds] Unique Body Armours', u: 'Use on a [Unique] item.', n: 10 } } }, { name: 'Crystal', kind: 'item' })
+    expect(tip!.sections.flat().map(text)).toEqual(['Stack Size: 10', 'Enshrouds Unique Body Armours', 'Use on a Unique item.'])
+  })
+
+  it('has no keyword markup left in the item text', async () => {
+    const { readFileSync } = await import('node:fs')
+    const items = JSON.parse(readFileSync('public/data/tips/items.json', 'utf8')) as Record<string, { d?: string, u?: string }>
+    expect(Object.entries(items).filter(([, v]) => /\[[^\]]*\]/.test(`${v.d ?? ''}${v.u ?? ''}`)).map(([k]) => k)).toEqual([])
+  })
 })
 
 describe('gearStats', () => {

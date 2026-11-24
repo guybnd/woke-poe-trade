@@ -97,7 +97,11 @@ const TAG_TONES: Record<string, TipTone> = {
   legiondivergent: 'mutated'
 }
 
-export function parseMarkup (source: string, tone: TipTone = 'gem'): TipLine[] {
+// The game's "[Enshroud|Enshrouds]" and "[Keyword]" links show their last part.
+export const unlink = (s: string) => s.replace(/\[(?:[^\]|]*\|)?([^\]|]*)\]/g, '$1')
+
+export function parseMarkup (markup: string, tone: TipTone = 'gem'): TipLine[] {
+  const source = unlink(markup)
   const lines: TipLine[] = [[]]
   const stack: TipTone[] = [tone]
   let text = ''
@@ -402,7 +406,7 @@ export function itemTip (name: string, item: TipItem, kind: TipKind): TipModel {
     sections: present([
       item.n ? [pair('Stack Size', String(item.n))] : [],
       item.d ? parseMarkup(item.d) : [],
-      item.u ? item.u.split('\n').map(l => plain(l, 'dim')) : []
+      item.u ? unlink(item.u).split('\n').map(l => plain(l, 'dim')) : []
     ])
   }
 }

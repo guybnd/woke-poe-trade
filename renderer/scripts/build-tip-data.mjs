@@ -149,8 +149,8 @@ async function main () {
     const p = b.properties ?? {}
     if (p.description !== undefined || p.directions !== undefined || p.stack_size) {
       stackables[i.name] = {
-        ...(p.description || effects.has(i.name) ? { d: p.description || effects.get(i.name) } : {}),
-        ...(p.directions ? { u: p.directions } : {}),
+        ...(p.description || effects.has(i.name) ? { d: unlink(p.description || effects.get(i.name)) } : {}),
+        ...(p.directions ? { u: unlink(p.directions) } : {}),
         ...(p.stack_size ? { n: p.stack_size } : {})
       }
     } else {
