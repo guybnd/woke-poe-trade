@@ -173,3 +173,20 @@ export function ageText (ms: number): string {
 export function glanceOfPending (doc: PendingDoc): PendingGlance {
   return { league: doc.league, readAt: doc.readAt, items: doc.listings.map(l => [l.id, doc.firstSeen[l.id] ?? l.at, l.price.amount, l.price.currency]) }
 }
+
+// The chart's Faustus band before refreshes saved it (Guy's pick A,
+// 2026-11-24): the chaos at Faustus at each time. A listing counts from the
+// first time a read saw it until it sold: still listed, at `worthOf` (its
+// worth now); sold, at its sale price. A read drops what's gone from it, so
+// listings sold or taken down before the last read aren't counted.
+export function listedAt (doc: PendingDoc | null, sales: readonly Sale[], rates: Rates, worthOf: (l: Listing) => number, times: readonly number[]): number[] {
+  if (!doc) return times.map(() => 0)
+  const soldAt = new Map<string, Sale>()
+  const sold = soldIds(doc, sales)
+  for (const s of sales) if (sold.has(s.id) && !soldAt.has(s.id)) soldAt.set(s.id, s)
+  const spans = doc.listings.map(l => {
+    const s = soldAt.get(l.id)
+    return { from: doc.firstSeen[l.id] ?? l.at, to: s ? s.at : Infinity, chaos: s ? saleChaos(s, rates) ?? worthOf(l) : worthOf(l) }
+  })
+  return times.map(t => spans.reduce((sum, x) => x.from <= t && t < x.to ? sum + x.chaos : sum, 0))
+}

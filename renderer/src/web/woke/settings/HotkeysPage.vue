@@ -40,13 +40,20 @@
         <w-toggle v-model="config.stashScroll" />
       </w-setting-row>
     </w-setting-section>
+
+    <w-setting-section title="Overlay">
+      <w-setting-row label="Give clicks back to the game" hint="If the overlay ever keeps your clicks. Always on." data-testid="rescue-hotkey">
+        <w-kbd :keys="RESCUE_HOTKEY" />
+      </w-setting-row>
+    </w-setting-section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
 import type { Config } from '@/web/Config'
-import { WChip, WEmpty, WField, WHotkeyCell, WSegmented, WSettingRow, WSettingSection, WToggle, normalizeKey, useHotkeyContext } from '../ui'
+import { WChip, WEmpty, WField, WHotkeyCell, WKbd, WSegmented, WSettingRow, WSettingSection, WToggle, normalizeKey, useHotkeyContext } from '../ui'
+import { RESCUE_HOTKEY } from '@ipc/KeyToCode'
 import { poeBindNote, reservedKeyNote } from '../ui/hotkey-context'
 import { fieldKey, hotkeyFields } from './hotkey-fields'
 import type { HotkeyField } from './hotkey-fields'

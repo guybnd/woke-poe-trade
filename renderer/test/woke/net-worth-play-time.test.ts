@@ -176,16 +176,64 @@ describe('maps and hideout time', () => {
   })
 })
 
+describe('crafting and selling in the hideout', () => {
+  // A map 0-30, then an hour in the hideout with reads at 30, 60 and 90.
+  const m = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand'), area(30, 'HideoutFoo')]).marks
+  const points = [{ at: T0, netChaos: null }, { at: T0 + 30 * MIN, netChaos: 300 }, { at: T0 + 60 * MIN, netChaos: -200 }, { at: T0 + 90 * MIN, netChaos: 50 }]
+
+  it('keeps reads with no map out of the rate and shows them apart', () => {
+    const r = playRate(points, m, T0, T0 + 90 * MIN)
+    // Only the map read: 300c in 30 min.
+    expect(r.perHour).toBeCloseTo(600)
+    expect(r.rateChaos).toBeCloseTo(300)
+    expect(r.hubChaos).toBeCloseTo(-150)
+    expect(r.hubOnlyMs).toBe(60 * MIN)
+    expect(r.chaos).toBeCloseTo(150)
+    expect(r.hubOnly).toBe(false)
+  })
+
+  it('a window with only hideout time has no rate', () => {
+    const r = playRate(points, m, T0 + 31 * MIN, T0 + 90 * MIN)
+    expect(r.perHour).toBeNull()
+    expect(r.hubOnly).toBe(true)
+    // 29 of the first hideout read's 30 min fall inside.
+    expect(r.hubChaos).toBeCloseTo(-200 * 29 / 30 + 50)
+    expect(rateTip('1h', r, true, c => `${c}c`)).toBe(`Last hour: no maps, only hideout and town\n${RATE_TIME_WHERE}`)
+  })
+
+  it('with hideout time counted, the hideout-only reads still stay out', () => {
+    const r = playRate(points, m, T0, T0 + 90 * MIN, true)
+    expect(r.perHour).toBeCloseTo(600)
+    // Played is the rate's time; the hour in the hideout is apart.
+    expect(r.playMs).toBe(30 * MIN)
+    expect(r.hubOnlyMs).toBe(60 * MIN)
+  })
+
+  it('an hour of crafting after a map in the same read says No maps', () => {
+    // One read from before the map (0) to after 70 min in the hideout (100).
+    const mk = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand'), area(30, 'HideoutFoo')]).marks
+    const pts = [{ at: T0, netChaos: null }, { at: T0 + 100 * MIN, netChaos: 200 }]
+    const r = playRate(pts, mk, T0 + 40 * MIN, T0 + 100 * MIN)
+    expect(r.perHour).toBeNull()
+    expect(r.hubOnly).toBe(true)
+  })
+
+  it('the hover says what the no-map time did', () => {
+    const r = playRate(points, m, T0, T0 + 90 * MIN)
+    expect(rateTip('2h', r, true, c => `${c}c`)).toBe(`Last 2 hours: 300c in 30m of play. Left out: 1h 0m with no map (-150c: crafting, selling)\n${RATE_TIME_WHERE}`)
+  })
+})
+
 describe('hover text', () => {
   it('names the unit, the play time and what was left out', () => {
-    const r = { perHour: 600, chaos: 300, playMs: 30 * MIN, mapMs: 30 * MIN, otherMs: 0, hubMs: 15 * MIN, offMs: 0, maps: 4, medianMapMs: 7 * MIN }
+    const r = { perHour: 600, chaos: 300, rateChaos: 300, rateMs: 30 * MIN, hubChaos: 0, hubOnlyMs: 0, hubOnly: false, playMs: 30 * MIN, mapMs: 30 * MIN, otherMs: 0, hubMs: 15 * MIN, offMs: 0, maps: 4, medianMapMs: 7 * MIN }
     const amount = (c: number) => `+${(c / 200).toFixed(1)} d`
     expect(rateTip('1h', r, true, amount)).toBe(`Last hour: +1.5 d in 30m of play. Left out: 15m in hideout and town\n${RATE_TIME_WHERE}`)
     expect(rateTip('2h', { ...r, perHour: null }, false, amount)).toBe('Last 2 hours: under 10 min of play. Client.txt not found: hideout time not left out')
   })
 
   it('says time, not play, and leaves nothing out when all time counts', () => {
-    const r = { perHour: 600, chaos: 300, playMs: 30 * MIN, mapMs: 20 * MIN, otherMs: 0, hubMs: 5 * MIN, offMs: 5 * MIN, maps: 4, medianMapMs: 7 * MIN }
+    const r = { perHour: 600, chaos: 300, rateChaos: 300, rateMs: 30 * MIN, hubChaos: 0, hubOnlyMs: 0, hubOnly: false, playMs: 30 * MIN, mapMs: 20 * MIN, otherMs: 0, hubMs: 5 * MIN, offMs: 5 * MIN, maps: 4, medianMapMs: 7 * MIN }
     expect(rateTip('1h', r, true, c => `+${c}c`, true, true)).toBe(`Last hour: +300c in 30m of time\n${RATE_TIME_WHERE}`)
     expect(rateTip('1h', r, true, c => `+${c}c`, true, false)).toBe(`Last hour: +300c in 30m of play. Left out: 5m closed or AFK\n${RATE_TIME_WHERE}`)
   })

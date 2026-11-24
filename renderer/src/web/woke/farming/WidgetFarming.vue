@@ -495,7 +495,9 @@ const itemListener = MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {
   const parsed = parseClipboard(e.clipboard).unwrapOr(null)
   if (!parsed) return
   const name = parsed.info.refName
-  const snap = prices.snapshot.value
+  // poe.ninja's own rows (a held price included), so the line keeps its type
+  // and is priced once the price holds.
+  const snap = prices.raw.value
   const candidates = snap?.items.filter(i => i.name === name) ?? []
   // poe.ninja's variant the way APT's price check builds it ("20/20c" for a
   // corrupted gem, map tier and generation); with no exact match, the

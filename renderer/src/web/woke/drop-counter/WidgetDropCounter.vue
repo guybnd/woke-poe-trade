@@ -185,7 +185,7 @@ interface Result { type: string, name: string, label: string, hint: string }
 const results = computed<Result[]>(() => {
   const q = query.value.trim()
   if (!q) return []
-  const found: Result[] = searchPrices(prices.snapshot.value?.items ?? [], q, { limit: 6 })
+  const found: Result[] = searchPrices(prices.raw.value?.items ?? [], q, { limit: 6 })
     .map(g => ({ type: g.type, name: g.name, label: g.name, hint: typeLabel(g.type) }))
   if (!found.some(r => r.name.toLowerCase() === q.toLowerCase())) {
     found.push({ type: '', name: q, label: `Count "${q}" by that name`, hint: 'Any text' })
@@ -273,7 +273,7 @@ const itemListener = MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {
   if (!parsed) return
   const name = parsed.info.refName
   const line = findLine(props.config.items, name) ??
-    addLine(props.config, { type: prices.snapshot.value?.items.find(i => i.name === name)?.type ?? '', name })
+    addLine(props.config, { type: prices.raw.value?.items.find(i => i.name === name)?.type ?? '', name })
   if (line) bump(line)
 })
 onUnmounted(() => { itemListener.abort() })

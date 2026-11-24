@@ -13,7 +13,7 @@ import { addToTally } from './runs'
 import type { CostLine, LivePrice, Run } from './runs'
 import type { StashDiff } from './valuation'
 
-type Extra = Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales' | 'carriedFrom'>
+type Extra = Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales' | 'carriedFrom' | 'kind'>
 
 // The costs typed for this name last time (without what was bought then).
 export function lastCostsOf (name: string): CostLine[] {
@@ -42,7 +42,8 @@ let starting = false
 // `at`: the read the run starts from. False when it didn't start.
 // `kit`: the costs to start with (the Runs view's kit, changed before Start);
 // default the last same-name run's. `price`: today's prices for its live lines.
-export async function startRunAt (league: string, name: string, at: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null, kit?: CostLine[], price?: LivePrice): Promise<boolean> {
+// `kind`: 'craft' for a crafting session.
+export async function startRunAt (league: string, name: string, at: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null, kit?: CostLine[], price?: LivePrice, kind?: 'craft'): Promise<boolean> {
   if (starting) return false
   // The league switched (the card's dynamic import can take a moment).
   const leagueNow = () => { const cur = AppConfig().leagueId; return !cur || cur === league }
@@ -75,6 +76,7 @@ export async function startRunAt (league: string, name: string, at: number, diff
     }
     // The league switched meanwhile: the runs doc is the other league's now.
     if (!leagueNow()) return false
+    if (kind) extra = { ...extra, kind }
     await startRun(league, runName, at, diffs, points, divine, costs, extra, price)
     return true
   } finally { starting = false }

@@ -176,6 +176,8 @@ import { MARKET_TRACKER_TYPE, marketSearchRequest } from '../market/widget'
 import type { MarketTrackerWidget } from '../market/widget'
 import { isThin, itemKey, thinTitle } from '../market/types'
 import { savedStep } from '../price-insight/ninja-trust'
+import { heldText } from '../shared/price-trust'
+import type { HeldPrice } from '../shared/price-trust'
 import { rangeInfo } from '../market/ranges'
 import { savedPriceSeries } from '../market/db'
 import type { CorruptedFilter, PriceItem } from '../market/types'
@@ -253,7 +255,8 @@ import type { AtlasWidget } from '../atlas/strategies'
 import { netWorthLookup } from './lookups/net-worth'
 import { runsLookup } from './lookups/runs'
 import { rateTime } from '../shared/rate-time-now'
-import { isRunBoard, isRunGlance, runBoardKey, runGlanceKey } from '../net-worth/runs'
+import { isLastRun, isRunBoard, isRunGlance, lastRunKey, runBoardKey, runGlanceKey } from '../net-worth/runs'
+import type { LastRun } from '../net-worth/runs'
 import type { RunBoard, RunGlance } from '../net-worth/runs'
 import { salesLookup } from './lookups/sales'
 import { listedLookup } from './lookups/listed'
@@ -310,8 +313,11 @@ type Entry = PriceEntry | ItemEntry | ActionEntry | LookupEntry
 
 const query = shallowRef('')
 // A step of 5x or more over a day or a week ago: maybe a few fake listings.
-const stepOf = (v: { chaos: number, d1?: number, d7?: number }) => savedStep(v.chaos, v.d1, v.d7)
-function stepTitle (v: { chaos: number, d1?: number, d7?: number }) {
+// A price other windows hold (market/parse.ts held) gets the mark too.
+type Stepped = { chaos: number, d1?: number, d7?: number, held?: HeldPrice }
+const stepOf = (v: Stepped) => v.held ? (v.held.chaos ?? 0) : savedStep(v.chaos, v.d1, v.d7)
+function stepTitle (v: Stepped) {
+  if (v.held) return heldText(v.held, c => `${c >= 1 ? Math.round(c * 10) / 10 : c.toPrecision(2)}c`) + ' Check live offers before you trust it.'
   const usual = stepOf(v)
   return usual == null ? '' : `Was ${usual >= 1 ? Math.round(usual * 10) / 10 : usual.toPrecision(2)}c a day or a week ago. A sudden step like this is often a few fake listings: check live offers before you trust it.`
 }
@@ -679,9 +685,13 @@ function loadVaultTable () {
 const netWorthGlance = shallowRef<Glance | null>(null)
 const runGlance = shallowRef<RunGlance | null>(null)
 const runBoard = shallowRef<RunBoard | null>(null)
+const lastRun = shallowRef<LastRun | null>(null)
 function loadNetWorthGlance () {
   const league = AppConfig().leagueId
-  if (!league || !isWidgetTypeOn(AppConfig(), NET_WORTH_TYPE)) { netWorthGlance.value = null; runGlance.value = null; runBoard.value = null; return }
+  if (!league || !isWidgetTypeOn(AppConfig(), NET_WORTH_TYPE)) { netWorthGlance.value = null; runGlance.value = null; runBoard.value = null; lastRun.value = null; return }
+  hostRequest('doc-get', { collection: NET_WORTH_DOCS, key: lastRunKey(league) })
+    .then((l) => { lastRun.value = isLastRun(l) && l.league === league ? l : null })
+    .catch(() => {})
   hostRequest('doc-get', { collection: NET_WORTH_DOCS, key: runBoardKey(league) })
     .then((b) => { runBoard.value = isRunBoard(b) && b.league === league ? b : null })
     .catch(() => {})
@@ -827,7 +837,7 @@ function flipsConfig (): ScarabFlipWidget | null {
   return (config.widgets.find(w => w.wmType === SCARAB_FLIP_TYPE) as ScarabFlipWidget | undefined) ?? null
 }
 const netWorthWidget = () => AppConfig().widgets.find(w => w.wmType === NET_WORTH_TYPE) as { staleDays?: number, countListed?: boolean } | undefined
-const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, forbiddenLookup(forbidden.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime(), runBoard.value), salesLookup(salesList.value), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
+const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, forbiddenLookup(forbidden.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime(), runBoard.value, lastRun.value), salesLookup(salesList.value), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))

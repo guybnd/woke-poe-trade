@@ -131,7 +131,7 @@ test('map: every number is a chip filter, typed min goes into the search', async
 // WOKEPOET-523: Elder (and Shaper) maps list cheap and crowd a search for
 // Originator maps, so No Elder starts on. Exchange searches the map's bulk
 // exchange entry, one seller per row with their stock, only on the click.
-test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back', async ({ overlay }) => {
+test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back', async ({ overlay, fakeApp }) => {
   const searches: Query[] = []
   const wants: string[][] = []
   await overlay.page.route('**/api/trade/search/**', (route) => {
@@ -144,8 +144,8 @@ test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back'
     listing: {
       indexed: new Date().toISOString(),
       account: { name: `${id}#1`, lastCharacterName: `${id}c`, online: { league: 'Testleague' } },
-      offers: [{ exchange: { currency: 'chaos', amount, whisper: '' }, item: { currency: 'zana-map-tier-16', amount: 1, stock, id, whisper: '' } }],
-      whisper: ''
+      offers: [{ exchange: { currency: 'chaos', amount, whisper: '{0} Chaos Orb' }, item: { currency: 'zana-map-tier-16', amount: 1, stock, id, whisper: '{0} Map (Tier 16) (Memory-Influenced)' } }],
+      whisper: `@${id}c Hi, I'd like to buy your {0} for my {1} in Testleague.`
     }
   })
   await overlay.page.route('**/api/trade/exchange/**', (route) => {
@@ -169,7 +169,11 @@ test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back'
   await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBe(1)
   const not = searches[0].query.stats.find(g => g.type === 'not')!
-  expect(not.filters.find(f => f.id === 'implicit.stat_1792283443')?.disabled).toBeFalsy()
+  // Shaper and Elder each by option: with no option it matched nothing.
+  expect(not.filters.filter(f => f.id === 'implicit.stat_1792283443')).toEqual([
+    { id: 'implicit.stat_1792283443', value: { option: 1 }, disabled: false },
+    { id: 'implicit.stat_1792283443', value: { option: 2 }, disabled: false }
+  ])
 
   // Off: the next search includes them.
   await noElder.click()
@@ -189,6 +193,18 @@ test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back'
   await expect(panel.getByText('1400', { exact: true }).first()).toBeVisible()
   await expect(chip).toHaveAttribute('aria-pressed', 'true')
   expect(searches.length).toBe(2)
+  // Faustus's Currency Exchange doesn't trade maps: no banner saying it does.
+  await expect(panel.getByText(/Currency Exchange/)).toHaveCount(0)
+  // A click on a seller whispers them for the count in Buy (WOKEPOET-523).
+  await panel.locator('[data-bulk-buy]').fill('10')
+  const big = panel.locator('[data-bulk-whisper]').filter({ hasText: '1400' })
+  await expect(big).toHaveAttribute('title', /Click to whisper: @s2c .*10 Map/)
+  await big.click()
+  const text = "@s2c Hi, I'd like to buy your 10 Map (Tier 16) (Memory-Influenced) for my 600 Chaos Orb in Testleague."
+  await expect.poll(() => fakeApp.received.some(e => e.name === 'CLIENT->MAIN::user-action' &&
+    (e.payload as { action?: string, text?: string }).action === 'paste-in-chat' &&
+    (e.payload as { text?: string }).text === text)).toBe(true)
+  await expect(panel.locator('[data-bulk-whispered]')).toHaveText('Whispered s2c')
   await overlay.snap('map exchange sellers')
 
   // Back to the listings: the same trade search again (from the cache, as it's unchanged).
@@ -262,7 +278,7 @@ test('map: Base map and the Bulk tab keep the map\'s influence', async ({ overla
   await search.click()
   await expect.poll(() => searches.length).toBeGreaterThan(0)
   // And No Elder (WOKEPOET-523), which is the kind of map too.
-  expect(onIds(searches[0]).sort()).toEqual([ORIGINATOR, 'implicit.stat_1792283443'].sort())
+  expect(onIds(searches[0]).sort()).toEqual([ORIGINATOR, 'implicit.stat_1792283443', 'implicit.stat_1792283443'].sort())
 
   await panel.locator('[data-trade-presets]').getByText('Bulk', { exact: true }).click()
   const before = searches.length
@@ -320,5 +336,40 @@ test('map: the farming goal picks which number chips start on', async ({ overlay
   await expect(chip('Currency')).toHaveAttribute('aria-pressed', 'true')
   await expect(chip('Rarity')).toHaveAttribute('aria-pressed', 'true')
   await expect(chip('Maps')).toHaveAttribute('aria-pressed', 'false')
+  expect(overlay.errors).toEqual([])
+})
+
+// Guy (2026-11-24): a buried Sentinel is never searched by default, and an Evocator
+// searches any of the three kinds until narrowed to this one.
+test('map: Sentinels start Any; an Evocator searches any of the three, or this one', async ({ overlay }) => {
+  const searches = await fakeTrade(overlay.page)
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-sentinel-t16.txt')
+  const panel = overlay.widget('price-check')
+  await expect(panel.locator('[data-map-trade]')).toBeVisible({ timeout: 20_000 })
+  const strip = panel.locator('[data-map-trade] > button').first()
+  if (await panel.locator('[data-map-mod]').count() === 0) await strip.click()
+  const sentinel = panel.locator('[data-map-mod]').filter({ hasText: 'buried Stalker Sentinel' })
+  const evocator = panel.locator('[data-map-mod]').filter({ hasText: 'Evocator of Beidat' })
+  await expect(sentinel.locator('[data-state="any"]')).toHaveAttribute('aria-checked', 'true')
+  const anyOf = evocator.locator('[data-map-any-of]')
+  await expect(anyOf).toHaveText('any Evocator')
+  await evocator.locator('[data-state="has"]').click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBe(1)
+  const groupWith = (q: Query, id: string) => q.query.stats.find(g => g.filters.some(f => f.id === id))
+  const any = groupWith(searches[0], 'explicit.stat_260515856')!
+  expect(any.type).toBe('count')
+  expect(any.filters.map(f => f.id).sort()).toEqual(['explicit.stat_1290924623', 'explicit.stat_260515856', 'explicit.stat_2896557935'])
+  // The Sentinel stayed out of the search.
+  expect(groupWith(searches[0], 'explicit.stat_2712450522')?.disabled ?? true).toBe(true)
+
+  await anyOf.click()
+  await expect(anyOf).toHaveText('this one')
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBe(2)
+  const exact = groupWith(searches[1], 'explicit.stat_260515856')!
+  expect(exact.type).toBe('and')
+  expect(exact.filters.filter(f => f.id.startsWith('explicit.stat_') && ['explicit.stat_1290924623', 'explicit.stat_2896557935'].includes(f.id))).toEqual([])
   expect(overlay.errors).toEqual([])
 })

@@ -36,8 +36,12 @@ describe('No Elder on a map search', () => {
     expect(filter?.disabled).toBe(false)
     const query = createTradeRequest(createFilters(item, OPTS), stats).query
     const not = query.stats.find(g => g.type === 'not')
-    // No option: either influence is left out.
-    expect(not?.filters).toContainEqual(expect.objectContaining({ id: 'implicit.stat_1792283443', value: expect.not.objectContaining({ option: expect.anything() }) }))
+    // Each influence by its option: with none, the trade site matches nothing, so
+    // "not" left nothing out (Guy's 29c Elder map, 2026-11-24).
+    expect(not?.filters.filter(f => f.id === 'implicit.stat_1792283443')).toEqual([
+      { id: 'implicit.stat_1792283443', value: { option: 1 }, disabled: false },
+      { id: 'implicit.stat_1792283443', value: { option: 2 }, disabled: false }
+    ])
     // The Originator's Memories still searched.
     expect(JSON.stringify(query.stats)).toContain('implicit.stat_2696470877')
   })
@@ -56,8 +60,8 @@ describe('No Elder on a map search', () => {
     const query = createTradeRequest(createFilters(item, OPTS), stats).query
     // Sent switched off, as every unticked row is: the trade site skips it.
     const sent = query.stats.flatMap(g => g.filters).filter(f => f.id === 'implicit.stat_1792283443')
-    expect(sent).toHaveLength(1)
-    expect(sent[0].disabled).toBe(true)
+    expect(sent).toHaveLength(2)
+    expect(sent.every(f => f.disabled)).toBe(true)
   })
 })
 
@@ -82,5 +86,58 @@ describe('the bulk exchange entry of a map', () => {
     expect(req.query.have).toEqual(['chaos'])
     // The checked item is left as it was.
     expect(item.info.tradeTag).toBeUndefined()
+  })
+})
+
+describe('a bulk seller whisper', () => {
+  it('fills the trade site template for the lots asked', async () => {
+    const { bulkWhisper } = await import('@/web/price-check/trade/pathofexile-bulk')
+    const row = {
+      id: 'x',
+      relativeDate: '',
+      exchangeAmount: 5,
+      itemAmount: 1,
+      stock: 36,
+      accountStatus: 'online' as const,
+      isMine: false,
+      accountName: 'a#1',
+      ign: 'Seller',
+      whisper: { text: "@Seller Hi, I'd like to buy your {0} for my {1} in Covens.", item: '{0} Map (Tier 16) (Memory-Influenced)', pay: '{0} Chaos Orb' }
+    }
+    expect(bulkWhisper(row, 10)).toBe("@Seller Hi, I'd like to buy your 10 Map (Tier 16) (Memory-Influenced) for my 50 Chaos Orb in Covens.")
+    expect(bulkWhisper({ ...row, whisper: undefined }, 1)).toBeNull()
+  })
+})
+
+describe('a rare map opens with none of its own mods ticked', () => {
+  it('top tier mods, a buried Sentinel among them, start Any', () => {
+    const item = parseItem(fixture('items/map-sentinel-t16.txt'))
+    const { presets } = createPresets(item, OPTS)
+    const mods = presets.find(p => p.id === 'filters.preset_pseudo')!.stats
+      .filter((s): s is StatFilter => !s.group && !!s.mapMod)
+    expect(mods.map(m => m.statRef)).toContain('Area contains a buried Stalker Sentinel')
+    expect(mods.filter(m => !m.disabled).map(m => m.statRef)).toEqual([])
+  })
+})
+
+describe('a map mod with sibling kinds', () => {
+  it('Has searches any Evocator by default, and only this one once narrowed', () => {
+    const item = parseItem(fixture('items/map-sentinel-t16.txt'))
+    const { presets } = createPresets(item, OPTS)
+    const stats = presets.find(p => p.id === 'filters.preset_pseudo')!.stats
+    const evocator = stats.find((s): s is StatFilter => !s.group && s.statRef === 'Area contains an Evocator of Beidat')!
+    expect(evocator.anyOf?.label).toBe('Evocator')
+    expect(evocator.tradeId).toHaveLength(3)
+    evocator.disabled = false
+    const evocatorGroup = (q: ReturnType<typeof createTradeRequest>['query']) =>
+      q.stats.find(g => g.type === 'count' && g.filters.some(f => f.id === 'explicit.stat_260515856'))
+    const count = evocatorGroup(createTradeRequest(createFilters(item, OPTS), stats).query)
+    expect(count?.value).toEqual({ min: 1 })
+    expect(count?.disabled).toBe(false)
+    expect(count?.filters.map(f => f.id).sort()).toEqual(['explicit.stat_1290924623', 'explicit.stat_260515856', 'explicit.stat_2896557935'])
+    evocator.tradeId = evocator.anyOf!.exact
+    const query = createTradeRequest(createFilters(item, OPTS), stats).query
+    expect(evocatorGroup(query)).toBeUndefined()
+    expect(query.stats[0].filters).toContainEqual(expect.objectContaining({ id: 'explicit.stat_260515856', disabled: false }))
   })
 })

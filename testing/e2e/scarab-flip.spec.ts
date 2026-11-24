@@ -63,31 +63,31 @@ async function routePrices (overlay: { page: Page }) {
   })
 }
 
-test('flips: the Threads tab, marked low confidence, with its buy list and odds', async ({ overlay }) => {
+test('flips: the Threads tab shows each recipe as a range, not an average', async ({ overlay }) => {
   await routePrices(overlay)
   await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-scarab-flip', wmWants: 'show' }] })
   const panel = overlay.widget('woke-scarab-flip')
 
   // No scarab tab in 3.30; Threads comes first.
   await expect(panel.getByRole('tab', { name: 'Scarabs' })).toHaveCount(0)
-  await expect(panel.getByText(/\d+ threads? worth vendoring/)).toBeVisible()
-  await expect(panel.getByText(/Low confidence: no measured weights yet/)).toBeVisible()
-  // Volume comes from the exchange feed, so the Supply column shows, as a word.
-  await expect(panel.getByRole('button', { name: /Supply/ })).toHaveAttribute('title', /currency exchange/)
-  await expect(panel.getByRole('button', { name: /Profit each/ })).toHaveAttribute('title', /divided by 3/)
+  const verdict = panel.locator('[data-flip-range]')
+  await expect(verdict).toContainText('No odds measured')
+  await expect(verdict).toContainText(/from Expedition at 0\.2 ?c to Legion at 4 ?c/)
+  await expect(panel.getByText(/worst and best result, not an average/)).toBeVisible()
+  await expect(panel.getByText(/worth vendoring/)).toHaveCount(0)
+  await expect(panel.getByText('Cost of 3')).toBeVisible()
+  await expect(panel.getByText('Gives back')).toBeVisible()
+  // A Thread can't give itself back: Expedition's worst is the next cheapest.
   const expedition = panel.locator('.w-row').filter({ hasText: 'Expedition' })
-  await expect(expedition.getByText('EST', { exact: true })).toBeVisible()
-  // Every Thread equally likely: ((sum - 0.2) / 9 - 3 x 0.2) / 3.
-  await expect(expedition.getByText('+0.3c')).toBeVisible()
-  // Frayed Thread has no price, so it gets what one opens to: the plain average.
-  await expect(panel.getByText(/opens to 1\.5 ?c on average/)).toBeVisible()
+  await expect(expedition.getByText('0.6c')).toBeVisible()
+  await expect(expedition.getByText('0.3–4c')).toBeVisible()
+  // Frayed Thread has no price: it opens to any Thread, so its range.
+  await expect(panel.getByText(/opens to any thread, worth 0\.2 ?c to 4 ?c/)).toBeVisible()
+  await expect(panel.getByText(/on average/)).toHaveCount(0)
   await expect(panel.locator('[data-item-tip]').filter({ hasText: /^Frayed Thread$/ })).toHaveCount(1)
-  await overlay.snap('flips-threads-buy')
-
-  await panel.getByRole('button', { name: 'Odds', exact: true }).click()
-  await expect(panel.getByText('Biggest sources of value')).toBeVisible()
-  await expect(panel.getByRole('button', { name: /^Rare & cheap/ })).toHaveCount(0)
-  await overlay.snap('flips-threads-odds')
+  // No odds to show.
+  await expect(panel.getByRole('button', { name: 'Odds', exact: true })).toHaveCount(0)
+  await overlay.snap('flips-threads-range')
 })
 
 test('flips: a Harvest reroll tab and a known-result tab', async ({ overlay }) => {
@@ -317,8 +317,8 @@ test('flips: Settings sets your own Thread weight', async ({ overlay }) => {
   await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-scarab-flip', wmWants: 'show' }] })
 
   const panel = overlay.widget('woke-scarab-flip')
-  await expect(panel.getByText(/10 estimated/)).toBeVisible()
-  await overlay.snap('flips-est')
+  // No odds measured: a range until you set a weight of your own.
+  await expect(panel.locator('[data-flip-range]')).toBeVisible()
 
   await panel.getByRole('button', { name: 'Weights', exact: true }).click()
   const weights = overlay.page.locator('[data-flip-weights]')
@@ -335,6 +335,7 @@ test('flips: Settings sets your own Thread weight', async ({ overlay }) => {
 
   await line.getByRole('button', { name: 'Reset' }).click()
   await expect(line.getByText('Estimated')).toBeVisible()
+  await expect(panel.locator('[data-flip-range]')).toBeAttached()
 })
 
 test('flips: Ctrl+Space says whether a Thread is worth flipping', async ({ overlay }) => {
@@ -349,7 +350,7 @@ test('flips: Ctrl+Space says whether a Thread is worth flipping', async ({ overl
     await expect(result).toBeVisible({ timeout: 500 })
   }).toPass({ timeout: 20_000 })
   await result.click()
-  await expect(search.getByText('Profit per item put in')).toBeVisible()
-  await expect(search.getByText(/^\+0\.\d+c each$/)).toBeVisible()
+  await expect(search.getByText('One recipe')).toBeVisible()
+  await expect(search.getByText('costs 0.6c, gives back 0.3c to 4c', { exact: true })).toBeVisible()
   await overlay.snap('search flips thread')
 })

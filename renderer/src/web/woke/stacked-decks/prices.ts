@@ -6,31 +6,57 @@ import { usePoeninja } from '@/web/background/Prices'
 import { STACKED_DECK, calibration, expectedValue, luckPercentile, ownAverage } from './deck'
 import type { DeckRecord, PriceOf } from './deck'
 import { WEIGHTS } from './weights'
+import { lastWokePrices } from '../market/hook'
+import { feedDays } from '../market/parse'
+import { guardCardPrice } from './guard'
+import type { HeldPrice } from './guard'
+
+export type { HeldPrice }
 
 export function useDeckPrices () {
   const ninja = usePoeninja()
   // APT's price table isn't reactive: each lookup reads updatedAt, which a
   // new download changes.
-  function lookup (ns: string, name: string): number | null {
+  function row (ns: string, name: string): { chaos: number, graph?: Array<number | null> } | null {
     if (ninja.updatedAt.value == null) return null
     try {
-      return ninja.findPriceByQuery({ ns, name, variant: undefined })?.chaos ?? null
+      return ninja.findPriceByQuery({ ns, name, variant: undefined })
     } catch { return null }
   }
-  const price = computed<PriceOf>(() => {
-    const cache = new Map<string, number | null>()
+  function lookup (ns: string, name: string): number | null {
+    return row(ns, name)?.chaos ?? null
+  }
+  const table = computed(() => {
+    const cache = new Map<string, { chaos: number | null, held: HeldPrice | null }>()
     // Read here, so this table is rebuilt when prices change.
     const loaded = ninja.updatedAt.value != null
-    return (name) => {
-      if (!loaded) return null
-      if (!cache.has(name)) cache.set(name, lookup('DIVINATION_CARD', name))
-      return cache.get(name)!
+    const loadedPrices = lastWokePrices()
+    const days = loadedPrices ? feedDays(loadedPrices.chunks) : undefined
+    return (name: string) => {
+      if (!loaded) return { chaos: null, held: null }
+      let hit = cache.get(name)
+      if (!hit) {
+        const r = row('DIVINATION_CARD', name)
+        const held = r ? guardCardPrice(r.chaos, r.graph, days) : null
+        hit = { chaos: held ? held.chaos : r?.chaos ?? null, held }
+        cache.set(name, hit)
+      }
+      return hit
     }
+  })
+  const price = computed<PriceOf>(() => {
+    const t = table.value
+    return (name) => t(name).chaos
+  })
+  // poe.ninja's price for a card when it isn't the one counted.
+  const held = computed(() => {
+    const t = table.value
+    return (name: string) => t(name).held
   })
   const deckChaos = computed<number | null>(() => lookup('ITEM', STACKED_DECK))
   const divine = computed<number | null>(() => ninja.xchgRate.value ?? null)
   const ready = computed(() => ninja.updatedAt.value != null)
-  return { price, deckChaos, divine, ready, fetch: () => { ninja.queuePricesFetch() } }
+  return { price, held, deckChaos, divine, ready, fetch: () => { ninja.queuePricesFetch() } }
 }
 
 export interface Luck {

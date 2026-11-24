@@ -7,8 +7,11 @@
     <w-setting-row label="Open cards on hover" hint="Off: clicking an icon opens its card, and the card's Open row opens the full window.">
       <w-toggle :model-value="dock.hoverOpens !== false" @update:model-value="dock.hoverOpens = $event" />
     </w-setting-row>
-    <w-setting-row label="Peek" hint="An icon grows into one line for 5 seconds when something happens: new zone, live search hit, map counted.">
+    <w-setting-row label="Peek" hint="An icon grows into one line for 5 seconds when something happens: new zone, live search hit, map counted (with the glance bar off).">
       <w-toggle v-model="dock.peeks" />
+    </w-setting-row>
+    <w-setting-row label="What's new after updates" hint="Off: no What's new icon, no NEW seals in All tools, no count on the rail.">
+      <w-toggle :model-value="!woke.newsOff" @update:model-value="setNewsOff(woke, !$event)" />
     </w-setting-row>
     <w-setting-row label="Stand the row on its side">
       <w-toggle v-model="dock.vertical" />
@@ -39,6 +42,7 @@ import type { Config } from '@/web/Config'
 import { WButton, WInfo, WSettingRow, WSettingSection, WToggle } from '../ui'
 import { ensureWokeConfig, isWidgetTypeOn } from '../modules'
 import { DEFAULT_DOCK, DOCK_ORDER, dockListName } from './dock'
+import { setNewsOff } from '../tab-bar/news-off'
 import type { DockConfig } from './dock'
 
 // `config` is the settings window's working copy; changes apply as you make them.
@@ -53,6 +57,7 @@ function ensureDock (): DockConfig {
 }
 ensureDock()
 const dock = computed<DockConfig>(() => props.config.woke?.dock ?? ensureDock())
+const woke = computed(() => ensureWokeConfig(props.config).woke)
 // Net worth comes with the opt-in stash reader: listed only while that's on.
 const rows = computed(() => DOCK_ORDER.filter(id => id !== 'net-worth' || isWidgetTypeOn(props.config, 'woke-net-worth')))
 

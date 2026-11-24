@@ -13,6 +13,7 @@ import type { ServerEvents } from '../server'
 import type { OverlayWindow } from '../windowing/OverlayWindow'
 
 const LEFT_BUTTON = 1
+const MAX_HOLD_MS = 30_000
 const RIGHT_BUTTON = 2
 
 interface Zone {
@@ -35,6 +36,9 @@ export class WokeHoverTracker {
   private heldButtons = new Set<unknown>()
   private mouseX: number | null = null
   private mouseY = 0
+  // When the hook last reported the mouse, for the log: a hook Windows dropped
+  // goes quiet, and the mouse then never leaves a zone.
+  private lastHookAt = 0
 
   constructor (
     private server: ServerEvents,
@@ -42,6 +46,27 @@ export class WokeHoverTracker {
   ) {
     this.overlay.onGameActive = () => {
       if (this.listening && this.mouseX != null) this.update(this.mouseX, this.mouseY)
+    }
+    // For the overlay's failsafe, which reads the cursor itself (in DIP).
+    this.overlay.isOverClickZone = (p) => this.flat.some(z => z.activate && contains(z.dip, p.x, p.y))
+    this.overlay.describeZones = () => this.describe()
+    // A drag reports no moves. If the hook died mid-drag the button never
+    // comes up for us, so a long hold stops counting.
+    this.overlay.isButtonHeld = () => this.heldButtons.size > 0 && Date.now() - this.lastHookAt < MAX_HOLD_MS
+    // A reloaded page registers its zones again; the old page's are gone. Kept,
+    // they'd catch the mouse where nothing shows any more.
+    this.overlay.onPageReload = () => {
+      // Keep where the mouse is, so the new page's zones are checked against
+      // it: a mouse resting on an icon across a reload is still on it.
+      const { mouseX, mouseY } = this
+      this.clear(false)
+      this.mouseX = mouseX
+      this.mouseY = mouseY
+    }
+    // The rescue hotkey: drop every zone, and have the page send its live ones.
+    this.overlay.onRescue = () => {
+      this.clear(true)
+      this.server.sendEventTo('broadcast', { name: 'MAIN->OVERLAY::woke-hover-resend', payload: undefined })
     }
     this.server.onEventAnyClient('OVERLAY->MAIN::woke-hover-zones', ({ owner, zones }) => {
       const prev = this.zones.get(owner) ?? []
@@ -87,6 +112,25 @@ export class WokeHoverTracker {
     })
   }
 
+  private clear (tellPage: boolean) {
+    if (!this.zones.size) return
+    if (tellPage) {
+      for (const zone of this.flat) if (zone.inside) this.emit(zone.id, false)
+    }
+    this.zones.clear()
+    this.flat = []
+    this.updateListening()
+  }
+
+  private describe () {
+    const zones = this.flat.filter(z => z.activate)
+      .map(z => `${z.id}@${Math.round(z.dip.x)},${Math.round(z.dip.y)} ${Math.round(z.dip.width)}x${Math.round(z.dip.height)}${z.inside ? ' (inside)' : ''}`)
+    const hook = !this.listening
+      ? 'hook not watching'
+      : this.lastHookAt ? `hook last saw the mouse ${((Date.now() - this.lastHookAt) / 1000).toFixed(1)} s ago` : 'hook saw no mouse yet'
+    return `${zones.length} click zones [${zones.join('; ')}], ${hook}`
+  }
+
   private updateListening () {
     const want = this.zones.size > 0
     if (want && !this.listening) {
@@ -101,8 +145,9 @@ export class WokeHoverTracker {
       this.listening = false
       this.heldButtons.clear()
       this.mouseX = null
-      this.overlay.giveMouse()
-      this.overlay.releaseCard()
+      this.lastHookAt = 0
+      this.overlay.giveMouse('no dock zones left')
+      this.overlay.releaseCard('no dock zones left')
     }
   }
 
@@ -129,10 +174,12 @@ export class WokeHoverTracker {
   }
 
   private readonly handleMouseMove = (e: UiohookMouseEvent) => {
+    this.lastHookAt = Date.now()
     this.update(e.x, e.y)
   }
 
   private readonly handleMouseUp = (e: UiohookMouseEvent) => {
+    this.lastHookAt = Date.now()
     this.heldButtons.delete(e.button)
     this.update(e.x, e.y)
   }
@@ -141,6 +188,7 @@ export class WokeHoverTracker {
     // Only if the mouse was already taken, or a card already has focus, did this
     // click reach the overlay.
     const reachedOverlay = this.overlay.isMouseTaken || this.overlay.isCardActive
+    this.lastHookAt = Date.now()
     // Bring `inside` up to date first, so a click also counts as entering.
     const inActivateZone = this.update(e.x, e.y)
     this.heldButtons.add(e.button)
