@@ -211,4 +211,4 @@
 - Net worth: sales you make in the hideout after a map no longer show as that map's loot in the session list. They go under "Hideout after Map 1" (and so on) until the next map.
 - Net worth: the session list, the Sold list and Price moves today now work like the other profit lists. Hover a line for ⊘ (leave it out) and ⋯, right-click for the same menu, or click an item's number to set your price. A sale left out there leaves Sold today and 7 days too.
 - Profit lists: the hover buttons (⊘, ⋯) no longer take a column of their own. They show over the row's right edge on a shaded backing, away from any number you can click, so nothing shifts. In a run's details, the In, Out and Faustus totals line up with their values.
-- Ctrl+Space: the item you closed the search on is kept in Recent across a restart. Before, it could be lost.
+- Ctrl+Space keeps what you typed. With the box empty, Recent lists your last 3 searches first, even ones you only looked at without opening anything. Enter or a click puts one back, and typing starts a new search. Recent items are also no longer lost to a restart.

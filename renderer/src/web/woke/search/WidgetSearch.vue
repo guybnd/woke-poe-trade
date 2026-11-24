@@ -38,7 +38,7 @@
                 <span :class="section.more ? $style.foldName : undefined">{{ e.name }}</span><span class="w-dim ml-1">{{ section.more ? `${e.sub} · show` : e.sub }}</span>
               </button>
               <button v-else v-item-tip="tipOf(e)" :data-no-item-tip="e.kind === 'setting' ? 'a setting named after a mechanic or item, not the item itself' : undefined" tabindex="-1" :class="[$style.res, { [$style.sel]: e === selected }]"
-                :data-selected="e === selected || undefined" @click="selected = e" @dblclick="run(e)">
+                :data-selected="e === selected || undefined" @click="e.kind === 'again' ? run(e) : selected = e" @dblclick="run(e)">
                 <WIcon v-if="e.kind === 'price'" :src="ninjaIcon(e.group.type, e.group.name) ?? ninjaArt(e.group.type, e.group.name)" size="md" />
                 <WIcon v-else-if="e.kind === 'item'" :src="e.info.icon" size="md" />
                 <WIcon v-else-if="e.kind === 'lookup' && isImageIcon(e.icon)" :src="e.icon" size="md" />
@@ -52,7 +52,7 @@
               </button>
               </template>
             </template>
-            <div v-if="!entries.length" :class="$style.none">Type an item, a tool or a setting, or ? for ideas. Items you look up show here next time.</div>
+            <div v-if="!entries.length" :class="$style.none">Type an item, a tool or a setting, or ? for ideas. Your searches show here next time.</div>
           </div>
           <div :class="$style.detail" class="w-scroll">
             <template v-if="selected?.kind === 'price'">
@@ -292,7 +292,7 @@ import { onSharedDataChange } from '../app/live-data'
 import { openDiscord, openReportDialog } from '../app/report'
 import { dropOf } from '../ui/tooltip/tip-content'
 import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
-import { SEARCH_TARGET, searchRequest } from './widget'
+import { SEARCH_TARGET, searchRequest, addQuery } from './widget'
 import { VARIABLE_ITEMS, useTradePrices } from '../shared/unid-prices'
 import { poeWebApi, saveConfig } from '@/web/Config'
 import type { SearchWidget } from './widget'
@@ -307,7 +307,7 @@ const snapshot = useSearchSnapshot()
 interface Base { id: string, name: string, sub: string }
 interface PriceEntry extends Base { kind: 'price', group: PriceGroup }
 interface ItemEntry extends Base { kind: 'item', info: BaseType }
-interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting' | 'more', icon: string, about: string, verb: string, keys?: string | null, aliases?: string[], action: () => void }
+interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting' | 'more' | 'again', icon: string, about: string, verb: string, keys?: string | null, aliases?: string[], action: () => void }
 interface LookupEntry extends Base { kind: 'lookup', icon: string, card: LookupCard }
 type Entry = PriceEntry | ItemEntry | ActionEntry | LookupEntry
 
@@ -364,6 +364,8 @@ function tipOf (entry: Entry) {
   if (entry.kind === 'item') return { name: entry.info.refName }
   // A card about an item (a Viscera, a gem, a div card) shows that item.
   if (entry.kind === 'lookup') return entry.card.tip ?? itemRefFromName(entry.card.title ?? entry.card.name)
+  // A past search that is an item's name shows that item.
+  if (entry.kind === 'again') return itemRefFromName(entry.name)
   return null
 }
 
@@ -900,8 +902,8 @@ const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: b
   const items = snapshot.value?.items ?? []
   // Nothing typed yet: your recent lookups, then things to try.
   if (!queryOk.value) {
-    const recent = recentGroups(items)
-    return [...(recent.length ? [{ label: 'Recent', entries: recent.map(priceEntry) as Entry[] }] : []), ...cardSections(exampleCards(liveAnswer), null)]
+    const recent = [...(props.config.queries ?? []).map(againEntry), ...recentGroups(items).map(priceEntry)]
+    return [...(recent.length ? [{ label: 'Recent', entries: recent }] : []), ...cardSections(exampleCards(liveAnswer), null)]
   }
   const q = query.value
   const groups = searchPrices(items, q, { corrupted: corrupted.value })
@@ -1341,17 +1343,33 @@ function recentGroups (items: readonly PriceItem[]): PriceGroup[] {
   }
   return out
 }
-function remember (entry: Entry | null) {
-  if (entry?.kind !== 'price') return
+// Whether the list changed.
+function remember (entry: Entry | null): boolean {
+  if (entry?.kind !== 'price') return false
   const { type, name } = entry.group
   const head = props.config.recent?.[0]
-  if (head?.type === type && head.name === name) return
+  if (head?.type === type && head.name === name) return false
   const rest = (props.config.recent ?? []).filter(r => r.type !== type || r.name !== name)
   props.config.recent = [{ type, name }, ...rest].slice(0, RECENT_MAX)
-  // On close the overlay's own save has already run (it saves as the palette
-  // hides, before this). Closing on blur or into a tool brings no later save,
-  // so the newest lookup could be lost to a restart or another window's save.
-  if (!open.value) saveConfig()
+  return true
+}
+// What was typed, opened or not: a quick look is a search too.
+function rememberQuery (text: string): boolean {
+  const list = addQuery(props.config.queries, text, [HELP_QUERY])
+  if (list) props.config.queries = list
+  return list != null
+}
+function againEntry (q: string): ActionEntry {
+  return {
+    kind: 'again',
+    id: `q:${q}`,
+    name: q,
+    sub: 'Search again',
+    icon: 'fas fa-history',
+    about: 'Puts this search back in the box.',
+    verb: 'Search',
+    action: () => { query.value = q; focusInput() }
+  }
 }
 
 // ---- pins ----
@@ -1600,7 +1618,14 @@ watch(searchRequest, (request) => {
 watch(wm.active, (active) => { if (active && open.value) focusInput(true) })
 watch(open, (now) => {
   if (now) focusInput(true)
-  else remember(queryOk.value ? selected.value : null)
+  else {
+    const item = remember(queryOk.value ? selected.value : null)
+    const typed = rememberQuery(query.value)
+    // The overlay's own save has already run (it saves as the palette hides,
+    // before this). Closing on blur or into a tool brings no later save, so
+    // these could be lost to a restart or another window's save.
+    if (item || typed) saveConfig()
+  }
 })
 
 const dataNote = computed(() => {

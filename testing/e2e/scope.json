@@ -501,6 +501,9 @@
    "renderer/src/web/woke/search/",
    "renderer/src/web/woke/settings/"
   ],
+  "search-recent.spec.ts": [
+   "renderer/src/web/woke/search/"
+  ],
   "search-price-check.spec.ts": [
    "main/src/woke/market-store.ts",
    "renderer/src/parser/",
