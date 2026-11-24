@@ -31,19 +31,23 @@ function wantsBoard (query: string): boolean {
 
 // Past runs by strategy, best per map first (Net worth › Runs, By strategy).
 function boardAnswer (board: RunBoard, time: RateTime, divine: number | null): ReturnType<Lookup> {
-  const rows = [...board.rows].sort((a, b) => (b.perMapChaos ?? -Infinity) - (a.perMapChaos ?? -Infinity)).slice(0, 6)
+  // Steady ones first (a small sample's per map is a guess), then per map.
+  const per = (r: RunBoard['rows'][number]) => r.perMapChaos ?? -1e15
+  const rows = board.rows.filter(r => r.perMapChaos != null).sort((a, b) => Number(a.small) - Number(b.small) || per(b) - per(a)).slice(0, 6)
   if (!rows.length) return []
+  const unitOf = (r: RunBoard['rows'][number]) => r.fights ? (r.maps ? 'run' : 'fight') : 'map'
   const lines: LookupRow[] = rows.map(r => {
     const runs = r.maps + r.fights
     const ph = r.perHour[time]
-    const bits = [`${amount(r.perMapChaos ?? 0, divine)} a map`, ph != null ? amount(ph, divine, '/h') : null, `${runs} ${runs === 1 ? 'map' : 'maps'}`, r.small ? 'small sample' : null].filter(Boolean)
+    const u = unitOf(r)
+    const bits = [`${amount(r.perMapChaos ?? 0, divine)} a ${u}`, ph != null ? amount(ph, divine, '/h') : null, `${runs} ${u}${runs === 1 ? '' : 's'}`, r.small ? 'small sample' : null].filter(Boolean)
     return { label: r.name, value: bits.join(' · '), dim: r.small }
   })
   const best = rows[0]
   return [{
     id: 'answer:strategy-runs-compare',
     group: 'Answer',
-    name: `Best strategy so far: ${best.name}, ${amount(best.perMapChaos ?? 0, divine)} a map`,
+    name: `Best strategy so far: ${best.name}, ${amount(best.perMapChaos ?? 0, divine)} a ${unitOf(best)}`,
     sub: 'Net worth, past runs by strategy',
     icon: 'fas fa-flag',
     sections: [{ rows: lines }, { text: ['Runs with the same name added up. Open Net worth › Runs to sort by per hour, cost or without the top drop.'] }],

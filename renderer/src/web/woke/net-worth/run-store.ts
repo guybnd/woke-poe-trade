@@ -40,7 +40,7 @@ export function loadRuns (league: string): Promise<void> {
     .then((g) => { if (loadedFor === league && runGlance.value == null && isRunGlance(g) && g.league === league) runGlance.value = g })
     .catch(() => {})
   loading = (hostRequest('doc-get', { collection: COLLECTION, key: runsKey(league) }) as Promise<unknown>)
-    .then((d) => { if (loadedFor === league) { runsDoc.value = cleanDoc(d); readOk = true } })
+    .then((d) => { if (loadedFor === league) { runsDoc.value = cleanDoc(d); readOk = true; saveBoard(league, runsDoc.value) } })
     .catch(() => { if (loadedFor === league) loading = null })
     .then(() => glance)
   return loading
@@ -232,7 +232,10 @@ async function withFinal (run: Run, points: readonly LedgerPoint[]): Promise<Run
   if (run.stoppedAt == null) return run
   const maps = mapsIn(run, await readRunMaps(run, run.stoppedAt), run.stoppedAt)
   // An edit on a past run keeps the time it had (Client.txt may be gone).
-  const spent = run.final?.time ? null : await runSpent(run.startAt, run.stoppedAt)
+  // A Client.txt that no longer covers the run reads as no time at all:
+  // the fights it had stand, and no time is saved.
+  const read = run.final?.time ? null : await runSpent(run.startAt, run.stoppedAt)
+  const spent = read && Object.values(read.ms).some(ms => ms > 0) ? read : null
   const fights = spent ? spent.fights : (run.final?.fights ?? 0)
   const t = runTotals(run, points, { maps, fights }, run.stoppedAt, undefined, outsideOf(run))
   const final: Run['final'] = { profitChaos: t.profitChaos, maps, perMapChaos: t.perMapChaos, perHourChaos: t.perHourChaos, stashChaos: t.stashChaos }

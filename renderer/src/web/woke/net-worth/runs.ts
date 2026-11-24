@@ -24,6 +24,8 @@ export interface TallyLine {
   removedChaos: number
   // A map, scarab or fragment (isMapCostItem): cost per map counts it used up.
   cost?: true
+  // Currency: its change sums trades and collected sales, never one drop.
+  currency?: true
 }
 
 // A cost the stash can't see: `qty` a map at `unitChaos` each (the price you
@@ -167,6 +169,7 @@ export function addToTally (run: Run, diff: StashDiff): Run {
     for (const l of lines) {
       const t: TallyLine = tally[l.key] ? { ...tally[l.key] } : { name: l.name, icon: l.icon, added: 0, removed: 0, addedChaos: 0, removedChaos: 0 }
       if (!t.cost && isMapCostItem(l.name, l.cat)) t.cost = true
+      if (!t.currency && l.cat === 'currency') t.currency = true
       if (dir > 0) { t.added += l.count; t.addedChaos += l.chaos } else { t.removed += l.count; t.removedChaos += l.chaos }
       tally[l.key] = t
     }
@@ -312,13 +315,20 @@ export function relive (run: Run, price: LivePrice): Run {
 // ---------- the biggest drop, small samples (pick S1) ----------
 export interface TopDrop { name: string, chaos: number }
 
+// Tallied before rows knew their category: the usual currency names.
+const CURRENCY_NAME = /\b(Orb|Shard|Scroll|Splinter|Fossil|Resonator|Catalyst|Oil|Essence|Scarab|Delirium Orb|Prism|Bauble|Whetstone|Chisel|Sextant)\b|Orb of /
+
 // The single biggest thing that came in: a stash row (with your edit; left
 // out ones don't count) or an item added by hand. null: nothing came in.
+// Currency (sums of trades and sales; a Mirror counts) and map-cost items
+// (restocks) are never a drop.
 export function topDrop (run: Run): TopDrop | null {
   const typed = new Set(run.costs.map(c => c.key))
   let top: TopDrop | null = null
   for (const [k, t] of Object.entries(run.tally)) {
-    if (typed.has(k)) continue
+    if (typed.has(k) || t.cost || isMapCostItem(t.name, undefined)) continue
+    // Mirrors are the lucky drop itself, not trade money.
+    if ((t.currency || CURRENCY_NAME.test(t.name)) && !/^Mirror/.test(t.name)) continue
     const v = tallyValue(t, run.edits?.[rowKey.tally(k)])
     if (v > 0 && (!top || v > top.chaos)) top = { name: t.name, chaos: v }
   }

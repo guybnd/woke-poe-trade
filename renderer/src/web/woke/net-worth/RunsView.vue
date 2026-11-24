@@ -117,7 +117,7 @@
       <div :class="$style.tableWrap">
         <table :class="$style.table" data-compare>
           <thead><tr>
-            <th v-for="c in COLUMNS" :key="c.id" :class="{ [$style.num]: c.id !== 'new' }" :aria-sort="sortBy === c.id ? 'descending' : undefined">
+            <th v-for="c in COLUMNS" :key="c.id" :class="{ [$style.num]: c.id !== 'new' }" :aria-sort="sortBy === c.id ? (c.id === 'cost' ? 'ascending' : 'descending') : undefined">
               <button type="button" :class="[$style.sortBtn, { [$style.on]: sortBy === c.id }]" :title="c.tip" @click="sortBy = c.id">{{ c.id === 'perMap' ? `Per ${pastUnit}` : c.label }}</button>
             </th>
             <th v-if="!byName" />
@@ -395,7 +395,7 @@ const COLUMNS: Array<{ id: CompareSort, label: string, tip: string }> = [
 ]
 const byName = shallowRef(false)
 const sortBy = shallowRef<CompareSort>('new')
-const pastRows = computed(() => sortCompare(compareRows(doc.value.done, rateTime(), byName.value, mapCostKeys.value), sortBy.value))
+const pastRows = computed(() => sortCompare(compareRows(doc.value.done, rateTime(), byName.value), sortBy.value))
 const pastUnit = computed(() => pastRows.value.some(r => r.fights > 0) ? (pastRows.value.some(r => r.maps > 0) ? 'run' : 'fight') : 'map')
 
 // ---------- costs ----------

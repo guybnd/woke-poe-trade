@@ -45,6 +45,17 @@ describe('top drop and small samples', () => {
     expect(topDrop(out)).toEqual({ name: 'Mageblood', chaos: 200 })
     expect(topDrop(run())).toBeNull()
   })
+  it('currency sums and restocked maps are never the top drop', () => {
+    const r = run({
+      tally: {
+        div: tl('Divine Orb', 3, 600),
+        chaos: { ...tl('Chaos Orb', 400, 400), currency: true },
+        maps: tl('Nightmare Map', 40, 1200),
+        card: tl('The Apothecary', 1, 150)
+      }
+    })
+    expect(topDrop(r)).toEqual({ name: 'The Apothecary', chaos: 150 })
+  })
   it('under 30 maps, or one drop over half the profit', () => {
     expect(smallSample(12, 500, null)).toEqual({ few: true, share: null })
     expect(smallSample(40, 500, { name: 'Mirror Shard', chaos: 300 })).toEqual({ few: false, share: 0.6 })

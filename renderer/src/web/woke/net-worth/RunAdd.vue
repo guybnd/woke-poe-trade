@@ -56,6 +56,8 @@ const lineOf = (n: string) => {
   return props.lines.find(l => l.name.toLowerCase() === b) ?? props.lines.find(l => l.name.toLowerCase().startsWith(b + ' ('))
 }
 function priceFromName () {
+  // Another item: the price filled in for the last one goes.
+  if (autoEach.value != null && Number(each.value) === autoEach.value) { each.value = 0; autoEach.value = null }
   const l = lineOf(name.value)
   if (l && !(each.value > 0)) { each.value = Math.round(toDiv(l.unitChaos) * 10000) / 10000; autoEach.value = each.value }
 }
