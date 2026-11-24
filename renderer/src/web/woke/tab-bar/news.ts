@@ -22,7 +22,7 @@ export interface NewsItem {
 }
 
 export const NEWS: NewsItem[] = [
-  { id: 'glance-bar-default', wmType: 'woke-session-analytics', name: 'Session analytics', settingsPage: 'Sessions', note: 'New: a thin bar at the top while mapping, with each map\'s time after it. Off in Settings' },
+  { id: 'glance-bar-default', wmType: 'woke-session-analytics', name: 'Session analytics', settingsPage: 'Sessions', note: 'New: a thin bar at the top while mapping. Off in Settings' },
   { id: 'runs-kits-compare', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: run costs priced live, and past runs side by side, by strategy too' },
   { id: 'listed-still-cheapest', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: Check on a Listed row says if anyone sells it cheaper (one trade search)' },
   { id: 'per-hour-time-setting', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: Play, + Hideout or All beside every per hour, the same choice in every tool' },
@@ -53,13 +53,6 @@ export function markAllNewsSeen (woke: WokeModulesConfig): void {
 // What's new switched off, for players who update every day or two.
 export function seenNewsIds (woke: WokeModulesConfig | undefined): readonly string[] {
   return woke?.setupDone && !woke.newsOff ? (woke.seenNews ?? []) : NEWS.map(n => n.id)
-}
-
-// Switching it off also marks every line seen, so switching it back on later
-// shows only what came after.
-export function setNewsOff (woke: WokeModulesConfig, off: boolean): void {
-  if (off) markAllNewsSeen(woke)
-  woke.newsOff = off || undefined
 }
 
 // Lines not seen yet. Like the All tools count, a switched-off tool's line

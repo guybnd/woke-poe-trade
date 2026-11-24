@@ -42,7 +42,7 @@ import type { Config } from '@/web/Config'
 import { WButton, WInfo, WSettingRow, WSettingSection, WToggle } from '../ui'
 import { ensureWokeConfig, isWidgetTypeOn } from '../modules'
 import { DEFAULT_DOCK, DOCK_ORDER, dockListName } from './dock'
-import { setNewsOff } from '../tab-bar/news'
+import { setNewsOff } from '../tab-bar/news-off'
 import type { DockConfig } from './dock'
 
 // `config` is the settings window's working copy; changes apply as you make them.

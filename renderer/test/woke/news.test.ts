@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { NEWS, markAllNewsSeen, markNewsSeen, seenNewsIds, setNewsOff, unseenNews } from '@/web/woke/tab-bar/news'
+import { NEWS, markAllNewsSeen, markNewsSeen, seenNewsIds, unseenNews } from '@/web/woke/tab-bar/news'
+import { setNewsOff } from '@/web/woke/tab-bar/news-off'
 import { gotoTargets } from '@/web/woke/tab-bar/goto-targets'
 import type { WokeModulesConfig } from '@/web/woke/modules'
 

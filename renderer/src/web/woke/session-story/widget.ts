@@ -36,22 +36,6 @@ export interface SessionStoryWidget extends Widget {
   glancePos?: { x: number, y: number }
 }
 
-export function glanceOn (config: Pick<SessionStoryWidget, 'glance'>): boolean {
-  return config.glance !== false
-}
-
-export function glanceClockOn (config: Pick<SessionStoryWidget, 'glance' | 'glanceClock'>): boolean {
-  return config.glanceClock !== false
-}
-
-// Where the map line goes. Not picked: on the glance bar while it's on, so one
-// thing shows while you play; the dock icon with it off. The bar picked and
-// then turned off: the dock icon.
-export function chipPlaceOf (config: Pick<SessionStoryWidget, 'glance' | 'chipPlace'>): ChipPlace {
-  const place = config.chipPlace ?? (glanceOn(config) ? 'bar' : 'dock')
-  return place === 'bar' && !glanceOn(config) ? 'dock' : place
-}
-
 export const CHIP_CLOSE_TARGET = 'woke-session-story-chip'
 
 export function initSessionStoryWidget (wmId: number): SessionStoryWidget {

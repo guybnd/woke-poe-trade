@@ -34,7 +34,7 @@ import WButton from '../ui/WButton.vue'
 import WSegmented from '../ui/WSegmented.vue'
 import WSelect from '../ui/WSelect.vue'
 import WToggle from '../ui/WToggle.vue'
-import { chipPlaceOf, glanceClockOn, glanceOn } from './widget'
+import { chipPlaceOf, glanceClockOn, glanceOn } from './glance'
 import type { ChipPlace, SessionStoryWidget } from './widget'
 
 const props = defineProps<{
