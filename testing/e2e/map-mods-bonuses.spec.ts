@@ -39,6 +39,13 @@ test('the Planner lists T17 mods by bonus and builds a counted search', async ({
   await expect(planner.getByRole('row', { name: /Fecund/ }).getByText('P', { exact: true })).toBeVisible()
   await overlay.snap('map mods planner')
 
+  // Trade search first (it can count); with every mod ticked the stash text
+  // doesn't fit, and a plain line says so.
+  await expect(planner.getByTestId('map-planner-trade').getByRole('button', { name: 'Search trade' })).toBeEnabled()
+  await expect(panel.getByTestId('map-planner-stash-too-long')).toBeVisible()
+  const order = await planner.locator('[data-testid="map-planner-trade"], [data-testid="map-planner-search"]').evaluateAll(els => els.map(e => e.getAttribute('data-testid')))
+  expect(order).toEqual(['map-planner-trade', 'map-planner-search'])
+
   // Untick all but four, ask for 2 of them: the search fits.
   for (const name of ['of Defiance', 'Diluted', 'Punishing', 'Stalwart']) {
     await planner.getByRole('checkbox', { name: `Use ${name}` }).click()
@@ -47,5 +54,6 @@ test('the Planner lists T17 mods by bonus and builds a counted search', async ({
   const search = panel.getByTestId('map-planner-search')
   await expect(search.locator('code')).toContainText('"!')
   await expect(search.getByRole('button', { name: 'Copy' })).toBeEnabled()
+  await expect(panel.getByTestId('map-planner-stash-too-long')).toHaveCount(0)
   await expect(planner.getByText('of the 4 ticked mods', { exact: true })).toBeVisible()
 })

@@ -21,6 +21,14 @@
       <div v-if="summary || picked" :class="$style.summary">
         {{ summary }}<template v-if="summary && picked"> · </template><template v-if="picked">Search: <span :class="$style.picked" data-map-mod-picked>{{ picked }}</span></template>
       </div>
+      <!-- Guy's pick (veteran review, 2026-11-24): what you farm decides which numbers start on. Remembered. -->
+      <div v-if="propFilters.length && isMap" :class="$style.goalRow" data-map-goal>
+        <span class="w-dim text-xs">Farming</span>
+        <span :class="$style.seg" role="radiogroup" aria-label="Farming goal">
+          <button v-for="g in FARM_GOALS" :key="g" type="button" role="radio" :aria-checked="goal === g"
+            :class="goal === g && $style.on_any" :data-goal="g" :title="GOAL_TITLE[g]" @click="setGoal(g)">{{ FARM_GOAL_LABEL[g] }}</button>
+        </span>
+      </div>
       <div :class="$style.chips">
         <!-- Guy's pick A (2026-11-23): every number is a chip and every chip is a filter.
              Off: dashed with +. On: the min, typed in its box or scrolled. -->
@@ -28,7 +36,7 @@
         <button v-if="hasFilters" type="button" :class="[$style.chip, $style.baseBtn, baseOnly && $style.baseOn]" :aria-pressed="baseOnly"
           :title="baseTitle" data-map-base @click="toggleBase">Base map<template v-if="baseOnly"> ✓</template></button>
         <template v-for="p in result.props" :key="p.label">
-          <span v-if="propFilter(p.label)" :class="[$style.chip, $style.propChip, isOn(p.label) ? $style.propOn : $style.propOff, p.label === 'Drops' && $style.propWarn]"
+          <span v-if="propFilter(p.label)" :class="[$style.chip, $style.propChip, isOn(p.label) ? $style.propOn : $style.propOff, p.label === 'Drops' && $style.propWarn, goalKeys.includes(p.label) && $style.goalKey, faded(p.label) && $style.faded]"
             class="w-num" data-own-wheel @wheel.prevent.stop="wheelMin(p.label, $event)">
             <button type="button" :class="$style.propBtn" :aria-pressed="isOn(p.label)" :title="propTitle(p.label)" :data-map-prop="p.label"
               @click="toggleProp(p.label)">{{ p.label }} {{ p.value }}%</button>
@@ -75,6 +83,11 @@ import { checkMap, findMapModsConfig, isMapLike, isUnsure, PROP_TRADE_ID } from 
 import { NO_ELDER_TRADE_ID } from '@/web/price-check/filters/pseudo/maps'
 import type { AddedMod, FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
+import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalDisabled } from './goal'
+import { farmGoal, setFarmGoal } from './goal-config'
+import { tickPref } from '../price-insight/tick-prefs'
+import { ItemCategory } from '@/parser'
+import type { FarmGoal } from './goal'
 
 // addMods: off on the bulk preset, which searches maps by type only.
 // worth: the worth slot is filled (a Nightmare Map).
@@ -217,10 +230,54 @@ function typeMin (label: string, e: Event) {
 const DEAD_TITLE = 'The bulk search finds maps by type only. Switch to the normal search to use this number.'
 function propTitle (label: string): string {
   const on = isOn(label)
+  const raises = RAISES[label] ? `${RAISES[label]}\n\n` : ''
   // Checked 2026-11-15: the trade site's Atlas Drops filter matched no listing.
-  if (label === 'Drops') return on ? 'Searching Atlas Drops. The trade site found no listings for this filter in 3.30, so results may be empty. Click to leave it out.' : 'The trade site found no listings for Atlas Drops in 3.30, so turning this on will likely empty the results.'
-  return on ? 'In the search. Type or scroll the minimum, click to leave it out.' : 'Click to search at least this, or scroll to set the minimum.'
+  if (label === 'Drops') return raises + (on ? 'Searching Atlas Drops. The trade site found no listings for this filter in 3.30, so results may be empty. Click to leave it out.' : 'The trade site found no listings for Atlas Drops in 3.30, so turning this on will likely empty the results.')
+  return raises + (on ? 'In the search. Type or scroll the minimum, click to leave it out.' : 'Click to search at least this, or scroll to set the minimum.')
 }
+
+// The farming goal (goal.ts): picking one sets this map's number chips to the
+// goal's, and the next maps start that way.
+const goal = computed(() => farmGoal())
+const goalKeys = computed(() => GOAL_KEYS[goal.value])
+const GOAL_TITLE: Record<FarmGoal, string> = {
+  currency: 'Farming currency: Rarity, Pack size and More Currency start on. Remembered for the next maps.',
+  atlas: 'Farming maps and Threads: Pack size, More Maps and More Threads start on. Atlas Drops matters most but the trade site has no listings for it. Remembered for the next maps.',
+  any: 'No goal: the numbers start as they always did.'
+}
+// Off and not one the goal wants: faded, so the ones that matter stand out.
+function faded (label: string): boolean {
+  return goal.value !== 'any' && !goalKeys.value.includes(label) && !isOn(label)
+}
+// Only maps: charts keep their own numbers (pseudo/maps.ts chartProps).
+const isMap = computed(() => props.item.category === ItemCategory.Map)
+function setGoal (g: FarmGoal) {
+  // Base map on: bring its picks back first, so the goal doesn't lose them.
+  if (baseOnly.value && clearedRef.value) toggleBase()
+  setFarmGoal(g)
+  applyGoal(g)
+}
+function applyGoal (g: FarmGoal) {
+  for (const p of result.value?.props ?? []) {
+    // Atlas Drops is off for every goal (no listings): one you turned on stays on.
+    if (p.label === 'Drops') continue
+    const f = propFilter(p.label)
+    const off = goalDisabled(p.label, g)
+    // An Always / Never tick you set on a number wins (price-insight/tick-prefs.ts).
+    if (f && off !== undefined && !tickPref(f)) f.disabled = off
+  }
+}
+// The price check builds a map's numbers as it always did; the strip sets them
+// to the goal once per set of filters (a new item, or another preset), so
+// clicks after that are kept. The strip loads lazily, which keeps this out of
+// the startup budget.
+const goalApplied = new WeakSet<object>()
+watch(() => [props.stats, result.value] as const, () => {
+  const stats = props.stats
+  if (!stats || !result.value || !isMap.value || goalApplied.has(stats)) return
+  goalApplied.add(stats)
+  if (goal.value !== 'any') applyGoal(goal.value)
+}, { immediate: true })
 
 // The Base map button: every chip and every row below off (the 8-mod count too),
 // every mod Any, added mods off. The picks it cleared come back on a second
@@ -347,6 +404,10 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .propOff { border: 1px dashed var(--w-line-strong); }
 .propOff .propBtn::before { content: '+' / ''; margin-right: 3px; color: var(--w-gold); }
 .propChip:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
+.goalRow { display: flex; align-items: center; gap: 6px; }
+.goalKey { box-shadow: 0 0 0 1px var(--w-gold); }
+.faded { opacity: 0.5; }
+.faded:hover { opacity: 1; }
 .propOn { color: var(--w-fg); background: var(--w-accent-soft); border-color: var(--w-accent); }
 .propOn:hover { border-color: var(--w-accent); }
 /* Atlas Drops: the trade site has no listings for it (pseudo/maps.ts). */

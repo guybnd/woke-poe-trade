@@ -4,7 +4,7 @@
     <div :class="$style.chips">
       <span v-if="compact" class="w-dim">Drops:</span>
       <WChip v-for="m in maps" :key="m.name" v-item-tip="{ name: m.name, content: m.tip }" data-card-drop-map>
-        {{ m.label }}<span v-if="m.tier != null" :class="$style.tier">T{{ m.tier }}</span>
+        {{ m.label }}<span v-if="m.tier != null" :class="$style.tier">T{{ m.tier }}</span><span v-if="!compact && m.oneIn" :class="$style.tier" :title="chanceWords(m.oneIn)" data-card-drop-chance>{{ oneInText(m.oneIn) }}</span>
       </WChip>
       <span v-if="compact && !maps.length && !facts.other.length" class="w-dim">{{ facts.disabled ? 'no longer drops' : 'no verified source yet' }}</span>
       <!-- One line on the small card: the first source, the rest on hover. -->
@@ -16,7 +16,7 @@
         {{ facts.disabled ? 'Not in the game right now.' : 'Divcord has no verified source for this card yet.' }}
       </div>
       <div :class="$style.foot">
-        <span :class="$style.note">Sources: Divcord · weights: Prohibited Library</span>
+        <span :class="$style.note">Sources: Divcord · weights: Prohibited Library<template v-if="maps.some(m => m.oneIn)"> · 1 in N: how many of that map's own cards it takes, on average, to get this one (by drop weight)</template></span>
         <WButton size="sm" @click="open">Divcord</WButton>
       </div>
     </template>
@@ -31,7 +31,7 @@ import { computed, shallowRef, watch } from 'vue'
 import { WButton, WChip, vItemTip } from '../ui'
 import { formatChaos } from '../ui/format'
 import { usePrice } from '../shared/price'
-import { cardDropFacts, cardPageUrl, factLine, loadCardDrops, mapTip } from './card-drops'
+import { cardDropFacts, cardPageUrl, chanceWords, factLine, loadCardDrops, mapTip, mapsByChance, oneInText } from './card-drops'
 import type { CardDropData } from './card-drops'
 
 const props = defineProps<{ name: string, compact?: boolean }>()
@@ -56,7 +56,8 @@ const line = computed(() => facts.value ? factLine(facts.value) : '')
 const maps = computed(() => {
   const d = data.value
   if (!d || !facts.value) return []
-  return facts.value.maps.map(m => ({ ...m, tip: mapTip(d, m.name, price, chaos => formatChaos(chaos, divine.value)) }))
+  // Likeliest first (Guy's pick, veteran review 2026-11-24).
+  return mapsByChance(d, props.name, facts.value.maps).map(m => ({ ...m, tip: mapTip(d, m.name, price, chaos => formatChaos(chaos, divine.value)) }))
 })
 
 function open () {
