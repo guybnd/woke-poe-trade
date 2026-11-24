@@ -60,3 +60,29 @@ test('set to In maps, it goes when you leave the map, and ticked-off fields stay
   await overlay.log(lines.hideout('15:03:01'))
   await expect(bar).toBeHidden()
 })
+
+test('with the overlay open, the cog opens the bar settings under it, saved as you tick', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ patch: glance(['time'], 'map') })
+  await overlay.log([...lines.hideout('15:00:34'), ...lines.strand('15:01:00')])
+  const bar = overlay.page.locator('[data-glance-bar]')
+  await expect(bar).toBeVisible({ timeout: 15_000 })
+  // While you play: no cog (it would take the mouse).
+  await expect(bar.locator('[data-glance-cog]')).toHaveCount(0)
+
+  await overlay.pressHotkey(overlay.config.overlayKey)
+  await bar.locator('[data-glance-cog]').click()
+  const pop = bar.locator('[data-glance-popover]')
+  await expect(pop).toBeVisible()
+  await expect(bar.locator('[data-glance-map]')).toHaveCount(0)
+  await pop.getByRole('switch', { name: 'Map and tier' }).click()
+  await expect(bar.locator('[data-glance-map]')).toHaveText('Strand')
+  await expect.poll(() => overlay.savedWidget('woke-session-story')?.glanceFields ?? null).toEqual(['map', 'time'])
+  await pop.getByRole('switch', { name: 'Map and tier' }).click()
+  await expect.poll(() => overlay.savedWidget('woke-session-story')?.glanceFields ?? null).toEqual(['time'])
+  await overlay.snap('glance-bar-cog-popover')
+
+  // Back to the game: the popover closes, and the cog goes.
+  fakeApp.focusGame(true)
+  await expect(bar.locator('[data-glance-cog]')).toHaveCount(0)
+  await expect(pop).toHaveCount(0)
+})

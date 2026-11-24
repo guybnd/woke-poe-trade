@@ -9,15 +9,18 @@
             :title="`In ${inChaos(c.id) ? 'chaos' : 'divines'}. Click for ${inChaos(c.id) ? 'divines' : 'chaos'}`"
             @click.stop="swap(c.id)" @keydown.enter.stop @keydown.space.stop><Coin :chaos="inChaos(c.id)" /></button><Coin v-else-if="c.id === 'unit' || c.id === 'chaos'" chaos /><template v-if="sort === c.id">{{ desc ? ' ▾' : ' ▴' }}</template>
         </th>
+        <th :class="$style.actsHead"><span class="sr-only">Actions</span></th>
       </tr>
     </thead>
     <tbody>
-      <tr v-for="l in shown" :key="(l.state ?? '') + l.key" :class="{ [$style.dim]: !!l.state }" @contextmenu="rowMenu($event, l)">
+      <tr v-for="l in shown" :key="l.key" :class="['w-line', { [$style.dim]: l.state === 'unpriced', 'w-line-out': l.state === 'ignored' }]" tabindex="0" data-nw-row
+        @contextmenu="rowMenu($event, l)" @keydown="lineKeys($event, stateOf(l), handlersOf(l))">
         <td :class="$style.left">
           <span :class="$style.name" v-item-tip="tipOf(l)">
             <img v-if="l.icon" :src="l.icon" alt="" :class="$style.icon">
-            <span class="w-trunc" :style="{ color: colourOf(l) }">{{ l.name }}</span>
+            <span class="w-trunc w-line-name" :style="{ color: colourOf(l) }">{{ l.name }}</span>
           </span>
+          <span v-if="l.state === 'ignored'" class="w-line-tag" :class="$style.tag">left out</span>
         </td>
         <td class="w-num">{{ qty(l.count) }}</td>
         <td v-if="editing === l.key" :class="$style.editCell">
@@ -28,22 +31,23 @@
               @mousedown.prevent @click="flipDraft" @blur="onBlur"><Coin :chaos="draftUnit === 'c'" /></button>
           </span>
         </td>
-        <td v-else class="w-num" :class="l.mine ? '' : 'w-dim'" :title="unitTitle(l)">
-          <i v-if="l.mine" class="fas fa-thumbtack" :class="$style.pin" /><i v-else-if="l.heldSince != null" class="fas fa-pause-circle" :class="$style.held" />{{ l.state === 'unpriced' ? '—' : show('unit', l.unitChaos) }}
+        <td v-else class="w-num" :class="l.mine ? '' : 'w-dim'">
+          <i v-if="!l.mine && l.heldSince != null" class="fas fa-pause-circle" :class="$style.held" /><WLineNum :mine="l.mine" :out="l.state === 'ignored'" :title="unitTitle(l)" :label="`${l.mine ? 'Change my' : 'Set my'} price for one ${l.name}`" data-nw-price @edit="startEdit(l)">{{ l.state === 'unpriced' ? '—' : show('unit', l.unitChaos) }}</WLineNum>
         </td>
-        <td class="w-num" :title="l.state === 'unpriced' ? undefined : other('chaos', l.chaos)">{{ l.state === 'unpriced' ? '—' : show('chaos', l.chaos) }}</td>
+        <td class="w-num" :class="{ [$style.struck]: l.state === 'ignored' }" :title="l.state === 'unpriced' ? undefined : other('chaos', l.chaos)">{{ l.state === 'unpriced' ? '—' : show('chaos', l.chaos) }}</td>
         <td :class="$style.shareCell" :title="l.state ? undefined : `${shareText(l.chaos)} of your net worth`">
           <template v-if="!l.state"><span class="w-num w-dim" :class="$style.pctText">{{ shareText(l.chaos) }}</span><span :class="$style.share"><i :style="{ width: Math.min(100, Math.max(2, share(l.chaos) * 100)) + '%' }" /></span></template>
         </td>
         <td class="w-num" :class="tone(changes.get(l.key))">{{ pct(changes.get(l.key)) }}</td>
         <td class="w-dim w-trunc" :class="$style.tab" :title="l.tabIds.map(nameOfTab).join(', ')">{{ tabText(l) }}</td>
+        <td :class="$style.actsCell"><WLineActs :name="l.name" :out="l.state === 'ignored'" :entries="entriesOf(l)" :head="e => itemMenuHead(menuOf(l), e)" @out="handlersOf(l).out($event)" /></td>
       </tr>
       <tr v-if="!lines.length">
-        <td colspan="7" class="w-dim" :class="$style.left">
+        <td colspan="8" class="w-dim" :class="$style.left">
           Nothing matches.<WButton v-if="filtered" size="sm" variant="ghost" @click="emit('clear')">Show all</WButton>
         </td>
       </tr>
-      <tr v-if="more > 0"><td colspan="7" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 200">{{ more }} more</WButton></td></tr>
+      <tr v-if="more > 0"><td colspan="8" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 200">{{ more }} more</WButton></td></tr>
     </tbody>
   </table>
 </template>
@@ -52,7 +56,7 @@
 // The item table (A1): sortable, the game tooltip on hover (with the tabs that
 // hold it, and poe.ninja's 7-day line), the item menu on right-click.
 import { computed, nextTick, shallowRef } from 'vue'
-import { WButton, openMenu, vItemTip } from '../ui'
+import { WButton, WLineActs, WLineNum, lineKeys, lineMenu, openMenu, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui/layer'
 import { formatAmount } from '../ui/format'
 import { itemMenuHead } from '../ui/tooltip/item-menu'
@@ -133,24 +137,25 @@ const sorted = computed(() => {
     }
   }
   const dir = desc.value ? -1 : 1
-  // Unpriced and ignored rows stay under the rest.
+  // Unpriced rows stay under the rest; left-out ones keep their place (pick S1).
   // No 24h change ("—") sorts last either way.
   const missing = (x: number | string) => typeof x === 'number' && Number.isNaN(x)
   return [...props.lines].sort((a, b) => {
-    if (!a.state !== !b.state) return a.state ? 1 : -1
+    const ua = a.state === 'unpriced'
+    if (ua !== (b.state === 'unpriced')) return ua ? 1 : -1
     const x = key(a)
     const y = key(b)
     if (missing(x) || missing(y)) return missing(x) === missing(y) ? 0 : missing(x) ? 1 : -1
     return (x < y ? -1 : x > y ? 1 : 0) * dir
   })
 })
-// Unpriced and ignored rows (asked for in the footer) always show, under the rest.
+// Unpriced rows (asked for in the footer) always show, under the rest.
 const shown = computed(() => {
   const all = sorted.value
-  const priced = all.filter(l => !l.state)
-  return [...priced.slice(0, limit.value), ...all.filter(l => l.state)]
+  const priced = all.filter(l => l.state !== 'unpriced')
+  return [...priced.slice(0, limit.value), ...all.filter(l => l.state === 'unpriced')]
 })
-const more = computed(() => Math.max(0, props.lines.filter(l => !l.state).length - limit.value))
+const more = computed(() => Math.max(0, props.lines.filter(l => l.state !== 'unpriced').length - limit.value))
 // Share: a row's part of the whole net worth, so it stays put while filters change.
 const whole = computed(() => props.total ?? props.lines.reduce((x, l) => l.state ? x : x + l.chaos, 0))
 const share = (chaos: number) => whole.value > 0 ? chaos / whole.value : 0
@@ -255,14 +260,18 @@ function unitTitle (l: ValuedLine) {
   return other('unit', l.unitChaos)
 }
 
+// The shared profit line (ui/line-item.ts): the same menu on ⋯, right-click
+// and the row's keys (Enter: your price, Delete: leave out).
+const stateOf = (l: ValuedLine) => ({ out: l.state === 'ignored', edited: !!l.mine })
+const handlersOf = (l: ValuedLine) => ({
+  edit: () => { startEdit(l) },
+  reset: () => { emit('price', l.key, null) },
+  out: (on: boolean) => { emit('ignore', l.key, l.name, on) }
+})
+const entriesOf = (l: ValuedLine): MenuEntry[] => lineMenu(stateOf(l), handlersOf(l), { edit: l.mine ? 'Change my price…' : 'Set my price…', reset: "Back to poe.ninja's price" })
 function rowMenu (e: MouseEvent, l: ValuedLine) {
-  const entries: MenuEntry[] = []
-  if (l.state !== 'ignored') entries.push({ label: l.mine ? 'Change my price…' : 'Set my price…', icon: 'fas fa-thumbtack', action: () => { startEdit(l) } })
-  if (l.mine) entries.push({ label: 'Reset to poe.ninja price', icon: 'fas fa-undo', action: () => { emit('price', l.key, null) } })
-  entries.push(l.state === 'ignored'
-    ? { label: 'Stop ignoring', icon: 'fas fa-eye', action: () => { emit('ignore', l.key, l.name, false) } }
-    : { label: 'Ignore item', icon: 'fas fa-eye-slash', action: () => { emit('ignore', l.key, l.name, true) } })
-  openMenu(e, entries, itemMenuHead(menuOf(l), e) ?? undefined)
+  if ((e.target as Element).closest('input')) return
+  openMenu(e, entriesOf(l), itemMenuHead(menuOf(l), e) ?? undefined)
 }
 
 function menuOf (l: ValuedLine): ItemMenuRef {
@@ -291,10 +300,13 @@ function menuOf (l: ValuedLine): ItemMenuRef {
 .unitBtn:hover { box-shadow: 0 0 0 1px var(--w-gold); }
 .unitBtn:focus-visible { outline: 1px solid var(--w-accent); }
 .dim td { opacity: .55; }
-.pin { font-size: calc(9px * var(--w-text-scale, 1)); color: var(--w-gold); margin-right: 4px; }
 .held { font-size: calc(9px * var(--w-text-scale, 1)); color: var(--w-warn); margin-right: 4px; }
 .editCell { padding: 0 2px !important; }
 .edit { display: inline-flex; align-items: center; gap: 2px; justify-content: flex-end; width: 100%; }
 .editInput { width: 100%; min-width: 0; max-width: 64px; font: inherit; font-family: var(--w-num); text-align: right; color: var(--w-fg); background: var(--w-panel-3); border: 1px solid var(--w-gold); border-radius: var(--w-r-sm); padding: 0 3px; }
+.table th:last-child { width: 3.2em; cursor: default; }
+.actsCell { padding-left: 0 !important; }
+.struck { text-decoration: line-through; color: var(--w-dim); }
+.tag { flex: none; }
 .tab { max-width: 0; overflow: hidden; text-overflow: ellipsis; }
 </style>

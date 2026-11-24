@@ -12,6 +12,14 @@ export const ADD_KINDS: ReadonlyArray<{ kind: AddedModKind, label: string, title
   { kind: 'enchant', label: 'Enchant', title: 'Enchantment' }
 ]
 
+// A map's mods are area mods (Guy, 2026-11-24): "Add a mod" on a map offers only the
+// stats a map can roll (regular, Originator, Nightmare...), as prefix/suffix or implicit.
+export const MAP_ADD_KINDS: ReadonlyArray<AddedModKind> = ['explicit', 'implicit']
+export type AddScope = 'item' | 'map'
+function inScope (stat: Stat, scope: AddScope): boolean {
+  return scope === 'item' || stat.fromAreaMods === 'yes' || stat.fromAreaMods === 'ubermap_exclusive'
+}
+
 // The chips: every kind (the default), or one.
 export type AddFilter = AddedModKind | 'all'
 
@@ -28,11 +36,13 @@ export interface AddEntry {
   inverted: boolean
 }
 
-export function buildAddIndex (stats: Iterable<Stat>): AddEntry[] {
+export function buildAddIndex (stats: Iterable<Stat>, scope: AddScope = 'item'): AddEntry[] {
   const byRef = new Map<string, AddEntry>()
+  const kinds = scope === 'map' ? MAP_ADD_KINDS : ADD_KINDS.map(k => k.kind)
   for (const stat of stats) {
+    if (!inScope(stat, scope)) continue
     const ids: AddEntry['ids'] = {}
-    for (const { kind } of ADD_KINDS) {
+    for (const kind of kinds) {
       const list = stat.trade.ids[kind]
       if (list?.length) ids[kind] = list
     }
@@ -57,11 +67,11 @@ export function buildAddIndex (stats: Iterable<Stat>): AddEntry[] {
   return Array.from(byRef.values())
 }
 
-let shared: { src: unknown, index: AddEntry[] } | null = null
-// One index per stats data: the source is a new function after a data reload.
-export function sharedAddIndex (src: (includes: string) => Iterable<Stat>): AddEntry[] {
-  if (shared?.src !== src) shared = { src, index: buildAddIndex(src('')) }
-  return shared.index
+const shared: Partial<Record<AddScope, { src: unknown, index: AddEntry[] }>> = {}
+// One index per stats data and scope: the source is a new function after a data reload.
+export function sharedAddIndex (src: (includes: string) => Iterable<Stat>, scope: AddScope = 'item'): AddEntry[] {
+  if (shared[scope]?.src !== src) shared[scope] = { src, index: buildAddIndex(src(''), scope) }
+  return shared[scope]!.index
 }
 
 function words (query: string): string[] {

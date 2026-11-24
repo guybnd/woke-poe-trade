@@ -5,7 +5,7 @@
          shows outside a map, so it can be placed before one. Its fields and
          whether it stays out of maps (a run going, or all night) are settings. -->
     <div v-if="map || editing || outside || after" :class="[$style.bar, { [$style.movable]: movable || editing, [$style.editing]: editing }]" :style="place" class="w-num" data-glance-bar role="status"
-      :title="movable || editing ? 'Drag to move' : undefined" @pointerdown="startDrag">
+      :title="(movable || editing) && !popover ? 'Drag to move' : undefined" @pointerdown="startDrag">
       <template v-if="map">
         <template v-if="on.map">
           <span :class="$style.name" data-glance-map>{{ map.name }}</span>
@@ -48,6 +48,13 @@
         <span v-if="on.total" data-glance-total title="Tonight so far, AFK left out">{{ hoursText(playedMs(nightNow ?? night)) }}</span>
         <span v-if="on.avg && nightAvg != null" class="w-dim" data-glance-avg>avg {{ formatClock(nightAvg) }}</span>
       </template>
+      <!-- With the overlay open (not in Settings already): its settings, one click away. -->
+      <button v-if="movable && !editing && config" type="button" :class="[$style.cog, { 'w-accent': popover }]" class="w-dim" data-glance-cog title="What the bar shows"
+        @pointerdown.stop @click.stop="popover = !popover"><i class="fas fa-cog" /></button>
+      <!-- The cog's settings, under the bar: they apply and save as you tick. -->
+      <div v-if="popover && movable && !editing && config" ref="popEl" :class="[$style.popover, { [$style.up]: popUp }]" :style="popShift" data-glance-popover @pointerdown.stop>
+        <GlanceSettings :config="config" live />
+      </div>
       <span :class="[$style.grip, { [$style.gripOn]: movable || editing }]" class="w-dim" data-glance-drag><i class="fas fa-grip-vertical" /></span>
     </div>
   </Teleport>
@@ -55,7 +62,7 @@
 
 <script setup lang="ts">
 // Settings › Sessions › "While in a map". On unless turned off.
-import { computed, onUnmounted, shallowRef, watch } from 'vue'
+import { computed, nextTick, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { hostRequest } from '../shared/host'
 import { formatChaos, formatClock, nowMinute } from '../ui/format'
@@ -68,6 +75,8 @@ import { useNights } from './store'
 import { runMapsNow } from './glance-run'
 import { avgMapMs, glanceFields, glanceOutside, glanceShow, hoursText, perHourOf } from './glance-fields'
 import type { LastMap } from './glance-fields'
+import type { SessionStoryWidget } from './widget'
+import GlanceSettings from './GlanceSettings.vue'
 import { isSkippedArea } from './skip-areas'
 import { nightRateMs, playedMs } from './night-rate'
 import { countedMs, leftOutText } from '../shared/rate-time'
@@ -93,8 +102,26 @@ const props = defineProps<{
   last?: LastMap | null
   // The map line after a map (chip place "bar"), for a few seconds.
   after?: string | null
+  // The widget's config, for the cog's popover; left out: no cog.
+  config?: SessionStoryWidget
 }>()
 const emit = defineEmits<{ move: [pos: { x: number, y: number }, done: boolean] }>()
+// The cog's popover; shut whenever the overlay closes.
+const popover = shallowRef(false)
+watch(() => props.movable, (open) => { if (!open) popover.value = false })
+// Kept on screen: above the bar in the lower half, and moved in from a side edge.
+const popEl = shallowRef<HTMLElement | null>(null)
+const popUp = computed(() => (props.pos?.y ?? 0) > 0.5)
+const popShift = shallowRef<{ transform: string } | undefined>(undefined)
+watch([popover, () => props.pos], async () => {
+  popShift.value = undefined
+  if (!popover.value) return
+  await nextTick()
+  const r = popEl.value?.getBoundingClientRect()
+  if (!r) return
+  const dx = r.left < 8 ? 8 - r.left : r.right > window.innerWidth - 8 ? window.innerWidth - 8 - r.right : 0
+  if (dx) popShift.value = { transform: `translateX(calc(-50% + ${Math.round(dx)}px))` }
+})
 
 const on = computed(() => {
   const f = glanceFields(props.fields)
@@ -248,5 +275,24 @@ const clock = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: '2-dig
 .movable:hover .gripOn, .editing .gripOn { visibility: visible; }
 .movable:hover, .editing { border-color: var(--w-accent); }
 .name { color: var(--w-accent); }
+.cog { all: unset; cursor: pointer; padding: 0 2px; }
+.cog:hover { color: var(--w-accent); }
+.popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 10px;
+  align-items: center;
+  padding: 8px 10px;
+  white-space: nowrap;
+  cursor: default;
+  background: var(--w-panel);
+  border: 1px solid var(--w-line);
+}
+.popover > * { justify-self: start; }
+.up { top: auto; bottom: calc(100% + 4px); }
 .sep { width: 1px; align-self: stretch; background: var(--w-line); }
 </style>

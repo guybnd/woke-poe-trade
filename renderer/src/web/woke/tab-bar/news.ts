@@ -24,6 +24,7 @@ export interface NewsItem {
 export const NEWS: NewsItem[] = [
   { id: 'valdo-map-skips', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: on a Valdo map, set a mod Not and listings with it are hidden; remembered per profile' },
   { id: 'valdo-map-lookup', wmType: 'woke-search', name: 'Search', note: 'New: type "valdo headhunter" to price check Valdo maps with that reward' },
+  { id: 'map-price-check-kind', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: a map\'s price check searches its own kind (Originator, Elder...) or one you pick, every mod in one list' },
   { id: 'price-check-map-stat-columns', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: a map\'s ticked Rarity, Pack and More Currency show as columns in the results, higher or lower than yours' },
   { id: 'price-check-related-upgrades', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: beside a unique, its upgrade, where it drops and the cards that give it, with prices' },
   { id: 'scrying-helper', wmType: 'woke-scrying', name: 'Scrying', note: 'New: which map to scry, ranked by the cards a Scrying Orb adds per map, with the orb\'s price and a Buy link' },
@@ -40,6 +41,7 @@ export const NEWS: NewsItem[] = [
   { id: 'price-check-unid-vs-id', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: unid Watcher\'s Eye and other gamble jewels show unid price vs identified versions' },
   { id: 'map-farming-goal', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: pick Currency or Maps & Threads on a map\'s price check, and the numbers that matter start on' },
   { id: 'div-card-map-chance', wmType: 'woke-search', name: 'Search', note: 'New: type a map to see how likely each of its cards is, and what one is worth on average' },
+  { id: 'profit-line-item', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: click a price to set your own; hover a row to leave it out. Changed lists what you edited' },
   { id: 'run-summary-on-stop', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: a run summary on Stop: vs your usual, best drops, map times and tips' },
   { id: 'runs-kits-compare', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: run costs priced live, and past runs side by side, by strategy too' },
   { id: 'listed-still-cheapest', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: Check on a Listed row says if anyone sells it cheaper (one trade search)' },

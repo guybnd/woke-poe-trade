@@ -389,7 +389,7 @@ test('map: price check shows the map mod verdict strip', async ({ overlay }) => 
   const panel = overlay.widget('price-check')
   // Default profile: max res and no regen are "careful", twin bosses "good".
   await expect(panel.getByText('Risky', { exact: true })).toBeVisible({ timeout: 20_000 })
-  await expect(panel).toContainText('Quant 64%')
+  await expect(panel.locator('[data-map-tile]').filter({ hasText: 'Quant' })).toContainText('64%')
   await overlay.snap('map verdict strip')
 })
 

@@ -276,7 +276,7 @@ export default defineComponent({
     const rowStats = computed(() => {
       // Only while the strip is up: with Map mods off, the map's mods stay rows.
       // A Valdo map's Void filter is on the Valdo strip, which is always up.
-      const onStrip = (s: FilterOrGroup) => !s.group && (!!s.valdoVoid || (stripProps.value != null && (!!s.mapMod || stripProps.value.has(s.tradeId[0]))))
+      const onStrip = (s: FilterOrGroup) => !s.group && (!!s.valdoVoid || !!s.mapKind || (stripProps.value != null && (!!s.mapMod || !!s.mapLine || stripProps.value.has(s.tradeId[0]))))
       return itemStats.value.some(onStrip) ? itemStats.value.filter(s => !onStrip(s)) : itemStats.value
     })
     const doSearch = ref(false)

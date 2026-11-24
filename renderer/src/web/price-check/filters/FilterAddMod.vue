@@ -49,20 +49,21 @@
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { STATS_ITERATOR } from '@/assets/data'
 import type { AddedMod, ItemFilters } from './interfaces'
-import { ADD_KINDS, AddFilter, AddHit, addedModFrom, kindCounts, searchAddIndex, sharedAddIndex } from '@/web/woke/price-insight/add-mod-search'
+import { ADD_KINDS, MAP_ADD_KINDS, AddFilter, AddHit, addedModFrom, kindCounts, searchAddIndex, sharedAddIndex } from '@/web/woke/price-insight/add-mod-search'
 
 // All first and by default (Guy's call): every match, its kind on the line.
-const CHIPS: ReadonlyArray<{ kind: AddFilter, label: string, title: string }> = [
-  { kind: 'all', label: 'All', title: 'Every kind, each on its own line' },
-  ...ADD_KINDS
-]
+const props = defineProps<{ filters: ItemFilters, map?: boolean }>()
 
-const props = defineProps<{ filters: ItemFilters }>()
+// A map offers only map mods, so only the kinds a map has.
+const CHIPS = computed<ReadonlyArray<{ kind: AddFilter, label: string, title: string }>>(() => [
+  { kind: 'all', label: 'All', title: 'Every kind, each on its own line' },
+  ...(props.map ? ADD_KINDS.filter(k => MAP_ADD_KINDS.includes(k.kind)) : ADD_KINDS)
+])
 
 const mods = computed(() => props.filters.addedMods ?? [])
 
 // Built on the first keystroke, shared by every window, rebuilt when the data reloads.
-const getIndex = () => sharedAddIndex(STATS_ITERATOR)
+const getIndex = () => sharedAddIndex(STATS_ITERATOR, props.map ? 'map' : 'item')
 
 const query = ref('')
 const focused = ref(false)
@@ -78,7 +79,7 @@ const results = computed(() => open.value ? searchAddIndex(getIndex(), query.val
 watch([query, kind], () => { sel.value = 0 })
 
 function kindOf (k: AddFilter) {
-  return CHIPS.find(x => x.kind === k)!
+  return CHIPS.value.find(x => x.kind === k)!
 }
 
 function pickKind (k: AddFilter) {
@@ -87,7 +88,7 @@ function pickKind (k: AddFilter) {
 
 // Tab steps through the kinds that have a match.
 function stepKind (by: 1 | -1) {
-  const live = CHIPS.filter(k => counts.value[k.kind]).map(k => k.kind)
+  const live = CHIPS.value.filter(k => counts.value[k.kind]).map(k => k.kind)
   if (!live.length) return
   const at = live.indexOf(kind.value)
   wanted.value = live[(at + by + live.length) % live.length]

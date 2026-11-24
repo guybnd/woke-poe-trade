@@ -53,19 +53,22 @@
 
       <!-- A stopped run's summary (pick W1 + T1): opens on Stop. -->
       <RunSummary v-if="showSummary && totals" :key="shownRun.id" :run="shownRun" :done="doc.done" :totals="totals" :per-hour="perHour" :spent="spent" :tips="tips" :divine="divine" :map-cost-keys="mapCostKeys" :league="league" @details="summaryId = null" />
-      <div v-else :class="$style.cols">
+      <div v-if="!showSummary && changedCount" :class="$style.changedBar">
+        <WChip clickable :active="onlyChanged" :title="onlyChanged ? 'Show every row' : 'Only the rows you edited or left out, and the ones you added'" data-run-changed @click="onlyChanged = !onlyChanged">Changed {{ changedCount }}</WChip>
+      </div>
+      <div v-if="!showSummary" :class="$style.cols">
         <!-- In: what came into the stash, and what you added. -->
         <div :class="$style.col" data-run-in>
           <div :class="$style.colHead"><span :class="$style.colTitle">{{ isCraft ? 'Made' : 'In' }}</span><span class="w-num w-up">{{ signed(inSum) }}<Coin :chaos="!divine" /></span></div>
           <!-- A crafting run's new unpriced items: price them by hand. -->
           <RunRow v-for="r in madeRows" :key="'m' + r.key" data-run-made :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, r.net)" :count="tallyCount(r)" :chaos="madeVal(r)" sign="+" :sub="isEdited(rowKey.tally(r.key)) ? undefined : 'set price'" :divine="divine"
-            :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event)" @reset="resetRow(rowKey.tally(r.key))" />
-          <RunRow v-for="r in rows.came.slice(0, cameShown)" :key="r.key" data-run-came :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="tallyCount(r)" :chaos="Math.abs(isOut(rowKey.tally(r.key)) ? r.netChaos : tallyVal(r))" sign="+" :divine="divine"
-            :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event)" @reset="resetRow(rowKey.tally(r.key))" />
+            :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
+          <RunRow v-for="r in came.slice(0, cameShown)" :key="r.key" data-run-came :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="tallyCount(r)" :chaos="Math.abs(isOut(rowKey.tally(r.key)) ? r.netChaos : tallyVal(r))" sign="+" :divine="divine"
+            :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
           <RunRow v-for="m in manualIn" :key="m.id" :icon="m.icon" :name="m.name" :tip="tipOf(m.key ?? null, m.name, m.count)" :count="m.count" :chaos="m.count * m.each" :each="m.each" sign="+" sub="added" :divine="divine" :can-leave-out="false" removable
             @edit="editManual(m.id, $event)" @remove="removeManual(m.id)" />
-          <button v-if="rows.came.length > cameShown" type="button" :class="$style.link" class="text-xs" @click="cameShown += 15">+{{ rows.came.length - cameShown }} more</button>
-          <div v-if="!rows.came.length && !manualIn.length && !madeRows.length" class="w-dim text-xs">Nothing yet</div>
+          <button v-if="came.length > cameShown" type="button" :class="$style.link" class="text-xs" @click="cameShown += 15">+{{ came.length - cameShown }} more</button>
+          <div v-if="!came.length && !manualIn.length && !madeRows.length" class="w-dim text-xs">{{ onlyChanged ? 'Nothing changed here' : 'Nothing yet' }}</div>
           <RunAdd :known="knownItems" :lines="lines" :divine="divine" label="Add an item" @add="addManual('in', $event)" />
         </div>
 
@@ -82,9 +85,9 @@
           <RunRow v-for="o in shownRun.once" :key="o.id" :name="o.name" :tip="tipOf(null, o.name)" :count="null" :chaos="o.chaos" sign="−" sub="once" :divine="divine" :editable="false" :can-leave-out="false" removable @remove="removeOnce(o.id)" />
           <RunRow v-for="m in manualOut" :key="m.id" :icon="m.icon" :name="m.name" :tip="tipOf(m.key ?? null, m.name, m.count)" :count="m.count" :chaos="m.count * m.each" :each="m.each" sign="−" sub="added" :divine="divine" :can-leave-out="false" removable
             @edit="editManual(m.id, $event)" @remove="removeManual(m.id)" />
-          <RunRow v-for="r in rows.used.slice(0, usedShown)" :key="r.key" data-run-used :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="tallyCount(r)" :chaos="Math.abs(isOut(rowKey.tally(r.key)) ? r.netChaos : tallyVal(r))" sign="−" :divine="divine"
-            :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event)" @reset="resetRow(rowKey.tally(r.key))" />
-          <button v-if="rows.used.length > usedShown" type="button" :class="$style.link" class="text-xs" @click="usedShown += 15">+{{ rows.used.length - usedShown }} more</button>
+          <RunRow v-for="r in used.slice(0, usedShown)" :key="r.key" data-run-used :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="tallyCount(r)" :chaos="Math.abs(isOut(rowKey.tally(r.key)) ? r.netChaos : tallyVal(r))" sign="−" :divine="divine"
+            :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
+          <button v-if="used.length > usedShown" type="button" :class="$style.link" class="text-xs" @click="usedShown += 15">+{{ used.length - usedShown }} more</button>
           <RunAdd :known="knownItems" :lines="lines" :divine="divine" label="Add a cost" :per-map="!isCraft" :unit="unit" @add="addManual('out', $event)" @per-map="addPerMap" />
         </div>
 
@@ -92,20 +95,20 @@
         <div :class="$style.col" data-run-faustus>
           <div :class="$style.colHead"><span :class="$style.colTitle">{{ isCraft ? 'Sold' : 'Faustus' }}</span><span class="w-num" :class="totals.faustusChaos ? 'w-up' : 'w-dim'">{{ signed(totals.faustusChaos) }}<Coin :chaos="!divine" /></span>
             <i class="fas fa-info-circle" :class="$style.info" :title="faustusInfo" /></div>
-          <RunRow v-for="r in outside.listed.slice(0, listedShown)" :key="'l' + r.item.id" data-run-listed :icon="r.item.icon" :name="saleName(r.item)" :tip="saleTip(r.item)" :count="r.item.stack" :chaos="r.chaos" sign="+" :sub="listedSub(r.item)" :divine="divine"
-            :out="r.leftOut" :edited="r.edited" @edit="editRow(rowKey.item(r.item.id), $event)" @out="leaveOut(rowKey.item(r.item.id), $event)" @reset="resetRow(rowKey.item(r.item.id))" />
-          <RunRow v-for="h in outside.held" :key="'h' + h.item.id" data-run-held :icon="h.item.icon" :name="h.item.name" :tip="{ name: h.item.name, count: h.left }" :count="h.left" :chaos="h.chaos" :sign="h.carried ? '' : '+'" :sub="h.carried ? 'from last run' : 'held'" :divine="divine"
-            :out="h.leftOut" :edited="h.edited" :editable="!h.carried" :can-leave-out="!h.carried" removable @edit="editRow(rowKey.held(h.item.id), $event)" @out="leaveOut(rowKey.held(h.item.id), $event)" @reset="resetRow(rowKey.held(h.item.id))" @remove="removeHeld(h.item.id, h.carried)" />
-          <RunRow v-for="r in outside.sold.slice(0, soldShown)" :key="'s' + r.item.id" data-run-sold :icon="r.item.icon" :name="saleName(r.item)" :tip="saleTip(r.item)" :count="r.item.stack" :chaos="r.chaos" :sign="soldSign(r)" :divine="divine"
-            :out="r.leftOut" :edited="r.edited" :editable="!r.before && !r.collected" :can-leave-out="!r.before" @edit="editRow(rowKey.item(r.item.id), $event)" @out="leaveOut(rowKey.item(r.item.id), $event)" @reset="resetRow(rowKey.item(r.item.id))">
+          <RunRow v-for="r in listed.slice(0, listedShown)" :key="'l' + r.item.id" data-run-listed :icon="r.item.icon" :name="saleName(r.item)" :tip="saleTip(r.item)" :count="r.item.stack" :chaos="r.chaos" sign="+" :sub="listedSub(r.item)" :divine="divine"
+            :out="r.leftOut" :edited="r.edited" @edit="editRow(rowKey.item(r.item.id), $event)" @out="leaveOut(rowKey.item(r.item.id), $event, saleName(r.item))" @reset="resetRow(rowKey.item(r.item.id))" />
+          <RunRow v-for="h in held" :key="'h' + h.item.id" data-run-held :icon="h.item.icon" :name="h.item.name" :tip="{ name: h.item.name, count: h.left }" :count="h.left" :chaos="h.chaos" :sign="h.carried ? '' : '+'" :sub="h.carried ? 'from last run' : 'held'" :divine="divine"
+            :out="h.leftOut" :edited="h.edited" :editable="!h.carried" :can-leave-out="!h.carried" removable @edit="editRow(rowKey.held(h.item.id), $event)" @out="leaveOut(rowKey.held(h.item.id), $event, h.item.name)" @reset="resetRow(rowKey.held(h.item.id))" @remove="removeHeld(h.item.id, h.carried)" />
+          <RunRow v-for="r in sold.slice(0, soldShown)" :key="'s' + r.item.id" data-run-sold :icon="r.item.icon" :name="saleName(r.item)" :tip="saleTip(r.item)" :count="r.item.stack" :chaos="r.chaos" :sign="soldSign(r)" :divine="divine"
+            :out="r.leftOut" :edited="r.edited" :editable="!r.before && !r.collected" :can-leave-out="!r.before" @edit="editRow(rowKey.item(r.item.id), $event)" @out="leaveOut(rowKey.item(r.item.id), $event, saleName(r.item))" @reset="resetRow(rowKey.item(r.item.id))">
             <template #sub>
               <span class="w-dim text-xs" :title="r.collected ? 'A stash read saw its currency come in' : 'Its currency isn\'t in your stash yet'">{{ r.collected ? 'collected' : 'sold' }}</span>
               <button type="button" :class="[$style.chip, { [$style.on]: r.before }]" :title="r.before ? 'From before the run: not its profit. Click: it is the run\'s' : 'The run\'s. Click if the item was from before the run'" :aria-pressed="r.before" @click="markBefore(r.item.id, !r.before)">before</button>
             </template>
           </RunRow>
-          <button v-if="outside.listed.length > listedShown" type="button" :class="$style.link" class="text-xs" @click="listedShown += 15">+{{ outside.listed.length - listedShown }} more listed</button>
-          <button v-if="outside.sold.length > soldShown" type="button" :class="$style.link" class="text-xs" @click="soldShown += 15">+{{ outside.sold.length - soldShown }} more sold</button>
-          <div v-if="!outside.listed.length && !outside.held.length && !outside.sold.length" class="w-dim text-xs">Nothing listed or held</div>
+          <button v-if="listed.length > listedShown" type="button" :class="$style.link" class="text-xs" @click="listedShown += 15">+{{ listed.length - listedShown }} more listed</button>
+          <button v-if="sold.length > soldShown" type="button" :class="$style.link" class="text-xs" @click="soldShown += 15">+{{ sold.length - soldShown }} more sold</button>
+          <div v-if="!listed.length && !held.length && !sold.length" class="w-dim text-xs">{{ onlyChanged ? 'Nothing changed here' : 'Nothing listed or held' }}</div>
           <div :class="$style.colFoot" class="w-dim text-xs">
             <span v-if="shownRun.faustus">Read {{ clock(shownRun.faustus.at) }}<template v-if="shownRun.faustus.more"> · newest 100</template></span>
             <span v-if="outside.unpriced">{{ outside.unpriced }} unpriced</span>
@@ -164,7 +167,7 @@
 // the last read or a chart point, see profit since then with what got used
 // up, type the costs the stash can't see, and look back at finished runs.
 import { computed, defineAsyncComponent, onUnmounted, shallowRef, watch } from 'vue'
-import { WButton, WKbd, toast, vItemTip } from '../ui'
+import { WButton, WChip, WKbd, lineToast, toast, vItemTip } from '../ui'
 import { AppConfig } from '@/web/Config'
 import { NET_WORTH_TYPE, runHotkeyOf } from './widget'
 import type { NetWorthWidget } from './widget'
@@ -263,7 +266,12 @@ const faustusInfo = 'Listed at Faustus during the run (your asking price), sold 
 const editOf = (key: string) => shownRun.value?.edits?.[key]
 const isOut = (key: string) => editOf(key)?.out === true
 const isEdited = (key: string) => { const e = editOf(key); return e != null && (e.count != null || e.each != null) }
-function leaveOut (key: string, out: boolean) { edit(r => setEdit(r, key, { out })) }
+function leaveOut (key: string, out: boolean, name?: string) {
+  edit(r => setEdit(r, key, { out }))
+  if (name) lineToast(out ? 'out' : 'in', name, editLater(r => setEdit(r, key, { out: !out })))
+}
+// Put back what a remove took out, where it was.
+function putBack<T> (list: T[], at: number, x: T): T[] { const next = [...list]; next.splice(Math.min(at, next.length), 0, x); return next }
 function editRow (key: string, v: { count?: number, each?: number }) { edit(r => setEdit(r, key, { ...(v.count != null ? { count: v.count } : {}), ...(v.each != null ? { each: v.each } : {}) })) }
 function resetRow (key: string) { edit(r => setEdit(r, key, { count: undefined, each: undefined })) }
 const tallyVal = (r: TallyRow) => tallyValue(r.line, editOf(rowKey.tally(r.key)))
@@ -276,7 +284,14 @@ function addManual (side: 'in' | 'out', l: AddedLine) {
   edit(r => ({ ...r, manual: [...(r.manual ?? []), m] }))
 }
 function editManual (id: string, v: { count?: number, each?: number }) { edit(r => ({ ...r, manual: (r.manual ?? []).map(m => m.id === id ? { ...m, count: v.count ?? m.count, each: v.each ?? m.each } : m) })) }
-function removeManual (id: string) { edit(r => ({ ...r, manual: (r.manual ?? []).filter(m => m.id !== id) })) }
+function removeManual (id: string) {
+  const list = shownRun.value?.manual ?? []
+  const at = list.findIndex(m => m.id === id)
+  if (at < 0) return
+  const m = list[at]
+  edit(r => ({ ...r, manual: (r.manual ?? []).filter(x => x.id !== id) }))
+  lineToast('remove', m.name, editLater(r => ({ ...r, manual: putBack(r.manual ?? [], at, m) })))
+}
 const inSum = computed(() => rows.value.came.reduce((s, r) => s + Math.max(0, tallyVal(r)), 0) + madeRows.value.reduce((s, r) => s + Math.max(0, madeVal(r) ?? 0), 0) + manualIn.value.reduce((s, m) => s + m.count * m.each, 0))
 const outSum = computed(() => {
   const r = shownRun.value
@@ -319,7 +334,12 @@ const perHour = computed(() => {
 const perHourTip = computed(() => spent.value ? `Per hour, ${leftOutText(craftTime(rateTime(), shownRun.value?.kind === 'craft'))}. ${RATE_TIME_WHERE}` : 'Per hour of the whole run: Client.txt not read')
 const holdKey = computed(() => { const w = netWorthWidget(); return w ? runHotkeyOf(w) : null })
 function removeHeld (id: string, carried: boolean) {
-  edit(r => carried ? { ...r, carried: (r.carried ?? []).filter(h => h.id !== id) } : { ...r, held: (r.held ?? []).filter(h => h.id !== id) })
+  const list = (carried ? shownRun.value?.carried : shownRun.value?.held) ?? []
+  const at = list.findIndex(h => h.id === id)
+  if (at < 0) return
+  const h = list[at]
+  edit(r => carried ? { ...r, carried: (r.carried ?? []).filter(x => x.id !== id) } : { ...r, held: (r.held ?? []).filter(x => x.id !== id) })
+  lineToast('remove', h.name, editLater(r => carried ? { ...r, carried: putBack(r.carried ?? [], at, h) } : { ...r, held: putBack(r.held ?? [], at, h) }))
 }
 const faustusReading = shallowRef(false)
 async function readFaustusInto (r: Run): Promise<void> {
@@ -366,6 +386,20 @@ const isCraft = computed(() => shownRun.value?.kind === 'craft')
 const madeRows = computed(() => isCraft.value ? rows.value.made : [])
 // A made item's value: your price, else none yet.
 const madeVal = (r: TallyRow) => isEdited(rowKey.tally(r.key)) && !isOut(rowKey.tally(r.key)) ? tallyVal(r) : null
+// The Changed chip: only rows you edited or left out (the ones you typed
+// or added always show).
+const onlyChanged = shallowRef(false)
+const changedTally = (r: TallyRow) => { const k = rowKey.tally(r.key); return isOut(k) || isEdited(k) }
+const changedOutside = (r: { leftOut: boolean, edited: boolean }) => r.leftOut || r.edited
+const changedCount = computed(() => rows.value.came.filter(changedTally).length + rows.value.used.filter(changedTally).length + madeRows.value.filter(changedTally).length +
+  outside.value.listed.filter(changedOutside).length + outside.value.held.filter(changedOutside).length + outside.value.sold.filter(changedOutside).length)
+watch(changedCount, n => { if (!n) onlyChanged.value = false })
+watch(() => shownRun.value?.id, () => { onlyChanged.value = false })
+const came = computed(() => onlyChanged.value ? rows.value.came.filter(changedTally) : rows.value.came)
+const used = computed(() => onlyChanged.value ? rows.value.used.filter(changedTally) : rows.value.used)
+const listed = computed(() => onlyChanged.value ? outside.value.listed.filter(changedOutside) : outside.value.listed)
+const held = computed(() => onlyChanged.value ? outside.value.held.filter(changedOutside) : outside.value.held)
+const sold = computed(() => onlyChanged.value ? outside.value.sold.filter(changedOutside) : outside.value.sold)
 const usedShown = shallowRef(8)
 const cameShown = shallowRef(8)
 watch(() => shownRun.value?.id, () => { usedShown.value = 8; cameShown.value = 8; listedShown.value = 8; soldShown.value = 8 })
@@ -441,6 +475,11 @@ function edit (fn: (r: Run) => Run) {
   if (!r) return
   editRun(props.league, r.id, fn, props.points, props.divine).catch(() => {})
 }
+// An Undo changes the run it was made on, even after you open another one.
+function editLater (fn: (r: Run) => Run): () => void {
+  const id = shownRun.value?.id
+  return () => { if (id) editRun(props.league, id, fn, props.points, props.divine).catch(() => {}) }
+}
 function setCost (id: string, patch: Partial<CostLine>) {
   edit(r => ({ ...r, costs: r.costs.map(c => { if (c.id !== id) return c; const n = { ...c, ...patch }; if (n.bought == null) delete n.bought; if (!n.live) delete n.live; return n }) }))
 }
@@ -456,8 +495,20 @@ function setLive (c: CostLine, on: boolean) {
     setCost(c.id, { live: true, ...(p != null && p > 0 ? { unitChaos: p } : {}) })
   } else setCost(c.id, { live: undefined })
 }
-function removeCost (id: string) { edit(r => ({ ...r, costs: r.costs.filter(c => c.id !== id) })) }
-function removeOnce (id: string) { edit(r => ({ ...r, once: r.once.filter(o => o.id !== id) })) }
+function removeCost (id: string) {
+  const at = shownRun.value?.costs.findIndex(c => c.id === id) ?? -1
+  if (at < 0) return
+  const c = shownRun.value!.costs[at]
+  edit(r => ({ ...r, costs: r.costs.filter(x => x.id !== id) }))
+  lineToast('remove', c.name, editLater(r => ({ ...r, costs: putBack(r.costs, at, c) })))
+}
+function removeOnce (id: string) {
+  const at = shownRun.value?.once.findIndex(o => o.id === id) ?? -1
+  if (at < 0) return
+  const o = shownRun.value!.once[at]
+  edit(r => ({ ...r, once: r.once.filter(x => x.id !== id) }))
+  lineToast('remove', o.name, editLater(r => ({ ...r, once: putBack(r.once, at, o) })))
+}
 
 // Items the run has seen (its tally), with their stash key and price each,
 // for the add form's suggestions (items used up are no longer in the stash).
@@ -492,6 +543,7 @@ function addPerMap (l: AddedLine) {
 .hero > span { display: flex; flex-direction: column; }
 .hero b { font-weight: 500; font-size: calc(15px * var(--w-text-scale, 1)); }
 .hero b.big { font-size: calc(24px * var(--w-text-scale, 1)); line-height: 1.1; }
+.changedBar { display: flex; justify-content: flex-end; }
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--w-s2) calc(var(--w-s3) * 1.5); align-items: start; }
 .col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .colHead { display: flex; align-items: baseline; gap: var(--w-s2); border-bottom: 1px solid var(--w-line-strong); padding-bottom: 2px; margin-bottom: 2px; }

@@ -1,0 +1,21 @@
+Item Class: Maps
+Rarity: Rare
+Grim Ward
+Map (Tier 16)
+--------
+Item Rarity: +60% (augmented)
+Monster Pack Size: +25% (augmented)
+--------
+Item Level: 83
+--------
+Monster Level: 83
+--------
+{ Implicit Modifier }
+Map contains Baran's Citadel
+--------
+{ Prefix Modifier "Savage" }
+Monsters have 50% increased Accuracy Rating
+{ Suffix Modifier "of Venom" }
+Monsters Poison on Hit
+--------
+Travel to a Map of this tier or lower by using this in a personal Map Device. Maps can only be used once.
