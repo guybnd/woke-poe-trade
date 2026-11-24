@@ -12,6 +12,7 @@ export type NewsDemo =
 
 export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-seller-spread': { check: { name: 'Exalted Orb' }, spot: 'seller-spread' },
+  'price-check-exchange-ladder': { check: { name: 'Exalted Orb' }, spot: 'exchange-ladder' },
   // A Breach unique and its blessed upgrade.
   'price-check-related-upgrades': { check: { name: "Xoph's Inception", rarity: 'unique' }, spot: 'related' },
   'price-check-unique-recipe': { check: { name: 'The Will of Uul-Netol', rarity: 'unique' }, spot: 'related' },

@@ -194,27 +194,41 @@ test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back'
   await chip.click()
   await expect.poll(() => wants.length).toBe(1)
   expect(wants[0]).toEqual(['zana-map-tier-16'])
-  // Stock and the fulfill count both read 1400.
-  await expect(panel.getByText('1400', { exact: true }).first()).toBeVisible()
+  // One row per price (Guy, 2026-11-24): 36 maps at 5c, 1400 at 60c.
+  const steps = panel.locator('[data-bulk-step]')
+  await expect(steps).toHaveCount(2)
+  await expect(steps.nth(1)).toContainText('1400')
   await expect(chip).toHaveAttribute('aria-pressed', 'true')
   expect(searches.length).toBe(2)
   // Faustus's Currency Exchange doesn't trade maps: no banner saying it does.
   await expect(panel.getByText(/Currency Exchange/)).toHaveCount(0)
-  // A click on a seller whispers them for the count in Buy (WOKEPOET-523).
-  await panel.locator('[data-bulk-buy]').fill('10')
-  const big = panel.locator('[data-bulk-whisper]').filter({ hasText: '1400' })
-  await expect(big).toHaveAttribute('title', /Click to whisper: @s2c .*10 Map/)
+  // Buy 40: what it costs from the cheapest up (36 at 5c, 4 at 60c).
+  await panel.locator('[data-bulk-buy]').fill('40')
+  await expect(panel.locator('[data-bulk-total]')).toContainText('Buy 40 → 420')
+  await expect(panel.locator('[data-bulk-total]')).toContainText('2 sellers')
+  // The cheapest price starts open; the 60c one opens on a click, its seller with an amount and Whisper.
+  await steps.nth(1).click()
+  const amount = panel.locator('[data-bulk-amount]').nth(1)
+  await expect(amount).toHaveValue('4')
+  await amount.fill('10')
+  const big = panel.locator('[data-bulk-whisper]').nth(1)
+  await expect(big).toHaveAttribute('title', /Whisper: @s2c .*10 Map/)
   await big.click()
   const text = "@s2c Hi, I'd like to buy your 10 Map (Tier 16) (Memory-Influenced) for my 600 Chaos Orb in Testleague."
   await expect.poll(() => fakeApp.received.some(e => e.name === 'CLIENT->MAIN::user-action' &&
     (e.payload as { action?: string, text?: string }).action === 'paste-in-chat' &&
     (e.payload as { text?: string }).text === text)).toBe(true)
   await expect(panel.locator('[data-bulk-whispered]')).toHaveText('Whispered s2c')
+  // Whisper next works down the buy's sellers, cheapest first, each for what the buy takes.
+  await panel.locator('[data-bulk-next]').click()
+  const first = "@s1c Hi, I'd like to buy your 36 Map (Tier 16) (Memory-Influenced) for my 180 Chaos Orb in Testleague."
+  await expect.poll(() => fakeApp.received.some(e => (e.payload as { text?: string })?.text === first)).toBe(true)
+  await expect(panel.locator('[data-bulk-next]')).toContainText('(2/2)')
   await overlay.snap('map exchange sellers')
 
   // Back to the listings: the same trade search again (from the cache, as it's unchanged).
   await chip.click()
-  await expect(panel.getByText('1400', { exact: true })).toHaveCount(0)
+  await expect(panel.locator('[data-bulk-step]')).toHaveCount(0)
   await expect(panel.locator('[data-exchange-chip]')).not.toHaveAttribute('aria-pressed', 'true')
   await expect(panel.locator('.w-pc-foot, .w-pc-matched').first()).toBeVisible()
   expect(wants.length).toBe(1)
