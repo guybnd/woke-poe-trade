@@ -26,8 +26,11 @@ import { setAppIcon } from './woke/app-icon'
 import { saveBeforeQuit } from './woke/quit-flush'
 import { guardWebContents } from './woke/web-guard'
 import { appPrefs } from './woke/app-prefs'
+import { setRunAsAdminLog, startElevatedIfChosen } from './woke/run-as-admin'
+import { lockAfterWait } from './woke/wait-starter'
 
-if (!app.requestSingleInstanceLock()) {
+// woke: an elevated copy (run-as-admin.ts) retries while the old one lets go.
+if (!lockAfterWait(() => app.requestSingleInstanceLock())) {
   app.exit()
 }
 
@@ -50,12 +53,15 @@ app.on('second-instance', () => { tray?.notifyAlreadyRunning() })
 
 app.on('ready', async () => {
   perfMark('app ready')
+  // woke: "Always start as admin" asks for elevation before anything opens.
+  if (await startElevatedIfChosen()) return
   // woke: before any window: webviews locked down, links only to the browser.
   guardWebContents(app, session.defaultSession, (url) => shell.openExternal(url))
   setAppIcon(savedAppIcon())
   const appTray = new AppTray(eventPipe)
   tray = appTray
   const logger = new Logger(eventPipe)
+  setRunAsAdminLog((line) => { logger.write(line) })
   attachCrashLogger(logger)
   const gameLogWatcher = new GameLogWatcher(eventPipe, logger)
   const gameConfig = new GameConfig(eventPipe, logger)
