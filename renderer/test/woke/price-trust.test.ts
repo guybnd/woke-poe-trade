@@ -57,3 +57,17 @@ describe('snapshot prices', () => {
     expect(countedPrices(plain)).toBe(plain)
   })
 })
+
+describe('snapshot prices, new categories and gear', () => {
+  it("doesn't call a category's first tracked day fake, or hold gear", () => {
+    const items = parseDenseChunks([
+      chunk('Currency', 'currency', [line('Divine Orb', 195, [21, 39, 41, 41, 36, 31, 26])]),
+      chunk('Viscera', 'viscera', [line('New Thing', 50, [null, null, null, null, null, null, 0])]),
+      chunk('UniqueArmour', 'unique-armours', [
+        line('Old Armour', 10, [0, 0, 0, 0, 0, 0, 0]),
+        line('Kaom\'s Heart', 500, [-99, -99, -99, -99, -99, -99, 0])
+      ])
+    ])
+    expect(items.filter(i => i.held)).toEqual([])
+  })
+})
