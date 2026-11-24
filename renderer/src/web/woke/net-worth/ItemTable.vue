@@ -40,7 +40,7 @@
         </td>
         <td class="w-num" :class="tone(changes.get(l.key))">{{ pct(changes.get(l.key)) }}</td>
         <td class="w-dim w-trunc" :class="$style.tab" :title="l.tabIds.map(nameOfTab).join(', ')">{{ tabText(l) }}</td>
-        <td :class="$style.actsCell"><WLineActs :name="l.name" :out="l.state === 'ignored'" :entries="entriesOf(l)" :head="e => itemMenuHead(menuOf(l), e)" /></td>
+        <td :class="$style.actsCell"><WLineActs :name="l.name" :out="l.state === 'ignored'" :entries="entriesOf(l)" :head="e => itemMenuHead(menuOf(l), e)" @out="handlersOf(l).out($event)" /></td>
       </tr>
       <tr v-if="!lines.length">
         <td colspan="8" class="w-dim" :class="$style.left">
