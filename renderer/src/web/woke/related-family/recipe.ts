@@ -45,9 +45,10 @@ export function uniqueRecipes (find: Find): UniqueRecipe[] {
   return out
 }
 
-// The recipes a name makes or is a part of.
+// The recipes a unique makes or is a part of. Only unique parts count: an Orb
+// of Fusing is a part of five recipes and says nothing about any of them.
 export function recipesOf (refName: string, list: UniqueRecipe[]): UniqueRecipe[] {
-  return list.filter(r => r.makes.refName === refName || r.parts.some(p => p.info.refName === refName))
+  return list.filter(r => r.makes.refName === refName || r.parts.some(p => p.info.namespace === 'UNIQUE' && p.info.refName === refName))
 }
 
 export interface RecipeSum {

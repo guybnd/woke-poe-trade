@@ -50,7 +50,7 @@ import { sideRow, type SideRow } from './side-row'
 import { familyOf, familyRows, type Family } from '@/web/woke/related-family/family'
 import { recipesOf, recipeSum, uniqueRecipes } from '@/web/woke/related-family/recipe'
 
-const { findPriceByQuery, findPriceByName, autoCurrency, xchgRate } = usePoeninja()
+const { findPriceByQuery, findPricesByName, autoCurrency, xchgRate } = usePoeninja()
 
 function findItemByQueryId (queryId: string): BaseType | undefined {
   const [ns, encodedName] = queryId.split('::')
@@ -98,13 +98,20 @@ function getFamily (item: ParsedItem) {
 // woke: the vendor recipes the item makes or is a part of (Lost Unity for one of
 // its rings): every part, then what it makes, each with its poe.ninja price.
 const findRecipeItem = (name: string) => ITEM_BY_REF('UNIQUE', name)?.[0] ?? ITEM_BY_REF('ITEM', name)?.[0]
-// A unique's row is named by its base (as a checked unique's is), else any
-// variant of it (a unique map's "T0"), else the row with no variant.
+// A unique's row is named by its base (as a checked unique's is), else its
+// cheapest variant that isn't linked (a 6L price isn't the part's), else the
+// row with no variant.
 function chaosOf (info: BaseType): number | null {
   const ns = info.namespace
-  const byBase = ns === 'UNIQUE' && info.unique ? findPriceByQuery({ ns, name: info.refName, variant: info.unique.base }) : null
-  return (byBase ?? (ns === 'UNIQUE' ? findPriceByName(ns, info.refName) : null) ??
-    findPriceByQuery({ ns, name: info.refName, variant: undefined }))?.chaos ?? null
+  if (ns === 'UNIQUE') {
+    const byBase = info.unique ? findPriceByQuery({ ns, name: info.refName, variant: info.unique.base }) : null
+    if (byBase) return byBase.chaos
+    const rows = findPricesByName(ns, info.refName)
+    const plain = rows.filter(r => !/\b\dL\b/.test(r.variant ?? ''))
+    const pick = (plain.length ? plain : rows).map(r => r.chaos)
+    if (pick.length) return Math.min(...pick)
+  }
+  return findPriceByQuery({ ns, name: info.refName, variant: undefined })?.chaos ?? null
 }
 function getRecipes (item: ParsedItem) {
   const own = item.info.refName
@@ -206,7 +213,8 @@ export default defineComponent({
       note?: string
     }
     const recipes = computed(() => {
-      if (!props.item || updatedAt.value === undefined) return []
+      // Only a unique lists its recipes: an Orb of Fusing is a part of five.
+      if (!props.item || !updatedAt.value || props.item.info.namespace !== 'UNIQUE') return []
       return getRecipes(props.item)
     })
     const sections = computed<Section[]>(() => {

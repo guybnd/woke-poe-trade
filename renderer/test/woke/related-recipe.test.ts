@@ -24,6 +24,12 @@ describe('unique recipes', () => {
     ])
   })
 
+  it('lists nothing for a currency or splinter part', () => {
+    expect(recipesOf('Orb of Fusing', list())).toEqual([])
+    expect(recipesOf('Timeless Karui Splinter', list())).toEqual([])
+    expect(recipesOf('Lethal Pride', list()).map(r => r.parts[0].qty)).toEqual([10])
+  })
+
   it('leaves out recipes whose parts are not named items', () => {
     const made = list().map(r => r.makes.refName)
     expect(made).not.toContain('Loreweave')
