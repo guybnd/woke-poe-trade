@@ -121,7 +121,7 @@ import { bigGains, refreshWaitMs, seriesFor, topCardChanges } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { ReaderStatus } from './widget'
 import type { RunGlance } from './runs'
-import { countLabel, runPerHour, tallyRows, unitOf } from './runs'
+import { countLabel, craftTime, runPerHour, tallyRows, unitOf } from './runs'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
 import RateTimePick from '../shared/RateTimePick.vue'
@@ -279,7 +279,7 @@ const perHour = computed(() => {
   if (!r) return null
   return runPerHour(r.profitChaos, (r.timeTo ?? r.at) - r.startAt, spent.value ?? r.time, rateTime(), r.craft === true)
 })
-const perHourTip = computed(() => (spent.value ?? props.run?.time) ? `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}` : 'Per hour of the whole run: Client.txt not read')
+const perHourTip = computed(() => (spent.value ?? props.run?.time) ? `Per hour, ${leftOutText(craftTime(rateTime(), props.run?.craft === true))}. ${RATE_TIME_WHERE}` : 'Per hour of the whole run: Client.txt not read')
 
 const fmt = (n: number) => formatAmount(n)
 const toDiv = (chaos: number) => divineRate.value ? chaos / divineRate.value : chaos

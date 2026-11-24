@@ -29,6 +29,10 @@ export interface TallyLine {
   // No price when read (a fresh rare you crafted): its chaos stays 0 and a
   // crafting run lists it under Made, to price by hand.
   unpriced?: true
+  // Such an item that left the stash priced (Set my price, or poe.ninja got a
+  // price later): the stash read lost that value, but it never counted as a
+  // gain, so it isn't a loss (runTotals adds it back).
+  pricedOutChaos?: number
 }
 
 // A cost the stash can't see: `qty` a map at `unitChaos` each (the price you
@@ -172,6 +176,11 @@ export function addToTally (run: Run, diff: StashDiff): Run {
   const tally = { ...run.tally }
   for (const [lines, dir] of [[diff.added, 1], [diff.removed, -1]] as const) {
     for (const l of lines) {
+      const was = tally[l.key]
+      if (dir < 0 && was?.unpriced) {
+        tally[l.key] = { ...was, removed: was.removed + l.count, pricedOutChaos: (was.pricedOutChaos ?? 0) + l.chaos }
+        continue
+      }
       const t: TallyLine = tally[l.key] ? { ...tally[l.key] } : { name: l.name, icon: l.icon, added: 0, removed: 0, addedChaos: 0, removedChaos: 0 }
       if (!t.cost && isMapCostItem(l.name, l.cat)) t.cost = true
       if (!t.currency && l.cat === 'currency') t.currency = true
@@ -180,7 +189,8 @@ export function addToTally (run: Run, diff: StashDiff): Run {
     }
   }
   // Unpriced items: counts only (a crafting run's Made column).
-  for (const [lines, dir] of [[diff.unpricedIn ?? [], 1], [diff.unpricedOut ?? [], -1]] as const) {
+  const unpricedLines = run.kind === 'craft' ? [[diff.unpricedIn ?? [], 1], [diff.unpricedOut ?? [], -1]] as const : []
+  for (const [lines, dir] of unpricedLines) {
     for (const l of lines) {
       const t: TallyLine = tally[l.key] ? { ...tally[l.key] } : { name: l.name, icon: l.icon, added: 0, removed: 0, addedChaos: 0, removedChaos: 0 }
       t.unpriced = true
@@ -258,6 +268,8 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], count: numb
     editChaos += now - was
     if (e.out) leftOutStash += Math.abs(was)
   }
+  // Made items that left priced: not a loss (TallyLine.pricedOutChaos).
+  for (const t of Object.values(run.tally)) editChaos += t.pricedOutChaos ?? 0
   const manualChaos = (run.manual ?? []).reduce((s, m) => s + (m.side === 'in' ? 1 : -1) * Math.max(0, m.count) * Math.max(0, m.each), 0)
   const leftOutChaos = leftOutStash + (outside.leftOutShownChaos ?? 0)
   const profitChaos = stashChaos - takenOverChaos - costChaos - onceChaos - beforeChaos + editChaos + manualChaos - (outside.leftOutChaos ?? 0)
@@ -409,7 +421,7 @@ export function compareRows (done: readonly Run[], time: RateTime, byName = fals
     const runs = f.maps + (f.fights ?? 0)
     const cost = (costPerRun(r, runs, mapCostKeys) ?? 0) * runs
     const top = topDrop(r)
-    const key = byName ? r.name : r.id
+    const key = byName ? `${r.kind ?? 'maps'}:${r.name}` : r.id
     let a = byKey.get(key)
     if (!a) {
       a = { id: key, name: r.name, count: 0, startAt: r.startAt, ms: 0, rateMs: 0, maps: 0, fights: 0, profit: 0, cost: 0, top: null, craft: r.kind === 'craft' }
@@ -483,6 +495,8 @@ export function craftTime (time: RateTime, craft: boolean): RateTime {
 export function tallyValue (t: TallyLine, e: RowEdit | undefined): number {
   const was = netOf(t)
   if (!e) return was
+  // A made item that left the stash: its sale counts, not your price.
+  if (t.unpriced && t.added - t.removed <= 0) return was
   if (e.out) return 0
   const n = Math.abs(t.added - t.removed)
   return Math.sign(was || 1) * edited(e, n, Math.abs(was)).chaos

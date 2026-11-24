@@ -405,7 +405,7 @@ export interface StashDiff {
   unpricedOut?: DiffLine[]
 }
 
-const MAX_UNPRICED = 30
+const MAX_UNPRICED = 80
 
 // Items that came or went between two reads (moving between tabs isn't a change).
 // Ignored items never count, and items with no price are worth nothing.

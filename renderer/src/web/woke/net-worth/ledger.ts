@@ -288,7 +288,10 @@ export const MAX_DIFFS = 200
 export const DIFF_ROWS_KEPT = 8
 
 export function keepDiff (diffs: StashDiff[], d: StashDiff): StashDiff[] {
-  const small = { ...d, added: d.added.slice(0, DIFF_ROWS_KEPT), removed: d.removed.slice(0, DIFF_ROWS_KEPT) }
+  const small: StashDiff = { ...d, added: d.added.slice(0, DIFF_ROWS_KEPT), removed: d.removed.slice(0, DIFF_ROWS_KEPT) }
+  // Kept for a crafting run started from an older point, a few at most.
+  if (d.unpricedIn) small.unpricedIn = d.unpricedIn.slice(0, DIFF_ROWS_KEPT)
+  if (d.unpricedOut) small.unpricedOut = d.unpricedOut.slice(0, DIFF_ROWS_KEPT)
   return [...diffs.filter(x => x.at !== d.at), small].sort((a, b) => a.at - b.at).slice(-MAX_DIFFS)
 }
 

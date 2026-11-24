@@ -173,7 +173,7 @@ import { tipFor } from './tips'
 import type { TipIndex } from './tips'
 import { span } from './play-time'
 import Coin from './Coin.vue'
-import { compareRows, countLabel, shownFights, shownMaps, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, smallSample, sortCompare, tallyRows, tallyValue, topDrop, unitOf, SAMPLE_MIN_RUNS } from './runs'
+import { compareRows, countLabel, craftTime, shownFights, shownMaps, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, smallSample, sortCompare, tallyRows, tallyValue, topDrop, unitOf, SAMPLE_MIN_RUNS } from './runs'
 import { kitPrice } from './run-kit'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
@@ -316,7 +316,7 @@ const perHour = computed(() => {
   const clock = r.stoppedAt == null ? Math.max(0, (props.points[props.points.length - 1]?.at ?? r.startAt) - r.startAt) : Math.max(0, r.stoppedAt - r.startAt)
   return runPerHour(t.profitChaos, clock, spent.value?.ms, rateTime(), r.kind === 'craft')
 })
-const perHourTip = computed(() => spent.value ? `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}` : 'Per hour of the whole run: Client.txt not read')
+const perHourTip = computed(() => spent.value ? `Per hour, ${leftOutText(craftTime(rateTime(), shownRun.value?.kind === 'craft'))}. ${RATE_TIME_WHERE}` : 'Per hour of the whole run: Client.txt not read')
 const holdKey = computed(() => { const w = netWorthWidget(); return w ? runHotkeyOf(w) : null })
 function removeHeld (id: string, carried: boolean) {
   edit(r => carried ? { ...r, carried: (r.carried ?? []).filter(h => h.id !== id) } : { ...r, held: (r.held ?? []).filter(h => h.id !== id) })

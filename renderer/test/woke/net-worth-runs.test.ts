@@ -115,6 +115,27 @@ describe('crafting run (pick B)', () => {
     r = addToTally(r, { ...diff(T0 + 2 * M, [], []), unpricedOut: [made('R:Glyph Spiral')] })
     expect(runTotals(r, pts, 0, T0 + H).profitChaos).toBe(-40)
   })
+  it('a count edit on a made item stops counting once it sold', () => {
+    let r = run({ kind: 'craft' })
+    r = addToTally(r, { ...diff(T0 + M, [], []), unpricedIn: [made('M:Cobalt Jewel', 3)] })
+    r = { ...r, edits: { 'tally:M:Cobalt Jewel': { count: 1, each: 50 } } }
+    expect(runTotals(r, [], 0, T0 + H).profitChaos).toBe(50)
+    r = addToTally(r, { ...diff(T0 + 2 * M, [], []), unpricedOut: [made('M:Cobalt Jewel', 3)] })
+    expect(runTotals(r, [], 0, T0 + H).profitChaos).toBe(0)
+  })
+  it('a made item priced later and sold is not a loss, nor under Used', () => {
+    let r = run({ kind: 'craft' })
+    r = addToTally(r, { ...diff(T0 + M, [], []), unpricedIn: [made('R:Glyph Spiral')] })
+    // Set my price 45, then it sells: the read loses 45.
+    r = addToTally(r, diff(T0 + 2 * M, [], [line('R:Glyph Spiral', 1, 45)]))
+    expect(runTotals(r, [point(T0 + 2 * M, -45)], 0, T0 + H).profitChaos).toBe(0)
+    expect(tallyRows(r).used).toEqual([])
+    expect(tallyRows(r).made).toEqual([])
+  })
+  it('a map run keeps no unpriced lines', () => {
+    const r = addToTally(run(), { ...diff(T0 + M, [], []), unpricedIn: [made('R:Junk')] })
+    expect(r.tally).toEqual({})
+  })
   it('per hour counts hideout time as play for a crafting run', () => {
     const split = { map: 0, play: 0, hub: H, off: 0 }
     expect(runPerHour(100, H, split, 'play')).toBeNull()
