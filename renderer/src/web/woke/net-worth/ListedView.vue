@@ -12,11 +12,11 @@
   </WEmpty>
   <template v-else>
     <section :class="$style.head">
-      <span :class="$style.total" class="w-num" :title="`Asking ${inChaos(sum.askChaos)}`" data-listed-total>{{ div(sum.askChaos) }}<Coin :chaos="!divine" /></span>
+      <span :class="$style.total" class="w-num" :title="headTitle" data-listed-total>{{ div(head.askChaos) }}<Coin :chaos="!divine" /></span>
       <span class="w-dim text-xs">
-        asking · {{ sum.count }} {{ sum.count === 1 ? 'listing' : 'listings' }}<template v-if="sum.worthChaos !== sum.askChaos"> · worth about {{ div(sum.worthChaos) }} {{ unit }}</template>
-        <template v-if="sum.stale"> · <span class="w-warn" data-listed-stale>{{ sum.stale }} unsold {{ staleDays }}d+</span></template>
-        <template v-if="sum.unpriced"> · {{ sum.unpriced }} in a currency without a price</template>
+        asking<template v-if="filterLabel"> for <span class="w-accent" data-listed-filtered>{{ filterLabel }}</span></template> · {{ head.count }} {{ head.count === 1 ? 'listing' : 'listings' }}<template v-if="head.worthChaos !== head.askChaos"> · worth about {{ div(head.worthChaos) }} {{ unit }}</template>
+        <template v-if="head.stale && filter !== 'stale'"> · <span class="w-warn" data-listed-stale>{{ head.stale }} unsold {{ staleDays }}d+</span></template>
+        <template v-if="head.unpriced"> · {{ head.unpriced }} in a currency without a price</template>
       </span>
       <label :class="$style.days" class="w-dim text-xs" title="A listing unsold this many days counts as stale: the dock icon counts them">
         Stale after <input v-model.number="daysInput" type="number" min="1" max="30" step="1" aria-label="Stale after days" :class="$style.daysIn"> d
@@ -104,6 +104,16 @@ const shown = computed(() => {
   if (!f) return sorted.value
   return sorted.value.filter(r => f === 'stale' ? r.stale : f === 'over' ? isOver(r) : saleType(r.item) === f)
 })
+// The head's numbers: the rows the chip picked, or all of them.
+const head = computed(() => filter.value ? pendingTotals(shown.value) : sum.value)
+const filterLabel = computed(() => {
+  const f = filter.value
+  if (!f) return ''
+  return f === 'stale' ? 'stale' : f === 'over' ? 'overpriced' : SALE_TYPES.find(t => t.id === f)?.label.toLowerCase() ?? ''
+})
+const headTitle = computed(() => filter.value
+  ? `Asking ${inChaos(head.value.askChaos)} for the picked chip (all ${sum.value.count}: ${inChaos(sum.value.askChaos)}). Click the chip again for all`
+  : `Asking ${inChaos(sum.value.askChaos)}`)
 // A filter that has nothing left drops.
 watch(shown, (list) => { if (filter.value && !list.length) filter.value = null })
 
