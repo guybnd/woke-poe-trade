@@ -169,7 +169,11 @@ test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back'
   await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBe(1)
   const not = searches[0].query.stats.find(g => g.type === 'not')!
-  expect(not.filters.find(f => f.id === 'implicit.stat_1792283443')?.disabled).toBeFalsy()
+  // Shaper and Elder each by option: with no option it matched nothing.
+  expect(not.filters.filter(f => f.id === 'implicit.stat_1792283443')).toEqual([
+    { id: 'implicit.stat_1792283443', value: { option: 1 }, disabled: false },
+    { id: 'implicit.stat_1792283443', value: { option: 2 }, disabled: false }
+  ])
 
   // Off: the next search includes them.
   await noElder.click()
@@ -262,7 +266,7 @@ test('map: Base map and the Bulk tab keep the map\'s influence', async ({ overla
   await search.click()
   await expect.poll(() => searches.length).toBeGreaterThan(0)
   // And No Elder (WOKEPOET-523), which is the kind of map too.
-  expect(onIds(searches[0]).sort()).toEqual([ORIGINATOR, 'implicit.stat_1792283443'].sort())
+  expect(onIds(searches[0]).sort()).toEqual([ORIGINATOR, 'implicit.stat_1792283443', 'implicit.stat_1792283443'].sort())
 
   await panel.locator('[data-trade-presets]').getByText('Bulk', { exact: true }).click()
   const before = searches.length

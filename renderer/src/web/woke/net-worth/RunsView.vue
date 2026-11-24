@@ -32,8 +32,14 @@
       <div :class="$style.head">
         <span :class="$style.title" class="w-trunc">{{ shownRun.name }}</span>
         <span class="w-dim w-num text-xs">{{ clock(shownRun.startAt) }} → {{ shownRun.stoppedAt ? clock(shownRun.stoppedAt) : 'now' }} · {{ span(totals.ms) }} · {{ countLabel(totals.maps, totals.fights) }}</span>
-        <WButton v-if="shownRun === live" size="sm" :disabled="faustusReading" @click="stop">Stop</WButton>
-        <WButton v-else size="sm" variant="ghost" @click="opened = null">Close</WButton>
+        <WButton v-if="shownRun === live" size="sm" :disabled="faustusReading" :title="'Reads your stash one last time and your Faustus listings, then shows the summary'" @click="stop">{{ stopPhase === 'stash' ? 'Reading stash…' : stopPhase === 'listings' ? 'Stopping…' : 'Stop' }}</WButton>
+        <span v-else :class="$style.headEnd">
+          <span :class="$style.seg" role="group" aria-label="Show the run">
+            <button type="button" :class="{ [$style.on]: showSummary }" :aria-pressed="showSummary" data-run-summary-tab @click="summaryId = shownRun.id">Summary</button>
+            <button type="button" :class="{ [$style.on]: !showSummary }" :aria-pressed="!showSummary" data-run-details-tab @click="summaryId = null">Details</button>
+          </span>
+          <WButton size="sm" variant="ghost" @click="opened = null">Close</WButton>
+        </span>
       </div>
       <div :class="$style.hero" class="w-num">
         <span :title="profitTitle"><span :class="$style.caps">Profit</span><b :class="[$style.big, tone(totals.profitChaos)]">{{ signed(totals.profitChaos) }}<Coin :chaos="!divine" /></b></span>
@@ -44,7 +50,9 @@
       </div>
       <RunTimeBar :start-at="shownRun.startAt" :end="timeEnd" :maps="totals.runs" :unit="unit" @spent="spent = $event" />
 
-      <div :class="$style.cols">
+      <!-- A stopped run's summary (pick W1 + T1): opens on Stop. -->
+      <RunSummary v-if="showSummary && totals" :key="shownRun.id" :run="shownRun" :done="doc.done" :totals="totals" :per-hour="perHour" :spent="spent" :tips="tips" :divine="divine" :map-cost-keys="mapCostKeys" :league="league" @details="summaryId = null" />
+      <div v-else :class="$style.cols">
         <!-- In: what came into the stash, and what you added. -->
         <div :class="$style.col" data-run-in>
           <div :class="$style.colHead"><span :class="$style.colTitle">In</span><span class="w-num w-up">{{ signed(inSum) }}<Coin :chaos="!divine" /></span></div>
@@ -151,7 +159,7 @@
 // Strategy runs (WOKEPOET-515), the Runs view of Net worth: start a run from
 // the last read or a chart point, see profit since then with what got used
 // up, type the costs the stash can't see, and look back at finished runs.
-import { computed, onUnmounted, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, onUnmounted, shallowRef, watch } from 'vue'
 import { WButton, WKbd, toast, vItemTip } from '../ui'
 import { AppConfig } from '@/web/Config'
 import { NET_WORTH_TYPE, runHotkeyOf } from './widget'
@@ -171,7 +179,7 @@ import RunAdd from './RunAdd.vue'
 import type { AddedLine } from './RunAdd.vue'
 import RunTimeBar from './RunTimeBar.vue'
 import type { RunTime } from './run-time'
-import { addCost, deleteRun, editRun, loadRuns, refreshRunMaps, runMaps, runsDoc, setOutside } from './run-store'
+import { addCost, deleteRun, editRun, loadRuns, refreshRunMaps, runMaps, runsDoc, setOutside, stopPhase, summaryFor, SUMMARY_FOR_MS } from './run-store'
 import { stopLiveRun } from './run-stop'
 import { lastCostsOf, startRunAt } from './run-start'
 import { outsideSums, outsideTotals, rowKey, setBefore, setEdit } from './faustus'
@@ -202,6 +210,19 @@ const live = computed(() => doc.value.live?.league === props.league ? doc.value.
 const opened = shallowRef<string | null>(null)
 const shownRun = computed<Run | null>(() => (opened.value ? doc.value.done.find(r => r.id === opened.value) : null) ?? live.value)
 watch(() => [shownRun.value?.id, shownRun.value?.stoppedAt], () => { refreshRunMaps(shownRun.value).catch(() => {}) }, { immediate: true })
+// The summary (pick W1): its own chunk, loaded when a run stops or you ask.
+const RunSummary = defineAsyncComponent(() => import('./RunSummary.vue'))
+const summaryId = shallowRef<string | null>(null)
+const showSummary = computed(() => shownRun.value?.stoppedAt != null && summaryId.value === shownRun.value.id)
+// A run that just stopped (here or from the dock card): open its summary.
+watch([summaryFor, () => doc.value.done], ([want]) => {
+  if (!want) return
+  if (Date.now() - want.at > SUMMARY_FOR_MS) { summaryFor.value = null; return }
+  if (!doc.value.done.some(r => r.id === want.id)) return
+  opened.value = want.id
+  summaryId.value = want.id
+  summaryFor.value = null
+}, { immediate: true })
 // New maps: read again with each new chart point (a read lands after maps).
 watch(() => props.points.length, () => { if (shownRun.value && !shownRun.value.stoppedAt) refreshRunMaps(shownRun.value).catch(() => {}) })
 
@@ -370,7 +391,7 @@ async function start () {
 async function stop () {
   if (!live.value || faustusReading.value) return
   faustusReading.value = true
-  try { await stopLiveRun(props.league, props.points, props.divine) } catch {} finally { faustusReading.value = false }
+  try { await stopLiveRun(props.league, () => props.points, props.divine) } catch {} finally { faustusReading.value = false }
 }
 function openId (id: string) {
   opened.value = opened.value === id ? null : id
@@ -434,6 +455,7 @@ function addPerMap (l: AddedLine) {
 .card { border: 1px solid var(--w-line); padding: var(--w-s2) var(--w-s3); gap: var(--w-s3); }
 .head { display: flex; align-items: baseline; gap: var(--w-s2); min-width: 0; }
 .head > :last-child:not(:first-child) { margin-left: auto; }
+.headEnd { display: flex; align-items: center; gap: var(--w-s2); }
 .title { font-family: var(--w-caps-face); font-weight: 600; color: var(--w-gold); min-width: 0; }
 .caps { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); }
 .row { display: flex; gap: var(--w-s2); align-items: center; }

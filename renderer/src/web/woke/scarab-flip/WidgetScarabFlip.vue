@@ -31,7 +31,15 @@
         <b>{{ verdict }}</b>
         <span class="w-dim">{{ verdictSub }}</span>
       </div>
+      <div v-if="flip?.kind === 'range' && rangeSpan" :class="$style.verdict" class="w-num w-verdict" data-flip-range>
+        <b>No odds measured</b>
+        <span class="w-dim">{{ method.inputs }} {{ family.noun }}s give back 1 other: from <span v-item-tip="{ name: rangeSpan.low.name, type: family.ninjaType }">{{ shortName(rangeSpan.low.name) }}</span> at {{ fmt(rangeSpan.low.chaos) }} to <span v-item-tip="{ name: rangeSpan.high.name, type: family.ninjaType }">{{ shortName(rangeSpan.high.name) }}</span> at {{ fmt(rangeSpan.high.chaos) }}</span>
+      </div>
+      <div v-if="flip?.kind === 'range'" :class="[$style.note, $style.warning]">{{ RANGE_NOTE }}</div>
       <div v-if="warning" :class="[$style.note, $style.warning]">{{ warning }}</div>
+      <div v-if="openerSpan" :class="$style.note" class="w-num">
+        <span v-item-tip="{ name: family.opener!, type: family.ninjaType }">{{ family.opener }}</span> opens to any {{ family.noun }}, worth {{ fmt(openerSpan.low) }} to {{ fmt(openerSpan.high) }}. It has no price to buy at.
+      </div>
       <div v-if="openerValue != null" :class="$style.note" class="w-num">
         <span v-item-tip="{ name: family.opener!, type: family.ninjaType }">{{ family.opener }}</span> opens to {{ fmt(openerValue) }} on average<template v-if="family.lowConfidence && !countOf('yours')">, with every result counted as equally likely</template>. It has no price to buy at.
       </div>
@@ -40,6 +48,24 @@
       <WEmpty v-else-if="!flip" icon="fas fa-recycle">poe.ninja has no {{ family.noun }} prices yet.</WEmpty>
       <WEmpty v-else-if="flip.kind === 'no-pool'" icon="fas fa-recycle">poe.ninja has {{ family.noun }} prices, but none this method can use yet.</WEmpty>
       <WEmpty v-else-if="flip.kind === 'no-cost'" icon="fas fa-recycle">No {{ method.lifeforce }} Crystallised Lifeforce price yet, so the cost of a reroll is unknown.</WEmpty>
+
+      <template v-else-if="flip.kind === 'range'">
+        <WEmpty v-if="!flip.rows.length" icon="fas fa-recycle">Too few priced {{ family.noun }}s to show a range.</WEmpty>
+        <template v-else>
+          <div class="w-row w-row--head" :class="$style.rangeGrid">
+            <span>{{ capitalize(family.noun) }}</span><span class="text-right">Price</span>
+            <span class="text-right" :title="`What ${method.inputs} of this cost`">Cost of {{ method.inputs }}</span>
+            <span class="text-right" title="The cheapest and dearest result one recipe can give, after your sell discount">Gives back</span>
+          </div>
+          <div v-for="r in flip.rows" :key="r.name" class="w-row" :class="$style.rangeGrid" @contextmenu="rowMenu($event, r.name)">
+            <FlipName :name="r.name" :item="r.name" :type="family.ninjaType" />
+            <WPrice :chaos="r.chaos" :divine="divine" class="text-right" />
+            <span class="text-right w-num">{{ amount(r.cost) }}c</span>
+            <span class="text-right w-num" :class="r.low.chaos > r.cost ? 'w-up' : r.high.chaos < r.cost ? 'w-down' : ''"
+              :title="r.low.chaos > r.cost ? 'Even the worst result pays' : r.high.chaos < r.cost ? 'Even the best result loses' : 'Could go either way'">{{ amount(r.low.chaos) }}–{{ amount(r.high.chaos) }}c</span>
+          </div>
+        </template>
+      </template>
 
       <template v-else-if="view === 'buy'">
         <WEmpty v-if="!buy.length" icon="fas fa-recycle">No {{ family.noun }} is worth flipping this way right now.</WEmpty>
@@ -112,7 +138,7 @@
       </template>
 
       <template #footer>
-        <span>{{ footerText }}</span> <button v-if="pool" type="button" :class="$style.weightsLink" @click="openWeights">Weights</button> <WInfo :text="footerTitle" />
+        <span>{{ footerText }}</span> <button v-if="pool || flip?.kind === 'range'" type="button" :class="$style.weightsLink" @click="openWeights">Weights</button> <WInfo :text="footerTitle" />
       </template>
     </WPanel>
   </Widget>
@@ -147,7 +173,7 @@ import type { DockMenuAction } from '../dock/dock'
 import { useZone } from '../shared/zone'
 import { DEFAULT_FLIP_SORT, JACKPOT_CHAOS, SUPPLY_HIGH, SUPPLY_MEDIUM, buyList, firstSortDir, isTraded, flipOdds, parseExchange, rareCheapList, sortFlips, supplyLevel } from './calc'
 import type { FlipRow, FlipSortKey, UpgradeRow, WeightSource } from './calc'
-import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, bestFlip, knownFamily, parseLifeforce, priceFlip, pricedFamilies, shortName, shownFamily, unpricedShare } from './families'
+import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, RANGE_NOTE, bestFlip, knownFamily, parseLifeforce, priceFlip, pricedFamilies, shortName, shownFamily, unpricedShare } from './families'
 import type { Exchanges, FlipMethodId } from './families'
 import { stashHotkeyTarget } from './widget'
 import type { ScarabFlipWidget } from './widget'
@@ -256,7 +282,7 @@ const lifeforcePerItem = computed(() => parseLifeforce(props.config.lifeforcePer
 const options = computed(() => ({ sellDiscount: props.config.sellDiscount / 100, reroll: props.config.reroll }))
 
 const flip = computed(() => snapshot.value
-  ? priceFlip(family.value, method.value, snapshot.value.items, exchanges.value, options.value, lifeforcePerItem.value, props.config.weights)
+  ? priceFlip(family.value, method.value, snapshot.value.items, exchanges.value, options.value, lifeforcePerItem.value, props.config.weights, props.config.hideUntraded)
   : null)
 const pool = computed(() => flip.value?.kind === 'pool' ? flip.value.model : null)
 const rows = computed<Array<FlipRow | UpgradeRow>>(() => {
@@ -313,6 +339,19 @@ const rareCheap = computed(() => pool.value ? rareCheapList(pool.value) : [])
 const odds = computed(() => pool.value ? flipOdds(pool.value) : null)
 // What the family's opener is worth used: the average result, after the sell discount.
 const openerValue = computed(() => family.value.opener && odds.value && odds.value.saleValue > 0 ? odds.value.saleValue : null)
+// Unmeasured odds: the cheapest and dearest result over the whole pool.
+const rangeSpan = computed(() => {
+  if (flip.value?.kind !== 'range' || !flip.value.rows.length) return null
+  const rows = flip.value.rows
+  const low = rows.reduce((a, r) => r.low.chaos < a.chaos ? r.low : a, rows[0].low)
+  const high = rows.reduce((a, r) => r.high.chaos > a.chaos ? r.high : a, rows[0].high)
+  return { low, high }
+})
+// What the opener can give: any one of the family, so its full range.
+const openerSpan = computed(() => {
+  if (!family.value.opener || !rangeSpan.value) return null
+  return { low: rangeSpan.value.low.chaos, high: rangeSpan.value.high.chaos }
+})
 // Both bars use one scale, so a long value bar means more than a long chance bar.
 const oddsScale = computed(() => Math.max(...(odds.value?.buckets ?? []).flatMap(b => [b.chance, b.valueShare]), 0.0001))
 
@@ -462,9 +501,11 @@ async function toggleOutlines () {
   const priced = priceFlip(tabFamily, tabMethod, prices.items, exchanges.value, options.value, lifeforcePerItem.value, props.config.weights)
   if (priced?.kind !== 'pool' && priced?.kind !== 'upgrade') {
     hostRequest('stash-watch-stop', null).catch(() => {})
-    stashNote(priced?.kind === 'no-cost'
-      ? `No ${tabMethod.lifeforce ?? ''} lifeforce price yet, so nothing to outline`
-      : `No ${tabFamily.noun} prices yet, so nothing to outline`)
+    stashNote(priced?.kind === 'range'
+      ? `No measured odds for ${tabFamily.noun}s, so nothing to outline`
+      : priced?.kind === 'no-cost'
+        ? `No ${tabMethod.lifeforce ?? ''} lifeforce price yet, so nothing to outline`
+        : `No ${tabFamily.noun} prices yet, so nothing to outline`)
     return
   }
   const profits = new Map<string, number>()
@@ -533,6 +574,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 .sortHead { all: unset; cursor: pointer; white-space: nowrap; }
 .sortHead:hover, .sortHead:focus-visible { color: var(--w-fg); }
 .sorted { color: var(--w-accent); }
+.rangeGrid { grid-template-columns: minmax(0, 1fr) 62px calc(72px * var(--w-text-scale, 1)) calc(96px * var(--w-text-scale, 1)); }
 .rareGrid { grid-template-columns: minmax(0, 1fr) 62px 76px calc(64px * var(--w-text-scale, 1)); }
 .sourceGrid { grid-template-columns: minmax(0, 1fr) 76px 44px; }
 .note { padding: 8px var(--w-pad); color: var(--w-dim); font-size: var(--w-fs-sm); white-space: normal; overflow-wrap: anywhere; }

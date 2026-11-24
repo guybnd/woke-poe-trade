@@ -210,12 +210,28 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
       if (/Stop/.test(label) && !/Stopping/.test(label)) await stopBtn.click()
       await expect(runTab).toHaveCount(0, { timeout: 4000 })
     }).toPass({ timeout: 30_000 })
+    // Stop reads the stash one last time, then the run's Summary waits in
+    // the window (pick W1): the game's last zone was a boss arena, so it
+    // doesn't pop up over the game. Best drops with their item tooltip, map
+    // times, spent and kept, tips.
     await overlay.pressHotkey(overlay.config.overlayKey)
+    const summary = panel.locator('[data-run-summary]')
+    await expect(summary).toBeVisible({ timeout: 45_000 })
+    const drop = summary.locator('[data-summary-drop]').filter({ hasText: 'The Apothecary' })
+    await expect(drop).toBeVisible()
+    await drop.locator('[data-item-tip]').hover()
+    await expect(overlay.page.getByRole('tooltip')).toContainText('The Apothecary')
+    await overlay.page.mouse.move(0, 0)
+    await expect(summary.locator('[data-summary-vs]')).toContainText('Your first Nightmare maps run')
+    await expect(summary.locator('[data-summary-spend]')).toContainText('Spent')
+    await expect(summary.locator('[data-summary-tips]')).toBeVisible()
+    await overlay.snap('net worth run summary')
+    await panel.locator('[data-run-details-tab]').click()
+    await expect(summary).toHaveCount(0)
     await expect(panel.locator('[data-past-run]').first()).toContainText('Nightmare maps')
     expect(searches).toHaveLength(2)
     expect(searches[0]).toContain('Tester#1234')
     expect(searches[0]).toContain('securable')
-    await panel.locator('[data-past-run]').first().getByText('Nightmare maps').click()
     const listed = panel.locator('[data-run-listed]')
     await expect(listed).toHaveCount(1)
     await expect(listed).toContainText('Mageblood')
@@ -246,7 +262,10 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
       if (/Stop/.test(label) && !/Stopping/.test(label)) await stopBtn.click()
       await expect(runTab).toHaveCount(0, { timeout: 4000 })
     }).toPass({ timeout: 30_000 })
+    // The second run's Summary compares it with the first (same name).
     await overlay.pressHotkey(overlay.config.overlayKey)
+    await expect(summary).toBeVisible({ timeout: 45_000 })
+    await expect(summary.locator('[data-summary-vs]')).toContainText('1 earlier run')
     // Past runs compared (pick C2): one row a run, By strategy adds up the
     // two Nightmare maps runs. One fight is a small sample (pick S1).
     await panel.getByRole('tab', { name: 'Runs' }).click()

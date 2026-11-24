@@ -14,8 +14,8 @@
         </div>
       </template>
     </DockItem>
-    <GlanceBar v-if="config.glance" :map="glanceMap" :since="glanceSince" :before="glanceBefore" :editing="placingGlance" :movable="wm.active.value" :pos="config.glancePos ?? null"
-      @move="moveGlance" />
+    <GlanceBar v-if="glanceOn(config)" :map="glanceMap" :after="barLine" :since="glanceSince" :before="glanceBefore" :editing="placingGlance" :movable="wm.active.value" :pos="config.glancePos ?? null"
+      :fields="config.glanceFields" :show="config.glanceShow" :last="lastMap" @move="moveGlance" />
     <MapToast :chip="chip" :close-key="config.chipKey || null" :size="toastSize" @close="closeChip" @hold="holdChip" @resize="resizeChip"
       :pos="config.chipPos ?? null" @move="moveChip" />
   </Widget>
@@ -52,6 +52,8 @@ import { NIGHT_GAP_MS, NightTracker } from './story'
 import type { NightStory } from './story'
 import { MapLog } from './map-log'
 import { chipLines, clampToastSize, compareMap } from './chip'
+import { lastMapOf } from './glance-fields'
+import type { LastMap } from './glance-fields'
 import type { ToastSize } from './chip'
 import type { MapCompare } from './chip'
 import type { MapRecord } from './map-log'
@@ -62,6 +64,7 @@ import { ANALYTICS_TYPE } from '../analytics/types'
 import { isSkippedArea, knownAreaName, setSkipAreas } from './skip-areas'
 import { setAreaSkip } from '../farming/farming'
 import { CHIP_CLOSE_TARGET } from './widget'
+import { chipPlaceOf, glanceOn } from './glance'
 import type { SessionStoryWidget } from './widget'
 import { MainProcess } from '@/web/background/IPC'
 import { AppConfig, saveConfig } from '@/web/Config'
@@ -133,8 +136,19 @@ function resizeChip (size: ToastSize, done: boolean) {
 onUnmounted(() => { clearTimeout(chipTimer) })
 // The dock is showing the map line (not the night's summary).
 let chipPeek = false
+// The map you just left, on the glance bar for a few seconds.
+const barLine = shallowRef<string | null>(null)
+let barTimer: ReturnType<typeof setTimeout> | undefined
+function showBarLine (text: string, ms: number) {
+  clearTimeout(barTimer)
+  barLine.value = text
+  barTimer = setTimeout(() => { barLine.value = null }, ms)
+}
+onUnmounted(() => { clearTimeout(barTimer) })
 function closeChip () {
   clearTimeout(chipTimer)
+  clearTimeout(barTimer)
+  barLine.value = null
   chip.value = null
   chipHeld = false
   if (chipPeek) dockRef.value?.unpeek()
@@ -145,7 +159,7 @@ const chipKeySub = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
   if (e.target === CHIP_CLOSE_TARGET) closeChip()
 })
 onUnmounted(() => { chipKeySub.abort() })
-// The glance bar (off unless turned on): the map you're in, from the map log.
+// The glance bar (on unless turned off): the map you're in, from the map log.
 // With the overlay open, the bar in a map takes the mouse and drags (its grip
 // shows on hover only). While Settings is open it also shows outside a map,
 // outlined, so it can be placed before one; not over a price check or trade
@@ -159,24 +173,32 @@ function moveGlance (pos: { x: number, y: number }, done: boolean) {
 }
 const glanceSince = shallowRef(0)
 const glanceBefore = shallowRef(0)
-const glanceMap = shallowRef<{ name: string, areaLevel: number } | null>(null)
+const glanceMap = shallowRef<{ name: string, areaLevel: number, deaths: number, npcs: readonly string[] } | null>(null)
+// The map you just left, for the bar between maps (when it stays out of maps).
+const lastMap = shallowRef<LastMap | null>(null)
 // `replayed`: right after reading the log's tail, when you may already be in a map.
 function syncGlance (replayed = false) {
-  const cur = (live || replayed) && props.config.glance && mapLog.inCountedMap ? mapLog.current : null
+  const cur = (live || replayed) && glanceOn(props.config) && mapLog.inCountedMap ? mapLog.current : null
   if (!cur) { glanceMap.value = null; return }
   glanceSince.value = mapLog.enteredThisTime
   glanceBefore.value = cur.mapMs
-  // The name comes a line after the area starts: update when it changes.
-  if (glanceMap.value?.name !== cur.name || glanceMap.value.areaLevel !== cur.areaLevel) glanceMap.value = { name: cur.name, areaLevel: cur.areaLevel }
+  // The name comes a line after the area starts, deaths and mechanics as they
+  // happen: a new object only when one of them changes.
+  const g = glanceMap.value
+  if (g?.name !== cur.name || g.areaLevel !== cur.areaLevel || g.deaths !== cur.deaths || g.npcs.length !== cur.npcs.length) {
+    glanceMap.value = { name: cur.name, areaLevel: cur.areaLevel, deaths: cur.deaths, npcs: [...cur.npcs] }
+  }
 }
 watch(() => props.config.glance, () => syncGlance(true))
 // Each map, for the chip and Session analytics' Map history.
 const mapLog = new MapLog({
   onLeave: (rec) => {
     if (!live) return
-    const place = props.config.chipPlace ?? 'dock'
+    if (glanceOn(props.config)) lastMap.value = lastMapOf(rec, compareMap(rec, store.maps.value))
+    const place = chipPlaceOf(props.config)
     // The toast in the middle takes the mouse only once the pointer rests on it.
     if (place === 'center') showChip(rec, compareMap(rec, store.maps.value), chipMs())
+    else if (place === 'bar') showBarLine(chipText(rec), chipMs())
     else if (place === 'dock') {
       dockRef.value?.peek(chipText(rec), chipMs())
       chipPeek = true
@@ -185,13 +207,14 @@ const mapLog = new MapLog({
   // Into a map: the toast goes (it takes clicks, and a fight is no place for
   // that), and so does a dock line set to stay until then.
   onEnter: () => {
-    if (live && (props.config.chipSeconds === 0 || chip.value)) closeChip()
+    if (live && (props.config.chipSeconds === 0 || chip.value || barLine.value)) closeChip()
   },
   onDone: (rec) => { store.addMap(rec).catch(() => {}) }
 })
 
 const tracker = new NightTracker((draft) => {
   mapLog.finish(draft.lastAt)
+  lastMap.value = null
   syncGlance()
   store.finish(draft).then(async (story) => {
     // The icon only shows once the saved night is drawn; a peek before that is dropped.
@@ -288,7 +311,9 @@ const cardGear = shallowRef(false)
 function showMe () {
   const [last, ...before] = store.maps.value.filter(m => !isSkippedArea(m.name))
   if (!last) return
-  if ((props.config.chipPlace ?? 'dock') === 'center') showChip(last, compareMap(last, before), chipMs())
+  const place = chipPlaceOf(props.config)
+  if (place === 'center') showChip(last, compareMap(last, before), chipMs())
+  else if (place === 'bar') showBarLine(chipLines(last, compareMap(last, before), formatClock).join(' · '), chipMs())
   else {
     dockRef.value?.peek(chipLines(last, compareMap(last, before), formatClock).join(' · '), chipMs())
     chipPeek = true
