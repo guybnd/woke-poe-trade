@@ -1,5 +1,6 @@
 # Next release notes
 
+- Net worth, Listed: a Cheapest? column. Click Check on a listing and the app runs one trade search for that item and says where your price ranks among other instant buyout listings ("1st ✓", or "4th · 35 div" with the cheapest asks on hover). The answer stays until you reprice, an Undercut chip shows the listings someone sells cheaper, and Ctrl+Space "listed" shows the rank too. Rare gear has no Check: a search by name can't compare rares.
 - Net worth, "Tabs to read": the tab list is easier to read. Rows use the normal row text size with brighter names, and each row is tinted with its tab's colour instead of showing a small dot.
 - New players: the first time the overlay opens after setup, a Getting started card beside the rail shows the price check and search keys, where All tools and Settings are, and how to turn on Net worth (Got it closes it for good). The next 3 opens name the rail's buttons beside them. Players who updated don't get either.
 - New players' rail starts with 5 of their tools (from the preset they picked in setup: Market, Map mods, Atlas strategies, PoB builds and Trades for Everything). Each loads only when you click it, then stays pinned.
