@@ -169,3 +169,29 @@ test('map: Base map unticks every chip and mod, and brings them back', async ({ 
   expect(q.filters?.map_filters?.filters?.map_iiq).toBeUndefined()
   expect(overlay.errors).toEqual([])
 })
+
+// Guy (2026-11-24): the map's influence (here the Originator) is the base map,
+// so Base map keeps it in the search, and so does the Bulk tab.
+test('map: Base map and the Bulk tab keep the map\'s influence', async ({ overlay }) => {
+  const searches = await fakeTrade(overlay.page)
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-originator-implicit.txt')
+  const panel = overlay.widget('price-check')
+  const base = panel.locator('[data-map-base]')
+  await expect(base).toBeVisible({ timeout: 20_000 })
+  await base.click()
+  await expect(base).toHaveAttribute('aria-pressed', 'true')
+  const search = panel.getByRole('button', { name: 'Search', exact: true })
+  const ORIGINATOR = 'implicit.stat_2696470877'
+  const onIds = (q: Query) => q.query.stats.flatMap(g => g.disabled ? [] : g.filters.filter(f => !f.disabled).map(f => f.id))
+  await search.click()
+  await expect.poll(() => searches.length).toBeGreaterThan(0)
+  expect(onIds(searches[0])).toEqual([ORIGINATOR])
+
+  await panel.locator('[data-trade-presets]').getByText('Bulk', { exact: true }).click()
+  const before = searches.length
+  await search.click()
+  await expect.poll(() => searches.length).toBeGreaterThan(before)
+  expect(onIds(searches[searches.length - 1])).toContain(ORIGINATOR)
+  expect(overlay.errors).toEqual([])
+})
