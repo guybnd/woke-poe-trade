@@ -23,6 +23,8 @@
             <span>{{ result.xchgStable.listed.value?.total ?? '?' }}</span>
           </button>
           <span class="ml-1"><online-filter :filters="filters" api="bulk" /></span>
+          <!-- woke: the price check's own chips (a map's Exchange, WOKEPOET-523). -->
+          <span class="ml-1"><slot name="chips" /></span>
         </div>
       </div>
       <trade-links v-if="result"

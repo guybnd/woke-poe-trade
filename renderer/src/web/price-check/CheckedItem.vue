@@ -74,6 +74,9 @@
       <button v-if="canSearchBulk" class="btn ml-1 mr-auto whitespace-nowrap" data-search-bulk
         title="Search, then show only sellers with 2 or more copies at one price. Loads more listings (up to 100) if fewer than 10 sellers show."
         @click="cancelSearchHover(); searchBulk()">Search bulk</button>
+      <!-- woke: maps on the bulk exchange: each seller once with their stock (WOKEPOET-523). One exchange search, on the click. -->
+      <button v-if="mapEx" class="btn ml-1 whitespace-nowrap" :class="{ 'mr-auto': !canSearchBulk }" data-search-exchange
+        :title="exchangeTitle" @click="cancelSearchHover(); searchExchange()">Exchange</button>
       <!-- woke: TradeListing says here whether the old results were filtered here or need a search. -->
       <div ref="searchStatusSlot" class="w-pc-status-slot" />
       <!-- woke: the prefix / suffix caps ride the results bar; here while it waits for Search,
@@ -93,7 +96,7 @@
     <woke-swap-flip v-if="showFlipTab && swap.view.value === 'flip'" :swap="swap" />
     <!-- woke: shows the last search until the next one, however the filters change meanwhile. -->
     <trade-listing
-      v-if="tradeAPI === 'trade' && searched"
+      v-if="tradeAPI === 'trade' && searched && !exchangeView"
       v-show="!(showFlipTab && swap.view.value === 'flip')"
       ref="tradeService"
       :filters="searched.filters"
@@ -107,13 +110,21 @@
       <template v-if="itemFilters.affixCaps" #toolbar>
         <filter-affix-caps class="w-pc-caps" :caps="itemFilters.affixCaps" />
       </template>
+      <template v-if="mapEx" #chips>
+        <button type="button" class="w-pc-bulk ml-1" data-exchange-chip :title="exchangeTitle" @click="searchExchange">Exchange</button>
+      </template>
     </trade-listing>
     <trade-bulk
-      v-if="tradeAPI === 'bulk' && doSearch"
+      v-if="(tradeAPI === 'bulk' || exchangeView) && doSearch"
       ref="tradeService"
       :filters="itemFilters"
-      :item="item"
-      @reset="resetTradeResults" />
+      :item="bulkItem"
+      @reset="resetTradeResults">
+      <template v-if="exchangeView" #chips>
+        <button type="button" class="w-pc-bulk on" aria-pressed="true" data-exchange-chip
+          :title="`Showing ${mapEx?.label} on the bulk exchange. Click to go back to the listings (a trade search).`" @click="leaveExchange">Exchange</button>
+      </template>
+    </trade-bulk>
     <p v-if="showComplexityHint" :class="$style.complexityHint">
       <i class="fas fa-info-circle" />
       {{ t('item.complexity_hint') }}
@@ -166,6 +177,7 @@ import { useLeagues } from '@/web/background/Leagues'
 import { priceView, ninjaCardOpen } from '@/web/woke/price-insight/view'
 import { holdBulkSearch, fixedPriceItem, isUnidUniqueJewel, chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
 import { exactDetailsId } from './trends/getDetailsId'
+import { mapExchange, asExchangeItem } from '@/web/woke/price-insight/map-exchange'
 import { usePoeninja } from '@/web/background/Prices'
 import { poeMode, poeOn, loadPoeKit } from '@/web/woke/price-insight/window-style'
 
@@ -299,6 +311,27 @@ export default defineComponent({
     const resultsStale = computed(() => !doSearch.value && searched.value != null && tradeAPI.value === 'trade')
     const tradeAPI = ref<'trade' | 'bulk'>('bulk')
 
+    // woke: a map's bulk exchange entry, shown by TradeBulk instead of the listings
+    // after the Exchange click (WOKEPOET-523). Any other search goes back to listings.
+    const mapEx = computed(() => mapExchange(props.item))
+    const exchangeView = shallowRef(false)
+    const bulkItem = computed(() => exchangeView.value && mapEx.value ? asExchangeItem(props.item, mapEx.value.tag) : props.item)
+    watch(() => [props.item, doSearch.value], () => { if (!doSearch.value) exchangeView.value = false })
+    watch(() => props.item, () => { exchangeView.value = false })
+    // A search starts on doSearch's change, so a running one is stopped first.
+    function searchExchange () {
+      doSearch.value = false
+      nextTick(() => {
+        if (!mapEx.value) return
+        exchangeView.value = true
+        doSearch.value = true
+      })
+    }
+    function leaveExchange () {
+      doSearch.value = false
+      nextTick(() => { doSearch.value = true })
+    }
+
     // TradeListing.vue OR TradeBulk.vue
     const tradeService = ref<{ execSearch(bulk?: boolean): void } | null>(null)
     // woke: a search started before the trade listing was there to run it (see below).
@@ -410,6 +443,8 @@ export default defineComponent({
         filters: { ...rawClone(itemFilters.value), trade: itemFilters.value.trade },
         stats: rawClone(itemStats.value)
       }
+      // woke: an exchange search leaves no listings behind to show once it's gone.
+      if (exchangeView.value) searched.value = null
 
       // NOTE: child `trade-xxx` component renders/receives props on nextTick
       nextTick(() => {
@@ -580,7 +615,7 @@ export default defineComponent({
       ninjaCardOpen,
       ninjaVerdictShown,
       showTrendCard: computed(() => !wokeVerdictShown.value && !ninjaVerdictShown.value && !showPredictedPrice.value),
-      verdictHeld: computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade'),
+      verdictHeld: computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && !exchangeView.value),
       t,
       itemFilters,
       itemStats,
@@ -595,6 +630,14 @@ export default defineComponent({
       searchGlow,
       searchStatusSlot,
       doSearch,
+      mapEx,
+      exchangeView,
+      bulkItem,
+      searchExchange,
+      leaveExchange,
+      exchangeTitle: computed(() => mapEx.value
+        ? `Search the bulk exchange's ${mapEx.value.label}: each seller once, with their stock, cheapest first. One exchange search. It can't filter by mods.`
+        : ''),
       canSearchBulk: computed(() => apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'trade'),
       searchBulk () {
         bulkClick = true

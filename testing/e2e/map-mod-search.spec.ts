@@ -65,8 +65,11 @@ test('map: no search until Search, then each mod searches as has or not', async 
   await expect.poll(() => searches.length).toBeGreaterThan(0)
   const stats = searches[0].query.stats
   const not = stats.find(g => g.type === 'not')!
-  expect(not.filters.length).toBe(1)
-  expect(not.filters[0].disabled).toBeFalsy()
+  // Hexproof, and No Elder (on from the start, WOKEPOET-523).
+  const hexNot = not.filters.filter(f => f.id !== 'implicit.stat_1792283443')
+  expect(hexNot.length).toBe(1)
+  expect(hexNot[0].disabled).toBeFalsy()
+  expect(not.filters.find(f => f.id === 'implicit.stat_1792283443')?.disabled).toBeFalsy()
   const and = stats.find(g => g.type === 'and')!
   expect(and.filters.filter(f => !f.disabled).length).toBeGreaterThanOrEqual(1)
   // Pack size went out of the search with its chip.
@@ -122,5 +125,75 @@ test('map: every number is a chip filter, typed min goes into the search', async
   // Atlas Drops stayed out.
   const q = searches[0].query as unknown as { filters?: { map_filters?: { filters?: Record<string, unknown> } } }
   expect(q.filters?.map_filters?.filters?.map_bonus).toBeUndefined()
+  expect(overlay.errors).toEqual([])
+})
+
+// WOKEPOET-523: Elder (and Shaper) maps list cheap and crowd a search for
+// Originator maps, so No Elder starts on. Exchange searches the map's bulk
+// exchange entry, one seller per row with their stock, only on the click.
+test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back', async ({ overlay }) => {
+  const searches: Query[] = []
+  const wants: string[][] = []
+  await overlay.page.route('**/api/trade/search/**', (route) => {
+    searches.push(route.request().postDataJSON())
+    return route.fulfill({ contentType: 'application/json', headers: LIMITS, body: JSON.stringify({ id: 'q', total: 0, result: [] }) })
+  })
+  const offer = (id: string, amount: number, stock: number) => ({
+    id,
+    item: null,
+    listing: {
+      indexed: new Date().toISOString(),
+      account: { name: `${id}#1`, lastCharacterName: `${id}c`, online: { league: 'Testleague' } },
+      offers: [{ exchange: { currency: 'chaos', amount, whisper: '' }, item: { currency: 'zana-map-tier-16', amount: 1, stock, id, whisper: '' } }],
+      whisper: ''
+    }
+  })
+  await overlay.page.route('**/api/trade/exchange/**', (route) => {
+    wants.push(JSON.parse(route.request().postData()!).query.want)
+    const rows = [offer('s1', 5, 36), offer('s2', 60, 1400)]
+    return route.fulfill({ contentType: 'application/json', headers: LIMITS, body: JSON.stringify({ id: 'xq', total: 2, result: Object.fromEntries(rows.map(r => [r.id, r])) }) })
+  })
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-originator-t16.txt')
+  const panel = overlay.widget('price-check')
+  const noElder = panel.locator('[data-map-no-elder]')
+  await expect(noElder).toBeVisible({ timeout: 20_000 })
+  await expect(noElder).toHaveAttribute('aria-pressed', 'true')
+  await expect(noElder).toHaveAttribute('title', /Elder or the Shaper/)
+  // The chip stands in for the row below.
+  await expect(panel.getByText('Area is influenced by The Elder or The Shaper')).toHaveCount(0)
+  await overlay.page.waitForTimeout(1000)
+  expect(searches).toEqual([])
+  expect(wants).toEqual([])
+
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBe(1)
+  const not = searches[0].query.stats.find(g => g.type === 'not')!
+  expect(not.filters.find(f => f.id === 'implicit.stat_1792283443')?.disabled).toBeFalsy()
+
+  // Off: the next search includes them.
+  await noElder.click()
+  await expect(noElder).toHaveAttribute('aria-pressed', 'false')
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBe(2)
+  const not2 = searches[1].query.stats.find(g => g.type === 'not')
+  expect(not2?.filters.find(f => f.id === 'implicit.stat_1792283443')?.disabled ?? true).toBe(true)
+
+  // Exchange, from the listings' toolbar: the Memory-Influenced T16 entry.
+  const chip = panel.locator('[data-exchange-chip]')
+  await expect(chip).toHaveAttribute('title', /Memory-Influenced Map \(Tier 16\)/)
+  await chip.click()
+  await expect.poll(() => wants.length).toBe(1)
+  expect(wants[0]).toEqual(['zana-map-tier-16'])
+  await expect(panel.getByText('1400', { exact: true })).toBeVisible()
+  await expect(chip).toHaveAttribute('aria-pressed', 'true')
+  expect(searches.length).toBe(2)
+  await overlay.snap('map exchange sellers')
+
+  // Back to the listings: a trade search again.
+  await chip.click()
+  await expect.poll(() => searches.length).toBe(3)
+  await expect(panel.getByText('1400', { exact: true })).toHaveCount(0)
+  expect(wants.length).toBe(1)
   expect(overlay.errors).toEqual([])
 })

@@ -34,6 +34,8 @@
         </span>
 <span v-if="currencyNote" class="ml-1">{{ currencyNote }}</span>
       </button>
+      <!-- woke: the price check's own chips beside Bulk (a map's Exchange, WOKEPOET-523). -->
+      <slot name="chips" />
       <div class="w-pc-grow flex-1"></div>
       <!-- woke: the price check's prefix / suffix caps, editing its live filters. -->
       <slot name="toolbar" />
