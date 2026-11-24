@@ -105,7 +105,9 @@ const findRecipeItem = (name: string) => ITEM_BY_REF('UNIQUE', name)?.[0] ?? ITE
 function chaosOf (info: BaseType): number | null {
   const ns = info.namespace
   if (ns === 'UNIQUE') {
-    const byBase = info.unique ? findPriceByQuery({ ns, name: info.refName, variant: info.unique.base }) : null
+    // A unique on several bases (Precursor's Emblem) takes its cheapest, not the first base's.
+    const oneBase = (ITEM_BY_REF('UNIQUE', info.refName)?.length ?? 1) <= 1
+    const byBase = info.unique && oneBase ? findPriceByQuery({ ns, name: info.refName, variant: info.unique.base }) : null
     if (byBase) return byBase.chaos
     const rows = findPricesByName(ns, info.refName)
     const plain = rows.filter(r => !/\b\dL\b/.test(r.variant ?? ''))
@@ -273,9 +275,11 @@ export default defineComponent({
       sum?: SumLine
       note?: string
     }
-    // The card rewards load with the first unique or currency checked.
+    // The card rewards load with the first unique or currency checked, and
+    // again on the next check if that load failed.
     const tipItems = shallowRef<Record<string, { d?: string, n?: number }> | null>(null)
-    watch(() => props.item?.info.namespace, ns => {
+    watch(() => props.item, item => {
+      const ns = item?.info.namespace
       if (tipItems.value || (ns !== 'UNIQUE' && ns !== 'ITEM')) return
       loadTipItems().then(items => { tipItems.value = items as Record<string, { d?: string, n?: number }> | null }).catch(() => {})
     }, { immediate: true })

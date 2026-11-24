@@ -44,6 +44,8 @@ describe('recipes', () => {
   it('reads vial, scroll, piece and curio upgrades from the drop groups', () => {
     expect(names('Vial of Awakening')).toEqual([["Upgrade to Apep's Supremacy", ["Apep's Slumber", 'Vial of Awakening']]])
     expect(names('Transcendent Mind')).toEqual([['Upgrade to Transcendent Mind', ['Tempered Mind', 'Vial of Transcendence']]])
+    // One vial, three upgrades from one group: still listed for the vial.
+    expect(names('Vial of Transcendence').map(n => n[0])).toEqual(['Upgrade to Transcendent Flesh', 'Upgrade to Transcendent Spirit', 'Upgrade to Transcendent Mind'])
     // The assembled Harbinger uniques left the game in 3.28: their pieces list nothing.
     expect(of('First Piece of Time')).toEqual([])
     expect(names('Curio of Potential')).toEqual([['Combine into The Utmost', ['Curio of Absorption', 'Curio of Consumption', 'Curio of Decay', 'Curio of Potential']]])
@@ -55,6 +57,7 @@ describe('recipes', () => {
     expect(names('Simulacrum Splinter')).toEqual([['Combine into Simulacrum', ['300 Simulacrum Splinter']]])
     expect(names('Timeless Karui Splinter').map(n => n[0])).toEqual(['Lethal Pride recipe', 'Combine into Timeless Karui Emblem'])
     expect(names("The Maven's Writ")).toEqual([["Combine into The Maven's Writ", ['10 Crescent Splinter']]])
+    expect(names('Timeless Eternal Emblem')).toEqual([['Combine into Timeless Eternal Emblem', ['100 Timeless Eternal Empire Splinter']]])
   })
 
   it("takes any Mountain, Valley and Meadow ring for Precursor's Emblem", () => {

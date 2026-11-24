@@ -25,6 +25,9 @@ export type RecipeKind = 'vendor' | 'upgrade' | 'combine'
 
 export interface UniqueRecipe {
   kind: RecipeKind
+  // The drop group it was read from: one group's recipes count as one use of
+  // a shared part (Vial of Transcendence upgrades three Tempered jewels).
+  group?: DropEntry
   makes: BaseType
   parts: RecipePart[]
   note?: string
@@ -96,7 +99,7 @@ function dropRecipes (drops: DropEntry[], find: Find, used: Set<DropEntry>): Uni
       from.forEach((key, i) => {
         const part = look(key)
         const makes = look(g.items[i])
-        if (part && makes) made.push({ kind: 'upgrade', makes, parts: [{ info: part, qty: 1 }, { info: helper, qty: 1 }] })
+        if (part && makes) made.push({ kind: 'upgrade', group: g, makes, parts: [{ info: part, qty: 1 }, { info: helper, qty: 1 }] })
       })
       if (made.length === from.length) { out.push(...made); used.add(g) }
       continue
@@ -119,7 +122,8 @@ function dropRecipes (drops: DropEntry[], find: Find, used: Set<DropEntry>): Uni
 const SPLINTERS: Array<[string, number, string]> = [
   ['Simulacrum Splinter', 300, 'Simulacrum'],
   ['Crescent Splinter', 10, "The Maven's Writ"],
-  ...['Karui', 'Maraketh', 'Eternal Empire', 'Templar', 'Vaal'].map((who): [string, number, string] => [`Timeless ${who} Splinter`, 100, `Timeless ${who} Emblem`])
+  // The Eternal Empire's splinter makes the "Timeless Eternal Emblem".
+  ...['Karui', 'Maraketh', 'Eternal Empire', 'Templar', 'Vaal'].map((who): [string, number, string] => [`Timeless ${who} Splinter`, 100, `Timeless ${who.split(' ')[0]} Emblem`])
 ]
 
 function splinterRecipes (find: Find): UniqueRecipe[] {
@@ -147,13 +151,15 @@ export function recipeBook (find: Find, drops: DropEntry[]): RecipeBook {
   if (cache) return cache
   const used = new Set<DropEntry>()
   const list = [...vendorRecipes(find), ...precursor(find), ...dropRecipes(drops, find, used), ...splinterRecipes(find)]
-  const uses = new Map<string, number>()
+  const uses = new Map<string, Set<unknown>>()
   for (const r of list) {
     for (const p of r.parts) {
-      if (p.info.namespace !== 'UNIQUE') uses.set(p.info.refName, (uses.get(p.info.refName) ?? 0) + 1)
+      if (p.info.namespace === 'UNIQUE') continue
+      if (!uses.has(p.info.refName)) uses.set(p.info.refName, new Set())
+      uses.get(p.info.refName)!.add(r.group ?? r)
     }
   }
-  const common = new Set([...uses].filter(([, n]) => n >= 3).map(([name]) => name))
+  const common = new Set([...uses].filter(([, from]) => from.size >= 3).map(([name]) => name))
   cache = { list, used, common }
   return cache
 }
