@@ -156,7 +156,12 @@ async function saveGlance (league: string, run: Run | null, points: readonly Led
   let g: RunGlance | null = null
   if (run) {
     const now = Date.now()
-    const maps = mapsIn(run, await readRunMaps(run, now), now)
+    const logged = await readRunMaps(run, now)
+    const maps = mapsIn(run, logged, now)
+    // The newest map counted: the glance bar adds the maps logged after it.
+    const end = run.stoppedAt ?? now
+    const counted = logged.filter(m => m.leftAt > run.startAt && m.enteredAt <= end)
+    const lastMapAt = counted.reduce((t, m) => Math.max(t, m.enteredAt), 0)
     // Profit runs to the last read, so its time does too (Start and edits
     // save the glance between reads).
     const timeTo = Math.max(run.startAt, points[points.length - 1]?.at ?? run.startAt)
@@ -166,6 +171,7 @@ async function saveGlance (league: string, run: Run | null, points: readonly Led
     const t = runTotals(run, points, { maps, fights }, now, undefined, await glanceOutside(league, run))
     g = { league, name: run.name, startAt: run.startAt, at: now, profitChaos: t.profitChaos, maps, perHourChaos: t.perHourChaos, costPerMapChaos: t.costPerMapChaos, divine }
     if (fights) g.fights = fights
+    if (lastMapAt) g.lastMapAt = lastMapAt
     const top = topDrop(run)
     if (top) g.top = top
     if (time) { g.time = time; g.timeTo = timeTo }

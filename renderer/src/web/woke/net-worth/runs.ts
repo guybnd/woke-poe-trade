@@ -530,6 +530,9 @@ export interface RunGlance {
   faustusChaos?: number
   // The biggest single drop, for "without top drop" and the small-sample note.
   top?: TopDrop
+  // When the newest map in `maps` was entered (the glance bar counts the
+  // maps logged after it; a map is logged only once the next one starts).
+  lastMapAt?: number
 }
 
 // Past runs by strategy (compareRows grouped), saved small for Ctrl+Space.

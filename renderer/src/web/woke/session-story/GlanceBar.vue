@@ -80,8 +80,9 @@ const profit = computed(() => night.value ? nights.profitOf(night.value) : null)
 // time you go into a map: it changes only with a stash read.
 // `at`: when it was saved (its map count is up to then); `readAt`: the stash
 // read its profit is from.
-interface RunNumbers { name: string, maps: number, fights: number, profitChaos: number, divine: number | null, at: number, readAt: number | null }
+interface RunNumbers { name: string, maps: number, fights: number, profitChaos: number, divine: number | null, at: number, startAt: number, lastMapAt?: number, readAt: number | null }
 const run = shallowRef<RunNumbers | null>(null)
+const recent = useNights()
 type SavedGlance = Partial<RunNumbers> & { league?: string, timeTo?: number }
 watch(() => props.map ? props.since : null, (since) => {
   const league = AppConfig().leagueId
@@ -90,7 +91,7 @@ watch(() => props.map ? props.since : null, (since) => {
     .then((g) => {
       const o = g as SavedGlance | null
       run.value = o && o.league === league && typeof o.profitChaos === 'number' && Number.isFinite(o.profitChaos) && typeof o.maps === 'number'
-        ? { name: String(o.name ?? ''), maps: o.maps, fights: typeof o.fights === 'number' ? o.fights : 0, profitChaos: o.profitChaos, divine: typeof o.divine === 'number' ? o.divine : null, at: typeof o.at === 'number' ? o.at : 0, readAt: typeof o.timeTo === 'number' ? o.timeTo : null }
+        ? { name: String(o.name ?? ''), maps: o.maps, fights: typeof o.fights === 'number' ? o.fights : 0, profitChaos: o.profitChaos, divine: typeof o.divine === 'number' ? o.divine : null, at: typeof o.at === 'number' ? o.at : 0, startAt: typeof o.startAt === 'number' ? o.startAt : 0, ...(typeof o.lastMapAt === 'number' ? { lastMapAt: o.lastMapAt } : {}), readAt: typeof o.timeTo === 'number' ? o.timeTo : null }
         : null
     })
     .catch(() => {})
@@ -98,11 +99,10 @@ watch(() => props.map ? props.since : null, (since) => {
 }, { immediate: true })
 // The saved count changes only with a stash read; maps since then come from
 // the map log, so the count keeps up map by map (profit waits for a read).
-const recent = useNights()
 const runMaps = computed(() => {
   const r = run.value
   if (!r) return 0
-  return runMapsNow(r.maps, r.at, recent.maps.value)
+  return runMapsNow(r, recent.maps.value)
 })
 const clock = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 </script>
