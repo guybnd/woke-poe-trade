@@ -33,7 +33,7 @@ describe('farming goal', () => {
     expect(farmGoal()).toBe('any')
   })
   it('Any keeps the chips as they always started', () => {
-    expect(goalDisabled('Drops', 'any')).toBe(true)
+    expect(goalDisabled('Drops', 'any')).toBe(false)
     expect(goalDisabled('Rarity', 'any')).toBe(false)
     expect(goalDisabled('Pack', 'any')).toBe(false)
     expect(goalDisabled('Currency', 'any')).toBe(false)
@@ -47,10 +47,10 @@ describe('farming goal', () => {
     const on = LABELS.filter(l => goalDisabled(l, 'currency') === false).sort()
     expect(on).toEqual(['Currency', 'Pack', 'Rarity'])
   })
-  it('maps and Threads turn on Pack, More Maps and More Threads; Atlas Drops stays off (no listings)', () => {
+  it('maps and Threads turn on Pack, More Maps and More Threads; Atlas Drops on too', () => {
     const LABELS = ['Drops', 'Rarity', 'Pack', 'Currency', 'Threads', 'Maps', 'Div cards']
     const on = LABELS.filter(l => goalDisabled(l, 'atlas') === false).sort()
-    expect(on).toEqual(['Maps', 'Pack', 'Threads'])
+    expect(on).toEqual(['Drops', 'Maps', 'Pack', 'Threads'])
     expect(GOAL_KEYS.atlas).toContain('Drops')
   })
   it('every chip says what it raises, and the Planner follows the goal', () => {
