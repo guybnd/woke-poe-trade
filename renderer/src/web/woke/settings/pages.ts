@@ -14,9 +14,7 @@ import ModulesSettings from '../switchboard/ModulesSettings.vue'
 import GamePage from './GamePage.vue'
 import HotkeysPage from './HotkeysPage.vue'
 import ScreenPage from './ScreenPage.vue'
-import InstallPage from './InstallPage.vue'
 import AboutPage from './AboutPage.vue'
-import CreditsPage from './CreditsPage.vue'
 import { CREDIT_NAMES } from './credits'
 
 // Loaded when its page opens, not at startup (startup JS budget).
@@ -362,7 +360,8 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     group: 'app',
     icon: { fa: 'fas fa-download' },
     description: 'Updates, starting with Windows, crash reports, reporting an issue, the Discord and the setup window.',
-    parts: [InstallPage],
+    // Loaded when the page opens, not at startup (startup JS budget).
+    parts: [defineAsyncComponent(() => import('./InstallPage.vue'))],
     find: ['Auto update', 'Check for updates', 'Start with Windows', 'Crash reports', 'Report an issue', 'Discord', 'Setup window', 'Version']
   },
   {
@@ -401,7 +400,7 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     group: 'app',
     icon: { fa: 'fas fa-heart' },
     description: 'The projects this toolkit is built on, uses data from or took ideas from.',
-    parts: [CreditsPage],
+    parts: [defineAsyncComponent(() => import('./CreditsPage.vue'))],
     find: ['Credits', 'License', ...CREDIT_NAMES]
   }
 ])
