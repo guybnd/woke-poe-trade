@@ -1555,6 +1555,248 @@
    }
   }
  },
+ "map-originator-special.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_2696470877",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_1708461270",
+       "value": {
+        "min": 100
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1309819744",
+       "value": {
+        "min": 2
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_95249895",
+       "value": {
+        "min": 90
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3183973644",
+       "value": {
+        "min": 3
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2753403220",
+       "value": {
+        "min": 100
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_2712450522",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_2398157267",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_2436559047",
+       "value": {},
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_tier": {
+       "min": 16,
+       "max": 16
+      },
+      "map_blighted": {
+       "option": "false"
+      },
+      "map_uberblighted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "map",
+    "option": "Map"
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_2696470877",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1708461270",
+       "value": {
+        "min": 100
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1309819744",
+       "value": {
+        "min": 2
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_95249895",
+       "value": {
+        "min": 90
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3183973644",
+       "value": {
+        "min": 3
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2753403220",
+       "value": {
+        "min": 100
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2712450522",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2398157267",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2436559047",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_tier": {
+       "min": 16,
+       "max": 16
+      },
+      "map_blighted": {
+       "option": "false"
+      },
+      "map_uberblighted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "map",
+    "option": "Map"
+   }
+  }
+ },
  "map-originator-t16.txt": {
   "opened": {
    "status": {

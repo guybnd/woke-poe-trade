@@ -14,8 +14,7 @@ export { goalDisabled } from './goal-chips'
 export const FARM_GOALS: FarmGoal[] = ['currency', 'atlas', 'any']
 export const FARM_GOAL_LABEL: Record<FarmGoal, string> = { currency: 'Currency', atlas: 'Maps & Threads', any: 'Any' }
 
-// The numbers that matter for a goal: ringed on the strip. Atlas Drops is one
-// for maps even though it can't be searched.
+// The numbers that matter for a goal: ringed on the strip.
 export const GOAL_KEYS: Record<FarmGoal, readonly string[]> = {
   any: [],
   currency: ['Rarity', 'Pack', 'Currency'],

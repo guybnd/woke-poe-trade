@@ -53,12 +53,13 @@ test('map: no search until Search, then each mod searches as has or not', async 
   // The wheel moves the min the rows used to edit.
   const rarityMin = panel.locator('[data-map-prop-min="Rarity"]')
   const before = await rarityMin.inputValue()
-  await rarity.hover()
+  // The tile's head: its min box takes the rest.
+  await rarity.hover({ position: { x: 12, y: 8 } })
   await overlay.page.mouse.wheel(0, -100)
   await expect(rarityMin).not.toHaveValue(before)
   // Says what the switches do.
   await expect(panel.locator('[data-map-mod] [data-state="not"]').first()).toHaveAttribute('title', 'Trade search finds maps without this mod')
-  await pack.click()
+  await pack.click({ position: { x: 12, y: 8 } })
   await expect(pack).toHaveAttribute('aria-pressed', 'false')
   await expect(panel.getByText('Monster Pack Size')).toHaveCount(0)
   await overlay.snap('map mods has and not')
@@ -92,13 +93,13 @@ test('map: every number is a chip filter, typed min goes into the search', async
   const maps = panel.locator('[data-map-prop="Maps"]')
   const drops = panel.locator('[data-map-prop="Drops"]')
   await expect(currency).toBeVisible({ timeout: 20_000 })
-  // Currency and Rarity start on (Rarity too, More Currency or not), Maps and Drops off.
+  // Currency, Rarity and Drops start on (Rarity too, More Currency or not), Maps off.
   await expect(currency).toHaveAttribute('aria-pressed', 'true')
   await expect(panel.locator('[data-map-prop="Rarity"]')).toHaveAttribute('aria-pressed', 'true')
   await expect(maps).toHaveAttribute('aria-pressed', 'false')
-  await expect(drops).toHaveAttribute('aria-pressed', 'false')
-  // Drops says why it's off.
-  await expect(drops).toHaveAttribute('title', /no listings/)
+  // Guy (2026-11-24): the trade site's Atlas Drops filter works, so it searches like the rest.
+  await expect(drops).toHaveAttribute('aria-pressed', 'true')
+  await expect(drops).not.toHaveAttribute('title', /no listings/)
   // No second control for the same number in the lines below.
   await expect(panel.getByText(/More Currency: 92%/)).toHaveCount(0)
   await expect(panel.getByText(/More Maps: 35%/)).toHaveCount(0)
@@ -124,9 +125,9 @@ test('map: every number is a chip filter, typed min goes into the search', async
   expect(byId('pseudo.pseudo_map_more_currency_drops')?.value).toMatchObject({ min: 70 })
   expect(byId('pseudo.pseudo_map_more_map_drops')?.disabled).toBeFalsy()
   expect(byId('pseudo.pseudo_map_more_map_drops')?.value).toMatchObject({ min: 35 })
-  // Atlas Drops stayed out.
+  // Atlas Drops went in as a map filter.
   const q = searches[0].query as unknown as { filters?: { map_filters?: { filters?: Record<string, unknown> } } }
-  expect(q.filters?.map_filters?.filters?.map_bonus).toBeUndefined()
+  expect(q.filters?.map_filters?.filters?.map_bonus).toBeDefined()
   expect(overlay.errors).toEqual([])
 })
 
@@ -318,8 +319,8 @@ test('map: the farming goal picks which number chips start on', async ({ overlay
   await expect(chip('Pack')).toHaveAttribute('aria-pressed', 'true')
   await expect(chip('Currency')).toHaveAttribute('aria-pressed', 'false')
   await expect(chip('Rarity')).toHaveAttribute('aria-pressed', 'false')
-  // Atlas Drops can't be searched (no listings), so it stays off.
-  await expect(chip('Drops')).toHaveAttribute('aria-pressed', 'false')
+  // Atlas Drops is a maps number, and the trade site searches it.
+  await expect(chip('Drops')).toHaveAttribute('aria-pressed', 'true')
   await overlay.snap('map farming goal')
   expect(searches).toEqual([])
 
@@ -456,9 +457,60 @@ test('map: the + tile adds a number this map hasn\'t got, with its own minimum',
   const maps = searches[0].query.stats.flatMap(g => g.filters).find(f => f.id === 'pseudo.pseudo_map_more_map_drops')
   expect(maps).toMatchObject({ value: { min: 40 }, disabled: false })
   // Click the tile to take it back out: it returns to the menu.
-  await panel.locator('[data-map-extra] [data-map-prop="Maps"]').click()
+  await panel.locator('[data-map-extra] [data-map-prop="Maps"]').click({ position: { x: 12, y: 8 } })
   await expect(panel.locator('[data-map-tile]')).toHaveCount(own)
   // Never a row under the strip.
   await expect(panel.getByText('More Maps: #%')).toHaveCount(0)
+  expect(overlay.errors).toEqual([])
+})
+
+// Guy (2026-11-24, his own map): "why show mods in two places? why are they unclickable
+// in the top list? ... rare map mods that are yellow ... any evocator type". The
+// 3.30 rare-only map mods must be in the strip's one list, yellow, with Any/Has/Not,
+// and a buried Sentinel (or Evocator) offers "any" of its kinds. Nothing listed twice.
+test('map: rare-only mods sit in the one list, yellow and searchable, any Sentinel kind', async ({ overlay }) => {
+  const searches = await fakeTrade(overlay.page)
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-originator-special.txt')
+  const panel = overlay.widget('price-check')
+  await expect(panel.locator('[data-map-kind]')).toBeVisible({ timeout: 20_000 })
+  const strip = panel.locator('[data-map-trade] > button').first()
+  if (await panel.locator('[data-map-mod]').count() === 0) await strip.click()
+  const rows = panel.locator('[data-map-mod]')
+  // Every mod line of the map, each once, each with its switches.
+  const lines = ['increased Area of Effect', 'fire 2 additional Projectiles', 'more Monster Life', 'Chain 3 additional times',
+    'Chain when colliding with Terrain', 'buried Stalker Sentinel', 'Mirror of Delirium', 'Area contains a Mirage']
+  for (const line of lines) {
+    await expect(panel.getByText(line)).toHaveCount(1)
+    await expect(rows.filter({ hasText: line }).locator('[data-state]')).toHaveCount(3)
+  }
+  // No second block of mod rows under the strip.
+  await expect(panel.locator('[data-map-trade]').getByText(/of 3|of 8/)).toHaveCount(0)
+  // The rare-only ones are marked and yellow.
+  await expect(panel.locator('[data-map-mod][data-rare-only]')).toHaveCount(3)
+  const color = await panel.locator('[data-map-mod][data-rare-only]').first().locator('span').nth(2)
+    .evaluate(el => getComputedStyle(el).color)
+  expect(color).toBe('rgb(255, 255, 119)')
+  // Any buried Sentinel by default, narrowable to this one.
+  const sentinel = rows.filter({ hasText: 'buried Stalker Sentinel' })
+  const anyOf = sentinel.locator('[data-map-any-of]')
+  await expect(anyOf).toHaveText('any buried Sentinel')
+  await sentinel.locator('[data-state="has"]').click()
+  // Picked, it shows its search state like any other mod (green for Has).
+  expect(await sentinel.locator('span').nth(2).evaluate(el => getComputedStyle(el).color)).not.toBe('rgb(255, 255, 119)')
+  const mirage = rows.filter({ hasText: 'Area contains a Mirage' })
+  await mirage.locator('[data-state="not"]').click()
+  // The + for more numbers sits on the tiles' row.
+  const tile = await panel.locator('[data-map-tile]').first().boundingBox()
+  const add = await panel.locator('[data-map-add-prop]').boundingBox()
+  expect(Math.abs(add!.y - tile!.y)).toBeLessThan(8)
+  await overlay.snap('map-rare-only-mods')
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBe(1)
+  const stats = searches[0].query.stats
+  // Has any buried Sentinel: a count group of its three kinds.
+  const any = stats.find(g => g.type === 'count')!
+  expect(any.filters.length).toBe(3)
+  expect(stats.find(g => g.type === 'not')!.filters.some(f => !f.disabled && !KIND_IDS.includes(f.id))).toBe(true)
   expect(overlay.errors).toEqual([])
 })
