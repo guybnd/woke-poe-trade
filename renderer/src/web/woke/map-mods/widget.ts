@@ -6,6 +6,7 @@ import { importAptMapRatings, moveHeistRatings } from './apt-import'
 import { heistRowOf } from './data'
 import { DEFAULT_JUICE_WEIGHTS, carryRewordedRatings, defaultProfile } from './rules'
 import type { JuiceWeights, MapModProfile } from './rules'
+import type { FarmGoal } from './goal-chips'
 
 export const MAP_MODS_TYPE = 'woke-map-mods'
 // copy-item target for the checker's own hotkey.
@@ -39,6 +40,9 @@ export interface MapModsWidget extends Widget {
   scanRollHotkey: string | null
   // Flash the badge when a reroll on the same map turns it into a "run".
   scanAlertOnPass: boolean
+  // What you farm (goal.ts): which map numbers start on in price checks, and
+  // the Planner's goal. Unset: any.
+  goal?: FarmGoal
 }
 
 export function initMapModsWidget (w: MapModsWidget) {

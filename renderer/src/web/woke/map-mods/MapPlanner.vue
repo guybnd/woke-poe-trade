@@ -61,29 +61,34 @@
             :label="`Map total ${BONUS_LABEL[state.goal].toLowerCase()} at least`" @update:model-value="set({ total: Math.max(0, Math.min(999, Math.floor(Number($event) || 0))) })" />
         </div>
       </section>
-      <section :class="$style.pane" data-testid="map-planner-search">
-        <div class="flex items-center gap-2">
-          <span class="w-group-label flex-1" style="padding: 0;">Stash search</span>
-          <WInfo v-if="search.text && !search.tooLong" :text="tokenInfo" />
-        </div>
-        <code :class="[$style.regex, { 'w-dim': !search.text }]" :title="search.text">{{ search.text || search.problem || 'Tick mods to build a search' }}</code>
-        <div :class="$style.meter">
-          <span :class="$style.bar"><span :class="{ [$style.over]: search.tooLong }" :style="{ width: `${Math.min(100, search.length / MAX_SEARCH_LENGTH * 100)}%` }" /></span>
-          <span class="w-num" :class="search.tooLong ? 'w-down' : 'w-dim'">{{ search.tooLong ? 'too long' : `${search.length} / ${MAX_SEARCH_LENGTH}` }}</span>
-        </div>
-        <div v-if="search.tooLong" class="w-down text-xs">
-          The stash search can't count, so "{{ state.need }} of {{ ticked.size }}" needs a term for every group of mods. Tick fewer mods, lower the counts, or use the trade search below.
-        </div>
-        <div class="flex items-center gap-2 flex-wrap">
-          <WButton size="sm" variant="primary" :icon="copied ? 'fas fa-check' : 'far fa-copy'" :disabled="!usable" @click="copy">Copy</WButton>
-          <WButton size="sm" icon="fas fa-search" :disabled="!usable" title="Type it into the open stash's search box" @click="paste">Paste in stash</WButton>
-        </div>
-      </section>
-      <section :class="$style.pane">
+      <!-- Guy's pick (veteran review, 2026-11-24): the trade search first, since it can count; stash text after, only when it fits. -->
+      <section :class="$style.pane" data-testid="map-planner-trade">
         <span class="w-group-label" style="padding: 0;">Trade search</span>
         <div class="w-dim text-xs">T17 maps with {{ tradeWords }}. The trade site counts the mods itself, so any number works.</div>
         <div v-if="problem" class="w-warn text-xs">{{ problem }}</div>
         <WButton size="sm" variant="primary" icon="fas fa-external-link-alt" :disabled="!ticked.size || !!problem" @click="openTrade">Search trade</WButton>
+      </section>
+      <section :class="$style.pane" data-testid="map-planner-search">
+        <div class="flex items-center gap-2">
+          <span class="w-group-label flex-1" style="padding: 0;">Stash search</span>
+          <WInfo v-if="usable" :text="tokenInfo" />
+        </div>
+        <template v-if="search.tooLong">
+          <div class="w-dim text-xs" data-testid="map-planner-stash-too-long">
+            Too many mods to fit the stash box: it can't count, so "{{ state.need }} of {{ ticked.size }}" needs a term for every group of mods. Use the trade search above, or tick fewer mods.
+          </div>
+        </template>
+        <template v-else>
+          <code :class="[$style.regex, { 'w-dim': !search.text }]" :title="search.text">{{ search.text || search.problem || 'Tick mods to build a search' }}</code>
+          <div v-if="search.text" :class="$style.meter">
+            <span :class="$style.bar"><span :style="{ width: `${Math.min(100, search.length / MAX_SEARCH_LENGTH * 100)}%` }" /></span>
+            <span class="w-num w-dim">{{ search.length }} / {{ MAX_SEARCH_LENGTH }}</span>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <WButton size="sm" :icon="copied ? 'fas fa-check' : 'far fa-copy'" :disabled="!usable" @click="copy">Copy</WButton>
+            <WButton size="sm" icon="fas fa-search" :disabled="!usable" title="Type it into the open stash's search box" @click="paste">Paste in stash</WButton>
+          </div>
+        </template>
       </section>
     </div>
   </div>
@@ -105,6 +110,8 @@ import type { PlanGoal, PlanRow, PlannerState } from './planner'
 import { MAX_SEARCH_LENGTH } from './regex'
 import { allMapNames } from './data'
 import type { MapModProfile, ModRating } from './rules'
+import { plannerGoalFor } from './goal'
+import { farmGoal } from './goal-config'
 
 const props = defineProps<{ profile: MapModProfile, ratings: Record<string, ModRating> }>()
 
@@ -114,14 +121,17 @@ const SHORT: Record<string, string> = { d: 'Drops', r: 'Rarity', p: 'Pack', curr
 loadMapBonuses().catch(() => {})
 const data = mapBonusData
 const state = computed<PlannerState>(() => {
-  const s = { ...DEFAULT_PLANNER, ...props.profile.planner }
+  // Until you pick a goal here, it follows the farming goal (goal.ts).
+  const farm = plannerGoalFor(farmGoal())
+  const saved = { ...DEFAULT_PLANNER, ...props.profile.planner }
+  const s = farm && !saved.goalPicked ? { ...saved, goal: farm } : saved
   return PLAN_GOALS.includes(s.goal) ? s : { ...s, goal: DEFAULT_PLANNER.goal }
 })
 function set (patch: Partial<PlannerState>) {
   props.profile.planner = { ...state.value, ...patch }
 }
 function setGoal (goal: PlanGoal) {
-  set({ goal })
+  set({ goal, goalPicked: true })
 }
 
 const rows = computed(() => planRows(data.value, state.value.goal))
@@ -266,5 +276,4 @@ function openTrade () {
 .meter { display: flex; align-items: center; gap: 8px; font-size: var(--w-fs-xs); }
 .bar { flex: 1; height: 4px; border-radius: 2px; background: var(--w-panel-3); overflow: hidden; }
 .bar > span { display: block; height: 100%; background: var(--w-up); }
-.bar > span.over { background: var(--w-down); }
 </style>
