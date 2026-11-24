@@ -100,6 +100,15 @@ export function createExactStatFilters (
       if (f.tag !== FilterTag.Explicit) continue
       f.mapMod = true
     }
+  }
+
+  // woke: a map's implicit, enchant and influence lines go on the map strip too, in every preset (Guy,
+  // 2026-11-24: one place for mods): the influence is its Kind switch, the rest are lines in its list.
+  if (item.category === ItemCategory.Map && item.rarity !== ItemRarity.Unique && !item.mapCompletionReward) {
+    for (const f of ctx.filters) {
+      if ((f.tag !== FilterTag.Implicit && f.tag !== FilterTag.Enchant && f.tag !== FilterTag.Variant) || f.mapKind || !f.sources.length) continue
+      f.mapLine = true
+    }
     mapModFamilies(ctx)
   }
 

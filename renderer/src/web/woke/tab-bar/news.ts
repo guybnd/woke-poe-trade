@@ -22,6 +22,7 @@ export interface NewsItem {
 }
 
 export const NEWS: NewsItem[] = [
+  { id: 'map-price-check-kind', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: a map\'s price check finds only its kind (Originator, Elder, conqueror...), with every mod in one list' },
   { id: 'price-check-related-upgrades', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: beside a unique, its upgrade, where it drops and the cards that give it, with prices' },
   { id: 'scrying-helper', wmType: 'woke-scrying', name: 'Scrying', note: 'New: which map to scry, ranked by the cards a Scrying Orb adds per map, with the orb\'s price and a Buy link' },
   { id: 'price-check-unique-recipe', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: a recipe part (Lost Unity rings) lists the other parts and what they make, with prices' },

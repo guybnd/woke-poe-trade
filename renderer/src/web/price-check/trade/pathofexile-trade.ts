@@ -617,7 +617,7 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
     return stat
   })
 
-  type NoUiStatFilter = Pick<StatFilter, 'not' | 'noElder' | 'fracShare' | keyof BareStatFilter>
+  type NoUiStatFilter = Pick<StatFilter, 'not' | 'mapKind' | 'fracShare' | keyof BareStatFilter>
   const realStats: NoUiStatFilter[] = stats.filter((stat): stat is StatFilter =>
     !stat.group &&
     !INTERNAL_TRADE_IDS.includes(stat.tradeId[0]))
@@ -798,10 +798,10 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
       const add = (v: number | '' | undefined) => typeof v === 'number' ? v + share : v
       stat = { ...stat, roll: { ...stat.roll, min: add(stat.roll.min), max: add(stat.roll.max) } }
     }
-    if (stat.noElder) {
+    if (stat.mapKind?.options) {
       // woke: an option stat with no option matches nothing, so "not" left out nothing.
       // Each influence goes in by its option (1 Shaper, 2 Elder; checked live 2026-11-24).
-      for (const option of [1, 2]) {
+      for (const option of stat.mapKind.options) {
         qNot.filters.push({ id: stat.tradeId[0], value: { option }, disabled: stat.disabled })
       }
     } else if (stat.not) {

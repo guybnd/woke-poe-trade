@@ -25,7 +25,7 @@ function noElder (file: string, preset = 'filters.preset_pseudo') {
   const item = parseItem(fixture(`items/${file}`))
   const { presets } = createPresets(item, OPTS)
   const stats = presets.find(p => p.id === preset)!.stats
-  return { item, stats, filter: stats.find((s): s is StatFilter => !s.group && !!s.noElder) }
+  return { item, stats, filter: stats.find((s): s is StatFilter => !s.group && !!s.mapKind && s.tradeId[0] === 'implicit.stat_1792283443') }
 }
 
 beforeAll(loadGameData)
@@ -62,6 +62,28 @@ describe('No Elder on a map search', () => {
     const sent = query.stats.flatMap(g => g.filters).filter(f => f.id === 'implicit.stat_1792283443')
     expect(sent).toHaveLength(2)
     expect(sent.every(f => f.disabled)).toBe(true)
+  })
+})
+
+// Guy (2026-11-24): a map's kind is its influence, and the search finds only that kind.
+describe('the map kind', () => {
+  const kinds = (file: string) => noElder(file).stats
+    .filter((s): s is StatFilter => !s.group && !!s.mapKind && !s.disabled)
+    .map(s => s.tradeId[0]).sort()
+  it('an Originator map leaves out Elder/Shaper and conqueror maps', () => {
+    expect(kinds('map-originator-t16.txt')).toEqual(['implicit.stat_1792283443', 'implicit.stat_3624393862'])
+    const { item, stats } = noElder('map-originator-t16.txt')
+    const not = createTradeRequest(createFilters(item, OPTS), stats).query.stats.find(g => g.type === 'not')!
+    expect(not.filters.filter(f => f.id === 'implicit.stat_3624393862').map(f => f.value)).toEqual([1, 2, 3, 4].map(option => ({ option })))
+  })
+  it('an Elder Originator map occupied by a conqueror is all three: nothing left out', () => {
+    expect(kinds('map-originator-elder.txt')).toEqual([])
+  })
+  it('a normal map leaves out every influenced kind, the Originator too', () => {
+    expect(kinds('map-rare-t16.txt')).toEqual(['implicit.stat_1792283443', 'implicit.stat_2696470877', 'implicit.stat_3624393862'])
+    const { item, stats } = noElder('map-rare-t16.txt')
+    const not = createTradeRequest(createFilters(item, OPTS), stats).query.stats.find(g => g.type === 'not')!
+    expect(not.filters.filter(f => f.id === 'implicit.stat_2696470877')).toHaveLength(1)
   })
 })
 
@@ -139,5 +161,22 @@ describe('a map mod with sibling kinds', () => {
     const query = createTradeRequest(createFilters(item, OPTS), stats).query
     expect(evocatorGroup(query)).toBeUndefined()
     expect(query.stats[0].filters).toContainEqual(expect.objectContaining({ id: 'explicit.stat_260515856', disabled: false }))
+  })
+})
+
+// Guy (2026-11-24): one place for a map's lines. Its implicit lines (the influence)
+// join the strip's list, keep being searched, and leave the rows below.
+describe('a map\'s implicit lines are strip lines', () => {
+  it('the Originator influence is a strip line, searched by default', () => {
+    const item = parseItem(fixture('items/map-originator-implicit.txt'))
+    const { presets } = createPresets(item, OPTS)
+    const stats = presets.find(p => p.id === 'filters.preset_pseudo')!.stats
+    const lines = stats.filter((s): s is StatFilter => !s.group && !!s.mapLine)
+    expect(lines).toHaveLength(1)
+    expect(lines[0].statRef).toMatch(/^Area is influenced by the Originator's Memories$/i)
+    expect(lines[0].disabled).toBe(false)
+    expect(lines[0].mapMod).toBeUndefined()
+    // The No Elder filter stays its own button, not a line.
+    expect(stats.some(s => !s.group && s.mapKind && s.mapLine)).toBe(false)
   })
 })

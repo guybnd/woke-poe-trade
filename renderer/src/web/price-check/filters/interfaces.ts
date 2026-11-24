@@ -163,10 +163,15 @@ export interface StatFilter {
   not?: true
   /** woke: one of a map's mods, set Any / Has / Not on the map strip (MapModStrip.vue), not listed in the rows. */
   mapMod?: true
+  /** woke: a map's implicit or enchant line (its influence, an Originator's Evocator or Mirage), also set
+   * Any / Has / Not on the map strip's one list and not listed in the rows. Keeps its usual default (searched). */
+  mapLine?: true
   /** woke: a Valdo map's "sent to the Void" mod, set Any / Void / No void on the Valdo strip (ValdoStrip.vue), not listed in the rows. */
   valdoVoid?: true
-  /** woke: a map's "no Elder or Shaper influence" filter, the No Elder chip on the map strip (pseudo/maps.ts). */
-  noElder?: true
+  /** woke: a map kind the checked map isn't (Elder or Shaper, a conqueror, the Originator), searched as "not"
+   * so the search finds only this map's kind; the map strip's Kind switch (pseudo/maps.ts). With options, each
+   * goes into the not group on its own (an option stat with no option matches nothing). */
+  mapKind?: { options?: number[] }
   /** woke: a map mod with sibling variants (the 3 Evocators, the 3 buried Sentinels):
    * Has searches any of them until narrowed to this one on the map strip (pseudo/maps.ts). */
   anyOf?: { label: string, ids: string[], exact: string[] }
