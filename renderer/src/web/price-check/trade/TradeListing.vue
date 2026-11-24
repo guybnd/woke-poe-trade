@@ -598,7 +598,9 @@ export default defineComponent({
 
     const { insight, divine, options: insightOptions } = useInsight(fitResults, computed(() => props.filters.trade.league))
     // woke: Net worth's Listed bar suggests a price from these (no search of its own).
-    watch([fitResults, divine], ([list, d]) => { lastAsks.value = asksOf(list, d ?? null, props.item) }, { immediate: true })
+    watch([fitResults, divine, searchResult, loadedCount], ([list, d, found, loaded]) => {
+      lastAsks.value = asksOf(list, d ?? null, props.item, found?.total ?? null, found != null && loaded >= found.total)
+    }, { immediate: true })
     onUnmounted(() => { lastAsks.value = null })
 
     // woke: listings found without a rare's mods say nothing about its price.

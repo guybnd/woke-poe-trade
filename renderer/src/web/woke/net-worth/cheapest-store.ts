@@ -4,7 +4,7 @@ import { shallowRef } from 'vue'
 import { hostRequest } from '../shared/host'
 import { cheapestKey, cheapestQuery, isCheapestDoc, summarize, withCheck, withTarget } from './cheapest'
 import type { TargetPrice } from './listed-target'
-import type { CheapestDoc } from './cheapest'
+import type { CheapestCheck, CheapestDoc } from './cheapest'
 import type { Listing } from './faustus'
 import { ITEM_BY_REF } from '@/assets/data'
 import { saleChaos } from './sales'
@@ -102,6 +102,15 @@ export async function checkCheapest (league: string, l: Listing, rates: Rates): 
 // It holds for the next item the price check shows, opened within a few
 // seconds; any other item clears it.
 export const repricing = shallowRef<{ league: string, id: string, at: number } | null>(null)
+
+// A rank from a price check of the listing (checkFromAsks), saved as its check.
+export async function saveCheck (league: string, id: string, check: CheapestCheck): Promise<void> {
+  await loadCheapest(league)
+  if (loadedFor !== league) return
+  const next = withCheck(cheapestDoc.value, league, id, check)
+  cheapestDoc.value = next
+  await hostRequest('doc-put', { collection: COLLECTION, key: cheapestKey(league), value: next }).catch(() => {})
+}
 
 // A new price for a listing, from the price check's bar (null: clear it).
 export async function setTarget (league: string, id: string, target: TargetPrice | null): Promise<void> {

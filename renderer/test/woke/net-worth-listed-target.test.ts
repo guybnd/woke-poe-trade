@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { asTradePrice, listingsFor, namesOfText, stepUnder, suggestions, targetOpen } from '@/web/woke/net-worth/listed-target'
-import { withCheck, withTarget } from '@/web/woke/net-worth/cheapest'
+import { checkFromAsks, withCheck, withTarget } from '@/web/woke/net-worth/cheapest'
 import { asksOf } from '@/web/woke/price-insight/last-asks'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { listedLookup } from '@/web/woke/search/lookups/listed'
@@ -49,8 +49,19 @@ describe('set a price from the price check', () => {
       { priceAmount: 38, priceCurrency: 'divine', isMine: true },
       { priceAmount: 100, priceCurrency: 'chaos', stackSize: 10, isMine: false },
       { priceAmount: 5, priceCurrency: 'exalted', isMine: false }
-    ], 200, 'x')
+    ], 200, 'x', 30, false)
     expect(a.chaos).toEqual([10, 7200])
+    expect(a).toMatchObject({ mine: 1, total: 30, all: false })
+  })
+
+  it('the price check ranks the listing from what it loaded, never rough', () => {
+    // A rolled unique: a search by name would be rough, its own price check isn't.
+    const c = checkFromAsks(item('hh'), 38 * 200, [7000, 7400, 8000], 1, 4, true, T0)
+    expect(c).toMatchObject({ cheaper: 2, total: 3, asks: [7000, 7400, 8000], priceCheck: true })
+    expect(c.rough).toBeUndefined()
+    expect(JSON.parse(JSON.stringify(c))).not.toHaveProperty('rough')
+    // All of them cheaper and more not loaded: "+".
+    expect(checkFromAsks(item('hh'), 38 * 200, [7000], 0, 50, false, T0).more).toBe(true)
   })
 
   it('a set price stands until the listing asks it, and keeps the checks', () => {

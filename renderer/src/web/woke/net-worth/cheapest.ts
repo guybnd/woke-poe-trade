@@ -28,6 +28,9 @@ export interface CheapestCheck {
   total: number
   // Its rolls, corruption or mods move the price: a name search is rough.
   rough?: boolean
+  // From a price check of the listing (its own mods and your filters), not a
+  // search by name: never rough, and not only instant buyout.
+  priceCheck?: true
 }
 
 export interface CheapestDoc {
@@ -150,4 +153,12 @@ export function ordinal (n: number): string {
 // The cell's short text: "1st", "4th", "11th+".
 export function rankText (c: CheapestCheck): string {
   return `${c.rough ? '~' : ''}${ordinal(c.cheaper + 1)}${c.more ? '+' : ''}`
+}
+
+// A price check of the listing (opened from Listed, or Ctrl+D on it) ranks it
+// from the listings it loaded: no search of its own.
+export function checkFromAsks (l: Listing, mineEach: number, asks: readonly number[], mine: number, total: number | null, all: boolean, at: number): CheapestCheck {
+  const fetched: FetchedAsk[] = [...asks.map(c => ({ chaosEach: c, mine: false })), ...Array.from({ length: mine }, () => ({ chaosEach: null, mine: true }))]
+  // Its own mods were searched: never rough (undefined isn't saved).
+  return { ...summarize(l, mineEach, fetched, total ?? asks.length + mine, all, at), rough: undefined, priceCheck: true }
 }

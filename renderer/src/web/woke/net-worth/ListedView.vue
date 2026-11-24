@@ -39,7 +39,7 @@
             <th>Asking</th>
             <th title="poe.ninja's price now, for the whole stack. ~ is rough: its rolls, corruption or a thin market move the price">Suggest</th>
             <th title="Your asking price against poe.ninja's">vs ninja</th>
-            <th title="Still cheapest? One trade search on a click: where your price ranks among other instant buyout listings of it">Cheapest?</th>
+            <th title="Still cheapest? Price check a listing with its own mods (your filters) to rank your price, then set a new one at the foot. The bolt is a quick search by name">Cheapest?</th>
             <th :title="`Since you first listed it (a reprice doesn't reset it). Orange: ${staleDays} days or more`">Listed</th>
           </tr>
         </thead>
@@ -49,14 +49,17 @@
               <span :class="$style.name"><img v-if="r.item.icon" :src="r.item.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(r.item)" class="w-trunc" :style="{ color: colourOf(r.item.frameType) }">{{ saleName(r.item) }}</span></span>
             </td>
             <td class="w-num" :class="$style.ask">
-              <WButton v-if="canReprice(r.item)" size="sm" variant="ghost" :class="$style.reprice" title="Reprice: price check it, then set a new price at the foot of the price check" aria-label="Reprice" data-listed-reprice @click="reprice(r, $event)"><i class="fas fa-tag" /></WButton>
               {{ fmt(r.item.price.amount) }} {{ r.item.price.currency }}<span v-if="targetOf(r)" class="w-warn" :title="`You set ${priceLabel(targetOf(r)!)} from the price check: reprice it at Faustus. It clears once a Refresh sees that price`" data-listed-target> → {{ priceLabel(targetOf(r)!) }}</span>
             </td>
             <td class="w-num" :class="r.confidence === 'rough' ? 'w-dim' : ''" :title="suggestTitle(r)">{{ suggestText(r) }}</td>
             <td class="w-num" :class="vsTone(r)">{{ vsText(r) }}</td>
             <td :class="$style.check" data-listed-check>
-              <span v-if="!canCheck(r.item)" class="w-dim" title="Rare gear: a search by name can't compare it. Price check it in game">—</span>
-              <span v-else-if="busy.has(r.item.id)" class="w-dim">Checking…</span>
+              <span v-if="busy.has(r.item.id)" class="w-dim">Checking…</span>
+              <template v-else-if="canReprice(r.item)">
+                <WButton v-if="canCheck(r.item)" size="sm" variant="ghost" :class="$style.quick" :title="errors[r.item.id] ? `Quick rank failed: ${errors[r.item.id]}. Click to try again` : 'Quick rank: one trade search by name, instant buyout only. It ignores the rolls'" aria-label="Quick rank" data-listed-quick @click="check(r)"><i class="fas fa-bolt" /></WButton>
+                <WButton size="sm" variant="ghost" :class="checkOf(r) ? (checkOf(r)!.cheaper ? 'w-down' : 'w-up') : ''" :title="checkOf(r) ? `${checkTitle(r)}\nClick to price check it again` : 'Price check this listing with its own mods: tune the filters, then set a new price at the foot'" data-listed-reprice @click="reprice(r, $event)">{{ checkOf(r) ? checkText(r) : 'Price check' }}</WButton>
+              </template>
+              <span v-else-if="!canCheck(r.item)" class="w-dim" title="Rare gear read before its mods were kept: Refresh, or price check it in game">—</span>
               <WButton v-else-if="checkOf(r)" size="sm" variant="ghost" :class="checkOf(r)!.cheaper ? 'w-down' : 'w-up'" :title="checkTitle(r)" @click="check(r)">{{ checkText(r) }}</WButton>
               <WButton v-else size="sm" variant="ghost" :class="errors[r.item.id] ? 'w-down' : ''" :title="errors[r.item.id] ? `Check failed: ${errors[r.item.id]}. Click to try again` : 'One trade search: where your price ranks among other instant buyout listings of it'" @click="check(r)">{{ errors[r.item.id] ? 'Retry' : 'Check' }}</WButton>
             </td>
@@ -189,12 +192,14 @@ function checkTitle (r: PendingRow) {
   const c = checkOf(r)!
   const lines = [
     c.total === 0
-      ? 'Nobody else lists it for instant buyout'
+      ? (c.priceCheck ? 'Nobody else in your price check' : 'Nobody else lists it for instant buyout')
       : c.cheaper ? `${c.cheaper}${c.more ? '+' : ''} cheaper than your ${fmt(r.item.price.amount)} ${r.item.price.currency}` : 'Nobody asks less than you',
     ...(c.asks.length ? [`Cheapest${r.item.stack > 1 ? ', each' : ''}: ${c.asks.map(priceText).join(' · ')}`] : []),
-    `${c.total} other instant buyout ${c.total === 1 ? 'listing' : 'listings'} · checked ${agoPhrase(c.at)}`,
+    c.priceCheck
+      ? `${c.total} other ${c.total === 1 ? 'listing' : 'listings'} in your price check ${agoPhrase(c.at)}`
+      : `${c.total} other instant buyout ${c.total === 1 ? 'listing' : 'listings'} · checked ${agoPhrase(c.at)}`,
     ...(c.rough ? ['Rough: its rolls, corruption or mods change the price'] : []),
-    'Click to check again (one trade search)'
+    ...(canReprice(r.item) ? [] : ['Click to check again (one trade search)'])
   ]
   return lines.join('\n')
 }
@@ -242,7 +247,8 @@ function colourOf (frame: number) {
 .scroll { max-height: 420px; overflow-y: auto; overscroll-behavior: contain; }
 .table { width: 100%; border-collapse: collapse; font-size: var(--w-fs-sm); table-layout: fixed; }
 .table th { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); font-weight: 500; text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--w-line-strong); white-space: nowrap; position: sticky; top: 0; background: var(--w-panel-solid); }
-.table th:nth-child(1) { width: 34%; }
+.table th:nth-child(1) { width: 26%; }
+.table th:nth-child(5) { width: 20%; }
 .table td { padding: 2px 6px; text-align: right; border-bottom: 1px solid var(--w-line-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .table tbody tr:hover td { background: var(--w-panel-2); }
 .left { text-align: left !important; }
@@ -250,8 +256,8 @@ function colourOf (frame: number) {
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .ask { color: var(--w-gold); }
 .check { text-align: right; }
-.reprice { opacity: 0; }
-.table tbody tr:hover .reprice, .reprice:focus-visible { opacity: 1; }
+.quick { opacity: 0; padding-inline: 2px; }
+.table tbody tr:hover .quick, .quick:focus-visible { opacity: 1; }
 .note { padding: 4px var(--w-pad); }
 .autoLine { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; justify-content: space-between; }
 .chips { display: flex; gap: var(--w-s1); padding: 6px var(--w-pad); flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--w-line); }

@@ -37,8 +37,7 @@ export interface FakeAppOptions {
   httpFixtures: string
 }
 
-// `at`: when the request arrived (Date.now()).
-export interface RecordedRequest { method: string, url: string, body: string, mocked: boolean, at: number }
+export interface RecordedRequest { method: string, url: string, body: string, mocked: boolean }
 
 const CLIENT_EVENTS: Array<IpcEvent['name']> = [
   'CLIENT->MAIN::update-host-config',
@@ -242,7 +241,7 @@ function fixtureProxy (app: FakeApp) {
       const any = path.join(path.dirname(base), '_any')
       const candidates = [`${base}.${method}.json`, `${base}.json`, `${any}.${method}.json`, `${any}.json`]
       const file = candidates.find(f => fs.existsSync(f))
-      app.requests.push({ method: req.method!, url: req.url!.slice('/proxy/'.length), body, mocked: Boolean(file), at: Date.now() })
+      app.requests.push({ method: req.method!, url: req.url!.slice('/proxy/'.length), body, mocked: Boolean(file) })
       if (!file) {
         res.writeHead(404, { 'content-type': 'application/json' })
         res.end(JSON.stringify({ error: { message: `No recorded response for ${req.method} ${target}` } }))

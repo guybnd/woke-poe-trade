@@ -34,7 +34,9 @@ import { lastAsks } from '../price-insight/last-asks'
 import { loadPending, pendingDoc } from './pending-store'
 import { soldIds } from './pending'
 import { sales } from './sales-store'
-import { cheapestDoc, loadCheapest, repricing, setTarget } from './cheapest-store'
+import { cheapestDoc, loadCheapest, repricing, saveCheck, setTarget } from './cheapest-store'
+import { checkFromAsks } from './cheapest'
+import { saleChaos } from './sales'
 import { listingsFor, namesOfText, priceLabel, suggestions, targetOpen } from './listed-target'
 import type { TargetPrice } from './listed-target'
 
@@ -86,6 +88,21 @@ const suggest = computed(() => {
   if (!a || a.for !== props.item || !l || !a.chaos.length) return null
   return suggestions(a.chaos[0] * Math.max(1, l.stack), a.divine)
 })
+
+// The listings this check loaded rank your price: Listed's Cheapest? column
+// shows it (Guy, 2026-11-24: a search by name can't price rolls). Only for a
+// listing this check is surely of: Reprice's, the one match, or the one picked.
+let ranked = ''
+watch([lastAsks, listing], ([a, l]) => {
+  if (!a || a.for !== props.item || !l || a.total == null) return
+  if (!(repricedFor.value?.item === props.item || matches.value.length === 1 || picked.value === l.id)) return
+  const mine = saleChaos(l, a.divine ? { divine: a.divine } : {})
+  if (mine == null) return
+  const key = `${l.id}|${a.total}|${a.chaos.join(',')}`
+  if (key === ranked) return
+  ranked = key
+  saveCheck(league.value, l.id, checkFromAsks(l, mine / Math.max(1, l.stack), a.chaos, a.mine, a.total, a.all, Date.now())).catch(() => {})
+}, { immediate: true }) // this bar loads after the listings it ranks
 
 const typed = shallowRef(0)
 const typedCurrency = shallowRef<'chaos' | 'divine'>('divine')
