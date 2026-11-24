@@ -316,9 +316,12 @@ async function stopLive () {
   try {
     const [s, rs] = await Promise.all([import('./store'), import('./run-stop')])
     if (!s.ledger.value.points.length) return
-    await rs.stopLiveRun(league, s.ledger.value.points, s.divine.value)
+    const id = await rs.stopLiveRun(league, () => s.ledger.value.points, s.divine.value)
     // The store may not be watched here yet (it loads with the window).
     if (leagueId.value === league) runG.value = s.runGlance.value
+    // The run's summary (pick W1), in the window: Stop is pressed with the
+    // overlay up, so it covers nothing in game.
+    if (id && leagueId.value === league) openRun()
   } catch {} finally { stopping.value = false }
 }
 // Start from the card: from the last read, like the Runs view's Start.

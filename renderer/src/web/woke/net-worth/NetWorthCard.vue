@@ -55,8 +55,8 @@
         </button>
         <div :class="$style.foot">
           <button type="button" :class="[$style.refresh, $style.left, $style.stop]" data-card-stop :disabled="!canStop"
-            :title="canStop ? 'Stop the run: reads your Faustus listings, then keeps the summary' : 'Waiting for Net worth to load'" @click="stopClick">
-            <i class="fas fa-stop" /> {{ stopping ? 'Stopping…' : confirmStop ? 'Stop the run?' : 'Stop' }}
+            :title="canStop ? 'Stop the run: reads your stash one last time and your Faustus listings, then shows the summary' : 'Waiting for Net worth to load'" @click="stopClick">
+            <i class="fas fa-stop" /> {{ stopping ? (stopPhase === 'stash' ? 'Reading stash…' : 'Stopping…') : confirmStop ? 'Stop the run?' : 'Stop' }}
           </button>
           <button type="button" :class="[$style.refresh, $style.left]" data-card-open-run @click="emit('open-run')">Open run</button>
           <span class="w-dim text-xs" :class="$style.readEnd">{{ readLine }}</span>
@@ -125,7 +125,7 @@ import { countLabel, runPerHour, tallyRows, unitOf } from './runs'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
 import RateTimePick from '../shared/RateTimePick.vue'
-import { loadRuns, runsDoc } from './run-store'
+import { loadRuns, runsDoc, stopPhase } from './run-store'
 import { runTimeIn } from './run-time'
 import Coin from './Coin.vue'
 import LedgerChart from './LedgerChart.vue'

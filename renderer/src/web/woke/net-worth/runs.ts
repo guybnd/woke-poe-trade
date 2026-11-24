@@ -563,3 +563,25 @@ export function isRunGlance (g: unknown): g is RunGlance {
   const o = g as Record<string, unknown>
   return typeof o.league === 'string' && typeof o.name === 'string' && typeof o.profitChaos === 'number' && Number.isFinite(o.profitChaos)
 }
+
+// ---------- the last run's summary (run-summary.ts), for Ctrl+Space ----------
+export interface LastRun {
+  league: string
+  id: string
+  name: string
+  startAt: number
+  stoppedAt: number
+  profitChaos: number
+  maps: number
+  fights?: number
+  perMapChaos: number | null
+  usualPerMapChaos: number | null
+  best?: { name: string, chaos: number }
+  tips: Array<{ lead: string, text: string }>
+}
+export const lastRunKey = (league: string) => `${league}-run-last`
+export function isLastRun (x: unknown): x is LastRun {
+  if (x == null || typeof x !== 'object') return false
+  const o = x as Record<string, unknown>
+  return typeof o.league === 'string' && typeof o.name === 'string' && typeof o.profitChaos === 'number' && Array.isArray(o.tips)
+}
