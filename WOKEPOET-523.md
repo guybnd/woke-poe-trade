@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-523
 title: 'Bulk map buying: leave out Elder maps, reach pricier bulk sellers'
-status: In Progress
+status: Todo
 priority: Medium
 effort: M
 assignee: unassigned
 tags:
   - price-check
 createdBy: Agent
-updatedBy: claude-code@GUY-PC
+updatedBy: Event Horizon
 history:
   - type: activity
     user: Agent
@@ -41,11 +41,17 @@ history:
       Exchange and Pricier; first review's findings fixed; second review + CI
       running.
     id: a-2026-11-24t02-08-50-788z
+  - type: activity
+    user: Event Horizon
+    date: '2026-11-24T02:39:08.402Z'
+    comment: Claim by claude-code@GUY-PC expired (no heartbeat for 30 min)
+    id: a-2026-11-24t02-39-08-402z
+  - type: status_change
+    from: In Progress
+    to: Todo
+    user: Event Horizon
+    date: '2026-11-24T02:39:08.408Z'
 needsAction: null
-claim:
-  holder: claude-code@GUY-PC
-  claimedAt: '2026-11-24T01:47:04.061Z'
-  expiresAt: '2026-11-24T02:38:51.424Z'
 ---
 Guy (2026-11-24): buying influenced (Originator) maps in bulk. (1) avoid Elder-influenced ones; (2) bulk results are poor, wants to pull in further, pricier listings.
 
