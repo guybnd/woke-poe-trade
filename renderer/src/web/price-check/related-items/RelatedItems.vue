@@ -153,7 +153,7 @@ function getRecipes (item: ParsedItem) {
 // woke: the divination cards that give the item, each priced as a full stack.
 function getCards (item: ParsedItem, tips: Record<string, { d?: string, n?: number }>) {
   const rows: SideRow[] = []
-  for (const c of cardsFor(item.info.refName, tips)) {
+  for (const c of cardsFor(item.info, tips)) {
     const info = ITEM_BY_REF('DIVINATION_CARD', c.card)?.[0]
     if (!info) continue
     const each = findPriceByQuery({ ns: 'DIVINATION_CARD', name: c.card, variant: undefined })?.chaos

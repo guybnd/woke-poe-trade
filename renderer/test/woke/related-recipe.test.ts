@@ -83,14 +83,24 @@ describe('card rewards and sets', () => {
     'The Fiend': { d: '<uniqueitem>{Headhunter}\r\n<corrupted>{Corrupted}', n: 11 },
     'A Chilling Wind': { d: '<gemitem>{Level 21 Vaal Cold Snap}\r\n<default>{Quality:} <augmented>{+20%}', n: 4 },
     'The Nurse': { d: '<divination>{The Doctor}', n: 8 },
-    'Mirror of Kalandra': { d: 'a currency, not a card' }
+    'Mirror of Kalandra': { d: 'a currency, not a card' },
+    'The Encroaching Darkness': { d: '<uniqueitem>{Map}\r\n<corrupted>{Corrupted}', n: 8 },
+    "Lysah's Respite": { d: '<uniqueitem>{Agate Amulet}', n: 6 },
+    'House of Mirrors': { d: '<currencyitem>{Mirror of Kalandra}', n: 9 }
   }
   it('finds the cards whose reward is the item', () => {
-    expect(cardsFor('Headhunter', tips)).toEqual([
+    expect(cardsFor({ refName: 'Headhunter', namespace: 'UNIQUE' }, tips)).toEqual([
       { card: 'The Doctor', stack: 8, corrupted: false },
       { card: 'The Fiend', stack: 11, corrupted: true }
     ])
-    expect(cardsFor('Vaal Cold Snap', tips)).toEqual([])
+    expect(cardsFor({ refName: 'Vaal Cold Snap', namespace: 'GEM' }, tips)).toEqual([])
+    expect(cardsFor({ refName: 'Mirror of Kalandra', namespace: 'ITEM' }, tips)).toEqual([{ card: 'House of Mirrors', stack: 9, corrupted: false }])
+  })
+  it('leaves out cards that give a random item of that kind', () => {
+    // A map is checked as "Map": The Encroaching Darkness gives any unique map.
+    expect(cardsFor({ refName: 'Map', namespace: 'ITEM' }, tips)).toEqual([])
+    // A rare Agate Amulet isn't the unique one Lysah's Respite gives.
+    expect(cardsFor({ refName: 'Agate Amulet', namespace: 'ITEM' }, tips)).toEqual([])
   })
   it('knows the fragment sets', () => {
     const sets = ITEM_DROP.filter(isFragmentSet).map(g => g.query[0])
