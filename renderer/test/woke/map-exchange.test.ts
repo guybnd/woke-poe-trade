@@ -68,7 +68,7 @@ describe('the bulk exchange entry of a map', () => {
   })
 
   it('a guardian map trades under its guardian', () => {
-    expect(mapExchange(parseItem(fixture('items/map-originator-elder.txt')))).toEqual({ tag: 'purifier-map', label: 'Purifier-Occupied Map' })
+    expect(mapExchange(parseItem(fixture('items/map-originator-elder.txt')))).toMatchObject({ tag: 'purifier-map', label: 'Purifier-Occupied Map' })
   })
 
   it('a Valdo map has none', () => {

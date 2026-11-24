@@ -36,7 +36,22 @@ export interface MapExchange {
   label: string
 }
 
-export function mapExchange (item: ParsedItem): MapExchange | null {
+/** The entry, with the Exchange button's hover texts. */
+export interface MapExchangeView extends MapExchange {
+  title: string
+  backTitle: string
+}
+
+export function mapExchange (item: ParsedItem): MapExchangeView | null {
+  const entry = exchangeEntry(item)
+  return entry && {
+    ...entry,
+    title: `Search the bulk exchange's ${entry.label}: each seller once, with their stock, cheapest first. One exchange search. It can't filter by mods.`,
+    backTitle: `Showing ${entry.label} on the bulk exchange. Click to go back to the listings (a trade search).`
+  }
+}
+
+function exchangeEntry (item: ParsedItem): MapExchange | null {
   if (item.category !== ItemCategory.Map || item.rarity === ItemRarity.Unique || item.mapCompletionReward) return null
   // Its mods are hidden, so a guardian or the Originator's Memories could be there.
   if (item.isUnidentified) return null

@@ -261,7 +261,8 @@ test('map: Base map and the Bulk tab keep the map\'s influence', async ({ overla
   const onIds = (q: Query) => q.query.stats.flatMap(g => g.disabled ? [] : g.filters.filter(f => !f.disabled).map(f => f.id))
   await search.click()
   await expect.poll(() => searches.length).toBeGreaterThan(0)
-  expect(onIds(searches[0])).toEqual([ORIGINATOR])
+  // And No Elder (WOKEPOET-523), which is the kind of map too.
+  expect(onIds(searches[0]).sort()).toEqual([ORIGINATOR, 'implicit.stat_1792283443'].sort())
 
   await panel.locator('[data-trade-presets]').getByText('Bulk', { exact: true }).click()
   const before = searches.length

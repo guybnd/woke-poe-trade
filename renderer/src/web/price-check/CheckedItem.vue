@@ -122,7 +122,7 @@
       @reset="resetTradeResults">
       <template v-if="exchangeView" #chips>
         <button type="button" class="w-pc-bulk on" aria-pressed="true" data-exchange-chip
-          :title="`Showing ${mapEx?.label} on the bulk exchange. Click to go back to the listings (a trade search).`" @click="leaveExchange">Exchange</button>
+          :title="mapEx?.backTitle" @click="leaveExchange">Exchange</button>
       </template>
       <template v-if="exchangeView" #error-actions>
         <button class="btn" @click="leaveExchange">Back to listings</button>
@@ -180,7 +180,6 @@ import { useLeagues } from '@/web/background/Leagues'
 import { priceView, ninjaCardOpen } from '@/web/woke/price-insight/view'
 import { holdBulkSearch, fixedPriceItem, isUnidUniqueJewel, chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
 import { exactDetailsId } from './trends/getDetailsId'
-import { mapExchange, asExchangeItem } from '@/web/woke/price-insight/map-exchange'
 import { usePoeninja } from '@/web/background/Prices'
 import { poeMode, poeOn, loadPoeKit } from '@/web/woke/price-insight/window-style'
 
@@ -316,9 +315,16 @@ export default defineComponent({
 
     // woke: a map's bulk exchange entry, shown by TradeBulk instead of the listings
     // after the Exchange click (WOKEPOET-523). Any other search goes back to listings.
-    const mapEx = computed(() => mapExchange(props.item))
+    // Loaded with the first map checked, not at startup (startup JS budget).
+    const mapExMod = shallowRef<typeof import('@/web/woke/price-insight/map-exchange') | null>(null)
+    watch(() => props.item, (item) => {
+      if (item.category === ItemCategory.Map && !mapExMod.value) {
+        import('@/web/woke/price-insight/map-exchange').then(m => { mapExMod.value = m }, () => {})
+      }
+    }, { immediate: true })
+    const mapEx = computed(() => mapExMod.value?.mapExchange(props.item) ?? null)
     const exchangeView = shallowRef(false)
-    const bulkItem = computed(() => exchangeView.value && mapEx.value ? asExchangeItem(props.item, mapEx.value.tag) : props.item)
+    const bulkItem = computed(() => exchangeView.value && mapEx.value && mapExMod.value ? mapExMod.value.asExchangeItem(props.item, mapEx.value.tag) : props.item)
     watch(() => [props.item, doSearch.value], () => { if (!doSearch.value) exchangeView.value = false })
     watch(() => props.item, () => { exchangeView.value = false })
     // A search starts on doSearch's change, so a running one is stopped first.
@@ -646,9 +652,7 @@ export default defineComponent({
       bulkItem,
       searchExchange,
       leaveExchange,
-      exchangeTitle: computed(() => mapEx.value
-        ? `Search the bulk exchange's ${mapEx.value.label}: each seller once, with their stock, cheapest first. One exchange search. It can't filter by mods.`
-        : ''),
+      exchangeTitle: computed(() => mapEx.value?.title ?? ''),
       canSearchBulk: computed(() => apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'trade'),
       searchBulk () {
         bulkClick = true
