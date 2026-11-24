@@ -7,21 +7,40 @@ import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interf
 import { pseudoRuleStats } from '@/web/price-check/filters/pseudo'
 import { clusterResColumnStats } from '@/web/price-check/filters/pseudo/cluster-res'
 import { roundRoll } from '@/web/price-check/filters/util'
-import { modDomain, modText, ListingItem, ListingMod } from './listing-tip'
+import { modDomain, modText, stripLinks, ListingItem, ListingMod } from './listing-tip'
 
 type Reader = (item: ListingItem) => number | undefined
 
 function propValue (name: string): Reader {
   return (item) => {
-    const raw = item.properties?.find(p => p.name === name)?.values[0]?.[0]
+    const raw = item.properties?.find(p => p.name != null && stripLinks(p.name) === name)?.values[0]?.[0]
     if (raw == null) return undefined
     const n = parseFloat(raw)
     return Number.isFinite(n) ? n : undefined
   }
 }
 
+// woke: a map's More Currency and the like. A listing shows them as properties;
+// a search with the pseudo filter also lists them as a pseudo line ("+205% More Currency").
+// 3.30 renamed More Scarabs to More Threads on the map; the pseudo filter keeps the old name.
+function mapMoreValue (name: string, propName = name): Reader {
+  const fromProp = propValue(propName)
+  const line = new RegExp(`^\\+?(-?[\\d.]+)% ${name}$|^${name}: \\+?(-?[\\d.]+)%$`, 'i')
+  return (item) => {
+    const prop = fromProp(item)
+    if (prop != null) return prop
+    for (const mod of item.pseudoMods ?? []) {
+      const m = line.exec(modText(mod))
+      if (m) return parseFloat(m[1] ?? m[2])
+    }
+    return undefined
+  }
+}
+
 // `extended` holds these at 20% quality, which is what the filters search on.
-const PROPERTIES: Record<string, { label: string, read: Reader }> = {
+// showOnly: read by English name and not checked against the live site, so
+// the column is shown but never used to filter loaded listings here.
+const PROPERTIES: Record<string, { label: string, read: Reader, showOnly?: boolean }> = {
   'item.armour': { label: 'AR', read: i => i.extended?.ar },
   'item.evasion_rating': { label: 'EV', read: i => i.extended?.ev },
   'item.energy_shield': { label: 'ES', read: i => i.extended?.es },
@@ -32,7 +51,16 @@ const PROPERTIES: Record<string, { label: string, read: Reader }> = {
   'item.physical_dps': { label: 'pDPS', read: i => i.extended?.pdps },
   'item.elemental_dps': { label: 'eDPS', read: i => i.extended?.edps },
   'item.aps': { label: 'APS', read: propValue('Attacks per Second') },
-  'item.crit': { label: 'Crit', read: propValue('Critical Strike Chance') }
+  'item.crit': { label: 'Crit', read: propValue('Critical Strike Chance') },
+  // woke: a map's numbers, from the listing's own properties.
+  'item.map_item_quantity': { label: 'Qty', read: propValue('Item Quantity'), showOnly: true },
+  'item.map_item_rarity': { label: 'Rarity', read: propValue('Item Rarity'), showOnly: true },
+  'item.map_pack_size': { label: 'Pack', read: propValue('Monster Pack Size'), showOnly: true },
+  'item.map_atlas_drops': { label: 'Atlas', read: propValue('Atlas Drops'), showOnly: true },
+  'pseudo.pseudo_map_more_currency_drops': { label: 'Curr', read: mapMoreValue('More Currency'), showOnly: true },
+  'pseudo.pseudo_map_more_scarab_drops': { label: 'Thread', read: mapMoreValue('More Scarabs', 'More Threads'), showOnly: true },
+  'pseudo.pseudo_map_more_map_drops': { label: 'Maps', read: mapMoreValue('More Maps'), showOnly: true },
+  'pseudo.pseudo_map_more_card_drops': { label: 'Cards', read: mapMoreValue('More Divination Cards'), showOnly: true }
 }
 
 const LABELS: Array<[RegExp, string]> = [
@@ -92,6 +120,8 @@ export interface StatColumn {
   better: 1 | -1 | 0
   dp: boolean
   source: ColumnSource
+  /** Shown, but a newly ticked one searches again instead of filtering loaded listings. */
+  showOnly?: boolean
 }
 
 type ColumnSource =
@@ -155,7 +185,8 @@ export function pickStatColumns (stats: readonly FilterOrGroup[]): StatColumn[] 
         : filter.roll.value,
       better: filter.roll.better ?? 0,
       dp: filter.roll.dp,
-      source
+      source,
+      ...(PROPERTIES[id]?.showOnly ? { showOnly: true } : {})
     })
   }
   return columns

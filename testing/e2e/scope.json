@@ -248,6 +248,10 @@
   "mechanics-settings.spec.ts": [
    "renderer/src/web/woke/mechanics/"
   ],
+  "merc-warrant.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/"
+  ],
   "net-worth.spec.ts": [
    "main/src/woke/personal/",
    "main/src/woke/stash-digits-data.ts",
