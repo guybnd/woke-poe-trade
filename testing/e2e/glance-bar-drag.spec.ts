@@ -1,6 +1,8 @@
 // Session story's glance bar in a map: click-through while you play, dragged
 // with the overlay open (no Settings needed), and its spot is remembered.
+import type { Locator } from '@playwright/test'
 import { test, expect } from './harness'
+import type { Overlay } from './harness'
 
 const intoMap = [
   '2026/11/05 15:00:34 3725546 1186a8a3 [DEBUG Client 25552] Generating level 60 area "HideoutArenaSearingExarch" with seed 1',
@@ -18,14 +20,23 @@ function glanceOn (pos?: { x: number, y: number }) {
   }
 }
 
+// The session story only hears log lines once it has loaded: under load a
+// line written right after boot can come too early, so enter the map again
+// until the bar shows.
+async function enterMap (overlay: Overlay, bar: Locator) {
+  await expect(async () => {
+    await overlay.log(intoMap)
+    await expect(bar).toBeVisible({ timeout: 3000 })
+  }).toPass({ timeout: 30_000 })
+}
+
 test('the glance bar drags with the overlay open and keeps its spot', async ({ overlay }) => {
   // Started below the top, where the overlay's own notices (an update, a
   // config warning) can cover its default spot.
   await overlay.boot({ patch: glanceOn({ x: 0.5, y: 0.3 }) })
-  await overlay.log(intoMap)
   const page = overlay.page
   const bar = page.locator('[data-glance-bar]')
-  await expect(bar).toBeVisible({ timeout: 15_000 })
+  await enterMap(overlay, bar)
   await expect(bar).toContainText('Strand')
   // While you play: click-through, no hover text.
   await expect(bar).not.toHaveAttribute('title', /./)
@@ -46,16 +57,16 @@ test('the glance bar drags with the overlay open and keeps its spot', async ({ o
   expect(after.x).toBeLessThan(before.x - 250)
   expect(after.y).toBeGreaterThan(before.y + 150)
 
-  // Saved when the drag ends.
-  await expect.poll(() => overlay.savedWidget('woke-session-story')?.glancePos ?? null).not.toBeNull()
+  // Saved when the drag ends. It started with a saved spot (0.5, 0.3), so wait
+  // for the new one: a not-null check passed before the save under load.
+  await expect.poll(() => (overlay.savedWidget('woke-session-story')?.glancePos as { x: number } | undefined)?.x ?? 0.5).not.toBe(0.5)
   const saved = overlay.savedWidget('woke-session-story').glancePos as { x: number, y: number }
   const vw = page.viewportSize()!.width
   expect(saved.x * vw).toBeCloseTo(after.x + after.width / 2, -1)
 
   // Next start, next map: it comes up where it was left.
   await overlay.boot({ patch: glanceOn(saved) })
-  await overlay.log(intoMap)
-  await expect(bar).toBeVisible({ timeout: 15_000 })
+  await enterMap(overlay, bar)
   const again = (await bar.boundingBox())!
   expect(Math.abs(again.x - after.x)).toBeLessThan(30)
   expect(Math.abs(again.y - after.y)).toBeLessThan(4)

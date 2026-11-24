@@ -106,6 +106,10 @@ export class Overlay {
   // The website's shots set this: the price check keeps the app's default layout
   // (Tooltip lines) instead of the Rows layout the other specs check.
   appDefaults = false
+  private ninjaInFlight = 0
+  private ninjaDoneAt = 0
+  // No price check yet since this boot (see copyItem).
+  private firstCheck = true
 
   constructor (readonly page: Page, readonly app: FakeApp, private testInfo: TestInfo) {
     page.on('pageerror', (e) => {
@@ -113,6 +117,16 @@ export class Overlay {
       this.errors.push(`${e.message}\n${e.stack ?? ''}`)
     })
     page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) this.errors.push(m.text()) })
+    // poe.ninja downloads in flight (see copyItem).
+    const isNinja = (url: string) => url.includes('/proxy/poe.ninja/') && url.includes('/dense/overviews')
+    page.on('request', (r) => { if (isNinja(r.url())) this.ninjaInFlight++ })
+    const done = (r: { url: () => string }) => {
+      if (!isNinja(r.url())) return
+      this.ninjaInFlight = Math.max(0, this.ninjaInFlight - 1)
+      this.ninjaDoneAt = Date.now()
+    }
+    page.on('requestfinished', done)
+    page.on('requestfailed', done)
     // Every item named on screen has the item tooltip (tip-audit.ts).
     this.auditReady = page.addInitScript(installTipAudit, itemNames())
     // WOKE_LAYOUT_AUDIT=<folder> records layout faults (layout-audit.ts).
@@ -250,6 +264,7 @@ export class Overlay {
     this.app.newClientLog(typeof opts.logBefore === 'string' ? logFixture(opts.logBefore) : opts.logBefore ?? [])
     this.app.clearReceived()
     this.app.game.resetInputLog()
+    this.firstCheck = true
     // The fake app lives for the whole worker, so the mouse is wherever the
     // last test left it, over whatever item it hovered. A dock icon that
     // appears under it opens its card, which then covers what this test clicks
@@ -325,6 +340,18 @@ export class Overlay {
   async copyItem (fixture: string, hotkey = 'Ctrl + D') {
     const text = fixture.includes('\n') ? fixture : fixtureText(fixture)
     this.app.hoverItem(text)
+    // The price check picks the instant card or the window when the key is
+    // pressed, from the poe.ninja prices it has then. Pressed while the boot's
+    // download is still running, it opens the window (the instant card flakes
+    // under load): wait for that download, and a moment to read it.
+    // Only the first check: a later one may itself have started a download,
+    // and waiting for it would spoil "the key again on the same item".
+    if (this.firstCheck && /\bD$/.test(hotkey)) {
+      this.firstCheck = false
+      for (let waited = 0; waited < 15_000 && this.ninjaInFlight > 0; waited += 50) await this.page.waitForTimeout(50)
+      const sinceDone = Date.now() - this.ninjaDoneAt
+      if (sinceDone < 300) await this.page.waitForTimeout(300 - sinceDone)
+    }
     await this.pressHotkey(hotkey)
   }
 
