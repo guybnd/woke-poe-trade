@@ -62,7 +62,7 @@ export function mergeRead (prev: PendingDoc | null, league: string, read: Faustu
 
 // Uniques whose worth swings with their rolls or mods: poe.ninja's price for
 // the name says little about yours.
-const ROLLED_UNIQUES = new Set([
+export const ROLLED_UNIQUES = new Set([
   "Watcher's Eye", 'Glorious Vanity', 'Lethal Pride', 'Brutal Restraint', 'Militant Faith', 'Elegant Hubris',
   'Forbidden Flame', 'Forbidden Flesh', 'Impossible Escape', 'Thread of Hope', 'Megalomaniac', 'Voices',
   'Split Personality', 'Unnatural Instinct', 'Sublime Vision', 'Grand Spectrum', 'Precursor\'s Emblem',
