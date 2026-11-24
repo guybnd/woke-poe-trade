@@ -99,7 +99,8 @@ async function check (name: string) {
   color: var(--w-accent);
 }
 .count { font-family: var(--w-body); font-size: var(--w-fs-sm); color: var(--w-faint); white-space: nowrap; }
-.list { max-height: min(26rem, 60vh); overflow-y: auto; overscroll-behavior: contain; }
+/* Beside the instant card, which zooms it 1.2x (--w-instant-scale): the same height on screen as before. */
+.list { max-height: calc(min(26rem, 60vh) / var(--w-instant-scale, 1)); overflow-y: auto; overscroll-behavior: contain; }
 .row { display: flex; flex-direction: column; gap: 1px; padding: 5px 12px; border-bottom: 1px solid var(--w-line-soft); }
 .row:last-child { border-bottom: 0; }
 .what { color: var(--w-fg); font-weight: 500; }

@@ -1,4 +1,5 @@
 import { shallowRef, watch } from 'vue'
+import type { CheapUnit } from './ninja-first'
 
 // Which price check view to show. 'classic' is APT's listing table untouched;
 // 'improved' adds the verdict card and marks listings the verdict ignored.
@@ -58,3 +59,23 @@ window.addEventListener('storage', (e) => {
 // The instant poe.ninja card is showing (PriceCheckWindow.vue): the overlay
 // leaves the game undarkened behind it, as for the quick key.
 export const instantCardShown = shallowRef(false)
+
+// How poe.ninja's price of an item under a divine reads on the instant card and
+// the verdict: in chaos, or per divine (ninja-first.ts CheapUnit). A click on
+// the price switches it (Guy, 2026-11-24); remembered between checks and restarts.
+const UNIT_KEY = 'woke.ninjaCheapUnit'
+function readUnit (): CheapUnit {
+  try { return localStorage.getItem(UNIT_KEY) === 'div' ? 'div' : 'c' } catch { return 'c' }
+}
+export const ninjaCheapUnit = shallowRef<CheapUnit>(readUnit())
+watch(ninjaCheapUnit, (v) => {
+  try { localStorage.setItem(UNIT_KEY, v) } catch {}
+})
+window.addEventListener('storage', (e) => {
+  if (e.key === UNIT_KEY) ninjaCheapUnit.value = e.newValue === 'div' ? 'div' : 'c'
+})
+
+/** A click on a poe.ninja price: show prices under a divine the other way. */
+export function flipUnit (price: { flip: CheapUnit | null } | null | undefined): void {
+  if (price?.flip) ninjaCheapUnit.value = price.flip
+}

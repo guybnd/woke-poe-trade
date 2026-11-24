@@ -11,7 +11,7 @@
       </template>
     </div>
     <div :class="$style.value">
-      <span :class="$style.headline"><w-price-text :text="price?.main" /></span>
+      <span :class="[$style.headline, { [$style.flip]: price?.flip }]" data-testid="ninja-verdict-price" :data-unit="price?.flip ? ninjaCheapUnit : null" :title="flipTitle(price)" @click="flipUnit(price)"><w-price-text :text="price?.main" /></span>
       <span :class="$style.each"><template v-if="price?.each">each</template><template v-if="stack">{{ price?.each ? ' · ' : '' }}<w-price-text :text="stack" /> for your {{ have }}</template><template v-if="price?.sub"> · <w-price-text :text="price.sub" /></template></span>
     </div>
     <!-- How sure poe.ninja's price is (ninja-trust.ts, WOKEPOET-534). -->
@@ -46,7 +46,8 @@ import { computed, inject } from 'vue'
 import type { ParsedItem } from '@/parser'
 import type { ItemFilters } from '@/web/price-check/filters/interfaces'
 import { usePoeninja } from '@/web/background/Prices'
-import { ninjaPrice, ninjaTotal, chaosOrbRow } from './ninja-first'
+import { ninjaPrice, ninjaTotal, chaosOrbRow, flipTitle } from './ninja-first'
+import { ninjaCheapUnit, flipUnit } from './view'
 import { WSpark, WKbd, WPriceText, agoPhrase } from '../ui'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { poeOn } from './window-style'
@@ -73,7 +74,7 @@ const info = computed(() => {
 
 const isDivine = computed(() => props.item.info.refName === 'Divine Orb')
 const have = computed(() => props.filters.stackSize?.value ?? 1)
-const price = computed(() => info.value ? ninjaPrice(info.value.chaos, xchgRate.value, isDivine.value) : null)
+const price = computed(() => info.value ? ninjaPrice(info.value.chaos, xchgRate.value, isDivine.value, ninjaCheapUnit.value) : null)
 const stack = computed(() => info.value && have.value > 1 ? ninjaTotal(info.value.chaos * have.value, isDivine.value ? undefined : xchgRate.value) : null)
 const age = computed(() => agoPhrase(updatedAt.value))
 const doubt = useNinjaDoubt(info)
@@ -136,6 +137,8 @@ const weekChange = computed(() => spark.value.length ? Math.round(spark.value[sp
   color: #7fb2e5;
 }
 .value { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-width: 0; }
+.flip { cursor: pointer; }
+.flip:hover { filter: brightness(1.2); }
 .headline { font-family: var(--w-num); font-size: calc(28px * var(--w-text-scale, 1)); line-height: calc(32px * var(--w-text-scale, 1)); font-weight: 600; color: var(--w-accent); white-space: nowrap; }
 .each { color: var(--w-dim); font-size: var(--w-fs-sm); }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: var(--w-fs-sm); }

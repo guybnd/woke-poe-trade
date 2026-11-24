@@ -17,21 +17,24 @@ on:
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
+# Both jobs: configure-pages reads the Pages settings, deploy-pages writes.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 # Pages refuses a deploy while another is running, so close merges wait their
 # turn. The newest waiting one wins, as it has everything the others had.
 concurrency:
   group: pages
   cancel-in-progress: false
 
+# Build and deploy are two jobs, as GitHub's own Pages workflow does: in one
+# job, deploy-pages asked for the artifact a fraction of a second after the
+# upload finished and sometimes found none ("No artifacts named github-pages").
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -49,4 +52,13 @@ jobs:
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: ./docs/.vitepress/dist
-      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
