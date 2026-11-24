@@ -32,8 +32,12 @@ test('a notable found in Ctrl+Space opens the finder on its class, and Price sho
   await expect(finder.getByText('Necromancer', { exact: true })).toBeVisible()
   await expect(finder.getByText('Only on Forbidden jewels', { exact: true })).toBeVisible()
   const row = finder.locator('[data-qa="forbidden-row"]', { hasText: 'Bone Barrier' })
-  await row.hover()
-  await expect(overlay.page.getByRole('tooltip')).toContainText('Witch jewels only')
+  // The finder scrolls the row into view as it opens, and a scroll hides a hover: point again until it shows.
+  await expect(async () => {
+    await overlay.page.mouse.move(0, 0)
+    await row.getByText('Bone Barrier', { exact: true }).hover()
+    await expect(overlay.page.getByRole('tooltip')).toContainText('Witch jewels only', { timeout: 1000 })
+  }).toPass({ timeout: 10_000 })
 
   await row.locator('[data-qa="forbidden-price"]').click()
   const pair = row.locator('[data-qa="forbidden-pair"]')

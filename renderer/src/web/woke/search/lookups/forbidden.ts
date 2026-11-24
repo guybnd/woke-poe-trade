@@ -43,7 +43,7 @@ export function forbiddenLookup (list: readonly ForbiddenNotable[] | null): Look
         sub: `Forbidden pair · ${n.group === ONLY_HERE ? `${n.cls} only` : n.group}`,
         icon: 'fas fa-fire',
         sections: [
-          { label: n.group === ONLY_HERE ? `Only on Forbidden jewels (${n.cls})` : `${n.group} notable (${n.cls})`, text: n.stats.length ? n.stats : [`The Ascendant's ${n.name} node.`] },
+          { label: n.group === ONLY_HERE ? `Only on Forbidden jewels (${n.cls})` : `${n.group} notable (${n.cls})`, text: n.stats.length ? n.stats : [n.group === 'Ascendant' ? `The Ascendant's ${n.name} node.` : 'No stats in the tree data.'] },
           {
             label: 'Both jewels name it',
             rows: [

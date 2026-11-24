@@ -4,7 +4,8 @@
         <!-- Where the class comes from -->
         <div :class="$style.row">
           <WSegmented v-model="config.source" :options="SOURCES" />
-          <WSelect v-if="config.source === 'class'" :model-value="config.pickClass" @update:model-value="config.pickClass = $event as ClassName" :options="CLASS_OPTIONS" data-qa="forbidden-class" />
+          <WSelect v-if="config.source === 'class' && !shownClass" :model-value="config.pickClass" @update:model-value="config.pickClass = $event as ClassName" :options="CLASS_OPTIONS" data-qa="forbidden-class" />
+          <span v-else-if="shownClass" :class="$style.dim" data-qa="forbidden-class">{{ shownClass }} <WButton size="sm" variant="ghost" @click="shownClass = null">Back to {{ config.source === 'class' ? config.pickClass : 'yours' }}</WButton></span>
           <span v-else-if="cls" :class="$style.dim" class="w-trunc" data-qa="forbidden-source" :title="who.label">{{ who.label }}</span>
           <WButton v-if="otherPath" size="sm" variant="ghost" title="Use the PoB build other windows use" @click="config.pobPath = null">Use the build in use</WButton>
           <WInfo :class="$style.end" text="Both jewels must name the same notable, from your class: any of its three ascendancies, or the one notable only these jewels give. Each is Limited to 1, so a build has one pair. The estimate is poe.ninja's price of both jewels. Price runs two trade searches for the real cheapest pair. Flame and Flesh open the price check on that jewel." />
@@ -15,7 +16,7 @@
 
         <section v-for="g in groups" :key="g.group" :class="$style.sec" data-qa="forbidden-group">
           <div :class="$style.head"><span>{{ g.group }}</span><span v-if="g.mine" :class="$style.mine">yours</span></div>
-          <div v-for="n in g.rows" :key="n.node" :ref="el => rowRef(n.name, el)" :class="[$style.nrow, { [$style.have]: has(n), [$style.focus]: config.focus === n.name }]"
+          <div v-for="n in g.rows" :key="n.node" :ref="el => rowRef(n.name, el)" :class="[$style.nrow, { [$style.have]: has(n), [$style.focus]: marked === n.name }]"
             data-qa="forbidden-row" data-no-item-tip="an ascendancy notable, not an item: its own tooltip says what it does"
             @mouseenter="tip($event, n)" @mouseleave="untip">
             <span :class="$style.name">{{ n.name }}<span v-if="has(n)" :class="$style.dim"> · you have it</span></span>
@@ -28,7 +29,7 @@
               <span v-else-if="answer(n)?.state === 'busy'" :class="$style.dim">Searching…</span>
               <span v-else-if="answer(n)?.state === 'error'" :class="$style.err" :title="answer(n)!.error">Search failed</span>
               <span v-else-if="estimate(n) != null" :class="$style.est" data-qa="forbidden-estimate" title="poe.ninja's price of both jewels">~{{ fmt(estimate(n)!) }}</span>
-              <span :class="$style.btns">
+              <span :class="$style.btns" @mouseenter="untip" @mouseleave="(e: MouseEvent) => tip(e, n, (e.currentTarget as HTMLElement).parentElement!)">
                 <WButton size="sm" variant="ghost" data-qa="forbidden-price" :disabled="answer(n)?.state === 'busy'" title="Two trade searches: the cheapest Forbidden Flame and Forbidden Flesh with this notable" @click="price(n)">Price</WButton>
                 <WButton v-item-tip="{ name: FLAME }" data-item-tip size="sm" variant="ghost" data-qa="forbidden-check-flame" @click="check(n, 'flame', $event)">Flame</WButton>
                 <WButton v-item-tip="{ name: FLESH }" data-item-tip size="sm" variant="ghost" data-qa="forbidden-check-flesh" @click="check(n, 'flesh', $event)">Flesh</WButton>
@@ -59,6 +60,7 @@ import { usePriceIndex } from '../market/price-index'
 import { useActiveBuild } from '../pob-builds/active'
 import { character } from '../pob-builds/character'
 import { loadPassiveTree } from '../pob-builds/passive-tree'
+import { loadoutOf } from '../pob-builds/build-model'
 import { onSharedDataChange } from '../app/live-data'
 import { POB_BUILDS_TYPE, pobApi } from '../pob-builds/widget'
 import type { PobBuildsWidget, PobDetails } from '../pob-builds/widget'
@@ -82,14 +84,18 @@ const index = usePriceIndex()
 const all = shallowRef<ForbiddenNotable[]>([])
 const loadNote = shallowRef('Reading the notable list…')
 let loaded = false
+let loads = 0
 async function load () {
   if (loaded) return
   loaded = true
+  // A read started before a data update is dropped.
+  const mine = ++loads
   try {
     const tree = await loadPassiveTree()
+    if (mine !== loads) return
     all.value = forbiddenNotables(STATS_ITERATOR('matching modifier on Forbidden'), id => tree.get(id))
   } catch { /* No tree data: said below. */ }
-  if (!all.value.length) {
+  if (mine === loads && !all.value.length) {
     loaded = false
     loadNote.value = "Couldn't read the notable list. Open the PoB builds window once to download the tree data."
   }
@@ -97,6 +103,7 @@ async function load () {
 watch(() => config.wmWants, (w) => { if (w === 'show') load().catch(() => {}) }, { immediate: true })
 onBeforeUnmount(onSharedDataChange(() => {
   loaded = false
+  loads++
   if (config.wmWants === 'show') setTimeout(() => { load().catch(() => {}) }, 0)
 }))
 
@@ -119,13 +126,23 @@ watch([otherPath, () => config.wmWants], async ([path, wants], old) => {
   }
 }, { immediate: true })
 
-function activeNodes (d: PobDetails): Set<number> {
-  const t = d.trees.find(t => t.isActive && !t.divider) ?? d.trees.find(t => !t.divider)
+// The tree in use: for the build in use, the loadout every window shows
+// (your level and act, or the set you picked); for another build, PoB's own.
+function activeNodes (d: PobDetails, inUse: boolean): Set<number> {
+  const t = inUse
+    ? loadoutOf(d, active.level.value, active.act.value, active.loadout.value).tree
+    : d.trees.find(t => t.isActive && !t.divider) ?? d.trees.find(t => !t.divider)
   return new Set(t?.nodes ?? [])
 }
 
+// A notable of another class asked for from the search palette: that class
+// shows until you pick a source or class yourself. Your saved choice stays.
+const shownClass = shallowRef<ClassName | null>(null)
+watch(() => [config.source, config.pickClass], () => { shownClass.value = null })
+
 const who = computed<{ label: string, cls: ClassName | null, asc: string | null, nodes: Set<number> }>(() => {
   const none = (label: string) => ({ label, cls: null, asc: null, nodes: new Set<number>() })
+  if (shownClass.value) return { label: shownClass.value, cls: shownClass.value, asc: null, nodes: new Set() }
   if (config.source === 'class') return { label: config.pickClass, cls: config.pickClass, asc: null, nodes: new Set() }
   if (config.source === 'character') {
     const c = character.value
@@ -142,7 +159,7 @@ const who = computed<{ label: string, cls: ClassName | null, asc: string | null,
   const asc = d.ascendClassName && d.ascendClassName !== 'None' ? d.ascendClassName : ''
   const cls = classOf(asc) ?? classOf(d.className)
   if (!cls) return none(`Can't tell the class of ${name}. Pick a class instead.`)
-  return { label: `${name} · ${asc || d.className}`, cls, asc: ascendancyShown(asc), nodes: activeNodes(d) }
+  return { label: `${name} · ${asc || d.className}`, cls, asc: ascendancyShown(asc), nodes: activeNodes(d, !otherPath.value) }
 })
 const cls = computed(() => who.value.cls)
 const groups = computed(() => cls.value ? groupsFor(all.value, cls.value, who.value.asc) : [])
@@ -151,11 +168,17 @@ function has (n: ForbiddenNotable): boolean { return who.value.nodes.has(n.node)
 // ---- the row the search palette asked for ----
 const rows = new Map<string, HTMLElement>()
 function rowRef (name: string, el: unknown) { if (el instanceof HTMLElement) rows.set(name, el); else rows.delete(name) }
-watch([() => config.focus, all, groups], async ([focus]) => {
-  if (!focus) return
-  // A notable of another class: show that class.
+// Taken once: the request is cleared, so later opens and your own picks
+// aren't pulled back to it. Waits for the list and for your class to be known.
+const marked = shallowRef<string | null>(null)
+watch([() => config.focus, all, () => who.value.label], async ([focus]) => {
+  if (!focus || !all.value.length) return
   const n = all.value.find(n => n.name === focus)
-  if (n && n.cls !== cls.value) { config.source = 'class'; config.pickClass = n.cls }
+  if (!n) { config.focus = null; return }
+  if (!cls.value && config.source !== 'class' && who.value.label.startsWith('Reading')) return
+  if (n.cls !== cls.value) shownClass.value = n.cls
+  config.focus = null
+  marked.value = focus
   await nextTick()
   rows.get(focus)?.scrollIntoView({ block: 'center' })
 }, { immediate: true })
@@ -163,7 +186,7 @@ watch([() => config.focus, all, groups], async ([focus]) => {
 // ---- prices ----
 const divine = computed(() => ninja.xchgRate.value ?? null)
 function fmt (chaos: number): string { return formatChaos(chaos, divine.value) }
-function fmtOr (c: CheapestOf): string { return c.chaos == null ? 'none listed' : fmt(c.chaos) }
+function fmtOr (c: CheapestOf): string { return c.chaos == null ? (c.listings ? `${c.listings} listed, no price` : 'none listed') : fmt(c.chaos) }
 
 // poe.ninja's two Forbidden jewel rows for this notable, from the Market's saved prices.
 const ninjaRows = computed(() => {
@@ -200,7 +223,8 @@ async function cheapestOf (n: ForbiddenNotable, jewel: 'flame' | 'flesh', league
   const search = await requestTradeResultList(body(n, jewel) as unknown as TradeRequest, league)
   if (!search.result.length) return NONE
   const listings = await requestResults(search.id, search.result.slice(0, 5), { accountName: '' })
-  return cheapest(listings, search.total, divine.value ?? 0)
+  if (!divine.value) throw new Error('Waiting for the divine rate from poe.ninja. Try again in a moment.')
+  return cheapest(listings, search.total, divine.value)
 }
 
 function price (n: ForbiddenNotable) {
@@ -222,14 +246,14 @@ function check (n: ForbiddenNotable, jewel: 'flame' | 'flesh', e: MouseEvent) {
 
 // ---- tooltip ----
 const tipOwner = {}
-function tip (e: Event, n: ForbiddenNotable) {
+function tip (e: Event, n: ForbiddenNotable, at?: HTMLElement) {
   const parts = [
     n.name,
-    n.stats.length ? n.stats.join('\n') : `The Ascendant's ${n.name} node.`,
+    n.stats.length ? n.stats.join('\n') : n.group === 'Ascendant' ? `The Ascendant's ${n.name} node.` : 'No stats in the tree data.',
     `${n.group === ONLY_HERE ? 'Only Forbidden jewels give it' : `${n.group} notable`}. ${n.cls} jewels only.`,
     ...(has(n) ? ['Your tree already has it.'] : [])
   ]
-  showHelp(tipOwner, e.currentTarget as HTMLElement, parts.join('\n\n'), undefined, { lines: true })
+  showHelp(tipOwner, at ?? e.currentTarget as HTMLElement, parts.join('\n\n'), undefined, { lines: true })
 }
 function untip () { hideHelp(tipOwner) }
 onBeforeUnmount(untip)
@@ -244,11 +268,11 @@ onBeforeUnmount(untip)
 .mine { color: var(--w-gold-hi); font-size: 0.85em; }
 .dim { color: var(--w-dim); }
 .err { color: var(--w-err, var(--w-r-unique)); }
-.nrow { display: flex; align-items: center; gap: 8px; min-height: 26px; padding: 0 4px; border-bottom: 1px solid var(--w-line-soft); }
+.nrow { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-height: 26px; padding: 0 4px; border-bottom: 1px solid var(--w-line-soft); }
 .nrow:hover { background: var(--w-well); }
 .nrow.have { opacity: 0.5; }
 .nrow.focus { box-shadow: inset 2px 0 0 var(--w-gold-hi); }
-.name { flex: 1 1 auto; min-width: 0; color: var(--w-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name { flex: 1 1 8rem; min-width: 8rem; color: var(--w-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .est { color: var(--w-gold-hi); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pair { color: var(--w-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pair b { color: var(--w-gold-hi); font-weight: normal; }
