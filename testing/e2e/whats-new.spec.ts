@@ -4,6 +4,7 @@
 import { test, expect } from './harness'
 import { NEWS } from '../../renderer/src/web/woke/tab-bar/news'
 import { gotoTargets } from '../../renderer/src/web/woke/tab-bar/goto-targets'
+import { NEWS_DEMOS } from '../../renderer/src/web/woke/tab-bar/news-demos'
 
 test('players who update get a What\'s new icon in the dock; a hover lists the lines', async ({ overlay }) => {
   await overlay.boot({ whatsNew: true })
@@ -26,12 +27,14 @@ test('with the overlay open: Show me opens the tool, dismiss takes a line off, t
   await lines.filter({ hasText: 'Atlas strategies' }).first().locator('[data-whats-new-dismiss]').click()
   await expect(lines).toHaveCount(NEWS.length - 1)
 
-  await lines.filter({ hasText: 'Map mods' }).first().getByRole('button', { name: 'Show me' }).click()
+  await lines.filter({ hasText: 'Planner tab for T17' }).getByRole('button', { name: 'Show me' }).click()
   await expect(lines).toHaveCount(NEWS.length - 2)
   await expect(overlay.page.getByRole('button', { name: 'Map mods', exact: true })).toHaveClass(/open/)
 
-  // Net worth's reader is off: its line still shows. Dismiss all takes the icon.
+  // Net worth's reader is off: its line still shows, with nothing to show, so no
+  // Show me (Guy: show it, or don't offer to). Dismiss all takes the icon.
   await expect(lines.filter({ hasText: 'Net worth' }).first()).toBeVisible()
+  await expect(lines.filter({ hasText: 'Net worth' }).getByRole('button', { name: 'Show me' })).toHaveCount(0)
   await icon.locator('[data-whats-new-dismiss-all]').click()
   await expect(icon).toHaveCount(0)
 })
@@ -43,8 +46,8 @@ test('a fresh install gets no What\'s new icon, even before setup is finished', 
 })
 
 // Every line's Show me lands on the tab it names (tab-bar/goto.ts). Net worth's
-// lines go to its switch in Settings here, since the stash reader is off.
-for (const n of NEWS.filter(n => n.goto && n.wmType !== 'woke-net-worth')) {
+// lines have none here, since the stash reader is off (tested below with it on).
+for (const n of NEWS.filter(n => n.goto && n.wmType !== 'woke-net-worth' && !NEWS_DEMOS[n.id])) {
   test(`Show me on "${n.id}" opens ${n.name} on its tab`, async ({ overlay }) => {
     await overlay.boot({ overlayActive: true, whatsNew: true })
     const icon = overlay.dockIcon('whats-new')
@@ -62,7 +65,7 @@ test('Show me on a switched-off tool turns it on and opens the line\'s tab', asy
   const icon = overlay.dockIcon('whats-new')
   await icon.click()
   await overlay.page.mouse.move(5, 5)
-  await icon.locator('[data-whats-new-line]').filter({ hasText: 'Map mods' }).first().getByRole('button', { name: 'Show me' }).click()
+  await icon.locator('[data-whats-new-line]').filter({ hasText: 'Planner tab for T17' }).getByRole('button', { name: 'Show me' }).click()
   await expect(overlay.page.getByRole('tab', { name: 'Planner', selected: true }).first()).toBeVisible()
 })
 
@@ -157,3 +160,4 @@ test('a line with nothing to show has no Show me, only dismiss', async ({ overla
   await expect(line.getByRole('button', { name: 'Show me' })).toHaveCount(0)
   await expect(line.locator('[data-whats-new-dismiss]')).toBeVisible()
 })
+

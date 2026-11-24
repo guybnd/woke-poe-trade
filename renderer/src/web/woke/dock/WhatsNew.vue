@@ -8,7 +8,7 @@
             <span :class="$style.name" data-no-item-tip="A tool's name, not an item"><ToolIcon :art="artFor(n.wmType)" :icon="iconFor(n.wmType)" :class="$style.toolIcon" />{{ n.name }}</span>
             <span>{{ sentence(n.note) }}</span>
           </div>
-          <w-button v-if="hasShowMe(n, byName)" size="sm" variant="ghost" data-whats-new-show @click="show(n, $event)">Show me</w-button>
+          <w-button v-if="hasShowMe(n, byName, personalOn)" size="sm" variant="ghost" data-whats-new-show @click="show(n, $event)">Show me</w-button>
           <w-button size="sm" variant="ghost" icon="fas fa-times" title="Dismiss" data-whats-new-dismiss @click="markSeen([n])" />
         </div>
         <div :class="$style.foot">
@@ -130,8 +130,8 @@ async function runCheck (n: NewsItem, ref: ItemMenuRef, spot: string, e?: MouseE
     if (n.settingsPage) openSettingsPage(wm, n.settingsPage)
     return
   }
-  const pc = wm.widgets.value.find(w => w.wmType === 'price-check')
-  if (pc) (await import('../tab-bar/goto-flash')).flashSpot(pc.wmId, spot, 150)
+  const { flashSpot } = await import('../tab-bar/goto-flash')
+  flashSpot(null, spot, 150)
 }
 
 // Ids get reused: a removed window's rail pin and label mustn't carry over

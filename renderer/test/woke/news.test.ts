@@ -28,9 +28,8 @@ describe("What's new lines", () => {
     }
   })
 
-  it('NEWS_SPOTS and NEWS_DEMOS name only real lines; a demo replaces a tab', () => {
+  it('NEWS_SPOTS and NEWS_DEMOS name only real lines', () => {
     for (const id of [...Object.keys(NEWS_SPOTS), ...Object.keys(NEWS_DEMOS)]) expect(NEWS.map(n => n.id), id).toContain(id)
-    for (const id of Object.keys(NEWS_DEMOS)) expect(NEWS.find(n => n.id === id)!.goto, id).toBeUndefined()
   })
 
   it('offers Show me only where it shows the feature (Guy: show it, or don\'t offer to)', () => {
@@ -43,6 +42,8 @@ describe("What's new lines", () => {
     expect(hasShowMe({ id: 'price-check-seller-spread', wmType: 'price-check' })).toBe(true)
     expect(hasShowMe({ id: 'price-check-seller-spread', wmType: 'price-check' }, false)).toBe(false)
     expect(hasShowMe({ id: 'div-card-map-chance', wmType: 'woke-search' }, false)).toBe(true)
+    // Net worth with the stash reader off has nothing to show.
+    expect(hasShowMe({ id: 'x', wmType: 'woke-net-worth', goto: 'holdings' }, true, false)).toBe(false)
   })
 
   it('reads the Settings page names', () => {

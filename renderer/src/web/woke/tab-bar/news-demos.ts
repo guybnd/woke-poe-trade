@@ -24,8 +24,10 @@ const WINDOWLESS = new Set(['price-check'])
 
 // Whether Show me has somewhere real to go: a tab, a sample, the Settings
 // page the feature lives on, or the tool's own window. `byName`: the client
-// can price check by name (English), which a sample check needs.
-export function hasShowMe (n: { id: string, wmType: string, goto?: string, settingsPage?: string }, byName = true): boolean {
+// can price check by name (English), which a sample check needs. `reader`: the
+// stash reader is on; without it Net worth has nothing to show.
+export function hasShowMe (n: { id: string, wmType: string, goto?: string, settingsPage?: string }, byName = true, reader = true): boolean {
+  if (n.wmType === 'woke-net-worth' && !reader) return false
   const demo = NEWS_DEMOS[n.id]
   if (demo) return !('check' in demo) || byName
   if (n.goto || n.settingsPage) return true
