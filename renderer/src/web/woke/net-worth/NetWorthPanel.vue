@@ -101,7 +101,7 @@
                 <TextTabs v-model="range" :options="RANGE_OPTIONS" />
               </span>
             </div>
-            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="chartListed ? goal?.div ?? null : goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :listed="chartListed" :maps="chartMaps" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
+            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :mode="chartMode as 'total' | 'category'" :goal-div="chartListed ? goal?.div ?? null : goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :listed="chartListed" :maps="chartMaps" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
             <div v-if="chartMode === 'category' && !fold.chart" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
             </div>
@@ -303,7 +303,7 @@ import { stashGainsBetween } from './gains'
 import type { FarmingWidget } from '../farming/farming'
 import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
-import { bigGains, change24h, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
+import { change24h, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
 import type { ChartRange, PriceMove } from './ledger'
 import { divine, gainsNow, historyNow, leagueNow, ledger, ratesAt, setIgnored, setMyPrice, setSpendMark, summary, tabValues, valuation, wantPrices } from './store'
 import { markAction, resolveSpends } from './spend'
@@ -582,7 +582,6 @@ const showChanges = computed(() => shown.value.changes && (groups.value.length >
 const chartMode = shallowRef('total')
 const range = shallowRef<string>('7d')
 const series = computed(() => seriesFor(ledger.value.points, historyNow.value.days, range.value as ChartRange, Date.now(), divine.value))
-const big = computed(() => bigGains(series.value))
 // The summary's tiny line: the last 7 days.
 const spark = computed(() => seriesFor(ledger.value.points, historyNow.value.days, '7d', Date.now(), divine.value).map(p => p.div))
 const goal = computed(() => props.config.goal && props.config.goal.div > 0 ? props.config.goal : null)
@@ -952,9 +951,7 @@ const chartLegend = computed(() => {
   const t1 = s[s.length - 1].at
   const out: Array<{ id: string, label: string, tip: string }> = []
   if (chartListed.value) out.push({ id: 'band', label: 'At Faustus', tip: 'What you have listed at Faustus, on top of your stash' })
-  if (chartSales.value.some(x => x.at >= t0 && x.at <= t1)) out.push({ id: 'sale', label: 'Sold', tip: 'What sold, bigger for more money. Hover a coin for the items' })
-  if (big.value.size) out.push({ id: 'big', label: 'Big gain', tip: 'A refresh that added a lot. Hover it for what came in' })
-  if (s.some(p => p.spentDiv)) out.push({ id: 'spend', label: 'Purchase', tip: 'You bought something: the drop isn\'t counted as a loss' })
+  if (chartSales.value.some(x => x.at >= t0 && x.at <= t1)) out.push({ id: 'sale', label: 'Sale', tip: 'Something sold here. Click the chart there for the items' })
   if (chartMaps.value?.some(m => m.to > t0 && m.from < t1)) out.push({ id: 'maps', label: 'Maps', tip: 'Your maps this session' })
   return out
 })
@@ -1080,9 +1077,7 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .goalLine { color: var(--w-up); }
 .key { opacity: 1 !important; }
 .key-band { background: color-mix(in srgb, var(--w-higher) 45%, transparent); border-top: 1px dashed var(--w-higher); }
-.key-sale { background: var(--w-accent); border-radius: 50%; }
-.key-big { background: var(--w-up); border-radius: 50%; }
-.key-spend { width: 0 !important; border-left: 1px dashed var(--w-info); }
+.key-sale { width: 2px !important; background: var(--w-accent); }
 .key-maps { background: color-mix(in srgb, var(--w-gold) 25%, transparent); }
 .chartRight { display: inline-flex; align-items: baseline; gap: 10px; }
 .mapsBtn { padding: 0 0 2px; font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-faint); border-bottom: 1px dashed transparent; cursor: pointer; }

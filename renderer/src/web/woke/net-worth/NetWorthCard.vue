@@ -77,7 +77,7 @@
           <span class="w-num" :class="tone(rate.div)" :title="rate.tip"><template v-if="rate.div != null">{{ signed(rate.div) }}<Coin :chaos="!divineRate" />/h</template><template v-else-if="rate.hubOnly">No maps</template><template v-else>—<Coin :chaos="!divineRate" />/h</template></span>
         </div>
         <!-- The window's chart, short: hover a point for what changed, click to keep it. -->
-        <LedgerChart v-if="series.length > 1" :series="series" :big="big" mode="total" :goal-div="null" :height="48" tip-below
+        <LedgerChart v-if="series.length > 1" :series="series" mode="total" :goal-div="null" :height="48" tip-below
           :tip-of="(name, count) => tipFor(tips, null, name, count)" :class="$style.spark" />
         <template v-if="v">
           <div v-if="diff" :class="$style.caps">Since last read · <span class="w-num" :class="tone(diff.netChaos)">{{ signed(toDiv(diff.netChaos)) }}<Coin :chaos="!divineRate" /></span></div>
@@ -117,7 +117,7 @@ import { WSegmented, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, formatDuration } from '../ui/format'
 import { divine as divineRate, historyNow, ledger, onStatus, ratesAt, pricePrefs, setLeague, stashNow, summary, valuation, wantPrices } from './store'
-import { bigGains, refreshWaitMs, seriesFor, topCardChanges } from './ledger'
+import { refreshWaitMs, seriesFor, topCardChanges } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { ReaderStatus } from './widget'
 import type { RunGlance } from './runs'
@@ -185,7 +185,6 @@ const series = computed<SeriesPoint[]>(() => {
   const out = all.slice(i)
   return i > 0 ? [{ ...all[i - 1], at: Math.min(from, out[0].at - 1), netDiv: null, top: [] }, ...out] : out
 })
-const big = computed(() => bigGains(series.value))
 // The last read's changes, if that read had any to compare.
 const diff = computed(() => {
   const d = ledger.value.diffs[ledger.value.diffs.length - 1]
