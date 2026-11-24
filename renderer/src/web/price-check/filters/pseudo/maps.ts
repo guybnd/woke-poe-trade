@@ -173,7 +173,8 @@ export function valdoBadMods (ctx: FiltersCreationContext): void {
 // list cheap, so they crowd a search for plain or Originator maps (807 of the
 // T16 Originator maps in Covens, 2026-11-24). Left out from the first search
 // when the checked map has no such influence; the map strip's No Elder chip
-// turns it off (WOKEPOET-523). No option: either influence counts.
+// turns it off (WOKEPOET-523). The trade request sends it twice, once per
+// influence option (pathofexile-trade.ts): with no option it matches nothing.
 export const NO_ELDER_TRADE_ID = 'implicit.stat_1792283443'
 
 function noElderFilter (ctx: FiltersCreationContext): void {
