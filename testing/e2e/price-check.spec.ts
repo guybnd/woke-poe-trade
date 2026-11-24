@@ -67,16 +67,18 @@ test('currency: a Chaos Orb gets the instant card with the same 0.1 to 1 div pan
   await expect(tenths.nth(4)).toHaveText('0.5 div90c')
   await expect(card).toContainText('180 per div')
   await overlay.snap('chaos orb instant check')
-  // A click on the price shows it per divine, and the next check keeps that (Guy, 2026-11-24).
+  // A click on the price shows it per divine, and the window keeps that (Guy, 2026-11-24).
   const price = card.getByTestId('instant-ninja-price')
   await expect(price).toHaveAttribute('title', 'Click to show it in divines')
   await price.click()
   await expect(price).toHaveText('180 per div')
   await expect(card).toContainText('1c')
-  await overlay.copyItem('items/currency-chaos.txt')
-  await expect(card.getByTestId('instant-ninja-price')).toHaveText('180 per div')
-  await card.getByTestId('instant-ninja-price').click()
-  await expect(card.getByTestId('instant-ninja-price')).toHaveText('1c')
+  // The window's cached price follows, and clicks back.
+  await card.getByTestId('instant-ninja-details').click()
+  const verdictPrice = overlay.widget('price-check').getByTestId('ninja-verdict-price')
+  await expect(verdictPrice).toHaveText('180 per div')
+  await verdictPrice.click()
+  await expect(verdictPrice).toHaveText('1c')
   expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
 })
 

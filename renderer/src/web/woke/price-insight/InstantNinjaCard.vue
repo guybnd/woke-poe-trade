@@ -261,9 +261,11 @@ onUnmounted(() => {
 
 <style module>
 .range { margin-left: 3px; color: var(--w-dim); font-size: var(--w-fs-xs); }
-.anchor { position: absolute; pointer-events: auto; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; max-height: 100%; }
+/* The card reads at a glance by a stash cell: 20% over the app's UI size
+   (Guy, 2026-11-24, "small and hard to read"). The list beside it follows. */
+.anchor { --w-instant-scale: 1.2; position: absolute; pointer-events: auto; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; max-height: 100%; }
 .card {
-  zoom: var(--w-ui-size, 1);
+  zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1));
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -298,9 +300,9 @@ onUnmounted(() => {
 .dim { color: var(--w-dim); }
 .doubt { color: var(--w-warn, #e0a03c); max-width: 18rem; }
 .fg { color: var(--w-fg); }
-.top { display: flex; align-items: flex-start; gap: calc(6px * var(--w-ui-size, 1)); }
+.top { display: flex; align-items: flex-start; gap: calc(6px * var(--w-ui-size, 1) * var(--w-instant-scale, 1)); }
 .tenths {
-  zoom: var(--w-ui-size, 1);
+  zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1));
   border: 1px solid var(--w-line-strong, var(--w-line));
   border-radius: var(--w-r-sm);
   background: var(--w-pc-well, var(--w-panel-solid));
