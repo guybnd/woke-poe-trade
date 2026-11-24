@@ -194,3 +194,26 @@ function noElderFilter (ctx: FiltersCreationContext): void {
     noElder: true
   })
 }
+
+// woke: 3.30 map mods that come in variants. Searched as "any of them" by default
+// (Guy, 2026-11-24: any Evocator does the job); the map strip narrows it to this one.
+const MAP_MOD_FAMILIES = [
+  { label: 'Evocator', refs: ['Area contains an Evocator of Beidat', 'Area contains an Evocator of Ghorr', "Area contains an Evocator of K'Tash"] },
+  { label: 'buried Sentinel', refs: ['Area contains a buried Apex Sentinel', 'Area contains a buried Stalker Sentinel', 'Area contains a buried Pandemonium Sentinel'] }
+]
+
+export function mapModFamilies (ctx: FiltersCreationContext): void {
+  for (const f of ctx.filters) {
+    if (!f.mapMod) continue
+    const family = MAP_MOD_FAMILIES.find(fam => fam.refs.includes(f.statRef))
+    if (!family) continue
+    // Two kinds on one map: each stays its own, or one Evocator would match both.
+    if (ctx.filters.filter(g => g.mapMod && family.refs.includes(g.statRef)).length > 1) continue
+    const ids = family.refs.flatMap(ref => {
+      try { return findAndResolveByRef(ref, ModifierType.Explicit, ctx.item.category).trade.ids[ModifierType.Explicit] ?? [] } catch { return [] }
+    })
+    if (ids.length < 2) continue
+    f.anyOf = { label: family.label, ids, exact: f.tradeId }
+    f.tradeId = ids
+  }
+}

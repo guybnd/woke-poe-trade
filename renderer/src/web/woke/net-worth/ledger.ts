@@ -48,6 +48,9 @@ export interface LedgerPoint {
   // purchase, spend.ts), and the chaos it left out as spent.
   counted?: number
   spent?: number
+  // What your unsold Faustus listings were worth at the read, chaos (the
+  // chart's band, pick A). Left out: not known then.
+  listed?: number
 }
 
 const MAX_POINTS = 3000
@@ -76,6 +79,8 @@ export function addPoint (points: LedgerPoint[], p: LedgerPoint): LedgerPoint[] 
   else delete small.counted
   if (p.spent) small.spent = round1(p.spent)
   else delete small.spent
+  if (p.listed) small.listed = round1(p.listed)
+  else delete small.listed
   return [...points.filter(x => x.at !== p.at), small]
     .sort((a, b) => a.at - b.at)
     .slice(-MAX_POINTS)
@@ -95,6 +100,8 @@ export interface SeriesPoint {
   daily: boolean
   // Divines spent on a purchase at this read (spend.ts), for the marker.
   spentDiv?: number
+  // At Faustus at this read, when it was saved (LedgerPoint.listed).
+  listedDiv?: number
 }
 
 const toDiv = (chaos: number, rate: number | null, fallback: number | null) => {
@@ -209,7 +216,8 @@ export function seriesFor (allPoints: LedgerPoint[], days: Record<string, DaySna
       netDiv: p.netChaos == null ? null : toDiv(p.netChaos, p.divine, divineNow),
       top: p.top,
       daily: false,
-      ...(p.spent ? { spentDiv: toDiv(p.spent, p.divine, divineNow) } : {})
+      ...(p.spent ? { spentDiv: toDiv(p.spent, p.divine, divineNow) } : {}),
+      ...(p.listed ? { listedDiv: toDiv(p.listed, p.divine, divineNow) } : {})
     })
   }
   return out.sort((a, b) => a.at - b.at)
@@ -219,16 +227,6 @@ function catsDiv (c: Record<Category, number>, rate: number | null, fallback: nu
   const out = { ...c }
   for (const k of Object.keys(out) as Category[]) out[k] = toDiv(out[k], rate, fallback)
   return out
-}
-
-// Refreshes that added a lot: at least 10 div, and 3× the usual change.
-export function bigGains (series: SeriesPoint[]): Set<number> {
-  const nets = series.map(p => p.netDiv).filter((n): n is number => n != null)
-  if (!nets.length) return new Set()
-  const abs = nets.map(Math.abs).sort((a, b) => a - b)
-  const median = abs[Math.floor(abs.length / 2)]
-  const bar = Math.max(10, median * 3)
-  return new Set(series.filter(p => p.netDiv != null && p.netDiv >= bar).map(p => p.at))
 }
 
 // ---------- goal (D6) ----------
@@ -280,7 +278,10 @@ export const MAX_DIFFS = 200
 export const DIFF_ROWS_KEPT = 8
 
 export function keepDiff (diffs: StashDiff[], d: StashDiff): StashDiff[] {
-  const small = { ...d, added: d.added.slice(0, DIFF_ROWS_KEPT), removed: d.removed.slice(0, DIFF_ROWS_KEPT) }
+  const small: StashDiff = { ...d, added: d.added.slice(0, DIFF_ROWS_KEPT), removed: d.removed.slice(0, DIFF_ROWS_KEPT) }
+  // Kept for a crafting run started from an older point, a few at most.
+  if (d.unpricedIn) small.unpricedIn = d.unpricedIn.slice(0, DIFF_ROWS_KEPT)
+  if (d.unpricedOut) small.unpricedOut = d.unpricedOut.slice(0, DIFF_ROWS_KEPT)
   return [...diffs.filter(x => x.at !== d.at), small].sort((a, b) => a.at - b.at).slice(-MAX_DIFFS)
 }
 

@@ -8,6 +8,7 @@ import { ageText, pendingRows, pendingTotals, sortPending } from '../../net-wort
 import type { PendingDoc, PendingRow } from '../../net-worth/pending'
 import { saleLookupTip } from '../../net-worth/sale-tip'
 import { checkFor, rankText } from '../../net-worth/cheapest'
+import { priceLabel, targetOpen } from '../../net-worth/listed-target'
 import type { CheapestDoc } from '../../net-worth/cheapest'
 import type { Lookup, LookupCard, LookupRow } from './types'
 
@@ -21,7 +22,8 @@ function wantsTotals (query: string): boolean {
 // "4th cheapest" from your last Still cheapest? check at this price.
 function rankOf (r: PendingRow, checks: CheapestDoc | null): string {
   const c = checkFor(checks, r.item)
-  return c ? ` · ${rankText(c)} cheapest` : ''
+  const t = checks?.targets?.[r.item.id]
+  return `${c ? ` · ${rankText(c)} cheapest` : ''}${targetOpen(t, r.item) ? ` · set ${priceLabel(t)}` : ''}`
 }
 
 function row (r: PendingRow, checks: CheapestDoc | null): LookupRow {

@@ -62,6 +62,10 @@
               :class="stateOf(row.filter) === opt && $style[`on_${opt}`]" :data-state="opt" :title="STATE_TITLE[opt]"
               @click="setState(row.filter, opt)">{{ STATE_LABEL[opt] }}</button>
           </span>
+          <!-- Guy (2026-11-24): any Evocator (or buried Sentinel) does the job, so Has and Not
+               take all three until narrowed to this one. -->
+          <button v-if="row.filter?.anyOf" type="button" :class="$style.anyOf" data-map-any-of
+            :aria-pressed="isAnyOf(row.filter)" :title="anyOfTitle(row.filter)" @click="toggleAnyOf(row.filter)">{{ isAnyOf(row.filter) ? `any ${row.filter.anyOf.label}` : 'this one' }}</button>
         </div>
         <!-- Guy: any other mod goes in from here; the price check's own rows keep only special ones (enchants). -->
         <FilterAddMod v-if="filters && addMods" :filters="filters" data-map-add-mod />
@@ -164,6 +168,19 @@ const rows = computed(() => {
     return { mod, filter }
   })
 })
+function isAnyOf (f: StatFilter): boolean {
+  return f.tradeId.length > 1
+}
+function toggleAnyOf (f: StatFilter) {
+  if (!f.anyOf) return
+  f.tradeId = isAnyOf(f) ? f.anyOf.exact : f.anyOf.ids
+}
+function anyOfTitle (f: StatFilter): string {
+  const label = f.anyOf!.label
+  return isAnyOf(f)
+    ? `Has and Not count any ${label} (all ${f.anyOf!.ids.length} kinds). Click to search only this one.`
+    : `Has and Not count only this ${label}. Click to count any of the ${f.anyOf!.ids.length} kinds.`
+}
 function stateOf (f: StatFilter): ModState {
   return f.disabled ? 'any' : f.not ? 'not' : 'has'
 }
@@ -421,6 +438,8 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 }
 .minBox input::-webkit-inner-spin-button, .minBox input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .minBox input:focus-visible { outline: 1px solid var(--w-accent); }
+.anyOf { flex: none; font-size: var(--w-fs-xs); padding: 0 5px; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); color: var(--w-dim); cursor: pointer; }
+.anyOf:hover { color: var(--w-fg); }
 .dot { flex: none; width: 7px; height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-3); }
 .dot.deadly { background: var(--w-down); }
 .dot.warn { background: var(--w-warn); }

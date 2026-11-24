@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest'
 import { nudgeHide, valueFloor } from '@/web/woke/net-worth/widget'
 import type { NetWorthWidget } from '@/web/woke/net-worth/widget'
 import {
-  addPoint, bigGains, filterLines, refreshWaitMs, selectedFirst, topCardChanges, tipPlacement, toggleTab, change24h, goalEta, groupByRefresh, groupByRuns, keepDiff, liquidChaos, priceMoves, seriesFor, topChanges, valueByTab
+  addPoint, filterLines, refreshWaitMs, selectedFirst, topCardChanges, tipPlacement, toggleTab, change24h, goalEta, groupByRefresh, groupByRuns, keepDiff, liquidChaos, priceMoves, seriesFor, topChanges, valueByTab
 } from '@/web/woke/net-worth/ledger'
 import type { LedgerPoint, SeriesPoint } from '@/web/woke/net-worth/ledger'
 import { valueStash } from '@/web/woke/net-worth/valuation'
@@ -83,11 +83,6 @@ describe('chart points', () => {
     expect(s[1].netDiv).toBe(2)
     expect(seriesFor(points, days, 'league', now, 200)).toHaveLength(3)
     expect(seriesFor(points, days, '24h', now, 200)).toHaveLength(1)
-  })
-
-  it('marks refreshes that added a lot', () => {
-    const s = [1, 2, 1.5, 40, 2, -30].map((n, i): SeriesPoint => ({ at: i, div: 0, byCategory: cats({}), netDiv: n, top: [], daily: false }))
-    expect([...bigGains(s)]).toEqual([3])
   })
 })
 

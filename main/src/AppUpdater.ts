@@ -4,7 +4,7 @@ import type { ServerEvents } from './server'
 import type { Logger } from './RemoteLogger'
 import type { UpdateInfo } from '../../ipc/types'
 import type { GameWindow } from './windowing/GameWindow'
-import { appPrefs, canRestartApp, onRestartWithUpdate } from './woke/app-prefs'
+import { appPrefs, canRestartApp, onPlainQuit, onRestartWithUpdate } from './woke/app-prefs'
 import {
   GAME_CLOSED_GRACE_MS, NO_AUTO_INSTALL_ARG, RECHECK_MS, VERDICT_TEXT, afterEvent, describeUpdateError,
   installGate, installVerdict, installerLogFailure, installerProblem, isGameRunning, isSpawnFailure, quitInstallAllowed, relaunchArgs, stillClosed,
@@ -212,6 +212,13 @@ export class AppUpdater {
       this.logger.write(`info [AppUpdater] Installing ${this.downloaded}: restart asked for.`)
       this.install(true, true)
       return true
+    })
+    // An elevated copy takes over (run-as-admin.ts): quit without installing.
+    // It installs on its own quit instead.
+    onPlainQuit(() => {
+      this.isRestarting = true
+      this.plainRestart = true
+      this.syncQuitInstall()
     })
     // on('download-progress') https://github.com/electron-userland/electron-builder/issues/2521
   }

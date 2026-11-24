@@ -167,6 +167,9 @@ export interface StatFilter {
   valdoVoid?: true
   /** woke: a map's "no Elder or Shaper influence" filter, the No Elder chip on the map strip (pseudo/maps.ts). */
   noElder?: true
+  /** woke: a map mod with sibling variants (the 3 Evocators, the 3 buried Sentinels):
+   * Has searches any of them until narrowed to this one on the map strip (pseudo/maps.ts). */
+  anyOf?: { label: string, ids: string[], exact: string[] }
   roll?: {
     value: number
     min: number | '' | undefined // NOTE: mutable in UI

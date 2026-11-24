@@ -94,11 +94,20 @@
                 <template v-else-if="eta.days != null">about {{ etaText(eta.days) }}</template>
                 <template v-else>no ETA yet</template>
               </span>
-              <TextTabs v-model="range" :options="RANGE_OPTIONS" />
+              <span :class="$style.chartRight">
+                <!-- Maps behind the line (pick D): off until switched on. -->
+                <button v-if="chartMode === 'total' && farming?.runs.length" type="button" :class="[$style.mapsBtn, { [$style.mapsOn]: mapsOn }]" :aria-pressed="mapsOn"
+                  :title="mapsOn ? 'Hide your maps behind the line' : 'Show your maps behind the line'" data-chart-maps @click="config.chartMaps = !mapsOn">Maps</button>
+                <TextTabs v-model="range" :options="RANGE_OPTIONS" />
+              </span>
             </div>
-            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
+            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :mode="chartMode as 'total' | 'category'" :goal-div="chartListed ? goal?.div ?? null : goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :listed="chartListed" :maps="chartMaps" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
             <div v-if="chartMode === 'category' && !fold.chart" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
+            </div>
+            <!-- What each mark on the line is (Guy, 2026-11-24). -->
+            <div v-if="chartMode === 'total' && !fold.chart && chartLegend.length" :class="$style.legend" data-chart-legend>
+              <span v-for="l in chartLegend" :key="l.id" :title="l.tip"><i :class="[$style.key, $style['key-' + l.id]]" />{{ l.label }}</span>
             </div>
             <SplitHandle v-if="!fold.chart" dir="y" @start="startDrag" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
           </section>
@@ -113,10 +122,17 @@
               <RateTimePick :class="$style.rateTime" />
             </div>
             <div v-if="!fold.perHour" :class="$style.tiles">
-              <div><span :class="$style.caps">Per hour</span><b :class="[$style.bigRate, tone(rateShown.div)]" class="w-num" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b></div>
+              <div><span :class="$style.caps">Per hour</span><b :class="[$style.bigRate, tone(rateShown.div)]" class="w-num" :title="rateShown.tip" data-rate-big><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else-if="rateShown.r.hubOnly">No maps</template><template v-else>—</template></b></div>
               <div><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b></div>
               <div title="The middle map's time: short visits barely move it"><span :class="$style.caps">Median map</span><b class="w-num">{{ rateShown.r.medianMapMs != null ? shortSpan(rateShown.r.medianMapMs) : '—' }}</b></div>
               <div :title="playedTip"><span :class="$style.caps">Played</span><b class="w-num">{{ span(rateShown.r.playMs) }}</b></div>
+            </div>
+            <!-- Time with no map (crafting, selling) and sales: apart from the rate. -->
+            <div v-if="!fold.perHour && hubRow" :class="[$style.tiles, $style.hubTiles]" data-hub-row>
+              <div title="Hideout and town time with no map between two stash reads: crafting, trading. Not in the per hour"><span :class="$style.caps">Hideout</span><b class="w-num">{{ span(hubRow.ms) }}</b></div>
+              <div :title="hubRow.soldTip"><span :class="$style.caps">Sold</span><b class="w-num" :class="tone(hubRow.soldChaos)">{{ hubRow.soldChaos ? signed(toDiv(hubRow.soldChaos)) : '0' }}<Coin :chaos="!divine" /></b></div>
+              <div title="What the stash did in that hideout time: orbs used, sales collected, things bought"><span :class="$style.caps">Stash in hideout</span><b class="w-num" :class="tone(hubRow.hubChaos)">{{ signed(toDiv(hubRow.hubChaos)) }}<Coin :chaos="!divine" /></b></div>
+              <div title="The stash's whole change in the window, maps and hideout"><span :class="$style.caps">Net</span><b class="w-num" :class="tone(hubRow.netChaos)">{{ signed(toDiv(hubRow.netChaos)) }}<Coin :chaos="!divine" /></b></div>
             </div>
             <template v-if="splitTotal > 0 && !fold.perHour">
               <div :class="[$style.split, { [$style.splitPick]: splitLabel }]" @mouseleave="pickSplit(null)">
@@ -288,7 +304,7 @@ import { stashGainsBetween } from './gains'
 import type { FarmingWidget } from '../farming/farming'
 import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
-import { bigGains, change24h, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
+import { change24h, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
 import type { ChartRange, PriceMove } from './ledger'
 import { divine, gainsNow, historyNow, leagueNow, ledger, ratesAt, setIgnored, setMyPrice, setSpendMark, summary, tabValues, valuation, wantPrices } from './store'
 import { markAction, resolveSpends } from './spend'
@@ -297,7 +313,7 @@ import type { ChangeGroup } from './ledger'
 import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection, valueFloor } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { UNREADABLE } from './tab-picker'
-import { rateTip, shortSpan, span } from './play-time'
+import { RATE_WINDOWS, rateTip, shortSpan, span, startOfDay } from './play-time'
 import { chartHOf, clampChartH, clampMidH, colWeights, dragCols, dragTop, edges, foldedOf, hasChartH, midHOf, toggleFold, topOf } from './layout'
 import type { ColId, FoldId, PanelLayout } from './layout'
 import SplitHandle from './SplitHandle.vue'
@@ -314,7 +330,8 @@ import HideChip from './HideChip.vue'
 import SalesView from './SalesView.vue'
 import ListedView from './ListedView.vue'
 import { loadPending, pendingDoc, pendingReading, refreshPending } from './pending-store'
-import { pendingRows, pendingTotals, rowWorth, DEFAULT_STALE_DAYS } from './pending'
+import { listedAt, pendingRows, pendingTotals, rowWorth, DEFAULT_STALE_DAYS } from './pending'
+import type { ChartMap, ChartSale } from './chart-marks'
 import { listedWorth as listedWorthDoc, listedWorthKey } from './pending-glance'
 import RunsView from './RunsView.vue'
 import { loadRuns, runGlance, runsDoc } from './run-store'
@@ -396,6 +413,21 @@ const rateAmount = (chaos: number) => `${signed(toDiv(chaos))} ${unit.value}`
 const rateShown = computed(() => {
   const r = rates.value[rateWindow.value]
   return { r, div: r.perHour == null ? null : toDiv(r.perHour), tip: rateTip(rateWindow.value, r, rates.value.fromLog, rateAmount, rates.value.withHub, rates.value.withOff) }
+})
+// Hideout time with no map and the window's sales, shown apart from the rate
+// (crafting, trading). Sales count at the time they sold.
+const rateFrom = computed(() => { const at = rates.value.at; return rateWindow.value === 'today' ? startOfDay(at) : at - (RATE_WINDOWS.find(w => w.id === rateWindow.value)?.ms ?? 3_600_000) })
+const hubRow = computed(() => {
+  const r = rateShown.value.r
+  const sold = totals(salesInWindow(sales.value, rateFrom.value, rates.value.at), saleRates.value)
+  if (r.hubOnlyMs < 60_000 && !sold.count) return null
+  return {
+    ms: r.hubOnlyMs,
+    soldChaos: sold.chaos,
+    soldTip: `${sold.count} ${sold.count === 1 ? 'sale' : 'sales'} in the window, counted when they sold. Their currency reaches the stash when you collect it`,
+    hubChaos: r.hubChaos,
+    netChaos: r.chaos
+  }
 })
 // The window's time by kind, for the bar under the numbers.
 const splitParts = computed(() => {
@@ -551,7 +583,6 @@ const showChanges = computed(() => shown.value.changes && (groups.value.length >
 const chartMode = shallowRef('total')
 const range = shallowRef<string>('7d')
 const series = computed(() => seriesFor(ledger.value.points, historyNow.value.days, range.value as ChartRange, Date.now(), divine.value))
-const big = computed(() => bigGains(series.value))
 // The summary's tiny line: the last 7 days.
 const spark = computed(() => seriesFor(ledger.value.points, historyNow.value.days, '7d', Date.now(), divine.value).map(p => p.div))
 const goal = computed(() => props.config.goal && props.config.goal.div > 0 ? props.config.goal : null)
@@ -883,7 +914,7 @@ const totalTitle = computed(() => {
 const listedTitle = computed(() => {
   const t = listed.value
   const lines = [`${t.count} ${t.count === 1 ? 'listing' : 'listings'} not sold yet, worth about ${div(t.worthChaos)} ${unit.value} (asking ${div(t.askChaos)} ${unit.value})`]
-  lines.push(countListed.value ? 'Counted in your total; the chart counts only your stash' : 'Left out of your total (tick the box to count it)')
+  lines.push(countListed.value ? 'Counted in your total; the chart shows it as a band on top of your stash' : 'Left out of your total (tick the box to count it)')
   if (t.stale) lines.push(`${t.stale} unsold ${props.config.staleDays ?? DEFAULT_STALE_DAYS} days or more`)
   lines.push('Click for the Listed view')
   return lines.join('\n')
@@ -916,7 +947,46 @@ function marketTone (s: Sale) {
   return x == null || Math.abs(x) < 0.03 ? 'w-dim' : x < 0 ? 'w-down' : 'w-up'
 }
 // The chart's dots: each sale, named for the hover card.
-const chartSales = computed(() => sales.value.map(s => ({ at: s.at, text: `${saleName(s)} ${salePrice(s)}${saleChaosOf(s) == null ? '' : ` ${unit.value}`}`, tip: saleTip(s) })))
+const chartSales = computed<ChartSale[]>(() => sales.value.map(s => {
+  const c = saleChaosOf(s)
+  return { at: s.at, text: `${saleName(s)} ${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, tip: saleTip(s), name: saleName(s), div: c == null ? null : toDiv(c) }
+}))
+// The chart's Faustus band (pick A), when listings count in your total: what
+// each refresh saved, else rebuilt from the listings and sales (listedAt).
+const chartListed = computed(() => {
+  if (!countListed.value || chartMode.value !== 'total') return undefined
+  const s = series.value
+  const d = pendingDoc.value
+  const doc = d && d.league === salesLeague.value ? d : null
+  if (!doc && !s.some(p => p.listedDiv)) return undefined
+  const worth = new Map(listedRows.value.map(r => [r.item.id, rowWorth(r)]))
+  const rebuilt = listedAt(doc, sales.value, saleRates.value, l => worth.get(l.id) ?? saleChaos(l, saleRates.value) ?? 0, s.map(p => p.at))
+  const out = s.map((p, i) => p.listedDiv ?? toDiv(rebuilt[i]))
+  return out.some(v => v > 0) ? out : undefined
+})
+// The legend under the line: only the marks this range shows.
+const chartLegend = computed(() => {
+  const s = series.value
+  if (s.length < 2) return []
+  const t0 = s[0].at
+  const t1 = s[s.length - 1].at
+  const out: Array<{ id: string, label: string, tip: string }> = []
+  if (chartListed.value) out.push({ id: 'band', label: 'At Faustus', tip: 'What you have listed at Faustus, on top of your stash' })
+  if (chartSales.value.some(x => x.at >= t0 && x.at <= t1)) out.push({ id: 'sale', label: 'Sale', tip: 'Something sold here. Hover the chart there for the items' })
+  if (chartMaps.value?.some(m => m.to > t0 && m.from < t1)) out.push({ id: 'maps', label: 'Maps', tip: 'Your maps this session' })
+  return out
+})
+// Your maps behind the line (pick D), each with what the refreshes after it added.
+const mapsOn = computed(() => props.config.chartMaps === true)
+const chartMaps = computed<ChartMap[] | undefined>(() => {
+  const f = farming.value
+  if (!mapsOn.value || !f?.runs.length) return undefined
+  const gain = new Map(groups.value.map(g => [g.key, g.netChaos]))
+  return f.runs.map((r, i) => {
+    const g = gain.get(`run:${i}`)
+    return { from: r.enteredAt, to: r.enteredAt + r.mapMs, name: `Map ${i + 1} · ${r.name}`, gainDiv: g == null ? null : toDiv(g) }
+  })
+})
 // A group's sales: those after the read before its first, up to its last. Their
 // items' removed lines give way to the sale rows.
 const readBefore = computed(() => {
@@ -992,6 +1062,7 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .tiles > div { display: flex; flex-direction: column; justify-content: space-between; gap: 1px; min-width: 0; }
 .tiles > div > :first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tiles b { font-weight: 500; }
+.hubTiles { margin-top: var(--w-s2); padding-top: var(--w-s2); border-top: 1px dashed var(--w-line); }
 .timeLegend { flex-wrap: nowrap; gap: var(--w-s2); white-space: nowrap; overflow: hidden; }
 .timeLegend i { opacity: 1; }
 .halves > .chartBlock { display: flex; flex-direction: column; }
@@ -1025,6 +1096,14 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .chartBlock { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 6px var(--w-pad) 8px; border-bottom: 1px solid var(--w-line); }
 .chartHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 .goalLine { color: var(--w-up); }
+.key { opacity: 1 !important; }
+.key-band { background: color-mix(in srgb, var(--w-higher) 45%, transparent); border-top: 1px dashed var(--w-higher); }
+.key-sale { width: 2px !important; background: var(--w-accent); }
+.key-maps { background: color-mix(in srgb, var(--w-gold) 25%, transparent); }
+.chartRight { display: inline-flex; align-items: baseline; gap: 10px; }
+.mapsBtn { padding: 0 0 2px; font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-faint); border-bottom: 1px dashed transparent; cursor: pointer; }
+.mapsBtn:hover { color: var(--w-fg); }
+.mapsOn { color: var(--w-gold); border-bottom-color: var(--w-gold); }
 .legend { display: flex; gap: var(--w-s2); flex-wrap: wrap; font-size: var(--w-fs-xs); color: var(--w-dim); }
 .legend i { display: inline-block; width: 8px; height: 8px; margin-right: 4px; opacity: .7; }
 .cols { position: relative; display: grid; border-bottom: 1px solid var(--w-line); }

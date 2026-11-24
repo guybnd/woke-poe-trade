@@ -16,6 +16,7 @@ import { classify, resolveSpends } from './spend'
 import type { SpendMark } from './spend'
 import { addPoint, keepDiff, topChanges, valueByTab } from './ledger'
 import { glanceKey, glanceRates, ledgerKey } from './glance'
+import { keptSales, listedGlance, listedTotal, listedWorth } from './pending-glance'
 import type { Glance } from './glance'
 import type { LedgerPoint, TabValue } from './ledger'
 import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, StashTabLike, Valuation } from './valuation'
@@ -228,7 +229,7 @@ async function countRead (id: string, readAt: number) {
   const led = ledgerRef.value
   const tabNow = Object.fromEntries(tabValues.value.map(t => [t.id, t.chaos]))
   const nextLedger: Ledger = {
-    points: withSpends(addPoint(led.points, { at: readAt, chaos: v.chaos, divine: divine.value, byCategory: { ...v.byCategory }, netChaos: diff?.netChaos ?? null, top: topChanges(diff) }), gainsRef.value),
+    points: withSpends(addPoint(led.points, { at: readAt, chaos: v.chaos, divine: divine.value, byCategory: { ...v.byCategory }, netChaos: diff?.netChaos ?? null, top: topChanges(diff), ...listedNow(id) }), gainsRef.value),
     diffs: diff ? keepDiff(led.diffs, diff) : led.diffs,
     tabChaos: { prev: led.tabChaos.last, last: tabNow }
   }
@@ -250,7 +251,18 @@ async function countRead (id: string, readAt: number) {
   await recordRunRead(id, diff, nextLedger.points, divine.value, kitPrice(v.lines))
 }
 
+// The chart's Faustus band (pick A): what the unsold listings are worth now,
+// as the dock card's total counts them (a sold one drops out).
+function listedNow (id: string): { listed?: number } {
+  const g = listedGlance.value
+  if (!g || g.league !== id) return {}
+  const kept = keptSales.value
+  const listed = listedTotal(g, listedWorth.value, kept?.league === id ? kept.sales : [], divine.value)
+  return listed > 0 ? { listed } : {}
+}
+
 // The dock icon's number at a read (Ctrl+Space reads the saved one).
+
 function glanceAt (id: string, at: number, chaos: number, netChaos: number | null, todayChaos: number | null): Glance {
   const rates = ratesAt(at)
   const g: Glance = { league: id, at, chaos, netChaos, divine: divine.value, perHourChaos: rates.today.perHour, rates: glanceRates(rates), todayChaos }
