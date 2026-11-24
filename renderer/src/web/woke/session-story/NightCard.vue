@@ -152,7 +152,7 @@ function signed (chaos: number): string {
   gap: 2px 12px;
   padding: 6px var(--w-pad) 0;
 }
-.best { display: inline-flex; align-items: center; gap: 4px; }
+.best { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; }
 .bestArt { width: var(--w-icon-sm); height: var(--w-icon-sm); object-fit: contain; flex: none; }
 .line { display: flex; flex-wrap: wrap; gap: 2px 12px; padding: 3px var(--w-pad) 0; }
 .card { padding-bottom: 6px; }
