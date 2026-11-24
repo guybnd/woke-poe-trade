@@ -16,6 +16,8 @@ export const pendingGlanceKey = (league: string) => `${league}-pending-glance`
 export const listedGlance = shallowRef<PendingGlance | null>(null)
 // The window's sales (sales-store.ts) once it has them, so a Refresh there
 // updates the icon's count too.
+// The dock card's Show: the Listed tab opens on its Stale chip.
+export const listedOpenStale = shallowRef(false)
 export const keptSales = shallowRef<{ league: string, sales: ReadonlyArray<{ id: string, at: number }> } | null>(null)
 
 export function isPendingGlance (x: unknown): x is PendingGlance {

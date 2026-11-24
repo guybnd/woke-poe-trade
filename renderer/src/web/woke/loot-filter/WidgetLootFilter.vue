@@ -401,8 +401,12 @@ function openFromDock () {
 // GGG's rules don't allow it on a log line or a timer.
 const reloadWaiting = computed(() => props.config.reloadViaChat && (store.pendingReload.value || store.netWaitsForReload.value))
 const dockReadouts = computed(() => reloadWaiting.value ? [{ id: 'reload', text: 'Reload', tone: 'up' as const }] : undefined)
-const dockShow = computed(() => reloadWaiting.value || (Boolean(store.doc.value) && (props.config.neversink.on || dockNotes.value.length > 0)))
-const dockBadge = computed(() => props.config.neversink.on ? LEVEL_SHORT[props.config.neversink.level] : (dockNotes.value.length || null))
+// While you play, only when there's something to apply: a reload waiting or a
+// note that needs you. With the overlay open it stays, for the strictness
+// picker (Guy, 2026-11-24: no strictness chip on screen all the time).
+const dockShow = computed(() => reloadWaiting.value || (Boolean(store.doc.value) &&
+  (dockNotes.value.length > 0 || (wm.active.value && props.config.neversink.on))))
+const dockBadge = computed(() => dockNotes.value.length || null)
 const dockTone = computed(() => dockNotes.value.some(n => n.warn) ? 'warn' : (dockNotes.value.some(n => n.id === 'update') ? 'accent' : undefined))
 
 // Say it briefly when the strictness changes.

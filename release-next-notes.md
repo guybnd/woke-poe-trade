@@ -1,5 +1,7 @@
 # Next release notes
 
+- Icon row: the loot filter icon no longer sits on screen all the time with its strictness (VS). While you play it shows only when there's something to apply: a saved filter waiting for a reload, or a note that needs you. With the overlay open it's there as before, for the strictness picker.
+- Net worth icon: the number on it (listings at Faustus unsold for 3+ days) now shows only in your hideout, where you can reprice. Its card says what the number is, and Show opens the Listed tab on Stale.
 - Net worth, "Tabs to read": the tab list is easier to read. Rows use the normal row text size with brighter names, and each tab's colour is now a thick strip down its left edge instead of a small dot.
 - New players: the first time the overlay opens after setup, a Getting started card beside the rail shows the price check and search keys, where All tools and Settings are, and how to turn on Net worth (Got it closes it for good). The next 3 opens name the rail's buttons beside them. Players who updated don't get either.
 - New players' rail starts with 5 of their tools (from the preset they picked in setup: Market, Map mods, Atlas strategies, PoB builds and Trades for Everything). Each loads only when you click it, then stays pinned.

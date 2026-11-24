@@ -3,6 +3,11 @@
     <DockItem ref="dockEl" id="net-worth" title="Net worth" :show="config.dockIcon !== false" :wm-id="config.wmId"
       :badge="badge" :stack="stack" :glow="!!liveRun" :wheel="swapGlance" card-width="25rem" :menu="dockMenu" @open-change="cardOpen = $event">
       <template #card>
+        <!-- What the icon's number counts, and the way to them. -->
+        <div v-if="staleListed" class="text-xs" data-stale-line style="padding: 6px var(--w-pad) 0;">
+          {{ staleListed }} listing{{ staleListed > 1 ? 's' : '' }} unsold for {{ staleDaysShown }}+ days ·
+          <button type="button" class="w-accent" style="text-decoration: underline;" @click="showStale">Show</button>
+        </div>
         <!-- Its data loads the first time the card opens, never at startup. -->
         <NetWorthCard v-if="cardOpen && personalReady" :status="status" :league="leagueId" :rate-window="config.rateWindow ?? '1h'" @window="config.rateWindow = $event" @refresh="refresh" @settings="openSettingsPage(wm, 'Game & league')"
           :run="liveRun" :stopping="stopping" :starting-run="startingRun" @start="startLive" :listed-chaos="listedChaos" @stop="stopLive" @open-run="openRun" />
@@ -46,7 +51,7 @@ import type { Glance } from './glance'
 import { isRunGlance, runGlanceKey } from './runs'
 import type { RunGlance } from './runs'
 import type { LedgerPoint } from './ledger'
-import { isListedWorth, isPendingGlance, keptSales, listedGlance, listedTotal, listedWorth, listedWorthKey, pendingGlanceKey, staleCount } from './pending-glance'
+import { isListedWorth, isPendingGlance, keptSales, listedGlance, listedOpenStale, listedTotal, listedWorth, listedWorthKey, pendingGlanceKey, staleCount, DEFAULT_STALE_DAYS } from './pending-glance'
 import { useZone } from '../shared/zone'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { useGoto } from '../tab-bar/goto'
@@ -266,7 +271,16 @@ watch(() => zoneNow.live && zoneNow.kind === 'hideout' ? zoneNow.enteredAt : 0, 
 let autoTimer: ReturnType<typeof setTimeout> | undefined
 onUnmounted(() => { salesEvents.abort(); clearTimeout(autoTimer) })
 
-const badge = computed(() => status.value?.running ? '…' : status.value?.error ? '!' : staleListed.value || null)
+// The stale count only in your hideout, where you can reprice (Guy, 2026-11-24).
+const inHideout = computed(() => zoneNow.kind === 'hideout')
+const badge = computed(() => status.value?.running ? '…' : status.value?.error ? '!' : (inHideout.value && staleListed.value) || null)
+const staleDaysShown = computed(() => Math.max(1, props.config.staleDays ?? DEFAULT_STALE_DAYS))
+function showStale () {
+  listedOpenStale.value = true
+  props.config.view = 'listed'
+  showWithOverlay(wm, props.config.wmId)
+  wm.bringToTop(props.config.wmId)
+}
 const cardText = computed(() => {
   const s = status.value
   if (!s) return 'Click to open.'

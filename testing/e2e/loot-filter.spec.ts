@@ -704,6 +704,10 @@ test('dock card: click or scroll a strictness, then reload from there', async ({
   const page = overlay.page
   fakeApp.focusGame(true)
   const level = (name: string) => page.getByRole('button', { name, exact: true })
+  // Nothing to apply: no icon while you play. The overlay brings it back, for the picker.
+  await overlay.pressHotkey(overlay.config.overlayKey)
+  await expect(overlay.dockIcon('loot-filter')).toBeVisible({ timeout: 20_000 })
+  await expect(overlay.dockIcon('loot-filter')).not.toContainText('SS')
   await expect(async () => {
     await overlay.moveMouse(1000, 900)
     await overlay.hoverDockIcon('loot-filter')
@@ -744,6 +748,11 @@ test('dock card: click or scroll a strictness, then reload from there', async ({
 
   await page.getByRole('button', { name: 'Back to auto' }).click()
   await expect(page.getByRole('button', { name: 'Back to auto' })).toHaveCount(0)
+
+  // Reloaded, back in the game: nothing left to apply, so the icon goes.
+  await overlay.moveMouse(1000, 900)
+  fakeApp.focusGame(true)
+  await expect(overlay.dockIcon('loot-filter')).toHaveCount(0, { timeout: 10_000 })
 })
 
 test('stack sizes: type a number or drag a line, the bar follows and the file changes', async ({ overlay, fakeApp }) => {

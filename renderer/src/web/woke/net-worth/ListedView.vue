@@ -72,6 +72,7 @@ import type { SaleType } from './sales'
 import { ninjaPriced, rates, sales } from './sales-store'
 import { loadPending, pendingDoc, pendingReading } from './pending-store'
 import { ageText, pendingRows, pendingTotals, sortPending, DEFAULT_STALE_DAYS } from './pending'
+import { listedOpenStale } from './pending-glance'
 import type { PendingRow } from './pending'
 
 const props = defineProps<{ league: string, divine: number | null, staleDays?: number, auto: boolean }>()
@@ -98,6 +99,12 @@ const OVER = 0.1
 const isOver = (r: PendingRow) => r.vs != null && r.vs >= OVER
 const over = computed(() => rows.value.filter(isOver).length)
 const types = computed(() => SALE_TYPES.map(t => ({ ...t, count: rows.value.filter(r => saleType(r.item) === t.id).length })).filter(t => t.count > 0))
+watch(listedOpenStale, (on) => {
+  if (!on) return
+  listedOpenStale.value = false
+  filter.value = 'stale'
+  limit.value = 100
+}, { immediate: true })
 function toggle (f: Filter) { filter.value = filter.value === f ? null : f; limit.value = 100 }
 const shown = computed(() => {
   const f = filter.value
