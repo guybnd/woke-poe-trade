@@ -22,6 +22,7 @@ export interface NewsItem {
 }
 
 export const NEWS: NewsItem[] = [
+  { id: 'div-card-rarity', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: a div card\'s price check and tooltip say how rare it is, like "1 in 121k cards"' },
   { id: 'price-check-map-stat-columns', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: a map\'s ticked Rarity, Pack and More Currency show as columns in the results, higher or lower than yours' },
   { id: 'price-check-related-upgrades', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: beside a unique, its upgrade, where it drops and the cards that give it, with prices' },
   { id: 'scrying-helper', wmType: 'woke-scrying', name: 'Scrying', note: 'New: which map to scry, ranked by the cards a Scrying Orb adds per map, with the orb\'s price and a Buy link' },

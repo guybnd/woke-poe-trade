@@ -1,7 +1,7 @@
 // Where divination cards drop: the data script, the card's facts and the map
 // lookup in Ctrl+Space.
 import { describe, it, expect } from 'vitest'
-import { cardChanceIn, cardDropFacts, cardPageUrl, cardsInMap, factLine, mapPool, mapTip, mapsByChance, mapsMatching, oneInText, valuePerCardDrop } from '@/web/woke/card-drops/card-drops'
+import { cardChanceIn, cardDropFacts, cardPageUrl, cardsInMap, factLine, mapPool, mapTip, mapsByChance, mapsMatching, oneInText, rarityText, rarityWords, valuePerCardDrop } from '@/web/woke/card-drops/card-drops'
 import type { CardDropData } from '@/web/woke/card-drops/card-drops'
 import { mapCardsLookup } from '@/web/woke/search/lookups/card-drops'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
@@ -40,6 +40,14 @@ describe('card drop facts', () => {
     expect(oneInText(4300)).toBe('1 in 4,300')
     expect(oneInText(120689)).toBe('1 in 121k')
     expect(oneInText(1_234_000)).toBe('1 in 1.2M')
+  })
+  it('gives the short rarity for the price check and tooltip, none without a weight', () => {
+    expect(rarityText(cardDropFacts(DATA, 'The Doctor'))).toBe('1 in 121k cards')
+    expect(rarityText(cardDropFacts(DATA, 'Rain of Chaos'))).toBe('1 in 12 cards')
+    expect(rarityText(cardDropFacts(DATA, 'The Incantation'))).toBeNull()
+    expect(rarityText(cardDropFacts(DATA, 'Birth of the Three'))).toBeNull()
+    expect(rarityText(null)).toBeNull()
+    expect(rarityWords(120689)).toContain('1 in 121k of all divination cards')
   })
   it('links the card on divicards', () => {
     expect(cardPageUrl("The King's Heart")).toBe('https://divicards-site.pages.dev/card/the-king-s-heart')

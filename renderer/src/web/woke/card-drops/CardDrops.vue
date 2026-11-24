@@ -9,6 +9,8 @@
       <span v-if="compact && !maps.length && !facts.other.length" class="w-dim">{{ facts.disabled ? 'no longer drops' : 'no verified source yet' }}</span>
       <!-- One line on the small card: the first source, the rest on hover. -->
       <span v-if="compact && facts.other.length" :class="$style.more" :title="facts.other.join('\n')">{{ compactOther }}</span>
+      <!-- How rare it is, by drop weight (Guy 2026-11-24): the full view has it in its head line. -->
+      <span v-if="compact && rarity" :class="$style.more" :title="rarityWords(facts.oneIn!)" data-card-rarity>· {{ rarity }}</span>
     </div>
     <template v-if="!compact">
       <div v-for="o in facts.other" :key="o" :class="$style.other">{{ o }}</div>
@@ -31,7 +33,7 @@ import { computed, shallowRef, watch } from 'vue'
 import { WButton, WChip, vItemTip } from '../ui'
 import { formatChaos } from '../ui/format'
 import { usePrice } from '../shared/price'
-import { cardDropFacts, cardPageUrl, chanceWords, factLine, loadCardDrops, mapTip, mapsByChance, oneInText } from './card-drops'
+import { cardDropFacts, cardPageUrl, chanceWords, factLine, loadCardDrops, mapTip, mapsByChance, oneInText, rarityText, rarityWords } from './card-drops'
 import type { CardDropData } from './card-drops'
 
 const props = defineProps<{ name: string, compact?: boolean }>()
@@ -53,6 +55,7 @@ const compactOther = computed(() => {
   return other.length > 1 ? `${other[0]} +${other.length - 1} more` : other[0] ?? ''
 })
 const line = computed(() => facts.value ? factLine(facts.value) : '')
+const rarity = computed(() => rarityText(facts.value))
 const maps = computed(() => {
   const d = data.value
   if (!d || !facts.value) return []
