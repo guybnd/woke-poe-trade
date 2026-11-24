@@ -316,7 +316,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect(hhRow.locator('[data-listed-target]')).toContainText('7 div')
     // Closed by its own button (Esc would close the whole overlay).
     await overlay.page.locator('#price-window [data-price-close]').click()
-    await expect(priceBar).toHaveCount(0)
+    await expect(priceBar).toBeHidden()
     await overlay.snap('net worth listed')
 
     // Stale after 1 day: Headhunter is. The icon counts it only in your hideout.
