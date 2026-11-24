@@ -20,3 +20,12 @@
   background-image: var(--w-pattern-texture);
   background-position: var(--w-pattern-texture-pos);
 }
+
+/* Profit line items (ui/line-item.ts): the hover actions show on hover or
+   focus, and stay on a left-out row so it can be counted again. A left-out
+   row stays in place, dimmed, its number struck (pick S1). */
+.w-line-acts { visibility: hidden; }
+.w-line:hover .w-line-acts, .w-line:focus-within .w-line-acts, .w-line.w-line-out .w-line-acts, .w-line-acts.w-line-acts-on { visibility: visible; }
+.w-line.w-line-out .w-line-name { opacity: .5; }
+.w-line-tag { font-size: var(--w-fs-xs); color: var(--w-dim); border: 1px dashed var(--w-line-strong); border-radius: var(--w-r-sm); padding: 0 4px; white-space: nowrap; }
+.w-line:focus-visible { outline: 1px solid var(--w-gold); outline-offset: -1px; }
