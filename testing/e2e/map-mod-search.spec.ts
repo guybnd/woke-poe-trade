@@ -496,6 +496,8 @@ test('map: rare-only mods sit in the one list, yellow and searchable, any Sentin
   const anyOf = sentinel.locator('[data-map-any-of]')
   await expect(anyOf).toHaveText('any buried Sentinel')
   await sentinel.locator('[data-state="has"]').click()
+  // Picked, it shows its search state like any other mod (green for Has).
+  expect(await sentinel.locator('span').nth(2).evaluate(el => getComputedStyle(el).color)).not.toBe('rgb(255, 255, 119)')
   const mirage = rows.filter({ hasText: 'Area contains a Mirage' })
   await mirage.locator('[data-state="not"]').click()
   // The + for more numbers sits on the tiles' row.

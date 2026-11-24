@@ -631,7 +631,7 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .minBox input:focus-visible { outline: 1px solid var(--w-accent); }
 .anyOf { flex: none; font-size: var(--w-fs-xs); padding: 0 5px; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); color: var(--w-dim); cursor: pointer; }
 .anyOf:hover { color: var(--w-fg); }
-.rareOnly .text { color: var(--w-r-rare); }
+.rareOnly:not(.has):not(.not) .text { color: var(--w-r-rare); }
 .rareIcon { flex: none; width: 14px; height: 14px; background: url('/images/rareonly.png') center / contain no-repeat; }
 .dot { flex: none; width: 7px; height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-3); }
 .dot.deadly { background: var(--w-down); }
