@@ -47,7 +47,8 @@ test('the glance bar drags with the overlay open and keeps its spot', async ({ o
   expect(after.y).toBeGreaterThan(before.y + 150)
 
   // Saved when the drag ends.
-  await expect.poll(() => overlay.savedWidget('woke-session-story')?.glancePos ?? null).not.toBeNull()
+  // It starts saved at x 0.5: wait for the dragged spot, not the boot one.
+  await expect.poll(() => (overlay.savedWidget('woke-session-story')?.glancePos as { x: number } | undefined)?.x ?? 0.5).not.toBe(0.5)
   const saved = overlay.savedWidget('woke-session-story').glancePos as { x: number, y: number }
   const vw = page.viewportSize()!.width
   expect(saved.x * vw).toBeCloseTo(after.x + after.width / 2, -1)

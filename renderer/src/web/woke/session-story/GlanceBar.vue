@@ -46,6 +46,13 @@
         <span v-if="on.total" data-glance-total title="Tonight so far, AFK left out">{{ hoursText(playedMs(nightNow ?? night)) }}</span>
         <span v-if="on.avg && nightAvg != null" class="w-dim" data-glance-avg>avg {{ formatClock(nightAvg) }}</span>
       </template>
+      <!-- With the overlay open (not in Settings already): its settings, one click away. -->
+      <button v-if="movable && !editing && config" type="button" :class="[$style.cog, { 'w-accent': popover }]" class="w-dim" data-glance-cog title="What the bar shows"
+        @pointerdown.stop @click.stop="popover = !popover"><i class="fas fa-cog" /></button>
+      <!-- The cog's settings, under the bar: they apply and save as you tick. -->
+      <div v-if="popover && movable && !editing && config" :class="$style.popover" data-glance-popover @pointerdown.stop>
+        <GlanceSettings :config="config" live />
+      </div>
       <span :class="[$style.grip, { [$style.gripOn]: movable || editing }]" class="w-dim" data-glance-drag><i class="fas fa-grip-vertical" /></span>
     </div>
   </Teleport>
@@ -66,6 +73,8 @@ import { useNights } from './store'
 import { runMapsNow } from './glance-run'
 import { avgMapMs, glanceFields, glanceOutside, glanceShow, hoursText, perHourOf } from './glance-fields'
 import type { LastMap } from './glance-fields'
+import type { SessionStoryWidget } from './widget'
+import GlanceSettings from './GlanceSettings.vue'
 import { isSkippedArea } from './skip-areas'
 import { nightRateMs, playedMs } from './night-rate'
 import { countedMs, leftOutText } from '../shared/rate-time'
@@ -89,8 +98,13 @@ const props = defineProps<{
   show?: unknown
   // The map you just left (till the next one), for the bar between maps.
   last?: LastMap | null
+  // The widget's config, for the cog's popover; left out: no cog.
+  config?: SessionStoryWidget
 }>()
 const emit = defineEmits<{ move: [pos: { x: number, y: number }, done: boolean] }>()
+// The cog's popover; shut whenever the overlay closes.
+const popover = shallowRef(false)
+watch(() => props.movable, (open) => { if (!open) popover.value = false })
 
 const on = computed(() => {
   const f = glanceFields(props.fields)
@@ -243,5 +257,23 @@ const clock = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: '2-dig
 .movable:hover .gripOn, .editing .gripOn { visibility: visible; }
 .movable:hover, .editing { border-color: var(--w-accent); }
 .name { color: var(--w-accent); }
+.cog { all: unset; cursor: pointer; padding: 0 2px; }
+.cog:hover { color: var(--w-accent); }
+.popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 10px;
+  align-items: center;
+  padding: 8px 10px;
+  white-space: nowrap;
+  cursor: default;
+  background: var(--w-panel);
+  border: 1px solid var(--w-line);
+}
+.popover > * { justify-self: start; }
 .sep { width: 1px; align-self: stretch; background: var(--w-line); }
 </style>
