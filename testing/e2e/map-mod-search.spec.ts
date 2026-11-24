@@ -210,7 +210,12 @@ test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back'
   await steps.nth(1).click()
   const amount = panel.locator('[data-bulk-amount]').nth(1)
   await expect(amount).toHaveValue('4')
+  // More than they have snaps to their stock.
+  await amount.fill('5000')
+  await amount.blur()
+  await expect(amount).toHaveValue('1400')
   await amount.fill('10')
+  await amount.blur()
   const big = panel.locator('[data-bulk-whisper]').nth(1)
   await expect(big).toHaveAttribute('title', /Whisper: @s2c .*10 Map/)
   await big.click()

@@ -18,7 +18,7 @@ export interface LadderStep<T extends LadderOffer> {
   /** The price as shown, which is what makes offers one step. */
   key: string
   offers: T[]
-  /** Items on offer at this price (sellers' stock added up). */
+  /** Items for sale at this price (other sellers' stock added up). */
   stock: number
   sellers: number
 }
@@ -61,25 +61,52 @@ export function ladderSteps<T extends LadderOffer> (offers: readonly T[]): Array
     step.offers.push(o)
   }
   for (const s of steps) {
-    s.stock = s.offers.reduce((sum, o) => sum + o.stock, 0)
-    s.sellers = new Set(s.offers.map(o => o.accountName)).size
+    // What can be bought: not yours, and at least one lot in stock.
+    const real = s.offers.filter(buyable)
+    s.stock = real.reduce((sum, o) => sum + o.stock, 0)
+    s.sellers = new Set(real.map(o => o.accountName)).size
   }
   return steps
 }
 
-/** Buying `want` from the cheapest offers up, in each seller's lot size, never past their stock. */
+/**
+ * Buying `want` from the cheapest offers up, in each seller's lot size, never past their stock.
+ * Whole lots that fit come first; what's left is finished by the offer that does it for least,
+ * so a Buy of 1 isn't one big cheap lot when a single costs less.
+ */
 export function fillPlan<T extends LadderOffer> (offers: readonly T[], want: number): FillPlan<T> {
   const sorted = offers.filter(buyable).sort((a, b) => unitOf(a) - unitOf(b))
-  const picks: Array<FillPick<T>> = []
+  const lotsOf = new Map<T, number>()
   let left = Math.max(1, Math.floor(want))
+  const room = (o: T) => Math.floor(o.stock / o.itemAmount) - (lotsOf.get(o) ?? 0)
   for (const offer of sorted) {
     if (left <= 0) break
-    const lots = Math.min(Math.ceil(left / offer.itemAmount), Math.floor(offer.stock / offer.itemAmount))
+    const lots = Math.min(Math.floor(left / offer.itemAmount), room(offer))
     if (lots <= 0) continue
-    const items = lots * offer.itemAmount
-    picks.push({ offer, lots, items, cost: lots * offer.exchangeAmount })
-    left -= items
+    lotsOf.set(offer, lots)
+    left -= lots * offer.itemAmount
   }
+  // The rest is smaller than the lots it reached: the cheapest way to cover it, overshooting as little as it must.
+  while (left > 0) {
+    let best: { offer: T, lots: number, cost: number } | null = null
+    for (const offer of sorted) {
+      const lots = Math.min(Math.ceil(left / offer.itemAmount), room(offer))
+      if (lots <= 0) continue
+      const covers = lots * offer.itemAmount >= left
+      const cost = lots * offer.exchangeAmount
+      // One that covers it all beats one that doesn't; then the cheaper.
+      if (!best || (covers && best.lots * best.offer.itemAmount < left) || (covers === (best.lots * best.offer.itemAmount >= left) && cost < best.cost)) {
+        best = { offer, lots, cost }
+      }
+    }
+    if (!best) break
+    lotsOf.set(best.offer, (lotsOf.get(best.offer) ?? 0) + best.lots)
+    left -= best.lots * best.offer.itemAmount
+  }
+  const picks: Array<FillPick<T>> = sorted.filter(o => lotsOf.has(o)).map(offer => {
+    const lots = lotsOf.get(offer)!
+    return { offer, lots, items: lots * offer.itemAmount, cost: lots * offer.exchangeAmount }
+  })
   return {
     picks,
     items: picks.reduce((s, p) => s + p.items, 0),

@@ -25,8 +25,9 @@ describe('ladderSteps', () => {
     expect(steps[0].sellers).toBe(3)
   })
 
-  it('counts one seller once on a step', () => {
+  it('counts one seller once on a step, and leaves your own stock out', () => {
     expect(ladderSteps([offer('a', 2, 1), offer('a', 2, 5)])[0].sellers).toBe(1)
+    expect(ladderSteps([offer('me', 2, 9, 1, true), offer('a', 2, 5)])[0].stock).toBe(5)
   })
 })
 
@@ -41,13 +42,26 @@ describe('fillPlan', () => {
 
   it('buys in the seller\'s lots and never past their stock', () => {
     const plan = fillPlan([offer('a', 7, 25, 10), offer('b', 1, 100)], 15)
-    // Two lots of 10 from a (25 in stock holds two), none needed from b.
-    expect(plan.picks.map(p => [p.offer.accountName, p.lots, p.items, p.cost])).toEqual([['a', 2, 20, 14]])
+    // One lot of 10 from a; the last 5 cost less as singles from b than a second lot of a.
+    expect(plan.picks.map(p => [p.offer.accountName, p.lots, p.items, p.cost])).toEqual([['a', 1, 10, 7], ['b', 5, 5, 5]])
+    // Never past their stock: 25 holds two lots of 10.
+    expect(fillPlan([offer('a', 7, 25, 10)], 40).picks[0].lots).toBe(2)
   })
 
   it('skips your own offers and ones that cannot fill a lot', () => {
     const plan = fillPlan([offer('me', 1, 50, 1, true), offer('thin', 1, 5, 10), offer('ok', 2, 3)], 2)
     expect(plan.picks.map(p => p.offer.accountName)).toEqual(['ok'])
+  })
+
+  it('takes a single over a cheaper big lot when the single costs less for what is left', () => {
+    const plan = fillPlan([offer('lot', 50, 500, 100), offer('one', 0.6, 5)], 1)
+    expect(plan.picks.map(p => [p.offer.accountName, p.items])).toEqual([['one', 1]])
+    expect(plan.cost).toBe(0.6)
+  })
+
+  it('still takes the big lot when it is all there is', () => {
+    const plan = fillPlan([offer('lot', 50, 500, 100)], 1)
+    expect(plan.picks.map(p => [p.offer.accountName, p.items])).toEqual([['lot', 100]])
   })
 
   it('says when fewer are on offer than asked', () => {

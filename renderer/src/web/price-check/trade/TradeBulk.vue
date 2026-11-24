@@ -33,12 +33,13 @@
     </div>
     <!-- woke: what Buy N costs from the cheapest up, and whispering them in turn (Guy, 2026-11-24). -->
     <div v-if="!tableLoading && plan.picks.length" :class="$style.total" class="px-2 mb-1" data-bulk-total>
-      <span>Buy {{ plan.items }} → <b>{{ amount(plan.cost) }}</b><img :src="unitIcon" :alt="unitName" :class="$style.unitIcon"> total<template v-if="plan.items > 1"> · {{ amount(plan.cost / plan.items) }}<img :src="unitIcon" :alt="unitName" :class="$style.unitIcon"> each</template> · {{ plan.picks.length }} {{ plan.picks.length === 1 ? 'seller' : 'sellers' }}<template v-if="plan.short"> · only {{ plan.items }} on offer</template></span>
+      <span>Buy {{ plan.items }} → <b>{{ amount(plan.cost) }}</b><img :src="unitIcon" :alt="unitName" :class="$style.unitIcon"> total<template v-if="plan.items > 1"> · {{ amount(plan.cost / plan.items) }}<img :src="unitIcon" :alt="unitName" :class="$style.unitIcon"> each</template> · {{ plan.picks.length }} {{ plan.picks.length === 1 ? 'seller' : 'sellers' }}<template v-if="plan.short && moreListed"> · as many as the {{ shownCount }} cheapest offers hold</template><template v-else-if="plan.short"> · only {{ plan.items }} on offer</template></span>
       <span class="flex-1" />
       <span v-if="whisperNote" class="text-gray-400 whitespace-nowrap mr-2" data-bulk-whispered>{{ whisperNote }}</span>
+      <span v-else-if="whispers.length && !nextPick" class="text-gray-500 whitespace-nowrap">All {{ whispers.length }} whispered</span>
       <button v-if="nextPick" type="button" :class="[$style.whisperBtn, $style.nextBtn]" data-bulk-next
         :title="`Whisper ${sellerName(nextPick.offer)} for ${nextPick.items}: the next cheapest seller for your amount`"
-        @click="whisperNext">Whisper next<template v-if="plan.picks.length > 1"> ({{ nextIdx + 1 }}/{{ plan.picks.length }})</template></button>
+        @click="whisperNext">Whisper next<template v-if="whispers.length > 1"> ({{ nextIdx + 1 }}/{{ whispers.length }})</template></button>
     </div>
     <div ref="tableBox" data-goto-spot="exchange-ladder" class="w-pc-scroll layout-column overflow-y-auto overflow-x-hidden">
       <table class="w-pc-table w-full" :class="$style.ladder">
@@ -60,7 +61,7 @@
             <td colspan="100" class="px-2 py-1" data-testid="bulk-side-failed">These offers didn't load. <button class="btn" @click="retrySide">Try again</button></td>
           </tr>
           <template v-else>
-            <template v-for="step in steps" :key="step.key">
+            <template v-for="step in steps" :key="(step.ninja ? 'ninja:' : '') + step.key">
               <tr v-if="step.ninja" :class="$style.marketRatioRow">
                 <td class="px-2 whitespace-nowrap">{{ step.key }}<img :src="unitIcon" :alt="unitName" :class="$style.unitIcon"></td>
                 <td colspan="3" class="px-2 text-gray-400">{{ t(':market_ratio') }}</td>
@@ -91,7 +92,7 @@
                         <input type="number" :class="$style.amountBox" :min="r.itemAmount" :step="r.itemAmount" :max="maxItems(r)"
                           :value="amountFor(r)" data-bulk-amount :aria-label="`How many from ${sellerName(r)}`"
                           :title="`How many from ${sellerName(r)}: up to ${maxItems(r)}`"
-                          @click.stop @input="setAmount(r, ($event.target as HTMLInputElement).valueAsNumber)">
+                          @click.stop @change="setAmount(r, $event.target as HTMLInputElement)">
                         <span :class="$style.rowCost">{{ amount(lotsFor(r) * r.exchangeAmount) }}<img :src="unitIcon" :alt="unitName" :class="$style.unitIcon"></span>
                         <button type="button" :class="$style.whisperBtn" data-bulk-whisper
                           :title="`Whisper: ${whisperText(r)}`" @click.stop="whisper(r)">Whisper</button>
@@ -133,7 +134,7 @@ import { usePoeninja } from '@/web/background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
 import { getDetailsId, exactDetailsId } from '../trends/getDetailsId'
 import { ItemFilters } from '../filters/interfaces'
-import { ParsedItem } from '@/parser'
+import { ParsedItem, ItemCategory } from '@/parser'
 import { PriceCheckWidget } from '@/web/overlay/interfaces'
 import { artificialSlowdown } from './artificial-slowdown'
 import { useRetryCountdown } from './retry-countdown'
@@ -150,8 +151,8 @@ import '@/web/woke/price-insight/price-table.css'
 
 const slowdown = artificialSlowdown(900)
 const SKELETON_ROWS = 8
-// woke: the last Buy amount typed for a single item (a map), kept for the next check.
-let lastBuy = 1
+// woke: the last Buy amount typed on a map's exchange, kept for the next map checked.
+let lastMapBuy = 1
 // Narrower than this, the Seller column shows only how many sellers.
 const WIDE_PX = 420
 
@@ -361,10 +362,12 @@ export default defineComponent({
     const need = computed(() => props.item.stackSize?.value ?? 1)
     // woke: how many you want (Guy, 2026-11-24): the line above the ladder adds up what that costs
     // from the cheapest sellers, and each seller's amount starts at what that buy takes from them.
-    // A stack's size leads; otherwise the last amount typed stays for the next check.
-    const buyCount = shallowRef(need.value > 1 ? need.value : lastBuy)
-    watch(() => props.item, () => { buyCount.value = need.value > 1 ? need.value : lastBuy })
-    watch(buyCount, (n) => { if (need.value <= 1 && Number(n) >= 1) lastBuy = Math.floor(Number(n)) })
+    // A stack's size leads; a map starts at the last amount typed for a map.
+    const isMap = computed(() => props.item.category === ItemCategory.Map)
+    const startBuy = () => isMap.value ? lastMapBuy : need.value
+    const buyCount = shallowRef(startBuy())
+    watch(() => props.item, () => { buyCount.value = startBuy() })
+    watch(buyCount, (n) => { if (isMap.value && Number(n) >= 1) lastMapBuy = Math.floor(Number(n)) })
     const want = computed(() => Math.max(1, Math.floor(Number(buyCount.value) || 1)))
     const plan = computed(() => fillPlan(listedNow.value, want.value))
 
@@ -414,8 +417,13 @@ export default defineComponent({
     watch(() => [listedNow.value, want.value], () => { typed.clear() })
     const maxItems = (r: PricingResult) => Math.floor(r.stock / r.itemAmount) * r.itemAmount
     const amountFor = (r: PricingResult) => typed.get(r.id) ?? plan.value.picks.find(p => p.offer === r)?.items ?? r.itemAmount
-    function setAmount (r: PricingResult, n: number) {
-      if (Number.isFinite(n) && n >= 1) typed.set(r.id, n)
+    // Snapped to the seller's lot size and their stock, and shown as snapped: the box says what Whisper asks for.
+    function setAmount (r: PricingResult, input: HTMLInputElement) {
+      const n = input.valueAsNumber
+      if (Number.isFinite(n) && n >= 1) {
+        typed.set(r.id, Math.min(maxItems(r), Math.ceil(n / r.itemAmount) * r.itemAmount))
+      }
+      input.value = String(amountFor(r))
     }
     // Lots: the seller's own lot size, enough for the amount, never more than their stock.
     const lotsFor = (r: PricingResult) =>
@@ -440,16 +448,16 @@ export default defineComponent({
       if (text) send(r, text)
     }
     // Whisper next: down the buy's sellers, cheapest first, each for what the buy takes from them.
+    // Each for the amount on their row, which starts at what the buy takes; it stops after the last.
+    const whispers = computed(() => plan.value.picks.filter(p => canWhisper(p.offer)))
     const nextIdx = shallowRef(0)
     watch(plan, () => { nextIdx.value = 0 })
-    const nextPick = computed(() => plan.value.picks.filter(p => !!p.offer.whisper)[nextIdx.value] ?? null)
+    const nextPick = computed(() => whispers.value[nextIdx.value] ?? null)
     function whisperNext () {
       const pick = nextPick.value
       if (!pick) return
-      const text = bulkWhisper(pick.offer, pick.lots)
-      if (text) send(pick.offer, text)
-      const count = plan.value.picks.filter(p => !!p.offer.whisper).length
-      nextIdx.value = (nextIdx.value + 1) % count
+      whisper(pick.offer)
+      nextIdx.value += 1
     }
     // The game didn't have focus, so the whisper never went out.
     const chatDropped = MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data }) => {
@@ -544,6 +552,10 @@ export default defineComponent({
       whisperNext,
       nextPick,
       nextIdx,
+      whispers,
+      // The exchange loads its cheapest offers only: more are listed than the plan could see.
+      moreListed: computed(() => (result.value?.[selectedCurr.value].listed.value?.total ?? 0) > listedNow.value.length),
+      shownCount: computed(() => listedNow.value.length),
       plan,
       steps,
       depthWidth,
