@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const config = { widgets: [] as Array<Record<string, unknown>>, woke: { off: [] as string[] } }
 vi.mock('@/web/Config', () => ({ AppConfig: () => config }))
 
-const { FARM_GOALS, GOAL_CHIPS, GOAL_KEYS, RAISES, goalDisabled, plannerGoalFor } = await import('@/web/woke/map-mods/goal')
+const { FARM_GOALS, GOAL_KEYS, RAISES, goalDisabled, plannerGoalFor } = await import('@/web/woke/map-mods/goal')
 const { farmGoal, setFarmGoal } = await import('@/web/woke/map-mods/goal-config')
 const { mapBonusLookup } = await import('@/web/woke/search/lookups/map-bonus')
 
@@ -43,11 +43,13 @@ describe('farming goal', () => {
     expect(goalDisabled('Quant', 'any')).toBeUndefined()
   })
   it('currency turns on Rarity, Pack and More Currency only', () => {
-    const on = Object.entries(GOAL_CHIPS.currency).filter(([, v]) => v).map(([k]) => k).sort()
+    const LABELS = ['Drops', 'Rarity', 'Pack', 'Currency', 'Threads', 'Maps', 'Div cards']
+    const on = LABELS.filter(l => goalDisabled(l, 'currency') === false).sort()
     expect(on).toEqual(['Currency', 'Pack', 'Rarity'])
   })
   it('maps and Threads turn on Pack, More Maps and More Threads; Atlas Drops stays off (no listings)', () => {
-    const on = Object.entries(GOAL_CHIPS.atlas).filter(([, v]) => v).map(([k]) => k).sort()
+    const LABELS = ['Drops', 'Rarity', 'Pack', 'Currency', 'Threads', 'Maps', 'Div cards']
+    const on = LABELS.filter(l => goalDisabled(l, 'atlas') === false).sort()
     expect(on).toEqual(['Maps', 'Pack', 'Threads'])
     expect(GOAL_KEYS.atlas).toContain('Drops')
   })

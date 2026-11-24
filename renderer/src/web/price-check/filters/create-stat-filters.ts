@@ -10,7 +10,6 @@ import { applyRules as applyAtzoatlRules } from './pseudo/atzoatl-rules'
 import { applyRules as applyMirroredTabletRules } from './pseudo/reflection-rules'
 import { filterEquipmentProps, filterBasePercentile, filterMemoryStrands, filterStoredExperience, BASE_PCTL_AFFECTED_IDS } from './pseudo/item-property'
 import { mapProps, valdoBadMods, chartProps } from './pseudo/maps'
-import type { FarmGoal } from '@/web/woke/map-mods/goal'
 import { applyFlaskHybridMod } from './pseudo/flasks'
 import { applyHeistRules } from './pseudo/heist'
 import { filterTimelessJewelKeystones } from './pseudo/timeless-jewel'
@@ -33,8 +32,7 @@ export interface FiltersCreationContext {
 export function createExactStatFilters (
   item: ParsedItem,
   statsByType: StatCalculated[],
-  // woke: farmGoal picks which map numbers start on (map-mods/goal.ts).
-  opts: { searchStatRange: number, mode?: 'props' | 'bulk', farmGoal?: FarmGoal }
+  opts: { searchStatRange: number, mode?: 'props' | 'bulk' }
 ): StatFilter[] {
   if (
     item.info.area?.blighted ||
@@ -89,7 +87,7 @@ export function createExactStatFilters (
   filterBasePercentile(ctx)
   filterMemoryStrands(ctx)
   filterStoredExperience(ctx)
-  mapProps(opts.mode === 'bulk', ctx, opts.farmGoal)
+  mapProps(opts.mode === 'bulk', ctx)
   chartProps(opts.mode === 'bulk', ctx)
   valdoBadMods(ctx)
 

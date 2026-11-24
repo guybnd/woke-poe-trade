@@ -5,8 +5,6 @@ import { FiltersCreationContext } from '../create-stat-filters'
 import { FilterTag } from '../interfaces'
 import { noSourcePseudoToFilter, propToFilter } from './item-property'
 import { findAndResolveByRef, statToNotFilter } from './utils'
-import { goalDisabled } from '@/web/woke/map-mods/goal'
-import type { FarmGoal } from '@/web/woke/map-mods/goal'
 
 const PSEUDO = {
   MORE_THREADS: stat('More Scarabs: #%'),
@@ -67,7 +65,7 @@ function areaProps (
   }
 }
 
-export function mapProps (bulk: boolean, ctx: FiltersCreationContext, goal: FarmGoal = 'any'): void {
+export function mapProps (bulk: boolean, ctx: FiltersCreationContext): void {
   const { item } = ctx
   if (item.category !== ItemCategory.Map || item.mapCompletionReward || item.rarity === ItemRarity.Unique) return
 
@@ -77,12 +75,11 @@ export function mapProps (bulk: boolean, ctx: FiltersCreationContext, goal: Farm
     // woke: Rarity starts on like Pack size, More X or not (Guy, 2026-11-23: a
     // high Rarity left off looked like a mistake). APT left it off when the map
     // had More Currency / Scarabs / Div cards.
-    // woke: the farming goal (map-mods/goal.ts) picks which numbers start on.
     areaProps({
       disabled: {
         itemQuantity: false,
-        itemRarity: goalDisabled('Rarity', goal) ?? false,
-        packSize: goalDisabled('Pack', goal) ?? false
+        itemRarity: false,
+        packSize: false
       }
     }, ctx)
 
@@ -90,28 +87,28 @@ export function mapProps (bulk: boolean, ctx: FiltersCreationContext, goal: Farm
       ctx.filters.push(noSourcePseudoToFilter({
         pseudo: pseudoStatByRef(PSEUDO.MORE_MAPS)!,
         roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreMaps },
-        disabled: goalDisabled('Maps', goal) ?? true
+        disabled: true
       }, ctx))
     }
     if (item.mapMoreThreads) {
       ctx.filters.push(noSourcePseudoToFilter({
         pseudo: pseudoStatByRef(PSEUDO.MORE_THREADS)!,
         roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreThreads },
-        disabled: goalDisabled('Threads', goal) ?? false
+        disabled: false
       }, ctx))
     }
     if (item.mapMoreCurrency) {
       ctx.filters.push(noSourcePseudoToFilter({
         pseudo: pseudoStatByRef(PSEUDO.MORE_CURRENCY)!,
         roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreCurrency },
-        disabled: goalDisabled('Currency', goal) ?? false
+        disabled: false
       }, ctx))
     }
     if (item.mapMoreDivCards) {
       ctx.filters.push(noSourcePseudoToFilter({
         pseudo: pseudoStatByRef(PSEUDO.MORE_DIVINATION_CARDS)!,
         roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreDivCards },
-        disabled: goalDisabled('Div cards', goal) ?? false
+        disabled: false
       }, ctx))
     }
   }

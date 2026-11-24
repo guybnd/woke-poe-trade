@@ -182,7 +182,6 @@ import { holdBulkSearch, fixedPriceItem, isUnidUniqueJewel, chaosOrbRow } from '
 import { exactDetailsId } from './trends/getDetailsId'
 import { usePoeninja } from '@/web/background/Prices'
 import { poeMode, poeOn, loadPoeKit } from '@/web/woke/price-insight/window-style'
-import { farmGoal } from '@/web/woke/map-mods/goal-config'
 
 let _showSupportLinksCounter = 0
 
@@ -365,8 +364,6 @@ export default defineComponent({
         collapseListings: widget.value.collapseListings,
         activateStockFilter: widget.value.activateStockFilter,
         searchStatRange: widget.value.searchStatRange,
-        // woke: which map numbers start on (map-mods/goal.ts).
-        farmGoal: farmGoal(),
         useEn: AppConfig().useIntlSite,
         currency: (prevItem &&
           item.info.namespace === prevItem.info.namespace &&

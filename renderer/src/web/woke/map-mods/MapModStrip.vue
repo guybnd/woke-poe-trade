@@ -255,6 +255,9 @@ function setGoal (g: FarmGoal) {
   // Base map on: bring its picks back first, so the goal doesn't lose them.
   if (baseOnly.value && clearedRef.value) toggleBase()
   setFarmGoal(g)
+  applyGoal(g)
+}
+function applyGoal (g: FarmGoal) {
   for (const p of result.value?.props ?? []) {
     // Atlas Drops is off for every goal (no listings): one you turned on stays on.
     if (p.label === 'Drops') continue
@@ -264,6 +267,17 @@ function setGoal (g: FarmGoal) {
     if (f && off !== undefined && !tickPref(f)) f.disabled = off
   }
 }
+// The price check builds a map's numbers as it always did; the strip sets them
+// to the goal once per set of filters (a new item, or another preset), so
+// clicks after that are kept. The strip loads lazily, which keeps this out of
+// the startup budget.
+const goalApplied = new WeakSet<object>()
+watch(() => [props.stats, result.value] as const, () => {
+  const stats = props.stats
+  if (!stats || !result.value || !isMap.value || goalApplied.has(stats)) return
+  goalApplied.add(stats)
+  if (goal.value !== 'any') applyGoal(goal.value)
+}, { immediate: true })
 
 // The Base map button: every chip and every row below off (the 8-mod count too),
 // every mod Any, added mods off. The picks it cleared come back on a second

@@ -6,7 +6,7 @@ import { importAptMapRatings, moveHeistRatings } from './apt-import'
 import { heistRowOf } from './data'
 import { DEFAULT_JUICE_WEIGHTS, carryRewordedRatings, defaultProfile } from './rules'
 import type { JuiceWeights, MapModProfile } from './rules'
-import type { FarmGoal } from './goal'
+import type { FarmGoal } from './goal-chips'
 
 export const MAP_MODS_TYPE = 'woke-map-mods'
 // copy-item target for the checker's own hotkey.

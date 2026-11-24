@@ -1,7 +1,7 @@
 // Reads and saves the farming goal (goal.ts) on the Map mods window's config.
 import { AppConfig } from '@/web/Config'
 import { isModuleOn } from '../modules'
-import type { FarmGoal } from './goal'
+import type { FarmGoal } from './goal-chips'
 
 // map-mods/widget.ts's MAP_MODS_TYPE; that file pulls in the UI.
 const MAP_MODS_TYPE = 'woke-map-mods'

@@ -5,22 +5,14 @@
 // rarity too). So currency maps want Rarity, Pack size and More Currency, and
 // map / Thread farming wants Atlas Drops, More Maps and More Threads.
 // Checked against poedb's 3.30.0 patch notes.
-// Kept free of imports: the price check's filter code (pseudo/maps.ts) uses it.
-// Reading and saving the goal is in goal-config.ts.
+// The words and the strip's rings; which numbers start on is goal-chips.ts.
+// Reading and saving the goal is goal-config.ts.
 
-export type FarmGoal = 'any' | 'currency' | 'atlas'
+import type { FarmGoal } from './goal-chips'
+export type { FarmGoal } from './goal-chips'
+export { goalDisabled } from './goal-chips'
 export const FARM_GOALS: FarmGoal[] = ['currency', 'atlas', 'any']
 export const FARM_GOAL_LABEL: Record<FarmGoal, string> = { currency: 'Currency', atlas: 'Maps & Threads', any: 'Any' }
-
-// The map strip's chip labels (check.ts) and whether each starts in the trade
-// search. Any is how chips started before goals: Atlas Drops off (the trade
-// site has no listings for it), More Maps off as APT had it. A label left out
-// (Quant, on old maps and charts only) keeps how it was made.
-export const GOAL_CHIPS: Record<FarmGoal, Record<string, boolean>> = {
-  any: { 'Drops': false, 'Rarity': true, 'Pack': true, 'Currency': true, 'Threads': true, 'Maps': false, 'Div cards': true },
-  currency: { 'Drops': false, 'Rarity': true, 'Pack': true, 'Currency': true, 'Threads': false, 'Maps': false, 'Div cards': false },
-  atlas: { 'Drops': false, 'Rarity': false, 'Pack': true, 'Currency': false, 'Threads': true, 'Maps': true, 'Div cards': false }
-}
 
 // The numbers that matter for a goal: ringed on the strip. Atlas Drops is one
 // for maps even though it can't be searched.
@@ -40,12 +32,6 @@ export const RAISES: Record<string, string> = {
   'Threads': 'T17 bonus: more Threads dropped.',
   'Maps': 'T17 bonus: more maps dropped.',
   'Div cards': 'T17 bonus: more divination cards dropped.'
-}
-
-// Whether a chip's filter starts off in the trade search; undefined: as made.
-export function goalDisabled (label: string, goal: FarmGoal = 'any'): boolean | undefined {
-  const on = GOAL_CHIPS[goal][label]
-  return on === undefined ? undefined : !on
 }
 
 // The Planner's goal when you haven't picked one there.
