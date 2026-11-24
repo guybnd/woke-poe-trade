@@ -15,6 +15,15 @@ export const GOTO_SPOTS = {
   'woke-net-worth': { 'per-hour': 'holdings', 'faustus-box': 'holdings', 'still-cheapest': 'listed', 'stale': 'listed' }
 } as const satisfies { [T in keyof typeof GOTO_TARGETS]?: Record<string, keyof typeof GOTO_TARGETS[T]> }
 
+// What's new lines whose feature is a spot, by line id (news.ts). Kept here,
+// not on the line: NEWS loads at startup, this only with the dock's card.
+export const NEWS_SPOTS: Record<string, string> = {
+  'listed-still-cheapest': 'still-cheapest',
+  'per-hour-time-setting': 'per-hour',
+  'net-worth-listed': 'stale',
+  'net-worth-faustus-box': 'faustus-box'
+}
+
 export function gotoSpots (wmType: string): Record<string, string> | null {
   return (GOTO_SPOTS as Record<string, Record<string, string>>)[wmType] ?? null
 }

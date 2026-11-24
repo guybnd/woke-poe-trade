@@ -34,6 +34,7 @@ import type { NewsItem } from '../tab-bar/news'
 import { WButton } from '../ui'
 import { personalOn } from '../personal'
 import { requestGoto } from '../tab-bar/goto'
+import { NEWS_SPOTS } from '../tab-bar/goto-targets'
 import { uiTrace } from '../app/ui-trace'
 import DockItem from './DockItem.vue'
 import { openSettingsPage, showWithOverlay } from './dock'
@@ -66,7 +67,7 @@ function markSeen (items: NewsItem[]) {
 // switch in Settings instead, since turning it on asks first.
 function show (n: NewsItem) {
   markSeen([n])
-  uiTrace(`What's new › Show me: ${n.id} (${n.wmType}${n.goto ? ` › ${n.goto}` : ''}${n.spot ? ` › ${n.spot}` : ''}${n.settingsPage ? `, Settings › ${n.settingsPage}` : ''})`)
+  uiTrace(`What's new › Show me: ${n.id} (${n.wmType}${n.goto ? ` › ${n.goto}` : ''}${NEWS_SPOTS[n.id] ? ` › ${NEWS_SPOTS[n.id]}` : ''}${n.settingsPage ? `, Settings › ${n.settingsPage}` : ''})`)
   if (!n.settingsPage && n.wmType !== 'woke-net-worth' && !isWidgetTypeOn(AppConfig(), n.wmType)) {
     const config = ensureWokeConfig(AppConfig())
     for (const m of MODULES) if (m.widgetTypes.includes(n.wmType)) setModuleOn(config, m.id, true)
@@ -91,7 +92,7 @@ function show (n: NewsItem) {
   }
   const wmId = w.wmId
   // On the tab the line is about (goto.ts).
-  if (n.goto) requestGoto(wmId, n.goto, n.spot)
+  if (n.goto) requestGoto(wmId, n.goto, NEWS_SPOTS[n.id])
   nextTick(() => nextTick(() => {
     showWithOverlay(wm, wmId)
     pushHostConfig()

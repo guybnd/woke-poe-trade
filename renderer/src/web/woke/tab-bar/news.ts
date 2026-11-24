@@ -18,9 +18,6 @@ export interface NewsItem {
   // GOTO_TARGETS; required for a tool that has tabs there), or a Settings
   // page by its name instead.
   goto?: string
-  // A thing on that tab to scroll to and flash (goto-targets.ts GOTO_SPOTS),
-  // for a feature that isn't the whole tab.
-  spot?: string
   settingsPage?: string
 }
 
@@ -28,13 +25,13 @@ export const NEWS: NewsItem[] = [
   { id: 'map-farming-goal', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: pick Currency or Maps & Threads on a map\'s price check, and the numbers that matter start on' },
   { id: 'div-card-map-chance', wmType: 'woke-search', name: 'Search', note: 'New: type a map to see how likely each of its cards is, and what one is worth on average' },
   { id: 'runs-kits-compare', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: run costs priced live, and past runs side by side, by strategy too' },
-  { id: 'listed-still-cheapest', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', spot: 'still-cheapest', note: 'New: Check on a Listed row says if anyone sells it cheaper (one trade search)' },
-  { id: 'per-hour-time-setting', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', spot: 'per-hour', note: 'New: Play, + Hideout or All beside every per hour, the same choice in every tool' },
+  { id: 'listed-still-cheapest', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: Check on a Listed row says if anyone sells it cheaper (one trade search)' },
+  { id: 'per-hour-time-setting', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: Play, + Hideout or All beside every per hour, the same choice in every tool' },
   { id: 'net-worth-public', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: open to everyone. Charts what your stash is worth and what each map earned' },
   { id: 'map-mods-t17-planner', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: a Planner tab for T17 maps, and what each mod adds to a map' },
-  { id: 'net-worth-listed', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', spot: 'stale', note: 'New: a Listed tab: what you have up at Faustus, unsold, and for how long' },
+  { id: 'net-worth-listed', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: a Listed tab: what you have up at Faustus, unsold, and for how long' },
   { id: 'net-worth-strategy-runs', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: strategy runs. Start one from the icon\'s card to see what a farm earns' },
-  { id: 'net-worth-faustus-box', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', spot: 'faustus-box', note: 'New: tick the box on At Faustus to count your listings in the total, or leave them out' },
+  { id: 'net-worth-faustus-box', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: tick the box on At Faustus to count your listings in the total, or leave them out' },
   { id: 'atlas-planner-links', wmType: 'woke-atlas-strategies', name: 'Atlas strategies', note: 'New: imports poeatlasplanner.com links' }
 ]
 

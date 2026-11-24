@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { NEWS, markAllNewsSeen, markNewsSeen, unseenNews } from '@/web/woke/tab-bar/news'
-import { gotoSpots, gotoTargets } from '@/web/woke/tab-bar/goto-targets'
+import { NEWS_SPOTS, gotoSpots, gotoTargets } from '@/web/woke/tab-bar/goto-targets'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import type { WokeModulesConfig } from '@/web/woke/modules'
@@ -26,6 +26,10 @@ describe("What's new lines", () => {
     }
   })
 
+  it('NEWS_SPOTS names only real lines', () => {
+    for (const id of Object.keys(NEWS_SPOTS)) expect(NEWS.map(n => n.id), id).toContain(id)
+  })
+
   it('reads the Settings page names', () => {
     expect(PAGE_NAMES.size).toBeGreaterThan(20)
     for (const n of ['All modules', 'Sessions', 'Price check', 'farming', 'Modules']) expect(PAGE_NAMES, n).toContain(n)
@@ -35,7 +39,7 @@ describe("What's new lines", () => {
     for (const n of NEWS) {
       if (n.settingsPage) {
         expect(n.goto, n.id).toBeUndefined()
-        expect(n.spot, n.id).toBeUndefined()
+        expect(NEWS_SPOTS[n.id], n.id).toBeUndefined()
         expect(pageByName(n.settingsPage), `${n.id}: no Settings page called "${n.settingsPage}"`).toBeDefined()
         continue
       }
@@ -45,10 +49,11 @@ describe("What's new lines", () => {
         continue
       }
       expect(Object.keys(targets), `${n.id}: add goto, one of the tool's tabs`).toContain(n.goto)
-      if (n.spot) {
+      const spot = NEWS_SPOTS[n.id]
+      if (spot) {
         const spots = gotoSpots(n.wmType)
-        expect(spots?.[n.spot], `${n.id}: spot "${n.spot}" isn't in GOTO_SPOTS for ${n.wmType}`).toBeDefined()
-        expect(spots![n.spot], `${n.id}: spot "${n.spot}" sits on another tab`).toBe(n.goto)
+        expect(spots?.[spot], `${n.id}: spot "${spot}" isn't in GOTO_SPOTS for ${n.wmType}`).toBeDefined()
+        expect(spots![spot], `${n.id}: spot "${spot}" sits on another tab`).toBe(n.goto)
       }
     }
   })
