@@ -5,7 +5,7 @@ import type { Page } from '@playwright/test'
 import { test, expect } from './harness'
 
 // The map kind's "not" filters (pseudo/maps.ts): Elder or Shaper, a conqueror, the Originator.
-const KIND_IDS = ['implicit.stat_1792283443', 'implicit.stat_3624393862', 'implicit.stat_2696470877']
+const KIND_IDS = ['implicit.stat_1792283443', 'implicit.stat_2563183002', 'implicit.stat_2696470877']
 const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
 type Query = { query: { stats: Array<{ type: string, filters: Array<{ id: string, disabled?: boolean, value?: unknown }>, disabled?: boolean }> } }
 
@@ -163,7 +163,7 @@ test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back'
   await expect(noElder).toBeVisible({ timeout: 20_000 })
   await expect(noElder).toHaveText('Originator map')
   await expect(noElder).toHaveAttribute('aria-checked', 'true')
-  await expect(noElder).toHaveAttribute('title', /leaves out Elder and Shaper, conqueror maps/)
+  await expect(noElder).toHaveAttribute('title', /leaves out Elder and Shaper, conqueror Citadel maps/)
   // The switch stands in for the row below.
   await expect(panel.getByText('Area is influenced by The Elder or The Shaper')).toHaveCount(0)
   await overlay.page.waitForTimeout(1000)
@@ -281,8 +281,8 @@ test('map: Base map and the Bulk tab keep the map\'s influence', async ({ overla
   const onIds = (q: Query) => q.query.stats.flatMap(g => g.disabled ? [] : g.filters.filter(f => !f.disabled).map(f => f.id))
   await search.click()
   await expect.poll(() => searches.length).toBeGreaterThan(0)
-  // And the kinds it isn't (WOKEPOET-523): Elder or Shaper by 2 options, a conqueror by 4.
-  const CONQ = 'implicit.stat_3624393862'
+  // And the kinds it isn't (WOKEPOET-523): Elder or Shaper by 2 options, a conqueror's Citadel by 4.
+  const CONQ = 'implicit.stat_2563183002'
   expect(onIds(searches[0]).sort()).toEqual([ORIGINATOR, 'implicit.stat_1792283443', 'implicit.stat_1792283443', CONQ, CONQ, CONQ, CONQ].sort())
 
   await panel.locator('[data-trade-presets]').getByText('Bulk', { exact: true }).click()
@@ -388,7 +388,7 @@ test('map: the kind is one switch, the list holds only mods, and the numbers are
   const panel = overlay.widget('price-check')
   const kind = panel.locator('[data-map-kind] [data-kind="this"]')
   await expect(kind).toBeVisible({ timeout: 20_000 })
-  await expect(kind).toHaveText('Elder Purifier Originator map')
+  await expect(kind).toHaveText('Elder Originator map')
   await expect(kind).toHaveAttribute('aria-checked', 'true')
   const strip = panel.locator('[data-map-trade] > button').first()
   if (await panel.locator('[data-map-mod]').count() === 0) await strip.click()

@@ -70,17 +70,20 @@ describe('the map kind', () => {
   const kinds = (file: string) => noElder(file).stats
     .filter((s): s is StatFilter => !s.group && !!s.mapKind && !s.disabled)
     .map(s => s.tradeId[0]).sort()
-  it('an Originator map leaves out Elder/Shaper and conqueror maps', () => {
-    expect(kinds('map-originator-t16.txt')).toEqual(['implicit.stat_1792283443', 'implicit.stat_3624393862'])
+  it('an Originator map leaves out Elder/Shaper and conqueror Citadel maps', () => {
+    expect(kinds('map-originator-t16.txt')).toEqual(['implicit.stat_1792283443', 'implicit.stat_2563183002'])
     const { item, stats } = noElder('map-originator-t16.txt')
     const not = createTradeRequest(createFilters(item, OPTS), stats).query.stats.find(g => g.type === 'not')!
-    expect(not.filters.filter(f => f.id === 'implicit.stat_3624393862').map(f => f.value)).toEqual([1, 2, 3, 4].map(option => ({ option })))
+    expect(not.filters.filter(f => f.id === 'implicit.stat_2563183002').map(f => f.value)).toEqual([1, 2, 3, 4].map(option => ({ option })))
   })
-  it('an Elder Originator map occupied by a conqueror is all three: nothing left out', () => {
-    expect(kinds('map-originator-elder.txt')).toEqual([])
+  it('an Elder Originator map (with its guardian) leaves out only Citadel maps', () => {
+    expect(kinds('map-originator-elder.txt')).toEqual(['implicit.stat_2563183002'])
+  })
+  it('a conqueror Citadel map leaves out Elder/Shaper and Originator maps', () => {
+    expect(kinds('map-citadel.txt')).toEqual(['implicit.stat_1792283443', 'implicit.stat_2696470877'])
   })
   it('a normal map leaves out every influenced kind, the Originator too', () => {
-    expect(kinds('map-rare-t16.txt')).toEqual(['implicit.stat_1792283443', 'implicit.stat_2696470877', 'implicit.stat_3624393862'])
+    expect(kinds('map-rare-t16.txt')).toEqual(['implicit.stat_1792283443', 'implicit.stat_2563183002', 'implicit.stat_2696470877'])
     const { item, stats } = noElder('map-rare-t16.txt')
     const not = createTradeRequest(createFilters(item, OPTS), stats).query.stats.find(g => g.type === 'not')!
     expect(not.filters.filter(f => f.id === 'implicit.stat_2696470877')).toHaveLength(1)

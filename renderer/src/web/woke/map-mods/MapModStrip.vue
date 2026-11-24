@@ -192,7 +192,8 @@ const rows = computed<Row[]>(() => {
   const rated: Row[] = result.value!.verdict.mods.map(mod => {
     // The verdict names a mod by its wording, the filter by its stat's ref; a
     // stat has several wordings (plural, 100%, reworded), so any of them counts.
-    const filter = searchable.value.find(f => !used.has(f) && (f.statRef === mod.matcher ||
+    // Only the map's own mods: an enchant with the same wording (a Mirage) stays its own line.
+    const filter = searchable.value.find(f => f.mapMod && !used.has(f) && (f.statRef === mod.matcher ||
       f.sources.some(s => s.stat.stat.matchers.some(m => m.string === mod.matcher)))) ?? null
     if (filter) used.add(filter)
     return { mod, filter }
@@ -250,7 +251,8 @@ const kindLabel = computed(() => {
   const refs = kindFilters.value.filter(f => !f.mapKind).map(f => f.statRef)
   const parts: string[] = []
   for (const ref of refs) {
-    const m = /influenced by The (Elder|Shaper)$/i.exec(ref) ?? /occupied by The (\w+)/i.exec(ref)
+    // The Elder's guardian ("occupied by") goes with the Elder: not a kind of its own.
+    const m = /influenced by The (Elder|Shaper)$/i.exec(ref) ?? /^Map contains (\S+?)'s Citadel/i.exec(ref)
     if (m) parts.push(m[1])
   }
   if (refs.some(r => /Originator/i.test(r))) parts.push('Originator')
@@ -258,7 +260,7 @@ const kindLabel = computed(() => {
 })
 const kindTitle = computed(() => {
   const leaves = kindFilters.value.filter(f => f.mapKind).map(f =>
-    f.tradeId[0] === MAP_KIND_TRADE_IDS[0] ? 'Elder and Shaper' : f.tradeId[0] === MAP_KIND_TRADE_IDS[1] ? 'conqueror' : 'Originator')
+    f.tradeId[0] === MAP_KIND_TRADE_IDS[0] ? 'Elder and Shaper' : f.tradeId[0] === MAP_KIND_TRADE_IDS[1] ? 'conqueror Citadel' : 'Originator')
   return `Search only this kind of map (${kindLabel.value})` +
     (leaves.length ? `: leaves out ${leaves.join(', ')} maps.` : '.') + ' Kinds list at different prices.'
 })

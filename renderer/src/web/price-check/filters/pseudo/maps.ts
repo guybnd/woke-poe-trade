@@ -169,21 +169,23 @@ export function valdoBadMods (ctx: FiltersCreationContext): void {
   }
 }
 
-// woke: a map's kind is its influence: none, the Originator, the Elder or Shaper, a
-// conqueror, or the Originator with one of those (Guy, 2026-11-24). Kinds list at
+// woke: a map's kind is its influence: none, the Originator, the Elder or Shaper (an
+// Elder map also has a guardian: "occupied by The Purifier"), a conqueror's Citadel, or
+// the Originator with one of those (Guy, 2026-11-24). Kinds list at
 // different prices (Elder maps carry a guardian and list cheap: 807 of the T16
 // Originator maps in Covens, 2026-11-24, WOKEPOET-523), so the search finds only
 // this map's kind: its own influence lines are searched as "has" (they start on), and
 // one "not" filter per kind it isn't is added here. The map strip's Kind switch
 // turns them all off (Any kind). Nightmare and Valdo maps are other items.
 export const NO_ELDER_TRADE_ID = 'implicit.stat_1792283443'
-export const CONQUEROR_TRADE_ID = 'implicit.stat_3624393862'
+export const CITADEL_TRADE_ID = 'implicit.stat_2563183002'
 export const ORIGINATOR_TRADE_ID = 'implicit.stat_2696470877'
 const MAP_KINDS: Array<{ id: string, statRef: string, text: string, options?: number[] }> = [
   // 1 Shaper, 2 Elder (checked live 2026-11-24).
   { id: NO_ELDER_TRADE_ID, statRef: 'Area is influenced by The Elder', text: 'Area is influenced by The Elder or The Shaper', options: [1, 2] },
-  // 1 Enslaver, 2 Eradicator, 3 Constrictor, 4 Purifier (stats data).
-  { id: CONQUEROR_TRADE_ID, statRef: 'Map is occupied by The Purifier', text: 'Map is occupied by a conqueror', options: [1, 2, 3, 4] },
+  // A conqueror's Citadel: 1 Baran, 2 Veritania, 3 Al-Hezmin, 4 Drox (stats data). The Elder's
+  // guardians ("occupied by") come with the Elder, so leaving out the Elder leaves them out too.
+  { id: CITADEL_TRADE_ID, statRef: "Map contains Baran's Citadel", text: "Map contains a conqueror's Citadel", options: [1, 2, 3, 4] },
   { id: ORIGINATOR_TRADE_ID, statRef: "Area is Influenced by the Originator's Memories", text: "Area is Influenced by the Originator's Memories" }
 ]
 export const MAP_KIND_TRADE_IDS: readonly string[] = MAP_KINDS.map(k => k.id)
@@ -223,6 +225,7 @@ export function mapModFamilies (ctx: FiltersCreationContext): void {
     // Two kinds on one map: each stays its own, or one Evocator would match both.
     if (ctx.filters.filter(g => (g.mapMod || g.mapLine) && family.refs.includes(g.statRef)).length > 1) continue
     // An Evocator can be a mod or (on an Originator map) an enchant: search its siblings of the same kind.
+    if (!f.mapMod && f.tag !== FilterTag.Enchant && f.tag !== FilterTag.Implicit) continue
     const type = f.mapMod ? ModifierType.Explicit : f.tag as ModifierType
     const ids = family.refs.flatMap(ref => {
       try { return findAndResolveByRef(ref, type, ctx.item.category).trade.ids[type] ?? [] } catch { return [] }
