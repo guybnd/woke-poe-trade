@@ -204,3 +204,4 @@
 - What's new: Show me now goes to the feature itself, not just its tab. It scrolls to it and flashes it, and the Listed line picks the Stale chip. Before, with the window already on that tab, it looked like nothing happened.
 - What's new: Show me on the price check's seller spread line opens a sample Exalted Orb check and points at the spread; the map cards line opens Ctrl+Space with a map typed.
 - What's new: Show me on the price check's upgrade and recipe lines opens a sample check (Xoph's Inception, The Will of Uul-Netol) and points at the side list. Lines with nothing to show have no Show me, only dismiss, instead of opening Settings.
+- Net worth Runs: the "small" mark's hover names the best drop it leaves out ("Without your best drop (Mageblood, 40c): ..."), and the past runs column reads "Without best drop".
