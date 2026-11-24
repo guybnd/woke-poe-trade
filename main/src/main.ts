@@ -26,6 +26,10 @@ import { setAppIcon } from './woke/app-icon'
 import { saveBeforeQuit } from './woke/quit-flush'
 import { guardWebContents } from './woke/web-guard'
 import { appPrefs } from './woke/app-prefs'
+import { startElevatedIfChosen, waitForStarter } from './woke/run-as-admin'
+
+// woke: an elevated copy (run-as-admin.ts) lets the one that started it quit first.
+waitForStarter()
 
 if (!app.requestSingleInstanceLock()) {
   app.exit()
@@ -50,6 +54,8 @@ app.on('second-instance', () => { tray?.notifyAlreadyRunning() })
 
 app.on('ready', async () => {
   perfMark('app ready')
+  // woke: "Always start as admin" asks for elevation before anything opens.
+  if (await startElevatedIfChosen()) return
   // woke: before any window: webviews locked down, links only to the browser.
   guardWebContents(app, session.defaultSession, (url) => shell.openExternal(url))
   setAppIcon(savedAppIcon())

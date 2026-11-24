@@ -158,10 +158,13 @@ export function afterEvent (downloaded: string | null, ev: UpdaterEvent): { show
 // on quit, and from Restart now.
 export const NO_AUTO_INSTALL_ARG = '--woke-no-auto-install'
 
-// The arguments for starting the app again: never the flag above, so it lasts
-// one run only.
+// An elevated copy waits for this process to quit first (run-as-admin.ts).
+export const AFTER_PID_ARG = '--woke-after-pid='
+
+// The arguments for starting the app again: never the flags above, so they
+// last one run only.
 export function relaunchArgs (argv: string[], noAutoInstall: boolean): string[] {
-  const args = argv.slice(1).filter(a => a !== NO_AUTO_INSTALL_ARG)
+  const args = argv.slice(1).filter(a => a !== NO_AUTO_INSTALL_ARG && !a.startsWith(AFTER_PID_ARG))
   return noAutoInstall ? [...args, NO_AUTO_INSTALL_ARG] : args
 }
 
