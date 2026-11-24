@@ -98,7 +98,7 @@ export function compareToSearched (
     const onlyThis = stats.map((r, j) => j === i ? reverted(row, old) : r)
     if (query(filters, onlyThis) === live) continue
     const column = pickStatColumns([row])[0]
-    if (!column) return STALE
+    if (!column || column.showOnly) return STALE
     // Several ids are searched as "any one of them" at the range; a column adds them up.
     if (column.source.kind === 'mod' && !column.source.labels && row.tradeId.length > 1) return STALE
     // Newly ticked: if the search ignores its number ({empty} ids), only having the stat counts.
