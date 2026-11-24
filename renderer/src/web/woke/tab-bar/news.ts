@@ -23,6 +23,8 @@ export interface NewsItem {
 
 export const NEWS: NewsItem[] = [
   { id: 'search-recent-queries', wmType: 'woke-search', name: 'Search', note: 'New: your last 3 searches wait under Recent, even ones you only looked at. Enter or a click puts one back' },
+  { id: 'valdo-map-skips', wmType: 'price-check', name: 'Price check', note: 'New: on a Valdo map, set a mod Not and listings with it are hidden; remembered per profile' },
+  { id: 'valdo-map-lookup', wmType: 'woke-search', name: 'Search', note: 'New: type "valdo headhunter" to price check Valdo maps with that reward' },
   { id: 'price-check-exchange-ladder', wmType: 'price-check', name: 'Price check', note: 'New: exchange offers as one row per price, what N would cost, and a Whisper with an amount on each seller' },
   { id: 'price-unit-flip', wmType: 'price-check', name: 'Price check', note: 'New: click the poe.ninja price to show it per divine ("44,469 per div") or in chaos' },
   { id: 'map-price-check-add-number', wmType: 'price-check', name: 'Price check', note: 'New: a map\'s + tile adds a number it hasn\'t got (More Maps, Div cards...) to the search' },

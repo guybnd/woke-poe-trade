@@ -37,6 +37,10 @@ export interface MapModProfile {
   hideT17?: boolean
   // The Planner tab's goal, ticks and counts (planner.ts).
   planner?: PlannerState
+  // Valdo map skips (valdo/skips.ts): mods added on the Valdo strip, and keys
+  // of "can't run" map mods the strip was told not to skip.
+  valdoSkip?: string[]
+  valdoKeep?: string[]
 }
 
 export interface JuiceWeights {
@@ -388,7 +392,9 @@ export function copyOfProfile (profile: MapModProfile, id: number): MapModProfil
     heistRatings: { ...profile.heistRatings },
     chartRatings: { ...profile.chartRatings },
     tabSearch: { ...profile.tabSearch },
-    mins: { ...profile.mins }
+    mins: { ...profile.mins },
+    valdoSkip: profile.valdoSkip && [...profile.valdoSkip],
+    valdoKeep: profile.valdoKeep && [...profile.valdoKeep]
   }
 }
 
