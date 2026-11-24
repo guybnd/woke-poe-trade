@@ -77,7 +77,7 @@ export function cardFilterOf (w: Pick<StackedDecksWidget, 'cheapUnder' | 'countC
   }
 }
 
-// Unpriced cards are never cheap: they stay listed with no price.
+// Unpriced cards are never cheap by price (see `common` in totals).
 export function isCheap (each: number | null, filter: CardFilter | null | undefined): boolean {
   return filter != null && each != null && each < filter.under
 }
@@ -231,17 +231,26 @@ export interface DeckTotals {
 
 // With a filter, cards under its price move from `rows` to `cheap`, and
 // leave Got and Result too unless the filter counts them.
-export function totals (draws: string[], price: PriceOf, deckChaos: number | null, filter: CardFilter | null = null): DeckTotals {
+// `common`: cards that drop often from a deck. poe.ninja leaves out about a
+// tenth of deck draws (The Carrion Crow, Her Mask, Thunderous Skies...): too
+// few trades to price, so worth next to nothing. Without a price those fold
+// with the cheap cards too, once prices are in (another card has one). A rare
+// card without a price stays listed: it may be new and worth something.
+export function totals (draws: string[], price: PriceOf, deckChaos: number | null, filter: CardFilter | null = null, common: (name: string) => boolean = () => false): DeckTotals {
   const all: CardRow[] = []
   let got = 0
   let unpriced = 0
   let cheapQty = 0
   let cheapChaos = 0
-  for (const [name, qty] of cardCounts(draws)) {
+  const counts = cardCounts(draws)
+  const pricesIn = [...counts.keys()].some(name => price(name) != null)
+  const cheapRow = new Set<string>()
+  for (const [name, qty] of counts) {
     const each = price(name)
     if (each == null) unpriced += qty
     const total = (each ?? 0) * qty
-    const cheap = isCheap(each, filter)
+    const cheap = isCheap(each, filter) || (each == null && filter != null && filter.under > 0 && pricesIn && common(name))
+    if (cheap) cheapRow.add(name)
     if (cheap) {
       cheapQty += qty
       cheapChaos += total
@@ -251,8 +260,8 @@ export function totals (draws: string[], price: PriceOf, deckChaos: number | nul
   }
   // Most value first; same value: more copies, then name.
   all.sort((a, b) => b.total - a.total || b.qty - a.qty || a.name.localeCompare(b.name))
-  const rows = all.filter(r => !isCheap(r.each, filter))
-  const cheap = all.filter(r => isCheap(r.each, filter))
+  const rows = all.filter(r => !cheapRow.has(r.name))
+  const cheap = all.filter(r => cheapRow.has(r.name))
   // The top card is one that counts.
   let top: CardRow | null = null
   for (const r of (filter && !filter.count ? rows : all)) if (r.each != null && (!top || r.each > top.each!)) top = r

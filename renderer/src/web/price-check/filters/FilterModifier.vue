@@ -12,7 +12,8 @@
             @click="toggleFilter" type="submit">
             <i :class="isDisabled ? 'far fa-square' : 'fas fa-check-square'" />
           </button>
-          <button :class="$style.labelBtn" @click="smartToggle" type="submit">
+          <!-- woke: a mercenary's skill row is a gem: its tooltip (Guy's rule, merc thread). -->
+          <button v-item-tip="filter.mercenary?.icon ? { name: filter.text } : null" :class="$style.labelBtn" @click="smartToggle" type="submit">
             <img v-if="filter.mercenary?.icon"
               :src="filter.mercenary.icon">
             <span v-if="filter.not && miniFilter"
@@ -124,6 +125,7 @@
 </template>
 
 <script lang="ts">
+import { vItemTip } from '@/web/woke/ui/tooltip/item-tip'
 import { defineAsyncComponent, defineComponent, PropType, computed, ref, nextTick, useCssModule, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import UiPopover from '@/web/ui/Popover.vue'
@@ -148,6 +150,7 @@ import { ModifierType } from '@/parser/modifiers'
 import { poeKit } from '@/web/woke/price-insight/window-style'
 
 export default defineComponent({
+  directives: { ItemTip: vItemTip },
   components: { WokeModWorthTag, ClusterSpotTag: defineAsyncComponent(() => import('@/web/woke/cluster-type/ClusterSpotTag.vue')), WokeSwapMarker: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapMarker.vue')), WokeSwapElement: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapElementPick.vue')), WokeRollPick, ItemModifierText, ModifierAnointment: defineAsyncComponent(() => import('./FilterModifierAnointment.vue')), FilterModifierOptions, FilterModifierTiers, StatRollSlider, UiPopover },
   emits: ['update:groupExpanded'],
   props: {

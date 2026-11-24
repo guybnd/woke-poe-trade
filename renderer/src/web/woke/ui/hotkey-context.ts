@@ -1,6 +1,6 @@
 // Lets every hotkey cell in the settings window show clashes without each one
 // rebuilding the whole key list: the settings shell provides it.
-import { RESERVED_SHORTCUTS } from '@ipc/KeyToCode'
+import { RESERVED_SHORTCUTS, RESCUE_HOTKEY } from '@ipc/KeyToCode'
 import { inject, provide } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
 
@@ -20,6 +20,7 @@ export function useHotkeyContext (): HotkeyContext | null { return inject<Hotkey
 // Main never registers these (see RESERVED_SHORTCUTS), so say so. Takes the whole
 // key, with any hold key already joined on.
 export function reservedKeyNote (key: string): string | null {
+  if (key === RESCUE_HOTKEY) return 'Kept for giving clicks back to the game, so it won\'t work here'
   return RESERVED_SHORTCUTS.includes(key) ? "The game uses this key, so it won't work here" : null
 }
 

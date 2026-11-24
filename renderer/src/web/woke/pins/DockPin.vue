@@ -1,7 +1,7 @@
 <template>
   <SlotOut :entry="host" />
   <template v-for="ex in extras" :key="ex.key">
-    <div :class="$style.extraHead"><i :class="dockIcon(ex.props)" /> {{ ex.props.title }}</div>
+    <div :class="$style.extraHead"><ToolIcon :art="dockArt(ex.props)" :icon="dockIcon(ex.props)" :class="$style.extraIcon" /> {{ ex.props.title }}</div>
     <SlotOut :entry="ex" />
   </template>
 </template>
@@ -10,7 +10,8 @@
 // A dock card taken off the dock: the same card, kept open where you put it.
 import { defineComponent, onUnmounted, watch } from 'vue'
 import type { PropType } from 'vue'
-import { dockIcon, holdOpen } from '../dock/dock'
+import { dockArt, dockIcon, holdOpen } from '../dock/dock'
+import ToolIcon from '../tab-bar/ToolIcon.vue'
 import type { DockEntry } from '../dock/dock'
 
 const props = defineProps<{ host: DockEntry, extras: DockEntry[] }>()
@@ -33,7 +34,11 @@ const SlotOut = defineComponent({
 </script>
 
 <style module>
+.extraIcon { --w-icon-md: 14px; --w-fs-lg: var(--w-fs-caps); }
 .extraHead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 4px var(--w-pad) 2px;
   border-top: 1px solid var(--w-line);
   font-size: var(--w-fs-caps);

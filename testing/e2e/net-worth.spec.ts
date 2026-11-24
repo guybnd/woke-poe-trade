@@ -26,6 +26,10 @@ const SALES = JSON.stringify({
 })
 
 test('the stash reader turns on, reads the picked tabs, and Net worth prices them', async ({ overlay, fakeApp }) => {
+  // One long walk: reads, two runs started and stopped (each Stop reads the
+  // stash and your Faustus listings), their summaries, past runs. About 35 s
+  // alone and over 45 s on a loaded runner, so it gets more than the default.
+  test.setTimeout(90_000)
   let dump = DUMP
   fakeApp.site.reply = (url) => {
     const u = new URL(url)
@@ -122,7 +126,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
     const searches: string[] = []
     const listing = (id: string, name: string, base: string, at: string, div: number) =>
-      ({ id, item: { name, typeLine: base, baseType: base, frameType: 3, icon: '' }, listing: { indexed: at, fee: 100, price: { amount: div, currency: 'divine', type: '~price' }, account: { name: 'Tester#1234', lastCharacterName: 'T' } } })
+      ({ id, item: { name, typeLine: base, baseType: base, frameType: 3, icon: '' }, listing: { indexed: at, fee: 100, stash: { name: 'Sell 1', x: 4, y: 2 }, price: { amount: div, currency: 'divine', type: '~price' }, account: { name: 'Tester#1234', lastCharacterName: 'T' } } })
     let listings = [listing('l0', 'Headhunter', 'Leather Belt', ago(48), 9)]
     // Other sellers' Headhunters, for Still cheapest? (a search sorted by price).
     const other = (id: string, div: number) => ({ ...listing(id, 'Headhunter', 'Leather Belt', ago(5), div), listing: { ...listing(id, 'Headhunter', 'Leather Belt', ago(5), div).listing, account: { name: 'Other#1', lastCharacterName: 'O' } } })
@@ -159,12 +163,39 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await came.hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('The Apothecary')
     await overlay.page.mouse.move(0, 0)
+    // A row's icons each work when clicked: edit opens a named editor under
+    // the row, Save changes it, reset puts it back as read.
+    const usedRow = card.locator('[data-run-used]').filter({ hasText: 'Strand Map' }).first()
+    await usedRow.hover()
+    await usedRow.locator('[data-run-edit]').click()
+    const editor = usedRow.locator('[data-run-editor]')
+    await expect(editor).toBeVisible()
+    await expect(editor).toContainText('How many')
+    await expect(editor).toContainText('Price each')
+    await overlay.snap('net worth run edit row')
+    await editor.getByLabel(/how many/).fill('3')
+    await editor.locator('[data-run-edit-save]').click()
+    await expect(usedRow).toContainText('3 ×')
+    await usedRow.hover()
+    await usedRow.getByRole('button', { name: /^Reset / }).click()
+    await expect(usedRow).not.toContainText('3 ×')
     // A cost by hand, per map (Out column).
+    // Typing suggests items with art and price (our own list: the browser's
+    // datalist never draws in the overlay); every box is named.
     await card.locator('[data-run-out] [data-run-add]').click()
-    await card.getByLabel('Add a cost: item').fill('Strand Map')
+    await card.getByLabel('Add a cost: item').pressSequentially('Strand')
+    const option = card.locator('[data-run-add-option]').filter({ hasText: 'Strand Map' }).first()
+    await expect(option).toBeVisible()
+    await overlay.snap('net worth run add cost')
+    await option.click()
+    await expect(card.getByLabel('Add a cost: item')).toHaveValue(/Strand Map/)
+    await card.getByLabel('Add a cost: price each').fill('1.5')
+    await card.locator('[data-run-add-form]').getByRole('button', { name: 'c', exact: true }).click()
     await card.getByLabel('Add a cost: price each').fill('1')
-    await card.getByRole('button', { name: /^Per (map|fight|run)$/ }).click()
+    await card.locator('[data-run-add-per-map]').click()
     await expect(card.locator('[data-run-cost]')).toContainText('Strand Map')
+    // The typed line takes over the read one (same item), so it isn't counted twice.
+    await expect(card.locator('[data-run-used]').filter({ hasText: 'Strand Map' })).toHaveCount(0)
     // A long shot: left out, then counted again.
     const cameRow = card.locator('[data-run-came]').first()
     await cameRow.hover()
@@ -213,12 +244,28 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
       if (/Stop/.test(label) && !/Stopping/.test(label)) await stopBtn.click()
       await expect(runTab).toHaveCount(0, { timeout: 4000 })
     }).toPass({ timeout: 30_000 })
+    // Stop reads the stash one last time, then the run's Summary waits in
+    // the window (pick W1): the game's last zone was a boss arena, so it
+    // doesn't pop up over the game. Best drops with their item tooltip, map
+    // times, spent and kept, tips.
     await overlay.pressHotkey(overlay.config.overlayKey)
+    const summary = panel.locator('[data-run-summary]')
+    await expect(summary).toBeVisible({ timeout: 45_000 })
+    const drop = summary.locator('[data-summary-drop]').filter({ hasText: 'The Apothecary' })
+    await expect(drop).toBeVisible()
+    await drop.locator('[data-item-tip]').hover()
+    await expect(overlay.page.getByRole('tooltip')).toContainText('The Apothecary')
+    await overlay.page.mouse.move(0, 0)
+    await expect(summary.locator('[data-summary-vs]')).toContainText('Your first Nightmare maps run')
+    await expect(summary.locator('[data-summary-spend]')).toContainText('Spent')
+    await expect(summary.locator('[data-summary-tips]')).toBeVisible()
+    await overlay.snap('net worth run summary')
+    await panel.locator('[data-run-details-tab]').click()
+    await expect(summary).toHaveCount(0)
     await expect(panel.locator('[data-past-run]').first()).toContainText('Nightmare maps')
     expect(searches).toHaveLength(2)
     expect(searches[0]).toContain('Tester#1234')
     expect(searches[0]).toContain('securable')
-    await panel.locator('[data-past-run]').first().getByText('Nightmare maps').click()
     const listed = panel.locator('[data-run-listed]')
     await expect(listed).toHaveCount(1)
     await expect(listed).toContainText('Mageblood')
@@ -249,7 +296,10 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
       if (/Stop/.test(label) && !/Stopping/.test(label)) await stopBtn.click()
       await expect(runTab).toHaveCount(0, { timeout: 4000 })
     }).toPass({ timeout: 30_000 })
+    // The second run's Summary compares it with the first (same name).
     await overlay.pressHotkey(overlay.config.overlayKey)
+    await expect(summary).toBeVisible({ timeout: 45_000 })
+    await expect(summary.locator('[data-summary-vs]')).toContainText('1 earlier run')
     // Past runs compared (pick C2): one row a run, By strategy adds up the
     // two Nightmare maps runs. One fight is a small sample (pick S1).
     await panel.getByRole('tab', { name: 'Runs' }).click()
@@ -288,16 +338,17 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await listedRows.filter({ hasText: 'Headhunter' }).getByText('Headhunter', { exact: true }).hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
     await overlay.page.mouse.move(0, 0)
-    // Still cheapest? (WOKEPOET-535): Check runs one search for that item,
-    // instant buyout, cheapest first. One other seller asks less: 2nd.
+    // Still cheapest? (WOKEPOET-535): the quick rank (the bolt) runs one search
+    // by name, instant buyout, cheapest first. One other seller asks less: 2nd.
     const hhCheck = listedRows.filter({ hasText: 'Headhunter' }).locator('[data-listed-check]')
-    await hhCheck.getByRole('button', { name: 'Check' }).click()
+    await listedRows.filter({ hasText: 'Headhunter' }).hover()
+    await hhCheck.locator('[data-listed-quick]').click()
     await expect(hhCheck).toContainText('2nd', { timeout: 15_000 })
     expect(searches).toHaveLength(searchesBefore + 2)
     expect(searches.at(-1)).toContain('"name":"Headhunter"')
     await expect(panel.getByText('Undercut 1')).toBeVisible()
-    // Rows nobody checked still offer Check; no search went out for them.
-    await expect(listedRows.filter({ hasText: "Kaom's Heart" }).locator('[data-listed-check]')).toContainText('Check')
+    // Rows nobody checked offer a price check; no search went out for them.
+    await expect(listedRows.filter({ hasText: "Kaom's Heart" }).locator('[data-listed-check]')).toContainText('Price check')
     // A chip: the head names it and totals its rows (all three are uniques here).
     const head = panel.locator('[data-listed] [data-listed-total]')
     const allAsk = await head.innerText()
@@ -306,6 +357,34 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect(head).toHaveText(allAsk)
     await panel.locator('[data-listed]').getByText(/^Uniques 3$/).click()
     await expect(panel.locator('[data-listed-filtered]')).toHaveCount(0)
+    // Price check (R1, and Guy 2026-11-24): the full price check opens on the
+    // listing, ranks it from what it loaded, and its foot sets a new price
+    // that Listed keeps as a to-do.
+    const hhRow = listedRows.filter({ hasText: 'Headhunter' })
+    await hhRow.locator('[data-listed-reprice]').click()
+    const priceBar = overlay.page.locator('[data-listed-bar]')
+    await expect(priceBar).toBeVisible({ timeout: 20_000 })
+    await expect(hhRow.locator('[data-listed-reprice]')).toHaveAttribute('title', /in your price check/, { timeout: 15_000 })
+    // It names the listed item, with its tooltip, and where it sits at Faustus.
+    await expect(priceBar.locator('[data-listed-bar-item]')).toHaveText('Headhunter')
+    await expect(priceBar.locator('[data-listed-bar-tab]')).toHaveText('in Sell 1 · col 5, row 3')
+    // The suggestions copy the cheapest other ask as its seller priced it.
+    await expect(priceBar.locator('[data-listed-bar-match]')).toHaveText('Set 8 div (match cheapest)')
+    await expect(priceBar.locator('[data-listed-bar-under]')).toHaveText('Set 7.9 div (under cheapest)')
+    await priceBar.getByLabel('Your price', { exact: true }).fill('7')
+    await priceBar.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(priceBar.locator('[data-listed-bar-target]')).toContainText('set 7 div')
+    await expect(hhRow.locator('[data-listed-target]')).toContainText('7 div')
+    // Closed by its own button (Esc would close the whole overlay).
+    await overlay.page.locator('#price-window [data-price-close]').click()
+    await expect(priceBar).toBeHidden()
+    // Closing the price check gives the game focus back (the fake game takes
+    // it when told), which hides the overlay: then open it again.
+    await expect(panel).toBeHidden()
+    fakeApp.focusGame(true)
+    await overlay.pressHotkey(overlay.config.overlayKey)
+    // (Its outer box measures 0 high after a reshow; its contents show.)
+    await expect(panel.getByRole('tab', { name: 'Listed' })).toBeVisible()
     await overlay.snap('net worth listed')
 
     // Stale after 1 day: Headhunter is. The icon counts it only in your hideout.
@@ -352,6 +431,23 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await countBox.click()
     await expect(countBox).toBeChecked()
     await expect(total).toHaveText(withListed)
+    // The chart puts what's at Faustus on top of the stash as a band (pick
+    // A), and only while the listings count in the total.
+    const chart = panel.locator('[data-ledger-chart]').first()
+    await expect(chart.locator('[data-listed-band]')).toHaveCount(1)
+    // A legend under the line names its marks.
+    await expect(panel.locator('[data-chart-legend]')).toContainText('At Faustus')
+    await overlay.snap('net worth chart with the Faustus band')
+    // A click on the line pins its card (what changed, with item tooltips); Esc closes it.
+    const box = await chart.boundingBox()
+    await chart.click({ position: { x: box!.width - 4, y: box!.height / 2 } })
+    await expect(chart.locator('[data-chart-card]')).toContainText('Stash')
+    await overlay.page.keyboard.press('Escape')
+    await overlay.page.mouse.move(1, 1)
+    await expect(chart.locator('[data-chart-card]')).toHaveCount(0)
+    await countBox.click()
+    await expect(chart.locator('[data-listed-band]')).toHaveCount(0)
+    await countBox.click()
 
     // The Sales view: a header click sorts the table, a second click flips it.
     // Price compares by value: 44c sorts under 1 div though 44 > 1.

@@ -23,22 +23,27 @@ const config = { sellDiscount: 0, reroll: false } as ScarabFlipWidget
 const lookup = flipsLookup(config)
 
 describe('flips in search', () => {
-  it('says whether flipping an item pays, per method', () => {
+  it('gives unmeasured Threads a range, never an average', () => {
     const [card] = lookup('expedition thread', ctx)
     expect(card.title).toBe('Expedition Thread')
     expect(card.tip).toEqual({ name: 'Expedition Thread', type: 'Thread' })
+    expect(card.sections[1].label).toBe('One recipe')
     const row = card.sections[1].rows![0]
     expect(row.label).toBe('Vendor 3 for 1')
-    // ((4 + 3.6) / 2 - 3 x 0.2) / 3 = 1.07, in the panel's rounding.
-    expect(row.value).toBe('+1.1c each')
-    // Threads have no measured weights, and the card says so.
-    expect(card.sections[2].text![0]).toMatch(/Low confidence/)
+    expect(row.value).toBe('costs 0.6c, gives back 3.6c to 4c')
+    expect(card.sub).toBe('Threads: vendor 3 for 1 costs 0.6c, gives back 3.6c to 4c')
+    expect(card.sections[2].text![0]).toMatch(/worst and best result, not an average/)
     expect(card.actions).toEqual([{ label: 'Open Flips', tool: 'woke-scarab-flip' }])
   })
 
-  it('marks a losing flip', () => {
-    const [card] = lookup('legion thread', ctx)
-    expect(card.sections[1].rows![0].value).toMatch(/^−.*not worth it$/)
+  it('averages Threads, with a low-confidence note, once you set your own weights', () => {
+    const own = flipsLookup({ sellDiscount: 0, reroll: false, weights: { threads: { 'Abyss Thread': 1 } } } as unknown as ScarabFlipWidget)
+    const [card] = own('expedition thread', ctx)
+    // ((4 + 3.6) / 2 - 3 x 0.2) / 3 = 1.07, in the panel's rounding.
+    expect(card.sections[1].rows![0].value).toBe('+1.1c each')
+    expect(card.sections[2].text![0]).toMatch(/Low confidence/)
+    const [legion] = own('legion thread', ctx)
+    expect(legion.sections[1].rows![0].value).toMatch(/^−.*not worth it$/)
   })
 
   it('shows tier upgrades with their result', () => {

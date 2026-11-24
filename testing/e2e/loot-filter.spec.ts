@@ -1030,6 +1030,38 @@ test('prices: Apply only stages the moves; Save + reload writes them once', asyn
   await expect.poll(() => fakeApp.game.chat).toEqual(['/itemfilter NeverSink (woke)'])
 })
 
+// A window made taller than a tab's usual height: the tab's list fills it, no
+// blank band under it (Prices drew a few rows, then empty floor). A window
+// never resized keeps a short tab short.
+const tabGap = (page: Overlay['page'], inTab: string) => page.getByText(inTab, { exact: true }).first().evaluate(el => {
+  const list = el.closest('.w-scroll')!
+  const body = list.parentElement!
+  return Math.round(body.getBoundingClientRect().bottom - list.getBoundingClientRect().bottom)
+})
+test('prices: a taller window, the list fills it to the bottom', async ({ overlay, fakeApp }) => {
+  // 700px fits any test screen and is well over a tab's own 36rem.
+  await overlay.boot({ widgets: [{ ...lootFilter(filterFolder()), wokeSizes: { main: { h: 700 } } } as never] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await page.getByRole('tab', { name: /^Prices/ }).click()
+  await expect(page.getByRole('switch', { name: /Re-tier from poe.ninja prices/ })).toBeVisible()
+  await expect.poll(() => tabGap(page, 'Re-tier from poe.ninja prices')).toBeLessThan(4)
+  await overlay.snap('prices tab in a tall window')
+  await page.getByRole('tab', { name: /^NeverSink/ }).click()
+  await expect.poll(() => tabGap(page, 'Get NeverSink from GitHub and keep it up to date')).toBeLessThan(4)
+})
+
+test('a window never resized keeps a short tab short', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ widgets: [lootFilter(filterFolder())] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await page.getByRole('tab', { name: /^NeverSink/ }).click()
+  await expect(page.getByText('Get NeverSink from GitHub and keep it up to date', { exact: true }).first()).toBeVisible()
+  expect(await tabGap(page, 'Get NeverSink from GitHub and keep it up to date')).toBeLessThan(4)
+  const panel = (await page.locator('[data-w-panel]').filter({ hasText: 'Get NeverSink from GitHub' }).first().boundingBox())!
+  expect(panel.height).toBeLessThan(500)
+})
+
 test('prices: kept items list under Not moved, unlock in bulk, and both steps undo', async ({ overlay, fakeApp }) => {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
   fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', '1-REGULAR.filter.gz'))))

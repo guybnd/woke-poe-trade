@@ -20,7 +20,7 @@ import { GameConfig } from '../../main/src/host-files/GameConfig'
 import { GameLogWatcher } from '../../main/src/host-files/GameLogWatcher'
 import { Shortcuts } from '../../main/src/shortcuts/Shortcuts'
 import { initWoke, initWokeOverlay, registerWokeHandler } from '../../main/src/woke'
-import { KeyToElectron } from '../../ipc/KeyToCode'
+import { KeyToElectron, RESCUE_HOTKEY } from '../../ipc/KeyToCode'
 import type { IpcEvent } from '../../ipc/types'
 import type { AppUpdater } from '../../main/src/AppUpdater'
 import { decodePng } from './png'
@@ -152,8 +152,11 @@ export class FakeApp {
     game.holdKeys(shortcut.split(' + '), cb)
   }
 
+  // The ones from settings: the always-on rescue hotkey is left out, so tests
+  // can wait for settings to arrive by waiting for hotkeys.
   registeredHotkeys (): string[] {
-    return [...registeredShortcuts.keys()]
+    const rescue = RESCUE_HOTKEY.split(' + ').map(k => (KeyToElectron as Record<string, string>)[k]).join('+')
+    return [...registeredShortcuts.keys()].filter(accel => accel !== rescue)
   }
 
   // The game window gains / loses focus (alt-tab, clicking the overlay...).

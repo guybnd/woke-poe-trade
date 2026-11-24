@@ -120,6 +120,31 @@ build of this app (or just the settings when it's plain APT).
    to a **draft** release. Players and the auto-updater only see it once the
    draft is published on GitHub.
 
+### Discord announcements
+
+Every published release posts to the Discord announcements channel: version,
+its notes (the release body without the install how-to and SmartScreen line,
+cut to fit with a link to the rest) and links to the installer, the portable
+exe and the release page. `.github/workflows/discord-release.yml` does it, run
+by `release.yml` right after it publishes, or by GitHub when a draft is
+published by hand.
+
+Set up once:
+
+1. In Discord, channel settings › Integrations › Webhooks › New Webhook on the
+   announcements channel, then Copy Webhook URL.
+2. On GitHub, Settings › Secrets and variables › Actions › New repository
+   secret: `DISCORD_WEBHOOK_URL`, the copied URL.
+3. Optional ping above each post: a repository *variable*
+   `DISCORD_RELEASE_PING` holding `@everyone` or a role mention like
+   `<@&123456789>`. No variable, no ping.
+
+Without the secret the workflow only prints the post. To see a post or send
+one again: Actions › Discord announcement › Run workflow with a tag (tick
+"dry run" to only print it). Locally, `node scripts/discord-release.mjs v1.330.18 --dry-run`. A draft
+made before this workflow existed won't post when published by hand (GitHub
+runs the workflow from the release's own commit): run it by hand from master.
+
 ### Version numbers
 
 From 3.30 on, versions are `major.LEAGUE.patch`, with the game's league patch

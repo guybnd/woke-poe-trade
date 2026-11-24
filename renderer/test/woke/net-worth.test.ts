@@ -45,6 +45,23 @@ describe('valueStash', () => {
   })
 })
 
+describe('unpriced items that came or went (crafting runs)', () => {
+  it('lists a fresh rare as made, worth nothing, and a sold one as gone', () => {
+    const rare = item('Titan Greaves', 1, { frame: 2, name: 'Glyph Spiral' })
+    const old = item('Hubris Circlet', 1, { frame: 2, name: 'Doom Crown' })
+    const before = baselineOf(valueStash([{ name: 'A', items: [item('Chaos Orb', 50), old] }], priceOf))
+    const d = diffStash(before, valueStash([{ name: 'A', items: [item('Chaos Orb', 10), rare] }], priceOf), 1)
+    expect(d.netChaos).toBe(-40)
+    expect(d.unpricedIn?.map(l => [l.key, l.count, l.chaos])).toEqual([['R:Glyph Spiral Titan Greaves', 1, 0]])
+    expect(d.unpricedOut?.map(l => [l.key, l.count])).toEqual([['R:Doom Crown Hubris Circlet', 1]])
+  })
+  it('has no unpriced lists when nothing unpriced moved', () => {
+    const v = valueStash([{ name: 'A', items: [item('Chaos Orb', 5)] }], priceOf)
+    const d = diffStash(baselineOf(v), v, 1)
+    expect('unpricedIn' in d || 'unpricedOut' in d).toBe(false)
+  })
+})
+
 describe('since last refresh', () => {
   it('lists what came and went, at current prices', () => {
     const before = baselineOf(valueStash([{ name: 'A', items: [item('Divine Orb', 2), item('Sacrifice at Dawn', 10)] }], priceOf))

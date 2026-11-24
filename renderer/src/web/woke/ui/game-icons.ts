@@ -88,6 +88,12 @@ export function moduleIcon (moduleId: string): { art: string | null, fa: string 
   return { art, fa: i.fa }
 }
 
+// Art for the dock's own icons, which belong to no tool.
+export const DOCK_ART_ITEMS = {
+  whatsNew: "Valdo's Puzzle Box",
+  suggestions: 'Scrying Orb'
+} as const
+
 export function moduleIconForWidget (wmType: string): { art: string | null, fa: string } | null {
   const m = MODULES.find(_ => _.widgetTypes.includes(wmType))
   return m ? moduleIcon(m.id) : null

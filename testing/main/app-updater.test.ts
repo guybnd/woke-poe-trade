@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const h = vi.hoisted(() => ({
   restartHook: null as null | (() => boolean),
+  plainQuit: null as null | (() => void),
   skipped: null as string | null
 }))
 
@@ -35,7 +36,8 @@ vi.mock('electron', async (orig) => {
 vi.mock('../../main/src/woke/app-prefs', () => ({
   appPrefs: () => ({ autoUpdate: true }),
   canRestartApp: () => true,
-  onRestartWithUpdate: (fn: () => boolean) => { h.restartHook = fn }
+  onRestartWithUpdate: (fn: () => boolean) => { h.restartHook = fn },
+  onPlainQuit: (fn: () => void) => { h.plainQuit = fn }
 }))
 vi.mock('../../main/src/woke/rollback', async (orig) => {
   const real = await orig<typeof import('../../main/src/woke/rollback')>()
@@ -188,6 +190,17 @@ describe('installing from the overlay', () => {
     makeUpdater()
     const install = vi.spyOn(autoUpdater, 'quitAndInstall')
     expect(h.restartHook!()).toBe(false)
+    expect(install).not.toHaveBeenCalled()
+  })
+
+  it('quitting for an elevated copy installs nothing on the way out', () => {
+    makeUpdater()
+    const install = vi.spyOn(autoUpdater, 'quitAndInstall')
+    autoUpdater.emit('update-downloaded', { version: '1.330.5' })
+    h.plainQuit!()
+    vi.runOnlyPendingTimers()
+    expect(autoUpdater.autoInstallOnAppQuit).toBe(false)
+    expect(h.restartHook!()).toBe(true)
     expect(install).not.toHaveBeenCalled()
   })
 })

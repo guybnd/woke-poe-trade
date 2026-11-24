@@ -28,7 +28,7 @@
       <span v-for="l in story.levelUps" :key="l.char"><span class="w-dim">{{ story.levelUps.length > 1 ? l.char : 'Level' }}</span> {{ l.from }} → {{ l.to }}</span>
     </div>
     <div v-if="story.best" :class="$style.line" class="w-num" data-night-best>
-      <span class="w-accent">★</span> <span v-item-tip="{ name: bestItem(story.best) }">{{ story.best.name }}</span> · {{ formatChaos(story.best.chaos, story.divine) }}
+      <span :class="$style.best"><img v-if="bestArt" :src="bestArt" alt="" draggable="false" :class="$style.bestArt"><span v-else class="w-accent">★</span> <span v-item-tip="{ name: bestItem(story.best) }">{{ story.best.name }}</span> · {{ formatChaos(story.best.chaos, story.divine) }}</span>
     </div>
   </div>
 </template>
@@ -43,6 +43,7 @@ import RateTimePick from '../shared/RateTimePick.vue'
 import { clockTime } from './history-days'
 import { formatChaos, formatClock, formatDuration } from '../ui/format'
 import { bestItem } from './story'
+import { itemArt } from '../ui/game-icons'
 import type { NightStory, StripPart } from './story'
 import { vItemTip } from '../ui'
 
@@ -84,6 +85,8 @@ const deathMarks = computed(() => {
   return span > 0 ? props.story.deathsAt.map(at => Math.min(100, Math.max(0, (at - props.story.startedAt) / span * 100))) : []
 })
 
+// The night's biggest drop shows its own art, the star where it has none.
+const bestArt = computed(() => props.story.best ? itemArt({ name: bestItem(props.story.best) }) : null)
 const HIDEOUT_TIP = "Hideout, town, vaults and anything else that isn't a map, AFK left out"
 const AFK_TIP = 'AFK in the game, left out of the time played. 15 minutes AFK ends the night'
 
@@ -149,6 +152,8 @@ function signed (chaos: number): string {
   gap: 2px 12px;
   padding: 6px var(--w-pad) 0;
 }
+.best { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; }
+.bestArt { width: var(--w-icon-sm); height: var(--w-icon-sm); object-fit: contain; flex: none; }
 .line { display: flex; flex-wrap: wrap; gap: 2px 12px; padding: 3px var(--w-pad) 0; }
 .card { padding-bottom: 6px; }
 </style>

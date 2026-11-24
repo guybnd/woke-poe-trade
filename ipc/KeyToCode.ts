@@ -259,6 +259,10 @@ export function isModKey (key: string) {
   )
 }
 
+// woke: always on, whatever the settings: gives every click back to the game
+// if the overlay ever keeps them (main/src/windowing/OverlayWindow.ts).
+export const RESCUE_HOTKEY = 'Ctrl + Shift + Alt + Space'
+
 // Keys the game uses itself: a hotkey on one of these is never registered.
 export const RESERVED_SHORTCUTS: readonly string[] = [
   'Ctrl + C', 'Ctrl + V', 'Ctrl + A',

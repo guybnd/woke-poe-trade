@@ -106,6 +106,9 @@
   "glance-bar-drag.spec.ts": [
    "renderer/src/web/woke/session-story/"
   ],
+  "glance-bar-fields.spec.ts": [
+   "renderer/src/web/woke/session-story/"
+  ],
   "glance-bar.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/price-check/",
@@ -244,6 +247,10 @@
   ],
   "mechanics-settings.spec.ts": [
    "renderer/src/web/woke/mechanics/"
+  ],
+  "merc-warrant.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/"
   ],
   "net-worth.spec.ts": [
    "main/src/woke/personal/",
@@ -445,6 +452,12 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
+  "related-recipe.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/related-family/",
+   "renderer/src/web/woke/search/lookups/recipe-list.ts"
+  ],
   "report-issue.spec.ts": [
    "ipc/issue-report.ts",
    "main/src/woke/crash-reports.ts",
@@ -478,6 +491,10 @@
   "scarab-flip.spec.ts": [
    "renderer/src/web/woke/scarab-flip/",
    "renderer/src/web/woke/search/lookups/flips.ts"
+  ],
+  "scrying.spec.ts": [
+   "renderer/src/web/woke/scrying/",
+   "renderer/src/web/woke/card-drops/"
   ],
   "search-groups.spec.ts": [
    "renderer/src/web/woke/search/",

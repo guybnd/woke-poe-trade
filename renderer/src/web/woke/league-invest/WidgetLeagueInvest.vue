@@ -113,6 +113,7 @@ import { ninjaIcon, moduleIcon } from '../ui/game-icons'
 import { useLeagues } from '@/web/background/Leagues'
 import { useMarketCollector } from '../market/collector'
 import { latestSnapshots } from '../market/db'
+import { countedSnapshot } from '../market/parse'
 import { formatAmount } from '../ui/format'
 import { usePriceText } from '../shared/price'
 import { isThin, itemKey } from '../market/types'
@@ -169,7 +170,7 @@ watch([league, collector.revision], async () => {
   if (!id) { snapshot.value = null; return }
   try {
     const [snap] = await latestSnapshots(id, 1)
-    if (seq === snapSeq) snapshot.value = snap ?? null
+    if (seq === snapSeq) snapshot.value = snap ? countedSnapshot(snap) : null
   } catch { if (seq === snapSeq) snapshot.value = null }
 }, { immediate: true })
 

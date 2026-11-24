@@ -112,8 +112,8 @@ export function initSetup (appUpdater: AppUpdater) {
   registerWokeHandler('setup-prefs', async () => prefsView())
   registerWokeHandler('setup-prefs-set', async (patch: Partial<AppPrefs> & { openAtLogin?: boolean }) => {
     // The stash reader switches only through personal-set, which starts and
-    // stops it too.
-    const { experimental: _e, stashReader: _s, ...rest } = patch ?? {}
+    // stops it too. Starting as admin only from its own popup and the tray.
+    const { experimental: _e, stashReader: _s, alwaysAdmin: _a, ...rest } = patch ?? {}
     setAppPrefs(rest)
     if (typeof patch.autoUpdate === 'boolean') appUpdater.setAutoDownload(patch.autoUpdate)
     if (typeof patch.openAtLogin === 'boolean' && canStartWithWindows()) {

@@ -1,5 +1,5 @@
 <template>
-  <div ref="root" class="w-surface w-enter" :class="$style.panel" :style="boxStyle" data-w-panel
+  <div ref="root" class="w-surface w-enter" :class="$style.panel" :style="boxStyle" data-w-panel :data-w-sized="sized ? '' : undefined"
     @keydown="onKey">
     <div v-if="title || $slots.title || $slots.actions || icon" ref="head" :class="$style.head" data-widget-drag
       :title="headTip" @dblclick="onHeadDblClick">
@@ -160,6 +160,9 @@ const minimizesFromHead = computed(() => primary.value && !!cfg?.canMinimize)
 
 const canResize = computed(() => props.resizable && !!cfg?.anchor && !minimized.value)
 const saved = computed(() => cfg?.wokeSizes?.[props.sizeKey])
+// A height set by resizing (or the height prop): tabs that cap their own
+// height drop the cap and fill it.
+const sized = computed(() => !minimized.value && !!(saved.value?.h || props.height))
 const BOTH_SIDES: ResizeSide[] = ['start', 'end']
 // Every edge and corner resizes. A widget that can't move can't keep its far
 // edge in place, so it only has the sides away from its anchor.

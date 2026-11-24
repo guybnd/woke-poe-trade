@@ -394,3 +394,49 @@ export function flipOdds (model: FlipModel): Odds {
     withoutJackpot: saleValue - jackpots.reduce((n, r) => n + r.share * r.chaos * keep, 0)
   }
 }
+
+// A recipe with no measured odds: no average, only what the inputs cost
+// against the cheapest and dearest result one could give.
+export interface RangeRow {
+  name: string
+  chaos: number
+  // The items one recipe takes, at this price, plus any lifeforce.
+  cost: number
+  // The cheapest and dearest result, after the sell discount.
+  low: { name: string, chaos: number }
+  high: { name: string, chaos: number }
+  tradedChaos: number | null
+}
+
+export function flipRange (
+  quotes: Map<string, Quote>,
+  recipe: Pick<FlipRecipe, 'inputs' | 'cost' | 'excludeInput'>,
+  sellDiscount: number,
+  hideUntraded: boolean
+): RangeRow[] {
+  const keep = 1 - sellDiscount
+  // Every priced item can come back, traded or not; hideUntraded only trims
+  // which inputs are listed.
+  const pool = [...quotes]
+  const rows: RangeRow[] = []
+  for (const [name, q] of pool) {
+    if (hideUntraded && !isTraded(q)) continue
+    const results = recipe.excludeInput ? pool.filter(([other]) => other !== name) : pool
+    if (!results.length) continue
+    let low = results[0]
+    let high = results[0]
+    for (const r of results) {
+      if (r[1].chaos < low[1].chaos) low = r
+      if (r[1].chaos > high[1].chaos) high = r
+    }
+    rows.push({
+      name,
+      chaos: q.chaos,
+      cost: recipe.inputs * q.chaos + recipe.cost,
+      low: { name: low[0], chaos: low[1].chaos * keep },
+      high: { name: high[0], chaos: high[1].chaos * keep },
+      tradedChaos: q.tradedChaos
+    })
+  }
+  return rows.sort((a, b) => a.chaos - b.chaos || a.name.localeCompare(b.name, 'en'))
+}

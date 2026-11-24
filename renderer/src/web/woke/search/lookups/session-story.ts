@@ -9,6 +9,8 @@ import type { Lookup, LookupRow } from './types'
 import { isSkippedArea } from '../../session-story/skip-areas'
 import { nightRateMs, playedMs } from '../../session-story/night-rate'
 import type { RateTime } from '../../shared/rate-time'
+import { gameIcon } from '../../ui/game-icons'
+import { NIGHT_ART } from '../../modules'
 
 const WORDS = ['tonight', 'last night', 'session story', 'session summary', 'night']
 
@@ -56,7 +58,7 @@ export function sessionStoryLookup (live: NightStory | null, last: NightStory | 
       group: 'Answer',
       name: live ? 'Tonight so far' : `Night of ${when}`,
       sub: `${formatDuration(played(s))} · ${s.maps.length} maps${s.profitChaos != null ? ` · ${signed(s.profitChaos, s.divine)}` : ''}`,
-      icon: 'fas fa-moon',
+      icon: gameIcon(NIGHT_ART) ?? 'fas fa-moon',
       sections: [{ rows: rows(s, time) }],
       // Session analytics holds tonight and Map history: only offered while it's on.
       actions: ctx.tools.has(ANALYTICS_TYPE) ? [{ label: 'Open Session analytics', open: { tool: ANALYTICS_TYPE, id: 'history' } }] : []

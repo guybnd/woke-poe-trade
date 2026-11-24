@@ -35,7 +35,7 @@
         </span>
         <WButton size="sm" variant="ghost" icon="fas fa-trash" title="You can undo" @click="remove(open)">Delete</WButton>
       </div>
-      <DeckSummary :draws="open.draws" :price="recordPrice(open)" :deck-chaos="open.deckChaos" :divine="open.divine" :filter="filter" :luck="openLuck" />
+      <DeckSummary :draws="open.draws" :price="savedPrice(open)" :held="savedHeld(open)" :deck-chaos="open.deckChaos" :divine="open.divine" :filter="filter" :luck="openLuck" />
       <div class="text-xs w-faint">At the prices when the session ended.</div>
     </template>
   </div>
@@ -55,6 +55,7 @@ import { AppConfig } from '@/web/Config'
 import { STACKED_DECK, STACKED_DECKS_TYPE, cardFilterOf, recordPrice, totals } from './deck'
 import type { DeckRecord, StackedDecksWidget } from './deck'
 import { luckFor, useDeckPrices } from './prices'
+import { withoutHeld } from './guard'
 import { useDeckStore } from './store'
 
 const props = defineProps<{
@@ -66,14 +67,26 @@ const props = defineProps<{
 
 const store = useDeckStore()
 store.load(true)
-const { price, deckChaos, divine, fetch } = useDeckPrices()
+const { price, held, deckChaos, divine, fetch } = useDeckPrices()
+// Each saved session at its own prices, less any that look fake today (guard.ts).
+const savedPrice = (r: DeckRecord) => withoutHeld(recordPrice(r), held.value)
+// The fake prices this session was saved with.
+function savedHeld (r: DeckRecord) {
+  const saved = recordPrice(r)
+  return (name: string) => {
+    const h = held.value(name)
+    const chaos = saved(name)
+    // null: saved after the check held it (or not on poe.ninja then).
+    return h && (chaos == null || chaos >= h.ninja / 2) ? h : null
+  }
+}
 fetch()
 
 const list = computed(() => store.records.value.filter(r =>
   (props.range === 'all' || r.league === props.league) && inRange(r.endedAt, props.range, props.now)))
 // The tracker's cheap-card setting, so results match its window.
 const filter = computed(() => cardFilterOf(AppConfig().widgets.find(w => w.wmType === STACKED_DECKS_TYPE) as StackedDecksWidget | undefined))
-const rows = computed(() => list.value.map(r => ({ r, t: totals(r.draws, recordPrice(r), r.deckChaos, filter.value) })))
+const rows = computed(() => list.value.map(r => ({ r, t: totals(r.draws, savedPrice(r), r.deckChaos, filter.value) })))
 const allDecks = computed(() => list.value.reduce((n, r) => n + r.decks, 0))
 // Each session in divines at its own rate.
 const allResult = computed(() => {
@@ -101,7 +114,7 @@ const open = computed(() => store.records.value.find(r => r.id === openId.value)
 const openLuck = computed(() => {
   const r = open.value
   if (!r) return null
-  const px = recordPrice(r)
+  const px = savedPrice(r)
   return luckFor(r.draws, totals(r.draws, px, null).got, r.id, px, store.records.value)
 })
 
