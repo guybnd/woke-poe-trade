@@ -1,6 +1,6 @@
 <template>
-  <div v-if="result" :class="$style.wrapper" class="w-pc-side">
-    <div v-if="'error' in result" class="p-2">
+  <div v-if="result || sections.length" :class="$style.wrapper" class="w-pc-side">
+    <div v-if="result && 'error' in result" class="p-2">
       {{ result.error }}
     </div>
     <!-- woke: the item's family, its drop group, what it drops: one row and one
@@ -12,17 +12,26 @@
         <span v-if="sec.family" :class="$style.count">{{ sec.rows.length }} · poe.ninja</span>
       </div>
       <div :class="[$style.list, { [$style.tight]: sec.family }]">
-        <WItemRow v-for="row in sec.rows" :key="row.key" :item="tipOf(row)" :art="false" :info="row.info" :action="canOpen(row) ? 'pick' : null"
-          :class="[$style.row, { [$style.me]: row.highlight, [$style.click]: canOpen(row) }]"
-          @pick="open(row)">
-          <img :class="$style.art" :src="row.icon" :alt="''">
-          <span :class="$style.name">{{ row.name }}</span>
-          <span :class="$style.price">
-            <template v-if="row.price">{{ priceText(row.price) }}<img :class="$style.coin" :src="coin(row.price)" :alt="row.price.currency"></template>
-            <span v-else :class="$style.none" title="poe.ninja has no price for this">?</span>
-          </span>
-        </WItemRow>
+        <template v-for="row in sec.rows" :key="row.key">
+          <div v-if="row.lead" :class="$style.lead">{{ row.lead }}</div>
+          <WItemRow :item="tipOf(row)" :art="false" :info="row.info" :action="canOpen(row) ? 'pick' : null"
+            :class="[$style.row, { [$style.me]: row.highlight, [$style.click]: canOpen(row) }]"
+            @pick="open(row)">
+            <img :class="$style.art" :src="row.icon" :alt="''">
+            <span :class="$style.name"><span v-if="row.qty && row.qty > 1" :class="$style.qty">{{ row.qty }} ×</span>{{ row.name }}</span>
+            <span :class="$style.price">
+              <template v-if="row.price">{{ priceText(row.price) }}<img :class="$style.coin" :src="coin(row.price)" :alt="row.price.currency"></template>
+              <span v-else :class="$style.none" title="poe.ninja has no price for this">?</span>
+            </span>
+          </WItemRow>
+        </template>
       </div>
+      <!-- woke: what the recipe's parts cost against what it makes. -->
+      <div v-if="sec.sum" :class="$style.sum">
+        <span>Parts <b>{{ sec.sum.parts }}</b><span v-if="sec.sum.missing" :class="$style.none"> + {{ sec.sum.missing }} unpriced</span></span>
+        <span v-if="sec.sum.makes">Makes <b>{{ sec.sum.makes }}</b></span>
+      </div>
+      <div v-if="sec.note" :class="$style.note">{{ sec.note }}</div>
     </template>
     <div v-if="sections.some(sec => sec.rows.some(canOpen))" :class="$style.ft">Click to price check</div>
   </div>
@@ -39,8 +48,9 @@ import { ParsedItem } from '@/parser'
 import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
 import { sideRow, type SideRow } from './side-row'
 import { familyOf, familyRows, type Family } from '@/web/woke/related-family/family'
+import { recipesOf, recipeSum, uniqueRecipes } from '@/web/woke/related-family/recipe'
 
-const { findPriceByQuery, autoCurrency, xchgRate } = usePoeninja()
+const { findPriceByQuery, findPricesByName, autoCurrency, xchgRate } = usePoeninja()
 
 function findItemByQueryId (queryId: string): BaseType | undefined {
   const [ns, encodedName] = queryId.split('::')
@@ -84,6 +94,53 @@ function getFamily (item: ParsedItem) {
     related: rows.map(row => sideRow(row.info, row.chaos != null ? autoCurrency(row.chaos) : undefined, row.own, row.info.refName))
   }
 }
+
+// woke: the vendor recipes the item makes or is a part of (Lost Unity for one of
+// its rings): every part, then what it makes, each with its poe.ninja price.
+const findRecipeItem = (name: string) => ITEM_BY_REF('UNIQUE', name)?.[0] ?? ITEM_BY_REF('ITEM', name)?.[0]
+// A unique's row is named by its base (as a checked unique's is), else its
+// cheapest variant that isn't linked (a 6L price isn't the part's), else the
+// row with no variant.
+function chaosOf (info: BaseType): number | null {
+  const ns = info.namespace
+  if (ns === 'UNIQUE') {
+    const byBase = info.unique ? findPriceByQuery({ ns, name: info.refName, variant: info.unique.base }) : null
+    if (byBase) return byBase.chaos
+    const rows = findPricesByName(ns, info.refName)
+    const plain = rows.filter(r => !/\b\dL\b/.test(r.variant ?? ''))
+    const pick = (plain.length ? plain : rows).map(r => r.chaos)
+    if (pick.length) return Math.min(...pick)
+  }
+  return findPriceByQuery({ ns, name: info.refName, variant: undefined })?.chaos ?? null
+}
+function getRecipes (item: ParsedItem) {
+  const own = item.info.refName
+  return recipesOf(own, uniqueRecipes(findRecipeItem)).map(r => {
+    const sum = recipeSum(r, chaosOf)
+    const parts = r.parts.map(p => {
+      const each = chaosOf(p.info)
+      return { ...sideRow(p.info, each != null ? autoCurrency(each * p.qty) : undefined, p.info.refName === own, `part:${p.info.refName}`), qty: p.qty }
+    })
+    const makes = chaosOf(r.makes)
+    return {
+      title: `${r.makes.name} recipe`,
+      rows: [...parts, { ...sideRow(r.makes, makes != null ? autoCurrency(makes) : undefined, r.makes.refName === own, `makes:${r.makes.refName}`), lead: 'Makes' }],
+      sum: {
+        parts: sum.missing === r.parts.length ? '?' : currencyText(autoCurrency(sum.parts)),
+        missing: sum.missing === r.parts.length ? 0 : sum.missing,
+        makes: sum.makes != null ? currencyText(autoCurrency(sum.makes)) : null
+      },
+      note: r.note
+    }
+  })
+}
+
+function priceText (price: CurrencyValue) {
+  return (price.min === price.max)
+    ? displayRounding(price.min, true)
+    : `${displayRounding(price.min, true)}–${displayRounding(price.max, true)}`
+}
+const currencyText = (price: CurrencyValue) => `${priceText(price)} ${price.currency === 'div' ? 'div' : 'c'}`
 
 function getItemPrices (queryId: string) {
   const dropEntry = ITEM_DROP.find(entry => entry.query.includes(queryId))
@@ -148,8 +205,27 @@ export default defineComponent({
       }
     })
 
-    interface Section { title: string, family: boolean, rows: SideRow[] }
+    interface Section {
+      title: string
+      family: boolean
+      rows: SideRow[]
+      sum?: { parts: string, missing: number, makes: string | null }
+      note?: string
+    }
+    const recipes = computed(() => {
+      // Only a unique lists its recipes: an Orb of Fusing is a part of five.
+      if (!props.item || !updatedAt.value || props.item.info.namespace !== 'UNIQUE') return []
+      return getRecipes(props.item)
+    })
     const sections = computed<Section[]>(() => {
+      const recipeSecs: Section[] = recipes.value.map(r => ({ ...r, family: false }))
+      // A drop group that only repeats a recipe (Kingmaker's two parts, and
+      // Kingmaker) goes: the recipe says it better.
+      const inRecipe = new Set(recipeSecs.flatMap(sec => sec.rows.map(r => r.name)))
+      const others = otherSections().filter(sec => !recipeSecs.length || !sec.rows.every(r => inRecipe.has(r.name)))
+      return [...recipeSecs, ...others]
+    })
+    function otherSections (): Section[] {
       const res = result.value
       if (!res || !('related' in res)) return []
       const out: Section[] = []
@@ -157,7 +233,7 @@ export default defineComponent({
       if ('dropRelated' in res && res.dropRelated.length > 1) out.push({ title: `Related to ${props.item!.info.name}`, family: false, rows: res.dropRelated })
       if (res.items.length) out.push({ title: `Drops in ${props.item!.info.name}`, family: false, rows: res.items })
       return out
-    })
+    }
 
     const canOpen = (row: SideRow) => row.clickable && !row.highlight
     // A unique's mods load before it opens: a later click, or a new check,
@@ -181,9 +257,7 @@ export default defineComponent({
       canOpen,
       open,
       tipOf,
-      priceText: (price: CurrencyValue) => (price.min === price.max)
-        ? displayRounding(price.min, true)
-        : `${displayRounding(price.min, true)}–${displayRounding(price.max, true)}`,
+      priceText,
       coin: (price: CurrencyValue) => (price.currency === 'div') ? '/images/divine.png' : '/images/chaos.png'
     }
   }
@@ -239,4 +313,9 @@ export default defineComponent({
 .price { display: inline-flex; align-items: center; gap: 3px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .coin { width: 16px; height: 16px; object-fit: contain; }
 .none { color: var(--w-faint); font-weight: 400; }
+.qty { color: var(--w-faint); margin-right: 4px; }
+.lead { padding: 3px 12px 2px; font-size: var(--w-fs-sm); color: var(--w-faint); background: var(--w-panel-solid); border-bottom: 1px solid var(--w-line-soft); }
+.sum { display: flex; justify-content: space-between; gap: 8px; padding: 5px 12px; border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); color: var(--w-dim); }
+.sum b { color: var(--w-fg); font-variant-numeric: tabular-nums; }
+.note { padding: 0 12px 5px; font-size: var(--w-fs-sm); color: var(--w-faint); }
 </style>

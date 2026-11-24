@@ -448,6 +448,12 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
+  "related-recipe.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/related-family/",
+   "renderer/src/web/woke/search/lookups/recipe-list.ts"
+  ],
   "report-issue.spec.ts": [
    "ipc/issue-report.ts",
    "main/src/woke/crash-reports.ts",

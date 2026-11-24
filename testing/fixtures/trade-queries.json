@@ -5914,6 +5914,64 @@
    "type": "Prismatic Jewel"
   }
  },
+ "unique-will-of-uul-netol.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "The Will of Uul-Netol",
+   "type": "Organic Ring"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "The Will of Uul-Netol",
+   "type": "Organic Ring"
+  }
+ },
  "viscera-ghostly-claw.txt": {
   "opened": {
    "status": {
