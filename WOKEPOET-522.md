@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-522
 title: 'Bug hunt 3: Net worth and run tracking'
-status: In Progress
+status: Todo
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: claude-code@guy-pc
+updatedBy: Event Horizon
 history:
   - type: activity
     user: Agent
@@ -34,10 +34,16 @@ history:
       At Faustus box scope, run per hour away time, Listed big number) asked in
       the project thread.
     id: a-2026-11-24t01-50-18-788z
+  - type: activity
+    user: Event Horizon
+    date: '2026-11-24T02:21:08.333Z'
+    comment: Claim by claude-code@guy-pc expired (no heartbeat for 30 min)
+    id: a-2026-11-24t02-21-08-333z
+  - type: status_change
+    from: In Progress
+    to: Todo
+    user: Event Horizon
+    date: '2026-11-24T02:21:08.339Z'
 needsAction: null
-claim:
-  holder: claude-code@guy-pc
-  claimedAt: '2026-11-24T01:33:21.672Z'
-  expiresAt: '2026-11-24T02:20:19.238Z'
 ---
 Second bug hunt over Net worth (stash, Sales/Listed, chart, glance, fake-price guards #796-#800, Faustus toggle #819/#821) and run tracking (map runs, Session analytics, Strategy runs WOKEPOET-515, post-map toast, in-map timer). Skips what PR #824 fixed. Branch fix/bug-hunt-3, worktree E:\Git\woke\wt\bug-hunt-3.
