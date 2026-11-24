@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-557
 title: 'Per hour box: Maps/h, Sold, Used and Net tiles'
-status: Todo
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -27,6 +27,42 @@ history:
       PR https://github.com/guybnd/woke-poe-trade/pull/865 is open but has merge
       conflicts with master; not merged yet.
     id: a-2026-11-24t07-49-59-161z
+  - type: comment
+    user: Agent
+    comment: Shipped in PR 865.
+    date: '2026-11-24T07:57:48.818Z'
+    completionComment: true
+    id: c-2026-11-24t07-57-48-818z
+  - type: status_change
+    from: Todo
+    to: Ready
+    user: Agent
+    date: '2026-11-24T07:57:48.818Z'
+  - type: comment
+    user: Agent
+    comment: Merged from a cloud thread; dev build reloaded.
+    completionComment: true
+    date: '2026-11-24T07:58:05.165Z'
+    id: c-2026-11-24t07-58-05-165z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-24T07:58:05.728Z'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/865'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 The Per hour box gets four tiles:
 - Maps/h: map time only. Shows "No maps" when there were none.
