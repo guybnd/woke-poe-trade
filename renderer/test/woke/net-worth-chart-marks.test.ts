@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coinRadius, labelledSales, mapOf, COIN_MAX, COIN_MIN } from '@/web/woke/net-worth/chart-marks'
+import { coinRadius, groupSales, labelledSales, mapOf, slotOf, COIN_MAX, COIN_MIN } from '@/web/woke/net-worth/chart-marks'
 import { listedAt } from '@/web/woke/net-worth/pending'
 import type { PendingDoc } from '@/web/woke/net-worth/pending'
 import { addPoint, seriesFor } from '@/web/woke/net-worth/ledger'
@@ -15,7 +15,8 @@ const cats = { currency: 0, fragments: 0, cards: 0, gear: 0, other: 0 }
 describe('Faustus band (pick A)', () => {
   it('counts each listing from first seen until it sold', () => {
     const doc: PendingDoc = {
-      league: 'L', readAt: T0 + 3 * H,
+      league: 'L',
+      readAt: T0 + 3 * H,
       listings: [item('a', T0, 100), item('b', T0 + H, 1, 'divine')],
       firstSeen: { a: T0, b: T0 + H }
     }
@@ -58,5 +59,22 @@ describe('map columns (pick D)', () => {
     expect(mapOf(maps, T0 + 700_000)?.name).toBe('Map 1 · Strand')
     expect(mapOf(maps, T0 + 50 * 60_000)).toBeNull()
     expect(mapOf(maps, T0 + H + 650_000)?.name).toBe('Map 2 · Tower')
+  })
+})
+
+describe('sale coins by slot', () => {
+  it('folds sales in one slot into one coin worth their total', () => {
+    const M = 60_000
+    const t0 = 1_000_000_000_000 - (1_000_000_000_000 % (6 * 60 * M))
+    expect(slotOf(t0, t0 + 3 * 60 * M)).toBe(10 * M)
+    expect(slotOf(t0, t0 + 7 * 24 * 60 * M)).toBe(360 * M)
+    const sales = [
+      { at: t0 + M, text: '', name: 'Blunderbore', div: 20 },
+      { at: t0 + 2 * M, text: '', name: 'Dusk Scarab', div: 0.5 },
+      { at: t0 + 3 * M, text: '', name: 'Odd currency', div: null },
+      { at: t0 + 400 * M, text: '', name: 'Hollow Lands', div: 1.4 }
+    ]
+    const g = groupSales(sales, t0, t0 + 7 * 24 * 60 * M)
+    expect(g.map(x => [x.name, x.div, x.count])).toEqual([['Blunderbore', 20.5, 3], ['Hollow Lands', 1.4, 1]])
   })
 })
