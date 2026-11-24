@@ -26,7 +26,7 @@ export function glanceFields (saved: unknown): Set<GlanceField> {
   return new Set(saved.filter((f): f is GlanceField => typeof f === 'string' && KNOWN.has(f)))
 }
 
-export const GLANCE_SHOW: ReadonlyArray<{ value: GlanceShow, label: string }> = [
+export const GLANCE_SHOW: Array<{ value: GlanceShow, label: string }> = [
   { value: 'map', label: 'In maps' },
   { value: 'run', label: 'While a run goes' },
   { value: 'game', label: 'All the time in game' }

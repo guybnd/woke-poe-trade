@@ -35,7 +35,7 @@
         <span v-if="on.profit" :class="run.profitChaos >= 0 ? 'w-up' : 'w-down'" :title="run.readAt ? `Profit at the last stash read, ${clock(run.readAt)}` : undefined">{{ run.profitChaos > 0 ? '+' : '' }}{{ formatChaos(run.profitChaos, run.divine) }}</span>
         <span v-if="on.perHour && runRate != null" data-glance-rate :title="leftOutText(time)">{{ formatChaos(runRate, run.divine) }}/h</span>
         <span v-if="on.total" data-glance-total title="Since the run started">{{ hoursText(clockNow - run.startAt) }}</span>
-        <span v-if="on.avg && runAvg != null" class="w-dim" data-glance-avg>avg {{ formatClock(runAvg) }}</span>
+        <span v-if="on.avg && runAvg != null" class="w-dim" data-glance-avg title="Average map time in the run, its last 20 maps at most">avg {{ formatClock(runAvg) }}</span>
       </template>
       <template v-else-if="night && nightFields">
         <span :class="$style.sep" />
@@ -43,7 +43,7 @@
         <span v-if="on.maps">{{ night.maps.length }} {{ night.maps.length === 1 ? 'map' : 'maps' }}</span>
         <span v-if="on.profit && profit != null" :class="profit >= 0 ? 'w-up' : 'w-down'">{{ profit > 0 ? '+' : '' }}{{ formatChaos(profit, night.divine) }}</span>
         <span v-if="on.perHour && nightRate != null" data-glance-rate :title="leftOutText(time)">{{ formatChaos(nightRate, night.divine) }}/h</span>
-        <span v-if="on.total" data-glance-total title="Tonight so far, AFK left out">{{ hoursText(playedMs(night)) }}</span>
+        <span v-if="on.total" data-glance-total title="Tonight so far, AFK left out">{{ hoursText(playedMs(nightNow ?? night)) }}</span>
         <span v-if="on.avg && nightAvg != null" class="w-dim" data-glance-avg>avg {{ formatClock(nightAvg) }}</span>
       </template>
       <span :class="[$style.grip, { [$style.gripOn]: movable || editing }]" class="w-dim" data-glance-drag><i class="fas fa-grip-vertical" /></span>
@@ -118,8 +118,8 @@ const clockNow = computed(() => props.map ? now.value : Math.max(now.value, nowM
 const nights = useNightList()
 const night = computed(() => nights.shown.value?.live ? nights.shown.value.story : null)
 const profit = computed(() => night.value ? nights.profitOf(night.value) : null)
-// The Per hour setting (Play / + Hideout / All), read as the bar draws.
-const time = computed(() => { void nowMinute.value; return rateTime() })
+// The Per hour setting (Play / + Hideout / All); the config is reactive.
+const time = computed(() => rateTime())
 
 // The strategy run's saved glance (net-worth/runs.ts RunGlance), read each
 // time you go into or out of a map, when the overlay closes (Start and Stop
@@ -132,11 +132,15 @@ const recent = useNights()
 type SavedGlance = Partial<RunNumbers> & { league?: string, timeTo?: number }
 const isSplit = (t: unknown): t is TimeSplit => t != null && typeof t === 'object' &&
   (['map', 'play', 'hub', 'off'] as const).every(k => typeof (t as Record<string, unknown>)[k] === 'number')
+// Reads can cross: only the newest one's answer counts.
+let readSeq = 0
 function readRun () {
   const league = AppConfig().leagueId
   if (!league) { run.value = null; return }
+  const seq = ++readSeq
   hostRequest('doc-get', { collection: 'net-worth', key: `${league}-run-glance` })
     .then((g) => {
+      if (seq !== readSeq) return
       const o = g as SavedGlance | null
       run.value = o && o.league === league && typeof o.profitChaos === 'number' && Number.isFinite(o.profitChaos) && typeof o.maps === 'number'
         ? { name: String(o.name ?? ''), maps: o.maps, fights: typeof o.fights === 'number' ? o.fights : 0, profitChaos: o.profitChaos, divine: typeof o.divine === 'number' ? o.divine : null, at: typeof o.at === 'number' ? o.at : 0, startAt: typeof o.startAt === 'number' ? o.startAt : 0, ...(typeof o.lastMapAt === 'number' ? { lastMapAt: o.lastMapAt } : {}), readAt: typeof o.timeTo === 'number' ? o.timeTo : null, time: isSplit(o.time) ? o.time : null }
@@ -148,9 +152,19 @@ watch(() => props.map ? props.since : null, () => {
   readRun()
   recent.loadMaps().catch(() => {})
 }, { immediate: true })
-watch(() => props.movable, (open, was) => { if (was && !open) readRun() })
+// Stop saves the run's end after a Faustus read: read again a little later too.
+let lateRead: ReturnType<typeof setTimeout> | undefined
+watch(() => props.movable, (open, was) => {
+  if (!was || open) return
+  readRun()
+  clearTimeout(lateRead)
+  lateRead = setTimeout(readRun, 5000)
+})
+onUnmounted(() => clearTimeout(lateRead))
 let runPoll: ReturnType<typeof setInterval> | undefined
-watch(() => showWhen.value !== 'map' && !props.map, (poll) => {
+// Only while there's something to show: a run or tonight going (a run started
+// from the overlay is read when it closes).
+watch(() => showWhen.value !== 'map' && !props.map && (!!run.value || !!night.value), (poll) => {
   clearInterval(runPoll)
   runPoll = poll ? setInterval(readRun, 60_000) : undefined
 }, { immediate: true })
@@ -179,8 +193,17 @@ const runAvg = computed(() => {
   const r = run.value
   return r ? avgMapMs(recent.maps.value.filter(m => m.leftAt > r.startAt && !isSkippedArea(m.name))) : null
 })
-const nightRate = computed(() => night.value ? perHourOf(profit.value, nightRateMs(night.value, time.value)) : null)
-const nightAvg = computed(() => night.value ? avgMapMs(night.value.maps) : null)
+// The live night ends at its last log line: carried on to now, so its time
+// keeps moving while the log is quiet (out of maps that time is hideout time).
+const nightNow = computed(() => {
+  const n = night.value
+  if (!n) return null
+  const more = Math.max(0, clockNow.value - n.endedAt)
+  return { ...n, endedAt: n.endedAt + more, hubMs: (n.hubMs ?? 0) + (props.map ? 0 : more) }
+})
+const nightRate = computed(() => nightNow.value ? perHourOf(profit.value, nightRateMs(nightNow.value, time.value)) : null)
+// Finished maps only: the one you're in is still counting.
+const nightAvg = computed(() => night.value ? avgMapMs(props.map ? night.value.maps.slice(0, -1) : night.value.maps) : null)
 
 // This map's pace: your average for it in the hour before you went in, else
 // your usual map (as the after-map toast compares). Amber once past it.
