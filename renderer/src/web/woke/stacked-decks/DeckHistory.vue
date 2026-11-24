@@ -76,7 +76,8 @@ function savedHeld (r: DeckRecord) {
   return (name: string) => {
     const h = held.value(name)
     const chaos = saved(name)
-    return h && chaos != null && chaos >= h.ninja / 2 ? h : null
+    // null: saved after the check held it (or not on poe.ninja then).
+    return h && (chaos == null || chaos >= h.ninja / 2) ? h : null
   }
 }
 fetch()
