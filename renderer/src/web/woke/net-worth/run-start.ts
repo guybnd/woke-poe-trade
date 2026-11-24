@@ -9,6 +9,7 @@ import { readFaustus } from './faustus-read'
 import { loadRuns, runsDoc, startRun } from './run-store'
 import { loadSales, rates, sales } from './sales-store'
 import type { LedgerPoint } from './ledger'
+import { addToTally } from './runs'
 import type { CostLine, Run } from './runs'
 import type { StashDiff } from './valuation'
 
@@ -23,6 +24,18 @@ export function lastCostsOf (name: string): CostLine[] {
 // The names of past runs, newest first.
 export function pastRunNames (): string[] {
   return [...new Set(runsDoc.value.done.map(r => r.name))].filter(n => n !== 'Run')
+}
+
+// The last run with the reads between its Stop and this start: a sale
+// collected or a held item stashed in between isn't carried over (else the
+// next run's first arrival or drop would take it off that run's profit).
+// Only its tally and arrivals grow; its own window stays.
+export function withGap (last: Run, diffs: readonly StashDiff[], at: number): Run {
+  const stop = last.stoppedAt
+  if (stop == null) return last
+  let r: Run = { ...last, stoppedAt: at }
+  for (const d of [...diffs].filter(d => d.at > stop && d.at <= at).sort((a, b) => a.at - b.at)) r = addToTally(r, d)
+  return { ...r, stoppedAt: stop }
 }
 
 let starting = false
@@ -41,7 +54,7 @@ export async function startRunAt (league: string, name: string, at: number, diff
     const doc = runsDoc.value
     const last = doc.live ?? doc.done[0]
     const taken = last && [doc.live, ...doc.done].some(r => r?.carriedFrom === last.id)
-    let extra: Extra = last && !taken ? { ...leftOver(last, sales.value, rates.value), carriedFrom: last.id } : {}
+    let extra: Extra = last && !taken ? { ...leftOver(withGap(last, diffs, at), sales.value, rates.value), carriedFrom: last.id } : {}
     // When the Listed doc first saw each listing: a read holds at most 100,
     // and an older listing's sale is from before the run too.
     const seen = await import('./pending-store')

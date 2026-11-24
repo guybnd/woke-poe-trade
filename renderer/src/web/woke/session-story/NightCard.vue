@@ -28,7 +28,7 @@
       <span v-for="l in story.levelUps" :key="l.char"><span class="w-dim">{{ story.levelUps.length > 1 ? l.char : 'Level' }}</span> {{ l.from }} → {{ l.to }}</span>
     </div>
     <div v-if="story.best" :class="$style.line" class="w-num" data-night-best>
-      <span class="w-accent">★</span> {{ story.best.name }} · {{ formatChaos(story.best.chaos, story.divine) }}
+      <span class="w-accent">★</span> <span v-item-tip="{ name: bestItem(story.best) }">{{ story.best.name }}</span> · {{ formatChaos(story.best.chaos, story.divine) }}
     </div>
   </div>
 </template>
@@ -42,7 +42,9 @@ import { rateTime } from '../shared/rate-time-now'
 import RateTimePick from '../shared/RateTimePick.vue'
 import { clockTime } from './history-days'
 import { formatChaos, formatClock, formatDuration } from '../ui/format'
+import { bestItem } from './story'
 import type { NightStory, StripPart } from './story'
+import { vItemTip } from '../ui'
 
 const props = defineProps<{
   story: NightStory

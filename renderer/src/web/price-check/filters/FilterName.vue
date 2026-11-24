@@ -40,7 +40,7 @@
           <filter-btn-logical v-for="influence of filters.influences" :key="influence.value"
             :filter="influence" :text="influence.value" :img="`/images/influence-${influence.value}.png`" />
         </template>
-        <!-- woke: gear steps its rarity: Any, Magic (bases to recombine or fracture), Rare. -->
+        <!-- woke: gear steps its rarity: Any, Magic (bases to craft or recombine), Rare. -->
         <rarity-chip v-if="filters.rarity && rarityChip" :rarity="filters.rarity" :stats="stats" />
         <filter-btn-logical v-else-if="filters.rarity?.value === 'magic'"
           :filter="filters.rarity" text="Magic" />

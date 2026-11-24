@@ -96,7 +96,7 @@
               </span>
               <TextTabs v-model="range" :options="RANGE_OPTIONS" />
             </div>
-            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
+            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
             <div v-if="chartMode === 'category' && !fold.chart" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
             </div>
@@ -313,7 +313,8 @@ import HideChip from './HideChip.vue'
 import SalesView from './SalesView.vue'
 import ListedView from './ListedView.vue'
 import { loadPending, pendingDoc, pendingReading, refreshPending } from './pending-store'
-import { pendingRows, pendingTotals, DEFAULT_STALE_DAYS } from './pending'
+import { pendingRows, pendingTotals, rowWorth, DEFAULT_STALE_DAYS } from './pending'
+import { listedWorth as listedWorthDoc, listedWorthKey } from './pending-glance'
 import RunsView from './RunsView.vue'
 import { loadRuns, runGlance, runsDoc } from './run-store'
 import { countLabel } from './runs'
@@ -553,7 +554,10 @@ const big = computed(() => bigGains(series.value))
 // The summary's tiny line: the last 7 days.
 const spark = computed(() => seriesFor(ledger.value.points, historyNow.value.days, '7d', Date.now(), divine.value).map(p => p.div))
 const goal = computed(() => props.config.goal && props.config.goal.div > 0 ? props.config.goal : null)
-const eta = computed(() => goal.value ? goalEta(seriesFor(ledger.value.points, historyNow.value.days, '7d', Date.now(), divine.value), goal.value.div) : { reached: false, days: null })
+// The At Faustus box: counted listings bring the goal closer, so the chart's
+// stash line has that much less to go (the line is drawn there too).
+const goalStashDiv = computed(() => goal.value ? Math.max(0, goal.value.div - (divine.value ? listedWorth.value / divine.value : 0)) : null)
+const eta = computed(() => goalStashDiv.value != null ? goalEta(seriesFor(ledger.value.points, historyNow.value.days, '7d', Date.now(), divine.value), goalStashDiv.value) : { reached: false, days: null })
 
 // ---------- price moves (D3) ----------
 // The item tooltip for any item named here: held ones by their table line.
@@ -823,10 +827,24 @@ function refreshListed () {
 // Your listings count in your net worth (pick E2): at poe.ninja's price where
 // it can be trusted, else the ask. The chart and per hour stay the stash's.
 watch(salesLeague, (l) => { if (l) loadPending(l).catch(() => {}) }, { immediate: true })
-const listed = computed(() => {
+const listedRows = computed(() => {
   const d = pendingDoc.value
-  const rows = d && d.league === salesLeague.value ? pendingRows(d, sales.value, saleRates.value, ninjaPriced, now.value, props.config.staleDays) : []
-  return pendingTotals(rows)
+  return d && d.league === salesLeague.value ? pendingRows(d, sales.value, saleRates.value, ninjaPriced, now.value, props.config.staleDays) : []
+})
+const listed = computed(() => pendingTotals(listedRows.value))
+// Each listing's worth for the dock card's total (pending-glance.ts), saved
+// when it changes.
+let savedWorth = ''
+watch(listedRows, (rows) => {
+  const league = pendingDoc.value?.league
+  if (!league || league !== salesLeague.value) return
+  const items = rows.map(r => [r.item.id, Math.round(rowWorth(r) * 100) / 100] as [string, number])
+  const sig = `${league}|${JSON.stringify(items)}`
+  if (sig === savedWorth) return
+  savedWorth = sig
+  const w = { league, at: Date.now(), items }
+  listedWorthDoc.value = w
+  hostRequest('doc-put', { collection: 'net-worth', key: listedWorthKey(league), value: w }).catch(() => {})
 })
 const countListed = computed(() => props.config.countListed !== false)
 const listedWorth = computed(() => countListed.value ? listed.value.worthChaos : 0)
@@ -836,7 +854,8 @@ const totalTitle = computed(() => {
   if (listedWorth.value) {
     lines.push(`At Faustus ${div(listedWorth.value)} ${unit.value} (${listed.value.count} unsold)`)
     // A sale shows in your trade history only at the next sales read.
-    lines.push('A listing that sold and was collected counts twice until your sales are read again')
+    // Sold, not collected yet: Faustus holds it, not the stash (or the list).
+    lines.push('A sold listing drops out at the next sales read; its currency counts once you collect it (twice if you collect before that read)')
   }
   return lines.join('\n')
 })

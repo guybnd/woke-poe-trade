@@ -9,7 +9,7 @@ import { ninjaPriceOf } from './prices'
 import { historyRev, loadPriceHistory } from './history'
 import { lastWokePrices } from '../market/hook'
 import {
-  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceYesterday, tabSetOf, valueStash
+  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceYesterday, tabSetOf, valueStash, withTabShift
 } from './valuation'
 import { stashGains, gainsKey } from './gains'
 import { classify, resolveSpends } from './spend'
@@ -219,6 +219,8 @@ async function countRead (id: string, readAt: number) {
     // Other tabs now: today's rate starts again from this read, so the
     // tabs added or dropped don't read as profit or loss per hour.
     next = { ...next, today: { day: next.today.day, points: next.today.points.slice(-1) } }
+    // Nor as today's: against the read before (the old tabs).
+    next = withTabShift(next, history.value.today.points[history.value.today.points.length - 1]?.chaos ?? null, v.chaos, divine.value, readAt)
   }
   history.value = next
   // The chart's point, the change view, and per-tab values.

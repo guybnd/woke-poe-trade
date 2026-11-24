@@ -1,5 +1,5 @@
 // woke: the rarity chip on non-unique gear (RarityChip.vue, loaded on demand): search any non-unique, magic only
-// (bases to recombine or fracture) or rare only.
+// (bases to craft or recombine) or rare only.
 import type { FilterOrGroup, ItemFilters, StatFilter } from './interfaces'
 
 type ParsedModifier = StatFilter['sources'][number]['modifier']

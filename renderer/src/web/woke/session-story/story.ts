@@ -84,7 +84,8 @@ export interface NightStory {
   // From the stash reader, when it read during the night.
   profitChaos: number | null
   divine: number | null
-  best: { name: string, chaos: number } | null
+  // `item`: the item's own name (`name` has the count: "3 × Divine Orb").
+  best: { name: string, chaos: number, item?: string } | null
   // Characters that levelled: the level before the first level-up, and the last.
   levelUps?: Array<{ char: string, from: number, to: number }>
   // The longest time out of maps between two maps.
@@ -96,17 +97,29 @@ export interface NightStory {
 
 export class NightTracker {
   draft: NightDraft | null = null
+  // The last line before the game closed, while nothing has come since.
+  private openedAt: number | null = null
 
-  constructor (private readonly onFinished: (draft: NightDraft) => void) {}
+  // `charOf`: your character's name (map-log.ts follows it), so a party
+  // member's death isn't yours.
+  constructor (private readonly onFinished: (draft: NightDraft) => void, private readonly charOf?: () => string | null) {}
 
   feed (line: string, fallbackAt: number): void {
     const at = lineTime(line) ?? fallbackAt
     if (line.includes(OPENING)) {
-      if (this.draft) this.draft.endedByOpening = true
-      this.finish()
+      // The game closed (a crash, a restart): the night ends there only if
+      // nothing comes for NIGHT_GAP_MS. Back sooner, it goes on, and the time
+      // closed is a stretch outside any map.
+      const d = this.draft
+      if (d) {
+        this.openedAt = d.lastAt
+        // Not a hub either: hideout time is time you were there.
+        d.segs.push({ at: d.lastAt, map: false, key: '', name: '', named: true, level: 0 })
+      }
       return
     }
     if (this.draft && at - this.draft.lastAt >= NIGHT_GAP_MS) this.finish()
+    this.openedAt = null
     const d = this.draft
     if (d && AFK_ON.test(line)) {
       if (d.afkAt == null) {
@@ -145,7 +158,9 @@ export class NightTracker {
       (this.draft.levels ??= []).push({ char: ev.charName, level: ev.level })
     } else if (!ev && this.draft) {
       const seg = this.draft.segs[this.draft.segs.length - 1]
-      if (seg && slainName(line)) this.draft.deaths.push({ at, key: seg.key })
+      const slain = slainName(line)
+      const me = this.charOf?.() ?? null
+      if (seg && slain && (me == null || slain === me)) this.draft.deaths.push({ at, key: seg.key })
     }
     if (this.draft && !away) this.draft.lastAt = Math.max(this.draft.lastAt, at)
   }
@@ -158,6 +173,8 @@ export class NightTracker {
   finish (): void {
     const d = this.draft
     this.draft = null
+    if (d && this.openedAt != null && this.openedAt >= d.lastAt) d.endedByOpening = true
+    this.openedAt = null
     if (d && hasMaps(d)) this.onFinished(d)
   }
 }
@@ -309,14 +326,19 @@ export function farmingProfit (night: Pick<NightStory, 'startedAt' | 'endedAt'>,
   return { chaos: inside.reduce((n, s) => n + s.profit, 0), sessions: inside.length }
 }
 
+// The best drop's item name (nights saved before `item` keep it in `name`).
+export function bestItem (b: { name: string, item?: string }): string {
+  return b.item ?? b.name.replace(/^\d+ × /, '')
+}
+
 // The biggest single gain in stash changes between two times.
-export function bestDrop (diffs: Array<{ at: number, added: Array<{ name: string, count: number, chaos: number }> }>, from: number, to: number): { name: string, chaos: number } | null {
-  let best: { name: string, chaos: number } | null = null
+export function bestDrop (diffs: Array<{ at: number, added: Array<{ name: string, count: number, chaos: number, tip?: string }> }>, from: number, to: number): { name: string, chaos: number, item: string } | null {
+  let best: { name: string, chaos: number, item: string } | null = null
   for (const diff of diffs) {
     if (diff.at < from || diff.at > to) continue
     for (const line of diff.added) {
       if (!(line.chaos > 0)) continue
-      if (!best || line.chaos > best.chaos) best = { name: line.count > 1 ? `${line.count} × ${line.name}` : line.name, chaos: line.chaos }
+      if (!best || line.chaos > best.chaos) best = { name: line.count > 1 ? `${line.count} × ${line.name}` : line.name, chaos: line.chaos, item: line.tip ?? line.name }
     }
   }
   return best

@@ -321,7 +321,26 @@ export interface FetchedListing {
   priceAmount: number
   priceCurrency: string
   stackSize?: number
-  listedItem?: { id?: string, name?: string, typeLine?: string, baseType?: string, frameType?: number, icon?: string, ilvl?: number, corrupted?: boolean, stackSize?: number }
+  listedItem?: { id?: string, name?: string, typeLine?: string, baseType?: string, frameType?: number, icon?: string, ilvl?: number, corrupted?: boolean, stackSize?: number, properties?: unknown, sockets?: unknown }
+}
+
+// A number property of a trade item ("Level", "Quality", "Map Tier"), as the
+// trade history's parseSale reads it (main trade-history.ts).
+function itemProperty (props: unknown, name: string): number | undefined {
+  if (!Array.isArray(props)) return undefined
+  const p = props.find((x: { name?: unknown } | null) => x?.name === name) as { values?: unknown } | undefined
+  const values = Array.isArray(p?.values) ? p.values as unknown[][] : []
+  const m = /(\d+)/.exec(String(values[0]?.[0] ?? ''))
+  return m ? Number(m[1]) : undefined
+}
+
+function biggestLinks (sockets: unknown): number {
+  if (!Array.isArray(sockets)) return 0
+  const groups = new Map<number, number>()
+  for (const s of sockets as Array<{ group?: unknown } | null>) {
+    if (typeof s?.group === 'number') groups.set(s.group, (groups.get(s.group) ?? 0) + 1)
+  }
+  return Math.max(0, ...groups.values())
 }
 
 export function toListing (r: FetchedListing): Listing | null {
@@ -332,6 +351,12 @@ export function toListing (r: FetchedListing): Listing | null {
   const frameType = it.frameType ?? 0
   const stack = r.stackSize ?? it.stackSize ?? 1
   const gear = frameType <= 3 && stack <= 1
+  // A gem's level and quality, a map's tier and 5 or 6 links, as a sale has
+  // them: the price, the vs poe.ninja check and held maps' tier go by them.
+  const level = frameType === 4 ? itemProperty(it.properties, 'Level') : undefined
+  const quality = itemProperty(it.properties, 'Quality')
+  const mapTier = itemProperty(it.properties, 'Map Tier')
+  const links = biggestLinks(it.sockets)
   return {
     // The item's id, as a sale has it (the trade history's item_id); the
     // fetch's own id is the listing's.
@@ -345,6 +370,10 @@ export function toListing (r: FetchedListing): Listing | null {
     stack,
     ...(it.ilvl != null ? { ilvl: it.ilvl } : {}),
     ...(it.corrupted ? { corrupted: true } : {}),
+    ...(level ? { gemLevel: level } : {}),
+    ...(quality ? { quality } : {}),
+    ...(mapTier ? { mapTier } : {}),
+    ...(links >= 5 ? { links } : {}),
     price: { amount: r.priceAmount, currency: r.priceCurrency },
     // Gear's mods for its tooltip, as a sale keeps them.
     ...(gear && r.listedItem ? { tip: r.listedItem as Record<string, unknown> } : {})

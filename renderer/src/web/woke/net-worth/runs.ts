@@ -22,6 +22,8 @@ export interface TallyLine {
   removed: number
   addedChaos: number
   removedChaos: number
+  // A map, scarab or fragment (isMapCostItem): cost per map counts it used up.
+  cost?: true
 }
 
 // A cost the stash can't see: `qty` a map at `unitChaos` each (the price you
@@ -86,7 +88,9 @@ export interface ManualLine { id: string, name: string, key?: string | null, ico
 // `fights`: boss arenas (Maven, Uber Elder...), which aren't maps. Each counts
 // as one run of the strategy, like a map: per-map figures and typed costs
 // are per map or fight.
-export interface RunFinal { profitChaos: number, maps: number, fights?: number, perMapChaos: number | null, perHourChaos: number | null, faustusChaos?: number }
+// `stashChaos`: the stash change at Stop, for when the chart's reads no
+// longer go back to the run's start (the ledger keeps the newest reads only).
+export interface RunFinal { profitChaos: number, maps: number, fights?: number, perMapChaos: number | null, perHourChaos: number | null, faustusChaos?: number, stashChaos?: number }
 
 export interface RunCount { maps: number, fights: number }
 // "4 maps · 2 fights", "1 fight", "0 maps".
@@ -156,7 +160,8 @@ export function addToTally (run: Run, diff: StashDiff): Run {
   const tally = { ...run.tally }
   for (const [lines, dir] of [[diff.added, 1], [diff.removed, -1]] as const) {
     for (const l of lines) {
-      const t = tally[l.key] ? { ...tally[l.key] } : { name: l.name, icon: l.icon, added: 0, removed: 0, addedChaos: 0, removedChaos: 0 }
+      const t: TallyLine = tally[l.key] ? { ...tally[l.key] } : { name: l.name, icon: l.icon, added: 0, removed: 0, addedChaos: 0, removedChaos: 0 }
+      if (!t.cost && isMapCostItem(l.name, l.cat)) t.cost = true
       if (dir > 0) { t.added += l.count; t.addedChaos += l.chaos } else { t.removed += l.count; t.removedChaos += l.chaos }
       tally[l.key] = t
     }
@@ -176,6 +181,14 @@ export function tallyFrom (run: Run, diffs: readonly StashDiff[]): Run {
 // The run's reads: after the start, up to Stop.
 function inRun (run: Run, at: number): boolean {
   return at > run.startAt && (run.stoppedAt == null || at <= run.stoppedAt)
+}
+
+// A stopped run whose start is older than the chart's first read: the stash
+// change kept at Stop (what's left of the reads would undercount it).
+export function runStash (run: Run, points: readonly LedgerPoint[]): number {
+  const kept = run.final?.stashChaos
+  if (run.stoppedAt != null && kept != null && !(points.length && points[0].at <= run.startAt)) return kept
+  return stashChange(run, points)
 }
 
 export function stashChange (run: Run, points: readonly LedgerPoint[]): number {
@@ -205,7 +218,7 @@ export function leftOf (c: CostLine, runs: number): number | null {
 export function runTotals (run: Run, points: readonly LedgerPoint[], count: number | RunCount, now: number, mapCostKeys: ReadonlySet<string> = new Set(), outside: Outside = { beforeChaos: 0, faustusChaos: 0 }): RunTotals {
   const { maps, fights } = typeof count === 'number' ? { maps: count, fights: 0 } : count
   const runs = maps + fights
-  const stashChaos = stashChange(run, points)
+  const stashChaos = runStash(run, points)
   const typedKeys = new Set(run.costs.map(c => c.key).filter((k): k is string => k != null))
   let takenOverChaos = 0
   for (const k of typedKeys) takenOverChaos += netOf(run.tally[k])
@@ -230,7 +243,7 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], count: numb
   // Used up from the stash: map-cost items that went down, not typed.
   let usedChaos = 0
   for (const [k, t] of Object.entries(run.tally)) {
-    if (typedKeys.has(k) || !mapCostKeys.has(k)) continue
+    if (typedKeys.has(k) || !(t.cost || mapCostKeys.has(k))) continue
     const net = tallyValue(t, run.edits?.[rowKey.tally(k)])
     if (net < 0) usedChaos += -net
   }
@@ -291,6 +304,11 @@ export function tallyRows (run: Run): { used: TallyRow[], came: TallyRow[] } {
     used: rows.filter(r => r.netChaos < 0).sort((a, b) => a.netChaos - b.netChaos),
     came: rows.filter(r => r.netChaos > 0).sort((a, b) => b.netChaos - a.netChaos)
   }
+}
+
+// Map-cost items (for cost per map): maps, scarabs and fragments.
+export function isMapCostItem (name: string, category: string | undefined): boolean {
+  return category === 'fragments' || /\bMap( \(|$)/.test(name)
 }
 
 // Maps in the run: came out of after the start, entered before the end.

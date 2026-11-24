@@ -214,7 +214,11 @@ function propTitle (label: string): string {
 // click (until the next item).
 const propFilters = computed(() => result.value!.props.map(p => propFilter(p.label)).filter((f): f is StatFilter => f != null))
 // Every filter other than the map's own mods (those are Any / Has / Not): chips and rows.
-const plainFilters = computed(() => (props.stats ?? []).filter(s => s.group || !s.mapMod))
+// The map's influence (Originator, Elder, Shaper, a guardian, a conqueror's Citadel) is what
+// the base map is (Guy, 2026-11-24), so Base map never touches it.
+const INFLUENCE = /^(Area is influenced by|Map is occupied by|Map contains \S+ Citadel)/i
+const isMapIdentity = (s: FilterOrGroup) => !s.group && INFLUENCE.test(s.statRef)
+const plainFilters = computed(() => (props.stats ?? []).filter(s => s.group || (!s.mapMod && !isMapIdentity(s))))
 const isOnFilter = (s: FilterOrGroup) => s.group ? !s.meta.disabled : !s.disabled
 const setOnFilter = (s: FilterOrGroup, on: boolean) => { if (s.group) s.meta.disabled = !on; else s.disabled = !on }
 const hasFilters = computed(() => propFilters.value.length > 0 || searchable.value.length > 0)
@@ -249,7 +253,7 @@ function toggleBase () {
 }
 const baseTitle = computed(() => baseOnly.value
   ? (clearedRef.value ? 'Searching the plain map. Click to bring back the numbers and mods you had ticked.' : 'Searching the plain map: no number or mod is ticked.')
-  : 'Untick every number, mod and line below, to search the plain map. Click again to bring them back. Searches only when you press Search.')
+  : 'Untick every number, mod and line below, to search the plain map (its influence stays). Click again to bring them back. Searches only when you press Search.')
 
 const picked = computed(() => {
   const has = searchable.value.filter(f => stateOf(f) === 'has').length

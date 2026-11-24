@@ -123,13 +123,23 @@ export function priceGlitches (points: LedgerPoint[]): Map<number, number> {
     let net = 0
     let peak = 0
     let end = -1
+    let netDiv = 0
     for (let k = i; k < points.length && points[k].at - a.at <= SPIKE_MAX_MS; k++) {
       const n = points[k].netChaos
       if (n == null) break
       net += n
+      const rk = points[k].divine
+      if (rk) netDiv += n / rk
       const e = points[k].chaos - a.chaos - net
       if (k === i) {
         if (Math.abs(e) < a.chaos * SPIKE_SHARE) break
+        // A glitched price moves the value in chaos and in divines alike. A
+        // move of the divine rate doesn't: divines held go up in chaos and
+        // stay put in divines, the rest stays put in chaos (it isn't a glitch).
+        if (a.divine && rk) {
+          const ed = points[k].chaos / rk - a.chaos / a.divine - netDiv
+          if (Math.sign(ed) !== Math.sign(e) || Math.abs(ed) < (a.chaos / a.divine) * SPIKE_SHARE) break
+        }
         peak = e
       } else if (Math.sign(e) !== Math.sign(peak) || Math.abs(e) <= Math.abs(peak) * SPIKE_UNDONE) {
         // Back: whatever is left counts as a real move from the start.

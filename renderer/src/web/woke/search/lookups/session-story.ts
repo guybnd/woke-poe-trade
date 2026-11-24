@@ -1,8 +1,9 @@
 // The night so far, or the last one, from Session story.
 import { formatChaos, formatClock, formatDuration } from '../../ui/format'
 import { ANALYTICS_TYPE } from '../../analytics/types'
+import { bestItem } from '../../session-story/story'
 import type { NightStory } from '../../session-story/story'
-import { tierText, usualMapMs } from '../../session-story/map-log'
+import { mapItemName, tierText, usualMapMs } from '../../session-story/map-log'
 import type { MapRecord } from '../../session-story/map-log'
 import type { Lookup, LookupRow } from './types'
 import { isSkippedArea } from '../../session-story/skip-areas'
@@ -30,7 +31,7 @@ function rows (s: NightStory, time: RateTime): LookupRow[] {
     { label: 'Maps', value: String(s.maps.length) }
   ]
   if (s.profitChaos != null) out.push({ label: 'Profit', value: signed(s.profitChaos, s.divine) })
-  if (s.best) out.push({ label: 'Best drop', value: `${s.best.name} · ${formatChaos(s.best.chaos, s.divine)}` })
+  if (s.best) out.push({ label: 'Best drop', value: `${s.best.name} · ${formatChaos(s.best.chaos, s.divine)}`, item: { name: bestItem(s.best) } })
   // The time the Per hour setting counts, as on the night card.
   const hours = nightRateMs(s, time) / 3_600_000
   if (s.maps.length) out.push({ label: 'Average map', value: formatClock(s.mapMs / s.maps.length) })
@@ -86,6 +87,7 @@ export function mapsLookup (all: readonly MapRecord[]): Lookup {
       sections: [{
         rows: last.map(m => ({
           label: `${m.name} ${tierText(m.areaLevel)}`,
+          item: { name: mapItemName(m.name) },
           value: [formatClock(m.mapMs), m.deaths ? `${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}` : '', m.npcs.join(', ')].filter(Boolean).join(' · '),
           // Opens Map history at that map's row.
           ...(history ? { action: { label: 'Show', open: { tool: ANALYTICS_TYPE, id: `map:${m.enteredAt}` } } } : {})

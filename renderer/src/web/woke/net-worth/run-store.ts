@@ -148,13 +148,26 @@ async function saveGlance (league: string, run: Run | null, points: readonly Led
 }
 export const runGlance = shallowRef<RunGlance | null>(null)
 
+// Set by run-stop.ts from the press until the run is stopped.
+let pendingStop: { id: string, at: number } | null = null
+export function setPendingStop (p: { id: string, at: number } | null) { pendingStop = p }
+
 // A counted read (store.ts): into the live run's tally.
 export function recordRunRead (league: string, diff: StashDiff | null, points: readonly LedgerPoint[], divine: number | null): Promise<void> {
   return queue(async () => {
     await loadRuns(league)
     const live = runsDoc.value.live
     if (!readOk || !live || live.league !== league) return
-    const next = diff ? addToTally(live, diff) : live
+    // Stop was pressed and is waiting on its Faustus read: a read after the
+    // press is past the run's end (its stash change isn't counted either).
+    const cap = pendingStop?.id === live.id ? { ...live, stoppedAt: pendingStop.at } : live
+    const added = diff ? addToTally(cap, diff) : cap
+    let next = live
+    if (added !== cap) {
+      next = { ...added }
+      if (live.stoppedAt == null) delete next.stoppedAt
+      else next.stoppedAt = live.stoppedAt
+    }
     if (next !== live) await save(league, { ...runsDoc.value, live: next })
     await saveGlance(league, next, points, divine)
   })
@@ -187,7 +200,7 @@ async function withFinal (run: Run, points: readonly LedgerPoint[]): Promise<Run
   const maps = mapsIn(run, await readRunMaps(run, run.stoppedAt), run.stoppedAt)
   const fights = await runFights(run.startAt, run.stoppedAt)
   const t = runTotals(run, points, { maps, fights }, run.stoppedAt, undefined, outsideOf(run))
-  const final: Run['final'] = { profitChaos: t.profitChaos, maps, perMapChaos: t.perMapChaos, perHourChaos: t.perHourChaos }
+  const final: Run['final'] = { profitChaos: t.profitChaos, maps, perMapChaos: t.perMapChaos, perHourChaos: t.perHourChaos, stashChaos: t.stashChaos }
   if (fights) final.fights = fights
   if (t.faustusChaos) final.faustusChaos = t.faustusChaos
   return { ...run, final }

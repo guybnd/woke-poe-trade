@@ -1,5 +1,5 @@
 <template>
-  <!-- woke: gear steps its rarity: Any, Magic (bases to recombine or fracture), Rare.
+  <!-- woke: gear steps its rarity: Any, Magic (bases to craft or recombine), Rare.
        Every label stays in the grid cell, so the chip keeps its width under the mouse. -->
   <button type="button" data-rarity-chip
     class="filter-name-corrupted filter-name-rarity" :data-step="now" :class="{ clash: !!clash }"
@@ -28,7 +28,7 @@ const now = computed(() => rarityStep(props.rarity))
 const clash = computed(() => now.value === 'magic' ? magicAffixClash(props.stats) : null)
 const title = computed(() => {
   const step = RARITY_STEPS.find(s => s.value === now.value)!
-  const base = `Rarity filter: searching ${step.what}. Click to change: Any, Magic (bases to recombine or fracture), Rare.`
+  const base = `Rarity filter: searching ${step.what}. Click to change: Any, Magic (bases to craft or recombine), Rare.`
   return clash.value ? `${clash.value} ${base}` : base
 })
 </script>
