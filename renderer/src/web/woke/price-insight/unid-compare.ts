@@ -15,6 +15,15 @@ export function identifiedSpread (rows: ReadonlyArray<{ chaos: number }>): Ident
   return { low: v[0], high: v[v.length - 1], median: v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2, count: v.length }
 }
 
+/**
+ * "50c to 2.5 div" reads as 50 div: both ends in one unit, divines when the
+ * top is a divine or more (as ninjaTotal switches), else chaos.
+ */
+export function rangeText (low: number, high: number, rate: number | null | undefined, num: (v: number) => string): string {
+  if (rate && high >= rate * 0.94) return `${num(low / rate)} to ${num(high / rate)} div`
+  return `${num(low)} to ${num(high)}c`
+}
+
 export type UnidRead = 'identify' | 'unid' | 'even'
 
 // Past this ratio either way, one side reads as worth more.

@@ -1,8 +1,9 @@
 // How far to trust poe.ninja's price for one item, on the instant card (Ctrl+D)
 // and the price check's cached verdict (WOKEPOET-534). The same checks Net
 // worth uses before it counts a price (net-worth/valuation.ts holdJump), here
-// without a last read to compare with: a price poe.ninja has on one day only,
-// a sudden step up from the item's usual price, or a thin market.
+// without a last read to compare with: a price poe.ninja has on one day only
+// (checked against the last saved daily price, not Net worth's last solid
+// read), a sudden step up from the item's usual price, or a thin market.
 // Pure: no Vue or IO.
 import { graphGaps, pricedOnlyToday } from '../market/parse'
 import { THIN_GAPS } from '../market/types'
@@ -91,12 +92,13 @@ export function doubtText (d: NinjaDoubt, price: (chaos: number) => string): str
 
 /**
  * Ctrl+Space's saved prices have no line, only the price a day and a week
- * ago: a step of 5x or more over the lower of them, and 1c or more, gets the
- * same doubt as a spike. undefined: no such step.
+ * ago: a step of 5x or more over a day ago (a week ago without it), and 1c
+ * or more, gets the same doubt as a spike. undefined: no such step.
  */
 export function savedStep (chaos: number, d1?: number, d7?: number): number | undefined {
-  const before = [d1, d7].filter((v): v is number => typeof v === 'number' && v > 0)
-  if (!before.length || !(chaos > 0)) return undefined
-  const usual = Math.min(...before)
+  // A day ago, else a week ago: a step that has held since yesterday isn't a
+  // sudden one, and a steady rise over the week is never a step.
+  const usual = typeof d1 === 'number' && d1 > 0 ? d1 : typeof d7 === 'number' && d7 > 0 ? d7 : undefined
+  if (usual == null || !(chaos > 0)) return undefined
   return chaos >= usual * HOLD_RATIO && chaos - usual >= 1 ? usual : undefined
 }

@@ -17,14 +17,20 @@
     <!-- How sure poe.ninja's price is (ninja-trust.ts, WOKEPOET-534). -->
     <div v-if="doubtLine" :class="$style.doubt" data-testid="ninja-verdict-doubt" :data-doubt="doubt?.kind"><w-price-text :text="doubtLine" /></div>
     <!-- A gamble unique, unidentified: identify it or sell it unid (WOKEPOET-542). -->
-    <div v-if="gamble && versions" :class="$style.unid" data-testid="ninja-verdict-unid">
+    <div v-if="gamble" :class="$style.unid" data-testid="ninja-verdict-unid">
       <div v-if="unidQuote" data-unid-trade>Unid listings <b><w-price-text :text="fmt(unidQuote.chaos)" /></b> <span class="w-dim">· trade, {{ unidQuote.listings }} listed</span></div>
       <div v-else class="w-dim" data-unid-trade>Unid listings
         <span v-if="unidPending">…</span>
+        <span v-else-if="unidNone">too few listed to price</span>
         <button v-else type="button" :class="$style.link" title="Uses one trade search: the middle of the cheapest unidentified listings" @click="askUnid">check on trade</button>
       </div>
-      <div>Identified <b><w-price-text :text="`${fmt(versions.low).replace(/[^\d.,]+$/, '')} to ${fmt(versions.high)}`" /></b>, median <w-price-text :text="fmt(versions.median)" /> <span class="w-dim">across {{ versions.count }} versions</span></div>
-      <div class="w-dim" data-unid-read>{{ UNID_READ_TEXT[read] }}</div>
+      <template v-if="versions">
+        <div>Identified <b><w-price-text :text="rangeText(versions.low, versions.high, xchgRate, num)" /></b>, median <w-price-text :text="fmt(versions.median)" /> <span class="w-dim">across {{ versions.count }} versions</span></div>
+        <div class="w-dim" data-unid-read>{{ UNID_READ_TEXT[read] }}</div>
+      </template>
+      <div v-else class="w-dim" data-unid-identified>poe.ninja lists no identified versions of it.
+        <button type="button" :class="$style.link" title="Opens the trade site in your browser: identified copies, cheapest first" @click="openIdentified">See identified on trade</button>
+      </div>
     </div>
     <div :class="$style.row">
       <button type="button" class="btn w-pc-primary" :class="[$style.live, { 'w-pc-glow': doubt && doubt.kind !== 'thin' }]" data-testid="ninja-verdict-live" @click="search">
@@ -46,8 +52,8 @@ import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { poeOn } from './window-style'
 import { useNinjaDoubt } from './use-ninja-doubt'
 import { isUnidUniqueJewel } from './ninja-first'
-import { identifiedSpread, unidRead, UNID_READ_TEXT } from './unid-compare'
-import { VARIABLE_ITEMS, useTradePrices } from '../shared/unid-prices'
+import { identifiedSpread, unidRead, rangeText, UNID_READ_TEXT } from './unid-compare'
+import { VARIABLE_ITEMS, useTradePrices, identifiedTradeUrl } from '../shared/unid-prices'
 import { doubtText } from './ninja-trust'
 
 const props = defineProps<{
@@ -75,12 +81,22 @@ const doubt = useNinjaDoubt(info)
 // A gamble unique, unidentified: poe.ninja's identified versions beside the unid price.
 const gamble = computed(() => isUnidUniqueJewel(props.item) && VARIABLE_ITEMS.has(props.item.info.refName))
 const versions = computed(() => gamble.value
-  ? identifiedSpread((findPricesByName('UNIQUE', props.item.info.refName) as Array<{ chaos: number }>).filter(r => r !== info.value))
+  // The headline row (the unid price, by base) isn't an identified version.
+  ? identifiedSpread((findPricesByName('UNIQUE', props.item.info.refName) as Array<{ chaos: number, variant?: string }>).filter(r => (r.variant ?? '') !== (info.value?.variant ?? '')))
   : null)
 const tradePrices = useTradePrices()
 const league = computed(() => props.filters.trade.league)
 const unidQuote = computed(() => gamble.value && league.value ? tradePrices.get(league.value, props.item.info.refName) : null)
 const unidPending = computed(() => tradePrices.pending(props.item.info.refName))
+const unidNone = computed(() => !!league.value && tradePrices.noneListed(league.value, props.item.info.refName))
+function openIdentified () {
+  if (league.value) window.open(identifiedTradeUrl(league.value, props.item.info.refName))
+}
+function num (v: number) {
+  if (v >= 100) return String(Math.round(v))
+  if (v >= 10) return String(Number(v.toFixed(1)))
+  return String(Number(v.toPrecision(2)))
+}
 // The unid price: trade's when it was checked, else poe.ninja's (the headline).
 const read = computed(() => versions.value ? unidRead(unidQuote.value?.chaos ?? info.value?.chaos ?? 0, versions.value) : 'even')
 function askUnid () {

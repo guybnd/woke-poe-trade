@@ -22,22 +22,27 @@ export function useNinjaDoubt (row: Ref<DoubtRow | null | undefined>) {
   const history = shallowRef<Array<number | null> | undefined>(undefined)
   const loading = shallowRef(false)
 
-  watch(row, async (r) => {
+  // Keyed by the item, not the row object: a new divine rate makes a new row.
+  watch(() => row.value ? `${row.value.slug}\u0000${row.value.name}\u0000${row.value.variant ?? ''}` : '', async (key) => {
+    const r = row.value
     history.value = undefined
     loading.value = false
     const league = leagues.selectedId.value
     const type = r?.slug ? typeForSlug(r.slug) : undefined
     if (!r || !league || !type || NOT_SAVED.has(type)) return
     loading.value = true
-    const wait = setTimeout(() => { if (row.value === r) loading.value = false }, WAIT_MS)
+    const same = () => (row.value ? `${row.value.slug}\u0000${row.value.name}\u0000${row.value.variant ?? ''}` : '') === key
+    // A short wait so the line rarely flips; a slower answer (the first read
+    // can import old history) still updates it once when it comes.
+    const wait = setTimeout(() => { if (same()) loading.value = false }, WAIT_MS)
     try {
       const rows = await dailyHistory(league, { type, name: r.name, variant: r.variant ?? '' })
-      if (row.value === r && loading.value) history.value = dailySeries(rows, utcDate(Date.now()))
+      if (same()) history.value = dailySeries(rows, utcDate(Date.now()))
     } catch {
       // No saved prices: poe.ninja's own line stands in.
     } finally {
       clearTimeout(wait)
-      if (row.value === r) loading.value = false
+      if (same()) loading.value = false
     }
   }, { immediate: true })
 

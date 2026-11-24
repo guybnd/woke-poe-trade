@@ -191,15 +191,17 @@ export function buildInsight (listings: InsightListing[], opts: InsightOptions):
     kept = kept.slice(1)
   }
 
-  // Whisper listings far under the instant buyouts, wherever they sit.
+  // Whisper listings far under the instant buyouts, wherever they sit. Only
+  // while they're under half the listings: when most sellers ask that, it's
+  // the market, and the buyouts are the ones asking more.
   const buyouts = kept.filter(k => k.instant)
   if (new Set(buyouts.map(k => k.account)).size >= UNDER_BUYOUT_SELLERS) {
     const line = buyouts[0].chaos * UNDER_BUYOUT_RATIO
-    kept = kept.filter(k => {
-      if (k.instant || k.chaos >= line) return true
-      dropped.set(k.id, 'underbuy')
-      return false
-    })
+    const under = kept.filter(k => !k.instant && k.chaos < line)
+    if (under.length * 2 < kept.length) {
+      for (const k of under) dropped.set(k.id, 'underbuy')
+      kept = kept.filter(k => !under.includes(k))
+    }
   }
 
   const { risk, signals } = fixRisk(kept, dropped, listings)

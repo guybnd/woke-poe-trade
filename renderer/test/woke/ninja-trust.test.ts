@@ -78,6 +78,9 @@ describe('doubtText', () => {
 describe('savedStep (Ctrl+Space)', () => {
   it('flags a 5x step over the lower of a day and a week ago', () => {
     expect(savedStep(100, 2, 20)).toBe(2)
+    // Stepped days ago and held since yesterday: not sudden.
+    expect(savedStep(100, 90, 2)).toBeUndefined()
+    expect(savedStep(100, undefined, 2)).toBe(2)
     expect(savedStep(100, 30, 40)).toBeUndefined()
     expect(savedStep(0.5, 0.05)).toBeUndefined()
     expect(savedStep(10)).toBeUndefined()

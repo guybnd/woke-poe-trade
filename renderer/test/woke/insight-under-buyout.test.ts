@@ -52,4 +52,10 @@ describe('whisper listings under the instant buyouts', () => {
     const insight = buildInsight([cheap, listing(95, true), listing(100, true), listing(101, false)], { divine: 200, now: NOW })
     expect(insight.dropped.has(cheap.id)).toBe(false)
   })
+
+  it('leaves them in when most listings ask that: then it is the market', () => {
+    const whispers = Array.from({ length: 6 }, () => listing(50, false))
+    const insight = buildInsight([...whispers, listing(100, true), listing(102, true)], { divine: 200, now: NOW })
+    expect(whispers.some(w => insight.dropped.get(w.id) === 'underbuy')).toBe(false)
+  })
 })
