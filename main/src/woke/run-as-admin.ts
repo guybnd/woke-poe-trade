@@ -6,125 +6,166 @@
 // admin" only does something once a player ticked it there.
 //
 // Starting elevated means a UAC prompt each time: Windows asks, the app can't
-// skip that without a scheduled task, which this doesn't set up.
+// skip that without a scheduled task, which this doesn't set up. Offered only
+// to an account in Administrators: for anyone else Windows asks for another
+// account's password and the app would run as that account, with its data.
 import { app, dialog } from 'electron'
-import { spawn, spawnSync } from 'child_process'
+import { execFile, spawn } from 'child_process'
 import { appPrefs, canRestartApp, preparePlainQuit, setAppPrefs } from './app-prefs'
-import { AFTER_PID_ARG, relaunchArgs } from './update-install'
+import { AFTER_PID_ARG, NO_AUTO_INSTALL_ARG, relaunchArgs } from './update-install'
+import { afterPid } from './wait-starter'
 
-// The elevated copy waits for the copy that started it to quit (AFTER_PID_ARG),
-// so only one runs and the old one's last config write lands before the new
-// one reads it.
+export { afterPid }
 
-// High (12288) or System (16384) mandatory level in `whoami /groups`.
-export function groupsAreElevated (stdout: string): boolean {
-  return /S-1-16-(12288|16384)\b/.test(stdout)
+export interface Rights {
+  // Null: whoami didn't answer, so not known.
+  elevated: boolean | null
+  admin: boolean | null
 }
 
-let elevated: boolean | null = null
-export function isElevated (): boolean {
-  if (process.platform !== 'win32') return false
-  if (elevated == null) {
-    try {
-      const out = spawnSync('whoami', ['/groups'], { encoding: 'utf8', windowsHide: true, timeout: 5000 })
-      elevated = groupsAreElevated(out.stdout ?? '')
-    } catch {
-      elevated = false
-    }
+// From `whoami /groups`: High (12288) or System (16384) mandatory level, and
+// BUILTIN\Administrators (S-1-5-32-544, listed "for deny only" while not
+// elevated). Matched by SID, so any Windows language reads the same.
+export function readRights (stdout: string): Rights {
+  if (!/S-1-16-\d+/.test(stdout)) return { elevated: null, admin: null }
+  return {
+    elevated: /S-1-16-(12288|16384)\b/.test(stdout),
+    admin: /S-1-5-32-544\b/.test(stdout)
   }
-  return elevated
 }
 
-export function afterPid (argv: string[]): number | null {
-  const arg = argv.find(a => a.startsWith(AFTER_PID_ARG))
-  const pid = arg ? Number(arg.slice(AFTER_PID_ARG.length)) : NaN
-  return Number.isInteger(pid) && pid > 0 ? pid : null
+let rights: Promise<Rights> | null = null
+let known: Rights | null = null
+export function probeRights (): Promise<Rights> {
+  if (process.platform !== 'win32') return Promise.resolve({ elevated: false, admin: false })
+  rights ??= new Promise((resolve) => {
+    execFile('whoami', ['/groups'], { windowsHide: true, timeout: 10_000 }, (err, stdout) => {
+      const r = err ? { elevated: null, admin: null } : readRights(String(stdout))
+      known = r
+      // A failed read can be tried again later.
+      if (r.elevated == null) rights = null
+      resolve(r)
+    })
+  })
+  return rights
 }
 
-// The arguments the elevated copy starts with: this run's (one-run flags and
-// an older wait flag dropped) plus who to wait for.
+// What the last probe found, without waiting (the tray's menu is built at once).
+export function knownRights (): Rights | null { return known }
+
+// Restart as admin makes sense: Windows, a build that can start itself, an
+// account that can elevate, and not elevated yet.
+export function canOffer (r: Rights | null): boolean {
+  return process.platform === 'win32' && canRestartApp() && r?.admin === true && r.elevated === false
+}
+
+// The arguments the elevated copy starts with: this run's (one-run flags kept
+// only as this run has them) plus who to wait for.
 export function elevatedArgs (argv: string[], pid: number): string[] {
-  return [...relaunchArgs(argv, false), `${AFTER_PID_ARG}${pid}`]
+  return [...relaunchArgs(argv, argv.includes(NO_AUTO_INSTALL_ARG)), `${AFTER_PID_ARG}${pid}`]
 }
 
-// PowerShell's Start-Process -Verb RunAs shows the UAC prompt; it fails
-// (exit code 1) when the player says no. Single-quoted strings take '' for '.
+// PowerShell's Start-Process -Verb RunAs shows the UAC prompt. Exit 0: the
+// copy started. 2: the player said no (ERROR_CANCELLED, 1223). 3: it failed.
+// Single-quoted strings double each quote, and PowerShell counts the curly
+// ones as quotes too.
 export function runAsCommand (exe: string, args: string[]): string {
-  const q = (s: string) => `'${s.replace(/'/g, "''")}'`
+  const q = (s: string) => `'${s.replace(/['‘’‚‛]/g, m => m + m)}'`
   // Start-Process joins the list with spaces, so an argument with a space
   // needs its own double quotes to arrive whole.
   const list = args.map(a => q(/\s/.test(a) ? `"${a}"` : a)).join(',')
-  return `$ErrorActionPreference='Stop'; Start-Process -FilePath ${q(exe)}` +
-    (args.length ? ` -ArgumentList @(${list})` : '') + ' -Verb RunAs'
+  return 'try { Start-Process -ErrorAction Stop -FilePath ' + q(exe) +
+    (args.length ? ` -ArgumentList @(${list})` : '') + ' -Verb RunAs; exit 0 } ' +
+    'catch { $e = $_.Exception; while ($e) { if ($e.NativeErrorCode -eq 1223) { exit 2 }; $e = $e.InnerException }; exit 3 }'
 }
 
-// Before the single-instance lock: an elevated copy started by
-// relaunchAsAdmin waits (up to 20 s) for the copy that started it to quit.
-export function waitForStarter () {
-  const pid = afterPid(process.argv)
-  if (pid == null) return
-  const sleeper = new Int32Array(new SharedArrayBuffer(4))
-  const until = Date.now() + 20_000
-  while (Date.now() < until) {
-    try {
-      process.kill(pid, 0)
-    } catch (e) {
-      // EPERM: it's there but not ours to signal, so still running.
-      if ((e as NodeJS.ErrnoException).code !== 'EPERM') return
-    }
-    Atomics.wait(sleeper, 0, 0, 100)
-  }
-}
+export type RelaunchResult = 'started' | 'declined' | 'failed'
 
-export function canRunAsAdmin () {
-  return process.platform === 'win32' && canRestartApp()
-}
+let log: (line: string) => void = () => {}
+export function setRunAsAdminLog (fn: (line: string) => void) { log = fn }
 
 let starting = false
-// Starts an elevated copy and quits this one. False when the player said no
-// to the UAC prompt, or it couldn't start: this copy keeps running.
-export function relaunchAsAdmin (): Promise<boolean> {
-  if (!canRunAsAdmin() || starting) return Promise.resolve(false)
+let quitting = false
+// Starts an elevated copy and quits this one. 'declined' when the player said
+// no to the UAC prompt, 'failed' when it couldn't start: this copy keeps
+// running either way.
+export function relaunchAsAdmin (): Promise<RelaunchResult> {
+  if (quitting || starting) return Promise.resolve('declined')
   starting = true
   const command = runAsCommand(process.execPath, elevatedArgs(process.argv, process.pid))
   return new Promise((resolve) => {
     const ps = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', command], { windowsHide: true, stdio: 'ignore' })
-    ps.on('error', () => { starting = false; resolve(false) })
-    ps.on('exit', (code) => {
+    ps.on('error', (err) => {
       starting = false
+      log(`error [RunAsAdmin] PowerShell didn't start: ${err.message}`)
+      resolve('failed')
+    })
+    ps.on('exit', (code) => {
       if (code === 0) {
+        quitting = true
+        log('info [RunAsAdmin] Elevated copy started; quitting this one.')
         preparePlainQuit()
         app.quit()
+        resolve('started')
+        return
       }
-      resolve(code === 0)
+      starting = false
+      if (code === 2) {
+        resolve('declined')
+      } else {
+        log(`error [RunAsAdmin] Start-Process failed (exit ${String(code)})`)
+        resolve('failed')
+      }
     })
   })
 }
 
 // At start: a player who ticked "Always start as admin" gets the UAC prompt
 // now, before the game, instead of the no-access popup later. Saying no keeps
-// this copy running as before.
+// this copy running. A copy that was itself started this way never starts
+// another, so nothing can loop.
 export async function startElevatedIfChosen (): Promise<boolean> {
-  if (!appPrefs().alwaysAdmin || !canRunAsAdmin() || isElevated()) return false
-  return await relaunchAsAdmin()
+  if (!appPrefs().alwaysAdmin || process.platform !== 'win32' || !canRestartApp()) return false
+  const r = await probeRights()
+  if (afterPid(process.argv) != null) {
+    if (r.elevated === false) log('error [RunAsAdmin] Restarted as admin but still not elevated (UAC off?).')
+    return false
+  }
+  if (!canOffer(r)) return false
+  return (await relaunchAsAdmin()) === 'started'
+}
+
+function showManual (r: Rights | null) {
+  dialog.showErrorBox(
+    'PoE window - No access',
+    r?.elevated
+      ? 'Path of Exile is running with rights this app doesn\'t have, though it runs as admin too.\n\nStart both from the same Windows account.'
+      : 'Path of Exile is running with administrator rights.\n' +
+        '\n' +
+        'You need to restart Woke PoE Trade with administrator rights.'
+  )
+}
+
+// The tray's Restart as admin: says what to do by hand if it couldn't.
+export async function restartAsAdmin () {
+  if ((await relaunchAsAdmin()) === 'failed') showManual(knownRights())
 }
 
 let asking = false
-// The popup when Path of Exile runs as admin. With no way to restart (dev
-// build, portable exe) it only says what to do, as before.
+let dismissed = false
+// The popup when Path of Exile runs as admin. Where restarting can't help
+// (dev build, portable exe, an account that can't elevate, already elevated)
+// it only says what to do, as before. After "Not now" it stays away for this
+// run; the tray still offers it.
 export async function showNeedsAdmin () {
-  if (asking) return
-  if (!canRunAsAdmin()) {
-    dialog.showErrorBox(
-      'PoE window - No access',
-      'Path of Exile is running with administrator rights.\n' +
-      '\n' +
-      'You need to restart Woke PoE Trade with administrator rights.'
-    )
-    return
-  }
+  if (asking || dismissed || quitting) return
   asking = true
   try {
+    const r = await probeRights()
+    if (!canOffer(r)) {
+      showManual(r)
+      return
+    }
     const { response, checkboxChecked } = await dialog.showMessageBox({
       type: 'warning',
       title: 'PoE window - No access',
@@ -138,7 +179,11 @@ export async function showNeedsAdmin () {
       noLink: true
     })
     if (checkboxChecked !== appPrefs().alwaysAdmin) setAppPrefs({ alwaysAdmin: checkboxChecked })
-    if (response === 0) await relaunchAsAdmin()
+    if (response === 0) {
+      if ((await relaunchAsAdmin()) === 'failed') showManual(r)
+    } else {
+      dismissed = true
+    }
   } finally {
     asking = false
   }

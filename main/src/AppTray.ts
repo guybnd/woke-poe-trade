@@ -3,7 +3,7 @@ import { app, Tray, Menu, shell, nativeImage, dialog } from 'electron'
 import type { ServerEvents } from './server'
 import { appIconFile } from './woke/app-icon'
 import { appPrefs, canRestartApp, onAppPrefsChange, restartApp, setAppPrefs } from './woke/app-prefs'
-import { canRunAsAdmin, relaunchAsAdmin } from './woke/run-as-admin'
+import { canOffer, knownRights, probeRights, restartAsAdmin } from './woke/run-as-admin'
 
 // woke: the overlay can't be seen until it's attached, so the tray says.
 export type TrayStatus = 'waiting' | 'attached' | 'needs-admin'
@@ -27,6 +27,8 @@ export class AppTray {
     if (status === this.status) return
     this.status = status
     this.rebuildMenu()
+    // woke: the admin items need to know if this account can elevate.
+    if (status === 'needs-admin') void probeRights().then(() => { this.rebuildMenu() })
   }
 
   private statusText () {
@@ -79,11 +81,12 @@ export class AppTray {
   // woke: only for a player whose game runs as admin, or who already chose
   // to start as admin (so they can turn it off again).
   private adminItems (): Electron.MenuItemConstructorOptions[] {
-    if (!canRunAsAdmin()) return []
     const needs = this.status === 'needs-admin'
     if (!needs && !appPrefs().alwaysAdmin) return []
+    const offer = canOffer(knownRights())
+    if (!offer && !appPrefs().alwaysAdmin) return []
     return [
-      ...(needs ? [{ label: 'Restart as admin', click: () => { void relaunchAsAdmin() } }] : []),
+      ...(needs && offer ? [{ label: 'Restart as admin', click: () => { void restartAsAdmin() } }] : []),
       {
         label: 'Always start as admin',
         type: 'checkbox' as const,

@@ -26,12 +26,11 @@ import { setAppIcon } from './woke/app-icon'
 import { saveBeforeQuit } from './woke/quit-flush'
 import { guardWebContents } from './woke/web-guard'
 import { appPrefs } from './woke/app-prefs'
-import { startElevatedIfChosen, waitForStarter } from './woke/run-as-admin'
+import { setRunAsAdminLog, startElevatedIfChosen } from './woke/run-as-admin'
+import { lockAfterWait } from './woke/wait-starter'
 
-// woke: an elevated copy (run-as-admin.ts) lets the one that started it quit first.
-waitForStarter()
-
-if (!app.requestSingleInstanceLock()) {
+// woke: an elevated copy (run-as-admin.ts) retries while the old one lets go.
+if (!lockAfterWait(() => app.requestSingleInstanceLock())) {
   app.exit()
 }
 
@@ -62,6 +61,7 @@ app.on('ready', async () => {
   const appTray = new AppTray(eventPipe)
   tray = appTray
   const logger = new Logger(eventPipe)
+  setRunAsAdminLog((line) => { logger.write(line) })
   attachCrashLogger(logger)
   const gameLogWatcher = new GameLogWatcher(eventPipe, logger)
   const gameConfig = new GameConfig(eventPipe, logger)
