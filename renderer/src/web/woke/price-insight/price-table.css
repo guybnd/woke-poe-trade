@@ -191,6 +191,8 @@
 @media (prefers-reduced-motion: reduce) { .w-pc-skel { animation: none; } }
 
 .w-pc-foot { padding: 5px 0 0; color: var(--w-faint); font-family: var(--w-body); font-size: var(--w-fs-xs); text-align: right; font-variant-numeric: tabular-nums; }
+.w-pc-foot-more { color: var(--w-accent); text-decoration: underline; text-underline-offset: 2px; }
+.w-pc-foot-more:disabled { color: var(--w-faint); text-decoration: none; }
 
 /* A column per ticked stat. Orange: their number is higher than yours, blue: lower.
    Neutral on purpose. The colour builds with distance from yours (--w-pc-stat-k, 0 to 1),
@@ -242,7 +244,7 @@
   white-space: nowrap; font-size: var(--w-fs-sm);
 }
 .w-pc-status-short { display: none; }
-/* Between Search bulk and the affix caps there can be little room: a short count, or nothing. */
+/* Between Search and the affix caps there can be little room: a short count, or nothing. */
 @container (max-width: 140px) {
   .w-pc-status-full { display: none; }
   .w-pc-status-short { display: inline; }

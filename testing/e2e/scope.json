@@ -93,6 +93,10 @@
   "folds.spec.ts": [
    "renderer/src/web/woke/mechanics/"
   ],
+  "forbidden-pair.spec.ts": [
+   "renderer/src/web/woke/forbidden/",
+   "renderer/src/web/woke/search/"
+  ],
   "gem-versions.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",

@@ -79,6 +79,12 @@ export function createTradePrices (deps: TradePriceDeps) {
     return { chaos: q.chaos, listings: q.listings }
   }
 
+  /** Looked up within the hour and found too few listings to price it. */
+  function noneListed (forLeague: string, name: string): boolean {
+    const q = stored.value[forLeague]?.[name]
+    return q != null && q.chaos == null && now() - q.ts < FRESH_MS
+  }
+
   function due (forLeague: string, name: string): boolean {
     const q = stored.value[forLeague]?.[name]
     if (q && now() - q.ts < FRESH_MS) return false
@@ -173,5 +179,5 @@ export function createTradePrices (deps: TradePriceDeps) {
     return inFlight.value.has(name)
   }
 
-  return { get, pending, request, ask, stop }
+  return { get, pending, noneListed, request, ask, stop }
 }

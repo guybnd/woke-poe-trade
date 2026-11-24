@@ -68,8 +68,9 @@ test('All tools counts what is new; pointing at a tool clears its seal; Net wort
   await overlay.boot({ overlayActive: true, whatsNew: true })
   const page = overlay.page
   const count = page.locator('[data-news-count]')
-  // Search is one window, not in All tools: its lines show only in the dock.
-  const tools = new Set(NEWS.filter(n => n.wmType !== 'woke-search').map(n => n.wmType)).size
+  // Search is one window, not in All tools, and a line that opens a Settings page
+  // (price check) has no tool row: those lines show only in the dock.
+  const tools = new Set(NEWS.filter(n => n.wmType !== 'woke-search' && !n.settingsPage).map(n => n.wmType)).size
   // Read from NEWS, so adding a line breaks nothing: the launcher shows a tool's first unseen line.
   const mapNews = NEWS.filter(n => n.wmType === 'woke-map-mods')
   await expect(count).toHaveText(String(tools))

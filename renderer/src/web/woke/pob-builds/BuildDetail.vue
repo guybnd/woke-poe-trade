@@ -197,6 +197,7 @@ import { computed, defineAsyncComponent, inject, onBeforeUnmount, provide, shall
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { WPanel, WButton, WEmpty, WTabs, WChip, WKbd, openMenu } from '../ui'
 import { openMegalo } from '../megalo/open'
+import { openForbidden } from '../forbidden/open'
 import { buildRegexFolder } from '../regex-library/folder-names'
 // Loads with the Notes tab.
 const RegexFolderList = defineAsyncComponent(() => import('../regex-library/RegexFolderList.vue'))
@@ -278,6 +279,7 @@ function moreMenu (e: MouseEvent) {
     { label: 'Compare with another build', icon: 'fas fa-balance-scale', action: () => emit('compare', props.entry.relPath) },
     { label: 'Show file', icon: 'fas fa-folder-open', action: () => run(pobApi.show(props.config, props.entry.relPath)) },
     { label: 'Megalomaniac searcher', icon: 'fas fa-circle-nodes', action: () => openMegalo(wm, { pobPath: props.entry.relPath }) },
+    { label: 'Forbidden pair finder', icon: 'fas fa-fire', action: () => openForbidden(wm, { pobPath: props.entry.relPath }) },
     ...(name
       ? [{
           label: followsMe.value ? `Stop following ${name}` : `Follow ${name}`,

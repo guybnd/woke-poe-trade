@@ -23,12 +23,25 @@ test('dragging the toast corner makes it wider and taller, text the same size', 
     '2026/11/05 15:05:01 3727812 cffb065b [INFO Client 25552] : You have entered Strand.'
   ])
   // Apart: the first run is saved when the second map starts, before this leave compares to it.
-  await overlay.log([
-    '2026/11/05 15:08:00 3725546 1186a8a3 [DEBUG Client 25552] Generating level 60 area "HideoutArenaSearingExarch" with seed 1',
-    '2026/11/05 15:08:01 3727812 cffb065b [INFO Client 25552] : You have entered Searing Hideout.'
-  ])
+  // The widget follows the log only once its saved maps load, later under load:
+  // lines written before that are read as old, with no toast. Each try leaves
+  // one more map until a leave is read live.
   const page = overlay.page
   const toast = page.locator('[data-map-toast]')
+  for (let i = 0; i < 4 && !(await toast.isVisible()); i++) {
+    const m = 8 + i * 2
+    if (i > 0) {
+      await overlay.log([
+        `2026/11/05 15:${String(m - 1).padStart(2, '0')}:00 3725546 1186a8a3 [DEBUG Client 25552] Generating level 83 area "MapWorldsStrand" with seed ${10 + i}`,
+        `2026/11/05 15:${String(m - 1).padStart(2, '0')}:01 3727812 cffb065b [INFO Client 25552] : You have entered Strand.`
+      ])
+    }
+    await overlay.log([
+      `2026/11/05 15:${String(m).padStart(2, '0')}:00 3725546 1186a8a3 [DEBUG Client 25552] Generating level 60 area "HideoutArenaSearingExarch" with seed 1`,
+      `2026/11/05 15:${String(m).padStart(2, '0')}:01 3727812 cffb065b [INFO Client 25552] : You have entered Searing Hideout.`
+    ])
+    await toast.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {})
+  }
   await expect(toast).toBeVisible({ timeout: 5000 })
   const time = page.locator('[data-map-toast-time]')
   const fontBefore = await time.evaluate(el => el.getBoundingClientRect().height)

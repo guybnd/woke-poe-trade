@@ -69,16 +69,11 @@
         <!-- woke: a click drops the hover's pending search, or an edit made right after re-searches. -->
         <button class="btn w-pc-primary" :class="{ 'w-pc-glow': searchGlow }" @click="cancelSearchHover(); doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
       </div>
-      <!-- woke: one search that shows only sellers with 2+ copies, loading more listings as needed.
-           Outside the hover area above, so reaching it doesn't start a plain search. -->
-      <button v-if="canSearchBulk" class="btn ml-1 mr-auto whitespace-nowrap" data-search-bulk
-        title="Search, then show only sellers with 2 or more copies at one price. Loads more listings (up to 100) if fewer than 10 sellers show."
-        @click="cancelSearchHover(); searchBulk()">Search bulk</button>
       <!-- woke: maps on the bulk exchange: each seller once with their stock (WOKEPOET-523). One exchange search, on the click. -->
-      <button v-if="mapEx" class="btn ml-1 whitespace-nowrap" :class="{ 'mr-auto': !canSearchBulk }" data-search-exchange
+      <button v-if="mapEx" class="btn ml-1 whitespace-nowrap" data-search-exchange
         :title="exchangeTitle" @click="cancelSearchHover(); searchExchange()">Exchange</button>
       <!-- woke: TradeListing says here whether the old results were filtered here or need a search. -->
-      <div ref="searchStatusSlot" class="w-pc-status-slot" />
+      <div ref="searchStatusSlot" class="w-pc-status-slot ml-2" />
       <!-- woke: the prefix / suffix caps ride the results bar; here while it waits for Search,
            at the same spot (the hidden refresh button keeps them there), so a scroll stays on them. -->
       <template v-if="itemFilters.affixCaps && tradeAPI === 'trade'">
@@ -342,12 +337,9 @@ export default defineComponent({
     }
 
     // TradeListing.vue OR TradeBulk.vue
-    const tradeService = ref<{ execSearch(bulk?: boolean): void } | null>(null)
+    const tradeService = ref<{ execSearch(): void } | null>(null)
     // woke: a search started before the trade listing was there to run it (see below).
     let searchWaiting = false
-    // woke: Search bulk's click, for the search it starts (and one still waiting for the listing).
-    let bulkClick = false
-    let bulkWaiting = false
     // FiltersBlock.vue
     const filtersComponent = ref<ComponentPublicInstance>(null!)
     // FilterName.vue, which holds the tiles and chips
@@ -442,8 +434,6 @@ export default defineComponent({
     watch(() => [props.item, doSearch.value], () => {
       // A new item or a cancelled search drops one still waiting for the listing.
       searchWaiting = false
-      const bulk = bulkClick
-      bulkClick = false
       if (doSearch.value === false) return
 
       tradeAPI.value = apiToSatisfySearch(props.item, itemStats.value, itemFilters.value)
@@ -459,10 +449,9 @@ export default defineComponent({
       nextTick(() => {
         if (tradeService.value) {
           searchWaiting = false
-          tradeService.value.execSearch(bulk)
+          tradeService.value.execSearch()
         } else {
           searchWaiting = true
-          bulkWaiting = bulk
         }
       })
     }, { deep: false, immediate: true })
@@ -474,8 +463,7 @@ export default defineComponent({
       if (!service) return
       if (!searchWaiting || !doSearch.value) return
       searchWaiting = false
-      service.execSearch(bulkWaiting)
-      bulkWaiting = false
+      service.execSearch()
     })
 
     watch(() => [props.item, doSearch.value, itemStats.value, itemFilters.value], (curr, prev) => {
@@ -653,11 +641,6 @@ export default defineComponent({
       searchExchange,
       leaveExchange,
       exchangeTitle: computed(() => mapEx.value?.title ?? ''),
-      canSearchBulk: computed(() => apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'trade'),
-      searchBulk () {
-        bulkClick = true
-        doSearch.value = true
-      },
       tradeAPI,
       tradeService,
       filtersComponent,

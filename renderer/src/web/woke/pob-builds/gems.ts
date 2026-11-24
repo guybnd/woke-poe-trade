@@ -4,14 +4,29 @@
 // LICENSE-exile-leveling.txt): { name: { l: required level, a: colour,
 // s: sources } }, colour = r/g/b/w (primary attribute), source = [act, quest,
 // npc, 'q' (quest reward) | 'v' (vendor), class mask].
+import { shallowRef } from 'vue'
 import type { InjectionKey, Ref } from 'vue'
-import raw from './gem-sources.json'
 import type { PobDetails } from './widget'
 
 export type GemSource = [number, string, string, string, string]
 type Source = GemSource
 export type GemColour = 'r' | 'g' | 'b' | 'w'
-const DATA = raw as unknown as Record<string, { l: number, a: GemColour, s: Source[] }>
+type GemTable = Record<string, { l: number, a: GemColour, s: Source[] }>
+
+// The table (~105 KB) is its own chunk, not part of the startup bundle. It
+// starts loading as soon as this module runs, and everything reading it (all
+// in computeds) updates when it lands, a moment after startup.
+const table = shallowRef<GemTable>({})
+// True once the load settled (even if it failed): code that saves what it
+// derives from gems, like the loot filter's build rules, waits for it.
+export const gemsLoaded = shallowRef(false)
+export const gemsReady: Promise<void> = import('./gem-sources.json').then(m => {
+  table.value = m.default as unknown as GemTable
+}).catch(e => {
+  console.warn('[gems] campaign gem table failed to load', e)
+}).finally(() => {
+  gemsLoaded.value = true
+})
 
 export interface GemData {
   // The item name, as loot filters and the trade site spell it
@@ -23,16 +38,16 @@ export interface GemData {
 }
 
 export function gemData (name: string): GemData | null {
-  const key = DATA[name] ? name : DATA[`${name} Support`] ? `${name} Support` : null
+  const key = table.value[name] ? name : table.value[`${name} Support`] ? `${name} Support` : null
   if (key) {
-    const d = DATA[key]
+    const d = table.value[key]
     return { name: key, requiredLevel: d.l, colour: d.a ?? 'w', sources: d.s }
   }
   // Transfigured gems ("Kinetic Blast of Clustering") aren't in the campaign
   // data: they share their base gem's colour and level, and no quest or
   // vendor hands them out.
   const i = name.lastIndexOf(' of ')
-  const base = i > 0 ? DATA[name.slice(0, i)] : undefined
+  const base = i > 0 ? table.value[name.slice(0, i)] : undefined
   return base ? { name, requiredLevel: base.l, colour: base.a ?? 'w', sources: [] } : null
 }
 
@@ -114,7 +129,7 @@ function questStep (s: Source): number {
 // The first source the class can use: earliest quest, the reward before a
 // vendor at the same quest.
 function firstSource (name: string, cls: string): Source | null {
-  const entry = DATA[name] ?? DATA[`${name} Support`]
+  const entry = table.value[name] ?? table.value[`${name} Support`]
   if (!entry) return null
   const idx = CLASSES.indexOf(cls)
   const fits = entry.s.filter(s => idx < 0 || s[4][idx] === '1')
@@ -130,7 +145,7 @@ function sourceLabel (pick: Source | null): string | null {
 // Every way the class gets the gem in the campaign: the quest reward, and the
 // first vendor that sells it. One line each, for a gem's tooltip.
 export function gemWhere (name: string, className: string): string {
-  const entry = DATA[name] ?? DATA[`${name} Support`]
+  const entry = table.value[name] ?? table.value[`${name} Support`]
   if (!entry) return gemData(name) ? 'Not in the campaign: buy or drop' : ''
   const idx = CLASSES.indexOf(baseClass(className))
   const fits = entry.s.filter(s => idx < 0 || s[4][idx] === '1')

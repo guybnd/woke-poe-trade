@@ -28,6 +28,7 @@ export const SEARCH_GROUPS: readonly GroupInfo[] = [
   { id: 'Passive tree', name: 'Passive tree', mode: 'folded' },
   { id: 'Ring anoints', name: 'Ring anoints', mode: 'folded' },
   { id: 'Megalomaniac', name: 'Megalomaniac', mode: 'folded' },
+  { id: 'Forbidden pairs', name: 'Forbidden pairs', mode: 'folded' },
   { id: 'Pantheon', name: 'Pantheon', mode: 'folded' },
   { id: 'Zones', name: 'Zones', mode: 'folded' },
   { id: 'Your saved items', name: 'Your saved items', mode: 'folded' },

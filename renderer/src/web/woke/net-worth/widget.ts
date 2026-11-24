@@ -50,6 +50,9 @@ export interface NetWorthWidget extends Widget {
   salesSort?: SaleSort
   // A listing unsold this many days counts as stale (default 3).
   staleDays?: number
+  // The stale listings when you last hid the icon's count: it comes back once
+  // another one goes stale.
+  staleHidden?: string[]
   // Listings refresh on entering your hideout, at most every 30 min (undefined: on).
   listedAuto?: boolean
   // Your Faustus listings count in the total (undefined: yes).
