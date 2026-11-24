@@ -10,7 +10,7 @@
       <!-- One line on the small card: the first source, the rest on hover. -->
       <span v-if="compact && facts.other.length" :class="$style.more" :title="facts.other.join('\n')">{{ compactOther }}</span>
       <!-- How rare it is, by drop weight (Guy 2026-11-24): the full view has it in its head line. -->
-      <span v-if="compact && rarity" :class="$style.more" :title="rarityWords(facts.oneIn!)" data-card-rarity>· {{ rarity }}</span>
+      <span v-if="compact && rarity" :class="[$style.more, $style.rarity]" :title="rarityWords(facts.oneIn!)" data-card-rarity>{{ rarity }}</span>
     </div>
     <template v-if="!compact">
       <div v-for="o in facts.other" :key="o" :class="$style.other">{{ o }}</div>
@@ -77,6 +77,8 @@ function open () {
 .chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-block: 2px; }
 .tier { margin-left: 4px; color: var(--w-dim); font-size: var(--w-fs-sm); }
 .more { color: var(--w-dim); font-size: var(--w-fs-sm); }
+/* Set apart from the chips by space, not a dot that could start a wrapped row. */
+.rarity { margin-left: var(--w-s2); white-space: nowrap; }
 .other { color: var(--w-text); }
 .foot { display: flex; align-items: center; justify-content: space-between; gap: var(--w-s2); margin-top: 2px; }
 </style>

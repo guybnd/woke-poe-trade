@@ -77,6 +77,6 @@ test('the price check of a div card shows where it drops', async ({ overlay }) =
   await expect(drops).toContainText('Drops:')
   await expect(drops.locator('[data-card-drop-map]', { hasText: 'Waste Pool' })).toBeVisible()
   // How rare it is among all cards, by drop weight.
-  await expect(drops.locator('[data-card-rarity]')).toHaveText('· 1 in 121k cards')
+  await expect(drops.locator('[data-card-rarity]')).toHaveText('1 in 121k cards')
   await overlay.snap('card-drops-price-check')
 })

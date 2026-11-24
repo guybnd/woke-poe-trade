@@ -34,7 +34,8 @@
    "renderer/src/web/woke/price-insight/",
    "renderer/src/web/price-check/",
    "renderer/src/parser/",
-   "renderer/public/data/card-drops.json"
+   "renderer/public/data/card-drops.json",
+   "renderer/src/web/woke/ui/tooltip/item-tip.ts"
   ],
   "catalyst-slider.spec.ts": [
    "renderer/src/parser/",
