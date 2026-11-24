@@ -169,13 +169,16 @@ function readThese () {
 .del:hover { opacity: 1; }
 .tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--w-s1); }
 .list { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow-y: auto; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); }
-/* Rows at body size; the tab's own colour as a thick left edge (no colour: a faint one). */
-.row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--w-s2); align-items: center; padding: 5px var(--w-s2); border-left: 4px solid var(--tab, var(--w-line)); cursor: pointer; font-size: var(--w-fs-md); }
-.row:hover { background: var(--w-panel-2); }
+/* Rows at body size, each tinted with its tab's own colour (pick D). The tint
+   stays light and the text gets a shadow so names read on white or yellow
+   tabs too; a hairline keeps two tabs of one colour apart. */
+.row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--w-s2); align-items: center; padding: 5px var(--w-s2); cursor: pointer; font-size: var(--w-fs-md); background: color-mix(in srgb, var(--tab, transparent) 30%, transparent); box-shadow: inset 0 -1px 0 rgb(0 0 0 / .3); text-shadow: 0 1px 1px rgb(0 0 0 / .6); }
+.row:hover { background: color-mix(in srgb, var(--tab, var(--w-panel-2)) 36%, var(--w-panel-2)); }
 .name { color: var(--w-fg); }
-.kind { color: var(--w-dim); font-size: var(--w-fs-sm); }
-.off { cursor: default; }
-.off .name { color: var(--w-dim); }
+.kind { color: color-mix(in srgb, var(--w-fg) 75%, transparent); font-size: var(--w-fs-sm); }
+.off { cursor: default; background: color-mix(in srgb, var(--tab, transparent) 12%, transparent); }
+.off .name, .off .kind { color: var(--w-dim); }
+.off:hover { background: color-mix(in srgb, var(--tab, transparent) 12%, transparent); }
 .none { padding: var(--w-s2); }
 .save { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--w-s1); }
 .foot { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); }

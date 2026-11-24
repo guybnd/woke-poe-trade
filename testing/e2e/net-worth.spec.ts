@@ -273,6 +273,14 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect(panel.getByText('Undercut 1')).toBeVisible()
     // Rows nobody checked still offer Check; no search went out for them.
     await expect(listedRows.filter({ hasText: "Kaom's Heart" }).locator('[data-listed-check]')).toContainText('Check')
+    // A chip: the head names it and totals its rows (all three are uniques here).
+    const head = panel.locator('[data-listed] [data-listed-total]')
+    const allAsk = await head.innerText()
+    await panel.locator('[data-listed]').getByText(/^Uniques 3$/).click()
+    await expect(panel.locator('[data-listed-filtered]')).toHaveText('uniques')
+    await expect(head).toHaveText(allAsk)
+    await panel.locator('[data-listed]').getByText(/^Uniques 3$/).click()
+    await expect(panel.locator('[data-listed-filtered]')).toHaveCount(0)
     await overlay.snap('net worth listed')
     await overlay.page.unroute('**/api/trade/search/**')
     await overlay.page.unroute('**/api/trade/fetch/**')
