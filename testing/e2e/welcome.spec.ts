@@ -68,7 +68,8 @@ test('All tools counts what is new; pointing at a tool clears its seal; Net wort
   await overlay.boot({ overlayActive: true, whatsNew: true })
   const page = overlay.page
   const count = page.locator('[data-news-count]')
-  const tools = new Set(NEWS.map(n => n.wmType)).size
+  // A line that opens a Settings page (price check) has no tool row in All tools.
+  const tools = new Set(NEWS.filter(n => !n.settingsPage).map(n => n.wmType)).size
   await expect(count).toHaveText(String(tools))
   await page.getByRole('button', { name: 'All tools' }).click()
   const row = (name: string) => page.locator('div').filter({ has: page.getByRole('button', { name, exact: true }) }).last()

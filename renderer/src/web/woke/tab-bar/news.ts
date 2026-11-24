@@ -22,6 +22,10 @@ export interface NewsItem {
 }
 
 export const NEWS: NewsItem[] = [
+  { id: 'price-check-ninja-trust', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: the instant card says when poe.ninja\'s price looks fake, with the item\'s usual price' },
+  { id: 'price-check-bulk-remembered', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: Bulk stays on for your next checks until you turn it off' },
+  { id: 'price-check-seller-spread', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: exchange prices show what sellers ask, like "1 to 15c, most ask 10c"' },
+  { id: 'price-check-unid-vs-id', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: unid Watcher\'s Eye and other gamble jewels show unid price vs identified versions' },
   { id: 'per-hour-time-setting', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: Play, + Hideout or All beside every per hour, the same choice in every tool' },
   { id: 'net-worth-public', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: open to everyone. Charts what your stash is worth and what each map earned' },
   { id: 'map-mods-t17-planner', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: a Planner tab for T17 maps, and what each mod adds to a map' },
