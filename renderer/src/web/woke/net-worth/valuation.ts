@@ -317,7 +317,9 @@ export function priceItem (item: StashItemLike, priceOf: PriceOf, prefs: PricePr
   if (held) {
     out.heldSince = held.since
     out.heldKind = held.kind
-  } else if (!ninja.oneDay) out.solid = true
+    // An ignored item's price is never vouched for: ignoring a fake mustn't
+    // make it the trusted price (ref) it's held against once un-ignored.
+  } else if (hold && !ninja.oneDay) out.solid = true
   if (!held && hold && guard) {
     const released = spikeReleased(ninjaChaos, ninja, guard.before?.[key], guard.now)
     if (released != null) out.released = released
@@ -547,6 +549,9 @@ export interface NetWorthHistory {
   // The read already counted (so a reload doesn't count it twice).
   countedReadAt: number | null
   lastDiff: StashDiff | null
+  // Divines that picking other tabs added (or dropped) today: "today" takes
+  // it off, so a tab change isn't profit or loss.
+  tabShift?: { day: string, div: number }
 }
 
 export const emptyHistory = (): NetWorthHistory => ({ days: {}, today: { day: '', points: [] }, countedReadAt: null, lastDiff: null })
@@ -572,7 +577,17 @@ export function sinceYesterday (h: NetWorthHistory, chaosNow: number, divineNow:
   const earlier = Object.keys(h.days).filter(d => d < today).sort().pop()
   const prev = earlier ? h.days[earlier] : null
   if (!prev) return null
-  return chaosNow / divineNow - prev.chaos / (prev.divine ?? divineNow)
+  const shift = h.tabShift?.day === today ? h.tabShift.div : 0
+  return chaosNow / divineNow - prev.chaos / (prev.divine ?? divineNow) - shift
+}
+
+// A read of other tabs (tab picker): what they add or drop against the read
+// before, so "today" leaves it out (sinceYesterday).
+export function withTabShift (h: NetWorthHistory, prevChaos: number | null, chaosNow: number, divine: number | null, at: number): NetWorthHistory {
+  if (prevChaos == null || !divine) return h
+  const day = dayOf(at)
+  const had = h.tabShift?.day === day ? h.tabShift.div : 0
+  return { ...h, tabShift: { day, div: had + (chaosNow - prevChaos) / divine } }
 }
 
 // Chaos per hour across today's reads. Needs at least 20 minutes between them.

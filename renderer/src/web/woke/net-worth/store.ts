@@ -9,7 +9,7 @@ import { ninjaPriceOf } from './prices'
 import { historyRev, loadPriceHistory } from './history'
 import { lastWokePrices } from '../market/hook'
 import {
-  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceYesterday, tabSetOf, valueStash
+  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceYesterday, tabSetOf, valueStash, withTabShift
 } from './valuation'
 import { stashGains, gainsKey } from './gains'
 import { classify, resolveSpends } from './spend'
@@ -21,6 +21,7 @@ import type { LedgerPoint, TabValue } from './ledger'
 import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, StashTabLike, Valuation } from './valuation'
 import type { ReaderStatus } from './widget'
 import { recordRunRead } from './run-store'
+import { isMapCostItem } from './runs'
 import { emptyMarks, feedMarks, playRates, startOfDay, trimMarks, RATE_WINDOWS } from './play-time'
 import type { PlayMarks, PlayRates } from './play-time'
 
@@ -216,6 +217,8 @@ async function countRead (id: string, readAt: number) {
     // Other tabs now: today's rate starts again from this read, so the
     // tabs added or dropped don't read as profit or loss per hour.
     next = { ...next, today: { day: next.today.day, points: next.today.points.slice(-1) } }
+    // Nor as today's: against the read before (the old tabs).
+    next = withTabShift(next, history.value.today.points[history.value.today.points.length - 1]?.chaos ?? null, v.chaos, divine.value, readAt)
   }
   history.value = next
   // The chart's point, the change view, and per-tab values.
@@ -240,7 +243,10 @@ async function countRead (id: string, readAt: number) {
   await hostRequest('doc-put', { collection: COLLECTION, key: baseKey, value: nextBase }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: tabsKey, value: tabs }).catch(() => {})
   // A strategy run going: this read's changes join its tally (run-store.ts).
-  await recordRunRead(id, diff, nextLedger.points, divine.value)
+  const costKeys = new Set<string>()
+  for (const l of v.lines) if (isMapCostItem(l.name, l.category)) costKeys.add(l.key)
+  for (const [k, b] of Object.entries(before ?? {})) if (isMapCostItem(b.name, b.cat)) costKeys.add(k)
+  await recordRunRead(id, diff, nextLedger.points, divine.value, costKeys)
 }
 
 // The dock icon's number at a read (Ctrl+Space reads the saved one).

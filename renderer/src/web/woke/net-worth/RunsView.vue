@@ -119,14 +119,14 @@ import { tipFor } from './tips'
 import type { TipIndex } from './tips'
 import { span } from './play-time'
 import Coin from './Coin.vue'
-import { countLabel, leftOf, lineCost, mapsIn, readPerHour, runTotals, tallyRows, tallyValue, unitOf } from './runs'
+import { countLabel, isMapCostItem, leftOf, lineCost, mapsIn, readPerHour, runTotals, tallyRows, tallyValue, unitOf } from './runs'
 import type { CostLine, ManualLine, Run, TallyRow } from './runs'
 import RunRow from './RunRow.vue'
 import RunAdd from './RunAdd.vue'
 import type { AddedLine } from './RunAdd.vue'
 import RunTimeBar from './RunTimeBar.vue'
 import type { RunTime } from './run-time'
-import { addCost, deleteRun, editRun, loadRuns, refreshRunMaps, runMaps, runsDoc, setOutside } from './run-store'
+import { addCost, deleteRun, editRun, loadRuns, refreshRunMaps, runCostKeys, runMaps, runsDoc, setOutside } from './run-store'
 import { stopLiveRun } from './run-stop'
 import { lastCostsOf, startRunAt } from './run-start'
 import { outsideSums, outsideTotals, rowKey, setBefore, setEdit } from './faustus'
@@ -262,7 +262,8 @@ async function readListings () {
 }
 
 // Map-cost items: maps, scarabs and fragments (for cost per map).
-const mapCostKeys = computed(() => new Set(props.lines.filter(l => l.category === 'fragments' || /\bMap( \(|$)/.test(l.name)).map(l => l.key)))
+// The store's set also has items used up to none since (no longer in lines).
+const mapCostKeys = computed(() => new Set([...runCostKeys.value, ...props.lines.filter(l => isMapCostItem(l.name, l.category)).map(l => l.key)]))
 const totals = computed(() => {
   const r = shownRun.value
   if (!r) return null

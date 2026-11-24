@@ -122,6 +122,11 @@ async function glanceOutside (league: string, r: Run): Promise<Outside | undefin
 // Boss fights from Client.txt (run-time.ts, loaded when first needed).
 const runFights = (startAt: number, now: number) => import('./run-time').then(m => m.fightsIn(startAt, now)).catch(() => 0)
 
+// Map-cost item keys (runs.ts isMapCostItem), from the stash's items and the
+// last baseline's (so one used up to none still counts): the glance's cost
+// per map then agrees with the Runs view's.
+export const runCostKeys = shallowRef<ReadonlySet<string>>(new Set())
+
 // The dock number and Ctrl+Space's answer for the live run (null: none).
 async function saveGlance (league: string, run: Run | null, points: readonly LedgerPoint[], divine: number | null) {
   let g: RunGlance | null = null
@@ -129,7 +134,7 @@ async function saveGlance (league: string, run: Run | null, points: readonly Led
     const now = Date.now()
     const maps = mapsIn(run, await readRunMaps(run, now), now)
     const fights = await runFights(run.startAt, now)
-    const t = runTotals(run, points, { maps, fights }, now, undefined, await glanceOutside(league, run))
+    const t = runTotals(run, points, { maps, fights }, now, runCostKeys.value, await glanceOutside(league, run))
     g = { league, name: run.name, startAt: run.startAt, at: now, profitChaos: t.profitChaos, maps, perHourChaos: t.perHourChaos, costPerMapChaos: t.costPerMapChaos, divine }
     if (fights) g.fights = fights
     if (t.faustusChaos) g.faustusChaos = t.faustusChaos
@@ -139,13 +144,27 @@ async function saveGlance (league: string, run: Run | null, points: readonly Led
 }
 export const runGlance = shallowRef<RunGlance | null>(null)
 
+// Set by run-stop.ts from the press until the run is stopped.
+let pendingStop: { id: string, at: number } | null = null
+export function setPendingStop (p: { id: string, at: number } | null) { pendingStop = p }
+
 // A counted read (store.ts): into the live run's tally.
-export function recordRunRead (league: string, diff: StashDiff | null, points: readonly LedgerPoint[], divine: number | null): Promise<void> {
+export function recordRunRead (league: string, diff: StashDiff | null, points: readonly LedgerPoint[], divine: number | null, costKeys?: ReadonlySet<string>): Promise<void> {
+  if (costKeys) runCostKeys.value = costKeys
   return queue(async () => {
     await loadRuns(league)
     const live = runsDoc.value.live
     if (!readOk || !live || live.league !== league) return
-    const next = diff ? addToTally(live, diff) : live
+    // Stop was pressed and is waiting on its Faustus read: a read after the
+    // press is past the run's end (its stash change isn't counted either).
+    const cap = pendingStop?.id === live.id ? { ...live, stoppedAt: pendingStop.at } : live
+    const added = diff ? addToTally(cap, diff) : cap
+    let next = live
+    if (added !== cap) {
+      next = { ...added }
+      if (live.stoppedAt == null) delete next.stoppedAt
+      else next.stoppedAt = live.stoppedAt
+    }
     if (next !== live) await save(league, { ...runsDoc.value, live: next })
     await saveGlance(league, next, points, divine)
   })
@@ -178,7 +197,7 @@ async function withFinal (run: Run, points: readonly LedgerPoint[]): Promise<Run
   const maps = mapsIn(run, await readRunMaps(run, run.stoppedAt), run.stoppedAt)
   const fights = await runFights(run.startAt, run.stoppedAt)
   const t = runTotals(run, points, { maps, fights }, run.stoppedAt, undefined, outsideOf(run))
-  const final: Run['final'] = { profitChaos: t.profitChaos, maps, perMapChaos: t.perMapChaos, perHourChaos: t.perHourChaos }
+  const final: Run['final'] = { profitChaos: t.profitChaos, maps, perMapChaos: t.perMapChaos, perHourChaos: t.perHourChaos, stashChaos: t.stashChaos }
   if (fights) final.fights = fights
   if (t.faustusChaos) final.faustusChaos = t.faustusChaos
   return { ...run, final }

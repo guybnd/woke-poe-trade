@@ -84,7 +84,9 @@ export interface ManualLine { id: string, name: string, key?: string | null, ico
 // `fights`: boss arenas (Maven, Uber Elder...), which aren't maps. Each counts
 // as one run of the strategy, like a map: per-map figures and typed costs
 // are per map or fight.
-export interface RunFinal { profitChaos: number, maps: number, fights?: number, perMapChaos: number | null, perHourChaos: number | null, faustusChaos?: number }
+// `stashChaos`: the stash change at Stop, for when the chart's reads no
+// longer go back to the run's start (the ledger keeps the newest reads only).
+export interface RunFinal { profitChaos: number, maps: number, fights?: number, perMapChaos: number | null, perHourChaos: number | null, faustusChaos?: number, stashChaos?: number }
 
 export interface RunCount { maps: number, fights: number }
 // "4 maps · 2 fights", "1 fight", "0 maps".
@@ -176,6 +178,14 @@ function inRun (run: Run, at: number): boolean {
   return at > run.startAt && (run.stoppedAt == null || at <= run.stoppedAt)
 }
 
+// A stopped run whose start is older than the chart's first read: the stash
+// change kept at Stop (what's left of the reads would undercount it).
+export function runStash (run: Run, points: readonly LedgerPoint[]): number {
+  const kept = run.final?.stashChaos
+  if (run.stoppedAt != null && kept != null && !(points.length && points[0].at <= run.startAt)) return kept
+  return stashChange(run, points)
+}
+
 export function stashChange (run: Run, points: readonly LedgerPoint[]): number {
   let sum = 0
   for (const p of points) {
@@ -203,7 +213,7 @@ export function leftOf (c: CostLine, runs: number): number | null {
 export function runTotals (run: Run, points: readonly LedgerPoint[], count: number | RunCount, now: number, mapCostKeys: ReadonlySet<string> = new Set(), outside: Outside = { beforeChaos: 0, faustusChaos: 0 }): RunTotals {
   const { maps, fights } = typeof count === 'number' ? { maps: count, fights: 0 } : count
   const runs = maps + fights
-  const stashChaos = stashChange(run, points)
+  const stashChaos = runStash(run, points)
   const typedKeys = new Set(run.costs.map(c => c.key).filter((k): k is string => k != null))
   let takenOverChaos = 0
   for (const k of typedKeys) takenOverChaos += netOf(run.tally[k])
@@ -288,6 +298,11 @@ export function tallyRows (run: Run): { used: TallyRow[], came: TallyRow[] } {
     used: rows.filter(r => r.netChaos < 0).sort((a, b) => a.netChaos - b.netChaos),
     came: rows.filter(r => r.netChaos > 0).sort((a, b) => b.netChaos - a.netChaos)
   }
+}
+
+// Map-cost items (for cost per map): maps, scarabs and fragments.
+export function isMapCostItem (name: string, category: string | undefined): boolean {
+  return category === 'fragments' || /\bMap( \(|$)/.test(name)
 }
 
 // Maps in the run: came out of after the start, entered before the end.

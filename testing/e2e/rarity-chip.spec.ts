@@ -1,5 +1,5 @@
 // The rarity chip on gear: Any / Magic / Rare. A rare body armour can search
-// magic bases with its mods (to recombine or fracture), and the chip turns amber
+// magic bases with its mods (to craft or recombine), and the chip turns amber
 // when Magic can't match the ticked prefixes and suffixes.
 import type { Page } from '@playwright/test'
 import { test, expect } from './harness'
