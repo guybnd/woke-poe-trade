@@ -47,6 +47,13 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T02:05:31.777Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-24T02:40:15.175Z'
+    comment: >-
+      Guy picked D (full-row tint). Follow-up PR
+      https://github.com/guybnd/woke-poe-trade/pull/832
+    id: a-2026-11-24t02-40-15-175z
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
