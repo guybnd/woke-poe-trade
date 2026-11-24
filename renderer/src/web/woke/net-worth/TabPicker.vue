@@ -25,11 +25,10 @@
       </div>
       <ul :class="$style.list">
         <li v-for="t in shown" :key="t.id">
-          <label :class="$style.row">
+          <label :class="[$style.row, UNREADABLE.has(t.type) && $style.off]" :style="t.colour ? { '--tab': t.colour } : undefined">
             <input type="checkbox" :checked="ticked.has(t.id) && !UNREADABLE.has(t.type)" :disabled="UNREADABLE.has(t.type)" @change="tick(t.id, ($event.target as HTMLInputElement).checked)">
-            <span :class="$style.swatch" :style="{ background: t.colour ?? 'transparent' }" />
-            <span class="w-trunc">{{ t.name || `Tab ${t.index + 1}` }}</span>
-            <span class="w-dim text-xs" :title="UNREADABLE.has(t.type) ? `pathofexile.com doesn't send what's in ${typeLabel(t.type).toLowerCase()} tabs` : undefined">{{ typeLabel(t.type) }}{{ UNREADABLE.has(t.type) ? ' · can’t be read' : '' }}</span>
+            <span class="w-trunc" :class="$style.name">{{ t.name || `Tab ${t.index + 1}` }}</span>
+            <span :class="$style.kind" :title="UNREADABLE.has(t.type) ? `pathofexile.com doesn't send what's in ${typeLabel(t.type).toLowerCase()} tabs` : undefined">{{ typeLabel(t.type) }}{{ UNREADABLE.has(t.type) ? ' · can’t be read' : '' }}</span>
           </label>
         </li>
         <li v-if="!shown.length" class="w-dim text-xs" :class="$style.none">No tabs match.</li>
@@ -170,9 +169,13 @@ function readThese () {
 .del:hover { opacity: 1; }
 .tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--w-s1); }
 .list { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow-y: auto; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); }
-.row { display: grid; grid-template-columns: auto 10px minmax(0, 1fr) auto; gap: var(--w-s2); align-items: center; padding: 4px var(--w-s2); cursor: pointer; font-size: var(--w-fs-sm); }
+/* Rows at body size; the tab's own colour as a thick left edge (no colour: a faint one). */
+.row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--w-s2); align-items: center; padding: 5px var(--w-s2); border-left: 4px solid var(--tab, var(--w-line)); cursor: pointer; font-size: var(--w-fs-md); }
 .row:hover { background: var(--w-panel-2); }
-.swatch { width: 10px; height: 10px; border-radius: 2px; border: 1px solid var(--w-line-strong); }
+.name { color: var(--w-fg); }
+.kind { color: var(--w-dim); font-size: var(--w-fs-sm); }
+.off { cursor: default; }
+.off .name { color: var(--w-dim); }
 .none { padding: var(--w-s2); }
 .save { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--w-s1); }
 .foot { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); }
