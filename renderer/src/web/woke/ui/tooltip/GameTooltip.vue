@@ -151,7 +151,10 @@
           <template v-if="lookup.market.range.low !== lookup.market.range.high"><WPrice :bulk="lookup.market.range.high < 1" :chaos="lookup.market.range.low" :divine="xchgRate ?? null" /> to </template><WPrice :bulk="lookup.market.range.high < 1" :chaos="lookup.market.range.high" :divine="xchgRate ?? null" />
           <span class="w-dim" :class="$style.span">{{ lookup.market.range.count }} prices</span>
         </footer>
-        <footer v-else-if="lookup.market" :class="$style.strip">
+        <footer v-else-if="lookup.market?.varies" :class="$style.strip" data-tip="varies" title="Its price depends on a roll hidden until identified. A price check of it can look up unidentified copies on trade.">
+          <span class="w-dim">Price depends on the hidden roll</span>
+        </footer>
+        <footer v-else-if="lookup.market && !lookup.market.unidOnly" :class="$style.strip">
           <!-- One's price from poe.ninja; with a count, what they're worth together. -->
           <WPrice bulk :chaos="lookup.market.chaos" :divine="xchgRate ?? null" />
           <span v-if="bulkPerDivine(lookup.market.chaos, xchgRate) != null" class="w-dim">({{ formatAmount(lookup.market.chaos) }}c each)</span>
@@ -169,7 +172,7 @@
         </footer>
         <footer v-if="lookup.market?.unid" :class="$style.strip" :title="`Middle of the cheapest 10 of ${lookup.market.unid.listings} unidentified instant buyouts on trade.`">
           <WPrice :chaos="lookup.market.unid.chaos" :divine="xchgRate ?? null" />
-          <span class="w-dim">unidentified</span>
+          <span class="w-dim">unidentified<template v-if="lookup.market.unid.at"> · {{ agoPhrase(lookup.market.unid.at) }}</template></span>
         </footer>
       </template>
     </div>
@@ -193,7 +196,7 @@ import SwapCard from '../../pob-builds/SwapCard.vue'
 const ListingModGroup = defineAsyncComponent(() => import('./ListingModGroup.vue'))
 import WDelta from '../WDelta.vue'
 import WPrice from '../WPrice.vue'
-import { bulkPerDivine, formatAmount } from '../format'
+import { agoPhrase, bulkPerDivine, formatAmount } from '../format'
 import WSpark from '../WSpark.vue'
 import { hideTip, hideTipOnScroll, tip } from './tooltip'
 import { loadTipBases } from './item-tip'

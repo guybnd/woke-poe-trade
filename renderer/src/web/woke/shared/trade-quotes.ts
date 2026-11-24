@@ -10,11 +10,14 @@ import { inLane } from './on-demand'
 export interface TradeQuote {
   chaos: number
   listings: number
+  /** When it was looked up (ms); absent in older callers' test data. */
+  at?: number
 }
 
-// Refetched when older than this; still shown (over poe.ninja) until a day old.
+// Refetched (on a click) when older than this; still used, over poe.ninja,
+// by every window until a week old (Guy's pick C1, 2026-11-24).
 const FRESH_MS = 60 * 60 * 1000
-export const SHOW_MS = 24 * 60 * 60 * 1000
+export const SHOW_MS = 7 * 24 * 60 * 60 * 1000
 const RETRY_MS = 5 * 60 * 1000
 // At most 6 searches a minute, against the site's limit of 15.
 const GAP_MS = 10_000
@@ -76,7 +79,7 @@ export function createTradePrices (deps: TradePriceDeps) {
   function get (forLeague: string, name: string): TradeQuote | null {
     const q = stored.value[forLeague]?.[name]
     if (!q || q.chaos == null || now() - q.ts > SHOW_MS) return null
-    return { chaos: q.chaos, listings: q.listings }
+    return { chaos: q.chaos, listings: q.listings, at: q.ts }
   }
 
   /** Looked up within the hour and found too few listings to price it. */

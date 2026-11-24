@@ -52,7 +52,9 @@ export interface BossPrefs {
 export type PriceMode = 'unid' | 'min' | 'median' | 'custom'
 // Where the price on a row came from.
 // 'thin': poe.ninja's row is a thin market and Skip low confidence counts it as 0.
-export type PriceSource = 'trade' | 'ninja' | 'custom' | 'thin'
+// 'varies': a rolled unique with no unidentified trade price yet. It counts
+// as 0 rather than at poe.ninja's one misleading price (Guy's pick C1).
+export type PriceSource = 'trade' | 'ninja' | 'custom' | 'thin' | 'varies'
 
 // Price found on official trade, for drops poe.ninja can't price properly.
 export type { TradeQuote }
@@ -109,6 +111,8 @@ export interface BossResult {
   drops: DropRow[]
   // Drops with a chance but no price, or a price but no chance.
   unpriced: number
+  // Counted rolled uniques with no unidentified trade price yet (left out).
+  varies: string[]
   unrated: number
   // Drops using an estimated chance rather than a measured one.
   estimated: number
@@ -163,8 +167,9 @@ export interface DropPrice {
 }
 
 // Price for a drop, honouring the player's choice for roll-dependent items.
-// Trade fills in until poe.ninja has a row: unidentified items fall back to
-// poe.ninja until their trade price is known.
+// Trade fills in until poe.ninja has a row. An unidentified rolled unique has
+// no price until its trade price is known: poe.ninja's one row for it is a
+// guess at a roll nobody has seen.
 export function dropPrice (d: BossDrop, prices: Prices, prefs: BossPrefs): DropPrice {
   const custom = prefs.customPrices[d.name]
   const chosen = prefs.priceModes[d.name]
@@ -180,6 +185,7 @@ export function dropPrice (d: BossDrop, prices: Prices, prefs: BossPrefs): DropP
   const spread = prices.variants(d.name, prefs.skipThin)
   if (mode === 'custom' && custom != null) return { price: custom, spread, mode, source: 'custom', listings: null }
   if (mode === 'unid' && quote) return { price: quote.chaos, spread, mode, source: 'trade', listings: quote.listings }
+  if (mode === 'unid') return { price: null, spread, mode, source: 'varies', listings: null }
   const ninja = spread ? (mode === 'min' ? spread.min : spread.median) : null
   // Every variant thin, with Skip low confidence on: counts as 0 like any thin row.
   if (ninja == null && prefs.skipThin && prices.allThin(d.name)) return { price: 0, spread: null, mode, source: 'thin', listings: null }
@@ -296,6 +302,7 @@ export function evaluateBoss (
 
   let unpriced = 0
   let unrated = 0
+  const varies: string[] = []
   const drops: DropRow[] = dropList(boss, prefs).map(d => {
     let chance: number | null = null
     let rateSource: RateSource = 'none'
@@ -317,6 +324,7 @@ export function evaluateBoss (
     const tooRare = chance != null && chance > 0 && chance < minChance
     const included = toggles[d.name] ?? !tooRare
     if (chance == null) unrated++
+    else if (source === 'varies' && chance > 0 && included) varies.push(d.name)
     else if (p == null && chance > 0 && included) unpriced++
     const value = included && chance != null && p != null ? chance * qty * p : 0
     return { name: d.name, variant: d.variant, chance, rateSource, qty, price: p, value, included, tooRare, spread, priceMode: mode, priceSource: source, listings }
@@ -340,7 +348,7 @@ export function evaluateBoss (
     myLoot = total / kills.length
   }
 
-  return { boss, entry, entryMissing, loot, profit, perHour, runSeconds, drops, unpriced, unrated, estimated, hasRates, ready: hasRates && !entryMissing.length, kills: kills.length, myLoot, excluded }
+  return { boss, entry, entryMissing, loot, profit, perHour, runSeconds, drops, unpriced, varies, unrated, estimated, hasRates, ready: hasRates && !entryMissing.length, kills: kills.length, myLoot, excluded }
 }
 
 export interface Luck {

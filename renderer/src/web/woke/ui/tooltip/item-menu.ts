@@ -64,7 +64,7 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
 
   const market = ref.noPrice || ref.text ? null : marketFor({ name: ref.name, type: ref.type, variant: ref.variant }, kind)
   const divine = usePoeninja().xchgRate.value
-  const price = market ? formatUnitPrice(market.chaos, divine) : undefined
+  const price = market && !market.varies ? formatUnitPrice(market.chaos, divine) : undefined
 
   const check = priceCheckInput(ref, kind, info, AppConfig().language === 'en')
   const actions: MenuItemAction[] = [

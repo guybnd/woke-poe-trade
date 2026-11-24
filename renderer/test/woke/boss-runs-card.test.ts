@@ -52,7 +52,9 @@ describe('boss runs card', () => {
       { name: 'Forbidden Flame', variant: 'b', chaos: 300 },
       { name: 'Forbidden Flame', variant: 'c', chaos: 900 }
     ] as Parameters<typeof priceResolver>[0])
-    expect(killDropPrice({ name: 'Forbidden Flame' }, prices, prefs())).toBe(300)
+    // Unidentified: no price until trade has one (poe.ninja's rows are identified versions).
+    expect(killDropPrice({ name: 'Forbidden Flame' }, prices, prefs())).toBeNull()
+    expect(killDropPrice({ name: 'Forbidden Flame' }, prices, prefs({ priceModes: { 'Forbidden Flame': 'median' } }))).toBe(300)
     expect(killDropPrice({ name: 'Forbidden Flame' }, prices, prefs({ priceModes: { 'Forbidden Flame': 'custom' }, customPrices: { 'Forbidden Flame': 5000 } }))).toBe(5000)
   })
 

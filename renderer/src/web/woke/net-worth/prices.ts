@@ -1,11 +1,15 @@
 // Prices for stash items from the poe.ninja data the app already downloads.
 // Never a trade search: rares and other gear without a poe.ninja row stay
-// unpriced.
+// unpriced. An unidentified rolled unique (Watcher's Eye...) takes the unid
+// trade price another window saved, else stays unpriced (Guy's pick C1).
 import { usePoeninja } from '@/web/background/Prices'
 import { lastWokePrices } from '../market/hook'
 import { feedDays, graphGaps, pricedOnlyToday } from '../market/parse'
 import { THIN_GAPS } from '../market/types'
 import { priceHistory } from './history'
+import { useUnidPrice } from '../shared/price'
+import { VARIABLE_ITEMS } from '../shared/unid-prices'
+import { uniqueFromArt } from '../shared/unid-art'
 import { categoryOfSlug, gemVariant, isRolledMap, isUniqueFrame, mapBase } from './valuation'
 import type { Priced, PriceOf, StashItemLike } from './valuation'
 
@@ -29,6 +33,7 @@ function cheapest (rows: Row[]): Row | undefined {
 
 export function ninjaPriceOf (): PriceOf {
   const ninja = usePoeninja()
+  const unidOf = useUnidPrice()
   const cache = new Map<string, Priced | null>()
   const divine = ninja.xchgRate.value ?? null
   // Days the league has prices for, so a new league's items aren't all thin.
@@ -57,6 +62,15 @@ export function ninjaPriceOf (): PriceOf {
       return row ? { chaos: row.chaos, category: 'cards', graph: row.graph, history: priceHistory('DIVINATION_CARD', item.typeLine) } : null
     }
     if (isUniqueFrame(item.frame)) {
+      // Unidentified: named by its base only. A rolled unique's one poe.ninja
+      // price is a guess at the hidden roll, so only a saved unid price counts.
+      if (!item.name) {
+        const unid = uniqueFromArt(item.baseType || item.typeLine, item.icon)
+        if (unid && VARIABLE_ITEMS.has(unid)) {
+          const q = unidOf(unid)
+          return q ? { chaos: q.chaos, category: 'gear' } : null
+        }
+      }
       const name = item.name || item.typeLine
       const rows = ninja.findPricesByName('UNIQUE', name) as Row[]
       const exact = ninja.findPriceByQuery({ ns: 'UNIQUE', name, variant: undefined })
@@ -90,7 +104,7 @@ export function ninjaPriceOf (): PriceOf {
     }
     // Other magic and rare items: no poe.ninja price, and no trade searches.
     if (item.frame === 1 || item.frame === 2) return null
-    const key = `${item.frame}|${item.name}|${item.typeLine}|${item.gemLevel}|${item.quality}|${item.corrupted}|${item.links}`
+    const key = `${item.frame}|${item.name}|${item.typeLine}|${item.name ? '' : item.icon}|${item.gemLevel}|${item.quality}|${item.corrupted}|${item.links}`
     if (!cache.has(key)) {
       let p: Priced | null = null
       try { p = lookup(item) } catch { p = null }

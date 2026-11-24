@@ -92,8 +92,11 @@ test('the art names the unique: poe.ninja price first, and Change picks another'
     await overlay.copyItem(UNID_CRIMSON)
     const panel = overlay.widget('price-check')
     const strip = panel.getByTestId('unid-guess')
-    await expect(strip).toContainText('Guessed from the art')
-    await expect(strip).toContainText(`${CRIMSON.length} Crimson Jewel uniques compared`)
+    // One slim line: the name with a *, whose hover says it was guessed.
+    const star = strip.getByTestId('unid-guess-star')
+    await expect(star).toHaveAttribute('title', `Guessed from the art: ${CRIMSON.length} Crimson Jewel uniques compared`)
+    await expect(strip).toContainText('Thread of Hope')
+    await expect(strip).not.toContainText('Guessed from the art')
     await expect(panel).toContainText('Thread of Hope')
     // poe.ninja's price, and no trade search until a click.
     const verdict = panel.getByTestId('ninja-verdict')
@@ -110,7 +113,8 @@ test('the art names the unique: poe.ninja price first, and Change picks another'
     await expect(list.getByRole('button', { name: /Split Personality/ })).toContainText('40c')
     await overlay.snap('unid jewel change list')
     await list.getByRole('button', { name: /Split Personality/ }).click()
-    await expect(strip).toContainText('Your pick')
+    await expect(strip).toContainText('Split Personality')
+    await expect(strip.getByTestId('unid-guess-star')).toHaveCount(0)
     await expect(panel.getByTestId('ninja-verdict')).toContainText('40c')
 
     // The live search is for unidentified listings of the picked unique.
@@ -144,7 +148,8 @@ test('no art to read: the picker, dearest first with prices', async ({ overlay, 
     await expect(tiles.nth(1)).toContainText('Split Personality')
     await overlay.snap('unid jewel picker')
     await tiles.nth(1).click()
-    await expect(panel.getByTestId('unid-guess')).toContainText('Your pick')
+    await expect(panel.getByTestId('unid-guess')).toContainText('Split Personality')
+    await expect(panel.getByTestId('unid-guess-star')).toHaveCount(0)
   } finally {
     fakeApp.game.cursor = saved
   }

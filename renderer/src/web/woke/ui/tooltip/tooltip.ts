@@ -38,8 +38,12 @@ export interface TipMarket {
   // A name with several prices: shown instead of the one price and its graph.
   range?: { low: number, high: number, count: number }
   // A rolled unique (a jewel) drops unidentified: what those sell for on
-  // trade, when Boss runs or Search has looked it up.
-  unid?: { chaos: number, listings: number }
+  // trade, when any window has looked it up.
+  unid?: { chaos: number, listings: number, at?: number }
+  // The unid price is the whole price: no poe.ninja strip beside it.
+  unidOnly?: boolean
+  // A rolled unique with no unid price yet: "depends on the roll", no number.
+  varies?: boolean
   // poe.ninja's price looks fake (shared/price-trust.ts): the line saying so.
   doubt?: string
 }

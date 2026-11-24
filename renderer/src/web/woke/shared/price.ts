@@ -29,11 +29,11 @@ export type { PriceRowLike } from './price-row'
 
 // A rolled unique (Watcher's Eye, Forbidden Flame...): its price is the
 // unidentified one, from a trade quote already on hand. Never searches: a
-// search runs only on a click (Search's unid row, Boss runs).
+// search runs only on a click (the price check, Search, Boss runs).
 export function useUnidPrice () {
   const trade = useTradePrices()
   const league = useLeagues().selectedId
-  return (name: string): { chaos: number, listings: number } | null => {
+  return (name: string): { chaos: number, listings: number, at?: number } | null => {
     if (!VARIABLE_ITEMS.has(name) || !league.value) return null
     return trade.get(league.value, name)
   }
@@ -68,5 +68,5 @@ export function usePrice () {
     const held = heldPrice(row.chaos, row.graph, loaded ? feedDays(loaded.chunks) : undefined, categoryOfNs(opts.ns))
     return { row, chaos: held ? held.chaos : row.chaos, held, unid: opts.ns === 'UNIQUE' ? unidOf(name) : null }
   }
-  return { priceOf, divine: computed(() => ninja.xchgRate.value ?? null) }
+  return { priceOf, unidOf, isVariable: (name: string) => VARIABLE_ITEMS.has(name), divine: computed(() => ninja.xchgRate.value ?? null) }
 }
