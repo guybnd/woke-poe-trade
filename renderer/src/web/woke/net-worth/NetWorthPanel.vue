@@ -24,7 +24,7 @@
     <!-- Listed at Faustus and not sold yet (pending.ts, pick B). -->
     <div v-if="view === 'listed'" :class="$style.body">
       <WEmpty v-if="!salesLeague" icon="fas fa-store">Pick a league under Settings › Game & league.</WEmpty>
-      <ListedView v-else :league="salesLeague" :divine="divine" :stale-days="config.staleDays" :auto="config.listedAuto !== false"
+      <ListedView v-else :wm-id="config.wmId" :league="salesLeague" :divine="divine" :stale-days="config.staleDays" :auto="config.listedAuto !== false"
         @stale-days="config.staleDays = $event" @auto="config.listedAuto = $event" />
       <div class="w-dim text-xs" :class="$style.foot">
         <span>Listings show as of your last read · sold items drop off by themselves</span>
@@ -59,7 +59,7 @@
         <button v-if="soldToday.count" type="button" class="w-num" :class="$style.soldToday" :title="`${soldToday.count} ${soldToday.count === 1 ? 'sale' : 'sales'} today. Click for the Sales view`" @click="view = 'sales'">Sold {{ div(soldToday.chaos) }}<Coin :chaos="!divine" /> today</button>
         <!-- The box counts your listings in the total or leaves them out
              (remembered; the same switch as Settings). The words open Listed. -->
-        <span v-if="listed.count" :class="$style.listedChip" data-listed-chip>
+        <span v-if="listed.count" :class="$style.listedChip" data-listed-chip data-goto-spot="faustus-box">
           <input type="checkbox" :checked="countListed"
             :title="countListed ? 'Counted in your total. Click to leave it out' : 'Left out of your total. Click to count it'"
             aria-label="Count Faustus listings in your total" data-count-listed @change="config.countListed = !countListed">
@@ -111,7 +111,7 @@
             </div>
             <SplitHandle v-if="!fold.chart" dir="y" @start="startDrag" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
           </section>
-          <div v-if="shown.perHour" :class="$style.box">
+          <div v-if="shown.perHour" :class="$style.box" data-goto-spot="per-hour">
             <div v-if="fold.perHour" :class="$style.boxHead">
               <button type="button" :class="$style.foldHead" :aria-expanded="false" title="Open Per hour" @click="flipFold('perHour')"><i class="fas fa-chevron-right" /><span :class="$style.caps">Per hour</span></button>
               <b class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b>

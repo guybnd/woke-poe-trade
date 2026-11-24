@@ -69,7 +69,7 @@ export interface BootOptions {
   firstRun?: boolean
   // Leave What's new unseen (tab-bar/news.ts), as after an update. Off by
   // default, so the dock and rail look as they do once it's been read.
-  whatsNew?: boolean
+  whatsNew?: boolean | string[]
   // Any other changes to the saved config.
   patch?: (config: any) => void // eslint-disable-line @typescript-eslint/no-explicit-any
   // Start with the overlay active (Shift+Space) instead of the game focused.
@@ -229,7 +229,8 @@ export class Overlay {
     const config = await this.defaultConfig()
     config.leagueId = 'Testleague'
     config.woke = { ...(config.woke ?? {}), setupDone: !opts.firstRun, off: opts.off ?? [] }
-    if (!opts.whatsNew) config.woke.seenNews = NEWS.map(n => n.id)
+    // whatsNew: every line unseen, or just the ids listed.
+    if (opts.whatsNew !== true) config.woke.seenNews = NEWS.map(n => n.id).filter(id => !(Array.isArray(opts.whatsNew) && opts.whatsNew.includes(id)))
     let nextId = Math.max(0, ...config.widgets.map((w: { wmId: number }) => w.wmId)) + 1
     const seeded: number[] = []
     for (const seed of opts.widgets ?? []) {

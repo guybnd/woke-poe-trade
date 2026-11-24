@@ -202,6 +202,16 @@ export function attachCrashLogger (l: Logger) {
 // starts fresh, since reports only look back that far.
 const KEEP_FIRST = 5
 let loggedErrors = 0
+// A UI step, as one app log line (Settings › Debug, and in Report an issue).
+let traced: number[] = []
+export function noteUiTrace (text: string) {
+  const now = Date.now()
+  traced = traced.filter(t => now - t < 60_000)
+  if (traced.length >= 30) return
+  traced.push(now)
+  logger?.write(`[ui] ${text.slice(0, 300)}`)
+}
+
 export function noteRendererError (text: string) {
   const now = Date.now()
   const last = rendererErrors[rendererErrors.length - 1]

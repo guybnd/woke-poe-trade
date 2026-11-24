@@ -1,0 +1,35 @@
+// What's new lines with nothing to open on a tab (the price check, Search):
+// Show me runs a sample instead, then flashes the feature in it
+// (goto-flash.ts). Read only by the dock's card, so not at startup.
+import type { ItemMenuRef } from '../ui/tooltip/item-menu-logic'
+
+export type NewsDemo =
+  // A price check of this item (one trade search, as a check is), and the
+  // spot in it, data-goto-spot on the element.
+  | { check: ItemMenuRef, spot: string }
+  // Ctrl+Space with this typed.
+  | { search: string }
+
+export const NEWS_DEMOS: Record<string, NewsDemo> = {
+  'price-check-seller-spread': { check: { name: 'Exalted Orb' }, spot: 'seller-spread' },
+  // A Breach unique and its blessed upgrade.
+  'price-check-related-upgrades': { check: { name: "Xoph's Inception", rarity: 'unique' }, spot: 'related' },
+  'price-check-unique-recipe': { check: { name: 'The Will of Uul-Netol', rarity: 'unique' }, spot: 'related' },
+  'div-card-map-chance': { search: 'Strand Map' }
+}
+
+// Tools with no window of their own to open: a line about one needs a demo,
+// or it gets no Show me at all (Guy: show it, or don't offer to).
+const WINDOWLESS = new Set(['price-check'])
+
+// Whether Show me has somewhere real to go: a tab, a sample, the Settings
+// page the feature lives on, or the tool's own window. `byName`: the client
+// can price check by name (English), which a sample check needs. `reader`: the
+// stash reader is on; without it Net worth has nothing to show.
+export function hasShowMe (n: { id: string, wmType: string, goto?: string, settingsPage?: string }, byName = true, reader = true): boolean {
+  if (n.wmType === 'woke-net-worth' && !reader) return false
+  const demo = NEWS_DEMOS[n.id]
+  if (demo) return !('check' in demo) || byName
+  if (n.goto || n.settingsPage) return true
+  return !WINDOWLESS.has(n.wmType)
+}

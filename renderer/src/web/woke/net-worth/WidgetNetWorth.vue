@@ -47,7 +47,7 @@ import { popupAnchor } from '../ui/window-anchor'
 import { agoPhrase, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { toast } from '../ui/layer'
-import { RUN_HOLD_TARGET, parseHotkeyTarget, parseListedTarget } from './widget'
+import { RUN_HOLD_TARGET, parseHotkeyTarget, parseListedTarget, setSection } from './widget'
 import { DOCS, GLANCE_LABELS, glanceFromPoints, glanceKey, glanceText, isGlance, ledgerKey, nextShows } from './glance'
 import type { Glance } from './glance'
 import { isRunGlance, runGlanceKey } from './runs'
@@ -57,6 +57,8 @@ import { isListedWorth, isPendingGlance, keptSales, listedGlance, listedOpenStal
 import { useZone } from '../shared/zone'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { useGoto } from '../tab-bar/goto'
+import { foldedOf, toggleFold } from './layout'
+import { askListed } from './listed-ask'
 
 const NetWorthPanel = defineAsyncComponent(() => import('./NetWorthPanel.vue'))
 const NetWorthCard = defineAsyncComponent(() => import('./NetWorthCard.vue'))
@@ -74,7 +76,19 @@ useGoto(props.config, 'woke-net-worth', {
   holdings: () => { props.config.view = 'holdings' },
   sales: () => { props.config.view = 'sales' },
   listed: () => { props.config.view = 'listed' },
-  runs: () => { props.config.view = 'runs' }
+  runs: () => { props.config.view = 'runs' },
+  spots: {
+    // Per hour sits under Details, and can be switched off or folded.
+    'per-hour': () => {
+      props.config.detailsOpen = true
+      setSection(props.config, 'perHour', true)
+      if (foldedOf(props.config.layout).perHour) props.config.layout = { ...props.config.layout, folded: toggleFold(props.config.layout?.folded, 'perHour') }
+    },
+    'faustus-box': () => {},
+    'still-cheapest': () => {},
+    // Listed with its Stale chip picked.
+    'stale': () => { askListed(props.config.wmId, 'stale') }
+  }
 })
 
 if (props.config.wmFlags[0] === 'uninitialized') {

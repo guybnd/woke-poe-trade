@@ -1,5 +1,5 @@
 <template>
-  <div v-if="result || sections.length" :class="$style.wrapper" class="w-pc-side">
+  <div v-if="result || sections.length" :class="$style.wrapper" class="w-pc-side" data-goto-spot="related">
     <div v-if="result && 'error' in result" class="p-2">
       {{ result.error }}
     </div>

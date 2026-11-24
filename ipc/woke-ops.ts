@@ -184,6 +184,8 @@ export interface WokeOps {
   // "Report an issue": builds the GitHub link (open: false, for the preview) or opens it.
   'issue-report': Op<WokeIssueRequest, WokeIssue>
   'renderer-error': Op<{ text: string }, Ok>
+  // A UI step worth reading back later (What's new Show me): one app log line.
+  'ui-trace': Op<{ text: string }, Ok>
 
   // Screen readers
   'map-scan-start': Op<NoArgs, ScanStatus>

@@ -24,7 +24,7 @@
     </section>
 
     <section v-if="rows.length" :class="$style.chips">
-      <WChip v-if="sum.stale" clickable :active="filter === 'stale'" :title="`Unsold ${staleDays} days or more`" @click="toggle('stale')"><span class="w-warn">Stale {{ sum.stale }}</span></WChip>
+      <WChip v-if="sum.stale" data-goto-spot="stale" clickable :active="filter === 'stale'" :title="`Unsold ${staleDays} days or more`" @click="toggle('stale')"><span class="w-warn">Stale {{ sum.stale }}</span></WChip>
       <WChip v-if="toReprice" clickable :active="filter === 'reprice'" title="Listings you set a new price on from the price check: reprice them at Faustus" @click="toggle('reprice')"><span class="w-warn">To reprice {{ toReprice }}</span></WChip>
       <WChip v-if="undercut" clickable :active="filter === 'undercut'" title="Your last Check found someone cheaper" @click="toggle('undercut')"><span class="w-down">Undercut {{ undercut }}</span></WChip>
       <WChip v-if="over" clickable :active="filter === 'over'" title="Asking 10% or more over poe.ninja's price" @click="toggle('over')">Overpriced {{ over }}</WChip>
@@ -39,7 +39,7 @@
             <th>Asking</th>
             <th title="poe.ninja's price now, for the whole stack. ~ is rough: its rolls, corruption or a thin market move the price">Suggest</th>
             <th title="Your asking price against poe.ninja's">vs ninja</th>
-            <th title="Still cheapest? Price check a listing with its own mods (your filters) to rank your price, then set a new one at the foot. The bolt is a quick search by name">Cheapest?</th>
+            <th data-goto-spot="still-cheapest" title="Still cheapest? Price check a listing with its own mods (your filters) to rank your price, then set a new one at the foot. The bolt is a quick search by name">Cheapest?</th>
             <th :title="`Since you first listed it (a reprice doesn't reset it). Orange: ${staleDays} days or more`">Listed</th>
           </tr>
         </thead>
@@ -91,11 +91,12 @@ import { priceLabel, targetOpen } from './listed-target'
 import { saleItem } from './sale-tip'
 import type { Listing } from './faustus'
 import { loadPending, pendingDoc, pendingReading } from './pending-store'
+import { hasListedAsk, takeListedAsk } from './listed-ask'
 import { ageText, pendingRows, pendingTotals, sortPending, DEFAULT_STALE_DAYS } from './pending'
 import { listedOpenStale } from './pending-glance'
 import type { PendingRow } from './pending'
 
-const props = defineProps<{ league: string, divine: number | null, staleDays?: number, auto: boolean }>()
+const props = defineProps<{ wmId: number, league: string, divine: number | null, staleDays?: number, auto: boolean }>()
 const emit = defineEmits<{ 'stale-days': [d: number], 'auto': [on: boolean] }>()
 
 watch(() => props.league, (l) => { loadPending(l).catch(() => {}); loadCheapest(l) }, { immediate: true })
@@ -129,6 +130,13 @@ watch(listedOpenStale, (on) => {
   limit.value = 100
 }, { immediate: true })
 function toggle (f: Filter) { filter.value = filter.value === f ? null : f; limit.value = 100 }
+// What's new's Show me asks this window for a chip (listed-ask.ts). Only
+// picked when it has rows: an empty pick would hide the chip that undoes it.
+watch(() => hasListedAsk(props.wmId), has => {
+  if (!has) return
+  const f = takeListedAsk(props.wmId)
+  if (f === 'stale' && sum.value.stale) { filter.value = f; limit.value = 100 }
+}, { immediate: true })
 const shown = computed(() => {
   const f = filter.value
   if (!f) return sorted.value
