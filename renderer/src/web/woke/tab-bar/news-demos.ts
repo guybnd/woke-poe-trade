@@ -25,6 +25,9 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
 // Tools with no window of their own to open: a line about one needs a demo,
 // or it gets no Show me at all (Guy: show it, or don't offer to).
 const WINDOWLESS = new Set(['price-check'])
+// Lines about something that only shows once you've used it (your own past
+// searches): opening the tool shows nothing new, so no Show me.
+const NOTHING_TO_SHOW = new Set(['search-recent-queries'])
 
 // Whether Show me has somewhere real to go: a tab, a sample, the Settings
 // page the feature lives on, or the tool's own window. `byName`: the client
@@ -32,6 +35,7 @@ const WINDOWLESS = new Set(['price-check'])
 // stash reader is on; without it Net worth has nothing to show.
 export function hasShowMe (n: { id: string, wmType: string, goto?: string, settingsPage?: string }, byName = true, reader = true): boolean {
   if (n.wmType === 'woke-net-worth' && !reader) return false
+  if (NOTHING_TO_SHOW.has(n.id)) return false
   const demo = NEWS_DEMOS[n.id]
   if (demo) return !('check' in demo) || byName
   if (n.goto || n.settingsPage) return true
