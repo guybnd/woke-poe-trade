@@ -22,6 +22,7 @@ export interface NewsItem {
 }
 
 export const NEWS: NewsItem[] = [
+  { id: 'glance-bar-fields', wmType: 'woke-session-analytics', name: 'Session analytics', settingsPage: 'Sessions', note: 'New: pick what the in-map glance bar shows, and keep it up while a run goes' },
   { id: 'forbidden-pair-finder', wmType: 'woke-forbidden', name: 'Forbidden pair finder', note: 'New: the Forbidden Flame and Flesh notables your build can take, with what each pair costs' },
   { id: 'price-check-ninja-trust', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: the instant card says when poe.ninja\'s price looks fake, with the item\'s usual price' },
   { id: 'price-check-bulk-remembered', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: Bulk stays on for your next checks until you turn it off' },

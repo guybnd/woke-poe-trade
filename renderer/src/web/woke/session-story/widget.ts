@@ -30,7 +30,14 @@ export interface SessionStoryWidget extends Widget {
   glance?: boolean
   // Where the glance bar sits (its top centre, share of the screen), set by dragging it.
   glancePos?: { x: number, y: number }
+  // Its fields, in its fixed order (glance-fields.ts); undefined: the defaults.
+  glanceFields?: GlanceField[]
+  // When it shows: in maps only, also out of maps while a run goes, or all night.
+  glanceShow?: GlanceShow
 }
+
+export type GlanceField = 'map' | 'time' | 'deaths' | 'mechanics' | 'maps' | 'profit' | 'perHour' | 'total' | 'avg' | 'last'
+export type GlanceShow = 'map' | 'run' | 'game'
 
 export const CHIP_CLOSE_TARGET = 'woke-session-story-chip'
 
