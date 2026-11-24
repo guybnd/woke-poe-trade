@@ -349,7 +349,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await panel.getByRole('tab', { name: 'Runs' }).click()
     const pastRuns = panel.locator('[data-past-run]')
     await expect(pastRuns).toHaveCount(2)
-    await expect(panel.locator('[data-compare]')).toContainText('No top')
+    await expect(panel.locator('[data-compare]')).toContainText('Without best drop')
     await panel.locator('[data-by-strategy]').click()
     await expect(pastRuns).toHaveCount(1)
     await expect(pastRuns.first()).toContainText('2 runs')

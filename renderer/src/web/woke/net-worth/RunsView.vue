@@ -150,7 +150,7 @@
               <td :class="[$style.num, tone(r.perMapChaos)]" class="w-num">{{ r.perMapChaos != null ? signed(r.perMapChaos) : '—' }}<span v-if="r.sample" :class="$style.small" :title="sampleTextOf(r.runs, r.profitChaos, r.top, r.sample, pastUnit)">small</span></td>
               <td :class="[$style.num, tone(r.perHourChaos)]" class="w-num">{{ r.perHourChaos != null ? signed(r.perHourChaos) : '—' }}</td>
               <td :class="$style.num" class="w-num w-dim">{{ r.costPerMapChaos != null ? amount(r.costPerMapChaos) : '—' }}</td>
-              <td :class="[$style.num, tone(r.perMapNoTopChaos)]" class="w-num" :title="r.top ? `Per ${pastUnit} without ${r.top.name} (${amount(r.top.chaos)})` : undefined">
+              <td :class="[$style.num, tone(r.perMapNoTopChaos)]" class="w-num" :title="r.top ? `Per ${pastUnit} without your best drop (${r.top.name}, ${amountU(r.top.chaos)})` : undefined">
                 {{ r.perMapNoTopChaos != null ? signed(r.perMapNoTopChaos) : '—' }}
               </td>
               <td v-if="!byName"><button type="button" :class="$style.x" :aria-label="`Delete ${r.name}`" title="Delete" @click="removeId(r.id)"><i class="fas fa-trash-alt" /></button></td>
@@ -239,6 +239,8 @@ watch(() => props.points.length, () => { if (shownRun.value && !shownRun.value.s
 // ---------- numbers ----------
 const toDiv = (chaos: number) => props.divine ? chaos / props.divine : chaos
 const amount = (chaos: number) => { const d = toDiv(chaos); return Math.abs(d) >= 100 ? formatAmount(d) : d.toFixed(Math.abs(d) < 1 && props.divine ? 2 : 1) }
+// With its unit, for hover text.
+const amountU = (chaos: number) => `${amount(chaos)}${props.divine ? ' div' : 'c'}`
 const signed = (chaos: number) => `${chaos > 0 ? '+' : chaos < 0 ? '−' : ''}${amount(Math.abs(chaos))}`
 const tone = (n: number | null | undefined) => n == null || Math.abs(n) < 0.05 ? '' : n > 0 ? 'w-up' : 'w-down'
 const clock = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -384,8 +386,8 @@ function sampleTextOf (runs: number, profit: number, t: TopDrop | null, s: Small
   const u = one === 'run' ? 'maps and fights' : `${one}s`
   const parts: string[] = []
   if (s.few) parts.push(`Only ${runs} ${u}: per ${one} can swing a lot. Over ${SAMPLE_MIN_RUNS} reads steadier.`)
-  if (s.share != null && t) parts.push(`One drop (${t.name}, ${amount(t.chaos)}) is ${Math.round(s.share * 100)}% of the profit.`)
-  if (t && runs > 0) parts.push(`Without it: ${signed((profit - t.chaos) / runs)} a ${one}.`)
+  if (s.share != null && t) parts.push(`Your best drop is ${Math.round(s.share * 100)}% of the profit.`)
+  if (t && runs > 0) parts.push(`Without your best drop (${t.name}, ${amountU(t.chaos)}): ${signed((profit - t.chaos) / runs)}${props.divine ? ' div' : 'c'} a ${one}.`)
   return parts.join(' ')
 }
 const sampleText = computed(() => totals.value && sample.value ? sampleTextOf(totals.value.runs, totals.value.profitChaos, top.value, sample.value) : '')
@@ -470,7 +472,7 @@ const COLUMNS: Array<{ id: CompareSort, label: string, tip: string }> = [
   { id: 'perMap', label: 'Per map', tip: 'Best per map or fight first' },
   { id: 'perHour', label: 'Per hour', tip: 'Best per hour first' },
   { id: 'cost', label: 'Cost', tip: 'Cost a map: typed costs plus maps, scarabs and fragments used up. Cheapest first' },
-  { id: 'noTop', label: 'No top', tip: 'Per map without the single biggest drop. Best first' }
+  { id: 'noTop', label: 'Without best drop', tip: 'Per map without the run\'s single best drop, so one lucky drop doesn\'t decide it. Best first' }
 ]
 const byName = shallowRef(false)
 const sortBy = shallowRef<CompareSort>('new')
