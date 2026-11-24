@@ -12,7 +12,7 @@
         <label :class="$style.find">
           <i class="fas fa-search" />
           <input ref="input" v-model="query" :class="$style.input" spellcheck="false" aria-label="Search"
-            placeholder="Item, tool or setting. Or paste an item (Ctrl V)" @keydown="onKey" @paste="onPaste">
+            placeholder="Item, tool or setting. Or paste an item (Ctrl V)" @keydown="onKey" @paste="onPaste" @input="noteTyped">
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': helpOpen }" title="What can I search for?" aria-label="What can I search for?" @click="toggleHelp"><i class="fas fa-question" /></button>
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': groupsOpen }" title="What search shows" aria-label="What search shows" data-search-groups-btn @click="toggleGroups"><i class="fas fa-cog" /></button>
           <WCorruptedFilter v-model="corrupted" />
@@ -38,7 +38,7 @@
                 <span :class="section.more ? $style.foldName : undefined">{{ e.name }}</span><span class="w-dim ml-1">{{ section.more ? `${e.sub} · show` : e.sub }}</span>
               </button>
               <button v-else v-item-tip="tipOf(e)" :data-no-item-tip="e.kind === 'setting' ? 'a setting named after a mechanic or item, not the item itself' : undefined" tabindex="-1" :class="[$style.res, { [$style.sel]: e === selected }]"
-                :data-selected="e === selected || undefined" @click="selected = e" @dblclick="run(e)">
+                :data-selected="e === selected || undefined" @click="e.kind === 'again' ? runAgain(e) : selected = e" @dblclick="onDouble(e)">
                 <WIcon v-if="e.kind === 'price'" :src="ninjaIcon(e.group.type, e.group.name) ?? ninjaArt(e.group.type, e.group.name)" size="md" />
                 <WIcon v-else-if="e.kind === 'item'" :src="e.info.icon" size="md" />
                 <WIcon v-else-if="e.kind === 'lookup' && isImageIcon(e.icon)" :src="e.icon" size="md" />
@@ -52,7 +52,7 @@
               </button>
               </template>
             </template>
-            <div v-if="!entries.length" :class="$style.none">Type an item, a tool or a setting, or ? for ideas. Items you look up show here next time.</div>
+            <div v-if="!entries.length" :class="$style.none">Type an item, a tool or a setting, or ? for ideas. Your searches show here next time.</div>
           </div>
           <div :class="$style.detail" class="w-scroll">
             <template v-if="selected?.kind === 'price'">
@@ -117,7 +117,7 @@
             </template>
             <LookupDetail v-else-if="selected?.kind === 'lookup'" :card="selected.card" :divine="divine" @act="act" />
             <template v-else-if="selected">
-              <div :class="$style.title"><i :class="selected.icon" /><span>{{ selected.name }}</span></div>
+              <div v-item-tip="tipOf(selected)" :class="$style.title"><i :class="selected.icon" /><span>{{ selected.name }}</span></div>
               <p class="w-dim">{{ selected.about }}</p>
               <div :class="$style.acts"><WButton size="sm" @click="run(selected!)">{{ selected.verb }}</WButton></div>
             </template>
@@ -294,9 +294,9 @@ import { onSharedDataChange } from '../app/live-data'
 import { openDiscord, openReportDialog } from '../app/report'
 import { dropOf } from '../ui/tooltip/tip-content'
 import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
-import { SEARCH_TARGET, searchRequest } from './widget'
+import { SEARCH_TARGET, searchRequest, addQuery } from './widget'
 import { VARIABLE_ITEMS, useTradePrices } from '../shared/unid-prices'
-import { poeWebApi } from '@/web/Config'
+import { poeWebApi, saveConfig } from '@/web/Config'
 import type { SearchWidget } from './widget'
 
 const props = defineProps<{ config: SearchWidget }>()
@@ -309,7 +309,7 @@ const snapshot = useSearchSnapshot()
 interface Base { id: string, name: string, sub: string }
 interface PriceEntry extends Base { kind: 'price', group: PriceGroup }
 interface ItemEntry extends Base { kind: 'item', info: BaseType }
-interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting' | 'more', icon: string, about: string, verb: string, keys?: string | null, aliases?: string[], action: () => void }
+interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting' | 'more' | 'again', icon: string, about: string, verb: string, keys?: string | null, aliases?: string[], action: () => void }
 interface LookupEntry extends Base { kind: 'lookup', icon: string, card: LookupCard }
 type Entry = PriceEntry | ItemEntry | ActionEntry | LookupEntry
 
@@ -366,6 +366,8 @@ function tipOf (entry: Entry) {
   if (entry.kind === 'item') return { name: entry.info.refName }
   // A card about an item (a Viscera, a gem, a div card) shows that item.
   if (entry.kind === 'lookup') return entry.card.tip ?? itemRefFromName(entry.card.title ?? entry.card.name)
+  // A past search that is an item's name shows that item.
+  if (entry.kind === 'again') return itemRefFromName(entry.name)
   return null
 }
 
@@ -907,8 +909,8 @@ const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: b
   const items = snapshot.value?.items ?? []
   // Nothing typed yet: your recent lookups, then things to try.
   if (!queryOk.value) {
-    const recent = recentGroups(items)
-    return [...(recent.length ? [{ label: 'Recent', entries: recent.map(priceEntry) as Entry[] }] : []), ...cardSections(exampleCards(liveAnswer), null)]
+    const recent = [...(props.config.queries ?? []).map(againEntry), ...recentGroups(items).map(priceEntry)]
+    return [...(recent.length ? [{ label: 'Recent', entries: recent }] : []), ...cardSections(exampleCards(liveAnswer), null)]
   }
   const q = query.value
   const groups = searchPrices(items, q, { corrupted: corrupted.value })
@@ -1348,11 +1350,47 @@ function recentGroups (items: readonly PriceItem[]): PriceGroup[] {
   }
   return out
 }
-function remember (entry: Entry | null) {
-  if (entry?.kind !== 'price') return
+// Whether the list changed.
+function remember (entry: Entry | null): boolean {
+  if (entry?.kind !== 'price') return false
   const { type, name } = entry.group
+  const head = props.config.recent?.[0]
+  if (head?.type === type && head.name === name) return false
   const rest = (props.config.recent ?? []).filter(r => r.type !== type || r.name !== name)
   props.config.recent = [{ type, name }, ...rest].slice(0, RECENT_MAX)
+  return true
+}
+// What you typed yourself: not a jump, an example or a What's new sample.
+let ownText = ''
+function noteTyped (e: Event) { ownText = (e.target as HTMLInputElement).value }
+// A past search runs on one click; the second click of a double-click lands
+// on whatever row replaced it, and mustn't run that.
+let againAt = 0
+function runAgain (e: Entry) {
+  againAt = Date.now()
+  run(e)
+}
+function onDouble (e: Entry) {
+  if (Date.now() - againAt < 600) return
+  run(e)
+}
+// What was typed, opened or not: a quick look is a search too.
+function rememberQuery (text: string): boolean {
+  const list = addQuery(props.config.queries, text, [HELP_QUERY])
+  if (list) props.config.queries = list
+  return list != null
+}
+function againEntry (q: string): ActionEntry {
+  return {
+    kind: 'again',
+    id: `q:${q}`,
+    name: q,
+    sub: 'Search again',
+    icon: 'fas fa-history',
+    about: 'Puts this search back in the box.',
+    verb: 'Search',
+    action: () => { query.value = ownText = q; focusInput() }
+  }
 }
 
 // ---- pins ----
@@ -1553,6 +1591,7 @@ function start (text: string) {
   savedOpenRequest.value = null
   holdPricesForSearch()
   query.value = text
+  ownText = ''
   corrupted.value = 'any'
   chip.value = 'all'
   // As a new query does: the same query again (an empty one, say) doesn't
@@ -1604,7 +1643,14 @@ watch(searchRequest, (request) => {
 watch(wm.active, (active) => { if (active && open.value) focusInput(true) })
 watch(open, (now) => {
   if (now) focusInput(true)
-  else remember(queryOk.value ? selected.value : null)
+  else {
+    const item = remember(queryOk.value ? selected.value : null)
+    const searched = rememberQuery(ownText)
+    // The overlay's own save has already run (it saves as the palette hides,
+    // before this). Closing on blur or into a tool brings no later save, so
+    // these could be lost to a restart or another window's save.
+    if (item || searched) saveConfig()
+  }
 })
 
 const dataNote = computed(() => {
