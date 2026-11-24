@@ -205,6 +205,8 @@ export class Overlay {
   // and waits until it has connected and sent its hotkeys to the app.
   async boot (opts: BootOptions = {}) {
     await this.auditReady
+    this.ninjaSettled = false
+    this.bootAt = Date.now()
     // WOKE_UI_ART=poe1|poe2|simple runs a test in that UI style, to look over each.
     const art = process.env.WOKE_UI_ART
     if (art) await this.page.addInitScript(a => { try { localStorage.setItem('woke.uiArt', a) } catch {} }, art)
@@ -324,8 +326,27 @@ export class Overlay {
   // Hover an item in game and press a hotkey, e.g. price check (Ctrl + D).
   async copyItem (fixture: string, hotkey = 'Ctrl + D') {
     const text = fixture.includes('\n') ? fixture : fixtureText(fixture)
+    await this.ninjaPricesSettled()
     this.app.hoverItem(text)
     await this.pressHotkey(hotkey)
+  }
+
+  // A price check decides on the instant card from poe.ninja's prices as they
+  // are at the hotkey, so the first check waits for the boot's download. APT
+  // reads the league list twice and downloads again after each, so: a download
+  // after the last league list, then quiet.
+  private ninjaSettled = false
+  private bootAt = 0
+  private async ninjaPricesSettled () {
+    if (this.ninjaSettled) return
+    const last = (part: string) => this.app.requests.filter(r => r.at >= this.bootAt && r.url.includes(part)).at(-1)?.at ?? 0
+    for (let waited = 0; waited < 3000; waited += 50) {
+      const dense = last('poe.ninja/poe1/api/economy/current/dense/')
+      const leagues = last('pathofexile.com/api/leagues')
+      if (dense > leagues && Date.now() - dense >= 400) break
+      await this.page.waitForTimeout(50)
+    }
+    this.ninjaSettled = true
   }
 
   // Waits for the hotkey to be registered first: a widget placed at boot

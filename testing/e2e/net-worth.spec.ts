@@ -317,9 +317,13 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     // Closed by its own button (Esc would close the whole overlay).
     await overlay.page.locator('#price-window [data-price-close]').click()
     await expect(priceBar).toBeHidden()
-    // Closing the price check gives the game focus back: open the overlay again.
-    if (!await panel.isVisible()) await overlay.pressHotkey(overlay.config.overlayKey)
-    await expect(panel).toBeVisible()
+    // Closing the price check gives the game focus back (the fake game takes
+    // it when told), which hides the overlay: then open it again.
+    await expect(panel).toBeHidden()
+    fakeApp.focusGame(true)
+    await overlay.pressHotkey(overlay.config.overlayKey)
+    // (Its outer box measures 0 high after a reshow; its contents show.)
+    await expect(panel.getByRole('tab', { name: 'Listed' })).toBeVisible()
     await overlay.snap('net worth listed')
 
     // Stale after 1 day: Headhunter is. The icon counts it only in your hideout.
