@@ -7,8 +7,8 @@ import { hostRequest } from '../shared/host'
 import { toast } from '../ui/layer'
 import { readMapDay, dayKey } from '../session-story/store'
 import { isSkippedArea } from '../session-story/skip-areas'
-import { addToTally, cleanDoc, emptyRun, isRunGlance, mapsIn, runGlanceKey, runsKey, runTotals, tallyFrom, MAX_DONE_RUNS } from './runs'
-import type { CostLine, OnceCost, Outside, Run, RunGlance, RunsDoc } from './runs'
+import { addToTally, cleanDoc, compareRows, emptyRun, isRunGlance, mapsIn, relive, runBoardKey, runGlanceKey, runsKey, runTotals, tallyFrom, topDrop, MAX_DONE_RUNS } from './runs'
+import type { CostLine, LivePrice, OnceCost, Outside, Run, RunBoard, RunGlance, RunsDoc } from './runs'
 import type { LedgerPoint } from './ledger'
 import type { StashDiff } from './valuation'
 
@@ -40,7 +40,7 @@ export function loadRuns (league: string): Promise<void> {
     .then((g) => { if (loadedFor === league && runGlance.value == null && isRunGlance(g) && g.league === league) runGlance.value = g })
     .catch(() => {})
   loading = (hostRequest('doc-get', { collection: COLLECTION, key: runsKey(league) }) as Promise<unknown>)
-    .then((d) => { if (loadedFor === league) { runsDoc.value = cleanDoc(d); readOk = true } })
+    .then((d) => { if (loadedFor === league) { runsDoc.value = cleanDoc(d); readOk = true; saveBoard(league, runsDoc.value) } })
     .catch(() => { if (loadedFor === league) loading = null })
     .then(() => glance)
   return loading
@@ -58,7 +58,35 @@ async function save (league: string, next: RunsDoc): Promise<boolean> {
     return false
   }
   if (loadedFor === league) runsDoc.value = next
+  saveBoard(league, next)
   return true
+}
+
+// Past runs by strategy, small, for Ctrl+Space (no tallies to load there).
+// Per hour under each Per hour choice, so the answer follows the setting.
+let boardWas = ''
+function saveBoard (league: string, doc: RunsDoc) {
+  const [play, hub, all] = (['play', 'hub', 'all'] as const).map(t => compareRows(doc.done, t, true))
+  const board: RunBoard = {
+    league,
+    rows: all.map((r, i) => ({
+      name: r.name,
+      count: r.count,
+      maps: r.maps,
+      fights: r.fights,
+      profitChaos: r.profitChaos,
+      perMapChaos: r.perMapChaos,
+      perHour: { play: play[i]?.perHourChaos ?? null, hub: hub[i]?.perHourChaos ?? null, all: r.perHourChaos },
+      costPerMapChaos: r.costPerMapChaos,
+      perMapNoTopChaos: r.perMapNoTopChaos,
+      ...(r.top ? { top: r.top } : {}),
+      small: r.sample != null
+    }))
+  }
+  const json = JSON.stringify(board)
+  if (json === boardWas) return
+  boardWas = json
+  hostRequest('doc-put', { collection: COLLECTION, key: runBoardKey(league), value: board }).catch(() => { boardWas = '' })
 }
 
 // Every map from the start's day to today (map history keeps one file a day).
@@ -119,8 +147,6 @@ async function glanceOutside (league: string, r: Run): Promise<Outside | undefin
   }
 }
 
-// Boss fights from Client.txt (run-time.ts, loaded when first needed).
-const runFights = (startAt: number, now: number) => import('./run-time').then(m => m.fightsIn(startAt, now)).catch(() => 0)
 // The live run's fights and where its time went, for its per hour (null
 // without Client.txt).
 const runSpent = (startAt: number, now: number) => import('./run-time').then(m => m.runTimeIn(startAt, now)).catch(() => null)
@@ -140,6 +166,8 @@ async function saveGlance (league: string, run: Run | null, points: readonly Led
     const t = runTotals(run, points, { maps, fights }, now, undefined, await glanceOutside(league, run))
     g = { league, name: run.name, startAt: run.startAt, at: now, profitChaos: t.profitChaos, maps, perHourChaos: t.perHourChaos, costPerMapChaos: t.costPerMapChaos, divine }
     if (fights) g.fights = fights
+    const top = topDrop(run)
+    if (top) g.top = top
     if (time) { g.time = time; g.timeTo = timeTo }
     if (t.faustusChaos) g.faustusChaos = t.faustusChaos
   }
@@ -152,8 +180,9 @@ export const runGlance = shallowRef<RunGlance | null>(null)
 let pendingStop: { id: string, at: number } | null = null
 export function setPendingStop (p: { id: string, at: number } | null) { pendingStop = p }
 
-// A counted read (store.ts): into the live run's tally.
-export function recordRunRead (league: string, diff: StashDiff | null, points: readonly LedgerPoint[], divine: number | null): Promise<void> {
+// A counted read (store.ts): into the live run's tally, and its kit lines at
+// this read's prices (`price`, pick K1).
+export function recordRunRead (league: string, diff: StashDiff | null, points: readonly LedgerPoint[], divine: number | null, price?: LivePrice): Promise<void> {
   return queue(async () => {
     await loadRuns(league)
     const live = runsDoc.value.live
@@ -168,6 +197,8 @@ export function recordRunRead (league: string, diff: StashDiff | null, points: r
       if (live.stoppedAt == null) delete next.stoppedAt
       else next.stoppedAt = live.stoppedAt
     }
+    // Stop is pending: the kit keeps the prices it had at the press.
+    if (price && pendingStop?.id !== live.id) next = relive(next, price)
     if (next !== live) await save(league, { ...runsDoc.value, live: next })
     await saveGlance(league, next, points, divine)
   })
@@ -179,7 +210,8 @@ const newId = () => `${Date.now().toString(36)}${(idSeq++).toString(36)}`
 // Starts a run at a chart point (the last read for "now"). A run going
 // already is stopped first. Earlier reads' changes come from the kept diffs.
 // `extra`: what Start read of your Faustus listings (RunsView).
-export function startRun (league: string, name: string, startAt: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null, costs: CostLine[] = [], extra: Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales' | 'carriedFrom'> = {}) {
+// `price`: today's prices for the kit's live lines (else the next read sets them).
+export function startRun (league: string, name: string, startAt: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null, costs: CostLine[] = [], extra: Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales' | 'carriedFrom'> = {}, price?: LivePrice) {
   return queue(async () => {
     await loadRuns(league)
     const doc = runsDoc.value
@@ -187,6 +219,7 @@ export function startRun (league: string, name: string, startAt: number, diffs: 
     let run = emptyRun(newId(), league, name, startAt)
     run = { ...tallyFrom(run, diffs), costs: costs.map(c => ({ ...c, id: newId() })), ...extra }
     if (!run.tallyPartial) delete run.tallyPartial
+    if (price) run = relive(run, price)
     if (await save(league, { live: run, done: done.slice(0, MAX_DONE_RUNS) })) {
       await saveGlance(league, run, points, divine)
       await refreshRunMaps(run)
@@ -198,10 +231,17 @@ export function startRun (league: string, name: string, startAt: number, diffs: 
 async function withFinal (run: Run, points: readonly LedgerPoint[]): Promise<Run> {
   if (run.stoppedAt == null) return run
   const maps = mapsIn(run, await readRunMaps(run, run.stoppedAt), run.stoppedAt)
-  const fights = await runFights(run.startAt, run.stoppedAt)
+  // An edit on a past run keeps the time it had (Client.txt may be gone).
+  // A Client.txt that no longer covers the run reads as no time at all:
+  // the fights it had stand, and no time is saved.
+  const read = run.final?.time ? null : await runSpent(run.startAt, run.stoppedAt)
+  const spent = read && Object.values(read.ms).some(ms => ms > 0) ? read : null
+  const fights = spent ? spent.fights : (run.final?.fights ?? 0)
   const t = runTotals(run, points, { maps, fights }, run.stoppedAt, undefined, outsideOf(run))
   const final: Run['final'] = { profitChaos: t.profitChaos, maps, perMapChaos: t.perMapChaos, perHourChaos: t.perHourChaos, stashChaos: t.stashChaos }
   if (fights) final.fights = fights
+  const time = spent?.ms ?? run.final?.time
+  if (time) final.time = time
   if (t.faustusChaos) final.faustusChaos = t.faustusChaos
   return { ...run, final }
 }

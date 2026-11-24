@@ -38,6 +38,12 @@
           <!-- No filter: the bulk search finds maps by type only (or the item isn't a map). -->
           <span v-else :class="$style.chip" class="w-num" :title="addMods === false ? DEAD_TITLE : undefined">{{ p.label }} {{ p.value }}%</span>
         </template>
+        <!-- WOKEPOET-523: Elder (or Shaper) maps list cheap and crowd the results; on from the start. -->
+        <span v-if="noElder" :class="[$style.chip, $style.propChip, noElder.disabled ? $style.propOff : $style.propOn]">
+          <button type="button" :class="$style.propBtn" :aria-pressed="!noElder.disabled" data-map-no-elder
+            :title="noElder.disabled ? 'Elder and Shaper maps are in the search. Click to leave them out.' : 'Leaves out maps influenced by the Elder or the Shaper (they carry a guardian and list cheap). Click to include them.'"
+            @click="toggleNoElder">No Elder</button>
+        </span>
       </div>
       <div v-if="open" :class="$style.list">
         <div v-for="(row, i) in rows" :key="`${i}:${row.mod.matcher}`" :class="[$style.mod, row.filter && $style[stateOf(row.filter)]]" data-map-mod>
@@ -66,6 +72,7 @@ import type { ParsedItem } from '@/parser'
 import { shortLabel } from './rules'
 import { VERDICT_LABEL } from './rules'
 import { checkMap, findMapModsConfig, isMapLike, isUnsure, PROP_TRADE_ID } from './check'
+import { NO_ELDER_TRADE_ID } from '@/web/price-check/filters/pseudo/maps'
 import type { AddedMod, FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
 
@@ -94,7 +101,7 @@ watch(worthOpen, (now) => { if (now && accordion.value) open.value = false })
 
 // Tells the price check which number rows the chips stand in for (CheckedItem.vue).
 const owns = inject<ShallowRef<ReadonlySet<string> | null> | null>('map-strip-owns', null)
-const PROP_IDS: ReadonlySet<string> = new Set(Object.values(PROP_TRADE_ID))
+const PROP_IDS: ReadonlySet<string> = new Set([...Object.values(PROP_TRADE_ID), NO_ELDER_TRADE_ID])
 watchEffect(() => { if (owns) owns.value = result.value ? PROP_IDS : null })
 onBeforeUnmount(() => { if (owns) owns.value = null })
 
@@ -160,6 +167,12 @@ function setState (f: StatFilter, state: ModState) {
     f.roll.min = state === 'not' ? '' : made.min
     f.roll.max = state === 'not' ? '' : made.max
   }
+}
+// The map's "no Elder or Shaper influence" filter (pseudo/maps.ts); none on an influenced map.
+const noElder = computed(() => (props.stats ?? []).find((s): s is StatFilter => !s.group && !!s.noElder) ?? null)
+function toggleNoElder () {
+  const f = noElder.value
+  if (f) f.disabled = !f.disabled
 }
 function propFilter (label: string): StatFilter | null {
   const id = PROP_TRADE_ID[label]
