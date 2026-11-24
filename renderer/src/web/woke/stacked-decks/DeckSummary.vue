@@ -32,30 +32,23 @@
     <div v-if="notes.unlisted" class="text-xs w-faint" :title="notes.anyPriced ? NO_PRICE : undefined">{{ notes.unlisted }} {{ notes.anyPriced ? (notes.unlisted === 1 ? "card isn't on poe.ninja (too few trades)" : "cards aren't on poe.ninja (too few trades)") : (notes.unlisted === 1 ? 'card has no poe.ninja price' : 'cards have no poe.ninja price') }} and count as 0.</div>
     <div v-if="notes.held" class="text-xs w-faint" data-deck="held-note">{{ notes.held }} {{ notes.held === 1 ? 'card has a poe.ninja price that looks fake' : 'cards have poe.ninja prices that look fake' }} (<i class="fas fa-pause-circle" />): counted at the usual price, or 0. Hover the price for poe.ninja's.</div>
 
-    <div v-if="shown.length || t.cheapQty" :class="$style.table">
-      <div v-for="r in shown" :key="r.name" :class="$style.row" data-deck="card">
-        <WIcon :src="art(r.name)" fallback="fas fa-clone" />
-        <span class="w-trunc" v-item-tip="{ type: 'DivinationCard', name: r.name }">{{ r.name }}</span>
-        <span class="w-num w-dim">×{{ r.qty }}</span>
-        <span class="w-num text-right" :title="priceTitle(r.name, r.each)" :data-held="heldOf(r.name) ? '' : undefined"><i v-if="heldOf(r.name)" class="fas fa-pause-circle w-dim" :class="$style.held" />{{ r.each != null ? money(r.total) : '—' }}</span>
-      </div>
+    <div v-if="shown.length || t.cheap.length" :class="$style.table">
+      <CardLine v-for="r in shown" :key="r.name" :row="r" :divine="divine" :held="heldOf(r.name)" :title="priceTitle(r.name, r.each)" :editable="editable" data-deck="card"
+        @price="emit('price', r.name, $event)" @out="emit('out', r.name, $event)" />
       <div v-if="t.rows.length > shown.length" class="text-xs w-faint" :class="$style.more">and {{ t.rows.length - shown.length }} more cards</div>
       <!-- Cards under the cut-off, folded into one line (A). -->
-      <template v-if="t.cheapQty">
+      <template v-if="t.cheap.length">
         <button type="button" :class="[$style.row, $style.fold]" data-deck="cheap" :aria-expanded="cheapOpen"
           :title="cheapTitle" @click="cheapOpen = !cheapOpen">
           <i class="fas text-xs" :class="cheapOpen ? 'fa-caret-down' : 'fa-caret-right'" />
           <span class="w-trunc">{{ t.cheapQty.toLocaleString('en-US') }} {{ t.cheapQty === 1 ? 'card' : 'cards' }} under {{ cutOff }}{{ filter && !filter.count ? ' · not counted' : '' }}</span>
           <span />
           <span class="w-num text-right">{{ money(t.cheapChaos) }}</span>
+          <span />
         </button>
         <template v-if="cheapOpen">
-          <div v-for="r in t.cheap" :key="r.name" :class="[$style.row, $style.cheap]" data-deck="cheap-card">
-            <WIcon :src="art(r.name)" fallback="fas fa-clone" />
-            <span class="w-trunc" v-item-tip="{ type: 'DivinationCard', name: r.name }">{{ r.name }}</span>
-            <span class="w-num">×{{ r.qty }}</span>
-            <span class="w-num text-right" :title="priceTitle(r.name, r.each)"><i v-if="heldOf(r.name)" class="fas fa-pause-circle w-dim" :class="$style.held" />{{ r.each != null ? money(r.total) : '—' }}</span>
-          </div>
+          <CardLine v-for="r in t.cheap" :key="r.name" :row="r" :divine="divine" :held="heldOf(r.name)" :title="priceTitle(r.name, r.each)" :editable="editable" cheap data-deck="cheap-card"
+            @price="emit('price', r.name, $event)" @out="emit('out', r.name, $event)" />
         </template>
       </template>
     </div>
@@ -68,12 +61,12 @@
 // the cards by total value.
 import { computed } from 'vue'
 import { useFold } from '../ui/fold'
-import { WIcon, WInfo, WSegmented, vItemTip } from '../ui'
+import { WInfo, WSegmented } from '../ui'
 import { formatChaos } from '../ui/format'
-import { ninjaIcon } from '../ui/game-icons'
 import ResultChart from './ResultChart.vue'
 import { MIN_CALIBRATION_DECKS, luckText, runningResult, totals } from './deck'
-import type { CardFilter, PriceOf } from './deck'
+import type { CardEdits, CardFilter, PriceOf } from './deck'
+import CardLine from './CardLine.vue'
 import { WEIGHTS_CREDIT, isCommonCard } from './weights'
 import type { HeldPrice, Luck } from './prices'
 
@@ -92,11 +85,19 @@ const props = withDefaults(defineProps<{
   switchable?: boolean
   // poe.ninja's price for a card when a fake-price check set it aside.
   held?: ((name: string) => HeldPrice | null) | null
-}>(), { luck: null, limit: 0, chartWidth: 280, filter: null, switchable: false, held: null })
-const emit = defineEmits<{ (e: 'count', v: boolean): void }>()
+  // Your prices and left-out cards; editable lets you change them.
+  edits?: CardEdits | null
+  editable?: boolean
+}>(), { luck: null, limit: 0, chartWidth: 280, filter: null, switchable: false, held: null, edits: null, editable: false })
+const emit = defineEmits<{
+  (e: 'count', v: boolean): void
+  // Your price for one card, in chaos; null: poe.ninja's again.
+  (e: 'price', name: string, chaos: number | null): void
+  (e: 'out', name: string, on: boolean): void
+}>()
 const COUNT_OPTIONS = [{ value: 'in', label: 'Hidden, counted' }, { value: 'out', label: 'Not counted' }]
 
-const t = computed(() => totals(props.draws, props.price, props.deckChaos, props.filter, name => isCommonCard(name) && !heldOf(name)))
+const t = computed(() => totals(props.draws, props.price, props.deckChaos, props.filter, name => isCommonCard(name) && !heldOf(name), props.edits))
 const NO_PRICE = 'poe.ninja leaves out cards that trade too rarely to price. Common ones fold with the cheap cards. Counted as 0.'
 const heldOf = (name: string) => props.held?.(name) ?? null
 // Cards without a price, apart from those a fake-price check set aside, and those.
@@ -105,7 +106,9 @@ const notes = computed(() => {
   let held = 0
   let anyPriced = false
   for (const r of [...t.value.rows, ...t.value.cheap]) {
-    if (heldOf(r.name)) held += r.qty
+    // Left out, or your price: these notes don't apply.
+    if (r.out) continue
+    if (heldOf(r.name) && !r.mine) held += r.qty
     else if (r.each == null) unlisted += r.qty
     else anyPriced = true
   }
@@ -119,7 +122,7 @@ function priceTitle (name: string, each: number | null): string | undefined {
   }
   return each == null ? NO_PRICE : undefined
 }
-const chart = computed(() => runningResult(props.draws, props.price, props.deckChaos, undefined, props.filter))
+const chart = computed(() => runningResult(props.draws, props.price, props.deckChaos, undefined, props.filter, props.edits))
 const cheapOpen = useFold('decks.cheap')
 const cutOff = computed(() => formatChaos(props.filter?.under ?? 0, null, 'chaos'))
 const cheapTitle = computed(() => props.filter?.count === false
@@ -130,7 +133,6 @@ const shown = computed(() => props.limit > 0 ? t.value.rows.slice(0, props.limit
 const money = (chaos: number) => formatChaos(chaos, props.divine)
 const signed = (chaos: number) => `${chaos > 0 ? '+' : ''}${money(chaos)}`
 const tone = (v: number | null) => v == null ? '' : v >= 0 ? 'w-up' : 'w-down'
-const art = (name: string) => ninjaIcon('DivinationCard', name) ?? undefined
 
 const luckInfo = computed(() => {
   const l = props.luck
@@ -148,9 +150,8 @@ const luckInfo = computed(() => {
 .stats { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 2px 10px; align-items: baseline; }
 .luck { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--w-fs-sm); }
 .table { display: flex; flex-direction: column; }
-.row { display: grid; grid-template-columns: var(--w-icon, 16px) minmax(0, 1fr) auto 4.5rem; gap: 6px; align-items: center; min-height: 22px; }
+.row { display: grid; grid-template-columns: var(--w-icon, 16px) minmax(0, 1fr) auto 4.5rem 2.6em; gap: 6px; align-items: center; min-height: 22px; }
 .more { padding-top: 2px; }
-.held { margin-right: 3px; font-size: 0.85em; }
 .fold {
   width: 100%;
   margin-top: 2px;
@@ -165,6 +166,5 @@ const luckInfo = computed(() => {
 }
 .fold:hover { color: var(--w-fg); background: var(--w-line-soft); }
 .fold > i { justify-self: center; }
-.cheap { color: var(--w-faint); }
 .switch { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--w-fs-sm); }
 </style>

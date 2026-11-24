@@ -5,7 +5,7 @@
       :glow="opening" :wm-id="config.wmId" :menu="dockMenu" card-width="22rem">
       <template #card>
         <div v-if="session" :class="$style.card">
-          <DeckSummary :draws="session.draws" :price="price" :held="held" :deck-chaos="sessionDeck" :divine="sessionDivine" :filter="filter" :limit="8" :chart-width="320" />
+          <DeckSummary :draws="session.draws" :price="price" :held="held" :deck-chaos="sessionDeck" :divine="sessionDivine" :filter="filter" :limit="8" :chart-width="320" :edits="session.edits" editable @price="setPrice" @out="leaveOut" />
           <!-- The dock adds "Open Stacked decks" (the window) under this. -->
           <div :class="$style.actions">
             <button type="button" :class="$style.action" @click="newSession(true)"><i class="fas fa-redo text-xs" /> New session</button>
@@ -28,7 +28,7 @@
             <span class="w-dim text-xs grow">since {{ clock(session.startedAt) }}</span>
             <WButton size="sm" variant="ghost" icon="fas fa-redo" @click="newSession(false)">New session</WButton>
           </div>
-          <DeckSummary :draws="session.draws" :price="price" :held="held" :deck-chaos="sessionDeck" :divine="sessionDivine" :filter="filter" switchable :luck="luck" @count="setCountCheap" />
+          <DeckSummary :draws="session.draws" :price="price" :held="held" :deck-chaos="sessionDeck" :divine="sessionDivine" :filter="filter" switchable :luck="luck" :edits="session.edits" editable @count="setCountCheap" @price="setPrice" @out="leaveOut" />
         </template>
         <WEmpty v-else :art="{ item: STACKED_DECK }">Open a Stacked Deck in game to start a session. It ends after 15 minutes without a card.</WEmpty>
       </div>
@@ -67,7 +67,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { beforeQuitSave, saveConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
-import { WButton, WEmpty, WIcon, WPanel, WTabs, toast } from '../ui'
+import { WButton, WEmpty, WIcon, WPanel, WTabs, lineToast, toast } from '../ui'
 import { formatChaos } from '../ui/format'
 import { ninjaIcon } from '../ui/game-icons'
 import { popupAnchor } from '../ui/window-anchor'
@@ -79,8 +79,8 @@ import { followGameLog } from '../shared/game-log'
 import { lineTime } from '../campaign/log-tail'
 import DeckSummary from './DeckSummary.vue'
 import DeckHistory from './DeckHistory.vue'
-import { ACTIVE_MS, IDLE_END_MS, STACKED_DECK, cardFilterOf, initStackedDecks, isBigHit, isOver, markSeen, parseCardLine, replaySince, startSession, toRecord, totals } from './deck'
-import type { StackedDecksWidget } from './deck'
+import { ACTIVE_MS, IDLE_END_MS, STACKED_DECK, cardFilterOf, initStackedDecks, isBigHit, isOver, markSeen, parseCardLine, replaySince, setCardEdit, startSession, toRecord, totals } from './deck'
+import type { CardEdit, StackedDecksWidget } from './deck'
 import { useDeckPrices, useLuck } from './prices'
 import { useDeckStore } from './store'
 import { playHitSound } from './sound'
@@ -164,7 +164,7 @@ const windowShown = computed(() => props.config.wmWants === 'show' && wm.active.
 const luckInput = computed(() => {
   const s = session.value
   if (!s || !windowShown.value) return null
-  return { draws: s.draws, got: totals(s.draws, price.value, null).got, id: s.id }
+  return { draws: s.draws, got: totals(s.draws, price.value, null, null, undefined, s.edits).got, id: s.id }
 })
 const luck = useLuck(luckInput, price, store.records)
 
@@ -195,6 +195,20 @@ function finish () {
   if (s?.draws.length) props.config.ended = [...(props.config.ended ?? []), s]
   saveSoon()
   saveEnded()
+}
+
+// Your price for a card, or a card left out (the shared line item), on this session.
+function editCard (name: string, patch: CardEdit) {
+  const s = props.config.session
+  if (!s) return
+  s.edits = setCardEdit(s.edits, name, patch)
+  saveSoon()
+}
+function setPrice (name: string, chaos: number | null) { editCard(name, { each: chaos ?? undefined }) }
+function leaveOut (name: string, on: boolean) {
+  const id = props.config.session?.id
+  editCard(name, { out: on })
+  lineToast(on ? 'out' : 'in', name, () => { if (props.config.session?.id === id) editCard(name, { out: !on }) })
 }
 
 // Without poe.ninja for a few minutes, saved anyway: its cards show no price.
@@ -305,7 +319,7 @@ followGameLog({
     fetchPrices()
     saveSoon()
     if (best && props.config.session) {
-      best.result = totals(props.config.session.draws, price.value, sessionDeck.value, filter.value).result
+      best.result = totals(props.config.session.draws, price.value, sessionDeck.value, filter.value, undefined, props.config.session.edits).result
       showHit(best)
     }
   }

@@ -180,9 +180,12 @@ export function pickStatColumns (stats: readonly FilterOrGroup[]): StatColumn[] 
       title: filter.text,
       // A fractured item's total leaves its fractured mod out; a listing's total
       // counts every mod, so yours takes the share back to compare like with like.
-      yours: (source.kind === 'total' && filter.fracShare)
-        ? Math.round((filter.roll.value + filter.fracShare) * 100) / 100
-        : filter.roll.value,
+      // A number this map hasn't got (added on the map strip): the minimum asked for.
+      yours: filter.mapExtra
+        ? (typeof filter.roll.min === 'number' ? filter.roll.min : 0)
+        : (source.kind === 'total' && filter.fracShare)
+            ? Math.round((filter.roll.value + filter.fracShare) * 100) / 100
+            : filter.roll.value,
       better: filter.roll.better ?? 0,
       dp: filter.roll.dp,
       source,

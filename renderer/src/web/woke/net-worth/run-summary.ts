@@ -14,7 +14,19 @@ import type { RateTime, TimeSplit } from '../shared/rate-time'
 // A map in the run, from Client.txt (session-story map-log.ts).
 export interface SummaryMap { name: string, enteredAt: number, mapMs: number, deaths: number, npcs: string[] }
 
-export interface SummaryDrop { key: string, name: string, icon: string, count: number, chaos: number }
+export interface SummaryDrop {
+  key: string
+  name: string
+  icon: string
+  count: number
+  // What it's worth (with your count and price); a left-out one, what it would be.
+  chaos: number
+  // The shared line item: left out (stays listed, struck), your count or price,
+  // and an item added by hand (its id; it can't be left out, only removed).
+  out?: boolean
+  edited?: boolean
+  manualId?: string
+}
 
 export interface SummaryTip {
   id: 'pace' | 'slow' | 'kit-price' | 'hideout' | 'kit-compare'
@@ -82,17 +94,25 @@ function dropRows (run: Run): SummaryDrop[] {
     if (t.cost || isMapCostItem(t.name, undefined)) continue
     if ((t.currency || CURRENCY_NAME.test(t.name)) && !/^Mirror/.test(t.name)) continue
     const e = run.edits?.[rowKey.tally(r.key)]
-    if (e?.out) continue
-    const chaos = tallyValue(t, e)
+    // A left-out drop stays where it was, struck (the shared line item).
+    const chaos = tallyValue(t, e?.out ? { ...e, out: undefined } : e)
     if (!(chaos > 0.5)) continue
-    out.push({ key: r.key, name: t.name, icon: t.icon, count: e?.count ?? Math.max(1, r.net), chaos })
+    out.push({ key: r.key, name: t.name, icon: t.icon, count: e?.count ?? Math.max(1, r.net), chaos, ...(e?.out ? { out: true } : {}), ...(e?.count != null || e?.each != null ? { edited: true } : {}) })
   }
   for (const m of run.manual ?? []) {
     if (m.side !== 'in') continue
     const chaos = Math.max(0, m.count) * Math.max(0, m.each)
-    if (chaos > 0.5) out.push({ key: m.key ?? `manual:${m.id}`, name: m.name, icon: m.icon ?? '', count: m.count, chaos })
+    if (chaos > 0.5) out.push({ key: m.key ?? `manual:${m.id}`, name: m.name, icon: m.icon ?? '', count: m.count, chaos, manualId: m.id })
   }
-  return out.sort((a, b) => b.chaos - a.chaos).slice(0, MAX_DROPS)
+  // Left-out drops keep their place by value but don't take a counted one's slot.
+  const shown: SummaryDrop[] = []
+  let counted = 0
+  for (const d of out.sort((a, b) => b.chaos - a.chaos)) {
+    if (counted >= MAX_DROPS || shown.length >= MAX_DROPS + 2) break
+    shown.push(d)
+    if (!d.out) counted++
+  }
+  return shown
 }
 
 function median (xs: number[]): number | null {

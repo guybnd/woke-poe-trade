@@ -144,31 +144,29 @@
             <div v-else-if="!openSession.runs.length" class="text-xs w-dim">No maps were recorded one by one (maps added by hand or before this update).</div>
 
             <div v-if="openSession.runs.length">
-              <div v-for="(r, i) in openSession.runs" :key="i" class="w-row px-0" :class="[$style.runGrid, r.excluded ? $style.excluded : '']">
+              <div v-for="(r, i) in openSession.runs" :key="i" class="w-row px-0 w-line" :class="[$style.runGrid, { 'w-line-out': r.excluded }]" tabindex="0" data-analytics-map
+                @contextmenu="mapMenu($event, r)" @keydown="mapKeys($event, r)">
                 <span class="w-faint w-num text-xs pt-0.5">{{ i + 1 }}</span>
                 <div class="flex flex-col gap-1 min-w-0">
                   <div class="flex gap-2 items-baseline min-w-0">
-                    <span class="font-medium w-trunc">{{ r.name }}</span>
+                    <span class="font-medium w-trunc w-line-name">{{ r.name }}</span>
                     <span class="w-faint w-num text-xs">{{ formatDuration(r.mapMs) }}<template v-if="r.otherMs >= 60_000"> + {{ formatDuration(r.otherMs) }} out</template></span>
                     <span v-if="isBigDrop(r, openSession)" :class="$style.flag">big drop</span>
-                    <span v-if="r.excluded" class="text-xs w-faint">left out</span>
+                    <span v-if="r.excluded" class="w-line-tag">left out</span>
                   </div>
                   <div :class="$style.timeBar" :title="`${formatDuration(r.mapMs)} in the map, ${formatDuration(r.otherMs)} elsewhere`">
                     <i :style="{ width: `${r.mapMs / runScaleMs * 100}%` }" />
                     <i :class="$style.other" :style="{ left: `${r.mapMs / runScaleMs * 100}%`, width: `${r.otherMs / runScaleMs * 100}%` }" />
                   </div>
                   <div v-if="r.loot.length" class="flex flex-wrap gap-1">
-                    <button v-for="(l, j) in r.loot" :key="j" :style="{ color: lootColour(l.type) }" :class="[$style.loot, moving && moving.run === i && moving.line === j ? $style.moving : '']"
-                      :title="`${l.chaos != null ? num(l.chaos * l.qty / (rate(openSession) ?? 1)) + ' ' + unitLabel : 'no price'}. Click to move to another map.`"
-                      v-item-tip="l" @click="pickLoot(i, j)"><WIcon :src="lootArt(l.type, l.name)" fallback="fas fa-coins" class="mr-1" />{{ l.name }}<template v-if="l.qty > 1"> ×{{ l.qty }}</template></button>
+                    <LootChip v-for="(l, j) in r.loot" :key="j" :line="l" :color="lootColour(l.type)" :worth="lootWorth(l)" :moving="!!moving && moving.run === i && moving.line === j"
+                      @pick="pickLoot(i, j)" @price="setPrice(i, j, $event)" @out="leaveOutLoot(i, j, $event)" />
                   </div>
                 </div>
                 <div class="flex flex-col items-end gap-1">
-                  <span class="w-num" :class="(runValue(r) ?? 0) >= 0 ? 'w-up' : 'w-down'">{{ maybe(runValue(r), true) }}</span>
+                  <span class="w-num" :class="[(runValue(r) ?? 0) >= 0 ? 'w-up' : 'w-down', { [$style.struck]: r.excluded }]">{{ maybe(runValue(r), true) }}</span>
                   <WButton v-if="moving && moving.run !== i" size="sm" @click="moveHere(i)">Move here</WButton>
-                  <button v-else class="w-icon-btn text-xs" :title="r.excluded ? 'Count this map again' : 'Leave this map out of the averages'" @click="toggleExcluded(r)">
-                    <i :class="r.excluded ? 'fas fa-eye-slash' : 'fas fa-eye'" />
-                  </button>
+                  <WLineActs v-else :name="r.name" :out="!!r.excluded" :entries="mapEntries(r)" @out="toggleExcluded(r)" />
                 </div>
               </div>
             </div>
@@ -233,10 +231,11 @@ import Widget from '@/web/overlay/Widget.vue'
 import { formatDuration } from '../ui/format'
 import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
-import { WInfo, WPanel, WTabs, WSegmented, WButton, WEmpty, WChip, WSpark, WIcon, WBanner, WSkeleton, openMenu, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WSegmented, WButton, WEmpty, WChip, WSpark, WIcon, WBanner, WSkeleton, WLineActs, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
+import LootChip from './LootChip.vue'
 import { useWindowKeys } from '../ui/window-keys'
 import { copyText } from '../ui/copy'
-import { ninjaIcon, moduleIcon } from '../ui/game-icons'
+import { moduleIcon } from '../ui/game-icons'
 import { usePriceIndex } from '../market/price-index'
 import { hostRequest } from '../shared/host'
 import { BOSSES } from '../boss-runs/bosses'
@@ -254,10 +253,10 @@ import DeckHistory from '../stacked-decks/DeckHistory.vue'
 import { useVisibleClock } from '../shared/visible-clock'
 import {
   MIN_UNITS_FOR_RANGE, buildRow, chanceBetter, exportRows, filterSessions, formatSessionDate,
-  inRange, isBigDrop, mapTileRows, perHour, rateFor, runProfit, sessionTotals, sessionUnits, sortRows, strategyRows
+  inRange, isBigDrop, mapTileRows, perHour, rateFor, runProfit, sessionTotals, sessionUnits, setLootPrice, sortRows, strategyRows
 } from './stats'
 import type { StrategyRow, Unit } from './stats'
-import type { AnalyticsWidget, MapRun, SessionRecord } from './types'
+import type { AnalyticsWidget, MapRun, SavedLoot, SessionRecord } from './types'
 import { rateTime } from '../shared/rate-time-now'
 import RateTimePick from '../shared/RateTimePick.vue'
 // What the Per hour choice counts here: saved sessions keep hideout and AFK
@@ -517,9 +516,50 @@ function saveOpen (change: (s: SessionRecord) => void) {
   change(copy)
   store.save(copy).catch(() => {})
 }
+// The shared line item (ui/line-item.ts): a map left out of the averages
+// stays listed, struck; a loot line can be left out or take your price.
 function toggleExcluded (r: MapRun) {
-  const i = openSession.value!.runs.indexOf(r)
-  saveOpen(s => { s.runs[i].excluded = !s.runs[i].excluded || undefined })
+  const s0 = openSession.value
+  if (!s0) return
+  const i = s0.runs.indexOf(r)
+  const id = s0.id
+  const out = !r.excluded
+  saveOpen(s => { s.runs[i].excluded = out || undefined })
+  lineToast(out ? 'out' : 'in', r.name, () => { saveId(id, s => { if (s.runs[i]) s.runs[i].excluded = !out || undefined }) }, panel.value?.el)
+}
+const mapHandlers = (r: MapRun) => ({ out: () => { toggleExcluded(r) } })
+const mapEntries = (r: MapRun) => lineMenu({ out: r.excluded, editable: false }, mapHandlers(r))
+function mapMenu (e: MouseEvent, r: MapRun) {
+  if ((e.target as Element).closest('[data-loot-line], input')) return
+  openMenu(e, mapEntries(r))
+}
+function mapKeys (e: KeyboardEvent, r: MapRun) { lineKeys(e, { out: r.excluded, editable: false }, mapHandlers(r)) }
+const lootWorth = (l: SavedLoot) => l.chaos != null ? `${num(l.chaos * l.qty / (rate(openSession.value!) ?? 1))} ${unitLabel.value}` : 'no price'
+function setPrice (run: number, line: number, chaos: number | null) {
+  saveOpen(s => { const l = s.runs[run]?.loot[line]; if (l) setLootPrice(l, chaos) })
+}
+function leaveOutLoot (run: number, line: number, out: boolean) {
+  const s0 = openSession.value
+  const l0 = s0?.runs[run]?.loot[line]
+  if (!s0 || !l0) return
+  const id = s0.id
+  saveOpen((s) => { const l = s.runs[run]?.loot[line]; if (l) { if (out) l.out = true; else delete l.out } })
+  // Undo finds the line again by what it is (a move may have shifted it).
+  const same = (l: SavedLoot) => l.type === l0.type && l.name === l0.name && l.variant === l0.variant && !!l.out === out && l.chaos === l0.chaos
+  lineToast(out ? 'out' : 'in', l0.name, () => {
+    saveId(id, (s) => {
+      const at = [s.runs[run], ...s.runs].map(r => r?.loot.find(same)).find(Boolean)
+      if (at) { if (out) delete at.out; else at.out = true }
+    })
+  }, panel.value?.el)
+}
+// Undo changes the session the action was on, even if another is open now.
+function saveId (id: string, change: (s: SessionRecord) => void) {
+  const s = store.sessions.value.find(x => x.id === id)
+  if (!s) return
+  const copy = JSON.parse(JSON.stringify(s)) as SessionRecord
+  change(copy)
+  store.save(copy).catch(() => {})
 }
 function rename () {
   const name = renameTo.value.trim()
@@ -561,10 +601,6 @@ function strategyMenu (e: MouseEvent, row: StrategyRow) {
   ])
 }
 
-function lootArt (type: string, name: string) {
-  return ninjaIcon(type, name) ?? undefined
-}
-
 // Move a loot line to another map: click the chip, then "Move here".
 const moving = shallowRef<{ run: number, line: number } | null>(null)
 function pickLoot (run: number, line: number) {
@@ -578,7 +614,7 @@ function moveHere (target: number) {
   saveOpen(s => {
     const [line] = s.runs[m.run].loot.splice(m.line, 1)
     if (!line) return
-    const same = s.runs[target].loot.find(l => l.type === line.type && l.name === line.name && l.variant === line.variant)
+    const same = s.runs[target].loot.find(l => l.type === line.type && l.name === line.name && l.variant === line.variant && !l.out === !line.out && l.chaos === line.chaos && l.read === line.read)
     if (same) same.qty += line.qty
     else s.runs[target].loot.push(line)
   })
@@ -606,7 +642,7 @@ const tiles = computed(() => mapTileRows(inView.value, props.config.unit, divine
 .tileGrid { grid-template-columns: minmax(0, 1fr) 36px 56px 56px 56px 48px; gap: 6px; }
 .runGrid { grid-template-columns: 16px minmax(0, 1fr) auto; gap: 8px; align-items: start; padding-top: 5px; padding-bottom: 5px; }
 .sel { background: var(--w-accent-soft); }
-.excluded { opacity: 0.5; }
+.struck { text-decoration: line-through; }
 .detail {
   display: flex;
   flex-direction: column;
@@ -623,16 +659,6 @@ const tiles = computed(() => mapTileRows(inView.value, props.config.unit, divine
 .timeBar { height: 4px; border-radius: var(--w-r-sm); background: var(--w-panel-3); position: relative; overflow: hidden; }
 .timeBar i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--w-accent); opacity: 0.75; }
 .timeBar i.other { background: var(--w-faint); opacity: 1; }
-.loot {
-  font-size: var(--w-fs-xs);
-  padding: 0 6px;
-  border-radius: var(--w-r-sm);
-  background: var(--w-panel-3);
-  border: 1px solid transparent;
-  white-space: nowrap;
-}
-.loot:hover { border-color: var(--w-line-strong); }
-.moving { border-color: var(--w-accent); }
 .flag { font-size: var(--w-fs-xs); color: var(--w-warn); border: 1px solid var(--w-warn); border-radius: var(--w-r-sm); padding: 0 4px; opacity: 0.85; }
 .input {
   height: 24px;

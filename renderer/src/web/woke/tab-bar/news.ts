@@ -23,6 +23,7 @@ export interface NewsItem {
 
 export const NEWS: NewsItem[] = [
   { id: 'price-unit-flip', wmType: 'price-check', name: 'Price check', note: 'New: click the poe.ninja price to show it per divine ("44,469 per div") or in chaos' },
+  { id: 'map-price-check-add-number', wmType: 'price-check', name: 'Price check', note: 'New: a map\'s + tile adds a number it hasn\'t got (More Maps, Div cards...) to the search' },
   { id: 'div-card-rarity', wmType: 'price-check', name: 'Price check', note: 'New: a div card\'s price check and tooltip say how rare it is, like "1 in 121k cards"' },
   { id: 'map-price-check-kind', wmType: 'price-check', name: 'Price check', note: 'New: a map\'s price check searches its own kind (Originator, Elder...) or one you pick, every mod in one list' },
   { id: 'price-check-map-stat-columns', wmType: 'price-check', name: 'Price check', note: 'New: a map\'s ticked Rarity, Pack and More Currency show as columns in the results, higher or lower than yours' },
@@ -41,6 +42,9 @@ export const NEWS: NewsItem[] = [
   { id: 'price-check-unid-vs-id', wmType: 'price-check', name: 'Price check', note: 'New: unid Watcher\'s Eye and other gamble jewels show unid price vs identified versions' },
   { id: 'map-farming-goal', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: pick Currency or Maps & Threads on a map\'s price check, and the numbers that matter start on' },
   { id: 'div-card-map-chance', wmType: 'woke-search', name: 'Search', note: 'New: type a map to see how likely each of its cards is, and what one is worth on average' },
+  { id: 'listed-sales-leave-out', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: hover a listing for ⊘ to leave it out of the Listed total (Sales too)' },
+  { id: 'deck-card-line-item', wmType: 'woke-stacked-decks', name: 'Stacked decks', note: 'New: click a card\'s value to set your price; hover it to leave it out of Got and Result' },
+  { id: 'analytics-line-item', wmType: 'woke-session-analytics', name: 'Session analytics', note: 'New: right-click a map\'s loot for your price or to leave it out' },
   { id: 'profit-line-item', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: click a price to set your own; hover a row to leave it out. Changed lists what you edited' },
   { id: 'run-summary-on-stop', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: a run summary on Stop: vs your usual, best drops, map times and tips' },
   { id: 'runs-kits-compare', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: run costs priced live, and past runs side by side, by strategy too' },

@@ -19,8 +19,19 @@ export interface Unit {
 
 export function lootValue (lines: SavedLoot[]): number {
   let n = 0
-  for (const l of lines) n += (l.chaos ?? 0) * l.qty
+  for (const l of lines) if (!l.out) n += (l.chaos ?? 0) * l.qty
   return n
+}
+
+// Your price for one line (null: back to poe.ninja's from the session's end).
+export function setLootPrice (l: SavedLoot, chaos: number | null): void {
+  if (chaos == null) {
+    if (l.read !== undefined) l.chaos = l.read
+    delete l.read
+    return
+  }
+  if (l.read === undefined) l.read = l.chaos
+  l.chaos = chaos
 }
 
 export interface SessionTotals {
@@ -307,7 +318,7 @@ export function formatSessionDate (ts: number): string {
 }
 
 function dropsText (lines: SavedLoot[]): string {
-  return lines.map(l => `${l.qty}x ${l.name}${l.variant ? ` (${l.variant})` : ''}`).join('; ')
+  return lines.map(l => `${l.qty}x ${l.name}${l.variant ? ` (${l.variant})` : ''}${l.out ? ' (left out)' : ''}`).join('; ')
 }
 
 // CSV rows: one per map, or one per session without map detail. Chaos.

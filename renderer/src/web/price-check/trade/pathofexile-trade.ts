@@ -621,6 +621,8 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
   type NoUiStatFilter = Pick<StatFilter, 'not' | 'mapKind' | 'disabled' | 'fracShare' | keyof BareStatFilter>
   const realStats: NoUiStatFilter[] = stats.filter((stat): stat is StatFilter =>
     !stat.group &&
+    // woke: a map number this map hasn't got goes in only once added (pseudo/maps.ts), not as clutter.
+    !(stat.mapExtra && stat.disabled) &&
     !INTERNAL_TRADE_IDS.includes(stat.tradeId[0]))
   if (filters.veiled) {
     for (const statRef of filters.veiled.statRefs) {

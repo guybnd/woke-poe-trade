@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_CHEAP_UNDER, IDLE_END_MS, MAX_SIMULATED_DECKS, cardFilterOf, REPLAY_MAX_MS, calibration, markSeen, replaySince, expectedValue, isBigHit, isOver, luckPercentile, openOrSell, ownAverage,
-  parseCardLine, recordPrice, runningResult, startSession, toRecord, totals
+  parseCardLine, recordPrice, runningResult, setCardEdit, startSession, toRecord, totals, withEdits
 } from '@/web/woke/stacked-decks/deck'
 import type { PriceOf } from '@/web/woke/stacked-decks/deck'
 import { WEIGHTS, isCommonCard } from '@/web/woke/stacked-decks/weights'
@@ -276,5 +276,48 @@ describe('withoutHeld', () => {
     expect(px('The Doctor')).toBe(900)
     // Saved before the spike: its own price stands.
     expect(px('Old Card')).toBe(3)
+  })
+})
+
+describe('your edits (the shared line item)', () => {
+  const draws = ['Rain of Chaos', 'Rain of Chaos', 'The Doctor', 'Her Mask', 'Unknown Card']
+
+  it('a card left out stays listed, struck, and counts nowhere', () => {
+    const t = totals(draws, price, 3, null, undefined, { 'The Doctor': { out: true } })
+    const doctor = t.rows.find(r => r.name === 'The Doctor')!
+    expect(doctor.out).toBe(true)
+    expect(doctor.total).toBe(900)
+    expect(t.got).toBe(0.5 * 2 + 2)
+    expect(t.top?.name).toBe('Her Mask')
+  })
+
+  it('your price replaces poe.ninja\'s, gives a price to an unpriced card and is never folded as cheap', () => {
+    const t = totals(draws, price, 3, { under: 2, count: false }, undefined, { 'Unknown Card': { each: 10 }, 'Rain of Chaos': { each: 1 } })
+    expect(t.rows.find(r => r.name === 'Unknown Card')).toMatchObject({ each: 10, total: 10, mine: true })
+    expect(t.rows.find(r => r.name === 'Rain of Chaos')).toMatchObject({ each: 1, mine: true })
+    expect(t.unpriced).toBe(0)
+    expect(t.got).toBe(900 + 2 + 10 + 2)
+  })
+
+  it('a cheap card left out stays with the cheap cards, counted nowhere', () => {
+    const t = totals(draws, price, 3, { under: 2, count: true }, undefined, { 'Rain of Chaos': { out: true } })
+    expect(t.cheap.find(r => r.name === 'Rain of Chaos')).toMatchObject({ out: true })
+    expect(t.rows.some(r => r.name === 'Rain of Chaos')).toBe(false)
+    expect(t.cheapQty).toBe(0)
+  })
+
+  it('the running result follows your edits', () => {
+    expect(runningResult(['The Doctor', 'Her Mask'], price, 3, 120, null, { 'The Doctor': { out: true } })).toEqual([-3, -4])
+    expect(runningResult(['Unknown Card'], price, 3, 120, null, { 'Unknown Card': { each: 10 } })).toEqual([7])
+  })
+
+  it('setCardEdit drops an edit that is back to as read, and a saved session keeps them', () => {
+    let e = setCardEdit(undefined, 'The Doctor', { out: true })
+    e = setCardEdit(e, 'The Doctor', { each: 800 })
+    expect(e).toEqual({ 'The Doctor': { out: true, each: 800 } })
+    expect(setCardEdit(setCardEdit(e, 'The Doctor', { out: false }), 'The Doctor', { each: undefined })).toEqual({})
+    const s = { ...startSession(0, 'L', 3, 200), draws: ['The Doctor'], edits: e }
+    expect(toRecord(s, 1, price, 3, 200).edits).toEqual(e)
+    expect(withEdits(price, e)('The Doctor')).toBe(0)
   })
 })

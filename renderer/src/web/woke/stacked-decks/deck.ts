@@ -36,6 +36,35 @@ export interface LiveSession {
   // Stacked Deck price and divine rate when the session started, in chaos.
   deckChaos: number | null
   divine: number | null
+  // Your price for a card, or a card left out (the shared line item).
+  edits?: CardEdits
+}
+
+// --- Your edits: a card's price, or left out of Got and Result ---
+
+export interface CardEdit {
+  // One card, in chaos.
+  each?: number
+  out?: boolean
+}
+export type CardEdits = Record<string, CardEdit>
+
+// Prices with your edits: yours where you set one, 0 for a card left out.
+export function withEdits (price: PriceOf, edits: CardEdits | null | undefined): PriceOf {
+  if (!edits || !Object.keys(edits).length) return price
+  return name => {
+    const e = edits[name]
+    return e?.out ? 0 : e?.each ?? price(name)
+  }
+}
+
+// One card's edit changed; an empty one is dropped.
+export function setCardEdit (edits: CardEdits | null | undefined, name: string, patch: CardEdit): CardEdits {
+  const merged: CardEdit = { ...edits?.[name], ...patch }
+  const e: CardEdit = { ...(merged.each != null ? { each: merged.each } : {}), ...(merged.out ? { out: true } : {}) }
+  const next = Object.fromEntries(Object.entries(edits ?? {}).filter(([k]) => k !== name))
+  if (Object.keys(e).length) next[name] = e
+  return next
 }
 
 export interface StackedDecksWidget extends Widget {
@@ -171,6 +200,8 @@ export interface DeckRecord {
   cards: DeckCard[]
   // Draw order (card names), for the running chart.
   draws: string[]
+  // Your prices and left-out cards (cards keep poe.ninja's price as saved).
+  edits?: CardEdits
 }
 
 export type PriceOf = (card: string) => number | null
@@ -192,7 +223,8 @@ export function toRecord (s: LiveSession, endedAt: number, price: PriceOf, deckC
     deckChaos: s.deckChaos ?? deckChaos,
     divine: s.divine ?? divine,
     cards,
-    draws: [...s.draws]
+    draws: [...s.draws],
+    ...(s.edits && Object.keys(s.edits).length ? { edits: JSON.parse(JSON.stringify(s.edits)) as CardEdits } : {})
   }
 }
 
@@ -207,8 +239,13 @@ export function recordPrice (r: DeckRecord): PriceOf {
 export interface CardRow {
   name: string
   qty: number
+  // With your price, if you set one.
   each: number | null
   total: number
+  // Your price, not poe.ninja's.
+  mine?: boolean
+  // Left out of Got, Result and the top card; still listed, struck.
+  out?: boolean
 }
 
 export interface DeckTotals {
@@ -236,7 +273,7 @@ export interface DeckTotals {
 // few trades to price, so worth next to nothing. Without a price those fold
 // with the cheap cards too, once prices are in (another card has one). A rare
 // card without a price stays listed: it may be new and worth something.
-export function totals (draws: string[], price: PriceOf, deckChaos: number | null, filter: CardFilter | null = null, common: (name: string) => boolean = () => false): DeckTotals {
+export function totals (draws: string[], price: PriceOf, deckChaos: number | null, filter: CardFilter | null = null, common: (name: string) => boolean = () => false, edits: CardEdits | null = null): DeckTotals {
   const all: CardRow[] = []
   let got = 0
   let unpriced = 0
@@ -246,17 +283,25 @@ export function totals (draws: string[], price: PriceOf, deckChaos: number | nul
   const pricesIn = [...counts.keys()].some(name => price(name) != null)
   const cheapRow = new Set<string>()
   for (const [name, qty] of counts) {
-    const each = price(name)
-    if (each == null) unpriced += qty
+    const e = edits?.[name]
+    const mine = e?.each != null
+    const each = mine ? e.each! : price(name)
     const total = (each ?? 0) * qty
-    const cheap = isCheap(each, filter) || (each == null && filter != null && filter.under > 0 && pricesIn && common(name))
+    const cheap = !mine && (isCheap(each, filter) || (each == null && filter != null && filter.under > 0 && pricesIn && common(name)))
     if (cheap) cheapRow.add(name)
+    // Left out: listed where it was (a cheap one stays with the cheap cards),
+    // counted nowhere.
+    if (e?.out) {
+      all.push({ name, qty, each, total, out: true, ...(mine ? { mine } : {}) })
+      continue
+    }
+    if (each == null) unpriced += qty
     if (cheap) {
       cheapQty += qty
       cheapChaos += total
     }
     if (!cheap || filter!.count) got += total
-    all.push({ name, qty, each, total })
+    all.push({ name, qty, each, total, ...(mine ? { mine } : {}) })
   }
   // Most value first; same value: more copies, then name.
   all.sort((a, b) => b.total - a.total || b.qty - a.qty || a.name.localeCompare(b.name))
@@ -264,7 +309,7 @@ export function totals (draws: string[], price: PriceOf, deckChaos: number | nul
   const cheap = all.filter(r => cheapRow.has(r.name))
   // The top card is one that counts.
   let top: CardRow | null = null
-  for (const r of (filter && !filter.count ? rows : all)) if (r.each != null && (!top || r.each > top.each!)) top = r
+  for (const r of (filter && !filter.count ? rows : all)) if (!r.out && r.each != null && (!top || r.each > top.each!)) top = r
   const spent = deckChaos != null ? deckChaos * draws.length : null
   const result = spent != null ? got - spent : null
   const withoutTop = result != null && top ? result - top.each! : result
@@ -274,7 +319,8 @@ export function totals (draws: string[], price: PriceOf, deckChaos: number | nul
 // Running result after each deck (chaos), for the line chart. Long sessions
 // are thinned to about `points` points, always keeping the last.
 // A filter that doesn't count cheap cards leaves them out (as 0).
-export function runningResult (draws: string[], price: PriceOf, deckChaos: number | null, points = 120, filter: CardFilter | null = null): number[] {
+export function runningResult (draws: string[], basePrice: PriceOf, deckChaos: number | null, points = 120, filter: CardFilter | null = null, edits: CardEdits | null = null): number[] {
+  const price = withEdits(basePrice, edits)
   const cost = deckChaos ?? 0
   const skip = filter != null && !filter.count
   const out: number[] = []
@@ -282,7 +328,7 @@ export function runningResult (draws: string[], price: PriceOf, deckChaos: numbe
   let sum = 0
   for (let i = 0; i < draws.length; i++) {
     const each = price(draws[i])
-    sum += (skip && isCheap(each, filter) ? 0 : (each ?? 0)) - cost
+    sum += (skip && edits?.[draws[i]]?.each == null && isCheap(each, filter) ? 0 : (each ?? 0)) - cost
     if ((i + 1) % step === 0 || i === draws.length - 1) out.push(sum)
   }
   return out
