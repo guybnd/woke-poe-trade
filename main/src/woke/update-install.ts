@@ -4,6 +4,7 @@
 // runs: installing restarts the overlay.
 import { execFile } from 'child_process'
 import fs from 'fs'
+import { AFTER_PID_ARG } from './after-pid'
 
 // The game must stay closed this long first: a crash, a relaunch or a patch
 // restart brings it back within seconds.
@@ -158,10 +159,12 @@ export function afterEvent (downloaded: string | null, ev: UpdaterEvent): { show
 // on quit, and from Restart now.
 export const NO_AUTO_INSTALL_ARG = '--woke-no-auto-install'
 
-// The arguments for starting the app again: never the flag above, so it lasts
-// one run only.
+export { AFTER_PID_ARG }
+
+// The arguments for starting the app again: never the flags above, so they
+// last one run only.
 export function relaunchArgs (argv: string[], noAutoInstall: boolean): string[] {
-  const args = argv.slice(1).filter(a => a !== NO_AUTO_INSTALL_ARG)
+  const args = argv.slice(1).filter(a => a !== NO_AUTO_INSTALL_ARG && !a.startsWith(AFTER_PID_ARG))
   return noAutoInstall ? [...args, NO_AUTO_INSTALL_ARG] : args
 }
 

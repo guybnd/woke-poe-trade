@@ -3,6 +3,7 @@ import { app, Tray, Menu, shell, nativeImage, dialog } from 'electron'
 import type { ServerEvents } from './server'
 import { appIconFile } from './woke/app-icon'
 import { appPrefs, canRestartApp, onAppPrefsChange, restartApp, setAppPrefs } from './woke/app-prefs'
+import { canOffer, knownRights, probeRights, restartAsAdmin } from './woke/run-as-admin'
 
 // woke: the overlay can't be seen until it's attached, so the tray says.
 export type TrayStatus = 'waiting' | 'attached' | 'needs-admin'
@@ -26,6 +27,8 @@ export class AppTray {
     if (status === this.status) return
     this.status = status
     this.rebuildMenu()
+    // woke: the admin items need to know if this account can elevate.
+    if (status === 'needs-admin') void probeRights().then(() => { this.rebuildMenu() })
   }
 
   private statusText () {
@@ -75,12 +78,31 @@ export class AppTray {
     this.notify('Woke PoE Trade is already running', `It's in the tray. Press ${this.overlayKey} in game to open it.`)
   }
 
+  // woke: only for a player whose game runs as admin, or who already chose
+  // to start as admin (so they can turn it off again).
+  private adminItems (): Electron.MenuItemConstructorOptions[] {
+    const needs = this.status === 'needs-admin'
+    if (!needs && !appPrefs().alwaysAdmin) return []
+    const offer = canOffer(knownRights())
+    if (!offer && !appPrefs().alwaysAdmin) return []
+    return [
+      ...(needs && offer ? [{ label: 'Restart as admin', click: () => { void restartAsAdmin() } }] : []),
+      {
+        label: 'Always start as admin',
+        type: 'checkbox' as const,
+        checked: appPrefs().alwaysAdmin,
+        click: () => { setAppPrefs({ alwaysAdmin: !appPrefs().alwaysAdmin }) }
+      }
+    ]
+  }
+
   rebuildMenu () {
     this.tray.setToolTip(process.env.VITE_DEV_SERVER_URL
       ? `Woke PoE Trade DEV (${process.env.WOKE_DEV_BRANCH ?? 'no launcher'})`.slice(0, 127)
       : `Woke PoE Trade v${app.getVersion()}: ${this.statusText()}`.slice(0, 127))
     const contextMenu = Menu.buildFromTemplate([
       { label: this.statusText(), enabled: false },
+      ...this.adminItems(),
       { type: 'separator' },
       {
         label: 'Settings/League',

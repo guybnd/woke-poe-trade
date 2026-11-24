@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, shell, Menu, WebContents, screen } from 'electron'
+import { BrowserWindow, shell, Menu, WebContents, screen } from 'electron'
 import type { Point } from 'electron'
 import { OverlayController, OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
 import type { ServerEvents } from '../server'
@@ -6,6 +6,7 @@ import type { Logger } from '../RemoteLogger'
 import type { GameWindow } from './GameWindow'
 import { appIconFile } from '../woke/app-icon'
 import { openWebLink } from '../woke/web-guard'
+import { showNeedsAdmin } from '../woke/run-as-admin'
 
 // The failsafe: while the window takes clicks for a dock icon or card, check the
 // cursor this often, and give the clicks back to the game once it has been off
@@ -380,13 +381,8 @@ export class OverlayWindow {
     if (hasAccess === false) {
       this.logger.write('error [Overlay] PoE is running with administrator rights')
 
-      dialog.showErrorBox(
-        'PoE window - No access',
-        // ----------------------
-        'Path of Exile is running with administrator rights.\n' +
-        '\n' +
-        'You need to restart Woke PoE Trade with administrator rights.'
-      )
+      // woke: offers to restart as admin (run-as-admin.ts).
+      void showNeedsAdmin()
     } else {
       this.server.sendEventTo('broadcast', {
         name: 'MAIN->OVERLAY::overlay-attached',

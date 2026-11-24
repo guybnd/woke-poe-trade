@@ -6,6 +6,8 @@
 // %APPDATA%\awakened-poe-trade with a normal Awakened PoE Trade install. Our
 // own folder keeps the two apart. The folder name is fixed on purpose: the
 // display name can change without moving anyone's data.
+// An elevated copy waits for the old one to quit before anything here runs.
+import './wait-starter'
 import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
