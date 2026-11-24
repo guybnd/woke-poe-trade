@@ -12,8 +12,18 @@
           <template v-if="startAt == null">Refresh your stash once first</template>
           <template v-else-if="from != null">From {{ clock(startAt) }} · <button type="button" :class="$style.link" @click="$emit('clear-from')">use the last read</button></template>
           <template v-else>From {{ clock(startAt) }} <i class="fas fa-info-circle" :class="$style.info" title="The last stash read. To start earlier, click a point on the chart." /></template>
-          <template v-if="lastCosts.length"> · keeps last time's costs</template>
         </span>
+      </div>
+      <!-- The kit (pick K1): last time's per-map costs for this name, priced
+           live where they came from the stash or poe.ninja. -->
+      <div v-if="kit.length" :class="$style.kit" data-run-kit>
+        <div :class="$style.kitHead"><span :class="$style.caps">Kit, per map</span><span class="w-dim w-num text-xs">{{ amount(kitPerMap) }}<Coin :chaos="!divine" /> a map · from your last {{ name.trim() || 'Run' }} run</span></div>
+        <div v-for="c in kit" :key="c.id" :class="$style.kitRow" data-run-kit-line>
+          <span v-item-tip="tipOf(c.key, c.name)" class="w-trunc">{{ c.qty !== 1 ? `${c.qty} × ` : '' }}{{ c.name }}</span>
+          <span class="w-num text-xs">{{ amount(kitEach(c)) }}<Coin :chaos="!divine" /></span>
+          <span :class="[$style.src, { [$style.on]: c.live }]" :title="c.live ? 'Follows the price while the run goes' : 'Your price, kept as typed'">{{ c.live ? 'live' : 'typed' }}</span>
+          <button type="button" :class="$style.x" :aria-label="`Leave ${c.name} out of this run`" title="Not this run" @click="dropKit(c.id)"><i class="fas fa-times" /></button>
+        </div>
       </div>
     </section>
 
@@ -27,7 +37,7 @@
       </div>
       <div :class="$style.hero" class="w-num">
         <span :title="profitTitle"><span :class="$style.caps">Profit</span><b :class="[$style.big, tone(totals.profitChaos)]">{{ signed(totals.profitChaos) }}<Coin :chaos="!divine" /></b></span>
-        <span :title="unit === 'map' ? undefined : 'Per map or boss fight'" data-run-per><span :class="$style.caps">Per {{ unit }}</span><b :class="tone(totals.perMapChaos)">{{ totals.perMapChaos != null ? signed(totals.perMapChaos) : '—' }}</b></span>
+        <span :title="unit === 'map' ? undefined : 'Per map or boss fight'" data-run-per><span :class="$style.caps">Per {{ unit }} <span v-if="sample" :class="$style.small" :title="sampleText" data-run-small>small sample</span></span><b :class="tone(totals.perMapChaos)">{{ totals.perMapChaos != null ? signed(totals.perMapChaos) : '—' }}</b></span>
         <span :title="perHourTip"><span :class="$style.caps">Per hour</span><b :class="tone(perHour)">{{ perHour != null ? signed(perHour) : '—' }}</b></span>
         <span v-if="totals.faustusChaos" title="Profit plus what's at Faustus or held outside the stash" data-run-total><span :class="$style.caps">With Faustus</span><b :class="tone(totals.totalChaos)">{{ signed(totals.totalChaos) }}</b></span>
         <span v-if="totals.leftOutChaos" title="Long shots you left out. None of it counts" data-run-left-out><span :class="$style.caps">Left out</span><b class="w-dim">{{ amount(totals.leftOutChaos) }}</b></span>
@@ -52,7 +62,11 @@
           <div :class="$style.colHead"><span :class="$style.colTitle">Out</span><span class="w-num w-down">{{ outSum > 0 ? '−' : '' }}{{ amount(outSum) }}<Coin :chaos="!divine" /></span>
             <span v-if="totals.costPerMapChaos != null" class="w-dim w-num text-xs" :title="`Typed costs, plus maps, scarabs and fragments used up, per ${unit === 'run' ? 'map or fight' : unit}`">{{ amount(totals.costPerMapChaos) }} a {{ unit }}</span></div>
           <RunRow v-for="c in shownRun.costs" :key="c.id" :name="c.name" :tip="tipOf(c.key, c.name)" :count="c.qty" :each="c.unitChaos" :chaos="lineCost(c, totals.runs)" sign="−" :sub="costSub(c)" :divine="divine" :bought="c.bought ?? null" :can-leave-out="false" removable data-run-cost
-            @edit="editCost(c.id, $event)" @remove="removeCost(c.id)" />
+            @edit="editCost(c.id, $event)" @remove="removeCost(c.id)">
+            <template #sub>
+              <button v-if="shownRun === live || c.live" type="button" :class="[$style.chip, { [$style.on]: c.live }]" :disabled="shownRun !== live" :title="c.live ? (shownRun === live ? 'Follows the price at each stash read. Click to keep this price' : 'Was live; kept at its price at Stop') : 'Kept at your price. Click to follow the price at each stash read'" :aria-pressed="!!c.live" data-run-live @click="setLive(c, !c.live)">live</button>
+            </template>
+          </RunRow>
           <RunRow v-for="o in shownRun.once" :key="o.id" :name="o.name" :tip="tipOf(null, o.name)" :count="null" :chaos="o.chaos" sign="−" sub="once" :divine="divine" :editable="false" :can-leave-out="false" removable @remove="removeOnce(o.id)" />
           <RunRow v-for="m in manualOut" :key="m.id" :icon="m.icon" :name="m.name" :tip="tipOf(m.key ?? null, m.name, m.count)" :count="m.count" :chaos="m.count * m.each" :each="m.each" sign="−" sub="added" :divine="divine" :can-leave-out="false" removable
             @edit="editManual(m.id, $event)" @remove="removeManual(m.id)" />
@@ -91,16 +105,44 @@
       <div v-if="shownRun.tallyPartial" class="w-dim text-xs">Started in the past: small items before Start may be missing <i class="fas fa-info-circle" :class="$style.info" title="Reads before you pressed Start keep only their biggest changes." /></div>
     </section>
 
-    <!-- Finished runs, newest first. -->
-    <section v-if="doc.done.length" :class="$style.past">
-      <div :class="$style.head"><span :class="$style.caps">Past runs</span></div>
-      <div v-for="r in doc.done.slice(0, pastShown)" :key="r.id" data-past-run :class="[$style.pastRow, { [$style.on]: opened === r.id }]">
-        <button type="button" :class="$style.pastOpen" class="w-trunc" :title="`Open ${r.name}`" @click="open(r)">{{ r.name }}</button>
-        <span class="w-dim w-num text-xs">{{ day(r.startAt) }} · {{ span((r.stoppedAt ?? r.startAt) - r.startAt) }}<template v-if="r.final"> · {{ countLabel(r.final.maps, r.final.fights) }}</template></span>
-        <span class="w-num text-xs" :class="r.final ? tone(r.final.profitChaos) : 'w-dim'"><template v-if="r.final">{{ signed(r.final.profitChaos) }}<Coin :chaos="!divine" /><template v-if="r.final.perMapChaos != null"> · {{ signed(r.final.perMapChaos) }}/{{ unitOf(r.final.maps, r.final.fights) }}</template></template></span>
-        <button type="button" :class="$style.x" :aria-label="`Delete ${r.name}`" title="Delete" @click="remove(r)"><i class="fas fa-trash-alt" /></button>
+    <!-- Finished runs compared (pick C2): one row a run, or by strategy. -->
+    <section v-if="doc.done.length" :class="$style.past" data-past-runs>
+      <div :class="$style.head">
+        <span :class="$style.caps">Past runs</span>
+        <span :class="$style.seg" role="group" aria-label="Show past runs">
+          <button type="button" :class="{ [$style.on]: !byName }" :aria-pressed="!byName" @click="byName = false">Each run</button>
+          <button type="button" :class="{ [$style.on]: byName }" :aria-pressed="byName" data-by-strategy @click="byName = true">By strategy</button>
+        </span>
       </div>
-      <button v-if="doc.done.length > pastShown" type="button" :class="$style.link" class="text-xs" @click="pastShown += 10">Show older ({{ doc.done.length - pastShown }})</button>
+      <div :class="$style.tableWrap">
+        <table :class="$style.table" data-compare>
+          <thead><tr>
+            <th v-for="c in COLUMNS" :key="c.id" :class="{ [$style.num]: c.id !== 'new' }" :aria-sort="sortBy === c.id ? (c.id === 'cost' ? 'ascending' : 'descending') : undefined">
+              <button type="button" :class="[$style.sortBtn, { [$style.on]: sortBy === c.id }]" :title="c.tip" @click="sortBy = c.id">{{ c.id === 'perMap' ? `Per ${pastUnit}` : c.label }}</button>
+            </th>
+            <th v-if="!byName" />
+          </tr></thead>
+          <tbody>
+            <tr v-for="r in pastRows" :key="r.id" data-past-run :class="{ [$style.on]: !byName && opened === r.id }">
+              <td>
+                <button v-if="!byName" type="button" :class="$style.pastOpen" class="w-trunc" :title="`Open ${r.name}`" @click="openId(r.id)">{{ r.name }}</button>
+                <span v-else class="w-trunc">{{ r.name }}</span>
+                <div class="w-dim w-num text-xs">{{ byName ? `${r.count} ${r.count === 1 ? 'run' : 'runs'}` : day(r.startAt) }} · {{ span(r.ms) }}</div>
+              </td>
+              <td :class="$style.num" class="w-num">{{ countLabel(r.maps, r.fights) }}</td>
+              <td :class="[$style.num, tone(r.profitChaos)]" class="w-num">{{ signed(r.profitChaos) }}</td>
+              <td :class="[$style.num, tone(r.perMapChaos)]" class="w-num">{{ r.perMapChaos != null ? signed(r.perMapChaos) : '—' }}<span v-if="r.sample" :class="$style.small" :title="sampleTextOf(r.runs, r.profitChaos, r.top, r.sample, pastUnit)">small</span></td>
+              <td :class="[$style.num, tone(r.perHourChaos)]" class="w-num">{{ r.perHourChaos != null ? signed(r.perHourChaos) : '—' }}</td>
+              <td :class="$style.num" class="w-num w-dim">{{ r.costPerMapChaos != null ? amount(r.costPerMapChaos) : '—' }}</td>
+              <td :class="[$style.num, tone(r.perMapNoTopChaos)]" class="w-num" :title="r.top ? `Per ${pastUnit} without ${r.top.name} (${amount(r.top.chaos)})` : undefined">
+                {{ r.perMapNoTopChaos != null ? signed(r.perMapNoTopChaos) : '—' }}
+              </td>
+              <td v-if="!byName"><button type="button" :class="$style.x" :aria-label="`Delete ${r.name}`" title="Delete" @click="removeId(r.id)"><i class="fas fa-trash-alt" /></button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="w-dim text-xs">In {{ divine ? 'divines' : 'chaos' }}. Per hour: {{ leftOutText(rateTime()) }}.<template v-if="doc.done.length > pastRows.length && !byName"> · {{ doc.done.length - pastRows.length }} without totals</template></div>
     </section>
   </div>
 </template>
@@ -110,7 +152,7 @@
 // the last read or a chart point, see profit since then with what got used
 // up, type the costs the stash can't see, and look back at finished runs.
 import { computed, onUnmounted, shallowRef, watch } from 'vue'
-import { WButton, WKbd, toast } from '../ui'
+import { WButton, WKbd, toast, vItemTip } from '../ui'
 import { AppConfig } from '@/web/Config'
 import { NET_WORTH_TYPE, runHotkeyOf } from './widget'
 import type { NetWorthWidget } from './widget'
@@ -119,10 +161,11 @@ import { tipFor } from './tips'
 import type { TipIndex } from './tips'
 import { span } from './play-time'
 import Coin from './Coin.vue'
-import { countLabel, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, tallyRows, tallyValue, unitOf } from './runs'
+import { compareRows, countLabel, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, smallSample, sortCompare, tallyRows, tallyValue, topDrop, unitOf, SAMPLE_MIN_RUNS } from './runs'
+import { kitPrice } from './run-kit'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
-import type { CostLine, ManualLine, Run, TallyRow } from './runs'
+import type { CompareSort, CostLine, ManualLine, Run, SmallSample, TallyRow, TopDrop } from './runs'
 import RunRow from './RunRow.vue'
 import RunAdd from './RunAdd.vue'
 import type { AddedLine } from './RunAdd.vue'
@@ -276,10 +319,21 @@ const totals = computed(() => {
   return runTotals(r, props.points, { maps: mapsIn(r, runMaps.value, now), fights: spent.value?.fights ?? r.final?.fights ?? 0 }, now, mapCostKeys.value, outside.value)
 })
 const unit = computed(() => totals.value ? unitOf(totals.value.maps, totals.value.fights) : 'map')
+// Small sample (pick S1): few maps, or one drop over half the profit.
+const top = computed(() => shownRun.value ? topDrop(shownRun.value) : null)
+const sample = computed(() => totals.value ? smallSample(totals.value.runs, totals.value.profitChaos, top.value) : null)
+function sampleTextOf (runs: number, profit: number, t: TopDrop | null, s: SmallSample, one: string = unit.value): string {
+  const u = one === 'run' ? 'maps and fights' : `${one}s`
+  const parts: string[] = []
+  if (s.few) parts.push(`Only ${runs} ${u}: per ${one} can swing a lot. Over ${SAMPLE_MIN_RUNS} reads steadier.`)
+  if (s.share != null && t) parts.push(`One drop (${t.name}, ${amount(t.chaos)}) is ${Math.round(s.share * 100)}% of the profit.`)
+  if (t && runs > 0) parts.push(`Without it: ${signed((profit - t.chaos) / runs)} a ${one}.`)
+  return parts.join(' ')
+}
+const sampleText = computed(() => totals.value && sample.value ? sampleTextOf(totals.value.runs, totals.value.profitChaos, top.value, sample.value) : '')
 const rows = computed(() => shownRun.value ? tallyRows(shownRun.value) : { used: [], came: [] })
 const usedShown = shallowRef(8)
 const cameShown = shallowRef(8)
-const pastShown = shallowRef(10)
 watch(() => shownRun.value?.id, () => { usedShown.value = 8; cameShown.value = 8; listedShown.value = 8; soldShown.value = 8 })
 
 // ---------- start ----------
@@ -289,8 +343,16 @@ const lastPoint = computed(() => props.points[props.points.length - 1]?.at ?? nu
 const startAt = computed(() => props.from ?? lastPoint.value)
 const startTitle = 'Reads your Faustus listings (one trade search): what is listed now is from before the run'
 
-// The costs typed for the same name last time come along.
+// The kit (pick K1): the costs typed for the same name last time come along,
+// less the ones you take off before Start.
 const lastCosts = computed<CostLine[]>(() => lastCostsOf(name.value))
+const dropped = shallowRef<string[]>([])
+watch(name, () => { dropped.value = [] })
+const kit = computed(() => lastCosts.value.filter(c => !dropped.value.includes(c.id)))
+const livePrice = computed(() => kitPrice(props.lines))
+const kitEach = (c: CostLine) => c.live ? (livePrice.value(c.key, c.name) ?? c.unitChaos) : c.unitChaos
+const kitPerMap = computed(() => kit.value.reduce((s, c) => s + Math.max(0, c.qty) * kitEach(c), 0))
+function dropKit (id: string) { dropped.value = [...dropped.value, id] }
 // Start reads your Faustus listings (run-start.ts). A failed read still starts.
 const starting = shallowRef(false)
 async function start () {
@@ -299,8 +361,9 @@ async function start () {
   // What the run starts from, as it is now (the read can take a while).
   const { league, diffs, points, divine } = props
   starting.value = true
-  try { await startRunAt(league, name.value, at, diffs, points, divine) } catch {} finally { starting.value = false }
+  try { await startRunAt(league, name.value, at, diffs, points, divine, kit.value, livePrice.value) } catch {} finally { starting.value = false }
   name.value = ''
+  dropped.value = []
 }
 // Stop reads your Faustus listings first; a failed read still stops.
 // The run stops at the press, whatever the read takes.
@@ -309,14 +372,31 @@ async function stop () {
   faustusReading.value = true
   try { await stopLiveRun(props.league, props.points, props.divine) } catch {} finally { faustusReading.value = false }
 }
-function open (r: Run) {
-  opened.value = opened.value === r.id ? null : r.id
+function openId (id: string) {
+  opened.value = opened.value === id ? null : id
 }
-function remove (r: Run) {
-  if (opened.value === r.id) opened.value = null
-  deleteRun(props.league, r.id).catch(() => {})
+function removeId (id: string) {
+  const r = doc.value.done.find(x => x.id === id)
+  if (!r) return
+  if (opened.value === id) opened.value = null
+  deleteRun(props.league, id).catch(() => {})
   toast(`Deleted ${r.name}`)
 }
+
+// ---------- past runs compared (pick C2) ----------
+const COLUMNS: Array<{ id: CompareSort, label: string, tip: string }> = [
+  { id: 'new', label: 'Run', tip: 'Newest first' },
+  { id: 'maps', label: 'Maps', tip: 'Most maps and boss fights first' },
+  { id: 'profit', label: 'Profit', tip: 'Biggest profit first' },
+  { id: 'perMap', label: 'Per map', tip: 'Best per map or fight first' },
+  { id: 'perHour', label: 'Per hour', tip: 'Best per hour first' },
+  { id: 'cost', label: 'Cost', tip: 'Cost a map: typed costs plus maps, scarabs and fragments used up. Cheapest first' },
+  { id: 'noTop', label: 'No top', tip: 'Per map without the single biggest drop. Best first' }
+]
+const byName = shallowRef(false)
+const sortBy = shallowRef<CompareSort>('new')
+const pastRows = computed(() => sortCompare(compareRows(doc.value.done, rateTime(), byName.value), sortBy.value))
+const pastUnit = computed(() => pastRows.value.some(r => r.fights > 0) ? (pastRows.value.some(r => r.maps > 0) ? 'run' : 'fight') : 'map')
 
 // ---------- costs ----------
 function edit (fn: (r: Run) => Run) {
@@ -325,17 +405,26 @@ function edit (fn: (r: Run) => Run) {
   editRun(props.league, r.id, fn, props.points, props.divine).catch(() => {})
 }
 function setCost (id: string, patch: Partial<CostLine>) {
-  edit(r => ({ ...r, costs: r.costs.map(c => { if (c.id !== id) return c; const n = { ...c, ...patch }; if (n.bought == null) delete n.bought; return n }) }))
+  edit(r => ({ ...r, costs: r.costs.map(c => { if (c.id !== id) return c; const n = { ...c, ...patch }; if (n.bought == null) delete n.bought; if (!n.live) delete n.live; return n }) }))
 }
 function editCost (id: string, v: { count?: number, each?: number, bought?: number | null }) {
-  setCost(id, { ...(v.count != null ? { qty: v.count } : {}), ...(v.each != null ? { unitChaos: v.each } : {}), ...(v.bought !== undefined ? { bought: v.bought ?? undefined } : {}) })
+  // A typed price pins the line (it no longer follows the price).
+  const was = shownRun.value?.costs.find(c => c.id === id)
+  const priced = v.each != null && (was == null || Math.abs(v.each - was.unitChaos) > 1e-6)
+  setCost(id, { ...(v.count != null ? { qty: v.count } : {}), ...(v.each != null ? { unitChaos: v.each } : {}), ...(priced ? { live: undefined } : {}), ...(v.bought !== undefined ? { bought: v.bought ?? undefined } : {}) })
+}
+function setLive (c: CostLine, on: boolean) {
+  if (on) {
+    const p = livePrice.value(c.key, c.name)
+    setCost(c.id, { live: true, ...(p != null && p > 0 ? { unitChaos: p } : {}) })
+  } else setCost(c.id, { live: undefined })
 }
 function removeCost (id: string) { edit(r => ({ ...r, costs: r.costs.filter(c => c.id !== id) })) }
 function removeOnce (id: string) { edit(r => ({ ...r, once: r.once.filter(o => o.id !== id) })) }
 
 const itemNames = computed(() => [...new Set([...Object.values(shownRun.value?.tally ?? {}).map(t => t.name), ...props.lines.map(l => l.name)])].slice(0, 400))
 function addPerMap (l: AddedLine) {
-  edit(r => addCost(r, { key: l.key, name: l.name, qty: l.count, unitChaos: l.each }))
+  edit(r => addCost(r, { key: l.key, name: l.name, qty: l.count, unitChaos: l.each, ...(l.live ? { live: true as const } : {}) }))
 }
 </script>
 
@@ -367,8 +456,24 @@ function addPerMap (l: AddedLine) {
 .colFoot { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; margin-top: 4px; }
 .x { background: none; border: 0; color: var(--w-dim); cursor: pointer; padding: 0; }
 .x:hover { color: var(--w-down); }
-.pastRow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto 1.2rem; gap: var(--w-s2); align-items: baseline; border-bottom: 1px solid var(--w-line); padding: 2px 0; }
-.pastRow.on .pastOpen { color: var(--w-gold); }
+.kit { display: flex; flex-direction: column; gap: 2px; border-left: 2px solid var(--w-line-strong); padding-left: var(--w-s2); }
+.kitHead { display: flex; align-items: baseline; gap: var(--w-s2); }
+.kitRow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto 1rem; gap: var(--w-s2); align-items: baseline; font-size: var(--w-fs-sm); }
+.src { font-size: var(--w-fs-xs); border: 1px solid var(--w-line); color: var(--w-dim); padding: 0 4px; }
+.src.on { border-color: var(--w-gold); color: var(--w-gold); }
+.small { font-family: inherit; text-transform: none; font-size: var(--w-fs-xs); border: 1px solid var(--w-gold); color: var(--w-gold); padding: 0 4px; margin-left: 4px; cursor: help; white-space: nowrap; }
+.seg { display: inline-flex; border: 1px solid var(--w-line); }
+.seg button { background: none; border: 0; color: var(--w-dim); font: inherit; font-size: var(--w-fs-xs); padding: 0 8px; cursor: pointer; }
+.seg button.on { background: var(--w-line-strong); color: var(--w-gold); }
+.tableWrap { overflow-x: auto; min-width: 0; }
+.table { width: 100%; border-collapse: collapse; font-size: var(--w-fs-sm); }
+.table th { font-weight: normal; text-align: left; border-bottom: 1px solid var(--w-line-strong); padding: 2px 4px; white-space: nowrap; }
+.table td { border-bottom: 1px solid var(--w-line); padding: 2px 4px; vertical-align: top; }
+.table td:first-child { max-width: 14rem; }
+.table .num { text-align: right; white-space: nowrap; }
+.table tr.on .pastOpen { color: var(--w-gold); }
+.sortBtn { background: none; border: 0; padding: 0; font: inherit; font-size: var(--w-fs-xs); color: var(--w-dim); cursor: pointer; font-family: var(--w-caps-face); text-transform: var(--w-caps-case); }
+.sortBtn.on, .sortBtn:hover { color: var(--w-gold); }
 .pastOpen { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .pastOpen:hover { color: var(--w-gold); }
 </style>
