@@ -25,6 +25,10 @@ const SALES = JSON.stringify({
 })
 
 test('the stash reader turns on, reads the picked tabs, and Net worth prices them', async ({ overlay, fakeApp }) => {
+  // One long walk: reads, two runs started and stopped (each Stop reads the
+  // stash and your Faustus listings), their summaries, past runs. About 35 s
+  // alone and over 45 s on a loaded runner, so it gets more than the default.
+  test.setTimeout(90_000)
   let dump = DUMP
   fakeApp.site.reply = (url) => {
     const u = new URL(url)
