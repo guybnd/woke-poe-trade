@@ -97,19 +97,20 @@ test('Bulk stays on for the next check; more pages load only on Load more', asyn
   await expect(foot).toContainText('10 bulk sellers in 40 of 60 listings')
   expect(fetches).toHaveLength(4)
 
-  // The next check starts with Bulk on, but fetches only its usual two pages.
+  // The next check starts with Bulk on, but loads only its usual two pages (20 listings;
+  // the same ids may come from the fetch cache, so the foot is what counts).
   await overlay.copyItem('items/rare-body-armour-ar-ev.txt')
   await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(bulk).toHaveAttribute('aria-pressed', 'true')
   await expect(foot).toContainText('No bulk sellers in 20 of 60 listings')
   expect(fetches.searches).toHaveLength(2)
-  expect(fetches).toHaveLength(6)
   const more = foot.getByRole('button', { name: 'Load more' })
   await overlay.snap('price check bulk remembered')
   await more.click()
   await expect(foot).toContainText('10 bulk sellers in 40 of 60 listings')
-  expect(fetches).toHaveLength(8)
   await expect(more).toHaveCount(0)
+  // Nothing past the 40 listings that bring ten sellers was ever fetched.
+  expect(fetches.flat().every(id => Number(id.slice(1)) < 40)).toBe(true)
 
   // Off is remembered too.
   await bulk.click()
