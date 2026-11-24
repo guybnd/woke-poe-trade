@@ -92,3 +92,42 @@ test('with the stash reader on, each Net worth line\'s Show me opens its tab', a
     await expect(overlay.page.getByRole('tab', { name: label, selected: true }).first(), n.id).toBeVisible()
   }
 })
+
+// Lines with no tab to open run a sample: a price check that shows the
+// feature (one exchange search, from the click), or Ctrl+Space with a map typed.
+test('Show me on a price check line opens a sample check and flashes the feature', async ({ overlay }) => {
+  const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
+  const searches: string[] = []
+  await overlay.page.route('**/api/trade/exchange/**', (route) => {
+    searches.push(route.request().postData() ?? '')
+    const rows = Array.from({ length: 20 }, (_, i) => ({
+      id: `x${i}`,
+      item: null,
+      listing: {
+        indexed: new Date().toISOString(),
+        account: { name: `x${i}#1`, lastCharacterName: `x${i}c`, online: { league: 'Testleague' } },
+        offers: [{ exchange: { currency: 'chaos', amount: i < 14 ? 170 : 180 + i, whisper: '' }, item: { currency: 'exalted', amount: 1, stock: 5 + i, id: `x${i}`, whisper: '' } }],
+        whisper: ''
+      }
+    }))
+    return route.fulfill({ contentType: 'application/json', headers: LIMITS, body: JSON.stringify({ id: 'xq', total: 20, result: Object.fromEntries(rows.map(r => [r.id, r])) }) })
+  })
+  await overlay.boot({ overlayActive: true, whatsNew: ['price-check-seller-spread'] })
+  const icon = overlay.dockIcon('whats-new')
+  await icon.click()
+  await overlay.page.mouse.move(5, 5)
+  await icon.locator('[data-whats-new-line]').getByRole('button', { name: 'Show me' }).click()
+  const spread = overlay.widget('price-check').locator('[data-goto-spot="seller-spread"]')
+  await expect(spread).toContainText('Sellers ask')
+  await expect(spread).toHaveAttribute('data-goto-flashed', '')
+  expect(searches.length).toBeGreaterThan(0)
+})
+
+test('Show me on the map cards line opens Ctrl+Space with a map typed', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true, whatsNew: ['div-card-map-chance'] })
+  const icon = overlay.dockIcon('whats-new')
+  await icon.click()
+  await overlay.page.mouse.move(5, 5)
+  await icon.locator('[data-whats-new-line]').getByRole('button', { name: 'Show me' }).click()
+  await expect(overlay.widget('woke-search').getByRole('textbox', { name: 'Search', exact: true })).toHaveValue('Strand Map')
+})

@@ -171,3 +171,4 @@
 - Map mods Planner: the trade search comes first, since it can count any number of mods. The stash text follows, and when it's too long a plain line says so instead of a red meter.
 - Divination cards: a card's Drops in maps are ranked by chance, each with "1 in N" (how many of that map's own cards it takes, on average, to get this one, by drop weight). A map in Ctrl+Space, and a map's hover, shows each card's share and about what one of its cards is worth.
 - What's new: Show me now goes to the feature itself, not just its tab. It scrolls to it and flashes it, and the Listed line picks the Stale chip. Before, with the window already on that tab, it looked like nothing happened.
+- What's new: Show me on the price check's seller spread line opens a sample Exalted Orb check and points at the spread; the map cards line opens Ctrl+Space with a map typed.

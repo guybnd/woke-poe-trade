@@ -12,7 +12,7 @@
         <span :class="$style.each">each<template v-if="unit !== 'c' && divineInChaos"> ≈ <w-price-text :text="`${bulkAmount(insight.fair * divineInChaos)}c`" /></template><template v-if="need > 1 && !insight.fewWithStock"> · <w-price-text :text="amount(insight.fair * need)" /> for {{ need }}</template><template v-if="insight.fewWithStock && need > 1"> · small stacks counted</template><WInfo v-if="insight.fewWithStock && need > 1" class="ml-1" :text="`Few of the cheapest offers have stock for ${need}, so smaller ones are counted too.`" /></span>
       </div>
       <!-- What sellers ask, not only the price picked from it (WOKEPOET-540). -->
-      <div v-if="spreadLine" :class="$style.spread" data-testid="bulk-verdict-spread"><w-price-text :text="spreadLine" /></div>
+      <div v-if="spreadLine" :class="$style.spread" data-testid="bulk-verdict-spread" data-goto-spot="seller-spread"><w-price-text :text="spreadLine" /></div>
       <div v-if="insight.floor > insight.low" :class="$style.note">An offer at <w-price-text :text="amount(insight.low)" /> sits far under the rest, so it may be worth buying</div>
       <div v-if="insight.lowStock" :class="$style.note">{{ insight.lowStock }} {{ insight.lowStock === 1 ? 'offer' : 'offers' }} with under {{ need }} in stock left out</div>
       <div :class="$style.prices">

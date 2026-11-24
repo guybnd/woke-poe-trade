@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { NEWS, markAllNewsSeen, markNewsSeen, unseenNews } from '@/web/woke/tab-bar/news'
 import { NEWS_SPOTS, gotoSpots, gotoTargets } from '@/web/woke/tab-bar/goto-targets'
+import { NEWS_DEMOS } from '@/web/woke/tab-bar/news-demos'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import type { WokeModulesConfig } from '@/web/woke/modules'
@@ -26,8 +27,9 @@ describe("What's new lines", () => {
     }
   })
 
-  it('NEWS_SPOTS names only real lines', () => {
-    for (const id of Object.keys(NEWS_SPOTS)) expect(NEWS.map(n => n.id), id).toContain(id)
+  it('NEWS_SPOTS and NEWS_DEMOS name only real lines; a demo replaces a tab', () => {
+    for (const id of [...Object.keys(NEWS_SPOTS), ...Object.keys(NEWS_DEMOS)]) expect(NEWS.map(n => n.id), id).toContain(id)
+    for (const id of Object.keys(NEWS_DEMOS)) expect(NEWS.find(n => n.id === id)!.goto, id).toBeUndefined()
   })
 
   it('reads the Settings page names', () => {
