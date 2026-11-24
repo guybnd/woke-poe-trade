@@ -8,7 +8,7 @@ assignee: unassigned
 tags:
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: claude-code@GUY-PC
 history:
   - type: activity
     user: Agent
@@ -32,11 +32,20 @@ history:
       Mockup with picks: https://claude.ai/artifact/Wy7fSr5VY4MiXdXqr1rj39 .
       Building 1 (No Elder chip, on) + 2A (Exchange button) meanwhile.
     id: a-2026-11-24t01-48-43-168z
+  - type: activity
+    user: Agent
+    date: '2026-11-24T02:08:50.788Z'
+    comment: >-
+      Guy picked 2B on top of 2A. PR
+      https://github.com/guybnd/woke-poe-trade/pull/828 now has No Elder,
+      Exchange and Pricier; first review's findings fixed; second review + CI
+      running.
+    id: a-2026-11-24t02-08-50-788z
 needsAction: null
 claim:
   holder: claude-code@GUY-PC
   claimedAt: '2026-11-24T01:47:04.061Z'
-  expiresAt: '2026-11-24T02:17:04.061Z'
+  expiresAt: '2026-11-24T02:38:51.424Z'
 ---
 Guy (2026-11-24): buying influenced (Originator) maps in bulk. (1) avoid Elder-influenced ones; (2) bulk results are poor, wants to pull in further, pricier listings.
 
