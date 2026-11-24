@@ -40,3 +40,22 @@ export function staleCount (g: PendingGlance | null, sales: ReadonlyArray<{ id: 
   const staleMs = Math.max(1, staleDays) * DAY_MS
   return g.items.filter(([id, at]) => !sold.has(id) && now - at >= staleMs).length
 }
+
+// What each unsold listing counts for in the total (pending.ts rowWorth), as
+// the window last priced them: the dock card adds the ones not sold since,
+// so its total matches the window's with the At Faustus box ticked.
+export interface ListedWorth { league: string, at: number, items: Array<[id: string, chaos: number]> }
+export const listedWorthKey = (league: string) => `${league}-listed-worth`
+export const listedWorth = shallowRef<ListedWorth | null>(null)
+
+export function isListedWorth (x: unknown): x is ListedWorth {
+  return x != null && typeof x === 'object' && typeof (x as ListedWorth).league === 'string' &&
+    typeof (x as ListedWorth).at === 'number' && Array.isArray((x as ListedWorth).items)
+}
+
+// The worth of listings not sold since it was saved (a minute's slack, as soldOf).
+export function worthLeft (w: ListedWorth | null, sales: ReadonlyArray<{ id: string, at: number }>): number {
+  if (!w) return 0
+  const sold = new Set(sales.filter(s => s.at >= w.at - 60_000).map(s => s.id))
+  return w.items.reduce((sum, [id, chaos]) => sold.has(id) ? sum : sum + chaos, 0)
+}

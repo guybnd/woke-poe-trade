@@ -113,8 +113,8 @@ export class NightTracker {
       const d = this.draft
       if (d) {
         this.openedAt = d.lastAt
-        const prev = d.segs[d.segs.length - 1]
-        if (prev?.map) d.segs.push({ at: d.lastAt, map: false, key: '', name: '', named: true, level: 0 })
+        // Not a hub either: hideout time is time you were there.
+        d.segs.push({ at: d.lastAt, map: false, key: '', name: '', named: true, level: 0 })
       }
       return
     }
@@ -332,13 +332,13 @@ export function bestItem (b: { name: string, item?: string }): string {
 }
 
 // The biggest single gain in stash changes between two times.
-export function bestDrop (diffs: Array<{ at: number, added: Array<{ name: string, count: number, chaos: number }> }>, from: number, to: number): { name: string, chaos: number, item: string } | null {
+export function bestDrop (diffs: Array<{ at: number, added: Array<{ name: string, count: number, chaos: number, tip?: string }> }>, from: number, to: number): { name: string, chaos: number, item: string } | null {
   let best: { name: string, chaos: number, item: string } | null = null
   for (const diff of diffs) {
     if (diff.at < from || diff.at > to) continue
     for (const line of diff.added) {
       if (!(line.chaos > 0)) continue
-      if (!best || line.chaos > best.chaos) best = { name: line.count > 1 ? `${line.count} × ${line.name}` : line.name, chaos: line.chaos, item: line.name }
+      if (!best || line.chaos > best.chaos) best = { name: line.count > 1 ? `${line.count} × ${line.name}` : line.name, chaos: line.chaos, item: line.tip ?? line.name }
     }
   }
   return best

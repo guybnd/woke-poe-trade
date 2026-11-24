@@ -126,7 +126,7 @@ import RunAdd from './RunAdd.vue'
 import type { AddedLine } from './RunAdd.vue'
 import RunTimeBar from './RunTimeBar.vue'
 import type { RunTime } from './run-time'
-import { addCost, deleteRun, editRun, loadRuns, refreshRunMaps, runCostKeys, runMaps, runsDoc, setOutside } from './run-store'
+import { addCost, deleteRun, editRun, loadRuns, refreshRunMaps, runMaps, runsDoc, setOutside } from './run-store'
 import { stopLiveRun } from './run-stop'
 import { lastCostsOf, startRunAt } from './run-start'
 import { outsideSums, outsideTotals, rowKey, setBefore, setEdit } from './faustus'
@@ -262,8 +262,9 @@ async function readListings () {
 }
 
 // Map-cost items: maps, scarabs and fragments (for cost per map).
-// The store's set also has items used up to none since (no longer in lines).
-const mapCostKeys = computed(() => new Set([...runCostKeys.value, ...props.lines.filter(l => isMapCostItem(l.name, l.category)).map(l => l.key)]))
+// The tally marks them itself (runs.ts TallyLine.cost); this covers runs
+// tallied before it did.
+const mapCostKeys = computed(() => new Set(props.lines.filter(l => isMapCostItem(l.name, l.category)).map(l => l.key)))
 const totals = computed(() => {
   const r = shownRun.value
   if (!r) return null

@@ -20,6 +20,8 @@ export interface TallyLine {
   removed: number
   addedChaos: number
   removedChaos: number
+  // A map, scarab or fragment (isMapCostItem): cost per map counts it used up.
+  cost?: true
 }
 
 // A cost the stash can't see: `qty` a map at `unitChaos` each (the price you
@@ -156,7 +158,8 @@ export function addToTally (run: Run, diff: StashDiff): Run {
   const tally = { ...run.tally }
   for (const [lines, dir] of [[diff.added, 1], [diff.removed, -1]] as const) {
     for (const l of lines) {
-      const t = tally[l.key] ? { ...tally[l.key] } : { name: l.name, icon: l.icon, added: 0, removed: 0, addedChaos: 0, removedChaos: 0 }
+      const t: TallyLine = tally[l.key] ? { ...tally[l.key] } : { name: l.name, icon: l.icon, added: 0, removed: 0, addedChaos: 0, removedChaos: 0 }
+      if (!t.cost && isMapCostItem(l.name, l.cat)) t.cost = true
       if (dir > 0) { t.added += l.count; t.addedChaos += l.chaos } else { t.removed += l.count; t.removedChaos += l.chaos }
       tally[l.key] = t
     }
@@ -238,7 +241,7 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], count: numb
   // Used up from the stash: map-cost items that went down, not typed.
   let usedChaos = 0
   for (const [k, t] of Object.entries(run.tally)) {
-    if (typedKeys.has(k) || !mapCostKeys.has(k)) continue
+    if (typedKeys.has(k) || !(t.cost || mapCostKeys.has(k))) continue
     const net = tallyValue(t, run.edits?.[rowKey.tally(k)])
     if (net < 0) usedChaos += -net
   }

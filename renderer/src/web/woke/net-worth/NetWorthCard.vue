@@ -49,7 +49,7 @@
         </template>
         <button type="button" :class="$style.fold" title="Show Net worth" data-card-fold @click="tab = 'worth'">
           <span class="w-dim">Net worth</span>
-          <b v-if="v" class="w-num">{{ div(v.chaos) }}<Coin :chaos="!divineRate" /></b>
+          <b v-if="v" class="w-num" :title="totalTip">{{ div(v.chaos + listedAdd) }}<Coin :chaos="!divineRate" /></b>
           <span v-if="today != null" class="w-num text-xs" :class="tone(today)">{{ today >= 0 ? '▲' : '▼' }} {{ signed(today) }} today</span>
           <i class="fas fa-chevron-right w-dim" :class="$style.chev" />
         </button>
@@ -65,7 +65,7 @@
       <template v-else>
       <template v-if="status?.lastReadAt">
         <div v-if="v" :class="$style.total">
-          <b class="w-num">{{ div(v.chaos) }}<Coin :chaos="!divineRate" /></b>
+          <b class="w-num" :title="totalTip">{{ div(v.chaos + listedAdd) }}<Coin :chaos="!divineRate" /></b>
           <span v-if="today != null" class="w-num text-xs" :class="tone(today)">{{ today >= 0 ? '▲' : '▼' }} {{ signed(today) }} today</span>
         </div>
         <div v-else class="w-dim text-xs">Waiting for poe.ninja prices…</div>
@@ -144,6 +144,8 @@ const props = defineProps<{
   runWithHub?: boolean
   // Start pressed, until the run is saved.
   startingRun?: boolean
+  // Unsold Faustus listings counted in the total (the At Faustus box).
+  listedChaos?: number
 }>()
 const emit = defineEmits<{ (e: 'refresh' | 'settings' | 'stop' | 'open-run'): void, (e: 'window', w: RateWindow): void, (e: 'run-hub', on: boolean): void, (e: 'start', name: string): void }>()
 
@@ -164,6 +166,8 @@ watch(() => props.league, (id) => { setLeague(id) })
 // Just after a league switch the store still holds the old league's read.
 const sameLeague = computed(() => stashNow.value?.league === props.league && (!props.status?.league || props.status.league === props.league))
 const v = computed(() => sameLeague.value ? valuation.value : null)
+const listedAdd = computed(() => props.listedChaos ?? 0)
+const totalTip = computed(() => v.value && listedAdd.value ? `Stash ${div(v.value.chaos)} + at Faustus ${div(listedAdd.value)} (${divineRate.value ? 'div' : 'chaos'})` : undefined)
 const signedOut = computed(() => props.status?.error?.kind === 'signed-out' || (props.status != null && !props.status.account))
 const today = computed(() => sameLeague.value ? summary.value?.sinceYesterdayDiv ?? null : null)
 // Net worth over the picked window, as the window's chart draws it: its reads,

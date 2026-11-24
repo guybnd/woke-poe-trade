@@ -122,11 +122,6 @@ async function glanceOutside (league: string, r: Run): Promise<Outside | undefin
 // Boss fights from Client.txt (run-time.ts, loaded when first needed).
 const runFights = (startAt: number, now: number) => import('./run-time').then(m => m.fightsIn(startAt, now)).catch(() => 0)
 
-// Map-cost item keys (runs.ts isMapCostItem), from the stash's items and the
-// last baseline's (so one used up to none still counts): the glance's cost
-// per map then agrees with the Runs view's.
-export const runCostKeys = shallowRef<ReadonlySet<string>>(new Set())
-
 // The dock number and Ctrl+Space's answer for the live run (null: none).
 async function saveGlance (league: string, run: Run | null, points: readonly LedgerPoint[], divine: number | null) {
   let g: RunGlance | null = null
@@ -134,7 +129,7 @@ async function saveGlance (league: string, run: Run | null, points: readonly Led
     const now = Date.now()
     const maps = mapsIn(run, await readRunMaps(run, now), now)
     const fights = await runFights(run.startAt, now)
-    const t = runTotals(run, points, { maps, fights }, now, runCostKeys.value, await glanceOutside(league, run))
+    const t = runTotals(run, points, { maps, fights }, now, undefined, await glanceOutside(league, run))
     g = { league, name: run.name, startAt: run.startAt, at: now, profitChaos: t.profitChaos, maps, perHourChaos: t.perHourChaos, costPerMapChaos: t.costPerMapChaos, divine }
     if (fights) g.fights = fights
     if (t.faustusChaos) g.faustusChaos = t.faustusChaos
@@ -149,8 +144,7 @@ let pendingStop: { id: string, at: number } | null = null
 export function setPendingStop (p: { id: string, at: number } | null) { pendingStop = p }
 
 // A counted read (store.ts): into the live run's tally.
-export function recordRunRead (league: string, diff: StashDiff | null, points: readonly LedgerPoint[], divine: number | null, costKeys?: ReadonlySet<string>): Promise<void> {
-  if (costKeys) runCostKeys.value = costKeys
+export function recordRunRead (league: string, diff: StashDiff | null, points: readonly LedgerPoint[], divine: number | null): Promise<void> {
   return queue(async () => {
     await loadRuns(league)
     const live = runsDoc.value.live

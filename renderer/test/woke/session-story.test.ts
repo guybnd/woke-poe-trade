@@ -187,6 +187,8 @@ describe('night extras', () => {
     // The item's own name too, for its tooltip.
     expect(bestDrop(diffs, 0, 6)).toEqual({ name: '3 × Divine Orb', chaos: 600, item: 'Divine Orb' })
     expect(bestItem({ name: '3 × Divine Orb' })).toBe('Divine Orb')
+    // The item's tooltip name, not its stash label.
+    expect(bestDrop([{ at: 1, added: [{ name: 'Headhunter 6L', tip: 'Headhunter', count: 1, chaos: 9000 }] }], 0, 2)?.item).toBe('Headhunter')
     expect(bestDrop([], 0, 20)).toBeNull()
   })
 

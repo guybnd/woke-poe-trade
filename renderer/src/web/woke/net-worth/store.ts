@@ -21,7 +21,6 @@ import type { LedgerPoint, TabValue } from './ledger'
 import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, StashTabLike, Valuation } from './valuation'
 import type { ReaderStatus } from './widget'
 import { recordRunRead } from './run-store'
-import { isMapCostItem } from './runs'
 import { emptyMarks, feedMarks, playRates, startOfDay, trimMarks, RATE_WINDOWS } from './play-time'
 import type { PlayMarks, PlayRates } from './play-time'
 
@@ -243,10 +242,7 @@ async function countRead (id: string, readAt: number) {
   await hostRequest('doc-put', { collection: COLLECTION, key: baseKey, value: nextBase }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: tabsKey, value: tabs }).catch(() => {})
   // A strategy run going: this read's changes join its tally (run-store.ts).
-  const costKeys = new Set<string>()
-  for (const l of v.lines) if (isMapCostItem(l.name, l.category)) costKeys.add(l.key)
-  for (const [k, b] of Object.entries(before ?? {})) if (isMapCostItem(b.name, b.cat)) costKeys.add(k)
-  await recordRunRead(id, diff, nextLedger.points, divine.value, costKeys)
+  await recordRunRead(id, diff, nextLedger.points, divine.value)
 }
 
 // The dock icon's number at a read (Ctrl+Space reads the saved one).

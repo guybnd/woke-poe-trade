@@ -480,7 +480,9 @@ export function baselineOf (v: Valuation): Baseline {
   return out
 }
 
-export interface DiffLine { key: string, name: string, icon: string, count: number, chaos: number }
+// `cat`: its category (Strategy runs tell map costs by it). `tip`: the name its
+// item tooltip goes by, when the label isn't it ("Headhunter 6L", a gem's level).
+export interface DiffLine { key: string, name: string, icon: string, count: number, chaos: number, cat?: Category, tip?: string }
 
 export interface StashDiff {
   at: number
@@ -512,7 +514,7 @@ export function diffStash (before: Baseline, after: Valuation, at: number): Stas
     if (oldMaps && before[l.key] == null && ROLLED_MAP_KEY.test(l.key)) continue
     const had = before[l.key]?.count ?? 0
     if (l.count > had && l.unitChaos > 0) {
-      added.push({ key: l.key, name: l.name, icon: l.icon, count: l.count - had, chaos: (l.count - had) * l.unitChaos })
+      added.push({ key: l.key, name: l.name, icon: l.icon, count: l.count - had, chaos: (l.count - had) * l.unitChaos, cat: l.category, ...(l.tipName && l.tipName !== l.name ? { tip: l.tipName } : {}) })
       if (l.category === 'currency') cash += (l.count - had) * l.unitChaos
     }
   }
@@ -522,7 +524,7 @@ export function diffStash (before: Baseline, after: Valuation, at: number): Stas
     const has = left?.count ?? 0
     const unit = left ? left.unitChaos : after.ownPrices?.[key] ?? b.unitChaos
     if (has < b.count && unit > 0) {
-      removed.push({ key, name: b.name, icon: b.icon, count: b.count - has, chaos: (b.count - has) * unit })
+      removed.push({ key, name: b.name, icon: b.icon, count: b.count - has, chaos: (b.count - has) * unit, ...((left?.category ?? b.cat) ? { cat: left?.category ?? b.cat } : {}) })
       if ((left?.category ?? b.cat) === 'currency') cash -= (b.count - has) * unit
     }
   }

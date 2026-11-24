@@ -148,3 +148,4 @@
 - Session story: deaths count only your own character, not party members'.
 - Session story and Ctrl+Space: the night's best drop and the last maps show their item tooltip.
 - Price check: the Rarity chip's hover no longer says Magic finds bases to fracture (a Fracturing Orb needs a rare with 4 or more mods).
+- Net worth: the At Faustus box now applies to the dock card's total and the goal too, not only the window's headline. With it ticked, your unsold listings count there (any that sold since drop out), and the goal's line and ETA allow for them.

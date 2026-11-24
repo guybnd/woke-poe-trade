@@ -1,6 +1,7 @@
 // The night so far, or the last one, from Session story.
 import { formatChaos, formatClock, formatDuration } from '../../ui/format'
 import { ANALYTICS_TYPE } from '../../analytics/types'
+import { bestItem } from '../../session-story/story'
 import type { NightStory } from '../../session-story/story'
 import { mapItemName, tierText, usualMapMs } from '../../session-story/map-log'
 import type { MapRecord } from '../../session-story/map-log'
@@ -28,7 +29,7 @@ function rows (s: NightStory): LookupRow[] {
     { label: 'Maps', value: String(s.maps.length) }
   ]
   if (s.profitChaos != null) out.push({ label: 'Profit', value: signed(s.profitChaos, s.divine) })
-  if (s.best) out.push({ label: 'Best drop', value: `${s.best.name} · ${formatChaos(s.best.chaos, s.divine)}`, item: { name: s.best.item ?? s.best.name.replace(/^\d+ × /, '') } })
+  if (s.best) out.push({ label: 'Best drop', value: `${s.best.name} · ${formatChaos(s.best.chaos, s.divine)}`, item: { name: bestItem(s.best) } })
   // Hideout and town left out, as the night card does by default.
   const hours = (played(s) - (s.hubMs ?? 0)) / 3_600_000
   if (s.maps.length) out.push({ label: 'Average map', value: formatClock(s.mapMs / s.maps.length) })

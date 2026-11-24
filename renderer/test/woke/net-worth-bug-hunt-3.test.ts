@@ -5,10 +5,9 @@ import type { Run } from '@/web/woke/net-worth/runs'
 import { leftOver, outsideTotals, toListing } from '@/web/woke/net-worth/faustus'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { baselineOf, emptyHistory, recordRead, sinceYesterday, valueStash, withTabShift } from '@/web/woke/net-worth/valuation'
-import type { Priced, PriceOf, StashItemLike, Valuation } from '@/web/woke/net-worth/valuation'
+import type { Priced, PriceOf, StashDiff, StashItemLike, Valuation } from '@/web/woke/net-worth/valuation'
 import { priceSpikes, seriesFor } from '@/web/woke/net-worth/ledger'
 import type { LedgerPoint } from '@/web/woke/net-worth/ledger'
-import type { StashDiff } from '@/web/woke/net-worth/valuation'
 
 vi.mock('@/web/woke/ui/layer', () => ({ toast: () => {} }))
 vi.mock('@/web/woke/shared/host', () => ({ hostRequest: async () => null }))
@@ -53,6 +52,13 @@ describe('cost per map', () => {
     expect(isMapCostItem('Strand Map (T16)', 'other')).toBe(true)
     expect(isMapCostItem('Gilded Ambush Scarab', 'fragments')).toBe(true)
     expect(isMapCostItem('Mapmaker\'s Fate', 'cards')).toBe(false)
+  })
+  it('the tally keeps a map cost used up reads ago (dock card and Ctrl+Space)', () => {
+    let r = run()
+    r = addToTally(r, diff(T0 + M, [], [{ ...line('Gilded Ambush Scarab', 10, 40), cat: 'fragments' as const }]))
+    // Two reads later the scarab is in neither the stash nor its last read.
+    r = addToTally(r, diff(T0 + 20 * M, [line('Chaos Orb', 5, 5)]))
+    expect(runTotals(r, [], 4, T0 + H).costPerMapChaos).toBe(10)
   })
 })
 
@@ -147,5 +153,16 @@ describe('Faustus listings', () => {
     const t14 = toListing({ ...base, indexedAt: new Date(T0 + 5 * M).toISOString(), listedItem: { id: 'l', typeLine: 'Strand Map', baseType: 'Strand Map', frameType: 2, properties: [{ name: 'Map Tier', values: [['14', 0]] }] } })!
     const o = outsideTotals({ startAt: T0, held: [held], faustus: { at: T0 + 10 * M, listings: [t14] } }, [], { chaos: 1, divine: DIV })
     expect(o.held.map(h => h.left)).toEqual([1])
+  })
+})
+
+describe('the dock card counts your listings as the window does', () => {
+  it('adds the saved worth of listings not sold since', async () => {
+    const { worthLeft } = await import('@/web/woke/net-worth/pending-glance')
+    const w = { league: 'L', at: T0, items: [['a', 100], ['b', 50]] as Array<[string, number]> }
+    expect(worthLeft(w, [])).toBe(150)
+    // b sold after the worth was saved; a sold long before (another listing of it).
+    expect(worthLeft(w, [{ id: 'b', at: T0 + M }, { id: 'a', at: T0 - H }])).toBe(100)
+    expect(worthLeft(null, [])).toBe(0)
   })
 })
