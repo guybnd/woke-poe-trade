@@ -101,9 +101,13 @@
                 <TextTabs v-model="range" :options="RANGE_OPTIONS" />
               </span>
             </div>
-            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="chartListed ? goal?.div ?? null : goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :listed="chartListed" :maps="chartMaps" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
+            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :mode="chartMode as 'total' | 'category'" :goal-div="chartListed ? goal?.div ?? null : goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :listed="chartListed" :maps="chartMaps" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
             <div v-if="chartMode === 'category' && !fold.chart" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
+            </div>
+            <!-- What each mark on the line is (Guy, 2026-11-24). -->
+            <div v-if="chartMode === 'total' && !fold.chart && chartLegend.length" :class="$style.legend" data-chart-legend>
+              <span v-for="l in chartLegend" :key="l.id" :title="l.tip"><i :class="[$style.key, $style['key-' + l.id]]" />{{ l.label }}</span>
             </div>
             <SplitHandle v-if="!fold.chart" dir="y" @start="startDrag" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
           </section>
@@ -299,7 +303,7 @@ import { stashGainsBetween } from './gains'
 import type { FarmingWidget } from '../farming/farming'
 import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
-import { bigGains, change24h, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
+import { change24h, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
 import type { ChartRange, PriceMove } from './ledger'
 import { divine, gainsNow, historyNow, leagueNow, ledger, ratesAt, setIgnored, setMyPrice, setSpendMark, summary, tabValues, valuation, wantPrices } from './store'
 import { markAction, resolveSpends } from './spend'
@@ -578,7 +582,6 @@ const showChanges = computed(() => shown.value.changes && (groups.value.length >
 const chartMode = shallowRef('total')
 const range = shallowRef<string>('7d')
 const series = computed(() => seriesFor(ledger.value.points, historyNow.value.days, range.value as ChartRange, Date.now(), divine.value))
-const big = computed(() => bigGains(series.value))
 // The summary's tiny line: the last 7 days.
 const spark = computed(() => seriesFor(ledger.value.points, historyNow.value.days, '7d', Date.now(), divine.value).map(p => p.div))
 const goal = computed(() => props.config.goal && props.config.goal.div > 0 ? props.config.goal : null)
@@ -940,6 +943,18 @@ const chartListed = computed(() => {
   const out = s.map((p, i) => p.listedDiv ?? toDiv(rebuilt[i]))
   return out.some(v => v > 0) ? out : undefined
 })
+// The legend under the line: only the marks this range shows.
+const chartLegend = computed(() => {
+  const s = series.value
+  if (s.length < 2) return []
+  const t0 = s[0].at
+  const t1 = s[s.length - 1].at
+  const out: Array<{ id: string, label: string, tip: string }> = []
+  if (chartListed.value) out.push({ id: 'band', label: 'At Faustus', tip: 'What you have listed at Faustus, on top of your stash' })
+  if (chartSales.value.some(x => x.at >= t0 && x.at <= t1)) out.push({ id: 'sale', label: 'Sale', tip: 'Something sold here. Click the chart there for the items' })
+  if (chartMaps.value?.some(m => m.to > t0 && m.from < t1)) out.push({ id: 'maps', label: 'Maps', tip: 'Your maps this session' })
+  return out
+})
 // Your maps behind the line (pick D), each with what the refreshes after it added.
 const mapsOn = computed(() => props.config.chartMaps === true)
 const chartMaps = computed<ChartMap[] | undefined>(() => {
@@ -1060,6 +1075,10 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .chartBlock { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 6px var(--w-pad) 8px; border-bottom: 1px solid var(--w-line); }
 .chartHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 .goalLine { color: var(--w-up); }
+.key { opacity: 1 !important; }
+.key-band { background: color-mix(in srgb, var(--w-higher) 45%, transparent); border-top: 1px dashed var(--w-higher); }
+.key-sale { width: 2px !important; background: var(--w-accent); }
+.key-maps { background: color-mix(in srgb, var(--w-gold) 25%, transparent); }
 .chartRight { display: inline-flex; align-items: baseline; gap: 10px; }
 .mapsBtn { padding: 0 0 2px; font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-faint); border-bottom: 1px dashed transparent; cursor: pointer; }
 .mapsBtn:hover { color: var(--w-fg); }

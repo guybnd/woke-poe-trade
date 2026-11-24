@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coinRadius, groupSales, labelledSales, mapOf, slotOf, COIN_MAX, COIN_MIN } from '@/web/woke/net-worth/chart-marks'
+import { groupSales, mapOf, slotOf } from '@/web/woke/net-worth/chart-marks'
 import { listedAt } from '@/web/woke/net-worth/pending'
 import type { PendingDoc } from '@/web/woke/net-worth/pending'
 import { addPoint, seriesFor } from '@/web/woke/net-worth/ledger'
@@ -37,21 +37,6 @@ describe('Faustus band (pick A)', () => {
   })
 })
 
-describe('sale coins (pick B)', () => {
-  it('sizes by area and names the two dearest apart', () => {
-    expect(coinRadius(null, 10)).toBe(COIN_MIN)
-    expect(coinRadius(10, 10)).toBe(COIN_MAX)
-    expect(coinRadius(2.5, 10)).toBeCloseTo(COIN_MIN + (COIN_MAX - COIN_MIN) * 0.5)
-    const dots = [
-      { x: 10, div: 18, name: 'Forbidden Flame' },
-      { x: 15, div: 12, name: 'Ashes of the Stars' },
-      { x: 60, div: 9, name: 'Awakened Multistrike' },
-      { x: 90, div: null, name: 'Mirror Shard' }
-    ]
-    expect(labelledSales(dots).map(d => d.name)).toEqual(['Forbidden Flame', 'Awakened Multistrike'])
-  })
-})
-
 describe('map columns (pick D)', () => {
   it('a read belongs to the map before it, if soon after', () => {
     const maps = [{ from: T0, to: T0 + 600_000, name: 'Map 1 · Strand', gainDiv: 2 }, { from: T0 + H, to: T0 + H + 600_000, name: 'Map 2 · Tower', gainDiv: 5 }]
@@ -62,17 +47,17 @@ describe('map columns (pick D)', () => {
   })
 })
 
-describe('sale coins by slot', () => {
-  it('folds sales in one slot into one coin worth their total', () => {
+describe('sale ticks by slot', () => {
+  it('folds sales in one slot into one tick worth their total', () => {
     const M = 60_000
-    const t0 = 1_000_000_000_000 - (1_000_000_000_000 % (6 * 60 * M))
-    expect(slotOf(t0, t0 + 3 * 60 * M)).toBe(10 * M)
-    expect(slotOf(t0, t0 + 7 * 24 * 60 * M)).toBe(360 * M)
+    const t0 = 1_000_000_000_000 - (1_000_000_000_000 % (12 * 60 * M))
+    expect(slotOf(t0, t0 + 3 * 60 * M)).toBe(15 * M)
+    expect(slotOf(t0, t0 + 7 * 24 * 60 * M)).toBe(720 * M)
     const sales = [
       { at: t0 + M, text: '', name: 'Blunderbore', div: 20 },
       { at: t0 + 2 * M, text: '', name: 'Dusk Scarab', div: 0.5 },
       { at: t0 + 3 * M, text: '', name: 'Odd currency', div: null },
-      { at: t0 + 400 * M, text: '', name: 'Hollow Lands', div: 1.4 }
+      { at: t0 + 2000 * M, text: '', name: 'Hollow Lands', div: 1.4 }
     ]
     const g = groupSales(sales, t0, t0 + 7 * 24 * 60 * M)
     expect(g.map(x => [x.name, x.div, x.count])).toEqual([['Blunderbore', 20.5, 3], ['Hollow Lands', 1.4, 1]])

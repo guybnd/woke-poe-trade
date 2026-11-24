@@ -412,7 +412,16 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     // A), and only while the listings count in the total.
     const chart = panel.locator('[data-ledger-chart]').first()
     await expect(chart.locator('[data-listed-band]')).toHaveCount(1)
+    // A legend under the line names its marks.
+    await expect(panel.locator('[data-chart-legend]')).toContainText('At Faustus')
     await overlay.snap('net worth chart with the Faustus band')
+    // A click on the line pins its card (what changed, with item tooltips); Esc closes it.
+    const box = await chart.boundingBox()
+    await chart.click({ position: { x: box!.width - 4, y: box!.height / 2 } })
+    await expect(chart.locator('[data-chart-card]')).toContainText('Stash')
+    await overlay.page.keyboard.press('Escape')
+    await overlay.page.mouse.move(1, 1)
+    await expect(chart.locator('[data-chart-card]')).toHaveCount(0)
     await countBox.click()
     await expect(chart.locator('[data-listed-band]')).toHaveCount(0)
     await countBox.click()
