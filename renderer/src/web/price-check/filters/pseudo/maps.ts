@@ -5,6 +5,7 @@ import { FiltersCreationContext } from '../create-stat-filters'
 import { noSourcePseudoToFilter, propToFilter } from './item-property'
 import { findAndResolveByRef, statToNotFilter } from './utils'
 import { goalDisabled } from '@/web/woke/map-mods/goal'
+import type { FarmGoal } from '@/web/woke/map-mods/goal'
 
 const PSEUDO = {
   MORE_THREADS: stat('More Scarabs: #%'),
@@ -65,7 +66,7 @@ function areaProps (
   }
 }
 
-export function mapProps (bulk: boolean, ctx: FiltersCreationContext): void {
+export function mapProps (bulk: boolean, ctx: FiltersCreationContext, goal: FarmGoal = 'any'): void {
   const { item } = ctx
   if (item.category !== ItemCategory.Map || item.mapCompletionReward || item.rarity === ItemRarity.Unique) return
 
@@ -77,8 +78,8 @@ export function mapProps (bulk: boolean, ctx: FiltersCreationContext): void {
     areaProps({
       disabled: {
         itemQuantity: false,
-        itemRarity: goalDisabled('Rarity') ?? false,
-        packSize: goalDisabled('Pack') ?? false
+        itemRarity: goalDisabled('Rarity', goal) ?? false,
+        packSize: goalDisabled('Pack', goal) ?? false
       }
     }, ctx)
 
@@ -86,28 +87,28 @@ export function mapProps (bulk: boolean, ctx: FiltersCreationContext): void {
       ctx.filters.push(noSourcePseudoToFilter({
         pseudo: pseudoStatByRef(PSEUDO.MORE_MAPS)!,
         roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreMaps },
-        disabled: goalDisabled('Maps') ?? true
+        disabled: goalDisabled('Maps', goal) ?? true
       }, ctx))
     }
     if (item.mapMoreThreads) {
       ctx.filters.push(noSourcePseudoToFilter({
         pseudo: pseudoStatByRef(PSEUDO.MORE_THREADS)!,
         roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreThreads },
-        disabled: goalDisabled('Threads') ?? false
+        disabled: goalDisabled('Threads', goal) ?? false
       }, ctx))
     }
     if (item.mapMoreCurrency) {
       ctx.filters.push(noSourcePseudoToFilter({
         pseudo: pseudoStatByRef(PSEUDO.MORE_CURRENCY)!,
         roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreCurrency },
-        disabled: goalDisabled('Currency') ?? false
+        disabled: goalDisabled('Currency', goal) ?? false
       }, ctx))
     }
     if (item.mapMoreDivCards) {
       ctx.filters.push(noSourcePseudoToFilter({
         pseudo: pseudoStatByRef(PSEUDO.MORE_DIVINATION_CARDS)!,
         roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.mapMoreDivCards },
-        disabled: goalDisabled('Div cards') ?? false
+        disabled: goalDisabled('Div cards', goal) ?? false
       }, ctx))
     }
   }

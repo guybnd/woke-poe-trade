@@ -5,12 +5,13 @@ import { ModifierType, sumStatsByModType } from '@/parser/modifiers'
 import { ItemCategory, ItemRarity, ParsedItem } from '@/parser'
 import { WEAPON, ARMOUR } from '@/parser/meta'
 import type { FilterPreset } from './interfaces'
+import type { FarmGoal } from '@/web/woke/map-mods/goal'
 
 const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V']
 
 type CreatePresetsOptions =
   & Omit<CreateFiltersOptions, 'exact'>
-  & { searchStatRange: number }
+  & { searchStatRange: number, farmGoal?: FarmGoal }
 
 export function createPresets (
   item: ParsedItem,

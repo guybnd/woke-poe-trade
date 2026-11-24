@@ -5,15 +5,12 @@
 // rarity too). So currency maps want Rarity, Pack size and More Currency, and
 // map / Thread farming wants Atlas Drops, More Maps and More Threads.
 // Checked against poedb's 3.30.0 patch notes.
-import { AppConfig } from '@/web/Config'
-import { isModuleOn } from '../modules'
+// Kept free of imports: the price check's filter code (pseudo/maps.ts) uses it.
+// Reading and saving the goal is in goal-config.ts.
 
 export type FarmGoal = 'any' | 'currency' | 'atlas'
 export const FARM_GOALS: FarmGoal[] = ['currency', 'atlas', 'any']
 export const FARM_GOAL_LABEL: Record<FarmGoal, string> = { currency: 'Currency', atlas: 'Maps & Threads', any: 'Any' }
-
-// map-mods/widget.ts's MAP_MODS_TYPE; that file pulls in the UI.
-const MAP_MODS_TYPE = 'woke-map-mods'
 
 // The map strip's chip labels (check.ts) and whether each starts in the trade
 // search. Any is how chips started before goals: Atlas Drops off (the trade
@@ -45,24 +42,8 @@ export const RAISES: Record<string, string> = {
   'Div cards': 'T17 bonus: more divination cards dropped.'
 }
 
-function widget (): { goal?: FarmGoal } | null {
-  const config = AppConfig()
-  if (!isModuleOn(config, 'map-mods')) return null
-  return (config.widgets.find(w => w.wmType === MAP_MODS_TYPE) as { goal?: FarmGoal } | undefined) ?? null
-}
-
-export function farmGoal (): FarmGoal {
-  const g = widget()?.goal
-  return g === 'currency' || g === 'atlas' ? g : 'any'
-}
-
-export function setFarmGoal (goal: FarmGoal): void {
-  const w = widget()
-  if (w) w.goal = goal
-}
-
 // Whether a chip's filter starts off in the trade search; undefined: as made.
-export function goalDisabled (label: string, goal: FarmGoal = farmGoal()): boolean | undefined {
+export function goalDisabled (label: string, goal: FarmGoal = 'any'): boolean | undefined {
   const on = GOAL_CHIPS[goal][label]
   return on === undefined ? undefined : !on
 }

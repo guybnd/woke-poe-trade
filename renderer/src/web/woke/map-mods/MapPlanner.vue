@@ -110,7 +110,8 @@ import type { PlanGoal, PlanRow, PlannerState } from './planner'
 import { MAX_SEARCH_LENGTH } from './regex'
 import { allMapNames } from './data'
 import type { MapModProfile, ModRating } from './rules'
-import { farmGoal, plannerGoalFor } from './goal'
+import { plannerGoalFor } from './goal'
+import { farmGoal } from './goal-config'
 
 const props = defineProps<{ profile: MapModProfile, ratings: Record<string, ModRating> }>()
 

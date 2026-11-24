@@ -44,6 +44,26 @@ describe('3.30 More Threads', () => {
     expect(threads?.roll?.value).toBe(71)
   })
 
+  it('starts the numbers by the farming goal', () => {
+    const item = parseItem(MAP_330)
+    const make = (goal?: 'any' | 'currency' | 'atlas') => {
+      const filters: StatFilter[] = []
+      mapProps(false, { item, filters, searchInRange: 10, statsByType: item.statsByType } as never, goal)
+      return (ref: string) => filters.find(f => f.statRef === ref)?.disabled
+    }
+    const any = make()
+    expect(any('More Scarabs: #%')).toBe(false)
+    expect(any('Item Rarity: +#%')).toBe(false)
+    const currency = make('currency')
+    expect(currency('More Scarabs: #%')).toBe(true)
+    expect(currency('Item Rarity: +#%')).toBe(false)
+    const atlas = make('atlas')
+    expect(atlas('More Scarabs: #%')).toBe(false)
+    expect(atlas('Item Rarity: +#%')).toBe(true)
+    expect(atlas('Monster Pack Size: +#%')).toBe(false)
+    expect(atlas('Atlas Drops: +#%')).toBe(true)
+  })
+
   it('builds a map regex minimum that matches the More Threads line', () => {
     const { text } = buildMapRegex({ avoid: [], want: [], mins: { scarabs: 50 }, highlight: 'good' }, [])
     const re = new RegExp(text.slice(1, -1), 'i')

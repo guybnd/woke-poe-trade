@@ -76,7 +76,8 @@ import { VERDICT_LABEL } from './rules'
 import { checkMap, findMapModsConfig, isMapLike, isUnsure, PROP_TRADE_ID } from './check'
 import type { AddedMod, FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
-import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, farmGoal, goalDisabled, setFarmGoal } from './goal'
+import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalDisabled } from './goal'
+import { farmGoal, setFarmGoal } from './goal-config'
 import type { FarmGoal } from './goal'
 
 // addMods: off on the bulk preset, which searches maps by type only.

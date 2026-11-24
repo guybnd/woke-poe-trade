@@ -6,7 +6,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const config = { widgets: [] as Array<Record<string, unknown>>, woke: { off: [] as string[] } }
 vi.mock('@/web/Config', () => ({ AppConfig: () => config }))
 
-const { FARM_GOALS, GOAL_CHIPS, GOAL_KEYS, RAISES, farmGoal, goalDisabled, plannerGoalFor, setFarmGoal } = await import('@/web/woke/map-mods/goal')
+const { FARM_GOALS, GOAL_CHIPS, GOAL_KEYS, RAISES, goalDisabled, plannerGoalFor } = await import('@/web/woke/map-mods/goal')
+const { farmGoal, setFarmGoal } = await import('@/web/woke/map-mods/goal-config')
 const { mapBonusLookup } = await import('@/web/woke/search/lookups/map-bonus')
 
 const ctx = { price: () => null, items: [], tools: new Set(['woke-map-mods']), divine: 100, now: 0, league: null }
