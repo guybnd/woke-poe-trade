@@ -14,7 +14,7 @@
         </div>
       </template>
     </DockItem>
-    <GlanceBar v-if="glanceOn(config)" :map="glanceMap" :after="barLine" :clock="glanceClockOn(config)" :since="glanceSince" :before="glanceBefore" :editing="placingGlance" :movable="wm.active.value" :pos="config.glancePos ?? null"
+    <GlanceBar v-if="glanceOn(config)" :map="glanceMap" :after="barLine" :show-clock="glanceClockOn(config)" :since="glanceSince" :before="glanceBefore" :editing="placingGlance" :movable="wm.active.value" :pos="config.glancePos ?? null"
       @move="moveGlance" />
     <MapToast :chip="chip" :close-key="config.chipKey || null" :size="toastSize" @close="closeChip" @hold="holdChip" @resize="resizeChip"
       :pos="config.chipPos ?? null" @move="moveChip" />

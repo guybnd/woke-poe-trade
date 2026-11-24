@@ -65,7 +65,7 @@ test('a raised min filters the loaded listings here; a lowered one asks for a ne
   // column header and the mod row say it's filtered here.
   const status = panel.locator('.w-pc-status')
   await expect(status).toContainText('14 of 20 here')
-  // Squeezed between Search bulk and the affix caps, it shows the full line, the short count,
+  // Squeezed between Search and the affix caps, it shows the full line, the short count,
   // or (with no room even for that) nothing, never cut off. The full line is on hover, and the foot says it too.
   await expect(status).toHaveAttribute('title', /Filtered from the 20 listings already loaded/)
   const shown = await status.evaluate(el => ({

@@ -4,6 +4,8 @@ import fs from 'fs'
 import path from 'path'
 import { test, expect, FIXTURES } from './harness'
 
+const area = (id: string, seed = '666232010') => `2026/11/05 20:49:09 18884906 1186a8a3 [DEBUG Client 34092] Generating level 83 area "${id}" with seed ${seed}`
+
 const LIST = fs.readFileSync(path.join(FIXTURES, 'stash/tab-list.json'), 'utf8')
 const DUMP = fs.readFileSync(path.join(FIXTURES, 'stash/tab-dump.json'), 'utf8')
 // The dump a map later: the Strand Map used up, two more Apothecary cards.
@@ -302,6 +304,17 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await panel.locator('[data-listed]').getByText(/^Uniques 3$/).click()
     await expect(panel.locator('[data-listed-filtered]')).toHaveCount(0)
     await overlay.snap('net worth listed')
+
+    // Stale after 1 day: Headhunter is. The icon counts it only in your hideout.
+    await panel.getByLabel('Stale after days').fill('1')
+    const badge = overlay.dockIcon('net-worth').locator('[data-layout-ok^="the badge"]')
+    await expect(panel.locator('[data-listed-stale]')).toContainText('1 unsold')
+    await expect(badge).toHaveCount(0)
+    await overlay.log([area('HideoutFelled', '1')])
+    await expect(badge).toHaveText('1')
+    // Out again before the hideout's quiet listings refresh (5 s).
+    await overlay.log([area('MapWorldsStrand')])
+    await expect(badge).toHaveCount(0)
     await overlay.page.unroute('**/api/trade/search/**')
     await overlay.page.unroute('**/api/trade/fetch/**')
     await panel.getByRole('tab', { name: 'Holdings' }).click()

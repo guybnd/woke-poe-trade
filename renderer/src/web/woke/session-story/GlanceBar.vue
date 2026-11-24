@@ -9,16 +9,16 @@
       <template v-else-if="map">
         <span :class="$style.name">{{ map.name }}</span>
         <span class="w-dim">{{ tierText(map.areaLevel) }}</span>
-        <span v-if="clock" data-glance-time>{{ formatClock(elapsed) }}</span>
+        <span v-if="showClock" data-glance-time>{{ formatClock(elapsed) }}</span>
       </template>
       <span v-else-if="!after" :class="$style.name">Glance bar</span>
       <!-- A strategy run going (Net worth › Runs): its maps and profit instead of tonight's. -->
       <template v-if="run">
         <span :class="$style.sep" />
         <span class="w-dim" data-glance-run>Run</span>
-        <span v-if="run.maps || !run.fights">{{ run.maps }} {{ run.maps === 1 ? 'map' : 'maps' }}</span>
+        <span v-if="runMaps || !run.fights" data-glance-run-maps>{{ runMaps }} {{ runMaps === 1 ? 'map' : 'maps' }}</span>
         <span v-if="run.fights">{{ run.fights }} {{ run.fights === 1 ? 'fight' : 'fights' }}</span>
-        <span :class="run.profitChaos >= 0 ? 'w-up' : 'w-down'">{{ run.profitChaos > 0 ? '+' : '' }}{{ formatChaos(run.profitChaos, run.divine) }}</span>
+        <span :class="run.profitChaos >= 0 ? 'w-up' : 'w-down'" :title="run.readAt ? `Profit at the last stash read, ${clock(run.readAt)}` : undefined">{{ run.profitChaos > 0 ? '+' : '' }}{{ formatChaos(run.profitChaos, run.divine) }}</span>
       </template>
       <template v-else-if="night">
         <span :class="$style.sep" />
@@ -42,6 +42,8 @@ import { tierText } from './map-log'
 import { dragSpot } from '../ui/drag-spot'
 import type { MapRecord } from './map-log'
 import { useNightList } from './nights'
+import { useNights } from './store'
+import { runMapsNow } from './glance-run'
 
 const props = defineProps<{
   // The map you're in, as Session story's map log has it; null in hideout or town.
@@ -49,7 +51,7 @@ const props = defineProps<{
   // The map you just left, for a few seconds after (its time against your usual).
   after?: string | null
   // The map's time ticking each second (Settings, on by default): off, nothing ticks in a map.
-  clock?: boolean
+  showClock?: boolean
   // When you went in this time through the portal, and the map's time before that.
   since: number
   before: number
@@ -73,7 +75,7 @@ function startDrag (e: PointerEvent) {
 
 // The map's time so far, like the after-map toast, ticking each second while the bar shows.
 const now = shallowRef(Date.now())
-onUnmounted(tickWhile(() => !!props.map && !!props.clock, () => { now.value = Date.now() }, 1000))
+onUnmounted(tickWhile(() => !!props.map && !!props.showClock, () => { now.value = Date.now() }, 1000))
 const elapsed = computed(() => props.before + Math.max(0, now.value - props.since))
 const nights = useNightList()
 const night = computed(() => nights.shown.value?.live ? nights.shown.value.story : null)
@@ -81,20 +83,33 @@ const profit = computed(() => night.value ? nights.profitOf(night.value) : null)
 
 // The strategy run's saved glance (net-worth/runs.ts RunGlance), read each
 // time you go into a map: it changes only with a stash read.
-interface RunNumbers { name: string, maps: number, fights: number, profitChaos: number, divine: number | null }
+// `at`: when it was saved (its map count is up to then); `readAt`: the stash
+// read its profit is from.
+interface RunNumbers { name: string, maps: number, fights: number, profitChaos: number, divine: number | null, at: number, startAt: number, lastMapAt?: number, readAt: number | null }
 const run = shallowRef<RunNumbers | null>(null)
+const recent = useNights()
+type SavedGlance = Partial<RunNumbers> & { league?: string, timeTo?: number }
 watch(() => props.map ? props.since : null, (since) => {
   const league = AppConfig().leagueId
   if (since == null || !league) return
   hostRequest('doc-get', { collection: 'net-worth', key: `${league}-run-glance` })
     .then((g) => {
-      const o = g as Partial<RunNumbers> & { league?: string } | null
+      const o = g as SavedGlance | null
       run.value = o && o.league === league && typeof o.profitChaos === 'number' && Number.isFinite(o.profitChaos) && typeof o.maps === 'number'
-        ? { name: String(o.name ?? ''), maps: o.maps, fights: typeof o.fights === 'number' ? o.fights : 0, profitChaos: o.profitChaos, divine: typeof o.divine === 'number' ? o.divine : null }
+        ? { name: String(o.name ?? ''), maps: o.maps, fights: typeof o.fights === 'number' ? o.fights : 0, profitChaos: o.profitChaos, divine: typeof o.divine === 'number' ? o.divine : null, at: typeof o.at === 'number' ? o.at : 0, startAt: typeof o.startAt === 'number' ? o.startAt : 0, ...(typeof o.lastMapAt === 'number' ? { lastMapAt: o.lastMapAt } : {}), readAt: typeof o.timeTo === 'number' ? o.timeTo : null }
         : null
     })
     .catch(() => {})
+  recent.loadMaps().catch(() => {})
 }, { immediate: true })
+// The saved count changes only with a stash read; maps since then come from
+// the map log, so the count keeps up map by map (profit waits for a read).
+const runMaps = computed(() => {
+  const r = run.value
+  if (!r) return 0
+  return runMapsNow(r, recent.maps.value)
+})
+const clock = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 </script>
 
 <style module>

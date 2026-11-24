@@ -4,6 +4,7 @@ import type { ComputedRef } from 'vue'
 import { ITEM_BY_REF } from '@/assets/data'
 import { useActiveBuild } from '../pob-builds/active'
 import { buildFacts, linkColours, loadoutOf, mainGroupOf } from '../pob-builds/build-model'
+import { gemsLoaded } from '../pob-builds/gems'
 import { CATEGORY_CLASSES } from './build-rules'
 import type { BuildRuleInput } from './build-rules'
 
@@ -20,7 +21,9 @@ export function useBuildRuleInput (): ComputedRef<BuildRuleInput | null> {
   const build = useActiveBuild()
   return computed(() => {
     const d = build.details.value
-    if (!d) return null
+    // Wait for the gem table too, so the filter never saves build rules
+    // without the build's gems and link colours.
+    if (!d || !gemsLoaded.value) return null
     const level = build.level.value
     const act = build.act.value
     const pick = build.loadout.value
