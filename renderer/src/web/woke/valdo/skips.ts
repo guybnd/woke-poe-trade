@@ -108,13 +108,55 @@ export function skippedBy (item: ListingItem | undefined, keys: ReadonlySet<stri
   return listingKeys(item).find(k => keys.has(k)) ?? null
 }
 
-/** The active Map mods profile, or null when Map mods is off or not set up yet. */
-export function valdoProfile (): MapModProfile | null {
+/** The Map mods window's config, or null when Map mods is off or not set up yet. */
+export function valdoConfig (): MapModsWidget | null {
   const config = AppConfig()
   if (!isModuleOn(config, 'map-mods')) return null
   const w = config.widgets.find(w => w.wmType === MAP_MODS_TYPE) as MapModsWidget | undefined
   if (!w || w.wmFlags[0] === 'uninitialized' || !Array.isArray(w.profiles) || !w.profiles.length) return null
-  return w.profiles.find(p => p.id === w.activeProfile) ?? w.profiles[0]
+  return w
+}
+
+/** The active Map mods profile: the Valdo template. */
+export function valdoProfile (): MapModProfile | null {
+  const w = valdoConfig()
+  return w ? w.profiles.find(p => p.id === w.activeProfile) ?? w.profiles[0] : null
+}
+
+// Valdo mods met so far, kept for "Add a mod". The cap keeps a list of junk
+// (a misread line) from growing for ever: the oldest go first.
+const SEEN_CAP = 300
+
+/** Adds mods to the met list (numbers as "#", one per mod); returns whether it changed. */
+export function rememberSeen (w: Pick<MapModsWidget, 'valdoSeen'>, texts: Iterable<string>): boolean {
+  const list = [...(w.valdoSeen ?? [])]
+  const keys = new Set(list.map(skipKey))
+  const voidKey = skipKey(VOID_TEXT)
+  let changed = false
+  for (const text of texts) {
+    const key = skipKey(text)
+    if (!key || key === voidKey || keys.has(key)) continue
+    keys.add(key)
+    list.push(skipLabel(text))
+    changed = true
+  }
+  if (!changed) return false
+  w.valdoSeen = list.slice(-SEEN_CAP)
+  return true
+}
+
+/** The first lines of the loaded listings' mods: TradeListing writes them, the strip remembers them. */
+export const valdoListingMods = shallowRef<readonly string[]>([])
+
+/** Every mod line of a listing, as text. */
+export function listingModLines (item: ListingItem | undefined): string[] {
+  const out: string[] = []
+  for (const m of item?.explicitMods ?? []) {
+    const first = modText(m).split('\n')[0]
+    // A minions line belongs to the player mod above it.
+    if (first.trim() && !first.startsWith("Players' Minions ")) out.push(first)
+  }
+  return out
 }
 
 /** The keys to skip now: empty when there's no profile. */

@@ -23,6 +23,7 @@ export interface NewsItem {
 
 export const NEWS: NewsItem[] = [
   { id: 'valdo-map-skips', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: on a Valdo map, set a mod Not and listings with it are hidden; remembered per profile' },
+  { id: 'valdo-map-lookup', wmType: 'woke-search', name: 'Search', note: 'New: type "valdo headhunter" to price check Valdo maps with that reward' },
   { id: 'price-check-map-stat-columns', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: a map\'s ticked Rarity, Pack and More Currency show as columns in the results, higher or lower than yours' },
   { id: 'price-check-related-upgrades', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: beside a unique, its upgrade, where it drops and the cards that give it, with prices' },
   { id: 'scrying-helper', wmType: 'woke-scrying', name: 'Scrying', note: 'New: which map to scry, ranked by the cards a Scrying Orb adds per map, with the orb\'s price and a Buy link' },

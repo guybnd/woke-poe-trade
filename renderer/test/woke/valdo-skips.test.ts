@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('@/web/Config', () => ({ AppConfig: () => ({ widgets: [], woke: { off: [] } }) }))
 
 /* eslint-disable import-x/first */
-import { isSkipped, profileSkips, setSkipped, skipKey, skippedBy, valdoHides, VOID_TEXT } from '@/web/woke/valdo/skips'
+import { isSkipped, listingModLines, profileSkips, rememberSeen, setSkipped, skipKey, skippedBy, valdoHides, VOID_TEXT } from '@/web/woke/valdo/skips'
 import { copyOfProfile, defaultProfile } from '@/web/woke/map-mods/rules'
 import type { MapModProfile } from '@/web/woke/map-mods/rules'
 /* eslint-enable import-x/first */
@@ -87,5 +87,25 @@ describe('Valdo skips', () => {
     const copy = copyOfProfile(p, 2)
     setSkipped(copy, 'Players cannot gain Flask Charges', false)
     expect(isSkipped(p, 'Players cannot gain Flask Charges')).toBe(true)
+  })
+})
+
+describe('valdo mods met so far', () => {
+  it('remembers each mod once, numbers as #, never the Void', () => {
+    const w: { valdoSeen?: string[] } = {}
+    expect(rememberSeen(w, ['Players deal 10% less Damage per Equipped Item', 'Area contains The Feared', VOID_TEXT])).toBe(true)
+    expect(rememberSeen(w, ['Players deal 20% less Damage per Equipped Item'])).toBe(false)
+    expect(w.valdoSeen).toEqual(['Players deal #% less Damage per Equipped Item', 'Area contains The Feared'])
+  })
+  it('keeps the newest 300', () => {
+    const w: { valdoSeen?: string[] } = {}
+    rememberSeen(w, Array.from({ length: 310 }, (_, i) => `Mod number${'x'.repeat(i)}`))
+    expect(w.valdoSeen).toHaveLength(300)
+    expect(w.valdoSeen![299]).toBe(`Mod number${'x'.repeat(309)}`)
+  })
+  it('reads a listing\'s first lines, without the minions line', () => {
+    expect(listingModLines({ explicitMods: ['Players deal 10% less Damage per Equipped Item\nPlayers\' Minions deal 10% less Damage', 'Players\' Minions have 10% less Life', { description: 'Area contains The Feared' }] } as never))
+      .toEqual(['Players deal 10% less Damage per Equipped Item', 'Area contains The Feared'])
+    expect(listingModLines(undefined)).toEqual([])
   })
 })

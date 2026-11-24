@@ -80,7 +80,7 @@ test('a Valdo map hides listings with a mod you skip, with no new search', async
   const MODS: Record<string, string[]> = {
     a: ['Players who Die in area are sent to the Void', 'Players cannot gain Flask Charges'],
     b: ['Players who Die in area are sent to the Void', 'Area contains The Feared'],
-    c: ['Players who Die in area are sent to the Void', 'Players deal 12% less Damage per Equipped Item\nPlayers\' Minions deal 12% less Damage per Item Equipped by their Master']
+    c: ['Players who Die in area are sent to the Void', 'Players deal 12% less Damage per Equipped Item\nPlayers\' Minions deal 12% less Damage per Item Equipped by their Master', 'Monsters cannot be Stunned']
   }
   await overlay.page.route('**/api/trade/fetch/**', (route) => route.fulfill({
     contentType: 'application/json',
@@ -127,6 +127,19 @@ test('a Valdo map hides listings with a mod you skip, with no new search', async
   await perItem.locator('[data-state="any"]').click()
   await strip.locator('[data-valdo-mod="Area contains The Feared"] [data-state="has"]').click()
   await expect(strip.locator('[data-valdo-headline]')).toHaveText('1 Has · 2 of 3 listings hidden')
+  await strip.locator('[data-valdo-mod="Area contains The Feared"] [data-state="any"]').click()
+
+  // A mod met on a listing, not this map: "Add a mod" finds it, and Not on it
+  // is saved to the Map mods profile.
+  await strip.locator('[data-valdo-add-input]').fill('stun')
+  await strip.locator('[data-valdo-add-option="Monsters cannot be Stunned"]').click()
+  const stun = strip.locator('[data-valdo-mod="Monsters cannot be Stunned"]')
+  await expect(stun).toContainText('other maps')
+  await stun.locator('[data-state="not"]').click()
+  await expect(strip.locator('[data-valdo-headline]')).toHaveText('1 Not · 1 of 3 listings hidden')
+  await expect(strip.locator('[data-valdo-saved]')).toContainText('Saved to')
+  await expect(strip.locator('[data-valdo-template-pick]')).toBeVisible()
+  await overlay.snap('valdo map add a mod')
   expect(searches).toBe(1)
 })
 

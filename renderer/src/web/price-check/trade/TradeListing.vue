@@ -271,7 +271,7 @@ import '@/web/woke/price-insight/price-table.css'
 import { useCheckLog } from '@/web/woke/price-insight/useCheckLog'
 import { travelState, travelToHideout, travelNote } from '@/web/woke/hideout-travel/travel'
 import { isBlankRareSearch, ninjaFitsSearch, skipsTopMods, socketColoursOn } from '@/web/woke/price-insight/search-scope'
-import { activeSkipKeys, valdoHides, valdoHidden, valdoNeed } from '@/web/woke/valdo/skips'
+import { activeSkipKeys, listingModLines, valdoHides, valdoHidden, valdoListingMods, valdoNeed } from '@/web/woke/valdo/skips'
 
 // woke: the drivers load with the first price check, not at startup; results take longer.
 const loadDrivers = () => import('@/web/woke/price-insight/PriceDrivers.vue')
@@ -612,6 +612,14 @@ export default defineComponent({
       valdoHidden.value = keys ? { hidden, loaded } : null
     }, { immediate: true })
     onUnmounted(() => { valdoHidden.value = null })
+    // A Valdo map's loaded listings tell the strip which mods exist ("Add a mod").
+    watch(loadedCount, () => {
+      if (!props.item.mapCompletionReward) return
+      const lines = new Set<string>()
+      for (const r of fetchResults.value) if (r) for (const l of listingModLines(r.listedItem)) lines.add(l)
+      valdoListingMods.value = [...lines]
+    })
+    onUnmounted(() => { valdoListingMods.value = [] })
     const statusSlot = inject<ShallowRef<HTMLElement | null>>('price-search-status-slot', shallowRef(null))
 
     const { insight, divine, options: insightOptions } = useInsight(fitResults, computed(() => props.filters.trade.league))

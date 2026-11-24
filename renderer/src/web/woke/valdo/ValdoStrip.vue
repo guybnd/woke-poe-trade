@@ -31,10 +31,21 @@
       </button>
       <span v-if="query && !matches.length" class="w-dim text-xs">No unique matches "{{ query }}"</span>
     </div>
+    <!-- The template: the Map mods profile that keeps your Not list. One per build. -->
+    <div v-if="config" :class="$style.line" data-valdo-template>
+      <span class="w-dim text-xs" :class="$style.label">Template</span>
+      <select :class="$style.tool" :value="config.activeProfile" aria-label="Template (Map mods profile)"
+        title="Your Not mods are kept on this Map mods profile and apply to every Valdo map. Switching it switches Map mods too."
+        data-valdo-template-pick @change="pickProfile(($event.target as HTMLSelectElement).value)">
+        <option v-for="p in config.profiles" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
+      <span class="w-dim text-xs w-trunc" data-valdo-saved>{{ savedNote }}</span>
+    </div>
     <div v-if="shown.length" :class="$style.list" data-valdo-mods>
       <div v-for="(m, i) in shown" :key="i" :class="[$style.mod, $style[stateOf(m)]]" :data-valdo-mod="m.split('\n')[0]">
         <span :class="[$style.dot, buildSkips(m) && $style.deadly]" :title="buildSkips(m) ? 'Your Map mods profile: can\'t run' : undefined" />
         <span :class="$style.text" :title="m">{{ m.split('\n')[0] }}</span>
+        <span v-if="m !== VOID_TEXT && !onMap(m)" :class="$style.sub" title="Not on this map: it still filters the listings">other maps</span>
         <span v-if="m === VOID_TEXT && !hasVoid" :class="$style.sub" title="This map doesn't send you to the Void; the search looks for maps without it until you change it">not on this map</span>
         <span v-if="m === VOID_TEXT ? !!voidFilter : canSkip" :class="$style.seg" role="radiogroup" :aria-label="`Search ${m.split('\n')[0]}`">
           <button v-for="opt in STATES" :key="opt" type="button" role="radio" :aria-checked="stateOf(m) === opt"
@@ -42,8 +53,12 @@
             @click="setState(m, opt)">{{ STATE_LABEL[opt] }}</button>
         </span>
       </div>
-      <div v-if="open && elsewhere.length" :class="$style.also" :title="elsewhere.map(s => s.label).join('\n')" data-valdo-also>
-        Also Not, from your profile: {{ elsewhere.map(s => s.label).join(' · ') }}
+      <!-- Any other Valdo mod, from the ones met so far (on your maps and the listings loaded). -->
+      <div v-if="open && canSkip" :class="$style.add" data-valdo-add>
+        <input v-model="addQuery" type="text" :class="$style.addInput" placeholder="+ Add a mod…" aria-label="Add a Valdo mod"
+          data-valdo-add-input @keydown.enter.prevent="addFirst" @keydown.esc.prevent="addQuery = ''">
+        <button v-for="m in addMatches" :key="m" type="button" :class="$style.option" :data-valdo-add-option="m" @click="addMod(m)">{{ m }}</button>
+        <span v-if="addQuery.trim() && !addMatches.length" class="w-dim text-xs">No Valdo mod met yet matches "{{ addQuery.trim() }}". Enter adds it as typed.</span>
       </div>
     </div>
   </section>
@@ -62,7 +77,7 @@ import { isModuleOn } from '../modules'
 import type { FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
 import { ensureMapModsConfig } from '../map-mods/check'
 import { activeProfile } from '../map-mods/widget'
-import { isSkipped, profileSkips, setSkipped, skipKey, valdoHidden, valdoNeed, valdoProfile, VOID_TEXT } from './skips'
+import { isSkipped, profileSkips, rememberSeen, setSkipped, skipKey, valdoConfig, valdoHidden, valdoListingMods, valdoNeed, valdoProfile, VOID_TEXT } from './skips'
 import type { SkipEntry } from './skips'
 
 const props = defineProps<{ item: ParsedItem, stats: FilterOrGroup[], filters: ItemFilters }>()
@@ -100,7 +115,7 @@ const own = computed(() => props.item.mapCompletionReward!)
 const picking = ref(false)
 const query = ref('')
 const input = shallowRef<HTMLInputElement | null>(null)
-watch(() => props.item, () => { picking.value = false; query.value = ''; valdoNeed.value = new Set() })
+watch(() => props.item, () => { picking.value = false; query.value = ''; valdoNeed.value = new Set(); added.value = []; addQuery.value = '' })
 onBeforeUnmount(() => { valdoNeed.value = new Set() })
 
 function togglePicker () {
@@ -164,7 +179,64 @@ const mods = computed(() => {
 })
 // The Void line stays up when the list is folded: it's part of the search.
 const hasVoid = computed(() => props.item.statsByType.some(c => c.stat.ref === VOID_TEXT))
-const shown = computed(() => open.value ? mods.value : mods.value.filter(m => m === VOID_TEXT))
+// Rows for mods not on this map: ones added here, and the template's Not mods
+// that Valdo maps have (a Not from a normal map mod that no Valdo map has met stays quiet).
+const added = ref<string[]>([])
+const config = computed(() => valdoConfig())
+const seenKeys = computed(() => new Set((config.value?.valdoSeen ?? []).map(skipKey)))
+const mapKeys = computed(() => new Set(mods.value.map(m => skipKey(m))))
+const onMap = (m: string) => mapKeys.value.has(skipKey(m))
+const extra = computed(() => {
+  const out: string[] = []
+  const keys = new Set(mapKeys.value)
+  const push = (label: string) => {
+    const k = skipKey(label)
+    if (keys.has(k)) return
+    keys.add(k)
+    out.push(label)
+  }
+  for (const m of added.value) push(m)
+  for (const s of skips.value) if (!s.auto || seenKeys.value.has(s.key)) push(s.label)
+  return out
+})
+const rows = computed(() => [...mods.value, ...extra.value])
+const shown = computed(() => open.value ? rows.value : rows.value.filter(m => m === VOID_TEXT))
+
+// Add a mod: the mods met so far that aren't listed, by the text typed.
+const addQuery = ref('')
+const addMatches = computed(() => {
+  const q = addQuery.value.trim().toLowerCase()
+  if (!q) return []
+  const listed = new Set(rows.value.map(m => skipKey(m)))
+  return (config.value?.valdoSeen ?? []).filter(m => !listed.has(skipKey(m)) && m.toLowerCase().includes(q)).slice(0, 8)
+})
+function addMod (m: string) {
+  if (!rows.value.some(r => skipKey(r) === skipKey(m))) added.value = [...added.value, m]
+  addQuery.value = ''
+}
+function addFirst () {
+  if (addMatches.value.length) addMod(addMatches.value[0])
+  else if (addQuery.value.trim()) addMod(addQuery.value.trim())
+}
+
+// The mods met: this map's, and the loaded listings'.
+watch([mods, valdoListingMods], ([own, listed]) => {
+  const w = valdoConfig()
+  if (w) rememberSeen(w, [...own, ...listed])
+}, { immediate: true })
+
+function pickProfile (id: string) {
+  const w = ensureMapModsConfig()
+  if (w) w.activeProfile = Number(id)
+}
+const savedNote = ref('')
+let savedTimer: ReturnType<typeof setTimeout> | undefined
+function flashSaved (name: string) {
+  savedNote.value = `Saved to ${name}`
+  clearTimeout(savedTimer)
+  savedTimer = setTimeout(() => { savedNote.value = '' }, 2500)
+}
+onBeforeUnmount(() => clearTimeout(savedTimer))
 
 // Not lives on the active Map mods profile: one list per build.
 const profile = computed(() => valdoProfile())
@@ -192,24 +264,22 @@ function setState (m: string, state: ModState) {
   const w = ensureMapModsConfig()
   if (!w) return
   const p = activeProfile(w)
-  if (isSkipped(p, m) !== (state === 'not')) setSkipped(p, m, state === 'not')
+  if (isSkipped(p, m) !== (state === 'not')) {
+    setSkipped(p, m, state === 'not')
+    flashSaved(p.name)
+  }
 }
 
 // The top line: what's set beyond Any, and what it hid.
 const headline = computed(() => {
-  const not = mods.value.filter(m => m !== VOID_TEXT && stateOf(m) === 'not').length
-  const has = mods.value.filter(m => m !== VOID_TEXT && stateOf(m) === 'has').length
+  const not = rows.value.filter(m => m !== VOID_TEXT && stateOf(m) === 'not').length
+  const has = rows.value.filter(m => m !== VOID_TEXT && stateOf(m) === 'has').length
   const h = valdoHidden.value
   return [
     not ? `${not} Not` : '',
     has ? `${has} Has` : '',
     h && h.hidden ? `${h.hidden} of ${h.loaded} listings hidden` : ''
   ].filter(Boolean).join(' · ')
-})
-// The build's other Not mods, not on this map.
-const elsewhere = computed(() => {
-  const here = new Set(mods.value.map(m => skipKey(m)))
-  return skips.value.filter(s => !here.has(s.key))
 })
 </script>
 
@@ -272,5 +342,8 @@ const elsewhere = computed(() => {
 .seg .on_has { background: color-mix(in srgb, var(--w-up) 28%, transparent); color: var(--w-fg); }
 .seg .on_not { background: color-mix(in srgb, var(--w-down) 28%, transparent); color: var(--w-fg); }
 .sub { flex: none; font-size: var(--w-fs-xs); color: var(--w-dim); border: 1px solid var(--w-line); padding: 0 4px; border-radius: var(--w-r-sm); }
+.add { display: flex; flex-direction: column; gap: 2px; padding: 2px 0 0 13px; }
+.addInput { font-size: var(--w-fs-sm); padding: 1px 6px; border: 1px dashed var(--w-line-strong); border-radius: var(--w-r-sm); background: transparent; color: var(--w-fg); font-style: italic; }
+.addInput:focus { font-style: normal; border-style: solid; }
 .also { padding: 2px 0 0 13px; color: var(--w-dim); font-size: var(--w-fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

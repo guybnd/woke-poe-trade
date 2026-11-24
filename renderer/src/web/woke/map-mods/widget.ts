@@ -28,6 +28,8 @@ export interface MapModsWidget extends Widget {
   stripOnPriceCheck: boolean
   activeProfile: number
   profiles: MapModProfile[]
+  // Valdo map mods met so far (valdo/skips.ts), as "Add a mod" suggestions.
+  valdoSeen?: string[]
   weights: JuiceWeights
   // APT's map check ratings were brought over.
   aptImported?: boolean
@@ -125,6 +127,7 @@ export function normalizeMapModsWidget (w: MapModsWidget) {
     if (p.valdoSkip !== undefined && !Array.isArray(p.valdoSkip)) p.valdoSkip = undefined
     if (p.valdoKeep !== undefined && !Array.isArray(p.valdoKeep)) p.valdoKeep = undefined
   }
+  if (w.valdoSeen !== undefined && !Array.isArray(w.valdoSeen)) w.valdoSeen = undefined
   importAptOnce(w)
 }
 
