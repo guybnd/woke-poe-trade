@@ -21,6 +21,10 @@ test('Death recap: no icon until a death, then the checked map\'s mods', async (
   const icon = overlay.dockIcon('death-recap')
   await overlay.log([area('HideoutArenaSearingExarch', '1', 60), info(': You have entered Searing Hideout.')])
   await expect(icon).toHaveCount(0)
+  // The widget is lazy-loaded and only hears map checks once mounted; under CI load
+  // the check could land before it, so wait for its chunk first.
+  await expect.poll(() => overlay.page.evaluate(() => performance.getEntriesByType('resource').some(e => e.name.includes('WidgetDeathRecap'))), SLOW).toBe(true)
+  await overlay.page.waitForTimeout(300)
 
   await overlay.copyItem('items/map-rare-t16-deadly.txt', 'Alt + M')
   await expect(overlay.page.locator('body')).toContainText('Cemetery')
