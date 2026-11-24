@@ -1,37 +1,49 @@
 <template>
   <!-- The verdict for an exchange item before any search: poe.ninja's cached price (ninja-first.ts). -->
-  <div v-if="info" :class="$style.card" data-testid="ninja-verdict">
-    <div :class="$style.eyebrow">
-      <span :class="$style.badge" :title="poeOn ? 'This is used to provide instant pricing without any delay. For live data, press:' : 'This is used to provide instant pricing without any delay. For live data, click Check live offers.'" :data-tip-keys="poeOn ? 'Enter' : null">POE.NINJA</span>
-      <span>Cached price<template v-if="age">, updated {{ age }}</template></span>
-      <span class="flex-1" />
-      <template v-if="weekChange != null">
-        <w-spark :values="spark" :width="32" :height="14" />
-        <span :class="weekChange >= 0 ? 'w-up' : 'w-down'">{{ weekChange >= 0 ? '▲' : '▼' }}{{ Math.abs(weekChange) }}% 7d</span>
-      </template>
-    </div>
-    <div :class="$style.value">
-      <span :class="[$style.headline, { [$style.flip]: price?.flip }]" data-testid="ninja-verdict-price" :data-unit="price?.flip ? ninjaCheapUnit : null" :title="flipTitle(price)" @click="flipUnit(price)"><w-price-text :text="price?.main" /></span>
-      <span :class="$style.each"><template v-if="price?.each">each</template><template v-if="stack">{{ price?.each ? ' · ' : '' }}<w-price-text :text="stack" /> for your {{ have }}</template><template v-if="price?.sub"> · <w-price-text :text="price.sub" /></template></span>
-    </div>
-    <!-- How sure poe.ninja's price is (ninja-trust.ts, WOKEPOET-534). -->
-    <div v-if="doubtLine" :class="$style.doubt" data-testid="ninja-verdict-doubt" :data-doubt="doubt?.kind"><w-price-text :text="doubtLine" /></div>
-    <!-- A gamble unique, unidentified: identify it or sell it unid (WOKEPOET-542). -->
-    <div v-if="gamble" :class="$style.unid" data-testid="ninja-verdict-unid">
-      <div v-if="unidQuote" data-unid-trade>Unid listings <b><w-price-text :text="fmt(unidQuote.chaos)" /></b> <span class="w-dim">· trade, {{ unidQuote.listings }} listed</span></div>
-      <div v-else class="w-dim" data-unid-trade>Unid listings
-        <span v-if="unidPending">…</span>
-        <span v-else-if="unidNone">too few listed to price</span>
-        <button v-else type="button" :class="$style.link" title="Uses one trade search: the middle of the cheapest unidentified listings" @click="askUnid">check on trade</button>
+  <div v-if="info || gamble" :class="$style.card" data-testid="ninja-verdict">
+    <!-- A rolled unique, unidentified (Forbidden Flame, Watcher's Eye...): poe.ninja's one price
+         is a guess at a hidden roll, so the unid trade price leads, saved for every window
+         (Guy's pick A1, 2026-11-24). Never searched without a click. -->
+    <div v-if="gamble" :class="$style.unid" data-testid="ninja-verdict-unid" data-goto-spot="unid-price">
+      <div v-if="unidQuote" :class="$style.value" data-unid-trade>
+        <span :class="$style.headline" data-testid="ninja-verdict-price"><w-price-text :text="fmt(unidQuote.chaos)" /></span>
+        <span :class="$style.each">unid on trade · {{ unidQuote.listings }} listed<template v-if="unidAge"> · {{ unidAge }}</template></span>
       </div>
-      <template v-if="versions">
-        <div>Identified <b><w-price-text :text="rangeText(versions.low, versions.high, xchgRate, num)" /></b>, median <w-price-text :text="fmt(versions.median)" /> <span class="w-dim">across {{ versions.count }} versions</span></div>
-        <div class="w-dim" data-unid-read>{{ UNID_READ_TEXT[read] }}</div>
-      </template>
-      <div v-else class="w-dim" data-unid-identified>poe.ninja lists no identified versions of it.
-        <button type="button" :class="$style.link" title="Opens the trade site in your browser: identified copies, cheapest first" @click="openIdentified">See identified on trade</button>
+      <div v-else :class="$style.value" data-unid-trade>
+        <span :class="$style.muted">Depends on the hidden roll</span>
+      </div>
+      <div v-if="!unidQuote || unidStale" :class="$style.row">
+        <span v-if="unidPending" class="w-dim">Checking unid listings…</span>
+        <span v-else-if="unidNone" class="w-dim">Too few unid listings to price</span>
+        <button v-else type="button" class="btn" :class="$style.unidBtn" data-testid="ninja-verdict-unid-check"
+          title="One trade search: the middle of the cheapest unidentified instant buyouts. Saved for a week, for every window." @click="askUnid">
+          {{ unidQuote ? 'Check again' : 'Check unid price' }}
+        </button>
+        <span v-if="!unidPending && !unidNone" class="w-dim">1 search</span>
+      </div>
+      <div class="w-dim" data-unid-identified>
+        <template v-if="info">poe.ninja <s><w-price-text :text="price?.main" /></s> · not reliable unid</template>
+        <template v-if="versions"><template v-if="info"> · </template><span :title="UNID_READ_TEXT[read]" data-unid-read>identified <w-price-text :text="rangeText(versions.low, versions.high, xchgRate, num)" /></span></template>
+        <template v-else><template v-if="info"> · </template><button type="button" :class="$style.link" title="Opens the trade site in your browser: identified copies, cheapest first" @click="openIdentified">identified on trade</button></template>
       </div>
     </div>
+    <template v-else>
+      <div :class="$style.eyebrow">
+        <span :class="$style.badge" :title="poeOn ? 'This is used to provide instant pricing without any delay. For live data, press:' : 'This is used to provide instant pricing without any delay. For live data, click Check live offers.'" :data-tip-keys="poeOn ? 'Enter' : null">POE.NINJA</span>
+        <span>Cached price<template v-if="age">, updated {{ age }}</template></span>
+        <span class="flex-1" />
+        <template v-if="weekChange != null">
+          <w-spark :values="spark" :width="32" :height="14" />
+          <span :class="weekChange >= 0 ? 'w-up' : 'w-down'">{{ weekChange >= 0 ? '▲' : '▼' }}{{ Math.abs(weekChange) }}% 7d</span>
+        </template>
+      </div>
+      <div :class="$style.value">
+        <span :class="[$style.headline, { [$style.flip]: price?.flip }]" data-testid="ninja-verdict-price" :data-unit="price?.flip ? ninjaCheapUnit : null" :title="flipTitle(price)" @click="flipUnit(price)"><w-price-text :text="price?.main" /></span>
+        <span :class="$style.each"><template v-if="price?.each">each</template><template v-if="stack">{{ price?.each ? ' · ' : '' }}<w-price-text :text="stack" /> for your {{ have }}</template><template v-if="price?.sub"> · <w-price-text :text="price.sub" /></template></span>
+      </div>
+      <!-- How sure poe.ninja's price is (ninja-trust.ts, WOKEPOET-534). -->
+      <div v-if="doubtLine" :class="$style.doubt" data-testid="ninja-verdict-doubt" :data-doubt="doubt?.kind"><w-price-text :text="doubtLine" /></div>
+    </template>
     <div :class="$style.row">
       <button type="button" class="btn w-pc-primary" :class="[$style.live, { 'w-pc-glow': doubt && doubt.kind !== 'thin' }]" data-testid="ninja-verdict-live" @click="search">
         Check live offers<w-kbd v-if="poeOn" keys="Enter" class="ml-2" />
@@ -49,12 +61,13 @@ import { usePoeninja } from '@/web/background/Prices'
 import { ninjaPrice, ninjaTotal, chaosOrbRow, flipTitle } from './ninja-first'
 import { ninjaCheapUnit, flipUnit } from './view'
 import { WSpark, WKbd, WPriceText, agoPhrase } from '../ui'
+import { nowMinute } from '../ui/format'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { poeOn } from './window-style'
 import { useNinjaDoubt } from './use-ninja-doubt'
-import { isUnidUniqueJewel } from './ninja-first'
+import { isUnidVariableUnique } from './ninja-first'
 import { identifiedSpread, unidRead, rangeText, UNID_READ_TEXT } from './unid-compare'
-import { VARIABLE_ITEMS, useTradePrices, identifiedTradeUrl } from '../shared/unid-prices'
+import { useTradePrices, identifiedTradeUrl } from '../shared/unid-prices'
 import { doubtText } from './ninja-trust'
 
 const props = defineProps<{
@@ -80,7 +93,7 @@ const age = computed(() => agoPhrase(updatedAt.value))
 const doubt = useNinjaDoubt(info)
 
 // A gamble unique, unidentified: poe.ninja's identified versions beside the unid price.
-const gamble = computed(() => isUnidUniqueJewel(props.item) && VARIABLE_ITEMS.has(props.item.info.refName))
+const gamble = computed(() => isUnidVariableUnique(props.item))
 const versions = computed(() => gamble.value
   // The headline row (the unid price, by base) isn't an identified version.
   ? identifiedSpread((findPricesByName('UNIQUE', props.item.info.refName) as Array<{ chaos: number, variant?: string }>).filter(r => (r.variant ?? '') !== (info.value?.variant ?? '')))
@@ -100,6 +113,9 @@ function num (v: number) {
 }
 // The unid price: trade's when it was checked, else poe.ninja's (the headline).
 const read = computed(() => versions.value ? unidRead(unidQuote.value?.chaos ?? info.value?.chaos ?? 0, versions.value) : 'even')
+// When the saved price was checked, and whether a click may check it again.
+const unidAge = computed(() => unidQuote.value?.at ? agoPhrase(unidQuote.value.at) : '')
+const unidStale = computed(() => !!unidQuote.value?.at && nowMinute.value - unidQuote.value.at > 60 * 60 * 1000)
 function askUnid () {
   if (league.value && xchgRate.value) tradePrices.ask(league.value, xchgRate.value, props.item.info.refName)
 }
@@ -144,6 +160,8 @@ const weekChange = computed(() => spark.value.length ? Math.round(spark.value[sp
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: var(--w-fs-sm); }
 .doubt { color: var(--w-warn); font-size: var(--w-fs-sm); }
 .unid { display: flex; flex-direction: column; gap: 2px; font-size: var(--w-fs-sm); }
+.muted { font-family: var(--w-head); font-size: var(--w-fs-lg, 16px); color: var(--w-fg); }
+.unidBtn { padding: 2px 12px; }
 .link { color: var(--w-accent); text-decoration: underline; text-underline-offset: 2px; }
 .live { display: inline-flex; align-items: center; }
 </style>

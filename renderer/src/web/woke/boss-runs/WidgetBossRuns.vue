@@ -34,7 +34,7 @@
         <WSegmented v-model="config.sort" :options="sortOptions" />
         <WChip clickable :active="!!config.skipThin" title="Count drops priced from a thin poe.ninja market as 0, so loot and profit are a floor. Entry costs stay as they are."
           @click="config.skipThin = !config.skipThin"><i class="fas fa-exclamation-circle" /> Skip low confidence</WChip>
-        <WChip clickable :active="tradeBusy" title="Look up this boss's jewels as unidentified, and drops poe.ninja doesn't list, on trade. One search every 10 seconds, kept for an hour."
+        <WChip clickable :active="tradeBusy" title="Look up this boss's jewels as unidentified, and drops poe.ninja doesn't list, on trade. One search every 10 seconds, kept for a week."
           @click="searchTrade"><i :class="tradeBusy ? 'fas fa-spinner fa-spin' : 'fas fa-search'" /> Search trade</WChip>
       </template>
       <template v-if="!prices.snapshot.value" #banner>
@@ -49,7 +49,7 @@
           <WListItem v-for="r in ranked.good" :key="r.boss.id" :active="r.boss.id === sel?.boss.id" @select="config.selected = r.boss.id" @contextmenu="bossMenu($event, r)">
             <span class="flex justify-between gap-2 w-full min-w-0">
               <span class="flex items-center gap-2 min-w-0"><WIcon :src="art(r.boss.entry[0]?.name)" fallback="fas fa-skull" /><span class="w-trunc">{{ r.boss.name }}</span><WChip v-if="r.estimated" title="Uses estimated drop chances, not measured kills">est.</WChip></span>
-              <span :class="r.profit >= 0 ? 'w-up' : 'w-down'"><WPrice :chaos="config.sort === 'run' ? r.profit : r.perHour" :divine="divine" />{{ config.sort === 'run' ? '' : '/h' }}</span>
+              <span :class="r.profit >= 0 ? 'w-up' : 'w-down'"><WPrice :chaos="config.sort === 'run' ? r.profit : r.perHour" :divine="divine" />{{ config.sort === 'run' ? '' : '/h' }}<span v-if="r.varies.length" class="w-faint" data-varies-mark :title="variesTitle(r)">*</span></span>
             </span>
             <template #sub>{{ subline(r) }}</template>
           </WListItem>
@@ -59,7 +59,7 @@
             <WListItem v-for="r in ranked.losing" :key="r.boss.id" :active="r.boss.id === sel?.boss.id" @select="config.selected = r.boss.id" @contextmenu="bossMenu($event, r)">
               <span class="flex justify-between gap-2 w-full min-w-0">
                 <span class="flex items-center gap-2 min-w-0"><WIcon :src="art(r.boss.entry[0]?.name)" fallback="fas fa-skull" /><span class="w-trunc">{{ r.boss.name }}</span><WChip v-if="r.estimated" title="Uses estimated drop chances, not measured kills">est.</WChip></span>
-                <span class="w-down"><WPrice :chaos="config.sort === 'run' ? r.profit : r.perHour" :divine="divine" />{{ config.sort === 'run' ? '' : '/h' }}</span>
+                <span class="w-down"><WPrice :chaos="config.sort === 'run' ? r.profit : r.perHour" :divine="divine" />{{ config.sort === 'run' ? '' : '/h' }}<span v-if="r.varies.length" class="w-faint" data-varies-mark :title="variesTitle(r)">*</span></span>
               </span>
               <template #sub>{{ subline(r) }}</template>
             </WListItem>
@@ -71,6 +71,12 @@
               <span class="w-faint text-xs flex items-center gap-1">entry <WPrice :chaos="r.entryMissing.length ? null : r.entry" :divine="divine" /></span>
             </span>
           </WListItem>
+          <!-- Rolled uniques with no unidentified price count as 0: one click checks them all (Guy, 2026-11-24). -->
+          <div v-if="variesNames.length" class="text-xs w-dim" :class="$style.variesNote" data-testid="boss-varies-note">
+            * Leaves out {{ variesNames.length }} unidentified {{ variesNames.length === 1 ? 'unique' : 'uniques' }} with no price yet.
+            <button type="button" class="w-accent hover:underline" :disabled="variesBusy" @click="checkVaries">{{ variesBusy ? 'Checking…' : 'Check them' }}</button>
+            <span class="w-faint">· 1 trade search each</span>
+          </div>
         </div>
 
         <!-- boss detail -->
@@ -145,6 +151,7 @@
                     ].filter(Boolean).join('\n\n')" />
                   </div>
                   <div v-if="sel.estimated" class="text-xs" style="padding: 6px var(--w-pad) 0; color: var(--w-warn);">~ is an estimated chance ({{ estimateLabel(sel.boss) }}). Loot and profit are rough.</div>
+                  <div v-if="sel.varies.length" class="text-xs w-dim" style="padding: 6px var(--w-pad) 0;" data-testid="boss-varies-drops">Unidentified {{ sel.varies.join(', ') }}: price depends on the hidden roll, counted as 0 until checked. <button type="button" class="w-accent hover:underline" @click="searchTrade">Check on trade</button></div>
                   <div v-if="sel.unpriced" class="text-xs" style="padding: 0 var(--w-pad) 6px; color: var(--w-warn);">{{ sel.unpriced }} {{ sel.unpriced === 1 ? 'drop has' : 'drops have' }} no price yet and count as 0.</div>
                 </template>
               </template>
@@ -364,6 +371,21 @@ function searchTrade () {
 }
 watch(onScreen, (show) => { if (!show) tradePrices.stop() })
 
+// Every shown boss's rolled uniques with no unidentified price yet: their
+// estimates leave them out until one click checks them all.
+const variesNames = computed(() => [...new Set(results.value.flatMap(r => r.varies))])
+const variesBusy = computed(() => variesNames.value.some(n => tradePrices.pending(n)))
+function variesTitle (r: BossResult) {
+  return `Leaves out ${r.varies.join(', ')}: unidentified, no price until checked on trade.`
+}
+function checkVaries () {
+  const league = prices.snapshot.value?.league
+  const rate = divine.value
+  if (poeWebApi() !== 'www.pathofexile.com') { toast('Needs the international trade site'); return }
+  if (!league || !rate) return
+  tradePrices.request(league, rate, variesNames.value)
+}
+
 // Nightmare (T17) map bosses depend on the fragments-a-kill setting.
 const fragsPerKill = computed(() => props.config.nightmareFrags ?? DEFAULT_FRAGMENTS_PER_KILL)
 const allBosses = computed(() => [...BOSSES, ...nightmareBosses(fragsPerKill.value)])
@@ -474,18 +496,18 @@ const editingRow = computed(() => sel.value?.drops.find(d => d.name === editing.
 const modeOptions = [{ value: 'unid', label: 'Unidentified' }, { value: 'median', label: 'poe.ninja' }, { value: 'custom', label: 'My price' }]
 
 function modeLabel (d: DropRow) {
-  if (d.priceMode === 'unid' && d.priceSource !== 'trade') return tradePrices.pending(d.name) ? '…' : 'ninja'
+  if (d.priceMode === 'unid' && d.priceSource !== 'trade') return tradePrices.pending(d.name) ? '…' : 'varies'
   return { unid: 'unid', min: 'cheapest', median: 'ninja', custom: 'my price' }[d.priceMode!]
 }
 function cardPriceTitle (d: DropRow) {
   if (d.priceMode !== 'unid') return undefined
   if (d.priceSource === 'trade') return `Unidentified: middle of the cheapest 10 of ${d.listings} instant buyouts on trade.`
-  return 'poe.ninja. Open Boss runs to look up unidentified copies on trade.'
+  return 'Depends on the hidden roll. Open Boss runs to check unidentified copies on trade.'
 }
 function spreadTitle (d: DropRow) {
   const ask = 'Click to choose how to price it.'
   if (d.priceMode === 'unid' && d.listings != null) return `Middle of the cheapest 10 of ${d.listings} unidentified instant buyouts on trade. ${ask}`
-  if (d.priceMode === 'unid') return tradePrices.pending(d.name) ? `Looking up unidentified listings on trade. Showing poe.ninja until then. ${ask}` : `poe.ninja. Search trade looks up unidentified listings. ${ask}`
+  if (d.priceMode === 'unid') return tradePrices.pending(d.name) ? `Looking up unidentified listings on trade. ${ask}` : `Depends on the hidden roll: no price until Search trade checks unidentified listings. poe.ninja's one price for it is a guess. ${ask}`
   if (!d.spread) return `No poe.ninja price. ${ask}`
   return `${d.spread.count} poe.ninja ${d.spread.count === 1 ? 'row' : 'rows'}, ${Math.round(d.spread.min)}c to ${Math.round(d.spread.max)}c. ${ask}`
 }
@@ -633,6 +655,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 .killGrid { grid-template-columns: 74px minmax(0, 1fr) 70px 22px; }
 .share { height: 6px; background: var(--w-panel-3); border-radius: var(--w-r-sm); overflow: hidden; }
 .share i { display: block; height: 100%; background: var(--w-accent); }
+.variesNote { padding: 6px var(--w-pad); }
 .input {
   height: 24px;
   padding: 0 6px;

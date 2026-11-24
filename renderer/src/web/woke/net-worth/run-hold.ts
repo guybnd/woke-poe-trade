@@ -11,6 +11,8 @@ import type { StashItemLike } from './valuation'
 import { editRun, loadRuns, runsDoc } from './run-store'
 import type { HeldItem } from './faustus'
 import type { LedgerPoint } from './ledger'
+import { VARIABLE_ITEMS } from '../shared/unid-prices'
+import { useUnidPrice } from '../shared/price'
 
 // The parsed item as the stash would give it.
 export function stashLike (item: ParsedItem): StashItemLike {
@@ -52,8 +54,14 @@ export async function holdHovered (clipboard: string, league: string, points: re
   // the stash and sales already.
   if ((s.frame === 1 || s.frame === 2) && !isRolledMap(s)) { toast("Rares and magic items can't be held: they have no price. Stash or list it"); return }
   if (CURRENCY_ITEM_NAMES.has(s.typeLine)) { toast('Currency is counted when it reaches your stash'); return }
-  const priced = ninjaPriceOf()(s)
-  if (!priced || !(priced.chaos > 0)) { toast(`No price for ${s.name || s.typeLine}: not held`); return }
+  // An unidentified rolled unique: its saved unid trade price only, as in
+  // Net worth (prices.ts); poe.ninja's one price is a guess at the roll.
+  const rolled = parsed.isUnidentified && s.frame === 3 && VARIABLE_ITEMS.has(s.name)
+  const priced = rolled ? useUnidPrice()(s.name) : ninjaPriceOf()(s)
+  if (!priced || !(priced.chaos > 0)) {
+    toast(rolled ? `No unid price for ${s.name} yet: check it in the price check, then hold it` : `No price for ${s.name || s.typeLine}: not held`)
+    return
+  }
   const key = itemKey(s)
   const item: HeldItem = {
     id: `h${Date.now().toString(36)}${(seq++).toString(36)}`,

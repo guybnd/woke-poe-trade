@@ -1,7 +1,8 @@
 // Uniques whose value depends on what they roll, which drop unidentified:
-// jewels (keystone, notable, ascendancy...) and a few others. poe.ninja has one
-// low row for most of them, so their price comes from unidentified listings on
-// official trade. Shared by Boss runs, Search and the item tooltip.
+// jewels (keystone, notable, ascendancy...), random-variant gear and the like.
+// poe.ninja's one price for them misleads, so their price comes from
+// unidentified listings on official trade, looked up on a click and saved.
+// Shared by every window that prices them.
 //
 // Kept apart from the boss tables so the tooltip can read quotes without
 // loading them.
@@ -9,46 +10,42 @@ import { createGlobalState } from '@vueuse/core'
 import { ITEM_BY_REF } from '@/assets/data'
 import type { TradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { createTradePrices, quoteFromListings, SHOW_MS } from './trade-quotes'
+import { VARIABLE_UNIQUE_NAMES, VARIABLE_UNIQUE_BASES } from './variable-uniques'
 import type { Stored } from './trade-quotes'
 
-// Name -> base type, which the trade search needs.
-const UNID_BASES: Record<string, string> = {
-  'Impossible Escape': 'Viridian Jewel',
-  'Thread of Hope': 'Crimson Jewel',
-  "Watcher's Eye": 'Prismatic Jewel',
-  'Forbidden Flesh': 'Cobalt Jewel',
-  'Forbidden Flame': 'Crimson Jewel',
-  'Sublime Vision': 'Prismatic Jewel',
-  'The Light of Meaning': 'Prismatic Jewel',
-  'Rational Doctrine': 'Cobalt Jewel',
-  'Melding of the Flesh': 'Cobalt Jewel',
-  'Dissolution of the Flesh': 'Crimson Jewel',
-  // Not jewels, but the roll picks the variant poe.ninja prices.
-  "Atziri's Splendour": 'Sacrificial Garb',
-  "Doryani's Invitation": 'Heavy Belt',
-  // Saresh's belt drops unidentified; poe.ninja only has identified copies.
-  'Screams of the Desiccated': 'Leather Belt',
-  // Element: Chaos is worth far more than the other four.
-  'Impresence': 'Onyx Amulet',
-  'Beauty': 'Vaal Aspect'
-}
+// Trade needs a base type with the name: Path of Building's, for the
+// uniques on one base (variable-uniques.ts).
+const UNID_BASES: Readonly<Record<string, string>> = VARIABLE_UNIQUE_BASES
 
 // Bases for other trade lookups of named uniques the item data may not know.
 const OTHER_BASES: Record<string, string> = {
   'The Broken Elegy': 'Foul Staff'
 }
 
-export const VARIABLE_ITEMS: ReadonlySet<string> = new Set(Object.keys(UNID_BASES))
+// Every unique whose roll sets its price: Path of Building's list
+// (variable-uniques.ts, generated), for Boss runs, Search, the price check,
+// the item tooltip and Net worth alike.
+export const VARIABLE_ITEMS: ReadonlySet<string> = new Set(VARIABLE_UNIQUE_NAMES)
+
+// A unique's one base. Some uniques (Grand Spectrum, Precursor's Emblem) come
+// on several bases: searching the first would hide the others, so none.
+export function uniqueBaseOf (name: string): string | undefined {
+  const bases = new Set((ITEM_BY_REF('UNIQUE', name) ?? []).map(u => u.unique?.base))
+  if (bases.size !== 1) return undefined
+  return [...bases][0]
+}
 
 // Instant buyout is the live market now: plain 'online' finds next to nothing
 // and 'any' is full of offline bait.
 export function tradeQuery (name: string, unidentified: boolean) {
-  const uniqueBase = UNID_BASES[name] ?? OTHER_BASES[name] ?? ITEM_BY_REF('UNIQUE', name)?.[0]?.unique?.base
+  const uniqueBase = UNID_BASES[name] ?? OTHER_BASES[name] ?? uniqueBaseOf(name)
+  // A unique on several bases goes by its name alone.
+  const named = VARIABLE_ITEMS.has(name) || ITEM_BY_REF('UNIQUE', name) != null || name in OTHER_BASES
   return {
     query: {
       status: { option: 'securable' as const },
       // Divination cards, keys and other named bases have only a type.
-      ...(uniqueBase ? { name, type: uniqueBase } : { type: name }),
+      ...(uniqueBase ? { name, type: uniqueBase } : named ? { name } : { type: name }),
       stats: [],
       filters: unidentified
         ? { misc_filters: { filters: { identified: { option: 'false' as const } } } }

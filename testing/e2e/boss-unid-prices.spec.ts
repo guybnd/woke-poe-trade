@@ -81,8 +81,10 @@ test('Boss runs: unidentified jewel prices and estimated chances', async ({ over
   await expect(row).toContainText('~1.50%', SLOW)
   await expect(panel).toContainText('is an estimated chance')
 
-  // Nothing searches trade until you ask: poe.ninja's price stands.
-  await expect(row.getByText('ninja', { exact: true })).toBeVisible(SLOW)
+  // Nothing searches trade until you ask: poe.ninja's one price would mislead,
+  // so the jewel "varies", the list says what it leaves out and offers a check.
+  await expect(row.getByText('varies', { exact: true })).toBeVisible(SLOW)
+  await expect(panel.getByTestId('boss-varies-drops')).toContainText('Sublime Vision')
   expect(searches).toEqual([])
   // Search trade looks up the opened boss's jewels, unidentified at instant buyout.
   await panel.getByText('Search trade').click()

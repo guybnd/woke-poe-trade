@@ -18,6 +18,8 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-related-upgrades': { check: { name: "Xoph's Inception", rarity: 'unique' }, spot: 'related' },
   'price-check-unique-recipe': { check: { name: 'The Will of Uul-Netol', rarity: 'unique' }, spot: 'related' },
   'div-card-map-chance': { search: 'Strand Map' },
+  // A rolled jewel, unidentified: the unid price card (nothing searched until a click).
+  'unid-rolled-unique-price': { check: { name: 'Forbidden Flame', rarity: 'unique' }, spot: 'unid-price' },
   'valdo-map-skips': { check: { name: 'Valdo Map', text: valdoMapText('Headhunter') }, spot: 'valdo-strip' },
   'valdo-map-lookup': { search: 'valdo headhunter' }
 }

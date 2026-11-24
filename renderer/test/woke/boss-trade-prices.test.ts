@@ -22,8 +22,15 @@ describe('boss drop pricing', () => {
     expect(p).toMatchObject({ price: 786, mode: 'unid', source: 'trade', listings: 466 })
   })
 
-  it('shows poe.ninja until the trade price is known', () => {
-    expect(dropPrice(jewel, priceResolver(ninja), prefs())).toMatchObject({ price: 28, mode: 'unid', source: 'ninja', listings: null })
+  it('has no price until the trade price is known: poe.ninja\'s is a guess at the roll', () => {
+    expect(dropPrice(jewel, priceResolver(ninja), prefs())).toMatchObject({ price: null, mode: 'unid', source: 'varies', listings: null })
+  })
+
+  it('lists counted rolled uniques with no trade price, apart from unpriced drops', () => {
+    const r = evaluateBoss(boss('king-in-the-mists'), prefs(), priceResolver(ninja))
+    expect(r.varies).toContain('The Light of Meaning')
+    const priced = evaluateBoss(boss('king-in-the-mists'), prefs(), priceResolver(ninja, quotes({ 'The Light of Meaning': { chaos: 786, listings: 466 } })))
+    expect(priced.varies).not.toContain('The Light of Meaning')
   })
 
   it('keeps the player\'s choice over the trade price', () => {
@@ -44,7 +51,7 @@ describe('boss drop pricing', () => {
   })
 
   it('treats every boss jewel as unidentified', () => {
-    for (const name of ['The Light of Meaning', 'Impossible Escape', 'Thread of Hope', "Watcher's Eye", 'Forbidden Flesh', 'Forbidden Flame', 'Sublime Vision', 'Rational Doctrine', 'Beauty', 'Melding of the Flesh', 'Dissolution of the Flesh']) {
+    for (const name of ['The Light of Meaning', 'Impossible Escape', 'Thread of Hope', "Watcher's Eye", 'Forbidden Flesh', 'Forbidden Flame', 'Sublime Vision', 'Rational Doctrine', 'Beauty', 'Melding of the Flesh', 'Dissolution of the Flesh', 'Megalomaniac', 'Lethal Pride', "Atziri's Splendour", 'Bound by Destiny']) {
       expect(VARIABLE_ITEMS.has(name)).toBe(true)
     }
     expect(boss('king-in-the-mists').drops.find(d => d.name === 'The Light of Meaning')?.variable).toBe(true)
@@ -117,7 +124,7 @@ describe('trade price store', () => {
     prices.request('Allflame', 400, ['A', 'B'])
     await vi.advanceTimersByTimeAsync(0)
     expect(lookup).toHaveBeenCalledTimes(1)
-    expect(prices.get('Allflame', 'A')).toEqual({ chaos: 50, listings: 5 })
+    expect(prices.get('Allflame', 'A')).toMatchObject({ chaos: 50, listings: 5 })
     expect(prices.pending('B')).toBe(true)
     await vi.advanceTimersByTimeAsync(9_000)
     expect(lookup).toHaveBeenCalledTimes(1)
@@ -240,9 +247,12 @@ describe('trade price store', () => {
     expect(prices.get('Allflame', 'B')?.chaos).toBe(5)
   })
 
-  it('stops showing a price after a day', () => {
-    const { prices } = store(undefined, () => ({ Allflame: { A: { chaos: 50, listings: 5, ts: Date.now() - 25 * 60 * 60 * 1000 } } }))
-    expect(prices.get('Allflame', 'A')).toBeNull()
+  it('keeps a price for a week, with when it was looked up', () => {
+    const day = 24 * 60 * 60 * 1000
+    const ts = Date.now() - 6 * day
+    const { prices } = store(undefined, () => ({ Allflame: { A: { chaos: 50, listings: 5, ts }, B: { chaos: 9, listings: 3, ts: Date.now() - 8 * day } } }))
+    expect(prices.get('Allflame', 'A')).toEqual({ chaos: 50, listings: 5, at: ts })
+    expect(prices.get('Allflame', 'B')).toBeNull()
   })
 
   it('looks up a name asked for one at a time first, and keeps it when the panel stops', async () => {
@@ -287,7 +297,7 @@ describe('trade price store', () => {
 
 describe('estimated drop chances', () => {
   it('fills Uber Uber Elder with estimates, flagged as such', () => {
-    const r = evaluateBoss(boss('uber-uber-elder'), prefs(), priceResolver([item('Sublime Vision', 1000)]))
+    const r = evaluateBoss(boss('uber-uber-elder'), prefs(), priceResolver([], quotes({ 'Sublime Vision': { chaos: 1000, listings: 5 } })))
     const row = r.drops.find(d => d.name === 'Sublime Vision')!
     expect(row).toMatchObject({ chance: 0.015, rateSource: 'estimate', value: 15 })
     expect(r.estimated).toBe(r.drops.length)

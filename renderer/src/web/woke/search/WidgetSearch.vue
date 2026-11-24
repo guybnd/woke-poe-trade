@@ -81,7 +81,7 @@
               </div>
               <!-- Rolled uniques drop unidentified: poe.ninja's row stands for that; a click checks real listings. -->
               <div v-if="unidName" :class="[$style.grid, $style.row, { [$style.gridExtra]: extraRange }]" :title="unidTitle">
-                <span class="w-trunc">Unidentified on trade</span>
+                <span class="w-trunc">Unidentified on trade<span v-if="unidQuote?.at" class="w-dim"> · {{ agoPhrase(unidQuote.at) }}</span></span>
                 <span v-if="extraRange" />
                 <WPrice v-if="unidQuote" bulk :chaos="unidQuote.chaos" :divine="divine" class="text-right" />
                 <span v-else-if="tradePrices.pending(unidName)" class="text-right w-faint">…</span>
@@ -157,7 +157,7 @@ import { notableOils, oilNames } from '@/web/price-check/filters/pseudo/anointme
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import type { BaseType } from '@/assets/data/interfaces'
 import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
-import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, itemRefFromName, ninjaIcon, nowMinute, toast, vItemTip } from '../ui'
+import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, itemRefFromName, ninjaIcon, nowMinute, toast, vItemTip, agoPhrase } from '../ui'
 import { ninjaArt } from '../market/ninja-icons'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
@@ -1043,7 +1043,7 @@ const selected = shallowRef<Entry | null>(null)
 
 // Rolled uniques (jewels and the like) drop unidentified. poe.ninja's row is
 // their price; a click checks the middle of the cheapest unidentified listings
-// on trade, kept for an hour (shared with Boss runs). Never searched by itself.
+// on trade, kept for a week (shared with every window). Never searched by itself.
 const unidName = computed(() => {
   const e = selected.value
   const name = e?.kind === 'price' ? e.group.name : e?.kind === 'lookup' && e.card.id.startsWith('drop:') ? e.card.id.slice(5) : null

@@ -179,7 +179,7 @@ import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { priceView, ninjaCardOpen } from '@/web/woke/price-insight/view'
-import { holdBulkSearch, fixedPriceItem, isUnidUniqueJewel, chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
+import { holdBulkSearch, fixedPriceItem, isUnidUniqueJewel, isUnidVariableUnique, chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
 import { exactDetailsId } from './trends/getDetailsId'
 import { usePoeninja } from '@/web/background/Prices'
 import { poeMode, poeOn, loadPoeKit } from '@/web/woke/price-insight/window-style'
@@ -411,7 +411,7 @@ export default defineComponent({
       ninjaChaos.value = readNinjaChaos(item)
       waitingForPrices = false
       if (!doSearch.value) return
-      const hold = { api: tradeAPI.value, enabled: widget.value.wokeNinjaFirst, live: props.live, fixed: fixedPriceItem(item) || isUnidUniqueJewel(item) }
+      const hold = { api: tradeAPI.value, enabled: widget.value.wokeNinjaFirst, live: props.live, fixed: fixedPriceItem(item) || isUnidUniqueJewel(item) || isUnidVariableUnique(item) }
       if (holdBulkSearch({ ...hold, chaos: ninjaChaos.value })) {
         doSearch.value = false
       } else if (ninjaChaos.value == null && pricesPending() && holdBulkSearch({ ...hold, chaos: 1 })) {
@@ -609,8 +609,9 @@ export default defineComponent({
     const wokeVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value != null)
     // woke: before an exchange search, poe.ninja's price is the verdict.
     // In Classic view too: it holds the search the same way.
-    // An unidentified unique jewel too (WOKEPOET-481): poe.ninja's price, unidentified listings on a click.
-    const isFixed = computed(() => fixedPriceItem(props.item) || isUnidUniqueJewel(props.item))
+    // An unidentified unique jewel too (WOKEPOET-481), and any unidentified
+    // variable unique: their price is unidentified listings, on a click.
+    const isFixed = computed(() => fixedPriceItem(props.item) || isUnidUniqueJewel(props.item) || isUnidVariableUnique(props.item))
     // An item poe.ninja prices whose search waits for a click: exchange items, and fixed ones (cards, beasts, keys).
     const ninjaHolds = computed(() => ninjaChaos.value != null && widget.value.wokeNinjaFirst !== false &&
       (tradeAPI.value === 'bulk' || isFixed.value))

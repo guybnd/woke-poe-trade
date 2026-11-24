@@ -1,12 +1,14 @@
 <template>
   <!-- woke: the guess from the art, with a way to change it (WOKEPOET-481). -->
+  <!-- One slim line: the unique's name, a * whose hover says it was guessed (Guy, 2026-11-24), and Change. -->
   <div v-if="strip" :class="$style.strip" data-testid="unid-guess">
     <img :src="strip.icon" :class="$style.stripIcon" alt="" />
-    <div :class="$style.stripText">
-      <b>{{ strip.byYou ? 'Your pick' : 'Guessed from the art' }}</b>
-      <span>{{ candidates.length }} {{ baseType }} uniques<template v-if="!strip.byYou"> compared</template></span>
-    </div>
-    <button type="button" class="btn" :class="$style.change" data-testid="unid-guess-change" @click="listOpen = !listOpen">
+    <span v-item-tip="{ name: strip.refName }" :class="$style.stripName">{{ strip.name }}</span>
+    <span v-if="!strip.byYou" :class="$style.star" tabindex="0" data-testid="unid-guess-star"
+      :title="`Guessed from the art: ${candidates.length} ${baseType} uniques compared`">*</span>
+    <span v-else :class="$style.star" :title="`Your pick of ${candidates.length} ${baseType} uniques`">✓</span>
+    <span class="flex-1" />
+    <button type="button" :class="$style.change" data-testid="unid-guess-change" @click="listOpen = !listOpen">
       {{ listOpen ? 'Close' : 'Change' }}
     </button>
   </div>
@@ -50,6 +52,8 @@ import { vItemTip } from '@/web/woke/ui/tooltip/item-tip'
 import { usePoeninja, displayRounding } from '@/web/background/Prices'
 import { exactDetailsId } from '../trends/getDetailsId'
 import { hostRequest } from '@/web/woke/shared/host'
+import { useUnidPrice } from '@/web/woke/shared/price'
+import { VARIABLE_ITEMS } from '@/web/woke/shared/unid-prices'
 
 // poecdn icon links carry the item's size: /gen/image/<base64 of [.., .., { w, h }]>/...
 function oneSlotIcon (url: string): boolean {
@@ -76,6 +80,7 @@ export default defineComponent({
   },
   setup (props, ctx) {
     const { findPriceByQuery, autoCurrency } = usePoeninja()
+    const unidOf = useUnidPrice()
     // The unidentified item this check started from, and what was made of it.
     const origin = shallowRef<ParsedItem | null>(null)
     const made = shallowRef<{ item: ParsedItem, byYou: boolean } | null>(null)
@@ -152,13 +157,24 @@ export default defineComponent({
         })
     }, { immediate: true })
 
-    function price (info: BaseType): { chaos: number, text: string } | null {
+    function priceText (chaos: number) {
+      const p = autoCurrency(chaos)
+      return `${displayRounding(p.min)}${p.currency === 'div' ? ' div' : 'c'}`
+    }
+
+    // poe.ninja's price, or for a unique whose hidden roll sets its price,
+    // its saved unid trade price and none until checked: poe.ninja's one
+    // price for it misleads (unid-prices.ts). That one still orders the list.
+    function price (info: BaseType): { chaos: number, text: string | null } | null {
       if (!origin.value) return null
       const q = exactDetailsId(makeIdentifiedUnique(info, origin.value))
-      const chaos = q ? findPriceByQuery(q)?.chaos : null
-      if (!chaos) return null
-      const p = autoCurrency(chaos)
-      return { chaos, text: `${displayRounding(p.min)}${p.currency === 'div' ? ' div' : 'c'}` }
+      const ninja = q ? findPriceByQuery(q)?.chaos : null
+      if (VARIABLE_ITEMS.has(info.refName)) {
+        const unid = unidOf(info.refName)
+        return { chaos: unid?.chaos ?? ninja ?? 0, text: unid ? `${priceText(unid.chaos)} unid` : null }
+      }
+      if (!ninja) return null
+      return { chaos: ninja, text: priceText(ninja) }
     }
 
     // Best match first when the art was read, else the dearest first.
@@ -183,7 +199,7 @@ export default defineComponent({
     const strip = computed(() => {
       const m = made.value
       if (!m || m.item !== props.item || candidates.value.length < 2) return null
-      return { icon: m.item.info.icon, byYou: m.byYou }
+      return { icon: m.item.info.icon, name: m.item.info.name, refName: m.item.info.refName, byYou: m.byYou }
     })
 
     const note = computed(() => {
@@ -216,17 +232,18 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 1rem;
+  padding: 3px 1rem;
   background: var(--w-pc-well, var(--w-panel-solid));
   border-bottom: 1px solid var(--w-line);
   color: var(--w-fg);
   font-family: var(--w-body);
   font-size: var(--w-fs-md);
 }
-.stripIcon { width: 30px; height: 30px; }
-.stripText { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.2; }
-.stripText span { color: var(--w-dim); font-size: var(--w-fs-sm); }
-.change { flex: none; }
+.stripIcon { width: 22px; height: 22px; }
+.stripName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--w-r-unique); font-family: var(--w-head); }
+.star { flex: none; margin-left: -4px; color: var(--w-dim); cursor: help; }
+.change { flex: none; color: var(--w-dim); font-size: var(--w-fs-sm); text-decoration: underline; text-underline-offset: 2px; }
+.change:hover { color: var(--w-accent); }
 .note { margin: 0 1rem 0.5rem; color: var(--w-dim); font-size: var(--w-fs-sm); }
 .tile { border: 1px solid transparent; }
 .best { border-color: var(--w-accent); }

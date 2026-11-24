@@ -23,6 +23,7 @@ export interface NewsItem {
 
 export const NEWS: NewsItem[] = [
   { id: 'map-price-check-rate-chip', wmType: 'price-check', name: 'Price check', note: 'New: rate a map\'s mods Bad, Care or Want from the price check (click the chip); saved to your Map mods profile' },
+  { id: 'unid-rolled-unique-price', wmType: 'price-check', name: 'Price check', note: 'New: unid Watcher\'s Eye, Forbidden Flame and 66 more show their unid trade price, not poe.ninja\'s' },
   { id: 'search-recent-queries', wmType: 'woke-search', name: 'Search', note: 'New: your last 3 searches wait under Recent, even ones you only looked at. Enter or a click puts one back' },
   { id: 'valdo-map-skips', wmType: 'price-check', name: 'Price check', note: 'New: on a Valdo map, set a mod Not and listings with it are hidden; remembered per profile' },
   { id: 'valdo-map-lookup', wmType: 'woke-search', name: 'Search', note: 'New: type "valdo headhunter" to price check Valdo maps with that reward' },

@@ -130,6 +130,14 @@ export function marketFor (ref: ItemTipRef, kind: TipKind): TipMarket | null {
   // The row every window takes for this name; a rolled unique's unidentified
   // price only from a quote on hand: hovering never spends a trade search.
   price ??= usePrice()
+  // A rolled unique by name alone (no variant): poe.ninja's one price is a
+  // guess at a hidden roll. Its saved unidentified trade price, else "varies"
+  // (Guy's pick C1, 2026-11-24).
+  if (kind === 'unique' && !ref.variant) {
+    const unid = price.unidOf(ref.name)
+    if (unid) return { chaos: unid.chaos, change: null, graph: [], unid, unidOnly: true }
+    if (price.isVariable(ref.name)) return { chaos: 0, change: null, graph: [], varies: true }
+  }
   const found = price.priceOf(ref.name, { ns, variant: ref.variant })
   if (!found) return null
   const market = marketFromRow(found.row, ref)
