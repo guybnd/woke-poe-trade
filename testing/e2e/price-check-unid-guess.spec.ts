@@ -77,7 +77,7 @@ function screenWith (game: { bounds: { width: number, height: number }, screen: 
   game.screen = screen
 }
 
-test('the art names the unique: poe.ninja price first, and Change picks another', async ({ overlay, fakeApp }) => {
+test('the art names the unique: its unid price on a click, and Change picks another', async ({ overlay, fakeApp }) => {
   expect(CRIMSON.length).toBeGreaterThan(10)
   fakeApp.site.reply = (url) => {
     const png = iconPng(url)
@@ -98,19 +98,19 @@ test('the art names the unique: poe.ninja price first, and Change picks another'
     await expect(strip).toContainText('Thread of Hope')
     await expect(strip).not.toContainText('Guessed from the art')
     await expect(panel).toContainText('Thread of Hope')
-    // poe.ninja's price, and no trade search until a click.
+    // poe.ninja's price struck (the roll sets it), and no trade search until a click.
     const verdict = panel.getByTestId('ninja-verdict')
     await expect(verdict).toContainText('150c')
-    await expect(verdict).toContainText('uses one trade search')
+    await expect(verdict.getByTestId('ninja-verdict-unid-check')).toBeVisible()
     expect(fakeApp.requests.some(r => r.url.includes('/api/trade/search/'))).toBe(false)
     await overlay.snap('unid jewel guessed')
 
-    // Change: best match first, with prices; picking one is "your pick".
+    // Change: best match first, no poe.ninja price for a rolled jewel; picking one is "your pick".
     await panel.getByTestId('unid-guess-change').click()
     const list = panel.getByTestId('unid-guess-list')
     await expect(list.locator('button').first()).toContainText('Thread of Hope')
     await expect(list.locator('button').first()).toContainText('match')
-    await expect(list.getByRole('button', { name: /Split Personality/ })).toContainText('40c')
+    await expect(list.getByRole('button', { name: /Split Personality/ })).not.toContainText('40c')
     await overlay.snap('unid jewel change list')
     await list.getByRole('button', { name: /Split Personality/ }).click()
     await expect(strip).toContainText('Split Personality')
@@ -129,7 +129,7 @@ test('the art names the unique: poe.ninja price first, and Change picks another'
   }
 })
 
-test('no art to read: the picker, dearest first with prices', async ({ overlay, fakeApp }) => {
+test('no art to read: the picker, dearest first, no poe.ninja price for rolled jewels', async ({ overlay, fakeApp }) => {
   const saved = fakeApp.game.cursor
   try {
     await overlay.boot()
@@ -144,7 +144,7 @@ test('no art to read: the picker, dearest first with prices', async ({ overlay, 
     const tiles = picker.locator('button')
     await expect(tiles).toHaveCount(CRIMSON.length)
     await expect(tiles.nth(0)).toContainText('Thread of Hope')
-    await expect(tiles.nth(0)).toContainText('150c')
+    await expect(tiles.nth(0)).not.toContainText('150c')
     await expect(tiles.nth(1)).toContainText('Split Personality')
     await overlay.snap('unid jewel picker')
     await tiles.nth(1).click()

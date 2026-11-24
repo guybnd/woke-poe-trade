@@ -24,8 +24,9 @@ const GENERATED = [
 ]
 // Already in the app before this list, not variants in PoB's data.
 const KEPT = ['Rational Doctrine', 'Melding of the Flesh', 'Dissolution of the Flesh', 'Beauty']
-// PoB variants that are a version or a base, not a roll.
-const NOT_ROLLED = new Set(['The Rat Cage', 'The Restless Ward', 'Rathpith Globe', 'Font of Thunder'])
+// PoB variants that are a version or a base, not a roll: the base shows them
+// before identifying (Beacon of Madness's implicit, Grand Spectrum's jewel).
+const NOT_ROLLED = new Set(['The Rat Cage', 'The Restless Ward', 'Rathpith Globe', 'Font of Thunder', 'Beacon of Madness', 'Grand Spectrum'])
 
 async function get (path) {
   const res = await fetch(`${RAW}/${path}`)
@@ -86,6 +87,10 @@ const GENERATED_BASES = {
   'Rational Doctrine': 'Cobalt Jewel', 'Melding of the Flesh': 'Cobalt Jewel', 'Dissolution of the Flesh': 'Crimson Jewel', Beauty: 'Vaal Aspect'
 }
 for (const [name, base] of Object.entries(GENERATED_BASES)) if (!bases.has(name)) bases.set(name, base)
+// A unique on several bases (Doryani's Delusion, Precursor's Emblem) stays
+// on poe.ninja: a trade search by name alone would mix its bases.
+const multiBase = [...variable].filter(n => !bases.get(n))
+for (const n of multiBase) variable.delete(n)
 
 const sorted = xs => [...xs].sort((a, b) => a.localeCompare(b))
 // The repo's lint: single quotes, double only around an apostrophe.
@@ -105,11 +110,9 @@ ${list(variable)}
 export const VARIABLE_UNIQUE_BASES: Readonly<Record<string, string>> = {
 ${sorted(variable).filter(n => bases.get(n)).map(n => `  ${quote(n)}: ${quote(bases.get(n))}`).join(',\n')}
 }
-
-// Uniques whose Foulborn version can get one of 2+ mutated mods.
-export const FOULBORN_VARIABLE_NAMES: readonly string[] = [
-${list(foulborn)}
-]
 `
 writeFileSync(fileURLToPath(new URL('../renderer/src/web/woke/shared/variable-uniques.ts', import.meta.url)), out)
-console.log(`${variable.size} variable, ${foulborn.length} Foulborn`)
+console.log(`${variable.size} variable (left out on several bases: ${multiBase.join(', ') || 'none'})`)
+// Foulborn uniques with 2+ possible mutations, for the list's doc page only
+// (the app doesn't use it yet, so it stays out of the bundle).
+console.log(`${foulborn.length} Foulborn: ${sorted(foulborn).join(', ')}`)

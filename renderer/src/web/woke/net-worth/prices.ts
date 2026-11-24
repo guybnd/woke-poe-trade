@@ -62,15 +62,6 @@ export function ninjaPriceOf (): PriceOf {
       return row ? { chaos: row.chaos, category: 'cards', graph: row.graph, history: priceHistory('DIVINATION_CARD', item.typeLine) } : null
     }
     if (isUniqueFrame(item.frame)) {
-      // Unidentified: named by its base only. A rolled unique's one poe.ninja
-      // price is a guess at the hidden roll, so only a saved unid price counts.
-      if (!item.name) {
-        const unid = uniqueFromArt(item.baseType || item.typeLine, item.icon)
-        if (unid && VARIABLE_ITEMS.has(unid)) {
-          const q = unidOf(unid)
-          return q ? { chaos: q.chaos, category: 'gear' } : null
-        }
-      }
       const name = item.name || item.typeLine
       const rows = ninja.findPricesByName('UNIQUE', name) as Row[]
       const exact = ninja.findPriceByQuery({ ns: 'UNIQUE', name, variant: undefined })
@@ -104,6 +95,16 @@ export function ninjaPriceOf (): PriceOf {
     }
     // Other magic and rare items: no poe.ninja price, and no trade searches.
     if (item.frame === 1 || item.frame === 2) return null
+    // Unidentified uniques are named by their base only. A rolled one's one
+    // poe.ninja price is a guess at the hidden roll, so only its saved unid
+    // price counts. Read each time, not cached: a check saves it later.
+    if (isUniqueFrame(item.frame) && !item.name) {
+      const unid = uniqueFromArt(item.baseType || item.typeLine, item.icon)
+      if (unid && VARIABLE_ITEMS.has(unid)) {
+        const q = unidOf(unid)
+        return q ? { chaos: q.chaos, category: 'gear' } : null
+      }
+    }
     const key = `${item.frame}|${item.name}|${item.typeLine}|${item.name ? '' : item.icon}|${item.gemLevel}|${item.quality}|${item.corrupted}|${item.links}`
     if (!cache.has(key)) {
       let p: Priced | null = null

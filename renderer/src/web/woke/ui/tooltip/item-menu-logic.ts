@@ -8,7 +8,7 @@ import type { ParsedItem } from '@/parser/ParsedItem'
 import { ItemCategory } from '@/parser/meta'
 import { parseClipboard } from '@/parser/Parser'
 import type { TipKind, TipUnique } from './tip-content'
-import { VARIABLE_ITEMS } from '../../shared/unid-prices'
+import { VARIABLE_ITEMS, uniqueBaseOf } from '../../shared/unid-prices'
 import { dataUniqueName, isFoulborn } from '../../shared/item-identity'
 
 export function kindOfName (name: string): TipKind {
@@ -244,13 +244,7 @@ export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType
 
 export type TradeType = string | { option: string, discriminator: string }
 
-// A unique's one base. Some uniques (Grand Spectrum, Precursor's Emblem) come
-// on several bases: searching the first would hide the others, so none.
-export function uniqueBaseOf (name: string): string | undefined {
-  const bases = new Set((ITEM_BY_REF('UNIQUE', name) ?? []).map(u => u.unique?.base))
-  if (bases.size !== 1) return undefined
-  return [...bases][0]
-}
+export { uniqueBaseOf }
 
 // The trade link's search: tradeQuery plus, for a unique, its Foulborn copies
 // only or none of them, as the price check searches a plain unique without

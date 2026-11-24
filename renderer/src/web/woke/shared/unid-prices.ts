@@ -10,7 +10,7 @@ import { createGlobalState } from '@vueuse/core'
 import { ITEM_BY_REF } from '@/assets/data'
 import type { TradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { createTradePrices, quoteFromListings, SHOW_MS } from './trade-quotes'
-import { VARIABLE_UNIQUE_NAMES, VARIABLE_UNIQUE_BASES, FOULBORN_VARIABLE_NAMES } from './variable-uniques'
+import { VARIABLE_UNIQUE_NAMES, VARIABLE_UNIQUE_BASES } from './variable-uniques'
 import type { Stored } from './trade-quotes'
 
 // Trade needs a base type with the name: Path of Building's, for the
@@ -27,14 +27,12 @@ const OTHER_BASES: Record<string, string> = {
 // the item tooltip and Net worth alike.
 export const VARIABLE_ITEMS: ReadonlySet<string> = new Set(VARIABLE_UNIQUE_NAMES)
 
-// A Foulborn copy of these can carry one of several mutated mods.
-export const FOULBORN_VARIABLE: ReadonlySet<string> = new Set(FOULBORN_VARIABLE_NAMES)
-
-// The data's base for a unique, or null when it drops on several (Grand
-// Spectrum, Precursor's Emblem): then trade searches the name alone.
-function uniqueBaseOf (name: string): string | null {
-  const bases = new Set((ITEM_BY_REF('UNIQUE', name) ?? []).map(u => u.unique?.base).filter((b): b is string => !!b))
-  return bases.size === 1 ? [...bases][0] : null
+// A unique's one base. Some uniques (Grand Spectrum, Precursor's Emblem) come
+// on several bases: searching the first would hide the others, so none.
+export function uniqueBaseOf (name: string): string | undefined {
+  const bases = new Set((ITEM_BY_REF('UNIQUE', name) ?? []).map(u => u.unique?.base))
+  if (bases.size !== 1) return undefined
+  return [...bases][0]
 }
 
 // Instant buyout is the live market now: plain 'online' finds next to nothing

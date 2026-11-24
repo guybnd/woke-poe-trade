@@ -52,6 +52,8 @@ import { vItemTip } from '@/web/woke/ui/tooltip/item-tip'
 import { usePoeninja, displayRounding } from '@/web/background/Prices'
 import { exactDetailsId } from '../trends/getDetailsId'
 import { hostRequest } from '@/web/woke/shared/host'
+import { useUnidPrice } from '@/web/woke/shared/price'
+import { VARIABLE_ITEMS } from '@/web/woke/shared/unid-prices'
 
 // poecdn icon links carry the item's size: /gen/image/<base64 of [.., .., { w, h }]>/...
 function oneSlotIcon (url: string): boolean {
@@ -78,6 +80,7 @@ export default defineComponent({
   },
   setup (props, ctx) {
     const { findPriceByQuery, autoCurrency } = usePoeninja()
+    const unidOf = useUnidPrice()
     // The unidentified item this check started from, and what was made of it.
     const origin = shallowRef<ParsedItem | null>(null)
     const made = shallowRef<{ item: ParsedItem, byYou: boolean } | null>(null)
@@ -154,13 +157,24 @@ export default defineComponent({
         })
     }, { immediate: true })
 
-    function price (info: BaseType): { chaos: number, text: string } | null {
+    function priceText (chaos: number) {
+      const p = autoCurrency(chaos)
+      return `${displayRounding(p.min)}${p.currency === 'div' ? ' div' : 'c'}`
+    }
+
+    // poe.ninja's price, or for a unique whose hidden roll sets its price,
+    // its saved unid trade price and none until checked: poe.ninja's one
+    // price for it misleads (unid-prices.ts). That one still orders the list.
+    function price (info: BaseType): { chaos: number, text: string | null } | null {
       if (!origin.value) return null
       const q = exactDetailsId(makeIdentifiedUnique(info, origin.value))
-      const chaos = q ? findPriceByQuery(q)?.chaos : null
-      if (!chaos) return null
-      const p = autoCurrency(chaos)
-      return { chaos, text: `${displayRounding(p.min)}${p.currency === 'div' ? ' div' : 'c'}` }
+      const ninja = q ? findPriceByQuery(q)?.chaos : null
+      if (VARIABLE_ITEMS.has(info.refName)) {
+        const unid = unidOf(info.refName)
+        return { chaos: unid?.chaos ?? ninja ?? 0, text: unid ? `${priceText(unid.chaos)} unid` : null }
+      }
+      if (!ninja) return null
+      return { chaos: ninja, text: priceText(ninja) }
     }
 
     // Best match first when the art was read, else the dearest first.

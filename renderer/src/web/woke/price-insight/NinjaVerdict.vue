@@ -65,9 +65,9 @@ import { nowMinute } from '../ui/format'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { poeOn } from './window-style'
 import { useNinjaDoubt } from './use-ninja-doubt'
-import { isUnidUniqueJewel } from './ninja-first'
+import { isUnidVariableUnique } from './ninja-first'
 import { identifiedSpread, unidRead, rangeText, UNID_READ_TEXT } from './unid-compare'
-import { VARIABLE_ITEMS, useTradePrices, identifiedTradeUrl } from '../shared/unid-prices'
+import { useTradePrices, identifiedTradeUrl } from '../shared/unid-prices'
 import { doubtText } from './ninja-trust'
 
 const props = defineProps<{
@@ -93,7 +93,7 @@ const age = computed(() => agoPhrase(updatedAt.value))
 const doubt = useNinjaDoubt(info)
 
 // A gamble unique, unidentified: poe.ninja's identified versions beside the unid price.
-const gamble = computed(() => isUnidUniqueJewel(props.item) && VARIABLE_ITEMS.has(props.item.info.refName))
+const gamble = computed(() => isUnidVariableUnique(props.item))
 const versions = computed(() => gamble.value
   // The headline row (the unid price, by base) isn't an identified version.
   ? identifiedSpread((findPricesByName('UNIQUE', props.item.info.refName) as Array<{ chaos: number, variant?: string }>).filter(r => (r.variant ?? '') !== (info.value?.variant ?? '')))

@@ -6,6 +6,10 @@
 
 // The poe.ninja row for the exact item is exactDetailsId (price-check/trends/getDetailsId.ts).
 
+import { VARIABLE_UNIQUE_NAMES } from '../shared/variable-uniques'
+
+const VARIABLE = new Set(VARIABLE_UNIQUE_NAMES)
+
 export interface HoldOptions {
   /** Which trade API the item is searched with. */
   api: 'trade' | 'bulk'
@@ -63,6 +67,11 @@ export function fixedPriceItem (item: FixedItem): boolean {
 export function isUnidUniqueJewel (item: { rarity?: string, isUnidentified: boolean, uniqueBase?: unknown, category?: string }): boolean {
   return item.rarity === 'Unique' && item.isUnidentified && item.uniqueBase != null &&
     (item.category === 'Jewel' || item.category === 'Abyss Jewel')
+}
+
+/** An unidentified unique on the variable list (picked or guessed): its price is the unid trade price, on a click. */
+export function isUnidVariableUnique (item: { rarity?: string, isUnidentified: boolean, uniqueBase?: unknown, info: { refName: string } }): boolean {
+  return item.rarity === 'Unique' && item.isUnidentified && item.uniqueBase != null && VARIABLE.has(item.info.refName)
 }
 
 // ---- How a poe.ninja price reads on the instant card and the verdict ----

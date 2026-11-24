@@ -1,25 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { artFile, uniqueFromArt } from '@/web/woke/shared/unid-art'
-import { FOULBORN_VARIABLE, VARIABLE_ITEMS } from '@/web/woke/shared/unid-prices'
+import { VARIABLE_ITEMS } from '@/web/woke/shared/unid-prices'
 import { VARIABLE_UNIQUE_BASES } from '@/web/woke/shared/variable-uniques'
 
 describe('variable uniques list (Path of Building data)', () => {
   it('holds the rolled jewels and gear, and leaves fixed uniques out', () => {
-    for (const name of ["Watcher's Eye", 'Forbidden Flame', 'Megalomaniac', 'Glorious Vanity', 'Voices', "Atziri's Splendour", 'Impresence', 'Grand Spectrum']) {
+    for (const name of ["Watcher's Eye", 'Forbidden Flame', 'Megalomaniac', 'Glorious Vanity', 'Voices', "Atziri's Splendour", 'Impresence']) {
       expect(VARIABLE_ITEMS.has(name), name).toBe(true)
     }
-    for (const name of ['Headhunter', 'Mageblood', 'The Rat Cage']) expect(VARIABLE_ITEMS.has(name), name).toBe(false)
+    // Fixed, or set by a base that shows before identifying (Grand Spectrum's
+    // jewel, Beacon of Madness's boots).
+    for (const name of ['Headhunter', 'Mageblood', 'The Rat Cage', 'Grand Spectrum', 'Beacon of Madness']) expect(VARIABLE_ITEMS.has(name), name).toBe(false)
   })
 
-  it('has one base for trade, none for a unique on several', () => {
+  it('has one base for trade for each, and leaves out uniques on several bases', () => {
     expect(VARIABLE_UNIQUE_BASES['Forbidden Flame']).toBe('Crimson Jewel')
-    expect(VARIABLE_UNIQUE_BASES['Grand Spectrum']).toBeUndefined()
-    expect(VARIABLE_UNIQUE_BASES["Precursor's Emblem"]).toBeUndefined()
-  })
-
-  it('lists Foulborn uniques with more than one possible mutation', () => {
-    expect(FOULBORN_VARIABLE.size).toBeGreaterThan(50)
-    expect(FOULBORN_VARIABLE.has("Alpha's Howl")).toBe(true)
+    for (const name of VARIABLE_ITEMS) expect(VARIABLE_UNIQUE_BASES[name], name).toBeTruthy()
+    for (const name of ["Precursor's Emblem", "Doryani's Delusion"]) expect(VARIABLE_ITEMS.has(name), name).toBe(false)
   })
 })
 

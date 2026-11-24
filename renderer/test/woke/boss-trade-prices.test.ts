@@ -84,10 +84,6 @@ describe('trade lookups wanted', () => {
     expect(key).toMatchObject({ type: 'Decaying Reliquary Key', filters: {} })
     expect(key).not.toHaveProperty('name')
     expect(decodeURIComponent(unidentifiedTradeUrl('Allflame', "Watcher's Eye"))).toContain('"securable"')
-    // On several bases: the name alone.
-    const spectrum = tradeQuery('Grand Spectrum', true).query
-    expect(spectrum).toMatchObject({ name: 'Grand Spectrum' })
-    expect(spectrum).not.toHaveProperty('type')
   })
 })
 
