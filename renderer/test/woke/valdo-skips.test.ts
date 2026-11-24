@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('@/web/Config', () => ({ AppConfig: () => ({ widgets: [], woke: { off: [] } }) }))
 
 /* eslint-disable import-x/first */
-import { isSkipped, listingModLines, profileSkips, rememberSeen, setSkipped, skipKey, skippedBy, valdoHides, VOID_TEXT } from '@/web/woke/valdo/skips'
+import { isSkipped, listingMarks, listingModLines, profileSkips, rememberSeen, setSkipped, skipKey, skippedBy, valdoHides, VOID_TEXT } from '@/web/woke/valdo/skips'
 import { copyOfProfile, defaultProfile } from '@/web/woke/map-mods/rules'
 import type { MapModProfile } from '@/web/woke/map-mods/rules'
 /* eslint-enable import-x/first */
@@ -107,5 +107,19 @@ describe('valdo mods met so far', () => {
     expect(listingModLines({ explicitMods: ['Players deal 10% less Damage per Equipped Item\nPlayers\' Minions deal 10% less Damage', 'Players\' Minions have 10% less Life', { description: 'Area contains The Feared' }] } as never))
       .toEqual(['Players deal 10% less Damage per Equipped Item', 'Area contains The Feared'])
     expect(listingModLines(undefined)).toEqual([])
+  })
+})
+
+describe('valdo listing marks', () => {
+  it('lists the rated mods on a listing, worst first, by any number', () => {
+    const ratings = { 'Area contains The Feared': 'good', 'Players deal #% less Damage per Equipped Item': 'warn', 'Players cannot gain Flask Charges': 'deadly', 'Monsters cannot be Stunned': 'ok' } as const
+    const item = { explicitMods: ['Area contains The Feared', 'Players deal 12% less Damage per Equipped Item\nPlayers\' Minions deal 12% less Damage', 'Players cannot gain Flask Charges', 'Monsters cannot be Stunned'] }
+    expect(listingMarks(item as never, { ratings: { ...ratings } })).toEqual([
+      { label: 'Players cannot gain Flask Charges', rating: 'deadly' },
+      { label: 'Players deal #% less Damage per Equipped Item', rating: 'warn' },
+      { label: 'Area contains The Feared', rating: 'good' }
+    ])
+    expect(listingMarks(undefined, { ratings: { ...ratings } })).toEqual([])
+    expect(listingMarks(item as never, null)).toEqual([])
   })
 })

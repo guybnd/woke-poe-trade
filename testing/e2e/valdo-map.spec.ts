@@ -33,6 +33,8 @@ test('a Valdo map searches its reward and Void, and can pick another reward', as
   const voidSeg = strip.locator('[data-valdo-mod="Players who Die in area are sent to the Void"]')
   await expect(voidSeg.locator('[data-state="has"]')).toHaveAttribute('aria-checked', 'true')
   await expect(strip.locator('[data-valdo-reward-pick]')).toHaveText(/Foil Nimis/)
+  // Once: on the strip, not in the heading too.
+  await expect(panel.getByText('Foil Nimis')).toHaveCount(1)
   // The mods are listed, Void first, without the "Unscalable Value" tag.
   if (await strip.locator('[data-valdo-mod]').count() < 2) await strip.locator('[data-valdo-mods-toggle]').click()
   await expect(strip.locator('[data-valdo-mod]').first()).toHaveAttribute('data-valdo-mod', 'Players who Die in area are sent to the Void')
@@ -157,6 +159,8 @@ test('a Valdo map hides listings with a mod you skip, with no new search', async
   await expect(strip.locator('[data-valdo-headline]')).toHaveText('2 Not · 2 of 3 listings hidden')
   await chip.click()
   await expect(chip).toHaveText('Care')
+  // The listing with it says so on its row, without a filter for it.
+  await expect(panel.locator('[data-valdo-mark="warn"]')).toHaveText(['Area contains The Feared'])
   await overlay.snap('valdo map ratings')
   await overlay.snap('valdo map add a mod')
   expect(searches).toBe(1)

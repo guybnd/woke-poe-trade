@@ -195,3 +195,33 @@ export function takeLookupAsk (): boolean {
   lookupAsk = 0
   return on
 }
+
+export interface ListingMark {
+  label: string
+  rating: 'deadly' | 'warn' | 'good'
+}
+
+const MARK_ORDER = { deadly: 0, warn: 1, good: 2 } as const
+
+/**
+ * The listing's mods the profile rates (Bad, Care, Want), worst first: shown
+ * on the listing's row, so a mod you care about shows without a filter for it.
+ */
+export function listingMarks (item: ListingItem | undefined, profile: Pick<MapModProfile, 'ratings'> | null): ListingMark[] {
+  if (!item || !profile) return []
+  const rated = new Map<string, ListingMark['rating']>()
+  for (const [matcher, rating] of Object.entries(profile.ratings)) {
+    if (rating === 'deadly' || rating === 'warn' || rating === 'good') rated.set(skipKey(matcher), rating)
+  }
+  if (!rated.size) return []
+  const out: ListingMark[] = []
+  const seen = new Set<string>()
+  for (const line of listingModLines(item)) {
+    const key = skipKey(line)
+    const rating = rated.get(key)
+    if (!rating || seen.has(key)) continue
+    seen.add(key)
+    out.push({ label: skipLabel(line), rating })
+  }
+  return out.sort((a, b) => MARK_ORDER[a.rating] - MARK_ORDER[b.rating])
+}

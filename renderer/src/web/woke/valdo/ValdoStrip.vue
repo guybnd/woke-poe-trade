@@ -4,7 +4,7 @@
        Any / Has / Not. The trade site searches only the Void mod; the rest filter the listings
        already loaded (skips.ts), so nothing is searched twice. A Not is saved on the Map mods
        profile, so each build profile keeps its own; a Has is for this price check only. -->
-  <section :class="$style.zone" data-valdo-strip>
+  <section :class="$style.zone" data-valdo-strip data-goto-spot="valdo-strip">
     <button type="button" :class="$style.row" :aria-expanded="open" data-valdo-mods-toggle @click="open = !open">
       <span :class="$style.title">Trade search</span>
       <span class="flex-1" />

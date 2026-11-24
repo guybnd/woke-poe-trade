@@ -171,6 +171,12 @@
                   </span>
                   <span v-if="improved && row.dropped && FIX_TAG[row.dropped]" class="w-pc-tag">{{ FIX_TAG[row.dropped] }}</span>
                   <span v-if="row.lead.corrupted" class="w-pc-tag" :class="{ 'w-pc-tag-fit': anyTwice }" :data-fit="anyTwice ? 'Twice Corrupted' : undefined">{{ row.lead.twiceCorrupted ? 'Twice Corrupted' : 'Corrupted' }}</span>
+                  <!-- woke: a Valdo map listing's mods your template rates (Bad, Care, Want), so they show without a filter. -->
+                  <template v-if="valdoMarking">
+                    <span v-for="m in valdoMarks(row.lead).slice(0, 3)" :key="m.label" :class="[$style.valdoMark, $style[`mark_${m.rating}`]]"
+                      :title="`${MARK_WORD[m.rating]}: ${m.label}`" :data-valdo-mark="m.rating">{{ m.label }}</span>
+                    <span v-if="valdoMarks(row.lead).length > 3" class="w-dim text-xs" :title="valdoMarks(row.lead).slice(3).map(m => `${MARK_WORD[m.rating]}: ${m.label}`).join('\n')">+{{ valdoMarks(row.lead).length - 3 }}</span>
+                  </template>
                 </span>
               </td>
               <td v-if="item.stackSize" class="px-2 text-right">{{ row.lead.stackSize }}</td>
@@ -271,7 +277,8 @@ import '@/web/woke/price-insight/price-table.css'
 import { useCheckLog } from '@/web/woke/price-insight/useCheckLog'
 import { travelState, travelToHideout, travelNote } from '@/web/woke/hideout-travel/travel'
 import { isBlankRareSearch, ninjaFitsSearch, skipsTopMods, socketColoursOn } from '@/web/woke/price-insight/search-scope'
-import { activeSkipKeys, listingModLines, valdoHides, valdoHidden, valdoListingMods, valdoNeed } from '@/web/woke/valdo/skips'
+import { activeSkipKeys, listingMarks, listingModLines, valdoHides, valdoHidden, valdoListingMods, valdoNeed, valdoProfile } from '@/web/woke/valdo/skips'
+import type { ListingMark } from '@/web/woke/valdo/skips'
 
 // woke: the drivers load with the first price check, not at startup; results take longer.
 const loadDrivers = () => import('@/web/woke/price-insight/PriceDrivers.vue')
@@ -601,6 +608,19 @@ export default defineComponent({
       const need = valdoNeed.value
       return { skip, need, size: skip.size + need.size }
     })
+    // Rated mods on each Valdo listing, by the template's ratings.
+    const valdoMarking = computed(() => !!props.item.mapCompletionReward && !!valdoProfile())
+    const markCache = new WeakMap<PricingResult, { ratings: object, marks: ListingMark[] }>()
+    function valdoMarks (listing: PricingResult): ListingMark[] {
+      const p = valdoProfile()
+      if (!p) return []
+      const hit = markCache.get(listing)
+      if (hit && hit.ratings === p.ratings) return hit.marks
+      const marks = listingMarks(listing.listedItem, p)
+      markCache.set(listing, { ratings: p.ratings, marks })
+      return marks
+    }
+    const MARK_WORD = { deadly: 'Bad', warn: 'Care', good: 'Want' }
     const valdoSkipped = (listing: PricingResult) => !!valdoSkips.value?.size && valdoHides(listing.listedItem, valdoSkips.value.skip, valdoSkips.value.need)
     const fits = (listing: PricingResult) => (!props.narrow || props.narrow.fits(listing.listedItem, props.item.category)) && !valdoSkipped(listing)
     const filtering = computed(() => props.narrow != null || !!valdoSkips.value?.size)
@@ -955,6 +975,9 @@ export default defineComponent({
       },
       shownCount: computed(() => fetchResults.value.filter(r => r != null && !valdoSkipped(r)).length),
       valdoHiddenCount,
+      valdoMarking,
+      valdoMarks,
+      MARK_WORD,
       bulk,
       bulkNote,
       toggleBulk,
@@ -1030,6 +1053,15 @@ export default defineComponent({
 </script>
 
 <style lang="postcss" module>
+/* woke: a Valdo listing's rated mod (valdo/skips.ts listingMarks), coloured as the strip's chips. */
+.valdoMark {
+  display: inline-block; vertical-align: middle; max-width: 20em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-left: var(--w-s1); padding: 0 4px; border-radius: var(--w-r-sm); border: 1px solid transparent;
+  font-size: var(--w-fs-xs); line-height: calc(14px * var(--w-text-scale, 1));
+}
+.mark_deadly { color: var(--w-down); border-color: color-mix(in srgb, var(--w-down) 55%, transparent); background: color-mix(in srgb, var(--w-down) 14%, transparent); }
+.mark_warn { color: var(--w-warn); border-color: color-mix(in srgb, var(--w-warn) 55%, transparent); background: color-mix(in srgb, var(--w-warn) 14%, transparent); }
+.mark_good { color: var(--w-up); border-color: color-mix(in srgb, var(--w-up) 55%, transparent); background: color-mix(in srgb, var(--w-up) 14%, transparent); }
 .tableHeading {
   @apply sticky top-0;
   /* woke: above the rows' slid-out travel door and the sticky Yours row. */

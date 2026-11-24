@@ -4,28 +4,13 @@
 // list on the Valdo strip) hides listings as on a real one.
 import { matchRank } from '../search'
 import type { Lookup, LookupCard } from './types'
+import { valdoMapText } from '../../valdo/map-text'
+
+export { valdoMapText }
 
 // poe.ninja's unique kinds a Valdo map can reward.
 const REWARD_TYPES = new Set(['UniqueWeapon', 'UniqueArmour', 'UniqueAccessory', 'UniqueFlask', 'UniqueJewel'])
 const MAX_CARDS = 5
-
-/** The item text of a Valdo map with this reward, as the game copies one. */
-export function valdoMapText (reward: string): string {
-  return [
-    'Item Class: Maps',
-    'Rarity: Rare',
-    'Valdo Map',
-    'Valdo Map',
-    '--------',
-    `Reward: Foil ${reward}`,
-    '--------',
-    'Item Level: 83',
-    '--------',
-    'Unmodifiable',
-    '--------',
-    'Foil (Celestial Emerald)'
-  ].join('\n')
-}
 
 /** `known`: whether the item data has this unique (the check can't read others). */
 export function valdoLookup (known: (name: string) => boolean): Lookup {
