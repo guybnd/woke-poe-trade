@@ -43,6 +43,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T03:02:49.515Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up merged: https://github.com/guybnd/woke-poe-trade/pull/839
+      (c81a800c). Listed's Price check now opens the full price check on the
+      listing, with a reprice bar.
+    date: '2026-11-24T08:56:39.212Z'
+    selfAttested: true
+    id: c-2026-11-24t08-56-39-212z
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/834'
