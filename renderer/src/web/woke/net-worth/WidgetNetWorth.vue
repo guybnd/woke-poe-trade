@@ -289,6 +289,8 @@ const badge = computed(() => status.value?.running ? '…' : status.value?.error
 const staleDaysShown = computed(() => Math.max(1, props.config.staleDays ?? DEFAULT_STALE_DAYS))
 function showStale () {
   listedOpenStale.value = true
+  // Not taken (no league picked yet): no surprise filter later.
+  setTimeout(() => { listedOpenStale.value = false }, 3000)
   props.config.view = 'listed'
   showWithOverlay(wm, props.config.wmId)
   wm.bringToTop(props.config.wmId)
