@@ -19,6 +19,8 @@
           <span :class="weekChange >= 0 ? 'w-up' : 'w-down'" :title="changeTitle" data-testid="instant-ninja-change">{{ weekChange >= 0 ? '▲' : '▼' }}{{ Math.abs(weekChange) }}%<span :class="$style.range">1d</span></span>
         </template>
       </div>
+      <!-- How sure poe.ninja's price is: Net worth's fake-price checks (ninja-trust.ts, WOKEPOET-534). -->
+      <div v-if="doubtLine" :class="$style.doubt" data-testid="instant-ninja-doubt" :data-doubt="doubt?.kind"><w-price-text :text="doubtLine" /></div>
       <div v-if="price?.sub || stack" :class="$style.dim">
         <template v-if="stack"><span :class="$style.fg"><w-price-text :text="stack" /></span> for your {{ have }}</template><template v-if="stack && price?.sub"> · </template><w-price-text :text="price?.sub" />
       </div>
@@ -28,7 +30,7 @@
       <CardDrops v-if="item.category === ItemCategory.DivinationCard" :name="item.info.refName" compact />
       <div v-if="age" :class="$style.dim">poe.ninja, updated {{ age }}</div>
       <div :class="$style.row">
-        <button type="button" class="btn w-pc-primary" :class="$style.btn" data-testid="instant-ninja-live" @click="$emit('live')">
+        <button type="button" class="btn w-pc-primary" :class="[$style.btn, { 'w-pc-glow': doubt && doubt.kind !== 'thin' }]" data-testid="instant-ninja-live" @click="$emit('live')">
           Live offers<w-kbd keys="Space" class="ml-2" />
         </button>
         <button type="button" class="btn" :class="$style.btn" data-testid="instant-ninja-details" @click="$emit('details')">Details</button>
@@ -57,6 +59,8 @@ import { ItemCategory } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
 import { ninjaPrice, ninjaTotal, divineTenths, chaosOrbRow } from './ninja-first'
 import { instantCardKey, onKeyboardFocusedControl } from './instant-card-key'
+import { useNinjaDoubt } from './use-ninja-doubt'
+import { doubtText } from './ninja-trust'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { useLeagues } from '@/web/background/Leagues'
 import { savedPriceSeries } from '../market/db'
@@ -117,6 +121,8 @@ const tenths = computed(() => {
   return null
 })
 const age = computed(() => agoPhrase(updatedAt.value))
+const doubt = useNinjaDoubt(info)
+const doubtLine = computed(() => doubt.value ? doubtText(doubt.value, c => ninjaTotal(c, xchgRate.value)) : null)
 // The last day (Guy, 2026-11-23): the prices this app saved about every 30
 // minutes when it was running a day ago, else poe.ninja's last two daily prices.
 const leagues = useLeagues()
@@ -287,6 +293,7 @@ onUnmounted(() => {
 .value { display: flex; align-items: baseline; gap: 6px; }
 .headline { font-family: var(--w-num); font-size: calc(24px * var(--w-text-scale, 1)); line-height: 1.1; font-weight: 600; color: var(--w-accent); white-space: nowrap; }
 .dim { color: var(--w-dim); }
+.doubt { color: var(--w-warn, #e0a03c); max-width: 18rem; }
 .fg { color: var(--w-fg); }
 .top { display: flex; align-items: flex-start; gap: calc(6px * var(--w-ui-size, 1)); }
 .tenths {

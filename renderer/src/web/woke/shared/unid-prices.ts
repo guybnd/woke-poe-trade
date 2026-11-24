@@ -63,6 +63,14 @@ export function unidentifiedTradeUrl (league: string, name: string): string {
   return `https://www.pathofexile.com/trade/search/${encodeURIComponent(league)}?q=${encodeURIComponent(JSON.stringify(tradeQuery(name, true)))}`
 }
 
+// Official trade search for identified copies, cheapest first: the other side
+// of the price check's unid or identify read (WOKEPOET-542).
+export function identifiedTradeUrl (league: string, name: string): string {
+  const q = tradeQuery(name, false)
+  const body = { ...q, query: { ...q.query, filters: { misc_filters: { filters: { identified: { option: 'true' as const } } } } } }
+  return `https://www.pathofexile.com/trade/search/${encodeURIComponent(league)}?q=${encodeURIComponent(JSON.stringify(body))}`
+}
+
 const STORAGE_KEY = 'woke-boss-trade-prices'
 const SAMPLE = 10
 // An unidentified price replaces poe.ninja's, so it needs a few real listings.

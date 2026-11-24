@@ -64,7 +64,9 @@
               <div :class="[$style.grid, $style.gridHead, { [$style.gridExtra]: extraRange }]"><span>Variant</span><span class="text-right">Now</span><span v-if="extraRange" class="text-right" :title="extraTitle">{{ extraRange.label }} ago</span><span class="text-right">24h ago</span><span class="text-right">7d ago</span><span v-if="extraRange" class="text-right" :title="extraTitle">{{ extraRange.label }}</span><span class="text-right">24h</span><span class="text-right">7d</span><span /></div>
               <div v-for="v in selected.group.variants" :key="key(v)" v-item-tip="v" :class="[$style.grid, $style.row, { [$style.rowPicked]: shownVariant != null && v.variant === shownVariant, [$style.gridExtra]: extraRange }]">
                 <span class="w-trunc">{{ v.variant || selected.group.name }}
-                  <i v-if="isThin(v)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(v)" /></span>
+                  <i v-if="isThin(v)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(v)" />
+                  <!-- A sudden step up: the price check's doubt line, here as a mark (WOKEPOET-534). -->
+                  <i v-if="stepOf(v) != null" class="fas fa-exclamation-triangle w-warn" data-price-step :title="stepTitle(v)" /></span>
                 <WPrice bulk :chaos="v.chaos" :divine="divine" class="text-right" />
                 <WPrice v-if="extraRange" bulk :chaos="extraThen(v)" :divine="divine" class="text-right w-dim" />
                 <WPrice bulk :chaos="v.d1" :divine="divine" class="text-right w-dim" />
@@ -173,6 +175,7 @@ import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { MARKET_TRACKER_TYPE, marketSearchRequest } from '../market/widget'
 import type { MarketTrackerWidget } from '../market/widget'
 import { isThin, itemKey, thinTitle } from '../market/types'
+import { savedStep } from '../price-insight/ninja-trust'
 import { rangeInfo } from '../market/ranges'
 import { savedPriceSeries } from '../market/db'
 import type { CorruptedFilter, PriceItem } from '../market/types'
@@ -303,6 +306,12 @@ interface LookupEntry extends Base { kind: 'lookup', icon: string, card: LookupC
 type Entry = PriceEntry | ItemEntry | ActionEntry | LookupEntry
 
 const query = shallowRef('')
+// A step of 5x or more over a day or a week ago: maybe a few fake listings.
+const stepOf = (v: { chaos: number, d1?: number, d7?: number }) => savedStep(v.chaos, v.d1, v.d7)
+function stepTitle (v: { chaos: number, d1?: number, d7?: number }) {
+  const usual = stepOf(v)
+  return usual == null ? '' : `Was ${usual >= 1 ? Math.round(usual * 10) / 10 : usual.toPrecision(2)}c a day or a week ago. A sudden step like this is often a few fake listings: check live offers before you trust it.`
+}
 const corrupted = shallowRef<CorruptedFilter>('any')
 const input = shallowRef<HTMLInputElement | null>(null)
 const listEl = shallowRef<HTMLElement | null>(null)

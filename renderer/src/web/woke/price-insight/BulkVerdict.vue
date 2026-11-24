@@ -11,6 +11,8 @@
         <span :class="$style.headline" data-testid="bulk-verdict-price"><w-price-text :text="amount(insight.fair)" /></span>
         <span :class="$style.each">each<template v-if="unit !== 'c' && divineInChaos"> ≈ <w-price-text :text="`${bulkAmount(insight.fair * divineInChaos)}c`" /></template><template v-if="need > 1 && !insight.fewWithStock"> · <w-price-text :text="amount(insight.fair * need)" /> for {{ need }}</template><template v-if="insight.fewWithStock && need > 1"> · small stacks counted</template><WInfo v-if="insight.fewWithStock && need > 1" class="ml-1" :text="`Few of the cheapest offers have stock for ${need}, so smaller ones are counted too.`" /></span>
       </div>
+      <!-- What sellers ask, not only the price picked from it (WOKEPOET-540). -->
+      <div v-if="spreadLine" :class="$style.spread" data-testid="bulk-verdict-spread"><w-price-text :text="spreadLine" /></div>
       <div v-if="insight.floor > insight.low" :class="$style.note">An offer at <w-price-text :text="amount(insight.low)" /> sits far under the rest, so it may be worth buying</div>
       <div v-if="insight.lowStock" :class="$style.note">{{ insight.lowStock }} {{ insight.lowStock === 1 ? 'offer' : 'offers' }} with under {{ need }} in stock left out</div>
       <div :class="$style.prices">
@@ -32,7 +34,8 @@ import WInfo from '../ui/WInfo.vue'
 import WPriceText from '../ui/WPriceText.vue'
 import { computed } from 'vue'
 import type { Confidence } from './insight'
-import { bulkAmount, BulkInsight } from './bulk-insight'
+import { bulkAmount, spreadText } from './bulk-insight'
+import type { BulkInsight } from './bulk-insight'
 
 const props = defineProps<{
   insight: BulkInsight | null
@@ -62,6 +65,8 @@ function amountIn (value: number, unit: string) {
 function amount (value: number) {
   return amountIn(value, props.unit)
 }
+
+const spreadLine = computed(() => props.insight ? spreadText(props.insight.spread, props.insight.sellers, amount) : null)
 
 // The other currency's price, in both currencies, and how it compares.
 const otherNote = computed(() => {
@@ -143,6 +148,7 @@ const fast = computed(() => {
 .headline { font-family: var(--w-num); font-size: calc(28px * var(--w-text-scale, 1)); line-height: calc(32px * var(--w-text-scale, 1)); font-weight: 600; color: var(--w-accent); white-space: nowrap; }
 .each { color: var(--w-dim); font-size: var(--w-fs-sm); }
 .note { color: var(--w-dim); font-size: var(--w-fs-sm); line-height: calc(17px * var(--w-text-scale, 1)); }
+.spread { font-size: var(--w-fs-sm); line-height: calc(17px * var(--w-text-scale, 1)); }
 .other { display: flex; align-items: center; gap: 4px; color: var(--w-dim); font-size: var(--w-fs-sm); line-height: calc(17px * var(--w-text-scale, 1)); border-top: 1px dashed var(--w-line-soft); padding-top: 5px; }
 .prices { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--w-fs-sm); }
 </style>

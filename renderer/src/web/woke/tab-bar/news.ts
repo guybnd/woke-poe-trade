@@ -22,6 +22,10 @@ export interface NewsItem {
 }
 
 export const NEWS: NewsItem[] = [
+  { id: 'price-check-ninja-trust', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: the instant card says when poe.ninja\'s price looks fake, with the item\'s usual price' },
+  { id: 'price-check-bulk-remembered', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: Bulk stays on for your next checks until you turn it off' },
+  { id: 'price-check-seller-spread', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: exchange prices show what sellers ask, like "1 to 15c, most ask 10c"' },
+  { id: 'price-check-unid-vs-id', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: unid Watcher\'s Eye and other gamble jewels show unid price vs identified versions' },
   { id: 'map-farming-goal', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: pick Currency or Maps & Threads on a map\'s price check, and the numbers that matter start on' },
   { id: 'div-card-map-chance', wmType: 'woke-search', name: 'Search', note: 'New: type a map to see how likely each of its cards is, and what one is worth on average' },
   { id: 'runs-kits-compare', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: run costs priced live, and past runs side by side, by strategy too' },

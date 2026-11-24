@@ -704,6 +704,12 @@ test('dock card: click or scroll a strictness, then reload from there', async ({
   const page = overlay.page
   fakeApp.focusGame(true)
   const level = (name: string) => page.getByRole('button', { name, exact: true })
+  // The game starts on another filter (a note), so the icon is up while you play;
+  // the end of this test shows it going once that's settled. With the overlay
+  // open it's there for the picker, never with the strictness on it.
+  await overlay.pressHotkey(overlay.config.overlayKey)
+  await expect(overlay.dockIcon('loot-filter')).toBeVisible({ timeout: 20_000 })
+  await expect(overlay.dockIcon('loot-filter')).not.toContainText('SS')
   await expect(async () => {
     await overlay.moveMouse(1000, 900)
     await overlay.hoverDockIcon('loot-filter')
@@ -744,6 +750,13 @@ test('dock card: click or scroll a strictness, then reload from there', async ({
 
   await page.getByRole('button', { name: 'Back to auto' }).click()
   await expect(page.getByRole('button', { name: 'Back to auto' })).toHaveCount(0)
+
+  // Reloaded, back in the game: no Reload left, and never the strictness. (The
+  // icon may stay for a note, such as the fake league having no prices.)
+  await overlay.moveMouse(1000, 900)
+  fakeApp.focusGame(true)
+  await expect(overlay.dockIcon('loot-filter').filter({ hasText: 'Reload' })).toHaveCount(0, { timeout: 10_000 })
+  await expect(overlay.dockIcon('loot-filter')).not.toContainText('U')
 })
 
 test('stack sizes: type a number or drag a line, the bar follows and the file changes', async ({ overlay, fakeApp }) => {
