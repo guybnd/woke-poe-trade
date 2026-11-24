@@ -20,7 +20,9 @@ import { WButton } from '../ui'
 import Coin from './Coin.vue'
 import type { ValuedLine } from './valuation'
 
-export interface AddedLine { name: string, key: string | null, icon?: string, count: number, each: number }
+// `live`: priced from the stash or poe.ninja and left as it was (a kit line
+// then follows the price, pick K1).
+export interface AddedLine { name: string, key: string | null, icon?: string, count: number, each: number, live?: true }
 
 const props = defineProps<{
   names: string[]
@@ -40,6 +42,8 @@ const open = shallowRef(false)
 const name = shallowRef('')
 const count = shallowRef(1)
 const each = shallowRef(0)
+// The price filled in from the item (null: typed by you).
+const autoEach = shallowRef<number | null>(null)
 const nameEl = shallowRef<HTMLInputElement | null>(null)
 watch(open, (o) => { if (o) nextTick(() => nameEl.value?.focus()).catch(() => {}) })
 
@@ -52,13 +56,16 @@ const lineOf = (n: string) => {
   return props.lines.find(l => l.name.toLowerCase() === b) ?? props.lines.find(l => l.name.toLowerCase().startsWith(b + ' ('))
 }
 function priceFromName () {
+  // Another item: the price filled in for the last one goes.
+  if (autoEach.value != null && Number(each.value) === autoEach.value) { each.value = 0; autoEach.value = null }
   const l = lineOf(name.value)
-  if (l && !(each.value > 0)) each.value = Math.round(toDiv(l.unitChaos) * 10000) / 10000
+  if (l && !(each.value > 0)) { each.value = Math.round(toDiv(l.unitChaos) * 10000) / 10000; autoEach.value = each.value }
 }
 const ok = computed(() => name.value.trim() !== '' && count.value > 0 && each.value >= 0 && Number.isFinite(each.value))
 function line (): AddedLine {
   const l = lineOf(name.value)
-  return { name: l?.name ?? name.value.trim(), key: l?.key ?? null, ...(l?.icon ? { icon: l.icon } : {}), count: Number(count.value), each: fromDiv(Number(each.value)) }
+  const live = l != null && autoEach.value != null && Number(each.value) === autoEach.value
+  return { name: l?.name ?? name.value.trim(), key: l?.key ?? null, ...(l?.icon ? { icon: l.icon } : {}), count: Number(count.value), each: live ? l.unitChaos : fromDiv(Number(each.value)), ...(live ? { live: true as const } : {}) }
 }
 function add () { if (ok.value) { emit('add', line()); close() } }
 function addPerMap () { if (ok.value) { emit('per-map', line()); close() } }
@@ -67,6 +74,7 @@ function close () {
   name.value = ''
   count.value = 1
   each.value = 0
+  autoEach.value = null
 }
 </script>
 
