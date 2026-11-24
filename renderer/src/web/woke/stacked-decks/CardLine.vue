@@ -7,7 +7,7 @@
     <WIcon :src="art" fallback="fas fa-clone" class="w-line-name" />
     <span :class="$style.name"><span v-item-tip="{ type: 'DivinationCard', name: row.name }" class="w-trunc w-line-name">{{ row.name }}</span><span v-if="row.out" class="w-line-tag">left out</span></span>
     <span class="w-num" :class="cheap ? '' : 'w-dim'">×{{ row.qty }}</span>
-    <span class="w-num text-right" :data-held="held && !row.mine ? '' : undefined">
+    <span class="w-num text-right" :data-held="held && !row.mine ? '' : undefined" :title="held && !row.mine ? valueTitle : undefined">
       <input v-if="editing" ref="box" v-model="draft" type="number" min="0" step="any" class="w-input px-1 rounded" :class="$style.box"
         :aria-label="`Your price for one ${row.name}, in chaos`" title="Your price for one, in chaos. Enter keeps it, Esc cancels"
         @keydown.enter.prevent="save" @keydown.esc.prevent.stop="editing = false" @blur="save">

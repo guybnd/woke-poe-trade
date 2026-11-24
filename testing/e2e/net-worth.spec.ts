@@ -266,7 +266,8 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect(stopBtn).toContainText('Stop the run?')
     // The confirm lapses after a few seconds: on a slow runner, arm it again.
     await expect(async () => {
-      const label = await stopBtn.innerText().catch(() => '')
+      // Once the run has stopped the button is gone: don't wait for it.
+      const label = await stopBtn.innerText({ timeout: 1000 }).catch(() => '')
       if (/Stop/.test(label) && !/Stopping/.test(label)) await stopBtn.click()
       await expect(runTab).toHaveCount(0, { timeout: 4000 })
     }).toPass({ timeout: 30_000 })
@@ -282,19 +283,15 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await drop.locator('[data-item-tip]').hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('The Apothecary')
     await overlay.page.mouse.move(0, 0)
-    // A best drop is the shared line item: your price (gold, pinned), left
-    // out (it stays, struck), counted again, back to as read.
+    // A best drop is the shared line item: your price (gold, pinned), then
+    // back to as read from ⋯ (leave out is the same ⊘ as the Runs rows).
     await drop.locator('[data-summary-price]').click()
     const dropBox = drop.getByRole('spinbutton')
     await dropBox.fill('150')
     await dropBox.press('Enter')
     await expect(drop.locator('[data-summary-price] .fa-thumbtack')).toBeVisible()
     await drop.hover()
-    await drop.locator('[data-line-out]').click()
-    await expect(drop).toContainText('left out')
-    await drop.locator('[data-line-out]').click()
-    await expect(drop).not.toContainText('left out')
-    await drop.hover()
+    await expect(drop.locator('[data-line-out]')).toBeVisible()
     await drop.locator('[data-line-more]').click()
     await overlay.page.getByRole('menuitem', { name: 'Back to as read' }).click()
     await expect(drop.locator('[data-summary-price] .fa-thumbtack')).toHaveCount(0)
@@ -335,7 +332,8 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await stopBtn.click()
     await expect(stopBtn).toContainText('Stop the run?')
     await expect(async () => {
-      const label = await stopBtn.innerText().catch(() => '')
+      // Once the run has stopped the button is gone: don't wait for it.
+      const label = await stopBtn.innerText({ timeout: 1000 }).catch(() => '')
       if (/Stop/.test(label) && !/Stopping/.test(label)) await stopBtn.click()
       await expect(runTab).toHaveCount(0, { timeout: 4000 })
     }).toPass({ timeout: 30_000 })

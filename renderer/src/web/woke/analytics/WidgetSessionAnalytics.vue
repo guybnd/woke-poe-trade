@@ -543,9 +543,15 @@ function leaveOutLoot (run: number, line: number, out: boolean) {
   const l0 = s0?.runs[run]?.loot[line]
   if (!s0 || !l0) return
   const id = s0.id
-  const set = (on: boolean) => (s: SessionRecord) => { const l = s.runs[run]?.loot[line]; if (l && l.name === l0.name) { if (on) l.out = true; else delete l.out } }
-  saveOpen(set(out))
-  lineToast(out ? 'out' : 'in', l0.name, () => { saveId(id, set(!out)) }, panel.value?.el)
+  saveOpen((s) => { const l = s.runs[run]?.loot[line]; if (l) { if (out) l.out = true; else delete l.out } })
+  // Undo finds the line again by what it is (a move may have shifted it).
+  const same = (l: SavedLoot) => l.type === l0.type && l.name === l0.name && l.variant === l0.variant && !!l.out === out && l.chaos === l0.chaos
+  lineToast(out ? 'out' : 'in', l0.name, () => {
+    saveId(id, (s) => {
+      const at = [s.runs[run], ...s.runs].map(r => r?.loot.find(same)).find(Boolean)
+      if (at) { if (out) delete at.out; else at.out = true }
+    })
+  }, panel.value?.el)
 }
 // Undo changes the session the action was on, even if another is open now.
 function saveId (id: string, change: (s: SessionRecord) => void) {

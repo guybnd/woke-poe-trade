@@ -287,14 +287,15 @@ export function totals (draws: string[], price: PriceOf, deckChaos: number | nul
     const mine = e?.each != null
     const each = mine ? e.each! : price(name)
     const total = (each ?? 0) * qty
-    // Left out: listed where it was, counted nowhere (and never folded away).
+    const cheap = !mine && (isCheap(each, filter) || (each == null && filter != null && filter.under > 0 && pricesIn && common(name)))
+    if (cheap) cheapRow.add(name)
+    // Left out: listed where it was (a cheap one stays with the cheap cards),
+    // counted nowhere.
     if (e?.out) {
       all.push({ name, qty, each, total, out: true, ...(mine ? { mine } : {}) })
       continue
     }
     if (each == null) unpriced += qty
-    const cheap = !mine && (isCheap(each, filter) || (each == null && filter != null && filter.under > 0 && pricesIn && common(name)))
-    if (cheap) cheapRow.add(name)
     if (cheap) {
       cheapQty += qty
       cheapChaos += total

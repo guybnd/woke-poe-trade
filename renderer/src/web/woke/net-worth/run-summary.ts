@@ -108,7 +108,7 @@ function dropRows (run: Run): SummaryDrop[] {
   const shown: SummaryDrop[] = []
   let counted = 0
   for (const d of out.sort((a, b) => b.chaos - a.chaos)) {
-    if (counted >= MAX_DROPS) break
+    if (counted >= MAX_DROPS || shown.length >= MAX_DROPS + 2) break
     shown.push(d)
     if (!d.out) counted++
   }

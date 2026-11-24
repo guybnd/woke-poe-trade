@@ -32,12 +32,12 @@
     <div v-if="notes.unlisted" class="text-xs w-faint" :title="notes.anyPriced ? NO_PRICE : undefined">{{ notes.unlisted }} {{ notes.anyPriced ? (notes.unlisted === 1 ? "card isn't on poe.ninja (too few trades)" : "cards aren't on poe.ninja (too few trades)") : (notes.unlisted === 1 ? 'card has no poe.ninja price' : 'cards have no poe.ninja price') }} and count as 0.</div>
     <div v-if="notes.held" class="text-xs w-faint" data-deck="held-note">{{ notes.held }} {{ notes.held === 1 ? 'card has a poe.ninja price that looks fake' : 'cards have poe.ninja prices that look fake' }} (<i class="fas fa-pause-circle" />): counted at the usual price, or 0. Hover the price for poe.ninja's.</div>
 
-    <div v-if="shown.length || t.cheapQty" :class="$style.table">
+    <div v-if="shown.length || t.cheap.length" :class="$style.table">
       <CardLine v-for="r in shown" :key="r.name" :row="r" :divine="divine" :held="heldOf(r.name)" :title="priceTitle(r.name, r.each)" :editable="editable" data-deck="card"
         @price="emit('price', r.name, $event)" @out="emit('out', r.name, $event)" />
       <div v-if="t.rows.length > shown.length" class="text-xs w-faint" :class="$style.more">and {{ t.rows.length - shown.length }} more cards</div>
       <!-- Cards under the cut-off, folded into one line (A). -->
-      <template v-if="t.cheapQty">
+      <template v-if="t.cheap.length">
         <button type="button" :class="[$style.row, $style.fold]" data-deck="cheap" :aria-expanded="cheapOpen"
           :title="cheapTitle" @click="cheapOpen = !cheapOpen">
           <i class="fas text-xs" :class="cheapOpen ? 'fa-caret-down' : 'fa-caret-right'" />
@@ -106,7 +106,9 @@ const notes = computed(() => {
   let held = 0
   let anyPriced = false
   for (const r of [...t.value.rows, ...t.value.cheap]) {
-    if (heldOf(r.name)) held += r.qty
+    // Left out, or your price: these notes don't apply.
+    if (r.out) continue
+    if (heldOf(r.name) && !r.mine) held += r.qty
     else if (r.each == null) unlisted += r.qty
     else anyPriced = true
   }

@@ -4,7 +4,7 @@
        focused) for your price and leave out. Left out: struck, not counted.
        Your price: a gold pin. -->
   <span v-if="editing" :class="[$style.loot, 'w-line']" :style="{ color }">
-    <WIcon :src="art" fallback="fas fa-coins" class="mr-1" />{{ line.name }}
+    <WIcon :src="art" fallback="fas fa-coins" class="mr-1" /><span v-item-tip="line">{{ line.name }}</span>
     <input ref="box" v-model="draft" type="number" min="0" step="any" class="w-input px-1 rounded" :class="$style.box"
       :aria-label="`Your price for one ${line.name}, in chaos`" title="Your price for one, in chaos. Enter keeps it, Esc cancels"
       @keydown.enter.prevent="save" @keydown.esc.prevent.stop="editing = false" @blur="save">

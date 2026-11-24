@@ -299,6 +299,13 @@ describe('your edits (the shared line item)', () => {
     expect(t.got).toBe(900 + 2 + 10 + 2)
   })
 
+  it('a cheap card left out stays with the cheap cards, counted nowhere', () => {
+    const t = totals(draws, price, 3, { under: 2, count: true }, undefined, { 'Rain of Chaos': { out: true } })
+    expect(t.cheap.find(r => r.name === 'Rain of Chaos')).toMatchObject({ out: true })
+    expect(t.rows.some(r => r.name === 'Rain of Chaos')).toBe(false)
+    expect(t.cheapQty).toBe(0)
+  })
+
   it('the running result follows your edits', () => {
     expect(runningResult(['The Doctor', 'Her Mask'], price, 3, 120, null, { 'The Doctor': { out: true } })).toEqual([-3, -4])
     expect(runningResult(['Unknown Card'], price, 3, 120, null, { 'Unknown Card': { each: 10 } })).toEqual([7])
