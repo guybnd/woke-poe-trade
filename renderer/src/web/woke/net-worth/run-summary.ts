@@ -129,7 +129,8 @@ function spending (run: Run, runs: number, mapCostKeys?: ReadonlySet<string>): {
 
 // ---------- tips (pick T1) ----------
 
-function paceTip (maps: readonly SummaryMap[], perHour: number | null, fmt: SummaryInput['fmt']): SummaryTip | null {
+function paceTip (all: readonly SummaryMap[], perHour: number | null, fmt: SummaryInput['fmt']): SummaryTip | null {
+  const maps = all.filter(m => m.mapMs > 0)
   if (maps.length < PACE_MIN_MAPS) return null
   const third = Math.floor(maps.length / 3)
   const first = avg(maps.slice(0, third).map(m => m.mapMs))!
@@ -172,8 +173,9 @@ function kitPriceTip (run: Run, others: readonly Run[], cost: number | null, usu
   if (cost == null || usual == null || !(usual > 0)) return null
   const diff = cost - usual
   if (Math.abs(diff) < KIT_MIN_CHAOS || Math.abs(diff) / usual < KIT_SHARE) return null
-  // The kit line whose price moved most since your last run of this name.
-  const last = others.find(r => r.costs.length)
+  // The kit line whose price moved most, the same way, since your run of
+  // this name before this one.
+  const last = others.filter(r => r.costs.length && (r.stoppedAt ?? 0) <= run.startAt).sort((a, b) => b.startAt - a.startAt)[0]
   let moved = ''
   if (last) {
     let best = 0
@@ -181,7 +183,7 @@ function kitPriceTip (run: Run, others: readonly Run[], cost: number | null, usu
       const was = last.costs.find(x => x.name === c.name)
       if (!was) continue
       const d = (c.unitChaos - was.unitChaos) * c.qty
-      if (Math.abs(d) > Math.abs(best) && Math.abs(c.unitChaos - was.unitChaos) >= 0.5) {
+      if (Math.sign(d) === Math.sign(diff) && Math.abs(d) > Math.abs(best) && Math.abs(c.unitChaos - was.unitChaos) >= 0.5) {
         best = d
         moved = ` ${c.name} went from ${fmt(was.unitChaos)} to ${fmt(c.unitChaos)}.`
       }
@@ -193,8 +195,8 @@ function kitPriceTip (run: Run, others: readonly Run[], cost: number | null, usu
     : ''
   return {
     id: 'kit-price',
-    lead: `Your kit cost ${fmt(Math.abs(diff))} a map ${more ? 'more' : 'less'} than usual`,
-    text: `${fmt(cost)} a map against ${fmt(usual)} on your other runs.${moved}${still}`
+    lead: `A map cost ${fmt(Math.abs(diff))} ${more ? 'more' : 'less'} than usual`,
+    text: `${fmt(cost)} a map in kit and items used up, against ${fmt(usual)} on your other runs.${moved}${still}`
   }
 }
 

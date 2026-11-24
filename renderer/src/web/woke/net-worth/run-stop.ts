@@ -8,7 +8,7 @@ import { outsideSums, outsideTotals } from './faustus'
 import { readFaustus } from './faustus-read'
 import { watch } from 'vue'
 import { hostRequest } from '../shared/host'
-import { editRun, lastRunReadAt, loadRuns, runsDoc, setOutside, setPendingStop, stopPhase, stopRun, summaryFor } from './run-store'
+import { editRun, lastRunReadAt, loadRuns, runReadSeen, runsDoc, setOutside, setPendingStop, stopPhase, stopRun, summaryFor } from './run-store'
 import { loadSales, rates, sales } from './sales-store'
 import type { LedgerPoint } from './ledger'
 import type { Outside, Run } from './runs'
@@ -27,10 +27,13 @@ export async function stopLiveRun (league: string, points: () => readonly Ledger
     await loadRuns(league)
     const r = runsDoc.value.live
     if (!r || r.league !== league) return null
+    const pressAt = Date.now()
     stopPhase.value = 'stash'
-    await finalRead()
+    const readAt = await finalRead(league)
     if (runsDoc.value.live?.id !== r.id) return null
-    const at = Math.max(r.startAt, points()[points().length - 1]?.at ?? 0, Date.now())
+    // The run ends at the final read when it was counted, else at the press
+    // (the loot since the last counted read is missing either way).
+    const at = Math.max(r.startAt, readAt ?? pressAt)
     setPendingStop({ id: r.id, at })
     stopPhase.value = 'listings'
     await loadSales(league).catch(() => {})
@@ -49,28 +52,32 @@ export async function stopLiveRun (league: string, points: () => readonly Ledger
       if (now !== mine) setOutside(now)
     }
     if (runsDoc.value.live?.id === r.id || !runsDoc.value.done.some(x => x.id === r.id)) return null
-    summaryFor.value = r.id
+    summaryFor.value = { id: r.id, at: Date.now() }
     return r.id
   } finally { stopping = false; setPendingStop(null); stopPhase.value = null }
 }
 
-// Reads the stash and waits until Net worth has counted that read into the
-// run (store.ts calls recordRunRead). Gives up quietly after a while: a read
-// that changed nothing countable, or prices not loaded, never gets there.
-async function finalRead (): Promise<void> {
+// Reads the stash and waits until Net worth has taken that read in
+// (store.ts marks every read it handled, counted or not). Resolves to the
+// read's time when it went into the run, else null (stop at the press).
+const READ_WAIT_MS = 90_000
+async function finalRead (league: string): Promise<number | null> {
   let readAt: number | null = null
   try {
-    const s = await hostRequest('stash-reader-read', null, 15 * 60_000) as { lastReadAt?: number | null, error?: { message?: string } | null } | null
+    const s = await hostRequest('stash-reader-read', null, READ_WAIT_MS) as { lastReadAt?: number | null, league?: string | null, running?: boolean, error?: { message?: string } | null } | null
     if (s?.error) toast(`Stopped on the last stash read: ${s.error.message ?? 'the read failed'}`)
-    else readAt = s?.lastReadAt ?? null
+    else if (s?.league === league && !s.running) readAt = s.lastReadAt ?? null
   } catch (e) {
     toast(`Stopped on the last stash read: ${(e as Error).message}`)
   }
-  if (readAt == null || lastRunReadAt.value >= readAt) return
-  const seen = readAt
-  await new Promise<void>((resolve) => {
-    const timer = setTimeout(done, COUNT_WAIT_MS)
-    const off = watch(lastRunReadAt, (at) => { if (at >= seen) done() })
-    function done () { clearTimeout(timer); off(); resolve() }
-  })
+  if (readAt == null) return null
+  if (runReadSeen.value < readAt) {
+    const seen = readAt
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(done, COUNT_WAIT_MS)
+      const off = watch(runReadSeen, (at) => { if (at >= seen) done() })
+      function done () { clearTimeout(timer); off(); resolve() }
+    })
+  }
+  return lastRunReadAt.value >= readAt ? readAt : null
 }

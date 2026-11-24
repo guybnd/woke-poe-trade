@@ -22,7 +22,7 @@
       <div :class="$style.ph"><span>Best drops</span></div>
       <div v-if="s.drops.length" :class="$style.drops">
         <div v-for="d in s.drops" :key="d.key" :class="$style.drop" data-summary-drop>
-          <img v-if="d.icon" :src="d.icon" alt="" :class="$style.art"><span v-else :class="$style.art" />
+          <img v-if="d.icon && !badArt.has(d.key)" :src="d.icon" alt="" :class="$style.art" @error="badArt = new Set([...badArt, d.key])"><span v-else :class="$style.art" />
           <span :class="$style.dropText">
             <span v-item-tip="tipFor(tips, d.key.startsWith('manual:') ? null : d.key, d.name, d.count)" class="w-trunc">{{ d.name }}</span>
             <span class="w-dim w-num text-xs">{{ d.count > 1 ? `${d.count} × · ` : '' }}{{ money(d.chaos) }}</span>
@@ -56,7 +56,7 @@
           <span><i :class="[$style.sw, $style.spent]" />Spent {{ money(s.spentChaos) }}<template v-if="s.spentOn.length"> ({{ s.spentOn.join(', ') }})</template></span>
           <span><i :class="[$style.sw, $style.kept]" />Kept {{ money(totals.profitChaos) }}</span>
         </div>
-        <div v-if="s.returnPerChaos != null" class="w-dim text-xs w-num">Every 1c spent came back as {{ s.returnPerChaos.toFixed(1) }}c.</div>
+        <div v-if="s.returnPerChaos != null" class="w-dim text-xs w-num">It brought back {{ s.returnPerChaos.toFixed(1) }}× what it spent.</div>
         <div v-else-if="totals.profitChaos <= 0" class="w-dim text-xs">The run didn't make back what it spent.</div>
       </template>
       <div v-else class="w-dim text-xs">Nothing spent that the stash or your kit shows.</div>
@@ -81,7 +81,7 @@ import { hostRequest } from '../shared/host'
 import { rateTime } from '../shared/rate-time-now'
 import { tipFor } from './tips'
 import type { TipIndex } from './tips'
-import { countLabel, smallSample, topDrop } from './runs'
+import { countLabel, smallSample, topDrop, unitOf } from './runs'
 import type { Run, RunTotals } from './runs'
 import type { RunTime } from './run-time'
 import { readRunMapRecords, runsDoc } from './run-store'
@@ -102,15 +102,21 @@ const props = defineProps<{
 const emit = defineEmits<{ details: [] }>()
 
 const money = (chaos: number) => formatChaos(chaos, props.divine)
+const badArt = shallowRef(new Set<string>())
+const unit = computed(() => unitOf(props.totals.maps, props.totals.fights))
 const signedMoney = (chaos: number) => `${chaos > 0 ? '+' : chaos < 0 ? '−' : ''}${money(Math.abs(chaos))}`
 
 // The run's maps, whole (deaths, NPCs), from the map log.
 const maps = shallowRef<SummaryMap[]>([])
+const mapsLoading = shallowRef(true)
 watch(() => [props.run.id, props.run.stoppedAt], () => {
   const r = props.run
+  maps.value = []
+  mapsLoading.value = true
   readRunMapRecords(r, r.stoppedAt ?? Date.now())
     .then((list) => { if (props.run.id === r.id) maps.value = list.map(m => ({ name: m.name, enteredAt: m.enteredAt, mapMs: m.mapMs, deaths: m.deaths, npcs: m.npcs })) })
-    .catch(() => { maps.value = [] })
+    .catch(() => { if (props.run.id === r.id) maps.value = [] })
+    .finally(() => { if (props.run.id === r.id) mapsLoading.value = false })
 }, { immediate: true })
 
 const s = computed(() => summarize({
@@ -135,9 +141,9 @@ const vsRows = computed<VsRow[]>(() => {
   if (!u) return []
   const t = props.totals
   const rows: Array<{ label: string, me: number | null, usual: number | null, lowerBetter?: boolean, unit?: string }> = [
-    { label: 'Per map', me: t.perMapChaos, usual: u.perMapChaos },
+    { label: `Per ${unit.value}`, me: t.perMapChaos, usual: u.perMapChaos },
     { label: 'Per hour', me: props.perHour, usual: u.perHourChaos },
-    { label: 'Cost a map', me: t.costPerMapChaos, usual: u.costPerMapChaos, lowerBetter: true }
+    { label: `Cost a ${unit.value}`, me: t.costPerMapChaos, usual: u.costPerMapChaos, lowerBetter: true }
   ]
   return rows.filter(r => r.me != null && r.usual != null).map((r) => {
     const me = r.me!
@@ -167,9 +173,11 @@ const sampleNote = computed(() => {
   if (!top || t.runs <= 0 || t.profitChaos <= 0) return null
   const share = Math.round(Math.min(1, top.chaos / t.profitChaos) * 100)
   const without = signedMoney((t.profitChaos - top.chaos) / t.runs)
-  if (sm?.share != null) return `${top.name} is ${share}% of the profit. Without it: ${without} a map.`
-  if (sm?.few) return `Only ${t.runs} maps, so per map can swing a lot. Without ${top.name}: ${without} a map.`
-  return `The top drop is ${share}% of the profit: per map holds up without it (${without}).`
+  const u = unit.value
+  const many = u === 'run' ? 'maps and fights' : `${u}s`
+  if (sm?.share != null) return `${top.name} is ${share}% of the profit. Without it: ${without} a ${u}.`
+  if (sm?.few) return `Only ${t.runs} ${many}, so per ${u} can swing a lot. Without ${top.name}: ${without} a ${u}.`
+  return `The top drop is ${share}% of the profit: per ${u} holds up without it (${without}).`
 })
 
 // ---------- map times ----------
@@ -189,7 +197,7 @@ let savedFor = ''
 watch(s, (sum) => {
   const r = props.run
   // The newest finished run only, once its maps are in.
-  if (r.stoppedAt == null || runsDoc.value.done[0]?.id !== r.id || (r.final?.maps && !maps.value.length)) return
+  if (r.stoppedAt == null || mapsLoading.value || runsDoc.value.done[0]?.id !== r.id) return
   const last: LastRun = {
     league: props.league,
     id: r.id,

@@ -51,7 +51,7 @@
       <RunTimeBar :start-at="shownRun.startAt" :end="timeEnd" :maps="totals.runs" :unit="unit" @spent="spent = $event" />
 
       <!-- A stopped run's summary (pick W1 + T1): opens on Stop. -->
-      <RunSummary v-if="showSummary && totals" :run="shownRun" :done="doc.done" :totals="totals" :per-hour="perHour" :spent="spent" :tips="tips" :divine="divine" :map-cost-keys="mapCostKeys" :league="league" @details="summaryId = null" />
+      <RunSummary v-if="showSummary && totals" :key="shownRun.id" :run="shownRun" :done="doc.done" :totals="totals" :per-hour="perHour" :spent="spent" :tips="tips" :divine="divine" :map-cost-keys="mapCostKeys" :league="league" @details="summaryId = null" />
       <div v-else :class="$style.cols">
         <!-- In: what came into the stash, and what you added. -->
         <div :class="$style.col" data-run-in>
@@ -179,7 +179,7 @@ import RunAdd from './RunAdd.vue'
 import type { AddedLine } from './RunAdd.vue'
 import RunTimeBar from './RunTimeBar.vue'
 import type { RunTime } from './run-time'
-import { addCost, deleteRun, editRun, loadRuns, refreshRunMaps, runMaps, runsDoc, setOutside, stopPhase, summaryFor } from './run-store'
+import { addCost, deleteRun, editRun, loadRuns, refreshRunMaps, runMaps, runsDoc, setOutside, stopPhase, summaryFor, SUMMARY_FOR_MS } from './run-store'
 import { stopLiveRun } from './run-stop'
 import { lastCostsOf, startRunAt } from './run-start'
 import { outsideSums, outsideTotals, rowKey, setBefore, setEdit } from './faustus'
@@ -215,10 +215,12 @@ const RunSummary = defineAsyncComponent(() => import('./RunSummary.vue'))
 const summaryId = shallowRef<string | null>(null)
 const showSummary = computed(() => shownRun.value?.stoppedAt != null && summaryId.value === shownRun.value.id)
 // A run that just stopped (here or from the dock card): open its summary.
-watch([summaryFor, () => doc.value.done], ([id]) => {
-  if (!id || !doc.value.done.some(r => r.id === id)) return
-  opened.value = id
-  summaryId.value = id
+watch([summaryFor, () => doc.value.done], ([want]) => {
+  if (!want) return
+  if (Date.now() - want.at > SUMMARY_FOR_MS) { summaryFor.value = null; return }
+  if (!doc.value.done.some(r => r.id === want.id)) return
+  opened.value = want.id
+  summaryId.value = want.id
   summaryFor.value = null
 }, { immediate: true })
 // New maps: read again with each new chart point (a read lands after maps).

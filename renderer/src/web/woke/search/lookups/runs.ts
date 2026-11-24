@@ -28,7 +28,7 @@ const LAST_WORDS = ['last run', 'run summary', 'last run summary', 'how did my r
 function wantsLast (query: string, name: string): boolean {
   const q = query.trim().toLowerCase().replace(/\s+/g, ' ')
   if (q.length < 3) return false
-  return LAST_WORDS.some(w => w.startsWith(q) || q === w) || wanted(query, name)
+  return LAST_WORDS.some(w => w.startsWith(q) || q === w) || name.toLowerCase().startsWith(q) || (q.startsWith('last ') && name.toLowerCase().startsWith(q.slice(5)))
 }
 
 // The last finished run's summary (Net worth › Runs, Summary): its headline

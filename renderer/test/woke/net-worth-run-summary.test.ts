@@ -98,7 +98,7 @@ describe('run summary', () => {
     const run: Run = { ...emptyRun('now', 'Covens', 'Nightmare maps', T0), stoppedAt: T0 + H, costs: [{ id: 'k', key: null, name: 'Nightmare Map', qty: 1, unitChaos: 16.5 }] }
     const past = done('a', 'Nightmare maps', T0 - 3 * H, { profitChaos: 300, maps: 10 }, { costs: [{ id: 'k', key: null, name: 'Nightmare Map', qty: 1, unitChaos: 14 }] })
     const t = summarize(input({ run, done: [past], costPerMapChaos: 16.5, perMapChaos: 36 })).tips.find(x => x.id === 'kit-price')
-    expect(t?.lead).toBe('Your kit cost 2.5c a map more than usual')
+    expect(t?.lead).toBe('A map cost 2.5c more than usual')
     expect(t?.text).toContain('Nightmare Map went from 14c to 16.5c')
     expect(t?.text).toContain('still beat your usual')
   })

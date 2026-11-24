@@ -8,7 +8,7 @@ import { toast } from '../ui/layer'
 import { readMapDay, dayKey } from '../session-story/store'
 import { isSkippedArea } from '../session-story/skip-areas'
 import type { MapRecord } from '../session-story/map-log'
-import { addToTally, cleanDoc, compareRows, emptyRun, isRunGlance, mapsIn, relive, runBoardKey, runGlanceKey, runsKey, runTotals, tallyFrom, topDrop, MAX_DONE_RUNS } from './runs'
+import { addToTally, cleanDoc, compareRows, emptyRun, isLastRun, isRunGlance, lastRunKey, mapsIn, relive, runBoardKey, runGlanceKey, runsKey, runTotals, tallyFrom, topDrop, MAX_DONE_RUNS } from './runs'
 import type { CostLine, LivePrice, OnceCost, Outside, Run, RunBoard, RunGlance, RunsDoc } from './runs'
 import type { LedgerPoint } from './ledger'
 import type { StashDiff } from './valuation'
@@ -196,12 +196,17 @@ export const runGlance = shallowRef<RunGlance | null>(null)
 
 // A run that just stopped (run-stop.ts): the Runs view opens its summary
 // (pick W1) and clears it.
-export const summaryFor = shallowRef<string | null>(null)
+// Only for a minute: a summary nobody opened by then doesn't jump in later.
+export const summaryFor = shallowRef<{ id: string, at: number } | null>(null)
+export const SUMMARY_FOR_MS = 60_000
 // What Stop is doing (run-stop.ts): its final stash read, then your Faustus
 // listings. null when no Stop is under way.
 export const stopPhase = shallowRef<'stash' | 'listings' | null>(null)
-// The newest read recordRunRead has taken in (Stop waits for its final read).
+// The newest read recordRunRead has taken in, and the newest read Net worth
+// handled at all, counted or skipped (Stop waits for its final read).
 export const lastRunReadAt = shallowRef(0)
+export const runReadSeen = shallowRef(0)
+export function markReadSeen (at: number) { if (at > runReadSeen.value) runReadSeen.value = at }
 
 // Set by run-stop.ts from the press until the run is stopped.
 let pendingStop: { id: string, at: number } | null = null
@@ -307,6 +312,9 @@ export function deleteRun (league: string, id: string) {
     await loadRuns(league)
     const doc = runsDoc.value
     await save(league, { live: doc.live, done: doc.done.filter(r => r.id !== id) })
+    // Ctrl+Space's last run, if it was this one.
+    const last = await (hostRequest('doc-get', { collection: COLLECTION, key: lastRunKey(league) }) as Promise<unknown>).catch(() => null)
+    if (isLastRun(last) && last.id === id) await hostRequest('doc-put', { collection: COLLECTION, key: lastRunKey(league), value: null }).catch(() => {})
   })
 }
 

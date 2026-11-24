@@ -210,11 +210,13 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
       if (/Stop/.test(label) && !/Stopping/.test(label)) await stopBtn.click()
       await expect(runTab).toHaveCount(0, { timeout: 4000 })
     }).toPass({ timeout: 30_000 })
-    // Stop reads the stash one last time, then opens the run's Summary in
-    // the window (pick W1): best drops with their item tooltip, map times,
-    // spent and kept, tips.
+    // Stop reads the stash one last time, then the run's Summary waits in
+    // the window (pick W1): the game's last zone was a boss arena, so it
+    // doesn't pop up over the game. Best drops with their item tooltip, map
+    // times, spent and kept, tips.
+    await overlay.pressHotkey(overlay.config.overlayKey)
     const summary = panel.locator('[data-run-summary]')
-    await expect(summary).toBeVisible({ timeout: 20_000 })
+    await expect(summary).toBeVisible({ timeout: 45_000 })
     const drop = summary.locator('[data-summary-drop]').filter({ hasText: 'The Apothecary' })
     await expect(drop).toBeVisible()
     await drop.locator('[data-item-tip]').hover()
@@ -261,7 +263,8 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
       await expect(runTab).toHaveCount(0, { timeout: 4000 })
     }).toPass({ timeout: 30_000 })
     // The second run's Summary compares it with the first (same name).
-    await expect(summary).toBeVisible({ timeout: 20_000 })
+    await overlay.pressHotkey(overlay.config.overlayKey)
+    await expect(summary).toBeVisible({ timeout: 45_000 })
     await expect(summary.locator('[data-summary-vs]')).toContainText('1 earlier run')
     // Past runs compared (pick C2): one row a run, By strategy adds up the
     // two Nightmare maps runs. One fight is a small sample (pick S1).

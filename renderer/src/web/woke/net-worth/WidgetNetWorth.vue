@@ -46,6 +46,7 @@ import { hideWhilePlaying, openSettingsPage, showWithOverlay } from '../dock/doc
 import { popupAnchor } from '../ui/window-anchor'
 import { agoPhrase, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
+import { toast } from '../ui/layer'
 import { RUN_HOLD_TARGET, parseHotkeyTarget, parseListedTarget } from './widget'
 import { DOCS, GLANCE_LABELS, glanceFromPoints, glanceKey, glanceText, isGlance, ledgerKey, nextShows } from './glance'
 import type { Glance } from './glance'
@@ -319,9 +320,15 @@ async function stopLive () {
     const id = await rs.stopLiveRun(league, () => s.ledger.value.points, s.divine.value)
     // The store may not be watched here yet (it loads with the window).
     if (leagueId.value === league) runG.value = s.runGlance.value
-    // The run's summary (pick W1), in the window: Stop is pressed with the
-    // overlay up, so it covers nothing in game.
-    if (id && leagueId.value === league) openRun()
+    // The run's summary (pick W1), in the window. The final read can take a
+    // while: if you went back into a map meanwhile, it waits in the window
+    // instead of popping up over the game.
+    if (id && leagueId.value === league) {
+      if (zoneNow.live && zoneNow.kind != null && !['hideout', 'town'].includes(zoneNow.kind)) {
+        props.config.view = 'runs'
+        toast('Run stopped. Its summary is in Net worth › Runs')
+      } else openRun()
+    }
   } catch {} finally { stopping.value = false }
 }
 // Start from the card: from the last read, like the Runs view's Start.

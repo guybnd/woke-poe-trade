@@ -20,7 +20,7 @@ import type { Glance } from './glance'
 import type { LedgerPoint, TabValue } from './ledger'
 import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, StashTabLike, Valuation } from './valuation'
 import type { ReaderStatus } from './widget'
-import { recordRunRead } from './run-store'
+import { markReadSeen, recordRunRead } from './run-store'
 import { kitPrice } from './run-kit'
 import { emptyMarks, feedMarks, playRates, startOfDay, trimMarks, RATE_WINDOWS } from './play-time'
 import type { PlayMarks, PlayRates } from './play-time'
@@ -391,7 +391,7 @@ export function onStatus (s: ReaderStatus) {
     await loadLeague(id)
     await retryPrefs(id)
     if (!pricesReady.value) ninja.queuePricesFetch()
-    await countRead(id, readAt)
+    try { await countRead(id, readAt) } finally { markReadSeen(readAt) }
   })
 }
 
