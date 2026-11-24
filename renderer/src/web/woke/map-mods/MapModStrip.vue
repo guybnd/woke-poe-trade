@@ -271,8 +271,15 @@ watch(kindMenu, (on) => {
 onBeforeUnmount(() => { kindMenu.value = false; document.removeEventListener('pointerdown', closeKindMenu, true); document.removeEventListener('keydown', closeKindMenu, true) })
 function pickKind (c: KindChoice) {
   for (const f of kindFs.value) setPick(f, c.picks[f.mapKind!.family])
+  // The Elder's guardian line is searched only while the kind is Elder: another kind
+  // (or Any kind) has no guardian, so it would find nothing.
+  const elder = c.picks.elder
+  const elderOnly = typeof elder === 'object' && Array.isArray(elder.has) && elder.has.length === 1 && elder.has[0] === 2
+  for (const f of guardianFs.value) f.disabled = !elderOnly
   kindMenu.value = false
 }
+const guardianFs = computed(() => (props.stats ?? []).filter((s): s is StatFilter =>
+  !s.group && !!s.mapLine && /^Map is occupied by/i.test(s.statRef)))
 const kindTitle = computed(() => {
   const c = current.value
   if (!c) return 'Pick which kind of map to search'
