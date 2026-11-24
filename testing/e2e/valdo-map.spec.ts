@@ -152,3 +152,23 @@ test('a Valdo map without the Void mod still shows the Void line, set No void', 
   await expect(voidLine).toContainText('not on this map')
   await expect(voidLine.locator('[data-state="not"]')).toHaveAttribute('aria-checked', 'true')
 })
+
+test('"valdo headhunter" in Search opens a Valdo map price check for that reward', async ({ overlay }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.pressHotkey('Ctrl + Space')
+  const search = overlay.widget('woke-search')
+  const box = search.getByRole('textbox', { name: 'Search', exact: true })
+  // Prices load a moment after the palette opens: type again until they're in.
+  const result = search.getByRole('button', { name: /Valdo map: Headhunter/ })
+  await expect(async () => {
+    await box.fill('valdo headhunter')
+    await expect(result).toBeVisible({ timeout: 1000 })
+  }).toPass({ timeout: 20_000 })
+  await result.click()
+  await search.getByRole('button', { name: 'Price check', exact: true }).click()
+  const strip = overlay.widget('price-check').locator('[data-valdo-strip]')
+  await expect(strip).toBeVisible({ timeout: 20_000 })
+  await expect(strip.locator('[data-valdo-reward-pick]')).toHaveText(/Foil Headhunter/)
+  await expect(strip.locator('[data-valdo-mod="Players who Die in area are sent to the Void"]')).toContainText('not on this map')
+  await overlay.snap('valdo lookup')
+})
