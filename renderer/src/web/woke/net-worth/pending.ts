@@ -106,6 +106,8 @@ export interface PendingTotals {
 }
 
 const isUnique = (l: Listing) => l.frameType === 3 || l.frameType === 9
+// valuation.ts isRolledMap, for a listing (3.30 bases read "Map (Tier 16)").
+const isRolledListing = (l: Listing) => (l.frameType === 1 || l.frameType === 2) && (!!l.mapTier || /\bMap( \(Tier \d+\))?$/.test(l.baseType))
 export function confidenceOf (l: Listing, price: NinjaPrice | null): Confidence | null {
   if (!price || !(price.chaos > 0)) return null
   if (isUnique(l) && (ROLLED_UNIQUES.has(l.name) || ROLLED_UNIQUES.has(l.typeLine) || l.corrupted)) return 'rough'
@@ -129,8 +131,11 @@ export function pendingRows (doc: PendingDoc | null, sales: readonly Sale[], rat
     const ageMs = Math.max(0, now - firstAt)
     const chaos = saleChaos(item, rates)
     const p = ninjaOf(item)
-    const each = p && p.chaos > 0 ? p.chaos : null
-    const vs = versusMarket(chaos, each, item.stack)
+    let each = p && p.chaos > 0 ? p.chaos : null
+    let vs = versusMarket(chaos, each, item.stack)
+    // A magic or rare map: poe.ninja prices only its plain base (a T16 at
+    // 2c). Listed way off that, its mods set the price: no suggestion.
+    if (vs == null && each != null && isRolledListing(item)) { each = null; vs = null }
     // Way off poe.ninja (versusMarket gives up): most likely another version.
     const confidence = each == null ? null : vs == null && chaos != null ? 'rough' : confidenceOf(item, p)
     rows.push({ item, firstAt, ageMs, stale: ageMs >= staleMs, chaos, ninja: each != null ? each * Math.max(1, item.stack) : null, vs, confidence })
