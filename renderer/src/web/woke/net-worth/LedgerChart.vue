@@ -242,7 +242,8 @@ const bands = computed(() => {
   })
 })
 
-const goalY = computed(() => props.goalDiv && props.goalDiv <= span.value.hi ? yOf(props.goalDiv) : null)
+// Only while it lies inside the chart (a goal passed long ago would draw under it).
+const goalY = computed(() => props.goalDiv && props.goalDiv <= span.value.hi && props.goalDiv >= span.value.lo ? yOf(props.goalDiv) : null)
 
 const marks = computed(() => props.mode !== 'total'
   ? []
