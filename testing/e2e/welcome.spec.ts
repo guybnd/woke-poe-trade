@@ -68,7 +68,10 @@ test('All tools counts what is new; pointing at a tool clears its seal; Net wort
   await overlay.boot({ overlayActive: true, whatsNew: true })
   const page = overlay.page
   const count = page.locator('[data-news-count]')
-  const tools = new Set(NEWS.map(n => n.wmType)).size
+  // Search is one window, not in All tools: its lines show only in the dock.
+  const tools = new Set(NEWS.filter(n => n.wmType !== 'woke-search').map(n => n.wmType)).size
+  // Read from NEWS, so adding a line breaks nothing: the launcher shows a tool's first unseen line.
+  const mapNews = NEWS.filter(n => n.wmType === 'woke-map-mods')
   await expect(count).toHaveText(String(tools))
   await page.getByRole('button', { name: 'All tools' }).click()
   const row = (name: string) => page.locator('div').filter({ has: page.getByRole('button', { name, exact: true }) }).last()
@@ -76,13 +79,14 @@ test('All tools counts what is new; pointing at a tool clears its seal; Net wort
   await expect(row('Map mods').locator('[data-news-seal]')).toBeVisible()
   await overlay.snap('All tools with new seals')
   await page.getByRole('button', { name: 'Map mods', exact: true }).hover()
-  await expect(page.getByText('a Planner tab for T17 maps', { exact: false })).toBeVisible()
-  await expect(row('Map mods').locator('[data-news-seal]')).toHaveCount(0)
-  await expect(count).toHaveText(String(tools - 1))
+  await expect(page.getByText(mapNews[0].note.replace(/^New: /, ''), { exact: false })).toBeVisible()
+  // Only the line shown counts as read; another Map mods line keeps the seal.
+  await expect(row('Map mods').locator('[data-news-seal]')).toHaveCount(mapNews.length > 1 ? 1 : 0)
+  await expect(count).toHaveText(String(mapNews.length > 1 ? tools : tools - 1))
   // Net worth, off: its row goes to the switch in Settings, which asks first.
   await page.getByRole('button', { name: 'Net worth', exact: true }).click()
   await expect(page.locator('[data-stash-reader]')).toBeVisible()
-  await expect.poll(() => fakeApp.readConfig()?.woke?.seenNews ?? []).toContain('map-mods-t17-planner')
+  await expect.poll(() => fakeApp.readConfig()?.woke?.seenNews ?? []).toContain(mapNews[0].id)
 })
 
 test('a fresh install has nothing new', async ({ overlay }) => {

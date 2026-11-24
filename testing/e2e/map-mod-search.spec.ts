@@ -271,3 +271,54 @@ test('map: Base map and the Bulk tab keep the map\'s influence', async ({ overla
   expect(onIds(searches[searches.length - 1])).toContain(ORIGINATOR)
   expect(overlay.errors).toEqual([])
 })
+
+// Guy's pick (veteran review, 2026-11-24): a Farming switch on the map's Trade
+// search picks which numbers start on, and is remembered for the next map.
+test('map: the farming goal picks which number chips start on', async ({ overlay }) => {
+  const searches = await fakeTrade(overlay.page)
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-originator-more.txt')
+  const panel = overlay.widget('price-check')
+  const chip = (label: string) => panel.locator(`[data-map-prop="${label}"]`)
+  const goal = (g: string) => panel.locator(`[data-map-goal] [data-goal="${g}"]`)
+  await expect(chip('Currency')).toBeVisible({ timeout: 20_000 })
+  // Any to start: the chips as they always were.
+  await expect(goal('any')).toHaveAttribute('aria-checked', 'true')
+  await expect(chip('Currency')).toHaveAttribute('aria-pressed', 'true')
+  await expect(chip('Maps')).toHaveAttribute('aria-pressed', 'false')
+  // Each number says what it raises.
+  await expect(chip('Drops')).toHaveAttribute('title', /not currency/)
+  await expect(chip('Rarity')).toHaveAttribute('title', /better currency/)
+
+  await goal('atlas').click()
+  await expect(goal('atlas')).toHaveAttribute('aria-checked', 'true')
+  await expect(chip('Maps')).toHaveAttribute('aria-pressed', 'true')
+  await expect(chip('Pack')).toHaveAttribute('aria-pressed', 'true')
+  await expect(chip('Currency')).toHaveAttribute('aria-pressed', 'false')
+  await expect(chip('Rarity')).toHaveAttribute('aria-pressed', 'false')
+  // Atlas Drops can't be searched (no listings), so it stays off.
+  await expect(chip('Drops')).toHaveAttribute('aria-pressed', 'false')
+  await overlay.snap('map farming goal')
+  expect(searches).toEqual([])
+
+  // The next map starts on the goal.
+  await overlay.copyItem('items/map-originator-more.txt')
+  await expect(goal('atlas')).toHaveAttribute('aria-checked', 'true')
+  await expect(chip('Maps')).toHaveAttribute('aria-pressed', 'true')
+  await expect(chip('Currency')).toHaveAttribute('aria-pressed', 'false')
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBeGreaterThan(0)
+  const and = searches[0].query.stats.find(g => g.type === 'and')!
+  const byId = (id: string) => and.filters.find(f => f.id === id)
+  expect(byId('pseudo.pseudo_map_more_map_drops')?.disabled).toBeFalsy()
+  expect(byId('pseudo.pseudo_map_more_currency_drops')?.disabled).toBe(true)
+  const q = searches[0].query as unknown as { filters?: { map_filters?: { filters?: Record<string, unknown> } } }
+  expect(q.filters?.map_filters?.filters?.map_iir).toBeUndefined()
+
+  // Currency flips it back.
+  await goal('currency').click()
+  await expect(chip('Currency')).toHaveAttribute('aria-pressed', 'true')
+  await expect(chip('Rarity')).toHaveAttribute('aria-pressed', 'true')
+  await expect(chip('Maps')).toHaveAttribute('aria-pressed', 'false')
+  expect(overlay.errors).toEqual([])
+})

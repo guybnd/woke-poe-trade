@@ -20,6 +20,8 @@ export interface LookupRow {
   bulk?: boolean
   // A small button at the row's end.
   action?: LookupAction
+  // A short dim note before the price ("1 in 22").
+  note?: string
 }
 
 // A row of a table. A cell can carry a small second line.

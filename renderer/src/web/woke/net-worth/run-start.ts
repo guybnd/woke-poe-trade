@@ -10,7 +10,7 @@ import { loadRuns, runsDoc, startRun } from './run-store'
 import { loadSales, rates, sales } from './sales-store'
 import type { LedgerPoint } from './ledger'
 import { addToTally } from './runs'
-import type { CostLine, Run } from './runs'
+import type { CostLine, LivePrice, Run } from './runs'
 import type { StashDiff } from './valuation'
 
 type Extra = Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales' | 'carriedFrom'>
@@ -40,7 +40,9 @@ export function withGap (last: Run, diffs: readonly StashDiff[], at: number): Ru
 
 let starting = false
 // `at`: the read the run starts from. False when it didn't start.
-export async function startRunAt (league: string, name: string, at: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null): Promise<boolean> {
+// `kit`: the costs to start with (the Runs view's kit, changed before Start);
+// default the last same-name run's. `price`: today's prices for its live lines.
+export async function startRunAt (league: string, name: string, at: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null, kit?: CostLine[], price?: LivePrice): Promise<boolean> {
   if (starting) return false
   // The league switched (the card's dynamic import can take a moment).
   const leagueNow = () => { const cur = AppConfig().leagueId; return !cur || cur === league }
@@ -50,7 +52,7 @@ export async function startRunAt (league: string, name: string, at: number, diff
     await loadRuns(league)
     await loadSales(league).catch(() => {})
     const runName = name.trim() || 'Run'
-    const costs = lastCostsOf(runName)
+    const costs = kit ?? lastCostsOf(runName)
     const doc = runsDoc.value
     const last = doc.live ?? doc.done[0]
     const taken = last && [doc.live, ...doc.done].some(r => r?.carriedFrom === last.id)
@@ -73,7 +75,7 @@ export async function startRunAt (league: string, name: string, at: number, diff
     }
     // The league switched meanwhile: the runs doc is the other league's now.
     if (!leagueNow()) return false
-    await startRun(league, runName, at, diffs, points, divine, costs, extra)
+    await startRun(league, runName, at, diffs, points, divine, costs, extra, price)
     return true
   } finally { starting = false }
 }

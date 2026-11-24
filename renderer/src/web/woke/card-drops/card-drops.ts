@@ -124,10 +124,15 @@ export function mapTip (data: CardDropData, map: string, price: (card: string) =
   const cards = cardsInMap(data, map)
     .map(name => ({ name, chaos: price(name) }))
     .sort((a, b) => (b.chaos ?? -1) - (a.chaos ?? -1) || (a.name < b.name ? -1 : 1))
-  const lines: TipLine[] = cards.map(c => [
-    { text: c.name, tone: 'card' as const },
-    ...(c.chaos != null ? [{ text: `  ${fmt(c.chaos)}`, tone: 'value' as const }] : [])
-  ])
+  const lines: TipLine[] = cards.map(c => {
+    const oneIn = cardChanceIn(data, c.name, map)
+    return [
+      { text: c.name, tone: 'card' as const },
+      ...(c.chaos != null ? [{ text: `  ${fmt(c.chaos)}`, tone: 'value' as const }] : []),
+      ...(oneIn ? [{ text: `  ${oneInText(oneIn)}`, tone: 'dim' as const }] : [])
+    ]
+  })
+  const perDrop = valuePerCardDrop(data, map, price)
   const tier = data.maps[map]
   return {
     kind: 'lookup',
@@ -138,9 +143,72 @@ export function mapTip (data: CardDropData, map: string, price: (card: string) =
       frame: tier ? 'normal' : 'unique',
       sections: [
         [[{ text: 'Divination cards here', tone: 'label' }]],
-        lines.length ? lines : [[{ text: 'No cards listed', tone: 'dim' }]]
+        lines.length ? lines : [[{ text: 'No cards listed', tone: 'dim' }]],
+        ...(perDrop != null ? [[[{ text: `About ${fmt(perDrop)} per card from this map's list (by drop weight)`, tone: 'dim' as const }]]] : [])
       ]
     },
     market: null
   }
 }
+
+// How likely a card from a map is to be a given card (Guy's pick, veteran
+// review 2026-11-24): the card's drop weight over the total weight of the
+// cards Divcord lists for that map. Cards Divcord ties to no map (bosses,
+// league content, unverified ones) are left out, so this ranks a map's own
+// cards against each other; it is not a drop rate. Cards with no weight are
+// left out too.
+
+export interface PoolCard { name: string, weight: number }
+export interface MapPool { cards: PoolCard[], total: number }
+
+const poolCache = new WeakMap<CardDropData, Map<string, MapPool>>()
+// The map's own weighted cards, with their weight (1 / "1 in N").
+export function mapPool (data: CardDropData, map: string): MapPool {
+  let byMap = poolCache.get(data)
+  if (!byMap) { byMap = new Map(); poolCache.set(data, byMap) }
+  let pool = byMap.get(map)
+  if (!pool) {
+    const cards: PoolCard[] = []
+    for (const [name, e] of Object.entries(data.cards)) {
+      if (!e.x && e.w && e.m?.includes(map)) cards.push({ name, weight: 1 / e.w })
+    }
+    pool = { cards, total: cards.reduce((s, c) => s + c.weight, 0) }
+    byMap.set(map, pool)
+  }
+  return pool
+}
+
+// About 1 in this many of the map's cards is this one; null when the card has
+// no weight or isn't listed for the map.
+export function cardChanceIn (data: CardDropData, card: string, map: string): number | null {
+  const pool = mapPool(data, map)
+  const c = pool.cards.find(x => x.name === card)
+  return c && pool.total > 0 ? Math.max(1, Math.round(pool.total / c.weight)) : null
+}
+
+// What one of the map's cards is worth on average, in chaos: unpriced cards
+// count as 0. Null when none has a price.
+export function valuePerCardDrop (data: CardDropData, map: string, price: (card: string) => number | null): number | null {
+  const pool = mapPool(data, map)
+  if (!pool.total) return null
+  let sum = 0
+  let priced = false
+  for (const c of pool.cards) {
+    const p = price(c.name)
+    if (p == null) continue
+    priced = true
+    sum += p * c.weight
+  }
+  return priced ? sum / pool.total : null
+}
+
+// A card's maps, likeliest first (unknown chance last, in Divcord's order).
+export function mapsByChance (data: CardDropData, card: string, maps: DropMap[]): Array<DropMap & { oneIn: number | null }> {
+  return maps
+    .map((m, i) => ({ ...m, oneIn: cardChanceIn(data, card, m.name), i }))
+    .sort((a, b) => (a.oneIn ?? Infinity) - (b.oneIn ?? Infinity) || a.i - b.i)
+    .map(({ name, label, tier, oneIn }) => ({ name, label, tier, oneIn }))
+}
+
+// The hover on a "1 in 22".
+export const chanceWords = (oneIn: number) => `About ${oneInText(oneIn)} of this map's own cards is this one, by drop weight`
