@@ -951,7 +951,7 @@ const chartLegend = computed(() => {
   const t1 = s[s.length - 1].at
   const out: Array<{ id: string, label: string, tip: string }> = []
   if (chartListed.value) out.push({ id: 'band', label: 'At Faustus', tip: 'What you have listed at Faustus, on top of your stash' })
-  if (chartSales.value.some(x => x.at >= t0 && x.at <= t1)) out.push({ id: 'sale', label: 'Sale', tip: 'Something sold here. Click the chart there for the items' })
+  if (chartSales.value.some(x => x.at >= t0 && x.at <= t1)) out.push({ id: 'sale', label: 'Sale', tip: 'Something sold here. Hover the chart there for the items' })
   if (chartMaps.value?.some(m => m.to > t0 && m.from < t1)) out.push({ id: 'maps', label: 'Maps', tip: 'Your maps this session' })
   return out
 })

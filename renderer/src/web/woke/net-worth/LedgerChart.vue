@@ -32,18 +32,18 @@
         <b class="w-num">{{ when(shown.p.at) }} · {{ fmt(shown.listed ? shown.p.div + shown.listed : shown.p.div) }}<Coin /><template v-if="shown.p.netDiv != null"> · {{ signed(shown.p.netDiv) }}<Coin /></template></b>
         <span v-if="shown.listed" class="w-num">Stash {{ fmt(shown.p.div) }}<Coin /> · <span :class="$style.listedText">At Faustus {{ fmt(shown.listed) }}<Coin /></span></span>
         <span v-if="shownMap">{{ shownMap.name }}<template v-if="shownMap.gainDiv != null"> · {{ signed(shownMap.gainDiv) }}<Coin /></template></span>
-        <!-- Hovered: a short card. Clicked (pinned): what changed and what sold. -->
+        <!-- Hovered: the totals and what sold. Clicked (pinned): what changed too. -->
         <span v-if="shownSales.count" :class="$style.saleText" class="w-num">Sold {{ shownSales.count }} {{ shownSales.count === 1 ? 'item' : 'items' }}<template v-if="shownSales.div > 0"> · {{ fmt(shownSales.div) }}<Coin /></template></span>
         <span v-if="shown.p.spentDiv" :class="$style.spendText">Purchase: {{ fmt(shown.p.spentDiv) }}<Coin />, not counted as a loss</span>
         <span v-if="shown.p.daily" class="w-dim">That day's last read</span>
-        <template v-if="pinned">
-          <span v-if="shown.p.top.length">
-            <template v-for="(t, i) in shown.p.top" :key="i"><span v-item-tip="tipOf ? topTip(t) : null" :class="$style.item">{{ t }}</span><template v-if="i < shown.p.top.length - 1">, </template></template>
-          </span>
-          <span v-for="(x, i) in shownSales.list" :key="'s' + i" :class="$style.saleText"><span v-item-tip="x.tip ?? null" :class="$style.item">Sold {{ x.text }}</span></span>
-          <span v-if="shownSales.more" class="w-dim">+{{ shownSales.more }} more sold</span>
-        </template>
-        <span v-else-if="shown.p.top.length || shownSales.count || (!shown.p.daily && shown.p.netDiv != null && spendAction?.(shown.p.at))" class="w-dim">Click for details</span>
+        <!-- What sold shows on hover too (Guy, 2026-11-24). The card ignores the
+             mouse until pinned, so no item tooltip pops over it on hover. -->
+        <span v-for="(x, i) in shownSales.list" :key="'s' + i" :class="$style.soldRow"><span v-item-tip="x.tip ?? null" :class="$style.item">{{ x.text }}</span></span>
+        <span v-if="shownSales.more" class="w-dim">+{{ shownSales.more }} more sold</span>
+        <span v-if="pinned && shown.p.top.length">
+          <template v-for="(t, i) in shown.p.top" :key="i"><span v-item-tip="tipOf ? topTip(t) : null" :class="$style.item">{{ t }}</span><template v-if="i < shown.p.top.length - 1">, </template></template>
+        </span>
+        <span v-else-if="!pinned && (shown.p.top.length || (!shown.p.daily && shown.p.netDiv != null && spendAction?.(shown.p.at)))" class="w-dim">Click for what changed</span>
         <!-- Purchases (spend.ts): mark a losing refresh as one, with how much,
              or say a purchase wasn't one. -->
         <div v-if="pinAction" :class="$style.spendBar">
@@ -266,7 +266,7 @@ const mapCols = computed(() => {
 })
 const bestMap = computed(() => mapCols.value.find(m => m.best) ?? null)
 const shownMap = computed(() => shown.value && props.maps?.length && props.mode === 'total' ? mapOf(props.maps, shown.value.p.at) : null)
-// A clicked point's card names this many sales, then "+N more sold".
+// The card names this many sales, dearest first, then "+N more sold".
 const SOLD_LIST = 6
 const shownSales = computed(() => {
   const p = shown.value?.p
@@ -274,7 +274,7 @@ const shownSales = computed(() => {
   const i = props.series.findIndex(q => q.at === p.at)
   // The first point counts only sales at its own time, not the whole league before it.
   const from = i > 0 ? props.series[i - 1].at : p.at - 1
-  const list = props.sales.filter(x => x.at > from && x.at <= p.at)
+  const list = props.sales.filter(x => x.at > from && x.at <= p.at).sort((a, b) => (b.div ?? -1) - (a.div ?? -1))
   return { list: list.slice(0, SOLD_LIST), more: Math.max(0, list.length - SOLD_LIST), count: list.length, div: list.reduce((n, x) => n + (x.div ?? 0), 0) }
 })
 
@@ -345,7 +345,8 @@ function when (at: number) {
 .pinned { pointer-events: auto; border-color: var(--w-gold); }
 /* Below the point, as wide as the chart: never past the dock card's sides. */
 .wide { left: 0 !important; right: 0; width: auto; max-width: none; transform: translate(0, 12px) !important; }
-.item { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
+.pinned .item { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
+.soldRow { padding-left: 8px; }
 .chart { cursor: pointer; }
 .above { --ty: calc(-100% - 10px); }
 .below { --ty: 12px; }
