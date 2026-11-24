@@ -271,7 +271,7 @@ import '@/web/woke/price-insight/price-table.css'
 import { useCheckLog } from '@/web/woke/price-insight/useCheckLog'
 import { travelState, travelToHideout, travelNote } from '@/web/woke/hideout-travel/travel'
 import { isBlankRareSearch, ninjaFitsSearch, skipsTopMods, socketColoursOn } from '@/web/woke/price-insight/search-scope'
-import { activeSkipKeys, skippedBy, valdoHidden } from '@/web/woke/valdo/skips'
+import { activeSkipKeys, valdoHides, valdoHidden, valdoNeed } from '@/web/woke/valdo/skips'
 
 // woke: the drivers load with the first price check, not at startup; results take longer.
 const loadDrivers = () => import('@/web/woke/price-insight/PriceDrivers.vue')
@@ -595,8 +595,13 @@ export default defineComponent({
     // woke: improved view reads the same listings, nothing extra is requested
     // woke: tighter ranges hide what no longer fits; the verdict reads what's left.
     // woke: a Valdo map hides listings with a mod the build skips (valdo/skips.ts).
-    const valdoSkips = computed(() => props.item.mapCompletionReward ? activeSkipKeys() : null)
-    const valdoSkipped = (listing: PricingResult) => !!valdoSkips.value?.size && skippedBy(listing.listedItem, valdoSkips.value) != null
+    const valdoSkips = computed(() => {
+      if (!props.item.mapCompletionReward) return null
+      const skip = activeSkipKeys()
+      const need = valdoNeed.value
+      return { skip, need, size: skip.size + need.size }
+    })
+    const valdoSkipped = (listing: PricingResult) => !!valdoSkips.value?.size && valdoHides(listing.listedItem, valdoSkips.value.skip, valdoSkips.value.need)
     const fits = (listing: PricingResult) => (!props.narrow || props.narrow.fits(listing.listedItem, props.item.category)) && !valdoSkipped(listing)
     const filtering = computed(() => props.narrow != null || !!valdoSkips.value?.size)
     const fitResults = computed(() => filtering.value ? groupedResults.value.filter(fits) : groupedResults.value)

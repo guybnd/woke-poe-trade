@@ -1,25 +1,20 @@
 <template>
-  <!-- A Valdo map (Valdo's Puzzle Box): Void and Reward first, as you'd pick
-       them on the trade site (Guy, 2026-11-21). Its mods are fixed, and the
-       trade site searches only the Void one, so the rest are a folded list. -->
+  <!-- A Valdo map (Valdo's Puzzle Box), laid out like the map strip (MapModStrip.vue, Guy's pick A):
+       Trade search on top with what's skipped, the Reward, then one list of the map's mods, each
+       Any / Has / Not. The trade site searches only the Void mod; the rest filter the listings
+       already loaded (skips.ts), so nothing is searched twice. A Not is saved on the Map mods
+       profile, so each build profile keeps its own; a Has is for this price check only. -->
   <section :class="$style.zone" data-valdo-strip>
-    <div :class="$style.row">
+    <button type="button" :class="$style.row" :aria-expanded="open" data-valdo-mods-toggle @click="open = !open">
       <span :class="$style.title">Trade search</span>
       <span class="flex-1" />
-      <WInfo text="Void and Reward go into this price check's search. Nothing is searched until you press Search. The trade site can't search the other mods: mark one Skip and listings with it are hidden from the results." />
-    </div>
-    <div v-if="voidFilter" :class="$style.row" data-valdo-void>
-      <span :class="$style.label">Void</span>
-      <span :class="$style.seg" role="radiogroup" aria-label="Search by the Void mod">
-        <button v-for="opt in VOID_STATES" :key="opt" type="button" role="radio" :aria-checked="voidState === opt"
-          :class="voidState === opt && $style[`on_${opt}`]" :data-state="opt" :title="VOID_TITLE[opt]"
-          @click="setVoid(opt)">{{ VOID_LABEL[opt] }}</button>
-      </span>
-      <span class="w-dim text-xs w-trunc">{{ hasVoid ? 'This map sends you to the Void' : 'This map has no Void mod' }}</span>
-    </div>
-    <div v-if="reward" :class="$style.row" data-valdo-reward>
-      <span :class="$style.label">Reward</span>
-      <button type="button" :class="[$style.pick, !reward.disabled && $style.pickOn]" :aria-expanded="picking"
+      <span v-if="headline" :class="$style.headline" class="w-trunc" data-valdo-headline>{{ headline }}</span>
+      <WInfo text="Void and Reward go into this price check's search; nothing is searched until you press Search. The trade site can't search a Valdo map's other mods, so their Has and Not filter the listings already loaded. Not is remembered on your Map mods profile, and its red dots are the mods that profile says you can't run." />
+      <i class="fas w-dim text-xs" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
+    </button>
+    <div v-if="reward" :class="$style.line" data-valdo-reward>
+      <span class="w-dim text-xs" :class="$style.label">Reward</span>
+      <button type="button" :class="[$style.tool, !reward.disabled && $style.toolOn]" :aria-expanded="picking"
         title="Search Valdo maps with another reward" data-valdo-reward-pick @click="togglePicker">
         {{ reward.disabled ? 'Any reward' : `Foil ${reward.name}` }}
         <i class="fas fa-chevron-down text-xs w-dim" />
@@ -36,34 +31,25 @@
       </button>
       <span v-if="query && !matches.length" class="w-dim text-xs">No unique matches "{{ query }}"</span>
     </div>
-    <!-- Skips: listings with one of these are hidden below (skips.ts). Saved on the Map mods profile. -->
-    <div v-if="profile && skips.length" :class="$style.row" data-valdo-skips>
-      <span :class="$style.label">Skip</span>
-      <span :class="$style.chips">
-      <button v-for="s in skips" :key="s.key" type="button" :class="[$style.skip, s.auto && $style.skipAuto]" :data-valdo-skip="s.label"
-        :title="`${s.label}\n${s.auto ? 'From your Map mods profile (can\'t run). ' : ''}Click to stop skipping it.`" @click="unskip(s)">
-        {{ s.label }} <i class="fas fa-times text-xs" />
-      </button>
-      <span v-if="hiddenNote" class="w-dim text-xs" data-valdo-hidden>{{ hiddenNote }}</span>
-      </span>
+    <div v-if="open && mods.length" :class="$style.list" data-valdo-mods>
+      <div v-for="(m, i) in mods" :key="i" :class="[$style.mod, $style[stateOf(m)]]" :data-valdo-mod="m.split('\n')[0]">
+        <span :class="[$style.dot, buildSkips(m) && $style.deadly]" :title="buildSkips(m) ? 'Your Map mods profile: can\'t run' : undefined" />
+        <span :class="$style.text" :title="m">{{ m.split('\n')[0] }}</span>
+        <span v-if="m === VOID_TEXT ? !!voidFilter : canSkip" :class="$style.seg" role="radiogroup" :aria-label="`Search ${m.split('\n')[0]}`">
+          <button v-for="opt in STATES" :key="opt" type="button" role="radio" :aria-checked="stateOf(m) === opt"
+            :class="stateOf(m) === opt && $style[`on_${opt}`]" :data-state="opt" :title="stateTitle(m, opt)"
+            @click="setState(m, opt)">{{ STATE_LABEL[opt] }}</button>
+        </span>
+      </div>
+      <div v-if="elsewhere.length" :class="$style.also" :title="elsewhere.map(s => s.label).join('\n')" data-valdo-also>
+        Also Not, from your profile: {{ elsewhere.map(s => s.label).join(' · ') }}
+      </div>
     </div>
-    <button v-if="mods.length" type="button" :class="$style.row" class="w-dim text-xs" :aria-expanded="open" data-valdo-mods-toggle @click="open = !open">
-      {{ modCount }} Valdo {{ modCount === 1 ? 'mod' : 'mods' }}
-      <i class="fas" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
-    </button>
-    <ul v-if="open" :class="$style.list" data-valdo-mods>
-      <li v-for="(m, i) in mods" :key="i" :class="[$style.mod, m === VOID_TEXT && $style.void]">
-        <span :class="$style.modText">{{ m }}</span>
-        <button v-if="m !== VOID_TEXT && canSkip" type="button" :class="[$style.toggle, skipped(m) && $style.toggleOn]"
-          :aria-pressed="skipped(m)" :title="skipped(m) ? 'Show listings with this mod again' : 'Hide listings with this mod: your build can\'t run it'"
-          data-valdo-skip-toggle @click="toggleSkip(m)">{{ skipped(m) ? 'Skipped' : 'Skip' }}</button>
-      </li>
-    </ul>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { WInfo } from '../ui'
 import { useFold } from '../ui/fold'
 import { CLIENT_STRINGS as _$, ITEMS_ITERATOR } from '@/assets/data'
@@ -75,28 +61,32 @@ import { isModuleOn } from '../modules'
 import type { FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
 import { ensureMapModsConfig } from '../map-mods/check'
 import { activeProfile } from '../map-mods/widget'
-import { isSkipped, profileSkips, setSkipped, valdoHidden, valdoProfile, VOID_TEXT } from './skips'
+import { isSkipped, profileSkips, setSkipped, skipKey, valdoHidden, valdoNeed, valdoProfile, VOID_TEXT } from './skips'
 import type { SkipEntry } from './skips'
 
 const props = defineProps<{ item: ParsedItem, stats: FilterOrGroup[], filters: ItemFilters }>()
 
-type VoidState = 'any' | 'has' | 'not'
-const VOID_STATES: VoidState[] = ['any', 'has', 'not']
-const VOID_LABEL: Record<VoidState, string> = { any: 'Any', has: 'Void', not: 'No void' }
-const VOID_TITLE: Record<VoidState, string> = {
-  any: 'Trade search finds Valdo maps with or without the Void mod',
-  has: 'Trade search finds only Valdo maps that send you to the Void',
-  not: 'Trade search finds only Valdo maps without the Void mod'
+type ModState = 'any' | 'has' | 'not'
+const STATES: ModState[] = ['any', 'has', 'not']
+const STATE_LABEL: Record<ModState, string> = { any: 'Any', has: 'Has', not: 'Not' }
+function stateTitle (m: string, opt: ModState): string {
+  if (m === VOID_TEXT) {
+    return opt === 'any' ? 'Trade search finds Valdo maps with or without the Void mod'
+      : opt === 'has' ? 'Trade search finds only Valdo maps that send you to the Void'
+        : 'Trade search finds only Valdo maps without the Void mod'
+  }
+  return opt === 'any' ? 'Show listings with or without this mod'
+    : opt === 'has' ? 'Show only the loaded listings with this mod (this price check only)'
+      : 'Hide the loaded listings with this mod. Remembered on your Map mods profile'
 }
 
 // The one Void filter on every Valdo map (pseudo/maps.ts valdoBadMods).
 const voidFilter = computed(() => props.stats.find((s): s is StatFilter => !s.group && !!s.valdoVoid) ?? null)
-const hasVoid = computed(() => props.item.statsByType.some(c => c.stat.ref === VOID_TEXT))
-const voidState = computed<VoidState>(() => {
+const voidState = computed<ModState>(() => {
   const f = voidFilter.value
   return !f || f.disabled ? 'any' : f.not ? 'not' : 'has'
 })
-function setVoid (state: VoidState) {
+function setVoid (state: ModState) {
   const f = voidFilter.value
   if (!f) return
   f.disabled = state === 'any'
@@ -109,7 +99,8 @@ const own = computed(() => props.item.mapCompletionReward!)
 const picking = ref(false)
 const query = ref('')
 const input = shallowRef<HTMLInputElement | null>(null)
-watch(() => props.item, () => { picking.value = false; query.value = '' })
+watch(() => props.item, () => { picking.value = false; query.value = ''; valdoNeed.value = new Set() })
+onBeforeUnmount(() => { valdoNeed.value = new Set() })
 
 function togglePicker () {
   picking.value = !picking.value
@@ -151,10 +142,8 @@ function pickFirst () {
   if (matches.value.length) pick(matches.value[0])
 }
 
-// A mod can take two lines ("less Damage per Equipped Item" and its minions line).
-const modCount = computed(() => props.item.newMods.filter(m => m.info.type === ModifierType.Explicit).length || mods.value.length)
 // The map's mods as the game lists them, Void first.
-const open = useFold('valdo-mods')
+const open = useFold('valdo-list', true)
 const mods = computed(() => {
   const known = props.item.statsByType
     .filter(c => c.type === ModifierType.Explicit)
@@ -171,29 +160,52 @@ const mods = computed(() => {
   return all.sort((a, b) => Number(b === VOID_TEXT) - Number(a === VOID_TEXT))
 })
 
-// Skips live on the active Map mods profile: one list per build.
+// Not lives on the active Map mods profile: one list per build.
 const profile = computed(() => valdoProfile())
 const skips = computed<SkipEntry[]>(() => profile.value ? profileSkips(profile.value) : [])
-// Skipping works while the Map mods module is on (the first skip sets it up).
+// Skipping works while the Map mods module is on (the first Not sets it up).
 const canSkip = computed(() => isModuleOn(AppConfig(), 'map-mods'))
-const skipped = (m: string) => !!profile.value && isSkipped(profile.value, m)
-function toggleSkip (m: string) {
+const autoKeys = computed(() => new Set(skips.value.filter(s => s.auto).map(s => s.key)))
+const buildSkips = (m: string) => m !== VOID_TEXT && autoKeys.value.has(skipKey(m))
+
+function stateOf (m: string): ModState {
+  if (m === VOID_TEXT) return voidState.value
+  if (profile.value && isSkipped(profile.value, m)) return 'not'
+  return valdoNeed.value.has(skipKey(m)) ? 'has' : 'any'
+}
+function setState (m: string, state: ModState) {
+  if (m === VOID_TEXT) { setVoid(state); return }
+  const key = skipKey(m)
+  const need = new Set(valdoNeed.value)
+  if (state === 'has') need.add(key)
+  else need.delete(key)
+  valdoNeed.value = need
   const w = ensureMapModsConfig()
   if (!w) return
   const p = activeProfile(w)
-  setSkipped(p, m, !isSkipped(p, m))
+  if (isSkipped(p, m) !== (state === 'not')) setSkipped(p, m, state === 'not')
 }
-function unskip (s: SkipEntry) {
-  if (profile.value) setSkipped(profile.value, s.label, false)
-}
-const hiddenNote = computed(() => {
+
+// The top line: what's set beyond Any, and what it hid.
+const headline = computed(() => {
+  const not = mods.value.filter(m => m !== VOID_TEXT && stateOf(m) === 'not').length
+  const has = mods.value.filter(m => m !== VOID_TEXT && stateOf(m) === 'has').length
   const h = valdoHidden.value
-  if (!h || !h.loaded) return ''
-  return h.hidden ? `${h.hidden} of ${h.loaded} listings hidden` : 'None of the listings hidden'
+  return [
+    not ? `${not} Not` : '',
+    has ? `${has} Has` : '',
+    h && h.hidden ? `${h.hidden} of ${h.loaded} listings hidden` : ''
+  ].filter(Boolean).join(' · ')
+})
+// The build's other Not mods, not on this map.
+const elsewhere = computed(() => {
+  const here = new Set(mods.value.map(m => skipKey(m)))
+  return skips.value.filter(s => !here.has(s.key))
 })
 </script>
 
 <style module>
+/* As the map strip's (MapModStrip.vue), so the two read as one design. */
 .zone {
   display: flex;
   flex-direction: column;
@@ -208,27 +220,22 @@ const hiddenNote = computed(() => {
 }
 .title { flex: none; color: var(--w-gold); font-family: var(--w-caps-face); font-size: var(--w-fs-sm); }
 .row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; min-width: 0; }
-.label { flex: none; width: 52px; color: var(--w-dim); font-size: var(--w-fs-sm); }
-.seg { flex: none; display: inline-flex; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); overflow: hidden; }
-.seg button { padding: 0 8px; font-size: var(--w-fs-sm); color: var(--w-dim); border-left: 1px solid var(--w-line); }
-.seg button:first-child { border-left: 0; }
-.seg button:hover { background: var(--w-chip-ground); }
-.seg .on_any { background: var(--w-panel-2); color: var(--w-fg); }
-.seg .on_has { background: color-mix(in srgb, var(--w-down) 28%, transparent); color: var(--w-fg); }
-.seg .on_not { background: color-mix(in srgb, var(--w-up) 28%, transparent); color: var(--w-fg); }
-.pick {
+.headline { font-weight: 500; min-width: 0; text-align: right; font-size: var(--w-fs-sm); }
+.line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.label { flex: none; width: 52px; }
+.tool {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: var(--w-fs-sm);
   padding: 0 8px;
-  border-radius: var(--w-r-pill);
+  border-radius: var(--w-r-sm);
   border: 1px solid var(--w-line-strong);
   background: var(--w-panel-2);
   color: var(--w-dim);
 }
-.pick:hover { color: var(--w-fg); }
-.pickOn { color: var(--w-fg); background: var(--w-accent-soft); border-color: var(--w-accent); }
+.tool:hover { color: var(--w-fg); }
+.toolOn { color: var(--w-fg); border-color: var(--w-accent); }
 .link:hover { color: var(--w-fg); text-decoration: underline; }
 .picker { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 4px 60px; }
 .input {
@@ -241,28 +248,19 @@ const hiddenNote = computed(() => {
 }
 .option { text-align: left; font-size: var(--w-fs-sm); padding: 1px 6px; border-radius: var(--w-r-sm); }
 .option:hover { background: var(--w-chip-ground); }
-.list { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); }
-.void { color: var(--w-down); }
-.modText { min-width: 0; white-space: pre-line; }
-.mod { display: flex; align-items: center; gap: 8px; min-width: 0; justify-content: space-between; }
-.toggle { flex: none; padding: 0 8px; font-size: var(--w-fs-xs); border-radius: var(--w-r-pill); border: 1px solid var(--w-line-strong); color: var(--w-dim); }
-.toggle:hover { color: var(--w-fg); }
-.toggleOn { color: var(--w-fg); border-color: var(--w-down); background: color-mix(in srgb, var(--w-down) 22%, transparent); }
-.skip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  max-width: 100%;
-  padding: 0 8px;
-  font-size: var(--w-fs-sm);
-  border-radius: var(--w-r-pill);
-  border: 1px solid var(--w-down);
-  background: color-mix(in srgb, var(--w-down) 18%, transparent);
-  color: var(--w-fg);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; }
-.skipAuto { border-style: dashed; }
+.list { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; border-top: 1px solid var(--w-line); }
+.mod { display: flex; align-items: center; gap: 6px; font-size: var(--w-fs-sm); padding: 1px 0; }
+.text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.has .text { color: var(--w-up); }
+.not .text { color: var(--w-down); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--w-down) 50%, transparent); }
+.dot { flex: none; width: 7px; height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-3); }
+.dot.deadly { background: var(--w-down); }
+.seg { flex: none; display: inline-flex; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); overflow: hidden; }
+.seg button { padding: 0 6px; font-size: var(--w-fs-xs); color: var(--w-dim); border-left: 1px solid var(--w-line); }
+.seg button:first-child { border-left: 0; }
+.seg button:hover { background: var(--w-chip-ground); }
+.seg .on_any { background: var(--w-panel-2); color: var(--w-fg); }
+.seg .on_has { background: color-mix(in srgb, var(--w-up) 28%, transparent); color: var(--w-fg); }
+.seg .on_not { background: color-mix(in srgb, var(--w-down) 28%, transparent); color: var(--w-fg); }
+.also { padding: 2px 0 0 13px; color: var(--w-dim); font-size: var(--w-fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

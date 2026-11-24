@@ -123,5 +123,21 @@ export function activeSkipKeys (): ReadonlySet<string> {
   return new Set(p ? profileSkips(p).map(s => s.key) : [])
 }
 
+/**
+ * Mods set Has on the strip: only listings with every one of them show. For
+ * this price check only (not saved); the strip clears it on a new item.
+ */
+export const valdoNeed = shallowRef<ReadonlySet<string>>(new Set())
+
+/** Whether the listing is hidden: it has a skipped mod, or lacks a needed one. */
+export function valdoHides (item: ListingItem | undefined, skip: ReadonlySet<string>, need: ReadonlySet<string>): boolean {
+  if (!skip.size && !need.size) return false
+  if (!item) return false
+  const keys = new Set(listingKeys(item))
+  for (const k of keys) if (skip.has(k)) return true
+  for (const k of need) if (!keys.has(k)) return true
+  return false
+}
+
 /** What the listings below the strip hid: TradeListing writes it, the strip reads it. */
 export const valdoHidden = shallowRef<{ hidden: number, loaded: number } | null>(null)

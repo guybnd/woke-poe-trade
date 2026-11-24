@@ -22,7 +22,7 @@ export interface NewsItem {
 }
 
 export const NEWS: NewsItem[] = [
-  { id: 'valdo-map-skips', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: on a Valdo map, mark mods you can\'t run Skip and listings with them are hidden' },
+  { id: 'valdo-map-skips', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: on a Valdo map, set a mod Not and listings with it are hidden; remembered per profile' },
   { id: 'price-check-related-upgrades', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: beside a unique, its upgrade, where it drops and the cards that give it, with prices' },
   { id: 'scrying-helper', wmType: 'woke-scrying', name: 'Scrying', note: 'New: which map to scry, ranked by the cards a Scrying Orb adds per map, with the orb\'s price and a Buy link' },
   { id: 'price-check-unique-recipe', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: a recipe part (Lost Unity rings) lists the other parts and what they make, with prices' },
