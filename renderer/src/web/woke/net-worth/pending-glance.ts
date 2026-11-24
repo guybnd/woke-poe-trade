@@ -39,11 +39,14 @@ export function soldOf (firstSeen: Record<string, number>, sales: ReadonlyArray<
 const firstSeenOf = (g: PendingGlance) => Object.fromEntries(g.items.map(([id, at]) => [id, at]))
 
 // How many listings passed the stale line and haven't sold.
-export function staleCount (g: PendingGlance | null, sales: ReadonlyArray<{ id: string, at: number }>, now: number, staleDays = DEFAULT_STALE_DAYS): number {
-  if (!g) return 0
+export function staleIds (g: PendingGlance | null, sales: ReadonlyArray<{ id: string, at: number }>, now: number, staleDays = DEFAULT_STALE_DAYS): string[] {
+  if (!g) return []
   const sold = soldOf(firstSeenOf(g), sales)
   const staleMs = Math.max(1, staleDays) * DAY_MS
-  return g.items.filter(([id, at]) => !sold.has(id) && now - at >= staleMs).length
+  return g.items.filter(([id, at]) => !sold.has(id) && now - at >= staleMs).map(([id]) => id)
+}
+export function staleCount (g: PendingGlance | null, sales: ReadonlyArray<{ id: string, at: number }>, now: number, staleDays = DEFAULT_STALE_DAYS): number {
+  return staleIds(g, sales, now, staleDays).length
 }
 
 // What each listing counts for in the total (pending.ts rowWorth), as the

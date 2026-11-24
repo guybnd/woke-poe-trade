@@ -7,6 +7,7 @@
         <div v-if="staleListed" class="text-xs" data-stale-line style="padding: 6px var(--w-pad) 0;">
           {{ staleListed }} listing{{ staleListed > 1 ? 's' : '' }} unsold for {{ staleDaysShown }}+ days ·
           <button type="button" class="w-accent" style="text-decoration: underline;" @click="showStale">Show</button>
+          <template v-if="staleNew"> · <button type="button" class="w-dim" style="text-decoration: underline;" title="Hide the number on the icon until another listing goes stale" @click="hideStale">Hide</button></template>
         </div>
         <!-- Its data loads the first time the card opens, never at startup. -->
         <NetWorthCard v-if="cardOpen && personalReady" :status="status" :league="leagueId" :rate-window="config.rateWindow ?? '1h'" @window="config.rateWindow = $event" @refresh="refresh" @settings="openSettingsPage(wm, 'Game & league')"
@@ -51,7 +52,7 @@ import type { Glance } from './glance'
 import { isRunGlance, runGlanceKey } from './runs'
 import type { RunGlance } from './runs'
 import type { LedgerPoint } from './ledger'
-import { isListedWorth, isPendingGlance, keptSales, listedGlance, listedOpenStale, listedTotal, listedWorth, listedWorthKey, pendingGlanceKey, staleCount, DEFAULT_STALE_DAYS } from './pending-glance'
+import { isListedWorth, isPendingGlance, keptSales, listedGlance, listedOpenStale, listedTotal, listedWorth, listedWorthKey, pendingGlanceKey, staleIds, DEFAULT_STALE_DAYS } from './pending-glance'
 import { useZone } from '../shared/zone'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { useGoto } from '../tab-bar/goto'
@@ -250,12 +251,23 @@ watch(() => listedGlance.value?.items.length ? listedGlance.value.league : null,
 const salesEvents = MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data }) => {
   if (topic === 'trade-history' && leagueId.value && salesOk(data, leagueId.value)) glanceSales.value = data.sales
 })
-const staleListed = computed(() => {
+const staleList = computed(() => {
   const g = listedGlance.value
-  if (!g || g.league !== leagueId.value) return 0
+  if (!g || g.league !== leagueId.value) return []
   const kept = keptSales.value?.league === g.league ? keptSales.value.sales : null
-  return staleCount(g, kept ?? glanceSales.value, nowMinute.value, props.config.staleDays)
+  return staleIds(g, kept ?? glanceSales.value, nowMinute.value, props.config.staleDays)
 })
+const staleListed = computed(() => staleList.value.length)
+// Hidden from the card: back once a listing that wasn't stale then is.
+const staleNew = computed(() => {
+  const hidden = props.config.staleHidden
+  if (!hidden) return true
+  const seen = new Set(hidden)
+  return staleList.value.some(id => !seen.has(id))
+})
+function hideStale () {
+  props.config.staleHidden = [...staleList.value]
+}
 // On entering your hideout: the listings' quiet refresh (Guy, 2026-11-23).
 const zoneNow = useZone()
 watch(() => zoneNow.live && zoneNow.kind === 'hideout' ? zoneNow.enteredAt : 0, (at) => {
@@ -273,7 +285,7 @@ onUnmounted(() => { salesEvents.abort(); clearTimeout(autoTimer) })
 
 // The stale count only in your hideout, where you can reprice (Guy, 2026-11-24).
 const inHideout = computed(() => zoneNow.kind === 'hideout')
-const badge = computed(() => status.value?.running ? '…' : status.value?.error ? '!' : (inHideout.value && staleListed.value) || null)
+const badge = computed(() => status.value?.running ? '…' : status.value?.error ? '!' : (inHideout.value && staleNew.value && staleListed.value) || null)
 const staleDaysShown = computed(() => Math.max(1, props.config.staleDays ?? DEFAULT_STALE_DAYS))
 function showStale () {
   listedOpenStale.value = true
