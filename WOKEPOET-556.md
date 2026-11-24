@@ -67,6 +67,16 @@ history:
     selfAttested: true
     pin: true
     id: c-2026-11-24t12-37-52-288z
+  - type: comment
+    user: Agent
+    comment: >-
+      Ladder removed in PR 878
+      (https://github.com/guybnd/woke-poe-trade/pull/878, merged 452e444); the
+      gem tooltips stay. Ticket stays In Progress.
+    date: '2026-11-24T12:47:39.512Z'
+    selfAttested: true
+    pin: true
+    id: c-2026-11-24t12-47-39-512z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/864'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
