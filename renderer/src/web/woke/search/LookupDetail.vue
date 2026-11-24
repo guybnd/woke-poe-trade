@@ -13,6 +13,7 @@
           <WIcon v-if="row.item || hasItems(section)" :src="row.item ? rowIcon(row.item.name) : undefined" />
           <span class="w-trunc" :class="row.dim ? 'w-dim' : undefined">{{ row.label }}</span>
         </span>
+        <span v-if="row.note" class="w-dim w-num" :class="$style.note">{{ row.note }}</span>
         <WPrice v-if="row.chaos !== undefined" :bulk="!!row.bulk" :chaos="row.chaos" :divine="divine" />
         <span v-else-if="row.value" :class="[$style.value, row.dim ? 'w-dim' : undefined]">{{ row.value }}</span>
         <button v-if="row.action" class="w-icon-btn" :class="$style.rowAct" :title="row.action.label" :aria-label="row.action.label" @click="$emit('act', row.action)"><i :class="'trade' in row.action ? 'fas fa-search' : 'fas fa-arrow-right'" /></button>
@@ -70,6 +71,7 @@ defineEmits<{ (e: 'act', action: LookupAction): void }>()
 .text { margin: 4px 0; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: var(--w-s3); min-height: var(--w-row-h); border-bottom: 1px solid var(--w-line-soft); }
 .value { text-align: right; min-width: 0; }
+.note { flex: none; margin-left: auto; font-size: var(--w-fs-sm); }
 .rowAct { flex: none; }
 .name { flex: 1 1 auto; display: flex; align-items: center; gap: var(--w-s2); min-width: 0; }
 .table { width: 100%; border-collapse: collapse; margin-top: var(--w-s1); }

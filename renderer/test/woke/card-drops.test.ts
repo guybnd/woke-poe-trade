@@ -1,7 +1,7 @@
 // Where divination cards drop: the data script, the card's facts and the map
 // lookup in Ctrl+Space.
 import { describe, it, expect } from 'vitest'
-import { cardDropFacts, cardPageUrl, cardsInMap, factLine, mapTip, mapsMatching, oneInText } from '@/web/woke/card-drops/card-drops'
+import { cardChanceIn, cardDropFacts, cardPageUrl, cardsInMap, factLine, mapPool, mapTip, mapsByChance, mapsMatching, oneInText, valuePerCardDrop } from '@/web/woke/card-drops/card-drops'
 import type { CardDropData } from '@/web/woke/card-drops/card-drops'
 import { mapCardsLookup } from '@/web/woke/search/lookups/card-drops'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
@@ -88,7 +88,7 @@ describe('Ctrl+Space map lookup', () => {
     const [card] = lookup('burial', ctx)
     expect(card.group).toBe('Div cards by map')
     expect(card.name).toBe('Burial Chambers: 3 cards')
-    expect(card.sub).toBe('Best: The Doctor · 33 c')
+    expect(card.sub).toBe('Best: The Doctor · 33 c · about 2.2 c per card')
     const rows = card.sections[0].rows!
     expect(rows.map(r => r.label)).toEqual(['The Doctor', 'The Summoner', 'The Incantation'])
     expect(rows[0].item).toEqual({ name: 'The Doctor', type: 'DivinationCard' })
@@ -138,5 +138,46 @@ describe('build-card-drops', () => {
     expect(sourceText({ type: 'Map Boss', id: 'Rose', kind: 'source' }, acts)).toBe('Rose (Map Boss)')
     expect(sourceText({ type: 'Chest', id: 'Delve chest', kind: 'source' }, acts)).toBe('Delve chest')
     expect(sourceText({ type: 'Maps Only', id: 'Omniphobia, Fear Manifest (maps only)', kind: 'source' }, acts)).toBe('Omniphobia, Fear Manifest (maps only)')
+  })
+})
+
+// Guy's pick (veteran review, 2026-11-24): the chance a card drop in a map is
+// the card, from drop weights, and what a card drop there is worth.
+describe('card chance per map', () => {
+  it('counts only the map\'s own weighted cards', () => {
+    // Burial Chambers: The Doctor and The Summoner. The Incantation has no
+    // weight, Birth of the Three no longer drops.
+    expect(mapPool(DATA, 'Burial Chambers Map').cards.map(c => c.name).sort()).toEqual(['The Doctor', 'The Summoner'])
+    // House of Mirrors is tied to no map, so it's in no map's list.
+    expect(mapPool(DATA, 'Pit of the Chimera Map').cards).toEqual([])
+  })
+  it('gives 1 in N card drops', () => {
+    // 1 + 120689 / 900 = 135.1
+    expect(cardChanceIn(DATA, 'The Doctor', 'Burial Chambers Map')).toBe(135)
+    expect(cardChanceIn(DATA, 'The Summoner', 'Burial Chambers Map')).toBe(1)
+    expect(cardChanceIn(DATA, 'The Doctor', 'Waste Pool Map')).toBe(1)
+    expect(cardChanceIn(DATA, 'The Incantation', 'Burial Chambers Map')).toBeNull()
+    expect(cardChanceIn(DATA, 'The Doctor', 'Fields Map')).toBeNull()
+  })
+  it('ranks a card\'s maps likeliest first', () => {
+    const f = cardDropFacts(DATA, 'The Doctor')!
+    expect(mapsByChance(DATA, 'The Doctor', f.maps).map(m => [m.label, m.oneIn])).toEqual([['Waste Pool', 1], ['Burial Chambers', 135]])
+  })
+  it('prices a card drop in a map as the weighted average, unpriced cards as 0', () => {
+    const v = valuePerCardDrop(DATA, 'Burial Chambers Map', n => PRICES[n] ?? null)!
+    const wd = 1 / 120689
+    const ws = 1 / 900
+    expect(v).toBeCloseTo((33 * wd + 2 * ws) / (wd + ws), 6)
+    expect(valuePerCardDrop(DATA, 'Pit of the Chimera Map', () => null)).toBeNull()
+  })
+  it('puts the chance and the average on the map\'s tooltip and Ctrl+Space card', () => {
+    const tip = mapTip(DATA, 'Burial Chambers Map', n => PRICES[n] ?? null, c => `${c.toFixed(1)}c`)
+    const text = JSON.stringify(tip)
+    expect(text).toContain('1 in 135')
+    expect(text).toContain('per card from this map')
+    const card = mapCardsLookup(DATA)('burial chambers', ctx)[0]
+    const doctor = card.sections[0].rows!.find(r => r.label === 'The Doctor')!
+    expect(doctor.note).toBe('1 in 135')
+    expect(card.sub).toContain('per card')
   })
 })
