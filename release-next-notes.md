@@ -153,4 +153,3 @@
 - Map price check: a Base map button at the start of the Trade search chips unticks every number and mod in one click, to search the plain map. Click it again to bring them back.
 - Map price check: Base map keeps the map's influence (Originator, Elder, Shaper, a guardian, a conqueror's Citadel) in the search, since that is the base map.
 - Net worth Listed tab: with a chip picked (Maps, Stale, Overpriced...), the big number shows that chip's asking total, count and "worth about", not every listing's.
-- Net worth Listed tab: magic and rare maps listed far over poe.ninja's plain-base price (a T16 at 2c) show no suggestion, since their mods set the price. 3.30's "Map (Tier 16)" bases are now known as maps everywhere in Net worth.

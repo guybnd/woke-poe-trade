@@ -258,7 +258,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await listedRows.filter({ hasText: 'Headhunter' }).getByText('Headhunter', { exact: true }).hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
     await overlay.page.mouse.move(0, 0)
-    // A type chip: the big number is that type's total.
+    // A chip: the head names it and totals its rows (all three are uniques here).
     const head = panel.locator('[data-listed] [data-listed-total]')
     const allAsk = await head.innerText()
     await panel.locator('[data-listed]').getByText(/^Uniques 3$/).click()

@@ -342,8 +342,7 @@ export function gemVariant (item: StashItemLike, exactLevel = false): string {
 
 // A magic or rare map: priced by its base (prices.ts), so counted by it.
 export function isRolledMap (item: Pick<StashItemLike, 'frame' | 'mapTier' | 'baseType'>): boolean {
-  // 3.30 maps' base reads "Map (Tier 16)".
-  return (item.frame === 1 || item.frame === 2) && (!!item.mapTier || /\bMap( \(Tier \d+\))?$/.test(item.baseType))
+  return (item.frame === 1 || item.frame === 2) && (!!item.mapTier || /\bMap$/.test(item.baseType))
 }
 
 // A rolled map's base as poe.ninja names it: blighted ones keep "Blighted"

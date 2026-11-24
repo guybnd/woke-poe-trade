@@ -108,19 +108,3 @@ describe('Ctrl+Space: listed', () => {
     expect(listedLookup(null, null)('listed', ctx)).toEqual([])
   })
 })
-
-describe('rolled maps at Faustus', () => {
-  it('get no poe.ninja suggestion when listed far over the plain base', () => {
-    // 3.30: a rare T16 lists as "Map (Tier 16)"; poe.ninja prices that base at 2c.
-    const map = item('m', T0 - H, 300, 'chaos', { name: 'Fate Portent', typeLine: 'Map (Tier 16)', baseType: 'Map (Tier 16)', frameType: 2 })
-    const cheap = item('c', T0 - H, 3, 'chaos', { name: 'Dark Toil', typeLine: 'Map (Tier 16)', baseType: 'Map (Tier 16)', frameType: 2 })
-    const doc = mergeRead(null, 'L', { at: T0, listings: [map, cheap] })
-    const rows = pendingRows(doc, [], RATES, () => ({ chaos: 2 }), T0)
-    const of = (id: string) => rows.find(r => r.item.id === id)!
-    expect(of('m').ninja).toBeNull()
-    expect(of('m').confidence).toBeNull()
-    // Near the base price, it's compared as before.
-    expect(of('c').ninja).toBe(2)
-    expect(pendingTotals(rows).worthChaos).toBe(300 + 2)
-  })
-})
