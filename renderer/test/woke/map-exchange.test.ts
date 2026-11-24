@@ -88,3 +88,23 @@ describe('the bulk exchange entry of a map', () => {
     expect(item.info.tradeTag).toBeUndefined()
   })
 })
+
+describe('a bulk seller whisper', () => {
+  it('fills the trade site template for the lots asked', async () => {
+    const { bulkWhisper } = await import('@/web/price-check/trade/pathofexile-bulk')
+    const row = {
+      id: 'x',
+      relativeDate: '',
+      exchangeAmount: 5,
+      itemAmount: 1,
+      stock: 36,
+      accountStatus: 'online' as const,
+      isMine: false,
+      accountName: 'a#1',
+      ign: 'Seller',
+      whisper: { text: "@Seller Hi, I'd like to buy your {0} for my {1} in Covens.", item: '{0} Map (Tier 16) (Memory-Influenced)', pay: '{0} Chaos Orb' }
+    }
+    expect(bulkWhisper(row, 10)).toBe("@Seller Hi, I'd like to buy your 10 Map (Tier 16) (Memory-Influenced) for my 50 Chaos Orb in Covens.")
+    expect(bulkWhisper({ ...row, whisper: undefined }, 1)).toBeNull()
+  })
+})

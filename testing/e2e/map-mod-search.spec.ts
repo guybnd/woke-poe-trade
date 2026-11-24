@@ -131,7 +131,7 @@ test('map: every number is a chip filter, typed min goes into the search', async
 // WOKEPOET-523: Elder (and Shaper) maps list cheap and crowd a search for
 // Originator maps, so No Elder starts on. Exchange searches the map's bulk
 // exchange entry, one seller per row with their stock, only on the click.
-test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back', async ({ overlay }) => {
+test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back', async ({ overlay, fakeApp }) => {
   const searches: Query[] = []
   const wants: string[][] = []
   await overlay.page.route('**/api/trade/search/**', (route) => {
@@ -144,8 +144,8 @@ test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back'
     listing: {
       indexed: new Date().toISOString(),
       account: { name: `${id}#1`, lastCharacterName: `${id}c`, online: { league: 'Testleague' } },
-      offers: [{ exchange: { currency: 'chaos', amount, whisper: '' }, item: { currency: 'zana-map-tier-16', amount: 1, stock, id, whisper: '' } }],
-      whisper: ''
+      offers: [{ exchange: { currency: 'chaos', amount, whisper: '{0} Chaos Orb' }, item: { currency: 'zana-map-tier-16', amount: 1, stock, id, whisper: '{0} Map (Tier 16) (Memory-Influenced)' } }],
+      whisper: `@${id}c Hi, I'd like to buy your {0} for my {1} in Testleague.`
     }
   })
   await overlay.page.route('**/api/trade/exchange/**', (route) => {
@@ -193,6 +193,18 @@ test('map: No Elder starts on; Exchange lists the bulk exchange entry, and back'
   await expect(panel.getByText('1400', { exact: true }).first()).toBeVisible()
   await expect(chip).toHaveAttribute('aria-pressed', 'true')
   expect(searches.length).toBe(2)
+  // Faustus's Currency Exchange doesn't trade maps: no banner saying it does.
+  await expect(panel.getByText(/Currency Exchange/)).toHaveCount(0)
+  // A click on a seller whispers them for the count in Buy (WOKEPOET-523).
+  await panel.locator('[data-bulk-buy]').fill('10')
+  const big = panel.locator('[data-bulk-whisper]').filter({ hasText: '1400' })
+  await expect(big).toHaveAttribute('title', /Click to whisper: @s2c .*10 Map/)
+  await big.click()
+  const text = "@s2c Hi, I'd like to buy your 10 Map (Tier 16) (Memory-Influenced) for my 600 Chaos Orb in Testleague."
+  await expect.poll(() => fakeApp.received.some(e => e.name === 'CLIENT->MAIN::user-action' &&
+    (e.payload as { action?: string, text?: string }).action === 'paste-in-chat' &&
+    (e.payload as { text?: string }).text === text)).toBe(true)
+  await expect(panel.locator('[data-bulk-whispered]')).toHaveText('Whispered s2c')
   await overlay.snap('map exchange sellers')
 
   // Back to the listings: the same trade search again (from the cache, as it's unchanged).
