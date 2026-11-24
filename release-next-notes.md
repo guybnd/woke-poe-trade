@@ -138,4 +138,4 @@
 - Ctrl+Space: the "Listed …" and "Sold …" results have the item hover. What's new: Show me on Campaign or Session story opens its own Settings page. Reopening search with the same text starts with the groups folded again. Hovering a tool in All tools clears only the What's new line it shows, so its other new lines stay in the dock.
 - Item tooltips: the first listing tooltip in a price check no longer runs off the bottom of the screen. It was placed before its mod lines loaded; it's placed again once they do.
 - Map price check: a Base map button at the start of the Trade search chips unticks every number and mod in one click, to search the plain map. Click it again to bring them back.
-- Map price check: Base map keeps the map's influence (Originator, Elder, Shaper, a guardian) in the search, since that is the base map.
+- Map price check: Base map keeps the map's influence (Originator, Elder, Shaper, a guardian, a conqueror's Citadel) in the search, since that is the base map.
