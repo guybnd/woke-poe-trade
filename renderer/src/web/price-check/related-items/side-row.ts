@@ -16,6 +16,9 @@ export interface SideRow {
   ref: ItemMenuRef
   info: BaseType
   clickable: boolean
+  // woke: a recipe part's count, and the caption above a recipe's result row.
+  qty?: number
+  lead?: string
 }
 
 const KIND_OF_NS: Partial<Record<BaseType['namespace'], Partial<ItemMenuRef>>> = {
