@@ -1,11 +1,11 @@
 <template>
-  <DockItem id="whats-new" icon="fas fa-gift" :art="null" title="What's new" :show="lines.length > 0"
+  <DockItem id="whats-new" icon="fas fa-gift" :art="gameIcon(DOCK_ART_ITEMS.whatsNew)" title="What's new" :show="lines.length > 0"
     :badge="lines.length" :wake="lines.length" card-width="24rem" pinnable :menu="dockMenu">
     <template #card>
       <div :class="$style.body">
         <div v-for="n in lines" :key="n.id" :class="$style.line" data-whats-new-line>
           <div :class="$style.text">
-            <span :class="$style.name" data-no-item-tip="A tool's name, not an item">{{ n.name }}</span>
+            <span :class="$style.name" data-no-item-tip="A tool's name, not an item"><ToolIcon :art="artFor(n.wmType)" :icon="iconFor(n.wmType)" :class="$style.toolIcon" />{{ n.name }}</span>
             <span>{{ sentence(n.note) }}</span>
           </div>
           <w-button size="sm" variant="ghost" data-whats-new-show @click="show(n)">Show me</w-button>
@@ -32,6 +32,10 @@ import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '../modul
 import { markNewsSeen, unseenNews } from '../tab-bar/news'
 import type { NewsItem } from '../tab-bar/news'
 import { WButton } from '../ui'
+import { DOCK_ART_ITEMS, gameIcon } from '../ui/game-icons'
+// Each line's title shows its tool's icon, as All tools and the dock do.
+import ToolIcon from '../tab-bar/ToolIcon.vue'
+import { artFor, iconFor } from '../tab-bar/tools'
 import { personalOn } from '../personal'
 import { requestGoto } from '../tab-bar/goto'
 import DockItem from './DockItem.vue'
@@ -112,6 +116,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [
 .body { display: flex; flex-direction: column; gap: 6px; padding: 6px var(--w-pad) 8px; }
 .line { display: flex; align-items: center; gap: 4px; }
 .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.name { color: var(--w-accent); font-family: var(--w-head); letter-spacing: var(--w-head-track); }
+.toolIcon { --w-icon-md: 16px; --w-fs-lg: var(--w-fs-md); }
+.name { display: flex; align-items: center; gap: 5px; color: var(--w-accent); font-family: var(--w-head); letter-spacing: var(--w-head-track); }
 .foot { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
 </style>

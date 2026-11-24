@@ -32,7 +32,7 @@
     <div v-if="cardOpen" ref="cardEl" data-w-popup :class="[$style.card, placement]"
       :style="{ width: host.props.cardWidth ?? '20rem' }">
       <div :class="$style.cardHead">
-        <i :class="dockIcon(host.props)" class="w-accent" />
+        <ToolIcon :art="dockArt(host.props)" :icon="dockIcon(host.props)" class="w-accent" />
         <span class="w-head-font w-accent w-trunc">{{ host.props.title }}</span>
         <button type="button" :class="$style.pinBtn" class="w-focusable" data-dock-pin
           title="Pin: keep this card on screen while you play, and drag it anywhere" aria-label="Pin this card"
@@ -40,7 +40,7 @@
       </div>
       <SlotOut :entry="host" />
       <template v-for="ex in extras" :key="ex.key">
-        <div :class="$style.extraHead"><i :class="dockIcon(ex.props)" /> {{ ex.props.title }}</div>
+        <div :class="$style.extraHead"><ToolIcon :art="dockArt(ex.props)" :icon="dockIcon(ex.props)" :class="$style.extraIcon" /> {{ ex.props.title }}</div>
         <SlotOut :entry="ex" />
       </template>
       <button v-if="host.props.wmId != null" type="button" :class="$style.open" data-dock-open @click="openFull">
@@ -62,6 +62,8 @@ import { wheelStep } from './wheel'
 import { addPin, isPinned } from '../pins/pins'
 import { clickWhilePlaying } from './click'
 import DockMenu from './DockMenu.vue'
+// The card head shows the icon's own art, as the dock does.
+import ToolIcon from '../tab-bar/ToolIcon.vue'
 
 const props = defineProps<{
   host: DockEntry
@@ -446,6 +448,9 @@ const styles = useCssModule()
   pointer-events: none;
 }
 .extraHead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 4px var(--w-pad) 2px;
   border-top: 1px solid var(--w-line);
   font-size: var(--w-fs-caps);
@@ -454,6 +459,7 @@ const styles = useCssModule()
   color: var(--w-faint);
   font-family: var(--w-caps-face);
 }
+.extraIcon { --w-icon-md: 14px; --w-fs-lg: var(--w-fs-caps); }
 .open { display: block; width: 100%; padding: var(--w-s1) var(--w-pad); text-align: left; font-size: var(--w-fs-sm); color: var(--w-accent); border-top: 1px solid var(--w-line); }
 :global([data-woke-look="game"]) .open { font-family: var(--w-label); font-size: var(--w-fs-md); letter-spacing: 0.03em; color: var(--w-gold); }
 :global([data-woke-look="game"]) .open:hover { color: var(--w-gold-hi); }
