@@ -8,24 +8,35 @@ import { isModuleOn } from '../modules'
 import { useCollectorState, useMarketCollector } from './collector'
 import { latestSnapshots } from './db'
 import { itemKey } from './types'
+import { countedPrices } from './parse'
 import type { PriceItem, Snapshot } from './types'
 
 const usePriceIndexState = createGlobalState(() => {
   const collector = useCollectorState()
   const leagues = useLeagues()
-  const snapshot = shallowRef<Snapshot | null>(null)
+  const raw = shallowRef<Snapshot | null>(null)
 
   let seq = 0
   watch([leagues.selectedId, collector.revision], async ([league]) => {
     const mine = ++seq
-    if (!league) { snapshot.value = null; return }
+    if (!league) { raw.value = null; return }
     let snap: Snapshot | null = null
     try {
       snap = (await latestSnapshots(league, 1))[0] ?? null
     } catch {}
     // A league switch while reading: keep only the newest answer.
-    if (mine === seq) snapshot.value = snap
+    if (mine === seq) raw.value = snap
   }, { immediate: true })
+
+  // Every window reads prices through here: one poe.ninja marked as fake
+  // (market/parse.ts held) counts at its usual price, or not at all when it
+  // has none, so a fake can't price a loot filter tier, a map's cards, a boss
+  // run or a farming session. held.ninja keeps poe.ninja's number for a hover.
+  const snapshot = computed<Snapshot | null>(() => {
+    const snap = raw.value
+    if (!snap || !snap.items.some(i => i.held)) return snap
+    return { ...snap, items: countedPrices(snap.items) }
+  })
 
   const byKey = computed(() => new Map((snapshot.value?.items ?? []).map(i => [itemKey(i), i])))
 
@@ -50,7 +61,8 @@ const usePriceIndexState = createGlobalState(() => {
     return [...starts, ...contains].slice(0, limit)
   }
 
-  return { snapshot, price, search }
+  // `raw`: poe.ninja's prices as they are, fakes marked (Search shows those).
+  return { snapshot, raw, price, search }
 })
 
 // The search boxes touch nothing until one is first opened, so an unused box
@@ -66,7 +78,7 @@ export function holdPricesForSearch (): void {
 }
 export function useSearchSnapshot () {
   return computed(() => searchStarted.value && isModuleOn(AppConfig(), 'market')
-    ? usePriceIndexState().snapshot.value
+    ? usePriceIndexState().raw.value
     : null)
 }
 

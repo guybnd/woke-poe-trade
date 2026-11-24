@@ -16,6 +16,8 @@ import { kindOfName, uniqueModLines } from './item-menu-logic'
 import type { ItemMenuRef, UniqueModLines } from './item-menu-logic'
 import { dataFileUrl, onSharedDataChange } from '../../app/live-data'
 import { usePrice } from '../../shared/price'
+import { heldText } from '../../shared/price-trust'
+import { formatChaos } from '../format'
 import type { TipBaseUnique, TipContent, TipEffect, TipMarket } from './tooltip'
 
 export interface ItemTipRef {
@@ -131,6 +133,8 @@ export function marketFor (ref: ItemTipRef, kind: TipKind): TipMarket | null {
   const found = price.priceOf(ref.name, { ns, variant: ref.variant })
   if (!found) return null
   const market = marketFromRow(found.row, ref)
+  // The tooltip shows poe.ninja's price as it is, and says when it looks fake.
+  if (found.held) market.doubt = heldText(found.held, c => formatChaos(c, price!.divine.value))
   return found.unid ? { ...market, unid: found.unid } : market
 }
 

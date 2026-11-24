@@ -26,7 +26,7 @@
     <!-- Sales (sales.ts): a gold dot on the line where each sold. -->
     <!-- Sales (pick B): a coin each, sized by price; the biggest two named. -->
     <span v-for="(m, i) in saleDots" :key="'d' + i + ':' + m.at" :class="$style.sale" :style="{ left: m.x + '%', top: m.y + '%', width: m.r * 2 + 'px', height: m.r * 2 + 'px' }" />
-    <span v-for="(m, i) in saleLabels" :key="'l' + i + ':' + m.at" v-item-tip="m.tip ?? null" :class="[$style.saleLabel, $style[m.align], { [$style.under]: m.under }]" :style="{ left: m.x + '%', top: m.y + '%', '--r': m.r + 'px' }">{{ m.name }} {{ fmt(m.div!) }}<Coin /></span>
+    <span v-for="(m, i) in saleLabels" :key="'l' + i + ':' + m.at" v-item-tip="m.tip ?? null" :class="[$style.saleLabel, $style[m.align], { [$style.under]: m.under }]" :style="{ left: m.x + '%', top: m.y + '%', '--r': m.r + 'px' }">{{ m.name }}<template v-if="m.count > 1"> +{{ m.count - 1 }}</template> {{ fmt(m.div!) }}<Coin /></span>
     <template v-if="shown">
       <span :class="$style.dot" :style="{ left: shown.x + '%', top: shown.y + '%' }" />
       <!-- Follows the mouse; a click keeps it open (pinned), and then its item
@@ -75,7 +75,7 @@ import { tipPlacement } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { Category } from './valuation'
 import type { SpendMark } from './spend'
-import { coinRadius, labelledSales, mapOf } from './chart-marks'
+import { coinRadius, groupSales, labelledSales, mapOf } from './chart-marks'
 import type { ChartMap, ChartSale } from './chart-marks'
 
 const props = defineProps<{
@@ -193,9 +193,10 @@ const span = computed(() => {
   const s = props.series
   const t0 = s[0]?.at ?? 0
   const t1 = s[s.length - 1]?.at ?? 1
-  const vals = s.map((p, i) => p.div + (props.mode === 'total' ? listedOf(i) : 0))
-  let lo = Math.min(...vals)
-  let hi = Math.max(...vals)
+  // The bottom from the stash line, the top from the band's edge: both stay
+  // inside the chart.
+  let lo = Math.min(...s.map(p => p.div))
+  let hi = Math.max(...s.map((p, i) => p.div + (props.mode === 'total' ? listedOf(i) : 0)))
   // The goal joins the scale when it's within reach of the line.
   if (props.goalDiv && props.goalDiv <= hi * 1.5) hi = Math.max(hi, props.goalDiv)
   if (props.mode === 'category') lo = 0
@@ -241,7 +242,8 @@ const bands = computed(() => {
   })
 })
 
-const goalY = computed(() => props.goalDiv && props.goalDiv <= span.value.hi ? yOf(props.goalDiv) : null)
+// Only while it lies inside the chart (a goal passed long ago would draw under it).
+const goalY = computed(() => props.goalDiv && props.goalDiv <= span.value.hi && props.goalDiv >= span.value.lo ? yOf(props.goalDiv) : null)
 
 const marks = computed(() => props.mode !== 'total'
   ? []
@@ -251,7 +253,8 @@ const marks = computed(() => props.mode !== 'total'
 const saleDots = computed(() => {
   const s = props.series
   if (props.mode !== 'total' || s.length < 2 || !props.sales?.length) return []
-  const shownSales = props.sales.filter(x => x.at >= span.value.t0 && x.at <= span.value.t1)
+  // One coin per slot of time, so 7D and League don't fill with coins.
+  const shownSales = groupSales(props.sales.filter(x => x.at >= span.value.t0 && x.at <= span.value.t1), span.value.t0, span.value.t1)
   const most = Math.max(0, ...shownSales.map(x => x.div ?? 0))
   return shownSales.map(x => {
     // Past the last point (i = -1; the range filter keeps these out): on it.
@@ -333,8 +336,8 @@ function when (at: number) {
 .runStart { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--w-gold); opacity: .7; pointer-events: none; }
 .spend { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--w-info); opacity: .8; pointer-events: none; }
 .spendText { color: var(--w-info); }
-.sale { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, var(--w-fg) 0 15%, var(--w-gold) 45%); box-shadow: 0 0 0 1px var(--w-panel-solid), inset 0 0 0 1px color-mix(in srgb, var(--w-panel-solid) 45%, transparent); transform: translate(-50%, -50%); pointer-events: none; }
-.saleLabel { position: absolute; z-index: 1; display: block; white-space: nowrap; font-size: var(--w-fs-xs); line-height: 1; color: var(--w-fg); text-shadow: 0 1px 2px var(--w-panel-solid), 0 0 3px var(--w-panel-solid); cursor: help; max-width: 48%; --ty: calc(-100% - var(--r) - 3px); }
+.sale { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--w-gold) 55%, var(--w-fg)) 0 18%, var(--w-gold) 50%, color-mix(in srgb, var(--w-gold) 55%, #000) 100%); box-shadow: 0 0 0 1px var(--w-panel-solid), inset 0 0 0 1px color-mix(in srgb, var(--w-panel-solid) 45%, transparent); transform: translate(-50%, -50%); pointer-events: none; }
+.saleLabel { position: absolute; z-index: 1; display: block; white-space: nowrap; font-size: var(--w-fs-xs); line-height: 1; color: var(--w-fg); text-shadow: 0 1px 2px var(--w-panel-solid), 0 0 3px var(--w-panel-solid); cursor: help; max-width: 60%; --ty: calc(-100% - var(--r) - 3px); }
 .saleLabel.under { --ty: calc(var(--r) + 3px); }
 .saleLabel { overflow: hidden; text-overflow: ellipsis; }
 .listed { fill: color-mix(in srgb, var(--w-higher) 24%, transparent); }

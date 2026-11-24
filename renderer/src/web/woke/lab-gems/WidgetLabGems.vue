@@ -113,6 +113,7 @@ import { openItemMenu } from '../ui/tooltip/item-menu'
 import { useLeagues } from '@/web/background/Leagues'
 import { useMarketCollector } from '../market/collector'
 import { latestSnapshots } from '../market/db'
+import { countedSnapshot } from '../market/parse'
 import { usePriceText } from '../shared/price'
 import type { Snapshot } from '../market/types'
 import { GEM_STATES, colorRolls, evByState, gemPrices, pickProfit, pickValue, specificPicks, thinGems, thinInPool, withoutThinGems } from './font'
@@ -163,7 +164,7 @@ async function load () {
   if (!id) { snapshot.value = null; return }
   try {
     const [snap] = await latestSnapshots(id, 1)
-    if (seq === loadSeq) snapshot.value = snap ?? null
+    if (seq === loadSeq) snapshot.value = snap ? countedSnapshot(snap) : null
   } catch {
     if (seq === loadSeq) snapshot.value = null
   }

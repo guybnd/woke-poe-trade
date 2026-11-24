@@ -176,6 +176,8 @@ import { MARKET_TRACKER_TYPE, marketSearchRequest } from '../market/widget'
 import type { MarketTrackerWidget } from '../market/widget'
 import { isThin, itemKey, thinTitle } from '../market/types'
 import { savedStep } from '../price-insight/ninja-trust'
+import { heldText } from '../shared/price-trust'
+import type { HeldPrice } from '../shared/price-trust'
 import { rangeInfo } from '../market/ranges'
 import { savedPriceSeries } from '../market/db'
 import type { CorruptedFilter, PriceItem } from '../market/types'
@@ -311,8 +313,11 @@ type Entry = PriceEntry | ItemEntry | ActionEntry | LookupEntry
 
 const query = shallowRef('')
 // A step of 5x or more over a day or a week ago: maybe a few fake listings.
-const stepOf = (v: { chaos: number, d1?: number, d7?: number }) => savedStep(v.chaos, v.d1, v.d7)
-function stepTitle (v: { chaos: number, d1?: number, d7?: number }) {
+// A price other windows hold (market/parse.ts held) gets the mark too.
+type Stepped = { chaos: number, d1?: number, d7?: number, held?: HeldPrice }
+const stepOf = (v: Stepped) => v.held ? (v.held.chaos ?? 0) : savedStep(v.chaos, v.d1, v.d7)
+function stepTitle (v: Stepped) {
+  if (v.held) return heldText(v.held, c => `${c >= 1 ? Math.round(c * 10) / 10 : c.toPrecision(2)}c`) + ' Check live offers before you trust it.'
   const usual = stepOf(v)
   return usual == null ? '' : `Was ${usual >= 1 ? Math.round(usual * 10) / 10 : usual.toPrecision(2)}c a day or a week ago. A sudden step like this is often a few fake listings: check live offers before you trust it.`
 }
