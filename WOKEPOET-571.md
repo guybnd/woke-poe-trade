@@ -38,6 +38,14 @@ history:
     selfAttested: true
     pin: true
     id: c-2026-11-24t13-57-29-718z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 885 (https://github.com/guybnd/woke-poe-trade/pull/885, merged
+      554a957): map strip + a "+" tile that adds a number the map hasn't got.
+    date: '2026-11-24T14:52:07.187Z'
+    selfAttested: true
+    id: c-2026-11-24t14-52-07-187z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/880'
 ---
 Redesign the price check layout for maps. No PR yet.
