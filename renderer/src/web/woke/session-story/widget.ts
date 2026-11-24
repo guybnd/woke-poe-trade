@@ -28,8 +28,6 @@ export interface SessionStoryWidget extends Widget {
   chipKey?: string | null
   // While in a map: a thin bar at the top with the map, its time so far and tonight's total. Off unless on.
   glance?: boolean
-  // Night cards' per hour counts hideout and town time (Net worth's "Leave out hideout" unticked).
-  nightWithHub?: boolean
   // Where the glance bar sits (its top centre, share of the screen), set by dragging it.
   glancePos?: { x: number, y: number }
 }

@@ -28,11 +28,11 @@
       <div :class="$style.hero" class="w-num">
         <span :title="profitTitle"><span :class="$style.caps">Profit</span><b :class="[$style.big, tone(totals.profitChaos)]">{{ signed(totals.profitChaos) }}<Coin :chaos="!divine" /></b></span>
         <span :title="unit === 'map' ? undefined : 'Per map or boss fight'" data-run-per><span :class="$style.caps">Per {{ unit }}</span><b :class="tone(totals.perMapChaos)">{{ totals.perMapChaos != null ? signed(totals.perMapChaos) : '—' }}</b></span>
-        <span :title="withHub ? 'Per hour of the whole run' : 'Per hour, hideout and away time left out'"><span :class="$style.caps">Per hour</span><b :class="tone(perHour)">{{ perHour != null ? signed(perHour) : '—' }}</b></span>
+        <span :title="perHourTip"><span :class="$style.caps">Per hour</span><b :class="tone(perHour)">{{ perHour != null ? signed(perHour) : '—' }}</b></span>
         <span v-if="totals.faustusChaos" title="Profit plus what's at Faustus or held outside the stash" data-run-total><span :class="$style.caps">With Faustus</span><b :class="tone(totals.totalChaos)">{{ signed(totals.totalChaos) }}</b></span>
         <span v-if="totals.leftOutChaos" title="Long shots you left out. None of it counts" data-run-left-out><span :class="$style.caps">Left out</span><b class="w-dim">{{ amount(totals.leftOutChaos) }}</b></span>
       </div>
-      <RunTimeBar :start-at="shownRun.startAt" :end="timeEnd" :maps="totals.runs" :unit="unit" :with-hub="withHub" @with-hub="setWithHub" @spent="spent = $event" />
+      <RunTimeBar :start-at="shownRun.startAt" :end="timeEnd" :maps="totals.runs" :unit="unit" @spent="spent = $event" />
 
       <div :class="$style.cols">
         <!-- In: what came into the stash, and what you added. -->
@@ -119,7 +119,9 @@ import { tipFor } from './tips'
 import type { TipIndex } from './tips'
 import { span } from './play-time'
 import Coin from './Coin.vue'
-import { countLabel, isMapCostItem, leftOf, lineCost, mapsIn, readPerHour, runTotals, tallyRows, tallyValue, unitOf } from './runs'
+import { countLabel, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, tallyRows, tallyValue, unitOf } from './runs'
+import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
+import { rateTime } from '../shared/rate-time-now'
 import type { CostLine, ManualLine, Run, TallyRow } from './runs'
 import RunRow from './RunRow.vue'
 import RunAdd from './RunAdd.vue'
@@ -233,18 +235,19 @@ const profitTitle = computed(() => {
 
 // ---------- time (Client.txt) and per hour ----------
 const netWorthWidget = () => AppConfig().widgets.find(x => x.wmType === NET_WORTH_TYPE) as NetWorthWidget | undefined
-const withHub = computed(() => netWorthWidget()?.runWithHub !== false)
-function setWithHub (on: boolean) { const w = netWorthWidget(); if (w) w.runWithHub = on }
 const spent = shallowRef<RunTime | null>(null)
 watch(() => shownRun.value?.id, () => { spent.value = null })
 const timeEnd = computed(() => shownRun.value?.stoppedAt ?? props.points[props.points.length - 1]?.at ?? nowMinute.value)
+// Over the time the Per hour setting counts (shared/rate-time.ts), up to the
+// last read or Stop; the clock without Client.txt.
 const perHour = computed(() => {
   const t = totals.value
-  if (!t) return null
-  if (withHub.value || !spent.value) return shownRun.value ? readPerHour(shownRun.value, t, props.points[props.points.length - 1]?.at) : t.perHourChaos
-  const ms = spent.value.ms.map + spent.value.ms.play
-  return ms >= 10 * 60_000 ? t.profitChaos / (ms / 3_600_000) : null
+  const r = shownRun.value
+  if (!t || !r) return null
+  const clock = r.stoppedAt == null ? Math.max(0, (props.points[props.points.length - 1]?.at ?? r.startAt) - r.startAt) : Math.max(0, r.stoppedAt - r.startAt)
+  return runPerHour(t.profitChaos, clock, spent.value?.ms, rateTime())
 })
+const perHourTip = computed(() => spent.value ? `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}` : 'Per hour of the whole run: Client.txt not read')
 const holdKey = computed(() => { const w = netWorthWidget(); return w ? runHotkeyOf(w) : null })
 function removeHeld (id: string, carried: boolean) {
   edit(r => carried ? { ...r, carried: (r.carried ?? []).filter(h => h.id !== id) } : { ...r, held: (r.held ?? []).filter(h => h.id !== id) })

@@ -7,6 +7,8 @@ import { mapItemName, tierText, usualMapMs } from '../../session-story/map-log'
 import type { MapRecord } from '../../session-story/map-log'
 import type { Lookup, LookupRow } from './types'
 import { isSkippedArea } from '../../session-story/skip-areas'
+import { nightRateMs, playedMs } from '../../session-story/night-rate'
+import type { RateTime } from '../../shared/rate-time'
 
 const WORDS = ['tonight', 'last night', 'session story', 'session summary', 'night']
 
@@ -21,17 +23,17 @@ function signed (chaos: number, divine: number | null): string {
 }
 
 // AFK left out, as on the night card.
-const played = (s: NightStory) => s.endedAt - s.startedAt - (s.afkMs ?? 0)
+const played = playedMs
 
-function rows (s: NightStory): LookupRow[] {
+function rows (s: NightStory, time: RateTime): LookupRow[] {
   const out: LookupRow[] = [
     { label: 'Played', value: formatDuration(played(s)) },
     { label: 'Maps', value: String(s.maps.length) }
   ]
   if (s.profitChaos != null) out.push({ label: 'Profit', value: signed(s.profitChaos, s.divine) })
   if (s.best) out.push({ label: 'Best drop', value: `${s.best.name} · ${formatChaos(s.best.chaos, s.divine)}`, item: { name: bestItem(s.best) } })
-  // Hideout and town left out, as the night card does by default.
-  const hours = (played(s) - (s.hubMs ?? 0)) / 3_600_000
+  // The time the Per hour setting counts, as on the night card.
+  const hours = nightRateMs(s, time) / 3_600_000
   if (s.maps.length) out.push({ label: 'Average map', value: formatClock(s.mapMs / s.maps.length) })
   if (hours >= 0.25) out.push({ label: 'Maps per hour', value: (s.maps.length / hours).toFixed(1) })
   for (const l of s.levelUps ?? []) out.push({ label: s.levelUps!.length > 1 ? l.char : 'Level', value: `${l.from} → ${l.to}` })
@@ -43,7 +45,8 @@ function rows (s: NightStory): LookupRow[] {
 }
 
 // `live`: the night still going; `last`: the newest finished one.
-export function sessionStoryLookup (live: NightStory | null, last: NightStory | null): Lookup {
+// `time`: the Per hour setting (shared/rate-time.ts).
+export function sessionStoryLookup (live: NightStory | null, last: NightStory | null, time: RateTime = 'play'): Lookup {
   return (query, ctx) => {
     const s = live ?? last
     if (!s || !wanted(query)) return []
@@ -54,7 +57,7 @@ export function sessionStoryLookup (live: NightStory | null, last: NightStory | 
       name: live ? 'Tonight so far' : `Night of ${when}`,
       sub: `${formatDuration(played(s))} · ${s.maps.length} maps${s.profitChaos != null ? ` · ${signed(s.profitChaos, s.divine)}` : ''}`,
       icon: 'fas fa-moon',
-      sections: [{ rows: rows(s) }],
+      sections: [{ rows: rows(s, time) }],
       // Session analytics holds tonight and Map history: only offered while it's on.
       actions: ctx.tools.has(ANALYTICS_TYPE) ? [{ label: 'Open Session analytics', open: { tool: ANALYTICS_TYPE, id: 'history' } }] : []
     }]

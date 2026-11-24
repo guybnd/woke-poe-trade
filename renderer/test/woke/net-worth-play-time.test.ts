@@ -2,6 +2,7 @@
 // over the last 1, 2 and 3 hours (play-time.ts), and its Ctrl+Space card.
 import { describe, it, expect } from 'vitest'
 import { emptyMarks, feedMarks, playRate, playRates, rateTip, timeIn, trimMarks } from '@/web/woke/net-worth/play-time'
+import { RATE_TIME_WHERE } from '@/web/woke/shared/rate-time'
 import { glanceRates } from '@/web/woke/net-worth/glance'
 import { netWorthLookup } from '@/web/woke/search/lookups/net-worth'
 import type { Glance } from '@/web/woke/net-worth/glance'
@@ -160,7 +161,18 @@ describe('maps and hideout time', () => {
     const r = playRate(points, m.marks, T0, T0 + 45 * MIN, true, m.maps)
     expect(r.playMs).toBe(45 * MIN)
     expect(r.perHour).toBeCloseTo(600)
-    expect(rateTip('1h', r, true, c => `+${c}c`, true)).toBe('Last hour: +450c in 45m of play')
+    expect(rateTip('1h', r, true, c => `+${c}c`, true)).toBe(`Last hour: +450c in 45m of play\n${RATE_TIME_WHERE}`)
+  })
+
+  it('AFK and closed time count only with all time', () => {
+    // 10 min in a map, 15 AFK in it, 5 in the hideout.
+    const afk = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand'), line(10, ': AFK mode is now ON. Autoreply "x"'), line(25, ': AFK mode is now OFF.'), area(25, 'HideoutFoo')])
+    const pts = [{ at: T0, netChaos: null }, { at: T0 + 30 * MIN, netChaos: 300 }]
+    const t = (withHub: boolean, withOff: boolean) => playRate(pts, afk.marks, T0, T0 + 30 * MIN, withHub, afk.maps, withOff)
+    expect(t(false, false).playMs).toBe(10 * MIN)
+    expect(t(true, false).playMs).toBe(15 * MIN)
+    expect(t(true, true).playMs).toBe(30 * MIN)
+    expect(t(true, true).offMs).toBe(15 * MIN)
   })
 })
 
@@ -168,8 +180,14 @@ describe('hover text', () => {
   it('names the unit, the play time and what was left out', () => {
     const r = { perHour: 600, chaos: 300, playMs: 30 * MIN, mapMs: 30 * MIN, otherMs: 0, hubMs: 15 * MIN, offMs: 0, maps: 4, medianMapMs: 7 * MIN }
     const amount = (c: number) => `+${(c / 200).toFixed(1)} d`
-    expect(rateTip('1h', r, true, amount)).toBe('Last hour: +1.5 d in 30m of play. Left out: 15m in hideout and town')
+    expect(rateTip('1h', r, true, amount)).toBe(`Last hour: +1.5 d in 30m of play. Left out: 15m in hideout and town\n${RATE_TIME_WHERE}`)
     expect(rateTip('2h', { ...r, perHour: null }, false, amount)).toBe('Last 2 hours: under 10 min of play. Client.txt not found: hideout time not left out')
+  })
+
+  it('says time, not play, and leaves nothing out when all time counts', () => {
+    const r = { perHour: 600, chaos: 300, playMs: 30 * MIN, mapMs: 20 * MIN, otherMs: 0, hubMs: 5 * MIN, offMs: 5 * MIN, maps: 4, medianMapMs: 7 * MIN }
+    expect(rateTip('1h', r, true, c => `+${c}c`, true, true)).toBe(`Last hour: +300c in 30m of time\n${RATE_TIME_WHERE}`)
+    expect(rateTip('1h', r, true, c => `+${c}c`, true, false)).toBe(`Last hour: +300c in 30m of play. Left out: 5m closed or AFK\n${RATE_TIME_WHERE}`)
   })
 })
 

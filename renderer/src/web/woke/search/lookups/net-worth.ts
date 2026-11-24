@@ -1,7 +1,7 @@
 // Net worth profit per hour of play, from the last stash read's saved glance.
 import { formatDuration } from '../../ui/format'
 import { NET_WORTH_TYPE } from '../../net-worth/widget'
-import type { Glance, GlanceRate } from '../../net-worth/glance'
+import type { Glance, GlanceRate, GlanceRates } from '../../net-worth/glance'
 import type { Lookup, LookupRow } from './types'
 
 const WORDS = ['per hour', 'profit', 'profit per hour', 'net worth', 'income', 'currency per hour', 'divines per hour']
@@ -26,9 +26,12 @@ function amount (chaos: number, divine: number | null): string {
   return div != null ? `${sign}${div.toFixed(1)} div/h` : `${sign}${Math.round(Math.abs(chaos))} c/h`
 }
 
-function sub (r: GlanceRate, fromLog: boolean): string {
-  const parts = [`${formatDuration(r.playMs)} played`]
-  if (fromLog && r.hubMs >= 60_000) parts.push(`${formatDuration(r.hubMs)} hideout left out`)
+// What the read counted (the Per hour setting then; older glances left
+// hideout, AFK and closed out).
+function sub (r: GlanceRate, rates: GlanceRates): string {
+  const parts = [`${formatDuration(r.playMs)} ${rates.withOff ? 'counted' : 'played'}`]
+  if (rates.fromLog && !rates.withHub && r.hubMs >= 60_000) parts.push(`${formatDuration(r.hubMs)} hideout left out`)
+  if (rates.fromLog && !rates.withOff && r.offMs >= 60_000) parts.push(`${formatDuration(r.offMs)} AFK or closed left out`)
   return parts.join(' · ')
 }
 
@@ -42,7 +45,7 @@ export function netWorthLookup (glance: Glance | null): Lookup {
       const r = rates[w.id]
       return r.perHour == null
         ? { label: w.label, value: 'under 10 min played', dim: true }
-        : { label: w.label, value: `${amount(r.perHour, divine)} · ${sub(r, rates.fromLog)}` }
+        : { label: w.label, value: `${amount(r.perHour, divine)} · ${sub(r, rates)}` }
     })
     const head = rates['1h'].perHour != null ? { label: 'Last hour', chaos: rates['1h'].perHour } : rates.today.perHour != null ? { label: 'Today', chaos: rates.today.perHour } : null
     const minutes = Math.max(0, Math.round((ctx.now - glance.at) / 60_000))

@@ -22,7 +22,7 @@
       <span v-if="(story.afkMs ?? 0) >= 60_000" @mouseenter="tip($event, AFK_TIP)" @mouseleave="untip"><span class="w-dim">AFK</span> {{ formatDuration(story.afkMs!) }}</span>
       <span v-if="story.longestBreakMs && story.longestBreakMs >= 60_000"><span class="w-dim">Longest break</span> {{ formatClock(story.longestBreakMs) }}</span>
       <span><span class="w-dim">Deaths</span> {{ story.deathsAt.length }}</span>
-      <WToggle v-model="leaveOutHub" :class="$style.hub" data-night-hub @mouseenter="tip($event, hoursTip)" @mouseleave="untip">Leave out hideout</WToggle>
+      <RateTimePick :class="$style.ratePick" />
     </div>
     <div v-if="story.levelUps?.length" :class="$style.line" class="w-num" data-night-levels>
       <span v-for="l in story.levelUps" :key="l.char"><span class="w-dim">{{ story.levelUps.length > 1 ? l.char : 'Level' }}</span> {{ l.from }} → {{ l.to }}</span>
@@ -35,16 +35,16 @@
 
 <script setup lang="ts">
 import { computed, onUnmounted } from 'vue'
-import { AppConfig, saveConfig } from '@/web/Config'
 import { hideHelp, showHelp } from '../ui/help-tip'
-import WToggle from '../ui/WToggle.vue'
+import { nightRateMs, playedMs } from './night-rate'
+import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
+import { rateTime } from '../shared/rate-time-now'
+import RateTimePick from '../shared/RateTimePick.vue'
 import { clockTime } from './history-days'
 import { formatChaos, formatClock, formatDuration } from '../ui/format'
 import { bestItem } from './story'
 import type { NightStory, StripPart } from './story'
 import { vItemTip } from '../ui'
-import { SESSION_STORY_TYPE } from './widget'
-import type { SessionStoryWidget } from './widget'
 
 const props = defineProps<{
   story: NightStory
@@ -60,21 +60,11 @@ const props = defineProps<{
 const emit = defineEmits<{ pick: [enteredAt: number] }>()
 
 // Time played: AFK left out.
-const played = computed(() => props.story.endedAt - props.story.startedAt - (props.story.afkMs ?? 0))
-// Per hour leaves out hideout and town unless asked, as Net worth's does. Kept
-// on Session story's settings, so the dock card and Session analytics agree.
-const storyConfig = () => AppConfig().widgets.find(w => w.wmType === SESSION_STORY_TYPE) as SessionStoryWidget | undefined
-const leaveOutHub = computed({
-  get: () => storyConfig()?.nightWithHub !== true,
-  set: (on: boolean) => {
-    const c = storyConfig()
-    if (!c) return
-    c.nightWithHub = !on
-    saveConfig()
-  }
-})
-const rateHours = computed(() => (played.value - (leaveOutHub.value ? props.story.hubMs ?? 0 : 0)) / 3_600_000)
-const hoursTip = computed(() => `Per hour of ${formatDuration(rateHours.value * 3_600_000)}: ${props.story.hubMs == null ? 'hideout time not recorded for this night' : `AFK${leaveOutHub.value ? ', hideout and town' : ''} left out`}`)
+const played = computed(() => playedMs(props.story))
+// Per hour counts what the Per hour setting counts (shared/rate-time.ts), as
+// Net worth's and Ctrl+Space's do.
+const rateHours = computed(() => nightRateMs(props.story, rateTime()) / 3_600_000)
+const hoursTip = computed(() => `Per hour of ${formatDuration(rateHours.value * 3_600_000)}: ${props.story.hubMs == null && rateTime() === 'play' ? 'hideout time not recorded for this night' : leftOutText(rateTime())}\n${RATE_TIME_WHERE}`)
 const profit = computed(() => {
   if (props.story.profitChaos != null) return { chaos: props.story.profitChaos, from: 'From stash reads (Net worth)' }
   if (props.farm) return { chaos: props.farm.chaos, from: `From Farming's loot, ${props.farm.sessions} ${props.farm.sessions === 1 ? 'session' : 'sessions'}` }
@@ -143,8 +133,6 @@ function signed (chaos: number): string {
 }
 .skipped { min-width: 1px; background: var(--w-line); opacity: 0.45; }
 .afk { min-width: 1px; }
-.hub { margin-left: auto; font-size: var(--w-fs-xs); color: var(--w-dim); }
-.hub:hover { color: var(--w-fg); }
 .death {
   position: absolute;
   top: -3px;
@@ -154,6 +142,7 @@ function signed (chaos: number): string {
   pointer-events: none;
   z-index: 2;
 }
+.ratePick { margin-left: auto; }
 .totals {
   display: flex;
   flex-wrap: wrap;

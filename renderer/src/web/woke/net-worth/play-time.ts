@@ -5,6 +5,7 @@ import { isTownLike, parseLogLine } from '../campaign/log-parse'
 import { lineTime } from '../campaign/log-tail'
 import { isFarmedMap, isMapSideArea } from '../farming/farming'
 import { isBossArea } from '../shared/boss-areas'
+import { RATE_TIME_WHERE } from '../shared/rate-time'
 
 // map: in a map (its side areas too); play: any other area (campaign, boss
 // arenas); hub: hideout, town and the like; off: the game closed (between a
@@ -141,8 +142,8 @@ export interface PlayRate {
   // Chaos per hour of play, or null with too little play to say.
   perHour: number | null
   chaos: number
-  // The time the rate is over: maps and other areas, plus hideout and town
-  // when they count.
+  // The time the rate is over: maps and other areas, plus hideout and town,
+  // and AFK and closed, when they count.
   playMs: number
   // Each kind of time in the window's reads.
   mapMs: number
@@ -162,12 +163,13 @@ export const MIN_PLAY_MS = 10 * 60_000
 // Gains from reads in [from, to] over play time. A read's gain happened
 // between it and the read before; one that started before `from` counts the
 // share of its play that falls inside the window. `withHub`: hideout and
-// town time counts as play.
+// town time counts as play; `withOff`: AFK and the game closed count too
+// (the Per hour setting, shared/rate-time.ts).
 export function playRate (
   points: readonly ReadPoint[], marks: PlayMarks['marks'], from: number, to: number,
-  withHub = false, mapTimes: readonly number[] = []
+  withHub = false, mapTimes: readonly number[] = [], withOff = false
 ): PlayRate {
-  const counted = (t: Record<PlayState, number>) => t.map + t.play + (withHub ? t.hub : 0)
+  const counted = (t: Record<PlayState, number>) => t.map + t.play + (withHub ? t.hub : 0) + (withOff ? t.off : 0)
   let chaos = 0
   let maps = 0
   const opened: number[] = []
@@ -233,8 +235,10 @@ export interface PlayRates {
   'today': PlayRate
   // false: Client.txt wasn't readable, so nothing was left out.
   'fromLog': boolean
-  // Hideout and town time counted as play (the window's checkbox off).
+  // Hideout and town time counted as play, and AFK and closed time (the
+  // Per hour setting).
   'withHub': boolean
+  'withOff': boolean
 }
 
 const WINDOW_NAME: Record<string, string> = { '1h': 'Last hour', '2h': 'Last 2 hours', '3h': 'Last 3 hours', 'today': 'Today' }
@@ -251,13 +255,14 @@ export const span = (ms: number) => {
 
 // A window's hover text, the same in the window and the dock card.
 // `amount`: a chaos sum as shown, unit included ("+0.8 d").
-export function rateTip (id: string, r: PlayRate, fromLog: boolean, amount: (chaos: number) => string, withHub = false): string {
+export function rateTip (id: string, r: PlayRate, fromLog: boolean, amount: (chaos: number) => string, withHub = false, withOff = false): string {
+  const of = withOff ? 'time' : 'play'
   const head = r.perHour == null
-    ? `${WINDOW_NAME[id]}: under 10 min of play`
-    : `${WINDOW_NAME[id]}: ${amount(r.chaos)} in ${span(r.playMs)} of play`
+    ? `${WINDOW_NAME[id]}: under 10 min of ${of}`
+    : `${WINDOW_NAME[id]}: ${amount(r.chaos)} in ${span(r.playMs)} of ${of}`
   if (!fromLog) return `${head}. Client.txt not found: hideout time not left out`
-  const out = [!withHub && r.hubMs >= 60_000 ? `${span(r.hubMs)} in hideout and town` : '', r.offMs >= 60_000 ? `${span(r.offMs)} closed or AFK` : ''].filter(Boolean)
-  return out.length ? `${head}. Left out: ${out.join(', ')}` : head
+  const out = [!withHub && r.hubMs >= 60_000 ? `${span(r.hubMs)} in hideout and town` : '', !withOff && r.offMs >= 60_000 ? `${span(r.offMs)} closed or AFK` : ''].filter(Boolean)
+  return `${out.length ? `${head}. Left out: ${out.join(', ')}` : head}\n${RATE_TIME_WHERE}`
 }
 
 export function startOfDay (at: number): number {
@@ -268,10 +273,10 @@ export function startOfDay (at: number): number {
 
 export function playRates (
   points: readonly ReadPoint[], marks: PlayMarks['marks'], now: number, fromLog: boolean,
-  withHub = false, mapTimes: readonly number[] = []
+  withHub = false, mapTimes: readonly number[] = [], withOff = false
 ): PlayRates {
   const m = fromLog ? marks : []
-  const rate = (from: number) => playRate(points, m, from, now, withHub, fromLog ? mapTimes : [])
+  const rate = (from: number) => playRate(points, m, from, now, withHub, fromLog ? mapTimes : [], withOff)
   return {
     'at': now,
     '1h': rate(now - RATE_WINDOWS[0].ms),
@@ -279,6 +284,7 @@ export function playRates (
     '3h': rate(now - RATE_WINDOWS[2].ms),
     'today': rate(startOfDay(now)),
     'fromLog': fromLog,
-    'withHub': withHub
+    'withHub': withHub,
+    'withOff': withOff
   }
 }

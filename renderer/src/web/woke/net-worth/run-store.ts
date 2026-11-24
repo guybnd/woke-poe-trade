@@ -121,6 +121,9 @@ async function glanceOutside (league: string, r: Run): Promise<Outside | undefin
 
 // Boss fights from Client.txt (run-time.ts, loaded when first needed).
 const runFights = (startAt: number, now: number) => import('./run-time').then(m => m.fightsIn(startAt, now)).catch(() => 0)
+// The live run's fights and where its time went, for its per hour (null
+// without Client.txt).
+const runSpent = (startAt: number, now: number) => import('./run-time').then(m => m.runTimeIn(startAt, now)).catch(() => null)
 
 // The dock number and Ctrl+Space's answer for the live run (null: none).
 async function saveGlance (league: string, run: Run | null, points: readonly LedgerPoint[], divine: number | null) {
@@ -128,10 +131,16 @@ async function saveGlance (league: string, run: Run | null, points: readonly Led
   if (run) {
     const now = Date.now()
     const maps = mapsIn(run, await readRunMaps(run, now), now)
-    const fights = await runFights(run.startAt, now)
+    // Profit runs to the last read, so its time does too (Start and edits
+    // save the glance between reads).
+    const timeTo = Math.max(run.startAt, points[points.length - 1]?.at ?? run.startAt)
+    const spent = await runSpent(run.startAt, timeTo)
+    const fights = spent?.fights ?? 0
+    const time = spent?.ms
     const t = runTotals(run, points, { maps, fights }, now, undefined, await glanceOutside(league, run))
     g = { league, name: run.name, startAt: run.startAt, at: now, profitChaos: t.profitChaos, maps, perHourChaos: t.perHourChaos, costPerMapChaos: t.costPerMapChaos, divine }
     if (fights) g.fights = fights
+    if (time) { g.time = time; g.timeTo = timeTo }
     if (t.faustusChaos) g.faustusChaos = t.faustusChaos
   }
   await hostRequest('doc-put', { collection: COLLECTION, key: runGlanceKey(league), value: g }).catch(() => {})

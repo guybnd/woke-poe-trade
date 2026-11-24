@@ -25,7 +25,7 @@
         </template>
         <div :class="$style.stats" class="w-dim w-num text-xs" data-card-run-stats>
           <span v-if="runs">{{ signed(toDiv(run.profitChaos / runs)) }}<Coin :chaos="!divineRate" />/{{ unit }}</span><span v-else>No maps yet</span>
-          <span v-if="perHour != null" :title="withHub ? 'Per hour of the whole run' : 'Per hour, hideout and town time left out'">{{ signed(toDiv(perHour)) }}<Coin :chaos="!divineRate" />/h</span><span v-else>Per hour after 10 min</span>
+          <span v-if="perHour != null" :title="perHourTip">{{ signed(toDiv(perHour)) }}<Coin :chaos="!divineRate" />/h</span><span v-else>Per hour after 10 min</span>
           <span v-if="run.costPerMapChaos != null">Costs {{ div(run.costPerMapChaos) }}<Coin :chaos="!divineRate" />/{{ unit }}</span>
         </div>
         <!-- Where the run's time went (Client.txt): maps, hideout and town, away. -->
@@ -35,7 +35,7 @@
           </div>
           <div :class="$style.timeKey" class="w-dim w-num text-xs">
             <span v-for="p in time.parts" :key="p.id"><i :class="[$style.dot, $style[p.id]]" />{{ p.label }} {{ formatDuration(p.ms) }}</span>
-            <WToggle :model-value="withHub" :class="$style.hubToggle" title="Count hideout and town time in the run's per hour" data-card-run-hub @update:model-value="emit('run-hub', $event)">Count hideout</WToggle>
+            <RateTimePick :class="$style.ratePick" />
           </div>
         </template>
         <!-- What brought the most in (the stash's tally since the start). -->
@@ -113,7 +113,7 @@
 <script setup lang="ts">
 // Loaded the first time the card opens, with the window's data (store.ts).
 import { computed, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
-import { WSegmented, WToggle, vItemTip } from '../ui'
+import { WSegmented, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, formatDuration } from '../ui/format'
 import { divine as divineRate, historyNow, ledger, onStatus, ratesAt, pricePrefs, setLeague, stashNow, summary, valuation, wantPrices } from './store'
@@ -121,7 +121,10 @@ import { bigGains, refreshWaitMs, seriesFor, topCardChanges } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { ReaderStatus } from './widget'
 import type { RunGlance } from './runs'
-import { countLabel, tallyRows, unitOf } from './runs'
+import { countLabel, runPerHour, tallyRows, unitOf } from './runs'
+import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
+import { rateTime } from '../shared/rate-time-now'
+import RateTimePick from '../shared/RateTimePick.vue'
 import { loadRuns, runsDoc } from './run-store'
 import { runTimeIn } from './run-time'
 import Coin from './Coin.vue'
@@ -132,22 +135,18 @@ import type { RateWindow } from './play-time'
 const props = defineProps<{
   status: ReaderStatus | null
   league: string | null
-  // The window's "Leave out hideout time" unticked.
-  withHub?: boolean
   // The per hour window picked (here or in the window).
   rateWindow?: RateWindow
   // The run going (its saved glance), or null.
   run?: RunGlance | null
   // Stop pressed, until the run is saved stopped.
   stopping?: boolean
-  // The run's per hour counts hideout and town time.
-  runWithHub?: boolean
   // Start pressed, until the run is saved.
   startingRun?: boolean
   // Unsold Faustus listings counted in the total (the At Faustus box).
   listedChaos?: number
 }>()
-const emit = defineEmits<{ (e: 'refresh' | 'settings' | 'stop' | 'open-run'): void, (e: 'window', w: RateWindow): void, (e: 'run-hub', on: boolean): void, (e: 'start', name: string): void }>()
+const emit = defineEmits<{ (e: 'refresh' | 'settings' | 'stop' | 'open-run'): void, (e: 'window', w: RateWindow): void, (e: 'start', name: string): void }>()
 
 // The clock for "in N min" and "3h ago": only while the card is shown.
 const now = shallowRef(Date.now())
@@ -204,10 +203,10 @@ const win = computed<RateWindow>(() => WINDOW_OPTIONS.some(o => o.value === prop
 const pick = (w: string) => { emit('window', w as RateWindow) }
 // The same numbers as the window (store.ratesAt).
 const rate = computed(() => {
-  const r = ratesAt(now.value, props.withHub === true)
+  const r = ratesAt(now.value)
   const x = r[win.value]
   const amount = (chaos: number) => `${signed(toDiv(chaos))} ${divineRate.value ? 'd' : 'c'}`
-  return { div: !sameLeague.value || x.perHour == null ? null : toDiv(x.perHour), tip: rateTip(win.value, x, r.fromLog, amount, r.withHub) }
+  return { div: !sameLeague.value || x.perHour == null ? null : toDiv(x.perHour), tip: rateTip(win.value, x, r.fromLog, amount, r.withHub, r.withOff) }
 })
 
 // ---------- the run going (pick Q1) ----------
@@ -258,10 +257,10 @@ const topCame = computed(() => liveDoc.value ? tallyRows(liveDoc.value).came.sli
 const runs = computed(() => props.run ? props.run.maps + (props.run.fights ?? 0) : 0)
 const unit = computed(() => props.run ? unitOf(props.run.maps, props.run.fights) : 'map')
 const spent = shallowRef<Record<'map' | 'play' | 'hub' | 'off', number> | null>(null)
-watch(() => props.run ? [props.run.startAt, props.run.at] as const : null, (span) => {
+watch(() => props.run ? [props.run.startAt, props.run.timeTo ?? props.run.at] as const : null, (span) => {
   if (!span) { spent.value = null; return }
   const [from, to] = span
-  runTimeIn(from, to).then((t) => { if (props.run?.startAt === from && props.run.at === to) spent.value = t?.ms ?? null }).catch(() => {})
+  runTimeIn(from, to).then((t) => { if (props.run?.startAt === from && (props.run.timeTo ?? props.run.at) === to) spent.value = t?.ms ?? null }).catch(() => {})
 }, { immediate: true })
 const time = computed(() => {
   const t = spent.value
@@ -273,16 +272,14 @@ const time = computed(() => {
   ].filter(p => p.ms >= 60_000)
   return parts.length ? { parts, ...t } : null
 })
-const withHub = computed(() => props.runWithHub !== false)
-// Hideout left out: profit over the time in maps and other zones only
-// (away, closed or AFK, is left out too).
+// Over the time the Per hour setting counts (shared/rate-time.ts); the
+// clock without Client.txt.
 const perHour = computed(() => {
   const r = props.run
   if (!r) return null
-  if (withHub.value || !spent.value) return r.perHourChaos
-  const ms = spent.value.map + spent.value.play
-  return ms >= 10 * 60_000 ? r.profitChaos / (ms / 3_600_000) : null
+  return runPerHour(r.profitChaos, (r.timeTo ?? r.at) - r.startAt, spent.value ?? r.time, rateTime())
 })
+const perHourTip = computed(() => (spent.value ?? props.run?.time) ? `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}` : 'Per hour of the whole run: Client.txt not read')
 
 const fmt = (n: number) => formatAmount(n)
 const toDiv = (chaos: number) => divineRate.value ? chaos / divineRate.value : chaos
@@ -328,8 +325,8 @@ const tone = (n: number | null | undefined) => n == null || n === 0 ? 'w-dim' : 
 .map { background: var(--w-up); }
 .hub { background: var(--w-gold); }
 .off { background: var(--w-line-strong); }
+.ratePick { margin-left: auto; }
 .timeKey { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
 .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
-.hubToggle { margin-left: auto; }
 .link { align-self: flex-start; color: var(--w-gold); text-decoration: underline; cursor: pointer; font-size: var(--w-fs-sm); }
 </style>

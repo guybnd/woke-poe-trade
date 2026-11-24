@@ -1,5 +1,6 @@
 // Numbers for Session analytics. Pure functions over saved sessions.
 import type { AnalyticsRange, AnalyticsUnit, MapRun, SavedLoot, SessionRecord } from './types'
+import type { RateTime } from '../shared/rate-time'
 
 export const HOUR_MS = 3_600_000
 const DAY_MS = 24 * HOUR_MS
@@ -51,8 +52,11 @@ export function rateFor (s: { divine: number | null }, unit: AnalyticsUnit, fall
 
 // Splits a session into units. Loot and time not tied to a map (before the
 // first map, typed-in chaos, maps added by hand) are shared out evenly, so
-// the units add up to the session's totals.
-export function sessionUnits (s: SessionRecord, unit: AnalyticsUnit, fallbackDivine: number | null, keepExcluded = false): Unit[] {
+// the units add up to the session's totals. `time`: the Per hour setting
+// (shared/rate-time.ts). Farming's sessions kept hideout and AFK as one
+// "other" time, so "play" counts the time inside maps only and the others
+// count it all; a session without map detail has only its whole length.
+export function sessionUnits (s: SessionRecord, unit: AnalyticsUnit, fallbackDivine: number | null, time: RateTime, keepExcluded = false): Unit[] {
   const rate = rateFor(s, unit, fallbackDivine)
   if (!rate) return []
   const total = sessionTotals(s)
@@ -65,13 +69,14 @@ export function sessionUnits (s: SessionRecord, unit: AnalyticsUnit, fallbackDiv
     runsMs += r.mapMs + r.otherMs
     runsProfit += runProfit(r, s)
   }
-  const shareMs = Math.max(0, s.durationMs - runsMs) / s.runs.length
+  const mapOnly = time === 'play'
+  const shareMs = mapOnly ? 0 : Math.max(0, s.durationMs - runsMs) / s.runs.length
   const shareProfit = (total.profit - runsProfit) / s.runs.length
   return s.runs
     .filter(r => keepExcluded || !r.excluded)
     .map(r => ({
       profit: (runProfit(r, s) + shareProfit) / rate,
-      ms: r.mapMs + r.otherMs + shareMs,
+      ms: r.mapMs + (mapOnly ? 0 : r.otherMs) + shareMs,
       ts: r.enteredAt,
       name: r.name
     }))
@@ -201,7 +206,7 @@ export function buildRow (key: string, strategy: string, kind: 'maps' | 'boss', 
   }
 }
 
-export function strategyRows (sessions: SessionRecord[], unit: AnalyticsUnit, fallbackDivine: number | null): StrategyRow[] {
+export function strategyRows (sessions: SessionRecord[], unit: AnalyticsUnit, fallbackDivine: number | null, time: RateTime): StrategyRow[] {
   const groups = new Map<string, SessionRecord[]>()
   for (const s of sessions) {
     const name = s.strategy.trim() || 'Unnamed'
@@ -219,9 +224,9 @@ export function strategyRows (sessions: SessionRecord[], unit: AnalyticsUnit, fa
     let mapMs = 0
     let allMs = 0
     for (const s of list) {
-      const u = sessionUnits(s, unit, fallbackDivine)
+      const u = sessionUnits(s, unit, fallbackDivine, time)
       units.push(...u)
-      const ph = perHour(sessionUnits(s, unit, fallbackDivine, true))
+      const ph = perHour(sessionUnits(s, unit, fallbackDivine, time, true))
       if (ph != null) trend.push(ph)
       // Maps left out don't count, as in the averages: their share of the time
       // isn't in `units`, so counting them would inflate maps per hour.
@@ -262,11 +267,11 @@ export interface MapTileRow {
 }
 
 // Results by map tile (Strand, Cemetery…) across sessions with map detail.
-export function mapTileRows (sessions: SessionRecord[], unit: AnalyticsUnit, fallbackDivine: number | null): MapTileRow[] {
+export function mapTileRows (sessions: SessionRecord[], unit: AnalyticsUnit, fallbackDivine: number | null, time: RateTime): MapTileRow[] {
   const groups = new Map<string, Unit[]>()
   for (const s of sessions) {
     if (!s.runs.length) continue
-    for (const u of sessionUnits(s, unit, fallbackDivine)) {
+    for (const u of sessionUnits(s, unit, fallbackDivine, time)) {
       const list = groups.get(u.name)
       if (list) list.push(u)
       else groups.set(u.name, [u])

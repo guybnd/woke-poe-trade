@@ -110,13 +110,13 @@
             <div v-else :class="$style.boxHead">
               <button type="button" :class="$style.fold" :aria-expanded="true" title="Fold Per hour" aria-label="Fold Per hour" @click="flipFold('perHour')"><i class="fas fa-chevron-down" /></button>
               <TextTabs v-model="rateWindow" :options="WINDOW_OPTIONS" />
-              <label :class="$style.check" :title="timeNote"><input v-model="leaveOutHub" type="checkbox">Leave out hideout</label>
+              <RateTimePick :class="$style.rateTime" />
             </div>
             <div v-if="!fold.perHour" :class="$style.tiles">
               <div><span :class="$style.caps">Per hour</span><b :class="[$style.bigRate, tone(rateShown.div)]" class="w-num" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b></div>
               <div><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b></div>
               <div title="The middle map's time: short visits barely move it"><span :class="$style.caps">Median map</span><b class="w-num">{{ rateShown.r.medianMapMs != null ? shortSpan(rateShown.r.medianMapMs) : '—' }}</b></div>
-              <div :title="leaveOutHub ? 'Time in maps and other areas' : 'Time in maps, other areas and hideout'"><span :class="$style.caps">Played</span><b class="w-num">{{ span(rateShown.r.playMs) }}</b></div>
+              <div :title="playedTip"><span :class="$style.caps">Played</span><b class="w-num">{{ span(rateShown.r.playMs) }}</b></div>
             </div>
             <template v-if="splitTotal > 0 && !fold.perHour">
               <div :class="[$style.split, { [$style.splitPick]: splitLabel }]" @mouseleave="pickSplit(null)">
@@ -135,7 +135,7 @@
           <div v-if="showChanges" :class="$style.changesCol">
             <div :class="$style.colHead">
               <button type="button" :class="$style.foldHead" :aria-expanded="!fold.changes" :title="fold.changes ? 'Open' : 'Fold'" @click="flipFold('changes')"><i :class="fold.changes ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} maps` : 'Since last refresh' }}</span></button>
-              <b v-if="session" class="w-num" :class="tone(session.div)">{{ signed(session.div) }}<Coin :chaos="!divine" /><template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}<Coin :chaos="!divine" />/h</template></b>
+              <b v-if="session" class="w-num" :class="tone(session.div)" :title="session.tip">{{ signed(session.div) }}<Coin :chaos="!divine" /><template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}<Coin :chaos="!divine" />/h</template></b>
               <span v-if="session && session.spent > 0" :class="$style.spendNote" class="w-num" title="Purchases in this session: left out of its profit">spent {{ div(session.spent) }}<Coin :chaos="!divine" /></span>
             </div>
             <!-- The newest groups; the two latest open, the rest one row each. The
@@ -301,6 +301,10 @@ import { chartHOf, clampChartH, clampMidH, colWeights, dragCols, dragTop, edges,
 import type { ColId, FoldId, PanelLayout } from './layout'
 import SplitHandle from './SplitHandle.vue'
 import TextTabs from './TextTabs.vue'
+import RateTimePick from '../shared/RateTimePick.vue'
+import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
+import { rateTime } from '../shared/rate-time-now'
+import { nightRateMs } from '../session-story/night-rate'
 import type { RateWindow } from './play-time'
 import LedgerChart from './LedgerChart.vue'
 import Coin from './Coin.vue'
@@ -385,15 +389,12 @@ const rateWindow = computed<RateWindow>({
   get: () => WINDOW_OPTIONS.some(o => o.value === props.config.rateWindow) ? props.config.rateWindow! : '1h',
   set: (w) => { props.config.rateWindow = w }
 })
-const leaveOutHub = computed<boolean>({
-  get: () => props.config.rateWithHub !== true,
-  set: (on) => { props.config.rateWithHub = !on }
-})
-const rates = computed(() => ratesAt(now.value, !leaveOutHub.value))
+const rates = computed(() => ratesAt(now.value))
+const playedTip = computed(() => rates.value.withOff ? 'All time, AFK and game closed included' : rates.value.withHub ? 'Time in maps, other areas and hideout' : 'Time in maps and other areas')
 const rateAmount = (chaos: number) => `${signed(toDiv(chaos))} ${unit.value}`
 const rateShown = computed(() => {
   const r = rates.value[rateWindow.value]
-  return { r, div: r.perHour == null ? null : toDiv(r.perHour), tip: rateTip(rateWindow.value, r, rates.value.fromLog, rateAmount, rates.value.withHub) }
+  return { r, div: r.perHour == null ? null : toDiv(r.perHour), tip: rateTip(rateWindow.value, r, rates.value.fromLog, rateAmount, rates.value.withHub, rates.value.withOff) }
 })
 // The window's time by kind, for the bar under the numbers.
 const splitParts = computed(() => {
@@ -423,14 +424,10 @@ const splitLabel = computed(() => {
   }
   return null
 })
-const timeNote = computed(() => {
-  if (!rates.value.fromLog) return 'Client.txt not found: nothing left out'
-  return leaveOutHub.value ? 'Hideout time left out' : 'Hideout time counted as play'
-})
 const todayTip = computed(() => {
   const t = rates.value.today
   return t.perHour == null ? "Since yesterday's last read" : `Since yesterday's last read
-Per hour of play today: ${signed(toDiv(t.perHour))} ${unit.value}/h over ${duration(t.playMs)}`
+Per hour today: ${signed(toDiv(t.perHour))} ${unit.value}/h over ${duration(t.playMs)}, ${leftOutText(rateTime())}`
 })
 const best = computed(() => v.value?.lines[0] ?? null)
 
@@ -587,7 +584,8 @@ const farming = computed<PanelSession | null>(() => {
   if (s) return { startedAt: s.startedAt, maps: s.maps, runs: s.runs ?? [], ms: now => elapsed(s, now), endable: true }
   const n = isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nightStore.live.value : null
   if (!n) return null
-  return { startedAt: n.startedAt, maps: n.maps.length, runs: n.maps, ms: now => n.mapMs + n.otherMs + Math.min(Math.max(0, now - n.endedAt), NIGHT_TAIL_MS), endable: false }
+  // The time the Per hour choice counts (night-rate.ts), as on the night card.
+  return { startedAt: n.startedAt, maps: n.maps.length, runs: n.maps, ms: now => nightRateMs(n, rateTime()) + Math.min(Math.max(0, now - n.endedAt), NIGHT_TAIL_MS), endable: false }
 })
 // The session's clock moves while you sit in the hideout.
 const now = shallowRef(Date.now())
@@ -613,7 +611,8 @@ const session = computed(() => {
   if (!s) return null
   const ms = s.ms(now.value)
   const divVal = toDiv(sessionChaos.value)
-  return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null, spent: sessionSpent.value, endable: s.endable }
+  const tip = s.endable ? 'Per hour of the whole session' : `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}`
+  return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null, spent: sessionSpent.value, endable: s.endable, tip }
 })
 const gainAt = computed(() => new Map(gainsNow.value.map(g => [g.at, g])))
 // Every refresh's share of profit (spend.ts), worked out in time order.
@@ -977,10 +976,9 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .halves > .chartBlock { display: flex; flex-direction: column; }
 .chartFill { flex: 1 1 auto; height: auto !important; min-height: 80px; }
 .spark + .holdings { margin-left: 0; }
-.check { display: inline-flex; align-items: center; gap: 5px; font-size: var(--w-fs-xs); color: var(--w-dim); cursor: pointer; }
-.check:hover { color: var(--w-fg); }
 .holdings { display: inline-flex; gap: var(--w-s3); align-items: baseline; min-width: 0; margin-left: auto; }
 .box { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: var(--w-s2); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
+.rateTime { margin-left: auto; }
 .boxHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 .sideCol { display: flex; flex-direction: column; gap: var(--w-s3); }
 .movesCol { display: flex; flex-direction: column; gap: 2px; }

@@ -4,8 +4,8 @@
       :badge="badge" :stack="stack" :glow="!!liveRun" :wheel="swapGlance" card-width="25rem" :menu="dockMenu" @open-change="cardOpen = $event">
       <template #card>
         <!-- Its data loads the first time the card opens, never at startup. -->
-        <NetWorthCard v-if="cardOpen && personalReady" :status="status" :league="leagueId" :with-hub="config.rateWithHub === true" :rate-window="config.rateWindow ?? '1h'" @window="config.rateWindow = $event" @refresh="refresh" @settings="openSettingsPage(wm, 'Game & league')"
-          :run="liveRun" :stopping="stopping" :starting-run="startingRun" @start="startLive" :run-with-hub="config.runWithHub !== false" :listed-chaos="listedChaos" @stop="stopLive" @open-run="openRun" @run-hub="config.runWithHub = $event" />
+        <NetWorthCard v-if="cardOpen && personalReady" :status="status" :league="leagueId" :rate-window="config.rateWindow ?? '1h'" @window="config.rateWindow = $event" @refresh="refresh" @settings="openSettingsPage(wm, 'Game & league')"
+          :run="liveRun" :stopping="stopping" :starting-run="startingRun" @start="startLive" :listed-chaos="listedChaos" @stop="stopLive" @open-run="openRun" />
         <div v-else class="w-dim text-xs" style="padding: 6px var(--w-pad);">{{ cardText }}</div>
       </template>
     </DockItem>

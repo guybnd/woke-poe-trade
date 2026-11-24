@@ -61,6 +61,13 @@
         <w-field v-model="config.accountName" placeholder="Account name" />
       </w-setting-row>
     </w-setting-section>
+    <w-setting-section title="Per hour">
+      <w-setting-row label="Time counted" show-hint
+        hint="Every per hour number uses this: Net worth, strategy runs, Session story, Session analytics and Ctrl+Space. Play only counts maps and other areas. Play + hideout adds hideout and town. All time also counts AFK and the game closed.">
+        <!-- The live value, as in every tool (not this window's copy), so both stay in step. -->
+        <RateTimePick data-rate-time />
+      </w-setting-row>
+    </w-setting-section>
     <StashSignIn v-if="personalOn" />
   </div>
 </template>
@@ -71,6 +78,7 @@ import type { Config } from '@/web/Config'
 import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import { WButton, WField, WPathField, WSelect, WSettingRow, WSettingSection, WToggle, agoPhrase } from '../ui'
+import RateTimePick from '../shared/RateTimePick.vue'
 import { hostRequest } from '../shared/host'
 import { personalOn } from '../personal'
 
