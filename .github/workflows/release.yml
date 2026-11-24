@@ -25,6 +25,8 @@ on:
 
 permissions:
   contents: write
+  # Starts discord-release.yml once the release is published.
+  actions: write
   # Build provenance: a signed record, checkable by anyone, that the installer
   # was built here from this tag (gh attestation verify <file> -R guybnd/woke-poe-trade).
   id-token: write
@@ -133,6 +135,15 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: gh release edit "$RELEASE_TAG" --draft=false --latest -R "$GITHUB_REPOSITORY"
+    # A release published with GITHUB_TOKEN doesn't fire other workflows, so
+    # start the Discord post by hand. A failed post never fails the release.
+    - name: Announce on Discord
+      if: ${{ inputs.publish && github.ref == 'refs/heads/master' }}
+      continue-on-error: true
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: gh workflow run discord-release.yml --ref master -f tag="$RELEASE_TAG" -R "$GITHUB_REPOSITORY"
     - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
       with:
         name: windows-installer
