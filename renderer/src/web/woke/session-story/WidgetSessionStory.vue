@@ -14,8 +14,8 @@
         </div>
       </template>
     </DockItem>
-    <GlanceBar v-if="glanceOn(config)" :map="glanceMap" :after="barLine" :show-clock="glanceClockOn(config)" :since="glanceSince" :before="glanceBefore" :editing="placingGlance" :movable="wm.active.value" :pos="config.glancePos ?? null"
-      @move="moveGlance" />
+    <GlanceBar v-if="glanceOn(config)" :map="glanceMap" :after="barLine" :since="glanceSince" :before="glanceBefore" :editing="placingGlance" :movable="wm.active.value" :pos="config.glancePos ?? null"
+      :fields="config.glanceFields" :show="config.glanceShow" :last="lastMap" @move="moveGlance" />
     <MapToast :chip="chip" :close-key="config.chipKey || null" :size="toastSize" @close="closeChip" @hold="holdChip" @resize="resizeChip"
       :pos="config.chipPos ?? null" @move="moveChip" />
   </Widget>
@@ -52,6 +52,8 @@ import { NIGHT_GAP_MS, NightTracker } from './story'
 import type { NightStory } from './story'
 import { MapLog } from './map-log'
 import { chipLines, clampToastSize, compareMap } from './chip'
+import { lastMapOf } from './glance-fields'
+import type { LastMap } from './glance-fields'
 import type { ToastSize } from './chip'
 import type { MapCompare } from './chip'
 import type { MapRecord } from './map-log'
@@ -62,7 +64,7 @@ import { ANALYTICS_TYPE } from '../analytics/types'
 import { isSkippedArea, knownAreaName, setSkipAreas } from './skip-areas'
 import { setAreaSkip } from '../farming/farming'
 import { CHIP_CLOSE_TARGET } from './widget'
-import { chipPlaceOf, glanceClockOn, glanceOn } from './glance'
+import { chipPlaceOf, glanceOn } from './glance'
 import type { SessionStoryWidget } from './widget'
 import { MainProcess } from '@/web/background/IPC'
 import { AppConfig, saveConfig } from '@/web/Config'
@@ -171,21 +173,28 @@ function moveGlance (pos: { x: number, y: number }, done: boolean) {
 }
 const glanceSince = shallowRef(0)
 const glanceBefore = shallowRef(0)
-const glanceMap = shallowRef<{ name: string, areaLevel: number } | null>(null)
+const glanceMap = shallowRef<{ name: string, areaLevel: number, deaths: number, npcs: readonly string[] } | null>(null)
+// The map you just left, for the bar between maps (when it stays out of maps).
+const lastMap = shallowRef<LastMap | null>(null)
 // `replayed`: right after reading the log's tail, when you may already be in a map.
 function syncGlance (replayed = false) {
   const cur = (live || replayed) && glanceOn(props.config) && mapLog.inCountedMap ? mapLog.current : null
   if (!cur) { glanceMap.value = null; return }
   glanceSince.value = mapLog.enteredThisTime
   glanceBefore.value = cur.mapMs
-  // The name comes a line after the area starts: update when it changes.
-  if (glanceMap.value?.name !== cur.name || glanceMap.value.areaLevel !== cur.areaLevel) glanceMap.value = { name: cur.name, areaLevel: cur.areaLevel }
+  // The name comes a line after the area starts, deaths and mechanics as they
+  // happen: a new object only when one of them changes.
+  const g = glanceMap.value
+  if (g?.name !== cur.name || g.areaLevel !== cur.areaLevel || g.deaths !== cur.deaths || g.npcs.length !== cur.npcs.length) {
+    glanceMap.value = { name: cur.name, areaLevel: cur.areaLevel, deaths: cur.deaths, npcs: [...cur.npcs] }
+  }
 }
 watch(() => props.config.glance, () => syncGlance(true))
 // Each map, for the chip and Session analytics' Map history.
 const mapLog = new MapLog({
   onLeave: (rec) => {
     if (!live) return
+    if (glanceOn(props.config)) lastMap.value = lastMapOf(rec, compareMap(rec, store.maps.value))
     const place = chipPlaceOf(props.config)
     // The toast in the middle takes the mouse only once the pointer rests on it.
     if (place === 'center') showChip(rec, compareMap(rec, store.maps.value), chipMs())
@@ -205,6 +214,7 @@ const mapLog = new MapLog({
 
 const tracker = new NightTracker((draft) => {
   mapLog.finish(draft.lastAt)
+  lastMap.value = null
   syncGlance()
   store.finish(draft).then(async (story) => {
     // The icon only shows once the saved night is drawn; a peek before that is dropped.

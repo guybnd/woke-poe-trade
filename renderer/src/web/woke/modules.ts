@@ -13,6 +13,10 @@ import type { DockConfig } from './dock/dock'
 import type { RateTime } from './shared/rate-time'
 import type { ShortcutAction } from '@ipc/types'
 
+// Session analytics' art: its tool, dock icon, card and
+// Ctrl+Space answer all show it.
+export const NIGHT_ART = 'Eternal Orb'
+
 export type ModuleGroup = 'economy' | 'mapping' | 'campaign' | 'builds' | 'apt'
 // poll: keeps poe.ninja prices refreshing to build history (every 10 min).
 // prices: reads the latest saved prices, no extra network.
@@ -66,13 +70,13 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'wealthy-exile', name: 'Wealthy Exile', description: 'The Wealthy Exile net worth site in an overlay window', group: 'economy', widgetTypes: ['woke-wealthy-exile'], icon: { fa: 'fas fa-wallet', src: '/images/art/crested-golden-idol.png' }, needs: ['hotkeys', 'network'] },
   { id: 'drop-counter', name: 'Drop counter', description: 'A tally of the drops you choose, and maps run', group: 'economy', widgetTypes: ['woke-drop-counter'], icon: { fa: 'fas fa-hashtag', src: '/images/art/o-eternal.png' }, needs: ['log', 'prices', 'hotkeys'] },
   { id: 'stacked-decks', name: 'Stacked decks', description: 'Cards from the Stacked Decks you open: profit, big hits and luck', group: 'economy', widgetTypes: ['woke-stacked-decks'], icon: { fa: 'fas fa-layer-group', item: 'Stacked Deck' }, needs: ['log', 'prices'] },
-  { id: 'session-analytics', name: 'Session analytics', description: 'Profit per map, strategy and hour over time', group: 'economy', widgetTypes: ['woke-session-analytics'], icon: { fa: 'fas fa-chart-bar', item: 'Eternal Orb' }, needs: ['prices'] },
+  { id: 'session-analytics', name: 'Session analytics', description: 'Profit per map, strategy and hour over time', group: 'economy', widgetTypes: ['woke-session-analytics'], icon: { fa: 'fas fa-chart-bar', item: NIGHT_ART }, needs: ['prices'] },
   // 3.30 Covens of Umbra only: remove this entry and wickerman/ when the league ends.
   { id: 'wickerman', name: 'Wickerman (3.30)', description: 'Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one', group: 'economy', widgetTypes: ['woke-wickerman'], runsWithoutWidget: true, icon: { fa: 'fas fa-bone' }, needs: ['log'] },
   { id: 'boss-runs', name: 'Boss runs', description: 'Profit per boss kill', group: 'economy', widgetTypes: ['woke-boss-runs'], icon: { fa: 'fas fa-skull', mechanic: 'maven' }, needs: ['log', 'prices'] },
 
   { id: 'map-mods', name: 'Map mods', description: 'Danger strip on price check, map regex, and map scan (reads hovered maps on screen)', group: 'mapping', widgetTypes: ['woke-map-mods'], icon: { fa: 'fas fa-map', item: 'Nightmare Map' }, needs: ['hotkeys', 'ocr'] },
-  { id: 'session-story', name: 'Session story', description: 'A summary card when you log off, a per map run toast, and your map history', group: 'mapping', widgetTypes: ['woke-session-story'], icon: { fa: 'fas fa-moon', item: "Cartographer's Chisel" }, needs: ['log'] },
+  { id: 'session-story', name: 'Session story', description: 'A summary card when you log off, a per map run toast, and your map history', group: 'mapping', widgetTypes: ['woke-session-story'], icon: { fa: 'fas fa-moon', item: NIGHT_ART }, needs: ['log'] },
   { id: 'death-recap', name: 'Death recap', description: 'Where you died, and the mods of maps you checked', group: 'mapping', widgetTypes: ['woke-death-recap'], icon: { fa: 'fas fa-skull', item: 'Portal Scroll' }, needs: ['log'] },
   { id: 'essence-scan', name: 'Essence scan', description: 'Reads essence monoliths and flags MEDS', group: 'mapping', widgetTypes: ['woke-essence-scan'], icon: { fa: 'fas fa-flask', mechanic: 'essence' }, needs: ['ocr', 'hotkeys', 'prices', 'log'] },
   { id: 'loot-filter', name: 'Loot filter editor', description: 'Edit the NeverSink rule for a sampled item', group: 'mapping', widgetTypes: ['woke-loot-filter'], icon: { fa: 'fas fa-filter', item: 'Orb of Scouring' }, needs: ['log', 'hotkeys'] },

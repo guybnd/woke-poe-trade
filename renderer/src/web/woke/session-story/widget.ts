@@ -28,13 +28,19 @@ export interface SessionStoryWidget extends Widget {
   chipKey?: string | null
   // While in a map: a thin bar at the top with the map, its time so far and tonight's total.
   // On unless turned off (veteran review, 2026-11-24: one in-map overlay on by default).
+  // Its Map time field ticks each second in a map: one timer and one layout a
+  // second (Guy raised the in-map perf budget for it, 2026-11-24).
   glance?: boolean
-  // The bar's map time ticking each second. On unless turned off: one timer
-  // and one layout a second in a map (Guy raised the in-map budget for it, 2026-11-24).
-  glanceClock?: boolean
   // Where the glance bar sits (its top centre, share of the screen), set by dragging it.
   glancePos?: { x: number, y: number }
+  // Its fields, in its fixed order (glance-fields.ts); undefined: the defaults.
+  glanceFields?: GlanceField[]
+  // When it shows: in maps only, also out of maps while a run goes, or all night.
+  glanceShow?: GlanceShow
 }
+
+export type GlanceField = 'map' | 'time' | 'deaths' | 'mechanics' | 'maps' | 'profit' | 'perHour' | 'total' | 'avg' | 'last'
+export type GlanceShow = 'map' | 'run' | 'game'
 
 export const CHIP_CLOSE_TARGET = 'woke-session-story-chip'
 

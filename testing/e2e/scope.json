@@ -106,6 +106,9 @@
   "glance-bar-drag.spec.ts": [
    "renderer/src/web/woke/session-story/"
   ],
+  "glance-bar-fields.spec.ts": [
+   "renderer/src/web/woke/session-story/"
+  ],
   "glance-bar.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/price-check/",

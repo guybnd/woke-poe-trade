@@ -1,6 +1,6 @@
 // The glance bar is on unless turned off, and takes the map line while it is.
 import { describe, it, expect } from 'vitest'
-import { chipPlaceOf, glanceClockOn, glanceOn } from '@/web/woke/session-story/glance'
+import { chipPlaceOf, glanceOn } from '@/web/woke/session-story/glance'
 
 describe('glance bar default', () => {
   it('is on unless turned off', () => {
@@ -19,14 +19,5 @@ describe('glance bar default', () => {
     expect(chipPlaceOf({ chipPlace: 'dock' })).toBe('dock')
     expect(chipPlaceOf({ chipPlace: 'off', glance: false })).toBe('off')
     expect(chipPlaceOf({ chipPlace: 'bar', glance: false })).toBe('dock')
-  })
-})
-
-describe('glance bar clock', () => {
-  it('ticks unless turned off', () => {
-    expect(glanceClockOn({})).toBe(true)
-    expect(glanceClockOn({ glance: true })).toBe(true)
-    expect(glanceClockOn({ glance: true, glanceClock: false })).toBe(false)
-    expect(glanceClockOn({ glanceClock: true })).toBe(true)
   })
 })

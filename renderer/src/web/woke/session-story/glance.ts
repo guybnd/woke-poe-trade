@@ -7,10 +7,6 @@ export function glanceOn (config: Pick<SessionStoryWidget, 'glance'>): boolean {
   return config.glance !== false
 }
 
-export function glanceClockOn (config: Pick<SessionStoryWidget, 'glance' | 'glanceClock'>): boolean {
-  return config.glanceClock !== false
-}
-
 // Where the map line goes. Not picked: on the glance bar while it's on, so one
 // thing shows while you play; the dock icon with it off. The bar picked and
 // then turned off: the dock icon.
