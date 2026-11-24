@@ -601,7 +601,9 @@ export default defineComponent({
     // listings shown until its own search, and late pages still arrive.
     let searchedItem: unknown = props.item
     watch(searchResult, () => { searchedItem = props.item }, { flush: 'sync' })
-    watch([fitResults, divine, searchResult, loadedCount], ([list, d, found, loaded]) => {
+    // Ungrouped: a seller's grouped rows add up their stacks under one price.
+    const askRows = computed(() => fetchResults.value.filter((r): r is PricingResult => r != null && fits(r)))
+    watch([askRows, divine, searchResult, loadedCount], ([list, d, found, loaded]) => {
       // Narrowed: only the loaded listings that fit count, all of them seen.
       const total = props.narrow ? null : found?.total ?? null
       lastAsks.value = asksOf(list, d ?? null, searchedItem, total, found != null && (props.narrow != null || loaded >= found.total), loaded)

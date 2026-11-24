@@ -41,6 +41,14 @@ describe('set a price from the price check', () => {
     expect(stepUnder({ amount: 1, currency: 'chaos' }, 200)).toEqual({ amount: 1, currency: 'chaos' })
     expect(suggestions(7000, 200)).toEqual({ under: { amount: 34, currency: 'divine' }, match: { amount: 35, currency: 'divine' } })
     expect(suggestions(null, 200)).toBeNull()
+    // The cheapest asks 20c: the suggestions stay in chaos (Guy saw "20 div").
+    expect(suggestions(20, 200, { amount: 20, currency: 'chaos', stack: 1 })).toEqual({ under: { amount: 19, currency: 'chaos' }, match: { amount: 20, currency: 'chaos' } })
+    // A fraction of a chaos: from the price each, so under stays under match.
+    expect(suggestions(0.5, 200, { amount: 0.5, currency: 'chaos', stack: 1 })?.match).toEqual({ amount: 1, currency: 'chaos' })
+    // Asked in divines: copied as listed.
+    expect(suggestions(900, 180, { amount: 5, currency: 'divine', stack: 1 })?.match).toEqual({ amount: 5, currency: 'divine' })
+    // Another stack size: from the price each, for your stack.
+    expect(suggestions(200, 200, { amount: 50, currency: 'chaos', stack: 5 }, 20)?.match).toEqual({ amount: 1, currency: 'divine' })
   })
 
   it('the price check hands over other sellers\' asks, each', () => {
@@ -51,6 +59,7 @@ describe('set a price from the price check', () => {
       { priceAmount: 5, priceCurrency: 'exalted', isMine: false }
     ], 200, 'x', 30, false)
     expect(a.chaos).toEqual([10, 7200])
+    expect(a.cheapest).toEqual({ amount: 100, currency: 'chaos', stack: 10 })
     expect(a).toMatchObject({ mine: 1, total: 30, all: false })
   })
 

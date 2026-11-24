@@ -23,6 +23,9 @@ export interface Sale {
   price: { amount: number, currency: string }
   // Gear's item data for the tooltip (trade-history.ts tipOf).
   tip?: Record<string, unknown>
+  // A listing's stash tab and its place there (x, y from the top left), when
+  // the trade site gives them. Sales don't have it.
+  tab?: { name: string, x?: number, y?: number }
 }
 
 export interface SalesReply {

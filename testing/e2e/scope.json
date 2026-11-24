@@ -488,6 +488,10 @@
    "renderer/src/web/woke/scarab-flip/",
    "renderer/src/web/woke/search/lookups/flips.ts"
   ],
+  "scrying.spec.ts": [
+   "renderer/src/web/woke/scrying/",
+   "renderer/src/web/woke/card-drops/"
+  ],
   "search-groups.spec.ts": [
    "renderer/src/web/woke/search/",
    "renderer/src/web/woke/settings/"

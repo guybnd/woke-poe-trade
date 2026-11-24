@@ -23,6 +23,7 @@ export interface NewsItem {
 
 export const NEWS: NewsItem[] = [
   { id: 'price-check-related-upgrades', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: beside a unique, its upgrade, where it drops and the cards that give it, with prices' },
+  { id: 'scrying-helper', wmType: 'woke-scrying', name: 'Scrying', note: 'New: which map to scry, ranked by the cards a Scrying Orb adds per map, with the orb\'s price and a Buy link' },
   { id: 'price-check-unique-recipe', wmType: 'price-check', name: 'Price check', settingsPage: 'Price check', note: 'New: a recipe part (Lost Unity rings) lists the other parts and what they make, with prices' },
   { id: 'listed-reprice', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: price check an item you have listed and set its new price at the foot' },
   { id: 'runs-crafting-session', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: a Crafting run: what you made, the orbs used and what sold, with its profit' },

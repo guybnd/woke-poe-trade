@@ -123,7 +123,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
     const searches: string[] = []
     const listing = (id: string, name: string, base: string, at: string, div: number) =>
-      ({ id, item: { name, typeLine: base, baseType: base, frameType: 3, icon: '' }, listing: { indexed: at, fee: 100, price: { amount: div, currency: 'divine', type: '~price' }, account: { name: 'Tester#1234', lastCharacterName: 'T' } } })
+      ({ id, item: { name, typeLine: base, baseType: base, frameType: 3, icon: '' }, listing: { indexed: at, fee: 100, stash: { name: 'Sell 1', x: 4, y: 2 }, price: { amount: div, currency: 'divine', type: '~price' }, account: { name: 'Tester#1234', lastCharacterName: 'T' } } })
     let listings = [listing('l0', 'Headhunter', 'Leather Belt', ago(48), 9)]
     // Other sellers' Headhunters, for Still cheapest? (a search sorted by price).
     const other = (id: string, div: number) => ({ ...listing(id, 'Headhunter', 'Leather Belt', ago(5), div), listing: { ...listing(id, 'Headhunter', 'Leather Belt', ago(5), div).listing, account: { name: 'Other#1', lastCharacterName: 'O' } } })
@@ -362,6 +362,12 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const priceBar = overlay.page.locator('[data-listed-bar]')
     await expect(priceBar).toBeVisible({ timeout: 20_000 })
     await expect(hhRow.locator('[data-listed-reprice]')).toHaveAttribute('title', /in your price check/, { timeout: 15_000 })
+    // It names the listed item, with its tooltip, and where it sits at Faustus.
+    await expect(priceBar.locator('[data-listed-bar-item]')).toHaveText('Headhunter')
+    await expect(priceBar.locator('[data-listed-bar-tab]')).toHaveText('in Sell 1 · col 5, row 3')
+    // The suggestions copy the cheapest other ask as its seller priced it.
+    await expect(priceBar.locator('[data-listed-bar-match]')).toHaveText('Set 8 div (match cheapest)')
+    await expect(priceBar.locator('[data-listed-bar-under]')).toHaveText('Set 7.9 div (under cheapest)')
     await priceBar.getByLabel('Your price', { exact: true }).fill('7')
     await priceBar.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(priceBar.locator('[data-listed-bar-target]')).toContainText('set 7 div')

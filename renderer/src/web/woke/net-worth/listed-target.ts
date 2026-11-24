@@ -63,9 +63,14 @@ export function stepUnder (p: { amount: number, currency: 'chaos' | 'divine' }, 
 
 // The two suggestions from the cheapest other ask (chaos, for your whole
 // stack): one step under it, and matching it.
-export function suggestions (cheapestChaos: number | null, divine: number | null) {
+// `asListed`: the cheapest ask as its seller priced it; when it's for the same
+// stack size as yours, the suggestion copies it (20c stays 20c).
+export function suggestions (cheapestChaos: number | null, divine: number | null, asListed?: { amount: number, currency: string, stack: number } | null, stack = 1) {
   if (cheapestChaos == null || !(cheapestChaos > 0)) return null
-  const match = asTradePrice(cheapestChaos, divine)
+  // A fraction of a chaos isn't copied (a step under it would be above it).
+  const same = asListed && asListed.stack === Math.max(1, stack) &&
+    ((asListed.currency === 'chaos' && asListed.amount >= 1) || asListed.currency === 'divine')
+  const match = same ? { amount: asListed.amount, currency: asListed.currency as 'chaos' | 'divine' } : asTradePrice(cheapestChaos, divine)
   return { under: stepUnder(match, divine), match }
 }
 
