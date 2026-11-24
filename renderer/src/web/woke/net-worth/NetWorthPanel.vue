@@ -94,9 +94,14 @@
                 <template v-else-if="eta.days != null">about {{ etaText(eta.days) }}</template>
                 <template v-else>no ETA yet</template>
               </span>
-              <TextTabs v-model="range" :options="RANGE_OPTIONS" />
+              <span :class="$style.chartRight">
+                <!-- Maps behind the line (pick D): off until switched on. -->
+                <button v-if="chartMode === 'total' && farming?.runs.length" type="button" :class="[$style.mapsBtn, { [$style.mapsOn]: mapsOn }]" :aria-pressed="mapsOn"
+                  :title="mapsOn ? 'Hide your maps behind the line' : 'Show your maps behind the line'" data-chart-maps @click="config.chartMaps = !mapsOn">Maps</button>
+                <TextTabs v-model="range" :options="RANGE_OPTIONS" />
+              </span>
             </div>
-            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
+            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :listed="chartListed" :maps="chartMaps" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
             <div v-if="chartMode === 'category' && !fold.chart" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
             </div>
@@ -313,7 +318,8 @@ import HideChip from './HideChip.vue'
 import SalesView from './SalesView.vue'
 import ListedView from './ListedView.vue'
 import { loadPending, pendingDoc, pendingReading, refreshPending } from './pending-store'
-import { pendingRows, pendingTotals, rowWorth, DEFAULT_STALE_DAYS } from './pending'
+import { listedAt, pendingRows, pendingTotals, rowWorth, DEFAULT_STALE_DAYS } from './pending'
+import type { ChartMap, ChartSale } from './chart-marks'
 import { listedWorth as listedWorthDoc, listedWorthKey } from './pending-glance'
 import RunsView from './RunsView.vue'
 import { loadRuns, runGlance, runsDoc } from './run-store'
@@ -862,7 +868,7 @@ const totalTitle = computed(() => {
 const listedTitle = computed(() => {
   const t = listed.value
   const lines = [`${t.count} ${t.count === 1 ? 'listing' : 'listings'} not sold yet, worth about ${div(t.worthChaos)} ${unit.value} (asking ${div(t.askChaos)} ${unit.value})`]
-  lines.push(countListed.value ? 'Counted in your total; the chart counts only your stash' : 'Left out of your total (tick the box to count it)')
+  lines.push(countListed.value ? 'Counted in your total; the chart shows it as a band on top of your stash' : 'Left out of your total (tick the box to count it)')
   if (t.stale) lines.push(`${t.stale} unsold ${props.config.staleDays ?? DEFAULT_STALE_DAYS} days or more`)
   lines.push('Click for the Listed view')
   return lines.join('\n')
@@ -895,7 +901,34 @@ function marketTone (s: Sale) {
   return x == null || Math.abs(x) < 0.03 ? 'w-dim' : x < 0 ? 'w-down' : 'w-up'
 }
 // The chart's dots: each sale, named for the hover card.
-const chartSales = computed(() => sales.value.map(s => ({ at: s.at, text: `${saleName(s)} ${salePrice(s)}${saleChaosOf(s) == null ? '' : ` ${unit.value}`}`, tip: saleTip(s) })))
+const chartSales = computed<ChartSale[]>(() => sales.value.map(s => {
+  const c = saleChaosOf(s)
+  return { at: s.at, text: `${saleName(s)} ${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, tip: saleTip(s), name: saleName(s), div: c == null ? null : toDiv(c) }
+}))
+// The chart's Faustus band (pick A), when listings count in your total: what
+// each refresh saved, else rebuilt from the listings and sales (listedAt).
+const chartListed = computed(() => {
+  if (!countListed.value || chartMode.value !== 'total') return undefined
+  const s = series.value
+  const d = pendingDoc.value
+  const doc = d && d.league === salesLeague.value ? d : null
+  if (!doc && !s.some(p => p.listedDiv)) return undefined
+  const worth = new Map(listedRows.value.map(r => [r.item.id, rowWorth(r)]))
+  const rebuilt = listedAt(doc, sales.value, saleRates.value, l => worth.get(l.id) ?? saleChaos(l, saleRates.value) ?? 0, s.map(p => p.at))
+  const out = s.map((p, i) => p.listedDiv ?? toDiv(rebuilt[i]))
+  return out.some(v => v > 0) ? out : undefined
+})
+// Your maps behind the line (pick D), each with what the refreshes after it added.
+const mapsOn = computed(() => props.config.chartMaps === true)
+const chartMaps = computed<ChartMap[] | undefined>(() => {
+  const f = farming.value
+  if (!mapsOn.value || !f?.runs.length) return undefined
+  const gain = new Map(groups.value.map(g => [g.key, g.netChaos]))
+  return f.runs.map((r, i) => {
+    const g = gain.get(`run:${i}`)
+    return { from: r.enteredAt, to: r.enteredAt + r.mapMs, name: `Map ${i + 1} · ${r.name}`, gainDiv: g == null ? null : toDiv(g) }
+  })
+})
 // A group's sales: those after the read before its first, up to its last. Their
 // items' removed lines give way to the sale rows.
 const readBefore = computed(() => {
@@ -1004,6 +1037,10 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .chartBlock { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 6px var(--w-pad) 8px; border-bottom: 1px solid var(--w-line); }
 .chartHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 .goalLine { color: var(--w-up); }
+.chartRight { display: inline-flex; align-items: baseline; gap: 10px; }
+.mapsBtn { padding: 0 0 2px; font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-faint); border-bottom: 1px dashed transparent; cursor: pointer; }
+.mapsBtn:hover { color: var(--w-fg); }
+.mapsOn { color: var(--w-gold); border-bottom-color: var(--w-gold); }
 .legend { display: flex; gap: var(--w-s2); flex-wrap: wrap; font-size: var(--w-fs-xs); color: var(--w-dim); }
 .legend i { display: inline-block; width: 8px; height: 8px; margin-right: 4px; opacity: .7; }
 .cols { position: relative; display: grid; border-bottom: 1px solid var(--w-line); }

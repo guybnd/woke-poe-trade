@@ -375,6 +375,14 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await countBox.click()
     await expect(countBox).toBeChecked()
     await expect(total).toHaveText(withListed)
+    // The chart puts what's at Faustus on top of the stash as a band (pick
+    // A), and only while the listings count in the total.
+    const chart = panel.locator('[data-ledger-chart]').first()
+    await expect(chart.locator('[data-listed-band]')).toHaveCount(1)
+    await overlay.snap('net worth chart with the Faustus band')
+    await countBox.click()
+    await expect(chart.locator('[data-listed-band]')).toHaveCount(0)
+    await countBox.click()
 
     // The Sales view: a header click sorts the table, a second click flips it.
     // Price compares by value: 44c sorts under 1 div though 44 > 1.

@@ -48,6 +48,9 @@ export interface LedgerPoint {
   // purchase, spend.ts), and the chaos it left out as spent.
   counted?: number
   spent?: number
+  // What your unsold Faustus listings were worth at the read, chaos (the
+  // chart's band, pick A). Left out: not known then.
+  listed?: number
 }
 
 const MAX_POINTS = 3000
@@ -76,6 +79,8 @@ export function addPoint (points: LedgerPoint[], p: LedgerPoint): LedgerPoint[] 
   else delete small.counted
   if (p.spent) small.spent = round1(p.spent)
   else delete small.spent
+  if (p.listed) small.listed = round1(p.listed)
+  else delete small.listed
   return [...points.filter(x => x.at !== p.at), small]
     .sort((a, b) => a.at - b.at)
     .slice(-MAX_POINTS)
@@ -95,6 +100,8 @@ export interface SeriesPoint {
   daily: boolean
   // Divines spent on a purchase at this read (spend.ts), for the marker.
   spentDiv?: number
+  // At Faustus at this read, when it was saved (LedgerPoint.listed).
+  listedDiv?: number
 }
 
 const toDiv = (chaos: number, rate: number | null, fallback: number | null) => {
@@ -209,7 +216,8 @@ export function seriesFor (allPoints: LedgerPoint[], days: Record<string, DaySna
       netDiv: p.netChaos == null ? null : toDiv(p.netChaos, p.divine, divineNow),
       top: p.top,
       daily: false,
-      ...(p.spent ? { spentDiv: toDiv(p.spent, p.divine, divineNow) } : {})
+      ...(p.spent ? { spentDiv: toDiv(p.spent, p.divine, divineNow) } : {}),
+      ...(p.listed ? { listedDiv: toDiv(p.listed, p.divine, divineNow) } : {})
     })
   }
   return out.sort((a, b) => a.at - b.at)
