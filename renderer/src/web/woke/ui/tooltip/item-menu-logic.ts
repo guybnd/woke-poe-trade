@@ -7,6 +7,7 @@ import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
 import type { ParsedItem } from '@/parser/ParsedItem'
 import { ItemCategory } from '@/parser/meta'
 import { parseClipboard } from '@/parser/Parser'
+import { unlink } from './tip-content'
 import type { TipKind, TipUnique } from './tip-content'
 import { VARIABLE_ITEMS } from '../../shared/unid-prices'
 import { dataUniqueName, isFoulborn } from '../../shared/item-identity'
@@ -185,11 +186,6 @@ export function uniqueModLines (tip: TipUnique | undefined, variant?: string): U
   const implicits = common(r => r.i).length > MOST_IMPLICITS ? [] : common(r => r.i)
   const explicits = common(r => r.e).length > MOST_EXPLICITS ? [] : common(r => r.e)
   return implicits.length || explicits.length ? { base: tip.b, implicits, explicits } : null
-}
-
-// "[Keyword|Shown]" and "[Keyword]" are links in the data, plain text in game.
-function unlink (line: string) {
-  return line.replace(/\[([^\]|]*)\|([^\]]*)\]/g, '$2').replace(/\[([^\]]*)\]/g, '$1')
 }
 
 // A range "(75-100)" as the game's advanced copy writes a roll: "75(75-100)".
