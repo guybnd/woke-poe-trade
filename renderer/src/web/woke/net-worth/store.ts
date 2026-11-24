@@ -21,6 +21,7 @@ import type { LedgerPoint, TabValue } from './ledger'
 import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, StashTabLike, Valuation } from './valuation'
 import type { ReaderStatus } from './widget'
 import { recordRunRead } from './run-store'
+import { kitPrice } from './run-kit'
 import { emptyMarks, feedMarks, playRates, startOfDay, trimMarks, RATE_WINDOWS } from './play-time'
 import type { PlayMarks, PlayRates } from './play-time'
 import { countsHub, countsOff } from '../shared/rate-time'
@@ -245,7 +246,8 @@ async function countRead (id: string, readAt: number) {
   await hostRequest('doc-put', { collection: COLLECTION, key: baseKey, value: nextBase }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: tabsKey, value: tabs }).catch(() => {})
   // A strategy run going: this read's changes join its tally (run-store.ts).
-  await recordRunRead(id, diff, nextLedger.points, divine.value)
+  // Its kit lines priced live take this read's prices.
+  await recordRunRead(id, diff, nextLedger.points, divine.value, kitPrice(v.lines))
 }
 
 // The dock icon's number at a read (Ctrl+Space reads the saved one).

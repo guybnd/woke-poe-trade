@@ -24,6 +24,8 @@ export interface TallyLine {
   removedChaos: number
   // A map, scarab or fragment (isMapCostItem): cost per map counts it used up.
   cost?: true
+  // Currency: its change sums trades and collected sales, never one drop.
+  currency?: true
 }
 
 // A cost the stash can't see: `qty` a map at `unitChaos` each (the price you
@@ -38,6 +40,9 @@ export interface CostLine {
   qty: number
   unitChaos: number
   bought?: number
+  // Priced live (pick K1): unitChaos follows the item's price at each read
+  // while the run goes, and stays as it was at Stop. Typing a price pins it.
+  live?: true
 }
 
 // A one-time cost (a Kirac mission, a fee).
@@ -90,7 +95,9 @@ export interface ManualLine { id: string, name: string, key?: string | null, ico
 // are per map or fight.
 // `stashChaos`: the stash change at Stop, for when the chart's reads no
 // longer go back to the run's start (the ledger keeps the newest reads only).
-export interface RunFinal { profitChaos: number, maps: number, fights?: number, perMapChaos: number | null, perHourChaos: number | null, faustusChaos?: number, stashChaos?: number }
+// `time`: where the run's time went (Client.txt), for per hour under the Per
+// hour setting in the past runs table; old runs have the clock only.
+export interface RunFinal { profitChaos: number, maps: number, fights?: number, perMapChaos: number | null, perHourChaos: number | null, faustusChaos?: number, stashChaos?: number, time?: TimeSplit }
 
 export interface RunCount { maps: number, fights: number }
 // "4 maps · 2 fights", "1 fight", "0 maps".
@@ -162,6 +169,7 @@ export function addToTally (run: Run, diff: StashDiff): Run {
     for (const l of lines) {
       const t: TallyLine = tally[l.key] ? { ...tally[l.key] } : { name: l.name, icon: l.icon, added: 0, removed: 0, addedChaos: 0, removedChaos: 0 }
       if (!t.cost && isMapCostItem(l.name, l.cat)) t.cost = true
+      if (!t.currency && l.cat === 'currency') t.currency = true
       if (dir > 0) { t.added += l.count; t.addedChaos += l.chaos } else { t.removed += l.count; t.removedChaos += l.chaos }
       tally[l.key] = t
     }
@@ -240,13 +248,7 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], count: numb
   const leftOutChaos = leftOutStash + (outside.leftOutShownChaos ?? 0)
   const profitChaos = stashChaos - takenOverChaos - costChaos - onceChaos - beforeChaos + editChaos + manualChaos - (outside.leftOutChaos ?? 0)
   const faustusChaos = outside.faustusChaos
-  // Used up from the stash: map-cost items that went down, not typed.
-  let usedChaos = 0
-  for (const [k, t] of Object.entries(run.tally)) {
-    if (typedKeys.has(k) || !(t.cost || mapCostKeys.has(k))) continue
-    const net = tallyValue(t, run.edits?.[rowKey.tally(k)])
-    if (net < 0) usedChaos += -net
-  }
+  const usedChaos = usedUp(run, mapCostKeys)
   const end = run.stoppedAt ?? now
   const ms = Math.max(0, end - run.startAt)
   return {
@@ -269,6 +271,178 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], count: numb
     ms,
     perHourChaos: ms >= MIN_RATE_MS ? profitChaos / (ms / 3_600_000) : null
   }
+}
+
+// Used up from the stash: map-cost items that went down, not typed.
+function usedUp (run: Run, mapCostKeys: ReadonlySet<string> = new Set()): number {
+  const typedKeys = new Set(run.costs.map(c => c.key).filter((k): k is string => k != null))
+  let used = 0
+  for (const [k, t] of Object.entries(run.tally)) {
+    if (typedKeys.has(k) || !(t.cost || mapCostKeys.has(k))) continue
+    const net = tallyValue(t, run.edits?.[rowKey.tally(k)])
+    if (net < 0) used += -net
+  }
+  return used
+}
+
+// What a map (or fight) cost: typed lines and map-cost items used up. Needs
+// no chart reads, so a past run's comes from the run alone.
+export function costPerRun (run: Run, runs: number, mapCostKeys?: ReadonlySet<string>): number | null {
+  if (runs <= 0) return null
+  return (run.costs.reduce((s, c) => s + lineCost(c, runs), 0) + usedUp(run, mapCostKeys)) / runs
+}
+
+// ---------- cost kits (pick K1) ----------
+// A price for a kit line: its stash item's (by key) or poe.ninja's by name;
+// null when neither has one (the line keeps its last price).
+export type LivePrice = (key: string | null, name: string) => number | null
+
+// The live run's kit lines at today's price. The same run back when nothing
+// moved (so a save can be skipped).
+export function relive (run: Run, price: LivePrice): Run {
+  if (run.stoppedAt != null) return run
+  let changed = false
+  const costs = run.costs.map(c => {
+    if (!c.live) return c
+    const p = price(c.key, c.name)
+    if (p == null || !(p > 0) || Math.abs(p - c.unitChaos) < 1e-6) return c
+    changed = true
+    return { ...c, unitChaos: p }
+  })
+  return changed ? { ...run, costs } : run
+}
+
+// ---------- the biggest drop, small samples (pick S1) ----------
+export interface TopDrop { name: string, chaos: number }
+
+// Tallied before rows knew their category: the usual currency names.
+const CURRENCY_NAME = /\b(Orb|Shard|Scroll|Splinter|Fossil|Resonator|Catalyst|Oil|Essence|Scarab|Delirium Orb|Prism|Bauble|Whetstone|Chisel|Sextant)\b|Orb of /
+
+// The single biggest thing that came in: a stash row (with your edit; left
+// out ones don't count) or an item added by hand. null: nothing came in.
+// Currency (sums of trades and sales; a Mirror counts) and map-cost items
+// (restocks) are never a drop.
+export function topDrop (run: Run): TopDrop | null {
+  const typed = new Set(run.costs.map(c => c.key))
+  let top: TopDrop | null = null
+  for (const [k, t] of Object.entries(run.tally)) {
+    if (typed.has(k) || t.cost || isMapCostItem(t.name, undefined)) continue
+    // Mirrors are the lucky drop itself, not trade money.
+    if ((t.currency || CURRENCY_NAME.test(t.name)) && !/^Mirror/.test(t.name)) continue
+    const v = tallyValue(t, run.edits?.[rowKey.tally(k)])
+    if (v > 0 && (!top || v > top.chaos)) top = { name: t.name, chaos: v }
+  }
+  for (const m of run.manual ?? []) {
+    const v = m.side === 'in' ? Math.max(0, m.count) * Math.max(0, m.each) : 0
+    if (v > 0 && (!top || v > top.chaos)) top = { name: m.name, chaos: v }
+  }
+  return top
+}
+
+// Fewer maps than this, or one drop over this share of the profit: per map
+// is a small sample.
+export const SAMPLE_MIN_RUNS = 30
+export const SAMPLE_TOP_SHARE = 0.5
+
+export interface SmallSample { few: boolean, share: number | null }
+// null when the sample is fine. `share`: the top drop's part of the profit
+// when it's over half of it.
+export function smallSample (runs: number, profitChaos: number, top: TopDrop | null): SmallSample | null {
+  if (runs <= 0) return null
+  const few = runs < SAMPLE_MIN_RUNS
+  const share = top && profitChaos > 0 && top.chaos > profitChaos * SAMPLE_TOP_SHARE ? Math.min(1, top.chaos / profitChaos) : null
+  return few || share != null ? { few, share } : null
+}
+
+// ---------- past runs compared (pick C2) ----------
+export interface CompareRow {
+  // A run's id, or the strategy's name when grouped.
+  id: string
+  name: string
+  // How many runs it adds up (1 for a single run).
+  count: number
+  startAt: number
+  ms: number
+  maps: number
+  fights: number
+  runs: number
+  profitChaos: number
+  perMapChaos: number | null
+  perHourChaos: number | null
+  costPerMapChaos: number | null
+  top: TopDrop | null
+  // Per map without the top drop.
+  perMapNoTopChaos: number | null
+  sample: SmallSample | null
+}
+
+// One row a finished run (with its final totals), newest first; `byName`
+// adds up runs with the same name (per hour over their summed time, the top
+// drop the biggest of any of them). `time`: the Per hour setting.
+export function compareRows (done: readonly Run[], time: RateTime, byName = false, mapCostKeys?: ReadonlySet<string>): CompareRow[] {
+  interface Acc { id: string, name: string, count: number, startAt: number, ms: number, rateMs: number, maps: number, fights: number, profit: number, cost: number, top: TopDrop | null }
+  const accs: Acc[] = []
+  const byKey = new Map<string, Acc>()
+  for (const r of done) {
+    const f = r.final
+    if (!f || r.stoppedAt == null) continue
+    const clockMs = Math.max(0, r.stoppedAt - r.startAt)
+    const known = f.time && f.time.map + f.time.play + f.time.hub > 0 ? f.time : null
+    const rateMs = known && time !== 'all' ? countedMs(known, time) : clockMs
+    const runs = f.maps + (f.fights ?? 0)
+    const cost = (costPerRun(r, runs, mapCostKeys) ?? 0) * runs
+    const top = topDrop(r)
+    const key = byName ? r.name : r.id
+    let a = byKey.get(key)
+    if (!a) {
+      a = { id: key, name: r.name, count: 0, startAt: r.startAt, ms: 0, rateMs: 0, maps: 0, fights: 0, profit: 0, cost: 0, top: null }
+      byKey.set(key, a)
+      accs.push(a)
+    }
+    a.count++
+    a.startAt = Math.max(a.startAt, r.startAt)
+    a.ms += clockMs
+    a.rateMs += rateMs
+    a.maps += f.maps
+    a.fights += f.fights ?? 0
+    a.profit += f.profitChaos
+    a.cost += cost
+    if (top && (!a.top || top.chaos > a.top.chaos)) a.top = top
+  }
+  return accs.map(a => {
+    const runs = a.maps + a.fights
+    return {
+      id: a.id,
+      name: a.name,
+      count: a.count,
+      startAt: a.startAt,
+      ms: a.ms,
+      maps: a.maps,
+      fights: a.fights,
+      runs,
+      profitChaos: a.profit,
+      perMapChaos: runs > 0 ? a.profit / runs : null,
+      perHourChaos: a.rateMs >= MIN_RATE_MS ? a.profit / (a.rateMs / 3_600_000) : null,
+      costPerMapChaos: runs > 0 ? a.cost / runs : null,
+      top: a.top,
+      perMapNoTopChaos: runs > 0 ? (a.profit - (a.top?.chaos ?? 0)) / runs : null,
+      sample: smallSample(runs, a.profit, a.top)
+    }
+  })
+}
+
+export type CompareSort = 'new' | 'maps' | 'profit' | 'perMap' | 'perHour' | 'cost' | 'noTop'
+// Biggest first (cost: cheapest first); a row without the figure goes last.
+export function sortCompare (rows: readonly CompareRow[], by: CompareSort): CompareRow[] {
+  if (by === 'new') return [...rows].sort((a, b) => b.startAt - a.startAt)
+  const val = (r: CompareRow): number | null => by === 'maps' ? r.runs : by === 'profit' ? r.profitChaos : by === 'perMap' ? r.perMapChaos : by === 'perHour' ? r.perHourChaos : by === 'cost' ? r.costPerMapChaos : r.perMapNoTopChaos
+  const dir = by === 'cost' ? 1 : -1
+  return [...rows].sort((a, b) => {
+    const x = val(a)
+    const y = val(b)
+    if (x == null || y == null) return x == null ? (y == null ? 0 : 1) : -1
+    return (x - y) * dir
+  })
 }
 
 // Per hour over the time the Per hour setting counts (shared/rate-time.ts).
@@ -354,6 +528,28 @@ export interface RunGlance {
   divine: number | null
   // The Faustus line (left out when nothing is there).
   faustusChaos?: number
+  // The biggest single drop, for "without top drop" and the small-sample note.
+  top?: TopDrop
+}
+
+// Past runs by strategy (compareRows grouped), saved small for Ctrl+Space.
+export interface RunBoardRow {
+  name: string
+  count: number
+  maps: number
+  fights: number
+  profitChaos: number
+  perMapChaos: number | null
+  perHour: Record<RateTime, number | null>
+  costPerMapChaos: number | null
+  perMapNoTopChaos: number | null
+  top?: TopDrop
+  small: boolean
+}
+export interface RunBoard { league: string, rows: RunBoardRow[] }
+export const runBoardKey = (league: string) => `${league}-run-board`
+export function isRunBoard (b: unknown): b is RunBoard {
+  return b != null && typeof b === 'object' && typeof (b as RunBoard).league === 'string' && Array.isArray((b as RunBoard).rows)
 }
 
 export const runsKey = (league: string) => `${league}-runs`
