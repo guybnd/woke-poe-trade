@@ -232,6 +232,7 @@ import { vaalGemLookup } from './lookups/vaal-gem'
 import { keystoneUniques, passiveList, treeLookup, withOils } from './lookups/tree'
 import { megaloLookup } from './lookups/megalo'
 import { valdoLookup } from './lookups/valdo'
+import { askLookupAny } from '../valdo/skips'
 import { forbiddenLookup } from './lookups/forbidden'
 import { forbiddenNotables } from '../forbidden/notables'
 import type { ForbiddenNotable } from '../forbidden/notables'
@@ -875,6 +876,7 @@ function act (action: LookupAction) {
     wm.hide(props.config.wmId)
   } else if ('priceCheck' in action) {
     // As if the item was pasted; the palette steps aside for the check.
+    askLookupAny()
     checkItemText(action.priceCheck)
     wm.hide(props.config.wmId)
   } else if ('trade' in action) tradeBeast(action.trade)

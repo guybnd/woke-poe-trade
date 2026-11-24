@@ -169,6 +169,8 @@ test('"valdo headhunter" in Search opens a Valdo map price check for that reward
   const strip = overlay.widget('price-check').locator('[data-valdo-strip]')
   await expect(strip).toBeVisible({ timeout: 20_000 })
   await expect(strip.locator('[data-valdo-reward-pick]')).toHaveText(/Foil Headhunter/)
-  await expect(strip.locator('[data-valdo-mod="Players who Die in area are sent to the Void"]')).toContainText('not on this map')
+  // Any void: the made-up map has no Void mod, but the search is for any map with the reward.
+  const voidLine = strip.locator('[data-valdo-mod="Players who Die in area are sent to the Void"]')
+  await expect(voidLine.locator('[data-state="any"]')).toHaveAttribute('aria-checked', 'true')
   await overlay.snap('valdo lookup')
 })

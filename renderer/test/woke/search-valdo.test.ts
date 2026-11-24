@@ -42,6 +42,6 @@ describe('valdo map text', () => {
   it('parses as a Valdo map with that reward and no Void mod', () => {
     const item = parseItem(valdoMapText('Headhunter'))
     expect(item.mapCompletionReward?.refName).toBe('Headhunter')
-    expect(item.newMods.some(m => m.info.text?.includes('Void'))).toBe(false)
+    expect(item.newMods).toHaveLength(0)
   })
 })

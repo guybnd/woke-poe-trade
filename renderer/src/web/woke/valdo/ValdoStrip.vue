@@ -77,7 +77,7 @@ import { isModuleOn } from '../modules'
 import type { FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
 import { ensureMapModsConfig } from '../map-mods/check'
 import { activeProfile } from '../map-mods/widget'
-import { isSkipped, profileSkips, rememberSeen, setSkipped, skipKey, valdoConfig, valdoHidden, valdoListingMods, valdoNeed, valdoProfile, VOID_TEXT } from './skips'
+import { isSkipped, profileSkips, rememberSeen, setSkipped, skipKey, valdoConfig, valdoHidden, valdoListingMods, valdoNeed, valdoProfile, VOID_TEXT, takeLookupAsk } from './skips'
 import type { SkipEntry } from './skips'
 
 const props = defineProps<{ item: ParsedItem, stats: FilterOrGroup[], filters: ItemFilters }>()
@@ -115,7 +115,13 @@ const own = computed(() => props.item.mapCompletionReward!)
 const picking = ref(false)
 const query = ref('')
 const input = shallowRef<HTMLInputElement | null>(null)
-watch(() => props.item, () => { picking.value = false; query.value = ''; valdoNeed.value = new Set(); added.value = []; addQuery.value = '' })
+watch(() => props.item, () => { picking.value = false; query.value = ''; valdoNeed.value = new Set(); added.value = []; addQuery.value = ''; fromLookup() })
+// Opened from Search ("valdo headhunter"): a made-up map with no Void mod, so
+// any map with the reward, Void or not, until you pick.
+function fromLookup () {
+  if (takeLookupAsk() && !props.item.newMods.length) setVoid('any')
+}
+fromLookup()
 onBeforeUnmount(() => { valdoNeed.value = new Set() })
 
 function togglePicker () {
@@ -220,8 +226,8 @@ function addFirst () {
 }
 
 // The mods met: this map's, and the loaded listings'.
-watch([mods, valdoListingMods], ([own, listed]) => {
-  const w = valdoConfig()
+// The config too: Map mods is set up on the first Not, after the listings loaded.
+watch([mods, valdoListingMods, valdoConfig], ([own, listed, w]) => {
   if (w) rememberSeen(w, [...own, ...listed])
 }, { immediate: true })
 
@@ -259,6 +265,9 @@ function setState (m: string, state: ModState) {
   if (state === 'has') need.add(key)
   else need.delete(key)
   valdoNeed.value = need
+  // A row from the profile stays for this check once touched, so Any on it
+  // doesn't take it away under the cursor.
+  if (!onMap(m) && !added.value.includes(m)) added.value = [...added.value, m]
   // Has leaves the saved Not list alone; Not adds to it, Any takes it off.
   if (state === 'has') return
   const w = ensureMapModsConfig()

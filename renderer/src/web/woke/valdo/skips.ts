@@ -184,3 +184,14 @@ export function valdoHides (item: ListingItem | undefined, skip: ReadonlySet<str
 
 /** What the listings below the strip hid: TradeListing writes it, the strip reads it. */
 export const valdoHidden = shallowRef<{ hidden: number, loaded: number } | null>(null)
+
+// Search's "valdo <reward>" asks for its price check to start with Any void
+// (its made-up map has no Void mod, which would mean No void). Taken once,
+// by the next Valdo strip, within a few seconds.
+let lookupAsk = 0
+export function askLookupAny (): void { lookupAsk = Date.now() }
+export function takeLookupAsk (): boolean {
+  const on = Date.now() - lookupAsk < 5000
+  lookupAsk = 0
+  return on
+}
