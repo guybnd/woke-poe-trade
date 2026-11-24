@@ -3,14 +3,14 @@ id: WOKEPOET-526
 title: >-
   Dock: loot filter icon only when there's a change to apply; explain Net worth
   stale count
-status: In Progress
+status: Todo
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Event Horizon
 history:
   - type: activity
     user: Agent
@@ -35,11 +35,17 @@ history:
       Building A + N1 on branch dock-chips; CI check + adversarial review
       running.
     id: a-2026-11-24t02-44-21-049z
+  - type: activity
+    user: Event Horizon
+    date: '2026-11-24T03:10:38.625Z'
+    comment: Claim by claude-code@guy-pc expired (no heartbeat for 30 min)
+    id: a-2026-11-24t03-10-38-625z
+  - type: status_change
+    from: In Progress
+    to: Todo
+    user: Event Horizon
+    date: '2026-11-24T03:10:38.888Z'
 needsAction: null
-claim:
-  holder: claude-code@guy-pc
-  claimedAt: '2026-11-24T02:40:03.383Z'
-  expiresAt: '2026-11-24T03:10:03.383Z'
 ---
 Guy: the VS chip (loot filter strictness) shouldn't always show; only when there are filter changes to apply. Also asked what the 18 on the Net worth icon counts (stale Faustus listings, 3+ days unsold).
 
