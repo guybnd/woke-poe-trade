@@ -5,7 +5,6 @@ import { defineAsyncComponent, shallowReactive, type Component } from 'vue'
 import { CURRENCY_ICONS, MECHANIC_ICONS } from '../ui/game-icons'
 import { MODULES } from '../modules'
 
-import SettingsPricecheck from '@/web/price-check/settings-price-check.vue'
 import SettingsItemcheck from '@/web/item-check/settings-item-check.vue'
 import SettingsChat from '@/web/settings/chat.vue'
 import SettingsDebug from '@/web/settings/debug.vue'
@@ -15,10 +14,11 @@ import ModulesSettings from '../switchboard/ModulesSettings.vue'
 import GamePage from './GamePage.vue'
 import HotkeysPage from './HotkeysPage.vue'
 import ScreenPage from './ScreenPage.vue'
-import InstallPage from './InstallPage.vue'
 import AboutPage from './AboutPage.vue'
-import CreditsPage from './CreditsPage.vue'
 import { CREDIT_NAMES } from './credits'
+
+// Loaded when its page opens, not at startup (startup JS budget).
+const SettingsPricecheck = defineAsyncComponent(() => import('@/web/price-check/settings-price-check.vue'))
 
 export type PageGroup = 'general' | 'modules' | 'app'
 
@@ -360,7 +360,8 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     group: 'app',
     icon: { fa: 'fas fa-download' },
     description: 'Updates, starting with Windows, crash reports, reporting an issue, the Discord and the setup window.',
-    parts: [InstallPage],
+    // Loaded when the page opens, not at startup (startup JS budget).
+    parts: [defineAsyncComponent(() => import('./InstallPage.vue'))],
     find: ['Auto update', 'Check for updates', 'Start with Windows', 'Crash reports', 'Report an issue', 'Discord', 'Setup window', 'Version']
   },
   {
@@ -399,7 +400,7 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     group: 'app',
     icon: { fa: 'fas fa-heart' },
     description: 'The projects this toolkit is built on, uses data from or took ideas from.',
-    parts: [CreditsPage],
+    parts: [defineAsyncComponent(() => import('./CreditsPage.vue'))],
     find: ['Credits', 'License', ...CREDIT_NAMES]
   }
 ])

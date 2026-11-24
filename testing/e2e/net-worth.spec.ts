@@ -4,6 +4,8 @@ import fs from 'fs'
 import path from 'path'
 import { test, expect, FIXTURES } from './harness'
 
+const area = (id: string, seed = '666232010') => `2026/11/05 20:49:09 18884906 1186a8a3 [DEBUG Client 34092] Generating level 83 area "${id}" with seed ${seed}`
+
 const LIST = fs.readFileSync(path.join(FIXTURES, 'stash/tab-list.json'), 'utf8')
 const DUMP = fs.readFileSync(path.join(FIXTURES, 'stash/tab-dump.json'), 'utf8')
 // The dump a map later: the Strand Map used up, two more Apothecary cards.
@@ -245,6 +247,26 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
       await expect(runTab).toHaveCount(0, { timeout: 4000 })
     }).toPass({ timeout: 30_000 })
     await overlay.pressHotkey(overlay.config.overlayKey)
+    // Past runs compared (pick C2): one row a run, By strategy adds up the
+    // two Nightmare maps runs. One fight is a small sample (pick S1).
+    await panel.getByRole('tab', { name: 'Runs' }).click()
+    const pastRuns = panel.locator('[data-past-run]')
+    await expect(pastRuns).toHaveCount(2)
+    await expect(panel.locator('[data-compare]')).toContainText('No top')
+    await panel.locator('[data-by-strategy]').click()
+    await expect(pastRuns).toHaveCount(1)
+    await expect(pastRuns.first()).toContainText('2 runs')
+    await expect(pastRuns.first()).toContainText('small')
+    await overlay.snap('net worth runs compared')
+    // The kit (pick K1): the name brings last time's per-map cost to Start.
+    await panel.getByLabel('Run name').fill('Nightmare maps')
+    const kitLine = panel.locator('[data-run-kit-line]')
+    await expect(kitLine).toContainText('Strand Map')
+    await expect(kitLine).toContainText('typed')
+    await kitLine.getByText('Strand Map').hover()
+    await expect(overlay.page.getByRole('tooltip')).toContainText('Strand Map')
+    await overlay.page.mouse.move(0, 0)
+    await panel.getByLabel('Run name').fill('')
     // The Listed tab (pending sales): Start's read saved your listings, and
     // Refresh reads them again (one more search). Each row has its tooltip.
     await panel.getByRole('tab', { name: 'Listed' }).click()
@@ -296,6 +318,17 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await overlay.page.locator('#price-window [data-price-close]').click()
     await expect(priceBar).toHaveCount(0)
     await overlay.snap('net worth listed')
+
+    // Stale after 1 day: Headhunter is. The icon counts it only in your hideout.
+    await panel.getByLabel('Stale after days').fill('1')
+    const badge = overlay.dockIcon('net-worth').locator('[data-layout-ok^="the badge"]')
+    await expect(panel.locator('[data-listed-stale]')).toContainText('1 unsold')
+    await expect(badge).toHaveCount(0)
+    await overlay.log([area('HideoutFelled', '1')])
+    await expect(badge).toHaveText('1')
+    // Out again before the hideout's quiet listings refresh (5 s).
+    await overlay.log([area('MapWorldsStrand')])
+    await expect(badge).toHaveCount(0)
     await overlay.page.unroute('**/api/trade/search/**')
     await overlay.page.unroute('**/api/trade/fetch/**')
     await panel.getByRole('tab', { name: 'Holdings' }).click()

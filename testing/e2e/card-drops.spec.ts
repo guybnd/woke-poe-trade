@@ -32,6 +32,9 @@ test('a div card says which maps it drops in, and a map chip lists its cards', a
   const chip = drops.locator('[data-card-drop-map]', { hasText: 'Waste Pool' })
   await expect(chip).toContainText('T8')
   await expect(drops.locator('[data-card-drop-map]', { hasText: 'Burial Chambers' })).toBeVisible()
+  // Likeliest map first, each with its share of that map's own cards.
+  await expect(drops.locator('[data-card-drop-chance]').first()).toHaveText(/^1 in [\d,]+$/)
+  await expect(drops).toContainText('how many of that map\'s own cards it takes')
 
   await chip.hover()
   const tip = overlay.page.getByRole('tooltip')
@@ -53,6 +56,9 @@ test('a map name lists the cards that drop there, dearest first', async ({ overl
   await expect(panel.getByText('Cards in Burial Chambers (tier 6)')).toBeVisible()
   const doctor = panel.getByText('The Doctor', { exact: true })
   await expect(doctor).toBeVisible()
+  // Each card's share of the map's own cards, and what one is worth on average.
+  await expect(panel.getByText(/^1 in [\d,]+$/).first()).toBeVisible()
+  await expect(panel.getByText(/per card from this map's list/)).toBeVisible()
   await doctor.hover()
   await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
   await overlay.snap('card-drops-map')

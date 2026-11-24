@@ -64,7 +64,9 @@
               <div :class="[$style.grid, $style.gridHead, { [$style.gridExtra]: extraRange }]"><span>Variant</span><span class="text-right">Now</span><span v-if="extraRange" class="text-right" :title="extraTitle">{{ extraRange.label }} ago</span><span class="text-right">24h ago</span><span class="text-right">7d ago</span><span v-if="extraRange" class="text-right" :title="extraTitle">{{ extraRange.label }}</span><span class="text-right">24h</span><span class="text-right">7d</span><span /></div>
               <div v-for="v in selected.group.variants" :key="key(v)" v-item-tip="v" :class="[$style.grid, $style.row, { [$style.rowPicked]: shownVariant != null && v.variant === shownVariant, [$style.gridExtra]: extraRange }]">
                 <span class="w-trunc">{{ v.variant || selected.group.name }}
-                  <i v-if="isThin(v)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(v)" /></span>
+                  <i v-if="isThin(v)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(v)" />
+                  <!-- A sudden step up: the price check's doubt line, here as a mark (WOKEPOET-534). -->
+                  <i v-if="stepOf(v) != null" class="fas fa-exclamation-triangle w-warn" data-price-step :title="stepTitle(v)" /></span>
                 <WPrice bulk :chaos="v.chaos" :divine="divine" class="text-right" />
                 <WPrice v-if="extraRange" bulk :chaos="extraThen(v)" :divine="divine" class="text-right w-dim" />
                 <WPrice bulk :chaos="v.d1" :divine="divine" class="text-right w-dim" />
@@ -173,6 +175,7 @@ import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { MARKET_TRACKER_TYPE, marketSearchRequest } from '../market/widget'
 import type { MarketTrackerWidget } from '../market/widget'
 import { isThin, itemKey, thinTitle } from '../market/types'
+import { savedStep } from '../price-insight/ninja-trust'
 import { rangeInfo } from '../market/ranges'
 import { savedPriceSeries } from '../market/db'
 import type { CorruptedFilter, PriceItem } from '../market/types'
@@ -226,6 +229,9 @@ import { gemLookup, transfiguredBase } from './lookups/gems'
 import { vaalGemLookup } from './lookups/vaal-gem'
 import { keystoneUniques, passiveList, treeLookup, withOils } from './lookups/tree'
 import { megaloLookup } from './lookups/megalo'
+import { forbiddenLookup } from './lookups/forbidden'
+import { forbiddenNotables } from '../forbidden/notables'
+import type { ForbiddenNotable } from '../forbidden/notables'
 import { ringAnointLookup, ringAnoints } from './lookups/rings'
 import type { RingAnoint } from './lookups/rings'
 import type { Passive } from './lookups/tree'
@@ -247,8 +253,8 @@ import type { AtlasWidget } from '../atlas/strategies'
 import { netWorthLookup } from './lookups/net-worth'
 import { runsLookup } from './lookups/runs'
 import { rateTime } from '../shared/rate-time-now'
-import { isRunGlance, runGlanceKey } from '../net-worth/runs'
-import type { RunGlance } from '../net-worth/runs'
+import { isRunBoard, isRunGlance, runBoardKey, runGlanceKey } from '../net-worth/runs'
+import type { RunBoard, RunGlance } from '../net-worth/runs'
 import { salesLookup } from './lookups/sales'
 import { listedLookup } from './lookups/listed'
 import { isPendingDoc, pendingKey } from '../net-worth/pending'
@@ -303,6 +309,12 @@ interface LookupEntry extends Base { kind: 'lookup', icon: string, card: LookupC
 type Entry = PriceEntry | ItemEntry | ActionEntry | LookupEntry
 
 const query = shallowRef('')
+// A step of 5x or more over a day or a week ago: maybe a few fake listings.
+const stepOf = (v: { chaos: number, d1?: number, d7?: number }) => savedStep(v.chaos, v.d1, v.d7)
+function stepTitle (v: { chaos: number, d1?: number, d7?: number }) {
+  const usual = stepOf(v)
+  return usual == null ? '' : `Was ${usual >= 1 ? Math.round(usual * 10) / 10 : usual.toPrecision(2)}c a day or a week ago. A sudden step like this is often a few fake listings: check live offers before you trust it.`
+}
 const corrupted = shallowRef<CorruptedFilter>('any')
 const input = shallowRef<HTMLInputElement | null>(null)
 const listEl = shallowRef<HTMLElement | null>(null)
@@ -666,9 +678,13 @@ function loadVaultTable () {
 // Net worth's per hour numbers: its small saved glance, read on open while it's on.
 const netWorthGlance = shallowRef<Glance | null>(null)
 const runGlance = shallowRef<RunGlance | null>(null)
+const runBoard = shallowRef<RunBoard | null>(null)
 function loadNetWorthGlance () {
   const league = AppConfig().leagueId
-  if (!league || !isWidgetTypeOn(AppConfig(), NET_WORTH_TYPE)) { netWorthGlance.value = null; runGlance.value = null; return }
+  if (!league || !isWidgetTypeOn(AppConfig(), NET_WORTH_TYPE)) { netWorthGlance.value = null; runGlance.value = null; runBoard.value = null; return }
+  hostRequest('doc-get', { collection: NET_WORTH_DOCS, key: runBoardKey(league) })
+    .then((b) => { runBoard.value = isRunBoard(b) && b.league === league ? b : null })
+    .catch(() => {})
   hostRequest('doc-get', { collection: NET_WORTH_DOCS, key: runGlanceKey(league) })
     .then((g) => { runGlance.value = isRunGlance(g) && g.league === league ? g : null })
     .catch(() => {})
@@ -710,6 +726,8 @@ function loadNights () {
 // Keystones and notables with what they do, from the PoB tool's tree.
 const passives = shallowRef<Passive[] | null>(null)
 const keystoneGrants = shallowRef<ReadonlyMap<string, string[]>>(new Map())
+// The notables a Forbidden Flame and Flesh pair can give, from the stat data and the tree.
+const forbidden = shallowRef<ForbiddenNotable[] | null>(null)
 let treeLoads = 0
 function loadTree () {
   if (passives.value) return
@@ -720,6 +738,7 @@ function loadTree () {
     const list = passiveList(nodes.values(), passiveTreeClusters()?.named ?? null)
     keystoneGrants.value = uniques ? keystoneUniques(uniques, list.filter(p => p.kind === 'Keystone').map(p => p.name)) : new Map()
     passives.value = withOils(list, name => notableOils(name, STAT_BY_REF_V2))
+    forbidden.value = forbiddenNotables(STATS_ITERATOR('matching modifier on Forbidden'), id => nodes.get(id))
   }).catch(() => {})
 }
 // Blight ring anoints, from the stat data. Read again when the data's
@@ -790,6 +809,7 @@ const stopDataWatch = onSharedDataChange(() => {
   if (detailName.value) loadDetailPack()
   tipItems.value = null
   passives.value = null
+  forbidden.value = null
   visceraTable.value = null
   vaultTable.value = null
   treeLoads++
@@ -807,7 +827,7 @@ function flipsConfig (): ScarabFlipWidget | null {
   return (config.widgets.find(w => w.wmType === SCARAB_FLIP_TYPE) as ScarabFlipWidget | undefined) ?? null
 }
 const netWorthWidget = () => AppConfig().widgets.find(w => w.wmType === NET_WORTH_TYPE) as { staleDays?: number, countListed?: boolean } | undefined
-const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime()), salesLookup(salesList.value), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
+const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, forbiddenLookup(forbidden.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime(), runBoard.value), salesLookup(salesList.value), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))

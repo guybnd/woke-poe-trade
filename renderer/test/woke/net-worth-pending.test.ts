@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ageText, confidenceOf, glanceOfPending, mergeRead, pendingRows, pendingTotals, sortPending } from '@/web/woke/net-worth/pending'
 import type { PendingDoc } from '@/web/woke/net-worth/pending'
-import { staleCount } from '@/web/woke/net-worth/pending-glance'
+import { staleCount, staleIds } from '@/web/woke/net-worth/pending-glance'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { listedLookup } from '@/web/woke/search/lookups/listed'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
@@ -79,6 +79,7 @@ describe('pending sales', () => {
     expect(staleCount(g, [{ id: 'b', at: T0 - D }], T0, 3)).toBe(1)
     expect(staleCount(g, [], T0, 7)).toBe(0)
     expect(staleCount(null, [], T0)).toBe(0)
+    expect(staleIds(g, [{ id: 'b', at: T0 - D }], T0, 3)).toHaveLength(1)
   })
 
   it('reads ages short', () => {

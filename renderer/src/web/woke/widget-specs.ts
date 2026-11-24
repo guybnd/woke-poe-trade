@@ -25,6 +25,7 @@ import { MAP_MODS_TYPE } from './map-mods/widget'
 import { MARKET_TRACKER_TYPE } from './market/widget'
 import { MECHANICS_TYPE } from './mechanics/widget'
 import { MEGALO_TYPE, initMegaloWidget } from './megalo/widget'
+import { FORBIDDEN_TYPE, initForbiddenWidget } from './forbidden/widget'
 import { POB_BUILDS_TYPE } from './pob-builds/widget'
 import { POE_RE_TYPE, initPoeReWidget } from './regex-library/poe-re-widget'
 import { REGEX_LIBRARY_TYPE, RegexLibraryWidget, starterEntries } from './regex-library/widget'
@@ -237,4 +238,11 @@ export const widgetMegaloSpec = {
   instances: 'multi',
   trNameKey: 'Megalomaniac searcher',
   defaultInstances: () => [initMegaloWidget(0)]
+} satisfies WidgetSpec
+
+export const widgetForbiddenSpec = {
+  type: FORBIDDEN_TYPE,
+  instances: 'multi',
+  trNameKey: 'Forbidden pair finder',
+  defaultInstances: () => [initForbiddenWidget(0)]
 } satisfies WidgetSpec

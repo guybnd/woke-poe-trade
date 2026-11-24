@@ -79,11 +79,50 @@ function modCard (id: string, title: string, mods: MapBonusMod[], ctx: LookupCon
   }
 }
 
+// "farming goal", "atlas drops", "farm currency": which map numbers matter for
+// what you farm (map-mods/goal.ts, checked against poedb's 3.30.0 notes).
+const GOAL_QUERY = /^(?:map goal|(?:map )?(?:farming goal|farm goal|farm(?:ing)? (?:currency|maps?|threads?)|atlas drops?|what does atlas drops? do\??))$/
+export function farmGoalCard (ctx: LookupContext): LookupCard {
+  return {
+    id: 'map-goal',
+    group: 'Atlas',
+    name: 'Map farming goal',
+    sub: 'Currency: Rarity, Pack size, More Currency · Maps & Threads: Atlas Drops, More Maps, More Threads',
+    icon: 'fas fa-map',
+    sections: [
+      {
+        label: 'Farming currency',
+        rows: [
+          { label: 'Item Rarity', value: 'better currency drops' },
+          { label: 'Pack size', value: 'more of everything' },
+          { label: 'More Currency (T17)', value: 'more currency items' }
+        ]
+      },
+      {
+        label: 'Farming maps and Threads',
+        rows: [
+          { label: 'Atlas Drops', value: 'more Maps, Threads, league resources' },
+          { label: 'More Maps, More Threads (T17)', value: 'more of each' },
+          { label: 'Pack size', value: 'more of everything' }
+        ]
+      },
+      {
+        text: [
+          'In 3.30 Atlas Drops replaced Item Quantity on map mods. It raises Maps, Threads and league resources found (Splinters, Hiveblood, Lifeforce), not currency, and also counts as Item Rarity.',
+          'Pick your goal with Farming on any map\'s Trade search in the price check: the numbers that matter start on. It also sets the Planner\'s goal.'
+        ]
+      }
+    ],
+    actions: [...actions(ctx), { label: 'Patch notes: poedb', url: 'https://poedb.tw/us/Version_3.30.0' }]
+  }
+}
+
 export function mapBonusLookup (data: MapBonusData | null): Lookup {
   return (query: string, ctx: LookupContext) => {
-    if (!data) return []
     const q = query.trim().toLowerCase().replace(/\s+/g, ' ')
     if (q.length < MIN_QUERY) return []
+    if (GOAL_QUERY.test(q)) return [farmGoalCard(ctx)]
+    if (!data) return []
     const bonus = BONUS_QUERY.map(re => q.match(re)).find(Boolean)
     if (bonus && MORE_WORDS[bonus[1]]) {
       const card = bonusCard(data, MORE_WORDS[bonus[1]], ctx)

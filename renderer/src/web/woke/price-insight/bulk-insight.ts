@@ -24,6 +24,15 @@ export interface BulkInsight {
   /** Too few sellers hold that amount, so smaller offers count after all. */
   fewWithStock: boolean
   sellers: number
+  /** What sellers ask, each seller's best offer once: the range without the dearest tenth, and the price most ask. */
+  spread: BulkSpread
+}
+
+export interface BulkSpread {
+  low: number
+  high: number
+  /** The price the most sellers ask, rounded as shown; null under 4 sellers or when no price repeats. */
+  most: number | null
 }
 
 const WINDOW = 6
@@ -80,8 +89,43 @@ export function buildBulkInsight (listings: readonly BulkListing[], need: number
     confidence,
     lowStock: fewWithStock ? 0 : real.length - withStock.length,
     fewWithStock,
-    sellers: units.length
+    sellers: units.length,
+    spread: bulkSpread(units)
   }
+}
+
+const SPREAD_MIN_SELLERS = 4
+// The dearest tenth is left out of the range: one silly ask would swamp it.
+const SPREAD_TOP_CUT = 0.9
+
+/** Sellers' prices (one each, cheapest first) as a range and the price most ask. */
+export function bulkSpread (units: readonly number[]): BulkSpread {
+  const n = units.length
+  const low = units[0]
+  const high = units[Math.max(0, Math.ceil(n * SPREAD_TOP_CUT) - 1)]
+  let most: number | null = null
+  if (n >= SPREAD_MIN_SELLERS) {
+    // Counted as shown, so 9.96 and 10 are one price.
+    const counts = new Map<string, { value: number, count: number }>()
+    for (const u of units) {
+      const k = bulkAmount(u)
+      const c = counts.get(k)
+      if (c) c.count++
+      else counts.set(k, { value: u, count: 1 })
+    }
+    let best: { value: number, count: number } | null = null
+    for (const c of counts.values()) if (!best || c.count > best.count) best = c
+    if (best && best.count >= 2) most = best.value
+  }
+  return { low, high, most }
+}
+
+/** "Sellers ask 1 to 15c, most ask 10c". null with one seller. `fmt` writes an amount with its unit. */
+export function spreadText (s: BulkSpread, sellers: number, fmt: (v: number) => string): string | null {
+  if (sellers < 2) return null
+  if (bulkAmount(s.low) === bulkAmount(s.high)) return `Sellers ask ${fmt(s.low)}`
+  const range = `Sellers ask ${fmt(s.low).replace(/[^\d.,]+$/, '')} to ${fmt(s.high)}`
+  return s.most != null ? `${range}, most ask ${fmt(s.most)}` : range
 }
 
 /** A readable per-item amount: bulk prices are often well under one. */

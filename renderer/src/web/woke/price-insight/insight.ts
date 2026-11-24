@@ -15,13 +15,14 @@ export interface InsightListing {
   listedTimes: number
 }
 
-export type DropReason = 'currency' | 'mine' | 'stale' | 'fixer' | 'wall' | 'dump'
+export type DropReason = 'currency' | 'mine' | 'stale' | 'fixer' | 'underbuy' | 'wall' | 'dump'
 
 export const DROP_LABEL: Record<DropReason, string> = {
   currency: 'priced in a currency we can not convert',
   mine: 'your own listing',
   stale: 'seller offline and listing older than 3 days',
   fixer: 'far below the next listings, likely bait from a price fixer',
+  underbuy: 'whisper only, far under what instant buyouts ask, likely bait from a price fixer',
   wall: 'one seller listing many copies far under everyone else, a classic price-fixing wall',
   dump: 'one of several cheap listings that all appeared in the last hour, likely a price-fixing dump'
 }
@@ -29,13 +30,14 @@ export const DROP_LABEL: Record<DropReason, string> = {
 /** Short tag shown on a listing row for the reasons that point at price fixing. */
 export const FIX_TAG: Partial<Record<DropReason, string>> = {
   fixer: 'bait',
+  underbuy: 'bait',
   wall: 'wall',
   dump: 'dump',
   stale: 'ghost'
 }
 
 /** Drop reasons that mean someone may be faking the price. */
-export const FIXING_REASONS = new Set<DropReason>(['fixer', 'wall', 'dump'])
+export const FIXING_REASONS = new Set<DropReason>(['fixer', 'underbuy', 'wall', 'dump'])
 
 export type FixRisk = 'none' | 'low' | 'medium' | 'high'
 
@@ -80,6 +82,11 @@ const OLD_MS = 7 * 24 * 60 * 60 * 1000
 const WINDOW = 6
 const FIXER_RATIO = 0.5
 const THIN_FIXER_RATIO = 0.25
+// A whisper listing under this share of the cheapest instant buyout is bait
+// (WOKEPOET-541): anyone can buy the buyouts now, so a real seller asks about
+// that. Needs buyouts from at least 2 sellers, so one odd buyout sets nothing.
+const UNDER_BUYOUT_RATIO = 0.6
+const UNDER_BUYOUT_SELLERS = 2
 const MAX_ROWS_PER_SELLER = 2
 const MAX_BELOW_FLOOR = 2
 // Chaos a bargain has to save before it's worth pointing out.
@@ -182,6 +189,19 @@ export function buildInsight (listings: InsightListing[], opts: InsightOptions):
   if (thinMarket && !kept[0].instant && kept[0].chaos < kept[1].chaos * THIN_FIXER_RATIO) {
     dropped.set(kept[0].id, 'fixer')
     kept = kept.slice(1)
+  }
+
+  // Whisper listings far under the instant buyouts, wherever they sit. Only
+  // while they're under half the listings: when most sellers ask that, it's
+  // the market, and the buyouts are the ones asking more.
+  const buyouts = kept.filter(k => k.instant)
+  if (new Set(buyouts.map(k => k.account)).size >= UNDER_BUYOUT_SELLERS) {
+    const line = buyouts[0].chaos * UNDER_BUYOUT_RATIO
+    const under = kept.filter(k => !k.instant && k.chaos < line)
+    if (under.length * 2 < kept.length) {
+      for (const k of under) dropped.set(k.id, 'underbuy')
+      kept = kept.filter(k => !under.includes(k))
+    }
   }
 
   const { risk, signals } = fixRisk(kept, dropped, listings)
@@ -329,14 +349,20 @@ function fixRisk (kept: KeptRow[], dropped: Map<string, DropReason>, listings: I
   }
   const walls = count('wall')
   const dumps = count('dump')
-  const bait = count('fixer')
+  const bait = count('fixer') + count('underbuy')
   if (walls) {
     const ids = Array.from(dropped).filter(([, r]) => r === 'wall').map(([id]) => id)
     const sellers = new Set(listings.filter(l => ids.includes(l.id)).map(l => l.accountName))
     signals.push({ kind: 'wall', text: sellers.size === 1 ? `One seller listed ${walls} copies far under everyone else` : `${sellers.size} sellers listed ${walls} copies far under everyone else` })
   }
   if (dumps) signals.push({ kind: 'dump', text: `${dumps} cheap listings all appeared in the last hour` })
-  if (bait) signals.push({ kind: 'bait', text: bait === 1 ? 'One bait listing far under the rest' : `${bait} bait listings far under the rest` })
+  if (bait) {
+    const under = count('underbuy')
+    const text = under === bait
+      ? (bait === 1 ? 'One whisper listing far under the instant buyouts: likely bait' : `${bait} whisper listings far under the instant buyouts: likely bait`)
+      : (bait === 1 ? 'One bait listing far under the rest' : `${bait} bait listings far under the rest`)
+    signals.push({ kind: 'bait', text })
+  }
   const sellers = new Set(kept.map(k => k.account)).size
   if (kept.length > 0 && kept.length < 4 && sellers <= 2 && kept.some(k => !k.instant)) {
     signals.push({ kind: 'thin', text: 'Few listings from one or two sellers: easy to fake, check by hand' })

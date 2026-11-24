@@ -22,6 +22,8 @@ export const PLAN_GOALS: PlanGoal[] = ['currency', 'maps', 'threads', 'p']
 
 export interface PlannerState {
   goal: PlanGoal
+  // Picked on the Planner; until then the goal follows the farming goal (goal.ts).
+  goalPicked?: boolean
   // Mods (by affix name) ticked or unticked by hand; the rest follow your
   // ratings: a mod with a line rated avoid starts unticked.
   on?: string[]

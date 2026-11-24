@@ -70,7 +70,8 @@ export const wokeWidgets: WidgetComponent[] = [
   lazy(specs.widgetSearchSpec, () => import('./search/WidgetSearch.vue')),
   lazy(specs.widgetWealthyExileSpec, () => import('./wealthy-exile/WidgetWealthyExile.vue')),
   lazy(specs.widgetPoeReSpec, () => import('./regex-library/WidgetPoeRe.vue')),
-  lazy(specs.widgetMegaloSpec, () => import('./megalo/WidgetMegalo.vue'))
+  lazy(specs.widgetMegaloSpec, () => import('./megalo/WidgetMegalo.vue')),
+  lazy(specs.widgetForbiddenSpec, () => import('./forbidden/WidgetForbidden.vue'))
 ]
 
 export { wokeSettingsFor } from './editors'
