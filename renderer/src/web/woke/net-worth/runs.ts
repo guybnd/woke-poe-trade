@@ -258,14 +258,13 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], count: numb
   }
 }
 
-// Per hour with hideout time counted, for the Runs view: a live run's profit
-// is to the last read, so its time is too, as on the dock card (whose glance
-// is worked out at the read). A stopped run's stands.
 // Per hour over the time the Per hour setting counts (shared/rate-time.ts).
 // `split`: where the run's time went (run-time.ts); null without Client.txt,
-// and then the clock (`clockMs`) is all there is.
+// and then the clock (`clockMs`) is all there is. A split with no zone time
+// at all (a Client.txt with nothing written in the run) counts as none.
 export function runPerHour (profitChaos: number, clockMs: number, split: TimeSplit | null | undefined, time: RateTime): number | null {
-  const ms = split && time !== 'all' ? countedMs(split, time) : clockMs
+  const known = split && split.map + split.play + split.hub > 0 ? split : null
+  const ms = known && time !== 'all' ? countedMs(known, time) : clockMs
   return ms >= MIN_RATE_MS ? profitChaos / (ms / 3_600_000) : null
 }
 
@@ -329,8 +328,10 @@ export interface RunGlance {
   fights?: number
   // Over the whole run (the clock); runPerHour with `time` for the setting's.
   perHourChaos: number | null
-  // Where the run's time went (Client.txt), when it was read.
+  // Where the run's time went (Client.txt), from the start to `timeTo` (the
+  // last stash read, which the profit runs to).
   time?: TimeSplit
+  timeTo?: number
   costPerMapChaos: number | null
   divine: number | null
   // The Faustus line (left out when nothing is there).

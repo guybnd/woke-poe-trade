@@ -47,9 +47,9 @@ describe('Session analytics with play only', () => {
   const run = { areaId: 'MapWorldsStrand', name: 'Strand', level: 83, enteredAt: 1, mapMs: 10 * M, otherMs: 5 * M, loot: [] }
   const s: SessionRecord = { id: 's', league: 'L', strategy: 'Boxes', startedAt: 0, endedAt: 1, durationMs: 40 * M, maps: 2, costPerMapChaos: 0, loot: [], extraChaos: 600, divine: 100, runs: [run, run] }
   it('counts time inside maps only; the others count the whole session', () => {
-    expect(perHour(sessionUnits(s, 'chaos', null, false, 'play'))).toBeCloseTo(600 / (20 / 60))
-    expect(perHour(sessionUnits(s, 'chaos', null, false, 'hub'))).toBeCloseTo(600 / (40 / 60))
-    expect(perHour(sessionUnits(s, 'chaos', null))).toBeCloseTo(600 / (40 / 60))
+    expect(perHour(sessionUnits(s, 'chaos', null, 'play'))).toBeCloseTo(600 / (20 / 60))
+    expect(perHour(sessionUnits(s, 'chaos', null, 'hub'))).toBeCloseTo(600 / (40 / 60))
+    expect(perHour(sessionUnits(s, 'chaos', null, 'all'))).toBeCloseTo(600 / (40 / 60))
   })
 })
 

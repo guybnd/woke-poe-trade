@@ -32,7 +32,7 @@ export function runsLookup (run: RunGlance | null, time: RateTime = 'play'): Loo
     const fights = run.fights ?? 0
     const runs = run.maps + fights
     const unit = fights ? (run.maps ? 'run' : 'fight') : 'map'
-    const perHour = runPerHour(run.profitChaos, run.at - run.startAt, run.time, time)
+    const perHour = runPerHour(run.profitChaos, (run.timeTo ?? run.at) - run.startAt, run.time, time)
     const rows: LookupRow[] = [
       { label: 'Profit', value: amount(run.profitChaos, divine) },
       ...(run.faustusChaos ? [{ label: 'Outside the stash', value: amount(run.faustusChaos, divine) }, { label: 'Total', value: amount(run.profitChaos + run.faustusChaos, divine) }] : []),

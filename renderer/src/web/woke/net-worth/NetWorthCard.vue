@@ -253,10 +253,10 @@ const topCame = computed(() => liveDoc.value ? tallyRows(liveDoc.value).came.sli
 const runs = computed(() => props.run ? props.run.maps + (props.run.fights ?? 0) : 0)
 const unit = computed(() => props.run ? unitOf(props.run.maps, props.run.fights) : 'map')
 const spent = shallowRef<Record<'map' | 'play' | 'hub' | 'off', number> | null>(null)
-watch(() => props.run ? [props.run.startAt, props.run.at] as const : null, (span) => {
+watch(() => props.run ? [props.run.startAt, props.run.timeTo ?? props.run.at] as const : null, (span) => {
   if (!span) { spent.value = null; return }
   const [from, to] = span
-  runTimeIn(from, to).then((t) => { if (props.run?.startAt === from && props.run.at === to) spent.value = t?.ms ?? null }).catch(() => {})
+  runTimeIn(from, to).then((t) => { if (props.run?.startAt === from && (props.run.timeTo ?? props.run.at) === to) spent.value = t?.ms ?? null }).catch(() => {})
 }, { immediate: true })
 const time = computed(() => {
   const t = spent.value
@@ -273,7 +273,7 @@ const time = computed(() => {
 const perHour = computed(() => {
   const r = props.run
   if (!r) return null
-  return runPerHour(r.profitChaos, r.at - r.startAt, spent.value ?? r.time, rateTime())
+  return runPerHour(r.profitChaos, (r.timeTo ?? r.at) - r.startAt, spent.value ?? r.time, rateTime())
 })
 const perHourTip = computed(() => (spent.value ?? props.run?.time) ? `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}` : 'Per hour of the whole run: Client.txt not read')
 

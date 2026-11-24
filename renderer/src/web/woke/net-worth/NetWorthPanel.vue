@@ -135,7 +135,7 @@
           <div v-if="showChanges" :class="$style.changesCol">
             <div :class="$style.colHead">
               <button type="button" :class="$style.foldHead" :aria-expanded="!fold.changes" :title="fold.changes ? 'Open' : 'Fold'" @click="flipFold('changes')"><i :class="fold.changes ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} maps` : 'Since last refresh' }}</span></button>
-              <b v-if="session" class="w-num" :class="tone(session.div)">{{ signed(session.div) }}<Coin :chaos="!divine" /><template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}<Coin :chaos="!divine" />/h</template></b>
+              <b v-if="session" class="w-num" :class="tone(session.div)" :title="session.tip">{{ signed(session.div) }}<Coin :chaos="!divine" /><template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}<Coin :chaos="!divine" />/h</template></b>
               <span v-if="session && session.spent > 0" :class="$style.spendNote" class="w-num" title="Purchases in this session: left out of its profit">spent {{ div(session.spent) }}<Coin :chaos="!divine" /></span>
             </div>
             <!-- The newest groups; the two latest open, the rest one row each. The
@@ -302,6 +302,9 @@ import type { ColId, FoldId, PanelLayout } from './layout'
 import SplitHandle from './SplitHandle.vue'
 import TextTabs from './TextTabs.vue'
 import RateTimePick from '../shared/RateTimePick.vue'
+import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
+import { rateTime } from '../shared/rate-time-now'
+import { nightRateMs } from '../session-story/night-rate'
 import type { RateWindow } from './play-time'
 import LedgerChart from './LedgerChart.vue'
 import Coin from './Coin.vue'
@@ -423,7 +426,7 @@ const splitLabel = computed(() => {
 const todayTip = computed(() => {
   const t = rates.value.today
   return t.perHour == null ? "Since yesterday's last read" : `Since yesterday's last read
-Per hour of play today: ${signed(toDiv(t.perHour))} ${unit.value}/h over ${duration(t.playMs)}`
+Per hour today: ${signed(toDiv(t.perHour))} ${unit.value}/h over ${duration(t.playMs)}, ${leftOutText(rateTime())}`
 })
 const best = computed(() => v.value?.lines[0] ?? null)
 
@@ -577,7 +580,8 @@ const farming = computed<PanelSession | null>(() => {
   if (s) return { startedAt: s.startedAt, maps: s.maps, runs: s.runs ?? [], ms: now => elapsed(s, now), endable: true }
   const n = isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nightStore.live.value : null
   if (!n) return null
-  return { startedAt: n.startedAt, maps: n.maps.length, runs: n.maps, ms: now => n.mapMs + n.otherMs + Math.min(Math.max(0, now - n.endedAt), NIGHT_TAIL_MS), endable: false }
+  // The time the Per hour choice counts (night-rate.ts), as on the night card.
+  return { startedAt: n.startedAt, maps: n.maps.length, runs: n.maps, ms: now => nightRateMs(n, rateTime()) + Math.min(Math.max(0, now - n.endedAt), NIGHT_TAIL_MS), endable: false }
 })
 // The session's clock moves while you sit in the hideout.
 const now = shallowRef(Date.now())
@@ -603,7 +607,8 @@ const session = computed(() => {
   if (!s) return null
   const ms = s.ms(now.value)
   const divVal = toDiv(sessionChaos.value)
-  return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null, spent: sessionSpent.value, endable: s.endable }
+  const tip = s.endable ? 'Per hour of the whole session' : `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}`
+  return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null, spent: sessionSpent.value, endable: s.endable, tip }
 })
 const gainAt = computed(() => new Map(gainsNow.value.map(g => [g.at, g])))
 // Every refresh's share of profit (spend.ts), worked out in time order.

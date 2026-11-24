@@ -165,9 +165,14 @@ describe('maps and hideout time', () => {
   })
 
   it('AFK and closed time count only with all time', () => {
-    const t = (withHub: boolean, withOff: boolean) => playRate(points, m.marks, T0, T0 + 45 * MIN, withHub, m.maps, withOff)
-    expect(t(true, true).playMs).toBeGreaterThanOrEqual(t(true, false).playMs)
-    expect(t(true, true).playMs - t(true, false).playMs).toBe(t(true, true).offMs)
+    // 10 min in a map, 15 AFK in it, 5 in the hideout.
+    const afk = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand'), line(10, ': AFK mode is now ON. Autoreply "x"'), line(25, ': AFK mode is now OFF.'), area(25, 'HideoutFoo')])
+    const pts = [{ at: T0, netChaos: null }, { at: T0 + 30 * MIN, netChaos: 300 }]
+    const t = (withHub: boolean, withOff: boolean) => playRate(pts, afk.marks, T0, T0 + 30 * MIN, withHub, afk.maps, withOff)
+    expect(t(false, false).playMs).toBe(10 * MIN)
+    expect(t(true, false).playMs).toBe(15 * MIN)
+    expect(t(true, true).playMs).toBe(30 * MIN)
+    expect(t(true, true).offMs).toBe(15 * MIN)
   })
 })
 
