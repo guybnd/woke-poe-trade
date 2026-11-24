@@ -11,13 +11,15 @@ let tick = 3725546
 const card = (name: string) => `2026/11/08 18:04:11 ${tick++} 1186a8a3 [INFO Client 4567] : Card drawn from the deck: <divination>{${name}}`
 
 // The fixture's prices (Divine Orb 180c, The Doctor 900c, Rain of Chaos 0.5c),
-// with a Stacked Deck at 3c and The Lover at 1c.
+// with a Stacked Deck at 3c, The Lover at 1c and a fake Thirst for Knowledge.
 async function routePrices (page: Page) {
   const dense = JSON.parse(fixtureText('http/poe.ninja/poe1/api/economy/current/dense/overviews.json'))
   const currency = dense.currencyOverviews.find((o: { type: string }) => o.type === 'Currency')
   currency.lines.push({ name: 'Stacked Deck', chaos: 3, graph: [0, 0, 0, 0, 0, 0, 0] })
   const cards = dense.itemOverviews.find((o: { type: string }) => o.type === 'DivinationCard')
   cards.lines.push({ name: 'The Lover', chaos: 1, graph: [0, 0, 0, 0, 0, 0, 0] })
+  // A fake: priced on one day only, at 14,000c (Thirst for Knowledge read 14,139c).
+  cards.lines.push({ name: 'Thirst for Knowledge', chaos: 14000, graph: [null, null, null, null, null, null, 0] })
   await page.route(DENSE, route => route.fulfill({ json: dense }))
 }
 
@@ -83,20 +85,47 @@ test('cards from the log add up on the dock card, and a big hit pops up', async 
 test('cheap cards can be left out of Got and Result', async ({ overlay, page }) => {
   await routePrices(page)
   await overlay.boot({ patch: tracker({ countCheap: false }) })
-  await overlay.log([card('Rain of Chaos'), card('The Lover')])
+  // Her Mask isn't on poe.ninja (too few trades): a common card, so it folds too.
+  await overlay.log([card('Rain of Chaos'), card('The Lover'), card('Her Mask')])
   const icon = overlay.dockIcon('stacked-decks')
   await expect(icon).toBeVisible()
   await overlay.hoverDockIcon('stacked-decks')
   const stats = icon.locator('[data-deck="stats"]')
-  await expect(stats.locator('[data-stat="spent"]')).toHaveText('6 c', { timeout: 15_000 })
+  await expect(stats.locator('[data-stat="spent"]')).toHaveText('9 c', { timeout: 15_000 })
   await expect(stats.locator('[data-stat="got"]')).toHaveText('0 c')
-  await expect(stats.locator('[data-stat="result"]')).toHaveText('-6 c')
+  await expect(stats.locator('[data-stat="result"]')).toHaveText('-9 c')
+  await expect(icon.locator('[data-deck="card"]')).toHaveCount(0)
+  await expect(icon).toContainText("1 card isn't on poe.ninja")
   const fold = icon.locator('[data-deck="cheap"]')
+  await expect(fold).toContainText('3 cards under 2 c')
   await expect(fold).toContainText('not counted')
   const box = await fold.boundingBox()
   await overlay.moveMouse(Math.round(box!.x + box!.width / 2), Math.round(box!.y + box!.height / 2))
   await fold.click()
-  await expect(icon.locator('[data-deck="cheap-card"]')).toHaveCount(2)
+  await expect(icon.locator('[data-deck="cheap-card"]')).toHaveCount(3)
+  await expect(icon.locator('[data-deck="cheap-card"]').filter({ hasText: 'Her Mask' })).toContainText('—')
+})
+
+test("a card poe.ninja priced on one day only doesn't count, or pop up as a big hit", async ({ overlay, page }) => {
+  await routePrices(page)
+  await overlay.boot({ patch: tracker() })
+  await overlay.log([card('Rain of Chaos')])
+  const icon = overlay.dockIcon('stacked-decks')
+  await expect(icon).toBeVisible()
+  await overlay.hoverDockIcon('stacked-decks')
+  const stats = icon.locator('[data-deck="stats"]')
+  // Prices are in before the fake card comes, so a popup would show at once.
+  await expect(stats.locator('[data-stat="spent"]')).toHaveText('3 c', { timeout: 15_000 })
+  await overlay.log([card('Thirst for Knowledge')])
+  await overlay.hoverDockIcon('stacked-decks')
+  await expect(stats.locator('[data-stat="spent"]')).toHaveText('6 c')
+  await expect(page.locator('[data-deck="big-hit"]')).toHaveCount(0)
+  await expect(stats.locator('[data-stat="got"]')).toHaveText('0.5 c')
+  await expect(icon.locator('[data-deck="held-note"]')).toContainText('1 card has a poe.ninja price that looks fake')
+  const row = icon.locator('[data-deck="card"]').filter({ hasText: 'Thirst for Knowledge' })
+  await expect(row).toContainText('—')
+  await expect(row.locator('[data-held]')).toHaveAttribute('title', /poe\.ninja: .* on the one day it had a price/)
+  await expect(page.locator('[data-deck="big-hit"]')).toHaveCount(0)
 })
 
 test('a quiet session is saved and shows in Session analytics', async ({ overlay, page }) => {

@@ -29,14 +29,15 @@
       <WInfo :text="luckInfo" />
     </div>
 
-    <div v-if="t.unpriced" class="text-xs w-faint">{{ t.unpriced }} {{ t.unpriced === 1 ? 'card has' : 'cards have' }} no poe.ninja price and count as 0.</div>
+    <div v-if="notes.unlisted" class="text-xs w-faint" :title="notes.anyPriced ? NO_PRICE : undefined">{{ notes.unlisted }} {{ notes.anyPriced ? (notes.unlisted === 1 ? "card isn't on poe.ninja (too few trades)" : "cards aren't on poe.ninja (too few trades)") : (notes.unlisted === 1 ? 'card has no poe.ninja price' : 'cards have no poe.ninja price') }} and count as 0.</div>
+    <div v-if="notes.held" class="text-xs w-faint" data-deck="held-note">{{ notes.held }} {{ notes.held === 1 ? 'card has a poe.ninja price that looks fake' : 'cards have poe.ninja prices that look fake' }} (<i class="fas fa-pause-circle" />): counted at the usual price, or 0. Hover the price for poe.ninja's.</div>
 
     <div v-if="shown.length || t.cheapQty" :class="$style.table">
       <div v-for="r in shown" :key="r.name" :class="$style.row" data-deck="card">
         <WIcon :src="art(r.name)" fallback="fas fa-clone" />
         <span class="w-trunc" v-item-tip="{ type: 'DivinationCard', name: r.name }">{{ r.name }}</span>
         <span class="w-num w-dim">×{{ r.qty }}</span>
-        <span class="w-num text-right">{{ r.each != null ? money(r.total) : '—' }}</span>
+        <span class="w-num text-right" :title="priceTitle(r.name, r.each)" :data-held="heldOf(r.name) ? '' : undefined"><i v-if="heldOf(r.name)" class="fas fa-pause-circle w-dim" :class="$style.held" />{{ r.each != null ? money(r.total) : '—' }}</span>
       </div>
       <div v-if="t.rows.length > shown.length" class="text-xs w-faint" :class="$style.more">and {{ t.rows.length - shown.length }} more cards</div>
       <!-- Cards under the cut-off, folded into one line (A). -->
@@ -53,7 +54,7 @@
             <WIcon :src="art(r.name)" fallback="fas fa-clone" />
             <span class="w-trunc" v-item-tip="{ type: 'DivinationCard', name: r.name }">{{ r.name }}</span>
             <span class="w-num">×{{ r.qty }}</span>
-            <span class="w-num text-right">{{ money(r.total) }}</span>
+            <span class="w-num text-right" :title="priceTitle(r.name, r.each)"><i v-if="heldOf(r.name)" class="fas fa-pause-circle w-dim" :class="$style.held" />{{ r.each != null ? money(r.total) : '—' }}</span>
           </div>
         </template>
       </template>
@@ -73,8 +74,8 @@ import { ninjaIcon } from '../ui/game-icons'
 import ResultChart from './ResultChart.vue'
 import { MIN_CALIBRATION_DECKS, luckText, runningResult, totals } from './deck'
 import type { CardFilter, PriceOf } from './deck'
-import { WEIGHTS_CREDIT } from './weights'
-import type { Luck } from './prices'
+import { WEIGHTS_CREDIT, isCommonCard } from './weights'
+import type { HeldPrice, Luck } from './prices'
 
 const props = withDefaults(defineProps<{
   draws: string[]
@@ -89,11 +90,35 @@ const props = withDefaults(defineProps<{
   filter?: CardFilter | null
   // Shows the counted / not counted switch (emits `count`).
   switchable?: boolean
-}>(), { luck: null, limit: 0, chartWidth: 280, filter: null, switchable: false })
+  // poe.ninja's price for a card when a fake-price check set it aside.
+  held?: ((name: string) => HeldPrice | null) | null
+}>(), { luck: null, limit: 0, chartWidth: 280, filter: null, switchable: false, held: null })
 const emit = defineEmits<{ (e: 'count', v: boolean): void }>()
 const COUNT_OPTIONS = [{ value: 'in', label: 'Hidden, counted' }, { value: 'out', label: 'Not counted' }]
 
-const t = computed(() => totals(props.draws, props.price, props.deckChaos, props.filter))
+const t = computed(() => totals(props.draws, props.price, props.deckChaos, props.filter, name => isCommonCard(name) && !heldOf(name)))
+const NO_PRICE = 'poe.ninja leaves out cards that trade too rarely to price. Common ones fold with the cheap cards. Counted as 0.'
+const heldOf = (name: string) => props.held?.(name) ?? null
+// Cards without a price, apart from those a fake-price check set aside, and those.
+const notes = computed(() => {
+  let unlisted = 0
+  let held = 0
+  let anyPriced = false
+  for (const r of [...t.value.rows, ...t.value.cheap]) {
+    if (heldOf(r.name)) held += r.qty
+    else if (r.each == null) unlisted += r.qty
+    else anyPriced = true
+  }
+  return { unlisted, held, anyPriced }
+})
+function priceTitle (name: string, each: number | null): string | undefined {
+  const h = heldOf(name)
+  if (h) {
+    const why = h.kind === 'one-day' ? 'on the one day it had a price' : 'a sudden step from its usual price'
+    return `poe.ninja: ${money(h.ninja)} each, ${why}. Prices like that have been a few fake listings, so ${h.chaos != null ? `it counts at its usual ${money(h.chaos)}` : 'it counts as 0'} until the price holds.`
+  }
+  return each == null ? NO_PRICE : undefined
+}
 const chart = computed(() => runningResult(props.draws, props.price, props.deckChaos, undefined, props.filter))
 const cheapOpen = useFold('decks.cheap')
 const cutOff = computed(() => formatChaos(props.filter?.under ?? 0, null, 'chaos'))
@@ -125,6 +150,7 @@ const luckInfo = computed(() => {
 .table { display: flex; flex-direction: column; }
 .row { display: grid; grid-template-columns: var(--w-icon, 16px) minmax(0, 1fr) auto 4.5rem; gap: 6px; align-items: center; min-height: 22px; }
 .more { padding-top: 2px; }
+.held { margin-right: 3px; font-size: 0.85em; }
 .fold {
   width: 100%;
   margin-top: 2px;
