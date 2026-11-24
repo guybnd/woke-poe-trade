@@ -197,3 +197,4 @@
 - Loot filter: a window you resized taller no longer leaves an empty band under Prices (and NeverSink, Presets, Gear, Preview, Build, Changes): the list fills the window. A window you never resized stays as it was. The "0 of 45 picked" count under Not moved is plain text instead of a section bar.
 - What's new: Show me now goes to the feature itself, not just its tab. It scrolls to it and flashes it, and the Listed line picks the Stale chip. Before, with the window already on that tab, it looked like nothing happened.
 - What's new: Show me on the price check's seller spread line opens a sample Exalted Orb check and points at the spread; the map cards line opens Ctrl+Space with a map typed.
+- What's new: Show me on the price check's upgrade and recipe lines opens a sample check (Xoph's Inception, The Will of Uul-Netol) and points at the side list. Lines with nothing to show have no Show me, only dismiss, instead of opening Settings.

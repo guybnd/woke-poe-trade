@@ -8,7 +8,7 @@
             <span :class="$style.name" data-no-item-tip="A tool's name, not an item"><ToolIcon :art="artFor(n.wmType)" :icon="iconFor(n.wmType)" :class="$style.toolIcon" />{{ n.name }}</span>
             <span>{{ sentence(n.note) }}</span>
           </div>
-          <w-button size="sm" variant="ghost" data-whats-new-show @click="show(n, $event)">Show me</w-button>
+          <w-button v-if="hasShowMe(n, byName)" size="sm" variant="ghost" data-whats-new-show @click="show(n, $event)">Show me</w-button>
           <w-button size="sm" variant="ghost" icon="fas fa-times" title="Dismiss" data-whats-new-dismiss @click="markSeen([n])" />
         </div>
         <div :class="$style.foot">
@@ -40,7 +40,7 @@ import { artFor, iconFor } from '../tab-bar/tools'
 import { personalOn } from '../personal'
 import { requestGoto } from '../tab-bar/goto'
 import { NEWS_SPOTS } from '../tab-bar/goto-targets'
-import { NEWS_DEMOS } from '../tab-bar/news-demos'
+import { NEWS_DEMOS, hasShowMe } from '../tab-bar/news-demos'
 import { searchRequest } from '../search/widget'
 import { elementPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
 import type { ItemMenuRef } from '../ui/tooltip/item-menu-logic'
@@ -58,6 +58,8 @@ function typeName (wmType: string): string {
   return spec?.trNameKey ? t(spec.trNameKey) : wmType
 }
 const lines = computed(() => unseenNews(AppConfig().woke))
+// A sample price check goes by the item's English name.
+const byName = computed(() => AppConfig().language === 'en')
 // "New: a Planner tab…" reads "A Planner tab…" under the tool's name.
 function sentence (note: string) {
   const s = note.replace(/^New: /, '')
@@ -123,9 +125,8 @@ function show (n: NewsItem, e?: MouseEvent) {
 // A sample price check, then its spot flashed once the results draw.
 async function runCheck (n: NewsItem, ref: ItemMenuRef, spot: string, e?: MouseEvent) {
   const at = e?.currentTarget ? elementPoint(e) : { x: window.screenX + window.innerWidth / 2, y: window.screenY + window.innerHeight / 2 }
-  // Not by name (a client in another language): the line's Settings page, as before.
   if (!await openPriceCheck(ref, at)) {
-    uiTrace(`What's new › Show me: can't price check ${ref.name}, to Settings`)
+    uiTrace(`What's new › Show me: can't price check ${ref.name}`)
     if (n.settingsPage) openSettingsPage(wm, n.settingsPage)
     return
   }

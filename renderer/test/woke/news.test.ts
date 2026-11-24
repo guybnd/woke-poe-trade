@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { NEWS, markAllNewsSeen, markNewsSeen, seenNewsIds, unseenNews } from '@/web/woke/tab-bar/news'
 import { setNewsOff } from '@/web/woke/tab-bar/news-off'
 import { NEWS_SPOTS, gotoSpots, gotoTargets } from '@/web/woke/tab-bar/goto-targets'
-import { NEWS_DEMOS } from '@/web/woke/tab-bar/news-demos'
+import { NEWS_DEMOS, hasShowMe } from '@/web/woke/tab-bar/news-demos'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import type { WokeModulesConfig } from '@/web/woke/modules'
@@ -31,6 +31,18 @@ describe("What's new lines", () => {
   it('NEWS_SPOTS and NEWS_DEMOS name only real lines; a demo replaces a tab', () => {
     for (const id of [...Object.keys(NEWS_SPOTS), ...Object.keys(NEWS_DEMOS)]) expect(NEWS.map(n => n.id), id).toContain(id)
     for (const id of Object.keys(NEWS_DEMOS)) expect(NEWS.find(n => n.id === id)!.goto, id).toBeUndefined()
+  })
+
+  it('offers Show me only where it shows the feature (Guy: show it, or don\'t offer to)', () => {
+    for (const n of NEWS) {
+      // Settings › Price check isn't where a price check feature is.
+      if (n.wmType === 'price-check') expect(n.settingsPage, `${n.id}: give it a sample in NEWS_DEMOS, or no Show me`).toBeUndefined()
+    }
+    // A price check line without a sample has no button; with one, only where a check by name works.
+    expect(hasShowMe({ id: 'x', wmType: 'price-check' })).toBe(false)
+    expect(hasShowMe({ id: 'price-check-seller-spread', wmType: 'price-check' })).toBe(true)
+    expect(hasShowMe({ id: 'price-check-seller-spread', wmType: 'price-check' }, false)).toBe(false)
+    expect(hasShowMe({ id: 'div-card-map-chance', wmType: 'woke-search' }, false)).toBe(true)
   })
 
   it('reads the Settings page names', () => {

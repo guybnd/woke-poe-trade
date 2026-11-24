@@ -12,5 +12,22 @@ export type NewsDemo =
 
 export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-seller-spread': { check: { name: 'Exalted Orb' }, spot: 'seller-spread' },
+  // A Breach unique and its blessed upgrade.
+  'price-check-related-upgrades': { check: { name: "Xoph's Inception", rarity: 'unique' }, spot: 'related' },
+  'price-check-unique-recipe': { check: { name: 'The Will of Uul-Netol', rarity: 'unique' }, spot: 'related' },
   'div-card-map-chance': { search: 'Strand Map' }
+}
+
+// Tools with no window of their own to open: a line about one needs a demo,
+// or it gets no Show me at all (Guy: show it, or don't offer to).
+const WINDOWLESS = new Set(['price-check'])
+
+// Whether Show me has somewhere real to go: a tab, a sample, the Settings
+// page the feature lives on, or the tool's own window. `byName`: the client
+// can price check by name (English), which a sample check needs.
+export function hasShowMe (n: { id: string, wmType: string, goto?: string, settingsPage?: string }, byName = true): boolean {
+  const demo = NEWS_DEMOS[n.id]
+  if (demo) return !('check' in demo) || byName
+  if (n.goto || n.settingsPage) return true
+  return !WINDOWLESS.has(n.wmType)
 }

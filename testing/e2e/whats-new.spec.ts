@@ -131,3 +131,29 @@ test('Show me on the map cards line opens Ctrl+Space with a map typed', async ({
   await icon.locator('[data-whats-new-line]').getByRole('button', { name: 'Show me' }).click()
   await expect(overlay.widget('woke-search').getByRole('textbox', { name: 'Search', exact: true })).toHaveValue('Strand Map')
 })
+
+// A unique's side list: its upgrade, or the other parts of its recipe. Read
+// from the item data, so no search runs for it.
+for (const [id, shows] of [['price-check-related-upgrades', "Xoph's Nurture"], ['price-check-unique-recipe', 'Lost Unity']] as const) {
+  test(`Show me on "${id}" opens a sample check with its side list flashed`, async ({ overlay }) => {
+    await overlay.boot({ overlayActive: true, whatsNew: [id] })
+    const icon = overlay.dockIcon('whats-new')
+    await icon.click()
+    await overlay.page.mouse.move(5, 5)
+    await icon.locator('[data-whats-new-line]').getByRole('button', { name: 'Show me' }).click()
+    const side = overlay.widget('price-check').locator('[data-goto-spot="related"]')
+    await expect(side).toContainText(shows)
+    await expect(side).toHaveAttribute('data-goto-flashed', '')
+  })
+}
+
+test('a line with nothing to show has no Show me, only dismiss', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true, whatsNew: ['price-check-ninja-trust'] })
+  const icon = overlay.dockIcon('whats-new')
+  await icon.click()
+  await overlay.page.mouse.move(5, 5)
+  const line = icon.locator('[data-whats-new-line]')
+  await expect(line).toHaveCount(1)
+  await expect(line.getByRole('button', { name: 'Show me' })).toHaveCount(0)
+  await expect(line.locator('[data-whats-new-dismiss]')).toBeVisible()
+})
