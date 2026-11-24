@@ -13,9 +13,9 @@ import type { DockConfig } from './dock/dock'
 import type { RateTime } from './shared/rate-time'
 import type { ShortcutAction } from '@ipc/types'
 
-// Session analytics' art ("Night of …"): its tool, dock icon, card and
+// Session analytics' art: its tool, dock icon, card and
 // Ctrl+Space answer all show it.
-export const NIGHT_ART = 'Sacrifice at Midnight'
+export const NIGHT_ART = 'Eternal Orb'
 
 export type ModuleGroup = 'economy' | 'mapping' | 'campaign' | 'builds' | 'apt'
 // poll: keeps poe.ninja prices refreshing to build history (every 10 min).
@@ -72,7 +72,7 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'stacked-decks', name: 'Stacked decks', description: 'Cards from the Stacked Decks you open: profit, big hits and luck', group: 'economy', widgetTypes: ['woke-stacked-decks'], icon: { fa: 'fas fa-layer-group', item: 'Stacked Deck' }, needs: ['log', 'prices'] },
   { id: 'session-analytics', name: 'Session analytics', description: 'Profit per map, strategy and hour over time', group: 'economy', widgetTypes: ['woke-session-analytics'], icon: { fa: 'fas fa-chart-bar', item: NIGHT_ART }, needs: ['prices'] },
   // 3.30 Covens of Umbra only: remove this entry and wickerman/ when the league ends.
-  { id: 'wickerman', name: 'Wickerman (3.30)', description: 'Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one', group: 'economy', widgetTypes: ['woke-wickerman'], runsWithoutWidget: true, icon: { fa: 'fas fa-bone', item: 'Flesh of Xesht' }, needs: ['log'] },
+  { id: 'wickerman', name: 'Wickerman (3.30)', description: 'Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one', group: 'economy', widgetTypes: ['woke-wickerman'], runsWithoutWidget: true, icon: { fa: 'fas fa-bone' }, needs: ['log'] },
   { id: 'boss-runs', name: 'Boss runs', description: 'Profit per boss kill', group: 'economy', widgetTypes: ['woke-boss-runs'], icon: { fa: 'fas fa-skull', mechanic: 'maven' }, needs: ['log', 'prices'] },
 
   { id: 'map-mods', name: 'Map mods', description: 'Danger strip on price check, map regex, and map scan (reads hovered maps on screen)', group: 'mapping', widgetTypes: ['woke-map-mods'], icon: { fa: 'fas fa-map', item: 'Nightmare Map' }, needs: ['hotkeys', 'ocr'] },
@@ -84,7 +84,7 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'mechanics', name: 'League mechanics', description: 'Prices and picks for each league mechanic', group: 'mapping', widgetTypes: ['woke-mechanics'], icon: { fa: 'fas fa-puzzle-piece', mechanic: 'incursion' }, needs: ['log', 'prices'] },
 
   { id: 'campaign', name: 'Campaign', description: 'Next steps for the act you are in', group: 'campaign', widgetTypes: ['woke-campaign'], icon: { fa: 'fas fa-route', src: '/images/art/admiral-darnaws-papers.png' }, needs: ['log'] },
-  { id: 'run-timer', name: 'Run timer', description: 'Act splits and personal bests', group: 'campaign', widgetTypes: ['woke-run-timer'], icon: { fa: 'fas fa-stopwatch', item: 'Timeless Eternal Emblem' }, needs: ['log'] },
+  { id: 'run-timer', name: 'Run timer', description: 'Act splits and personal bests', group: 'campaign', widgetTypes: ['woke-run-timer'], icon: { fa: 'fas fa-stopwatch' }, needs: ['log'] },
   { id: 'lab', name: 'Lab layouts', description: "Today's poelab layout and reset countdown", group: 'campaign', widgetTypes: ['woke-lab'], icon: { fa: 'fas fa-dungeon', mechanic: 'lab' }, needs: ['hotkeys'] },
   { id: 'lab-gems', name: 'Lab gems', description: 'Divine Font gem values by colour', group: 'campaign', widgetTypes: ['woke-lab-gems'], icon: { fa: 'fas fa-gem', item: "Gemcutter's Prism" }, needs: ['poll'] },
   { id: 'challenges', name: 'Challenge guide', description: 'League challenge guide with your progress', group: 'campaign', widgetTypes: ['woke-challenges'], icon: { fa: 'fas fa-trophy', src: '/images/art/ez-myrae-tome.png' }, needs: ['hotkeys', 'network', 'account'] },

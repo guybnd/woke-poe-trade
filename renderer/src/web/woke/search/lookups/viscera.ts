@@ -3,7 +3,6 @@
 // the palette opens, only while the module is on.
 import { actLine, searchViscera } from '../../wickerman/viscera'
 import type { Viscera, VisceraTable } from '../../wickerman/viscera'
-import { moduleIcon } from '../../ui/game-icons'
 import type { Lookup, LookupCard, LookupContext, LookupRow } from './types'
 
 function visceraCard (v: Viscera, why: string | undefined, ctx: LookupContext): LookupCard {
@@ -19,7 +18,7 @@ function visceraCard (v: Viscera, why: string | undefined, ctx: LookupContext): 
     group: 'Viscera',
     name: v.name,
     sub: [v.slot, why ?? where].filter(Boolean).join(' · '),
-    icon: moduleIcon('wickerman').art ?? 'fas fa-bone',
+    icon: 'fas fa-bone',
     sections: [
       { rows: [{ label: 'Slot', value: v.slot, ...(price != null ? { chaos: price } : {}) }] },
       { label: 'Versions', rows: v.tiers.map(t => ({ label: t.label, value: t.text.replace(/\n/g, ' · ') })) },

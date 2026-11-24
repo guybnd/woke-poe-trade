@@ -1,5 +1,5 @@
 <template>
-  <DockItem :menu="dockMenu" :wake="lines.length" id="toolkit" icon="fas fa-exclamation" :art="gameIcon(DOCK_ART_ITEMS.toolkit)" title="Toolkit" :show="lines.length > 0"
+  <DockItem :menu="dockMenu" :wake="lines.length" id="toolkit" icon="fas fa-exclamation" title="Toolkit" :show="lines.length > 0"
     :badge="lines.length" tone="down" led="error" card-width="22rem">
     <template #card>
       <div :class="$style.body">
@@ -16,7 +16,6 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import { copyText } from '../ui/copy'
 import { openSettingsPage } from './dock'
 import DockItem from './DockItem.vue'
-import { DOCK_ART_ITEMS, gameIcon } from '../ui/game-icons'
 import type { DockMenuAction } from './dock'
 import { healthProblems } from './health'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
