@@ -537,10 +537,14 @@ test('map: rare-only mods sit in the one list, yellow and searchable, any Sentin
   // and saved to the profile; the header no longer names the mods a second time.
   const chipOf = mirror.locator('[data-map-rate]')
   await expect(chipOf).toHaveText('–')
+  const at = async () => (await rows.allInnerTexts()).findIndex(t => t.includes('Mirror of Delirium'))
+  const before = await at()
   for (const word of ['Bad', 'Care', 'Want', '–']) {
     await chipOf.click()
     await expect(chipOf).toHaveText(word)
     if (word === 'Bad') await expect(panel.locator('[data-map-trade] > button').first()).not.toContainText('Mirror')
+    // The row stays put, so the next click rates the same mod.
+    expect(await at()).toBe(before)
   }
   await expect(mirror.locator('[aria-checked="true"]')).toHaveAttribute('data-state', 'any')
   const mirage = rows.filter({ hasText: 'Area contains a Mirage' })

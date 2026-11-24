@@ -74,7 +74,7 @@
               :aria-label="`${p.label} minimum`" :data-map-prop-min="p.label" @change="typeMin(p.label, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()"></label>
           </div>
           <!-- No filter: the bulk search finds maps by type only (or the item isn't a map). -->
-          <div v-else :class="[$style.tile, $style.dead]" :title="addMods === false ? DEAD_TITLE : undefined">
+          <div v-else :class="[$style.tile, $style.dead]" :title="addMods === false ? `${p.label}: ${DEAD_TITLE}` : p.label">
             <span :class="$style.tileHead"><WIcon v-bind="PROP_ICON[p.label] ?? { fallback: 'fas fa-percent' }" size="sm" /><span :class="$style.tileName">{{ p.label }}</span></span>
             <span :class="$style.tileVal" class="w-num">{{ p.value }}%</span>
           </div>
@@ -250,6 +250,10 @@ const rows = computed<Row[]>(() => {
     if (filter) used.add(filter)
     return { mod, filter, rated: true }
   })
+  // The verdict sorts by rating; keep the order the item was first shown in, so
+  // rating a mod from its chip doesn't move the row under the pointer.
+  const order = rowOrder(props.item, rated.map(r => r.mod.matcher))
+  rated.sort((a, b) => order.indexOf(a.mod.matcher) - order.indexOf(b.mod.matcher))
   // Lines the ratings skip: listed too, so every line is in this one list.
   const rest: Row[] = searchable.value.filter(f => !used.has(f)).map(f => ({
     mod: { text: f.text, matcher: f.statRef, rating: 'ok' }, filter: f
@@ -263,13 +267,25 @@ function rateTitle (r: ModRating): string {
   const name = config ? activeProfile(config).name : ''
   return `${RATING_TITLE[r]}. Click for the next: Bad, Care, Want, none${name ? `; saved to ${name}` : ''}.`
 }
+const firstOrder = new WeakMap<ParsedItem, string[]>()
+function rowOrder (item: ParsedItem, matchers: string[]): string[] {
+  const known = firstOrder.get(item) ?? []
+  const order = [...known, ...matchers.filter(m => !known.includes(m))]
+  firstOrder.set(item, order)
+  return order
+}
 function rate (matcher: string, current: ModRating) {
   const config = findMapModsConfig()
   const mode = result.value?.mode
   if (!config || !mode) return
   const profile = activeProfile(config)
   const key = mode === 'heist' ? heistRowOf(matcher) ?? matcher : matcher
-  setModRatings(profile, mode, withRating(modRatings(profile, mode), [key], nextModRating(current)))
+  const ratings = modRatings(profile, mode)
+  // A rating saved under another wording of the stat counts for this mod (check.ts),
+  // so every rated wording changes with it, or "none" could never be reached.
+  const wordings = props.item.statsByType.find(c => c.stat.matchers.some(m => m.string === matcher))?.stat.matchers.map(m => m.string) ?? []
+  const keys = [key, ...wordings.filter(w => w !== key && ratings[w])]
+  setModRatings(profile, mode, withRating(ratings, keys, nextModRating(current)))
 }
 function isRareOnly (row: Row): boolean {
   return row.filter?.tag === FilterTag.RareOnly
