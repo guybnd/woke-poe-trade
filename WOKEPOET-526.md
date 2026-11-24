@@ -3,14 +3,14 @@ id: WOKEPOET-526
 title: >-
   Dock: loot filter icon only when there's a change to apply; explain Net worth
   stale count
-status: Todo
+status: Done
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Event Horizon
+updatedBy: Agent
 history:
   - type: activity
     user: Agent
@@ -45,7 +45,47 @@ history:
     to: Todo
     user: Event Horizon
     date: '2026-11-24T03:10:38.888Z'
+  - type: comment
+    user: Agent
+    comment: 'PR 844 merged (671456cd), all checks green, adversarial review fixes in.'
+    date: '2026-11-24T03:43:48.266Z'
+    completionComment: true
+    id: c-2026-11-24t03-43-48-266z
+  - type: status_change
+    from: Todo
+    to: Ready
+    user: Agent
+    date: '2026-11-24T03:43:48.266Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged PR 844: loot filter icon shows while playing only with a reload or
+      note waiting (overlay open or pinned keeps it; no strictness chip). Net
+      worth stale count only in hideout, card line with Show (Listed on Stale)
+      and Hide (until another listing goes stale). Guy's pick on the mockups
+      still pending.
+    completionComment: true
+    date: '2026-11-24T03:43:51.905Z'
+    id: c-2026-11-24t03-43-51-905z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-24T03:43:52.963Z'
 needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/844'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy: the VS chip (loot filter strictness) shouldn't always show; only when there are filter changes to apply. Also asked what the 18 on the Net worth icon counts (stale Faustus listings, 3+ days unsold).
 
