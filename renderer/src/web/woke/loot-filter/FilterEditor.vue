@@ -1862,11 +1862,13 @@ function openFolder () {
   text-decoration: line-through;
 }
 .changes {
-  /* Fills a window made taller; this is its height otherwise. */
-  flex: 1 1 min(36rem, calc(70vh / var(--w-ui-scale, 1)));
+  max-height: min(36rem, calc(70vh / var(--w-ui-scale, 1)));
+  /* Fills the window once it's resized (WPanel's data-w-sized). */
+  flex: 1 1 auto;
   min-height: 0;
   padding: 6px 0;
 }
+:global([data-w-sized]) .changes { max-height: none; }
 .buildIntro {
   padding: 4px var(--w-pad) 8px;
   max-width: 60rem;

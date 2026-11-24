@@ -105,14 +105,16 @@ async function update () {
 
 <style module>
 .wrap {
-  /* Fills a window made taller; this is its height otherwise. */
-  flex: 1 1 min(36rem, calc(70vh / var(--w-ui-scale, 1)));
+  max-height: min(36rem, calc(70vh / var(--w-ui-scale, 1)));
+  /* Fills the window once it's resized (WPanel's data-w-sized). */
+  flex: 1 1 auto;
   min-height: 0;
   padding: 8px var(--w-pad) 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
+:global([data-w-sized]) .wrap { max-height: none; }
 .card {
   display: flex;
   flex-direction: column;
