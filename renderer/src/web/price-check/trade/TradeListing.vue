@@ -36,7 +36,7 @@
       </button>
       <!-- woke: the search found more than the 100 it handed back: search again from the
            top price loaded, adding those listings (Guy's pick 2B, WOKEPOET-523). -->
-      <button v-if="canPricier" type="button" class="w-pc-bulk ml-1" data-pricier :disabled="fetching"
+      <button v-if="canPricier || pricierNote" type="button" class="w-pc-bulk ml-1" data-pricier :disabled="fetching || !canPricier"
         :title="pricierTitle" @click="pricier">Pricier<span v-if="pricierNote" class="ml-1">{{ pricierNote }}</span></button>
       <!-- woke: the price check's own chips beside Bulk (a map's Exchange, WOKEPOET-523). -->
       <slot name="chips" />
@@ -500,14 +500,17 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
         const found = await requestTradeResultList(request, filters.trade.league)
         if (_searchId !== searchId) return null
         const shown = new Set(into.map(r => r.id))
-        source = { ...found, result: found.result.filter(id => !shown.has(id)) }
+        const src: SearchResult = { ...found, result: found.result.filter(id => !shown.has(id)) }
+        source = src
         sourceCapped.value = found.total > found.result.length
         fetched = 0
-        if (!source.result.length) return 'none'
+        if (!src.result.length) return 'none'
         // Two pages, as a search starts with; Bulk and the currency chip load more.
-        for (let page = 0; page < 2 && canFetchMore(source); page++) {
+        // A newer search owns the pager from then on: this stops.
+        for (let page = 0; page < 2; page++) {
+          if (_searchId !== searchId || !canFetchMore(src)) break
           preventQueueCreation([{ count: 1, limiters: RATE_LIMIT_RULES.FETCH }])
-          await fetchPage(_searchId, source, into)
+          await fetchPage(_searchId, src, into)
         }
         return null
       } catch (err) {
@@ -718,29 +721,25 @@ export default defineComponent({
       }
     }
 
-    // woke: Pricier (WOKEPOET-523). The floor is the dearest listing loaded, in the
-    // search's own price currency: chaos (the trade site counts a divine in chaos for
-    // "chaos or divine"), or divines when it asked for divines only.
+    // woke: Pricier (WOKEPOET-523). The floor is the dearest listing loaded, as its own
+    // amount, never converted: the trade site reads a "chaos or divine" min at its own
+    // divine rate, which lags poe.ninja's (price-currency.ts), so a converted floor
+    // could skip listings. Chaos searches use the dearest chaos listing, divine-only
+    // searches the dearest divine one. Overlap is fine: ids already loaded are dropped.
     const PRICIER_CURRENCIES = new Set(['', 'chaos', 'chaos_divine', 'divine'])
     const pricierNote = shallowRef('')
     // A floor that brought back only listings already shown: the next click starts above it.
     const pricierPast = shallowRef<number | null>(null)
     watch(searchResult, () => { pricierNote.value = ''; pricierPast.value = null })
-    const dearestChaos = computed(() => {
+    const pricierFloor = computed(() => {
+      const inDivine = props.filters.trade.currency === 'divine'
+      const unit = inDivine ? 'divine' : 'chaos'
       let top = 0
       for (const r of fetchResults.value) {
-        const chaos = r ? toChaos(r.priceAmount, r.priceCurrency, insightOptions.value) : null
-        if (chaos != null && chaos > top) top = chaos
+        if (r && r.priceCurrency === unit && r.priceAmount > top) top = r.priceAmount
       }
-      return top || null
-    })
-    const pricierFloor = computed(() => {
-      const top = dearestChaos.value
-      if (top == null) return null
-      const inDivine = props.filters.trade.currency === 'divine'
-      const rate = insightOptions.value.divine
-      if (inDivine && !rate) return null
-      const floor = inDivine ? Math.floor((top / rate!) * 100) / 100 : Math.floor(top)
+      if (!top) return null
+      const floor = inDivine ? Math.floor(top * 100) / 100 : Math.floor(top)
       const step = inDivine ? 0.01 : 1
       const past = pricierPast.value
       return past != null && floor <= past ? Math.round((past + step) * 100) / 100 : floor
