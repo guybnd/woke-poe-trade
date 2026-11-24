@@ -41,7 +41,7 @@ import { elementPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
 import type { ItemMenuRef } from '../ui/tooltip/item-menu-logic'
 import { uiTrace } from '../app/ui-trace'
 import DockItem from './DockItem.vue'
-import { openSettingsPage, showWithOverlay } from './dock'
+import { openOverlay, openSettingsPage, showWithOverlay } from './dock'
 import { moduleSettingsPage } from '../tab-bar/tools'
 import type { DockMenuAction } from './dock'
 
@@ -78,12 +78,14 @@ function show (n: NewsItem, e?: MouseEvent) {
   }
   const demo = NEWS_DEMOS[n.id]
   if (demo) {
+    // A dock card click in game doesn't open the overlay; the sample needs it.
+    if (!wm.active.value) openOverlay()
     uiTrace(`What's new › Show me: ${n.id}, sample ${'check' in demo ? `price check of ${demo.check.name}` : `search "${demo.search}"`}`)
     if ('search' in demo) {
       const q = demo.search
       // After a switched-on Search mounts.
       nextTick(() => { searchRequest.value = { query: q } })
-    } else runCheck(demo.check, demo.spot, e).catch(() => {})
+    } else runCheck(n, demo.check, demo.spot, e).catch(() => {})
     return
   }
   const off = !isWidgetTypeOn(AppConfig(), n.wmType) || (n.wmType === 'woke-net-worth' && !personalOn.value)
@@ -114,9 +116,14 @@ function show (n: NewsItem, e?: MouseEvent) {
 }
 
 // A sample price check, then its spot flashed once the results draw.
-async function runCheck (ref: ItemMenuRef, spot: string, e?: MouseEvent) {
+async function runCheck (n: NewsItem, ref: ItemMenuRef, spot: string, e?: MouseEvent) {
   const at = e?.currentTarget ? elementPoint(e) : { x: window.screenX + window.innerWidth / 2, y: window.screenY + window.innerHeight / 2 }
-  if (!await openPriceCheck(ref, at)) { uiTrace(`What's new › Show me: can't price check ${ref.name}`); return }
+  // Not by name (a client in another language): the line's Settings page, as before.
+  if (!await openPriceCheck(ref, at)) {
+    uiTrace(`What's new › Show me: can't price check ${ref.name}, to Settings`)
+    if (n.settingsPage) openSettingsPage(wm, n.settingsPage)
+    return
+  }
   const pc = wm.widgets.value.find(w => w.wmType === 'price-check')
   if (pc) (await import('../tab-bar/goto-flash')).flashSpot(pc.wmId, spot, 150)
 }
