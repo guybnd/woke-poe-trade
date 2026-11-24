@@ -5,7 +5,6 @@ import { defineAsyncComponent, shallowReactive, type Component } from 'vue'
 import { CURRENCY_ICONS, MECHANIC_ICONS } from '../ui/game-icons'
 import { MODULES } from '../modules'
 
-import SettingsPricecheck from '@/web/price-check/settings-price-check.vue'
 import SettingsItemcheck from '@/web/item-check/settings-item-check.vue'
 import SettingsChat from '@/web/settings/chat.vue'
 import SettingsDebug from '@/web/settings/debug.vue'
@@ -17,6 +16,9 @@ import HotkeysPage from './HotkeysPage.vue'
 import ScreenPage from './ScreenPage.vue'
 import AboutPage from './AboutPage.vue'
 import { CREDIT_NAMES } from './credits'
+
+// Loaded when its page opens, not at startup (startup JS budget).
+const SettingsPricecheck = defineAsyncComponent(() => import('@/web/price-check/settings-price-check.vue'))
 
 export type PageGroup = 'general' | 'modules' | 'app'
 

@@ -1,6 +1,6 @@
 // What sellers with enough stock ask per item on the exchange.
 import { describe, expect, it } from 'vitest'
-import { buildBulkInsight, bulkAmount, bulkSideWaiting, pickBulkMarket } from '@/web/woke/price-insight/bulk-insight'
+import { buildBulkInsight, bulkAmount, bulkSideWaiting, pickBulkMarket, bulkSpread, spreadText } from '@/web/woke/price-insight/bulk-insight'
 import type { BulkListing } from '@/web/woke/price-insight/bulk-insight'
 
 let id = 0
@@ -97,7 +97,7 @@ describe('bulkAmount', () => {
 
 describe('pickBulkMarket', () => {
   const side = (fair: number, sellers: number, total: number | null = 100) => ({
-    insight: { low: fair, fair, high: fair, floor: fair, confidence: 'high' as const, lowStock: 0, fewWithStock: false, sellers },
+    insight: { low: fair, fair, high: fair, floor: fair, confidence: 'high' as const, lowStock: 0, fewWithStock: false, sellers, spread: { low: fair, high: fair, most: null } },
     total
   })
 
@@ -143,5 +143,34 @@ describe('bulkSideWaiting', () => {
   it('stops waiting once loaded or failed', () => {
     expect(bulkSideWaiting({ loaded: true, failed: false, loading: false })).toBe(false)
     expect(bulkSideWaiting({ loaded: false, failed: true, loading: false })).toBe(false)
+  })
+})
+
+describe('bulkSpread / spreadText (WOKEPOET-540)', () => {
+  const c = (v: number) => `${bulkAmount(v)}c`
+  it('gives the range without the dearest tenth, and the price most ask', () => {
+    const units = [1, 8, 10, 10, 10, 10, 12, 15, 15, 500]
+    const s = bulkSpread(units)
+    expect(s).toEqual({ low: 1, high: 15, most: 10 })
+    expect(spreadText(s, units.length, c)).toBe('Sellers ask 1 to 15c, most ask 10c')
+  })
+  it('shows only the range under 4 sellers or when no price repeats', () => {
+    expect(spreadText(bulkSpread([8, 8, 12]), 3, c)).toBe('Sellers ask 8 to 12c')
+    expect(bulkSpread([1, 2, 3, 4]).most).toBeNull()
+  })
+  it('counts prices as shown, so 9.96 and 10 are one', () => {
+    expect(bulkSpread([9.96, 10, 11, 12]).most).toBe(9.96)
+  })
+  it('says one price once, and nothing for one seller', () => {
+    expect(spreadText(bulkSpread([10, 10, 10]), 3, c)).toBe('Sellers ask 10c')
+    expect(spreadText(bulkSpread([10]), 1, c)).toBeNull()
+  })
+  it('strips the unit from the low end in divines too', () => {
+    const d = (v: number) => `${bulkAmount(v)} div`
+    expect(spreadText(bulkSpread([0.5, 1, 1, 2]), 4, d)).toBe('Sellers ask 0.5 to 2 div, most ask 1 div')
+  })
+  it('is on every built insight', () => {
+    const insight = buildBulkInsight([offer(15, 50), offer(17, 50), offer(17, 50), offer(18, 50)], 1)!
+    expect(insight.spread).toEqual({ low: 15, high: 18, most: 17 })
   })
 })
