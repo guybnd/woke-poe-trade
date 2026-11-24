@@ -292,7 +292,9 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await priceBar.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(priceBar.locator('[data-listed-bar-target]')).toContainText('set 7 div')
     await expect(hhRow.locator('[data-listed-target]')).toContainText('7 div')
-    await overlay.page.keyboard.press('Escape')
+    // Closed by its own button (Esc would close the whole overlay).
+    await overlay.page.locator('#price-window [data-price-close]').click()
+    await expect(priceBar).toHaveCount(0)
     await overlay.snap('net worth listed')
     await overlay.page.unroute('**/api/trade/search/**')
     await overlay.page.unroute('**/api/trade/fetch/**')
