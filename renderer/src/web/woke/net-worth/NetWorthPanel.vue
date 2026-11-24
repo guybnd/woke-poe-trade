@@ -949,12 +949,13 @@ const chartLegend = computed(() => {
   const s = series.value
   if (s.length < 2) return []
   const t0 = s[0].at
+  const t1 = s[s.length - 1].at
   const out: Array<{ id: string, label: string, tip: string }> = []
   if (chartListed.value) out.push({ id: 'band', label: 'At Faustus', tip: 'What you have listed at Faustus, on top of your stash' })
-  if (chartSales.value.some(x => x.at >= t0)) out.push({ id: 'sale', label: 'Sold', tip: 'What sold, bigger for more money. Hover a coin for the items' })
+  if (chartSales.value.some(x => x.at >= t0 && x.at <= t1)) out.push({ id: 'sale', label: 'Sold', tip: 'What sold, bigger for more money. Hover a coin for the items' })
   if (big.value.size) out.push({ id: 'big', label: 'Big gain', tip: 'A refresh that added a lot. Hover it for what came in' })
   if (s.some(p => p.spentDiv)) out.push({ id: 'spend', label: 'Purchase', tip: 'You bought something: the drop isn\'t counted as a loss' })
-  if (chartMaps.value?.length) out.push({ id: 'maps', label: 'Maps', tip: 'Your maps this session' })
+  if (chartMaps.value?.some(m => m.to > t0 && m.from < t1)) out.push({ id: 'maps', label: 'Maps', tip: 'Your maps this session' })
   return out
 })
 // Your maps behind the line (pick D), each with what the refreshes after it added.

@@ -147,7 +147,11 @@ const pinned = shallowRef<At | null>(null)
 const shown = computed<At | null>(() => {
   const a = pinned.value ?? hover.value
   if (!a) return null
-  if (a.coin) return a
+  // A coin: found again by any of its sales, so new reads or sales move it.
+  if (a.coin) {
+    const c = coinOf(a.coin)
+    return c ? { ...a, coin: c, x: c.x, y: c.y } : null
+  }
   // Worked out again: the band or the mode can change under a pinned card.
   const i = props.series.findIndex(p => p.at === a.p.at)
   if (i < 0) return a
@@ -198,6 +202,7 @@ watch(pinned, (on, was) => {
 // rebuilds its series as the clock moves).
 watch(() => [props.series, props.mode], () => {
   if (pinned.value && !props.series.some(p => p.at === pinned.value!.p.at)) pinned.value = null
+  else if (pinned.value?.coin && !coinOf(pinned.value.coin)) pinned.value = null
 })
 onUnmounted(() => {
   document.removeEventListener('pointerdown', outside, true)
@@ -283,6 +288,7 @@ const saleDots = computed(() => {
     return { ...x, x: xOf(x.at) / W * 100, y: yOf(v) / H * 100, r: coinRadius(x.div ?? null, most) }
   })
 })
+const coinOf = (c: Coin) => saleDots.value.find(d => d.list.some(x => c.list.some(y => y.at === x.at))) ?? null
 // Named near the top: below the coin, so it stays off the chart's header.
 const saleLabels = computed(() => labelledSales(saleDots.value).map(m => ({ ...m, align: m.x < 30 ? 'left' as const : m.x > 70 ? 'right' as const : 'center' as const, under: m.y < 20 })))
 // The map columns in view, and the best one named.
