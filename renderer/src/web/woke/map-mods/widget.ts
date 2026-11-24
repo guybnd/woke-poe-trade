@@ -121,6 +121,9 @@ export function normalizeMapModsWidget (w: MapModsWidget) {
     if (!p.ratings || typeof p.ratings !== 'object') p.ratings = {}
     if (!p.heistRatings || typeof p.heistRatings !== 'object') p.heistRatings = {}
     if (!p.chartRatings || typeof p.chartRatings !== 'object') p.chartRatings = {}
+    // Valdo skips (valdo/skips.ts): lists of text, or nothing.
+    if (p.valdoSkip !== undefined && !Array.isArray(p.valdoSkip)) p.valdoSkip = undefined
+    if (p.valdoKeep !== undefined && !Array.isArray(p.valdoKeep)) p.valdoKeep = undefined
   }
   importAptOnce(w)
 }

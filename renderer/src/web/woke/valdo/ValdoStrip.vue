@@ -6,7 +6,7 @@
     <div :class="$style.row">
       <span :class="$style.title">Trade search</span>
       <span class="flex-1" />
-      <WInfo text="Void and Reward go into this price check's search. Nothing is searched until you press Search." />
+      <WInfo text="Void and Reward go into this price check's search. Nothing is searched until you press Search. The trade site can't search the other mods: mark one Skip and listings with it are hidden from the results." />
     </div>
     <div v-if="voidFilter" :class="$style.row" data-valdo-void>
       <span :class="$style.label">Void</span>
@@ -36,12 +36,28 @@
       </button>
       <span v-if="query && !matches.length" class="w-dim text-xs">No unique matches "{{ query }}"</span>
     </div>
+    <!-- Skips: listings with one of these are hidden below (skips.ts). Saved on the Map mods profile. -->
+    <div v-if="profile && skips.length" :class="$style.row" data-valdo-skips>
+      <span :class="$style.label">Skip</span>
+      <span :class="$style.chips">
+      <button v-for="s in skips" :key="s.key" type="button" :class="[$style.skip, s.auto && $style.skipAuto]" :data-valdo-skip="s.label"
+        :title="`${s.label}\n${s.auto ? 'From your Map mods profile (can\'t run). ' : ''}Click to stop skipping it.`" @click="unskip(s)">
+        {{ s.label }} <i class="fas fa-times text-xs" />
+      </button>
+      <span v-if="hiddenNote" class="w-dim text-xs" data-valdo-hidden>{{ hiddenNote }}</span>
+      </span>
+    </div>
     <button v-if="mods.length" type="button" :class="$style.row" class="w-dim text-xs" :aria-expanded="open" data-valdo-mods-toggle @click="open = !open">
       {{ modCount }} Valdo {{ modCount === 1 ? 'mod' : 'mods' }}
       <i class="fas" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
     </button>
     <ul v-if="open" :class="$style.list" data-valdo-mods>
-      <li v-for="(m, i) in mods" :key="i" :class="m === VOID_TEXT && $style.void">{{ m }}</li>
+      <li v-for="(m, i) in mods" :key="i" :class="[$style.mod, m === VOID_TEXT && $style.void]">
+        <span :class="$style.modText">{{ m }}</span>
+        <button v-if="m !== VOID_TEXT && canSkip" type="button" :class="[$style.toggle, skipped(m) && $style.toggleOn]"
+          :aria-pressed="skipped(m)" :title="skipped(m) ? 'Show listings with this mod again' : 'Hide listings with this mod: your build can\'t run it'"
+          data-valdo-skip-toggle @click="toggleSkip(m)">{{ skipped(m) ? 'Skipped' : 'Skip' }}</button>
+      </li>
     </ul>
   </section>
 </template>
@@ -55,11 +71,15 @@ import type { BaseType } from '@/assets/data'
 import { ModifierType } from '@/parser/modifiers'
 import type { ParsedItem } from '@/parser'
 import { AppConfig } from '@/web/Config'
+import { isModuleOn } from '../modules'
 import type { FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
+import { ensureMapModsConfig } from '../map-mods/check'
+import { activeProfile } from '../map-mods/widget'
+import { isSkipped, profileSkips, setSkipped, valdoHidden, valdoProfile, VOID_TEXT } from './skips'
+import type { SkipEntry } from './skips'
 
 const props = defineProps<{ item: ParsedItem, stats: FilterOrGroup[], filters: ItemFilters }>()
 
-const VOID_TEXT = 'Players who Die in area are sent to the Void'
 type VoidState = 'any' | 'has' | 'not'
 const VOID_STATES: VoidState[] = ['any', 'has', 'not']
 const VOID_LABEL: Record<VoidState, string> = { any: 'Any', has: 'Void', not: 'No void' }
@@ -142,8 +162,34 @@ const mods = computed(() => {
   const unknown = props.item.unknownModifiers
     .filter(m => m.type === ModifierType.Explicit)
     .map(m => m.text.endsWith(_$.UNSCALABLE_VALUE) ? m.text.slice(0, -_$.UNSCALABLE_VALUE.length) : m.text)
-  const all = [...known, ...unknown]
+  // A minions line is the second line of the player mod above it: one row, one Skip.
+  const all: string[] = []
+  for (const line of [...known, ...unknown]) {
+    if (line.startsWith("Players' Minions ") && all.length && all[all.length - 1].startsWith('Players ')) all[all.length - 1] += `\n${line}`
+    else all.push(line)
+  }
   return all.sort((a, b) => Number(b === VOID_TEXT) - Number(a === VOID_TEXT))
+})
+
+// Skips live on the active Map mods profile: one list per build.
+const profile = computed(() => valdoProfile())
+const skips = computed<SkipEntry[]>(() => profile.value ? profileSkips(profile.value) : [])
+// Skipping works while the Map mods module is on (the first skip sets it up).
+const canSkip = computed(() => isModuleOn(AppConfig(), 'map-mods'))
+const skipped = (m: string) => !!profile.value && isSkipped(profile.value, m)
+function toggleSkip (m: string) {
+  const w = ensureMapModsConfig()
+  if (!w) return
+  const p = activeProfile(w)
+  setSkipped(p, m, !isSkipped(p, m))
+}
+function unskip (s: SkipEntry) {
+  if (profile.value) setSkipped(profile.value, s.label, false)
+}
+const hiddenNote = computed(() => {
+  const h = valdoHidden.value
+  if (!h || !h.loaded) return ''
+  return h.hidden ? `${h.hidden} of ${h.loaded} listings hidden` : 'None of the listings hidden'
 })
 </script>
 
@@ -197,4 +243,26 @@ const mods = computed(() => {
 .option:hover { background: var(--w-chip-ground); }
 .list { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); }
 .void { color: var(--w-down); }
+.modText { min-width: 0; white-space: pre-line; }
+.mod { display: flex; align-items: center; gap: 8px; min-width: 0; justify-content: space-between; }
+.toggle { flex: none; padding: 0 8px; font-size: var(--w-fs-xs); border-radius: var(--w-r-pill); border: 1px solid var(--w-line-strong); color: var(--w-dim); }
+.toggle:hover { color: var(--w-fg); }
+.toggleOn { color: var(--w-fg); border-color: var(--w-down); background: color-mix(in srgb, var(--w-down) 22%, transparent); }
+.skip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 0 8px;
+  font-size: var(--w-fs-sm);
+  border-radius: var(--w-r-pill);
+  border: 1px solid var(--w-down);
+  background: color-mix(in srgb, var(--w-down) 18%, transparent);
+  color: var(--w-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; }
+.skipAuto { border-style: dashed; }
 </style>

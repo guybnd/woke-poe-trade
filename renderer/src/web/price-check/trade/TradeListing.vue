@@ -55,7 +55,7 @@
         :divine="divine"
         :loading="!list || tableLoading"
         :total="list ? list.total : null"
-        :log-key="narrow ? null : logKey"
+        :log-key="filtering ? null : logKey"
         :league="filters.trade.league"
         :blank-search="blankSearch"
         :skips-top-mods="skipsTop"
@@ -200,6 +200,10 @@
             <tr v-if="currency !== 'all' && !bulk && !narrow && !currencyCount && loadedCount && listSettled && list" class="w-pc-local-hint" data-currency-empty>
               <td colspan="100" class="px-2">No listings priced in {{ currency === 'divine' ? 'divines' : 'chaos' }} among the {{ loadedCount }} loaded.</td>
             </tr>
+            <!-- woke: Valdo skips hid most of what loaded: Pricier loads more. -->
+            <tr v-if="valdoShort" class="w-pc-local-hint" data-valdo-short>
+              <td colspan="100" class="px-2">{{ fitCount ? `Only ${fitCount}` : 'None' }} of the {{ loadedCount }} loaded {{ fitCount === 1 ? 'listing has' : 'listings have' }} no mod you skip{{ canPricier ? '. Pricier loads more.' : '.' }}</td>
+            </tr>
             <!-- woke: few rows fit: suggest a search, unless the search's every listing is already here. -->
             <tr v-if="shortList" class="w-pc-local-hint">
               <td colspan="100" class="px-2">
@@ -212,7 +216,7 @@
       </table>
     </div>
     <div v-if="improved || bulk || currency !== 'all'" class="w-pc-foot" :class="{ invisible: !(listSettled && list && (rows.length || bulk || currency !== 'all')) }"
-      title="Prices come from the cheapest listings the trade site returned"><template v-if="list && narrow"><template v-if="currency !== 'all'">{{ currencyCount || 'None' }} in {{ currency === 'divine' ? 'divines' : 'chaos' }} · </template>{{ fitCount }} of {{ loadedCount }} loaded listings fit · the search found {{ list.total }}{{ list.inexact ? '+' : '' }}</template><template v-else-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="currency !== 'all'">{{ currencyCount || 'None' }} in {{ currency === 'divine' ? 'divines' : 'chaos' }} · </template><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
+      title="Prices come from the cheapest listings the trade site returned"><template v-if="list && narrow"><template v-if="currency !== 'all'">{{ currencyCount || 'None' }} in {{ currency === 'divine' ? 'divines' : 'chaos' }} · </template>{{ fitCount }} of {{ loadedCount }} loaded listings fit · the search found {{ list.total }}{{ list.inexact ? '+' : '' }}</template><template v-else-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="currency !== 'all'">{{ currencyCount || 'None' }} in {{ currency === 'divine' ? 'divines' : 'chaos' }} · </template><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings<template v-if="valdoHiddenCount"> · {{ valdoHiddenCount }} hidden by your Valdo skips</template></template><template v-else>&nbsp;</template></div>
   </div>
   <ui-error-box v-else>
     <template #name>{{ t(':error') }}</template>
@@ -267,6 +271,7 @@ import '@/web/woke/price-insight/price-table.css'
 import { useCheckLog } from '@/web/woke/price-insight/useCheckLog'
 import { travelState, travelToHideout, travelNote } from '@/web/woke/hideout-travel/travel'
 import { isBlankRareSearch, ninjaFitsSearch, skipsTopMods, socketColoursOn } from '@/web/woke/price-insight/search-scope'
+import { activeSkipKeys, skippedBy, valdoHidden } from '@/web/woke/valdo/skips'
 
 // woke: the drivers load with the first price check, not at startup; results take longer.
 const loadDrivers = () => import('@/web/woke/price-insight/PriceDrivers.vue')
@@ -589,10 +594,19 @@ export default defineComponent({
 
     // woke: improved view reads the same listings, nothing extra is requested
     // woke: tighter ranges hide what no longer fits; the verdict reads what's left.
-    const fits = (listing: PricingResult) => !props.narrow || props.narrow.fits(listing.listedItem, props.item.category)
-    const fitResults = computed(() => props.narrow ? groupedResults.value.filter(fits) : groupedResults.value)
+    // woke: a Valdo map hides listings with a mod the build skips (valdo/skips.ts).
+    const valdoSkips = computed(() => props.item.mapCompletionReward ? activeSkipKeys() : null)
+    const valdoSkipped = (listing: PricingResult) => !!valdoSkips.value?.size && skippedBy(listing.listedItem, valdoSkips.value) != null
+    const fits = (listing: PricingResult) => (!props.narrow || props.narrow.fits(listing.listedItem, props.item.category)) && !valdoSkipped(listing)
+    const filtering = computed(() => props.narrow != null || !!valdoSkips.value?.size)
+    const fitResults = computed(() => filtering.value ? groupedResults.value.filter(fits) : groupedResults.value)
     const loadedCount = computed(() => fetchResults.value.filter(r => r != null).length)
-    const fitCount = computed(() => props.narrow ? fetchResults.value.filter(r => r != null && fits(r)).length : loadedCount.value)
+    const fitCount = computed(() => filtering.value ? fetchResults.value.filter(r => r != null && fits(r)).length : loadedCount.value)
+    const valdoHiddenCount = computed(() => valdoSkips.value?.size ? fetchResults.value.filter(r => r != null && valdoSkipped(r)).length : 0)
+    watch([valdoHiddenCount, loadedCount, valdoSkips], ([hidden, loaded, keys]) => {
+      valdoHidden.value = keys ? { hidden, loaded } : null
+    }, { immediate: true })
+    onUnmounted(() => { valdoHidden.value = null })
     const statusSlot = inject<ShallowRef<HTMLElement | null>>('price-search-status-slot', shallowRef(null))
 
     const { insight, divine, options: insightOptions } = useInsight(fitResults, computed(() => props.filters.trade.league))
@@ -605,8 +619,8 @@ export default defineComponent({
     const askRows = computed(() => fetchResults.value.filter((r): r is PricingResult => r != null && fits(r)))
     watch([askRows, divine, searchResult, loadedCount], ([list, d, found, loaded]) => {
       // Narrowed: only the loaded listings that fit count, all of them seen.
-      const total = props.narrow ? null : found?.total ?? null
-      lastAsks.value = asksOf(list, d ?? null, searchedItem, total, found != null && (props.narrow != null || loaded >= found.total), loaded)
+      const total = filtering.value ? null : found?.total ?? null
+      lastAsks.value = asksOf(list, d ?? null, searchedItem, total, found != null && (filtering.value || loaded >= found.total), loaded)
     }, { immediate: true })
     onUnmounted(() => { lastAsks.value = null })
 
@@ -615,7 +629,7 @@ export default defineComponent({
     const verdictInsight = computed(() => blankSearch.value ? buildInsight([], insightOptions.value) : insight.value)
 
     // A verdict from listings filtered here isn't the search's: it isn't logged under it.
-    const logKey = useCheckLog(props, searchResult, verdictInsight, slowdown.isReady, computed(() => props.narrow != null))
+    const logKey = useCheckLog(props, searchResult, verdictInsight, slowdown.isReady, computed(() => filtering.value))
 
     const showBrowser = inject<(url: string) => void>('builtin-browser')!
     const verdictSlot = inject<ShallowRef<HTMLElement | null>>('price-verdict-slot', shallowRef(null))
@@ -816,6 +830,7 @@ export default defineComponent({
     const listSettled = computed(() => !tableLoading.value && !fetching.value)
 
     // woke: a filtered list this short suggests a search (Search glows).
+    const valdoShort = computed(() => !props.narrow && valdoHiddenCount.value > 0 && !!searchResult.value && !tableLoading.value && fitCount.value < SHORT_LIST)
     const shortList = computed(() => props.narrow != null && !!searchResult.value && !tableLoading.value && fitCount.value < SHORT_LIST)
     // Every listing the search found is loaded: the filter here is exact, a search finds nothing more.
     const allLoaded = computed(() => !!searchResult.value && loadedCount.value >= searchResult.value.total)
@@ -925,7 +940,8 @@ export default defineComponent({
         const tone = statTone(statValue(listing, col), col)
         return tone ? { '--w-pc-stat-k': tone.strength } : undefined
       },
-      shownCount: computed(() => fetchResults.value.filter(r => r != null).length),
+      shownCount: computed(() => fetchResults.value.filter(r => r != null && !valdoSkipped(r)).length),
+      valdoHiddenCount,
       bulk,
       bulkNote,
       toggleBulk,
@@ -942,6 +958,8 @@ export default defineComponent({
       stepCurrency,
       currencyTitle: computed(() => currencyTitle(currencyView.value, props.filters.trade.currency)),
       shortList,
+      valdoShort,
+      filtering,
       allLoaded,
       localRange,
       loadedCount,

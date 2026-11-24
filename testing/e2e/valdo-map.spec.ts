@@ -69,3 +69,56 @@ test('a Valdo map searches its reward and Void, and can pick another reward', as
   await strip.locator('[data-valdo-reward-reset]').click()
   await expect(strip.locator('[data-valdo-reward-pick]')).toHaveText(/Foil Nimis/)
 })
+
+test('a Valdo map hides listings with a mod you skip, with no new search', async ({ overlay }) => {
+  let searches = 0
+  await overlay.page.route('**/api/trade/search/**', (route) => {
+    searches++
+    return route.fulfill({ contentType: 'application/json', headers: LIMITS, body: JSON.stringify({ id: 'q', total: 3, result: ['a', 'b', 'c'] }) })
+  })
+  const MODS: Record<string, string[]> = {
+    a: ['Players who Die in area are sent to the Void', 'Players cannot gain Flask Charges'],
+    b: ['Players who Die in area are sent to the Void', 'Area contains The Feared'],
+    c: ['Players who Die in area are sent to the Void', 'Players deal 12% less Damage per Equipped Item\nPlayers\' Minions deal 12% less Damage per Item Equipped by their Master']
+  }
+  await overlay.page.route('**/api/trade/fetch/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    headers: LIMITS,
+    body: JSON.stringify({
+      result: route.request().url().split('/fetch/')[1].split('?')[0].split(',').map((id, i) => ({
+        id,
+        item: { ilvl: 100, frameType: 2, rarity: 'Rare', name: 'Festering Sanctuary', typeLine: 'Valdo Map', baseType: 'Valdo Map', explicitMods: MODS[id], properties: [] },
+        listing: {
+          indexed: '2026-11-20T00:00:00Z',
+          price: { amount: 30 + i, currency: 'divine' },
+          account: { name: `seller${i}`, lastCharacterName: `char${i}`, online: { league: 'Mirage' } }
+        }
+      }))
+    })
+  }))
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-valdo-void.txt')
+  const panel = overlay.widget('price-check')
+  const strip = panel.locator('[data-valdo-strip]')
+  await expect(strip).toBeVisible({ timeout: 20_000 })
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches).toBe(1)
+
+  // Skip a mod from this map's list: the listing with it is hidden, nothing searched.
+  if (await strip.locator('[data-valdo-mods]').count() === 0) await strip.locator('[data-valdo-mods-toggle]').click()
+  const flask = strip.locator('[data-valdo-mods] li', { hasText: 'Players cannot gain Flask Charges' })
+  await flask.locator('[data-valdo-skip-toggle]').click()
+  await expect(flask.locator('[data-valdo-skip-toggle]')).toHaveText('Skipped')
+  await expect(strip.locator('[data-valdo-skip="Players cannot gain Flask Charges"]')).toBeVisible()
+  await expect(strip.locator('[data-valdo-hidden]')).toHaveText('1 of 3 listings hidden')
+
+  // A second one, whatever its number: "per Equipped Item" rolled 10 here, 12 on the listing.
+  await strip.locator('[data-valdo-mods] li', { hasText: 'per Equipped Item' }).locator('[data-valdo-skip-toggle]').click()
+  await expect(strip.locator('[data-valdo-hidden]')).toHaveText('2 of 3 listings hidden')
+  await overlay.snap('valdo map skips')
+
+  // The chip takes it off again.
+  await strip.locator('[data-valdo-skip="Players cannot gain Flask Charges"]').click()
+  await expect(strip.locator('[data-valdo-hidden]')).toHaveText('1 of 3 listings hidden')
+  expect(searches).toBe(1)
+})
