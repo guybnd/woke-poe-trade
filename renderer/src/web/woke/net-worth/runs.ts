@@ -491,6 +491,14 @@ export function mapsIn (run: Run, maps: ReadonlyArray<{ enteredAt: number, leftA
   return maps.filter(m => m.leftAt > run.startAt && m.enteredAt <= end).length
 }
 
+// The maps a run shows: a stopped run keeps the count Stop saved (a map
+// history read for it can only add); the live one has what was read for it
+// (null: not read yet).
+export function shownMaps (run: Pick<Run, 'stoppedAt' | 'final'>, read: number | null): number {
+  if (run.stoppedAt != null && run.final) return Math.max(run.final.maps, read ?? 0)
+  return read ?? 0
+}
+
 // The saved doc: the run going now and finished ones, newest first.
 export interface RunsDoc { live: Run | null, done: Run[] }
 

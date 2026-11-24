@@ -5,7 +5,7 @@
 import { shallowRef } from 'vue'
 import { hostRequest } from '../shared/host'
 import { toast } from '../ui/layer'
-import { readMapDay, dayKey } from '../session-story/store'
+import { readMapDay, dayKey, NIGHTS_COLLECTION, RECENT_MAPS_KEY } from '../session-story/store'
 import { isSkippedArea } from '../session-story/skip-areas'
 import { addToTally, cleanDoc, compareRows, emptyRun, isRunGlance, mapsIn, relive, runBoardKey, runGlanceKey, runsKey, runTotals, tallyFrom, topDrop, MAX_DONE_RUNS } from './runs'
 import type { CostLine, LivePrice, OnceCost, Outside, Run, RunBoard, RunGlance, RunsDoc } from './runs'
@@ -16,7 +16,9 @@ const COLLECTION = 'net-worth'
 
 export const runsDoc = shallowRef<RunsDoc>({ live: null, done: [] })
 // Map instances (enteredAt, leftAt) across the shown run's days.
-export const runMaps = shallowRef<Array<{ enteredAt: number, leftAt: number }>>([])
+// The maps of the run the Runs view shows, with that run's id (a read for
+// another run never counts against this one).
+export const runMaps = shallowRef<{ id: string | null, maps: Array<{ enteredAt: number, leftAt: number }> }>({ id: null, maps: [] })
 let loadedFor: string | null = null
 let loading: Promise<void> | null = null
 let busy: Promise<void> = Promise.resolve()
@@ -101,8 +103,18 @@ export async function readRunMaps (run: Run, now: number): Promise<Array<{ enter
     if (!keys.includes(k)) keys.push(k)
     if (d.getTime() >= end || keys.length > 60) break
   }
-  const days = await Promise.all(keys.map(k => readMapDay(k).catch(() => [])))
-  return days.flat().filter(m => !isSkippedArea(m.name)).map(m => ({ enteredAt: m.enteredAt, leftAt: m.leftAt }))
+  // Session story's recent maps too: the same list the glance bar counts, so
+  // a day file that can't be read (or isn't written yet) never reads 0.
+  const [days, recent] = await Promise.all([
+    Promise.all(keys.map(k => readMapDay(k).catch(() => []))),
+    readMapDay(RECENT_MAPS_KEY, false, NIGHTS_COLLECTION).catch(() => [])
+  ])
+  const byKey = new Map<string, { enteredAt: number, leftAt: number, name: string }>()
+  for (const m of [...days.flat(), ...recent]) {
+    const was = byKey.get(m.key)
+    byKey.set(m.key, was ? { ...was, leftAt: Math.max(was.leftAt, m.leftAt) } : m)
+  }
+  return [...byKey.values()].filter(m => !isSkippedArea(m.name)).map(m => ({ enteredAt: m.enteredAt, leftAt: m.leftAt }))
 }
 
 let mapsSeq = 0
@@ -110,7 +122,7 @@ export async function refreshRunMaps (run: Run | null, now = Date.now()) {
   const seq = ++mapsSeq
   const maps = run ? await readRunMaps(run, now) : []
   // A newer call (another run opened) wins.
-  if (seq === mapsSeq) runMaps.value = maps
+  if (seq === mapsSeq) runMaps.value = { id: run?.id ?? null, maps }
 }
 
 // Sales and Faustus listings (faustus.ts) need the sales store, which the

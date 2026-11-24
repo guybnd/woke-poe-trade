@@ -33,7 +33,8 @@ export function dayKey (ms: number): string {
 const DAY_MS = 86_400_000
 export const DAY_MS_EXPORT = DAY_MS
 const RECENT = 20
-const RECENT_KEY = 'recent-maps'
+export const RECENT_MAPS_KEY = 'recent-maps'
+const RECENT_KEY = RECENT_MAPS_KEY
 
 export async function readMapDay (key: string, strict = false, collection = MAPS_COLLECTION): Promise<MapRecord[]> {
   const saved = await (hostRequest(strict ? 'doc-get-strict' : 'doc-get', { collection, key }) as Promise<unknown>)

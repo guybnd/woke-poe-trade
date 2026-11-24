@@ -156,12 +156,39 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await came.hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('The Apothecary')
     await overlay.page.mouse.move(0, 0)
+    // A row's icons each work when clicked: edit opens a named editor under
+    // the row, Save changes it, reset puts it back as read.
+    const usedRow = card.locator('[data-run-used]').filter({ hasText: 'Strand Map' }).first()
+    await usedRow.hover()
+    await usedRow.locator('[data-run-edit]').click()
+    const editor = usedRow.locator('[data-run-editor]')
+    await expect(editor).toBeVisible()
+    await expect(editor).toContainText('How many')
+    await expect(editor).toContainText('Price each')
+    await overlay.snap('net worth run edit row')
+    await editor.getByLabel(/how many/).fill('3')
+    await editor.locator('[data-run-edit-save]').click()
+    await expect(usedRow).toContainText('3 ×')
+    await usedRow.hover()
+    await usedRow.getByRole('button', { name: /^Reset / }).click()
+    await expect(usedRow).not.toContainText('3 ×')
     // A cost by hand, per map (Out column).
+    // Typing suggests items with art and price (our own list: the browser's
+    // datalist never draws in the overlay); every box is named.
     await card.locator('[data-run-out] [data-run-add]').click()
-    await card.getByLabel('Add a cost: item').fill('Strand Map')
+    await card.getByLabel('Add a cost: item').pressSequentially('Strand')
+    const option = card.locator('[data-run-add-option]').filter({ hasText: 'Strand Map' }).first()
+    await expect(option).toBeVisible()
+    await overlay.snap('net worth run add cost')
+    await option.click()
+    await expect(card.getByLabel('Add a cost: item')).toHaveValue(/Strand Map/)
+    await card.getByLabel('Add a cost: price each').fill('1.5')
+    await card.locator('[data-run-add-form]').getByRole('button', { name: 'c', exact: true }).click()
     await card.getByLabel('Add a cost: price each').fill('1')
-    await card.getByRole('button', { name: /^Per (map|fight|run)$/ }).click()
+    await card.locator('[data-run-add-per-map]').click()
     await expect(card.locator('[data-run-cost]')).toContainText('Strand Map')
+    // The typed line takes over the read one (same item), so it isn't counted twice.
+    await expect(card.locator('[data-run-used]').filter({ hasText: 'Strand Map' })).toHaveCount(0)
     // A long shot: left out, then counted again.
     const cameRow = card.locator('[data-run-came]').first()
     await cameRow.hover()
