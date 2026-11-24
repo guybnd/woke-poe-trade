@@ -48,6 +48,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T12:16:11.306Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up fix: PR 879 (https://github.com/guybnd/woke-poe-trade/pull/879,
+      merged f9a3327) shows only cards for this exact item.
+    date: '2026-11-24T12:56:43.698Z'
+    selfAttested: true
+    id: c-2026-11-24t12-56-43-698z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/875'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
