@@ -23,6 +23,7 @@ export interface NewsItem {
 
 export const NEWS: NewsItem[] = [
   { id: 'map-price-check-add-number', wmType: 'price-check', name: 'Price check', note: 'New: a map\'s + tile adds a number it hasn\'t got (More Maps, Div cards...) to the search' },
+  { id: 'div-card-rarity', wmType: 'price-check', name: 'Price check', note: 'New: a div card\'s price check and tooltip say how rare it is, like "1 in 121k cards"' },
   { id: 'map-price-check-kind', wmType: 'price-check', name: 'Price check', note: 'New: a map\'s price check searches its own kind (Originator, Elder...) or one you pick, every mod in one list' },
   { id: 'price-check-map-stat-columns', wmType: 'price-check', name: 'Price check', note: 'New: a map\'s ticked Rarity, Pack and More Currency show as columns in the results, higher or lower than yours' },
   { id: 'price-check-related-upgrades', wmType: 'price-check', name: 'Price check', note: 'New: beside a unique, its upgrade, where it drops and the cards that give it, with prices' },

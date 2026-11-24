@@ -64,6 +64,8 @@ test('a map name lists the cards that drop there, dearest first', async ({ overl
   await expect(panel.getByText(/per card from this map's list/)).toBeVisible()
   await doctor.hover()
   await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
+  // The card's own tooltip ends with how rare it is.
+  await expect(overlay.page.getByRole('tooltip')).toContainText('Rarity: 1 in 121k cards, by drop weight')
   await overlay.snap('card-drops-map')
 })
 
@@ -74,5 +76,7 @@ test('the price check of a div card shows where it drops', async ({ overlay }) =
   const drops = card.locator('[data-card-drops]')
   await expect(drops).toContainText('Drops:')
   await expect(drops.locator('[data-card-drop-map]', { hasText: 'Waste Pool' })).toBeVisible()
+  // How rare it is among all cards, by drop weight.
+  await expect(drops.locator('[data-card-rarity]')).toHaveText('1 in 121k cards')
   await overlay.snap('card-drops-price-check')
 })

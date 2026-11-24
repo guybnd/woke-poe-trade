@@ -179,8 +179,23 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
   const kind = ref.type ? kindOfNinjaType(ref.type) : kindOfName(ref.name)
   await Promise.all(packFiles(kind).map(loadFile))
   const base = kind === 'unique' ? ITEM_BY_REF('UNIQUE', ref.name)?.[0]?.unique?.base : undefined
-  const model = buildTip(pack, { name: ref.name, kind, variant: ref.variant, base })
+  let model = buildTip(pack, { name: ref.name, kind, variant: ref.variant, base })
+  if (model && kind === 'card') model = await withCardRarity(model, ref.name)
   return { model, market: marketFor(ref, kind) }
+}
+
+// A divination card's tooltip ends with how rare it is among all card drops
+// (stacked-deck drop weights). The drop data loads on the first card hover;
+// without it the tooltip shows as it was.
+async function withCardRarity (model: TipModel, card: string): Promise<TipModel> {
+  try {
+    const { cardDropFacts, loadCardDrops, rarityText } = await import('../../card-drops/card-drops')
+    const rarity = rarityText(cardDropFacts(await loadCardDrops(), card))
+    if (!rarity) return model
+    return { ...model, sections: [...model.sections, [[{ text: `Rarity: ${rarity}, by drop weight`, tone: 'dim' }]]] }
+  } catch {
+    return model
+  }
 }
 
 // ---- hover ----
