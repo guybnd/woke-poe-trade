@@ -186,7 +186,7 @@ describe('night extras', () => {
     expect(bestDrop(diffs, 0, 20)).toEqual({ name: 'Forbidden Flame', chaos: 800, item: 'Forbidden Flame' })
     // The item's own name too, for its tooltip.
     expect(bestDrop(diffs, 0, 6)).toEqual({ name: '3 × Divine Orb', chaos: 600, item: 'Divine Orb' })
-    expect(bestItem({ name: '3 × Divine Orb', chaos: 600 })).toBe('Divine Orb')
+    expect(bestItem({ name: '3 × Divine Orb' })).toBe('Divine Orb')
     expect(bestDrop([], 0, 20)).toBeNull()
   })
 

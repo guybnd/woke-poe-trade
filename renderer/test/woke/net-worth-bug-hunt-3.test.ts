@@ -90,7 +90,7 @@ describe('ignoring a fake price', () => {
   const fake = pricesOf({ 'The Witch': { chaos: 7075, category: 'cards', thin: true } })
 
   it('does not make it the trusted price it is held against later', () => {
-    const b0 = baselineOf(valueStash(tabs, normal, undefined, { now: T0 }))
+    const b0 = baselineOf(valueStash(tabs, normal))
     const ignored = valueStash(tabs, fake, { prices: {}, ignored: ['The Witch'] }, { before: b0, now: T0 + H })
     const b1 = baselineOf(ignored)
     expect(b1['The Witch'].ref).toBe(1)
@@ -122,7 +122,7 @@ describe('a divine rate swing is not a price glitch', () => {
     const p = (at: number, chaos: number, divine: number): LedgerPoint => ({ at, chaos, divine, byCategory: cats(chaos), netChaos: 0, top: [] })
     const reads = [p(1, 15000, 150), p(2, 20000, 200), p(3, 15000, 150)]
     expect(priceSpikes(reads).size).toBe(0)
-    expect(seriesFor(reads, {}, 'all', 4, 150).map(s => Math.round(s.div))).toEqual([100, 100, 100])
+    expect(seriesFor(reads, {}, 'league', 4, 150).map(s => Math.round(s.div))).toEqual([100, 100, 100])
   })
   it('a card glitch still is one', () => {
     const p = (at: number, chaos: number, divine: number): LedgerPoint => ({ at, chaos, divine, byCategory: cats(0, chaos), netChaos: 0, top: [] })
@@ -143,7 +143,7 @@ describe('Faustus listings', () => {
     expect(toListing({ ...base, listedItem: { id: 'b', frameType: 3, sockets: sockets.slice(0, 4) } })?.links).toBeUndefined()
   })
   it('a held map matches only a listing of its tier', () => {
-    const held = { id: 'h', key: 'Strand Map (T16)', name: 'Strand Map', base: 'Strand Map', mapTier: 16, count: 1, unitChaos: 50, at: T0 + M, tallyAdded: 0 }
+    const held = { id: 'h', icon: '', key: 'Strand Map (T16)', name: 'Strand Map', base: 'Strand Map', mapTier: 16, count: 1, unitChaos: 50, at: T0 + M, tallyAdded: 0 }
     const t14 = toListing({ ...base, indexedAt: new Date(T0 + 5 * M).toISOString(), listedItem: { id: 'l', typeLine: 'Strand Map', baseType: 'Strand Map', frameType: 2, properties: [{ name: 'Map Tier', values: [['14', 0]] }] } })!
     const o = outsideTotals({ startAt: T0, held: [held], faustus: { at: T0 + 10 * M, listings: [t14] } }, [], { chaos: 1, divine: DIV })
     expect(o.held.map(h => h.left)).toEqual([1])
