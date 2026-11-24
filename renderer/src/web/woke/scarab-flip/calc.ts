@@ -415,9 +415,12 @@ export function flipRange (
   hideUntraded: boolean
 ): RangeRow[] {
   const keep = 1 - sellDiscount
-  const pool = [...quotes].filter(([, q]) => !hideUntraded || isTraded(q))
+  // Every priced item can come back, traded or not; hideUntraded only trims
+  // which inputs are listed.
+  const pool = [...quotes]
   const rows: RangeRow[] = []
   for (const [name, q] of pool) {
+    if (hideUntraded && !isTraded(q)) continue
     const results = recipe.excludeInput ? pool.filter(([other]) => other !== name) : pool
     if (!results.length) continue
     let low = results[0]

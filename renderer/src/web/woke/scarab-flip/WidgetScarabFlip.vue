@@ -50,7 +50,7 @@
       <WEmpty v-else-if="flip.kind === 'no-cost'" icon="fas fa-recycle">No {{ method.lifeforce }} Crystallised Lifeforce price yet, so the cost of a reroll is unknown.</WEmpty>
 
       <template v-else-if="flip.kind === 'range'">
-        <WEmpty v-if="!flip.rows.length" icon="fas fa-recycle">Too few traded {{ family.noun }}s to show a range.</WEmpty>
+        <WEmpty v-if="!flip.rows.length" icon="fas fa-recycle">Too few priced {{ family.noun }}s to show a range.</WEmpty>
         <template v-else>
           <div class="w-row w-row--head" :class="$style.rangeGrid">
             <span>{{ capitalize(family.noun) }}</span><span class="text-right">Price</span>

@@ -500,7 +500,7 @@ describe('3.30 families', () => {
     expect(legion.high.name).toBe('Abyss Thread')
   })
 
-  it('takes the sell discount off the results and leaves untraded ones out', () => {
+  it('takes the sell discount off the results and lists only traded inputs, though any can come back', () => {
     const quotes = new Map([
       ['A Thread', { chaos: 1, tradedChaos: 50 }],
       ['B Thread', { chaos: 10, tradedChaos: 50 }],
@@ -508,8 +508,9 @@ describe('3.30 families', () => {
     ])
     const rows = flipRange(quotes, { inputs: 3, cost: 0, excludeInput: true }, 0.1, true)
     expect(rows.map(r => r.name)).toEqual(['A Thread', 'B Thread'])
-    expect(rows[0].high).toEqual({ name: 'B Thread', chaos: 9 })
-    expect(flipRange(quotes, { inputs: 3, cost: 0, excludeInput: true }, 0, false)[0].high.name).toBe('C Thread')
+    expect(rows[0].high).toEqual({ name: 'C Thread', chaos: 450 })
+    expect(rows[1].low).toEqual({ name: 'A Thread', chaos: 0.9 })
+    expect(flipRange(quotes, { inputs: 3, cost: 0, excludeInput: true }, 0, false).map(r => r.name)).toEqual(['A Thread', 'B Thread', 'C Thread'])
   })
 
   it('averages Threads with every untouched one at 1 once you set your own weights', () => {
