@@ -6,7 +6,7 @@ import { AppConfig } from '@/web/Config'
 import { toast } from '../ui/layer'
 import { outsideSums, outsideTotals } from './faustus'
 import { readFaustus } from './faustus-read'
-import { editRun, loadRuns, runsDoc, setOutside, stopRun } from './run-store'
+import { editRun, loadRuns, runsDoc, setOutside, setPendingStop, stopRun } from './run-store'
 import { loadSales, rates, sales } from './sales-store'
 import type { LedgerPoint } from './ledger'
 import type { Outside, Run } from './runs'
@@ -20,6 +20,7 @@ export async function stopLiveRun (league: string, points: readonly LedgerPoint[
     const r = runsDoc.value.live
     if (!r || r.league !== league) return
     const at = Date.now()
+    setPendingStop({ id: r.id, at })
     await loadSales(league).catch(() => {})
     try {
       const read = await readFaustus(league, r.startAt)
@@ -35,5 +36,5 @@ export async function stopLiveRun (league: string, points: readonly LedgerPoint[
       const now = setOutside(was)
       if (now !== mine) setOutside(now)
     }
-  } finally { stopping = false }
+  } finally { stopping = false; setPendingStop(null) }
 }

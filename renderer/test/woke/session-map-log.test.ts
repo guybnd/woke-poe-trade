@@ -66,6 +66,21 @@ describe('maps from Client.txt', () => {
     expect(done.map(r => [r.name, r.mapMs])).toEqual([['Strand', 2 * 60_000], ['Cemetery', 60_000]])
   })
 
+  it('keeps one run across a crash when you go back into the same map soon', () => {
+    const { done, left } = follow([
+      area('23:50:00', 'MapWorldsFortress', '390826414'),
+      info('23:51:40', '[SHADER] Delay: OFF'),
+      `${stamp('23:51:44')} ***** LOG FILE OPENING *****`,
+      area('23:52:00', 'HideoutChurch', '1', 68),
+      area('23:52:10', 'MapWorldsFortress', '390826414'),
+      area('23:53:40', 'HideoutChurch', '1', 68),
+      area('23:55:00', 'MapWorldsCemetery', '13')
+    ])
+    // The crash leaves no toast; the real exit does, with both stretches.
+    expect(left.map(r => [r.name, r.mapMs])).toEqual([['Fortress', 190_000]])
+    expect(done.map(r => [r.name, r.mapMs, r.enteredAt])).toEqual([['Fortress', 190_000, new Date('2026-11-05T23:50:00').getTime()]])
+  })
+
   it('follows a character switch outside maps, not a party member inside one', () => {
     const { log } = follow([
       level('20:00:00', 94),

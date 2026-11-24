@@ -22,7 +22,7 @@ vi.mock('@/web/woke/shared/host', () => ({
 }))
 vi.mock('@/web/woke/ui/layer', () => ({ toast: () => {} }))
 vi.mock('@/web/woke/session-story/store', () => ({ readMapDay: async () => [], dayKey: (at: number) => String(Math.floor(at / 86_400_000)) }))
-vi.mock('@/web/woke/net-worth/run-time', () => ({ fightsIn: () => 0 }))
+vi.mock('@/web/woke/net-worth/run-time', () => ({ fightsIn: () => 0, runTimeIn: async () => null }))
 vi.mock('@/web/woke/net-worth/prices', () => ({ ninjaPriceOf: () => () => null }))
 vi.mock('@/web/background/Prices', () => ({
   usePoeninja: () => ({ updatedAt: ref(1), xchgRate: ref(200), findPriceByQuery: () => null })

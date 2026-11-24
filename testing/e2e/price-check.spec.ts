@@ -393,8 +393,10 @@ test('map: price check shows the map mod verdict strip', async ({ overlay }) => 
 
 test('map check hotkey (Alt+M) opens the verdict card, even before the widget is placed', async ({ overlay }) => {
   await overlay.boot()
-  await overlay.copyItem('items/map-rare-t16.txt', 'Alt + M')
   const card = overlay.widget('woke-map-check')
+  // A default widget, lazy: a key pressed before its chunk mounts is lost (CI flake).
+  await card.waitFor({ state: 'attached', timeout: 15_000 })
+  await overlay.copyItem('items/map-rare-t16.txt', 'Alt + M')
   await expect(card).toContainText('Strand')
   await expect(card).toContainText('Safe')
   await overlay.snap('map check card')

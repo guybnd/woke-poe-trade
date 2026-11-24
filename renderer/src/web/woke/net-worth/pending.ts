@@ -138,14 +138,20 @@ export function pendingRows (doc: PendingDoc | null, sales: readonly Sale[], rat
   return rows
 }
 
+// What a listing counts for: a 'sure' poe.ninja price (never over the ask),
+// otherwise the ask.
+export function rowWorth (r: PendingRow): number {
+  const ask = r.chaos ?? 0
+  return r.confidence === 'sure' && r.ninja != null ? Math.min(r.ninja, ask || r.ninja) : ask
+}
+
 export function pendingTotals (rows: readonly PendingRow[]): PendingTotals {
   const t: PendingTotals = { count: rows.length, askChaos: 0, worthChaos: 0, stale: 0, staleChaos: 0, unpriced: 0 }
   for (const r of rows) {
     if (r.chaos == null) t.unpriced++
     const ask = r.chaos ?? 0
     t.askChaos += ask
-    // A 'sure' poe.ninja price is the worth; otherwise the ask is all we have.
-    t.worthChaos += r.confidence === 'sure' && r.ninja != null ? Math.min(r.ninja, ask || r.ninja) : ask
+    t.worthChaos += rowWorth(r)
     if (r.stale) { t.stale++; t.staleChaos += ask }
   }
   return t
@@ -165,5 +171,5 @@ export function ageText (ms: number): string {
 
 // The glance the dock icon reads (pending-glance.ts).
 export function glanceOfPending (doc: PendingDoc): PendingGlance {
-  return { league: doc.league, readAt: doc.readAt, items: doc.listings.map(l => [l.id, doc.firstSeen[l.id] ?? l.at]) }
+  return { league: doc.league, readAt: doc.readAt, items: doc.listings.map(l => [l.id, doc.firstSeen[l.id] ?? l.at, l.price.amount, l.price.currency]) }
 }

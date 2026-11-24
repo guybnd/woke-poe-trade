@@ -9,7 +9,7 @@ import { ninjaPriceOf } from './prices'
 import { historyRev, loadPriceHistory } from './history'
 import { lastWokePrices } from '../market/hook'
 import {
-  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceYesterday, tabSetOf, valueStash
+  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceYesterday, tabSetOf, valueStash, withTabShift
 } from './valuation'
 import { stashGains, gainsKey } from './gains'
 import { classify, resolveSpends } from './spend'
@@ -23,6 +23,9 @@ import type { ReaderStatus } from './widget'
 import { recordRunRead } from './run-store'
 import { emptyMarks, feedMarks, playRates, startOfDay, trimMarks, RATE_WINDOWS } from './play-time'
 import type { PlayMarks, PlayRates } from './play-time'
+import { countsHub, countsOff } from '../shared/rate-time'
+import { rateTime } from '../shared/rate-time-now'
+import type { RateTime } from '../shared/rate-time'
 
 // The live run's dock number (WidgetNetWorth watches it once this loads).
 export { runGlance } from './run-store'
@@ -129,12 +132,12 @@ async function readMarks (now: number) {
 
 // Profit per hour of play over the last 1, 2, 3 hours and today, at `now`.
 // A read that just landed counts even before the caller's clock ticks past it.
-// `withHub`: hideout and town time counts as play.
-export function ratesAt (now: number, withHub = false): PlayRates {
+// What time counts comes from the Per hour setting (shared/rate-time.ts).
+export function ratesAt (now: number, time: RateTime = rateTime()): PlayRates {
   // A purchase adds at most 0 (spend.ts).
   const points = ledgerRef.value.points.map(p => ({ at: p.at, netChaos: p.netChaos == null ? null : p.counted ?? p.netChaos }))
   const at = Math.max(now, points[points.length - 1]?.at ?? 0)
-  return playRates(points, marks.value.marks, at, marksFromLog.value, withHub, marks.value.maps)
+  return playRates(points, marks.value.marks, at, marksFromLog.value, countsHub(time), marks.value.maps, countsOff(time))
 }
 
 export const lastDiff = computed(() => history.value.lastDiff)
@@ -216,6 +219,8 @@ async function countRead (id: string, readAt: number) {
     // Other tabs now: today's rate starts again from this read, so the
     // tabs added or dropped don't read as profit or loss per hour.
     next = { ...next, today: { day: next.today.day, points: next.today.points.slice(-1) } }
+    // Nor as today's: against the read before (the old tabs).
+    next = withTabShift(next, history.value.today.points[history.value.today.points.length - 1]?.chaos ?? null, v.chaos, divine.value, readAt)
   }
   history.value = next
   // The chart's point, the change view, and per-tab values.
@@ -250,6 +255,15 @@ function glanceAt (id: string, at: number, chaos: number, netChaos: number | nul
   glance.value = g
   return g
 }
+
+// The Per hour choice changed (shared/rate-time.ts): the saved dock number
+// and Ctrl+Space's answer follow now instead of at the next read.
+watch(rateTime, () => {
+  const last = glance.value
+  if (!last || last.league !== loadedFor) return
+  const saved = glanceAt(last.league, last.at, last.chaos, last.netChaos, last.todayChaos ?? null)
+  hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(last.league), value: saved }).catch(() => {})
+})
 
 // The points' purchase fields from the gains, worked out in time order
 // (spend.ts): a flip moves the refreshes after it too.

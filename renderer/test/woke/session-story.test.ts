@@ -1,6 +1,6 @@
 // Log lines are in the real Client.txt's shape (see death-recap.test.ts).
 import { afterEach, describe, expect, it } from 'vitest'
-import { NightTracker, NIGHT_GAP_MS, bestDrop, farmingProfit, hasMaps, keepNight, summarize } from '@/web/woke/session-story/story'
+import { NightTracker, NIGHT_GAP_MS, bestDrop, bestItem, farmingProfit, hasMaps, keepNight, summarize } from '@/web/woke/session-story/story'
 import { isSkippedArea, parseSkipAreas, setSkipAreas } from '@/web/woke/session-story/skip-areas'
 import type { NightDraft, NightStory } from '@/web/woke/session-story/story'
 
@@ -114,10 +114,36 @@ describe('a night from Client.txt', () => {
     expect(tracker.draft!.startedAt).toBe(at(t))
   })
 
-  it('ends when the game opens a new log section', () => {
+  it('ends when the game opens a new log section and nothing comes after', () => {
     const { tracker, done } = follow([...NIGHT, `${stamp('21:23:00')} ***** LOG FILE OPENING *****`])
+    expect(done).toHaveLength(0)
+    tracker.tick(tracker.draft!.lastAt + NIGHT_GAP_MS)
     expect(done).toHaveLength(1)
     expect(tracker.draft).toBeNull()
+  })
+
+  it('goes on after a crash mid-map when you are back in it soon', () => {
+    // Guy's Client.txt, 2026-11-20: Fortress, a crash, back into the same seed.
+    const { tracker, done } = follow([
+      area('23:50:00', 'MapWorldsFortress', '390826414'),
+      info('23:51:40', '[SHADER] Delay: OFF'),
+      `${stamp('23:51:44')} ***** LOG FILE OPENING *****`,
+      area('23:52:00', 'HideoutChurch', '1', 68),
+      area('23:52:10', 'MapWorldsFortress', '390826414'),
+      area('23:53:40', 'HideoutChurch', '1', 68)
+    ])
+    expect(done).toHaveLength(0)
+    const s = summarize(tracker.draft!)
+    expect(s.maps).toHaveLength(1)
+    // 1:40 before the crash, 1:30 after; the time closed isn't map time.
+    expect(s.maps[0].mapMs).toBe(190_000)
+  })
+
+  it("counts only your own deaths, not a party member's", () => {
+    const done: NightDraft[] = []
+    const tracker = new NightTracker((d) => { done.push(d) }, () => 'luminyahu')
+    for (const line of [area('21:00:00', 'MapWorldsStrand', '11'), slain('21:01:00', 'friend'), slain('21:02:00', 'friend'), slain('21:03:00')]) tracker.feed(line, 0)
+    expect(summarize(tracker.draft!).deathsAt).toHaveLength(1)
   })
 
   it('keeps encounters and towers inside a map as that map', () => {
@@ -133,8 +159,13 @@ describe('a night from Client.txt', () => {
   })
 
   it('marks a night that ended because the game restarted', () => {
-    const { done } = follow([...NIGHT, `${stamp('21:23:00')} ***** LOG FILE OPENING *****`])
+    const { tracker, done } = follow([...NIGHT, `${stamp('21:23:00')} ***** LOG FILE OPENING *****`])
+    tracker.tick(tracker.draft!.lastAt + NIGHT_GAP_MS)
     expect(summarize(done[0]).endedByOpening).toBe(true)
+    // Ended by a quiet spell after the restart's next line: not by the restart.
+    const quiet = follow([...NIGHT, `${stamp('21:23:00')} ***** LOG FILE OPENING *****`, area('21:24:00', 'HideoutChurch', '1', 68)])
+    quiet.tracker.tick(quiet.tracker.draft!.lastAt + NIGHT_GAP_MS)
+    expect(summarize(quiet.done[0]).endedByOpening).toBeFalsy()
   })
 
   it('skips a night with no maps', () => {
@@ -152,8 +183,12 @@ describe('night extras', () => {
       { at: 50, added: [{ name: 'Mirror Shard', count: 1, chaos: 9000 }] },
       { at: 10, added: [{ name: 'Forbidden Flame', count: 1, chaos: 800 }, { name: 'Chaos Orb', count: 40, chaos: 40 }] }
     ]
-    expect(bestDrop(diffs, 0, 20)).toEqual({ name: 'Forbidden Flame', chaos: 800 })
-    expect(bestDrop(diffs, 0, 6)).toEqual({ name: '3 × Divine Orb', chaos: 600 })
+    expect(bestDrop(diffs, 0, 20)).toEqual({ name: 'Forbidden Flame', chaos: 800, item: 'Forbidden Flame' })
+    // The item's own name too, for its tooltip.
+    expect(bestDrop(diffs, 0, 6)).toEqual({ name: '3 × Divine Orb', chaos: 600, item: 'Divine Orb' })
+    expect(bestItem({ name: '3 × Divine Orb' })).toBe('Divine Orb')
+    // The item's tooltip name, not its stash label.
+    expect(bestDrop([{ at: 1, added: [{ name: 'Headhunter 6L', tip: 'Headhunter', count: 1, chaos: 9000 }] }], 0, 2)?.item).toBe('Headhunter')
     expect(bestDrop([], 0, 20)).toBeNull()
   })
 

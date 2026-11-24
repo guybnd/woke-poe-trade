@@ -16,6 +16,8 @@
           <WSegmented v-model="config.range" :options="rangeOptions" />
           <span class="text-xs w-dim ml-2">Show in</span>
           <WSegmented v-model="config.unit" :options="unitOptions" />
+          <span class="text-xs w-dim ml-2">Per hour of</span>
+          <RateTimePick />
           <span v-if="config.unit === 'div' && !divineNow" class="text-xs" style="color: var(--w-warn);" title="Sessions saved without a divine rate need today's poe.ninja prices">Waiting for poe.ninja prices.</span>
         </div>
       </template>
@@ -55,7 +57,7 @@
                 </span>
                 <span class="flex justify-end"><WSpark :values="row.trend" :width="48" :height="16" /></span>
               </button>
-              <div class="pt-1"><WInfo :text="`Bar: ${unitLabel} per hour. Whisker: 90% range.\n\nWhiskers show after ${MIN_UNITS_FOR_RANGE} maps. Overlapping whiskers mean it is too early to tell two strategies apart.`" /></div>
+              <div class="pt-1"><WInfo :text="`Bar: ${unitLabel} per hour. Whisker: 90% range.\n\nWhiskers show after ${MIN_UNITS_FOR_RANGE} maps. Overlapping whiskers mean it is too early to tell two strategies apart.\n\n${ANALYTICS_TIME[rateTime()]}`" /></div>
             </div>
 
             <div v-if="selectedRow" :class="$style.detail">
@@ -256,6 +258,15 @@ import {
 } from './stats'
 import type { StrategyRow, Unit } from './stats'
 import type { AnalyticsWidget, MapRun, SessionRecord } from './types'
+import { rateTime } from '../shared/rate-time-now'
+import RateTimePick from '../shared/RateTimePick.vue'
+// What the Per hour choice counts here: saved sessions keep hideout and AFK
+// as one time, so + Hideout and All read the same.
+const ANALYTICS_TIME = {
+  play: 'Per hour of time inside maps: hideout, town and AFK left out.',
+  hub: 'Per hour of the whole session. Saved sessions can\'t tell hideout from AFK, so AFK counts too.',
+  all: 'Per hour of the whole session, AFK included.'
+} as const
 // Tonight's card, from Session story's own chunk (already loaded when Session
 // story is on), so it adds nothing to startup.
 const TonightBand = defineAsyncComponent(() => import('../session-story/WidgetSessionStory.vue').then(m => m.TonightBand))
@@ -397,7 +408,7 @@ const bossRows = computed<StrategyRow[]>(() => {
   return out
 })
 
-const rows = computed(() => sortRows([...strategyRows(inView.value, props.config.unit, divineNow.value), ...bossRows.value]))
+const rows = computed(() => sortRows([...strategyRows(inView.value, props.config.unit, divineNow.value, rateTime()), ...bossRows.value]))
 
 const selectedKey = shallowRef<string | null>(null)
 const selectedRow = computed(() => rows.value.find(r => r.key === selectedKey.value) ?? rows.value[0] ?? null)
@@ -462,7 +473,7 @@ function summary (s: SessionRecord) {
   return {
     s,
     profit: r ? t.profit / r : null,
-    perHour: perHour(sessionUnits(s, props.config.unit, divineNow.value, true))
+    perHour: perHour(sessionUnits(s, props.config.unit, divineNow.value, rateTime(), true))
   }
 }
 const sessionList = computed(() => inView.value
@@ -584,7 +595,7 @@ async function exportCsv () {
 }
 
 // --- Maps ---
-const tiles = computed(() => mapTileRows(inView.value, props.config.unit, divineNow.value))
+const tiles = computed(() => mapTileRows(inView.value, props.config.unit, divineNow.value, rateTime()))
 
 </script>
 

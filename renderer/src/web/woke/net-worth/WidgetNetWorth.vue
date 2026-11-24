@@ -4,8 +4,8 @@
       :badge="badge" :stack="stack" :glow="!!liveRun" :wheel="swapGlance" card-width="25rem" :menu="dockMenu" @open-change="cardOpen = $event">
       <template #card>
         <!-- Its data loads the first time the card opens, never at startup. -->
-        <NetWorthCard v-if="cardOpen && personalReady" :status="status" :league="leagueId" :with-hub="config.rateWithHub === true" :rate-window="config.rateWindow ?? '1h'" @window="config.rateWindow = $event" @refresh="refresh" @settings="openSettingsPage(wm, 'Game & league')"
-          :run="liveRun" :stopping="stopping" :starting-run="startingRun" @start="startLive" :run-with-hub="config.runWithHub !== false" @stop="stopLive" @open-run="openRun" @run-hub="config.runWithHub = $event" />
+        <NetWorthCard v-if="cardOpen && personalReady" :status="status" :league="leagueId" :rate-window="config.rateWindow ?? '1h'" @window="config.rateWindow = $event" @refresh="refresh" @settings="openSettingsPage(wm, 'Game & league')"
+          :run="liveRun" :stopping="stopping" :starting-run="startingRun" @start="startLive" :listed-chaos="listedChaos" @stop="stopLive" @open-run="openRun" />
         <div v-else class="w-dim text-xs" style="padding: 6px var(--w-pad);">{{ cardText }}</div>
       </template>
     </DockItem>
@@ -46,7 +46,7 @@ import type { Glance } from './glance'
 import { isRunGlance, runGlanceKey } from './runs'
 import type { RunGlance } from './runs'
 import type { LedgerPoint } from './ledger'
-import { isPendingGlance, keptSales, listedGlance, pendingGlanceKey, staleCount } from './pending-glance'
+import { isListedWorth, isPendingGlance, keptSales, listedGlance, listedTotal, listedWorth, listedWorthKey, pendingGlanceKey, staleCount } from './pending-glance'
 import { useZone } from '../shared/zone'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { useGoto } from '../tab-bar/goto'
@@ -220,7 +220,19 @@ watch(leagueId, (league) => {
   hostRequest('doc-get', { collection: DOCS, key: pendingGlanceKey(league) })
     .then((g) => { if (leagueId.value === league && listedGlance.value == null && isPendingGlance(g) && g.league === league) listedGlance.value = g })
     .catch(() => {})
+  if (listedWorth.value?.league !== league) listedWorth.value = null
+  hostRequest('doc-get', { collection: DOCS, key: listedWorthKey(league) })
+    .then((w) => { if (leagueId.value === league && listedWorth.value == null && isListedWorth(w) && w.league === league) listedWorth.value = w })
+    .catch(() => {})
 }, { immediate: true })
+// The At Faustus box (countListed): the card's total adds your unsold
+// listings, as the window's does.
+const listedChaos = computed(() => {
+  const g = listedGlance.value
+  if (props.config.countListed === false || !g || g.league !== leagueId.value) return 0
+  const kept = keptSales.value?.league === g.league ? keptSales.value.sales : null
+  return listedTotal(g, listedWorth.value, kept ?? glanceSales.value, glance.value?.divine ?? null)
+})
 const salesOk = (r: unknown, league: string): r is { league: string, sales: Array<{ id: string, at: number }> } =>
   !!r && typeof r === 'object' && (r as { league?: unknown }).league === league && Array.isArray((r as { sales?: unknown }).sales)
 // The kept sales (a file read, no request) once there are listings to count.

@@ -116,9 +116,16 @@ export class MapLog {
     const at = lineTime(line) ?? fallbackAt
     // The game was closed, or nothing was written for a long time: the map
     // ended with the last line, not whenever the next one comes.
-    if (line.includes(OPENING) || (this.lastAt && at - this.lastAt >= NIGHT_GAP_MS)) this.finish(this.lastAt || at)
+    if (this.lastAt && at - this.lastAt >= NIGHT_GAP_MS) this.finish(this.lastAt)
+    if (line.includes(OPENING)) {
+      // The game closed (a crash, a restart): the stretch inside ends with the
+      // last line, but the map goes on if you're back in it soon (the same
+      // instance is the same run; a long gap or another map ends it).
+      this.pause(this.lastAt || at)
+      this.lastAt = Math.max(this.lastAt, at)
+      return
+    }
     this.lastAt = Math.max(this.lastAt, at)
-    if (line.includes(OPENING)) return
     const ev = parseLogLine(line)
     if (ev?.kind === 'area') {
       this.naming = false
@@ -214,6 +221,14 @@ export class MapLog {
     this.current.leftAt = at
     this.inMap = false
     if (!this.skipped) this.events.onLeave(this.current)
+  }
+
+  // Out of the map without leaving it (the game closed): no toast.
+  private pause (at: number): void {
+    if (!this.inMap || !this.current) return
+    this.current.mapMs += Math.max(0, at - this.since)
+    this.current.leftAt = at
+    this.inMap = false
   }
 
   // Ends the current map (the night is over, or another map started).
