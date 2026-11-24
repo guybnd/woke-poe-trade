@@ -5,7 +5,7 @@ import type { Run } from '@/web/woke/net-worth/runs'
 import { leftOver, outsideTotals, toListing } from '@/web/woke/net-worth/faustus'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { baselineOf, emptyHistory, recordRead, sinceYesterday, valueStash, withTabShift } from '@/web/woke/net-worth/valuation'
-import type { Priced, PriceOf, StashDiff, StashItemLike, Valuation } from '@/web/woke/net-worth/valuation'
+import type { DiffLine, Priced, PriceOf, StashDiff, StashItemLike, Valuation } from '@/web/woke/net-worth/valuation'
 import { priceSpikes, seriesFor } from '@/web/woke/net-worth/ledger'
 import type { LedgerPoint } from '@/web/woke/net-worth/ledger'
 
@@ -25,7 +25,7 @@ const cats = (currency: number, cards = 0) => ({ currency, fragments: 0, cards, 
 const point = (at: number, netChaos: number | null, extra: Partial<LedgerPoint> = {}): LedgerPoint =>
   ({ at, chaos: 0, divine: DIV, byCategory: cats(0), netChaos, top: [], ...extra })
 const line = (key: string, count: number, chaos: number) => ({ key, name: key, icon: '', count, chaos })
-const diff = (at: number, added: ReturnType<typeof line>[], removed: ReturnType<typeof line>[] = []): StashDiff =>
+const diff = (at: number, added: DiffLine[], removed: DiffLine[] = []): StashDiff =>
   ({ at, added, removed, netChaos: added.reduce((s, l) => s + l.chaos, 0) - removed.reduce((s, l) => s + l.chaos, 0) })
 const run = (extra: Partial<Run> = {}): Run => ({ ...emptyRun('r1', 'L', 'Strand', T0), ...extra })
 const sale = (id: string, at: number, amount: number, currency = 'chaos'): Sale =>
@@ -157,12 +157,16 @@ describe('Faustus listings', () => {
 })
 
 describe('the dock card counts your listings as the window does', () => {
-  it('adds the saved worth of listings not sold since', async () => {
-    const { worthLeft } = await import('@/web/woke/net-worth/pending-glance')
-    const w = { league: 'L', at: T0, items: [['a', 100], ['b', 50]] as Array<[string, number]> }
-    expect(worthLeft(w, [])).toBe(150)
-    // b sold after the worth was saved; a sold long before (another listing of it).
-    expect(worthLeft(w, [{ id: 'b', at: T0 + M }, { id: 'a', at: T0 - H }])).toBe(100)
-    expect(worthLeft(null, [])).toBe(0)
+  it("the window's worth, else the ask; sold and taken-down ones out", async () => {
+    const { listedTotal } = await import('@/web/woke/net-worth/pending-glance')
+    const g = { league: 'L', readAt: T0, items: [['a', T0 - H, 120, 'chaos'], ['b', T0 - H, 1, 'divine'], ['c', T0, 30, 'chaos']] as Array<[string, number, number, string]> }
+    // 'a' priced by the window at 100; 'c' new since (its ask); 'z' taken down.
+    const w = { league: 'L', at: T0 - M, items: [['a', 100], ['z', 999]] as Array<[string, number]> }
+    expect(listedTotal(g, w, [], DIV)).toBe(100 + 200 + 30)
+    // 'b' sold after it was listed, read after the worth was saved: out.
+    expect(listedTotal(g, w, [{ id: 'b', at: T0 - 30 * M }], DIV)).toBe(130)
+    // Another league's worth doesn't apply.
+    expect(listedTotal(g, { ...w, league: 'X' }, [], DIV)).toBe(120 + 200 + 30)
+    expect(listedTotal(null, w, [], DIV)).toBe(0)
   })
 })

@@ -171,5 +171,5 @@ export function ageText (ms: number): string {
 
 // The glance the dock icon reads (pending-glance.ts).
 export function glanceOfPending (doc: PendingDoc): PendingGlance {
-  return { league: doc.league, readAt: doc.readAt, items: doc.listings.map(l => [l.id, doc.firstSeen[l.id] ?? l.at]) }
+  return { league: doc.league, readAt: doc.readAt, items: doc.listings.map(l => [l.id, doc.firstSeen[l.id] ?? l.at, l.price.amount, l.price.currency]) }
 }

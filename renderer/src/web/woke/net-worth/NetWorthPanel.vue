@@ -559,7 +559,7 @@ const spark = computed(() => seriesFor(ledger.value.points, historyNow.value.day
 const goal = computed(() => props.config.goal && props.config.goal.div > 0 ? props.config.goal : null)
 // The At Faustus box: counted listings bring the goal closer, so the chart's
 // stash line has that much less to go (the line is drawn there too).
-const goalStashDiv = computed(() => goal.value ? goal.value.div - (divine.value ? listedWorth.value / divine.value : 0) : null)
+const goalStashDiv = computed(() => goal.value ? Math.max(0, goal.value.div - (divine.value ? listedWorth.value / divine.value : 0)) : null)
 const eta = computed(() => goalStashDiv.value != null ? goalEta(seriesFor(ledger.value.points, historyNow.value.days, '7d', Date.now(), divine.value), goalStashDiv.value) : { reached: false, days: null })
 
 // ---------- price moves (D3) ----------
@@ -855,9 +855,8 @@ const totalTitle = computed(() => {
   if (listedWorth.value) {
     lines.push(`At Faustus ${div(listedWorth.value)} ${unit.value} (${listed.value.count} unsold)`)
     // A sale shows in your trade history only at the next sales read.
-    lines.push('A listing that sold and was collected counts twice until your sales are read again')
     // Sold, not collected yet: Faustus holds it, not the stash (or the list).
-    lines.push('A listing that sold drops out at the next sales read; its currency counts once you collect it')
+    lines.push('A sold listing drops out at the next sales read; its currency counts once you collect it (twice if you collect before that read)')
   }
   return lines.join('\n')
 })

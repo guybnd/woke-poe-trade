@@ -9,7 +9,8 @@ export const DAY_MS = 86_400_000
 // Listings refresh by themselves at most this often (on entering your hideout).
 export const AUTO_REFRESH_MS = 30 * 60_000
 
-export interface PendingGlance { league: string, readAt: number, items: Array<[id: string, firstAt: number]> }
+// `amount`, `currency`: the ask (glances saved before them lack it).
+export interface PendingGlance { league: string, readAt: number, items: Array<[id: string, firstAt: number, amount?: number, currency?: string]> }
 export const pendingGlanceKey = (league: string) => `${league}-pending-glance`
 // The latest glance: the shell loads it, a listings read replaces it.
 export const listedGlance = shallowRef<PendingGlance | null>(null)
@@ -33,17 +34,21 @@ export function soldOf (firstSeen: Record<string, number>, sales: ReadonlyArray<
   return ids
 }
 
+const firstSeenOf = (g: PendingGlance) => Object.fromEntries(g.items.map(([id, at]) => [id, at]))
+
 // How many listings passed the stale line and haven't sold.
 export function staleCount (g: PendingGlance | null, sales: ReadonlyArray<{ id: string, at: number }>, now: number, staleDays = DEFAULT_STALE_DAYS): number {
   if (!g) return 0
-  const sold = soldOf(Object.fromEntries(g.items), sales)
+  const sold = soldOf(firstSeenOf(g), sales)
   const staleMs = Math.max(1, staleDays) * DAY_MS
   return g.items.filter(([id, at]) => !sold.has(id) && now - at >= staleMs).length
 }
 
-// What each unsold listing counts for in the total (pending.ts rowWorth), as
-// the window last priced them: the dock card adds the ones not sold since,
-// so its total matches the window's with the At Faustus box ticked.
+// What each listing counts for in the total (pending.ts rowWorth), as the
+// window last priced them. The dock card goes by the listings glance (new
+// listings at their ask, taken-down ones gone, sold ones out by when they
+// were first listed), so its total matches the window's with the At Faustus
+// box ticked.
 export interface ListedWorth { league: string, at: number, items: Array<[id: string, chaos: number]> }
 export const listedWorthKey = (league: string) => `${league}-listed-worth`
 export const listedWorth = shallowRef<ListedWorth | null>(null)
@@ -53,9 +58,18 @@ export function isListedWorth (x: unknown): x is ListedWorth {
     typeof (x as ListedWorth).at === 'number' && Array.isArray((x as ListedWorth).items)
 }
 
-// The worth of listings not sold since it was saved (a minute's slack, as soldOf).
-export function worthLeft (w: ListedWorth | null, sales: ReadonlyArray<{ id: string, at: number }>): number {
-  if (!w) return 0
-  const sold = new Set(sales.filter(s => s.at >= w.at - 60_000).map(s => s.id))
-  return w.items.reduce((sum, [id, chaos]) => sold.has(id) ? sum : sum + chaos, 0)
+// The unsold listings' worth: the window's price, else the ask.
+export function listedTotal (g: PendingGlance | null, w: ListedWorth | null, sales: ReadonlyArray<{ id: string, at: number }>, divine: number | null): number {
+  if (!g) return 0
+  const worth = new Map(w && w.league === g.league ? w.items : [])
+  const sold = soldOf(firstSeenOf(g), sales)
+  let sum = 0
+  for (const [id, , amount, currency] of g.items) {
+    if (sold.has(id)) continue
+    const known = worth.get(id)
+    if (known != null) sum += known
+    else if (amount != null && currency === 'chaos') sum += amount
+    else if (amount != null && currency === 'divine' && divine) sum += amount * divine
+  }
+  return sum
 }

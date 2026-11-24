@@ -46,7 +46,7 @@ import type { Glance } from './glance'
 import { isRunGlance, runGlanceKey } from './runs'
 import type { RunGlance } from './runs'
 import type { LedgerPoint } from './ledger'
-import { isListedWorth, isPendingGlance, keptSales, listedGlance, listedWorth, listedWorthKey, pendingGlanceKey, staleCount, worthLeft } from './pending-glance'
+import { isListedWorth, isPendingGlance, keptSales, listedGlance, listedTotal, listedWorth, listedWorthKey, pendingGlanceKey, staleCount } from './pending-glance'
 import { useZone } from '../shared/zone'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { useGoto } from '../tab-bar/goto'
@@ -228,10 +228,10 @@ watch(leagueId, (league) => {
 // The At Faustus box (countListed): the card's total adds your unsold
 // listings, as the window's does.
 const listedChaos = computed(() => {
-  const w = listedWorth.value
-  if (props.config.countListed === false || !w || w.league !== leagueId.value) return 0
-  const kept = keptSales.value?.league === w.league ? keptSales.value.sales : null
-  return worthLeft(w, kept ?? glanceSales.value)
+  const g = listedGlance.value
+  if (props.config.countListed === false || !g || g.league !== leagueId.value) return 0
+  const kept = keptSales.value?.league === g.league ? keptSales.value.sales : null
+  return listedTotal(g, listedWorth.value, kept ?? glanceSales.value, glance.value?.divine ?? null)
 })
 const salesOk = (r: unknown, league: string): r is { league: string, sales: Array<{ id: string, at: number }> } =>
   !!r && typeof r === 'object' && (r as { league?: unknown }).league === league && Array.isArray((r as { sales?: unknown }).sales)
