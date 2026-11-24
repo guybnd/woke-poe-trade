@@ -1344,11 +1344,13 @@ function recentGroups (items: readonly PriceItem[]): PriceGroup[] {
 function remember (entry: Entry | null) {
   if (entry?.kind !== 'price') return
   const { type, name } = entry.group
+  const head = props.config.recent?.[0]
+  if (head?.type === type && head.name === name) return
   const rest = (props.config.recent ?? []).filter(r => r.type !== type || r.name !== name)
   props.config.recent = [{ type, name }, ...rest].slice(0, RECENT_MAX)
-  // On close the window's own save has already run (the overlay saves as the
-  // palette hides, before this), so the newest lookup would wait for some
-  // later save, and be lost to a restart or another window's save.
+  // On close the overlay's own save has already run (it saves as the palette
+  // hides, before this). Closing on blur or into a tool brings no later save,
+  // so the newest lookup could be lost to a restart or another window's save.
   if (!open.value) saveConfig()
 }
 
