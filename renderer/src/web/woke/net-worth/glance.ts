@@ -7,13 +7,14 @@ import type { LedgerPoint } from './ledger'
 import type { PlayRate, PlayRates } from './play-time'
 
 // A window's profit per hour of play, as saved (Ctrl+Space reads it).
-export type GlanceRate = Pick<PlayRate, 'perHour' | 'playMs' | 'hubMs' | 'offMs'>
+// hubOnly: no maps in the window, only hideout time (no rate).
+export type GlanceRate = Pick<PlayRate, 'perHour' | 'playMs' | 'hubMs' | 'offMs'> & { hubOnly?: boolean }
 // `withHub`/`withOff`: what the Per hour setting counted at that read
 // (unset in older glances: neither).
 export interface GlanceRates { '1h': GlanceRate, '2h': GlanceRate, '3h': GlanceRate, 'today': GlanceRate, 'fromLog': boolean, 'withHub'?: boolean, 'withOff'?: boolean }
 
 export function glanceRates (r: PlayRates): GlanceRates {
-  const one = (x: PlayRate): GlanceRate => ({ perHour: x.perHour, playMs: x.playMs, hubMs: x.hubMs, offMs: x.offMs })
+  const one = (x: PlayRate): GlanceRate => ({ perHour: x.perHour, playMs: x.playMs, hubMs: x.hubMs, offMs: x.offMs, ...(x.hubOnly ? { hubOnly: true } : {}) })
   return { '1h': one(r['1h']), '2h': one(r['2h']), '3h': one(r['3h']), 'today': one(r.today), 'fromLog': r.fromLog, 'withHub': r.withHub, 'withOff': r.withOff }
 }
 

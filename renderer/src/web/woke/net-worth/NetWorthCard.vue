@@ -74,7 +74,7 @@
              per hour figure and the graph. -->
         <div v-if="v" :class="$style.rates">
           <WSegmented :model-value="win" :options="WINDOW_OPTIONS" @update:model-value="pick" />
-          <span class="w-num" :class="tone(rate.div)" :title="rate.tip">{{ rate.div == null ? '—' : signed(rate.div) }}<Coin :chaos="!divineRate" />/h</span>
+          <span class="w-num" :class="tone(rate.div)" :title="rate.tip"><template v-if="rate.div != null">{{ signed(rate.div) }}<Coin :chaos="!divineRate" />/h</template><template v-else-if="rate.hubOnly">No maps</template><template v-else>—<Coin :chaos="!divineRate" />/h</template></span>
         </div>
         <!-- The window's chart, short: hover a point for what changed, click to keep it. -->
         <LedgerChart v-if="series.length > 1" :series="series" :big="big" mode="total" :goal-div="null" :height="48" tip-below
@@ -206,7 +206,7 @@ const rate = computed(() => {
   const r = ratesAt(now.value)
   const x = r[win.value]
   const amount = (chaos: number) => `${signed(toDiv(chaos))} ${divineRate.value ? 'd' : 'c'}`
-  return { div: !sameLeague.value || x.perHour == null ? null : toDiv(x.perHour), tip: rateTip(win.value, x, r.fromLog, amount, r.withHub, r.withOff) }
+  return { div: !sameLeague.value || x.perHour == null ? null : toDiv(x.perHour), hubOnly: sameLeague.value && x.hubOnly, tip: rateTip(win.value, x, r.fromLog, amount, r.withHub, r.withOff) }
 })
 
 // ---------- the run going (pick Q1) ----------

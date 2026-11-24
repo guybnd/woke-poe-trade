@@ -118,10 +118,17 @@
               <RateTimePick :class="$style.rateTime" />
             </div>
             <div v-if="!fold.perHour" :class="$style.tiles">
-              <div><span :class="$style.caps">Per hour</span><b :class="[$style.bigRate, tone(rateShown.div)]" class="w-num" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b></div>
+              <div><span :class="$style.caps">Per hour</span><b :class="[$style.bigRate, tone(rateShown.div)]" class="w-num" :title="rateShown.tip" data-rate-big><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else-if="rateShown.r.hubOnly">No maps</template><template v-else>—</template></b></div>
               <div><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b></div>
               <div title="The middle map's time: short visits barely move it"><span :class="$style.caps">Median map</span><b class="w-num">{{ rateShown.r.medianMapMs != null ? shortSpan(rateShown.r.medianMapMs) : '—' }}</b></div>
               <div :title="playedTip"><span :class="$style.caps">Played</span><b class="w-num">{{ span(rateShown.r.playMs) }}</b></div>
+            </div>
+            <!-- Time with no map (crafting, selling) and sales: apart from the rate. -->
+            <div v-if="!fold.perHour && hubRow" :class="[$style.tiles, $style.hubTiles]" data-hub-row>
+              <div title="Hideout and town time with no map between two stash reads: crafting, trading. Not in the per hour"><span :class="$style.caps">Hideout</span><b class="w-num">{{ span(hubRow.ms) }}</b></div>
+              <div :title="hubRow.soldTip"><span :class="$style.caps">Sold</span><b class="w-num" :class="tone(hubRow.soldChaos)">{{ hubRow.soldChaos ? signed(toDiv(hubRow.soldChaos)) : '0' }}<Coin :chaos="!divine" /></b></div>
+              <div title="What the stash did in that hideout time: orbs used, sales collected, things bought"><span :class="$style.caps">Stash in hideout</span><b class="w-num" :class="tone(hubRow.hubChaos)">{{ signed(toDiv(hubRow.hubChaos)) }}<Coin :chaos="!divine" /></b></div>
+              <div title="The stash's whole change in the window, maps and hideout"><span :class="$style.caps">Net</span><b class="w-num" :class="tone(hubRow.netChaos)">{{ signed(toDiv(hubRow.netChaos)) }}<Coin :chaos="!divine" /></b></div>
             </div>
             <template v-if="splitTotal > 0 && !fold.perHour">
               <div :class="[$style.split, { [$style.splitPick]: splitLabel }]" @mouseleave="pickSplit(null)">
@@ -301,7 +308,7 @@ import type { ChangeGroup } from './ledger'
 import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection, valueFloor } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { UNREADABLE } from './tab-picker'
-import { rateTip, shortSpan, span } from './play-time'
+import { RATE_WINDOWS, rateTip, shortSpan, span, startOfDay } from './play-time'
 import { chartHOf, clampChartH, clampMidH, colWeights, dragCols, dragTop, edges, foldedOf, hasChartH, midHOf, toggleFold, topOf } from './layout'
 import type { ColId, FoldId, PanelLayout } from './layout'
 import SplitHandle from './SplitHandle.vue'
@@ -401,6 +408,21 @@ const rateAmount = (chaos: number) => `${signed(toDiv(chaos))} ${unit.value}`
 const rateShown = computed(() => {
   const r = rates.value[rateWindow.value]
   return { r, div: r.perHour == null ? null : toDiv(r.perHour), tip: rateTip(rateWindow.value, r, rates.value.fromLog, rateAmount, rates.value.withHub, rates.value.withOff) }
+})
+// Hideout time with no map and the window's sales, shown apart from the rate
+// (crafting, trading). Sales count at the time they sold.
+const rateFrom = computed(() => rateWindow.value === 'today' ? startOfDay(now.value) : now.value - (RATE_WINDOWS.find(w => w.id === rateWindow.value)?.ms ?? 3_600_000))
+const hubRow = computed(() => {
+  const r = rateShown.value.r
+  const sold = totals(salesInWindow(sales.value, rateFrom.value, now.value), saleRates.value)
+  if (r.hubOnlyMs < 60_000 && !sold.count) return null
+  return {
+    ms: r.hubOnlyMs,
+    soldChaos: sold.chaos,
+    soldTip: `${sold.count} ${sold.count === 1 ? 'sale' : 'sales'} in the window, counted when they sold. Their currency reaches the stash when you collect it`,
+    hubChaos: r.hubChaos,
+    netChaos: r.chaos
+  }
 })
 // The window's time by kind, for the bar under the numbers.
 const splitParts = computed(() => {
@@ -1004,6 +1026,7 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .tiles > div { display: flex; flex-direction: column; justify-content: space-between; gap: 1px; min-width: 0; }
 .tiles > div > :first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tiles b { font-weight: 500; }
+.hubTiles { margin-top: var(--w-s2); padding-top: var(--w-s2); border-top: 1px dashed var(--w-line); }
 .timeLegend { flex-wrap: nowrap; gap: var(--w-s2); white-space: nowrap; overflow: hidden; }
 .timeLegend i { opacity: 1; }
 .halves > .chartBlock { display: flex; flex-direction: column; }
