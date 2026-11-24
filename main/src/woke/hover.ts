@@ -13,6 +13,7 @@ import type { ServerEvents } from '../server'
 import type { OverlayWindow } from '../windowing/OverlayWindow'
 
 const LEFT_BUTTON = 1
+const MAX_HOLD_MS = 30_000
 const RIGHT_BUTTON = 2
 
 interface Zone {
@@ -49,9 +50,19 @@ export class WokeHoverTracker {
     // For the overlay's failsafe, which reads the cursor itself (in DIP).
     this.overlay.isOverClickZone = (p) => this.flat.some(z => z.activate && contains(z.dip, p.x, p.y))
     this.overlay.describeZones = () => this.describe()
+    // A drag reports no moves. If the hook died mid-drag the button never
+    // comes up for us, so a long hold stops counting.
+    this.overlay.isButtonHeld = () => this.heldButtons.size > 0 && Date.now() - this.lastHookAt < MAX_HOLD_MS
     // A reloaded page registers its zones again; the old page's are gone. Kept,
     // they'd catch the mouse where nothing shows any more.
-    this.overlay.onPageReload = () => { this.clear(false) }
+    this.overlay.onPageReload = () => {
+      // Keep where the mouse is, so the new page's zones are checked against
+      // it: a mouse resting on an icon across a reload is still on it.
+      const { mouseX, mouseY } = this
+      this.clear(false)
+      this.mouseX = mouseX
+      this.mouseY = mouseY
+    }
     // The rescue hotkey: drop every zone, and have the page send its live ones.
     this.overlay.onRescue = () => {
       this.clear(true)

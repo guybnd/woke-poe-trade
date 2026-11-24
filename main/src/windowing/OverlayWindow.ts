@@ -30,6 +30,8 @@ export class OverlayWindow {
   public onRescue?: () => void
   // For the log when the failsafe or the hotkey steps in: the zones, the hook.
   public describeZones: () => string = () => 'no hover tracker'
+  // A mouse button is held (a drag): the failsafe waits for it to come up.
+  public isButtonHeld: () => boolean = () => false
   // Whether the window lets clicks through to the game, as last set.
   private clickThrough = true
   private lastState = ''
@@ -99,6 +101,10 @@ export class OverlayWindow {
     this.window.webContents.on('did-navigate', () => {
       this.panelKeys.clear()
       this.onPageReload?.()
+    })
+    // woke: a crashed page can't let go of the mouse it had taken.
+    this.window.webContents.on('render-process-gone', () => {
+      this.forceClickThrough('overlay page crashed')
     })
     this.window.webContents.on('did-attach-webview', (_, webviewWebContents) => {
       webviewWebContents.on('before-input-event', this.handleExtraCommands)
@@ -214,8 +220,13 @@ export class OverlayWindow {
   forceClickThrough = (why = 'rescue hotkey') => {
     this.logger.write(`warn [Overlay] Forcing click-through (${why}); state was ${this.describeState()}; ${this.describeZones()}`)
     this.isMouseTaken = false
-    if (this.isInteractable) {
+    // Pull the game in front only if it or the overlay is: the key also works
+    // from another program, which mustn't lose focus to the game.
+    if (this.isInteractable && (this.isFocused || OverlayController.targetHasFocus)) {
       this.assertGameActive(why)
+    } else {
+      this.isCardActive = false
+      this.isInteractable = false
     }
     this.setClickThrough(true, why)
     this.onRescue?.()
@@ -280,7 +291,9 @@ export class OverlayWindow {
   }
 
   private readonly checkCursor = () => {
-    if (this.isOverClickZone(screen.getCursorScreenPoint())) {
+    // The hook reports no moves during a drag, and a drag (a slider, a resize
+    // grip) can leave the zone: let go only once the button is up.
+    if (this.isButtonHeld() || this.isOverClickZone(screen.getCursorScreenPoint())) {
       this.offZoneSince = 0
       return
     }
@@ -296,7 +309,6 @@ export class OverlayWindow {
     this.releaseCard(why)
     // Neither of those applied (focus arrived with no card): let clicks through anyway.
     if (!this.clickThrough && !(this.isInteractable && !this.isCardActive)) {
-      this.isInteractable = false
       this.setClickThrough(true, why)
     }
   }

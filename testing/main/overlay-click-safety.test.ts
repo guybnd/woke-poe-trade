@@ -19,6 +19,7 @@ const { OverlayWindow, WATCH_MS, RELEASE_AFTER_MS } = await import('../../main/s
 const { WokeHoverTracker } = await import('../../main/src/woke/hover')
 const { uIOhook } = await import('../../main/node_modules/uiohook-napi/dist/index.js')
 const { game } = await import('../fake-host/game')
+const { OverlayController } = await import('../fake-host/stubs/electron-overlay-window')
 
 type Handler = (payload: any) => void // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -59,6 +60,8 @@ describe('overlay click safety', () => {
   afterEach(() => {
     vi.useRealTimers()
     uIOhook.removeAllListeners()
+    // Each test's overlay listens to the shared stub; don't let it hear the next test.
+    OverlayController.events.removeAllListeners()
   })
 
   it('takes the mouse over a dock icon and gives it back when the mouse leaves, logging both', () => {
@@ -144,6 +147,32 @@ describe('overlay click safety', () => {
     zones('woke-hover-1', [ICON])
     move(112, 112)
     expect(overlay.isMouseTaken).toBe(true)
+  })
+
+  it('waits for a drag to end before letting go, since the hook reports no drag moves', () => {
+    const { overlay, zones, move } = setup()
+    zones('woke-hover-1', [ICON])
+    move(110, 110)
+    uIOhook.emit('mousedown', { x: 110, y: 110, button: 1 })
+    expect(overlay.isCardActive).toBe(true)
+    // Dragging a slider off the card: the cursor moves, the hook stays quiet.
+    game.cursor = { x: 600, y: 600 }
+    vi.advanceTimersByTime(5000)
+    expect(overlay.isCardActive).toBe(true)
+    uIOhook.emit('mouseup', { x: 600, y: 600, button: 1 })
+    expect(overlay.isCardActive).toBe(false)
+  })
+
+  it('a mouse resting on an icon across a reload is still on it', () => {
+    const { overlay, zones, move, sent } = setup()
+    zones('woke-hover-1', [ICON])
+    move(110, 110)
+    overlay.giveMouse()
+    overlay.onPageReload?.()
+    sent.length = 0
+    zones('woke-hover-1', [ICON])
+    expect(overlay.isMouseTaken).toBe(true)
+    expect(sent.some(e => e.name === 'MAIN->OVERLAY::woke-hover' && (e.payload as { inside: boolean }).inside)).toBe(true)
   })
 
   it('logs a state only when it changes', () => {

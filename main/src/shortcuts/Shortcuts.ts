@@ -177,7 +177,13 @@ export class Shortcuts {
         this.logger.write(`error [Shortcuts] Hotkey "${action.shortcut}" reserved by the game will not be registered.`)
       }
     }
-    actions = actions.filter(action => !allShortcuts.has(action.shortcut))
+    // woke: the rescue hotkey is taken already (registerRescue).
+    for (const action of actions) {
+      if (action.shortcut === RESCUE_HOTKEY && action.action.type !== 'test-only') {
+        this.logger.write(`error [Shortcuts] Hotkey "${action.shortcut}" gives clicks back to the game, so it can't go on an action.`)
+      }
+    }
+    actions = actions.filter(action => !allShortcuts.has(action.shortcut) && action.shortcut !== RESCUE_HOTKEY)
 
     this.actions = pickActions(actions, (shortcut) => {
       this.logger.write(`error [Shortcuts] Hotkey "${shortcut}" is on more than one action; only one will work.`)
