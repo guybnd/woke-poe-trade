@@ -125,6 +125,9 @@ test("a card poe.ninja priced on one day only doesn't count, or pop up as a big 
   const row = icon.locator('[data-deck="card"]').filter({ hasText: 'Thirst for Knowledge' })
   await expect(row).toContainText('—')
   await expect(row.locator('[data-held]')).toHaveAttribute('title', /poe\.ninja: .* on the one day it had a price/)
+  // Its item tooltip shows poe.ninja's price, and says it looks fake.
+  await row.getByText('Thirst for Knowledge').hover()
+  await expect(page.locator('[data-tip="doubt"]')).toContainText('on the one day it had a price')
   await expect(page.locator('[data-deck="big-hit"]')).toHaveCount(0)
 })
 
