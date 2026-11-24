@@ -66,9 +66,15 @@ export function mapCards (data: CardDropData, map: string, price: (card: string)
     .sort((a, b) => (b.adds ?? -1) - (a.adds ?? -1) || a.oneIn - b.oneIn)
 }
 
+// What one of your map's own cards is worth; 0 when not set. Null: set, but
+// none of its cards has a price (the gain is then over 0, an overstatement).
+export function fromValue (data: CardDropData, fromMap: string | null, price: (card: string) => number | null): number | null {
+  return fromMap ? valuePerCardDrop(data, fromMap, price) : 0
+}
+
 export function scryRows (data: CardDropData, price: (card: string) => number | null, opts: ScryOpts): ScryRow[] {
   const cardsPerMap = Math.max(0, opts.cardsPerMap)
-  const base = opts.fromMap ? (valuePerCardDrop(data, opts.fromMap, price) ?? 0) : 0
+  const base = fromValue(data, opts.fromMap, price) ?? 0
   return scryableMaps(data, opts.canScry)
     .filter(map => map !== opts.fromMap)
     .map(map => {

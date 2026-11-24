@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
-import { mapCards, orbTradeQuery, orbTradeUrl, rankScry, scryRows, scryableMaps } from '@/web/woke/scrying/scry'
+import { fromValue, mapCards, orbTradeQuery, orbTradeUrl, rankScry, scryRows, scryableMaps } from '@/web/woke/scrying/scry'
 import type { CardDropData } from '@/web/woke/card-drops/card-drops'
 import { initScryingWidget, SCRYING_TYPE } from '@/web/woke/scrying/widget'
 
@@ -75,6 +75,14 @@ describe('scryRows and rankScry', () => {
     const rows = scryRows(many, n => n === 'Dust' ? 100 : price(n), { ...opts, orbPrice: m => m === 'Poor Map' ? { chaos: 10, listings: 3 } : orbs[m] ?? null })
     expect(rankScry(rows, 'payback').good.map(r => r.map)).toEqual(['Poor Map', 'Rich Map', 'Home Map'])
     expect(rankScry(rows, 'gain').good[0].map).toBe('Poor Map')
+  })
+})
+
+describe('fromValue', () => {
+  it('is 0 with no map set, and null for a map with no priced card', () => {
+    expect(fromValue(small, null, price)).toBe(0)
+    expect(fromValue(small, 'Home Map', price)).toBeCloseTo(1, 5)
+    expect(fromValue(small, 'Poor Map', () => null)).toBeNull()
   })
 })
 

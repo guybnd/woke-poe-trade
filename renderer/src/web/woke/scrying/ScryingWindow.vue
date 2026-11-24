@@ -20,6 +20,7 @@
     <div :class="$style.layout" data-qa="scrying">
       <div v-if="!data || !prices.snapshot.value" :class="$style.list"><WSkeleton :rows="9" /></div>
       <div v-else :class="$style.list" class="w-scroll">
+        <div v-if="!groups[0].rows.length" class="w-faint text-xs" style="padding: 4px var(--w-pad);">No map beats yours at these prices.</div>
         <template v-for="g in groups" :key="g.label">
           <div v-if="g.rows.length" class="w-group-label">{{ g.label }}</div>
           <WListItem v-for="r in g.rows" :key="r.map" :active="r.map === sel?.map" data-qa="scry-row" @select="config.selected = r.map">
@@ -30,7 +31,6 @@
             <template #sub>{{ subline(r) }}</template>
           </WListItem>
         </template>
-        <div v-if="!groups[0].rows.length" class="w-faint text-xs" style="padding: 4px var(--w-pad);">No map beats yours at these prices.</div>
       </div>
 
       <div v-if="sel" :class="$style.detail" class="w-scroll" data-qa="scry-detail">
@@ -50,7 +50,7 @@
         </div>
         <div class="flex items-center gap-2 flex-wrap" style="padding: 0 var(--w-pad) 8px;">
           <WButton size="sm" icon="fas fa-external-link-alt" :disabled="!orbUrl(sel.map)" data-qa="scry-buy" @click="buyOrb(sel.map)">Buy orb</WButton>
-          <WButton v-if="sel.orb == null && !orbs.pending(sel.map)" size="sm" variant="ghost" icon="fas fa-search" @click="priceOne(sel.map)">Price this orb</WButton>
+          <WButton v-if="sel.orb == null && !orbs.pending(sel.map) && !orbNone(sel.map)" size="sm" variant="ghost" icon="fas fa-search" @click="priceOne(sel.map)">Price this orb</WButton>
           <span v-if="sel.orbListings" class="w-faint text-xs">{{ sel.orbListings.toLocaleString() }} on trade</span>
         </div>
         <div class="w-row w-row--head" :class="$style.cardGrid"><span>Card</span><span class="text-right">Chance</span><span class="text-right">Price</span><span class="text-right">Adds</span></div>
@@ -63,6 +63,7 @@
         <div class="text-xs w-faint" style="padding: 8px var(--w-pad);">
           Card value: each of the map's own cards' price times its share of drops (the Prohibited Library weights, {{ data?.season ?? '' }}). Gain: {{ config.cardsPerMap }} cards a map{{ config.fromMap ? `, over ${mapLabel(config.fromMap)}'s own cards` : '' }}.
           Scrying works on non-unique maps with bonus objectives.
+          <span v-if="fromUnpriced" style="color: var(--w-warn);">None of {{ mapLabel(config.fromMap!) }}'s own cards has a price, so it counts as 0 and gains read high.</span>
         </div>
       </div>
     </div>
@@ -78,7 +79,7 @@ import { WBanner, WButton, WChip, WIcon, WListItem, WPanel, WPrice, WSegmented, 
 import { usePriceIndex } from '../market/price-index'
 import { loadCardDrops, mapLabel } from '../card-drops/card-drops'
 import type { CardDropData } from '../card-drops/card-drops'
-import { orbTradeUrl, rankScry, scryRows, scryableMaps } from './scry'
+import { fromValue, orbTradeUrl, rankScry, scryRows, scryableMaps } from './scry'
 import type { ScryRow } from './scry'
 import { areaDisc, useOrbPrices } from './orb-prices'
 import type { ScryingWidget } from './widget'
@@ -130,10 +131,13 @@ const groups = computed(() => [
 
 const sel = computed(() => rows.value.find(r => r.map === config.selected) ?? ranked.value.good[0] ?? rows.value[0] ?? null)
 
+// Any tiered map can be the one you run: it needs no orb of its own.
 const fromOptions = computed(() => [
   { value: '', label: 'Not set' },
-  ...(data.value ? scryableMaps(data.value, canScry).map(m => ({ value: m, label: mapLabel(m) })) : [])
+  ...(data.value ? scryableMaps(data.value).map(m => ({ value: m, label: mapLabel(m) })) : [])
 ])
+
+const fromUnpriced = computed(() => !!data.value && !!config.fromMap && fromValue(data.value, config.fromMap, cardPrice.value) == null)
 
 function subline (r: ScryRow): string {
   const parts: string[] = []
@@ -176,6 +180,7 @@ function priceOrbs () {
   const first = sel.value && ranked.value.good.includes(sel.value) ? [sel.value.map] : []
   const names = [...new Set([...first, ...top])]
   if (!names.length) { toast('No map to price'); return }
+  if (names.every(m => orbs.get(league.value, m) || orbs.noneListed(league.value, m))) { toast('Looked up within the hour'); return }
   orbs.request(league.value, divine.value!, names)
 }
 

@@ -4,6 +4,7 @@ import { cardChanceIn, cardPageUrl, cardsInMap, mapLabel, mapTip, mapsMatching, 
 import type { CardDropData } from '../../card-drops/card-drops'
 import { formatChaos } from '../../ui/format'
 import { SCRYING_TYPE } from '../../scrying/widget'
+import { ITEM_BY_REF } from '@/assets/data'
 import { matchRank } from '../search'
 import type { Lookup, LookupCard, LookupContext, LookupRow } from './types'
 
@@ -42,7 +43,8 @@ export function mapCardsCard (data: CardDropData, map: string, ctx: LookupContex
     ],
     actions: [
       ...(best ? [{ label: `Look up ${best.name}`, search: best.name }] : []),
-      ...(ctx.tools.has(SCRYING_TYPE) ? [{ label: 'Scry it', open: { tool: SCRYING_TYPE, id: map } }] : []),
+      // Only maps a Scrying Orb can name (tiered, with an orb on trade).
+      ...(ctx.tools.has(SCRYING_TYPE) && tier > 0 && ITEM_BY_REF('AREA', label)?.[0]?.tradeDisc ? [{ label: 'Scry it', open: { tool: SCRYING_TYPE, id: map } }] : []),
       { label: 'Divcord', url: best ? cardPageUrl(best.name) : DIVCORD_URL }
     ]
   }
@@ -66,7 +68,7 @@ export function mapCardsLookup (data: CardDropData | null): Lookup {
   if (!data) return () => []
   return (query, ctx) => {
     const q = query.trim()
-    const scry = q.length >= 4 && ctx.tools.has(SCRYING_TYPE) && (matchRank('Scrying', q) >= 0 || matchRank('Scry', q) >= 0) ? [scryingCard()] : []
+    const scry = q.length >= 4 && ctx.tools.has(SCRYING_TYPE) && [matchRank('Scrying', q), matchRank('Scry', q)].some(r => r >= 0 && r < 2) ? [scryingCard()] : []
     return [...scry, ...mapsMatching(data, query)
       .filter(map => cardsInMap(data, map).length)
       .slice(0, 3)
