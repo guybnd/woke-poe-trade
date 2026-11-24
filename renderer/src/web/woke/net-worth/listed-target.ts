@@ -45,7 +45,8 @@ export function listingsFor (c: CheckedNames, listings: readonly Listing[]): Lis
 
 // A price as the trade site takes it: divines from 1 div up, else chaos.
 export function asTradePrice (chaos: number, divine: number | null): { amount: number, currency: 'chaos' | 'divine' } {
-  if (divine && chaos >= divine) {
+  // A divine under 30c is a rate that didn't load right (as Prices.ts takes it).
+  if (divine && divine >= 30 && chaos >= divine) {
     const d = chaos / divine
     return { amount: d >= 10 ? Math.round(d) : Math.round(d * 10) / 10, currency: 'divine' }
   }
@@ -63,9 +64,12 @@ export function stepUnder (p: { amount: number, currency: 'chaos' | 'divine' }, 
 
 // The two suggestions from the cheapest other ask (chaos, for your whole
 // stack): one step under it, and matching it.
-export function suggestions (cheapestChaos: number | null, divine: number | null) {
+// `asListed`: the cheapest ask as its seller priced it; when it's for the same
+// stack size as yours, the suggestion copies it (20c stays 20c).
+export function suggestions (cheapestChaos: number | null, divine: number | null, asListed?: { amount: number, currency: string, stack: number } | null, stack = 1) {
   if (cheapestChaos == null || !(cheapestChaos > 0)) return null
-  const match = asTradePrice(cheapestChaos, divine)
+  const same = asListed && asListed.stack === Math.max(1, stack) && (asListed.currency === 'chaos' || asListed.currency === 'divine')
+  const match = same ? { amount: asListed.amount, currency: asListed.currency as 'chaos' | 'divine' } : asTradePrice(cheapestChaos, divine)
   return { under: stepUnder(match, divine), match }
 }
 

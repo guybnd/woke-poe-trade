@@ -362,6 +362,9 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const priceBar = overlay.page.locator('[data-listed-bar]')
     await expect(priceBar).toBeVisible({ timeout: 20_000 })
     await expect(hhRow.locator('[data-listed-reprice]')).toHaveAttribute('title', /in your price check/, { timeout: 15_000 })
+    // The suggestions copy the cheapest other ask as its seller priced it.
+    await expect(priceBar.locator('[data-listed-bar-match]')).toHaveText('Set 8 div (match cheapest)')
+    await expect(priceBar.locator('[data-listed-bar-under]')).toHaveText('Set 7.9 div (under cheapest)')
     await priceBar.getByLabel('Your price', { exact: true }).fill('7')
     await priceBar.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(priceBar.locator('[data-listed-bar-target]')).toContainText('set 7 div')
