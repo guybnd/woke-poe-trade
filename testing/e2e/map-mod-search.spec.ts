@@ -124,3 +124,48 @@ test('map: every number is a chip filter, typed min goes into the search', async
   expect(q.filters?.map_filters?.filters?.map_bonus).toBeUndefined()
   expect(overlay.errors).toEqual([])
 })
+
+// Guy (2026-11-24): one click unticks every number and mod to search the plain
+// map; a second click brings them back. Neither click searches.
+test('map: Base map unticks every chip and mod, and brings them back', async ({ overlay }) => {
+  const searches = await fakeTrade(overlay.page)
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-rare-t16-deadly.txt')
+  const panel = overlay.widget('price-check')
+  const base = panel.locator('[data-map-base]')
+  const pack = panel.locator('[data-map-prop="Pack"]')
+  const rarity = panel.locator('[data-map-prop="Rarity"]')
+  await expect(base).toBeVisible({ timeout: 20_000 })
+  await expect(base).toHaveAttribute('aria-pressed', 'false')
+  // A mod set to Not goes too.
+  const strip = panel.locator('[data-map-trade] > button').first()
+  if (await panel.locator('[data-map-mod]').count() === 0) await strip.click()
+  const hexproof = panel.locator('[data-map-mod]').filter({ hasText: 'Monsters are Hexproof' })
+  await hexproof.locator('[data-state="not"]').click()
+
+  await base.click()
+  await expect(base).toHaveAttribute('aria-pressed', 'true')
+  for (const chip of await panel.locator('[data-map-prop]').all()) await expect(chip).toHaveAttribute('aria-pressed', 'false')
+  await expect(hexproof.locator('[data-state="any"]')).toHaveAttribute('aria-checked', 'true')
+  await overlay.page.waitForTimeout(500)
+  expect(searches).toEqual([])
+
+  await base.click()
+  await expect(base).toHaveAttribute('aria-pressed', 'false')
+  await expect(pack).toHaveAttribute('aria-pressed', 'true')
+  await expect(rarity).toHaveAttribute('aria-pressed', 'true')
+  await expect(hexproof.locator('[data-state="not"]')).toHaveAttribute('aria-checked', 'true')
+
+  // Plain map: the search carries no number and no mod.
+  await base.click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBeGreaterThan(0)
+  const groups = searches[0].query.stats
+  // Nothing at all: no mod, no total, no mod count.
+  expect(groups.flatMap(g => g.disabled ? [] : g.filters.filter(f => !f.disabled))).toEqual([])
+  const q = searches[0].query as unknown as { filters?: { map_filters?: { filters?: Record<string, unknown> } } }
+  expect(q.filters?.map_filters?.filters?.map_iir).toBeUndefined()
+  expect(q.filters?.map_filters?.filters?.map_packsize).toBeUndefined()
+  expect(q.filters?.map_filters?.filters?.map_iiq).toBeUndefined()
+  expect(overlay.errors).toEqual([])
+})

@@ -24,6 +24,9 @@
       <div :class="$style.chips">
         <!-- Guy's pick A (2026-11-23): every number is a chip and every chip is a filter.
              Off: dashed with +. On: the min, typed in its box or scrolled. -->
+        <!-- Guy (2026-11-24): one click to search the plain map; again brings the picks back. Never searches. -->
+        <button v-if="hasFilters" type="button" :class="[$style.chip, $style.baseBtn, baseOnly && $style.baseOn]" :aria-pressed="baseOnly"
+          :title="baseTitle" data-map-base @click="toggleBase">Base map<template v-if="baseOnly"> ✓</template></button>
         <template v-for="p in result.props" :key="p.label">
           <span v-if="propFilter(p.label)" :class="[$style.chip, $style.propChip, isOn(p.label) ? $style.propOn : $style.propOff, p.label === 'Drops' && $style.propWarn]"
             class="w-num" data-own-wheel @wheel.prevent.stop="wheelMin(p.label, $event)">
@@ -55,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, watch, watchEffect } from 'vue'
+import { computed, inject, onBeforeUnmount, shallowRef, watch, watchEffect } from 'vue'
 import type { ShallowRef } from 'vue'
 import { WInfo } from '../ui'
 import { useFold } from '../ui/fold'
@@ -63,7 +66,7 @@ import type { ParsedItem } from '@/parser'
 import { shortLabel } from './rules'
 import { VERDICT_LABEL } from './rules'
 import { checkMap, findMapModsConfig, isMapLike, isUnsure, PROP_TRADE_ID } from './check'
-import type { FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
+import type { AddedMod, FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
 
 // addMods: off on the bulk preset, which searches maps by type only.
@@ -206,6 +209,48 @@ function propTitle (label: string): string {
   return on ? 'In the search. Type or scroll the minimum, click to leave it out.' : 'Click to search at least this, or scroll to set the minimum.'
 }
 
+// The Base map button: every chip and every row below off (the 8-mod count too),
+// every mod Any, added mods off. The picks it cleared come back on a second
+// click (until the next item).
+const propFilters = computed(() => result.value!.props.map(p => propFilter(p.label)).filter((f): f is StatFilter => f != null))
+// Every filter other than the map's own mods (those are Any / Has / Not): chips and rows.
+const plainFilters = computed(() => (props.stats ?? []).filter(s => s.group || !s.mapMod))
+const isOnFilter = (s: FilterOrGroup) => s.group ? !s.meta.disabled : !s.disabled
+const setOnFilter = (s: FilterOrGroup, on: boolean) => { if (s.group) s.meta.disabled = !on; else s.disabled = !on }
+const hasFilters = computed(() => propFilters.value.length > 0 || searchable.value.length > 0)
+const baseOnly = computed(() =>
+  !plainFilters.value.some(isOnFilter) &&
+  searchable.value.every(f => stateOf(f) === 'any') &&
+  (props.filters?.addedMods ?? []).every(m => m.disabled))
+interface BaseSnapshot { on: FilterOrGroup[], mods: Array<[StatFilter, ModState]>, added: AddedMod[] }
+const clearedRef = shallowRef<BaseSnapshot | null>(null)
+watch(() => props.item, () => { clearedRef.value = null })
+function toggleBase () {
+  if (!baseOnly.value) {
+    const cleared: BaseSnapshot = {
+      on: plainFilters.value.filter(isOnFilter),
+      mods: searchable.value.filter(f => stateOf(f) !== 'any').map(f => [f, stateOf(f)]),
+      added: (props.filters?.addedMods ?? []).filter(m => !m.disabled)
+    }
+    cleared.on.forEach(f => { setOnFilter(f, false) })
+    cleared.mods.forEach(([f]) => { setState(f, 'any') })
+    cleared.added.forEach(m => { m.disabled = true })
+    clearedRef.value = cleared
+  } else if (clearedRef.value) {
+    const cleared = clearedRef.value
+    // Only filters still on show: a preset switch makes new ones.
+    const stats = props.stats ?? []
+    cleared.on.filter(f => stats.includes(f)).forEach(f => { setOnFilter(f, true) })
+    cleared.mods.filter(([f]) => stats.includes(f)).forEach(([f, state]) => { setState(f, state) })
+    const added = props.filters?.addedMods ?? []
+    cleared.added.filter(m => added.includes(m)).forEach(m => { m.disabled = false })
+    clearedRef.value = null
+  }
+}
+const baseTitle = computed(() => baseOnly.value
+  ? (clearedRef.value ? 'Searching the plain map. Click to bring back the numbers and mods you had ticked.' : 'Searching the plain map: no number or mod is ticked.')
+  : 'Untick every number, mod and line below, to search the plain map. Click again to bring them back. Searches only when you press Search.')
+
 const picked = computed(() => {
   const has = searchable.value.filter(f => stateOf(f) === 'has').length
   const not = searchable.value.filter(f => stateOf(f) === 'not').length
@@ -277,6 +322,9 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .seg .on_has { background: color-mix(in srgb, var(--w-up) 28%, transparent); color: var(--w-fg); }
 .seg .on_not { background: color-mix(in srgb, var(--w-down) 28%, transparent); color: var(--w-fg); }
 .picked { color: var(--w-fg); }
+.baseBtn { cursor: pointer; border: 1px solid var(--w-gold); color: var(--w-gold); background: transparent; }
+.baseBtn:hover { color: var(--w-fg); }
+.baseOn { background: var(--w-accent-soft); color: var(--w-fg); }
 .propChip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid transparent; }
 .propBtn { cursor: pointer; color: inherit; }
 .propOff { border: 1px dashed var(--w-line-strong); }

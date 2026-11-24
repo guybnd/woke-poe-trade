@@ -1,5 +1,6 @@
 # Next release notes
 
+- Net worth, "Tabs to read": the tab list is easier to read. Rows use the normal row text size with brighter names, and each tab's colour is now a thick strip down its left edge instead of a small dot.
 - New players: the first time the overlay opens after setup, a Getting started card beside the rail shows the price check and search keys, where All tools and Settings are, and how to turn on Net worth (Got it closes it for good). The next 3 opens name the rail's buttons beside them. Players who updated don't get either.
 - New players' rail starts with 5 of their tools (from the preset they picked in setup: Market, Map mods, Atlas strategies, PoB builds and Trades for Everything). Each loads only when you click it, then stays pinned.
 - What's new, in game: All tools marks tools with something new with a NEW seal until you point at one (its note shows along the bottom), and the rail's All tools button counts them. Net worth is now listed in All tools while it's off; clicking it opens its switch in Settings.
@@ -149,3 +150,4 @@
 - Session story and Ctrl+Space: the night's best drop and the last maps show their item tooltip.
 - Price check: the Rarity chip's hover no longer says Magic finds bases to fracture (a Fracturing Orb needs a rare with 4 or more mods).
 - Net worth: the At Faustus box now applies to the dock card's total and the goal too, not only the window's headline. With it ticked, your unsold listings count there (any that sold since drop out), and the goal's line and ETA allow for them.
+- Map price check: a Base map button at the start of the Trade search chips unticks every number and mod in one click, to search the plain map. Click it again to bring them back.

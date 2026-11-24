@@ -1,0 +1,118 @@
+name: Website shots
+
+# Retakes the website's pictures and clips (docs/public/shots, clips) from the
+# branch's own app: the landing specs in testing/e2e, on the fake game, where
+# poe.ninja and web.poecdn.com's item art load. The retake is in parts, one per
+# landing section (testing/tools/shot-parts.mjs): tick the parts you want, or
+# let it pick the ones whose tools changed since the last release. Only
+# pictures that look different are committed back to the branch, with any item
+# icons the fixtures lacked (testing/fixtures/icons).
+#
+# Runs from Actions > Website shots > Run workflow (on any branch but master),
+# or on a push to a branch whose last commit says [shots] (every part).
+on:
+  workflow_dispatch:
+    inputs:
+      changed:
+        description: Parts whose tools changed since the last release
+        type: boolean
+        default: true
+      price-check: { description: Price Check, type: boolean, default: false }
+      pob: { description: Path of Building, type: boolean, default: false }
+      loot-filter: { description: Loot Filter, type: boolean, default: false }
+      market: { description: Market, type: boolean, default: false }
+      profit: { description: Profit (Net worth), type: boolean, default: false }
+      on-screen: { description: On Your Screen, type: boolean, default: false }
+      quick-search: { description: Quick Search, type: boolean, default: false }
+      maps: { description: Maps, type: boolean, default: false }
+      regex: { description: Regex, type: boolean, default: false }
+      setup: { description: Your Setup, type: boolean, default: false }
+      all: { description: Every part, type: boolean, default: false }
+  push:
+    branches-ignore:
+      - 'master'
+
+jobs:
+  shots:
+    name: Retake website shots
+    if: ${{ github.ref != 'refs/heads/master' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[shots]')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # On the job, not the workflow: a push without [shots] skips this job and
+    # mustn't cancel a retake that is running.
+    concurrency:
+      group: website-shots-${{ github.ref }}
+      cancel-in-progress: true
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        # The tags and history, for "changed since the last release".
+        fetch-depth: 0
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version: 22
+        cache: npm
+        cache-dependency-path: |
+          renderer/package-lock.json
+          main/package-lock.json
+          testing/package-lock.json
+    - uses: ./.github/actions/fake-game-setup
+    - name: Install ffmpeg (for the clips)
+      run: sudo apt-get install -y --no-install-recommends ffmpeg
+    - name: Pick the parts
+      id: parts
+      working-directory: ./testing
+      env:
+        INPUTS: ${{ toJSON(github.event.inputs) }}
+      run: |
+        git fetch --quiet --tags origin
+        if [ "$GITHUB_EVENT_NAME" = push ]; then
+          parts=all; since=
+        else
+          parts=$(node -e 'const i = JSON.parse(process.env.INPUTS); console.log(Object.keys(i).filter(k => k !== "changed" && i[k] === "true").join(","))')
+          since=
+          if [ "$(node -e 'console.log(JSON.parse(process.env.INPUTS).changed)')" = true ]; then
+            since=$(git describe --tags --abbrev=0 --match 'v*' HEAD 2>/dev/null || true)
+          fi
+        fi
+        grep=$(node tools/shot-parts.mjs --parts "$parts" ${since:+--changed-since "$since"})
+        echo "grep=$grep" >> "$GITHUB_OUTPUT"
+    # One worker: the specs share one fake app per file, and a full run in
+    # parallel can leave one test's card over another's shot.
+    - name: Take the pictures and clips
+      if: steps.parts.outputs.grep != ''
+      run: npx playwright test e2e/landing-highlights.spec.ts e2e/landing-shots.spec.ts -g "$GREP" --workers 1 --retries 1 --trace off --reporter=list,github
+      working-directory: ./testing
+      env:
+        GREP: ${{ steps.parts.outputs.grep }}
+        WOKE_LANDING_SHOTS: '1'
+        WOKE_LANDING_CLIPS: '1'
+        WOKE_SAVE_ICONS: '1'
+    - name: Keep pictures that look the same
+      if: ${{ !cancelled() && steps.parts.outputs.grep != '' }}
+      run: |
+        npm ci --no-audit --no-fund
+        node scripts/keep-same-shots.mjs
+      working-directory: ./docs
+    - name: Commit the new pictures to the branch
+      if: ${{ !cancelled() }}
+      run: |
+        git config user.name 'github-actions[bot]'
+        git config user.email '41898+github-actions[bot]@users.noreply.github.com'
+        rm -f testing/fixtures/icons/icons-missing.txt
+        git add docs/public/shots docs/public/clips testing/fixtures/icons
+        if git diff --cached --quiet; then echo 'No picture changed.'; exit 0; fi
+        git diff --cached --stat | tail -1
+        git commit -m 'Website: retake shots and clips from the app on this branch'
+        # Commits pushed meanwhile go under the retake.
+        git pull --rebase --quiet origin "$GITHUB_REF_NAME"
+        git push origin "HEAD:${GITHUB_REF_NAME}"
+    - name: Upload the report
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      with:
+        name: website-shots-report
+        path: testing/report
+        retention-days: 3

@@ -27,6 +27,10 @@ test.beforeEach(({}, info) => { // eslint-disable-line no-empty-pattern
   test.skip(!process.env.WOKE_LANDING_SHOTS && !info.title.startsWith('clip:'), 'Set WOKE_LANDING_SHOTS=1 to take the landing page screenshots')
 })
 test.use({ deviceScaleFactor: 2 })
+// Item art from testing/fixtures/icons, so the shots look the same wherever
+// they are taken (web.poecdn.com isn't reachable everywhere).
+// The website shows the app as a new install sees it.
+test.beforeEach(async ({ overlay }) => { overlay.appDefaults = true; await localIcons(overlay) })
 
 async function backdrop (overlay: Overlay, file: string, place = 'center / cover') {
   const data = fs.readFileSync(path.join(FIXTURES, 'screens', file)).toString('base64')
@@ -242,10 +246,12 @@ test('search: pin prices to compare them', async ({ overlay }) => {
   await overlay.boot()
   await backdrop(overlay, 'frames/hideout.jpg')
   const { panel, box, palette } = await searchFor(overlay, 'divine orb', /Divine Orb/)
-  for (const [query, name] of [['divine orb', /Divine Orb/], ['headhunter', /Headhunter/], ['mirror of kalandra', /Mirror of Kalandra/]] as const) {
+  // ^: "1 Divine Orb = 180 c", the currency maths answer, comes first.
+  for (const [query, name] of [['divine orb', /^Divine Orb/], ['headhunter', /^Headhunter/], ['mirror of kalandra', /^Mirror of Kalandra/]] as const) {
     await box.fill(query)
     await panel.getByRole('button', { name }).first().click()
-    await panel.getByRole('button', { name: 'Pin to compare' }).first().click()
+    // Ctrl+P pins the open result (the footer says so).
+    await overlay.page.keyboard.press('Control+p')
   }
   await expect(panel.getByTitle('Remove from the comparison')).toHaveCount(3)
   await overlay.page.mouse.move(1900, 1060)
@@ -943,11 +949,14 @@ test('maps: atlas strategies keep tree, scarabs and regex together', async ({ ov
     } as never]
   })
   await backdrop(overlay, 'frames/town.jpg')
-  const panel = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Essence farm' }).first()
-  await expect(panel).toBeVisible()
-  await overlay.page.waitForTimeout(3000)
-  await overlay.page.mouse.move(1800, 1000)
-  await saveAround(overlay, 'hl-atlas', [panel], 1280)
+  // The list, the tree and the strategy open side by side: crop around all three.
+  const { page } = overlay
+  // (Playwright calls these windows hidden while they fade in; they're on screen.)
+  const parts = [page.getByPlaceholder(/Filter by name/).last(), page.getByPlaceholder('Find a passive').last(), page.getByText('Corrupt anything essence scan marks.').last()]
+  for (const p of parts) await p.waitFor({ state: 'attached' })
+  await page.waitForTimeout(3000)
+  await page.mouse.move(1800, 1000)
+  await saveAround(overlay, 'hl-atlas', parts, 1280)
 })
 
 test('on screen: Betrayal, the slots worth having', async ({ overlay }) => {
@@ -1598,7 +1607,8 @@ test.describe('clips', () => {
         await clip.moveTo(b.x + Math.min(b.width / 2, 50), b.y + b.height / 2, ms)
         await clip.click()
       }
-      await go(/^Tier 3/)
+      // Rare gear moves by its rank in NeverSink's gear table.
+      await go(/^Rank 3$/)
       await clip.hold(500)
       await clip.poster()
       await clip.hold(800)
