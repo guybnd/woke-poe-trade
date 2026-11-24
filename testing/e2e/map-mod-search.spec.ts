@@ -425,3 +425,40 @@ test('map: the kind is one switch, the list holds only mods, and the numbers are
   expect(onIds(searches[2]).filter(id => id.startsWith('implicit.'))).toEqual([ORIGINATOR])
   expect(overlay.errors).toEqual([])
 })
+
+// Guy (2026-11-24): any map number can be searched, also one this map hasn't got.
+test('map: the + tile adds a number this map hasn\'t got, with its own minimum', async ({ overlay }) => {
+  const searches = await fakeTrade(overlay.page)
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-originator-elder.txt')
+  const panel = overlay.widget('price-check')
+  const add = panel.locator('[data-map-add-prop]')
+  await expect(add).toBeVisible({ timeout: 20_000 })
+  const own = await panel.locator('[data-map-tile]').count()
+  await add.click()
+  const menu = panel.locator('[data-map-add-prop-menu]')
+  await expect(menu.locator('[data-add-prop="Maps"]')).toBeVisible()
+  // Never a number the map already has, and each with its icon.
+  for (const label of await panel.locator('[data-map-tile] [data-map-prop]').evaluateAll(els => els.map(e => e.getAttribute('data-map-prop')))) {
+    await expect(menu.locator(`[data-add-prop="${label}"]`)).toHaveCount(0)
+  }
+  await expect(menu.locator('[data-add-prop="Maps"]').locator('img, i')).toHaveCount(1)
+  await overlay.snap('map-add-number-menu')
+  await menu.locator('[data-add-prop="Maps"]').click()
+  await expect(menu).toHaveCount(0)
+  await expect(panel.locator('[data-map-tile]')).toHaveCount(own + 1)
+  const box = panel.locator('[data-map-prop-min="Maps"]')
+  await box.fill('40')
+  await box.press('Enter')
+  await overlay.snap('map-added-number')
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBe(1)
+  const maps = searches[0].query.stats.flatMap(g => g.filters).find(f => f.id === 'pseudo.pseudo_map_more_map_drops')
+  expect(maps).toMatchObject({ value: { min: 40 }, disabled: false })
+  // Click the tile to take it back out: it returns to the menu.
+  await panel.locator('[data-map-extra] [data-map-prop="Maps"]').click()
+  await expect(panel.locator('[data-map-tile]')).toHaveCount(own)
+  // Never a row under the strip.
+  await expect(panel.getByText('More Maps: #%')).toHaveCount(0)
+  expect(overlay.errors).toEqual([])
+})
