@@ -207,6 +207,8 @@ export function mapModFamilies (ctx: FiltersCreationContext): void {
     if (!f.mapMod) continue
     const family = MAP_MOD_FAMILIES.find(fam => fam.refs.includes(f.statRef))
     if (!family) continue
+    // Two kinds on one map: each stays its own, or one Evocator would match both.
+    if (ctx.filters.filter(g => g.mapMod && family.refs.includes(g.statRef)).length > 1) continue
     const ids = family.refs.flatMap(ref => {
       try { return findAndResolveByRef(ref, ModifierType.Explicit, ctx.item.category).trade.ids[ModifierType.Explicit] ?? [] } catch { return [] }
     })
