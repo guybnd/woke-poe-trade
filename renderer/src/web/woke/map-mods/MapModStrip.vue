@@ -91,7 +91,7 @@
         </div>
         <div v-if="extraOff.length" :class="$style.addWrap">
           <button type="button" :class="[$style.tile, $style.addTile]" :aria-expanded="addMenu" data-map-add-prop
-            title="Search a number this map hasn't got (Quantity, More Maps...)" @click="addMenu = !addMenu">
+            title="Search a number this map hasn't got (Rarity, More Maps...)" @click="addMenu = !addMenu">
             <span :class="$style.tileHead"><i class="fas fa-plus" />Add</span>
             <span :class="$style.tileVal" class="w-dim">a number</span>
           </button>
@@ -337,6 +337,19 @@ const extraOn = computed(() => extras.value.filter(f => !f.disabled).map(f => PR
 const extraOff = computed(() => extras.value.filter(f => f.disabled).map(f => PROP_LABEL[f.tradeId[0]]))
 const addMenu = shallowRef(false)
 watch(() => [props.item, props.stats], () => { addMenu.value = false })
+watch(() => extraOff.value.length, (n) => { if (!n) addMenu.value = false })
+// One menu at a time; each closes on a click outside it or Escape.
+watch(addMenu, (on) => { if (on) kindMenu.value = false })
+watch(kindMenu, (on) => { if (on) addMenu.value = false })
+function closeAddMenu (e: Event) {
+  if (e instanceof KeyboardEvent ? e.key === 'Escape' : !(e.target as Element | null)?.closest?.('[data-map-add-prop-menu],[data-map-add-prop]')) addMenu.value = false
+}
+watch(addMenu, (on) => {
+  const fn = on ? document.addEventListener : document.removeEventListener
+  fn.call(document, 'pointerdown', closeAddMenu, true)
+  fn.call(document, 'keydown', closeAddMenu, true)
+})
+onBeforeUnmount(() => { document.removeEventListener('pointerdown', closeAddMenu, true); document.removeEventListener('keydown', closeAddMenu, true) })
 function extraTitle (label: string): string {
   return `${RAISES[label] ? RAISES[label] + '\n\n' : ''}Not on this map: searching maps with at least the minimum. Click to remove it.`
 }
@@ -383,7 +396,8 @@ function typeMin (label: string, e: Event) {
   const box = e.target as HTMLInputElement
   if (!f?.roll) return
   const n = box.value.trim() === '' ? NaN : Number(box.value)
-  f.roll.min = Number.isFinite(n) ? clampMin(f, Math.round(n)) : ''
+  // An added number with no minimum would search nothing (Rarity, Pack): at least 1.
+  f.roll.min = Number.isFinite(n) ? clampMin(f, Math.round(n)) : (f.mapExtra ? 1 : '')
   // Show the clamped number, not what was typed.
   box.value = typeof f.roll.min === 'number' ? String(f.roll.min) : ''
 }

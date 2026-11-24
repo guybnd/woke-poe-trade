@@ -195,8 +195,8 @@ describe('a map number this map hasn\'t got', () => {
     const own = stats.filter((s): s is StatFilter => !s.group && !s.mapExtra).map(s => s.tradeId[0])
     expect(ids.some(id => own.includes(id))).toBe(false)
     let req = createTradeRequest(createFilters(item, OPTS), stats)
-    // Sent unticked, like any row left out.
-    expect(req.query.stats[0].filters).toContainEqual(expect.objectContaining({ id: 'pseudo.pseudo_map_more_map_drops', disabled: true }))
+    // Not sent until added: no clutter in the trade link.
+    expect(JSON.stringify(req)).not.toContain('pseudo_map_more_map_drops')
     const maps = extras.find(f => f.tradeId[0] === 'pseudo.pseudo_map_more_map_drops')!
     maps.disabled = false
     maps.roll!.min = 30
