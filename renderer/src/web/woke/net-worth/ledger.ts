@@ -229,16 +229,6 @@ function catsDiv (c: Record<Category, number>, rate: number | null, fallback: nu
   return out
 }
 
-// Refreshes that added a lot: at least 10 div, and 3× the usual change.
-export function bigGains (series: SeriesPoint[]): Set<number> {
-  const nets = series.map(p => p.netDiv).filter((n): n is number => n != null)
-  if (!nets.length) return new Set()
-  const abs = nets.map(Math.abs).sort((a, b) => a - b)
-  const median = abs[Math.floor(abs.length / 2)]
-  const bar = Math.max(10, median * 3)
-  return new Set(series.filter(p => p.netDiv != null && p.netDiv >= bar).map(p => p.at))
-}
-
 // ---------- goal (D6) ----------
 
 // Days to reach the goal at the rate over the series; null when not rising

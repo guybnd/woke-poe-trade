@@ -92,7 +92,7 @@ const props = defineProps<{
   tipBelow?: boolean
   // A clicked point's purchase switch (spend.ts); left out: none.
   spendAction?: (at: number) => { label: string, mark: SpendMark | null } | null
-  // Your sales: a dot each, and the hover card names those since the point before.
+  // Your sales: ticks on the bottom edge, and each point's card counts those since the point before.
   sales?: ChartSale[]
   // Offer "Start a run from here" on a clicked point (runs.ts).
   runFrom?: boolean
@@ -245,7 +245,6 @@ const bands = computed(() => {
 // Only while it lies inside the chart (a goal passed long ago would draw under it).
 const goalY = computed(() => props.goalDiv && props.goalDiv <= span.value.hi && props.goalDiv >= span.value.lo ? yOf(props.goalDiv) : null)
 
-// Each sale on the line, between the points either side of it.
 // One tick per slot of time with a sale, on the bottom edge (pick S2).
 const saleTicks = computed(() => {
   if (props.mode !== 'total' || props.series.length < 2 || !props.sales?.length) return []
@@ -267,14 +266,14 @@ const mapCols = computed(() => {
 })
 const bestMap = computed(() => mapCols.value.find(m => m.best) ?? null)
 const shownMap = computed(() => shown.value && props.maps?.length && props.mode === 'total' ? mapOf(props.maps, shown.value.p.at) : null)
-// Each with its own item tooltip; past 3, a count.
 // A clicked point's card names this many sales, then "+N more sold".
 const SOLD_LIST = 6
 const shownSales = computed(() => {
   const p = shown.value?.p
   if (!p || !props.sales?.length) return { list: [], more: 0, count: 0, div: 0 }
   const i = props.series.findIndex(q => q.at === p.at)
-  const from = i > 0 ? props.series[i - 1].at : -Infinity
+  // The first point counts only sales at its own time, not the whole league before it.
+  const from = i > 0 ? props.series[i - 1].at : p.at - 1
   const list = props.sales.filter(x => x.at > from && x.at <= p.at)
   return { list: list.slice(0, SOLD_LIST), more: Math.max(0, list.length - SOLD_LIST), count: list.length, div: list.reduce((n, x) => n + (x.div ?? 0), 0) }
 })
@@ -293,6 +292,13 @@ function onMove (e: MouseEvent) {
   const at = span.value.t0 + (e.clientX - r.left) / r.width * (span.value.t1 - span.value.t0)
   let i = 0
   s.forEach((q, k) => { if (Math.abs(q.at - at) < Math.abs(s[i].at - at)) i = k })
+  // On a sale tick (within 6 px): the read that counts that sale, the first at or after it.
+  const px = (e.clientX - r.left) / r.width * 100
+  const tick = saleTicks.value.find(t => Math.abs(t.x - px) / 100 * r.width <= 6)
+  if (tick) {
+    const k = s.findIndex(q => q.at >= tick.at)
+    if (k >= 0) i = k
+  }
   const p = s[i]
   hover.value = { p, x: xOf(p.at) / W * 100, y: yOf(props.mode === 'total' ? topOf(i) : sumCats(p)) / H * 100, listed: listedOf(i) }
 }
