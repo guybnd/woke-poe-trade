@@ -338,3 +338,38 @@ test('map: the farming goal picks which number chips start on', async ({ overlay
   await expect(chip('Maps')).toHaveAttribute('aria-pressed', 'false')
   expect(overlay.errors).toEqual([])
 })
+
+// Guy (2026-11-24): a buried Sentinel is never searched by default, and an Evocator
+// searches any of the three kinds until narrowed to this one.
+test('map: Sentinels start Any; an Evocator searches any of the three, or this one', async ({ overlay }) => {
+  const searches = await fakeTrade(overlay.page)
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-sentinel-t16.txt')
+  const panel = overlay.widget('price-check')
+  await expect(panel.locator('[data-map-trade]')).toBeVisible({ timeout: 20_000 })
+  const strip = panel.locator('[data-map-trade] > button').first()
+  if (await panel.locator('[data-map-mod]').count() === 0) await strip.click()
+  const sentinel = panel.locator('[data-map-mod]').filter({ hasText: 'buried Stalker Sentinel' })
+  const evocator = panel.locator('[data-map-mod]').filter({ hasText: 'Evocator of Beidat' })
+  await expect(sentinel.locator('[data-state="any"]')).toHaveAttribute('aria-checked', 'true')
+  const anyOf = evocator.locator('[data-map-any-of]')
+  await expect(anyOf).toHaveText('any Evocator')
+  await evocator.locator('[data-state="has"]').click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBe(1)
+  const groupWith = (q: Query, id: string) => q.query.stats.find(g => g.filters.some(f => f.id === id))
+  const any = groupWith(searches[0], 'explicit.stat_260515856')!
+  expect(any.type).toBe('count')
+  expect(any.filters.map(f => f.id).sort()).toEqual(['explicit.stat_1290924623', 'explicit.stat_260515856', 'explicit.stat_2896557935'])
+  // The Sentinel stayed out of the search.
+  expect(groupWith(searches[0], 'explicit.stat_2712450522')?.disabled ?? true).toBe(true)
+
+  await anyOf.click()
+  await expect(anyOf).toHaveText('this one')
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBe(2)
+  const exact = groupWith(searches[1], 'explicit.stat_260515856')!
+  expect(exact.type).toBe('and')
+  expect(exact.filters.filter(f => f.id.startsWith('explicit.stat_') && ['explicit.stat_1290924623', 'explicit.stat_2896557935'].includes(f.id))).toEqual([])
+  expect(overlay.errors).toEqual([])
+})
