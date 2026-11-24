@@ -22,6 +22,7 @@ export interface NewsItem {
 }
 
 export const NEWS: NewsItem[] = [
+  { id: 'glance-bar-default', wmType: 'woke-session-story', name: 'Session analytics', settingsPage: 'Sessions', note: 'New: a thin bar at the top while mapping, with each map\'s time after it. Off in Settings' },
   { id: 'per-hour-time-setting', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: Play, + Hideout or All beside every per hour, the same choice in every tool' },
   { id: 'net-worth-public', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: open to everyone. Charts what your stash is worth and what each map earned' },
   { id: 'map-mods-t17-planner', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: a Planner tab for T17 maps, and what each mod adds to a map' },
@@ -46,9 +47,17 @@ export function markAllNewsSeen (woke: WokeModulesConfig): void {
 }
 
 // What counts as seen. Before setup's first Finish (or with it closed
-// unfinished) it's all of it: a new player has nothing "new".
+// unfinished) it's all of it: a new player has nothing "new". The same with
+// What's new switched off, for players who update every day or two.
 export function seenNewsIds (woke: WokeModulesConfig | undefined): readonly string[] {
-  return woke?.setupDone ? (woke.seenNews ?? []) : NEWS.map(n => n.id)
+  return woke?.setupDone && !woke.newsOff ? (woke.seenNews ?? []) : NEWS.map(n => n.id)
+}
+
+// Switching it off also marks every line seen, so switching it back on later
+// shows only what came after.
+export function setNewsOff (woke: WokeModulesConfig, off: boolean): void {
+  if (off) markAllNewsSeen(woke)
+  woke.newsOff = off || undefined
 }
 
 // Lines not seen yet. Like the All tools count, a switched-off tool's line

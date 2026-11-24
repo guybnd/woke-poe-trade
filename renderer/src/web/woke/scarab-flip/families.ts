@@ -1,7 +1,7 @@
 // Every flip the panel prices. Recipes and costs: poewiki.net's Vendor recipe
 // system and Harvest crafting pages.
-import { averageWeight, buyList, familyQuotes, flipModel, upgradeRows } from './calc'
-import type { ExchangeQuotes, FlipModel, FlipOptions, FlipRecipe, FlipRow, ItemWeight, Quote, UpgradeRow, WeightSource } from './calc'
+import { averageWeight, buyList, familyQuotes, flipModel, flipRange, upgradeRows } from './calc'
+import type { ExchangeQuotes, FlipModel, FlipOptions, FlipRecipe, FlipRow, ItemWeight, Quote, RangeRow, UpgradeRow, WeightSource } from './calc'
 import { CATALYST_WEIGHTS, DEAFENING_ESSENCE_WEIGHTS, DELIRIUM_WEIGHTS, FOSSIL_WEIGHTS, RUNEGRAFT_WEIGHTS } from './family-weights'
 import type { PriceItem } from '../market/types'
 
@@ -52,6 +52,9 @@ export interface FlipFamily {
   // The same in a few words, for a row in Settings.
   sourceShort?: string
   lowConfidence?: string
+  // No one has measured the odds: the panel shows each recipe's worst and best
+  // result, never an average, until you set your own weights in Settings.
+  unmeasured?: boolean
   // An item that opens to a random one of the family, priced as the average.
   opener?: string
 }
@@ -86,12 +89,14 @@ export const FAMILIES: FlipFamily[] = [
     // 3.30.0c added a vendor recipe for Threads. Taken to work like the scarab
     // one it replaces: 3 in, 1 of a different type back.
     methods: [vendor3(true)],
-    // No one has measured the recipe yet, so every Thread counts the same.
+    // No one has measured the recipe yet: the panel shows the range of results,
+    // and with your own weights, every Thread you left alone counts as 1.
+    unmeasured: true,
     weightOf: () => ({ weight: 1, source: 'estimate' }),
     rareShare: null,
     sourceShort: 'None measured',
     source: 'Weights: none measured yet, so every Thread counts as equally likely.',
-    lowConfidence: 'Low confidence: no measured weights yet, so every Thread counts as equally likely. Set your own in Settings.',
+    lowConfidence: 'Low confidence: no measured weights yet, so the average leans on your own weights from Settings.',
     opener: 'Frayed Thread'
   },
   {
@@ -249,8 +254,19 @@ export function flipRecipe (family: FlipFamily, method: FlipMethod, cost: number
 
 export type Exchanges = Map<string, ExchangeQuotes | null>
 
+// What the panel and Ctrl+Space say instead of an average.
+export const RANGE_NOTE = 'No one has measured the odds yet, so this shows the worst and best result, not an average. Set your own weights in Settings for one.'
+
+// True when the family's odds are unmeasured and you haven't set any of your own.
+export function rangeOnly (family: FlipFamily, own?: Record<string, number>): boolean {
+  if (!family.unmeasured) return false
+  return !Object.keys(own ?? {}).some(name => ownWeight(own, name) != null)
+}
+
 export type FlipResult =
   | { kind: 'pool', model: FlipModel, quotes: Map<string, Quote>, cost: number }
+  // Unmeasured odds: each input's cost against its worst and best result.
+  | { kind: 'range', rows: RangeRow[], quotes: Map<string, Quote>, cost: number }
   | { kind: 'upgrade', rows: UpgradeRow[] }
   // A Harvest flip with no lifeforce price to work out its cost.
   | { kind: 'no-cost' }
@@ -265,7 +281,8 @@ export function priceFlip (
   exchanges: Exchanges,
   options: FlipOptions,
   lifeforcePerItem: number,
-  weights?: WeightOverrides
+  weights?: WeightOverrides,
+  hideUntraded = true
 ): FlipResult | null {
   const all = familyQuotes(items, family.ninjaType, family.match, exchanges.get(family.ninjaType) ?? null)
   if (!all.size) return null
@@ -276,6 +293,9 @@ export function priceFlip (
   if (!quotes.size) return { kind: 'no-pool' }
   const cost = harvestCost(method, lifeforcePerItem, items, exchanges.get('Currency') ?? null)
   if (cost == null) return { kind: 'no-cost' }
+  if (rangeOnly(family, weights?.[family.id])) {
+    return { kind: 'range', rows: flipRange(quotes, { inputs: method.inputs, cost, excludeInput: method.excludeInput }, options.sellDiscount, hideUntraded), quotes, cost }
+  }
   return { kind: 'pool', model: flipModel(quotes, options, flipRecipe(family, method, cost, weights?.[family.id])), quotes, cost }
 }
 

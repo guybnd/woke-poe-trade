@@ -4,7 +4,7 @@
 // have no volume, so these rank by profit per item, not by supply.
 import { matchRank } from '../search'
 import { formatAmount } from '../../ui/format'
-import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, bestFlip, parseLifeforce, priceFlip, shortName } from '../../scarab-flip/families'
+import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, RANGE_NOTE, bestFlip, parseLifeforce, priceFlip, rangeOnly, shortName } from '../../scarab-flip/families'
 import type { FlipFamily, FlipMethod, FlipResult } from '../../scarab-flip/families'
 import type { FlipOptions } from '../../scarab-flip/calc'
 import { SCARAB_FLIP_TYPE } from '../../scarab-flip/widget'
@@ -52,6 +52,13 @@ function methodLine (method: FlipMethod, name: string, flip: FlipResult | null):
     const row = flip.rows.find(r => r.from === name)
     return row ? verdict(`${method.label} to ${shortName(row.into)}`, row.profitEach) : null
   }
+  if (flip?.kind === 'range') {
+    // No measured odds: the worst and best a recipe can give, never an average.
+    const row = flip.rows.find(r => r.name === name)
+    if (!row) return null
+    const value = `costs ${formatAmount(row.cost)}c, gives back ${formatAmount(row.low.chaos)}c to ${formatAmount(row.high.chaos)}c`
+    return { row: { label: method.label, value }, profit: null }
+  }
   if (flip?.kind === 'no-cost') return { row: { label: method.label, value: `no ${method.lifeforce} lifeforce price yet`, dim: true }, profit: null }
   return null
 }
@@ -68,18 +75,20 @@ function itemCard (family: FlipFamily, name: string, s: Settings, ctx: LookupCon
   // The method that pays most, when any pays.
   const best = lines.reduce<MethodLine | null>((top, l) => l.profit != null && l.profit > 0 && (top == null || l.profit > top.profit!) ? l : top, null)?.row
   const price = ctx.price(name)
+  const range = rangeOnly(family, s.weights?.[family.id])
+  const ranged = range ? `${rows[0].label.toLowerCase()} ${rows[0].value}` : ''
   return {
     id: `flip:${name}`,
     group: 'Flips',
     name: `Flip ${name}`,
     title: name,
-    sub: best ? `${family.label}: ${best.label.toLowerCase()} ${best.value}` : `${family.label}: not worth flipping now`,
+    sub: best ? `${family.label}: ${best.label.toLowerCase()} ${best.value}` : ranged ? `${family.label}: ${ranged}` : `${family.label}: not worth flipping now`,
     icon: 'fas fa-recycle',
     tip: { name, type: family.ninjaType },
     sections: [
       { rows: [{ label: 'Price', item: { name, type: family.ninjaType }, chaos: price, bulk: true }] },
-      { label: 'Profit per item put in', rows },
-      ...(family.lowConfidence ? [{ text: [family.lowConfidence] }] : [])
+      { label: range ? 'One recipe' : 'Profit per item put in', rows },
+      ...(range ? [{ text: [RANGE_NOTE] }] : family.lowConfidence ? [{ text: [family.lowConfidence] }] : [])
     ],
     actions: openAction(ctx)
   }

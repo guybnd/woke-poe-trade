@@ -3,14 +3,15 @@
     <!-- While you're in a map: a thin bar, click-through while you play. With the
          overlay open it can be dragged anywhere; while Settings is open it also
          shows outside a map, so it can be placed before one. -->
-    <div v-if="map || editing" :class="[$style.bar, { [$style.movable]: movable || editing, [$style.editing]: editing }]" :style="place" class="w-num" data-glance-bar role="status"
+    <div v-if="map || after || editing" :class="[$style.bar, { [$style.movable]: movable || editing, [$style.editing]: editing }]" :style="place" class="w-num" data-glance-bar role="status"
       :title="movable || editing ? 'Drag to move' : undefined" @pointerdown="startDrag">
-      <template v-if="map">
+      <span v-if="!map && after" :class="$style.name" data-glance-after>{{ after }}</span>
+      <template v-else-if="map">
         <span :class="$style.name">{{ map.name }}</span>
         <span class="w-dim">{{ tierText(map.areaLevel) }}</span>
         <span data-glance-time>{{ formatClock(elapsed) }}</span>
       </template>
-      <span v-else :class="$style.name">Glance bar</span>
+      <span v-else-if="!after" :class="$style.name">Glance bar</span>
       <!-- A strategy run going (Net worth › Runs): its maps and profit instead of tonight's. -->
       <template v-if="run">
         <span :class="$style.sep" />
@@ -31,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-// Settings › Sessions › "While in a map". Off unless turned on.
+// Settings › Sessions › "While in a map". On unless turned off.
 import { computed, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { hostRequest } from '../shared/host'
@@ -45,6 +46,8 @@ import { useNightList } from './nights'
 const props = defineProps<{
   // The map you're in, as Session story's map log has it; null in hideout or town.
   map: Pick<MapRecord, 'name' | 'areaLevel'> | null
+  // The map you just left, for a few seconds after (its time against your usual).
+  after?: string | null
   // When you went in this time through the portal, and the map's time before that.
   since: number
   before: number

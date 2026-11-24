@@ -3,9 +3,9 @@ import type { Widget, Anchor } from '@/web/overlay/widgets'
 // Kept free of Vue components: Config.ts imports this file.
 export const SESSION_STORY_TYPE = 'woke-session-story'
 
-// Where the line about a map you just left shows: on the dock icon, as a
-// note in the middle of the screen, or nowhere.
-export type ChipPlace = 'dock' | 'center' | 'off'
+// Where the line about a map you just left shows: on the glance bar, on the
+// dock icon, as a note in the middle of the screen, or nowhere.
+export type ChipPlace = 'bar' | 'dock' | 'center' | 'off'
 
 export interface SessionStoryWidget extends Widget {
   anchor: Anchor
@@ -26,10 +26,23 @@ export interface SessionStoryWidget extends Widget {
   historySkipped?: boolean
   // A hotkey that closes it. Registered like any hotkey: the game no longer gets that key.
   chipKey?: string | null
-  // While in a map: a thin bar at the top with the map, its time so far and tonight's total. Off unless on.
+  // While in a map: a thin bar at the top with the map, its time so far and tonight's total.
+  // On unless turned off (veteran review, 2026-11-24: one in-map overlay on by default).
   glance?: boolean
   // Where the glance bar sits (its top centre, share of the screen), set by dragging it.
   glancePos?: { x: number, y: number }
+}
+
+export function glanceOn (config: Pick<SessionStoryWidget, 'glance'>): boolean {
+  return config.glance !== false
+}
+
+// Where the map line goes. Not picked: on the glance bar while it's on, so one
+// thing shows while you play; the dock icon with it off. The bar picked and
+// then turned off: the dock icon.
+export function chipPlaceOf (config: Pick<SessionStoryWidget, 'glance' | 'chipPlace'>): ChipPlace {
+  const place = config.chipPlace ?? (glanceOn(config) ? 'bar' : 'dock')
+  return place === 'bar' && !glanceOn(config) ? 'dock' : place
 }
 
 export const CHIP_CLOSE_TARGET = 'woke-session-story-chip'
