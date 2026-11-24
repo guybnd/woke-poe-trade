@@ -89,6 +89,7 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'trade-searches', name: 'Trade searches', description: 'Saved trade site searches', group: 'builds', widgetTypes: ['woke-trade-searches'], icon: { fa: 'fas fa-search-dollar', currency: 'exalted' }, needs: ['hotkeys'] },
   { id: 'trade', name: 'Trades', description: 'Trade whispers, quick replies and a sales log', group: 'builds', widgetTypes: ['woke-trade'], icon: { fa: 'fas fa-handshake', src: '/images/art/bust-of-emperor-caspiro.png' }, needs: ['log', 'hotkeys', 'prices'] },
   { id: 'megalo', name: 'Megalomaniac searcher', description: 'A trade search for the Megalomaniac notables your build wants', group: 'builds', widgetTypes: ['woke-megalo'], icon: { fa: 'fas fa-circle-nodes', item: 'Medium Cluster Jewel' }, needs: [] },
+  { id: 'forbidden', name: 'Forbidden pair finder', description: 'The Forbidden Flame and Flesh notables your class can take, with what each pair costs', group: 'builds', widgetTypes: ['woke-forbidden'], icon: { fa: 'fas fa-fire', item: 'Forbidden Flame' }, needs: [] },
   { id: 'regex-library', name: 'Regex library', description: 'Saved stash search strings', group: 'builds', widgetTypes: ['woke-regex-library'], icon: { fa: 'fas fa-search', mechanic: 'stash' }, needs: ['hotkeys'] },
 
   // APT features: only their hotkeys can be switched off.
@@ -122,9 +123,9 @@ export interface Preset {
 
 export const PRESETS: Preset[] = [
   { id: 'everything', label: 'Everything', on: 'all' },
-  { id: 'mapper', label: 'Mapper', on: ['market', 'drop-counter', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'death-recap', 'session-story', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'wickerman', 'trade-searches', 'trade', 'regex-library', 'megalo'] },
-  { id: 'leveling', label: 'Leveling', on: ['campaign', 'run-timer', 'lab', 'challenges', 'pob-builds', 'regex-library', 'wickerman', 'megalo'] },
-  { id: 'trader', label: 'Trader', on: ['market', 'lab-gems', 'scarab-flip', 'disenchant', 'stacked-decks', 'wealthy-exile', 'trade-searches', 'trade', 'regex-library', 'megalo'] },
+  { id: 'mapper', label: 'Mapper', on: ['market', 'drop-counter', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'death-recap', 'session-story', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'wickerman', 'trade-searches', 'trade', 'regex-library', 'megalo', 'forbidden'] },
+  { id: 'leveling', label: 'Leveling', on: ['campaign', 'run-timer', 'lab', 'challenges', 'pob-builds', 'regex-library', 'wickerman', 'megalo', 'forbidden'] },
+  { id: 'trader', label: 'Trader', on: ['market', 'lab-gems', 'scarab-flip', 'disenchant', 'stacked-decks', 'wealthy-exile', 'trade-searches', 'trade', 'regex-library', 'megalo', 'forbidden'] },
   { id: 'price-check-only', label: 'Price check only', on: [] }
 ]
 
