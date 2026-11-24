@@ -10,6 +10,7 @@ import { reactive, shallowReactive } from 'vue'
 import { BOOKMARKS_TARGET } from './item-lookup/lookup'
 import type { HarvestSwapConfig } from './harvest-swap/families'
 import type { DockConfig } from './dock/dock'
+import type { RateTime } from './shared/rate-time'
 import type { ShortcutAction } from '@ipc/types'
 
 export type ModuleGroup = 'economy' | 'mapping' | 'campaign' | 'builds' | 'apt'
@@ -159,6 +160,8 @@ export interface WokeModulesConfig {
   welcome?: WelcomeState
   // What's new lines (tab-bar/news.ts) the player has pointed at.
   seenNews?: string[]
+  // What time every per hour counts (shared/rate-time.ts); unset: carried over.
+  rateTime?: RateTime
 }
 
 export interface WelcomeState {
