@@ -13,7 +13,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-for="l in shown" :key="(l.state ?? '') + l.key" :class="['w-line', { [$style.dim]: l.state === 'unpriced', 'w-line-out': l.state === 'ignored' }]" tabindex="0" data-nw-row
+      <tr v-for="l in shown" :key="l.key" :class="['w-line', { [$style.dim]: l.state === 'unpriced', 'w-line-out': l.state === 'ignored' }]" tabindex="0" data-nw-row
         @contextmenu="rowMenu($event, l)" @keydown="lineKeys($event, stateOf(l), handlersOf(l))">
         <td :class="$style.left">
           <span :class="$style.name" v-item-tip="tipOf(l)">

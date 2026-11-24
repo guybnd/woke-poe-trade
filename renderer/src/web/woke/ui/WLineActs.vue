@@ -29,8 +29,14 @@ const emit = defineEmits<{ (e: 'out', on: boolean): void }>()
 // holds something more.
 const hasMore = computed(() => props.entries.some(e => !('label' in e) || (e.label !== LEAVE_OUT && e.label !== COUNT_AGAIN)))
 function openMore (e: MouseEvent) {
-  const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  openMenu({ x: r.right, y: r.bottom, from: e.currentTarget as Element }, props.entries, props.head?.(e) ?? undefined)
+  const el = e.currentTarget as HTMLElement
+  const r = el.getBoundingClientRect()
+  // Enter or Space clicks at 0,0: the item header (and a price check from it)
+  // opens beside the button instead.
+  const at = e.detail === 0 || (e.screenX === 0 && e.screenY === 0)
+    ? new MouseEvent('click', { clientX: r.right, clientY: r.bottom, screenX: window.screenX + r.right, screenY: window.screenY + r.bottom })
+    : e
+  openMenu({ x: r.right, y: r.bottom, from: el }, props.entries, props.head?.(at) ?? undefined)
 }
 </script>
 

@@ -92,7 +92,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await chaosRow.hover()
     await chaosRow.locator('[data-line-out]').click()
     await expect(chaosRow).toContainText('left out')
-    await expect(changed).toContainText('Changed 2')
+    await expect(changed).toContainText('Changed 1')
     await overlay.snap('net worth row left out')
     await overlay.page.getByRole('button', { name: 'Undo' }).last().click()
     await expect(chaosRow).not.toContainText('left out')

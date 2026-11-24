@@ -13,7 +13,7 @@
     <span class="w-num text-sm" :class="[$style.value, out ? 'w-dim' : tone]">
       <WLineNum :editable="editable" :mine="edited" :out="out" :title="valueTitle" :label="`Change the price of ${name}`" data-run-edit @edit="startEdit('each')">{{ chaos == null ? '—' : `${sign}${amount(chaos)}` }}</WLineNum><Coin v-if="chaos != null" :chaos="!divine" />
     </span>
-    <WLineActs :name="name" :out="out" :can-leave-out="canLeaveOut" :entries="entries" @out="emit('out', $event)" />
+    <WLineActs :name="name" :out="out" :can-leave-out="canLeaveOut" :entries="entries" :head="headOf" @out="emit('out', $event)" />
     <!-- The editor opens under the row, full width, each box named. -->
     <div v-if="editing" :class="$style.editor" data-run-editor @keydown.esc.stop="editing = false">
       <label :class="$style.field"><span class="w-dim text-xs">How many</span>
@@ -41,6 +41,7 @@
 import { computed, nextTick, shallowRef } from 'vue'
 import { WButton, WLineActs, WLineNum, lineKeys, lineMenu, openMenu, vItemTip } from '../ui'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
+import { itemMenuHead } from '../ui/tooltip/item-menu'
 import { formatAmount } from '../ui/format'
 import Coin from './Coin.vue'
 
@@ -98,9 +99,12 @@ const handlers = {
   remove: () => { emit('remove') }
 }
 const entries = computed(() => lineMenu(state.value, handlers))
+// The item header over the menu, as the item's own right-click shows it.
+const headOf = (e: MouseEvent) => props.tip ? itemMenuHead({ name: props.tip.name, type: props.tip.type, variant: props.tip.variant }, e) : null
 function onMenu (e: MouseEvent) {
-  if (!entries.value.length || (e.target as Element).closest('input')) return
-  openMenu(e, entries.value)
+  // The open editor's own boxes and buttons keep the browser's menu.
+  if (!entries.value.length || (e.target as Element).closest('input, [data-run-editor]')) return
+  openMenu(e, entries.value, headOf(e) ?? undefined)
 }
 function onKeys (e: KeyboardEvent) { lineKeys(e, state.value, handlers) }
 
@@ -114,6 +118,8 @@ const eachEl = shallowRef<HTMLInputElement | null>(null)
 let opened = { count: 0, eachChaos: 0, bought: '' as string | number }
 const round = (n: number) => Math.round(n * 10000) / 10000
 function startEdit (field: 'count' | 'each' = 'count') {
+  // Already open: keep what you typed, just move to the box.
+  if (editing.value) { (field === 'each' ? eachEl.value : countEl.value)?.focus(); return }
   const n = props.count ?? 1
   const each = props.each ?? (props.chaos != null && n > 0 ? props.chaos / n : 0)
   countDraft.value = n

@@ -64,7 +64,7 @@
           <RunRow v-for="m in manualIn" :key="m.id" :icon="m.icon" :name="m.name" :tip="tipOf(m.key ?? null, m.name, m.count)" :count="m.count" :chaos="m.count * m.each" :each="m.each" sign="+" sub="added" :divine="divine" :can-leave-out="false" removable
             @edit="editManual(m.id, $event)" @remove="removeManual(m.id)" />
           <button v-if="came.length > cameShown" type="button" :class="$style.link" class="text-xs" @click="cameShown += 15">+{{ came.length - cameShown }} more</button>
-          <div v-if="!rows.came.length && !manualIn.length" class="w-dim text-xs">Nothing yet</div>
+          <div v-if="!came.length && !manualIn.length" class="w-dim text-xs">{{ onlyChanged ? 'Nothing changed here' : 'Nothing yet' }}</div>
           <RunAdd :known="knownItems" :lines="lines" :divine="divine" label="Add an item" @add="addManual('in', $event)" />
         </div>
 
@@ -104,7 +104,7 @@
           </RunRow>
           <button v-if="listed.length > listedShown" type="button" :class="$style.link" class="text-xs" @click="listedShown += 15">+{{ listed.length - listedShown }} more listed</button>
           <button v-if="sold.length > soldShown" type="button" :class="$style.link" class="text-xs" @click="soldShown += 15">+{{ sold.length - soldShown }} more sold</button>
-          <div v-if="!outside.listed.length && !outside.held.length && !outside.sold.length" class="w-dim text-xs">Nothing listed or held</div>
+          <div v-if="!listed.length && !held.length && !sold.length" class="w-dim text-xs">{{ onlyChanged ? 'Nothing changed here' : 'Nothing listed or held' }}</div>
           <div :class="$style.colFoot" class="w-dim text-xs">
             <span v-if="shownRun.faustus">Read {{ clock(shownRun.faustus.at) }}<template v-if="shownRun.faustus.more"> · newest 100</template></span>
             <span v-if="outside.unpriced">{{ outside.unpriced }} unpriced</span>
@@ -263,7 +263,7 @@ const isOut = (key: string) => editOf(key)?.out === true
 const isEdited = (key: string) => { const e = editOf(key); return e != null && (e.count != null || e.each != null) }
 function leaveOut (key: string, out: boolean, name?: string) {
   edit(r => setEdit(r, key, { out }))
-  if (name) lineToast(out ? 'out' : 'in', name, () => { edit(r => setEdit(r, key, { out: !out })) })
+  if (name) lineToast(out ? 'out' : 'in', name, editLater(r => setEdit(r, key, { out: !out })))
 }
 // Put back what a remove took out, where it was.
 function putBack<T> (list: T[], at: number, x: T): T[] { const next = [...list]; next.splice(Math.min(at, next.length), 0, x); return next }
@@ -285,7 +285,7 @@ function removeManual (id: string) {
   if (at < 0) return
   const m = list[at]
   edit(r => ({ ...r, manual: (r.manual ?? []).filter(x => x.id !== id) }))
-  lineToast('remove', m.name, () => { edit(r => ({ ...r, manual: putBack(r.manual ?? [], at, m) })) })
+  lineToast('remove', m.name, editLater(r => ({ ...r, manual: putBack(r.manual ?? [], at, m) })))
 }
 const inSum = computed(() => rows.value.came.reduce((s, r) => s + Math.max(0, tallyVal(r)), 0) + manualIn.value.reduce((s, m) => s + m.count * m.each, 0))
 const outSum = computed(() => {
@@ -334,7 +334,7 @@ function removeHeld (id: string, carried: boolean) {
   if (at < 0) return
   const h = list[at]
   edit(r => carried ? { ...r, carried: (r.carried ?? []).filter(x => x.id !== id) } : { ...r, held: (r.held ?? []).filter(x => x.id !== id) })
-  lineToast('remove', h.name, () => { edit(r => carried ? { ...r, carried: putBack(r.carried ?? [], at, h) } : { ...r, held: putBack(r.held ?? [], at, h) }) })
+  lineToast('remove', h.name, editLater(r => carried ? { ...r, carried: putBack(r.carried ?? [], at, h) } : { ...r, held: putBack(r.held ?? [], at, h) }))
 }
 const faustusReading = shallowRef(false)
 async function readFaustusInto (r: Run): Promise<void> {
@@ -463,6 +463,11 @@ function edit (fn: (r: Run) => Run) {
   if (!r) return
   editRun(props.league, r.id, fn, props.points, props.divine).catch(() => {})
 }
+// An Undo changes the run it was made on, even after you open another one.
+function editLater (fn: (r: Run) => Run): () => void {
+  const id = shownRun.value?.id
+  return () => { if (id) editRun(props.league, id, fn, props.points, props.divine).catch(() => {}) }
+}
 function setCost (id: string, patch: Partial<CostLine>) {
   edit(r => ({ ...r, costs: r.costs.map(c => { if (c.id !== id) return c; const n = { ...c, ...patch }; if (n.bought == null) delete n.bought; if (!n.live) delete n.live; return n }) }))
 }
@@ -483,14 +488,14 @@ function removeCost (id: string) {
   if (at < 0) return
   const c = shownRun.value!.costs[at]
   edit(r => ({ ...r, costs: r.costs.filter(x => x.id !== id) }))
-  lineToast('remove', c.name, () => { edit(r => ({ ...r, costs: putBack(r.costs, at, c) })) })
+  lineToast('remove', c.name, editLater(r => ({ ...r, costs: putBack(r.costs, at, c) })))
 }
 function removeOnce (id: string) {
   const at = shownRun.value?.once.findIndex(o => o.id === id) ?? -1
   if (at < 0) return
   const o = shownRun.value!.once[at]
   edit(r => ({ ...r, once: r.once.filter(x => x.id !== id) }))
-  lineToast('remove', o.name, () => { edit(r => ({ ...r, once: putBack(r.once, at, o) })) })
+  lineToast('remove', o.name, editLater(r => ({ ...r, once: putBack(r.once, at, o) })))
 }
 
 // Items the run has seen (its tally), with their stash key and price each,

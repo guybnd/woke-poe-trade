@@ -680,6 +680,7 @@ const cat = shallowRef<Category | 'all'>('all')
 // Picked tabs (multi); none is every tab.
 const tabs = shallowRef<string[]>([])
 function clearFilters () {
+  onlyChanged.value = false
   cat.value = 'all'
   tabs.value = []
   query.value = ''
@@ -762,16 +763,18 @@ const showIgnored = shallowRef(false)
 const justOut = shallowRef<ReadonlySet<string>>(new Set())
 // The Changed chip: only your own prices and what you left out.
 const onlyChanged = shallowRef(false)
-const changedCount = computed(() => {
+const changedLines = computed(() => {
   const val = v.value
-  return val ? val.lines.filter(l => l.mine).length + val.ignoredLines.length : 0
+  if (!val) return []
+  return filterLines([...val.lines.filter(l => l.mine), ...val.ignoredLines], { cat: cat.value, tabs: tabs.value, query: query.value, minChaos: 0 })
 })
+const changedCount = computed(() => changedLines.value.length)
 watch(changedCount, (n) => { if (!n) onlyChanged.value = false })
 const tableLines = computed(() => {
   const val = v.value
   if (!val) return []
   const f = { cat: cat.value, tabs: tabs.value, query: query.value, minChaos: floor.value.minChaos }
-  if (onlyChanged.value) return filterLines([...val.lines.filter(l => l.mine), ...val.ignoredLines], { ...f, minChaos: 0 })
+  if (onlyChanged.value) return changedLines.value
   const out = showIgnored.value ? val.ignoredLines : val.ignoredLines.filter(l => justOut.value.has(l.key))
   const extra = [...(showUnpriced.value ? val.unpricedLines : []), ...out]
   return [...filterLines(val.lines, f), ...filterLines(extra, { ...f, minChaos: 0 })]
@@ -789,6 +792,9 @@ function showHidden () {
   props.config.hideChaosOn = false
 }
 watch(ignoredCount, (n) => { if (!n) showIgnored.value = false })
+// The footer's show / hide, a new league or a new read: left-out rows go back
+// to the footer's count.
+watch([showIgnored, () => props.status?.league, () => props.status?.lastReadAt], () => { justOut.value = new Set() })
 
 // ---------- your prices and left-out items (the shared line item, ui/line-item.ts) ----------
 const NOT_READY = 'Not loaded yet. Try again in a moment'
@@ -797,8 +803,10 @@ function onPrice (key: string, chaos: number | null) {
 }
 function onIgnore (key: string, name: string, on: boolean) {
   if (!setIgnored(key, on)) { toast(NOT_READY); return }
-  if (on) justOut.value = new Set([...justOut.value, key])
-  lineToast(on ? 'out' : 'in', name, () => { setIgnored(key, !on) })
+  // Left out (or put back out by Undo): it stays where it was, dimmed.
+  const keep = () => { justOut.value = new Set([...justOut.value, key]) }
+  if (on) keep()
+  lineToast(on ? 'out' : 'in', name, () => { if (setIgnored(key, !on) && !on) keep() })
 }
 
 // ---------- sales (pick A: Sold section, sale lines, chart dots; pick C: the Sales view) ----------
