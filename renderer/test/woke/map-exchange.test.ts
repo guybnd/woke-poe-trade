@@ -60,8 +60,10 @@ describe('the map kind', () => {
     const k = kindQuery('map-originator-elder.txt')
     expect(k.and).toEqual([`${ELDER}|2`, ORIGINATOR])
     expect(k.not).toEqual([1, 2, 3, 4].map(o => `${CITADEL}|${o}`))
-    // The influence lines left the filters: the kind stands in for them.
-    expect(k.stats.some(s => !s.group && !s.mapKind && /occupied by|influenced by The Elder/i.test(s.statRef))).toBe(false)
+    // The influence line left the filters: the kind stands in for it. The guardian stays a
+    // line of its own (each guardian sells at its own price).
+    expect(k.stats.some(s => !s.group && !s.mapKind && /influenced by The Elder/i.test(s.statRef))).toBe(false)
+    expect(k.stats.some(s => !s.group && s.mapLine && /occupied by/i.test(s.statRef))).toBe(true)
   })
   it('a Citadel map: has its own conqueror, not Elder/Shaper or the Originator', () => {
     const k = kindQuery('map-citadel.txt')

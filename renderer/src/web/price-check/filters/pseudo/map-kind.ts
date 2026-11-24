@@ -31,8 +31,9 @@ export const MAP_KIND_TRADE_IDS: readonly string[] = Object.values(KIND_FAMILIES
 const FAMILY_OF: Record<string, KindFamily> = Object.fromEntries(
   (Object.keys(KIND_FAMILIES) as KindFamily[]).map(k => [KIND_FAMILIES[k].id, k]))
 
-// The map's influence lines (the guardian goes with the Elder), replaced by the family filters.
-const INFLUENCE_LINE = /^(Area is influenced by|Map is occupied by|Map contains \S+ Citadel)/i
+// The map's influence lines, replaced by the family filters. The Elder's guardian ("Map is
+// occupied by The Purifier") stays a line of its own: each guardian sells at its own price.
+const INFLUENCE_LINE = /^(Area is influenced by|Map contains \S+ Citadel)/i
 export function isInfluenceLine (statRef: string): boolean {
   return INFLUENCE_LINE.test(statRef)
 }

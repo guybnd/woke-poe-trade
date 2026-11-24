@@ -258,7 +258,17 @@ const current = computed(() => choices.value.find(c =>
 // With Any kind on, the menu button names this map's kind again (Any kind has its own button).
 const shownKind = computed(() => current.value?.key === 'any' ? choices.value.find(c => c.key === ownKey.value) ?? null : current.value)
 const kindMenu = shallowRef(false)
-watch(() => props.item, () => { kindMenu.value = false })
+watch(() => [props.item, props.stats], () => { kindMenu.value = false })
+// The menu closes on a click outside it or Escape.
+function closeKindMenu (e: Event) {
+  if (e instanceof KeyboardEvent ? e.key === 'Escape' : !(e.target as Element | null)?.closest?.('[data-map-kind-menu],[data-map-kind]')) kindMenu.value = false
+}
+watch(kindMenu, (on) => {
+  const fn = on ? document.addEventListener : document.removeEventListener
+  fn.call(document, 'pointerdown', closeKindMenu, true)
+  fn.call(document, 'keydown', closeKindMenu, true)
+})
+onBeforeUnmount(() => { kindMenu.value = false; document.removeEventListener('pointerdown', closeKindMenu, true); document.removeEventListener('keydown', closeKindMenu, true) })
 function pickKind (c: KindChoice) {
   for (const f of kindFs.value) setPick(f, c.picks[f.mapKind!.family])
   kindMenu.value = false
@@ -271,20 +281,21 @@ const kindTitle = computed(() => {
 })
 // Game art for each kind: the influence's own icon, the Originator's orb, a plain map.
 const CONQUEROR_ART: Record<number, string> = { 1: 'Crusader', 2: 'Redeemer', 3: 'Hunter', 4: 'Warlord' }
-type KindIcon = { src?: string, item?: string }
+type KindIcon = { src?: string, item?: string, fa?: string }
 function iconsFor (key: string | undefined): KindIcon[] {
   if (!key) return []
   const icons: KindIcon[] = []
   if (key.startsWith('elder')) icons.push({ src: '/images/influence-Elder.png' })
   else if (key.startsWith('shaper')) icons.push({ src: '/images/influence-Shaper.png' })
-  else if (key.startsWith('citadel')) icons.push({ src: `/images/influence-${CONQUEROR_ART[ownKind.value.citadel ?? 1]}.png` })
+  // A map with no Citadel picks any conqueror: a plain citadel, not one conqueror's art.
+  else if (key.startsWith('citadel')) icons.push(ownKind.value.citadel ? { src: `/images/influence-${CONQUEROR_ART[ownKind.value.citadel]}.png` } : { fa: 'fas fa-chess-rook' })
   else if (key.startsWith('normal') && !key.endsWith('Originator')) icons.push({ src: MAP_ICON })
   if (key.endsWith('Originator') || key === 'any-originator') icons.push({ item: "Originator's Exalted Orb" })
   if (key === 'any') icons.push({ src: MAP_ICON })
   return icons
 }
 const KindIcons = (p: { icons: KindIcon[] }) => p.icons.map(i =>
-  h(WIcon, { src: i.src, item: i.item, size: 'sm', title: '', fallback: 'fas fa-map' }))
+  h(WIcon, { src: i.src, item: i.item, size: 'sm', title: '', fallback: i.fa ?? 'fas fa-map' }))
 KindIcons.props = ['icons']
 
 function propFilter (label: string): StatFilter | null {
