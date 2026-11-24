@@ -281,6 +281,18 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect(head).toHaveText(allAsk)
     await panel.locator('[data-listed]').getByText(/^Uniques 3$/).click()
     await expect(panel.locator('[data-listed-filtered]')).toHaveCount(0)
+    // Reprice (R1): the price check opens on the listing, and its foot sets
+    // a new price that Listed keeps as a to-do.
+    const hhRow = listedRows.filter({ hasText: 'Headhunter' })
+    await hhRow.hover()
+    await hhRow.locator('[data-listed-reprice]').click()
+    const bar = overlay.page.locator('[data-listed-bar]')
+    await expect(bar).toBeVisible({ timeout: 20_000 })
+    await bar.getByLabel('Your price', { exact: true }).fill('7')
+    await bar.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(bar.locator('[data-listed-bar-target]')).toContainText('set 7 div')
+    await expect(hhRow.locator('[data-listed-target]')).toContainText('7 div')
+    await overlay.page.keyboard.press('Escape')
     await overlay.snap('net worth listed')
     await overlay.page.unroute('**/api/trade/search/**')
     await overlay.page.unroute('**/api/trade/fetch/**')

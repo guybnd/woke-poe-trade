@@ -114,6 +114,8 @@
         <button type="button" class="w-pc-bulk ml-1" data-exchange-chip :title="exchangeTitle" @click="searchExchange">Exchange</button>
       </template>
     </trade-listing>
+    <!-- woke: an item you have listed at Faustus: set a new price on it (Net worth › Listed). -->
+    <woke-listed-price-bar v-if="listedBarOn" :item="item" />
     <trade-bulk
       v-if="(tradeAPI === 'bulk' || exchangeView) && doSearch"
       ref="tradeService"
@@ -172,8 +174,9 @@ import type { ResultsState } from '@/web/woke/price-insight/local-filter'
 // woke: loaded with the first search, not at startup (the startup JS budget).
 type LocalFilter = typeof import('@/web/woke/price-insight/local-filter')
 const loadLocalFilter = () => import('@/web/woke/price-insight/local-filter')
+import { NET_WORTH_TYPE } from '@/web/woke/net-worth/widget'
 import { AppConfig } from '@/web/Config'
-import { isModuleOn } from '@/web/woke/modules'
+import { isModuleOn, isWidgetTypeOn } from '@/web/woke/modules'
 import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
@@ -192,6 +195,7 @@ export default defineComponent({
   components: {
     // woke: lazy, so the map strip and its checks stay out of the startup bundle.
     WokeMapStrip: defineAsyncComponent(() => import('@/web/woke/map-mods/MapModStrip.vue')),
+    WokeListedPriceBar: defineAsyncComponent(() => import('@/web/woke/net-worth/ListedPriceBar.vue')),
     WokeValdoStrip: defineAsyncComponent(() => import('@/web/woke/valdo/ValdoStrip.vue')),
     // Loads when the Flip tab is first opened.
     WokeSwapFlip: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapFlip.vue')),
@@ -628,6 +632,7 @@ export default defineComponent({
       isGem: computed(() => props.item.category === ItemCategory.Gem),
       isViscera: computed(() => props.item.category === ItemCategory.Viscera),
       isDivCard: computed(() => props.item.category === ItemCategory.DivinationCard),
+      listedBarOn: computed(() => isWidgetTypeOn(AppConfig(), NET_WORTH_TYPE)),
       isNightmareMap: computed(() => props.item.info.refName === 'Nightmare Map' && isModuleOn(AppConfig(), 'boss-runs')),
       ninjaCardOpen,
       ninjaVerdictShown,

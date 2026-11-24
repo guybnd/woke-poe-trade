@@ -25,6 +25,7 @@
 
     <section v-if="rows.length" :class="$style.chips">
       <WChip v-if="sum.stale" clickable :active="filter === 'stale'" :title="`Unsold ${staleDays} days or more`" @click="toggle('stale')"><span class="w-warn">Stale {{ sum.stale }}</span></WChip>
+      <WChip v-if="toReprice" clickable :active="filter === 'reprice'" title="Listings you set a new price on from the price check: reprice them at Faustus" @click="toggle('reprice')"><span class="w-warn">To reprice {{ toReprice }}</span></WChip>
       <WChip v-if="undercut" clickable :active="filter === 'undercut'" title="Your last Check found someone cheaper" @click="toggle('undercut')"><span class="w-down">Undercut {{ undercut }}</span></WChip>
       <WChip v-if="over" clickable :active="filter === 'over'" title="Asking 10% or more over poe.ninja's price" @click="toggle('over')">Overpriced {{ over }}</WChip>
       <WChip v-for="t in types" :key="t.id" clickable :active="filter === t.id" @click="toggle(t.id)">{{ t.label }} {{ t.count }}</WChip>
@@ -47,7 +48,10 @@
             <td :class="$style.left">
               <span :class="$style.name"><img v-if="r.item.icon" :src="r.item.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(r.item)" class="w-trunc" :style="{ color: colourOf(r.item.frameType) }">{{ saleName(r.item) }}</span></span>
             </td>
-            <td class="w-num" :class="$style.ask">{{ fmt(r.item.price.amount) }} {{ r.item.price.currency }}</td>
+            <td class="w-num" :class="$style.ask">
+              <WButton v-if="canReprice(r.item)" size="sm" variant="ghost" :class="$style.reprice" title="Reprice: price check it, then set a new price at the foot of the price check" aria-label="Reprice" data-listed-reprice @click="reprice(r, $event)"><i class="fas fa-tag" /></WButton>
+              {{ fmt(r.item.price.amount) }} {{ r.item.price.currency }}<span v-if="targetOf(r)" class="w-warn" :title="`You set ${priceLabel(targetOf(r)!)} from the price check: reprice it at Faustus. It clears once a Refresh sees that price`" data-listed-target> → {{ priceLabel(targetOf(r)!) }}</span>
+            </td>
             <td class="w-num" :class="r.confidence === 'rough' ? 'w-dim' : ''" :title="suggestTitle(r)">{{ suggestText(r) }}</td>
             <td class="w-num" :class="vsTone(r)">{{ vsText(r) }}</td>
             <td :class="$style.check" data-listed-check>
@@ -79,7 +83,10 @@ import { saleName, saleType, SALE_TYPES } from './sales'
 import type { SaleType } from './sales'
 import { ninjaPriced, rates, sales } from './sales-store'
 import { canCheck, checkFor, rankText } from './cheapest'
-import { cheapestBusy, cheapestDoc, cheapestErrors, checkCheapest, loadCheapest } from './cheapest-store'
+import { cheapestBusy, cheapestDoc, cheapestErrors, checkCheapest, loadCheapest, repricing } from './cheapest-store'
+import { priceLabel, targetOpen } from './listed-target'
+import { saleItem } from './sale-tip'
+import type { Listing } from './faustus'
 import { loadPending, pendingDoc, pendingReading } from './pending-store'
 import { ageText, pendingRows, pendingTotals, sortPending, DEFAULT_STALE_DAYS } from './pending'
 import type { PendingRow } from './pending'
@@ -102,26 +109,27 @@ const sum = computed(() => pendingTotals(rows.value))
 const limit = shallowRef(100)
 
 // Filter chips: stale, overpriced, or one type.
-type Filter = 'stale' | 'over' | 'undercut' | SaleType
+type Filter = 'stale' | 'over' | 'undercut' | 'reprice' | SaleType
 const filter = shallowRef<Filter | null>(null)
 const OVER = 0.1
 const isOver = (r: PendingRow) => r.vs != null && r.vs >= OVER
 const over = computed(() => rows.value.filter(isOver).length)
 const isUndercut = (r: PendingRow) => (checkOf(r)?.cheaper ?? 0) > 0
 const undercut = computed(() => rows.value.filter(isUndercut).length)
+const toReprice = computed(() => rows.value.filter(r => targetOf(r) != null).length)
 const types = computed(() => SALE_TYPES.map(t => ({ ...t, count: rows.value.filter(r => saleType(r.item) === t.id).length })).filter(t => t.count > 0))
 function toggle (f: Filter) { filter.value = filter.value === f ? null : f; limit.value = 100 }
 const shown = computed(() => {
   const f = filter.value
   if (!f) return sorted.value
-  return sorted.value.filter(r => f === 'stale' ? r.stale : f === 'over' ? isOver(r) : f === 'undercut' ? isUndercut(r) : saleType(r.item) === f)
+  return sorted.value.filter(r => f === 'stale' ? r.stale : f === 'over' ? isOver(r) : f === 'undercut' ? isUndercut(r) : f === 'reprice' ? targetOf(r) != null : saleType(r.item) === f)
 })
 // The head's numbers: the rows the chip picked, or all of them.
 const head = computed(() => filter.value ? pendingTotals(shown.value) : sum.value)
 const filterLabel = computed(() => {
   const f = filter.value
   if (!f) return ''
-  return f === 'stale' ? 'stale' : f === 'over' ? 'overpriced' : f === 'undercut' ? 'undercut' : SALE_TYPES.find(t => t.id === f)?.label.toLowerCase() ?? ''
+  return f === 'stale' ? 'stale' : f === 'over' ? 'overpriced' : f === 'undercut' ? 'undercut' : f === 'reprice' ? 'to reprice' : SALE_TYPES.find(t => t.id === f)?.label.toLowerCase() ?? ''
 })
 const headTitle = computed(() => filter.value
   ? `Asking ${inChaos(head.value.askChaos)} for the picked chip (all ${sum.value.count}: ${inChaos(sum.value.askChaos)}). Click the chip again for all`
@@ -183,6 +191,27 @@ function checkTitle (r: PendingRow) {
   ]
   return lines.join('\n')
 }
+// Reprice (Guy's R1): the price check opens on the listing, and its foot
+// sets a new price, shown here until a read sees it.
+function targetOf (r: PendingRow) {
+  const t = checkDoc.value?.targets?.[r.item.id]
+  return targetOpen(t, r.item) ? t : null
+}
+// Rares only with their mods (a read after #815 keeps them).
+function canReprice (l: Listing) {
+  return !(l.frameType === 1 || l.frameType === 2) || l.tip != null
+}
+async function reprice (r: PendingRow, e: MouseEvent) {
+  const l = r.item
+  repricing.value = { league: props.league, id: l.id }
+  // Read before the await: currentTarget is gone after it.
+  const box = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const at = { x: window.screenX + box.x + box.width / 2, y: window.screenY + box.y + box.height / 2 }
+  const [{ openPriceCheck }, { pobMenuRef }] = await Promise.all([import('../ui/tooltip/item-price-check'), import('../pob-builds/item-menu-ref')])
+  const unique = l.frameType === 3 || l.frameType === 9
+  const ref = pobMenuRef(saleItem(l)) ?? { name: l.name || l.typeLine, ...(unique ? { rarity: 'unique' as const } : {}) }
+  openPriceCheck(ref, at).catch(() => {})
+}
 function colourOf (frame: number) {
   switch (frame) {
     case 1: return 'var(--w-r-magic)'
@@ -213,6 +242,8 @@ function colourOf (frame: number) {
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .ask { color: var(--w-gold); }
 .check { text-align: right; }
+.reprice { opacity: 0; }
+.table tbody tr:hover .reprice, .reprice:focus-visible { opacity: 1; }
 .note { padding: 4px var(--w-pad); }
 .autoLine { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; justify-content: space-between; }
 .chips { display: flex; gap: var(--w-s1); padding: 6px var(--w-pad); flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--w-line); }

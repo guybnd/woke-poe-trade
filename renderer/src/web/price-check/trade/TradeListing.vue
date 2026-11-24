@@ -227,6 +227,7 @@
 </template>
 
 <script lang="ts">
+import { asksOf, lastAsks } from '@/web/woke/price-insight/last-asks'
 import { defineAsyncComponent, defineComponent, computed, watch, onUnmounted, PropType, inject, shallowReactive, shallowRef, ShallowRef } from 'vue'
 import { useElementSize } from '@vueuse/core'
 import { hideTip, showTip } from '@/web/woke/ui/tooltip/tooltip'
@@ -595,6 +596,9 @@ export default defineComponent({
     const statusSlot = inject<ShallowRef<HTMLElement | null>>('price-search-status-slot', shallowRef(null))
 
     const { insight, divine, options: insightOptions } = useInsight(fitResults, computed(() => props.filters.trade.league))
+    // woke: Net worth's Listed bar suggests a price from these (no search of its own).
+    watch([fitResults, divine], ([list, d]) => { lastAsks.value = asksOf(list, d ?? null, props.item) }, { immediate: true })
+    onUnmounted(() => { lastAsks.value = null })
 
     // woke: listings found without a rare's mods say nothing about its price.
     const blankSearch = computed(() => isBlankRareSearch(props.item, props.filters, props.stats))

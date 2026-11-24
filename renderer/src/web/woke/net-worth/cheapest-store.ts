@@ -2,7 +2,8 @@
 // runs only on a click: one trade search and one fetch of ten.
 import { shallowRef } from 'vue'
 import { hostRequest } from '../shared/host'
-import { cheapestKey, cheapestQuery, isCheapestDoc, summarize, withCheck } from './cheapest'
+import { cheapestKey, cheapestQuery, isCheapestDoc, summarize, withCheck, withTarget } from './cheapest'
+import type { TargetPrice } from './listed-target'
 import type { CheapestDoc } from './cheapest'
 import type { Listing } from './faustus'
 import { ITEM_BY_REF } from '@/assets/data'
@@ -28,7 +29,9 @@ export function loadCheapest (league: string): void {
       // A check made while this loaded wins over the saved doc.
       const saved = isCheapestDoc(d) && d.league === league ? d : null
       const now = cheapestDoc.value
-      cheapestDoc.value = saved && now ? { league, checks: { ...saved.checks, ...now.checks } } : now ?? saved
+      cheapestDoc.value = saved && now
+        ? { league, checks: { ...saved.checks, ...now.checks }, targets: { ...saved.targets, ...now.targets } }
+        : now ?? saved
     })
     .catch(() => { if (loadedFor === league) loadedFor = null })
 }
@@ -87,4 +90,16 @@ export async function checkCheapest (league: string, l: Listing, rates: Rates): 
   } finally {
     setBusy(l.id, false)
   }
+}
+
+// The listing a Listed row's Reprice opened the price check for: the price
+// check's bar picks it over a match by name.
+export const repricing = shallowRef<{ league: string, id: string } | null>(null)
+
+// A new price for a listing, from the price check's bar (null: clear it).
+export async function setTarget (league: string, id: string, target: TargetPrice | null): Promise<void> {
+  loadCheapest(league)
+  const next = withTarget(cheapestDoc.value?.league === league ? cheapestDoc.value : null, league, id, target)
+  cheapestDoc.value = next
+  await hostRequest('doc-put', { collection: COLLECTION, key: cheapestKey(league), value: next }).catch(() => {})
 }

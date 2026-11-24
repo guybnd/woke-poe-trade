@@ -10,6 +10,7 @@
 import type { Listing } from './faustus'
 import { ROLLED_UNIQUES } from './pending'
 import { saleType } from './sales'
+import type { TargetPrice } from './listed-target'
 
 export interface CheapestCheck {
   at: number
@@ -33,6 +34,9 @@ export interface CheapestDoc {
   league: string
   // Item id → its last check.
   checks: Record<string, CheapestCheck>
+  // Item id → the price you set from the price check, to reprice in game
+  // (listed-target.ts).
+  targets?: Record<string, TargetPrice>
 }
 
 export const cheapestKey = (league: string) => `${league}-cheapest`
@@ -126,7 +130,16 @@ export function checkFor (doc: CheapestDoc | null, l: Listing): CheapestCheck | 
 export function withCheck (doc: CheapestDoc | null, league: string, id: string, check: CheapestCheck): CheapestDoc {
   const old = doc?.league === league ? doc.checks : {}
   const entries = Object.entries({ ...old, [id]: check }).sort((a, b) => b[1].at - a[1].at).slice(0, MAX_KEPT)
-  return { league, checks: Object.fromEntries(entries) }
+  const targets = doc?.league === league ? doc.targets : undefined
+  return { league, checks: Object.fromEntries(entries), ...(targets ? { targets } : {}) }
+}
+
+// A price set (or cleared, null) on a listing; the oldest dropped past MAX_KEPT.
+export function withTarget (doc: CheapestDoc | null, league: string, id: string, target: TargetPrice | null): CheapestDoc {
+  const same = doc?.league === league ? doc : null
+  const rest = Object.entries(same?.targets ?? {}).filter(([k]) => k !== id)
+  const entries = (target ? [...rest, [id, target] as [string, TargetPrice]] : rest).sort((a, b) => b[1].at - a[1].at).slice(0, MAX_KEPT)
+  return { league, checks: same?.checks ?? {}, ...(entries.length ? { targets: Object.fromEntries(entries) } : {}) }
 }
 
 export function ordinal (n: number): string {
