@@ -8,11 +8,13 @@ import type { PlayRate, PlayRates } from './play-time'
 
 // A window's profit per hour of play, as saved (Ctrl+Space reads it).
 export type GlanceRate = Pick<PlayRate, 'perHour' | 'playMs' | 'hubMs' | 'offMs'>
-export interface GlanceRates { '1h': GlanceRate, '2h': GlanceRate, '3h': GlanceRate, 'today': GlanceRate, 'fromLog': boolean }
+// `withHub`/`withOff`: what the Per hour setting counted at that read
+// (unset in older glances: neither).
+export interface GlanceRates { '1h': GlanceRate, '2h': GlanceRate, '3h': GlanceRate, 'today': GlanceRate, 'fromLog': boolean, 'withHub'?: boolean, 'withOff'?: boolean }
 
 export function glanceRates (r: PlayRates): GlanceRates {
   const one = (x: PlayRate): GlanceRate => ({ perHour: x.perHour, playMs: x.playMs, hubMs: x.hubMs, offMs: x.offMs })
-  return { '1h': one(r['1h']), '2h': one(r['2h']), '3h': one(r['3h']), 'today': one(r.today), 'fromLog': r.fromLog }
+  return { '1h': one(r['1h']), '2h': one(r['2h']), '3h': one(r['3h']), 'today': one(r.today), 'fromLog': r.fromLog, 'withHub': r.withHub, 'withOff': r.withOff }
 }
 
 export interface Glance {
@@ -27,7 +29,7 @@ export interface Glance {
   divine: number | null
   // The window's "per hour" and "today" at that read (chaos), for that day only.
   // Missing in glances made from chart points.
-  // Per hour counts only time out of hideout and town.
+  // Per hour counts the time the Per hour setting counted then.
   perHourChaos?: number | null
   todayChaos?: number | null
   // Per hour of play over the last 1, 2, 3 hours and today, at that read.

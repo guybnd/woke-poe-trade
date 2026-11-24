@@ -256,6 +256,7 @@ import {
 } from './stats'
 import type { StrategyRow, Unit } from './stats'
 import type { AnalyticsWidget, MapRun, SessionRecord } from './types'
+import { rateTime } from '../shared/rate-time-now'
 // Tonight's card, from Session story's own chunk (already loaded when Session
 // story is on), so it adds nothing to startup.
 const TonightBand = defineAsyncComponent(() => import('../session-story/WidgetSessionStory.vue').then(m => m.TonightBand))
@@ -397,7 +398,7 @@ const bossRows = computed<StrategyRow[]>(() => {
   return out
 })
 
-const rows = computed(() => sortRows([...strategyRows(inView.value, props.config.unit, divineNow.value), ...bossRows.value]))
+const rows = computed(() => sortRows([...strategyRows(inView.value, props.config.unit, divineNow.value, rateTime()), ...bossRows.value]))
 
 const selectedKey = shallowRef<string | null>(null)
 const selectedRow = computed(() => rows.value.find(r => r.key === selectedKey.value) ?? rows.value[0] ?? null)
@@ -462,7 +463,7 @@ function summary (s: SessionRecord) {
   return {
     s,
     profit: r ? t.profit / r : null,
-    perHour: perHour(sessionUnits(s, props.config.unit, divineNow.value, true))
+    perHour: perHour(sessionUnits(s, props.config.unit, divineNow.value, true, rateTime()))
   }
 }
 const sessionList = computed(() => inView.value

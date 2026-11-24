@@ -76,7 +76,7 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     icon: { fa: 'fas fa-flag' },
     description: 'Set once here. Every module reads these.',
     parts: [GamePage],
-    find: ['League', 'Private league', 'Trade site', 'Game language', 'Client.txt', 'Game log', 'production_Config.ini', 'Loot filter folder', 'Character', 'Account name'],
+    find: ['League', 'Private league', 'Trade site', 'Game language', 'Client.txt', 'Game log', 'production_Config.ini', 'Loot filter folder', 'Character', 'Account name', 'Per hour', 'Time counted', 'Hideout time', 'AFK', 'Game closed', 'Leave out hideout', 'Count hideout'],
     aliases: ['settings.general']
   },
   {

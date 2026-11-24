@@ -35,12 +35,11 @@ export interface NetWorthWidget extends Widget {
   // What the dock icon's number shows (glance.ts). The mouse wheel over the
   // icon steps through them.
   glanceShows?: GlanceShows
-  // Per hour: the window picked (default the last hour), and hideout and
-  // town time counted as play (default left out).
+  // Per hour: the window picked (default the last hour).
   rateWindow?: RateWindow
+  // The old "Leave out hideout" box unticked: read as the Per hour setting's
+  // start until that is set (shared/rate-time.ts), and no longer written.
   rateWithHub?: boolean
-  // The dock card's run per hour counts hideout and town time (undefined: yes).
-  runWithHub?: boolean
   // Section sizes dragged under Details (layout.ts).
   layout?: PanelLayout
   // What the window shows: your stash (default) or your sales (pick C), and
