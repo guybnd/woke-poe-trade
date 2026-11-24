@@ -16,6 +16,11 @@ history:
     date: '2026-11-24T10:51:09.108Z'
     comment: Created ticket.
     id: a-2026-11-24t10-51-09-108z
+  - type: activity
+    user: Agent
+    date: '2026-11-24T11:09:14.248Z'
+    comment: Updated implementation link.
+    id: a-2026-11-24t11-09-14-248z
 subtasks:
   - WOKEPOET-562
   - WOKEPOET-563
@@ -23,6 +28,7 @@ subtasks:
   - WOKEPOET-565
   - WOKEPOET-566
   - WOKEPOET-567
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/875'
 ---
 Epic: price check shows items related to the one being checked, with prices. Follows WOKEPOET-560 (recipe parts, PR 873).
 
