@@ -33,6 +33,20 @@ export const HIGHLIGHTS = [
     ]
   },
   {
+    id: 'profit',
+    name: 'Profit',
+    tag: 'Stash, maps and trades, one number',
+    // A story: numbered plates in order, and a line on how they add up.
+    steps: true,
+    flow: 'Stash reads + maps + trades = profit per map and per hour',
+    slides: [
+      { label: 'Stash reads', shot: 'clip-profit', clip: 'clip-profit', focus: [700, 0, 1152], text: 'Pick your stash tabs. Each read is priced at poe.ninja, so your stash keeps the score.', more: 'A price that jumps 5× or more overnight is held at its usual price until the market agrees, so one fake listing can\'t move your total.', alt: 'Net worth window: a refresh adds a point to the chart, and a strategy run\'s profit goes up' },
+      { label: 'Every map', module: 'session-analytics', modules: ['session-story'], shot: 'hl-profit-maps', focus: [600, 120, 1000], text: 'Each map is timed and logged, with a small card after it. Stash reads land between maps, so a change is tied to the maps that made it.', alt: 'Map history grouped by day with stash reads between the maps, and the card after a map with its time against the last hour' },
+      { label: 'Buys and sales', shot: 'hl-profit-sales', focus: [700, 120, 1000], text: 'Your trade history is read in, so a sale shows what it went for against the market, and a buy isn\'t counted as a loss.', alt: 'Net worth Sales tab: each sale with its price and how far under the market it went' },
+      { label: 'Strategy run', shot: 'hl-profit-run', focus: [700, 120, 1000], text: 'Name a run and play. Profit since the start, per map and per hour, with what got used up and what came in.', alt: 'A strategy run: Nightmare maps, its profit, per map, per hour and cost per map, with what came in and what was used up' }
+    ]
+  },
+  {
     id: 'pob',
     name: 'Path of Building',
     tag: 'Your build, no alt-tab',
@@ -71,20 +85,6 @@ export const HIGHLIGHTS = [
       { label: 'Prices', module: 'market', shot: 'hl-market-prices', focus: [295, 20, 1135], text: 'Every poe.ninja category in one window, with the last 7 days. Movers and a watchlist are in the next tabs.', alt: 'Market window on Currency: categories down the side, each item with its value and 7-day line' },
       { label: 'Lab gems', module: 'lab-gems', shot: 'hl-lab-gems', focus: [300, 100, 900], text: 'What each Divine Font roll is worth today, by gem colour and level.', alt: 'Lab gems window: value of red, green and blue gems at each level and quality' },
       { label: 'Stacked decks', module: 'stacked-decks', shot: 'hl-stacked-decks', focus: [710, 300, 760], text: 'Open decks and it counts the cards from your game log: what you spent, what you got and the result, priced.', alt: 'Stacked decks card: 8 opened, 24c spent, The Doctor drawn, result +4.9 div' }
-    ]
-  },
-  {
-    id: 'profit',
-    name: 'Profit',
-    tag: 'Stash, maps and trades, one number',
-    // A story: numbered plates in order, and a line on how they add up.
-    steps: true,
-    flow: 'Stash reads + maps + trades = profit per map and per hour',
-    slides: [
-      { label: 'Stash reads', shot: 'clip-profit', clip: 'clip-profit', focus: [700, 0, 1152], text: 'Pick your stash tabs. Each read is priced at poe.ninja, so your stash keeps the score.', more: 'A price that jumps 5× or more overnight is held at its usual price until the market agrees, so one fake listing can\'t move your total.', alt: 'Net worth window: a refresh adds a point to the chart, and a strategy run\'s profit goes up' },
-      { label: 'Every map', module: 'session-analytics', modules: ['session-story'], shot: 'hl-profit-maps', focus: [600, 120, 1000], text: 'Each map is timed and logged, with a small card after it. Stash reads land between maps, so a change is tied to the maps that made it.', alt: 'Map history grouped by day with stash reads between the maps, and the card after a map with its time against the last hour' },
-      { label: 'Buys and sales', shot: 'hl-profit-sales', focus: [700, 120, 1000], text: 'Your trade history is read in, so a sale shows what it went for against the market, and a buy isn\'t counted as a loss.', alt: 'Net worth Sales tab: each sale with its price and how far under the market it went' },
-      { label: 'Strategy run', shot: 'hl-profit-run', focus: [700, 120, 1000], text: 'Name a run and play. Profit since the start, per map and per hour, with what got used up and what came in.', alt: 'A strategy run: Nightmare maps, its profit, per map, per hour and cost per map, with what came in and what was used up' }
     ]
   },
   {

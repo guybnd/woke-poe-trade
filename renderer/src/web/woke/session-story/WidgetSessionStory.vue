@@ -15,7 +15,7 @@
       </template>
     </DockItem>
     <GlanceBar v-if="glanceOn(config)" :map="glanceMap" :after="barLine" :since="glanceSince" :before="glanceBefore" :editing="placingGlance" :movable="wm.active.value" :pos="config.glancePos ?? null"
-      :fields="config.glanceFields" :show="config.glanceShow" :last="lastMap" @move="moveGlance" />
+      :fields="config.glanceFields" :show="config.glanceShow" :last="lastMap" :config="config" @move="moveGlance" />
     <MapToast :chip="chip" :close-key="config.chipKey || null" :size="toastSize" @close="closeChip" @hold="holdChip" @resize="resizeChip"
       :pos="config.chipPos ?? null" @move="moveChip" />
   </Widget>

@@ -27,7 +27,9 @@ const SHOTS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../
 export interface Rect { x: number, y: number, width: number, height: number }
 
 const FPS = 30
-const OUT_WIDTH = 1920
+// 2560 wide, like the stills: the site shows a clip up to 1280 CSS pixels, so a
+// sharp screen draws it at 2560. Frames are taken at 2x, so this is no upscale.
+const OUT_WIDTH = 2560
 
 // The game's pointer, near enough: a gold arrow with a dark edge.
 const CURSOR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="38" viewBox="0 0 30 38">
@@ -95,10 +97,11 @@ export class Clip {
     this.camera = { x: c.x + (a.x - c.x) * k, y: c.y + (a.y - c.y) * k, width: c.width + (a.width - c.width) * k, height: c.height + (a.height - c.height) * k }
     if (Math.abs(this.camera.width - a.width) < 0.5 && Math.abs(this.camera.x - a.x) < 0.5 && Math.abs(this.camera.y - a.y) < 0.5) this.camera = a
     const cam = this.camera
+    // PNG: JPEG frames smeared the coloured mod text before the encode did.
     // The shot comes at the clip's scale times the device's pixel ratio: this
     // makes it OUT_WIDTH wide.
-    const shot = await this.cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 92, optimizeForSpeed: true, clip: { ...cam, scale: OUT_WIDTH / cam.width / this.view[2] } })
-    const file = path.join(this.dir, `f${String(this.frames.length).padStart(5, '0')}.jpg`)
+    const shot = await this.cdp.send('Page.captureScreenshot', { format: 'png', optimizeForSpeed: true, clip: { ...cam, scale: OUT_WIDTH / cam.width / this.view[2] } })
+    const file = path.join(this.dir, `f${String(this.frames.length).padStart(5, '0')}.png`)
     fs.writeFileSync(file, Buffer.from(shot.data, 'base64'))
     this.frames.push({ file, seconds })
   }
@@ -225,8 +228,10 @@ export class Clip {
     // a new MP4 next to an old WebM.
     const mp4 = path.join(this.dir, 'clip.mp4')
     const webm = path.join(this.dir, 'clip.webm')
-    run([...input, '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', mp4])
-    run([...input, '-c:v', 'libvpx-vp9', '-crf', '36', '-b:v', '0', '-row-mt', '1', '-deadline', 'good', '-cpu-used', '2', webm])
+    // Quality is set for small game text: at CRF 24 / 36 the tooltip lines turned
+    // to mush. The site loads a clip only when its slide shows (preload="none").
+    run([...input, '-c:v', 'libx264', '-preset', 'slow', '-tune', 'animation', '-crf', '17', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', mp4])
+    run([...input, '-c:v', 'libvpx-vp9', '-crf', '31', '-b:v', '0', '-row-mt', '1', '-deadline', 'good', '-cpu-used', '2', webm])
     run(['-i', this.frames[this.posterFrame].file, '-vf', `scale=${OUT_WIDTH}:${OUT_WIDTH * 9 / 16}:flags=lanczos`, '-c:v', 'libwebp', '-quality', '86', path.join(SHOTS, `${this.name}.webp`)])
     fs.copyFileSync(mp4, path.join(CLIPS, `${this.name}.mp4`))
     fs.copyFileSync(webm, path.join(CLIPS, `${this.name}.webm`))

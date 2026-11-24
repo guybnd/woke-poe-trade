@@ -81,6 +81,31 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect(panel.locator('tr', { hasText: 'Chaos Orb' })).toContainText('340')
     await expect(panel.getByText('Dump', { exact: true }).first()).toBeVisible()
     await overlay.snap('net worth after a read')
+
+    // The shared profit line: click the price to type yours (gold, a pin),
+    // leave a row out (it stays, struck, "left out"), Undo, and the Changed
+    // chip lists what you changed. Then put it all back.
+    const chaosRow = panel.locator('tr[data-nw-row]', { hasText: 'Chaos Orb' })
+    await chaosRow.locator('[data-nw-price]').click()
+    const priceBox = chaosRow.getByRole('spinbutton')
+    await priceBox.fill('0.01')
+    await priceBox.press('Enter')
+    await expect(chaosRow.locator('[data-nw-price] .fa-thumbtack')).toBeVisible()
+    const changed = panel.locator('[data-nw-changed]')
+    await expect(changed).toContainText('Changed 1')
+    await chaosRow.hover()
+    await chaosRow.locator('[data-line-out]').click()
+    await expect(chaosRow).toContainText('left out')
+    await expect(changed).toContainText('Changed 1')
+    await overlay.snap('net worth row left out')
+    await overlay.page.getByRole('button', { name: 'Undo' }).last().click()
+    await expect(chaosRow).not.toContainText('left out')
+    await chaosRow.hover()
+    await chaosRow.locator('[data-line-more]').click()
+    await overlay.page.getByRole('menuitem', { name: "Back to poe.ninja's price" }).click()
+    await expect(chaosRow.locator('[data-nw-price] .fa-thumbtack')).toHaveCount(0)
+    await expect(changed).toHaveCount(0)
+    await overlay.page.mouse.move(0, 0)
     expect(fakeApp.site.requests.some(u => u.includes('tabIndex=1'))).toBe(true)
 
     // Sections fold to their title line, and the bar under the middle row
@@ -104,8 +129,9 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect.poll(async () => Math.round((await row.boundingBox())!.height)).toBeLessThan(before + 10)
     // Folded, Where it is keeps its title and drops its rows.
     const where = panel.getByRole('button', { name: 'Where it is' })
-    // A category row: a button with its share bar (an <i>) right inside.
-    const catRows = panel.locator('button[aria-pressed]:has(> i)')
+    // A category row: a button with its share bar (an <i>) right inside
+    // (not a row's leave-out button, which is one too).
+    const catRows = panel.locator('button[aria-pressed]:not([data-line-out]):has(> i)')
     await expect(where).toHaveAttribute('aria-expanded', 'true')
     expect(await catRows.count()).toBeGreaterThan(0)
     await where.click()
@@ -174,7 +200,8 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await editor.locator('[data-run-edit-save]').click()
     await expect(usedRow).toContainText('3 ×')
     await usedRow.hover()
-    await usedRow.getByRole('button', { name: /^Reset / }).click()
+    await usedRow.locator('[data-line-more]').click()
+    await overlay.page.getByRole('menuitem', { name: 'Back to as read' }).click()
     await expect(usedRow).not.toContainText('3 ×')
     // A cost by hand, per map (Out column).
     // Typing suggests items with art and price (our own list: the browser's
@@ -196,10 +223,12 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     // A long shot: left out, then counted again.
     const cameRow = card.locator('[data-run-came]').first()
     await cameRow.hover()
-    await cameRow.locator('[data-run-leave-out]').click()
+    await cameRow.locator('[data-line-out]').click()
     await expect(panel.locator('[data-run-left-out]')).toBeVisible()
+    await expect(cameRow).toContainText('left out')
+    await expect(card.locator('[data-run-changed]')).toContainText('Changed 1')
     await overlay.snap('net worth strategy run')
-    await cameRow.locator('[data-run-leave-out]').click()
+    await cameRow.locator('[data-line-out]').click()
     await expect(panel.locator('[data-run-left-out]')).toHaveCount(0)
     // Your count on a row.
     await cameRow.hover()
