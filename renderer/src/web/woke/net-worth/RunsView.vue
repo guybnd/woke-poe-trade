@@ -161,7 +161,7 @@ import { tipFor } from './tips'
 import type { TipIndex } from './tips'
 import { span } from './play-time'
 import Coin from './Coin.vue'
-import { compareRows, countLabel, shownMaps, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, smallSample, sortCompare, tallyRows, tallyValue, topDrop, unitOf, SAMPLE_MIN_RUNS } from './runs'
+import { compareRows, countLabel, shownFights, shownMaps, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, smallSample, sortCompare, tallyRows, tallyValue, topDrop, unitOf, SAMPLE_MIN_RUNS } from './runs'
 import { kitPrice } from './run-kit'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
@@ -320,7 +320,7 @@ const totals = computed(() => {
   // history has for it (only a read for this run, never another run's).
   const read = runMaps.value.id === r.id ? mapsIn(r, runMaps.value.maps, now) : null
   const maps = shownMaps(r, read)
-  return runTotals(r, props.points, { maps, fights: spent.value?.fights ?? r.final?.fights ?? 0 }, now, mapCostKeys.value, outside.value)
+  return runTotals(r, props.points, { maps, fights: shownFights(r, spent.value) }, now, mapCostKeys.value, outside.value)
 })
 const unit = computed(() => totals.value ? unitOf(totals.value.maps, totals.value.fights) : 'map')
 // Small sample (pick S1): few maps, or one drop over half the profit.

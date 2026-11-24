@@ -92,7 +92,8 @@ const round = (n: number) => Math.round(n * 10000) / 10000
 const priceText = (chaos: number) => props.divine && chaos >= props.divine ? `${fmt(chaos / props.divine)} div` : `${chaos < 10 ? round(chaos) : fmt(chaos)}c`
 function setUnit (u: 'c' | 'div') {
   if (u === priceUnit.value) return
-  const chaos = each.value === '' ? null : fromUnit(Number(each.value))
+  // A live price converts from its chaos value (it stays live).
+  const chaos = autoEach.value ?? (each.value === '' ? null : fromUnit(Number(each.value)))
   priceUnit.value = u
   if (chaos != null) each.value = round(inUnit(chaos))
 }
@@ -187,6 +188,7 @@ function close () {
   name.value = ''
   count.value = 1
   each.value = ''
+  priceUnit.value = 'c'
   autoEach.value = null
   picked.value = null
   typed.value = false

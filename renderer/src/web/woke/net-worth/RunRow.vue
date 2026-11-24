@@ -81,7 +81,9 @@ const inUnit = (chaos: number) => unit.value === 'div' && props.divine ? chaos /
 const fromUnit = (n: number) => unit.value === 'div' && props.divine ? n * props.divine : n
 function setUnit (u: 'c' | 'div') {
   if (u === unit.value) return
-  const chaos = fromUnit(Number(eachDraft.value) || 0)
+  // Untouched: convert the price it opened with (no rounding drift).
+  const same = Number(eachDraft.value) === round(inUnit(opened.eachChaos))
+  const chaos = same ? opened.eachChaos : fromUnit(Number(eachDraft.value) || 0)
   unit.value = u
   eachDraft.value = round(inUnit(chaos))
 }

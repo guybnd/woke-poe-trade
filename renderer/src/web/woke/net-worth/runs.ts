@@ -499,6 +499,13 @@ export function shownMaps (run: Pick<Run, 'stoppedAt' | 'final'>, read: number |
   return read ?? 0
 }
 
+// Boss fights the same way: a stopped run keeps what Stop saved (Client.txt
+// may no longer cover it and read 0).
+export function shownFights (run: Pick<Run, 'stoppedAt' | 'final'>, read: { fights: number } | null): number {
+  if (run.stoppedAt != null && run.final) return Math.max(run.final.fights ?? 0, read?.fights ?? 0)
+  return read?.fights ?? 0
+}
+
 // The saved doc: the run going now and finished ones, newest first.
 export interface RunsDoc { live: Run | null, done: Run[] }
 
