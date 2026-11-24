@@ -2,10 +2,14 @@
 // open, never just because the overlay is open over a price check or trade search.
 import { test, expect } from './harness'
 
-const widgets = [{ wmType: 'woke-session-story', glance: true }]
+// The default config already has the session story widget (its bar on by
+// default since the veteran review): turn it on explicitly, not a second copy.
+function patch (c: { widgets: Array<{ wmType: string, glance?: boolean }> }) {
+  c.widgets.find(w => w.wmType === 'woke-session-story')!.glance = true
+}
 
 test('the glance bar handle stays hidden with the overlay open over a price check', async ({ overlay }) => {
-  await overlay.boot({ widgets })
+  await overlay.boot({ patch })
   const bar = overlay.page.locator('[data-glance-bar]')
 
   // Price check first (hotkeys only work while the game has focus), then the overlay.
@@ -18,7 +22,7 @@ test('the glance bar handle stays hidden with the overlay open over a price chec
 })
 
 test('the glance bar handle shows with Settings open, not with only the overlay open', async ({ overlay }) => {
-  await overlay.boot({ widgets, overlayActive: true })
+  await overlay.boot({ patch, overlayActive: true })
   const bar = overlay.page.locator('[data-glance-bar]')
   const handle = overlay.page.locator('[data-glance-drag]')
 

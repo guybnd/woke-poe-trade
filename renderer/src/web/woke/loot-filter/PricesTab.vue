@@ -79,7 +79,8 @@
         </div>
         <div :class="$style.pickBar">
           <input type="checkbox" :class="$style.check" :checked="skipPicks.all.value" :indeterminate="skipPicks.some.value" aria-label="Pick every item under Not moved" :title="`Pick all ${skipList.length} (with the filters above), or none`" @change="skipPicks.allOrNone">
-          <span class="w-group-label">{{ skipPicks.picked.value.length }} of {{ skipList.length }} picked</span>
+          <!-- A count beside its box, not a heading: "Not moved" above is that. -->
+          <span class="text-xs w-dim">{{ skipPicks.picked.value.length }} of {{ skipList.length }} picked</span>
           <span class="grow" />
           <WButton v-if="pickedLocked.length" size="sm" variant="ghost" icon="fas fa-unlock" title="Prices may move them again. Any move you made by hand goes too." @click="unlockMany(pickedLocked)">Unlock {{ pickedLocked.length }}</WButton>
           <WButton v-if="pickedUnsure.length" size="sm" variant="ghost" title="Move them to the tier their price says, though the price may not be real" @click="moveAnywayMany(pickedUnsure)">Move {{ pickedUnsure.length }} anyway<template v-if="pickedHides"> · {{ pickedHides }} would hide</template></WButton>
@@ -575,10 +576,14 @@ function undoEditStep<T extends { id: number }> (now: T[], step: EditStep<T>): T
 <style module>
 .wrap {
   max-height: min(36rem, calc(70vh / var(--w-ui-scale, 1)));
+  /* Fills the window once it's resized (WPanel's data-w-sized). */
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 6px 0 10px;
   display: flex;
   flex-direction: column;
 }
+:global([data-w-sized]) .wrap { max-height: none; }
 .head {
   display: flex;
   align-items: center;

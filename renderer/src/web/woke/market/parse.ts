@@ -1,5 +1,6 @@
 import { SKIPPED_TYPES, typeForSlug } from './types'
 import type { PriceItem } from './types'
+import { categoryOfType, heldPrice } from '../shared/price-trust'
 
 // The shape APT keeps after splitting poe.ninja's dense overview:
 // one chunk per category, each holding many `{"name":…,"variant":…,"chaos":…,"graph":[…]}` objects.
@@ -53,8 +54,23 @@ export function parseDenseChunks (chunks: DenseChunk[]): PriceItem[] {
   for (let c = 0; c + 1 < starts.length; c++) {
     const from = starts[c]
     const to = starts[c + 1]
-    const gapsOf = categoryGaps(graphs.slice(from, to), days)
+    const own = graphs.slice(from, to)
+    const gapsOf = categoryGaps(own, days)
     for (let i = from; i < to; i++) out[i].gaps = gapsOf(graphs[i])
+    // A price that looks fake (shared/price-trust.ts): kept as poe.ninja has
+    // it, marked so the windows reading the snapshot count the usual price
+    // instead. Days as the category has them: on a category's first tracked
+    // day every row is priced on one day only. Gear is left alone: its lines
+    // are sparse, and Net worth lets a gear step go after 6 hours, which a
+    // snapshot can't time.
+    const ownDays = Math.min(days, leagueDays(own))
+    for (let i = from; i < to; i++) {
+      const category = categoryOfType(out[i].type)
+      if (category === 'gear') continue
+      const g = graphs[i]
+      const held = heldPrice(out[i].chaos, Array.isArray(g) ? g as Array<number | null> : undefined, ownDays, category)
+      if (held) out[i].held = held
+    }
   }
   return out
 }
@@ -145,4 +161,22 @@ export function pricedOnlyToday (graph: unknown, days = 7): boolean {
 export function findDivinePrice (items: PriceItem[]): number | null {
   const divine = items.find(i => i.type === 'Currency' && i.name === 'Divine Orb' && !i.variant)
   return divine && divine.chaos >= 1 ? divine.chaos : null
+}
+
+// The prices windows count: a held one (parseDenseChunks) at its usual price,
+// left out when it has none. The same array when nothing is held.
+export function countedPrices (items: PriceItem[]): PriceItem[] {
+  if (!items.some(i => i.held)) return items
+  const out: PriceItem[] = []
+  for (const i of items) {
+    if (!i.held) out.push(i)
+    else if (i.held.chaos != null && i.held.chaos > 0) out.push({ ...i, chaos: i.held.chaos })
+  }
+  return out
+}
+
+// A saved snapshot with the prices windows count (countedPrices).
+export function countedSnapshot<T extends { items: PriceItem[] }> (snap: T): T {
+  const items = countedPrices(snap.items)
+  return items === snap.items ? snap : { ...snap, items }
 }

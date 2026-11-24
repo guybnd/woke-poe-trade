@@ -25,6 +25,7 @@
 
     <section v-if="rows.length" :class="$style.chips">
       <WChip v-if="sum.stale" clickable :active="filter === 'stale'" :title="`Unsold ${staleDays} days or more`" @click="toggle('stale')"><span class="w-warn">Stale {{ sum.stale }}</span></WChip>
+      <WChip v-if="toReprice" clickable :active="filter === 'reprice'" title="Listings you set a new price on from the price check: reprice them at Faustus" @click="toggle('reprice')"><span class="w-warn">To reprice {{ toReprice }}</span></WChip>
       <WChip v-if="undercut" clickable :active="filter === 'undercut'" title="Your last Check found someone cheaper" @click="toggle('undercut')"><span class="w-down">Undercut {{ undercut }}</span></WChip>
       <WChip v-if="over" clickable :active="filter === 'over'" title="Asking 10% or more over poe.ninja's price" @click="toggle('over')">Overpriced {{ over }}</WChip>
       <WChip v-for="t in types" :key="t.id" clickable :active="filter === t.id" @click="toggle(t.id)">{{ t.label }} {{ t.count }}</WChip>
@@ -38,7 +39,7 @@
             <th>Asking</th>
             <th title="poe.ninja's price now, for the whole stack. ~ is rough: its rolls, corruption or a thin market move the price">Suggest</th>
             <th title="Your asking price against poe.ninja's">vs ninja</th>
-            <th title="Still cheapest? One trade search on a click: where your price ranks among other instant buyout listings of it">Cheapest?</th>
+            <th title="Still cheapest? Price check a listing with its own mods (your filters) to rank your price, then set a new one at the foot. The bolt is a quick search by name">Cheapest?</th>
             <th :title="`Since you first listed it (a reprice doesn't reset it). Orange: ${staleDays} days or more`">Listed</th>
           </tr>
         </thead>
@@ -47,12 +48,18 @@
             <td :class="$style.left">
               <span :class="$style.name"><img v-if="r.item.icon" :src="r.item.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(r.item)" class="w-trunc" :style="{ color: colourOf(r.item.frameType) }">{{ saleName(r.item) }}</span></span>
             </td>
-            <td class="w-num" :class="$style.ask">{{ fmt(r.item.price.amount) }} {{ r.item.price.currency }}</td>
+            <td class="w-num" :class="$style.ask">
+              {{ fmt(r.item.price.amount) }} {{ r.item.price.currency }}<span v-if="targetOf(r)" class="w-warn" :title="`You set ${priceLabel(targetOf(r)!)} from the price check: reprice it at Faustus. It clears once a Refresh sees that price`" data-listed-target> → {{ priceLabel(targetOf(r)!) }}</span>
+            </td>
             <td class="w-num" :class="r.confidence === 'rough' ? 'w-dim' : ''" :title="suggestTitle(r)">{{ suggestText(r) }}</td>
             <td class="w-num" :class="vsTone(r)">{{ vsText(r) }}</td>
             <td :class="$style.check" data-listed-check>
-              <span v-if="!canCheck(r.item)" class="w-dim" title="Rare gear: a search by name can't compare it. Price check it in game">—</span>
-              <span v-else-if="busy.has(r.item.id)" class="w-dim">Checking…</span>
+              <span v-if="busy.has(r.item.id)" class="w-dim">Checking…</span>
+              <template v-else-if="canReprice(r.item)">
+                <WButton v-if="canCheck(r.item)" size="sm" variant="ghost" :class="[$style.quick, errors[r.item.id] ? `w-down ${$style.failed}` : '']" :title="errors[r.item.id] ? `Quick rank failed: ${errors[r.item.id]}. Click to try again` : 'Quick rank: one trade search by name, instant buyout only. It ignores the rolls'" aria-label="Quick rank" data-listed-quick @click="check(r)"><i class="fas fa-bolt" /></WButton>
+                <WButton size="sm" variant="ghost" :class="checkOf(r) ? (checkOf(r)!.cheaper ? 'w-down' : 'w-up') : ''" :title="checkOf(r) ? `${checkTitle(r)}\nClick to price check it again` : 'Price check this listing with its own mods: tune the filters, then set a new price at the foot'" data-listed-reprice @click="reprice(r, $event)">{{ checkOf(r) ? checkText(r) : 'Price check' }}</WButton>
+              </template>
+              <span v-else-if="!canCheck(r.item)" class="w-dim" title="Rare gear read before its mods were kept: Refresh, or price check it in game">—</span>
               <WButton v-else-if="checkOf(r)" size="sm" variant="ghost" :class="checkOf(r)!.cheaper ? 'w-down' : 'w-up'" :title="checkTitle(r)" @click="check(r)">{{ checkText(r) }}</WButton>
               <WButton v-else size="sm" variant="ghost" :class="errors[r.item.id] ? 'w-down' : ''" :title="errors[r.item.id] ? `Check failed: ${errors[r.item.id]}. Click to try again` : 'One trade search: where your price ranks among other instant buyout listings of it'" @click="check(r)">{{ errors[r.item.id] ? 'Retry' : 'Check' }}</WButton>
             </td>
@@ -71,7 +78,7 @@
 // Sales › Listed (pending.ts): what's at Faustus and not sold, its asking
 // price against poe.ninja, and how long it has sat.
 import { computed, shallowRef, watch } from 'vue'
-import { WButton, WChip, WEmpty, WToggle, vItemTip } from '../ui'
+import { WButton, WChip, WEmpty, WToggle, toast, vItemTip } from '../ui'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import Coin from './Coin.vue'
 import { saleTip } from './sale-tip'
@@ -79,7 +86,10 @@ import { saleName, saleType, SALE_TYPES } from './sales'
 import type { SaleType } from './sales'
 import { ninjaPriced, rates, sales } from './sales-store'
 import { canCheck, checkFor, rankText } from './cheapest'
-import { cheapestBusy, cheapestDoc, cheapestErrors, checkCheapest, loadCheapest } from './cheapest-store'
+import { cheapestBusy, cheapestDoc, cheapestErrors, checkCheapest, loadCheapest, repricing } from './cheapest-store'
+import { priceLabel, targetOpen } from './listed-target'
+import { saleItem } from './sale-tip'
+import type { Listing } from './faustus'
 import { loadPending, pendingDoc, pendingReading } from './pending-store'
 import { ageText, pendingRows, pendingTotals, sortPending, DEFAULT_STALE_DAYS } from './pending'
 import { listedOpenStale } from './pending-glance'
@@ -103,13 +113,14 @@ const sum = computed(() => pendingTotals(rows.value))
 const limit = shallowRef(100)
 
 // Filter chips: stale, overpriced, or one type.
-type Filter = 'stale' | 'over' | 'undercut' | SaleType
+type Filter = 'stale' | 'over' | 'undercut' | 'reprice' | SaleType
 const filter = shallowRef<Filter | null>(null)
 const OVER = 0.1
 const isOver = (r: PendingRow) => r.vs != null && r.vs >= OVER
 const over = computed(() => rows.value.filter(isOver).length)
 const isUndercut = (r: PendingRow) => (checkOf(r)?.cheaper ?? 0) > 0
 const undercut = computed(() => rows.value.filter(isUndercut).length)
+const toReprice = computed(() => rows.value.filter(r => targetOf(r) != null).length)
 const types = computed(() => SALE_TYPES.map(t => ({ ...t, count: rows.value.filter(r => saleType(r.item) === t.id).length })).filter(t => t.count > 0))
 watch(listedOpenStale, (on) => {
   if (!on) return
@@ -121,14 +132,14 @@ function toggle (f: Filter) { filter.value = filter.value === f ? null : f; limi
 const shown = computed(() => {
   const f = filter.value
   if (!f) return sorted.value
-  return sorted.value.filter(r => f === 'stale' ? r.stale : f === 'over' ? isOver(r) : f === 'undercut' ? isUndercut(r) : saleType(r.item) === f)
+  return sorted.value.filter(r => f === 'stale' ? r.stale : f === 'over' ? isOver(r) : f === 'undercut' ? isUndercut(r) : f === 'reprice' ? targetOf(r) != null : saleType(r.item) === f)
 })
 // The head's numbers: the rows the chip picked, or all of them.
 const head = computed(() => filter.value ? pendingTotals(shown.value) : sum.value)
 const filterLabel = computed(() => {
   const f = filter.value
   if (!f) return ''
-  return f === 'stale' ? 'stale' : f === 'over' ? 'overpriced' : f === 'undercut' ? 'undercut' : SALE_TYPES.find(t => t.id === f)?.label.toLowerCase() ?? ''
+  return f === 'stale' ? 'stale' : f === 'over' ? 'overpriced' : f === 'undercut' ? 'undercut' : f === 'reprice' ? 'to reprice' : SALE_TYPES.find(t => t.id === f)?.label.toLowerCase() ?? ''
 })
 const headTitle = computed(() => filter.value
   ? `Asking ${inChaos(head.value.askChaos)} for the picked chip (all ${sum.value.count}: ${inChaos(sum.value.askChaos)}). Click the chip again for all`
@@ -181,14 +192,38 @@ function checkTitle (r: PendingRow) {
   const c = checkOf(r)!
   const lines = [
     c.total === 0
-      ? 'Nobody else lists it for instant buyout'
+      ? (c.priceCheck ? 'Nobody else in your price check' : 'Nobody else lists it for instant buyout')
       : c.cheaper ? `${c.cheaper}${c.more ? '+' : ''} cheaper than your ${fmt(r.item.price.amount)} ${r.item.price.currency}` : 'Nobody asks less than you',
     ...(c.asks.length ? [`Cheapest${r.item.stack > 1 ? ', each' : ''}: ${c.asks.map(priceText).join(' · ')}`] : []),
-    `${c.total} other instant buyout ${c.total === 1 ? 'listing' : 'listings'} · checked ${agoPhrase(c.at)}`,
+    c.priceCheck
+      ? `${c.total} other ${c.total === 1 ? 'listing' : 'listings'} in your price check ${agoPhrase(c.at)}`
+      : `${c.total} other instant buyout ${c.total === 1 ? 'listing' : 'listings'} · checked ${agoPhrase(c.at)}`,
     ...(c.rough ? ['Rough: its rolls, corruption or mods change the price'] : []),
-    'Click to check again (one trade search)'
+    ...(canReprice(r.item) ? [] : ['Click to check again (one trade search)'])
   ]
   return lines.join('\n')
+}
+// Reprice (Guy's R1): the price check opens on the listing, and its foot
+// sets a new price, shown here until a read sees it.
+function targetOf (r: PendingRow) {
+  const t = checkDoc.value?.targets?.[r.item.id]
+  return targetOpen(t, r.item) ? t : null
+}
+// Rares only with their mods (a read after #815 keeps them).
+function canReprice (l: Listing) {
+  return !(l.frameType === 1 || l.frameType === 2) || l.tip != null
+}
+async function reprice (r: PendingRow, e: MouseEvent) {
+  const l = r.item
+  repricing.value = { league: props.league, id: l.id, at: Date.now() }
+  // Read before the await: currentTarget is gone after it.
+  const box = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const at = { x: window.screenX + box.x + box.width / 2, y: window.screenY + box.y + box.height / 2 }
+  const [{ openPriceCheck }, { pobMenuRef }] = await Promise.all([import('../ui/tooltip/item-price-check'), import('../pob-builds/item-menu-ref')])
+  const unique = l.frameType === 3 || l.frameType === 9
+  const ref = pobMenuRef(saleItem(l)) ?? { name: l.name || l.typeLine, ...(unique ? { rarity: 'unique' as const } : {}) }
+  const opened = await openPriceCheck(ref, at).catch(() => false)
+  if (!opened) { repricing.value = null; toast("Can't price check this one by name: Ctrl+D it at Faustus in game") }
 }
 function colourOf (frame: number) {
   switch (frame) {
@@ -212,7 +247,8 @@ function colourOf (frame: number) {
 .scroll { max-height: 420px; overflow-y: auto; overscroll-behavior: contain; }
 .table { width: 100%; border-collapse: collapse; font-size: var(--w-fs-sm); table-layout: fixed; }
 .table th { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); font-weight: 500; text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--w-line-strong); white-space: nowrap; position: sticky; top: 0; background: var(--w-panel-solid); }
-.table th:nth-child(1) { width: 34%; }
+.table th:nth-child(1) { width: 26%; }
+.table th:nth-child(5) { width: 20%; }
 .table td { padding: 2px 6px; text-align: right; border-bottom: 1px solid var(--w-line-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .table tbody tr:hover td { background: var(--w-panel-2); }
 .left { text-align: left !important; }
@@ -220,6 +256,8 @@ function colourOf (frame: number) {
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .ask { color: var(--w-gold); }
 .check { text-align: right; }
+.quick { opacity: 0; padding-inline: 2px; }
+.table tbody tr:hover .quick, .quick:focus-visible, .quick.failed { opacity: 1; }
 .note { padding: 4px var(--w-pad); }
 .autoLine { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; justify-content: space-between; }
 .chips { display: flex; gap: var(--w-s1); padding: 6px var(--w-pad); flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--w-line); }

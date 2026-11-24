@@ -1,8 +1,16 @@
 <template>
-  <div ref="box" :class="$style.chart" :style="height ? { height: `${height}px` } : undefined" @mousemove="onMove" @mouseleave="hover = null" @click="onClick">
+  <div ref="box" :class="$style.chart" data-ledger-chart :style="height ? { height: `${height}px` } : undefined" @mousemove="onMove" @mouseleave="hover = null" @click="onClick">
+    <!-- Maps (pick D): a faint column per map, behind the line; the best one named. -->
+    <span v-for="m in mapCols" :key="'m' + m.from" :class="[$style.mapCol, { [$style.mapBest]: m.best }]" :style="{ left: m.x + '%', width: m.w + '%' }" />
+    <span v-if="bestMap" :class="$style.mapLabel" :style="bestMap.x > 70 ? { right: (100 - bestMap.x - bestMap.w) + '%' } : { left: bestMap.x + '%' }">{{ bestMap.name }} {{ signed(bestMap.gainDiv!) }}<Coin /></span>
     <svg :viewBox="`0 0 ${W} ${H}`" preserveAspectRatio="none" :class="$style.svg" aria-hidden="true">
       <template v-if="mode === 'total'">
         <path v-if="area" :d="area" :class="$style.area" />
+        <!-- At Faustus (pick A): a band on top of the stash, so its top edge is all you own. -->
+        <template v-if="band">
+          <path :d="band.d" :class="$style.listed" data-listed-band />
+          <path :d="band.top" :class="$style.listedTop" vector-effect="non-scaling-stroke" />
+        </template>
         <path v-if="line" :d="line" :class="$style.line" vector-effect="non-scaling-stroke" />
       </template>
       <template v-else>
@@ -10,27 +18,32 @@
       </template>
       <line v-if="goalY != null" x1="0" :x2="W" :y1="goalY" :y2="goalY" :class="$style.goal" vector-effect="non-scaling-stroke" />
     </svg>
-    <span v-for="m in marks" :key="m.at" :class="$style.mark" :style="{ left: m.x + '%', top: m.y + '%' }" />
-    <!-- Purchases (spend.ts): a dashed line, so a drop that isn't a loss reads as one. -->
-    <span v-for="m in spends" :key="'s' + m.at" :class="$style.spend" :style="{ left: m.x + '%' }" />
     <!-- The live run's start (runs.ts): a gold line where it counts from. -->
     <span v-if="runLine != null" :class="$style.runStart" :style="{ left: runLine + '%' }" />
-    <!-- Sales (sales.ts): a gold dot on the line where each sold. -->
-    <span v-for="(m, i) in saleDots" :key="'d' + i + ':' + m.at" :class="$style.sale" :style="{ left: m.x + '%', top: m.y + '%' }" />
+    <!-- Sales (Guy's pick S2, 2026-11-24): a small tick on the bottom edge per
+         slot of time with a sale, off the line; the hover card counts them. -->
+    <span v-for="(m, i) in saleTicks" :key="'t' + i + ':' + m.at" :class="$style.saleTick" :style="{ left: m.x + '%' }" data-sale-tick />
     <template v-if="shown">
       <span :class="$style.dot" :style="{ left: shown.x + '%', top: shown.y + '%' }" />
       <!-- Follows the mouse; a click keeps it open (pinned), and then its item
            names take the item tooltip and menu. -->
       <div ref="tipEl" :class="[$style.tip, place.below ? $style.below : $style.above, $style[place.align], { [$style.pinned]: !!pinned, [$style.wide]: !!tipBelow }]"
         :style="{ left: shown.x + '%', top: shown.y + '%' }" data-chart-card>
-        <b class="w-num">{{ when(shown.p.at) }} · {{ fmt(shown.p.div) }}<Coin /><template v-if="shown.p.netDiv != null"> · {{ signed(shown.p.netDiv) }}<Coin /></template></b>
-        <span v-if="shown.p.top.length">
-          <template v-for="(t, i) in shown.p.top" :key="i"><span v-item-tip="pinned && tipOf ? topTip(t) : null" :class="{ [$style.item]: !!pinned }">{{ t }}</span><template v-if="i < shown.p.top.length - 1">, </template></template>
+        <b class="w-num">{{ when(shown.p.at) }} · {{ fmt(shown.listed ? shown.p.div + shown.listed : shown.p.div) }}<Coin /><template v-if="shown.p.netDiv != null"> · {{ signed(shown.p.netDiv) }}<Coin /></template></b>
+        <span v-if="shown.listed" class="w-num">Stash {{ fmt(shown.p.div) }}<Coin /> · <span :class="$style.listedText">At Faustus {{ fmt(shown.listed) }}<Coin /></span></span>
+        <span v-if="shownMap">{{ shownMap.name }}<template v-if="shownMap.gainDiv != null"> · {{ signed(shownMap.gainDiv) }}<Coin /></template></span>
+        <!-- Hovered: the totals and what sold. Clicked (pinned): what changed too. -->
+        <span v-if="shownSales.count" :class="$style.saleText" class="w-num">Sold {{ shownSales.count }} {{ shownSales.count === 1 ? 'item' : 'items' }}<template v-if="shownSales.div > 0"> · {{ fmt(shownSales.div) }}<Coin /></template></span>
+        <span v-if="shown.p.spentDiv" :class="$style.spendText">Purchase: {{ fmt(shown.p.spentDiv) }}<Coin />, not counted as a loss</span>
+        <span v-if="shown.p.daily" class="w-dim">That day's last read</span>
+        <!-- What sold shows on hover too (Guy, 2026-11-24). The card ignores the
+             mouse until pinned, so no item tooltip pops over it on hover. -->
+        <span v-for="(x, i) in shownSales.list" :key="'s' + i" :class="$style.soldRow"><span v-item-tip="x.tip ?? null" :class="$style.item">{{ x.text }}</span></span>
+        <span v-if="shownSales.more" class="w-dim">+{{ shownSales.more }} more sold</span>
+        <span v-if="pinned && shown.p.top.length">
+          <template v-for="(t, i) in shown.p.top" :key="i"><span v-item-tip="tipOf ? topTip(t) : null" :class="$style.item">{{ t }}</span><template v-if="i < shown.p.top.length - 1">, </template></template>
         </span>
-        <span v-else-if="shown.p.daily" class="w-dim">That day's last read</span>
-        <span v-if="shownSales.list.length" :class="$style.saleText">Sold: <template v-for="(x, i) in shownSales.list" :key="i"><span v-item-tip="x.tip ?? null">{{ x.text }}</span><template v-if="i < shownSales.list.length - 1">, </template></template><template v-if="shownSales.more"> +{{ shownSales.more }} more</template></span>
-        <span v-if="shown.p.spentDiv" :class="$style.spendText">Purchase: {{ fmt(shown.p.spentDiv) }}<Coin /> spent, not counted as a loss</span>
-        <span v-if="!pinned && (shown.p.top.length && tipOf || (!shown.p.daily && shown.p.netDiv != null && spendAction?.(shown.p.at)))" class="w-dim">Click to keep this open</span>
+        <span v-else-if="!pinned && (shown.p.top.length || (!shown.p.daily && shown.p.netDiv != null && spendAction?.(shown.p.at)))" class="w-dim">Click for what changed</span>
         <!-- Purchases (spend.ts): mark a losing refresh as one, with how much,
              or say a purchase wasn't one. -->
         <div v-if="pinAction" :class="$style.spendBar">
@@ -51,8 +64,8 @@
 </template>
 
 <script setup lang="ts">
-// The net worth line (B1): a point per refresh, big gains marked, hover for
-// what changed. By category (B2): the same points stacked. Goal line (D6).
+// The net worth line (B1): a point per refresh, small gold ticks where things
+// sold, hover for a short card, click for what changed. By category (B2): the same points stacked. Goal line (D6).
 import { computed, onUnmounted, shallowRef, watch } from 'vue'
 import { vItemTip } from '../ui'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
@@ -63,10 +76,11 @@ import { tipPlacement } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { Category } from './valuation'
 import type { SpendMark } from './spend'
+import { groupSales, mapOf } from './chart-marks'
+import type { ChartMap, ChartSale } from './chart-marks'
 
 const props = defineProps<{
   series: SeriesPoint[]
-  big: Set<number>
   mode: 'total' | 'category'
   goalDiv: number | null
   // The item tooltip for a name in a pinned card.
@@ -78,12 +92,17 @@ const props = defineProps<{
   tipBelow?: boolean
   // A clicked point's purchase switch (spend.ts); left out: none.
   spendAction?: (at: number) => { label: string, mark: SpendMark | null } | null
-  // Your sales: a dot each, and the hover card names those since the point before.
-  sales?: Array<{ at: number, text: string, tip?: ItemTipRef }>
+  // Your sales: ticks on the bottom edge, and each point's card counts those since the point before.
+  sales?: ChartSale[]
   // Offer "Start a run from here" on a clicked point (runs.ts).
   runFrom?: boolean
   // The live run's start, drawn as a line.
   runStartAt?: number | null
+  // At Faustus at each point of `series` (pick A), in the chart's unit; left
+  // out or all 0: no band.
+  listed?: number[]
+  // Your maps (pick D): a column each.
+  maps?: ChartMap[]
 }>()
 // Mark or unmark a refresh as a purchase; amount in the chart's unit.
 const emit = defineEmits<{ spend: [at: number, mark: SpendMark | null, amount?: number], run: [at: number] }>()
@@ -107,11 +126,18 @@ const CAT_COLOUR: Record<Category, string> = {
 }
 
 const box = shallowRef<HTMLElement | null>(null)
-type At = { p: SeriesPoint, x: number, y: number }
+type At = { p: SeriesPoint, x: number, y: number, listed: number }
 const hover = shallowRef<At | null>(null)
 // A clicked point's card stays until a click elsewhere, Esc, or new points.
 const pinned = shallowRef<At | null>(null)
-const shown = computed(() => pinned.value ?? hover.value)
+const shown = computed<At | null>(() => {
+  const a = pinned.value ?? hover.value
+  if (!a) return null
+  // Worked out again: the band or the mode can change under a pinned card.
+  const i = props.series.findIndex(p => p.at === a.p.at)
+  if (i < 0) return a
+  return { ...a, y: yOf(props.mode === 'total' ? topOf(i) : sumCats(a.p)) / H * 100, listed: listedOf(i) }
+})
 const tipEl = shallowRef<HTMLElement | null>(null)
 const topTip = (t: string) => { const x = parseTop(t); return props.tipOf!(x.name, Math.abs(x.count)) }
 
@@ -167,9 +193,10 @@ const span = computed(() => {
   const s = props.series
   const t0 = s[0]?.at ?? 0
   const t1 = s[s.length - 1]?.at ?? 1
-  const vals = s.map(p => p.div)
-  let lo = Math.min(...vals)
-  let hi = Math.max(...vals)
+  // The bottom from the stash line, the top from the band's edge: both stay
+  // inside the chart.
+  let lo = Math.min(...s.map(p => p.div))
+  let hi = Math.max(...s.map((p, i) => p.div + (props.mode === 'total' ? listedOf(i) : 0)))
   // The goal joins the scale when it's within reach of the line.
   if (props.goalDiv && props.goalDiv <= hi * 1.5) hi = Math.max(hi, props.goalDiv)
   if (props.mode === 'category') lo = 0
@@ -183,11 +210,24 @@ const place = computed(() => {
   return props.tipBelow ? { ...p, below: true } : p
 })
 
+// At Faustus at point i (0 without a band).
+const hasBand = computed(() => props.mode === 'total' && !!props.listed && props.listed.length === props.series.length && props.listed.some(v => v > 0))
+const listedOf = (i: number) => hasBand.value ? Math.max(0, props.listed![i] ?? 0) : 0
+const topOf = (i: number) => props.series[i].div + listedOf(i)
+
 const xOf = (at: number) => (at - span.value.t0) / (span.value.t1 - span.value.t0) * W
 const yOf = (v: number) => H - PAD - (v - span.value.lo) / (span.value.hi - span.value.lo) * (H - 2 * PAD)
 
 const line = computed(() => props.series.length >= 2 ? 'M' + props.series.map(p => `${xOf(p.at).toFixed(1)},${yOf(p.div).toFixed(1)}`).join(' L') : '')
 const area = computed(() => line.value ? `${line.value} L${W},${H} L0,${H} Z` : '')
+
+const band = computed(() => {
+  const s = props.series
+  if (!hasBand.value || s.length < 2) return null
+  const up = s.map((p, i) => `${xOf(p.at).toFixed(1)},${yOf(topOf(i)).toFixed(1)}`)
+  const down = s.map(p => `${xOf(p.at).toFixed(1)},${yOf(p.div).toFixed(1)}`).reverse()
+  return { d: `M${up.join(' L')} L${down.join(' L')} Z`, top: `M${up.join(' L')}` }
+})
 
 const bands = computed(() => {
   const s = props.series
@@ -202,35 +242,42 @@ const bands = computed(() => {
   })
 })
 
-const goalY = computed(() => props.goalDiv && props.goalDiv <= span.value.hi ? yOf(props.goalDiv) : null)
+// Only while it lies inside the chart (a goal passed long ago would draw under it).
+const goalY = computed(() => props.goalDiv && props.goalDiv <= span.value.hi && props.goalDiv >= span.value.lo ? yOf(props.goalDiv) : null)
 
-const marks = computed(() => props.mode !== 'total'
-  ? []
-  : props.series.filter(p => props.big.has(p.at)).map(p => ({ at: p.at, x: xOf(p.at) / W * 100, y: yOf(p.div) / H * 100 })))
-
-// Each sale on the line, between the points either side of it.
-const saleDots = computed(() => {
-  const s = props.series
-  if (props.mode !== 'total' || s.length < 2 || !props.sales?.length) return []
-  return props.sales.filter(x => x.at >= span.value.t0 && x.at <= span.value.t1).map(x => {
-    const i = s.findIndex(p => p.at >= x.at)
-    const b = s[Math.max(0, i)]
-    const a = s[Math.max(0, i - 1)]
-    const t = b.at === a.at ? 1 : (x.at - a.at) / (b.at - a.at)
-    return { at: x.at, x: xOf(x.at) / W * 100, y: yOf(a.div + (b.div - a.div) * t) / H * 100 }
+// One tick per slot of time with a sale, on the bottom edge (pick S2).
+const saleTicks = computed(() => {
+  if (props.mode !== 'total' || props.series.length < 2 || !props.sales?.length) return []
+  const { t0, t1 } = span.value
+  return groupSales(props.sales.filter(x => x.at >= t0 && x.at <= t1), t0, t1, 48).map(x => ({ at: x.at, x: xOf(x.at) / W * 100 }))
+})
+// The map columns in view, and the best one named.
+const mapCols = computed(() => {
+  const ms = props.maps
+  if (props.mode !== 'total' || props.series.length < 2 || !ms?.length) return []
+  const { t0, t1 } = span.value
+  const inView = ms.filter(m => m.to > t0 && m.from < t1)
+  const best = inView.reduce<ChartMap | null>((b, m) => m.gainDiv != null && m.gainDiv > 0 && (!b || m.gainDiv > b.gainDiv!) ? m : b, null)
+  return inView.map(m => {
+    const a = xOf(Math.max(t0, m.from)) / W * 100
+    const z = xOf(Math.min(t1, m.to)) / W * 100
+    return { ...m, x: a, w: Math.max(0.3, z - a), best: m === best }
   })
 })
-// Each with its own item tooltip; past 3, a count.
+const bestMap = computed(() => mapCols.value.find(m => m.best) ?? null)
+const shownMap = computed(() => shown.value && props.maps?.length && props.mode === 'total' ? mapOf(props.maps, shown.value.p.at) : null)
+// The card names this many sales, dearest first, then "+N more sold".
+const SOLD_LIST = 6
 const shownSales = computed(() => {
   const p = shown.value?.p
-  if (!p || !props.sales?.length) return { list: [], more: 0 }
+  if (!p || !props.sales?.length) return { list: [], more: 0, count: 0, div: 0 }
   const i = props.series.findIndex(q => q.at === p.at)
-  const from = i > 0 ? props.series[i - 1].at : -Infinity
-  const list = props.sales.filter(x => x.at > from && x.at <= p.at)
-  return { list: list.slice(0, 3), more: Math.max(0, list.length - 3) }
+  // The first point counts only sales at its own time, not the whole league before it.
+  const from = i > 0 ? props.series[i - 1].at : p.at - 1
+  const list = props.sales.filter(x => x.at > from && x.at <= p.at).sort((a, b) => (b.div ?? -1) - (a.div ?? -1))
+  return { list: list.slice(0, SOLD_LIST), more: Math.max(0, list.length - SOLD_LIST), count: list.length, div: list.reduce((n, x) => n + (x.div ?? 0), 0) }
 })
 
-const spends = computed(() => props.series.filter(p => p.spentDiv).map(p => ({ at: p.at, x: xOf(p.at) / W * 100 })))
 const runLine = computed(() => {
   const at = props.runStartAt
   if (at == null || props.series.length < 2 || at < span.value.t0 || at > span.value.t1) return null
@@ -243,8 +290,17 @@ function onMove (e: MouseEvent) {
   if (!el || !s.length) return
   const r = el.getBoundingClientRect()
   const at = span.value.t0 + (e.clientX - r.left) / r.width * (span.value.t1 - span.value.t0)
-  const p = s.reduce((best, q) => Math.abs(q.at - at) < Math.abs(best.at - at) ? q : best, s[0])
-  hover.value = { p, x: xOf(p.at) / W * 100, y: yOf(props.mode === 'total' ? p.div : sumCats(p)) / H * 100 }
+  let i = 0
+  s.forEach((q, k) => { if (Math.abs(q.at - at) < Math.abs(s[i].at - at)) i = k })
+  // On a sale tick (within 6 px): the read that counts that sale, the first at or after it.
+  const px = (e.clientX - r.left) / r.width * 100
+  const tick = saleTicks.value.find(t => Math.abs(t.x - px) / 100 * r.width <= 6)
+  if (tick) {
+    const k = s.findIndex(q => q.at >= tick.at)
+    if (k >= 0) i = k
+  }
+  const p = s[i]
+  hover.value = { p, x: xOf(p.at) / W * 100, y: yOf(props.mode === 'total' ? topOf(i) : sumCats(p)) / H * 100, listed: listedOf(i) }
 }
 
 const sumCats = (p: SeriesPoint) => CAT_ORDER.reduce((s, c) => s + p.byCategory[c], 0)
@@ -265,11 +321,15 @@ function when (at: number) {
 .line { fill: none; stroke: var(--w-gold); stroke-width: 1.5; }
 .band { opacity: .55; }
 .goal { stroke: var(--w-up); stroke-width: 1; stroke-dasharray: 4 3; }
-.mark { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--w-up); transform: translate(-50%, -50%); pointer-events: none; }
 .runStart { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--w-gold); opacity: .7; pointer-events: none; }
-.spend { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--w-info); opacity: .8; pointer-events: none; }
 .spendText { color: var(--w-info); }
-.sale { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--w-gold); box-shadow: 0 0 0 1px var(--w-panel-solid); transform: translate(-50%, -50%); pointer-events: none; }
+.saleTick { position: absolute; bottom: 0; width: 2px; height: 7px; margin-left: -1px; background: var(--w-accent); pointer-events: none; }
+.listed { fill: color-mix(in srgb, var(--w-higher) 24%, transparent); }
+.listedTop { fill: none; stroke: var(--w-higher); stroke-width: 1; stroke-dasharray: 3 2; opacity: .85; }
+.listedText { color: var(--w-higher); }
+.mapCol { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--w-fg) 5%, transparent); pointer-events: none; }
+.mapBest { background: color-mix(in srgb, var(--w-gold) 13%, transparent); }
+.mapLabel { position: absolute; top: 1px; display: inline-flex; align-items: center; gap: 2px; padding: 0 2px; font-size: var(--w-fs-xs); line-height: 1.2; color: var(--w-gold); white-space: nowrap; pointer-events: none; }
 .saleText { color: var(--w-gold); }
 .spendBar { display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap; }
 .spendAmount { display: inline-flex; align-items: center; gap: 4px; color: var(--w-dim); }
@@ -285,7 +345,8 @@ function when (at: number) {
 .pinned { pointer-events: auto; border-color: var(--w-gold); }
 /* Below the point, as wide as the chart: never past the dock card's sides. */
 .wide { left: 0 !important; right: 0; width: auto; max-width: none; transform: translate(0, 12px) !important; }
-.item { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
+.pinned .item { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
+.soldRow { padding-left: 8px; }
 .chart { cursor: pointer; }
 .above { --ty: calc(-100% - 10px); }
 .below { --ty: 12px; }

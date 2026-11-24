@@ -1,0 +1,23 @@
+Item Class: Rings
+Rarity: Unique
+The Will of Uul-Netol
+Organic Ring
+--------
+Requirements:
+Level: 42
+--------
+Item Level: 83
+--------
+3% additional Physical Damage Reduction (implicit)
+Cannot roll Modifiers of Non-Physical Damage Types (implicit)
+--------
++18 to Strength
+Adds 8 to 15 Physical Damage
+28% increased Armour
+24% increased Area of Effect of Aura Skills
+30% reduced Reservation Efficiency of Skills
+Increases and Reductions to Physical Damage also apply to Effect of
+Auras from Physical Skills at 12% of their value, up to a maximum of 150%
+--------
+They move and coil, gripped by painful ecstasy,
+all meaning long since lost to dead-eyed lust.

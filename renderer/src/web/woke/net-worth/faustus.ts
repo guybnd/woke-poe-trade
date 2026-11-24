@@ -321,6 +321,7 @@ export interface FetchedListing {
   priceAmount: number
   priceCurrency: string
   stackSize?: number
+  stash?: { name: string, x?: number, y?: number }
   listedItem?: { id?: string, name?: string, typeLine?: string, baseType?: string, frameType?: number, icon?: string, ilvl?: number, corrupted?: boolean, stackSize?: number, properties?: unknown, sockets?: unknown }
 }
 
@@ -375,6 +376,7 @@ export function toListing (r: FetchedListing): Listing | null {
     ...(mapTier ? { mapTier } : {}),
     ...(links >= 5 ? { links } : {}),
     price: { amount: r.priceAmount, currency: r.priceCurrency },
+    ...(r.stash ? { tab: { name: r.stash.name, ...(r.stash.x != null ? { x: r.stash.x } : {}), ...(r.stash.y != null ? { y: r.stash.y } : {}) } } : {}),
     // Gear's mods for its tooltip, as a sale keeps them.
     ...(gear && r.listedItem ? { tip: r.listedItem as Record<string, unknown> } : {})
   }

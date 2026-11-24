@@ -1,3 +1,4 @@
+import type { HeldPrice } from '../shared/price-trust'
 // poe.ninja category slugs (as used by APT's dense overview) mapped to the
 // overview "type" names, which are also the Type column of poe.ninja's
 // per-league data dumps.
@@ -93,6 +94,9 @@ export interface PriceItem {
   // available sign of a thin, easily price-fixed market. Missing on
   // snapshots saved before it was recorded.
   gaps?: number
+  // poe.ninja's price looks fake (shared/price-trust.ts): `chaos` is still
+  // poe.ninja's; the price index counts held.chaos instead (none when null).
+  held?: HeldPrice
 }
 
 // Thin market: poe.ninja had no price on 3+ of the last 7 days.

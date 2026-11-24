@@ -28,9 +28,12 @@ export interface AppPrefs {
   // The player set gpuDrawing themselves. Older files saved every key, so a
   // false there is the old default, not a choice, and reads as the new one.
   gpuDrawingChosen: boolean
+  // Start elevated (a UAC prompt each launch). Offered only when Path of Exile
+  // runs as admin (run-as-admin.ts). Off by default.
+  alwaysAdmin: boolean
 }
 
-const DEFAULTS: AppPrefs = { wizardShown: false, autoUpdate: true, crashPrompt: true, experimental: false, stashReader: false, claudeLink: false, gpuDrawing: true, gpuDrawingChosen: false }
+const DEFAULTS: AppPrefs = { wizardShown: false, autoUpdate: true, crashPrompt: true, experimental: false, stashReader: false, claudeLink: false, gpuDrawing: true, gpuDrawingChosen: false, alwaysAdmin: false }
 
 const file = () => path.join(app.getPath('userData'), 'apt-data', 'woke-app.json')
 
@@ -83,6 +86,12 @@ export function canRestartApp () {
 // would race it. The updater registers how to install and start again instead.
 let installAndRestart: (() => boolean) | null = null
 export function onRestartWithUpdate (fn: () => boolean) { installAndRestart = fn }
+
+// Quitting for another copy to take over (run-as-admin.ts): a downloaded update
+// must not install under it. The updater turns install-on-quit off.
+let plainQuit: (() => void) | null = null
+export function onPlainQuit (fn: () => void) { plainQuit = fn }
+export function preparePlainQuit () { plainQuit?.() }
 
 export function restartApp () {
   if (!canRestartApp()) return

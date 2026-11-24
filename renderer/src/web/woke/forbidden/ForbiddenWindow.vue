@@ -20,21 +20,19 @@
             data-qa="forbidden-row" data-no-item-tip="an ascendancy notable, not an item: its own tooltip says what it does"
             @mouseenter="tip($event, n)" @mouseleave="untip">
             <span :class="$style.name">{{ n.name }}<span v-if="has(n)" :class="$style.dim"> · you have it</span></span>
-            <template v-if="!has(n)">
-              <span v-if="answer(n)?.state === 'done'" :class="$style.pair" data-qa="forbidden-pair">
-                <span v-item-tip="{ name: FLAME }" data-item-tip>Flame</span> {{ fmtOr(answer(n)!.flame) }} +
-                <span v-item-tip="{ name: FLESH }" data-item-tip>Flesh</span> {{ fmtOr(answer(n)!.flesh) }}
-                <b v-if="answer(n)!.total != null">= {{ fmt(answer(n)!.total!) }}</b>
-              </span>
-              <span v-else-if="answer(n)?.state === 'busy'" :class="$style.dim">Searching…</span>
-              <span v-else-if="answer(n)?.state === 'error'" :class="$style.err" :title="answer(n)!.error">Search failed</span>
-              <span v-else-if="estimate(n) != null" :class="$style.est" data-qa="forbidden-estimate" title="poe.ninja's price of both jewels">~{{ fmt(estimate(n)!) }}</span>
-              <span :class="$style.btns" @mouseenter="untip" @mouseleave="(e: MouseEvent) => tip(e, n, (e.currentTarget as HTMLElement).parentElement!)">
-                <WButton size="sm" variant="ghost" data-qa="forbidden-price" :disabled="answer(n)?.state === 'busy'" title="Two trade searches: the cheapest Forbidden Flame and Forbidden Flesh with this notable" @click="price(n)">Price</WButton>
-                <WButton v-item-tip="{ name: FLAME }" data-item-tip size="sm" variant="ghost" data-qa="forbidden-check-flame" @click="check(n, 'flame', $event)">Flame</WButton>
-                <WButton v-item-tip="{ name: FLESH }" data-item-tip size="sm" variant="ghost" data-qa="forbidden-check-flesh" @click="check(n, 'flesh', $event)">Flesh</WButton>
-              </span>
-            </template>
+            <span v-if="answer(n)?.state === 'done'" :class="$style.pair" data-qa="forbidden-pair">
+              <span v-item-tip="{ name: FLAME }" data-item-tip>Flame</span> {{ fmtOr(answer(n)!.flame) }} +
+              <span v-item-tip="{ name: FLESH }" data-item-tip>Flesh</span> {{ fmtOr(answer(n)!.flesh) }}
+              <b v-if="answer(n)!.total != null">= {{ fmt(answer(n)!.total!) }}</b>
+            </span>
+            <span v-else-if="answer(n)?.state === 'busy'" :class="$style.dim">Searching…</span>
+            <span v-else-if="answer(n)?.state === 'error'" :class="$style.err" :title="answer(n)!.error">Search failed</span>
+            <span v-else-if="estimate(n) != null" :class="$style.est" data-qa="forbidden-estimate" title="poe.ninja's price of both jewels">~{{ fmt(estimate(n)!) }}</span>
+            <span :class="$style.btns" @mouseenter="untip" @mouseleave="(e: MouseEvent) => tip(e, n, (e.currentTarget as HTMLElement).parentElement!)">
+              <WButton size="sm" variant="ghost" data-qa="forbidden-price" :disabled="answer(n)?.state === 'busy'" title="Two trade searches: the cheapest Forbidden Flame and Forbidden Flesh with this notable" @click="price(n)">Price</WButton>
+              <WButton v-item-tip="{ name: FLAME }" data-item-tip size="sm" variant="ghost" data-qa="forbidden-check-flame" @click="check(n, 'flame', $event)">Flame</WButton>
+              <WButton v-item-tip="{ name: FLESH }" data-item-tip size="sm" variant="ghost" data-qa="forbidden-check-flesh" @click="check(n, 'flesh', $event)">Flesh</WButton>
+            </span>
           </div>
         </section>
       </div>
@@ -270,7 +268,7 @@ onBeforeUnmount(untip)
 .err { color: var(--w-err, var(--w-r-unique)); }
 .nrow { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-height: 26px; padding: 0 4px; border-bottom: 1px solid var(--w-line-soft); }
 .nrow:hover { background: var(--w-well); }
-.nrow.have { opacity: 0.5; }
+.nrow.have .name { opacity: 0.6; }
 .nrow.focus { box-shadow: inset 2px 0 0 var(--w-gold-hi); }
 .name { flex: 1 1 8rem; min-width: 8rem; color: var(--w-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .est { color: var(--w-gold-hi); font-variant-numeric: tabular-nums; white-space: nowrap; }

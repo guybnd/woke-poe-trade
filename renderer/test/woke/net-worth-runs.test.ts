@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addToTally, cleanDoc, countLabel, emptyRun, leftOf, lineCost, mapsIn, runPerHour, runTotals, tallyFrom, tallyRows, unitOf } from '@/web/woke/net-worth/runs'
+import { addToTally, cleanDoc, countLabel, emptyRun, leftOf, lineCost, mapsIn, shownMaps, shownFights, runPerHour, runTotals, tallyFrom, tallyRows, unitOf } from '@/web/woke/net-worth/runs'
 import type { Run } from '@/web/woke/net-worth/runs'
 import { runsLookup } from '@/web/woke/search/lookups/runs'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
@@ -96,6 +96,53 @@ describe('typed costs', () => {
   })
 })
 
+describe('crafting run (pick B)', () => {
+  const made = (key: string, n = 1) => ({ key, name: key, icon: '', count: n, chaos: 0 })
+  it('an unpriced item that came in is Made until it leaves the stash', () => {
+    let r = run({ kind: 'craft' })
+    r = addToTally(r, { ...diff(T0 + M, [], [line('chaos', 40, 40)]), unpricedIn: [made('R:Glyph Spiral'), made('R:Morbid Band')] })
+    expect(tallyRows(r).made.map(x => x.key)).toEqual(['R:Glyph Spiral', 'R:Morbid Band'])
+    expect(tallyRows(r).came).toEqual([])
+    r = addToTally(r, { ...diff(T0 + 2 * M, [], []), unpricedOut: [made('R:Morbid Band')] })
+    expect(tallyRows(r).made.map(x => x.key)).toEqual(['R:Glyph Spiral'])
+  })
+  it('a price you give a made item counts, and stops counting once it sold', () => {
+    let r = run({ kind: 'craft' })
+    r = addToTally(r, { ...diff(T0 + M, [], [line('chaos', 40, 40)]), unpricedIn: [made('R:Glyph Spiral')] })
+    r = { ...r, edits: { 'tally:R:Glyph Spiral': { each: 45 } } }
+    const pts = [point(T0 + M, -40)]
+    expect(runTotals(r, pts, 0, T0 + H).profitChaos).toBe(5)
+    r = addToTally(r, { ...diff(T0 + 2 * M, [], []), unpricedOut: [made('R:Glyph Spiral')] })
+    expect(runTotals(r, pts, 0, T0 + H).profitChaos).toBe(-40)
+  })
+  it('a count edit on a made item stops counting once it sold', () => {
+    let r = run({ kind: 'craft' })
+    r = addToTally(r, { ...diff(T0 + M, [], []), unpricedIn: [made('M:Cobalt Jewel', 3)] })
+    r = { ...r, edits: { 'tally:M:Cobalt Jewel': { count: 1, each: 50 } } }
+    expect(runTotals(r, [], 0, T0 + H).profitChaos).toBe(50)
+    r = addToTally(r, { ...diff(T0 + 2 * M, [], []), unpricedOut: [made('M:Cobalt Jewel', 3)] })
+    expect(runTotals(r, [], 0, T0 + H).profitChaos).toBe(0)
+  })
+  it('a made item priced later and sold is not a loss, nor under Used', () => {
+    let r = run({ kind: 'craft' })
+    r = addToTally(r, { ...diff(T0 + M, [], []), unpricedIn: [made('R:Glyph Spiral')] })
+    // Set my price 45, then it sells: the read loses 45.
+    r = addToTally(r, diff(T0 + 2 * M, [], [line('R:Glyph Spiral', 1, 45)]))
+    expect(runTotals(r, [point(T0 + 2 * M, -45)], 0, T0 + H).profitChaos).toBe(0)
+    expect(tallyRows(r).used).toEqual([])
+    expect(tallyRows(r).made).toEqual([])
+  })
+  it('a map run keeps no unpriced lines', () => {
+    const r = addToTally(run(), { ...diff(T0 + M, [], []), unpricedIn: [made('R:Junk')] })
+    expect(r.tally).toEqual({})
+  })
+  it('per hour counts hideout time as play for a crafting run', () => {
+    const split = { map: 0, play: 0, hub: H, off: 0 }
+    expect(runPerHour(100, H, split, 'play')).toBeNull()
+    expect(runPerHour(100, H, split, 'play', true)).toBeCloseTo(100)
+  })
+})
+
 describe('tally', () => {
   it('adds each read once, only inside the run', () => {
     let r = run()
@@ -185,5 +232,31 @@ describe('Ctrl+Space run card', () => {
     expect(cells).toContain('Boss fights: 4')
     expect(cells).toContain('Per fight: +200 c')
     expect(cells).toContain('Cost per fight: 50 c')
+  })
+})
+
+describe('shownMaps', () => {
+  const final = { profitChaos: 0, maps: 19, perMapChaos: null, perHourChaos: null }
+  it('a stopped run keeps the count Stop saved, even before (or without) a read for it', () => {
+    expect(shownMaps({ stoppedAt: 10, final }, null)).toBe(19)
+    // Another run's maps read 0 in this window: never below what Stop saved.
+    expect(shownMaps({ stoppedAt: 10, final }, 0)).toBe(19)
+    expect(shownMaps({ stoppedAt: 10, final }, 20)).toBe(20)
+  })
+  it('the live run counts what was read for it', () => {
+    expect(shownMaps({}, 13)).toBe(13)
+    expect(shownMaps({}, null)).toBe(0)
+  })
+})
+
+describe('shownFights', () => {
+  const final = { profitChaos: 0, maps: 2, fights: 3, perMapChaos: null, perHourChaos: null }
+  it('a stopped run keeps the fights Stop saved when Client.txt reads none', () => {
+    expect(shownFights({ stoppedAt: 10, final }, { fights: 0 })).toBe(3)
+    expect(shownFights({ stoppedAt: 10, final }, null)).toBe(3)
+  })
+  it('the live run counts what was read', () => {
+    expect(shownFights({}, { fights: 1 })).toBe(1)
+    expect(shownFights({}, null)).toBe(0)
   })
 })

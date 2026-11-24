@@ -1,0 +1,26 @@
+Item Class: Maps
+Rarity: Rare
+Doom Spires
+Map (Tier 16)
+--------
+Item Quantity: +80% (augmented)
+Item Rarity: +45% (augmented)
+Monster Pack Size: +30% (augmented)
+--------
+Item Level: 83
+--------
+Monster Level: 83
+--------
+{ Implicit Modifier }
+Area is Influenced by the Originator's Memories
+--------
+{ Suffix Modifier "of the Sentinel" (Tier: 1) }
+Area contains a buried Stalker Sentinel
+{ Suffix Modifier "of the Sentinel" (Tier: 1) }
+Area contains an Evocator of Beidat
+{ Prefix Modifier "Savage" (Tier: 1) }
+Monsters have 50% increased Accuracy Rating
+{ Suffix Modifier "of Venom" (Tier: 1) }
+Monsters Poison on Hit
+--------
+Travel to a Map of this tier or lower by using this in a personal Map Device. Maps can only be used once.

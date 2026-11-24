@@ -254,6 +254,8 @@ interface FetchResult {
     fee?: number
     // woke: instant buyout listings in a signed-in fetch; see woke/hideout-travel
     hideout_token?: string
+    // woke: the stash tab it sits in and where (Net worth's Listed shows it)
+    stash?: { name?: string, x?: number, y?: number }
     account: Account
   }
 }
@@ -277,6 +279,8 @@ export interface PricingResult {
   priceCurrency: string
   isMine: boolean
   hasNote: boolean
+  // woke: the stash tab it's in, when the trade site says (x, y from the top left)
+  stash?: { name: string, x?: number, y?: number }
   hasFee: boolean
   // woke: travel pass for an instant buyout listing (signed-in fetches only)
   hideoutToken?: string
@@ -613,7 +617,7 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
     return stat
   })
 
-  type NoUiStatFilter = Pick<StatFilter, 'not' | 'fracShare' | keyof BareStatFilter>
+  type NoUiStatFilter = Pick<StatFilter, 'not' | 'noElder' | 'fracShare' | keyof BareStatFilter>
   const realStats: NoUiStatFilter[] = stats.filter((stat): stat is StatFilter =>
     !stat.group &&
     !INTERNAL_TRADE_IDS.includes(stat.tradeId[0]))
@@ -794,7 +798,13 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
       const add = (v: number | '' | undefined) => typeof v === 'number' ? v + share : v
       stat = { ...stat, roll: { ...stat.roll, min: add(stat.roll.min), max: add(stat.roll.max) } }
     }
-    if (stat.not) {
+    if (stat.noElder) {
+      // woke: an option stat with no option matches nothing, so "not" left out nothing.
+      // Each influence goes in by its option (1 Shaper, 2 Elder; checked live 2026-11-24).
+      for (const option of [1, 2]) {
+        qNot.filters.push({ id: stat.tradeId[0], value: { option }, disabled: stat.disabled })
+      }
+    } else if (stat.not) {
       qNot.filters.push(...everyTradeIdToQuery(stat))
     } else {
       appendAndFilter(stat, qAnd, query.stats)
@@ -923,6 +933,7 @@ export async function requestResults (
       priceCurrency: result.listing.price?.currency ?? 'no price',
       hasNote: result.item.note != null,
       hasFee: result.listing.fee != null,
+      ...(result.listing.stash?.name ? { stash: { name: result.listing.stash.name, x: result.listing.stash.x, y: result.listing.stash.y } } : {}),
       hideoutToken: result.listing.fee != null ? result.listing.hideout_token : undefined,
       isMine: isOwnAccount(result.listing.account.name, opts.accountName),
       ign: result.listing.account.lastCharacterName,

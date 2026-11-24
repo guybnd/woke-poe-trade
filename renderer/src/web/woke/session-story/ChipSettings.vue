@@ -13,7 +13,7 @@
       </slot>
     </template>
     <span class="w-dim">While in a map</span>
-    <WToggle v-model="glance" title="A thin bar at the top with the map, its time so far and the run's or tonight's maps and profit (pick below). While you play it never takes the mouse; with the overlay open, drag it to move it.">Glance bar</WToggle>
+    <WToggle v-model="glance" title="A thin bar at the top with the map, its time so far and the run's or tonight's maps and profit (pick below), and each map's result once you leave it. While you play it never takes the mouse; with the overlay open, drag it to move it.">Glance bar</WToggle>
     <GlanceSettings v-if="glance" :config="config" />
     <template v-if="showMe">
       <span />
@@ -31,6 +31,7 @@ import WButton from '../ui/WButton.vue'
 import WSegmented from '../ui/WSegmented.vue'
 import WSelect from '../ui/WSelect.vue'
 import WToggle from '../ui/WToggle.vue'
+import { chipPlaceOf, glanceOn } from './glance'
 import type { ChipPlace, SessionStoryWidget } from './widget'
 import GlanceSettings from './GlanceSettings.vue'
 
@@ -43,11 +44,14 @@ const props = defineProps<{
   live?: boolean
 }>()
 
-const CHIP_OPTIONS: Array<{ value: ChipPlace, label: string }> = [
+const ALL_OPTIONS: Array<{ value: ChipPlace, label: string }> = [
+  { value: 'bar', label: 'Glance bar' },
   { value: 'dock', label: 'Dock icon' },
   { value: 'center', label: 'Middle of the screen' },
   { value: 'off', label: 'Off' }
 ]
+// The glance bar is a place only while it's on.
+const CHIP_OPTIONS = computed(() => glanceOn(props.config) ? ALL_OPTIONS : ALL_OPTIONS.filter(o => o.value !== 'bar'))
 const CHIP_TIMES = [
   { value: '5', label: 'After 5 s' },
   { value: '8', label: 'After 8 s' },
@@ -57,7 +61,7 @@ const CHIP_TIMES = [
 ]
 
 const place = computed({
-  get: () => props.config.chipPlace ?? 'dock',
+  get: () => chipPlaceOf(props.config),
   set: (v: ChipPlace) => {
     props.config.chipPlace = v
     // The close key is registered only while the line shows somewhere.
@@ -65,8 +69,11 @@ const place = computed({
   }
 })
 const glance = computed({
-  get: () => props.config.glance === true,
-  set: (v: boolean) => { props.config.glance = v }
+  get: () => glanceOn(props.config),
+  set: (v: boolean) => {
+    props.config.glance = v
+    if (props.live) pushHostConfig()
+  }
 })
 const seconds = computed({
   get: () => String(props.config.chipSeconds ?? 8),

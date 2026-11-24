@@ -68,7 +68,7 @@ describe('which filters get a column', () => {
       filter({ option: { value: 1 } }),
       filter({ not: true }),
       filter({ roll: undefined }),
-      filter({ tradeId: ['item.map_item_quantity'] }),
+      filter({ tradeId: ['item.heist_job_agility'] }),
       filter({ tradeId: ['pseudo.not_a_rule'], statRef: 'not a rule' })
     ])).toEqual([])
   })
@@ -278,5 +278,56 @@ describe('showing them', () => {
 
   it('assumes the default before the table is measured', () => {
     expect(statColumnsThatFit(0, 200, 1)).toBe(4)
+  })
+})
+
+describe('map columns', () => {
+  // Shaped like the trade site's map listing: properties by name, with link markup at times.
+  const MAP: ListingItem = {
+    properties: [
+      { name: 'Map Tier', values: [['16', 0]] },
+      { name: 'Item Quantity', values: [['+87%', 1]] },
+      { name: '[ItemRarity|Item Rarity]', values: [['+112%', 1]] },
+      { name: 'Monster Pack Size', values: [['+30%', 1]] },
+      { name: 'More Currency', values: [['+184%', 1]] }
+    ],
+    pseudoMods: ['+40% More Scarabs']
+  } as ListingItem
+
+  const columns = pickStatColumns([
+    filter({ tradeId: ['item.map_item_rarity'], statRef: 'Item Rarity: +#%', text: 'Item Rarity: +101%', value: 101 }),
+    filter({ tradeId: ['item.map_pack_size'], statRef: 'Monster Pack Size: +#%', text: 'Monster Pack Size: +34%', value: 34 }),
+    filter({ tradeId: ['pseudo.pseudo_map_more_currency_drops'], statRef: 'More Currency: #%', text: 'More Currency: 205%', value: 205 }),
+    filter({ tradeId: ['pseudo.pseudo_map_more_scarab_drops'], statRef: 'More Scarabs: #%', text: 'More Scarabs: 50%', value: 50 }),
+    filter({ tradeId: ['item.map_item_quantity'], statRef: 'Item Quantity: +#%', text: 'Item Quantity: +80%', value: 80 })
+  ])
+
+  it('gets a column for each picked map number', () => {
+    expect(columns.map(c => c.label)).toEqual(['Rarity', 'Pack', 'Curr', 'Thread', 'Qty'])
+    expect(columns.map(c => c.yours)).toEqual([101, 34, 205, 50, 80])
+  })
+
+  it('reads each listing\'s number from its properties, or its pseudo line', () => {
+    expect(columns.map(c => listingStatValue(MAP, c, ItemCategory.Map))).toEqual([112, 30, 184, 40, 87])
+  })
+
+  it('marks higher and lower against yours', () => {
+    const [rarity, pack] = columns
+    expect(statTone(listingStatValue(MAP, rarity, ItemCategory.Map), rarity)?.dir).toBe('higher')
+    expect(statTone(listingStatValue(MAP, pack, ItemCategory.Map), pack)?.dir).toBe('lower')
+  })
+
+  it('reads More Threads, the 3.30 name of More Scarabs', () => {
+    const scarab = columns[3]
+    expect(listingStatValue({ properties: [{ name: 'More Threads', values: [['+65%', 1]] }] } as ListingItem, scarab, ItemCategory.Map)).toBe(65)
+  })
+
+  it('never filters loaded listings by a map column', () => {
+    expect(columns.every(c => c.showOnly)).toBe(true)
+  })
+
+  it('shows a dash when the listing doesn\'t say', () => {
+    const [, , currency] = columns
+    expect(formatStatValue(listingStatValue({ properties: [] } as ListingItem, currency, ItemCategory.Map), currency)).toBe('–')
   })
 })

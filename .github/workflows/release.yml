@@ -33,12 +33,15 @@ permissions:
 jobs:
   windows:
     runs-on: windows-2022
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
     steps:
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
     - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
         node-version: 22
     - name: Check tag matches version
+      id: version
       shell: bash
       run: |
         version=$(node -p "require('./main/package.json').version")
@@ -52,6 +55,7 @@ jobs:
           exit 1
         fi
         echo "RELEASE_TAG=v$version" >> "$GITHUB_ENV"
+        echo "tag=v$version" >> "$GITHUB_OUTPUT"
     # One draft, made before packaging. electron-builder uploads the installer,
     # the portable exe and the blockmap at once, and with no release there yet
     # each upload made its own draft: the stray blockmap-only drafts on every
@@ -141,3 +145,22 @@ jobs:
           main/dist/latest.yml
           main/dist/SHA256SUMS.txt
         retention-days: 14
+
+  # A release published with GITHUB_TOKEN doesn't fire other workflows, so start
+  # the Discord post (discord-release.yml) here. Its own job keeps actions: write
+  # away from the build steps; a failed post never fails the release.
+  announce:
+    needs: windows
+    if: ${{ inputs.publish && github.ref == 'refs/heads/master' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+    - name: Announce on Discord
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ needs.windows.outputs.tag }}
+      run: |
+        if ! gh workflow run discord-release.yml --ref master -f tag="$TAG" -R "$GITHUB_REPOSITORY"; then
+          echo "::warning::Could not start the Discord post for $TAG. Run 'Discord announcement' by hand with that tag."
+        fi

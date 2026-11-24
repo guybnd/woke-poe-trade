@@ -139,9 +139,22 @@ export function timeIn (marks: PlayMarks['marks'], from: number, to: number): Re
 export interface ReadPoint { at: number, netChaos: number | null }
 
 export interface PlayRate {
-  // Chaos per hour of play, or null with too little play to say.
+  // Chaos per hour of play, or null with too little play to say. Reads with
+  // no map or other area since the read before (crafting, selling in your
+  // hideout) are left out of it: their gain and time are in hub*.
   perHour: number | null
+  // Every read's gain in the window, hideout ones included (the stash change).
   chaos: number
+  // The rate's part: chaos and time from reads with play in them.
+  rateChaos: number
+  rateMs: number
+  // Reads with only hideout, town, AFK or closed time since the read before:
+  // what the stash did (orbs used, sales collected) and the time out of it
+  // that isn't AFK or closed.
+  hubChaos: number
+  hubOnlyMs: number
+  // Nothing but hideout time in the window: no rate, "No maps".
+  hubOnly: boolean
   // The time the rate is over: maps and other areas, plus hideout and town,
   // and AFK and closed, when they count.
   playMs: number
@@ -171,6 +184,10 @@ export function playRate (
 ): PlayRate {
   const counted = (t: Record<PlayState, number>) => t.map + t.play + (withHub ? t.hub : 0) + (withOff ? t.off : 0)
   let chaos = 0
+  let rateChaos = 0
+  let rateMs = 0
+  let hubChaos = 0
+  let hubOnlyMs = 0
   let maps = 0
   const opened: number[] = []
   let last: number | null = null
@@ -187,6 +204,16 @@ export function playRate (
     }
     chaos += p.netChaos * share
     for (const k of STATES) total[k] += inside[k]
+    // Hideout only since the last read (with Client.txt): crafting or trading.
+    // Before the first mark is unknown: that read stays in the rate.
+    const whole = marks.length && start >= marks[0].at ? timeIn(marks, start, p.at) : null
+    if (whole && whole.map + whole.play === 0) {
+      hubChaos += p.netChaos * share
+      hubOnlyMs += inside.hub
+    } else {
+      rateChaos += p.netChaos * share
+      rateMs += counted(inside)
+    }
     // Maps opened in the same stretch whose time counts, and one already
     // running when the window starts.
     const a = Math.max(start, from)
@@ -196,7 +223,8 @@ export function playRate (
     last = p.at
     if (start < from && marks.length && stateAt(marks, a) === 'map') maps++
   }
-  const playMs = counted(total)
+  // The rate's time: hideout-only reads are apart (hubOnlyMs).
+  const playMs = rateMs
   // Each map's time runs until the next map opens. The newest counts only
   // once you've left it by the last read (a map still running isn't whole).
   const end = last
@@ -207,9 +235,16 @@ export function playRate (
   }).filter(ms => ms > 0).sort((x, y) => x - y)
   const mid = durations.length >> 1
   const medianMapMs = !durations.length ? null : durations.length % 2 ? durations[mid] : (durations[mid - 1] + durations[mid]) / 2
+  const perHour = rateMs >= MIN_PLAY_MS ? rateChaos / (rateMs / 3_600_000) : null
+  const hubOnly = perHour == null && marks.length > 0 && last != null && total.map + total.play === 0 && total.hub > 0
   return {
-    perHour: playMs >= MIN_PLAY_MS ? chaos / (playMs / 3_600_000) : null,
+    perHour,
     chaos,
+    rateChaos,
+    rateMs,
+    hubChaos,
+    hubOnlyMs,
+    hubOnly,
     playMs,
     mapMs: total.map,
     otherMs: total.play,
@@ -257,11 +292,18 @@ export const span = (ms: number) => {
 // `amount`: a chaos sum as shown, unit included ("+0.8 d").
 export function rateTip (id: string, r: PlayRate, fromLog: boolean, amount: (chaos: number) => string, withHub = false, withOff = false): string {
   const of = withOff ? 'time' : 'play'
-  const head = r.perHour == null
-    ? `${WINDOW_NAME[id]}: under 10 min of ${of}`
-    : `${WINDOW_NAME[id]}: ${amount(r.chaos)} in ${span(r.playMs)} of ${of}`
+  const head = r.hubOnly
+    ? `${WINDOW_NAME[id]}: no maps, only hideout and town`
+    : r.perHour == null
+      ? `${WINDOW_NAME[id]}: under 10 min of ${of}`
+      : `${WINDOW_NAME[id]}: ${amount(r.rateChaos)} in ${span(r.rateMs)} of ${of}`
   if (!fromLog) return `${head}. Client.txt not found: hideout time not left out`
-  const out = [!withHub && r.hubMs >= 60_000 ? `${span(r.hubMs)} in hideout and town` : '', !withOff && r.offMs >= 60_000 ? `${span(r.offMs)} closed or AFK` : ''].filter(Boolean)
+  const hubInRate = r.hubMs - r.hubOnlyMs
+  const out = [
+    r.hubOnlyMs >= 60_000 && !r.hubOnly ? `${span(r.hubOnlyMs)} with no map (${amount(r.hubChaos)}: crafting, selling)` : '',
+    !withHub && hubInRate >= 60_000 ? `${span(hubInRate)} in hideout and town` : '',
+    !withOff && r.offMs >= 60_000 ? `${span(r.offMs)} closed or AFK` : ''
+  ].filter(Boolean)
   return `${out.length ? `${head}. Left out: ${out.join(', ')}` : head}\n${RATE_TIME_WHERE}`
 }
 
