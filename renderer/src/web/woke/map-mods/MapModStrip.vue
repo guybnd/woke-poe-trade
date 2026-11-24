@@ -67,7 +67,7 @@
             data-own-wheel data-map-tile @wheel.prevent.stop="wheelMin(p.label, $event)">
             <button type="button" :class="$style.propBtn" :aria-pressed="isOn(p.label)" :title="propTitle(p.label)" :data-map-prop="p.label"
               @click="toggleProp(p.label)">
-              <span :class="$style.tileHead"><WIcon v-bind="PROP_ICON[p.label] ?? { fallback: 'fas fa-percent' }" size="sm" />{{ p.label }}</span>
+              <span :class="$style.tileHead"><WIcon v-bind="PROP_ICON[p.label] ?? { fallback: 'fas fa-percent' }" size="sm" /><span :class="$style.tileName">{{ p.label }}</span></span>
               <span :class="$style.tileVal" class="w-num">{{ p.value }}%</span>
             </button>
             <label v-if="isOn(p.label)" :class="$style.minBox" :title="`Search at least this ${p.label}`">≥<input type="number" min="0" :max="p.value" :value="minOf(p.label) ?? ''"
@@ -75,7 +75,7 @@
           </div>
           <!-- No filter: the bulk search finds maps by type only (or the item isn't a map). -->
           <div v-else :class="[$style.tile, $style.dead]" :title="addMods === false ? DEAD_TITLE : undefined">
-            <span :class="$style.tileHead"><WIcon v-bind="PROP_ICON[p.label] ?? { fallback: 'fas fa-percent' }" size="sm" />{{ p.label }}</span>
+            <span :class="$style.tileHead"><WIcon v-bind="PROP_ICON[p.label] ?? { fallback: 'fas fa-percent' }" size="sm" /><span :class="$style.tileName">{{ p.label }}</span></span>
             <span :class="$style.tileVal" class="w-num">{{ p.value }}%</span>
           </div>
         </template>
@@ -85,8 +85,8 @@
           <button type="button" :class="$style.propBtn" aria-pressed="true" :data-map-prop="label"
             :title="extraTitle(label)"
             @click="toggleProp(label)">
-            <span :class="$style.tileHead"><WIcon v-bind="PROP_ICON[label] ?? { fallback: 'fas fa-percent' }" size="sm" />{{ label }}</span>
-            <span :class="$style.tileVal" class="w-dim">added</span>
+            <span :class="$style.tileHead"><WIcon v-bind="PROP_ICON[label] ?? { fallback: 'fas fa-percent' }" size="sm" /><span :class="$style.tileName">{{ label }}</span></span>
+            <span :class="$style.tileVal" class="w-dim" title="Not on this map: added to the search">–</span>
           </button>
           <label :class="$style.minBox" :title="`Search at least this ${label}`">≥<input type="number" min="0" :value="minOf(label) ?? ''"
             :aria-label="`${label} minimum`" :data-map-prop-min="label" @change="typeMin(label, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()"></label>
@@ -108,20 +108,26 @@
       <div v-if="open" :class="$style.list">
         <div v-for="(row, i) in rows" :key="`${i}:${row.mod.matcher}`"
           :class="[$style.mod, row.filter && $style[stateOf(row.filter)], isRareOnly(row) && $style.rareOnly]"
-          :data-rare-only="isRareOnly(row) || undefined" data-map-mod>
-          <span :class="[$style.dot, $style[row.mod.rating]]" :title="RATING_TITLE[row.mod.rating]" />
+          :data-rare-only="isRareOnly(row) || undefined" data-map-mod
+          :title="row.filter ? 'Click to cycle Has, Not, Any' : undefined" @click="row.filter && cycleState(row.filter)">
+          <!-- Guy (2026-11-24): the chip is the rating; click it to change it, saved to the active Map mods profile. -->
+          <button v-if="row.rated" type="button" :class="[$style.rateChip, $style[`rate_${row.mod.rating}`]]" :title="rateTitle(row.mod.rating)"
+            :aria-label="`Rating: ${RATING_TITLE[row.mod.rating]}. Click to change`" :data-map-rate="row.mod.rating" @click.stop="rate(row.mod.matcher, row.mod.rating)">{{ RATE_WORD[row.mod.rating] }}</button>
+          <span v-else :class="$style.rateGap" />
           <!-- Guy (2026-11-24): rare-only map mods are yellow in game and worth filtering for. -->
           <span v-if="isRareOnly(row)" :class="$style.rareIcon" title="Rare-only map mod" />
           <span :class="[$style.text, { 'w-dim': row.mod.rating === 'ok' && !row.filter?.disabled }]">{{ row.mod.text }}</span>
-          <span v-if="row.filter" :class="$style.seg" role="radiogroup" :aria-label="`Search ${row.mod.text}`">
+          <!-- Guy (2026-11-24): any Evocator (or buried Sentinel) does the job, so Has and Not
+               take all three until unticked. A tick box with a fixed label, left of the switches
+               so they stay in one column ("which one am I clicking for?"). -->
+          <label v-if="row.filter?.anyOf" @click.stop :class="[$style.anyOf, isAnyOf(row.filter) && $style.anyOfOn]" :title="anyOfTitle(row.filter)">
+            <input type="checkbox" :checked="isAnyOf(row.filter)" data-map-any-of @change="toggleAnyOf(row.filter)">any {{ row.filter.anyOf.label }}
+          </label>
+          <span v-if="row.filter" :class="$style.seg" role="radiogroup" @click.stop :aria-label="`Search ${row.mod.text}`">
             <button v-for="opt in STATES" :key="opt" type="button" role="radio" :aria-checked="stateOf(row.filter) === opt"
               :class="stateOf(row.filter) === opt && $style[`on_${opt}`]" :data-state="opt" :title="STATE_TITLE[opt]"
               @click="setState(row.filter, opt)">{{ STATE_LABEL[opt] }}</button>
           </span>
-          <!-- Guy (2026-11-24): any Evocator (or buried Sentinel) does the job, so Has and Not
-               take all three until narrowed to this one. -->
-          <button v-if="row.filter?.anyOf" type="button" :class="$style.anyOf" data-map-any-of
-            :aria-pressed="isAnyOf(row.filter)" :title="anyOfTitle(row.filter)" @click="toggleAnyOf(row.filter)">{{ isAnyOf(row.filter) ? `any ${row.filter.anyOf.label}` : 'this one' }}</button>
         </div>
         <!-- Guy: any other mod goes in from here; the price check's own rows keep only special ones (enchants). -->
         <FilterAddMod v-if="filters && addMods" :filters="filters" map data-map-add-mod />
@@ -137,8 +143,10 @@ import type { ShallowRef } from 'vue'
 import { WIcon, WInfo } from '../ui'
 import { useFold } from '../ui/fold'
 import type { ParsedItem } from '@/parser'
-import { shortLabel } from './rules'
-import { VERDICT_LABEL } from './rules'
+import { VERDICT_LABEL, modRatings, nextModRating, setModRatings, withRating } from './rules'
+import type { ModRating } from './rules'
+import { activeProfile } from './widget'
+import { heistRowOf } from './data'
 import { checkMap, findMapModsConfig, isMapLike, isUnsure, PROP_TRADE_ID } from './check'
 import { MAP_KIND_TRADE_IDS, kindChoices, mapKindOf, ownKindKey, pickOf, samePick, setPick } from '@/web/price-check/filters/pseudo/map-kind'
 import type { KindChoice } from '@/web/price-check/filters/pseudo/map-kind'
@@ -212,8 +220,8 @@ const headline = computed(() => {
   const v = result.value!.verdict
   // The badge says how bad; this says why, once (the warn chip is gone).
   // Deadly first; risky ones too, so a folded strip still names them.
-  if (v.deadly.length) return [...v.deadly, ...v.warn].map(m => shortLabel(m.matcher)).join(' · ')
-  if (v.warn.length) return warnText.value
+  // Guy (2026-11-24): the rated mods are named once, on their rows (the dots), not here too.
+  if (v.deadly.length || v.warn.length) return ''
   if (result.value!.unknown.length) return "Couldn't read every mod"
   return ''
 })
@@ -230,7 +238,7 @@ const STATE_TITLE: Record<ModState, string> = {
 }
 // The map's own mods and its implicit / enchant lines (influence, an Originator's Evocator): one list.
 const searchable = computed(() => (props.stats ?? []).filter((s): s is StatFilter => !s.group && (!!s.mapMod || !!s.mapLine)))
-interface Row { mod: { text: string, matcher: string, rating: string }, filter: StatFilter | null }
+interface Row { mod: { text: string, matcher: string, rating: ModRating }, filter: StatFilter | null, rated?: boolean }
 const rows = computed<Row[]>(() => {
   const used = new Set<StatFilter>()
   const rated: Row[] = result.value!.verdict.mods.map(mod => {
@@ -240,7 +248,7 @@ const rows = computed<Row[]>(() => {
     const filter = searchable.value.find(f => f.mapMod && !used.has(f) && (f.statRef === mod.matcher ||
       f.sources.some(s => s.stat.stat.matchers.some(m => m.string === mod.matcher)))) ?? null
     if (filter) used.add(filter)
-    return { mod, filter }
+    return { mod, filter, rated: true }
   })
   // Lines the ratings skip: listed too, so every line is in this one list.
   const rest: Row[] = searchable.value.filter(f => !used.has(f)).map(f => ({
@@ -248,6 +256,21 @@ const rows = computed<Row[]>(() => {
   }))
   return [...rest, ...rated]
 })
+// Guy (2026-11-24): a word chip per mod, clicked through Bad (red), Care (yellow), Want (green).
+const RATE_WORD: Record<ModRating, string> = { deadly: 'Bad', warn: 'Care', good: 'Want', ok: '–' }
+function rateTitle (r: ModRating): string {
+  const config = findMapModsConfig()
+  const name = config ? activeProfile(config).name : ''
+  return `${RATING_TITLE[r]}. Click for the next: Bad, Care, Want, none${name ? `; saved to ${name}` : ''}.`
+}
+function rate (matcher: string, current: ModRating) {
+  const config = findMapModsConfig()
+  const mode = result.value?.mode
+  if (!config || !mode) return
+  const profile = activeProfile(config)
+  const key = mode === 'heist' ? heistRowOf(matcher) ?? matcher : matcher
+  setModRatings(profile, mode, withRating(modRatings(profile, mode), [key], nextModRating(current)))
+}
 function isRareOnly (row: Row): boolean {
   return row.filter?.tag === FilterTag.RareOnly
 }
@@ -261,8 +284,8 @@ function toggleAnyOf (f: StatFilter) {
 function anyOfTitle (f: StatFilter): string {
   const label = f.anyOf!.label
   return isAnyOf(f)
-    ? `Has and Not count any ${label} (all ${f.anyOf!.ids.length} kinds). Click to search only this one.`
-    : `Has and Not count only this ${label}. Click to count any of the ${f.anyOf!.ids.length} kinds.`
+    ? `Ticked: Has and Not count any ${label} (all ${f.anyOf!.ids.length} kinds). Untick to count only this one.`
+    : `Unticked: Has and Not count only this ${label}. Tick to count any of the ${f.anyOf!.ids.length} kinds.`
 }
 function stateOf (f: StatFilter): ModState {
   return f.disabled ? 'any' : f.not ? 'not' : 'has'
@@ -271,6 +294,11 @@ function stateOf (f: StatFilter): ModState {
 // at most a bad one), put back when Has follows Not.
 const madeWith = new WeakMap<StatFilter, { min: number | '' | undefined, max: number | '' | undefined }>()
 // Has searches this map's roll as the filter was made; Not wants none of it, any roll.
+// Guy (2026-11-24): clicking a mod row cycles it, as in the price check: Has, Not, Any.
+const NEXT_STATE: Record<ModState, ModState> = { any: 'has', has: 'not', not: 'any' }
+function cycleState (f: StatFilter) {
+  setState(f, NEXT_STATE[stateOf(f)])
+}
 function setState (f: StatFilter, state: ModState) {
   if (f.roll && !madeWith.has(f)) madeWith.set(f, { min: f.roll.min, max: f.roll.max })
   f.disabled = state === 'any'
@@ -361,7 +389,7 @@ watch(addMenu, (on) => {
 })
 onBeforeUnmount(() => { document.removeEventListener('pointerdown', closeAddMenu, true); document.removeEventListener('keydown', closeAddMenu, true) })
 function extraTitle (label: string): string {
-  return `${RAISES[label] ? RAISES[label] + '\n\n' : ''}Not on this map: searching maps with at least the minimum. Click to remove it.`
+  return `${label}: ${RAISES[label] ? RAISES[label] + '\n\n' : ''}Not on this map: searching maps with at least the minimum. Click to remove it.`
 }
 function addExtra (label: string) {
   const f = propFilter(label)
@@ -414,7 +442,7 @@ function typeMin (label: string, e: Event) {
 const DEAD_TITLE = 'The bulk search finds maps by type only. Switch to the normal search to use this number.'
 function propTitle (label: string): string {
   const on = isOn(label)
-  const raises = RAISES[label] ? `${RAISES[label]}\n\n` : ''
+  const raises = `${label}: ${RAISES[label] ? `${RAISES[label]}\n\n` : ''}`
   return raises + (on ? 'In the search. Type or scroll the minimum, click to leave it out.' : 'Click to search at least this, or scroll to set the minimum.')
 }
 
@@ -516,7 +544,6 @@ const picked = computed(() => {
   return [has ? `has ${has}` : '', not ? `not ${not}` : '', added ? `+${added} added` : ''].filter(Boolean).join(' · ')
 })
 
-const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m.matcher)).join(' · '))
 </script>
 
 <style module>
@@ -558,7 +585,11 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .skip .headline { color: var(--w-down); }
 .careful .headline { color: var(--w-warn); }
 .run .headline { color: var(--w-up); }
-.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.tiles { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; }
+/* Guy (2026-11-24): every number on one row. A narrow tile keeps its icon, value and min; the name moves to the hover. */
+.tile { container-type: inline-size; }
+.tileName { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
 .tile {
   position: relative;
   display: flex; flex-direction: column; gap: 1px; min-width: 0;
@@ -592,7 +623,9 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .toolOn { color: var(--w-fg); border-color: var(--w-accent); background: var(--w-accent-soft); }
 .ic { width: var(--w-icon-sm); height: var(--w-icon-sm); object-fit: contain; }
 .list { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; border-top: 1px solid var(--w-line); }
-.mod { display: flex; align-items: center; gap: 6px; font-size: var(--w-fs-sm); padding: 1px 0; }
+.mod { display: flex; align-items: center; gap: 6px; font-size: var(--w-fs-sm); padding: 1px 2px; border-radius: var(--w-r-sm); }
+.mod[title] { cursor: pointer; }
+.mod[title]:hover { background: var(--w-chip-ground); }
 .text { flex: 1; min-width: 0; }
 .has .text { color: var(--w-up); }
 .not .text { color: var(--w-down); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--w-down) 50%, transparent); }
@@ -629,12 +662,27 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 }
 .minBox input::-webkit-inner-spin-button, .minBox input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .minBox input:focus-visible { outline: 1px solid var(--w-accent); }
-.anyOf { flex: none; font-size: var(--w-fs-xs); padding: 0 5px; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); color: var(--w-dim); cursor: pointer; }
-.anyOf:hover { color: var(--w-fg); }
+.anyOf { flex: none; display: inline-flex; align-items: center; gap: 3px; font-size: var(--w-fs-xs); color: var(--w-dim); cursor: pointer; white-space: nowrap; }
+.anyOf input { margin: 0; accent-color: var(--w-accent); cursor: pointer; }
+.anyOf:hover, .anyOfOn { color: var(--w-fg); }
 .rareOnly:not(.has):not(.not) .text { color: var(--w-r-rare); }
 .rareIcon { flex: none; width: 14px; height: 14px; background: url('/images/rareonly.png') center / contain no-repeat; }
 .dot { flex: none; width: 7px; height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-3); }
 .dot.deadly { background: var(--w-down); }
 .dot.warn { background: var(--w-warn); }
 .dot.good { background: var(--w-up); }
-</style>
+.rateChip { flex: none; width: 3.4em; padding: 0 2px; text-align: center; font-size: var(--w-fs-xs); line-height: 1.5;
+  border: 1px solid transparent; border-radius: var(--w-r-sm); color: var(--w-dim); cursor: pointer; }
+.rateGap { flex: none; width: 3.4em; }
+.rateChip:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
+.rate_deadly { color: var(--w-down); border-color: color-mix(in srgb, var(--w-down) 55%, transparent); background: color-mix(in srgb, var(--w-down) 14%, transparent); }
+.rate_warn { color: var(--w-warn); border-color: color-mix(in srgb, var(--w-warn) 55%, transparent); background: color-mix(in srgb, var(--w-warn) 14%, transparent); }
+.rate_good { color: var(--w-up); border-color: color-mix(in srgb, var(--w-up) 55%, transparent); background: color-mix(in srgb, var(--w-up) 14%, transparent); }
+/* Last, so it wins over the tile rules above. */
+@container (max-width: 92px) {
+  /* Narrow: icon and value on one line, the min under it (the name is in the hover). */
+  .tileName { display: none; }
+  .tile .propBtn { flex-direction: row; align-items: center; gap: 3px; }
+  .tile .minBox { position: static; display: flex; }
+  .tile .minBox input { flex: 1; min-width: 0; width: auto; }
+}</style>

@@ -379,7 +379,9 @@ test('map: Sentinels start Any; an Evocator searches any of the three, or this o
   const evocator = panel.locator('[data-map-mod]').filter({ hasText: 'Evocator of Beidat' })
   await expect(sentinel.locator('[data-state="any"]')).toHaveAttribute('aria-checked', 'true')
   const anyOf = evocator.locator('[data-map-any-of]')
-  await expect(anyOf).toHaveText('any Evocator')
+  // A tick box with a fixed label (Guy: "which one am I clicking for?"), ticked = any of the three.
+  await expect(anyOf).toBeChecked()
+  await expect(evocator.locator('label', { has: overlay.page.locator('[data-map-any-of]') })).toHaveText('any Evocator')
   await evocator.locator('[data-state="has"]').click()
   await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBe(1)
@@ -391,7 +393,8 @@ test('map: Sentinels start Any; an Evocator searches any of the three, or this o
   expect(groupWith(searches[0], 'explicit.stat_2712450522')?.disabled ?? true).toBe(true)
 
   await anyOf.click()
-  await expect(anyOf).toHaveText('this one')
+  await expect(anyOf).not.toBeChecked()
+  await expect(evocator.locator('label', { has: overlay.page.locator('[data-map-any-of]') })).toHaveText('any Evocator')
   await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBe(2)
   const exact = groupWith(searches[1], 'explicit.stat_260515856')!
@@ -507,22 +510,57 @@ test('map: rare-only mods sit in the one list, yellow and searchable, any Sentin
   await expect(panel.locator('[data-map-trade]').getByText(/of 3|of 8/)).toHaveCount(0)
   // The rare-only ones are marked and yellow.
   await expect(panel.locator('[data-map-mod][data-rare-only]')).toHaveCount(3)
-  const color = await panel.locator('[data-map-mod][data-rare-only]').first().locator('span').nth(2)
+  const color = await panel.locator('[data-map-mod][data-rare-only]').first().getByText('buried Stalker Sentinel')
     .evaluate(el => getComputedStyle(el).color)
   expect(color).toBe('rgb(255, 255, 119)')
   // Any buried Sentinel by default, narrowable to this one.
   const sentinel = rows.filter({ hasText: 'buried Stalker Sentinel' })
   const anyOf = sentinel.locator('[data-map-any-of]')
-  await expect(anyOf).toHaveText('any buried Sentinel')
+  await expect(anyOf).toBeChecked()
+  await expect(sentinel.locator('label', { has: overlay.page.locator('[data-map-any-of]') })).toHaveText('any buried Sentinel')
+  // Guy (2026-11-24): the switches stay in one column; the tick box sits left of them.
+  const segX = await rows.locator('[role="radiogroup"]').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().right)))
+  expect(new Set(segX).size).toBe(1)
+  const tickX = (await sentinel.locator('label', { has: overlay.page.locator('[data-map-any-of]') }).boundingBox())!.x
+  expect(tickX).toBeLessThan((await sentinel.locator('[role="radiogroup"]').boundingBox())!.x)
   await sentinel.locator('[data-state="has"]').click()
   // Picked, it shows its search state like any other mod (green for Has).
-  expect(await sentinel.locator('span').nth(2).evaluate(el => getComputedStyle(el).color)).not.toBe('rgb(255, 255, 119)')
+  expect(await sentinel.getByText('buried Stalker Sentinel').evaluate(el => getComputedStyle(el).color)).not.toBe('rgb(255, 255, 119)')
+  // Guy (2026-11-24): clicking the row cycles it, as in the price check: Has, Not, Any.
+  const mirror = rows.filter({ hasText: 'Mirror of Delirium' })
+  const checked = () => mirror.locator('[aria-checked="true"]')
+  for (const state of ['has', 'not', 'any']) {
+    await mirror.getByText('Mirror of Delirium').click()
+    await expect(checked()).toHaveAttribute('data-state', state)
+  }
+  // Guy (2026-11-24): the rating is a word chip on the row, clicked through Bad, Care, Want
+  // and saved to the profile; the header no longer names the mods a second time.
+  const chipOf = mirror.locator('[data-map-rate]')
+  await expect(chipOf).toHaveText('–')
+  for (const word of ['Bad', 'Care', 'Want', '–']) {
+    await chipOf.click()
+    await expect(chipOf).toHaveText(word)
+    if (word === 'Bad') await expect(panel.locator('[data-map-trade] > button').first()).not.toContainText('Mirror')
+  }
+  await expect(mirror.locator('[aria-checked="true"]')).toHaveAttribute('data-state', 'any')
   const mirage = rows.filter({ hasText: 'Area contains a Mirage' })
   await mirage.locator('[data-state="not"]').click()
   // The + for more numbers sits on the tiles' row.
   const tile = await panel.locator('[data-map-tile]').first().boundingBox()
   const add = await panel.locator('[data-map-add-prop]').boundingBox()
   expect(Math.abs(add!.y - tile!.y)).toBeLessThan(8)
+  // Guy (2026-11-24, "cant these all fit in one row"): with every number added, still one row.
+  for (const label of ['Threads', 'Maps', 'Div cards']) {
+    await panel.locator('[data-map-add-prop]').click()
+    await panel.locator(`[data-map-add-prop-menu] [data-add-prop="${label}"]`).click()
+  }
+  await expect(panel.locator('[data-map-tile]')).toHaveCount(7)
+  const ys = await panel.locator('[data-map-tile]').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)))
+  expect(new Set(ys).size).toBe(1)
+  await overlay.snap('map-tiles-one-row')
+  // Take them back out (first number only, at its head: the min box takes the rest).
+  for (const label of ['Threads', 'Maps', 'Div cards']) await panel.locator(`[data-map-extra] [data-map-prop="${label}"]`).click({ position: { x: 8, y: 6 } })
+  await expect(panel.locator('[data-map-tile]')).toHaveCount(4)
   await overlay.snap('map-rare-only-mods')
   await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBe(1)
