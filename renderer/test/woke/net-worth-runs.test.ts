@@ -96,6 +96,32 @@ describe('typed costs', () => {
   })
 })
 
+describe('crafting run (pick B)', () => {
+  const made = (key: string, n = 1) => ({ key, name: key, icon: '', count: n, chaos: 0 })
+  it('an unpriced item that came in is Made until it leaves the stash', () => {
+    let r = run({ kind: 'craft' })
+    r = addToTally(r, { ...diff(T0 + M, [], [line('chaos', 40, 40)]), unpricedIn: [made('R:Glyph Spiral'), made('R:Morbid Band')] })
+    expect(tallyRows(r).made.map(x => x.key)).toEqual(['R:Glyph Spiral', 'R:Morbid Band'])
+    expect(tallyRows(r).came).toEqual([])
+    r = addToTally(r, { ...diff(T0 + 2 * M, [], []), unpricedOut: [made('R:Morbid Band')] })
+    expect(tallyRows(r).made.map(x => x.key)).toEqual(['R:Glyph Spiral'])
+  })
+  it('a price you give a made item counts, and stops counting once it sold', () => {
+    let r = run({ kind: 'craft' })
+    r = addToTally(r, { ...diff(T0 + M, [], [line('chaos', 40, 40)]), unpricedIn: [made('R:Glyph Spiral')] })
+    r = { ...r, edits: { 'tally:R:Glyph Spiral': { each: 45 } } }
+    const pts = [point(T0 + M, -40)]
+    expect(runTotals(r, pts, 0, T0 + H).profitChaos).toBe(5)
+    r = addToTally(r, { ...diff(T0 + 2 * M, [], []), unpricedOut: [made('R:Glyph Spiral')] })
+    expect(runTotals(r, pts, 0, T0 + H).profitChaos).toBe(-40)
+  })
+  it('per hour counts hideout time as play for a crafting run', () => {
+    const split = { map: 0, play: 0, hub: H, off: 0 }
+    expect(runPerHour(100, H, split, 'play')).toBeNull()
+    expect(runPerHour(100, H, split, 'play', true)).toBeCloseTo(100)
+  })
+})
+
 describe('tally', () => {
   it('adds each read once, only inside the run', () => {
     let r = run()

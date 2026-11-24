@@ -26,6 +26,9 @@ export interface TallyLine {
   cost?: true
   // Currency: its change sums trades and collected sales, never one drop.
   currency?: true
+  // No price when read (a fresh rare you crafted): its chaos stays 0 and a
+  // crafting run lists it under Made, to price by hand.
+  unpriced?: true
 }
 
 // A cost the stash can't see: `qty` a map at `unitChaos` each (the price you
@@ -56,6 +59,8 @@ export interface Run {
   startAt: number
   // Set when stopped; reads after it don't count.
   stoppedAt?: number
+  // A crafting session (pick B): no maps; its columns read Made, Used, Sold.
+  kind?: 'craft'
   // Item changes from each read after the start.
   tally: Record<string, TallyLine>
   // The start was before the run existed: the tally came from the saved
@@ -171,6 +176,15 @@ export function addToTally (run: Run, diff: StashDiff): Run {
       if (!t.cost && isMapCostItem(l.name, l.cat)) t.cost = true
       if (!t.currency && l.cat === 'currency') t.currency = true
       if (dir > 0) { t.added += l.count; t.addedChaos += l.chaos } else { t.removed += l.count; t.removedChaos += l.chaos }
+      tally[l.key] = t
+    }
+  }
+  // Unpriced items: counts only (a crafting run's Made column).
+  for (const [lines, dir] of [[diff.unpricedIn ?? [], 1], [diff.unpricedOut ?? [], -1]] as const) {
+    for (const l of lines) {
+      const t: TallyLine = tally[l.key] ? { ...tally[l.key] } : { name: l.name, icon: l.icon, added: 0, removed: 0, addedChaos: 0, removedChaos: 0 }
+      t.unpriced = true
+      if (dir > 0) t.added += l.count; else t.removed += l.count
       tally[l.key] = t
     }
   }
@@ -361,6 +375,8 @@ export interface CompareRow {
   name: string
   // How many runs it adds up (1 for a single run).
   count: number
+  // A crafting session (pick B): no maps.
+  craft?: boolean
   startAt: number
   ms: number
   maps: number
@@ -380,7 +396,7 @@ export interface CompareRow {
 // adds up runs with the same name (per hour over their summed time, the top
 // drop the biggest of any of them). `time`: the Per hour setting.
 export function compareRows (done: readonly Run[], time: RateTime, byName = false, mapCostKeys?: ReadonlySet<string>): CompareRow[] {
-  interface Acc { id: string, name: string, count: number, startAt: number, ms: number, rateMs: number, maps: number, fights: number, profit: number, cost: number, top: TopDrop | null }
+  interface Acc { id: string, name: string, count: number, startAt: number, ms: number, rateMs: number, maps: number, fights: number, profit: number, cost: number, top: TopDrop | null, craft: boolean }
   const accs: Acc[] = []
   const byKey = new Map<string, Acc>()
   for (const r of done) {
@@ -388,14 +404,15 @@ export function compareRows (done: readonly Run[], time: RateTime, byName = fals
     if (!f || r.stoppedAt == null) continue
     const clockMs = Math.max(0, r.stoppedAt - r.startAt)
     const known = f.time && f.time.map + f.time.play + f.time.hub > 0 ? f.time : null
-    const rateMs = known && time !== 'all' ? countedMs(known, time) : clockMs
+    const t = craftTime(time, r.kind === 'craft')
+    const rateMs = known && t !== 'all' ? countedMs(known, t) : clockMs
     const runs = f.maps + (f.fights ?? 0)
     const cost = (costPerRun(r, runs, mapCostKeys) ?? 0) * runs
     const top = topDrop(r)
     const key = byName ? r.name : r.id
     let a = byKey.get(key)
     if (!a) {
-      a = { id: key, name: r.name, count: 0, startAt: r.startAt, ms: 0, rateMs: 0, maps: 0, fights: 0, profit: 0, cost: 0, top: null }
+      a = { id: key, name: r.name, count: 0, startAt: r.startAt, ms: 0, rateMs: 0, maps: 0, fights: 0, profit: 0, cost: 0, top: null, craft: r.kind === 'craft' }
       byKey.set(key, a)
       accs.push(a)
     }
@@ -415,6 +432,7 @@ export function compareRows (done: readonly Run[], time: RateTime, byName = fals
       id: a.id,
       name: a.name,
       count: a.count,
+      ...(a.craft ? { craft: true } : {}),
       startAt: a.startAt,
       ms: a.ms,
       maps: a.maps,
@@ -449,10 +467,16 @@ export function sortCompare (rows: readonly CompareRow[], by: CompareSort): Comp
 // `split`: where the run's time went (run-time.ts); null without Client.txt,
 // and then the clock (`clockMs`) is all there is. A split with no zone time
 // at all (a Client.txt with nothing written in the run) counts as none.
-export function runPerHour (profitChaos: number, clockMs: number, split: TimeSplit | null | undefined, time: RateTime): number | null {
+// `craft`: a crafting session's hideout time is its play, so Play counts it.
+export function runPerHour (profitChaos: number, clockMs: number, split: TimeSplit | null | undefined, time: RateTime, craft = false): number | null {
   const known = split && split.map + split.play + split.hub > 0 ? split : null
-  const ms = known && time !== 'all' ? countedMs(known, time) : clockMs
+  const t = craftTime(time, craft)
+  const ms = known && t !== 'all' ? countedMs(known, t) : clockMs
   return ms >= MIN_RATE_MS ? profitChaos / (ms / 3_600_000) : null
+}
+
+export function craftTime (time: RateTime, craft: boolean): RateTime {
+  return craft && time === 'play' ? 'hub' : time
 }
 
 // A stash row's value with your edit: signed as it went (in +, used up −).
@@ -468,15 +492,18 @@ export interface TallyRow { key: string, line: TallyLine, netChaos: number, net:
 
 // Items that went down (used up) and up (came in), biggest first. Typed
 // lines' items are left out: their cost is the typed one.
-export function tallyRows (run: Run): { used: TallyRow[], came: TallyRow[] } {
+export function tallyRows (run: Run): { used: TallyRow[], came: TallyRow[], made: TallyRow[] } {
   const typed = new Set(run.costs.map(c => c.key))
-  const rows = Object.entries(run.tally)
+  const all = Object.entries(run.tally)
     .filter(([k]) => !typed.has(k))
     .map(([key, line]) => ({ key, line, netChaos: netOf(line), net: line.added - line.removed }))
-    .filter(r => Math.abs(r.netChaos) >= 0.5)
+  const rows = all.filter(r => Math.abs(r.netChaos) >= 0.5)
   return {
     used: rows.filter(r => r.netChaos < 0).sort((a, b) => a.netChaos - b.netChaos),
-    came: rows.filter(r => r.netChaos > 0).sort((a, b) => b.netChaos - a.netChaos)
+    came: rows.filter(r => r.netChaos > 0).sort((a, b) => b.netChaos - a.netChaos),
+    // Unpriced items still in the stash: what a crafting run made. One that
+    // sold or went drops off (its sale is under Sold).
+    made: all.filter(r => r.line.unpriced && r.net > 0 && Math.abs(r.netChaos) < 0.5).sort((a, b) => a.line.name.localeCompare(b.line.name))
   }
 }
 
@@ -535,6 +562,8 @@ export interface RunGlance {
   fights?: number
   // Over the whole run (the clock); runPerHour with `time` for the setting's.
   perHourChaos: number | null
+  // A crafting session (pick B).
+  craft?: true
   // Where the run's time went (Client.txt), from the start to `timeTo` (the
   // last stash read, which the profit runs to).
   time?: TimeSplit

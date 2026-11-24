@@ -399,7 +399,13 @@ export interface StashDiff {
   // The currency part of netChaos (spend.ts tells purchases from losses).
   // Older diffs lack it.
   cashChaos?: number
+  // Items with no price that came or went (worth 0 here): a crafting run's
+  // Made column (runs.ts). Missing when none; at most MAX_UNPRICED each.
+  unpricedIn?: DiffLine[]
+  unpricedOut?: DiffLine[]
 }
+
+const MAX_UNPRICED = 30
 
 // Items that came or went between two reads (moving between tabs isn't a change).
 // Ignored items never count, and items with no price are worth nothing.
@@ -424,6 +430,17 @@ export function diffStash (before: Baseline, after: Valuation, at: number): Stas
       if (l.category === 'currency') cash += (l.count - had) * l.unitChaos
     }
   }
+  const unpricedIn: DiffLine[] = []
+  const unpricedOut: DiffLine[] = []
+  // Unpriced items are in the baseline only from BASELINE_V2.
+  if (!old) {
+    for (const l of after.unpricedLines ?? []) {
+      if (ignored.has(l.key)) continue
+      if (oldMaps && before[l.key] == null && ROLLED_MAP_KEY.test(l.key)) continue
+      const had = before[l.key]?.count ?? 0
+      if (l.count > had) unpricedIn.push({ key: l.key, name: l.name, icon: l.icon, count: l.count - had, chaos: 0, cat: l.category })
+    }
+  }
   for (const [key, b] of Object.entries(before)) {
     if (key === BASELINE_V2 || key === BASELINE_V3 || ignored.has(key)) continue
     const left = now.get(key)
@@ -432,12 +449,22 @@ export function diffStash (before: Baseline, after: Valuation, at: number): Stas
     if (has < b.count && unit > 0) {
       removed.push({ key, name: b.name, icon: b.icon, count: b.count - has, chaos: (b.count - has) * unit, ...((left?.category ?? b.cat) ? { cat: left?.category ?? b.cat } : {}) })
       if ((left?.category ?? b.cat) === 'currency') cash -= (b.count - has) * unit
+    } else if (has < b.count) {
+      unpricedOut.push({ key, name: b.name, icon: b.icon, count: b.count - has, chaos: 0, ...(b.cat ? { cat: b.cat } : {}) })
     }
   }
   const sum = (xs: DiffLine[]) => xs.reduce((s, x) => s + x.chaos, 0)
   added.sort((a, b) => b.chaos - a.chaos)
   removed.sort((a, b) => b.chaos - a.chaos)
-  return { at, added, removed, netChaos: sum(added) - sum(removed), cashChaos: cash }
+  return {
+    at,
+    added,
+    removed,
+    netChaos: sum(added) - sum(removed),
+    cashChaos: cash,
+    ...(unpricedIn.length ? { unpricedIn: unpricedIn.slice(0, MAX_UNPRICED) } : {}),
+    ...(unpricedOut.length ? { unpricedOut: unpricedOut.slice(0, MAX_UNPRICED) } : {})
+  }
 }
 
 // ---------- daily snapshots (for a profit graph later) ----------

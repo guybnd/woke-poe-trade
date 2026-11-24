@@ -13,7 +13,7 @@
       <template v-if="run && tab === 'run'">
         <div :class="$style.runHead" data-card-run>
           <b class="w-trunc" :class="$style.runName">{{ run.name }}</b>
-          <span class="w-dim w-num text-xs">{{ runFor }} · {{ countLabel(run.maps, run.fights) }}</span>
+          <span class="w-dim w-num text-xs">{{ runFor }} · {{ run.craft ? 'Crafting' : countLabel(run.maps, run.fights) }}</span>
         </div>
         <div :class="$style.total">
           <b class="w-num" :class="tone(run.profitChaos)" data-card-run-profit>{{ signed(toDiv(run.profitChaos)) }}<Coin :chaos="!divineRate" /></b>
@@ -24,9 +24,9 @@
           <div :class="$style.kv" data-card-run-total><span :class="$style.gold">Total</span><span class="w-num" :class="tone(run.profitChaos + run.faustusChaos)">{{ signed(toDiv(run.profitChaos + run.faustusChaos)) }}<Coin :chaos="!divineRate" /></span></div>
         </template>
         <div :class="$style.stats" class="w-dim w-num text-xs" data-card-run-stats>
-          <span v-if="runs">{{ signed(toDiv(run.profitChaos / runs)) }}<Coin :chaos="!divineRate" />/{{ unit }}</span><span v-else>No maps yet</span>
+          <template v-if="!run.craft"><span v-if="runs">{{ signed(toDiv(run.profitChaos / runs)) }}<Coin :chaos="!divineRate" />/{{ unit }}</span><span v-else>No maps yet</span></template>
           <span v-if="perHour != null" :title="perHourTip">{{ signed(toDiv(perHour)) }}<Coin :chaos="!divineRate" />/h</span><span v-else>Per hour after 10 min</span>
-          <span v-if="run.costPerMapChaos != null">Costs {{ div(run.costPerMapChaos) }}<Coin :chaos="!divineRate" />/{{ unit }}</span>
+          <span v-if="run.costPerMapChaos != null && !run.craft">Costs {{ div(run.costPerMapChaos) }}<Coin :chaos="!divineRate" />/{{ unit }}</span>
         </div>
         <!-- Where the run's time went (Client.txt): maps, hideout and town, away. -->
         <template v-if="time">
@@ -277,7 +277,7 @@ const time = computed(() => {
 const perHour = computed(() => {
   const r = props.run
   if (!r) return null
-  return runPerHour(r.profitChaos, (r.timeTo ?? r.at) - r.startAt, spent.value ?? r.time, rateTime())
+  return runPerHour(r.profitChaos, (r.timeTo ?? r.at) - r.startAt, spent.value ?? r.time, rateTime(), r.craft === true)
 })
 const perHourTip = computed(() => (spent.value ?? props.run?.time) ? `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}` : 'Per hour of the whole run: Client.txt not read')
 

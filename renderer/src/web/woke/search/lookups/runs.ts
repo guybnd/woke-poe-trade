@@ -103,7 +103,7 @@ export function runsLookup (run: RunGlance | null, time: RateTime = 'play', boar
     const fights = run.fights ?? 0
     const runs = run.maps + fights
     const unit = fights ? (run.maps ? 'run' : 'fight') : 'map'
-    const perHour = runPerHour(run.profitChaos, (run.timeTo ?? run.at) - run.startAt, run.time, time)
+    const perHour = runPerHour(run.profitChaos, (run.timeTo ?? run.at) - run.startAt, run.time, time, run.craft === true)
     const sample = smallSample(runs, run.profitChaos, run.top ?? null)
     const sampleNote = sample?.few ? `Small sample: only ${runs} so far, so per ${unit} can swing a lot.` : `Small sample: one drop (${run.top?.name}) is over half the profit.`
     const rows: LookupRow[] = [
