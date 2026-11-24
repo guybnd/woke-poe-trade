@@ -498,7 +498,8 @@ test('an item price check can\'t read offers its copied text to copy', async ({ 
 
 // Sellers asking divines often ask "1 div" for items worth a few chaos. The first
 // search (both currencies, sorted by the raw number) then holds the chaos side
-// back; the check loads it and leads with the cheaper market (WOKEPOET-487).
+// back. The check never spends a second search by itself: it leads with what came
+// back, and loads the chaos offers when the player picks them (WOKEPOET-487).
 const XCHG_LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
 const xchgOffer = (id: string, currency: string, amount: number, stock: number, ageDays = 0) => ({
   id,
@@ -535,12 +536,23 @@ async function fakeOriginatorExchange (page: Page, failChaos = 0) {
   return haves
 }
 
-test('bulk: leads with the cheaper chaos offers when divine sellers ask 1 div each', async ({ overlay }) => {
+test('bulk: a held-back chaos side costs no search until picked, then shows the cheaper chaos offers', async ({ overlay }) => {
   const haves = await fakeOriginatorExchange(overlay.page)
   await overlay.boot()
   await overlay.copyItem('items/currency-originators-exalted.txt')
   const panel = overlay.widget('price-check')
   const price = panel.getByTestId('bulk-verdict-price')
+  // Only the first search ran: the divine offers lead, and nothing waits on the chaos side.
+  await expect(price).toHaveText('1 div')
+  await expect(panel.getByTestId('bulk-verdict-other')).toContainText("Chaos offers weren't searched yet")
+  await expect(panel.locator('.w-pc-matched button').nth(0)).toContainText('?')
+  // The divine count isn't double-reduced: the first search's total less the chaos rows it had.
+  await expect(panel.locator('.w-pc-matched button').nth(1)).toContainText('1207')
+  await expect(panel.locator('.w-pc-table .w-pc-skel')).toHaveCount(0)
+  await expect(panel.getByTestId('bulk-each').first()).toBeVisible()
+  expect(haves).toEqual([['divine', 'chaos']])
+  // Picking chaos loads those offers: one search, from the click.
+  await panel.locator('.w-pc-matched button').nth(0).click()
   await expect(price).toHaveText('1c')
   await expect(panel).toContainText('Chaos offers, with stock for your 3')
   // The divine offers are named, with their chaos value.
@@ -550,30 +562,33 @@ test('bulk: leads with the cheaper chaos offers when divine sellers ask 1 div ea
   await expect(each).toHaveText('1')
   await expect(each.locator('img')).toHaveAttribute('alt', 'chaos')
   expect(haves).toEqual([['divine', 'chaos'], ['chaos']])
+  // Once chaos loaded, divine's count is the first search's total less chaos's.
+  await expect(panel.locator('.w-pc-matched button').nth(1)).toContainText('311')
   // The listed time is coloured by age, as in the listings table: green for new, red past a week.
   await expect(panel.locator('.w-pc-table td.w-pc-age.w-pc-age-new').first()).toBeVisible()
   await expect(panel.locator('.w-pc-table td.w-pc-age.w-pc-age-old').first()).toBeVisible()
-  await overlay.snap('bulk check leads with chaos offers')
-  // Picking divine shows those offers, priced in div with their chaos value.
+  await overlay.snap('bulk check after picking chaos offers')
+  // Picking divine again shows those offers, priced in div with their chaos value, with no new search.
   await panel.locator('.w-pc-matched button').nth(1).click()
   await expect(price).toHaveText('1 div')
   await expect(panel).toContainText('each ≈ 180c')
   await expect(panel.getByTestId('bulk-verdict-other')).toContainText('Chaos offers ask 1c each')
   await expect(each.locator('img')).toHaveAttribute('alt', 'divine')
+  expect(haves).toHaveLength(2)
 })
 
-test('bulk: when the chaos offers fail to load, the verdict says so and a click loads them', async ({ overlay }) => {
+test('bulk: when the picked chaos offers fail to load, it says so and Retry gets them', async ({ overlay }) => {
   const haves = await fakeOriginatorExchange(overlay.page, 1)
   await overlay.boot()
   await overlay.copyItem('items/currency-originators-exalted.txt')
   const panel = overlay.widget('price-check')
   await expect(panel.getByTestId('bulk-verdict-price')).toHaveText('1 div')
-  await expect(panel.getByTestId('bulk-verdict-other')).toContainText("Chaos offers didn't load")
-  // The divine count isn't double-reduced: the first search's total less the chaos rows it had.
-  await expect(panel.locator('.w-pc-matched button').nth(1)).toContainText('1207')
+  await panel.locator('.w-pc-matched button').nth(0).click()
+  await expect(panel).toContainText('Test failure')
+  await panel.getByRole('button', { name: 'Retry' }).click()
+  await expect(panel.getByTestId('bulk-verdict-price')).toHaveText('1 div')
   await panel.locator('.w-pc-matched button').nth(0).click()
   await expect(panel.getByTestId('bulk-verdict-price')).toHaveText('1c')
-  expect(haves).toEqual([['divine', 'chaos'], ['chaos'], ['chaos']])
-  // Once chaos loaded, divine's count is the first search's total less chaos's.
-  await expect(panel.locator('.w-pc-matched button').nth(1)).toContainText('311')
+  // Each chaos search came from a click.
+  expect(haves.filter(have => have.length === 1)).toHaveLength(2)
 })

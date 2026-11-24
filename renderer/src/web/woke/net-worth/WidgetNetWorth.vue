@@ -49,6 +49,7 @@ import type { LedgerPoint } from './ledger'
 import { isPendingGlance, keptSales, listedGlance, pendingGlanceKey, staleCount } from './pending-glance'
 import { useZone } from '../shared/zone'
 import type { NetWorthWidget, ReaderStatus } from './widget'
+import { useGoto } from '../tab-bar/goto'
 
 const NetWorthPanel = defineAsyncComponent(() => import('./NetWorthPanel.vue'))
 const NetWorthCard = defineAsyncComponent(() => import('./NetWorthCard.vue'))
@@ -61,6 +62,13 @@ const props = defineProps<{
 }>()
 
 const wm = inject<WidgetManager>('wm')!
+// What's new's Show me (tab-bar/goto.ts): the view it names.
+useGoto(props.config, 'woke-net-worth', {
+  holdings: () => { props.config.view = 'holdings' },
+  sales: () => { props.config.view = 'sales' },
+  listed: () => { props.config.view = 'listed' },
+  runs: () => { props.config.view = 'runs' }
+})
 
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']

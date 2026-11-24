@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arrivalsOf, leftOver, listingsQuery, outsideTotals, setBefore, setEdit, toListing } from '@/web/woke/net-worth/faustus'
+import { arrivalsOf, leftOver, listingsQuery, outsideTotals, setBefore, setEdit, startListingIds, toListing } from '@/web/woke/net-worth/faustus'
 import type { HeldItem, OutsideRun } from '@/web/woke/net-worth/faustus'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { addToTally, emptyRun, runTotals } from '@/web/woke/net-worth/runs'
@@ -105,6 +105,20 @@ describe('held outside the stash (the run hotkey)', () => {
     // Sold: the sale counts it.
     expect(outsideTotals(run({ held: [h] }), [item('The Dark Seer', T0 + 3 * M, 850)], RATES).faustusChaos).toBe(850)
   })
+  it('a rolled map held by its base is taken by its listing under the map\'s rare name', () => {
+    const h = held('h', 'Cemetery Map', T0 + M, 20, { key: 'R:Cemetery Map|T16', base: 'Cemetery Map' })
+    const rare: Sale = { id: 'l', at: T0 + 2 * M, name: 'Dread Cell', typeLine: 'Cemetery Map', baseType: 'Cemetery Map', frameType: 2, mapTier: 16, icon: '', stack: 1, price: { amount: 30, currency: 'chaos' } }
+    const o = outsideTotals(run({ held: [h], faustus: { at: T0 + 9 * M, listings: [rare] } }), [], RATES)
+    expect([o.heldChaos, o.listedChaos]).toEqual([0, 30])
+    const magic: Sale = { ...rare, id: 's', name: '', typeLine: 'Fecund Cemetery Map of Bameth', frameType: 1 }
+    expect(outsideTotals(run({ held: [h] }), [magic], RATES).heldChaos).toBe(0)
+    // Another base's rare map leaves it held.
+    expect(outsideTotals(run({ held: [h] }), [{ ...magic, typeLine: 'Strand Map', baseType: 'Strand Map' }], RATES).heldChaos).toBe(20)
+    // A held T16 map isn't taken by a T14 sale of the same base.
+    const t16 = held('h', 'Cemetery Map', T0 + M, 20, { key: 'R:Cemetery Map|T16', base: 'Cemetery Map', mapTier: 16 })
+    expect(outsideTotals(run({ held: [t16] }), [{ ...magic, mapTier: 14 }], RATES).heldChaos).toBe(20)
+    expect(outsideTotals(run({ held: [t16] }), [magic], RATES).heldChaos).toBe(0)
+  })
   it('a stack already in the stash when added doesn\'t take it', () => {
     const h = held('h', 'Reality Fragment', T0 + M, 50, { count: 2, tallyAdded: 3 })
     expect(outsideTotals(run({ held: [h], tally: { 'Reality Fragment': { added: 3 } } }), [], RATES).heldChaos).toBe(100)
@@ -144,6 +158,15 @@ describe('held outside the stash (the run hotkey)', () => {
 })
 
 describe('listings read', () => {
+  it('a listing the Listed doc saw by the start is from before, though Start\'s read (100 at most) missed it', () => {
+    const read = [item('new', T0 + M, 10), item('old', T0 - M, 10)]
+    const ids = startListingIds(read, { older: T0 - H, later: T0 + 2 * M }, T0)
+    expect(ids.sort()).toEqual(['old', 'older'])
+    // Its sale during the run is from before, not run profit.
+    const o = outsideTotals(run({ startListings: ids }), [item('older', T0 + 5 * M, 300)], RATES)
+    expect(o.sold[0].before).toBe(true)
+    expect(o.faustusChaos).toBe(0)
+  })
   it('keeps merchant listings with a price only', () => {
     const base = { id: 'i', indexedAt: new Date(T0).toISOString(), priceAmount: 3, priceCurrency: 'divine', listedItem: { name: 'Mageblood', typeLine: 'Heavy Belt', frameType: 3, icon: 'x' } }
     expect(toListing({ ...base, hasFee: true })).toMatchObject({ id: 'i', at: T0, name: 'Mageblood', price: { amount: 3, currency: 'divine' } })

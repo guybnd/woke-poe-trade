@@ -24,18 +24,28 @@
 // After an update, the dock lists what's new until each line is dismissed or
 // shown (tab-bar/news.ts). A fresh install has seen it all, so it never shows there.
 import { computed, inject, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { registry } from '@/web/overlay/widget-registry'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { AppConfig, pushHostConfig, saveConfigQuietly } from '@/web/Config'
-import { ensureWokeConfig, isWidgetTypeOn } from '../modules'
+import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '../modules'
 import { markNewsSeen, unseenNews } from '../tab-bar/news'
 import type { NewsItem } from '../tab-bar/news'
 import { WButton } from '../ui'
 import { personalOn } from '../personal'
+import { requestGoto } from '../tab-bar/goto'
 import DockItem from './DockItem.vue'
 import { openSettingsPage, showWithOverlay } from './dock'
+import { moduleSettingsPage } from '../tab-bar/tools'
 import type { DockMenuAction } from './dock'
 
 const wm = inject<WidgetManager>('wm')!
+const { t } = useI18n()
+// The tool's name as Settings lists it (TabBar's typeName).
+function typeName (wmType: string): string {
+  const spec = registry.widgets.find(w => w.widget.type === wmType)?.widget
+  return spec?.trNameKey ? t(spec.trNameKey) : wmType
+}
 const lines = computed(() => unseenNews(AppConfig().woke))
 // "New: a Planner tab…" reads "A Planner tab…" under the tool's name.
 function sentence (note: string) {
@@ -50,18 +60,24 @@ function markSeen (items: NewsItem[]) {
   saveConfigQuietly()
 }
 
-// Its window, placed first if it isn't yet. A tool that's off (Net worth's
-// reader too) goes to its switch in Settings, which asks first where it should.
+// Its window on the line's tab, placed first if it isn't yet. A switched-off
+// tool is turned on, as the launcher does. Net worth's reader goes to its
+// switch in Settings instead, since turning it on asks first.
 function show (n: NewsItem) {
   markSeen([n])
+  if (!n.settingsPage && n.wmType !== 'woke-net-worth' && !isWidgetTypeOn(AppConfig(), n.wmType)) {
+    const config = ensureWokeConfig(AppConfig())
+    for (const m of MODULES) if (m.widgetTypes.includes(n.wmType)) setModuleOn(config, m.id, true)
+  }
   const off = !isWidgetTypeOn(AppConfig(), n.wmType) || (n.wmType === 'woke-net-worth' && !personalOn.value)
   if (n.settingsPage || off) {
     openSettingsPage(wm, n.settingsPage ?? 'All modules')
     return
   }
   let w = wm.widgets.value.find(w => w.wmType === n.wmType)
+  // A dock-only tool has no window: its own page in Settings, as the rail does.
   if (w?.wmFlags.includes('menu::skip')) {
-    openSettingsPage(wm, 'All modules')
+    openSettingsPage(wm, moduleSettingsPage(n.wmType, typeName))
     return
   }
   if (!w) {
@@ -70,6 +86,8 @@ function show (n: NewsItem) {
     forgetRailSlot(w.wmId)
   }
   const wmId = w.wmId
+  // On the tab the line is about (goto.ts).
+  if (n.goto) requestGoto(wmId, n.goto)
   nextTick(() => nextTick(() => {
     showWithOverlay(wm, wmId)
     pushHostConfig()

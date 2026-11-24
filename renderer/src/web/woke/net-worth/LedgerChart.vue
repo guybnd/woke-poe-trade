@@ -28,7 +28,7 @@
           <template v-for="(t, i) in shown.p.top" :key="i"><span v-item-tip="pinned && tipOf ? topTip(t) : null" :class="{ [$style.item]: !!pinned }">{{ t }}</span><template v-if="i < shown.p.top.length - 1">, </template></template>
         </span>
         <span v-else-if="shown.p.daily" class="w-dim">That day's last read</span>
-        <span v-if="shownSales" :class="$style.saleText">Sold: {{ shownSales }}</span>
+        <span v-if="shownSales.list.length" :class="$style.saleText">Sold: <template v-for="(x, i) in shownSales.list" :key="i"><span v-item-tip="x.tip ?? null">{{ x.text }}</span><template v-if="i < shownSales.list.length - 1">, </template></template><template v-if="shownSales.more"> +{{ shownSales.more }} more</template></span>
         <span v-if="shown.p.spentDiv" :class="$style.spendText">Purchase: {{ fmt(shown.p.spentDiv) }}<Coin /> spent, not counted as a loss</span>
         <span v-if="!pinned && (shown.p.top.length && tipOf || (!shown.p.daily && shown.p.netDiv != null && spendAction?.(shown.p.at)))" class="w-dim">Click to keep this open</span>
         <!-- Purchases (spend.ts): mark a losing refresh as one, with how much,
@@ -79,7 +79,7 @@ const props = defineProps<{
   // A clicked point's purchase switch (spend.ts); left out: none.
   spendAction?: (at: number) => { label: string, mark: SpendMark | null } | null
   // Your sales: a dot each, and the hover card names those since the point before.
-  sales?: Array<{ at: number, text: string }>
+  sales?: Array<{ at: number, text: string, tip?: ItemTipRef }>
   // Offer "Start a run from here" on a clicked point (runs.ts).
   runFrom?: boolean
   // The live run's start, drawn as a line.
@@ -220,13 +220,14 @@ const saleDots = computed(() => {
     return { at: x.at, x: xOf(x.at) / W * 100, y: yOf(a.div + (b.div - a.div) * t) / H * 100 }
   })
 })
+// Each with its own item tooltip; past 3, a count.
 const shownSales = computed(() => {
   const p = shown.value?.p
-  if (!p || !props.sales?.length) return ''
+  if (!p || !props.sales?.length) return { list: [], more: 0 }
   const i = props.series.findIndex(q => q.at === p.at)
   const from = i > 0 ? props.series[i - 1].at : -Infinity
   const list = props.sales.filter(x => x.at > from && x.at <= p.at)
-  return list.length > 3 ? `${list.slice(0, 3).map(x => x.text).join(', ')} +${list.length - 3} more` : list.map(x => x.text).join(', ')
+  return { list: list.slice(0, 3), more: Math.max(0, list.length - 3) }
 })
 
 const spends = computed(() => props.series.filter(p => p.spentDiv).map(p => ({ at: p.at, x: xOf(p.at) / W * 100 })))

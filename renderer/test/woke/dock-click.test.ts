@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { clickWhilePlaying } from '@/web/woke/dock/click'
 import { noticeAction } from '@/web/woke/loot-filter/notices'
+import { moduleSettingsPage } from '@/web/woke/tab-bar/tools'
 
 describe('clicking a dock icon while playing', () => {
   const run = () => {}
@@ -38,5 +39,14 @@ describe('the loot filter card button', () => {
     expect(noticeAction(notice('failed'))).toBe('Fix it')
     expect(noticeAction(notice('failed', 3))).toBe('Fix them')
     expect(noticeAction(notice('wrong'))).toBe('Open editor')
+  })
+})
+
+describe("a dock-only tool's Settings page", () => {
+  const name = (wmType: string) => ({ 'woke-session-story': 'Session story', 'woke-campaign': 'Campaign' } as Record<string, string>)[wmType] ?? wmType
+
+  it("is the tool's own page, as the rail and What's new open it", () => {
+    expect(moduleSettingsPage('woke-session-story', name)).toBe('Session story')
+    expect(moduleSettingsPage('woke-campaign', name)).toBe('Campaign & run timer')
   })
 })

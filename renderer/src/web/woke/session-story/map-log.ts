@@ -9,6 +9,9 @@ import { isMapArea, mapNameFromArea } from '../farming/farming'
 import { staysInRun } from '../death-recap/death-log'
 import { isSkippedArea, knownAreaName } from './skip-areas'
 import { NIGHT_GAP_MS } from './story'
+import { ITEM_BY_REF } from '@/assets/data'
+import type { BaseType } from '@/assets/data/interfaces'
+import { dataUniqueName } from '../shared/item-identity'
 
 const OPENING = '***** LOG FILE OPENING *****'
 
@@ -255,4 +258,16 @@ export function keepMap (history: MapRecord[], rec: MapRecord): MapRecord[] {
 export function isMapRecord (v: unknown): v is MapRecord {
   const m = v as MapRecord
   return !!m && typeof m.key === 'string' && typeof m.enteredAt === 'number' && typeof m.mapMs === 'number' && Array.isArray(m.npcs)
+}
+
+// The item a map run's name is: "Strand" is the "Strand Map" base, but a
+// unique map logs its own name ("Maelström of Chaos", "Cortex"), and is that
+// unique. A name the data doesn't know keeps the base's form.
+export function mapItemName (
+  name: string,
+  lookup: (ns: BaseType['namespace'], name: string) => readonly BaseType[] | undefined = ITEM_BY_REF
+): string {
+  if (lookup('AREA', name)?.length) return `${name} Map`
+  if (lookup('UNIQUE', dataUniqueName(name))?.some(u => u.unique?.base === 'Map')) return name
+  return `${name} Map`
 }

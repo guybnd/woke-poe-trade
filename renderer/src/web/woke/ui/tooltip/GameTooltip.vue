@@ -425,6 +425,15 @@ watch(tip, async (t) => {
   reposition()
 })
 
+// Its content can grow after the first measure (async parts such as the
+// listing's mod groups load on first use): place it again whenever its size
+// changes, or a tall tooltip placed while short runs off the screen's bottom.
+const sized = new ResizeObserver(() => { if (tip.value) reposition() })
+watch(el, (now, was) => {
+  if (was) sized.unobserve(was)
+  if (now) sized.observe(now)
+})
+
 // Hidden until measured, so it never flashes in the wrong spot.
 const pos = computed(() => placed.value
   ? { left: `${placed.value.left}px`, top: `${placed.value.top}px` }
@@ -450,6 +459,7 @@ onUnmounted(() => {
   window.removeEventListener('dragstart', hideTip, true)
   window.removeEventListener('blur', hideTip)
   window.removeEventListener('scroll', hideTipOnScroll, true)
+  sized.disconnect()
   hideTip()
 })
 </script>

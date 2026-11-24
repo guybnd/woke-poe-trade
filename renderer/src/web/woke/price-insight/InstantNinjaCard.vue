@@ -56,6 +56,7 @@ import type { ParsedItem } from '@/parser'
 import { ItemCategory } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
 import { ninjaPrice, ninjaTotal, divineTenths, chaosOrbRow } from './ninja-first'
+import { instantCardKey, onKeyboardFocusedControl } from './instant-card-key'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { useLeagues } from '@/web/background/Leagues'
 import { savedPriceSeries } from '../market/db'
@@ -186,10 +187,12 @@ function onKey (e: KeyboardEvent) {
   const t = e.target as HTMLElement | null
   if (t && t !== document.body && !el.value?.contains(t)) return
   if (t?.closest('input, textarea, select, [contenteditable]')) return
-  if (e.key === ' ' || e.key === 'Enter') {
+  // A focused button keeps its own Enter and Space: Details never runs a search.
+  const action = instantCardKey(e.key, onKeyboardFocusedControl(t))
+  if (action === 'live') {
     e.preventDefault()
     emit('live', true)
-  } else if (e.key === 'Escape') {
+  } else if (action === 'close') {
     emit('close')
   }
 }

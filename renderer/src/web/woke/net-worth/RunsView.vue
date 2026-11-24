@@ -119,7 +119,7 @@ import { tipFor } from './tips'
 import type { TipIndex } from './tips'
 import { span } from './play-time'
 import Coin from './Coin.vue'
-import { countLabel, leftOf, lineCost, mapsIn, runTotals, tallyRows, tallyValue, unitOf } from './runs'
+import { countLabel, leftOf, lineCost, mapsIn, readPerHour, runTotals, tallyRows, tallyValue, unitOf } from './runs'
 import type { CostLine, ManualLine, Run, TallyRow } from './runs'
 import RunRow from './RunRow.vue'
 import RunAdd from './RunAdd.vue'
@@ -241,7 +241,7 @@ const timeEnd = computed(() => shownRun.value?.stoppedAt ?? props.points[props.p
 const perHour = computed(() => {
   const t = totals.value
   if (!t) return null
-  if (withHub.value || !spent.value) return t.perHourChaos
+  if (withHub.value || !spent.value) return shownRun.value ? readPerHour(shownRun.value, t, props.points[props.points.length - 1]?.at) : t.perHourChaos
   const ms = spent.value.ms.map + spent.value.ms.play
   return ms >= 10 * 60_000 ? t.profitChaos / (ms / 3_600_000) : null
 })

@@ -120,7 +120,7 @@ import { useRetryCountdown } from './retry-countdown'
 import OnlineFilter from './OnlineFilter.vue'
 import TradeLinks from './TradeLinks.vue'
 import BulkVerdict from '@/web/woke/price-insight/BulkVerdict.vue'
-import { buildBulkInsight, pickBulkMarket } from '@/web/woke/price-insight/bulk-insight'
+import { buildBulkInsight, pickBulkMarket, bulkSideWaiting } from '@/web/woke/price-insight/bulk-insight'
 import { priceView } from '@/web/woke/price-insight/view'
 import { chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
 import { ageTone } from '@/web/woke/price-insight/listing-rows'
@@ -133,9 +133,11 @@ function useBulkApi () {
   type BulkSide = {
     listed: Ref<BulkSearch | null>
     listedLazy: ComputedRef<readonly PricingResult[]>
-    /** Loads this side if it isn't yet. Quiet: a failure only marks it failed. */
-    load: (quiet?: boolean) => void
+    /** Loads this side if it isn't yet: only from a click, never by itself. */
+    load: () => void
     failed: Ref<boolean>
+    /** This side's own search is running. */
+    loading: Ref<boolean>
   }
   type BulkSearchExtended = Record<'xchgChaos' | 'xchgStable', BulkSide> & {
     /** The first search asked for both currencies (not a Chaos or Divine Orb). */
@@ -160,8 +162,9 @@ function useBulkApi () {
             ? ['chaos']
             : ['divine', 'chaos']
 
+      // woke: a search still waiting its turn when another item is checked isn't sent.
       const optimisticSearch = await execBulkSearch(
-        item, filters, have, { accountName: AppConfig().accountName })
+        item, filters, have, { accountName: AppConfig().accountName, isCurrent: () => _searchId === searchId })
       if (_searchId === searchId) {
         result.value = {
           xchgStable: getResultsByHave(item, filters, optimisticSearch, 'divine'),
@@ -187,19 +190,20 @@ function useBulkApi () {
         : null)
     const items = shallowRef<PricingResult[]>(_result.value?.listed ?? [])
     const failed = shallowRef(false)
-    let inFlight = false
+    const loading = shallowRef(false)
 
-    // woke: loads start from a pick or the price comparison, never from inside a computed.
-    function load (quiet = false) {
-      if (inFlight || _result.value != null) return
-      inFlight = true
+    // woke: a side the first search held back loads only when the player picks it:
+    // the price check never spends a trade search of its own accord.
+    function load () {
+      if (loading.value || _result.value != null) return
+      loading.value = true
       failed.value = false
       // A newer search replaces this one's results, so this has nothing to add.
       const _searchId = searchId
       ;(async function () {
         try {
           const found = (await execBulkSearch(
-            item, filters, [have], { accountName: AppConfig().accountName, wait: quiet }))[0]!
+            item, filters, [have], { accountName: AppConfig().accountName, isCurrent: () => _searchId === searchId }))[0]!
           if (_searchId !== searchId) return
           _result.value = shallowReactive(found)
           items.value = _result.value.listed
@@ -211,18 +215,18 @@ function useBulkApi () {
           if (otherHave && result.value!.both) otherHave.total = Math.max(0, otherHave.queryTotal - found.total)
         } catch (err) {
           if (_searchId !== searchId) return
-          // Loaded only to compare prices: the side shows it failed and a click retries.
+          // The side shows it failed and a click retries.
           failed.value = true
-          if (!quiet) error.value = (err as Error).message
+          error.value = (err as Error).message
         } finally {
-          inFlight = false
+          loading.value = false
         }
       })()
     }
 
     const listedLazy = computed(() => items.value)
 
-    return { listed: _result, listedLazy, load, failed }
+    return { listed: _result, listedLazy, load, failed, loading }
   }
 
   return { error, result, search }
@@ -361,15 +365,10 @@ export default defineComponent({
       return listed ? buildBulkInsight(listed, need.value) : null
     })
     const insights = { xchgChaos: sideInsight('xchgChaos'), xchgStable: sideInsight('xchgStable') }
-    // Both sides are in (or one failed), so the cheaper can be told.
-    const marketsSettled = computed(() => {
-      const r = result.value
-      if (!r) return false
-      if (!r.both) return true
-      return (['xchgChaos', 'xchgStable'] as const).every(c => r[c].listed.value != null || r[c].failed.value)
-    })
+    // woke: the first search is all there is to compare: a side it held back loads only on a click,
+    // so the cheaper side is told only when both came back; otherwise the loaded side leads.
     const bulkInsight = computed(() => {
-      if (!slowdown.isReady.value || !result.value || !marketsSettled.value) return null
+      if (!slowdown.isReady.value || !result.value) return null
       const listed = result.value[selectedCurr.value].listedLazy.value
       return buildBulkInsight(listed, need.value)
     })
@@ -377,30 +376,26 @@ export default defineComponent({
       if (!bulkInsight.value) return null
       const curr = selectedCurr.value === 'xchgChaos' ? 'xchgStable' : 'xchgChaos'
       const unit = curr === 'xchgChaos' ? 'c' : 'div'
-      if (result.value?.[curr].failed.value) return { unit, failed: true }
+      const side = result.value?.[curr]
+      if (side?.failed.value) return { unit, failed: true }
+      // The first search held this side back: it costs a search, so it waits for a click.
+      if (result.value?.both && side && side.listed.value == null && !side.loading.value) return { unit, unsearched: true }
       const insight = insights[curr].value
       return insight ? { unit, fair: insight.fair, sellers: insight.sellers } : null
     })
 
     // woke: real rows only once loaded, with placeholder rows until then.
+    // Placeholder rows only while the shown side's own search runs, never for a side nobody asked to load.
     const tableLoading = computed(() => {
-      const shown = selectedResults.value
-      if (!slowdown.isReady.value || !result.value || !marketsSettled.value) return true
+      if (!slowdown.isReady.value || !result.value) return true
       const side = result.value[selectedCurr.value]
-      return shown.length === 0 || 'marketRatio' in shown[0]
-        ? side.listed.value == null && !side.failed.value
-        : false
+      return bulkSideWaiting({ loaded: side.listed.value != null, failed: side.failed.value, loading: side.loading.value })
     })
 
-    watch(result, (r) => {
+    watch(result, () => {
       userPicked = false
-      // The first search held the chaos side back: load it to compare prices.
-      if (r?.both) {
-        r.xchgChaos.load(true)
-        r.xchgStable.load(true)
-      }
     })
-    watch(() => marketsSettled.value && result.value
+    watch(() => result.value
       ? pickBulkMarket(
           { insight: insights.xchgChaos.value, total: result.value.xchgChaos.listed.value?.total ?? null },
           { insight: insights.xchgStable.value, total: result.value.xchgStable.listed.value?.total ?? null },

@@ -43,3 +43,9 @@ export function saleTip (s: Sale): ItemTipRef {
   const unique = s.frameType === 3 || s.frameType === 9 || s.frameType === 10
   return { name, ...(s.name && !unique ? { type: s.typeLine } : {}), count: s.stack, ...gem }
 }
+
+// saleTip as a Ctrl+Space card or row takes it (no count or gem fallback).
+export function saleLookupTip (s: Sale): { name: string, type?: string, content?: ItemTipRef['content'] } {
+  const tip = saleTip(s)
+  return { name: tip.name, ...(tip.type ? { type: tip.type } : {}), ...(tip.content ? { content: tip.content } : {}) }
+}

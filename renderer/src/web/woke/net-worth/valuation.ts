@@ -86,6 +86,9 @@ export interface ValuedLine {
   // The last price from poe.ninja that could be trusted, kept through reads
   // with no price or a held one (saved in the baseline as ref).
   refChaos?: number
+  // A gear spike on poe.ninja's line alone whose 6-hour hold ran out: when that
+  // hold began, so the next read doesn't start it again (saved as released).
+  releasedSince?: number
 }
 
 export interface Valuation {
@@ -134,7 +137,7 @@ function categoryOfFrame (frame: number): Category {
   return frame >= 1 && frame <= 4 ? 'gear' : 'other'
 }
 
-export interface ItemPrice { chaos: number, category: Category, graph?: Array<number | null>, ninja: number | null, mine: boolean, variant?: string, heldSince?: number, heldKind?: HoldKind, solid?: boolean }
+export interface ItemPrice { chaos: number, category: Category, graph?: Array<number | null>, ninja: number | null, mine: boolean, variant?: string, heldSince?: number, heldKind?: HoldKind, solid?: boolean, released?: number }
 
 // ---------- price jumps in thin markets ----------
 // One fake listing can set a thin item's poe.ninja price: The Witch read
@@ -243,7 +246,10 @@ export interface HoldGuard { before: Baseline | null, now: number }
 // Gear (uniques, gems) is left out of the one-day rule: many trade on so few days
 // that poe.ninja's line is mostly empty, and those were real prices.
 export function holdJump (ninja: number, p: { thin?: boolean, oneDay?: boolean, category?: Category, graph?: Array<number | null>, history?: Array<number | null> }, prev: Baseline[string] | undefined, now: number): { chaos: number, since: number, kind: HoldKind } | null {
-  const sinceFor = (kind: HoldKind) => prev?.heldSince != null && (prev.heldKind ?? 'jump') === kind ? prev.heldSince : now
+  const sinceFor = (kind: HoldKind) => prev?.heldSince != null && (prev.heldKind ?? 'jump') === kind
+    ? prev.heldSince
+    // A gear spike whose hold ran out keeps its start: it isn't held again.
+    : kind === 'spike' && releasedFor(ninja, prev) != null ? prev!.released! : now
   // Only a solid price vouches for a one-day one: an older baseline's price
   // may itself have been a fake.
   const ref = prev?.ref != null && prev.ref > 0 ? prev.ref : null
@@ -265,6 +271,24 @@ export function holdJump (ninja: number, p: { thin?: boolean, oneDay?: boolean, 
   // A one-day hold that ended gets the full 6 hours as a jump.
   const since = sinceFor('jump')
   return now - since < HOLD_MS ? { chaos: base, since, kind: 'jump' } : null
+}
+
+// A released spike's start, while poe.ninja's price is still the one let go:
+// a fresh jump of 5x or more over what the last read counted is a new spike.
+function releasedFor (ninja: number, prev: Baseline[string] | undefined): number | undefined {
+  if (prev?.released == null) return undefined
+  return prev.unitChaos > 0 && ninja >= prev.unitChaos * HOLD_RATIO ? undefined : prev.released
+}
+
+// A gear spike on poe.ninja's line alone that holdJump let go after 6 hours:
+// when its hold began, kept in the baseline so the next read, which finds the
+// same step, doesn't start a fresh hold. undefined: not such a spike.
+export function spikeReleased (ninja: number, p: { category?: Category, graph?: Array<number | null>, history?: Array<number | null> }, prev: Baseline[string] | undefined, now: number): number | undefined {
+  if (p.category !== 'gear') return undefined
+  const { step, saved } = priceStep(ninja, p)
+  if (typeof step !== 'number' || saved) return undefined
+  const since = prev?.heldSince != null && prev.heldKind === 'spike' ? prev.heldSince : releasedFor(ninja, prev)
+  return since != null && now - since >= HOLD_MS ? since : undefined
 }
 
 function spikeOnly (ninja: number, p: { graph?: Array<number | null>, history?: Array<number | null>, category?: Category }): { chaos: number, since: number, kind: HoldKind } | null {
@@ -294,6 +318,10 @@ export function priceItem (item: StashItemLike, priceOf: PriceOf, prefs: PricePr
     out.heldSince = held.since
     out.heldKind = held.kind
   } else if (!ninja.oneDay) out.solid = true
+  if (!held && hold && guard) {
+    const released = spikeReleased(ninjaChaos, ninja, guard.before?.[key], guard.now)
+    if (released != null) out.released = released
+  }
   return out
 }
 
@@ -320,6 +348,12 @@ export function isRolledMap (item: Pick<StashItemLike, 'frame' | 'mapTier' | 'ba
 export function mapBase (item: Pick<StashItemLike, 'typeLine' | 'baseType'>): string {
   const blight = /\b(Blight-ravaged|Blighted) /.exec(item.typeLine)?.[1]
   return blight && !item.baseType.startsWith(blight) ? `${blight} ${item.baseType}` : item.baseType
+}
+
+// The name the app's saved prices (history.ts) know an item by, as prices.ts
+// looks it up: a unique's name, a rolled map's base, else its typeLine.
+export function historyName (item: StashItemLike): string {
+  return isUniqueFrame(item.frame) && item.name ? item.name : isRolledMap(item) ? mapBase(item) : item.typeLine
 }
 
 // Keys of rolled maps (itemKey), which baselines before BASELINE_V3 kept
@@ -390,6 +424,7 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
           line.heldSince = price.heldSince
           line.heldKind = price.heldKind
         }
+        if (price?.released != null) line.releasedSince = price.released
         const ref = price?.solid ? price.chaos : guard?.before?.[key]?.ref
         if (ref != null && ref > 0) line.refChaos = ref
         into.set(key, line)
@@ -415,7 +450,8 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
 // heldSince: the price is held (holdJump) since then.
 // mine: unitChaos is your own price, so it isn't the last poe.ninja price.
 // ref: the last solid poe.ninja price (ValuedLine.refChaos); older baselines lack it.
-export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number, cat?: Category, heldSince?: number, heldKind?: HoldKind, mine?: boolean, ref?: number }>
+// released: a gear spike's hold ran out; when it began (ValuedLine.releasedSince).
+export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number, cat?: Category, heldSince?: number, heldKind?: HoldKind, mine?: boolean, ref?: number, released?: number }>
 
 // Marks a baseline that holds unpriced and ignored items too (see diffStash).
 export const BASELINE_V2 = '\u0000v2'
@@ -436,6 +472,8 @@ export function baselineOf (v: Valuation): Baseline {
     if (l.mine || had?.mine) out[l.key].mine = true
     const ref = l.refChaos ?? had?.ref
     if (ref != null) out[l.key].ref = ref
+    const released = l.releasedSince ?? had?.released
+    if (released != null) out[l.key].released = released
   }
   return out
 }

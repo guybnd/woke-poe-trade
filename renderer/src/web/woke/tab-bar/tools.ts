@@ -209,3 +209,10 @@ export function groupByModule<T extends { wmType: string }> (items: T[]): Array<
   groups.push({ label: 'Overlay', items: items.filter(i => !groupOf.has(i.wmType)) })
   return groups
 }
+
+// A tool's own page in Settings, under its name there (`typeName`: the
+// registry's translated name). A dock-only tool's page is named apart.
+const DOCK_ONLY_PAGES: Record<string, string> = { 'woke-campaign': 'Campaign & run timer' }
+export function moduleSettingsPage (wmType: string, typeName: (wmType: string) => string): string {
+  return DOCK_ONLY_PAGES[wmType] ?? typeName(wmType)
+}

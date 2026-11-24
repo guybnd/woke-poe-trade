@@ -72,4 +72,20 @@ describe('hypostasis.faith atlas links', () => {
     expect(out).toContain('8x Breach Thread')
     expect(() => rewriteHypostasisLinks(text, null)).toThrow(/loading/)
   })
+
+  it('leaves the sentence\'s punctuation after a link out of it', () => {
+    for (const p of ['.', ',', ';', ':', '!', '?', '...']) {
+      const out = rewriteHypostasisLinks(`My tree: ${LINK}${p} Enjoy`, model)
+      expect(out).toMatch(/pathofexile\.com\/fullscreen-atlas-skill-tree\//)
+      expect(out.endsWith(`${p} Enjoy`)).toBe(true)
+    }
+  })
+
+  it('reads an empty pick ("id:") as no pick, not the first type', () => {
+    const notable = [...model.variants.keys()][0]
+    const path = pathTo(model, new Set([model.start]), notable).reverse().filter(id => id !== notable)
+    const t = decodeTree(hypostasisToLink(model, `https://hypostasis.faith/atlas/data.html#s=${[...path, `${notable}:`].join(',')}`)!)
+    expect(t.nodes).toEqual([...path, notable])
+    expect(t.masteries).toEqual([])
+  })
 })

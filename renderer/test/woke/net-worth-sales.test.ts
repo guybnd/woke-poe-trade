@@ -154,6 +154,9 @@ describe('Ctrl+Space', () => {
     expect(cards).toHaveLength(1)
     expect(cards[0].name).toBe('Sold Headhunter')
     expect(cards[0].sections[0].rows?.[0].chaos).toBe(7600)
+    // The result, its heading and its rows show the item's tooltip.
+    expect(cards[0].tip?.name).toBe('Headhunter')
+    expect(cards[0].sections[0].rows?.[0].item?.name).toBe('Headhunter')
   })
 
   it('stays quiet without sales or for short queries', () => {

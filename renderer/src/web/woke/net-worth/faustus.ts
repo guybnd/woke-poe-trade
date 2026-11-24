@@ -13,6 +13,7 @@
 // Pure: no Vue, no IO.
 import { NINJA_CURRENCY, saleChaos } from './sales'
 import type { Rates, Sale } from './sales'
+import { isRolledMap, mapBase } from './valuation'
 import type { StashDiff } from './valuation'
 
 // A merchant tab listing, in the sales' shape (its tooltip, name and price
@@ -54,6 +55,12 @@ export interface HeldItem {
   at: number
   // The run's tally of its key when added: what comes in after is it.
   tallyAdded: number
+  // A magic or rare map: its base (valuation.ts mapBase), held under that
+  // name. Its listing or sale goes by the map's own rare name, so it's
+  // matched by base instead.
+  base?: string
+  // Its map tier, so a held T16 map is not taken by a T14 listing of that base.
+  mapTier?: number
 }
 
 // What a run needs of this (runs.ts Run has these fields).
@@ -156,6 +163,11 @@ export function isBefore (run: OutsideRun, s: Sale): boolean {
 }
 
 const nameOf = (s: Sale) => s.name || s.typeLine
+// A listing or sale of a held item: a rolled map by its base, else by name.
+const isHeld = (o: Sale, item: HeldItem) => item.base
+  ? isRolledMap({ frame: o.frameType, mapTier: o.mapTier, baseType: o.baseType }) && mapBase(o) === item.base &&
+    (item.mapTier == null || o.mapTier == null || o.mapTier === item.mapTier)
+  : nameOf(o) === item.name
 
 // What's left of each held item: a stash read that saw its key come in after
 // it was added, or a listing or sale of the same name after it, takes it.
@@ -175,7 +187,7 @@ export function heldLeft (run: OutsideRun, listings: readonly Sale[], sales: rea
     left -= stashed
     for (const o of others) {
       if (left <= 0) break
-      if (used.has(o.id) || nameOf(o) !== item.name || (!carried && o.at <= item.at)) continue
+      if (used.has(o.id) || !isHeld(o, item) || (!carried && o.at <= item.at)) continue
       used.add(o.id)
       left -= Math.min(left, o.stack)
     }
@@ -274,6 +286,15 @@ export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: R
 // The sums a run's totals need (runs.ts Outside).
 export function outsideSums (o: OutsideTotals) {
   return { beforeChaos: o.beforeChaos, faustusChaos: o.faustusChaos, leftOutChaos: o.leftOutCollectedChaos, leftOutShownChaos: o.leftOutChaos }
+}
+
+// Item ids listed at a run's start: those in Start's read listed by then,
+// and (a read holds at most 100) any the Listed doc saw first by then
+// (pending.ts firstSeen), so an older listing's sale isn't the run's.
+export function startListingIds (listings: readonly Listing[], firstSeen: Readonly<Record<string, number>> | undefined, at: number): string[] {
+  const ids = new Set(listings.filter(l => l.at <= at).map(l => l.id))
+  for (const [id, seen] of Object.entries(firstSeen ?? {})) if (seen <= at) ids.add(id)
+  return [...ids]
 }
 
 // What a stopped run leaves to the next (H1): held items not yet in the

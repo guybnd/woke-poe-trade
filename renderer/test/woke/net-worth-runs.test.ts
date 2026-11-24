@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addToTally, cleanDoc, countLabel, emptyRun, leftOf, lineCost, mapsIn, runTotals, tallyFrom, tallyRows, unitOf } from '@/web/woke/net-worth/runs'
+import { addToTally, cleanDoc, countLabel, emptyRun, leftOf, lineCost, mapsIn, readPerHour, runTotals, tallyFrom, tallyRows, unitOf } from '@/web/woke/net-worth/runs'
 import type { Run } from '@/web/woke/net-worth/runs'
 import { runsLookup } from '@/web/woke/search/lookups/runs'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
@@ -32,6 +32,16 @@ describe('profit', () => {
     const points = [point(T0 + M, 100), point(T0 + 2 * M, null), point(T0 + 3 * M, 100)]
     expect(runTotals(run({ stoppedAt: T0 + 2 * M }), points, 0, T0 + H).stashChaos).toBe(100)
     expect(runTotals(run(), points, 0, T0 + H).stashChaos).toBe(200)
+  })
+  it('a live run\'s per hour (hideout counted) is to the last read, as the dock card\'s', () => {
+    const points = [point(T0, 50), point(T0 + 30 * M, 500)]
+    // Opened an hour after the last read: profit is still to that read.
+    const t = runTotals(run(), points, 4, T0 + 90 * M)
+    expect(t.perHourChaos).toBeCloseTo(500 / 1.5)
+    expect(readPerHour(run(), t, T0 + 30 * M)).toBe(1000)
+    expect(readPerHour(run(), t, T0 + 5 * M)).toBeNull()
+    // A stopped run keeps its own.
+    expect(readPerHour(run({ stoppedAt: T0 + H }), { profitChaos: 500, perHourChaos: 500 }, T0 + 30 * M)).toBe(500)
   })
   it('no per hour under 10 minutes, no per map without maps', () => {
     const t = runTotals(run(), [point(T0 + M, 100)], 0, T0 + 5 * M)

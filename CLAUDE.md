@@ -21,8 +21,8 @@ Guy's standing rule: any row or chip that names an item, mod, sale or listing sh
 Guy's standing rule: a PR that adds a feature a player would want to know about adds a line to `NEWS` in `renderer/src/web/woke/tab-bar/news.ts`. That one line drives everything players who update see: the dock's What's new icon (each line with a "Show me" button and a dismiss button), the NEW seal on the tool in All tools, and the count on the rail's All tools button. New installs see none of it.
 
 - `id`: new and unique, and never changed later (it's what "seen" remembers).
-- `wmType`: the tool that "Show me" opens. Set `settingsPage` instead when the feature lives in Settings.
+- `wmType`: the tool that "Show me" opens. `goto`: the tab it opens on, from that tool's entry in `tab-bar/goto-targets.ts`; a tool with tabs there must name one. A feature on a tab not listed yet: add the tab there and a handler in the tool's `useGoto` (the type check asks for it). Set `settingsPage` instead when the feature lives in Settings.
 - `name`: the tool's name. `note`: one short line, starting "New: ".
 - Bug fixes and polish don't get a line. Take lines out after a release or two.
-- `renderer/test/woke/news.test.ts` checks that every line is well formed. Tests read `NEWS` instead of counting lines, so adding one breaks nothing.
-- One feature, one line: a tool can have several (Net worth has three), and each shows on its own in the dock.
+- `renderer/test/woke/news.test.ts` checks that every line is well formed and that its `goto` is a real tab. Tests read `NEWS` instead of counting lines, so adding one breaks nothing.
+- One feature, one line: a tool can have several (Net worth has several), and each shows on its own in the dock.

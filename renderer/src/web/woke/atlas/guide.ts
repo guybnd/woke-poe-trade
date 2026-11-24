@@ -5,6 +5,7 @@ import type { PriceItem } from '../market/types'
 import type { AtlasStrategy, ThreadSlot } from './strategies'
 import { MAX_THREAD_SLOTS, MAX_THREADS, THREAD_TYPES } from './strategies'
 import { parseCostLines, priceLines } from './loadout'
+import { trimLinkEnd } from './tree'
 
 const TREE_URL = /https?:\/\/(?:www\.)?(?:pathofexile\.com\/(?:fullscreen-)?atlas-skill-tree\/[^\s)"']+|poeplanner\.com\/[^\s)"']+|poeatlasplanner\.com\/[^\s)"']+)/i
 const DEVICE_WORDS = /\b(map device|kirac|atlas memor|memory|sextant|omen|altar|eldritch|maven'?s invitation|delirium orb|map craft|alch|chisel|scour|vaal orb|8.?mod)/i
@@ -33,7 +34,7 @@ export function parseScarabs (text: string): ScarabLine[] {
 
 export function parseGuideText (text: string): Omit<AtlasStrategy, 'id'> {
   const lines = text.split(/\r?\n/).map(l => l.trim())
-  const treeUrl = TREE_URL.exec(text)?.[0] ?? ''
+  const treeUrl = trimLinkEnd(TREE_URL.exec(text)?.[0] ?? '')
   const scarabs: string[] = []
   const threads: ThreadSlot[] = []
   const device: string[] = []

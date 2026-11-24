@@ -103,6 +103,7 @@ describe('Ctrl+Space: listed', () => {
   it('finds a listed item by name', () => {
     const cards = listedLookup(doc, [], 3)('mageblood', ctx)
     expect(cards.map(c => c.name)).toEqual(['Listed Mageblood'])
+    expect(cards[0].tip?.name).toBe('Mageblood')
     expect(listedLookup(doc, [item('Mageblood', T0, 3, 'divine')], 3)('mageblood', ctx)).toEqual([])
     expect(listedLookup(null, null)('listed', ctx)).toEqual([])
   })

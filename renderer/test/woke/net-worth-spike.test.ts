@@ -2,7 +2,7 @@
 // usual price. Rain Tempter on 2026-11-23: about 4c all week, then 98.5c
 // (+2,362%) on a market that wasn't thin, so it made 76% of a tab.
 import { describe, it, expect } from 'vitest'
-import { HOLD_MS, baselineOf, graphChaos, graphSpike, graphStep, holdJump, priceStep, seriesStep, valueStash } from '@/web/woke/net-worth/valuation'
+import { HOLD_MS, baselineOf, graphChaos, graphSpike, graphStep, historyName, holdJump, priceStep, seriesStep, valueStash } from '@/web/woke/net-worth/valuation'
 import { heldNote } from '@/web/woke/net-worth/tips'
 import type { Priced, PriceOf, StashItemLike } from '@/web/woke/net-worth/valuation'
 
@@ -121,6 +121,31 @@ describe('valuing Rain Tempter', () => {
     expect(holdJump(500, { category: 'gear', graph, thin: true }, prev, T0 + HOLD_MS)).toBeNull()
   })
 
+  it('lets gear go once: the hold does not start again on the next read', () => {
+    // A unique priced from poe.ninja's sparse line alone: 20 -> 500, never back to 20.
+    const unique: StashItemLike = { name: 'Headhunter', typeLine: 'Leather Belt', baseType: 'Leather Belt', frame: 3, stack: 1, icon: '' }
+    const gTabs = [{ name: 'Gear', id: 'g', items: [unique] }]
+    const p: PriceOf = () => ({ chaos: 500, category: 'gear', graph: [0, null, 0, null, 0, null, 2400] })
+    const key = 'Headhunter Leather Belt'
+    const at0 = valueStash(gTabs, p, undefined, { before: null, now: T0 })
+    expect(at0.lines[0].unitChaos).toBeCloseTo(20)
+    const at6 = valueStash(gTabs, p, undefined, { before: baselineOf(at0), now: T0 + HOLD_MS })
+    expect(at6.lines[0].unitChaos).toBe(500)
+    expect(baselineOf(at6)[key].released).toBe(T0)
+    const at8 = valueStash(gTabs, p, undefined, { before: baselineOf(at6), now: T0 + 8 * H })
+    expect(at8.lines[0].unitChaos).toBe(500)
+    expect(at8.lines[0].heldSince).toBeUndefined()
+    expect(baselineOf(at8)[key].released).toBe(T0)
+    // A fresh spike 5x over the let-go price is held again.
+    const bigger: PriceOf = () => ({ chaos: 5000, category: 'gear', graph: [0, null, 0, null, 0, null, 2400] })
+    const at9 = valueStash(gTabs, bigger, undefined, { before: baselineOf(at8), now: T0 + 9 * H })
+    expect(at9.lines[0].unitChaos).toBeLessThan(5000)
+    expect(at9.lines[0].heldSince).toBe(T0 + 9 * H)
+    // Once the step is gone, the marker goes too.
+    const flat: PriceOf = () => ({ chaos: 500, category: 'gear', graph: [0, null, 0, null, 0, null, 0] })
+    expect(baselineOf(valueStash(gTabs, flat, undefined, { before: baselineOf(at8), now: T0 + 9 * H }))[key].released).toBeUndefined()
+  })
+
   it('starts no thin-market jump hold when a spike is confirmed', () => {
     const prev = { name: 'x', icon: '', count: 1, unitChaos: 4, ref: 4, heldSince: T0, heldKind: 'spike' as const }
     expect(holdJump(98, { thin: true, graph: [0, null, 0, null, 2400, 2400, 2400] }, prev, T0 + 50 * H)).toBeNull()
@@ -192,6 +217,15 @@ describe('saved prices', () => {
     const line = [0, 0, 0, 0, 900, 950, 1000]
     expect(priceStep(10, { history: [1, 1, 1, 1], graph: line, category: 'cards' }).step).toBe('confirmed')
     expect(priceStep(100, { history: [1, 1, 1, 1], graph: line, category: 'cards' }).step).toBe(1)
+  })
+
+  it('asks for a rolled map\'s saved prices by its base, as prices.ts looks them up', () => {
+    const map = (frame: number, typeLine: string, baseType: string): StashItemLike => ({ name: frame === 2 ? 'Dread Cell' : '', typeLine, baseType, frame, stack: 1, icon: '', mapTier: 16 })
+    expect(historyName(map(1, 'Fecund Cemetery Map of Bameth', 'Cemetery Map'))).toBe('Cemetery Map')
+    expect(historyName(map(2, 'Cemetery Map', 'Cemetery Map'))).toBe('Cemetery Map')
+    expect(historyName(map(1, 'Blighted Strand Map of Power', 'Strand Map'))).toBe('Blighted Strand Map')
+    expect(historyName({ name: 'Headhunter', typeLine: 'Leather Belt', baseType: 'Leather Belt', frame: 3, stack: 1, icon: '' })).toBe('Headhunter')
+    expect(historyName(card('Rain Tempter', 1))).toBe('Rain Tempter')
   })
 
   it('only fresh rows of one type are kept (history.ts)', async () => {

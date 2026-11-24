@@ -265,13 +265,13 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     // The box on At Faustus leaves your listings out of the total and back in.
     const total = panel.locator('[data-net-total]')
     const countBox = panel.locator('[data-count-listed]')
-    await expect(countBox).toHaveAttribute('aria-checked', 'true')
+    await expect(countBox).toBeChecked()
     const withListed = await total.innerText()
     await countBox.click()
-    await expect(countBox).toHaveAttribute('aria-checked', 'false')
+    await expect(countBox).not.toBeChecked()
     await expect(total).not.toHaveText(withListed)
     await countBox.click()
-    await expect(countBox).toHaveAttribute('aria-checked', 'true')
+    await expect(countBox).toBeChecked()
     await expect(total).toHaveText(withListed)
 
     // The Sales view: a header click sorts the table, a second click flips it.

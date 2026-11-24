@@ -220,7 +220,7 @@ import { useI18n } from 'vue-i18n'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import ToolIcon from './ToolIcon.vue'
 import { MAX_UI_SIZE, MIN_UI_SIZE, nudgeUiSize, uiSize } from '../ui/ui-size'
-import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, pickStarterPins, toolDescription } from './tools'
+import { ICON_TOOL_NAMES, moduleSettingsPage, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, pickStarterPins, toolDescription } from './tools'
 import { pastedItemText } from '../search/pasted-item'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
 import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
@@ -228,7 +228,7 @@ import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import { searchRequest } from '../search/widget'
 import { usePriceText } from '../shared/price'
-import { markNewsSeen, newsFor, seenNewsIds, unseenNewsOf } from './news'
+import { markNewsSeen, newsFor, seenNewsIds } from './news'
 import { personalOn } from '../personal'
 import { openSettingsPage } from '../dock/dock'
 
@@ -728,11 +728,13 @@ function newsOf (entry: LauncherEntry<Tab>) {
 const newsCount = computed(() => new Set(launcherAll.value.map(e => newsOf(e)?.id).filter(Boolean)).size)
 const hoveredNote = shallowRef<string | null>(null)
 function pointAt (entry: LauncherEntry<Tab>) {
+  // mouseenter then focusin on the same row: keep the note already read.
+  if (hovered.value?.key === entry.key && hoveredNote.value != null) return
   hovered.value = entry
   const news = newsOf(entry)
   hoveredNote.value = news?.note ?? null
-  // A tool with several lines: pointing at it once reads them all.
-  if (news) markNewsSeen(ensureWokeConfig(AppConfig()).woke, unseenNewsOf(entry.wmType, seenNews.value).map(n => n.id))
+  // Only the line shown counts as read; a tool's other lines stay in the dock.
+  if (news) markNewsSeen(ensureWokeConfig(AppConfig()).woke, [news.id])
 }
 const ENTRY_HINT: Record<LauncherState, string | undefined> = {
   placed: undefined,
@@ -799,11 +801,10 @@ function turnOn (wmType: string) {
   }
 }
 // A dock-only tool has no window to open, so its settings are the way in.
-const DOCK_ONLY_PAGES: Record<string, string> = { 'woke-campaign': 'Campaign & run timer' }
 function openModuleSettings (wmType: string) {
   const settings = wm.widgets.value.find(w => w.wmType === 'settings')
   if (!settings) return
-  wm.setFlag(settings.wmId, `settings::page=${DOCK_ONLY_PAGES[wmType] ?? typeName(wmType)}`, true)
+  wm.setFlag(settings.wmId, `settings::page=${moduleSettingsPage(wmType, typeName)}`, true)
   wm.show(settings.wmId)
 }
 // Once it's mounted: its default hotkeys are set then, and whether a running

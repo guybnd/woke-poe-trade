@@ -164,4 +164,15 @@ describe('listed time colour', () => {
     expect(ageTone(3 * 24 * H)).toBe('week')
     expect(ageTone(9 * 24 * H)).toBe('old')
   })
+
+  it('changes colour where the label changes: at 1h and at 1d', () => {
+    expect(shortAge(H - 1)).toBe('59m')
+    expect(ageTone(H - 1)).toBe('new')
+    expect(shortAge(H)).toBe('1h')
+    expect(ageTone(H)).toBe('day')
+    expect(shortAge(24 * H - 1)).toBe('23h')
+    expect(ageTone(24 * H - 1)).toBe('day')
+    expect(shortAge(24 * H)).toBe('1d')
+    expect(ageTone(24 * H)).toBe('week')
+  })
 })

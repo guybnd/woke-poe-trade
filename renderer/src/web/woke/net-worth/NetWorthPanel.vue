@@ -60,16 +60,16 @@
         <!-- The box counts your listings in the total or leaves them out
              (remembered; the same switch as Settings). The words open Listed. -->
         <span v-if="listed.count" :class="$style.listedChip" data-listed-chip>
-          <button type="button" role="checkbox" :aria-checked="countListed" :class="$style.countBox"
+          <input type="checkbox" :checked="countListed"
             :title="countListed ? 'Counted in your total. Click to leave it out' : 'Left out of your total. Click to count it'"
-            aria-label="Count Faustus listings in your total" data-count-listed @click="config.countListed = !countListed"><i v-if="countListed" class="fas fa-check" /></button>
+            aria-label="Count Faustus listings in your total" data-count-listed @change="config.countListed = !countListed">
           <button type="button" class="w-num" :class="$style.soldToday" :title="listedTitle" @click="view = 'listed'"><span :class="{ [$style.leftOut]: !countListed }">At Faustus {{ div(listed.worthChaos) }}<Coin :chaos="!divine" /></span><template v-if="listed.stale"> · <span class="w-warn">{{ listed.stale }} stale</span></template></button>
         </span>
         <button v-if="runChip" type="button" class="w-num" :class="[$style.soldToday, tone(runChip.profitChaos)]" :title="`Run ${runChip.name}: ${countLabel(runChip.maps, runChip.fights)}. Click for the Runs view`" data-run-chip @click="view = 'runs'">Run {{ signed(toDiv(runChip.profitChaos)) }}<Coin :chaos="!divine" /></button>
         <WSpark v-if="spark.length > 1 && !(detailsOpen && shown.chart)" :values="spark" :width="90" :height="18" :class="$style.spark" />
         <span v-if="detailsOpen && shown.numbers" :class="$style.holdings" class="w-num text-xs">
           <span :title="inChaos(liquid)"><span :class="$style.caps">Liquid</span> {{ div(liquid) }}<Coin :chaos="!divine" /></span>
-          <span v-if="best" class="w-trunc" :title="inChaos(best.chaos)"><span :class="$style.caps">Best</span> {{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></span>
+          <span v-if="best" class="w-trunc" :title="inChaos(best.chaos)"><span :class="$style.caps">Best</span> <span v-item-tip="lineTip(best, best.count)">{{ best.name }}</span> {{ div(best.chaos) }}<Coin :chaos="!divine" /></span>
           <span v-if="session" :class="tone(session.div)"><span :class="$style.caps">Session</span> {{ signed(session.div) }}<Coin :chaos="!divine" /></span>
         </span>
         <button v-if="anyDetails" type="button" :class="$style.toggle" :aria-expanded="detailsOpen" @click="config.detailsOpen = !detailsOpen">
@@ -273,9 +273,10 @@
 // sections flyout to switch parts off.
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
+import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import { usePoeninja } from '@/web/background/Prices'
 import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSpark, WTabs, openMenu, toast, vItemTip } from '../ui'
-import { tipFor, tipIndex } from './tips'
+import { lineTip, tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { FARMING_TYPE, elapsed, requestEndSession } from '../farming/farming'
@@ -785,7 +786,8 @@ function onIgnore (key: string, name: string, on: boolean) {
 }
 
 // ---------- sales (pick A: Sold section, sale lines, chart dots; pick C: the Sales view) ----------
-const VIEW_OPTIONS = [{ value: 'holdings', label: 'Holdings' }, { value: 'sales', label: 'Sales' }, { value: 'listed', label: 'Listed' }, { value: 'runs', label: 'Runs' }]
+// Labels shared with What's new's Show me (tab-bar/goto.ts).
+const VIEW_OPTIONS = (['holdings', 'sales', 'listed', 'runs'] as const).map(value => ({ value, label: GOTO_TARGETS['woke-net-worth'][value] }))
 const view = computed<string>({
   get: () => props.config.view === 'sales' || props.config.view === 'runs' || props.config.view === 'listed' ? props.config.view : 'holdings',
   set: (x) => { props.config.view = x === 'sales' || x === 'runs' || x === 'listed' ? x : 'holdings' }
@@ -875,7 +877,7 @@ function marketTone (s: Sale) {
   return x == null || Math.abs(x) < 0.03 ? 'w-dim' : x < 0 ? 'w-down' : 'w-up'
 }
 // The chart's dots: each sale, named for the hover card.
-const chartSales = computed(() => sales.value.map(s => ({ at: s.at, text: `${saleName(s)} ${salePrice(s)}${saleChaosOf(s) == null ? '' : ` ${unit.value}`}` })))
+const chartSales = computed(() => sales.value.map(s => ({ at: s.at, text: `${saleName(s)} ${salePrice(s)}${saleChaosOf(s) == null ? '' : ` ${unit.value}`}`, tip: saleTip(s) })))
 // A group's sales: those after the read before its first, up to its last. Their
 // items' removed lines give way to the sale rows.
 const readBefore = computed(() => {
@@ -1024,9 +1026,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .soldToday { color: var(--w-gold); cursor: pointer; white-space: nowrap; }
 .soldToday:hover { text-decoration: underline; }
 .listedChip { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-.countBox { width: 13px; height: 13px; display: inline-grid; place-items: center; padding: 0; border: 1px solid var(--w-gold); background: transparent; color: var(--w-gold); font-size: calc(9px * var(--w-text-scale, 1)); cursor: pointer; }
-.countBox:hover { background: color-mix(in srgb, var(--w-gold) 18%, transparent); }
-.countBox:focus-visible { outline: 1px solid var(--w-fg); outline-offset: 1px; }
 .leftOut { color: var(--w-dim); text-decoration: line-through; }
 .soldHead { display: flex; justify-content: space-between; align-items: baseline; gap: var(--w-s2); width: 100%; margin-bottom: 4px; text-align: left; cursor: pointer; }
 .soldHead:hover .caps { color: var(--w-fg); }

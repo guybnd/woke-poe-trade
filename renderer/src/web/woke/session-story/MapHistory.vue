@@ -77,7 +77,7 @@ import { formatChaos, formatClock } from '../ui/format'
 import { inRange } from '../analytics/stats'
 import type { AnalyticsRange } from '../analytics/types'
 import { isWidgetTypeOn } from '../modules'
-import { tierText } from './map-log'
+import { mapItemName, tierText } from './map-log'
 import { incomeRows, interleave } from './income'
 import type { IncomeRow } from './income'
 import { clockTime, dayLabel, dayStart, openIndex, withDays } from './history-days'
@@ -261,10 +261,11 @@ const counted = computed(() => maps.value.filter(m => m.mapMs > 30_000))
 const avgMs = computed(() => counted.value.reduce((s, m) => s + m.mapMs, 0) / Math.max(1, counted.value.length))
 const deaths = computed(() => maps.value.reduce((s, m) => s + m.deaths, 0))
 const diedIn = computed(() => maps.value.filter(m => m.deaths > 0).length)
-// The map's tooltip ("Fortress Map"), with the run under it. A vault or
-// other area that isn't counted shows just its name and the run.
+// The map's tooltip ("Fortress Map", or a unique map by its own name), with
+// the run under it. A vault or other area that isn't counted shows just its
+// name and the run.
 function mapTip (m: MapRecord): ItemTipRef {
-  const item = `${m.name} Map`
+  const item = mapItemName(m.name)
   const run = [
     `Entered ${clockTime(m.enteredAt)} · ${formatClock(m.mapMs)} ${skippedRow(m) ? 'inside' : 'in the map'}${m.deaths ? ` · ${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}` : ''}`,
     ...(m.char ? [`${m.char}${m.className ? `, ${m.className}` : ''}${m.charLevel != null ? `, level ${m.levelsGained ? `${m.charLevel} → ${m.charLevel + m.levelsGained}` : m.charLevel}` : ''}`] : []),

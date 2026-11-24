@@ -54,8 +54,9 @@ export function ageBand (ageMs: number | null): AgeBand {
 
 export function ageTone (ageMs: number | null): AgeTone | null {
   if (ageMs == null) return null
-  if (ageMs <= HOUR) return 'new'
-  if (ageMs <= AGING_MS) return 'day'
+  // The colour changes where the label does: "59m" is new, "1h" isn't; "23h" is today, "1d" isn't.
+  if (ageMs < HOUR) return 'new'
+  if (ageMs < AGING_MS) return 'day'
   if (ageMs <= STALE_MS) return 'week'
   return 'old'
 }

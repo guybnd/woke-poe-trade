@@ -5,7 +5,7 @@ import { parseClipboard, ItemRarity } from '@/parser'
 import type { ParsedItem } from '@/parser'
 import { toast } from '../ui/layer'
 import { ninjaPriceOf } from './prices'
-import { isRolledMap, itemKey } from './valuation'
+import { isRolledMap, itemKey, mapBase } from './valuation'
 import { CURRENCY_ITEM } from './faustus'
 import type { StashItemLike } from './valuation'
 import { editRun, loadRuns, runsDoc } from './run-store'
@@ -63,7 +63,8 @@ export async function holdHovered (clipboard: string, league: string, points: re
     count: s.stack,
     unitChaos: priced.chaos,
     at: Date.now(),
-    tallyAdded: live.tally[key]?.added ?? 0
+    tallyAdded: live.tally[key]?.added ?? 0,
+    ...(isRolledMap(s) ? { base: mapBase(s), ...(s.mapTier != null ? { mapTier: s.mapTier } : {}) } : {})
   }
   await editRun(league, live.id, r => ({ ...r, held: [...(r.held ?? []), item] }), points, divine)
   const value = item.unitChaos * item.count
