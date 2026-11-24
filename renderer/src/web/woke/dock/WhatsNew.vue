@@ -12,7 +12,7 @@
           <w-button size="sm" variant="ghost" icon="fas fa-times" title="Dismiss" data-whats-new-dismiss @click="markSeen([n])" />
         </div>
         <div :class="$style.foot">
-          <span class="w-faint text-xs">With the overlay open, click the icon to keep this card up.</span>
+          <span class="w-faint text-xs">With the overlay open, click the icon to keep this card up. Right-click it to turn What's new off.</span>
           <w-button size="sm" variant="ghost" data-whats-new-dismiss-all @click="markSeen(lines)">Dismiss all</w-button>
         </div>
       </div>
@@ -30,6 +30,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import { AppConfig, pushHostConfig, saveConfigQuietly } from '@/web/Config'
 import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '../modules'
 import { markNewsSeen, unseenNews } from '../tab-bar/news'
+import { setNewsOff } from '../tab-bar/news-off'
 import type { NewsItem } from '../tab-bar/news'
 import { WButton } from '../ui'
 import { DOCK_ART_ITEMS, gameIcon } from '../ui/game-icons'
@@ -108,8 +109,15 @@ function forgetRailSlot (wmId: number) {
 }
 
 const dockMenu = computed<DockMenuAction[]>(() => [
-  { label: 'Dismiss all', icon: 'fas fa-check', action: () => { markSeen(lines.value) } }
+  { label: 'Dismiss all', icon: 'fas fa-check', action: () => { markSeen(lines.value) } },
+  { label: "Turn off What's new", icon: 'fas fa-bell-slash', action: turnOff }
 ])
+
+// For players who update every day or two. Back on: Settings, Look & icon row.
+function turnOff () {
+  setNewsOff(ensureWokeConfig(AppConfig()).woke, true)
+  saveConfigQuietly()
+}
 </script>
 
 <style module>

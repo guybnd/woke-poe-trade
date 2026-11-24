@@ -4,7 +4,7 @@
          overlay open it can be dragged anywhere; while Settings is open it also
          shows outside a map, so it can be placed before one. Its fields and
          whether it stays out of maps (a run going, or all night) are settings. -->
-    <div v-if="map || editing || outside" :class="[$style.bar, { [$style.movable]: movable || editing, [$style.editing]: editing }]" :style="place" class="w-num" data-glance-bar role="status"
+    <div v-if="map || editing || outside || after" :class="[$style.bar, { [$style.movable]: movable || editing, [$style.editing]: editing }]" :style="place" class="w-num" data-glance-bar role="status"
       :title="movable || editing ? 'Drag to move' : undefined" @pointerdown="startDrag">
       <template v-if="map">
         <template v-if="on.map">
@@ -22,6 +22,8 @@
         <span>{{ formatClock(last.mapMs) }}</span>
         <span v-if="last.diff != null && Math.abs(last.diff) >= 1000" :class="last.diff > 0 ? 'w-down' : 'w-up'" title="Against your average for it">{{ last.diff > 0 ? '+' : '−' }}{{ formatClock(Math.abs(last.diff)) }}</span>
       </template>
+      <!-- In maps only: the map you just left, for a few seconds (its time against your usual). -->
+      <span v-else-if="after" :class="$style.name" data-glance-after>{{ after }}</span>
       <span v-else-if="outside" class="w-dim" data-glance-out>Out of maps</span>
       <span v-else :class="$style.name">Glance bar</span>
       <!-- A strategy run going (Net worth › Runs): its maps and profit instead of tonight's. -->
@@ -52,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-// Settings › Sessions › "While in a map". Off unless turned on.
+// Settings › Sessions › "While in a map". On unless turned off.
 import { computed, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { hostRequest } from '../shared/host'
@@ -89,6 +91,8 @@ const props = defineProps<{
   show?: unknown
   // The map you just left (till the next one), for the bar between maps.
   last?: LastMap | null
+  // The map line after a map (chip place "bar"), for a few seconds.
+  after?: string | null
 }>()
 const emit = defineEmits<{ move: [pos: { x: number, y: number }, done: boolean] }>()
 
@@ -110,11 +114,12 @@ function startDrag (e: PointerEvent) {
 }
 
 // The map's time so far, like the after-map toast, ticking each second while
-// in a map. Out of maps nothing ticks faster than the shared minute clock.
+// in a map, only while it shows (Map time off: nothing ticks). Out of maps
+// nothing ticks faster than the shared minute clock.
 const now = shallowRef(Date.now())
-onUnmounted(tickWhile(() => !!props.map, () => { now.value = Date.now() }, 1000))
+onUnmounted(tickWhile(() => !!props.map && on.value.time, () => { now.value = Date.now() }, 1000))
 const elapsed = computed(() => props.before + Math.max(0, now.value - props.since))
-const clockNow = computed(() => props.map ? now.value : Math.max(now.value, nowMinute.value))
+const clockNow = computed(() => props.map && on.value.time ? now.value : Math.max(now.value, nowMinute.value))
 const nights = useNightList()
 const night = computed(() => nights.shown.value?.live ? nights.shown.value.story : null)
 const profit = computed(() => night.value ? nights.profitOf(night.value) : null)

@@ -36,8 +36,12 @@ describe('No Elder on a map search', () => {
     expect(filter?.disabled).toBe(false)
     const query = createTradeRequest(createFilters(item, OPTS), stats).query
     const not = query.stats.find(g => g.type === 'not')
-    // No option: either influence is left out.
-    expect(not?.filters).toContainEqual(expect.objectContaining({ id: 'implicit.stat_1792283443', value: expect.not.objectContaining({ option: expect.anything() }) }))
+    // Each influence by its option: with none, the trade site matches nothing, so
+    // "not" left nothing out (Guy's 29c Elder map, 2026-11-24).
+    expect(not?.filters.filter(f => f.id === 'implicit.stat_1792283443')).toEqual([
+      { id: 'implicit.stat_1792283443', value: { option: 1 }, disabled: false },
+      { id: 'implicit.stat_1792283443', value: { option: 2 }, disabled: false }
+    ])
     // The Originator's Memories still searched.
     expect(JSON.stringify(query.stats)).toContain('implicit.stat_2696470877')
   })
@@ -56,8 +60,8 @@ describe('No Elder on a map search', () => {
     const query = createTradeRequest(createFilters(item, OPTS), stats).query
     // Sent switched off, as every unticked row is: the trade site skips it.
     const sent = query.stats.flatMap(g => g.filters).filter(f => f.id === 'implicit.stat_1792283443')
-    expect(sent).toHaveLength(1)
-    expect(sent[0].disabled).toBe(true)
+    expect(sent).toHaveLength(2)
+    expect(sent.every(f => f.disabled)).toBe(true)
   })
 })
 

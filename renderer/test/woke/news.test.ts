@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { NEWS, markAllNewsSeen, markNewsSeen, unseenNews } from '@/web/woke/tab-bar/news'
+import { NEWS, markAllNewsSeen, markNewsSeen, seenNewsIds, unseenNews } from '@/web/woke/tab-bar/news'
+import { setNewsOff } from '@/web/woke/tab-bar/news-off'
 import { gotoTargets } from '@/web/woke/tab-bar/goto-targets'
 import type { WokeModulesConfig } from '@/web/woke/modules'
 
@@ -40,5 +41,19 @@ describe("What's new lines", () => {
     expect(unseenNews(fresh)).toEqual([])
     markAllNewsSeen(fresh)
     expect(unseenNews(fresh)).toEqual([])
+  })
+})
+
+describe("What's new switched off", () => {
+  it('hides every line, marks them seen, and shows only later lines once back on', () => {
+    const woke: WokeModulesConfig = { setupDone: true, off: [] }
+    setNewsOff(woke, true)
+    expect(woke.newsOff).toBe(true)
+    expect(unseenNews(woke)).toEqual([])
+    expect(seenNewsIds(woke)).toEqual(NEWS.map(n => n.id))
+    setNewsOff(woke, false)
+    expect(woke.newsOff).toBeUndefined()
+    // Everything there when it was switched off stays seen.
+    expect(unseenNews(woke)).toEqual([])
   })
 })

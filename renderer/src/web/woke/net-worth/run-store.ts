@@ -7,7 +7,8 @@ import { hostRequest } from '../shared/host'
 import { toast } from '../ui/layer'
 import { readMapDay, dayKey, NIGHTS_COLLECTION, RECENT_MAPS_KEY } from '../session-story/store'
 import { isSkippedArea } from '../session-story/skip-areas'
-import { addToTally, cleanDoc, compareRows, emptyRun, isRunGlance, mapsIn, relive, runBoardKey, runGlanceKey, runsKey, runTotals, tallyFrom, topDrop, MAX_DONE_RUNS } from './runs'
+import type { MapRecord } from '../session-story/map-log'
+import { addToTally, cleanDoc, compareRows, emptyRun, isLastRun, isRunGlance, lastRunKey, mapsIn, relive, runBoardKey, runGlanceKey, runsKey, runTotals, tallyFrom, topDrop, MAX_DONE_RUNS } from './runs'
 import type { CostLine, LivePrice, OnceCost, Outside, Run, RunBoard, RunGlance, RunsDoc } from './runs'
 import type { LedgerPoint } from './ledger'
 import type { StashDiff } from './valuation'
@@ -93,6 +94,17 @@ function saveBoard (league: string, doc: RunsDoc) {
 
 // Every map from the start's day to today (map history keeps one file a day).
 export async function readRunMaps (run: Run, now: number): Promise<Array<{ enteredAt: number, leftAt: number }>> {
+  return (await readRunDays(run, now)).map(m => ({ enteredAt: m.enteredAt, leftAt: m.leftAt }))
+}
+
+// The maps in the run itself, whole (time inside, deaths, NPCs), oldest
+// first: the run summary's map times.
+export async function readRunMapRecords (run: Run, now: number): Promise<MapRecord[]> {
+  const end = run.stoppedAt ?? now
+  return (await readRunDays(run, now)).filter(m => m.leftAt > run.startAt && m.enteredAt <= end).sort((a, b) => a.enteredAt - b.enteredAt)
+}
+
+async function readRunDays (run: Run, now: number): Promise<MapRecord[]> {
   const end = run.stoppedAt ?? now
   // Calendar days (a DST day is 23 or 25 hours).
   const keys: string[] = []
@@ -109,12 +121,12 @@ export async function readRunMaps (run: Run, now: number): Promise<Array<{ enter
     Promise.all(keys.map(k => readMapDay(k).catch(() => []))),
     readMapDay(RECENT_MAPS_KEY, false, NIGHTS_COLLECTION).catch(() => [])
   ])
-  const byKey = new Map<string, { enteredAt: number, leftAt: number, name: string }>()
+  const byKey = new Map<string, MapRecord>()
   for (const m of [...days.flat(), ...recent]) {
     const was = byKey.get(m.key)
-    byKey.set(m.key, was ? { ...was, leftAt: Math.max(was.leftAt, m.leftAt) } : m)
+    byKey.set(m.key, was ? (m.leftAt > was.leftAt ? m : was) : m)
   }
-  return [...byKey.values()].filter(m => !isSkippedArea(m.name)).map(m => ({ enteredAt: m.enteredAt, leftAt: m.leftAt }))
+  return [...byKey.values()].filter(m => !isSkippedArea(m.name))
 }
 
 let mapsSeq = 0
@@ -194,6 +206,20 @@ async function saveGlance (league: string, run: Run | null, points: readonly Led
 }
 export const runGlance = shallowRef<RunGlance | null>(null)
 
+// A run that just stopped (run-stop.ts): the Runs view opens its summary
+// (pick W1) and clears it.
+// Only for a minute: a summary nobody opened by then doesn't jump in later.
+export const summaryFor = shallowRef<{ id: string, at: number } | null>(null)
+export const SUMMARY_FOR_MS = 60_000
+// What Stop is doing (run-stop.ts): its final stash read, then your Faustus
+// listings. null when no Stop is under way.
+export const stopPhase = shallowRef<'stash' | 'listings' | null>(null)
+// The newest read recordRunRead has taken in, and the newest read Net worth
+// handled at all, counted or skipped (Stop waits for its final read).
+export const lastRunReadAt = shallowRef(0)
+export const runReadSeen = shallowRef(0)
+export function markReadSeen (at: number) { if (at > runReadSeen.value) runReadSeen.value = at }
+
 // Set by run-stop.ts from the press until the run is stopped.
 let pendingStop: { id: string, at: number } | null = null
 export function setPendingStop (p: { id: string, at: number } | null) { pendingStop = p }
@@ -219,6 +245,9 @@ export function recordRunRead (league: string, diff: StashDiff | null, points: r
     if (price && pendingStop?.id !== live.id) next = relive(next, price)
     if (next !== live) await save(league, { ...runsDoc.value, live: next })
     await saveGlance(league, next, points, divine)
+  }).finally(() => {
+    const at = points[points.length - 1]?.at ?? 0
+    if (at > lastRunReadAt.value) lastRunReadAt.value = at
   })
 }
 
@@ -295,6 +324,9 @@ export function deleteRun (league: string, id: string) {
     await loadRuns(league)
     const doc = runsDoc.value
     await save(league, { live: doc.live, done: doc.done.filter(r => r.id !== id) })
+    // Ctrl+Space's last run, if it was this one.
+    const last = await (hostRequest('doc-get', { collection: COLLECTION, key: lastRunKey(league) }) as Promise<unknown>).catch(() => null)
+    if (isLastRun(last) && last.id === id) await hostRequest('doc-put', { collection: COLLECTION, key: lastRunKey(league), value: null }).catch(() => {})
   })
 }
 
