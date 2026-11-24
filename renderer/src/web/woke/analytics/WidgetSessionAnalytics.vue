@@ -16,6 +16,8 @@
           <WSegmented v-model="config.range" :options="rangeOptions" />
           <span class="text-xs w-dim ml-2">Show in</span>
           <WSegmented v-model="config.unit" :options="unitOptions" />
+          <span class="text-xs w-dim ml-2">Per hour of</span>
+          <RateTimePick />
           <span v-if="config.unit === 'div' && !divineNow" class="text-xs" style="color: var(--w-warn);" title="Sessions saved without a divine rate need today's poe.ninja prices">Waiting for poe.ninja prices.</span>
         </div>
       </template>
@@ -257,6 +259,7 @@ import {
 import type { StrategyRow, Unit } from './stats'
 import type { AnalyticsWidget, MapRun, SessionRecord } from './types'
 import { rateTime } from '../shared/rate-time-now'
+import RateTimePick from '../shared/RateTimePick.vue'
 // Tonight's card, from Session story's own chunk (already loaded when Session
 // story is on), so it adds nothing to startup.
 const TonightBand = defineAsyncComponent(() => import('../session-story/WidgetSessionStory.vue').then(m => m.TonightBand))

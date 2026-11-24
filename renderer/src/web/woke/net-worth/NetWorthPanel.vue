@@ -110,6 +110,7 @@
             <div v-else :class="$style.boxHead">
               <button type="button" :class="$style.fold" :aria-expanded="true" title="Fold Per hour" aria-label="Fold Per hour" @click="flipFold('perHour')"><i class="fas fa-chevron-down" /></button>
               <TextTabs v-model="rateWindow" :options="WINDOW_OPTIONS" />
+              <RateTimePick :class="$style.rateTime" />
             </div>
             <div v-if="!fold.perHour" :class="$style.tiles">
               <div><span :class="$style.caps">Per hour</span><b :class="[$style.bigRate, tone(rateShown.div)]" class="w-num" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b></div>
@@ -300,6 +301,7 @@ import { chartHOf, clampChartH, clampMidH, colWeights, dragCols, dragTop, edges,
 import type { ColId, FoldId, PanelLayout } from './layout'
 import SplitHandle from './SplitHandle.vue'
 import TextTabs from './TextTabs.vue'
+import RateTimePick from '../shared/RateTimePick.vue'
 import type { RateWindow } from './play-time'
 import LedgerChart from './LedgerChart.vue'
 import Coin from './Coin.vue'
@@ -952,6 +954,7 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .spark + .holdings { margin-left: 0; }
 .holdings { display: inline-flex; gap: var(--w-s3); align-items: baseline; min-width: 0; margin-left: auto; }
 .box { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: var(--w-s2); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
+.rateTime { margin-left: auto; }
 .boxHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 .sideCol { display: flex; flex-direction: column; gap: var(--w-s3); }
 .movesCol { display: flex; flex-direction: column; gap: 2px; }

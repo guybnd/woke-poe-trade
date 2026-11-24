@@ -36,4 +36,4 @@ export function countedMs (s: TimeSplit, t: RateTime): number {
 export function leftOutText (t: RateTime): string {
   return t === 'play' ? 'hideout, town, AFK and game closed left out' : t === 'hub' ? 'AFK and game closed left out' : 'all time counted'
 }
-export const RATE_TIME_WHERE = 'Change what counts: Settings → Game & league → Per hour'
+export const RATE_TIME_WHERE = 'Play, + Hideout or All changes what counts, in every tool at once'
