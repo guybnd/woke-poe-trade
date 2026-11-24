@@ -242,8 +242,17 @@ export function isFragmentSet (group: DropEntry): boolean {
 // are never shown as "Drops from" or "Drops in".
 const NOT_DROPS = new Set(['Essence of Insanity', 'Primal Crystallised Lifeforce', 'Golden Oil', 'Lesser Eldritch Ember', 'Lesser Eldritch Ichor', 'Timeless Eternal Empire Splinter'])
 
+// Items in a real drop group that poedb doesn't back: Perfect Forest Tiger is
+// an Azmeri corpse, not a drop of the King in the Mists.
+const NOT_DROP_ITEMS = new Set(['ITEM::Perfect Forest Tiger'])
+
 export function dropsAreReal (group: DropEntry): boolean {
   return !NOT_DROPS.has(keyName(group.query[0]).name)
+}
+
+// What a group really drops.
+export function realDrops (group: DropEntry): string[] {
+  return dropsAreReal(group) ? group.items.filter(id => !NOT_DROP_ITEMS.has(id)) : []
 }
 
 // For tests: the book is built once per game data load.

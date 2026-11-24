@@ -48,7 +48,7 @@ import { ParsedItem } from '@/parser'
 import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
 import { sideRow, type SideRow } from './side-row'
 import { familyOf, familyRows, type Family } from '@/web/woke/related-family/family'
-import { cardsFor, dropsAreReal, isFragmentSet, recipeBook, recipesOf, recipeSum, recipeTitle, resolveParts } from '@/web/woke/related-family/recipe'
+import { cardsFor, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resolveParts } from '@/web/woke/related-family/recipe'
 import { loadTipItems } from '@/web/woke/ui/tooltip/item-tip'
 
 const { findPriceByQuery, findPricesByName, autoCurrency, xchgRate } = usePoeninja()
@@ -182,7 +182,7 @@ function setSum (group: DropEntry): SumLine | undefined {
 // cards that give the item are listed already.
 function getSources (item: ParsedItem, queryId: string, cardsShown: boolean) {
   return ITEM_DROP
-    .filter(g => g.items.includes(queryId) && !book().used.has(g) && dropsAreReal(g))
+    .filter(g => !book().used.has(g) && realDrops(g).includes(queryId))
     .filter(g => !cardsShown || !g.query.every(id => id.startsWith('DIVINATION_CARD::')))
     .map((g, i) => {
       const rows: SideRow[] = []
@@ -220,7 +220,7 @@ function getItemPrices (queryId: string) {
   }
   const chaosOf = (price?: CurrencyValue) => !price ? -1 : (price.currency === 'div' ? price.max * (xchgRate.value ?? 1) : price.max)
   // A recipe group's items are what it makes, which the recipe list shows.
-  for (const itemId of book().used.has(dropEntry) || !dropsAreReal(dropEntry) ? [] : dropEntry.items) {
+  for (const itemId of book().used.has(dropEntry) ? [] : realDrops(dropEntry)) {
     const dbItem = findItemByQueryId(itemId)
     if (!dbItem) return { error: `Can't find "${itemId}".` }
 
