@@ -22,6 +22,7 @@
       <span v-if="(story.afkMs ?? 0) >= 60_000" @mouseenter="tip($event, AFK_TIP)" @mouseleave="untip"><span class="w-dim">AFK</span> {{ formatDuration(story.afkMs!) }}</span>
       <span v-if="story.longestBreakMs && story.longestBreakMs >= 60_000"><span class="w-dim">Longest break</span> {{ formatClock(story.longestBreakMs) }}</span>
       <span><span class="w-dim">Deaths</span> {{ story.deathsAt.length }}</span>
+      <RateTimePick :class="$style.ratePick" />
     </div>
     <div v-if="story.levelUps?.length" :class="$style.line" class="w-num" data-night-levels>
       <span v-for="l in story.levelUps" :key="l.char"><span class="w-dim">{{ story.levelUps.length > 1 ? l.char : 'Level' }}</span> {{ l.from }} → {{ l.to }}</span>
@@ -38,6 +39,7 @@ import { hideHelp, showHelp } from '../ui/help-tip'
 import { nightRateMs, playedMs } from './night-rate'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
+import RateTimePick from '../shared/RateTimePick.vue'
 import { clockTime } from './history-days'
 import { formatChaos, formatClock, formatDuration } from '../ui/format'
 import type { NightStory, StripPart } from './story'
@@ -138,6 +140,7 @@ function signed (chaos: number): string {
   pointer-events: none;
   z-index: 2;
 }
+.ratePick { margin-left: auto; }
 .totals {
   display: flex;
   flex-wrap: wrap;

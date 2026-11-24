@@ -35,6 +35,7 @@
           </div>
           <div :class="$style.timeKey" class="w-dim w-num text-xs">
             <span v-for="p in time.parts" :key="p.id"><i :class="[$style.dot, $style[p.id]]" />{{ p.label }} {{ formatDuration(p.ms) }}</span>
+            <RateTimePick :class="$style.ratePick" />
           </div>
         </template>
         <!-- What brought the most in (the stash's tally since the start). -->
@@ -123,6 +124,7 @@ import type { RunGlance } from './runs'
 import { countLabel, runPerHour, tallyRows, unitOf } from './runs'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
+import RateTimePick from '../shared/RateTimePick.vue'
 import { loadRuns, runsDoc } from './run-store'
 import { runTimeIn } from './run-time'
 import Coin from './Coin.vue'
@@ -319,6 +321,7 @@ const tone = (n: number | null | undefined) => n == null || n === 0 ? 'w-dim' : 
 .map { background: var(--w-up); }
 .hub { background: var(--w-gold); }
 .off { background: var(--w-line-strong); }
+.ratePick { margin-left: auto; }
 .timeKey { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
 .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
 .link { align-self: flex-start; color: var(--w-gold); text-decoration: underline; cursor: pointer; font-size: var(--w-fs-sm); }

@@ -7,6 +7,7 @@
     <div :class="$style.key" class="w-dim w-num text-xs">
       <span v-for="p in parts" :key="p.id"><i :class="[$style.dot, $style[p.id]]" />{{ p.label }} {{ formatDuration(p.ms) }}</span>
       <span v-if="perMap" :title="unit === 'map' ? 'Time in maps per map' : 'Time in maps and boss fights, per map or fight'">{{ perMap }} a {{ unit }}</span>
+      <RateTimePick :class="$style.pick" />
     </div>
   </div>
 </template>
@@ -14,6 +15,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue'
 import { formatDuration } from '../ui/format'
+import RateTimePick from '../shared/RateTimePick.vue'
 import { runTimeIn } from './run-time'
 import type { RunTime } from './run-time'
 
@@ -57,5 +59,6 @@ const perMap = computed(() => spent.value && props.maps > 0 ? formatDuration((sp
 .hub { background: var(--w-gold); }
 .off { background: var(--w-line-strong); }
 .key { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; }
+.pick { margin-left: auto; }
 .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
 </style>
