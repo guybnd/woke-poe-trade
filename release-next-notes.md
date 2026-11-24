@@ -204,3 +204,4 @@
 - What's new: Show me now goes to the feature itself, not just its tab. It scrolls to it and flashes it, and the Listed line picks the Stale chip. Before, with the window already on that tab, it looked like nothing happened.
 - What's new: Show me on the price check's seller spread line opens a sample Exalted Orb check and points at the spread; the map cards line opens Ctrl+Space with a map typed.
 - What's new: Show me on the price check's upgrade and recipe lines opens a sample check (Xoph's Inception, The Will of Uul-Netol) and points at the side list. Lines with nothing to show have no Show me, only dismiss, instead of opening Settings.
+- Map price check: rare-only (yellow) map mods are in the one mod list again, in their game colour, with Any/Has/Not; a buried Sentinel or Evocator among them searches any of its kinds. Atlas Drops is searched like Rarity and Pack, and the + for another number sits on the tiles' row.
