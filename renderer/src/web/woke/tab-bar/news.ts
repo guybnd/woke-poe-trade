@@ -22,6 +22,7 @@ export interface NewsItem {
 }
 
 export const NEWS: NewsItem[] = [
+  { id: 'scrying-helper', wmType: 'woke-scrying', name: 'Scrying', note: 'New: which map to scry, ranked by the cards a Scrying Orb adds per map, with the orb\'s price and a Buy link' },
   { id: 'runs-crafting-session', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: a Crafting run: what you made, the orbs used and what sold, with its profit' },
   { id: 'per-hour-hideout-apart', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: crafting and selling in hideout no longer count against per hour. Shown apart, with your sales' },
   { id: 'net-worth-chart-faustus-band', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: the chart shows what you have at Faustus on top, sales as coins, and your maps (Maps)' },

@@ -3,6 +3,8 @@
 import { cardChanceIn, cardPageUrl, cardsInMap, mapLabel, mapTip, mapsMatching, oneInText, valuePerCardDrop, DIVCORD_URL } from '../../card-drops/card-drops'
 import type { CardDropData } from '../../card-drops/card-drops'
 import { formatChaos } from '../../ui/format'
+import { SCRYING_TYPE } from '../../scrying/widget'
+import { matchRank } from '../search'
 import type { Lookup, LookupCard, LookupContext, LookupRow } from './types'
 
 export function mapCardsCard (data: CardDropData, map: string, ctx: LookupContext): LookupCard {
@@ -40,15 +42,34 @@ export function mapCardsCard (data: CardDropData, map: string, ctx: LookupContex
     ],
     actions: [
       ...(best ? [{ label: `Look up ${best.name}`, search: best.name }] : []),
+      ...(ctx.tools.has(SCRYING_TYPE) ? [{ label: 'Scry it', open: { tool: SCRYING_TYPE, id: map } }] : []),
       { label: 'Divcord', url: best ? cardPageUrl(best.name) : DIVCORD_URL }
     ]
   }
 }
 
+// "scry" or "scrying": a card that opens the Scrying window.
+function scryingCard (): LookupCard {
+  return {
+    id: 'scrying-window',
+    group: 'Div cards by map',
+    name: 'Scrying',
+    sub: 'Which map to scry, by the cards a Scrying Orb adds per map',
+    icon: 'fas fa-eye',
+    tip: { name: 'Scrying Orb' },
+    sections: [{ text: ['A Scrying Orb names a map. Used on a map on your Atlas, that map\'s own divination cards become the named map\'s. The Scrying window ranks maps by what that adds per map you run, with the orb\'s price from trade and a Buy link.'] }],
+    actions: [{ label: 'Open Scrying', tool: SCRYING_TYPE }]
+  }
+}
+
 export function mapCardsLookup (data: CardDropData | null): Lookup {
   if (!data) return () => []
-  return (query, ctx) => mapsMatching(data, query)
-    .filter(map => cardsInMap(data, map).length)
-    .slice(0, 3)
-    .map(map => mapCardsCard(data, map, ctx))
+  return (query, ctx) => {
+    const q = query.trim()
+    const scry = q.length >= 4 && ctx.tools.has(SCRYING_TYPE) && (matchRank('Scrying', q) >= 0 || matchRank('Scry', q) >= 0) ? [scryingCard()] : []
+    return [...scry, ...mapsMatching(data, query)
+      .filter(map => cardsInMap(data, map).length)
+      .slice(0, 3)
+      .map(map => mapCardsCard(data, map, ctx))]
+  }
 }
