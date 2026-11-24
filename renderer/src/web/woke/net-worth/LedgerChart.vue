@@ -26,7 +26,7 @@
     <!-- Sales (sales.ts): a gold dot on the line where each sold. -->
     <!-- Sales (pick B): a coin each, sized by price; the biggest two named. -->
     <span v-for="(m, i) in saleDots" :key="'d' + i + ':' + m.at" :class="$style.sale" :style="{ left: m.x + '%', top: m.y + '%', width: m.r * 2 + 'px', height: m.r * 2 + 'px' }" />
-    <span v-for="(m, i) in saleLabels" :key="'l' + i + ':' + m.at" v-item-tip="m.tip ?? null" :class="[$style.saleLabel, $style[m.align]]" :style="{ left: m.x + '%', top: m.y + '%', '--r': m.r + 'px' }">{{ m.name }} {{ fmt(m.div!) }}<Coin /></span>
+    <span v-for="(m, i) in saleLabels" :key="'l' + i + ':' + m.at" v-item-tip="m.tip ?? null" :class="[$style.saleLabel, $style[m.align], { [$style.under]: m.under }]" :style="{ left: m.x + '%', top: m.y + '%', '--r': m.r + 'px' }">{{ m.name }} {{ fmt(m.div!) }}<Coin /></span>
     <template v-if="shown">
       <span :class="$style.dot" :style="{ left: shown.x + '%', top: shown.y + '%' }" />
       <!-- Follows the mouse; a click keeps it open (pinned), and then its item
@@ -130,7 +130,14 @@ type At = { p: SeriesPoint, x: number, y: number, listed: number }
 const hover = shallowRef<At | null>(null)
 // A clicked point's card stays until a click elsewhere, Esc, or new points.
 const pinned = shallowRef<At | null>(null)
-const shown = computed(() => pinned.value ?? hover.value)
+const shown = computed<At | null>(() => {
+  const a = pinned.value ?? hover.value
+  if (!a) return null
+  // Worked out again: the band or the mode can change under a pinned card.
+  const i = props.series.findIndex(p => p.at === a.p.at)
+  if (i < 0) return a
+  return { ...a, y: yOf(props.mode === 'total' ? topOf(i) : sumCats(a.p)) / H * 100, listed: listedOf(i) }
+})
 const tipEl = shallowRef<HTMLElement | null>(null)
 const topTip = (t: string) => { const x = parseTop(t); return props.tipOf!(x.name, Math.abs(x.count)) }
 
@@ -247,7 +254,7 @@ const saleDots = computed(() => {
   const shownSales = props.sales.filter(x => x.at >= span.value.t0 && x.at <= span.value.t1)
   const most = Math.max(0, ...shownSales.map(x => x.div ?? 0))
   return shownSales.map(x => {
-    // A sale before the first point (i = -1) sits on it.
+    // Past the last point (i = -1; the range filter keeps these out): on it.
     const i = s.findIndex(p => p.at >= x.at)
     const bi = i < 0 ? s.length - 1 : i
     const ai = Math.max(0, bi - 1)
@@ -258,7 +265,8 @@ const saleDots = computed(() => {
     return { ...x, x: xOf(x.at) / W * 100, y: yOf(v) / H * 100, r: coinRadius(x.div ?? null, most) }
   })
 })
-const saleLabels = computed(() => labelledSales(saleDots.value).map(m => ({ ...m, align: m.x < 15 ? 'left' as const : m.x > 85 ? 'right' as const : 'center' as const })))
+// Named near the top: below the coin, so it stays off the chart's header.
+const saleLabels = computed(() => labelledSales(saleDots.value).map(m => ({ ...m, align: m.x < 30 ? 'left' as const : m.x > 70 ? 'right' as const : 'center' as const, under: m.y < 35 })))
 // The map columns in view, and the best one named.
 const mapCols = computed(() => {
   const ms = props.maps
@@ -326,7 +334,9 @@ function when (at: number) {
 .spend { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--w-info); opacity: .8; pointer-events: none; }
 .spendText { color: var(--w-info); }
 .sale { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, var(--w-fg) 0 15%, var(--w-gold) 45%); box-shadow: 0 0 0 1px var(--w-panel-solid), inset 0 0 0 1px color-mix(in srgb, var(--w-panel-solid) 45%, transparent); transform: translate(-50%, -50%); pointer-events: none; }
-.saleLabel { position: absolute; z-index: 1; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; font-size: var(--w-fs-xs); line-height: 1; color: var(--w-fg); text-shadow: 0 1px 2px var(--w-panel-solid), 0 0 3px var(--w-panel-solid); cursor: help; --ty: calc(-100% - var(--r) - 3px); }
+.saleLabel { position: absolute; z-index: 1; display: block; white-space: nowrap; font-size: var(--w-fs-xs); line-height: 1; color: var(--w-fg); text-shadow: 0 1px 2px var(--w-panel-solid), 0 0 3px var(--w-panel-solid); cursor: help; max-width: 48%; --ty: calc(-100% - var(--r) - 3px); }
+.saleLabel.under { --ty: calc(var(--r) + 3px); }
+.saleLabel { overflow: hidden; text-overflow: ellipsis; }
 .listed { fill: color-mix(in srgb, var(--w-higher) 24%, transparent); }
 .listedTop { fill: none; stroke: var(--w-higher); stroke-width: 1; stroke-dasharray: 3 2; opacity: .85; }
 .listedText { color: var(--w-higher); }

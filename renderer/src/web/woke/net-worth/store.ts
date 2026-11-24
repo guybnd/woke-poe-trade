@@ -16,7 +16,7 @@ import { classify, resolveSpends } from './spend'
 import type { SpendMark } from './spend'
 import { addPoint, keepDiff, topChanges, valueByTab } from './ledger'
 import { glanceKey, glanceRates, ledgerKey } from './glance'
-import { listedWorth } from './pending-glance'
+import { keptSales, listedGlance, listedTotal, listedWorth } from './pending-glance'
 import type { Glance } from './glance'
 import type { LedgerPoint, TabValue } from './ledger'
 import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, StashTabLike, Valuation } from './valuation'
@@ -251,14 +251,17 @@ async function countRead (id: string, readAt: number) {
   await recordRunRead(id, diff, nextLedger.points, divine.value, kitPrice(v.lines))
 }
 
-// The dock icon's number at a read (Ctrl+Space reads the saved one).
 // The chart's Faustus band (pick A): what the unsold listings are worth now,
-// as the window or dock card last worked it out.
+// as the dock card's total counts them (a sold one drops out).
 function listedNow (id: string): { listed?: number } {
-  const w = listedWorth.value
-  if (!w || w.league !== id || !w.items.length) return {}
-  return { listed: w.items.reduce((s, [, chaos]) => s + chaos, 0) }
+  const g = listedGlance.value
+  if (!g || g.league !== id) return {}
+  const kept = keptSales.value
+  const listed = listedTotal(g, listedWorth.value, kept?.league === id ? kept.sales : [], divine.value)
+  return listed > 0 ? { listed } : {}
 }
+
+// The dock icon's number at a read (Ctrl+Space reads the saved one).
 
 function glanceAt (id: string, at: number, chaos: number, netChaos: number | null, todayChaos: number | null): Glance {
   const rates = ratesAt(at)

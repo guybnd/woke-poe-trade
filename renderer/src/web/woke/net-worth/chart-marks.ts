@@ -36,7 +36,7 @@ export function coinRadius (div: number | null, most: number): number {
 
 // The sales to name: the two dearest, the second only when it isn't on top
 // of the first (x within `gap` % of the chart's width).
-export function labelledSales<T extends { x: number, div?: number | null, name?: string }> (dots: readonly T[], gap = 22): T[] {
+export function labelledSales<T extends { x: number, div?: number | null, name?: string }> (dots: readonly T[], gap = 40): T[] {
   const priced = dots.filter(d => d.name && d.div != null && d.div > 0).sort((a, b) => b.div! - a.div!)
   const out: T[] = []
   for (const d of priced) {
