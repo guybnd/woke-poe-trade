@@ -49,15 +49,26 @@ const listings = computed(() => {
   const sold = soldIds(doc, sales.value)
   return doc.listings.filter(l => !sold.has(l.id))
 })
-// Your listings of the checked item; a Listed row's Reprice picks its own
-// among them (two copies of one unique at different prices).
+// A Listed row's Reprice: the listing it opened this check for. Bound to the
+// first item shown after the click; any later item clears it.
+const REPRICE_MS = 10_000
+const repricedFor = shallowRef<{ id: string, item: unknown } | null>(null)
+watch(() => props.item, (item) => {
+  const r = repricing.value
+  if (r && r.league === league.value && Date.now() - r.at < REPRICE_MS) repricedFor.value = { id: r.id, item }
+  else if (repricedFor.value?.item !== item) repricedFor.value = null
+  repricing.value = null
+}, { immediate: true })
+
+// Your listings of the checked item. A check opened by name (a gem, a rolled
+// unique) has no game text to match: Reprice's listing stands alone then.
 const matches = computed(() => {
+  const r = repricedFor.value?.item === props.item ? repricedFor.value.id : null
+  const own = r ? listings.value.find(l => l.id === r) : undefined
+  if (own) return [own]
   const names = namesOfText(props.item.rawText)
   if (!names) return []
-  const found = listingsFor({ ...names, rarity: props.item.rarity, mapTier: props.item.mapTier, gemLevel: props.item.gemLevel }, listings.value)
-  const r = repricing.value
-  const own = r && r.league === league.value ? found.find(l => l.id === r.id) : undefined
-  return own ? [own] : found
+  return listingsFor({ ...names, rarity: props.item.rarity, mapTier: props.item.mapTier, gemLevel: props.item.gemLevel }, listings.value)
 })
 const picked = shallowRef<string | null>(null)
 watch(() => props.item, () => { picked.value = null; typed.value = 0 })

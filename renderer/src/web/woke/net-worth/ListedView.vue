@@ -75,7 +75,7 @@
 // Sales › Listed (pending.ts): what's at Faustus and not sold, its asking
 // price against poe.ninja, and how long it has sat.
 import { computed, shallowRef, watch } from 'vue'
-import { WButton, WChip, WEmpty, WToggle, vItemTip } from '../ui'
+import { WButton, WChip, WEmpty, WToggle, toast, vItemTip } from '../ui'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import Coin from './Coin.vue'
 import { saleTip } from './sale-tip'
@@ -203,14 +203,15 @@ function canReprice (l: Listing) {
 }
 async function reprice (r: PendingRow, e: MouseEvent) {
   const l = r.item
-  repricing.value = { league: props.league, id: l.id }
+  repricing.value = { league: props.league, id: l.id, at: Date.now() }
   // Read before the await: currentTarget is gone after it.
   const box = (e.currentTarget as HTMLElement).getBoundingClientRect()
   const at = { x: window.screenX + box.x + box.width / 2, y: window.screenY + box.y + box.height / 2 }
   const [{ openPriceCheck }, { pobMenuRef }] = await Promise.all([import('../ui/tooltip/item-price-check'), import('../pob-builds/item-menu-ref')])
   const unique = l.frameType === 3 || l.frameType === 9
   const ref = pobMenuRef(saleItem(l)) ?? { name: l.name || l.typeLine, ...(unique ? { rarity: 'unique' as const } : {}) }
-  openPriceCheck(ref, at).catch(() => {})
+  const opened = await openPriceCheck(ref, at).catch(() => false)
+  if (!opened) { repricing.value = null; toast("Can't price check this one by name: Ctrl+D it at Faustus in game") }
 }
 function colourOf (frame: number) {
   switch (frame) {

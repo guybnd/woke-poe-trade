@@ -18,12 +18,15 @@ export const cheapestDoc = shallowRef<CheapestDoc | null>(null)
 export const cheapestBusy = shallowRef<ReadonlySet<string>>(new Set())
 export const cheapestErrors = shallowRef<Readonly<Record<string, string>>>({})
 let loadedFor: string | null = null
+let loading: Promise<void> = Promise.resolve()
 
-export function loadCheapest (league: string): void {
-  if (loadedFor === league) return
+// Resolves once the saved doc is in (a write waits for it, so it never
+// overwrites saved checks it hasn't seen).
+export function loadCheapest (league: string): Promise<void> {
+  if (loadedFor === league) return loading
   loadedFor = league
   cheapestDoc.value = null
-  ;(hostRequest('doc-get', { collection: COLLECTION, key: cheapestKey(league) }) as Promise<unknown>)
+  loading = (hostRequest('doc-get', { collection: COLLECTION, key: cheapestKey(league) }) as Promise<unknown>)
     .then((d) => {
       if (loadedFor !== league) return
       // A check made while this loaded wins over the saved doc.
@@ -34,6 +37,7 @@ export function loadCheapest (league: string): void {
         : now ?? saved
     })
     .catch(() => { if (loadedFor === league) loadedFor = null })
+  return loading
 }
 
 // A transfigured gem searches as its normal gem plus a discriminator, as the
@@ -81,6 +85,7 @@ export async function checkCheapest (league: string, l: Listing, rates: Rates): 
       return { chaosEach: c == null ? null : c / Math.max(1, r.stackSize ?? 1), mine: r.isMine }
     })
     const check = summarize(l, mine / Math.max(1, l.stack), fetched, search.total, search.result.length <= FETCH, Date.now())
+    await loadCheapest(league)
     if (loadedFor !== league) return
     const next = withCheck(cheapestDoc.value, league, l.id, check)
     cheapestDoc.value = next
@@ -94,11 +99,13 @@ export async function checkCheapest (league: string, l: Listing, rates: Rates): 
 
 // The listing a Listed row's Reprice opened the price check for: the price
 // check's bar picks it over a match by name.
-export const repricing = shallowRef<{ league: string, id: string } | null>(null)
+// It holds for the next item the price check shows, opened within a few
+// seconds; any other item clears it.
+export const repricing = shallowRef<{ league: string, id: string, at: number } | null>(null)
 
 // A new price for a listing, from the price check's bar (null: clear it).
 export async function setTarget (league: string, id: string, target: TargetPrice | null): Promise<void> {
-  loadCheapest(league)
+  await loadCheapest(league)
   const next = withTarget(cheapestDoc.value?.league === league ? cheapestDoc.value : null, league, id, target)
   cheapestDoc.value = next
   await hostRequest('doc-put', { collection: COLLECTION, key: cheapestKey(league), value: next }).catch(() => {})

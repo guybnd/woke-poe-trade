@@ -26,7 +26,8 @@ export function namesOfText (rawText: string): { name: string, base?: string } |
   return { name: lines[at + 1], ...(base ? { base } : {}) }
 }
 
-const strip = (s: string) => s.replace(/^(Superior|Synthesised|Foulborn|Fated) /, '')
+// A copy's prefixes the listing's name doesn't carry (Foulborn it does).
+const strip = (s: string) => s.replace(/^(Superior|Synthesised|Fated) /, '')
 
 // Your listings of the checked item. A unique or rare by its own name (and
 // base); anything else by its type, a map by its tier too, a gem by its level.
