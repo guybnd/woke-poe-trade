@@ -38,8 +38,23 @@ describe('run summary', () => {
       manual: [{ id: 'm1', name: 'Mageblood', count: 1, each: 120, side: 'in' }]
     }
     const s = summarize(input({ run }))
-    expect(s.drops.map(d => d.name)).toEqual(['Mirror of Kalandra', 'Forbidden Flame', 'Mageblood', 'The Apothecary'])
+    // A left-out drop stays in its place, struck, without taking a counted slot.
+    expect(s.drops.map(d => d.name)).toEqual(['Mirror of Kalandra', 'Headhunter', 'Forbidden Flame', 'Mageblood', 'The Apothecary'])
+    expect(s.drops.find(d => d.name === 'Headhunter')).toMatchObject({ out: true, chaos: 5000 })
     expect(s.drops.find(d => d.name === 'Forbidden Flame')?.count).toBe(1)
+    expect(s.drops.find(d => d.name === 'Mageblood')?.manualId).toBe('m1')
+  })
+
+  it('best drops flag your price', () => {
+    const run: Run = {
+      ...emptyRun('now', 'Covens', 'Nightmare maps', T0),
+      stoppedAt: T0 + H,
+      tally: { card: tl('The Apothecary', 1, 96) },
+      edits: { 'tally:card': { each: 120 } }
+    }
+    const d = summarize(input({ run })).drops[0]
+    expect(d).toMatchObject({ name: 'The Apothecary', chaos: 120, edited: true })
+    expect(d.out).toBeUndefined()
   })
 
   it('compares against your other runs of the same name only, and leaves this run out', () => {

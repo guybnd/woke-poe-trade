@@ -52,7 +52,8 @@
       <RunTimeBar :start-at="shownRun.startAt" :end="timeEnd" :maps="totals.runs" :unit="unit" :kept="shownRun.final?.time" @spent="spent = $event" />
 
       <!-- A stopped run's summary (pick W1 + T1): opens on Stop. -->
-      <RunSummary v-if="showSummary && totals" :key="shownRun.id" :run="shownRun" :done="doc.done" :totals="totals" :per-hour="perHour" :spent="spent" :tips="tips" :divine="divine" :map-cost-keys="mapCostKeys" :league="league" @details="summaryId = null" />
+      <RunSummary v-if="showSummary && totals" :key="shownRun.id" :run="shownRun" :done="doc.done" :totals="totals" :per-hour="perHour" :spent="spent" :tips="tips" :divine="divine" :map-cost-keys="mapCostKeys" :league="league" @details="summaryId = null"
+        @drop-price="dropPrice" @drop-out="(d, on) => leaveOut(rowKey.tally(d.key), on, d.name)" @drop-remove="d => d.manualId && removeManual(d.manualId)" />
       <div v-if="!showSummary && changedCount" :class="$style.changedBar">
         <WChip clickable :active="onlyChanged" :title="onlyChanged ? 'Show every row' : 'Only the rows you edited or left out, and the ones you added'" data-run-changed @click="onlyChanged = !onlyChanged">Changed {{ changedCount }}</WChip>
       </div>
@@ -174,6 +175,7 @@ import type { NetWorthWidget } from './widget'
 import { formatAmount, nowMinute } from '../ui/format'
 import { tipFor } from './tips'
 import type { TipIndex } from './tips'
+import type { SummaryDrop } from './run-summary'
 import { span } from './play-time'
 import Coin from './Coin.vue'
 import { compareRows, countLabel, craftTime, shownFights, shownMaps, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, smallSample, sortCompare, tallyRows, tallyValue, topDrop, unitOf, SAMPLE_MIN_RUNS } from './runs'
@@ -284,6 +286,12 @@ function addManual (side: 'in' | 'out', l: AddedLine) {
   edit(r => ({ ...r, manual: [...(r.manual ?? []), m] }))
 }
 function editManual (id: string, v: { count?: number, each?: number }) { edit(r => ({ ...r, manual: (r.manual ?? []).map(m => m.id === id ? { ...m, count: v.count ?? m.count, each: v.each ?? m.each } : m) })) }
+// The run summary's best drops: your price each, or back to as read.
+function dropPrice (d: SummaryDrop, each: number | null) {
+  if (d.manualId) { if (each != null) editManual(d.manualId, { each }); return }
+  const key = rowKey.tally(d.key)
+  if (each == null) resetRow(key); else editRow(key, { each })
+}
 function removeManual (id: string) {
   const list = shownRun.value?.manual ?? []
   const at = list.findIndex(m => m.id === id)

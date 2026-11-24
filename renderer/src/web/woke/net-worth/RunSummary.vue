@@ -21,13 +21,8 @@
     <div :class="$style.panel" data-summary-drops>
       <div :class="$style.ph"><span>Best drops</span></div>
       <div v-if="s.drops.length" :class="$style.drops">
-        <div v-for="d in s.drops" :key="d.key" :class="$style.drop" data-summary-drop>
-          <img v-if="d.icon && !badArt.has(d.key)" :src="d.icon" alt="" :class="$style.art" @error="badArt = new Set([...badArt, d.key])"><span v-else :class="$style.art" />
-          <span :class="$style.dropText">
-            <span v-item-tip="tipFor(tips, d.key.startsWith('manual:') ? null : d.key, d.name, d.count)" class="w-trunc">{{ d.name }}</span>
-            <span class="w-dim w-num text-xs">{{ d.count > 1 ? `${d.count} × · ` : '' }}{{ money(d.chaos) }}</span>
-          </span>
-        </div>
+        <DropTile v-for="d in s.drops" :key="d.key" :drop="d" :divine="divine" :tip="tipFor(tips, d.key.startsWith('manual:') ? null : d.key, d.name, d.count)"
+          @price="emit('drop-price', d, $event)" @out="emit('drop-out', d, $event)" @remove="emit('drop-remove', d)" />
       </div>
       <div v-else class="w-dim text-xs">Nothing but currency came in.</div>
       <div v-if="sampleNote" :class="$style.note" class="text-xs" data-summary-sample>{{ sampleNote }}</div>
@@ -75,7 +70,7 @@
 // The run summary (pick W1 + T1), in the Runs view of a stopped run. The
 // numbers come from run-summary.ts; map times from Client.txt's map log.
 import { computed, shallowRef, watch } from 'vue'
-import { vItemTip } from '../ui'
+import DropTile from './DropTile.vue'
 import { formatChaos } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { rateTime } from '../shared/rate-time-now'
@@ -86,7 +81,7 @@ import type { Run, RunTotals } from './runs'
 import type { RunTime } from './run-time'
 import { readRunMapRecords, runsDoc } from './run-store'
 import { clockOf, lastRunKey, summarize, SLOW_FACTOR } from './run-summary'
-import type { LastRun, SummaryMap } from './run-summary'
+import type { LastRun, SummaryDrop, SummaryMap } from './run-summary'
 
 const props = defineProps<{
   run: Run
@@ -99,10 +94,16 @@ const props = defineProps<{
   mapCostKeys: ReadonlySet<string>
   league: string
 }>()
-const emit = defineEmits<{ details: [] }>()
+const emit = defineEmits<{
+  'details': []
+  // A best drop's shared line item: your price each (null: as read), leave
+  // out, remove (added by hand).
+  'drop-price': [d: SummaryDrop, each: number | null]
+  'drop-out': [d: SummaryDrop, on: boolean]
+  'drop-remove': [d: SummaryDrop]
+}>()
 
 const money = (chaos: number) => formatChaos(chaos, props.divine)
-const badArt = shallowRef(new Set<string>())
 const unit = computed(() => unitOf(props.totals.maps, props.totals.fights))
 const signedMoney = (chaos: number) => `${chaos > 0 ? '+' : chaos < 0 ? '−' : ''}${money(Math.abs(chaos))}`
 
@@ -198,6 +199,7 @@ watch(s, (sum) => {
   const r = props.run
   // The newest finished run only, once its maps are in.
   if (r.stoppedAt == null || mapsLoading.value || runsDoc.value.done[0]?.id !== r.id) return
+  const best = sum.drops.find(d => !d.out)
   const last: LastRun = {
     league: props.league,
     id: r.id,
@@ -209,7 +211,7 @@ watch(s, (sum) => {
     ...(props.totals.fights ? { fights: props.totals.fights } : {}),
     perMapChaos: props.totals.perMapChaos,
     usualPerMapChaos: sum.usual?.perMapChaos ?? null,
-    ...(sum.drops[0] ? { best: { name: sum.drops[0].name, chaos: sum.drops[0].chaos } } : {}),
+    ...(best ? { best: { name: best.name, chaos: best.chaos } } : {}),
     tips: sum.tips.map(t => ({ lead: t.lead, text: t.text }))
   }
   const json = JSON.stringify(last)
@@ -231,9 +233,6 @@ watch(s, (sum) => {
 .trk > span { position: absolute; left: 0; top: 0; bottom: 0; background: var(--w-line-strong); }
 .trk > span.me { background: var(--w-gold); opacity: 0.6; top: 2px; bottom: 2px; }
 .drops { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 4px; }
-.drop { display: flex; gap: 6px; align-items: center; border: 1px solid var(--w-line); padding: 3px 4px; min-width: 0; }
-.art { width: 32px; height: 32px; flex: none; object-fit: contain; }
-.dropText { display: flex; flex-direction: column; min-width: 0; font-size: var(--w-fs-sm); }
 .note { color: var(--w-dim); border-left: 2px solid var(--w-line-strong); padding-left: 6px; }
 .bars { display: flex; align-items: flex-end; gap: 2px; height: 64px; border-bottom: 1px solid var(--w-line-strong); position: relative; }
 .bars i { flex: 1; min-width: 2px; background: var(--w-line-strong); position: relative; cursor: help; }
