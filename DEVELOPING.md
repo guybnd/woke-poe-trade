@@ -141,7 +141,9 @@ Set up once:
 
 Without the secret the workflow only prints the post. To see a post or send
 one again: Actions › Discord announcement › Run workflow with a tag (tick
-"dry run" to only print it). Locally, `node scripts/discord-release.mjs v1.330.18 --dry-run`.
+"dry run" to only print it). Locally, `node scripts/discord-release.mjs v1.330.18 --dry-run`. A draft
+made before this workflow existed won't post when published by hand (GitHub
+runs the workflow from the release's own commit): run it by hand from master.
 
 ### Version numbers
 

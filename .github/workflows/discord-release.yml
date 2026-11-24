@@ -6,12 +6,14 @@ name: Discord announcement
 # Without the secret it only prints the post.
 #
 # release.yml starts this after it publishes (a release its GITHUB_TOKEN
-# publishes doesn't fire "release: published", so there is never a double
+# publishes doesn't fire "release" events, so there is never a double
 # post). Publishing a draft by hand on GitHub fires it directly. Run it by hand
 # with a tag to post again, or with "dry run" to see the post in the log.
 on:
   release:
-    types: [published]
+    # "released" also covers a pre-release promoted to a full release; pre-releases
+    # themselves don't post.
+    types: [released]
   workflow_dispatch:
     inputs:
       tag:
@@ -32,6 +34,7 @@ concurrency:
 jobs:
   announce:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       with:

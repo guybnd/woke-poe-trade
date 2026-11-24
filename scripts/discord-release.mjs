@@ -10,6 +10,8 @@
 // DISCORD_RELEASE_PING (optional text above the post, e.g. @everyone or <@&roleId>).
 // The release must be published: a draft or pre-release is skipped.
 
+import { pathToFileURL } from 'node:url'
+
 const DESCRIPTION_MAX = 4096 // Discord's embed description limit
 const COLOR = 0xaf6025 // PoE unique-item brown
 
@@ -25,7 +27,7 @@ export function cleanNotes (body) {
   })
   text = paragraphs.join('\n\n')
   // Embed descriptions don't render # headings everywhere: make them bold lines.
-  text = text.replace(/^#{1,6}\s+(.+?)\s*#*\s*$/gm, (_, h) => `__**${h.replace(/\*\*/g, '')}**__`)
+  text = text.replace(/^#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*$/gm, (_, h) => `__**${h.replace(/\*\*/g, '')}**__`)
   return text.trim()
 }
 
@@ -104,7 +106,14 @@ async function main () {
   const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'woke-release-announcer' }
   if (process.env.GH_TOKEN) headers.Authorization = `Bearer ${process.env.GH_TOKEN}`
 
-  const res = await fetch(`https://api.github.com/repos/${repo}/releases/tags/${encodeURIComponent(tag)}`, { headers })
+  // Just after publishing, GitHub can still answer 404 for the new tag.
+  let res
+  for (let attempt = 1; ; attempt++) {
+    res = await fetch(`https://api.github.com/repos/${repo}/releases/tags/${encodeURIComponent(tag)}`, { headers })
+    if (res.ok || attempt >= 4 || !(res.status === 404 || res.status >= 500)) break
+    console.log(`GitHub said ${res.status} for ${tag}; retrying in ${attempt * 10}s.`)
+    await new Promise(r => setTimeout(r, attempt * 10000))
+  }
   if (!res.ok) throw new Error(`GitHub release ${tag}: ${res.status} ${await res.text()}`)
   const release = await res.json()
   if (release.draft || release.prerelease) {
@@ -121,7 +130,9 @@ async function main () {
   }
 
   for (let attempt = 1; ; attempt++) {
-    const post = await fetch(`${webhook}?wait=true`, {
+    const target = new URL(webhook)
+    target.searchParams.set('wait', 'true')
+    const post = await fetch(target, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -131,7 +142,8 @@ async function main () {
       return
     }
     const text = await post.text()
-    if ((post.status === 429 || post.status >= 500) && attempt < 4) {
+    // Only a rate limit is retried: after a 5xx the message may already be posted.
+    if (post.status === 429 && attempt < 4) {
       const wait = Number(post.headers.get('retry-after')) || attempt * 5
       console.log(`Discord said ${post.status}; retrying in ${wait}s.`)
       await new Promise(r => setTimeout(r, wait * 1000))
@@ -141,6 +153,6 @@ async function main () {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('discord-release.mjs')) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch(e => { console.error(e.message); process.exit(1) })
 }
