@@ -29,7 +29,8 @@ test.beforeEach(({}, info) => { // eslint-disable-line no-empty-pattern
 test.use({ deviceScaleFactor: 2 })
 // Item art from testing/fixtures/icons, so the shots look the same wherever
 // they are taken (web.poecdn.com isn't reachable everywhere).
-test.beforeEach(async ({ overlay }) => { await localIcons(overlay) })
+// The website shows the app as a new install sees it.
+test.beforeEach(async ({ overlay }) => { overlay.appDefaults = true; await localIcons(overlay) })
 
 async function backdrop (overlay: Overlay, file: string, place = 'center / cover') {
   const data = fs.readFileSync(path.join(FIXTURES, 'screens', file)).toString('base64')

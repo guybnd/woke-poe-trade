@@ -21,7 +21,8 @@ test.skip(!process.env.WOKE_LANDING_SHOTS, 'Set WOKE_LANDING_SHOTS=1 to take the
 test.use({ deviceScaleFactor: 2 })
 // Item art from testing/fixtures/icons, so the shots look the same wherever
 // they are taken (web.poecdn.com isn't reachable everywhere).
-test.beforeEach(async ({ overlay }) => { await localIcons(overlay) })
+// The website shows the app as a new install sees it.
+test.beforeEach(async ({ overlay }) => { overlay.appDefaults = true; await localIcons(overlay) })
 
 // The toolkit tools the rail shows, as a player who maps would have them,
 // with the names their rail icons carry.
