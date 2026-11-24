@@ -5,6 +5,7 @@ import { hostRequest } from '../shared/host'
 import { cheapestKey, cheapestQuery, isCheapestDoc, summarize, withCheck } from './cheapest'
 import type { CheapestDoc } from './cheapest'
 import type { Listing } from './faustus'
+import { ITEM_BY_REF } from '@/assets/data'
 import { saleChaos } from './sales'
 import type { Rates } from './sales'
 
@@ -29,7 +30,18 @@ export function loadCheapest (league: string): void {
       const now = cheapestDoc.value
       cheapestDoc.value = saved && now ? { league, checks: { ...saved.checks, ...now.checks } } : now ?? saved
     })
-    .catch(() => {})
+    .catch(() => { if (loadedFor === league) loadedFor = null })
+}
+
+// A transfigured gem searches as its normal gem plus a discriminator, as the
+// price check sends it.
+function transfiguredOf (l: Listing) {
+  if (l.frameType !== 4) return null
+  const info = ITEM_BY_REF('GEM', l.typeLine)?.[0]
+  const normal = info?.gem?.normalVariant
+  if (!normal || !info?.tradeDisc) return null
+  const base = ITEM_BY_REF('GEM', normal)?.[0]
+  return base ? { option: base.refName, discriminator: info.tradeDisc } : null
 }
 
 function setBusy (id: string, on: boolean) {
@@ -44,24 +56,28 @@ function setError (id: string, message: string | null) {
 }
 
 export async function checkCheapest (league: string, l: Listing, rates: Rates): Promise<void> {
-  const body = cheapestQuery(l)
+  if (cheapestBusy.value.has(l.id)) return
+  const body = cheapestQuery(l, transfiguredOf(l))
+  if (!body) return
   const mine = saleChaos(l, rates)
-  if (!body || mine == null || cheapestBusy.value.has(l.id)) return
+  if (mine == null) { setError(l.id, `No price for ${l.price.currency} yet (poe.ninja still loading?)`); return }
   setBusy(l.id, true)
   setError(l.id, null)
   try {
     const { ownAccount } = await import('./faustus-read')
     const { requestResults, requestTradeResultList } = await import('@/web/price-check/trade/pathofexile-trade')
-    const account = (await ownAccount()) ?? ''
+    // Without it your own listings would count as other sellers'.
+    const account = await ownAccount()
+    if (!account) throw new Error('Sign in to the stash reader, or set your account name in Settings')
     const search = await requestTradeResultList(body as unknown as Parameters<typeof requestTradeResultList>[0], league, true)
     const ids = search.result.slice(0, FETCH)
     const got = ids.length ? await requestResults(search.id, ids, { accountName: account, fresh: true }) : []
     const fetched = got.map(r => {
-      // Prices compared as listed, the way the price check shows them: a
-      // stack's price note isn't split here (rare in a merchant tab).
-      return { chaosEach: saleChaos({ price: { amount: r.priceAmount, currency: r.priceCurrency } }, rates), mine: r.isMine }
+      // A stack's price is the whole stack's (as Listed takes yours): each.
+      const c = saleChaos({ price: { amount: r.priceAmount, currency: r.priceCurrency } }, rates)
+      return { chaosEach: c == null ? null : c / Math.max(1, r.stackSize ?? 1), mine: r.isMine }
     })
-    const check = summarize(l, mine, fetched, search.total, search.result.length <= FETCH, Date.now())
+    const check = summarize(l, mine / Math.max(1, l.stack), fetched, search.total, search.result.length <= FETCH, Date.now())
     if (loadedFor !== league) return
     const next = withCheck(cheapestDoc.value, league, l.id, check)
     cheapestDoc.value = next

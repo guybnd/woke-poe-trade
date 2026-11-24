@@ -168,7 +168,7 @@ function checkOf (r: PendingRow) { return checkFor(checkDoc.value, r.item) }
 function check (r: PendingRow) { checkCheapest(props.league, r.item, rates.value).catch(() => {}) }
 function checkText (r: PendingRow) {
   const c = checkOf(r)!
-  return c.cheaper || c.more ? `${rankText(c)} · ${priceText(c.asks[0])}` : `${rankText(c)} ✓`
+  return c.cheaper || c.more ? `${rankText(c)} · ${priceText(c.asks[0])}${r.item.stack > 1 ? ' each' : ''}` : `${rankText(c)} ✓`
 }
 function checkTitle (r: PendingRow) {
   const c = checkOf(r)!
@@ -176,7 +176,7 @@ function checkTitle (r: PendingRow) {
     c.total === 0
       ? 'Nobody else lists it for instant buyout'
       : c.cheaper ? `${c.cheaper}${c.more ? '+' : ''} cheaper than your ${fmt(r.item.price.amount)} ${r.item.price.currency}` : 'Nobody asks less than you',
-    ...(c.asks.length ? [`Cheapest: ${c.asks.map(priceText).join(' · ')}`] : []),
+    ...(c.asks.length ? [`Cheapest${r.item.stack > 1 ? ', each' : ''}: ${c.asks.map(priceText).join(' · ')}`] : []),
     `${c.total} other instant buyout ${c.total === 1 ? 'listing' : 'listings'} · checked ${agoPhrase(c.at)}`,
     ...(c.rough ? ['Rough: its rolls, corruption or mods change the price'] : []),
     'Click to check again (one trade search)'

@@ -31,6 +31,13 @@ describe('still cheapest?', () => {
     expect(map.query.filters.map_filters?.filters.map_tier).toEqual({ min: 16, max: 16 })
     expect(map.query.filters.type_filters?.filters.rarity).toEqual({ option: 'nonunique' })
 
+    // A transfigured gem: its normal gem and the discriminator.
+    const tg = cheapestQuery(item({ name: '', typeLine: 'Lightning Arrow of Electrocution', frameType: 4 }), { option: 'Lightning Arrow', discriminator: 'alt_x' })!
+    expect(tg.query.type).toEqual({ option: 'Lightning Arrow', discriminator: 'alt_x' })
+    // A white base: no check (its price is in its item level or influence).
+    expect(canCheck(item({ name: '', typeLine: 'Leather Belt', frameType: 0 }))).toBe(false)
+    // A fragment is fine.
+    expect(canCheck(item({ name: '', typeLine: 'Fragment of the Hydra', frameType: 0 }))).toBe(true)
     // Rare gear: no check.
     expect(canCheck(item({ name: 'Doom Clasp', frameType: 2 }))).toBe(false)
     expect(cheapestQuery(item({ name: 'Doom Clasp', frameType: 2 }))).toBeNull()

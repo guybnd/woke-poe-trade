@@ -9,16 +9,19 @@
 // Pure: no Vue, no IO.
 import type { Listing } from './faustus'
 import { ROLLED_UNIQUES } from './pending'
+import { saleType } from './sales'
 
 export interface CheapestCheck {
   at: number
   // Your asking price when checked.
   price: { amount: number, currency: string }
-  // Other sellers asking less than you.
+  // Other sellers asking less than you (each, for a stack).
   cheaper: number
   // Every fetched listing was cheaper than yours: there may be more.
   more?: boolean
-  // Other sellers' asks in chaos, cheapest first (at most 5).
+  // Other sellers' asks in chaos each, cheapest first (at most 5).
+  // A stack's ask is its price note over its size, as Listed's Suggest
+  // column takes a stack's price (the whole stack).
   asks: number[]
   // Other instant buyout listings of it on the trade site.
   total: number
@@ -46,10 +49,12 @@ export function isCheapestDoc (x: unknown): x is CheapestDoc {
 const isRare = (l: Listing) => l.frameType === 1 || l.frameType === 2
 const isUnique = (l: Listing) => l.frameType === 3 || l.frameType === 9
 
-// Whether a listing can be checked: everything but magic and rare gear.
-// A magic or rare map is checked by its base and tier, roughly.
+// Whether a listing can be checked: everything but gear that isn't unique
+// (a base's price is in its mods, item level or influence, which a search by
+// type can't see). A magic or rare map is checked by its base and tier, roughly.
 export function canCheck (l: Listing): boolean {
   if (isRare(l)) return l.mapTier != null
+  if (l.frameType === 0 && saleType(l) === 'gear') return false
   return !!(l.typeLine || l.baseType)
 }
 
@@ -59,14 +64,16 @@ export function isRough (l: Listing): boolean {
 }
 
 type Range = { min?: number, max?: number }
+// A transfigured gem's trade type: its normal gem and a discriminator.
+export interface GemType { option: string, discriminator: string }
 
 // The trade search for others' instant buyout listings of the same item,
 // cheapest first. Null: not checkable.
-export function cheapestQuery (l: Listing) {
+export function cheapestQuery (l: Listing, transfigured?: GemType | null) {
   if (!canCheck(l)) return null
   const misc: Record<string, Range | { option: string }> = {}
   const filters: Record<string, { filters: Record<string, unknown> }> = {}
-  const query: { status: { option: 'securable' }, name?: string, type?: string, stats: Array<{ type: 'and', filters: [] }>, filters: typeof filters } =
+  const query: { status: { option: 'securable' }, name?: string, type?: string | GemType, stats: Array<{ type: 'and', filters: [] }>, filters: typeof filters } =
     { status: { option: 'securable' }, stats: [{ type: 'and', filters: [] }], filters }
   if (isUnique(l)) {
     if (l.name) query.name = l.name
@@ -75,7 +82,7 @@ export function cheapestQuery (l: Listing) {
     misc.corrupted = { option: l.corrupted ? 'true' : 'false' }
     if (l.links && l.links >= 5) filters.socket_filters = { filters: { links: { min: l.links } } }
   } else if (l.frameType === 4) {
-    query.type = l.typeLine || l.baseType
+    query.type = transfigured ?? (l.typeLine || l.baseType)
     if (l.gemLevel) misc.gem_level = { min: l.gemLevel, max: l.gemLevel }
     if (l.quality) misc.quality = { min: l.quality }
     misc.corrupted = { option: l.corrupted ? 'true' : 'false' }
@@ -88,10 +95,10 @@ export function cheapestQuery (l: Listing) {
   return { query, sort: { price: 'asc' as const } }
 }
 
-// What a fetched listing asks, in chaos (null: a currency without a price).
+// What a fetched listing asks, in chaos each (null: a currency without a price).
 export interface FetchedAsk { chaosEach: number | null, mine: boolean }
 
-// Where your ask (chaos) ranks among the fetched listings.
+// Where your ask (chaos each) ranks among the fetched listings.
 // `total`: the search's count of listings; `fetchedAll`: the fetch held all.
 export function summarize (l: Listing, mineEach: number, fetched: readonly FetchedAsk[], total: number, fetchedAll: boolean, at: number): CheapestCheck {
   const mineCount = fetched.filter(f => f.mine).length
