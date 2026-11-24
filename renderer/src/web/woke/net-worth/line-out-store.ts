@@ -1,5 +1,5 @@
-// Sales and Faustus listings you left out of their totals (the shared line
-// item, ui/line-item.ts), one small doc per league: the ids of each.
+// Sales and Faustus listings you left out of their tab's total (the shared
+// line item, ui/line-item.ts), one small doc per league: the ids of each.
 import { computed, shallowRef } from 'vue'
 import { hostRequest } from '../shared/host'
 
@@ -7,44 +7,54 @@ const COLLECTION = 'net-worth'
 export type OutKind = 'sale' | 'listed'
 export interface LineOutDoc { league: string, sale: string[], listed: string[] }
 
-const doc = shallowRef<LineOutDoc | null>(null)
-let loadedFor: string | null = null
-let loading: Promise<void> = Promise.resolve()
+// By league: only docs that were read (or saved) are here, so a write never
+// lands on a doc it hasn't seen.
+const docs = shallowRef<ReadonlyMap<string, LineOutDoc>>(new Map())
+const loading = new Map<string, Promise<boolean>>()
+// Writes for one league run one after another.
+const writing = new Map<string, Promise<void>>()
 
 export const lineOutKey = (league: string) => `line-out:${league}`
 const isDoc = (d: unknown): d is LineOutDoc => !!d && typeof d === 'object' &&
   Array.isArray((d as LineOutDoc).sale) && Array.isArray((d as LineOutDoc).listed)
 
-export function loadLineOut (league: string): Promise<void> {
-  if (loadedFor === league) return loading
-  loadedFor = league
-  doc.value = null
-  loading = (hostRequest('doc-get', { collection: COLLECTION, key: lineOutKey(league) }) as Promise<unknown>)
+function put (d: LineOutDoc) { docs.value = new Map(docs.value).set(d.league, d) }
+
+// Resolves true once the league's saved doc is in (or there is none).
+export function loadLineOut (league: string): Promise<boolean> {
+  if (docs.value.has(league)) return Promise.resolve(true)
+  const was = loading.get(league)
+  if (was) return was
+  const p = (hostRequest('doc-get', { collection: COLLECTION, key: lineOutKey(league) }) as Promise<unknown>)
     .then((d) => {
-      if (loadedFor !== league) return
-      // A change made while this loaded wins over the saved doc.
-      const saved = isDoc(d) && d.league === league ? d : null
-      const now = doc.value
-      doc.value = saved && now
-        ? { league, sale: [...new Set([...saved.sale, ...now.sale])], listed: [...new Set([...saved.listed, ...now.listed])] }
-        : now ?? saved
+      if (!docs.value.has(league)) put(isDoc(d) && d.league === league ? d : { league, sale: [], listed: [] })
+      return true
     })
-    .catch(() => { if (loadedFor === league) loadedFor = null })
-  return loading
+    .catch(() => false)
+    .finally(() => { loading.delete(league) })
+  loading.set(league, p)
+  return p
 }
 
-export const lineOutDoc = computed(() => doc.value)
+export const lineOutDoc = computed(() => docs.value)
 // The ids left out, for one league.
-export function outIdsOf (d: LineOutDoc | null, league: string | null | undefined, kind: OutKind): ReadonlySet<string> {
-  return new Set(d && league && d.league === league ? d[kind] : [])
+export function outIdsOf (d: ReadonlyMap<string, LineOutDoc>, league: string | null | undefined, kind: OutKind): ReadonlySet<string> {
+  const doc = league ? d.get(league) : undefined
+  return new Set(doc ? doc[kind] : [])
 }
 
-export async function setLineOut (league: string, kind: OutKind, id: string, out: boolean): Promise<void> {
-  await loadLineOut(league)
-  const cur = doc.value?.league === league ? doc.value : { league, sale: [], listed: [] }
-  const list = cur[kind].filter(x => x !== id)
-  if (out) list.push(id)
-  const next: LineOutDoc = { ...cur, [kind]: list }
-  doc.value = next
-  await hostRequest('doc-put', { collection: COLLECTION, key: lineOutKey(league), value: next }).catch(() => {})
+export function setLineOut (league: string, kind: OutKind, id: string, out: boolean): Promise<void> {
+  const run = async () => {
+    // Not read (the app didn't answer): nothing is saved over it.
+    if (!await loadLineOut(league)) throw new Error("Couldn't read what you left out")
+    const cur = docs.value.get(league)!
+    const list = cur[kind].filter(x => x !== id)
+    if (out) list.push(id)
+    const next: LineOutDoc = { ...cur, [kind]: list }
+    put(next)
+    await hostRequest('doc-put', { collection: COLLECTION, key: lineOutKey(league), value: next })
+  }
+  const p = (writing.get(league) ?? Promise.resolve()).then(run, run)
+  writing.set(league, p.catch(() => {}))
+  return p
 }

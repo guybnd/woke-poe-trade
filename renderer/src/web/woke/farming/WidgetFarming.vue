@@ -453,9 +453,23 @@ function leaveOut (line: LootLine, on: boolean) {
 function removeLine (line: LootLine) {
   const sess = props.config.session
   if (!sess) return
-  const before = JSON.parse(JSON.stringify({ loot: sess.loot, runs: sess.runs ?? [] })) as { loot: LootLine[], runs: LiveRun[] }
+  // Undo puts back only this line: its count in each map and your edits.
+  const k = key(line)
+  const was = JSON.parse(JSON.stringify(line)) as LootLine
+  const perRun = (sess.runs ?? []).map((r, i) => ({ i, qty: r.loot.find(l => key(l) === k)?.qty ?? 0 })).filter(x => x.qty > 0)
   removeLoot(sess, line, line.qty)
-  lineToast('remove', line.name, laterOn((x) => { x.loot = before.loot; x.runs = before.runs }), panel.value?.el)
+  lineToast('remove', line.name, laterOn((x) => {
+    const inSession = x.loot.find(l => key(l) === k)
+    if (inSession) inSession.qty += was.qty
+    else x.loot.push({ ...was })
+    for (const { i, qty } of perRun) {
+      const run = x.runs?.[i]
+      if (!run) continue
+      const rl = run.loot.find(l => key(l) === k)
+      if (rl) rl.qty += qty
+      else run.loot.push({ type: was.type, name: was.name, variant: was.variant, qty })
+    }
+  }), panel.value?.el)
 }
 
 function addCost (item: PriceItem) {

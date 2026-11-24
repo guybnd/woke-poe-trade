@@ -64,7 +64,7 @@
 // The Sales view (pick C): your sales for a range, a ranked bar per type that
 // filters the table under it, and every sale kept.
 import { computed, shallowRef, watch } from 'vue'
-import { WButton, WChip, WEmpty, WField, WLineActs, lineKeys, lineMenu, lineToast, openMenu, vItemTip } from '../ui'
+import { WButton, WChip, WEmpty, WField, WLineActs, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui'
 import { itemMenuHead } from '../ui/tooltip/item-menu'
 import { lineOutDoc, loadLineOut, outIdsOf, setLineOut } from './line-out-store'
@@ -108,9 +108,10 @@ const types = computed(() => byType(counted.value, rates.value))
 function leaveOut (s: Sale, out: boolean) {
   const l = league.value
   if (!l) return
-  setLineOut(l, 'sale', s.id, out).catch(() => {})
-  lineToast(out ? 'out' : 'in', saleName(s), () => { setLineOut(l, 'sale', s.id, !out).catch(() => {}) })
+  setLineOut(l, 'sale', s.id, out).catch(failed)
+  lineToast(out ? 'out' : 'in', saleName(s), () => { setLineOut(l, 'sale', s.id, !out).catch(failed) })
 }
+const failed = (e: Error) => { toast(e.message) }
 const handlersOf = (s: Sale) => ({ out: (on: boolean) => { leaveOut(s, on) } })
 const stateOf = (s: Sale) => ({ out: isOut(s), editable: false })
 const entriesOf = (s: Sale): MenuEntry[] => lineMenu(stateOf(s), handlersOf(s))

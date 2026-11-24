@@ -54,7 +54,10 @@ export function saleLookupTip (s: Sale): { name: string, type?: string, content?
 // The right-click menu's item header for a sale or a listing. A rare's own
 // name finds nothing: its base, with no price (the base's isn't the item's).
 export function saleMenuRef (s: Sale): ItemMenuRef {
-  if (s.frameType === 3) return { name: s.name || s.typeLine, rarity: 'unique' }
+  // Uniques, relics and foils.
+  if (s.frameType === 3 || s.frameType === 9 || s.frameType === 10) return { name: s.name || s.typeLine, rarity: 'unique' }
   if (s.frameType === 1 || s.frameType === 2) return { name: s.baseType || s.typeLine, base: s.baseType || s.typeLine, noPrice: true }
+  // A gem's price hangs on its level and quality: none in the header.
+  if (s.frameType === 4) return { name: s.typeLine, noPrice: true }
   return { name: s.typeLine }
 }

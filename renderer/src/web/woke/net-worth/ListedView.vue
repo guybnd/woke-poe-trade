@@ -127,9 +127,10 @@ const sum = computed(() => pendingTotals(rows.value.filter(r => !isOut(r))))
 function leaveOut (r: PendingRow, out: boolean) {
   const l = props.league
   const id = r.item.id
-  setLineOut(l, 'listed', id, out).catch(() => {})
-  lineToast(out ? 'out' : 'in', saleName(r.item), () => { setLineOut(l, 'listed', id, !out).catch(() => {}) })
+  setLineOut(l, 'listed', id, out).catch(failed)
+  lineToast(out ? 'out' : 'in', saleName(r.item), () => { setLineOut(l, 'listed', id, !out).catch(failed) })
 }
+const failed = (e: Error) => { toast(e.message) }
 const handlersOf = (r: PendingRow) => ({ out: (on: boolean) => { leaveOut(r, on) } })
 const stateOf = (r: PendingRow) => ({ out: isOut(r), editable: false })
 const entriesOf = (r: PendingRow): MenuEntry[] => lineMenu(stateOf(r), handlersOf(r))
