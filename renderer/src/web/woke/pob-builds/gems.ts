@@ -17,9 +17,16 @@ type GemTable = Record<string, { l: number, a: GemColour, s: Source[] }>
 // starts loading as soon as this module runs, and everything reading it (all
 // in computeds) updates when it lands, a moment after startup.
 const table = shallowRef<GemTable>({})
+// True once the load settled (even if it failed): code that saves what it
+// derives from gems, like the loot filter's build rules, waits for it.
+export const gemsLoaded = shallowRef(false)
 export const gemsReady: Promise<void> = import('./gem-sources.json').then(m => {
   table.value = m.default as unknown as GemTable
-}).catch(() => {})
+}).catch(e => {
+  console.warn('[gems] campaign gem table failed to load', e)
+}).finally(() => {
+  gemsLoaded.value = true
+})
 
 export interface GemData {
   // The item name, as loot filters and the trade site spell it
