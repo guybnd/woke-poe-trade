@@ -77,6 +77,8 @@ describe('Valdo skips', () => {
     expect(valdoHides(c, none, new Set([feared]))).toBe(true)
     expect(valdoHides(b, none, new Set([feared]))).toBe(false)
     expect(valdoHides(c, none, none)).toBe(false)
+    // Has for this check wins over the same mod's saved Not.
+    expect(valdoHides(a, new Set([flask]), new Set([flask]))).toBe(false)
   })
 
   it('a copied profile has its own skip list', () => {

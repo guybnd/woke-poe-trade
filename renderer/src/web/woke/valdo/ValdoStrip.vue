@@ -31,17 +31,18 @@
       </button>
       <span v-if="query && !matches.length" class="w-dim text-xs">No unique matches "{{ query }}"</span>
     </div>
-    <div v-if="open && mods.length" :class="$style.list" data-valdo-mods>
-      <div v-for="(m, i) in mods" :key="i" :class="[$style.mod, $style[stateOf(m)]]" :data-valdo-mod="m.split('\n')[0]">
+    <div v-if="shown.length" :class="$style.list" data-valdo-mods>
+      <div v-for="(m, i) in shown" :key="i" :class="[$style.mod, $style[stateOf(m)]]" :data-valdo-mod="m.split('\n')[0]">
         <span :class="[$style.dot, buildSkips(m) && $style.deadly]" :title="buildSkips(m) ? 'Your Map mods profile: can\'t run' : undefined" />
         <span :class="$style.text" :title="m">{{ m.split('\n')[0] }}</span>
+        <span v-if="m === VOID_TEXT && !hasVoid" :class="$style.sub" title="This map doesn't send you to the Void; the search looks for maps without it until you change it">not on this map</span>
         <span v-if="m === VOID_TEXT ? !!voidFilter : canSkip" :class="$style.seg" role="radiogroup" :aria-label="`Search ${m.split('\n')[0]}`">
           <button v-for="opt in STATES" :key="opt" type="button" role="radio" :aria-checked="stateOf(m) === opt"
             :class="stateOf(m) === opt && $style[`on_${opt}`]" :data-state="opt" :title="stateTitle(m, opt)"
             @click="setState(m, opt)">{{ STATE_LABEL[opt] }}</button>
         </span>
       </div>
-      <div v-if="elsewhere.length" :class="$style.also" :title="elsewhere.map(s => s.label).join('\n')" data-valdo-also>
+      <div v-if="open && elsewhere.length" :class="$style.also" :title="elsewhere.map(s => s.label).join('\n')" data-valdo-also>
         Also Not, from your profile: {{ elsewhere.map(s => s.label).join(' · ') }}
       </div>
     </div>
@@ -157,8 +158,13 @@ const mods = computed(() => {
     if (line.startsWith("Players' Minions ") && all.length && all[all.length - 1].startsWith('Players ')) all[all.length - 1] += `\n${line}`
     else all.push(line)
   }
+  // A map without the Void mod still has its Void filter (No void to start).
+  if (voidFilter.value && !all.includes(VOID_TEXT)) all.push(VOID_TEXT)
   return all.sort((a, b) => Number(b === VOID_TEXT) - Number(a === VOID_TEXT))
 })
+// The Void line stays up when the list is folded: it's part of the search.
+const hasVoid = computed(() => props.item.statsByType.some(c => c.stat.ref === VOID_TEXT))
+const shown = computed(() => open.value ? mods.value : mods.value.filter(m => m === VOID_TEXT))
 
 // Not lives on the active Map mods profile: one list per build.
 const profile = computed(() => valdoProfile())
@@ -170,8 +176,9 @@ const buildSkips = (m: string) => m !== VOID_TEXT && autoKeys.value.has(skipKey(
 
 function stateOf (m: string): ModState {
   if (m === VOID_TEXT) return voidState.value
-  if (profile.value && isSkipped(profile.value, m)) return 'not'
-  return valdoNeed.value.has(skipKey(m)) ? 'has' : 'any'
+  // Has (this price check) wins over a saved Not, without changing the profile.
+  if (valdoNeed.value.has(skipKey(m))) return 'has'
+  return profile.value && isSkipped(profile.value, m) ? 'not' : 'any'
 }
 function setState (m: string, state: ModState) {
   if (m === VOID_TEXT) { setVoid(state); return }
@@ -180,6 +187,8 @@ function setState (m: string, state: ModState) {
   if (state === 'has') need.add(key)
   else need.delete(key)
   valdoNeed.value = need
+  // Has leaves the saved Not list alone; Not adds to it, Any takes it off.
+  if (state === 'has') return
   const w = ensureMapModsConfig()
   if (!w) return
   const p = activeProfile(w)
@@ -262,5 +271,6 @@ const elsewhere = computed(() => {
 .seg .on_any { background: var(--w-panel-2); color: var(--w-fg); }
 .seg .on_has { background: color-mix(in srgb, var(--w-up) 28%, transparent); color: var(--w-fg); }
 .seg .on_not { background: color-mix(in srgb, var(--w-down) 28%, transparent); color: var(--w-fg); }
+.sub { flex: none; font-size: var(--w-fs-xs); color: var(--w-dim); border: 1px solid var(--w-line); padding: 0 4px; border-radius: var(--w-r-sm); }
 .also { padding: 2px 0 0 13px; color: var(--w-dim); font-size: var(--w-fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

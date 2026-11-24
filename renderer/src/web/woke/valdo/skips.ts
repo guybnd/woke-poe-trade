@@ -134,7 +134,8 @@ export function valdoHides (item: ListingItem | undefined, skip: ReadonlySet<str
   if (!skip.size && !need.size) return false
   if (!item) return false
   const keys = new Set(listingKeys(item))
-  for (const k of keys) if (skip.has(k)) return true
+  // A mod set Has for this check wins over the same mod's saved Not.
+  for (const k of keys) if (skip.has(k) && !need.has(k)) return true
   for (const k of need) if (!keys.has(k)) return true
   return false
 }

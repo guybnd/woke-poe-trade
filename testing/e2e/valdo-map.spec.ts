@@ -34,6 +34,7 @@ test('a Valdo map searches its reward and Void, and can pick another reward', as
   await expect(voidSeg.locator('[data-state="has"]')).toHaveAttribute('aria-checked', 'true')
   await expect(strip.locator('[data-valdo-reward-pick]')).toHaveText(/Foil Nimis/)
   // The mods are listed, Void first, without the "Unscalable Value" tag.
+  if (await strip.locator('[data-valdo-mod]').count() < 2) await strip.locator('[data-valdo-mods-toggle]').click()
   await expect(strip.locator('[data-valdo-mod]').first()).toHaveAttribute('data-valdo-mod', 'Players who Die in area are sent to the Void')
   await expect(strip.locator('[data-valdo-mods]')).toContainText('Players cannot gain Flask Charges')
   await expect(strip.locator('[data-valdo-mods]')).not.toContainText('Unscalable')
@@ -104,6 +105,7 @@ test('a Valdo map hides listings with a mod you skip, with no new search', async
   await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches).toBe(1)
 
+  if (await strip.locator('[data-valdo-mod="Players cannot gain Flask Charges"]').count() === 0) await strip.locator('[data-valdo-mods-toggle]').click()
   // Not on a mod hides the loaded listings with it, with no new search.
   const flask = strip.locator('[data-valdo-mod="Players cannot gain Flask Charges"]')
   await flask.locator('[data-state="not"]').click()
@@ -114,7 +116,8 @@ test('a Valdo map hides listings with a mod you skip, with no new search', async
   // Its minions line is the same row.
   const perItem = strip.locator('[data-valdo-mod="Players deal 10% less Damage per Equipped Item"]')
   await perItem.locator('[data-state="not"]').click()
-  await expect(strip.locator('[data-valdo-mod]')).toHaveCount(6)
+  // Its minions line is in the same row, not a row of its own.
+  await expect(strip.locator('[data-valdo-mod^="Players\' Minions"]')).toHaveCount(0)
   await expect(strip.locator('[data-valdo-headline]')).toHaveText('2 Not · 2 of 3 listings hidden')
   await overlay.snap('valdo map skips')
 
@@ -125,4 +128,14 @@ test('a Valdo map hides listings with a mod you skip, with no new search', async
   await strip.locator('[data-valdo-mod="Area contains The Feared"] [data-state="has"]').click()
   await expect(strip.locator('[data-valdo-headline]')).toHaveText('1 Has · 2 of 3 listings hidden')
   expect(searches).toBe(1)
+})
+
+test('a Valdo map without the Void mod still shows the Void line, set No void', async ({ overlay }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-valdo.txt')
+  const strip = overlay.widget('price-check').locator('[data-valdo-strip]')
+  await expect(strip).toBeVisible({ timeout: 20_000 })
+  const voidLine = strip.locator('[data-valdo-mod="Players who Die in area are sent to the Void"]')
+  await expect(voidLine).toContainText('not on this map')
+  await expect(voidLine.locator('[data-state="not"]')).toHaveAttribute('aria-checked', 'true')
 })
