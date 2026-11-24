@@ -208,13 +208,18 @@ export function recipeSum (parts: RecipePart[], makes: BaseType, priceOf: (info:
 // file: "<uniqueitem>{Headhunter}" and a stack size.
 export interface CardReward { card: string, stack: number, corrupted: boolean }
 
-export function cardsFor (name: string, items: Record<string, { d?: string, n?: number }>): CardReward[] {
+// Only a card for this exact item: a unique's card names that unique, a
+// currency's that currency. "<uniqueitem>{Map}" (any unique map) or a base
+// name ("a unique Agate Amulet") is a random item, not the checked one.
+export function cardsFor (item: { refName: string, namespace: string }, items: Record<string, { d?: string, n?: number }>): CardReward[] {
+  const tag = item.namespace === 'UNIQUE' ? 'uniqueitem' : item.namespace === 'ITEM' ? 'currencyitem' : null
+  if (!tag) return []
   const out: CardReward[] = []
   for (const [card, v] of Object.entries(items)) {
     if (!v.n || !v.d) continue
     const lines = v.d.split(/\r?\n/)
     const m = /^<(uniqueitem|currencyitem)>\{(.+)\}$/.exec(lines[0])
-    if (!m || m[2] !== name) continue
+    if (!m || m[1] !== tag || m[2] !== item.refName) continue
     // A reward with more than its corruption (a level, links) isn't the plain item.
     const rest = lines.slice(1)
     if (rest.some(l => !/^<corrupted>\{Corrupted\}$/.test(l))) continue

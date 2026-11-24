@@ -41,6 +41,8 @@ export interface ListingItem {
   fracturedMods?: ListingMod[]
   explicitMods?: ListingMod[]
   craftedMods?: ListingMod[]
+  // Only when the search has pseudo filters: "+205% More Currency".
+  pseudoMods?: ListingMod[]
   sockets?: Array<{ group: number, sColour: string }>
   fractured?: boolean
   synthesised?: boolean
