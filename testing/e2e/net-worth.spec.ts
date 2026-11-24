@@ -290,6 +290,9 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const news = overlay.dockIcon('whats-new')
     const showMe = async (id: string) => {
       const n = NEWS.find(n => n.id === id)!
+      // Two workers share the app's port: its notice can sit over the dock.
+      const notice = overlay.page.getByRole('button', { name: 'Dismiss', exact: true })
+      if (await notice.isVisible()) await notice.click()
       await news.click()
       await overlay.page.mouse.move(5, 5)
       await news.locator('[data-whats-new-line]').filter({ hasText: n.note.replace(/^New: /, '').slice(1, 30) }).getByRole('button', { name: 'Show me' }).click()

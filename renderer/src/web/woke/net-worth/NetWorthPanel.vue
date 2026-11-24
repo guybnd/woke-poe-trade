@@ -24,7 +24,7 @@
     <!-- Listed at Faustus and not sold yet (pending.ts, pick B). -->
     <div v-if="view === 'listed'" :class="$style.body">
       <WEmpty v-if="!salesLeague" icon="fas fa-store">Pick a league under Settings › Game & league.</WEmpty>
-      <ListedView v-else :league="salesLeague" :divine="divine" :stale-days="config.staleDays" :auto="config.listedAuto !== false"
+      <ListedView v-else :wm-id="config.wmId" :league="salesLeague" :divine="divine" :stale-days="config.staleDays" :auto="config.listedAuto !== false"
         @stale-days="config.staleDays = $event" @auto="config.listedAuto = $event" />
       <div class="w-dim text-xs" :class="$style.foot">
         <span>Listings show as of your last read · sold items drop off by themselves</span>

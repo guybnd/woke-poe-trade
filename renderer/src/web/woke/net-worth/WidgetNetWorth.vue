@@ -51,7 +51,7 @@ import { useZone } from '../shared/zone'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { useGoto } from '../tab-bar/goto'
 import { foldedOf, toggleFold } from './layout'
-import { listedFilterAsk } from './listed-ask'
+import { askListed } from './listed-ask'
 
 const NetWorthPanel = defineAsyncComponent(() => import('./NetWorthPanel.vue'))
 const NetWorthCard = defineAsyncComponent(() => import('./NetWorthCard.vue'))
@@ -80,7 +80,7 @@ useGoto(props.config, 'woke-net-worth', {
     'faustus-box': () => {},
     'still-cheapest': () => {},
     // Listed with its Stale chip picked.
-    'stale': () => { listedFilterAsk.value = 'stale' }
+    'stale': () => { askListed(props.config.wmId, 'stale') }
   }
 })
 

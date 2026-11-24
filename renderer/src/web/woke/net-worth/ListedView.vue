@@ -81,11 +81,11 @@ import { ninjaPriced, rates, sales } from './sales-store'
 import { canCheck, checkFor, rankText } from './cheapest'
 import { cheapestBusy, cheapestDoc, cheapestErrors, checkCheapest, loadCheapest } from './cheapest-store'
 import { loadPending, pendingDoc, pendingReading } from './pending-store'
-import { listedFilterAsk } from './listed-ask'
+import { hasListedAsk, takeListedAsk } from './listed-ask'
 import { ageText, pendingRows, pendingTotals, sortPending, DEFAULT_STALE_DAYS } from './pending'
 import type { PendingRow } from './pending'
 
-const props = defineProps<{ league: string, divine: number | null, staleDays?: number, auto: boolean }>()
+const props = defineProps<{ wmId: number, league: string, divine: number | null, staleDays?: number, auto: boolean }>()
 const emit = defineEmits<{ 'stale-days': [d: number], 'auto': [on: boolean] }>()
 
 watch(() => props.league, (l) => { loadPending(l).catch(() => {}); loadCheapest(l) }, { immediate: true })
@@ -112,12 +112,12 @@ const isUndercut = (r: PendingRow) => (checkOf(r)?.cheaper ?? 0) > 0
 const undercut = computed(() => rows.value.filter(isUndercut).length)
 const types = computed(() => SALE_TYPES.map(t => ({ ...t, count: rows.value.filter(r => saleType(r.item) === t.id).length })).filter(t => t.count > 0))
 function toggle (f: Filter) { filter.value = filter.value === f ? null : f; limit.value = 100 }
-// What's new's Show me asks for a chip (listed-ask.ts).
-watch(listedFilterAsk, f => {
-  if (!f) return
-  filter.value = f
-  limit.value = 100
-  listedFilterAsk.value = null
+// What's new's Show me asks this window for a chip (listed-ask.ts). Only
+// picked when it has rows: an empty pick would hide the chip that undoes it.
+watch(() => hasListedAsk(props.wmId), has => {
+  if (!has) return
+  const f = takeListedAsk(props.wmId)
+  if (f === 'stale' && sum.value.stale) { filter.value = f; limit.value = 100 }
 }, { immediate: true })
 const shown = computed(() => {
   const f = filter.value
