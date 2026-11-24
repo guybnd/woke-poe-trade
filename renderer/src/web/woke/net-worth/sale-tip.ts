@@ -5,6 +5,7 @@ import { listingTipItem, modDomain, modText } from '../price-insight/listing-tip
 import type { ListingItem } from '../price-insight/listing-tip'
 import type { PobItem } from '../pob-builds/widget'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
+import type { ItemMenuRef } from '../ui/tooltip/item-menu-logic'
 import type { Sale } from './sales'
 
 const items = new WeakMap<Sale, PobItem | null>()
@@ -48,4 +49,15 @@ export function saleTip (s: Sale): ItemTipRef {
 export function saleLookupTip (s: Sale): { name: string, type?: string, content?: ItemTipRef['content'] } {
   const tip = saleTip(s)
   return { name: tip.name, ...(tip.type ? { type: tip.type } : {}), ...(tip.content ? { content: tip.content } : {}) }
+}
+
+// The right-click menu's item header for a sale or a listing. A rare's own
+// name finds nothing: its base, with no price (the base's isn't the item's).
+export function saleMenuRef (s: Sale): ItemMenuRef {
+  // Uniques, relics and foils.
+  if (s.frameType === 3 || s.frameType === 9 || s.frameType === 10) return { name: s.name || s.typeLine, rarity: 'unique' }
+  if (s.frameType === 1 || s.frameType === 2) return { name: s.baseType || s.typeLine, base: s.baseType || s.typeLine, noPrice: true }
+  // A gem's price hangs on its level and quality: none in the header.
+  if (s.frameType === 4) return { name: s.typeLine, noPrice: true }
+  return { name: s.typeLine }
 }

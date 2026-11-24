@@ -35,15 +35,13 @@ function areaProps (
     }, ctx))
   }
   if (item.areaAtlasDrops) {
-    // Off by default: on 2026-11-15 the trade site's Atlas Drops filter
-    // (map_bonus) matched no listing at all, even at +1%, while Rarity and
-    // Pack size work. Ticking it today would empty the results.
+    // woke: searched like Rarity and Pack (Guy, 2026-11-24: the trade site's filter works).
     ctx.filters.push(propToFilter({
       ref: 'Atlas Drops: +#%',
       tradeId: 'item.map_atlas_drops',
       roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.areaAtlasDrops },
       sources: [],
-      disabled: true
+      disabled: false
     }, ctx))
   }
   if (item.areaItemRarity) {
@@ -69,9 +67,9 @@ function areaProps (
 // woke: Guy (2026-11-24): any map number can be searched, also one this map hasn't got
 // (a Quantity or More Maps minimum on a map with neither). Each missing one is a filter
 // that starts off, hidden from the rows; the map strip's + tile turns it on with a minimum.
-// Atlas Drops is left out (the trade site's filter for it finds nothing, 2026-11-15), and so
-// is Item Quantity: 3.30 maps have none (Atlas Drops took its place).
-const EXTRA_PROPS: Array<{ ref: string, tradeId: 'item.map_item_rarity' | 'item.map_pack_size' } | { pseudo: string }> = [
+// Item Quantity is left out: 3.30 maps have none (Atlas Drops took its place).
+const EXTRA_PROPS: Array<{ ref: string, tradeId: 'item.map_atlas_drops' | 'item.map_item_rarity' | 'item.map_pack_size' } | { pseudo: string }> = [
+  { ref: 'Atlas Drops: +#%', tradeId: 'item.map_atlas_drops' },
   { ref: 'Item Rarity: +#%', tradeId: 'item.map_item_rarity' },
   { ref: 'Monster Pack Size: +#%', tradeId: 'item.map_pack_size' },
   { pseudo: PSEUDO.MORE_CURRENCY },

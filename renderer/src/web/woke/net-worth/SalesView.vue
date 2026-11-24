@@ -5,7 +5,7 @@
   <div v-else :class="$style.body">
     <section :class="$style.head">
       <span :class="$style.total" class="w-num" :title="inChaos(sum.chaos)">{{ div(sum.chaos) }}<Coin :chaos="!divine" /></span>
-      <span class="w-dim text-xs">{{ sum.count }} {{ sum.count === 1 ? 'sale' : 'sales' }}<template v-if="sum.unpriced"> · {{ sum.unpriced }} in a currency without a price</template></span>
+      <span class="w-dim text-xs">{{ sum.count }} {{ sum.count === 1 ? 'sale' : 'sales' }}<template v-if="sum.unpriced"> · {{ sum.unpriced }} in a currency without a price</template><template v-if="outInRange"> · <span data-sales-left-out>{{ outInRange }} left out</span></template></span>
       <TextTabs v-model="range" :options="RANGES" :class="$style.range" />
     </section>
 
@@ -24,6 +24,7 @@
     <section :class="$style.chips">
       <WField v-model="query" type="search" icon="fas fa-search" placeholder="Search sales" :class="$style.search" />
       <WChip v-if="type" clickable active :title="`Only ${typeLabel}. Click to show every type`" @click="type = null">{{ typeLabel }} ×</WChip>
+      <WChip v-if="outInRange || onlyChanged" clickable :active="onlyChanged" title="Only the sales you left out of the totals" data-sales-changed @click="onlyChanged = !onlyChanged">Changed {{ outInRange }}</WChip>
     </section>
 
     <div :class="$style.scroll">
@@ -36,20 +37,23 @@
                 <i v-if="sort.key === c.key" :class="['fas', sort.dir === 'asc' ? 'fa-caret-up' : 'fa-caret-down']" aria-hidden="true" />
               </button>
             </th>
+            <th :class="$style.acts" />
           </tr>
         </thead>
         <tbody>
-          <tr v-for="s in sorted.slice(0, limit)" :key="s.id">
+          <tr v-for="s in sorted.slice(0, limit)" :key="s.id" :class="['w-line', { 'w-line-out': isOut(s) }]" tabindex="0" data-sale-row
+            @contextmenu="onMenu($event, s)" @keydown="onKeys($event, s)">
             <td :class="$style.left">
-              <span :class="$style.name"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(s)" class="w-trunc" :style="{ color: colourOf(s.frameType) }">{{ saleName(s) }}</span></span>
+              <span :class="$style.name"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(s)" class="w-trunc w-line-name" :style="{ color: colourOf(s.frameType) }">{{ saleName(s) }}</span><span v-if="isOut(s)" class="w-line-tag">left out</span></span>
             </td>
             <td class="w-num w-dim">{{ fmt(s.price.amount) }} {{ s.price.currency }}</td>
-            <td class="w-num" :class="$style.sale">{{ chaosOf(s) == null ? '—' : div(chaosOf(s)!) }}</td>
+            <td class="w-num" :class="[$style.sale, { [$style.struck]: isOut(s) }]">{{ chaosOf(s) == null ? '—' : div(chaosOf(s)!) }}</td>
             <td class="w-num" :class="marketTone(s)">{{ marketText(marketOf(s)) || '—' }}</td>
             <td class="w-num w-dim" :title="new Date(s.at).toLocaleString()">{{ when(s.at) }}</td>
+            <td><WLineActs :name="saleName(s)" :out="isOut(s)" :entries="entriesOf(s)" :head="e => headOf(s, e)" @out="leaveOut(s, $event)" /></td>
           </tr>
-          <tr v-if="!rows.length"><td colspan="5" class="w-dim" :class="$style.left">Nothing matches.</td></tr>
-          <tr v-if="rows.length > limit"><td colspan="5" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 100">{{ rows.length - limit }} more</WButton></td></tr>
+          <tr v-if="!rows.length"><td colspan="6" class="w-dim" :class="$style.left">Nothing matches.</td></tr>
+          <tr v-if="rows.length > limit"><td colspan="6" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 100">{{ rows.length - limit }} more</WButton></td></tr>
         </tbody>
       </table>
     </div>
@@ -60,14 +64,17 @@
 // The Sales view (pick C): your sales for a range, a ranked bar per type that
 // filters the table under it, and every sale kept.
 import { computed, shallowRef, watch } from 'vue'
-import { WButton, WChip, WEmpty, WField, vItemTip } from '../ui'
-import { saleTip } from './sale-tip'
+import { WButton, WChip, WEmpty, WField, WLineActs, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
+import type { MenuEntry } from '../ui'
+import { itemMenuHead } from '../ui/tooltip/item-menu'
+import { lineOutDoc, loadLineOut, outIdsOf, setLineOut } from './line-out-store'
+import { saleMenuRef, saleTip } from './sale-tip'
 import { formatAmount, nowMinute } from '../ui/format'
 import TextTabs from './TextTabs.vue'
 import Coin from './Coin.vue'
 import { byType, inRange, marketText, nextSaleSort, saleChaos, saleName, saleSortOf, saleType, sortSales, totals, SALE_TYPES } from './sales'
 import type { Sale, SaleRange, SaleSort, SaleSortKey, SaleType, TypeRow } from './sales'
-import { marketOf, rates, sales, salesReading } from './sales-store'
+import { marketOf, rates, sales, salesReading, salesReply } from './sales-store'
 
 const props = defineProps<{ divine: number | null, range?: SaleRange, sort?: SaleSort }>()
 const emit = defineEmits<{ range: [r: SaleRange], sort: [s: SaleSort] }>()
@@ -86,12 +93,35 @@ const reading = salesReading
 const all = sales
 // Moves with the minute clock, so Today rolls over at midnight.
 const inR = computed(() => inRange(all.value, range.value, Math.max(nowMinute.value, Date.now())))
-const sum = computed(() => totals(inR.value, rates.value))
-const types = computed(() => byType(inR.value, rates.value))
+// The shared line item (ui/line-item.ts): a sale left out stays listed,
+// struck, and leaves the totals and the bars.
+const league = computed(() => salesReply.value?.league ?? null)
+watch(league, (l) => { if (l) loadLineOut(l).catch(() => {}) }, { immediate: true })
+const outIds = computed(() => outIdsOf(lineOutDoc.value, league.value, 'sale'))
+const isOut = (s: Sale) => outIds.value.has(s.id)
+const counted = computed(() => inR.value.filter(s => !isOut(s)))
+const outInRange = computed(() => inR.value.length - counted.value.length)
+const onlyChanged = shallowRef(false)
+watch(outInRange, (n) => { if (!n) onlyChanged.value = false })
+const sum = computed(() => totals(counted.value, rates.value))
+const types = computed(() => byType(counted.value, rates.value))
+function leaveOut (s: Sale, out: boolean) {
+  const l = league.value
+  if (!l) return
+  setLineOut(l, 'sale', s.id, out).catch(failed)
+  lineToast(out ? 'out' : 'in', saleName(s), () => { setLineOut(l, 'sale', s.id, !out).catch(failed) })
+}
+const failed = (e: Error) => { toast(e.message) }
+const handlersOf = (s: Sale) => ({ out: (on: boolean) => { leaveOut(s, on) } })
+const stateOf = (s: Sale) => ({ out: isOut(s), editable: false })
+const entriesOf = (s: Sale): MenuEntry[] => lineMenu(stateOf(s), handlersOf(s))
+const headOf = (s: Sale, e: MouseEvent) => itemMenuHead(saleMenuRef(s), e)
+function onMenu (e: MouseEvent, s: Sale) { openMenu(e, entriesOf(s), headOf(s, e) ?? undefined) }
+function onKeys (e: KeyboardEvent, s: Sale) { lineKeys(e, stateOf(s), handlersOf(s)) }
 const typeLabel = computed(() => SALE_TYPES.find(t => t.id === type.value)?.label ?? '')
 const rows = computed(() => {
   const words = query.value.toLowerCase().split(/\s+/).filter(Boolean)
-  return inR.value.filter(s => (!type.value || saleType(s) === type.value) &&
+  return inR.value.filter(s => (!type.value || saleType(s) === type.value) && (!onlyChanged.value || isOut(s)) &&
     words.every(w => `${s.name} ${s.typeLine}`.toLowerCase().includes(w)))
 })
 
@@ -179,4 +209,6 @@ watch(types, (list) => { if (type.value && !list.some(t => t.id === type.value))
 .name { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .sale { color: var(--w-gold); }
+.struck { text-decoration: line-through; color: var(--w-dim); }
+.table th.acts { width: 2.8em; }
 </style>
