@@ -1,8 +1,13 @@
 <template>
   <div v-if="listing" :class="$style.bar" data-listed-bar>
     <span class="w-dim text-xs">Listed at Faustus</span>
+    <span :class="$style.item" data-listed-bar-item>
+      <img v-if="listing.icon" :src="listing.icon" alt="" :class="$style.icon">
+      <span v-item-tip="saleTip(listing)" class="w-trunc">{{ saleName(listing) }}</span>
+    </span>
+    <span v-if="listing.tab" class="w-dim text-xs" :title="tabTitle(listing)" data-listed-bar-tab>in {{ listing.tab.name }}<template v-if="listing.tab.x != null && listing.tab.y != null"> · col {{ listing.tab.x + 1 }}, row {{ listing.tab.y + 1 }}</template></span>
     <template v-if="matches.length > 1">
-      <WChip v-for="l in matches" :key="l.id" clickable :active="l.id === listing.id" @click="picked = l.id">{{ priceLabel(l.price) }}</WChip>
+      <WChip v-for="l in matches" :key="l.id" clickable :active="l.id === listing.id" :title="l.tab ? `In ${l.tab.name}` : undefined" @click="picked = l.id">{{ priceLabel(l.price) }}<template v-if="l.tab"> · {{ l.tab.name }}</template></WChip>
     </template>
     <span v-else class="w-num" :class="$style.ask">{{ priceLabel(listing.price) }}</span>
     <span v-if="target" class="w-warn text-xs" data-listed-bar-target>set {{ priceLabel(target) }}</span>
@@ -29,7 +34,10 @@
 import { computed, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import type { ParsedItem } from '@/parser'
-import { WButton, WChip } from '../ui'
+import { WButton, WChip, vItemTip } from '../ui'
+import { saleTip } from './sale-tip'
+import { saleName } from './sales'
+import type { Listing } from './faustus'
 import { lastAsks } from '../price-insight/last-asks'
 import { loadPending, pendingDoc } from './pending-store'
 import { soldIds } from './pending'
@@ -119,6 +127,10 @@ function save (p: { amount: number, currency: 'chaos' | 'divine' }) {
   const t: TargetPrice = { amount: p.amount, currency: p.currency, at: Date.now() }
   setTarget(league.value, l.id, t).catch(() => {})
 }
+function tabTitle (l: Listing) {
+  const t = l.tab!
+  return `Your merchant tab "${t.name}"${t.x != null && t.y != null ? `, column ${t.x + 1} and row ${t.y + 1} from the top left` : ''}, at Faustus`
+}
 function saveTyped () { save({ amount: typed.value ?? 0, currency: typedCurrency.value }) }
 function clear () {
   const l = listing.value
@@ -129,6 +141,8 @@ function clear () {
 <style module>
 .bar { display: flex; align-items: center; gap: var(--w-s2); flex-wrap: wrap; padding: 6px var(--w-pad); border-top: 1px solid var(--w-line); background: var(--w-panel-solid); }
 .ask { color: var(--w-gold); }
+.item { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 14em; }
+.icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .sep { flex: 1; }
 .input { width: 6em; background: var(--w-panel-2); border: 1px solid var(--w-line); color: var(--w-fg); font: inherit; font-size: var(--w-fs-sm); padding: 1px 4px; }
 select.input { width: auto; }

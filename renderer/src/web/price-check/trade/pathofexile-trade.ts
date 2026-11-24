@@ -254,6 +254,8 @@ interface FetchResult {
     fee?: number
     // woke: instant buyout listings in a signed-in fetch; see woke/hideout-travel
     hideout_token?: string
+    // woke: the stash tab it sits in and where (Net worth's Listed shows it)
+    stash?: { name?: string, x?: number, y?: number }
     account: Account
   }
 }
@@ -277,6 +279,8 @@ export interface PricingResult {
   priceCurrency: string
   isMine: boolean
   hasNote: boolean
+  // woke: the stash tab it's in, when the trade site says (x, y from the top left)
+  stash?: { name: string, x?: number, y?: number }
   hasFee: boolean
   // woke: travel pass for an instant buyout listing (signed-in fetches only)
   hideoutToken?: string
@@ -929,6 +933,7 @@ export async function requestResults (
       priceCurrency: result.listing.price?.currency ?? 'no price',
       hasNote: result.item.note != null,
       hasFee: result.listing.fee != null,
+      ...(result.listing.stash?.name ? { stash: { name: result.listing.stash.name, x: result.listing.stash.x, y: result.listing.stash.y } } : {}),
       hideoutToken: result.listing.fee != null ? result.listing.hideout_token : undefined,
       isMine: isOwnAccount(result.listing.account.name, opts.accountName),
       ign: result.listing.account.lastCharacterName,
