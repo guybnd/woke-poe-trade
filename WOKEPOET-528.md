@@ -36,6 +36,7 @@ subtasks:
   - WOKEPOET-546
   - WOKEPOET-547
   - WOKEPOET-550
+  - WOKEPOET-551
 ---
 Guy's Build picks from the veteran critique page: https://claude.ai/artifact/HQ4N7sqNFTfUWGS3jedRxh (db collection `picks`). 18 Build, 7 Skip (age-whisper, beast-profit, earnings-full, listed-min, ninja-trim, vault-own; viscera-recipe left unpicked). One subtask per Build pick.
 
