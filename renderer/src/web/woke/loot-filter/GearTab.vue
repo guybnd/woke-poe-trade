@@ -701,7 +701,9 @@ function neverOffBuild () {
 
 <style module>
 .wrap {
-  max-height: min(40rem, calc(76vh / var(--w-ui-scale, 1)));
+  /* Fills a window made taller; this is its height otherwise. */
+  flex: 1 1 min(40rem, calc(76vh / var(--w-ui-scale, 1)));
+  min-height: 0;
   padding: 8px var(--w-pad) 12px;
   display: flex;
   flex-direction: column;

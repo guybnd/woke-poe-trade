@@ -336,7 +336,9 @@ function toggleSlot (key: string) {
   align-items: baseline;
 }
 .wrap {
-  max-height: min(36rem, calc(70vh / var(--w-ui-scale, 1)));
+  /* Fills a window made taller; this is its height otherwise. */
+  flex: 1 1 min(36rem, calc(70vh / var(--w-ui-scale, 1)));
+  min-height: 0;
   padding: 8px var(--w-pad) 12px;
   display: flex;
   flex-direction: column;

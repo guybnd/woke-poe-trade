@@ -1862,7 +1862,9 @@ function openFolder () {
   text-decoration: line-through;
 }
 .changes {
-  max-height: min(36rem, calc(70vh / var(--w-ui-scale, 1)));
+  /* Fills a window made taller; this is its height otherwise. */
+  flex: 1 1 min(36rem, calc(70vh / var(--w-ui-scale, 1)));
+  min-height: 0;
   padding: 6px 0;
 }
 .buildIntro {
