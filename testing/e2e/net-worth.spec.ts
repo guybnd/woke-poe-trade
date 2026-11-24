@@ -495,6 +495,17 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     // A legend under the line names its marks.
     await expect(panel.locator('[data-chart-legend]')).toContainText('At Faustus')
     await overlay.snap('net worth chart with the Faustus band')
+    // The list of changes is the shared profit line too: hover shows ⊘ and ⋯
+    // over the end of the name, taking no room of its own.
+    const feedLine = panel.locator('[data-hold-line]').first()
+    await expect(feedLine).toBeVisible()
+    await feedLine.hover()
+    await expect(feedLine.locator('[data-line-out]')).toBeVisible()
+    await expect(feedLine.locator('[data-line-more]')).toBeVisible()
+    await overlay.snap('net worth change line hover')
+    await panel.locator('tr[data-nw-row]', { hasText: 'Divine Orb' }).hover()
+    await overlay.snap('net worth table row hover')
+    await overlay.page.mouse.move(0, 0)
     // A click on the line pins its card (what changed, with item tooltips); Esc closes it.
     const box = await chart.boundingBox()
     await chart.click({ position: { x: box!.width - 4, y: box!.height / 2 } })

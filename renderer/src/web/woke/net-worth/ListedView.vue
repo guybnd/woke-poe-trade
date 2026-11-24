@@ -43,7 +43,6 @@
             <th title="Your asking price against poe.ninja's">vs ninja</th>
             <th data-goto-spot="still-cheapest" title="Still cheapest? Price check a listing with its own mods (your filters) to rank your price, then set a new one at the foot. The bolt is a quick search by name">Cheapest?</th>
             <th :title="`Since you first listed it (a reprice doesn't reset it). Orange: ${staleDays} days or more`">Listed</th>
-            <th :class="$style.acts" />
           </tr>
         </thead>
         <tbody>
@@ -67,10 +66,9 @@
               <WButton v-else-if="checkOf(r)" size="sm" variant="ghost" :class="checkOf(r)!.cheaper ? 'w-down' : 'w-up'" :title="checkTitle(r)" @click="check(r)">{{ checkText(r) }}</WButton>
               <WButton v-else size="sm" variant="ghost" :class="errors[r.item.id] ? 'w-down' : ''" :title="errors[r.item.id] ? `Check failed: ${errors[r.item.id]}. Click to try again` : 'One trade search: where your price ranks among other instant buyout listings of it'" @click="check(r)">{{ errors[r.item.id] ? 'Retry' : 'Check' }}</WButton>
             </td>
-            <td class="w-num" :class="r.stale && !isOut(r) ? 'w-warn' : 'w-dim'" :title="new Date(r.firstAt).toLocaleString()">{{ ageText(r.ageMs) }}</td>
-            <td><WLineActs :name="saleName(r.item)" :out="isOut(r)" :entries="entriesOf(r)" :head="e => itemMenuHead(saleMenuRef(r.item), e)" @out="leaveOut(r, $event)" /></td>
+            <td class="w-num" :class="r.stale && !isOut(r) ? 'w-warn' : 'w-dim'" :title="new Date(r.firstAt).toLocaleString()">{{ ageText(r.ageMs) }}<WLineActs :name="saleName(r.item)" :out="isOut(r)" :entries="entriesOf(r)" :head="e => itemMenuHead(saleMenuRef(r.item), e)" @out="leaveOut(r, $event)" /></td>
           </tr>
-          <tr v-if="shown.length > limit"><td colspan="7" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 100">{{ shown.length - limit }} more</WButton></td></tr>
+          <tr v-if="shown.length > limit"><td colspan="6" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 100">{{ shown.length - limit }} more</WButton></td></tr>
         </tbody>
       </table>
     </div>
@@ -291,7 +289,6 @@ function colourOf (frame: number) {
 .table tbody tr:hover td { background: var(--w-panel-2); }
 .left { text-align: left !important; }
 .struck { text-decoration: line-through; color: var(--w-dim); }
-.table th.acts { width: 2.8em; }
 .name { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .ask { color: var(--w-gold); }

@@ -321,22 +321,29 @@ const mmss = (ms: number) => `${Math.floor(ms / 60_000)}:${String(Math.floor(ms 
 // C2: inside a session, each refresh's change goes to the map run before it
 // (reads happen when you enter the hideout after a map).
 export function groupByRuns (diffs: StashDiff[], runs: RunLike[], sessionStart: number): ChangeGroup[] {
-  const groups = new Map<number, StashDiff[]>()
-  for (const d of diffs) {
+  // A map's group takes its reads up to the first one after its map time
+  // (the read on the way back to the hideout). Later reads before the next
+  // map are hideout time: sales, crafting, trading. They aren't map loot.
+  const groups = new Map<number, { idx: number, hub: boolean, ds: StashDiff[] }>()
+  const closed = new Set<number>()
+  for (const d of [...diffs].sort((a, b) => a.at - b.at)) {
     if (d.at < sessionStart) continue
     let idx = -1
     for (let i = 0; i < runs.length; i++) if (runs[i].enteredAt <= d.at) idx = i
-    const list = groups.get(idx) ?? []
-    list.push(d)
-    groups.set(idx, list)
+    const hub = idx >= 0 && closed.has(idx)
+    if (idx >= 0 && d.at >= runs[idx].enteredAt + runs[idx].mapMs) closed.add(idx)
+    const order = idx * 2 + (hub ? 1 : 0)
+    const g = groups.get(order) ?? { idx, hub, ds: [] }
+    g.ds.push(d)
+    groups.set(order, g)
   }
   return [...groups.entries()]
     .sort((a, b) => b[0] - a[0])
-    .map(([idx, ds]) => {
+    .map(([, { idx, hub, ds }]) => {
       const run = runs[idx]
       return {
-        key: `run:${idx}`,
-        title: run ? `Map ${idx + 1} · ${run.name} · ${mmss(run.mapMs)}` : 'Before the first map',
+        key: hub ? `hub:${idx}` : `run:${idx}`,
+        title: hub ? `Hideout after Map ${idx + 1}` : run ? `Map ${idx + 1} · ${run.name} · ${mmss(run.mapMs)}` : 'Before the first map',
         netChaos: ds.reduce((s, d) => s + d.netChaos, 0),
         lines: rowsOf(ds),
         reads: ds.map(d => d.at)

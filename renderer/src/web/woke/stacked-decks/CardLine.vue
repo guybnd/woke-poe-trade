@@ -13,7 +13,7 @@
         @keydown.enter.prevent="save" @keydown.esc.prevent.stop="editing = false" @blur="save">
       <template v-else><i v-if="held && !row.mine" class="fas fa-pause-circle w-dim" :class="$style.held" /><WLineNum :editable="editable" :mine="row.mine" :out="row.out" :title="valueTitle" :label="`${row.mine ? 'Change your' : 'Set your'} price for ${row.name}`" data-deck-price @edit="startEdit">{{ row.each != null ? money(row.total) : '—' }}</WLineNum></template>
     </span>
-    <WLineActs v-if="editable" :name="row.name" :out="!!row.out" :entries="entries" @out="emit('out', $event)" /><span v-else />
+    <WLineActs v-if="editable" :name="row.name" :out="!!row.out" :entries="entries" @out="emit('out', $event)" />
   </div>
 </template>
 
@@ -84,7 +84,12 @@ function onKeys (e: KeyboardEvent) { if (props.editable) lineKeys(e, state.value
 </script>
 
 <style module>
-.row { display: grid; grid-template-columns: var(--w-icon, 16px) minmax(0, 1fr) auto 4.5rem 2.6em; gap: 6px; align-items: center; min-height: 22px; }
+.row { display: grid; grid-template-columns: var(--w-icon, 16px) minmax(0, 1fr) auto 4.5rem; gap: 6px; align-items: center; min-height: 22px; }
+/* The hover actions lie over the end of the name, not the value: the value
+   is clicked to change it. */
+/* Each cell on row 1 by hand: the actions share the name's cell. */
+.row > :nth-child(1) { grid-area: 1 / 1; } .row > :nth-child(2) { grid-area: 1 / 2; } .row > :nth-child(3) { grid-area: 1 / 3; } .row > :nth-child(4) { grid-area: 1 / 4; }
+.row > :global(.w-line-acts) { position: relative; top: auto; transform: none; grid-column: 2; grid-row: 1; justify-self: end; }
 .name { min-width: 0; display: flex; align-items: baseline; gap: 6px; }
 .held { margin-right: 3px; font-size: 0.85em; }
 .cheap { color: var(--w-faint); }

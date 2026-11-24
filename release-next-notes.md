@@ -204,3 +204,6 @@
 - What's new: Show me now goes to the feature itself, not just its tab. It scrolls to it and flashes it, and the Listed line picks the Stale chip. Before, with the window already on that tab, it looked like nothing happened.
 - What's new: Show me on the price check's seller spread line opens a sample Exalted Orb check and points at the spread; the map cards line opens Ctrl+Space with a map typed.
 - What's new: Show me on the price check's upgrade and recipe lines opens a sample check (Xoph's Inception, The Will of Uul-Netol) and points at the side list. Lines with nothing to show have no Show me, only dismiss, instead of opening Settings.
+- Net worth: sales you make in the hideout after a map no longer show as that map's loot in the session list. They go under "Hideout after Map 1" (and so on) until the next map.
+- Net worth: the session list, the Sold list and Price moves today now work like the other profit lists. Hover a line for ⊘ (leave it out) and ⋯, right-click for the same menu, or click an item's number to set your price. A sale left out there leaves Sold today and 7 days too.
+- Profit lists: the hover buttons (⊘, ⋯) no longer take a column of their own. They show over the row's right edge on a shaded backing, away from any number you can click, so nothing shifts. In a run's details, the In, Out and Faustus totals line up with their values.

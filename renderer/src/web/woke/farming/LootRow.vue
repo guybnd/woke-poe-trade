@@ -94,6 +94,11 @@ function onKeys (e: KeyboardEvent) { lineKeys(e, state.value, handlers) }
 </script>
 
 <style module>
-.row { display: grid; grid-template-columns: minmax(0, 1fr) 3.2rem 4.8rem 2.6em; gap: 4px; align-items: center; min-height: 24px; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) 3.2rem 4.8rem; gap: 4px; align-items: center; min-height: 24px; }
+/* The hover actions lie over the end of the name, not the value: the value
+   is clicked to change it. */
+/* Each cell on row 1 by hand: the actions share the name's cell. */
+.row > :nth-child(1) { grid-area: 1 / 1; } .row > :nth-child(2) { grid-area: 1 / 2; } .row > :nth-child(3) { grid-area: 1 / 3; }
+.row > :global(.w-line-acts) { position: relative; top: auto; transform: none; grid-column: 1; grid-row: 1; justify-self: end; }
 .box { width: 100%; text-align: right; }
 </style>

@@ -60,7 +60,7 @@
       <div v-if="!showSummary" :class="$style.cols">
         <!-- In: what came into the stash, and what you added. -->
         <div :class="$style.col" data-run-in>
-          <div :class="$style.colHead"><span :class="$style.colTitle">{{ isCraft ? 'Made' : 'In' }}</span><span class="w-num w-up">{{ signed(inSum) }}<Coin :chaos="!divine" /></span></div>
+          <div :class="$style.colHead"><span :class="$style.colTitleBox"><span :class="$style.colTitle">{{ isCraft ? 'Made' : 'In' }}</span></span><span class="w-num w-up" :class="$style.colSum">{{ signed(inSum) }}<Coin :chaos="!divine" /></span></div>
           <!-- A crafting run's new unpriced items: price them by hand. -->
           <RunRow v-for="r in madeRows" :key="'m' + r.key" data-run-made :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, r.net)" :count="tallyCount(r)" :chaos="madeVal(r)" sign="+" :sub="isEdited(rowKey.tally(r.key)) ? undefined : 'set price'" :divine="divine"
             :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
@@ -75,8 +75,8 @@
 
         <!-- Out: costs you typed, and what the stash says was used up. -->
         <div :class="$style.col" data-run-out>
-          <div :class="$style.colHead"><span :class="$style.colTitle">{{ isCraft ? 'Used' : 'Out' }}</span><span class="w-num w-down">{{ outSum > 0 ? '−' : '' }}{{ amount(outSum) }}<Coin :chaos="!divine" /></span>
-            <span v-if="totals.costPerMapChaos != null && !isCraft" class="w-dim w-num text-xs" :title="`Typed costs, plus maps, scarabs and fragments used up, per ${unit === 'run' ? 'map or fight' : unit}`">{{ amount(totals.costPerMapChaos) }} a {{ unit }}</span></div>
+          <div :class="$style.colHead"><span :class="$style.colTitleBox"><span :class="$style.colTitle">{{ isCraft ? 'Used' : 'Out' }}</span>
+            <span v-if="totals.costPerMapChaos != null && !isCraft" class="w-dim w-num text-xs" :title="`Typed costs, plus maps, scarabs and fragments used up, per ${unit === 'run' ? 'map or fight' : unit}`">{{ amount(totals.costPerMapChaos) }} a {{ unit }}</span></span><span class="w-num w-down" :class="$style.colSum">{{ outSum > 0 ? '−' : '' }}{{ amount(outSum) }}<Coin :chaos="!divine" /></span></div>
           <RunRow v-for="c in shownRun.costs" :key="c.id" :name="c.name" :tip="tipOf(c.key, c.name)" :count="c.qty" :each="c.unitChaos" :chaos="lineCost(c, totals.runs)" sign="−" :sub="costSub(c)" :divine="divine" :bought="c.bought ?? null" :can-leave-out="false" removable data-run-cost
             @edit="editCost(c.id, $event)" @remove="removeCost(c.id)">
             <template #sub>
@@ -94,8 +94,8 @@
 
         <!-- Faustus: listed and sold, not in your stash yet; items you hold. -->
         <div :class="$style.col" data-run-faustus>
-          <div :class="$style.colHead"><span :class="$style.colTitle">{{ isCraft ? 'Sold' : 'Faustus' }}</span><span class="w-num" :class="totals.faustusChaos ? 'w-up' : 'w-dim'">{{ signed(totals.faustusChaos) }}<Coin :chaos="!divine" /></span>
-            <i class="fas fa-info-circle" :class="$style.info" :title="faustusInfo" /></div>
+          <div :class="$style.colHead"><span :class="$style.colTitleBox"><span :class="$style.colTitle">{{ isCraft ? 'Sold' : 'Faustus' }}</span>
+            <i class="fas fa-info-circle" :class="$style.info" :title="faustusInfo" /></span><span class="w-num" :class="[$style.colSum, totals.faustusChaos ? 'w-up' : 'w-dim']">{{ signed(totals.faustusChaos) }}<Coin :chaos="!divine" /></span></div>
           <RunRow v-for="r in listed.slice(0, listedShown)" :key="'l' + r.item.id" data-run-listed :icon="r.item.icon" :name="saleName(r.item)" :tip="saleTip(r.item)" :count="r.item.stack" :chaos="r.chaos" sign="+" :sub="listedSub(r.item)" :divine="divine"
             :out="r.leftOut" :edited="r.edited" @edit="editRow(rowKey.item(r.item.id), $event)" @out="leaveOut(rowKey.item(r.item.id), $event, saleName(r.item))" @reset="resetRow(rowKey.item(r.item.id))" />
           <RunRow v-for="h in held" :key="'h' + h.item.id" data-run-held :icon="h.item.icon" :name="h.item.name" :tip="{ name: h.item.name, count: h.left }" :count="h.left" :chaos="h.chaos" :sign="h.carried ? '' : '+'" :sub="h.carried ? 'from last run' : 'held'" :divine="divine"
@@ -553,8 +553,16 @@ function addPerMap (l: AddedLine) {
 .hero b.big { font-size: calc(24px * var(--w-text-scale, 1)); line-height: 1.1; }
 .changedBar { display: flex; justify-content: flex-end; }
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--w-s2) calc(var(--w-s3) * 1.5); align-items: start; }
-.col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.colHead { display: flex; align-items: baseline; gap: var(--w-s2); border-bottom: 1px solid var(--w-line-strong); padding-bottom: 2px; margin-bottom: 2px; }
+/* One grid per column: every row (RunRow) and the head share its value
+   column (subgrid), so the totals and values line up (Guy, 2026-11-24). The
+   hover actions lie over the row and take no room. */
+.col { display: grid; grid-template-columns: 18px minmax(0, 1fr) max-content; column-gap: 6px; row-gap: 2px; align-content: start; min-width: 0; }
+.col > * { grid-column: 1 / -1; min-width: 0; }
+.col > [data-run-row], .col > .colHead { display: grid; grid-template-columns: subgrid; }
+.col > :not([data-run-row]):not(.colHead) { justify-self: start; }
+.colHead { align-items: baseline; border-bottom: 1px solid var(--w-line-strong); padding-bottom: 2px; margin-bottom: 2px; }
+.colTitleBox { grid-column: 1 / 3; display: flex; align-items: baseline; gap: var(--w-s2); min-width: 0; }
+.colSum { grid-column: 3; text-align: right; white-space: nowrap; }
 .colTitle { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); color: var(--w-gold); margin-right: auto; }
 .colFoot { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; margin-top: 4px; }
 .x { background: none; border: 0; color: var(--w-dim); cursor: pointer; padding: 0; }

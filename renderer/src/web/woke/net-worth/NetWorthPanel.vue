@@ -166,16 +166,16 @@
                   </button>
                   <template v-if="groupOpen(g.key, i)">
                     <!-- A sale takes the place of its item's removed line (sales.ts). -->
-                    <div v-for="s in groupSales(g).sales" :key="'sale' + s.id" :class="$style.feedRow">
-                      <img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
-                      <span v-item-tip="saleTip(s)" class="w-trunc">Sold {{ saleName(s) }}</span>
-                      <span class="w-num" :class="$style.saleNum" :title="saleTitle(s)">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /></span>
+                    <div v-for="s in groupSales(g).sales" :key="'sale' + s.id" :class="[$style.saleLine, 'w-line', { 'w-line-out': saleOut(s) }]" tabindex="0" data-feed-sale
+                      @contextmenu="onSaleMenu($event, s)" @keydown="onSaleKeys($event, s)">
+                      <img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon" class="w-line-name"><span v-else :class="$style.icon" />
+                      <span :class="$style.moveName"><span v-item-tip="saleTip(s)" class="w-trunc w-line-name">Sold {{ saleName(s) }}</span><span v-if="saleOut(s)" class="w-line-tag">left out</span></span>
+                      <span class="w-num" :class="[$style.saleNum, { [$style.struck]: saleOut(s) }]" :title="saleTitle(s)">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /></span>
+                      <WLineActs :name="saleName(s)" :out="saleOut(s)" :entries="saleEntries(s)" :head="e => saleHead(s, e)" @out="leaveSaleOut(s, $event)" />
                     </div>
-                    <div v-for="l in groupSales(g).lines.slice(0, 5)" :key="l.dir + l.key" :class="$style.feedRow">
-                      <img v-if="l.icon" :src="l.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
-                      <span v-item-tip="tipFor(tips, l.key, l.name, l.count)" class="w-trunc">{{ l.count > 1 ? `${fmt(l.count)} × ` : '' }}{{ l.name }}</span>
-                      <span class="w-num" :class="l.dir === 'add' ? 'w-up' : 'w-down'" :title="inChaos(l.chaos)">{{ l.dir === 'add' ? '+' : '−' }}{{ div(l.chaos) }}<Coin :chaos="!divine" /></span>
-                    </div>
+                    <HoldLine v-for="l in groupSales(g).lines.slice(0, 5)" :key="l.dir + l.key" :icon="l.icon" :name="l.name" :text="`${l.count > 1 ? `${fmt(l.count)} × ` : ''}${l.name}`"
+                      :tip="tipFor(tips, l.key, l.name, l.count)" :mine="holdOf(l.key)?.mine" :out="ignoredKeys.has(l.key)" :each="holdOf(l.key)?.unitChaos ?? null" :title="inChaos(l.chaos)"
+                      @price="onPrice(l.key, $event)" @out="onIgnore(l.key, l.name, $event)"><span :class="ignoredKeys.has(l.key) ? '' : l.dir === 'add' ? 'w-up' : 'w-down'">{{ l.dir === 'add' ? '+' : '−' }}{{ div(l.chaos) }}</span><Coin :chaos="!divine" /></HoldLine>
                     <div v-if="groupSales(g).lines.length > 5" :class="$style.more">+{{ groupSales(g).lines.length - 5 }} more</div>
                     <div v-for="r in spendRows(g)" :key="'spend' + r.at" :class="$style.spendRow">
                       <span class="w-trunc" :title="r.tip">{{ r.text }}</span>
@@ -200,9 +200,12 @@
                   <span class="w-num text-xs w-dim">today <b :class="$style.saleNum">{{ div(soldToday.chaos) }}</b> · 7 days <b :class="$style.saleNum">{{ div(soldWeek.chaos) }}</b><Coin :chaos="!divine" /></span>
                 </button>
               </div>
-              <div v-for="s in fold.sold ? [] : recentSales" :key="s.id" :class="$style.moveRow">
-                <span :class="$style.moveName"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" /><span v-item-tip="saleTip(s)" class="w-trunc">{{ saleName(s) }}</span><span v-if="marketOf(s) != null" :class="[$style.saleTag, marketTone(s)]">{{ marketText(marketOf(s)) }}</span></span>
-                <span class="w-num" :class="$style.saleNum" :title="saleTitle(s)">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /> · {{ clockOf(s.at) }}</span>
+              <div v-for="s in fold.sold ? [] : recentSales" :key="s.id" :class="[$style.saleLine, 'w-line', { 'w-line-out': saleOut(s) }]" tabindex="0" data-side-sale
+                @contextmenu="onSaleMenu($event, s)" @keydown="onSaleKeys($event, s)">
+                <img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon" class="w-line-name"><span v-else :class="$style.icon" />
+                <span :class="$style.moveName"><span v-item-tip="saleTip(s)" class="w-trunc w-line-name">{{ saleName(s) }}</span><span v-if="saleOut(s)" class="w-line-tag">left out</span><span v-else-if="marketOf(s) != null" :class="[$style.saleTag, marketTone(s)]">{{ marketText(marketOf(s)) }}</span></span>
+                <span class="w-num" :class="$style.saleNum" :title="saleTitle(s)"><span :class="{ [$style.struck]: saleOut(s) }">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /></span> · {{ clockOf(s.at) }}</span>
+                <WLineActs :name="saleName(s)" :out="saleOut(s)" :entries="saleEntries(s)" :head="e => saleHead(s, e)" @out="leaveSaleOut(s, $event)" />
               </div>
             </div>
             <div v-if="shown.where">
@@ -214,10 +217,9 @@
             </div>
             <div v-if="showMoves" :class="$style.movesCol">
               <button type="button" :class="[$style.foldHead, $style.sideTitle]" :aria-expanded="!fold.moves" :title="fold.moves ? 'Open' : 'Fold'" @click="flipFold('moves')"><i :class="fold.moves ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">Price moves today</span></button>
-              <div v-for="m in fold.moves ? [] : moves.slice(0, 8)" :key="m.key" :class="$style.moveRow">
-                <span :class="$style.moveName"><img v-if="m.icon" :src="m.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" /><span v-item-tip="tipFor(tips, m.key, m.name)" class="w-trunc">{{ m.name }}</span></span>
-                <span class="w-num" :class="tone(m.change)" :title="inChaos(m.valueChaos)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span>
-              </div>
+              <HoldLine v-for="m in fold.moves ? [] : moves.slice(0, 8)" :key="m.key" :icon="m.icon" :name="m.name" :text="m.name" :tip="tipFor(tips, m.key, m.name)"
+                :mine="holdOf(m.key)?.mine" :out="ignoredKeys.has(m.key)" :each="holdOf(m.key)?.unitChaos ?? null" :title="inChaos(m.valueChaos)"
+                @price="onPrice(m.key, $event)" @out="onIgnore(m.key, m.name, $event)"><span :class="tone(m.change)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span></HoldLine>
               <div v-if="moves.length > 8 && !fold.moves" :class="$style.more" :title="moves.slice(8).map(moveText).join('\n')">+{{ moves.length - 8 }} more</div>
             </div>
           </div>
@@ -292,7 +294,7 @@ import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shall
 import { AppConfig } from '@/web/Config'
 import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import { usePoeninja } from '@/web/background/Prices'
-import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WField, WLineActs, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
 import { lineTip, tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
@@ -306,7 +308,7 @@ import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
 import { change24h, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
 import type { ChartRange, PriceMove } from './ledger'
-import { divine, gainsNow, historyNow, leagueNow, ledger, ratesAt, setIgnored, setMyPrice, setSpendMark, summary, tabValues, valuation, wantPrices } from './store'
+import { divine, gainsNow, historyNow, leagueNow, ledger, pricePrefs, ratesAt, setIgnored, setMyPrice, setSpendMark, summary, tabValues, valuation, wantPrices } from './store'
 import { markAction, resolveSpends } from './spend'
 import type { SpendMark } from './spend'
 import type { ChangeGroup } from './ledger'
@@ -328,6 +330,8 @@ import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
 import HideChip from './HideChip.vue'
 import SalesView from './SalesView.vue'
+import HoldLine from './HoldLine.vue'
+import { useSaleLines } from './sale-lines'
 import ListedView from './ListedView.vue'
 import { loadPending, pendingDoc, pendingReading, refreshPending } from './pending-store'
 import { listedAt, pendingRows, pendingTotals, rowWorth, DEFAULT_STALE_DAYS } from './pending'
@@ -593,6 +597,11 @@ const eta = computed(() => goalStashDiv.value != null ? goalEta(seriesFor(ledger
 
 // ---------- price moves (D3) ----------
 // The item tooltip for any item named here: held ones by their table line.
+// Holdings' items by key, and the ones you left out: the session list and
+// Price moves act on the same items as the table.
+const holdings = computed(() => new Map((v.value ? [...v.value.lines, ...v.value.unpricedLines, ...v.value.ignoredLines] : []).map(l => [l.key, l])))
+const holdOf = (key: string) => holdings.value.get(key)
+const ignoredKeys = computed(() => new Set(pricePrefs.value.ignored))
 const tips = computed(() => tipIndex(v.value ? [...v.value.lines, ...v.value.unpricedLines, ...v.value.ignoredLines] : []))
 
 // Your own prices don't move with poe.ninja.
@@ -930,8 +939,13 @@ function salePrice (s: Sale) {
   const c = saleChaosOf(s)
   return c == null ? `${fmt(s.price.amount)} ${s.price.currency}` : div(c)
 }
-const soldToday = computed(() => totals(inRange(sales.value, 'today', now.value), saleRates.value))
-const soldWeek = computed(() => totals(inRange(sales.value, '7d', now.value), saleRates.value))
+// Sales as shared profit lines (sale-lines.ts): one left out anywhere leaves
+// these totals too, as in the Sales view.
+const { isOut: saleOut, leaveOut: leaveSaleOut, entriesOf: saleEntries, headOf: saleHead, onMenu: onSaleMenu, onKeys: onSaleKeys } =
+  useSaleLines(() => [{ label: 'Open in Sales', icon: 'fas fa-receipt', action: () => { view.value = 'sales' } }])
+const countedSales = computed(() => sales.value.filter(s => !saleOut(s)))
+const soldToday = computed(() => totals(inRange(countedSales.value, 'today', now.value), saleRates.value))
+const soldWeek = computed(() => totals(inRange(countedSales.value, '7d', now.value), saleRates.value))
 const recentSales = computed(() => sales.value.slice(0, 6))
 const clockOf = (at: number) => {
   const d = new Date(at)
@@ -1148,6 +1162,14 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .soldHead:hover .caps { color: var(--w-fg); }
 .spendNote { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-info); }
 .feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
+/* A sale as a shared profit line (sale-lines.ts); its hover actions lie over
+   the end of the name. */
+.saleLine { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); min-height: 20px; }
+/* Each cell on row 1 by hand: the actions share the name's cell. */
+.saleLine > :nth-child(1) { grid-area: 1 / 1; } .saleLine > :nth-child(2) { grid-area: 1 / 2; } .saleLine > :nth-child(3) { grid-area: 1 / 3; }
+.saleLine > :global(.w-line-acts) { position: relative; top: auto; transform: none; grid-column: 2; grid-row: 1; justify-self: end; }
+.saleLine > :global(.w-num) { white-space: nowrap; }
+.struck { text-decoration: line-through; color: var(--w-dim); }
 .icon { width: 16px; height: 16px; object-fit: contain; flex: none; }
 .sessionFoot { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); margin-top: var(--w-s2); }
 .catName { display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
