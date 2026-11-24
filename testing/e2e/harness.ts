@@ -103,6 +103,9 @@ export class Overlay {
   readonly errors: string[] = []
   // The config the overlay was booted with.
   config: any = null // eslint-disable-line @typescript-eslint/no-explicit-any
+  // The website's shots set this: the price check keeps the app's default layout
+  // (Tooltip lines) instead of the Rows layout the other specs check.
+  appDefaults = false
 
   constructor (readonly page: Page, readonly app: FakeApp, private testInfo: TestInfo) {
     page.on('pageerror', (e) => {
@@ -231,7 +234,7 @@ export class Overlay {
     }
     // The price check's specs check the Standard layout; PoE mode (the default) has its own spec.
     const priceCheck = config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check')
-    if (priceCheck && priceCheck.wokeWindowStyle == null) priceCheck.wokeWindowStyle = 'standard'
+    if (priceCheck && priceCheck.wokeWindowStyle == null && !this.appDefaults) priceCheck.wokeWindowStyle = 'standard'
     opts.patch?.(config)
     // Leave the page that's open (the default config capture, or an earlier
     // boot) first: it can still save its own settings on the way out, which

@@ -13,11 +13,16 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { test, expect, FIXTURES } from './harness'
 import type { Overlay } from './harness'
+import { localIcons } from './profit-showcase'
 
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/public/shots')
 
 test.skip(!process.env.WOKE_LANDING_SHOTS, 'Set WOKE_LANDING_SHOTS=1 to take the landing page screenshots')
 test.use({ deviceScaleFactor: 2 })
+// Item art from testing/fixtures/icons, so the shots look the same wherever
+// they are taken (web.poecdn.com isn't reachable everywhere).
+// The website shows the app as a new install sees it.
+test.beforeEach(async ({ overlay }) => { overlay.appDefaults = true; await localIcons(overlay) })
 
 // The toolkit tools the rail shows, as a player who maps would have them,
 // with the names their rail icons carry.

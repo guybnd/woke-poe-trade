@@ -28,6 +28,19 @@ export async function localIcons (overlay: Overlay) {
     const rel = new URL(route.request().url()).pathname
     const file = path.join(ICONS, rel)
     if (fs.existsSync(file)) return await route.fulfill({ path: file, contentType: 'image/webp' })
+    // WOKE_SAVE_ICONS=1 (the Website shots workflow, where the site loads):
+    // fetch the missing one and keep it, so later runs anywhere have it.
+    if (process.env.WOKE_SAVE_ICONS) {
+      try {
+        const res = await route.fetch()
+        if (res.ok()) {
+          const body = await res.body()
+          fs.mkdirSync(path.dirname(file), { recursive: true })
+          fs.writeFileSync(file, body)
+          return await route.fulfill({ body, contentType: res.headers()['content-type'] ?? 'image/png' })
+        }
+      } catch {}
+    }
     fs.mkdirSync(ICONS, { recursive: true })
     fs.appendFileSync(path.join(ICONS, 'icons-missing.txt'), route.request().url() + '\n')
     await route.continue()

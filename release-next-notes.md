@@ -1,5 +1,6 @@
 # Next release notes
 
+- Net worth, "Tabs to read": the tab list is easier to read. Rows use the normal row text size with brighter names, and each tab's colour is now a thick strip down its left edge instead of a small dot.
 - New players: the first time the overlay opens after setup, a Getting started card beside the rail shows the price check and search keys, where All tools and Settings are, and how to turn on Net worth (Got it closes it for good). The next 3 opens name the rail's buttons beside them. Players who updated don't get either.
 - New players' rail starts with 5 of their tools (from the preset they picked in setup: Market, Map mods, Atlas strategies, PoB builds and Trades for Everything). Each loads only when you click it, then stays pinned.
 - What's new, in game: All tools marks tools with something new with a NEW seal until you point at one (its note shows along the bottom), and the rail's All tools button counts them. Net worth is now listed in All tools while it's off; clicking it opens its switch in Settings.
@@ -136,5 +137,9 @@
 - Map history: unique maps (Cortex, Maelström of Chaos...) show their own item on hover, not a made-up "<name> Map".
 - Ctrl+Space: the "Listed …" and "Sold …" results have the item hover. What's new: Show me on Campaign or Session story opens its own Settings page. Reopening search with the same text starts with the groups folded again. Hovering a tool in All tools clears only the What's new line it shows, so its other new lines stay in the dock.
 - Item tooltips: the first listing tooltip in a price check no longer runs off the bottom of the screen. It was placed before its mod lines loaded; it's placed again once they do.
+<<<<<<< HEAD
 - Price check, maps: a No Elder chip on the map strip leaves out maps also influenced by the Elder or the Shaper (they carry a guardian and list cheap, crowding the cheapest rows of Originator maps). It starts on when your map has no such influence; click it to include them. New Exchange button: searches the bulk exchange for the map's entry (Map, Memory-Influenced, Blighted, Citadel or guardian maps, by tier), listing each seller once with their stock, so sellers with hundreds of maps above the cheapest 100 listings show up. Click Exchange again to go back to the listings.
 - Price check: a Pricier chip beside Bulk when the search found more than the 100 cheapest listings the trade site hands back. It searches again from the dearest price loaded and adds those listings below (one trade search per click), so you can climb past the cheap single listings to the sellers further up.
+=======
+- Map price check: a Base map button at the start of the Trade search chips unticks every number and mod in one click, to search the plain map. Click it again to bring them back.
+>>>>>>> origin/master
