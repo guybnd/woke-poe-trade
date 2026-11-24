@@ -195,6 +195,7 @@ async function saveGlance (league: string, run: Run | null, points: readonly Led
     const t = runTotals(run, points, { maps, fights }, now, undefined, await glanceOutside(league, run))
     g = { league, name: run.name, startAt: run.startAt, at: now, profitChaos: t.profitChaos, maps, perHourChaos: t.perHourChaos, costPerMapChaos: t.costPerMapChaos, divine }
     if (fights) g.fights = fights
+    if (run.kind === 'craft') g.craft = true
     if (lastMapAt) g.lastMapAt = lastMapAt
     const top = topDrop(run)
     if (top) g.top = top
@@ -258,7 +259,7 @@ const newId = () => `${Date.now().toString(36)}${(idSeq++).toString(36)}`
 // already is stopped first. Earlier reads' changes come from the kept diffs.
 // `extra`: what Start read of your Faustus listings (RunsView).
 // `price`: today's prices for the kit's live lines (else the next read sets them).
-export function startRun (league: string, name: string, startAt: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null, costs: CostLine[] = [], extra: Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales' | 'carriedFrom'> = {}, price?: LivePrice) {
+export function startRun (league: string, name: string, startAt: number, diffs: readonly StashDiff[], points: readonly LedgerPoint[], divine: number | null, costs: CostLine[] = [], extra: Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales' | 'carriedFrom' | 'kind'> = {}, price?: LivePrice) {
   return queue(async () => {
     await loadRuns(league)
     const doc = runsDoc.value

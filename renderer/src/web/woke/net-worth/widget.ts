@@ -57,6 +57,8 @@ export interface NetWorthWidget extends Widget {
   listedAuto?: boolean
   // Your Faustus listings count in the total (undefined: yes).
   countListed?: boolean
+  // Your maps as columns behind the chart's line (pick D; undefined: off).
+  chartMaps?: boolean
 }
 
 export type Section = 'chart' | 'perHour' | 'numbers' | 'moves' | 'changes' | 'sold' | 'where' | 'tabs'

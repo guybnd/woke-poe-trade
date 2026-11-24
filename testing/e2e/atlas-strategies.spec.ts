@@ -35,7 +35,34 @@ async function smallTreeLink (): Promise<string> {
   return `https://www.pathofexile.com/fullscreen-atlas-skill-tree/${bytes.toString('base64url')}`
 }
 
+// GGG's export (data.json and its sprite sheets), downloaded once per worker:
+// every boot fetching it live from GitHub ran past the tree's 30 s wait under CI load.
+const EXPORT = 'https://raw.githubusercontent.com/grindinggear/atlastree-export/master/'
+const exportCache = new Map<string, Promise<{ status: number, headers: Record<string, string>, body: Buffer }>>()
+
+async function serveExportFromCache (overlay: Overlay) {
+  await overlay.page.route(`${EXPORT}**`, async (route) => {
+    const url = route.request().url()
+    let hit = exportCache.get(url)
+    if (!hit) {
+      hit = route.fetch().then(async res => {
+        // The body comes decoded: drop the headers that describe the wire copy.
+        const { 'content-encoding': _enc, 'content-length': _len, ...headers } = res.headers()
+        return { status: res.status(), headers, body: await res.body() }
+      })
+      exportCache.set(url, hit)
+      hit.then(r => { if (r.status !== 200) exportCache.delete(url) }, () => exportCache.delete(url))
+    }
+    try {
+      await route.fulfill(await hit)
+    } catch {
+      await route.abort().catch(() => {})
+    }
+  })
+}
+
 async function bootAtlas (overlay: Overlay, treeUrl: string) {
+  await serveExportFromCache(overlay)
   await overlay.boot({
     overlayActive: true,
     widgets: [{

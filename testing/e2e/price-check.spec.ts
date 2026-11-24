@@ -298,6 +298,8 @@ test('unique: the Corrupted chip cycles Any, Corr, Not at one width', async ({ o
   const chip = panel.locator('[data-corrupted-chip]')
   const shown = chip.locator('span.shown')
   await expect(shown).toHaveText('Any')
+  // Measured once the fonts are in: under load the first look came before them.
+  await overlay.page.evaluate(async () => { await document.fonts.ready })
   const width = (await chip.boundingBox())!.width
   await overlay.snap('corrupted chip on any')
 

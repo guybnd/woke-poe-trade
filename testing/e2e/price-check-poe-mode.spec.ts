@@ -177,7 +177,9 @@ test('PoE mode: the catalyst Q tag shows on picked rows and unpicked lines, and 
   await expect(row.locator('[data-catalyst-tag]')).toHaveText('Q20')
   expect(searches()).toBe(before)
   await overlay.snap('poe mode catalyst tag')
-  await win.locator('.btn.w-pc-primary').click()
+  // Not a mouse click: the mouse coming over Search from the lines searches on
+  // its own and takes the button away, so a slow click then waited for it.
+  await win.locator('.btn.w-pc-primary').dispatchEvent('click')
   await expect.poll(() => fakeApp.requests.some(r => r.url.includes('/api/trade/search') && r.body.includes('pseudo_jewellery_attribute_quality'))).toBe(true)
 })
 

@@ -103,18 +103,20 @@ export function runsLookup (run: RunGlance | null, time: RateTime = 'play', boar
     const fights = run.fights ?? 0
     const runs = run.maps + fights
     const unit = fights ? (run.maps ? 'run' : 'fight') : 'map'
-    const perHour = runPerHour(run.profitChaos, (run.timeTo ?? run.at) - run.startAt, run.time, time)
-    const sample = smallSample(runs, run.profitChaos, run.top ?? null)
+    const perHour = runPerHour(run.profitChaos, (run.timeTo ?? run.at) - run.startAt, run.time, time, run.craft === true)
+    // A crafting session (pick B) has no maps: no per map rows.
+    const craft = run.craft === true
+    const sample = craft ? null : smallSample(runs, run.profitChaos, run.top ?? null)
     const sampleNote = sample?.few ? `Small sample: only ${runs} so far, so per ${unit} can swing a lot.` : `Small sample: one drop (${run.top?.name}) is over half the profit.`
     const rows: LookupRow[] = [
       { label: 'Profit', value: amount(run.profitChaos, divine) },
       ...(run.faustusChaos ? [{ label: 'Outside the stash', value: amount(run.faustusChaos, divine) }, { label: 'Total', value: amount(run.profitChaos + run.faustusChaos, divine) }] : []),
-      { label: 'Maps', value: String(run.maps) },
-      ...(fights ? [{ label: 'Boss fights', value: String(fights) }] : []),
-      { label: `Per ${unit}`, value: runs ? amount(run.profitChaos / runs, divine) : '—', dim: !runs },
+      ...(craft ? [{ label: 'Kind', value: 'Crafting' }] : [{ label: 'Maps', value: String(run.maps) }]),
+      ...(fights && !craft ? [{ label: 'Boss fights', value: String(fights) }] : []),
+      ...(craft ? [] : [{ label: `Per ${unit}`, value: runs ? amount(run.profitChaos / runs, divine) : '—', dim: !runs }]),
       { label: 'Per hour', value: perHour != null ? amount(perHour, divine, '/h') : 'under 10 min', dim: perHour == null },
-      { label: `Cost per ${unit}`, value: run.costPerMapChaos != null ? amount(run.costPerMapChaos, divine).replace(/^[+−]/, '') : '—', dim: run.costPerMapChaos == null },
-      ...(run.top && runs ? [{ label: `Per ${unit} without ${run.top.name}`, value: amount((run.profitChaos - run.top.chaos) / runs, divine) }] : []),
+      ...(craft ? [] : [{ label: `Cost per ${unit}`, value: run.costPerMapChaos != null ? amount(run.costPerMapChaos, divine).replace(/^[+−]/, '') : '—', dim: run.costPerMapChaos == null }]),
+      ...(run.top && runs && !craft ? [{ label: `Per ${unit} without ${run.top.name}`, value: amount((run.profitChaos - run.top.chaos) / runs, divine) }] : []),
       { label: 'Running', value: formatDuration(Math.max(0, ctx.now - run.startAt)) }
     ]
     return [{

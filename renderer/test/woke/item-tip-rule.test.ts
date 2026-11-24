@@ -42,8 +42,9 @@ describe('item tooltip rule', () => {
     const src = (f: string) => files.find(x => x.file === f)!.text
     expect(src('woke/net-worth/NetWorthPanel.vue')).toMatch(/<span v-item-tip="[^"]+">\{\{ best\.name \}\}<\/span>/)
     const chart = src('woke/net-worth/LedgerChart.vue')
-    expect(chart).toMatch(/Sold: <template v-for="\(x, i\) in shownSales\.list"[^>]*><span v-item-tip="x\.tip[^"]*">\{\{ x\.text \}\}/)
-    expect(src('woke/net-worth/NetWorthPanel.vue')).toMatch(/const chartSales = [^\n]*tip: saleTip\(s\)/)
+    // Each sale in the clicked card (#868, #876): its name, with the item tooltip.
+    expect(chart).toMatch(/<span v-for="\(x, i\) in shownSales\.list"[^>]*><span v-item-tip="x\.tip[^"]*"[^>]*>(?:Sold )?\{\{ x\.text \}\}/)
+    expect(src('woke/net-worth/NetWorthPanel.vue')).toMatch(/const chartSales = [\s\S]{0,200}?tip: saleTip\(s\)/)
   })
 
   it('every data-no-item-tip says why', () => {

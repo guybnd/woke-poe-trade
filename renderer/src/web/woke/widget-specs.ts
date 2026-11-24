@@ -26,6 +26,7 @@ import { MARKET_TRACKER_TYPE } from './market/widget'
 import { MECHANICS_TYPE } from './mechanics/widget'
 import { MEGALO_TYPE, initMegaloWidget } from './megalo/widget'
 import { FORBIDDEN_TYPE, initForbiddenWidget } from './forbidden/widget'
+import { SCRYING_TYPE, initScryingWidget } from './scrying/widget'
 import { POB_BUILDS_TYPE } from './pob-builds/widget'
 import { POE_RE_TYPE, initPoeReWidget } from './regex-library/poe-re-widget'
 import { REGEX_LIBRARY_TYPE, RegexLibraryWidget, starterEntries } from './regex-library/widget'
@@ -245,4 +246,11 @@ export const widgetForbiddenSpec = {
   instances: 'multi',
   trNameKey: 'Forbidden pair finder',
   defaultInstances: () => [initForbiddenWidget(0)]
+} satisfies WidgetSpec
+
+export const widgetScryingSpec = {
+  type: SCRYING_TYPE,
+  instances: 'multi',
+  trNameKey: 'Scrying',
+  defaultInstances: () => [initScryingWidget(0)]
 } satisfies WidgetSpec

@@ -44,7 +44,7 @@ export function netWorthLookup (glance: Glance | null): Lookup {
     const rows: LookupRow[] = WINDOWS.map(w => {
       const r = rates[w.id]
       return r.perHour == null
-        ? { label: w.label, value: 'under 10 min played', dim: true }
+        ? { label: w.label, value: r.hubOnly ? 'no maps, hideout only' : 'under 10 min played', dim: true }
         : { label: w.label, value: `${amount(r.perHour, divine)} · ${sub(r, rates)}` }
     })
     const head = rates['1h'].perHour != null ? { label: 'Last hour', chaos: rates['1h'].perHour } : rates.today.perHour != null ? { label: 'Today', chaos: rates.today.perHour } : null

@@ -108,3 +108,36 @@ describe('a bulk seller whisper', () => {
     expect(bulkWhisper({ ...row, whisper: undefined }, 1)).toBeNull()
   })
 })
+
+describe('a rare map opens with none of its own mods ticked', () => {
+  it('top tier mods, a buried Sentinel among them, start Any', () => {
+    const item = parseItem(fixture('items/map-sentinel-t16.txt'))
+    const { presets } = createPresets(item, OPTS)
+    const mods = presets.find(p => p.id === 'filters.preset_pseudo')!.stats
+      .filter((s): s is StatFilter => !s.group && !!s.mapMod)
+    expect(mods.map(m => m.statRef)).toContain('Area contains a buried Stalker Sentinel')
+    expect(mods.filter(m => !m.disabled).map(m => m.statRef)).toEqual([])
+  })
+})
+
+describe('a map mod with sibling kinds', () => {
+  it('Has searches any Evocator by default, and only this one once narrowed', () => {
+    const item = parseItem(fixture('items/map-sentinel-t16.txt'))
+    const { presets } = createPresets(item, OPTS)
+    const stats = presets.find(p => p.id === 'filters.preset_pseudo')!.stats
+    const evocator = stats.find((s): s is StatFilter => !s.group && s.statRef === 'Area contains an Evocator of Beidat')!
+    expect(evocator.anyOf?.label).toBe('Evocator')
+    expect(evocator.tradeId).toHaveLength(3)
+    evocator.disabled = false
+    const evocatorGroup = (q: ReturnType<typeof createTradeRequest>['query']) =>
+      q.stats.find(g => g.type === 'count' && g.filters.some(f => f.id === 'explicit.stat_260515856'))
+    const count = evocatorGroup(createTradeRequest(createFilters(item, OPTS), stats).query)
+    expect(count?.value).toEqual({ min: 1 })
+    expect(count?.disabled).toBe(false)
+    expect(count?.filters.map(f => f.id).sort()).toEqual(['explicit.stat_1290924623', 'explicit.stat_260515856', 'explicit.stat_2896557935'])
+    evocator.tradeId = evocator.anyOf!.exact
+    const query = createTradeRequest(createFilters(item, OPTS), stats).query
+    expect(evocatorGroup(query)).toBeUndefined()
+    expect(query.stats[0].filters).toContainEqual(expect.objectContaining({ id: 'explicit.stat_260515856', disabled: false }))
+  })
+})

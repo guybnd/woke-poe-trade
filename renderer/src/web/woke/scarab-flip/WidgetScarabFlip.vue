@@ -166,6 +166,7 @@ import { usePriceText } from '../shared/price'
 import { gameIcon, moduleIcon } from '../ui/game-icons'
 import { useMarketCollector } from '../market/collector'
 import { latestSnapshots } from '../market/db'
+import { countedSnapshot } from '../market/parse'
 import type { Snapshot } from '../market/types'
 import DockItem from '../dock/DockItem.vue'
 import { dockConfig, dockIconEl, openSettingsPage } from '../dock/dock'
@@ -218,7 +219,7 @@ async function load () {
   if (!id) { snapshot.value = null; return }
   try {
     const [snap] = await latestSnapshots(id, 1)
-    if (seq === loadSeq) snapshot.value = snap ?? null
+    if (seq === loadSeq) snapshot.value = snap ? countedSnapshot(snap) : null
   } catch {
     if (seq === loadSeq) snapshot.value = null
   }

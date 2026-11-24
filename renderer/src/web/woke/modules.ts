@@ -73,6 +73,7 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'session-analytics', name: 'Session analytics', description: 'Profit per map, strategy and hour over time', group: 'economy', widgetTypes: ['woke-session-analytics'], icon: { fa: 'fas fa-chart-bar', item: NIGHT_ART }, needs: ['prices'] },
   // 3.30 Covens of Umbra only: remove this entry and wickerman/ when the league ends.
   { id: 'wickerman', name: 'Wickerman (3.30)', description: 'Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one', group: 'economy', widgetTypes: ['woke-wickerman'], runsWithoutWidget: true, icon: { fa: 'fas fa-bone' }, needs: ['log'] },
+  { id: 'scrying', name: 'Scrying', description: 'Which map to scry: the divination cards a Scrying Orb adds per map, against what the orb costs', group: 'economy', widgetTypes: ['woke-scrying'], icon: { fa: 'fas fa-eye', item: 'Scrying Orb' }, needs: ['prices'] },
   { id: 'boss-runs', name: 'Boss runs', description: 'Profit per boss kill', group: 'economy', widgetTypes: ['woke-boss-runs'], icon: { fa: 'fas fa-skull', mechanic: 'maven' }, needs: ['log', 'prices'] },
 
   { id: 'map-mods', name: 'Map mods', description: 'Danger strip on price check, map regex, and map scan (reads hovered maps on screen)', group: 'mapping', widgetTypes: ['woke-map-mods'], icon: { fa: 'fas fa-map', item: 'Nightmare Map' }, needs: ['hotkeys', 'ocr'] },
@@ -127,7 +128,7 @@ export interface Preset {
 
 export const PRESETS: Preset[] = [
   { id: 'everything', label: 'Everything', on: 'all' },
-  { id: 'mapper', label: 'Mapper', on: ['market', 'drop-counter', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'death-recap', 'session-story', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'wickerman', 'trade-searches', 'trade', 'regex-library', 'megalo', 'forbidden'] },
+  { id: 'mapper', label: 'Mapper', on: ['market', 'drop-counter', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'death-recap', 'session-story', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'wickerman', 'trade-searches', 'trade', 'regex-library', 'megalo', 'forbidden', 'scrying'] },
   { id: 'leveling', label: 'Leveling', on: ['campaign', 'run-timer', 'lab', 'challenges', 'pob-builds', 'regex-library', 'wickerman', 'megalo', 'forbidden'] },
   { id: 'trader', label: 'Trader', on: ['market', 'lab-gems', 'scarab-flip', 'disenchant', 'stacked-decks', 'wealthy-exile', 'trade-searches', 'trade', 'regex-library', 'megalo', 'forbidden'] },
   { id: 'price-check-only', label: 'Price check only', on: [] }

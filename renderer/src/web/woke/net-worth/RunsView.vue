@@ -4,6 +4,7 @@
     <section v-if="!live" :class="$style.start">
       <div :class="$style.row">
         <input id="run-name" v-model="name" class="w-input px-1 leading-6 rounded" :class="$style.name" placeholder="Start a run: name it, e.g. Nightmare maps" maxlength="40" aria-label="Run name" @keydown.enter="start">
+        <button type="button" :class="[$style.chip, { [$style.on]: craft }]" :aria-pressed="craft" title="A crafting or trading session: no maps; shows what you made, the orbs used and what sold" data-run-craft @click="craft = !craft">Crafting</button>
         <WButton size="sm" :disabled="startAt == null || starting" :title="startTitle" @click="start">{{ starting ? 'Starting…' : 'Start' }}</WButton>
       </div>
       <div :class="$style.chips">
@@ -16,7 +17,7 @@
       </div>
       <!-- The kit (pick K1): last time's per-map costs for this name, priced
            live where they came from the stash or poe.ninja. -->
-      <div v-if="kit.length" :class="$style.kit" data-run-kit>
+      <div v-if="kit.length && !craft" :class="$style.kit" data-run-kit>
         <div :class="$style.kitHead"><span :class="$style.caps">Kit, per map</span><span class="w-dim w-num text-xs">{{ amount(kitPerMap) }}<Coin :chaos="!divine" /> a map · from your last {{ name.trim() || 'Run' }} run</span></div>
         <div v-for="c in kit" :key="c.id" :class="$style.kitRow" data-run-kit-line>
           <span v-item-tip="tipOf(c.key, c.name)" class="w-trunc">{{ c.qty !== 1 ? `${c.qty} × ` : '' }}{{ c.name }}</span>
@@ -31,10 +32,10 @@
     <section v-if="shownRun && totals" :class="$style.card" data-run-card>
       <div :class="$style.head">
         <span :class="$style.title" class="w-trunc">{{ shownRun.name }}</span>
-        <span class="w-dim w-num text-xs">{{ clock(shownRun.startAt) }} → {{ shownRun.stoppedAt ? clock(shownRun.stoppedAt) : 'now' }} · {{ span(totals.ms) }} · {{ countLabel(totals.maps, totals.fights) }}</span>
+        <span class="w-dim w-num text-xs">{{ clock(shownRun.startAt) }} → {{ shownRun.stoppedAt ? clock(shownRun.stoppedAt) : 'now' }} · {{ span(totals.ms) }} · {{ isCraft ? 'Crafting' : countLabel(totals.maps, totals.fights) }}</span>
         <WButton v-if="shownRun === live" size="sm" :disabled="faustusReading" :title="'Reads your stash one last time and your Faustus listings, then shows the summary'" @click="stop">{{ stopPhase === 'stash' ? 'Reading stash…' : stopPhase === 'listings' ? 'Stopping…' : 'Stop' }}</WButton>
         <span v-else :class="$style.headEnd">
-          <span :class="$style.seg" role="group" aria-label="Show the run">
+          <span v-if="shownRun.kind !== 'craft'" :class="$style.seg" role="group" aria-label="Show the run">
             <button type="button" :class="{ [$style.on]: showSummary }" :aria-pressed="showSummary" data-run-summary-tab @click="summaryId = shownRun.id">Summary</button>
             <button type="button" :class="{ [$style.on]: !showSummary }" :aria-pressed="!showSummary" data-run-details-tab @click="summaryId = null">Details</button>
           </span>
@@ -43,7 +44,7 @@
       </div>
       <div :class="$style.hero" class="w-num">
         <span :title="profitTitle"><span :class="$style.caps">Profit</span><b :class="[$style.big, tone(totals.profitChaos)]">{{ signed(totals.profitChaos) }}<Coin :chaos="!divine" /></b></span>
-        <span :title="unit === 'map' ? undefined : 'Per map or boss fight'" data-run-per><span :class="$style.caps">Per {{ unit }} <span v-if="sample" :class="$style.small" :title="sampleText" data-run-small>small sample</span></span><b :class="tone(totals.perMapChaos)">{{ totals.perMapChaos != null ? signed(totals.perMapChaos) : '—' }}</b></span>
+        <span v-if="!isCraft" :title="unit === 'map' ? undefined : 'Per map or boss fight'" data-run-per><span :class="$style.caps">Per {{ unit }} <span v-if="sample" :class="$style.small" :title="sampleText" data-run-small>small sample</span></span><b :class="tone(totals.perMapChaos)">{{ totals.perMapChaos != null ? signed(totals.perMapChaos) : '—' }}</b></span>
         <span :title="perHourTip"><span :class="$style.caps">Per hour</span><b :class="tone(perHour)">{{ perHour != null ? signed(perHour) : '—' }}</b></span>
         <span v-if="totals.faustusChaos" title="Profit plus what's at Faustus or held outside the stash" data-run-total><span :class="$style.caps">With Faustus</span><b :class="tone(totals.totalChaos)">{{ signed(totals.totalChaos) }}</b></span>
         <span v-if="totals.leftOutChaos" title="Long shots you left out. None of it counts" data-run-left-out><span :class="$style.caps">Left out</span><b class="w-dim">{{ amount(totals.leftOutChaos) }}</b></span>
@@ -55,20 +56,23 @@
       <div v-else :class="$style.cols">
         <!-- In: what came into the stash, and what you added. -->
         <div :class="$style.col" data-run-in>
-          <div :class="$style.colHead"><span :class="$style.colTitle">In</span><span class="w-num w-up">{{ signed(inSum) }}<Coin :chaos="!divine" /></span></div>
+          <div :class="$style.colHead"><span :class="$style.colTitle">{{ isCraft ? 'Made' : 'In' }}</span><span class="w-num w-up">{{ signed(inSum) }}<Coin :chaos="!divine" /></span></div>
+          <!-- A crafting run's new unpriced items: price them by hand. -->
+          <RunRow v-for="r in madeRows" :key="'m' + r.key" data-run-made :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, r.net)" :count="tallyCount(r)" :chaos="madeVal(r)" sign="+" :sub="isEdited(rowKey.tally(r.key)) ? undefined : 'set price'" :divine="divine"
+            :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event)" @reset="resetRow(rowKey.tally(r.key))" />
           <RunRow v-for="r in rows.came.slice(0, cameShown)" :key="r.key" data-run-came :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="tallyCount(r)" :chaos="Math.abs(isOut(rowKey.tally(r.key)) ? r.netChaos : tallyVal(r))" sign="+" :divine="divine"
             :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event)" @reset="resetRow(rowKey.tally(r.key))" />
           <RunRow v-for="m in manualIn" :key="m.id" :icon="m.icon" :name="m.name" :tip="tipOf(m.key ?? null, m.name, m.count)" :count="m.count" :chaos="m.count * m.each" :each="m.each" sign="+" sub="added" :divine="divine" :can-leave-out="false" removable
             @edit="editManual(m.id, $event)" @remove="removeManual(m.id)" />
           <button v-if="rows.came.length > cameShown" type="button" :class="$style.link" class="text-xs" @click="cameShown += 15">+{{ rows.came.length - cameShown }} more</button>
-          <div v-if="!rows.came.length && !manualIn.length" class="w-dim text-xs">Nothing yet</div>
+          <div v-if="!rows.came.length && !manualIn.length && !madeRows.length" class="w-dim text-xs">Nothing yet</div>
           <RunAdd :known="knownItems" :lines="lines" :divine="divine" label="Add an item" @add="addManual('in', $event)" />
         </div>
 
         <!-- Out: costs you typed, and what the stash says was used up. -->
         <div :class="$style.col" data-run-out>
-          <div :class="$style.colHead"><span :class="$style.colTitle">Out</span><span class="w-num w-down">{{ outSum > 0 ? '−' : '' }}{{ amount(outSum) }}<Coin :chaos="!divine" /></span>
-            <span v-if="totals.costPerMapChaos != null" class="w-dim w-num text-xs" :title="`Typed costs, plus maps, scarabs and fragments used up, per ${unit === 'run' ? 'map or fight' : unit}`">{{ amount(totals.costPerMapChaos) }} a {{ unit }}</span></div>
+          <div :class="$style.colHead"><span :class="$style.colTitle">{{ isCraft ? 'Used' : 'Out' }}</span><span class="w-num w-down">{{ outSum > 0 ? '−' : '' }}{{ amount(outSum) }}<Coin :chaos="!divine" /></span>
+            <span v-if="totals.costPerMapChaos != null && !isCraft" class="w-dim w-num text-xs" :title="`Typed costs, plus maps, scarabs and fragments used up, per ${unit === 'run' ? 'map or fight' : unit}`">{{ amount(totals.costPerMapChaos) }} a {{ unit }}</span></div>
           <RunRow v-for="c in shownRun.costs" :key="c.id" :name="c.name" :tip="tipOf(c.key, c.name)" :count="c.qty" :each="c.unitChaos" :chaos="lineCost(c, totals.runs)" sign="−" :sub="costSub(c)" :divine="divine" :bought="c.bought ?? null" :can-leave-out="false" removable data-run-cost
             @edit="editCost(c.id, $event)" @remove="removeCost(c.id)">
             <template #sub>
@@ -81,12 +85,12 @@
           <RunRow v-for="r in rows.used.slice(0, usedShown)" :key="r.key" data-run-used :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="tallyCount(r)" :chaos="Math.abs(isOut(rowKey.tally(r.key)) ? r.netChaos : tallyVal(r))" sign="−" :divine="divine"
             :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event)" @reset="resetRow(rowKey.tally(r.key))" />
           <button v-if="rows.used.length > usedShown" type="button" :class="$style.link" class="text-xs" @click="usedShown += 15">+{{ rows.used.length - usedShown }} more</button>
-          <RunAdd :known="knownItems" :lines="lines" :divine="divine" label="Add a cost" per-map :unit="unit" @add="addManual('out', $event)" @per-map="addPerMap" />
+          <RunAdd :known="knownItems" :lines="lines" :divine="divine" label="Add a cost" :per-map="!isCraft" :unit="unit" @add="addManual('out', $event)" @per-map="addPerMap" />
         </div>
 
         <!-- Faustus: listed and sold, not in your stash yet; items you hold. -->
         <div :class="$style.col" data-run-faustus>
-          <div :class="$style.colHead"><span :class="$style.colTitle">Faustus</span><span class="w-num" :class="totals.faustusChaos ? 'w-up' : 'w-dim'">{{ signed(totals.faustusChaos) }}<Coin :chaos="!divine" /></span>
+          <div :class="$style.colHead"><span :class="$style.colTitle">{{ isCraft ? 'Sold' : 'Faustus' }}</span><span class="w-num" :class="totals.faustusChaos ? 'w-up' : 'w-dim'">{{ signed(totals.faustusChaos) }}<Coin :chaos="!divine" /></span>
             <i class="fas fa-info-circle" :class="$style.info" :title="faustusInfo" /></div>
           <RunRow v-for="r in outside.listed.slice(0, listedShown)" :key="'l' + r.item.id" data-run-listed :icon="r.item.icon" :name="saleName(r.item)" :tip="saleTip(r.item)" :count="r.item.stack" :chaos="r.chaos" sign="+" :sub="listedSub(r.item)" :divine="divine"
             :out="r.leftOut" :edited="r.edited" @edit="editRow(rowKey.item(r.item.id), $event)" @out="leaveOut(rowKey.item(r.item.id), $event)" @reset="resetRow(rowKey.item(r.item.id))" />
@@ -137,7 +141,7 @@
                 <span v-else class="w-trunc">{{ r.name }}</span>
                 <div class="w-dim w-num text-xs">{{ byName ? `${r.count} ${r.count === 1 ? 'run' : 'runs'}` : day(r.startAt) }} · {{ span(r.ms) }}</div>
               </td>
-              <td :class="$style.num" class="w-num">{{ countLabel(r.maps, r.fights) }}</td>
+              <td :class="$style.num" class="w-num">{{ r.craft ? 'Crafting' : countLabel(r.maps, r.fights) }}</td>
               <td :class="[$style.num, tone(r.profitChaos)]" class="w-num">{{ signed(r.profitChaos) }}</td>
               <td :class="[$style.num, tone(r.perMapChaos)]" class="w-num">{{ r.perMapChaos != null ? signed(r.perMapChaos) : '—' }}<span v-if="r.sample" :class="$style.small" :title="sampleTextOf(r.runs, r.profitChaos, r.top, r.sample, pastUnit)">small</span></td>
               <td :class="[$style.num, tone(r.perHourChaos)]" class="w-num">{{ r.perHourChaos != null ? signed(r.perHourChaos) : '—' }}</td>
@@ -169,7 +173,7 @@ import { tipFor } from './tips'
 import type { TipIndex } from './tips'
 import { span } from './play-time'
 import Coin from './Coin.vue'
-import { compareRows, countLabel, shownFights, shownMaps, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, smallSample, sortCompare, tallyRows, tallyValue, topDrop, unitOf, SAMPLE_MIN_RUNS } from './runs'
+import { compareRows, countLabel, craftTime, shownFights, shownMaps, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, smallSample, sortCompare, tallyRows, tallyValue, topDrop, unitOf, SAMPLE_MIN_RUNS } from './runs'
 import { kitPrice } from './run-kit'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
@@ -213,7 +217,8 @@ watch(() => [shownRun.value?.id, shownRun.value?.stoppedAt], () => { refreshRunM
 // The summary (pick W1): its own chunk, loaded when a run stops or you ask.
 const RunSummary = defineAsyncComponent(() => import('./RunSummary.vue'))
 const summaryId = shallowRef<string | null>(null)
-const showSummary = computed(() => shownRun.value?.stoppedAt != null && summaryId.value === shownRun.value.id)
+// A crafting session has no maps to sum up: it shows its columns.
+const showSummary = computed(() => shownRun.value?.stoppedAt != null && shownRun.value.kind !== 'craft' && summaryId.value === shownRun.value.id)
 // A run that just stopped (here or from the dock card): open its summary.
 watch([summaryFor, () => doc.value.done], ([want]) => {
   if (!want) return
@@ -272,7 +277,7 @@ function addManual (side: 'in' | 'out', l: AddedLine) {
 }
 function editManual (id: string, v: { count?: number, each?: number }) { edit(r => ({ ...r, manual: (r.manual ?? []).map(m => m.id === id ? { ...m, count: v.count ?? m.count, each: v.each ?? m.each } : m) })) }
 function removeManual (id: string) { edit(r => ({ ...r, manual: (r.manual ?? []).filter(m => m.id !== id) })) }
-const inSum = computed(() => rows.value.came.reduce((s, r) => s + Math.max(0, tallyVal(r)), 0) + manualIn.value.reduce((s, m) => s + m.count * m.each, 0))
+const inSum = computed(() => rows.value.came.reduce((s, r) => s + Math.max(0, tallyVal(r)), 0) + madeRows.value.reduce((s, r) => s + Math.max(0, madeVal(r) ?? 0), 0) + manualIn.value.reduce((s, m) => s + m.count * m.each, 0))
 const outSum = computed(() => {
   const r = shownRun.value
   const t = totals.value
@@ -309,9 +314,9 @@ const perHour = computed(() => {
   const r = shownRun.value
   if (!t || !r) return null
   const clock = r.stoppedAt == null ? Math.max(0, (props.points[props.points.length - 1]?.at ?? r.startAt) - r.startAt) : Math.max(0, r.stoppedAt - r.startAt)
-  return runPerHour(t.profitChaos, clock, spent.value?.ms, rateTime())
+  return runPerHour(t.profitChaos, clock, spent.value?.ms, rateTime(), r.kind === 'craft')
 })
-const perHourTip = computed(() => spent.value ? `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}` : 'Per hour of the whole run: Client.txt not read')
+const perHourTip = computed(() => spent.value ? `Per hour, ${leftOutText(craftTime(rateTime(), shownRun.value?.kind === 'craft'))}. ${RATE_TIME_WHERE}` : 'Per hour of the whole run: Client.txt not read')
 const holdKey = computed(() => { const w = netWorthWidget(); return w ? runHotkeyOf(w) : null })
 function removeHeld (id: string, carried: boolean) {
   edit(r => carried ? { ...r, carried: (r.carried ?? []).filter(h => h.id !== id) } : { ...r, held: (r.held ?? []).filter(h => h.id !== id) })
@@ -356,13 +361,19 @@ function sampleTextOf (runs: number, profit: number, t: TopDrop | null, s: Small
   return parts.join(' ')
 }
 const sampleText = computed(() => totals.value && sample.value ? sampleTextOf(totals.value.runs, totals.value.profitChaos, top.value, sample.value) : '')
-const rows = computed(() => shownRun.value ? tallyRows(shownRun.value) : { used: [], came: [] })
+const rows = computed(() => shownRun.value ? tallyRows(shownRun.value) : { used: [], came: [], made: [] })
+const isCraft = computed(() => shownRun.value?.kind === 'craft')
+const madeRows = computed(() => isCraft.value ? rows.value.made : [])
+// A made item's value: your price, else none yet.
+const madeVal = (r: TallyRow) => isEdited(rowKey.tally(r.key)) && !isOut(rowKey.tally(r.key)) ? tallyVal(r) : null
 const usedShown = shallowRef(8)
 const cameShown = shallowRef(8)
 watch(() => shownRun.value?.id, () => { usedShown.value = 8; cameShown.value = 8; listedShown.value = 8; soldShown.value = 8 })
 
 // ---------- start ----------
 const name = shallowRef('')
+// Start a crafting session (pick B) instead of a map run.
+const craft = shallowRef(false)
 const pastNames = computed(() => [...new Set(doc.value.done.map(r => r.name))].filter(n => n !== 'Run').slice(0, 6))
 const lastPoint = computed(() => props.points[props.points.length - 1]?.at ?? null)
 const startAt = computed(() => props.from ?? lastPoint.value)
@@ -386,9 +397,10 @@ async function start () {
   // What the run starts from, as it is now (the read can take a while).
   const { league, diffs, points, divine } = props
   starting.value = true
-  try { await startRunAt(league, name.value, at, diffs, points, divine, kit.value, livePrice.value) } catch {} finally { starting.value = false }
+  try { await startRunAt(league, name.value, at, diffs, points, divine, craft.value ? [] : kit.value, livePrice.value, craft.value ? 'craft' : undefined) } catch {} finally { starting.value = false }
   name.value = ''
   dropped.value = []
+  craft.value = false
 }
 // Stop reads your Faustus listings first; a failed read still stops.
 // The run stops at the press, whatever the read takes.

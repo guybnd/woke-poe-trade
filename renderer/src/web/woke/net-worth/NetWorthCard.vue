@@ -13,7 +13,7 @@
       <template v-if="run && tab === 'run'">
         <div :class="$style.runHead" data-card-run>
           <b class="w-trunc" :class="$style.runName">{{ run.name }}</b>
-          <span class="w-dim w-num text-xs">{{ runFor }} · {{ countLabel(run.maps, run.fights) }}</span>
+          <span class="w-dim w-num text-xs">{{ runFor }} · {{ run.craft ? 'Crafting' : countLabel(run.maps, run.fights) }}</span>
         </div>
         <div :class="$style.total">
           <b class="w-num" :class="tone(run.profitChaos)" data-card-run-profit>{{ signed(toDiv(run.profitChaos)) }}<Coin :chaos="!divineRate" /></b>
@@ -24,9 +24,9 @@
           <div :class="$style.kv" data-card-run-total><span :class="$style.gold">Total</span><span class="w-num" :class="tone(run.profitChaos + run.faustusChaos)">{{ signed(toDiv(run.profitChaos + run.faustusChaos)) }}<Coin :chaos="!divineRate" /></span></div>
         </template>
         <div :class="$style.stats" class="w-dim w-num text-xs" data-card-run-stats>
-          <span v-if="runs">{{ signed(toDiv(run.profitChaos / runs)) }}<Coin :chaos="!divineRate" />/{{ unit }}</span><span v-else>No maps yet</span>
+          <template v-if="!run.craft"><span v-if="runs">{{ signed(toDiv(run.profitChaos / runs)) }}<Coin :chaos="!divineRate" />/{{ unit }}</span><span v-else>No maps yet</span></template>
           <span v-if="perHour != null" :title="perHourTip">{{ signed(toDiv(perHour)) }}<Coin :chaos="!divineRate" />/h</span><span v-else>Per hour after 10 min</span>
-          <span v-if="run.costPerMapChaos != null">Costs {{ div(run.costPerMapChaos) }}<Coin :chaos="!divineRate" />/{{ unit }}</span>
+          <span v-if="run.costPerMapChaos != null && !run.craft">Costs {{ div(run.costPerMapChaos) }}<Coin :chaos="!divineRate" />/{{ unit }}</span>
         </div>
         <!-- Where the run's time went (Client.txt): maps, hideout and town, away. -->
         <template v-if="time">
@@ -74,10 +74,10 @@
              per hour figure and the graph. -->
         <div v-if="v" :class="$style.rates">
           <WSegmented :model-value="win" :options="WINDOW_OPTIONS" @update:model-value="pick" />
-          <span class="w-num" :class="tone(rate.div)" :title="rate.tip">{{ rate.div == null ? '—' : signed(rate.div) }}<Coin :chaos="!divineRate" />/h</span>
+          <span class="w-num" :class="tone(rate.div)" :title="rate.tip"><template v-if="rate.div != null">{{ signed(rate.div) }}<Coin :chaos="!divineRate" />/h</template><template v-else-if="rate.hubOnly">No maps</template><template v-else>—<Coin :chaos="!divineRate" />/h</template></span>
         </div>
         <!-- The window's chart, short: hover a point for what changed, click to keep it. -->
-        <LedgerChart v-if="series.length > 1" :series="series" :big="big" mode="total" :goal-div="null" :height="48" tip-below
+        <LedgerChart v-if="series.length > 1" :series="series" mode="total" :goal-div="null" :height="48" tip-below
           :tip-of="(name, count) => tipFor(tips, null, name, count)" :class="$style.spark" />
         <template v-if="v">
           <div v-if="diff" :class="$style.caps">Since last read · <span class="w-num" :class="tone(diff.netChaos)">{{ signed(toDiv(diff.netChaos)) }}<Coin :chaos="!divineRate" /></span></div>
@@ -117,11 +117,11 @@ import { WSegmented, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, formatDuration } from '../ui/format'
 import { divine as divineRate, historyNow, ledger, onStatus, ratesAt, pricePrefs, setLeague, stashNow, summary, valuation, wantPrices } from './store'
-import { bigGains, refreshWaitMs, seriesFor, topCardChanges } from './ledger'
+import { refreshWaitMs, seriesFor, topCardChanges } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { ReaderStatus } from './widget'
 import type { RunGlance } from './runs'
-import { countLabel, runPerHour, tallyRows, unitOf } from './runs'
+import { countLabel, craftTime, runPerHour, tallyRows, unitOf } from './runs'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
 import RateTimePick from '../shared/RateTimePick.vue'
@@ -185,7 +185,6 @@ const series = computed<SeriesPoint[]>(() => {
   const out = all.slice(i)
   return i > 0 ? [{ ...all[i - 1], at: Math.min(from, out[0].at - 1), netDiv: null, top: [] }, ...out] : out
 })
-const big = computed(() => bigGains(series.value))
 // The last read's changes, if that read had any to compare.
 const diff = computed(() => {
   const d = ledger.value.diffs[ledger.value.diffs.length - 1]
@@ -206,7 +205,7 @@ const rate = computed(() => {
   const r = ratesAt(now.value)
   const x = r[win.value]
   const amount = (chaos: number) => `${signed(toDiv(chaos))} ${divineRate.value ? 'd' : 'c'}`
-  return { div: !sameLeague.value || x.perHour == null ? null : toDiv(x.perHour), tip: rateTip(win.value, x, r.fromLog, amount, r.withHub, r.withOff) }
+  return { div: !sameLeague.value || x.perHour == null ? null : toDiv(x.perHour), hubOnly: sameLeague.value && x.hubOnly, tip: rateTip(win.value, x, r.fromLog, amount, r.withHub, r.withOff) }
 })
 
 // ---------- the run going (pick Q1) ----------
@@ -277,9 +276,9 @@ const time = computed(() => {
 const perHour = computed(() => {
   const r = props.run
   if (!r) return null
-  return runPerHour(r.profitChaos, (r.timeTo ?? r.at) - r.startAt, spent.value ?? r.time, rateTime())
+  return runPerHour(r.profitChaos, (r.timeTo ?? r.at) - r.startAt, spent.value ?? r.time, rateTime(), r.craft === true)
 })
-const perHourTip = computed(() => (spent.value ?? props.run?.time) ? `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}` : 'Per hour of the whole run: Client.txt not read')
+const perHourTip = computed(() => (spent.value ?? props.run?.time) ? `Per hour, ${leftOutText(craftTime(rateTime(), props.run?.craft === true))}. ${RATE_TIME_WHERE}` : 'Per hour of the whole run: Client.txt not read')
 
 const fmt = (n: number) => formatAmount(n)
 const toDiv = (chaos: number) => divineRate.value ? chaos / divineRate.value : chaos
