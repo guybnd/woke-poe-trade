@@ -3,7 +3,7 @@ import { uIOhook, UiohookKey, UiohookWheelEvent } from 'uiohook-napi'
 import { noteHotkeyFailures } from '../woke/hotkey-failures'
 import { pickActions } from './pick-actions'
 import { makeRepeatGuard } from './repeat-guard'
-import { isModKey, KeyToElectron, mergeTwoHotkeys, RESERVED_SHORTCUTS } from '../../../ipc/KeyToCode'
+import { isModKey, KeyToElectron, mergeTwoHotkeys, RESERVED_SHORTCUTS, RESCUE_HOTKEY } from '../../../ipc/KeyToCode'
 import { typeInChat, stashSearch } from './text-box'
 import { WidgetAreaTracker } from '../windowing/WidgetAreaTracker'
 import { HostClipboard } from './HostClipboard'
@@ -26,6 +26,7 @@ const UiohookToName = Object.fromEntries(Object.entries(UiohookKey).map(([k, v])
 export class Shortcuts {
   // woke: last key press anywhere, for whenKeysIdle.
   private lastKeyAt = 0
+  private rescueWarned = false
 
   private whenKeysIdle (run: () => void, idleMs = 1500, maxWaitMs = 30000) {
     const started = Date.now()
@@ -107,6 +108,7 @@ export class Shortcuts {
   ) {
     this.areaTracker = new WidgetAreaTracker(server, overlay)
     this.clipboard = new HostClipboard(logger)
+    this.registerRescue()
 
     this.poeWindow.on('active-change', (isActive) => {
       process.nextTick(() => {
@@ -274,6 +276,23 @@ export class Shortcuts {
 
   private unregister () {
     globalShortcut.unregisterAll()
+    this.registerRescue()
+  }
+
+  // woke: the way out if the overlay ever keeps the clicks: registered all the
+  // time, since a stuck overlay can have taken focus from the game, which turns
+  // the other hotkeys off. The mouse hook may be dead too, so not through it.
+  private registerRescue () {
+    const accel = shortcutToElectron(RESCUE_HOTKEY)
+    if (globalShortcut.isRegistered(accel)) return
+    const isOk = globalShortcut.register(accel, () => {
+      this.areaTracker.removeListeners()
+      this.overlay.forceClickThrough(`rescue hotkey ${RESCUE_HOTKEY}`)
+    })
+    if (!isOk && !this.rescueWarned) {
+      this.rescueWarned = true
+      this.logger.write(`error [Shortcuts] Couldn't register the rescue hotkey "${RESCUE_HOTKEY}": another program has it.`)
+    }
   }
 }
 

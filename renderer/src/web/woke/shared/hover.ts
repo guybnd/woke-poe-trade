@@ -26,6 +26,16 @@ function removeCheck (fn: () => void) {
   if (!checks.size && checkTimer) { clearInterval(checkTimer); checkTimer = null }
 }
 
+// Main dropped every zone (the rescue hotkey): each live one sends again.
+const resends = new Set<() => void>()
+let resendListening = false
+function addResend (fn: () => void) {
+  resends.add(fn)
+  if (resendListening) return
+  resendListening = true
+  Host.onEvent('MAIN->OVERLAY::woke-hover-resend', () => { for (const resend of resends) resend() })
+}
+
 export function useHoverZone (
   el: Ref<HTMLElement | null | undefined>,
   opts: {
@@ -120,11 +130,14 @@ export function useHoverZone (
 
   // Widgets move by changing their anchor, which also changes the rect;
   // a cheap periodic check covers drags and window moves (sent only if changed).
+  const resend = () => { lastSent = null; send() }
+
   onMounted(() => {
     observer = new ResizeObserver(() => send())
     bind(el.value)
     send()
     addCheck(send)
+    addResend(resend)
   })
   watch(el, (node) => { bind(node); send() })
   watch(() => [opts.enabled(), opts.activate?.()], () => send())
@@ -137,6 +150,7 @@ export function useHoverZone (
     bind(null)
     observer?.disconnect()
     removeCheck(send)
+    resends.delete(resend)
     lastSent = null
     post([])
   })

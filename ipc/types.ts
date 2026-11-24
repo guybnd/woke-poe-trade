@@ -270,7 +270,9 @@ type IpcWokeHover =
   Event<'MAIN->OVERLAY::woke-hover', {
     id: string
     inside: boolean
-  }>
+  }> |
+  // Main dropped every zone (the rescue hotkey): send the live ones again.
+  Event<'MAIN->OVERLAY::woke-hover-resend', undefined>
 
 // The left mouse button went down on a zone, seen by the global mouse hook.
 type IpcWokeHoverClick =

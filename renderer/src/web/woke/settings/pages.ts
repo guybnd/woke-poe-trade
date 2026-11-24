@@ -86,7 +86,7 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     icon: { fa: 'fas fa-keyboard' },
     description: 'Every key the app listens for. Click a key, then press the new one.',
     parts: [HotkeysPage],
-    find: ['Overlay key', 'Hotkey clashes', 'Stash scroll', 'Ctrl + mouse wheel'],
+    find: ['Overlay key', 'Hotkey clashes', 'Stash scroll', 'Ctrl + mouse wheel', 'Give clicks back to the game'],
     aliases: ['Hotkey list', 'settings.hotkeys']
   },
   {
