@@ -86,7 +86,7 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     icon: { fa: 'fas fa-keyboard' },
     description: 'Every key the app listens for. Click a key, then press the new one.',
     parts: [HotkeysPage],
-    find: ['Overlay key', 'Hotkey clashes', 'Stash scroll', 'Ctrl + mouse wheel'],
+    find: ['Overlay key', 'Hotkey clashes', 'Stash scroll', 'Ctrl + mouse wheel', 'Give clicks back to the game'],
     aliases: ['Hotkey list', 'settings.hotkeys']
   },
   {
@@ -284,7 +284,7 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     description: 'Profit per map and strategy over time, and a card of each night.',
     modules: ['session-analytics', 'session-story'],
     widgets: ['woke-session-analytics', 'woke-session-story'],
-    find: ['Session analytics', 'Session story', 'Map chip', 'Middle of the screen']
+    find: ['Session analytics', 'Session story', 'Map chip', 'Middle of the screen', 'Glance bar', 'Bar shows', 'On the bar']
   },
   {
     id: 'drop-counter',

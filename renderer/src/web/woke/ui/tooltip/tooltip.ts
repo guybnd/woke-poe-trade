@@ -40,6 +40,8 @@ export interface TipMarket {
   // A rolled unique (a jewel) drops unidentified: what those sell for on
   // trade, when Boss runs or Search has looked it up.
   unid?: { chaos: number, listings: number }
+  // poe.ninja's price looks fake (shared/price-trust.ts): the line saying so.
+  doubt?: string
 }
 
 // One unique a base can drop as, for a base in a filter's unique tiers.

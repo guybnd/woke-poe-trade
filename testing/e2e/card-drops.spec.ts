@@ -12,12 +12,15 @@ async function openSearch (overlay: Overlay) {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await overlay.boot()
   await overlay.showScreen('screens/map-real-01.png')
-  await overlay.pressHotkey(SEARCH_KEY)
   const panel = overlay.widget('woke-search')
   const box = panel.getByRole('textbox', { name: 'Search', exact: true })
+  // The key works once the palette has loaded and listens (its element is
+  // there): pressed before, under load, the overlay opened with no palette.
+  await panel.waitFor({ state: 'attached', timeout: 15_000 })
+  await overlay.pressHotkey(SEARCH_KEY)
   // Prices are saved a moment after they load.
   await expect(async () => {
-    await box.fill('the doctor')
+    await box.fill('the doctor', { timeout: 3000 })
     await expect(panel.getByRole('button', { name: /The Doctor/ }).first()).toBeVisible({ timeout: 500 })
   }).toPass({ timeout: 20_000 })
   return { panel, box }

@@ -1,9 +1,9 @@
 // The flip families: Thread and catalyst recipes, Harvest rerolls, tier
 // upgrades, and how each is priced.
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_FLIP_SORT, buyList, flipModel, parseExchange, sortFlips, supplyLevel, upgradeRows } from '@/web/woke/scarab-flip/calc'
+import { DEFAULT_FLIP_SORT, buyList, flipModel, flipRange, parseExchange, sortFlips, supplyLevel, upgradeRows } from '@/web/woke/scarab-flip/calc'
 import type { Quote } from '@/web/woke/scarab-flip/calc'
-import { FAMILIES, bestFlip, familyById, flipRecipe, harvestCost, parseLifeforce, priceFlip, pricedFamilies, shortName, shownFamily, unpricedShare, weightForPercent, weightRows } from '@/web/woke/scarab-flip/families'
+import { FAMILIES, bestFlip, familyById, flipRecipe, harvestCost, parseLifeforce, priceFlip, pricedFamilies, rangeOnly, shortName, shownFamily, unpricedShare, weightForPercent, weightRows } from '@/web/woke/scarab-flip/families'
 import type { Exchanges, WeightOverrides } from '@/web/woke/scarab-flip/families'
 import { CORRUPTION_ONLY, ESSENCE_TYPES } from '@/web/woke/essence-scan/essences'
 import type { PriceItem } from '@/web/woke/market/types'
@@ -483,13 +483,44 @@ describe('3.30 families', () => {
     item('Thread', 'Frayed Thread', 1), item('Currency', 'Chaos Orb', 1)
   ]
 
-  it('prices Threads as a 3 for 1 recipe with every Thread equally likely', () => {
+  it('shows Threads as a range, not an average, while the odds are unmeasured', () => {
     expect(threads.methods.map(m => [m.id, m.inputs, m.excludeInput])).toEqual([['vendor', 3, true]])
+    expect(rangeOnly(threads)).toBe(true)
     const flip = priceFlip(threads, threads.methods[0], items, new Map(), PLAIN, 30)
+    if (flip?.kind !== 'range') throw new Error('expected a range')
+    // Frayed Thread isn't a Thread. Cheapest input first.
+    expect(flip.rows.map(r => r.name)).toEqual(['Expedition Thread', 'Abyss Thread', 'Legion Thread'])
+    const expedition = flip.rows[0]
+    expect(expedition.cost).toBeCloseTo(0.6, 8)
+    // A Thread can't give itself back.
+    expect(expedition.low).toEqual({ name: 'Abyss Thread', chaos: 3.6 })
+    expect(expedition.high).toEqual({ name: 'Legion Thread', chaos: 4 })
+    const legion = flip.rows[2]
+    expect(legion.low.name).toBe('Expedition Thread')
+    expect(legion.high.name).toBe('Abyss Thread')
+  })
+
+  it('takes the sell discount off the results and lists only traded inputs, though any can come back', () => {
+    const quotes = new Map([
+      ['A Thread', { chaos: 1, tradedChaos: 50 }],
+      ['B Thread', { chaos: 10, tradedChaos: 50 }],
+      ['C Thread', { chaos: 500, tradedChaos: 0 }]
+    ])
+    const rows = flipRange(quotes, { inputs: 3, cost: 0, excludeInput: true }, 0.1, true)
+    expect(rows.map(r => r.name)).toEqual(['A Thread', 'B Thread'])
+    expect(rows[0].high).toEqual({ name: 'C Thread', chaos: 450 })
+    expect(rows[1].low).toEqual({ name: 'A Thread', chaos: 0.9 })
+    expect(flipRange(quotes, { inputs: 3, cost: 0, excludeInput: true }, 0, false).map(r => r.name)).toEqual(['A Thread', 'B Thread', 'C Thread'])
+  })
+
+  it('averages Threads with every untouched one at 1 once you set your own weights', () => {
+    const own = { threads: { 'Legion Thread': 1 } }
+    expect(rangeOnly(threads, own.threads)).toBe(false)
+    const flip = priceFlip(threads, threads.methods[0], items, new Map(), PLAIN, 30, own)
     if (flip?.kind !== 'pool') throw new Error('expected a pool')
     // Frayed Thread isn't a Thread.
     expect(flip.model.rows.map(r => r.name).sort()).toEqual(['Abyss Thread', 'Expedition Thread', 'Legion Thread'])
-    expect(flip.model.rows.every(r => r.weightSource === 'estimate' && Math.abs(r.share - 1 / 3) < 1e-9)).toBe(true)
+    expect(flip.model.rows.every(r => Math.abs(r.share - 1 / 3) < 1e-9)).toBe(true)
     const expedition = flip.model.rows.find(r => r.name === 'Expedition Thread')!
     expect(expedition.profitEach).toBeCloseTo(((4 + 3.6) / 2 - 3 * 0.2) / 3, 8)
   })

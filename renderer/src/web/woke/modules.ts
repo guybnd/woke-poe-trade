@@ -165,6 +165,8 @@ export interface WokeModulesConfig {
   welcome?: WelcomeState
   // What's new lines (tab-bar/news.ts) the player has pointed at.
   seenNews?: string[]
+  // What's new switched off: no dock icon, no NEW seals, no count (tab-bar/news.ts).
+  newsOff?: boolean
   // What time every per hour counts (shared/rate-time.ts); unset: carried over.
   rateTime?: RateTime
 }

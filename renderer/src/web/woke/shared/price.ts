@@ -12,6 +12,17 @@ import { useLeagues } from '@/web/background/Leagues'
 import { formatChaos } from '../ui/format'
 import { VARIABLE_ITEMS, useTradePrices } from './unid-prices'
 import { pickRow, divineRate } from './price-row'
+import { heldPrice } from './price-trust'
+import type { Category } from './price-trust'
+import { lastWokePrices } from '../market/hook'
+import { feedDays } from '../market/parse'
+
+// APT's lookup namespaces as price-trust categories.
+function categoryOfNs (ns: string): Category {
+  if (ns === 'DIVINATION_CARD') return 'cards'
+  if (ns === 'UNIQUE' || ns === 'GEM') return 'gear'
+  return 'other'
+}
 
 export { pickRow, divineRate }
 export type { PriceRowLike } from './price-row'
@@ -51,7 +62,11 @@ export function usePrice () {
     const row = ninja.findPriceByQuery({ ns: opts.ns, name, variant: opts.variant || undefined }) ??
       (opts.variant ? null : pickRow(ninja.findPricesByName(opts.ns, name)))
     if (!row) return null
-    return { row, chaos: row.chaos, unid: opts.ns === 'UNIQUE' ? unidOf(name) : null }
+    // A price that looks fake (price-trust.ts) counts at the usual price, or
+    // as none; `row` keeps poe.ninja's, for the tooltip's line about it.
+    const loaded = lastWokePrices()
+    const held = heldPrice(row.chaos, row.graph, loaded ? feedDays(loaded.chunks) : undefined, categoryOfNs(opts.ns))
+    return { row, chaos: held ? held.chaos : row.chaos, held, unid: opts.ns === 'UNIQUE' ? unidOf(name) : null }
   }
   return { priceOf, divine: computed(() => ninja.xchgRate.value ?? null) }
 }

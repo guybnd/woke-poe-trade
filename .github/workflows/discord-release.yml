@@ -1,0 +1,52 @@
+name: Discord announcement
+
+# Posts a published release to the Discord announcements channel: version,
+# its notes and download links. Set up once (DEVELOPING.md, "Discord
+# announcements"): a channel webhook in the DISCORD_WEBHOOK_URL repo secret.
+# Without the secret it only prints the post.
+#
+# release.yml starts this after it publishes (a release its GITHUB_TOKEN
+# publishes doesn't fire "release" events, so there is never a double
+# post). Publishing a draft by hand on GitHub fires it directly. Run it by hand
+# with a tag to post again, or with "dry run" to see the post in the log.
+on:
+  release:
+    # "released" also covers a pre-release promoted to a full release; pre-releases
+    # themselves don't post.
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to announce (e.g. v1.330.19)
+        required: true
+      dry_run:
+        description: Only print the post in the log
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: discord-release-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        sparse-checkout: scripts
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version: 22
+    - name: Post to Discord
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        DISCORD_RELEASE_PING: ${{ vars.DISCORD_RELEASE_PING }}
+        TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
+      run: node scripts/discord-release.mjs "$TAG" $DRY_RUN

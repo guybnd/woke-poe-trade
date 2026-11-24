@@ -32,13 +32,16 @@ interface FetchResult {
       exchange: {
         currency: string
         amount: number
+        whisper?: string
       }
       item: {
         amount: number
         stock: number
+        whisper?: string
       }
     }>
     account: Account
+    whisper?: string
   }
 }
 
@@ -54,6 +57,17 @@ export interface PricingResult {
   isMine: boolean
   accountName: string
   ign: string
+  /** woke: the trade site's whisper, filled in by bulkWhisper (WOKEPOET-523). */
+  whisper?: { text: string, item: string, pay: string }
+}
+
+/** woke: the whisper for `units` lots of an offer: "@seller ... 10 Map ... for 50 Chaos Orb ...". */
+export function bulkWhisper (r: PricingResult, units: number): string | null {
+  if (!r.whisper) return null
+  const fill = (tpl: string, n: number) => tpl.replace('{0}', String(Number((n).toFixed(4))))
+  return r.whisper.text
+    .replace('{0}', fill(r.whisper.item, r.itemAmount * units))
+    .replace('{1}', fill(r.whisper.pay, r.exchangeAmount * units))
 }
 
 const cache = new Cache()
@@ -107,6 +121,12 @@ export async function requestTradeResultList (
   return data
 }
 
+function whisperParts (result: FetchResult, offer: number): PricingResult['whisper'] {
+  const { item, exchange } = result.listing.offers[offer]
+  const text = result.listing.whisper
+  return (text && item.whisper && exchange.whisper) ? { text, item: item.whisper, pay: exchange.whisper } : undefined
+}
+
 function toPricingResult (
   result: FetchResult,
   opts: { accountName: string },
@@ -122,6 +142,7 @@ function toPricingResult (
     isMine: isOwnAccount(result.listing.account.name, opts.accountName),
     ign: result.listing.account.lastCharacterName,
     accountName: result.listing.account.name,
+    whisper: whisperParts(result, offer),
     accountStatus: result.listing.account.online
       ? (result.listing.account.online.status === 'afk' ? 'afk' : 'online')
       : 'offline'

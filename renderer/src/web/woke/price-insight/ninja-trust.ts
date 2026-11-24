@@ -5,58 +5,12 @@
 // (checked against the last saved daily price, not Net worth's last solid
 // read), a sudden step up from the item's usual price, or a thin market.
 // Pure: no Vue or IO.
-import { graphGaps, pricedOnlyToday } from '../market/parse'
-import { THIN_GAPS } from '../market/types'
-import { HOLD_RATIO, ONE_DAY_MIN, priceStep } from '../net-worth/valuation'
-import type { Category } from '../net-worth/valuation'
+import { HOLD_RATIO } from '../shared/price-trust'
+import type { NinjaDoubt } from '../shared/price-trust'
 
-export type NinjaDoubt =
-  /** poe.ninja priced it today and on none of the days before. */
-  | { kind: 'one-day', usual: number | null }
-  /** A step of 5x or more over its usual price that hasn't held 3 days. */
-  | { kind: 'spike', usual: number }
-  /** No price on 3+ of the last 7 days: one fake listing can set it. */
-  | { kind: 'thin', gaps: number }
-
-export interface TrustInput {
-  chaos: number
-  /** poe.ninja's 7-day line, % change, today last. */
-  graph?: Array<number | null>
-  /** Days the league has prices for (market/parse feedDays): a new league isn't all thin. */
-  days?: number
-  /** The app's saved daily prices for the days before today, oldest first (net-worth/history.ts). */
-  history?: Array<number | null>
-  category?: Category
-}
-
-/** Why poe.ninja's price may be wrong, or null when nothing points that way. */
-export function ninjaDoubt (p: TrustInput): NinjaDoubt | null {
-  if (!(p.chaos > 0)) return null
-  const history = p.history?.some(v => typeof v === 'number' && v > 0) ? p.history : undefined
-  // Gear trades on so few days that a one-day price there is usually real (valuation.ts).
-  if (p.category !== 'gear' && p.chaos >= ONE_DAY_MIN && pricedOnlyToday(p.graph, p.days)) {
-    const last = history ? [...history].reverse().find((v): v is number => typeof v === 'number' && v > 0) ?? null : null
-    if (last == null || p.chaos >= last * HOLD_RATIO) return { kind: 'one-day', usual: last }
-  }
-  const { step } = priceStep(p.chaos, { graph: p.graph, history, category: p.category })
-  if (typeof step === 'number') return { kind: 'spike', usual: step }
-  // Confirmed (held 3 days): a real price, thin or not.
-  if (step === 'confirmed') return null
-  // Gear's lines are mostly gaps even when its price is real: no thin mark there.
-  if (p.category === 'gear') return null
-  const gaps = graphGaps(p.graph, p.days)
-  if (gaps >= THIN_GAPS) return { kind: 'thin', gaps }
-  return null
-}
-
-/** poe.ninja's market type to Net worth's category, for the rules above. */
-export function categoryOfType (type: string | undefined): Category | undefined {
-  if (!type) return undefined
-  if (type === 'DivinationCard') return 'cards'
-  if (type.startsWith('Unique') || type === 'SkillGem') return 'gear'
-  if (type === 'Currency' || type === 'Omen') return 'currency'
-  return 'other'
-}
+// The checks themselves live in shared/price-trust.ts.
+export { ninjaDoubt, categoryOfType } from '../shared/price-trust'
+export type { NinjaDoubt, TrustInput } from '../shared/price-trust'
 
 /**
  * Saved daily prices (date, chaos) as the days before `today`, oldest first,

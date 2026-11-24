@@ -173,7 +173,8 @@ export function valdoBadMods (ctx: FiltersCreationContext): void {
 // list cheap, so they crowd a search for plain or Originator maps (807 of the
 // T16 Originator maps in Covens, 2026-11-24). Left out from the first search
 // when the checked map has no such influence; the map strip's No Elder chip
-// turns it off (WOKEPOET-523). No option: either influence counts.
+// turns it off (WOKEPOET-523). The trade request sends it twice, once per
+// influence option (pathofexile-trade.ts): with no option it matches nothing.
 export const NO_ELDER_TRADE_ID = 'implicit.stat_1792283443'
 
 function noElderFilter (ctx: FiltersCreationContext): void {
@@ -192,4 +193,27 @@ function noElderFilter (ctx: FiltersCreationContext): void {
     not: true,
     noElder: true
   })
+}
+
+// woke: 3.30 map mods that come in variants. Searched as "any of them" by default
+// (Guy, 2026-11-24: any Evocator does the job); the map strip narrows it to this one.
+const MAP_MOD_FAMILIES = [
+  { label: 'Evocator', refs: ['Area contains an Evocator of Beidat', 'Area contains an Evocator of Ghorr', "Area contains an Evocator of K'Tash"] },
+  { label: 'buried Sentinel', refs: ['Area contains a buried Apex Sentinel', 'Area contains a buried Stalker Sentinel', 'Area contains a buried Pandemonium Sentinel'] }
+]
+
+export function mapModFamilies (ctx: FiltersCreationContext): void {
+  for (const f of ctx.filters) {
+    if (!f.mapMod) continue
+    const family = MAP_MOD_FAMILIES.find(fam => fam.refs.includes(f.statRef))
+    if (!family) continue
+    // Two kinds on one map: each stays its own, or one Evocator would match both.
+    if (ctx.filters.filter(g => g.mapMod && family.refs.includes(g.statRef)).length > 1) continue
+    const ids = family.refs.flatMap(ref => {
+      try { return findAndResolveByRef(ref, ModifierType.Explicit, ctx.item.category).trade.ids[ModifierType.Explicit] ?? [] } catch { return [] }
+    })
+    if (ids.length < 2) continue
+    f.anyOf = { label: family.label, ids, exact: f.tradeId }
+    f.tradeId = ids
+  }
 }

@@ -3,7 +3,8 @@
     <teleport v-if="improved && verdictSlot" :to="verdictSlot">
       <bulk-verdict :insight="bulkInsight" :unit="selectedCurr === 'xchgChaos' ? 'c' : 'div'" :need="need" :loading="tableLoading" :ninja="ninjaEach" :other="otherMarket" :divine-in-chaos="divineInChaos" />
     </teleport>
-    <div :class="$style.legacyMessage">
+    <!-- woke: only for what Faustus's Currency Exchange trades, as in TradeListing (maps aren't). -->
+    <div v-if="item.info.exchangeable" :class="$style.legacyMessage">
       {{ t(':legacy_bulk_xchg_msg') }}
     </div>
     <!-- @TODO: fix "Matched" text jumping (min-height: 22px) -->
@@ -26,6 +27,9 @@
         </div>
         <!-- woke: the price check's own chips (a map's Exchange, WOKEPOET-523), there while it loads too. -->
         <span class="ml-1"><slot name="chips" /></span>
+        <!-- woke: how many a row's whisper asks for (WOKEPOET-523). -->
+        <label v-if="result" class="ml-2 flex items-center whitespace-nowrap" title="How many to ask for when you click a seller: rounded to their lot size and capped at their stock">Buy<input v-model.number="buyCount" type="number" min="1" :class="$style.buyBox" data-bulk-buy aria-label="How many to buy"></label>
+        <span v-if="whisperNote" class="ml-2 text-gray-400 whitespace-nowrap" data-bulk-whispered>{{ whisperNote }}</span>
       </div>
       <trade-links v-if="result"
         :get-link="makeTradeLink" :suggest-name="() => item.info.name" />
@@ -65,7 +69,10 @@
           </tr>
           <template v-else>
             <tr v-for="result in selectedResults" :key="result.id"
-              :class="{ [$style.marketRatioRow]: ('marketRatio' in result) }">
+              :class="{ [$style.marketRatioRow]: ('marketRatio' in result), [$style.whisperRow]: canWhisper(result) }"
+              :title="canWhisper(result) ? `Click to whisper: ${whisperText(result)}` : undefined"
+              :data-bulk-whisper="canWhisper(result) ? '' : undefined"
+              @click="canWhisper(result) && whisper(result)">
               <td class="px-2 whitespace-nowrap" data-testid="bulk-each">{{ Number((result.exchangeAmount / result.itemAmount).toFixed(4)) }}<img :src="unitIcon" :alt="unitName" :title="unitName" :class="$style.unitIcon"></td>
               <td class="pl-1 whitespace-nowrap"><span :class="[$style.ratioCell, $style.ratioPay]" class="text-right">{{ Number(result.exchangeAmount.toFixed(1)) }}<img :src="unitIcon" :alt="unitName" :title="unitName" :class="$style.unitIcon"></span><span>{{ '\u2009' }}/{{ '\u2009' }}</span><span :class="$style.ratioCell">{{ Number(result.itemAmount.toFixed(1)) }}</span></td>
               <template v-if="'marketRatio' in result">
@@ -109,7 +116,8 @@
 import { defineComponent, PropType, computed, watch, ComputedRef, Ref, ShallowRef, shallowRef, shallowReactive, inject, readonly, onUnmounted } from 'vue'
 import { useI18nNs } from '@/web/i18n'
 import UiErrorBox from '@/web/ui/UiErrorBox.vue'
-import { BulkSearch, execBulkSearch, createTradeRequest, PricingResult } from './pathofexile-bulk'
+import { BulkSearch, execBulkSearch, createTradeRequest, PricingResult, bulkWhisper } from './pathofexile-bulk'
+import { MainProcess } from '@/web/background/IPC'
 import { getTradeEndpoint } from './common'
 import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
@@ -354,6 +362,39 @@ export default defineComponent({
     // woke: the verdict's slot sits above the mods, as for item listings.
     const verdictSlot = inject<ShallowRef<HTMLElement | null>>('price-verdict-slot', shallowRef(null))
     const need = computed(() => props.item.stackSize?.value ?? 1)
+    // woke: a click on a seller whispers them, as the trade site's Whisper button
+    // does (WOKEPOET-523). Lots: the seller's own lot size, enough for buyCount,
+    // never more than their stock.
+    const buyCount = shallowRef(need.value)
+    watch(() => props.item, () => { buyCount.value = need.value })
+    const whisperNote = shallowRef('')
+    const lotsFor = (r: PricingResult) => {
+      const want = Math.max(1, Math.floor(Number(buyCount.value) || 1))
+      return Math.max(1, Math.min(Math.ceil(want / r.itemAmount), Math.floor(r.stock / r.itemAmount)))
+    }
+    const whisperText = (r: PricingResult) => bulkWhisper(r, lotsFor(r)) ?? ''
+    // Not yours, not the poe.ninja ratio row, and a seller with at least one lot in stock.
+    const canWhisper = (r: PricingResult | MarketRatio): r is PricingResult =>
+      !('marketRatio' in r) && !r.isMine && !!r.whisper && r.stock >= r.itemAmount
+    const showNote = (note: string) => {
+      whisperNote.value = note
+      setTimeout(() => { if (whisperNote.value === note) whisperNote.value = '' }, 3000)
+    }
+    let lastWhisper = ''
+    function whisper (r: PricingResult) {
+      const text = whisperText(r)
+      if (!text) return
+      lastWhisper = text
+      MainProcess.sendEvent({ name: 'CLIENT->MAIN::user-action', payload: { action: 'paste-in-chat', text, immediate: true } })
+      showNote(`Whispered ${r.ign}`)
+    }
+    // The game didn't have focus, so the whisper never went out.
+    const chatDropped = MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data }) => {
+      if (topic !== 'chat-dropped' || !lastWhisper || (data as { text?: string }).text !== lastWhisper) return
+      lastWhisper = ''
+      showNote("Not sent: the game wasn't in front. Click again")
+    })
+    onUnmounted(() => { chatDropped.abort() })
     // woke: poe.ninja's price in the offers' currency, for the verdict to compare (WOKEPOET-479).
     const poeninja = usePoeninja()
     const { selected: selectedLeague } = useLeagues()
@@ -432,6 +473,11 @@ export default defineComponent({
       },
       verdictSlot,
       need,
+      buyCount,
+      whisperNote,
+      whisperText,
+      canWhisper,
+      whisper,
       ninjaEach,
       bulkInsight,
       otherMarket,
@@ -522,6 +568,12 @@ export default defineComponent({
   color: var(--w-dim);
 }
 
+.whisperRow { cursor: pointer; }
+.whisperRow:hover td { background: var(--w-chip-ground, rgba(255, 255, 255, .06)); }
+.buyBox {
+  width: 3.5em; margin-left: 4px; padding: 0 3px; text-align: right;
+  border: 1px solid var(--w-line-strong, #555); border-radius: 3px; background: transparent; color: inherit;
+}
 .marketRatioRow {
   background: var(--w-pc-raise, theme('colors.gray.700')) !important;
   outline: 1px solid theme('colors.gray.600');
