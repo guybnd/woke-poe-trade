@@ -24,5 +24,11 @@ history:
     date: '2026-11-24T12:37:47.876Z'
     selfAttested: true
     id: c-2026-11-24t12-37-47-876z
+  - type: activity
+    user: Agent
+    date: '2026-11-24T13:00:43.108Z'
+    comment: Updated implementation link.
+    id: a-2026-11-24t13-00-43-108z
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/880'
 ---
 Redesign the price check layout for maps. No PR yet.
