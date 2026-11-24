@@ -1,7 +1,7 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- A live search keeps running out of sight; its icon counts new results. -->
-    <DockItem :menu="dockMenu" :wake="unseen" ref="dockRef" id="trade-live" icon="fas fa-bolt" :title="openEntry?.name || 'Live search'" :show="liveOpen"
+    <DockItem :menu="dockMenu" :wake="unseen" ref="dockRef" id="trade-live" icon="fas fa-bolt" :art="CURRENCY_ICONS.exalted" :title="openEntry?.name || 'Live search'" :show="liveOpen"
       :badge="unseen || null" :tone="unseen ? 'down' : 'accent'" :led="liveOpen ? 'on' : null" :wm-id="config.wmId"
       card-width="20rem" @open-change="onCard">
       <template #card>
@@ -124,6 +124,7 @@ import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, saveDock } from '../dock/dock'
 import { useLeagues } from '@/web/background/Leagues'
+import { CURRENCY_ICONS } from '../ui/game-icons'
 import { FOLDER_ICONS, TRADE_SEARCHES_TYPE, ensureFolder, folderIcon, inView, isLiveSearch, isValidUrl, leagueOf, matchesFilter, parseHotkeyTarget, pinnedFirst, sortEntries, withLeague } from './widget'
 import type { OpenTarget, SearchSort, TradeSearchEntry } from './widget'
 

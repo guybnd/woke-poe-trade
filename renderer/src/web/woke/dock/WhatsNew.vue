@@ -1,5 +1,5 @@
 <template>
-  <DockItem id="whats-new" icon="fas fa-gift" :art="null" title="What's new" :show="lines.length > 0"
+  <DockItem id="whats-new" icon="fas fa-gift" :art="gameIcon(DOCK_ART_ITEMS.whatsNew)" title="What's new" :show="lines.length > 0"
     :badge="lines.length" :wake="lines.length" card-width="24rem" pinnable :menu="dockMenu">
     <template #card>
       <div :class="$style.body">
@@ -32,6 +32,7 @@ import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '../modul
 import { markNewsSeen, unseenNews } from '../tab-bar/news'
 import type { NewsItem } from '../tab-bar/news'
 import { WButton } from '../ui'
+import { DOCK_ART_ITEMS, gameIcon } from '../ui/game-icons'
 import { personalOn } from '../personal'
 import { requestGoto } from '../tab-bar/goto'
 import DockItem from './DockItem.vue'
