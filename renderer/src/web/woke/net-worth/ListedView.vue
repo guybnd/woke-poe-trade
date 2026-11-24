@@ -56,7 +56,7 @@
             <td :class="$style.check" data-listed-check>
               <span v-if="busy.has(r.item.id)" class="w-dim">Checking…</span>
               <template v-else-if="canReprice(r.item)">
-                <WButton v-if="canCheck(r.item)" size="sm" variant="ghost" :class="$style.quick" :title="errors[r.item.id] ? `Quick rank failed: ${errors[r.item.id]}. Click to try again` : 'Quick rank: one trade search by name, instant buyout only. It ignores the rolls'" aria-label="Quick rank" data-listed-quick @click="check(r)"><i class="fas fa-bolt" /></WButton>
+                <WButton v-if="canCheck(r.item)" size="sm" variant="ghost" :class="[$style.quick, errors[r.item.id] ? `w-down ${$style.failed}` : '']" :title="errors[r.item.id] ? `Quick rank failed: ${errors[r.item.id]}. Click to try again` : 'Quick rank: one trade search by name, instant buyout only. It ignores the rolls'" aria-label="Quick rank" data-listed-quick @click="check(r)"><i class="fas fa-bolt" /></WButton>
                 <WButton size="sm" variant="ghost" :class="checkOf(r) ? (checkOf(r)!.cheaper ? 'w-down' : 'w-up') : ''" :title="checkOf(r) ? `${checkTitle(r)}\nClick to price check it again` : 'Price check this listing with its own mods: tune the filters, then set a new price at the foot'" data-listed-reprice @click="reprice(r, $event)">{{ checkOf(r) ? checkText(r) : 'Price check' }}</WButton>
               </template>
               <span v-else-if="!canCheck(r.item)" class="w-dim" title="Rare gear read before its mods were kept: Refresh, or price check it in game">—</span>
@@ -257,7 +257,7 @@ function colourOf (frame: number) {
 .ask { color: var(--w-gold); }
 .check { text-align: right; }
 .quick { opacity: 0; padding-inline: 2px; }
-.table tbody tr:hover .quick, .quick:focus-visible { opacity: 1; }
+.table tbody tr:hover .quick, .quick:focus-visible, .quick.failed { opacity: 1; }
 .note { padding: 4px var(--w-pad); }
 .autoLine { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; justify-content: space-between; }
 .chips { display: flex; gap: var(--w-s1); padding: 6px var(--w-pad); flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--w-line); }

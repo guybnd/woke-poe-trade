@@ -14,13 +14,15 @@ export interface LastAsks {
   // The search's count of listings (yours too), and whether all of them loaded.
   total: number | null
   all: boolean
+  // Listings loaded so far (none yet: the search's count alone).
+  loaded: number
 }
 
 export const lastAsks = shallowRef<LastAsks | null>(null)
 
 export interface AskListing { priceAmount: number, priceCurrency: string, stackSize?: number, isMine: boolean }
 
-export function asksOf (list: readonly AskListing[], divine: number | null, item: unknown, total: number | null = null, all = false): LastAsks {
+export function asksOf (list: readonly AskListing[], divine: number | null, item: unknown, total: number | null = null, all = false, loaded = list.length): LastAsks {
   const chaos: number[] = []
   let mine = 0
   for (const r of list) {
@@ -29,5 +31,5 @@ export function asksOf (list: readonly AskListing[], divine: number | null, item
     const c = r.priceCurrency === 'chaos' ? r.priceAmount : r.priceCurrency === 'divine' && divine ? r.priceAmount * divine : null
     if (c != null) chaos.push(c / Math.max(1, r.stackSize ?? 1))
   }
-  return { chaos: chaos.sort((a, b) => a - b), divine, for: item, mine, total, all }
+  return { chaos: chaos.sort((a, b) => a - b), divine, for: item, mine, total, all, loaded }
 }

@@ -157,8 +157,9 @@ export function rankText (c: CheapestCheck): string {
 
 // A price check of the listing (opened from Listed, or Ctrl+D on it) ranks it
 // from the listings it loaded: no search of its own.
-export function checkFromAsks (l: Listing, mineEach: number, asks: readonly number[], mine: number, total: number | null, all: boolean, at: number): CheapestCheck {
+// `byName`: the check had no item data (a search by name), so as rough as
+// the quick rank; otherwise its own mods were searched (undefined isn't saved).
+export function checkFromAsks (l: Listing, mineEach: number, asks: readonly number[], mine: number, total: number | null, all: boolean, at: number, byName = false): CheapestCheck {
   const fetched: FetchedAsk[] = [...asks.map(c => ({ chaosEach: c, mine: false })), ...Array.from({ length: mine }, () => ({ chaosEach: null, mine: true }))]
-  // Its own mods were searched: never rough (undefined isn't saved).
-  return { ...summarize(l, mineEach, fetched, total ?? asks.length + mine, all, at), rough: undefined, priceCheck: true }
+  return { ...summarize(l, mineEach, fetched, total ?? asks.length + mine, all, at), rough: byName && isRough(l) ? true : undefined, priceCheck: true }
 }

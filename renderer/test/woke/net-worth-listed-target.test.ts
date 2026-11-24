@@ -62,6 +62,9 @@ describe('set a price from the price check', () => {
     expect(JSON.parse(JSON.stringify(c))).not.toHaveProperty('rough')
     // All of them cheaper and more not loaded: "+".
     expect(checkFromAsks(item('hh'), 38 * 200, [7000], 0, 50, false, T0).more).toBe(true)
+    // Opened by name (no item data): as rough as a search by name.
+    const rolled = item('hh', { corrupted: true })
+    expect(checkFromAsks(rolled, 600, [500], 0, 1, true, T0, true).rough).toBe(true)
   })
 
   it('a set price stands until the listing asks it, and keeps the checks', () => {

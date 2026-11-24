@@ -598,8 +598,14 @@ export default defineComponent({
 
     const { insight, divine, options: insightOptions } = useInsight(fitResults, computed(() => props.filters.trade.league))
     // woke: Net worth's Listed bar suggests a price from these (no search of its own).
+    // Tagged with the item the search was for: a new item can keep these
+    // listings shown until its own search, and late pages still arrive.
+    let searchedItem: unknown = props.item
+    watch(searchResult, () => { searchedItem = props.item }, { flush: 'sync' })
     watch([fitResults, divine, searchResult, loadedCount], ([list, d, found, loaded]) => {
-      lastAsks.value = asksOf(list, d ?? null, props.item, found?.total ?? null, found != null && loaded >= found.total)
+      // Narrowed: only the loaded listings that fit count, all of them seen.
+      const total = props.narrow ? null : found?.total ?? null
+      lastAsks.value = asksOf(list, d ?? null, searchedItem, total, found != null && (props.narrow != null || loaded >= found.total), loaded)
     }, { immediate: true })
     onUnmounted(() => { lastAsks.value = null })
 

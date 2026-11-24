@@ -91,17 +91,21 @@ const suggest = computed(() => {
 
 // The listings this check loaded rank your price: Listed's Cheapest? column
 // shows it (Guy, 2026-11-24: a search by name can't price rolls). Only for a
-// listing this check is surely of: Reprice's, the one match, or the one picked.
+// listing this check is surely of: Reprice's, or one picked on a chip. A match
+// by name alone may be another copy (other rolls, corrupted).
 let ranked = ''
 watch([lastAsks, listing], ([a, l]) => {
-  if (!a || a.for !== props.item || !l || a.total == null) return
-  if (!(repricedFor.value?.item === props.item || matches.value.length === 1 || picked.value === l.id)) return
+  if (!a || a.for !== props.item || !l || (a.total == null && !a.all)) return
+  // Nothing loaded yet: no rank to give (a failed fetch would leave "1st").
+  if (!a.loaded && !a.all) return
+  if (!(repricedFor.value?.item === props.item || picked.value === l.id)) return
   const mine = saleChaos(l, a.divine ? { divine: a.divine } : {})
   if (mine == null) return
-  const key = `${l.id}|${a.total}|${a.chaos.join(',')}`
+  const key = JSON.stringify([l.id, l.price, a.total, a.all, a.mine, a.chaos])
   if (key === ranked) return
   ranked = key
-  saveCheck(league.value, l.id, checkFromAsks(l, mine / Math.max(1, l.stack), a.chaos, a.mine, a.total, a.all, Date.now())).catch(() => {})
+  const byName = props.item.rawText === 'VIRTUAL_ITEM'
+  saveCheck(league.value, l.id, checkFromAsks(l, mine / Math.max(1, l.stack), a.chaos, a.mine, a.total, a.all, Date.now(), byName)).catch(() => {})
 }, { immediate: true }) // this bar loads after the listings it ranks
 
 const typed = shallowRef(0)
