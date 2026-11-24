@@ -373,15 +373,28 @@ export default defineComponent({
       return Math.max(1, Math.min(Math.ceil(want / r.itemAmount), Math.floor(r.stock / r.itemAmount)))
     }
     const whisperText = (r: PricingResult) => bulkWhisper(r, lotsFor(r)) ?? ''
-    const canWhisper = (r: PricingResult | { marketRatio: true }) =>
-      !('marketRatio' in r) && !r.isMine && !!r.whisper
+    // Not yours, not the poe.ninja ratio row, and a seller with at least one lot in stock.
+    const canWhisper = (r: PricingResult | MarketRatio): r is PricingResult =>
+      !('marketRatio' in r) && !r.isMine && !!r.whisper && r.stock >= r.itemAmount
+    const showNote = (note: string) => {
+      whisperNote.value = note
+      setTimeout(() => { if (whisperNote.value === note) whisperNote.value = '' }, 3000)
+    }
+    let lastWhisper = ''
     function whisper (r: PricingResult) {
       const text = whisperText(r)
       if (!text) return
+      lastWhisper = text
       MainProcess.sendEvent({ name: 'CLIENT->MAIN::user-action', payload: { action: 'paste-in-chat', text, immediate: true } })
-      whisperNote.value = `Whispered ${r.ign}`
-      setTimeout(() => { if (whisperNote.value === `Whispered ${r.ign}`) whisperNote.value = '' }, 3000)
+      showNote(`Whispered ${r.ign}`)
     }
+    // The game didn't have focus, so the whisper never went out.
+    const chatDropped = MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data }) => {
+      if (topic !== 'chat-dropped' || !lastWhisper || (data as { text?: string }).text !== lastWhisper) return
+      lastWhisper = ''
+      showNote("Not sent: the game wasn't in front. Click again")
+    })
+    onUnmounted(() => { chatDropped.abort() })
     // woke: poe.ninja's price in the offers' currency, for the verdict to compare (WOKEPOET-479).
     const poeninja = usePoeninja()
     const { selected: selectedLeague } = useLeagues()
