@@ -23,8 +23,8 @@ describe('glance bar default', () => {
 })
 
 describe('glance bar clock', () => {
-  it('ticks only for players who turned it on, or who turned the bar on before it was a default', () => {
-    expect(glanceClockOn({})).toBe(false)
+  it('ticks unless turned off', () => {
+    expect(glanceClockOn({})).toBe(true)
     expect(glanceClockOn({ glance: true })).toBe(true)
     expect(glanceClockOn({ glance: true, glanceClock: false })).toBe(false)
     expect(glanceClockOn({ glanceClock: true })).toBe(true)

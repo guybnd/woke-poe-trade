@@ -48,7 +48,7 @@ const props = defineProps<{
   map: Pick<MapRecord, 'name' | 'areaLevel'> | null
   // The map you just left, for a few seconds after (its time against your usual).
   after?: string | null
-  // The map's time ticking each second (Settings): off, nothing ticks in a map.
+  // The map's time ticking each second (Settings, on by default): off, nothing ticks in a map.
   clock?: boolean
   // When you went in this time through the portal, and the map's time before that.
   since: number

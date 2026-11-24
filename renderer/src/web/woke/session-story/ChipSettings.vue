@@ -13,7 +13,7 @@
       </slot>
     </template>
     <span class="w-dim">While in a map</span>
-    <WToggle v-model="glance" title="A thin bar at the top with the map and tonight's maps and profit, and each map's time once you leave it. While you play it never takes the mouse; with the overlay open, drag it to move it.">Bar at the top</WToggle>
+    <WToggle v-model="glance" title="A thin bar at the top with the map, its time so far and tonight's maps and profit, and each map's result once you leave it. While you play it never takes the mouse; with the overlay open, drag it to move it.">Bar at the top</WToggle>
     <template v-if="glance">
       <span class="w-dim">Map clock</span>
       <WToggle v-model="clock" title="The map's time on the bar, ticking each second. Off: the bar shows the map and tonight, and the map's time once you leave it.">Tick each second</WToggle>
