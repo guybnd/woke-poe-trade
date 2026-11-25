@@ -195,6 +195,17 @@ describe('overlay click safety', () => {
     expect(overlay.isCardActive).toBe(false)
   })
 
+  it('gives the mouse back when the game got a press on a zone before the mouse was taken', () => {
+    const { overlay, zones } = setup()
+    zones('woke-hover-1', [{ ...ICON, activate: false }])
+    // Swept onto the zone and pressed at once: not activated, so the game got it.
+    uIOhook.emit('mousedown', { x: 110, y: 110, button: 1 })
+    zones('woke-hover-1', [{ ...ICON, activate: true }])
+    zones('woke-hover-1', [{ ...ICON, x: 300, activate: true }])
+    expect(overlay.isMouseTaken).toBe(false)
+    expect(overlay.isCardActive).toBe(false)
+  })
+
   it('a mouse resting on an icon across a reload is still on it', () => {
     const { overlay, zones, move, sent } = setup()
     zones('woke-hover-1', [ICON])
