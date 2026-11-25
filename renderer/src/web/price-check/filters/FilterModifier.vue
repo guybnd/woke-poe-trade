@@ -15,7 +15,7 @@
           <!-- woke: a mercenary's skill row is a gem: its tooltip (Guy's rule, merc thread). -->
           <!-- woke: a tiered mod's ladder on hover (tooltip audit G5/I1, price-insight/mod-tip.ts). -->
           <button v-item-tip="filter.mercenary?.icon ? { name: filter.text } : null" :class="$style.labelBtn" @click="smartToggle" type="submit"
-            @mouseenter="modTipEnter" @mouseleave="modTipLeave">
+            @mouseenter="modTipEnter" @mouseleave="modTipLeave" data-goto-spot="mod-tiers">
             <img v-if="filter.mercenary?.icon"
               :src="filter.mercenary.icon">
             <span v-if="filter.not && miniFilter"

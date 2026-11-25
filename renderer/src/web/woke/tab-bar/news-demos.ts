@@ -11,6 +11,22 @@ export type NewsDemo =
   // Ctrl+Space with this typed.
   | { search: string }
 
+const MOD_TIERS_ITEM = `Item Class: Body Armours
+Rarity: Rare
+Doom Shell
+Twilight Regalia
+--------
+Energy Shield: 1210 (augmented)
+--------
+Item Level: 84
+--------
+{ Prefix Modifier "Unassailable" (Tier: 1) — Defences, Energy Shield }
+120(110-120)% increased Energy Shield
+{ Prefix Modifier "Fecund" (Tier: 1) — Life }
++120(110-129) to maximum Life
+{ Suffix Modifier "of the Magma" (Tier: 1) — Elemental, Fire, Resistance }
++34(31-35)% to Fire Resistance`
+
 export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-seller-spread': { check: { name: 'Exalted Orb' }, spot: 'seller-spread' },
   'price-check-exchange-ladder': { check: { name: 'Exalted Orb' }, spot: 'exchange-ladder' },
@@ -24,7 +40,9 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   // A rolled jewel, unidentified: the unid price card (nothing searched until a click).
   'unid-rolled-unique-price': { check: { name: 'Forbidden Flame', rarity: 'unique' }, spot: 'unid-price' },
   'valdo-map-skips': { check: { name: 'Valdo Map', text: valdoMapText('Headhunter') }, spot: 'valdo-strip' },
-  'valdo-map-lookup': { search: 'valdo headhunter' }
+  'valdo-map-lookup': { search: 'valdo headhunter' },
+  // A rare with tiered mods: hover one for its ladder.
+  'price-check-mod-tiers': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' }
 }
 
 // Tools with no window of their own to open: a line about one needs a demo,
