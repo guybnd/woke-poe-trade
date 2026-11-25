@@ -22,3 +22,10 @@ export function initMapCheckWidget (wmId: number): MapCheckWidget {
     moved: false
   }
 }
+
+// Alt+M pressed just after start, before the card's code has loaded: index.ts
+// keeps the item here and the card checks it when it mounts, instead of the
+// press being lost.
+export interface EarlyMapCheck { clipboard: string, position: { x: number, y: number } }
+export const earlyMapCheck: { mounted: boolean, press: EarlyMapCheck | null, at: number } = { mounted: false, press: null, at: 0 }
+export const EARLY_CHECK_MS = 5_000

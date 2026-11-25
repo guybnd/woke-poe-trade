@@ -30,7 +30,8 @@ import { WPanel, WEmpty, WButton } from '../ui'
 import MapVerdictCard from './MapVerdictCard.vue'
 import { MAP_MODS_TARGET, showRewards } from './widget'
 import { checkMap, ensureMapModsConfig, findMapModsConfig, isMapLike } from './check'
-import type { MapCheckWidget } from './map-check'
+import { EARLY_CHECK_MS, earlyMapCheck } from './map-check'
+import type { EarlyMapCheck, MapCheckWidget } from './map-check'
 
 const props = defineProps<{
   config: MapCheckWidget
@@ -57,15 +58,28 @@ function place (position: { x: number, y: number }) {
   }
 }
 
-const handler = MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {
-  if (e.target !== MAP_MODS_TARGET) return
+function check (e: EarlyMapCheck) {
   ensureMapModsConfig()
   if (!props.config.moved) place(e.position)
   const parsed = parseClipboard(e.clipboard).unwrapOr(null)
   item.value = parsed && isMapLike(parsed) ? parsed : null
   wm.show(props.config.wmId)
+}
+
+const handler = MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {
+  if (e.target === MAP_MODS_TARGET) check(e)
 })
-onUnmounted(() => { handler.abort() })
+// Alt+M pressed before this code had loaded (just after start).
+earlyMapCheck.mounted = true
+{
+  const { press, at } = earlyMapCheck
+  earlyMapCheck.press = null
+  if (press && Date.now() - at < EARLY_CHECK_MS) check(press)
+}
+onUnmounted(() => {
+  handler.abort()
+  earlyMapCheck.mounted = false
+})
 
 function close () {
   if (Host.isElectron) Host.sendEvent({ name: 'OVERLAY->MAIN::focus-game', payload: undefined })
