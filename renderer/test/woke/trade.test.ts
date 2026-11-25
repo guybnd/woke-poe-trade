@@ -9,7 +9,7 @@ import { artNames, CURRENCY_TAGS, parseOffer, parsePrice, parseTradeLine, offerL
 import { alreadyClosed, alreadyLogged, applyEvent, belongsInHistory, dismiss, front, markSent, markTraded, newBook, nextStep, prune, queue, recordFor, reopen, skip, OPEN_FOR_MS } from '@/web/woke/trade/book'
 import type { Offer, TradeBook } from '@/web/woke/trade/book'
 import { DEFAULT_REPLIES, fillReply, replyText } from '@/web/woke/trade/widget'
-import { bulkDelta, priceChaos } from '@/web/woke/trade/value'
+import { bulkDelta, deltaTone, priceChaos } from '@/web/woke/trade/value'
 import { tradeTotals } from '@/web/woke/trade/log-store'
 
 function logLines (name: string): string[] {
@@ -414,5 +414,14 @@ describe('reopening closed offers', () => {
 describe('item art names', () => {
   it('finds a unique named with a comma and its base', () => {
     expect(artNames("Doedre's Damning, Paua Ring")).toContain("Doedre's Damning")
+  })
+})
+
+describe('price against value', () => {
+  it('is green when it is good for you: over value selling, under value buying', () => {
+    expect(deltaTone('sell', 0.2)).toBe('w-up')
+    expect(deltaTone('sell', -0.2)).toBe('w-down')
+    expect(deltaTone('buy', 0.2)).toBe('w-down')
+    expect(deltaTone('buy', -0.2)).toBe('w-up')
   })
 })
