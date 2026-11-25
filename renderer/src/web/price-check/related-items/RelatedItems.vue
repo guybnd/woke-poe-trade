@@ -30,6 +30,7 @@
       <div v-if="sec.sum" :class="$style.sum">
         <span>{{ sec.sum.label }} <b>{{ sec.sum.value }}</b><span v-if="sec.sum.missing" :class="$style.none"> + {{ sec.sum.missing }} unpriced</span></span>
         <span v-if="sec.sum.makes">Makes <b>{{ sec.sum.makes }}</b></span>
+        <span v-if="sec.sum.gain">Gain <b>{{ sec.sum.gain }}</b></span>
       </div>
       <div v-if="sec.note" :class="$style.note">{{ sec.note }}</div>
     </template>
@@ -48,7 +49,7 @@ import { ParsedItem } from '@/parser'
 import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
 import { sideRow, type SideRow } from './side-row'
 import { familiesOf, familyRows, type Family } from '@/web/woke/related-family/family'
-import { cardsFor, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resolveParts } from '@/web/woke/related-family/recipe'
+import { cardsFor, rewardOf, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resolveParts } from '@/web/woke/related-family/recipe'
 import { loadTipItems } from '@/web/woke/ui/tooltip/item-tip'
 
 const { findPriceByQuery, findPricesByName, autoCurrency, xchgRate } = usePoeninja()
@@ -128,7 +129,7 @@ function chaosOf (info: BaseType): number | null {
 const book = () => recipeBook(findRecipeItem, ITEM_DROP)
 
 // The sum line under a section: "Parts 130 c + 1 unpriced", "Makes 5 div".
-interface SumLine { label: string, value: string, missing: number, makes?: string | null }
+interface SumLine { label: string, value: string, missing: number, makes?: string | null, gain?: string }
 function sumLine (label: string, chaos: number, missing: number, count: number, makes?: number | null): SumLine {
   const none = missing === count
   return {
@@ -170,6 +171,27 @@ function getCards (item: ParsedItem, tips: Record<string, { d?: string, n?: numb
   }
   return rows.length ? [{ key: 'cards', title: 'Cards that give it', rows }] : []
 }
+
+// woke: what a checked card's full stack gives, when that's one named unique
+// or currency: the stack's price against the reward's, and the gain.
+function getReward (item: ParsedItem, tips: Record<string, { d?: string, n?: number }>) {
+  const tip = tips[item.info.refName]
+  const r = tip?.d && tip.n ? rewardOf(tip.d) : null
+  const info = r ? ITEM_BY_REF(r.namespace, r.name)?.[0] : undefined
+  if (!r || !info || !tip?.n) return []
+  const card = findPriceByQuery({ ns: 'DIVINATION_CARD', name: item.info.refName, variant: undefined })?.chaos
+  const each = chaosOf(info)
+  const stack = card != null ? card * tip.n : null
+  const makes = each != null ? each * r.gives : null
+  const rows: SideRow[] = [
+    { ...sideRow(item.info, stack != null ? autoCurrency(stack) : undefined, true, `stack:${item.info.refName}`), qty: tip.n },
+    { ...sideRow(info, makes != null ? autoCurrency(makes) : undefined, false, `reward:${r.name}`), qty: r.gives, lead: 'Gives', tag: r.corrupted ? 'corrupted' : undefined }
+  ]
+  const sum = sumLine('Stack', stack ?? 0, stack == null ? 1 : 0, 1, makes)
+  if (stack != null && makes != null) sum.gain = signed(makes - stack)
+  return [{ key: 'reward', title: 'Full stack', rows, sum }]
+}
+const signed = (chaos: number) => `${chaos < 0 ? '−' : '+'}${currencyText(autoCurrency(Math.abs(chaos)))}`
 
 // woke: a fragment set's total, under its list: "Full set 3.2 div".
 function setSum (group: DropEntry): SumLine | undefined {
@@ -300,12 +322,12 @@ export default defineComponent({
       sum?: SumLine
       note?: string
     }
-    // The card rewards load with the first unique or currency checked, and
+    // The card rewards load with the first unique, currency or card checked, and
     // again on the next check if that load failed.
     const tipItems = shallowRef<Record<string, { d?: string, n?: number }> | null>(null)
     watch(() => props.item, item => {
       const ns = item?.info.namespace
-      if (tipItems.value || (ns !== 'UNIQUE' && ns !== 'ITEM')) return
+      if (tipItems.value || (ns !== 'UNIQUE' && ns !== 'ITEM' && ns !== 'DIVINATION_CARD')) return
       loadTipItems().then(items => { tipItems.value = items as Record<string, { d?: string, n?: number }> | null }).catch(() => {})
     }, { immediate: true })
     const extra = computed<Section[]>(() => {
@@ -313,10 +335,12 @@ export default defineComponent({
       const queryId = getDetailsId(props.item)
       const id = queryId ? `${queryId.ns}::${queryId.name}${queryId.variant ? ` // ${queryId.variant}` : ''}` : null
       const cards = tipItems.value ? getCards(props.item, tipItems.value) : []
+      const reward = tipItems.value && props.item.info.namespace === 'DIVINATION_CARD' ? getReward(props.item, tipItems.value) : []
       const recipes = getRecipes(props.item)
       // What a recipe lists already isn't repeated under Also drops.
       const shown = new Set(recipes.flatMap(sec => sec.rows.map(r => r.name)))
       return [
+        ...reward,
         ...recipes,
         ...cards,
         ...(id ? getSources(props.item, id, cards.length > 0, shown) : [])
@@ -327,7 +351,12 @@ export default defineComponent({
       // A drop group that only repeats a recipe (Kingmaker's two parts, and
       // Kingmaker) goes: the recipe says it better.
       const inRecipe = new Set(recipeSecs.flatMap(sec => sec.rows.map(r => r.name)))
-      const others = otherSections().filter(sec => !recipeSecs.length || !sec.rows.every(r => inRecipe.has(r.name)))
+      // What a card drops is its reward, which the Full stack section shows priced.
+      const reward = new Set(extra.value.filter(sec => sec.key === 'reward').flatMap(sec => sec.rows.map(r => r.name)))
+      const others = otherSections()
+        .filter(sec => !recipeSecs.length || !sec.rows.every(r => inRecipe.has(r.name)))
+        .map(sec => sec.key === 'drops' ? { ...sec, rows: sec.rows.filter(r => !reward.has(r.name)) } : sec)
+        .filter(sec => sec.rows.length)
       return [...recipeSecs, ...extra.value.filter(sec => !sec.key.startsWith('recipe:')), ...others]
     })
     function otherSections (): Section[] {
@@ -425,7 +454,7 @@ export default defineComponent({
 .gives { color: var(--w-faint); margin-left: 6px; }
 .tag { color: #d20000; margin-left: 6px; font-size: var(--w-fs-sm); }
 .lead { padding: 3px 12px 2px; font-size: var(--w-fs-sm); color: var(--w-faint); background: var(--w-panel-solid); border-bottom: 1px solid var(--w-line-soft); }
-.sum { display: flex; justify-content: space-between; gap: 8px; padding: 5px 12px; border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); color: var(--w-dim); }
+.sum { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; padding: 5px 12px; border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); color: var(--w-dim); }
 .sum b { color: var(--w-fg); font-variant-numeric: tabular-nums; }
 .note { padding: 0 12px 5px; font-size: var(--w-fs-sm); color: var(--w-faint); }
 </style>

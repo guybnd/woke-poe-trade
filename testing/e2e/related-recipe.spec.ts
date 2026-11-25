@@ -74,3 +74,18 @@ test('side window: Dawnbreaker drops from the invitation, a click, with the boss
   }
   await expect(side.locator('[data-item-row]', { hasText: 'Dawnbreaker' })).toHaveCount(0)
 })
+
+test('side window: a card shows what its full stack gives, and the gain', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/card-the-doctor.txt')
+  const side = overlay.page.locator('.w-pc-side')
+  await expect(side).toBeVisible({ timeout: 20_000 })
+  await expect(side.getByText('Full stack')).toBeVisible()
+  // The card itself, as a stack: 8 × 900c = 40 div at 180c a divine.
+  await expect(side.locator('div[data-item-row]', { hasText: 'The Doctor' }).first()).toContainText('8 ×')
+  // What it gives: Headhunter at 9000c = 50 div, a click to price check it.
+  await expect(side.locator('button[data-item-row]', { hasText: 'Headhunter' })).toContainText('50')
+  await expect(side.getByText(/Stack\s*40 div/)).toBeVisible()
+  await expect(side.getByText(/Makes\s*50 div/)).toBeVisible()
+  await expect(side.getByText(/Gain\s*\+10 div/)).toBeVisible()
+})
