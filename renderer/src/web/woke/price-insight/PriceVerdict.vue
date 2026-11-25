@@ -231,7 +231,7 @@ const droppedTitle = computed(() => {
 const blendTitle = computed(() => {
   const lines = blend.value.points.map(p =>
     `${p.label}: ${Math.round(p.low)}${p.high > p.low ? '–' + Math.round(p.high) : ''}c${p.weight === 0 ? ' (not counted)' : ''}. ${p.note}`)
-  if (headline.value?.from === 'buyout') lines.unshift('The cheapest trusted instant buyout: anyone can buy it at this price right now. Listings are few, so it leads over a blend.')
+  if (headline.value?.from === 'buyout') lines.unshift('The cheapest trusted instant buyout, close to what the other trusted listings ask: anyone can buy it at this price right now. Listings are few, so it leads over a blend.')
   else if (headline.value?.from === 'blend') lines.unshift('Blend of every source, listings count most:')
   else if (headline.value?.chaos === props.insight.range?.low) lines.unshift('What sellers ask, since the trade site shows no sales: the cheapest trusted listing.')
   else lines.unshift('What sellers ask, since the trade site shows no sales: the middle of the cheapest trusted listings, counting online and recent sellers more.')

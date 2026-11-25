@@ -81,6 +81,8 @@ export interface InsightOptions {
   now?: number
 }
 
+// How far above the fair price an instant buyout can sit and still lead a thin market.
+const BUYOUT_NEAR_FAIR = 1.35
 const STALE_MS = 3 * 24 * 60 * 60 * 1000
 // Listings still up after this long are not selling at their price.
 const OLD_MS = 7 * 24 * 60 * 60 * 1000
@@ -263,7 +265,9 @@ export function buildInsight (listings: InsightListing[], opts: InsightOptions):
   }
 
   const instant = kept.filter(k => k.instant).map(k => k.chaos)
-  const buyout = kept.find(k => k.instant && k.chaos >= floor)?.chaos
+  // Only near what the trusted listings ask: one buyout far above a wall of
+  // whispers isn't the price.
+  const buyout = kept.find(k => k.instant && k.chaos >= floor && k.chaos <= range.fair * BUYOUT_NEAR_FAIR)?.chaos
   const ceiling = instant.length ? Math.max(Math.min(...instant), range.fair) : null
 
   if (bargain) {

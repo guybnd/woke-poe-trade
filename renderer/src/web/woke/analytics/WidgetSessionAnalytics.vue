@@ -323,7 +323,8 @@ watch(storyOn, (on) => {
   nightId.value = null
 })
 const store = useSessionStore()
-const farmingHistory = computed(() => store.sessions.value.length > 0)
+// Until the saved sessions load, keep the tabs: they may have some.
+const farmingHistory = computed(() => !store.loaded.value || store.sessions.value.length > 0)
 const decksOn = computed(() => isModuleOn(AppConfig(), 'stacked-decks'))
 const tabOptions = computed(() => [
   ...(storyOn.value ? [{ value: 'history', label: 'Map history' }, { value: 'nights', label: 'Play sessions' }] : []),

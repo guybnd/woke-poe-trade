@@ -88,6 +88,16 @@ describe('headline', () => {
     expect(blend.points.find(p => p.key === 'mine')?.weight).toBe(0)
   })
 
+  it('ignores one instant buyout far above a wall of whispers', () => {
+    for (const [ask, buy] of [[100, 300], [100, 1000], [2, 8]]) {
+      const insight = buildInsight([...rows(ask, 6, { hasFee: false }), ...rows(buy, 1)], OPTS)
+      const blend = buildBlend({ insight, now: NOW })
+      expect(insight.buyout).toBeUndefined()
+      expect(headlinePrice(blend, insight)?.from).not.toBe('buyout')
+      expect(headlinePrice(blend, insight)!.chaos).toBeLessThan(ask * 1.35)
+    }
+  })
+
   it('falls back to poe.ninja when nothing is listed, even off target', () => {
     expect(headline([], { chaos: 150, gaps: 0, fits: false })).toEqual({ chaos: 150, from: 'blend' })
   })

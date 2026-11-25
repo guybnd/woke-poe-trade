@@ -1,6 +1,6 @@
 # Next release notes
 
-- Price check, few listings: the headline price is now the cheapest real instant buyout (bait and stale listings left out) instead of a blend of listings, poe.ninja and poeprices, and the line under it says "cheapest instant buyout". Your own past checks of the item still show on the hover, but no longer move the price.
+- Price check, few listings: the headline price is now the cheapest real instant buyout (bait and stale listings left out, and only when it sits close to what the other listings ask) instead of a blend of listings, poe.ninja and poeprices, and the line under it says "cheapest instant buyout". Your own past checks of the item still show on the hover, but no longer move the price.
 - Session analytics: the Sessions and Maps tabs only show if you have sessions from the retired Farming tool. Map history and Play sessions cover the same ground.
 - New installs start with the Mapper preset on instead of every tool. Nothing changes for an existing install.
 - More fixes: the map scan counts a rating you saved under another wording of a mod (Mirror of Delirium), the run hotkey holds an unidentified unique as its unique when only one unique uses that base and refuses it otherwise (it was priced as a white base), and Undo after setting the map check key in Settings takes the Map mods window back out.
