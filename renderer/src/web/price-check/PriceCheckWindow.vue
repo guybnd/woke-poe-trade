@@ -8,7 +8,7 @@
   }">
     <instant-ninja-card v-if="instant && item?.isOk()" :key="instantKey" :item="item.value" :at="instant"
       :active="config.wmWants === 'show'" :again-keys="config.hotkey && !advancedCheck ? `${config.hotkeyHold} + ${config.hotkey}` : null"
-      @placed="instantPlaced" @live="openWindow(true, $event === true)" @details="openWindow(false)" @close="closePriceCheck">
+      @placed="instantPlaced" @live="openWindow(true, $event === true)" @close="closePriceCheck">
       <template #verdict>
         <div v-if="item.value.info.refName === 'Stacked Deck'" :class="$style.instantVerdict">
           <woke-deck-verdict-chip :item="item.value" />

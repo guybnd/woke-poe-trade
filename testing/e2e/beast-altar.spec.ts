@@ -8,7 +8,7 @@ test('captured beast: the instant card lists its Blood Altar recipes', async ({ 
   await overlay.boot()
   await overlay.copyItem('items/beast-craicic-vassal.txt')
   const card = overlay.page.getByTestId('instant-ninja-card')
-  await expect(card).toContainText('38c')
+  await expect(card.getByTestId('instant-ninja-price')).toHaveText('1⇄38')
   const altar = card.getByTestId('beast-altar')
   await expect(altar).toContainText('2 recipes')
   const rows = altar.getByTestId('beast-altar-recipe')
@@ -24,11 +24,13 @@ test('captured beast: the instant card lists its Blood Altar recipes', async ({ 
 })
 
 test('captured beast: the full price check shows the recipes beside the window', async ({ overlay }) => {
-  await overlay.boot()
+  // The full window for it, not the instant card by the item.
+  await overlay.boot({
+    patch: (config: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeNinjaInstant = false
+    }
+  })
   await overlay.copyItem('items/beast-craicic-vassal.txt')
-  const card = overlay.page.getByTestId('instant-ninja-card')
-  await expect(card).toBeVisible()
-  await card.getByTestId('instant-ninja-details').click()
   await expect(overlay.page.locator('#price-window')).toBeVisible()
   const altar = overlay.page.getByTestId('beast-altar')
   await expect(altar).toContainText('Corrupt a map twice')
