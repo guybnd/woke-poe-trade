@@ -43,6 +43,15 @@ export async function runTimeIn (startAt: number, now: number): Promise<RunTime 
   return { ms: timeIn(next.marks.marks, startAt, now), fights: next.marks.fights.filter(at => at >= startAt && at <= now).length }
 }
 
+// The read, unless it found no play at all and Stop kept a split: a past
+// run whose Client.txt days are gone (deleted, started over) reads as all
+// away, so the time Stop saved stands.
+export function timeOrKept (read: RunTime | null, kept: Record<PlayState, number> | null | undefined): RunTime | null {
+  const played = (t: Record<PlayState, number>) => t.map + t.play + t.hub > 0
+  if (read && played(read.ms)) return read
+  return kept && played(kept) ? { ms: kept, fights: read?.fights ?? 0 } : read
+}
+
 // Boss fights only (0 without Client.txt).
 export async function fightsIn (startAt: number, now: number): Promise<number> {
   return (await runTimeIn(startAt, now).catch(() => null))?.fights ?? 0
