@@ -60,7 +60,8 @@
               <input :class="[$style['rollInput'], 'w-roll-input', { [$style.catOnly]: catOnly === 'below', 'w-roll-cat': catOnly === 'below' }]" :placeholder="t('max')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
                 ref="inputMaxEl"
                 v-model.number="inputMax" :data-wheel-from="roll?.default.max" @focus="inputFocus($event, 'max')" @input="wheeled">
-              <!-- woke: keep the line, drop its numbers: one click on hover (Guy, timeless jewel thread). -->
+              <!-- woke: keep the line, drop its numbers: one click on hover (Guy, timeless jewel thread).
+                   Last in the box, so the inputs keep :first-of-type / :last-of-type. -->
               <button v-if="hasNumbers" type="button" :class="$style.clearNums" data-clear-nums
                 title="Any value: empty both boxes" @click="clearNumbers">×</button>
             </div>
@@ -591,21 +592,22 @@ export default defineComponent({
   }
 }
 
-/* woke: the × that empties both boxes: over the max box's end, on hover only. */
+/* woke: the × that empties both boxes, on hover only. It sits just left of the
+   min box, over the end of the mod's text, so it never covers a box you type in. */
 .nums { position: relative; }
 .clearNums {
   display: none;
   position: absolute;
-  top: 1px;
-  bottom: 1px;
-  right: 1px;
-  width: 1.1rem;
+  top: 0;
+  bottom: 0;
+  right: 100%;
+  width: 1.2rem;
   align-items: center;
   justify-content: center;
   background: rgba(10, 8, 6, 0.9);
   color: var(--w-accent, theme('colors.gray.300'));
-  border-left: 1px solid var(--w-line, theme('colors.gray.700'));
-  @apply rounded-r;
+  border: 1px solid var(--w-line, theme('colors.gray.700'));
+  @apply rounded-l;
   line-height: 1;
 }
 .nums:hover .clearNums { display: flex; }

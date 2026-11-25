@@ -32,7 +32,7 @@
             :class="[$style.row, { [$style.me]: row.highlight, [$style.click]: canOpen(row) }]"
             @pick="open(row)">
             <img :class="$style.art" :src="row.icon" :alt="''">
-            <span :class="$style.name"><span v-if="row.qty && row.qty > 1" :class="$style.qty">{{ row.qty }} ×</span>{{ row.name }}<span v-if="row.tag" :class="row.ownTag ? $style.kby : $style.tag">{{ row.tag }}</span><span v-if="row.sub" v-item-tip="row.sub.tip" :class="$style.ksub">{{ row.sub.text }}</span></span>
+            <span :class="$style.name"><span v-if="row.qty && row.qty > 1" :class="$style.qty">{{ row.qty }} ×</span>{{ row.name }}<span v-if="row.tag" :class="row.ownTag ? $style.kby : $style.tag">{{ row.tag }}</span><span v-if="row.sub?.tip" v-item-tip="row.sub.tip" :class="$style.ksub">{{ row.sub.text }}</span><span v-else-if="row.sub" :class="$style.ksub">{{ row.sub.text }}</span></span>
             <span :class="$style.price">
               <template v-if="row.price">{{ priceText(row.price) }}<img :class="$style.coin" :src="coin(row.price)" :alt="row.price.currency"></template>
               <span v-else :class="$style.none" title="poe.ninja has no price for this">?</span>
@@ -64,7 +64,7 @@ import { sideRow, type SideRow } from './side-row'
 import { familyOf, familyRows, type Family } from '@/web/woke/related-family/family'
 import { cardsFor, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resolveParts } from '@/web/woke/related-family/recipe'
 import { loadTipItems, vItemTip } from '@/web/woke/ui/tooltip/item-tip'
-import { ABYSS, EMBLEMS, TIMELESS, ownConquerorId, type Conqueror } from '@/web/woke/related-family/conquest'
+import type { Conqueror } from '@/web/woke/related-family/conquest'
 import { conquestPick } from '@/web/woke/related-family/conquest-pick'
 
 const { findPriceByQuery, findPricesByName, autoCurrency, xchgRate } = usePoeninja()
@@ -223,18 +223,30 @@ function keystoneTip (c: Conqueror, jewel?: string): ItemTipRef | null {
 
 // woke: the Abyss conquest jewels have one lord each: wherever one is listed
 // (the Reclaimed Malevolence recipe lists all five), its keystone goes under it.
-const ABYSS_BY_JEWEL = new Map(ABYSS.map(a => [a.jewel, a]))
-function withKeystone (row: SideRow): SideRow {
-  const a = ABYSS_BY_JEWEL.get(row.info.refName)
+// The keystone data loads with the first Timeless or Eye jewel checked, not
+// at startup (the startup JS budget).
+type ConquestData = typeof import('@/web/woke/related-family/conquest')
+const conquest = shallowRef<ConquestData | null>(null)
+let conquestJob: Promise<void> | null = null
+function needsConquest (item: ParsedItem) {
+  const base = item.info.unique?.base
+  if (base == null || conquest.value || conquestJob) return
+  if (base !== 'Timeless Jewel' && !base.endsWith(' Eye Jewel')) return
+  conquestJob = import('@/web/woke/related-family/conquest')
+    .then(m => { conquest.value = m })
+    .catch(() => { conquestJob = null })
+}
+function withKeystone (row: SideRow, data: ConquestData): SideRow {
+  const a = data.ABYSS.find(x => x.jewel === row.info.refName)
   return a ? { ...row, sub: { text: a.keystone?.name ?? a.name, tip: keystoneTip(a, a.jewel) } } : row
 }
 
 // woke: a Legion Timeless jewel drops in the Domain of Timeless Conflict: the
 // five emblems that open it, its own faction's marked.
-function getEmblems (item: ParsedItem) {
-  if (!EMBLEMS.some(e => e.jewel === item.info.refName)) return []
+function getEmblems (item: ParsedItem, data: ConquestData | null) {
+  if (!data?.EMBLEMS.some(e => e.jewel === item.info.refName)) return []
   const rows: SideRow[] = []
-  for (const e of EMBLEMS) {
+  for (const e of data.EMBLEMS) {
     const info = ITEM_BY_REF('ITEM', e.emblem)?.[0]
     if (!info) continue
     const chaos = chaosOf(info)
@@ -327,6 +339,7 @@ export default defineComponent({
     }
     // The card rewards load with the first unique or currency checked, and
     // again on the next check if that load failed.
+    watch(() => props.item, item => { if (item) needsConquest(item) }, { immediate: true })
     const tipItems = shallowRef<Record<string, { d?: string, n?: number }> | null>(null)
     watch(() => props.item, item => {
       const ns = item?.info.namespace
@@ -339,7 +352,7 @@ export default defineComponent({
       const id = queryId ? `${queryId.ns}::${queryId.name}${queryId.variant ? ` // ${queryId.variant}` : ''}` : null
       const cards = tipItems.value ? getCards(props.item, tipItems.value) : []
       return [
-        ...getEmblems(props.item),
+        ...getEmblems(props.item, conquest.value),
         ...getRecipes(props.item),
         ...cards,
         ...(id ? getSources(props.item, id, cards.length > 0) : [])
@@ -352,7 +365,9 @@ export default defineComponent({
       const inRecipe = new Set(recipeSecs.flatMap(sec => sec.rows.map(r => r.name)))
       const others = otherSections().filter(sec => !recipeSecs.length || !sec.rows.every(r => inRecipe.has(r.name)))
       const all = [...recipeSecs, ...extra.value.filter(sec => !sec.key.startsWith('recipe:')), ...others]
-      return all.map(sec => sec.rows.some(r => ABYSS_BY_JEWEL.has(r.info.refName)) ? { ...sec, rows: sec.rows.map(withKeystone) } : sec)
+      const data = conquest.value
+      if (!data) return all
+      return all.map(sec => sec.rows.some(r => data.ABYSS.some(a => a.jewel === r.info.refName)) ? { ...sec, rows: sec.rows.map(r => withKeystone(r, data)) } : sec)
     })
     function otherSections (): Section[] {
       const res = result.value
@@ -368,9 +383,10 @@ export default defineComponent({
     // woke: a Timeless jewel's conquerors and their keystones.
     const keystones = computed(() => {
       const item = props.item
-      const list = item ? TIMELESS[item.info.refName] : undefined
-      if (!item || !list) return null
-      const own = ownConquerorId(item.statsByType)
+      const data = conquest.value
+      const list = item && data ? data.TIMELESS[item.info.refName] : undefined
+      if (!item || !list || !data) return null
+      const own = data.ownConquerorId(item.statsByType)
       return list.filter(c => c.keystone).map(c => ({ id: c.id, name: c.keystone!.name, by: c.name, own: c.id === own, tip: keystoneTip(c) }))
     })
     function pickKeystone (id: string) {
