@@ -5,7 +5,7 @@ import { buildMapRegex, buildTrimmedMapRegex } from './regex'
 import type { MapRegexResult } from './regex'
 import { modPriority, modRatings, searchOptions } from './rules'
 import type { MapModProfile, ModMode } from './rules'
-import { allAreaMods, allMapNames, chartMods, heistMods, tier17Mods } from './data'
+import { allAreaMods, allMapNames, chartMods, heistMods, sameSenseWordings, tier17Mods } from './data'
 
 // Chart lines the stat data can't read. A card can't rate them, but a search
 // token mustn't match them either.
@@ -108,15 +108,20 @@ export function profileRegex (profile: MapModProfile, mode: ModMode = 'maps'): M
   const avoid: string[] = []
   const want: string[] = []
   const skip = new Set(mode === 'maps' && profile.hideT17 ? tier17Mods() : [])
-  for (const [m, r] of Object.entries(modRatings(profile, mode))) {
+  const ratings = modRatings(profile, mode)
+  for (const [m, r] of Object.entries(ratings)) {
     if (skip.has(m)) continue
-    if (r === 'deadly') avoid.push(m)
-    else if (r === 'good') want.push(m)
+    // A rating counts for the stat's other wordings that say the same (check.ts),
+    // so the search looks for them too: an old rating on "Areas contain a Mirror
+    // of Delirium" must find maps that say "Area contains".
+    const same = mode === 'maps' ? sameSenseWordings(m).filter(w => !ratings[w] && !skip.has(w)) : []
+    if (r === 'deadly') avoid.push(m, ...same)
+    else if (r === 'good') want.push(m, ...same)
   }
   // The minimums are about map properties.
   const mins = mode === 'maps' ? profile.mins : {}
   const { highlight, autoTrim } = searchOptions(profile, mode)
-  const input = { avoid, want, mins, highlight, minsAny: profile.minsAny }
+  const input = { avoid: [...new Set(avoid)], want: [...new Set(want)], mins, highlight, minsAny: profile.minsAny }
   const universe = searchUniverse(mode)
   const extra = [...allMapNames(), ...MODE_TOOLTIP_LINES[mode]]
   // Rare names and heist targets on these items can't be listed, so a short

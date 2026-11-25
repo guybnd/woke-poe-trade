@@ -94,6 +94,23 @@ describe('reading deaths from Client.txt', () => {
     expect(deaths.map(d => d.runKey)).toEqual(['MapWorldsBeach:7', null, null])
   })
 
+  it('keeps the run in a side area you portal back into from the hideout', () => {
+    const { deaths } = follow([
+      area('15:00:00', 'MapWorldsBeach', '7'),
+      entered('15:00:01', 'Beach'),
+      area('15:01:00', 'MapSideArea_Vaal', '9'),
+      area('15:02:00', 'HideoutArenaSearingExarch', '1', 60),
+      area('15:03:00', 'MapSideArea_Vaal', '9'),
+      slain('15:03:30'),
+      // Another map's side area entered from the hideout has no run.
+      area('15:04:00', 'MapWorldsStrand', '10'),
+      area('15:05:00', 'HideoutArenaSearingExarch', '1', 60),
+      area('15:06:00', 'MapSideArea_Vaal', '9'),
+      slain('15:06:30')
+    ])
+    expect(deaths.map(d => d.runKey)).toEqual(['MapWorldsBeach:7', null])
+  })
+
   it('keeps the run through map-launched encounter and tower areas, without counting a new map', () => {
     const { maps, deaths } = follow([
       area('15:00:00', 'MapWorldsBeach', '7'),

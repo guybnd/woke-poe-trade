@@ -42,7 +42,8 @@ export function loadRuns (league: string): Promise<void> {
   const glance = (hostRequest('doc-get', { collection: COLLECTION, key: runGlanceKey(league) }) as Promise<unknown>)
     .then((g) => { if (loadedFor === league && runGlance.value == null && isRunGlance(g) && g.league === league) runGlance.value = g })
     .catch(() => {})
-  loading = (hostRequest('doc-get', { collection: COLLECTION, key: runsKey(league) }) as Promise<unknown>)
+  // Strict: null only when there's no file yet; a locked one throws.
+  loading = (hostRequest('doc-get-strict', { collection: COLLECTION, key: runsKey(league) }) as Promise<unknown>)
     .then((d) => { if (loadedFor === league) { runsDoc.value = cleanDoc(d); readOk = true; saveBoard(league, runsDoc.value) } })
     .catch(() => { if (loadedFor === league) loading = null })
     .then(() => glance)

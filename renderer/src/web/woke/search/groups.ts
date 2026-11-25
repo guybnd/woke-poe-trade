@@ -23,6 +23,7 @@ export const SEARCH_GROUPS: readonly GroupInfo[] = [
   { id: 'Vendor recipes', name: 'Vendor recipes', mode: 'folded' },
   { id: 'Flips', name: 'Flips', mode: 'folded' },
   { id: 'Atlas', name: 'Atlas', mode: 'folded' },
+  { id: 'Valdo map', name: 'Valdo map', mode: 'folded', note: 'price check by reward' },
   { id: 'Where to get gems', name: 'Where to get gems', mode: 'folded' },
   { id: 'Vaal it?', name: 'Vaal it?', mode: 'folded' },
   { id: 'Passive tree', name: 'Passive tree', mode: 'folded' },

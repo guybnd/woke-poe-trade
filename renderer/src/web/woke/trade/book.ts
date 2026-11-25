@@ -191,6 +191,10 @@ export function applyEvent (book: TradeBook, ev: TradeEvent): ApplyResult {
       }
       return {}
     }
+    case 'entered':
+      // No "has left" line for the players in the area you just left.
+      for (const o of book.offers) o.inArea = false
+      return {}
     case 'trade-accepted': {
       const o = tradePartner(book, ev.at)
       if (!o) return {}
@@ -281,6 +285,13 @@ export function reopen (book: TradeBook, o: Offer, at: number): Offer {
 // Reading Client.txt again after a restart finds whispers you already closed.
 export function alreadyClosed (history: Offer[], o: Pick<Offer, 'dir' | 'who' | 'item' | 'at'>): boolean {
   return history.some(h => h.dir === o.dir && h.who === o.who && h.item === o.item && (h.closedAt ?? 0) >= o.at)
+}
+
+// A trade a restart reads again was logged before it: the offer was finished
+// then (traded offers stay out of the history), so it mustn't come back open.
+export function alreadyLogged (trades: Array<Pick<TradeRecord, 'id'>>, o: Offer, at: number): boolean {
+  const id = recordFor(o, at, null, null).id
+  return trades.some(t => t.id === id)
 }
 
 // Whether a whisper a restart can still read could be older than this closing.

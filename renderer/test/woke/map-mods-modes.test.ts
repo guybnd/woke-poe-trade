@@ -2,12 +2,11 @@
 // the verdict on heist items and charts. The chart is real item text from the game.
 import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { fixture, loadGameData, parseItem } from '../helpers/game-data'
-import { allAreaMods, chartMods, heistMods, modsForMode, tier17Mods } from '@/web/woke/map-mods/data'
+import { allAreaMods, chartMods, heistMods, modsForMode, rateSavedMods, sameSenseWordings, tier17Mods } from '@/web/woke/map-mods/data'
 import { profileRegex } from '@/web/woke/map-mods/search'
 import { MAX_SEARCH_LENGTH } from '@/web/woke/map-mods/regex'
-import { defaultProfile, modListRows, setSearchOption } from '@/web/woke/map-mods/rules'
+import { DEFAULT_JUICE_WEIGHTS, defaultProfile, modListRows, setSearchOption, withModRating } from '@/web/woke/map-mods/rules'
 import type { MapModProfile } from '@/web/woke/map-mods/rules'
-import { DEFAULT_JUICE_WEIGHTS } from '@/web/woke/map-mods/rules'
 import { checkMap, isMapLike } from '@/web/woke/map-mods/check'
 import { importAptOnce } from '@/web/woke/map-mods/widget'
 import type { MapModsWidget } from '@/web/woke/map-mods/widget'
@@ -338,5 +337,57 @@ describe('3.30 suffix wordings', () => {
     expect(res.verdict.verdict).toBe('skip')
     const ok = checkMap(item, widget(profile({ 'Area contains a Mirror of Delirium': 'deadly' })))
     expect(ok.verdict.verdict).toBe('skip')
+  })
+
+  // A mod with no number read as its stat's first wording, the plural "Areas
+  // contain a Mirror of Delirium" the map doesn't show.
+  it('names a mod with no number by the wording the map shows', () => {
+    const text = fixture('items/map-rare-t16.txt')
+      .replace('Players have 60% less Recovery Rate of Life and Energy Shield', 'Players have 60% less Recovery Rate of Life and Energy Shield\nArea contains a Mirror of Delirium')
+    const res = checkMap(parseItem(text), widget(profile({})))
+    const names = res.verdict.mods.map(m => m.matcher)
+    expect(names).toContain('Area contains a Mirror of Delirium')
+    expect(names).not.toContain('Areas contain a Mirror of Delirium')
+  })
+
+  // The death recap rates a map's saved mods: an old rating on the plural
+  // wording read "ok" there once maps saved the singular one.
+  it('the death recap counts a rating on another wording, and can clear it', () => {
+    const p = profile({ 'Areas contain a Mirror of Delirium': 'deadly' })
+    const [mod] = rateSavedMods([{ matcher: 'Area contains a Mirror of Delirium' }], p)
+    expect(mod.rating).toBe('deadly')
+    p.ratings = withModRating(p.ratings, mod.matcher, mod.wordings ?? [], 'ok')
+    expect(p.ratings).toEqual({})
+    expect(rateSavedMods([{ matcher: 'Area contains a Mirror of Delirium' }], p)[0].rating).toBe('ok')
+  })
+
+  // The map card's click cycle: a rating on another wording came back after
+  // "ok", so the mod could never be un-rated there.
+  it('un-rating a mod clears the rating on its other wording too', () => {
+    const text = fixture('items/map-rare-t16.txt')
+      .replace('Players have 60% less Recovery Rate of Life and Energy Shield', 'Players have 60% less Recovery Rate of Life and Energy Shield\nArea contains a Mirror of Delirium')
+    const item = parseItem(text)
+    for (const rated of ['Areas contain a Mirror of Delirium', 'Area contains a Mirror of Delirium']) {
+      const p = profile({ [rated]: 'deadly' })
+      const w = widget(p)
+      const mod = checkMap(item, w).verdict.mods.find(m => m.rating === 'deadly')!
+      expect(mod, rated).toBeTruthy()
+      p.ratings = withModRating(p.ratings, mod.matcher, mod.wordings ?? [], 'ok')
+      expect(checkMap(item, w).verdict.deadly, rated).toEqual([])
+      expect(p.ratings, rated).toEqual({})
+    }
+  })
+})
+
+describe('a rating carries only to wordings that say the same thing', () => {
+  it('pairs the Mirror wordings but not faster with slower, or increased with reduced', () => {
+    expect(sameSenseWordings('Areas contain a Mirror of Delirium')).toEqual(['Area contains a Mirror of Delirium'])
+    expect(sameSenseWordings('Buffs on Players expire #% faster')).toEqual([])
+    expect(sameSenseWordings('Monsters have #% increased Area of Effect')).toEqual([])
+  })
+  it("doesn't rate a saved \"reduced\" mod by the \"increased\" rating", () => {
+    const p = profile({ 'Monsters have #% increased Area of Effect': 'deadly' })
+    expect(rateSavedMods([{ matcher: 'Monsters have #% reduced Area of Effect' }], p)[0].rating).toBe('ok')
+    expect(rateSavedMods([{ matcher: 'Monsters have #% increased Area of Effect' }], p)[0].rating).toBe('deadly')
   })
 })

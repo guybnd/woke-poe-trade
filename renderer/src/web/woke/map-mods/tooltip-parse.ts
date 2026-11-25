@@ -91,6 +91,8 @@ const MIN_SIMILARITY = 0.8
 const SURE_SIMILARITY = 0.9
 // Words that start map mod lines; such a line with no match is suspicious.
 const MOD_LIKE = /^(monsters?|players?|rare|unique|area|buffs|auras|debuffs|the maven|#% (more|less|increased|reduced))/
+// Lines that read like mods but aren't: an Elder or Shaper map's influence.
+const NOT_MODS = ['area is influenced by the elder', 'area is influenced by the shaper']
 
 interface Known { matcher: string, norm: string }
 
@@ -240,6 +242,7 @@ export class TooltipMatcher {
       }
       const norm = normalize(line)
       if (multi.used.has(lineIndex)) continue
+      if (!mod && NOT_MODS.some(n => similarity(norm, n) >= SURE_SIMILARITY)) continue
       if ((mod && mod.score < SURE_SIMILARITY) || (!mod && norm.length >= 15 && MOD_LIKE.test(norm))) {
         out.weak.push(line)
       }

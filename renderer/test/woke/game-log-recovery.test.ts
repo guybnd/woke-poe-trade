@@ -169,6 +169,53 @@ describe('moving to another log', () => {
   })
 })
 
+describe('a follower started later', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.resetModules()
+    vi.doUnmock('@/web/background/IPC')
+    vi.doUnmock('@/web/woke/shared/host')
+  })
+
+  it('reads the tail again, with the lines written since', async () => {
+    vi.useFakeTimers()
+    vi.resetModules()
+    const LATER = { path: LOG.path, lines: [AT_12, NEXT] }
+    const host = mockHost([LOG, LATER])
+    const { followGameLog } = await import('@/web/woke/shared/game-log')
+    followGameLog({ since: () => null, onLines: () => {} })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(host.requests.count).toBe(1)
+
+    // A widget turned on an hour later.
+    await vi.advanceTimersByTimeAsync(3_600_000)
+    const got: string[] = []
+    followGameLog({ since: () => 0, onLines: (lines) => { for (const l of lines) got.push(l.line) } })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(host.requests.count).toBe(2)
+    expect(got).toEqual([AT_12, NEXT])
+  })
+
+  it("doesn't take a read started before a new log opened for that log's tail", async () => {
+    vi.useFakeTimers()
+    vi.resetModules()
+    const REAL = { path: 'F:\\real\\Client.txt', lines: [AT_12] }
+    const host = mockHost([LOG, MISSING, REAL])
+    const { followGameLog } = await import('@/web/woke/shared/game-log')
+    const b: Array<string | null> = []
+    followGameLog({ since: () => null, onTail: t => b.push(t.path), onLines: () => {} })
+    await vi.advanceTimersByTimeAsync(0)
+    // Another follower starts a read, still going (Client.txt not there yet)…
+    followGameLog({ since: () => null, onLines: () => {} })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(host.requests.count).toBe(2)
+    // …when the app moves to the game's own log: the idle one reads it now.
+    host.emit(OPENED, { path: REAL.path })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(b).toEqual([LOG.path, REAL.path])
+  })
+})
+
 describe('GameLogWatcher', () => {
   it('waits for a set path that does not exist yet, then follows it', async () => {
     const { GameLogWatcher } = await import('../../../main/src/host-files/GameLogWatcher')

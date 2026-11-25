@@ -8,8 +8,11 @@ export interface LogTail {
   lines: string[]
 }
 
+// A read in flight, shared by everyone who asks meanwhile. Once it's done the
+// next ask reads again: a widget turned on later needs the lines since.
 let pending: Promise<LogTail> | null = null
-let loadedPath: string | null = null
+// The log that read was asked for, when one was named.
+let pendingFor: string | null = null
 
 async function load (): Promise<LogTail> {
   // The log watcher starts once the overlay sends its config, which can be
@@ -24,17 +27,15 @@ async function load (): Promise<LogTail> {
   return { path: null, lines: [] }
 }
 
-// `path`: the log now in use, when the app has moved to another one.
+// `path`: a log that just opened. A read started before it (for no log
+// named, or another) can still have the old log's lines: read again.
 export function logTail (path?: string): Promise<LogTail> {
-  if (pending && (path == null || loadedPath == null || loadedPath === path)) return pending
-  loadedPath = null
-  // Not found isn't for good: the app can start before the game.
-  const loading: Promise<LogTail> = load().then((tail) => {
-    if (tail.path) loadedPath = tail.path
-    else pending = null
-    return tail
+  if (pending && (path == null || pendingFor === path)) return pending
+  const loading: Promise<LogTail> = load().finally(() => {
+    if (pending === loading) pending = null
   })
   pending = loading
+  pendingFor = path ?? null
   return loading
 }
 

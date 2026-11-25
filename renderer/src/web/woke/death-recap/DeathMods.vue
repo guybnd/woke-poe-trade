@@ -12,7 +12,7 @@
     <button v-for="mod in rated" :key="mod.matcher" type="button" :disabled="!config"
       :class="[$style.mod, { 'w-dim': mod.rating === 'ok' }]"
       :title="config ? `Click to change: ${RATING_LABEL[mod.rating]}` : undefined"
-      data-death-mod @click="cycle(mod.matcher, mod.rating)">
+      data-death-mod @click="cycle(mod)">
       <span :class="[$style.dot, $style[mod.rating]]" />
       <span class="flex-1 text-left">{{ mod.text }}</span>
       <span v-if="mod.rating !== 'ok'" :class="[$style.tag, $style[mod.rating]]">{{ RATING_LABEL[mod.rating] }}</span>
@@ -34,8 +34,9 @@ import { computed } from 'vue'
 import { WKbd } from '../ui'
 import { findMapModsConfig } from '../map-mods/check'
 import { activeProfile } from '../map-mods/widget'
-import { fillRoll, modRatings, nextModRating, rateMods, setModRatings, withRating } from '../map-mods/rules'
-import type { ModRating } from '../map-mods/rules'
+import { fillRoll, modRatings, nextModRating, setModRatings, withModRating } from '../map-mods/rules'
+import type { CheckedMod, ModRating } from '../map-mods/rules'
+import { rateSavedMods } from '../map-mods/data'
 import { shortTime } from './death-log'
 import type { RunRecord } from './death-log'
 
@@ -49,8 +50,7 @@ const hotkey = computed(() => config.value?.hotkey ?? 'Alt + M')
 const rated = computed(() => {
   const mods = props.run?.mods ?? []
   if (!config.value) return mods.map(m => ({ matcher: m.matcher, text: fillRoll(m.matcher, m.roll), rating: 'ok' as ModRating }))
-  const profile = activeProfile(config.value)
-  return rateMods(mods, { ...profile, ratings: modRatings(profile, 'maps') }).mods
+  return rateSavedMods(mods, activeProfile(config.value))
 })
 
 const checkedText = computed(() => {
@@ -65,10 +65,10 @@ const likelyNote = computed(() => {
     : `${checkedText.value ?? 'Checked a while before'}, so it may be another map of the same name.`
 })
 
-function cycle (matcher: string, current: ModRating) {
+function cycle (mod: CheckedMod) {
   if (!config.value) return
   const profile = activeProfile(config.value)
-  setModRatings(profile, 'maps', withRating(modRatings(profile, 'maps'), [matcher], nextModRating(current)))
+  setModRatings(profile, 'maps', withModRating(modRatings(profile, 'maps'), mod.matcher, mod.wordings ?? [], nextModRating(mod.rating)))
 }
 </script>
 

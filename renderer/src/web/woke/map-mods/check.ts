@@ -5,8 +5,8 @@ import { ItemCategory, ItemRarity } from '@/parser'
 import type { ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import { prepareMapStat } from '@/web/map-check/prepare-map-stats'
-import { heistRowOf } from './data'
-import { juiceScore, modRatings, rateMods } from './rules'
+import { heistRowOf, sameSenseOf } from './data'
+import { juiceScore, modRatings, rateMods, withOtherWordings } from './rules'
 import type { JuiceResult, MapVerdict, ModMode } from './rules'
 import { MAP_MODS_TYPE, activeProfile, importAptOnce, initMapModsWidget } from './widget'
 import { MIN_LABELS } from './regex'
@@ -90,17 +90,14 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
   const rated = (type: ModifierType) => type === ModifierType.Explicit || (isChart && type === ModifierType.Implicit)
   const calcs = item.statsByType
     .filter(calc => rated(calc.type) && calc.stat.ref !== VOYAGE_UNREVEALED)
-  const stats = calcs.map(calc => prepareMapStat(calc))
-  const mode = modeOfItem(item)
-  const ratings = { ...modRatings(profile, mode) }
-  // A mod with no number shows as its stat's first wording, which may not be
-  // the one the map has ("Area contains a Mirage" reads as the older Empowered
-  // Mirage line). A rating on any wording of the stat counts.
-  stats.forEach(({ matcher }, i) => {
-    if (ratings[matcher]) return
-    const other = calcs[i].stat.matchers.find(m => ratings[m.string])
-    if (other) ratings[matcher] = ratings[other.string]
+  const stats = calcs.map(calc => {
+    const stat = prepareMapStat(calc)
+    // Only wordings that say the same thing: a rating on "increased" isn't one on "reduced".
+    return { ...stat, wordings: sameSenseOf(calc.stat.matchers, stat.matcher) }
   })
+  const mode = modeOfItem(item)
+  // A rating may sit on another wording of the stat than the one the map has.
+  const ratings = withOtherWordings(modRatings(profile, mode), stats)
   if (mode === 'heist') {
     // A row rates both wordings of its mod.
     for (const { matcher } of stats) {

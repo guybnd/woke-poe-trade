@@ -52,7 +52,7 @@
               @click.stop="catalyst!.toggle()">Q{{ qTag }}</button>
             <img v-for="img of rollTags"
               :class="$style.rollTag" :src="img">
-            <div class="flex gap-x-px">
+            <div class="flex gap-x-px" :class="$style.nums">
               <input :class="[$style['rollInput'], 'w-roll-input', { 'w-poe-drag': poe, [$style.catOnly]: catOnly === 'above', 'w-roll-cat': catOnly === 'above' }]" :placeholder="t('min')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
                 ref="inputMinEl"
                 v-model.number="inputMin" :data-wheel-from="roll?.default.min" @focus="inputFocus($event, 'min')" @input="wheeled"
@@ -60,6 +60,10 @@
               <input :class="[$style['rollInput'], 'w-roll-input', { [$style.catOnly]: catOnly === 'below', 'w-roll-cat': catOnly === 'below' }]" :placeholder="t('max')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
                 ref="inputMaxEl"
                 v-model.number="inputMax" :data-wheel-from="roll?.default.max" @focus="inputFocus($event, 'max')" @input="wheeled">
+              <!-- woke: keep the line, drop its numbers: one click on hover (Guy, timeless jewel thread).
+                   Last in the box, so the inputs keep :first-of-type / :last-of-type. -->
+              <button v-if="hasNumbers" type="button" :class="$style.clearNums" data-clear-nums
+                title="Any value: empty both boxes" @click="clearNumbers">×</button>
             </div>
           </div>
           <filter-modifier-options v-else-if="miniFilter && rollOptions"
@@ -471,6 +475,17 @@ export default defineComponent({
       }),
       showBoundsTagGap: computed(() => Boolean(showTag.value || props.filter.not)),
       showRollPick: computed(() => canPickRoll(props.filter) && props.item.category !== ItemCategory.Map),
+      hasNumbers: computed(() => {
+        const roll = props.filter.roll
+        return roll != null && (typeof roll.min === 'number' || typeof roll.max === 'number')
+      }),
+      clearNumbers () {
+        const roll = props.filter.roll
+        if (!roll) return
+        roll.min = ''
+        roll.max = ''
+        props.filter.disabled = false
+      },
       inputFocus,
       wheeled,
       toggleFilter,
@@ -561,8 +576,8 @@ export default defineComponent({
   @apply px-1;
   @apply border border-transparent;
 
-  &:first-child { @apply rounded-l; }
-  &:last-child { @apply rounded-r; }
+  &:first-of-type { @apply rounded-l; }
+  &:last-of-type { @apply rounded-r; }
 
   &::placeholder {
     @apply text-gray-700;
@@ -576,6 +591,27 @@ export default defineComponent({
     cursor: none;
   }
 }
+
+/* woke: the × that empties both boxes, on hover only. It sits just left of the
+   min box, over the end of the mod's text, so it never covers a box you type in. */
+.nums { position: relative; }
+.clearNums {
+  display: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 100%;
+  width: 1.2rem;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 8, 6, 0.9);
+  color: var(--w-accent, theme('colors.gray.300'));
+  border: 1px solid var(--w-line, theme('colors.gray.700'));
+  @apply rounded-l;
+  line-height: 1;
+}
+.nums:hover .clearNums { display: flex; }
+.clearNums:hover { color: #fff; }
 
 .qualityLabel {
   padding-right: theme('spacing.1');

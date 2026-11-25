@@ -181,10 +181,10 @@ export const useNights = createGlobalState(() => {
     saveDraft(d)
     // Once a minute at most while nothing changes, so Ctrl+Space doesn't redo
     // its answers on every log line.
-    const sig = d ? `${skipVersion()}:${d.startedAt}:${d.segs.length}:${d.deaths.length}:${d.levels?.length ?? 0}:${d.segs[d.segs.length - 1]?.name}:${Math.floor(d.lastAt / 60_000)}` : ''
+    const sig = d ? `${skipVersion()}:${d.startedAt}:${d.segs.length}:${d.deaths.length}:${d.levels?.length ?? 0}:${d.segs[d.segs.length - 1]?.name}:${Math.floor(d.lastAt / 60_000)}:${d.afkAt ?? ''}` : ''
     if (sig === liveSig) return
     liveSig = sig
-    live.value = d && hasMaps(d) ? summarize(d) : null
+    live.value = d && hasMaps(d) ? { ...summarize(d), ...(d.afkAt != null ? { afkSince: d.afkAt } : {}) } : null
   }
   const keptDraft = () => draft
 

@@ -79,7 +79,8 @@ export function cardDropFacts (data: CardDropData | null, card: string): CardDro
 // "1 in 12", "1 in 4,300", "1 in 121k", "1 in 1.2M".
 export function oneInText (n: number): string {
   if (n < 10_000) return `1 in ${n.toLocaleString('en-US')}`
-  if (n < 1_000_000) return `1 in ${Math.round(n / 1000)}k`
+  const k = Math.round(n / 1000)
+  if (k < 1000) return `1 in ${k}k`
   return `1 in ${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
 }
 

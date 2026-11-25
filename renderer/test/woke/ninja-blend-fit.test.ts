@@ -9,14 +9,14 @@ vi.mock('@/web/Config', () => ({
   poeWebApi: () => 'www.pathofexile.com'
 }))
 
-/* eslint-disable import/first */
+/* eslint-disable import-x/first */
 import { createPresets } from '@/web/price-check/filters/create-presets'
 import { buildInsight } from '@/web/woke/price-insight/insight'
 import type { InsightListing } from '@/web/woke/price-insight/insight'
 import { buildBlend, headlinePrice } from '@/web/woke/price-insight/sources'
 import { ninjaFitsSearch } from '@/web/woke/price-insight/search-scope'
 import type { ParsedItem } from '@/parser'
-/* eslint-enable import/first */
+/* eslint-enable import-x/first */
 
 const NOW = Date.parse('2026-11-05T12:00:00Z')
 const OPTS = { divine: 180, now: NOW }
@@ -118,6 +118,17 @@ Corrupted`)
     expect(ninjaFitsSearch(clean, stats(clean), 'not-corrupted')).toBe(true)
     expect(ninjaFitsSearch(corrupted, stats(corrupted), 'any')).toBe(false)
     expect(ninjaFitsSearch(corrupted, stats(corrupted), 'corrupted')).toBe(false)
+  })
+
+  // poe.ninja's unique price is for the plain item, not one with a mod added
+  // from the search line (an implicit, an enchant).
+  it('is false when the search asks for an added mod', () => {
+    const text = fixture('items/unique-kaoms-heart.txt').replace('40(20-40)%', '23(20-40)%')
+    const kaom = parseItem(text)
+    const added = { statRef: '+# to maximum Life', kind: 'implicit', tradeId: ['implicit.stat_3299347043'], min: 30, max: '', disabled: false } as never
+    expect(ninjaFitsSearch(kaom, stats(kaom), undefined, false, [added])).toBe(false)
+    const off = { ...(added as object), disabled: true } as never
+    expect(ninjaFitsSearch(kaom, stats(kaom), undefined, false, [off])).toBe(true)
   })
 
   it('counts a good property roll', () => {

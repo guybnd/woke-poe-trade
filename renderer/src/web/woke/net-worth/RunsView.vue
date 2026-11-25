@@ -11,8 +11,8 @@
         <button v-for="n in pastNames" :key="n" type="button" :class="[$style.chip, { [$style.on]: n === name }]" @click="name = n">{{ n }}</button>
         <span class="w-dim text-xs" :class="$style.from">
           <template v-if="startAt == null">Refresh your stash once first</template>
-          <template v-else-if="from != null">From {{ clock(startAt) }} · <button type="button" :class="$style.link" @click="$emit('clear-from')">use the last read</button></template>
-          <template v-else>From {{ clock(startAt) }} <i class="fas fa-info-circle" :class="$style.info" title="The last stash read. To start earlier, click a point on the chart." /></template>
+          <template v-else-if="from != null">From {{ when(startAt) }} · <button type="button" :class="$style.link" @click="$emit('clear-from')">use the last read</button></template>
+          <template v-else>From {{ when(startAt) }} <i class="fas fa-info-circle" :class="$style.info" title="The last stash read. To start earlier, click a point on the chart." /></template>
         </span>
       </div>
       <!-- The kit (pick K1): last time's per-map costs for this name, priced
@@ -250,6 +250,8 @@ const signed = (chaos: number) => `${chaos > 0 ? '+' : chaos < 0 ? '−' : ''}${
 const tone = (n: number | null | undefined) => n == null || Math.abs(n) < 0.05 ? '' : n > 0 ? 'w-up' : 'w-down'
 const clock = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 const day = (ms: number) => new Date(ms).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) + ' ' + clock(ms)
+// A clock time today, the day too for anything older.
+const when = (ms: number) => new Date(ms).toDateString() === new Date().toDateString() ? clock(ms) : day(ms)
 const tipOf = (key: string | null, name: string, count?: number) => tipFor(props.tips, key, name, count)
 
 // Faustus listings and sales the stash hasn't seen (faustus.ts).
@@ -267,7 +269,7 @@ const soldSign = (r: OutsideRow): '+' | '−' | '' => r.before ? (r.collected ? 
 function markBefore (id: string, before: boolean) { edit(r => setBefore(r, id, before)) }
 const listedSub = (l: Sale) => {
   const ninja = stale(l) ? ninjaOf(l) : null
-  return `listed ${clock(l.at)}${stale(l) ? ` · ninja ${ninja != null ? amount(ninja) : '—'}` : ''}`
+  return `listed ${when(l.at)}${stale(l) ? ` · ninja ${ninja != null ? amount(ninja) : '—'}` : ''}`
 }
 const faustusInfo = 'Listed at Faustus during the run (your asking price), sold but not collected yet, and items you hold. Profit counts a sale once its currency is in your stash.'
 

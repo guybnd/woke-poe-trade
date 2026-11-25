@@ -158,6 +158,7 @@ import WokeFilterVerdictChip from '@/web/woke/loot-filter/FilterVerdictChip.vue'
 import FilterName from './filters/FilterName.vue'
 import { provideSwap } from '@/web/woke/harvest-swap/useSwap'
 import { provideStatActions } from '@/web/woke/price-insight/stat-actions'
+import { applyConquestPick, conquestPick } from '@/web/woke/related-family/conquest-pick'
 import { applyTickPrefs } from '@/web/woke/price-insight/tick-prefs'
 import { provideCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { WTabs } from '@/web/woke/ui'
@@ -433,6 +434,17 @@ export default defineComponent({
     provideStatActions(computed(() => props.item), itemStats,
       // The same range the item's other rows got (create-stat-filters.ts).
       () => props.item.rarity === ItemRarity.Normal ? 100 : widget.value.searchStatRange, swap)
+
+    // woke: a keystone clicked in the side list: that conqueror's line alone,
+    // any number, and the one search the click asked for.
+    watch(conquestPick, pick => {
+      if (!pick || toRaw(pick.item) !== toRaw(props.item)) return
+      conquestPick.value = null
+      if (!applyConquestPick(itemStats.value, pick.id)) return
+      cancelSearchHover()
+      doSearch.value = false
+      nextTick(() => { doSearch.value = true })
+    })
 
     watch(() => [props.item, doSearch.value], () => {
       // A new item or a cancelled search drops one still waiting for the listing.

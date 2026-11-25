@@ -97,7 +97,7 @@ import type { LogTail } from '../campaign/log-tail'
 import { followGameLog, onGameLog } from '../shared/game-log'
 import OfferRow from './OfferRow.vue'
 import OfferHistory from './OfferHistory.vue'
-import { LOG_REPLAY_MS, OPEN_FOR_MS, alreadyClosed, applyEvent, belongsInHistory, dismiss, front, markSent, markTraded, newBook, nextStep, prune, queue, recordFor, reopen, skip } from './book'
+import { LOG_REPLAY_MS, OPEN_FOR_MS, alreadyClosed, alreadyLogged, applyEvent, belongsInHistory, dismiss, front, markSent, markTraded, newBook, nextStep, prune, queue, recordFor, reopen, skip } from './book'
 import type { Offer, TradeBook, TradeRecord } from './book'
 import { DEFAULT_REPLIES, REPLY_LABELS, parseHotkeyTarget, replyText } from './widget'
 import type { ReplyId } from './widget'
@@ -253,6 +253,11 @@ function handle (line: string, live: boolean) {
     book.offers = book.offers.filter(o => o.id !== id)
     return
   }
+  if (!live && res.finished && alreadyLogged(log.trades.value, res.finished, lineAt)) {
+    const id = res.finished.id
+    book.offers = book.offers.filter(o => o.id !== id)
+    return
+  }
   if (res.finished) logTrade(res.finished, lineAt, false)
   if (res.added && live) announce(res.added)
   now.value = Date.now()
@@ -345,7 +350,8 @@ function restoreFromTail (tail: LogTail) {
 
 let stopFollowing: (() => void) | null = null
 let unmounted = false
-loadHistory().then(() => {
+// The sales log too: trades finished before the restart stay finished.
+Promise.all([loadHistory(), log.load()]).then(() => {
   if (unmounted) return
   stopFollowing = followGameLog({ since: () => null, onLines: () => {}, onTail: restoreFromTail })
 }).catch(() => {

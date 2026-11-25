@@ -138,6 +138,11 @@ describe('farming', () => {
     expect(s.mapMs).toBe(3000)
   })
 
+  it('an encounter a map opens is not a new map', () => {
+    expect(isMapArea('MapAtlasEncounterBoss')).toBe(false)
+    expect(isMapSideArea('MapAtlasEncounter_Foo')).toBe(true)
+  })
+
   it('a pinnacle boss fight is not a map', () => {
     expect(isMapArea('MapWorldsShapersRealm')).toBe(false)
     expect(isMapArea('MapWorldsPrimordialBoss3')).toBe(false)

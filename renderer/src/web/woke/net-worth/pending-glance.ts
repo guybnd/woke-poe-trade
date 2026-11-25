@@ -38,12 +38,13 @@ export function soldOf (firstSeen: Record<string, number>, sales: ReadonlyArray<
 
 const firstSeenOf = (g: PendingGlance) => Object.fromEntries(g.items.map(([id, at]) => [id, at]))
 
-// How many listings passed the stale line and haven't sold.
-export function staleIds (g: PendingGlance | null, sales: ReadonlyArray<{ id: string, at: number }>, now: number, staleDays = DEFAULT_STALE_DAYS): string[] {
+// How many listings passed the stale line and haven't sold. `out`: the ones
+// you left out (line-out-store.ts), as the Listed view leaves them out.
+export function staleIds (g: PendingGlance | null, sales: ReadonlyArray<{ id: string, at: number }>, now: number, staleDays = DEFAULT_STALE_DAYS, out: ReadonlySet<string> = new Set()): string[] {
   if (!g) return []
   const sold = soldOf(firstSeenOf(g), sales)
   const staleMs = Math.max(1, staleDays) * DAY_MS
-  return g.items.filter(([id, at]) => !sold.has(id) && now - at >= staleMs).map(([id]) => id)
+  return g.items.filter(([id, at]) => !sold.has(id) && !out.has(id) && now - at >= staleMs).map(([id]) => id)
 }
 export function staleCount (g: PendingGlance | null, sales: ReadonlyArray<{ id: string, at: number }>, now: number, staleDays = DEFAULT_STALE_DAYS): number {
   return staleIds(g, sales, now, staleDays).length
@@ -64,13 +65,14 @@ export function isListedWorth (x: unknown): x is ListedWorth {
 }
 
 // The unsold listings' worth: the window's price, else the ask.
-export function listedTotal (g: PendingGlance | null, w: ListedWorth | null, sales: ReadonlyArray<{ id: string, at: number }>, divine: number | null): number {
+// `out`: listings you left out (line-out-store.ts) count for nothing.
+export function listedTotal (g: PendingGlance | null, w: ListedWorth | null, sales: ReadonlyArray<{ id: string, at: number }>, divine: number | null, out: ReadonlySet<string> = new Set()): number {
   if (!g) return 0
   const worth = new Map(w && w.league === g.league ? w.items : [])
   const sold = soldOf(firstSeenOf(g), sales)
   let sum = 0
   for (const [id, , amount, currency] of g.items) {
-    if (sold.has(id)) continue
+    if (sold.has(id) || out.has(id)) continue
     const known = worth.get(id)
     if (known != null) sum += known
     else if (amount != null && currency === 'chaos') sum += amount

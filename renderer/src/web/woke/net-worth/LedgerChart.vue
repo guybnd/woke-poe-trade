@@ -136,7 +136,9 @@ const shown = computed<At | null>(() => {
   // Worked out again: the band or the mode can change under a pinned card.
   const i = props.series.findIndex(p => p.at === a.p.at)
   if (i < 0) return a
-  return { ...a, y: yOf(props.mode === 'total' ? topOf(i) : sumCats(a.p)) / H * 100, listed: listedOf(i) }
+  // The point itself too: the window slides and a new read can replace it.
+  const p = props.series[i]
+  return { p, x: xOf(p.at) / W * 100, y: yOf(props.mode === 'total' ? topOf(i) : sumCats(p)) / H * 100, listed: listedOf(i) }
 })
 const tipEl = shallowRef<HTMLElement | null>(null)
 const topTip = (t: string) => { const x = parseTop(t); return props.tipOf!(x.name, Math.abs(x.count)) }

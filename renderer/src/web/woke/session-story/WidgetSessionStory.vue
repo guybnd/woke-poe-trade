@@ -323,7 +323,7 @@ function showMe () {
 function peekText (s: NightStory): string {
   const p = profitOf(s)
   const profit = p != null ? ` · ${p > 0 ? '+' : ''}${formatChaos(p, s.divine)}` : ''
-  return `${formatDuration(s.endedAt - s.startedAt - (s.afkMs ?? 0))} · ${s.maps.length} maps${profit}`
+  return `${formatDuration(s.endedAt - s.startedAt - (s.afkMs ?? 0))} · ${s.maps.length} ${s.maps.length === 1 ? 'map' : 'maps'}${profit}`
 }
 
 // Session analytics on Map history or Nights; placed the first time if it isn't yet.

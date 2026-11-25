@@ -206,13 +206,15 @@ describe('bug hunt: build details', () => {
     expect(item.mods).toEqual(['First pick', 'Second pick', 'Third pick', 'Always there'])
   })
 
-  it.each(['20% quality', 'Cold 100%', 'Dmg 10.5', 'Full Plate', 'Template', 'Translate', 'Midgame {3}', 'Early Game {4}', '2 Stone', '4 Stone', 'Leap Slam Day 3', 'Pre-T16', '5-link', '6-linked'])('"%s" is not a stage', (title) => {
+  it.each(['20% quality', 'Cold 100%', 'Dmg 10.5', 'Full Plate', 'Template', 'Translate', 'Midgame {3}', 'Early Game {4}', '2 Stone', '4 Stone', 'Leap Slam Day 3', 'Pre-T16', '5-link', '6-linked', 'Buy a 6 link', 'Get a 5 Link Chest'])('"%s" is not a stage', (title) => {
     expect(stageOf(title)).toBeNull()
   })
 
   it('still reads real stage titles', () => {
     expect(stageOf('Level 28')).toEqual({ kind: 'level', at: 28 })
     expect(stageOf('Act 5')).toEqual({ kind: 'act', at: 5 })
+    expect(stageOf('A6 Kitava')).toEqual({ kind: 'act', at: 6 })
+    expect(stageOf('Act6')).toEqual({ kind: 'act', at: 6 })
     expect(stageOf('Late game')).toEqual({ kind: 'end', at: 70 })
     expect(stageOf('Endgame')).toEqual({ kind: 'end', at: 70 })
     for (const t of ['Lategame', 'LateGame', 'Late_game', 'Latemaps', 'late90', 'Endgame2', 'Final', 'Endgame {1,2}']) {

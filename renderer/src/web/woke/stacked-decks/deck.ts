@@ -234,6 +234,12 @@ export function recordPrice (r: DeckRecord): PriceOf {
   return name => m.get(name) ?? null
 }
 
+// A saved session keeps prices only for the cards it drew; what decks should
+// give needs every card, so the rest take today's price.
+export function savedOrToday (saved: PriceOf, today: PriceOf): PriceOf {
+  return name => saved(name) ?? today(name)
+}
+
 // --- Totals ---
 
 export interface CardRow {
