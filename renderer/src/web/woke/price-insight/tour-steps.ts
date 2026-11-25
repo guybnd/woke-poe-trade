@@ -16,8 +16,11 @@ export type TourBit = string | { kbd: string }
 export interface TourStep {
   id: 'mods' | 'price' | 'listing'
   title: string
-  // What the card points at; a step whose target isn't on screen is skipped.
+  // What the step is about; a step whose target isn't on screen is skipped.
   target: string
+  // What the card points at, when not the target, and on which side of it.
+  anchor?: string
+  above?: true
   text: TourBit[]
 }
 
@@ -37,8 +40,12 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'listing',
     title: 'Listings',
-    target: '#price-window .w-pc-table tbody tr:not(.w-pc-yours):not(:has(.w-pc-skel))',
-    text: ['Hover a listing for its item. ', { kbd: 'Right-click' }, ' it for wiki, trade and copy. Travel goes to the seller\'s hideout.']
+    // The item listings in the Improved view (not the exchange's, not Classic).
+    target: '#price-window [data-tour="listings"] tbody tr:not(.w-pc-yours):not(:has(.w-pc-skel))',
+    // Over the list, so it hides none of it.
+    anchor: '#price-window [data-tour="listings"] thead',
+    above: true,
+    text: ['Highlighted prices are the listings the trade price comes from. Dim rows are left out or over a week old. The time on the right turns green under an hour and red after a week.']
   }
 ]
 

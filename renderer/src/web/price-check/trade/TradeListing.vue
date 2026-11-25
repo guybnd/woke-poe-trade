@@ -72,7 +72,7 @@
         :stale="stale" />
     </teleport>
     <div ref="scrollEl" class="w-pc-scroll layout-column overflow-y-auto overflow-x-hidden">
-      <table class="w-pc-table table-stripped w-full">
+      <table class="w-pc-table table-stripped w-full" :data-tour="improved ? 'listings' : undefined">
         <thead>
           <tr class="text-left">
             <th :class="[$style.tableHeading, 'text-right']">

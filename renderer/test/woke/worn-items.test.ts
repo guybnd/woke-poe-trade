@@ -123,6 +123,12 @@ describe('worn items', () => {
     expect(r.verdict).toBe('same')
   })
 
+  it('keeps a jewel\'s radius', () => {
+    const jewel = wornItem({ frameType: 3, name: 'Elegant Hubris', typeLine: 'Timeless Jewel', baseType: 'Timeless Jewel', properties: [{ name: 'Radius', values: [['Large', 0]], displayMode: 0 }], explicitMods: ['Commissioned 148980 coins to commemorate Caspiro'] })
+    expect(jewel.radius).toBe('Large')
+    expect(wornItem({ frameType: 2, name: 'X', typeLine: 'Leather Belt', baseType: 'Leather Belt' }).radius).toBeUndefined()
+  })
+
   it('reads foil uniques, normal bases by their base and Foulborn mods', () => {
     const items = parseWornItems(JSON.stringify({ items: [
       { ...TIMEPIECE, frameType: 10 },

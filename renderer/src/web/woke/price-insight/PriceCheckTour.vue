@@ -24,7 +24,7 @@
 // Mounted by PriceCheckWindow only while the window shows and the tour may
 // still run; one mount per check. A showing counts once per check (not per
 // overlay open, as window tips do): checks from the hotkey don't open it.
-import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { hintPlaceOk, hintsOff, isHintDone, retireHint, tourHeld, tourUp } from '../shared/hints'
 import { WButton, WKbd } from '../ui'
@@ -36,6 +36,14 @@ const GAP = 8
 // A sample check from What's new: not now.
 const held = tourHeld()
 
+const card = shallowRef<HTMLElement>()
+// The card's size, measured after it draws (each step's text differs).
+const size = shallowRef({ w: 0, h: 0 })
+function measure () {
+  const el = card.value
+  if (el && (el.offsetWidth !== size.value.w || el.offsetHeight !== size.value.h)) size.value = { w: el.offsetWidth, h: el.offsetHeight }
+}
+
 // What each step points at, found again as the window fills in (listings
 // come after the price). Polled only while this check's tour may show.
 const found = shallowRef<Record<string, DOMRect | null>>({})
@@ -43,12 +51,14 @@ function look () {
   const out: Record<string, DOMRect | null> = {}
   let same = true
   for (const s of TOUR_STEPS) {
-    const r = document.querySelector<HTMLElement>(s.target)?.getBoundingClientRect()
+    const there = document.querySelector<HTMLElement>(s.target)?.getBoundingClientRect()
+    const r = there && s.anchor ? document.querySelector<HTMLElement>(s.anchor)?.getBoundingClientRect() : there
     out[s.id] = r && r.width > 0 && r.height > 0 ? r : null
     const was = found.value[s.id]
     if (was?.top !== out[s.id]?.top || was?.left !== out[s.id]?.left || was?.bottom !== out[s.id]?.bottom) same = false
   }
   if (!same) found.value = out
+  measure()
 }
 let timer = 0
 function stopLooking () { if (timer) { window.clearInterval(timer); timer = 0 } }
@@ -95,19 +105,19 @@ onBeforeUnmount(() => {
   if (sawEnd) retireHint(PRICE_CHECK_TOUR)
 })
 
-// By the target, inside the price window: under it, or over it when the card
-// wouldn't fit below. Coordinates are the window's own.
-const card = shallowRef<HTMLElement>()
+watch([card, step], () => nextTick(measure), { immediate: true })
+// By the target, inside the price window: under it, or over it when the step
+// asks (`above`) or the card wouldn't fit below. Coordinates are the window's own.
 const box = computed(() => {
   const r = step.value ? found.value[step.value.id] : null
   const win = (card.value?.offsetParent as HTMLElement | null)?.getBoundingClientRect()
-  if (!r || !win || !card.value) return null
-  const w = card.value.offsetWidth
-  const h = card.value.offsetHeight
+  const { w, h } = size.value
+  if (!r || !win || !w) return null
   const aim = r.left + Math.min(r.width, 120) / 2 - win.left
   const x = Math.max(GAP, Math.min(aim - 24, win.width - w - GAP))
   const below = r.bottom - win.top + GAP
-  const above = below + h > win.height - GAP && r.top - win.top - GAP - h >= GAP
+  const roomAbove = r.top - win.top - GAP - h >= GAP
+  const above = roomAbove && (step.value!.above === true || below + h > win.height - GAP)
   const y = above ? r.top - win.top - GAP - h : Math.min(below, win.height - h - GAP)
   const arrow = Math.max(12, Math.min(aim - x, w - 20))
   return { x, y, arrow, above }
