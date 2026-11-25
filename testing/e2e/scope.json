@@ -256,6 +256,13 @@
    "renderer/src/parser/",
    "renderer/src/web/price-check/"
   ],
+  "mod-tip.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/price-insight/",
+   "renderer/src/web/woke/ui/tooltip/"
+  ],
   "net-worth.spec.ts": [
    "main/src/woke/personal/",
    "main/src/woke/stash-digits-data.ts",

@@ -126,7 +126,7 @@ import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
 import RateTimePick from '../shared/RateTimePick.vue'
 import { loadRuns, runsDoc, stopPhase } from './run-store'
-import { runTimeIn } from './run-time'
+import { runTimeIn, timeOrKept } from './run-time'
 import Coin from './Coin.vue'
 import LedgerChart from './LedgerChart.vue'
 import { RATE_WINDOWS, rateTip, startOfDay } from './play-time'
@@ -259,7 +259,7 @@ const spent = shallowRef<Record<'map' | 'play' | 'hub' | 'off', number> | null>(
 watch(() => props.run ? [props.run.startAt, props.run.timeTo ?? props.run.at] as const : null, (span) => {
   if (!span) { spent.value = null; return }
   const [from, to] = span
-  runTimeIn(from, to).then((t) => { if (props.run?.startAt === from && (props.run.timeTo ?? props.run.at) === to) spent.value = t?.ms ?? null }).catch(() => {})
+  runTimeIn(from, to).then((t) => { if (props.run?.startAt === from && (props.run.timeTo ?? props.run.at) === to) spent.value = timeOrKept(t, props.run.time)?.ms ?? null }).catch(() => {})
 }, { immediate: true })
 const time = computed(() => {
   const t = spent.value

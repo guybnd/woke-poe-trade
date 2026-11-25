@@ -5,7 +5,7 @@ import { attributeNeeds, buildTip, dropLines, gearStats, kindOfNinjaType, parseG
 import type { TipLine, TipModel, TipPack } from '@/web/woke/ui/tooltip/tip-content'
 
 const read = (file: string) => JSON.parse(readFileSync(join(__dirname, '../../public/data/tips', `${file}.json`), 'utf8'))
-const pack: TipPack = { uniques: read('uniques'), gems: read('gems'), items: read('items'), bases: read('bases'), drops: read('drops') }
+const pack: TipPack = { 'uniques': read('uniques'), 'unique-extras': read('unique-extras'), 'gems': read('gems'), 'items': read('items'), 'bases': read('bases'), 'base-extras': read('base-extras'), 'drops': read('drops') }
 
 const text = (line: TipLine) => line.map(p => p.text).join('')
 const all = (model: TipModel | null) => (model?.sections ?? []).flat().map(text)
@@ -298,5 +298,60 @@ describe('where a unique drops', () => {
   it('keeps a long source short', () => {
     const tip = buildTip({ ...pack, drops: { Headhunter: { r: 1, t: 'x'.repeat(400) } } }, { name: 'Headhunter', kind: 'unique' })
     expect(all(tip).every(l => l.length <= 180)).toBe(true)
+  })
+})
+
+describe('what a base gives before its mods', () => {
+  const base = (name: string) => all(buildTip(pack, { name, kind: 'item' }))
+
+  it('shows a ring\'s implicit', () => {
+    expect(base('Amethyst Ring')).toContain('+(13-19)% to Chaos Resistance')
+    expect(base('Crystal Belt')).toContain('+(60-100) to maximum Energy Shield')
+  })
+  it('shows a life flask\'s recovery and charges', () => {
+    const lines = base('Divine Life Flask')
+    expect(lines).toContain('Recovers 2400 Life over 3.50 Seconds')
+    expect(lines).toContain('Consumes 15 of 45 Charges on use')
+  })
+  it('shows a hybrid flask\'s life and mana', () => {
+    const lines = base('Large Hybrid Flask')
+    expect(lines.some(l => /^Recovers \d+ Life over/.test(l))).toBe(true)
+    expect(lines.some(l => /^Recovers \d+ Mana over/.test(l))).toBe(true)
+  })
+  it('shows a utility flask\'s duration and effect', () => {
+    const lines = base('Quicksilver Flask')
+    expect(lines).toContain('Lasts 6.00 Seconds')
+    expect(lines).toContain('40% increased Movement Speed')
+  })
+  it('puts a flask\'s effect under its charges, above the requirements', () => {
+    const tip = buildTip(pack, { name: 'Ruby Flask', kind: 'item' })!
+    const first = tip.sections[0].map(l => l.map(p => p.text).join(''))
+    expect(first).toContain('+40% to Fire Resistance')
+    expect(first.indexOf('+40% to Fire Resistance')).toBeGreaterThan(first.findIndex(l => l.startsWith('Consumes ')))
+  })
+  it('shows the current implicit of a quiver with a legacy namesake', () => {
+    expect(base('Blunt Arrow Quiver')).toContain('Adds (7-9) to (13-16) Physical Damage to Attacks')
+  })
+  it('shows a tincture\'s mana burn, cooldown and implicit', () => {
+    const lines = base('Ashbark Tincture')
+    expect(lines.some(l => l.startsWith('Inflicts Mana Burn every '))).toBe(true)
+    expect(lines.some(l => l.endsWith(' Second Cooldown When Deactivated'))).toBe(true)
+    expect(lines).toContain('25% chance to Ignite with Melee Weapons')
+  })
+})
+
+describe('uniques poe.ninja has no listing of', () => {
+  it('shows them from Path of Building\'s text', () => {
+    const tip = buildTip(pack, { name: 'Corpse Rose', kind: 'unique' })!
+    expect(tip.base).toBe('Imbued Wand')
+    expect(all(tip)).toContain('(20-30)% increased Cast Speed')
+  })
+  it('shows only the lines every copy has for a pick-one unique', () => {
+    const lines = all(buildTip(pack, { name: 'String of Servitude', kind: 'unique' }))
+    expect(lines).toContain('Implicit Modifier magnitudes are tripled')
+    expect(lines).not.toContain('+(42-48)% to all Elemental Resistances')
+  })
+  it('never lists Corrupted as a mod', () => {
+    expect(Object.values(pack['unique-extras']!).every(u => u.v.every(v => ![...(v.i ?? []), ...(v.e ?? [])].includes('Corrupted')))).toBe(true)
   })
 })

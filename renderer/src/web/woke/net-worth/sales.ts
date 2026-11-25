@@ -2,7 +2,9 @@
 // window: what each sold for in chaos, its type, totals per range and type,
 // and which sales fall in a refresh. Pure: no Vue, no requests.
 
-import { itemKey } from './valuation'
+import { stashKey } from './valuation'
+import type { PriceOf } from './valuation'
+import { matchRank } from '../search/search'
 
 // What main sends (trade-history.ts Sale).
 export interface Sale {
@@ -229,18 +231,19 @@ export function salesInWindow (sales: Sale[], from: number | null, to: number): 
   return sales.filter(s => s.at <= to && (from == null ? s.at > to - 3_600_000 : s.at > from))
 }
 
-// The stash's key for a sale's item (valuation.ts itemKey), to find its line.
-export function saleKey (s: Sale): string {
-  return itemKey({ name: s.name, typeLine: s.typeLine, baseType: s.baseType, frame: s.frameType, stack: s.stack, icon: s.icon, gemLevel: s.gemLevel, quality: s.quality, mapTier: s.mapTier, corrupted: s.corrupted, links: s.links })
+// The stash's key for a sale's item (valuation.ts stashKey), to find its line.
+// identify: the unique an unidentified one is (PriceOf.identify).
+export function saleKey (s: Sale, identify?: PriceOf['identify']): string {
+  return stashKey({ name: s.name, typeLine: s.typeLine, baseType: s.baseType, frame: s.frameType, stack: s.stack, icon: s.icon, gemLevel: s.gemLevel, quality: s.quality, mapTier: s.mapTier, corrupted: s.corrupted, links: s.links }, identify)
 }
 
 // The change list's lines with the sold items taken out of their removed
 // lines, by item and count: 10 scarabs sold out of 60 gone leaves 50 (and
 // their share of the chaos). Added lines are never touched.
-export function withoutSold<L extends { key: string, count: number, chaos: number, dir: 'add' | 'remove' }> (lines: L[], sales: Sale[]): L[] {
+export function withoutSold<L extends { key: string, count: number, chaos: number, dir: 'add' | 'remove' }> (lines: L[], sales: Sale[], identify?: PriceOf['identify']): L[] {
   if (!sales.length) return lines
   const sold = new Map<string, number>()
-  for (const s of sales) { const k = saleKey(s); sold.set(k, (sold.get(k) ?? 0) + s.stack) }
+  for (const s of sales) { const k = saleKey(s, identify); sold.set(k, (sold.get(k) ?? 0) + s.stack) }
   const out: L[] = []
   for (const l of lines) {
     const n = l.dir === 'remove' ? sold.get(l.key) ?? 0 : 0
@@ -253,12 +256,9 @@ export function withoutSold<L extends { key: string, count: number, chaos: numbe
 
 // Ctrl+Space: sales whose name has every word of the query.
 export function searchSales (sales: Sale[], query: string, limit = 8): Sale[] {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
-  if (!words.length) return []
-  return sales.filter(s => {
-    const text = `${s.name} ${s.typeLine}`.toLowerCase()
-    return words.every(w => text.includes(w))
-  }).slice(0, limit)
+  if (!query.trim()) return []
+  // Folds accents and apostrophes like the other results ("kaoms" finds Kaom's).
+  return sales.filter(s => matchRank(`${s.name} ${s.typeLine}`, query) >= 0).slice(0, limit)
 }
 
 // Sales per day for the range, oldest first (the Sales view's bars).

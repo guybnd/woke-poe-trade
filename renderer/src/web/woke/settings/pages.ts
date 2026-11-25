@@ -192,10 +192,10 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     group: 'modules',
     sub: 'Trade & prices',
     icon: modulePageIcon('market'),
-    description: 'Movers, watchlist, flips and dust from poe.ninja, and Wealthy Exile.',
-    modules: ['market', 'scarab-flip', 'disenchant', 'wealthy-exile'],
-    widgets: ['woke-market-tracker', 'woke-scarab-flip', 'woke-disenchant', 'woke-wealthy-exile'],
-    find: ['Market', 'Watchlist', 'Flips', 'Scarab flip', 'Scarab vendor recipe', 'Harvest reroll', 'Lifeforce', 'Stash outlines', 'Catalyst', 'Delirium orb', 'Disenchant', 'Thaumaturgic Dust', 'Kingsmarch', 'Gold fee', 'Wealthy Exile', 'Net worth']
+    description: 'Movers, watchlist, flips and dust from poe.ninja.',
+    modules: ['market', 'scarab-flip', 'disenchant'],
+    widgets: ['woke-market-tracker', 'woke-scarab-flip', 'woke-disenchant'],
+    find: ['Market', 'Watchlist', 'Flips', 'Scarab flip', 'Scarab vendor recipe', 'Harvest reroll', 'Lifeforce', 'Stash outlines', 'Catalyst', 'Delirium orb', 'Disenchant', 'Thaumaturgic Dust', 'Kingsmarch', 'Gold fee', 'Net worth']
   },
   {
     id: 'campaign',

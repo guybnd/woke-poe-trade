@@ -49,6 +49,19 @@ describe('maps from Client.txt', () => {
     expect(log.current?.charLevel).toBe(95)
   })
 
+  it('counts a side area you portal back into from the hideout as the map', () => {
+    const { log, left, done } = follow([
+      area('21:00:00', 'MapWorldsStrand', '11'),
+      area('21:02:00', 'MapSideArea1', '12'),
+      area('21:03:00', 'HideoutChurch', '1', 68),
+      area('21:05:00', 'MapSideArea1', '12'),
+      area('21:06:00', 'HideoutChurch', '1', 68)
+    ])
+    expect(left.map(r => r.mapMs)).toEqual([3 * 60_000, 4 * 60_000])
+    expect(done).toHaveLength(0)
+    expect(log.current?.name).toBe('Strand')
+  })
+
   it('learns the character from a level-up inside the first map', () => {
     const { log } = follow([area('21:02:00', 'MapWorldsStrand', '11'), level('21:03:00', 90)])
     expect(log.current).toMatchObject({ char: 'whekq', charLevel: 89, levelsGained: 1 })

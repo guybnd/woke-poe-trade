@@ -4,10 +4,10 @@
 import { computed, shallowRef } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { hostRequest } from '../shared/host'
-import { DEFAULT_JUICE_WEIGHTS, defaultProfile, juiceScore, rateMods, shortLabel, VERDICT_LABEL as VERDICT_WORD } from './rules'
+import { DEFAULT_JUICE_WEIGHTS, defaultProfile, juiceScore, rateMods, shortLabel, withOtherWordings, VERDICT_LABEL as VERDICT_WORD } from './rules'
 import type { ModRating, Verdict } from './rules'
 import { TooltipMatcher } from './tooltip-parse'
-import { allAreaMods } from './data'
+import { allAreaMods, sameSenseWordings, statWordings } from './data'
 import { findMapModsConfig } from './check'
 import { activeProfile, MAP_MODS_TYPE } from './widget'
 import type { MapModsWidget } from './widget'
@@ -75,13 +75,19 @@ export function onReading (reading: ScanReading, alertOnPass: boolean) {
   const profile = cfg ? activeProfile(cfg) : defaultProfile()
   // Mods the user rated are always compared in full, never skipped by the
   // first-word shortcut.
-  matcher.setAlwaysCheck([...Object.keys(profile.ratings ?? {}), ...Object.keys(profile.mins ?? {})])
+  // A rating counts for its stat's other wordings that say the same thing, so
+  // those are compared in full too.
+  const rated = Object.keys(profile.ratings ?? {})
+  matcher.setAlwaysCheck([...rated, ...rated.flatMap(sameSenseWordings), ...Object.keys(profile.mins ?? {})])
   const scanned = matcher.parse(reading.lines)
   if (!scanned) {
     current.value = null
     return
   }
-  const verdict = rateMods(scanned.mods, profile)
+  // As the map card rates them: a rating saved under another wording of the
+  // mod's stat ("Areas contain" for "Area contains") counts.
+  const ratings = withOtherWordings(profile.ratings ?? {}, scanned.mods.map(m => ({ matcher: m.matcher, wordings: statWordings(m.matcher) })))
+  const verdict = rateMods(scanned.mods, { ...profile, ratings })
   const juice = juiceScore({ ...scanned.props, goodMods: verdict.good.length }, cfg?.weights ?? DEFAULT_JUICE_WEIGHTS)
   const flagged = [...verdict.deadly, ...verdict.warn, ...verdict.good]
     .map(m => ({ matcher: m.matcher, text: m.text || m.matcher, label: shortLabel(m.matcher), rating: m.rating }))

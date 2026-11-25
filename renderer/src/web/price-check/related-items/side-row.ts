@@ -4,6 +4,7 @@
 import type { BaseType } from '@/assets/data'
 import type { CurrencyValue } from '@/web/background/Prices'
 import type { ItemMenuRef } from '@/web/woke/ui/tooltip/item-menu-logic'
+import type { ItemTipRef } from '@/web/woke/ui/tooltip/item-tip'
 import { canPriceCheck } from '@/web/woke/ui/tooltip/item-price-check'
 
 export interface SideRow {
@@ -19,8 +20,15 @@ export interface SideRow {
   // woke: a recipe part's count, and the caption above a recipe's result row.
   qty?: number
   lead?: string
+  // How many of the checked item a card's full stack gives: "→ 2".
+  gives?: number
   // Said after the name ("corrupted" on a card's reward).
   tag?: string
+  // The tag is a plain note, not a warning (red is for "corrupted").
+  ownTag?: boolean
+  // woke: a second name after the item's, with its own tooltip (the keystone
+  // an Abyss conquest jewel gives).
+  sub?: { text: string, tip: ItemTipRef | null }
 }
 
 const KIND_OF_NS: Partial<Record<BaseType['namespace'], Partial<ItemMenuRef>>> = {

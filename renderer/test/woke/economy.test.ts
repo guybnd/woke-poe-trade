@@ -132,6 +132,27 @@ describe('essence corruption', () => {
     expect(rateMonolith(plain, MEDS, price).verdict).not.toBe('corrupt')
   })
 
+  it('decides by the rule of thumb and shows only the best case, with no guessed odds', () => {
+    // Deafening is the top tier, so an upgrade keeps them; the best case is Misery (6c) turning into Horror (45c).
+    const meds = parseMonolith(['Deafening Essence of Misery', 'Shrieking Essence of Greed'])!
+    const r = rateMonolith(meds, MEDS, price, 1)
+    expect(r.verdict).toBe('corrupt')
+    expect(r.estimate?.now).toBe(6.5)
+    expect(r.estimate?.best).toBe(45.5)
+    expect(r.estimate?.bestGain).toBe(38)
+    // Without a flagged essence it never says corrupt, whatever an upgrade is worth.
+    const plain = parseMonolith(['Shrieking Essence of Greed'])!
+    expect(rateMonolith(plain, MEDS, name => name.startsWith('Deafening') ? 500 : price(name), 1).verdict).toBe('open')
+  })
+
+  it('leaves an unpriced Misery out of the best case instead of counting it as free', () => {
+    const m = parseMonolith(['Screaming Essence of Misery', 'Shrieking Essence of Greed'])!
+    const r = rateMonolith(m, MEDS, price, 1)
+    expect(r.verdict).toBe('corrupt')
+    expect(r.estimate?.best).toBe(0.5)
+    expect(r.estimate?.complete).toBe(false)
+  })
+
   it('knows only essences that exist', () => {
     // Every essence the game has (APT's item data), and nothing else.
     const items = fs.readFileSync(path.join(__dirname, '../../public/data/en/items.ndjson'), 'utf8')

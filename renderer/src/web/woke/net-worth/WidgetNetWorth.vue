@@ -54,6 +54,7 @@ import { isRunGlance, runGlanceKey } from './runs'
 import type { RunGlance } from './runs'
 import type { LedgerPoint } from './ledger'
 import { isListedWorth, isPendingGlance, keptSales, listedGlance, listedOpenStale, listedTotal, listedWorth, listedWorthKey, pendingGlanceKey, staleIds, DEFAULT_STALE_DAYS } from './pending-glance'
+import { lineOutDoc, loadLineOut, outIdsOf } from './line-out-store'
 import { useZone } from '../shared/zone'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { useGoto } from '../tab-bar/goto'
@@ -238,6 +239,7 @@ watch(leagueId, (league) => {
   listedGlance.value = null
   glanceSales.value = []
   if (!league || !Host.isElectron) return
+  loadLineOut(league).catch(() => {})
   hostRequest('doc-get', { collection: DOCS, key: pendingGlanceKey(league) })
     .then((g) => { if (leagueId.value === league && listedGlance.value == null && isPendingGlance(g) && g.league === league) listedGlance.value = g })
     .catch(() => {})
@@ -246,13 +248,15 @@ watch(leagueId, (league) => {
     .then((w) => { if (leagueId.value === league && listedWorth.value == null && isListedWorth(w) && w.league === league) listedWorth.value = w })
     .catch(() => {})
 }, { immediate: true })
+// Listings you left out (line-out-store.ts): out of the total and stale count.
+const listedOut = computed(() => outIdsOf(lineOutDoc.value, leagueId.value, 'listed'))
 // The At Faustus box (countListed): the card's total adds your unsold
 // listings, as the window's does.
 const listedChaos = computed(() => {
   const g = listedGlance.value
   if (props.config.countListed === false || !g || g.league !== leagueId.value) return 0
   const kept = keptSales.value?.league === g.league ? keptSales.value.sales : null
-  return listedTotal(g, listedWorth.value, kept ?? glanceSales.value, glance.value?.divine ?? null)
+  return listedTotal(g, listedWorth.value, kept ?? glanceSales.value, glance.value?.divine ?? null, listedOut.value)
 })
 const salesOk = (r: unknown, league: string): r is { league: string, sales: Array<{ id: string, at: number }> } =>
   !!r && typeof r === 'object' && (r as { league?: unknown }).league === league && Array.isArray((r as { sales?: unknown }).sales)
@@ -270,7 +274,7 @@ const staleList = computed(() => {
   const g = listedGlance.value
   if (!g || g.league !== leagueId.value) return []
   const kept = keptSales.value?.league === g.league ? keptSales.value.sales : null
-  return staleIds(g, kept ?? glanceSales.value, nowMinute.value, props.config.staleDays)
+  return staleIds(g, kept ?? glanceSales.value, nowMinute.value, props.config.staleDays, listedOut.value)
 })
 const staleListed = computed(() => staleList.value.length)
 // Hidden from the card: back once a listing that wasn't stale then is.

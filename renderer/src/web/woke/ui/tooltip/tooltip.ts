@@ -94,7 +94,21 @@ export interface PassiveTip {
   note?: string
 }
 
-export type TipContent = GemTip | ItemTip | LookupTip | SwapTip | PassiveTip
+// A price check mod row's tiers on its item class (price-insight/mod-tip.ts):
+// each tier's range and the item level it needs, the row's own lit, and the
+// bench craft for the same line.
+export interface ModTip {
+  kind: 'mod'
+  title: string
+  // "Prefix · Body Armour"
+  sub: string
+  steps: Array<{ tier: number, min: number, max: number, level: number }>
+  mine: number
+  itemLevel?: number
+  bench?: { text: string, cost: string, where: string }
+}
+
+export type TipContent = GemTip | ItemTip | LookupTip | SwapTip | PassiveTip | ModTip
 
 export const tip = shallowRef<{ content: TipContent, anchor: DOMRect } | null>(null)
 

@@ -81,13 +81,17 @@ export function feedMarks (m: PlayMarks, lines: readonly string[]): PlayMarks {
     } else {
       const ev = parseLogLine(line)
       if (ev?.kind === 'area') {
+        const from = here
         here = stateOfArea(ev.areaId)
         push(marks, at, here)
         const boss = isBossArea(ev.areaId)
+        // A boss in a map's side area (Starfall Crater) is part of that map,
+        // not a fight of its own: the run's per-fight costs would count again.
+        const inMap = boss && from === 'map' && isMapSideArea(ev.areaId)
         if (boss || isFarmedMap(ev.areaId)) {
           const key = `${ev.areaId}:${ev.seed ?? ''}`
           // Without a seed a map can't be told apart: every entry counts.
-          if (!ev.seed || !recent.includes(key)) (boss ? fights : maps).push(at)
+          if (!inMap && (!ev.seed || !recent.includes(key))) (boss ? fights : maps).push(at)
           recent = [...recent.filter(k => k !== key), key].slice(-RECENT_MAPS)
         }
       }

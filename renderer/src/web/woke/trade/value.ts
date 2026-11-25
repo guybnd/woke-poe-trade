@@ -22,3 +22,8 @@ export function bulkDelta (o: { bulk: boolean, item: string, qty: number, price:
   if (paid == null || one == null || one <= 0 || o.qty <= 0) return null
   return paid / (one * o.qty) - 1
 }
+
+// Green when the price is good for you: over value when selling, under it when buying.
+export function deltaTone (dir: 'sell' | 'buy', delta: number): 'w-up' | 'w-down' {
+  return (dir === 'buy' ? delta <= 0 : delta >= 0) ? 'w-up' : 'w-down'
+}

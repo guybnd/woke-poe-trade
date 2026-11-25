@@ -46,7 +46,7 @@
     <button v-for="(mod, i) in result.verdict.mods" :key="`${i}:${mod.matcher}`" type="button"
       :class="[$style.mod, { 'w-dim': mod.rating === 'ok' }]"
       :title="`Click to change: ${RATING_LABEL[mod.rating]}`"
-      @click="cycle(mod.matcher, mod.rating)">
+      @click="cycle(mod)">
       <span :class="[$style.dot, $style[mod.rating]]" />
       <span class="flex-1 text-left">{{ mod.text }}</span>
       <span v-if="mod.rating !== 'ok'" :class="[$style.tag, $style[mod.rating]]">{{ RATING_LABEL[mod.rating] }}</span>
@@ -62,8 +62,8 @@
 import { computed } from 'vue'
 import { WPanel } from '../ui'
 import { heistRowOf } from './data'
-import { modRatings, nextModRating, setModRatings, shortLabel, VERDICT_LABEL, withRating } from './rules'
-import type { ModRating } from './rules'
+import { modRatings, nextModRating, setModRatings, shortLabel, VERDICT_LABEL, withModRating } from './rules'
+import type { CheckedMod, ModRating } from './rules'
 import { activeProfile } from './widget'
 import type { MapModsWidget } from './widget'
 import { isUnsure } from './check'
@@ -98,12 +98,12 @@ const headline = computed(() => {
   return "Nothing your build can't run"
 })
 
-function cycle (matcher: string, current: ModRating) {
+function cycle (mod: CheckedMod) {
   const profile = activeProfile(props.config)
-  const next = nextModRating(current)
+  const next = nextModRating(mod.rating)
   const mode = props.result.mode
-  const key = mode === 'heist' ? heistRowOf(matcher) ?? matcher : matcher
-  setModRatings(profile, mode, withRating(modRatings(profile, mode), [key], next))
+  const key = mode === 'heist' ? heistRowOf(mod.matcher) ?? mod.matcher : mod.matcher
+  setModRatings(profile, mode, withModRating(modRatings(profile, mode), key, mod.wordings ?? [], next))
 }
 </script>
 

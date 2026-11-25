@@ -1,7 +1,7 @@
 // The family list beside a bulk price check: which items share a family.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { ITEM_BY_REF, ITEMS_ITERATOR } from '@/assets/data'
-import { familyOf, familyRows } from '@/web/woke/related-family/family'
+import { familiesOf, familyOf, familyRows } from '@/web/woke/related-family/family'
 import { loadGameData } from '../helpers/game-data'
 
 beforeAll(loadGameData)
@@ -46,15 +46,37 @@ describe('related family', () => {
     expect(names('Imbued Catalyst')).toContain('Tainted Catalyst')
   })
 
-  it('adds the influence orbs the name pattern misses', () => {
-    expect(names("Hunter's Exalted Orb")).toEqual(expect.arrayContaining(["Awakener's Orb", 'Orb of Dominance', "Elder's Exalted Orb"]))
-    expect(fam("Awakener's Orb")?.label).toBe('Influence orbs')
+  it('lists every exalt for an exalt, with the ones the name pattern misses', () => {
+    const exalts = ['Exalted Orb', 'Eldritch Exalted Orb', 'Veiled Exalted Orb', "Hunter's Exalted Orb", "Warlord's Exalted Orb", "Crusader's Exalted Orb", "Redeemer's Exalted Orb", "Shaper's Exalted Orb", "Elder's Exalted Orb", "Awakener's Orb", 'Orb of Dominance']
+    expect(fam('Exalted Orb')?.label).toBe('Exalted Orbs')
+    expect(names('Exalted Orb')).toEqual(expect.arrayContaining(exalts))
+    expect(names("Hunter's Exalted Orb")).toEqual(expect.arrayContaining(exalts))
     expect(names("Awakener's Orb")).toContain("Shaper's Exalted Orb")
   })
 
-  it('gives plain currency no family', () => {
-    expect(fam('Chaos Orb')).toBeNull()
+  it('puts an item in its own family and its orb kind', () => {
+    const info = ITEM_BY_REF('ITEM', 'Tainted Exalted Orb')![0]
+    const all = familiesOf(info, needle => ITEMS_ITERATOR(needle), ref => ITEM_BY_REF('ITEM', ref)?.[0])
+    expect(all.map(f => f.label)).toEqual(['Tainted currency', 'Exalted Orbs'])
+    expect(names('Chaos Orb')).toEqual(expect.arrayContaining(['Chaos Orb', 'Eldritch Chaos Orb', 'Tainted Chaos Orb']))
+    expect(names('Orb of Annulment')).toEqual(expect.arrayContaining(['Orb of Annulment', 'Eldritch Orb of Annulment']))
+    // A catalyst stays out of tainted currency.
+    expect(names('Imbued Catalyst')).toContain('Tainted Catalyst')
+    expect(names('Tainted Chaos Orb')).not.toContain('Tainted Catalyst')
+  })
+
+  it('lists each kind of tattoo', () => {
+    expect(fam('Honoured Tattoo of the Oak')?.label).toBe('Honoured Tattoos')
+    expect(names('Honoured Tattoo of the Oak')).toContain('Honoured Tattoo of the Flock')
+    expect(names('Honoured Tattoo of the Oak')).not.toContain('Loyalty Tattoo of Kaom')
+    for (const t of ['Loyalty Tattoo of Kaom', 'Journey Tattoo of the Body', 'Forbidden Tattoo of the Witch']) expect(fam(t)?.members.length, t).toBeGreaterThan(1)
+    // The plain ones keep their own family.
+    expect(fam('Tattoo of the Ngamahu Warmonger')?.label).toBe('Tattoos')
+  })
+
+  it('gives plain currency with no kinds no family', () => {
     expect(fam('Divine Orb')).toBeNull()
+    expect(fam('Orb of Alchemy')).toBeNull()
   })
 
   it('sorts dearest first, unpriced last', () => {

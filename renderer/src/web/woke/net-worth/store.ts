@@ -5,18 +5,19 @@ import { computed, shallowRef, watch } from 'vue'
 import { usePoeninja } from '@/web/background/Prices'
 import { hostRequest } from '../shared/host'
 import { toast } from '../ui/layer'
-import { ninjaPriceOf } from './prices'
+import { identifyUnid, ninjaPriceOf } from './prices'
 import { historyRev, loadPriceHistory } from './history'
 import { lastWokePrices } from '../market/hook'
 import {
-  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceYesterday, tabSetOf, valueStash, withTabShift
+  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceYesterday, tabSetOf, unidPrefs, valueStash, withTabShift
 } from './valuation'
-import { stashGains, gainsKey } from './gains'
+import { stashGains, stashGainsStrict, gainsKey } from './gains'
 import { classify, resolveSpends } from './spend'
 import type { SpendMark } from './spend'
 import { addPoint, keepDiff, topChanges, valueByTab } from './ledger'
 import { glanceKey, glanceRates, ledgerKey } from './glance'
 import { keptSales, listedGlance, listedTotal, listedWorth } from './pending-glance'
+import { lineOutDoc, loadLineOut, outIdsOf } from './line-out-store'
 import type { Glance } from './glance'
 import type { LedgerPoint, TabValue } from './ledger'
 import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, StashTabLike, Valuation } from './valuation'
@@ -59,6 +60,8 @@ const baseline = shallowRef<Baseline | null>(null)
 const guardNow = () => ({ before: baseline.value, now: Date.now() })
 // Every refresh's net change (gains.ts), for the purchase switch.
 const gainsRef = shallowRef<StashGain[]>([])
+// Refreshes' gains the gains file couldn't take (locked): saved with the next.
+let missedGains: { league: string, gains: StashGain[] } | null = null
 // The league those prefs are for: none while another league loads.
 let prefsFor: string | null = null
 const league = shallowRef<string | null>(null)
@@ -73,7 +76,7 @@ const ninja = usePoeninja()
 function loadHistory (): Promise<void> {
   const league = lastWokePrices()?.leagueId
   if (!league || !stash.value) return Promise.resolve()
-  const names = stash.value.tabs.flatMap(t => t.items.map(historyName))
+  const names = stash.value.tabs.flatMap(t => t.items.map(i => identifyUnid(i) ?? historyName(i)))
   return loadPriceHistory(league, names)
 }
 watch([stash, () => ninja.updatedAt.value], () => { loadHistory().catch(() => {}) })
@@ -164,11 +167,15 @@ async function loadLeague (id: string) {
   if (loadedFor === id) return
   loadedFor = id
   prefsFor = null
+  // Listings you left out stay out of the chart's Faustus band.
+  loadLineOut(id).catch(() => {})
+  // Strict reads (undefined: the file is there but couldn't be read, locked
+  // by antivirus or a sync tool); null only when there's no file yet.
   const [saved, cache, led, own, gains, base] = await Promise.all([
-    (hostRequest('doc-get', { collection: COLLECTION, key: id }) as Promise<NetWorthHistory | null>).catch(() => null),
+    (hostRequest('doc-get-strict', { collection: COLLECTION, key: id }) as Promise<NetWorthHistory | null>).catch(() => undefined),
     (hostRequest('stash-cache', { league: id }) as Promise<CachedStash | null>).catch(() => null),
-    (hostRequest('doc-get', { collection: COLLECTION, key: ledgerKey(id) }) as Promise<Ledger | null>).catch(() => null),
-    (hostRequest('doc-get', { collection: COLLECTION, key: prefsKey(id) }) as Promise<PricePrefs | null>).catch(() => undefined),
+    (hostRequest('doc-get-strict', { collection: COLLECTION, key: ledgerKey(id) }) as Promise<Ledger | null>).catch(() => undefined),
+    (hostRequest('doc-get-strict', { collection: COLLECTION, key: prefsKey(id) }) as Promise<PricePrefs | null>).catch(() => undefined),
     stashGains(id),
     (hostRequest('doc-get', { collection: COLLECTION, key: `${id}-baseline` }) as Promise<Baseline | null>).catch(() => null)
   ])
@@ -181,6 +188,13 @@ async function loadLeague (id: string) {
   // A failed read never gets saved over.
   prefsFor = own === undefined ? null : id
   stash.value = cache
+  // History or chart not read: nothing is saved over them, and the next
+  // read loads them again.
+  if (saved === undefined || led === undefined) {
+    loadedFor = null
+    console.warn("[net-worth] couldn't read the saved history; reads aren't counted until it can")
+  }
+  moveUnidPrefs(id)
   await readMarks(Date.now())
 }
 
@@ -188,6 +202,7 @@ async function loadLeague (id: string) {
 async function countRead (id: string, readAt: number) {
   if (history.value.countedReadAt != null && history.value.countedReadAt >= readAt) return
   stash.value = await (hostRequest('stash-cache', { league: id }) as Promise<CachedStash | null>).catch(() => stash.value)
+  moveUnidPrefs(id)
   // Counted with the saved prices a spike is checked against.
   await loadHistory()
   const v = valuation.value
@@ -200,9 +215,12 @@ async function countRead (id: string, readAt: number) {
   // The tabs read: a different choice (tab picker) isn't a gain or a loss.
   const tabs = tabSetOf(stash.value.tabs)
   const [before, beforeTabs] = await Promise.all([
-    (hostRequest('doc-get', { collection: COLLECTION, key: baseKey }) as Promise<Baseline | null>).catch(() => null),
-    (hostRequest('doc-get', { collection: COLLECTION, key: tabsKey }) as Promise<string | null>).catch(() => null)
+    (hostRequest('doc-get-strict', { collection: COLLECTION, key: baseKey }) as Promise<Baseline | null>).catch(() => undefined),
+    (hostRequest('doc-get-strict', { collection: COLLECTION, key: tabsKey }) as Promise<string | null>).catch(() => undefined)
   ])
+  // The last read couldn't be read (locked): this one counts at the next
+  // read, against it, instead of replacing it.
+  if (before === undefined || beforeTabs === undefined) return
   const since = history.value.countedReadAt
   let next = recordRead(history.value, v, divine.value, readAt)
   let diff: StashDiff | null = null
@@ -212,11 +230,19 @@ async function countRead (id: string, readAt: number) {
     next = { ...next, lastDiff: diff }
     // Every refresh's net change, for session profit elsewhere (gains.ts),
     // with the guess whether it's a purchase (spend.ts).
-    const old = await stashGains(id)
+    const old = await stashGainsStrict(id).catch(() => null)
     gain = gainOf(diff, since, divine.value, classify(diff, divine.value))
-    const gains = addGain(old, gain)
-    gainsRef.value = gains
-    await hostRequest('doc-put', { collection: COLLECTION, key: gainsKey(id), value: gains }).catch(() => {})
+    // Gains not read (locked): not saved over. This refresh's gain waits
+    // in memory and joins the next save.
+    const waiting = missedGains?.league === id ? missedGains.gains.slice(-100) : []
+    if (old) {
+      const gains = [...waiting, gain].reduce(addGain, old)
+      gainsRef.value = gains
+      const ok = await hostRequest('doc-put', { collection: COLLECTION, key: gainsKey(id), value: gains }).then(() => true, () => false)
+      missedGains = ok ? null : { league: id, gains: [...waiting, gain] }
+    } else {
+      missedGains = { league: id, gains: [...waiting, gain] }
+    }
   } else if (beforeTabs != null && beforeTabs !== tabs) {
     // Other tabs now: today's rate starts again from this read, so the
     // tabs added or dropped don't read as profit or loss per hour.
@@ -257,7 +283,7 @@ function listedNow (id: string): { listed?: number } {
   const g = listedGlance.value
   if (!g || g.league !== id) return {}
   const kept = keptSales.value
-  const listed = listedTotal(g, listedWorth.value, kept?.league === id ? kept.sales : [], divine.value)
+  const listed = listedTotal(g, listedWorth.value, kept?.league === id ? kept.sales : [], divine.value, outIdsOf(lineOutDoc.value, id, 'listed'))
   return listed > 0 ? { listed } : {}
 }
 
@@ -309,7 +335,8 @@ export function setSpendMark (at: number, mark: SpendMark | null, amountChaos?: 
   if (!id) return
   queue(async () => {
     if (loadedFor !== id) return
-    const gains = await stashGains(id)
+    const gains = await stashGainsStrict(id).catch(() => null)
+    if (!gains) { toast("Couldn't read your saved refreshes. Try again"); return }
     const i = gains.findIndex(g => g.at === at)
     if (i < 0) return
     const g: StashGain = { ...gains[i], mark: mark ?? undefined }
@@ -340,7 +367,15 @@ export function setSpendMark (at: number, mark: SpendMark | null, amountChaos?: 
 function cleanPrefs (p: PricePrefs | null): PricePrefs {
   const prices: Record<string, number> = {}
   for (const [k, c] of Object.entries(p?.prices ?? {})) if (typeof c === 'number' && Number.isFinite(c) && c >= 0) prices[k] = c
-  return { prices, ignored: Array.isArray(p?.ignored) ? p.ignored.filter(k => typeof k === 'string') : [] }
+  return { prices, ignored: Array.isArray(p?.ignored) ? p.ignored.filter(k => typeof k === 'string') : [], ...(p?.unidKeys ? { unidKeys: true as const } : {}) }
+}
+
+// Prices and ignores typed on an unidentified unique's old key move to its
+// own (valuation.ts unidPrefs), once, when the stash and your prices are in.
+function moveUnidPrefs (id: string) {
+  const tabs = stash.value?.tabs
+  if (prefsFor !== id || loadedFor !== id || !tabs?.length || prefs.value.unidKeys) return
+  savePrefs(unidPrefs(prefs.value, tabs.flatMap(t => t.items), identifyUnid))
 }
 
 export const pricePrefs = computed(() => prefs.value)
@@ -348,10 +383,11 @@ export const pricePrefs = computed(() => prefs.value)
 // A failed read is tried again (before the next save or read).
 async function retryPrefs (id: string) {
   if (prefsFor === id || loadedFor !== id) return
-  const own = await (hostRequest('doc-get', { collection: COLLECTION, key: prefsKey(id) }) as Promise<PricePrefs | null>).catch(() => undefined)
+  const own = await (hostRequest('doc-get-strict', { collection: COLLECTION, key: prefsKey(id) }) as Promise<PricePrefs | null>).catch(() => undefined)
   if (own === undefined || loadedFor !== id) return
   prefs.value = cleanPrefs(own)
   prefsFor = id
+  moveUnidPrefs(id)
 }
 
 // false: not loaded (yet), nothing changed.

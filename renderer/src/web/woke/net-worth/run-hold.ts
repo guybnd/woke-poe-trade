@@ -13,6 +13,7 @@ import type { HeldItem } from './faustus'
 import type { LedgerPoint } from './ledger'
 import { VARIABLE_ITEMS } from '../shared/unid-prices'
 import { useUnidPrice } from '../shared/price'
+import { uniquesOnBase } from '../shared/uniques-on-base'
 
 // The parsed item as the stash would give it.
 export function stashLike (item: ParsedItem): StashItemLike {
@@ -49,7 +50,17 @@ export async function holdHovered (clipboard: string, league: string, points: re
   await loadRuns(league)
   const live = runsDoc.value.live
   if (!live || live.league !== league) { toast('No run going: start one in Net worth › Runs'); return }
-  const s = stashLike(parsed)
+  let s = stashLike(parsed)
+  // An unidentified unique copies as its base. With one unique on that base
+  // it's known; with several it can't be priced (the clipboard has no art).
+  if (parsed.rarity === ItemRarity.Unique && parsed.isUnidentified && s.frame !== 3) {
+    const names = uniquesOnBase(s.baseType)
+    if (names.length !== 1) {
+      toast(names.length ? `Unidentified ${s.baseType}: more than one unique uses this base, so it has no price. Identify it or stash it` : `Unidentified ${s.baseType}: no known unique uses this base yet. Identify it or stash it`)
+      return
+    }
+    s = { ...s, frame: 3, name: names[0] }
+  }
   // Rares have no price and no name listings share; currency is counted by
   // the stash and sales already.
   if ((s.frame === 1 || s.frame === 2) && !isRolledMap(s)) { toast("Rares and magic items can't be held: they have no price. Stash or list it"); return }
@@ -58,11 +69,13 @@ export async function holdHovered (clipboard: string, league: string, points: re
   // Net worth (prices.ts); poe.ninja's one price is a guess at the roll.
   const rolled = parsed.isUnidentified && s.frame === 3 && VARIABLE_ITEMS.has(s.name)
   const priced = rolled ? useUnidPrice()(s.name) : ninjaPriceOf()(s)
+  // Keyed as the stash counts it: a rolled one by its base (prices.ts
+  // identifyUnid leaves it unnamed), any other by the unique's name.
   if (!priced || !(priced.chaos > 0) || overCardCap(priced)) {
     toast(rolled ? `No unid price for ${s.name} yet: check it in the price check, then hold it` : `No price for ${s.name || s.typeLine}: not held`)
     return
   }
-  const key = itemKey(s)
+  const key = itemKey(rolled ? { ...s, name: '' } : s)
   const item: HeldItem = {
     id: `h${Date.now().toString(36)}${(seq++).toString(36)}`,
     key,

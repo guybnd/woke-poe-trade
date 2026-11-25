@@ -78,7 +78,7 @@ import type { LastMap } from './glance-fields'
 import type { SessionStoryWidget } from './widget'
 import GlanceSettings from './GlanceSettings.vue'
 import { isSkippedArea } from './skip-areas'
-import { nightRateMs, playedMs } from './night-rate'
+import { nightRateMs, nightUpTo, playedMs } from './night-rate'
 import { countedMs, leftOutText } from '../shared/rate-time'
 import type { TimeSplit } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
@@ -225,14 +225,8 @@ const runAvg = computed(() => {
   const r = run.value
   return r ? avgMapMs(recent.maps.value.filter(m => m.leftAt > r.startAt && !isSkippedArea(m.name))) : null
 })
-// The live night ends at its last log line: carried on to now, so its time
-// keeps moving while the log is quiet (out of maps that time is hideout time).
-const nightNow = computed(() => {
-  const n = night.value
-  if (!n) return null
-  const more = Math.max(0, clockNow.value - n.endedAt)
-  return { ...n, endedAt: n.endedAt + more, hubMs: (n.hubMs ?? 0) + (props.map ? 0 : more) }
-})
+// The live night carried on to now (night-rate.ts).
+const nightNow = computed(() => night.value ? nightUpTo(night.value, clockNow.value, !!props.map) : null)
 const nightRate = computed(() => nightNow.value ? perHourOf(profit.value, nightRateMs(nightNow.value, time.value)) : null)
 // Finished maps only: the one you're in is still counting.
 const nightAvg = computed(() => night.value ? avgMapMs(props.map ? night.value.maps.slice(0, -1) : night.value.maps) : null)

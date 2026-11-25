@@ -66,7 +66,22 @@ export const TOOLTIP_LINES = [
   'unidentified',
   'travel to this map by using it in a personal map device. maps can only be used once.',
   'delirium reward type',
-  'map'
+  'map',
+  // Influence, Conqueror and Citadel lines (not mods, but on the tooltip).
+  'area is influenced by the elder',
+  'area is influenced by the shaper',
+  'map is occupied by the constrictor',
+  'map is occupied by the enslaver',
+  'map is occupied by the eradicator',
+  'map is occupied by the purifier',
+  "map contains al-hezmin's citadel",
+  "map contains baran's citadel",
+  "map contains drox's citadel",
+  "map contains veritania's citadel",
+  'item quantity increases amount of rewards al-hezmin drops by 20% of its value',
+  'item quantity increases amount of rewards baran drops by 20% of its value',
+  'item quantity increases amount of rewards drox drops by 20% of its value',
+  'item quantity increases amount of rewards veritania drops by 20% of its value'
 ]
 
 // Text in the form tokens are made and compared in: lowercase, each rolled

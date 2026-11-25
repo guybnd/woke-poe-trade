@@ -53,7 +53,7 @@ import type { AnalyticsRange, AnalyticsUnit } from '../analytics/types'
 import DeckSummary from './DeckSummary.vue'
 import OwnAverageLine from './OwnAverageLine.vue'
 import { AppConfig } from '@/web/Config'
-import { STACKED_DECK, STACKED_DECKS_TYPE, cardFilterOf, recordPrice, setCardEdit, totals } from './deck'
+import { STACKED_DECK, STACKED_DECKS_TYPE, cardFilterOf, recordPrice, savedOrToday, setCardEdit, totals } from './deck'
 import type { CardEdit, DeckRecord, StackedDecksWidget } from './deck'
 import { luckFor, useDeckPrices } from './prices'
 import { dropRateHeld, withoutHeld } from './guard'
@@ -127,7 +127,8 @@ const openLuck = computed(() => {
   const r = open.value
   if (!r) return null
   const px = savedPrice(r)
-  return luckFor(r.draws, totals(r.draws, px, null, null, undefined, r.edits).got, r.id, px, store.records.value)
+  // Got is at the session's own prices; the expectation needs every card.
+  return luckFor(r.draws, totals(r.draws, px, null, null, undefined, r.edits).got, r.id, savedOrToday(px, price.value), store.records.value)
 })
 
 // Your price for a card, or a card left out, on a saved session.

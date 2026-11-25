@@ -10,7 +10,7 @@
 // - Foulborn: a unique with 2+ possible mutated mods (ModFoulbornMap.jsonc,
 //   which PoB takes from poewiki's Foulborn table).
 // Run it after a league adds uniques, and review the diff.
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const RAW = 'https://raw.githubusercontent.com/PathOfBuildingCommunity/PathOfBuilding/dev/src/Data'
@@ -19,7 +19,7 @@ const FILES = ['amulet', 'axe', 'belt', 'body', 'boots', 'bow', 'claw', 'dagger'
 // Built in PoB's Special/Generated.lua code, not as item text.
 const GENERATED = [
   'Watcher\'s Eye', 'Forbidden Flame', 'Forbidden Flesh', 'Megalomaniac', 'Impossible Escape',
-  'Sublime Vision', 'Bound by Destiny', 'The Balance of Terror', 'Precursor\'s Emblem', 'Skin of the Lords',
+  'Sublime Vision', 'Bound By Destiny', 'The Balance of Terror', 'Precursor\'s Emblem', 'Skin of the Lords',
   'Forbidden Shako', 'Replica Forbidden Shako', 'Pearl of Tsoatha', 'Replica Dragonfang\'s Flight', 'Vorana\'s March'
 ]
 // Already in the app before this list, not variants in PoB's data.
@@ -81,7 +81,7 @@ const foulborn = Object.keys(foulMap).filter(k => Object.keys(foulMap[k]).length
 const GENERATED_BASES = {
   "Watcher's Eye": 'Prismatic Jewel', 'Forbidden Flame': 'Crimson Jewel', 'Forbidden Flesh': 'Cobalt Jewel',
   Megalomaniac: 'Medium Cluster Jewel', 'Impossible Escape': 'Viridian Jewel', 'Sublime Vision': 'Prismatic Jewel',
-  'Bound by Destiny': 'Prismatic Jewel', 'The Balance of Terror': 'Cobalt Jewel', "Precursor's Emblem": null,
+  'Bound By Destiny': 'Prismatic Jewel', 'The Balance of Terror': 'Cobalt Jewel', "Precursor's Emblem": null,
   'Skin of the Lords': 'Simple Robe', 'Forbidden Shako': 'Great Crown', 'Replica Forbidden Shako': 'Great Crown',
   'Pearl of Tsoatha': 'Prismatic Ring', "Replica Dragonfang's Flight": 'Onyx Amulet', "Vorana's March": 'Runic Sabatons',
   'Rational Doctrine': 'Cobalt Jewel', 'Melding of the Flesh': 'Cobalt Jewel', 'Dissolution of the Flesh': 'Crimson Jewel', Beauty: 'Vaal Aspect'
@@ -113,6 +113,12 @@ ${sorted(variable).filter(n => bases.get(n)).map(n => `  ${quote(n)}: ${quote(ba
 `
 writeFileSync(fileURLToPath(new URL('../renderer/src/web/woke/shared/variable-uniques.ts', import.meta.url)), out)
 console.log(`${variable.size} variable (left out on several bases: ${multiBase.join(', ') || 'none'})`)
+// The app matches names exactly ("Bound By Destiny", not PoB's "by"): flag
+// any the game data doesn't spell the same way.
+const itemsFile = fileURLToPath(new URL('../renderer/public/data/en/items.ndjson', import.meta.url))
+const known = new Set(readFileSync(itemsFile, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l)).filter(i => i.namespace === 'UNIQUE').map(i => i.refName))
+const unknown = sorted([...variable].filter(n => !known.has(n)))
+if (unknown.length) console.warn(`Not in the game data (check the spelling): ${unknown.join(', ')}`)
 // Foulborn uniques with 2+ possible mutations, for the list's doc page only
 // (the app doesn't use it yet, so it stays out of the bundle).
 console.log(`${foulborn.length} Foulborn: ${sorted(foulborn).join(', ')}`)

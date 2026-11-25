@@ -10,8 +10,12 @@ export function prepareMapStat (calc: StatCalculated): PreparedStat {
   const roll = statSourcesTotal(calc.sources)
   const translation = translateStatWithRoll(calc, roll)
 
+  // woke: a mod with no number goes by the wording the map shows ("Area
+  // contains a Mirror of Delirium"), not its stat's first one ("Areas contain").
+  const own = roll ? undefined : calc.sources[0]?.stat.translation.string
+
   const prepared = {
-    matcher: translation.string,
+    matcher: own ?? translation.string,
     roll: roll && roundRoll(roll.value, translation.dp ?? false)
   }
 

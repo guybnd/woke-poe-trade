@@ -10,7 +10,8 @@
       @click="actions!.toggleSplit(filter)">{{ tier || `×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
     <span v-else-if="eldritch" class="w-poe-tier"><EldritchMark v-bind="eldritch" /></span>
     <span v-else class="w-poe-tier" :class="{ 'w-poe-t1': isTopTier(tier) }">{{ tier }}</span>
-    <button type="button" class="w-poe-line-text" :class="`w-poe-k-${look.kind}`">
+    <!-- woke: a tiered mod's ladder on hover, as on the picked row (price-insight/mod-tip-hover.ts). -->
+    <button type="button" class="w-poe-line-text" :class="`w-poe-k-${look.kind}`" @mouseenter="modTip.enter" @mouseleave="modTip.leave">
       <span v-if="look.corrupted" class="w-poe-corrupt" />
       <img v-else-if="look.icon" class="w-poe-icon" :src="look.icon" alt="">
       <img v-if="filter.mercenary?.icon" class="w-poe-icon" :src="filter.mercenary.icon" alt="">
@@ -41,10 +42,12 @@ import { uniqueLineRanges } from '@/web/woke/price-insight/unique-roll'
 import type { ParsedItem } from '@/parser'
 import { INTERNAL_TRADE_IDS, StatFilter } from './interfaces'
 import ClusterSpotTag from '@/web/woke/cluster-type/ClusterSpotTag.vue'
+import { useModTipHover } from '@/web/woke/price-insight/mod-tip-hover'
 
 const props = defineProps<{ filter: StatFilter, item?: ParsedItem }>()
 const { t } = useI18n()
 const actions = useStatActions()
+const modTip = useModTipHover(() => props)
 
 const catalyst = useCatalystFilter()
 const qTag = computed(() => catalyst?.filter.value ? tagQuality(props.filter, catalyst.filter.value) : undefined)

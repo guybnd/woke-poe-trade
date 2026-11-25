@@ -6,10 +6,10 @@ import { fixture } from '../helpers/game-data'
 import fs from 'fs'
 import path from 'path'
 import { artNames, CURRENCY_TAGS, parseOffer, parsePrice, parseTradeLine, offerLabel, priceLabel } from '@/web/woke/trade/whispers'
-import { alreadyClosed, applyEvent, belongsInHistory, dismiss, front, markSent, markTraded, newBook, nextStep, prune, queue, recordFor, reopen, skip, OPEN_FOR_MS } from '@/web/woke/trade/book'
+import { alreadyClosed, alreadyLogged, applyEvent, belongsInHistory, dismiss, front, markSent, markTraded, newBook, nextStep, prune, queue, recordFor, reopen, skip, OPEN_FOR_MS } from '@/web/woke/trade/book'
 import type { Offer, TradeBook } from '@/web/woke/trade/book'
 import { DEFAULT_REPLIES, fillReply, replyText } from '@/web/woke/trade/widget'
-import { bulkDelta, priceChaos } from '@/web/woke/trade/value'
+import { bulkDelta, deltaTone, priceChaos } from '@/web/woke/trade/value'
 import { tradeTotals } from '@/web/woke/trade/log-store'
 
 function logLines (name: string): string[] {
@@ -386,10 +386,42 @@ describe('reopening closed offers', () => {
     expect(alreadyClosed([o], { dir: 'sell', who: 'Ignithor', item: o.item, at: 3000 })).toBe(false)
     expect(alreadyClosed([o], { dir: 'sell', who: 'Someone', item: o.item, at: 1000 })).toBe(false)
   })
+
+  it('a buyer from the hideout you left is no longer the trade partner', () => {
+    const book = newBook()
+    const first = whisper(book, 'Ignithor', 1000)
+    applyEvent(book, { kind: 'joined', at: 1500, who: 'Ignithor' })
+    applyEvent(book, parseTradeLine('2026/11/04 21:40:11 1 2 [INFO Client 1] : You have entered Lioneye\'s Watch.')!)
+    expect(first.inArea).toBe(false)
+    // You then went to a seller's hideout and bought from them.
+    const buy = applyEvent(book, { kind: 'whisper-out', at: 2000, who: 'Seller', body: 'x', offer: { item: 'Mageblood, Heavy Belt', qty: 1, bulk: false, price: { amount: 100, currency: 'Divine Orb' }, league: 'Standard', tab: null, note: '' } }).added!
+    expect(applyEvent(book, { kind: 'trade-accepted', at: 3000 }).finished?.id).toBe(buy.id)
+  })
+
+  it('a trade replayed after a restart that is in the sales log stays finished', () => {
+    const book = newBook()
+    const o = whisper(book, 'Ignithor', 1000)
+    o.inArea = true
+    const res = applyEvent(book, { kind: 'trade-accepted', at: 5000 })
+    expect(res.finished?.id).toBe(o.id)
+    const logged = [recordFor(o, 5000, 10, null)]
+    expect(alreadyLogged(logged, o, 5000)).toBe(true)
+    expect(alreadyLogged([], o, 5000)).toBe(false)
+    expect(alreadyLogged(logged, o, 9000)).toBe(false)
+  })
 })
 
 describe('item art names', () => {
   it('finds a unique named with a comma and its base', () => {
     expect(artNames("Doedre's Damning, Paua Ring")).toContain("Doedre's Damning")
+  })
+})
+
+describe('price against value', () => {
+  it('is green when it is good for you: over value selling, under value buying', () => {
+    expect(deltaTone('sell', 0.2)).toBe('w-up')
+    expect(deltaTone('sell', -0.2)).toBe('w-down')
+    expect(deltaTone('buy', 0.2)).toBe('w-down')
+    expect(deltaTone('buy', -0.2)).toBe('w-up')
   })
 })

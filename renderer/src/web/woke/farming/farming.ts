@@ -235,10 +235,10 @@ export function isMapArea (areaId: string): boolean {
 
 // Areas you reach from inside a map: Vaal side areas, abyssal depths, trials
 // of ascendancy, Settlers' fallen stars (prefixes as Exile-UI's map tracker
-// has them). Time there is map time, but they aren't new maps: counting the
-// side area also made the map count again on the way back.
+// has them), and encounters a map opens. Time there is map time, but they
+// aren't new maps: counting the side area also made the map count again on the way back.
 export function isMapSideArea (areaId: string): boolean {
-  return /^(MapSideArea|AbyssLeague|EndGame_Labyrinth_Trials|SettlersBossFallenStar)/i.test(areaId)
+  return /^(MapSideArea|AbyssLeague|EndGame_Labyrinth_Trials|SettlersBossFallenStar|MapAtlasEncounter)/i.test(areaId)
 }
 
 export function strategyStats (history: FarmingResult[]): Array<{ strategy: string, sessions: number, maps: number, hours: number, perHour: number, perMap: number }> {

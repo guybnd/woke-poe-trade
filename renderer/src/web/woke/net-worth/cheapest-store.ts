@@ -26,7 +26,8 @@ export function loadCheapest (league: string): Promise<void> {
   if (loadedFor === league) return loading
   loadedFor = league
   cheapestDoc.value = null
-  loading = (hostRequest('doc-get', { collection: COLLECTION, key: cheapestKey(league) }) as Promise<unknown>)
+  // Strict: null only when there's no file yet; a locked one throws.
+  loading = (hostRequest('doc-get-strict', { collection: COLLECTION, key: cheapestKey(league) }) as Promise<unknown>)
     .then((d) => {
       if (loadedFor !== league) return
       // A check made while this loaded wins over the saved doc.
@@ -115,6 +116,8 @@ export async function saveCheck (league: string, id: string, check: CheapestChec
 // A new price for a listing, from the price check's bar (null: clear it).
 export async function setTarget (league: string, id: string, target: TargetPrice | null): Promise<void> {
   await loadCheapest(league)
+  // Not read (locked): nothing is saved over it.
+  if (loadedFor !== league) return
   const next = withTarget(cheapestDoc.value?.league === league ? cheapestDoc.value : null, league, id, target)
   cheapestDoc.value = next
   await hostRequest('doc-put', { collection: COLLECTION, key: cheapestKey(league), value: next }).catch(() => {})

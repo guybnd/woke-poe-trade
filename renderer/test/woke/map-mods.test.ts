@@ -173,6 +173,41 @@ describe('stash regex', () => {
     }
   })
 
+  // An Elder/Shaper, Conqueror or Citadel map shows its influence as a plain
+  // line; "flu" (Originator) matched "influenced" and "eri" "Veritania's".
+  it('no mod token matches an influence, guardian or citadel line', () => {
+    const lines = [
+      'Area is influenced by The Elder',
+      'Area is influenced by The Shaper',
+      ...['Constrictor', 'Enslaver', 'Eradicator', 'Purifier'].map(g => `Map is occupied by The ${g}`),
+      ...["Al-Hezmin's", "Baran's", "Drox's", "Veritania's"].map(c => `Map contains ${c} Citadel`),
+      ...['Al-Hezmin', 'Baran', 'Drox', 'Veritania'].map(c => `Item Quantity increases amount of Rewards ${c} drops by 20% of its value`)
+    ]
+    const wrong: string[] = []
+    for (const mod of MODS) {
+      const { text } = buildMapRegex({ avoid: [], want: [mod], mins: {}, highlight: 'good' }, MODS, allMapNames())
+      if (!text) continue
+      for (const line of lines) {
+        if (stashSearch(text, line)) wrong.push(`${mod}: ${text} ~ ${line}`)
+      }
+    }
+    expect(wrong).toEqual([])
+  })
+
+  // A rating saved on the plural wording (older map cards did) still counts
+  // for maps that say "Area contains"; the search must hide those too, and
+  // not avoid the opposite wording of a rated mod.
+  it('a rating on one wording searches the wordings that say the same', () => {
+    const p: MapModProfile = { ...defaultProfile(), ratings: { 'Areas contain a Mirror of Delirium': 'deadly' } }
+    const res = profileRegex(p)
+    expect(stashSearch(res.text, mapTooltip(['Area contains a Mirror of Delirium'])), res.text).toBe(false)
+    expect(stashSearch(res.text, mapTooltip(['Areas contain a Mirror of Delirium'])), res.text).toBe(false)
+    expect(stashSearch(res.text, mapTooltip([])), res.text).toBe(true)
+    const aoe: MapModProfile = { ...defaultProfile(), ratings: { 'Monsters have #% increased Area of Effect': 'deadly' } }
+    const res2 = profileRegex(aoe)
+    expect(stashSearch(res2.text, mapTooltip(['Monsters have #% reduced Area of Effect'])), res2.text).toBe(true)
+  })
+
   it('every preset (avoid all) fits the search box once auto-trimmed', () => {
     for (const preset of PRESETS) {
       const profile: MapModProfile = { ...defaultProfile(), ratings: Object.fromEntries(preset.matchers.map(m => [m, 'deadly'])), autoTrim: true }
@@ -262,6 +297,15 @@ describe('map scan: mods on several tooltip lines', () => {
     expect(mods.length).toBeGreaterThan(0)
     for (const m of mods) expect(m.matcher).toContain('\nCan be Anointed up to ')
     expect(mods.some(m => m.roll === 3)).toBe(true)
+  })
+
+  // Not a mod: an Elder/Shaper map's influence line left every scan weak, so
+  // it never read Safe.
+  it('an influence line is not an unreadable mod', () => {
+    for (const line of ['Area is influenced by The Elder', 'Area is influenced by The Shaper', 'Area is influenced by The Eider']) {
+      const scanned = new TooltipMatcher(allAreaMods()).parse(['Map Tier: 16', line])!
+      expect(scanned.weak, line).toEqual([])
+    }
   })
 
   it('needs every line of the mod', () => {

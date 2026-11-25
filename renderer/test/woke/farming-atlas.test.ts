@@ -59,6 +59,23 @@ describe('session analytics', () => {
     expect(row.costPerMap).toBe(10)
   })
 
+  it('profit per map counts every map of a session saved without map detail', () => {
+    const [row] = strategyRows([session({ runs: [], maps: 10, extraChaos: 1000, costPerMapChaos: 0 })], 'chaos', null, 'hub')
+    expect(row.units).toHaveLength(1)
+    expect(row.profit).toBeGreaterThan(0)
+    expect(row.perMap).toBeCloseTo(row.profit / 10, 5)
+  })
+
+  it('a session with no divine price leaves profit per map alone', () => {
+    const priced = session({ id: 'a', runs: [], maps: 10, extraChaos: 1000, costPerMapChaos: 0, divine: 100 })
+    const unpriced = session({ id: 'b', runs: [], maps: 10, extraChaos: 1000, costPerMapChaos: 0, divine: null })
+    const [row] = strategyRows([priced, unpriced], 'div', null, 'hub')
+    expect(row.maps).toBe(10)
+    expect(row.perMap).toBeCloseTo(row.profit / 10, 5)
+    const [none] = strategyRows([unpriced], 'div', null, 'hub')
+    expect(none.perMap).toBeNull()
+  })
+
   it('the CSV adds up to the session, loot not tied to a map included', () => {
     const s = session({
       loot: [{ type: 'Currency', name: 'Divine Orb', variant: '', qty: 1, chaos: 100 }],

@@ -205,7 +205,8 @@ export function buildRow (key: string, strategy: string, kind: 'maps' | 'boss', 
     hours,
     profit,
     perHour: perHour(units),
-    perMap: units.length ? profit / units.length : null,
+    // A session saved without map detail is one unit of many maps.
+    perMap: !units.length ? null : extra.maps ? profit / extra.maps : profit / units.length,
     typicalMap: median(profits),
     range: hourRange(units),
     costPerMap: extra.costPerMap,
@@ -242,9 +243,11 @@ export function strategyRows (sessions: SessionRecord[], unit: AnalyticsUnit, fa
       // Maps left out don't count, as in the averages: their share of the time
       // isn't in `units`, so counting them would inflate maps per hour.
       const counted = Math.max(0, s.maps - s.runs.filter(r => r.excluded).length)
-      maps += counted
+      // No rate (divines with no divine price): its profit isn't in `units`
+      // either, so its maps would only drag profit per map down.
       const rate = rateFor(s, unit, fallbackDivine)
       if (rate) {
+        maps += counted
         costSum += (s.imported ? s.imported.costChaos : s.costPerMapChaos * counted) / rate
       }
       for (const r of s.runs) {

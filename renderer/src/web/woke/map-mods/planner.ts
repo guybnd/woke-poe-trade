@@ -90,7 +90,7 @@ export function planRows (data: MapBonusData | null, goal: PlanGoal): PlanRow[] 
 // still avoid them.
 export function ratedAvoid (data: MapBonusData | null, listed: PlanRow[], ratings: Record<string, ModRating>): PlanRow[] {
   const shown = new Set(listed.map(r => r.key))
-  return t17Rows(data, 'currency').filter(r => !shown.has(r.key) && r.matchers.some(m => ratings[m] === 'deadly'))
+  return t17Rows(data, 'currency').filter(r => !shown.has(r.key) && r.wordings.some(m => ratings[m] === 'deadly'))
 }
 
 function t17Rows (data: MapBonusData | null, goal: PlanGoal): PlanRow[] {
@@ -100,11 +100,18 @@ function t17Rows (data: MapBonusData | null, goal: PlanGoal): PlanRow[] {
     if (!mod.t.includes('t17')) continue
     const value = bonusOf(mod, goal as BonusKey)
     const stats = mod.refs.map(statsOf)
-    const matchers = stats.map(s => s?.matchers[0]).filter((m): m is string => !!m)
+    // The wording the mod rolls: Diluted is "less effect of Flasks", not "more".
+    const matchers = stats.map(s => s?.all.find(w => mod.lines.some(l => sameWording(w, l))) ?? s?.matchers[0]).filter((m): m is string => !!m)
     if (!matchers.length) continue
     rows.push({ mod, key: mod.n, matchers, wordings: stats.flatMap(s => s?.all ?? []), tradeId: stats[0]?.tradeId ?? null, value, prefix: mod.g === 1 })
   }
   return rows
+}
+
+// "Players have (25-30)% less Defences" reads as "Players have #% less Defences".
+export function sameWording (wording: string, line: string): boolean {
+  const canon = (t: string) => t.toLowerCase().replace(/[+-]?\([0-9.]+-[0-9.]+\)|[+-]?[0-9.#]+/g, '#')
+  return canon(wording) === canon(line)
 }
 
 // Other lines a T17 map's tooltip can show besides its T17 mods: its
@@ -134,7 +141,7 @@ export function planUniverse (data: MapBonusData | null): string[] {
 export function isTicked (row: PlanRow, state: PlannerState, ratings: Record<string, ModRating>): boolean {
   if (state.on?.includes(row.key)) return true
   if (state.off?.includes(row.key)) return false
-  return !row.matchers.some(m => ratings[m] === 'deadly')
+  return !row.wordings.some(m => ratings[m] === 'deadly')
 }
 
 export function toggled (state: PlannerState, key: string, ticked: boolean): PlannerState {
