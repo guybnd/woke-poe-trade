@@ -3,6 +3,7 @@ import { NEWS, markAllNewsSeen, markNewsSeen, seenNewsIds, unseenNews } from '@/
 import { setNewsOff } from '@/web/woke/tab-bar/news-off'
 import { NEWS_SPOTS, gotoSpots, gotoTargets } from '@/web/woke/tab-bar/goto-targets'
 import { NEWS_DEMOS, hasShowMe } from '@/web/woke/tab-bar/news-demos'
+import { WORTH } from '@/web/woke/tab-bar/worth-knowing'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import type { WokeModulesConfig } from '@/web/woke/modules'
@@ -29,7 +30,8 @@ describe("What's new lines", () => {
   })
 
   it('NEWS_SPOTS and NEWS_DEMOS name only real lines', () => {
-    for (const id of [...Object.keys(NEWS_SPOTS), ...Object.keys(NEWS_DEMOS)]) expect(NEWS.map(n => n.id), id).toContain(id)
+    const ids = [...NEWS, ...WORTH].map(n => n.id)
+    for (const id of [...Object.keys(NEWS_SPOTS), ...Object.keys(NEWS_DEMOS)]) expect(ids, id).toContain(id)
   })
 
   it('offers Show me only where it shows the feature (Guy: show it, or don\'t offer to)', () => {

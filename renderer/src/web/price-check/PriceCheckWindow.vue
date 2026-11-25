@@ -78,6 +78,8 @@
         <span :class="$style.edgeY" @mousedown.stop="startResize($event, false, true)" />
         <span :class="$style.corner" data-testid="price-window-resize" @mousedown.stop="startResize($event, true, true)" />
       </template>
+      <!-- woke: a one-off tour of the window on the 3rd check (shared/hints.ts). -->
+      <price-check-tour v-if="tourMay" :key="instantKey" />
     </div>
     <webview v-if="isBrowserShown" ref="iframeEl"
       class="pointer-events-auto flex-1"
@@ -131,6 +133,8 @@ import { floatingArea, floatingLayout, movedPosition, resizedPosition } from './
 import { dispatchPriceCheck } from '@/web/woke/ui/tooltip/item-price-check'
 import { exactDetailsId } from './trends/getDetailsId'
 import { instantCardShown } from '@/web/woke/price-insight/view'
+import { countPriceCheck, hintsOff, isHintDone } from '@/web/woke/shared/hints'
+import { PRICE_CHECK_TOUR, TOUR_AT_CHECK } from '@/web/woke/price-insight/tour-steps'
 import { fixedPriceItem, chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
 
 type ParseError = { name: string; message: string; rawText: ParsedItem['rawText']; unsupported?: boolean }
@@ -196,6 +200,7 @@ export default defineComponent({
     // A captured beast's Blood Altar recipes (WOKEPOET-485).
     BeastAltar: defineAsyncComponent(() => import('@/web/woke/price-insight/BeastAltar.vue')),
     // A Stacked Deck's open-or-sell verdict on its instant card.
+    PriceCheckTour: defineAsyncComponent(() => import('@/web/woke/price-insight/PriceCheckTour.vue')),
     WokeDeckVerdictChip: defineAsyncComponent(() => import('@/web/woke/stacked-decks/DeckVerdictChip.vue')),
     UnreadableItem,
     PriceStyleMenu,
@@ -265,6 +270,7 @@ export default defineComponent({
 
       if (item.value.isOk()) {
         queuePricesFetch()
+        if (!quick) countPriceCheck()
       }
     })
 
@@ -365,6 +371,10 @@ export default defineComponent({
     const title = computed(() => leagues.selectedId.value || 'Awakened PoE Trade')
     const stableOrbCost = computed(() => (xchgRate.value) ? Math.round(xchgRate.value) : null)
     const isBrowserShown = computed(() => props.config.wmFlags.includes('has-browser'))
+
+    // woke: the tour waits for the 3rd check in the window, and goes once done.
+    const tourMay = computed(() => !isBrowserShown.value && instant.value == null && item.value?.isOk() === true &&
+      !hintsOff() && !isHintDone(PRICE_CHECK_TOUR) && (AppConfig().woke?.hints?.checks ?? 0) >= TOUR_AT_CHECK)
     const overlayKey = computed(() => AppConfig().overlayKey)
     const showCheckPos = computed(() => wm.active.value && props.config.showCursor)
     const isLeagueSelected = computed(() => Boolean(leagues.selectedId.value))
@@ -555,6 +565,7 @@ export default defineComponent({
       liveCheck,
       instant,
       instantKey,
+      tourMay,
       isBeast,
       instantPlaced,
       openWindow,

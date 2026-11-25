@@ -1,5 +1,5 @@
 <template>
-  <div :class="[$style.filter, { [$style.grouped]: grouped, [$style.splitChild]: splitChild, 'w-poe-row': poe, 'w-poe-child': poe && (splitChild || hybridPart) }]">
+  <div data-pc-mod :class="[$style.filter, { [$style.grouped]: grouped, [$style.splitChild]: splitChild, 'w-poe-row': poe, 'w-poe-child': poe && (splitChild || hybridPart) }]">
     <div class="flex flex-col min-w-0 flex-1">
       <div class="flex items-baseline">
         <div class="flex items-baseline min-w-0 mr-2">

@@ -457,6 +457,31 @@ test('unique: improved merges same prices with a count, classic lists every list
   await overlay.snap('unique with merged listings')
 })
 
+test('the 3rd price check shows a short tour once, and the mod tip waits for it', async ({ overlay }) => {
+  // Tips on, two checks already done.
+  await overlay.boot({ tips: true, patch: c => { c.woke.hints = { checks: 2 } } })
+  await overlay.copyItem('items/unique-kaoms-heart.txt')
+  const panel = overlay.widget('price-check')
+  await expect(panel.locator('.w-pc-foot')).toContainText('listings')
+  const tour = overlay.page.locator('[data-pc-tour]')
+  await expect(tour).toHaveAttribute('data-step', 'mods')
+  await expect(tour).toContainText('1 of 2')
+  await expect(tour).toContainText('Ctrl')
+  await expect(panel.locator('[data-tip-line]')).toHaveCount(0)
+  await overlay.snap('price check tour, mods')
+  await tour.locator('[data-pc-tour-next]').click()
+  await expect(tour).toHaveAttribute('data-step', 'listing')
+  await expect(tour.locator('[data-pc-tour-next]')).toHaveCount(0)
+  await tour.locator('[data-pc-tour-done]').click()
+  await expect(tour).toHaveCount(0)
+  await expect(panel.locator('[data-tip-line]')).toBeVisible()
+  // Once only.
+  await overlay.copyItem('items/unique-kaoms-heart.txt')
+  await expect(panel.locator('.w-pc-foot')).toContainText('listings')
+  await overlay.page.waitForTimeout(700)
+  await expect(tour).toHaveCount(0)
+})
+
 test('Settings > Price check > Listings switches Classic and Improved', async ({ overlay }) => {
   await overlay.boot({ overlayActive: true })
   await overlay.widget('menu').locator('.fa-cog').click()

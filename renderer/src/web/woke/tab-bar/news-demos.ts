@@ -51,7 +51,13 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'valdo-map-lookup': { search: 'valdo headhunter' },
   'search-keys-list': { search: 'keys' },
   // A rare with tiered mods: hover one for its ladder.
-  'price-check-mod-tiers': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' }
+  'price-check-mod-tiers': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' },
+  // Worth knowing lines (worth-knowing.ts).
+  'wk-mod-ctrl-click': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' },
+  'wk-search-sums': { search: '2 div + 30c' },
+  'wk-search-drops': { search: 'awakened enlighten' },
+  'wk-search-map-cards': { search: 'dunes map' },
+  'wk-search-keys': { search: 'keys' }
 }
 
 // Tools with no window of their own to open: a line about one needs a demo,

@@ -20,6 +20,12 @@ export interface HintsConfig {
   shows?: Record<string, number>
   // Tips retired: used once, or closed with ×.
   done?: string[]
+  // Price checks opened in the window while tips were on (the tour waits for the 3rd).
+  checks?: number
+  // The day tips first ran here (YYYY-MM-DD): Worth knowing waits two days.
+  since?: string
+  // Worth knowing's line of the day, and the day it was picked.
+  wk?: { id: string, day: string }
 }
 
 export const DEFAULT_SHOWS = 3
@@ -32,6 +38,9 @@ export function setOverlayOpen (open: boolean): void {
   if (open && !overlayOpen.value) session.value++
   overlayOpen.value = open
 }
+
+// A tour is on screen (the price check's): window tips wait for it.
+export const tourUp = shallowRef(false)
 
 // The window tip on screen, by id. Tooltip lines don't take it.
 const slot = shallowRef<string | null>(null)
@@ -96,6 +105,13 @@ export function takeShow (id: string, max = DEFAULT_SHOWS): boolean {
   return true
 }
 
+// A price check opened in its window (not the small card by the item).
+export function countPriceCheck (): void {
+  if (hintsOff()) return
+  const h = ensureHints()
+  if (h) h.checks = (h.checks ?? 0) + 1
+}
+
 // The pure part of whether a tip may show, for tests.
 export function hintEligible (h: HintsConfig | undefined, id: string, max: number, countedThisOpen: boolean): boolean {
   if (h?.off || h?.done?.includes(id)) return false
@@ -124,6 +140,7 @@ export function useHint (id: string, opts: HintOptions = {}): Hint {
   const eligible = computed(() => {
     if (opts.when && !opts.when()) return false
     if (!hintPlaceOk()) return false
+    if (usesSlot && tourUp.value) return false
     return hintEligible(hintsOf(), id, max, counted.get(id) === session.value)
   })
   watch([eligible, slot], ([on, held]) => {

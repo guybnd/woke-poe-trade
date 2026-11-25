@@ -6,6 +6,8 @@
         @pointerdown="startDrag">
         <i :class="pin.icon" class="w-accent" />
         <span class="w-head-font w-accent w-trunc" :class="$style.title">{{ pin.title }}</span>
+        <!-- The pin's hidden handling, in one place (hidden-features audit F8). -->
+        <WInfo :class="$style.help" data-pin-help :keys="PIN_KEYS" @pointerdown.stop />
         <button type="button" :class="[$style.btn, { [$style.btnOn]: sliderOpen }]" class="w-focusable" data-pin-fade
           :title="`See-through: ${pin.opacity}%. Click for a slider, or scroll`" :aria-label="`See-through ${pin.opacity}%`"
           :aria-expanded="sliderOpen" @pointerdown.stop @click="sliderOpen = !sliderOpen"
@@ -37,6 +39,14 @@ import { hoverZonesMoved, useHoverZone } from '../shared/hover'
 import { uiSize } from '../ui/ui-size'
 import { MAX_PIN_OPACITY, MIN_PIN_OPACITY, movePin, pinScale, place, removePin, setPinOpacity, spotOf } from './pins'
 import type { Pin } from './pins'
+import WInfo from '../ui/WInfo.vue'
+import type { HelpKey } from '../ui/help-tip'
+
+const PIN_KEYS: HelpKey[] = [
+  { keys: 'Drag', label: 'The title: move it. Towns and hideouts keep one spot, maps another' },
+  { keys: 'Wheel', label: 'Over the %: more or less see-through' },
+  { keys: 'Click', label: 'The pin: unpin it' }
+]
 
 // `clickThrough`: only the head takes the mouse, so clicks on the body reach
 // the game under it (a pinned atlas tree over the game's own atlas).
@@ -172,6 +182,7 @@ onUnmounted(() => {
 }
 .dragging .head { cursor: grabbing; }
 .title { flex: 1; min-width: 0; }
+.help { flex: none; }
 .btn {
   display: inline-flex;
   align-items: center;

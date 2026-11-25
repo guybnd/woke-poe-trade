@@ -5,7 +5,7 @@
       <div :class="$style.body">
         <div v-for="n in lines" :key="n.id" :class="$style.line" data-whats-new-line>
           <div :class="$style.text">
-            <span :class="$style.name" data-no-item-tip="A tool's name, not an item"><ToolIcon :art="artFor(n.wmType)" :icon="iconFor(n.wmType)" :class="$style.toolIcon" />{{ n.name }}</span>
+            <span :class="$style.name" data-no-item-tip="A tool's name, not an item"><ToolIcon :art="artFor(n.wmType)" :icon="iconFor(n.wmType)" :class="$style.toolIcon" />{{ n.name }}<span v-if="isWorth(n)" :class="$style.worth" data-worth-knowing>Worth knowing</span></span>
             <span>{{ sentence(n.note) }}</span>
           </div>
           <w-button v-if="hasShowMe(n, byName, personalOn)" size="sm" variant="ghost" data-whats-new-show @click="show(n, $event)">Show me</w-button>
@@ -45,6 +45,8 @@ import { searchRequest } from '../search/widget'
 import { elementPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
 import type { ItemMenuRef } from '../ui/tooltip/item-menu-logic'
 import { uiTrace } from '../app/ui-trace'
+import { WORTH_PREFIX, dayOf, worthLine } from '../tab-bar/worth-knowing'
+import { hintPlaceOk, retireHint } from '../shared/hints'
 import DockItem from './DockItem.vue'
 import { openOverlay, openSettingsPage, showWithOverlay } from './dock'
 import { moduleSettingsPage } from '../tab-bar/tools'
@@ -57,9 +59,22 @@ function typeName (wmType: string): string {
   const spec = registry.widgets.find(w => w.widget.type === wmType)?.widget
   return spec?.trNameKey ? t(spec.trNameKey) : wmType
 }
-const lines = computed(() => unseenNews(AppConfig().woke))
 // A sample price check goes by the item's English name.
 const byName = computed(() => AppConfig().language === 'en')
+// After the update's lines, the Worth knowing line of the day, if one is due.
+const lines = computed<NewsItem[]>(() => {
+  const woke = AppConfig().woke
+  const news = unseenNews(woke)
+  if (!woke || woke.newsOff || !hintPlaceOk()) return news
+  const worth = worthLine(woke.hints, {
+    unseenNews: new Set(news.map(n => n.id)),
+    byName: byName.value,
+    reader: personalOn.value,
+    toolOn: t => isWidgetTypeOn(AppConfig(), t)
+  })
+  return worth && hasShowMe(worth, byName.value, personalOn.value) ? [...news, worth] : news
+})
+const isWorth = (n: NewsItem) => n.id.startsWith(WORTH_PREFIX)
 // "New: a Planner tab…" reads "A Planner tab…" under the tool's name.
 function sentence (note: string) {
   const s = note.replace(/^New: /, '')
@@ -69,7 +84,15 @@ function sentence (note: string) {
 // Saved now: a click in game (its menu, a pinned card) has no blur to save
 // on, and an open Settings window holds back the usual save.
 function markSeen (items: NewsItem[]) {
-  markNewsSeen(ensureWokeConfig(AppConfig()).woke, items.map(n => n.id))
+  markNewsSeen(ensureWokeConfig(AppConfig()).woke, items.filter(n => !isWorth(n)).map(n => n.id))
+  // A Worth knowing line goes like a tip: once (shared/hints.ts).
+  // The next one comes tomorrow.
+  for (const n of items) {
+    if (!isWorth(n)) continue
+    retireHint(n.id)
+    const h = AppConfig().woke?.hints
+    if (h?.wk?.id === n.id) h.wk = { id: n.id, day: dayOf(new Date()) }
+  }
   saveConfigQuietly()
 }
 
@@ -161,5 +184,6 @@ function turnOff () {
 .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .toolIcon { --w-icon-md: 16px; --w-fs-lg: var(--w-fs-md); }
 .name { display: flex; align-items: center; gap: 5px; color: var(--w-accent); font-family: var(--w-head); letter-spacing: var(--w-head-track); }
+.worth { margin-left: 4px; font-family: var(--w-body, inherit); letter-spacing: 0; font-size: var(--w-fs-xs); color: var(--w-dim); }
 .foot { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
 </style>

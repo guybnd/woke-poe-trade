@@ -28,7 +28,7 @@
     </div>
     <div v-if="!statsVisibility.disabled && hasStats && !(onStrip && !stats.length)" class="mb-3">
       <!-- woke: one right-click listener for every row (price-insight/stat-actions.ts). -->
-      <form @submit.prevent="handleStatsSubmit" @contextmenu="openRowMenu" :class="{ 'w-poe-well': poeMode }">
+      <form data-tour="mods" @submit.prevent="handleStatsSubmit" @contextmenu="openRowMenu" :class="{ 'w-poe-well': poeMode }">
         <!-- woke: weapon/armour numbers (stat-header.ts); its picked numbers are the rows under it. -->
         <component :is="poeKit!.StatHeader" v-if="statHeader" :model="statHeader" />
         <template v-for="{ filter, i } of shownStats">

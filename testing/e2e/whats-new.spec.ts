@@ -161,3 +161,29 @@ test('a line with nothing to show has no Show me, only dismiss', async ({ overla
   await expect(line.locator('[data-whats-new-dismiss]')).toBeVisible()
 })
 
+
+// Worth knowing (tab-bar/worth-knowing.ts): features that aren't new but are
+// easy to miss, one a day from the third day, for everyone.
+test('Worth knowing: from the third day, one line for everyone; Show me runs it and it goes', async ({ overlay }) => {
+  const d = new Date(Date.now() - 3 * 86400000)
+  const since = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  // Ctrl + Click already used, so the first line is the sums one.
+  await overlay.boot({ overlayActive: true, tips: true, patch: c => { c.woke.hints = { since, done: ['price-check-mod-keys'] } } })
+  const icon = overlay.dockIcon('whats-new')
+  await icon.click()
+  await overlay.page.mouse.move(5, 5)
+  const lines = icon.locator('[data-whats-new-line]')
+  await expect(lines).toHaveCount(1)
+  await expect(lines).toContainText('Worth knowing')
+  await expect(lines).toContainText('2 div + 30c')
+  await overlay.snap('worth knowing line')
+  await lines.getByRole('button', { name: 'Show me' }).click()
+  await expect(overlay.widget('woke-search').getByRole('textbox', { name: 'Search', exact: true })).toHaveValue('2 div + 30c')
+  await expect(icon).toHaveCount(0)
+})
+
+test('Worth knowing waits two days on a new install', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true, tips: true })
+  await overlay.page.waitForTimeout(1000)
+  await expect(overlay.dockIcon('whats-new')).toHaveCount(0)
+})
