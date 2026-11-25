@@ -9,7 +9,10 @@
       <span :class="$style.title">Trade search</span>
       <span class="flex-1" />
       <span v-if="headline" :class="$style.headline" class="w-trunc" data-valdo-headline>{{ headline }}</span>
-      <WInfo text="Void and Reward go into this price check's search; nothing is searched until you press Search. The trade site can't search a Valdo map's other mods, so their Has and Not filter the listings already loaded. Not is remembered on your Map mods profile, and its red dots are the mods that profile says you can't run." />
+      <WInfo text="**Void** and **Reward** go into this price check's search. Nothing is searched until you press **Search**.
+- The trade site can't search a Valdo map's other mods, so their **Has** and **Not** filter the listings already loaded.
+- **Not** is remembered on your Map mods profile.
+- **Red dots** are the mods that profile says you can't run." />
       <i class="fas w-dim text-xs" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
     </button>
     <div v-if="reward" :class="$style.line" data-valdo-reward>

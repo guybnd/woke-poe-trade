@@ -6,7 +6,7 @@
         <WInfo v-if="hint && !showHint" :text="hint" />
         <span v-if="restart" :class="$style.restart">Restart to apply</span>
       </div>
-      <div v-if="hint && showHint" :class="$style.hint">{{ hint }}</div>
+      <div v-if="hint && showHint" :class="$style.hint">{{ helpPlain(hint) }}</div>
     </div>
     <div v-if="$slots.default" class="w-setting-control" :class="$style.control"><slot /></div>
   </div>
@@ -17,6 +17,7 @@
 // behind a "?"; `showHint` keeps it on screen, for what goes wrong if it's missed.
 // `stack` puts the control under the text, for wide fields and lists.
 import WInfo from './WInfo.vue'
+import { helpPlain } from './help-tip'
 
 withDefaults(defineProps<{
   label: string

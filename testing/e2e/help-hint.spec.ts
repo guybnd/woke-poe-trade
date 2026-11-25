@@ -53,3 +53,22 @@ test('clicking a ? inside a radio label does not pick that radio', async ({ over
   await overwrite.locator('input').click()
   await expect(overwrite.locator('input')).toBeChecked()
 })
+
+test('a long ? reads as a lead line and bullets, with bold names and boxed keys', async ({ overlay }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-rare-t16-deadly.txt')
+  const panel = overlay.widget('price-check')
+  await expect(panel.getByText('Risky', { exact: true })).toBeVisible({ timeout: 20_000 })
+  const q = panel.locator('[data-map-trade] .w-info').first()
+  await expect(q).toHaveAttribute('aria-label', /^Tunes this price check's search\. Nothing is searched until you press Search\. Has finds/)
+  await q.hover()
+  const card = overlay.page.getByRole('tooltip')
+  await expect(card.locator('p').first()).toHaveText('Tunes this price check\'s search. Nothing is searched until you press Search.')
+  await expect(card.locator('li')).toHaveCount(4)
+  await expect(card.locator('li').first().locator('b')).toHaveText(['Has', 'Not', 'Any'])
+  await expect(card.locator('kbd')).toHaveText('Scroll')
+  // No markup left over.
+  await expect(card).not.toContainText('**')
+  await expect(card).not.toContainText('[[')
+  await overlay.snap('help card with bullets')
+})

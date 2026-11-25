@@ -3,7 +3,9 @@
     <div class="flex items-center gap-2 text-sm">
       <span v-if="g.on" class="w-dim">Your table replaces {{ store.gearReplaced.value }} of NeverSink's gear rules.</span>
       <span v-else class="w-dim">Showing NeverSink's gear rules as they are. Change anything to take them over.</span>
-      <WInfo text="Magic and rare gear that drops with a 3.30 item tier. Each cell is the lowest drop tier that shows. Influenced, fractured, veiled and other special gear keeps NeverSink's own rules, which come first." />
+      <WInfo text="Magic and rare gear that drops with a 3.30 item tier.
+- Each cell is the lowest drop tier that shows.
+- Influenced, fractured, veiled and other special gear keeps NeverSink's own rules, which come first." />
       <WButton size="sm" variant="ghost" icon="fas fa-magic" style="margin-left: auto;" title="One-click setups for the whole table" @click="quickMenu">Quick setups ▾</WButton>
       <WButton v-if="g.on" size="sm" variant="ghost" @click="backToNeverSink">Back to NeverSink</WButton>
     </div>
@@ -74,7 +76,9 @@
       <div ref="looksEl" :class="$style.card">
         <div class="flex items-center gap-2">
           <span>Looks</span>
-          <WInfo text="How the table's labels look. NeverSink gives magic and rare gear the same colours; here each rarity can look its own way. Each row and drop tier keeps NeverSink's size and sound." />
+          <WInfo text="How the table's labels look.
+- NeverSink gives magic and rare gear the same colours; here each rarity can look its own way.
+- Each row and drop tier keeps NeverSink's size and sound." />
           <WToggle :model-value="g.look.rarityText" style="margin-left: 8px;" @update:model-value="v => change(x => { x.look.rarityText = v })">Game's rarity colour for the text</WToggle>
         </div>
         <div :class="$style.looks">

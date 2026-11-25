@@ -1,7 +1,10 @@
 <template>
   <div :class="$style.page">
     <div :class="$style.how">
-      <span class="flex items-center gap-2 w-dim" :class="$style.howText">How it works <WInfo text="In a zone with a mechanic, an icon appears in the dock. Rest the mouse on it for that mechanic's top prices; click it with the overlay open for the full panel. The launcher opens the panel any time." /></span>
+      <span class="flex items-center gap-2 w-dim" :class="$style.howText">How it works <WInfo text="In a zone with a mechanic, an icon appears in the dock.
+- Rest the mouse on it for that mechanic's top prices.
+- Click it with the overlay open for the full panel.
+- The launcher opens the panel any time." /></span>
       <w-toggle v-model="autoSwitch" title="With the panel open, entering a mechanic's zone switches it to that mechanic">Panel follows my zone</w-toggle>
     </div>
 

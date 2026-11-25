@@ -3,7 +3,7 @@
     <div :class="$style.card">
       <div class="flex items-center gap-3">
         <WToggle :model-value="ns.on" @update:model-value="store.useGitHub($event)">Get NeverSink from GitHub and keep it up to date</WToggle>
-        <WInfo :text="`All seven strictness levels are downloaded into the app's own folder, so your game's filter list doesn't fill up. Your changes are saved to &quot;${NEVERSINK_OUTPUT.replace('.filter', '')}&quot;.\n\nIf you customise on FilterBlade, leave this off and keep picking your own file.`" />
+        <WInfo :text="`All seven strictness levels are downloaded into the app's own folder, so your game's filter list doesn't fill up.\n- Your changes are saved to **${NEVERSINK_OUTPUT.replace('.filter', '')}**.\n- If you customise on FilterBlade, leave this off and keep picking your own file.`" />
         <span class="grow" />
         <span v-if="ns.on && ns.version" class="w-dim text-xs w-num">
           Version {{ ns.version }}<template v-if="ns.checkedAt"> · checked {{ agoPhrase(ns.checkedAt) }}</template>

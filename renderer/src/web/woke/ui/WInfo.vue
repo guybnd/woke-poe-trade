@@ -4,15 +4,16 @@
 </template>
 
 <script setup lang="ts">
-// A long explanation, kept out of the panel until someone asks for it. A blank
-// line in `text` starts a new paragraph.
+// A long explanation, kept out of the panel until someone asks for it. `text`
+// takes the help format in help-tip.ts: a lead line, "- " bullets, **bold** names
+// and [[Right-click]] keys.
 import { computed, onBeforeUnmount } from 'vue'
-import { helpTip, hideHelp, showHelp, type HelpKey } from './help-tip'
+import { helpPlain, helpTip, hideHelp, showHelp, type HelpKey } from './help-tip'
 import { hotkeyText } from './key-label'
 
 // `keys` shows boxed key rows, the way hotkeys look everywhere else.
 const props = defineProps<{ text?: string, keys?: HelpKey[] }>()
-const label = computed(() => [props.text ?? '', ...(props.keys ?? []).map(k => `${hotkeyText(k.keys)} ${k.label}`)].filter(Boolean).join('. '))
+const label = computed(() => [helpPlain(props.text ?? ''), ...(props.keys ?? []).map(k => `${hotkeyText(k.keys)} ${k.label}`)].filter(Boolean).join('. '))
 
 const owner = {}
 const open = computed(() => helpTip.value?.owner === owner)

@@ -97,7 +97,13 @@
         <WSelect :model-value="String(p.lowTiers.tier)" :options="itemTiers" style="width: 4.5rem;"
           aria-label="Lowest item tier shown" @update:model-value="v => p.lowTiers.tier = Number(v)" />
         <span class="w-dim text-sm">once you're in maps</span>
-        <WInfo text="Uses 3.30's item tiers (2 to 5), white gear included. Item level 86 and crafting bases, exotic bases, influenced and synthesised rares, fractured and veiled gear, 5-links and 6-sockets, the chaos recipe and your build's rules still show." />
+        <WInfo text="Uses 3.30's item tiers (2 to 5), white gear included.
+
+These still show:
+- Item level 86 and crafting bases, exotic bases
+- Influenced and synthesised rares, fractured and veiled gear
+- 5-links and 6-sockets
+- The chaos recipe and your build's rules" />
       </div>
     </div>
 
@@ -131,7 +137,12 @@
         <WToggle v-model="p.cheapUniques.on">Hide uniques worth under</WToggle>
         <WField v-model.number="uniquesChaos" type="number" suffix="c" style="width: 5rem;" aria-label="Cheap unique line in chaos" />
         <span class="w-dim text-sm">once you're in maps</span>
-        <WInfo text="Only bases where every unique is that cheap. 5-links, 6-sockets, corrupted, replica and foulborn copies, dust bases and your build's uniques still show." />
+        <WInfo text="Only bases where every unique is that cheap.
+
+These still show:
+- 5-links and 6-sockets
+- Corrupted, replica and Foulborn copies
+- Dust bases and your build's uniques" />
       </div>
       <div v-if="p.cheapUniques.on" class="w-faint text-xs">{{ uniqueNote }}</div>
     </div>
@@ -188,7 +199,9 @@
         <WToggle v-model="p.weapons.on">While levelling, only weapons for</WToggle>
         <WSegmented :model-value="p.weapons.archetype" :options="archetypeOptions" aria-label="Build type"
           @update:model-value="setArchetype" />
-        <WInfo text="Other white and blue weapons are hidden and their rares dimmed. Auto uses the weapons of your PoB build. Click a weapon type to keep or hide it." />
+        <WInfo text="Other white and blue weapons are hidden and their rares dimmed.
+- **Auto** uses the weapons of your PoB build.
+- Click a weapon type to keep or hide it." />
       </div>
       <div v-if="p.weapons.on" :class="$style.weaponGroups">
         <template v-for="g in WEAPON_GROUPS" :key="g.label">

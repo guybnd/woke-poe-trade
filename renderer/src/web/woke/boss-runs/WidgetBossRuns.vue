@@ -215,7 +215,13 @@
                     <a v-if="estimateLink(sel.boss)" :href="estimateLink(sel.boss)!" target="_blank" class="w-accent">Open source ↗</a>
                     <div v-if="isNightmare(sel.boss)">{{ fragsPerKill }} fragments a kill, {{ Math.round(FAVOURED_SHARE * 100) }}% of them from the ones this boss favours, the rest spread over the other uber fragments.</div>
                   </div>
-                  <div><WInfo text="Your typed rates win over community rates, then your kill log, then estimates. Prices are from poe.ninja; Search trade prices jewels from unidentified trade listings." /></div>
+                  <div><WInfo text="Which drop rate counts, first to last:
+- Your typed rates
+- Community rates
+- Your kill log
+- Estimates
+
+Prices are from poe.ninja. **Search trade** prices jewels from unidentified trade listings." /></div>
                 </div>
                 <div class="w-row w-row--head" :class="$style.rateGrid"><span>Drop</span><span>Source</span><span class="text-right">Chance %</span><span /></div>
                 <div v-for="d in sel.drops" :key="d.name" class="w-row" :class="$style.rateGrid">

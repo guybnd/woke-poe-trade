@@ -12,7 +12,11 @@
         placeholder="e.g. C:\Users\you\AppData\Roaming\Path of Building Community\Path of Building.exe">
     </label>
     <WSettingRow label="Hotkey: draw the build over the passive tree"
-      hint="Open the passive tree in game and press it. Shows the active build's nodes you haven't taken yet. It follows when you drag the tree and snaps again after a scroll. Press again to hide it. Nothing reads the screen until you press it.">
+      hint="Open the passive tree in game and press it: shows the active build's nodes you haven't taken yet.
+- It follows when you drag the tree and snaps again after a scroll.
+- Press again to hide it.
+
+Nothing reads the screen until you press it.">
       <w-hotkey-cell v-model="treeHotkey" />
     </WSettingRow>
     <WSettingRow label="Dock icon click draws on the passive tree"

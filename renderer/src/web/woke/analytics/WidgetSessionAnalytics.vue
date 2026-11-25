@@ -57,7 +57,7 @@
                 </span>
                 <span class="flex justify-end"><WSpark :values="row.trend" :width="48" :height="16" /></span>
               </button>
-              <div class="pt-1"><WInfo :text="`Bar: ${unitLabel} per hour. Whisker: 90% range.\n\nWhiskers show after ${MIN_UNITS_FOR_RANGE} maps. Overlapping whiskers mean it is too early to tell two strategies apart.\n\n${ANALYTICS_TIME[rateTime()]}`" /></div>
+              <div class="pt-1"><WInfo :text="`**Bar**: ${unitLabel} per hour. **Whisker**: 90% range.\n- Whiskers show after ${MIN_UNITS_FOR_RANGE} maps.\n- Overlapping whiskers mean it is too early to tell two strategies apart.\n\n${ANALYTICS_TIME[rateTime()]}`" /></div>
             </div>
 
             <div v-if="selectedRow" :class="$style.detail">

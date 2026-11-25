@@ -12,7 +12,9 @@
         <section :class="$style.sec">
           <div :class="$style.head">
             <span>Your build's tags</span>
-            <WInfo text="Found in your build by itself: marked •, main skill tags count most. Click a tag to drop it, or add any tag below. Your changes stay with this build." />
+            <WInfo text="Tags found in your build by itself are marked **•**. Main skill tags count most.
+- Click a tag to drop it, or add any tag below.
+- Your changes stay with this build." />
             <WButton size="sm" variant="ghost" :class="$style.end" data-qa="megalo-add-tags" @click="browse = !browse">{{ browse ? 'Done' : '+ Add tags' }}</WButton>
           </div>
           <div :class="$style.chips">
@@ -38,7 +40,11 @@
         <section :class="$style.sec">
           <div :class="$style.head">
             <span>Notables</span>
-            <WInfo text="Right-click a notable to make it a must-have (up to 3): every result has it. Click a notable to tick or untick it. The number is its weight: the best fit is 100. Click the number to change it; ↺ goes back to the suggestion. Hover a notable to see what it does." />
+            <WInfo text="Which notables count, and how much.
+- [[Click]] a notable to tick or untick it.
+- [[Right-click]] makes it a must-have (up to 3): every result has it.
+- The **number** is its weight; the best fit is 100. Click it to change it, **↺** goes back to the suggestion.
+- Hover a notable to see what it does." />
             <WField v-model="filter" :class="$style.end" :style="{ width: '11rem' }" placeholder="Filter notables or tags" icon="fas fa-filter" data-qa="megalo-filter" />
           </div>
           <div v-if="!pool.length" :class="$style.dim">The notable list loads when the window opens…</div>

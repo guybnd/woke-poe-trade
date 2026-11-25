@@ -107,7 +107,11 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 props.config.bought ??= {}
 
 const PAGE = 60
-const INFO = 'Uniques ranked by Thaumaturgic Dust for what they cost, to buy and disenchant at Kingsmarch. Dust is at item level 84: weapons and armour at 20% quality, jewellery with catalysts when that gives more dust per chaos. poe.ninja prices, cheapest plain version. Logic from poe-disenchant-tool by deronek.'
+const INFO = 'Uniques ranked by Thaumaturgic Dust for what they cost, to buy and disenchant at Kingsmarch.\n' +
+  '- Dust is at item level 84.\n' +
+  '- Weapons and armour at 20% quality; jewellery with catalysts when that gives more dust per chaos.\n' +
+  '- Prices are poe.ninja\'s, for the cheapest plain version.\n\n' +
+  'Logic from poe-disenchant-tool by deronek.'
 
 // Holds the price collector while the panel is open: no polling of its own.
 const index = usePriceIndex()

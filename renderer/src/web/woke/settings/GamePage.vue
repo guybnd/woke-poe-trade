@@ -63,7 +63,10 @@
     </w-setting-section>
     <w-setting-section title="Per hour">
       <w-setting-row label="Time counted" show-hint
-        hint="Every per hour number uses this: Net worth, strategy runs, Session story, Session analytics and Ctrl+Space. Play only counts maps and other areas. Play + hideout adds hideout and town. All time also counts AFK and the game closed.">
+        hint="Every per hour number uses this: Net worth, strategy runs, Session story, Session analytics and [[Ctrl + Space]].
+- **Play** counts only maps and other areas.
+- **Play + hideout** adds hideout and town.
+- **All time** also counts AFK and the game closed.">
         <!-- The live value, as in every tool (not this window's copy), so both stay in step. -->
         <RateTimePick data-rate-time />
       </w-setting-row>

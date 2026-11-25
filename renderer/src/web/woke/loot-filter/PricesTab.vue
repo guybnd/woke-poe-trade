@@ -107,7 +107,7 @@
         <WToggle v-model="config.safetyNet.on">Always show anything worth</WToggle>
         <WField v-model.number="minChaos" type="number" suffix="c" style="width: 5.5rem;" aria-label="Safety net value in chaos" />
         <span class="w-dim text-xs">{{ config.safetyNet.on ? netCaughtText : 'off' }}</span>
-        <WInfo :text="'One rule at the top of your filter, white on red with a short red beam and an alert sound, for valuable items the rest of the filter would hide.\n\nThin markets count, since a junk price only costs you a click. It can\'t judge rares, gems, cluster jewels or maps, which have no one price for a base.'" />
+        <WInfo :text="'One rule at the top of your filter for valuable items the rest of the filter would hide: white on red, a short red beam and an alert sound.\n- Thin markets count, since a junk price only costs you a click.\n- It can\'t judge rares, gems, cluster jewels or maps, which have no one price for a base.'" />
       </div>
       <WToggle :model-value="dockNotice" @update:model-value="setDockNotice">Tell me on the dock icon</WToggle>
     </div>

@@ -1,5 +1,6 @@
 # Next release notes
 
+- Help "?" cards are easier to read: a short first line, then one bullet per control, with button names in bold and keys and clicks boxed. The map price check, Valdo maps, Megalomaniac, Forbidden Flame and Flesh, map scan, map regex rewards and juice score, loot filter presets and gear, Disenchant, Session analytics, Boss runs, Stacked decks and a few long Settings hints are rewritten this way.
 - PoB builds: the Live build of your character now keeps each jewel's radius, so in Path of Building a timeless jewel (Elegant Hubris and the rest) converts its passives and Thread of Hope reaches its ring. Before, PoB gave those jewels no radius and they did nothing.
 - Worth knowing: from your third day with the app, the What's new icon in the dock brings one line a day about something easy to miss (Ctrl + Click a mod, sums like 2 div + 30c in Ctrl + Space, where an item drops, your own price in Net worth), each with Show me. It skips what you already use, and goes with Settings › Look & icon row › Tips.
 - Your third price check shows a short tour, once: the mod rows (click, Ctrl + Click, right-click), poe.ninja's price and the listings. Got it or × ends it for good. A pinned card's "?" lists its handling: drag the title (towns and maps keep their own spot), the wheel over the % for see-through, the pin to unpin.

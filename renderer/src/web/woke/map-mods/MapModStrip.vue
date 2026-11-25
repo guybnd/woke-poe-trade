@@ -15,7 +15,11 @@
           <span class="w-dim text-xs">Juice</span>
           <span class="w-num w-accent font-semibold" data-map-juice>{{ result.juice.score }}</span>
         </template>
-        <WInfo text="The badge and dots are your Map mods ratings. Has finds maps with the mod, Not finds maps without it, Any ignores it; a number tile searches at least its minimum (type or scroll to change it). Kind finds only maps of this map's kind (its influence); click it to pick another. These change only this price check's search, and nothing is searched until you press Search." />
+        <WInfo text="Tunes this price check's search. Nothing is searched until you press **Search**.
+- **Has** finds maps with the mod, **Not** finds maps without it, **Any** ignores it.
+- A **number tile** searches at least its value. Type or [[Scroll]] to change it.
+- **Kind** finds only maps of this map's kind (its influence). Click it to pick another.
+- The badge and dots are your **Map mods** ratings." />
         <i class="fas w-dim text-xs" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
       </button>
       <div v-if="summary || picked" :class="$style.summary">
