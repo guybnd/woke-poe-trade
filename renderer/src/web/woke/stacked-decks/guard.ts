@@ -14,9 +14,12 @@ export const DROP_RATE_CAP = 2
 
 export function guardCardPrice (chaos: number, graph: Array<number | null> | undefined, days: number | undefined, drop?: { chance: number, deckChaos: number | null }): HeldPrice | null {
   // poe.ninja's line can't tell a fake that's held for days, or one with no
-  // earlier price: the drop rate can. It goes first: a fake that climbs again
-  // would otherwise count at the line's "usual" price, the earlier fake.
-  return (drop ? dropRateHeld(chaos, drop.chance, drop.deckChaos) : null) ?? heldPrice(chaos, graph, days, 'cards')
+  // earlier price: the drop rate can.
+  const held = heldPrice(chaos, graph, days, 'cards')
+  if (!drop) return held
+  // A fake that climbs again: the line's "usual" price is the earlier fake.
+  if (held?.chaos != null && dropRateHeld(held.chaos, drop.chance, drop.deckChaos)) return { ninja: chaos, chaos: null, kind: 'drop-rate' }
+  return held ?? dropRateHeld(chaos, drop.chance, drop.deckChaos)
 }
 
 // A card price over DROP_RATE_CAP decks' worth for how often it drops, or null.

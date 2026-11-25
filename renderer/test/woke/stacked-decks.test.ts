@@ -286,6 +286,10 @@ describe('drop-rate check', () => {
     expect(guardCardPrice(60_000, climbed, 30, deck('Loyalty'))).toEqual({ ninja: 60_000, chaos: null, kind: 'drop-rate' })
   })
 
+  it("a one-day price keeps its own reason (the line check's comes first)", () => {
+    expect(guardCardPrice(14139, [null, null, null, null, null, null, 0], 30, deck('Thirst for Knowledge'))?.kind).toBe('one-day')
+  })
+
   it('keeps real prices: a cheap common card, a rare card at a high price', () => {
     expect(guardCardPrice(2, steady, 30, deck('Loyalty'))).toBeNull()
     expect(guardCardPrice(19, steady, 30, deck('Matryoshka'))).toBeNull()
