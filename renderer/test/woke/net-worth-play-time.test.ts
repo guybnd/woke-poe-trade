@@ -271,6 +271,17 @@ describe('boss fights in the zone lines', () => {
     expect(trimMarks(m, T0 + 20 * MIN).fights).toEqual([T0 + 30 * MIN])
   })
 
+  it('counts an encounter a map opens as that map, not a new one', () => {
+    const m = feedMarks(emptyMarks(), [
+      area(0, 'MapWorldsStrand'),
+      line(3, 'Generating level 83 area "MapAtlasEncounterBoss" with seed 32'),
+      area(5, 'MapWorldsStrand'),
+      area(6, 'HideoutFoo')
+    ])
+    expect(m.maps).toEqual([T0])
+    expect(timeIn(m.marks, T0, T0 + 6 * MIN).map).toBe(6 * MIN)
+  })
+
   it("doesn't count a Starfall Crater entered from a map as a fight", () => {
     const m = feedMarks(emptyMarks(), [
       area(0, 'MapWorldsFortress'),
