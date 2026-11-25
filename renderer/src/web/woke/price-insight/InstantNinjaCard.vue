@@ -41,8 +41,7 @@
       <div v-if="hasHistory" :class="$style.gtabs">
         <button v-for="r in RANGES" :key="r.id" type="button" tabindex="-1" :class="{ [$style.on]: r.id === range }" :data-testid="`instant-ninja-range-${r.id}`" @mousedown.prevent @click="setRange(r.id)">{{ r.id }}</button>
       </div>
-      <!-- The graph fills what the box has: the card's width, and a divine's table's height
-           beside it (Guy, 2026-11-25, "it can scale dynamically"). -->
+      <!-- The graph stretches to the box's width, which fills the card's width (Guy, 2026-11-25). -->
       <div v-if="spark.length > 1" ref="plot" :class="$style.plot" data-testid="instant-ninja-plot"><w-spark :values="spark" :width="plotSize.w" :height="plotSize.h" /></div>
       <div v-else-if="hasHistory && !(range === '24h' && savedLoading)" :class="$style.nograph">No change yet</div>
       <span v-if="change != null" :class="change >= 0 ? 'w-up' : 'w-down'" :title="changeTitle" data-testid="instant-ninja-change">{{ change >= 0 ? '▲' : '▼' }}{{ Math.abs(change) }}%</span>
@@ -360,10 +359,25 @@ onUnmounted(() => {
    (Guy, 2026-11-24, "small and hard to read"). The list beside it follows. */
 .anchor { --w-instant-scale: 1.4; --w-instant-gap: calc(6px * var(--w-ui-size, 1) * var(--w-instant-scale, 1)); position: absolute; pointer-events: auto; z-index: 5; display: flex; align-items: flex-start; gap: var(--w-instant-gap); max-height: 100%; }
 .flipped { flex-direction: row-reverse; }
-.main { display: flex; flex-direction: column; align-items: flex-start; gap: var(--w-instant-gap); }
+/* No game showing through anywhere on the card or beside it (Guy, 2026-11-25), whatever
+   the panel see-through setting says: it beats theme.css's #overlay-window * rule. */
+:global(#overlay-window) .anchor.anchor.anchor, :global(#overlay-window) .anchor.anchor.anchor * {
+  --w-panel: var(--w-panel-solid-base);
+  --w-panel-solid: var(--w-panel-solid-base);
+  --w-panel-2: var(--w-panel-2-base);
+  --w-pc-well: var(--w-pc-well-base);
+  --w-tip-bg: #060504;
+}
+/* The boxes meet edge to edge (Guy, 2026-11-25, "corners all touching"): the lists are
+   as tall as the card and its graph box, the card and graph box as wide as each other.
+   .main keeps its own height, which place() keeps by the mouse. */
+.anchor { align-items: stretch; }
+.main { align-self: flex-start; display: flex; flex-direction: column; align-items: flex-start; gap: var(--w-instant-gap); }
 .flipped .main { align-items: flex-end; }
 .lists { display: flex; flex-direction: column; gap: var(--w-instant-gap); min-height: 0; max-height: 100%; }
 .lists:empty { display: none; }
+/* The last list grows to the bottom of the graph box. */
+.lists > :last-child { flex-grow: 1; }
 .card {
   zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1));
   --tip: var(--w-r-normal);
@@ -413,8 +427,8 @@ onUnmounted(() => {
 .doubt { color: var(--w-warn, #e0a03c); max-width: 18rem; }
 .fg { color: var(--w-r-magic, #8888ff); }
 /* The graph box and, for a divine, its parts in chaos: side by side under the card. */
-/* As wide as the card, the graph box taking what the table leaves; both as tall as the taller. */
-.aside { align-self: stretch; display: flex; align-items: stretch; gap: var(--w-instant-gap); }
+/* As wide as the card, the graph box taking the width the table leaves (Guy, 2026-11-25: width, not height). */
+.aside { align-self: stretch; display: flex; align-items: flex-start; gap: var(--w-instant-gap); }
 .tenths {
   zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1));
   border: 1px solid var(--w-line-strong, var(--w-line));
@@ -457,7 +471,7 @@ onUnmounted(() => {
 .gtabs button:hover { color: var(--w-fg); }
 .gtabs .on { color: var(--w-r-currency); border-color: rgba(170, 158, 130, .55); background: rgba(170, 158, 130, .1); }
 /* Out of the flow, so the graph never sets the box's size, only fills it. */
-.plot { position: relative; flex: 1 1 auto; align-self: stretch; min-height: 32px; }
+.plot { position: relative; align-self: stretch; height: 32px; }
 .plot > svg { position: absolute; inset: 0; }
 .nograph { font-size: var(--w-fs-xs); padding: 8px 0; }
 .src { font-size: var(--w-fs-xs); opacity: .8; }

@@ -34,12 +34,11 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   // The graph box starts on 24h: poe.ninja's last two days, 104% to 105%.
   const graph = card.getByTestId('instant-ninja-graph')
   await expect(graph.getByTestId('instant-ninja-range-24h')).toHaveClass(/on/)
-  // The graph fills its box: as tall as the table beside it, the box out to the card's edge.
+  // The graph box and the table beside it span the card's width; the graph stretches with the box.
   const [gb, tb, cb, pb] = await Promise.all([graph, card.getByTestId('instant-ninja-tenths'), card.locator('[data-card]'), card.getByTestId('instant-ninja-plot')].map(l => l.boundingBox()))
-  expect(Math.abs(gb!.y + gb!.height - (tb!.y + tb!.height))).toBeLessThan(2)
   expect(Math.abs(Math.min(gb!.x, tb!.x) - cb!.x)).toBeLessThan(2)
   expect(Math.abs(Math.max(gb!.x + gb!.width, tb!.x + tb!.width) - (cb!.x + cb!.width))).toBeLessThan(2)
-  expect(pb!.height).toBeGreaterThan(tb!.height / 2)
+  expect(pb!.width).toBeGreaterThan(gb!.width * 0.8)
   await expect(card.getByTestId('instant-ninja-change')).toHaveText('▲1%')
   await expect(card.getByTestId('instant-ninja-change')).toHaveAttribute('title', /last 24 hours/)
   // The mouse wheel steps to 3 days, a click on a range picks it.

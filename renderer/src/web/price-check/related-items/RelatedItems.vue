@@ -769,7 +769,8 @@ export default defineComponent({
 .tight .row { min-height: 30px; }
 .click { cursor: pointer; }
 .click:hover { background: var(--w-panel-3); }
-.ft { padding: 4px 12px; border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); color: var(--w-faint); }
+/* Beside the instant card the list can grow to its graph box: the footer stays at the foot. */
+.ft { margin-top: auto; padding: 4px 12px; border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); color: var(--w-faint); }
 .me { background: var(--w-accent-soft); }
 .art { width: 28px; height: 28px; object-fit: contain; }
 .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #d98a4a; }

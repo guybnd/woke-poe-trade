@@ -576,7 +576,8 @@ export default defineComponent({
 .edgeX, .edgeY, .corner { position: absolute; z-index: 2; }
 .zoomed { zoom: var(--w-ui-size, 1); }
 /* Under the instant card, close to it. */
-.zoomed.instantSide { margin-top: 0; zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1)); }
+.zoomed.instantSide { margin-top: 0; display: flex; flex-direction: column; zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1)); }
+.zoomed.instantSide > * { flex-shrink: 0; }
 .instantVerdict { display: flex; }
 .instantVerdict > * { margin-left: 0; }
 .edgeX { top: 8px; bottom: 8px; right: 0; width: 5px; cursor: ew-resize; }
