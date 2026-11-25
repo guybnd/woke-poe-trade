@@ -190,6 +190,18 @@ describe('related groups', () => {
     expect(relatedTo('CAPTURED_BEAST::Farric Wolf Alpha')).toEqual([])
     expect(relatedTo('ITEM::Orb of Fusing')).toEqual([])
     expect(relatedTo('UNIQUE::Goldrim // Leather Cap')).toEqual([])
+    expect(relatedTo("UNIQUE::Watcher's Eye // Prismatic Jewel")).toEqual([])
+    expect(relatedTo('UNIQUE::Goldwyrm // Nubuck Boots')).toEqual([])
+    expect(relatedTo('ITEM::Ancient Orb')).toEqual([])
+  })
+
+  it('never says Ancient Orb drops Headhunter', () => {
+    expect(ITEM_DROP.some(g => g.query.includes('ITEM::Ancient Orb') && realDrops(g).length)).toBe(false)
+  })
+
+  it('reads a Coin of Restoration or Desecration as an upgrade both ways', () => {
+    expect(names('Fleshrender')).toEqual(expect.arrayContaining([['Upgrade to Skysunder', ['Fleshrender', 'Coin of Restoration']]]))
+    expect(names('Skysunder')).toEqual(expect.arrayContaining([['Upgrade to Fleshrender', ['Skysunder', 'Coin of Desecration']]]))
   })
   it('keeps real families and sets', () => {
     expect(relatedTo('ITEM::Sacrifice at Dawn')).toContain('Sacrifice at Midnight')
