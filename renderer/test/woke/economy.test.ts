@@ -146,7 +146,7 @@ describe('essence corruption', () => {
   })
 
   it('leaves an unpriced Misery out of the best case instead of counting it as free', () => {
-    const m = parseMonolith(['Wailing Essence of Misery', 'Shrieking Essence of Greed'])!
+    const m = parseMonolith(['Screaming Essence of Misery', 'Shrieking Essence of Greed'])!
     const r = rateMonolith(m, MEDS, price, 1)
     expect(r.verdict).toBe('corrupt')
     expect(r.estimate?.best).toBe(0.5)
