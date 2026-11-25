@@ -44,7 +44,7 @@ export const SPIKE_MIN_DAYS_GEAR = 3
 export const SPIKE_KEEP_DAYS = 3
 export const SPIKE_NEVER_RATIO = 50
 
-export type HoldKind = 'jump' | 'one-day' | 'spike'
+export type HoldKind = 'jump' | 'one-day' | 'spike' | 'drop-rate'
 
 // poe.ninja's line as chaos per day, today last, from today's price: the line
 // is % change from one reference day, so day / today is the price ratio.
@@ -183,5 +183,6 @@ export function heldWhy (h: HeldPrice): string {
 
 export function heldText (h: HeldPrice, price: (chaos: number) => string): string {
   const why = heldWhy(h)
+  if (h.kind === 'drop-rate') return `poe.ninja: ${price(h.ninja)}, ${why}. That's a few fake listings, so it counts as nothing.`
   return `poe.ninja: ${price(h.ninja)}, ${why}. Prices like that have been a few fake listings, so ${h.chaos != null ? `it counts at its usual ${price(h.chaos)}` : 'it counts as nothing'} until the price holds.`
 }
