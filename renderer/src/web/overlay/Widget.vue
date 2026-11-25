@@ -278,6 +278,7 @@ export default defineComponent({
     // Through getters: the config object is replaced whenever the whole
     // config is (settings changes), while this component stays mounted.
     provide('wokeWidgetConfig', {
+      get wmId () { return props.config.wmId },
       get anchor () { return props.config.anchor },
       get wokeSizes () { return woke().wokeSizes },
       set wokeSizes (v: Record<string, unknown> | undefined) { woke().wokeSizes = v },

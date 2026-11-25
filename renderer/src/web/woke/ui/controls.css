@@ -450,3 +450,29 @@ button.w-chip:hover { color: var(--w-fg); }
 :root[data-woke-art] [data-w-switches] input[type="checkbox"]:disabled { opacity: 0.5; cursor: default; }
 :root[data-woke-art] [data-w-switches] input[type="checkbox"]:focus-visible { outline: 1px solid var(--w-accent); outline-offset: 1px; }
 :root[data-woke-art] [data-w-switches] .w-toggle:focus-visible .w-toggle-track { box-shadow: 0 0 0 2px var(--w-accent-soft), 0 0 0 1px var(--w-accent) !important; }
+
+/* ---------- "Wheel steps it" peek under a number box (number-wheel-hint.ts) ---------- */
+.w-wheel-peek {
+  position: fixed;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--w-line-strong);
+  border-radius: var(--w-r-sm);
+  background: var(--w-panel-2);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
+  font-size: var(--w-fs-xs);
+  color: var(--w-fg);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.w-wheel-peek .w-kbd {
+  font-family: var(--w-num);
+  font-size: var(--w-fs-xs);
+  padding: 0 5px;
+  border: 1px solid var(--w-line-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--w-r-sm);
+}

@@ -96,3 +96,27 @@ describe('useHint', () => {
     h.stop()
   })
 })
+
+describe('key peek', () => {
+  it('peeks a tool\'s key a few times, until the key is used', async () => {
+    const { keyPeek, keyUsed, peekFor, peekKey } = await import('@/web/woke/shared/key-peek')
+    const mapMods = { wmId: 5, wmType: 'woke-map-mods', hotkey: 'Alt + M' }
+    expect(peekFor({ wmType: 'woke-map-mods', hotkey: null })).toBeNull()
+    expect(peekFor({ wmType: 'woke-market-tracker', hotkey: 'Alt + K' })).toBeNull()
+    peekKey(mapMods)
+    expect(keyPeek.value).toMatchObject({ wmId: 5, keys: 'Alt + M' })
+    keyPeek.value = null
+    // The map check opening, overlay up or not, means Alt + M was used.
+    keyUsed('woke-map-check', false)
+    peekKey(mapMods)
+    expect(keyPeek.value).toBeNull()
+  })
+  it('stops after three peeks', async () => {
+    const { keyPeek, peekKey } = await import('@/web/woke/shared/key-peek')
+    const w = { wmId: 6, wmType: 'woke-challenges', hotkey: 'Alt + C' }
+    for (let i = 0; i < 3; i++) { keyPeek.value = null; peekKey(w); expect(keyPeek.value).not.toBeNull() }
+    keyPeek.value = null
+    peekKey(w)
+    expect(keyPeek.value).toBeNull()
+  })
+})

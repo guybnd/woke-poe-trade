@@ -24,6 +24,7 @@
           :title="a.label" :aria-label="a.label" @click="a.action()"><i :class="a.icon" /></button>
       </span>
       <span v-if="busy" :class="$style.busy" aria-hidden="true" />
+      <div v-if="peek" :class="$style.peek" data-key-peek role="status">Next time: <WKbd :keys="peek.keys" /> {{ peek.what }}</div>
     </div>
     <div v-if="$slots.banner" v-show="!minimized"><slot name="banner" /></div>
     <div v-if="$slots.tabs" v-show="!minimized" :class="$style.tabs"><slot name="tabs" /></div>
@@ -61,6 +62,7 @@ import WInfo from './WInfo.vue'
 import type { HelpKey } from './help-tip'
 import { unwatchTitle, watchTitle } from './title-fit'
 import { ago, freshness } from './format'
+import { keyPeek } from '../shared/key-peek'
 
 const props = withDefaults(defineProps<{
   title?: string
@@ -122,6 +124,7 @@ const root = ref<HTMLElement | null>(null)
 // ---- Size (P10, P17) ----
 interface WindowAction { id: string, label: string, icon: string, active?: boolean, danger?: boolean, action: () => void }
 interface SizedConfig {
+  wmId?: number
   anchor?: { pos: string, x: number, y: number }
   wokeSizes?: Record<string, { w?: number, h?: number }>
   // From the surrounding Widget: whether it can move, its box and element, and
@@ -153,6 +156,8 @@ if (props.title || props.icon || slots.title || slots.actions) {
   onBeforeUnmount(() => cfg?.removePanel?.(panelId))
 }
 const primary = computed(() => cfg?.isPrimaryPanel?.(panelId) ?? false)
+// Opened from the rail: the tool's own key, for a moment (shared/key-peek.ts).
+const peek = computed(() => primary.value && cfg?.wmId != null && keyPeek.value?.wmId === cfg.wmId ? keyPeek.value : null)
 const minimized = computed(() => !!cfg?.minimized)
 // Delete stays in the right-click menu, away from Minimize and Close.
 const titleActions = computed(() => (cfg?.windowActions ?? []).filter((a: { id: string }) => a.id !== 'delete'))
@@ -388,6 +393,24 @@ defineExpose({ el: root })
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+}
+.peek {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 6px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--w-line-strong);
+  border-radius: var(--w-r-sm);
+  background: var(--w-panel-2);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
+  font-size: var(--w-fs-xs);
+  color: var(--w-fg);
+  white-space: nowrap;
+  pointer-events: none;
 }
 .head {
   position: relative;

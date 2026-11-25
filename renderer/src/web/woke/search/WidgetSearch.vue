@@ -12,7 +12,7 @@
         <label :class="$style.find">
           <i class="fas fa-search" />
           <input ref="input" v-model="query" :class="$style.input" spellcheck="false" aria-label="Search"
-            placeholder="Item, tool or setting. Or paste an item (Ctrl V)" @keydown="onKey" @paste="onPaste" @input="noteTyped">
+            :placeholder="placeholder" @keydown="onKey" @paste="onPaste" @input="noteTyped">
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': helpOpen }" title="What can I search for?" aria-label="What can I search for?" @click="toggleHelp"><i class="fas fa-question" /></button>
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': groupsOpen }" title="What search shows" aria-label="What search shows" data-search-groups-btn @click="toggleGroups"><i class="fas fa-cog" /></button>
           <WCorruptedFilter v-model="corrupted" />
@@ -137,6 +137,7 @@
           <span><WKbd keys="Ctrl + P" /> pin to compare</span>
           <span v-if="selected?.line && !queryOk"><WKbd keys="Delete" /> remove</span>
           <span><WKbd keys="Esc" /> back to game</span>
+          <span v-if="typedHint.show.value && config.hotkey" :class="$style.peek" data-hint="search-from-game">Next time: <WKbd :keys="config.hotkey" /> from the game</span>
           <span class="ml-auto">{{ dataNote }}</span>
         </div>
       </div>
@@ -222,6 +223,8 @@ import { uniqueDetails, uniqueFacts } from './unique-details'
 import { isImageIcon } from './lookups/types'
 import type { Lookup, LookupAction, LookupCard, LookupContext } from './lookups/types'
 import { countdownLookup, currencyLookup, currencyNamer, webLookup } from './lookups/answers'
+import { keysLookup } from './lookups/keys'
+import { hotkeyFields } from '../settings/hotkey-fields'
 import { calcLookup } from './lookups/calc'
 import { bossLookup, dropLookupWith } from './lookups/bosses'
 import { nightmareLookup } from './lookups/nightmare'
@@ -293,7 +296,8 @@ import { loadVaults } from '../vaults/vaults'
 import type { VaultTable } from '../vaults/vaults'
 import { loadViscera, visceraByName, visceraItemText } from '../wickerman/viscera'
 import type { VisceraTable } from '../wickerman/viscera'
-import { HELP_QUERY, exampleCards } from './lookups/examples'
+import { HELP_QUERY, exampleCards, placeholderFor } from './lookups/examples'
+import { useHint } from '../shared/hints'
 import { MECHANICS_TYPE } from '../mechanics/widget'
 import type { MechanicsWidget } from '../mechanics/widget'
 import { loadPassiveTree, passiveTreeClusters } from '../pob-builds/passive-tree'
@@ -861,7 +865,16 @@ function flipsConfig (): ScarabFlipWidget | null {
   return (config.widgets.find(w => w.wmType === SCARAB_FLIP_TYPE) as ScarabFlipWidget | undefined) ?? null
 }
 const netWorthWidget = () => AppConfig().widgets.find(w => w.wmType === NET_WORTH_TYPE) as { staleDays?: number, countListed?: boolean } | undefined
-const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, forbiddenLookup(forbidden.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime(), runBoard.value, lastRun.value), salesLookup(salesList.value, lineOut.value.sale), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value, lineOut.value.listed), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), valdoLookup(name => AppConfig().language === 'en' && knownItem('UNIQUE', name)), webLookup])
+const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, forbiddenLookup(forbidden.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime(), runBoard.value, lastRun.value), salesLookup(salesList.value, lineOut.value.sale), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value, lineOut.value.listed), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), valdoLookup(name => AppConfig().language === 'en' && knownItem('UNIQUE', name)), keysLookup(setKeys), webLookup])
+
+// "keys": the hotkeys you have set, as the Hotkeys page lists them.
+function setKeys () {
+  return hotkeyFields(AppConfig()).filter(f => !f.off && f.get()).map(f => ({
+    label: f.label,
+    group: f.group,
+    keys: f.hold ? `${f.hold.get()} + ${f.get()!}` : f.get()!
+  }))
+}
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -925,7 +938,7 @@ function liveAnswer (q: string): string | null {
 // ---- results ----
 const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: boolean }>>(() => {
   if (!open.value) return []
-  if (helpOpen.value) return cardSections(exampleCards(liveAnswer), null)
+  if (helpOpen.value) return cardSections(exampleCards(liveAnswer, lookupTools.value), null)
   const items = snapshot.value?.items ?? []
   // Nothing typed yet: your recent lookups, then things to try.
   if (!queryOk.value) {
@@ -939,7 +952,7 @@ const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: b
     return [
       ...(saved.length ? [{ label: 'Saved', entries: saved }] : []),
       ...(recent.length ? [{ label: 'Recent', entries: recent }] : []),
-      ...cardSections(exampleCards(liveAnswer), null)
+      ...cardSections(exampleCards(liveAnswer, lookupTools.value), null)
     ]
   }
   const q = query.value
@@ -1598,10 +1611,30 @@ function checkItemText (text: string) {
 }
 
 // ---- opening and closing ----
+// Opened by typing in the overlay: keep typing after the letter, don't select it.
+const openedByTyping = shallowRef(false)
+// Letters typed while the box is still taking focus go into it.
+function catchTyping (e: KeyboardEvent) {
+  if (!open.value || !openedByTyping.value || !input.value || document.activeElement === input.value) return
+  if (e.defaultPrevented || e.repeat || e.isComposing || e.ctrlKey || e.altKey || e.metaKey || e.key.length !== 1) return
+  // Only keys that went nowhere: a focused button or chip keeps its Space.
+  const t = e.target
+  if (t instanceof Element && t !== document.body && t !== document.documentElement) return
+  e.preventDefault()
+  query.value += e.key
+  ownText = query.value
+  focusInput()
+}
+window.addEventListener('keydown', catchTyping)
+onBeforeUnmount(() => window.removeEventListener('keydown', catchTyping))
+// The foot's "Next time: Ctrl + Space from the game", for a palette found by typing.
+const typedHint = useHint('search-from-game', { slot: false, when: () => openedByTyping.value && !!props.config.hotkey })
 function focusInput (select = false) {
   nextTick(() => {
-    input.value?.focus()
-    if (select) input.value?.select()
+    const el = input.value
+    el?.focus()
+    if (el && openedByTyping.value) el.setSelectionRange(el.value.length, el.value.length)
+    else if (select) el?.select()
   })
 }
 // Clicking a button mustn't take the keyboard away from the box.
@@ -1708,13 +1741,19 @@ onBeforeUnmount(() => {
 watch(searchRequest, (request) => {
   if (!request) return
   searchRequest.value = null
+  openedByTyping.value = request.typed === true
   start(request.query)
 })
 // The hotkey can arrive before the overlay has the keyboard.
 watch(wm.active, (active) => { if (active && open.value) focusInput(true) })
+// A new "Try: …" in the empty box each open (hidden-features audit, P5).
+const opens = shallowRef(Math.floor(Math.random() * 8))
+const placeholder = computed(() => placeholderFor(opens.value))
 watch(open, (now) => {
+  if (now) opens.value++
   if (now) focusInput(true)
   else {
+    openedByTyping.value = false
     const item = remember(queryOk.value ? selected.value : null)
     const searched = rememberQuery(ownText)
     // The overlay's own save has already run (it saves as the palette hides,
@@ -1809,5 +1848,6 @@ const dataNote = computed(() => {
 .acts { display: flex; flex-wrap: wrap; gap: var(--w-s1); margin-top: var(--w-s3); }
 .convBox { margin-top: var(--w-s3); max-width: 320px; }
 .conv { display: grid; grid-template-columns: minmax(0, 1fr) repeat(var(--conv-cols, 1), 90px); column-gap: 6px; align-items: center; }
+.peek { color: var(--w-accent); }
 .foot { flex: none; display: flex; align-items: center; gap: var(--w-s3); padding: 7px var(--w-pad); border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); color: var(--w-dim); }
 </style>

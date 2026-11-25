@@ -97,4 +97,6 @@ export const earlySearchPress = { mounted: false, pressedAt: 0 }
 export const EARLY_PRESS_MS = 5_000
 
 // Opens the palette from inside the overlay, on this text.
-export const searchRequest = shallowRef<{ query: string } | null>(null)
+// `typed`: the player started typing in the overlay (TabBar), so the caret
+// goes after the letter instead of selecting it.
+export const searchRequest = shallowRef<{ query: string, typed?: boolean } | null>(null)
