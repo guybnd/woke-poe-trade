@@ -38,6 +38,8 @@ export const NEWS: NewsItem[] = [
   { id: 'search-recent-save', wmType: 'woke-search', name: 'Search', note: 'New: hover a Recent line to save it on top (bookmark) or remove it (×, or Delete)' },
   { id: 'search-recent-queries', wmType: 'woke-search', name: 'Search', note: 'New: your last 3 searches wait under Recent, even ones you only looked at. Enter or a click puts one back' },
   { id: 'valdo-map-skips', wmType: 'price-check', name: 'Price check', note: 'New: on a Valdo map, set a mod Not and listings with it are hidden; remembered per profile' },
+  { id: 'search-type-to-open', wmType: 'woke-search', name: 'Search', note: 'New: with the overlay open, just start typing to search' },
+  { id: 'item-menu-more', wmType: 'woke-search', name: 'Search', note: 'New: right-click any item, then More, to search it: where it drops, recipes, your sales' },
   { id: 'search-keys-list', wmType: 'woke-search', name: 'Search', note: 'New: type "keys" for every hotkey you have set and every mouse trick, in one list' },
   { id: 'valdo-map-lookup', wmType: 'woke-search', name: 'Search', note: 'New: type "valdo headhunter" to price check Valdo maps with that reward' },
   { id: 'price-check-exchange-ladder', wmType: 'price-check', name: 'Price check', note: 'New: exchange offers as one row per price, what N would cost, and a Whisper with an amount on each seller' },

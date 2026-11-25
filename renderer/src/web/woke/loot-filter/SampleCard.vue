@@ -587,15 +587,17 @@ function onKey (e: KeyboardEvent) {
   // Only for this card: a key pressed in another overlay window mustn't edit
   // and save the filter for an item you looked at earlier.
   if (clickedAway || (t && t !== document.body && t !== document.documentElement && !panel.value?.el?.contains(t))) return
-  if ((e.key === 'g' || e.key === 'G') && canGoTo.value) {
+  // A card key is the card's even when it can't act now (greyed out): it
+  // mustn't fall through to typing a search (TabBar's type-to-search).
+  if (e.key === 'g' || e.key === 'G') {
     e.preventDefault()
-    goToRule()
+    if (canGoTo.value) goToRule()
     return
   }
   const q = quick.value.find(x => x.key === e.key)
-  if (!q || q.disabled) return
+  if (!q) return
   e.preventDefault()
-  q.run()
+  if (!q.disabled) q.run()
 }
 onMounted(() => {
   window.addEventListener('keydown', onKey)

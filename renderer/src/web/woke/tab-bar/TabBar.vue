@@ -377,8 +377,7 @@ function toggle (tab: Tab) {
 // A tool that opens while the overlay isn't up came from its key in the game:
 // its "Next time" peek has done its job.
 watch(() => wm.widgets.value.filter(w => w.wmWants === 'show').map(w => w.wmType), (now, before) => {
-  if (wm.active.value) return
-  for (const t of now) if (!before?.includes(t)) keyUsed(t)
+  for (const t of now) if (!before?.includes(t)) keyUsed(t, !wm.active.value)
 })
 
 // Opens it from the launcher, whatever state it's in.
@@ -896,7 +895,9 @@ function onOverlayKey (e: KeyboardEvent) {
   if (!wm.active.value || e.ctrlKey || e.altKey || e.metaKey || e.repeat) return
   if (e.key.length !== 1 || !/[\p{L}\p{N}]/u.test(e.key)) return
   if (popup.value) return
-  if (wm.widgets.value.some(w => (w.wmType === 'settings' || w.wmType === SEARCH_TYPE) && w.wmWants === 'show')) return
+  // Not over Settings, or an exclusive window (price check, map check, search):
+  // search would replace it, and a stray flask key would lose the check.
+  if (wm.widgets.value.some(w => w.wmWants === 'show' && (w.wmType === 'settings' || w.wmZorder === 'exclusive'))) return
   if (!wm.widgets.value.some(w => w.wmType === SEARCH_TYPE) || !isWidgetTypeOn(AppConfig(), SEARCH_TYPE)) return
   const t = e.target
   if (t instanceof Element && t.closest(NO_TYPE_SEARCH)) return

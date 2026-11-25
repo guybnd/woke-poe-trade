@@ -5,12 +5,15 @@
 import { shallowRef } from 'vue'
 import { retireHint, takeShow } from './hints'
 
-// Per tool: the widget prop holding its key, and what the key does it on.
-const PEEKS: Record<string, { prop: string, what: string }> = {
-  'woke-map-mods': { prop: 'hotkey', what: 'on a map' },
-  'woke-challenges': { prop: 'hotkey', what: 'from the game' },
-  'woke-loot-filter': { prop: 'editorHotkey', what: 'from the game' },
-  'woke-lab': { prop: 'hotkeyOverlay', what: 'from the game' }
+// Per tool: the widget prop holding its key, what the key does, and the
+// window types whose opening from the game means the key was used.
+const PEEKS: Record<string, { prop: string, what: string, usedBy: string[] }> = {
+  // Alt+M opens the map check card, not this window.
+  'woke-map-mods': { prop: 'hotkey', what: 'on a map checks it', usedBy: ['woke-map-check'] },
+  'woke-challenges': { prop: 'hotkey', what: 'from the game', usedBy: ['woke-challenges'] },
+  // Alt+F (the sample) opens the same window, so opening it from the game
+  // doesn't say the editor key was used: peeks run out instead.
+  'woke-loot-filter': { prop: 'editorHotkey', what: 'from the game', usedBy: [] }
 }
 const SHOWS = 3
 const MS = 3000
@@ -37,7 +40,10 @@ export function peekKey (widget: { wmId: number, wmType: string } & Record<strin
   timer = setTimeout(() => { keyPeek.value = null }, MS)
 }
 
-// Opened some other way than the overlay (its key from the game).
-export function keyUsed (wmType: string): void {
-  if (PEEKS[wmType]) retireHint(hintId(wmType))
+// A window opened. `fromGame`: the overlay wasn't up, so a key opened it. A
+// window that only a key opens (the map check) counts either way.
+export function keyUsed (wmType: string, fromGame: boolean): void {
+  for (const [tool, p] of Object.entries(PEEKS)) {
+    if (p.usedBy.includes(wmType) && (fromGame || wmType !== tool)) retireHint(hintId(tool))
+  }
 }

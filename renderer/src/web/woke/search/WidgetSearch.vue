@@ -1616,9 +1616,13 @@ const openedByTyping = shallowRef(false)
 // Letters typed while the box is still taking focus go into it.
 function catchTyping (e: KeyboardEvent) {
   if (!open.value || !openedByTyping.value || !input.value || document.activeElement === input.value) return
-  if (e.ctrlKey || e.altKey || e.metaKey || e.key.length !== 1) return
+  if (e.defaultPrevented || e.repeat || e.isComposing || e.ctrlKey || e.altKey || e.metaKey || e.key.length !== 1) return
+  // Only keys that went nowhere: a focused button or chip keeps its Space.
+  const t = e.target
+  if (t instanceof Element && t !== document.body && t !== document.documentElement) return
   e.preventDefault()
   query.value += e.key
+  ownText = query.value
   focusInput()
 }
 window.addEventListener('keydown', catchTyping)

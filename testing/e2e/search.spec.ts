@@ -514,7 +514,8 @@ test('typing in the overlay opens search with it, and says the key for next time
   const page = overlay.page
   const palette = overlay.widget('woke-search')
   const box = palette.getByRole('textbox', { name: 'Search', exact: true })
-  await page.mouse.click(5, 700)
+  // Nothing in focus: the keys reach the page itself.
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await page.keyboard.type('mage', { delay: 60 })
   await expect(box).toBeVisible()
   await expect(box).toHaveValue('mage')
