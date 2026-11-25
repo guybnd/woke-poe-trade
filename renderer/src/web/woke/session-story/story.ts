@@ -163,11 +163,7 @@ export class NightTracker {
         seg.named = true
       }
     } else if (ev?.kind === 'level' && this.draft) {
-      // Party members' level-ups are logged too: inside a map, another name
-      // than your character's is someone else's (as map-log.ts reads it).
-      const seg = this.draft.segs[this.draft.segs.length - 1]
-      const me = this.charOf?.() ?? null
-      if (!seg?.map || me == null || ev.charName === me) (this.draft.levels ??= []).push({ char: ev.charName, level: ev.level })
+      (this.draft.levels ??= []).push({ char: ev.charName, level: ev.level })
     } else if (!ev && this.draft) {
       const seg = this.draft.segs[this.draft.segs.length - 1]
       const slain = slainName(line)
@@ -281,8 +277,8 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
       afterMap = true
     } else if (!p.afk) gap += p.ms
   }
-  // Follow the first character that levels, as the run timer does (a party
-  // member's level-ups inside a map aren't kept: see the tracker).
+  // Party members' level-ups are logged too: follow the first character
+  // that levels, as the run timer does.
   const levelUps: Array<{ char: string, from: number, to: number }> = []
   const mine = d.levels?.[0]?.char
   for (const l of d.levels ?? []) {

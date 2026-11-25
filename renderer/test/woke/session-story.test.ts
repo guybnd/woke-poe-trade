@@ -215,16 +215,6 @@ describe('night extras', () => {
     expect(s.longestBreakMs).toBe(2 * 60_000)
   })
 
-  it("doesn't take a party member's level-up in a map for yours", () => {
-    const tracker = new NightTracker(() => {}, () => 'whekq')
-    for (const line of [
-      area('21:00:00', 'MapWorldsStrand', '11'),
-      info('21:01:00', ': friend (Witch) is now level 40'),
-      info('21:02:00', ': whekq (Gladiator) is now level 94')
-    ]) tracker.feed(line, 0)
-    expect(summarize(tracker.draft!).levelUps).toEqual([{ char: 'whekq', from: 93, to: 94 }])
-  })
-
   it('adds up Farming sessions inside the night', () => {
     const H = 3_600_000
     const night = { startedAt: 10 * H, endedAt: 14 * H }
