@@ -120,3 +120,15 @@ test('side window: a transfigured gem lists its base and the other kinds, priced
   await expect(side.locator('button[data-item-row]', { hasText: /^Ice Nova\s*1/ })).toBeVisible()
   await expect(side.getByText(/Priced as level 1\./)).toBeVisible()
 })
+
+test('side window: a normal base lists the uniques an Orb of Chance can make', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/normal-glorious-plate.txt')
+  const side = overlay.page.locator('.w-pc-side')
+  await expect(side).toBeVisible({ timeout: 20_000 })
+  await expect(side.getByText('Uniques on Glorious Plate')).toBeVisible()
+  await expect(side.locator('button[data-item-row]', { hasText: "Kaom's Heart" })).toContainText('15')
+  // A Heist replica never drops at random, so no Orb of Chance makes it.
+  await expect(side.getByText("Replica Kaom's Heart")).toHaveCount(0)
+  await expect(side.getByText('An Orb of Chance can make one of these.')).toBeVisible()
+})

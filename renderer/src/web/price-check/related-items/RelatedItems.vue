@@ -45,12 +45,14 @@ import { usePoeninja, CurrencyValue, displayRounding } from '@/web/background/Pr
 import { getDetailsId } from '../trends/getDetailsId'
 import WItemRow from '@/web/woke/ui/WItemRow.vue'
 import type { ItemTipRef } from '@/web/woke/ui/tooltip/item-tip'
-import { ParsedItem } from '@/parser'
+import { ParsedItem, ItemRarity } from '@/parser'
 import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
 import { sideRow, type SideRow } from './side-row'
 import { familiesOf, familyRows, type Family } from '@/web/woke/related-family/family'
 import { cardsFor, rewardOf, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resolveParts } from '@/web/woke/related-family/recipe'
-import { loadTipItems } from '@/web/woke/ui/tooltip/item-tip'
+import { loadTipDrops, loadTipItems } from '@/web/woke/ui/tooltip/item-tip'
+import type { TipPack } from '@/web/woke/ui/tooltip/tip-content'
+import { randomDropsOnBase } from '@/web/woke/loot-filter/random-drops'
 
 const { findPriceByQuery, findPricesByName, autoCurrency, xchgRate } = usePoeninja()
 
@@ -217,6 +219,25 @@ function getGemKinds (item: ParsedItem, variant: string | undefined) {
   }]
 }
 
+// woke: a normal or magic base lists the uniques an Orb of Chance can make of
+// it: those that drop at random on that base (a boss-only or league unique
+// never comes from one), dearest first, each priced on this base.
+function getChanceTargets (item: ParsedItem, drops: TipPack['drops']) {
+  if (item.rarity !== ItemRarity.Normal && item.rarity !== ItemRarity.Magic) return []
+  const base = item.info.refName
+  const rows: SideRow[] = []
+  for (const name of randomDropsOnBase(drops)(base)) {
+    const all = ITEM_BY_REF('UNIQUE', name) ?? []
+    const info = all.find(u => u.unique?.base === base) ?? all[0]
+    if (!info) continue
+    const chaos = findPriceByQuery({ ns: 'UNIQUE', name, variant: base })?.chaos ?? chaosOf(info)
+    rows.push(sideRow(info, chaos != null ? autoCurrency(chaos) : undefined, false, `chance:${name}`))
+  }
+  if (!rows.length) return []
+  rows.sort((a, b) => chaosOfPrice(b.price) - chaosOfPrice(a.price))
+  return [{ key: 'chance', title: `Uniques on ${item.info.name}`, rows, note: 'An Orb of Chance can make one of these.' }]
+}
+
 // poe.ninja's gem variant in words: "20/20c" is "level 20, 20% quality, corrupted".
 function gemStateText (variant: string) {
   const m = /^(\d+)(?:\/(\d+))?(c?)$/.exec(variant)
@@ -361,6 +382,12 @@ export default defineComponent({
       if (tipItems.value || (ns !== 'UNIQUE' && ns !== 'ITEM' && ns !== 'DIVINATION_CARD')) return
       loadTipItems().then(items => { tipItems.value = items as Record<string, { d?: string, n?: number }> | null }).catch(() => {})
     }, { immediate: true })
+    // Which uniques drop at random, for a normal or magic base's chance list.
+    const tipDrops = shallowRef<TipPack['drops'] | null>(null)
+    watch(() => props.item, item => {
+      if (tipDrops.value || !item || (item.rarity !== ItemRarity.Normal && item.rarity !== ItemRarity.Magic)) return
+      loadTipDrops().then(drops => { tipDrops.value = drops }).catch(() => {})
+    }, { immediate: true })
     const extra = computed<Section[]>(() => {
       if (!props.item || !updatedAt.value) return []
       const queryId = getDetailsId(props.item)
@@ -373,6 +400,7 @@ export default defineComponent({
       return [
         ...reward,
         ...getGemKinds(props.item, queryId?.variant),
+        ...(tipDrops.value ? getChanceTargets(props.item, tipDrops.value) : []),
         ...recipes,
         ...cards,
         ...(id ? getSources(props.item, id, cards.length > 0, shown) : [])
