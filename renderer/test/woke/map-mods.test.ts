@@ -173,6 +173,27 @@ describe('stash regex', () => {
     }
   })
 
+  // An Elder/Shaper, Conqueror or Citadel map shows its influence as a plain
+  // line; "flu" (Originator) matched "influenced" and "eri" "Veritania's".
+  it('no mod token matches an influence, guardian or citadel line', () => {
+    const lines = [
+      'Area is influenced by The Elder',
+      'Area is influenced by The Shaper',
+      ...['Constrictor', 'Enslaver', 'Eradicator', 'Purifier'].map(g => `Map is occupied by The ${g}`),
+      ...["Al-Hezmin's", "Baran's", "Drox's", "Veritania's"].map(c => `Map contains ${c} Citadel`),
+      ...['Al-Hezmin', 'Baran', 'Drox', 'Veritania'].map(c => `Item Quantity increases amount of Rewards ${c} drops by 20% of its value`)
+    ]
+    const wrong: string[] = []
+    for (const mod of MODS) {
+      const { text } = buildMapRegex({ avoid: [], want: [mod], mins: {}, highlight: 'good' }, MODS, allMapNames())
+      if (!text) continue
+      for (const line of lines) {
+        if (stashSearch(text, line)) wrong.push(`${mod}: ${text} ~ ${line}`)
+      }
+    }
+    expect(wrong).toEqual([])
+  })
+
   it('every preset (avoid all) fits the search box once auto-trimmed', () => {
     for (const preset of PRESETS) {
       const profile: MapModProfile = { ...defaultProfile(), ratings: Object.fromEntries(preset.matchers.map(m => [m, 'deadly'])), autoTrim: true }
