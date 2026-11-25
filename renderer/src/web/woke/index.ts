@@ -15,6 +15,8 @@ import { defineAsyncComponent } from 'vue'
 import type { Component } from 'vue'
 import * as specs from './widget-specs'
 import { pushHostConfig } from '@/web/Config'
+import { Host } from '@/web/background/IPC'
+import { SEARCH_TARGET, earlySearchPress } from './search/widget'
 import type { WidgetSpec } from '@/web/overlay/interfaces'
 
 type WidgetComponent = Component & { widget: WidgetSpec }
@@ -38,6 +40,11 @@ function hostConfigAfterMount () {
     pushHostConfig()
   }, 50)
 }
+
+// Ctrl+Space pressed before the palette's code has loaded: see earlySearchPress.
+Host.onEvent('MAIN->CLIENT::widget-action', (e) => {
+  if (e.target === SEARCH_TARGET && !earlySearchPress.mounted) earlySearchPress.pressedAt = Date.now()
+})
 
 export const wokeWidgets: WidgetComponent[] = [
   lazy(specs.widgetRegexLibrarySpec, () => import('./regex-library/WidgetRegexLibrary.vue')),

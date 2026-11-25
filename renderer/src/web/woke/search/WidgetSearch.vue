@@ -151,7 +151,7 @@ export default { widget: widgetSearchSpec }
 </script>
 
 <script setup lang="ts">
-import { computed, inject, nextTick, onBeforeUnmount, shallowRef, watch } from 'vue'
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import type { Widget as WidgetT } from '@/web/overlay/widgets'
@@ -304,7 +304,7 @@ import { onSharedDataChange } from '../app/live-data'
 import { openDiscord, openReportDialog } from '../app/report'
 import { dropOf } from '../ui/tooltip/tip-content'
 import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
-import { SEARCH_TARGET, searchRequest, addQuery, RECENT_MAX, sameLine, dropLine, saveLine, unsaveLine } from './widget'
+import { SEARCH_TARGET, EARLY_PRESS_MS, earlySearchPress, searchRequest, addQuery, RECENT_MAX, sameLine, dropLine, saveLine, unsaveLine } from './widget'
 import { VARIABLE_ITEMS, useTradePrices } from '../shared/unid-prices'
 import { poeWebApi, saveConfig } from '@/web/Config'
 import type { SearchWidget, SearchLine } from './widget'
@@ -1691,7 +1691,19 @@ const hotkeys = Host.onEvent('MAIN->CLIENT::widget-action', (e) => {
     heldFromOpen = true
   }
 })
-onBeforeUnmount(() => { hotkeys.abort() })
+// The hotkey pressed before this had loaded (right after the overlay starts).
+// The keys are let go by now, so it opens as from a click.
+// On mount, so every watch below is set up first.
+earlySearchPress.mounted = true
+onMounted(() => {
+  const fresh = Date.now() - earlySearchPress.pressedAt < EARLY_PRESS_MS
+  earlySearchPress.pressedAt = 0
+  if (fresh) start('')
+})
+onBeforeUnmount(() => {
+  hotkeys.abort()
+  earlySearchPress.mounted = false
+})
 
 watch(searchRequest, (request) => {
   if (!request) return

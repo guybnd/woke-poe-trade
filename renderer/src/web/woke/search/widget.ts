@@ -88,5 +88,13 @@ export function addQuery (list: readonly string[] | undefined, text: string, ski
   return [q, ...rest].slice(0, QUERY_MAX)
 }
 
+// The palette's code loads a moment after the overlay starts, but its hotkey
+// is registered from the saved config straight away. A press in between
+// would reach no listener and be lost, so index.ts notes it here until the
+// palette has mounted, and the palette opens on it then (if it's still fresh:
+// pressedAt is when, 0 for none).
+export const earlySearchPress = { mounted: false, pressedAt: 0 }
+export const EARLY_PRESS_MS = 5_000
+
 // Opens the palette from inside the overlay, on this text.
 export const searchRequest = shallowRef<{ query: string } | null>(null)
