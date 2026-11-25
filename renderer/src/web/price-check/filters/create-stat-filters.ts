@@ -192,9 +192,9 @@ export function initUiModFilters (
   }
 
   filterEquipmentProps(ctx)
-  if (item.rarity === ItemRarity.Unique) {
-    filterBasePercentile(ctx)
-  }
+  // woke (Guy, 2026-11-25): every armour can search its base roll, not only uniques.
+  // On a rare or base it starts unticked: its defence number already counts the base.
+  filterBasePercentile(ctx, item.rarity !== ItemRarity.Unique)
   filterMemoryStrands(ctx, 'hide_memory_strands')
   // woke: a fractured item's fractured mod is what it's worth: no total takes it
   // in (the totals are made of the other mods), and it gets its own row,

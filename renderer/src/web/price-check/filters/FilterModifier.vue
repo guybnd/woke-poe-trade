@@ -367,7 +367,7 @@ export default defineComponent({
 
     // woke: the mod's tier tooltip (price-insight/mod-tip-hover.ts).
     const { enter: modTipEnter, leave: modTipLeave } = useModTipHover(() => props)
-    const tierSpot = computed(() => mayHaveTiers(props.filter) ? 'mod-tiers' : undefined)
+    const tierSpot = computed(() => props.filter.tradeId[0] === 'item.base_percentile' ? 'base-percentile' : mayHaveTiers(props.filter) ? 'mod-tiers' : undefined)
 
     return {
       modTipEnter,
