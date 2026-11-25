@@ -82,6 +82,17 @@ export function saleBaseName (s: Pick<Sale, 'name' | 'typeLine' | 'baseType' | '
   return saleName(s)
 }
 
+// One dim fact beside a magic or rare sale's base in the chart card (Guy's
+// pick C, 2026-11-25): its map tier, else 5 or 6 links, else corrupted, else
+// its item level. Nothing for the rest, whose name says enough.
+export function saleFact (s: Pick<Sale, 'frameType' | 'mapTier' | 'links' | 'corrupted' | 'ilvl'>): string {
+  if (s.frameType !== 1 && s.frameType !== 2) return ''
+  if (s.mapTier) return `T${s.mapTier}`
+  if (s.links && s.links >= 5) return `${s.links}L`
+  if (s.corrupted) return 'corrupted'
+  return s.ilvl ? `ilvl ${s.ilvl}` : ''
+}
+
 // A sale's name colour, by its rarity frame (relics and foils as uniques).
 export function saleColour (frameType: number): string {
   switch (frameType) {

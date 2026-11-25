@@ -45,7 +45,7 @@
         <span v-if="shown.p.daily" class="w-dim">That day's last read</span>
         <!-- What sold shows on hover too (Guy, 2026-11-24). The card ignores the
              mouse until pinned, so no item tooltip pops over it on hover. -->
-        <span v-for="(x, i) in shownSales.list" :key="'s' + i" :class="$style.soldRow"><img v-if="x.icon" :src="x.icon" alt="" :class="$style.soldIcon"><span v-item-tip="x.tip ?? null" :class="$style.item" :style="x.colour ? { color: x.colour } : undefined">{{ x.text }}</span><span v-if="x.price" class="w-num">{{ x.price }}</span></span>
+        <span v-for="(x, i) in shownSales.list" :key="'s' + i" :class="$style.soldRow"><img v-if="x.icon" :src="x.icon" alt="" :class="$style.soldIcon"><span v-item-tip="x.tip ?? null" :class="$style.item" :style="x.colour ? { color: x.colour } : undefined">{{ x.text }}</span><span v-if="x.fact" class="w-dim">{{ x.fact }}</span><span v-if="x.price" class="w-num">{{ x.price }}</span></span>
         <span v-if="shownSales.more" class="w-dim">+{{ shownSales.more }} more sold</span>
         <span v-if="pinned && shown.p.top.length">
           <template v-for="(t, i) in shown.p.top" :key="i"><span v-item-tip="tipOf ? topTip(t) : null" :class="$style.item">{{ t }}</span><template v-if="i < shown.p.top.length - 1">, </template></template>

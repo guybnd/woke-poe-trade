@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { byType, inRange, saleBaseName, saleColour, marketText, withoutSold, saleChaos, saleName, saleType, salesInWindow, searchSales, totals, versusMarket, nextSaleSort, saleSortOf, sortSales, DEFAULT_SALE_SORT } from '@/web/woke/net-worth/sales'
+import { byType, inRange, saleBaseName, saleColour, saleFact, marketText, withoutSold, saleChaos, saleName, saleType, salesInWindow, searchSales, totals, versusMarket, nextSaleSort, saleSortOf, sortSales, DEFAULT_SALE_SORT } from '@/web/woke/net-worth/sales'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { salesLookup } from '@/web/woke/search/lookups/sales'
 import { saleItem, saleTip } from '@/web/woke/net-worth/sale-tip'
@@ -31,6 +31,14 @@ describe('saleBaseName', () => {
     expect(saleBaseName(sale({ frameType: 2, name: 'Doom Gate', typeLine: 'Blight-ravaged Strand Map', baseType: 'Strand Map' }))).toBe('Blight-ravaged Strand Map')
     // No base sent: the old name, not an empty row.
     expect(saleBaseName(sale({ frameType: 2, name: 'Doom Gambit', typeLine: 'Sapphire Ring', baseType: '' }))).toBe('Doom Gambit')
+  })
+  it('gives a rare one fact: map tier, then links, then corrupted, then item level', () => {
+    expect(saleFact(sale({ frameType: 2, mapTier: 16, ilvl: 83, corrupted: true }))).toBe('T16')
+    expect(saleFact(sale({ frameType: 2, links: 6, ilvl: 86, corrupted: true }))).toBe('6L')
+    expect(saleFact(sale({ frameType: 2, corrupted: true, ilvl: 86 }))).toBe('corrupted')
+    expect(saleFact(sale({ frameType: 1, ilvl: 84 }))).toBe('ilvl 84')
+    expect(saleFact(sale({ frameType: 2 }))).toBe('')
+    expect(saleFact(sale({ frameType: 3, links: 6, ilvl: 86 }))).toBe('')
   })
   it('colours by rarity, relics and foils as uniques', () => {
     expect(saleColour(2)).toBe('var(--w-r-rare)')

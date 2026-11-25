@@ -8,6 +8,8 @@ export interface ChartSale {
   // The hover card's line: "Forbidden Flame", a rare by its base ("Sapphire Ring").
   text: string
   tip?: ItemTipRef
+  // A rare's one dim fact after its base: "6L", "ilvl 86", "T16".
+  fact?: string
   // "18 d", after the name.
   price?: string
   // Its inventory art and rarity colour.

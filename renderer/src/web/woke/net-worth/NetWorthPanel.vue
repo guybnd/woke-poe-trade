@@ -349,7 +349,7 @@ import RunsView from './RunsView.vue'
 import { loadRuns, runGlance, runsDoc } from './run-store'
 import { countLabel } from './runs'
 import { saleTip } from './sale-tip'
-import { inRange, marketText, saleBaseName, saleChaos, saleColour, saleName, salesInWindow, totals, withoutSold } from './sales'
+import { inRange, marketText, saleBaseName, saleChaos, saleColour, saleFact, saleName, salesInWindow, totals, withoutSold } from './sales'
 import type { Sale } from './sales'
 import { loadSales, marketOf, ninjaPriced, rates as saleRates, sales, salesFailed, salesReading, salesReply } from './sales-store'
 
@@ -973,7 +973,7 @@ function marketTone (s: Sale) {
 // The chart's dots: each sale, named for the hover card (a rare by its base).
 const chartSales = computed<ChartSale[]>(() => sales.value.map(s => {
   const c = saleChaosOf(s)
-  return { at: s.at, text: saleBaseName(s), tip: saleTip(s), price: `${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, icon: s.icon || undefined, colour: saleColour(s.frameType), name: saleName(s), div: c == null ? null : toDiv(c) }
+  return { at: s.at, text: saleBaseName(s), tip: saleTip(s), price: `${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, icon: s.icon || undefined, colour: saleColour(s.frameType), fact: saleFact(s) || undefined, name: saleName(s), div: c == null ? null : toDiv(c) }
 }))
 // The chart's Faustus band (pick A), when listings count in your total: what
 // each refresh saved, else rebuilt from the listings and sales (listedAt).
