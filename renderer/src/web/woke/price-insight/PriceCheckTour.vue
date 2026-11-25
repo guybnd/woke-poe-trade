@@ -151,7 +151,7 @@ function end () {
 .head { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: var(--w-accent); font-family: var(--w-head); letter-spacing: var(--w-head-track); }
 .close { padding: 0 4px; color: var(--w-dim); }
 .close:hover { color: var(--w-fg); }
-.text { margin: 3px 0 4px; }
+.text { margin: 3px 0 4px; font-family: var(--w-body); font-variant: normal; text-transform: none; letter-spacing: 0; }
 .text :global(.w-kbd) { margin: 0 1px; }
 .foot { display: flex; justify-content: flex-end; gap: 4px; }
 </style>
