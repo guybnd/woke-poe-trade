@@ -191,6 +191,10 @@ export function applyEvent (book: TradeBook, ev: TradeEvent): ApplyResult {
       }
       return {}
     }
+    case 'entered':
+      // No "has left" line for the players in the area you just left.
+      for (const o of book.offers) o.inArea = false
+      return {}
     case 'trade-accepted': {
       const o = tradePartner(book, ev.at)
       if (!o) return {}

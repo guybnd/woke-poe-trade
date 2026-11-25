@@ -387,6 +387,17 @@ describe('reopening closed offers', () => {
     expect(alreadyClosed([o], { dir: 'sell', who: 'Someone', item: o.item, at: 1000 })).toBe(false)
   })
 
+  it('a buyer from the hideout you left is no longer the trade partner', () => {
+    const book = newBook()
+    const first = whisper(book, 'Ignithor', 1000)
+    applyEvent(book, { kind: 'joined', at: 1500, who: 'Ignithor' })
+    applyEvent(book, parseTradeLine('2026/11/04 21:40:11 1 2 [INFO Client 1] : You have entered Lioneye\'s Watch.')!)
+    expect(first.inArea).toBe(false)
+    // You then went to a seller's hideout and bought from them.
+    const buy = applyEvent(book, { kind: 'whisper-out', at: 2000, who: 'Seller', body: 'x', offer: { item: 'Mageblood, Heavy Belt', qty: 1, bulk: false, price: { amount: 100, currency: 'Divine Orb' }, league: 'Standard', tab: null, note: '' } }).added!
+    expect(applyEvent(book, { kind: 'trade-accepted', at: 3000 }).finished?.id).toBe(buy.id)
+  })
+
   it('a trade replayed after a restart that is in the sales log stays finished', () => {
     const book = newBook()
     const o = whisper(book, 'Ignithor', 1000)
