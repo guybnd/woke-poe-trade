@@ -28,8 +28,8 @@ export function cardReward (item: TipItem | undefined): CardReward | null {
   }
   if (rest.length) return null
   if (m[1] === 'divination') return { name: m[2], ns: 'DIVINATION_CARD', count: 1 }
-  const stack = /^(\d+)x (.+)$/.exec(m[2])
-  return stack ? { name: stack[2], ns: 'ITEM', count: Number(stack[1]) } : { name: m[2], ns: 'ITEM', count: 1 }
+  const stack = /^([\d,]+)x (.+)$/.exec(m[2])
+  return stack ? { name: stack[2], ns: 'ITEM', count: Number(stack[1].replace(/,/g, '')) } : { name: m[2], ns: 'ITEM', count: 1 }
 }
 
 export function cardExtraSections (

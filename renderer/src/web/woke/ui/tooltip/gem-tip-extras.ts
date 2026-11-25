@@ -16,7 +16,7 @@ function versionKey (variant: string): [number, number, number] {
 }
 const label = (variant: string) => variant.replace(/c$/, ' corrupted')
 
-const MOST_VERSIONS = 8
+const MOST_VERSIONS = 10
 
 /** Its versions by level, then quality, then corruption, two to a line. */
 export function gemLadder (rows: Array<{ variant?: string, chaos: number }>, hovered: string | undefined, format: (chaos: number) => string): TipLine[] {
@@ -27,7 +27,10 @@ export function gemLadder (rows: Array<{ variant?: string, chaos: number }>, hov
       return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]
     })
   if (versions.length < 2) return []
-  const shown = versions.slice(0, MOST_VERSIONS)
+  // Too many: the lowest go first, the hovered one always stays.
+  const top = versions.slice(-MOST_VERSIONS)
+  const own = versions.find(v => v.variant === hovered)
+  const shown = own && !top.includes(own) ? [own, ...top.slice(1)] : top
   const lines: TipLine[] = []
   for (let i = 0; i < shown.length; i += 2) {
     const line: TipLine = []
@@ -37,7 +40,7 @@ export function gemLadder (rows: Array<{ variant?: string, chaos: number }>, hov
     }
     lines.push(line)
   }
-  if (versions.length > shown.length) lines.push([part(`and ${versions.length - shown.length} more versions`, 'dim')])
+  if (versions.length > shown.length) lines.unshift([part(`${versions.length - shown.length} lower versions not shown`, 'dim')])
   return lines
 }
 

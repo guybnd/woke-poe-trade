@@ -347,7 +347,8 @@ async function withCardRarity (model: TipModel, card: string, market: TipMarket 
     price ??= usePrice()
     const p = price
     const extras = cardExtraSections(card, pack.items?.[card], data && facts ? { data, facts } : null, {
-      card: market && !market.range ? market.chaos : null,
+      // The price after the fake-price checks, as the reward's is.
+      card: market && !market.range ? (p.priceOf(card, { ns: 'DIVINATION_CARD' })?.chaos ?? null) : null,
       reward: r => (r.ns === 'UNIQUE' && p.isVariable(r.name)) ? null : p.priceOf(r.name, { ns: r.ns })?.chaos ?? null,
       format: c => formatChaos(c, p.divine.value)
     })

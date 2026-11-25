@@ -16,9 +16,12 @@ describe('gem price ladder', () => {
   it('shows no ladder for a gem with one version', () => {
     expect(gemLadder([{ variant: '3', chaos: 700 }], undefined, fmt)).toEqual([])
   })
-  it('says how many more versions it left out', () => {
-    const rows = Array.from({ length: 10 }, (_, i) => ({ variant: String(i + 1), chaos: i }))
-    expect(text(gemLadder(rows, undefined, fmt)).at(-1)).toBe('and 2 more versions')
+  it('leaves out the lowest versions, never the hovered one', () => {
+    const rows = Array.from({ length: 12 }, (_, i) => ({ variant: String(i + 1), chaos: i }))
+    const lines = text(gemLadder(rows, '1', fmt))
+    expect(lines[0]).toBe('2 lower versions not shown')
+    expect(lines[1].startsWith('1 0c')).toBe(true)
+    expect(lines.at(-1)).toContain('12 11c')
   })
 })
 

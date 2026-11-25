@@ -19,6 +19,7 @@ describe('card reward', () => {
     expect(cardReward(items['The Fiend'])).toEqual({ name: 'Headhunter', ns: 'UNIQUE', count: 1 })
     expect(cardReward(items['Abandoned Wealth'])).toEqual({ name: 'Exalted Orb', ns: 'ITEM', count: 3 })
     expect(cardReward(items['The Nurse'])).toEqual({ name: 'The Doctor', ns: 'DIVINATION_CARD', count: 1 })
+    expect(cardReward({ d: '<currencyitem>{1,500x Vivid Crystallised Lifeforce}', n: 2 })).toEqual({ name: 'Vivid Crystallised Lifeforce', ns: 'ITEM', count: 1500 })
   })
   it('prices no gem or random item', () => {
     expect(cardReward(items['A Chilling Wind'])).toBeNull()
