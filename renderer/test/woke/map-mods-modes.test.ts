@@ -339,6 +339,17 @@ describe('3.30 suffix wordings', () => {
     expect(ok.verdict.verdict).toBe('skip')
   })
 
+  // A mod with no number read as its stat's first wording, the plural "Areas
+  // contain a Mirror of Delirium" the map doesn't show.
+  it('names a mod with no number by the wording the map shows', () => {
+    const text = fixture('items/map-rare-t16.txt')
+      .replace('Players have 60% less Recovery Rate of Life and Energy Shield', 'Players have 60% less Recovery Rate of Life and Energy Shield\nArea contains a Mirror of Delirium')
+    const res = checkMap(parseItem(text), widget(profile({})))
+    const names = res.verdict.mods.map(m => m.matcher)
+    expect(names).toContain('Area contains a Mirror of Delirium')
+    expect(names).not.toContain('Areas contain a Mirror of Delirium')
+  })
+
   // The map card's click cycle: a rating on another wording came back after
   // "ok", so the mod could never be un-rated there.
   it('un-rating a mod clears the rating on its other wording too', () => {

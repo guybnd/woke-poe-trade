@@ -93,9 +93,9 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
   const stats = calcs.map(calc => prepareMapStat(calc))
   const mode = modeOfItem(item)
   const ratings = { ...modRatings(profile, mode) }
-  // A mod with no number shows as its stat's first wording, which may not be
-  // the one the map has ("Area contains a Mirage" reads as the older Empowered
-  // Mirage line). A rating on any wording of the stat counts.
+  // A rating may sit on another wording of the stat than the one the map has
+  // ("Areas contain a Mirror of Delirium" for "Area contains"). A rating on any
+  // wording of the stat counts.
   stats.forEach(({ matcher }, i) => {
     if (ratings[matcher]) return
     const other = calcs[i].stat.matchers.find(m => ratings[m.string])
