@@ -313,7 +313,7 @@ export function dropSource (drop: TipDrop | undefined): DropSource | null {
   if (!drop?.d && !drop?.r) return null
   const label = drop.s ?? (drop.d ? 'No drop' : 'Restricted')
   const why = drop.t ?? (drop.d ? 'The game never drops it.' : 'The PoE wiki doesn\'t say where it comes from.')
-  return { label, title: `Not a random drop on this base. ${why}` }
+  return { label, title: `Not a random drop on this base, so a Chance Orb can't make it. ${why}` }
 }
 
 // Random drops first, restricted ones after, each keeping its order.

@@ -16,6 +16,8 @@ import { kindOfName, uniqueModLines } from './item-menu-logic'
 import type { ItemMenuRef, UniqueModLines } from './item-menu-logic'
 import { dataFileUrl, onSharedDataChange } from '../../app/live-data'
 import { usePrice } from '../../shared/price'
+import { uniquesOnBase } from '../../shared/uniques-on-base'
+import { loadModTiers, tierClassKey } from './mod-tiers'
 import { heldText } from '../../shared/price-trust'
 import { formatChaos } from '../format'
 import type { TipBaseUnique, TipContent, TipEffect, TipMarket } from './tooltip'
@@ -209,7 +211,48 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
   if (model && kind === 'card') model = await withCardRarity(model, ref.name)
   const market = marketFor(ref, kind)
   if (model && kind === 'unique') model = await withUniqueExtras(model, ref, market)
+  if (model && kind === 'item' && pack.bases?.[ref.name]) return await withBaseExtras(model, ref, market)
+  if (kind === 'item' && / Map$/.test(ref.name)) model = await withMapCards(model, ref.name)
   return { model, market }
+}
+
+// A map by name: its tier and the cards that drop there, dearest first, as
+// Map history and Card drops show it (Guy's pick I8). Without the drop data
+// the tooltip shows as it was.
+async function withMapCards (model: TipModel | null, map: string): Promise<TipModel | null> {
+  try {
+    const { loadCardDrops, mapTip } = await import('../../card-drops/card-drops')
+    const data = await loadCardDrops()
+    if (!data || data.maps[map] == null) return model
+    price ??= usePrice()
+    const p = price
+    const tip = mapTip(data, map, card => p.priceOf(card, { ns: 'DIVINATION_CARD' })?.chaos ?? null, c => formatChaos(c, p.divine.value))
+    return model ? { ...model, base: model.base ?? tip.model.base, sections: [...model.sections, ...tip.model.sections] } : tip.model
+  } catch {
+    return model
+  }
+}
+
+// A gear base: the item level its best tiers need, and the uniques it drops
+// as with their prices, ones that aren't random drops marked (Guy's pick I7).
+async function withBaseExtras (model: TipModel, ref: ItemTipRef, market: TipMarket | null): Promise<{ model: TipModel, market: TipMarket | null, uniques?: TipBaseUnique[] }> {
+  const category = ITEM_BY_REF('ITEM', ref.name)?.[0]?.craftable?.category
+  const key = tierClassKey(category, pack.bases?.[ref.name])
+  if (!key) return { model, market }
+  try {
+    const [{ topTierLine }, tiers] = await Promise.all([import('./base-tip-extras'), loadModTiers(), loadFile('drops')])
+    const line = tiers ? topTierLine(tiers, key) : null
+    if (line) model = { ...model, sections: [...model.sections, [line]] }
+  } catch {}
+  const names = uniquesOnBase(ref.name)
+  if (!names.length) return { model, market }
+  price ??= usePrice()
+  const p = price
+  const listed = names.map((name): TipBaseUnique => {
+    const found = p.isVariable(name) ? null : p.priceOf(name, { ns: 'UNIQUE' })
+    return { name, chaos: found?.chaos ?? null, grade: 'unknown', label: '', thin: false }
+  }).sort((a, b) => (b.chaos ?? -1) - (a.chaos ?? -1))
+  return { model, market, uniques: withDrops(listed, pack.drops) }
 }
 
 // A unique's Foulborn swap, Vestigial implicit and the cards that give it
