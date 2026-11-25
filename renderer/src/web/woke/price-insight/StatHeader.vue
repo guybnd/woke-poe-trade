@@ -15,6 +15,7 @@
       <span v-if="model.chips.length" :class="$style.chips">
         <component :is="c.filter ? 'button' : 'span'" v-for="c of model.chips" :key="c.key"
           :type="c.filter ? 'button' : undefined" :data-cell="c.key"
+          :data-goto-spot="c.key === 'base' ? 'base-percentile' : undefined"
           :class="[$style.chip, cellClass(c)]" :title="cellTitle(c)">
           <span>{{ c.text }} <span :class="$style.ck">{{ c.label }}</span></span>
           <span :class="[$style.track, { [$style.off]: c.fill == null }]"><b :style="barStyle(c)" /></span>

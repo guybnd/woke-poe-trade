@@ -133,6 +133,17 @@ describe('buildStatHeader', () => {
     if (prop('item.base_percentile')) expect(m.chips.map(c => c.key)).toContain('base')
   })
 
+  it('a rare armour gets a base percentile chip too, unticked', () => {
+    const { item, stats, prop } = load('rare-body-armour-ar-ev.txt')
+    expect(item.basePercentile).not.toBeUndefined()
+    const base = prop('item.base_percentile')!
+    expect(base).toBeTruthy()
+    expect(base.disabled).toBe(true)
+    expect(base.hidden).toBeFalsy()
+    const m = buildStatHeader(item, stats)!
+    expect(m.chips.find(c => c.key === 'base')?.filter).toBe(base)
+  })
+
   it("a unique's fixed Armour stays clickable and searches at least its value", () => {
     const { item, stats, prop } = load('unique-kaoms-heart.txt')
     expect(prop('item.armour')?.hidden).toBe('hide_variable_by_base_percentile_only')

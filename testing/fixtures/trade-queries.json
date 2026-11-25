@@ -2977,6 +2977,9 @@
      "filters": {
       "ar": {
        "min": 931
+      },
+      "base_defence_percentile": {
+       "min": 0
       }
      }
     }
@@ -3333,6 +3336,9 @@
       },
       "ev": {
        "min": 1965
+      },
+      "base_defence_percentile": {
+       "min": 90
       }
      }
     }
@@ -3491,6 +3497,9 @@
      "filters": {
       "es": {
        "min": 1089
+      },
+      "base_defence_percentile": {
+       "min": 90
       }
      }
     }
@@ -3671,6 +3680,9 @@
      "filters": {
       "es": {
        "min": 1089
+      },
+      "base_defence_percentile": {
+       "min": 90
       }
      }
     }
@@ -3837,6 +3849,9 @@
      "filters": {
       "es": {
        "min": 1134
+      },
+      "base_defence_percentile": {
+       "min": 90
       }
      }
     }
@@ -4111,6 +4126,9 @@
       },
       "es": {
        "min": 31
+      },
+      "base_defence_percentile": {
+       "min": 0
       }
      }
     }
@@ -4840,6 +4858,9 @@
       },
       "block": {
        "min": 26
+      },
+      "base_defence_percentile": {
+       "min": 12
       }
      }
     }
