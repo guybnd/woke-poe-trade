@@ -59,3 +59,18 @@ test('side window: Headhunter lists the cards that give it, priced as a stack', 
   await expect(doctor).toContainText('40')
   await expect(side.locator('button[data-item-row]', { hasText: 'The Fiend' })).toContainText('corrupted')
 })
+
+test('side window: Dawnbreaker drops from the invitation, a click, with the boss\'s other drops', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/unique-dawnbreaker.txt')
+  const side = overlay.page.locator('.w-pc-side')
+  await expect(side).toBeVisible({ timeout: 20_000 })
+  await expect(side.getByText('Drops from')).toBeVisible()
+  // The invitation price checks like any other row.
+  await expect(side.locator('button[data-item-row]', { hasText: 'Incandescent Invitation' })).toBeVisible()
+  await expect(side.getByText('Also drops', { exact: true })).toBeVisible()
+  for (const other of ['Forbidden Flame', 'Dawnstrider']) {
+    await expect(side.locator('button[data-item-row]', { hasText: other })).toBeVisible()
+  }
+  await expect(side.locator('[data-item-row]', { hasText: 'Dawnbreaker' })).toHaveCount(0)
+})

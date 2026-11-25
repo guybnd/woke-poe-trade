@@ -5545,6 +5545,73 @@
    "type": "Murder Boots"
   }
  },
+ "unique-dawnbreaker.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Dawnbreaker",
+   "type": "Colossal Tower Shield"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ar": {},
+      "block": {},
+      "base_defence_percentile": {
+       "min": 100
+      }
+     }
+    }
+   },
+   "name": "Dawnbreaker",
+   "type": "Colossal Tower Shield"
+  }
+ },
  "unique-ebers-unification-zwsp.txt": {
   "opened": {
    "status": {

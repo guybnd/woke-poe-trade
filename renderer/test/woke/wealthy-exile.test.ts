@@ -4,7 +4,7 @@ import {
   DEFAULT_SITE_URL, WEALTHY_EXILE_TYPE, hotkeyTarget, parseHotkeyTarget, siteUrl, wealthyExileShortcuts
 } from '@/web/woke/wealthy-exile/widget'
 import type { WealthyExileWidget } from '@/web/woke/wealthy-exile/widget'
-import { MODULES } from '@/web/woke/modules'
+import { MODULES, RETIRED_MODULES } from '@/web/woke/modules'
 
 function widget (hotkey: string | null): WealthyExileWidget {
   return { wmId: 9, wmType: WEALTHY_EXILE_TYPE, wmTitle: '', wmWants: 'hide', wmZorder: 1, wmFlags: [], anchor: { pos: 'tl', x: 0, y: 0 }, url: '', hotkey, dockIcon: false }
@@ -32,8 +32,9 @@ describe('Wealthy Exile window', () => {
     expect(action.action).toEqual({ type: 'trigger-event', target: 'woke-wealthy-exile:9', focusOverlay: true })
   })
 
-  it('is an economy module', () => {
-    const m = MODULES.find(x => x.id === 'wealthy-exile')!
+  it('is retired: an economy module kept off every list', () => {
+    expect(MODULES.some(x => x.id === 'wealthy-exile')).toBe(false)
+    const m = RETIRED_MODULES.find(x => x.id === 'wealthy-exile')!
     expect(m.widgetTypes).toEqual([WEALTHY_EXILE_TYPE])
     expect(m.group).toBe('economy')
   })

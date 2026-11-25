@@ -57,10 +57,9 @@
             <span v-item-tip="{ name: r.essence.name, type: 'Essence' }" :class="{ [$style.flagged]: r.flagged }">{{ shortEssenceName(r.essence) }}</span>
             <WPrice :chaos="r.chaos" :divine="divine" :class="{ 'w-dim': !r.flagged }" />
           </div>
-          <div v-if="current.rated.estimate" class="text-xs" :class="current.rated.estimate.gain > 0 ? 'w-up' : 'w-dim'"
-            :title="estimateTitle(current.rated)">
-            Corrupt: ~{{ fmt(current.rated.estimate.after) }} vs {{ fmt(current.rated.estimate.now) }} now
-            ({{ current.rated.estimate.gain >= 0 ? '+' : '' }}{{ fmt(current.rated.estimate.gain) }} after Vaal)
+          <div v-if="current.rated.estimate" class="text-xs w-dim" :title="estimateTitle(current.rated)">
+            Best case {{ fmt(current.rated.estimate.best) }} vs {{ fmt(current.rated.estimate.now) }} now
+            ({{ current.rated.estimate.bestGain >= 0 ? '+' : '' }}{{ fmt(current.rated.estimate.bestGain) }} after Vaal)
           </div>
           <template v-if="current.rated.specials.length">
             <div class="w-faint" style="font-size: var(--w-fs-xs); margin-top: 3px;">Corrupting can turn {{ current.rated.flagged.join(', ') }} into:</div>
@@ -79,8 +78,8 @@
           :style="{ left: `${l.at.x * 100}%`, top: `${l.at.y * 100}%` }">
           <span :class="$style.tag">{{ VERDICT_LABEL[l.rated.verdict] }}</span>
           <WPrice :chaos="l.rated.totalChaos || null" :divine="divine" />
-          <span v-if="l.rated.estimate" :class="l.rated.estimate.gain > 0 ? 'w-up' : 'w-dim'" class="text-xs">
-            {{ l.rated.estimate.gain >= 0 ? '+' : '' }}{{ fmt(l.rated.estimate.gain) }}
+          <span v-if="l.rated.estimate && l.rated.estimate.bestGain > 0" class="text-xs w-dim" title="Best case after corrupting; the odds aren't published">
+            up to +{{ fmt(l.rated.estimate.bestGain) }}
           </span>
         </div>
       </div>
@@ -170,9 +169,9 @@ function rate (lines: string[]): PricedMonolith | null {
 
 function estimateTitle (r: PricedMonolith) {
   const e = r.estimate!
-  return 'Estimate: each corrupt outcome (all upgrade a tier, one M/E/D/S becomes a special essence, nothing, ' +
-    'lose the cheapest) counted as equally likely; real odds aren\'t published.' +
-    (e.complete ? '' : ' Some prices are missing, so the CORRUPT call uses your ticked essences instead.')
+  return 'Best case: every essence goes up a tier, or one Misery, Envy, Dread or Scorn becomes the dearest corruption-only essence. ' +
+    'The odds aren\'t published, so this is what it can reach, not what to expect.' +
+    (e.complete ? '' : ' Some prices are missing, so this is a rough figure.')
 }
 
 const setupProblem = shallowRef<string | null>(null)

@@ -89,20 +89,20 @@ export function parseMonolith (lines: string[]): ScannedMonolith | null {
 
 export type EssenceVerdict = 'corrupt' | 'open' | 'done'
 
-// What a corrupt does, as modelled here. GGG doesn't publish the odds, so
-// these are equal-chance placeholders, kept in one place to tune:
+// What a corrupt can do, best case. GGG doesn't publish the odds, and an
+// average over guessed odds read like advice (veteran critique, Guy
+// 2026-11-25), so only the best result is priced and the verdict follows the
+// rule of thumb (a Misery, Envy, Dread or Scorn is there):
 // - upgrade: every tiered essence goes up one tier
-// - special: one Misery/Envy/Dread/Scorn turns into a corruption-only essence
-//   (without one of those, nothing changes)
-// - nothing: the monolith keeps what it had
-// - loss: a bad roll; the cheapest essence is lost
-export const CORRUPT_OUTCOMES = { upgrade: 0.25, special: 0.25, nothing: 0.25, loss: 0.25 }
+// - special: one Misery/Envy/Dread/Scorn turns into a corruption-only essence,
+//   the dearest of the four (without one of those, nothing changes)
 
 export interface CorruptEstimate {
   now: number
-  after: number
-  // after - now - cost of the corruption item
-  gain: number
+  // The better of the two outcomes above.
+  best: number
+  // best - now - cost of the corruption item
+  bestGain: number
   // False when some prices were missing, so the numbers are partial.
   complete: boolean
 }
@@ -127,19 +127,16 @@ export function estimateCorrupt (essences: Essence[], price: (name: string) => n
 
   const upgraded = essences.reduce((sum, e, i) => sum + (e.tier ? p(nextTierName(e)) : values[i]), 0)
 
-  const specials = CORRUPTION_ONLY.map(t => p(`Essence of ${t}`))
-  const avgSpecial = specials.reduce((a, b) => a + b, 0) / specials.length
+  // Only priced when the Misery/Envy/Dread/Scorn it replaces has a price:
+  // counting an unpriced one as 0 would make the gain look bigger than it is.
   const medsIdx = essences
     .map((e, i) => ({ e, i }))
-    .filter(x => MEDS.includes(x.e.type))
+    .filter(x => MEDS.includes(x.e.type) && price(x.e.name) != null)
     .sort((a, b) => values[a.i] - values[b.i])[0]
-  const special = medsIdx ? now - values[medsIdx.i] + avgSpecial : now
+  const special = medsIdx ? now - values[medsIdx.i] + Math.max(...CORRUPTION_ONLY.map(t => p(`Essence of ${t}`))) : now
 
-  const loss = essences.length ? now - Math.min(...values) : now
-
-  const after = CORRUPT_OUTCOMES.upgrade * upgraded + CORRUPT_OUTCOMES.special * special +
-    CORRUPT_OUTCOMES.nothing * now + CORRUPT_OUTCOMES.loss * loss
-  return { now, after, gain: after - now - corruptCost, complete }
+  const best = Math.max(upgraded, special)
+  return { now, best, bestGain: best - now - corruptCost, complete }
 }
 
 export interface PricedMonolith {
@@ -153,9 +150,8 @@ export interface PricedMonolith {
   estimate: CorruptEstimate | null
 }
 
-// With complete prices, corrupt when the expected value after corrupting beats
-// the value now plus the corruption item's cost. Without them, fall back to
-// the rule of thumb: corrupt when a flagged type (any tier) is present.
+// Corrupt when a flagged type (any tier) is present: the rule of thumb. The
+// best case is shown beside it, never used as the call.
 // `price` looks up an essence's chaos price by full name.
 export function rateMonolith (m: ScannedMonolith, flagTypes: string[], price: (name: string) => number | null, corruptCost = 1): PricedMonolith {
   const flagSet = new Set(flagTypes.map(t => t.toLowerCase()))
@@ -167,8 +163,7 @@ export function rateMonolith (m: ScannedMonolith, flagTypes: string[], price: (n
   const flagged = [...new Set(rows.filter(r => r.flagged).map(r => r.essence.type))]
   const totalChaos = rows.reduce((sum, r) => sum + (r.chaos ?? 0), 0)
   const estimate = m.corrupted ? null : estimateCorrupt(m.essences, price, corruptCost)
-  const byValue = estimate?.complete ? estimate.gain > 0 : flagged.length > 0
-  const verdict: EssenceVerdict = m.corrupted ? 'done' : byValue ? 'corrupt' : 'open'
+  const verdict: EssenceVerdict = m.corrupted ? 'done' : flagged.length > 0 ? 'corrupt' : 'open'
   const specials = !m.corrupted && flagged.length
     ? CORRUPTION_ONLY.map(t => ({ name: `Essence of ${t}`, chaos: price(`Essence of ${t}`) }))
         .sort((a, b) => (b.chaos ?? -1) - (a.chaos ?? -1))

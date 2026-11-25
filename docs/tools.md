@@ -19,7 +19,6 @@ Woke PoE Trade is a set of tools on one overlay. Each one is a module you can sw
 | Economy | Market | Every poe.ninja price by category, plus movers and a watchlist |
 | Economy | Flips | Vendor recipes and Harvest rerolls worth doing: threads, catalysts, delirium orbs and more |
 | Economy | Disenchant | Uniques with the most Thaumaturgic Dust per chaos, to buy and disenchant |
-| Economy | Wealthy Exile | The Wealthy Exile net worth site in an overlay window |
 | Economy | Drop counter | A tally of the drops you choose, and maps run |
 | Economy | Stacked decks | Cards from the Stacked Decks you open: profit, big hits and luck |
 | Economy | Session analytics | Profit per map, strategy and hour over time |
