@@ -72,11 +72,11 @@ export function followGameLog (opts: {
     else queued.push(lines)
   })
   const isNewLog = (path: string) => missing || path !== tailPath
-  function catchUp (path?: string) {
+  function catchUp () {
     caughtUp = false
     loading = true
     openedWhileLoading = null
-    logTail(path).then(tail => {
+    logTail().then(tail => {
       if (stopped) return
       missing = tail.path == null
       tailPath = tail.path
@@ -102,12 +102,12 @@ export function followGameLog (opts: {
       if (stopped) return
       for (const lines of queued.splice(0)) if (lines.length) opts.onLines(lines, true)
       // One may have opened after that read looked.
-      if (openedWhileLoading && isNewLog(openedWhileLoading)) catchUp(openedWhileLoading)
+      if (openedWhileLoading && isNewLog(openedWhileLoading)) catchUp()
     })
   }
   function onOpened (path: string) {
     if (loading) openedWhileLoading = path
-    else if (isNewLog(path)) catchUp(path)
+    else if (isNewLog(path)) catchUp()
   }
   openedSubscribers.add(onOpened)
   catchUp()
