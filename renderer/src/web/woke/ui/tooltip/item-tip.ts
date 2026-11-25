@@ -18,6 +18,7 @@ import { dataFileUrl, onSharedDataChange } from '../../app/live-data'
 import { usePrice } from '../../shared/price'
 import { uniquesOnBase } from '../../shared/uniques-on-base'
 import { loadModTiers, tierClassKey } from './mod-tiers'
+import type { GemTable } from '../../search/lookups/gems'
 import { heldText } from '../../shared/price-trust'
 import { formatChaos } from '../format'
 import type { TipBaseUnique, TipContent, TipEffect, TipMarket } from './tooltip'
@@ -208,12 +209,33 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
   await Promise.all(packFiles(kind).map(loadFile))
   const base = kind === 'unique' ? ITEM_BY_REF('UNIQUE', ref.name)?.[0]?.unique?.base : undefined
   let model = buildTip(pack, { name: ref.name, kind, variant: ref.variant, base })
-  if (model && kind === 'card') model = await withCardRarity(model, ref.name)
   const market = marketFor(ref, kind)
+  if (model && kind === 'card') model = await withCardRarity(model, ref.name, market)
+  if (model && kind === 'gem') model = await withGemExtras(model, ref)
   if (model && kind === 'unique') model = await withUniqueExtras(model, ref, market)
   if (model && kind === 'item' && pack.bases?.[ref.name]) return await withBaseExtras(model, ref, market)
   if (kind === 'item' && / Map$/.test(ref.name)) model = await withMapCards(model, ref.name)
+  if (model && (kind === 'item' || kind === 'card')) model = await withHeld(model, ref.name, market)
   return { model, market }
+}
+
+// "You have 34 · 1.2 div" from Net worth's last stash read (Guy's pick I9).
+async function withHeld (model: TipModel, name: string, market: TipMarket | null): Promise<TipModel> {
+  try {
+    const { heldCount } = await import('./held')
+    const n = await heldCount(name)
+    if (!n) return model
+    price ??= usePrice()
+    const worth = market && !market.range && !market.varies ? market.chaos * n : null
+    const line = [
+      { text: 'You have ', tone: 'label' as const },
+      { text: n.toLocaleString('en-US'), tone: 'value' as const },
+      ...(worth ? [{ text: ` · ${formatChaos(worth, price.divine.value)}`, tone: 'label' as const }] : [])
+    ]
+    return { ...model, sections: [...model.sections, [line]] }
+  } catch {
+    return model
+  }
 }
 
 // A map by name: its tier and the cards that drop there, dearest first, as
@@ -277,12 +299,43 @@ async function withUniqueExtras (model: TipModel, ref: ItemTipRef, market: TipMa
 // A divination card's tooltip ends with how rare it is among all card drops
 // (stacked-deck drop weights). The drop data loads on the first card hover;
 // without it the tooltip shows as it was.
-async function withCardRarity (model: TipModel, card: string): Promise<TipModel> {
+// A gem's versions with their prices and where to get it (Guy's pick I5,
+// gem-tip-extras.ts). Without the data the tooltip shows as it was.
+async function withGemExtras (model: TipModel, ref: ItemTipRef): Promise<TipModel> {
   try {
-    const { cardDropFacts, loadCardDrops, rarityText } = await import('../../card-drops/card-drops')
-    const rarity = rarityText(cardDropFacts(await loadCardDrops(), card))
-    if (!rarity) return model
-    return { ...model, sections: [...model.sections, [[{ text: `Rarity: ${rarity}, by drop weight`, tone: 'dim' }]]] }
+    const [{ gemLadder, gemSource }, sources] = await Promise.all([
+      import('./gem-tip-extras'),
+      import('../../pob-builds/gem-sources.json').then(m => m.default as unknown as GemTable).catch(() => null)
+    ])
+    price ??= usePrice()
+    const p = price
+    const ninja = usePoeninja()
+    const ladder = gemLadder(ninja.findPricesByName('GEM', ref.name), ref.variant, c => formatChaos(c, p.divine.value))
+    const where = gemSource(ref.name, sources)
+    const sections = [...(ladder.length ? [ladder] : []), ...(where ? [[[{ text: where, tone: 'dim' as const }]]] : [])]
+    return sections.length ? { ...model, sections: [...model.sections, ...sections] } : model
+  } catch {
+    return model
+  }
+}
+
+// Then the set's cost against its reward and the maps it is likeliest in
+// (Guy's pick I4, card-tip-extras.ts).
+async function withCardRarity (model: TipModel, card: string, market: TipMarket | null): Promise<TipModel> {
+  try {
+    const [{ cardDropFacts, loadCardDrops, rarityText }, { cardExtraSections }] = await Promise.all([import('../../card-drops/card-drops'), import('./card-tip-extras')])
+    const data = await loadCardDrops()
+    const facts = cardDropFacts(data, card)
+    const rarity = rarityText(facts)
+    price ??= usePrice()
+    const p = price
+    const extras = cardExtraSections(card, pack.items?.[card], data && facts ? { data, facts } : null, {
+      card: market && !market.range ? market.chaos : null,
+      reward: r => (r.ns === 'UNIQUE' && p.isVariable(r.name)) ? null : p.priceOf(r.name, { ns: r.ns })?.chaos ?? null,
+      format: c => formatChaos(c, p.divine.value)
+    })
+    const sections = [...(rarity ? [[[{ text: `Rarity: ${rarity}, by drop weight`, tone: 'dim' as const }]]] : []), ...extras]
+    return sections.length ? { ...model, sections: [...model.sections, ...sections] } : model
   } catch {
     return model
   }

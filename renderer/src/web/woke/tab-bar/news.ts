@@ -24,6 +24,9 @@ export interface NewsItem {
 export const NEWS: NewsItem[] = [
   { id: 'price-check-conquest-keystones', wmType: 'price-check', name: 'Price check', note: 'New: a Timeless jewel lists each conqueror\'s keystone beside it. Click one to search it, any number' },
   { id: 'price-check-clear-numbers', wmType: 'price-check', name: 'Price check', note: 'New: hover a mod\'s number boxes for × to keep the line and search any value' },
+  { id: 'card-tip-set-maps', wmType: 'price-check', name: 'Price check', note: 'New: a div card\'s tooltip sets the full set\'s cost against its reward, and names the maps it\'s likeliest in' },
+  { id: 'gem-tip-ladder', wmType: 'price-check', name: 'Price check', note: 'New: a gem\'s tooltip lists each version\'s price (20/20, 21/20 corrupted...) and where to get it' },
+  { id: 'tip-you-have', wmType: 'price-check', name: 'Price check', note: 'New: currency, fragment and card tooltips say how many your last stash read holds' },
   { id: 'base-tip-tiers-uniques', wmType: 'price-check', name: 'Price check', note: 'New: a base\'s tooltip shows the item level its best tiers need and its uniques, marked if not chanceable' },
   { id: 'map-tip-cards', wmType: 'price-check', name: 'Price check', note: 'New: hovering a map name anywhere shows its tier and the div cards that drop there' },
   { id: 'unique-tip-cards-foulborn', wmType: 'price-check', name: 'Price check', note: 'New: a unique\'s tooltip shows the cards that give it and the set\'s cost, its Vestigial and its Foulborn swap' },
