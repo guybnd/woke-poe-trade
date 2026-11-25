@@ -194,6 +194,20 @@ describe('stash regex', () => {
     expect(wrong).toEqual([])
   })
 
+  // A rating saved on the plural wording (older map cards did) still counts
+  // for maps that say "Area contains"; the search must hide those too, and
+  // not avoid the opposite wording of a rated mod.
+  it('a rating on one wording searches the wordings that say the same', () => {
+    const p: MapModProfile = { ...defaultProfile(), ratings: { 'Areas contain a Mirror of Delirium': 'deadly' } }
+    const res = profileRegex(p)
+    expect(stashSearch(res.text, mapTooltip(['Area contains a Mirror of Delirium'])), res.text).toBe(false)
+    expect(stashSearch(res.text, mapTooltip(['Areas contain a Mirror of Delirium'])), res.text).toBe(false)
+    expect(stashSearch(res.text, mapTooltip([])), res.text).toBe(true)
+    const aoe: MapModProfile = { ...defaultProfile(), ratings: { 'Monsters have #% increased Area of Effect': 'deadly' } }
+    const res2 = profileRegex(aoe)
+    expect(stashSearch(res2.text, mapTooltip(['Monsters have #% reduced Area of Effect'])), res2.text).toBe(true)
+  })
+
   it('every preset (avoid all) fits the search box once auto-trimmed', () => {
     for (const preset of PRESETS) {
       const profile: MapModProfile = { ...defaultProfile(), ratings: Object.fromEntries(preset.matchers.map(m => [m, 'deadly'])), autoTrim: true }

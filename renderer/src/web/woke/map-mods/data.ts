@@ -144,10 +144,24 @@ export function heistRowOf (matcher: string): string | undefined {
 // Every wording of a map mod's stat, from one of them: for mods saved as text
 // only (the death recap), where a rating on any wording counts.
 export function statWordings (matcher: string): string[] {
+  return areaStatOf(matcher)?.matchers.map(m => m.string) ?? []
+}
+
+// The other wordings of a map mod's stat that say the same thing ("Area
+// contains" for "Areas contain", the 100% one), not the opposite ("reduced"
+// for "increased").
+export function sameSenseWordings (matcher: string): string[] {
+  const stat = areaStatOf(matcher)
+  const own = stat?.matchers.find(m => m.string === matcher)
+  if (!stat || !own) return []
+  return stat.matchers.filter(m => m.string !== matcher && !m.negate === !own.negate).map(m => m.string)
+}
+
+function areaStatOf (matcher: string) {
   const found = STAT_BY_MATCH_STR_V2(matcher)
-  if (!found) return []
+  if (!found) return undefined
   const stats = 'stats' in found ? found.stats.filter(s => s.matchers.some(m => m.string === matcher)) : [found]
-  return (stats.find(s => s.fromAreaMods) ?? stats[0])?.matchers.map(m => m.string) ?? []
+  return stats.find(s => s.fromAreaMods) ?? stats[0]
 }
 
 // A map's saved mods rated by the profile's Maps ratings, as the map card
