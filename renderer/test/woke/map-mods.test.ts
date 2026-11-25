@@ -285,6 +285,15 @@ describe('map scan: mods on several tooltip lines', () => {
     expect(mods.some(m => m.roll === 3)).toBe(true)
   })
 
+  // Not a mod: an Elder/Shaper map's influence line left every scan weak, so
+  // it never read Safe.
+  it('an influence line is not an unreadable mod', () => {
+    for (const line of ['Area is influenced by The Elder', 'Area is influenced by The Shaper', 'Area is influenced by The Eider']) {
+      const scanned = new TooltipMatcher(allAreaMods()).parse(['Map Tier: 16', line])!
+      expect(scanned.weak, line).toEqual([])
+    }
+  })
+
   it('needs every line of the mod', () => {
     const scanned = new TooltipMatcher(allAreaMods()).parse(['Map Tier: 16', TWO_LINE.split('\n')[0]])!
     expect(scanned.mods.map(m => m.matcher)).not.toContain(TWO_LINE)
