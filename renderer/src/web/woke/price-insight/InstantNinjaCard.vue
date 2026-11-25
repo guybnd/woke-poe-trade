@@ -33,6 +33,8 @@
     </div>
     <!-- The price over 24h, 3 days or 7 days in its own box beside the card: a click on a
          range or the mouse wheel steps through them (Guy, 2026-11-25). -->
+    <!-- The graph box, and a divine's parts in chaos under it (Guy, 2026-11-25). -->
+    <div :class="$style.aside" data-aside>
     <div v-if="info" :class="$style.gbox" data-testid="instant-ninja-graph" :title="hasHistory ? 'Scroll or click: 24h, 3 days, 7 days' : undefined" @wheel="onWheel">
       <div v-if="hasHistory" :class="$style.gtabs">
         <button v-for="r in RANGES" :key="r.id" type="button" tabindex="-1" :class="{ [$style.on]: r.id === range }" :data-testid="`instant-ninja-range-${r.id}`" @mousedown.prevent @click="setRange(r.id)">{{ r.id }}</button>
@@ -50,6 +52,7 @@
           <tr v-for="t in tenths" :key="t.div"><td><w-price-text :text="t.div" /></td><td><w-price-text :text="t.chaos" /></td></tr>
         </tbody>
       </table>
+    </div>
     </div>
     </div>
     <!-- Related items (the item's family, what drops it), as beside the window. -->
@@ -245,8 +248,11 @@ const anchorStyle = computed(() => ({ left: `${pos.value.left}px`, top: `${pos.v
 function place () {
   const node = el.value
   if (!node) return
-  const w = node.offsetWidth
-  const h = node.offsetHeight
+  // The graph box hangs off the card's right edge, outside the anchor's own box.
+  const box = node.getBoundingClientRect()
+  const aside = node.querySelector('[data-aside]')?.getBoundingClientRect()
+  const w = Math.max(node.offsetWidth, aside ? aside.right - box.left : 0)
+  const h = Math.max(node.offsetHeight, aside ? aside.bottom - box.top : 0)
   const { x, y } = props.at
   const left = x + RIGHT_GAP + w <= window.innerWidth ? x + RIGHT_GAP : Math.max(0, x - LEFT_GAP - w)
   const top = Math.max(0, Math.min(y - ABOVE, window.innerHeight - h))
@@ -283,7 +289,7 @@ function shownRect (node: HTMLElement): DOMRect | null {
   // Hidden (the widget is display:none): nothing to track.
   if (!node.offsetWidth) return null
   let { left, top, right, bottom } = node.getBoundingClientRect()
-  for (const child of node.querySelectorAll(':scope > *, :scope .w-pc-side')) {
+  for (const child of node.querySelectorAll(':scope > *, :scope .w-pc-side, :scope [data-aside]')) {
     const r = child.getBoundingClientRect()
     if (!r.width || !r.height) continue
     left = Math.min(left, r.left); top = Math.min(top, r.top)
@@ -317,6 +323,8 @@ onMounted(() => {
   })
   kids.observe(el.value!, { childList: true })
   for (const child of el.value!.children) resize.observe(child)
+  const aside = el.value!.querySelector('[data-aside]')
+  if (aside) resize.observe(aside)
   stopKids = () => kids.disconnect()
 })
 watch(() => props.at, placeAndReport)
@@ -330,8 +338,10 @@ onUnmounted(() => {
 <style module>
 /* The card reads at a glance by a stash cell: 40% over the app's UI size
    (Guy, 2026-11-24, "small and hard to read"). The list beside it follows. */
-.anchor { --w-instant-scale: 1.4; position: absolute; pointer-events: auto; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; max-height: 100%; }
+.anchor { --w-instant-scale: 1.4; position: absolute; pointer-events: auto; z-index: 5; display: grid; grid-template-columns: auto auto; column-gap: calc(6px * var(--w-ui-size, 1) * var(--w-instant-scale, 1)); justify-items: start; align-items: start; max-height: 100%; }
 .card {
+  grid-column: 1;
+  grid-row: 1;
   zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1));
   --tip: var(--w-r-normal);
   --tip-rgb: 200, 200, 200;
@@ -379,7 +389,10 @@ onUnmounted(() => {
 .coin { width: 1.3em; height: 1.3em; object-fit: contain; }
 .doubt { color: var(--w-warn, #e0a03c); max-width: 18rem; }
 .fg { color: var(--w-r-magic, #8888ff); }
-.top { display: flex; align-items: flex-start; gap: calc(6px * var(--w-ui-size, 1) * var(--w-instant-scale, 1)); }
+/* Beside the card and the list under it, so the list sits right under the card. */
+.aside { grid-column: 2; grid-row: 1 / span 9; display: flex; flex-direction: column; align-items: flex-start; gap: calc(6px * var(--w-ui-size, 1) * var(--w-instant-scale, 1)); }
+.top { display: contents; }
+.anchor > * { grid-column: 1; }
 .tenths {
   zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1));
   border: 1px solid var(--w-line-strong, var(--w-line));

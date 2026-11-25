@@ -58,7 +58,7 @@ import { usePoeninja, CurrencyValue, displayRounding } from '@/web/background/Pr
 import { getDetailsId } from '../trends/getDetailsId'
 import WItemRow from '@/web/woke/ui/WItemRow.vue'
 import type { ItemTipRef } from '@/web/woke/ui/tooltip/item-tip'
-import { ParsedItem } from '@/parser'
+import { ParsedItem, ItemCategory } from '@/parser'
 import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
 import { sideRow, type SideRow } from './side-row'
 import { familiesOf, familyRows, type Family } from '@/web/woke/related-family/family'
@@ -405,7 +405,9 @@ export default defineComponent({
       if (res.related.length > 1) out.push({ key: 'related', title: res.label ?? `Related to ${props.item!.info.name}`, family: res.label != null, rows: res.related, sum: res.label == null && group ? setSum(group) : undefined })
       for (const fam of otherFamilies(props.item!)) out.push({ key: `family:${fam.label}`, title: fam.label, family: true, rows: fam.related })
       if ('dropRelated' in res && res.dropRelated.length > 1) out.push({ key: 'drop-related', title: `Related to ${props.item!.info.name}`, rows: res.dropRelated })
-      if (res.items.length) out.push({ key: 'drops', title: `Drops in ${props.item!.info.name}`, rows: res.items })
+      // A card doesn't drop its reward, it's turned in for it (Guy: "what does this drops in even mean").
+      const card = props.item!.category === ItemCategory.DivinationCard
+      if (res.items.length) out.push({ key: 'drops', title: card ? `${props.item!.info.name} gives` : `Drops in ${props.item!.info.name}`, rows: res.items })
       return out
     }
 
