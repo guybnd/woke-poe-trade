@@ -197,6 +197,19 @@ export function modPriority (matcher: string): number {
   return PRESETS.some(p => p.matchers.includes(matcher)) ? 1 : 0
 }
 
+// Copy of `ratings` where each mod's own wording takes a rating saved under
+// another of its stat's wordings ("Areas contain a Mirror of Delirium" for
+// "Area contains"): a rating on any wording counts.
+export function withOtherWordings (ratings: Record<string, ModRating>, mods: Array<{ matcher: string, wordings?: string[] }>): Record<string, ModRating> {
+  const out = { ...ratings }
+  for (const { matcher, wordings } of mods) {
+    if (out[matcher]) continue
+    const other = wordings?.find(w => ratings[w])
+    if (other) out[matcher] = ratings[other]
+  }
+  return out
+}
+
 // Copy of `ratings` with one mod (by `key`) set to `rating`. A rating saved
 // under another of its stat's `wordings` counts for the mod (check.ts), so
 // every rated wording changes with it, or "none" could never be reached.

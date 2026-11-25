@@ -1,6 +1,6 @@
-import { ITEMS_ITERATOR, STATS_ITERATOR } from '@/assets/data'
-import { modRatings } from './rules'
-import type { MapModProfile, ModMode } from './rules'
+import { ITEMS_ITERATOR, STAT_BY_MATCH_STR_V2, STATS_ITERATOR } from '@/assets/data'
+import { modRatings, rateMods, withOtherWordings } from './rules'
+import type { CheckedMod, MapModProfile, ModMode } from './rules'
 
 let areaMods: string[] | null = null
 let t17Mods: Set<string> | null = null
@@ -139,6 +139,22 @@ export function heistMods (): string[] {
 export function heistRowOf (matcher: string): string | undefined {
   heistMods()
   return heistRows!.get(matcher)
+}
+
+// Every wording of a map mod's stat, from one of them: for mods saved as text
+// only (the death recap), where a rating on any wording counts.
+export function statWordings (matcher: string): string[] {
+  const found = STAT_BY_MATCH_STR_V2(matcher)
+  if (!found) return []
+  const stats = 'stats' in found ? found.stats.filter(s => s.matchers.some(m => m.string === matcher)) : [found]
+  return (stats.find(s => s.fromAreaMods) ?? stats[0])?.matchers.map(m => m.string) ?? []
+}
+
+// A map's saved mods rated by the profile's Maps ratings, as the map card
+// rates them: a rating on another wording of a mod's stat counts.
+export function rateSavedMods (mods: Array<{ matcher: string, roll?: number }>, profile: MapModProfile): CheckedMod[] {
+  const withWordings = mods.map(m => ({ ...m, wordings: statWordings(m.matcher) }))
+  return rateMods(withWordings, { ...profile, ratings: withOtherWordings(modRatings(profile, 'maps'), withWordings) }).mods
 }
 
 export function chartMods (): string[] {

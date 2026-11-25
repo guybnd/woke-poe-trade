@@ -2,7 +2,7 @@
 // the verdict on heist items and charts. The chart is real item text from the game.
 import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { fixture, loadGameData, parseItem } from '../helpers/game-data'
-import { allAreaMods, chartMods, heistMods, modsForMode, tier17Mods } from '@/web/woke/map-mods/data'
+import { allAreaMods, chartMods, heistMods, modsForMode, rateSavedMods, tier17Mods } from '@/web/woke/map-mods/data'
 import { profileRegex } from '@/web/woke/map-mods/search'
 import { MAX_SEARCH_LENGTH } from '@/web/woke/map-mods/regex'
 import { DEFAULT_JUICE_WEIGHTS, defaultProfile, modListRows, setSearchOption, withModRating } from '@/web/woke/map-mods/rules'
@@ -348,6 +348,17 @@ describe('3.30 suffix wordings', () => {
     const names = res.verdict.mods.map(m => m.matcher)
     expect(names).toContain('Area contains a Mirror of Delirium')
     expect(names).not.toContain('Areas contain a Mirror of Delirium')
+  })
+
+  // The death recap rates a map's saved mods: an old rating on the plural
+  // wording read "ok" there once maps saved the singular one.
+  it('the death recap counts a rating on another wording, and can clear it', () => {
+    const p = profile({ 'Areas contain a Mirror of Delirium': 'deadly' })
+    const [mod] = rateSavedMods([{ matcher: 'Area contains a Mirror of Delirium' }], p)
+    expect(mod.rating).toBe('deadly')
+    p.ratings = withModRating(p.ratings, mod.matcher, mod.wordings ?? [], 'ok')
+    expect(p.ratings).toEqual({})
+    expect(rateSavedMods([{ matcher: 'Area contains a Mirror of Delirium' }], p)[0].rating).toBe('ok')
   })
 
   // The map card's click cycle: a rating on another wording came back after

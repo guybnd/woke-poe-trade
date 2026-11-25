@@ -6,7 +6,7 @@ import type { ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import { prepareMapStat } from '@/web/map-check/prepare-map-stats'
 import { heistRowOf } from './data'
-import { juiceScore, modRatings, rateMods } from './rules'
+import { juiceScore, modRatings, rateMods, withOtherWordings } from './rules'
 import type { JuiceResult, MapVerdict, ModMode } from './rules'
 import { MAP_MODS_TYPE, activeProfile, importAptOnce, initMapModsWidget } from './widget'
 import { MIN_LABELS } from './regex'
@@ -90,17 +90,10 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
   const rated = (type: ModifierType) => type === ModifierType.Explicit || (isChart && type === ModifierType.Implicit)
   const calcs = item.statsByType
     .filter(calc => rated(calc.type) && calc.stat.ref !== VOYAGE_UNREVEALED)
-  const stats = calcs.map(calc => prepareMapStat(calc))
+  const stats = calcs.map(calc => ({ ...prepareMapStat(calc), wordings: calc.stat.matchers.map(m => m.string) }))
   const mode = modeOfItem(item)
-  const ratings = { ...modRatings(profile, mode) }
-  // A rating may sit on another wording of the stat than the one the map has
-  // ("Areas contain a Mirror of Delirium" for "Area contains"). A rating on any
-  // wording of the stat counts.
-  stats.forEach(({ matcher }, i) => {
-    if (ratings[matcher]) return
-    const other = calcs[i].stat.matchers.find(m => ratings[m.string])
-    if (other) ratings[matcher] = ratings[other.string]
-  })
+  // A rating may sit on another wording of the stat than the one the map has.
+  const ratings = withOtherWordings(modRatings(profile, mode), stats)
   if (mode === 'heist') {
     // A row rates both wordings of its mod.
     for (const { matcher } of stats) {
@@ -108,7 +101,7 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
       if (rating) ratings[matcher] = rating
     }
   }
-  const verdict = rateMods(stats.map((s, i) => ({ ...s, wordings: calcs[i].stat.matchers.map(m => m.string) })), { ...profile, ratings })
+  const verdict = rateMods(stats, { ...profile, ratings })
 
   const juice = isHeistItem(item) ? null : juiceScore({
     quantity: item.areaAtlasDrops ?? item.areaItemQuantity,
