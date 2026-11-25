@@ -1,5 +1,5 @@
 <template>
-  <div v-if="result || sections.length || keystones" :class="$style.wrapper" class="w-pc-side" data-goto-spot="related">
+  <div v-if="result || sections.length || keystones" ref="root" :class="$style.wrapper" class="w-pc-side" data-goto-spot="related">
     <div v-if="result && 'error' in result" class="p-2">
       {{ result.error }}
     </div>
@@ -20,13 +20,19 @@
     <!-- woke: the item's family, its drop group, what it drops: one row and one
          click for every section. A click price checks the row's item the way the
          item menu's Price button does; nothing searches before that. -->
+    <!-- woke: each group folds to one line with its count and what matters (the
+         dearest row, or the set's total); as many open as fit on screen, the rest
+         folded (Guy's pick S1, 2026-11-25). A click opens or folds one. -->
     <template v-for="sec in sections" :key="sec.key">
-      <div :class="$style.hd">
-        <span>{{ sec.title }}</span>
-        <span v-if="sec.family" :class="$style.count">{{ sec.rows.length }} · poe.ninja</span>
-      </div>
+      <button type="button" :class="[$style.hd, $style.fold]" :aria-expanded="isOpen(sec)" data-related-head @click="toggle(sec)">
+        <span :class="$style.chev">▶</span>
+        <span :class="$style.title">{{ sec.title }}</span>
+        <span :class="$style.count">{{ sec.rows.length }}</span>
+        <span v-if="summary(sec)" :class="$style.top">{{ summary(sec)!.text }}<img v-if="summary(sec)!.coin" :class="$style.coin" :src="summary(sec)!.coin" alt=""></span>
+      </button>
+      <template v-if="isOpen(sec)">
       <div :class="[$style.list, { [$style.tight]: sec.family }]">
-        <template v-for="row in sec.rows" :key="row.key">
+        <template v-for="row in shownRows(sec)" :key="row.key">
           <div v-if="row.lead" :class="$style.lead">{{ row.lead }}</div>
           <WItemRow :item="tipOf(row)" :art="false" :info="row.info" :action="canOpen(row) ? 'pick' : null"
             :class="[$style.row, { [$style.me]: row.highlight, [$style.click]: canOpen(row) }]"
@@ -39,6 +45,7 @@
             </span>
           </WItemRow>
         </template>
+        <button v-if="shownRows(sec).length < sec.rows.length" type="button" :class="$style.more" data-related-more @click="expanded = new Set([...expanded, sec.key])">{{ sec.rows.length - shownRows(sec).length }} more</button>
       </div>
       <!-- woke: what the recipe's parts (or a full set) cost, against what it makes. -->
       <div v-if="sec.sum" :class="$style.sum">
@@ -47,13 +54,14 @@
         <span v-if="sec.sum.gain">Gain <b>{{ sec.sum.gain }}</b></span>
       </div>
       <div v-if="sec.note" :class="$style.note">{{ sec.note }}</div>
+      </template>
     </template>
     <div v-if="sections.some(sec => sec.rows.some(canOpen))" :class="$style.ft">Click to price check</div>
   </div>
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, PropType, shallowRef, watch } from 'vue'
+import { computed, defineComponent, nextTick, PropType, shallowRef, watch } from 'vue'
 import { BaseType, DropEntry, ITEM_BY_REF, ITEM_DROP, ITEMS_ITERATOR } from '@/assets/data'
 import { usePoeninja, CurrencyValue, displayRounding } from '@/web/background/Prices'
 import { getDetailsId } from '../trends/getDetailsId'
@@ -634,7 +642,65 @@ export default defineComponent({
     // as its click uses.
     const tipOf = (row: SideRow): ItemTipRef => ({ name: row.ref.name, type: row.ref.type, menu: row.ref })
 
+    // woke: folding (Guy's pick S1). A family shows its first FAMILY_ROWS (and the
+    // checked item); what a boss "also drops" waits behind "N more".
+    const FAMILY_ROWS = 6
+    const expanded = shallowRef(new Set<string>())
+    const opened = shallowRef(new Set<string>())
+    // A click on a heading: the player's own choice stands until the next item.
+    let touched = false
+    function shownRows (sec: Section): SideRow[] {
+      if (expanded.value.has(sec.key)) return sec.rows
+      const cut = sec.rows.findIndex(r => r.lead === 'Also drops')
+      let rows = cut >= 0 ? sec.rows.slice(0, cut) : sec.rows
+      if (sec.family && rows.length > FAMILY_ROWS + 2) {
+        const own = rows.findIndex(r => r.highlight)
+        rows = own >= FAMILY_ROWS ? [...rows.slice(0, FAMILY_ROWS - 1), rows[own]] : rows.slice(0, FAMILY_ROWS)
+      }
+      return rows
+    }
+    const isOpen = (sec: Section) => opened.value.has(sec.key)
+    function toggle (sec: Section) {
+      touched = true
+      const next = new Set(opened.value)
+      if (next.has(sec.key)) next.delete(sec.key); else next.add(sec.key)
+      opened.value = next
+    }
+    function summary (sec: Section): { text: string, coin?: string } | null {
+      if (sec.sum) return { text: `${sec.sum.label.toLowerCase()} ${sec.sum.value}` }
+      let top: SideRow | undefined
+      for (const r of sec.rows) if (r.price && (!top || chaosOfPrice(r.price) > chaosOfPrice(top.price!))) top = r
+      return top?.price ? { text: `top ${priceText(top.price)}`, coin: top.price.currency === 'div' ? '/images/divine.png' : '/images/chaos.png' } : null
+    }
+    // Open every group, then fold from the last until the list fits above the
+    // screen's bottom; the first group always stays open.
+    const root = shallowRef<HTMLElement | null>(null)
+    const FIT_MARGIN = 8
+    async function fit () {
+      const keys = sections.value.map(sec => sec.key)
+      opened.value = new Set(keys)
+      await nextTick()
+      for (let i = keys.length - 1; i > 0; i--) {
+        const node = root.value
+        if (!node || touched) return
+        const box = node.getBoundingClientRect()
+        if (box.bottom <= window.innerHeight - FIT_MARGIN) return
+        const next = new Set(opened.value)
+        next.delete(keys[i])
+        opened.value = next
+        await nextTick()
+      }
+    }
+    watch(() => props.item, () => { touched = false; expanded.value = new Set() })
+    watch(() => sections.value.map(sec => sec.key).join('\u0000'), () => { if (!touched) fit() }, { immediate: true })
+
     return {
+      root,
+      expanded,
+      shownRows,
+      isOpen,
+      toggle,
+      summary,
       result,
       sections,
       keystones,
@@ -665,6 +731,8 @@ export default defineComponent({
 }
 .hd {
   display: flex;
+  width: 100%;
+  text-align: left;
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
@@ -685,11 +753,19 @@ export default defineComponent({
   border-bottom: 1px solid var(--w-line-soft);
 }
 .row:last-child { border-bottom: 0; }
+.fold { justify-content: flex-start; align-items: center; cursor: pointer; border-top: 1px solid var(--w-line); }
+.fold:first-child { border-top: 0; }
+.fold:hover { filter: brightness(1.15); }
+.chev { flex: none; width: 10px; font-size: var(--w-fs-xs); color: var(--w-faint); transition: transform .12s; }
+.fold[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top { margin-left: auto; display: inline-flex; align-items: center; gap: 3px; font-family: var(--w-body); font-size: var(--w-fs-sm); color: var(--w-dim); white-space: nowrap; }
+.more { display: block; width: 100%; padding: 3px 12px 4px 48px; text-align: left; font-size: var(--w-fs-sm); color: var(--w-faint); cursor: pointer; }
+.more:hover { color: var(--w-fg); }
 .count { font-family: var(--w-body); font-size: var(--w-fs-sm); color: var(--w-faint); white-space: nowrap; }
 /* woke: a long family scrolls inside the panel; the panel never outgrows the window. */
 /* Beside the instant card, which zooms it 1.4x (--w-instant-scale): the same height on screen as before. */
-/* Under the instant card it also fits the room left below the card (--w-instant-room, less its heading and foot). */
-.list { max-height: calc(min(26rem, 60vh, max(8rem, var(--w-instant-room, 60vh) - 7rem)) / var(--w-instant-scale, 1)); overflow-y: auto; overscroll-behavior: contain; }
+.list { max-height: calc(min(26rem, 60vh) / var(--w-instant-scale, 1)); overflow-y: auto; overscroll-behavior: contain; }
 .tight .row { min-height: 30px; }
 .click { cursor: pointer; }
 .click:hover { background: var(--w-panel-3); }

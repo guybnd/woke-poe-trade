@@ -135,6 +135,9 @@ test('side window: Dawnbreaker drops from the invitation, a click, with the boss
   await expect(side.getByText('Drops from')).toBeVisible()
   // The invitation price checks like any other row.
   await expect(side.locator('button[data-item-row]', { hasText: 'Incandescent Invitation' })).toBeVisible()
+  // What the boss also drops waits behind "N more" (Guy's pick S1).
+  await expect(side.getByText('Also drops', { exact: true })).toHaveCount(0)
+  await side.locator('[data-related-more]').first().click()
   await expect(side.getByText('Also drops', { exact: true })).toBeVisible()
   for (const other of ['Forbidden Flame', 'Dawnstrider']) {
     await expect(side.locator('button[data-item-row]', { hasText: other })).toBeVisible()

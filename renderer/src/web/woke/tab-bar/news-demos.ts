@@ -43,6 +43,8 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-related-upgrades': { check: { name: "Xoph's Inception", rarity: 'unique' }, spot: 'related' },
   // A Timeless jewel: its conquerors' keystones in the side list.
   'price-check-conquest-keystones': { check: { name: 'Elegant Hubris', rarity: 'unique' }, spot: 'related' },
+  // A Shaper's Exalted Orb: its family and two fragment groups, folded to fit.
+  'related-folded-groups': { check: { name: "Shaper's Exalted Orb" }, spot: 'related' },
   'price-check-unique-recipe': { check: { name: 'The Will of Uul-Netol', rarity: 'unique' }, spot: 'related' },
   'div-card-map-chance': { search: 'Strand Map' },
   // A rolled jewel, unidentified: the unid price card (nothing searched until a click).
