@@ -72,15 +72,6 @@ export function retireHint (id: string): void {
   h.done = [...(h.done ?? []), id]
 }
 
-// Settings' "Show tips again".
-export function resetHints (): void {
-  const h = ensureHints()
-  if (!h) return
-  h.done = undefined
-  h.shows = undefined
-  counted.clear()
-}
-
 // Where tips may show: with the overlay open, or out of combat.
 export function hintPlaceOk (): boolean {
   if (overlayOpen.value) return true

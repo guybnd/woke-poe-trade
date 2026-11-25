@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import { effectScope, nextTick, reactive } from 'vue'
 
-import { bindHintsConfig, DEFAULT_SHOWS, hintEligible, hintPlaceOk, isHintDone, resetHints, retireHint, setOverlayOpen, useHint } from '@/web/woke/shared/hints'
+import { bindHintsConfig, DEFAULT_SHOWS, hintEligible, hintPlaceOk, isHintDone, retireHint, setOverlayOpen, useHint } from '@/web/woke/shared/hints'
 import { zone } from '@/web/woke/shared/zone'
 
 const config = reactive<{ woke?: { setupDone: boolean, off: string[], hints?: Record<string, unknown> } }>({ woke: { setupDone: true, off: [] } })
@@ -64,7 +64,8 @@ describe('useHint', () => {
     await nextTick()
     expect(h.value.show.value).toBe(false)
     expect(isHintDone('t2')).toBe(true)
-    resetHints()
+    // Settings' "Show tips again" clears what was used and shown.
+    config.woke!.hints = {}
     await nextTick()
     expect(h.value.show.value).toBe(true)
     h.stop()

@@ -51,7 +51,7 @@
         </template>
       </SavedTree>
       <!-- Until any string has a hotkey (shared/hints.ts). -->
-      <WTipLine v-if="config.entries.length && !hasHotkeys" :id="REGEX_KEY_HINT">
+      <WTipLine v-if="config.entries.length && !hasHotkeys && config.enableHotkeys" :id="REGEX_KEY_HINT">
         Give a string a hotkey (<i class="fas fa-pen" aria-label="Edit" />, then Hotkey): press it in game and it goes into the stash search
       </WTipLine>
       <WEmpty v-if="!tree.rows.value.length && config.entries.length && searching" icon="fas fa-filter">

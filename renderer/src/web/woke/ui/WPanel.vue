@@ -316,7 +316,7 @@ function onHeadDblClick (e: MouseEvent) {
 const helpKeys = computed<HelpKey[]>(() => {
   const out = [...(props.keys ?? [])]
   if (minimizesFromHead.value) out.push({ keys: 'Double-click', label: 'The title: minimize' })
-  else if (canResize.value) out.push({ keys: 'Double-click', label: 'The title: back to its size' })
+  else if (canResize.value && saved.value) out.push({ keys: 'Double-click', label: 'The title: back to its size' })
   if (canResize.value) out.push({ keys: 'Alt', label: 'Hold while dragging an edge: no snapping' })
   return out
 })

@@ -1,6 +1,9 @@
 <template>
   <!-- A tip for a hidden gesture, at the foot of a window (shared/hints.ts).
-       Gone the first time you use what it shows, or with ×. -->
+       Gone the first time you use what it shows, or with ×. The probe tells
+       whether the window is on screen: a hidden window (v-show) neither shows
+       the tip nor spends its showings. -->
+  <span ref="probe" :class="$style.probe" aria-hidden="true" />
   <div v-if="hint.show.value" :class="$style.tip" data-tip-line :data-hint="id" role="note">
     <span :class="$style.mark" aria-hidden="true">i</span>
     <span :class="$style.text"><slot /></span>
@@ -9,13 +12,24 @@
 </template>
 
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, shallowRef } from 'vue'
 import { useHint } from '../shared/hints'
 
-const props = defineProps<{ id: string, shows?: number, when?: () => boolean }>()
-const hint = useHint(props.id, { shows: props.shows, when: props.when })
+const props = defineProps<{ id: string, shows?: number }>()
+const probe = shallowRef<HTMLElement>()
+const onScreen = shallowRef(typeof IntersectionObserver === 'undefined')
+let io: IntersectionObserver | undefined
+onMounted(() => {
+  if (onScreen.value || !probe.value) return
+  io = new IntersectionObserver(entries => { onScreen.value = entries[entries.length - 1].isIntersecting })
+  io.observe(probe.value)
+})
+onBeforeUnmount(() => io?.disconnect())
+const hint = useHint(props.id, { shows: props.shows, when: () => onScreen.value })
 </script>
 
 <style module>
+.probe { display: block; height: 0; overflow: hidden; }
 .tip {
   display: flex;
   align-items: center;
