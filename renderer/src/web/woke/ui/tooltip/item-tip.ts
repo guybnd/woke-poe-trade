@@ -207,7 +207,28 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
   const base = kind === 'unique' ? ITEM_BY_REF('UNIQUE', ref.name)?.[0]?.unique?.base : undefined
   let model = buildTip(pack, { name: ref.name, kind, variant: ref.variant, base })
   if (model && kind === 'card') model = await withCardRarity(model, ref.name)
-  return { model, market: marketFor(ref, kind) }
+  const market = marketFor(ref, kind)
+  if (model && kind === 'unique') model = await withUniqueExtras(model, ref, market)
+  return { model, market }
+}
+
+// A unique's Foulborn swap, Vestigial implicit and the cards that give it
+// (unique-tip-extras.ts). Without the data the tooltip shows as it was.
+async function withUniqueExtras (model: TipModel, ref: ItemTipRef, market: TipMarket | null): Promise<TipModel> {
+  try {
+    const [{ uniqueExtraSections }] = await Promise.all([import('./unique-tip-extras'), loadFile('items'), loadFile('vestigial')])
+    price ??= usePrice()
+    const p = price
+    const one = market && !market.varies && !market.unidOnly && !market.range ? market.chaos : null
+    const sections = uniqueExtraSections(ref, pack, {
+      card: name => p.priceOf(name, { ns: 'DIVINATION_CARD' })?.chaos ?? null,
+      unique: one,
+      format: c => formatChaos(c, p.divine.value)
+    })
+    return sections.length ? { ...model, sections: [...model.sections, ...sections] } : model
+  } catch {
+    return model
+  }
 }
 
 // A divination card's tooltip ends with how rare it is among all card drops

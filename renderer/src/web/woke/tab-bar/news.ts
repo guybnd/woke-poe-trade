@@ -24,6 +24,7 @@ export interface NewsItem {
 export const NEWS: NewsItem[] = [
   { id: 'price-check-conquest-keystones', wmType: 'price-check', name: 'Price check', note: 'New: a Timeless jewel lists each conqueror\'s keystone beside it. Click one to search it, any number' },
   { id: 'price-check-clear-numbers', wmType: 'price-check', name: 'Price check', note: 'New: hover a mod\'s number boxes for × to keep the line and search any value' },
+  { id: 'unique-tip-cards-foulborn', wmType: 'price-check', name: 'Price check', note: 'New: a unique\'s tooltip shows the cards that give it and the set\'s cost, its Vestigial and its Foulborn swap' },
   { id: 'price-check-mod-tiers', wmType: 'price-check', name: 'Price check', note: 'New: hover a mod for its tiers, the item level each needs, and the bench craft for it' },
   { id: 'map-price-check-farm-templates', wmType: 'price-check', name: 'Price check', note: 'New: save a map\'s picks (numbers, kind, Not mods) as your own Farming button with Save' },
   { id: 'map-price-check-rate-chip', wmType: 'price-check', name: 'Price check', note: 'New: rate a map\'s mods Bad, Care or Want from the price check (click the chip); saved to your Map mods profile' },
