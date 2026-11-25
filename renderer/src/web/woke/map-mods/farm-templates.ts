@@ -55,7 +55,8 @@ export function saveTemplate (t: Omit<FarmTemplate, 'id'>): FarmTemplate | null 
   const w = widget()
   if (!w) return null
   const saved: FarmTemplate = { ...t, id: `t${Date.now().toString(36)}` }
-  w.farmTemplates = [...farmTemplates(), saved]
+  // Saving under a name already used replaces that one.
+  w.farmTemplates = [...farmTemplates().filter(o => o.name !== t.name), saved]
   w.farmTemplate = saved.id
   return saved
 }

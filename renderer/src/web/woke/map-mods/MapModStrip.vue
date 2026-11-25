@@ -36,7 +36,7 @@
           </template>
         </span>
         <input v-if="naming" ref="nameBox" v-model="newName" type="text" maxlength="24" :class="$style.nameBox" data-template-name
-          aria-label="Template name" @keydown.enter.prevent="confirmSave" @keydown.esc.prevent="naming = false" @blur="naming = false">
+          aria-label="Template name" @keydown.enter.prevent="confirmSave" @keydown.esc.prevent="naming = false" @blur="confirmSave">
         <button v-else type="button" :class="$style.tool" data-template-save
           title="Save what you picked (numbers and their mins, Kind, mods set to Not) as a Farming button for the next maps"
           @click="startSave"><i class="fas fa-plus" />Save</button>
@@ -542,7 +542,9 @@ function startSave () {
   naming.value = true
   nextTick(() => { nameBox.value?.focus(); nameBox.value?.select() })
 }
+// Enter or clicking away saves; Esc throws the name away.
 function confirmSave () {
+  if (!naming.value) return
   const name = newName.value.trim() || nextTemplateName()
   naming.value = false
   const on: string[] = []

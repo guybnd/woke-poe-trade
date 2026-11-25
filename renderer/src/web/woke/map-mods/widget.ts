@@ -133,6 +133,9 @@ export function normalizeMapModsWidget (w: MapModsWidget) {
   }
   if (w.valdoSeen !== undefined && !Array.isArray(w.valdoSeen)) w.valdoSeen = undefined
   if (w.farmTemplates !== undefined && !Array.isArray(w.farmTemplates)) w.farmTemplates = undefined
+  else if (w.farmTemplates) {
+    w.farmTemplates = w.farmTemplates.filter(t => t && typeof t.id === 'string' && typeof t.name === 'string' && Array.isArray(t.on))
+  }
   importAptOnce(w)
 }
 
