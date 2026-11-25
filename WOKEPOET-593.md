@@ -24,5 +24,21 @@ history:
     selfAttested: true
     pin: true
     id: c-2026-11-25t03-59-04-796z
+  - type: comment
+    user: Agent
+    comment: >-
+      Small fixes merged in PR 913
+      (https://github.com/guybnd/woke-poe-trade/pull/913, 4bf03a0): essence best
+      case, retire Wealthy Exile, quieter price check, own icons. Ticket stays
+      open for the follow-up picks.
+    date: '2026-11-25T04:27:31.178Z'
+    selfAttested: true
+    id: c-2026-11-25t04-27-31-178z
+  - type: activity
+    user: Agent
+    date: '2026-11-25T04:27:31.980Z'
+    comment: Updated implementation link.
+    id: a-2026-11-25t04-27-31-980z
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/913'
 ---
 Veteran-player critique pass, 13 findings. Waiting on Guy's Fix/Skip picks.
