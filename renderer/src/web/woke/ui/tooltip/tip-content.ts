@@ -282,7 +282,7 @@ const present = (sections: TipLine[][]) => sections.filter(s => s.length)
 // dozens that never appear together. No real item has this many of either kind.
 const MOST_IMPLICITS = 4
 const MOST_EXPLICITS = 12
-// The data doesn't say which are fixed, so this is only the start of the list.
+// The data doesn't say which are fixed, so this is only a sample of the pool.
 const EXPLICITS_SHOWN = 6
 
 // The wiki has no Foulborn names: a Foulborn unique drops where its plain one does.
@@ -346,8 +346,10 @@ export function uniqueTip (name: string, unique: TipUnique, base: TipBase | unde
         : implicits.map(m => plain(unwrap(m), 'mod')),
       [
         ...mutated.map(m => plain(unwrap(m), 'mutated')),
-        ...explicits.map(m => plain(unwrap(m), 'mod')),
-        ...(moreExplicits ? [plain(`and ${moreExplicits} more mods`, 'dim')] : [])
+        // A pool: the lines shown are only a sample of it, not this item's
+        // mods (Militant Faith, Forbidden Flame), so they're labelled as such.
+        ...(moreExplicits ? [plain(`Rolls from ${allExplicits.length} possible mods, such as:`, 'dim')] : []),
+        ...explicits.map(m => plain(unwrap(m), 'mod'))
       ],
       unique.f ? unique.f.split('\n').map(l => plain(l, 'flavour')) : [],
       dropLines(drop)
