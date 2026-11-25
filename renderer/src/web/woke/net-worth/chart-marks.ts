@@ -11,6 +11,8 @@ export interface ChartSale {
   name?: string
   // Its price in the chart's unit (null: a currency without a price).
   div?: number | null
+  // Left out of your totals (sale-lines.ts): still drawn, dimmed (Guy's pick).
+  out?: boolean
 }
 
 export interface ChartMap {
@@ -29,7 +31,8 @@ export function slotOf (t0: number, t1: number, slots = 16): number {
   const want = Math.max(1, t1 - t0) / slots
   return STEPS.find(s => s >= want) ?? STEPS[STEPS.length - 1]
 }
-export type SaleSlot<T> = T & { count: number, list: T[] }
+// `out`: every sale in the slot is left out, so its tick is dimmed.
+export type SaleSlot<T> = T & { count: number, list: T[], out: boolean }
 export function groupSales<T extends ChartSale> (sales: readonly T[], t0: number, t1: number, slots = 16): Array<SaleSlot<T>> {
   const step = slotOf(t0, t1, slots)
   const by = new Map<number, T[]>()
@@ -42,7 +45,7 @@ export function groupSales<T extends ChartSale> (sales: readonly T[], t0: number
   return [...by.values()].map(list => {
     const top = list.reduce((a, b) => (b.div ?? -1) > (a.div ?? -1) ? b : a)
     const priced = list.filter(x => x.div != null)
-    return { ...top, div: priced.length ? priced.reduce((n, x) => n + x.div!, 0) : null, count: list.length, list: [...list].sort((a, b) => (b.div ?? -1) - (a.div ?? -1)) }
+    return { ...top, div: priced.length ? priced.reduce((n, x) => n + x.div!, 0) : null, count: list.length, list: [...list].sort((a, b) => (b.div ?? -1) - (a.div ?? -1)), out: list.every(x => x.out) }
   }).sort((a, b) => a.at - b.at)
 }
 
@@ -53,4 +56,11 @@ export function mapOf (maps: readonly ChartMap[], at: number): ChartMap | null {
   let found: ChartMap | null = null
   for (const m of maps) if (m.from <= at) found = m
   return found && at - found.to <= AFTER_MS ? found : null
+}
+
+// The hover card's "Sold" line: the counted sales and their worth, and how
+// many more were left out of your totals (shown, not added).
+export function soldSummary (list: readonly ChartSale[]): { count: number, div: number, out: number } {
+  const kept = list.filter(x => !x.out)
+  return { count: kept.length, div: kept.reduce((n, x) => n + (x.div ?? 0), 0), out: list.length - kept.length }
 }

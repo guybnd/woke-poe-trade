@@ -970,7 +970,7 @@ function marketTone (s: Sale) {
 // The chart's dots: each sale, named for the hover card.
 const chartSales = computed<ChartSale[]>(() => sales.value.map(s => {
   const c = saleChaosOf(s)
-  return { at: s.at, text: `${saleName(s)} ${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, tip: saleTip(s), name: saleName(s), div: c == null ? null : toDiv(c) }
+  return { at: s.at, text: `${saleName(s)} ${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, tip: saleTip(s), name: saleName(s), div: c == null ? null : toDiv(c), ...(saleOut(s) ? { out: true } : {}) }
 }))
 // The chart's Faustus band (pick A), when listings count in your total: what
 // each refresh saved, else rebuilt from the listings and sales (listedAt).
