@@ -53,5 +53,15 @@ history:
     date: '2026-11-25T06:22:15.855Z'
     selfAttested: true
     id: c-2026-11-25t06-22-15-855z
+  - type: comment
+    user: Agent
+    comment: >-
+      Ctrl+Space flakes (forbidden-pair, search-settings, chip-settings-layout
+      :60) fixed in PR 927: early hotkey press before the lazy search widget
+      mounted was lost. Not covered: map-mods-tabs chart, dock-menu :136.
+    date: '2026-11-25T07:25:14.572Z'
+    selfAttested: true
+    pin: true
+    id: c-2026-11-25t07-25-14-572z
 ---
 Failed once in shard 2/4 on PR 864's CI run, passed on re-run. Investigate the timing/flake.
