@@ -62,9 +62,7 @@ export async function holdHovered (clipboard: string, league: string, points: re
     toast(rolled ? `No unid price for ${s.name} yet: check it in the price check, then hold it` : `No price for ${s.name || s.typeLine}: not held`)
     return
   }
-  // Keyed as the stash will count it once stashed (valuation.ts), so it's
-  // counted once: a rolled one by its base, any other by its name.
-  const key = itemKey(rolled ? { ...s, name: '' } : s)
+  const key = itemKey(s)
   const item: HeldItem = {
     id: `h${Date.now().toString(36)}${(seq++).toString(36)}`,
     key,
