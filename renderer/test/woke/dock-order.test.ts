@@ -39,7 +39,7 @@ describe('dock icons', () => {
 
   it('lists every icon in DOCK_ORDER with a name', () => {
     // Retired tools (modules.ts RETIRED_MODULES) keep their DockItem but never mount.
-    const retired = new Set(['farming', 'league-invest'])
+    const retired = new Set(['farming', 'league-invest', 'wealthy-exile'])
     expect([...ids].filter(id => !order.includes(id) && !retired.has(id))).toEqual([])
     expect([...ids].filter(id => !named.has(id))).toEqual([])
   })

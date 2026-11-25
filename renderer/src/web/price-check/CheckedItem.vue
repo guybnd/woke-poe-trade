@@ -135,13 +135,7 @@
       {{ t('item.complexity_hint') }}
     </p>
     <stack-value :filters="itemFilters" :item="item"/>
-    <div v-if="showSupportLinks" class="mt-auto border border-dashed p-2">
-      <div class="mb-1">{{ t('Support development on') }} <a href="https://patreon.com/awakened_poe_trade" class="inline-flex align-middle animate__animated animate__fadeInRight" target="_blank"><img class="inline h-5" src="/images/Patreon.svg"></a></div>
-      <i18n-t keypath="app.thanks_3rd_party" tag="div">
-        <a href="https://poeprices.info" target="_blank" class="bg-gray-900 px-1 rounded">poeprices.info</a>
-        <a href="https://poe.ninja/support" target="_blank" class="bg-gray-900 px-1 rounded">poe.ninja</a>
-      </i18n-t>
-    </div>
+    <!-- woke: upstream's Patreon box is gone from the price check; Settings › Credits thanks Awakened PoE Trade, poe.ninja and poeprices. -->
   </div>
 </template>
 
@@ -183,8 +177,6 @@ import { holdBulkSearch, fixedPriceItem, isUnidUniqueJewel, isUnidVariableUnique
 import { exactDetailsId } from './trends/getDetailsId'
 import { usePoeninja } from '@/web/background/Prices'
 import { poeMode, poeOn, loadPoeKit } from '@/web/woke/price-insight/window-style'
-
-let _showSupportLinksCounter = 0
 
 const SEARCH_HOVER_MS = 150
 
@@ -589,21 +581,6 @@ export default defineComponent({
       }
     }
 
-    const showSupportLinks = ref(false)
-    watch(() => [props.item, doSearch.value], ([cItem, cInteracted], [pItem]) => {
-      // Not under results kept on screen: it would squeeze them, and use up its turn.
-      const resultsShown = tradeAPI.value === 'trade' && searched.value != null
-      if (_showSupportLinksCounter >= 13 && !resultsShown && (!cInteracted || tradeAPI.value === 'bulk')) {
-        showSupportLinks.value = true
-        _showSupportLinksCounter = 0
-      } else {
-        showSupportLinks.value = false
-        if (cItem !== pItem) {
-          _showSupportLinksCounter += 1
-        }
-      }
-    })
-
     const { t } = useI18n()
 
     const wokeVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value != null)
@@ -672,7 +649,6 @@ export default defineComponent({
       show,
       handleSearchMouseenter,
       cancelSearchHover,
-      showSupportLinks,
       showComplexityHint: computed(() => !widget.value.builtinBrowser && !doSearch.value && !searched.value &&
         props.item.info.refName === 'Mercenary Warrant'),
       presets: computed(() => presets.value.presets.map(preset =>
