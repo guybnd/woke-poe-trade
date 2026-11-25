@@ -42,6 +42,9 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
+  "chip-settings-layout.spec.ts": [
+   "renderer/src/web/woke/session-story/"
+  ],
   "cluster-type.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",
