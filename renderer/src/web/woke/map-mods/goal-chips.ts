@@ -17,3 +17,14 @@ const ON: Record<FarmGoal, string> = {
 export function goalDisabled (label: string, goal: FarmGoal = 'any'): boolean | undefined {
   return DECIDES.includes(label) ? !ON[goal].split(',').includes(label) : undefined
 }
+
+// The T17 'More X' numbers. A goal that wants one the map hasn't got adds it
+// as a tile (the + menu's, min 1), so Currency searches maps with More
+// Currency (Guy, 2026-11-25: "i picked currency template why isnt it adding
+// currency box"). A goal that doesn't want one takes it off again. More Div
+// cards no goal adds, so one you added by hand stays.
+const MORE = ['Currency', 'Threads', 'Maps']
+export function goalAddsExtra (label: string, goal: FarmGoal = 'any'): boolean | undefined {
+  if (!MORE.includes(label)) return undefined
+  return goal !== 'any' && ON[goal].split(',').includes(label)
+}

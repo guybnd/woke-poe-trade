@@ -365,6 +365,42 @@ test('map: the farming goal picks which number chips start on', async ({ overlay
   expect(overlay.errors).toEqual([])
 })
 
+// Guy (2026-11-25): "i picked currency template why isnt it adding currency box".
+// A goal adds the More X numbers it wants that the map hasn't got, as + tiles.
+test('map: a farming goal adds its More X tiles to a map without them', async ({ overlay }) => {
+  const searches = await fakeTrade(overlay.page)
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods', goal: 'currency' }] })
+  await overlay.copyItem('items/map-nightmare-330.txt')
+  const panel = overlay.widget('price-check')
+  const extra = (label: string) => panel.locator(`[data-map-extra] [data-map-prop="${label}"]`)
+  const goal = (g: string) => panel.locator(`[data-map-goal] [data-goal="${g}"]`)
+  // The remembered goal adds More Currency to the next map.
+  await expect(extra('Currency')).toBeVisible({ timeout: 20_000 })
+  await expect(goal('currency')).toHaveAttribute('aria-checked', 'true')
+  await expect(extra('Maps')).toHaveCount(0)
+  await overlay.snap('map goal adds currency tile')
+
+  // Maps & Threads swaps it for More Maps and More Threads.
+  await goal('atlas').click()
+  await expect(extra('Maps')).toBeVisible()
+  await expect(extra('Threads')).toBeVisible()
+  await expect(extra('Currency')).toHaveCount(0)
+  // Any takes them off again.
+  await goal('any').click()
+  await expect(panel.locator('[data-map-extra]')).toHaveCount(0)
+
+  await goal('currency').click()
+  await expect(extra('Currency')).toBeVisible()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBeGreaterThan(0)
+  const and = searches[0].query.stats.find(g => g.type === 'and')!
+  const cur = and.filters.find(f => f.id === 'pseudo.pseudo_map_more_currency_drops')
+  expect(cur?.disabled).toBeFalsy()
+  expect(cur?.value?.min).toBe(1)
+  expect(and.filters.find(f => f.id === 'pseudo.pseudo_map_more_map_drops')).toBeUndefined()
+  expect(overlay.errors).toEqual([])
+})
+
 // Guy (2026-11-24): a buried Sentinel is never searched by default, and an Evocator
 // searches any of the three kinds until narrowed to this one.
 test('map: Sentinels start Any; an Evocator searches any of the three, or this one', async ({ overlay }) => {
@@ -529,7 +565,10 @@ test('map: rare-only mods sit in the one list, yellow and searchable, any Sentin
   // Guy (2026-11-24): clicking the row cycles it, as in the price check: Has, Not, Any.
   const mirror = rows.filter({ hasText: 'Mirror of Delirium' })
   const checked = () => mirror.locator('[aria-checked="true"]')
-  for (const state of ['has', 'not', 'any']) {
+  // Guy (2026-11-25): rare-only content adds to the map's worth, so it starts Has; a buried Sentinel doesn't.
+  await expect(checked()).toHaveAttribute('data-state', 'has')
+  await expect(rows.filter({ hasText: 'Area contains a Mirage' }).locator('[aria-checked="true"]')).toHaveAttribute('data-state', 'has')
+  for (const state of ['not', 'any', 'has', 'not', 'any']) {
     await mirror.getByText('Mirror of Delirium').click()
     await expect(checked()).toHaveAttribute('data-state', state)
   }
