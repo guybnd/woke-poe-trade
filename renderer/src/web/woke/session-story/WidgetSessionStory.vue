@@ -223,7 +223,7 @@ const tracker = new NightTracker((draft) => {
     dockRef.value?.peek(peekText(story))
     chipPeek = false
   }).catch(() => {})
-}, () => mapLog.char?.name ?? null)
+})
 // Back after the module was off: carry on with the night it was reading.
 tracker.draft = store.keptDraft()
 

@@ -140,10 +140,8 @@ describe('a night from Client.txt', () => {
   })
 
   it("counts only your own deaths, not a party member's", () => {
-    const done: NightDraft[] = []
-    const tracker = new NightTracker((d) => { done.push(d) }, () => 'luminyahu')
-    for (const line of [area('21:00:00', 'MapWorldsStrand', '11'), slain('21:01:00', 'friend'), slain('21:02:00', 'friend'), slain('21:03:00')]) tracker.feed(line, 0)
-    expect(summarize(tracker.draft!).deathsAt).toHaveLength(1)
+    const { tracker } = follow([area('20:59:00', 'HideoutChurch', '1', 68), slain('21:00:00'), area('21:00:10', 'MapWorldsStrand', '11'), slain('21:01:00', 'friend'), slain('21:02:00', 'friend'), slain('21:03:00')])
+    expect(summarize(tracker.draft!).deathsAt).toHaveLength(2)
   })
 
   it('keeps encounters and towers inside a map as that map', () => {
@@ -207,10 +205,10 @@ describe('night extras', () => {
   })
 
   it('reads level-ups and the longest break between maps', () => {
-    const level = (time: string, n: number) => info(time, `: whekq (Gladiator) is now level ${n}`)
+    const level = (time: string, n: number) => info(time, `: luminyahu (Gladiator) is now level ${n}`)
     const { tracker } = follow([...NIGHT.slice(0, 5), level('21:06:00', 94), ...NIGHT.slice(5), level('21:21:00', 95), info('21:21:30', ': friend (Witch) is now level 40')])
     const s = summarize(tracker.draft!)
-    expect(s.levelUps).toEqual([{ char: 'whekq', from: 93, to: 95 }])
+    expect(s.levelUps).toEqual([{ char: 'luminyahu', from: 93, to: 95 }])
     // Gaps between maps: 1 min, 1 min, 2 min; not the 2 min before the first or after the last.
     expect(s.longestBreakMs).toBe(2 * 60_000)
   })
@@ -285,5 +283,78 @@ describe('areas on the skip list', () => {
     expect(parseSkipAreas("Zealot's Vault, scholar's vault\n\n zealot's vault \nArkhon’s Vault")).toEqual(["Zealot's Vault", "scholar's vault", 'Arkhon’s Vault'])
     expect(isSkippedArea('Arkhon’s Vault')).toBe(true)
     expect(isSkippedArea('Vault')).toBe(false)
+  })
+})
+
+describe('your character in a night', () => {
+  const OPEN = `2026/11/05 20:00:00 ***** LOG FILE OPENING *****`
+  const level = (time: string, n: number, who = 'luminyahu') => info(time, `: ${who} (Witch) is now level ${n}`)
+
+  it('lets the first death or level-up decide, then ignores party members in maps', () => {
+    const { tracker } = follow([
+      OPEN,
+      area('21:00:00', 'MapWorldsStrand', '11'),
+      level('21:01:00', 90),
+      level('21:02:00', 40, 'friend'),
+      slain('21:03:00', 'friend'),
+      level('21:04:00', 91),
+      area('21:05:00', 'HideoutChurch', '1', 68)
+    ])
+    const s = summarize(tracker.draft!)
+    expect(s.levelUps).toEqual([{ char: 'luminyahu', from: 89, to: 91 }])
+    expect(s.deathsAt).toHaveLength(0)
+  })
+
+  it('takes the first name when nothing is known yet, even in a map', () => {
+    const { tracker } = follow([area('21:00:00', 'MapWorldsStrand', '11'), slain('21:01:00', 'friend'), level('21:02:00', 90)])
+    const s = summarize(tracker.draft!)
+    expect(s.deathsAt).toHaveLength(1)
+    expect(s.levelUps).toEqual([])
+  })
+
+  it('ignores other names until the game starts again, then the next one decides', () => {
+    const { tracker } = follow([
+      area('21:00:00', 'MapWorldsStrand', '11'),
+      level('21:01:00', 90),
+      area('21:02:00', 'HideoutChurch', '1', 68),
+      // A party member levelling while you're in the hideout.
+      level('21:03:00', 20, 'friend'),
+      `2026/11/05 21:04:00 ***** LOG FILE OPENING *****`,
+      area('21:05:00', 'HideoutChurch', '1', 68),
+      level('21:06:00', 20, 'alt'),
+      slain('21:07:00'),
+      area('21:08:00', 'MapWorldsCemetery', '12'),
+      slain('21:09:00', 'alt')
+    ])
+    const s = summarize(tracker.draft!)
+    expect(s.levelUps).toEqual([{ char: 'luminyahu', from: 89, to: 90 }, { char: 'alt', from: 19, to: 20 }])
+    expect(s.deathsAt).toEqual([at('21:09:00')])
+    expect(tracker.draft!.me).toBe('alt')
+  })
+
+  it('takes the login line as a new start', () => {
+    const { tracker } = follow([
+      area('21:00:00', 'HideoutChurch', '1', 68),
+      level('21:01:00', 90),
+      info('21:02:00', 'Connected to lon01.login.pathofexile.com in 31ms.'),
+      level('21:03:00', 20, 'alt')
+    ])
+    expect(tracker.draft!.me).toBe('alt')
+  })
+
+  it('keeps your character into the next night until the game starts again', () => {
+    const { tracker, done } = follow([
+      area('21:00:00', 'MapWorldsStrand', '11'),
+      level('21:01:00', 90),
+      area('22:00:00', 'MapWorldsCemetery', '12'),
+      level('22:01:00', 40, 'friend')
+    ])
+    expect(done).toHaveLength(1)
+    expect(summarize(tracker.draft!).levelUps).toEqual([])
+  })
+
+  it('follows the first character that levels in a draft saved before', () => {
+    const d: NightDraft = { startedAt: 0, lastAt: 1, segs: [], deaths: [], levels: [{ char: 'a', level: 10 }, { char: 'b', level: 50 }, { char: 'a', level: 11 }] }
+    expect(summarize(d).levelUps).toEqual([{ char: 'a', from: 9, to: 11 }])
   })
 })

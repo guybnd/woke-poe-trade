@@ -11,6 +11,7 @@ import { isTownLike, parseLogLine, slainName } from '../campaign/log-parse'
 import { isMapArea, mapNameFromArea } from '../farming/farming'
 import { staysInRun } from '../death-recap/death-log'
 import { isSkippedArea, knownAreaName } from './skip-areas'
+import { MyChar, isGameStart } from './my-char'
 
 export const NIGHT_GAP_MS = 15 * 60_000
 const OPENING = '***** LOG FILE OPENING *****'
@@ -37,7 +38,10 @@ export interface NightDraft {
   lastAt: number
   segs: Seg[]
   deaths: Array<{ at: number, key: string }>
-  levels?: Array<{ char: string, level: number }>
+  // `mine`: kept as yours when read (drafts from before that kept everyone's).
+  levels?: Array<{ char: string, level: number, mine?: true }>
+  // Your character, once a death or level-up decided it since the game started.
+  me?: string
   // AFK since then (lastAt stays there), and the AFK stretches that ended.
   afkAt?: number
   afk?: Array<[number, number]>
@@ -105,12 +109,17 @@ export class NightTracker {
   // from the hideout is back in that map.
   private sides = new Map<string, string>()
 
-  // `charOf`: your character's name (map-log.ts follows it), so a party
-  // member's death isn't yours.
-  constructor (private readonly onFinished: (draft: NightDraft) => void, private readonly charOf?: () => string | null) {}
+  // Your character, carried into the next night until the game starts again.
+  private me: string | undefined
+
+  constructor (private readonly onFinished: (draft: NightDraft) => void) {}
 
   feed (line: string, fallbackAt: number): void {
     const at = lineTime(line) ?? fallbackAt
+    if (isGameStart(line)) {
+      this.me = undefined
+      if (this.draft) this.draft.me = undefined
+    }
     if (line.includes(OPENING)) {
       // The game closed (a crash, a restart): the night ends there only if
       // nothing comes for NIGHT_GAP_MS. Back sooner, it goes on, and the time
@@ -144,7 +153,7 @@ export class NightTracker {
       } else away = true
     }
     if (ev?.kind === 'area') {
-      this.draft ??= { startedAt: at, lastAt: at, segs: [], deaths: [] }
+      this.draft ??= { startedAt: at, lastAt: at, segs: [], deaths: [], ...(this.me ? { me: this.me } : {}) }
       const prev = this.draft.segs[this.draft.segs.length - 1]
       // Side areas, encounters and towers inside a map stay part of it.
       const areaKey = `${ev.areaId}:${ev.seed ?? ''}`
@@ -163,14 +172,20 @@ export class NightTracker {
         seg.named = true
       }
     } else if (ev?.kind === 'level' && this.draft) {
-      (this.draft.levels ??= []).push({ char: ev.charName, level: ev.level })
+      if (this.isMe(this.draft, ev.charName)) (this.draft.levels ??= []).push({ char: ev.charName, level: ev.level, mine: true })
     } else if (!ev && this.draft) {
       const seg = this.draft.segs[this.draft.segs.length - 1]
       const slain = slainName(line)
-      const me = this.charOf?.() ?? null
-      if (seg && slain && (me == null || slain === me)) this.draft.deaths.push({ at, key: seg.key })
+      if (seg && slain && this.isMe(this.draft, slain)) this.draft.deaths.push({ at, key: seg.key })
     }
     if (this.draft && !away) this.draft.lastAt = Math.max(this.draft.lastAt, at)
+  }
+
+  // A death or level-up of `name`: yours, or a party member's (my-char.ts).
+  private isMe (d: NightDraft, name: string): boolean {
+    if (!new MyChar(d.me ?? null, d.me != null).seen(name)) return false
+    d.me = this.me = name
+    return true
   }
 
   // Ends a night that has been quiet long enough. Call on a timer.
@@ -277,13 +292,14 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
       afterMap = true
     } else if (!p.afk) gap += p.ms
   }
-  // Party members' level-ups are logged too: follow the first character
-  // that levels, as the run timer does.
+  // Level-ups kept as yours, one line per character. A draft from before
+  // that kept party members' too: follow the first character that levels.
   const levelUps: Array<{ char: string, from: number, to: number }> = []
-  const mine = d.levels?.[0]?.char
-  for (const l of d.levels ?? []) {
-    if (l.char !== mine) continue
-    if (levelUps[0]) levelUps[0].to = Math.max(levelUps[0].to, l.level)
+  const own = d.levels?.filter(l => l.mine) ?? []
+  const first = d.levels?.[0]?.char
+  for (const l of own.length ? own : (d.levels ?? []).filter(l => l.char === first)) {
+    const row = levelUps.find(x => x.char === l.char)
+    if (row) row.to = Math.max(row.to, l.level)
     else levelUps.push({ char: l.char, from: l.level - 1, to: l.level })
   }
   for (const death of d.deaths) {
