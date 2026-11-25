@@ -452,10 +452,10 @@ export function baseTip (name: string, base: TipBase, extra?: TipBaseExtra): Tip
     name,
     frame: 'normal',
     sections: present([
-      [...gearStats(base, []), ...usableLines(extra)],
+      // A flask's effect sits under its charges, as in game.
+      [...gearStats(base, []), ...usableLines(extra), ...(extra?.fl?.b ?? []).map(m => plain(m, 'mod'))],
       need ? [need] : [],
-      (extra?.im ?? []).map(m => plain(m, 'mod')),
-      (extra?.fl?.b ?? []).map(m => plain(m, 'mod'))
+      (extra?.im ?? []).map(m => plain(m, 'mod'))
     ])
   }
 }

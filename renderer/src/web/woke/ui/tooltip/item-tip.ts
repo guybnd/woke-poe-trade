@@ -76,9 +76,15 @@ function loadFile (file: keyof TipPack): Promise<void> {
 }
 
 // Unique mods, by name: the tooltip's unique file.
+// With the uniques poe.ninja doesn't list (unique-extras), merged once.
+let allUniques: { from: TipPack['uniques'], extras: TipPack['unique-extras'], all: NonNullable<TipPack['uniques']> } | null = null
 export async function loadTipUniques (): Promise<TipPack['uniques'] | null> {
-  await loadFile('uniques')
-  return pack.uniques ?? null
+  await Promise.all([loadFile('uniques'), loadFile('unique-extras')])
+  const from = pack.uniques
+  if (!from) return null
+  const extras = pack['unique-extras']
+  if (allUniques?.from !== from || allUniques.extras !== extras) allUniques = { from, extras, all: { ...extras, ...from } }
+  return allUniques.all
 }
 
 // A unique's mods for the price check (item-menu-logic's virtualUnique), or

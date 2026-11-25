@@ -46,10 +46,13 @@ function num (body, key) {
 export function baseExtras (lua) {
   /** @type {Record<string, { im?: string[], fl?: Record<string, unknown>, tc?: Record<string, number> }>} */
   const out = {}
+  const multi = new Set()
   // itemBases["Name"] = { ... \n}
   for (const m of lua.matchAll(/^itemBases\["((?:[^"\\]|\\.)+)"\] = \{\n([\s\S]*?)\n\}/gm)) {
     const name = unquote(m[1])
     const body = m[2]
+    // Hidden copies are legacy bases (old quivers) that share a current one's name.
+    if (/^\thidden = true,$/m.test(body)) continue
     /** @type {{ im?: string[], fl?: Record<string, unknown>, tc?: Record<string, number> }} */
     const entry = {}
     const implicit = /^\timplicit = "((?:[^"\\]|\\.)*)",$/m.exec(body)
@@ -79,10 +82,16 @@ export function baseExtras (lua) {
       const cd = num(tincture[1], 'cooldown')
       if (mb != null && cd != null) entry.tc = { mb, cd }
     }
-    // The first of a name wins: later ones are legacy or alternate copies.
-    if (Object.keys(entry).length && !out[name]) out[name] = entry
+    if (!Object.keys(entry).length) continue
+    const seen = out[name]
+    if (!seen) { out[name] = entry; continue }
+    // One name, several bases (Two-Stone Ring, Shadowed Ring, the talismans):
+    // their implicits differ, so the name alone can't say which it is.
+    if (String(seen.im) !== String(entry.im)) multi.add(name)
   }
-  return out
+  return Object.fromEntries(Object.entries(out)
+    .map(([name, { im, ...rest }]) => /** @type {const} */ ([name, multi.has(name) ? rest : { ...(im ? { im } : {}), ...rest }]))
+    .filter(([, entry]) => Object.keys(entry).length))
 }
 
 async function main () {

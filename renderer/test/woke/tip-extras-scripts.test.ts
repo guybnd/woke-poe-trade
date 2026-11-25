@@ -25,6 +25,19 @@ itemBases["Ashbark Tincture"] = {
 }
 itemBases["Plain Jewel"] = {
 \ttype = "Jewel",
+}
+itemBases["Blunt Arrow Quiver"] = {
+\thidden = true,
+\timplicit = "(25-35)% increased Stun Duration on Enemies",
+}
+itemBases["Blunt Arrow Quiver"] = {
+\timplicit = "Adds (7-9) to (13-16) Physical Damage to Attacks",
+}
+itemBases["Two-Stone Ring"] = {
+\timplicit = "+(12-16)% to Fire and Lightning Resistances",
+}
+itemBases["Two-Stone Ring"] = {
+\timplicit = "+(12-16)% to Cold and Lightning Resistances",
 }`
 
 describe('base extras', () => {
@@ -41,6 +54,12 @@ describe('base extras', () => {
   it('leaves out a base with nothing to add', () => {
     expect(out['Plain Jewel']).toBeUndefined()
   })
+  it('skips a hidden legacy copy of a name', () => {
+    expect(out['Blunt Arrow Quiver'].im).toEqual(['Adds (7-9) to (13-16) Physical Damage to Attacks'])
+  })
+  it('gives no implicit to a name several bases share', () => {
+    expect(out['Two-Stone Ring']).toBeUndefined()
+  })
 })
 
 describe('unique extras', () => {
@@ -52,7 +71,7 @@ Source: Drops from a boss
 Implicits: 1
 (33-37)% increased Spell Damage
 {tags:caster}(20-30)% increased Cast Speed`)!
-    expect(u).toEqual({ name: 'Corpse Rose', b: 'Imbued Wand', i: ['(33-37)% increased Spell Damage'], e: ['(20-30)% increased Cast Speed'] })
+    expect(u).toEqual({ name: 'Corpse Rose', b: 'Imbued Wand', v: [{ i: ['(33-37)% increased Spell Damage'], e: ['(20-30)% increased Cast Speed'] }] })
   })
   it("keeps the last variant's lines and the lines every variant has", () => {
     const u = parseUnique(`Old Thing
@@ -64,7 +83,22 @@ Implicits: 0
 {variant:2}20% new line
 Fixed line
 Corrupted`)!
-    expect(u.e).toEqual(['20% new line', 'Fixed line'])
+    expect(u.v).toEqual([{ i: [], e: ['20% new line', 'Fixed line'] }])
+  })
+  it('makes each copy of a pick-one unique a named variant', () => {
+    const u = parseUnique(`String of Servitude
+Heavy Belt
+Variant: Life
+Variant: Item Rarity
+Implicits: 2
+{variant:1}+(60-80) to maximum Life
+{variant:2}(30-40)% increased Rarity of Items found
+Implicit Modifier magnitudes are tripled`)!
+    expect(u.v).toEqual([
+      { i: [], e: ['Implicit Modifier magnitudes are tripled'] },
+      { n: 'Life', i: ['+(60-80) to maximum Life'], e: ['Implicit Modifier magnitudes are tripled'] },
+      { n: 'Item Rarity', i: ['(30-40)% increased Rarity of Items found'], e: ['Implicit Modifier magnitudes are tripled'] }
+    ])
   })
   it('finds every block in a file', () => {
     expect(uniquesIn('return {\n[[\nA\nRing\nImplicits: 0\nx\n]], [[\nB\nBelt\nImplicits: 0\ny\n]]\n}').map(u => u.name)).toEqual(['A', 'B'])

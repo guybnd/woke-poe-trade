@@ -10,7 +10,7 @@
 // "{variant:1,3}", "{tags:...}", "{range:...}". This reads them as text.
 //
 // Writes public/data/tips/unique-extras.json in uniques.json's shape
-// ({ b, v: [{ i?, e? }] }), only for uniques in the app that uniques.json lacks.
+// ({ b, v: [{ n?, i?, e? }] }), only for uniques in the app that uniques.json lacks.
 // Run it after tip-data, then src/assets/bump-data-version.mjs.
 // @ts-check
 import fs from 'node:fs'
@@ -32,38 +32,60 @@ async function source (name) {
   return await res.text()
 }
 
+/** @param {string} line */
+function tagged (line) {
+  /** @type {number[] | null} */
+  let variants = null
+  let text = line
+  // Leading {key:value} tags.
+  for (let m = /^\{([a-z]+)(?::([^}]*))?\}/i.exec(text); m; m = /^\{([a-z]+)(?::([^}]*))?\}/i.exec(text)) {
+    if (m[1] === 'variant') variants = m[2].split(',').map(Number)
+    text = text.slice(m[0].length)
+  }
+  return { variants, text }
+}
+
 /**
- * One unique's block, as the tooltip data wants it. With variants, the last
- * one is the item as it drops now.
+ * One unique's block, as the tooltip data wants it. Variants named for patches
+ * ("Pre 3.11.0", "Current") are versions: the last is the item as it drops
+ * now. Any other variants (String of Servitude's "Life", "Item Rarity") are
+ * different copies of it: the lines every copy has, then each copy as its own
+ * named variant.
  * @param {string} block
- * @returns {{ name: string, b: string, i: string[], e: string[] } | null}
+ * @returns {{ name: string, b: string, v: Array<{ n?: string, i: string[], e: string[] }> } | null}
  */
 export function parseUnique (block) {
   const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
   if (lines.length < 2) return null
   const [name, base] = lines
-  let variants = 0
+  /** @type {string[]} */
+  const variants = []
   let implicits = 0
   let at = 2
   for (; at < lines.length; at++) {
     const header = HEADER.exec(lines[at])
     if (!header) break
-    if (header[1] === 'Variant') variants++
+    if (header[1] === 'Variant') variants.push(lines[at].slice(lines[at].indexOf(':') + 1).trim())
     if (header[1] === 'Implicits') implicits = Number(lines[at].split(':')[1]) || 0
   }
-  const mods = []
-  for (const raw of lines.slice(at)) {
-    let line = raw
-    let keep = true
-    // Leading {key:value} tags.
-    for (let m = /^\{([a-z]+)(?::([^}]*))?\}/i.exec(line); m; m = /^\{([a-z]+)(?::([^}]*))?\}/i.exec(line)) {
-      if (m[1] === 'variant' && variants) keep = m[2].split(',').map(Number).includes(variants)
-      line = line.slice(m[0].length)
-    }
+  // "Implicits: N" counts the lines as written, variant tags and all.
+  const mods = lines.slice(at).map((l, k) => ({ ...tagged(l), implicit: k < implicits }))
     // The game shows Corrupted under the mods, not as one.
-    if (keep && line && line !== 'Corrupted') mods.push(line)
+    .filter(m => m.text && m.text !== 'Corrupted')
+  /** @param {(v: number[] | null) => boolean} keep */
+  const pick = (keep) => {
+    const chosen = mods.filter(m => keep(m.variants))
+    return { i: chosen.filter(m => m.implicit).map(m => m.text), e: chosen.filter(m => !m.implicit).map(m => m.text) }
   }
-  return { name, b: base, i: mods.slice(0, implicits), e: mods.slice(implicits) }
+  const versions = variants.every(v => /^(Pre \d|Current)/i.test(v))
+  if (!variants.length || versions) {
+    return { name, b: base, v: [pick(v => !v || v.includes(variants.length))] }
+  }
+  return {
+    name,
+    b: base,
+    v: [pick(v => !v), ...variants.map((n, k) => ({ n, ...pick(v => !v || v.includes(k + 1)) }))]
+  }
 }
 
 /** @param {string} lua */
@@ -80,7 +102,7 @@ async function main () {
   for (const file of FILES) {
     for (const u of uniquesIn(await source(file))) {
       if (!wanted.has(u.name) || out[u.name]) continue
-      out[u.name] = { b: u.b, v: [{ ...(u.i.length ? { i: u.i } : {}), ...(u.e.length ? { e: u.e } : {}) }] }
+      out[u.name] = { b: u.b, v: u.v.map(r => ({ ...(r.n ? { n: r.n } : {}), ...(r.i.length ? { i: r.i } : {}), ...(r.e.length ? { e: r.e } : {}) })) }
     }
   }
   const sorted = Object.fromEntries(Object.entries(out).sort(([a], [b]) => a < b ? -1 : 1))
