@@ -44,7 +44,8 @@ function headline (listings: InsightListing[], ninja: { chaos: number, gaps: num
 
 describe('headline', () => {
   it('never sits below the cheapest trusted listing', () => {
-    expect(headline(rows(1000, 4), { chaos: 100, gaps: 0 })).toEqual({ chaos: 1000, from: 'listings' })
+    // Instant buyouts lead when listings are thin (pick B1).
+    expect(headline(rows(1000, 4), { chaos: 100, gaps: 0 })).toEqual({ chaos: 1000, from: 'buyout' })
     expect(headline(rows(1000, 4, { hasFee: false }), { chaos: 100, gaps: 0 })).toEqual({ chaos: 1000, from: 'listings' })
   })
 
@@ -52,7 +53,7 @@ describe('headline', () => {
     const insight = buildInsight([...rows(100, 2), ...rows(300, 2)], OPTS)
     const blend = buildBlend({ insight, ninja: { chaos: 150, gaps: 0, fits: false }, now: NOW })
     expect(blend.points.find(p => p.key === 'ninja')?.weight).toBe(0)
-    expect(headlinePrice(blend, insight)?.from).toBe('listings')
+    expect(headlinePrice(blend, insight)).toEqual({ chaos: 100, from: 'buyout' })
   })
 
   it('does not let a lone bait listing set the price of a corrupted unique', () => {
@@ -75,6 +76,16 @@ describe('headline', () => {
     const insight = buildInsight([...rows(100, 2, stash), ...rows(300, 2, stash)], OPTS)
     const blend = buildBlend({ insight, ninja: { chaos: 150, gaps: 0, fits: true }, now: NOW })
     expect(headlinePrice(blend, insight)?.from).toBe('blend')
+  })
+
+  it('leads with the cheapest instant buyout over a blend when listings are thin', () => {
+    // Two whispers at 80c, buyouts from 100c, poe.ninja far above: the buyout, not a blend.
+    const insight = buildInsight([...rows(80, 2, { hasFee: false }), ...rows(100, 1), ...rows(140, 1)], OPTS)
+    const blend = buildBlend({ insight, ninja: { chaos: 180, gaps: 0 }, mine: { chaos: 500, ts: NOW - 3600e3 }, now: NOW })
+    expect(insight.confidence).not.toBe('high')
+    expect(headlinePrice(blend, insight)).toEqual({ chaos: 100, from: 'buyout' })
+    // Your own earlier check is listed but never counted.
+    expect(blend.points.find(p => p.key === 'mine')?.weight).toBe(0)
   })
 
   it('falls back to poe.ninja when nothing is listed, even off target', () => {

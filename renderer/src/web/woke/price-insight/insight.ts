@@ -60,6 +60,11 @@ export interface Insight {
   range: { low: number, fair: number, high: number } | null
   /** Cheapest listing that isn't far under the rest: what the market really starts at. */
   floor?: number
+  /**
+   * The cheapest trusted instant buyout at or above the floor: a price anyone
+   * can buy at right now. Leads the verdict when listings are thin (pick B1).
+   */
+  buyout?: number
   /** Price to list at to sell fast (just under the floor) and when patient (the fair price). */
   suggest: { fast: number, patient: number } | null
   confidence: Confidence
@@ -258,6 +263,7 @@ export function buildInsight (listings: InsightListing[], opts: InsightOptions):
   }
 
   const instant = kept.filter(k => k.instant).map(k => k.chaos)
+  const buyout = kept.find(k => k.instant && k.chaos >= floor)?.chaos
   const ceiling = instant.length ? Math.max(Math.min(...instant), range.fair) : null
 
   if (bargain) {
@@ -277,6 +283,7 @@ export function buildInsight (listings: InsightListing[], opts: InsightOptions):
     range,
     floor,
     ceiling,
+    buyout,
     suggest: {
       // Just under the floor. Under 10c a whole chaos is too big a cut, so match it.
       fast: floor >= 10 ? floor * 0.97 : floor,

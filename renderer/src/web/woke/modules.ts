@@ -249,13 +249,22 @@ export function modulesNeeding (config: ConfigLike, need: ModuleNeed): ModuleDef
   return MODULES.filter(m => m.needs.includes(need) && isModuleRunning(config, m))
 }
 
-export function applyPreset (config: ConfigLike & { woke: WokeModulesConfig }, preset: Preset) {
-  const aptOff = config.woke.off.filter(id => id.startsWith('apt-'))
-  const wokeOff = preset.on === 'all'
+// The woke modules a preset leaves off.
+function presetOff (preset: Preset): string[] {
+  return preset.on === 'all'
     ? []
     : MODULES.filter(m => m.group !== 'apt' && !m.optIn && !(preset.on as string[]).includes(m.id)).map(m => m.id)
-  config.woke.off = [...aptOff, ...wokeOff]
 }
+
+export function applyPreset (config: ConfigLike & { woke: WokeModulesConfig }, preset: Preset) {
+  const aptOff = config.woke.off.filter(id => id.startsWith('apt-'))
+  config.woke.off = [...aptOff, ...presetOff(preset)]
+}
+
+// A fresh config starts on this preset (veteran critique, Guy's pick C2,
+// 2026-11-25): setup's "Which tools do you want?" opens on it, and so does
+// anyone who skips setup. Configs that already have a module choice keep it.
+export const FIRST_PRESET = 'mapper'
 
 export function setModuleOn (config: ConfigLike & { woke: WokeModulesConfig }, id: string, on: boolean) {
   const off = config.woke.off.filter(x => x !== id)
@@ -280,7 +289,7 @@ export function renameOldDefaultTitles (widgets: Array<{ wmType: string, wmTitle
 }
 
 export function ensureWokeConfig<T extends ConfigLike> (config: T): T & { woke: WokeModulesConfig } {
-  config.woke ??= { setupDone: false, off: [] }
+  config.woke ??= { setupDone: false, off: presetOff(PRESETS.find(p => p.id === FIRST_PRESET)!) }
   return config as T & { woke: WokeModulesConfig }
 }
 
