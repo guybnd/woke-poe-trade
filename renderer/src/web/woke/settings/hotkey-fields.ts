@@ -10,6 +10,10 @@ import { MAP_MODS_TYPE, initMapModsWidget } from '../map-mods/widget'
 import type { MapModsWidget } from '../map-mods/widget'
 import { POB_BUILDS_TYPE, treeHotkeyOf } from '../pob-builds/widget'
 import type { PobBuildsWidget } from '../pob-builds/widget'
+import { runHotkeyOf } from '../net-worth/widget'
+import type { NetWorthWidget } from '../net-worth/widget'
+import { SESSION_STORY_TYPE } from '../session-story/widget'
+import type { SessionStoryWidget } from '../session-story/widget'
 
 type W = Widget & Record<string, unknown>
 
@@ -54,7 +58,7 @@ const WOKE_KEYS: Record<string, { page: string, keys: Array<[string, string]> }>
   'woke-farming': { page: 'farming', keys: [['lootHotkey', 'Farming: add the hovered item']] },
   'woke-drop-counter': { page: 'drop-counter', keys: [['hotkey', 'Drop counter: +1 the hovered item']] },
   // Registered by net-worth/enable.ts while the stash reader is on.
-  'woke-net-worth': { page: 'net-worth', keys: [['hotkey', 'Net worth: show / hide']] },
+  'woke-net-worth': { page: 'net-worth', keys: [['hotkey', 'Net worth: show / hide'], ['listedHotkey', 'Net worth: open your Faustus listings']] },
   'woke-trade': { page: 'trade', keys: [['stepHotkey', 'Trade: next step for the top offer'], ['busyHotkey', 'Trade: busy reply'], ['skipHotkey', 'Trade: skip to the next offer']] }
 }
 
@@ -111,7 +115,7 @@ export function hotkeyFields (config: Config): HotkeyField[] {
   const ic = find('item-check')
   if (ic) {
     const off = !isModuleOn(config, 'apt-item-info')
-    const rows: Array<[string, string]> = [['hotkey', 'Item info'], ['wikiKey', 'Open item on the wiki'], ['poedbKey', 'Open item on poedb'], ['craftOfExileKey', 'Open item on Craft of Exile'], ['stashSearchKey', 'Search similar items in stash']]
+    const rows: Array<[string, string]> = [['hotkey', 'Item info'], ['wikiKey', 'Open item on the wiki'], ['poedbKey', 'Open item on poedb'], ['craftOfExileKey', 'Open item on Craft of Exile'], ['stashSearchKey', 'Search similar items in stash'], ['bookmarksKey', 'Open bookmarks']]
     for (const [prop, label] of rows) out.push({ id: `ic-${prop}`, label, group: 'Item info', page: 'item-info', off, ...field(ic, prop) })
   }
   const delve = find('delve-grid')
@@ -167,6 +171,11 @@ export function hotkeyFields (config: Config): HotkeyField[] {
       if (w.wmType === MAP_MODS_TYPE && w === find(MAP_MODS_TYPE)) {
         for (const [prop, label] of MAP_SCAN_KEYS) out.push({ id: `${w.wmId}-${prop}`, label, group, page: spec.page, off, scan: true, ...field(w, prop) })
       }
+      // Unset means the default (Alt + H), which netWorthShortcuts registers too.
+      if (w.wmType === 'woke-net-worth') {
+        const nw = w as unknown as NetWorthWidget
+        out.push({ id: `${w.wmId}-runHotkey`, label: 'Net worth: add the hovered item to the run going', group, page: spec.page, off, get: () => runHotkeyOf(nw), set: (v) => { nw.runHotkey = v } })
+      }
     } else if (w.wmType === POB_BUILDS_TYPE && w === firstPob) {
       // Unset means the default (Alt + T), which shortcuts.ts registers too.
       const pob = w as unknown as PobBuildsWidget
@@ -180,6 +189,9 @@ export function hotkeyFields (config: Config): HotkeyField[] {
         get: () => treeHotkeyOf(pob),
         set: (v) => { pob.treeHotkey = v }
       })
+    } else if (w.wmType === SESSION_STORY_TYPE) {
+      const story = w as unknown as SessionStoryWidget
+      out.push({ id: `${w.wmId}-chipKey`, label: 'Sessions: close the map chip', group, page: 'farming', off: off || story.chipPlace === 'off', ...field(w, 'chipKey') })
     } else if (w.wmType === 'woke-regex-library') {
       for (const e of (w.entries as Array<{ id: number, name: string, text: string, hotkey: string | null }>) ?? []) {
         out.push({
