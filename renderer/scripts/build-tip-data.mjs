@@ -149,8 +149,8 @@ async function main () {
     const p = b.properties ?? {}
     if (p.description !== undefined || p.directions !== undefined || p.stack_size) {
       stackables[i.name] = {
-        ...(p.description || effects.has(i.name) ? { d: p.description || effects.get(i.name) } : {}),
-        ...(p.directions ? { u: p.directions } : {}),
+        ...(p.description || effects.has(i.name) ? { d: unlink(p.description || effects.get(i.name)) } : {}),
+        ...(p.directions ? { u: unlink(p.directions) } : {}),
         ...(p.stack_size ? { n: p.stack_size } : {})
       }
     } else {
@@ -172,6 +172,10 @@ async function main () {
     }
   }
 
+  // Currency RePoE has no text for yet, from poedb by hand (tip-items-extra.json).
+  const extra = JSON.parse(readFileSync(join(RENDERER, 'scripts/tip-items-extra.json'), 'utf8'))
+  for (const [name, text] of Object.entries(extra)) stackables[name] ??= text
+
   // ---- uniques ----
   const ninja = await ninjaUniques(LEAGUE)
   if (LEAGUE !== 'Standard') await ninjaUniques('Standard', ninja)
@@ -192,6 +196,7 @@ async function main () {
   write('items.json', stackables)
   write('bases.json', bases)
   console.log(`Uniques in the app with no text: ${[...appUniques].filter(n => !uniques[n]).join(', ') || 'none'}`)
+  console.log(`Currency in the app with no text: ${items.filter(i => i.namespace === 'ITEM' && !i.craftable && i.name !== 'Viscera' && !stackables[i.name] && !bases[i.name]).map(i => i.name).join(', ') || 'none'}`)
   console.log(`Gems in the app with no text: ${[...gemNames].filter(n => !gems[n]).join(', ') || 'none'}`)
 }
 

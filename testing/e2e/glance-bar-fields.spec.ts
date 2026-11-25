@@ -3,7 +3,24 @@
 // left, only when the bar is set to stay up.
 import { test, expect } from './harness'
 
-const t = (time: string) => `2026/11/05 ${time} 3725546 1186a8a3`
+// Each test plays its map from now on, later than the test before it (and
+// any spec run earlier in this worker). The app keeps the maps and night they
+// saved: the session widget reads the log's tail when it starts (under load,
+// after the test's lines are written), skips lines older than the last saved
+// map, and ends a night quiet for 15 minutes. Fixed old times made the
+// "In maps" test lose its map about one run in three.
+let nextStart = 0
+function clock () {
+  const start = Math.max(nextStart, Date.now() - 20_000)
+  nextStart = start + 200_000
+  const pad = (n: number) => String(n).padStart(2, '0')
+  // Seconds into the test's map run, as Client.txt writes the time (local).
+  return (sec: number) => {
+    const d = new Date(start + sec * 1000)
+    return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  }
+}
+const t = (time: string) => `${time} 3725546 1186a8a3`
 const lines = {
   hideout: (time: string) => [
     `${t(time)} [DEBUG Client 25552] Generating level 60 area "HideoutArenaSearingExarch" with seed 1`,
@@ -28,20 +45,21 @@ function glance (fields: string[], show: string) {
 }
 
 test('deaths and mechanics show in a map, and the last map stays up out of maps', async ({ overlay }) => {
+  const at = clock()
   await overlay.boot({ patch: glance(['map', 'time', 'deaths', 'mechanics', 'maps', 'last'], 'game') })
-  await overlay.log([...lines.hideout('15:00:34'), ...lines.strand('15:01:00')])
+  await overlay.log([...lines.hideout(at(0)), ...lines.strand(at(26))])
   const bar = overlay.page.locator('[data-glance-bar]')
   await expect(bar).toBeVisible({ timeout: 15_000 })
   await expect(bar.locator('[data-glance-map]')).toHaveText('Strand')
   await expect(bar.locator('[data-glance-deaths]')).toBeHidden()
 
-  await overlay.log([...lines.einhar('15:01:20'), ...lines.slain('15:01:40')])
+  await overlay.log([...lines.einhar(at(46)), ...lines.slain(at(66))])
   await expect(bar.locator('[data-glance-deaths]')).toHaveText('1')
   await expect(bar.locator('[data-glance-mechanics]')).toHaveText('Einhar')
   await overlay.snap('glance-bar-fields-in-map')
 
   // Out to the hideout: "All the time in game" keeps it, with the map you left.
-  await overlay.log(lines.hideout('15:03:01'))
+  await overlay.log(lines.hideout(at(147)))
   await expect(bar.locator('[data-glance-last]')).toHaveText('Strand')
   await expect(bar).toContainText('2:01')
   await expect(bar.locator('[data-glance-map]')).toBeHidden()
@@ -49,21 +67,23 @@ test('deaths and mechanics show in a map, and the last map stays up out of maps'
 })
 
 test('set to In maps, it goes when you leave the map, and ticked-off fields stay off', async ({ overlay }) => {
+  const at = clock()
   await overlay.boot({ patch: glance(['time'], 'map') })
-  await overlay.log([...lines.hideout('15:00:34'), ...lines.strand('15:01:00')])
+  await overlay.log([...lines.hideout(at(0)), ...lines.strand(at(26))])
   const bar = overlay.page.locator('[data-glance-bar]')
   await expect(bar).toBeVisible({ timeout: 15_000 })
   await expect(bar.locator('[data-glance-time]')).toBeVisible()
   await expect(bar.locator('[data-glance-map]')).toBeHidden()
   await expect(bar.locator('[data-glance-session]')).toBeHidden()
 
-  await overlay.log(lines.hideout('15:03:01'))
+  await overlay.log(lines.hideout(at(147)))
   await expect(bar).toBeHidden()
 })
 
 test('with the overlay open, the cog opens the bar settings under it, saved as you tick', async ({ overlay, fakeApp }) => {
+  const at = clock()
   await overlay.boot({ patch: glance(['time'], 'map') })
-  await overlay.log([...lines.hideout('15:00:34'), ...lines.strand('15:01:00')])
+  await overlay.log([...lines.hideout(at(0)), ...lines.strand(at(26))])
   const bar = overlay.page.locator('[data-glance-bar]')
   await expect(bar).toBeVisible({ timeout: 15_000 })
   // While you play: no cog (it would take the mouse).

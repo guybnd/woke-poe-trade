@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_CHEAP_UNDER, IDLE_END_MS, MAX_SIMULATED_DECKS, cardFilterOf, REPLAY_MAX_MS, calibration, markSeen, replaySince, expectedValue, isBigHit, isOver, luckPercentile, openOrSell, ownAverage,
-  parseCardLine, recordPrice, runningResult, setCardEdit, startSession, toRecord, totals, withEdits
+  parseCardLine, recordPrice, runningResult, savedOrToday, setCardEdit, startSession, toRecord, totals, withEdits
 } from '@/web/woke/stacked-decks/deck'
 import type { PriceOf } from '@/web/woke/stacked-decks/deck'
 import { WEIGHTS, dropChance, isCommonCard } from '@/web/woke/stacked-decks/weights'
@@ -362,5 +362,17 @@ describe('your edits (the shared line item)', () => {
     const s = { ...startSession(0, 'L', 3, 200), draws: ['The Doctor'], edits: e }
     expect(toRecord(s, 1, price, 3, 200).edits).toEqual(e)
     expect(withEdits(price, e)('The Doctor')).toBe(0)
+  })
+})
+
+describe('savedOrToday', () => {
+  it('prices the cards a saved session never drew at today\'s price, so its expectation counts every card', () => {
+    const today: PriceOf = name => name === 'The Doctor' ? 1000 : 1
+    const saved: PriceOf = name => name === 'Rain of Chaos' ? 2 : null
+    const px = savedOrToday(saved, today)
+    expect(px('Rain of Chaos')).toBe(2)
+    expect(px('The Doctor')).toBe(1000)
+    // Only the drawn card's price would leave the big cards out of the expectation.
+    expect(expectedValue(WEIGHTS, px)!.perDeck).toBeGreaterThan(expectedValue(WEIGHTS, saved)?.perDeck ?? 0)
   })
 })

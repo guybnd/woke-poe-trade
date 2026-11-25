@@ -3,7 +3,7 @@
 // Session analytics and their Ctrl+Space answers.
 import { describe, it, expect } from 'vitest'
 import { countedMs, leftOutText, rateTimeOf } from '@/web/woke/shared/rate-time'
-import { nightRateMs, playedMs } from '@/web/woke/session-story/night-rate'
+import { nightRateMs, nightUpTo, playedMs } from '@/web/woke/session-story/night-rate'
 import { sessionUnits, perHour } from '@/web/woke/analytics/stats'
 import type { SessionRecord } from '@/web/woke/analytics/types'
 import { runsLookup } from '@/web/woke/search/lookups/runs'
@@ -40,6 +40,17 @@ describe('a night\'s per hour time', () => {
     expect(nightRateMs(night, 'play')).toBe(120 * M)
     expect(nightRateMs(night, 'hub')).toBe(160 * M)
     expect(nightRateMs(night, 'all')).toBe(3 * H)
+  })
+
+  it('carries a live night on to now: hideout time out of maps, AFK time while AFK', () => {
+    expect(playedMs(nightUpTo(night, 3 * H + 10 * M, false))).toBe(170 * M)
+    expect(nightUpTo(night, 3 * H + 10 * M, false).hubMs).toBe(50 * M)
+    expect(nightUpTo(night, 3 * H + 10 * M, true).hubMs).toBe(40 * M)
+    // AFK since the last line: the time played stands still.
+    const afk = nightUpTo({ ...night, afkSince: 3 * H }, 3 * H + 10 * M, false)
+    expect(playedMs(afk)).toBe(160 * M)
+    expect(afk.hubMs).toBe(40 * M)
+    expect(nightRateMs(afk, 'all')).toBe(3 * H + 10 * M)
   })
 })
 

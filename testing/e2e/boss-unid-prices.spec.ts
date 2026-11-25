@@ -103,6 +103,28 @@ test('Boss runs: unidentified jewel prices and estimated chances', async ({ over
   await expect(panel.getByRole('button', { name: 'poe.ninja' })).toBeVisible()
   await overlay.snap('price strip for an unidentified jewel')
 
+  // Each drop is the shared profit line: ⊘ leaves it out (struck, in place)
+  // and back; a click on the price sets yours (gold, a pin), ⋯ puts it back.
+  const voidforge = panel.locator('[data-boss-drop]').filter({ hasText: 'Voidforge' }).first()
+  await voidforge.hover()
+  await voidforge.locator('[data-line-out]').click()
+  await expect(voidforge).toContainText('left out')
+  await overlay.snap('boss drop left out')
+  await voidforge.hover()
+  await voidforge.locator('[data-line-out]').click()
+  await expect(voidforge).not.toContainText('left out')
+  await voidforge.locator('[data-boss-price]').click()
+  const box = voidforge.getByRole('spinbutton')
+  await box.fill('7000')
+  await box.press('Enter')
+  await expect(voidforge.locator('[data-boss-price] .fa-thumbtack')).toBeVisible()
+  await voidforge.hover()
+  await voidforge.locator('[data-line-more]').click()
+  await overlay.page.getByRole('menuitem', { name: "Back to poe.ninja's price" }).click()
+  await expect(voidforge.locator('[data-boss-price] .fa-thumbtack')).toHaveCount(0)
+  // poe.ninja's 5000c again (in divines or chaos, whichever shows).
+  await expect(voidforge.locator('[data-boss-price]')).not.toContainText('7')
+
   // Rates tab: estimates are labelled, with the source named.
   await panel.getByText('Rates & sources').click()
   await expect(panel).toContainText('use estimated chances, not measured kills')

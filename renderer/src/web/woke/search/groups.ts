@@ -23,6 +23,7 @@ export const SEARCH_GROUPS: readonly GroupInfo[] = [
   { id: 'Vendor recipes', name: 'Vendor recipes', mode: 'folded' },
   { id: 'Flips', name: 'Flips', mode: 'folded' },
   { id: 'Atlas', name: 'Atlas', mode: 'folded' },
+  { id: 'Valdo map', name: 'Valdo map', mode: 'folded', note: 'price check by reward' },
   { id: 'Where to get gems', name: 'Where to get gems', mode: 'folded' },
   { id: 'Vaal it?', name: 'Vaal it?', mode: 'folded' },
   { id: 'Passive tree', name: 'Passive tree', mode: 'folded' },
@@ -46,7 +47,7 @@ const DEFAULTS = new Map(SEARCH_GROUPS.map(g => [g.id, g.mode]))
 
 // Always shown in full: what you searched for, and the empty box's lists.
 export function isLocked (label: string): boolean {
-  return label === 'Answer' || label === 'Prices' || label === 'Recent' || label === 'Things to try' || label.startsWith('Uniques on ')
+  return label === 'Answer' || label === 'Prices' || label === 'Recent' || label === 'Saved' || label === 'Things to try' || label.startsWith('Uniques on ')
 }
 
 export function groupMode (label: string, modes: Readonly<Record<string, GroupMode>> | undefined): GroupMode {

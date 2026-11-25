@@ -15,10 +15,11 @@ import type { StashDiff } from './valuation'
 
 type Extra = Pick<Run, 'startListings' | 'faustus' | 'carried' | 'carriedSales' | 'carriedFrom' | 'kind'>
 
-// The costs typed for this name last time (without what was bought then).
+// The costs typed for this name last time (without what was bought then):
+// a map run's kit, never a crafting session's costs.
 export function lastCostsOf (name: string): CostLine[] {
   const n = name.trim() || 'Run'
-  return (runsDoc.value.done.find(r => r.name === n)?.costs ?? []).map(c => { const x = { ...c }; delete x.bought; return x })
+  return (runsDoc.value.done.find(r => r.name === n && r.kind !== 'craft')?.costs ?? []).map(c => { const x = { ...c }; delete x.bought; return x })
 }
 
 // The names of past runs, newest first.

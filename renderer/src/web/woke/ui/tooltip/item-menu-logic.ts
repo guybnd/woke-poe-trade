@@ -7,6 +7,7 @@ import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
 import type { ParsedItem } from '@/parser/ParsedItem'
 import { ItemCategory } from '@/parser/meta'
 import { parseClipboard } from '@/parser/Parser'
+import { unlink } from './tip-content'
 import type { TipKind, TipUnique } from './tip-content'
 import { VARIABLE_ITEMS, uniqueBaseOf } from '../../shared/unid-prices'
 import { dataUniqueName, isFoulborn } from '../../shared/item-identity'
@@ -187,11 +188,6 @@ export function uniqueModLines (tip: TipUnique | undefined, variant?: string): U
   return implicits.length || explicits.length ? { base: tip.b, implicits, explicits } : null
 }
 
-// "[Keyword|Shown]" and "[Keyword]" are links in the data, plain text in game.
-function unlink (line: string) {
-  return line.replace(/\[([^\]|]*)\|([^\]]*)\]/g, '$2').replace(/\[([^\]]*)\]/g, '$1')
-}
-
 // A range "(75-100)" as the game's advanced copy writes a roll: "75(75-100)".
 function lowestRoll (line: string) {
   return line.replace(/\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)/g, (range, low: string) => `${low}${range}`)
@@ -225,6 +221,12 @@ export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType
   // A captured beast: searched by its name, as the game's copy of one is.
   if (info.namespace === 'CAPTURED_BEAST') {
     const item = createVirtualItem({ category: ItemCategory.CapturedBeast, info })
+    return { clipboard: item.rawText, item }
+  }
+  // An invitation (Incandescent: the Searing Exarch's) has no bulk tag: the
+  // price check searches it as the game's copy of one, a normal map item.
+  if (info.craftable?.category === ItemCategory.Invitation) {
+    const item = createVirtualItem({ category: ItemCategory.Invitation, rarity: ItemRarity.Normal, info })
     return { clipboard: item.rawText, item }
   }
   if (kind === 'gem') {

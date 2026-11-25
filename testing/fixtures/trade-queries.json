@@ -3533,6 +3533,172 @@
    }
   }
  },
+ "rare-body-armour-tiers.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_4015621042",
+       "value": {
+        "min": 92
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 46
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 46
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 160
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.chest"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "socket_filters": {
+     "filters": {
+      "links": {
+       "min": 6
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "es": {
+       "min": 1134
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_4015621042",
+       "value": {
+        "min": 92
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 46
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 46
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 160
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.chest"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "socket_filters": {
+     "filters": {
+      "links": {
+       "min": 6
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "es": {
+       "min": 1134
+      }
+     }
+    }
+   }
+  }
+ },
  "rare-cluster-large.txt": {
   "opened": {
    "status": {
@@ -5032,6 +5198,82 @@
    }
   }
  },
+ "unique-baleful-dominion.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.pseudo_timeless_jewel_kurgal",
+       "value": {
+        "min": 4512,
+        "max": 4512
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Baleful Dominion",
+   "type": "Hypnotic Eye Jewel"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.pseudo_timeless_jewel_kurgal",
+       "value": {
+        "min": 4512,
+        "max": 4512
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Baleful Dominion",
+   "type": "Hypnotic Eye Jewel"
+  }
+ },
  "unique-belt-catalysed.txt": {
   "opened": {
    "status": {
@@ -5543,6 +5785,73 @@
    },
    "name": "Bubonic Trail",
    "type": "Murder Boots"
+  }
+ },
+ "unique-dawnbreaker.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Dawnbreaker",
+   "type": "Colossal Tower Shield"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ar": {},
+      "block": {},
+      "base_defence_percentile": {
+       "min": 100
+      }
+     }
+    }
+   },
+   "name": "Dawnbreaker",
+   "type": "Colossal Tower Shield"
   }
  },
  "unique-ebers-unification-zwsp.txt": {

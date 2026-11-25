@@ -1,6 +1,7 @@
 import { SKIPPED_TYPES, typeForSlug } from './types'
 import type { PriceItem } from './types'
 import { categoryOfType, heldPrice } from '../shared/price-trust'
+import { STACKED_DECK, cardChance, withDropRate } from '../shared/card-cap'
 
 // The shape APT keeps after splitting poe.ninja's dense overview:
 // one chunk per category, each holding many `{"name":…,"variant":…,"chaos":…,"graph":[…]}` objects.
@@ -50,6 +51,11 @@ export function parseDenseChunks (chunks: DenseChunk[]): PriceItem[] {
   // Gaps only count inside the days the league has prices for, or every
   // item reads as thin in a league's first week.
   const days = leagueDays(graphs)
+  let deck: number | null | undefined
+  const deckChaos = () => {
+    if (deck === undefined) deck = out.find(i => i.name === STACKED_DECK && i.chaos > 0)?.chaos ?? null
+    return deck
+  }
   starts.push(out.length)
   for (let c = 0; c + 1 < starts.length; c++) {
     const from = starts[c]
@@ -68,7 +74,9 @@ export function parseDenseChunks (chunks: DenseChunk[]): PriceItem[] {
       const category = categoryOfType(out[i].type)
       if (category === 'gear') continue
       const g = graphs[i]
-      const held = heldPrice(out[i].chaos, Array.isArray(g) ? g as Array<number | null> : undefined, ownDays, category)
+      let held = heldPrice(out[i].chaos, Array.isArray(g) ? g as Array<number | null> : undefined, ownDays, category)
+      // A card priced over what its drop rate allows (shared/card-cap.ts).
+      if (category === 'cards') held = withDropRate(out[i].chaos, held, cardChance(out[i].name), deckChaos())
       if (held) out[i].held = held
     }
   }

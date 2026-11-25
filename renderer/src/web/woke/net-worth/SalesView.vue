@@ -130,7 +130,7 @@ function typeTip (t: TypeRow) {
   const lines = [`${t.label}: ${div(t.chaos)} ${unit.value} from ${t.count} ${t.count === 1 ? 'sale' : 'sales'}`]
   if (priced) lines.push(`Average ${div(t.chaos / priced)} ${unit.value}`)
   if (t.best) lines.push(`Best: ${saleName(t.best)} ${div(t.bestChaos)} ${unit.value}`)
-  const vs = inR.value.filter(s => saleType(s) === t.id).map(marketOf).filter((x): x is number => x != null)
+  const vs = counted.value.filter(s => saleType(s) === t.id).map(marketOf).filter((x): x is number => x != null)
   if (vs.length) {
     const avg = vs.reduce((a, b) => a + b, 0) / vs.length
     lines.push(`Against poe.ninja: ${marketText(avg)} on average`)

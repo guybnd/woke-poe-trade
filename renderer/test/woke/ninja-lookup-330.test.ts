@@ -93,6 +93,25 @@ describe('poe.ninja lookups, 3.30 names', () => {
     expect(getDetailsId(fake("Yriel's Fostering", 'Exquisite Leather', ItemCategory.BodyArmour,
       'Projectiles from Attacks have #% chance to Maim on Hit while\nyou have a Bestial Minion'))?.variant).toBe('Exquisite Leather')
   })
+
+  // The abyss uniques and Voices are split by a mod's roll; with that mod not
+  // read the price check threw instead of pricing the item by its base.
+  it('an abyss unique or Voices without its split mod is priced without a variant', () => {
+    const text = fixture('items/unique-bubonic-trail.txt')
+    expect(getDetailsId(parseItem(text))?.variant).toBe('2 Jewels, Murder Boots')
+    const noSockets = parseItem(text.replace('{ Unique Modifier }\nHas 2 Abyssal Sockets\n', ''))
+    expect(noSockets.info.refName).toBe('Bubonic Trail')
+    expect(getDetailsId(noSockets)?.variant).toBe('Murder Boots')
+    const voices = {
+      rarity: ItemRarity.Unique,
+      category: ItemCategory.Jewel,
+      info: { namespace: 'UNIQUE', refName: 'Voices' },
+      uniqueBase: { refName: 'Large Cluster Jewel' },
+      statsByType: [],
+      influences: []
+    } as unknown as ParsedItem
+    expect(() => getDetailsId(voices)).not.toThrow()
+  })
 })
 
 describe('stat columns on a fractured item', () => {

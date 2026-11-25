@@ -7,6 +7,7 @@ import { lastWokePrices } from '../market/hook'
 import { feedDays, graphGaps, pricedOnlyToday } from '../market/parse'
 import { THIN_GAPS } from '../market/types'
 import { priceHistory } from './history'
+import { STACKED_DECK, cardCap, cardChance } from '../shared/card-cap'
 import { useUnidPrice } from '../shared/price'
 import { VARIABLE_ITEMS } from '../shared/unid-prices'
 import { uniqueFromArt } from '../shared/unid-art'
@@ -31,6 +32,15 @@ function cheapest (rows: Row[]): Row | undefined {
   return rows.reduce<Row | undefined>((m, r) => !m || r.chaos < m.chaos ? r : m, undefined)
 }
 
+// An unidentified unique the stash names by its base only, told by its art:
+// valued and counted as the identified one, so identifying it isn't profit.
+// Not a rolled one (Watcher's Eye...): its unid price is its own (below).
+export function identifyUnid (item: StashItemLike): string | null {
+  if (!isUniqueFrame(item.frame) || item.name) return null
+  const unid = uniqueFromArt(item.baseType || item.typeLine, item.icon)
+  return unid && !VARIABLE_ITEMS.has(unid) ? unid : null
+}
+
 export function ninjaPriceOf (): PriceOf {
   const ninja = usePoeninja()
   const unidOf = useUnidPrice()
@@ -42,6 +52,12 @@ export function ninjaPriceOf (): PriceOf {
   // Thin market (poe.ninja had no price on 3+ of the last 7 days): one fake
   // listing can set its price (valuation.ts holds a sudden jump).
   const gapsOf = (graph: unknown) => graphGaps(graph, days)
+  // For the drop-rate check on cards (shared/card-cap.ts).
+  let deck: number | null | undefined
+  const deckChaos = () => {
+    if (deck === undefined) deck = ninja.findPriceByQuery({ ns: 'ITEM', name: STACKED_DECK, variant: undefined })?.chaos ?? null
+    return deck
+  }
 
   function lookup (item: StashItemLike): Priced | null {
     const p = find(item)
@@ -59,7 +75,9 @@ export function ninjaPriceOf (): PriceOf {
     if (item.typeLine === 'Divine Orb' && divine) return { chaos: divine, category: 'currency' }
     if (item.frame === 6) {
       const row = ninja.findPriceByQuery({ ns: 'DIVINATION_CARD', name: item.typeLine, variant: undefined })
-      return row ? { chaos: row.chaos, category: 'cards', graph: row.graph, history: priceHistory('DIVINATION_CARD', item.typeLine) } : null
+      if (!row) return null
+      const cap = cardCap(cardChance(item.typeLine), deckChaos())
+      return { chaos: row.chaos, category: 'cards', graph: row.graph, history: priceHistory('DIVINATION_CARD', item.typeLine), ...(cap != null ? { cap } : {}) }
     }
     if (isUniqueFrame(item.frame)) {
       const name = item.name || item.typeLine
@@ -87,7 +105,7 @@ export function ninjaPriceOf (): PriceOf {
     return any ? { chaos: any.chaos, category: 'other', graph: any.graph, history: priceHistory('ITEM', item.typeLine, any.variant) } : null
   }
 
-  return (item) => {
+  const priceOf: PriceOf = (item) => {
     // Magic and rare maps (Nightmare Maps drop rare): poe.ninja prices a map
     // by its base, whatever its rarity.
     if (isRolledMap(item)) {
@@ -98,12 +116,14 @@ export function ninjaPriceOf (): PriceOf {
     // Unidentified uniques are named by their base only. A rolled one's one
     // poe.ninja price is a guess at the hidden roll, so only its saved unid
     // price counts. Read each time, not cached: a check saves it later.
+    // Any other is priced as the identified one.
     if (isUniqueFrame(item.frame) && !item.name) {
       const unid = uniqueFromArt(item.baseType || item.typeLine, item.icon)
       if (unid && VARIABLE_ITEMS.has(unid)) {
         const q = unidOf(unid)
         return q ? { chaos: q.chaos, category: 'gear' } : null
       }
+      if (unid) item = { ...item, name: unid }
     }
     const key = `${item.frame}|${item.name}|${item.typeLine}|${item.name ? '' : item.icon}|${item.gemLevel}|${item.quality}|${item.corrupted}|${item.links}`
     if (!cache.has(key)) {
@@ -113,4 +133,6 @@ export function ninjaPriceOf (): PriceOf {
     }
     return cache.get(key)!
   }
+  priceOf.identify = identifyUnid
+  return priceOf
 }

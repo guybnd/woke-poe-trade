@@ -32,7 +32,7 @@ export function enableNetWorth (place: boolean) {
     icon: { fa: 'fas fa-scale-balanced', item: 'Mirror of Kalandra' },
     needs: ['log', 'prices', 'hotkeys', 'network'],
     optIn: true
-  }, 'wealthy-exile')
+  }, 'disenchant')
   if (!registry.widgets.includes(widget)) registry.widgets.push(widget)
   addEditor(NET_WORTH_TYPE, NetWorthEditor)
   addWidgetShortcuts(NET_WORTH_TYPE, netWorthShortcuts)

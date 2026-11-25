@@ -926,7 +926,7 @@ export default defineComponent({
       blankSearch,
       verdictInsight,
       skipsTop: computed(() => skipsTopMods(props.item, props.stats)),
-      ninjaFits: computed(() => ninjaFitsSearch(props.item, props.stats, props.filters.corrupted?.search, socketColoursOn(props.filters))),
+      ninjaFits: computed(() => ninjaFitsSearch(props.item, props.stats, props.filters.corrupted?.search, socketColoursOn(props.filters), props.filters.addedMods)),
       verdictSlot,
       insight,
       insightOptions,

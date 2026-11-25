@@ -363,6 +363,14 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await kitLine.getByText('Strand Map').hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('Strand Map')
     await overlay.page.mouse.move(0, 0)
+    // A kit line left out stays, struck, and counts again from its ⊘.
+    await kitLine.hover()
+    await kitLine.locator('[data-line-out]').click()
+    await expect(kitLine).toContainText('not this run')
+    await kitLine.hover()
+    await kitLine.locator('[data-line-out]').click()
+    await expect(kitLine).toContainText('typed')
+    await overlay.page.mouse.move(0, 0)
     await panel.getByLabel('Run name').fill('')
     // The Listed tab (pending sales): Start's read saved your listings, and
     // Refresh reads them again (one more search). Each row has its tooltip.

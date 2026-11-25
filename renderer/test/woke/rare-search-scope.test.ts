@@ -9,14 +9,14 @@ vi.mock('@/web/Config', () => ({
   poeWebApi: () => 'www.pathofexile.com'
 }))
 
-/* eslint-disable import/first */
+/* eslint-disable import-x/first */
 import { createPresets } from '@/web/price-check/filters/create-presets'
 import { isTopTierFilter } from '@/web/price-check/filters/create-stat-filters'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { isBlankRareSearch, skipsTopMods } from '@/web/woke/price-insight/search-scope'
 import type { ParsedItem } from '@/parser'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
-/* eslint-enable import/first */
+/* eslint-enable import-x/first */
 
 const OPTS = { league: 'Mirage', merchantOnly: true, currency: null, collapseListings: 'api' as const, activateStockFilter: false, searchStatRange: 10, useEn: false }
 
@@ -169,6 +169,16 @@ describe('verdict scope', () => {
   it('does not call a rare with nothing to tick blank', () => {
     const item = parseItem(amulet(T5_SPELL))
     expect(isBlankRareSearch(item, active(item).filters, [])).toBe(false)
+  })
+
+  // A mod added from the search line narrows the search like a ticked one.
+  it('does not call a search with an added mod blank', () => {
+    const item = parseItem(amulet(T5_SPELL))
+    const preset = active(item)
+    const added = { statRef: '+# to maximum Life', kind: 'explicit', tradeId: ['explicit.stat_3299347043'], min: 60, max: '', disabled: false } as never
+    expect(isBlankRareSearch(item, { ...preset.filters, addedMods: [added] }, preset.stats)).toBe(false)
+    const off = { ...(added as object), disabled: true } as never
+    expect(isBlankRareSearch(item, { ...preset.filters, addedMods: [off] }, preset.stats)).toBe(true)
   })
 
   it('does not call a 6-link search blank', () => {

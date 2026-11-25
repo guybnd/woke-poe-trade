@@ -22,7 +22,8 @@ export function loadPending (league: string): Promise<void> {
   loadedFor = league
   readOk = false
   pendingDoc.value = null
-  loading = (hostRequest('doc-get', { collection: COLLECTION, key: pendingKey(league) }) as Promise<unknown>)
+  // Strict: null only when there's no file yet; a locked one throws.
+  loading = (hostRequest('doc-get-strict', { collection: COLLECTION, key: pendingKey(league) }) as Promise<unknown>)
     .then((d) => {
       if (loadedFor !== league) return
       pendingDoc.value = isPendingDoc(d) && d.league === league ? d : null
@@ -44,7 +45,7 @@ export async function notePendingRead (league: string, read: FaustusRead): Promi
     if (next === pendingDoc.value) return
     pendingDoc.value = next
   } else {
-    const was = await (hostRequest('doc-get', { collection: COLLECTION, key: pendingKey(league) }) as Promise<unknown>).catch(() => undefined)
+    const was = await (hostRequest('doc-get-strict', { collection: COLLECTION, key: pendingKey(league) }) as Promise<unknown>).catch(() => undefined)
     if (was === undefined) return
     next = mergeRead(isPendingDoc(was) && was.league === league ? was : null, league, read)
   }

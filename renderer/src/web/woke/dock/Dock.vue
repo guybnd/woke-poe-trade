@@ -1,6 +1,6 @@
 <template>
-  <div v-if="groups.length || wm.active.value" :class="[$style.dock, { [$style.vertical]: cfg.vertical }]"
-    :style="{ left: `${cfg.x}%`, top: `${cfg.y}%` }" data-w-panel data-dock-row>
+  <div v-if="groups.length || wm.active.value" ref="root" :class="[$style.dock, { [$style.vertical]: cfg.vertical }]"
+    :style="dockSpot(cfg.x, cfg.y, size)" data-w-panel data-dock-row>
     <!-- Always takes its space, so the icons don't move when the overlay opens. -->
     <span :class="$style.grip" data-woke-frame :style="{ visibility: wm.active.value ? 'visible' : 'hidden' }" title="Drag to move the icon row. Double-click to stand it on its side. Right-click to bring back dismissed icons."
       @pointerdown="startDrag" @dblclick="flip" @contextmenu="gripMenu"><i class="fas fa-grip-vertical" /></span>
@@ -9,9 +9,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onUnmounted, watch } from 'vue'
+import { computed, inject, onUnmounted, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import DockIcon from './DockIcon.vue'
+import { dockSpot } from './place'
 import { dismissedIcons, dockConfig, dockGroups, ensureDockConfig, openSettingsPage, restoreIcon, runDismissals, saveDock } from './dock'
 import { useZone } from '../shared/zone'
 import { hoverZonesMoved } from '../shared/hover'
@@ -37,10 +38,23 @@ function gripMenu (e: MouseEvent) {
 
 const cfg = computed(() => dockConfig())
 
+// Its size, so a spot near the edge keeps the whole row on screen.
+const root = shallowRef<HTMLElement | null>(null)
+const size = shallowRef({ w: 0, h: 0 })
+const observer = new ResizeObserver(() => {
+  const r = root.value?.getBoundingClientRect()
+  if (r) size.value = { w: Math.ceil(r.width), h: Math.ceil(r.height) }
+})
+watch(root, (el, old) => {
+  if (old) observer.unobserve(old)
+  if (el) observer.observe(el)
+})
+onUnmounted(() => { observer.disconnect() })
+
 // Nothing over the settings window or another exclusive window.
 const blocked = computed(() => wm.widgets.value.some(w => w.wmZorder === 'exclusive' && w.wmWants === 'show'))
 const groups = computed(() => blocked.value ? [] : dockGroups.value)
-watch(groups, hoverZonesMoved)
+watch([groups, size], hoverZonesMoved)
 
 let drag: { dx: number, dy: number } | null = null
 function startDrag (e: PointerEvent) {

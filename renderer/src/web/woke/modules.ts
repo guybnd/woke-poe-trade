@@ -14,8 +14,9 @@ import type { DockConfig } from './dock/dock'
 import type { RateTime } from './shared/rate-time'
 import type { ShortcutAction } from '@ipc/types'
 
-// Session analytics' art: its tool, dock icon, card and
-// Ctrl+Space answer all show it.
+// Session story's art: its tool, dock icon, card and Ctrl+Space answer all
+// show it. Session analytics has its own (Chronicle of Atzoatl), so the two
+// tools don't look alike.
 export const NIGHT_ART = 'Eternal Orb'
 
 export type ModuleGroup = 'economy' | 'mapping' | 'campaign' | 'builds' | 'apt'
@@ -68,10 +69,9 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'market', name: 'Market', description: 'Every poe.ninja price by category, plus movers and a watchlist', group: 'economy', widgetTypes: ['woke-market-tracker'], icon: { fa: 'fas fa-chart-line', currency: 'divine' }, needs: ['poll'] },
   { id: 'scarab-flip', name: 'Flips', description: 'Vendor recipes and Harvest rerolls worth doing: threads, catalysts, delirium orbs and more', group: 'economy', widgetTypes: ['woke-scarab-flip'], icon: { fa: 'fas fa-recycle', item: 'Harvest Scarab' }, needs: ['poll', 'network'] },
   { id: 'disenchant', name: 'Disenchant', description: 'Uniques with the most Thaumaturgic Dust per chaos, to buy and disenchant', group: 'economy', widgetTypes: ['woke-disenchant'], icon: { fa: 'fas fa-hammer', currency: 'dust' }, needs: ['prices'] },
-  { id: 'wealthy-exile', name: 'Wealthy Exile', description: 'The Wealthy Exile net worth site in an overlay window', group: 'economy', widgetTypes: ['woke-wealthy-exile'], icon: { fa: 'fas fa-wallet', src: '/images/art/crested-golden-idol.png' }, needs: ['hotkeys', 'network'] },
-  { id: 'drop-counter', name: 'Drop counter', description: 'A tally of the drops you choose, and maps run', group: 'economy', widgetTypes: ['woke-drop-counter'], icon: { fa: 'fas fa-hashtag', src: '/images/art/o-eternal.png' }, needs: ['log', 'prices', 'hotkeys'] },
+  { id: 'drop-counter', name: 'Drop counter', description: 'A tally of the drops you choose, and maps run', group: 'economy', widgetTypes: ['woke-drop-counter'], icon: { fa: 'fas fa-hashtag', item: 'Expedition Logbook' }, needs: ['log', 'prices', 'hotkeys'] },
   { id: 'stacked-decks', name: 'Stacked decks', description: 'Cards from the Stacked Decks you open: profit, big hits and luck', group: 'economy', widgetTypes: ['woke-stacked-decks'], icon: { fa: 'fas fa-layer-group', item: 'Stacked Deck' }, needs: ['log', 'prices'] },
-  { id: 'session-analytics', name: 'Session analytics', description: 'Profit per map, strategy and hour over time', group: 'economy', widgetTypes: ['woke-session-analytics'], icon: { fa: 'fas fa-chart-bar', item: NIGHT_ART }, needs: ['prices'] },
+  { id: 'session-analytics', name: 'Session analytics', description: 'Profit per map, strategy and hour over time', group: 'economy', widgetTypes: ['woke-session-analytics'], icon: { fa: 'fas fa-chart-bar', item: 'Chronicle of Atzoatl' }, needs: ['prices'] },
   // 3.30 Covens of Umbra only: remove this entry and wickerman/ when the league ends.
   { id: 'wickerman', name: 'Wickerman (3.30)', description: 'Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one', group: 'economy', widgetTypes: ['woke-wickerman'], runsWithoutWidget: true, icon: { fa: 'fas fa-bone' }, needs: ['log'] },
   { id: 'scrying', name: 'Scrying', description: 'Which map to scry: the divination cards a Scrying Orb adds per map, against what the orb costs', group: 'economy', widgetTypes: ['woke-scrying'], icon: { fa: 'fas fa-eye', item: 'Scrying Orb' }, needs: ['prices'] },
@@ -109,6 +109,9 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
 // stay unregistered. To bring one back, move its entry into MODULES and drop
 // its widget type from removedTypes below.
 export const RETIRED_MODULES: ModuleDef[] = [
+  // Another site's net worth in a window, next to our own Net worth (veteran
+  // critique, Guy 2026-11-25).
+  { id: 'wealthy-exile', name: 'Wealthy Exile', description: 'The Wealthy Exile net worth site in an overlay window', group: 'economy', widgetTypes: ['woke-wealthy-exile'], icon: { fa: 'fas fa-wallet', src: '/images/art/crested-golden-idol.png' }, needs: ['hotkeys', 'network'] },
   { id: 'league-invest', name: 'Investments', description: 'League-start buys ranked from past leagues', group: 'economy', widgetTypes: ['woke-league-invest'], icon: { fa: 'fas fa-seedling', item: 'Mirror Shard' }, needs: ['poll', 'network'] },
   // Folded into Map mods (WOKEPOET-458): its keys moved there (Config.ts
   // foldMapScan), so it isn't coming back as its own tool.
@@ -129,9 +132,9 @@ export interface Preset {
 
 export const PRESETS: Preset[] = [
   { id: 'everything', label: 'Everything', on: 'all' },
-  { id: 'mapper', label: 'Mapper', on: ['market', 'drop-counter', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'death-recap', 'session-story', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'wickerman', 'trade-searches', 'trade', 'regex-library', 'megalo', 'forbidden', 'scrying'] },
+  { id: 'mapper', label: 'Mapper', on: ['market', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'death-recap', 'session-story', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'wickerman', 'trade-searches', 'trade', 'regex-library', 'megalo', 'forbidden', 'scrying'] },
   { id: 'leveling', label: 'Leveling', on: ['campaign', 'run-timer', 'lab', 'challenges', 'pob-builds', 'regex-library', 'wickerman', 'megalo', 'forbidden'] },
-  { id: 'trader', label: 'Trader', on: ['market', 'lab-gems', 'scarab-flip', 'disenchant', 'stacked-decks', 'wealthy-exile', 'trade-searches', 'trade', 'regex-library', 'megalo', 'forbidden'] },
+  { id: 'trader', label: 'Trader', on: ['market', 'lab-gems', 'scarab-flip', 'disenchant', 'stacked-decks', 'trade-searches', 'trade', 'regex-library', 'megalo', 'forbidden'] },
   { id: 'price-check-only', label: 'Price check only', on: [] }
 ]
 
@@ -249,13 +252,22 @@ export function modulesNeeding (config: ConfigLike, need: ModuleNeed): ModuleDef
   return MODULES.filter(m => m.needs.includes(need) && isModuleRunning(config, m))
 }
 
-export function applyPreset (config: ConfigLike & { woke: WokeModulesConfig }, preset: Preset) {
-  const aptOff = config.woke.off.filter(id => id.startsWith('apt-'))
-  const wokeOff = preset.on === 'all'
+// The woke modules a preset leaves off.
+function presetOff (preset: Preset): string[] {
+  return preset.on === 'all'
     ? []
     : MODULES.filter(m => m.group !== 'apt' && !m.optIn && !(preset.on as string[]).includes(m.id)).map(m => m.id)
-  config.woke.off = [...aptOff, ...wokeOff]
 }
+
+export function applyPreset (config: ConfigLike & { woke: WokeModulesConfig }, preset: Preset) {
+  const aptOff = config.woke.off.filter(id => id.startsWith('apt-'))
+  config.woke.off = [...aptOff, ...presetOff(preset)]
+}
+
+// A fresh config starts on this preset (veteran critique, Guy's pick C2,
+// 2026-11-25): setup's "Which tools do you want?" opens on it, and so does
+// anyone who skips setup. Configs that already have a module choice keep it.
+export const FIRST_PRESET = 'mapper'
 
 export function setModuleOn (config: ConfigLike & { woke: WokeModulesConfig }, id: string, on: boolean) {
   const off = config.woke.off.filter(x => x !== id)
@@ -280,7 +292,7 @@ export function renameOldDefaultTitles (widgets: Array<{ wmType: string, wmTitle
 }
 
 export function ensureWokeConfig<T extends ConfigLike> (config: T): T & { woke: WokeModulesConfig } {
-  config.woke ??= { setupDone: false, off: [] }
+  config.woke ??= { setupDone: false, off: presetOff(PRESETS.find(p => p.id === FIRST_PRESET)!) }
   return config as T & { woke: WokeModulesConfig }
 }
 

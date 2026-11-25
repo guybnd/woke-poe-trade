@@ -7,6 +7,7 @@ import { usePoeninja } from '@/web/background/Prices'
 import { hostRequest } from '../shared/host'
 import { keptSales } from './pending-glance'
 import { ninjaPriceOf } from './prices'
+import { overCardCap } from './valuation'
 import { NINJA_CURRENCY, saleChaos, versusMarket } from './sales'
 import type { Rates, Sale, SalesReply } from './sales'
 
@@ -42,14 +43,14 @@ export function ninjaEach (s: Sale): number | null {
   const of = priceOf.value
   if (!of) return null
   const p = of({ name: s.name, typeLine: s.typeLine, baseType: s.baseType, frame: s.frameType, stack: 1, icon: s.icon, gemLevel: s.gemLevel, quality: s.quality, mapTier: s.mapTier, corrupted: s.corrupted, links: s.links })
-  return p && p.chaos > 0 ? p.chaos : null
+  return p && p.chaos > 0 && !overCardCap(p) ? p.chaos : null
 }
 // The same, with poe.ninja's thin-market flag (pending.ts confidence).
 export function ninjaPriced (s: Sale): { chaos: number, thin?: boolean } | null {
   const of = priceOf.value
   if (!of) return null
   const p = of({ name: s.name, typeLine: s.typeLine, baseType: s.baseType, frame: s.frameType, stack: 1, icon: s.icon, gemLevel: s.gemLevel, quality: s.quality, mapTier: s.mapTier, corrupted: s.corrupted, links: s.links })
-  return p && p.chaos > 0 ? { chaos: p.chaos, ...(p.thin ? { thin: true } : {}) } : null
+  return p && p.chaos > 0 && !overCardCap(p) ? { chaos: p.chaos, ...(p.thin ? { thin: true } : {}) } : null
 }
 export function marketOf (s: Sale): number | null {
   return versusMarket(saleChaos(s, rates.value), ninjaEach(s), s.stack)

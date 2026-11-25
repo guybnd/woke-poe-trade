@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { loadGameData } from '../helpers/game-data'
 import { allMapNames } from '@/web/woke/map-mods/data'
 import type { MapBonusData } from '@/web/woke/map-mods/bonuses'
-import { DEFAULT_PLANNER, atLeastTerms, isTicked, planRows, planStashSearch, planTradeQuery, planUniverse, ratedAvoid, toggled } from '@/web/woke/map-mods/planner'
+import { DEFAULT_PLANNER, atLeastTerms, isTicked, planRows, planStashSearch, planTradeQuery, planUniverse, ratedAvoid, sameWording, toggled } from '@/web/woke/map-mods/planner'
 import type { PlannerState } from '@/web/woke/map-mods/planner'
 
 beforeAll(loadGameData)
@@ -58,6 +58,42 @@ describe('planner rows', () => {
     expect(isTicked(punishing, state, ratings)).toBe(true)
     state = toggled(state, 'Punishing', true)
     expect(isTicked(punishing, state, {})).toBe(false)
+  })
+})
+
+// Diluted and of Miring roll "less", not the stat's first "more" wording; an
+// avoid rating sits on the wording Maps shows, and the stash text must find it.
+describe('mods that roll another wording', () => {
+  const cases: Array<[string, string, string]> = [
+    ['Diluted', 'currency', 'Players have #% less effect of Flasks applied to them'],
+    ['of Miring', 'threads', 'Players have #% less Defences'],
+    ['Volatile', 'threads', 'Rare Monsters have Volatile Cores']
+  ]
+
+  it('an avoid rating on that wording unticks it, and searches avoid it', () => {
+    for (const [key, goal, wording] of cases) {
+      const row = planRows(data, goal as PlannerState['goal']).find(r => r.key === key)!
+      expect(row.matchers, key).toContain(wording)
+      const ratings = { [wording]: 'deadly' as const }
+      expect(isTicked(row, DEFAULT_PLANNER, ratings), key).toBe(false)
+      expect(ratedAvoid(data, [], ratings).map(r => r.key), key).toContain(key)
+    }
+  })
+
+  it('reads a signed roll range as the rolled number', () => {
+    expect(sameWording('#% to Monster Critical Strike Multiplier', '+(70-75)% to Monster Critical Strike Multiplier')).toBe(true)
+    expect(sameWording('Players have #% less Defences', 'Players have (25-30)% less Defences')).toBe(true)
+    expect(sameWording('Players have #% more Defences', 'Players have (25-30)% less Defences')).toBe(false)
+  })
+
+  it('the stash text matches the line the map shows', () => {
+    for (const [key, goal] of cases) {
+      const rows = planRows(data, goal as PlannerState['goal'])
+      const row = rows.find(r => r.key === key)!
+      const s = planStashSearch(rows, new Set([key]), { ...DEFAULT_PLANNER, goal: goal as PlannerState['goal'], need: 1 }, planUniverse(data), allMapNames())
+      const line = row.mod.lines[0].replace(/\((\d+)-\d+\)/, '$1')
+      expect(new RegExp(s.tokens[key], 'i').test(line), `${key}: ${s.tokens[key]} vs ${line}`).toBe(true)
+    }
   })
 })
 

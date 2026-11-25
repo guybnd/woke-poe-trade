@@ -47,8 +47,6 @@ const NINJA_THIN_WEIGHT = 0.25
 const NINJA_THIN_GAPS = 2
 const NINJA_GAP_NOTE = 0.25
 const POEPRICES_WEIGHT = 0.6
-const MINE_WEIGHT = 0.4
-const MINE_HALF_LIFE_DAYS = 7
 const MINE_MAX_DAYS = 14
 const MIN_LISTINGS_FOR_FLOOR = 3
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -134,8 +132,10 @@ export function buildBlend (input: BlendInput): Blend {
       low: input.mine.chaos,
       high: input.mine.chaos,
       mid: input.mine.chaos,
-      weight: days > MINE_MAX_DAYS ? 0 : MINE_WEIGHT * Math.pow(0.5, days / MINE_HALF_LIFE_DAYS),
-      note: 'Your earlier check of the same search'
+      // Shown for reference, never counted: an earlier check that was wrong
+      // would otherwise keep feeding today's price (veteran critique, pick B1).
+      weight: 0,
+      note: days > MINE_MAX_DAYS ? 'Your earlier check of the same search' : 'Your earlier check of the same search, for reference'
     })
   }
 
@@ -163,7 +163,9 @@ export function buildBlend (input: BlendInput): Blend {
  * Whether listing the sources says more than the verdict's own line, which
  * already shows the cheapest listing and poe.ninja's price.
  */
-export function sourcesAddAnything (blend: Blend, headlineFrom?: 'listings' | 'blend'): boolean {
+export type HeadlineFrom = 'listings' | 'blend' | 'buyout'
+
+export function sourcesAddAnything (blend: Blend, headlineFrom?: HeadlineFrom): boolean {
   // The list is what explains a blended headline.
   if (headlineFrom === 'blend') return true
   if (blend.agreement === 'mixed' || blend.agreement === 'disagree') return true
@@ -183,8 +185,11 @@ export function sourcesAddAnything (blend: Blend, headlineFrom?: 'listings' | 'b
  * exact search sells for, and other sources can't see its rolls, so they only
  * move the headline when listings are thin or missing.
  */
-export function headlinePrice (blend: Blend, insight: Insight): { chaos: number, from: 'listings' | 'blend' } | null {
+export function headlinePrice (blend: Blend, insight: Insight): { chaos: number, from: HeadlineFrom } | null {
   if (insight.range && insight.confidence === 'high') return { chaos: insight.range.fair, from: 'listings' }
+  // Thin listings: a price anyone can buy at right now beats a blend nobody
+  // asked for (veteran critique, pick B1). poe.ninja sits beside it.
+  if (insight.range && insight.buyout != null) return { chaos: insight.buyout, from: 'buyout' }
   if (blend.fair != null) {
     // Nobody pays more than an instant buyout that's sitting there, whatever other sources say.
     if (insight.ceiling != null && blend.fair > insight.ceiling) return { chaos: insight.ceiling, from: 'listings' }

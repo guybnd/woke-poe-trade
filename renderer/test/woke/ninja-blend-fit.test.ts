@@ -9,14 +9,14 @@ vi.mock('@/web/Config', () => ({
   poeWebApi: () => 'www.pathofexile.com'
 }))
 
-/* eslint-disable import/first */
+/* eslint-disable import-x/first */
 import { createPresets } from '@/web/price-check/filters/create-presets'
 import { buildInsight } from '@/web/woke/price-insight/insight'
 import type { InsightListing } from '@/web/woke/price-insight/insight'
 import { buildBlend, headlinePrice } from '@/web/woke/price-insight/sources'
 import { ninjaFitsSearch } from '@/web/woke/price-insight/search-scope'
 import type { ParsedItem } from '@/parser'
-/* eslint-enable import/first */
+/* eslint-enable import-x/first */
 
 const NOW = Date.parse('2026-11-05T12:00:00Z')
 const OPTS = { divine: 180, now: NOW }
@@ -44,7 +44,8 @@ function headline (listings: InsightListing[], ninja: { chaos: number, gaps: num
 
 describe('headline', () => {
   it('never sits below the cheapest trusted listing', () => {
-    expect(headline(rows(1000, 4), { chaos: 100, gaps: 0 })).toEqual({ chaos: 1000, from: 'listings' })
+    // Instant buyouts lead when listings are thin (pick B1).
+    expect(headline(rows(1000, 4), { chaos: 100, gaps: 0 })).toEqual({ chaos: 1000, from: 'buyout' })
     expect(headline(rows(1000, 4, { hasFee: false }), { chaos: 100, gaps: 0 })).toEqual({ chaos: 1000, from: 'listings' })
   })
 
@@ -52,7 +53,7 @@ describe('headline', () => {
     const insight = buildInsight([...rows(100, 2), ...rows(300, 2)], OPTS)
     const blend = buildBlend({ insight, ninja: { chaos: 150, gaps: 0, fits: false }, now: NOW })
     expect(blend.points.find(p => p.key === 'ninja')?.weight).toBe(0)
-    expect(headlinePrice(blend, insight)?.from).toBe('listings')
+    expect(headlinePrice(blend, insight)).toEqual({ chaos: 100, from: 'buyout' })
   })
 
   it('does not let a lone bait listing set the price of a corrupted unique', () => {
@@ -75,6 +76,26 @@ describe('headline', () => {
     const insight = buildInsight([...rows(100, 2, stash), ...rows(300, 2, stash)], OPTS)
     const blend = buildBlend({ insight, ninja: { chaos: 150, gaps: 0, fits: true }, now: NOW })
     expect(headlinePrice(blend, insight)?.from).toBe('blend')
+  })
+
+  it('leads with the cheapest instant buyout over a blend when listings are thin', () => {
+    // Two whispers at 80c, buyouts from 100c, poe.ninja far above: the buyout, not a blend.
+    const insight = buildInsight([...rows(80, 2, { hasFee: false }), ...rows(100, 1), ...rows(140, 1)], OPTS)
+    const blend = buildBlend({ insight, ninja: { chaos: 180, gaps: 0 }, mine: { chaos: 500, ts: NOW - 3600e3 }, now: NOW })
+    expect(insight.confidence).not.toBe('high')
+    expect(headlinePrice(blend, insight)).toEqual({ chaos: 100, from: 'buyout' })
+    // Your own earlier check is listed but never counted.
+    expect(blend.points.find(p => p.key === 'mine')?.weight).toBe(0)
+  })
+
+  it('ignores one instant buyout far above a wall of whispers', () => {
+    for (const [ask, buy] of [[100, 300], [100, 1000], [2, 8]]) {
+      const insight = buildInsight([...rows(ask, 6, { hasFee: false }), ...rows(buy, 1)], OPTS)
+      const blend = buildBlend({ insight, now: NOW })
+      expect(insight.buyout).toBeUndefined()
+      expect(headlinePrice(blend, insight)?.from).not.toBe('buyout')
+      expect(headlinePrice(blend, insight)!.chaos).toBeLessThan(ask * 1.35)
+    }
   })
 
   it('falls back to poe.ninja when nothing is listed, even off target', () => {
@@ -118,6 +139,17 @@ Corrupted`)
     expect(ninjaFitsSearch(clean, stats(clean), 'not-corrupted')).toBe(true)
     expect(ninjaFitsSearch(corrupted, stats(corrupted), 'any')).toBe(false)
     expect(ninjaFitsSearch(corrupted, stats(corrupted), 'corrupted')).toBe(false)
+  })
+
+  // poe.ninja's unique price is for the plain item, not one with a mod added
+  // from the search line (an implicit, an enchant).
+  it('is false when the search asks for an added mod', () => {
+    const text = fixture('items/unique-kaoms-heart.txt').replace('40(20-40)%', '23(20-40)%')
+    const kaom = parseItem(text)
+    const added = { statRef: '+# to maximum Life', kind: 'implicit', tradeId: ['implicit.stat_3299347043'], min: 30, max: '', disabled: false } as never
+    expect(ninjaFitsSearch(kaom, stats(kaom), undefined, false, [added])).toBe(false)
+    const off = { ...(added as object), disabled: true } as never
+    expect(ninjaFitsSearch(kaom, stats(kaom), undefined, false, [off])).toBe(true)
   })
 
   it('counts a good property roll', () => {

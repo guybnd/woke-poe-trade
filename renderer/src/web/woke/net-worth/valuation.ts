@@ -51,11 +51,18 @@ export interface Priced {
   gaps?: number
   // poe.ninja priced it today and on none of the days before (prices.ts).
   oneDay?: boolean
+  // A card: the most it can be worth for how often it drops (shared/card-cap.ts).
+  cap?: number
   // The app's own saved price on each day before today, oldest first, in
   // chaos (history.ts): what a spike is checked against.
   history?: Array<number | null>
 }
-export type PriceOf = (item: StashItemLike) => Priced | null
+// identify: the unique an unidentified one is, when it's valued as that one
+// (prices.ts identifyUnid).
+export interface PriceOf {
+  (item: StashItemLike): Priced | null
+  identify?: (item: StashItemLike) => string | null
+}
 
 // The same thing in any tab, counted together.
 export interface ValuedLine {
@@ -107,6 +114,9 @@ export interface Valuation {
   // since the last read is still worth what you said.
   ignoredKeys?: string[]
   ownPrices?: Record<string, number>
+  // Unidentified uniques counted under their own name (PriceOf.identify):
+  // the key older reads kept them by, for diffStash.
+  unidMoved?: Array<{ from: string, to: string, count: number }>
 }
 
 // Your prices and ignored items for one league, by itemKey.
@@ -114,6 +124,8 @@ export interface PricePrefs {
   // Chaos for one.
   prices: Record<string, number>
   ignored: string[]
+  // Prices and ignores moved to unidentified uniques' own keys (unidPrefs).
+  unidKeys?: true
 }
 export const emptyPrefs = (): PricePrefs => ({ prices: {}, ignored: [] })
 
@@ -202,6 +214,20 @@ function spikeOnly (ninja: number, p: { graph?: Array<number | null>, history?: 
   return typeof step === 'number' ? { chaos: step, since: Date.now(), kind: 'spike' } : null
 }
 
+// A card poe.ninja prices over what its drop rate allows: a fake, no price.
+export const overCardCap = (p: Pick<Priced, 'chaos' | 'cap'>) => p.cap != null && p.chaos > p.cap
+
+// A card priced over what its drop rate allows (shared/card-cap.ts). `held`:
+// the other checks' hold, whose "usual" price stands when it's under the cap
+// (it can be an earlier fake over it). Else the last solid price under the
+// cap, else nothing.
+function overCap (ninja: number, p: Priced, held: { chaos: number, since: number, kind: HoldKind } | null, prev: Baseline[string] | undefined, now: number): { chaos: number, since: number, kind: HoldKind } | null {
+  if (p.cap == null || !(ninja > p.cap)) return held
+  if (held && held.chaos <= p.cap) return held
+  const ref = prev?.ref != null && prev.ref > 0 && prev.ref <= p.cap ? prev.ref : 0
+  return { chaos: ref, since: prev?.heldKind === 'drop-rate' && prev.heldSince != null ? prev.heldSince : now, kind: 'drop-rate' }
+}
+
 // One item's price with your prices on top. null: no price.
 // `guard`: the last read, so a jump in a thin market is held (holdJump).
 // `hold`: false for an ignored item, which counts for nothing and is never held.
@@ -216,9 +242,9 @@ export function priceItem (item: StashItemLike, priceOf: PriceOf, prefs: PricePr
   // With no last read, the spike on poe.ninja's own line still counts.
   const held = !hold
     ? null
-    : guard
-      ? holdJump(ninjaChaos, ninja, guard.before?.[key], guard.now)
-      : spikeOnly(ninjaChaos, ninja)
+    : overCap(ninjaChaos, ninja, guard
+        ? holdJump(ninjaChaos, ninja, guard.before?.[key], guard.now)
+        : spikeOnly(ninjaChaos, ninja), guard?.before?.[key], guard?.now ?? Date.now())
   const out: ItemPrice = { chaos: held?.chaos ?? ninjaChaos, category: ninja.category, graph: ninja.graph, ninja: ninjaChaos, mine: false, variant: ninja.variant }
   if (held) {
     out.heldSince = held.since
@@ -282,6 +308,45 @@ export function itemKey (item: StashItemLike): string {
   return parts.filter(Boolean).join('|')
 }
 
+// The item as the stash counts it: an unidentified unique PriceOf.identify
+// knows goes by its own name (so its key is the identified one's).
+export function stashItem<T extends StashItemLike> (item: T, identify?: PriceOf['identify']): T {
+  const unid = identify?.(item)
+  return unid ? { ...item, name: unid } : item
+}
+
+export function stashKey (item: StashItemLike, identify?: PriceOf['identify']): string {
+  return itemKey(stashItem(item, identify))
+}
+
+// Your price or ignore typed for an unidentified unique went by its base's key
+// ("Leather Belt" for an unidentified Headhunter): it moves to its own key,
+// once. The base keeps it only while other items in the stash still go by
+// that key (they shared it, so it was theirs too).
+export function unidPrefs (prefs: PricePrefs, items: readonly StashItemLike[], identify: PriceOf['identify']): PricePrefs {
+  const moved = new Map<string, Set<string>>()
+  const stays = new Set<string>()
+  for (const raw of items) {
+    const item = stashItem(raw, identify)
+    const from = itemKey(raw)
+    if (item === raw) { stays.add(from); continue }
+    const to = moved.get(from) ?? new Set<string>()
+    to.add(itemKey(item))
+    moved.set(from, to)
+  }
+  const prices = new Map(Object.entries(prefs.prices))
+  const ignored = new Set(prefs.ignored)
+  for (const [from, tos] of moved) {
+    const price = prices.get(from)
+    for (const to of tos) {
+      if (price != null && !prices.has(to)) prices.set(to, price)
+      if (ignored.has(from)) ignored.add(to)
+    }
+    if (!stays.has(from)) { prices.delete(from); ignored.delete(from) }
+  }
+  return { prices: Object.fromEntries(prices), ignored: [...ignored], unidKeys: true }
+}
+
 export function itemLabel (item: StashItemLike): string {
   const base = isUniqueFrame(item.frame) && item.name ? item.name : isRolledMap(item) ? mapBase(item) : item.typeLine
   if (isRolledMap(item)) return `${base} (${item.mapTier ? `T${item.mapTier}, ` : ''}${item.frame === 2 ? 'rare' : 'magic'})`
@@ -300,9 +365,17 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
   const ignoredLines = new Map<string, ValuedLine>()
   const ignored = new Set(prefs.ignored)
   let unpriced = 0
+  const moved = new Map<string, { from: string, to: string, count: number }>()
   for (const tab of tabs) {
-    for (const item of tab.items) {
+    for (const raw of tab.items) {
+      const item = stashItem(raw, priceOf.identify)
       const key = itemKey(item)
+      if (item !== raw) {
+        const from = itemKey(raw)
+        const m = moved.get(`${from}\n${key}`) ?? { from, to: key, count: 0 }
+        m.count += raw.stack
+        moved.set(`${from}\n${key}`, m)
+      }
       const off = ignored.has(key)
       // An ignored item counts for nothing: no hold, so it can't outlive it.
       const price = priceItem(item, priceOf, prefs, key, off ? undefined : guard, !off)
@@ -350,7 +423,7 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
     chaos += line.chaos
   }
   const sorted = (m: Map<string, ValuedLine>) => [...m.values()].sort((a, b) => b.chaos - a.chaos || a.name.localeCompare(b.name))
-  return { chaos, byCategory, lines: sorted(lines), unpriced, unpricedLines: sorted(unpricedLines), ignoredLines: sorted(ignoredLines), ignoredKeys: [...ignored], ownPrices: { ...prefs.prices } }
+  return { chaos, byCategory, lines: sorted(lines), unpriced, unpricedLines: sorted(unpricedLines), ignoredLines: sorted(ignoredLines), ignoredKeys: [...ignored], ownPrices: { ...prefs.prices }, ...(moved.size ? { unidMoved: [...moved.values()] } : {}) }
 }
 
 // What a read held, small enough to keep: count and unit price per thing.
@@ -365,11 +438,13 @@ export type Baseline = Record<string, { name: string, icon: string, count: numbe
 export const BASELINE_V2 = '\u0000v2'
 // Rolled maps keyed by their base (2026-11-23).
 export const BASELINE_V3 = '\u0000v3'
+// Unidentified uniques keyed by their own name (2026-11-25).
+export const BASELINE_V4 = '\u0000v4'
 
 // Unpriced and ignored items too, so giving one a price or un-ignoring it later
 // isn't booked as new.
 export function baselineOf (v: Valuation): Baseline {
-  const out: Baseline = { [BASELINE_V2]: { name: '', icon: '', count: 0, unitChaos: 0 }, [BASELINE_V3]: { name: '', icon: '', count: 0, unitChaos: 0 } }
+  const out: Baseline = { [BASELINE_V2]: { name: '', icon: '', count: 0, unitChaos: 0 }, [BASELINE_V3]: { name: '', icon: '', count: 0, unitChaos: 0 }, [BASELINE_V4]: { name: '', icon: '', count: 0, unitChaos: 0 } }
   for (const l of [...v.lines, ...(v.unpricedLines ?? []), ...(v.ignoredLines ?? [])]) {
     const had = out[l.key]
     out[l.key] = { name: l.name, icon: l.icon, count: (had?.count ?? 0) + l.count, unitChaos: Math.max(had?.unitChaos ?? 0, l.unitChaos), cat: l.category }
@@ -420,11 +495,23 @@ export function diffStash (before: Baseline, after: Valuation, at: number): Stas
   // A baseline from before rolled maps had a price kept them by their own
   // names: under their new key they aren't new.
   const oldMaps = !before[BASELINE_V3]
+  // One from before unidentified uniques went by their own name kept them by
+  // their base: the ones it had aren't new under their name, nor gone under it.
+  const gone = new Map<string, number>()
+  const came = new Map<string, number>()
+  if (!before[BASELINE_V4]) {
+    for (const m of after.unidMoved ?? []) {
+      const n = Math.min(m.count, (before[m.from]?.count ?? 0) - (gone.get(m.from) ?? 0))
+      if (n <= 0) continue
+      gone.set(m.from, (gone.get(m.from) ?? 0) + n)
+      came.set(m.to, (came.get(m.to) ?? 0) + n)
+    }
+  }
   let cash = 0
   for (const l of after.lines) {
     if (old && l.mine && before[l.key] == null) continue
     if (oldMaps && before[l.key] == null && ROLLED_MAP_KEY.test(l.key)) continue
-    const had = before[l.key]?.count ?? 0
+    const had = (before[l.key]?.count ?? 0) + (came.get(l.key) ?? 0)
     if (l.count > had && l.unitChaos > 0) {
       added.push({ key: l.key, name: l.name, icon: l.icon, count: l.count - had, chaos: (l.count - had) * l.unitChaos, cat: l.category, ...(l.tipName && l.tipName !== l.name ? { tip: l.tipName } : {}) })
       if (l.category === 'currency') cash += (l.count - had) * l.unitChaos
@@ -437,14 +524,14 @@ export function diffStash (before: Baseline, after: Valuation, at: number): Stas
     for (const l of after.unpricedLines ?? []) {
       if (ignored.has(l.key)) continue
       if (oldMaps && before[l.key] == null && ROLLED_MAP_KEY.test(l.key)) continue
-      const had = before[l.key]?.count ?? 0
+      const had = (before[l.key]?.count ?? 0) + (came.get(l.key) ?? 0)
       if (l.count > had) unpricedIn.push({ key: l.key, name: l.name, icon: l.icon, count: l.count - had, chaos: 0, cat: l.category })
     }
   }
   for (const [key, b] of Object.entries(before)) {
-    if (key === BASELINE_V2 || key === BASELINE_V3 || ignored.has(key)) continue
+    if (key === BASELINE_V2 || key === BASELINE_V3 || key === BASELINE_V4 || ignored.has(key)) continue
     const left = now.get(key)
-    const has = left?.count ?? 0
+    const has = (left?.count ?? 0) + (gone.get(key) ?? 0)
     const unit = left ? left.unitChaos : after.ownPrices?.[key] ?? b.unitChaos
     if (has < b.count && unit > 0) {
       removed.push({ key, name: b.name, icon: b.icon, count: b.count - has, chaos: (b.count - has) * unit, ...((left?.category ?? b.cat) ? { cat: left?.category ?? b.cat } : {}) })

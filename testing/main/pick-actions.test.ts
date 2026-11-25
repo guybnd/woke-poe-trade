@@ -26,4 +26,11 @@ describe('pickActions', () => {
     const picked = pickActions([a('F1', 'test-only'), a('F1', 'copy-item')], () => {})
     expect(picked.map(p => p.action.type)).toEqual(['copy-item'])
   })
+
+  it('sees one key however its modifiers are ordered', () => {
+    const dropped: string[] = []
+    const picked = pickActions([a('Alt + Shift + F', 'copy-item', 'first'), a('Shift + Alt + F', 'stash-search', 'second')], k => dropped.push(k))
+    expect(picked.map(p => p.id)).toEqual(['first'])
+    expect(dropped).toEqual(['Shift + Alt + F'])
+  })
 })

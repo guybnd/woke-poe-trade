@@ -12,6 +12,19 @@ export interface NewItemQuery {
   // Currency and cards are priced on the bulk exchange once the item data
   // knows their trade tag; gems by level and quality. Others by mods.
   kind?: 'stack' | 'gem'
+  // The trade site names a Foulborn unique and a Vestigial base without the
+  // word, and finds them by a filter instead.
+  foulborn?: true
+  vestigial?: true
+}
+
+const FOULBORN = /^Foulborn /
+const VESTIGIAL = /^Vestigial /
+
+function unmark (q: NewItemQuery): NewItemQuery {
+  if (q.name && FOULBORN.test(q.name)) q = { ...q, name: q.name.replace(FOULBORN, ''), foulborn: true }
+  if (VESTIGIAL.test(q.type)) q = { ...q, type: q.type.replace(VESTIGIAL, ''), vestigial: true }
+  return q
 }
 
 const SEPARATOR = '--------'
@@ -32,12 +45,12 @@ export function newItemQuery (rawText: string): NewItemQuery | null {
 
   switch (rarity) {
     case 'Unique':
-      return lines.length === 2
+      return unmark(lines.length === 2
         ? { name: lines[0], type: lines[1], rarity: 'unique' }
         // Unidentified: only the base shows.
-        : { type: lines[0], rarity: 'unique' }
+        : { type: lines[0], rarity: 'unique' })
     case 'Rare':
-      return lines.length === 2 ? { type: lines[1], rarity: 'nonunique' } : null
+      return lines.length === 2 ? unmark({ type: lines[1], rarity: 'nonunique' }) : null
     case 'Currency':
     case 'Divination Card':
       return lines.length === 1 ? { type: lines[0], kind: 'stack' } : null
@@ -59,10 +72,17 @@ export function newItemNote (q: NewItemQuery): string {
 }
 
 function queryFields (q: NewItemQuery) {
+  const misc = {
+    ...(q.foulborn ? { foulborn_item: { option: 'true' } } : {}),
+    ...(q.vestigial ? { vestigial: { option: 'true' } } : {})
+  }
   return {
     ...(q.name ? { name: q.name } : {}),
     type: q.type,
-    filters: q.rarity ? { type_filters: { filters: { rarity: { option: q.rarity } } } } : {}
+    filters: {
+      ...(q.rarity ? { type_filters: { filters: { rarity: { option: q.rarity } } } } : {}),
+      ...(Object.keys(misc).length ? { misc_filters: { filters: misc } } : {})
+    }
   }
 }
 
