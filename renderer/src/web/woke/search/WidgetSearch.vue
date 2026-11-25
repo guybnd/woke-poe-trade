@@ -281,6 +281,8 @@ import { SESSION_STORY_TYPE } from '../session-story/widget'
 import { hostRequest } from '../shared/host'
 import { NET_WORTH_TYPE } from '../net-worth/widget'
 import { DOCS as NET_WORTH_DOCS, glanceKey, isGlance } from '../net-worth/glance'
+import { lineOutKey } from '../net-worth/line-out-store'
+import type { LineOutDoc } from '../net-worth/line-out-store'
 import type { Glance } from '../net-worth/glance'
 import { visceraLookup } from './lookups/viscera'
 import { flipsLookup } from './lookups/flips'
@@ -722,9 +724,18 @@ const salesList = shallowRef<Sale[] | null>(null)
 const listedDoc = shallowRef<PendingDoc | null>(null)
 // Its Still cheapest? checks.
 const cheapestChecks = shallowRef<CheapestDoc | null>(null)
+// Sales and listings you left out of Net worth's totals.
+const lineOut = shallowRef<{ sale: ReadonlySet<string>, listed: ReadonlySet<string> }>({ sale: new Set(), listed: new Set() })
 function loadSales () {
   const league = AppConfig().leagueId
+  lineOut.value = { sale: new Set(), listed: new Set() }
   if (!league || !isWidgetTypeOn(AppConfig(), NET_WORTH_TYPE)) { salesList.value = null; listedDoc.value = null; cheapestChecks.value = null; return }
+  hostRequest('doc-get', { collection: NET_WORTH_DOCS, key: lineOutKey(league) })
+    .then((d) => {
+      const doc = d as Partial<LineOutDoc> | null
+      if (doc?.league === league) lineOut.value = { sale: new Set(Array.isArray(doc.sale) ? doc.sale : []), listed: new Set(Array.isArray(doc.listed) ? doc.listed : []) }
+    })
+    .catch(() => {})
   hostRequest('doc-get', { collection: NET_WORTH_DOCS, key: cheapestKey(league) })
     .then((d) => { cheapestChecks.value = isCheapestDoc(d) && d.league === league ? d : null })
     .catch(() => { cheapestChecks.value = null })
@@ -850,7 +861,7 @@ function flipsConfig (): ScarabFlipWidget | null {
   return (config.widgets.find(w => w.wmType === SCARAB_FLIP_TYPE) as ScarabFlipWidget | undefined) ?? null
 }
 const netWorthWidget = () => AppConfig().widgets.find(w => w.wmType === NET_WORTH_TYPE) as { staleDays?: number, countListed?: boolean } | undefined
-const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, forbiddenLookup(forbidden.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime(), runBoard.value, lastRun.value), salesLookup(salesList.value), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), valdoLookup(name => AppConfig().language === 'en' && knownItem('UNIQUE', name)), webLookup])
+const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, forbiddenLookup(forbidden.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime(), runBoard.value, lastRun.value), salesLookup(salesList.value, lineOut.value.sale), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value, lineOut.value.listed), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), valdoLookup(name => AppConfig().language === 'en' && knownItem('UNIQUE', name)), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))

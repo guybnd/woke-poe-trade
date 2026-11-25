@@ -40,7 +40,8 @@ function row (r: PendingRow, checks: CheapestDoc | null): LookupRow {
 // `doc`: the league's saved listings, or null with Net worth off or never read.
 // `counted`: false when Net worth leaves your listings out of its total.
 // `checks`: the league's Still cheapest? checks.
-export function listedLookup (doc: PendingDoc | null, sales: Sale[] | null, staleDays?: number, counted = true, checks: CheapestDoc | null = null): Lookup {
+// `out`: listings you left out (line-out-store.ts): out of the totals, as in Net worth.
+export function listedLookup (doc: PendingDoc | null, sales: Sale[] | null, staleDays?: number, counted = true, checks: CheapestDoc | null = null, out: ReadonlySet<string> = new Set()): Lookup {
   return (query, ctx) => {
     if (!doc?.listings.length) return []
     const rates: Rates = { chaos: 1 }
@@ -54,7 +55,7 @@ export function listedLookup (doc: PendingDoc | null, sales: Sale[] | null, stal
     if (!rows.length) return []
     const cards: LookupCard[] = []
     if (wantsTotals(query)) {
-      const t = pendingTotals(rows)
+      const t = pendingTotals(rows.filter(r => !out.has(r.item.id)))
       cards.push({
         id: 'answer:listed',
         group: 'Answer',

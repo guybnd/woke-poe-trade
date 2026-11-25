@@ -424,7 +424,7 @@ const rateShown = computed(() => {
 const rateFrom = computed(() => { const at = rates.value.at; return rateWindow.value === 'today' ? startOfDay(at) : at - (RATE_WINDOWS.find(w => w.id === rateWindow.value)?.ms ?? 3_600_000) })
 const hubRow = computed(() => {
   const r = rateShown.value.r
-  const sold = totals(salesInWindow(sales.value, rateFrom.value, rates.value.at), saleRates.value)
+  const sold = totals(salesInWindow(countedSales.value, rateFrom.value, rates.value.at), saleRates.value)
   if (r.hubOnlyMs < 60_000 && !sold.count) return null
   return {
     ms: r.hubOnlyMs,
