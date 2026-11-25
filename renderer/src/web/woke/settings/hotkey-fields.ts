@@ -156,7 +156,7 @@ export function hotkeyFields (config: Config): HotkeyField[] {
         initMapModsWidget(w)
         w.hotkey = v
         config.widgets.push(w)
-        placedHere.add(w.wmId)
+        placedHere.set(w.wmId, w.wmType)
       }
     })
   }

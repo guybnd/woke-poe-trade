@@ -27,7 +27,9 @@ function merge3 (mine: unknown, base: unknown, live: unknown): unknown {
 
 // Widgets this settings window placed itself (setting the map check key before
 // Map mods exists): Undo back to before that takes them out again.
-export const placedHere = new Set<number>()
+// By id, with the type placed, so an id another tool takes later is never
+// mistaken for it. Cleared each time the window opens.
+export const placedHere = new Map<number, string>()
 
 // `drop`: widgets to take out (placed here, and Undo went back before them).
 export function mergeConfigs (next: Config, since: Config, live: Config, drop?: ReadonlySet<number>): Config {
@@ -58,9 +60,11 @@ export function mergeConfigs (next: Config, since: Config, live: Config, drop?: 
     if (!taken) widgets.push(mine)
     else if (taken.wmType !== mine.wmType) {
       const moved = { ...mine, wmId: ++top }
-      if (placedHere.has(mine.wmId)) placedHere.add(moved.wmId)
+      if (placedHere.has(mine.wmId)) { placedHere.delete(mine.wmId); placedHere.set(moved.wmId, moved.wmType) }
       widgets.push(moved)
     }
   }
-  return { ...merged, widgets: drop?.size ? widgets.filter(w => !drop.has(w.wmId)) : widgets } as Config
+  // Only a widget still of the type placed under that id.
+  const dropped = (w: Widget) => !!drop?.has(w.wmId) && placedHere.get(w.wmId) === w.wmType
+  return { ...merged, widgets: drop?.size ? widgets.filter(w => !dropped(w)) : widgets } as Config
 }

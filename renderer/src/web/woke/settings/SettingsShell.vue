@@ -137,7 +137,7 @@ function restore (snap: string) {
   lastApplied = snap
   // A widget this window placed after that snapshot goes again (Undo of
   // setting the map check key). Widgets added elsewhere stay.
-  const drop = new Set([...placedHere].filter(id => !restored.widgets.some(w => w.wmId === id)))
+  const drop = new Set([...placedHere.keys()].filter(id => !restored.widgets.some(w => w.wmId === id)))
   commit(snap, since, drop)
   for (const id of drop) placedHere.delete(id)
   nextTick(() => { restoring = false })
@@ -151,6 +151,7 @@ watch(clone, () => {
 
 watch(() => props.widget.wmWants, (wants) => {
   if (wants === 'show') {
+    placedHere.clear()
     clone.value = reactive(JSON.parse(JSON.stringify(AppConfig()))) as Config
     ensureWokeConfig(clone.value)
     lastApplied = snapshot()

@@ -1,6 +1,6 @@
 // The settings window's copy of the config merged back into the live one.
 import { describe, expect, it } from 'vitest'
-import { mergeConfigs } from '@/web/woke/settings/merge-live'
+import { mergeConfigs, placedHere } from '@/web/woke/settings/merge-live'
 import type { Config } from '@/web/Config'
 
 const widget = (wmId: number, wmType: string, extra: Record<string, unknown> = {}) =>
@@ -46,7 +46,18 @@ describe('mergeConfigs', () => {
     const since = config([widget(1, 'price-check'), widget(2, 'woke-map-mods'), widget(3, 'woke-lab')])
     const live = config([widget(1, 'price-check'), widget(2, 'woke-map-mods'), widget(3, 'woke-lab')])
     const restored = config([widget(1, 'price-check')])
+    placedHere.clear()
+    placedHere.set(2, 'woke-map-mods')
     const out = mergeConfigs(restored, since, live, new Set([2]))
+    expect(out.widgets.map(w => w.wmType)).toEqual(['price-check', 'woke-lab'])
+  })
+
+  it('never drops another tool that now has a placed id', () => {
+    placedHere.clear()
+    placedHere.set(2, 'woke-map-mods')
+    const since = config([widget(1, 'price-check')])
+    const live = config([widget(1, 'price-check'), widget(2, 'woke-lab')])
+    const out = mergeConfigs(config([widget(1, 'price-check')]), since, live, new Set([2]))
     expect(out.widgets.map(w => w.wmType)).toEqual(['price-check', 'woke-lab'])
   })
 })

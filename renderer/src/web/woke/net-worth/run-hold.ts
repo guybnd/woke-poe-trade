@@ -55,7 +55,10 @@ export async function holdHovered (clipboard: string, league: string, points: re
   // it's known; with several it can't be priced (the clipboard has no art).
   if (parsed.rarity === ItemRarity.Unique && parsed.isUnidentified && s.frame !== 3) {
     const names = uniquesOnBase(s.baseType)
-    if (names.length !== 1) { toast(`Unidentified ${s.baseType}: more than one unique uses this base, so it has no price. Identify it or stash it`); return }
+    if (names.length !== 1) {
+      toast(names.length ? `Unidentified ${s.baseType}: more than one unique uses this base, so it has no price. Identify it or stash it` : `Unidentified ${s.baseType}: no known unique uses this base yet. Identify it or stash it`)
+      return
+    }
     s = { ...s, frame: 3, name: names[0] }
   }
   // Rares have no price and no name listings share; currency is counted by

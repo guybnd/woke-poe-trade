@@ -84,7 +84,7 @@ describe('hotkey fields', () => {
       hotkeyFields(c).find(f => f.id === 'map-check-default')!.set('Alt + J')
       expect(c.widgets.find(w => w.wmType === 'woke-map-mods')?.wmId).toBe(8)
       // Remembered as placed here, so Undo can take it out again.
-      expect(placedHere.has(8)).toBe(true)
+      expect(placedHere.get(8)).toBe('woke-map-mods')
     } finally {
       liveWidgets.length = 0
     }
