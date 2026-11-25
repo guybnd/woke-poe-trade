@@ -14,7 +14,7 @@
       </template>
     </DockItem>
     <!-- One click listener for the panel's own buttons (data-act). -->
-    <WPanel ref="panel" :title="config.wmTitle || 'Regex library'" icon="stash" width="22rem" max-height="70vh" @click="onAction">
+    <WPanel ref="panel" :keys="LIST_KEYS" :title="config.wmTitle || 'Regex library'" icon="stash" width="22rem" max-height="70vh" @click="onAction">
       <template #toolbar>
         <WField v-model="filter" icon="fas fa-search" placeholder="Filter by name, tag, category…" class="grow" />
         <WButton size="sm" icon="fas fa-plus" title="Add a search string" data-qa="regex-new" data-act="new">New</WButton>
@@ -50,6 +50,10 @@
           </button>
         </template>
       </SavedTree>
+      <!-- Until any string has a hotkey (shared/hints.ts). -->
+      <WTipLine v-if="config.entries.length && !hasHotkeys && config.enableHotkeys" :id="REGEX_KEY_HINT">
+        Give a string a hotkey (<i class="fas fa-pen" aria-label="Edit" />, then Hotkey): press it in game and it goes into the stash search
+      </WTipLine>
       <WEmpty v-if="!tree.rows.value.length && config.entries.length && searching" icon="fas fa-filter">
         Nothing matches "{{ filter }}".
         <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
@@ -80,6 +84,9 @@ export default { widget: widgetRegexLibrarySpec }
 </script>
 
 <script setup lang="ts">
+import { savedListKeys } from '../shared/saved-list'
+import WTipLine from '../ui/WTipLine.vue'
+import { retireHint } from '../shared/hints'
 import { inject, computed, watch, shallowRef, defineAsyncComponent } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { pushHostConfig, saveConfig } from '@/web/Config'
@@ -100,6 +107,9 @@ import DockItem from '../dock/DockItem.vue'
 import { saveDock } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
 import { useZone } from '../shared/zone'
+
+// The window's "?": the saved list's keys.
+const LIST_KEYS = savedListKeys({ copy: true })
 
 const props = defineProps<{
   config: RegexLibraryWidget
@@ -137,6 +147,9 @@ const glance = computed(() => [...props.config.entries]
   .slice(0, 6))
 
 const hasHotkeys = computed(() => props.config.entries.some(e => e.hotkey != null))
+// The hotkey tip is done once any string has one.
+const REGEX_KEY_HINT = 'regex-entry-hotkey'
+watch(hasHotkeys, (on) => { if (on) retireHint(REGEX_KEY_HINT) }, { immediate: true })
 
 watch(() => props.config.enableHotkeys, () => { pushHostConfig() })
 

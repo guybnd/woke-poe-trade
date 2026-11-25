@@ -85,6 +85,9 @@ export interface BootOptions {
   // page that loads under a mouse that doesn't move. Otherwise every boot
   // starts with the mouse in the middle, over nothing.
   keepMouse?: boolean
+  // Show the one-off tips (shared/hints.ts). Off by default, so they don't
+  // turn up in other tests' screens.
+  tips?: boolean
 }
 
 let defaultConfigJson: string | null = null
@@ -229,6 +232,7 @@ export class Overlay {
     const config = await this.defaultConfig()
     config.leagueId = 'Testleague'
     config.woke = { ...(config.woke ?? {}), setupDone: !opts.firstRun, off: opts.off ?? [] }
+    if (!opts.tips) config.woke.hints = { off: true }
     // whatsNew: every line unseen, or just the ids listed.
     if (opts.whatsNew !== true) config.woke.seenNews = NEWS.map(n => n.id).filter(id => !(Array.isArray(opts.whatsNew) && opts.whatsNew.includes(id)))
     let nextId = Math.max(0, ...config.widgets.map((w: { wmId: number }) => w.wmId)) + 1

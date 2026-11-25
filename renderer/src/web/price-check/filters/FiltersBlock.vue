@@ -66,6 +66,10 @@
         <filter-add-mod v-if="canAddMods && !onStrip" :filters="filters" :map="isMap" />
         <input type="submit" class="hidden" />
       </form>
+      <!-- woke: teaches the row keys until one is used (shared/hints.ts). -->
+      <w-tip-line v-if="hasActions && filteredStats.length > 1" :id="MOD_KEYS_HINT">
+        <w-kbd keys="Ctrl + Click" /> a mod: search only it<template v-if="anyExcludable"> · <w-kbd keys="Alt + Click" /> leave it out</template> · <w-kbd keys="Right-click" /> tiers and more
+      </w-tip-line>
       <!-- woke: the toggles keep their label on one line; with no room one moves to a second line. -->
       <div class="w-pc-stat-foot flex flex-wrap gap-x-4" :class="$style.foot">
         <button @click="statsVisibility.disabled = !statsVisibility.disabled" class="w-pc-collapse bg-gray-700 px-2 py-1 text-gray-400 leading-none rounded-b w-40 whitespace-nowrap"
@@ -88,10 +92,11 @@ import FilterAddMod from './FilterAddMod.vue'
 import { poeOn as poeMode, poeKit } from '@/web/woke/price-insight/window-style'
 import type { PoeSection } from '@/web/woke/price-insight/poe-kind'
 import UnknownModifier from './UnknownModifier.vue'
-import { WSegmented } from '@/web/woke/ui'
+import { WSegmented, WKbd } from '@/web/woke/ui'
+import WTipLine from '@/web/woke/ui/WTipLine.vue'
 import { ItemFilters, FilterOrGroup, StatFilter } from './interfaces'
 import { ParsedItem, ItemRarity, ItemCategory } from '@/parser'
-import { useStatActions } from '@/web/woke/price-insight/stat-actions'
+import { useStatActions, MOD_KEYS_HINT } from '@/web/woke/price-insight/stat-actions'
 
 export default defineComponent({
   name: 'FiltersBlock',
@@ -103,6 +108,8 @@ export default defineComponent({
     FilterAddMod,
     UnknownModifier,
     WSegmented,
+    WKbd,
+    WTipLine,
     UiToggle
   },
   props: {
@@ -270,6 +277,9 @@ export default defineComponent({
 
     return {
       t,
+      MOD_KEYS_HINT,
+      hasActions: !!actions,
+      anyExcludable: computed(() => !!actions && filteredStats.value.some(f => !f.group && actions.canExclude(f))),
       poeMode,
       poeKit,
       statHeader,

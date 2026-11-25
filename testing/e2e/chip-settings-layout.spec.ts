@@ -3,15 +3,25 @@
 import { test, expect } from './harness'
 
 const SLOW = { timeout: 15_000 }
-const t = (time: string) => `2026/11/05 ${time} 3725546 1186a8a3`
-const lines = [
-  `${t('15:00:34')} [DEBUG Client 25552] Generating level 60 area "HideoutArenaSearingExarch" with seed 1`,
-  `${t('15:00:34')} [INFO Client 25552] : You have entered Searing Hideout.`,
-  `${t('15:01:00')} [DEBUG Client 25552] Generating level 83 area "MapWorldsStrand" with seed 7`,
-  `${t('15:01:00')} [INFO Client 25552] : You have entered Strand.`,
-  `${t('15:04:00')} [DEBUG Client 25552] Generating level 60 area "HideoutArenaSearingExarch" with seed 1`,
-  `${t('15:04:00')} [INFO Client 25552] : You have entered Searing Hideout.`
-]
+// The map plays from just before now: the app keeps the maps an earlier spec
+// saved, and the session widget skips log lines older than the last one (see
+// glance-bar-fields.spec.ts). Fixed old times left the dock with no session.
+function logLines () {
+  const start = Date.now() - 20_000
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const t = (sec: number) => {
+    const d = new Date(start + sec * 1000)
+    return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} 3725546 1186a8a3`
+  }
+  return [
+    `${t(0)} [DEBUG Client 25552] Generating level 60 area "HideoutArenaSearingExarch" with seed 1`,
+    `${t(0)} [INFO Client 25552] : You have entered Searing Hideout.`,
+    `${t(6)} [DEBUG Client 25552] Generating level 83 area "MapWorldsStrand" with seed 7`,
+    `${t(6)} [INFO Client 25552] : You have entered Strand.`,
+    `${t(16)} [DEBUG Client 25552] Generating level 60 area "HideoutArenaSearingExarch" with seed 1`,
+    `${t(16)} [INFO Client 25552] : You have entered Searing Hideout.`
+  ]
+}
 
 test('the dock card\'s After a map settings fit the card', async ({ overlay }) => {
   await overlay.boot({
@@ -21,7 +31,7 @@ test('the dock card\'s After a map settings fit the card', async ({ overlay }) =
       w.chipPlace = 'center'
     }
   })
-  await overlay.log(lines)
+  await overlay.log(logLines())
   await expect(overlay.dockIcon('session-story')).toBeVisible(SLOW)
   const gear = overlay.page.locator('[data-chip-gear-card]')
   await expect(async () => {

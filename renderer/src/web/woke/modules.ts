@@ -7,6 +7,7 @@
 //
 // Kept free of Vue component and widget imports: Config.ts imports this file.
 import { reactive, shallowReactive } from 'vue'
+import type { HintsConfig } from './shared/hints'
 import { BOOKMARKS_TARGET } from './item-lookup/lookup'
 import type { HarvestSwapConfig } from './harvest-swap/families'
 import type { DockConfig } from './dock/dock'
@@ -173,6 +174,8 @@ export interface WokeModulesConfig {
   newsOff?: boolean
   // What time every per hour counts (shared/rate-time.ts); unset: carried over.
   rateTime?: RateTime
+  // Tips for hidden gestures: shown, retired, switched off (shared/hints.ts).
+  hints?: HintsConfig
 }
 
 export interface WelcomeState {

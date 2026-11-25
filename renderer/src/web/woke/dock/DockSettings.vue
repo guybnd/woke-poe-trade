@@ -13,6 +13,12 @@
     <w-setting-row label="What's new after updates" hint="Off: no What's new icon, no NEW seals in All tools, no count on the rail.">
       <w-toggle :model-value="!woke.newsOff" @update:model-value="setNewsOff(woke, !$event)" />
     </w-setting-row>
+    <w-setting-row label="Tips" hint="A short line at the foot of a window or a tooltip for a key or click you might not know. Each one goes once you've used it. Never in a map.">
+      <div class="flex items-center gap-2">
+        <w-toggle :model-value="!woke.hints?.off" @update:model-value="setTipsOff(!$event)" />
+        <w-button v-if="tipsUsed" size="sm" @click="tipsAgain">Show tips again</w-button>
+      </div>
+    </w-setting-row>
     <w-setting-row label="Stand the row on its side">
       <w-toggle v-model="dock.vertical" />
     </w-setting-row>
@@ -56,6 +62,17 @@ function ensureDock (): DockConfig {
   return woke.dock
 }
 ensureDock()
+
+// Tips (shared/hints.ts), on the working copy like the rest of this page.
+const tipsUsed = computed(() => !!(woke.value.hints?.done?.length || Object.keys(woke.value.hints?.shows ?? {}).length))
+function setTipsOff (off: boolean) {
+  const w = ensureWokeConfig(props.config).woke
+  w.hints = { ...w.hints, off: off || undefined }
+}
+function tipsAgain () {
+  const w = ensureWokeConfig(props.config).woke
+  w.hints = { off: w.hints?.off }
+}
 const dock = computed<DockConfig>(() => props.config.woke?.dock ?? ensureDock())
 const woke = computed(() => ensureWokeConfig(props.config).woke)
 // Net worth comes with the opt-in stash reader: listed only while that's on.
