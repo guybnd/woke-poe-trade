@@ -213,8 +213,8 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
   if (model && kind === 'card') model = await withCardRarity(model, ref.name, market)
   if (model && kind === 'gem') model = await withGemExtras(model, ref)
   if (model && kind === 'unique') model = await withUniqueExtras(model, ref, market)
-  if (model && kind === 'item' && pack.bases?.[ref.name]) return await withBaseExtras(model, ref, market)
   if (kind === 'item' && / Map$/.test(ref.name)) model = await withMapCards(model, ref.name)
+  if (model && kind === 'item' && pack.bases?.[ref.name]) return await withBaseExtras(model, ref, market)
   if (model && (kind === 'item' || kind === 'card')) model = await withHeld(model, ref.name, market)
   return { model, market }
 }
@@ -259,13 +259,16 @@ async function withMapCards (model: TipModel | null, map: string): Promise<TipMo
 // as with their prices, ones that aren't random drops marked (Guy's pick I7).
 async function withBaseExtras (model: TipModel, ref: ItemTipRef, market: TipMarket | null): Promise<{ model: TipModel, market: TipMarket | null, uniques?: TipBaseUnique[] }> {
   const category = ITEM_BY_REF('ITEM', ref.name)?.[0]?.craftable?.category
+  // A flask, jewel or ward base has no tier line, but still its uniques.
   const key = tierClassKey(category, pack.bases?.[ref.name])
-  if (!key) return { model, market }
-  try {
-    const [{ topTierLine }, tiers] = await Promise.all([import('./base-tip-extras'), loadModTiers(), loadFile('drops')])
-    const line = tiers ? topTierLine(tiers, key) : null
-    if (line) model = { ...model, sections: [...model.sections, [line]] }
-  } catch {}
+  if (key) {
+    try {
+      const [{ topTierLine }, tiers] = await Promise.all([import('./base-tip-extras'), loadModTiers()])
+      const line = tiers ? topTierLine(tiers, key) : null
+      if (line) model = { ...model, sections: [...model.sections, [line]] }
+    } catch {}
+  }
+  await loadFile('drops')
   const names = uniquesOnBase(ref.name)
   if (!names.length) return { model, market }
   price ??= usePrice()
@@ -284,7 +287,9 @@ async function withUniqueExtras (model: TipModel, ref: ItemTipRef, market: TipMa
     const [{ uniqueExtraSections }] = await Promise.all([import('./unique-tip-extras'), loadFile('items'), loadFile('vestigial')])
     price ??= usePrice()
     const p = price
-    const one = market && !market.varies && !market.unidOnly && !market.range ? market.chaos : null
+    // A card gives a random roll: one variant's price isn't what the set makes.
+    const rolled = !!ref.variant && (pack.uniques?.[ref.name]?.v.length ?? 0) > 1
+    const one = market && !rolled && !market.varies && !market.unidOnly && !market.range ? market.chaos : null
     const sections = uniqueExtraSections(ref, pack, {
       card: name => p.priceOf(name, { ns: 'DIVINATION_CARD' })?.chaos ?? null,
       unique: one,

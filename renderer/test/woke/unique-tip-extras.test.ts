@@ -29,6 +29,10 @@ describe('unique tooltip extras', () => {
     const lines = text(uniqueExtraSections({ name: 'Headhunter' }, pack, noPrices))
     expect(lines).toContain('From card: The Fiend (11), corrupted')
   })
+  it('compares no corrupted reward with the plain unique\'s price', () => {
+    const prices = { card: () => 1000, unique: 50000, format: (c: number) => `${c}c` }
+    expect(text(uniqueExtraSections({ name: 'Headhunter' }, pack, prices))).toContain('From card: The Fiend (11), corrupted · set 11000c')
+  })
   it('adds nothing for a unique with none of it', () => {
     expect(uniqueExtraSections({ name: 'Nonexistent Thing' }, pack, noPrices)).toEqual([])
   })

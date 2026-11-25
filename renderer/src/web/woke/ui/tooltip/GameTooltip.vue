@@ -161,7 +161,7 @@
           </div>
           <div v-if="moreUniques" class="w-faint">and {{ moreUniques }} more</div>
           <!-- Guy (tooltip audit I7): a boss-only unique can't be chanced, and must say so. -->
-          <div v-if="lookup.uniques.some(u => u.drop)" class="w-faint" data-no-chance>Marked ones never drop at random, so a Chance Orb can't make them.</div>
+          <div v-if="shownUniques.some(u => u.drop)" class="w-faint" data-no-chance>Marked ones never drop at random, so a Chance Orb can't make them.</div>
         </footer>
         <footer v-if="lookup.effects?.length" :class="$style.uniques">
           <div v-for="(e, i) in shownEffects" :key="i" :class="[$style.effectRow, { [$style.effectOn]: e.hovered }]">

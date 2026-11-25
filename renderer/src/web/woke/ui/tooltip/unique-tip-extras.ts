@@ -51,7 +51,8 @@ export function uniqueExtraSections (
       if (each != null) {
         const set = each * c.stack
         line.push(part(' · set ', 'label'), part(prices.format(set), 'value'))
-        const worth = prices.unique
+        // A corrupted reward isn't worth the plain unique's price.
+        const worth = c.corrupted ? null : prices.unique
         if (worth != null && worth > 0) {
           const diff = Math.round((1 - set / worth) * 100)
           if (diff >= 3) line.push(part(` · ${diff}% cheaper`, 'label'))
