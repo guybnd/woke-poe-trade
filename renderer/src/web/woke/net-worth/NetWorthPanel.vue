@@ -336,6 +336,7 @@ import ListedView from './ListedView.vue'
 import { loadPending, pendingDoc, pendingReading, refreshPending } from './pending-store'
 import { listedAt, pendingRows, pendingTotals, rowWorth, DEFAULT_STALE_DAYS } from './pending'
 import { lineOutDoc, loadLineOut, outIdsOf } from './line-out-store'
+import { identifyUnid } from './prices'
 import type { ChartMap, ChartSale } from './chart-marks'
 import { listedWorth as listedWorthDoc, listedWorthKey } from './pending-glance'
 import RunsView from './RunsView.vue'
@@ -1016,7 +1017,7 @@ const groupSalesOf = computed(() => {
     const first = g.reads[0]
     const last = g.reads[g.reads.length - 1]
     const list = first == null ? [] : salesInWindow(sales.value, readBefore.value.get(first) ?? null, last)
-    out.set(g.key, { sales: list, lines: withoutSold(g.lines, list) })
+    out.set(g.key, { sales: list, lines: withoutSold(g.lines, list, identifyUnid) })
   }
   return out
 })

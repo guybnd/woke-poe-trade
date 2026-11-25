@@ -124,6 +124,8 @@ export interface PricePrefs {
   // Chaos for one.
   prices: Record<string, number>
   ignored: string[]
+  // Prices and ignores moved to unidentified uniques' own keys (unidPrefs).
+  unidKeys?: true
 }
 export const emptyPrefs = (): PricePrefs => ({ prices: {}, ignored: [] })
 
@@ -306,6 +308,45 @@ export function itemKey (item: StashItemLike): string {
   return parts.filter(Boolean).join('|')
 }
 
+// The item as the stash counts it: an unidentified unique PriceOf.identify
+// knows goes by its own name (so its key is the identified one's).
+export function stashItem<T extends StashItemLike> (item: T, identify?: PriceOf['identify']): T {
+  const unid = identify?.(item)
+  return unid ? { ...item, name: unid } : item
+}
+
+export function stashKey (item: StashItemLike, identify?: PriceOf['identify']): string {
+  return itemKey(stashItem(item, identify))
+}
+
+// Your price or ignore typed for an unidentified unique went by its base's key
+// ("Leather Belt" for an unidentified Headhunter): it moves to its own key,
+// once. The base keeps it only while other items in the stash still go by
+// that key (they shared it, so it was theirs too).
+export function unidPrefs (prefs: PricePrefs, items: readonly StashItemLike[], identify: PriceOf['identify']): PricePrefs {
+  const moved = new Map<string, Set<string>>()
+  const stays = new Set<string>()
+  for (const raw of items) {
+    const item = stashItem(raw, identify)
+    const from = itemKey(raw)
+    if (item === raw) { stays.add(from); continue }
+    const to = moved.get(from) ?? new Set<string>()
+    to.add(itemKey(item))
+    moved.set(from, to)
+  }
+  const prices = new Map(Object.entries(prefs.prices))
+  const ignored = new Set(prefs.ignored)
+  for (const [from, tos] of moved) {
+    const price = prices.get(from)
+    for (const to of tos) {
+      if (price != null && !prices.has(to)) prices.set(to, price)
+      if (ignored.has(from)) ignored.add(to)
+    }
+    if (!stays.has(from)) { prices.delete(from); ignored.delete(from) }
+  }
+  return { prices: Object.fromEntries(prices), ignored: [...ignored], unidKeys: true }
+}
+
 export function itemLabel (item: StashItemLike): string {
   const base = isUniqueFrame(item.frame) && item.name ? item.name : isRolledMap(item) ? mapBase(item) : item.typeLine
   if (isRolledMap(item)) return `${base} (${item.mapTier ? `T${item.mapTier}, ` : ''}${item.frame === 2 ? 'rare' : 'magic'})`
@@ -327,10 +368,9 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
   const moved = new Map<string, { from: string, to: string, count: number }>()
   for (const tab of tabs) {
     for (const raw of tab.items) {
-      const unid = priceOf.identify?.(raw)
-      const item = unid ? { ...raw, name: unid } : raw
+      const item = stashItem(raw, priceOf.identify)
       const key = itemKey(item)
-      if (unid) {
+      if (item !== raw) {
         const from = itemKey(raw)
         const m = moved.get(`${from}\n${key}`) ?? { from, to: key, count: 0 }
         m.count += raw.stack

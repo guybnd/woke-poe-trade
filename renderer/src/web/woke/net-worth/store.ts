@@ -9,7 +9,7 @@ import { identifyUnid, ninjaPriceOf } from './prices'
 import { historyRev, loadPriceHistory } from './history'
 import { lastWokePrices } from '../market/hook'
 import {
-  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceYesterday, tabSetOf, valueStash, withTabShift
+  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceYesterday, tabSetOf, unidPrefs, valueStash, withTabShift
 } from './valuation'
 import { stashGains, stashGainsStrict, gainsKey } from './gains'
 import { classify, resolveSpends } from './spend'
@@ -192,6 +192,7 @@ async function loadLeague (id: string) {
     loadedFor = null
     console.warn("[net-worth] couldn't read the saved history; reads aren't counted until it can")
   }
+  moveUnidPrefs(id)
   await readMarks(Date.now())
 }
 
@@ -199,6 +200,7 @@ async function loadLeague (id: string) {
 async function countRead (id: string, readAt: number) {
   if (history.value.countedReadAt != null && history.value.countedReadAt >= readAt) return
   stash.value = await (hostRequest('stash-cache', { league: id }) as Promise<CachedStash | null>).catch(() => stash.value)
+  moveUnidPrefs(id)
   // Counted with the saved prices a spike is checked against.
   await loadHistory()
   const v = valuation.value
@@ -358,7 +360,15 @@ export function setSpendMark (at: number, mark: SpendMark | null, amountChaos?: 
 function cleanPrefs (p: PricePrefs | null): PricePrefs {
   const prices: Record<string, number> = {}
   for (const [k, c] of Object.entries(p?.prices ?? {})) if (typeof c === 'number' && Number.isFinite(c) && c >= 0) prices[k] = c
-  return { prices, ignored: Array.isArray(p?.ignored) ? p.ignored.filter(k => typeof k === 'string') : [] }
+  return { prices, ignored: Array.isArray(p?.ignored) ? p.ignored.filter(k => typeof k === 'string') : [], ...(p?.unidKeys ? { unidKeys: true as const } : {}) }
+}
+
+// Prices and ignores typed on an unidentified unique's old key move to its
+// own (valuation.ts unidPrefs), once, when the stash and your prices are in.
+function moveUnidPrefs (id: string) {
+  const tabs = stash.value?.tabs
+  if (prefsFor !== id || loadedFor !== id || !tabs?.length || prefs.value.unidKeys) return
+  savePrefs(unidPrefs(prefs.value, tabs.flatMap(t => t.items), identifyUnid))
 }
 
 export const pricePrefs = computed(() => prefs.value)
@@ -370,6 +380,7 @@ async function retryPrefs (id: string) {
   if (own === undefined || loadedFor !== id) return
   prefs.value = cleanPrefs(own)
   prefsFor = id
+  moveUnidPrefs(id)
 }
 
 // false: not loaded (yet), nothing changed.

@@ -50,3 +50,31 @@ describe('an unidentified unique', () => {
     expect(d.unpricedOut).toBeUndefined()
   })
 })
+
+describe('an unidentified unique elsewhere in Net worth', () => {
+  const unid = { name: '', typeLine: 'Heavy Belt', baseType: 'Heavy Belt', frame: 3, stack: 1, icon: 'x/Mageblood.png' }
+  const white = { ...unid, frame: 0, icon: 'x/Belt.png' }
+
+  it('its tab is worth what the total says, and an ignore on its own line counts', async () => {
+    const { valueByTab } = await import('@/web/woke/net-worth/ledger')
+    const tabs = [{ id: 't', name: 't', items: [unid, white] }]
+    expect(valueByTab(tabs, ninjaPriceOf())[0].chaos).toBe(40000)
+    expect(valueByTab(tabs, ninjaPriceOf(), { prices: {}, ignored: ['Mageblood Heavy Belt'] })[0].chaos).toBe(0)
+  })
+
+  it('selling it takes its own line out of the change list', async () => {
+    const { withoutSold } = await import('@/web/woke/net-worth/sales')
+    const lines = [{ key: 'Mageblood Heavy Belt', count: 1, chaos: 40000, dir: 'remove' as const }]
+    const sold = [{ id: 's', at: 1, name: '', typeLine: 'Heavy Belt', baseType: 'Heavy Belt', frameType: 3, icon: 'x/Mageblood.png', stack: 1, price: { amount: 200, currency: 'divine' } }]
+    expect(withoutSold(lines, sold, ninjaPriceOf().identify)).toEqual([])
+  })
+
+  it('a price typed on its base moves to its own line, once', async () => {
+    const { unidPrefs } = await import('@/web/woke/net-worth/valuation')
+    const prefs = { prices: { 'Heavy Belt': 30000 }, ignored: [] }
+    const moved = unidPrefs(prefs, [unid], ninjaPriceOf().identify)
+    expect(moved).toEqual({ prices: { 'Mageblood Heavy Belt': 30000 }, ignored: [], unidKeys: true })
+    // A white Heavy Belt shared that key: it keeps it too.
+    expect(unidPrefs(prefs, [unid, white], ninjaPriceOf().identify).prices).toEqual({ 'Heavy Belt': 30000, 'Mageblood Heavy Belt': 30000 })
+  })
+})
