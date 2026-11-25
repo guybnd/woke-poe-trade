@@ -9,13 +9,13 @@ import { identifyUnid, ninjaPriceOf } from './prices'
 import { historyRev, loadPriceHistory } from './history'
 import { lastWokePrices } from '../market/hook'
 import {
-  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceYesterday, tabSetOf, unidPrefs, valueStash, withTabShift
+  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceDayOf, sinceYesterday, tabSetOf, unidPrefs, valueStash, withTabShift
 } from './valuation'
 import { stashGains, stashGainsStrict, gainsKey } from './gains'
 import { classify, resolveSpends } from './spend'
 import type { SpendMark } from './spend'
 import { addPoint, keepDiff, topChanges, valueByTab } from './ledger'
-import { glanceKey, glanceRates, ledgerKey } from './glance'
+import { glanceKey, glanceRates, ledgerKey, sinceLabel } from './glance'
 import { keptSales, listedGlance, listedTotal, listedWorth } from './pending-glance'
 import { lineOutDoc, loadLineOut, outIdsOf } from './line-out-store'
 import type { Glance } from './glance'
@@ -97,6 +97,8 @@ export const summary = computed(() => {
   return {
     chaos: v.chaos,
     sinceYesterdayDiv: sinceYesterday(history.value, v.chaos, divine.value, now),
+    // The day that compares with (glance.ts sinceLabel: "since Tue" after a break).
+    sinceDay: sinceDayOf(history.value, now),
     perHourChaos: ratesAt(now).today.perHour,
     tabs: stash.value?.tabs.length ?? 0
   }
@@ -264,7 +266,7 @@ async function countRead (id: string, readAt: number) {
   await readMarks(Date.now())
   ledgerRef.value = nextLedger
   const todayDiv = sinceYesterday(next, v.chaos, divine.value, readAt)
-  const g = glanceAt(id, readAt, v.chaos, diff?.netChaos ?? null, todayDiv != null && divine.value ? todayDiv * divine.value : null)
+  const g = glanceAt(id, readAt, v.chaos, diff?.netChaos ?? null, todayDiv != null && divine.value ? todayDiv * divine.value : null, sinceDayOf(next, readAt))
   await hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(id), value: g }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: id, value: next }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: ledgerKey(id), value: nextLedger }).catch(() => {})
@@ -289,9 +291,11 @@ function listedNow (id: string): { listed?: number } {
 
 // The dock icon's number at a read (Ctrl+Space reads the saved one).
 
-function glanceAt (id: string, at: number, chaos: number, netChaos: number | null, todayChaos: number | null): Glance {
+function glanceAt (id: string, at: number, chaos: number, netChaos: number | null, todayChaos: number | null, fromDay?: string | null): Glance {
   const rates = ratesAt(at)
-  const g: Glance = { league: id, at, chaos, netChaos, divine: divine.value, perHourChaos: rates.today.perHour, rates: glanceRates(rates), todayChaos }
+  // Kept only after a break (yesterday is the plain "today").
+  const todayFrom = fromDay && sinceLabel(fromDay, at).label !== 'today' ? { todayFrom: fromDay } : {}
+  const g: Glance = { league: id, at, chaos, netChaos, divine: divine.value, perHourChaos: rates.today.perHour, rates: glanceRates(rates), todayChaos, ...todayFrom }
   glance.value = g
   return g
 }
@@ -301,7 +305,7 @@ function glanceAt (id: string, at: number, chaos: number, netChaos: number | nul
 watch(rateTime, () => {
   const last = glance.value
   if (!last || last.league !== loadedFor) return
-  const saved = glanceAt(last.league, last.at, last.chaos, last.netChaos, last.todayChaos ?? null)
+  const saved = glanceAt(last.league, last.at, last.chaos, last.netChaos, last.todayChaos ?? null, last.todayFrom)
   hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(last.league), value: saved }).catch(() => {})
 })
 
@@ -358,7 +362,7 @@ export function setSpendMark (at: number, mark: SpendMark | null, amountChaos?: 
     // The saved dock number follows, when this was the last read.
     const last = glance.value
     if (last && last.league === id) {
-      const saved = glanceAt(id, last.at, last.chaos, last.netChaos, last.todayChaos ?? null)
+      const saved = glanceAt(id, last.at, last.chaos, last.netChaos, last.todayChaos ?? null, last.todayFrom)
       await hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(id), value: saved }).catch(() => {})
     }
   })

@@ -593,14 +593,22 @@ export function recordRead (h: NetWorthHistory, v: Valuation, divine: number | n
 }
 
 // Divines now against the last read of an earlier day (each in its own day's rate).
+// After a break that day isn't yesterday: sinceDayOf names it, so the label
+// says "since Tue" (glance.ts sinceLabel) and not "today".
 export function sinceYesterday (h: NetWorthHistory, chaosNow: number, divineNow: number | null, at: number): number | null {
   if (!divineNow) return null
   const today = dayOf(at)
-  const earlier = Object.keys(h.days).filter(d => d < today).sort().pop()
+  const earlier = sinceDayOf(h, at)
   const prev = earlier ? h.days[earlier] : null
   if (!prev) return null
   const shift = h.tabShift?.day === today ? h.tabShift.div : 0
   return chaosNow / divineNow - prev.chaos / (prev.divine ?? divineNow) - shift
+}
+
+// The day "today" compares with: the last earlier day with a read ("YYYY-MM-DD").
+export function sinceDayOf (h: NetWorthHistory, at: number): string | null {
+  const today = dayOf(at)
+  return Object.keys(h.days).filter(d => d < today).sort().pop() ?? null
 }
 
 // A read of other tabs (tab picker): what they add or drop against the read
