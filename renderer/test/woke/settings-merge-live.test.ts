@@ -31,4 +31,11 @@ describe('mergeConfigs', () => {
     const next = config([widget(1, 'woke-lab', { runs: 1, hotkey: 'Alt + L' })])
     expect(mergeConfigs(next, since, live).widgets[0]).toMatchObject({ runs: 5, hotkey: 'Alt + L' })
   })
+
+  it('never replaces a live widget that has the same id as one this window placed', () => {
+    const since = config([widget(1, 'price-check')])
+    const live = config([widget(1, 'price-check'), widget(2, 'woke-lab', { runs: 5 })])
+    const next = config([widget(1, 'price-check'), widget(2, 'woke-map-mods')])
+    expect(mergeConfigs(next, since, live).widgets[1]).toMatchObject({ wmType: 'woke-lab', runs: 5 })
+  })
 })

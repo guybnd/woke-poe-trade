@@ -6,8 +6,10 @@ import type { Config } from '@/web/Config'
 import { addModule, removeModule } from '@/web/woke/modules'
 import type { ModuleDef } from '@/web/woke/modules'
 
+const liveWidgets: Array<{ wmId: number }> = []
+
 // Config pulls in every window; the code under test only needs a stand-in.
-vi.mock('@/web/Config', () => ({ AppConfig: () => ({ widgets: [] }), saveConfig: () => {}, pushHostConfig: () => {} }))
+vi.mock('@/web/Config', () => ({ AppConfig: () => ({ widgets: liveWidgets }), saveConfig: () => {}, pushHostConfig: () => {} }))
 
 function config (widgets: Array<Record<string, unknown>>): Config {
   return {
@@ -71,5 +73,17 @@ describe('hotkey fields', () => {
   it('leaves the map chip key out while the chip is off', () => {
     const c = config([{ wmType: 'woke-session-story', chipKey: 'Alt + C', chipPlace: 'off' }])
     expect(hotkeyFields(c).find(f => f.id.endsWith('-chipKey'))?.off).toBe(true)
+  })
+
+  it('places Map mods from its key past the live widget ids too', () => {
+    const c = config([{ wmType: 'price-check' }])
+    c.woke!.off = []
+    liveWidgets.push({ wmId: 1 }, { wmId: 7 })
+    try {
+      hotkeyFields(c).find(f => f.id === 'map-check-default')!.set('Alt + J')
+      expect(c.widgets.find(w => w.wmType === 'woke-map-mods')?.wmId).toBe(8)
+    } finally {
+      liveWidgets.length = 0
+    }
   })
 })

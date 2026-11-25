@@ -1,6 +1,7 @@
 // Every hotkey the app and the toolkit listen for, as editable fields over the
 // settings window's working copy of the config. The Hotkeys page lists these;
 // module pages edit the same fields, so the two can't disagree.
+import { AppConfig } from '@/web/Config'
 import type { Config } from '@/web/Config'
 import type { Widget } from '@/web/overlay/widgets'
 import { MODULES, isModuleOn, isRetiredWidgetType, isWidgetTypeOn } from '../modules'
@@ -147,7 +148,10 @@ export function hotkeyFields (config: Config): HotkeyField[] {
       off: false,
       get: () => MAP_CHECK_DEFAULT_KEY,
       set: (v) => {
-        const w = { wmId: Math.max(0, ...config.widgets.map(_ => _.wmId)) + 1, wmType: MAP_MODS_TYPE, wmTitle: '', wmWants: 'hide', wmZorder: null, wmFlags: [] } as unknown as MapModsWidget
+        // Past the live ids too: a widget added there since the last save
+        // isn't in this copy yet, and sharing its id would replace it.
+        const ids = [...config.widgets, ...AppConfig().widgets].map(_ => _.wmId)
+        const w = { wmId: Math.max(0, ...ids) + 1, wmType: MAP_MODS_TYPE, wmTitle: '', wmWants: 'hide', wmZorder: null, wmFlags: [] } as unknown as MapModsWidget
         initMapModsWidget(w)
         w.hotkey = v
         config.widgets.push(w)

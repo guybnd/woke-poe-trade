@@ -34,6 +34,8 @@ export function mergeConfigs (next: Config, since: Config, live: Config): Config
     const mine = next.widgets.find(w => w.wmId === l.wmId)
     if (!mine) return copy(l)
     const base = since.widgets.find(w => w.wmId === l.wmId)
+    // Another widget that got the same id live: never replace it.
+    if (!base && mine.wmType !== l.wmType) return copy(l)
     const w = (base ? merge3(mine, base, l) : mine) as Widget
     // Window-manager state lives in the live config, not in our copy.
     w.wmWants = l.wmWants
