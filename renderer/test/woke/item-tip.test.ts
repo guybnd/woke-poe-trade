@@ -86,17 +86,19 @@ describe('uniques with a pool of mods', () => {
     expect(sure.length).toBeGreaterThan(0)
     expect(unique('Mask of the Tribunal')).toEqual(expect.arrayContaining(sure))
   })
-  it('keeps the first mods of a long list and counts the rest', () => {
+  it('shows a long list as a sample of its pool, not as the item\'s mods', () => {
     const lines = unique("Watcher's Eye")
     expect(lines).toContain('(4-6)% increased maximum Life')
-    expect(lines).toContain('and 84 more mods')
+    expect(lines).toContain('Rolls from 90 possible mods, such as:')
+    expect(lines.indexOf('Rolls from 90 possible mods, such as:')).toBeLessThan(lines.indexOf('(4-6)% increased maximum Life'))
+    expect(lines.some(l => l.includes('more mods'))).toBe(false)
     // Its drop note (Elder only) comes on top of the cut list.
     const drop = dropLines(pack.drops!["Watcher's Eye"]).map(text)
     expect(lines.filter(l => !drop.includes(l)).length).toBeLessThan(12)
   })
   it('lists every mod of a unique that really has this many', () => {
     const lines = unique('The Dancing Duo')
-    expect(lines.some(l => l.includes('more mods'))).toBe(false)
+    expect(lines.some(l => l.includes('possible mods'))).toBe(false)
     expect(lines).toContain('Manifested Dancing Dervishes disables both weapon slots')
   })
 })

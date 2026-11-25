@@ -222,3 +222,4 @@
 - Boss runs: each drop works like the other profit lists. Hover for ⊘ to leave it out of the loot (it stays, struck, in place of the old On box) and ⋯, right-click for the same menu, or click its price to set yours.
 - Net worth runs: a kit line you take off before Start stays in the list, struck, so you can count it again from its ⊘.
 - Session analytics, the dock card's "After a map" settings now fit the card: each label sits on one line above its options, and options that don't fit wrap to a second line instead of running off the edge ("Middle of the screen", "All the time in game").
+- Item hover tooltip: uniques that roll their mods from a big pool (Militant Faith, Forbidden Flame and Flesh, Watcher's Eye, Megalomaniac and others) no longer show six of the pool's lines as if they were the item's mods. The lines now sit under a line such as "Rolls from 90 possible mods, such as:", so they read as examples of the pool.
