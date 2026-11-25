@@ -592,7 +592,10 @@ watchEffect(() => {
   if (!f) return
   const t = template.value
   const list = t && excludeOn.value && props.addMods && isMap.value ? templateNotMods(t, onMapRefs.value) : []
-  f.templateNot = list.length ? list : undefined
+  // Written only when it changes: a new key on the filters counts as an edit,
+  // which stops the price check's own first search (any item, not just maps).
+  if (list.length) f.templateNot = list
+  else if (f.templateNot) f.templateNot = undefined
 })
 const excludeTitle = computed(() => {
   const t = template.value
