@@ -63,7 +63,7 @@ import { ParsedItem, ItemCategory, ItemRarity } from '@/parser'
 import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
 import { sideRow, type SideRow } from './side-row'
 import { familiesOf, familyRows, type Family } from '@/web/woke/related-family/family'
-import { cardsFor, rewardOf, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resolveParts } from '@/web/woke/related-family/recipe'
+import { isRelatedGroup, cardsFor, rewardOf, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resolveParts } from '@/web/woke/related-family/recipe'
 import { loadTipDrops, loadTipItems, vItemTip } from '@/web/woke/ui/tooltip/item-tip'
 import type { TipPack } from '@/web/woke/ui/tooltip/tip-content'
 import { randomDropsOnBase } from '@/web/woke/loot-filter/random-drops'
@@ -442,7 +442,7 @@ function priceText (price: CurrencyValue) {
 const currencyText = (price: CurrencyValue) => `${priceText(price)} ${price.currency === 'div' ? 'div' : 'c'}`
 
 function getItemPrices (queryId: string) {
-  const dropEntry = ITEM_DROP.find(entry => entry.query.includes(queryId))
+  const dropEntry = ITEM_DROP.find(entry => entry.query.includes(queryId) && isRelatedGroup(entry))
   if (!dropEntry) return null
 
   const out = {
@@ -590,9 +590,15 @@ export default defineComponent({
       if (!res || !('related' in res)) return []
       const out: Section[] = []
       const group = 'group' in res ? res.group : undefined
-      if (res.related.length > 1) out.push({ key: 'related', title: res.label ?? `Related to ${props.item!.info.name}`, family: res.label != null, rows: res.related, sum: res.label == null && group ? setSum(group) : undefined })
+      // A "Related to" list leaves out the checked item: it isn't related to
+      // itself. A family keeps it (where it ranks), and so does a fragment set
+      // (the set reads whole, with its total).
+      const sum = res.label == null && group ? setSum(group) : undefined
+      const related = res.label != null || sum ? res.related : res.related.filter(r => !r.highlight)
+      if (related.some(r => !r.highlight)) out.push({ key: 'related', title: res.label ?? `Related to ${props.item!.info.name}`, family: res.label != null, rows: related, sum })
       for (const fam of otherFamilies(props.item!)) out.push({ key: `family:${fam.label}`, title: fam.label, family: true, rows: fam.related })
-      if ('dropRelated' in res && res.dropRelated.length > 1) out.push({ key: 'drop-related', title: `Related to ${props.item!.info.name}`, rows: res.dropRelated })
+      const dropRelated = 'dropRelated' in res ? res.dropRelated.filter(r => !r.highlight) : []
+      if (dropRelated.length) out.push({ key: 'drop-related', title: `Related to ${props.item!.info.name}`, rows: dropRelated })
       // A card doesn't drop its reward, it's turned in for it (Guy: "what does this drops in even mean").
       const card = props.item!.category === ItemCategory.DivinationCard
       if (res.items.length) out.push({ key: 'drops', title: card ? `${props.item!.info.name} gives` : `Drops in ${props.item!.info.name}`, rows: res.items })

@@ -91,8 +91,9 @@ function dropRecipes (drops: DropEntry[], find: Find, used: Set<DropEntry>): Uni
   for (const g of drops) {
     const q = g.query.map(keyName)
     // A helper item that turns each unique into the item at the same place:
-    // Flesh of Xesht, a vial, a Harbinger scroll.
-    const helperAt = q.findIndex(k => k.ns === 'ITEM' && (k.name === 'Flesh of Xesht' || k.name.startsWith('Vial of ') || k.name.endsWith(' Scroll')))
+    // Flesh of Xesht, a vial, a Harbinger scroll, a Coin of Restoration or
+    // Desecration (Fleshrender <-> Skysunder).
+    const helperAt = q.findIndex(k => k.ns === 'ITEM' && (k.name === 'Flesh of Xesht' || k.name.startsWith('Vial of ') || k.name.endsWith(' Scroll') || k.name === 'Coin of Restoration' || k.name === 'Coin of Desecration'))
     if (helperAt >= 0) {
       const helper = look(g.query[helperAt])
       const from = g.query.filter((_, i) => i !== helperAt)
@@ -255,7 +256,7 @@ export function isFragmentSet (group: DropEntry): boolean {
 // currencies and Orb of Conflict (poedb: The Maven drops it). Timeless
 // splinters make the emblems, which the splinter recipe shows. Their items
 // are never shown as "Drops from" or "Drops in".
-const NOT_DROPS = new Set(['Essence of Insanity', 'Primal Crystallised Lifeforce', 'Golden Oil', 'Lesser Eldritch Ember', 'Lesser Eldritch Ichor', 'Timeless Eternal Empire Splinter'])
+const NOT_DROPS = new Set(['Ancient Orb', 'Essence of Insanity', 'Primal Crystallised Lifeforce', 'Golden Oil', 'Lesser Eldritch Ember', 'Lesser Eldritch Ichor', 'Timeless Eternal Empire Splinter'])
 
 // Items in a real drop group that poedb doesn't back: Perfect Forest Tiger is
 // an Azmeri corpse, not a drop of the King in the Mists.
@@ -268,6 +269,21 @@ export function dropsAreReal (group: DropEntry): boolean {
 // What a group really drops.
 export function realDrops (group: DropEntry): string[] {
   return dropsAreReal(group) ? group.items.filter(id => !NOT_DROP_ITEMS.has(id)) : []
+}
+
+// Upstream groups that aren't families, only things used together or a theme:
+// the Eldritch orbs with Exalted Orb, Orb of Annulment and the two Farric
+// beasts; ways to link (Orb of Fusing, an omen, a thread, two beasts);
+// Watcher's Eye with a beast; item quantity uniques; levelling uniques. A
+// recipe part or a shared theme isn't "related", so the price check never
+// lists them as "Related to" (Guy, 2026-11-25: Exalted Orb listed Farric
+// Wolf Alpha). Also Ancient Orb with Astragali, a reliquary key and Valdo's
+// Puzzle Box, a theme (ways to chase Headhunter and Mageblood), not one source
+// of those uniques, so its items aren't read as drops either (NOT_DROPS). Keyed by the group's first item.
+const NOT_RELATED = new Set(['Eldritch Orb of Annulment', 'Orb of Fusing', "Watcher's Eye", "Ventor's Gamble", 'Cast on Death Support', 'Ancient Orb'])
+
+export function isRelatedGroup (group: DropEntry): boolean {
+  return !NOT_RELATED.has(keyName(group.query[0]).name)
 }
 
 // For tests: the book is built once per game data load.

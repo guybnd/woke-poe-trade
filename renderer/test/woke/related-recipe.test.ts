@@ -2,7 +2,7 @@
 // recipes, upgrades, combines, splinters; card rewards and fragment sets.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { ITEM_BY_REF, ITEM_DROP } from '@/assets/data'
-import { cardsFor, rewardOf, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resetRecipeCache, resolveParts } from '@/web/woke/related-family/recipe'
+import { isRelatedGroup, cardsFor, rewardOf, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resetRecipeCache, resolveParts } from '@/web/woke/related-family/recipe'
 import { loadGameData } from '../helpers/game-data'
 import { BOSS_DROPS, bossOf } from '@/web/woke/related-family/boss-drops'
 
@@ -178,5 +178,35 @@ describe('boss drops (checked on poedb)', () => {
   it('finds the Delve boss of a Delve unique', () => {
     expect(bossOf('Hale Negator')?.boss).toBe('Kurgal, the Blackblooded')
     expect(bossOf('Headhunter')).toBeNull()
+  })
+})
+
+describe('related groups', () => {
+  // The first group an item is in, as the price check's "Related to" picks it.
+  const relatedTo = (id: string) => ITEM_DROP.find(g => g.query.includes(id) && isRelatedGroup(g))?.query.map(q => q.split('::')[1].split(' // ')[0]) ?? []
+  it('never lists recipe parts or a theme as related (Exalted Orb, Farric beasts)', () => {
+    expect(relatedTo('ITEM::Exalted Orb')).toEqual([])
+    expect(relatedTo('ITEM::Orb of Annulment')).toEqual([])
+    expect(relatedTo('CAPTURED_BEAST::Farric Wolf Alpha')).toEqual([])
+    expect(relatedTo('ITEM::Orb of Fusing')).toEqual([])
+    expect(relatedTo('UNIQUE::Goldrim // Leather Cap')).toEqual([])
+    expect(relatedTo("UNIQUE::Watcher's Eye // Prismatic Jewel")).toEqual([])
+    expect(relatedTo('UNIQUE::Goldwyrm // Nubuck Boots')).toEqual([])
+    expect(relatedTo('ITEM::Ancient Orb')).toEqual([])
+  })
+
+  it('never says Ancient Orb drops Headhunter', () => {
+    expect(ITEM_DROP.some(g => g.query.includes('ITEM::Ancient Orb') && realDrops(g).length)).toBe(false)
+  })
+
+  it('reads a Coin of Restoration or Desecration as an upgrade both ways', () => {
+    expect(names('Fleshrender')).toEqual(expect.arrayContaining([['Upgrade to Skysunder', ['Fleshrender', 'Coin of Restoration']]]))
+    expect(names('Skysunder')).toEqual(expect.arrayContaining([['Upgrade to Fleshrender', ['Skysunder', 'Coin of Desecration']]]))
+  })
+  it('keeps real families and sets', () => {
+    expect(relatedTo('ITEM::Sacrifice at Dawn')).toContain('Sacrifice at Midnight')
+    expect(relatedTo("UNIQUE::Farrul's Fur // Triumphant Lamellar")).toContain("Farrul's Chase")
+    // Watcher's Eye keeps its real source: the Uber Elder fragments.
+    expect(ITEM_DROP.some(g => isRelatedGroup(g) && realDrops(g).some(id => id.startsWith("UNIQUE::Watcher's Eye")))).toBe(true)
   })
 })
