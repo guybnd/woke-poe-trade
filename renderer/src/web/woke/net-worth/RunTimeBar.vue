@@ -40,7 +40,8 @@ const spent = shallowRef<RunTime | null>(null)
 watch(() => [props.startAt, props.end] as const, ([from, to]) => {
   runTimeIn(from, to).then((read) => {
     if (props.startAt !== from || props.end !== to) return
-    const t = timeOrKept(read, props.kept)
+    // kept is only ever what Stop saved.
+    const t = timeOrKept(read, props.kept, true)
     spent.value = t
     emit('spent', t)
   }).catch(() => {})

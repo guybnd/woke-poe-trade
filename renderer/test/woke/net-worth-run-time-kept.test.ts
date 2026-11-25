@@ -27,3 +27,13 @@ describe('a past run whose Client.txt days are gone', () => {
     expect(timeOrKept(null, kept)?.ms).toEqual(kept)
   })
 })
+
+describe('a past run whose Client.txt lost some of its days', () => {
+  it('keeps the time Stop saved when it has more play than the read', () => {
+    const kept = { map: 3 * H, play: 0, hub: H, off: 0 }
+    const partial = { ms: { map: H, play: 0, hub: 0, off: 3 * H }, fights: 0 }
+    expect(timeOrKept(partial, kept, true)?.ms).toEqual(kept)
+    // The live run's glance doesn't win over a read with play in it.
+    expect(timeOrKept(partial, kept)).toBe(partial)
+  })
+})
