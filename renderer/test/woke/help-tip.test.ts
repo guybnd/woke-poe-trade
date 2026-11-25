@@ -116,6 +116,8 @@ describe('helpBlocks (help text format)', () => {
     expect(helpBlocks('- One\nAfter.').map(x => x.k)).toEqual(['ul', 'p'])
   })
   it('strips the markup for screen readers', () => {
-    expect(helpPlain('Lead.\n- **Has** with it\n- [[Shift + Click]] range')).toBe('Lead. Has with it. Shift + Click range')
+    expect(helpPlain('Lead.\n- **Has** with it\n- [[Shift + Click]] range')).toBe('Lead. Has with it. Shift + Click range.')
+    expect(helpPlain('Counts, first to last:\n- Typed\n- Estimates\n\nPrices from poe.ninja.')).toBe('Counts, first to last: Typed. Estimates. Prices from poe.ninja.')
+    expect(helpPlain('One.\n- Ends here.\n- Also.')).toBe('One. Ends here. Also.')
   })
 })

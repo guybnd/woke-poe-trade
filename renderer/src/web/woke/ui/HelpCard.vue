@@ -5,7 +5,7 @@
         <p v-for="(p, i) in paragraphs" :key="i" :class="[$style.lines, { [$style.more]: i > 0 }]">{{ p }}</p>
       </template>
       <template v-for="(b, i) in blocks" v-else :key="i">
-        <p v-if="b.k === 'p'" :class="i === 0 ? $style.lead : $style.next"><HelpInlines :parts="b.parts" /></p>
+        <p v-if="b.k === 'p'" :class="i === 0 ? $style.lead : [$style.next, $style.after]"><HelpInlines :parts="b.parts" /></p>
         <ul v-else :class="[$style.list, { [$style.next]: i > 0 }]">
           <li v-for="(item, j) in b.items" :key="j"><HelpInlines :parts="item" /></li>
         </ul>
@@ -84,9 +84,10 @@ onUnmounted(() => {
 .keysOnly { width: max-content; max-width: 300px; }
 .keys { display: grid; grid-template-columns: auto auto; gap: 4px 8px; align-items: center; }
 .more { margin-top: 6px !important; color: var(--w-dim); }
-/* Lead line, then bullets and follow-on lines a step dimmer; names in bold. */
+/* Lead line and bullets in full colour; later paragraphs (notes, credits) dimmer, as before. Names in bold. */
 .lead { color: var(--w-fg); }
 .next { margin-top: 5px !important; }
+.after { color: var(--w-dim); }
 .card b { font-weight: 600; color: var(--w-fg); }
 .list { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; }
 .list li { position: relative; padding-left: 12px; }

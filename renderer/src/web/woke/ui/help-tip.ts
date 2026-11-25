@@ -73,9 +73,10 @@ export function helpBlocks (text: string): HelpBlock[] {
 
 // The same text with the markup taken out, for screen readers and logs.
 export function helpPlain (text: string): string {
-  return helpBlocks(text).map(b => b.k === 'p'
-    ? b.parts.map(i => i.v).join('')
-    : b.items.map(it => it.map(i => i.v).join('')).join('. ')).join(' ')
+  const pieces = helpBlocks(text).flatMap(b => b.k === 'p' ? [b.parts] : b.items)
+    .map(parts => parts.map(i => i.v).join('').trim()).filter(Boolean)
+  // Each piece ends as a sentence, so bullets don't run together or get "..".
+  return pieces.map(t => /[.!?:…]$/.test(t) ? t : `${t}.`).join(' ')
 }
 
 // Where the card goes, in screen pixels: right of the "?", else left of it, kept
