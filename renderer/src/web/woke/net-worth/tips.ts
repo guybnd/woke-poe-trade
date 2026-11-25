@@ -5,6 +5,7 @@
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import type { ValuedLine } from './valuation'
 import { HOLD_MS, HOLD_RATIO, ONE_DAY_MIN, SPIKE_KEEP_DAYS, SPIKE_NEVER_RATIO, isUniqueFrame } from './valuation'
+import { DROP_RATE_CAP } from '../shared/card-cap'
 
 type TipLine = Pick<ValuedLine, 'key' | 'name' | 'tipName' | 'variant' | 'frame'>
 
@@ -65,6 +66,11 @@ const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour: 'numer
 // a chaos amount in the table's unit.
 export function heldNote (l: Pick<ValuedLine, 'heldSince' | 'heldKind' | 'ninjaChaos' | 'unitChaos'>, price: (chaos: number) => string): string | undefined {
   if (l.heldSince == null || l.ninjaChaos == null) return undefined
+  if (l.heldKind === 'drop-rate') {
+    return `${l.unitChaos > 0 ? `Held at its last solid price, ${price(l.unitChaos)}` : 'Not counted'}. poe.ninja says ${price(l.ninjaChaos)}, far more than this card can be worth for how often it drops ` +
+      `(a Stacked Deck would be worth more than ${DROP_RATE_CAP}× its price from this card alone). That's a few fake listings. ` +
+      'Counts again once poe.ninja\'s price comes down. Right-click to set your own price'
+  }
   if (l.heldKind === 'one-day') {
     return `${l.unitChaos > 0 ? 'Held at its last solid price' : 'Not counted'}. poe.ninja says ${price(l.ninjaChaos)}, but it has priced this on only one of the last 7 days` +
       `${l.unitChaos > 0 ? `, at ${HOLD_RATIO}× or more its earlier price` : ` (${ONE_DAY_MIN}c or more, with no earlier price to check it against)`}. ` +

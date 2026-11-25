@@ -7,6 +7,7 @@ import { lastWokePrices } from '../market/hook'
 import { feedDays, graphGaps, pricedOnlyToday } from '../market/parse'
 import { THIN_GAPS } from '../market/types'
 import { priceHistory } from './history'
+import { STACKED_DECK, cardCap, cardChance } from '../shared/card-cap'
 import { useUnidPrice } from '../shared/price'
 import { VARIABLE_ITEMS } from '../shared/unid-prices'
 import { uniqueFromArt } from '../shared/unid-art'
@@ -42,6 +43,12 @@ export function ninjaPriceOf (): PriceOf {
   // Thin market (poe.ninja had no price on 3+ of the last 7 days): one fake
   // listing can set its price (valuation.ts holds a sudden jump).
   const gapsOf = (graph: unknown) => graphGaps(graph, days)
+  // For the drop-rate check on cards (shared/card-cap.ts).
+  let deck: number | null | undefined
+  const deckChaos = () => {
+    if (deck === undefined) deck = ninja.findPriceByQuery({ ns: 'ITEM', name: STACKED_DECK, variant: undefined })?.chaos ?? null
+    return deck
+  }
 
   function lookup (item: StashItemLike): Priced | null {
     const p = find(item)
@@ -59,7 +66,9 @@ export function ninjaPriceOf (): PriceOf {
     if (item.typeLine === 'Divine Orb' && divine) return { chaos: divine, category: 'currency' }
     if (item.frame === 6) {
       const row = ninja.findPriceByQuery({ ns: 'DIVINATION_CARD', name: item.typeLine, variant: undefined })
-      return row ? { chaos: row.chaos, category: 'cards', graph: row.graph, history: priceHistory('DIVINATION_CARD', item.typeLine) } : null
+      if (!row) return null
+      const cap = cardCap(cardChance(item.typeLine), deckChaos())
+      return { chaos: row.chaos, category: 'cards', graph: row.graph, history: priceHistory('DIVINATION_CARD', item.typeLine), ...(cap != null ? { cap } : {}) }
     }
     if (isUniqueFrame(item.frame)) {
       const name = item.name || item.typeLine

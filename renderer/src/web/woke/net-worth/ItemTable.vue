@@ -189,11 +189,13 @@ function tipOf (l: ValuedLine): ItemTipRef {
   const ninja = l.ninjaChaos != null ? `${show('unit', l.ninjaChaos)} ${inChaos('unit') ? 'c' : 'd'}` : ''
   const held = l.heldSince == null || l.ninjaChaos == null
     ? undefined
-    : l.heldKind === 'one-day'
-      ? `${l.unitChaos > 0 ? 'Price held' : 'Not counted'}: poe.ninja's ${ninja} is from only one day this week`
-      : l.heldKind === 'spike'
-        ? `Price held: poe.ninja's ${ninja} is ${HOLD_RATIO}× or more its usual price this week`
-        : `Price held: poe.ninja's jumped to ${ninja} in a thin market`
+    : l.heldKind === 'drop-rate'
+      ? `${l.unitChaos > 0 ? 'Price held' : 'Not counted'}: poe.ninja's ${ninja} is far more than this card can be worth for how often it drops`
+      : l.heldKind === 'one-day'
+        ? `${l.unitChaos > 0 ? 'Price held' : 'Not counted'}: poe.ninja's ${ninja} is from only one day this week`
+        : l.heldKind === 'spike'
+          ? `Price held: poe.ninja's ${ninja} is ${HOLD_RATIO}× or more its usual price this week`
+          : `Price held: poe.ninja's jumped to ${ninja} in a thin market`
   const note = [tabs.length ? `In ${tabs.join(', ')}` : '', held ?? ''].filter(Boolean).join('. ')
   return lineTip(l, l.count, note || undefined)
 }

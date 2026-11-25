@@ -25,9 +25,21 @@
       <div v-if="propFilters.length && isMap" :class="$style.goalRow" data-map-goal-row>
         <span class="w-dim text-xs" :class="$style.rowLabel">Farming</span>
         <span :class="$style.seg" role="radiogroup" aria-label="Farming goal" data-map-goal>
-          <button v-for="g in FARM_GOALS" :key="g" type="button" role="radio" :aria-checked="goal === g"
-            :class="goal === g && $style.on_any" :data-goal="g" :title="GOAL_TITLE[g]" @click="setGoal(g)">{{ FARM_GOAL_LABEL[g] }}</button>
+          <button v-for="g in FARM_GOALS" :key="g" type="button" role="radio" :aria-checked="!template && goal === g"
+            :class="!template && goal === g && $style.on_any" :data-goal="g" :title="GOAL_TITLE[g]" @click="setGoal(g)">{{ FARM_GOAL_LABEL[g] }}</button>
+          <!-- Guy's pick F (2026-11-24): your own farming templates, saved from the current picks. -->
+          <template v-for="t in templates" :key="t.id">
+            <button type="button" role="radio" :aria-checked="template?.id === t.id" :class="template?.id === t.id && $style.on_any"
+              :data-goal="`t:${t.name}`" :title="templateTitle(t)" @click="pickTemplate(t)">{{ t.name }}</button>
+            <button type="button" :class="$style.tplDel" :data-template-delete="t.name" :aria-label="`Delete ${t.name}`"
+              :title="`Delete the ${t.name} template`" @click="deleteTemplate(t.id)"><i class="fas fa-times" /></button>
+          </template>
         </span>
+        <input v-if="naming" ref="nameBox" v-model="newName" type="text" maxlength="24" :class="$style.nameBox" data-template-name
+          aria-label="Template name" @keydown.enter.prevent="confirmSave" @keydown.esc.prevent="naming = false" @blur="confirmSave">
+        <button v-else type="button" :class="$style.tool" data-template-save
+          title="Save what you picked (numbers and their mins, Kind, mods set to Not) as a Farming button for the next maps"
+          @click="startSave"><i class="fas fa-plus" />Save</button>
       </div>
       <!-- Guy (2026-11-24): a map's kind is its influence: normal, Elder, Shaper, a conqueror's, each with
            the Originator or without. The search finds only this map's kind; the menu picks another, Any
@@ -138,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, inject, onBeforeUnmount, shallowRef, watch, watchEffect } from 'vue'
+import { computed, h, inject, nextTick, onBeforeUnmount, shallowRef, watch, watchEffect } from 'vue'
 import type { ShallowRef } from 'vue'
 import { WIcon, WInfo } from '../ui'
 import { useFold } from '../ui/fold'
@@ -155,6 +167,8 @@ import { FilterTag } from '@/web/price-check/filters/interfaces'
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
 import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalDisabled } from './goal'
 import { farmGoal, setFarmGoal } from './goal-config'
+import { activeTemplate, deleteTemplate, farmTemplates, nextTemplateName, saveTemplate, setActiveTemplate, templateMin } from './farm-templates'
+import type { FarmTemplate } from './farm-templates'
 import { tickPref } from '../price-insight/tick-prefs'
 import { ItemCategory } from '@/parser'
 import type { FarmGoal } from './goal'
@@ -465,7 +479,9 @@ function propTitle (label: string): string {
 // The farming goal (goal.ts): picking one sets this map's number chips to the
 // goal's, and the next maps start that way.
 const goal = computed(() => farmGoal())
-const goalKeys = computed(() => GOAL_KEYS[goal.value])
+const templates = computed(() => farmTemplates())
+const template = computed(() => activeTemplate())
+const goalKeys = computed(() => template.value ? template.value.on : GOAL_KEYS[goal.value])
 const GOAL_TITLE: Record<FarmGoal, string> = {
   currency: 'Farming currency: Rarity, Pack size and More Currency start on. Remembered for the next maps.',
   atlas: 'Farming maps and Threads: Atlas Drops, Pack size, More Maps and More Threads start on. Remembered for the next maps.',
@@ -473,15 +489,83 @@ const GOAL_TITLE: Record<FarmGoal, string> = {
 }
 // Off and not one the goal wants: faded, so the ones that matter stand out.
 function faded (label: string): boolean {
-  return goal.value !== 'any' && !goalKeys.value.includes(label) && !isOn(label)
+  return (!!template.value || goal.value !== 'any') && !goalKeys.value.includes(label) && !isOn(label)
 }
 // Only maps: charts keep their own numbers (pseudo/maps.ts chartProps).
 const isMap = computed(() => props.item.category === ItemCategory.Map)
 function setGoal (g: FarmGoal) {
   // Base map on: bring its picks back first, so the goal doesn't lose them.
   if (baseOnly.value && clearedRef.value) toggleBase()
+  setActiveTemplate(null)
   setFarmGoal(g)
   applyGoal(g)
+}
+// Farming templates (farm-templates.ts).
+function templateTitle (t: FarmTemplate): string {
+  const parts = [t.on.length ? `${t.on.join(', ')} on` : 'No numbers on']
+  if (t.kind) parts.push(`Kind: ${t.kind === 'own' ? "the map's own" : choices.value.find(c => c.key === t.kind)?.label ?? t.kind}`)
+  if (t.not?.length) parts.push(`${t.not.length} ${t.not.length === 1 ? 'mod' : 'mods'} set to Not`)
+  return `Your template ${t.name}: ${parts.join('; ')}. Remembered for the next maps.`
+}
+function pickTemplate (t: FarmTemplate) {
+  if (baseOnly.value && clearedRef.value) toggleBase()
+  setActiveTemplate(t.id)
+  applyTemplate(t)
+}
+function applyTemplate (t: FarmTemplate) {
+  for (const p of result.value?.props ?? []) {
+    const f = propFilter(p.label)
+    if (!f) continue
+    if (!tickPref(f)) f.disabled = !t.on.includes(p.label)
+    const pct = t.minPct?.[p.label]
+    if (f.roll && pct != null && !f.disabled) f.roll.min = templateMin(pct, f.roll.value)
+  }
+  for (const f of extras.value) {
+    const label = PROP_LABEL[f.tradeId[0]]
+    f.disabled = !t.on.includes(label)
+    if (!f.disabled && f.roll) f.roll.min = t.extraMin?.[label] ?? 1
+  }
+  if (t.kind && kindFs.value.length) {
+    const key = t.kind === 'own' ? ownKey.value : t.kind
+    const c = choices.value.find(c => c.key === key)
+    if (c) pickKind(c)
+  }
+  for (const f of searchable.value) {
+    if (f.mapMod && t.not?.includes(f.statRef)) setState(f, 'not')
+  }
+}
+const naming = shallowRef(false)
+const newName = shallowRef('')
+const nameBox = shallowRef<HTMLInputElement | null>(null)
+function startSave () {
+  newName.value = nextTemplateName()
+  naming.value = true
+  nextTick(() => { nameBox.value?.focus(); nameBox.value?.select() })
+}
+// Enter or clicking away saves; Esc throws the name away.
+function confirmSave () {
+  if (!naming.value) return
+  const name = newName.value.trim() || nextTemplateName()
+  naming.value = false
+  const on: string[] = []
+  const minPct: Record<string, number> = {}
+  for (const p of result.value?.props ?? []) {
+    const f = propFilter(p.label)
+    if (!f || f.disabled) continue
+    on.push(p.label)
+    const min = f.roll?.min
+    if (typeof min === 'number' && f.roll!.value > 0) minPct[p.label] = Math.round(min / f.roll!.value * 1000) / 10
+  }
+  const extraMin: Record<string, number> = {}
+  for (const label of extraOn.value) {
+    on.push(label)
+    const min = minOf(label)
+    if (min != null) extraMin[label] = min
+  }
+  const key = current.value?.key
+  const kind = !key ? undefined : key === ownKey.value ? 'own' : key
+  const not = searchable.value.filter(f => f.mapMod && stateOf(f) === 'not').map(f => f.statRef)
+  saveTemplate({ name, on, minPct, extraMin, kind, not })
 }
 function applyGoal (g: FarmGoal) {
   for (const p of result.value?.props ?? []) {
@@ -500,7 +584,8 @@ watch(() => [props.stats, result.value] as const, () => {
   const stats = props.stats
   if (!stats || !result.value || !isMap.value || goalApplied.has(stats)) return
   goalApplied.add(stats)
-  if (goal.value !== 'any') applyGoal(goal.value)
+  if (template.value) applyTemplate(template.value)
+  else if (goal.value !== 'any') applyGoal(goal.value)
 }, { immediate: true })
 
 // The Base map button: every chip and every row below off (the 8-mod count too),
@@ -656,6 +741,9 @@ const picked = computed(() => {
 .propBtn { cursor: pointer; color: inherit; }
 .propOff { border: 1px dashed var(--w-line-strong); }
 .tile.propOff:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
+.tplDel { padding: 0 4px !important; color: var(--w-dim); font-size: var(--w-fs-xs) !important; border-left: 0 !important; }
+.tplDel:hover { color: var(--w-down); }
+.nameBox { width: 8em; padding: 0 4px; font-size: var(--w-fs-xs); border: 1px solid var(--w-accent); border-radius: var(--w-r-sm); background: var(--w-panel); color: var(--w-fg); }
 .goalRow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 .rowLabel { min-width: 3.6em; }
 .kindBtn { display: inline-flex; align-items: center; gap: 4px; }

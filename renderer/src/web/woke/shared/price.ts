@@ -13,6 +13,7 @@ import { formatChaos } from '../ui/format'
 import { VARIABLE_ITEMS, useTradePrices } from './unid-prices'
 import { pickRow, divineRate } from './price-row'
 import { heldPrice } from './price-trust'
+import { STACKED_DECK, cardChance, withDropRate } from './card-cap'
 import type { Category } from './price-trust'
 import { lastWokePrices } from '../market/hook'
 import { feedDays } from '../market/parse'
@@ -65,7 +66,11 @@ export function usePrice () {
     // A price that looks fake (price-trust.ts) counts at the usual price, or
     // as none; `row` keeps poe.ninja's, for the tooltip's line about it.
     const loaded = lastWokePrices()
-    const held = heldPrice(row.chaos, row.graph, loaded ? feedDays(loaded.chunks) : undefined, categoryOfNs(opts.ns))
+    let held = heldPrice(row.chaos, row.graph, loaded ? feedDays(loaded.chunks) : undefined, categoryOfNs(opts.ns))
+    // A card priced far over what its drop rate allows (card-cap.ts).
+    if (opts.ns === 'DIVINATION_CARD') {
+      held = withDropRate(row.chaos, held, cardChance(name), ninja.findPriceByQuery({ ns: 'ITEM', name: STACKED_DECK, variant: undefined })?.chaos ?? null)
+    }
     return { row, chaos: held ? held.chaos : row.chaos, held, unid: opts.ns === 'UNIQUE' ? unidOf(name) : null }
   }
   return { priceOf, unidOf, isVariable: (name: string) => VARIABLE_ITEMS.has(name), divine: computed(() => ninja.xchgRate.value ?? null) }
