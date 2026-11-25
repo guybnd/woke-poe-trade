@@ -116,11 +116,14 @@ function median (values: number[]): number {
 }
 
 // How much a listing says about what the item really sells for: sellers who
-// are online and listed recently are the ones actually trading.
+// are online and listed recently are the ones actually trading. An instant
+// buyout (merchant tab, hasFee) can be bought whatever the seller's status or
+// the listing's age, so it always counts in full.
 const STATUS_WEIGHT: Record<InsightListing['accountStatus'], number> = { online: 1, afk: 0.7, offline: 0.4 }
 const DAY_MS = 24 * 60 * 60 * 1000
 
-export function listingWeight (l: Pick<InsightListing, 'accountStatus' | 'indexedAt'>, now: number): number {
+export function listingWeight (l: Pick<InsightListing, 'accountStatus' | 'indexedAt'> & { hasFee?: boolean }, now: number): number {
+  if (l.hasFee) return 1
   let w = STATUS_WEIGHT[l.accountStatus] ?? 0.5
   if (l.indexedAt) {
     const age = now - Date.parse(l.indexedAt)

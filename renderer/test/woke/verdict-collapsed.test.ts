@@ -42,11 +42,12 @@ describe('bargain warning', () => {
     expect(snipe([row('x', 0.04), ...market(20)])).toContain('under 0.1c')
   })
 
-  it('points out a bargain that pulls the fair price down to itself', () => {
+  it('points out a bargain under old offline instant buyouts, which still set the fair price', () => {
+    // Offline, week-old instant buyouts can still be bought, so they count in full.
     const old = { indexedAt: new Date(NOW - 10 * 86400e3).toISOString(), accountStatus: 'offline' as const }
     const rows = [row('x', 5), ...['a', 'b', 'c'].map(id => ({ ...row(id, 100), ...old }))]
     const insight = buildInsight(rows, { divine: 180, now: NOW })
-    expect(insight.range?.fair).toBe(5)
+    expect(insight.range?.fair).toBe(100)
     expect(insight.signals.find(s => s.kind === 'snipe')?.text).toContain('5c')
   })
 })
