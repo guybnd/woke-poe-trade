@@ -4,8 +4,8 @@ import {
   parseCardLine, recordPrice, runningResult, setCardEdit, startSession, toRecord, totals, withEdits
 } from '@/web/woke/stacked-decks/deck'
 import type { PriceOf } from '@/web/woke/stacked-decks/deck'
-import { WEIGHTS, isCommonCard } from '@/web/woke/stacked-decks/weights'
-import { guardCardPrice, withoutHeld } from '@/web/woke/stacked-decks/guard'
+import { WEIGHTS, dropChance, isCommonCard } from '@/web/woke/stacked-decks/weights'
+import { dropRateHeld, guardCardPrice, withoutHeld } from '@/web/woke/stacked-decks/guard'
 
 const PRICES: Record<string, number> = { 'Rain of Chaos': 0.5, 'The Lover': 1, 'Her Mask': 2, 'The Doctor': 900 }
 const price: PriceOf = name => PRICES[name] ?? null
@@ -264,6 +264,38 @@ describe('guardCardPrice', () => {
     expect(guardCardPrice(165.8, [18.69, 35.62, 37.53, 35.85, 32.92, 29.36, 21.21], 30)).toBeNull()
     expect(guardCardPrice(4, [null, 21.08, 6.87, 193.8, 317.7, 92.19, 500.0], 30)).toBeNull()
     expect(guardCardPrice(3, [null, null, null, null, null, null, 0], 30)).toBeNull()
+  })
+})
+
+describe('drop-rate check', () => {
+  const steady = [0, 0, 0, 0, 0, 0, 0]
+  const deck = (name: string) => ({ chance: dropChance(name), deckChaos: 3 })
+
+  it("doesn't count a common card priced like a rare one, even when poe.ninja's line is steady (Loyalty at 53 div)", () => {
+    // Loyalty drops in about 1 in 45 decks: 10,000c would be ~220c a deck from it alone.
+    expect(1 / dropChance('Loyalty')).toBeLessThan(60)
+    expect(guardCardPrice(10_000, steady, 30, deck('Loyalty'))).toEqual({ ninja: 10_000, chaos: null, kind: 'drop-rate' })
+    // No earlier price on poe.ninja's line either.
+    expect(guardCardPrice(10_000, [null, null, 0, 0, 0, 0, 0], 30, deck('Loyalty'))?.kind).toBe('drop-rate')
+  })
+
+  it('keeps real prices: a cheap common card, a rare card at a high price', () => {
+    expect(guardCardPrice(2, steady, 30, deck('Loyalty'))).toBeNull()
+    expect(guardCardPrice(19, steady, 30, deck('Matryoshka'))).toBeNull()
+    expect(guardCardPrice(8_000, steady, 30, deck('The Doctor'))).toBeNull()
+  })
+
+  it('needs a deck price and a weight', () => {
+    expect(guardCardPrice(10_000, steady, 30, { chance: dropChance('Loyalty'), deckChaos: null })).toBeNull()
+    expect(guardCardPrice(10_000, steady, 30, { chance: dropChance('Not A Card'), deckChaos: 3 })).toBeNull()
+    expect(dropRateHeld(null, dropChance('Loyalty'), 3)).toBeNull()
+  })
+
+  it('a session saved with the fake price counts the card as 0', () => {
+    const saved: PriceOf = name => name === 'Loyalty' ? 10_000 : 2
+    const px = withoutHeld(saved, name => dropRateHeld(saved(name), dropChance(name), 3))
+    expect(px('Loyalty')).toBeNull()
+    expect(px('Rain of Chaos')).toBe(2)
   })
 })
 

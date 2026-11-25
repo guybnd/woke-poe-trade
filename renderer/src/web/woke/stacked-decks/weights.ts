@@ -15,3 +15,10 @@ export function isCommonCard (name: string): boolean {
   const w = WEIGHTS.weights[name]
   return w != null && w * COMMON_ONE_IN >= WEIGHT_SUM
 }
+
+// The share of Stacked Deck draws that are this card, by the weights; 0 when
+// the weights don't have it.
+export function dropChance (name: string): number {
+  const w = WEIGHTS.weights[name]
+  return w != null && WEIGHT_SUM > 0 ? w / WEIGHT_SUM : 0
+}

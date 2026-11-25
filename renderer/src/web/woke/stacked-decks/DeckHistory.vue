@@ -56,7 +56,8 @@ import { AppConfig } from '@/web/Config'
 import { STACKED_DECK, STACKED_DECKS_TYPE, cardFilterOf, recordPrice, setCardEdit, totals } from './deck'
 import type { CardEdit, DeckRecord, StackedDecksWidget } from './deck'
 import { luckFor, useDeckPrices } from './prices'
-import { withoutHeld } from './guard'
+import { dropRateHeld, withoutHeld } from './guard'
+import { dropChance } from './weights'
 import { useDeckStore } from './store'
 
 const props = defineProps<{
@@ -70,12 +71,20 @@ const store = useDeckStore()
 store.load(true)
 const { price, held, deckChaos, divine, fetch } = useDeckPrices()
 // Each saved session at its own prices, less any that look fake today (guard.ts).
-const savedPrice = (r: DeckRecord) => withoutHeld(recordPrice(r), held.value)
+// Today's fake-price check, or the session's own saved price when it's more
+// than a card that common can be worth (saved before the drop-rate check).
+function heldFor (r: DeckRecord) {
+  const saved = recordPrice(r)
+  const now = held.value
+  return (name: string) => now(name) ?? dropRateHeld(saved(name), dropChance(name), r.deckChaos)
+}
+const savedPrice = (r: DeckRecord) => withoutHeld(recordPrice(r), heldFor(r))
 // The fake prices this session was saved with.
 function savedHeld (r: DeckRecord) {
   const saved = recordPrice(r)
+  const heldOf = heldFor(r)
   return (name: string) => {
-    const h = held.value(name)
+    const h = heldOf(name)
     const chaos = saved(name)
     // null: saved after the check held it (or not on poe.ninja then).
     return h && (chaos == null || chaos >= h.ninja / 2) ? h : null

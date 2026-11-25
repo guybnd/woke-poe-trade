@@ -67,8 +67,9 @@ import ResultChart from './ResultChart.vue'
 import { MIN_CALIBRATION_DECKS, luckText, runningResult, totals } from './deck'
 import type { CardEdits, CardFilter, PriceOf } from './deck'
 import CardLine from './CardLine.vue'
-import { WEIGHTS_CREDIT, isCommonCard } from './weights'
+import { WEIGHTS_CREDIT, dropChance, isCommonCard } from './weights'
 import type { HeldPrice, Luck } from './prices'
+import { heldWhy } from '../shared/price-trust'
 
 const props = withDefaults(defineProps<{
   draws: string[]
@@ -117,7 +118,8 @@ const notes = computed(() => {
 function priceTitle (name: string, each: number | null): string | undefined {
   const h = heldOf(name)
   if (h) {
-    const why = h.kind === 'one-day' ? 'on the one day it had a price' : 'a sudden step from its usual price'
+    const why = heldWhy(h)
+    if (h.kind === 'drop-rate') return `poe.ninja: ${money(h.ninja)} each, ${why}: it drops in about 1 in ${Math.round(1 / (dropChance(name) || 1))} decks. That's a few fake listings, so it counts as 0.`
     return `poe.ninja: ${money(h.ninja)} each, ${why}. Prices like that have been a few fake listings, so ${h.chaos != null ? `it counts at its usual ${money(h.chaos)}` : 'it counts as 0'} until the price holds.`
   }
   return each == null ? NO_PRICE : undefined

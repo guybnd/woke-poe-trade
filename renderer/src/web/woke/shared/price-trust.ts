@@ -160,7 +160,8 @@ export interface HeldPrice {
   ninja: number
   // What counts instead (null: no earlier price, so nothing).
   chaos: number | null
-  kind: 'one-day' | 'spike'
+  // drop-rate: more than a common card can be worth (stacked-decks/guard.ts).
+  kind: 'one-day' | 'spike' | 'drop-rate'
 }
 
 // The price to count for a poe.ninja row, from its own 7-day line: a price on
@@ -176,7 +177,11 @@ export function heldPrice (chaos: number, graph: Array<number | null> | undefine
 }
 
 // The line a window shows beside a held price. `price` formats chaos.
+export function heldWhy (h: HeldPrice): string {
+  return h.kind === 'one-day' ? 'on the one day it had a price' : h.kind === 'drop-rate' ? 'far more than a card this common can be worth' : 'a sudden step from its usual price'
+}
+
 export function heldText (h: HeldPrice, price: (chaos: number) => string): string {
-  const why = h.kind === 'one-day' ? 'on the one day it had a price' : 'a sudden step from its usual price'
+  const why = heldWhy(h)
   return `poe.ninja: ${price(h.ninja)}, ${why}. Prices like that have been a few fake listings, so ${h.chaos != null ? `it counts at its usual ${price(h.chaos)}` : 'it counts as nothing'} until the price holds.`
 }

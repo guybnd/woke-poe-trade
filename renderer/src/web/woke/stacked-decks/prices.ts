@@ -5,7 +5,7 @@ import type { Ref } from 'vue'
 import { usePoeninja } from '@/web/background/Prices'
 import { STACKED_DECK, calibration, expectedValue, luckPercentile, ownAverage } from './deck'
 import type { DeckRecord, PriceOf } from './deck'
-import { WEIGHTS } from './weights'
+import { WEIGHTS, dropChance } from './weights'
 import { lastWokePrices } from '../market/hook'
 import { feedDays } from '../market/parse'
 import { guardCardPrice } from './guard'
@@ -32,12 +32,13 @@ export function useDeckPrices () {
     const loaded = ninja.updatedAt.value != null
     const loadedPrices = lastWokePrices()
     const days = loadedPrices ? feedDays(loadedPrices.chunks) : undefined
+    const deck = loaded ? lookup('ITEM', STACKED_DECK) : null
     return (name: string) => {
       if (!loaded) return { chaos: null, held: null }
       let hit = cache.get(name)
       if (!hit) {
         const r = row('DIVINATION_CARD', name)
-        const held = r ? guardCardPrice(r.chaos, r.graph, days) : null
+        const held = r ? guardCardPrice(r.chaos, r.graph, days, { chance: dropChance(name), deckChaos: deck }) : null
         hit = { chaos: held ? held.chaos : r?.chaos ?? null, held }
         cache.set(name, hit)
       }
