@@ -53,8 +53,8 @@
               </button>
               <span v-if="e.line" class="w-line-acts" :class="$style.lineActs" data-search-line-acts>
                 <button type="button" tabindex="-1" :class="$style.lineAct" :title="e.saved ? 'Stop saving: back to Recent' : 'Save: keep it here until you remove it'"
-                  :aria-label="e.saved ? `Stop saving ${e.name}` : `Save ${e.name}`" :aria-pressed="!!e.saved" data-search-save @click.stop="toggleSaved(e)"><i :class="e.saved ? 'fas fa-bookmark' : 'far fa-bookmark'" /></button>
-                <button type="button" tabindex="-1" :class="$style.lineAct" title="Remove (Delete)" :aria-label="`Remove ${e.name}`" data-search-remove @click.stop="removeLine(e)"><i class="fas fa-times" /></button>
+                  :aria-label="e.saved ? `Stop saving ${e.name}` : `Save ${e.name}`" :aria-pressed="!!e.saved" data-search-save @click.stop="lineActOk($event) && toggleSaved(e)"><i :class="e.saved ? 'fas fa-bookmark' : 'far fa-bookmark'" /></button>
+                <button type="button" tabindex="-1" :class="$style.lineAct" title="Remove (Delete)" :aria-label="`Remove ${e.name}`" data-search-remove @click.stop="lineActOk($event) && removeLine(e)"><i class="fas fa-times" /></button>
               </span>
               </span>
               </template>
@@ -135,7 +135,7 @@
           <span><WKbd keys="Enter" /> {{ itemEntry() ? 'trade site' : 'open' }}</span>
           <span v-if="itemEntry()"><WKbd keys="Ctrl + F" /> find in stash</span>
           <span><WKbd keys="Ctrl + P" /> pin to compare</span>
-          <span v-if="selected?.line && !query"><WKbd keys="Delete" /> remove</span>
+          <span v-if="selected?.line && !queryOk"><WKbd keys="Delete" /> remove</span>
           <span><WKbd keys="Esc" /> back to game</span>
           <span class="ml-auto">{{ dataNote }}</span>
         </div>
@@ -1266,10 +1266,11 @@ function onKey (e: KeyboardEvent) {
   } else if (e.code === 'KeyC' && e.ctrlKey && e.shiftKey && !e.altKey && itemEntry()) {
     e.preventDefault()
     if (!e.repeat) copyName(itemEntry()!.name)
-  } else if (e.key === 'Delete' && !query.value && selected.value?.line) {
-    // An empty box: Delete takes the picked Saved or Recent line away.
+  } else if (e.key === 'Delete' && !queryOk.value && selected.value?.line) {
+    // An empty box: Delete takes the picked Saved or Recent line away, one
+    // per press (held down, it would clear them all).
     e.preventDefault()
-    removeLine(selected.value)
+    if (!e.repeat) removeLine(selected.value)
   } else if (e.key === 'Escape') {
     // Main takes Esc first in the app; this is for the browser.
     e.stopPropagation()
@@ -1369,8 +1370,15 @@ function tradeBeast (name: string) {
 function lineEntry (line: SearchLine, items: readonly PriceItem[], saved: boolean): Entry | null {
   if ('q' in line) return { ...againEntry(line.q), line, saved }
   const group = searchPrices(items.filter(i => i.type === line.type && i.name === line.name), line.name, { limit: 1 })[0]
-  return group ? { ...priceEntry(group), line, saved } : null
+  if (group) return { ...priceEntry(group), line, saved }
+  // A saved item with no price yet (prices loading, none this league) stays
+  // listed, so it can still be searched or removed.
+  if (!saved) return null
+  return { ...againEntry(line.name), id: `s:${line.type}:${line.name}`, sub: snapshot.value ? 'No price right now' : 'Prices loading', line, saved }
 }
+// The row under the pointer after one of these buttons acts is another line,
+// its buttons already showing: a double-click's second click mustn't act on it.
+function lineActOk (ev: MouseEvent) { return ev.detail < 2 }
 function toggleSaved (e: Entry) {
   if (!e.line) return
   if (e.saved) unsaveLine(props.config, e.line)
@@ -1391,6 +1399,8 @@ function removeLine (e: Entry) {
 function remember (entry: Entry | null): boolean {
   if (entry?.kind !== 'price') return false
   const { type, name } = entry.group
+  // A saved item stays under Saved: listing it in Recent too would only take a slot.
+  if (props.config.saved?.some(s => sameLine(s, { type, name }))) return false
   const head = props.config.recent?.[0]
   if (head?.type === type && head.name === name) return false
   const rest = (props.config.recent ?? []).filter(r => r.type !== type || r.name !== name)
@@ -1413,7 +1423,8 @@ function onDouble (e: Entry) {
 }
 // What was typed, opened or not: a quick look is a search too.
 function rememberQuery (text: string): boolean {
-  const list = addQuery(props.config.queries, text, [HELP_QUERY])
+  const saved = (props.config.saved ?? []).flatMap(s => 'q' in s ? [s.q] : [])
+  const list = addQuery(props.config.queries, text, [HELP_QUERY, ...saved])
   if (list) props.config.queries = list
   return list != null
 }
