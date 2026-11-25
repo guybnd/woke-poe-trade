@@ -11,6 +11,7 @@ import { checkFor, rankText } from '../../net-worth/cheapest'
 import { priceLabel, targetOpen } from '../../net-worth/listed-target'
 import type { CheapestDoc } from '../../net-worth/cheapest'
 import type { Lookup, LookupCard, LookupRow } from './types'
+import { matchRank } from '../search'
 
 const WORDS = ['listed', 'listings', 'my listings', 'pending', 'pending sales', 'unsold', 'faustus listings']
 
@@ -68,8 +69,7 @@ export function listedLookup (doc: PendingDoc | null, sales: Sale[] | null, stal
       })
     }
     if (query.trim().length >= 3) {
-      const words = query.toLowerCase().split(/\s+/).filter(Boolean)
-      const found = rows.filter(r => words.every(w => `${r.item.name} ${r.item.typeLine}`.toLowerCase().includes(w))).slice(0, 8)
+      const found = rows.filter(r => matchRank(`${r.item.name} ${r.item.typeLine}`, query) >= 0).slice(0, 8)
       if (found.length) {
         const first = found[0].item
         cards.push({

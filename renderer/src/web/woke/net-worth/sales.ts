@@ -3,6 +3,7 @@
 // and which sales fall in a refresh. Pure: no Vue, no requests.
 
 import { itemKey } from './valuation'
+import { matchRank } from '../search/search'
 
 // What main sends (trade-history.ts Sale).
 export interface Sale {
@@ -253,12 +254,9 @@ export function withoutSold<L extends { key: string, count: number, chaos: numbe
 
 // Ctrl+Space: sales whose name has every word of the query.
 export function searchSales (sales: Sale[], query: string, limit = 8): Sale[] {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
-  if (!words.length) return []
-  return sales.filter(s => {
-    const text = `${s.name} ${s.typeLine}`.toLowerCase()
-    return words.every(w => text.includes(w))
-  }).slice(0, limit)
+  if (!query.trim()) return []
+  // Folds accents and apostrophes like the other results ("kaoms" finds Kaom's).
+  return sales.filter(s => matchRank(`${s.name} ${s.typeLine}`, query) >= 0).slice(0, limit)
 }
 
 // Sales per day for the range, oldest first (the Sales view's bars).
