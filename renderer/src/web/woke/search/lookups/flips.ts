@@ -11,6 +11,8 @@ import { SCARAB_FLIP_TYPE } from '../../scarab-flip/widget'
 import type { ScarabFlipWidget } from '../../scarab-flip/widget'
 import type { PriceItem } from '../../market/types'
 import type { Lookup, LookupAction, LookupCard, LookupContext, LookupRow } from './types'
+import { TATTOO_TRIBES, tattooProfitEach, tattooTribe } from '../../scarab-flip/tattoos'
+import type { TribeRow } from '../../scarab-flip/tattoos'
 
 const WORDS = ['flip', 'flips', 'best flip', 'flipping']
 
@@ -58,6 +60,12 @@ function methodLine (method: FlipMethod, name: string, flip: FlipResult | null):
     if (!row) return null
     const value = `costs ${formatAmount(row.cost)}c, gives back ${formatAmount(row.low.chaos)}c to ${formatAmount(row.high.chaos)}c`
     return { row: { label: method.label, value }, profit: null }
+  }
+  if (flip?.kind === 'tribes') {
+    const tribe = tattooTribe(name)
+    const row = flip.rows.find(r => r.tribe === tribe)
+    const own = row?.tattoos.find(t => t.name === name)
+    return row && own ? verdict(method.label, tattooProfitEach(row, own.chaos)) : null
   }
   if (flip?.kind === 'no-cost') return { row: { label: method.label, value: `no ${method.lifeforce} lifeforce price yet`, dim: true }, profit: null }
   return null
@@ -116,6 +124,38 @@ function bestCard (s: Settings, ctx: LookupContext): LookupCard {
   }
 }
 
+const TATTOO_WORDS = ['tattoo', 'tattoos', 'tattoo flip', 'tattoo tribes']
+
+function tribeLine (r: TribeRow): LookupRow & { value: string } {
+  const flip = r.profitEach == null ? 'no traded Tattoo to put in' : `3 for 1 ${signed(r.profitEach)} each`
+  return { label: r.tribe, value: `average ${formatAmount(r.average)}c, ${flip}` }
+}
+
+// Every tribe, best 3 for 1 first, or one tribe ("kitava") with its Tattoos.
+function tribeCard (s: Settings, ctx: LookupContext, only?: string): LookupCard | null {
+  const family = FAMILIES.find(f => f.id === 'tattoos')
+  if (!family) return null
+  const flip = priceFlip(family, family.methods[0], ctx.items as PriceItem[], new Map(), s.options, s.lifeforce, s.weights)
+  if (flip?.kind !== 'tribes' || !flip.rows.length) return null
+  const rows = only ? flip.rows.filter(r => r.tribe === only) : flip.rows
+  if (!rows.length) return null
+  const one = only ? rows[0] : null
+  return {
+    id: `flip:tattoos:${only ?? 'all'}`,
+    group: 'Flips',
+    name: one ? `${one.tribe} Tattoos` : 'Tattoo tribes',
+    sub: one ? tribeLine(one).value : `Best 3 for 1: ${rows[0].tribe}, ${tribeLine(rows[0]).value}`,
+    icon: 'fas fa-recycle',
+    sections: [
+      one
+        ? { label: `${one.tribe} Tattoos`, rows: one.tattoos.map(t => ({ label: shortName(t.name), item: { name: t.name, type: family.ninjaType }, chaos: t.chaos, bulk: true })) }
+        : { label: 'Average Tattoo and 3 for 1, per tribe', rows: rows.map(tribeLine) },
+      { text: ['3 Tattoos of one tribe vendor for 1 random Tattoo of that tribe.', family.lowConfidence ?? ''].filter(Boolean) }
+    ],
+    actions: openAction(ctx)
+  }
+}
+
 // `config`: the Flips panel's saved settings, or null with it switched off.
 export function flipsLookup (config: ScarabFlipWidget | null): Lookup {
   return (query, ctx) => {
@@ -124,6 +164,9 @@ export function flipsLookup (config: ScarabFlipWidget | null): Lookup {
     if (q.length < 3) return []
     const s = settingsOf(config)
     if (WORDS.includes(q)) return [bestCard(s, ctx)]
+    if (TATTOO_WORDS.includes(q)) return [tribeCard(s, ctx) ?? []].flat()
+    const tribe = TATTOO_TRIBES.find(t => t.toLowerCase() === q || `${t.toLowerCase()} tattoo` === q || `${t.toLowerCase()} tattoos` === q)
+    const tribeHit = tribe ? tribeCard(s, ctx, tribe) : null
     // The best few name matches across the families' priced items.
     const hits: Array<{ family: FlipFamily, name: string, rank: number }> = []
     const seen = new Set<string>()
@@ -136,9 +179,10 @@ export function flipsLookup (config: ScarabFlipWidget | null): Lookup {
       seen.add(item.name)
       hits.push({ family, name: item.name, rank })
     }
-    return hits
+    const cards = hits
       .sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name, 'en'))
       .slice(0, 3)
       .flatMap(h => itemCard(h.family, h.name, s, ctx) ?? [])
+    return tribeHit ? [tribeHit, ...cards] : cards
   }
 }

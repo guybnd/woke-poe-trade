@@ -105,6 +105,11 @@ export const GUIDE: Record<string, MechanicGuide> = {
     gets: 'Vials by price, to tell whether a Corruption room upgrade pays. Incursion scarabs in the full panel.',
     when: ['You enter the Temple of Atzoatl', 'Alva speaks in a map']
   },
+  settlers: {
+    kind: 'zone',
+    gets: 'Tattoos by price with a chip per tribe, and Runegrafts, to pick which ports to ship to. Flips, Tattoos tab, says which tribe is worth vendoring 3 for 1.',
+    when: ['You enter Kingsmarch']
+  },
   betrayal: {
     kind: 'zone',
     gets: 'Every Syndicate slot with a live price, by division. Star the ones you want and the card turns into a goal list; the full panel says what to do when you meet a member, and opens the full board.',

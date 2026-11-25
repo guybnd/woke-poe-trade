@@ -539,6 +539,10 @@
    "renderer/src/web/woke/shared/trade-status.ts",
    "renderer/src/web/woke/ui/tooltip/item-menu-logic.ts"
   ],
+  "settlers-tattoos.spec.ts": [
+   "renderer/src/web/woke/scarab-flip/",
+   "renderer/src/web/woke/mechanics/"
+  ],
   "stacked-decks.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",

@@ -4,7 +4,10 @@
 // fake-game specs read it too.
 export const GOTO_TARGETS = {
   'woke-net-worth': { holdings: 'Holdings', sales: 'Sales', listed: 'Listed', runs: 'Runs' },
-  'woke-map-mods': { maps: 'Maps', heist: 'Heist', charts: 'Charts', planner: 'Planner', scan: 'Scan' }
+  'woke-map-mods': { maps: 'Maps', heist: 'Heist', charts: 'Charts', planner: 'Planner', scan: 'Scan' },
+  // Only the tabs a What's new line opens.
+  'woke-scarab-flip': { tattoos: 'Tattoos' },
+  'woke-mechanics': { settlers: 'Settlers' }
 } as const satisfies Record<string, Record<string, string>>
 
 // A spot: one thing on a tab that Show me scrolls to and flashes, for a

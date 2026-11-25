@@ -31,6 +31,8 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
+  { id: 'flips-tattoo-tribes', since: '1.330.22', wmType: 'woke-scarab-flip', goto: 'tattoos', name: 'Flips', note: 'New: Tattoos tab, each tribe\'s average Tattoo and whether 3 of its cheapest are worth vendoring for 1' },
+  { id: 'mechanics-settlers', since: '1.330.22', wmType: 'woke-mechanics', goto: 'settlers', name: 'League mechanics', note: 'New: Settlers tab, Tattoos by tribe and Runegrafts, priced' },
   { id: 'price-check-base-percentile', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: rare and magic armour show their base roll ("92% base") by its defence; click it to add it to the search' },
   { id: 'related-folded-groups', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: the list beside a price check folds into groups that fit your screen; click a group to open it' },
   { id: 'instant-card-rates-graph', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: the price card by an item shows its chaos and divine rates, and a 24h / 3d / 7d graph (scroll on it)' },

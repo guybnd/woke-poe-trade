@@ -150,6 +150,7 @@ import { isModuleOn } from '../modules'
 import { AppConfig } from '@/web/Config'
 import type { DockMenuAction } from '../dock/dock'
 import { mechanicIcon } from '../ui/game-icons'
+import { useGoto } from '../tab-bar/goto'
 import { dockIconEl, hideWhilePlaying, saveDock } from '../dock/dock'
 import MechanicPrices from './MechanicPrices.vue'
 import MechanicGlance from './MechanicGlance.vue'
@@ -222,6 +223,14 @@ const dockShow = computed(() => zoneMech.value != null && !props.config.hidden.i
 const WickermanLine = defineAsyncComponent(() => import('../wickerman/MechanicsLine.vue'))
 const wickermanOn = computed(() => isModuleOn(AppConfig(), 'wickerman'))
 const dockMech = computed(() => (zoneMech.value && mechanicById(zoneMech.value)) || mech.value)
+
+useGoto(props.config, 'woke-mechanics', {
+  settlers: () => {
+    if (props.config.hidden.includes('settlers')) props.config.hidden = props.config.hidden.filter(id => id !== 'settlers')
+    props.config.tab = 'settlers'
+    props.config.expanded = true
+  }
+})
 
 function openFull () {
   props.config.tab = dockMech.value.id
