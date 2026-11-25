@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-571
 title: Redesign the map price check layout
-status: In Progress
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -46,6 +46,52 @@ history:
     date: '2026-11-24T14:52:07.187Z'
     selfAttested: true
     id: c-2026-11-24t14-52-07-187z
-implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/880'
+  - type: comment
+    user: Agent
+    comment: >-
+      Farming templates shipped in PR 902
+      (https://github.com/guybnd/woke-poe-trade/pull/902, merged d871894): save
+      your own Farming buttons. Redesign PRs: 880, 885, 891, 896, 902.
+    date: '2026-11-25T03:21:34.472Z'
+    selfAttested: true
+    id: c-2026-11-25t03-21-34-472z
+  - type: comment
+    user: Agent
+    comment: Farming templates merged in PR 902; redesign complete.
+    date: '2026-11-25T03:21:35.503Z'
+    completionComment: true
+    id: c-2026-11-25t03-21-35-503z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-25T03:21:35.503Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Final phase (farming templates) merged at d871894; dev build reloaded.
+      Guy's layout pick mockup remains linked in notes.
+    completionComment: true
+    date: '2026-11-25T03:21:40.543Z'
+    id: c-2026-11-25t03-21-40-543z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-25T03:21:41.083Z'
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/902'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Redesign the price check layout for maps. No PR yet.
