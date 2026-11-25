@@ -283,6 +283,13 @@ export function alreadyClosed (history: Offer[], o: Pick<Offer, 'dir' | 'who' | 
   return history.some(h => h.dir === o.dir && h.who === o.who && h.item === o.item && (h.closedAt ?? 0) >= o.at)
 }
 
+// A trade a restart reads again was logged before it: the offer was finished
+// then (traded offers stay out of the history), so it mustn't come back open.
+export function alreadyLogged (trades: Array<Pick<TradeRecord, 'id'>>, o: Offer, at: number): boolean {
+  const id = recordFor(o, at, null, null).id
+  return trades.some(t => t.id === id)
+}
+
 // Whether a whisper a restart can still read could be older than this closing.
 // If not, nothing needs the record to stay closed, so it can really be deleted.
 export function replayCouldReopen (o: Pick<Offer, 'closedAt'>, now: number): boolean {

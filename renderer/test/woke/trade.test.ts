@@ -6,7 +6,7 @@ import { fixture } from '../helpers/game-data'
 import fs from 'fs'
 import path from 'path'
 import { artNames, CURRENCY_TAGS, parseOffer, parsePrice, parseTradeLine, offerLabel, priceLabel } from '@/web/woke/trade/whispers'
-import { alreadyClosed, applyEvent, belongsInHistory, dismiss, front, markSent, markTraded, newBook, nextStep, prune, queue, recordFor, reopen, skip, OPEN_FOR_MS } from '@/web/woke/trade/book'
+import { alreadyClosed, alreadyLogged, applyEvent, belongsInHistory, dismiss, front, markSent, markTraded, newBook, nextStep, prune, queue, recordFor, reopen, skip, OPEN_FOR_MS } from '@/web/woke/trade/book'
 import type { Offer, TradeBook } from '@/web/woke/trade/book'
 import { DEFAULT_REPLIES, fillReply, replyText } from '@/web/woke/trade/widget'
 import { bulkDelta, priceChaos } from '@/web/woke/trade/value'
@@ -385,6 +385,18 @@ describe('reopening closed offers', () => {
     expect(alreadyClosed([o], { dir: 'sell', who: 'Ignithor', item: o.item, at: 1000 })).toBe(true)
     expect(alreadyClosed([o], { dir: 'sell', who: 'Ignithor', item: o.item, at: 3000 })).toBe(false)
     expect(alreadyClosed([o], { dir: 'sell', who: 'Someone', item: o.item, at: 1000 })).toBe(false)
+  })
+
+  it('a trade replayed after a restart that is in the sales log stays finished', () => {
+    const book = newBook()
+    const o = whisper(book, 'Ignithor', 1000)
+    o.inArea = true
+    const res = applyEvent(book, { kind: 'trade-accepted', at: 5000 })
+    expect(res.finished?.id).toBe(o.id)
+    const logged = [recordFor(o, 5000, 10, null)]
+    expect(alreadyLogged(logged, o, 5000)).toBe(true)
+    expect(alreadyLogged([], o, 5000)).toBe(false)
+    expect(alreadyLogged(logged, o, 9000)).toBe(false)
   })
 })
 
