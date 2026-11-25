@@ -155,7 +155,7 @@ import type { ShallowRef } from 'vue'
 import { WIcon, WInfo } from '../ui'
 import { useFold } from '../ui/fold'
 import type { ParsedItem } from '@/parser'
-import { VERDICT_LABEL, modRatings, nextModRating, setModRatings, withRating } from './rules'
+import { VERDICT_LABEL, modRatings, nextModRating, setModRatings, withModRating } from './rules'
 import type { ModRating } from './rules'
 import { activeProfile } from './widget'
 import { heistRowOf } from './data'
@@ -294,12 +294,8 @@ function rate (matcher: string, current: ModRating) {
   if (!config || !mode) return
   const profile = activeProfile(config)
   const key = mode === 'heist' ? heistRowOf(matcher) ?? matcher : matcher
-  const ratings = modRatings(profile, mode)
-  // A rating saved under another wording of the stat counts for this mod (check.ts),
-  // so every rated wording changes with it, or "none" could never be reached.
   const wordings = props.item.statsByType.find(c => c.stat.matchers.some(m => m.string === matcher))?.stat.matchers.map(m => m.string) ?? []
-  const keys = [key, ...wordings.filter(w => w !== key && ratings[w])]
-  setModRatings(profile, mode, withRating(ratings, keys, nextModRating(current)))
+  setModRatings(profile, mode, withModRating(modRatings(profile, mode), key, wordings, nextModRating(current)))
 }
 function isRareOnly (row: Row): boolean {
   return row.filter?.tag === FilterTag.RareOnly

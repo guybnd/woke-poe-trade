@@ -108,7 +108,7 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
       if (rating) ratings[matcher] = rating
     }
   }
-  const verdict = rateMods(stats, { ...profile, ratings })
+  const verdict = rateMods(stats.map((s, i) => ({ ...s, wordings: calcs[i].stat.matchers.map(m => m.string) })), { ...profile, ratings })
 
   const juice = isHeistItem(item) ? null : juiceScore({
     quantity: item.areaAtlasDrops ?? item.areaItemQuantity,
