@@ -672,7 +672,8 @@ export default defineComponent({
 .count { font-family: var(--w-body); font-size: var(--w-fs-sm); color: var(--w-faint); white-space: nowrap; }
 /* woke: a long family scrolls inside the panel; the panel never outgrows the window. */
 /* Beside the instant card, which zooms it 1.4x (--w-instant-scale): the same height on screen as before. */
-.list { max-height: calc(min(26rem, 60vh) / var(--w-instant-scale, 1)); overflow-y: auto; overscroll-behavior: contain; }
+/* Under the instant card it also fits the room left below the card (--w-instant-room, less its heading and foot). */
+.list { max-height: calc(min(26rem, 60vh, max(8rem, var(--w-instant-room, 60vh) - 7rem)) / var(--w-instant-scale, 1)); overflow-y: auto; overscroll-behavior: contain; }
 .tight .row { min-height: 30px; }
 .click { cursor: pointer; }
 .click:hover { background: var(--w-panel-3); }

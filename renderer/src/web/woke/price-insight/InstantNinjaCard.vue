@@ -5,7 +5,7 @@
     <div :class="$style.top">
     <!-- The game's own tooltip look (Guy's pick I2, 2026-11-25): its header art and
          separators, the exchange rates, then what your stack is worth. -->
-    <div :class="[$style.card, $style[frame]]">
+    <div :class="[$style.card, $style[frame]]" data-card>
       <header :class="[$style.head, { [$style.art]: headArt }]" :style="headArt">
         <span v-item-tip="{ name: item.info.refName }" :class="$style.name"><img v-if="item.info.icon" :src="item.info.icon" alt="" :class="$style.headIcon"><span :class="$style.nameText">{{ item.info.refName }}</span></span>
       </header>
@@ -109,6 +109,8 @@ const emit = defineEmits<{
 const RIGHT_GAP = 40
 const LEFT_GAP = 16
 const ABOVE = 12
+// Between the card and the lists under it, in screen px (.instantSide's margin).
+const SIDE_GAP = 10
 
 const { findPriceByQuery, xchgRate, updatedAt } = usePoeninja()
 const info = computed(() => {
@@ -241,22 +243,28 @@ watch(info, async (row) => {
 // Left of the cursor when the right side has no room, above it when the bottom has none.
 const el = shallowRef<HTMLElement | null>(null)
 const pos = shallowRef({ left: props.at.x + RIGHT_GAP, top: props.at.y - ABOVE })
-const anchorStyle = computed(() => ({ left: `${pos.value.left}px`, top: `${pos.value.top}px` }))
+// The lists under the card get the room left below it (--w-instant-room), so
+// the card itself stays by the mouse (Guy, 2026-11-25: "the price box must be next to the mouse").
+const room = shallowRef<number | null>(null)
+const anchorStyle = computed(() => ({ left: `${pos.value.left}px`, top: `${pos.value.top}px`, ...(room.value != null ? { '--w-instant-room': `${room.value}px` } : {}) }))
 
 // Right of and below the cursor; left of it when the right has no room, and up
 // as far as the screen needs when the bottom has none.
 function place () {
   const node = el.value
   if (!node) return
-  // The graph box hangs off the card's right edge, outside the anchor's own box.
-  const box = node.getBoundingClientRect()
+  const w = node.offsetWidth
+  // Only the card and the graph box beside it decide the height: the lists under
+  // them shrink to the room left (the card stays by the mouse).
+  const card = node.querySelector('[data-card]')?.getBoundingClientRect()
   const aside = node.querySelector('[data-aside]')?.getBoundingClientRect()
-  const w = Math.max(node.offsetWidth, aside ? aside.right - box.left : 0)
-  const h = Math.max(node.offsetHeight, aside ? aside.bottom - box.top : 0)
+  const head = Math.max(card?.height ?? node.offsetHeight, aside?.height ?? 0)
   const { x, y } = props.at
   const left = x + RIGHT_GAP + w <= window.innerWidth ? x + RIGHT_GAP : Math.max(0, x - LEFT_GAP - w)
-  const top = Math.max(0, Math.min(y - ABOVE, window.innerHeight - h))
+  const top = Math.max(0, Math.min(y - ABOVE, window.innerHeight - head))
+  const below = Math.max(0, Math.round(window.innerHeight - top - (card?.height ?? 0) - SIDE_GAP))
   if (left !== pos.value.left || top !== pos.value.top) pos.value = { left, top }
+  if (below !== room.value) room.value = below
 }
 // Related items load after the card, and change its size.
 let resize: ResizeObserver | undefined
