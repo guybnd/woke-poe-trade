@@ -36,7 +36,7 @@ test('map history groups maps by day, names its range and shows the map on hover
   await expect(row).toContainText('Strand')
   await expect(panel.locator('[data-history-day]').first()).toContainText('Today')
   await expect(panel.locator('[data-history-summary]')).toContainText(/1 map (this league|in 7 days)/)
-  // Tonight's card says when it began.
+  // The session card says when it began.
   await expect(panel.locator('[data-night-span]')).toContainText(/since|→/)
 
   await row.hover()

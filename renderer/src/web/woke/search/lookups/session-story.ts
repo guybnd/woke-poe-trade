@@ -12,7 +12,7 @@ import type { RateTime } from '../../shared/rate-time'
 import { gameIcon } from '../../ui/game-icons'
 import { NIGHT_ART } from '../../modules'
 
-const WORDS = ['tonight', 'last night', 'session story', 'session summary', 'night']
+const WORDS = ['this session', 'tonight', 'last night', 'session story', 'session summary', 'night']
 
 // Typed in full up to at least the first word: "ton" stays an item search.
 function wanted (query: string): boolean {
@@ -56,7 +56,7 @@ export function sessionStoryLookup (live: NightStory | null, last: NightStory | 
     return [{
       id: 'answer:session-story',
       group: 'Answer',
-      name: live ? 'Tonight so far' : `Night of ${when}`,
+      name: live ? 'This session' : `Night of ${when}`,
       sub: `${formatDuration(played(s))} · ${s.maps.length} maps${s.profitChaos != null ? ` · ${signed(s.profitChaos, s.divine)}` : ''}`,
       icon: gameIcon(NIGHT_ART) ?? 'fas fa-moon',
       sections: [{ rows: rows(s, time) }],

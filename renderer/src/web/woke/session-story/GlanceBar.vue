@@ -41,11 +41,11 @@
       </template>
       <template v-else-if="night && nightFields">
         <span :class="$style.sep" />
-        <span class="w-dim">Tonight</span>
+        <span class="w-dim" data-glance-session>This session</span>
         <span v-if="on.maps">{{ night.maps.length }} {{ night.maps.length === 1 ? 'map' : 'maps' }}</span>
         <span v-if="on.profit && profit != null" :class="profit >= 0 ? 'w-up' : 'w-down'">{{ profit > 0 ? '+' : '' }}{{ formatChaos(profit, night.divine) }}</span>
         <span v-if="on.perHour && nightRate != null" data-glance-rate :title="leftOutText(time)">{{ formatChaos(nightRate, night.divine) }}/h</span>
-        <span v-if="on.total" data-glance-total title="Tonight so far, AFK left out">{{ hoursText(playedMs(nightNow ?? night)) }}</span>
+        <span v-if="on.total" data-glance-total title="This session so far, AFK left out">{{ hoursText(playedMs(nightNow ?? night)) }}</span>
         <span v-if="on.avg && nightAvg != null" class="w-dim" data-glance-avg>avg {{ formatClock(nightAvg) }}</span>
       </template>
       <!-- With the overlay open (not in Settings already): its settings, one click away. -->

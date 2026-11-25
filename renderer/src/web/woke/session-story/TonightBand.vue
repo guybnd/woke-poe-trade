@@ -1,6 +1,6 @@
 <template>
   <!-- Tonight's card: on the dock and on top of Session analytics. -->
-  <NightCard v-if="shown" :story="shown.story" :live="shown.live" :farm="farmOf(shown.story)" :title="shown.live ? 'Tonight so far' : nightTitle(shown.story)"
+  <NightCard v-if="shown" :story="shown.story" :live="shown.live" :farm="farmOf(shown.story)" :title="shown.live ? 'This session' : nightTitle(shown.story)"
     :pickable="pickable" :selected="selected" @pick="emit('pick', $event)" />
 </template>
 

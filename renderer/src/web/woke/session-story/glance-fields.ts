@@ -8,11 +8,11 @@ export const GLANCE_FIELDS: ReadonlyArray<{ id: GlanceField, label: string, hint
   { id: 'time', label: 'Map time', hint: 'Its time so far; amber once past your average for it' },
   { id: 'deaths', label: 'Deaths', hint: 'Deaths in this map, once you die' },
   { id: 'mechanics', label: 'Mechanics', hint: 'Einhar, Delirium and the like, as they speak' },
-  { id: 'maps', label: 'Maps', hint: "The run's maps, or tonight's with no run going" },
+  { id: 'maps', label: 'Maps', hint: "The run's maps, or this session's with no run going" },
   { id: 'profit', label: 'Profit', hint: 'Profit at the last stash read' },
   { id: 'perHour', label: 'Per hour', hint: 'Profit per hour; the Per hour setting decides what time counts' },
-  { id: 'total', label: 'Total time', hint: 'How long the run, or tonight, has gone' },
-  { id: 'avg', label: 'Average map', hint: 'Your average map time in the run, or tonight' },
+  { id: 'total', label: 'Total time', hint: 'How long the run, or this session, has gone' },
+  { id: 'avg', label: 'Average map', hint: 'Your average map time in the run, or this session' },
   { id: 'last', label: 'Last map', hint: 'Between maps: the map you just left, against your average' }
 ]
 

@@ -7,7 +7,7 @@
     <button v-for="n in list" :key="n.story.id" type="button" :class="[$style.row, { [$style.on]: selected ? n.story.id === selected : n.live }]"
       data-night-row @click="emit('open', n.story.id)">
       <span :class="$style.top">
-        <span class="w-trunc">{{ n.live ? 'Tonight so far' : nightTitle(n.story) }}</span>
+        <span class="w-trunc">{{ n.live ? 'This session' : nightTitle(n.story) }}</span>
         <span class="w-dim w-num">{{ formatDuration(n.story.endedAt - n.story.startedAt - (n.story.afkMs ?? 0)) }} · {{ n.story.maps.length }} {{ n.story.maps.length === 1 ? 'map' : 'maps' }}</span>
         <span v-if="profitOf(n.story) != null" class="w-num" :class="profitOf(n.story)! >= 0 ? 'w-up' : 'w-down'">
           {{ formatChaos(profitOf(n.story)!, n.story.divine) }}

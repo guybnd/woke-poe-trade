@@ -13,7 +13,7 @@
       </slot>
     </template>
     <span class="w-dim">While in a map</span>
-    <WToggle v-model="glance" title="A thin bar at the top with the map, its time so far and the run's or tonight's maps and profit (pick below), and each map's result once you leave it. While you play it never takes the mouse; with the overlay open, drag it to move it.">Glance bar</WToggle>
+    <WToggle v-model="glance" title="A thin bar at the top with the map, its time so far and the run's or this session's maps and profit (pick below), and each map's result once you leave it. While you play it never takes the mouse; with the overlay open, drag it to move it.">Glance bar</WToggle>
     <GlanceSettings v-if="glance" :config="config" />
     <template v-if="showMe">
       <span />

@@ -55,7 +55,7 @@ test('set to In maps, it goes when you leave the map, and ticked-off fields stay
   await expect(bar).toBeVisible({ timeout: 15_000 })
   await expect(bar.locator('[data-glance-time]')).toBeVisible()
   await expect(bar.locator('[data-glance-map]')).toBeHidden()
-  await expect(bar).not.toContainText('Tonight')
+  await expect(bar.locator('[data-glance-session]')).toBeHidden()
 
   await overlay.log(lines.hideout('15:03:01'))
   await expect(bar).toBeHidden()
