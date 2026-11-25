@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { NEWS, markAllNewsSeen, markNewsSeen, seenNewsIds, unseenNews } from '@/web/woke/tab-bar/news'
+import { NEWS, liveNews, newsExpired, markAllNewsSeen, markNewsSeen, seenNewsIds, unseenNews } from '@/web/woke/tab-bar/news'
 import { setNewsOff } from '@/web/woke/tab-bar/news-off'
 import { NEWS_SPOTS, gotoSpots, gotoTargets } from '@/web/woke/tab-bar/goto-targets'
 import { NEWS_DEMOS, hasShowMe } from '@/web/woke/tab-bar/news-demos'
@@ -33,6 +33,31 @@ describe("What's new lines", () => {
       if (n.wmType === 'price-check') expect(n.topic, `${n.id}: give it a topic`).toBeTruthy()
       else expect(n.topic, n.id).toBeUndefined()
     }
+  })
+
+  it('each line names the release it ships in: this one or the next (main/package.json, patch + 1)', () => {
+    const app = JSON.parse(readFileSync(fileURLToPath(new URL('../../../main/package.json', import.meta.url)), 'utf8')).version as string
+    const [major, league, patch] = app.split('.').map(Number)
+    for (const n of NEWS) {
+      expect(n.since, n.id).toMatch(/^\d+\.\d+\.\d+$/)
+      const [m, l, p] = n.since.split('.').map(Number)
+      expect([m, l], `${n.id}: since ${n.since}, app ${app}`).toEqual([major, league])
+      expect(p, `${n.id}: since ${n.since} is past the next release (${app} + 1)`).toBeLessThanOrEqual(patch + 1)
+    }
+  })
+
+  it('a line shows for its release and the next, then expires; a new league expires it too', () => {
+    expect(newsExpired('1.330.21', '1.330.20')).toBe(false)
+    expect(newsExpired('1.330.21', '1.330.21')).toBe(false)
+    expect(newsExpired('1.330.21', '1.330.22')).toBe(false)
+    expect(newsExpired('1.330.21', '1.330.23')).toBe(true)
+    expect(newsExpired('1.330.21', '1.331.0')).toBe(true)
+    expect(newsExpired('1.330.21', '2.0.0')).toBe(true)
+    // Not a release: the fake app, or before the app says its version.
+    expect(newsExpired('1.330.21', '0.0.0-test')).toBe(false)
+    expect(newsExpired('1.330.21', '0.0.00000')).toBe(false)
+    expect(liveNews('0.0.0-test')).toHaveLength(NEWS.length)
+    expect(liveNews('9.0.0')).toEqual([])
   })
 
   it('NEWS_SPOTS and NEWS_DEMOS name only real lines', () => {
@@ -85,14 +110,14 @@ describe("What's new lines", () => {
 
   it('players who update see every line until dismissed; a fresh install sees none', () => {
     const updated: WokeModulesConfig = { setupDone: true, off: [] }
-    expect(unseenNews(updated)).toHaveLength(NEWS.length)
+    expect(unseenNews(updated, '0.0.0-test')).toHaveLength(NEWS.length)
     markNewsSeen(updated, [NEWS[0].id])
-    expect(unseenNews(updated).map(n => n.id)).not.toContain(NEWS[0].id)
+    expect(unseenNews(updated, '0.0.0-test').map(n => n.id)).not.toContain(NEWS[0].id)
     const fresh: WokeModulesConfig = { setupDone: false, off: [] }
     // Before setup's first Finish: nothing is new yet.
-    expect(unseenNews(fresh)).toEqual([])
+    expect(unseenNews(fresh, '0.0.0-test')).toEqual([])
     markAllNewsSeen(fresh)
-    expect(unseenNews(fresh)).toEqual([])
+    expect(unseenNews(fresh, '0.0.0-test')).toEqual([])
   })
 })
 
@@ -101,11 +126,11 @@ describe("What's new switched off", () => {
     const woke: WokeModulesConfig = { setupDone: true, off: [] }
     setNewsOff(woke, true)
     expect(woke.newsOff).toBe(true)
-    expect(unseenNews(woke)).toEqual([])
+    expect(unseenNews(woke, '0.0.0-test')).toEqual([])
     expect(seenNewsIds(woke)).toEqual(NEWS.map(n => n.id))
     setNewsOff(woke, false)
     expect(woke.newsOff).toBeUndefined()
     // Everything there when it was switched off stays seen.
-    expect(unseenNews(woke)).toEqual([])
+    expect(unseenNews(woke, '0.0.0-test')).toEqual([])
   })
 })

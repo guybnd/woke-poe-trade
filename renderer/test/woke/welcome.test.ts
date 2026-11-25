@@ -37,9 +37,9 @@ describe("what's new", () => {
     const { NEWS, markNewsSeen, newsFor } = await import('@/web/woke/tab-bar/news')
     const woke = fresh()
     const first = NEWS[0]
-    expect(newsFor(first.wmType, woke.seenNews)?.id).toBe(first.id)
+    expect(newsFor(first.wmType, woke.seenNews, '0.0.0-test')?.id).toBe(first.id)
     startWelcome(woke)
-    expect(NEWS.every(n => newsFor(n.wmType, woke.seenNews) == null)).toBe(true)
+    expect(NEWS.every(n => newsFor(n.wmType, woke.seenNews, '0.0.0-test') == null)).toBe(true)
     const other = fresh()
     other.seenNews = ['gone-line']
     markNewsSeen(other, [first.id])

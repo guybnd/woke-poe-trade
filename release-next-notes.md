@@ -255,4 +255,4 @@
 - Item hover tooltip: currency, fragments, cards and other stackables say how many your last Net worth stash read holds, and what that comes to ("You have 34 · 2.2 div"). Nothing shows without a stash read.
 - Item hover tooltip, essences: the mod each essence forces on each kind of item ("Body Armour: +(160-174) to maximum Life", "Weapons: ..."), slots that get the same mod on one line. From Path of Building's data.
 - Item hover tooltip, Timeless and Abyss conquest jewels: the keystone each conqueror gives, under the jewel's mods (Militant Faith: Avarius · Power of Purpose and so on), as the price check's side list shows.
-- What's new in the dock folds its lines under each tool (Price check split into Tooltips, Maps, Prices & search and Related), with a count and a × that dismisses a whole group. The newest group starts open.
+- What's new in the dock folds its lines under each tool (Price check split into Tooltips, Maps, Prices & search and Related), with a count, the newest line in faint text, and a × that dismisses a whole group. It reopens on the group you had open. Lines now go away on their own two releases after they shipped.

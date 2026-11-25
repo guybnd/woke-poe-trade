@@ -41,7 +41,7 @@ test('with the overlay open: Show me opens the tool, dismiss takes a line off, t
   await expect(icon).toHaveCount(0)
 })
 
-test('lines fold under their tool: one group open at a time, × on a heading dismisses the lot', async ({ overlay }) => {
+test('lines fold under their tool: one group open at a time, × on a heading dismisses the lot', async ({ overlay, fakeApp }) => {
   await overlay.boot({ overlayActive: true, whatsNew: true })
   const icon = overlay.dockIcon('whats-new')
   await icon.click()
@@ -60,6 +60,11 @@ test('lines fold under their tool: one group open at a time, × on a heading dis
   await expect(icon.locator('[data-open]')).toHaveCount(1)
   await expect(maps.locator('[data-whats-new-line]').first()).toBeVisible()
   await expect(tooltips.locator('[data-whats-new-line]').first()).toBeHidden()
+  // A folded heading shows its newest line, faint; the open one doesn't.
+  await expect(tooltips.locator('[data-whats-new-preview]')).toContainText(NEWS.find(n => n.topic === 'Tooltips')!.note.replace(/^New: ./, '').slice(0, 20))
+  await expect(maps.locator('[data-whats-new-preview]')).toHaveCount(0)
+  // Remembered: the card reopens on Maps.
+  await expect.poll(() => fakeApp.readConfig()?.woke?.newsOpen).toBe('price-check:Maps')
   // Its heading's × takes every line of the group.
   const before = await icon.locator('[data-whats-new-line]').count()
   const nMaps = NEWS.filter(n => n.topic === 'Maps').length

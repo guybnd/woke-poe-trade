@@ -229,6 +229,7 @@ import { groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import { searchRequest } from '../search/widget'
 import { usePriceText } from '../shared/price'
 import { markNewsSeen, newsFor, seenNewsIds } from './news'
+import { MainProcess } from '@/web/background/IPC'
 import { personalOn } from '../personal'
 import { openSettingsPage } from '../dock/dock'
 
@@ -722,7 +723,7 @@ function entryHint (entry: LauncherEntry<Tab>): string | undefined {
 // ---- What's new (news.ts) ----
 const seenNews = computed(() => seenNewsIds(AppConfig().woke))
 function newsOf (entry: LauncherEntry<Tab>) {
-  return newsFor(entry.wmType, seenNews.value)
+  return newsFor(entry.wmType, seenNews.value, MainProcess.version.value)
 }
 // Counted on what the launcher lists, so a switched-off tool still counts.
 const newsCount = computed(() => new Set(launcherAll.value.map(e => newsOf(e)?.id).filter(Boolean)).size)

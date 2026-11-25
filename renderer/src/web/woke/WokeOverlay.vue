@@ -41,7 +41,7 @@ import { unseenNews } from './tab-bar/news'
 
 // What's new in the dock, loaded only after an update brings some.
 const WhatsNew = defineAsyncComponent(() => import('./dock/WhatsNew.vue'))
-const newsUnseen = computed(() => unseenNews(AppConfig().woke).length > 0)
+const newsUnseen = computed(() => unseenNews(AppConfig().woke, MainProcess.version.value).length > 0)
 
 // Loaded when first opened: kept out of the startup JS (perf budget).
 const ReportDialog = defineAsyncComponent(() => import('./app/ReportDialog.vue'))

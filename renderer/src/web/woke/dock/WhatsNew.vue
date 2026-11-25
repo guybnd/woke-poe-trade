@@ -11,6 +11,8 @@
               <i :class="['fas fa-chevron-right', $style.chev, isOpen(g) && $style.chevOpen]" aria-hidden="true" />
               <span :class="$style.name" data-no-item-tip="A tool's name, not an item"><ToolIcon :art="artFor(g.wmType)" :icon="iconFor(g.wmType)" :class="$style.toolIcon" />{{ g.name }}<span v-if="g.topic" :class="$style.topic">· {{ g.topic }}</span></span>
               <span :class="$style.count">{{ g.lines.length }}</span>
+              <!-- Folded: its newest line, to tell what's in it. -->
+              <span v-if="!isOpen(g)" :class="$style.preview" data-whats-new-preview>{{ sentence(g.lines[0].note) }}</span>
             </button>
             <w-button size="sm" variant="ghost" icon="fas fa-times" :title="`Dismiss these ${g.lines.length}`" data-whats-new-dismiss-group @click="markSeen(g.lines)" />
           </div>
@@ -44,6 +46,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import { AppConfig, pushHostConfig, saveConfigQuietly } from '@/web/Config'
 import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '../modules'
 import { markNewsSeen, unseenNews } from '../tab-bar/news'
+import { MainProcess } from '@/web/background/IPC'
 import { setNewsOff } from '../tab-bar/news-off'
 import type { NewsItem } from '../tab-bar/news'
 import { groupNews } from '../tab-bar/news-groups'
@@ -73,11 +76,11 @@ function typeName (wmType: string): string {
   const spec = registry.widgets.find(w => w.widget.type === wmType)?.widget
   return spec?.trNameKey ? t(spec.trNameKey) : wmType
 }
-const lines = computed(() => unseenNews(AppConfig().woke))
+const lines = computed(() => unseenNews(AppConfig().woke, MainProcess.version.value))
 const groups = computed(() => groupNews(lines.value))
 // The open group: the first (newest) until one is picked, and again once
-// the picked one is gone. '' is all folded.
-const picked = ref<string>()
+// the picked one is gone. '' is all folded. Remembered for next time.
+const picked = ref<string | undefined>(AppConfig().woke?.newsOpen)
 const openKey = computed(() => {
   const k = picked.value
   // A picked group down to one line has no fold: back to the newest.
@@ -87,6 +90,8 @@ const openKey = computed(() => {
 function isOpen (g: NewsGroup) { return openKey.value === g.key }
 function toggle (g: NewsGroup) {
   picked.value = isOpen(g) ? '' : g.key
+  ensureWokeConfig(AppConfig()).woke.newsOpen = picked.value
+  saveConfigQuietly()
   uiTrace(`What's new › ${picked.value ? 'open' : 'fold'} ${g.key}`)
 }
 // A sample price check goes by the item's English name.
@@ -195,6 +200,7 @@ function turnOff () {
 .chev { width: 10px; font-size: var(--w-fs-xs); color: var(--w-faint); transition: transform 0.12s; }
 .chevOpen { transform: rotate(90deg); }
 .topic { margin-left: 4px; opacity: 0.8; }
+.preview { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--w-faint); font-size: var(--w-fs-sm); }
 .count { font-size: var(--w-fs-xs); padding: 0 6px; border-radius: 8px; border: 1px solid var(--w-line); color: var(--w-fg); }
 .lines { display: flex; flex-direction: column; gap: 6px; padding-left: 16px; }
 .head + .lines { padding-top: 4px; }
