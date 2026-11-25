@@ -39,6 +39,12 @@ describe('boss drop pricing', () => {
     expect(dropPrice(jewel, px, prefs({ priceModes: { 'The Light of Meaning': 'custom' }, customPrices: { 'The Light of Meaning': 5 } }))).toMatchObject({ price: 5, source: 'custom' })
   })
 
+  it('takes your price for a plain drop with no price mode, and poe.ninja\'s again once cleared', () => {
+    const px = priceResolver([item('Voidforge', 100)])
+    expect(dropPrice({ name: 'Voidforge', chance: null }, px, prefs({ customPrices: { Voidforge: 7000 } }))).toMatchObject({ price: 7000, source: 'custom', mode: null })
+    expect(dropPrice({ name: 'Voidforge', chance: null }, px, prefs())).toMatchObject({ price: 100, source: 'ninja', mode: null })
+  })
+
   it('fills a drop poe.ninja doesn\'t list from trade, and never overrides a row it has', () => {
     const px = priceResolver([item('Voidforge', 100)], quotes({ 'Decaying Reliquary Key': { chaos: 800, listings: 12 }, Voidforge: { chaos: 999, listings: 1 } }))
     expect(dropPrice({ name: 'Decaying Reliquary Key', chance: null }, px, prefs())).toMatchObject({ price: 800, source: 'trade', mode: null })

@@ -125,8 +125,8 @@
                     </span>
                     <span class="text-right w-num" :class="d.rateSource === 'community' ? 'w-dim' : d.rateSource === 'none' ? 'w-faint' : d.rateSource === 'estimate' ? '' : 'w-accent'" :style="d.rateSource === 'estimate' ? 'color: var(--w-warn);' : ''" :title="rateTitle(d.rateSource)">{{ d.chance == null ? '?' : (d.rateSource === 'estimate' ? '~' : '') + pct(d.chance) }}</span>
                     <span class="flex items-center justify-end gap-1">
-                      <WChip v-if="d.priceMode" clickable :active="d.priceMode === 'custom'" :title="spreadTitle(d)" @click="editing = editing === d.name ? null : d.name">{{ modeLabel(d) }}</WChip>
-                      <WChip v-else-if="d.priceSource === 'trade'" :title="`poe.ninja doesn't list this. Price from ${d.listings} instant buyouts on trade.`">trade</WChip>
+                      <WChip v-if="d.priceMode && pricing !== d.name" clickable :active="d.priceMode === 'custom'" :title="spreadTitle(d)" @click="editing = editing === d.name ? null : d.name">{{ modeLabel(d) }}</WChip>
+                      <WChip v-else-if="d.priceSource === 'trade' && pricing !== d.name" :title="`poe.ninja doesn't list this. Price from ${d.listings} instant buyouts on trade.`">trade</WChip>
                       <input v-if="pricing === d.name" :ref="focusBox" v-model="priceDraft" type="number" min="0" step="any" class="w-input px-1 rounded text-right" style="width: 4.6rem;"
                         :aria-label="`Your price for one ${d.name}, in chaos`" title="Your price for one, in chaos. Enter keeps it, Esc cancels"
                         @keydown.enter.prevent="savePrice(d)" @keydown.esc.prevent.stop="pricing = null" @blur="savePrice(d)">
@@ -535,12 +535,14 @@ function leaveDropOut (d: DropRow, out: boolean) {
   toggleDrop(id, d.name, !out, d.tooRare)
   lineToast(out ? 'out' : 'in', d.name, () => { toggleDrop(id, d.name, out, d.tooRare) })
 }
-function setMyDropPrice (name: string, chaos: number | null) {
-  const modes = Object.fromEntries(Object.entries(props.config.priceModes).filter(([k]) => k !== name))
-  const custom = Object.fromEntries(Object.entries(props.config.customPrices).filter(([k]) => k !== name))
-  if (chaos != null) { modes[name] = 'custom'; custom[name] = chaos }
-  props.config.priceModes = modes
+// A plain drop keeps no price mode: your price alone wins (calc.ts dropPrice).
+// A rolled one (with the price strip) goes to My price, and back to
+// poe.ninja's, as the menu says.
+function setMyDropPrice (d: DropRow, chaos: number | null) {
+  const custom = Object.fromEntries(Object.entries(props.config.customPrices).filter(([k]) => k !== d.name))
+  if (chaos != null) custom[d.name] = chaos
   props.config.customPrices = custom
+  if (d.priceMode != null) props.config.priceModes = { ...props.config.priceModes, [d.name]: chaos != null ? 'custom' : 'median' }
 }
 const pricing = shallowRef<string | null>(null)
 const priceDraft = shallowRef<string | number>('')
@@ -556,12 +558,12 @@ function savePrice (d: DropRow) {
   const text = String(priceDraft.value).trim()
   const n = Number(text)
   if (text === priceOpened || text === '' || !Number.isFinite(n) || n < 0) return
-  setMyDropPrice(d.name, n)
+  setMyDropPrice(d, n)
 }
 const dropState = (d: DropRow) => ({ out: !d.included, edited: d.priceSource === 'custom' })
 const dropHandlers = (d: DropRow) => ({
   edit: () => { startPrice(d) },
-  reset: () => { setMyDropPrice(d.name, null) },
+  reset: () => { setMyDropPrice(d, null) },
   out: (on: boolean) => { leaveDropOut(d, on) }
 })
 const dropEntries = (d: DropRow): MenuEntry[] => lineMenu(dropState(d), dropHandlers(d), { edit: d.priceSource === 'custom' ? 'Change my price…' : 'Set my price…', reset: "Back to poe.ninja's price" })
@@ -702,6 +704,8 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 /* Each cell on row 1 by hand: the hover actions share the drop's name cell,
    clear of the price you click. */
 .dropGrid > :nth-child(1) { grid-area: 1 / 1; } .dropGrid > :nth-child(2) { grid-area: 1 / 2; } .dropGrid > :nth-child(3) { grid-area: 1 / 3; } .dropGrid > :nth-child(4) { grid-area: 1 / 4; } .dropGrid > :nth-child(5) { grid-area: 1 / 5; }
+/* Hovered, the name makes room for them: its ! and chips stay readable. */
+.dropGrid:hover > :nth-child(1), .dropGrid:focus-within > :nth-child(1) { padding-right: 3.6em; }
 .dropGrid > :global(.w-line-acts) { position: relative; top: auto; transform: none; grid-area: 1 / 1; justify-self: end; }
 .struck { text-decoration: line-through; color: var(--w-dim); }
 .cardStats { margin-top: 4px; }

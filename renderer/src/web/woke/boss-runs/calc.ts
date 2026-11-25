@@ -176,6 +176,8 @@ export function dropPrice (d: BossDrop, prices: Prices, prefs: BossPrefs): DropP
   const mode: PriceMode | null = chosen ?? (d.variable ? 'unid' : null)
   const quote = prices.trade(d.name)
   if (mode == null) {
+    // Your price, set from the drop's line (any drop, not only rolled ones).
+    if (custom != null) return { price: custom, spread: null, mode, source: 'custom', listings: null }
     const ninja = prices.price(d.name, d.variant)
     if (ninja != null && prefs.skipThin && prices.thin(d.name, d.variant)) return { price: 0, spread: null, mode, source: 'thin', listings: null }
     if (ninja != null) return { price: ninja, spread: null, mode, source: 'ninja', listings: null }

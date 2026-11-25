@@ -122,6 +122,8 @@ test('Boss runs: unidentified jewel prices and estimated chances', async ({ over
   await voidforge.locator('[data-line-more]').click()
   await overlay.page.getByRole('menuitem', { name: "Back to poe.ninja's price" }).click()
   await expect(voidforge.locator('[data-boss-price] .fa-thumbtack')).toHaveCount(0)
+  // poe.ninja's 5000c again (in divines or chaos, whichever shows).
+  await expect(voidforge.locator('[data-boss-price]')).not.toContainText('7')
 
   // Rates tab: estimates are labelled, with the source named.
   await panel.getByText('Rates & sources').click()
