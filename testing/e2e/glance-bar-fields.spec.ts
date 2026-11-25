@@ -3,15 +3,15 @@
 // left, only when the bar is set to stay up.
 import { test, expect } from './harness'
 
-// Each test plays its map just before now, later than the test before it.
-// The tests share one app, which keeps the maps and night they saved: the
-// session widget reads the log's tail when it starts (which, under load, is
-// after the test's lines are written) and skips lines older than the last
-// saved map, then ends a night quiet for 15 minutes. Fixed old times made
-// the "In maps" test lose its map about one run in three.
+// Each test plays its map from now on, later than the test before it (and
+// any spec run earlier in this worker). The app keeps the maps and night they
+// saved: the session widget reads the log's tail when it starts (under load,
+// after the test's lines are written), skips lines older than the last saved
+// map, and ends a night quiet for 15 minutes. Fixed old times made the
+// "In maps" test lose its map about one run in three.
 let nextStart = 0
 function clock () {
-  const start = Math.max(nextStart, Date.now() - 5 * 60_000)
+  const start = Math.max(nextStart, Date.now() - 20_000)
   nextStart = start + 200_000
   const pad = (n: number) => String(n).padStart(2, '0')
   // Seconds into the test's map run, as Client.txt writes the time (local).
