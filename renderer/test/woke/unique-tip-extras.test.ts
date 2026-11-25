@@ -33,6 +33,11 @@ describe('unique tooltip extras', () => {
     const prices = { card: () => 1000, unique: 50000, format: (c: number) => `${c}c` }
     expect(text(uniqueExtraSections({ name: 'Headhunter' }, pack, prices))).toContain('From card: The Fiend (11), corrupted · set 11000c')
   })
+  it('names each conqueror\'s keystone on a Timeless jewel', () => {
+    const lines = text(uniqueExtraSections({ name: 'Militant Faith' }, pack, noPrices))
+    expect(lines).toContain('The conqueror decides the keystone:')
+    expect(lines).toContain('Avarius · Power of Purpose')
+  })
   it('adds nothing for a unique with none of it', () => {
     expect(uniqueExtraSections({ name: 'Nonexistent Thing' }, pack, noPrices)).toEqual([])
   })

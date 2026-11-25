@@ -4,6 +4,7 @@
 // the set's cost against the unique's own price. Pure: item-tip.ts passes the
 // data and prices. Loaded on the first unique hover, not at startup.
 import { cardsFor } from '../../related-family/recipe'
+import { ABYSS, TIMELESS } from '../../related-family/conquest'
 import { uniqueDetails } from '../../search/unique-details'
 import type { TipLine, TipPack, TipPart } from './tip-content'
 
@@ -34,6 +35,16 @@ export function uniqueExtraSections (
     if (kind?.replaces.length) {
       out.push(kind.replaces.map((l, i) => [part(i ? 'and ' : 'Replaces: ', 'label'), part(l, 'mod')]))
     }
+  }
+
+  // A conquest jewel: the keystone each conqueror gives, whatever the number
+  // (Guy's pick G2; the price check's side list has the same, conquest.ts).
+  const conquerors = (TIMELESS[plain] ?? ABYSS.filter(a => a.jewel === plain)).filter(c => c.keystone)
+  if (conquerors.length) {
+    out.push([
+      [part(conquerors.length > 1 ? 'The conqueror decides the keystone:' : 'Its keystone:', 'label')],
+      ...conquerors.map((c): TipLine => [part(c.name, 'value'), part(` · ${c.keystone!.name}`, 'mod')])
+    ])
   }
 
   const vest = details?.vestigial ?? []

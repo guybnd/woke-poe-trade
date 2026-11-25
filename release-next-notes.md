@@ -242,3 +242,4 @@
 - Item hover tooltip, gems: the price of each version poe.ninja lists (1, 20/20, 21/20 corrupted and so on), and one line on where to get the gem: quest reward, vendor, transfiguring, or the boss that drops it.
 - Item hover tooltip: currency, fragments, cards and other stackables say how many your last Net worth stash read holds, and what that comes to ("You have 34 · 2.2 div"). Nothing shows without a stash read.
 - Item hover tooltip, essences: the mod each essence forces on each kind of item ("Body Armour: +(160-174) to maximum Life", "Weapons: ..."), slots that get the same mod on one line. From Path of Building's data.
+- Item hover tooltip, Timeless and Abyss conquest jewels: the keystone each conqueror gives, under the jewel's mods (Militant Faith: Avarius · Power of Purpose and so on), as the price check's side list shows.
