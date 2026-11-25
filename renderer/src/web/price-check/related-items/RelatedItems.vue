@@ -193,6 +193,37 @@ function getReward (item: ParsedItem, tips: Record<string, { d?: string, n?: num
 }
 const signed = (chaos: number) => `${chaos < 0 ? '−' : '+'}${currencyText(autoCurrency(Math.abs(chaos)))}`
 
+// woke: a gem with transfigured kinds lists them all, base first, each priced
+// at the checked gem's level and quality: the Divine Font in the Labyrinth
+// turns one into another, keeping both.
+function getGemKinds (item: ParsedItem, variant: string | undefined) {
+  const gem = item.info.gem
+  if (item.info.namespace !== 'GEM' || gem?.vaal) return []
+  const base = gem?.transfigured ? gem.normalVariant : item.info.refName
+  if (!base) return []
+  const baseInfo = ITEM_BY_REF('GEM', base)?.[0]
+  const kinds = [...ITEMS_ITERATOR(`"normalVariant":"${base}"`)].filter(g => g.gem?.transfigured && g.gem.normalVariant === base)
+  if (!baseInfo || !kinds.length) return []
+  const priced = (info: BaseType) => {
+    const chaos = variant != null ? findPriceByQuery({ ns: 'GEM', name: info.refName, variant })?.chaos : undefined
+    return sideRow(info, chaos != null ? autoCurrency(chaos) : undefined, info.refName === item.info.refName, `gem:${info.refName}`)
+  }
+  const dearest = (a: SideRow, b: SideRow) => chaosOfPrice(b.price) - chaosOfPrice(a.price)
+  return [{
+    key: 'gem-kinds',
+    title: `${base}, transfigured`,
+    rows: [priced(baseInfo), ...kinds.map(priced).sort(dearest)],
+    note: `${variant ? `Priced as ${gemStateText(variant)}. ` : ''}The Divine Font in the Labyrinth turns one into another.`
+  }]
+}
+
+// poe.ninja's gem variant in words: "20/20c" is "level 20, 20% quality, corrupted".
+function gemStateText (variant: string) {
+  const m = /^(\d+)(?:\/(\d+))?(c?)$/.exec(variant)
+  if (!m) return variant
+  return [`level ${m[1]}`, m[2] ? `${m[2]}% quality` : '', m[3] ? 'corrupted' : ''].filter(Boolean).join(', ')
+}
+
 // woke: a fragment set's total, under its list: "Full set 3.2 div".
 function setSum (group: DropEntry): SumLine | undefined {
   if (!isFragmentSet(group)) return undefined
@@ -341,6 +372,7 @@ export default defineComponent({
       const shown = new Set(recipes.flatMap(sec => sec.rows.map(r => r.name)))
       return [
         ...reward,
+        ...getGemKinds(props.item, queryId?.variant),
         ...recipes,
         ...cards,
         ...(id ? getSources(props.item, id, cards.length > 0, shown) : [])
