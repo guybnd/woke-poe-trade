@@ -49,7 +49,7 @@
           <tr v-for="r in shown.slice(0, limit)" :key="r.item.id" :class="['w-line', { 'w-line-out': isOut(r) }]" tabindex="0" data-listed-row
             @contextmenu="onMenu($event, r)" @keydown="onKeys($event, r)">
             <td :class="$style.left">
-              <span :class="$style.name"><img v-if="r.item.icon" :src="r.item.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(r.item)" class="w-trunc w-line-name" :style="{ color: colourOf(r.item.frameType) }">{{ saleName(r.item) }}</span><span v-if="isOut(r)" class="w-line-tag">left out</span></span>
+              <span :class="$style.name"><img v-if="r.item.icon" :src="r.item.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(r.item)" class="w-trunc w-line-name" :style="{ color: saleColour(r.item.frameType) }">{{ saleName(r.item) }}</span><span v-if="isOut(r)" class="w-line-tag">left out</span></span>
             </td>
             <td class="w-num" :class="[$style.ask, { [$style.struck]: isOut(r) }]">
               {{ fmt(r.item.price.amount) }} {{ r.item.price.currency }}<span v-if="targetOf(r)" class="w-warn" :title="`You set ${priceLabel(targetOf(r)!)} from the price check: reprice it at Faustus. It clears once a Refresh sees that price`" data-listed-target> → {{ priceLabel(targetOf(r)!) }}</span>
@@ -88,7 +88,7 @@ import { lineOutDoc, loadLineOut, outIdsOf, setLineOut } from './line-out-store'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import Coin from './Coin.vue'
 import { saleMenuRef, saleTip } from './sale-tip'
-import { saleName, saleType, SALE_TYPES } from './sales'
+import { saleColour, saleName, saleType, SALE_TYPES } from './sales'
 import type { SaleType } from './sales'
 import { ninjaPriced, rates, sales } from './sales-store'
 import { canCheck, checkFor, rankText } from './cheapest'
@@ -260,17 +260,6 @@ async function reprice (r: PendingRow, e: MouseEvent) {
   const ref = pobMenuRef(saleItem(l)) ?? { name: l.name || l.typeLine, ...(unique ? { rarity: 'unique' as const } : {}) }
   const opened = await openPriceCheck(ref, at).catch(() => false)
   if (!opened) { repricing.value = null; toast("Can't price check this one by name: Ctrl+D it at Faustus in game") }
-}
-function colourOf (frame: number) {
-  switch (frame) {
-    case 1: return 'var(--w-r-magic)'
-    case 2: return 'var(--w-r-rare)'
-    case 3: return 'var(--w-r-unique)'
-    case 4: return 'var(--w-r-gem)'
-    case 5: return 'var(--w-r-currency)'
-    case 6: return 'var(--w-r-divination)'
-    default: return 'var(--w-fg)'
-  }
 }
 </script>
 
