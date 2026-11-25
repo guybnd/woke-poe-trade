@@ -335,7 +335,7 @@ export default defineComponent({
       if (!Host.isElectron || advancedCheck.value || !rect.width || props.config.wmWants !== 'show') return
       sendTrackArea(trackFrom, { x: window.screenX + rect.x, y: window.screenY + rect.y, width: rect.width, height: rect.height })
     }
-    // From the card to the window: Live offers searches, Details doesn't. The
+    // From the card to the window (live: with a search). The
     // mouse is tracked into the window now, or leaving the card would close it.
     // A click on the card already gave the overlay the mouse (and ended the
     // tracking), so only a key (Space) needs the window tracked from here.

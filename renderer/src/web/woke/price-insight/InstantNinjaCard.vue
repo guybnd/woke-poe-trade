@@ -33,7 +33,7 @@
     </div>
     <!-- The price over 24h, 3 days or 7 days in its own box beside the card: a click on a
          range or the mouse wheel steps through them (Guy, 2026-11-25). -->
-    <div v-if="info && !isChaos" :class="$style.gbox" data-testid="instant-ninja-graph" :title="hasHistory ? 'Scroll or click: 24h, 3 days, 7 days' : undefined" @wheel="onWheel">
+    <div v-if="info" :class="$style.gbox" data-testid="instant-ninja-graph" :title="hasHistory ? 'Scroll or click: 24h, 3 days, 7 days' : undefined" @wheel="onWheel">
       <div v-if="hasHistory" :class="$style.gtabs">
         <button v-for="r in RANGES" :key="r.id" type="button" tabindex="-1" :class="{ [$style.on]: r.id === range }" :data-testid="`instant-ninja-range-${r.id}`" @mousedown.prevent @click="setRange(r.id)">{{ r.id }}</button>
       </div>
@@ -78,6 +78,7 @@ const DAY_MS = 24 * 3600 * 1000
 const DAY_POINTS = 7
 const SAVED_WAIT_MS = 400
 import { WSpark, WKbd, WPriceText, agoPhrase, vItemTip } from '../ui'
+import { wheelStep } from '../dock/wheel'
 
 const CardDrops = defineAsyncComponent(() => import('../card-drops/CardDrops.vue'))
 
@@ -117,7 +118,7 @@ const info = computed(() => {
 const badgeTip = computed(() => `This is used to provide instant pricing without any delay. For live data, press${props.againKeys ? ' the price check key again' : ''}:`)
 
 const isDivine = computed(() => props.item.info.refName === 'Divine Orb')
-// A Chaos Orb is 1c: no graph, and its stack in chaos says nothing.
+// A Chaos Orb is 1c: its stack in chaos says nothing, and it has no graph (chaosOrbRow).
 const isChaos = computed(() => props.item.info.refName === 'Chaos Orb')
 const have = computed(() => props.item.stackSize?.value ?? 1)
 const stack = computed(() => info.value && have.value > 1 && !isChaos.value ? ninjaTotal(info.value.chaos * have.value, isDivine.value ? undefined : xchgRate.value) : null)
@@ -198,9 +199,11 @@ const hasHistory = computed(() => {
   return (Array.isArray(g) && g.filter(v => typeof v === 'number').length > 1) || (saved.value?.some(v => v != null) ?? false)
 })
 function onWheel (e: WheelEvent) {
-  if (!hasHistory.value || !e.deltaY) return
+  if (!hasHistory.value) return
   e.preventDefault()
-  stepRange(e.deltaY > 0 ? 1 : -1)
+  // A touchpad's many small deltas add up to one notch (dock/wheel.ts).
+  const dir = wheelStep(e)
+  if (dir) stepRange(dir)
 }
 const spark = computed(() => shownTrend.value?.trend ?? [])
 const change = computed(() => shownTrend.value?.change != null ? Math.round(shownTrend.value.change) : null)
@@ -259,7 +262,7 @@ function onKey (e: KeyboardEvent) {
   const t = e.target as HTMLElement | null
   if (t && t !== document.body && !el.value?.contains(t)) return
   if (t?.closest('input, textarea, select, [contenteditable]')) return
-  // A focused button keeps its own Enter and Space: Details never runs a search.
+  // A focused button keeps its own Enter and Space.
   const action = instantCardKey(e.key, onKeyboardFocusedControl(t))
   if (action === 'live') {
     e.preventDefault()
