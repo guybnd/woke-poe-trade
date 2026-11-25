@@ -96,7 +96,7 @@ function itemCard (family: FlipFamily, name: string, s: Settings, ctx: LookupCon
     sections: [
       { rows: [{ label: 'Price', item: { name, type: family.ninjaType }, chaos: price, bulk: true }] },
       { label: range ? 'One recipe' : 'Profit per item put in', rows },
-      ...(range ? [{ text: [RANGE_NOTE] }] : family.lowConfidence ? [{ text: [family.lowConfidence] }] : [])
+      ...(range ? [{ text: [RANGE_NOTE] }] : family.lowConfidence && !(family.id === 'tattoos' && ownWeights(s, family.id)) ? [{ text: [family.lowConfidence] }] : [])
     ],
     actions: openAction(ctx)
   }
@@ -124,11 +124,17 @@ function bestCard (s: Settings, ctx: LookupContext): LookupCard {
   }
 }
 
+// Own weights set for the family, which the Tattoos note then doesn't warn about.
+function ownWeights (s: Settings, id: string): boolean {
+  return Object.values(s.weights?.[id] ?? {}).some(w => typeof w === 'number' && Number.isFinite(w) && w >= 0)
+}
+
 const TATTOO_WORDS = ['tattoo', 'tattoos', 'tattoo flip', 'tattoo tribes']
 
 function tribeLine (r: TribeRow): LookupRow & { value: string } {
   const flip = r.profitEach == null ? 'no traded Tattoo to put in' : `3 for 1 ${signed(r.profitEach)} each`
-  return { label: r.tribe, value: `average ${formatAmount(r.average)}c, ${flip}` }
+  const guess = r.unpriced ? `, ${r.unpriced} unpriced` : ''
+  return { label: r.tribe, value: `average ${formatAmount(r.average)}c, ${flip}${guess}` }
 }
 
 // Every tribe, best 3 for 1 first, or one tribe ("kitava") with its Tattoos.
@@ -144,13 +150,13 @@ function tribeCard (s: Settings, ctx: LookupContext, only?: string): LookupCard 
     id: `flip:tattoos:${only ?? 'all'}`,
     group: 'Flips',
     name: one ? `${one.tribe} Tattoos` : 'Tattoo tribes',
-    sub: one ? tribeLine(one).value : `Best 3 for 1: ${rows[0].tribe}, ${tribeLine(rows[0]).value}`,
+    sub: one ? tribeLine(one).value : `Top: ${rows[0].tribe}, ${tribeLine(rows[0]).value}`,
     icon: 'fas fa-recycle',
     sections: [
       one
-        ? { label: `${one.tribe} Tattoos`, rows: one.tattoos.map(t => ({ label: shortName(t.name), item: { name: t.name, type: family.ninjaType }, chaos: t.chaos, bulk: true })) }
+        ? { label: `${one.tribe} Tattoos`, rows: one.tattoos.map(t => t.unpriced ? { label: shortName(t.name), item: { name: t.name, type: family.ninjaType }, value: 'no price', dim: true } : { label: shortName(t.name), item: { name: t.name, type: family.ninjaType }, chaos: t.chaos, bulk: true }) }
         : { label: 'Average Tattoo and 3 for 1, per tribe', rows: rows.map(tribeLine) },
-      { text: ['3 Tattoos of one tribe vendor for 1 random Tattoo of that tribe.', family.lowConfidence ?? ''].filter(Boolean) }
+      { text: ['3 Tattoos of one tribe vendor for 1 random Tattoo of that tribe.', ownWeights(s, family.id) ? '' : family.lowConfidence ?? ''].filter(Boolean) }
     ],
     actions: openAction(ctx)
   }

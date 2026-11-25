@@ -10,8 +10,12 @@ const EXCHANGE = '**/poe.ninja/poe1/api/economy/exchange/current/overview*'
 
 const TATTOOS: Array<[string, number]> = [
   ['Tattoo of the Kitava Blood Drinker', 60],
+  ['Tattoo of the Kitava Heart Eater', 10],
+  ['Tattoo of the Kitava Makanga', 8],
+  ['Tattoo of the Kitava Shaman', 6],
   ['Tattoo of the Kitava Warrior', 4],
   ['Tattoo of the Kitava Rebel', 2],
+  // Ngamahu has 4 Tattoos without a price.
   ['Tattoo of the Ngamahu Warrior', 6],
   ['Tattoo of the Ngamahu Woodcarver', 3],
   ['Journey Tattoo of the Body', 50]
@@ -41,16 +45,19 @@ test('flips: the Tattoos tab ranks tribes by 3 for 1 and opens a tribe', async (
   const verdict = panel.locator('[data-flip-tribes]')
   await expect(verdict).toContainText('Best 3 for 1: Kitava')
   await expect(panel.getByText(/^No one has measured the odds/)).toBeVisible()
-  // Kitava averages 22c; 3 Rebels at 2c make (22 - 6) / 3 each.
+  // Kitava averages 15c; 3 Rebels at 2c make (15 - 6) / 3 each.
   const kitava = panel.locator('[data-tribe="Kitava"]')
   await expect(kitava).toContainText('Rebel 2c')
-  await expect(kitava).toContainText('+5.3c')
-  await expect(panel.locator('[data-tribe="Ngamahu"]')).toContainText('−1.5c')
+  await expect(kitava).toContainText('+3c')
+  // Its 4 unpriced Tattoos count at its cheapest, 3c: (21 / 6 - 9) / 3.
+  const ngamahu = panel.locator('[data-tribe="Ngamahu"]')
+  await expect(ngamahu).toContainText('4 unpriced')
+  await expect(ngamahu).toContainText('−1.8c')
   await overlay.snap('flips-tattoo-tribes')
 
   await kitava.click()
   await expect(panel.getByText('Kitava Blood Drinker', { exact: true })).toBeVisible()
-  await expect(panel.getByText('33%').first()).toBeVisible()
+  await expect(panel.getByText('17%').first()).toBeVisible()
   await overlay.snap('flips-tattoo-tribe-open')
 })
 

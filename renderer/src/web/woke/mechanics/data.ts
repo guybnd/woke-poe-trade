@@ -23,6 +23,8 @@ export interface PriceGroup {
   // and the full panel shows the kinds as chips that filter the list.
   kinds?: GroupKind[]
   kindOf?: (item: PriceItem) => string | undefined
+  // Rows keep their own item art instead of their kind's icon (Tattoos).
+  itemIcons?: boolean
   // Prices here can't rank the items against each other, so no "best" call.
   unranked?: boolean
   // A name with many priced variants (a Viscera's effects) shows its cheapest.
@@ -320,6 +322,7 @@ export const MECHANICS: Mechanic[] = [
         kinds: TATTOO_TRIBES.map(tribe => ({ id: tribe, label: tribe, get icon () { return gameIcon(tribeIconItem(tribe)) ?? '' } })),
         kindOf: i => tattooTribe(i.name) ?? undefined,
         rowName: i => i.name.replace(/^Tattoo of the /, ''),
+        itemIcons: true,
         limit: 12
       },
       { label: 'Runegrafts', types: ['Runegraft'], limit: 8 }
@@ -401,7 +404,7 @@ export function priceGroup (group: PriceGroup, items: PriceItem[], leaveOut?: (i
   }
   const rows: PricedRow[] = [...best.values()].filter(item => !leaveOut?.(item)).map(item => {
     const kind = group.kindOf?.(item)
-    return { item, chaos: item.chaos * unit, unit, tag: group.tag?.(item), kind: group.kinds?.find(k => k.id === kind), rowName: group.rowName?.(item) }
+    return { item, chaos: item.chaos * unit, unit, tag: group.tag?.(item), kind: group.itemIcons ? undefined : group.kinds?.find(k => k.id === kind), rowName: group.rowName?.(item) }
   })
   rows.sort((a, b) => b.chaos - a.chaos)
   return rows.slice(0, group.limit ?? 20)

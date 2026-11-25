@@ -59,6 +59,8 @@ export interface FlipFamily {
   unmeasured?: boolean
   // An item that opens to a random one of the family, priced as the average.
   opener?: string
+  // Recipes stay inside a group (a Tattoo's tribe): shares are taken within it.
+  group?: (name: string) => string | null
 }
 
 const vendor3 = (excludeInput: boolean): FlipMethod => ({ id: 'vendor', label: 'Vendor 3 for 1', inputs: 3, excludeInput })
@@ -191,6 +193,7 @@ export const FAMILIES: FlipFamily[] = [
     ninjaType: 'Tattoo',
     // Only tribe Tattoos: Journey, Honoured, Loyalty and the rest have no tribe.
     match: name => tattooTribe(name) != null,
+    group: tattooTribe,
     methods: [tribe],
     // No one has measured the recipe: every Tattoo of the tribe counts as 1.
     weightOf: () => ({ weight: 1, source: 'estimate' }),
@@ -397,12 +400,20 @@ function familyWeights (family: FlipFamily, names: string[], own?: Record<string
 // What the Settings list shows: each item as a share of the results.
 export function weightRows (family: FlipFamily, names: string[], own?: Record<string, number>): WeightRow[] {
   const items = familyWeights(family, names, own)
-  const total = items.reduce((n, i) => n + (i.weight ?? 0), 0)
-  return items.map(({ name, weight, source }) => ({ name, source, percent: weight != null && total > 0 ? weight / total * 100 : null }))
+  const groupOf = (name: string) => family.group?.(name) ?? ''
+  const totals = new Map<string, number>()
+  for (const i of items) totals.set(groupOf(i.name), (totals.get(groupOf(i.name)) ?? 0) + (i.weight ?? 0))
+  return items.map(({ name, weight, source }) => {
+    const total = totals.get(groupOf(name)) ?? 0
+    return { name, source, percent: weight != null && total > 0 ? weight / total * 100 : null }
+  })
 }
 
 // The weight that makes `name` this share of the results, under 100%, the rest staying as they are.
 export function weightForPercent (family: FlipFamily, names: string[], own: Record<string, number> | undefined, name: string, percent: number): number {
-  const others = familyWeights(family, names, own).reduce((n, i) => n + (i.name === name ? 0 : i.weight ?? 0), 0)
+  const group = family.group?.(name) ?? ''
+  const others = familyWeights(family, names, own)
+    .filter(i => (family.group?.(i.name) ?? '') === group)
+    .reduce((n, i) => n + (i.name === name ? 0 : i.weight ?? 0), 0)
   return percent * others / (100 - percent)
 }

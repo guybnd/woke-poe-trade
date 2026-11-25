@@ -10,6 +10,24 @@ import type { ItemWeight, Quote } from './calc'
 export const TATTOO_TRIBES = ['Arohongui', 'Hinekora', 'Kitava', 'Ngamahu', 'Ramako', 'Rongokurai', 'Tasalio', 'Tawhoa', 'Tukohama', 'Valako'] as const
 export type TattooTribe = typeof TATTOO_TRIBES[number]
 
+// Each tribe's six, from the game's item data (3.30).
+const TRIBE_ROLES: Record<TattooTribe, string[]> = {
+  Arohongui: ['Makanga', 'Moonwarden', 'Scout', 'Shaman', 'Warmonger', 'Warrior'],
+  Hinekora: ['Deathwarden', 'Makanga', 'Shaman', 'Storyteller', 'Warmonger', 'Warrior'],
+  Kitava: ['Blood Drinker', 'Heart Eater', 'Makanga', 'Rebel', 'Shaman', 'Warrior'],
+  Ngamahu: ['Firewalker', 'Makanga', 'Shaman', 'Warmonger', 'Warrior', 'Woodcarver'],
+  Ramako: ['Archer', 'Fleetfoot', 'Makanga', 'Scout', 'Shaman', 'Sniper'],
+  Rongokurai: ['Brute', 'Goliath', 'Guard', 'Makanga', 'Turtle', 'Warrior'],
+  Tasalio: ['Bladedancer', 'Makanga', 'Scout', 'Shaman', 'Tideshifter', 'Warrior'],
+  Tawhoa: ['Herbalist', 'Makanga', 'Naturalist', 'Scout', 'Shaman', 'Warrior'],
+  Tukohama: ['Brawler', 'Makanga', 'Shaman', 'Warcaller', 'Warmonger', 'Warrior'],
+  Valako: ['Makanga', 'Scout', 'Shaman', 'Shieldbearer', 'Stormrider', 'Warrior']
+}
+
+export function tribeTattoos (tribe: TattooTribe): string[] {
+  return TRIBE_ROLES[tribe].map(role => `Tattoo of the ${tribe} ${role}`)
+}
+
 const TRIBE_NAME = /^Tattoo of the (\S+) /
 
 export function tattooTribe (name: string): TattooTribe | null {
@@ -30,6 +48,8 @@ export interface TribeTattoo {
   // Chance of being the result, 0..1.
   share: number
   tradedChaos: number | null
+  // No price: it counts at the tribe's cheapest price, so the average is a guess.
+  unpriced?: boolean
 }
 
 export interface TribeRow {
@@ -44,6 +64,8 @@ export interface TribeRow {
   profitEach: number | null
   // Cheapest Tattoos traded a day; null without the exchange feed.
   supplyPerDay: number | null
+  // Tattoos of the tribe with no price. Such a row is never called best.
+  unpriced: number
 }
 
 export function tribeRows (
@@ -53,23 +75,29 @@ export function tribeRows (
   hideUntraded: boolean
 ): TribeRow[] {
   const keep = 1 - sellDiscount
-  const byTribe = new Map<TattooTribe, Array<{ name: string, quote: Quote, weight: number }>>()
-  for (const [name, quote] of quotes) {
+  const tribes = new Set<TattooTribe>()
+  for (const name of quotes.keys()) {
     const tribe = tattooTribe(name)
-    if (!tribe) continue
-    const weight = weightOf(name)?.weight ?? 1
-    const list = byTribe.get(tribe) ?? []
-    list.push({ name, quote, weight })
-    byTribe.set(tribe, list)
+    if (tribe) tribes.add(tribe)
   }
   const rows: TribeRow[] = []
-  for (const [tribe, list] of byTribe) {
+  for (const tribe of tribes) {
+    const names = tribeTattoos(tribe)
+    const priced = names.flatMap(name => quotes.has(name) ? [quotes.get(name)!.chaos] : [])
+    const floor = Math.min(...priced)
+    // A weight that isn't a positive number counts as 1; all at 0 would leave no result.
+    let list = names.map(name => {
+      const quote = quotes.get(name)
+      const weight = weightOf(name)?.weight
+      return { name, chaos: quote?.chaos ?? floor, tradedChaos: quote?.tradedChaos ?? null, unpriced: !quote, weight: weight != null && weight >= 0 ? weight : 1 }
+    })
+    if (!list.some(t => t.weight > 0)) list = list.map(t => ({ ...t, weight: 1 }))
     const total = list.reduce((n, t) => n + t.weight, 0)
-    const tattoos = list
-      .map(t => ({ name: t.name, chaos: t.quote.chaos, share: total > 0 ? t.weight / total : 0, tradedChaos: t.quote.tradedChaos }))
+    const tattoos: TribeTattoo[] = list
+      .map(t => ({ name: t.name, chaos: t.chaos, share: t.weight / total, tradedChaos: t.tradedChaos, ...(t.unpriced ? { unpriced: true } : {}) }))
       .sort((a, b) => b.chaos - a.chaos || a.name.localeCompare(b.name, 'en'))
     const average = tattoos.reduce((n, t) => n + t.share * t.chaos * keep, 0)
-    const inputs = tattoos.filter(t => !hideUntraded || isTraded(t))
+    const inputs = tattoos.filter(t => !t.unpriced && (!hideUntraded || isTraded(t)))
     const cheapest = inputs.length ? inputs[inputs.length - 1] : null
     rows.push({
       tribe,
@@ -77,7 +105,8 @@ export function tribeRows (
       tattoos,
       cheapest,
       profitEach: cheapest ? (average - TRIBE_INPUTS * cheapest.chaos) / TRIBE_INPUTS : null,
-      supplyPerDay: cheapest?.tradedChaos == null ? null : cheapest.tradedChaos / cheapest.chaos
+      supplyPerDay: cheapest?.tradedChaos == null ? null : cheapest.tradedChaos / cheapest.chaos,
+      unpriced: tattoos.filter(t => t.unpriced).length
     })
   }
   return rows.sort((a, b) => (b.profitEach ?? -Infinity) - (a.profitEach ?? -Infinity) || b.average - a.average)

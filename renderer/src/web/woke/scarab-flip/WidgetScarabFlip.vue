@@ -92,6 +92,7 @@
                 <img v-if="tribeIcon(r.tribe)" :src="tribeIcon(r.tribe)!" alt="" :class="$style.tribeIcon" draggable="false" @error="($event.target as HTMLImageElement).style.visibility = 'hidden'">
                 <span class="w-trunc">{{ r.tribe }}</span>
                 <span v-if="r === bestTribe" class="w-up" :class="$style.bestTag">best</span>
+                <span v-else-if="r.unpriced" class="w-warn w-num" :class="$style.bestTag" :title="`${r.unpriced} of its Tattoos have no price and count at its cheapest, so the average is a guess`">{{ r.unpriced }} unpriced</span>
               </span>
               <WPrice :chaos="r.average" :divine="divine" class="text-right" />
               <span class="text-right w-num w-trunc">
@@ -102,9 +103,11 @@
             <template v-if="openTribe === r.tribe">
               <div v-for="t in r.tattoos" :key="t.name" class="w-row" :class="[$style.tattooGrid]" @contextmenu="rowMenu($event, t.name)">
                 <FlipName :name="t.name" :item="t.name" :type="family.ninjaType" />
-                <WPrice :chaos="t.chaos" :divine="divine" class="text-right" />
+                <span v-if="t.unpriced" class="text-right w-faint w-num" title="poe.ninja has no price: counted at the tribe's cheapest">no price</span>
+                <WPrice v-else :chaos="t.chaos" :divine="divine" class="text-right" />
                 <span class="text-right w-num w-dim" title="Chance of this result">{{ pct(t.share) }}</span>
-                <span class="text-right w-num" :class="tattooProfitEach(r, t.chaos) > 0 ? 'w-up' : 'w-down'" title="Put in with 2 more like it, per Tattoo">{{ signedAmount(tattooProfitEach(r, t.chaos)) }}</span>
+                <span v-if="t.unpriced" />
+                <span v-else class="text-right w-num" :class="tattooProfitEach(r, t.chaos) > 0 ? 'w-up' : 'w-down'" title="Put in with 2 more like it, per Tattoo">{{ signedAmount(tattooProfitEach(r, t.chaos)) }}</span>
               </div>
             </template>
           </template>
@@ -350,10 +353,11 @@ useGoto(props.config, 'woke-scarab-flip', {
 const openTribe = shallowRef<TattooTribe | null>(null)
 const bestTribe = computed(() => {
   if (flip.value?.kind !== 'tribes') return null
-  const top = flip.value.rows[0]
+  // A tribe with an unpriced Tattoo has a guessed average, so it isn't called best.
+  const top = flip.value.rows.find(r => !r.unpriced)
   return top?.profitEach != null && top.profitEach > 0 && top.cheapest ? top : null
 })
-const countOwnWeights = computed(() => Object.keys(props.config.weights?.[family.value.id] ?? {}).length)
+const countOwnWeights = computed(() => Object.values(props.config.weights?.[family.value.id] ?? {}).filter(w => typeof w === 'number' && Number.isFinite(w) && w >= 0).length)
 function toggleTribe (tribe: TattooTribe) { openTribe.value = openTribe.value === tribe ? null : tribe }
 function tribeIcon (tribe: TattooTribe) { return gameIcon(tribeIconItem(tribe)) }
 // "Tattoo of the Kitava Rebel" -> "Rebel": the row already names the tribe.
