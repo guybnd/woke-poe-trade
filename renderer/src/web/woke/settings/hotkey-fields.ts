@@ -15,6 +15,7 @@ import { runHotkeyOf } from '../net-worth/widget'
 import type { NetWorthWidget } from '../net-worth/widget'
 import { SESSION_STORY_TYPE } from '../session-story/widget'
 import type { SessionStoryWidget } from '../session-story/widget'
+import { placedHere } from './merge-live'
 
 type W = Widget & Record<string, unknown>
 
@@ -155,6 +156,7 @@ export function hotkeyFields (config: Config): HotkeyField[] {
         initMapModsWidget(w)
         w.hotkey = v
         config.widgets.push(w)
+        placedHere.set(w.wmId, w.wmType)
       }
     })
   }

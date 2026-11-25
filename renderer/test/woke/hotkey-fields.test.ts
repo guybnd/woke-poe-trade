@@ -1,6 +1,7 @@
 // The Hotkeys page and the clash warnings list every key the app registers.
 import { describe, expect, it, vi } from 'vitest'
 import { fieldKey, hotkeyFields, hotkeyUses } from '@/web/woke/settings/hotkey-fields'
+import { placedHere } from '@/web/woke/settings/merge-live'
 import { normalizeKey } from '@/web/woke/ui/hotkey-context'
 import type { Config } from '@/web/Config'
 import { addModule, removeModule } from '@/web/woke/modules'
@@ -82,6 +83,8 @@ describe('hotkey fields', () => {
     try {
       hotkeyFields(c).find(f => f.id === 'map-check-default')!.set('Alt + J')
       expect(c.widgets.find(w => w.wmType === 'woke-map-mods')?.wmId).toBe(8)
+      // Remembered as placed here, so Undo can take it out again.
+      expect(placedHere.get(8)).toBe('woke-map-mods')
     } finally {
       liveWidgets.length = 0
     }

@@ -51,14 +51,26 @@ export interface TipBase {
   d?: number
   i?: number
 }
+// What a base gives before any mods (scripts/build-base-extras.mjs, from Path
+// of Building): im, its implicit lines; fl, a flask's life and mana recovered,
+// duration in seconds, charges used per use and most charges, and a utility
+// flask's effect lines; tc, a tincture's mana burn interval and cooldown.
+export interface TipBaseExtra {
+  im?: string[]
+  fl?: { l?: number, m?: number, d?: number, u?: number, x?: number, b?: string[] }
+  tc?: { mb: number, cd: number }
+}
 export interface TipPack {
-  uniques?: Record<string, TipUnique>
-  gems?: Record<string, TipGem>
-  items?: Record<string, TipItem>
-  bases?: Record<string, TipBase>
-  drops?: Record<string, TipDrop>
+  'uniques'?: Record<string, TipUnique>
+  // Uniques poe.ninja has no listing of, from Path of Building (scripts/build-unique-extras.mjs).
+  'unique-extras'?: Record<string, TipUnique>
+  'gems'?: Record<string, TipGem>
+  'items'?: Record<string, TipItem>
+  'bases'?: Record<string, TipBase>
+  'base-extras'?: Record<string, TipBaseExtra>
+  'drops'?: Record<string, TipDrop>
   // A unique's Vestigial implicit, one list of lines per mod (scripts/build-vestigial-data.mjs).
-  vestigial?: Record<string, string[][]>
+  'vestigial'?: Record<string, string[][]>
 }
 
 export type TipKind = 'unique' | 'gem' | 'card' | 'item'
@@ -413,16 +425,46 @@ export function itemTip (name: string, item: TipItem, kind: TipKind): TipModel {
   }
 }
 
-export function baseTip (name: string, base: TipBase): TipModel {
+const seconds = (n: number) => n.toFixed(2)
+
+// A flask's or tincture's own lines, as the game words them.
+export function usableLines (extra: TipBaseExtra | undefined): TipLine[] {
+  const lines: TipLine[] = []
+  const f = extra?.fl
+  if (f) {
+    const over = f.d ? ` over ${seconds(f.d)} Seconds` : ''
+    if (f.l) lines.push([part('Recovers ', 'label'), part(String(f.l), 'value'), part(` Life${over}`, 'label')])
+    if (f.m) lines.push([part('Recovers ', 'label'), part(String(f.m), 'value'), part(` Mana${over}`, 'label')])
+    if (!f.l && !f.m && f.d) lines.push([part('Lasts ', 'label'), part(seconds(f.d), 'value'), part(' Seconds', 'label')])
+    if (f.u && f.x) lines.push([part('Consumes ', 'label'), part(String(f.u), 'value'), part(' of ', 'label'), part(String(f.x), 'value'), part(' Charges on use', 'label')])
+  }
+  const t = extra?.tc
+  if (t) {
+    lines.push([part('Inflicts Mana Burn every ', 'label'), part(seconds(t.mb), 'value'), part(' Seconds', 'label')])
+    lines.push([part(String(t.cd), 'value'), part(' Second Cooldown When Deactivated', 'label')])
+  }
+  return lines
+}
+
+export function baseTip (name: string, base: TipBase, extra?: TipBaseExtra): TipModel {
   const need = requirements(base.l, attributeNeeds(base, []))
-  return { name, frame: 'normal', sections: present([gearStats(base, []), need ? [need] : []]) }
+  return {
+    name,
+    frame: 'normal',
+    sections: present([
+      // A flask's effect sits under its charges, as in game.
+      [...gearStats(base, []), ...usableLines(extra), ...(extra?.fl?.b ?? []).map(m => plain(m, 'mod'))],
+      need ? [need] : [],
+      (extra?.im ?? []).map(m => plain(m, 'mod'))
+    ])
+  }
 }
 
 // What a kind of item needs from the pack.
 export function packFiles (kind: TipKind): Array<keyof TipPack> {
-  if (kind === 'unique') return ['uniques', 'bases', 'drops']
+  if (kind === 'unique') return ['uniques', 'unique-extras', 'bases', 'drops']
   if (kind === 'gem') return ['gems']
-  return ['items', 'bases']
+  return ['items', 'bases', 'base-extras']
 }
 
 // base: shown when the data has no text for a unique. atBase: the base this
@@ -430,7 +472,7 @@ export function packFiles (kind: TipKind): Array<keyof TipPack> {
 export function buildTip (pack: TipPack, ref: { name: string, kind: TipKind, variant?: string, base?: string, atBase?: string }): TipModel | null {
   const { name, kind, variant } = ref
   if (kind === 'unique') {
-    const unique = pack.uniques?.[name]
+    const unique = pack.uniques?.[name] ?? pack['unique-extras']?.[name]
     // Known by name but with no text: its base at least.
     const drop = dropOf(pack.drops, name)
     if (!unique) return ref.base ? { name, base: ref.base, frame: 'unique', sections: present([dropLines(drop)]) } : null
@@ -444,5 +486,5 @@ export function buildTip (pack: TipPack, ref: { name: string, kind: TipKind, var
   const item = pack.items?.[name]
   if (item) return itemTip(name, item, kind)
   const base = pack.bases?.[name]
-  return base ? baseTip(name, base) : null
+  return base ? baseTip(name, base, pack['base-extras']?.[name]) : null
 }

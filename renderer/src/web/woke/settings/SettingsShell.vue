@@ -77,7 +77,7 @@ import { ensureWokeConfig, isModuleOn, setModuleOn } from '../modules'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import { allowsCopies } from '../tab-bar/tools'
 import { hotkeyFields, hotkeyUses } from './hotkey-fields'
-import { mergeConfigs } from './merge-live'
+import { mergeConfigs, placedHere } from './merge-live'
 import { PAGES, PAGE_BY_ID, pageByName, pageForWidgetType } from './pages'
 import type { SettingsPage } from './pages'
 import ModulePage from './ModulePage.vue'
@@ -96,8 +96,8 @@ const winEl = shallowRef<HTMLElement | null>(null)
 
 function snapshot (): string { return JSON.stringify(clone.value) }
 
-function mergeLive (next: Config, since: Config): Config {
-  return mergeConfigs(next, since, AppConfig())
+function mergeLive (next: Config, since: Config, drop?: ReadonlySet<number>): Config {
+  return mergeConfigs(next, since, AppConfig(), drop)
 }
 
 // Widgets created while the window is open (Add buttons) join our copy.
@@ -109,8 +109,8 @@ function adoptNewWidgets () {
   }
 }
 
-function commit (snap: string, since: string) {
-  const next = mergeLive(JSON.parse(snap) as Config, JSON.parse(since) as Config)
+function commit (snap: string, since: string, drop?: ReadonlySet<number>) {
+  const next = mergeLive(JSON.parse(snap) as Config, JSON.parse(since) as Config, drop)
   updateConfig(next)
   pushHostConfig()
   // On disk now, so "Change saved" is true whatever happens next.
@@ -132,9 +132,14 @@ function apply (silent = false) {
 function restore (snap: string) {
   restoring = true
   const since = lastApplied
-  clone.value = reactive(JSON.parse(snap)) as Config
+  const restored = JSON.parse(snap) as Config
+  clone.value = reactive(restored) as Config
   lastApplied = snap
-  commit(snap, since)
+  // A widget this window placed after that snapshot goes again (Undo of
+  // setting the map check key). Widgets added elsewhere stay.
+  const drop = new Set([...placedHere.keys()].filter(id => !restored.widgets.some(w => w.wmId === id)))
+  commit(snap, since, drop)
+  for (const id of drop) placedHere.delete(id)
   nextTick(() => { restoring = false })
 }
 
@@ -146,6 +151,7 @@ watch(clone, () => {
 
 watch(() => props.widget.wmWants, (wants) => {
   if (wants === 'show') {
+    placedHere.clear()
     clone.value = reactive(JSON.parse(JSON.stringify(AppConfig()))) as Config
     ensureWokeConfig(clone.value)
     lastApplied = snapshot()
