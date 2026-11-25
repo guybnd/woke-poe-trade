@@ -169,8 +169,20 @@ function visceraTip (ref: ItemTipRef): { model: TipModel, market: null, effects:
   return { model: { name: ref.name, base, frame: 'normal', sections: [] }, market: null, effects }
 }
 
+// A captured beast: its Bestiary recipes, so a beast in a list says why it's
+// there (Farric Lynx Alpha beside Exalted Orb: it adds a suffix).
+async function beastTip (ref: ItemTipRef): Promise<{ model: TipModel, market: TipMarket | null }> {
+  const { beastCrafts } = await import('./beast-crafts')
+  const lines = await beastCrafts(ref.name)
+  const sections = lines.length
+    ? [[[{ text: 'Blood Altar recipes', tone: 'label' as const }]], lines.map(l => [{ text: l.text, tone: l.recipe ? 'mod' as const : 'dim' as const }])]
+    : []
+  return { model: { name: ref.name, base: 'Captured beast', frame: 'normal', sections }, market: marketFor(ref, 'item') }
+}
+
 async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, market: TipMarket | null, uniques?: TipBaseUnique[], effects?: TipEffect[] }> {
   if (ref.type === 'Viscera') return visceraTip(ref)
+  if (ref.type === 'Beast') return beastTip(ref)
   const listed = ref.uniques?.()
   if (listed?.length) {
     await loadFile('drops')

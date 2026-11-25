@@ -37,7 +37,8 @@
                 :data-selected="e === selected || undefined" :title="e.about" @click="run(e)">
                 <span :class="section.more ? $style.foldName : undefined">{{ e.name }}</span><span class="w-dim ml-1">{{ section.more ? `${e.sub} · show` : e.sub }}</span>
               </button>
-              <button v-else v-item-tip="tipOf(e)" :data-no-item-tip="e.kind === 'setting' ? 'a setting named after a mechanic or item, not the item itself' : undefined" tabindex="-1" :class="[$style.res, { [$style.sel]: e === selected }]"
+              <span v-else :class="$style.line" class="w-line">
+              <button v-item-tip="tipOf(e)" :data-no-item-tip="e.kind === 'setting' ? 'a setting named after a mechanic or item, not the item itself' : undefined" tabindex="-1" :class="[$style.res, { [$style.sel]: e === selected }]"
                 :data-selected="e === selected || undefined" @click="e.kind === 'again' ? runAgain(e) : selected = e" @dblclick="onDouble(e)">
                 <WIcon v-if="e.kind === 'price'" :src="ninjaIcon(e.group.type, e.group.name) ?? ninjaArt(e.group.type, e.group.name)" size="md" />
                 <WIcon v-else-if="e.kind === 'item'" :src="e.info.icon" size="md" />
@@ -50,6 +51,12 @@
                 <span v-if="e.kind === 'price'" :class="$style.range"><template v-if="e.group.low !== e.group.high"><WPrice :bulk="e.group.high < 1" :chaos="e.group.low" :divine="divine" /> to </template><WPrice :bulk="e.group.high < 1" :chaos="e.group.high" :divine="divine" /></span>
                 <WKbd v-else-if="e.kind === 'command' && e.keys" :keys="e.keys" />
               </button>
+              <span v-if="e.line" class="w-line-acts" :class="$style.lineActs" data-search-line-acts>
+                <button type="button" tabindex="-1" :class="$style.lineAct" :title="e.saved ? 'Stop saving: back to Recent' : 'Save: keep it here until you remove it'"
+                  :aria-label="e.saved ? `Stop saving ${e.name}` : `Save ${e.name}`" :aria-pressed="!!e.saved" data-search-save @click.stop="lineActOk($event) && toggleSaved(e)"><i :class="e.saved ? 'fas fa-bookmark' : 'far fa-bookmark'" /></button>
+                <button type="button" tabindex="-1" :class="$style.lineAct" title="Remove (Delete)" :aria-label="`Remove ${e.name}`" data-search-remove @click.stop="lineActOk($event) && removeLine(e)"><i class="fas fa-times" /></button>
+              </span>
+              </span>
               </template>
             </template>
             <div v-if="!entries.length" :class="$style.none">Type an item, a tool or a setting, or ? for ideas. Your searches show here next time.</div>
@@ -128,6 +135,7 @@
           <span><WKbd keys="Enter" /> {{ itemEntry() ? 'trade site' : 'open' }}</span>
           <span v-if="itemEntry()"><WKbd keys="Ctrl + F" /> find in stash</span>
           <span><WKbd keys="Ctrl + P" /> pin to compare</span>
+          <span v-if="selected?.line && !queryOk"><WKbd keys="Delete" /> remove</span>
           <span><WKbd keys="Esc" /> back to game</span>
           <span class="ml-auto">{{ dataNote }}</span>
         </div>
@@ -294,10 +302,10 @@ import { onSharedDataChange } from '../app/live-data'
 import { openDiscord, openReportDialog } from '../app/report'
 import { dropOf } from '../ui/tooltip/tip-content'
 import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
-import { SEARCH_TARGET, searchRequest, addQuery } from './widget'
+import { SEARCH_TARGET, searchRequest, addQuery, RECENT_MAX, sameLine, dropLine, saveLine, unsaveLine } from './widget'
 import { VARIABLE_ITEMS, useTradePrices } from '../shared/unid-prices'
 import { poeWebApi, saveConfig } from '@/web/Config'
-import type { SearchWidget } from './widget'
+import type { SearchWidget, SearchLine } from './widget'
 
 const props = defineProps<{ config: SearchWidget }>()
 const wm = inject<WidgetManager>('wm')!
@@ -306,7 +314,8 @@ const leagues = useLeagues()
 const tradePrices = useTradePrices()
 const snapshot = useSearchSnapshot()
 
-interface Base { id: string, name: string, sub: string }
+// `line`: a row of the empty box's Saved or Recent, with its save and remove buttons.
+interface Base { id: string, name: string, sub: string, line?: SearchLine, saved?: boolean }
 interface PriceEntry extends Base { kind: 'price', group: PriceGroup }
 interface ItemEntry extends Base { kind: 'item', info: BaseType }
 interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting' | 'more' | 'again', icon: string, about: string, verb: string, keys?: string | null, aliases?: string[], action: () => void }
@@ -909,8 +918,18 @@ const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: b
   const items = snapshot.value?.items ?? []
   // Nothing typed yet: your recent lookups, then things to try.
   if (!queryOk.value) {
-    const recent = [...(props.config.queries ?? []).map(againEntry), ...recentGroups(items).map(priceEntry)]
-    return [...(recent.length ? [{ label: 'Recent', entries: recent }] : []), ...cardSections(exampleCards(liveAnswer), null)]
+    const savedList = props.config.saved ?? []
+    const isSaved = (l: SearchLine) => savedList.some(s => sameLine(s, l))
+    const saved = savedList.map(l => lineEntry(l, items, true)).filter((e): e is Entry => e != null)
+    const recent = [
+      ...(props.config.queries ?? []).map(q => ({ q })),
+      ...(props.config.recent ?? [])
+    ].filter(l => !isSaved(l)).map(l => lineEntry(l, items, false)).filter((e): e is Entry => e != null)
+    return [
+      ...(saved.length ? [{ label: 'Saved', entries: saved }] : []),
+      ...(recent.length ? [{ label: 'Recent', entries: recent }] : []),
+      ...cardSections(exampleCards(liveAnswer), null)
+    ]
   }
   const q = query.value
   const groups = searchPrices(items, q, { corrupted: corrupted.value })
@@ -1247,6 +1266,11 @@ function onKey (e: KeyboardEvent) {
   } else if (e.code === 'KeyC' && e.ctrlKey && e.shiftKey && !e.altKey && itemEntry()) {
     e.preventDefault()
     if (!e.repeat) copyName(itemEntry()!.name)
+  } else if (e.key === 'Delete' && !queryOk.value && selected.value?.line) {
+    // An empty box: Delete takes the picked Saved or Recent line away, one
+    // per press (held down, it would clear them all).
+    e.preventDefault()
+    if (!e.repeat) removeLine(selected.value)
   } else if (e.key === 'Escape') {
     // Main takes Esc first in the app; this is for the browser.
     e.stopPropagation()
@@ -1341,19 +1365,42 @@ function tradeBeast (name: string) {
 }
 
 // ---- recent lookups, saved with the window ----
-const RECENT_MAX = 6
-function recentGroups (items: readonly PriceItem[]): PriceGroup[] {
-  const out: PriceGroup[] = []
-  for (const r of props.config.recent ?? []) {
-    const group = searchPrices(items.filter(i => i.type === r.type && i.name === r.name), r.name, { limit: 1 })[0]
-    if (group) out.push(group)
-  }
-  return out
+// A Saved or Recent line as its row: a past search, or an item at today's
+// prices (gone while prices load, or when it has none this league).
+function lineEntry (line: SearchLine, items: readonly PriceItem[], saved: boolean): Entry | null {
+  if ('q' in line) return { ...againEntry(line.q), line, saved }
+  const group = searchPrices(items.filter(i => i.type === line.type && i.name === line.name), line.name, { limit: 1 })[0]
+  if (group) return { ...priceEntry(group), line, saved }
+  // A saved item with no price yet (prices loading, none this league) stays
+  // listed, so it can still be searched or removed.
+  if (!saved) return null
+  return { ...againEntry(line.name), id: `s:${line.type}:${line.name}`, sub: snapshot.value ? 'No price right now' : 'Prices loading', line, saved }
+}
+// The row under the pointer after one of these buttons acts is another line,
+// its buttons already showing: a double-click's second click mustn't act on it.
+function lineActOk (ev: MouseEvent) { return ev.detail < 2 }
+function toggleSaved (e: Entry) {
+  if (!e.line) return
+  if (e.saved) unsaveLine(props.config, e.line)
+  else saveLine(props.config, e.line)
+  focusInput()
+}
+// Removes the row and picks the one that takes its place.
+function removeLine (e: Entry) {
+  if (!e.line) return
+  const list = entries.value
+  const at = list.indexOf(e)
+  const next = at >= 0 ? (list[at + 1] ?? list[at - 1] ?? null) : null
+  dropLine(props.config, e.line)
+  if (selected.value === e && next) wantEntry = x => x.id === next.id
+  focusInput()
 }
 // Whether the list changed.
 function remember (entry: Entry | null): boolean {
   if (entry?.kind !== 'price') return false
   const { type, name } = entry.group
+  // A saved item stays under Saved: listing it in Recent too would only take a slot.
+  if (props.config.saved?.some(s => sameLine(s, { type, name }))) return false
   const head = props.config.recent?.[0]
   if (head?.type === type && head.name === name) return false
   const rest = (props.config.recent ?? []).filter(r => r.type !== type || r.name !== name)
@@ -1376,7 +1423,8 @@ function onDouble (e: Entry) {
 }
 // What was typed, opened or not: a quick look is a search too.
 function rememberQuery (text: string): boolean {
-  const list = addQuery(props.config.queries, text, [HELP_QUERY])
+  const saved = (props.config.saved ?? []).flatMap(s => 'q' in s ? [s.q] : [])
+  const list = addQuery(props.config.queries, text, [HELP_QUERY, ...saved])
   if (list) props.config.queries = list
   return list != null
 }
@@ -1702,6 +1750,12 @@ const dataNote = computed(() => {
 .panes { flex: 1 1 26rem; min-height: 0; display: grid; grid-template-columns: 22rem minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 .list { border-right: 1px solid var(--w-line); padding-bottom: var(--w-s1); }
 .head { padding: 8px var(--w-pad) 3px; font-size: var(--w-fs-caps); font-weight: var(--w-caps-weight); letter-spacing: 0.05em; text-transform: var(--w-caps-case); color: var(--w-dim); font-family: var(--w-caps-face); }
+/* A row and, on a Saved or Recent line, its hover buttons over the right edge (patterns.css w-line). */
+.line { display: block; }
+.lineActs { display: inline-flex; align-items: center; gap: 8px; margin-right: var(--w-pad); padding: 3px 6px 3px 8px; border-radius: var(--w-r-sm);
+  background: var(--w-panel-solid-base, #0a0806); box-shadow: -10px 0 8px 2px var(--w-panel-solid-base, #0a0806), 0 0 0 1px var(--w-line); }
+.lineAct { background: none; border: 0; padding: 0 1px; color: var(--w-dim); cursor: pointer; font-size: var(--w-fs-xs); line-height: 1; }
+.lineAct:hover, .lineAct:focus-visible { color: var(--w-gold); outline: none; }
 .res { display: flex; align-items: center; gap: var(--w-s2); width: 100%; min-height: 40px; padding: 2px var(--w-pad); text-align: left; }
 .res:hover { background: var(--w-panel-2); }
 /* A group's "+N more" row, and a folded group's one line. */

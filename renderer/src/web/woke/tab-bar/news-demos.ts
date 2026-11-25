@@ -14,6 +14,7 @@ export type NewsDemo =
 export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-seller-spread': { check: { name: 'Exalted Orb' }, spot: 'seller-spread' },
   'price-check-exchange-ladder': { check: { name: 'Exalted Orb' }, spot: 'exchange-ladder' },
+  'price-check-related-exalts': { check: { name: 'Exalted Orb' }, spot: 'related' },
   // A Breach unique and its blessed upgrade.
   'price-check-related-upgrades': { check: { name: "Xoph's Inception", rarity: 'unique' }, spot: 'related' },
   // A Timeless jewel: its conquerors' keystones in the side list.
@@ -31,7 +32,7 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
 const WINDOWLESS = new Set(['price-check'])
 // Lines about something that only shows once you've used it (your own past
 // searches): opening the tool shows nothing new, so no Show me.
-const NOTHING_TO_SHOW = new Set(['search-recent-queries'])
+const NOTHING_TO_SHOW = new Set(['search-recent-queries', 'search-recent-save'])
 
 // Whether Show me has somewhere real to go: a tab, a sample, the Settings
 // page the feature lives on, or the tool's own window. `byName`: the client

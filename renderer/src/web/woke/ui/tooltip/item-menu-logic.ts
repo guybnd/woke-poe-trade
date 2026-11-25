@@ -223,6 +223,12 @@ export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType
     const item = createVirtualItem({ category: ItemCategory.CapturedBeast, info })
     return { clipboard: item.rawText, item }
   }
+  // An invitation (Incandescent: the Searing Exarch's) has no bulk tag: the
+  // price check searches it as the game's copy of one, a normal map item.
+  if (info.craftable?.category === ItemCategory.Invitation) {
+    const item = createVirtualItem({ category: ItemCategory.Invitation, rarity: ItemRarity.Normal, info })
+    return { clipboard: item.rawText, item }
+  }
   if (kind === 'gem') {
     // Vaal gems are always corrupted; searching uncorrupted ones finds none.
     const item = createVirtualItem({ category: ItemCategory.Gem, info, gemLevel: 1, isCorrupted: !!info.gem?.vaal })

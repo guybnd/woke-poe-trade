@@ -18,6 +18,15 @@ function input (name: string, kind: 'unique' | 'gem' | 'card' | 'item') {
 }
 
 describe('priceCheckInput', () => {
+  it('price checks an invitation as a normal map item', () => {
+    for (const name of ['Incandescent Invitation', 'Screaming Invitation']) {
+      const res = input(name, 'item')
+      expect(res?.item?.category).toBe(ItemCategory.Invitation)
+      expect(res?.item?.rarity).toBe(ItemRarity.Normal)
+      expect(res?.item?.info.refName).toBe(name)
+    }
+  })
+
   it.each([
     'Tainted Chromatic Orb',
     'Horned Scarab of Tradition',

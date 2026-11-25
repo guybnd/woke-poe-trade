@@ -20,6 +20,8 @@ export interface SideRow {
   // woke: a recipe part's count, and the caption above a recipe's result row.
   qty?: number
   lead?: string
+  // How many of the checked item a card's full stack gives: "→ 2".
+  gives?: number
   // Said after the name ("corrupted" on a card's reward).
   tag?: string
   // The tag is a plain note, not a warning (red is for "corrupted").
