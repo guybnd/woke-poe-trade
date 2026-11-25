@@ -1,11 +1,14 @@
 // The price check's one-off tour (hidden-features audit P6, Guy's pick): on the
-// 3rd check in the window, three small cards point at a mod row, poe.ninja's
-// price and a listing, one after another. Next, Got it or × ends it for good.
+// 3rd check in the window, three small cards point at the mod rows, poe.ninja's
+// price and a listing, one after another. Got it, ×, or reaching the last card
+// ends it for good; a check closed earlier shows it once more (TOUR_SHOWS).
 // No Vue here: PriceCheckWindow reads the two constants at startup.
 
 export const PRICE_CHECK_TOUR = 'price-check-tour'
 // Never the 1st check: then you want the price, not a tour.
 export const TOUR_AT_CHECK = 3
+// Checks it shows on before it gives up.
+export const TOUR_SHOWS = 2
 
 // Plain text, or a key chip.
 export type TourBit = string | { kbd: string }

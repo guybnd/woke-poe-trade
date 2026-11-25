@@ -134,7 +134,7 @@ import { dispatchPriceCheck } from '@/web/woke/ui/tooltip/item-price-check'
 import { exactDetailsId } from './trends/getDetailsId'
 import { instantCardShown } from '@/web/woke/price-insight/view'
 import { countPriceCheck, hintsOff, isHintDone } from '@/web/woke/shared/hints'
-import { PRICE_CHECK_TOUR, TOUR_AT_CHECK } from '@/web/woke/price-insight/tour-steps'
+import { PRICE_CHECK_TOUR, TOUR_AT_CHECK, TOUR_SHOWS } from '@/web/woke/price-insight/tour-steps'
 import { fixedPriceItem, chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
 
 type ParseError = { name: string; message: string; rawText: ParsedItem['rawText']; unsupported?: boolean }
@@ -199,8 +199,8 @@ export default defineComponent({
     InstantNinjaCard: defineAsyncComponent(() => import('@/web/woke/price-insight/InstantNinjaCard.vue')),
     // A captured beast's Blood Altar recipes (WOKEPOET-485).
     BeastAltar: defineAsyncComponent(() => import('@/web/woke/price-insight/BeastAltar.vue')),
-    // A Stacked Deck's open-or-sell verdict on its instant card.
     PriceCheckTour: defineAsyncComponent(() => import('@/web/woke/price-insight/PriceCheckTour.vue')),
+    // A Stacked Deck's open-or-sell verdict on its instant card.
     WokeDeckVerdictChip: defineAsyncComponent(() => import('@/web/woke/stacked-decks/DeckVerdictChip.vue')),
     UnreadableItem,
     PriceStyleMenu,
@@ -347,6 +347,8 @@ export default defineComponent({
     // tracking), so only a key (Space) needs the window tracked from here.
     function openWindow (live: boolean, byKey = false) {
       liveCheck.value = live
+      // woke: the small card opened into the window counts as a check there.
+      if (instant.value != null) countPriceCheck()
       instant.value = null
       if (byKey && Host.isElectron && !advancedCheck.value) trackWindowArea(trackFrom)
     }
@@ -373,8 +375,12 @@ export default defineComponent({
     const isBrowserShown = computed(() => props.config.wmFlags.includes('has-browser'))
 
     // woke: the tour waits for the 3rd check in the window, and goes once done.
-    const tourMay = computed(() => !isBrowserShown.value && instant.value == null && item.value?.isOk() === true &&
-      !hintsOff() && !isHintDone(PRICE_CHECK_TOUR) && (AppConfig().woke?.hints?.checks ?? 0) >= TOUR_AT_CHECK)
+    // Mounted only while the window shows and the tour can still show (2 checks at most).
+    const tourMay = computed(() => {
+      const h = AppConfig().woke?.hints
+      return props.config.wmWants === 'show' && !isBrowserShown.value && instant.value == null && item.value?.isOk() === true &&
+        !hintsOff() && !isHintDone(PRICE_CHECK_TOUR) && (h?.checks ?? 0) >= TOUR_AT_CHECK && (h?.shows?.[PRICE_CHECK_TOUR] ?? 0) < TOUR_SHOWS
+    })
     const overlayKey = computed(() => AppConfig().overlayKey)
     const showCheckPos = computed(() => wm.active.value && props.config.showCursor)
     const isLeagueSelected = computed(() => Boolean(leagues.selectedId.value))

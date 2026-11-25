@@ -41,6 +41,10 @@ export function setOverlayOpen (open: boolean): void {
 
 // A tour is on screen (the price check's): window tips wait for it.
 export const tourUp = shallowRef(false)
+// A sample check (What's new's Show me) isn't a check of yours: no count, no tour.
+let tourHeldUntil = 0
+export function holdTour (ms = 5000): void { tourHeldUntil = Date.now() + ms }
+export function tourHeld (): boolean { return Date.now() < tourHeldUntil }
 
 // The window tip on screen, by id. Tooltip lines don't take it.
 const slot = shallowRef<string | null>(null)
@@ -107,7 +111,7 @@ export function takeShow (id: string, max = DEFAULT_SHOWS): boolean {
 
 // A price check opened in its window (not the small card by the item).
 export function countPriceCheck (): void {
-  if (hintsOff()) return
+  if (hintsOff() || tourHeld()) return
   const h = ensureHints()
   if (h) h.checks = (h.checks ?? 0) + 1
 }

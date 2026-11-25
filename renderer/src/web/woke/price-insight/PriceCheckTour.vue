@@ -1,81 +1,115 @@
 <template>
-  <!-- The price check's one-off tour (tour-steps.ts): a small card under
-       what it explains, inside the window so it stays clickable. -->
-  <teleport to="body">
-    <div v-if="hint.show.value && step && box" :class="$style.card" :style="box.above ? { left: `${box.x}px`, bottom: `${box.y}px` } : { left: `${box.x}px`, top: `${box.y}px` }"
-      data-pc-tour :data-step="step.id" role="dialog" :aria-label="`Price check tour, ${step.title}`" data-no-item-tip="The tour's own text">
-      <span :class="[$style.arrow, { [$style.up]: box.above }]" :style="{ left: `${box.arrow}px` }" aria-hidden="true" />
-      <div :class="$style.head">
-        <span>{{ place.at }} of {{ place.of }} · {{ step.title }}</span>
-        <button type="button" :class="$style.close" title="End the tour" aria-label="End the tour" @click="end">×</button>
-      </div>
-      <div :class="$style.text">
-        <template v-for="(b, i) in step.text" :key="i"><WKbd v-if="typeof b !== 'string'" :keys="b.kbd" /><template v-else>{{ b }}</template></template>
-      </div>
-      <div :class="$style.foot">
-        <WButton size="sm" variant="ghost" data-pc-tour-done @click="end">Got it</WButton>
-        <WButton v-if="later >= 0" size="sm" data-pc-tour-next @click="next">Next</WButton>
-      </div>
+  <!-- The price check's one-off tour (tour-steps.ts): a small card by what it
+       explains, inside the price window, so it keeps the window's look and
+       stays where clicks reach the overlay. -->
+  <div v-if="shown" ref="card" :class="$style.card" :style="box ? { left: `${box.x}px`, top: `${box.y}px` } : { visibility: 'hidden' }"
+    data-pc-tour :data-step="step!.id" role="dialog" :aria-label="`Price check tour, ${step!.title}`" data-no-item-tip="The tour's own text"
+    @mousedown.stop>
+    <span v-if="box" :class="[$style.arrow, { [$style.up]: box.above }]" :style="{ left: `${box.arrow}px` }" aria-hidden="true" />
+    <div :class="$style.head">
+      <span>{{ place.at }} of {{ place.of }} · {{ step!.title }}</span>
+      <button type="button" :class="$style.close" title="End the tour" aria-label="End the tour" @click="end">×</button>
     </div>
-  </teleport>
+    <div :class="$style.text">
+      <template v-for="(b, i) in step!.text" :key="i"><WKbd v-if="typeof b !== 'string'" :keys="b.kbd" /><template v-else>{{ b }}</template></template>
+    </div>
+    <div :class="$style.foot">
+      <WButton size="sm" variant="ghost" data-pc-tour-done @click="end">Got it</WButton>
+      <WButton v-if="later >= 0" size="sm" data-pc-tour-next @click="next">Next</WButton>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
+// Mounted by PriceCheckWindow only while the window shows and the tour may
+// still run; one mount per check. A showing counts once per check (not per
+// overlay open, as window tips do): checks from the hotkey don't open it.
 import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
-import { tourUp, useHint } from '../shared/hints'
+import { AppConfig } from '@/web/Config'
+import { hintPlaceOk, hintsOff, isHintDone, retireHint, tourHeld, tourUp } from '../shared/hints'
 import { WButton, WKbd } from '../ui'
-import { PRICE_CHECK_TOUR, TOUR_STEPS, nextStep } from './tour-steps'
+import { PRICE_CHECK_TOUR, TOUR_SHOWS, TOUR_STEPS, nextStep } from './tour-steps'
 import type { TourStep } from './tour-steps'
 
-const CARD_W = 260
 const GAP = 8
 
+// A sample check from What's new: not now.
+const held = tourHeld()
+
 // What each step points at, found again as the window fills in (listings
-// come after the price).
+// come after the price). Polled only while this check's tour may show.
 const found = shallowRef<Record<string, DOMRect | null>>({})
 function look () {
   const out: Record<string, DOMRect | null> = {}
+  let same = true
   for (const s of TOUR_STEPS) {
-    const el = document.querySelector<HTMLElement>(s.target)
-    const r = el?.getBoundingClientRect()
+    const r = document.querySelector<HTMLElement>(s.target)?.getBoundingClientRect()
     out[s.id] = r && r.width > 0 && r.height > 0 ? r : null
+    const was = found.value[s.id]
+    if (was?.top !== out[s.id]?.top || was?.left !== out[s.id]?.left || was?.bottom !== out[s.id]?.bottom) same = false
   }
-  found.value = out
+  if (!same) found.value = out
 }
-look()
-const timer = window.setInterval(look, 300)
-onBeforeUnmount(() => window.clearInterval(timer))
+let timer = 0
+function stopLooking () { if (timer) { window.clearInterval(timer); timer = 0 } }
+if (!held) {
+  look()
+  timer = window.setInterval(look, 300)
+}
 
 const seen = (s: TourStep) => found.value[s.id] != null
-// The step on screen: the first one there, then each Next.
 const index = shallowRef(-1)
 watch(found, () => { if (index.value < 0) index.value = nextStep(0, seen) }, { immediate: true })
 const step = computed(() => index.value >= 0 ? TOUR_STEPS[index.value] : null)
+const later = computed(() => index.value < 0 ? -1 : nextStep(index.value + 1, seen))
 // Counted among the steps this check has (an exchange item has no mod rows).
 const place = computed(() => {
   const there = TOUR_STEPS.map((s, i) => i <= index.value || seen(s))
   return { at: there.slice(0, index.value + 1).filter(Boolean).length, of: there.filter(Boolean).length }
 })
-const later = computed(() => index.value < 0 ? -1 : nextStep(index.value + 1, seen))
 
-// Shown twice at most if it's never finished (a check closed mid-tour).
-const hint = useHint(PRICE_CHECK_TOUR, { shows: 2, slot: false, when: () => step.value != null && seen(step.value) })
-watch(() => hint.show.value, on => { tourUp.value = on }, { immediate: true })
-onBeforeUnmount(() => { tourUp.value = false })
+const done = shallowRef(false)
+const shown = computed(() => !held && !done.value && !hintsOff() && !isHintDone(PRICE_CHECK_TOUR) && hintPlaceOk() &&
+  step.value != null && seen(step.value))
+watch(shown, on => { tourUp.value = on }, { immediate: true })
 
-// Under the target, kept inside the price window (where clicks reach it).
+// One showing per check; after TOUR_SHOWS checks it stops coming.
+let counted = false
+watch(shown, (on) => {
+  if (!on || counted) return
+  counted = true
+  const woke = AppConfig().woke
+  if (!woke) return
+  woke.hints ??= {}
+  woke.hints.shows = { ...woke.hints.shows, [PRICE_CHECK_TOUR]: Math.min(TOUR_SHOWS, (woke.hints.shows?.[PRICE_CHECK_TOUR] ?? 0) + 1) }
+}, { immediate: true })
+
+// Reached the last card: the tour is done once this check closes.
+const reachedEnd = computed(() => shown.value && later.value < 0 && index.value > 0)
+let sawEnd = false
+watch(reachedEnd, (on) => { if (on) sawEnd = true })
+
+onBeforeUnmount(() => {
+  stopLooking()
+  tourUp.value = false
+  if (sawEnd) retireHint(PRICE_CHECK_TOUR)
+})
+
+// By the target, inside the price window: under it, or over it when the card
+// wouldn't fit below. Coordinates are the window's own.
+const card = shallowRef<HTMLElement>()
 const box = computed(() => {
   const r = step.value ? found.value[step.value.id] : null
-  if (!r) return null
-  const win = document.getElementById('price-window')?.getBoundingClientRect()
-  const left = win ? win.left + GAP : GAP
-  const right = win ? win.right - GAP : window.innerWidth - GAP
-  const x = Math.max(left, Math.min(r.left + Math.min(r.width, 120) / 2 - 24, right - CARD_W))
-  const below = r.bottom + GAP
-  const above = win != null && below + 120 > win.bottom
-  // Above: y is the distance from the viewport's foot.
-  const y = above ? window.innerHeight - (r.top - GAP) : below
-  const arrow = Math.max(12, Math.min(r.left + Math.min(r.width, 120) / 2 - x, CARD_W - 20))
+  const win = (card.value?.offsetParent as HTMLElement | null)?.getBoundingClientRect()
+  if (!r || !win || !card.value) return null
+  const w = card.value.offsetWidth
+  const h = card.value.offsetHeight
+  const aim = r.left + Math.min(r.width, 120) / 2 - win.left
+  const x = Math.max(GAP, Math.min(aim - 24, win.width - w - GAP))
+  const below = r.bottom - win.top + GAP
+  const above = below + h > win.height - GAP && r.top - win.top - GAP - h >= GAP
+  const y = above ? r.top - win.top - GAP - h : Math.min(below, win.height - h - GAP)
+  const arrow = Math.max(12, Math.min(aim - x, w - 20))
   return { x, y, arrow, above }
 })
 
@@ -83,13 +117,15 @@ function next () {
   if (later.value >= 0) index.value = later.value
 }
 function end () {
-  hint.retire()
+  done.value = true
+  stopLooking()
+  retireHint(PRICE_CHECK_TOUR)
 }
 </script>
 
 <style module>
 .card {
-  position: fixed;
+  position: absolute;
   z-index: 60;
   width: 260px;
   padding: 6px var(--w-pad) 6px;
