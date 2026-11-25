@@ -17,6 +17,8 @@ import * as specs from './widget-specs'
 import { pushHostConfig } from '@/web/Config'
 import { Host } from '@/web/background/IPC'
 import { SEARCH_TARGET, earlySearchPress } from './search/widget'
+import { MAP_MODS_TARGET } from './map-mods/widget'
+import { earlyMapCheck } from './map-mods/map-check'
 import type { WidgetSpec } from '@/web/overlay/interfaces'
 
 type WidgetComponent = Component & { widget: WidgetSpec }
@@ -44,6 +46,12 @@ function hostConfigAfterMount () {
 // Ctrl+Space pressed before the palette's code has loaded: see earlySearchPress.
 Host.onEvent('MAIN->CLIENT::widget-action', (e) => {
   if (e.target === SEARCH_TARGET && !earlySearchPress.mounted) earlySearchPress.pressedAt = Date.now()
+})
+// Alt+M pressed before the map check card's code has loaded: see earlyMapCheck.
+Host.onEvent('MAIN->CLIENT::item-text', (e) => {
+  if (e.target !== MAP_MODS_TARGET || earlyMapCheck.mounted) return
+  earlyMapCheck.press = { clipboard: e.clipboard, position: e.position }
+  earlyMapCheck.at = Date.now()
 })
 
 export const wokeWidgets: WidgetComponent[] = [
