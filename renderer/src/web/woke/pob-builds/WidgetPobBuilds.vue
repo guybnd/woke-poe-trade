@@ -5,7 +5,7 @@
       <template #card><BuildHoverCard /></template>
     </DockItem>
     <div class="flex gap-2 min-h-0 items-start">
-      <WPanel ref="panel" :title="config.wmTitle || 'PoB builds'" icon="wisdom" :busy="loading && builds.length > 0" width="20rem" max-height="70vh">
+      <WPanel ref="panel" :keys="LIST_KEYS" :title="config.wmTitle || 'PoB builds'" icon="wisdom" :busy="loading && builds.length > 0" width="20rem" max-height="70vh">
         <template #actions>
           <button @click="importOpen = !importOpen" class="w-icon-btn" :class="{ 'w-icon-btn--on': importOpen }" title="Import a pobb.in / pastebin link or PoB code">
             <i class="fas fa-file-import" />
@@ -81,6 +81,7 @@ export default { widget: widgetPobBuildsSpec }
 </script>
 
 <script setup lang="ts">
+import { savedListKeys } from '../shared/saved-list'
 import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, shallowRef, watch, defineAsyncComponent } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
@@ -109,6 +110,9 @@ import { statLine } from './build-model'
 import { POB_BUILDS_TYPE, buildMatches, describe, groupBuilds, lastBuildList, migratePobWidget, moveBuildRefs, pobApi, sortBuilds, treeHotkeyOf } from './widget'
 import { onSavedOpen } from '../shared/saved-open'
 import type { PobBuildEntry, PobDetails } from './widget'
+
+// The window's "?": the saved list's keys.
+const LIST_KEYS = savedListKeys({ copy: false })
 
 // The tree loads on first open: it's big and most sessions never open it.
 const BuildTree = defineAsyncComponent(() => import('./BuildTree.vue'))

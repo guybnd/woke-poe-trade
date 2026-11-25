@@ -102,7 +102,8 @@ export interface ModTip {
   title: string
   // "Prefix · Body Armour"
   sub: string
-  steps: Array<{ tier: number, min: number, max: number, level: number }>
+  // An eldritch implicit's tiers have a name (label) and no item level.
+  steps: Array<{ tier: number, min: number, max: number, level?: number, label?: string }>
   mine: number
   itemLevel?: number
   bench?: { text: string, cost: string, where: string }
@@ -110,10 +111,12 @@ export interface ModTip {
 
 export type TipContent = GemTip | ItemTip | LookupTip | SwapTip | PassiveTip | ModTip
 
-export const tip = shallowRef<{ content: TipContent, anchor: DOMRect } | null>(null)
+// `menu`: a right-click on the hovered row opens the item's menu (item-tip.ts),
+// so the tooltip can say so (shared/hints.ts).
+export const tip = shallowRef<{ content: TipContent, anchor: DOMRect, menu?: boolean } | null>(null)
 
-export function showTipAt (target: HTMLElement, content: TipContent) {
-  tip.value = { content, anchor: target.getBoundingClientRect() }
+export function showTipAt (target: HTMLElement, content: TipContent, opts: { menu?: boolean } = {}) {
+  tip.value = { content, anchor: target.getBoundingClientRect(), menu: opts.menu }
 }
 
 export function showTip (e: Event, content: TipContent) {

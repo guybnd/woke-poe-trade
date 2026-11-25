@@ -2,8 +2,9 @@
 // recipes, upgrades, combines, splinters; card rewards and fragment sets.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { ITEM_BY_REF, ITEM_DROP } from '@/assets/data'
-import { cardsFor, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resetRecipeCache, resolveParts } from '@/web/woke/related-family/recipe'
+import { isRelatedGroup, cardsFor, rewardOf, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resetRecipeCache, resolveParts } from '@/web/woke/related-family/recipe'
 import { loadGameData } from '../helpers/game-data'
+import { BOSS_DROPS, bossOf } from '@/web/woke/related-family/boss-drops'
 
 beforeAll(async () => { await loadGameData(); resetRecipeCache() })
 
@@ -78,6 +79,22 @@ describe('recipes', () => {
   })
 })
 
+describe('oil ladder and splinters', () => {
+  const find = (n: string) => ITEM_BY_REF('UNIQUE', n)?.[0] ?? ITEM_BY_REF('ITEM', n)?.[0]
+  it('lists the oil upgrade a checked oil makes and is part of', () => {
+    const book = recipeBook(find, ITEM_DROP)
+    const golden = recipesOf('Golden Oil', book)
+    expect(golden.map(r => [r.makes.refName, r.parts.map(p => `${p.qty} ${p.info.refName}`).join()])).toEqual([['Golden Oil', '3 Silver Oil']])
+    expect(recipesOf('Silver Oil', book).map(r => r.makes.refName)).toEqual(expect.arrayContaining(['Golden Oil', 'Silver Oil']))
+    // Other currency vendor swaps aren't listed.
+    expect(recipesOf('Orb of Alteration', book)).toEqual([])
+  })
+  it('combines 100 Ritual Splinters into a Ritual Vessel', () => {
+    const book = recipeBook(find, ITEM_DROP)
+    expect(recipesOf('Ritual Splinter', book).map(r => [r.makes.refName, r.parts[0].qty])).toEqual([['Ritual Vessel', 100]])
+  })
+})
+
 describe('card rewards and sets', () => {
   const tips = {
     'The Doctor': { d: '<uniqueitem>{Headhunter}', n: 8 },
@@ -130,5 +147,66 @@ describe('card rewards and sets', () => {
     // The King in the Mists still drops his uniques.
     expect(into('Pragmatism').length + ITEM_DROP.filter(g => realDrops(g).some(id => id.startsWith('UNIQUE::Pragmatism'))).length).toBeGreaterThan(0)
     expect(into('Orb of Conflict').map(g => g.query[0])).toEqual(['ITEM::Crescent Splinter'])
+  })
+})
+
+describe('rewardOf', () => {
+  it('reads one named reward, a stack, a size wrapper, corruption', () => {
+    expect(rewardOf('<uniqueitem>{Headhunter}')).toEqual({ namespace: 'UNIQUE', name: 'Headhunter', gives: 1, corrupted: false })
+    expect(rewardOf('<currencyitem>{2x Exalted Orb}')).toEqual({ namespace: 'ITEM', name: 'Exalted Orb', gives: 2, corrupted: false })
+    expect(rewardOf('<size:30>{<currencyitem>{Mirror of Kalandra}}')?.name).toBe('Mirror of Kalandra')
+    expect(rewardOf('<uniqueitem>{Cortex}\r\n<corrupted>{Corrupted}')?.corrupted).toBe(true)
+  })
+  it('skips a gem, a rare, or a reward with a level or links', () => {
+    expect(rewardOf('<gemitem>{Level 21 Vaal Cold Snap}')).toBeNull()
+    expect(rewardOf('<rareitem>{Item}\r\n<default>{Item Level:} <normal>{100}')).toBeNull()
+    expect(rewardOf('<uniqueitem>{Tabula Rasa}\r\n<default>{Six-Link}')).toBeNull()
+  })
+})
+
+describe('boss drops (checked on poedb)', () => {
+  const inDropGroups = () => new Set(ITEM_DROP.flatMap(g => realDrops(g)).map(id => id.split('::')[1].split(' // ')[0]))
+  it('names only real uniques, each under one boss', () => {
+    const all = BOSS_DROPS.flatMap(b => b.uniques)
+    expect(all.filter(n => !ITEM_BY_REF('UNIQUE', n)?.length)).toEqual([])
+    expect(new Set(all).size).toBe(all.length)
+  })
+  it('adds something the drop groups lack to every boss', () => {
+    const listed = inDropGroups()
+    expect(BOSS_DROPS.filter(b => b.uniques.every(n => listed.has(n))).map(b => b.boss)).toEqual([])
+  })
+  it('finds the Delve boss of a Delve unique', () => {
+    expect(bossOf('Hale Negator')?.boss).toBe('Kurgal, the Blackblooded')
+    expect(bossOf('Headhunter')).toBeNull()
+  })
+})
+
+describe('related groups', () => {
+  // The first group an item is in, as the price check's "Related to" picks it.
+  const relatedTo = (id: string) => ITEM_DROP.find(g => g.query.includes(id) && isRelatedGroup(g))?.query.map(q => q.split('::')[1].split(' // ')[0]) ?? []
+  it('never lists recipe parts or a theme as related (Exalted Orb, Farric beasts)', () => {
+    expect(relatedTo('ITEM::Exalted Orb')).toEqual([])
+    expect(relatedTo('ITEM::Orb of Annulment')).toEqual([])
+    expect(relatedTo('CAPTURED_BEAST::Farric Wolf Alpha')).toEqual([])
+    expect(relatedTo('ITEM::Orb of Fusing')).toEqual([])
+    expect(relatedTo('UNIQUE::Goldrim // Leather Cap')).toEqual([])
+    expect(relatedTo("UNIQUE::Watcher's Eye // Prismatic Jewel")).toEqual([])
+    expect(relatedTo('UNIQUE::Goldwyrm // Nubuck Boots')).toEqual([])
+    expect(relatedTo('ITEM::Ancient Orb')).toEqual([])
+  })
+
+  it('never says Ancient Orb drops Headhunter', () => {
+    expect(ITEM_DROP.some(g => g.query.includes('ITEM::Ancient Orb') && realDrops(g).length)).toBe(false)
+  })
+
+  it('reads a Coin of Restoration or Desecration as an upgrade both ways', () => {
+    expect(names('Fleshrender')).toEqual(expect.arrayContaining([['Upgrade to Skysunder', ['Fleshrender', 'Coin of Restoration']]]))
+    expect(names('Skysunder')).toEqual(expect.arrayContaining([['Upgrade to Fleshrender', ['Skysunder', 'Coin of Desecration']]]))
+  })
+  it('keeps real families and sets', () => {
+    expect(relatedTo('ITEM::Sacrifice at Dawn')).toContain('Sacrifice at Midnight')
+    expect(relatedTo("UNIQUE::Farrul's Fur // Triumphant Lamellar")).toContain("Farrul's Chase")
+    // Watcher's Eye keeps its real source: the Uber Elder fragments.
+    expect(ITEM_DROP.some(g => isRelatedGroup(g) && realDrops(g).some(id => id.startsWith("UNIQUE::Watcher's Eye")))).toBe(true)
   })
 })

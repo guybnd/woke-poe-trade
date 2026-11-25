@@ -19,6 +19,7 @@ import { addClusterResPseudo } from './pseudo/cluster-res'
 import { markClusterSpots } from '@/web/woke/cluster-type/spots'
 import { clusterSizeOf } from '@/web/woke/cluster-type/apply'
 import { StatBetter } from '@/assets/data'
+import { eldritchRoll } from '@/web/woke/price-insight/eldritch-roll'
 
 export interface FiltersCreationContext {
   readonly item: ParsedItem
@@ -349,10 +350,11 @@ export function calculatedStatToFilter (
     }
   }
 
-  const roll = statSourcesTotal(
+  // woke: an eldritch implicit's line has no range in the copy; its tier's comes from the mod data.
+  const roll = eldritchRoll(calc.sources, statSourcesTotal(
     calc.sources,
     (item.info.refName === 'Mirrored Tablet') ? 'max' : 'sum'
-  )
+  ), item.category)
   const translation = translateStatWithRoll(calc, roll)
 
   filter ??= {
@@ -426,7 +428,8 @@ export function calculatedStatToFilter (
         goodness = 1
       } else {
         goodness = (roll.value - roll.min) / (roll.max - roll.min)
-        if (calc.stat.better === StatBetter.NegativeRoll) {
+        // woke: an eldritch implicit whose better tiers count down (eldritch-roll.ts).
+        if ((calc.stat.better === StatBetter.NegativeRoll) !== Boolean(roll.countsDown)) {
           goodness = 1 - goodness
         }
       }
@@ -456,6 +459,11 @@ export function calculatedStatToFilter (
               min: percentRoll(roll.value, -percent, Math.floor, dp),
               max: percentRoll(roll.value, +percent, Math.ceil, dp)
             }
+    // woke: an eldritch tier that's one number searches that number; its range is only the bar's.
+    if (roll.fixedTier) {
+      filterDefault.min = roundRoll(roll.value, dp)
+      filterDefault.max = roundRoll(roll.value, dp)
+    }
     filterDefault.min = Math.max(filterDefault.min, filterBounds.min)
     filterDefault.max = Math.min(filterDefault.max, filterBounds.max)
 
@@ -478,7 +486,11 @@ export function calculatedStatToFilter (
       goodness
     }
 
-    filterFillMinMax(filter.roll, calc.stat.better)
+    // woke: an eldritch "every # seconds" counts down: search it at most, not at least.
+    const fillBetter = (roll.countsDown && calc.stat.better !== StatBetter.NotComparable)
+      ? (calc.stat.better === StatBetter.NegativeRoll ? StatBetter.PositiveRoll : StatBetter.NegativeRoll)
+      : calc.stat.better
+    filterFillMinMax(filter.roll, fillBetter)
 
     if (translation.negate) {
       filterAdjustmentForNegate(filter.roll)

@@ -1,11 +1,13 @@
 <template>
   <!-- A number in a profit line (pick A4): click to change it. Yours (pick E2)
        shows in gold with a pin; a left-out line's number is struck (S1). -->
-  <button v-if="editable && !out" type="button" :class="[$style.num, { [$style.mine]: mine }]" :title="title" :aria-label="label" @click.stop="emit('edit')"><i v-if="mine" class="fas fa-thumbtack" :class="$style.pin" aria-hidden="true" /><slot /></button>
+  <button v-if="editable && !out" type="button" :class="[$style.num, { [$style.mine]: mine }]" :title="title" :aria-label="label" @click.stop="onEdit"><i v-if="mine" class="fas fa-thumbtack" :class="$style.pin" aria-hidden="true" /><slot /></button>
   <span v-else :class="[$style.plain, { [$style.mine]: mine && !out, [$style.out]: out }]" :title="title"><i v-if="mine && !out" class="fas fa-thumbtack" :class="$style.pin" aria-hidden="true" /><slot /></span>
 </template>
 
 <script setup lang="ts">
+import { retireHint } from '../shared/hints'
+import { LINE_HINT } from './line-item'
 withDefaults(defineProps<{
   editable?: boolean
   // Your number, not the one read (pick E2).
@@ -16,6 +18,10 @@ withDefaults(defineProps<{
   label?: string
 }>(), { editable: true, mine: false, out: false, title: undefined, label: undefined })
 const emit = defineEmits<{ (e: 'edit'): void }>()
+function onEdit () {
+  retireHint(LINE_HINT)
+  emit('edit')
+}
 </script>
 
 <style module>

@@ -6,6 +6,11 @@
 // with a pin. Leave out and remove show a toast with Undo.
 import type { MenuEntry } from './layer'
 import { toast } from './layer'
+import { retireHint } from '../shared/hints'
+
+// The tip under Net worth's rows (NetWorthPanel.vue): gone once a number is
+// clicked or a row left out.
+export const LINE_HINT = 'line-item-clicks'
 
 export interface LineState {
   out?: boolean
@@ -54,6 +59,7 @@ export function lineMenu (s: LineState, on: LineHandlers, words: LineWords = {},
 
 // The toast after a leave out or a remove, with Undo.
 export function lineToast (what: 'out' | 'in' | 'remove', name: string, undo: () => void, anchor?: Element | null) {
+  if (what === 'out') retireHint(LINE_HINT)
   const text = what === 'out' ? `Left out ${name}` : what === 'in' ? `${name} counts again` : `Removed ${name}`
   toast(text, { undo, anchor })
 }

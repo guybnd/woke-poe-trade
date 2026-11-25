@@ -28,6 +28,7 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
+  { id: 'instant-card-rates-graph', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: the price card by an item shows its chaos and divine rates, and a 24h / 3d / 7d graph (scroll on it)' },
   { id: 'price-check-conquest-keystones', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a Timeless jewel lists each conqueror\'s keystone beside it. Click one to search it, any number' },
   { id: 'price-check-clear-numbers', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: hover a mod\'s number boxes for × to keep the line and search any value' },
   { id: 'essence-tip-slots', wmType: 'price-check', name: 'Price check', topic: 'Tooltips', note: 'New: an essence\'s tooltip lists the mod it forces on each slot' },
@@ -51,6 +52,11 @@ export const NEWS: NewsItem[] = [
   { id: 'div-card-rarity', wmType: 'price-check', name: 'Price check', topic: 'Tooltips', note: 'New: a div card\'s price check and tooltip say how rare it is, like "1 in 121k cards"' },
   { id: 'map-price-check-kind', wmType: 'price-check', name: 'Price check', topic: 'Maps', note: 'New: a map\'s price check searches its own kind (Originator, Elder...) or one you pick, every mod in one list' },
   { id: 'price-check-map-stat-columns', wmType: 'price-check', name: 'Price check', topic: 'Maps', note: 'New: a map\'s ticked Rarity, Pack and More Currency show as columns in the results, higher or lower than yours' },
+  { id: 'price-check-card-stack', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a card, what a full stack gives and the gain' },
+  { id: 'price-check-gem-kinds', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a gem, its transfigured kinds, priced' },
+  { id: 'price-check-chance-uniques', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a normal base, the uniques an Orb of Chance can make' },
+  { id: 'price-check-vault-rewards', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a Templar Vault reward, its vault and the other rewards in it' },
+  { id: 'price-check-boss-uniques', wmType: 'price-check', name: 'Price check', topic: 'Related', note: "New: beside a Delve, Abyss or league boss's unique, the boss and its other uniques" },
   { id: 'price-check-related-exalts', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a currency, every kind of it (all the exalts) and the cards that give a stack of it' },
   { id: 'price-check-related-upgrades', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a unique, its upgrade, where it drops and the cards that give it, with prices' },
   { id: 'scrying-helper', wmType: 'woke-scrying', name: 'Scrying', note: 'New: which map to scry, ranked by the cards a Scrying Orb adds per map, with the orb\'s price and a Buy link' },

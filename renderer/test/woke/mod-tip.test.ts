@@ -41,7 +41,7 @@ describe('mod row tooltip', () => {
     expect(tip.sub).toBe('Prefix · Ring')
     expect(tip.mine).toBe(4)
     expect(tip.steps[3]).toMatchObject({ min: 55, max: 69 })
-    expect(tip.steps[0].level).toBeGreaterThan(tip.steps[3].level)
+    expect(tip.steps[0].level).toBeGreaterThan(tip.steps[3].level!)
     expect(tip.itemLevel).toBe(84)
     expect(tip.bench?.text).toMatch(/to maximum Life$/)
   })

@@ -5,6 +5,7 @@
 // trade stat, roll range and name.
 import { shallowRef } from 'vue'
 import type { ListingItem, ListingMod } from './listing-tip'
+import type { ShownRow } from './eldritch-roll'
 
 export interface EldritchKey {
   stat: string
@@ -48,17 +49,20 @@ type Row = [number, number, 0 | 1, number, number]
 export interface ImplicitTable {
   eldritch: Record<string, Row[]>
   corrupted: Record<string, Array<[number, number]>>
+  // Each tier's roll as the item shows it (eldritch-roll.ts).
+  shown?: Record<string, ShownRow[]>
 }
 export const implicitTable = shallowRef<ImplicitTable | null>(null)
-let loading = false
+let loading: Promise<ImplicitTable | null> | null = null
 
-export function loadImplicitTable () {
-  if (loading || implicitTable.value) return
-  loading = true
-  fetch(`${import.meta.env.BASE_URL}data/implicit-sources.json`)
-    .then(r => r.json())
-    .then(d => { implicitTable.value = d })
-    .catch(() => { loading = false })
+/** Starts the read once; resolves with the table, or null when it failed (tried again next time). */
+export function loadImplicitTable (): Promise<ImplicitTable | null> {
+  if (implicitTable.value) return Promise.resolve(implicitTable.value)
+  loading ??= fetch(`${import.meta.env.BASE_URL}data/implicit-sources.json`)
+    .then(r => r.json() as Promise<ImplicitTable>)
+    .then(d => { implicitTable.value = d; return d })
+    .catch(() => { loading = null; return null })
+  return loading
 }
 
 /** Whether the implicit is one corruption gives, by its stat and roll range. */

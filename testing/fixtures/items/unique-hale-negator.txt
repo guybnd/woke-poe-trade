@@ -1,0 +1,20 @@
+Item Class: Helmets
+Rarity: Unique
+Hale Negator
+Mind Cage
+--------
+Energy Shield: 152
+--------
+Requirements:
+Level: 65
+Int: 138
+--------
+Sockets: B-B-B-B 
+--------
+Item Level: 84
+--------
+Has 2 Abyssal Sockets
+--------
++1 to Maximum Power Charges
+--------
+When they were hiding, they were invincible. When they were revealed, they were... wait, they were hiding?
