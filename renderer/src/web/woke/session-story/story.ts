@@ -79,6 +79,8 @@ export interface NightStory {
   hubMs?: number
   // AFK inside the night (shorter than NIGHT_GAP_MS each).
   afkMs?: number
+  // A night still going: AFK right now, since then.
+  afkSince?: number
   // When each death happened (ms).
   deathsAt: number[]
   // From the stash reader, when it read during the night.
