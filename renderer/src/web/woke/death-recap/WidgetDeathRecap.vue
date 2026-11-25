@@ -53,7 +53,8 @@
             <button type="button" :class="[$style.death, { [$style.on]: selected?.id === d.id }]" data-death-row @click="picked = d.id">
               <div class="flex items-center gap-2">
                 <span class="flex-1 w-trunc font-semibold">{{ d.name }}</span>
-                <span v-if="d.runKey" :class="[$style.state, $style[stateOf(d)]]">{{ STATE_LABEL[stateOf(d)] }}</span>
+                <span v-if="runOf(d)?.byTier" class="w-dim text-xs" :title="BY_TIER_TIP">likely</span>
+                <span v-else-if="d.runKey" :class="[$style.state, $style[stateOf(d)]]">{{ STATE_LABEL[stateOf(d)] }}</span>
               </div>
               <div class="w-dim text-xs">{{ rowText(d) }}</div>
             </button>
@@ -198,6 +199,8 @@ const last = computed(() => store.deaths.value[0] ?? null)
 const earlier = computed(() => store.deaths.value.slice(1, 3))
 
 const STATE_LABEL = { screen: 'From screen', exact: 'Exact', likely: 'Likely', unknown: 'Mods unknown' }
+// A check matched by tier alone (the copied map had no area name): said quietly.
+const BY_TIER_TIP = 'Your copied map had no area name: these are the mods of the last map of this tier you checked'
 
 function runOf (d: DeathRecord): RunRecord | null {
   return d.runKey ? store.runByKey.value.get(d.runKey) ?? null : null
