@@ -180,6 +180,16 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.betrayalOverrides = {}
 }
 
+// What's new › Show me: the full panel on that mechanic. Before the check
+// below, so a window Show me just made isn't hidden as a collapsed icon.
+useGoto(props.config, 'woke-mechanics', {
+  settlers: () => {
+    if (props.config.hidden.includes('settlers')) props.config.hidden = props.config.hidden.filter(id => id !== 'settlers')
+    props.config.tab = 'settlers'
+    props.config.expanded = true
+  }
+})
+
 // The expanded window shows only with the overlay open; the dock covers play.
 hideWhilePlaying(props.config)
 
@@ -223,14 +233,6 @@ const dockShow = computed(() => zoneMech.value != null && !props.config.hidden.i
 const WickermanLine = defineAsyncComponent(() => import('../wickerman/MechanicsLine.vue'))
 const wickermanOn = computed(() => isModuleOn(AppConfig(), 'wickerman'))
 const dockMech = computed(() => (zoneMech.value && mechanicById(zoneMech.value)) || mech.value)
-
-useGoto(props.config, 'woke-mechanics', {
-  settlers: () => {
-    if (props.config.hidden.includes('settlers')) props.config.hidden = props.config.hidden.filter(id => id !== 'settlers')
-    props.config.tab = 'settlers'
-    props.config.expanded = true
-  }
-})
 
 function openFull () {
   props.config.tab = dockMech.value.id

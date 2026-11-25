@@ -317,7 +317,13 @@ async function fetchExchange (id: string, type: string) {
 watch([league, collector.revision], load, { immediate: true })
 
 const dockShow = computed(() => Boolean(snapshot.value) && (zone.kind === 'town' || zone.kind === 'hideout'))
-const families = computed(() => pricedFamilies(snapshot.value?.items))
+// A tab Show me asked for stays even before poe.ninja prices it, so Show me lands on it.
+const pinnedFamily = shallowRef<string | null>(null)
+const families = computed(() => {
+  const priced = pricedFamilies(snapshot.value?.items)
+  const pinned = pinnedFamily.value ? knownFamily(pinnedFamily.value) : null
+  return pinned && !priced.includes(pinned) ? [...priced, pinned] : priced
+})
 const family = computed(() => shownFamily(props.config.family, families.value))
 const method = computed(() => {
   const picked = props.config.methods?.[family.value.id]
@@ -346,7 +352,10 @@ const best = computed(() => snapshot.value && dockShow.value
   : null)
 
 useGoto(props.config, 'woke-scarab-flip', {
-  tattoos: () => { props.config.family = 'tattoos' }
+  tattoos: () => {
+    pinnedFamily.value = 'tattoos'
+    props.config.family = 'tattoos'
+  }
 })
 
 // Tattoos: the tribe whose list is open, and the best tribe to vendor.
