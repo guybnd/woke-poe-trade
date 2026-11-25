@@ -380,7 +380,7 @@ export default defineComponent({
 .row:last-child { border-bottom: 0; }
 .count { font-family: var(--w-body); font-size: var(--w-fs-sm); color: var(--w-faint); white-space: nowrap; }
 /* woke: a long family scrolls inside the panel; the panel never outgrows the window. */
-/* Beside the instant card, which zooms it 1.2x (--w-instant-scale): the same height on screen as before. */
+/* Beside the instant card, which zooms it 1.4x (--w-instant-scale): the same height on screen as before. */
 .list { max-height: calc(min(26rem, 60vh) / var(--w-instant-scale, 1)); overflow-y: auto; overscroll-behavior: contain; }
 .tight .row { min-height: 30px; }
 .click { cursor: pointer; }

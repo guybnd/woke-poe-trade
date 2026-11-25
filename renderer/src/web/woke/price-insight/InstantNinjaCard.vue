@@ -261,9 +261,9 @@ onUnmounted(() => {
 
 <style module>
 .range { margin-left: 3px; color: var(--w-dim); font-size: var(--w-fs-xs); }
-/* The card reads at a glance by a stash cell: 20% over the app's UI size
+/* The card reads at a glance by a stash cell: 40% over the app's UI size
    (Guy, 2026-11-24, "small and hard to read"). The list beside it follows. */
-.anchor { --w-instant-scale: 1.2; position: absolute; pointer-events: auto; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; max-height: 100%; }
+.anchor { --w-instant-scale: 1.4; position: absolute; pointer-events: auto; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; max-height: 100%; }
 .card {
   zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1));
   display: flex;

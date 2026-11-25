@@ -36,8 +36,9 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   await overlay.snap('divine orb instant check')
   // The mouse is tracked into the card, not the window.
   const tracked = await fakeApp.waitForReceived('OVERLAY->MAIN::track-area') as { area: { width: number } }
-  // The card and its Divine in chaos panel beside it, not the window.
-  expect(tracked.area.width).toBeLessThan(520)
+  // The card and its Divine in chaos panel beside it (plus the tracking pad), not the window.
+  const shown = await card.boundingBox()
+  expect(tracked.area.width).toBeLessThan(shown!.width + 60)
   expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
   await card.getByTestId('instant-ninja-live').click()
   await expect(card).toHaveCount(0)
