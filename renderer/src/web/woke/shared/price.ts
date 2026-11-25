@@ -13,7 +13,7 @@ import { formatChaos } from '../ui/format'
 import { VARIABLE_ITEMS, useTradePrices } from './unid-prices'
 import { pickRow, divineRate } from './price-row'
 import { heldPrice } from './price-trust'
-import { STACKED_DECK, cardChance, loadCardChances, withDropRate } from './card-cap'
+import { STACKED_DECK, cardChance, withDropRate } from './card-cap'
 import type { Category } from './price-trust'
 import { lastWokePrices } from '../market/hook'
 import { feedDays } from '../market/parse'
@@ -58,7 +58,6 @@ export function usePriceText (snapshot?: Ref<{ divine: number | null } | null | 
 export function usePrice () {
   const ninja = usePoeninja()
   const unidOf = useUnidPrice()
-  loadCardChances().catch(() => {})
   function priceOf (name: string, opts: { ns: string, variant?: string }) {
     ninja.queuePricesFetch()
     const row = ninja.findPriceByQuery({ ns: opts.ns, name, variant: opts.variant || undefined }) ??

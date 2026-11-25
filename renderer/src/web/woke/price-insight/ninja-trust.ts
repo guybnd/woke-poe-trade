@@ -35,6 +35,7 @@ export function dailySeries (rows: Array<{ date: string, chaos: number }>, today
 
 /** The line under the price, in the app's words. `price` formats chaos. */
 export function doubtText (d: NinjaDoubt, price: (chaos: number) => string): string {
+  if (d.kind === 'drop-rate') return 'Far more than a card this common can be worth for how often it drops. Likely a few fake listings.'
   if (d.kind === 'spike') return `Usually ${price(d.usual)}. A sudden step like this is often a few fake listings.`
   if (d.kind === 'one-day') {
     return d.usual != null

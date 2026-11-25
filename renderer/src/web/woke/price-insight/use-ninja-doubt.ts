@@ -4,6 +4,8 @@
 import { computed, shallowRef, watch } from 'vue'
 import type { Ref } from 'vue'
 import { useLeagues } from '@/web/background/Leagues'
+import { usePoeninja } from '@/web/background/Prices'
+import { STACKED_DECK, cardCap, cardChance } from '../shared/card-cap'
 import { lastWokePrices } from '../market/hook'
 import { feedDays } from '../market/parse'
 import { typeForSlug, utcDate } from '../market/types'
@@ -19,6 +21,7 @@ export interface DoubtRow { name: string, variant?: string, chaos: number, graph
 
 export function useNinjaDoubt (row: Ref<DoubtRow | null | undefined>) {
   const leagues = useLeagues()
+  const ninja = usePoeninja()
   const history = shallowRef<Array<number | null> | undefined>(undefined)
   const loading = shallowRef(false)
 
@@ -50,12 +53,18 @@ export function useNinjaDoubt (row: Ref<DoubtRow | null | undefined>) {
     const r = row.value
     if (!r || loading.value) return null
     const loaded = lastWokePrices()
+    const category = categoryOfType(r.slug ? typeForSlug(r.slug) : undefined)
+    // A card priced over what its drop rate allows (shared/card-cap.ts).
+    if (category === 'cards') {
+      const cap = cardCap(cardChance(r.name), ninja.findPriceByQuery({ ns: 'ITEM', name: STACKED_DECK, variant: undefined })?.chaos ?? null)
+      if (cap != null && r.chaos > cap) return { kind: 'drop-rate' }
+    }
     return ninjaDoubt({
       chaos: r.chaos,
       graph: r.graph,
       days: loaded ? feedDays(loaded.chunks) : undefined,
       history: history.value,
-      category: categoryOfType(r.slug ? typeForSlug(r.slug) : undefined)
+      category
     })
   })
 }

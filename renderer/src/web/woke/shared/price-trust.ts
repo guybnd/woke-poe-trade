@@ -111,6 +111,8 @@ export type NinjaDoubt =
   | { kind: 'one-day', usual: number | null }
   /** A step of 5x or more over its usual price that hasn't held 3 days. */
   | { kind: 'spike', usual: number }
+  /** A card priced far over what its drop rate allows (card-cap.ts). */
+  | { kind: 'drop-rate' }
   /** No price on 3+ of the last 7 days: one fake listing can set it. */
   | { kind: 'thin', gaps: number }
 

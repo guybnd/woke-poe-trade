@@ -190,7 +190,7 @@ function tipOf (l: ValuedLine): ItemTipRef {
   const held = l.heldSince == null || l.ninjaChaos == null
     ? undefined
     : l.heldKind === 'drop-rate'
-      ? `Not counted: poe.ninja's ${ninja} is far more than this card can be worth for how often it drops`
+      ? `${l.unitChaos > 0 ? 'Price held' : 'Not counted'}: poe.ninja's ${ninja} is far more than this card can be worth for how often it drops`
       : l.heldKind === 'one-day'
         ? `${l.unitChaos > 0 ? 'Price held' : 'Not counted'}: poe.ninja's ${ninja} is from only one day this week`
         : l.heldKind === 'spike'

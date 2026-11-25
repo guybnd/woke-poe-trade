@@ -7,7 +7,7 @@ import { lastWokePrices } from '../market/hook'
 import { feedDays, graphGaps, pricedOnlyToday } from '../market/parse'
 import { THIN_GAPS } from '../market/types'
 import { priceHistory } from './history'
-import { STACKED_DECK, cardCap, cardChance, loadCardChances } from '../shared/card-cap'
+import { STACKED_DECK, cardCap, cardChance } from '../shared/card-cap'
 import { useUnidPrice } from '../shared/price'
 import { VARIABLE_ITEMS } from '../shared/unid-prices'
 import { uniqueFromArt } from '../shared/unid-art'
@@ -44,7 +44,6 @@ export function ninjaPriceOf (): PriceOf {
   // listing can set its price (valuation.ts holds a sudden jump).
   const gapsOf = (graph: unknown) => graphGaps(graph, days)
   // For the drop-rate check on cards (shared/card-cap.ts).
-  loadCardChances().catch(() => {})
   let deck: number | null | undefined
   const deckChaos = () => {
     if (deck === undefined) deck = ninja.findPriceByQuery({ ns: 'ITEM', name: STACKED_DECK, variant: undefined })?.chaos ?? null

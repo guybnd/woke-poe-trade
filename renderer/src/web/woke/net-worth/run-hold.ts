@@ -5,7 +5,7 @@ import { parseClipboard, ItemRarity } from '@/parser'
 import type { ParsedItem } from '@/parser'
 import { toast } from '../ui/layer'
 import { ninjaPriceOf } from './prices'
-import { isRolledMap, itemKey, mapBase } from './valuation'
+import { isRolledMap, itemKey, mapBase, overCardCap } from './valuation'
 import { CURRENCY_ITEM } from './faustus'
 import type { StashItemLike } from './valuation'
 import { editRun, loadRuns, runsDoc } from './run-store'
@@ -58,7 +58,7 @@ export async function holdHovered (clipboard: string, league: string, points: re
   // Net worth (prices.ts); poe.ninja's one price is a guess at the roll.
   const rolled = parsed.isUnidentified && s.frame === 3 && VARIABLE_ITEMS.has(s.name)
   const priced = rolled ? useUnidPrice()(s.name) : ninjaPriceOf()(s)
-  if (!priced || !(priced.chaos > 0)) {
+  if (!priced || !(priced.chaos > 0) || overCardCap(priced)) {
     toast(rolled ? `No unid price for ${s.name} yet: check it in the price check, then hold it` : `No price for ${s.name || s.typeLine}: not held`)
     return
   }

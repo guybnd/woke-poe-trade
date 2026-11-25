@@ -67,7 +67,7 @@ const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour: 'numer
 export function heldNote (l: Pick<ValuedLine, 'heldSince' | 'heldKind' | 'ninjaChaos' | 'unitChaos'>, price: (chaos: number) => string): string | undefined {
   if (l.heldSince == null || l.ninjaChaos == null) return undefined
   if (l.heldKind === 'drop-rate') {
-    return `Not counted. poe.ninja says ${price(l.ninjaChaos)}, far more than this card can be worth for how often it drops ` +
+    return `${l.unitChaos > 0 ? `Held at its last solid price, ${price(l.unitChaos)}` : 'Not counted'}. poe.ninja says ${price(l.ninjaChaos)}, far more than this card can be worth for how often it drops ` +
       `(a Stacked Deck would be worth more than ${DROP_RATE_CAP}× its price from this card alone). That's a few fake listings. ` +
       'Counts again once poe.ninja\'s price comes down. Right-click to set your own price'
   }

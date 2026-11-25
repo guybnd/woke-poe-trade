@@ -1,8 +1,8 @@
 // The drop-rate check for divination card prices: a card can't be worth more
-// than a few decks' price for how often it comes out of a Stacked Deck. Small
-// and without the weights, so windows loaded at startup can use it: the
-// weights (stacked-decks/pl-weights.json) load on first use.
+// than a few decks' price for how often it comes out of a Stacked Deck, by
+// the Prohibited Library's weights (stacked-decks/pl-weights.json).
 import type { HeldPrice } from './price-trust'
+import PL_WEIGHTS from '../stacked-decks/pl-weights.json'
 
 export const STACKED_DECK = 'Stacked Deck'
 
@@ -32,26 +32,21 @@ export function cardCap (chance: number, deckChaos: number | null): number | nul
   return chance > 0 && deckChaos != null && deckChaos > 0 ? DROP_RATE_CAP * deckChaos / chance : null
 }
 
-// ---------- the weights, loaded on first use ----------
+// ---------- the weights ----------
+// Static, not loaded on first use: a check made before a lazy load arrived
+// went unguarded, and Net worth saved such a read (baseline, chart). ~9 KB.
 let chances: Map<string, number> | null = null
-let loading: Promise<void> | null = null
-
-export function loadCardChances (): Promise<void> {
-  loading ??= import('../stacked-decks/pl-weights.json')
-    .then(m => {
-      const weights = (m.default ?? m).weights as Record<string, number>
-      const sum = Object.values(weights).reduce((a, b) => a + b, 0)
-      const out = new Map<string, number>()
-      if (sum > 0) for (const [name, w] of Object.entries(weights)) out.set(name, w / sum)
-      chances = out
-    })
-    .catch(() => { loading = null })
-  return loading
+function table (): Map<string, number> {
+  if (!chances) {
+    const weights = PL_WEIGHTS.weights as Record<string, number>
+    const sum = Object.values(weights).reduce((a, b) => a + b, 0)
+    chances = new Map()
+    if (sum > 0) for (const [name, w] of Object.entries(weights)) chances.set(name, w / sum)
+  }
+  return chances
 }
 
-// A card's share of deck draws; 0 until the weights load, or for a card
-// they don't have.
+// A card's share of deck draws; 0 for a card the weights don't have.
 export function cardChance (name: string): number {
-  if (!chances) { loadCardChances().catch(() => {}); return 0 }
-  return chances.get(name) ?? 0
+  return table().get(name) ?? 0
 }

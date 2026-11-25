@@ -204,12 +204,18 @@ function spikeOnly (ninja: number, p: { graph?: Array<number | null>, history?: 
   return typeof step === 'number' ? { chaos: step, since: Date.now(), kind: 'spike' } : null
 }
 
-// A card priced over what its drop rate allows: counts for nothing while it
-// is (shared/card-cap.ts). Checked before the other holds, whose "usual"
-// price can be an earlier fake.
-function overCap (ninja: number, p: Priced, guard?: HoldGuard): { chaos: number, since: number, kind: HoldKind } | null {
-  if (p.cap == null || !(ninja > p.cap)) return null
-  return { chaos: 0, since: guard?.now ?? Date.now(), kind: 'drop-rate' }
+// A card poe.ninja prices over what its drop rate allows: a fake, no price.
+export const overCardCap = (p: Pick<Priced, 'chaos' | 'cap'>) => p.cap != null && p.chaos > p.cap
+
+// A card priced over what its drop rate allows (shared/card-cap.ts). `held`:
+// the other checks' hold, whose "usual" price stands when it's under the cap
+// (it can be an earlier fake over it). Else the last solid price under the
+// cap, else nothing.
+function overCap (ninja: number, p: Priced, held: { chaos: number, since: number, kind: HoldKind } | null, prev: Baseline[string] | undefined, now: number): { chaos: number, since: number, kind: HoldKind } | null {
+  if (p.cap == null || !(ninja > p.cap)) return held
+  if (held && held.chaos <= p.cap) return held
+  const ref = prev?.ref != null && prev.ref > 0 && prev.ref <= p.cap ? prev.ref : 0
+  return { chaos: ref, since: prev?.heldKind === 'drop-rate' && prev.heldSince != null ? prev.heldSince : now, kind: 'drop-rate' }
 }
 
 // One item's price with your prices on top. null: no price.
@@ -226,9 +232,9 @@ export function priceItem (item: StashItemLike, priceOf: PriceOf, prefs: PricePr
   // With no last read, the spike on poe.ninja's own line still counts.
   const held = !hold
     ? null
-    : overCap(ninjaChaos, ninja, guard) ?? (guard
-      ? holdJump(ninjaChaos, ninja, guard.before?.[key], guard.now)
-      : spikeOnly(ninjaChaos, ninja))
+    : overCap(ninjaChaos, ninja, guard
+        ? holdJump(ninjaChaos, ninja, guard.before?.[key], guard.now)
+        : spikeOnly(ninjaChaos, ninja), guard?.before?.[key], guard?.now ?? Date.now())
   const out: ItemPrice = { chaos: held?.chaos ?? ninjaChaos, category: ninja.category, graph: ninja.graph, ninja: ninjaChaos, mine: false, variant: ninja.variant }
   if (held) {
     out.heldSince = held.since
