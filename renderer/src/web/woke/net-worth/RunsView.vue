@@ -17,13 +17,16 @@
       </div>
       <!-- The kit (pick K1): last time's per-map costs for this name, priced
            live where they came from the stash or poe.ninja. -->
-      <div v-if="kit.length && !craft" :class="$style.kit" data-run-kit>
+      <div v-if="lastCosts.length && !craft" :class="$style.kit" data-run-kit>
         <div :class="$style.kitHead"><span :class="$style.caps">Kit, per map</span><span class="w-dim w-num text-xs">{{ amount(kitPerMap) }}<Coin :chaos="!divine" /> a map · from your last {{ name.trim() || 'Run' }} run</span></div>
-        <div v-for="c in kit" :key="c.id" :class="$style.kitRow" data-run-kit-line>
-          <span v-item-tip="tipOf(c.key, c.name)" class="w-trunc">{{ c.qty !== 1 ? `${c.qty} × ` : '' }}{{ c.name }}</span>
-          <span class="w-num text-xs">{{ amount(kitEach(c)) }}<Coin :chaos="!divine" /></span>
-          <span :class="[$style.src, { [$style.on]: c.live }]" :title="c.live ? 'Follows the price while the run goes' : 'Your price, kept as typed'">{{ c.live ? 'live' : 'typed' }}</span>
-          <button type="button" :class="$style.x" :aria-label="`Leave ${c.name} out of this run`" title="Not this run" @click="dropKit(c.id)"><i class="fas fa-times" /></button>
+        <!-- Each a shared profit line (ui/line-item.ts): ⊘ leaves it out of
+             this run, struck in place; hover it to count it again. -->
+        <div v-for="c in lastCosts" :key="c.id" :class="[$style.kitRow, 'w-line', { 'w-line-out': kitOut(c) }]" tabindex="0" data-run-kit-line
+          @contextmenu="kitMenu($event, c)" @keydown="lineKeys($event, kitState(c), kitHandlers(c))">
+          <span :class="$style.kitName"><span v-item-tip="tipOf(c.key, c.name)" class="w-trunc w-line-name">{{ c.qty !== 1 ? `${c.qty} × ` : '' }}{{ c.name }}</span><span v-if="kitOut(c)" class="w-line-tag">not this run</span>
+            <span v-else :class="[$style.src, { [$style.on]: c.live }]" :title="c.live ? 'Follows the price while the run goes' : 'Your price, kept as typed'">{{ c.live ? 'live' : 'typed' }}</span></span>
+          <span class="w-num text-xs" :class="{ [$style.struck]: kitOut(c) }">{{ amount(kitEach(c)) }}<Coin :chaos="!divine" /></span>
+          <WLineActs :name="c.name" :out="kitOut(c)" :entries="kitEntries(c)" :head="e => itemMenuHead({ name: c.name }, e)" @out="setKitOut(c, $event)" />
         </div>
       </div>
     </section>
@@ -168,7 +171,9 @@
 // the last read or a chart point, see profit since then with what got used
 // up, type the costs the stash can't see, and look back at finished runs.
 import { computed, defineAsyncComponent, onUnmounted, shallowRef, watch } from 'vue'
-import { WButton, WChip, WKbd, lineToast, toast, vItemTip } from '../ui'
+import { WButton, WChip, WKbd, WLineActs, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
+import type { MenuEntry } from '../ui'
+import { itemMenuHead } from '../ui/tooltip/item-menu'
 import { AppConfig } from '@/web/Config'
 import { NET_WORTH_TYPE, runHotkeyOf } from './widget'
 import type { NetWorthWidget } from './widget'
@@ -429,10 +434,20 @@ const lastCosts = computed<CostLine[]>(() => lastCostsOf(name.value))
 const dropped = shallowRef<string[]>([])
 watch(name, () => { dropped.value = [] })
 const kit = computed(() => lastCosts.value.filter(c => !dropped.value.includes(c.id)))
+const kitOut = (c: CostLine) => dropped.value.includes(c.id)
 const livePrice = computed(() => kitPrice(props.lines))
 const kitEach = (c: CostLine) => c.live ? (livePrice.value(c.key, c.name) ?? c.unitChaos) : c.unitChaos
 const kitPerMap = computed(() => kit.value.reduce((s, c) => s + Math.max(0, c.qty) * kitEach(c), 0))
-function dropKit (id: string) { dropped.value = [...dropped.value, id] }
+function setKitOut (c: CostLine, out: boolean) {
+  const flip = (on: boolean) => { dropped.value = on ? [...dropped.value.filter(x => x !== c.id), c.id] : dropped.value.filter(x => x !== c.id) }
+  flip(out)
+  lineToast(out ? 'out' : 'in', c.name, () => { flip(!out) })
+}
+// A kit line's price is changed once the run runs (its Out column).
+const kitState = (c: CostLine) => ({ out: kitOut(c), editable: false })
+const kitHandlers = (c: CostLine) => ({ out: (on: boolean) => { setKitOut(c, on) } })
+const kitEntries = (c: CostLine): MenuEntry[] => lineMenu(kitState(c), kitHandlers(c))
+function kitMenu (e: MouseEvent, c: CostLine) { openMenu(e, kitEntries(c), itemMenuHead({ name: c.name }, e) ?? undefined) }
 // Start reads your Faustus listings (run-start.ts). A failed read still starts.
 const starting = shallowRef(false)
 async function start () {
@@ -571,7 +586,12 @@ function addPerMap (l: AddedLine) {
 .x:hover { color: var(--w-down); }
 .kit { display: flex; flex-direction: column; gap: 2px; border-left: 2px solid var(--w-line-strong); padding-left: var(--w-s2); }
 .kitHead { display: flex; align-items: baseline; gap: var(--w-s2); }
-.kitRow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto 1rem; gap: var(--w-s2); align-items: baseline; font-size: var(--w-fs-sm); }
+.kitRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--w-s2); align-items: center; font-size: var(--w-fs-sm); }
+/* The hover actions lie over the end of the name, as in the rows below. */
+.kitRow > :nth-child(1) { grid-area: 1 / 1; } .kitRow > :nth-child(2) { grid-area: 1 / 2; }
+.kitRow > :global(.w-line-acts) { position: relative; top: auto; transform: none; grid-area: 1 / 1; justify-self: end; }
+.struck { text-decoration: line-through; color: var(--w-dim); }
+.kitName { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
 .src { font-size: var(--w-fs-xs); border: 1px solid var(--w-line); color: var(--w-dim); padding: 0 4px; }
 .src.on { border-color: var(--w-gold); color: var(--w-gold); }
 .small { font-family: inherit; text-transform: none; font-size: var(--w-fs-xs); border: 1px solid var(--w-gold); color: var(--w-gold); padding: 0 4px; margin-left: 4px; cursor: help; white-space: nowrap; }
