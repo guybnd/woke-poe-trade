@@ -1,5 +1,9 @@
 {
  "_about": "Which overlay tests a pull request runs (testing/tools/ci-scope.mjs). Each spec lists the paths it covers; a PR that changes only listed paths runs those specs and the smoke set, anything else runs every spec. Master and releases run everything. An empty list: the spec runs only with everything. A spec that copies items (a hotkey on an item, items/ fixtures) lists the parser and price check folders too; ci-scope.test.ts checks it.",
+ "chip-settings-layout.spec.ts": [
+  "renderer/src/web/woke/session-story/",
+  "renderer/src/web/woke/ui/"
+ ],
  "smoke": [
   "toolkit.spec.ts",
   "in-game.spec.ts"

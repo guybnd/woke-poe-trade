@@ -16,7 +16,6 @@
     <WToggle v-model="glance" title="A thin bar at the top with the map, its time so far and the run's or this session's maps and profit (pick below), and each map's result once you leave it. While you play it never takes the mouse; with the overlay open, drag it to move it.">Glance bar</WToggle>
     <GlanceSettings v-if="glance" :config="config" />
     <template v-if="showMe">
-      <span />
       <WButton size="sm" :disabled="place === 'off' || !canShow" @click="showMe">Show me with your last map</WButton>
     </template>
   </div>
@@ -82,12 +81,18 @@ const seconds = computed({
 </script>
 
 <style module>
+/* Each label on its own line above its control: the dock card is narrow, and a
+   label column beside the controls squeezed the labels to a word a line. */
 .grid {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 6px 10px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
   font-size: var(--w-fs-sm);
 }
-.grid > * { justify-self: start; }
+.grid > * { justify-self: start; max-width: 100%; }
+.grid > :global(.w-dim):not(:first-child) { margin-top: 5px; }
+/* Options wrap to a second line rather than run off the card. */
+.grid > :global(.w-seg) { flex-wrap: wrap; }
+.grid > :global(.w-seg) > button { flex: none; }
+.grid > :last-child:is(button) { margin-top: 6px; }
 </style>

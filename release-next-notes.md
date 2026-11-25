@@ -220,3 +220,4 @@
 - Price check: clicking Low, ≈ or High under one mod no longer runs a new trade search each time, so setting several mods in a row doesn't hit the trade rate limit. It sets the range like typing in the boxes: the results dim (or filter, when the range got tighter) until you press Search. Low / Approx / High for all mods above the list still searches in one click.
 - Boss runs: each drop works like the other profit lists. Hover for ⊘ to leave it out of the loot (it stays, struck, in place of the old On box) and ⋯, right-click for the same menu, or click its price to set yours.
 - Net worth runs: a kit line you take off before Start stays in the list, struck, so you can count it again from its ⊘.
+- Session analytics, the dock card's "After a map" settings now fit the card: each label sits on one line above its options, and options that don't fit wrap to a second line instead of running off the edge ("Middle of the screen", "All the time in game").
