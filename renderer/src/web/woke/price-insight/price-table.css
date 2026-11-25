@@ -353,6 +353,9 @@
   background-image: linear-gradient(var(--w-accent-soft), var(--w-accent-soft));
   white-space: nowrap;
 }
+/* The count bar sits under the slid-out face: hide it so "Travel" stands alone. */
+.w-pc-table tbody tr:hover .w-pc-travel ~ .w-pc-count-bar,
+.w-pc-travel:focus-visible ~ .w-pc-count-bar { visibility: hidden; }
 .w-pc-table tbody tr:hover .w-pc-travel .w-pc-travel-label,
 .w-pc-travel:focus-visible .w-pc-travel-label { display: inline; }
 .w-pc-table tbody .w-pc-travel:hover .w-pc-travel-face { background-image: linear-gradient(var(--w-accent-soft), var(--w-accent-soft)), linear-gradient(var(--w-accent-soft), var(--w-accent-soft)); }
