@@ -330,6 +330,16 @@ function setSum (group: DropEntry): SumLine | undefined {
 // first (Dawnbreaker: Forbidden Flame, Dawnstrider...). Recipe groups are
 // recipes, not drops. A group of only cards (The Doctor, The Nurse, The
 // Patient) goes when the cards that give the item are listed already.
+// A drop group named by its league mechanic when one opener says it (Guy,
+// 2026-11-25: "should just say 'sanctum'... reads less weird" than "Drops from").
+const DROP_CONTENT: Record<string, string> = {
+  'ITEM::Forbidden Tome': 'Sanctum',
+  'ITEM::Expedition Logbook': 'Expedition'
+}
+function sourceTitle (query: string[]): string {
+  for (const id of query) if (DROP_CONTENT[id]) return DROP_CONTENT[id]
+  return 'Drops from'
+}
 function getSources (item: ParsedItem, queryId: string, cardsShown: boolean, shown: Set<string>) {
   const dearest = (a: SideRow, b: SideRow) => chaosOfPrice(b.price) - chaosOfPrice(a.price)
   return ITEM_DROP
@@ -349,7 +359,7 @@ function getSources (item: ParsedItem, queryId: string, cardsShown: boolean, sho
       }
       also.sort(dearest)
       if (also.length) also[0] = { ...also[0], lead: 'Also drops' }
-      return { key: `from:${i}`, title: 'Drops from', rows, also, sum: setSum(g) }
+      return { key: `from:${i}`, title: sourceTitle(g.query), rows, also, sum: setSum(g) }
     })
     .filter(sec => sec.rows.length && !sec.rows.some(r => r.name === item.info.name))
     .map(({ also, ...sec }) => ({ ...sec, rows: [...sec.rows, ...also] }))
