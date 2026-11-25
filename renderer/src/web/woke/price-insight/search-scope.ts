@@ -2,7 +2,7 @@
 // so listings found without them say nothing about it. Pure functions.
 
 import { ItemRarity, ParsedItem } from '@/parser'
-import type { FilterOrGroup, ItemFilters, CorruptedSearch } from '@/web/price-check/filters/interfaces'
+import type { AddedMod, FilterOrGroup, ItemFilters, CorruptedSearch } from '@/web/price-check/filters/interfaces'
 import { isTopTierFilter } from '@/web/price-check/filters/create-stat-filters'
 import { catalystQualityFilter } from './catalyst-filter'
 
@@ -41,10 +41,12 @@ export function socketColoursOn (filters: ItemFilters): boolean {
  * Whether poe.ninja's price covers what this search looks for. Its unique
  * prices are for any roll, uncorrupted and without a Foulborn mod.
  */
-export function ninjaFitsSearch (item: ParsedItem, stats: FilterOrGroup[], corrupted?: CorruptedSearch, socketColours?: boolean): boolean {
+export function ninjaFitsSearch (item: ParsedItem, stats: FilterOrGroup[], corrupted?: CorruptedSearch, socketColours?: boolean, addedMods?: AddedMod[]): boolean {
   if (item.rarity !== ItemRarity.Unique) return true
   // Its prices are for any socket colours.
   if (socketColours) return false
+  // ...and for the item as it drops, not with a mod it hasn't got.
+  if (addedMods?.some(m => !m.disabled)) return false
   if (item.isFoulborn || corrupted === 'corrupted') return false
   if (item.isCorrupted && corrupted !== 'not-corrupted') return false
   // Its prices are for any catalyst quality, so a search for one (the Q tag) isn't covered.
