@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-519
 title: Make map price check filters consistent
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -35,6 +35,11 @@ history:
     date: '2026-11-23T16:21:48.671Z'
     selfAttested: true
     id: c-2026-11-23t16-21-48-671z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:06:02.279Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/816'
@@ -49,6 +54,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Map price check: every Trade search number is a chip filter. Done in a cloud thread: https://github.com/guybnd/woke-poe-trade/pull/816
 

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-584
 title: 'Stacked decks: drop-rate check for fake card prices'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - bug
   - prices
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -27,6 +27,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-25T02:37:20.586Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:49.978Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/899'
@@ -41,5 +46,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Stacked decks hold a card price that's higher than its drop rate allows (e.g. Loyalty at 53 div). PR: https://github.com/guybnd/woke-poe-trade/pull/899 (5198e31).

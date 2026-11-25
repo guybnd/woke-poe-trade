@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-538
 title: 'Thread recipe: show a range, not an average'
-status: Done
+status: Released
 priority: Medium
 effort: XS
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-528
 history:
   - type: activity
@@ -48,6 +48,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T04:41:16.413Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:56.609Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/836'
@@ -62,5 +67,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Veteran review pick (thread-hide). Until the odds are measured, show cost of 3 against the cheapest and dearest possible result, no expected value. Related: WOKEPOET-157.

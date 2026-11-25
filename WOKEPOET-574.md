@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-574
 title: Shared profit line item
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -74,6 +74,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T15:03:57.429Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:51.285Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/888'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -88,5 +93,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 One shared profit line item for Runs and Holdings rows. Phase 1 (Runs + Holdings rows, Changed chip) shipped in PR https://github.com/guybnd/woke-poe-trade/pull/861. Phases 2 and 3 to come.

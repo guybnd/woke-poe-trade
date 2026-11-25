@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-573
 title: Offer restart as admin when PoE is elevated
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -60,6 +60,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T13:20:46.642Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:51.754Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/882'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -74,5 +79,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 When PoE runs elevated, the overlay can't interact with it; offer to restart the app as admin. No PR yet.

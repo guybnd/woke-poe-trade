@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-531
 title: 'Runs: compare past runs side by side'
-status: Done
+status: Released
 priority: High
 effort: S
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-528
 history:
   - type: activity
@@ -56,6 +56,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T03:12:54.602Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:59.041Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/840'
@@ -70,5 +75,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Veteran review pick (run-compare). Sortable table of past runs: maps, profit per map, per hour, cost per map, profit without the top drop.

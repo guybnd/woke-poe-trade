@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-581
 title: Fix misleading prices for unidentified uniques
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - bug
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -29,6 +29,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T17:39:36.142Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:50.291Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/895'
@@ -43,5 +48,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Unid rolled uniques use the unid trade price everywhere, not poe.ninja's guess. PR: https://github.com/guybnd/woke-poe-trade/pull/895 (55cc4e1).

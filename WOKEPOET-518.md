@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-518
 title: Pending Faustus sales in Net worth
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -27,6 +27,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-23T14:51:37.252Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:06:02.919Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/815'
@@ -41,6 +46,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Net worth Listed tab with pending Faustus sales. Done in a cloud thread: https://github.com/guybnd/woke-poe-trade/pull/815
 

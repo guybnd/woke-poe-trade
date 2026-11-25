@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-561
 title: Related items in price check
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - epic
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -45,6 +45,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T12:16:04.069Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:52.581Z'
 subtasks:
   - WOKEPOET-562
   - WOKEPOET-563
@@ -66,6 +71,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Epic: price check shows items related to the one being checked, with prices. Follows WOKEPOET-560 (recipe parts, PR 873).
 

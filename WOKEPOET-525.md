@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-525
 title: One global setting for what time per hour rates count
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
 tags:
   - net-worth
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -42,6 +42,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T02:39:17.187Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:06:00.760Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -57,6 +62,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 From the Net worth bug hunt: run per hour counts game-closed and AFK time. Guy: "have a global setting for this together with all the other similar counters".
 

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-575
 title: Div card rarity on price check and tooltip
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -27,6 +27,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T14:29:17.129Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:51.551Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/883'
@@ -41,5 +46,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Div cards show their "1 in N" rarity on the price check and the tooltip. PR: https://github.com/guybnd/woke-poe-trade/pull/883 (6120e7b).

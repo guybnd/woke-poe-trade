@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-545
 title: 'Planner: trade search first, stash text second'
-status: Done
+status: Released
 priority: Low
 effort: S
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-528
 history:
   - type: activity
@@ -56,6 +56,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T03:26:50.568Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:58.652Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/837'
@@ -70,5 +75,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Veteran review pick (planner-simple). Lead with the trade search, which can count; show the stash text only when it fits.

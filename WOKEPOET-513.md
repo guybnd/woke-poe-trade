@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-513
 title: Fix filter check on related-item price checks
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -26,6 +26,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-23T09:33:33.140Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:06:05.135Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/799'
@@ -40,5 +45,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Items price checked from the related/side list had their filter chip judged wrongly (fragments treated as currency). Fixed in a cloud thread: https://github.com/guybnd/woke-poe-trade/pull/799 (merged at f4292f16).

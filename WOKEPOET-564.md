@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-564
 title: 'Price check: div cards that give the item'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-561
 history:
   - type: activity
@@ -56,6 +56,11 @@ history:
     date: '2026-11-24T12:56:43.698Z'
     selfAttested: true
     id: c-2026-11-24t12-56-43-698z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:51.879Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/875'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -70,5 +75,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 List divination cards that give the item, with prices. Picked in https://claude.ai/artifact/N82j4g5XbvTdrZzYKT7bBR.

@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-512
 title: Stop fake div card prices in Net worth (Rain Tempter)
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -59,6 +59,11 @@ history:
     date: '2026-11-23T11:00:07.412Z'
     selfAttested: true
     id: c-2026-11-23t11-00-07-412z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:06:04.897Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/797'
@@ -73,5 +78,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Done in a cloud thread: https://github.com/guybnd/woke-poe-trade/pull/796 (merged at 8b8348e0).

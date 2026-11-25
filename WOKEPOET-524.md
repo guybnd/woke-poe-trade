@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-524
 title: 'Net worth tab picker: bigger text, tab colour on each row'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -61,6 +61,11 @@ history:
       Pick D merged in https://github.com/guybnd/woke-poe-trade/pull/832 (row
       tint 30%, hover 36%, unreadable rows 12%).
     id: a-2026-11-24t02-47-07-717z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:06:00.406Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -76,5 +81,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 User feedback: Holdings "Tabs to read" list text too small, wants rows coloured by tab colour. Mockups (size only / coloured edge / coloured name / full-row tint) for Guy to pick; build size + contrast + thick left edge in tab colour meanwhile.

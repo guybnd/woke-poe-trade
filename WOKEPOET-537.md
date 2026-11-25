@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-537
 title: Forbidden Flame and Flesh pair finder from the PoB build
-status: Done
+status: Released
 priority: High
 effort: M
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-528
 history:
   - type: activity
@@ -64,6 +64,11 @@ history:
     date: '2026-11-24T04:57:27.176Z'
     selfAttested: true
     id: c-2026-11-24t04-57-27-176z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:56.064Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/841'
@@ -78,5 +83,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Veteran review pick (forbidden-pair). From the build's ascendancy, list notables you don't have with the cheapest Flame plus Flesh pair for each, and open both trade searches.

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-570
 title: Map stat columns in price check results
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -54,6 +54,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T12:42:09.035Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:52.014Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/877'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -68,5 +73,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Map stat columns in the price check result list. PR: https://github.com/guybnd/woke-poe-trade/pull/877

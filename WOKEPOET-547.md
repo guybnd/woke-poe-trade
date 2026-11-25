@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-547
 title: Reprice bar on price check for listed items (R1)
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-528
 history:
   - type: activity
@@ -42,6 +42,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T08:56:44.706Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:53.665Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/839'
@@ -56,5 +61,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Built in a cloud thread.

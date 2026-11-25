@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-571
 title: Redesign the map price check layout
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -79,6 +79,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-25T03:21:41.083Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:49.540Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/902'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -93,5 +98,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Redesign the price check layout for maps. No PR yet.

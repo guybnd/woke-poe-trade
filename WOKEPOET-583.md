@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-583
 title: Replace Tonight wording
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - polish
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -26,6 +26,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-25T01:05:22.671Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:50.048Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/898'
@@ -40,5 +45,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Say "This session" instead of "Tonight", and "Play sessions" instead of "Nights" (incl. "Night of …" and the Nights tab). PR: https://github.com/guybnd/woke-poe-trade/pull/898 (e6ef71f).

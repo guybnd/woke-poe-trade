@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-534
 title: 'Instant card: show how much to trust the poe.ninja price'
-status: Done
+status: Released
 priority: High
 effort: S
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-528
 history:
   - type: activity
@@ -50,6 +50,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T03:41:06.227Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:58.181Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/838'
@@ -64,5 +69,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Veteran review pick (ninja-trust). Reuse Net worth's spike and thin-market holds: when Net worth would hold this price, the card says so ("poe.ninja says 98 div, usual 1c") and nudges to Live offers. Thin-market mark when priced on few days.

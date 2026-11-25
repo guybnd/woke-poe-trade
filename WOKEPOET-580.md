@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-580
 title: Ctrl+Space keeps typed searches; recents save on close
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -26,6 +26,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T17:26:39.345Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:50.351Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/894'
@@ -40,5 +45,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Ctrl+Space search keeps what you typed, and recent searches save as the window closes. PR: https://github.com/guybnd/woke-poe-trade/pull/894 (427efa7).

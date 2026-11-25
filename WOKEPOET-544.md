@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-544
 title: 'One in-map overlay on by default (glance bar on, toast off)'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-528
 history:
   - type: activity
@@ -48,6 +48,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T04:41:19.090Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:56.394Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/836'
@@ -62,5 +67,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Veteran review pick (overlay-one). Glance bar on, after-map toast off by default; the bar flashes the map's result for a few seconds instead. Toast can be turned back on.

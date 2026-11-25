@@ -3,14 +3,14 @@ id: WOKEPOET-526
 title: >-
   Dock: loot filter icon only when there's a change to apply; explain Net worth
   stale count
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -72,6 +72,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T03:43:52.963Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:57.612Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/844'
@@ -86,6 +91,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Guy: the VS chip (loot filter strictness) shouldn't always show; only when there are filter changes to apply. Also asked what the 18 on the Net worth icon counts (stale Faustus listings, 3+ days unsold).
 

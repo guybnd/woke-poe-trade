@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-552
 title: Overlay stuck taking the game's clicks
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -28,6 +28,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T05:23:29.938Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:55.845Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/852'
@@ -42,6 +47,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 2026-11-24 ~04:15Z: the dev overlay blocked every click in the game, and Guy couldn't click anything. It wasn't reproduced and no merge was clearly at fault. Fixed defensively in https://github.com/guybnd/woke-poe-trade/pull/852 (26c0e784): a failsafe so the overlay never keeps the game's clicks, a rescue hotkey, and a state log for next time.
 

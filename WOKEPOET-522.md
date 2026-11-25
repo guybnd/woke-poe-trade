@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-522
 title: 'Bug hunt 3: Net worth and run tracking'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -74,6 +74,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T02:32:05.648Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:06:00.880Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -89,5 +94,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Second bug hunt over Net worth (stash, Sales/Listed, chart, glance, fake-price guards #796-#800, Faustus toggle #819/#821) and run tracking (map runs, Session analytics, Strategy runs WOKEPOET-515, post-map toast, in-map timer). Skips what PR #824 fixed. Branch fix/bug-hunt-3, worktree E:\Git\woke\wt\bug-hunt-3.

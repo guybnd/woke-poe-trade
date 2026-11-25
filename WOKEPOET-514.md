@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-514
 title: 'Atlas strategies: import poeatlasplanner.com links'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - atlas
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -43,6 +43,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-23T11:16:05.498Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:06:04.683Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/801'
@@ -57,5 +62,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 Guy (2026-11-23): a poeatlasplanner.com link (#p=, 3.30.0) wouldn't import, and neither would a screenshot (not received yet). The link format was inferred from his link and is now decoded: PR #801. The screenshot is waiting on a resend.

@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-557
 title: 'Per hour box: Maps/h, Sold, Used and Net tiles'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-555
 history:
   - type: activity
@@ -49,6 +49,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-24T07:58:05.728Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T04:05:54.471Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/865'
@@ -63,6 +68,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: 1.30.20
+releasedAt: '2026-11-25T04:05:49.382Z'
+releaseDocPath: release-notes/1.30.20
 ---
 The Per hour box gets four tiles:
 - Maps/h: map time only. Shows "No maps" when there were none.
