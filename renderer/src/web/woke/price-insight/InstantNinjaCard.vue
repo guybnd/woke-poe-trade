@@ -41,7 +41,9 @@
       <div v-if="hasHistory" :class="$style.gtabs">
         <button v-for="r in RANGES" :key="r.id" type="button" tabindex="-1" :class="{ [$style.on]: r.id === range }" :data-testid="`instant-ninja-range-${r.id}`" @mousedown.prevent @click="setRange(r.id)">{{ r.id }}</button>
       </div>
-      <w-spark v-if="spark.length > 1" :values="spark" :width="92" :height="32" />
+      <!-- The graph fills what the box has: the card's width, and a divine's table's height
+           beside it (Guy, 2026-11-25, "it can scale dynamically"). -->
+      <div v-if="spark.length > 1" ref="plot" :class="$style.plot" data-testid="instant-ninja-plot"><w-spark :values="spark" :width="plotSize.w" :height="plotSize.h" /></div>
       <div v-else-if="hasHistory && !(range === '24h' && savedLoading)" :class="$style.nograph">No change yet</div>
       <span v-if="change != null" :class="change >= 0 ? 'w-up' : 'w-down'" :title="changeTitle" data-testid="instant-ninja-change">{{ change >= 0 ? '▲' : '▼' }}{{ Math.abs(change) }}%</span>
       <span :class="$style.src" data-testid="instant-ninja-badge" :title="badgeTip" :data-tip-keys="againKeys ?? 'Space'">poe.ninja<template v-if="age">, {{ age }}</template></span>
@@ -263,6 +265,20 @@ function place () {
 }
 // Related items load after the card, and change its size.
 let resize: ResizeObserver | undefined
+// The plot's own size (clientWidth is in the box's zoomed CSS px, as the svg's).
+const plot = shallowRef<HTMLElement | null>(null)
+const plotSize = shallowRef({ w: 92, h: 32 })
+const plotResize = new ResizeObserver(() => {
+  const p = plot.value
+  if (!p) return
+  const w = Math.max(40, Math.floor(p.clientWidth))
+  const h = Math.max(24, Math.floor(p.clientHeight))
+  if (w !== plotSize.value.w || h !== plotSize.value.h) plotSize.value = { w, h }
+})
+watch(plot, (now, was) => {
+  if (was) plotResize.unobserve(was)
+  if (now) plotResize.observe(now)
+})
 let stopKids: (() => void) | undefined
 
 function onKey (e: KeyboardEvent) {
@@ -334,6 +350,7 @@ watch(() => props.at, placeAndReport)
 onUnmounted(() => {
   document.removeEventListener('keydown', onKey)
   resize?.disconnect()
+  plotResize.disconnect()
   stopKids?.()
 })
 </script>
@@ -396,7 +413,8 @@ onUnmounted(() => {
 .doubt { color: var(--w-warn, #e0a03c); max-width: 18rem; }
 .fg { color: var(--w-r-magic, #8888ff); }
 /* The graph box and, for a divine, its parts in chaos: side by side under the card. */
-.aside { display: flex; align-items: flex-start; gap: var(--w-instant-gap); }
+/* As wide as the card, the graph box taking what the table leaves; both as tall as the taller. */
+.aside { align-self: stretch; display: flex; align-items: stretch; gap: var(--w-instant-gap); }
 .tenths {
   zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1));
   border: 1px solid var(--w-line-strong, var(--w-line));
@@ -419,8 +437,11 @@ onUnmounted(() => {
 .headIcon { flex: none; width: 1.4em; height: 1.4em; object-fit: contain; margin-right: 4px; }
 .gbox {
   zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1));
-  display: grid;
-  justify-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 2px;
   padding: 4px 6px 5px;
   border: 1px solid rgba(170, 158, 130, .55);
@@ -435,6 +456,9 @@ onUnmounted(() => {
 .gtabs button { background: none; border: 1px solid transparent; color: var(--w-dim); font: inherit; font-size: var(--w-fs-xs); padding: 0 5px; cursor: pointer; }
 .gtabs button:hover { color: var(--w-fg); }
 .gtabs .on { color: var(--w-r-currency); border-color: rgba(170, 158, 130, .55); background: rgba(170, 158, 130, .1); }
+/* Out of the flow, so the graph never sets the box's size, only fills it. */
+.plot { position: relative; flex: 1 1 auto; align-self: stretch; min-height: 32px; }
+.plot > svg { position: absolute; inset: 0; }
 .nograph { font-size: var(--w-fs-xs); padding: 8px 0; }
 .src { font-size: var(--w-fs-xs); opacity: .8; }
 /* One game-style button at the foot (Guy's pick I2). */
