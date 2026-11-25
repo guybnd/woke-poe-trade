@@ -71,6 +71,8 @@ export interface TipPack {
   'drops'?: Record<string, TipDrop>
   // A unique's Vestigial implicit, one list of lines per mod (scripts/build-vestigial-data.mjs).
   'vestigial'?: Record<string, string[][]>
+  // The mod each essence forces per slot (scripts/build-essence-data.mjs).
+  'essences'?: Record<string, Array<[string[], string[]]>>
 }
 
 export type TipKind = 'unique' | 'gem' | 'card' | 'item'
@@ -313,7 +315,7 @@ export function dropSource (drop: TipDrop | undefined): DropSource | null {
   if (!drop?.d && !drop?.r) return null
   const label = drop.s ?? (drop.d ? 'No drop' : 'Restricted')
   const why = drop.t ?? (drop.d ? 'The game never drops it.' : 'The PoE wiki doesn\'t say where it comes from.')
-  return { label, title: `Not a random drop on this base. ${why}` }
+  return { label, title: `Not a random drop on this base, so a Chance Orb can't make it. ${why}` }
 }
 
 // Random drops first, restricted ones after, each keeping its order.

@@ -16,6 +16,9 @@ import { kindOfName, uniqueModLines } from './item-menu-logic'
 import type { ItemMenuRef, UniqueModLines } from './item-menu-logic'
 import { dataFileUrl, onSharedDataChange } from '../../app/live-data'
 import { usePrice } from '../../shared/price'
+import { uniquesOnBase } from '../../shared/uniques-on-base'
+import { loadModTiers, tierClassKey } from './mod-tiers'
+import type { GemTable } from '../../search/lookups/gems'
 import { heldText } from '../../shared/price-trust'
 import { formatChaos } from '../format'
 import type { TipBaseUnique, TipContent, TipEffect, TipMarket } from './tooltip'
@@ -206,19 +209,151 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
   await Promise.all(packFiles(kind).map(loadFile))
   const base = kind === 'unique' ? ITEM_BY_REF('UNIQUE', ref.name)?.[0]?.unique?.base : undefined
   let model = buildTip(pack, { name: ref.name, kind, variant: ref.variant, base })
-  if (model && kind === 'card') model = await withCardRarity(model, ref.name)
-  return { model, market: marketFor(ref, kind) }
+  const market = marketFor(ref, kind)
+  if (model && kind === 'card') model = await withCardRarity(model, ref.name, market)
+  if (model && kind === 'gem') model = await withGemExtras(model, ref)
+  if (model && kind === 'unique') model = await withUniqueExtras(model, ref, market)
+  if (kind === 'item' && / Map$/.test(ref.name)) model = await withMapCards(model, ref.name)
+  if (model && kind === 'item' && /^(?:\w+ )?Essence of /.test(ref.name)) model = await withEssence(model, ref.name)
+  if (model && kind === 'item' && pack.bases?.[ref.name]) return await withBaseExtras(model, ref, market)
+  if (model && (kind === 'item' || kind === 'card')) model = await withHeld(model, ref.name, market)
+  return { model, market }
+}
+
+// "You have 34 · 1.2 div" from Net worth's last stash read (Guy's pick I9).
+async function withHeld (model: TipModel, name: string, market: TipMarket | null): Promise<TipModel> {
+  try {
+    const { heldCount } = await import('./held')
+    const n = await heldCount(name)
+    if (!n) return model
+    price ??= usePrice()
+    const worth = market && !market.range && !market.varies ? market.chaos * n : null
+    const line = [
+      { text: 'You have ', tone: 'label' as const },
+      { text: n.toLocaleString('en-US'), tone: 'value' as const },
+      ...(worth ? [{ text: ` · ${formatChaos(worth, price.divine.value)}`, tone: 'label' as const }] : [])
+    ]
+    return { ...model, sections: [...model.sections, [line]] }
+  } catch {
+    return model
+  }
+}
+
+// An essence: the mod it forces on each slot (Guy's pick I6, essence-tip.ts).
+async function withEssence (model: TipModel, name: string): Promise<TipModel> {
+  try {
+    const [{ essenceSections }] = await Promise.all([import('./essence-tip'), loadFile('essences')])
+    const sections = essenceSections(pack.essences?.[name])
+    return sections.length ? { ...model, sections: [...model.sections, ...sections] } : model
+  } catch {
+    return model
+  }
+}
+
+// A map by name: its tier and the cards that drop there, dearest first, as
+// Map history and Card drops show it (Guy's pick I8). Without the drop data
+// the tooltip shows as it was.
+async function withMapCards (model: TipModel | null, map: string): Promise<TipModel | null> {
+  try {
+    const { loadCardDrops, mapTip } = await import('../../card-drops/card-drops')
+    const data = await loadCardDrops()
+    if (!data || data.maps[map] == null) return model
+    price ??= usePrice()
+    const p = price
+    const tip = mapTip(data, map, card => p.priceOf(card, { ns: 'DIVINATION_CARD' })?.chaos ?? null, c => formatChaos(c, p.divine.value))
+    return model ? { ...model, base: model.base ?? tip.model.base, sections: [...model.sections, ...tip.model.sections] } : tip.model
+  } catch {
+    return model
+  }
+}
+
+// A gear base: the item level its best tiers need, and the uniques it drops
+// as with their prices, ones that aren't random drops marked (Guy's pick I7).
+async function withBaseExtras (model: TipModel, ref: ItemTipRef, market: TipMarket | null): Promise<{ model: TipModel, market: TipMarket | null, uniques?: TipBaseUnique[] }> {
+  const category = ITEM_BY_REF('ITEM', ref.name)?.[0]?.craftable?.category
+  // A flask, jewel or ward base has no tier line, but still its uniques.
+  const key = tierClassKey(category, pack.bases?.[ref.name])
+  if (key) {
+    try {
+      const [{ topTierLine }, tiers] = await Promise.all([import('./base-tip-extras'), loadModTiers()])
+      const line = tiers ? topTierLine(tiers, key) : null
+      if (line) model = { ...model, sections: [...model.sections, [line]] }
+    } catch {}
+  }
+  await loadFile('drops')
+  const names = uniquesOnBase(ref.name)
+  if (!names.length) return { model, market }
+  price ??= usePrice()
+  const p = price
+  const listed = names.map((name): TipBaseUnique => {
+    const found = p.isVariable(name) ? null : p.priceOf(name, { ns: 'UNIQUE' })
+    return { name, chaos: found?.chaos ?? null, grade: 'unknown', label: '', thin: false }
+  }).sort((a, b) => (b.chaos ?? -1) - (a.chaos ?? -1))
+  return { model, market, uniques: withDrops(listed, pack.drops) }
+}
+
+// A unique's Foulborn swap, Vestigial implicit and the cards that give it
+// (unique-tip-extras.ts). Without the data the tooltip shows as it was.
+async function withUniqueExtras (model: TipModel, ref: ItemTipRef, market: TipMarket | null): Promise<TipModel> {
+  try {
+    const [{ uniqueExtraSections }] = await Promise.all([import('./unique-tip-extras'), loadFile('items'), loadFile('vestigial')])
+    price ??= usePrice()
+    const p = price
+    // A card gives a random roll: one variant's price isn't what the set makes.
+    const rolled = !!ref.variant && (pack.uniques?.[ref.name]?.v.length ?? 0) > 1
+    const one = market && !rolled && !market.varies && !market.unidOnly && !market.range ? market.chaos : null
+    const sections = uniqueExtraSections(ref, pack, {
+      card: name => p.priceOf(name, { ns: 'DIVINATION_CARD' })?.chaos ?? null,
+      unique: one,
+      format: c => formatChaos(c, p.divine.value)
+    })
+    return sections.length ? { ...model, sections: [...model.sections, ...sections] } : model
+  } catch {
+    return model
+  }
 }
 
 // A divination card's tooltip ends with how rare it is among all card drops
 // (stacked-deck drop weights). The drop data loads on the first card hover;
 // without it the tooltip shows as it was.
-async function withCardRarity (model: TipModel, card: string): Promise<TipModel> {
+// A gem's versions with their prices and where to get it (Guy's pick I5,
+// gem-tip-extras.ts). Without the data the tooltip shows as it was.
+async function withGemExtras (model: TipModel, ref: ItemTipRef): Promise<TipModel> {
   try {
-    const { cardDropFacts, loadCardDrops, rarityText } = await import('../../card-drops/card-drops')
-    const rarity = rarityText(cardDropFacts(await loadCardDrops(), card))
-    if (!rarity) return model
-    return { ...model, sections: [...model.sections, [[{ text: `Rarity: ${rarity}, by drop weight`, tone: 'dim' }]]] }
+    const [{ gemLadder, gemSource }, sources] = await Promise.all([
+      import('./gem-tip-extras'),
+      import('../../pob-builds/gem-sources.json').then(m => m.default as unknown as GemTable).catch(() => null)
+    ])
+    price ??= usePrice()
+    const p = price
+    const ninja = usePoeninja()
+    const ladder = gemLadder(ninja.findPricesByName('GEM', ref.name), ref.variant, c => formatChaos(c, p.divine.value))
+    const where = gemSource(ref.name, sources)
+    const sections = [...(ladder.length ? [ladder] : []), ...(where ? [[[{ text: where, tone: 'dim' as const }]]] : [])]
+    return sections.length ? { ...model, sections: [...model.sections, ...sections] } : model
+  } catch {
+    return model
+  }
+}
+
+// Then the set's cost against its reward and the maps it is likeliest in
+// (Guy's pick I4, card-tip-extras.ts).
+async function withCardRarity (model: TipModel, card: string, market: TipMarket | null): Promise<TipModel> {
+  try {
+    const [{ cardDropFacts, loadCardDrops, rarityText }, { cardExtraSections }] = await Promise.all([import('../../card-drops/card-drops'), import('./card-tip-extras')])
+    const data = await loadCardDrops()
+    const facts = cardDropFacts(data, card)
+    const rarity = rarityText(facts)
+    price ??= usePrice()
+    const p = price
+    const extras = cardExtraSections(card, pack.items?.[card], data && facts ? { data, facts } : null, {
+      // The price after the fake-price checks, as the reward's is.
+      card: market && !market.range ? (p.priceOf(card, { ns: 'DIVINATION_CARD' })?.chaos ?? null) : null,
+      reward: r => (r.ns === 'UNIQUE' && p.isVariable(r.name)) ? null : p.priceOf(r.name, { ns: r.ns })?.chaos ?? null,
+      format: c => formatChaos(c, p.divine.value)
+    })
+    const sections = [...(rarity ? [[[{ text: `Rarity: ${rarity}, by drop weight`, tone: 'dim' as const }]]] : []), ...extras]
+    return sections.length ? { ...model, sections: [...model.sections, ...sections] } : model
   } catch {
     return model
   }

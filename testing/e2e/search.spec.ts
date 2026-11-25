@@ -370,6 +370,14 @@ test('a base lists its uniques with their prices', async ({ overlay }) => {
   // The base's own pane lists them too, and a click opens one.
   await box.fill('shagreen boots')
   await expect(panel.getByText('Uniques on Shagreen Boots')).toBeVisible()
+  // Its tooltip: the item level for its best tiers, its uniques, and a
+  // Replica marked as one a Chance Orb can't make (tooltip audit I7).
+  await panel.getByRole('button', { name: /^Shagreen Boots/ }).first().hover()
+  const tip = overlay.page.getByRole('tooltip')
+  await expect(tip).toContainText('Best tiers need item level')
+  await expect(tip).toContainText('Movement Speed')
+  await expect(tip).toContainText('Three-step Assault')
+  await expect(tip.locator('[data-no-chance]')).toContainText("Chance Orb can't make them")
   await panel.getByRole('button', { name: /^Shagreen Boots/ }).first().click()
   await expect(panel.getByText('Uniques on this base')).toBeVisible()
   await expect(panel.getByText('Replica Three-step Assault')).toBeVisible()

@@ -13,7 +13,9 @@
             <i :class="isDisabled ? 'far fa-square' : 'fas fa-check-square'" />
           </button>
           <!-- woke: a mercenary's skill row is a gem: its tooltip (Guy's rule, merc thread). -->
-          <button v-item-tip="filter.mercenary?.icon ? { name: filter.text } : null" :class="$style.labelBtn" @click="smartToggle" type="submit">
+          <!-- woke: a tiered mod's ladder on hover (tooltip audit G5/I1, price-insight/mod-tip.ts). -->
+          <button v-item-tip="filter.mercenary?.icon ? { name: filter.text } : null" :class="$style.labelBtn" @click="smartToggle" type="submit"
+            @mouseenter="modTipEnter" @mouseleave="modTipLeave" :data-goto-spot="tierSpot">
             <img v-if="filter.mercenary?.icon"
               :src="filter.mercenary.icon">
             <span v-if="filter.not && miniFilter"
@@ -130,6 +132,7 @@
 
 <script lang="ts">
 import { vItemTip } from '@/web/woke/ui/tooltip/item-tip'
+import { mayHaveTiers, useModTipHover } from '@/web/woke/price-insight/mod-tip-hover'
 import { defineAsyncComponent, defineComponent, PropType, computed, ref, nextTick, useCssModule, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import UiPopover from '@/web/ui/Popover.vue'
@@ -362,7 +365,14 @@ export default defineComponent({
       pointercancel: drag.onPointerUp
     }
 
+    // woke: the mod's tier tooltip (price-insight/mod-tip-hover.ts).
+    const { enter: modTipEnter, leave: modTipLeave } = useModTipHover(() => props)
+    const tierSpot = computed(() => mayHaveTiers(props.filter) ? 'mod-tiers' : undefined)
+
     return {
+      modTipEnter,
+      modTipLeave,
+      tierSpot,
       catalyst,
       qTag,
       qOn,

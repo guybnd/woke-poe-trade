@@ -7,6 +7,27 @@
       </header>
 
       <SwapCard v-if="swap" :swap="swap" />
+      <template v-else-if="modTip">
+        <section :class="$style.block">
+          <div :class="$style.label">{{ modTip.sub }}</div>
+        </section>
+        <section :class="$style.block" class="w-num" data-mod-ladder>
+          <div :class="$style.ladder">
+            <template v-for="s in modTip.steps" :key="s.tier">
+              <span :class="ladderClass(s)">T{{ s.tier }}</span>
+              <span :class="ladderClass(s)">{{ s.min === s.max ? s.min : `${s.min}–${s.max}` }}</span>
+              <span :class="ladderClass(s)">ilvl {{ s.level }}</span>
+            </template>
+          </div>
+        </section>
+        <section v-if="modReach" :class="$style.block">
+          <div :class="$style.note">{{ modReach }}</div>
+        </section>
+        <section v-if="modTip.bench" :class="$style.block">
+          <div :class="$style.crafted">Bench: {{ modTip.bench.text }}</div>
+          <div :class="$style.note">{{ modTip.bench.cost }} · {{ modTip.bench.where }}</div>
+        </section>
+      </template>
       <template v-else-if="passive">
         <section v-if="passive.stats.length" :class="$style.block">
           <div v-for="(line, i) in passive.stats" :key="i" :class="$style.mod">{{ line }}</div>
@@ -139,6 +160,8 @@
             <span :class="$style[`g-${u.grade}`]">{{ u.label }}{{ u.thin ? ', thin market' : '' }}</span>
           </div>
           <div v-if="moreUniques" class="w-faint">and {{ moreUniques }} more</div>
+          <!-- Guy (tooltip audit I7): a boss-only unique can't be chanced, and must say so. -->
+          <div v-if="shownUniques.some(u => u.drop)" class="w-faint" data-no-chance>Marked ones never drop at random, so a Chance Orb can't make them.</div>
         </footer>
         <footer v-if="lookup.effects?.length" :class="$style.uniques">
           <div v-for="(e, i) in shownEffects" :key="i" :class="[$style.effectRow, { [$style.effectOn]: e.hovered }]">
@@ -207,7 +230,7 @@ import { onSharedDataChange } from '../../app/live-data'
 import type { TierData } from './mod-tiers'
 import type { ModLine } from '../../price-insight/listing-tip-detail'
 import { ITEM_BY_REF } from '@/assets/data'
-import type { GemTip, LookupTip, PassiveTip, SwapTip } from './tooltip'
+import type { GemTip, LookupTip, ModTip, PassiveTip, SwapTip } from './tooltip'
 
 const $style = useCssModule()
 const el = ref<HTMLElement | null>(null)
@@ -284,6 +307,22 @@ const implicitLines = computed(() => listing.value?.implicits.filter(l => l.kind
 const gem = computed<GemTip | null>(() => tip.value?.content.kind === 'gem' ? tip.value.content : null)
 const swap = computed<SwapTip | null>(() => tip.value?.content.kind === 'swap' ? tip.value.content : null)
 const passive = computed<PassiveTip | null>(() => tip.value?.content.kind === 'passive' ? tip.value.content : null)
+const modTip = computed<ModTip | null>(() => tip.value?.content.kind === 'mod' ? tip.value.content : null)
+// The row's own tier lit; tiers above the item's level faint.
+const ladderClass = (s: ModTip['steps'][number]) => {
+  const m = modTip.value!
+  if (s.tier === m.mine) return $style.value
+  return m.itemLevel != null && s.level > m.itemLevel ? $style.faint : $style.label
+}
+// What the item's level lets it roll, when that's not every tier.
+const modReach = computed(() => {
+  const m = modTip.value
+  if (!m || m.itemLevel == null) return ''
+  const best = m.steps.find(s => s.level <= m.itemLevel!)
+  if (!best) return ''
+  if (best.tier === 1) return `Item level ${m.itemLevel}: can roll every tier`
+  return `Item level ${m.itemLevel}: T${best.tier} is the best it can roll (T1 needs ${m.steps[0].level})`
+})
 // Cheap currency the way traders say it: 1 / price, "5.4 per c".
 const perChaos = (chaos: number) => { const n = 1 / chaos; return n >= 10 ? Math.round(n).toString() : n.toFixed(1) }
 const lookup = computed<LookupTip | null>(() => tip.value?.content.kind === 'lookup' ? tip.value.content : null)
@@ -302,6 +341,7 @@ const frame = computed(() => $style[frameName.value])
 
 const lines = computed<string[]>(() => {
   if (swap.value) return [swap.value.title]
+  if (modTip.value) return [modTip.value.title]
   if (passive.value) return [passive.value.name]
   if (lookup.value) return [lookup.value.model.name, lookup.value.model.base ?? ''].filter(Boolean)
   if (gem.value) return [data.value?.name ?? gem.value.name]
@@ -535,6 +575,8 @@ onUnmounted(() => {
 .value { color: #fff; }
 .mod { color: var(--w-r-magic); }
 .crafted { color: var(--w-mod-crafted); }
+.faint { color: var(--w-faint); opacity: .6; }
+.ladder { display: grid; grid-template-columns: auto 1fr auto; gap: 1px 12px; text-align: left; font-family: var(--w-body); font-size: var(--w-fs-sm); }
 .fractured { color: var(--w-mod-fractured); }
 .vestigial { color: var(--w-mod-vestigial); }
 .corrupted { color: var(--w-down); }
