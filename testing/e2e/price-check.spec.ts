@@ -1,6 +1,7 @@
 // Price check (APT) with the toolkit's additions, from the hotkey press in
 // game to the panel: the item is copied by the fake game, priced from
 // recorded trade site and poe.ninja responses.
+import { readFileSync } from 'fs'
 import type { Page } from '@playwright/test'
 import { test, expect } from './harness'
 
@@ -434,6 +435,18 @@ test('map check hotkey (Alt+M) opens the verdict card, even before the widget is
 })
 
 test('unique: improved merges same prices with a count, classic lists every listing', async ({ overlay }) => {
+  // Only one seller's listings share a row: the default listings' 1 div pair
+  // becomes one seller's two instant buyouts (classic lists those apart).
+  const fetched = JSON.parse(readFileSync(new URL('../fixtures/http/www.pathofexile.com/api/trade/fetch/_any.json', import.meta.url), 'utf-8'))
+  for (const r of fetched.result.slice(0, 2)) {
+    r.listing.account = { ...fetched.result[0].listing.account }
+    r.listing.fee = 1
+  }
+  await overlay.page.route('**/api/trade/fetch/**', route => route.fulfill({
+    contentType: 'application/json',
+    headers: { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' },
+    body: JSON.stringify(fetched)
+  }))
   await overlay.boot({ widgets: [{ wmType: 'woke-trade-searches' }] })
   await overlay.copyItem('items/unique-kaoms-heart.txt')
   const panel = overlay.widget('price-check')
