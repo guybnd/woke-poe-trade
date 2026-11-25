@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-593
 title: Veteran critique 2026-11-25
-status: Todo
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -39,6 +39,51 @@ history:
     date: '2026-11-25T04:27:31.980Z'
     comment: Updated implementation link.
     id: a-2026-11-25t04-27-31-980z
-implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/913'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up picks merged in PR 920
+      (https://github.com/guybnd/woke-poe-trade/pull/920, d23a8ad): Session
+      analytics tabs, thin price check leads with cheapest instant buyout,
+      Mapper preset for new installs. Critique PRs: 913, 920.
+    date: '2026-11-25T06:14:20.177Z'
+    selfAttested: true
+    id: c-2026-11-25t06-14-20-177z
+  - type: comment
+    user: Agent
+    comment: Critique picks shipped in PRs 913 and 920.
+    date: '2026-11-25T06:14:21.171Z'
+    completionComment: true
+    id: c-2026-11-25t06-14-21-171z
+  - type: status_change
+    from: Todo
+    to: Ready
+    user: Agent
+    date: '2026-11-25T06:14:21.171Z'
+  - type: comment
+    user: Agent
+    comment: Done across PRs 913 and 920 (final d23a8ad); dev build reloaded.
+    completionComment: true
+    date: '2026-11-25T06:14:25.190Z'
+    id: c-2026-11-25t06-14-25-190z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-25T06:14:25.695Z'
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/920'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Veteran-player critique pass, 13 findings. Waiting on Guy's Fix/Skip picks.
