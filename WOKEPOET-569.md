@@ -63,5 +63,16 @@ history:
     selfAttested: true
     pin: true
     id: c-2026-11-25t07-25-14-572z
+  - type: comment
+    user: Agent
+    comment: >-
+      map-mods-tabs chart-spec flake: root cause was a lost early Alt+M (lazy
+      card chunk not loaded yet), fixed in PR 940
+      (https://github.com/guybnd/woke-poe-trade/pull/940, c69f8a0). Still not
+      covered: dock-menu :136.
+    date: '2026-11-25T13:09:52.932Z'
+    selfAttested: true
+    pin: true
+    id: c-2026-11-25t13-09-52-932z
 ---
 Failed once in shard 2/4 on PR 864's CI run, passed on re-run. Investigate the timing/flake.
