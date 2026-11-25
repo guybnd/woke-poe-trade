@@ -31,6 +31,7 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
+  { id: 'price-check-base-percentile', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: rare and magic armour show their base roll ("92% base") by its defence; click it to add it to the search' },
   { id: 'related-folded-groups', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: the list beside a price check folds into groups that fit your screen; click a group to open it' },
   { id: 'instant-card-rates-graph', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: the price card by an item shows its chaos and divine rates, and a 24h / 3d / 7d graph (scroll on it)' },
   { id: 'price-check-conquest-keystones', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a Timeless jewel lists each conqueror\'s keystone beside it. Click one to search it, any number' },

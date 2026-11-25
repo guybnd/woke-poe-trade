@@ -10,7 +10,7 @@
 
 import type { FarmGoal } from './goal-chips'
 export type { FarmGoal } from './goal-chips'
-export { goalDisabled } from './goal-chips'
+export { goalAddsExtra, goalDisabled } from './goal-chips'
 export const FARM_GOALS: FarmGoal[] = ['currency', 'atlas', 'any']
 export const FARM_GOAL_LABEL: Record<FarmGoal, string> = { currency: 'Currency', atlas: 'Maps & Threads', any: 'Any' }
 

@@ -54,6 +54,8 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'search-keys-list': { search: 'keys' },
   // A rare with tiered mods: hover one for its ladder.
   'price-check-mod-tiers': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' },
+  // A rare armour: its base roll % beside its defence, to search.
+  'price-check-base-percentile': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'base-percentile' },
   // Worth knowing lines (worth-knowing.ts).
   'wk-mod-ctrl-click': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' },
   'wk-search-sums': { search: '2 div + 30c' },
