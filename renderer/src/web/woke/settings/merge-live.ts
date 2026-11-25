@@ -25,7 +25,12 @@ function merge3 (mine: unknown, base: unknown, live: unknown): unknown {
   return mine
 }
 
-export function mergeConfigs (next: Config, since: Config, live: Config): Config {
+// Widgets this settings window placed itself (setting the map check key before
+// Map mods exists): Undo back to before that takes them out again.
+export const placedHere = new Set<number>()
+
+// `drop`: widgets to take out (placed here, and Undo went back before them).
+export function mergeConfigs (next: Config, since: Config, live: Config, drop?: ReadonlySet<number>): Config {
   const noWidgets = (c: Config): Obj => { const o: Obj = { ...c }; delete o.widgets; return o }
   const merged = merge3(noWidgets(next), noWidgets(since), noWidgets(live)) as Omit<Config, 'widgets'>
   // Live order and membership: a widget removed while the window was open
@@ -51,7 +56,11 @@ export function mergeConfigs (next: Config, since: Config, live: Config): Config
     if (since.widgets.some(w => w.wmId === mine.wmId)) continue
     const taken = live.widgets.find(l => l.wmId === mine.wmId)
     if (!taken) widgets.push(mine)
-    else if (taken.wmType !== mine.wmType) widgets.push({ ...mine, wmId: ++top })
+    else if (taken.wmType !== mine.wmType) {
+      const moved = { ...mine, wmId: ++top }
+      if (placedHere.has(mine.wmId)) placedHere.add(moved.wmId)
+      widgets.push(moved)
+    }
   }
-  return { ...merged, widgets } as Config
+  return { ...merged, widgets: drop?.size ? widgets.filter(w => !drop.has(w.wmId)) : widgets } as Config
 }

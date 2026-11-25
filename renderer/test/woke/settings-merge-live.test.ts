@@ -41,4 +41,12 @@ describe('mergeConfigs', () => {
     // and the one this window placed still joins, under a new id
     expect(out.map(w => [w.wmId, w.wmType])).toEqual([[1, 'price-check'], [2, 'woke-lab'], [3, 'woke-map-mods']])
   })
+
+  it('takes out a widget Undo went back before, and only that one', () => {
+    const since = config([widget(1, 'price-check'), widget(2, 'woke-map-mods'), widget(3, 'woke-lab')])
+    const live = config([widget(1, 'price-check'), widget(2, 'woke-map-mods'), widget(3, 'woke-lab')])
+    const restored = config([widget(1, 'price-check')])
+    const out = mergeConfigs(restored, since, live, new Set([2]))
+    expect(out.widgets.map(w => w.wmType)).toEqual(['price-check', 'woke-lab'])
+  })
 })
