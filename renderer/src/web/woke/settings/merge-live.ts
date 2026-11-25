@@ -45,8 +45,13 @@ export function mergeConfigs (next: Config, since: Config, live: Config): Config
   })
   // Placed by this window (setting Alt+M before Map mods exists): it isn't
   // live yet, and it wasn't in our last commit either.
+  // If a different widget took its id live meanwhile, it joins under a new id.
+  let top = Math.max(0, ...live.widgets.map(w => w.wmId), ...next.widgets.map(w => w.wmId))
   for (const mine of next.widgets) {
-    if (!live.widgets.some(l => l.wmId === mine.wmId) && !since.widgets.some(w => w.wmId === mine.wmId)) widgets.push(mine)
+    if (since.widgets.some(w => w.wmId === mine.wmId)) continue
+    const taken = live.widgets.find(l => l.wmId === mine.wmId)
+    if (!taken) widgets.push(mine)
+    else if (taken.wmType !== mine.wmType) widgets.push({ ...mine, wmId: ++top })
   }
   return { ...merged, widgets } as Config
 }

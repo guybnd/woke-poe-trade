@@ -141,20 +141,39 @@ export function heistRowOf (matcher: string): string | undefined {
   return heistRows!.get(matcher)
 }
 
-// Every wording of a map mod's stat, from one of them: for mods saved as text
-// only (the death recap), where a rating on any wording counts.
+// A wording's text with its numbers, "a"/"an" and plural endings taken out, so
+// "Areas contain a Mirror" and "Area contains a Mirror", or "# additional
+// Packs" and "an additional Pack", read the same, while "faster" and "slower"
+// or "increased" and "reduced" don't.
+function wordingCanon (text: string): string {
+  return text.toLowerCase()
+    .replace(/[+-]?\([0-9.]+-[0-9.]+\)%?|[+-]?[0-9.#]+%?/g, '#')
+    .replace(/\b(an|a)\b/g, '#')
+    .split(/\s+/).map(w => w.replace(/(es|s)$/, '')).join(' ')
+}
+
+// Of a stat's wordings, the ones that say the same thing as `own` (the stat's
+// "Area contains" for "Areas contain"), never the opposite ("reduced" for
+// "increased"), which a rating on `own` must not carry over to.
+export function sameSenseOf (matchers: ReadonlyArray<{ string: string, negate?: boolean }>, own: string): string[] {
+  const mine = matchers.find(m => m.string === own)
+  if (!mine) return []
+  const canon = wordingCanon(own)
+  return matchers.filter(m => m.string === own || (!m.negate === !mine.negate && wordingCanon(m.string) === canon)).map(m => m.string)
+}
+
+// Every same-sense wording of a map mod's stat, from one of them: for mods
+// saved as text only (the death recap), where a rating on such a wording counts.
 export function statWordings (matcher: string): string[] {
-  return areaStatOf(matcher)?.matchers.map(m => m.string) ?? []
+  const stat = areaStatOf(matcher)
+  return stat ? sameSenseOf(stat.matchers, matcher) : []
 }
 
 // The other wordings of a map mod's stat that say the same thing ("Area
-// contains" for "Areas contain", the 100% one), not the opposite ("reduced"
-// for "increased").
+// contains" for "Areas contain"), not the opposite ("reduced" for
+// "increased", "slower" for "faster").
 export function sameSenseWordings (matcher: string): string[] {
-  const stat = areaStatOf(matcher)
-  const own = stat?.matchers.find(m => m.string === matcher)
-  if (!stat || !own) return []
-  return stat.matchers.filter(m => m.string !== matcher && !m.negate === !own.negate).map(m => m.string)
+  return statWordings(matcher).filter(m => m !== matcher)
 }
 
 function areaStatOf (matcher: string) {

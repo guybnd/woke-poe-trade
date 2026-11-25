@@ -2,7 +2,7 @@
 // the verdict on heist items and charts. The chart is real item text from the game.
 import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { fixture, loadGameData, parseItem } from '../helpers/game-data'
-import { allAreaMods, chartMods, heistMods, modsForMode, rateSavedMods, tier17Mods } from '@/web/woke/map-mods/data'
+import { allAreaMods, chartMods, heistMods, modsForMode, rateSavedMods, sameSenseWordings, tier17Mods } from '@/web/woke/map-mods/data'
 import { profileRegex } from '@/web/woke/map-mods/search'
 import { MAX_SEARCH_LENGTH } from '@/web/woke/map-mods/regex'
 import { DEFAULT_JUICE_WEIGHTS, defaultProfile, modListRows, setSearchOption, withModRating } from '@/web/woke/map-mods/rules'
@@ -376,5 +376,18 @@ describe('3.30 suffix wordings', () => {
       expect(checkMap(item, w).verdict.deadly, rated).toEqual([])
       expect(p.ratings, rated).toEqual({})
     }
+  })
+})
+
+describe('a rating carries only to wordings that say the same thing', () => {
+  it('pairs the Mirror wordings but not faster with slower, or increased with reduced', () => {
+    expect(sameSenseWordings('Areas contain a Mirror of Delirium')).toEqual(['Area contains a Mirror of Delirium'])
+    expect(sameSenseWordings('Buffs on Players expire #% faster')).toEqual([])
+    expect(sameSenseWordings('Monsters have #% increased Area of Effect')).toEqual([])
+  })
+  it("doesn't rate a saved \"reduced\" mod by the \"increased\" rating", () => {
+    const p = profile({ 'Monsters have #% increased Area of Effect': 'deadly' })
+    expect(rateSavedMods([{ matcher: 'Monsters have #% reduced Area of Effect' }], p)[0].rating).toBe('ok')
+    expect(rateSavedMods([{ matcher: 'Monsters have #% increased Area of Effect' }], p)[0].rating).toBe('deadly')
   })
 })

@@ -5,7 +5,7 @@ import { ItemCategory, ItemRarity } from '@/parser'
 import type { ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import { prepareMapStat } from '@/web/map-check/prepare-map-stats'
-import { heistRowOf } from './data'
+import { heistRowOf, sameSenseOf } from './data'
 import { juiceScore, modRatings, rateMods, withOtherWordings } from './rules'
 import type { JuiceResult, MapVerdict, ModMode } from './rules'
 import { MAP_MODS_TYPE, activeProfile, importAptOnce, initMapModsWidget } from './widget'
@@ -90,7 +90,11 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
   const rated = (type: ModifierType) => type === ModifierType.Explicit || (isChart && type === ModifierType.Implicit)
   const calcs = item.statsByType
     .filter(calc => rated(calc.type) && calc.stat.ref !== VOYAGE_UNREVEALED)
-  const stats = calcs.map(calc => ({ ...prepareMapStat(calc), wordings: calc.stat.matchers.map(m => m.string) }))
+  const stats = calcs.map(calc => {
+    const stat = prepareMapStat(calc)
+    // Only wordings that say the same thing: a rating on "increased" isn't one on "reduced".
+    return { ...stat, wordings: sameSenseOf(calc.stat.matchers, stat.matcher) }
+  })
   const mode = modeOfItem(item)
   // A rating may sit on another wording of the stat than the one the map has.
   const ratings = withOtherWordings(modRatings(profile, mode), stats)

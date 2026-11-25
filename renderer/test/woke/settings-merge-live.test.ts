@@ -36,6 +36,9 @@ describe('mergeConfigs', () => {
     const since = config([widget(1, 'price-check')])
     const live = config([widget(1, 'price-check'), widget(2, 'woke-lab', { runs: 5 })])
     const next = config([widget(1, 'price-check'), widget(2, 'woke-map-mods')])
-    expect(mergeConfigs(next, since, live).widgets[1]).toMatchObject({ wmType: 'woke-lab', runs: 5 })
+    const out = mergeConfigs(next, since, live).widgets
+    expect(out[1]).toMatchObject({ wmType: 'woke-lab', runs: 5 })
+    // and the one this window placed still joins, under a new id
+    expect(out.map(w => [w.wmId, w.wmType])).toEqual([[1, 'price-check'], [2, 'woke-lab'], [3, 'woke-map-mods']])
   })
 })
