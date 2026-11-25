@@ -1,6 +1,6 @@
-import { ITEMS_ITERATOR, STATS_ITERATOR } from '@/assets/data'
-import { modRatings } from './rules'
-import type { MapModProfile, ModMode } from './rules'
+import { ITEMS_ITERATOR, STAT_BY_MATCH_STR_V2, STATS_ITERATOR } from '@/assets/data'
+import { modRatings, rateMods, withOtherWordings } from './rules'
+import type { CheckedMod, MapModProfile, ModMode } from './rules'
 
 let areaMods: string[] | null = null
 let t17Mods: Set<string> | null = null
@@ -139,6 +139,55 @@ export function heistMods (): string[] {
 export function heistRowOf (matcher: string): string | undefined {
   heistMods()
   return heistRows!.get(matcher)
+}
+
+// A wording's text with its numbers, "a"/"an" and plural endings taken out, so
+// "Areas contain a Mirror" and "Area contains a Mirror", or "# additional
+// Packs" and "an additional Pack", read the same, while "faster" and "slower"
+// or "increased" and "reduced" don't.
+function wordingCanon (text: string): string {
+  return text.toLowerCase()
+    .replace(/[+-]?\([0-9.]+-[0-9.]+\)%?|[+-]?[0-9.#]+%?/g, '#')
+    .replace(/\b(an|a)\b/g, '#')
+    .split(/\s+/).map(w => w.replace(/(es|s)$/, '')).join(' ')
+}
+
+// Of a stat's wordings, the ones that say the same thing as `own` (the stat's
+// "Area contains" for "Areas contain"), never the opposite ("reduced" for
+// "increased"), which a rating on `own` must not carry over to.
+export function sameSenseOf (matchers: ReadonlyArray<{ string: string, negate?: boolean }>, own: string): string[] {
+  const mine = matchers.find(m => m.string === own)
+  if (!mine) return []
+  const canon = wordingCanon(own)
+  return matchers.filter(m => m.string === own || (!m.negate === !mine.negate && wordingCanon(m.string) === canon)).map(m => m.string)
+}
+
+// Every same-sense wording of a map mod's stat, from one of them: for mods
+// saved as text only (the death recap), where a rating on such a wording counts.
+export function statWordings (matcher: string): string[] {
+  const stat = areaStatOf(matcher)
+  return stat ? sameSenseOf(stat.matchers, matcher) : []
+}
+
+// The other wordings of a map mod's stat that say the same thing ("Area
+// contains" for "Areas contain"), not the opposite ("reduced" for
+// "increased", "slower" for "faster").
+export function sameSenseWordings (matcher: string): string[] {
+  return statWordings(matcher).filter(m => m !== matcher)
+}
+
+function areaStatOf (matcher: string) {
+  const found = STAT_BY_MATCH_STR_V2(matcher)
+  if (!found) return undefined
+  const stats = 'stats' in found ? found.stats.filter(s => s.matchers.some(m => m.string === matcher)) : [found]
+  return stats.find(s => s.fromAreaMods) ?? stats[0]
+}
+
+// A map's saved mods rated by the profile's Maps ratings, as the map card
+// rates them: a rating on another wording of a mod's stat counts.
+export function rateSavedMods (mods: Array<{ matcher: string, roll?: number }>, profile: MapModProfile): CheckedMod[] {
+  const withWordings = mods.map(m => ({ ...m, wordings: statWordings(m.matcher) }))
+  return rateMods(withWordings, { ...profile, ratings: withOtherWordings(modRatings(profile, 'maps'), withWordings) }).mods
 }
 
 export function chartMods (): string[] {

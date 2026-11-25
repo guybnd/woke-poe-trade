@@ -197,6 +197,26 @@ export function modPriority (matcher: string): number {
   return PRESETS.some(p => p.matchers.includes(matcher)) ? 1 : 0
 }
 
+// Copy of `ratings` where each mod's own wording takes a rating saved under
+// another of its stat's wordings ("Areas contain a Mirror of Delirium" for
+// "Area contains"): a rating on any wording counts.
+export function withOtherWordings (ratings: Record<string, ModRating>, mods: Array<{ matcher: string, wordings?: string[] }>): Record<string, ModRating> {
+  const out = { ...ratings }
+  for (const { matcher, wordings } of mods) {
+    if (out[matcher]) continue
+    const other = wordings?.find(w => ratings[w])
+    if (other) out[matcher] = ratings[other]
+  }
+  return out
+}
+
+// Copy of `ratings` with one mod (by `key`) set to `rating`. A rating saved
+// under another of its stat's `wordings` counts for the mod (check.ts), so
+// every rated wording changes with it, or "none" could never be reached.
+export function withModRating (ratings: Record<string, ModRating>, key: string, wordings: string[], rating: ModRating): Record<string, ModRating> {
+  return withRating(ratings, [key, ...wordings.filter(w => w !== key && ratings[w])], rating)
+}
+
 // Copy of `ratings` with `matchers` set to `rating` ('ok' removes them).
 export function withRating (ratings: Record<string, ModRating>, matchers: string[], rating: ModRating): Record<string, ModRating> {
   const out = Object.fromEntries(Object.entries(ratings).filter(([m]) => !matchers.includes(m)))
@@ -286,6 +306,8 @@ export interface CheckedMod {
   // Display text with the roll filled in.
   text: string
   rating: ModRating
+  // Every wording of the mod's stat, when known: a rating on any of them counts.
+  wordings?: string[]
 }
 
 export type Verdict = 'skip' | 'careful' | 'run'
@@ -308,11 +330,12 @@ export function fillRoll (matcher: string, roll: number | undefined): string {
   return matcher.replace('#', String(roll))
 }
 
-export function rateMods (mods: Array<{ matcher: string, roll?: number }>, profile: MapModProfile): MapVerdict {
+export function rateMods (mods: Array<{ matcher: string, roll?: number, wordings?: string[] }>, profile: MapModProfile): MapVerdict {
   const checked: CheckedMod[] = mods.map(m => ({
     matcher: m.matcher,
     text: fillRoll(m.matcher, m.roll),
-    rating: profile.ratings[m.matcher] ?? 'ok'
+    rating: profile.ratings[m.matcher] ?? 'ok',
+    ...(m.wordings ? { wordings: m.wordings } : {})
   }))
   checked.sort((a, b) => RATING_ORDER[a.rating] - RATING_ORDER[b.rating])
   const deadly = checked.filter(m => m.rating === 'deadly')

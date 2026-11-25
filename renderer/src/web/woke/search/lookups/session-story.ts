@@ -57,7 +57,7 @@ export function sessionStoryLookup (live: NightStory | null, last: NightStory | 
       id: 'answer:session-story',
       group: 'Answer',
       name: live ? 'This session' : `Session of ${when}`,
-      sub: `${formatDuration(played(s))} · ${s.maps.length} maps${s.profitChaos != null ? ` · ${signed(s.profitChaos, s.divine)}` : ''}`,
+      sub: `${formatDuration(played(s))} · ${s.maps.length} ${s.maps.length === 1 ? 'map' : 'maps'}${s.profitChaos != null ? ` · ${signed(s.profitChaos, s.divine)}` : ''}`,
       icon: gameIcon(NIGHT_ART) ?? 'fas fa-moon',
       sections: [{ rows: rows(s, time) }],
       // Session analytics holds tonight and Map history: only offered while it's on.

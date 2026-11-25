@@ -20,7 +20,7 @@
 import { computed, shallowRef, watch } from 'vue'
 import { formatDuration } from '../ui/format'
 import RateTimePick from '../shared/RateTimePick.vue'
-import { runTimeIn } from './run-time'
+import { runTimeIn, timeOrKept } from './run-time'
 import type { RunTime } from './run-time'
 import type { TimeSplit } from '../shared/rate-time'
 
@@ -38,8 +38,10 @@ const emit = defineEmits<{ (e: 'spent', t: RunTime | null): void }>()
 
 const spent = shallowRef<RunTime | null>(null)
 watch(() => [props.startAt, props.end] as const, ([from, to]) => {
-  runTimeIn(from, to).then((t) => {
+  runTimeIn(from, to).then((read) => {
     if (props.startAt !== from || props.end !== to) return
+    // kept is only ever what Stop saved.
+    const t = timeOrKept(read, props.kept, true)
     spent.value = t
     emit('spent', t)
   }).catch(() => {})

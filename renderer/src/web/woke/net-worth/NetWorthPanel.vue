@@ -150,7 +150,7 @@
         <section v-if="showChanges || showSide" ref="colsEl" :class="[$style.cols, { [$style.colsFixed]: midFixed }]" :style="{ gridTemplateColumns: colsTemplate, height: midFixed ? midHShown + 'px' : undefined }">
           <div v-if="showChanges" :class="$style.changesCol">
             <div :class="$style.colHead">
-              <button type="button" :class="$style.foldHead" :aria-expanded="!fold.changes" :title="fold.changes ? 'Open' : 'Fold'" @click="flipFold('changes')"><i :class="fold.changes ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} maps` : 'Since last refresh' }}</span></button>
+              <button type="button" :class="$style.foldHead" :aria-expanded="!fold.changes" :title="fold.changes ? 'Open' : 'Fold'" @click="flipFold('changes')"><i :class="fold.changes ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} ${session.maps === 1 ? 'map' : 'maps'}` : 'Since last refresh' }}</span></button>
               <b v-if="session" class="w-num" :class="tone(session.div)" :title="session.tip">{{ signed(session.div) }}<Coin :chaos="!divine" /><template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}<Coin :chaos="!divine" />/h</template></b>
               <span v-if="session && session.spent > 0" :class="$style.spendNote" class="w-num" title="Purchases in this session: left out of its profit">spent {{ div(session.spent) }}<Coin :chaos="!divine" /></span>
             </div>
@@ -335,6 +335,8 @@ import { useSaleLines } from './sale-lines'
 import ListedView from './ListedView.vue'
 import { loadPending, pendingDoc, pendingReading, refreshPending } from './pending-store'
 import { listedAt, pendingRows, pendingTotals, rowWorth, DEFAULT_STALE_DAYS } from './pending'
+import { lineOutDoc, loadLineOut, outIdsOf } from './line-out-store'
+import { identifyUnid } from './prices'
 import type { ChartMap, ChartSale } from './chart-marks'
 import { listedWorth as listedWorthDoc, listedWorthKey } from './pending-glance'
 import RunsView from './RunsView.vue'
@@ -423,7 +425,7 @@ const rateShown = computed(() => {
 const rateFrom = computed(() => { const at = rates.value.at; return rateWindow.value === 'today' ? startOfDay(at) : at - (RATE_WINDOWS.find(w => w.id === rateWindow.value)?.ms ?? 3_600_000) })
 const hubRow = computed(() => {
   const r = rateShown.value.r
-  const sold = totals(salesInWindow(sales.value, rateFrom.value, rates.value.at), saleRates.value)
+  const sold = totals(salesInWindow(countedSales.value, rateFrom.value, rates.value.at), saleRates.value)
   if (r.hubOnlyMs < 60_000 && !sold.count) return null
   return {
     ms: r.hubOnlyMs,
@@ -887,12 +889,14 @@ function refreshListed () {
 }
 // Your listings count in your net worth (pick E2): at poe.ninja's price where
 // it can be trusted, else the ask. The chart and per hour stay the stash's.
-watch(salesLeague, (l) => { if (l) loadPending(l).catch(() => {}) }, { immediate: true })
+// Listings you left out (line-out-store.ts) don't count, as in the Listed view.
+watch(salesLeague, (l) => { if (l) { loadPending(l).catch(() => {}); loadLineOut(l).catch(() => {}) } }, { immediate: true })
 const listedRows = computed(() => {
   const d = pendingDoc.value
   return d && d.league === salesLeague.value ? pendingRows(d, sales.value, saleRates.value, ninjaPriced, now.value, props.config.staleDays) : []
 })
-const listed = computed(() => pendingTotals(listedRows.value))
+const listedOut = computed(() => outIdsOf(lineOutDoc.value, salesLeague.value, 'listed'))
+const listed = computed(() => pendingTotals(listedRows.value.filter(r => !listedOut.value.has(r.item.id))))
 // Each listing's worth for the dock card's total (pending-glance.ts), saved
 // when it changes.
 let savedWorth = ''
@@ -974,7 +978,7 @@ const chartListed = computed(() => {
   const doc = d && d.league === salesLeague.value ? d : null
   if (!doc && !s.some(p => p.listedDiv)) return undefined
   const worth = new Map(listedRows.value.map(r => [r.item.id, rowWorth(r)]))
-  const rebuilt = listedAt(doc, sales.value, saleRates.value, l => worth.get(l.id) ?? saleChaos(l, saleRates.value) ?? 0, s.map(p => p.at))
+  const rebuilt = listedAt(doc, sales.value, saleRates.value, l => listedOut.value.has(l.id) ? 0 : worth.get(l.id) ?? saleChaos(l, saleRates.value) ?? 0, s.map(p => p.at))
   const out = s.map((p, i) => p.listedDiv ?? toDiv(rebuilt[i]))
   return out.some(v => v > 0) ? out : undefined
 })
@@ -1013,7 +1017,7 @@ const groupSalesOf = computed(() => {
     const first = g.reads[0]
     const last = g.reads[g.reads.length - 1]
     const list = first == null ? [] : salesInWindow(sales.value, readBefore.value.get(first) ?? null, last)
-    out.set(g.key, { sales: list, lines: withoutSold(g.lines, list) })
+    out.set(g.key, { sales: list, lines: withoutSold(g.lines, list, identifyUnid) })
   }
   return out
 })

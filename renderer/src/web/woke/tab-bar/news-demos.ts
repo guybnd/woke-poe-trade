@@ -11,17 +11,40 @@ export type NewsDemo =
   // Ctrl+Space with this typed.
   | { search: string }
 
+// Its tiers match public/data/mod-tiers.json (mod-tip.test.ts checks), or the
+// rows show no ladder.
+export const MOD_TIERS_ITEM = `Item Class: Body Armours
+Rarity: Rare
+Doom Shell
+Twilight Regalia
+--------
+Energy Shield: 1050 (augmented)
+--------
+Item Level: 84
+--------
+{ Prefix Modifier "Unassailable" (Tier: 2) — Defences, Energy Shield }
+96(92-100)% increased Energy Shield
+{ Prefix Modifier "Rapturous" (Tier: 2) — Life }
++170(160-174) to maximum Life
+{ Suffix Modifier "of Tzteosh" (Tier: 1) — Elemental, Fire, Resistance }
++47(46-48)% to Fire Resistance`
+
 export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-seller-spread': { check: { name: 'Exalted Orb' }, spot: 'seller-spread' },
   'price-check-exchange-ladder': { check: { name: 'Exalted Orb' }, spot: 'exchange-ladder' },
+  'price-check-related-exalts': { check: { name: 'Exalted Orb' }, spot: 'related' },
   // A Breach unique and its blessed upgrade.
   'price-check-related-upgrades': { check: { name: "Xoph's Inception", rarity: 'unique' }, spot: 'related' },
+  // A Timeless jewel: its conquerors' keystones in the side list.
+  'price-check-conquest-keystones': { check: { name: 'Elegant Hubris', rarity: 'unique' }, spot: 'related' },
   'price-check-unique-recipe': { check: { name: 'The Will of Uul-Netol', rarity: 'unique' }, spot: 'related' },
   'div-card-map-chance': { search: 'Strand Map' },
   // A rolled jewel, unidentified: the unid price card (nothing searched until a click).
   'unid-rolled-unique-price': { check: { name: 'Forbidden Flame', rarity: 'unique' }, spot: 'unid-price' },
   'valdo-map-skips': { check: { name: 'Valdo Map', text: valdoMapText('Headhunter') }, spot: 'valdo-strip' },
-  'valdo-map-lookup': { search: 'valdo headhunter' }
+  'valdo-map-lookup': { search: 'valdo headhunter' },
+  // A rare with tiered mods: hover one for its ladder.
+  'price-check-mod-tiers': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' }
 }
 
 // Tools with no window of their own to open: a line about one needs a demo,
@@ -29,7 +52,7 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
 const WINDOWLESS = new Set(['price-check'])
 // Lines about something that only shows once you've used it (your own past
 // searches): opening the tool shows nothing new, so no Show me.
-const NOTHING_TO_SHOW = new Set(['search-recent-queries'])
+const NOTHING_TO_SHOW = new Set(['search-recent-queries', 'search-recent-save'])
 
 // Whether Show me has somewhere real to go: a tab, a sample, the Settings
 // page the feature lives on, or the tool's own window. `byName`: the client

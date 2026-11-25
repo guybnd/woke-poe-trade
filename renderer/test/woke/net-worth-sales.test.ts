@@ -119,6 +119,12 @@ describe('sales in a refresh', () => {
     expect(searchSales(list, 'head belt').map(s => s.name)).toEqual(['Headhunter'])
     expect(searchSales(list, '')).toEqual([])
   })
+
+  it('finds names with apostrophes and accents typed plainly', () => {
+    const list = [sale({ frameType: 3, name: 'Kaom\'s Heart', typeLine: 'Glorious Plate' }), sale({ frameType: 3, name: 'Black Mórrigan', typeLine: 'Arcanist Gloves' })]
+    expect(searchSales(list, 'kaoms').map(s => s.name)).toEqual(['Kaom\'s Heart'])
+    expect(searchSales(list, 'morrigan').map(s => s.name)).toEqual(['Black Mórrigan'])
+  })
 })
 
 describe('tooltips', () => {

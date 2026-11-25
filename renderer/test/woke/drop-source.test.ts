@@ -33,7 +33,7 @@ describe('a restricted unique in a word or two', () => {
 describe('the chip on a unique list', () => {
   it('has a label and the wiki sentence', () => {
     expect(dropSource({ r: 1, t: 'Drops from Uber Eater.', s: 'Uber Eater' }))
-      .toEqual({ label: 'Uber Eater', title: 'Not a random drop on this base. Drops from Uber Eater.' })
+      .toEqual({ label: 'Uber Eater', title: 'Not a random drop on this base, so a Chance Orb can\'t make it. Drops from Uber Eater.' })
     expect(dropSource({ r: 1 })?.label).toBe('Restricted')
     expect(dropSource({ d: 1 })?.label).toBe('No drop')
     expect(dropSource(undefined)).toBeNull()

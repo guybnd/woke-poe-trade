@@ -575,3 +575,61 @@ test('map: rare-only mods sit in the one list, yellow and searchable, any Sentin
   expect(stats.find(g => g.type === 'not')!.filters.some(f => !f.disabled && !KIND_IDS.includes(f.id))).toBe(true)
   expect(overlay.errors).toEqual([])
 })
+
+// Guy's pick F (2026-11-24): your own Farming buttons, saved from the current picks
+// (numbers and how close their min sits to the map, the Kind, mods set to Not) and
+// applied to the next maps until another is picked.
+test('map: Save keeps the picks as a Farming button for the next maps', async ({ overlay }) => {
+  const searches = await fakeTrade(overlay.page)
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-originator-special.txt')
+  const panel = overlay.widget('price-check')
+  const chip = (label: string) => panel.locator(`[data-map-prop="${label}"]`)
+  const curMin = panel.locator('[data-map-prop-min="Currency"]')
+  await expect(chip('Currency')).toBeVisible({ timeout: 20_000 })
+  // Pick: Currency at least 35 (75% of 47), Rarity off, More Maps added, any kind, Mirage Not.
+  await chip('Rarity').click({ position: { x: 12, y: 8 } })
+  await curMin.fill('35')
+  await curMin.press('Enter')
+  await panel.locator('[data-map-add-prop]').click()
+  await panel.locator('[data-map-add-prop-menu] [data-add-prop="Maps"]').click()
+  await panel.locator('[data-kind="any"]').click()
+  const strip = panel.locator('[data-map-trade] > button').first()
+  const rows = panel.locator('[data-map-mod]')
+  if (await rows.count() === 0) await strip.click()
+  const mirage = () => rows.filter({ hasText: 'Area contains a Mirage' })
+  await mirage().locator('[data-state="not"]').click()
+
+  await panel.locator('[data-template-save]').click()
+  const name = panel.locator('[data-template-name]')
+  await expect(name).toBeFocused()
+  await name.fill('Juiced')
+  await name.press('Enter')
+  const juiced = panel.locator('[data-goal="t:Juiced"]')
+  await expect(juiced).toHaveAttribute('aria-checked', 'true')
+  await expect(panel.locator('[data-goal="currency"]')).toHaveAttribute('aria-checked', 'false')
+  await overlay.snap('map-farm-template-saved')
+
+  // The next map starts on it: Currency min 75% of its own 92, Rarity off,
+  // its own More Maps on, and Any kind.
+  await overlay.copyItem('items/map-originator-more.txt')
+  await expect(juiced).toHaveAttribute('aria-checked', 'true')
+  await expect(curMin).toHaveValue('69')
+  await expect(chip('Rarity')).toHaveAttribute('aria-pressed', 'false')
+  await expect(chip('Maps')).toHaveAttribute('aria-pressed', 'true')
+  await expect(panel.locator('[data-kind="any"]')).toHaveAttribute('aria-pressed', 'true')
+
+  // Back on a Mirage map, the Mirage is Not again.
+  await overlay.copyItem('items/map-originator-special.txt')
+  await expect(curMin).toHaveValue('35')
+  if (await rows.count() === 0) await strip.click()
+  await expect(mirage().locator('[aria-checked="true"]')).toHaveAttribute('data-state', 'not')
+
+  // A built-in goal takes over; the template stays to pick again, and × deletes it.
+  await panel.locator('[data-goal="currency"]').click()
+  await expect(juiced).toHaveAttribute('aria-checked', 'false')
+  await panel.locator('[data-template-delete="Juiced"]').click()
+  await expect(juiced).toHaveCount(0)
+  expect(searches).toEqual([])
+  expect(overlay.errors).toEqual([])
+})

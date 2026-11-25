@@ -210,6 +210,8 @@ export interface LadderStep {
   tier: number
   min: number
   max: number
+  // The item level the tier needs.
+  level: number
 }
 
 /** Every tier of a one-number mod line on this class, best first, and which of
@@ -229,7 +231,7 @@ export function tierLadder (data: TierData, key: string, template: string, value
   for (const e of family) {
     // Two mods at one level share a tier, as tierOfLine counts them.
     if (steps.length && family[family.indexOf(e) - 1].level === e.level) continue
-    steps.push({ tier: steps.length + 1, min: e.ranges[0][0], max: e.ranges[0][1] })
+    steps.push({ tier: steps.length + 1, min: e.ranges[0][0], max: e.ranges[0][1], level: e.level })
     if (e === hit || (e.level === hit.level)) mine = steps.length
   }
   return { steps, mine }

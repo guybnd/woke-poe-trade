@@ -7,6 +7,7 @@ import { heistRowOf } from './data'
 import { DEFAULT_JUICE_WEIGHTS, carryRewordedRatings, defaultProfile } from './rules'
 import type { JuiceWeights, MapModProfile } from './rules'
 import type { FarmGoal } from './goal-chips'
+import type { FarmTemplate } from './farm-templates'
 
 export const MAP_MODS_TYPE = 'woke-map-mods'
 // copy-item target for the checker's own hotkey.
@@ -45,6 +46,9 @@ export interface MapModsWidget extends Widget {
   // What you farm (goal.ts): which map numbers start on in price checks, and
   // the Planner's goal. Unset: any.
   goal?: FarmGoal
+  // Your own Farming buttons (farm-templates.ts), and the one in use.
+  farmTemplates?: FarmTemplate[]
+  farmTemplate?: string
 }
 
 export function initMapModsWidget (w: MapModsWidget) {
@@ -128,6 +132,10 @@ export function normalizeMapModsWidget (w: MapModsWidget) {
     if (p.valdoKeep !== undefined && !Array.isArray(p.valdoKeep)) p.valdoKeep = undefined
   }
   if (w.valdoSeen !== undefined && !Array.isArray(w.valdoSeen)) w.valdoSeen = undefined
+  if (w.farmTemplates !== undefined && !Array.isArray(w.farmTemplates)) w.farmTemplates = undefined
+  else if (w.farmTemplates) {
+    w.farmTemplates = w.farmTemplates.filter(t => t && typeof t.id === 'string' && typeof t.name === 'string' && Array.isArray(t.on))
+  }
   importAptOnce(w)
 }
 

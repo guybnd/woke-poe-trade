@@ -104,6 +104,9 @@ export class MapLog {
   private since = 0
   // The next "You have entered" names the map just generated.
   private naming = false
+  // Side areas ("areaId:seed") of the current map: a portal back into one
+  // from the hideout is back in the map.
+  private sides = new Set<string>()
 
   constructor (private readonly events: MapLogEvents) {}
 
@@ -129,9 +132,12 @@ export class MapLog {
     const ev = parseLogLine(line)
     if (ev?.kind === 'area') {
       this.naming = false
-      const side = staysInRun(ev.areaId) && this.inMap
+      const sideKey = `${ev.areaId}:${ev.seed ?? ''}`
+      const side = staysInRun(ev.areaId) && (this.inMap || (!!this.current && this.sides.has(sideKey)))
       if (side) {
+        this.sides.add(sideKey)
         if (isStarfallArea(ev.areaId)) this.mark(STARFALL)
+        if (!this.inMap) this.enter(at)
         return
       }
       if (isMapArea(ev.areaId)) {
@@ -155,14 +161,11 @@ export class MapLog {
             charLevel: this.char?.level ?? null,
             levelsGained: 0
           }
+          this.sides.clear()
           this.naming = true
         }
         // Back from a side area: still the same stretch inside.
-        if (!this.inMap) {
-          this.inMap = true
-          if (!this.skipped) this.events.onEnter?.()
-          this.since = at
-        }
+        if (!this.inMap) this.enter(at)
         return
       }
       this.leave(at)
@@ -213,6 +216,13 @@ export class MapLog {
   // The current record is an area on the skip list (a vault): kept, never toasted.
   private get skipped (): boolean {
     return !!this.current && isSkippedArea(this.current.name)
+  }
+
+  // Into the current map (or one of its side areas) through a portal.
+  private enter (at: number): void {
+    this.inMap = true
+    if (!this.skipped) this.events.onEnter?.()
+    this.since = at
   }
 
   private leave (at: number): void {

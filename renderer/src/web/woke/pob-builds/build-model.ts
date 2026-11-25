@@ -19,7 +19,7 @@ export function stageOf (rawTitle: string): Stage | null {
   // "{3}" is the guide's item variant note, not a level.
   const title = rawTitle.replace(/\{[^}]*\}/g, ' ')
   const inRange = (n: number) => n >= 1 && n <= 100
-  const actHit = /\b(?:act|a)\s*(\d{1,2})\b/i.exec(title)
+  const actHit = /\b(?:act\s*|a)(\d{1,2})\b/i.exec(title)
   const act = actHit && Number(actHit[1]) >= 1 && Number(actHit[1]) <= 10 ? actHit : null
   const levelHit = /\b(?:level|lvl|lv)\.?\s*(\d{1,3})/i.exec(title)
   const named = levelHit && inRange(Number(levelHit[1])) ? levelHit : null

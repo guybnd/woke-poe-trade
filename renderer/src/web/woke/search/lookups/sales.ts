@@ -29,7 +29,8 @@ function row (s: Sale, rates: Rates, now: number): LookupRow {
 }
 
 // `sales`: the league's kept sales, or null with Net worth or the stash reader off.
-export function salesLookup (sales: Sale[] | null): Lookup {
+// `out`: the ones you left out (line-out-store.ts): out of the totals, as in Net worth.
+export function salesLookup (sales: Sale[] | null, out: ReadonlySet<string> = new Set()): Lookup {
   return (query, ctx) => {
     if (!sales?.length) return []
     const rates: Rates = { chaos: 1 }
@@ -41,8 +42,9 @@ export function salesLookup (sales: Sale[] | null): Lookup {
     }
     const cards: LookupCard[] = []
     if (wantsTotals(query)) {
-      const today = totals(inRange(sales, 'today', ctx.now), rates)
-      const week = totals(inRange(sales, '7d', ctx.now), rates)
+      const counted = sales.filter(s => !out.has(s.id))
+      const today = totals(inRange(counted, 'today', ctx.now), rates)
+      const week = totals(inRange(counted, '7d', ctx.now), rates)
       cards.push({
         id: 'answer:sales',
         group: 'Answer',

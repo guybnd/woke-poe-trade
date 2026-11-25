@@ -44,4 +44,13 @@ describe('newItemQuery', () => {
     const q = JSON.parse(decodeURIComponent(url.split('?q=')[1]))
     expect(q.query).toMatchObject({ name: 'A', type: 'B', filters: { type_filters: { filters: { rarity: { option: 'unique' } } } } })
   })
+  it('searches a Foulborn unique and a Vestigial base by their trade names plus the filter', () => {
+    const foul = newItemQuery(text('Item Class: Helmets', 'Rarity: Unique', 'Foulborn Brand New Crest', 'Vestigial Great Crown'))
+    expect(foul).toEqual({ name: 'Brand New Crest', type: 'Great Crown', rarity: 'unique', foulborn: true, vestigial: true })
+    const q = JSON.parse(decodeURIComponent(newItemTradeUrl('Veilborn', foul!).split('?q=')[1]))
+    expect(q.query.filters.misc_filters.filters).toEqual({ foulborn_item: { option: 'true' }, vestigial: { option: 'true' } })
+    expect(q.query.filters.type_filters.filters.rarity.option).toBe('unique')
+    expect(newItemQuery(text('Item Class: Rings', 'Rarity: Rare', 'Doom Loop', 'Vestigial Veil Ring')))
+      .toEqual({ type: 'Veil Ring', rarity: 'nonunique', vestigial: true })
+  })
 })

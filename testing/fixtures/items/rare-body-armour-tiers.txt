@@ -1,0 +1,21 @@
+Item Class: Body Armours
+Rarity: Rare
+Doom Shell
+Twilight Regalia
+--------
+Energy Shield: 1050 (augmented)
+--------
+Requirements:
+Level: 80
+Int: 293
+--------
+Sockets: B-B-B-B-B-B
+--------
+Item Level: 84
+--------
+{ Prefix Modifier "Unassailable" (Tier: 2) — Defences, Energy Shield }
+96(92-100)% increased Energy Shield
+{ Prefix Modifier "Rapturous" (Tier: 2) — Life }
++170(160-174) to maximum Life
+{ Suffix Modifier "of Tzteosh" (Tier: 1) — Elemental, Fire, Resistance }
++47(46-48)% to Fire Resistance

@@ -261,8 +261,8 @@ function kitCompareTip (run: Run, others: readonly Run[], rateTime: RateTime, fm
 
 export function summarize (i: SummaryInput): RunSummary {
   const { run, fmt } = i
-  // Your other runs of this name, newest first.
-  const others = i.done.filter(r => r.id !== run.id && r.name === run.name && r.final && r.stoppedAt != null)
+  // Your other runs of this name and kind (map runs or crafting), newest first.
+  const others = i.done.filter(r => r.id !== run.id && r.name === run.name && (r.kind ?? 'maps') === (run.kind ?? 'maps') && r.final && r.stoppedAt != null)
   const usual = others.length ? compareRows(others, i.rateTime, true, i.mapCostKeys)[0] ?? null : null
   const maps = [...i.maps].sort((a, b) => a.enteredAt - b.enteredAt)
   const times = maps.map(m => m.mapMs).filter(ms => ms > 0)

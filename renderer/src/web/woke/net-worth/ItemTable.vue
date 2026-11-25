@@ -95,7 +95,7 @@ function swap (col: Col) {
   emit('units', next)
 }
 // Big chaos figures shortened ("360k"); the hover gives the exact one in divines.
-const chaosText = (chaos: number) => chaos >= 100_000 ? `${Math.round(chaos / 1000)}k` : chaos >= 10_000 ? `${(chaos / 1000).toFixed(1)}k` : chaos >= 100 ? formatAmount(Math.round(chaos)) : chaos >= 1 ? chaos.toFixed(1) : chaos.toFixed(2)
+const chaosText = (chaos: number) => chaos >= 100_000 ? `${Math.round(chaos / 1000)}k` : chaos >= 10_000 ? `${(chaos / 1000).toFixed(1)}k` : chaos >= 100 ? formatAmount(Math.round(chaos)) : chaos >= 1 ? chaos.toFixed(1) : chaos >= 0.01 ? chaos.toFixed(2) : formatAmount(chaos)
 const show = (col: Col, chaos: number) => inChaos(col) ? chaosText(chaos) : div(chaos)
 // The hover gives the other unit.
 const other = (col: Col, chaos: number) => !props.divine ? undefined : inChaos(col) ? `${div(chaos)} div` : `${chaosText(chaos)} chaos`
@@ -166,7 +166,7 @@ const div = (chaos: number) => {
   // The unit is in the column header.
   if (!props.divine) return formatAmount(chaos)
   const d = chaos / props.divine
-  return d >= 100 ? formatAmount(d) : d >= 1 ? d.toFixed(1) : d >= 0.01 ? d.toFixed(2) : d.toFixed(4)
+  return d >= 100 ? formatAmount(d) : d >= 1 ? d.toFixed(1) : d >= 0.01 ? d.toFixed(2) : formatAmount(d)
 }
 const qty = (n: number) => formatAmount(n)
 const pct = (c: number | null | undefined) => c == null ? '—' : `${c > 0 ? '+' : c < 0 ? '−' : ''}${Math.abs(c * 100).toFixed(1)}%`

@@ -1,0 +1,27 @@
+Item Class: Shields
+Rarity: Unique
+Dawnbreaker
+Colossal Tower Shield
+--------
+Chance to Block: 26%
+Armour: 1982 (augmented)
+--------
+Requirements:
+Level: 85
+Str: 159
+--------
+Sockets: R-R-R
+--------
+Item Level: 86
+--------
++40% to Fire Resistance (implicit)
+--------
+196% increased Armour
+22% Chance to Block
+15% of Cold Damage taken as Fire Damage
+17% of Lightning Damage taken as Fire Damage
+14% of Physical Damage taken as Fire Damage
+Unaffected by Ignite
+Damage of Enemies Hitting you is Unlucky while you are on Full Life
+--------
+"Dawn breaks; the reverberations continue."

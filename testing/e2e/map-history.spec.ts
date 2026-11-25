@@ -43,6 +43,8 @@ test('map history groups maps by day, names its range and shows the map on hover
   const tip = overlay.page.getByRole('tooltip')
   await expect(tip).toContainText('Strand Map')
   await expect(tip).toContainText('in the map')
+  // The map's cards, as everywhere a map is named (tooltip audit I8).
+  await expect(tip).toContainText('Divination cards here')
   await overlay.snap('map history')
 
   // A day folds to its header and opens again.

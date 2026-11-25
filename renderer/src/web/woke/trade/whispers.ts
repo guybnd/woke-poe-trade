@@ -30,6 +30,8 @@ export type TradeEvent =
   { kind: 'whisper-out', at: number, who: string, body: string, offer: TradeOffer | null } |
   { kind: 'joined', at: number, who: string } |
   { kind: 'left', at: number, who: string } |
+  // You changed area: nobody from before is with you now.
+  { kind: 'entered', at: number } |
   { kind: 'trade-accepted', at: number } |
   { kind: 'trade-cancelled', at: number } |
   { kind: 'offline', at: number } |
@@ -140,6 +142,7 @@ const FROM_RE = /^@From (?:<(?<guild>.+?)> )?(?<who>[^:]+?): (?<body>.+)$/
 const TO_RE = /^@To (?:<(?<guild>.+?)> )?(?<who>[^:]+?): (?<body>.+)$/
 const JOINED_RE = /^: (?<who>\S+) has joined the area\.$/
 const LEFT_RE = /^: (?<who>\S+) has left the area\.$/
+const ENTERED_RE = /^: You have entered .+$/
 
 // Other client languages: APT's chat parser knows every language's whisper
 // and trade site formats.
@@ -185,6 +188,7 @@ export function parseTradeLine (line: string, fallbackAt = Date.now(), language 
   if (!text.startsWith(': ')) return null
   if ((m = JOINED_RE.exec(text))) return { kind: 'joined', at, who: m.groups!.who }
   if ((m = LEFT_RE.exec(text))) return { kind: 'left', at, who: m.groups!.who }
+  if (ENTERED_RE.test(text)) return { kind: 'entered', at }
   if (text === ': Trade accepted.') return { kind: 'trade-accepted', at }
   if (text === ': Trade cancelled.') return { kind: 'trade-cancelled', at }
   if (text === ': That character is not online.') return { kind: 'offline', at }

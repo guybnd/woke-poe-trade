@@ -77,6 +77,7 @@ import { ensureWokeConfig, isModuleOn, setModuleOn } from '../modules'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import { allowsCopies } from '../tab-bar/tools'
 import { hotkeyFields, hotkeyUses } from './hotkey-fields'
+import { mergeConfigs, placedHere } from './merge-live'
 import { PAGES, PAGE_BY_ID, pageByName, pageForWidgetType } from './pages'
 import type { SettingsPage } from './pages'
 import ModulePage from './ModulePage.vue'
@@ -95,46 +96,8 @@ const winEl = shallowRef<HTMLElement | null>(null)
 
 function snapshot (): string { return JSON.stringify(clone.value) }
 
-type Obj = Record<string, unknown>
-const isObj = (v: unknown): v is Obj => v != null && typeof v === 'object' && !Array.isArray(v)
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
-const copy = <T>(v: T): T => v === undefined ? v : JSON.parse(JSON.stringify(v))
-
-// Three-way: what this window changed since its last commit wins; everything
-// else takes the live value. Widgets keep saving their own state while the
-// window is open (runs, sessions, steps, saved searches), and our copy of it
-// is stale.
-function merge3 (mine: unknown, base: unknown, live: unknown): unknown {
-  if (same(mine, base)) return copy(live)
-  if (isObj(mine) && isObj(base) && isObj(live)) {
-    const out: Obj = {}
-    for (const k of new Set([...Object.keys(mine), ...Object.keys(live)])) {
-      const v = merge3(mine[k], base[k], live[k])
-      if (v !== undefined) out[k] = v
-    }
-    return out
-  }
-  return mine
-}
-
-function mergeLive (next: Config, since: Config): Config {
-  const live = AppConfig()
-  const noWidgets = (c: Config): Obj => { const o: Obj = { ...c }; delete o.widgets; return o }
-  const merged = merge3(noWidgets(next), noWidgets(since), noWidgets(live)) as Omit<Config, 'widgets'>
-  // Live order and membership: a widget removed while the window was open
-  // stays removed, one added joins.
-  const widgets = live.widgets.map(l => {
-    const mine = next.widgets.find(w => w.wmId === l.wmId)
-    if (!mine) return copy(l)
-    const base = since.widgets.find(w => w.wmId === l.wmId)
-    const w = (base ? merge3(mine, base, l) : mine) as Widget
-    // Window-manager state lives in the live config, not in our copy.
-    w.wmWants = l.wmWants
-    w.wmZorder = l.wmZorder
-    w.wmFlags = [...l.wmFlags]
-    return w
-  })
-  return { ...merged, widgets } as Config
+function mergeLive (next: Config, since: Config, drop?: ReadonlySet<number>): Config {
+  return mergeConfigs(next, since, AppConfig(), drop)
 }
 
 // Widgets created while the window is open (Add buttons) join our copy.
@@ -146,8 +109,8 @@ function adoptNewWidgets () {
   }
 }
 
-function commit (snap: string, since: string) {
-  const next = mergeLive(JSON.parse(snap) as Config, JSON.parse(since) as Config)
+function commit (snap: string, since: string, drop?: ReadonlySet<number>) {
+  const next = mergeLive(JSON.parse(snap) as Config, JSON.parse(since) as Config, drop)
   updateConfig(next)
   pushHostConfig()
   // On disk now, so "Change saved" is true whatever happens next.
@@ -169,9 +132,14 @@ function apply (silent = false) {
 function restore (snap: string) {
   restoring = true
   const since = lastApplied
-  clone.value = reactive(JSON.parse(snap)) as Config
+  const restored = JSON.parse(snap) as Config
+  clone.value = reactive(restored) as Config
   lastApplied = snap
-  commit(snap, since)
+  // A widget this window placed after that snapshot goes again (Undo of
+  // setting the map check key). Widgets added elsewhere stay.
+  const drop = new Set([...placedHere.keys()].filter(id => !restored.widgets.some(w => w.wmId === id)))
+  commit(snap, since, drop)
+  for (const id of drop) placedHere.delete(id)
   nextTick(() => { restoring = false })
 }
 
@@ -183,6 +151,7 @@ watch(clone, () => {
 
 watch(() => props.widget.wmWants, (wants) => {
   if (wants === 'show') {
+    placedHere.clear()
     clone.value = reactive(JSON.parse(JSON.stringify(AppConfig()))) as Config
     ensureWokeConfig(clone.value)
     lastApplied = snapshot()

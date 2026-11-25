@@ -43,6 +43,18 @@ export async function runTimeIn (startAt: number, now: number): Promise<RunTime 
   return { ms: timeIn(next.marks.marks, startAt, now), fights: next.marks.fights.filter(at => at >= startAt && at <= now).length }
 }
 
+// The read, unless the split kept with the run has more play in it: a past
+// run whose Client.txt days are gone (deleted, started over) reads as all
+// away, and one whose Client.txt lost some of them as too little play, so
+// the time Stop saved stands. `stopped`: kept is what Stop saved; else (the
+// live run's last glance) it only stands in for a read with no play at all.
+export function timeOrKept (read: RunTime | null, kept: Record<PlayState, number> | null | undefined, stopped = false): RunTime | null {
+  const played = (t: Record<PlayState, number>) => t.map + t.play + t.hub
+  if (!kept || !(played(kept) > 0)) return read
+  const readPlay = read ? played(read.ms) : 0
+  return readPlay === 0 || (stopped && played(kept) > readPlay) ? { ms: kept, fights: read?.fights ?? 0 } : read
+}
+
 // Boss fights only (0 without Client.txt).
 export async function fightsIn (startAt: number, now: number): Promise<number> {
   return (await runTimeIn(startAt, now).catch(() => null))?.fights ?? 0

@@ -1,4 +1,6 @@
 // Search palette: which result groups show, how much of each, and the cog's settings.
+import { readFileSync, readdirSync } from 'node:fs'
+import path from 'node:path'
 import { describe, it, expect } from 'vitest'
 import { GROUP_CAP, SEARCH_GROUPS, chipOf, groupMode, isLocked, shapeSections, withMode } from '@/web/woke/search/groups'
 
@@ -88,5 +90,26 @@ describe('chipOf', () => {
     expect(chipOf('Settings')).toBe('settings')
     expect(chipOf('Search the web')).toBe('web')
     expect(chipOf('Viscera')).toBe('facts')
+  })
+})
+
+describe('SEARCH_GROUPS', () => {
+  // A group missing from the list has no row in the cog or Settings > Search,
+  // so it can't be folded or turned off.
+  it('lists every group a lookup shows', () => {
+    const dir = path.resolve(__dirname, '../../src/web/woke/search/lookups')
+    const groups = new Set<string>()
+    for (const file of readdirSync(dir).filter(f => f.endsWith('.ts'))) {
+      const src = readFileSync(path.join(dir, file), 'utf8')
+      for (const m of src.matchAll(/\bgroup: '([^']+)'/g)) groups.add(m[1])
+      for (const m of src.matchAll(/\bgroup: ([A-Z_]+)\b/g)) {
+        const value = new RegExp(`\\b${m[1]} = '([^']+)'`).exec(src)?.[1]
+        expect(value, `${file}: ${m[1]}`).toBeTruthy()
+        groups.add(value!)
+      }
+    }
+    expect(groups.size).toBeGreaterThan(10)
+    const listed = new Set(SEARCH_GROUPS.map(g => g.id))
+    expect([...groups].filter(g => !isLocked(g) && !listed.has(g))).toEqual([])
   })
 })

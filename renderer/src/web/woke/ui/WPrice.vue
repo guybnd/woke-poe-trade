@@ -12,7 +12,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { bulkPerDivine, formatAmount } from './format'
+import { bulkPerDivine, formatAmount, worthADivine } from './format'
 
 // Shows a chaos value, switching to divines when it is worth at least one.
 // Pass unit to force one, e.g. so "then" and "now" in a row use the same unit.
@@ -29,7 +29,7 @@ const props = withDefaults(defineProps<{
 
 const useDivine = computed(() => {
   if (!props.divine || props.chaos == null || props.unit === 'chaos') return false
-  return props.unit === 'div' || Math.abs(props.chaos) >= props.divine
+  return props.unit === 'div' || worthADivine(props.chaos, props.divine)
 })
 const text = computed(() => {
   if (props.chaos == null) return ''
