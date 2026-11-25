@@ -270,5 +270,18 @@ export function realDrops (group: DropEntry): string[] {
   return dropsAreReal(group) ? group.items.filter(id => !NOT_DROP_ITEMS.has(id)) : []
 }
 
+// Upstream groups that aren't families, only things used together or a theme:
+// the Eldritch orbs with Exalted Orb, Orb of Annulment and the two Farric
+// beasts; ways to link (Orb of Fusing, an omen, a thread, two beasts);
+// Watcher's Eye with a beast; item quantity uniques; levelling uniques. A
+// recipe part or a shared theme isn't "related", so the price check never
+// lists them as "Related to" (Guy, 2026-11-25: Exalted Orb listed Farric
+// Wolf Alpha). Keyed by the group's first item.
+const NOT_RELATED = new Set(['Eldritch Orb of Annulment', 'Orb of Fusing', "Watcher's Eye", "Ventor's Gamble", 'Cast on Death Support'])
+
+export function isRelatedGroup (group: DropEntry): boolean {
+  return !NOT_RELATED.has(keyName(group.query[0]).name)
+}
+
 // For tests: the book is built once per game data load.
 export function resetRecipeCache () { cache = null }
