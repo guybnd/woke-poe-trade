@@ -17,6 +17,7 @@ import type { SpendMark } from './spend'
 import { addPoint, keepDiff, topChanges, valueByTab } from './ledger'
 import { glanceKey, glanceRates, ledgerKey } from './glance'
 import { keptSales, listedGlance, listedTotal, listedWorth } from './pending-glance'
+import { lineOutDoc, loadLineOut, outIdsOf } from './line-out-store'
 import type { Glance } from './glance'
 import type { LedgerPoint, TabValue } from './ledger'
 import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, StashTabLike, Valuation } from './valuation'
@@ -164,6 +165,8 @@ async function loadLeague (id: string) {
   if (loadedFor === id) return
   loadedFor = id
   prefsFor = null
+  // Listings you left out stay out of the chart's Faustus band.
+  loadLineOut(id).catch(() => {})
   const [saved, cache, led, own, gains, base] = await Promise.all([
     (hostRequest('doc-get', { collection: COLLECTION, key: id }) as Promise<NetWorthHistory | null>).catch(() => null),
     (hostRequest('stash-cache', { league: id }) as Promise<CachedStash | null>).catch(() => null),
@@ -257,7 +260,7 @@ function listedNow (id: string): { listed?: number } {
   const g = listedGlance.value
   if (!g || g.league !== id) return {}
   const kept = keptSales.value
-  const listed = listedTotal(g, listedWorth.value, kept?.league === id ? kept.sales : [], divine.value)
+  const listed = listedTotal(g, listedWorth.value, kept?.league === id ? kept.sales : [], divine.value, outIdsOf(lineOutDoc.value, id, 'listed'))
   return listed > 0 ? { listed } : {}
 }
 

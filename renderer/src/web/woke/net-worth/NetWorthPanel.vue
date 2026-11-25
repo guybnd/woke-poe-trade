@@ -335,6 +335,7 @@ import { useSaleLines } from './sale-lines'
 import ListedView from './ListedView.vue'
 import { loadPending, pendingDoc, pendingReading, refreshPending } from './pending-store'
 import { listedAt, pendingRows, pendingTotals, rowWorth, DEFAULT_STALE_DAYS } from './pending'
+import { lineOutDoc, loadLineOut, outIdsOf } from './line-out-store'
 import type { ChartMap, ChartSale } from './chart-marks'
 import { listedWorth as listedWorthDoc, listedWorthKey } from './pending-glance'
 import RunsView from './RunsView.vue'
@@ -887,12 +888,14 @@ function refreshListed () {
 }
 // Your listings count in your net worth (pick E2): at poe.ninja's price where
 // it can be trusted, else the ask. The chart and per hour stay the stash's.
-watch(salesLeague, (l) => { if (l) loadPending(l).catch(() => {}) }, { immediate: true })
+// Listings you left out (line-out-store.ts) don't count, as in the Listed view.
+watch(salesLeague, (l) => { if (l) { loadPending(l).catch(() => {}); loadLineOut(l).catch(() => {}) } }, { immediate: true })
 const listedRows = computed(() => {
   const d = pendingDoc.value
   return d && d.league === salesLeague.value ? pendingRows(d, sales.value, saleRates.value, ninjaPriced, now.value, props.config.staleDays) : []
 })
-const listed = computed(() => pendingTotals(listedRows.value))
+const listedOut = computed(() => outIdsOf(lineOutDoc.value, salesLeague.value, 'listed'))
+const listed = computed(() => pendingTotals(listedRows.value.filter(r => !listedOut.value.has(r.item.id))))
 // Each listing's worth for the dock card's total (pending-glance.ts), saved
 // when it changes.
 let savedWorth = ''
@@ -974,7 +977,7 @@ const chartListed = computed(() => {
   const doc = d && d.league === salesLeague.value ? d : null
   if (!doc && !s.some(p => p.listedDiv)) return undefined
   const worth = new Map(listedRows.value.map(r => [r.item.id, rowWorth(r)]))
-  const rebuilt = listedAt(doc, sales.value, saleRates.value, l => worth.get(l.id) ?? saleChaos(l, saleRates.value) ?? 0, s.map(p => p.at))
+  const rebuilt = listedAt(doc, sales.value, saleRates.value, l => listedOut.value.has(l.id) ? 0 : worth.get(l.id) ?? saleChaos(l, saleRates.value) ?? 0, s.map(p => p.at))
   const out = s.map((p, i) => p.listedDiv ?? toDiv(rebuilt[i]))
   return out.some(v => v > 0) ? out : undefined
 })
