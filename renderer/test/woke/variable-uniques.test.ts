@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { artFile, uniqueFromArt } from '@/web/woke/shared/unid-art'
 import { VARIABLE_ITEMS } from '@/web/woke/shared/unid-prices'
 import { VARIABLE_UNIQUE_BASES } from '@/web/woke/shared/variable-uniques'
@@ -17,6 +19,17 @@ describe('variable uniques list (Path of Building data)', () => {
     expect(VARIABLE_UNIQUE_BASES['Forbidden Flame']).toBe('Crimson Jewel')
     for (const name of VARIABLE_ITEMS) expect(VARIABLE_UNIQUE_BASES[name], name).toBeTruthy()
     for (const name of ["Precursor's Emblem", "Doryani's Delusion"]) expect(VARIABLE_ITEMS.has(name), name).toBe(false)
+  })
+
+  // Names are matched exactly: PoB's "Bound by Destiny" never met the game's
+  // "Bound By Destiny", so it got poe.ninja's one misleading price.
+  it('spells every name as the game data does', () => {
+    const uniques = new Set(readFileSync(join(__dirname, '../../public/data/en/items.ndjson'), 'utf8')
+      .split('\n').filter(Boolean).map(l => JSON.parse(l) as { namespace: string, refName: string })
+      .filter(i => i.namespace === 'UNIQUE').map(i => i.refName))
+    // Not in the game data yet.
+    const absent = new Set(['Replica Forbidden Shako'])
+    expect([...VARIABLE_ITEMS].filter(n => !uniques.has(n) && !absent.has(n))).toEqual([])
   })
 })
 
