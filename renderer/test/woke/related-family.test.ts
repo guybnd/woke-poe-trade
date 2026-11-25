@@ -65,6 +65,17 @@ describe('related family', () => {
     expect(names('Tainted Chaos Orb')).not.toContain('Tainted Catalyst')
   })
 
+  it('lists the scarabs of no mechanic and each kind of tattoo', () => {
+    expect(fam('Scarab of Wisps')?.label).toBe('Other Scarabs')
+    expect(names('Scarab of Wisps')).toEqual(expect.arrayContaining(['Scarab of Adversaries', 'Scarab of the Dextral', 'Scarab of Divinity']))
+    expect(fam('Honoured Tattoo of the Oak')?.label).toBe('Honoured Tattoos')
+    expect(names('Honoured Tattoo of the Oak')).toContain('Honoured Tattoo of the Flock')
+    expect(names('Honoured Tattoo of the Oak')).not.toContain('Loyalty Tattoo of Kaom')
+    for (const t of ['Loyalty Tattoo of Kaom', 'Journey Tattoo of the Body', 'Forbidden Tattoo of the Witch']) expect(fam(t)?.members.length, t).toBeGreaterThan(1)
+    // The plain ones keep their own family.
+    expect(fam('Tattoo of the Ngamahu Warmonger')?.label).toBe('Tattoos')
+  })
+
   it('gives plain currency with no kinds no family', () => {
     expect(fam('Divine Orb')).toBeNull()
     expect(fam('Orb of Alchemy')).toBeNull()

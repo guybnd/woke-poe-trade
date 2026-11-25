@@ -83,7 +83,15 @@ const RULES: Rule[] = [
     key: ref => /^Timeless .+ (Splinter|Emblem)$/.test(ref) ? ref.split(' ').pop()! : null,
     label: kind => `Timeless ${kind.toLowerCase()}s`
   },
-  startsWith('Tattoo of ', 'Tattoos')
+  startsWith('Tattoo of ', 'Tattoos'),
+  // Scarabs of no league mechanic: "Scarab of Wisps", "Scarab of the Dextral".
+  startsWith('Scarab of ', 'Other Scarabs'),
+  {
+    // "Honoured Tattoo of the Oak", "Loyalty Tattoo of Kaom": one family a kind.
+    needle: ref => `"refName":"${ref.split(' ')[0]} Tattoo of `,
+    key: ref => /^[A-Z]\w+ Tattoo of /.test(ref) ? ref.split(' ')[0] : null,
+    label: kind => `${kind} Tattoos`
+  }
 ]
 
 export interface Family {
