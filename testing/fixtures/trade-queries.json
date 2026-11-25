@@ -5032,6 +5032,82 @@
    }
   }
  },
+ "unique-baleful-dominion.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.pseudo_timeless_jewel_kurgal",
+       "value": {
+        "min": 4512,
+        "max": 4512
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Baleful Dominion",
+   "type": "Hypnotic Eye Jewel"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.pseudo_timeless_jewel_kurgal",
+       "value": {
+        "min": 4512,
+        "max": 4512
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Baleful Dominion",
+   "type": "Hypnotic Eye Jewel"
+  }
+ },
  "unique-belt-catalysed.txt": {
   "opened": {
    "status": {

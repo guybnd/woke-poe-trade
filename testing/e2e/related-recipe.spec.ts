@@ -60,6 +60,68 @@ test('side window: Headhunter lists the cards that give it, priced as a stack', 
   await expect(side.locator('button[data-item-row]', { hasText: 'The Fiend' })).toContainText('corrupted')
 })
 
+test('side window: a Timeless jewel lists its conquerors\' keystones and the emblems', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/unique-brutal-restraint-330.txt')
+  const page = overlay.page
+  const side = page.locator('.w-pc-side')
+  await expect(side).toBeVisible({ timeout: 20_000 })
+  const keys = side.locator('[data-keystone-row]')
+  await expect(keys).toHaveText([/The Traitor\s*Balbala/, /Dance with Death\s*Asenath/, /Second Sight\s*Nasima/])
+  // The splinter "recipe" isn't in the game (Guy): the emblems are listed instead.
+  await expect(side.getByText('Brutal Restraint recipe')).toHaveCount(0)
+  await expect(side.getByText('Drops in Timeless Conflict')).toBeVisible()
+  for (const who of ['Karui', 'Maraketh', 'Eternal', 'Templar', 'Vaal']) {
+    await expect(side.locator('[data-item-row]', { hasText: `Timeless ${who} Emblem` })).toBeVisible()
+  }
+  await expect(side.locator('[data-item-row]', { hasText: 'Timeless Maraketh Emblem' })).toContainText('its own')
+
+  // A keystone's hover is the keystone, as the tree shows it.
+  await keys.nth(2).hover()
+  await expect(page.getByRole('tooltip')).toContainText('You are Blind')
+  await overlay.snap('timeless-keystones')
+
+  // A click: that conqueror's line alone, no number.
+  await keys.nth(2).click()
+  const panel = overlay.widget('price-check')
+  const row = panel.locator('.w-pc-modtext, .search-text', { hasText: 'Nasima' }).first()
+  await expect(row).toBeVisible()
+  const nasima = panel.locator('input.w-roll-input').nth(4)
+  await expect(nasima).toHaveValue('')
+})
+
+test('number boxes: the × keeps the line and empties both', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/unique-brutal-restraint-330.txt')
+  const panel = overlay.widget('price-check')
+  const clear = panel.locator('[data-clear-nums]').first()
+  const box = panel.locator('input.w-roll-input').first()
+  await expect(box).toHaveValue('7993', { timeout: 20_000 })
+  await box.hover()
+  await expect(clear).toBeVisible()
+  await overlay.snap('clear-numbers')
+  await clear.click()
+  await expect(box).toHaveValue('')
+  await expect(panel.locator('input.w-roll-input').nth(1)).toHaveValue('')
+  await expect(panel.locator('[data-clear-nums]')).toHaveCount(2)
+})
+
+test('side window: the Abyss conquest jewels show the keystone each gives', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/unique-baleful-dominion.txt')
+  const side = overlay.page.locator('.w-pc-side')
+  await expect(side).toBeVisible({ timeout: 20_000 })
+  // The Reclaimed Malevolence recipe already lists all five: each gets its keystone.
+  await expect(side.getByText('Reclaimed Malevolence recipe')).toBeVisible()
+  await expect(side.locator('div[data-item-row]', { hasText: 'Baleful Dominion' })).toContainText('Reconstructed Essence')
+  await side.getByText('Reconstructed Essence').hover()
+  await expect(overlay.page.getByRole('tooltip')).toContainText('Life Recoup also recovers Mana')
+  await overlay.snap('abyss-keystones')
+  for (const [jewel, key] of [['Destructive Aspiration', 'The Loyal Few'], ['Extinguishing Grasp', 'Weighted Exchange'], ['Festering Vengeance', 'Overwhelming Hate'], ['Reclaimed Malevolence', 'Zorath']]) {
+    await expect(side.locator('button[data-item-row]', { hasText: jewel })).toContainText(key)
+  }
+})
+
 test('side window: Dawnbreaker drops from the invitation, a click, with the boss\'s other drops', async ({ overlay }) => {
   await overlay.boot()
   await overlay.copyItem('items/unique-dawnbreaker.txt')

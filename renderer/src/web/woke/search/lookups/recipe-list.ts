@@ -82,14 +82,12 @@ export const RECIPES: Recipe[] = [
   R('+1 to a spell element\'s gem levels', ['A normal rune dagger, sceptre, staff or wand', 'Gems of that element with 40% quality between them'], { words: 'leveling caster, +1 gems' }),
   R('Helmet with +1 to minion gems', ['A normal helmet', 'Minion gems with 40% quality between them'], { words: 'leveling minion, summoner, +1 minion' }),
   R('Ring or amulet with more chaos resistance', ['A magic or rare ring or amulet with chaos resistance', 'An Amethyst Flask', '1 Orb of Augmentation'], { note: 'One tier higher.', words: 'chaos res' }),
-  // ---- 5 to 1, maps, timeless ----
+  // ---- 5 to 1, maps ----
+  // No Timeless jewel recipe: poedb lists "10 splinters make the jewel" under
+  // Map Recipe, but it isn't in the game (Guy, 2026-11-25). The jewels list
+  // the emblems that open their Domain instead (conquest.ts).
   R('One unidentified item of that base', ['5 magic (or 5 rare) items of the same base type'], { note: 'Lowest item level of the five; no influence.', words: '5 to 1, five to one' }),
   R('Random Thread', ['3 Threads'], { note: 'Added in 3.30.0c. Taken to give a different type from the ones sold, like the old scarab recipe.', words: 'thread recipe, thread vendor', base: true }),
-  R('Lethal Pride', ['10 Timeless Karui Splinter'], { words: 'timeless jewel' }),
-  R('Brutal Restraint', ['10 Timeless Maraketh Splinter'], { words: 'timeless jewel' }),
-  R('Elegant Hubris', ['10 Timeless Eternal Empire Splinter'], { words: 'timeless jewel' }),
-  R('Militant Faith', ['10 Timeless Templar Splinter'], { words: 'timeless jewel' }),
-  R('Glorious Vanity', ['10 Timeless Vaal Splinter'], { words: 'timeless jewel' }),
   // ---- uniques ----
   R('Kingmaker', ['Soul Taker', 'Heartbreaker', '1 Orb of Fusing']),
   R('Arborix', ['Grelwood Shank', 'Beltimber Blade', '1 Orb of Fusing']),

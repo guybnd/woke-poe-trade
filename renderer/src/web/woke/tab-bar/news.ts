@@ -22,6 +22,8 @@ export interface NewsItem {
 }
 
 export const NEWS: NewsItem[] = [
+  { id: 'price-check-conquest-keystones', wmType: 'price-check', name: 'Price check', note: 'New: a Timeless jewel lists each conqueror\'s keystone beside it. Click one to search it, any number' },
+  { id: 'price-check-clear-numbers', wmType: 'price-check', name: 'Price check', note: 'New: hover a mod\'s number boxes for × to keep the line and search any value' },
   { id: 'map-price-check-farm-templates', wmType: 'price-check', name: 'Price check', note: 'New: save a map\'s picks (numbers, kind, Not mods) as your own Farming button with Save' },
   { id: 'map-price-check-rate-chip', wmType: 'price-check', name: 'Price check', note: 'New: rate a map\'s mods Bad, Care or Want from the price check (click the chip); saved to your Map mods profile' },
   { id: 'unid-rolled-unique-price', wmType: 'price-check', name: 'Price check', note: 'New: unid Watcher\'s Eye, Forbidden Flame and 66 more show their unid trade price, not poe.ninja\'s' },
