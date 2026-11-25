@@ -1,6 +1,6 @@
 // Exchange items poe.ninja prices show that price first; the exchange search waits for a click.
 import { describe, expect, it } from 'vitest'
-import { holdBulkSearch, fixedPriceItem, ninjaPrice, ninjaTotal, divineTenths, chaosOrbRow, flipTitle } from '@/web/woke/price-insight/ninja-first'
+import { holdBulkSearch, fixedPriceItem, ninjaPrice, ninjaTotal, divineTenths, chaosOrbRow, flipTitle, ninjaRates } from '@/web/woke/price-insight/ninja-first'
 
 const base = { api: 'bulk' as const, enabled: undefined, live: false, chaos: 34 }
 
@@ -109,5 +109,22 @@ describe('ninjaPrice', () => {
     // Without poe.ninja's rate (not loaded, or a league it doesn't cover) it checks like other currency.
     expect(chaosOrbRow({ info: { refName: 'Chaos Orb', namespace: 'ITEM' } }, undefined)).toBeNull()
     expect(chaosOrbRow({ info: { refName: 'Divine Orb', namespace: 'ITEM' } }, 180)).toBeNull()
+  })
+})
+
+describe('ninjaRates', () => {
+  const t = (r: { left: { n: string, of: string }, right: { n: string, of: string } }) => `${r.left.n} ${r.left.of} = ${r.right.n} ${r.right.of}`
+  it('gives the count to whichever side is worth less', () => {
+    expect(ninjaRates(1 / 1.1, 175).map(t)).toEqual(['1 c = 1.1 item', '1 div = 193 item'])
+    expect(ninjaRates(34, 180).map(t)).toEqual(['1 item = 34 c', '1 div = 5.3 item'])
+    expect(ninjaRates(900, 180).map(t)).toEqual(['1 item = 900 c', '1 item = 5 div'])
+  })
+  it('leaves out the line a Divine Orb or Chaos Orb would price against itself', () => {
+    expect(ninjaRates(180, 180, 'divine').map(t)).toEqual(['1 item = 180 c'])
+    expect(ninjaRates(1, 180, 'chaos').map(t)).toEqual(['1 div = 180 item'])
+  })
+  it('has no divine line without a rate, and nothing without a price', () => {
+    expect(ninjaRates(34, undefined).map(t)).toEqual(['1 item = 34 c'])
+    expect(ninjaRates(0, 180)).toEqual([])
   })
 })

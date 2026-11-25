@@ -1,41 +1,48 @@
 <template>
   <!-- woke: the instant price check for an exchange item poe.ninja prices: a small card by
-       the item instead of the window (WOKEPOET-480). Space or Live offers opens the window
-       and searches; Details opens it without a search. -->
+       the item instead of the window (WOKEPOET-480). Space opens the window and searches. -->
   <div ref="el" :class="$style.anchor" :style="anchorStyle" data-testid="instant-ninja-card">
     <div :class="$style.top">
-    <div :class="$style.card">
-      <div :class="$style.eyebrow">
-        <span v-item-tip="{ name: item.info.refName }" :class="$style.name">{{ item.info.refName }}</span>
-        <span class="flex-1" />
-        <span :class="$style.badge" data-testid="instant-ninja-badge" :title="badgeTip" :data-tip-keys="againKeys ?? 'Space'">POE.NINJA</span>
-      </div>
-      <div :class="$style.value">
-        <span :class="[$style.headline, { [$style.flip]: price?.flip }]" data-testid="instant-ninja-price" :data-unit="price?.flip ? ninjaCheapUnit : null" :title="flipTitle(price)" @click="flipUnit(price)"><w-price-text :text="price?.main" /></span>
-        <span v-if="price?.each" :class="$style.dim">each</span>
-        <template v-if="weekChange != null">
-          <span class="flex-1" />
-          <w-spark :values="spark" :width="32" :height="14" />
-          <span :class="weekChange >= 0 ? 'w-up' : 'w-down'" :title="changeTitle" data-testid="instant-ninja-change">{{ weekChange >= 0 ? '▲' : '▼' }}{{ Math.abs(weekChange) }}%<span :class="$style.range">1d</span></span>
-        </template>
-      </div>
-      <!-- How sure poe.ninja's price is: Net worth's fake-price checks (ninja-trust.ts, WOKEPOET-534). -->
-      <div v-if="doubtLine" :class="$style.doubt" data-testid="instant-ninja-doubt" :data-doubt="doubt?.kind"><w-price-text :text="doubtLine" /></div>
-      <div v-if="price?.sub || stack" :class="$style.dim">
-        <template v-if="stack"><span :class="$style.fg"><w-price-text :text="stack" /></span> for your {{ have }}</template><template v-if="stack && price?.sub"> · </template><w-price-text :text="price?.sub" />
-      </div>
+    <!-- The game's own tooltip look (Guy's pick I2, 2026-11-25): its header art and
+         separators, the exchange rates, then what your stack is worth. -->
+    <div :class="[$style.card, $style[frame]]" data-card>
+      <header :class="[$style.head, { [$style.art]: headArt }]" :style="headArt">
+        <span v-item-tip="{ name: item.info.refName }" :class="$style.name"><img v-if="item.info.icon" :src="item.info.icon" alt="" :class="$style.headIcon"><span :class="$style.nameText">{{ item.info.refName }}</span></span>
+      </header>
+      <!-- The item against a chaos and a divine, as the game's Currency Exchange shows it. -->
+      <section :class="[$style.block, $style.rates]">
+        <div v-for="(r, i) in rates" :key="i" :class="$style.rate" :data-testid="i === 0 ? 'instant-ninja-price' : 'instant-ninja-rate'">
+          <span :class="$style.side"><span>{{ r.left.n }}</span><img v-if="sideIcon(r.left.of)" :src="sideIcon(r.left.of)" :alt="sideName(r.left.of)" :class="$style.coin"></span>
+          <span :class="$style.arr">⇄</span>
+          <span :class="[$style.side, $style.them]"><span>{{ r.right.n }}</span><img v-if="sideIcon(r.right.of)" :src="sideIcon(r.right.of)" :alt="sideName(r.right.of)" :class="$style.coin"></span>
+        </div>
+        <div v-if="!rates.length" :class="$style.rate" data-testid="instant-ninja-price">—</div>
+        <div v-if="stack" :class="$style.line" data-testid="instant-ninja-stack">Your {{ have }} = <span :class="$style.fg"><w-price-text :text="stack" /></span></div>
+        <!-- How sure poe.ninja's price is: Net worth's fake-price checks (ninja-trust.ts, WOKEPOET-534). -->
+        <div v-if="doubtLine" :class="$style.doubt" data-testid="instant-ninja-doubt" :data-doubt="doubt?.kind"><w-price-text :text="doubtLine" /></div>
+      </section>
       <!-- The item's own verdict, where it has one (Stacked Deck: open or sell). -->
-      <slot name="verdict" />
+      <section v-if="$slots.verdict" :class="$style.block"><slot name="verdict" /></section>
       <!-- A divination card: where it drops. -->
-      <CardDrops v-if="item.category === ItemCategory.DivinationCard" :name="item.info.refName" compact />
-      <div v-if="age" :class="$style.dim">poe.ninja, updated {{ age }}</div>
-      <div :class="$style.row">
-        <button type="button" class="btn w-pc-primary" :class="[$style.btn, { 'w-pc-glow': doubt && doubt.kind !== 'thin' }]" data-testid="instant-ninja-live" @click="$emit('live')">
-          Live offers<w-kbd keys="Space" class="ml-2" />
-        </button>
-        <button type="button" class="btn" :class="$style.btn" data-testid="instant-ninja-details" @click="$emit('details')">Details</button>
+      <section v-if="item.category === ItemCategory.DivinationCard" :class="$style.block"><CardDrops :name="item.info.refName" compact /></section>
+      <!-- Live offers only add something when poe.ninja's price is in doubt (Guy, 2026-11-25:
+           "not sure price check actually even matters"). Space and the hotkey again always work. -->
+      <button v-if="doubt" type="button" :class="$style.pc" data-testid="instant-ninja-live" :title="liveTitle" @click="$emit('live')">
+        Price check<w-kbd keys="Space" :class="$style.kbd" /><span :class="$style.slash">/</span><svg :class="$style.lmb" viewBox="0 0 12 16" width="11" height="15" aria-label="left click"><rect x="0.75" y="0.75" width="10.5" height="14.5" rx="5.25" fill="none" stroke="currentColor" stroke-width="1.3" /><path d="M6 0.75 V6.5 H0.75 V6 A5.25 5.25 0 0 1 6 0.75 Z" fill="currentColor" /></svg>
+      </button>
+    </div>
+    <!-- The price over 24h, 3 days or 7 days in its own box beside the card: a click on a
+         range or the mouse wheel steps through them (Guy, 2026-11-25). -->
+    <!-- The graph box, and a divine's parts in chaos under it (Guy, 2026-11-25). -->
+    <div :class="$style.aside" data-aside>
+    <div v-if="info" :class="$style.gbox" data-testid="instant-ninja-graph" :title="hasHistory ? 'Scroll or click: 24h, 3 days, 7 days' : undefined" @wheel="onWheel">
+      <div v-if="hasHistory" :class="$style.gtabs">
+        <button v-for="r in RANGES" :key="r.id" type="button" tabindex="-1" :class="{ [$style.on]: r.id === range }" :data-testid="`instant-ninja-range-${r.id}`" @mousedown.prevent @click="setRange(r.id)">{{ r.id }}</button>
       </div>
-      <div v-if="againKeys" :class="$style.dim" data-testid="instant-ninja-again">Live offers: <w-kbd :keys="againKeys" /> again</div>
+      <w-spark v-if="spark.length > 1" :values="spark" :width="92" :height="32" />
+      <div v-else-if="hasHistory && !(range === '24h' && savedLoading)" :class="$style.nograph">No change yet</div>
+      <span v-if="change != null" :class="change >= 0 ? 'w-up' : 'w-down'" :title="changeTitle" data-testid="instant-ninja-change">{{ change >= 0 ? '▲' : '▼' }}{{ Math.abs(change) }}%</span>
+      <span :class="$style.src" data-testid="instant-ninja-badge" :title="badgeTip" :data-tip-keys="againKeys ?? 'Space'">poe.ninja<template v-if="age">, {{ age }}</template></span>
     </div>
     <!-- A Divine Orb or Chaos Orb: 0.1 to 1 div in chaos beside the card, for paying part of a divine. -->
     <div v-if="tenths" :class="$style.tenths" data-testid="instant-ninja-tenths">
@@ -45,6 +52,7 @@
           <tr v-for="t in tenths" :key="t.div"><td><w-price-text :text="t.div" /></td><td><w-price-text :text="t.chaos" /></td></tr>
         </tbody>
       </table>
+    </div>
     </div>
     </div>
     <!-- Related items (the item's family, what drops it), as beside the window. -->
@@ -57,8 +65,8 @@ import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shall
 import type { ParsedItem } from '@/parser'
 import { ItemCategory } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
-import { ninjaPrice, ninjaTotal, divineTenths, chaosOrbRow, flipTitle } from './ninja-first'
-import { ninjaCheapUnit, flipUnit } from './view'
+import { ninjaTotal, divineTenths, chaosOrbRow, ninjaRates } from './ninja-first'
+import type { RateSide } from './ninja-first'
 import { instantCardKey, onKeyboardFocusedControl } from './instant-card-key'
 import { useNinjaDoubt } from './use-ninja-doubt'
 import { doubtText } from './ninja-trust'
@@ -73,6 +81,7 @@ const DAY_MS = 24 * 3600 * 1000
 const DAY_POINTS = 7
 const SAVED_WAIT_MS = 400
 import { WSpark, WKbd, WPriceText, agoPhrase, vItemTip } from '../ui'
+import { wheelStep } from '../dock/wheel'
 
 const CardDrops = defineAsyncComponent(() => import('../card-drops/CardDrops.vue'))
 
@@ -88,7 +97,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   /** `byKey`: Space or Enter, not a click. */
   live: [byKey?: boolean]
-  details: []
   close: []
   /** Where the card ended up, in the overlay's CSS px, so the mouse can be tracked into it. */
   placed: [rect: DOMRect]
@@ -101,6 +109,8 @@ const emit = defineEmits<{
 const RIGHT_GAP = 40
 const LEFT_GAP = 16
 const ABOVE = 12
+// Between the card and the lists under it, in screen px (.instantSide's margin).
+const SIDE_GAP = 10
 
 const { findPriceByQuery, xchgRate, updatedAt } = usePoeninja()
 const info = computed(() => {
@@ -113,15 +123,30 @@ const info = computed(() => {
 const badgeTip = computed(() => `This is used to provide instant pricing without any delay. For live data, press${props.againKeys ? ' the price check key again' : ''}:`)
 
 const isDivine = computed(() => props.item.info.refName === 'Divine Orb')
+// A Chaos Orb is 1c: its stack in chaos says nothing, and it has no graph (chaosOrbRow).
+const isChaos = computed(() => props.item.info.refName === 'Chaos Orb')
 const have = computed(() => props.item.stackSize?.value ?? 1)
-const price = computed(() => info.value ? ninjaPrice(info.value.chaos, xchgRate.value, isDivine.value, ninjaCheapUnit.value) : null)
-const stack = computed(() => info.value && have.value > 1 ? ninjaTotal(info.value.chaos * have.value, isDivine.value ? undefined : xchgRate.value) : null)
+const stack = computed(() => info.value && have.value > 1 && !isChaos.value ? ninjaTotal(info.value.chaos * have.value, isDivine.value ? undefined : xchgRate.value) : null)
 const tenths = computed(() => {
   if (isDivine.value && info.value) return divineTenths(info.value.chaos)
-  if (props.item.info.refName === 'Chaos Orb' && xchgRate.value) return divineTenths(xchgRate.value)
+  if (isChaos.value && xchgRate.value) return divineTenths(xchgRate.value)
   return null
 })
 const age = computed(() => agoPhrase(updatedAt.value))
+const rates = computed(() => info.value ? ninjaRates(info.value.chaos, xchgRate.value, isDivine.value ? 'divine' : isChaos.value ? 'chaos' : null) : [])
+function sideIcon (of: RateSide['of']): string {
+  return of === 'c' ? '/images/chaos.png' : of === 'div' ? '/images/divine.png' : (props.item.info.icon ?? '')
+}
+function sideName (of: RateSide['of']): string {
+  return of === 'c' ? 'Chaos Orb' : of === 'div' ? 'Divine Orb' : props.item.info.refName
+}
+// The game's header art for the item's kind; a card, like the game, has its own colour.
+const frame = computed(() => props.item.category === ItemCategory.DivinationCard ? 'divcard' : props.item.info.namespace === 'ITEM' ? 'currency' : 'normal')
+const headArt = computed(() => {
+  if (frame.value === 'divcard') return undefined
+  const file = (side: string) => `url(/images/item-frame/header-${frame.value}-${side}.png)`
+  return { backgroundImage: `${file('left')}, ${file('right')}, ${file('middle')}` }
+})
 const doubt = useNinjaDoubt(info)
 const doubtLine = computed(() => doubt.value ? doubtText(doubt.value, c => ninjaTotal(c, xchgRate.value)) : null)
 // The last day (Guy, 2026-11-23): the prices this app saved about every 30
@@ -141,11 +166,59 @@ const dayTrend = computed(() => {
   const ninja = ninjaRange(row.chaos, row.graph, 1)
   return ninja.change == null ? null : { ...ninja, from: 'ninja' as const }
 })
-const spark = computed(() => dayTrend.value?.trend ?? [])
-const weekChange = computed(() => dayTrend.value?.change != null ? Math.round(dayTrend.value.change) : null)
-const changeTitle = computed(() => dayTrend.value?.from === 'saved'
-  ? 'Change over the last 24 hours, from the prices this app saves about every 30 minutes'
-  : "Change over the last day, from poe.ninja's daily prices")
+// The graph box's range, remembered for every card: 24h from the prices this
+// app saves (else poe.ninja's last day), 3 and 7 days from poe.ninja's daily line.
+const RANGES = [
+  { id: '24h', long: 'the last 24 hours' },
+  { id: '3d', long: 'the last 3 days' },
+  { id: '7d', long: 'the last 7 days' }
+] as const
+type CardRange = typeof RANGES[number]['id']
+const RANGE_KEY = 'woke.instantRange'
+function readRange (): CardRange {
+  try {
+    const v = localStorage.getItem(RANGE_KEY)
+    return RANGES.some(r => r.id === v) ? v as CardRange : '24h'
+  } catch { return '24h' }
+}
+const range = shallowRef<CardRange>(readRange())
+function setRange (id: CardRange) {
+  range.value = id
+  try { localStorage.setItem(RANGE_KEY, id) } catch { /* not kept: fine */ }
+}
+function stepRange (by: number) {
+  const at = RANGES.findIndex(r => r.id === range.value)
+  setRange(RANGES[(at + by + RANGES.length) % RANGES.length].id)
+}
+const shownTrend = computed(() => {
+  const row = info.value
+  if (!row) return null
+  if (range.value === '24h') return dayTrend.value
+  const days = range.value === '3d' ? 3 : Array.isArray(row.graph) ? row.graph.length - 1 : 6
+  const ninja = ninjaRange(row.chaos, row.graph, days)
+  return ninja.change == null ? null : { ...ninja, from: 'ninja' as const }
+})
+// No line at all (a new item, the app not running yesterday): the box keeps only poe.ninja's age.
+const hasHistory = computed(() => {
+  const g = info.value?.graph
+  return (Array.isArray(g) && g.filter(v => typeof v === 'number').length > 1) || (saved.value?.some(v => v != null) ?? false)
+})
+function onWheel (e: WheelEvent) {
+  if (!hasHistory.value) return
+  e.preventDefault()
+  // A touchpad's many small deltas add up to one notch (dock/wheel.ts).
+  const dir = wheelStep(e)
+  if (dir) stepRange(dir)
+}
+const spark = computed(() => shownTrend.value?.trend ?? [])
+const change = computed(() => shownTrend.value?.change != null ? Math.round(shownTrend.value.change) : null)
+const changeTitle = computed(() => {
+  const long = RANGES.find(r => r.id === range.value)!.long
+  return shownTrend.value?.from === 'saved'
+    ? `Change over ${long}, from the prices this app saves about every 30 minutes`
+    : `Change over ${long}, from poe.ninja's daily prices`
+})
+const liveTitle = computed(() => `Live offers from the trade site: Space, a click${props.againKeys ? `, or ${props.againKeys} again` : ''}`)
 // Types the app's snapshots leave out (market/parse.ts, Prices.ts lookup-only).
 const NOT_SAVED = new Set(['ClusterJewel', 'BaseType'])
 watch(info, async (row) => {
@@ -170,7 +243,10 @@ watch(info, async (row) => {
 // Left of the cursor when the right side has no room, above it when the bottom has none.
 const el = shallowRef<HTMLElement | null>(null)
 const pos = shallowRef({ left: props.at.x + RIGHT_GAP, top: props.at.y - ABOVE })
-const anchorStyle = computed(() => ({ left: `${pos.value.left}px`, top: `${pos.value.top}px` }))
+// The lists under the card get the room left below it (--w-instant-room), so
+// the card itself stays by the mouse (Guy, 2026-11-25: "the price box must be next to the mouse").
+const room = shallowRef<number | null>(null)
+const anchorStyle = computed(() => ({ left: `${pos.value.left}px`, top: `${pos.value.top}px`, ...(room.value != null ? { '--w-instant-room': `${room.value}px` } : {}) }))
 
 // Right of and below the cursor; left of it when the right has no room, and up
 // as far as the screen needs when the bottom has none.
@@ -178,11 +254,17 @@ function place () {
   const node = el.value
   if (!node) return
   const w = node.offsetWidth
-  const h = node.offsetHeight
+  // Only the card and the graph box beside it decide the height: the lists under
+  // them shrink to the room left (the card stays by the mouse).
+  const card = node.querySelector('[data-card]')?.getBoundingClientRect()
+  const aside = node.querySelector('[data-aside]')?.getBoundingClientRect()
+  const head = Math.max(card?.height ?? node.offsetHeight, aside?.height ?? 0)
   const { x, y } = props.at
   const left = x + RIGHT_GAP + w <= window.innerWidth ? x + RIGHT_GAP : Math.max(0, x - LEFT_GAP - w)
-  const top = Math.max(0, Math.min(y - ABOVE, window.innerHeight - h))
+  const top = Math.max(0, Math.min(y - ABOVE, window.innerHeight - head))
+  const below = Math.max(0, Math.round(window.innerHeight - top - (card?.height ?? 0) - SIDE_GAP))
   if (left !== pos.value.left || top !== pos.value.top) pos.value = { left, top }
+  if (below !== room.value) room.value = below
 }
 // Related items load after the card, and change its size.
 let resize: ResizeObserver | undefined
@@ -194,7 +276,7 @@ function onKey (e: KeyboardEvent) {
   const t = e.target as HTMLElement | null
   if (t && t !== document.body && !el.value?.contains(t)) return
   if (t?.closest('input, textarea, select, [contenteditable]')) return
-  // A focused button keeps its own Enter and Space: Details never runs a search.
+  // A focused button keeps its own Enter and Space.
   const action = instantCardKey(e.key, onKeyboardFocusedControl(t))
   if (action === 'live') {
     e.preventDefault()
@@ -215,7 +297,7 @@ function shownRect (node: HTMLElement): DOMRect | null {
   // Hidden (the widget is display:none): nothing to track.
   if (!node.offsetWidth) return null
   let { left, top, right, bottom } = node.getBoundingClientRect()
-  for (const child of node.querySelectorAll(':scope > *, :scope .w-pc-side')) {
+  for (const child of node.querySelectorAll(':scope > *, :scope .w-pc-side, :scope [data-aside]')) {
     const r = child.getBoundingClientRect()
     if (!r.width || !r.height) continue
     left = Math.min(left, r.left); top = Math.min(top, r.top)
@@ -249,6 +331,8 @@ onMounted(() => {
   })
   kids.observe(el.value!, { childList: true })
   for (const child of el.value!.children) resize.observe(child)
+  const aside = el.value!.querySelector('[data-aside]')
+  if (aside) resize.observe(aside)
   stopKids = () => kids.disconnect()
 })
 watch(() => props.at, placeAndReport)
@@ -260,47 +344,63 @@ onUnmounted(() => {
 </script>
 
 <style module>
-.range { margin-left: 3px; color: var(--w-dim); font-size: var(--w-fs-xs); }
-/* The card reads at a glance by a stash cell: 20% over the app's UI size
+/* The card reads at a glance by a stash cell: 40% over the app's UI size
    (Guy, 2026-11-24, "small and hard to read"). The list beside it follows. */
-.anchor { --w-instant-scale: 1.2; position: absolute; pointer-events: auto; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; max-height: 100%; }
+.anchor { --w-instant-scale: 1.4; position: absolute; pointer-events: auto; z-index: 5; display: grid; grid-template-columns: auto auto; column-gap: calc(6px * var(--w-ui-size, 1) * var(--w-instant-scale, 1)); justify-items: start; align-items: start; max-height: 100%; }
 .card {
+  grid-column: 1;
+  grid-row: 1;
   zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1));
+  --tip: var(--w-r-normal);
+  --tip-rgb: 200, 200, 200;
   display: flex;
   flex-direction: column;
-  gap: 5px;
   min-width: 15rem;
   max-width: 20rem;
-  padding: 8px 10px;
-  border: 1px solid var(--w-line-strong, var(--w-line));
-  border-radius: var(--w-r-sm);
-  background: var(--w-pc-well, var(--w-panel-solid));
-  box-shadow: 0 4px 18px rgba(0, 0, 0, .6);
-  color: var(--w-fg);
-  font-family: var(--w-body);
+  text-align: center;
+  border: 1px solid rgba(var(--tip-rgb), .55);
+  background: var(--w-tip-bg, rgba(0, 0, 0, .92));
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .7);
+  color: var(--w-dim);
+  font-family: var(--w-head);
   font-size: var(--w-fs-sm);
+  line-height: 1.3;
   font-variant-numeric: tabular-nums;
 }
-.eyebrow { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--w-fg); font-weight: 600; }
-.badge {
-  flex: none;
-  font-size: var(--w-fs-xs);
-  font-weight: 600;
-  letter-spacing: .05em;
-  padding: 0 5px;
-  border-radius: var(--w-r-sm);
-  border: 1px solid currentColor;
-  color: #7fb2e5;
+.normal { --tip: var(--w-r-normal); --tip-rgb: 200, 200, 200; --sep: url(/images/item-frame/separator-normal.png); }
+.currency { --tip: var(--w-r-currency); --tip-rgb: 170, 158, 130; --sep: url(/images/item-frame/separator-currency.png); }
+.divcard { --tip: var(--w-r-divination); --tip-rgb: 127, 181, 214; }
+/* As GameTooltip's header: the game's art, ends fixed and the middle repeated; a card gets a colour band. */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 2px 26px;
+  color: var(--tip);
+  font-size: var(--w-fs-md, 13px);
+  background: linear-gradient(90deg, rgba(var(--tip-rgb), .08), rgba(var(--tip-rgb), .26) 22%, rgba(var(--tip-rgb), .26) 78%, rgba(var(--tip-rgb), .08));
+  border-bottom: 1px solid rgba(var(--tip-rgb), .7);
 }
-.value { display: flex; align-items: baseline; gap: 6px; }
-.flip { cursor: pointer; text-decoration: underline dashed color-mix(in srgb, currentColor 45%, transparent); text-decoration-thickness: 1px; text-underline-offset: 4px; }
-.flip:hover { filter: brightness(1.2); }
-.headline { font-family: var(--w-num); font-size: calc(24px * var(--w-text-scale, 1)); line-height: 1.1; font-weight: 600; color: var(--w-accent); white-space: nowrap; }
-.dim { color: var(--w-dim); }
+.art { background-position: left center, right center, center; background-size: auto 100%; background-repeat: no-repeat, no-repeat, repeat-x; border-bottom: 0; }
+.name { display: inline-flex; align-items: center; min-width: 0; white-space: nowrap; }
+.nameText { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.block { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 12px; }
+/* The game's fading line between sections. */
+.block + .block { background: var(--sep, none) center top / auto 6px no-repeat, linear-gradient(90deg, transparent, rgba(var(--tip-rgb), .5), transparent) top / 80% 1px no-repeat; padding-top: 8px; }
+.line { color: var(--w-dim); font-size: calc(15px * var(--w-text-scale, 1)); margin-top: 2px; }
+.rates { gap: 0; }
+.rate { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; width: 100%; font-family: var(--w-num); font-size: calc(19px * var(--w-text-scale, 1)); color: #fff; line-height: 1.5; }
+.side { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.them { justify-content: flex-start; }
+.arr { color: var(--w-dim); font-size: var(--w-fs-sm); }
+.coin { width: 1.3em; height: 1.3em; object-fit: contain; }
 .doubt { color: var(--w-warn, #e0a03c); max-width: 18rem; }
-.fg { color: var(--w-fg); }
-.top { display: flex; align-items: flex-start; gap: calc(6px * var(--w-ui-size, 1) * var(--w-instant-scale, 1)); }
+.fg { color: var(--w-r-magic, #8888ff); }
+/* Beside the card and the list under it, so the list sits right under the card. */
+.aside { grid-column: 2; grid-row: 1 / span 9; display: flex; flex-direction: column; align-items: flex-start; gap: calc(6px * var(--w-ui-size, 1) * var(--w-instant-scale, 1)); }
+.top { display: contents; }
+.anchor > * { grid-column: 1; }
 .tenths {
   zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1));
   border: 1px solid var(--w-line-strong, var(--w-line));
@@ -320,6 +420,45 @@ onUnmounted(() => {
 .tenthsTable td:last-child { text-align: right; }
 .tenthsTable tr:nth-child(even) td { background: color-mix(in srgb, var(--w-fg) 5%, transparent); }
 .tenthsTable tr:last-child td { color: var(--w-accent); font-weight: 600; }
-.row { display: flex; gap: 6px; margin-top: 2px; }
-.btn { display: inline-flex; align-items: center; }
+.headIcon { flex: none; width: 1.4em; height: 1.4em; object-fit: contain; margin-right: 4px; }
+.gbox {
+  zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1));
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 4px 6px 5px;
+  border: 1px solid rgba(170, 158, 130, .55);
+  background: var(--w-tip-bg, rgba(0, 0, 0, .92));
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .7);
+  color: var(--w-dim);
+  font-family: var(--w-head);
+  font-size: var(--w-fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.gtabs { display: flex; gap: 2px; }
+.gtabs button { background: none; border: 1px solid transparent; color: var(--w-dim); font: inherit; font-size: var(--w-fs-xs); padding: 0 5px; cursor: pointer; }
+.gtabs button:hover { color: var(--w-fg); }
+.gtabs .on { color: var(--w-r-currency); border-color: rgba(170, 158, 130, .55); background: rgba(170, 158, 130, .1); }
+.nograph { font-size: var(--w-fs-xs); padding: 8px 0; }
+.src { font-size: var(--w-fs-xs); opacity: .8; }
+/* One game-style button at the foot (Guy's pick I2). */
+.pc {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  border-top: 1px solid rgba(var(--tip-rgb), .55);
+  background: linear-gradient(#2a2117, #1a140e);
+  color: var(--w-r-currency);
+  font-family: var(--w-head);
+  font-size: var(--w-fs-sm);
+  cursor: pointer;
+}
+.pc:hover { background: linear-gradient(#3a2e20, #241b12); }
+.kbd { margin-left: 2px; }
+.slash { color: var(--w-dim); }
+.lmb { flex: none; color: var(--w-dim); }
 </style>

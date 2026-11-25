@@ -7,9 +7,9 @@ export type InstantCardKeyAction = 'live' | 'close' | null
 
 /**
  * Space or Enter opens Live offers (a trade search), Escape closes the card. On a control
- * the player moved to with the keyboard (Tab), Space and Enter are that control's own:
- * Enter on Details opens Details, never a search. A button the mouse last clicked doesn't
- * count, so Space still opens Live offers after a click elsewhere on the card.
+ * the player moved to with the keyboard (Tab), Space and Enter are that control's own.
+ * A button the mouse last clicked doesn't count, so Space still opens Live offers after
+ * a click elsewhere on the card.
  */
 export function instantCardKey (key: string, onFocusedControl: boolean): InstantCardKeyAction {
   if (key === 'Escape') return 'close'

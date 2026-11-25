@@ -51,7 +51,8 @@ export function useNinjaDoubt (row: Ref<DoubtRow | null | undefined>) {
 
   return computed<NinjaDoubt | null>(() => {
     const r = row.value
-    if (!r || loading.value) return null
+    // No slug: not a poe.ninja row (a Chaos Orb is 1c by definition, chaosOrbRow).
+    if (!r || !r.slug || loading.value) return null
     const loaded = lastWokePrices()
     const category = categoryOfType(r.slug ? typeForSlug(r.slug) : undefined)
     // A card priced over what its drop rate allows (shared/card-cap.ts).
