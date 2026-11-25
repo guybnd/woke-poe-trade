@@ -109,8 +109,8 @@ function t17Rows (data: MapBonusData | null, goal: PlanGoal): PlanRow[] {
 }
 
 // "Players have (25-30)% less Defences" reads as "Players have #% less Defences".
-function sameWording (wording: string, line: string): boolean {
-  const canon = (t: string) => t.toLowerCase().replace(/\([0-9.]+-[0-9.]+\)|[+-]?[0-9.#]+/g, '#')
+export function sameWording (wording: string, line: string): boolean {
+  const canon = (t: string) => t.toLowerCase().replace(/[+-]?\([0-9.]+-[0-9.]+\)|[+-]?[0-9.#]+/g, '#')
   return canon(wording) === canon(line)
 }
 

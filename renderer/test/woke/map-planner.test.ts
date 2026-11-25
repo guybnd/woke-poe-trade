@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { loadGameData } from '../helpers/game-data'
 import { allMapNames } from '@/web/woke/map-mods/data'
 import type { MapBonusData } from '@/web/woke/map-mods/bonuses'
-import { DEFAULT_PLANNER, atLeastTerms, isTicked, planRows, planStashSearch, planTradeQuery, planUniverse, ratedAvoid, toggled } from '@/web/woke/map-mods/planner'
+import { DEFAULT_PLANNER, atLeastTerms, isTicked, planRows, planStashSearch, planTradeQuery, planUniverse, ratedAvoid, sameWording, toggled } from '@/web/woke/map-mods/planner'
 import type { PlannerState } from '@/web/woke/map-mods/planner'
 
 beforeAll(loadGameData)
@@ -78,6 +78,12 @@ describe('mods that roll another wording', () => {
       expect(isTicked(row, DEFAULT_PLANNER, ratings), key).toBe(false)
       expect(ratedAvoid(data, [], ratings).map(r => r.key), key).toContain(key)
     }
+  })
+
+  it('reads a signed roll range as the rolled number', () => {
+    expect(sameWording('#% to Monster Critical Strike Multiplier', '+(70-75)% to Monster Critical Strike Multiplier')).toBe(true)
+    expect(sameWording('Players have #% less Defences', 'Players have (25-30)% less Defences')).toBe(true)
+    expect(sameWording('Players have #% more Defences', 'Players have (25-30)% less Defences')).toBe(false)
   })
 
   it('the stash text matches the line the map shows', () => {
