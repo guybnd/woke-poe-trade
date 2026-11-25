@@ -1,7 +1,7 @@
 // The night so far, or the last one, from Session story.
 import { formatChaos, formatClock, formatDuration } from '../../ui/format'
 import { ANALYTICS_TYPE } from '../../analytics/types'
-import { bestItem } from '../../session-story/story'
+import { bestItem, outOfMapsRows } from '../../session-story/story'
 import type { NightStory } from '../../session-story/story'
 import { mapItemName, tierText, usualMapMs } from '../../session-story/map-log'
 import type { MapRecord } from '../../session-story/map-log'
@@ -40,7 +40,7 @@ function rows (s: NightStory, time: RateTime): LookupRow[] {
   if (hours >= 0.25) out.push({ label: 'Maps per hour', value: (s.maps.length / hours).toFixed(1) })
   for (const l of s.levelUps ?? []) out.push({ label: s.levelUps!.length > 1 ? l.char : 'Level', value: `${l.from} → ${l.to}` })
   out.push({ label: 'Deaths', value: String(s.deathsAt.length) })
-  out.push({ label: 'Hideout', value: formatDuration(s.otherMs) })
+  for (const r of outOfMapsRows(s)) out.push({ label: r.label, value: formatDuration(r.ms) })
   if ((s.afkMs ?? 0) >= 60_000) out.push({ label: 'AFK', value: formatDuration(s.afkMs!) })
   if (s.longestBreakMs && s.longestBreakMs >= 60_000) out.push({ label: 'Longest break', value: formatClock(s.longestBreakMs) })
   return out

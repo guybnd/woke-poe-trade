@@ -1,6 +1,6 @@
 // Log lines are in the real Client.txt's shape (see death-recap.test.ts).
 import { afterEach, describe, expect, it } from 'vitest'
-import { NightTracker, NIGHT_GAP_MS, bestDrop, bestItem, farmingProfit, hasMaps, keepNight, summarize } from '@/web/woke/session-story/story'
+import { NightTracker, NIGHT_GAP_MS, bestDrop, bestItem, farmingProfit, hasMaps, keepNight, outOfMapsRows, summarize } from '@/web/woke/session-story/story'
 import { isSkippedArea, parseSkipAreas, setSkipAreas } from '@/web/woke/session-story/skip-areas'
 import type { NightDraft, NightStory } from '@/web/woke/session-story/story'
 
@@ -356,5 +356,24 @@ describe('your character in a night', () => {
   it('follows the first character that levels in a draft saved before', () => {
     const d: NightDraft = { startedAt: 0, lastAt: 1, segs: [], deaths: [], levels: [{ char: 'a', level: 10 }, { char: 'b', level: 50 }, { char: 'a', level: 11 }] }
     expect(summarize(d).levelUps).toEqual([{ char: 'a', from: 9, to: 11 }])
+  })
+})
+
+describe('time out of maps', () => {
+  it('splits the hideout from other areas, and leaves Other out under a minute', () => {
+    const { tracker } = follow([
+      area('21:00:00', 'MapWorldsStrand', '11'),
+      area('21:10:00', 'HideoutChurch', '1', 68),
+      area('21:15:00', 'Delve_Main', '2', 83),
+      area('21:27:00', 'HideoutChurch', '1', 68),
+      area('21:29:00', 'MapWorldsCemetery', '12')
+    ])
+    const s = summarize(tracker.draft!, at('21:35:00'))
+    expect(outOfMapsRows(s)).toEqual([{ label: 'Hideout', ms: 7 * 60_000 }, { label: 'Other', ms: 12 * 60_000 }])
+    expect(outOfMapsRows({ otherMs: 7 * 60_000 + 30_000, hubMs: 7 * 60_000 })).toEqual([{ label: 'Hideout', ms: 7 * 60_000 }])
+  })
+
+  it('shows a night saved before the split as one line', () => {
+    expect(outOfMapsRows({ otherMs: 60_000 })).toEqual([{ label: 'Out of maps', ms: 60_000 }])
   })
 })

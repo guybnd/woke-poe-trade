@@ -327,6 +327,15 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
   }
 }
 
+// Time out of maps, as the card and Ctrl+Space show it: the hideout (and
+// town), then Other (Delve, Heist, the lab, bosses, vaults, game closed),
+// left out under a minute. Nights saved before hubMs show it all as one line.
+export function outOfMapsRows (s: Pick<NightStory, 'otherMs' | 'hubMs'>): Array<{ label: 'Hideout' | 'Other' | 'Out of maps', ms: number }> {
+  if (s.hubMs == null) return [{ label: 'Out of maps', ms: s.otherMs }]
+  const other = Math.max(0, s.otherMs - s.hubMs)
+  return [{ label: 'Hideout', ms: s.hubMs }, ...(other >= 60_000 ? [{ label: 'Other' as const, ms: other }] : [])]
+}
+
 // The newest night first; the same night again replaces the old copy.
 export function keepNight (nights: NightStory[], story: NightStory): NightStory[] {
   return [story, ...nights.filter(n => n.id !== story.id)]
