@@ -11,6 +11,7 @@ import { usePoeninja } from '@/web/background/Prices'
 import { buildTip, dropOf, dropSource, kindOfNinjaType, packFiles, randomDropsFirst } from './tip-content'
 import type { TipKind, TipModel, TipPack } from './tip-content'
 import { hideTip, marketFromRow, onTipHide, showTipAt } from './tooltip'
+import { retireHint } from '../../shared/hints'
 import { offerItem, openItemMenu } from './item-menu'
 import { kindOfName, uniqueModLines } from './item-menu-logic'
 import type { ItemMenuRef, UniqueModLines } from './item-menu-logic'
@@ -22,6 +23,10 @@ import type { GemTable } from '../../search/lookups/gems'
 import { heldText } from '../../shared/price-trust'
 import { formatChaos } from '../format'
 import type { TipBaseUnique, TipContent, TipEffect, TipMarket } from './tooltip'
+
+// The item tooltip's key line (GameTooltip.vue): gone after the first
+// right-click on an item.
+export const ITEM_MENU_HINT = 'item-right-click'
 
 export interface ItemTipRef {
   name: string
@@ -434,8 +439,10 @@ function enter (el: HTMLElement) {
   live = el
   const mine = seq
   const own = ref.content
+  // Its right-click opens the item's menu: the tooltip's key line says so.
+  const opts = { menu: menuOwner(el) != null }
   if (own) {
-    timer = setTimeout(() => { if (mine === seq && el.isConnected) showTipAt(el, own) }, SHOW_DELAY_MS)
+    timer = setTimeout(() => { if (mine === seq && el.isConnected) showTipAt(el, own, opts) }, SHOW_DELAY_MS)
     return
   }
   timer = setTimeout(() => {
@@ -443,14 +450,14 @@ function enter (el: HTMLElement) {
       if (mine !== seq || !el.isConnected) return
       const note = ref.note ? [ref.note.split('\n').map(text => [{ text, tone: 'dim' as const }])] : []
       if (model && note.length) model = { ...model, sections: [...model.sections, ...note] }
-      if (model) showTipAt(el, { kind: 'lookup', model, market, uniques, effects })
-      else if (ref.fallback) showTipAt(el, ref.fallback)
+      if (model) showTipAt(el, { kind: 'lookup', model, market, uniques, effects }, opts)
+      else if (ref.fallback) showTipAt(el, ref.fallback, opts)
       // No text for it, but a price or the caller's note is still worth showing.
-      else if (market || note.length) showTipAt(el, { kind: 'lookup', model: { name: ref.name, frame: 'normal', sections: note }, market })
+      else if (market || note.length) showTipAt(el, { kind: 'lookup', model: { name: ref.name, frame: 'normal', sections: note }, market }, opts)
       else hideTip()
     }).catch(() => {
       if (mine !== seq) return
-      if (ref.fallback && el.isConnected) showTipAt(el, ref.fallback)
+      if (ref.fallback && el.isConnected) showTipAt(el, ref.fallback, opts)
       else hideTip()
     })
   }, SHOW_DELAY_MS)
@@ -521,6 +528,7 @@ function watchRightClicks () {
     const owner = menuOwner(e.target)
     if (!owner) return
     const ref = menuRef(refs.get(owner))
+    if (ref) retireHint(ITEM_MENU_HINT)
     offerItem(e, ref)
     // After the handlers inside the item, at the item itself, as a listener of
     // its own would: the item's menu alone, unless they opened one. A row or

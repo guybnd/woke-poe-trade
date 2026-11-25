@@ -322,18 +322,26 @@ watch(storyOn, (on) => {
   if (tab.value === 'history' || tab.value === 'nights') tab.value = 'sessions'
   nightId.value = null
 })
+const store = useSessionStore()
+// Until the saved sessions load, keep the tabs: they may have some.
+const farmingHistory = computed(() => !store.loaded.value || store.sessions.value.length > 0)
+const decksOn = computed(() => isModuleOn(AppConfig(), 'stacked-decks'))
 const tabOptions = computed(() => [
   ...(storyOn.value ? [{ value: 'history', label: 'Map history' }, { value: 'nights', label: 'Play sessions' }] : []),
   // Strategies is retired (Guy, Nov 2026): it only had Farming's sessions.
   // Its tab body stays below for when Farming comes back.
-  { value: 'sessions', label: 'Sessions' },
-  { value: 'maps', label: 'Maps' },
-  ...(isModuleOn(AppConfig(), 'stacked-decks') ? [{ value: 'decks', label: 'Stacked decks' }] : [])
+  // Sessions and Maps only had Farming's sessions too: shown while there are
+  // some saved, or when no other tab is left (veteran critique pick A1).
+  ...(farmingHistory.value || (!storyOn.value && !decksOn.value) ? [{ value: 'sessions', label: 'Sessions' }, { value: 'maps', label: 'Maps' }] : []),
+  ...(decksOn.value ? [{ value: 'decks', label: 'Stacked decks' }] : [])
 ])
+// A tab that went away (no Farming sessions, a tool switched off): show the first one left.
+watch(tabOptions, (opts) => {
+  if (!opts.some(o => o.value === tab.value)) tab.value = opts[0].value as typeof tab.value
+}, { immediate: true })
 const rangeOptions = [{ value: '7d', label: '7 days' }, { value: 'league', label: 'League' }, { value: 'all', label: 'All' }]
 const unitOptions = [{ value: 'div', label: 'div' }, { value: 'chaos', label: 'chaos' }]
 
-const store = useSessionStore()
 // Re-read when the window opens, in case another copy of the app saved.
 watch(() => props.config.wmWants, (wants) => { if (wants === 'show') store.load(true) }, { immediate: true })
 store.load()

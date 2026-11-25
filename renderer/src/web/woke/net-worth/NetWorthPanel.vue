@@ -268,6 +268,10 @@
       </section>
       <ItemTable :lines="tableLines" :total="v?.chaos" :units="config.tableUnits" :filtered="cat !== 'all' || tabs.length > 0 || !!query.trim() || floor.minChaos > 0" :divine="divine" :changes="changes" :tab-names="tabNames"
         @units="config.tableUnits = $event" @clear="clearFilters" @price="onPrice" @ignore="onIgnore" />
+      <!-- Teaches the row's clicks until one is used (shared/hints.ts, ui/line-item.ts). -->
+      <WTipLine v-if="tableLines.length" :id="LINE_HINT">
+        <WKbd keys="Click" /> a dashed number: your own price · hover a row: ⊘ leave it out · <WKbd keys="Right-click" /> more
+      </WTipLine>
 
       <div class="w-dim text-xs" :class="$style.foot">
         <span>
@@ -294,7 +298,7 @@ import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shall
 import { AppConfig } from '@/web/Config'
 import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import { usePoeninja } from '@/web/background/Prices'
-import { WBanner, WButton, WChip, WEmpty, WField, WLineActs, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WField, WKbd, WLineActs, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
 import { lineTip, tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
@@ -328,6 +332,8 @@ import type { RateWindow } from './play-time'
 import LedgerChart from './LedgerChart.vue'
 import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
+import WTipLine from '../ui/WTipLine.vue'
+import { LINE_HINT } from '../ui/line-item'
 import HideChip from './HideChip.vue'
 import SalesView from './SalesView.vue'
 import HoldLine from './HoldLine.vue'

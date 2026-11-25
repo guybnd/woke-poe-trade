@@ -32,6 +32,12 @@ Item Level: 84
 export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-seller-spread': { check: { name: 'Exalted Orb' }, spot: 'seller-spread' },
   'price-check-exchange-ladder': { check: { name: 'Exalted Orb' }, spot: 'exchange-ladder' },
+  'price-check-card-stack': { check: { name: 'The Doctor' }, spot: 'related' },
+  'price-check-gem-kinds': { check: { name: 'Ice Nova of Frostbolts' }, spot: 'related' },
+  // A base has no check by name: the game's text of a plain one.
+  'price-check-chance-uniques': { check: { name: 'Glorious Plate', rarity: 'normal', text: 'Item Class: Body Armours\nRarity: Normal\nGlorious Plate\n--------\nArmour: 776\n--------\nItem Level: 84\n' }, spot: 'related' },
+  'price-check-vault-rewards': { check: { name: 'Orb of Intention' }, spot: 'related' },
+  'price-check-boss-uniques': { check: { name: 'Hale Negator', rarity: 'unique' }, spot: 'related' },
   'price-check-related-exalts': { check: { name: 'Exalted Orb' }, spot: 'related' },
   // A Breach unique and its blessed upgrade.
   'price-check-related-upgrades': { check: { name: "Xoph's Inception", rarity: 'unique' }, spot: 'related' },

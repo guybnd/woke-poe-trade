@@ -10,12 +10,12 @@
         <i v-else-if="crest" :class="[crest.fa, 'w-crest-icon']" aria-hidden="true" />
         <slot name="title">{{ title }}</slot>
       </span>
-      <span v-if="!minimized && (updated != null || hotkey || keys?.length || $slots.actions)" :class="$style.actions">
+      <span v-if="!minimized && (updated != null || hotkey || helpKeys.length || $slots.actions)" :class="$style.actions">
         <span v-if="updated != null && (busy || fresh !== 'fresh')" :class="[$style.age, $style[fresh]]" :title="ageTitle">
           <span :class="$style.dot" />{{ busy ? 'refreshing' : ago(updated) }}
         </span>
         <WKbd v-if="hotkey" :keys="hotkey" :title="`Opens with ${hotkey}`" />
-        <WInfo v-if="keys?.length" :keys="keys" text="Keys in this window" />
+        <WInfo v-if="helpKeys.length" :keys="helpKeys" text="Keys and mouse in this window" />
         <slot name="actions" />
       </span>
       <span v-if="primary && titleActions.length" :class="$style.controls">
@@ -310,6 +310,16 @@ function onHeadDblClick (e: MouseEvent) {
   if (minimizesFromHead.value) cfg!.toggleMinimize!()
   else resetSize()
 }
+
+// The "?" in the title: the window's own keys, then what every window's title
+// and edges take (hidden-features audit, P3).
+const helpKeys = computed<HelpKey[]>(() => {
+  const out = [...(props.keys ?? [])]
+  if (minimizesFromHead.value) out.push({ keys: 'Double-click', label: 'The title: minimize' })
+  else if (canResize.value && saved.value) out.push({ keys: 'Double-click', label: 'The title: back to its size' })
+  if (canResize.value) out.push({ keys: 'Alt', label: 'Hold while dragging an edge: no snapping' })
+  return out
+})
 
 function resetSize () {
   if (!cfg?.wokeSizes?.[props.sizeKey]) return

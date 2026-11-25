@@ -153,7 +153,7 @@ const weekChange = computed(() => spark.value.length ? Math.round(spark.value[sp
   color: #7fb2e5;
 }
 .value { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-width: 0; }
-.flip { cursor: pointer; }
+.flip { cursor: pointer; text-decoration: underline dashed color-mix(in srgb, currentColor 45%, transparent); text-decoration-thickness: 1px; text-underline-offset: 4px; }
 .flip:hover { filter: brightness(1.2); }
 .headline { font-family: var(--w-num); font-size: calc(28px * var(--w-text-scale, 1)); line-height: calc(32px * var(--w-text-scale, 1)); font-weight: 600; color: var(--w-accent); white-space: nowrap; }
 .each { color: var(--w-dim); font-size: var(--w-fs-sm); }

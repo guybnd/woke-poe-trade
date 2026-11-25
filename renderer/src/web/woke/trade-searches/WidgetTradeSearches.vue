@@ -15,7 +15,7 @@
       </template>
     </DockItem>
     <div class="flex gap-2 min-w-0 min-h-0 items-start">
-      <WPanel ref="panel" class="shrink-0" :title="config.wmTitle || 'Trade searches'" icon="exalted" width="38rem" max-height="70vh">
+      <WPanel ref="panel" :keys="LIST_KEYS" class="shrink-0" :title="config.wmTitle || 'Trade searches'" icon="exalted" width="38rem" max-height="70vh">
         <template #toolbar>
           <WField v-model="filter" icon="fas fa-search" placeholder="Filter every folder by name, tag…" class="grow" />
           <WSelect v-model="sort" :options="SORTS" title="Sort the list" />
@@ -103,6 +103,7 @@ export default { widget: widgetTradeSearchesSpec }
 </script>
 
 <script setup lang="ts">
+import { savedListKeys } from '../shared/saved-list'
 import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, watch, shallowRef, nextTick, onUnmounted } from 'vue'
 import { removeEntries } from '../shared/saved-list'
@@ -126,6 +127,9 @@ import { hideWhilePlaying, saveDock } from '../dock/dock'
 import { useLeagues } from '@/web/background/Leagues'
 import { FOLDER_ICONS, TRADE_SEARCHES_TYPE, ensureFolder, folderIcon, inView, isLiveSearch, isValidUrl, leagueOf, matchesFilter, parseHotkeyTarget, pinnedFirst, sortEntries, withLeague } from './widget'
 import type { OpenTarget, SearchSort, TradeSearchEntry } from './widget'
+
+// The window's "?": the saved list's keys.
+const LIST_KEYS = savedListKeys({ copy: true })
 
 const props = defineProps<{
   config: TradeSearchesWidget
