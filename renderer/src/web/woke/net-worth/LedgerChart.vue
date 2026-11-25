@@ -45,7 +45,7 @@
         <span v-if="shown.p.daily" class="w-dim">That day's last read</span>
         <!-- What sold shows on hover too (Guy, 2026-11-24). The card ignores the
              mouse until pinned, so no item tooltip pops over it on hover. -->
-        <span v-for="(x, i) in shownSales.list" :key="'s' + i" :class="$style.soldRow"><span v-item-tip="x.tip ?? null" :class="$style.item">{{ x.text }}</span></span>
+        <span v-for="(x, i) in shownSales.list" :key="'s' + i" :class="$style.soldRow"><img v-if="x.icon" :src="x.icon" alt="" :class="$style.soldIcon"><span v-item-tip="x.tip ?? null" :class="$style.item" :style="x.colour ? { color: x.colour } : undefined">{{ x.text }}</span><span v-if="x.price" class="w-num">{{ x.price }}</span></span>
         <span v-if="shownSales.more" class="w-dim">+{{ shownSales.more }} more sold</span>
         <span v-if="pinned && shown.p.top.length">
           <template v-for="(t, i) in shown.p.top" :key="i"><span v-item-tip="tipOf ? topTip(t) : null" :class="$style.item">{{ t }}</span><template v-if="i < shown.p.top.length - 1">, </template></template>
@@ -375,7 +375,8 @@ function when (at: number) {
 /* Below the point, as wide as the chart: never past the dock card's sides. */
 .wide { left: 0 !important; right: 0; width: auto; max-width: none; transform: translate(0, 12px) !important; }
 .pinned .item { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
-.soldRow { padding-left: 8px; }
+.soldRow { padding-left: 8px; display: flex; align-items: center; gap: 4px; }
+.soldIcon { width: 14px; height: 14px; object-fit: contain; flex: none; }
 .chart { cursor: pointer; }
 .above { --ty: calc(-100% - 10px); }
 .below { --ty: 12px; }

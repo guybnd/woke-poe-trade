@@ -2,7 +2,7 @@
 // window: what each sold for in chaos, its type, totals per range and type,
 // and which sales fall in a refresh. Pure: no Vue, no requests.
 
-import { stashKey } from './valuation'
+import { mapBase, stashKey } from './valuation'
 import type { PriceOf } from './valuation'
 import { matchRank } from '../search/search'
 
@@ -71,6 +71,28 @@ export function saleName (s: Pick<Sale, 'name' | 'typeLine' | 'stack' | 'gemLeve
   const base = s.name || s.typeLine
   const gem = s.frameType === 4 && s.gemLevel ? ` ${s.gemLevel}${s.quality ? `/${s.quality}` : ''}` : ''
   return `${s.stack > 1 ? `${s.stack} × ` : ''}${base}${gem}`
+}
+
+// The Holdings chart card's name for a sale (Guy, 2026-11-25): a rare's own
+// name ("Doom Gambit") says nothing there, so magic and rare items show their
+// base ("Sapphire Ring"), without a magic item's affixes. The rest as saleName.
+export function saleBaseName (s: Pick<Sale, 'name' | 'typeLine' | 'baseType' | 'stack' | 'gemLevel' | 'quality' | 'frameType'>): string {
+  // A blighted map keeps "Blighted", which the API's baseType leaves out.
+  if ((s.frameType === 1 || s.frameType === 2) && s.baseType) return `${s.stack > 1 ? `${s.stack} × ` : ''}${mapBase(s)}`
+  return saleName(s)
+}
+
+// A sale's name colour, by its rarity frame (relics and foils as uniques).
+export function saleColour (frameType: number): string {
+  switch (frameType) {
+    case 1: return 'var(--w-r-magic)'
+    case 2: return 'var(--w-r-rare)'
+    case 3: case 9: case 10: return 'var(--w-r-unique)'
+    case 4: return 'var(--w-r-gem)'
+    case 5: return 'var(--w-r-currency)'
+    case 6: return 'var(--w-r-divination)'
+    default: return 'var(--w-fg)'
+  }
 }
 
 // Chaos per currency id (trade ids: chaos, divine, exalted...). chaos is 1.

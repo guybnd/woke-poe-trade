@@ -5,9 +5,14 @@ import type { ItemTipRef } from '../ui/tooltip/item-tip'
 
 export interface ChartSale {
   at: number
-  // The hover card's line: "Forbidden Flame 18 d".
+  // The hover card's line: "Forbidden Flame", a rare by its base ("Sapphire Ring").
   text: string
   tip?: ItemTipRef
+  // "18 d", after the name.
+  price?: string
+  // Its inventory art and rarity colour.
+  icon?: string
+  colour?: string
   name?: string
   // Its price in the chart's unit (null: a currency without a price).
   div?: number | null

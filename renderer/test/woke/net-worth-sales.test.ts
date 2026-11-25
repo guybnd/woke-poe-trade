@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { byType, inRange, marketText, withoutSold, saleChaos, saleName, saleType, salesInWindow, searchSales, totals, versusMarket, nextSaleSort, saleSortOf, sortSales, DEFAULT_SALE_SORT } from '@/web/woke/net-worth/sales'
+import { byType, inRange, saleBaseName, saleColour, marketText, withoutSold, saleChaos, saleName, saleType, salesInWindow, searchSales, totals, versusMarket, nextSaleSort, saleSortOf, sortSales, DEFAULT_SALE_SORT } from '@/web/woke/net-worth/sales'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { salesLookup } from '@/web/woke/search/lookups/sales'
 import { saleItem, saleTip } from '@/web/woke/net-worth/sale-tip'
@@ -20,6 +20,24 @@ const sale = (p: Partial<Sale>): Sale => ({
   ...p
 })
 const RATES = { chaos: 1, divine: 200 }
+
+describe('saleBaseName', () => {
+  it('names magic and rare items by their base, the rest as saleName', () => {
+    expect(saleBaseName(sale({ frameType: 2, name: 'Doom Gambit', typeLine: 'Sapphire Ring', baseType: 'Sapphire Ring' }))).toBe('Sapphire Ring')
+    expect(saleBaseName(sale({ frameType: 1, typeLine: 'Sapphire Ring of the Whale', baseType: 'Sapphire Ring' }))).toBe('Sapphire Ring')
+    expect(saleBaseName(sale({ frameType: 3, name: 'Headhunter', typeLine: 'Leather Belt', baseType: 'Leather Belt' }))).toBe('Headhunter')
+    expect(saleBaseName(sale({ stack: 12, typeLine: 'Divine Orb', baseType: 'Divine Orb' }))).toBe('12 × Divine Orb')
+    expect(saleBaseName(sale({ frameType: 4, typeLine: 'Empower Support', baseType: 'Empower Support', gemLevel: 4 }))).toBe('Empower Support 4')
+    expect(saleBaseName(sale({ frameType: 2, name: 'Doom Gate', typeLine: 'Blight-ravaged Strand Map', baseType: 'Strand Map' }))).toBe('Blight-ravaged Strand Map')
+    // No base sent: the old name, not an empty row.
+    expect(saleBaseName(sale({ frameType: 2, name: 'Doom Gambit', typeLine: 'Sapphire Ring', baseType: '' }))).toBe('Doom Gambit')
+  })
+  it('colours by rarity, relics and foils as uniques', () => {
+    expect(saleColour(2)).toBe('var(--w-r-rare)')
+    expect(saleColour(9)).toBe('var(--w-r-unique)')
+    expect(saleColour(7)).toBe('var(--w-fg)')
+  })
+})
 
 describe('saleType', () => {
   it('sorts by frame and name', () => {
