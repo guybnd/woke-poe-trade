@@ -472,7 +472,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
       if (await notice.isVisible()) await notice.click()
       await news.click()
       await overlay.page.mouse.move(5, 5)
-      await news.locator('[data-whats-new-line]').filter({ hasText: n.note.replace(/^New: /, '').slice(1, 30) }).getByRole('button', { name: 'Show me' }).click()
+      await (await overlay.whatsNewLine(n.note.replace(/^New: /, '').slice(1, 30))).getByRole('button', { name: 'Show me' }).click()
     }
     const stale = panel.locator('[data-goto-spot="stale"]')
     await expect(stale).not.toHaveClass(/\bon\b/)

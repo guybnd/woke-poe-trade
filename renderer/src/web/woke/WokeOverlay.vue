@@ -49,7 +49,7 @@ import { personalOn } from './personal'
 const WhatsNew = defineAsyncComponent(() => import('./dock/WhatsNew.vue'))
 function worthCtx (woke: WokeModulesConfig) {
   return {
-    unseenNews: new Set(unseenNews(woke).map(n => n.id)),
+    unseenNews: new Set(unseenNews(woke, MainProcess.version.value).map(n => n.id)),
     byName: AppConfig().language === 'en',
     reader: personalOn.value,
     toolOn: (t: string) => isWidgetTypeOn(AppConfig(), t)
@@ -59,7 +59,7 @@ const worthDue = computed(() => {
   const woke = AppConfig().woke
   return woke?.setupDone === true && !woke.newsOff && hintPlaceOk() && worthLine(woke.hints, worthCtx(woke)) != null
 })
-const newsUnseen = computed(() => unseenNews(AppConfig().woke).length > 0 || worthDue.value)
+const newsUnseen = computed(() => unseenNews(AppConfig().woke, MainProcess.version.value).length > 0 || worthDue.value)
 // The line of the day is picked at start, as the overlay opens, and on
 // reaching town or a hideout (for players who only use hotkeys and the dock).
 watch([overlayOpen, () => zone.kind], ([open, kind]) => {
