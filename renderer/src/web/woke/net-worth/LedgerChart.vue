@@ -287,7 +287,11 @@ const shownSales = computed(() => {
   return { list: list.slice(0, SOLD_LIST), more: Math.max(0, list.length - SOLD_LIST), count: list.length, div: list.reduce((n, x) => n + (x.div ?? 0), 0) }
 })
 
-const yTicks = computed(() => valueTicks(span.value.lo, span.value.hi, 3).map(v => ({ v, y: yOf(v) / H * 100 })))
+// Values that would read the same once rounded show once.
+const yTicks = computed(() => {
+  const seen = new Set<string>()
+  return valueTicks(span.value.lo, span.value.hi, 3).filter(v => !seen.has(fmt(v)) && !!seen.add(fmt(v))).map(v => ({ v, y: yOf(v) / H * 100 }))
+})
 const xTicks = computed(() => {
   const { t0, t1 } = span.value
   const long = t1 - t0 > 14 * 86_400_000

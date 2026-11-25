@@ -70,18 +70,23 @@ export function valueTicks (lo: number, hi: number, n = 3): number[] {
 
 // The time axis under the chart: round times inside [t0, t1], about `n` of
 // them (on the hour, midnight, ...). Local time, so midnight is yours.
-const TIME_STEPS = [15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map(m => m * 60_000)
+const TIME_STEPS = [15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080, 20160, 40320]
 export function timeTicks (t0: number, t1: number, n = 5): { at: number, day: boolean }[] {
   if (!(t1 > t0)) return []
-  const step = TIME_STEPS.find(s => s >= (t1 - t0) / n) ?? TIME_STEPS[TIME_STEPS.length - 1]
-  const day = step >= 1440 * 60_000
-  // Start from local midnight before t0, so the ticks land on round local times.
+  const want = (t1 - t0) / n / 60_000
+  const min = TIME_STEPS.find(s => s >= want) ?? TIME_STEPS[TIME_STEPS.length - 1]
+  const day = min >= 1440
+  // Start from local midnight before t0 (a Monday for week steps) and step in
+  // local time, so a daylight saving change doesn't shift the ticks off midnight.
   const d = new Date(t0)
   d.setHours(0, 0, 0, 0)
-  if (step === 10080 * 60_000) d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  if (min >= 10080) d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  const step = () => day ? d.setDate(d.getDate() + min / 1440) : d.setMinutes(d.getMinutes() + min)
   const out: { at: number, day: boolean }[] = []
-  let at = d.getTime()
-  while (at < t0) at += step
-  for (; at <= t1; at += step) out.push({ at, day })
+  for (let k = 0; k < 10_000 && d.getTime() < t0; k++) step()
+  for (let k = 0; k < 1000 && d.getTime() <= t1; k++) {
+    out.push({ at: d.getTime(), day })
+    step()
+  }
   return out
 }

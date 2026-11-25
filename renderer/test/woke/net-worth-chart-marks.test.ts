@@ -81,3 +81,13 @@ describe('chart axes', () => {
     expect(week.every(x => x.day && new Date(x.at).getHours() === 0)).toBe(true)
   })
 })
+
+describe('time axis edge cases', () => {
+  it('stays on midnight across a daylight saving change, and thins a long league', () => {
+    const t0 = new Date(2026, 9, 21, 9).getTime()
+    const week = timeTicks(t0, t0 + 14 * 86_400_000, 14)
+    expect(week.every(x => new Date(x.at).getHours() === 0)).toBe(true)
+    const league = timeTicks(t0, t0 + 120 * 86_400_000, 7)
+    expect(league.length).toBeLessThanOrEqual(9)
+  })
+})
