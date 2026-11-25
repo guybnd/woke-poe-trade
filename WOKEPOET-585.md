@@ -23,6 +23,13 @@ history:
     selfAttested: true
     pin: true
     id: c-2026-11-25t02-52-57-316z
+  - type: activity
+    user: Agent
+    date: '2026-11-25T06:27:21.439Z'
+    comment: >-
+      Part 1 (586) shipped in PR 903 (78bac8c). Parts 2 (587) and 3 (588) still
+      open.
+    id: a-2026-11-25t06-27-21-439z
 subtasks:
   - WOKEPOET-586
   - WOKEPOET-587
