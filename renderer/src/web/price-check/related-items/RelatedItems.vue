@@ -186,10 +186,12 @@ function setSum (group: DropEntry): SumLine | undefined {
 }
 
 // woke: where the item drops: each drop group that lists it, with what opens it
-// (Nimis: the Devouring Fragment). Recipe groups are recipes, not drops.
-// A group of only cards (The Doctor, The Nurse, The Patient) goes when the
-// cards that give the item are listed already.
-function getSources (item: ParsedItem, queryId: string, cardsShown: boolean) {
+// (Nimis: the Devouring Fragment), then what else that boss drops, dearest
+// first (Dawnbreaker: Forbidden Flame, Dawnstrider...). Recipe groups are
+// recipes, not drops. A group of only cards (The Doctor, The Nurse, The
+// Patient) goes when the cards that give the item are listed already.
+function getSources (item: ParsedItem, queryId: string, cardsShown: boolean, shown: Set<string>) {
+  const dearest = (a: SideRow, b: SideRow) => chaosOfPrice(b.price) - chaosOfPrice(a.price)
   return ITEM_DROP
     .filter(g => !book().used.has(g) && realDrops(g).includes(queryId))
     .filter(g => !cardsShown || !g.query.every(id => id.startsWith('DIVINATION_CARD::')))
@@ -199,9 +201,23 @@ function getSources (item: ParsedItem, queryId: string, cardsShown: boolean) {
         const info = findItemByQueryId(id)
         if (info) rows.push(sideRow(info, findPriceByQueryId(id), false, `from:${id}`))
       }
-      return { key: `from:${i}`, title: 'Drops from', rows, sum: setSum(g) }
+      const also: SideRow[] = []
+      for (const id of realDrops(g)) {
+        if (id === queryId) continue
+        const info = findItemByQueryId(id)
+        if (info && info.name !== item.info.name && !shown.has(info.name)) also.push(sideRow(info, findPriceByQueryId(id), false, `also:${id}`))
+      }
+      also.sort(dearest)
+      if (also.length) also[0] = { ...also[0], lead: 'Also drops' }
+      return { key: `from:${i}`, title: 'Drops from', rows, also, sum: setSum(g) }
     })
     .filter(sec => sec.rows.length && !sec.rows.some(r => r.name === item.info.name))
+    .map(({ also, ...sec }) => ({ ...sec, rows: [...sec.rows, ...also] }))
+}
+
+// A row's price in chaos, for sorting: unpriced last.
+function chaosOfPrice (price?: CurrencyValue) {
+  return !price ? -1 : (price.currency === 'div' ? price.max * (xchgRate.value ?? 1) : price.max)
 }
 
 function priceText (price: CurrencyValue) {
@@ -297,10 +313,13 @@ export default defineComponent({
       const queryId = getDetailsId(props.item)
       const id = queryId ? `${queryId.ns}::${queryId.name}${queryId.variant ? ` // ${queryId.variant}` : ''}` : null
       const cards = tipItems.value ? getCards(props.item, tipItems.value) : []
+      const recipes = getRecipes(props.item)
+      // What a recipe lists already isn't repeated under Also drops.
+      const shown = new Set(recipes.flatMap(sec => sec.rows.map(r => r.name)))
       return [
-        ...getRecipes(props.item),
+        ...recipes,
         ...cards,
-        ...(id ? getSources(props.item, id, cards.length > 0) : [])
+        ...(id ? getSources(props.item, id, cards.length > 0, shown) : [])
       ]
     })
     const sections = computed<Section[]>(() => {
