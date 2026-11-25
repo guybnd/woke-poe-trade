@@ -57,7 +57,7 @@ describe('boss drop pricing', () => {
   })
 
   it('treats every boss jewel as unidentified', () => {
-    for (const name of ['The Light of Meaning', 'Impossible Escape', 'Thread of Hope', "Watcher's Eye", 'Forbidden Flesh', 'Forbidden Flame', 'Sublime Vision', 'Rational Doctrine', 'Beauty', 'Melding of the Flesh', 'Dissolution of the Flesh', 'Megalomaniac', 'Lethal Pride', "Atziri's Splendour", 'Bound by Destiny']) {
+    for (const name of ['The Light of Meaning', 'Impossible Escape', 'Thread of Hope', "Watcher's Eye", 'Forbidden Flesh', 'Forbidden Flame', 'Sublime Vision', 'Rational Doctrine', 'Beauty', 'Melding of the Flesh', 'Dissolution of the Flesh', 'Megalomaniac', 'Lethal Pride', "Atziri's Splendour", 'Bound By Destiny']) {
       expect(VARIABLE_ITEMS.has(name)).toBe(true)
     }
     expect(boss('king-in-the-mists').drops.find(d => d.name === 'The Light of Meaning')?.variable).toBe(true)
