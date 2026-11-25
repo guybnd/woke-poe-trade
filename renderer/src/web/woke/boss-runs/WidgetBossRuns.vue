@@ -110,23 +110,31 @@
               <template v-if="tab === 'drops'">
                 <WEmpty v-if="!sel.drops.length" :art="{ mechanic: 'maven' }">No drop list for this boss yet. Log a kill or add drops under Rates &amp; sources.</WEmpty>
                 <template v-else>
-                  <div class="w-row w-row--head" :class="$style.dropGrid"><span title="Count this drop in the loot">On</span><span>Drop</span><span class="text-right">Chance</span><span class="text-right">Price</span><span class="text-right">Per run</span><span>Share</span></div>
+                  <div class="w-row w-row--head" :class="$style.dropGrid"><span>Drop</span><span class="text-right">Chance</span><span class="text-right">Price</span><span class="text-right">Per run</span><span>Share</span></div>
                   <template v-for="d in sel.drops" :key="d.name">
-                  <div class="w-row" :class="[$style.dropGrid, { [$style.off]: !d.included }]">
-                    <input type="checkbox" :checked="d.included" :aria-label="`Count ${d.name}`" @change="toggleDrop(sel.boss.id, d.name, ($event.target as HTMLInputElement).checked, d.tooRare)">
+                  <!-- A shared profit line (ui/line-item.ts): click the price to
+                       set yours, hover for ⊘ leave out and ⋯, right-click for
+                       the same menu. A left-out drop stays, struck. -->
+                  <div class="w-row w-line" :class="[$style.dropGrid, { 'w-line-out': !d.included }]" tabindex="0" data-boss-drop
+                    @contextmenu="dropMenu($event, d)" @keydown="lineKeys($event, dropState(d), dropHandlers(d))">
                     <span v-item-tip="{ name: d.name, type: typeByName.get(d.name) }" class="w-trunc flex items-center gap-1">
-                      <WIcon :src="art(d.name)" fallback="fas fa-gem" /><span class="w-trunc">{{ d.name }}</span><span v-if="d.qty > 1" class="w-dim">×{{ d.qty }}</span>
+                      <WIcon :src="art(d.name)" fallback="fas fa-gem" class="w-line-name" /><span class="w-trunc w-line-name">{{ d.name }}</span><span v-if="d.qty > 1" class="w-dim">×{{ d.qty }}</span>
+                      <span v-if="!d.included && !d.tooRare" class="w-line-tag">left out</span>
                       <i v-if="dropThin(d)" class="fas fa-exclamation-circle w-faint" :title="d.priceSource === 'thin' ? `${thinTitle(dropThin(d)!)} Counted as 0 (Skip low confidence).` : thinTitle(dropThin(d)!)" />
                       <WChip v-if="d.tooRare" :title="`Rarer than 1 in ${config.plannedRuns} runs`">rare</WChip>
                     </span>
                     <span class="text-right w-num" :class="d.rateSource === 'community' ? 'w-dim' : d.rateSource === 'none' ? 'w-faint' : d.rateSource === 'estimate' ? '' : 'w-accent'" :style="d.rateSource === 'estimate' ? 'color: var(--w-warn);' : ''" :title="rateTitle(d.rateSource)">{{ d.chance == null ? '?' : (d.rateSource === 'estimate' ? '~' : '') + pct(d.chance) }}</span>
                     <span class="flex items-center justify-end gap-1">
-                      <WChip v-if="d.priceMode" clickable :active="d.priceMode === 'custom'" :title="spreadTitle(d)" @click="editing = editing === d.name ? null : d.name">{{ modeLabel(d) }}</WChip>
-                      <WChip v-else-if="d.priceSource === 'trade'" :title="`poe.ninja doesn't list this. Price from ${d.listings} instant buyouts on trade.`">trade</WChip>
-                      <WPrice :chaos="d.price" :divine="divine" />
+                      <WChip v-if="d.priceMode && pricing !== d.name" clickable :active="d.priceMode === 'custom'" :title="spreadTitle(d)" @click="editing = editing === d.name ? null : d.name">{{ modeLabel(d) }}</WChip>
+                      <WChip v-else-if="d.priceSource === 'trade' && pricing !== d.name" :title="`poe.ninja doesn't list this. Price from ${d.listings} instant buyouts on trade.`">trade</WChip>
+                      <input v-if="pricing === d.name" :ref="focusBox" v-model="priceDraft" type="number" min="0" step="any" class="w-input px-1 rounded text-right" style="width: 4.6rem;"
+                        :aria-label="`Your price for one ${d.name}, in chaos`" title="Your price for one, in chaos. Enter keeps it, Esc cancels"
+                        @keydown.enter.prevent="savePrice(d)" @keydown.esc.prevent.stop="pricing = null" @blur="savePrice(d)">
+                      <WLineNum v-else :mine="d.priceSource === 'custom'" :out="!d.included" :label="`${d.priceSource === 'custom' ? 'Change my' : 'Set my'} price for ${d.name}`" data-boss-price @edit="startPrice(d)"><WPrice :chaos="d.price" :divine="divine" /></WLineNum>
                     </span>
-                    <span class="text-right"><WPrice :chaos="d.chance == null || d.price == null ? null : d.value" :divine="divine" /></span>
+                    <span class="text-right" :class="{ [$style.struck]: !d.included }"><WPrice :chaos="d.chance == null || d.price == null ? null : d.value" :divine="divine" /></span>
                     <span :class="$style.share"><i :style="{ width: (sel.loot > 0 ? d.value / sel.loot * 100 : 0) + '%' }" /></span>
+                    <WLineActs :name="d.name" :out="!d.included" :entries="dropEntries(d)" :head="e => itemMenuHead({ name: d.name, type: typeByName.get(d.name) }, e)" @out="leaveDropOut(d, $event)" />
                   </div>
                   <div v-if="editing === d.name && editingRow" class="flex flex-wrap items-center gap-2 text-sm" :class="$style.editor">
                     <span v-item-tip="{ name: editingRow.name, type: typeByName.get(editingRow.name) }" class="w-accent">{{ editingRow.name }}</span>
@@ -280,7 +288,9 @@ import { inject, computed, nextTick, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { thinTitle } from '../market/types'
-import { WInfo, WPanel, WTabs, WSegmented, WField, WButton, WEmpty, WPrice, WChip, WListItem, WIcon, WBanner, WSkeleton, openMenu, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WSegmented, WField, WButton, WEmpty, WPrice, WChip, WListItem, WIcon, WBanner, WSkeleton, WLineActs, WLineNum, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
+import type { MenuEntry } from '../ui'
+import { itemMenuHead } from '../ui/tooltip/item-menu'
 import { ninjaIcon } from '../ui/game-icons'
 import { usePriceIndex } from '../market/price-index'
 import { useLeagues } from '@/web/background/Leagues'
@@ -517,6 +527,50 @@ function toggleDrop (id: string, name: string, on: boolean, tooRare: boolean) {
   if (on === tooRare) rest[name] = on
   props.config.dropToggles[id] = rest
 }
+// A drop as a shared profit line (ui/line-item.ts). Leave out is the old
+// On box; your price is My price (any drop, not just rolled ones).
+function leaveDropOut (d: DropRow, out: boolean) {
+  const id = sel.value?.boss.id
+  if (!id) return
+  toggleDrop(id, d.name, !out, d.tooRare)
+  lineToast(out ? 'out' : 'in', d.name, () => { toggleDrop(id, d.name, out, d.tooRare) })
+}
+// A plain drop keeps no price mode: your price alone wins (calc.ts dropPrice).
+// A rolled one (with the price strip) goes to My price, and back to
+// poe.ninja's, as the menu says.
+function setMyDropPrice (d: DropRow, chaos: number | null) {
+  const custom = Object.fromEntries(Object.entries(props.config.customPrices).filter(([k]) => k !== d.name))
+  if (chaos != null) custom[d.name] = chaos
+  props.config.customPrices = custom
+  if (d.priceMode != null) props.config.priceModes = { ...props.config.priceModes, [d.name]: chaos != null ? 'custom' : 'median' }
+}
+const pricing = shallowRef<string | null>(null)
+const priceDraft = shallowRef<string | number>('')
+let priceOpened = ''
+function startPrice (d: DropRow) {
+  priceDraft.value = priceOpened = d.price != null && d.price > 0 ? String(Number(d.price.toPrecision(6))) : ''
+  pricing.value = d.name
+}
+const focusBox = (el: unknown) => { if (el instanceof HTMLInputElement && document.activeElement !== el) { el.focus(); el.select() } }
+function savePrice (d: DropRow) {
+  if (pricing.value !== d.name) return
+  pricing.value = null
+  const text = String(priceDraft.value).trim()
+  const n = Number(text)
+  if (text === priceOpened || text === '' || !Number.isFinite(n) || n < 0) return
+  setMyDropPrice(d, n)
+}
+const dropState = (d: DropRow) => ({ out: !d.included, edited: d.priceSource === 'custom' })
+const dropHandlers = (d: DropRow) => ({
+  edit: () => { startPrice(d) },
+  reset: () => { setMyDropPrice(d, null) },
+  out: (on: boolean) => { leaveDropOut(d, on) }
+})
+const dropEntries = (d: DropRow): MenuEntry[] => lineMenu(dropState(d), dropHandlers(d), { edit: d.priceSource === 'custom' ? 'Change my price…' : 'Set my price…', reset: "Back to poe.ninja's price" })
+function dropMenu (e: MouseEvent, d: DropRow) {
+  if ((e.target as Element).closest('input')) return
+  openMenu(e, dropEntries(d), itemMenuHead({ name: d.name, type: typeByName.value.get(d.name) }, e) ?? undefined)
+}
 function setMode (name: string, mode: string) {
   props.config.priceModes[name] = mode as PriceMode
 }
@@ -646,8 +700,14 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
   gap: 6px;
 }
 .kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; font-size: var(--w-fs-md); align-items: center; }
-.dropGrid { grid-template-columns: max-content minmax(0, 1fr) 62px 104px 72px 48px; }
-.off { opacity: 0.45; }
+.dropGrid { grid-template-columns: minmax(0, 1fr) 62px 104px 72px 48px; }
+/* Each cell on row 1 by hand: the hover actions share the drop's name cell,
+   clear of the price you click. */
+.dropGrid > :nth-child(1) { grid-area: 1 / 1; } .dropGrid > :nth-child(2) { grid-area: 1 / 2; } .dropGrid > :nth-child(3) { grid-area: 1 / 3; } .dropGrid > :nth-child(4) { grid-area: 1 / 4; } .dropGrid > :nth-child(5) { grid-area: 1 / 5; }
+/* Hovered, the name makes room for them: its ! and chips stay readable. */
+.dropGrid:hover > :nth-child(1), .dropGrid:focus-within > :nth-child(1) { padding-right: 3.6em; }
+.dropGrid > :global(.w-line-acts) { position: relative; top: auto; transform: none; grid-area: 1 / 1; justify-self: end; }
+.struck { text-decoration: line-through; color: var(--w-dim); }
 .cardStats { margin-top: 4px; }
 .cardDrop { display: grid; grid-template-columns: minmax(0, 1fr) 46px 58px; gap: 6px; align-items: center; }
 .editor { padding: 8px var(--w-pad); background: var(--w-panel-2); border-bottom: 1px solid var(--w-line); }
