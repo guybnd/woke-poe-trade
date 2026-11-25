@@ -221,3 +221,4 @@
 - Map price check: Save next to Farming keeps what you picked (which numbers are on and how close their minimum sits to the map, the Kind, mods set to Not) as your own Farming button; it applies to the next maps until you pick another, and its × deletes it.
 - Boss runs: each drop works like the other profit lists. Hover for ⊘ to leave it out of the loot (it stays, struck, in place of the old On box) and ⋯, right-click for the same menu, or click its price to set yours.
 - Net worth runs: a kit line you take off before Start stays in the list, struck, so you can count it again from its ⊘.
+- Ctrl+Space: hover a Recent line to save it (bookmark) or remove it (×). Saved lines stay on top of an empty box until you remove them, and Delete removes the picked line.

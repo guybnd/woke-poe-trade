@@ -46,7 +46,7 @@ const DEFAULTS = new Map(SEARCH_GROUPS.map(g => [g.id, g.mode]))
 
 // Always shown in full: what you searched for, and the empty box's lists.
 export function isLocked (label: string): boolean {
-  return label === 'Answer' || label === 'Prices' || label === 'Recent' || label === 'Things to try' || label.startsWith('Uniques on ')
+  return label === 'Answer' || label === 'Prices' || label === 'Recent' || label === 'Saved' || label === 'Things to try' || label.startsWith('Uniques on ')
 }
 
 export function groupMode (label: string, modes: Readonly<Record<string, GroupMode>> | undefined): GroupMode {

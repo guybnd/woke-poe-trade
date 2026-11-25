@@ -29,7 +29,7 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
 const WINDOWLESS = new Set(['price-check'])
 // Lines about something that only shows once you've used it (your own past
 // searches): opening the tool shows nothing new, so no Show me.
-const NOTHING_TO_SHOW = new Set(['search-recent-queries'])
+const NOTHING_TO_SHOW = new Set(['search-recent-queries', 'search-recent-save'])
 
 // Whether Show me has somewhere real to go: a tab, a sample, the Settings
 // page the feature lives on, or the tool's own window. `byName`: the client
