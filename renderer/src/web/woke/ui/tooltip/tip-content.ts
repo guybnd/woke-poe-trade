@@ -471,6 +471,12 @@ export function packFiles (kind: TipKind): Array<keyof TipPack> {
 
 // base: shown when the data has no text for a unique. atBase: the base this
 // unique is being looked at on, for those that come on several.
+// "Map (Tier 16)" (poe.ninja's 3.30 map rows, the drop counter's lines): its
+// base, "Map". Null for any other name.
+export function tieredMapBase (name: string): string | null {
+  return /^((?:Blighted |Blight-ravaged )?Map) \(Tier \d+\)$/.exec(name)?.[1] ?? null
+}
+
 export function buildTip (pack: TipPack, ref: { name: string, kind: TipKind, variant?: string, base?: string, atBase?: string }): TipModel | null {
   const { name, kind, variant } = ref
   if (kind === 'unique') {
