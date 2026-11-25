@@ -33,5 +33,16 @@ history:
     date: '2026-11-24T17:26:36.557Z'
     selfAttested: true
     id: c-2026-11-24t17-26-36-557z
+  - type: comment
+    user: Agent
+    comment: >-
+      Lead from the PR 904 thread: on master, map-mods-tabs.spec.ts > "checking
+      a chart shows the verdict card with its mods" fails ~1 in 3. After Alt+M
+      the Map check card says "That item isn't a map…" for
+      items/chart-sandy-seabed.txt.
+    date: '2026-11-25T03:34:13.221Z'
+    selfAttested: true
+    pin: true
+    id: c-2026-11-25t03-34-13-221z
 ---
 Failed once in shard 2/4 on PR 864's CI run, passed on re-run. Investigate the timing/flake.
