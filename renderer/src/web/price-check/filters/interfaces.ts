@@ -105,6 +105,7 @@ export interface ItemFilters {
   }
   // woke: mods the item doesn't have, added from the search line under the stats.
   addedMods?: AddedMod[]
+  templateNot?: TemplateNotMod[]
   trade: {
     offline: boolean
     onlineInLeague: boolean
@@ -119,6 +120,13 @@ export interface ItemFilters {
 
 // The trade site's kinds an added mod can be searched as. `pseudo` is the total.
 export type AddedModKind = 'pseudo' | 'explicit' | 'implicit' | 'crafted' | 'fractured' | 'enchant'
+
+// woke: a farming template's Not mods the map hasn't got, searched as Not while
+// its "Exclude my bad mods" chip is on (map-mods/farm-templates.ts).
+export interface TemplateNotMod {
+  statRef: string
+  tradeId: string[]
+}
 
 export interface AddedMod {
   statRef: string

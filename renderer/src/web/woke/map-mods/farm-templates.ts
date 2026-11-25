@@ -5,6 +5,8 @@
 // Saved on the Map mods window's config; the last one picked is used for the
 // next maps, like the built-in goals (goal-config.ts).
 import { AppConfig } from '@/web/Config'
+import { STAT_BY_REF_V2 } from '@/assets/data'
+import type { TemplateNotMod } from '@/web/price-check/filters/interfaces'
 import { isModuleOn } from '../modules'
 
 export interface FarmTemplate {
@@ -20,6 +22,9 @@ export interface FarmTemplate {
   kind?: string
   // Map mods (their stat refs) set to Not.
   not?: string[]
+  // Guy's pick: "Exclude my bad mods" is on. Every search leaves out maps with
+  // any of the Not mods, even ones the checked map hasn't got. Off by default.
+  excludeNot?: true
 }
 
 interface Holder { farmTemplates?: FarmTemplate[], farmTemplate?: string }
@@ -66,6 +71,38 @@ export function deleteTemplate (id: string): void {
   if (!w) return
   w.farmTemplates = farmTemplates().filter(t => t.id !== id)
   if (w.farmTemplate === id) delete w.farmTemplate
+}
+
+export function setExcludeNot (id: string, on: boolean): void {
+  const w = widget()
+  if (!w) return
+  w.farmTemplates = farmTemplates().map(t => {
+    if (t.id !== id) return t
+    const next: FarmTemplate = { ...t, excludeNot: true }
+    if (!on) delete next.excludeNot
+    return next
+  })
+}
+
+// A map mod's trade ids, as the map's own Not row searches it (prefix or suffix).
+function mapModIds (ref: string): string[] {
+  const found = STAT_BY_REF_V2(ref)
+  const stats = !found ? [] : 'stats' in found ? found.stats : [found]
+  const ids = new Set<string>()
+  for (const s of stats) if (s.ref === ref) for (const id of s.trade.ids.explicit ?? []) ids.add(id)
+  return Array.from(ids)
+}
+
+// The template's Not mods the map hasn't got, with their trade ids: "Exclude my
+// bad mods" puts them in the search's Not group. The map's own ones are its Not rows.
+export function templateNotMods (t: FarmTemplate, onMap: ReadonlySet<string>, idsOf: (ref: string) => string[] = mapModIds): TemplateNotMod[] {
+  const out: TemplateNotMod[] = []
+  for (const ref of t.not ?? []) {
+    if (onMap.has(ref)) continue
+    const tradeId = idsOf(ref)
+    if (tradeId.length) out.push({ statRef: ref, tradeId })
+  }
+  return out
 }
 
 // A short name not used yet: "Farm 1", "Farm 2"...

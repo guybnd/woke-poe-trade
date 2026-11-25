@@ -820,6 +820,11 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
     appendAndFilter(addedModToFilter(mod), qAnd, query.stats)
   }
 
+  // woke: a farming template's Not mods this map hasn't got ("Exclude my bad mods").
+  for (const mod of filters.templateNot ?? []) {
+    qNot.filters.push(...mod.tradeId.map(id => ({ id, disabled: false })))
+  }
+
   // woke: a cap of N prefixes leaves out listings with N+1 or more. A "not" group
   // keeps listings that have no prefix at all, which a count stat may not carry.
   if (filters.affixCaps) {

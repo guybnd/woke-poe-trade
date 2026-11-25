@@ -40,6 +40,10 @@
         <button v-else type="button" :class="$style.tool" data-template-save
           title="Save what you picked (numbers and their mins, Kind, mods set to Not) as a Farming button for the next maps"
           @click="startSave"><i class="fas fa-plus" />Save</button>
+        <!-- Guy's pick: the template's Not mods in every search, even ones this map hasn't got.
+             Off by default, lit while on, remembered on the template. -->
+        <button v-if="template?.not?.length && filters && addMods" type="button" :class="[$style.tool, excludeOn && $style.toolOn]"
+          :aria-pressed="excludeOn" :title="excludeTitle" data-map-exclude-bad @click="toggleExclude"><i class="fas fa-ban" />Exclude my bad mods</button>
       </div>
       <!-- Guy (2026-11-24): a map's kind is its influence: normal, Elder, Shaper, a conqueror's, each with
            the Originator or without. The search finds only this map's kind; the menu picks another, Any
@@ -167,7 +171,7 @@ import { FilterTag } from '@/web/price-check/filters/interfaces'
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
 import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalDisabled } from './goal'
 import { farmGoal, setFarmGoal } from './goal-config'
-import { activeTemplate, deleteTemplate, farmTemplates, nextTemplateName, saveTemplate, setActiveTemplate, templateMin } from './farm-templates'
+import { activeTemplate, deleteTemplate, farmTemplates, nextTemplateName, saveTemplate, setActiveTemplate, setExcludeNot, templateMin, templateNotMods } from './farm-templates'
 import type { FarmTemplate } from './farm-templates'
 import { tickPref } from '../price-insight/tick-prefs'
 import { ItemCategory } from '@/parser'
@@ -500,7 +504,7 @@ function setGoal (g: FarmGoal) {
 function templateTitle (t: FarmTemplate): string {
   const parts = [t.on.length ? `${t.on.join(', ')} on` : 'No numbers on']
   if (t.kind) parts.push(`Kind: ${t.kind === 'own' ? "the map's own" : choices.value.find(c => c.key === t.kind)?.label ?? t.kind}`)
-  if (t.not?.length) parts.push(`${t.not.length} ${t.not.length === 1 ? 'mod' : 'mods'} set to Not`)
+  if (t.not?.length) parts.push(`${t.not.length} ${t.not.length === 1 ? 'mod' : 'mods'} set to Not${t.excludeNot ? ', left out of every search' : ''}`)
   return `Your template ${t.name}: ${parts.join('; ')}. Remembered for the next maps.`
 }
 function pickTemplate (t: FarmTemplate) {
@@ -561,8 +565,41 @@ function confirmSave () {
   const key = current.value?.key
   const kind = !key ? undefined : key === ownKey.value ? 'own' : key
   const not = searchable.value.filter(f => f.mapMod && stateOf(f) === 'not').map(f => f.statRef)
-  saveTemplate({ name, on, minPct, extraMin, kind, not })
+  saveTemplate({ name, on, minPct, extraMin, kind, not, ...(template.value?.excludeNot ? { excludeNot: true } : {}) })
 }
+// "Exclude my bad mods" (Guy's pick): a template's Not mods go in the search's
+// Not group even when this map hasn't got them, so the results can't hold maps
+// with the mods you avoid. Base map pauses it for this item.
+const excludePaused = shallowRef(false)
+watch(() => props.item, () => { excludePaused.value = false })
+const excludeOn = computed(() => !!template.value?.excludeNot && !excludePaused.value)
+function toggleExclude () {
+  const t = template.value
+  if (!t) return
+  if (excludePaused.value) {
+    excludePaused.value = false
+    if (t.excludeNot) return
+  }
+  setExcludeNot(t.id, !t.excludeNot)
+}
+const onMapRefs = computed(() => new Set(searchable.value.filter(f => f.mapMod).map(f => f.statRef)))
+watchEffect(() => {
+  const f = props.filters
+  if (!f) return
+  const t = template.value
+  const list = t && excludeOn.value && props.addMods && isMap.value ? templateNotMods(t, onMapRefs.value) : []
+  f.templateNot = list.length ? list : undefined
+})
+const excludeTitle = computed(() => {
+  const t = template.value
+  if (!t?.not?.length) return ''
+  const n = t.not.length
+  const away = t.not.filter(ref => !onMapRefs.value.has(ref)).length
+  const mods = `${n} ${n === 1 ? 'mod' : 'mods'} set to Not`
+  return excludeOn.value
+    ? `On: every search leaves out maps with any of ${t.name}'s ${mods} (${away} not on this map). Click to turn off.`
+    : `Off: only this map's own mods are set to Not. Turn on to leave out maps with any of ${t.name}'s ${mods}, on every map.`
+})
 function applyGoal (g: FarmGoal) {
   for (const p of result.value?.props ?? []) {
     const f = propFilter(p.label)
@@ -602,8 +639,9 @@ const hasFilters = computed(() => propFilters.value.length > 0 || baseMods.value
 const baseOnly = computed(() =>
   !plainFilters.value.some(isOnFilter) &&
   baseMods.value.every(f => stateOf(f) === 'any') &&
-  (props.filters?.addedMods ?? []).every(m => m.disabled))
-interface BaseSnapshot { on: FilterOrGroup[], mods: Array<[StatFilter, ModState]>, added: AddedMod[] }
+  (props.filters?.addedMods ?? []).every(m => m.disabled) &&
+  !excludeOn.value)
+interface BaseSnapshot { on: FilterOrGroup[], mods: Array<[StatFilter, ModState]>, added: AddedMod[], exclude: boolean }
 const clearedRef = shallowRef<BaseSnapshot | null>(null)
 watch(() => props.item, () => { clearedRef.value = null })
 function toggleBase () {
@@ -611,11 +649,13 @@ function toggleBase () {
     const cleared: BaseSnapshot = {
       on: plainFilters.value.filter(isOnFilter),
       mods: baseMods.value.filter(f => stateOf(f) !== 'any').map(f => [f, stateOf(f)]),
-      added: (props.filters?.addedMods ?? []).filter(m => !m.disabled)
+      added: (props.filters?.addedMods ?? []).filter(m => !m.disabled),
+      exclude: excludeOn.value
     }
     cleared.on.forEach(f => { setOnFilter(f, false) })
     cleared.mods.forEach(([f]) => { setState(f, 'any') })
     cleared.added.forEach(m => { m.disabled = true })
+    if (cleared.exclude) excludePaused.value = true
     clearedRef.value = cleared
   } else if (clearedRef.value) {
     const cleared = clearedRef.value
@@ -625,6 +665,7 @@ function toggleBase () {
     cleared.mods.filter(([f]) => stats.includes(f)).forEach(([f, state]) => { setState(f, state) })
     const added = props.filters?.addedMods ?? []
     cleared.added.filter(m => added.includes(m)).forEach(m => { m.disabled = false })
+    if (cleared.exclude) excludePaused.value = false
     clearedRef.value = null
   }
 }
@@ -635,7 +676,8 @@ const baseTitle = computed(() => baseOnly.value
 const picked = computed(() => {
   // The influence is what the map is, not a pick.
   const has = baseMods.value.filter(f => stateOf(f) === 'has').length
-  const not = baseMods.value.filter(f => stateOf(f) === 'not').length
+  // The template's Not mods this map hasn't got ("Exclude my bad mods") count too.
+  const not = baseMods.value.filter(f => stateOf(f) === 'not').length + (props.filters?.templateNot?.length ?? 0)
   // Mods added from the line below count too, so a folded section still says what it searches.
   const added = (props.filters?.addedMods ?? []).filter(m => !m.disabled).length
   return [has ? `has ${has}` : '', not ? `not ${not}` : '', added ? `+${added} added` : ''].filter(Boolean).join(' · ')
