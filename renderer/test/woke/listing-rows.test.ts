@@ -18,7 +18,7 @@ function listing (over: Partial<RowListing> & { hoursAgo?: number } = {}): RowLi
     hasFee: true,
     hasNote: true,
     isMine: false,
-    accountName: `seller${seq}`,
+    accountName: 'seller',
     accountStatus: 'online',
     indexedAt: new Date(NOW - hoursAgo * HOUR).toISOString(),
     relativeDate: `${hoursAgo} hr. ago`,
@@ -68,13 +68,22 @@ describe('groupListings', () => {
     expect(rows).toHaveLength(2)
   })
 
-  it('counts a seller\'s repeated listings and tells sellers apart', () => {
+  it('counts a seller\'s repeated listings', () => {
     const [row] = groupListings([
       listing({ listedTimes: 4, accountName: 'wall' }),
-      listing({ listedTimes: 1, accountName: 'other' })
+      listing({ listedTimes: 1, accountName: 'wall' })
     ], { now: NOW, merge: true })
     expect(row.count).toBe(5)
-    expect(row.sellers).toBe(2)
+    expect(row.sellers).toBe(1)
+  })
+
+  it('never merges different sellers: a row is one hideout to travel to', () => {
+    const rows = groupListings([
+      listing({ accountName: 'a' }),
+      listing({ accountName: 'b' }),
+      listing({ accountName: 'a' })
+    ], { now: NOW, merge: true })
+    expect(rows.map(r => [r.lead.accountName, r.count])).toEqual([['a', 2], ['b', 1]])
   })
 
   it('never hides a visible difference in a merged row', () => {

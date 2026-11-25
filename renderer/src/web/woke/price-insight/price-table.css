@@ -120,7 +120,8 @@
 .w-pc-count { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .w-pc-count-n { min-width: 2.4em; color: var(--w-dim); font-size: var(--w-fs-sm); font-variant-numeric: tabular-nums; }
 .w-pc-count-bar { display: block; width: 28px; height: 3px; border-radius: var(--w-r-sm); background: var(--w-panel-3); overflow: hidden; }
-.w-pc-count-bar > span { display: block; height: 100%; background: var(--w-accent); opacity: 0.75; }
+.w-pc-count-bar > span { display: block; height: 100%; background: color-mix(in srgb, var(--w-accent) 75%, transparent); }
+/* No opacity on the bar: opacity paints it above the slid-out "Travel" face, striking it through. */
 
 .w-pc-age { color: var(--w-dim); font-size: var(--w-fs-sm); text-align: right; white-space: nowrap; }
 .w-pc-age-inner { display: inline-flex; align-items: center; gap: 5px; }
@@ -352,6 +353,9 @@
   background-image: linear-gradient(var(--w-accent-soft), var(--w-accent-soft));
   white-space: nowrap;
 }
+/* The count bar sits under the slid-out face: hide it so "Travel" stands alone. */
+.w-pc-table tbody tr:hover .w-pc-travel ~ .w-pc-count-bar,
+.w-pc-travel:focus-visible ~ .w-pc-count-bar { visibility: hidden; }
 .w-pc-table tbody tr:hover .w-pc-travel .w-pc-travel-label,
 .w-pc-travel:focus-visible .w-pc-travel-label { display: inline; }
 .w-pc-table tbody .w-pc-travel:hover .w-pc-travel-face { background-image: linear-gradient(var(--w-accent-soft), var(--w-accent-soft)), linear-gradient(var(--w-accent-soft), var(--w-accent-soft)); }

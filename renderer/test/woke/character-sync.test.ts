@@ -427,12 +427,31 @@ describe('fileStore with an older read', () => {
     fs.utimesSync(path.join(dir, 'last-items-reply.json'), then, then)
     fs.utimesSync(path.join(dir, 'last-passives-reply.json'), then, then)
     const s = (await store.load())!
-    expect(s.version).toBe(2)
+    expect(s.version).toBe(3)
     expect(s.readAt).toBe(5000)
     expect(s.gear[0].item.mods).toEqual(['+45 to maximum Life'])
     expect(s.tree.nodes).toEqual([1, 2])
-    // Written back as version 2.
-    expect(JSON.parse(fs.readFileSync(path.join(dir, 'current.json'), 'utf8')).version).toBe(2)
+    // Written back as the current version.
+    expect(JSON.parse(fs.readFileSync(path.join(dir, 'current.json'), 'utf8')).version).toBe(3)
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('reads a version 2 snapshot again for jewel radii, or keeps it as it is', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-char-v2-'))
+    const store = fileStore(dir)
+    const old = { version: 2, account: 'guy', readAt: 5000, character: { name: 'whekq', league: 'Covens', class: 'Gladiator', level: 81 }, gear: [], gems: [], tree: { nodes: [7], clusterNodes: [], masteries: {}, jewels: [] } }
+    fs.writeFileSync(path.join(dir, 'current.json'), JSON.stringify(old))
+    // No replies saved: kept, still version 2.
+    expect(await store.load()).toEqual(old)
+    fs.writeFileSync(path.join(dir, 'last-items-reply.json'), ITEMS)
+    fs.writeFileSync(path.join(dir, 'last-passives-reply.json'), JSON.stringify({ hashes: [1, 2], items: [{ x: 0, frameType: 3, name: 'Elegant Hubris', typeLine: 'Timeless Jewel', baseType: 'Timeless Jewel', properties: [{ name: 'Radius', values: [['Large', 0]] }], explicitMods: ['Commissioned 148980 coins to commemorate Caspiro'] }] }))
+    const then = new Date(4)
+    fs.utimesSync(path.join(dir, 'last-items-reply.json'), then, then)
+    fs.utimesSync(path.join(dir, 'last-passives-reply.json'), then, then)
+    const s = (await store.load())!
+    expect(s.version).toBe(3)
+    expect(s.tree.jewels[0].item.radius).toBe('Large')
+    expect(JSON.parse(fs.readFileSync(path.join(dir, 'current.json'), 'utf8')).version).toBe(3)
     fs.rmSync(dir, { recursive: true, force: true })
   })
 })

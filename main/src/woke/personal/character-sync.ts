@@ -20,7 +20,9 @@ import { SIGNED_OUT, characterEntry, cleanMod, socketColour, wornItem } from './
 
 // 2: mods read from 3.30's { description } objects. A version 1 read lost
 // every mod: it is read again from the saved replies, or dropped.
-export const SNAPSHOT_VERSION = 2
+// 3: jewels keep their radius (PoB needs it). A version 2 read is read again
+// from the saved replies when it can be, else kept as it is.
+export const SNAPSHOT_VERSION = 3
 export const AUTO_MS = 5 * 60_000
 export const MANUAL_MS = 30_000
 const MAX_WAIT_MS = 10_000
@@ -251,6 +253,26 @@ export function fileStore (dir: string): CharacterStore {
       await fs.rename(tmp, file).catch(async (e: Error) => { await fs.rm(tmp, { force: true }).catch(() => {}); throw e })
     }
   }
+  // The read again from the replies saved beside it, only if they are that
+  // read's: a later read that failed partway leaves newer ones (written before
+  // readAt is taken), or another character's.
+  const rebuild = async (s: CharacterSnapshot): Promise<CharacterSnapshot | null> => {
+    try {
+      const itemsFile = path.join(dir, 'last-items-reply.json')
+      const passivesFile = path.join(dir, 'last-passives-reply.json')
+      const [itemsAt, passivesAt] = await Promise.all([fs.stat(itemsFile), fs.stat(passivesFile)])
+      if (itemsAt.mtimeMs > s.readAt + 1000 || passivesAt.mtimeMs > s.readAt + 1000) return null
+      const itemsBody = await fs.readFile(itemsFile, 'utf8')
+      const named = (JSON.parse(itemsBody) as { character?: { name?: unknown } }).character?.name
+      if (typeof named === 'string' && named !== s.character.name) return null
+      const items = parseCharacterItems(itemsBody)
+      const tree = parsePassives(await fs.readFile(passivesFile, 'utf8'))
+      if (!items || !tree) return null
+      return { ...s, version: SNAPSHOT_VERSION, ...items, tree }
+    } catch {
+      return null
+    }
+  }
   const store: CharacterStore = {
     load: async () => {
       try {
@@ -259,24 +281,15 @@ export function fileStore (dir: string): CharacterStore {
           Array.isArray(s.gear) && Array.isArray(s.gems) && s.tree && Array.isArray(s.tree.nodes)
         if (!ok) return null
         if (s.version === SNAPSHOT_VERSION) return s
-        if (s.version !== 1) return null
-        // The replies saved beside it, only if they are that read's: a later
-        // read that failed partway leaves newer ones (written before readAt is
-        // taken), or another character's.
-        const itemsFile = path.join(dir, 'last-items-reply.json')
-        const passivesFile = path.join(dir, 'last-passives-reply.json')
-        const [itemsAt, passivesAt] = await Promise.all([fs.stat(itemsFile), fs.stat(passivesFile)])
-        if (itemsAt.mtimeMs > s.readAt + 1000 || passivesAt.mtimeMs > s.readAt + 1000) return null
-        const itemsBody = await fs.readFile(itemsFile, 'utf8')
-        const named = (JSON.parse(itemsBody) as { character?: { name?: unknown } }).character?.name
-        if (typeof named === 'string' && named !== s.character.name) return null
-        const items = parseCharacterItems(itemsBody)
-        const tree = parsePassives(await fs.readFile(passivesFile, 'utf8'))
-        if (!items || !tree) return null
-        const rebuilt: CharacterSnapshot = { ...s, version: SNAPSHOT_VERSION, ...items, tree }
-        // Written back, so the next start (and other readers of the file) have it.
-        await store.save(rebuilt).catch(() => {})
-        return rebuilt
+        if (s.version !== 1 && s.version !== 2) return null
+        const rebuilt = await rebuild(s)
+        if (rebuilt) {
+          // Written back, so the next start (and other readers of the file) have it.
+          await store.save(rebuilt).catch(() => {})
+          return rebuilt
+        }
+        // A version 2 read is whole, only without jewel radii.
+        return s.version === 2 ? s : null
       } catch {
         return null
       }

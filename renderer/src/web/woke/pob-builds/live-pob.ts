@@ -30,6 +30,8 @@ export function pobNativeText (item: PobItem): string {
   if (item.sockets) lines.push(`Sockets: ${item.sockets}`)
   if (item.itemLevel) lines.push(`Item Level: ${item.itemLevel}`)
   if (item.levelReq) lines.push(`LevelReq: ${item.levelReq}`)
+  // Without it PoB gives a radius jewel no radius: a timeless jewel converts nothing.
+  if (item.radius) lines.push(`Radius: ${item.radius}`)
   for (const inf of item.influences ?? []) lines.push(`${inf} Item`)
   // PoB counts lines, and one implicit can span two.
   const implicitLines = item.implicits.flatMap((line, i) => line.split('\n').map(part => `${item.implicitKinds?.[i] === 'crafted' ? '{crafted}' : ''}${part}`))

@@ -717,7 +717,7 @@ export default defineComponent({
     const shownColumns = computed(() => allColumns.value.slice(0, columnCap.value))
     const hiddenColumns = computed(() => allColumns.value.slice(columnCap.value))
 
-    // woke: improved merges a price into one row; classic stays one row per listing.
+    // woke: improved merges a seller's listings at one price into one row; classic stays one row per listing.
     // The trade site orders by its own currency ratios; re-sort what's fetched by
     // poe.ninja's rates so chaos and divine prices interleave by real value.
     // woke: Bulk keeps sellers with two or more copies at a price. Off for each new search.

@@ -22,6 +22,13 @@ describe('live PoB build', () => {
     expect(pobNativeText(SNAP.gear[0].item)).toBe('Rarity: RARE\nHorror Shackle\nHeavy Belt\nImplicits: 1\n+31 to Strength\n+80 to maximum Life\n{crafted}Hits can\'t be Evaded\nCorrupted')
   })
 
+  it('writes a jewel\'s radius, which PoB needs to convert a timeless jewel\'s passives', () => {
+    const hubris = { rarity: 'UNIQUE' as const, name: 'Elegant Hubris', base: 'Timeless Jewel', sockets: '', radius: 'Large', implicits: [], mods: ['Commissioned 148980 coins to commemorate Caspiro', 'Passives in radius are Conquered by the Eternal Empire'] }
+    expect(pobNativeText(hubris)).toBe('Rarity: UNIQUE\nElegant Hubris\nTimeless Jewel\nRadius: Large\nImplicits: 0\nCommissioned 148980 coins to commemorate Caspiro\nPassives in radius are Conquered by the Eternal Empire')
+    const d = parseBuild(liveBuildXml({ ...SNAP, tree: { ...SNAP.tree, jewels: [{ x: 0, item: hubris }] } }, [61419]).replace('treeVersion="latest"', 'treeVersion="3_29"'))
+    expect(d.trees[0].sockets?.[0]).toMatchObject({ node: 61419, item: { name: 'Elegant Hubris', radius: 'Large', mods: hubris.mods } })
+  })
+
   it('reads back with class, tree, gear and gems', () => {
     const d = parseBuild(liveBuildXml(SNAP, []).replace('treeVersion="latest"', 'treeVersion="3_29"'))
     expect([d.className, d.ascendClassName, d.level]).toEqual(['Duelist', 'Gladiator', 81])

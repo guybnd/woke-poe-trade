@@ -84,6 +84,14 @@ function property (item: Raw, name: string): number | undefined {
   return m ? Number(m[0]) : undefined
 }
 
+// A text property's first value, e.g. a jewel's "Radius": "Large".
+function textProperty (item: Raw, name: string): string | undefined {
+  const props = Array.isArray(item.properties) ? item.properties as Raw[] : []
+  const p = props.find(x => x && x.name === name)
+  const first = p && Array.isArray(p.values) ? (p.values as unknown[][])[0]?.[0] : undefined
+  return typeof first === 'string' && first.trim() ? first.trim() : undefined
+}
+
 // "Quality (Resistance Modifiers)": a catalyst's quality, not the item's own.
 function catalystQuality (item: Raw): number | undefined {
   const props = Array.isArray(item.properties) ? item.properties as Raw[] : []
@@ -152,6 +160,8 @@ export function wornItem (raw: Raw): PobItem {
     name: named ? name : rarity === 'NORMAL' ? baseType : typeLine,
     base: named ? baseType : '',
     sockets: socketText(raw),
+    // PoB needs it to find the passives a radius jewel (timeless, Thread of Hope) touches.
+    radius: textProperty(raw, 'Radius'),
     // item-text.ts writes implicits PoB marks crafted as enchants.
     implicits: [...enchants, ...implicits],
     implicitKinds: [...enchants.map(() => 'crafted' as const), ...implicitLines.map(m => m.vestigial ? 'vestigial' as const : '' as const)],
