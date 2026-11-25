@@ -132,3 +132,16 @@ test('side window: a normal base lists the uniques an Orb of Chance can make', a
   await expect(side.getByText("Replica Kaom's Heart")).toHaveCount(0)
   await expect(side.getByText('An Orb of Chance can make one of these.')).toBeVisible()
 })
+
+test('side window: a Templar Vault reward lists its vault and the other rewards', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/currency-orb-of-intention.txt')
+  const side = overlay.page.locator('.w-pc-side')
+  await expect(side).toBeVisible({ timeout: 20_000 })
+  await expect(side.getByText("Drops from Scholar's Vault")).toBeVisible()
+  await expect(side.locator('div[data-item-row]', { hasText: 'Orb of Intention' })).toBeVisible()
+  for (const other of ['Orb of Remembrance', 'Reflecting Mist', "Valdo's Puzzle Box"]) {
+    await expect(side.locator('button[data-item-row]', { hasText: other })).toBeVisible()
+  }
+  await expect(side.getByText(/offers four rewards and you take one/)).toBeVisible()
+})

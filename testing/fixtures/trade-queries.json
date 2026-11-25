@@ -383,6 +383,56 @@
    "type": "Divine Orb"
   }
  },
+ "currency-orb-of-intention.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Orb of Intention"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Orb of Intention"
+  }
+ },
  "currency-originators-exalted.txt": {
   "opened": {
    "status": {

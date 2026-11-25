@@ -53,6 +53,7 @@ import { cardsFor, rewardOf, isFragmentSet, realDrops, recipeBook, recipesOf, re
 import { loadTipDrops, loadTipItems } from '@/web/woke/ui/tooltip/item-tip'
 import type { TipPack } from '@/web/woke/ui/tooltip/tip-content'
 import { randomDropsOnBase } from '@/web/woke/loot-filter/random-drops'
+import type { VaultTable, Vault } from '@/web/woke/vaults/vaults'
 
 const { findPriceByQuery, findPricesByName, autoCurrency, xchgRate } = usePoeninja()
 
@@ -238,6 +239,37 @@ function getChanceTargets (item: ParsedItem, drops: TipPack['drops']) {
   return [{ key: 'chance', title: `Uniques on ${item.info.name}`, rows, note: 'An Orb of Chance can make one of these.' }]
 }
 
+// woke: a Templar Vault reward: the vault that gives it and its other
+// rewards that are one item, each priced as the vault table prices it
+// (gems at level 1). A vault with no other such reward (Machinist's: only
+// Stacked Decks) adds nothing, so it isn't listed.
+function getVaults (item: ParsedItem, vaults: Vault[]) {
+  const own = item.info.refName
+  return vaults.flatMap(v => {
+    const rows: SideRow[] = []
+    const seen = new Set<string>()
+    for (const r of v.rewards) {
+      for (const it of r.items ?? []) {
+        if (seen.has(it.name)) continue
+        seen.add(it.name)
+        const info = ITEM_BY_REF('ITEM', it.name)?.[0] ?? ITEM_BY_REF('GEM', it.name)?.[0]
+        if (!info) continue
+        const chaos = findPriceByQuery({ ns: info.namespace, name: it.name, variant: it.variant })?.chaos
+        rows.push({ ...sideRow(info, chaos != null ? autoCurrency(chaos) : undefined, it.name === own, `vault:${it.name}`), tag: r.rare ? 'rare' : undefined })
+      }
+    }
+    if (!rows.some(r => !r.highlight)) return []
+    rows.sort((a, b) => chaosOfPrice(b.price) - chaosOfPrice(a.price))
+    const others = v.rewards.filter(r => !r.items?.length).length
+    return [{
+      key: `vault:${v.id}`,
+      title: `Drops from ${v.name}`,
+      rows,
+      note: `The vault offers four rewards and you take one${others ? `. It has ${others} more kinds that vary` : ''}.`
+    }]
+  })
+}
+
 // poe.ninja's gem variant in words: "20/20c" is "level 20, 20% quality, corrupted".
 function gemStateText (variant: string) {
   const m = /^(\d+)(?:\/(\d+))?(c?)$/.exec(variant)
@@ -388,6 +420,15 @@ export default defineComponent({
       if (tipDrops.value || !item || (item.rarity !== ItemRarity.Normal && item.rarity !== ItemRarity.Magic)) return
       loadTipDrops().then(drops => { tipDrops.value = drops }).catch(() => {})
     }, { immediate: true })
+    // Templar Vault rewards, read on the first check. The vault code loads
+    // then too, not at startup.
+    const vaultTable = shallowRef<{ table: VaultTable, giving: (t: VaultTable, name: string) => Vault[] } | null>(null)
+    watch(() => props.item, item => {
+      if (vaultTable.value || !item) return
+      import('@/web/woke/vaults/vaults')
+        .then(async m => { const table = await m.loadVaults(); if (table) vaultTable.value = { table, giving: m.vaultsGiving } })
+        .catch(() => {})
+    }, { immediate: true })
     const extra = computed<Section[]>(() => {
       if (!props.item || !updatedAt.value) return []
       const queryId = getDetailsId(props.item)
@@ -403,7 +444,8 @@ export default defineComponent({
         ...(tipDrops.value ? getChanceTargets(props.item, tipDrops.value) : []),
         ...recipes,
         ...cards,
-        ...(id ? getSources(props.item, id, cards.length > 0, shown) : [])
+        ...(id ? getSources(props.item, id, cards.length > 0, shown) : []),
+        ...(vaultTable.value ? getVaults(props.item, vaultTable.value.giving(vaultTable.value.table, props.item.info.refName)) : [])
       ]
     })
     const sections = computed<Section[]>(() => {
