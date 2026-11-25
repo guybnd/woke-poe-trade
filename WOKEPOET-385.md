@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-385
 title: 'F1-F3: fix the top e2e flakes'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - testing
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-380
 history:
   - type: activity
@@ -56,6 +56,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T16:10:12.814Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:53.119Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/632'
@@ -70,5 +75,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Retried in 69 CI runs: item-copy-failed.spec.ts:4 every run (3 s toast wait right after boot; guess: hotkey before overlay ready). run-timeline.spec.ts:55 (25) and :22 (15): likely reading runs before the save lands. cluster-type.spec.ts:8 rows (6), tab-rail.spec.ts:280 pinned drag (4 + 1 hard fail), item-tip.spec.ts:104 unique base (4 + 1 hard fail). Diagnose each before changing timeouts.

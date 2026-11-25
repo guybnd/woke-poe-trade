@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-387
 title: 'G1: net worth fake-game e2e from stash read to window'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - testing
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-380
 history:
   - type: activity
@@ -46,6 +46,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T16:14:36.682Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:53.019Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/642'
@@ -60,5 +65,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Net worth had 6 bugs (WOKEPOET-220, 230-235), 3,100 lines, 4 unit files, no e2e. One flow: two stash reads, a tab change not counted as profit, relic/foil uniques priced as themselves, profit per hour line.

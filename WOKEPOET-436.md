@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-436
 title: 'Session window 2: Tonight ledger with stash-read income rows'
-status: Done
+status: Released
 priority: None
 effort: M
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-434
 history:
   - type: activity
@@ -62,6 +62,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T07:07:56.051Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:41.773Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/707'
@@ -76,5 +81,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Map history becomes the Tonight list (time bar, deaths, character, Met as chips). Each net worth stash read is its own row placed by time between maps: income since last read, maps it covers, per hour; purchases left out (#696). Row click shows loot picked up.

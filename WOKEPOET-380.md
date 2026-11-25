@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-380
 title: 'Test suite: faster PR checks, fewer flakes, cover the bug-heavy areas'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - testing
   - tooling
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -41,6 +41,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T16:14:37.795Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:52.919Z'
 subtasks:
   - WOKEPOET-381
   - WOKEPOET-382
@@ -66,6 +71,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Epic from the 2026-11-19 test audit (artifact https://claude.ai/artifact/R6Ha5b6XsuME1zyjzPoozs). Guy approved S1-S6, F1-F5, G1-G4; skipped G5.
 

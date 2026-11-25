@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-401
 title: Refresh the landing page for 1.330.x
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - landing
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -69,6 +69,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-20T03:04:05.184Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:49.834Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/661'
@@ -83,6 +88,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Landing content (docs/.vitepress/theme/landing/content.js) last changed 2026-11-13. Since then 1.330.5–1.330.10 and unreleased master added: Alt+T atlas/tree overlays, Ctrl+Space lookups (zones, pantheon, saved lists, bestiary recipes, anoints, crafts), Market prices list, map mods two-pane redesign, mod right-click menu, gem/cluster/Viscera version clicks, socket colour tiles, fractured pricing, cluster notable positions, update-while-closed with Go back.
 

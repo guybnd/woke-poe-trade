@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-426
 title: 'Session story: exclude vaults and other areas from maps, times and averages'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -57,6 +57,11 @@ history:
       Follow-up #702 merged: Map history Vaults chip (Guy's ask); vault runs
       saved to day files again, still no toast and out of counts/averages.
     id: a-2026-11-21t04-24-53-450z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:42.486Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/694'
@@ -71,6 +76,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy (2026-11-21): exclude areas such as vaults, reliquaries etc from the summary, timers and averages.
 

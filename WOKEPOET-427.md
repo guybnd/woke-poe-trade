@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-427
 title: Spending shouldn't tank profit/hour (purchases read as losses)
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - net-worth
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -52,6 +52,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T03:27:55.124Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:43.077Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -67,6 +72,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Buying an item (e.g. 50 d) removes currency from stash; the bought item is equipped or unpriced, so diffStash books a -50 d net change. That flows into Net worth per-hour rates (play-time.ts playRate via ledger points), session profit (gains.ts stashGainsBetween -> Net worth session, Session story "Farming profit").
 

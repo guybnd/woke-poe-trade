@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-429
 title: 'Ctrl+Space search: pick a new answer as you type'
-status: Done
+status: Released
 priority: Medium
 effort: XS
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -51,6 +51,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T03:20:01.649Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:43.250Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/698'
@@ -65,5 +70,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy: typing "50d/" selects the web search row; "50d/c" adds the calculator answer on top but the web row stays selected, so Enter opens poewiki. Fix: while the query changes, never keep the web row and let a new top answer take over.

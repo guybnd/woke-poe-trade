@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-423
 title: Show title hovers in the app's own tooltip card
-status: Done
+status: Released
 priority: None
 effort: M
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -44,6 +44,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-20T17:44:56.977Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:44.246Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/691'
@@ -58,5 +63,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Audit found ~800 native `title` tooltips in 176 files. One shared handler (ui/title-tip.ts, installed by HelpCard) shows any `title` in the themed help card at the cursor, with a short delay and warm follow-on. Opt out with `data-native-title`. Branch woke/app-tips, worktree E:\Git\woke\wt\app-tips. E2e: title-tip.spec.ts.

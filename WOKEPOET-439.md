@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-439
 title: 'Session window 5: glance bar in maps and hideout card'
-status: Done
+status: Released
 priority: None
 effort: M
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-434
 history:
   - type: activity
@@ -67,6 +67,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T07:47:03.111Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:41.311Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/710'
@@ -81,6 +86,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 > TL;DR: thin glance bar while mapping and a short hideout card; open question whether it replaces the map toast.
 

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-388
 title: 'G2: atlas strategy list unit tests for add, remove, import, undo'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - testing
   - atlas
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-380
 history:
   - type: activity
@@ -50,6 +50,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T15:57:59.760Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:55.172Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/400'
@@ -64,5 +69,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Bugs WOKEPOET-222, 227, 228, 229 were strategy list state bugs (new strategy inherits removed one's draft, same-name import shares regexes, undo after add does nothing, Settings link hidden by draft). Cover the store with unit tests.

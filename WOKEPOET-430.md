@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-430
 title: Show real drop sources for exceptional gems in Ctrl+Space search
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - search
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -51,6 +51,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T03:34:23.731Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:42.994Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -66,5 +71,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Ctrl+Space "spell echo" shows "Where to get Greater Spell Echo Support: Not in the campaign" (same for Awakened). Show where exceptional gems actually come from (Awakened: Maven/Sirus/Shaper etc., Enlighten/Empower/Enhance, Greater/exceptional supports from Heist/Sanctum etc.) in the search row sub and the gem card. Verified from poewiki, not memory.

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-382
 title: 'S2: fix and split the loot filter stack sizes e2e (fails first try 58/69 runs)'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - testing
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-380
 history:
   - type: activity
@@ -48,6 +48,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T16:10:11.605Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:53.226Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/632'
@@ -62,5 +67,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 testing/e2e/loot-filter.spec.ts:728 "stack sizes: type a number or drag a line...". First attempt runs ~51 s against a 45 s timeout, passes on retry. Split type/Esc/drag from Gold + save, find the slow step.

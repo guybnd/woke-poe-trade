@@ -3,7 +3,7 @@ id: WOKEPOET-381
 title: >-
   S1+F5: split fake-game e2e into 2 shard jobs, list flaky tests in the job
   summary
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -11,7 +11,7 @@ tags:
   - testing
   - tooling
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-380
 history:
   - type: activity
@@ -51,6 +51,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T16:02:15.282Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:55.054Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/630'
@@ -65,5 +70,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 .github/workflows/test.yml. e2e step is 8.3 min on 2 workers (1,030 test-seconds; loot-filter.spec.ts 220 s). Two shard jobs (playwright --shard 1/2, 2/2) plus a final job still named "Fake-game tests" (required by the master ruleset) that needs both, runs perf + Electron smoke, and fails if a shard failed. Cheaper first try: workers 3 on the 4-core runner. Merge blob reports for the HTML report artifact. F5: write each flaky test name to $GITHUB_STEP_SUMMARY (retries=1 hides them). Target: gate ~7 min.

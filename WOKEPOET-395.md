@@ -3,7 +3,7 @@ id: WOKEPOET-395
 title: >-
   Loot filter bug hunt round 2: own rule names, Alt+F keys, share fold, low maps
   look
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
@@ -11,7 +11,7 @@ tags:
   - bug
   - loot-filter
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -43,6 +43,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T16:18:14.270Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:52.705Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/643'
@@ -57,6 +62,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Done on branch `woke/filter-bughunt-2` (1511f583, f6f213bf) off master, and sent to merge. Follow-up to WOKEPOET-392.
 

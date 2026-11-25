@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-413
 title: Travel to hideout button on instant buyout results
-status: Done
+status: Released
 priority: None
 effort: M
 assignee: unassigned
 tags:
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -52,6 +52,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-20T10:33:38.767Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:47.505Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/674'
@@ -66,6 +71,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy approved (2026-11-20, project chat). Instant buyout (merchant) listings in the price check get a button that sends you to the seller's hideout; stash listings keep the whisper.
 

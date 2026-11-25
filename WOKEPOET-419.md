@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-419
 title: 'Map chip: time and events when you leave a map'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -64,6 +64,11 @@ history:
     date: '2026-11-20T17:46:00.970Z'
     selfAttested: true
     id: c-2026-11-20t17-46-00-970z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:44.117Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/686'
@@ -78,6 +83,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy picked B (2026-11-20), plus: store every map in Session analytics as a map history with character and level. Mocks in https://claude.ai/artifact/C69uz3mGDDWMSQ68RTKcSp section 4.
 Built on branch woke/map-chip (stacked on woke/session-facts): the chip is a one-line dock peek on the Session story icon (8 s); Map history tab; Ctrl+Space "maps".

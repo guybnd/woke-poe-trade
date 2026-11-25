@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-425
 title: 'Map toast: PoE 1 redesign, click to dismiss, resizable'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -57,6 +57,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T02:38:47.474Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:43.795Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/693'
@@ -71,6 +76,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy's ask (2026-11-21): redesign the post-map screen (map toast from Session story, #686/#688) in the PoE 1 look, with several mocks. Click on it dismisses it (it takes clicks on itself only, never blocks gameplay elsewhere, still auto-hides). Resizable while up, size saved.
 

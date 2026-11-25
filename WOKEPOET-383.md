@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-383
 title: 'S3: replace hard sleeps in dock-menu and trade e2e with page.clock'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - testing
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-380
 history:
   - type: activity
@@ -45,6 +45,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T15:57:55.138Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:55.779Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/634'
@@ -59,5 +64,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 dock-menu.spec.ts:97 waitForTimeout(21_000) (test takes 25 s every run); trade.spec.ts:148 (5.5 s) and :187 (3 s). Use Playwright page.clock to fast-forward the bubble/dismiss timers. ~30 s per run.

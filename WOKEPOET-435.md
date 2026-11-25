@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-435
 title: 'Session window 1: one window shell with tonight''s strip on top and the tabs'
-status: Done
+status: Released
 priority: None
 effort: M
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-434
 history:
   - type: activity
@@ -82,6 +82,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T06:56:46.675Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:41.942Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/705'
@@ -96,5 +101,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 New Session window: live band (current map, timer, profit) + NightCard strip and totals on top; tabs Tonight / Nights / Maps / Strategies / Decks reuse the existing analytics tab bodies. Dock icon and map toast open it at Tonight. Old windows untouched.

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-386
 title: 'F4: make stash-optin.test.ts independent of timing'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - testing
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-380
 history:
   - type: activity
@@ -45,6 +45,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T15:57:56.172Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:55.652Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/636'
@@ -59,5 +64,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 renderer/test/woke/stash-optin.test.ts: 3 failures in a local run 2026-11-19 under load (20 s timeout on "unlocking shows the row", then follow-on failures). Remove the real-time dependency.

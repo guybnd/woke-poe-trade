@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-399
 title: Ctrl+Space finds Blight ring anoints with their oils
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags:
   - search
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -57,6 +57,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-19T15:11:02.159Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:50.612Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/659'
@@ -71,5 +76,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Search palette lookup for the 91 two-oil Blight ring anoints (tower enchants), from the anoint recipes in the stat data. Card per enchant reusing the notable Anoint list from #655 (WOKEPOET-398): oil icons, poe.ninja prices, total. Shows when the query names a tower or says ring/anoint/blight. All 91 recipes checked against poedb's Anoint Rings list. Mocks A/B/C: https://claude.ai/artifact/NwWhryEEKsjkAP5hqdRMhc (building A). Branch woke/ring-anoints, worktree E:\Git\woke\wt\ring-anoints.

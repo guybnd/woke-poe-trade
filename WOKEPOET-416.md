@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-416
 title: 'Bestiary: family icons and family filter chips'
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -53,6 +53,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-20T12:29:48.142Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:46.655Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/679'
@@ -67,6 +72,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 > **TL;DR** Guy picked layout B for beast types (WOKEPOET-415) and asked for real game icons and clickable family headers that filter the list.
 

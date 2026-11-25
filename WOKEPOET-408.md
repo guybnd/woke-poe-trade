@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-408
 title: 'Map strip: number chips toggle search, switches labelled trade search'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -28,6 +28,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-20T04:20:35.240Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:48.633Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/668'
@@ -42,5 +47,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy 2026-11-20: set Drops/Rarity/Pack from the strip; unclear what Any/Has/Not does. PR https://github.com/guybnd/woke-poe-trade/pull/668.

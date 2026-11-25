@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-407
 title: 'Map verdicts: Safe / Risky / Dangerous, said once'
-status: Done
+status: Released
 priority: Low
 effort: XS
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -33,6 +33,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-20T03:49:46.034Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:48.891Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/667'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
@@ -47,5 +52,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy 2026-11-20: CARE badge + "Careful" headline says it twice; rename to Safe / Risky / Dangerous. PR https://github.com/guybnd/woke-poe-trade/pull/667.

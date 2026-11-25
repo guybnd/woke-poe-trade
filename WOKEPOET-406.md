@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-406
 title: 'Map price check redesign: Any/Has/Not per mod, no search until Search'
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -33,6 +33,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-20T03:37:18.535Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:49.224Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/666'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
@@ -47,5 +52,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy's pick A (mocks https://claude.ai/artifact/UkMTYkHLYu25wSiLaFJhXz): every map mod on the strip gets an Any / Has / Not switch for the trade search; map price checks don't search trade until Search; Nightmare Map grid folds and is realigned. PR https://github.com/guybnd/woke-poe-trade/pull/666. Follow-up of WOKEPOET-403.

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-433
 title: 'Vaults: drop the measured rate; tag hover lists rewards'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -29,6 +29,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T04:55:43.945Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:42.336Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/703'
@@ -43,5 +48,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy: the 54% vault rate is his own strategy, not general. Remove it from the app's text; the Nightmare vault tag hover should list that vault's reward options and prices.

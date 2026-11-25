@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-414
 title: 'Net worth per hour: skip hideout time, show last 1/2/3 h'
-status: Done
+status: Released
 priority: None
 effort: M
 assignee: unassigned
 tags:
   - net-worth
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -82,6 +82,11 @@ history:
     date: '2026-11-20T14:05:36.233Z'
     selfAttested: true
     id: c-2026-11-20t14-05-36-233z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:46.154Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/675'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -96,6 +101,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy (2026-11-20): net worth profit per hour should leave out time in hideout/town, and show rolling last 1, 2 and 3 hour windows.
 

@@ -3,14 +3,14 @@ id: WOKEPOET-393
 title: >-
   Price check mod menu extras: next tier up, all tiers, always/never tick,
   Alt+Click exclude
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: Agent
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -41,6 +41,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T15:53:02.921Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:55.983Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/637'
@@ -55,6 +60,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy's extra picks from the mod menu mocks (https://claude.ai/artifact/A23iFZEDZdvc8MKFY6hVPt, picks/current, 2026-11-18), on top of #628.
 

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-438
 title: 'Session window 4: Nights tab with a strip per night'
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-434
 history:
   - type: activity
@@ -58,6 +58,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T07:30:19.949Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:41.526Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/709'
@@ -72,5 +77,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 One thin strip per night with time, maps and income; clicking a night loads it into the top band and the ledger.

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-428
 title: 'Ctrl+Space search: calculator'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -57,6 +57,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T03:06:00.540Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:43.436Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/695'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -71,5 +76,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Typing a sum in the Ctrl+Space search ("70 * 38", "(12+8) x 1.5", "200 + 10%", "2k * 3") shows the answer as the top row; Enter copies it. Currency shorthand works at poe.ninja prices ("50d / 7", "2 div + 30c"). Safe recursive-descent parser, no eval. Mockups (options A/B/C, A recommended and built): https://claude.ai/artifact/L7PXfmAU1z1fsx4irhNHGe

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-405
 title: Price check new 3.30 Exalted Orbs as currency; currency-aware new-item note
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -45,6 +45,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-20T03:33:29.026Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:49.350Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/665'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -59,6 +64,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy's screenshot: Primordial Exalted Orb price check showed the new-item fallback ("Mod filters come with the next item data update") with 2 listings.
 

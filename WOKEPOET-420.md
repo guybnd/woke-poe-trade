@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-420
 title: 'Price check: roll quality on unique mod lines + high-roll chip'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -56,6 +56,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-20T15:33:37.715Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:45.415Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/684'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -70,6 +75,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy (2026-11-20, Bino's Kitchen Knife): show how high each unique mod rolled in its range, and flag when the copy is a high roll worth a real trade search (poe.ninja prices an average copy).
 

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-422
 title: 'Map price check: merge Run it? into Trade search'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - ui
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -55,6 +55,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-20T17:10:31.504Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:44.641Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/690'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -69,6 +74,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy (2026-11-20, screenshot of a Nightmare Map price check) asked why "Run it? Safe · Juice 85" and "Trade search" are separate sections. Run it? is read-only.
 

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-379
 title: 'Price check mod row right-click menu: grouped, Fractured only on any mod'
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: Agent
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -57,6 +57,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T15:37:04.988Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:57.304Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/628'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -71,6 +76,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy asked (2026-11-18) for a better right-click menu on price check mod rows, e.g. Fractured only on any mod, and ideas.
 

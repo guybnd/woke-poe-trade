@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-398
 title: Ctrl+Space notable card shows its anoint oils
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - woke
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -57,6 +57,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-19T09:14:08.694Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:51.359Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/655'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -71,6 +76,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy wants the Ctrl+Space passive notable detail pane (e.g. Sione's Ambition) to show the three oils that anoint it, with oil icons in PoE style. Only anointable notables.
 

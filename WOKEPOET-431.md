@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-431
 title: Vault rewards and value in Ctrl+Space and the Nightmare check
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -72,6 +72,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T04:15:52.320Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:42.555Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -87,6 +92,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 The four 3.30 Templar Vaults (Zealot's, Scholar's, Arkhon's, Machinist's): each one's reward pool from poewiki, priced live from poe.ninja, with a ~typical-pick estimate (no weights or spawn chance are published).
 

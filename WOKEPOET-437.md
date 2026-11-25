@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-437
 title: 'Session window 3: strip click-through, chip filters, Ctrl+Space jumps'
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-434
 history:
   - type: activity
@@ -61,6 +61,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T07:20:39.550Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:41.635Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/708'
@@ -75,5 +80,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Clicking a strip segment scrolls to and opens its row; the selected row outlines its segment. Chips (Vaults, Mirage, mechanics, Deaths) filter the list. Ctrl+Space: "tonight", "last vault", "best night" open the window at the row.

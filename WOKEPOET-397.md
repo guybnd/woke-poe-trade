@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-397
 title: Map mods page redesign
-status: Done
+status: Released
 priority: Medium
 effort: L
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - map-mods
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -59,6 +59,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-19T02:30:23.759Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:52.183Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/647'
@@ -73,6 +78,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Guy (2026-11-19): couldn't find where to set wanted currency/rewards; asked for a holistic redesign of the Map mods page, "god tier UI UX". Also: let him name searches saved to the Regex library.
 

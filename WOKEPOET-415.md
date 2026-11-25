@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-415
 title: 'Bestiary: show each beast''s group and family'
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -63,6 +63,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-20T11:56:14.240Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:47.025Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/677'
@@ -77,6 +82,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 > **TL;DR** Captured beast rows (League Mechanics Bestiary list, Ctrl+Space beast page) show the beast's Bestiary group and family, e.g. "Amphibian · Deep", so Guy knows which to prefer while hunting.
 

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-392
 title: 'Loot filter bug hunt: group hide fixes and cluster price fallback'
-status: Done
+status: Released
 priority: High
 effort: S
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - bug
   - loot-filter
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -44,6 +44,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T16:02:45.253Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:52:54.809Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/633'
@@ -58,6 +63,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00002'
+releasedAt: '2026-11-25T11:52:41.308Z'
+releaseDocPath: release-notes/00002
 ---
 Bug hunt team 2 (2026-11-19). Already done on branch `woke/filter-bughunt` (13c5358d, 2c4022b9) and sent to merge.
 
