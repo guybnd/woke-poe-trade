@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-585
 title: Surface hidden features with hints
-status: In Progress
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -35,10 +35,46 @@ history:
     date: '2026-11-25T08:17:22.093Z'
     comment: Part 2 (587) shipped in PR 924 (045a586). Part 3 (588) still open.
     id: a-2026-11-25t08-17-22-093z
+  - type: comment
+    user: Agent
+    comment: 'All three parts shipped: PRs 903, 924, 928.'
+    date: '2026-11-25T09:16:15.247Z'
+    completionComment: true
+    id: c-2026-11-25t09-16-15-247z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-25T09:16:15.247Z'
+  - type: comment
+    user: Agent
+    comment: 'Epic done across PRs 903, 924 and 928 (final 75399bb).'
+    completionComment: true
+    date: '2026-11-25T09:16:20.315Z'
+    id: c-2026-11-25t09-16-20-315z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-25T09:16:21.612Z'
 subtasks:
   - WOKEPOET-586
   - WOKEPOET-587
   - WOKEPOET-588
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/928'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Epic: teach players the hidden features (hints, tip lines, hotkey peeks, a price check tour). Branch: claude/project-thread-0b8q87.
 
