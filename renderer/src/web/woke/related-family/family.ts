@@ -84,8 +84,6 @@ const RULES: Rule[] = [
     label: kind => `Timeless ${kind.toLowerCase()}s`
   },
   startsWith('Tattoo of ', 'Tattoos'),
-  // Scarabs of no league mechanic: "Scarab of Wisps", "Scarab of the Dextral".
-  startsWith('Scarab of ', 'Other Scarabs'),
   {
     // "Honoured Tattoo of the Oak", "Loyalty Tattoo of Kaom": one family a kind.
     needle: ref => `"refName":"${ref.split(' ')[0]} Tattoo of `,

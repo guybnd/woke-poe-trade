@@ -65,9 +65,7 @@ describe('related family', () => {
     expect(names('Tainted Chaos Orb')).not.toContain('Tainted Catalyst')
   })
 
-  it('lists the scarabs of no mechanic and each kind of tattoo', () => {
-    expect(fam('Scarab of Wisps')?.label).toBe('Other Scarabs')
-    expect(names('Scarab of Wisps')).toEqual(expect.arrayContaining(['Scarab of Adversaries', 'Scarab of the Dextral', 'Scarab of Divinity']))
+  it('lists each kind of tattoo', () => {
     expect(fam('Honoured Tattoo of the Oak')?.label).toBe('Honoured Tattoos')
     expect(names('Honoured Tattoo of the Oak')).toContain('Honoured Tattoo of the Flock')
     expect(names('Honoured Tattoo of the Oak')).not.toContain('Loyalty Tattoo of Kaom')
