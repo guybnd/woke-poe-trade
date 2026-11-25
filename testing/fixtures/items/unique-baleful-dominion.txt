@@ -1,0 +1,17 @@
+Item Class: Abyss Jewels
+Rarity: Unique
+Baleful Dominion
+Hypnotic Eye Jewel
+--------
+Limited to: 1 Historic
+--------
+Item Level: 84
+--------
+{ Unique Modifier }
+Subjugating 4512(100-8000) souls in the thrall of Kurgal
+Passives affected are Conquered by the Abyssal
+--------
+He lusts for power over his former
+slavers, but he will never be free.
+--------
+Place into an Abyssal Socket on an Item or into an allocated Jewel Socket on the Passive Skill Tree. Right click to remove from the Socket.

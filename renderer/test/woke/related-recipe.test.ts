@@ -55,7 +55,8 @@ describe('recipes', () => {
 
   it('combines splinters into the whole', () => {
     expect(names('Simulacrum Splinter')).toEqual([['Combine into Simulacrum', ['300 Simulacrum Splinter']]])
-    expect(names('Timeless Karui Splinter').map(n => n[0])).toEqual(['Lethal Pride recipe', 'Combine into Timeless Karui Emblem'])
+    // No splinter-to-jewel recipe: it isn't in the game (Guy, 2026-11-25).
+    expect(names('Timeless Karui Splinter').map(n => n[0])).toEqual(['Combine into Timeless Karui Emblem'])
     expect(names("The Maven's Writ")).toEqual([["Combine into The Maven's Writ", ['10 Crescent Splinter']]])
     expect(names('Timeless Eternal Emblem')).toEqual([['Combine into Timeless Eternal Emblem', ['100 Timeless Eternal Empire Splinter']]])
   })

@@ -1,8 +1,22 @@
 <template>
-  <div v-if="result || sections.length" :class="$style.wrapper" class="w-pc-side" data-goto-spot="related">
+  <div v-if="result || sections.length || keystones" :class="$style.wrapper" class="w-pc-side" data-goto-spot="related">
     <div v-if="result && 'error' in result" class="p-2">
       {{ result.error }}
     </div>
+    <!-- woke: a Timeless jewel's keystones, one per conqueror. A click ticks that
+         conqueror's line alone with no number and searches once (CheckedItem.vue). -->
+    <template v-if="keystones">
+      <div :class="$style.hd"><span>Keystones</span><span :class="$style.count">any number</span></div>
+      <div :class="$style.list">
+        <button v-for="k in keystones" :key="k.id" type="button" v-item-tip="k.tip" data-keystone-row
+          :class="[$style.row, $style.click, { [$style.me]: k.own }]" @click="pickKeystone(k.id)">
+          <span :class="$style.ks" />
+          <span :class="$style.kname">{{ k.name }}<span :class="$style.kby">{{ k.by }}</span></span>
+          <span />
+        </button>
+      </div>
+      <div :class="$style.ft">Click: search that keystone, any number</div>
+    </template>
     <!-- woke: the item's family, its drop group, what it drops: one row and one
          click for every section. A click price checks the row's item the way the
          item menu's Price button does; nothing searches before that. -->
@@ -18,7 +32,7 @@
             :class="[$style.row, { [$style.me]: row.highlight, [$style.click]: canOpen(row) }]"
             @pick="open(row)">
             <img :class="$style.art" :src="row.icon" :alt="''">
-            <span :class="$style.name"><span v-if="row.qty && row.qty > 1" :class="$style.qty">{{ row.qty }} ×</span>{{ row.name }}<span v-if="row.tag" :class="$style.tag">{{ row.tag }}</span></span>
+            <span :class="$style.name"><span v-if="row.qty && row.qty > 1" :class="$style.qty">{{ row.qty }} ×</span>{{ row.name }}<span v-if="row.tag" :class="row.ownTag ? $style.kby : $style.tag">{{ row.tag }}</span><span v-if="row.sub" v-item-tip="row.sub.tip" :class="$style.ksub">{{ row.sub.text }}</span></span>
             <span :class="$style.price">
               <template v-if="row.price">{{ priceText(row.price) }}<img :class="$style.coin" :src="coin(row.price)" :alt="row.price.currency"></template>
               <span v-else :class="$style.none" title="poe.ninja has no price for this">?</span>
@@ -49,7 +63,9 @@ import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
 import { sideRow, type SideRow } from './side-row'
 import { familyOf, familyRows, type Family } from '@/web/woke/related-family/family'
 import { cardsFor, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resolveParts } from '@/web/woke/related-family/recipe'
-import { loadTipItems } from '@/web/woke/ui/tooltip/item-tip'
+import { loadTipItems, vItemTip } from '@/web/woke/ui/tooltip/item-tip'
+import { ABYSS, EMBLEMS, TIMELESS, ownConquerorId, type Conqueror } from '@/web/woke/related-family/conquest'
+import { conquestPick } from '@/web/woke/related-family/conquest-pick'
 
 const { findPriceByQuery, findPricesByName, autoCurrency, xchgRate } = usePoeninja()
 
@@ -195,6 +211,39 @@ function getSources (item: ParsedItem, queryId: string, cardsShown: boolean) {
     .filter(sec => sec.rows.length && !sec.rows.some(r => r.name === item.info.name))
 }
 
+// woke: a keystone's tooltip, framed as the passive tree frames keystones.
+function keystoneTip (c: Conqueror, jewel?: string): ItemTipRef | null {
+  if (!c.keystone) return null
+  return {
+    name: c.keystone.name,
+    noMenu: true,
+    content: { kind: 'passive', name: c.keystone.name, stats: c.keystone.stats, frame: 'unique', note: jewel ? `${jewel} (${c.name}) turns keystones in its area into this.` : `${c.name} turns keystones in the ring into this, whatever the number.` }
+  }
+}
+
+// woke: the Abyss conquest jewels have one lord each: wherever one is listed
+// (the Reclaimed Malevolence recipe lists all five), its keystone goes under it.
+const ABYSS_BY_JEWEL = new Map(ABYSS.map(a => [a.jewel, a]))
+function withKeystone (row: SideRow): SideRow {
+  const a = ABYSS_BY_JEWEL.get(row.info.refName)
+  return a ? { ...row, sub: { text: a.keystone?.name ?? a.name, tip: keystoneTip(a, a.jewel) } } : row
+}
+
+// woke: a Legion Timeless jewel drops in the Domain of Timeless Conflict: the
+// five emblems that open it, its own faction's marked.
+function getEmblems (item: ParsedItem) {
+  if (!EMBLEMS.some(e => e.jewel === item.info.refName)) return []
+  const rows: SideRow[] = []
+  for (const e of EMBLEMS) {
+    const info = ITEM_BY_REF('ITEM', e.emblem)?.[0]
+    if (!info) continue
+    const chaos = chaosOf(info)
+    const row = sideRow(info, chaos != null ? autoCurrency(chaos) : undefined, false, `emblem:${e.emblem}`)
+    rows.push(e.jewel === item.info.refName ? { ...row, tag: 'its own', ownTag: true } : row)
+  }
+  return [{ key: 'emblems', title: 'Drops in Timeless Conflict', rows }]
+}
+
 function priceText (price: CurrencyValue) {
   return (price.min === price.max)
     ? displayRounding(price.min, true)
@@ -233,6 +282,7 @@ function getItemPrices (queryId: string) {
 
 export default defineComponent({
   components: { WItemRow },
+  directives: { ItemTip: vItemTip },
   props: {
     item: {
       type: Object as PropType<ParsedItem | null>,
@@ -289,6 +339,7 @@ export default defineComponent({
       const id = queryId ? `${queryId.ns}::${queryId.name}${queryId.variant ? ` // ${queryId.variant}` : ''}` : null
       const cards = tipItems.value ? getCards(props.item, tipItems.value) : []
       return [
+        ...getEmblems(props.item),
         ...getRecipes(props.item),
         ...cards,
         ...(id ? getSources(props.item, id, cards.length > 0) : [])
@@ -300,7 +351,8 @@ export default defineComponent({
       // Kingmaker) goes: the recipe says it better.
       const inRecipe = new Set(recipeSecs.flatMap(sec => sec.rows.map(r => r.name)))
       const others = otherSections().filter(sec => !recipeSecs.length || !sec.rows.every(r => inRecipe.has(r.name)))
-      return [...recipeSecs, ...extra.value.filter(sec => !sec.key.startsWith('recipe:')), ...others]
+      const all = [...recipeSecs, ...extra.value.filter(sec => !sec.key.startsWith('recipe:')), ...others]
+      return all.map(sec => sec.rows.some(r => ABYSS_BY_JEWEL.has(r.info.refName)) ? { ...sec, rows: sec.rows.map(withKeystone) } : sec)
     })
     function otherSections (): Section[] {
       const res = result.value
@@ -311,6 +363,18 @@ export default defineComponent({
       if ('dropRelated' in res && res.dropRelated.length > 1) out.push({ key: 'drop-related', title: `Related to ${props.item!.info.name}`, rows: res.dropRelated })
       if (res.items.length) out.push({ key: 'drops', title: `Drops in ${props.item!.info.name}`, rows: res.items })
       return out
+    }
+
+    // woke: a Timeless jewel's conquerors and their keystones.
+    const keystones = computed(() => {
+      const item = props.item
+      const list = item ? TIMELESS[item.info.refName] : undefined
+      if (!item || !list) return null
+      const own = ownConquerorId(item.statsByType)
+      return list.filter(c => c.keystone).map(c => ({ id: c.id, name: c.keystone!.name, by: c.name, own: c.id === own, tip: keystoneTip(c) }))
+    })
+    function pickKeystone (id: string) {
+      if (props.item) conquestPick.value = { item: props.item, id }
     }
 
     const canOpen = (row: SideRow) => row.clickable && !row.highlight
@@ -332,6 +396,8 @@ export default defineComponent({
     return {
       result,
       sections,
+      keystones,
+      pickKeystone,
       canOpen,
       open,
       tipOf,
@@ -394,6 +460,12 @@ export default defineComponent({
 .none { color: var(--w-faint); font-weight: 400; }
 .qty { color: var(--w-faint); margin-right: 4px; }
 .tag { color: #d20000; margin-left: 6px; font-size: var(--w-fs-sm); }
+/* woke: a keystone: the tree's round frame, in CSS (no keystone art is bundled). */
+.ks { width: 20px; height: 20px; margin: 0 4px; border-radius: 50%; border: 2px solid #9a8355; background: radial-gradient(#3b2f6b, #14102a); box-sizing: border-box; }
+.kname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #b8a3ff; }
+.ksub { display: block; font-size: var(--w-fs-sm); color: #b8a3ff; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; }
+.kby { margin-left: 6px; font-size: var(--w-fs-sm); color: var(--w-faint); }
+button.row { width: 100%; text-align: left; }
 .lead { padding: 3px 12px 2px; font-size: var(--w-fs-sm); color: var(--w-faint); background: var(--w-panel-solid); border-bottom: 1px solid var(--w-line-soft); }
 .sum { display: flex; justify-content: space-between; gap: 8px; padding: 5px 12px; border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); color: var(--w-dim); }
 .sum b { color: var(--w-fg); font-variant-numeric: tabular-nums; }
