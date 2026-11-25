@@ -163,6 +163,49 @@ describe('overlay click safety', () => {
     expect(overlay.isCardActive).toBe(false)
   })
 
+  it('keeps the mouse while a pinned panel is dragged off where the press was', () => {
+    const { overlay, zones, move } = setup()
+    const PIN = { id: 'woke-hover-1:0', x: 100, y: 500, width: 300, height: 200, activate: true }
+    zones('woke-hover-1', [PIN])
+    move(150, 510)
+    expect(overlay.isMouseTaken).toBe(true)
+    uIOhook.emit('mousedown', { x: 150, y: 510, button: 1 })
+    expect(overlay.isCardActive).toBe(true)
+    // Dragged up by its title: the page sends the moved zone each frame, but the
+    // hook reports no drag moves, so main still has the press point (now below it).
+    for (const y of [400, 300, 200]) {
+      game.cursor = { x: 150, y: y + 10 }
+      zones('woke-hover-1', [{ ...PIN, y }])
+      expect(overlay.isCardActive).toBe(true)
+    }
+    uIOhook.emit('mouseup', { x: 150, y: 210, button: 1 })
+    expect(overlay.isCardActive).toBe(true)
+    expect(overlay.isInteractable).toBe(true)
+    move(900, 900)
+    expect(overlay.isCardActive).toBe(false)
+  })
+
+  it('still gives the mouse back when the game got the press (holding to move)', () => {
+    const { overlay, zones, move } = setup()
+    zones('woke-hover-1', [ICON])
+    move(500, 500)
+    uIOhook.emit('mousedown', { x: 500, y: 500, button: 1 })
+    zones('woke-hover-1', [{ ...ICON, x: 120 }])
+    expect(overlay.isMouseTaken).toBe(false)
+    expect(overlay.isCardActive).toBe(false)
+  })
+
+  it('gives the mouse back when the game got a press on a zone before the mouse was taken', () => {
+    const { overlay, zones } = setup()
+    zones('woke-hover-1', [{ ...ICON, activate: false }])
+    // Swept onto the zone and pressed at once: not activated, so the game got it.
+    uIOhook.emit('mousedown', { x: 110, y: 110, button: 1 })
+    zones('woke-hover-1', [{ ...ICON, activate: true }])
+    zones('woke-hover-1', [{ ...ICON, x: 300, activate: true }])
+    expect(overlay.isMouseTaken).toBe(false)
+    expect(overlay.isCardActive).toBe(false)
+  })
+
   it('a mouse resting on an icon across a reload is still on it', () => {
     const { overlay, zones, move, sent } = setup()
     zones('woke-hover-1', [ICON])

@@ -109,6 +109,10 @@ function startDrag (e: PointerEvent) {
   dragging.value = true
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', endDrag)
+  // The window can go click-through or lose focus mid-drag (the game took the
+  // mouse back): no pointerup comes then, so don't stay dragging.
+  window.addEventListener('pointercancel', endDrag)
+  window.addEventListener('blur', endDrag)
   e.preventDefault()
 }
 function onMove (e: PointerEvent) {
@@ -127,6 +131,8 @@ let zoneFrame = 0
 function endDrag () {
   window.removeEventListener('pointermove', onMove)
   window.removeEventListener('pointerup', endDrag)
+  window.removeEventListener('pointercancel', endDrag)
+  window.removeEventListener('blur', endDrag)
   if (live.value) movePin(props.pin.id, { x: Math.round(live.value.x * 10) / 10, y: Math.round(live.value.y * 10) / 10 })
   live.value = null
   grab = null
