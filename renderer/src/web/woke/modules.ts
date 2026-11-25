@@ -172,7 +172,7 @@ export interface WokeModulesConfig {
   seenNews?: string[]
   // What's new switched off: no dock icon, no NEW seals, no count (tab-bar/news.ts).
   newsOff?: boolean
-  // The What's new group last opened in the dock card ('' all folded).
+  // The What's new group last opened in the dock card.
   newsOpen?: string
   // What time every per hour counts (shared/rate-time.ts); unset: carried over.
   rateTime?: RateTime

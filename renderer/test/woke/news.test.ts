@@ -35,14 +35,18 @@ describe("What's new lines", () => {
     }
   })
 
-  it('each line names the release it ships in: this one or the next (main/package.json, patch + 1)', () => {
+  it('each line names the release it ships in, no later than the next one (main/package.json, patch + 1), newest first', () => {
     const app = JSON.parse(readFileSync(fileURLToPath(new URL('../../../main/package.json', import.meta.url)), 'utf8')).version as string
     const [major, league, patch] = app.split('.').map(Number)
+    const num = ([m, l, p]: number[]) => (m * 10000 + l) * 10000 + p
+    let prev = Infinity
     for (const n of NEWS) {
       expect(n.since, n.id).toMatch(/^\d+\.\d+\.\d+$/)
-      const [m, l, p] = n.since.split('.').map(Number)
-      expect([m, l], `${n.id}: since ${n.since}, app ${app}`).toEqual([major, league])
-      expect(p, `${n.id}: since ${n.since} is past the next release (${app} + 1)`).toBeLessThanOrEqual(patch + 1)
+      const v = num(n.since.split('.').map(Number))
+      expect(v, `${n.id}: since ${n.since} is past the next release (${app} + 1)`).toBeLessThanOrEqual(num([major, league, patch + 1]))
+      // Newest at the top: a new line goes first, with the next release.
+      expect(v, `${n.id}: since ${n.since} is newer than the line above it`).toBeLessThanOrEqual(prev)
+      prev = v
     }
   })
 
@@ -51,13 +55,16 @@ describe("What's new lines", () => {
     expect(newsExpired('1.330.21', '1.330.21')).toBe(false)
     expect(newsExpired('1.330.21', '1.330.22')).toBe(false)
     expect(newsExpired('1.330.21', '1.330.23')).toBe(true)
-    expect(newsExpired('1.330.21', '1.331.0')).toBe(true)
-    expect(newsExpired('1.330.21', '2.0.0')).toBe(true)
+    // A new league: its first release still shows the old league's lines.
+    expect(newsExpired('1.330.21', '1.331.0')).toBe(false)
+    expect(newsExpired('1.330.21', '1.331.1')).toBe(true)
+    expect(newsExpired('1.330.21', '2.0.1')).toBe(true)
+    expect(newsExpired('1.331.1', '1.330.21')).toBe(false)
     // Not a release: the fake app, or before the app says its version.
     expect(newsExpired('1.330.21', '0.0.0-test')).toBe(false)
     expect(newsExpired('1.330.21', '0.0.00000')).toBe(false)
     expect(liveNews('0.0.0-test')).toHaveLength(NEWS.length)
-    expect(liveNews('9.0.0')).toEqual([])
+    expect(liveNews('9.0.1')).toEqual([])
   })
 
   it('NEWS_SPOTS and NEWS_DEMOS name only real lines', () => {

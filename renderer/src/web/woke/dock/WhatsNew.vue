@@ -79,7 +79,7 @@ function typeName (wmType: string): string {
 const lines = computed(() => unseenNews(AppConfig().woke, MainProcess.version.value))
 const groups = computed(() => groupNews(lines.value))
 // The open group: the first (newest) until one is picked, and again once
-// the picked one is gone. '' is all folded. Remembered for next time.
+// the picked one is gone. '' is all folded (this time only).
 const picked = ref<string | undefined>(AppConfig().woke?.newsOpen)
 const openKey = computed(() => {
   const k = picked.value
@@ -90,7 +90,9 @@ const openKey = computed(() => {
 function isOpen (g: NewsGroup) { return openKey.value === g.key }
 function toggle (g: NewsGroup) {
   picked.value = isOpen(g) ? '' : g.key
-  ensureWokeConfig(AppConfig()).woke.newsOpen = picked.value
+  // An opened group is remembered; folding it all forgets, so the newest
+  // opens next time.
+  ensureWokeConfig(AppConfig()).woke.newsOpen = picked.value || undefined
   saveConfigQuietly()
   uiTrace(`What's new › ${picked.value ? 'open' : 'fold'} ${g.key}`)
 }
