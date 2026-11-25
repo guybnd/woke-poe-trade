@@ -5,7 +5,7 @@ import { computed, shallowRef, watch } from 'vue'
 import { usePoeninja } from '@/web/background/Prices'
 import { hostRequest } from '../shared/host'
 import { toast } from '../ui/layer'
-import { ninjaPriceOf } from './prices'
+import { identifyUnid, ninjaPriceOf } from './prices'
 import { historyRev, loadPriceHistory } from './history'
 import { lastWokePrices } from '../market/hook'
 import {
@@ -73,7 +73,7 @@ const ninja = usePoeninja()
 function loadHistory (): Promise<void> {
   const league = lastWokePrices()?.leagueId
   if (!league || !stash.value) return Promise.resolve()
-  const names = stash.value.tabs.flatMap(t => t.items.map(historyName))
+  const names = stash.value.tabs.flatMap(t => t.items.map(i => identifyUnid(i) ?? historyName(i)))
   return loadPriceHistory(league, names)
 }
 watch([stash, () => ninja.updatedAt.value], () => { loadHistory().catch(() => {}) })
