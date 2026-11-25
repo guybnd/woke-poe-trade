@@ -7,9 +7,12 @@
 </template>
 
 <script setup lang="ts">
-// Low / Approx / High for one mod, under its min and max boxes. A pick runs the
-// search, like the presets for all mods.
-import { computed, inject } from 'vue'
+// Low / Approx / High for one mod, under its min and max boxes. A pick only sets
+// the range, like typing in the boxes: results on screen dim (or filter, when the
+// range got tighter) until Search. Searching on each pick spent a trade search per
+// click and hit the rate limit when setting several mods in a row (Discord report,
+// 2026-11-25). The presets for all mods still search: that's one click for all.
+import { computed } from 'vue'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { applyRollToFilter, activeRollOf, RollPreset } from './roll-presets'
 
@@ -21,13 +24,10 @@ const OPTIONS: Array<{ value: RollPreset, label: string, title: string }> = [
   { value: 'high', label: 'High', title: 'The best quarter of this range' }
 ]
 
-const search = inject<() => void>('price-check-search', () => {})
-
 const active = computed(() => activeRollOf(props.filter))
 
 function choose (preset: RollPreset) {
   applyRollToFilter(props.filter, preset)
-  search()
 }
 </script>
 
