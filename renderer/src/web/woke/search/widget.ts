@@ -22,6 +22,24 @@ export interface SearchWidget extends Widget {
   saved?: SearchLine[]
   // Result groups set apart from their defaults (groups.ts): open, folded or off.
   groups?: Record<string, 'open' | 'folded' | 'off'>
+  // Items pinned to compare (Ctrl + P), oldest first, kept until you clear them.
+  pins?: PinLine[]
+}
+
+// A pinned item, as its poe.ninja row: type, name and variant.
+export interface PinLine { type: string, name: string, variant: string }
+export const PIN_MAX = 5
+const samePin = (a: PinLine, b: PinLine) => a.type === b.type && a.name === b.name && a.variant === b.variant
+export function isPinned (w: Pick<SearchWidget, 'pins'>, item: PinLine): boolean {
+  return (w.pins ?? []).some(p => samePin(p, item))
+}
+// Pins it, or takes it off. Past PIN_MAX the oldest goes.
+export function togglePin (w: Pick<SearchWidget, 'pins'>, item: PinLine): void {
+  const list = w.pins ?? []
+  const next = isPinned(w, item)
+    ? list.filter(p => !samePin(p, item))
+    : [...list, { type: item.type, name: item.name, variant: item.variant }].slice(-PIN_MAX)
+  w.pins = next.length ? next : undefined
 }
 
 export function initSearchWidget (wmId: number, taken: string[] = []): SearchWidget {
