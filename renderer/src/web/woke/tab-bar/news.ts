@@ -39,6 +39,7 @@ export const NEWS: NewsItem[] = [
   { id: 'price-check-gem-kinds', wmType: 'price-check', name: 'Price check', note: 'New: beside a gem, its transfigured kinds, priced' },
   { id: 'price-check-chance-uniques', wmType: 'price-check', name: 'Price check', note: 'New: beside a normal base, the uniques an Orb of Chance can make' },
   { id: 'price-check-vault-rewards', wmType: 'price-check', name: 'Price check', note: 'New: beside a Templar Vault reward, its vault and the other rewards in it' },
+  { id: 'price-check-boss-uniques', wmType: 'price-check', name: 'Price check', note: "New: beside a Delve, Abyss or league boss's unique, the boss and its other uniques" },
   { id: 'price-check-related-exalts', wmType: 'price-check', name: 'Price check', note: 'New: beside a currency, every kind of it (all the exalts) and the cards that give a stack of it' },
   { id: 'price-check-related-upgrades', wmType: 'price-check', name: 'Price check', note: 'New: beside a unique, its upgrade, where it drops and the cards that give it, with prices' },
   { id: 'scrying-helper', wmType: 'woke-scrying', name: 'Scrying', note: 'New: which map to scry, ranked by the cards a Scrying Orb adds per map, with the orb\'s price and a Buy link' },

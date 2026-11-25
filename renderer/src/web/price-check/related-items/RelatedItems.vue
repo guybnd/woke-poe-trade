@@ -54,6 +54,7 @@ import { loadTipDrops, loadTipItems } from '@/web/woke/ui/tooltip/item-tip'
 import type { TipPack } from '@/web/woke/ui/tooltip/tip-content'
 import { randomDropsOnBase } from '@/web/woke/loot-filter/random-drops'
 import type { VaultTable, Vault } from '@/web/woke/vaults/vaults'
+import { bossOf } from '@/web/woke/related-family/boss-drops'
 
 const { findPriceByQuery, findPricesByName, autoCurrency, xchgRate } = usePoeninja()
 
@@ -338,6 +339,25 @@ function getSources (item: ParsedItem, queryId: string, cardsShown: boolean, sho
     .map(({ also, ...sec }) => ({ ...sec, rows: [...sec.rows, ...also] }))
 }
 
+// woke: a unique only one boss drops, when the drop groups don't list it
+// (Delve, Abyss, Harvest, Expedition bosses...): the boss and its other
+// uniques, dearest first. From boss-drops.ts, checked on poedb.
+function getBossDrops (item: ParsedItem) {
+  if (item.info.namespace !== 'UNIQUE') return []
+  const own = item.info.refName
+  const entry = bossOf(own)
+  if (!entry) return []
+  const rows: SideRow[] = []
+  for (const name of entry.uniques) {
+    const info = name === own ? item.info : ITEM_BY_REF('UNIQUE', name)?.[0]
+    if (!info) continue
+    const chaos = chaosOf(info)
+    rows.push(sideRow(info, chaos != null ? autoCurrency(chaos) : undefined, name === own, `boss:${name}`))
+  }
+  rows.sort((a, b) => chaosOfPrice(b.price) - chaosOfPrice(a.price))
+  return [{ key: 'boss', title: `Drops from ${entry.boss}`, rows }]
+}
+
 // A row's price in chaos, for sorting: unpriced last.
 function chaosOfPrice (price?: CurrencyValue) {
   return !price ? -1 : (price.currency === 'div' ? price.max * (xchgRate.value ?? 1) : price.max)
@@ -455,13 +475,15 @@ export default defineComponent({
       const recipes = getRecipes(props.item)
       // What a recipe lists already isn't repeated under Also drops.
       const shown = new Set(recipes.flatMap(sec => sec.rows.map(r => r.name)))
+      // Where it drops: the drop groups, else the boss table.
+      const sources = id ? getSources(props.item, id, cards.length > 0, shown) : []
       return [
         ...reward,
         ...getGemKinds(props.item, queryId?.variant),
         ...(tipDrops.value ? getChanceTargets(props.item, tipDrops.value) : []),
         ...recipes,
         ...cards,
-        ...(id ? getSources(props.item, id, cards.length > 0, shown) : []),
+        ...(sources.length ? sources : getBossDrops(props.item)),
         ...(vaultTable.value ? getVaults(props.item, vaultTable.value.giving(vaultTable.value.table, props.item.info.refName)) : [])
       ]
     })

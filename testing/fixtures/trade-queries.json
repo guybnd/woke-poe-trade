@@ -5888,6 +5888,72 @@
    "type": "Hubris Circlet"
   }
  },
+ "unique-hale-negator.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Hale Negator",
+   "type": "Mind Cage"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "es": {},
+      "base_defence_percentile": {
+       "min": 100
+      }
+     }
+    }
+   },
+   "name": "Hale Negator",
+   "type": "Mind Cage"
+  }
+ },
  "unique-headhunter.txt": {
   "opened": {
    "status": {

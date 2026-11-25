@@ -145,3 +145,15 @@ test('side window: a Templar Vault reward lists its vault and the other rewards'
   }
   await expect(side.getByText(/offers four rewards and you take one/)).toBeVisible()
 })
+
+test('side window: a Delve boss unique drops from its boss, with the boss\'s others', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/unique-hale-negator.txt')
+  const side = overlay.page.locator('.w-pc-side')
+  await expect(side).toBeVisible({ timeout: 20_000 })
+  await expect(side.getByText('Drops from Kurgal, the Blackblooded')).toBeVisible()
+  await expect(side.locator('div[data-item-row]', { hasText: 'Hale Negator' })).toBeVisible()
+  for (const other of ['Command of the Pit', "Ahkeli's Valley", "Uzaza's Mountain"]) {
+    await expect(side.locator('button[data-item-row]', { hasText: other })).toBeVisible()
+  }
+})

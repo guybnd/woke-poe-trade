@@ -4,6 +4,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { ITEM_BY_REF, ITEM_DROP } from '@/assets/data'
 import { cardsFor, rewardOf, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resetRecipeCache, resolveParts } from '@/web/woke/related-family/recipe'
 import { loadGameData } from '../helpers/game-data'
+import { BOSS_DROPS, bossOf } from '@/web/woke/related-family/boss-drops'
 
 beforeAll(async () => { await loadGameData(); resetRecipeCache() })
 
@@ -159,5 +160,22 @@ describe('rewardOf', () => {
     expect(rewardOf('<gemitem>{Level 21 Vaal Cold Snap}')).toBeNull()
     expect(rewardOf('<rareitem>{Item}\r\n<default>{Item Level:} <normal>{100}')).toBeNull()
     expect(rewardOf('<uniqueitem>{Tabula Rasa}\r\n<default>{Six-Link}')).toBeNull()
+  })
+})
+
+describe('boss drops (checked on poedb)', () => {
+  const inDropGroups = () => new Set(ITEM_DROP.flatMap(g => realDrops(g)).map(id => id.split('::')[1].split(' // ')[0]))
+  it('names only real uniques, each under one boss', () => {
+    const all = BOSS_DROPS.flatMap(b => b.uniques)
+    expect(all.filter(n => !ITEM_BY_REF('UNIQUE', n)?.length)).toEqual([])
+    expect(new Set(all).size).toBe(all.length)
+  })
+  it('adds something the drop groups lack to every boss', () => {
+    const listed = inDropGroups()
+    expect(BOSS_DROPS.filter(b => b.uniques.every(n => listed.has(n))).map(b => b.boss)).toEqual([])
+  })
+  it('finds the Delve boss of a Delve unique', () => {
+    expect(bossOf('Hale Negator')?.boss).toBe('Kurgal, the Blackblooded')
+    expect(bossOf('Headhunter')).toBeNull()
   })
 })
