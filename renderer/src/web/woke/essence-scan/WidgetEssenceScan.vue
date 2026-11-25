@@ -171,7 +171,7 @@ function estimateTitle (r: PricedMonolith) {
   const e = r.estimate!
   return 'Best case: every essence goes up a tier, or one Misery, Envy, Dread or Scorn becomes the dearest corruption-only essence. ' +
     'The odds aren\'t published, so this is what it can reach, not what to expect.' +
-    (e.complete ? '' : ' Some prices are missing, so it reads low.')
+    (e.complete ? '' : ' Some prices are missing, so this is a rough figure.')
 }
 
 const setupProblem = shallowRef<string | null>(null)

@@ -127,12 +127,13 @@ export function estimateCorrupt (essences: Essence[], price: (name: string) => n
 
   const upgraded = essences.reduce((sum, e, i) => sum + (e.tier ? p(nextTierName(e)) : values[i]), 0)
 
-  const bestSpecial = Math.max(...CORRUPTION_ONLY.map(t => p(`Essence of ${t}`)))
+  // Only priced when the Misery/Envy/Dread/Scorn it replaces has a price:
+  // counting an unpriced one as 0 would make the gain look bigger than it is.
   const medsIdx = essences
     .map((e, i) => ({ e, i }))
-    .filter(x => MEDS.includes(x.e.type))
+    .filter(x => MEDS.includes(x.e.type) && price(x.e.name) != null)
     .sort((a, b) => values[a.i] - values[b.i])[0]
-  const special = medsIdx ? now - values[medsIdx.i] + bestSpecial : now
+  const special = medsIdx ? now - values[medsIdx.i] + Math.max(...CORRUPTION_ONLY.map(t => p(`Essence of ${t}`))) : now
 
   const best = Math.max(upgraded, special)
   return { now, best, bestGain: best - now - corruptCost, complete }

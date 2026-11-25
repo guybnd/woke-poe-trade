@@ -145,6 +145,14 @@ describe('essence corruption', () => {
     expect(rateMonolith(plain, MEDS, name => name.startsWith('Deafening') ? 500 : price(name), 1).verdict).toBe('open')
   })
 
+  it('leaves an unpriced Misery out of the best case instead of counting it as free', () => {
+    const m = parseMonolith(['Wailing Essence of Misery', 'Shrieking Essence of Greed'])!
+    const r = rateMonolith(m, MEDS, price, 1)
+    expect(r.verdict).toBe('corrupt')
+    expect(r.estimate?.best).toBe(0.5)
+    expect(r.estimate?.complete).toBe(false)
+  })
+
   it('knows only essences that exist', () => {
     // Every essence the game has (APT's item data), and nothing else.
     const items = fs.readFileSync(path.join(__dirname, '../../public/data/en/items.ndjson'), 'utf8')
