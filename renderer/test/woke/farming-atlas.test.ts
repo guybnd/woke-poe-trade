@@ -6,7 +6,7 @@ import { strategyScarabCosts } from '@/web/woke/atlas/guide'
 import type { AtlasStrategy } from '@/web/woke/atlas/widget'
 import { initFarmingData, isMapCostItem, withScarabCosts } from '@/web/woke/farming/farming'
 import type { FarmingWidget } from '@/web/woke/farming/farming'
-import { exportRows, sessionTotals, strategyRows } from '@/web/woke/analytics/stats'
+import { exportRows, mapProfits, sessionTotals, strategyRows } from '@/web/woke/analytics/stats'
 import type { MapRun, SessionRecord } from '@/web/woke/analytics/types'
 
 const items = [{ type: 'Scarab', name: 'Ambush Scarab', variant: '', chaos: 5 }]
@@ -64,6 +64,17 @@ describe('session analytics', () => {
     expect(row.units).toHaveLength(1)
     expect(row.profit).toBeGreaterThan(0)
     expect(row.perMap).toBeCloseTo(row.profit / 10, 5)
+  })
+
+  it('typical map, best map and losing share count a session without map detail as its maps', () => {
+    const bulk = session({ id: 'a', runs: [], maps: 10, extraChaos: 1000, costPerMapChaos: 0 })
+    const detailed = session({ id: 'b', costPerMapChaos: 50, runs: [run({ loot: [{ type: 'Currency', name: 'Divine Orb', variant: '', qty: 1, chaos: 300 }] as MapRun['loot'] }), run()] })
+    const [row] = strategyRows([bulk, detailed], 'chaos', null, 'hub')
+    // Ten maps of 100 each, one of 250 and one of -50.
+    expect(row.typicalMap).toBe(100)
+    expect(row.bestMap).toBe(250)
+    expect(row.losingShare).toBeCloseTo(1 / 12, 5)
+    expect(mapProfits([{ profit: 30, ms: 1, ts: 1, name: '', maps: 3 }, { profit: 5, ms: 1, ts: 1, name: 'x' }])).toEqual([10, 10, 10, 5])
   })
 
   it('a session with no divine price leaves profit per map alone', () => {
