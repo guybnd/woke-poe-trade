@@ -105,9 +105,9 @@ onBeforeUnmount(() => {
   if (sawEnd) retireHint(PRICE_CHECK_TOUR)
 })
 
-// By the target, inside the price window: under it, or over it when the card
-// wouldn't fit below. Coordinates are the window's own.
 watch([card, step], () => nextTick(measure), { immediate: true })
+// By the target, inside the price window: under it, or over it when the step
+// asks (`above`) or the card wouldn't fit below. Coordinates are the window's own.
 const box = computed(() => {
   const r = step.value ? found.value[step.value.id] : null
   const win = (card.value?.offsetParent as HTMLElement | null)?.getBoundingClientRect()

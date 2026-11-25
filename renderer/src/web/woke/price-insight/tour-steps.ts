@@ -40,11 +40,12 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'listing',
     title: 'Listings',
-    target: '#price-window .w-pc-table tbody tr:not(.w-pc-yours):not(:has(.w-pc-skel))',
+    // The item listings in the Improved view (not the exchange's, not Classic).
+    target: '#price-window [data-tour="listings"] tbody tr:not(.w-pc-yours):not(:has(.w-pc-skel))',
     // Over the list, so it hides none of it.
-    anchor: '#price-window .w-pc-table thead',
+    anchor: '#price-window [data-tour="listings"] thead',
     above: true,
-    text: ['Gold prices are the listings the price above comes from. Faded rows are left out: bait, or listed too long ago. The time on the right turns green under an hour and red after a week.']
+    text: ['Highlighted prices are the listings the trade price comes from. Dim rows are left out or over a week old. The time on the right turns green under an hour and red after a week.']
   }
 ]
 
