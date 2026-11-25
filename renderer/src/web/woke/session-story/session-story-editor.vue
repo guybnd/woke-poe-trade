@@ -9,7 +9,7 @@
       <textarea v-model="skipText" class="w-field" rows="4" spellcheck="false"
         @input="takeSkip" @focus="editing = true" @blur="editing = false" @change="saveSkip" />
       <div class="flex items-center gap-2">
-        <span class="w-faint text-xs flex-1">From now on, left out of the map toast, the night's maps, map and hideout time, averages and the strip. Use the name the game shows when you enter the area.</span>
+        <span class="w-faint text-xs flex-1">From now on, left out of the map toast, the session's maps, map and hideout time, averages and the strip. Use the name the game shows when you enter the area.</span>
         <WButton size="sm" variant="ghost" :disabled="isDefault" @click="resetSkip">Use the defaults</WButton>
       </div>
     </div>

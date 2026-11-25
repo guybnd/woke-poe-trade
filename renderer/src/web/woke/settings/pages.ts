@@ -281,7 +281,7 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     group: 'modules',
     sub: 'Maps & atlas',
     icon: modulePageIcon('session-analytics'),
-    description: 'Profit per map and strategy over time, and a card of each night.',
+    description: 'Profit per map and strategy over time, and a card of each play session.',
     modules: ['session-analytics', 'session-story'],
     widgets: ['woke-session-analytics', 'woke-session-story'],
     find: ['Session analytics', 'Session story', 'Map chip', 'Middle of the screen', 'Glance bar', 'Bar shows', 'On the bar']

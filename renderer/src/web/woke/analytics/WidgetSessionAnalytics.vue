@@ -323,7 +323,7 @@ watch(storyOn, (on) => {
   nightId.value = null
 })
 const tabOptions = computed(() => [
-  ...(storyOn.value ? [{ value: 'history', label: 'Map history' }, { value: 'nights', label: 'Nights' }] : []),
+  ...(storyOn.value ? [{ value: 'history', label: 'Map history' }, { value: 'nights', label: 'Play sessions' }] : []),
   // Strategies is retired (Guy, Nov 2026): it only had Farming's sessions.
   // Its tab body stays below for when Farming comes back.
   { value: 'sessions', label: 'Sessions' },

@@ -16,7 +16,7 @@ export const RECENT_MS = 12 * 3_600_000
 
 export function nightTitle (s: NightStory): string {
   const d = new Date(s.startedAt)
-  return `Night of ${d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}`
+  return `Session of ${d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}`
 }
 
 export function useNightList () {

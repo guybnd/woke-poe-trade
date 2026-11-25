@@ -330,7 +330,7 @@ function peekText (s: NightStory): string {
 function openAnalytics (id: 'history' | 'nights') {
   // Its module off: nothing would open, so point at the switch instead.
   if (!isModuleOn(AppConfig(), 'session-analytics')) {
-    toast('Turn on Session analytics (Settings › Sessions) to see your maps and nights.', { ms: 4000 })
+    toast('Turn on Session analytics (Settings › Sessions) to see your maps and play sessions.', { ms: 4000 })
     return
   }
   openOverlay()
@@ -347,7 +347,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
   icon: 'fas fa-map',
   action: () => openAnalytics('history')
 }, {
-  label: 'All nights',
+  label: 'All play sessions',
   icon: 'fas fa-list',
   action: () => openAnalytics('nights')
 }])

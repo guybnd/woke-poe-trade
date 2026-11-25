@@ -56,7 +56,7 @@ export function sessionStoryLookup (live: NightStory | null, last: NightStory | 
     return [{
       id: 'answer:session-story',
       group: 'Answer',
-      name: live ? 'This session' : `Night of ${when}`,
+      name: live ? 'This session' : `Session of ${when}`,
       sub: `${formatDuration(played(s))} · ${s.maps.length} maps${s.profitChaos != null ? ` · ${signed(s.profitChaos, s.divine)}` : ''}`,
       icon: gameIcon(NIGHT_ART) ?? 'fas fa-moon',
       sections: [{ rows: rows(s, time) }],

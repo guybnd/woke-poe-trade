@@ -65,7 +65,7 @@ const played = computed(() => playedMs(props.story))
 // Per hour counts what the Per hour setting counts (shared/rate-time.ts), as
 // Net worth's and Ctrl+Space's do.
 const rateHours = computed(() => nightRateMs(props.story, rateTime()) / 3_600_000)
-const hoursTip = computed(() => `Per hour of ${formatDuration(rateHours.value * 3_600_000)}: ${props.story.hubMs == null && rateTime() === 'play' ? 'hideout time not recorded for this night' : leftOutText(rateTime())}\n${RATE_TIME_WHERE}`)
+const hoursTip = computed(() => `Per hour of ${formatDuration(rateHours.value * 3_600_000)}: ${props.story.hubMs == null && rateTime() === 'play' ? 'hideout time not recorded for this session' : leftOutText(rateTime())}\n${RATE_TIME_WHERE}`)
 const profit = computed(() => {
   if (props.story.profitChaos != null) return { chaos: props.story.profitChaos, from: 'From stash reads (Net worth)' }
   if (props.farm) return { chaos: props.farm.chaos, from: `From Farming's loot, ${props.farm.sessions} ${props.farm.sessions === 1 ? 'session' : 'sessions'}` }
@@ -88,7 +88,7 @@ const deathMarks = computed(() => {
 // The night's biggest drop shows its own art, the star where it has none.
 const bestArt = computed(() => props.story.best ? itemArt({ name: bestItem(props.story.best) }) : null)
 const HIDEOUT_TIP = "Hideout, town, vaults and anything else that isn't a map, AFK left out"
-const AFK_TIP = 'AFK in the game, left out of the time played. 15 minutes AFK ends the night'
+const AFK_TIP = 'AFK in the game, left out of the time played. 15 minutes AFK ends the session'
 
 // The app's own tooltip card, not the browser's.
 const tipOwner = {}
