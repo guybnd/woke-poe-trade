@@ -90,11 +90,24 @@ describe('card rewards and sets', () => {
   }
   it('finds the cards whose reward is the item', () => {
     expect(cardsFor({ refName: 'Headhunter', namespace: 'UNIQUE' }, tips)).toEqual([
-      { card: 'The Doctor', stack: 8, corrupted: false },
-      { card: 'The Fiend', stack: 11, corrupted: true }
+      { card: 'The Doctor', stack: 8, gives: 1, corrupted: false },
+      { card: 'The Fiend', stack: 11, gives: 1, corrupted: true }
     ])
     expect(cardsFor({ refName: 'Vaal Cold Snap', namespace: 'GEM' }, tips)).toEqual([])
-    expect(cardsFor({ refName: 'Mirror of Kalandra', namespace: 'ITEM' }, tips)).toEqual([{ card: 'House of Mirrors', stack: 9, corrupted: false }])
+    expect(cardsFor({ refName: 'Mirror of Kalandra', namespace: 'ITEM' }, tips)).toEqual([{ card: 'House of Mirrors', stack: 9, gives: 1, corrupted: false }])
+  })
+  it('finds cards that give a stack of the item, cheapest per item first', async () => {
+    const { readFileSync } = await import('node:fs')
+    const all = JSON.parse(readFileSync('public/data/tips/items.json', 'utf8')) as Record<string, { d?: string, n?: number }>
+    const exalts = cardsFor({ refName: 'Exalted Orb', namespace: 'ITEM' }, all)
+    expect(exalts.map(c => c.card)).toEqual(expect.arrayContaining(["The Saint's Treasure", 'Abandoned Wealth', "Brother's Stash", 'The Scout', 'Alluring Bounty', 'The Hoarder']))
+    expect(exalts.find(c => c.card === "The Saint's Treasure")).toMatchObject({ stack: 10, gives: 2 })
+    const perItem = exalts.map(c => c.stack / c.gives)
+    expect(perItem).toEqual([...perItem].sort((a, b) => a - b))
+    // "Elderslayer's Exalted Orb" is a random one of six, not the plain orb.
+    expect(exalts.map(c => c.card)).not.toContain('The Long Con')
+    // A big reward is wrapped in a size tag.
+    expect(cardsFor({ refName: 'Mirror of Kalandra', namespace: 'ITEM' }, { 'House of Mirrors': { d: '<size:30>{<currencyitem>{Mirror of Kalandra}}', n: 9 } })).toHaveLength(1)
   })
   it('leaves out cards that give a random item of that kind', () => {
     // A map is checked as "Map": The Encroaching Darkness gives any unique map.

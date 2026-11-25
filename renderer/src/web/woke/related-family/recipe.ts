@@ -205,8 +205,9 @@ export function recipeSum (parts: RecipePart[], makes: BaseType, priceOf: (info:
 }
 
 // The divination cards whose reward is this item, from the tooltip's item
-// file: "<uniqueitem>{Headhunter}" and a stack size.
-export interface CardReward { card: string, stack: number, corrupted: boolean }
+// file: "<uniqueitem>{Headhunter}", "<currencyitem>{2x Exalted Orb}", and a
+// stack size. `gives` is how many of the item a full stack gives.
+export interface CardReward { card: string, stack: number, gives: number, corrupted: boolean }
 
 // Only a card for this exact item: a unique's card names that unique, a
 // currency's that currency. "<uniqueitem>{Map}" (any unique map) or a base
@@ -218,14 +219,16 @@ export function cardsFor (item: { refName: string, namespace: string }, items: R
   for (const [card, v] of Object.entries(items)) {
     if (!v.n || !v.d) continue
     const lines = v.d.split(/\r?\n/)
-    const m = /^<(uniqueitem|currencyitem)>\{(.+)\}$/.exec(lines[0])
-    if (!m || m[1] !== tag || m[2] !== item.refName) continue
+    // A big reward is wrapped in a size tag: "<size:30>{<currencyitem>{Mirror of Kalandra}}".
+    const first = /^<size:\d+>\{(.*)\}$/.exec(lines[0])?.[1] ?? lines[0]
+    const m = /^<(uniqueitem|currencyitem)>\{(?:(\d+)x )?(.+)\}$/.exec(first)
+    if (!m || m[1] !== tag || m[3] !== item.refName) continue
     // A reward with more than its corruption (a level, links) isn't the plain item.
     const rest = lines.slice(1)
     if (rest.some(l => !/^<corrupted>\{Corrupted\}$/.test(l))) continue
-    out.push({ card, stack: v.n, corrupted: rest.length > 0 })
+    out.push({ card, stack: v.n, gives: m[2] ? Number(m[2]) : 1, corrupted: rest.length > 0 })
   }
-  return out.sort((a, b) => a.stack - b.stack || a.card.localeCompare(b.card))
+  return out.sort((a, b) => a.stack / a.gives - b.stack / b.gives || a.card.localeCompare(b.card))
 }
 
 // Fragment sets that open something together: one of each.

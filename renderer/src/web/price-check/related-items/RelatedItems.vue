@@ -18,7 +18,7 @@
             :class="[$style.row, { [$style.me]: row.highlight, [$style.click]: canOpen(row) }]"
             @pick="open(row)">
             <img :class="$style.art" :src="row.icon" :alt="''">
-            <span :class="$style.name"><span v-if="row.qty && row.qty > 1" :class="$style.qty">{{ row.qty }} ×</span>{{ row.name }}<span v-if="row.tag" :class="$style.tag">{{ row.tag }}</span></span>
+            <span :class="$style.name"><span v-if="row.qty && row.qty > 1" :class="$style.qty">{{ row.qty }} ×</span>{{ row.name }}<span v-if="row.gives" :class="$style.gives">→ {{ row.gives }}</span><span v-if="row.tag" :class="$style.tag">{{ row.tag }}</span></span>
             <span :class="$style.price">
               <template v-if="row.price">{{ priceText(row.price) }}<img :class="$style.coin" :src="coin(row.price)" :alt="row.price.currency"></template>
               <span v-else :class="$style.none" title="poe.ninja has no price for this">?</span>
@@ -47,7 +47,7 @@ import type { ItemTipRef } from '@/web/woke/ui/tooltip/item-tip'
 import { ParsedItem } from '@/parser'
 import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
 import { sideRow, type SideRow } from './side-row'
-import { familyOf, familyRows, type Family } from '@/web/woke/related-family/family'
+import { familiesOf, familyRows, type Family } from '@/web/woke/related-family/family'
 import { cardsFor, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resolveParts } from '@/web/woke/related-family/recipe'
 import { loadTipItems } from '@/web/woke/ui/tooltip/item-tip'
 
@@ -77,23 +77,32 @@ function findPriceByQueryId (queryId: string) {
 // woke: the rest of a bulk item's family (fossils, catalysts, essences of its
 // tier...), dearest first, from the item data and poe.ninja rows already loaded.
 // Members come from a scan of the item data, so each family is read once.
-const familyCache = new Map<string, Family | null>()
-function cachedFamily (info: BaseType): Family | null {
+// An item can be in more than one (Tainted Exalted Orb: tainted currency and exalts).
+const familyCache = new Map<string, Family[]>()
+function cachedFamilies (info: BaseType): Family[] {
   const key = `${info.namespace}::${info.refName}`
   if (!familyCache.has(key)) {
-    familyCache.set(key, familyOf(info, needle => ITEMS_ITERATOR(needle), ref => ITEM_BY_REF('ITEM', ref)?.[0]))
+    familyCache.set(key, familiesOf(info, needle => ITEMS_ITERATOR(needle), ref => ITEM_BY_REF('ITEM', ref)?.[0]))
   }
   return familyCache.get(key)!
 }
 
-function getFamily (item: ParsedItem) {
-  const fam = cachedFamily(item.info)
-  if (!fam) return null
-  const rows = familyRows(fam, item.info.refName, ref => findPriceByQuery({ ns: 'ITEM', name: ref, variant: undefined })?.chaos ?? null)
+function familySection (fam: Family, own: string) {
+  const rows = familyRows(fam, own, ref => findPriceByQuery({ ns: 'ITEM', name: ref, variant: undefined })?.chaos ?? null)
   return {
     label: fam.label,
     related: rows.map(row => sideRow(row.info, row.chaos != null ? autoCurrency(row.chaos) : undefined, row.own, row.info.refName))
   }
+}
+
+function getFamily (item: ParsedItem) {
+  const fam = cachedFamilies(item.info)[0]
+  return fam ? familySection(fam, item.info.refName) : null
+}
+
+// The item's other families, after its own.
+function otherFamilies (item: ParsedItem) {
+  return cachedFamilies(item.info).slice(1).map(fam => familySection(fam, item.info.refName))
 }
 
 // woke: the vendor recipes the item makes or is a part of (Lost Unity for one of
@@ -157,7 +166,7 @@ function getCards (item: ParsedItem, tips: Record<string, { d?: string, n?: numb
     const info = ITEM_BY_REF('DIVINATION_CARD', c.card)?.[0]
     if (!info) continue
     const each = findPriceByQuery({ ns: 'DIVINATION_CARD', name: c.card, variant: undefined })?.chaos
-    rows.push({ ...sideRow(info, each != null ? autoCurrency(each * c.stack) : undefined, false, `card:${c.card}`), qty: c.stack, tag: c.corrupted ? 'corrupted' : undefined })
+    rows.push({ ...sideRow(info, each != null ? autoCurrency(each * c.stack) : undefined, false, `card:${c.card}`), qty: c.stack, gives: c.gives > 1 ? c.gives : undefined, tag: c.corrupted ? 'corrupted' : undefined })
   }
   return rows.length ? [{ key: 'cards', title: 'Cards that give it', rows }] : []
 }
@@ -308,6 +317,7 @@ export default defineComponent({
       const out: Section[] = []
       const group = 'group' in res ? res.group : undefined
       if (res.related.length > 1) out.push({ key: 'related', title: res.label ?? `Related to ${props.item!.info.name}`, family: res.label != null, rows: res.related, sum: res.label == null && group ? setSum(group) : undefined })
+      for (const fam of otherFamilies(props.item!)) out.push({ key: `family:${fam.label}`, title: fam.label, family: true, rows: fam.related })
       if ('dropRelated' in res && res.dropRelated.length > 1) out.push({ key: 'drop-related', title: `Related to ${props.item!.info.name}`, rows: res.dropRelated })
       if (res.items.length) out.push({ key: 'drops', title: `Drops in ${props.item!.info.name}`, rows: res.items })
       return out
@@ -393,6 +403,7 @@ export default defineComponent({
 .coin { width: 16px; height: 16px; object-fit: contain; }
 .none { color: var(--w-faint); font-weight: 400; }
 .qty { color: var(--w-faint); margin-right: 4px; }
+.gives { color: var(--w-faint); margin-left: 6px; }
 .tag { color: #d20000; margin-left: 6px; font-size: var(--w-fs-sm); }
 .lead { padding: 3px 12px 2px; font-size: var(--w-fs-sm); color: var(--w-faint); background: var(--w-panel-solid); border-bottom: 1px solid var(--w-line-soft); }
 .sum { display: flex; justify-content: space-between; gap: 8px; padding: 5px 12px; border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); color: var(--w-dim); }
