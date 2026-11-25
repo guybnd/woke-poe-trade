@@ -183,7 +183,8 @@ function getReward (item: ParsedItem, tips: Record<string, { d?: string, n?: num
   const info = r ? ITEM_BY_REF(r.namespace, r.name)?.[0] : undefined
   if (!r || !info || !tip?.n) return []
   const card = findPriceByQuery({ ns: 'DIVINATION_CARD', name: item.info.refName, variant: undefined })?.chaos
-  const each = chaosOf(info)
+  // poe.ninja's price is the plain item's: a corrupted reward's isn't known.
+  const each = r.corrupted ? null : chaosOf(info)
   const stack = card != null ? card * tip.n : null
   const makes = each != null ? each * r.gives : null
   const rows: SideRow[] = [
@@ -196,16 +197,28 @@ function getReward (item: ParsedItem, tips: Record<string, { d?: string, n?: num
 }
 const signed = (chaos: number) => `${chaos < 0 ? '−' : '+'}${currencyText(autoCurrency(Math.abs(chaos)))}`
 
+// A base gem's transfigured kinds, read from the item data once per base.
+const gemKindsCache = new Map<string, BaseType[]>()
+function gemKindsOf (base: string): BaseType[] {
+  let kinds = gemKindsCache.get(base)
+  if (!kinds) {
+    kinds = [...ITEMS_ITERATOR(`"normalVariant":"${base}"`)].filter(g => g.gem?.transfigured && g.gem.normalVariant === base)
+    if (kinds.length) gemKindsCache.set(base, kinds)
+  }
+  return kinds
+}
+
 // woke: a gem with transfigured kinds lists them all, base first, each priced
 // at the checked gem's level and quality: the Divine Font in the Labyrinth
 // turns one into another, keeping both.
 function getGemKinds (item: ParsedItem, variant: string | undefined) {
   const gem = item.info.gem
-  if (item.info.namespace !== 'GEM' || gem?.vaal) return []
+  // The Font takes no corrupted gem, and a Vaal gem has no transfigured kind.
+  if (item.info.namespace !== 'GEM' || gem?.vaal || item.isCorrupted) return []
   const base = gem?.transfigured ? gem.normalVariant : item.info.refName
   if (!base) return []
   const baseInfo = ITEM_BY_REF('GEM', base)?.[0]
-  const kinds = [...ITEMS_ITERATOR(`"normalVariant":"${base}"`)].filter(g => g.gem?.transfigured && g.gem.normalVariant === base)
+  const kinds = gemKindsOf(base)
   if (!baseInfo || !kinds.length) return []
   const priced = (info: BaseType) => {
     const chaos = variant != null ? findPriceByQuery({ ns: 'GEM', name: info.refName, variant })?.chaos : undefined
@@ -220,14 +233,17 @@ function getGemKinds (item: ParsedItem, variant: string | undefined) {
   }]
 }
 
-// woke: a normal or magic base lists the uniques an Orb of Chance can make of
-// it: those that drop at random on that base (a boss-only or league unique
-// never comes from one), dearest first, each priced on this base.
+// woke: a normal base lists the uniques an Orb of Chance can make of it:
+// those that drop at random on that base (a boss-only or league unique, or a
+// Heist replica, never comes from one), dearest first, each priced on this
+// base. Chance works only on a normal item that isn't corrupted or mirrored.
 function getChanceTargets (item: ParsedItem, drops: TipPack['drops']) {
-  if (item.rarity !== ItemRarity.Normal && item.rarity !== ItemRarity.Magic) return []
+  if (item.rarity !== ItemRarity.Normal || item.isCorrupted || item.isMirrored) return []
   const base = item.info.refName
   const rows: SideRow[] = []
   for (const name of randomDropsOnBase(drops)(base)) {
+    // Not every replica is flagged in the drop data (Replica Dragonfang's Flight).
+    if (name.startsWith('Replica ')) continue
     const all = ITEM_BY_REF('UNIQUE', name) ?? []
     const info = all.find(u => u.unique?.base === base) ?? all[0]
     if (!info) continue
@@ -255,17 +271,18 @@ function getVaults (item: ParsedItem, vaults: Vault[]) {
         const info = ITEM_BY_REF('ITEM', it.name)?.[0] ?? ITEM_BY_REF('GEM', it.name)?.[0]
         if (!info) continue
         const chaos = findPriceByQuery({ ns: info.namespace, name: it.name, variant: it.variant })?.chaos
-        rows.push({ ...sideRow(info, chaos != null ? autoCurrency(chaos) : undefined, it.name === own, `vault:${it.name}`), tag: r.rare ? 'rare' : undefined })
+        rows.push(sideRow(info, chaos != null ? autoCurrency(chaos) : undefined, it.name === own, `vault:${it.name}`))
       }
     }
     if (!rows.some(r => !r.highlight)) return []
     rows.sort((a, b) => chaosOfPrice(b.price) - chaosOfPrice(a.price))
     const others = v.rewards.filter(r => !r.items?.length).length
+    const gems = rows.some(r => r.info.namespace === 'GEM')
     return [{
       key: `vault:${v.id}`,
       title: `Drops from ${v.name}`,
       rows,
-      note: `The vault offers four rewards and you take one${others ? `. It has ${others} more kinds that vary` : ''}.`
+      note: `The vault offers four rewards and you take one${others ? `. It has ${others} more kinds that vary` : ''}.${gems ? ' Gems are priced at level 1.' : ''}`
     }]
   })
 }
@@ -417,7 +434,7 @@ export default defineComponent({
     // Which uniques drop at random, for a normal or magic base's chance list.
     const tipDrops = shallowRef<TipPack['drops'] | null>(null)
     watch(() => props.item, item => {
-      if (tipDrops.value || !item || (item.rarity !== ItemRarity.Normal && item.rarity !== ItemRarity.Magic)) return
+      if (tipDrops.value || !item || item.rarity !== ItemRarity.Normal) return
       loadTipDrops().then(drops => { tipDrops.value = drops }).catch(() => {})
     }, { immediate: true })
     // Templar Vault rewards, read on the first check. The vault code loads
@@ -455,11 +472,19 @@ export default defineComponent({
       const inRecipe = new Set(recipeSecs.flatMap(sec => sec.rows.map(r => r.name)))
       // What a card drops is its reward, which the Full stack section shows priced.
       const reward = new Set(extra.value.filter(sec => sec.key === 'reward').flatMap(sec => sec.rows.map(r => r.name)))
-      const others = otherSections()
+      const otherSecs = otherSections()
+      // A vault lists what the item's own group lists already (the Uber Elder
+      // fragments) only once: in that group.
+      const grouped = new Set(otherSecs.filter(sec => sec.key === 'related').flatMap(sec => sec.rows.filter(r => !r.highlight).map(r => r.name)))
+      const extras = extra.value
+        .filter(sec => !sec.key.startsWith('recipe:'))
+        .map(sec => sec.key.startsWith('vault:') ? { ...sec, rows: sec.rows.filter(r => r.highlight || !grouped.has(r.name)) } : sec)
+        .filter(sec => !sec.key.startsWith('vault:') || sec.rows.some(r => !r.highlight))
+      const others = otherSecs
         .filter(sec => !recipeSecs.length || !sec.rows.every(r => inRecipe.has(r.name)))
         .map(sec => sec.key === 'drops' ? { ...sec, rows: sec.rows.filter(r => !reward.has(r.name)) } : sec)
         .filter(sec => sec.rows.length)
-      return [...recipeSecs, ...extra.value.filter(sec => !sec.key.startsWith('recipe:')), ...others]
+      return [...recipeSecs, ...extras, ...others]
     })
     function otherSections (): Section[] {
       const res = result.value
