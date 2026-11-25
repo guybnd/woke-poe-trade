@@ -22,6 +22,7 @@ export interface NewsItem {
 }
 
 export const NEWS: NewsItem[] = [
+  { id: 'instant-card-rates-graph', wmType: 'price-check', name: 'Price check', note: 'New: the price card by an item shows its chaos and divine rates, and a 24h / 3d / 7d graph (scroll on it)' },
   { id: 'price-check-conquest-keystones', wmType: 'price-check', name: 'Price check', note: 'New: a Timeless jewel lists each conqueror\'s keystone beside it. Click one to search it, any number' },
   { id: 'price-check-clear-numbers', wmType: 'price-check', name: 'Price check', note: 'New: hover a mod\'s number boxes for × to keep the line and search any value' },
   { id: 'essence-tip-slots', wmType: 'price-check', name: 'Price check', note: 'New: an essence\'s tooltip lists the mod it forces on each slot' },

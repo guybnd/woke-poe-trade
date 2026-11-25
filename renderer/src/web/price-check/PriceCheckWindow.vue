@@ -8,7 +8,7 @@
   }">
     <instant-ninja-card v-if="instant && item?.isOk()" :key="instantKey" :item="item.value" :at="instant"
       :active="config.wmWants === 'show'" :again-keys="config.hotkey && !advancedCheck ? `${config.hotkeyHold} + ${config.hotkey}` : null"
-      @placed="instantPlaced" @live="openWindow(true, $event === true)" @details="openWindow(false)" @close="closePriceCheck">
+      @placed="instantPlaced" @live="openWindow(true, $event === true)" @close="closePriceCheck">
       <template #verdict>
         <div v-if="item.value.info.refName === 'Stacked Deck'" :class="$style.instantVerdict">
           <woke-deck-verdict-chip :item="item.value" />
@@ -335,7 +335,7 @@ export default defineComponent({
       if (!Host.isElectron || advancedCheck.value || !rect.width || props.config.wmWants !== 'show') return
       sendTrackArea(trackFrom, { x: window.screenX + rect.x, y: window.screenY + rect.y, width: rect.width, height: rect.height })
     }
-    // From the card to the window: Live offers searches, Details doesn't. The
+    // From the card to the window (live: with a search). The
     // mouse is tracked into the window now, or leaving the card would close it.
     // A click on the card already gave the overlay the mouse (and ended the
     // tracking), so only a key (Space) needs the window tracked from here.

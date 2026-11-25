@@ -19,7 +19,8 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   // The instant check: a small card by the item, no window and no search (WOKEPOET-480).
   const card = overlay.page.getByTestId('instant-ninja-card')
   await expect(card).toContainText('Divine Orb')
-  await expect(card).toContainText('180c')
+  // The exchange rate, as the game's Currency Exchange shows it (Guy's pick I2, 2026-11-25).
+  await expect(card.getByTestId('instant-ninja-price')).toHaveText('1⇄180')
   // Its badge says what the price is and which key gets live data.
   const badge = card.getByTestId('instant-ninja-badge')
   await expect(badge).toHaveAttribute('title', /instant pricing without any delay\. For live data, press the price check key again/)
@@ -30,16 +31,29 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   await expect(tenths).toHaveCount(10)
   await expect(tenths.first()).toHaveText('0.1 div18c')
   await expect(tenths.last()).toHaveText('1 div180c')
-  // The change is over the last day, and says so (poe.ninja's last two days: 104% to 105%).
-  await expect(card.getByTestId('instant-ninja-change')).toHaveText('▲1%1d')
+  // The graph box starts on 24h: poe.ninja's last two days, 104% to 105%.
+  const graph = card.getByTestId('instant-ninja-graph')
+  await expect(graph.getByTestId('instant-ninja-range-24h')).toHaveClass(/on/)
+  await expect(card.getByTestId('instant-ninja-change')).toHaveText('▲1%')
+  await expect(card.getByTestId('instant-ninja-change')).toHaveAttribute('title', /last 24 hours/)
+  // The mouse wheel steps to 3 days, a click on a range picks it.
+  await graph.hover()
+  await overlay.page.mouse.wheel(0, 100)
+  await expect(graph.getByTestId('instant-ninja-range-3d')).toHaveClass(/on/)
+  await expect(card.getByTestId('instant-ninja-change')).toHaveAttribute('title', /last 3 days/)
+  await graph.getByTestId('instant-ninja-range-24h').click()
+  await expect(graph.getByTestId('instant-ninja-range-24h')).toHaveClass(/on/)
+  // poe.ninja's price is sure here: no button, Space is the way to live offers.
+  await expect(card.getByTestId('instant-ninja-live')).toHaveCount(0)
   await expect(overlay.page.locator('#price-window')).toHaveCount(0)
   await overlay.snap('divine orb instant check')
   // The mouse is tracked into the card, not the window.
   const tracked = await fakeApp.waitForReceived('OVERLAY->MAIN::track-area') as { area: { width: number } }
-  // The card and its Divine in chaos panel beside it, not the window.
-  expect(tracked.area.width).toBeLessThan(520)
+  // The card and its Divine in chaos panel beside it (plus the tracking pad), not the window.
+  const shown = await card.boundingBox()
+  expect(tracked.area.width).toBeLessThan(shown!.width + 60)
   expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
-  await card.getByTestId('instant-ninja-live').click()
+  await overlay.page.keyboard.press('Space')
   await expect(card).toHaveCount(0)
   const panel = overlay.widget('price-check')
   // The five recorded exchange offers, cheapest first.
@@ -61,42 +75,35 @@ test('currency: a Chaos Orb gets the instant card with the same 0.1 to 1 div pan
   await overlay.boot()
   await overlay.copyItem('items/currency-chaos.txt')
   const card = overlay.page.getByTestId('instant-ninja-card')
-  await expect(card.getByTestId('instant-ninja-price')).toHaveText('1c')
+  // One line: what a divine buys (a chaos against itself says nothing).
+  await expect(card.getByTestId('instant-ninja-price')).toHaveText('1⇄180')
+  await expect(card.getByTestId('instant-ninja-rate')).toHaveCount(0)
   const tenths = card.getByTestId('instant-ninja-tenths').locator('tr')
   await expect(tenths).toHaveCount(10)
   await expect(tenths.nth(4)).toHaveText('0.5 div90c')
-  await expect(card).toContainText('180 per div')
   await overlay.snap('chaos orb instant check')
-  // A click on the price shows it per divine, and the window keeps that (Guy, 2026-11-24).
-  const price = card.getByTestId('instant-ninja-price')
-  await expect(price).toHaveAttribute('title', 'Click to show it in divines')
-  await price.click()
-  await expect(price).toHaveText('180 per div')
-  await expect(card).toContainText('1c')
-  // The window's cached price follows, and clicks back.
-  await card.getByTestId('instant-ninja-details').click()
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
+})
+
+test('currency: in the window, a click on the cached price shows it per divine', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ patch: windowCheck })
+  await overlay.copyItem('items/currency-chaos.txt')
+  // Guy, 2026-11-24.
   const verdictPrice = overlay.widget('price-check').getByTestId('ninja-verdict-price')
+  await expect(verdictPrice).toHaveText('1c')
+  await verdictPrice.click()
   await expect(verdictPrice).toHaveText('180 per div')
   await verdictPrice.click()
   await expect(verdictPrice).toHaveText('1c')
   expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
 })
 
-test('currency: Space on the instant card searches, Details opens the window without a search', async ({ overlay, fakeApp }) => {
-  await overlay.boot()
+test('currency: with the instant card off, the window shows poe.ninja\'s price without a search', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ patch: windowCheck })
   await overlay.copyItem('items/currency-divine.txt')
-  const card = overlay.page.getByTestId('instant-ninja-card')
-  await expect(card).toBeVisible()
-  await card.getByTestId('instant-ninja-details').click()
   const panel = overlay.widget('price-check')
-  // The window, with poe.ninja's price as its verdict and still no search.
   await expect(panel.getByTestId('ninja-verdict')).toContainText('180c')
   expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
-
-  await overlay.copyItem('items/currency-divine.txt')
-  await expect(card).toBeVisible()
-  await overlay.page.keyboard.press('Space')
-  await expect(panel).toContainText('Chaos 5')
 })
 
 test('divination card: the instant card shows the poe.ninja price and no trade search runs', async ({ overlay, fakeApp }) => {
@@ -104,9 +111,14 @@ test('divination card: the instant card shows the poe.ninja price and no trade s
   await overlay.copyItem('items/card-the-doctor.txt')
   const card = overlay.page.getByTestId('instant-ninja-card')
   await expect(card).toContainText('The Doctor')
-  await expect(card).toContainText('for your 2')
+  await expect(card.getByTestId('instant-ninja-stack')).toContainText('Your 2 =')
   await overlay.snap('the doctor instant check')
-  await card.getByTestId('instant-ninja-details').click()
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/search/'))).toBe(false)
+})
+
+test('divination card: the window says a live check uses one trade search, and runs none', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ patch: windowCheck })
+  await overlay.copyItem('items/card-the-doctor.txt')
   await expect(overlay.widget('price-check').getByTestId('ninja-verdict')).toContainText('uses one trade search')
   expect(fakeApp.requests.some(r => r.url.includes('/api/trade/search/'))).toBe(false)
 })
@@ -115,7 +127,7 @@ test('currency: the price check hotkey again on the same item opens live offers'
   await overlay.boot()
   await overlay.copyItem('items/currency-divine.txt')
   const card = overlay.page.getByTestId('instant-ninja-card')
-  await expect(card.getByTestId('instant-ninja-again')).toContainText('Ctrl')
+  await expect(card.getByTestId('instant-ninja-badge')).toHaveAttribute('data-tip-keys', /Ctrl/)
   await overlay.copyItem('items/currency-divine.txt')
   await expect(card).toHaveCount(0)
   await expect(overlay.widget('price-check')).toContainText('Chaos 5')
@@ -125,10 +137,10 @@ test('currency: the locked price check key shows the card too', async ({ overlay
   await overlay.boot()
   await overlay.copyItem('items/currency-divine.txt', 'Ctrl + Alt + D')
   const card = overlay.page.getByTestId('instant-ninja-card')
-  await expect(card).toContainText('180c')
+  await expect(card.getByTestId('instant-ninja-price')).toHaveText('1⇄180')
   expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
   // The game's hotkeys don't reach a focused overlay, so no "again" hint here.
-  await expect(card.getByTestId('instant-ninja-again')).toHaveCount(0)
+  await expect(card.getByTestId('instant-ninja-badge')).toHaveAttribute('data-tip-keys', 'Space')
   // The overlay has the keyboard here, so Space works straight away.
   await overlay.page.keyboard.press('Space')
   await expect(overlay.widget('price-check')).toContainText('Chaos 5')

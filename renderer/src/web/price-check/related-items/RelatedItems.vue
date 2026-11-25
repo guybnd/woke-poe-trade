@@ -59,7 +59,7 @@ import { usePoeninja, CurrencyValue, displayRounding } from '@/web/background/Pr
 import { getDetailsId } from '../trends/getDetailsId'
 import WItemRow from '@/web/woke/ui/WItemRow.vue'
 import type { ItemTipRef } from '@/web/woke/ui/tooltip/item-tip'
-import { ParsedItem, ItemRarity } from '@/parser'
+import { ParsedItem, ItemCategory, ItemRarity } from '@/parser'
 import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
 import { sideRow, type SideRow } from './side-row'
 import { familiesOf, familyRows, type Family } from '@/web/woke/related-family/family'
@@ -330,6 +330,16 @@ function setSum (group: DropEntry): SumLine | undefined {
 // first (Dawnbreaker: Forbidden Flame, Dawnstrider...). Recipe groups are
 // recipes, not drops. A group of only cards (The Doctor, The Nurse, The
 // Patient) goes when the cards that give the item are listed already.
+// A drop group named by its league mechanic when one opener says it (Guy,
+// 2026-11-25: "should just say 'sanctum'... reads less weird" than "Drops from").
+const DROP_CONTENT: Record<string, string> = {
+  'ITEM::Forbidden Tome': 'Sanctum',
+  'ITEM::Expedition Logbook': 'Expedition'
+}
+function sourceTitle (query: string[]): string {
+  for (const id of query) if (DROP_CONTENT[id]) return DROP_CONTENT[id]
+  return 'Drops from'
+}
 function getSources (item: ParsedItem, queryId: string, cardsShown: boolean, shown: Set<string>) {
   const dearest = (a: SideRow, b: SideRow) => chaosOfPrice(b.price) - chaosOfPrice(a.price)
   return ITEM_DROP
@@ -349,7 +359,7 @@ function getSources (item: ParsedItem, queryId: string, cardsShown: boolean, sho
       }
       also.sort(dearest)
       if (also.length) also[0] = { ...also[0], lead: 'Also drops' }
-      return { key: `from:${i}`, title: 'Drops from', rows, also, sum: setSum(g) }
+      return { key: `from:${i}`, title: sourceTitle(g.query), rows, also, sum: setSum(g) }
     })
     .filter(sec => sec.rows.length && !sec.rows.some(r => r.name === item.info.name))
     .map(({ also, ...sec }) => ({ ...sec, rows: [...sec.rows, ...also] }))
@@ -589,7 +599,9 @@ export default defineComponent({
       for (const fam of otherFamilies(props.item!)) out.push({ key: `family:${fam.label}`, title: fam.label, family: true, rows: fam.related })
       const dropRelated = 'dropRelated' in res ? res.dropRelated.filter(r => !r.highlight) : []
       if (dropRelated.length) out.push({ key: 'drop-related', title: `Related to ${props.item!.info.name}`, rows: dropRelated })
-      if (res.items.length) out.push({ key: 'drops', title: `Drops in ${props.item!.info.name}`, rows: res.items })
+      // A card doesn't drop its reward, it's turned in for it (Guy: "what does this drops in even mean").
+      const card = props.item!.category === ItemCategory.DivinationCard
+      if (res.items.length) out.push({ key: 'drops', title: card ? `${props.item!.info.name} gives` : `Drops in ${props.item!.info.name}`, rows: res.items })
       return out
     }
 
@@ -675,8 +687,9 @@ export default defineComponent({
 .row:last-child { border-bottom: 0; }
 .count { font-family: var(--w-body); font-size: var(--w-fs-sm); color: var(--w-faint); white-space: nowrap; }
 /* woke: a long family scrolls inside the panel; the panel never outgrows the window. */
-/* Beside the instant card, which zooms it 1.2x (--w-instant-scale): the same height on screen as before. */
-.list { max-height: calc(min(26rem, 60vh) / var(--w-instant-scale, 1)); overflow-y: auto; overscroll-behavior: contain; }
+/* Beside the instant card, which zooms it 1.4x (--w-instant-scale): the same height on screen as before. */
+/* Under the instant card it also fits the room left below the card (--w-instant-room, less its heading and foot). */
+.list { max-height: calc(min(26rem, 60vh, max(8rem, var(--w-instant-room, 60vh) - 7rem)) / var(--w-instant-scale, 1)); overflow-y: auto; overscroll-behavior: contain; }
 .tight .row { min-height: 30px; }
 .click { cursor: pointer; }
 .click:hover { background: var(--w-panel-3); }
