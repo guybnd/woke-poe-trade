@@ -317,7 +317,8 @@ const modReach = computed(() => {
   const m = modTip.value
   if (!m || m.itemLevel == null) return ''
   const best = m.steps.find(s => s.level <= m.itemLevel!)
-  if (!best || best.tier === 1) return `Item level ${m.itemLevel}: can roll every tier`
+  if (!best) return ''
+  if (best.tier === 1) return `Item level ${m.itemLevel}: can roll every tier`
   return `Item level ${m.itemLevel}: T${best.tier} is the best it can roll (T1 needs ${m.steps[0].level})`
 })
 // Cheap currency the way traders say it: 1 / price, "5.4 per c".

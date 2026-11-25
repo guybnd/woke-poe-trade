@@ -36,10 +36,7 @@ const BENCH_CLASS: Record<string, string> = {
   'Belt': 'Belt',
   'Amulet': 'Amulet',
   'Quiver': 'Quiver',
-  'Flask': 'Flask',
-  'Jewel': 'Jewel',
   'One-Handed Sword': 'One Hand Melee',
-  'Thrusting One-Handed Sword': 'One Hand Melee',
   'One-Handed Axe': 'One Hand Melee',
   'One-Handed Mace': 'One Hand Melee',
   'Sceptre': 'One Hand Melee',
@@ -79,9 +76,13 @@ export async function modTipFor (item: ParsedItem, f: StatFilter): Promise<ModTi
   if (!ladder) return null
   const { modifier, stat } = f.sources[0]
   const text = stat.translation.string
+  // The row's line with its roll: "+120 to maximum Life". A total's one
+  // source is that mod's own line, whose tiers these are.
+  const own = !/\btotal\b/i.test(f.text)
+  const line = own ? f.text : (f.text.startsWith('+') && !/^[+-]/.test(text) ? `+${text}` : text)
   return {
     kind: 'mod',
-    title: text,
+    title: stat.roll ? line.replace('#', String(stat.roll.value)) : line,
     sub: [GEN[modifier.info.generation ?? ''], item.category].filter(Boolean).join(' · '),
     steps: ladder.steps,
     mine: ladder.mine,

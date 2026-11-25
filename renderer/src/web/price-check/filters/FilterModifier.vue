@@ -15,7 +15,7 @@
           <!-- woke: a mercenary's skill row is a gem: its tooltip (Guy's rule, merc thread). -->
           <!-- woke: a tiered mod's ladder on hover (tooltip audit G5/I1, price-insight/mod-tip.ts). -->
           <button v-item-tip="filter.mercenary?.icon ? { name: filter.text } : null" :class="$style.labelBtn" @click="smartToggle" type="submit"
-            @mouseenter="modTipEnter" @mouseleave="modTipLeave" data-goto-spot="mod-tiers">
+            @mouseenter="modTipEnter" @mouseleave="modTipLeave" :data-goto-spot="tierSpot">
             <img v-if="filter.mercenary?.icon"
               :src="filter.mercenary.icon">
             <span v-if="filter.not && miniFilter"
@@ -132,8 +132,8 @@
 
 <script lang="ts">
 import { vItemTip } from '@/web/woke/ui/tooltip/item-tip'
-import { hideTip, showTipAt } from '@/web/woke/ui/tooltip/tooltip'
-import { defineAsyncComponent, defineComponent, PropType, computed, ref, nextTick, onBeforeUnmount, useCssModule, watch } from 'vue'
+import { mayHaveTiers, useModTipHover } from '@/web/woke/price-insight/mod-tip-hover'
+import { defineAsyncComponent, defineComponent, PropType, computed, ref, nextTick, useCssModule, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import UiPopover from '@/web/ui/Popover.vue'
 import StatRollSlider from '../../ui/StatRollSlider.vue'
@@ -365,30 +365,14 @@ export default defineComponent({
       pointercancel: drag.onPointerUp
     }
 
-    // woke: the mod tooltip waits a moment, so passing over rows shows nothing.
-    let modTipTimer: ReturnType<typeof setTimeout> | undefined
-    let modTipOn = false
-    function modTipEnter (e: MouseEvent) {
-      const el = e.currentTarget as HTMLElement
-      if (props.filter.mercenary || !props.filter.roll || props.filter.sources.length !== 1) return
-      clearTimeout(modTipTimer)
-      modTipTimer = setTimeout(async () => {
-        const { modTipFor } = await import('@/web/woke/price-insight/mod-tip')
-        const content = await modTipFor(props.item, props.filter)
-        if (!content || !el.isConnected || !el.matches(':hover')) return
-        modTipOn = true
-        showTipAt(el, content)
-      }, 250)
-    }
-    function modTipLeave () {
-      clearTimeout(modTipTimer)
-      if (modTipOn) { modTipOn = false; hideTip() }
-    }
-    onBeforeUnmount(modTipLeave)
+    // woke: the mod's tier tooltip (price-insight/mod-tip-hover.ts).
+    const { enter: modTipEnter, leave: modTipLeave } = useModTipHover(() => props)
+    const tierSpot = computed(() => mayHaveTiers(props.filter) ? 'mod-tiers' : undefined)
 
     return {
       modTipEnter,
       modTipLeave,
+      tierSpot,
       catalyst,
       qTag,
       qOn,
