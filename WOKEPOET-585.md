@@ -30,6 +30,11 @@ history:
       Part 1 (586) shipped in PR 903 (78bac8c). Parts 2 (587) and 3 (588) still
       open.
     id: a-2026-11-25t06-27-21-439z
+  - type: activity
+    user: Agent
+    date: '2026-11-25T08:17:22.093Z'
+    comment: Part 2 (587) shipped in PR 924 (045a586). Part 3 (588) still open.
+    id: a-2026-11-25t08-17-22-093z
 subtasks:
   - WOKEPOET-586
   - WOKEPOET-587
