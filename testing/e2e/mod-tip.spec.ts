@@ -18,6 +18,6 @@ test('a mod row shows its tier ladder on hover', async ({ overlay }) => {
   await expect(tip).toContainText('Item level 84: T2 is the best it can roll')
   await expect(tip).toContainText('Bench:')
   // Leaving the row takes it away.
-  await panel.hover({ position: { x: 5, y: 5 } })
+  await overlay.page.mouse.move(5, 5)
   await expect(tip).toBeHidden()
 })
