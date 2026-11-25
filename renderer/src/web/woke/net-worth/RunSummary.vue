@@ -12,7 +12,7 @@
           <span class="w-num">{{ v.text }}</span>
           <span class="w-num text-xs" :class="v.tone">{{ v.delta }}</span>
         </div>
-        <div v-if="vsRows.length" class="w-dim text-xs">Dark bar: your usual. Gold: this run.</div>
+        <div v-if="vsRows.length" :class="$style.legend" class="text-xs"><span><i :class="[$style.sw, $style.swUsual]" />Usual</span><span><i :class="[$style.sw, $style.swMe]" />This run</span></div>
         <div v-else class="w-dim text-xs">No maps to compare per map or per hour yet.</div>
       </template>
       <div v-else class="w-dim text-xs">Your first {{ run.name }} run. The next one with this name is compared to it.</div>
@@ -38,7 +38,7 @@
             <b v-if="m.deaths" :class="$style.death" />
           </i>
         </div>
-        <div class="w-dim text-xs">Each bar is a map, oldest first. Red dot: a death.</div>
+        <div :class="$style.legend" class="text-xs"><span v-if="slowMs != null && s.maps.some(m => m.mapMs > slowMs!)"><i :class="[$style.sw, $style.swSlow]" />Slow</span><span v-if="s.deaths"><i :class="[$style.sw, $style.swDeath]" />Death</span><span v-if="avgPct != null"><i :class="[$style.sw, $style.swAvg]" />Average</span></div>
       </template>
       <div v-else class="w-dim text-xs">No map times: Client.txt didn't cover this run.</div>
     </div>
@@ -58,9 +58,9 @@
     </div>
 
     <div :class="[$style.panel, $style.full]" data-summary-tips>
-      <div :class="$style.ph"><span>Worth a look</span><span :class="$style.phr">only what the numbers back</span></div>
+      <div :class="$style.ph"><span>Worth a look</span></div>
       <div v-for="t in s.tips" :key="t.id" :class="$style.tip" data-summary-tip><b>{{ t.lead }}.</b> {{ t.text }}</div>
-      <div v-if="!s.tips.length" class="w-dim text-xs">Nothing stood out: steady pace, no slow maps, kit at its usual price.</div>
+      <div v-if="!s.tips.length" class="w-dim text-xs">Nothing stood out.</div>
       <button type="button" :class="$style.link" class="text-xs" @click="emit('details')">See every item in and out</button>
     </div>
   </div>
@@ -246,6 +246,11 @@ watch(s, (sum) => {
 .kept { background: var(--w-up); opacity: 0.7; }
 .legend { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--w-dim); }
 .sw { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; }
+.swUsual { background: var(--w-line-strong); }
+.swMe { background: var(--w-gold); opacity: 0.6; }
+.swSlow { background: var(--w-gold); opacity: 0.7; }
+.swDeath { background: var(--w-down); border-radius: 50%; width: 5px; height: 5px; }
+.swAvg { height: 0; border-top: 1px dashed var(--w-dim); vertical-align: 3px; }
 .tip { font-size: var(--w-fs-sm); }
 .tip b { font-weight: 600; }
 .link { background: none; border: 0; padding: 0; color: var(--w-accent); cursor: pointer; font: inherit; align-self: flex-start; }
