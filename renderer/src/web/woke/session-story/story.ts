@@ -99,6 +99,9 @@ export class NightTracker {
   draft: NightDraft | null = null
   // The last line before the game closed, while nothing has come since.
   private openedAt: number | null = null
+  // Each side area ("areaId:seed") and its map's key: a portal back into one
+  // from the hideout is back in that map.
+  private sides = new Map<string, string>()
 
   // `charOf`: your character's name (map-log.ts follows it), so a party
   // member's death isn't yours.
@@ -142,9 +145,12 @@ export class NightTracker {
       this.draft ??= { startedAt: at, lastAt: at, segs: [], deaths: [] }
       const prev = this.draft.segs[this.draft.segs.length - 1]
       // Side areas, encounters and towers inside a map stay part of it.
-      const side = staysInRun(ev.areaId) && !!prev?.map
+      const areaKey = `${ev.areaId}:${ev.seed ?? ''}`
+      const runKey = staysInRun(ev.areaId) ? (prev?.map ? prev.key : this.sides.get(areaKey)) : undefined
+      const side = runKey != null
+      if (side) this.sides.set(areaKey, runKey)
       const map = isMapArea(ev.areaId) || side
-      const key = side ? prev.key : `${ev.areaId}:${ev.seed ?? ''}`
+      const key = runKey ?? areaKey
       const known = map && !side ? knownAreaName(ev.areaId) : null
       this.draft.segs.push({ at, map, key, name: map && !side ? known ?? mapNameFromArea(ev.areaId) : '', named: side || !!known, level: ev.areaLevel, ...(isTownLike(ev.areaId) ? { hub: true } : {}) })
     } else if (ev?.kind === 'zone') {
@@ -173,6 +179,7 @@ export class NightTracker {
   finish (): void {
     const d = this.draft
     this.draft = null
+    this.sides.clear()
     if (d && this.openedAt != null && this.openedAt >= d.lastAt) d.endedByOpening = true
     this.openedAt = null
     if (d && hasMaps(d)) this.onFinished(d)

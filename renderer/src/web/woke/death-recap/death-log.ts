@@ -161,6 +161,9 @@ export class DeathTracker {
   private runKey: string | null = null
   private voices: Array<{ name: string, at: number }> = []
   private readonly visited = new Set<string>()
+  // Side areas of the run going on, and its map's key: a portal back into one
+  // from the hideout is back in that run.
+  private readonly sides = new Map<string, string>()
 
   constructor (private readonly events: LogEvents) {}
 
@@ -181,8 +184,12 @@ export class DeathTracker {
       this.visited.add(this.key)
       if (staysInRun(ev.areaId)) {
         // Keeps the run.
+        if (this.runKey) this.sides.set(this.key, this.runKey)
+        else this.runKey = this.sides.get(this.key) ?? null
       } else {
         this.runKey = isFarmedMap(ev.areaId) ? this.key : null
+        // Another map: the last one's side areas are behind you.
+        if (this.runKey && [...this.sides.values()].some(k => k !== this.runKey)) this.sides.clear()
       }
       return
     }

@@ -158,6 +158,20 @@ describe('a night from Client.txt', () => {
     expect(s.maps[0].mapMs).toBe(6 * 60_000)
   })
 
+  it('counts a side area you portal back into from the hideout as its map', () => {
+    const { tracker } = follow([
+      area('22:00:00', 'MapWorldsStrand', '31'),
+      area('22:02:00', 'MapSideArea1', '32'),
+      area('22:03:00', 'HideoutChurch', '1', 68),
+      area('22:05:00', 'MapSideArea1', '32'),
+      area('22:06:00', 'HideoutChurch', '1', 68)
+    ])
+    const s = summarize(tracker.draft!, at('22:06:00'))
+    expect(s.maps).toHaveLength(1)
+    expect(s.maps[0].mapMs).toBe(4 * 60_000)
+    expect(s.otherMs).toBe(2 * 60_000)
+  })
+
   it('marks a night that ended because the game restarted', () => {
     const { tracker, done } = follow([...NIGHT, `${stamp('21:23:00')} ***** LOG FILE OPENING *****`])
     tracker.tick(tracker.draft!.lastAt + NIGHT_GAP_MS)
