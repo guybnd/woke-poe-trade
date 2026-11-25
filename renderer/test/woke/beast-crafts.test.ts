@@ -1,22 +1,23 @@
-// What a captured beast's tooltip says it does: its Bestiary recipes.
-import { describe, it, expect, beforeAll } from 'vitest'
-import { ITEM_BY_REF } from '@/assets/data'
-import { BEAST_CRAFTS } from '@/web/woke/ui/tooltip/beast-crafts'
-import { loadGameData } from '../helpers/game-data'
+// What a captured beast's tooltip says it does: its Blood Altar recipes, from
+// the same table as its price page.
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { describe, it, expect } from 'vitest'
+import { beastCraftLines } from '@/web/woke/ui/tooltip/beast-crafts'
+import type { BestiaryData } from '@/web/woke/search/lookups/bestiary'
 
-beforeAll(loadGameData)
+const data = JSON.parse(readFileSync(resolve(__dirname, '../../public/data/bestiary-data.json'), 'utf8')) as BestiaryData
 
 describe('beast crafts', () => {
-  it('names only beasts the item data knows', () => {
-    expect(Object.keys(BEAST_CRAFTS).filter(name => !ITEM_BY_REF('CAPTURED_BEAST', name)?.length)).toEqual([])
-  })
-
   it('says what the Farric Alphas beside Exalted Orb do', () => {
-    expect(BEAST_CRAFTS['Farric Lynx Alpha']).toEqual(['Modify Mods on an Item: Add a Suffix, Remove a Random Prefix', 'Only works on rare items'])
-    expect(BEAST_CRAFTS['Farric Wolf Alpha'][0]).toBe('Modify Mods on an Item: Add a Prefix, Remove a Random Suffix')
+    expect(beastCraftLines(data, 'Farric Lynx Alpha').map(l => l.text)).toEqual(['Modify Mods on an Item: Add a Suffix, Remove a Random Prefix', 'Only works on rare items'])
+    expect(beastCraftLines(data, 'Farric Lynx Alpha').map(l => l.recipe)).toEqual([true, false])
   })
 
-  it('starts every beast with a recipe, not a condition', () => {
-    for (const lines of Object.values(BEAST_CRAFTS)) expect(lines[0]).toContain(':')
+  it('spells Modifier right and lists every recipe a beast is in', () => {
+    const lines = beastCraftLines(data, 'Fenumal Plagued Arachnid').map(l => l.text)
+    expect(lines.some(l => l.startsWith('Fracture two Modifiers:'))).toBe(true)
+    expect(lines.join('\n')).not.toMatch(/Modifer/)
+    expect(beastCraftLines(data, 'No Such Beast')).toEqual([])
   })
 })

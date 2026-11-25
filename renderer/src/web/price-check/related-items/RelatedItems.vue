@@ -268,7 +268,7 @@ export default defineComponent({
       if (!drops || 'error' in drops) return { ...family, items: [], dropRelated: [] as SideRow[] }
       // The drop group stays when it adds items (an essence's other tiers), and
       // what the item drops leaves out what the family already lists.
-      const listed = new Set(family.related.map(r => r.name))
+      const listed = new Set([family, ...otherFamilies(props.item)].flatMap(f => f.related.map(r => r.name)))
       return {
         ...family,
         dropRelated: drops.related.some(r => !listed.has(r.name)) ? drops.related : [],
