@@ -60,6 +60,8 @@ const baseline = shallowRef<Baseline | null>(null)
 const guardNow = () => ({ before: baseline.value, now: Date.now() })
 // Every refresh's net change (gains.ts), for the purchase switch.
 const gainsRef = shallowRef<StashGain[]>([])
+// Refreshes' gains the gains file couldn't take (locked): saved with the next.
+let missedGains: { league: string, gains: StashGain[] } | null = null
 // The league those prefs are for: none while another league loads.
 let prefsFor: string | null = null
 const league = shallowRef<string | null>(null)
@@ -230,11 +232,16 @@ async function countRead (id: string, readAt: number) {
     // with the guess whether it's a purchase (spend.ts).
     const old = await stashGainsStrict(id).catch(() => null)
     gain = gainOf(diff, since, divine.value, classify(diff, divine.value))
-    // Gains not read (locked): not saved over.
+    // Gains not read (locked): not saved over. This refresh's gain waits
+    // in memory and joins the next save.
+    const waiting = missedGains?.league === id ? missedGains.gains.slice(-100) : []
     if (old) {
-      const gains = addGain(old, gain)
+      const gains = [...waiting, gain].reduce(addGain, old)
       gainsRef.value = gains
-      await hostRequest('doc-put', { collection: COLLECTION, key: gainsKey(id), value: gains }).catch(() => {})
+      const ok = await hostRequest('doc-put', { collection: COLLECTION, key: gainsKey(id), value: gains }).then(() => true, () => false)
+      missedGains = ok ? null : { league: id, gains: [...waiting, gain] }
+    } else {
+      missedGains = { league: id, gains: [...waiting, gain] }
     }
   } else if (beforeTabs != null && beforeTabs !== tabs) {
     // Other tabs now: today's rate starts again from this read, so the
