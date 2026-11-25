@@ -1,5 +1,5 @@
 <template>
-  <div ref="box" :class="$style.chart" data-ledger-chart :style="height ? { height: `${height}px` } : undefined" @mousemove="onMove" @mouseleave="hover = null" @click="onClick">
+  <div ref="box" :class="[$style.chart, { [$style.axes]: axes }]" data-ledger-chart :style="height ? { height: `${height}px` } : undefined" @mousemove="onMove" @mouseleave="hover = null" @click="onClick">
     <!-- Maps (pick D): a faint column per map, behind the line; the best one named. -->
     <span v-for="m in mapCols" :key="'m' + m.from" :class="[$style.mapCol, { [$style.mapBest]: m.best }]" :style="{ left: m.x + '%', width: m.w + '%' }" />
     <span v-if="bestMap" :class="$style.mapLabel" :style="bestMap.x > 70 ? { right: (100 - bestMap.x - bestMap.w) + '%' } : { left: bestMap.x + '%' }">{{ bestMap.name }} {{ signed(bestMap.gainDiv!) }}<Coin /></span>
@@ -18,6 +18,13 @@
       </template>
       <line v-if="goalY != null" x1="0" :x2="W" :y1="goalY" :y2="goalY" :class="$style.goal" vector-effect="non-scaling-stroke" />
     </svg>
+    <!-- Axes (Guy, 2026-11-25): round values up the left with faint lines
+         across, round times underneath. The line is zoomed to its range, so
+         the values say where it starts. -->
+    <template v-if="axes && series.length >= 2">
+      <span v-for="t in yTicks" :key="'y' + t.v" :class="$style.grid" :style="{ top: t.y + '%' }"><i :class="$style.yLabel" class="w-num">{{ fmt(t.v) }}</i></span>
+      <span v-for="t in xTicks" :key="'x' + t.at" :class="$style.xLabel" class="w-num" :style="{ left: t.x + '%' }">{{ t.text }}</span>
+    </template>
     <!-- The live run's start (runs.ts): a gold line where it counts from. -->
     <span v-if="runLine != null" :class="$style.runStart" :style="{ left: runLine + '%' }" />
     <!-- Sales (Guy's pick S2, 2026-11-24): a small tick on the bottom edge per
@@ -76,7 +83,7 @@ import { tipPlacement } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { Category } from './valuation'
 import type { SpendMark } from './spend'
-import { groupSales, mapOf } from './chart-marks'
+import { groupSales, mapOf, timeTicks, valueTicks } from './chart-marks'
 import type { ChartMap, ChartSale } from './chart-marks'
 
 const props = defineProps<{
@@ -92,6 +99,8 @@ const props = defineProps<{
   tipBelow?: boolean
   // A clicked point's purchase switch (spend.ts); left out: none.
   spendAction?: (at: number) => { label: string, mark: SpendMark | null } | null
+  // Values up the side and times underneath (the Net worth window; not the dock card).
+  axes?: boolean
   // Your sales: ticks on the bottom edge, and each point's card counts those since the point before.
   sales?: ChartSale[]
   // Offer "Start a run from here" on a clicked point (runs.ts).
@@ -278,6 +287,20 @@ const shownSales = computed(() => {
   return { list: list.slice(0, SOLD_LIST), more: Math.max(0, list.length - SOLD_LIST), count: list.length, div: list.reduce((n, x) => n + (x.div ?? 0), 0) }
 })
 
+const yTicks = computed(() => valueTicks(span.value.lo, span.value.hi, 3).map(v => ({ v, y: yOf(v) / H * 100 })))
+const xTicks = computed(() => {
+  const { t0, t1 } = span.value
+  const long = t1 - t0 > 14 * 86_400_000
+  return timeTicks(t0, t1, 7).map(t => {
+    const d = new Date(t.at)
+    const text = !t.day
+      ? d.toLocaleTimeString([], { hour: 'numeric', minute: d.getMinutes() ? '2-digit' : undefined })
+      : d.toLocaleDateString([], long ? { month: 'short', day: 'numeric' } : { weekday: 'short' })
+    return { at: t.at, x: xOf(t.at) / W * 100, text }
+  // Not under the edges, where a label would hang off the chart.
+  }).filter(t => t.x >= 4 && t.x <= 96)
+})
+
 const runLine = computed(() => {
   const at = props.runStartAt
   if (at == null || props.series.length < 2 || at < span.value.t0 || at > span.value.t1) return null
@@ -353,5 +376,9 @@ function when (at: number) {
 .center { transform: translate(-50%, var(--ty)); }
 .left { transform: translate(-4px, var(--ty)); }
 .right { transform: translate(calc(-100% + 4px), var(--ty)); }
+.axes { margin: 0 0 15px 32px; }
+.grid { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid color-mix(in srgb, var(--w-fg) 7%, transparent); pointer-events: none; }
+.yLabel { position: absolute; right: calc(100% + 5px); top: 0; transform: translateY(-50%); font-style: normal; font-size: var(--w-fs-xs); line-height: 1; color: var(--w-faint); white-space: nowrap; }
+.xLabel { position: absolute; top: calc(100% + 3px); transform: translateX(-50%); font-size: var(--w-fs-xs); line-height: 1; color: var(--w-faint); white-space: nowrap; pointer-events: none; }
 .empty { position: absolute; inset: 0; display: grid; place-items: center; }
 </style>

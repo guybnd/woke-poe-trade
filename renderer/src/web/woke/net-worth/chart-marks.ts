@@ -54,3 +54,34 @@ export function mapOf (maps: readonly ChartMap[], at: number): ChartMap | null {
   for (const m of maps) if (m.from <= at) found = m
   return found && at - found.to <= AFTER_MS ? found : null
 }
+
+// The value axis: round numbers inside [lo, hi], about `n` of them, on a
+// 1, 2 or 5 step (Guy, 2026-11-25: "a total number axis on height").
+export function valueTicks (lo: number, hi: number, n = 3): number[] {
+  if (!(hi > lo)) return []
+  const raw = (hi - lo) / n
+  const mag = 10 ** Math.floor(Math.log10(raw))
+  // The round step nearest the raw one (by ratio).
+  const step = [1, 2, 5, 10].map(m => m * mag).reduce((a, b) => Math.abs(Math.log(b / raw)) < Math.abs(Math.log(a / raw)) ? b : a)
+  const out: number[] = []
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(Math.round(v * 1e6) / 1e6)
+  return out
+}
+
+// The time axis under the chart: round times inside [t0, t1], about `n` of
+// them (on the hour, midnight, ...). Local time, so midnight is yours.
+const TIME_STEPS = [15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map(m => m * 60_000)
+export function timeTicks (t0: number, t1: number, n = 5): { at: number, day: boolean }[] {
+  if (!(t1 > t0)) return []
+  const step = TIME_STEPS.find(s => s >= (t1 - t0) / n) ?? TIME_STEPS[TIME_STEPS.length - 1]
+  const day = step >= 1440 * 60_000
+  // Start from local midnight before t0, so the ticks land on round local times.
+  const d = new Date(t0)
+  d.setHours(0, 0, 0, 0)
+  if (step === 10080 * 60_000) d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  const out: { at: number, day: boolean }[] = []
+  let at = d.getTime()
+  while (at < t0) at += step
+  for (; at <= t1; at += step) out.push({ at, day })
+  return out
+}

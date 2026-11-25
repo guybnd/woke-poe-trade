@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { groupSales, mapOf, slotOf } from '@/web/woke/net-worth/chart-marks'
+import { groupSales, mapOf, slotOf, timeTicks, valueTicks } from '@/web/woke/net-worth/chart-marks'
 import { listedAt } from '@/web/woke/net-worth/pending'
 import type { PendingDoc } from '@/web/woke/net-worth/pending'
 import { addPoint, seriesFor } from '@/web/woke/net-worth/ledger'
@@ -61,5 +61,23 @@ describe('sale ticks by slot', () => {
     ]
     const g = groupSales(sales, t0, t0 + 7 * 24 * 60 * M)
     expect(g.map(x => [x.name, x.div, x.count])).toEqual([['Blunderbore', 20.5, 3], ['Hollow Lands', 1.4, 1]])
+  })
+})
+
+describe('chart axes', () => {
+  it('puts round values inside the range', () => {
+    expect(valueTicks(720, 890)).toEqual([750, 800, 850])
+    expect(valueTicks(0, 10)).toEqual([0, 5, 10])
+    expect(valueTicks(1.2, 1.9)).toEqual([1.2, 1.4, 1.6, 1.8])
+    expect(valueTicks(5, 5)).toEqual([])
+  })
+  it('puts round local times inside the range', () => {
+    const t0 = new Date(2026, 10, 24, 3, 36).getTime()
+    const day = timeTicks(t0, t0 + 24 * 3600_000)
+    expect(day.length).toBeGreaterThanOrEqual(4)
+    expect(day.length).toBeLessThanOrEqual(6)
+    for (const x of day) { expect(new Date(x.at).getMinutes()).toBe(0); expect(new Date(x.at).getHours() % 6).toBe(0) }
+    const week = timeTicks(t0, t0 + 7 * 24 * 3600_000)
+    expect(week.every(x => x.day && new Date(x.at).getHours() === 0)).toBe(true)
   })
 })

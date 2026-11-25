@@ -101,7 +101,7 @@
                 <TextTabs v-model="range" :options="RANGE_OPTIONS" />
               </span>
             </div>
-            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :mode="chartMode as 'total' | 'category'" :goal-div="chartListed ? goal?.div ?? null : goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :listed="chartListed" :maps="chartMaps" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
+            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" axes :mode="chartMode as 'total' | 'category'" :goal-div="chartListed ? goal?.div ?? null : goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :listed="chartListed" :maps="chartMaps" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
             <div v-if="chartMode === 'category' && !fold.chart" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
             </div>
