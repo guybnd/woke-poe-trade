@@ -154,3 +154,25 @@ export function flipTitle (price: Pick<NinjaPrice, 'flip'> | null | undefined): 
   if (!price?.flip) return undefined
   return price.flip === 'div' ? 'Click to show it in divines' : 'Click to show it in chaos'
 }
+
+/** One side of an exchange rate: a count of the item or of a currency. */
+export interface RateSide { n: string, of: 'item' | 'c' | 'div' }
+/** "1 c ⇄ 1.1 Exalted", or "1 Mirror Shard ⇄ 5 div": whichever side is worth less gets the count. */
+export interface NinjaRate { left: RateSide, right: RateSide }
+
+/**
+ * The instant card's exchange rates (Guy's pick D, 2026-11-25): the item
+ * against a chaos and against a divine, as the game's Currency Exchange shows
+ * them, so there's no unit to switch. A Divine Orb has no divine line, a Chaos
+ * Orb no chaos line.
+ */
+export function ninjaRates (chaos: number, rate: number | undefined, kind: 'divine' | 'chaos' | null = null): NinjaRate[] {
+  if (!(chaos > 0)) return []
+  const row = (worth: number, of: 'c' | 'div'): NinjaRate => worth >= 1
+    ? { left: { n: '1', of: 'item' }, right: { n: num(worth), of } }
+    : { left: { n: '1', of }, right: { n: num(1 / worth), of: 'item' } }
+  const out: NinjaRate[] = []
+  if (kind !== 'chaos') out.push(row(chaos, 'c'))
+  if (kind !== 'divine' && rate) out.push(row(chaos / rate, 'div'))
+  return out
+}

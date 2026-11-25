@@ -14,9 +14,9 @@
         <section :class="$style.block" class="w-num" data-mod-ladder>
           <div :class="$style.ladder">
             <template v-for="s in modTip.steps" :key="s.tier">
-              <span :class="ladderClass(s)">T{{ s.tier }}</span>
+              <span :class="ladderClass(s)">{{ s.label ?? `T${s.tier}` }}</span>
               <span :class="ladderClass(s)">{{ s.min === s.max ? s.min : `${s.min}–${s.max}` }}</span>
-              <span :class="ladderClass(s)">ilvl {{ s.level }}</span>
+              <span :class="ladderClass(s)">{{ s.level != null ? `ilvl ${s.level}` : '' }}</span>
             </template>
           </div>
         </section>
@@ -320,13 +320,13 @@ const modTip = computed<ModTip | null>(() => tip.value?.content.kind === 'mod' ?
 const ladderClass = (s: ModTip['steps'][number]) => {
   const m = modTip.value!
   if (s.tier === m.mine) return $style.value
-  return m.itemLevel != null && s.level > m.itemLevel ? $style.faint : $style.label
+  return m.itemLevel != null && s.level != null && s.level > m.itemLevel ? $style.faint : $style.label
 }
 // What the item's level lets it roll, when that's not every tier.
 const modReach = computed(() => {
   const m = modTip.value
   if (!m || m.itemLevel == null) return ''
-  const best = m.steps.find(s => s.level <= m.itemLevel!)
+  const best = m.steps.find(s => s.level != null && s.level <= m.itemLevel!)
   if (!best) return ''
   if (best.tier === 1) return `Item level ${m.itemLevel}: can roll every tier`
   return `Item level ${m.itemLevel}: T${best.tier} is the best it can roll (T1 needs ${m.steps[0].level})`

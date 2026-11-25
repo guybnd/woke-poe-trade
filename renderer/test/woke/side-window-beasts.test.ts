@@ -1,6 +1,7 @@
-// The price check's side window lists captured beasts beside the uniques they
-// drop with (Watcher's Eye and Wild Hellion Alpha): a click price checks the
-// beast too, as the item menu's Price does.
+// A captured beast row in the price check's side window (a recipe or a list
+// naming one) price checks the beast on a click, as the item menu's Price does.
+// The upstream groups that paired beasts with Watcher's Eye or Exalted Orb are
+// no longer shown as related (recipe.ts isRelatedGroup).
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { ITEM_BY_REF, ITEM_DROP } from '@/assets/data'
 import type { BaseType } from '@/assets/data'
