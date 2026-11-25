@@ -40,6 +40,8 @@
               title="Don't tell me about this again. You can turn it back on in the Prices tab" @click="turnOff" />
           </div>
           <div v-if="config.editorHotkey && !config.neversink.on" class="w-faint text-xs">Open the editor with <WKbd :keys="config.editorHotkey" /></div>
+          <!-- The filter's least known key (hidden-features audit F6). -->
+          <div v-if="config.sampleHotkey" class="w-faint text-xs" data-filter-sample-key><WKbd :keys="config.sampleHotkey" /> on an item: the rule that shows or hides it</div>
         </div>
       </template>
     </DockItem>
@@ -295,8 +297,11 @@ const wantedLevel = computed(() => props.config.strictAuto.on && props.config.st
 const keysHelp = computed(() => {
   const c = props.config
   return [
+    { keys: c.sampleHotkey, label: 'On an item: the rule that shows or hides it' },
     { keys: c.looserHotkey, label: 'Looser' },
     { keys: c.stricterHotkey, label: 'Stricter' },
+    { keys: 'Wheel', label: 'Over the levels: step through them' },
+    { keys: c.reloadHotkey, label: 'Reload it in game' },
     { keys: c.editorHotkey, label: 'Editor' }
   ].filter((k): k is { keys: string, label: string } => !!k.keys)
 })

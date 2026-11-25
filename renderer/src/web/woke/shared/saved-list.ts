@@ -78,3 +78,15 @@ export function useDraftName (root: () => Element | null | undefined) {
   function cancel () { editing.value = null }
   return { editing, draft, start, finish, cancel }
 }
+
+// The rows a saved list's window "?" lists (shared/SavedTree's keys).
+export function savedListKeys (opts: { copy: boolean }): Array<{ keys: string, label: string }> {
+  return [
+    { keys: 'F2', label: 'Rename' },
+    { keys: 'Delete', label: 'Remove (Undo for a moment after)' },
+    ...(opts.copy ? [{ keys: 'Ctrl + C', label: 'Copy' }] : []),
+    { keys: 'Ctrl + Click', label: 'Pick another row' },
+    { keys: 'Shift + Click', label: 'Pick the rows between' },
+    { keys: 'Alt + Up', label: 'Move it up (Alt + Down: down)' }
+  ]
+}

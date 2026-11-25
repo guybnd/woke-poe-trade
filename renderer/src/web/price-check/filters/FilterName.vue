@@ -64,8 +64,11 @@
     <div class="filter-name-tiles">
       <!-- woke: right-click Links to show or hide the socket colour tiles. -->
       <span v-if="filters.linkedSockets" class="filter-name-links" data-links-tile
-        :title="item.sockets?.colours ? 'Right-click: socket colours' : undefined"
+        :title="item.sockets?.colours ? (filters.socketColours ? 'Socket colour tiles: show or hide' : 'Socket colour tiles') : undefined"
+        :data-tip-keys="item.sockets?.colours ? 'Right-click' : undefined"
         @contextmenu="toggleColourTiles">
+        <!-- woke: three small socket dots say the colours are a right-click away (hidden-features audit F10). -->
+        <span v-if="item.sockets?.colours && !filters.socketColours" class="filter-name-dots" aria-hidden="true"><i class="r" /><i class="g" /><i class="b" /></span>
         <filter-btn-numeric :chip="poe" :limit="NUMERIC_LIMITS.links"
           :filter="filters.linkedSockets" :name="t('item.linked_sockets')" />
       </span>
@@ -313,6 +316,12 @@ export default defineComponent({
   color: var(--w-down);
 }
 .filter-name-links, .filter-name-scol { display: inline-flex; }
+.filter-name-links { position: relative; }
+.filter-name-dots { position: absolute; top: 2px; right: 3px; display: flex; gap: 1px; pointer-events: none; }
+.filter-name-dots i { width: 3px; height: 3px; border-radius: 50%; }
+.filter-name-dots .r { background: #e0645c; }
+.filter-name-dots .g { background: #7fc94f; }
+.filter-name-dots .b { background: #6f9cf0; }
 /* The colour tiles' letters in their socket colour. */
 .filter-name-scol.r :is(.w-poe-nlab, [class*="label"]) { color: #e0645c; }
 .filter-name-scol.g :is(.w-poe-nlab, [class*="label"]) { color: #7fc94f; }

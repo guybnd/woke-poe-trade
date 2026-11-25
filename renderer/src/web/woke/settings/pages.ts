@@ -106,7 +106,7 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     description: 'UI size, theme, app colours, text size, panel opacity, the overlay backdrop and the row of icons you see while playing.',
     // Loaded when opened: kept out of the startup JS (perf budget).
     parts: [defineAsyncComponent(() => import('./LookPage.vue'))],
-    find: ['Theme', 'PoE 1', 'PoE 2', 'Window art', 'App colours', 'Colours', 'Colors', 'Accent', 'App icon', 'Tray icon', 'UI size', 'Bigger', 'Smaller', 'Zoom', 'Scale', 'Panel size', 'Pinned size', 'Font size', 'Text size', 'Price check window size', 'Window size', 'Overlay background', 'Panel opacity', 'Transparency', 'See-through', 'Darken the game', 'Restore clipboard', 'Window title', 'Overlay ready notice', 'Icon row', 'Peek', 'Dock'],
+    find: ['Theme', 'PoE 1', 'PoE 2', 'Window art', 'App colours', 'Colours', 'Colors', 'Accent', 'App icon', 'Tray icon', 'UI size', 'Bigger', 'Smaller', 'Zoom', 'Scale', 'Panel size', 'Pinned size', 'Font size', 'Text size', 'Price check window size', 'Window size', 'Overlay background', 'Panel opacity', 'Transparency', 'See-through', 'Darken the game', 'Restore clipboard', 'Window title', 'Overlay ready notice', 'Icon row', 'Peek', 'Dock', 'Tips', 'Hints', 'Show tips again'],
     aliases: ['Appearance', 'Icon row']
   },
   {

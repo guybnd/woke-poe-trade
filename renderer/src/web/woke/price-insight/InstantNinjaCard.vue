@@ -294,7 +294,7 @@ onUnmounted(() => {
   color: #7fb2e5;
 }
 .value { display: flex; align-items: baseline; gap: 6px; }
-.flip { cursor: pointer; }
+.flip { cursor: pointer; text-decoration: underline dashed color-mix(in srgb, currentColor 45%, transparent); text-decoration-thickness: 1px; text-underline-offset: 4px; }
 .flip:hover { filter: brightness(1.2); }
 .headline { font-family: var(--w-num); font-size: calc(24px * var(--w-text-scale, 1)); line-height: 1.1; font-weight: 600; color: var(--w-accent); white-space: nowrap; }
 .dim { color: var(--w-dim); }

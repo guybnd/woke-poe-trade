@@ -50,6 +50,7 @@ import { usePoeninja } from '@/web/background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
 import { handleLine } from '@/web/client-log/client-log'
 import { instantCardShown } from '@/web/woke/price-insight/view'
+import { bindHintsConfig, setOverlayOpen } from '@/web/woke/shared/hints'
 
 type WMID = Widget['wmId']
 
@@ -75,7 +76,11 @@ export default defineComponent({
     const hideUI = shallowRef(false)
     const showEditingNotification = shallowRef(false)
 
+    // woke: tips (shared/hints.ts) live in the config and count one showing per overlay open.
+    bindHintsConfig(() => AppConfig().woke)
+    setOverlayOpen(active.value)
     watch(active, (active) => {
+      setOverlayOpen(active)
       if (active) {
         showEditingNotification.value = false
       }
