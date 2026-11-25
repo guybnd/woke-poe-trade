@@ -20,6 +20,8 @@
     "ninja-icons": "node scripts/build-ninja-icons.mjs",
     "viscera-data": "node scripts/build-viscera-data.mjs",
     "vestigial-data": "node scripts/build-vestigial-data.mjs",
+    "base-extras": "node scripts/build-base-extras.mjs",
+    "unique-extras": "node scripts/build-unique-extras.mjs",
     "vault-data": "node scripts/build-vault-data.mjs"
   },
   "dependencies": {
