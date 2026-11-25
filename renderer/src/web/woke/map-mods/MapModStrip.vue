@@ -741,7 +741,7 @@ const picked = computed(() => {
 .propBtn { cursor: pointer; color: inherit; }
 .propOff { border: 1px dashed var(--w-line-strong); }
 .tile.propOff:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
-.tplDel { padding: 0 4px !important; color: var(--w-dim); font-size: 9px !important; border-left: 0 !important; }
+.tplDel { padding: 0 4px !important; color: var(--w-dim); font-size: var(--w-fs-xs) !important; border-left: 0 !important; }
 .tplDel:hover { color: var(--w-down); }
 .nameBox { width: 8em; padding: 0 4px; font-size: var(--w-fs-xs); border: 1px solid var(--w-accent); border-radius: var(--w-r-sm); background: var(--w-panel); color: var(--w-fg); }
 .goalRow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
