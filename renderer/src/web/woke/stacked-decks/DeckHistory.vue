@@ -76,7 +76,9 @@ const { price, held, deckChaos, divine, fetch } = useDeckPrices()
 function heldFor (r: DeckRecord) {
   const saved = recordPrice(r)
   const now = held.value
-  return (name: string) => now(name) ?? dropRateHeld(saved(name), dropChance(name), r.deckChaos)
+  // The saved price first: today's fake can be far above it, and then
+  // withoutHeld would keep a saved fake.
+  return (name: string) => dropRateHeld(saved(name), dropChance(name), r.deckChaos) ?? now(name)
 }
 const savedPrice = (r: DeckRecord) => withoutHeld(recordPrice(r), heldFor(r))
 // The fake prices this session was saved with.

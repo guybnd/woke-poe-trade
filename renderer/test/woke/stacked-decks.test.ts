@@ -279,6 +279,13 @@ describe('drop-rate check', () => {
     expect(guardCardPrice(10_000, [null, null, 0, 0, 0, 0, 0], 30, deck('Loyalty'))?.kind).toBe('drop-rate')
   })
 
+  it('a fake that climbs again after days counts as 0, not at the earlier fake', () => {
+    // 10,000c for five days, then 60,000c: the line check alone would count 10,000c.
+    const climbed = [-83.3, -83.3, -83.3, -83.3, -83.3, -83.3, 0]
+    expect(guardCardPrice(60_000, climbed, 30)?.chaos).toBeCloseTo(10_000, -2)
+    expect(guardCardPrice(60_000, climbed, 30, deck('Loyalty'))).toEqual({ ninja: 60_000, chaos: null, kind: 'drop-rate' })
+  })
+
   it('keeps real prices: a cheap common card, a rare card at a high price', () => {
     expect(guardCardPrice(2, steady, 30, deck('Loyalty'))).toBeNull()
     expect(guardCardPrice(19, steady, 30, deck('Matryoshka'))).toBeNull()
