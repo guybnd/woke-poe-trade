@@ -106,3 +106,16 @@ export function worthLine (h: HintsConfig | undefined, ctx?: WorthContext): Wort
   const l = WORTH.find(l => l.id === h.wk!.id)
   return l && (!ctx || worthFits(l, h, ctx)) ? l : null
 }
+
+// A note split for display: key phrases become key chips, and "Ctrl + Space"
+// becomes the search icon with the player's own search key (Guy's tips
+// review). `searchKey` null (no key set) leaves the words as they are.
+export type NoteBit = string | { kbd: string, search?: true }
+const NOTE_KEYS = /(Ctrl \+ Space|Ctrl \+ Click|Right-click)/
+export function noteBits (note: string, searchKey: string | null | undefined): NoteBit[] {
+  return note.split(NOTE_KEYS).filter(Boolean).map(s => {
+    if (s === 'Ctrl + Space') return searchKey ? { kbd: searchKey, search: true as const } : s
+    if (s === 'Ctrl + Click' || s === 'Right-click') return { kbd: s }
+    return s
+  })
+}

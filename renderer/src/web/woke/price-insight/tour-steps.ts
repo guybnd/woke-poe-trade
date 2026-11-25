@@ -10,8 +10,10 @@ export const TOUR_AT_CHECK = 3
 // Checks it shows on before it gives up.
 export const TOUR_SHOWS = 2
 
-// Plain text, or a key chip.
-export type TourBit = string | { kbd: string }
+// Plain text, a key chip, or words shown in the colour they name (the
+// listings' own colours, so the card reads like the table).
+export type TourTone = 'accent' | 'dim' | 'up' | 'down'
+export type TourBit = string | { kbd: string } | { tone: TourTone, text: string }
 
 export interface TourStep {
   id: 'mods' | 'price' | 'listing'
@@ -45,7 +47,11 @@ export const TOUR_STEPS: TourStep[] = [
     // Over the list, so it hides none of it.
     anchor: '#price-window [data-tour="listings"] thead',
     above: true,
-    text: ['Highlighted prices are the listings the trade price comes from. Dim rows are left out or over a week old. The time on the right turns green under an hour and red after a week.']
+    text: [
+      { tone: 'accent', text: 'Highlighted prices' }, ' are the listings the trade price comes from. ',
+      { tone: 'dim', text: 'Dim rows' }, ' are left out or over a week old. The time on the right turns ',
+      { tone: 'up', text: 'green' }, ' under an hour and ', { tone: 'down', text: 'red' }, ' after a week.'
+    ]
   }
 ]
 

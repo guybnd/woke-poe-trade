@@ -469,6 +469,9 @@ button.w-chip:hover { color: var(--w-fg); }
   pointer-events: none;
 }
 .w-wheel-peek .w-kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-family: var(--w-num);
   font-size: var(--w-fs-xs);
   padding: 0 5px;

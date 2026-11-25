@@ -1,6 +1,7 @@
 // "Wheel: step it": clicking into a number box to type peeks, for a moment
 // under the box, that the wheel steps it (hidden-features audit, F12). Gone for
 // good once the wheel steps a box, or after a few peeks (shared/hints.ts).
+import { WHEEL_GLYPH } from './mouse-glyph'
 import { retireHint, takeShow } from '../shared/hints'
 
 export const WHEEL_HINT = 'number-wheel'
@@ -33,7 +34,8 @@ function onFocusIn (e: FocusEvent) {
   el.setAttribute('data-hint', WHEEL_HINT)
   const kbd = document.createElement('kbd')
   kbd.className = 'w-kbd'
-  kbd.textContent = 'Wheel'
+  kbd.innerHTML = WHEEL_GLYPH // our own constant markup
+  kbd.append('Wheel')
   el.append(kbd, ' steps it up or down')
   el.style.left = `${Math.max(4, r.left)}px`
   el.style.top = `${r.bottom + 4}px`

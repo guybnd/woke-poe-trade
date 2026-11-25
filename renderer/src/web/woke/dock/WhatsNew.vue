@@ -33,7 +33,7 @@
             <div :class="$style.line" data-whats-new-line data-worth-knowing>
               <div :class="$style.text">
                 <span :class="$style.name" data-no-item-tip="A tool's name, not an item"><ToolIcon :art="artFor(worth.wmType)" :icon="iconFor(worth.wmType)" :class="$style.toolIcon" />{{ worth.name }}<span :class="$style.topic">· Worth knowing</span></span>
-                <span>{{ worth.note }}</span>
+                <span data-worth-note><template v-for="(b, i) in worthBits" :key="i"><template v-if="typeof b === 'string'">{{ b }}</template><span v-else :class="$style.keyBit"><i v-if="b.search" class="fas fa-search" :class="$style.searchIcon" aria-label="Search" /><WKbd :keys="b.kbd" /></span></template></span>
               </div>
               <w-button size="sm" variant="ghost" data-whats-new-show @click="show(worth, $event)">Show me</w-button>
               <w-button size="sm" variant="ghost" icon="fas fa-times" title="Dismiss" data-whats-new-dismiss @click="markSeen([worth])" />
@@ -77,7 +77,8 @@ import { searchRequest } from '../search/widget'
 import { elementPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
 import type { ItemMenuRef } from '../ui/tooltip/item-menu-logic'
 import { uiTrace } from '../app/ui-trace'
-import { WORTH_PREFIX, dayOf, worthLine } from '../tab-bar/worth-knowing'
+import { WORTH_PREFIX, dayOf, noteBits, worthLine } from '../tab-bar/worth-knowing'
+import WKbd from '../ui/WKbd.vue'
 import { hintPlaceOk, holdTour, retireHint } from '../shared/hints'
 import DockItem from './DockItem.vue'
 import { openOverlay, openSettingsPage, showWithOverlay } from './dock'
@@ -106,6 +107,10 @@ const worth = computed<NewsItem | null>(() => {
   })
   return l && hasShowMe(l, AppConfig().language === 'en', personalOn.value) ? { ...l, since: '' } : null
 })
+// Its note with key chips; Ctrl + Space reads the player's own search key.
+const worthBits = computed(() => worth.value
+  ? noteBits(worth.value.note, (AppConfig().widgets.find(w => w.wmType === 'woke-search') as { hotkey?: string | null } | undefined)?.hotkey)
+  : [])
 const all = computed(() => worth.value ? [...lines.value, worth.value] : lines.value)
 const count = computed(() => all.value.length)
 const isWorth = (n: NewsItem) => n.id.startsWith(WORTH_PREFIX)
@@ -251,4 +256,6 @@ function turnOff () {
 .toolIcon { --w-icon-md: 16px; --w-fs-lg: var(--w-fs-md); }
 .name { display: flex; align-items: center; gap: 5px; color: var(--w-accent); font-family: var(--w-head); letter-spacing: var(--w-head-track); }
 .foot { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.keyBit { display: inline-flex; align-items: center; gap: 4px; margin: 0 2px; vertical-align: 1px; }
+.searchIcon { font-size: 0.85em; color: var(--w-accent); }
 </style>

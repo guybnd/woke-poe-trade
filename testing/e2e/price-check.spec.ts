@@ -491,6 +491,8 @@ test('the 3rd price check shows a short tour once, and the mod tip waits for it'
   await expect(tour).toHaveAttribute('data-step', 'listing')
   await expect(tour).toBeVisible()
   await expect(tour).toContainText('Highlighted prices')
+  // The colour words wear their colours.
+  await expect(tour.locator('[data-tone]')).toHaveText(['Highlighted prices', 'Dim rows', 'green', 'red'])
   // Over the list, not on its first row.
   const head = (await panel.locator('.w-pc-table thead').boundingBox())!
   await expect.poll(async () => { const b = (await tour.boundingBox())!; return b.y + b.height }).toBeLessThanOrEqual(head.y + 1)
@@ -668,4 +670,15 @@ test('bulk: when the picked chaos offers fail to load, it says so and Retry gets
   await expect(panel.getByTestId('bulk-verdict-price')).toHaveText('1c')
   // Each chaos search came from a click.
   expect(haves.filter(have => have.length === 1)).toHaveLength(2)
+})
+
+test('clicking into a mod number peeks that the wheel steps it, with a wheel icon', async ({ overlay }) => {
+  await overlay.boot({ tips: true })
+  await overlay.copyItem('items/unique-kaoms-heart.txt')
+  const panel = overlay.widget('price-check')
+  await panel.locator('[data-pc-mod] input[type="number"]').first().click()
+  const peek = overlay.page.locator('.w-wheel-peek')
+  await expect(peek).toContainText('Wheel')
+  await expect(peek.locator('svg.w-mouse-glyph')).toHaveCount(1)
+  await overlay.snap('wheel peek')
 })

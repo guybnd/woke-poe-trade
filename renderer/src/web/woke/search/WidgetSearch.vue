@@ -137,7 +137,7 @@
           <span><WKbd keys="Ctrl + P" /> pin to compare</span>
           <span v-if="selected?.line && !queryOk"><WKbd keys="Delete" /> remove</span>
           <span><WKbd keys="Esc" /> back to game</span>
-          <span v-if="typedHint.show.value && config.hotkey" :class="$style.peek" data-hint="search-from-game">Next time: <WKbd :keys="config.hotkey" /> from the game</span>
+          <span v-if="typedHint.show.value && config.hotkey" :class="$style.peek" data-hint="search-from-game">Next time: <WKbd :keys="config.hotkey" /> from the game<button type="button" :class="$style.peekX" title="Don't show this again" aria-label="Close tip" @click="typedHint.retire()">×</button></span>
           <span class="ml-auto">{{ dataNote }}</span>
         </div>
       </div>
@@ -1627,8 +1627,9 @@ function catchTyping (e: KeyboardEvent) {
 }
 window.addEventListener('keydown', catchTyping)
 onBeforeUnmount(() => window.removeEventListener('keydown', catchTyping))
-// The foot's "Next time: Ctrl + Space from the game", for a palette found by typing.
-const typedHint = useHint('search-from-game', { slot: false, when: () => openedByTyping.value && !!props.config.hotkey })
+// The foot's "Next time: Ctrl + Space from the game", for a palette found by
+// typing. It doesn't run out: it shows each time until × (Guy's tips review).
+const typedHint = useHint('search-from-game', { slot: false, shows: Infinity, when: () => openedByTyping.value && !!props.config.hotkey })
 function focusInput (select = false) {
   nextTick(() => {
     const el = input.value
@@ -1848,6 +1849,8 @@ const dataNote = computed(() => {
 .acts { display: flex; flex-wrap: wrap; gap: var(--w-s1); margin-top: var(--w-s3); }
 .convBox { margin-top: var(--w-s3); max-width: 320px; }
 .conv { display: grid; grid-template-columns: minmax(0, 1fr) repeat(var(--conv-cols, 1), 90px); column-gap: 6px; align-items: center; }
-.peek { color: var(--w-accent); }
+.peek { color: var(--w-accent); display: inline-flex; align-items: center; gap: 2px; }
+.peekX { margin-left: 4px; padding: 0 4px; color: var(--w-dim); line-height: 1; }
+.peekX:hover { color: var(--w-fg); }
 .foot { flex: none; display: flex; align-items: center; gap: var(--w-s3); padding: 7px var(--w-pad); border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); color: var(--w-dim); }
 </style>

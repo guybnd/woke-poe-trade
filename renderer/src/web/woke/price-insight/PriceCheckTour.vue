@@ -11,7 +11,7 @@
       <button type="button" :class="$style.close" title="End the tour" aria-label="End the tour" @click="end">×</button>
     </div>
     <div :class="$style.text">
-      <template v-for="(b, i) in step!.text" :key="i"><WKbd v-if="typeof b !== 'string'" :keys="b.kbd" /><template v-else>{{ b }}</template></template>
+      <template v-for="(b, i) in step!.text" :key="i"><template v-if="typeof b === 'string'">{{ b }}</template><WKbd v-else-if="'kbd' in b" :keys="b.kbd" /><span v-else :class="$style[b.tone]" :data-tone="b.tone">{{ b.text }}</span></template>
     </div>
     <div :class="$style.foot">
       <WButton size="sm" variant="ghost" data-pc-tour-done @click="end">Got it</WButton>
@@ -163,5 +163,9 @@ function end () {
 .close:hover { color: var(--w-fg); }
 .text { margin: 3px 0 4px; font-family: var(--w-body); font-variant: normal; text-transform: none; letter-spacing: 0; }
 .text :global(.w-kbd) { margin: 0 1px; }
+.accent { color: var(--w-accent); }
+.dim { color: var(--w-dim); }
+.up { color: var(--w-up); }
+.down { color: var(--w-down); }
 .foot { display: flex; justify-content: flex-end; gap: 4px; }
 </style>

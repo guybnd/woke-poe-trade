@@ -211,6 +211,9 @@ test('Worth knowing: from the third day, one line for everyone; Show me runs it 
   await expect(lines).toHaveCount(1)
   await expect(lines).toContainText('Worth knowing')
   await expect(lines).toContainText('2 div + 30c')
+  // Ctrl + Space is the search icon and the search key's chips.
+  await expect(lines.locator('[data-worth-note] .fa-search')).toHaveCount(1)
+  await expect(lines.locator('[data-worth-note] .w-kbd')).toHaveText(['Ctrl', 'Space'])
   await overlay.snap('worth knowing line')
   await lines.getByRole('button', { name: 'Show me' }).click()
   await expect(overlay.widget('woke-search').getByRole('textbox', { name: 'Search', exact: true })).toHaveValue('2 div + 30c')

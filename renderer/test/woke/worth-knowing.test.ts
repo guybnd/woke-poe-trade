@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { NEWS } from '@/web/woke/tab-bar/news'
 import { NEWS_DEMOS, hasShowMe } from '@/web/woke/tab-bar/news-demos'
 import { gotoTargets } from '@/web/woke/tab-bar/goto-targets'
-import { WORTH, WORTH_PREFIX, dayOf, refreshWorth, worthLine } from '@/web/woke/tab-bar/worth-knowing'
+import { WORTH, WORTH_PREFIX, dayOf, noteBits, refreshWorth, worthLine } from '@/web/woke/tab-bar/worth-knowing'
 import type { WorthContext } from '@/web/woke/tab-bar/worth-knowing'
 import type { HintsConfig } from '@/web/woke/shared/hints'
 
@@ -78,5 +78,14 @@ describe('Worth knowing lines', () => {
 
   it('counts days by the local date', () => {
     expect(dayOf(new Date(2026, 0, 5, 23, 59))).toBe('2026-01-05')
+  })
+
+  it('shows key phrases as chips, Ctrl + Space as the search key', () => {
+    expect(noteBits('Type 2 div + 30c in Ctrl + Space to add up prices', 'Alt + Space'))
+      .toEqual(['Type 2 div + 30c in ', { kbd: 'Alt + Space', search: true }, ' to add up prices'])
+    expect(noteBits('Ctrl + Click a mod. Right-click it', null))
+      .toEqual([{ kbd: 'Ctrl + Click' }, ' a mod. ', { kbd: 'Right-click' }, ' it'])
+    // No search key set: the words stay.
+    expect(noteBits('in Ctrl + Space', null)).toEqual(['in ', 'Ctrl + Space'])
   })
 })
