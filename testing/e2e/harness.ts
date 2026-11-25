@@ -315,10 +315,12 @@ export class Overlay {
   async whatsNewLine (text: string) {
     const card = this.dockIcon('whats-new')
     const line = card.locator('[data-whats-new-line]').filter({ hasText: text })
-    if (!await line.first().isVisible()) {
-      const inGroup = this.page.locator('[data-whats-new-line]').filter({ hasText: text })
-      await card.locator('[data-whats-new-group]').filter({ has: inGroup }).first().locator('[data-whats-new-group-head]').click()
-    }
+    await expect(card.locator('[data-whats-new-group]').first()).toBeVisible()
+    const inGroup = this.page.locator('[data-whats-new-line]').filter({ hasText: text })
+    const group = card.locator('[data-whats-new-group]').filter({ has: inGroup }).first()
+    const head = group.locator('[data-whats-new-group-head]')
+    if (await head.count() && await group.getAttribute('data-open') === null) await head.click()
+    await expect(line.first()).toBeVisible()
     return line
   }
 

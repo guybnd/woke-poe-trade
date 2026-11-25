@@ -115,7 +115,7 @@ test('with the stash reader on, each Net worth line\'s Show me opens its tab', a
 
   const icon = overlay.dockIcon('whats-new')
   for (const n of NEWS.filter(n => n.wmType === 'woke-net-worth' && n.goto)) {
-    if (!await icon.locator('[data-whats-new-line]').first().isVisible()) {
+    if (!await icon.locator('[data-whats-new-group]').first().isVisible()) {
       await icon.click()
       await overlay.page.mouse.move(5, 5)
     }
