@@ -3,13 +3,27 @@
     :badge="lines.length" :wake="lines.length" card-width="24rem" pinnable :menu="dockMenu">
     <template #card>
       <div :class="$style.body">
-        <div v-for="n in lines" :key="n.id" :class="$style.line" data-whats-new-line>
-          <div :class="$style.text">
-            <span :class="$style.name" data-no-item-tip="A tool's name, not an item"><ToolIcon :art="artFor(n.wmType)" :icon="iconFor(n.wmType)" :class="$style.toolIcon" />{{ n.name }}</span>
-            <span>{{ sentence(n.note) }}</span>
+        <!-- A tool with one line shows it as before; more fold under a heading
+          with a count and a × for the lot. One open at a time, the newest first. -->
+        <div v-for="g in groups" :key="g.key" :class="$style.group" data-whats-new-group :data-open="g.lines.length > 1 && isOpen(g) ? '' : undefined">
+          <div v-if="g.lines.length > 1" :class="$style.head">
+            <button type="button" :class="$style.fold" :aria-expanded="isOpen(g)" data-whats-new-group-head @click="toggle(g)">
+              <i :class="['fas fa-chevron-right', $style.chev, isOpen(g) && $style.chevOpen]" aria-hidden="true" />
+              <span :class="$style.name" data-no-item-tip="A tool's name, not an item"><ToolIcon :art="artFor(g.wmType)" :icon="iconFor(g.wmType)" :class="$style.toolIcon" />{{ g.name }}<span v-if="g.topic" :class="$style.topic">· {{ g.topic }}</span></span>
+              <span :class="$style.count">{{ g.lines.length }}</span>
+            </button>
+            <w-button size="sm" variant="ghost" icon="fas fa-times" :title="`Dismiss these ${g.lines.length}`" data-whats-new-dismiss-group @click="markSeen(g.lines)" />
           </div>
-          <w-button v-if="hasShowMe(n, byName, personalOn)" size="sm" variant="ghost" data-whats-new-show @click="show(n, $event)">Show me</w-button>
-          <w-button size="sm" variant="ghost" icon="fas fa-times" title="Dismiss" data-whats-new-dismiss @click="markSeen([n])" />
+          <div v-show="g.lines.length === 1 || isOpen(g)" :class="$style.lines">
+            <div v-for="n in g.lines" :key="n.id" :class="$style.line" data-whats-new-line>
+              <div :class="$style.text">
+                <span v-if="g.lines.length === 1" :class="$style.name" data-no-item-tip="A tool's name, not an item"><ToolIcon :art="artFor(n.wmType)" :icon="iconFor(n.wmType)" :class="$style.toolIcon" />{{ n.name }}</span>
+                <span>{{ sentence(n.note) }}</span>
+              </div>
+              <w-button v-if="hasShowMe(n, byName, personalOn)" size="sm" variant="ghost" data-whats-new-show @click="show(n, $event)">Show me</w-button>
+              <w-button size="sm" variant="ghost" icon="fas fa-times" title="Dismiss" data-whats-new-dismiss @click="markSeen([n])" />
+            </div>
+          </div>
         </div>
         <div :class="$style.foot">
           <span class="w-faint text-xs">With the overlay open, click the icon to keep this card up. Right-click it to turn What's new off.</span>
@@ -23,7 +37,7 @@
 <script setup lang="ts">
 // After an update, the dock lists what's new until each line is dismissed or
 // shown (tab-bar/news.ts). A fresh install has seen it all, so it never shows there.
-import { computed, inject, nextTick } from 'vue'
+import { computed, inject, nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { registry } from '@/web/overlay/widget-registry'
 import type { WidgetManager } from '@/web/overlay/interfaces'
@@ -32,6 +46,8 @@ import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '../modul
 import { markNewsSeen, unseenNews } from '../tab-bar/news'
 import { setNewsOff } from '../tab-bar/news-off'
 import type { NewsItem } from '../tab-bar/news'
+import { groupNews } from '../tab-bar/news-groups'
+import type { NewsGroup } from '../tab-bar/news-groups'
 import { WButton } from '../ui'
 import { DOCK_ART_ITEMS, gameIcon } from '../ui/game-icons'
 // Each line's title shows its tool's icon, as All tools and the dock do.
@@ -58,6 +74,20 @@ function typeName (wmType: string): string {
   return spec?.trNameKey ? t(spec.trNameKey) : wmType
 }
 const lines = computed(() => unseenNews(AppConfig().woke))
+const groups = computed(() => groupNews(lines.value))
+// The open group: the first (newest) until one is picked, and again once
+// the picked one is gone. '' is all folded.
+const picked = ref<string>()
+const openKey = computed(() => {
+  const k = picked.value
+  if (k === '' || groups.value.some(g => g.key === k)) return k
+  return groups.value.find(g => g.lines.length > 1)?.key
+})
+function isOpen (g: NewsGroup) { return openKey.value === g.key }
+function toggle (g: NewsGroup) {
+  picked.value = isOpen(g) ? '' : g.key
+  uiTrace(`What's new › ${picked.value ? 'open' : 'fold'} ${g.key}`)
+}
 // A sample price check goes by the item's English name.
 const byName = computed(() => AppConfig().language === 'en')
 // "New: a Planner tab…" reads "A Planner tab…" under the tool's name.
@@ -157,6 +187,16 @@ function turnOff () {
 
 <style module>
 .body { display: flex; flex-direction: column; gap: 6px; padding: 6px var(--w-pad) 8px; }
+.group + .group { border-top: 1px solid var(--w-line-soft); padding-top: 6px; }
+.head { display: flex; align-items: center; gap: 4px; }
+.fold { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 1px 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.fold:hover .name { filter: brightness(1.2); }
+.chev { width: 10px; font-size: var(--w-fs-xs); color: var(--w-faint); transition: transform 0.12s; }
+.chevOpen { transform: rotate(90deg); }
+.topic { margin-left: 4px; opacity: 0.8; }
+.count { font-size: var(--w-fs-xs); padding: 0 6px; border-radius: 8px; border: 1px solid var(--w-line); color: var(--w-fg); }
+.lines { display: flex; flex-direction: column; gap: 6px; padding-left: 16px; }
+.head + .lines { padding-top: 4px; }
 .line { display: flex; align-items: center; gap: 4px; }
 .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .toolIcon { --w-icon-md: 16px; --w-fs-lg: var(--w-fs-md); }

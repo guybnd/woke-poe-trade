@@ -310,6 +310,18 @@ export class Overlay {
     return this.page.locator(`[data-dock="${moduleId}"]`)
   }
 
+  // A What's new line in the dock card, by a bit of its text. Lines fold
+  // under their tool's heading: its heading is opened first if need be.
+  async whatsNewLine (text: string) {
+    const card = this.dockIcon('whats-new')
+    const line = card.locator('[data-whats-new-line]').filter({ hasText: text })
+    if (!await line.first().isVisible()) {
+      const inGroup = this.page.locator('[data-whats-new-line]').filter({ hasText: text })
+      await card.locator('[data-whats-new-group]').filter({ has: inGroup }).first().locator('[data-whats-new-group-head]').click()
+    }
+    return line
+  }
+
   // Rests the mouse on a dock icon until its card opens (main's hover
   // tracker sees the mouse; the overlay doesn't get mouse events in game).
   async hoverDockIcon (moduleId: string) {

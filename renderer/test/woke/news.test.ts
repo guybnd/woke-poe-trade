@@ -28,6 +28,13 @@ describe("What's new lines", () => {
     }
   })
 
+  it('Price check lines name a topic, so the dock card can fold them (other tools need none)', () => {
+    for (const n of NEWS) {
+      if (n.wmType === 'price-check') expect(n.topic, `${n.id}: give it a topic`).toBeTruthy()
+      else expect(n.topic, n.id).toBeUndefined()
+    }
+  })
+
   it('NEWS_SPOTS and NEWS_DEMOS name only real lines', () => {
     for (const id of [...Object.keys(NEWS_SPOTS), ...Object.keys(NEWS_DEMOS)]) expect(NEWS.map(n => n.id), id).toContain(id)
   })
