@@ -61,6 +61,36 @@ describe('planner rows', () => {
   })
 })
 
+// Diluted and of Miring roll "less", not the stat's first "more" wording; an
+// avoid rating sits on the wording Maps shows, and the stash text must find it.
+describe('mods that roll another wording', () => {
+  const cases: Array<[string, string, string]> = [
+    ['Diluted', 'currency', 'Players have #% less effect of Flasks applied to them'],
+    ['of Miring', 'threads', 'Players have #% less Defences'],
+    ['Volatile', 'threads', 'Rare Monsters have Volatile Cores']
+  ]
+
+  it('an avoid rating on that wording unticks it, and searches avoid it', () => {
+    for (const [key, goal, wording] of cases) {
+      const row = planRows(data, goal as PlannerState['goal']).find(r => r.key === key)!
+      expect(row.matchers, key).toContain(wording)
+      const ratings = { [wording]: 'deadly' as const }
+      expect(isTicked(row, DEFAULT_PLANNER, ratings), key).toBe(false)
+      expect(ratedAvoid(data, [], ratings).map(r => r.key), key).toContain(key)
+    }
+  })
+
+  it('the stash text matches the line the map shows', () => {
+    for (const [key, goal] of cases) {
+      const rows = planRows(data, goal as PlannerState['goal'])
+      const row = rows.find(r => r.key === key)!
+      const s = planStashSearch(rows, new Set([key]), { ...DEFAULT_PLANNER, goal: goal as PlannerState['goal'], need: 1 }, planUniverse(data), allMapNames())
+      const line = row.mod.lines[0].replace(/\((\d+)-\d+\)/, '$1')
+      expect(new RegExp(s.tokens[key], 'i').test(line), `${key}: ${s.tokens[key]} vs ${line}`).toBe(true)
+    }
+  })
+})
+
 describe('pack size goal', () => {
   it('lists the T17 mods with big pack size only', () => {
     const rows = planRows(data, 'p')
