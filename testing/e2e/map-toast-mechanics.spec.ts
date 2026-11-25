@@ -12,7 +12,7 @@ const run = (m: number, seed: number) => [
   `${t(m, 51)} 3727812 cffb065b [INFO Client 25552] : You have entered Searing Hideout.`
 ]
 
-test('the toast and Map history show each mechanic with its icon', async ({ overlay }) => {
+test('the after-map toast shows each mechanic with its icon', async ({ overlay }) => {
   await overlay.boot({
     overlayActive: true,
     patch: c => {
