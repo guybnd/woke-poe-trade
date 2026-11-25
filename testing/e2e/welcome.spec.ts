@@ -55,6 +55,16 @@ test('opening a tool puts the welcome card away; Net worth opens its switch in S
   await expect.poll(() => fakeApp.readConfig()?.woke?.welcome?.due).toBe(false)
 })
 
+test('the welcome card\'s Try it opens search on a real query', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ overlayActive: true, patch: c => { c.woke.welcome = { due: true, labelOpens: 0 } } })
+  const page = overlay.page
+  const card = page.locator('[data-welcome-card]')
+  await card.locator('[data-welcome-try]').click()
+  await expect(card).toHaveCount(0)
+  await expect(overlay.widget('woke-search').getByRole('textbox', { name: 'Search', exact: true })).toHaveValue('mageblood')
+  await expect.poll(() => fakeApp.readConfig()?.woke?.welcome?.due).toBe(false)
+})
+
 test('players who updated get no welcome card', async ({ overlay }) => {
   await overlay.boot({ overlayActive: true })
   await expect(overlay.page.locator('[aria-label="All tools"]')).toBeVisible()

@@ -49,6 +49,7 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'unid-rolled-unique-price': { check: { name: 'Forbidden Flame', rarity: 'unique' }, spot: 'unid-price' },
   'valdo-map-skips': { check: { name: 'Valdo Map', text: valdoMapText('Headhunter') }, spot: 'valdo-strip' },
   'valdo-map-lookup': { search: 'valdo headhunter' },
+  'search-keys-list': { search: 'keys' },
   // A rare with tiered mods: hover one for its ladder.
   'price-check-mod-tiers': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' }
 }

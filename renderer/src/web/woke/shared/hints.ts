@@ -87,6 +87,15 @@ function countShow (id: string): void {
   h.shows = { ...h.shows, [id]: (h.shows?.[id] ?? 0) + 1 }
 }
 
+// For a one-off peek with no component of its own (shared/key-peek.ts): true
+// if it may show now, and counts the showing.
+export function takeShow (id: string, max = DEFAULT_SHOWS): boolean {
+  if (!hintEligible(hintsOf(), id, max, false)) return false
+  const h = ensureHints()
+  if (h) h.shows = { ...h.shows, [id]: (h.shows?.[id] ?? 0) + 1 }
+  return true
+}
+
 // The pure part of whether a tip may show, for tests.
 export function hintEligible (h: HintsConfig | undefined, id: string, max: number, countedThisOpen: boolean): boolean {
   if (h?.off || h?.done?.includes(id)) return false

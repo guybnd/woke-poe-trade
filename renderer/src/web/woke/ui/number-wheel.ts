@@ -11,6 +11,8 @@
 // Stepping a box stops the panel behind it scrolling, the same as the chips
 // that already took the wheel, unless a scroll is already going on.
 
+import { installWheelHint, wheelUsed } from './number-wheel-hint'
+
 // A touchpad sends many small deltas; they add up to one notch first.
 // 25 px: Chrome gives about 33 px a notch with Windows set to scroll 1 line.
 const NOTCH = 25
@@ -126,6 +128,7 @@ function onBoxWheel (e: WheelEvent) {
   if (next == null) return
   if (pending && pending.box !== box) flushChange()
   box.value = next
+  wheelUsed()
   box.dispatchEvent(new Event('input', { bubbles: true }))
   if (pending) clearTimeout(pending.timer)
   pending = { box, timer: setTimeout(flushChange, CHANGE_AFTER_MS) }
@@ -153,6 +156,7 @@ let installed = false
 export function installNumberWheel (target: Window = window) {
   if (installed) return
   installed = true
+  installWheelHint(target)
   target.addEventListener('pointerover', onPointerOver, { passive: true })
   target.addEventListener('wheel', onAnyWheel, { passive: true })
 }

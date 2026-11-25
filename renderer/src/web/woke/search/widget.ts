@@ -89,4 +89,6 @@ export function addQuery (list: readonly string[] | undefined, text: string, ski
 }
 
 // Opens the palette from inside the overlay, on this text.
-export const searchRequest = shallowRef<{ query: string } | null>(null)
+// `typed`: the player started typing in the overlay (TabBar), so the caret
+// goes after the letter instead of selecting it.
+export const searchRequest = shallowRef<{ query: string, typed?: boolean } | null>(null)

@@ -25,6 +25,7 @@ export interface MenuItemAction {
   icon: string // Font Awesome class
   action: () => void
   title?: string // the longer name, on hover
+  keys?: string // a key that does the same, shown under the hover's title
   disabled?: boolean
 }
 export interface MenuItemHead {

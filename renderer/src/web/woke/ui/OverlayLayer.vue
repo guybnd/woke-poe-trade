@@ -10,7 +10,7 @@
       </div>
       <div :class="$style.strip" data-strip role="group" :aria-label="menu.item.name">
         <button v-for="(a, i) in menu.item.actions" :key="i" type="button" role="menuitem" :class="$style.act"
-          :disabled="a.disabled" :title="a.title" :aria-label="a.title ?? a.label" @click="pickAction(a)">
+          :disabled="a.disabled" :title="a.title" :data-tip-keys="a.keys" :aria-label="a.title ?? a.label" @click="pickAction(a)">
           <i :class="a.icon" />
           <span>{{ a.label }}</span>
         </button>

@@ -6,7 +6,8 @@
           <w-kbd :keys="priceKey" /><span>Price the item under your cursor</span>
         </template>
         <template v-if="searchKey">
-          <w-kbd :keys="searchKey" /><span>Search any price, tool or setting</span>
+          <w-kbd :keys="searchKey" /><span>Search any price, tool or setting
+            <w-button variant="ghost" size="sm" data-welcome-try @click="emit('try')">Try it</w-button></span>
         </template>
         <span :class="$style.ic"><i class="fas fa-th" /></span><span>All tools. Pin the ones you use to this rail.</span>
         <span :class="$style.ic"><i class="fas fa-cog" /></span><span>Settings: hotkeys, league, and which tools are on</span>
@@ -41,7 +42,7 @@ import { personalOn } from '../personal'
 import { HELP_URL } from './welcome'
 
 defineProps<{ pos: Record<string, string> }>()
-const emit = defineEmits<{ (e: 'done' | 'net-worth'): void }>()
+const emit = defineEmits<{ (e: 'done' | 'net-worth' | 'try'): void }>()
 
 const priceKey = computed(() => {
   const pc = hotkeyFields(AppConfig()).find(f => f.id === 'pc' && !f.off)
