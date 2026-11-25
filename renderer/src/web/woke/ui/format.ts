@@ -41,10 +41,16 @@ export function formatAmount (v: number): string {
   return (+v.toFixed(1)).toString()
 }
 
+// Decided on the rounded chaos, so 199.6c with divine at 200 reads "1 div",
+// not "200 c".
+export function worthADivine (chaos: number, divine: number): boolean {
+  return Math.abs(+formatAmount(chaos)) >= divine
+}
+
 // "45 c" or "1.5 div": divines once it's worth at least one (or when `unit`
 // says so, e.g. so every point on a chart uses the same unit).
 export function formatChaos (chaos: number, divine: number | null | undefined, unit: 'auto' | 'chaos' | 'div' = 'auto'): string {
-  const useDiv = !!divine && unit !== 'chaos' && (unit === 'div' || Math.abs(chaos) >= divine)
+  const useDiv = !!divine && unit !== 'chaos' && (unit === 'div' || worthADivine(chaos, divine))
   return useDiv ? `${formatAmount(chaos / divine!)} div` : `${formatAmount(chaos)} c`
 }
 
