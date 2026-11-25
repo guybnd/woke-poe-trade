@@ -1,6 +1,6 @@
 // Log lines are in the real Client.txt's shape (see death-recap.test.ts).
 import { afterEach, describe, expect, it } from 'vitest'
-import { NightTracker, NIGHT_GAP_MS, bestDrop, bestItem, farmingProfit, hasMaps, keepNight, outOfMapsRows, summarize } from '@/web/woke/session-story/story'
+import { NightTracker, NIGHT_GAP_MS, bestDrop, bestItem, farmingProfit, hasPlay, isEndgameArea, keepNight, outOfMapsRows, summarize } from '@/web/woke/session-story/story'
 import { isSkippedArea, parseSkipAreas, setSkipAreas } from '@/web/woke/session-story/skip-areas'
 import type { NightDraft, NightStory } from '@/web/woke/session-story/story'
 
@@ -276,7 +276,7 @@ describe('areas on the skip list', () => {
 
   it('has no maps when the night was only vaults', () => {
     const d = follow(VAULT_NIGHT.slice(3, 8)).tracker.draft!
-    expect(hasMaps(d)).toBe(false)
+    expect(hasPlay(d)).toBe(false)
   })
 
   it('reads the list as typed', () => {
@@ -375,5 +375,47 @@ describe('time out of maps', () => {
 
   it('shows a night saved before the split as one line', () => {
     expect(outOfMapsRows({ otherMs: 60_000 })).toEqual([{ label: 'Out of maps', ms: 60_000 }])
+  })
+})
+
+describe('nights without maps', () => {
+  it('keeps an evening of endgame play out of maps', () => {
+    const { tracker, done } = follow([
+      area('21:00:00', 'HideoutChurch', '1', 68),
+      area('21:05:00', 'MapWorldsElderArenaUber', '2', 85),
+      area('21:10:00', 'HideoutChurch', '1', 68),
+      area('21:12:00', 'Delve_Main', '3', 70),
+      area('21:20:00', 'HideoutChurch', '1', 68)
+    ])
+    expect(hasPlay(tracker.draft!)).toBe(true)
+    tracker.finish()
+    expect(done).toHaveLength(1)
+    const s = summarize(done[0], at('21:25:00'))
+    expect(s.maps).toEqual([])
+    expect(s.mapMs).toBe(0)
+    expect(outOfMapsRows(s)).toEqual([{ label: 'Hideout', ms: 12 * 60_000 }, { label: 'Other', ms: 13 * 60_000 }])
+  })
+
+  it('never keeps campaign, towns or the hideout alone', () => {
+    const { tracker, done } = follow([
+      area('21:00:00', 'HideoutChurch', '1', 68),
+      area('21:05:00', '1_10_town', '2', 67),
+      area('21:06:00', '1_10_2', '3', 67),
+      area('21:10:00', '2_9_1', '4', 61)
+    ])
+    expect(hasPlay(tracker.draft!)).toBe(false)
+    tracker.finish()
+    expect(done).toHaveLength(0)
+  })
+
+  it('tells endgame areas apart', () => {
+    expect(isEndgameArea('Delve_Main', 20)).toBe(true)
+    expect(isEndgameArea('HeistMines', 50)).toBe(true)
+    expect(isEndgameArea('HeistHub', 68)).toBe(false)
+    expect(isEndgameArea('MavenBoss', 84)).toBe(true)
+    expect(isEndgameArea('SanctumCathedral', 83)).toBe(true)
+    expect(isEndgameArea('2_9_1', 61)).toBe(false)
+    expect(isEndgameArea('Labyrinth_Airlock', 33)).toBe(false)
+    expect(isEndgameArea('HideoutChurch', 68)).toBe(false)
   })
 })

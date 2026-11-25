@@ -1,5 +1,7 @@
 // A night of play read from Client.txt: the maps, the time out of maps, and
 // the deaths, from the first zone change until the log goes quiet. Pure: no Vue or IO.
+// A night is kept once it has endgame play: a map, or an endgame area that
+// isn't one (Uber bosses, Delve, Heist, Sanctum, Simulacrum, logbooks).
 //
 // The game logs no logout line (checked in a real Client.txt), so a night
 // ends when nothing is written for NIGHT_GAP_MS, or when the game starts a new
@@ -7,7 +9,8 @@
 // it, doesn't count: chat while AFK doesn't keep a night going, 15 minutes AFK
 // ends it, and a shorter AFK is left out of the night's time.
 import { lineTime } from '../campaign/log-tail'
-import { isTownLike, parseLogLine, slainName } from '../campaign/log-parse'
+import { actFromAreaId, isTownLike, parseLogLine, slainName } from '../campaign/log-parse'
+import { isBossArea } from '../shared/boss-areas'
 import { isMapArea, mapNameFromArea } from '../farming/farming'
 import { staysInRun } from '../death-recap/death-log'
 import { isSkippedArea, knownAreaName } from './skip-areas'
@@ -30,6 +33,8 @@ interface Seg {
   level: number
   // Hideout or town.
   hub?: boolean
+  // Endgame play that isn't a map (isEndgameArea).
+  end?: boolean
 }
 
 export interface NightDraft {
@@ -163,7 +168,7 @@ export class NightTracker {
       const map = isMapArea(ev.areaId) || side
       const key = runKey ?? areaKey
       const known = map && !side ? knownAreaName(ev.areaId) : null
-      this.draft.segs.push({ at, map, key, name: map && !side ? known ?? mapNameFromArea(ev.areaId) : '', named: side || !!known, level: ev.areaLevel, ...(isTownLike(ev.areaId) ? { hub: true } : {}) })
+      this.draft.segs.push({ at, map, key, name: map && !side ? known ?? mapNameFromArea(ev.areaId) : '', named: side || !!known, level: ev.areaLevel, ...(isTownLike(ev.areaId) ? { hub: true } : !map && isEndgameArea(ev.areaId, ev.areaLevel) ? { end: true } : {}) })
     } else if (ev?.kind === 'zone') {
       const seg = this.draft?.segs[this.draft.segs.length - 1]
       // "You have entered Strand." names the map it follows.
@@ -199,13 +204,23 @@ export class NightTracker {
     this.sides.clear()
     if (d && this.openedAt != null && this.openedAt >= d.lastAt) d.endedByOpening = true
     this.openedAt = null
-    if (d && hasMaps(d)) this.onFinished(d)
+    if (d && hasPlay(d)) this.onFinished(d)
   }
 }
 
-export function hasMaps (d: NightDraft): boolean {
+// Endgame play that isn't a map: boss arenas, Delve, Heist, and anything else
+// at area level 68 or more (where maps start: Sanctum, Simulacrum, logbooks,
+// the Eternal lab). Campaign zones (an act in the id), towns and hideouts never.
+export function isEndgameArea (areaId: string, areaLevel: number): boolean {
+  if (isTownLike(areaId) || actFromAreaId(areaId) != null) return false
+  return isBossArea(areaId) || /^(Delve|Heist)/i.test(areaId) || areaLevel >= 68
+}
+
+// Worth keeping as a session: a map (not a vault on the skip list), or
+// endgame play out of maps. Campaign, towns and the hideout alone never.
+export function hasPlay (d: NightDraft): boolean {
   const skip = skippedKeys(d)
-  return d.segs.some(s => s.map && !skip.has(s.key))
+  return d.segs.some(s => (s.map && !skip.has(s.key)) || s.end)
 }
 
 // Map instances in an area on the skip list (vaults): read at summary time, so

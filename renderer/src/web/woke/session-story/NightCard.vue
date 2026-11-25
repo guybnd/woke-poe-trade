@@ -77,7 +77,8 @@ const perHour = computed(() => {
 })
 const mapsPerHour = computed(() => {
   const hours = rateHours.value
-  return hours >= 0.25 ? (props.story.maps.length / hours).toFixed(1) : null
+  // A night of bosses or Delve only has no maps to count.
+  return hours >= 0.25 && props.story.maps.length ? (props.story.maps.length / hours).toFixed(1) : null
 })
 const deathMarks = computed(() => {
   // The strip is drawn by the clock, AFK included.

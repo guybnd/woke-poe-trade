@@ -37,7 +37,7 @@ function rows (s: NightStory, time: RateTime): LookupRow[] {
   // The time the Per hour setting counts, as on the night card.
   const hours = nightRateMs(s, time) / 3_600_000
   if (s.maps.length) out.push({ label: 'Average map', value: formatClock(s.mapMs / s.maps.length) })
-  if (hours >= 0.25) out.push({ label: 'Maps per hour', value: (s.maps.length / hours).toFixed(1) })
+  if (hours >= 0.25 && s.maps.length) out.push({ label: 'Maps per hour', value: (s.maps.length / hours).toFixed(1) })
   for (const l of s.levelUps ?? []) out.push({ label: s.levelUps!.length > 1 ? l.char : 'Level', value: `${l.from} → ${l.to}` })
   out.push({ label: 'Deaths', value: String(s.deathsAt.length) })
   for (const r of outOfMapsRows(s)) out.push({ label: r.label, value: formatDuration(r.ms) })
