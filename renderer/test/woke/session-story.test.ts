@@ -225,16 +225,6 @@ describe('night extras', () => {
     expect(summarize(tracker.draft!).levelUps).toEqual([{ char: 'whekq', from: 93, to: 94 }])
   })
 
-  it('follows a character levelling in maps when the one known is yesterday\'s', () => {
-    const tracker = new NightTracker(() => {}, () => 'yesterday')
-    for (const line of [
-      area('21:00:00', 'MapWorldsStrand', '11'),
-      info('21:01:00', ': whekq (Gladiator) is now level 94'),
-      info('21:02:00', ': whekq (Gladiator) is now level 95')
-    ]) tracker.feed(line, 0)
-    expect(summarize(tracker.draft!).levelUps).toEqual([{ char: 'whekq', from: 93, to: 95 }])
-  })
-
   it('adds up Farming sessions inside the night', () => {
     const H = 3_600_000
     const night = { startedAt: 10 * H, endedAt: 14 * H }

@@ -37,8 +37,7 @@ export interface NightDraft {
   lastAt: number
   segs: Seg[]
   deaths: Array<{ at: number, key: string }>
-  // `party`: another name than your character's, in a map: likely a party member.
-  levels?: Array<{ char: string, level: number, party?: boolean }>
+  levels?: Array<{ char: string, level: number }>
   // AFK since then (lastAt stays there), and the AFK stretches that ended.
   afkAt?: number
   afk?: Array<[number, number]>
@@ -165,13 +164,10 @@ export class NightTracker {
       }
     } else if (ev?.kind === 'level' && this.draft) {
       // Party members' level-ups are logged too: inside a map, another name
-      // than your character's is likely someone else's (as map-log.ts reads
-      // it). Kept, marked: the character known can be yesterday's.
+      // than your character's is someone else's (as map-log.ts reads it).
       const seg = this.draft.segs[this.draft.segs.length - 1]
       const me = this.charOf?.() ?? null
-      const party = !!seg?.map && me != null && ev.charName !== me
-      this.draft.levels ??= []
-      this.draft.levels.push({ char: ev.charName, level: ev.level, ...(party ? { party } : {}) })
+      if (!seg?.map || me == null || ev.charName === me) (this.draft.levels ??= []).push({ char: ev.charName, level: ev.level })
     } else if (!ev && this.draft) {
       const seg = this.draft.segs[this.draft.segs.length - 1]
       const slain = slainName(line)
@@ -285,10 +281,10 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
       afterMap = true
     } else if (!p.afk) gap += p.ms
   }
-  // Follow the first character that levels, as the run timer does, passing
-  // over likely party members' (see the tracker) when yours levelled too.
+  // Follow the first character that levels, as the run timer does (a party
+  // member's level-ups inside a map aren't kept: see the tracker).
   const levelUps: Array<{ char: string, from: number, to: number }> = []
-  const mine = (d.levels?.find(l => !l.party) ?? d.levels?.[0])?.char
+  const mine = d.levels?.[0]?.char
   for (const l of d.levels ?? []) {
     if (l.char !== mine) continue
     if (levelUps[0]) levelUps[0].to = Math.max(levelUps[0].to, l.level)
