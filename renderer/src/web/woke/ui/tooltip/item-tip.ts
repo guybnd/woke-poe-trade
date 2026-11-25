@@ -214,6 +214,7 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
   if (model && kind === 'gem') model = await withGemExtras(model, ref)
   if (model && kind === 'unique') model = await withUniqueExtras(model, ref, market)
   if (kind === 'item' && / Map$/.test(ref.name)) model = await withMapCards(model, ref.name)
+  if (model && kind === 'item' && /^(?:\w+ )?Essence of /.test(ref.name)) model = await withEssence(model, ref.name)
   if (model && kind === 'item' && pack.bases?.[ref.name]) return await withBaseExtras(model, ref, market)
   if (model && (kind === 'item' || kind === 'card')) model = await withHeld(model, ref.name, market)
   return { model, market }
@@ -233,6 +234,17 @@ async function withHeld (model: TipModel, name: string, market: TipMarket | null
       ...(worth ? [{ text: ` · ${formatChaos(worth, price.divine.value)}`, tone: 'label' as const }] : [])
     ]
     return { ...model, sections: [...model.sections, [line]] }
+  } catch {
+    return model
+  }
+}
+
+// An essence: the mod it forces on each slot (Guy's pick I6, essence-tip.ts).
+async function withEssence (model: TipModel, name: string): Promise<TipModel> {
+  try {
+    const [{ essenceSections }] = await Promise.all([import('./essence-tip'), loadFile('essences')])
+    const sections = essenceSections(pack.essences?.[name])
+    return sections.length ? { ...model, sections: [...model.sections, ...sections] } : model
   } catch {
     return model
   }

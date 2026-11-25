@@ -71,6 +71,8 @@ export interface TipPack {
   'drops'?: Record<string, TipDrop>
   // A unique's Vestigial implicit, one list of lines per mod (scripts/build-vestigial-data.mjs).
   'vestigial'?: Record<string, string[][]>
+  // The mod each essence forces per slot (scripts/build-essence-data.mjs).
+  'essences'?: Record<string, Array<[string[], string[]]>>
 }
 
 export type TipKind = 'unique' | 'gem' | 'card' | 'item'
