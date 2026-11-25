@@ -44,5 +44,14 @@ history:
     selfAttested: true
     pin: true
     id: c-2026-11-25t03-34-13-221z
+  - type: comment
+    user: Agent
+    comment: >-
+      Also flaky on master: dock-menu :136 and chip-settings-layout :60. Cause:
+      the Ctrl+Space search box is missing when they run after other specs in
+      the same worker.
+    date: '2026-11-25T06:22:15.855Z'
+    selfAttested: true
+    id: c-2026-11-25t06-22-15-855z
 ---
 Failed once in shard 2/4 on PR 864's CI run, passed on re-run. Investigate the timing/flake.
