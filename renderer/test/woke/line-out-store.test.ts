@@ -6,7 +6,9 @@ let failGet = false
 vi.mock('@/web/woke/shared/host', () => ({
   hostRequest: async (op: string, args: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     calls.push({ op, args })
-    if (op === 'doc-get') { if (failGet) throw new Error('no answer'); return saved[args.key] ?? null }
+    // As main answers a locked file: doc-get says null, doc-get-strict throws.
+    if (op === 'doc-get') return failGet ? null : saved[args.key] ?? null
+    if (op === 'doc-get-strict') { if (failGet) throw new Error('EBUSY'); return saved[args.key] ?? null }
     if (op === 'doc-put') { saved[args.key] = args.value; return null }
     return null
   }

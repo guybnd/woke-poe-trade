@@ -14,7 +14,7 @@ const docs = new Map<string, unknown>([['L-runs', { live: run, done: [] }]])
 
 vi.mock('@/web/woke/shared/host', () => ({
   hostRequest: async (op: string, args: { key?: string, value?: unknown, league?: string }) => {
-    if (op === 'doc-get') return docs.get(args.key!) ?? null
+    if (op === 'doc-get' || op === 'doc-get-strict') return docs.get(args.key!) ?? null
     if (op === 'doc-put') { docs.set(args.key!, args.value); return true }
     if (op === 'trade-history') return { league: args.league, readAt: 1, sales: [sold], error: null }
     return null

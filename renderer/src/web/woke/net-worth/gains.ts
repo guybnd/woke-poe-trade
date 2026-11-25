@@ -13,6 +13,13 @@ export async function stashGains (league: string): Promise<StashGain[]> {
   return Array.isArray(saved) ? saved : []
 }
 
+// For a read-change-write: throws when the file can't be read right now
+// (locked), so it's never saved over with nothing. No file yet: [].
+export async function stashGainsStrict (league: string): Promise<StashGain[]> {
+  const saved = await (hostRequest('doc-get-strict', { collection: GAINS_COLLECTION, key: gainsKey(league) }) as Promise<unknown>)
+  return Array.isArray(saved) ? saved as StashGain[] : []
+}
+
 // Net stash change for refreshes between `from` and `to` (ms).
 export async function stashGainsBetween (league: string, from: number, to: number) {
   return gainsBetween(await stashGains(league), from, to)

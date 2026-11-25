@@ -25,7 +25,8 @@ export function loadLineOut (league: string): Promise<boolean> {
   if (docs.value.has(league)) return Promise.resolve(true)
   const was = loading.get(league)
   if (was) return was
-  const p = (hostRequest('doc-get', { collection: COLLECTION, key: lineOutKey(league) }) as Promise<unknown>)
+  // Strict: null only when there's no file yet; a locked one throws (false).
+  const p = (hostRequest('doc-get-strict', { collection: COLLECTION, key: lineOutKey(league) }) as Promise<unknown>)
     .then((d) => {
       if (!docs.value.has(league)) put(isDoc(d) && d.league === league ? d : { league, sale: [], listed: [] })
       return true
