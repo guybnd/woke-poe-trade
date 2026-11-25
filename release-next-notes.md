@@ -1,5 +1,6 @@
 # Next release notes
 
+- Price check: Searing Exarch and Eater of Worlds implicits now have a roll bar like other mods. A tier that rolls a range (Fortify 6-7%) shows that range; a tier with one fixed number (an Endurance Charge every 14 seconds) shows where it sits from Lesser to the best tier. Hover the line for every tier, Lesser to Perfect, with yours lit.
 - Price check, few listings: the headline price is now the cheapest real instant buyout (bait and stale listings left out, and only when it sits close to what the other listings ask) instead of a blend of listings, poe.ninja and poeprices, and the line under it says "cheapest instant buyout". Your own past checks of the item still show on the hover, but no longer move the price.
 - Session analytics: the Sessions and Maps tabs only show if you have sessions from the retired Farming tool. Map history and Play sessions cover the same ground.
 - New installs start with the Mapper preset on instead of every tool. Nothing changes for an existing install.

@@ -160,6 +160,8 @@ import { provideSwap } from '@/web/woke/harvest-swap/useSwap'
 import { provideStatActions } from '@/web/woke/price-insight/stat-actions'
 import { applyConquestPick, conquestPick } from '@/web/woke/related-family/conquest-pick'
 import { applyTickPrefs } from '@/web/woke/price-insight/tick-prefs'
+import { implicitTable } from '@/web/woke/price-insight/eldritch-listing'
+import { refillEldritchRows } from '@/web/woke/price-insight/eldritch-refill'
 import { provideCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { WTabs } from '@/web/woke/ui'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
@@ -321,6 +323,11 @@ export default defineComponent({
     const mapEx = computed(() => mapExMod.value?.mapExchange(props.item) ?? null)
     const exchangeView = shallowRef(false)
     const bulkItem = computed(() => exchangeView.value && mapEx.value && mapExMod.value ? mapExMod.value.asExchangeItem(props.item, mapEx.value.tag) : props.item)
+    // woke: the eldritch implicits' ranges arrive a moment after the session's first check.
+    watch(implicitTable, () => {
+      if (!presets.value) return
+      for (const p of presets.value.presets) refillEldritchRows(p.stats, props.item, widget.value.searchStatRange)
+    })
     watch(() => [props.item, doSearch.value], () => { if (!doSearch.value) exchangeView.value = false })
     watch(() => props.item, () => { exchangeView.value = false })
     // A search starts on doSearch's change, so a running one is stopped first.

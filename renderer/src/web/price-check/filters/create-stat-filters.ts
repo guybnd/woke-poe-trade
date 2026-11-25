@@ -19,6 +19,7 @@ import { addClusterResPseudo } from './pseudo/cluster-res'
 import { markClusterSpots } from '@/web/woke/cluster-type/spots'
 import { clusterSizeOf } from '@/web/woke/cluster-type/apply'
 import { StatBetter } from '@/assets/data'
+import { eldritchRoll } from '@/web/woke/price-insight/eldritch-roll'
 
 export interface FiltersCreationContext {
   readonly item: ParsedItem
@@ -349,10 +350,11 @@ export function calculatedStatToFilter (
     }
   }
 
-  const roll = statSourcesTotal(
+  // woke: an eldritch implicit's line has no range in the copy; its tier's comes from the mod data.
+  const roll = eldritchRoll(calc.sources, statSourcesTotal(
     calc.sources,
     (item.info.refName === 'Mirrored Tablet') ? 'max' : 'sum'
-  )
+  ), item.category)
   const translation = translateStatWithRoll(calc, roll)
 
   filter ??= {

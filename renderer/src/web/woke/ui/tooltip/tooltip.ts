@@ -102,7 +102,8 @@ export interface ModTip {
   title: string
   // "Prefix · Body Armour"
   sub: string
-  steps: Array<{ tier: number, min: number, max: number, level: number }>
+  // An eldritch implicit's tiers have a name (label) and no item level.
+  steps: Array<{ tier: number, min: number, max: number, level?: number, label?: string }>
   mine: number
   itemLevel?: number
   bench?: { text: string, cost: string, where: string }
