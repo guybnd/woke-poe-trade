@@ -357,6 +357,11 @@ describe('your character in a night', () => {
     const d: NightDraft = { startedAt: 0, lastAt: 1, segs: [], deaths: [], levels: [{ char: 'a', level: 10 }, { char: 'b', level: 50 }, { char: 'a', level: 11 }] }
     expect(summarize(d).levelUps).toEqual([{ char: 'a', from: 9, to: 11 }])
   })
+
+  it('keeps the level-ups read before the update in a night that spans it', () => {
+    const d: NightDraft = { startedAt: 0, lastAt: 1, segs: [], deaths: [], levels: [{ char: 'a', level: 90 }, { char: 'b', level: 50 }, { char: 'a', level: 91 }, { char: 'a', level: 92, mine: true }] }
+    expect(summarize(d).levelUps).toEqual([{ char: 'a', from: 89, to: 92 }])
+  })
 })
 
 describe('time out of maps', () => {
@@ -409,8 +414,13 @@ describe('nights without maps', () => {
   })
 
   it('tells endgame areas apart', () => {
-    expect(isEndgameArea('Delve_Main', 20)).toBe(true)
-    expect(isEndgameArea('HeistMines', 50)).toBe(true)
+    // The mine's hub and levelling-depth Delve or Heist aren't endgame.
+    expect(isEndgameArea('Delve_Main', 70)).toBe(false)
+    expect(isEndgameArea('Delve_Generic_Fungal', 50)).toBe(false)
+    expect(isEndgameArea('Delve_Generic_Fungal', 75)).toBe(true)
+    expect(isEndgameArea('HeistMines', 50)).toBe(false)
+    expect(isEndgameArea('HeistMines', 75)).toBe(true)
+    expect(isEndgameArea('N_Labyrinth_Airlock', 68)).toBe(false)
     expect(isEndgameArea('HeistHub', 68)).toBe(false)
     expect(isEndgameArea('MavenBoss', 84)).toBe(true)
     expect(isEndgameArea('SanctumCathedral', 83)).toBe(true)

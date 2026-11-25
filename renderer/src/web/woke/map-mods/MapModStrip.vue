@@ -171,7 +171,7 @@ import { FilterTag } from '@/web/price-check/filters/interfaces'
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
 import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalDisabled } from './goal'
 import { farmGoal, setFarmGoal } from './goal-config'
-import { activeTemplate, deleteTemplate, farmTemplates, nextTemplateName, saveTemplate, setActiveTemplate, setExcludeNot, templateMin, templateNotMods } from './farm-templates'
+import { activeTemplate, deleteTemplate, farmTemplates, nextTemplateName, saveTemplate, setActiveTemplate, notToSave, setExcludeNot, templateMin, templateNotMods } from './farm-templates'
 import type { FarmTemplate } from './farm-templates'
 import { tickPref } from '../price-insight/tick-prefs'
 import { ItemCategory } from '@/parser'
@@ -564,8 +564,12 @@ function confirmSave () {
   }
   const key = current.value?.key
   const kind = !key ? undefined : key === ownKey.value ? 'own' : key
-  const not = searchable.value.filter(f => f.mapMod && stateOf(f) === 'not').map(f => f.statRef)
-  saveTemplate({ name, on, minPct, extraMin, kind, not, ...(template.value?.excludeNot ? { excludeNot: true } : {}) })
+  // Saved over the same name with Exclude on: its Not mods this map hasn't
+  // got stay in it, and so does Exclude. A new name starts with it off.
+  const prev = farmTemplates().find(t => t.name === name)
+  const here = searchable.value.filter(f => f.mapMod).map(f => f.statRef)
+  const not = notToSave(prev, here, searchable.value.filter(f => f.mapMod && stateOf(f) === 'not').map(f => f.statRef))
+  saveTemplate({ name, on, minPct, extraMin, kind, not, ...(prev?.excludeNot ? { excludeNot: true } : {}) })
 }
 // "Exclude my bad mods" (Guy's pick): a template's Not mods go in the search's
 // Not group even when this map hasn't got them, so the results can't hold maps

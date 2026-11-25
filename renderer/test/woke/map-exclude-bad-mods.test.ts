@@ -18,7 +18,7 @@ vi.mock('@/web/Config', () => ({
 }))
 
 /* eslint-disable import-x/first */
-import { activeTemplate, saveTemplate, setExcludeNot, templateNotMods } from '@/web/woke/map-mods/farm-templates'
+import { activeTemplate, notToSave, saveTemplate, setExcludeNot, templateNotMods } from '@/web/woke/map-mods/farm-templates'
 import { createFilters } from '@/web/price-check/filters/create-item-filters'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 /* eslint-enable import-x/first */
@@ -43,6 +43,13 @@ describe('Exclude my bad mods', () => {
     const ids = (ref: string) => ref === 'C' ? [] : [`explicit.${ref}`]
     expect(templateNotMods(t, new Set(['A']), ids)).toEqual([{ statRef: 'B', tradeId: ['explicit.B'] }])
     expect(templateNotMods({ ...t, not: undefined }, new Set(), ids)).toEqual([])
+  })
+
+  it('a save over the same name keeps its Not mods this map hasn\'t got, only with Exclude on', () => {
+    const prev = { id: 'x', name: 'X', on: [], not: ['A', 'B'], excludeNot: true as const }
+    expect(notToSave(prev, ['A', 'C'], ['C'])).toEqual(['C', 'B'])
+    expect(notToSave({ ...prev, excludeNot: undefined }, ['A', 'C'], ['C'])).toEqual(['C'])
+    expect(notToSave(undefined, [], ['C'])).toEqual(['C'])
   })
 
   it('reads a map mod\'s trade id from the data', () => {

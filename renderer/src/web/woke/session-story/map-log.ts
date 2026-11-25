@@ -191,6 +191,11 @@ export class MapLog {
       const cur = this.current
       if (this.inMap && cur) {
         if (cur.char !== ev.charName) this.runOn(cur, ev.charName, ev.className, ev.level - 1)
+        // Set by a death first (no class or level then): fill them in now.
+        else if (cur.charLevel == null) {
+          cur.className ??= ev.className
+          cur.charLevel = ev.level - 1 - cur.levelsGained
+        }
         cur.levelsGained++
       }
       return

@@ -213,7 +213,11 @@ export class NightTracker {
 // the Eternal lab). Campaign zones (an act in the id), towns and hideouts never.
 export function isEndgameArea (areaId: string, areaLevel: number): boolean {
   if (isTownLike(areaId) || actFromAreaId(areaId) != null) return false
-  return isBossArea(areaId) || /^(Delve|Heist)/i.test(areaId) || areaLevel >= 68
+  // The mine's hub (Niko, a stash), the Rogue Harbour and the Labyrinth (run
+  // while levelling, Merciless included) aren't a reason for a session.
+  if (/^(Delve_Main|HeistHub)|Labyrinth/i.test(areaId)) return false
+  // Delve and Heist go by their level too: a shallow mine or a low contract is levelling.
+  return isBossArea(areaId) || areaLevel >= 68
 }
 
 // Worth keeping as a session: a map (not a vault on the skip list), or
@@ -310,9 +314,11 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
   // Level-ups kept as yours, one line per character. A draft from before
   // that kept party members' too: follow the first character that levels.
   const levelUps: Array<{ char: string, from: number, to: number }> = []
+  // A night that spans the update has both: its older unmarked ones count
+  // when they're the same character's.
   const own = d.levels?.filter(l => l.mine) ?? []
-  const first = d.levels?.[0]?.char
-  for (const l of own.length ? own : (d.levels ?? []).filter(l => l.char === first)) {
+  const first = own[0]?.char ?? d.levels?.[0]?.char
+  for (const l of own.length ? (d.levels ?? []).filter(l => l.mine || own.some(o => o.char === l.char)) : (d.levels ?? []).filter(l => l.char === first)) {
     const row = levelUps.find(x => x.char === l.char)
     if (row) row.to = Math.max(row.to, l.level)
     else levelUps.push({ char: l.char, from: l.level - 1, to: l.level })

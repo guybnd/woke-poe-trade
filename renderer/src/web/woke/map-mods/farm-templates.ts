@@ -66,6 +66,13 @@ export function saveTemplate (t: Omit<FarmTemplate, 'id'>): FarmTemplate | null 
   return saved
 }
 
+// The Not mods a save keeps: this map's own, plus, when it replaces a
+// template with Exclude on, that one's Not mods this map hasn't got.
+export function notToSave (prev: FarmTemplate | undefined, here: readonly string[], not: readonly string[]): string[] {
+  const kept = prev?.excludeNot ? (prev.not ?? []).filter(ref => !here.includes(ref)) : []
+  return [...new Set([...not, ...kept])]
+}
+
 export function deleteTemplate (id: string): void {
   const w = widget()
   if (!w) return

@@ -114,6 +114,16 @@ describe('maps from Client.txt', () => {
     expect(log.current).toMatchObject({ name: 'Dunes', char: 'alt', charLevel: 70 })
   })
 
+  it('a level-up after the death that named you fills in the map\'s class and level', () => {
+    const { log } = follow([
+      `2026/11/05 21:00:00 ***** LOG FILE OPENING *****`,
+      area('21:01:00', 'MapWorldsStrand', '11'),
+      slain('21:02:00'),
+      level('21:03:00', 95)
+    ])
+    expect(log.current).toMatchObject({ char: 'whekq', className: 'Gladiator', charLevel: 94, deaths: 1, levelsGained: 1 })
+  })
+
   it('after the game starts, the first death or level-up in a map decides whose map it is', () => {
     const { log } = follow([
       level('20:00:00', 94),
