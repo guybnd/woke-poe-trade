@@ -36,7 +36,7 @@
       <div :class="$style.rule" />
       <div :class="$style.foot">
         <span :class="$style.chips">
-          <span v-for="t in tags" :key="t.text" :class="[$style.chip, t.tone && $style[t.tone]]">{{ t.text }}</span>
+          <span v-for="t in tags" :key="t.text" :class="[$style.chip, t.tone && $style[t.tone]]" :data-map-toast-chip="t.text"><WIcon v-if="t.mech" :mechanic="t.mech" title="" size="sm" />{{ t.text }}</span>
         </span>
         <span :class="$style.close" data-map-toast-close>
           <template v-if="closeKey"><WKbd :keys="closeKey" /> Dismiss</template>
@@ -59,6 +59,8 @@
 import { computed, onUnmounted, shallowRef, watch } from 'vue'
 import { formatClock } from '../ui/format'
 import WKbd from '../ui/WKbd.vue'
+import WIcon from '../ui/WIcon.vue'
+import { logMechanic } from '../ui/game-icons'
 import { hoverZonesMoved, useHoverZone } from '../shared/hover'
 import { tierText } from './map-log'
 import type { MapRecord } from './map-log'
@@ -281,9 +283,9 @@ const barTop = computed(() => Math.max(1, ...(props.chip?.cmp.runs ?? [1]), prop
 const tags = computed(() => {
   const r = props.chip?.rec
   if (!r) return []
-  const out: Array<{ text: string, tone?: 'bad' }> = []
+  const out: Array<{ text: string, tone?: 'bad', mech?: string }> = []
   if (r.deaths) out.push({ text: `${r.deaths} ${r.deaths === 1 ? 'death' : 'deaths'}`, tone: 'bad' })
-  for (const n of r.npcs) out.push({ text: n })
+  for (const n of r.npcs) out.push({ text: n, mech: logMechanic(n) })
   if (r.levelsGained && r.charLevel != null) out.push({ text: `Level ${r.charLevel + r.levelsGained}` })
   return out
 })
@@ -343,7 +345,7 @@ function tone (diff: number): string {
 .rule { height: 1px; margin: 6px 24px 7px; background: linear-gradient(90deg, transparent, #8a7149, transparent); }
 .foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 14px 2px 6px; font-size: calc(13px * var(--w-text-scale, 1)); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
-.chip { border: 1px solid #5c4d39; padding: 0 6px; color: #cdbb98; background: rgba(0, 0, 0, 0.3); }
+.chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid #5c4d39; padding: 0 6px; color: #cdbb98; background: rgba(0, 0, 0, 0.3); }
 .bad { color: var(--w-down, #e0675a); border-color: #6e3a32; }
 .close { flex: none; margin-left: auto; color: #8f8270; display: flex; gap: 5px; align-items: center; }
 .grip {

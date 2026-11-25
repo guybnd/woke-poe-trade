@@ -54,6 +54,9 @@ export const MECHANIC_ICONS: Record<string, { src?: string, item?: string, fa: s
   sanctum: { item: 'Forbidden Tome', fa: 'fas fa-book' },
   ultimatum: { item: 'Ultimatum Scarab', fa: 'fas fa-dungeon' },
   bestiary: { item: 'Bestiary Scarab', fa: 'fas fa-paw' },
+  // Mirage (Faridun's wishes) and Settlers (a fallen star's Starfall Crater).
+  mirage: { item: 'Coin of Restoration', fa: 'fas fa-sun' },
+  settlers: { item: 'Kalguuran Scarab', fa: 'fas fa-star' },
   map: { src: '/images/maps/normal.png', fa: 'fas fa-map' },
   stash: { src: '/images/stash.png', fa: 'fas fa-box' }
 }
@@ -62,6 +65,39 @@ export function mechanicIcon (id: string): { src: string | null, fa: string } {
   const m = MECHANIC_ICONS[id]
   if (!m) return { src: null, fa: 'fas fa-circle' }
   return { src: m.src ?? (m.item ? gameIcon(m.item) : null), fa: m.fa }
+}
+
+// The mechanic behind a name the map log gives a map (session-story/map-log.ts:
+// the NPC who spoke, Mirage, Starfall Crater), for its chip's icon.
+const LOG_MECHANIC: Record<string, string> = {
+  'Einhar': 'bestiary',
+  'Alva': 'incursion',
+  'Niko': 'delve',
+  'Jun': 'betrayal',
+  'Envoy': 'maven',
+  'Delirium': 'delirium',
+  'Blight': 'blight',
+  'Zana': 'map',
+  'Harvest': 'harvest',
+  'Expedition': 'expedition',
+  'Mirage': 'mirage',
+  'Starfall Crater': 'settlers'
+}
+export function logMechanic (label: string): string | undefined {
+  return LOG_MECHANIC[label]
+}
+
+// The map numbers (price check tiles, Map planner goals, farming goals) and
+// the art each is drawn with.
+export const MAP_NUMBER_ICONS: Record<string, { src?: string, item?: string, fa: string }> = {
+  drops: { src: '/images/increased.png', fa: 'fas fa-arrow-up' },
+  rarity: { item: 'Orb of Alchemy', fa: 'fas fa-gem' },
+  pack: { item: 'Bestiary Scarab of the Herd', fa: 'fas fa-users' },
+  currency: { src: '/images/chaos.png', fa: 'fas fa-coins' },
+  threads: { item: 'Ambush Scarab', fa: 'fas fa-bug' },
+  maps: { src: '/images/maps/normal.png', fa: 'fas fa-map' },
+  divCards: { item: 'Stacked Deck', fa: 'fas fa-clone' },
+  scarabs: { item: 'Ambush Scarab of Containment', fa: 'fas fa-bug' }
 }
 
 // Art for a poe.ninja row ("UniqueArmour", "SkillGem", "DivinationCard",

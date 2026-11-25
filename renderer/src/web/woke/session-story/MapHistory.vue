@@ -51,7 +51,7 @@
           <div v-else class="w-row px-0" :class="[$style.grid, $style.mapRow, { [$style.sel]: isFocus(line.map) }]" data-map-row
             :data-map-at="line.map.enteredAt" v-item-tip="mapTip(line.map)" @click="emit('select', line.map.enteredAt)">
             <span class="w-dim w-num">{{ clockTime(line.map.enteredAt) }}</span>
-            <span class="w-trunc" :class="{ 'w-dim': skippedRow(line.map) }">{{ line.map.name }} <span class="w-dim">{{ skippedRow(line.map) ? 'not counted' : tierText(line.map.areaLevel) }}</span><span v-for="n in line.map.npcs" :key="n" :class="$style.mech">{{ n }}</span><span v-if="line.map.levelsGained" :class="$style.mech" class="w-accent">+{{ line.map.levelsGained }} {{ line.map.levelsGained === 1 ? 'level' : 'levels' }}</span></span>
+            <span class="w-trunc" :class="{ 'w-dim': skippedRow(line.map) }">{{ line.map.name }} <span class="w-dim">{{ skippedRow(line.map) ? 'not counted' : tierText(line.map.areaLevel) }}</span><span v-for="n in line.map.npcs" :key="n" :class="$style.mech" data-history-mech><WIcon v-if="logMechanic(n)" :mechanic="logMechanic(n)" title="" size="sm" />{{ n }}</span><span v-if="line.map.levelsGained" :class="$style.mech" class="w-accent">+{{ line.map.levelsGained }} {{ line.map.levelsGained === 1 ? 'level' : 'levels' }}</span></span>
             <!-- Deaths keep their own column, so the times stay lined up. -->
             <span class="text-right w-num w-down">{{ line.map.deaths ? `✕${line.map.deaths}` : '' }}</span>
             <span class="text-right w-num">{{ formatClock(line.map.mapMs) }}</span>
@@ -70,7 +70,8 @@
 import { computed, nextTick, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { saveConfig } from '@/web/Config'
-import { WBanner, WButton, WEmpty, WSkeleton, openMenu, vItemTip } from '../ui'
+import { WBanner, WButton, WEmpty, WIcon, WSkeleton, openMenu, vItemTip } from '../ui'
+import { logMechanic } from '../ui/game-icons'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import { hideHelp, showHelp } from '../ui/help-tip'
 import { formatChaos, formatClock } from '../ui/format'
@@ -313,7 +314,10 @@ onUnmounted(untip)
 .dayTitle { font-size: 1.05em; }
 .char { padding: 4px 0 1px; color: var(--w-accent); opacity: 0.8; }
 .mech {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  vertical-align: middle;
   margin-left: 4px;
   padding: 0 5px;
   border: 1px solid var(--w-line);

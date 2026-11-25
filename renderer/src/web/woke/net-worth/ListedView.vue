@@ -29,7 +29,7 @@
       <WChip v-if="toReprice" clickable :active="filter === 'reprice'" title="Listings you set a new price on from the price check: reprice them at Faustus" @click="toggle('reprice')"><span class="w-warn">To reprice {{ toReprice }}</span></WChip>
       <WChip v-if="undercut" clickable :active="filter === 'undercut'" title="Your last Check found someone cheaper" @click="toggle('undercut')"><span class="w-down">Undercut {{ undercut }}</span></WChip>
       <WChip v-if="over" clickable :active="filter === 'over'" title="Asking 10% or more over poe.ninja's price" @click="toggle('over')">Overpriced {{ over }}</WChip>
-      <WChip v-for="t in types" :key="t.id" clickable :active="filter === t.id" @click="toggle(t.id)">{{ t.label }} {{ t.count }}</WChip>
+      <WChip v-for="t in types" :key="t.id" clickable :active="filter === t.id" :data-listed-type="t.id" @click="toggle(t.id)"><img v-if="t.icon" :src="t.icon" alt="" class="w-game-icon" :class="$style.chipIcon">{{ t.label }} {{ t.count }}</WChip>
       <WChip v-if="outCount" clickable :active="filter === 'changed'" title="Only the listings you left out of the total" data-listed-changed @click="toggle('changed')">Changed {{ outCount }}</WChip>
     </section>
     <WEmpty v-if="!rows.length" icon="fas fa-check">Nothing listed that hasn't sold.</WEmpty>
@@ -149,7 +149,13 @@ const over = computed(() => rows.value.filter(isOver).length)
 const isUndercut = (r: PendingRow) => (checkOf(r)?.cheaper ?? 0) > 0
 const undercut = computed(() => rows.value.filter(isUndercut).length)
 const toReprice = computed(() => rows.value.filter(r => targetOf(r) != null).length)
-const types = computed(() => SALE_TYPES.map(t => ({ ...t, count: rows.value.filter(r => saleType(r.item) === t.id).length })).filter(t => t.count > 0))
+// Each type chip shows its priciest listing's art, as Net worth's categories do.
+const types = computed(() => SALE_TYPES.map((t) => {
+  const of = rows.value.filter(r => saleType(r.item) === t.id)
+  let top: PendingRow | null = null
+  for (const r of of) if (r.item.icon && (!top || (r.chaos ?? 0) > (top.chaos ?? 0))) top = r
+  return { ...t, count: of.length, icon: top?.item.icon ?? '' }
+}).filter(t => t.count > 0))
 watch(listedOpenStale, (on) => {
   if (!on) return
   listedOpenStale.value = false
@@ -282,6 +288,7 @@ async function reprice (r: PendingRow, e: MouseEvent) {
 .struck { text-decoration: line-through; color: var(--w-dim); }
 .name { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
+.chipIcon { width: 16px; height: 16px; object-fit: contain; flex: none; }
 .ask { color: var(--w-gold); }
 .check { text-align: right; }
 .quick { opacity: 0; padding-inline: 2px; }

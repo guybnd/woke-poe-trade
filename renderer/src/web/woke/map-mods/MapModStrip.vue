@@ -30,7 +30,7 @@
         <span class="w-dim text-xs" :class="$style.rowLabel">Farming</span>
         <span :class="$style.seg" role="radiogroup" aria-label="Farming goal" data-map-goal>
           <button v-for="g in FARM_GOALS" :key="g" type="button" role="radio" :aria-checked="!template && goal === g"
-            :class="!template && goal === g && $style.on_any" :data-goal="g" :title="GOAL_TITLE[g]" @click="setGoal(g)">{{ FARM_GOAL_LABEL[g] }}</button>
+            :class="!template && goal === g && $style.on_any" :data-goal="g" :title="GOAL_TITLE[g]" @click="setGoal(g)"><WIcon v-if="GOAL_ICON[g]" v-bind="GOAL_ICON[g]" size="sm" />{{ FARM_GOAL_LABEL[g] }}</button>
           <!-- Guy's pick F (2026-11-24): your own farming templates, saved from the current picks. -->
           <template v-for="t in templates" :key="t.id">
             <button type="button" role="radio" :aria-checked="template?.id === t.id" :class="template?.id === t.id && $style.on_any"
@@ -196,6 +196,11 @@ const PROP_ICON: Record<string, IconProps> = {
   'Div cards': { item: 'Stacked Deck', fallback: 'fas fa-clone', title: '' }
 }
 const MAP_ICON = '/images/maps/normal.png'
+// The farming goal buttons draw what they farm (Guy 2026-11-25: icons on chips).
+const GOAL_ICON: Partial<Record<FarmGoal, IconProps>> = {
+  currency: { src: '/images/chaos.png', fallback: 'fas fa-coins', title: '' },
+  atlas: { src: MAP_ICON, fallback: 'fas fa-map', title: '' }
+}
 
 const result = computed(() => {
   const config = findMapModsConfig()
@@ -748,7 +753,7 @@ const picked = computed(() => {
 .has .text { color: var(--w-up); }
 .not .text { color: var(--w-down); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--w-down) 50%, transparent); }
 .seg { flex: none; display: inline-flex; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); overflow: hidden; }
-.seg button { padding: 0 6px; font-size: var(--w-fs-xs); color: var(--w-dim); border-left: 1px solid var(--w-line); }
+.seg button { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; font-size: var(--w-fs-xs); color: var(--w-dim); border-left: 1px solid var(--w-line); }
 .seg button:first-child { border-left: 0; }
 .seg button:hover { background: var(--w-chip-ground); }
 .seg .on_any { background: var(--w-panel-2); color: var(--w-fg); }

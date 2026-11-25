@@ -5,7 +5,7 @@
       <div :class="$style.tools">
         <div class="flex items-center gap-1 flex-wrap w-full">
           <span class="w-dim text-xs mr-1">I want</span>
-          <WChip v-for="g in PLAN_GOALS" :key="g" clickable :active="state.goal === g" @click="setGoal(g)">{{ BONUS_LABEL[g] }}</WChip>
+          <WChip v-for="g in PLAN_GOALS" :key="g" clickable :active="state.goal === g" @click="setGoal(g)"><WIcon v-bind="goalIcon(g)" size="sm" />{{ BONUS_LABEL[g] }}</WChip>
         </div>
         <div class="flex items-center gap-2 w-full">
           <span class="w-dim text-xs flex-1">
@@ -99,7 +99,8 @@ import { computed } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { useLeagues } from '@/web/background/Leagues'
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
-import { WButton, WChip, WEmpty, WField, WInfo, WSelect, toast } from '../ui'
+import { WButton, WChip, WEmpty, WField, WIcon, WInfo, WSelect, toast } from '../ui'
+import { MAP_NUMBER_ICONS } from '../ui/game-icons'
 import { useCopy } from '../ui/copy'
 import { tradeUrl } from '../search/search'
 import { priceCheckTradeStatus } from '../shared/trade-status'
@@ -113,6 +114,12 @@ import type { MapModProfile, ModRating } from './rules'
 import { plannerGoalFor } from './goal'
 import { farmGoal } from './goal-config'
 
+// Each goal chip draws what it brings (Guy 2026-11-25: icons on chips).
+const GOAL_ICON_KEY: Record<BonusKey, string> = { d: 'drops', r: 'rarity', p: 'pack', currency: 'currency', maps: 'maps', threads: 'threads', divCards: 'divCards', scarabs: 'scarabs' }
+function goalIcon (g: BonusKey): { src?: string, item?: string, fallback: string, title: string } {
+  const i = MAP_NUMBER_ICONS[GOAL_ICON_KEY[g]]
+  return { src: i?.src, item: i?.item, fallback: i?.fa ?? 'fas fa-percent', title: '' }
+}
 const props = defineProps<{ profile: MapModProfile, ratings: Record<string, ModRating> }>()
 
 const COLUMNS: BonusKey[] = ['d', 'r', 'p', 'currency', 'maps', 'threads']

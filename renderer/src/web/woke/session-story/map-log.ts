@@ -76,6 +76,11 @@ export function isStarfallArea (areaId: string): boolean {
   return /^SettlersBossFallenStar/i.test(areaId)
 }
 
+// Every name the log can put on a map, for the chips' icons (ui/game-icons.ts).
+export function logLabels (): string[] {
+  return [...NPCS.map(([, label]) => label), MIRAGE, STARFALL]
+}
+
 export function npcOf (speaker: string): string | null {
   for (const [re, label] of NPCS) if (re.test(speaker)) return label
   return null

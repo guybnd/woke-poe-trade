@@ -239,6 +239,10 @@
    "main/src/woke/map-scan.ts",
    "renderer/src/web/woke/map-mods/"
   ],
+  "map-toast-mechanics.spec.ts": [
+   "renderer/src/web/woke/session-story/",
+   "renderer/src/web/woke/ui/game-icons.ts"
+  ],
   "map-toast-resize.spec.ts": [
    "renderer/src/web/woke/session-story/"
   ],

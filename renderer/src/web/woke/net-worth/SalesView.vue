@@ -13,7 +13,7 @@
     <section v-if="types.length" :class="$style.bars">
       <button v-for="t in types" :key="t.id" type="button" :class="[$style.bar, { [$style.on]: type === t.id }]" :aria-pressed="type === t.id"
         :title="typeTip(t)" @click="type = type === t.id ? null : t.id">
-        <span class="w-trunc">{{ t.label }}</span>
+        <span class="flex items-center gap-1 min-w-0"><img v-if="t.best?.icon" :src="t.best.icon" alt="" class="w-game-icon" :class="$style.typeIcon"><span class="w-trunc">{{ t.label }}</span></span>
         <i :style="{ width: Math.max(2, t.share * 100) + '%' }" />
         <b class="w-num">{{ div(t.chaos) }}<Coin :chaos="!divine" /></b>
         <span class="w-num w-dim">{{ t.count }}</span>
@@ -169,6 +169,8 @@ watch(types, (list) => { if (type.value && !list.some(t => t.id === type.value))
 .bars { display: flex; flex-direction: column; padding: 4px var(--w-pad); border-bottom: 1px solid var(--w-line); }
 .bar { display: grid; grid-template-columns: 10em minmax(0, 1fr) 5.5em 2.5em; gap: 8px; align-items: center; width: 100%; padding: 2px 4px; font-size: var(--w-fs-sm); color: var(--w-fg); text-align: left; border-radius: var(--w-r-sm); cursor: pointer; }
 .bar:hover { background: var(--w-panel-2); }
+/* Each type shows its best sale's art (Guy 2026-11-25: icons on chips). */
+.typeIcon { width: 16px; height: 16px; object-fit: contain; flex: none; }
 .bar i { display: block; height: 8px; min-width: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--w-gold) 50%, transparent), var(--w-gold)); }
 .bar b { text-align: right; font-weight: 500; color: var(--w-gold); }
 .bar > span:last-child { text-align: right; }
