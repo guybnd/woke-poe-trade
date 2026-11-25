@@ -15,6 +15,8 @@ export function isBlankRareSearch (item: ParsedItem, filters: ItemFilters, stats
   // Beasts, invitations and the like are priced by name: they have nothing to tick.
   if (!stats.some(s => s.group || !s.hidden)) return false
   if (stats.some(s => s.group ? !s.meta.disabled : !s.disabled)) return false
+  // A mod added from the search line counts as one ticked.
+  if (filters.addedMods?.some(m => !m.disabled)) return false
   // These narrow a search as much as a mod does, as when pricing a crafting base.
   return !(
     filters.mapTier != null ||
