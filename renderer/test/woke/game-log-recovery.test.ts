@@ -195,6 +195,25 @@ describe('a follower started later', () => {
     expect(host.requests.count).toBe(2)
     expect(got).toEqual([AT_12, NEXT])
   })
+
+  it("doesn't take a read started before a new log opened for that log's tail", async () => {
+    vi.useFakeTimers()
+    vi.resetModules()
+    const REAL = { path: 'F:\\real\\Client.txt', lines: [AT_12] }
+    const host = mockHost([LOG, MISSING, REAL])
+    const { followGameLog } = await import('@/web/woke/shared/game-log')
+    const b: Array<string | null> = []
+    followGameLog({ since: () => null, onTail: t => b.push(t.path), onLines: () => {} })
+    await vi.advanceTimersByTimeAsync(0)
+    // Another follower starts a read, still going (Client.txt not there yet)…
+    followGameLog({ since: () => null, onLines: () => {} })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(host.requests.count).toBe(2)
+    // …when the app moves to the game's own log: the idle one reads it now.
+    host.emit(OPENED, { path: REAL.path })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(b).toEqual([LOG.path, REAL.path])
+  })
 })
 
 describe('GameLogWatcher', () => {
