@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-468
 title: 'Price check: show each defence/DPS max roll in the stat header'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -59,6 +59,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-22T05:20:57.979Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:55.188Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/751'
@@ -73,5 +78,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Guy asked if the price check can show what a max roll of the item's values could be (armour 2206 / ES 474 chips). The filter bounds already hold the max: base top roll + each local mod at its tier max, at Q20. Show it in the stat header (armour/weapon). Better-tier ceiling needs mod tier data we don't ship: out of scope.

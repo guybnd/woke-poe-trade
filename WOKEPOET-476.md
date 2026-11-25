@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-476
 title: 'Price check: filter loaded listings live when a stat range tightens'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -59,6 +59,11 @@ history:
       Load 10 more removed (Guy: a new search is better); short list points at
       Search, which glows.
     id: a-2026-11-22t11-49-03-523z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:53.575Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -74,5 +79,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Guy: after results load, tightening a stat's min/max (or ticking a readable stat) should filter the already-fetched listings locally, with no trade search. Widening/unticking/other filters keep the stale "search again" state. Must clearly show filtered-locally vs needs-search. Mockups: https://claude.ai/artifact/2smVMauq1dqp9pZZu9g9xw (recommended A: hide + teal strip + show hidden; red strip when stale). Branch woke/price-check-local-filter.

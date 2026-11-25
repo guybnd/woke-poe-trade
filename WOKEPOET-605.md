@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-605
 title: 'Net worth chart: value axis and time labels'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -26,6 +26,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-25T06:11:33.751Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:47.279Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/906'
@@ -40,5 +45,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Net worth chart gets a value axis and time labels. PR: https://github.com/guybnd/woke-poe-trade/pull/906 (c4e12a5).

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-603
 title: 'Tooltip audit part 1: fill empty tooltips, 18 missing uniques'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -26,6 +26,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-25T05:03:02.590Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:47.777Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/915'
@@ -40,5 +45,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Item tooltip: fill the empty ones (base implicits, flasks, tinctures, fragments) and add 18 missing uniques. PR: https://github.com/guybnd/woke-poe-trade/pull/915 (7a912c5).

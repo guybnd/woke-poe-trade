@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-474
 title: 'Price check: Kitava''s Thirst trigger line searches 125 instead of 50%'
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -51,6 +51,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-22T08:05:25.665Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:54.502Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -66,5 +71,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Foulborn Kitava's Thirst "50% chance to Trigger Socketed Spells when you Spend at least 200 Life..." averaged both numbers (125) and the search found no listings. Trade site stores this stat (and plain Kitava's, Tinkerskin's Phasing, Deerstalker's Movement Speed) by the first number — verified on the live trade API. Death's Oath verified as average, so a whitelist. Guy also asked to check other trigger mods: swept all unique trigger lines; guard test fails on any new unchecked two-number trigger stat. 0% BASE chip checked against trade base percentile filter: correct.

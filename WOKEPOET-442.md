@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-442
 title: 'Session window: Ctrl+Space map results open Map history at that row'
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-434
 history:
   - type: activity
@@ -59,6 +59,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T08:04:17.082Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:51:00.827Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/712'
@@ -73,5 +78,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 > TL;DR: left over from step 3 (WOKEPOET-437). Picking a map or "tonight"/"last vault" result in Ctrl+Space should open Session analytics on Map history and scroll to that row (focusAt in WidgetSessionAnalytics.vue). Search lookups (search/lookups/session-story.ts) don't open windows at a row yet.

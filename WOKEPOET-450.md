@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-450
 title: 'Sales in Net worth: trade history reader, Sold section, Sales view'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - personal
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -78,6 +78,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T11:08:07.608Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:58.478Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/728'
@@ -92,6 +97,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Guy's picks (2026-11-21): opt-in reader (A), Net worth integration A + C (mockups https://claude.ai/artifact/M9rk3zWppKwDT7eVb91bTm), per-type summary layout 1 "ranked bars" (https://claude.ai/artifact/UVx98gZ39f8EWwFFPmhzjS).
 

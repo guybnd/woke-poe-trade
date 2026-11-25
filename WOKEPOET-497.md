@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-497
 title: Currency icons instead of c/div on the poe.ninja card and verdicts
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -41,6 +41,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-23T03:27:26.808Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:50.625Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/781'
@@ -55,5 +60,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Guy (follow-up to WOKEPOET-487): the instant poe.ninja card shows "6.9 div" / "1,436c" as text. PR https://github.com/guybnd/woke-poe-trade/pull/781 adds WPriceText and uses it on the card, NinjaVerdict and BulkVerdict.

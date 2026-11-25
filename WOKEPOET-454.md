@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-454
 title: 'UI size: one slider that scales everything'
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -62,6 +62,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T12:28:32.502Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:57.528Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/736'
 reviewState: approved
@@ -77,6 +82,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 > **TL;DR** Guy wants one setting that makes the whole UI bigger. Add a master UI size on Look & icon row that multiplies Panel size, the price check window and Pinned size; fold the four existing size sliders under "Fine-tune"; add Size to the price check palette menu; Ctrl+Space entries.
 

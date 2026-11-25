@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-470
 title: 'Net worth: drag bars and folds for every section'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - net-worth
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -43,6 +43,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-22T05:35:24.402Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:55.117Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -58,5 +63,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Guy: the right column (Sold, Where it is, Price moves) pushes the items table down. Add vertical and horizontal drag bars between sections, fold each section, persist sizes and folds. Mockup: https://claude.ai/artifact/1fWAcquDRbi6HK75HoRjsQ (building option A).

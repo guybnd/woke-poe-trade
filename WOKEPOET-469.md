@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-469
 title: Item tooltips draw behind long-used windows (Net worth)
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -43,6 +43,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-22T05:17:11.196Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:55.265Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -58,5 +63,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Net worth rows showed no item tooltip or one half hidden behind the window. Panel wmZorder grew by one per bring-to-front forever; Net worth reached z 1004 over the tooltip's 1000. Fix: renumber z-orders once past 800 (bring-to-front and config load). Gate gap: tip-audit checked wiring, not paint order; the hover e2e now checks the tooltip is topmost. PR https://github.com/guybnd/woke-poe-trade/pull/750

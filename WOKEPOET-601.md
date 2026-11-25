@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-601
 title: 'OCR map scan: no fallback for ratings saved under another wording'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -37,6 +37,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-25T05:14:32.037Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:47.570Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/917'
@@ -51,5 +56,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Found in the 2026-11-25 bug hunt (PR 916): the OCR map scan has no fallback when a mod rating was saved under a different wording of the mod.

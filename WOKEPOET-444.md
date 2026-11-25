@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-444
 title: 'Gem price check: Clean | Corrupted versions + Vaal it? chip'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -58,6 +58,11 @@ history:
       Follow-up PR 717 merged as 03e93cad:
       https://github.com/guybnd/woke-poe-trade/pull/717
     id: a-2026-11-21t08-34-43-154z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:51:00.215Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/713'
 needsAction: null
 reviewState: approved
@@ -73,6 +78,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Work done in a cloud thread. PR: https://github.com/guybnd/woke-poe-trade/pull/713
 Picks page: https://claude.ai/artifact/RFLARFVB7NX9ZuQNTq5Sc5 (Guy picked C + V3).

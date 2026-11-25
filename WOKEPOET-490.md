@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-490
 title: 'Session analytics: tidy Map history'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -25,6 +25,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-23T03:00:44.007Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:51.065Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/779'
@@ -39,5 +44,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Done in a cloud thread: https://github.com/guybnd/woke-poe-trade/pull/779 (merged at 75ad6a0a).

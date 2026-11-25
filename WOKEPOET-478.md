@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-478
 title: 'Market sidebar: full category names, header wrap, missing icons'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - market
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -42,6 +42,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-22T10:29:55.885Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:54.024Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/759'
@@ -56,6 +61,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Market › Prices category sidebar: "Equipment & gems" header wrapped out of its bar; names cut off with "…" (Unique Weapons, Forbidden Jewels, Blight-ravaged Maps…); no icons for Scrying Orbs, Forbidden Jewels, Blighted/Blight-ravaged Maps, Incursion Temples, Beasts.
 

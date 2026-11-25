@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-473
 title: 'Net worth: fake poe.ninja price on thin div cards inflates net worth'
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -50,6 +50,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-22T07:01:43.931Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:54.669Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -65,6 +70,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 The Witch (7,075c, really 0.2c) and Rain Tempter (857c, really 0.01c) spiked on poe.ninja 2026-11-22 ~13:50-16:00 Sydney; Guy's 16:00 read had Div cards 107k c, net worth 196k vs ~100k. Both were thin (gaps 6/7). Users report the same skew.
 

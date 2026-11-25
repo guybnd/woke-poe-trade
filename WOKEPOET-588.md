@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-588
 title: 'Hints: price check tour and Worth knowing lines'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-585
 history:
   - type: activity
@@ -43,6 +43,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-25T09:16:19.951Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:45.852Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/928'
@@ -57,5 +62,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Price check tour and Worth knowing lines. Branch claude/project-thread-0b8q87.

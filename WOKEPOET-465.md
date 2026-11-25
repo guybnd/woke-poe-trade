@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-465
 title: 'After-map toast: resizing gives room, not zoom'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -49,6 +49,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T15:18:06.436Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:56.042Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -64,5 +69,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 > **TL;DR** Guy: resizing the after-map summary scales everything instead of giving the content more space. The corner grip set a zoom (chipScale) since PR 693, not PR 736. Make the grip set width/height; only UI size / Panel size scale it.

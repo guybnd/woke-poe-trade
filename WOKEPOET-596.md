@@ -3,7 +3,7 @@ id: WOKEPOET-596
 title: >-
   Related items: exalt variants, stacked-reward cards, beast recipes,
   scarab/tattoo families
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -11,7 +11,7 @@ tags:
   - feature
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -29,6 +29,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-25T04:28:16.052Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:48.135Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/908'
@@ -43,5 +48,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Follow-up to epic WOKEPOET-561: every exalt variant, cards that give a stack, beast recipes, clickable invitation drops, and the scarab and tattoo families. PR: https://github.com/guybnd/woke-poe-trade/pull/908 (8f84834).

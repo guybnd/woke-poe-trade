@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-493
 title: Shared action row and card footer
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-491
 history:
   - type: activity
@@ -42,6 +42,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-23T04:16:26.635Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:49.955Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/784'
@@ -56,5 +61,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 One shared action row and card footer so buttons and links stop mixing styles. Loot filter dock card first.

@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-486
 title: 'Price check: rarity chip (Any/Magic/Rare) for gear, to hunt magic bases'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -43,6 +43,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-22T23:25:31.325Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:52.288Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/773'
@@ -57,5 +62,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Discord request: price check a rare base (e.g. Necrotic Armour ilvl 86, life + suppress) but list magic items only, for recombining/fracturing. Today only magic jewels get a Magic chip. Mockups: https://claude.ai/artifact/3tnPzMQdFnrsa3b8ALrhjZ (A recommended: cycle chip; B simpler: Magic toggle). Branch woke/magic-bases.

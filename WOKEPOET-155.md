@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-155
 title: 'F. Flips for 3.30: retire scarabs, add Threads, fix Delirium'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
@@ -128,6 +128,11 @@ history:
     date: '2026-11-21T14:24:13.245Z'
     selfAttested: true
     id: c-2026-11-21t14-24-13-245z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:56.866Z'
 swimlane: null
 needsAction: null
 reviewState: approved
@@ -143,6 +148,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 > TL;DR: the Scarabs tab already hides itself (#266). The other 3.30 changes Flips needs are below. The Threads tab waits on Guy's yes.
 

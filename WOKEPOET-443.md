@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-443
 title: Price check Valdo maps
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -42,6 +42,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T07:49:56.310Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:51:01.096Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/711'
 needsAction: null
 reviewState: approved
@@ -57,5 +62,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Work done in a cloud thread. PR: https://github.com/guybnd/woke-poe-trade/pull/711 (branch claude/project-thread-l7hcc3).

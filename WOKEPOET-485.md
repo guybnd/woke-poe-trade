@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-485
 title: 'Price check: show a captured beast''s Blood Altar recipes'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -50,6 +50,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-22T16:07:29.327Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:52.517Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -65,5 +70,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Guy's ask: price checking a captured beast (instant card or full check) shows which Bestiary recipes it's used in. Example Craicic Vassal (map implicit). Also fix 3.30: yellow beasts no longer needed, so drop "+N any rare" from recipe data (Ctrl+Space too). Mockups/picks: https://claude.ai/artifact/NFLczRhQWZFcBkPGkLrws9 (building A). Branch woke/beast-recipes-price-check, worktree wt/beast-recipes.

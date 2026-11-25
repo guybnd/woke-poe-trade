@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-484
 title: 'Map mods: show each mod''s bonuses (Atlas Drops/rarity/pack, more-X)'
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -85,6 +85,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-23T00:40:12.794Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:51.945Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/770'
@@ -99,6 +104,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Guy asked for a planner from poedb map mod tables. Option A (recommended, built while his A/B/C pick is pending): bonus numbers + more-X tag + tooltip on every Map mods row, sort by bonus, "Want all with <bonus>", Ctrl+Space lookup. Data: script snapshots poedb Maps_low/mid/top/uber_tier embedded JSON into bundled data once per patch.
 

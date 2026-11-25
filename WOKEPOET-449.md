@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-449
 title: 'Price check: bulk sellers only toggle'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -49,6 +49,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T10:43:03.654Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:58.781Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -64,5 +69,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Toggle in the price check results to show only sellers listing 2+ copies at a price (e.g. Nightmare Maps x22). When it leaves too few rows, the click pulls more result pages (up to 100 listings). No extra fetches on open.

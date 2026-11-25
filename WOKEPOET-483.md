@@ -3,14 +3,14 @@ id: WOKEPOET-483
 title: >-
   Net worth: one-day poe.ninja fake (The Web 28,886c) slipped past the thin-jump
   guard
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -46,6 +46,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-22T14:50:29.750Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:52.770Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -61,5 +66,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Follow-up to WOKEPOET-473. The Web dropped off poe.ninja for about 8h, so the baseline forgot its 2.25c price. It came back at 28,886c (gaps 6), and the guard had no reference. Fix: the baseline keeps `ref` (the last solid price), and a one-day price of 10c or more doesn't count while it's 5x or more over ref, or there's no ref, until poe.ninja has a second day.

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-462
 title: Report an issue from Settings and Ctrl+Space search
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -51,6 +51,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T15:08:45.752Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:56.191Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -66,5 +71,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Add a "Report an issue" dialog (Bug/Idea, title, description, optional app info and scrubbed log, preview) reachable from Settings and Ctrl+Space. Submit opens a pre-filled GitHub issue via safe openExternal; long logs go to clipboard. Reuse/unify the crash-report builder from PR #41 and scrubbing from #269. Branch claude/report-issue, worktree E:\Git\woke\wt\report-issue.

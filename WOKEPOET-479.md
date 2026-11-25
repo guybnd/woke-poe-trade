@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-479
 title: 'Price check: poe.ninja price first for bulk items, live search on click'
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
 tags:
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -69,6 +69,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-22T11:30:02.985Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:53.795Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/761'
@@ -83,6 +88,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 > **TL;DR:** Price checking currency and other bulk goods shows the cached poe.ninja price straight away as the verdict and no longer spends an exchange search; "Check live offers" (or Enter) runs it.
 

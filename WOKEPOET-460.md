@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-460
 title: Redesign Ctrl+Space item action buttons
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -57,6 +57,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T14:38:47.241Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:56.649Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -72,5 +77,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Guy: Open in Market should go or move to the end; better layout with icons for the item detail pane's action row (Wiki, poedb, Price check, Trade site, Find in stash, Copy name). Mockups: https://claude.ai/artifact/2nmXyqb4SYivXVpW6Nu86H (building A meanwhile). Layout/presentation only; trade-site logic belongs to the Ctrl+Space trade links thread.

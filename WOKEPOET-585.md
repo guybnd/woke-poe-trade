@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-585
 title: Surface hidden features with hints
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - epic
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -57,6 +57,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-25T09:16:21.612Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:45.721Z'
 subtasks:
   - WOKEPOET-586
   - WOKEPOET-587
@@ -75,6 +80,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Epic: teach players the hidden features (hints, tip lines, hotkey peeks, a price check tour). Branch: claude/project-thread-0b8q87.
 

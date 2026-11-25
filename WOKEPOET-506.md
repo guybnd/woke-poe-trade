@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-506
 title: 'Instant card: 1-day price line and change, labelled 1d'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -26,6 +26,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-23T04:34:33.046Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:49.467Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/789'
@@ -40,5 +45,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Guy: sparkline + % on the instant poe.ninja card should cover 1d and say so. PR https://github.com/guybnd/woke-poe-trade/pull/789 merged (ac2ff547): saved snapshots over 24h (7 points, 400 ms wait, no flip), else poe.ninja's last two days; "1d" label; hover says the source.

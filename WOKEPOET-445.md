@@ -3,14 +3,14 @@ id: WOKEPOET-445
 title: >-
   Bug hunt: Incarnation arenas no longer count as maps; Ctrl+Space session cards
   fixes
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -30,6 +30,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T09:11:38.440Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:59.608Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/719'
@@ -44,5 +49,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Done in a cloud bug-hunt thread. PR: https://github.com/guybnd/woke-poe-trade/pull/719 (merged 0c632e2).

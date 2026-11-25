@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-482
 title: 'Loot filter: show how much a price moved on the "price jumped" badge'
-status: Done
+status: Released
 priority: Low
 effort: XS
 assignee: unassigned
 tags:
   - loot-filter
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -40,6 +40,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-22T12:01:15.417Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-25T11:50:53.418Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -55,5 +60,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0001'
+releasedAt: '2026-11-25T11:50:45.359Z'
+releaseDocPath: release-notes/0001
 ---
 Guy: the Not moved list in Loot filter → Prices shows "price jumped" with no size. Show the move (poe.ninja-style percent) and say spiked or crashed instead of jumped.
