@@ -64,12 +64,17 @@ export function eldritchSteps (
   return { steps, mine }
 }
 
+/** A filled-in roll. `fixedTier`: the tier is one number, so the search keeps to it and
+ *  the range is only the bar's. `countsDown`: better tiers have lower numbers (an Endurance
+ *  Charge every 10 seconds beats every 15), whatever the stat data says. */
+export type EldritchRoll = StatRoll & { fixedTier?: boolean, countsDown?: boolean }
+
 /** The row's roll with its range filled in, when the item gave none. */
 export function eldritchRoll (
   sources: StatSource[],
   roll: StatRoll | undefined,
   category: ItemCategory | undefined
-): StatRoll | undefined {
+): EldritchRoll | undefined {
   if (!roll || roll.min !== roll.max || sources.length !== 1) return roll
   if (!sources[0].modifier.info.eldritch) return roll
   // The first check starts the read; eldritch-refill.ts fills the rows in once it's back.
@@ -83,7 +88,11 @@ export function eldritchRoll (
   const abs = Math.abs(roll.value)
   // The data disagrees with the item (a changed mod): leave the row as it was.
   if (abs < mine.min || abs > mine.max || low === high) return roll
+  const fixedTier = mine.min === mine.max
+  const first = steps[0]
+  const last = steps[steps.length - 1]
+  const countsDown = last.rank > first.rank && last.max < first.min
   return roll.value >= 0
-    ? { value: roll.value, min: low, max: high }
-    : { value: roll.value, min: -high, max: -low }
+    ? { value: roll.value, min: low, max: high, fixedTier, countsDown }
+    : { value: roll.value, min: -high, max: -low, fixedTier, countsDown }
 }

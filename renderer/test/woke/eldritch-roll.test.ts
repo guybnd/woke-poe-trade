@@ -45,12 +45,37 @@ describe('eldritch implicit roll range', () => {
     const fortify = row(rows(BODY), 'Melee Hits have')
     expect(fortify.roll!.value).toBe(7)
     expect(fortify.roll!.bounds).toEqual({ min: 6, max: 7 })
+    expect(fortify.roll!.goodness).toBe(1)
   })
 
   it('a tier with one number spans every tier of its altar', () => {
     const charge = row(rows(BODY), 'Gain an Endurance Charge')
     expect(charge.roll!.value).toBe(14)
     expect(charge.roll!.bounds).toEqual({ min: 10, max: 15 })
+    // The search keeps to its own tier, and fewer seconds is better: at most 14.
+    expect(charge.roll!.default).toEqual({ min: 14, max: 14 })
+    expect(charge.roll!.min).toBeUndefined()
+    expect(charge.roll!.max).toBe(14)
+    expect(charge.roll!.goodness).toBeCloseTo(0.2)
+  })
+
+  it('the hover title reads as the item does', async () => {
+    const boots = `Item Class: Boots
+Rarity: Rare
+Doom Track
+Two-Toned Boots
+--------
+Armour: 120
+--------
+Item Level: 86
+--------
+{ Searing Exarch Implicit Modifier (Exquisite) }
+6% increased Action Speed
+`
+    const action = row(rows(boots), '#% increased Action Speed')
+    expect(action.roll!.bounds).toBeDefined()
+    const tip = (await modTipFor(parseItem(boots), action))!
+    expect(tip.title).toBe('6% increased Action Speed')
   })
 
   it('a roll the data has no tier for keeps no range', () => {

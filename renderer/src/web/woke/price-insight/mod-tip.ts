@@ -96,14 +96,14 @@ export async function modTipFor (item: ParsedItem, f: StatFilter): Promise<ModTi
 
 /** An eldritch implicit's tiers, Lesser to Perfect, best first, with the item's own lit. */
 async function eldritchTip (item: ParsedItem, f: StatFilter): Promise<ModTip | null> {
-  const { modifier, stat } = f.sources[0]
+  const { modifier } = f.sources[0]
   const table = await loadImplicitTable()
   const found = eldritchSteps(f.sources[0], item.category, table?.shown)
   if (!found) return null
   const altar = modifier.info.eldritch === 'exarch' ? 'Searing Exarch' : 'Eater of Worlds'
   return {
     kind: 'mod',
-    title: stat.roll ? f.text.replace('#', String(stat.roll.value)) : f.text,
+    title: f.roll ? f.text.replace('#', String(f.roll.value)) : f.text,
     sub: [`${altar} implicit`, item.category].filter(Boolean).join(' · '),
     steps: found.steps.map(s => ({ tier: s.rank, min: s.min, max: s.max, label: ELDRITCH_TIERS[s.rank - 1] })).reverse(),
     mine: found.mine.rank

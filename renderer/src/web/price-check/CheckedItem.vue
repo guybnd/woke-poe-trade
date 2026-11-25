@@ -324,9 +324,13 @@ export default defineComponent({
     const exchangeView = shallowRef(false)
     const bulkItem = computed(() => exchangeView.value && mapEx.value && mapExMod.value ? mapExMod.value.asExchangeItem(props.item, mapEx.value.tag) : props.item)
     // woke: the eldritch implicits' ranges arrive a moment after the session's first check.
+    // Only the bar changes, not the query: results on screen don't go stale for it.
+    let eldritchRefill = false
     watch(implicitTable, () => {
       if (!presets.value) return
+      eldritchRefill = true
       for (const p of presets.value.presets) refillEldritchRows(p.stats, props.item, widget.value.searchStatRange)
+      nextTick(() => { eldritchRefill = false })
     })
     watch(() => [props.item, doSearch.value], () => { if (!doSearch.value) exchangeView.value = false })
     watch(() => props.item, () => { exchangeView.value = false })
@@ -497,6 +501,8 @@ export default defineComponent({
       const cIntaracted = curr[1]; const pIntaracted = prev[1]
 
       if (cItem === pItem && cIntaracted === true && pIntaracted === true) {
+        // woke: an eldritch implicit's range arriving late (eldritch-refill.ts) isn't an edit.
+        if (eldritchRefill) return
         // woke: the exchange search reads none of the item's filters, only the trade
         // options, which the watcher below re-searches (WOKEPOET-523).
         if (exchangeView.value) return
