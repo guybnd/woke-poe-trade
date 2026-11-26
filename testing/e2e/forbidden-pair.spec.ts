@@ -19,7 +19,8 @@ test('a notable found in Ctrl+Space opens the finder on its class, and Price sho
   }).toPass({ timeout: 20_000 })
   await result.click()
   await expect(search.getByText('Both jewels name it')).toBeVisible()
-  await search.getByText('Forbidden Flesh', { exact: true }).hover()
+  // The card's jewel name (the list's "Uniques with this mod" can name it too).
+  await search.getByText('Forbidden Flesh', { exact: true }).last().hover()
   await expect(overlay.page.getByRole('tooltip')).toContainText('Forbidden Flesh')
   await overlay.snap('forbidden-search')
 
