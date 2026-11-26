@@ -1,5 +1,6 @@
 # Next release notes
 
+- Run setup again no longer saves its own old copy of your settings over changes the overlay made while setup was open (tool windows, keys, What's new). Each pick is now saved as you make it, merged into your current settings after the overlay has saved what it holds, and if a save fails setup stays open and says so.
 - PoB builds: import links from every site Path of Building imports from (poe.ninja, maxroll, pob.codes, pobb.in, pastebin, rentry, poedb), and the list follows the Build save path set in PoB's own options (or a portable PoB's folder).
 - Net worth: a sale in divines now counts at the divine price of the day it sold (from Net worth's own daily reads), so 7 day, 30 day and league totals no longer move with today's divine price. Each row still shows what it sold for. Before prices load, purchases are judged with your last saved divine price instead of a fixed 150c.
 - Prices no longer show as stale or leave divine sales unpriced when poe.ninja's Divine Orb price is under 30c or missing.

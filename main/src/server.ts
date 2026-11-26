@@ -47,6 +47,22 @@ export async function configFlushed () {
   await configStore?.flushed()
 }
 
+// woke: the settings as they are now, for the setup window to merge its picks
+// into. The overlay first saves what it holds (the same step as quitting;
+// a page that doesn't answer within `waitMs` is skipped), then the file is
+// read once every save is on disk.
+export async function freshConfig (waitMs = 3000): Promise<string | null> {
+  await new Promise<void>((resolve) => {
+    const done = () => { clearTimeout(timer); evBus.off('CLIENT->MAIN::config-flushed', done); resolve() }
+    const timer = setTimeout(done, Math.min(Math.max(0, waitMs), 10_000))
+    evBus.on('CLIENT->MAIN::config-flushed', done)
+    sendEventTo('broadcast', { name: 'MAIN->CLIENT::config-flush', payload: undefined })
+  })
+  if (!configStore) return null
+  await configStore.flushed()
+  return await configStore.load()
+}
+
 export function startConfigOver () {
   configStore?.startOver()
 }
