@@ -6,6 +6,7 @@
     </template>
     <template #toolbar>
       <WBackLink v-if="trail.length" :to="backTo" title="Back to where you were (mouse back button)" @back="goBack" />
+      <ProfileSwitcher :config="config" :store="store" />
       <WSelect :model-value="sourceKey" :options="fileOptions" style="max-width: 20rem;" @update:model-value="pickSource" />
       <WButton size="sm" variant="ghost" icon="fas fa-sync" title="Reload the file list and the filter" @click="refresh" />
       <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule. Works on your inventory, stash and labels on the ground. Hold Alt to reach items your filter hides.` : undefined" @paste.capture="onSearchPaste">
@@ -409,6 +410,7 @@
 import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip, itemRefFromName } from '../ui'
 import WBackLink from '../ui/WBackLink.vue'
+import ProfileSwitcher from './ProfileSwitcher.vue'
 import { useWindowKeys } from '../ui/window-keys'
 import { copyText } from '../ui/copy'
 import LabelPreview from './LabelPreview.vue'

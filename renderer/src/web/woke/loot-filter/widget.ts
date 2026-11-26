@@ -68,6 +68,24 @@ export function defaultNeverSink (): NeverSinkSource {
 
 export const NEVERSINK_OUTPUT = 'NeverSink (woke).filter'
 
+// A named whole filter (profiles.ts). The one in use keeps its settings on the
+// widget; the others carry them in `data`.
+export interface FilterProfile {
+  id: number
+  name: string
+  // Saves to the file it had before profiles ("NeverSink (woke).filter" and
+  // the like) until it's renamed; then, like every other, "<name> (woke).filter".
+  legacyFile?: boolean
+  // The settings of a profile not in use; the one in use has none here.
+  data?: Partial<LootFilterWidget>
+}
+
+export const PROFILE_NAME_MAX = 40
+
+export function cleanProfileName (name: string): string {
+  return name.replace(/[<>:"/\\|?*]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, PROFILE_NAME_MAX)
+}
+
 export interface LootFilterWidget extends Widget {
   anchor: Anchor
   // Hover an item and press: card with the rule that matched it.
@@ -132,6 +150,9 @@ export interface LootFilterWidget extends Widget {
   // One step stricter / looser (NeverSink from GitHub only).
   stricterHotkey: string | null
   looserHotkey: string | null
+  // Named filters you switch between, and the one in use.
+  profiles: FilterProfile[]
+  activeProfile: number
 }
 
 export function defaultPriceTiers (): PriceTiers {
@@ -169,6 +190,8 @@ export function initLootFilterWidget (w: LootFilterWidget) {
   w.noticesSeen = {}
   w.stricterHotkey = 'Alt + BracketRight'
   w.looserHotkey = 'Alt + BracketLeft'
+  w.profiles = []
+  w.activeProfile = 1
 }
 
 // The editor's hotkeys only register once the widget exists, so it is on every
@@ -262,6 +285,42 @@ export function normalizeLootFilterWidget (w: LootFilterWidget) {
   if (!w.noticesSeen || typeof w.noticesSeen !== 'object') w.noticesSeen = {}
   if (w.stricterHotkey === undefined) w.stricterHotkey = 'Alt + BracketRight'
   if (w.looserHotkey === undefined) w.looserHotkey = 'Alt + BracketLeft'
+  normalizeProfiles(w)
+}
+
+// The name the first profile gets: the file it already saves to, so the list
+// says what the game's filter list says.
+export function firstProfileName (w: LootFilterWidget): string {
+  if (!w.sourceName && !w.neversink?.on) return 'My filter'
+  const stem = outputName({ ...w, profile: null }).replace(/\.filter$/i, '').replace(/\s*\(woke\)\s*$/i, '').trim()
+  return cleanProfileName(stem) || 'My filter'
+}
+
+// Every widget has at least one profile; the one there before profiles came
+// keeps its file (and its undo steps, history-file.ts).
+export function normalizeProfiles (w: LootFilterWidget) {
+  const list = Array.isArray(w.profiles) ? w.profiles : []
+  const seen = new Set<number>()
+  w.profiles = list.filter(p => {
+    if (!p || typeof p.id !== 'number' || !Number.isInteger(p.id) || p.id < 1 || seen.has(p.id) || typeof p.name !== 'string') return false
+    seen.add(p.id)
+    return true
+  })
+  for (const p of w.profiles) {
+    p.name = cleanProfileName(p.name) || `Profile ${p.id}`
+    if (p.data != null && typeof p.data !== 'object') delete p.data
+  }
+  if (!w.profiles.length) {
+    w.profiles = [{ id: 1, name: firstProfileName(w), legacyFile: true }]
+    w.activeProfile = 1
+  }
+  if (!w.profiles.some(p => p.id === w.activeProfile)) {
+    // The one in use is the one without a stored copy.
+    w.activeProfile = (w.profiles.find(p => !p.data) ?? w.profiles[0]).id
+  }
+  // The one in use lives on the widget.
+  const active = w.profiles.find(p => p.id === w.activeProfile)!
+  if (active.data) delete active.data
 }
 
 export function editorHotkeyTarget (wmId: number): string {
@@ -317,7 +376,22 @@ export function baseFromCopy (text: string): string {
   return out.join('\n')
 }
 
-export function outputName (w: Pick<LootFilterWidget, 'sourceName' | 'saveMode' | 'sourceOnline' | 'sourceTitle'> & { neversink?: { on: boolean } }): string {
+type OutputOf = Pick<LootFilterWidget, 'sourceName' | 'saveMode' | 'sourceOnline' | 'sourceTitle'> & {
+  neversink?: { on: boolean }
+  // The profile it saves for; without one, the profile in use (if any).
+  profile?: Pick<FilterProfile, 'name' | 'legacyFile'> | null
+  profiles?: FilterProfile[]
+  activeProfile?: number
+}
+
+export function outputName (w: OutputOf): string {
+  const profile = w.profile !== undefined ? w.profile : w.profiles?.find(p => p.id === w.activeProfile)
+  // A named profile writes "<name> (woke).filter"; the first one keeps the
+  // file it had before profiles until it's renamed.
+  if (profile && !profile.legacyFile) {
+    const safe = cleanProfileName(profile.name)
+    if (safe) return `${safe} (woke).filter`
+  }
   if (w.neversink?.on) return NEVERSINK_OUTPUT
   // Working on an edited copy itself: it stays the copy.
   if (!w.sourceOnline && isWokeCopy(w.sourceName)) return w.sourceName

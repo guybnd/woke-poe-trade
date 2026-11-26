@@ -21,7 +21,8 @@ import { clusterPrices, clusterPricesFor, loadClusterPrices } from './cluster-ni
 import { describeStep, measureSteps, observe, settingsAt } from './timeline'
 import type { Settings } from './timeline'
 import { HISTORY_SIZE, baseFromCopy, isWokeCopy, outputName } from './widget'
-import { useFilterHistory } from './history-file'
+import { historyDocFor, useFilterHistory } from './history-file'
+import { deleteProfile as dropProfile, switchProfileData } from './profiles'
 import type { LootFilterWidget } from './widget'
 import { useBuildRuleInput } from './build-input'
 import { livePriceMoves, lockKey, lockedByEdits, mergeMoves, planRetier, tierRank } from './economy'
@@ -133,7 +134,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   const userSig = () => hash(JSON.stringify([cfg().edits, buildSig.value, cfg().priceTiers.on, cfg().priceTiers.moves.map(moveKey), cfg().rules, cfg().sourceName, cfg().sourceOnline, cfg().saveMode, presetsOn(cfg().presets) ? presetsSig() : null, sourceSig()]))
   // The build part is only known once the build file is read, so start from
   // what the last save used.
-  const savedEdits = ref(JSON.stringify([cfg().edits, cfg().savedBuildSig ?? hash(buildSig.value), cfg().savedExtraSig ?? extraSig()]))
+  const startSig = () => JSON.stringify([cfg().edits, cfg().savedBuildSig ?? hash(buildSig.value), cfg().savedExtraSig ?? extraSig()])
+  const savedEdits = ref(startSig())
   // woke: until a save records it, an old config counts as saved if its edits
   // match what the last save wrote.
   const userDirty = () => {
@@ -400,7 +402,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       delete c.timeline
       delete c.history
     }
-  })
+  }, undefined, historyDocFor(cfg().activeProfile ?? 1))
   const timeline = history.timeline
   history.ready.then(() => idle(() => measureSteps(toRaw(timeline.value)))).catch(() => {})
   // Writes a change still waiting (quitting, or the widget going away),
@@ -1228,6 +1230,56 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // A new active build, or a rule switched on or off: show it right away.
   watch(buildSig, () => { if (baseText.value != null) rebuild() })
 
+  // woke: named filter profiles (profiles.ts). Switching saves the one you
+  // leave, brings the other one in with its own undo steps, and (unless told
+  // not to) saves it and has the game load it, as Save does.
+  const switching = ref(false)
+  async function switchProfile (id: number, opts: { gameToo?: boolean } = {}): Promise<boolean> {
+    const c = cfg()
+    if (switching.value || id === c.activeProfile || !c.profiles.some(p => p.id === id)) return false
+    switching.value = true
+    try {
+      if (settleTimer && history.isLoaded()) settle()
+      // What you leave gets its file written, so the game has your last changes
+      // if you come back to it. Nothing is lost if this fails: the changes stay
+      // in the profile.
+      if (doc.value && baseText.value != null && (dirty.value || sourceChanged.value) && !saving.value) {
+        await save({ auto: true }).catch(() => false)
+      } else {
+        await saveQueue
+      }
+      if (!switchProfileData(c, id)) return false
+      // Taken from the profile, as on start.
+      savedEdits.value = startSig()
+      settled = copySettings()
+      lastSaved.value = null
+      sourceChanged.value = false
+      pendingReload.value = false
+      netWaitsForReload.value = false
+      problems.value = []
+      clearUndoToasts()
+      baseText.value = null
+      doc.value = null
+      // The skeleton, not "pick a filter", while the other one loads.
+      loading.value = true
+      await history.switchTo(historyDocFor(id))
+      settled = copySettings()
+      await load()
+      loading.value = false
+      if (opts.gameToo !== false && doc.value && cfg().activeProfile === id) await save()
+      return true
+    } finally {
+      switching.value = false
+    }
+  }
+
+  // A profile not in use goes, with its undo steps. Its .filter file stays.
+  function deleteProfile (id: number): boolean {
+    if (!dropProfile(cfg(), id)) return false
+    hostRequest('doc-delete', historyDocFor(id)).catch(() => {})
+    return true
+  }
+
   const api = {
     get config () { return cfg() },
     prices,
@@ -1253,7 +1305,10 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     // Undo steps and save points (their own file, not the settings).
     timeline,
     saves: history.saves,
-    historyReady: history.ready,
+    get historyReady () { return history.ready },
+    switchProfile,
+    deleteProfile,
+    switching,
     flushHistory,
     sourceLook,
     sourceVisibility,
