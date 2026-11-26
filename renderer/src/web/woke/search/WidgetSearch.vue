@@ -1,5 +1,6 @@
 <template>
-  <Widget :config="config" move-handles="none" :removable="false" :inline-edit="false" :readonly="true">
+  <!-- Drags by its search bar (data-widget-drag) and keeps the spot, as other windows do. -->
+  <Widget :config="config" move-handles="corners" :removable="false" :inline-edit="false" :readonly="true">
     <WPanel v-if="open" width="66rem" max-height="72vh" :scroll="false" :min-width="576" :min-height="288">
       <div :class="$style.root" data-search-palette @click="keepTyping" @keydown="onHotkey" @keyup="onHotkeyUp" @pointerdown="forgetHeld" @input="forgetHeld">
         <div v-if="pins.length" :class="$style.pins">
@@ -9,7 +10,7 @@
             <WPrice bulk :chaos="p.chaos" :divine="divine" />
           </button>
         </div>
-        <label :class="$style.find">
+        <div :class="$style.find" data-widget-drag title="" @click="focusInput">
           <i class="fas fa-search" />
           <input ref="input" v-model="query" :class="$style.input" spellcheck="false" aria-label="Search"
             :placeholder="placeholder" @keydown="onKey" @paste="onPaste" @input="noteTyped">
@@ -17,7 +18,7 @@
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': groupsOpen }" title="What search shows" aria-label="What search shows" data-search-groups-btn @click="toggleGroups"><i class="fas fa-cog" /></button>
           <WCorruptedFilter v-model="corrupted" />
           <WKbd keys="Esc" />
-        </label>
+        </div>
         <div v-if="chips.length && !groupsOpen" :class="$style.chips" data-search-chips>
           <button v-for="c in chips" :key="c.id" type="button" :class="[$style.chip, { [$style.chipOn]: c.id === chip }]" :aria-pressed="c.id === chip"
             :title="c.id === 'all' ? 'Everything, each group folded as the cog says' : `Only ${c.label.toLowerCase()}, every group in full`" @click="pickChip(c.id)">

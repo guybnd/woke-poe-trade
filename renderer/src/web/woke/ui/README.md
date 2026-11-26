@@ -76,6 +76,10 @@ art wherever the game has it, readable fonts (nothing under 11px).
 | `WSkeleton` | Grey placeholder rows for a first load (`rows`, `value`). |
 | `WBanner` | One-line error/warn/info above a panel's content with a fix button in `actions`. |
 
+## Moving windows
+
+Every window drags and keeps its spot (its `anchor`, saved with the widget): by its titled panel's header, or, with no header, by a strip marked `data-widget-drag` (the Ctrl+Space palette drags by its search bar; the input and buttons in it still click). Resize stays on the panel's edges. Exceptions, on purpose: the campaign strip (pinned to the top of the screen, beside the game's own bar) and small popovers that open beside what you clicked (menus, hover cards, the price check's side windows), which follow their anchor instead.
+
 ## Overlay layer
 
 `OverlayLayer.vue` is mounted once (via `WokeOverlay`). Use it through:
