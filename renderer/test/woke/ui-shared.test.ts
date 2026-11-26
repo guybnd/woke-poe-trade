@@ -12,6 +12,7 @@ import WThin from '@/web/woke/ui/WThin.vue'
 import WSortButton from '@/web/woke/ui/WSortButton.vue'
 import WSortHead from '@/web/woke/ui/WSortHead.vue'
 import WRowActs from '@/web/woke/ui/WRowActs.vue'
+import WBackLink from '@/web/woke/ui/WBackLink.vue'
 import { NO_PRICE, THIN_MARKET } from '@/web/woke/ui/format'
 import { RATE_HEAD, RATE_WORD, nextModRating } from '@/web/woke/map-mods/rules'
 
@@ -120,5 +121,17 @@ describe('saved list rows (WRowActs) and menu words', () => {
     expect(offenders(/label: 'Delete'|>Delete<\/WButton>|title="Delete/, ['campaign/run-timer-editor.vue'])).toEqual([])
     expect(offenders(/label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: \(\) => (tree\.)?startEdit\((b|'item'|'strategy')/)).toEqual([])
     expect(offenders(/label: 'Duplicate', icon: 'fas fa-clone'/)).toEqual([])
+  })
+})
+
+describe('back (WBackLink)', () => {
+  it('names where it goes', async () => {
+    const html = await render(WBackLink, { to: 'Runs' })
+    expect(html).toContain('fa-chevron-left')
+    expect(html).toContain('>Runs</span>')
+  })
+
+  it('is the only back control in drill-downs', () => {
+    expect(offenders(/title="Back" @click="openId = null"|icon="fas fa-arrow-left"[^>]*>Back</)).toEqual([])
   })
 })

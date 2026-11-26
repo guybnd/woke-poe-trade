@@ -133,7 +133,7 @@
           <template v-else>
             <div class="flex justify-between gap-2 items-baseline">
               <span class="min-w-0 w-trunc">
-                <button class="w-icon-btn" title="Back" @click="openId = null"><i class="fas fa-chevron-left" /></button>
+                <WBackLink to="Sessions" mouse @back="openId = null" />
                 <span class="font-medium">{{ formatSessionDate(openSession.startedAt) }}</span>
                 <span class="w-dim"> · {{ openSession.strategy || 'Unnamed' }} · {{ formatDuration(openSession.durationMs) }}</span>
               </span>
@@ -232,6 +232,7 @@ import { formatDuration, NO_PRICE } from '../ui/format'
 import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import { WInfo, WPanel, WTabs, WSegmented, WButton, WEmpty, WChip, WSpark, WIcon, WBanner, WSkeleton, WLineActs, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
+import WBackLink from '../ui/WBackLink.vue'
 import LootChip from './LootChip.vue'
 import { useWindowKeys } from '../ui/window-keys'
 import { copyText } from '../ui/copy'

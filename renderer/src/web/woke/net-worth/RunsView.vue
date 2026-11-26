@@ -34,6 +34,8 @@
     <!-- The run going now, or a finished one you opened (pick L1: in and out side by side). -->
     <section v-if="shownRun && totals" :class="$style.card" data-run-card>
       <div :class="$style.head">
+        <!-- A finished run you opened: back to the runs (and the mouse's back button). -->
+        <WBackLink v-if="shownRun !== live" to="Runs" mouse @back="opened = null" />
         <span :class="$style.title" class="w-trunc">{{ shownRun.name }}</span>
         <span class="w-dim w-num text-xs">{{ clock(shownRun.startAt) }} → {{ shownRun.stoppedAt ? clock(shownRun.stoppedAt) : 'now' }} · {{ span(totals.ms) }} · {{ isCraft ? 'Crafting' : countLabel(totals.maps, totals.fights) }}</span>
         <WButton v-if="shownRun === live" size="sm" :disabled="faustusReading" :title="'Reads your stash one last time and your Faustus listings, then shows the summary'" @click="stop">{{ stopPhase === 'stash' ? 'Reading stash…' : stopPhase === 'listings' ? 'Stopping…' : 'Stop' }}</WButton>
@@ -42,7 +44,6 @@
             <button type="button" :class="{ [$style.on]: showSummary }" :aria-pressed="showSummary" data-run-summary-tab @click="summaryId = shownRun.id">Summary</button>
             <button type="button" :class="{ [$style.on]: !showSummary }" :aria-pressed="!showSummary" data-run-details-tab @click="summaryId = null">Details</button>
           </span>
-          <WButton size="sm" variant="ghost" @click="opened = null">Close</WButton>
         </span>
       </div>
       <div :class="$style.hero" class="w-num">
@@ -184,6 +185,7 @@ import type { SummaryDrop } from './run-summary'
 import { span } from './play-time'
 import Coin from './Coin.vue'
 import WSortHead from '../ui/WSortHead.vue'
+import WBackLink from '../ui/WBackLink.vue'
 import { compareRows, countLabel, craftTime, shownFights, shownMaps, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, smallSample, sortCompare, tallyRows, tallyValue, topDrop, unitOf, SAMPLE_MIN_RUNS } from './runs'
 import { kitPrice } from './run-kit'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'

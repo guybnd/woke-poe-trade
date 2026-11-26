@@ -156,7 +156,7 @@
         </template>
 
         <template v-if="reviewRun" #footer>
-          <button class="w-accent hover:underline" @click="reviewId = null"><i class="fas fa-chevron-left text-xs" /> Runs</button>
+          <WBackLink to="Runs" @back="reviewId = null" />
           <span v-if="pb?.id === reviewRun.id" class="ml-auto" :class="$style.pbChip">PB</span>
           <span v-else-if="cmp?.id === reviewRun.id" class="ml-auto w-dim">Racing this run</span>
           <button v-else-if="isComplete(reviewRun)" class="ml-auto w-accent hover:underline" @click="pickCompare(reviewRun)">Race this run</button>
@@ -189,6 +189,7 @@ import Widget from '@/web/overlay/Widget.vue'
 import { formatClock } from '../ui/format'
 import { useVisibleClock } from '../shared/visible-clock'
 import { WPanel, WTabs, WChip, WEmpty, toast } from '../ui'
+import WBackLink from '../ui/WBackLink.vue'
 import { useWindowKeys } from '../ui/window-keys'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'

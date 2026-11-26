@@ -5,7 +5,7 @@
       <WTabs v-model="tab" :options="tabOptions" />
     </template>
     <template #toolbar>
-      <WButton v-if="trail.length" size="sm" variant="ghost" icon="fas fa-arrow-left" title="Back to where you were (mouse back button)" @click="goBack">Back</WButton>
+      <WBackLink v-if="trail.length" :to="backTo" title="Back to where you were (mouse back button)" @back="goBack" />
       <WSelect :model-value="sourceKey" :options="fileOptions" style="max-width: 20rem;" @update:model-value="pickSource" />
       <WButton size="sm" variant="ghost" icon="fas fa-sync" title="Reload the file list and the filter" @click="refresh" />
       <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule. Works on your inventory, stash and labels on the ground. Hold Alt to reach items your filter hides.` : undefined" @paste.capture="onSearchPaste">
@@ -408,6 +408,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip, itemRefFromName } from '../ui'
+import WBackLink from '../ui/WBackLink.vue'
 import { useWindowKeys } from '../ui/window-keys'
 import { copyText } from '../ui/copy'
 import LabelPreview from './LabelPreview.vue'
@@ -993,6 +994,12 @@ function rememberPlace () {
   trail.value = [...trail.value.slice(-19), { tab: tab.value, type: selType.value, tier: selTier.value, search: search.value, stamp: navStamp() }]
 }
 
+// The back link names where it goes: the rule type, else the tab.
+const backTo = computed(() => {
+  const place = trail.value[trail.value.length - 1]
+  if (!place) return 'Back'
+  return place.type || tabOptions.value.find(o => o.value === place.tab)?.label || 'Back'
+})
 function goBack () {
   const place = trail.value[trail.value.length - 1]
   if (!place) return
