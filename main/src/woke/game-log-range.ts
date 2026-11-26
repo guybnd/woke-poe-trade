@@ -1,7 +1,8 @@
 // Client.txt lines between two times, for rebuilding a past run's timeline.
 // The log is in time order, so the start is found by halving the file
 // rather than reading it all (it grows past 250 MB). Only the lines a run
-// timeline uses come back: zone, level-up and death lines.
+// timeline uses come back: zone, level-up and death lines (and, for play
+// time, game starts, AFK and a line every few minutes).
 import { promises as fs } from 'fs'
 import { createReadStream } from 'fs'
 import readline from 'readline'
@@ -13,6 +14,11 @@ const WANTED_RE = /Generating level \d+ area "|\] : You have entered |\] : \S+ \
 // too, for net worth's play time.
 const OPENING_RE = /\*\*\*\*\* LOG FILE OPENING \*\*\*\*\*/
 const SESSION_RE = /\*\*\*\*\* LOG FILE OPENING \*\*\*\*\*|\] : AFK mode is now O(?:N|FF)/
+
+// With `sessions`, one plain line at least this often while the game writes
+// any: play time counts a long quiet stretch as away, and without these a
+// long map with no zone change looked quiet.
+const HEARTBEAT_MS = 5 * 60_000
 
 // A run is a few days at most; past this many lines something is wrong.
 const MAX_LINES = 50_000
@@ -68,6 +74,7 @@ export async function readLogRange (path: string | null, from: number, to: numbe
   }
   const lines: string[] = []
   let before: string | null = null
+  let pushedAt = -Infinity
   const stream = createReadStream(path, { start, encoding: 'utf8' })
   const rl = readline.createInterface({ input: stream, crlfDelay: Infinity })
   try {
@@ -76,12 +83,16 @@ export async function readLogRange (path: string | null, from: number, to: numbe
       if (t == null) continue
       if (t < from) continue
       if (t > to) break
+      const count = lines.length
       if (WANTED_RE.test(raw)) lines.push(raw.trimEnd())
       else if (sessions && SESSION_RE.test(raw)) {
         // The line before a game start is when the game was last running.
         if (OPENING_RE.test(raw) && before && lines[lines.length - 1] !== before) lines.push(before)
         lines.push(raw.trimEnd())
+      } else if (sessions && t - pushedAt >= HEARTBEAT_MS) {
+        lines.push(raw.trimEnd())
       }
+      if (lines.length !== count) pushedAt = t
       before = raw.trimEnd()
       if (lines.length >= MAX_LINES) break
     }

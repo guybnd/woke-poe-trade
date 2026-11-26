@@ -3,7 +3,7 @@
 // and the boss fights in it. Kept for the live run only and read on from the
 // last line each time.
 import { hostRequest } from '../shared/host'
-import { emptyMarks, feedMarks, timeIn } from './play-time'
+import { emptyMarks, feedMarks, marksUntil, timeIn } from './play-time'
 import type { PlayMarks, PlayState } from './play-time'
 
 // The zone you were in at the start needs the line before it.
@@ -40,7 +40,7 @@ export async function runTimeIn (startAt: number, now: number): Promise<RunTime 
   keptBy.delete(startAt)
   keptBy.set(startAt, next)
   while (keptBy.size > KEEP) keptBy.delete(keptBy.keys().next().value!)
-  return { ms: timeIn(next.marks.marks, startAt, now), fights: next.marks.fights.filter(at => at >= startAt && at <= now).length }
+  return { ms: timeIn(marksUntil(next.marks, now), startAt, now), fights: next.marks.fights.filter(at => at >= startAt && at <= now).length }
 }
 
 // The read, unless the split kept with the run has more play in it: a past
