@@ -53,6 +53,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-26T14:39:19.988Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Done: follow-ups in PR 975
+      (https://github.com/guybnd/woke-poe-trade/pull/975, e4b137f): least roll
+      in mod search, passives by what they do, cards for corrupted rewards.
+    date: '2026-11-26T14:56:37.704Z'
+    selfAttested: true
+    id: c-2026-11-26t14-56-37-704z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/974'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
