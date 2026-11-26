@@ -188,7 +188,6 @@
             </div>
             <div v-if="session && !fold.changes" :class="$style.sessionFoot">
               <span class="w-dim text-xs">Gains are read when you enter your hideout</span>
-              <WButton v-if="session.endable" size="sm" @click="endSession">End session</WButton>
             </div>
           </div>
           <div v-if="showSide" :class="$style.sideCol">
@@ -302,12 +301,10 @@ import { WBanner, WButton, WChip, WEmpty, WField, WKbd, WLineActs, WPanel, WSpar
 import { lineTip, tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
-import { FARMING_TYPE, elapsed, requestEndSession } from '../farming/farming'
 import { isWidgetTypeOn } from '../modules'
 import { useNights } from '../session-story/store'
 import { SESSION_STORY_TYPE } from '../session-story/widget'
 import { stashGainsBetween } from './gains'
-import type { FarmingWidget } from '../farming/farming'
 import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
 import { change24h, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
@@ -617,24 +614,18 @@ const changes = computed(() => new Map((v.value?.lines ?? []).map(l => [l.key, l
 const moves = computed(() => priceMoves(v.value?.lines ?? [], k => changes.value.get(k) ?? null).filter(m => Math.abs(toDiv(m.valueChaos)) >= 0.1))
 
 // ---------- what changed (C2, C1) ----------
-// The Farming window's running session, if any: its maps come from Client.txt.
-// Its module must be on: off, the window isn't there to end it.
-const farmingWidget = computed(() => AppConfig().widgets.find(x =>
-  x.wmType === FARMING_TYPE && (x as FarmingWidget).session && isWidgetTypeOn(AppConfig(), x.wmType)) as FarmingWidget | undefined)
-// Farming is retired (modules.ts), so the session is usually tonight's night
-// from Session story: it starts and ends by itself, with its maps as runs.
+// The session is tonight's night from Session story: it starts and ends by
+// itself, with its maps as runs.
 const nightStore = useNights()
 // The night's time (AFK left out) runs to its last log line; past that, at
 // most this much more counts, so a long AFK doesn't drag profit per hour down.
 const NIGHT_TAIL_MS = 2 * 60_000
-interface PanelSession { startedAt: number, maps: number, runs: Array<{ name: string, enteredAt: number, mapMs: number }>, ms: (now: number) => number, endable: boolean }
+interface PanelSession { startedAt: number, maps: number, runs: Array<{ name: string, enteredAt: number, mapMs: number }>, ms: (now: number) => number }
 const farming = computed<PanelSession | null>(() => {
-  const s = farmingWidget.value?.session
-  if (s) return { startedAt: s.startedAt, maps: s.maps, runs: s.runs ?? [], ms: now => elapsed(s, now), endable: true }
   const n = isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nightStore.live.value : null
   if (!n) return null
   // The time the Per hour choice counts (night-rate.ts), as on the night card.
-  return { startedAt: n.startedAt, maps: n.maps.length, runs: n.maps, ms: now => nightRateMs(n, rateTime()) + Math.min(Math.max(0, now - n.endedAt), NIGHT_TAIL_MS), endable: false }
+  return { startedAt: n.startedAt, maps: n.maps.length, runs: n.maps, ms: now => nightRateMs(n, rateTime()) + Math.min(Math.max(0, now - n.endedAt), NIGHT_TAIL_MS) }
 })
 // The session's clock moves while you sit in the hideout.
 const now = shallowRef(Date.now())
@@ -660,8 +651,8 @@ const session = computed(() => {
   if (!s) return null
   const ms = s.ms(now.value)
   const divVal = toDiv(sessionChaos.value)
-  const tip = s.endable ? 'Per hour of the whole session' : `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}`
-  return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null, spent: sessionSpent.value, endable: s.endable, tip }
+  const tip = `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}`
+  return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null, spent: sessionSpent.value, tip }
 })
 const gainAt = computed(() => new Map(gainsNow.value.map(g => [g.at, g])))
 // Every refresh's share of profit (spend.ts), worked out in time order.
@@ -718,10 +709,6 @@ watch(farming, (now, before) => {
   groupLimit.value = GROUP_STEP
   groupToggled.value = {}
 })
-function endSession () {
-  const w = farmingWidget.value
-  if (w) requestEndSession(w.wmId)
-}
 
 // ---------- categories, tabs, filters ----------
 const cat = shallowRef<Category | 'all'>('all')

@@ -61,12 +61,8 @@
         </div>
       </template>
       <button v-else type="button" class="w-faint text-left hover:underline" @click="editing = true">None yet. Add what each map takes.</button>
-      <WButton v-if="farmingWidget && (pricedLines.some(p => p.item) || pricedThreads.some(p => p.item))" size="sm" class="self-start" @click="useInFarming">
-        {{ usedInFarming ? 'Set in Farming' : 'Use in Farming' }}
-      </WButton>
-      <div v-if="earn" class="w-dim text-xs">
-        Your results: <span class="w-num" :class="earn.perHour >= 0 ? 'w-up' : 'w-down'">{{ fmt(earn.perHour) }}/h</span>,
-        <span class="w-num">{{ fmt(earn.perMap) }}</span>/map over {{ earn.maps }} maps
+      <div v-if="earn && (earn.perHour != null || earn.perMap != null)" class="w-dim text-xs" title="From Net worth's runs of the same name">
+        Your results: <span v-if="earn.perHour != null" class="w-num" :class="earn.perHour >= 0 ? 'w-up' : 'w-down'">{{ fmt(earn.perHour) }}/h</span>{{ earn.perHour != null && earn.perMap != null ? ', ' : '' }}<span v-if="earn.perMap != null" class="w-num">{{ fmt(earn.perMap) }}/{{ unitOf(earn.maps, earn.fights) }}</span> over {{ countLabel(earn.maps, earn.fights) }}
       </div>
 
       <!-- Regexes, kept in the Regex library -->
@@ -167,14 +163,12 @@
 // currency), its regexes (kept in the Regex library), notes, and the tree read
 // as notables by mechanic.
 import { computed, nextTick, onBeforeUnmount, shallowRef, watch } from 'vue'
-import { AppConfig } from '@/web/Config'
-import { isWidgetTypeOn } from '../modules'
 import { WButton, WField, WPanel, WBanner, WIcon, WSkeleton, openMenu, toast, useCopy, vItemTip } from '../ui'
 import { ninjaIcon } from '../ui/game-icons'
 import { usePriceText } from '../shared/price'
 import { usePriceIndex } from '../market/price-index'
-import { FARMING_TYPE, strategyStats, withScarabCosts } from '../farming/farming'
-import type { FarmingWidget } from '../farming/farming'
+import { followRunBoard, strategyEarnings } from './run-earnings'
+import { countLabel, unitOf } from '../net-worth/runs'
 import { SAVE_MESSAGE } from '../regex-library/save'
 import { addRegex, libraryOn as isLibraryOn, regexesIn, removeRegex } from '../regex-library/folders'
 import { refileRegexes } from './strategy-ops'
@@ -300,25 +294,8 @@ const mapCost = computed(() => {
   return parts.length ? parts.reduce((a, b) => a + b, 0) : null
 })
 
-// Farming is retired (modules.ts): no window to send the costs to while it's off.
-const farmingWidget = computed(() => isWidgetTypeOn(AppConfig(), FARMING_TYPE) ? AppConfig<FarmingWidget>(FARMING_TYPE) : undefined)
-const usedInFarming = shallowRef(false)
-function useInFarming () {
-  const farm = farmingWidget.value
-  if (!farm) return
-  farm.strategy = props.strategy.name
-  const lines = [
-    ...pricedLines.value.filter(p => p.item).map(p => ({ type: p.item!.type, name: p.item!.name, variant: p.item!.variant, qty: p.qty })),
-    ...pricedThreads.value.filter(p => p.item).map(p => ({ type: p.item!.type, name: p.item!.name, variant: p.item!.variant, qty: p.count }))
-  ]
-  farm.costs = withScarabCosts(farm.costs, lines)
-  usedInFarming.value = true
-  setTimeout(() => { usedInFarming.value = false }, 1500)
-}
-const earn = computed(() => {
-  const history = AppConfig().widgets.filter(w => w.wmType === FARMING_TYPE).flatMap(w => (w as FarmingWidget).history ?? [])
-  return strategyStats(history).find(r => r.strategy === props.strategy.name) ?? null
-})
+followRunBoard()
+const earn = computed(() => strategyEarnings.value.get(props.strategy.name) ?? null)
 
 // ---- regexes ----
 
