@@ -31,6 +31,7 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
+  { id: 'pob-import-all-sites', since: '1.330.22', wmType: 'woke-pob-builds', name: 'PoB builds', note: 'New: import poe.ninja, maxroll and pob.codes build links; your list follows PoB\'s own builds folder' },
   { id: 'atlas-results-from-runs', since: '1.330.22', wmType: 'woke-atlas-strategies', name: 'Atlas strategies', note: 'New: each strategy shows what your strategy runs of the same name earn per hour and per map' },
   { id: 'price-check-corpse-card', since: '1.330.22', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: corpses get the quick price card and a tooltip with the spectre\'s monster type and abilities' },
   { id: 'map-price-check-exclude-bad-mods', since: '1.330.22', wmType: 'price-check', name: 'Price check', topic: 'Maps', note: 'New: Exclude my bad mods on a map\'s Farming template leaves out maps with any of its Not mods' },

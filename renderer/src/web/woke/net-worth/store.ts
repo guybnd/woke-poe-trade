@@ -9,7 +9,7 @@ import { identifyUnid, ninjaPriceOf } from './prices'
 import { historyRev, loadPriceHistory } from './history'
 import { lastWokePrices } from '../market/hook'
 import {
-  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceDayOf, sinceYesterday, tabSetOf, unidPrefs, valueStash, withTabShift
+  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, lastDivine, recordRead, sinceDayOf, sinceYesterday, tabSetOf, unidPrefs, valueStash, withTabShift
 } from './valuation'
 import { stashGains, stashGainsStrict, gainsKey } from './gains'
 import { classify, resolveSpends } from './spend'
@@ -27,6 +27,7 @@ import { kitPrice } from './run-kit'
 import { emptyMarks, feedMarks, marksUntil, playRates, startOfDay, trimMarks, RATE_WINDOWS } from './play-time'
 import type { PlayMarks, PlayRates } from './play-time'
 import { countsHub, countsOff } from '../shared/rate-time'
+import { divineDays } from './divine-days'
 import { rateTime } from '../shared/rate-time-now'
 import type { RateTime } from '../shared/rate-time'
 
@@ -52,6 +53,8 @@ const prefsKey = (league: string) => `${league}-prices`
 const status = shallowRef<ReaderStatus | null>(null)
 const stash = shallowRef<CachedStash | null>(null)
 const history = shallowRef<NetWorthHistory>(emptyHistory())
+// Each day's rate, for valuing a sale at the rate of its own day.
+watch(history, h => { divineDays.value = { league: loadedFor, days: h.days } })
 const ledgerRef = shallowRef<Ledger>(emptyLedger())
 const prefs = shallowRef<PricePrefs>(emptyPrefs())
 // The last counted read's items and prices: a thin item's price jump is held
@@ -232,7 +235,8 @@ async function countRead (id: string, readAt: number) {
     // Every refresh's net change, for session profit elsewhere (gains.ts),
     // with the guess whether it's a purchase (spend.ts).
     const old = await stashGainsStrict(id).catch(() => null)
-    gain = gainOf(diff, since, divine.value, classify(diff, divine.value))
+    // Before poe.ninja's rate loads, the last saved one decides what's a purchase.
+    gain = gainOf(diff, since, divine.value, classify(diff, divine.value ?? lastDivine(history.value)))
     // Gains not read (locked): not saved over. This refresh's gain waits
     // in memory and joins the next save.
     const waiting = missedGains?.league === id ? missedGains.gains.slice(-100) : []

@@ -933,7 +933,8 @@ const listedReadLine = computed(() => {
   const d = pendingDoc.value
   return d && d.league === salesLeague.value ? `read ${agoPhrase(d.readAt)}` : ''
 })
-const saleChaosOf = (s: Sale) => saleChaos(s, saleRates.value)
+// A row shows what it sold for (2 div reads 2 div); totals use each sale's day rate.
+const saleChaosOf = (s: Sale) => saleChaos({ price: s.price }, saleRates.value)
 // In divines (chaos without a rate); a currency poe.ninja can't price as sold.
 function salePrice (s: Sale) {
   const c = saleChaosOf(s)
@@ -974,7 +975,7 @@ const chartListed = computed(() => {
   const doc = d && d.league === salesLeague.value ? d : null
   if (!doc && !s.some(p => p.listedDiv)) return undefined
   const worth = new Map(listedRows.value.map(r => [r.item.id, rowWorth(r)]))
-  const rebuilt = listedAt(doc, sales.value, saleRates.value, l => listedOut.value.has(l.id) ? 0 : worth.get(l.id) ?? saleChaos(l, saleRates.value) ?? 0, s.map(p => p.at))
+  const rebuilt = listedAt(doc, sales.value, saleRates.value, l => listedOut.value.has(l.id) ? 0 : worth.get(l.id) ?? saleChaos({ price: l.price }, saleRates.value) ?? 0, s.map(p => p.at))
   const out = s.map((p, i) => p.listedDiv ?? toDiv(rebuilt[i]))
   return out.some(v => v > 0) ? out : undefined
 })

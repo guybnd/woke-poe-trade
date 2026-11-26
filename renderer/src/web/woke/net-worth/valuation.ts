@@ -590,6 +590,16 @@ export function recordRead (h: NetWorthHistory, v: Valuation, divine: number | n
   return { ...h, days, today: { day, points }, countedReadAt: at }
 }
 
+// The newest divine rate the history saved: stands in while poe.ninja's
+// isn't loaded yet.
+export function lastDivine (h: NetWorthHistory): number | null {
+  let best: { at: number, divine: number } | null = null
+  for (const d of Object.values(h.days)) {
+    if (d.divine && d.divine > 0 && (!best || d.at > best.at)) best = { at: d.at, divine: d.divine }
+  }
+  return best?.divine ?? null
+}
+
 // Divines now against the last read of an earlier day (each in its own day's rate).
 // After a break that day isn't yesterday: sinceDayOf names it, so the label
 // says "since Tue" (glance.ts sinceLabel) and not "today".

@@ -92,18 +92,33 @@ function pruned (data: Stored): Stored {
   return out
 }
 
-export const useTradePrices = createGlobalState(() => createTradePrices({
-  lookup,
-  read () {
-    try {
-      return pruned(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Stored)
-    } catch {
-      return {}
+// When the picked league started, for keeping first-week quotes shorter.
+// Loaded on first use, not imported: the league list pulls in the app's config,
+// which this module (read by tooltips and tests) shouldn't.
+let leagueStartOf: ((league: string) => number | null) | null = null
+function loadLeagueStart () {
+  import('@/web/background/Leagues').then(({ useLeagues }) => {
+    const leagues = useLeagues()
+    leagueStartOf = league => leagues.selectedId.value === league ? leagues.startedAt.value : null
+  }).catch(() => {})
+}
+
+export const useTradePrices = createGlobalState(() => {
+  loadLeagueStart()
+  return createTradePrices({
+    lookup,
+    leagueStart: league => leagueStartOf?.(league) ?? null,
+    read () {
+      try {
+        return pruned(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Stored)
+      } catch {
+        return {}
+      }
+    },
+    write (data) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+      } catch {}
     }
-  },
-  write (data) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-    } catch {}
-  }
-}))
+  })
+})
