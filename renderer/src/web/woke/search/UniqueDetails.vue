@@ -7,9 +7,9 @@
       </div>
       <div v-if="!priced" :class="$style.note">poe.ninja has no price for this variant.</div>
       <template v-if="shown">
-        <div v-for="(l, i) in shown.implicits" :key="'i' + i" :class="$style.implicit">{{ plainLine(l) }}</div>
+        <div v-for="(l, i) in shown.implicits" :key="'i' + i" :class="[$style.implicit, { [$style.lit]: isLit(l) }]">{{ plainLine(l) }}</div>
         <div v-if="shown.implicits.length && shown.explicits.length" :class="$style.rule" />
-        <div v-for="(l, i) in shown.explicits" :key="'e' + i" :class="[$style.mod, { [$style.shared]: details.variants.length > 1 && !shown.differs.includes(l) }]">{{ plainLine(l) }}</div>
+        <div v-for="(l, i) in shown.explicits" :key="'e' + i" :class="[$style.mod, { [$style.shared]: details.variants.length > 1 && !shown.differs.includes(l), [$style.lit]: isLit(l) }]">{{ plainLine(l) }}</div>
       </template>
     </section>
 
@@ -24,7 +24,7 @@
         :aria-pressed="f.name === foul" @click="emit('update:foul', f.name === foul ? null : (f.name ?? null))">
         <span :class="$style.kindName">{{ f.name || 'Foulborn' }}</span>
         <span :class="$style.kindLines">
-          <span v-for="(l, i) in f.adds" :key="'a' + i" :class="$style.foul">{{ plainLine(l) }}</span>
+          <span v-for="(l, i) in f.adds" :key="'a' + i" :class="[$style.foul, { [$style.lit]: isLit(l) }]">{{ plainLine(l) }}</span>
           <span v-for="(l, i) in f.replaces" :key="'r' + i" :class="$style.gone">{{ plainLine(l) }}</span>
         </span>
         <WPrice v-if="priceOf(f.name) != null" bulk :chaos="priceOf(f.name)!" :divine="divine" :class="$style.kindPrice" />
@@ -36,7 +36,7 @@
       <div :class="$style.head"><span>Vestigial</span><span :class="$style.note">Enshrouded and charged in Timeless Conflict, it drops another unique of its slot with this</span></div>
       <div v-for="(mod, i) in details.vestigial" :key="i" :class="$style.vestRow">
         <span v-if="details.vestigial.length > 1" :class="$style.note">{{ i === 0 ? 'One of' : 'or' }}</span>
-        <span><span v-for="(l, j) in mod" :key="j" :class="$style.vest">{{ l }}</span></span>
+        <span><span v-for="(l, j) in mod" :key="j" :class="[$style.vest, { [$style.lit]: isLit(l) }]">{{ l }}</span></span>
       </div>
     </section>
 
@@ -64,6 +64,8 @@ const props = defineProps<{
   // False when the shown variant has no poe.ninja row.
   priced: boolean
   divine: number | null
+  // A mod search's matched line: lit wherever it shows.
+  lit?: string
 }>()
 const emit = defineEmits<{ 'update:variant': [name: string | null], 'update:foul': [name: string | null] }>()
 
@@ -73,6 +75,7 @@ function priceOf (name: string | undefined): number | null {
   if (!name || !props.foulGroup) return null
   return props.foulGroup.variants.find(v => v.variant === name)?.chaos ?? null
 }
+const isLit = (line: string) => !!props.lit && plainLine(line) === props.lit
 const DROP_TEXT_MAX = 180
 const dropText = computed(() => {
   const d = props.drop
@@ -104,6 +107,7 @@ const dropText = computed(() => {
 .gone { color: var(--w-dim); text-decoration: line-through; }
 .vestRow { display: flex; gap: var(--w-s2); align-items: baseline; }
 .vest { display: block; color: var(--w-mod-vestigial); }
+.lit { opacity: 1; background: var(--w-panel-2); box-shadow: inset 2px 0 0 var(--w-accent); padding-left: 4px; }
 .facts { color: var(--w-dim); font-size: var(--w-fs-sm); }
 .restricted { color: var(--w-mod-corrupted); }
 </style>

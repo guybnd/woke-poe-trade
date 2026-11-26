@@ -80,6 +80,17 @@ export function uniquePrices (
   return groupPrices(items, item => /^Unique/.test(item.type) && names.has(baseUniqueName(item.name)) ? 0 : -1, opts)
 }
 
+// Uniques by their exact name, Foulborn ones apart from the plain: a mod
+// search's hits. Dearest first.
+export function namedUniquePrices (
+  items: readonly PriceItem[],
+  names: ReadonlySet<string>,
+  opts: { limit?: number, corrupted?: CorruptedFilter } = {}
+): PriceGroup[] {
+  if (!names.size) return []
+  return groupPrices(items, item => /^Unique/.test(item.type) && names.has(item.name) ? 0 : -1, opts)
+}
+
 // Each base's uniques and each unique's bases: shared/uniques-on-base.
 export { uniqueBaseIndex } from '../shared/uniques-on-base'
 export type { UniqueBaseIndex } from '../shared/uniques-on-base'
