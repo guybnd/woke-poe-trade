@@ -701,7 +701,8 @@ function onDragStart (e: DragEvent, b: string, from: string) {
   drag.value = { bases, from }
   if (!e.dataTransfer) return
   e.dataTransfer.effectAllowed = 'move'
-  e.dataTransfer.setData('text/plain', bases.join('\n'))
+  // Not text/plain: dropped on a text box it would type the names in.
+  e.dataTransfer.setData('application/x-woke-bases', bases.join('\n'))
   if (bases.length > 1) {
     // A count, not the one card under the pointer.
     const ghost = document.createElement('div')

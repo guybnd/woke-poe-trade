@@ -22,6 +22,7 @@ describe('gear drag and drop', () => {
     expect(dropMoves('r3', 'never')).toEqual(['never'])
     // Out of Build: leaves the build and takes the rank.
     expect(dropMoves('build', 'r2')).toEqual(['unbuild', 'r2'])
+    expect(dropMoves('build', 'never')).toEqual(['never'])
     expect(dropMoves('build', 'build')).toEqual([])
     expect(dropMoves('r1', 'exotic')).toEqual([])
   })
