@@ -114,7 +114,7 @@
             </template>
             <template v-else-if="selected?.kind === 'item'">
               <div v-item-tip="{ name: selected.info.refName }" :class="$style.title"><WIcon :src="selected.info.icon" size="lg" /><span>{{ selected.name }}</span></div>
-              <p class="w-dim">{{ snapshot ? "poe.ninja has no price for this. Rares, bases, flasks and cluster jewels aren't in the saved prices." : 'No saved prices yet, so this has no price here.' }}</p>
+              <p class="w-dim">{{ noPriceNote(selected) }}</p>
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" :no-price="snapshot ? undefined : 'No saved prices yet'" @pick="pickUnique" />
               <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
               <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
@@ -133,7 +133,8 @@
         </div>
         <div :class="$style.foot">
           <span><WKbd keys="Up" /> <WKbd keys="Down" /> move</span>
-          <span><WKbd keys="Enter" /> {{ itemEntry() ? 'trade site' : 'open' }}</span>
+          <span><WKbd keys="Enter" /> {{ enterHint }}</span>
+          <span v-if="itemEntry() && canPriceCheck(itemEntry()!)"><WKbd keys="Alt + Enter" /> trade site</span>
           <span v-if="itemEntry()"><WKbd keys="Ctrl + F" /> find in stash</span>
           <span><WKbd keys="Ctrl + P" /> pin to compare</span>
           <span v-if="selected?.line && !queryOk"><WKbd keys="Delete" /> remove</span>
@@ -1085,6 +1086,12 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
 const entries = computed(() => sections.value.flatMap(s => s.entries))
 
 const selected = shallowRef<Entry | null>(null)
+// The foot's Enter hint: what Enter does on the picked row.
+const enterHint = computed(() => {
+  const entry = itemEntry()
+  if (!entry) return 'open'
+  return canPriceCheck(entry) ? 'price check' : 'trade site'
+})
 
 // Rolled uniques (jewels and the like) drop unidentified. poe.ninja's row is
 // their price; a click checks the middle of the cheapest unidentified listings
@@ -1276,12 +1283,16 @@ function onKey (e: KeyboardEvent) {
     e.preventDefault()
     e.stopPropagation()
     move(e.key === 'ArrowDown' ? 1 : -1)
+  } else if (e.key === 'Enter' && e.altKey && itemEntry()) {
+    // Alt+Enter: the trade site, when Enter price checks here.
+    e.preventDefault()
+    if (!e.repeat) openTrade(itemEntry()!)
   } else if (e.key === 'Enter' && e.ctrlKey && itemEntry()) {
+    // Ctrl+Enter, the old price check key: still a price check.
     e.preventDefault()
     if (e.repeat) return
     const entry = itemEntry()!
-    // From the keyboard there's no pointer: near the top of the window, as a paste opens it.
-    if (canPriceCheck(entry)) priceCheck(entry, { x: window.screenX + window.innerWidth / 2, y: window.screenY + 100 })
+    if (canPriceCheck(entry)) priceCheck(entry, keyboardPoint())
   } else if (e.key === 'Enter') {
     e.preventDefault()
     // Held down: one trade tab, not one per repeat.
@@ -1313,11 +1324,18 @@ function itemEntry (): PriceEntry | ItemEntry | null {
   return e?.kind === 'price' || e?.kind === 'item' ? e : null
 }
 
+// From the keyboard there's no pointer: near the top of the window, as a paste opens it.
+function keyboardPoint (): ScreenPoint {
+  return { x: window.screenX + window.innerWidth / 2, y: window.screenY + 100 }
+}
+
 function run (entry: Entry) {
   remember(entry)
-  // An item: Trade site, the detail pane's main button.
+  // An item: the detail pane's main button. Price check here when it can be
+  // priced (Enter is the click that spends the search), else the trade site.
   if (entry.kind === 'price' || entry.kind === 'item') {
-    openTrade(entry)
+    if (canPriceCheck(entry)) priceCheck(entry, keyboardPoint())
+    else openTrade(entry)
   } else if (entry.kind === 'lookup') {
     if (entry.card.actions[0]) act(entry.card.actions[0])
   } else {
@@ -1544,7 +1562,17 @@ function visceraOf (entry: PriceEntry | ItemEntry) {
   const effect = entry.kind === 'price' && entry.group.variants.length === 1 ? entry.group.variants[0].variant : undefined
   return visceraByName(visceraTable.value, name, effect)
 }
+// Why an item row has no saved price, and what Enter does about it.
+function noPriceNote (entry: ItemEntry) {
+  const why = snapshot.value ? 'poe.ninja has no saved price for this.' : 'No saved prices yet.'
+  return canPriceCheck(entry) ? `${why} Price check looks up live listings.` : `${why} Trade site lists it.`
+}
 function canPriceCheck (entry: PriceEntry | ItemEntry) {
+  // A Foulborn unique (its row, or a Foulborn kind picked under it): the item
+  // data has none, so the price check would price the plain one. The trade site
+  // searches Foulborn copies.
+  const name = entry.kind === 'price' ? entry.group.name : entry.name
+  if (isFoulborn(name) || (pickedFoul.value != null && detailName.value === baseUniqueName(name))) return false
   const info = infoFor(entry)
   return info?.namespace === 'UNIQUE' || visceraOf(entry) != null || canCheckByName(menuRef(entry), info)
 }

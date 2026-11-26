@@ -94,20 +94,21 @@ test('prices are grouped, and the detail shows every variant and its actions', a
 
   await expect(panel.getByRole('button', { name: /^Trade site/ })).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Wiki', exact: true })).toBeVisible()
-  await expect(panel.getByRole('button', { name: 'Price check', exact: true })).toBeVisible()
-  // Trade site leads; Open in Market comes last, as a quiet link.
+  await expect(panel.getByRole('button', { name: /^Price check/ })).toBeVisible()
+  // Price check leads (Enter), then Trade site (Alt+Enter); Open in Market comes last, as a quiet link.
   const acts = panel.locator('[data-item-actions] button')
-  await expect(acts.first()).toContainText('Trade site')
+  await expect(acts.first()).toContainText('Price check')
+  await expect(acts.nth(1)).toContainText('Trade site')
   await expect(acts.last()).toHaveText('Market')
   await expect(panel.getByRole('button', { name: 'Copy name', exact: true })).toBeVisible()
   await overlay.snap('search-unique')
 
-  // Enter does what the main button does: the trade site, not the Market window.
+  // Alt+Enter: the trade site, not the Market window.
   await overlay.page.evaluate(() => {
     const w = window as unknown as { open: (url: string) => null, __opened?: string }
     w.open = (url: string) => { w.__opened = url; return null }
   })
-  await box.press('Enter')
+  await box.press('Alt+Enter')
   const opened = await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')
   expect(opened).toContain('/trade/search/')
 
@@ -138,7 +139,7 @@ test('prices are grouped, and the detail shows every variant and its actions', a
 
   await box.fill('astral plate')
   await expect(panel.getByRole('button', { name: /Astral Plate/ })).toBeVisible()
-  await expect(panel.getByText('poe.ninja has no price')).toBeVisible()
+  await expect(panel.getByText('poe.ninja has no saved price')).toBeVisible()
   await overlay.snap('search-no-price')
 
   expect(overlay.errors).toEqual([])

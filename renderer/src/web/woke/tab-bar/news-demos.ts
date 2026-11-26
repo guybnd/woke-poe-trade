@@ -62,6 +62,8 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'valdo-map-skips': { check: { name: 'Valdo Map', text: valdoMapText('Headhunter') }, spot: 'valdo-strip' },
   'valdo-map-lookup': { search: 'valdo headhunter' },
   'search-keys-list': { search: 'keys' },
+  // A base with no saved price: its Price check button leads.
+  'search-price-check-bases': { search: 'manifold ring' },
   // A rare with tiered mods: hover one for its ladder.
   'price-check-mod-tiers': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' },
   // A rare armour: its base roll % beside its defence, to search.
