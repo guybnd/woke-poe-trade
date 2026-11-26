@@ -22,7 +22,7 @@ test('stash search comes first, and Save overwrites a picked saved search', asyn
 
   // A different search, saved over the first one.
   await panel.getByPlaceholder(/Search \d+ map mods/).fill('Buffs on Players expire')
-  await panel.getByText('Buffs on Players expire #% faster').locator('..').getByRole('button', { name: 'avoid' }).click()
+  await panel.getByText('Buffs on Players expire #% faster').locator('..').locator('[data-map-rate]').click()
   await panel.getByRole('button', { name: /Save…/ }).click()
   await panel.getByRole('button', { name: 'Saved searches' }).click()
   await panel.getByRole('option', { name: /T16 juice/ }).click()

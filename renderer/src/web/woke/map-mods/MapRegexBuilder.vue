@@ -30,7 +30,7 @@
               </button>
               <button v-for="p in shownPresets" :key="p.preset.id" type="button"
                 :class="[$style.preset, $style[p.rating]]" @click="cyclePreset(p.preset, p.rating)"
-                title="Click: careful → avoid → off">{{ p.preset.label }}</button>
+                title="Click: Care → Bad → off">{{ p.preset.label }}</button>
               <button v-if="!presetsOpen && presets.length > shownPresets.length" type="button" :class="$style.preset"
                 @click="presetsOpen = true">+{{ presets.length - shownPresets.length }}</button>
             </div>
@@ -50,25 +50,19 @@
         </div>
         <div :class="$style.list" class="w-scroll">
           <template v-for="row in visible" :key="row.kind === 'head' ? `head:${row.rating}` : row.matcher">
-            <div v-if="row.kind === 'head'" :class="[$style.groupHead, $style[row.rating]]">{{ HEAD_LABEL[row.rating] }} · {{ row.count }}</div>
+            <div v-if="row.kind === 'head'" :class="[$style.groupHead, $style[row.rating]]">{{ RATE_HEAD[row.rating] }} · {{ row.count }}</div>
             <div v-else :class="$style.row">
+              <WRateChip :rating="ratings[row.matcher] ?? 'ok'" :save-to="profile.name" @rate="setRating(row.matcher, $event)" />
               <span v-mod-tip="{ head: modHead(row.matcher), text: row.matcher, notes: [bonusRows[row.matcher]?.tip] }" class="flex-1 min-w-0" :class="{ 'w-dim': !ratings[row.matcher] }">
                 {{ row.matcher }}<span v-if="mode === 'maps' && t17.has(row.matcher)" :class="$style.t17">T17</span>
               </span>
               <span v-if="bonusRows[row.matcher]" :class="$style.bonus" :title="bonusRows[row.matcher].tip">
-                <span class="w-num">{{ bonusRows[row.matcher].b.d }}/{{ bonusRows[row.matcher].b.r }}/{{ bonusRows[row.matcher].b.p }}</span>
+                <span class="w-num"><span class="w-faint">Drops</span> {{ bonusRows[row.matcher].b.d }} <span class="w-faint">Rarity</span> {{ bonusRows[row.matcher].b.r }} <span class="w-faint">Pack</span> {{ bonusRows[row.matcher].b.p }}</span>
                 <span v-for="x in bonusRows[row.matcher].b.more" :key="x.kind" :class="$style.more">{{ x.t17 ? 'T17 ' : '' }}+{{ x.pct }}% {{ MORE_LABEL[x.kind] }}</span>
               </span>
               <span v-if="regex.tokens[row.matcher]" :class="$style.cost"
                 :title="`Searched as &quot;${regex.tokens[row.matcher]}&quot;, ${tokenCost(regex.tokens[row.matcher])} characters`">{{ regex.tokens[row.matcher] }}</span>
               <span v-else-if="regex.dropped.includes(row.matcher)" class="w-warn text-xs" title="Left out to fit the search">trimmed</span>
-              <span :class="$style.rate" role="group" :aria-label="`Rate: ${row.matcher}`">
-                <button v-for="r in RATE_BUTTONS" :key="r.value" type="button"
-                  :class="[$style.rateBtn, $style[r.value]]" :aria-label="r.label"
-                  :aria-pressed="ratings[row.matcher] === r.value"
-                  :title="ratings[row.matcher] === r.value ? `Rated ${r.label}. Click to clear` : r.tip"
-                  @click="setRating(row.matcher, ratings[row.matcher] === r.value ? 'ok' : r.value)"><i :class="r.icon" /></button>
-              </span>
             </div>
           </template>
           <WEmpty v-if="!visible.length" icon="fas fa-search">No mods match.</WEmpty>
@@ -192,6 +186,7 @@ import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import type { ComponentPublicInstance } from 'vue'
 import { useFold } from '../ui/fold'
 import { vModTip } from '../ui/tooltip/mod-line-tip'
+import WRateChip from '../ui/WRateChip.vue'
 import { MainProcess } from '@/web/background/IPC'
 import { pushHostConfig } from '@/web/Config'
 import { WPanel, WButton, WChip, WField, WInfo, WKbd, WSegmented, WSelect, WTabs, WToggle, WEmpty, toast } from '../ui'
@@ -199,7 +194,7 @@ import { useCopy } from '../ui/copy'
 import { SAVE_MESSAGE, renameSavedRegex, replaceSavedRegex, saveToRegexLibrary, savedRegexName } from '../regex-library/save'
 import { regexesIn } from '../regex-library/folders'
 import type { RegexEntry } from '../regex-library/widget'
-import { PRESETS, applyPreset, modListRows, modRatings, nextPresetRating, presetRating, searchOptions, setModRatings, setSearchOption, withRating } from './rules'
+import { PRESETS, RATE_HEAD, applyPreset, modListRows, modRatings, nextPresetRating, presetRating, searchOptions, setModRatings, setSearchOption, withRating } from './rules'
 import type { JuiceWeights, MapModPreset, ModMode, ModRating } from './rules'
 import { MAX_SEARCH_LENGTH, MIN_LABELS, tokenCost } from './regex'
 import type { MinStat } from './regex'
@@ -218,11 +213,6 @@ const panelIcon = moduleIcon('map-mods').art ?? 'map'
 
 const props = defineProps<{ config: MapModsWidget }>()
 
-const RATE_BUTTONS: Array<{ value: ModRating, label: string, icon: string, tip: string }> = [
-  { value: 'deadly', label: 'avoid', icon: 'fas fa-times', tip: "Avoid: your build can't run it" },
-  { value: 'warn', label: 'careful', icon: 'fas fa-exclamation', tip: 'Careful: runnable, but watch out' },
-  { value: 'good', label: 'want', icon: 'fas fa-check', tip: 'Want: adds to the juice score' }
-]
 const HIGHLIGHT_OPTIONS = [
   { value: 'good', label: 'Maps to run' },
   { value: 'bad', label: 'Maps to skip' }
@@ -253,7 +243,6 @@ const MODE_HINT: Record<string, string> = {
 }
 const MODE_NOUN: Record<ModMode, string> = { maps: 'map', heist: 'heist', charts: 'chart' }
 const LIBRARY_NAME: Record<ModMode, string> = { maps: 'Maps', heist: 'Heist', charts: 'Charts' }
-const HEAD_LABEL: Record<ModRating, string> = { deadly: 'Avoid', warn: 'Careful', good: 'Want', ok: 'Not rated' }
 
 const profile = computed(() => activeProfile(props.config))
 const profileOptions = computed(() => props.config.profiles.map(p => ({ value: String(p.id), label: p.name || 'Unnamed' })))
@@ -732,23 +721,6 @@ function paste () {
   white-space: nowrap;
 }
 .more { color: var(--w-accent); font-weight: 600; }
-.rate { display: inline-flex; gap: 3px; flex: none; }
-.rateBtn {
-  width: 24px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--w-r-sm);
-  border: 1px solid var(--w-line);
-  background: var(--w-panel-2);
-  color: var(--w-faint);
-  font-size: var(--w-fs-xs);
-}
-.rateBtn:hover { color: var(--w-fg); border-color: var(--w-line-strong); }
-.rateBtn.deadly[aria-pressed="true"] { background: var(--w-down); border-color: var(--w-down); color: var(--w-accent-fg); }
-.rateBtn.warn[aria-pressed="true"] { background: var(--w-warn); border-color: var(--w-warn); color: var(--w-accent-fg); }
-.rateBtn.good[aria-pressed="true"] { background: var(--w-up); border-color: var(--w-up); color: var(--w-accent-fg); }
 .t17 {
   margin-left: 6px;
   font-size: var(--w-fs-xs);

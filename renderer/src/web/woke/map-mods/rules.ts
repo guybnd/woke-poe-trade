@@ -5,6 +5,14 @@ import type { MinStat } from './regex'
 
 export type ModRating = 'deadly' | 'warn' | 'good' | 'ok'
 
+// The one set of words for a rating, on every screen (WRateChip). Guy's
+// pick: Bad / Care / Want, unrated as a dash.
+export const RATE_WORD: Record<ModRating, string> = { deadly: 'Bad', warn: 'Care', good: 'Want', ok: '–' }
+// What each word means, for a hover or a group heading.
+export const RATE_TITLE: Record<ModRating, string> = { deadly: "Bad: your build can't run it", warn: 'Care: runnable, but watch out', good: 'Want: adds to the juice score', ok: 'Not rated' }
+// A group of mods by rating, as a list heading.
+export const RATE_HEAD: Record<ModRating, string> = { deadly: 'Bad', warn: 'Care', good: 'Want', ok: 'Not rated' }
+
 // The Map mods tabs. Each has its own ratings and its own search: a rating on
 // one never reaches another, even for a mod that rolls on both.
 export type ModMode = 'maps' | 'heist' | 'charts'
