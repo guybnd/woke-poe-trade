@@ -66,6 +66,8 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'search-keys-list': { search: 'keys' },
   // Uniques with a mod: priced rows, Goldwyrm's Vestigial line among them.
   'search-unique-mods': { search: 'item rarity' },
+  // Notables and keystones by their stats, under Passive tree.
+  'search-tree-by-stat': { search: 'onslaught' },
   // A base with no saved price: its Price check button leads.
   'search-price-check-bases': { search: 'manifold ring' },
   // A rare with tiered mods: hover one for its ladder.

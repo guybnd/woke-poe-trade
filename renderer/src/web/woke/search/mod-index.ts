@@ -3,9 +3,11 @@
 // implicits too. Built once from the tooltip's unique and Vestigial files,
 // which Search already reads for its unique details. Loaded on first use, so
 // startup doesn't carry it.
-import { foldAccents } from './search'
+import { MOD_QUERY_MIN, modQueryWords, normText as norm, startsWords, wordsOf } from './mod-words'
 import { plainLine } from './unique-details'
 import type { TipUnique } from '../ui/tooltip/tip-content'
+
+export { MOD_QUERY_MIN, modQueryWords }
 
 export type ModKind = 'implicit' | 'explicit' | 'foulborn' | 'vestigial'
 
@@ -31,20 +33,10 @@ export interface ModHit {
   rank: number
 }
 
-// Mod hits start at this many letters: "it" or "lif" is on hundreds of uniques.
-export const MOD_QUERY_MIN = 4
 // Past these the data lists a pool to roll from, not one item's mods (same cut
 // as the unique details).
 const MOST_IMPLICITS = 4
 const MOST_EXPLICITS = 12
-
-function norm (text: string): string {
-  return foldAccents(text.toLowerCase()).replace(/['’]/g, '').replace(/\s+/g, ' ').trim()
-}
-const WORD = /[^\p{L}\p{N}]+/u
-function wordsOf (text: string): string[] {
-  return text.split(WORD).filter(Boolean)
-}
 
 export function buildModIndex (
   uniques: Readonly<Record<string, TipUnique>>,
@@ -78,23 +70,33 @@ export function buildModIndex (
   return out
 }
 
-// The query's words that match mods: numbers are left out ("30% rarity" is
-// "rarity"), and too few letters gives none.
-export function modQueryWords (query: string): string[] {
-  const words = wordsOf(norm(query)).filter(w => !/^\d+$/.test(w))
-  // "a b c d" is four letters but matches nearly every line: one word needs 3.
-  return words.join('').length >= MOD_QUERY_MIN && words.some(w => w.length >= 3) ? words : []
+// The number in a query ("rarity 50"): only lines that can roll it or more.
+export function queryAtLeast (query: string): number | null {
+  const m = /(?:^|[\s,;])\+?(\d+(?:\.\d+)?)%?(?=[\s.,;]|$)/.exec(query)
+  return m ? Number(m[1]) : null
+}
+// The most a line can roll: the top of its largest range ("Adds 1 to
+// (650-850)" is 850, "(-10-40)%" is 40), else its first number ("+250 to"
+// is 250, "1% per 15" is 1). Null when the line has no number.
+export function rollMax (line: string): number | null {
+  const tops = [...line.matchAll(/\((-?[\d.]+)-(-?[\d.]+)\)/g)].map(m => Math.max(Number(m[1]), Number(m[2])))
+  if (tops.length) return Math.max(...tops)
+  const m = /-?\d+(?:\.\d+)?/.exec(line)
+  return m ? Number(m[0]) : null
 }
 
 // One hit per unique, its best line: every query word starts a word of the
-// line. Order is the data's; the caller sorts by price.
+// line, and a number in the query is a least roll. Order is the data's; the
+// caller sorts by price.
 export function searchMods (index: readonly ModLine[], query: string): ModHit[] {
   const parts = modQueryWords(query)
   if (!parts.length) return []
+  const least = queryAtLeast(query)
   const phrase = parts.join(' ')
   const best = new Map<string, ModHit>()
   for (const m of index) {
-    if (!parts.every(p => m.words.some(w => w.startsWith(p)))) continue
+    if (!startsWords(m.words, parts)) continue
+    if (least != null && !((rollMax(m.line) ?? -Infinity) >= least)) continue
     const rank = m.text.includes(phrase) ? 0 : 1
     const hit = { unique: m.unique, line: m.line, kind: m.kind, pool: m.pool, rank }
     const had = best.get(m.unique)

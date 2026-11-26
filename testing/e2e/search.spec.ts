@@ -453,6 +453,15 @@ test('a mod lists the uniques that have it, priced, with the matched words lit',
   await expect(panel.getByRole('button', { name: /Circle of Ambition/ }).first()).toBeVisible()
   await overlay.snap('search-unique-mods-all')
 
+  // A number is the least roll: Watcher's Eye's "4 seconds" goes, Three-step Assault's 100% stays.
+  await box.fill('onslaught 100')
+  await expect(panel.getByRole('button', { name: /Three-step Assault/ }).first()).toBeVisible()
+  await expect(panel.locator('[data-search-mod-hit]').filter({ hasText: 'for 4 seconds' })).toHaveCount(0)
+
+  // The passive tree finds notables by what they do.
+  await box.fill('onslaught')
+  await expect(panel.getByRole('button', { name: /Dance of Blades/ })).toBeVisible({ timeout: 15_000 })
+
   // Under 4 letters there are no mod hits.
   await box.fill('ons')
   await expect(panel.getByText('Uniques with this mod', { exact: true })).toHaveCount(0)
