@@ -10,6 +10,7 @@ import { compareRows, isMapCostItem, tallyRows, tallyValue } from './runs'
 import type { CompareRow, Run, TallyRow } from './runs'
 import { rowKey } from './faustus'
 import type { RateTime, TimeSplit } from '../shared/rate-time'
+import { medianOrNull as median } from '../shared/numbers'
 
 // A map in the run, from Client.txt (session-story map-log.ts).
 export interface SummaryMap { name: string, enteredAt: number, mapMs: number, deaths: number, npcs: string[] }
@@ -115,12 +116,6 @@ function dropRows (run: Run): SummaryDrop[] {
   return shown
 }
 
-function median (xs: number[]): number | null {
-  if (!xs.length) return null
-  const s = [...xs].sort((a, b) => a - b)
-  const m = s.length >> 1
-  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
-}
 const avg = (xs: number[]) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null
 
 export function clockOf (ms: number): string {

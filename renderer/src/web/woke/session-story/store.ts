@@ -13,6 +13,7 @@ import type { NightDraft, NightStory } from './story'
 import { isMapRecord, keepMap } from './map-log'
 import { isSkippedArea, skipVersion } from './skip-areas'
 import type { MapRecord } from './map-log'
+import { localDay } from '../shared/numbers'
 
 export const NIGHTS_COLLECTION = 'session-story'
 export const NIGHTS_KEY = 'nights'
@@ -26,10 +27,7 @@ function isNightDraft (v: unknown): v is NightDraft {
 // their own small file, for the chip's average, Ctrl+Space and where the log
 // replay starts.
 export const MAPS_COLLECTION = 'map-history'
-export function dayKey (ms: number): string {
-  const d = new Date(ms)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+export function dayKey (ms: number): string { return localDay(ms) }
 // The day keys of the last `n` calendar days, newest first. Stepped by the
 // calendar, not by 24 hours: a 25-hour day (clocks back) gave the same day
 // twice, and a 23-hour one skipped a day.

@@ -3,7 +3,6 @@
 // under the cursor, and sends new readings to the overlay. Text is re-read
 // whenever it changes, so rerolling the same map gives a new reading.
 // Used by map scan (map tooltips) and essence scan (essence monolith labels).
-import { screen } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -13,6 +12,7 @@ import type { GameWindow } from '../windowing/GameWindow'
 import { OcrWorker } from '../vision/link-main'
 import type { ScanOptions, ScanResult, LineImage } from './map-scan-vision'
 import { perfRecord } from './perf'
+import { cursorInScreenPixels } from './unid-art'
 import { ocrDir, USER_OCR_DIR, OCR_GUIDE_URL, missingOcrFiles, ensureOcrFiles, lastOcrDownloadError, ocrDownloading } from './ocr-dir'
 
 // About one quad-tab cell, as a fraction of the game window height.
@@ -639,12 +639,6 @@ function hasBlueText (bgra: Uint8Array, refH: number): boolean {
     if (bgra[i] > 110 && bgra[i] > bgra[i + 2] * 1.3 && bgra[i] > bgra[i + 1] * 1.3 && ++found >= need) return true
   }
   return false
-}
-
-// Same units as uiohook's mouse events: physical pixels on Windows.
-function cursorInScreenPixels (): { x: number, y: number } {
-  const p = screen.getCursorScreenPoint()
-  return process.platform === 'win32' ? screen.dipToScreenPoint(p) : p
 }
 
 // Copies a rectangle of a 4-byte-per-pixel image.

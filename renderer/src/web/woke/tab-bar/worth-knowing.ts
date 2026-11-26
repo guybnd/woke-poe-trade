@@ -11,6 +11,7 @@
 // a What's new line. Small, no imports from other tools: WokeOverlay reads it at
 // startup.
 import type { HintsConfig } from '../shared/hints'
+import { localDay } from '../shared/numbers'
 
 export interface WorthLine {
   // Starts "wk-"; stays the same for the life of the line (hints.done remembers it).
@@ -47,9 +48,7 @@ export const WORTH: WorthLine[] = [
 export const WORTH_AFTER_DAYS = 2
 
 // Local date, YYYY-MM-DD.
-export function dayOf (d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+export function dayOf (d: Date): string { return localDay(d) }
 
 function daysBetween (a: string, b: string): number {
   return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000)

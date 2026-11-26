@@ -5,6 +5,7 @@ import { resolveSpends } from './spend'
 import type { SpendKind, SpendMark } from './spend'
 import { HOLD_RATIO, HOLD_MIN_JUMP, HOLD_MS, ONE_DAY_MIN, priceStep } from '../shared/price-trust'
 import type { Category, HoldKind } from '../shared/price-trust'
+import { localDay } from '../shared/numbers'
 
 // The item fields valuing needs. The personal reader's records fit it.
 export interface StashItemLike {
@@ -578,10 +579,7 @@ export interface NetWorthHistory {
 
 export const emptyHistory = (): NetWorthHistory => ({ days: {}, today: { day: '', points: [] }, countedReadAt: null, lastDiff: null })
 
-export function dayOf (at: number): string {
-  const d = new Date(at)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+export function dayOf (at: number): string { return localDay(at) }
 
 const MAX_POINTS = 96
 

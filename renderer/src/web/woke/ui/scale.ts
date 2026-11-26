@@ -2,25 +2,21 @@
 // overlay window is the game window's size), so panels aren't huge at 1080p
 // or tiny at 4K. Stored like the theme: per origin in localStorage, shared by
 // the overlay and settings windows through the storage event.
-import { shallowRef, watch } from 'vue'
+import { watch } from 'vue'
+import { storedPref } from './stored-pref'
 import { uiSize } from './ui-size'
 
 export const MIN_SCALE = 70
 export const MAX_SCALE = 160
-const STORAGE_KEY = 'woke.uiScale'
 
 export type UiScale = 'auto' | number
 
-function readStored (): UiScale {
-  try {
-    const v = localStorage.getItem(STORAGE_KEY)
-    const n = Number(v)
-    if (v && v !== 'auto' && Number.isFinite(n)) return Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.round(n)))
-  } catch {}
-  return 'auto'
+function parseScale (v: string | null): UiScale {
+  const n = Number(v)
+  return v && v !== 'auto' && Number.isFinite(n) ? Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.round(n))) : 'auto'
 }
 
-export const uiScale = shallowRef<UiScale>(readStored())
+export const uiScale = storedPref<UiScale>('woke.uiScale', parseScale)
 
 // 1080p -> 100%, 1440p -> 135%, 2160p (no Windows scaling) -> 160%.
 // 1080p stays at 100% so the smallest text is a real 11px (charter P19).
@@ -44,11 +40,5 @@ function apply () {
 
 apply()
 watch(uiSize, apply)
-watch(uiScale, (v) => {
-  apply()
-  try { localStorage.setItem(STORAGE_KEY, String(v)) } catch {}
-})
+watch(uiScale, apply)
 window.addEventListener('resize', () => { if (uiScale.value === 'auto') apply() })
-window.addEventListener('storage', (e) => {
-  if (e.key === STORAGE_KEY) uiScale.value = readStored()
-})
