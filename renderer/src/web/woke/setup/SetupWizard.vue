@@ -337,15 +337,22 @@ async function saveMerged () {
   // Nothing changed here since the last save (or since another window's).
   if (mineText === base) return
   const mine = JSON.parse(mineText) as Config
+  const since = base
   // The overlay saves what it holds first, then the file is read.
-  const text = await hostRequest('config-fresh', {}, 10_000)
+  const text = await hostRequest('config-fresh', { waitMs: 3000 }, 15_000)
   const onDisk = upgradedConfig(text)
+  // A file that's there but can't be brought to today's shape is never
+  // written over with this window's copy.
+  if (text && !onDisk) throw new Error("the settings file couldn't be read")
   if (onDisk) {
     ensureWokeConfig(onDisk)
-    let next = mergeConfigs(mine, JSON.parse(base) as Config, onDisk)
-    // A click while the disk copy was on its way stays too.
+    let next = mergeConfigs(mine, JSON.parse(since) as Config, onDisk)
+    // Another window's save swapped this window's settings meanwhile (base
+    // moved): only clicks made after that swap are added again. Otherwise,
+    // clicks made while the file was on its way.
+    const ref = base !== since ? base : mineText
     const now = JSON.stringify(AppConfig())
-    if (now !== mineText) next = mergeConfigs(JSON.parse(now) as Config, mine, next)
+    if (now !== ref) next = mergeConfigs(JSON.parse(now) as Config, JSON.parse(ref) as Config, next)
     updateConfig(next)
   }
   saveConfig()

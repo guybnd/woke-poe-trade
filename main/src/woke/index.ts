@@ -93,7 +93,7 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
       .then(n => { if (n) logger.write(`info [market] Trimmed ${n} old price snapshots (day rows kept)`) })
       .catch((e: unknown) => { logger.write(`error [market] Trimming old snapshots failed: ${String(e)}`) })
   }, TRIM_AFTER_START_MS).unref?.()
-  registerWokeHandler('config-fresh', async () => await freshConfig())
+  registerWokeHandler('config-fresh', async (args) => await freshConfig(typeof args?.waitMs === 'number' ? args.waitMs : undefined))
   registerWokeHandler('game-log-tail', async (args) => await readGameLogTail(gameLog, args ?? undefined))
   // "Report an issue" (Settings, Ctrl+Space): builds or opens the GitHub link.
   registerWokeHandler('issue-report', async (args) => await userIssue(args, logger))
