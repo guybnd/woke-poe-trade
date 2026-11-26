@@ -17,7 +17,7 @@
           </button>
         </template>
         <template #toolbar>
-          <div v-if="importOpen" class="flex gap-1 w-full">
+          <div v-if="importOpen" class="flex gap-1 w-full" data-goto-spot="import">
             <WField v-model="importText" icon="fas fa-link" placeholder="Build link (pobb.in, poe.ninja, maxroll…) or PoB code" class="grow" @keydown.enter="doImport" />
             <WButton size="sm" variant="primary" :disabled="importing || !importText.trim()" @click="doImport">{{ importing ? '…' : 'Import' }}</WButton>
           </div>
@@ -97,6 +97,7 @@ import BuildDetail from './BuildDetail.vue'
 import BuildHoverCard from './BuildHoverCard.vue'
 import { CHARACTER_TREE, characterStatus, characterTreeNodes, characterTreeSpec, startCharacterSync } from './character'
 import { liveBuildXml } from './live-pob'
+import { useGoto } from '../tab-bar/goto'
 import { passiveTreeJewelSlots } from './passive-tree'
 import { personalOn } from '../personal'
 import { buildPinChoices, moveBuildPins, treePin } from './build-pins'
@@ -645,6 +646,11 @@ function togglePin (relPath: string) {
     : [...props.config.pinned, relPath]
 }
 
+// What's new's Show me: the import box, for the build link sites.
+useGoto(props.config, 'woke-pob-builds', {
+  builds: () => {},
+  spots: { import: () => { importOpen.value = true } }
+})
 </script>
 
 <style module>

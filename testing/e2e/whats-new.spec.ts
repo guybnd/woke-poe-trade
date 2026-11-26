@@ -3,7 +3,7 @@
 // dismiss each line.
 import { test, expect } from './harness'
 import { NEWS } from '../../renderer/src/web/woke/tab-bar/news'
-import { gotoTargets } from '../../renderer/src/web/woke/tab-bar/goto-targets'
+import { NO_TABS, gotoTargets } from '../../renderer/src/web/woke/tab-bar/goto-targets'
 import { NEWS_DEMOS } from '../../renderer/src/web/woke/tab-bar/news-demos'
 
 test('players who update get a What\'s new icon in the dock; a hover lists the lines', async ({ overlay }) => {
@@ -85,7 +85,8 @@ test('a fresh install gets no What\'s new icon, even before setup is finished', 
 
 // Every line's Show me lands on the tab it names (tab-bar/goto.ts). Net worth's
 // lines have none here, since the stash reader is off (tested below with it on).
-for (const n of NEWS.filter(n => n.goto && n.wmType !== 'woke-net-worth' && !NEWS_DEMOS[n.id])) {
+// A tool with no tabs flashes its spot instead (atlas-strategies.spec.ts).
+for (const n of NEWS.filter(n => n.goto && n.wmType !== 'woke-net-worth' && !NEWS_DEMOS[n.id] && !NO_TABS.includes(n.wmType))) {
   test(`Show me on "${n.id}" opens ${n.name} on its tab`, async ({ overlay }) => {
     await overlay.boot({ overlayActive: true, whatsNew: true })
     const icon = overlay.dockIcon('whats-new')
@@ -97,6 +98,17 @@ for (const n of NEWS.filter(n => n.goto && n.wmType !== 'woke-net-worth' && !NEW
     await expect(overlay.page.getByRole('tab', { name: label, selected: true }).first()).toBeVisible()
   })
 }
+
+test('Show me on the PoB builds import line opens its import box and flashes it', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true, whatsNew: ['pob-import-all-sites'] })
+  const icon = overlay.dockIcon('whats-new')
+  await icon.click()
+  await overlay.page.mouse.move(5, 5)
+  await icon.locator('[data-whats-new-line]').getByRole('button', { name: 'Show me' }).click()
+  const box = overlay.page.locator('[data-goto-spot="import"]')
+  await expect(box).toBeVisible()
+  await expect(box).toHaveAttribute('data-goto-flashed', '')
+})
 
 test('Show me on a switched-off tool turns it on and opens the line\'s tab', async ({ overlay }) => {
   await overlay.boot({ overlayActive: true, whatsNew: true, off: ['map-mods'] })
