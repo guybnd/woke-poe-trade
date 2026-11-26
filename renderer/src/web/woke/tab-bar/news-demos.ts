@@ -70,7 +70,13 @@ const WINDOWLESS = new Set(['price-check'])
 // Lines about something that only shows once you've used it (your own past
 // searches): opening the tool shows nothing new, so no Show me.
 // Type-to-search and the item strip's More start from your own keys and items.
-const NOTHING_TO_SHOW = new Set(['search-recent-queries', 'search-recent-save', 'search-type-to-open', 'item-menu-more'])
+// A line about one part of a window without a spot to flash: opening the
+// window doesn't point at it (and does nothing when it's already open).
+const NOTHING_TO_SHOW = new Set(['search-recent-queries', 'search-recent-save', 'search-type-to-open', 'item-menu-more',
+  'deck-card-line-item', 'analytics-line-item'])
+// Lines about a whole new tool: opening its window is the show. Any other
+// line needs a tab, a spot, a sample or a Settings page (news.test.ts).
+export const WHOLE_TOOL = new Set(['scrying-helper'])
 
 // Whether Show me has somewhere real to go: a tab, a sample, the Settings
 // page the feature lives on, or the tool's own window. `byName`: the client

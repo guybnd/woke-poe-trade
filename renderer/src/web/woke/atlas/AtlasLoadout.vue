@@ -61,9 +61,10 @@
         </div>
       </template>
       <button v-else type="button" class="w-faint text-left hover:underline" @click="editing = true">None yet. Add what each map takes.</button>
-      <div v-if="earn && (earn.perHour != null || earn.perMap != null)" class="w-dim text-xs" title="From Net worth's runs of the same name">
+      <div v-if="earn && (earn.perHour != null || earn.perMap != null)" class="w-dim text-xs" title="From Net worth's runs of the same name" data-goto-spot="results">
         Your results: <span v-if="earn.perHour != null" class="w-num" :class="earn.perHour >= 0 ? 'w-up' : 'w-down'">{{ fmt(earn.perHour) }}/h</span>{{ earn.perHour != null && earn.perMap != null ? ', ' : '' }}<span v-if="earn.perMap != null" class="w-num">{{ fmt(earn.perMap) }}/{{ unitOf(earn.maps, earn.fights) }}</span> over {{ countLabel(earn.maps, earn.fights) }}
       </div>
+      <div v-else class="w-faint text-xs" data-goto-spot="results">Your results: none yet. Net worth runs named "{{ strategy.name || 'Untitled' }}" show here.</div>
 
       <!-- Regexes, kept in the Regex library -->
       <div :class="$style.heading" class="flex items-center">
