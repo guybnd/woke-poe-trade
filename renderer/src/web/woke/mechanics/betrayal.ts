@@ -10,7 +10,6 @@ import { isThin } from '../market/types'
 import type { PriceGroup } from './data'
 
 export const DIVISIONS = ['Transportation', 'Fortification', 'Research', 'Intervention'] as const
-export type Division = typeof DIVISIONS[number]
 
 export const MEMBERS = [
   'Aisling', 'Cameria', 'Elreon', 'Gravicius', 'Guff', 'Haku', 'Hillock', 'It That Fled',

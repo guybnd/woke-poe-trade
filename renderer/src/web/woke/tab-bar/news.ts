@@ -79,23 +79,12 @@ export const NEWS: NewsItem[] = [
   { id: 'deck-card-line-item', since: '1.330.20', wmType: 'woke-stacked-decks', name: 'Stacked decks', note: 'New: click a card\'s value to set your price; hover it to leave it out of Got and Result' },
   { id: 'analytics-line-item', since: '1.330.20', wmType: 'woke-session-analytics', name: 'Session analytics', note: 'New: right-click a map\'s loot for your price or to leave it out' },
   { id: 'profit-line-item', since: '1.330.20', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: click a price to set your own; hover a row to leave it out. Changed lists what you edited' },
-  { id: 'glance-bar-default', since: '1.330.19', wmType: 'woke-session-analytics', name: 'Session analytics', settingsPage: 'Sessions', note: 'New: a thin bar at the top while mapping. Off in Settings' },
-  { id: 'glance-bar-fields', since: '1.330.19', wmType: 'woke-session-analytics', name: 'Session analytics', settingsPage: 'Sessions', note: 'New: pick what the in-map glance bar shows, and keep it up while a run goes' },
-  { id: 'forbidden-pair-finder', since: '1.330.19', wmType: 'woke-forbidden', name: 'Forbidden pair finder', note: 'New: the Forbidden Flame and Flesh notables your build can take, with what each pair costs' },
   { id: 'price-check-ninja-trust', since: '1.330.19', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: the instant card says when poe.ninja\'s price looks fake, with the item\'s usual price' },
   { id: 'price-check-seller-spread', since: '1.330.19', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: exchange prices show what sellers ask, like "1 to 15c, most ask 10c"' },
-  { id: 'price-check-unid-vs-id', since: '1.330.19', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: unid Watcher\'s Eye and other gamble jewels show unid price vs identified versions' },
-  { id: 'map-farming-goal', since: '1.330.19', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: pick Currency or Maps & Threads on a map\'s price check, and the numbers that matter start on' },
   { id: 'div-card-map-chance', since: '1.330.19', wmType: 'woke-search', name: 'Search', note: 'New: type a map to see how likely each of its cards is, and what one is worth on average' },
-  { id: 'run-summary-on-stop', since: '1.330.19', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: a run summary on Stop: vs your usual, best drops, map times and tips' },
-  { id: 'runs-kits-compare', since: '1.330.19', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: run costs priced live, and past runs side by side, by strategy too' },
   { id: 'listed-still-cheapest', since: '1.330.19', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: Check on a Listed row says if anyone sells it cheaper (one trade search)' },
-  { id: 'per-hour-time-setting', since: '1.330.19', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: Play, + Hideout or All beside every per hour, the same choice in every tool' },
-  { id: 'net-worth-public', since: '1.330.18', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: open to everyone. Charts what your stash is worth and what each map earned' },
-  { id: 'map-mods-t17-planner', since: '1.330.18', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: a Planner tab for T17 maps, and what each mod adds to a map' },
   { id: 'net-worth-listed', since: '1.330.18', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: a Listed tab: what you have up at Faustus, unsold, and for how long' },
-  { id: 'net-worth-strategy-runs', since: '1.330.18', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: strategy runs. Start one from the icon\'s card to see what a farm earns' },
-  { id: 'net-worth-faustus-box', since: '1.330.18', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: tick the box on At Faustus to count your listings in the total, or leave them out' },
+  { id: 'map-mods-t17-planner', since: '1.330.18', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: a Planner tab for T17 maps, and what each mod adds to a map' },
   { id: 'atlas-planner-links', since: '1.330.18', wmType: 'woke-atlas-strategies', name: 'Atlas strategies', note: 'New: imports poeatlasplanner.com links' }
 ]
 
@@ -144,9 +133,4 @@ export function seenNewsIds (woke: WokeModulesConfig | undefined): readonly stri
 export function unseenNews (woke: WokeModulesConfig | undefined, version: string): NewsItem[] {
   const seen = seenNewsIds(woke)
   return liveNews(version).filter(n => !seen.includes(n.id))
-}
-
-// Every unseen line of one tool (a tool can have several).
-export function unseenNewsOf (wmType: string, seen: readonly string[] | undefined, version: string): NewsItem[] {
-  return liveNews(version).filter(n => n.wmType === wmType && !seen?.includes(n.id))
 }

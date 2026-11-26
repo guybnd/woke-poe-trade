@@ -393,7 +393,3 @@ export function listingsQuery (account: string) {
     sort: { indexed: 'desc' }
   }
 }
-
-export function isFaustusRead (x: unknown): x is FaustusRead {
-  return x != null && typeof x === 'object' && typeof (x as FaustusRead).at === 'number' && Array.isArray((x as FaustusRead).listings)
-}

@@ -76,7 +76,3 @@ export function useZone (): ZoneState {
   }))
   return zone
 }
-
-export function inZone (...kinds: ZoneKind[]): boolean {
-  return zone.kind != null && kinds.includes(zone.kind)
-}

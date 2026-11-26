@@ -22,9 +22,7 @@ export const GOTO_SPOTS = {
 // not on the line: NEWS loads at startup, this only with the dock's card.
 export const NEWS_SPOTS: Record<string, string> = {
   'listed-still-cheapest': 'still-cheapest',
-  'per-hour-time-setting': 'per-hour',
-  'net-worth-listed': 'stale',
-  'net-worth-faustus-box': 'faustus-box'
+  'net-worth-listed': 'stale'
 }
 
 export function gotoSpots (wmType: string): Record<string, string> | null {
