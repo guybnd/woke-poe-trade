@@ -126,7 +126,7 @@
               </template>
             </div>
           </div>
-          <div v-if="!launcherHasMatch && !priceGroups.length" :class="$style.none">Nothing matches "{{ launcherQuery }}"</div>
+          <WNoMatch v-if="!launcherHasMatch && !priceGroups.length" :query="launcherQuery" @clear="clearLauncher" />
           <div v-else :class="$style.foot" data-launcher-foot>
             <template v-if="hovered"><span :class="$style.footName">{{ hovered.name }}</span><span :class="$style.footText">{{ [hoveredNote ?? toolDescription(hovered.wmType), entryHint(hovered)].filter(Boolean).join('. ') }}</span></template>
             <span v-else :class="$style.footHint">Point at a tool to see what it does. Right-click for more.</span>
@@ -219,6 +219,7 @@ import { MODULES, ensureWokeConfig, isRetiredWidgetType, isWidgetTypeOn, setModu
 import { useI18n } from 'vue-i18n'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import ToolIcon from './ToolIcon.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { MAX_UI_SIZE, MIN_UI_SIZE, nudgeUiSize, uiSize } from '../ui/ui-size'
 import { ICON_TOOL_NAMES, moduleSettingsPage, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, pickStarterPins, toolDescription } from './tools'
 import { pastedItemText } from '../search/pasted-item'
@@ -552,6 +553,10 @@ function openBesideRail (kind: 'launcher' | 'layout') {
   if (kind !== 'launcher') return
   query.value = ''
   nextTick(() => searchInput.value?.focus())
+}
+function clearLauncher () {
+  query.value = ''
+  searchInput.value?.focus()
 }
 function openLayout () { openBesideRail('layout') }
 // The side facing the screen, unless only the other side has room. When neither
@@ -1155,7 +1160,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onOverlayKey))
 .pin:not(.pinOn) { position: absolute; right: 4px; }
 .row:hover .pin:not(.pinOn) { background: var(--w-panel-solid); }
 .row:hover .pin, .pinOn, .pin:focus-visible { opacity: 1; }
-.none { padding: 10px 8px; color: var(--w-dim); }
 .foot {
   display: flex;
   align-items: baseline;

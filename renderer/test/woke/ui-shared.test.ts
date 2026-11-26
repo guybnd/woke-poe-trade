@@ -16,6 +16,7 @@ import WBackLink from '@/web/woke/ui/WBackLink.vue'
 import WSearchField from '@/web/woke/ui/WSearchField.vue'
 import WNoMatch from '@/web/woke/ui/WNoMatch.vue'
 import WFoldHead from '@/web/woke/ui/WFoldHead.vue'
+import WSegmented from '@/web/woke/ui/WSegmented.vue'
 import { NO_PRICE, THIN_MARKET } from '@/web/woke/ui/format'
 import { RATE_HEAD, RATE_WORD, nextModRating } from '@/web/woke/map-mods/rules'
 
@@ -32,6 +33,7 @@ function vueFiles (dir = WOKE): string[] {
     return name.endsWith('.vue') ? [p] : []
   })
 }
+const src = (f: string) => readFileSync(path.join(WOKE, f), 'utf8')
 const rel = (p: string) => path.relative(WOKE, p).replace(/\\/g, '/')
 function offenders (re: RegExp, except: string[] = []) {
   return vueFiles().filter(p => !except.includes(rel(p)) && re.test(readFileSync(p, 'utf8'))).map(rel)
@@ -154,9 +156,19 @@ describe('search and no match (WSearchField, WNoMatch)', () => {
 
   it('has one look: no funnel in filter boxes, no hand-made no-match lines', () => {
     expect(offenders(/<WField[^>]*icon="fas fa-filter"/)).toEqual([])
-    // Finders' dropdowns (an item picker, the launcher) say it in one dim line under the box.
-    const finders = ['ui/WNoMatch.vue', 'loot-filter/AddItemField.vue', 'loot-filter/ItemSearchField.vue', 'tab-bar/TabBar.vue', 'valdo/ValdoStrip.vue']
-    expect(offenders(/Nothing matches "\{\{|No \w+ matches? "\{\{|>No mods match\.<|>Nothing matches\.</, finders)).toEqual([])
+    // Finders' small dropdowns (an item picker, Valdo's pickers) say it in one dim line under the box.
+    const finders = ['ui/WNoMatch.vue', 'loot-filter/AddItemField.vue', 'loot-filter/ItemSearchField.vue', 'valdo/ValdoStrip.vue']
+    expect(offenders(/Nothing matches "\{\{|No \w+ matches? "\{\{|>No mods match\.<|>Nothing matches\.<|>No tag matches\.</, finders)).toEqual([])
+  })
+
+  it('is on the launcher, Challenges, Hotkeys and Megalo', () => {
+    for (const f of ['tab-bar/TabBar.vue', 'challenges/WidgetChallenges.vue', 'settings/HotkeysPage.vue', 'megalo/MegaloWindow.vue']) {
+      expect(src(f), f).toMatch(/<WNoMatch [^>]*@clear=/)
+      // Only when something was typed: an empty list with no query isn't a miss
+      // (the launcher lists every tool when its box is empty).
+      const show = /<WNoMatch v-(?:else-)?if="([^"]*)"/.exec(src(f))?.[1] ?? ''
+      expect(show, f).toMatch(/trim\(\)|Misses|HasMatch/)
+    }
   })
 })
 
@@ -172,6 +184,30 @@ describe('fold (WFoldHead, WFoldCaret)', () => {
 
   it('has one look: no glyph or caret folds', () => {
     expect(offenders(/\? '▾' : '[▸›]'|'fa-caret-down' : 'fa-caret-right'|'fa-caret-right' : 'fa-caret-down'/)).toEqual([])
+  })
+})
+
+describe('net worth on the shared pieces', () => {
+  it('folds its sections with WFoldHead and its lists with WFoldCaret', () => {
+    const s = src('net-worth/NetWorthPanel.vue')
+    expect(s).not.toMatch(/fa-chevron-(down|right)/)
+    expect(s).not.toMatch(/@click="flipFold\(/)
+    // Chart and Per hour (folded and open), Session, Sold, Where it is, Price moves, Details.
+    expect(s.match(/<WFoldHead /g)?.length).toBeGreaterThanOrEqual(9)
+    expect(s).toContain('<WFoldCaret :open="groupOpen(g.key, i)" />')
+  })
+
+  it('picks Runs views with WSegmented, keeping their data hooks', async () => {
+    const s = src('net-worth/RunsView.vue')
+    expect(s).not.toMatch(/\$style\.seg\b|^\.seg\b/m)
+    expect(s.match(/<WSegmented /g)).toHaveLength(2)
+    for (const d of ['data-run-summary-tab', 'data-run-details-tab', 'data-by-strategy']) expect(s).toContain(`'${d}': ''`)
+  })
+
+  it('WSegmented puts an option\'s attrs on its button', async () => {
+    const html = await render(WSegmented, { modelValue: 'b', options: [{ value: 'a', label: 'A', attrs: { 'data-pick-a': '' } }, { value: 'b', label: 'B' }] })
+    expect(html).toMatch(/<button[^>]*aria-pressed="false"[^>]*data-pick-a>A<\/button>/)
+    expect(html).toMatch(/<button[^>]*aria-pressed="true"[^>]*>B<\/button>/)
   })
 })
 

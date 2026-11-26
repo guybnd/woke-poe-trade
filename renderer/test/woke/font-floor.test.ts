@@ -14,10 +14,7 @@ const ALLOWED: Record<string, string> = {
   'woke/ui/controls.css|font: 600 calc(9px': 'ON/OFF inside the switch track',
   'woke/ui/controls.css|font: calc(10px': 'ON/OFF inside the PoE-art switch track',
   'woke/ui/SizeSettings.vue|.more i': 'chevron icon',
-  'woke/net-worth/ItemTable.vue|.held': 'lock icon',
-  'woke/net-worth/NetWorthPanel.vue|.toggle i': 'chevron icon',
-  'woke/net-worth/NetWorthPanel.vue|.fold i': 'fold chevron',
-  'woke/net-worth/NetWorthPanel.vue|.groupHead > i': 'fold chevron'
+  'woke/net-worth/ItemTable.vue|.held': 'lock icon'
 }
 
 function files (dir: string): string[] {

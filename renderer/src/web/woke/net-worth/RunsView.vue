@@ -40,10 +40,8 @@
         <span class="w-dim w-num text-xs">{{ clock(shownRun.startAt) }} → {{ shownRun.stoppedAt ? clock(shownRun.stoppedAt) : 'now' }} · {{ span(totals.ms) }} · {{ isCraft ? 'Crafting' : countLabel(totals.maps, totals.fights) }}</span>
         <WButton v-if="shownRun === live" size="sm" :disabled="faustusReading" :title="'Reads your stash one last time and your Faustus listings, then shows the summary'" @click="stop">{{ stopPhase === 'stash' ? 'Reading stash…' : stopPhase === 'listings' ? 'Stopping…' : 'Stop' }}</WButton>
         <span v-else :class="$style.headEnd">
-          <span v-if="shownRun.kind !== 'craft'" :class="$style.seg" role="group" aria-label="Show the run">
-            <button type="button" :class="{ [$style.on]: showSummary }" :aria-pressed="showSummary" data-run-summary-tab @click="summaryId = shownRun.id">Summary</button>
-            <button type="button" :class="{ [$style.on]: !showSummary }" :aria-pressed="!showSummary" data-run-details-tab @click="summaryId = null">Details</button>
-          </span>
+          <WSegmented v-if="shownRun.kind !== 'craft'" role="group" aria-label="Show the run" :model-value="showSummary ? 'summary' : 'details'" :options="SHOW_RUN"
+            @update:model-value="summaryId = $event === 'summary' ? shownRun.id : null" />
         </span>
       </div>
       <div :class="$style.hero" class="w-num">
@@ -129,10 +127,7 @@
     <section v-if="doc.done.length" :class="$style.past" data-past-runs>
       <div :class="$style.head">
         <span :class="$style.caps">Past runs</span>
-        <span :class="$style.seg" role="group" aria-label="Show past runs">
-          <button type="button" :class="{ [$style.on]: !byName }" :aria-pressed="!byName" @click="byName = false">Each run</button>
-          <button type="button" :class="{ [$style.on]: byName }" :aria-pressed="byName" data-by-strategy @click="byName = true">By strategy</button>
-        </span>
+        <WSegmented role="group" aria-label="Show past runs" :model-value="byName ? 'name' : 'run'" :options="SHOW_PAST" @update:model-value="byName = $event === 'name'" />
       </div>
       <div :class="$style.tableWrap">
         <table :class="$style.table" data-compare>
@@ -172,7 +167,7 @@
 // the last read or a chart point, see profit since then with what got used
 // up, type the costs the stash can't see, and look back at finished runs.
 import { computed, defineAsyncComponent, onUnmounted, shallowRef, watch } from 'vue'
-import { WButton, WChip, WKbd, WLineActs, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
+import { WButton, WChip, WKbd, WLineActs, WSegmented, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui'
 import { itemMenuHead } from '../ui/tooltip/item-menu'
 import { AppConfig } from '@/web/Config'
@@ -230,6 +225,8 @@ watch(() => [shownRun.value?.id, shownRun.value?.stoppedAt], () => { refreshRunM
 // The summary (pick W1): its own chunk, loaded when a run stops or you ask.
 const RunSummary = defineAsyncComponent(() => import('./RunSummary.vue'))
 const summaryId = shallowRef<string | null>(null)
+// The two views of a stopped run; data-* hooks for the e2e specs.
+const SHOW_RUN: Array<{ value: string, label: string, attrs?: Record<string, string> }> = [{ value: 'summary', label: 'Summary', attrs: { 'data-run-summary-tab': '' } }, { value: 'details', label: 'Details', attrs: { 'data-run-details-tab': '' } }]
 // A crafting session has no maps to sum up: it shows its columns.
 const showSummary = computed(() => shownRun.value?.stoppedAt != null && shownRun.value.kind !== 'craft' && summaryId.value === shownRun.value.id)
 // A run that just stopped (here or from the dock card): open its summary.
@@ -495,6 +492,7 @@ const COLUMNS: Array<{ id: CompareSort, label: string, tip: string }> = [
   { id: 'noTop', label: 'Without best drop', tip: 'Per map without the run\'s single best drop, so one lucky drop doesn\'t decide it. Best first' }
 ]
 const byName = shallowRef(false)
+const SHOW_PAST: Array<{ value: string, label: string, attrs?: Record<string, string> }> = [{ value: 'run', label: 'Each run' }, { value: 'name', label: 'By strategy', attrs: { 'data-by-strategy': '' } }]
 const sortBy = shallowRef<CompareSort>('new')
 const pastRows = computed(() => sortCompare(compareRows(doc.value.done, rateTime(), byName.value), sortBy.value))
 const pastUnit = computed(() => pastRows.value.some(r => r.fights > 0) ? (pastRows.value.some(r => r.maps > 0) ? 'run' : 'fight') : 'map')
@@ -600,9 +598,6 @@ function addPerMap (l: AddedLine) {
 .src { font-size: var(--w-fs-xs); border: 1px solid var(--w-line); color: var(--w-dim); padding: 0 4px; }
 .src.on { border-color: var(--w-gold); color: var(--w-gold); }
 .small { font-family: inherit; text-transform: none; font-size: var(--w-fs-xs); border: 1px solid var(--w-gold); color: var(--w-gold); padding: 0 4px; margin-left: 4px; cursor: help; white-space: nowrap; }
-.seg { display: inline-flex; border: 1px solid var(--w-line); }
-.seg button { background: none; border: 0; color: var(--w-dim); font: inherit; font-size: var(--w-fs-xs); padding: 0 8px; cursor: pointer; }
-.seg button.on { background: var(--w-line-strong); color: var(--w-gold); }
 .tableWrap { overflow-x: auto; min-width: 0; }
 .table { width: 100%; border-collapse: collapse; font-size: var(--w-fs-sm); }
 .table th { font-weight: normal; text-align: left; border-bottom: 1px solid var(--w-line-strong); padding: 2px 4px; white-space: nowrap; }
