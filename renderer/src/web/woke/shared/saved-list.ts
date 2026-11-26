@@ -1,7 +1,5 @@
 // What every saved list (Regex library, Trade searches, then Atlas strategies
-// and PoB builds) does the same way: the row keys, removing with Undo, and
-// renaming in place.
-import { nextTick, shallowRef } from 'vue'
+// and PoB builds) does the same way: the row keys and removing with Undo.
 
 export interface RowKeyActions {
   remove?: () => void
@@ -53,30 +51,6 @@ export function removeEntries<T extends { id: number }> (list: readonly T[], ids
 // One entry: removeEntries for one id.
 export function removeEntry<T extends { id: number }> (list: readonly T[], id: number) {
   return removeEntries(list, [id])
-}
-
-// One name field at a time, by key ("entry:3", "folder:Gems", "new"): it
-// takes focus with its text picked; Enter or leaving it keeps the name, Esc
-// drops it. The field carries `data-draft`.
-export function useDraftName (root: () => Element | null | undefined) {
-  const editing = shallowRef<string | null>(null)
-  const draft = shallowRef('')
-  async function start (key: string, value = '') {
-    draft.value = value
-    editing.value = key
-    await nextTick()
-    const input = root()?.querySelector<HTMLInputElement>('[data-draft]')
-    input?.focus()
-    input?.select()
-  }
-  // The typed name, trimmed, when `key` is the field open (once).
-  function finish (key: string): string | null {
-    if (editing.value !== key) return null
-    editing.value = null
-    return draft.value.trim()
-  }
-  function cancel () { editing.value = null }
-  return { editing, draft, start, finish, cancel }
 }
 
 // The rows a saved list's window "?" lists (shared/SavedTree's keys).

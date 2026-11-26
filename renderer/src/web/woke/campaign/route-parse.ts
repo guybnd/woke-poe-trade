@@ -425,14 +425,6 @@ export function actProgress (route: Route, current: number): { done: number, tot
   return { done: inAct.filter(s => s.index < current).length, total: inAct.length }
 }
 
-export function stepsLeftInAct (route: Route, current: number): number {
-  const step = route.steps[current]
-  if (!step) return 0
-  let n = 0
-  for (let i = current; i < route.steps.length && route.steps[i].act === step.act; i++) n++
-  return n
-}
-
 // ---- XP penalty ----
 
 // PoE 1: no penalty while the gap to the monster level is within

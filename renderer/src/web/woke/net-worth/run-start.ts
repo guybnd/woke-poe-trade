@@ -22,11 +22,6 @@ export function lastCostsOf (name: string): CostLine[] {
   return (runsDoc.value.done.find(r => r.name === n && r.kind !== 'craft')?.costs ?? []).map(c => { const x = { ...c }; delete x.bought; return x })
 }
 
-// The names of past runs, newest first.
-export function pastRunNames (): string[] {
-  return [...new Set(runsDoc.value.done.map(r => r.name))].filter(n => n !== 'Run')
-}
-
 // The last run with the reads between its Stop and this start: a sale
 // collected or a held item stashed in between isn't carried over (else the
 // next run's first arrival or drop would take it off that run's profit).

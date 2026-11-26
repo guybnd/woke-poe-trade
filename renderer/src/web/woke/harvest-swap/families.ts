@@ -2,11 +2,11 @@
 //
 // Harvest (poedb Horticrafting list, checked 2026-11-09): "Change a modifier that
 // grants Fire Resistance / Fire Damage into a similar-tier modifier that grants
-// Cold ..." for every pair of Fire, Cold and Lightning. Up to 3.29 the target
-// colour paid 500: to Fire is Wild, to Cold Vivid, to Lightning Primal.
-// 3.30 patch notes: a swap costs "300 Lifeforce of two different types", and a
-// damage swap a Crystallised Rancour too. Which second colour isn't stated, so
-// until it's seen in game the target colour plus the cheaper other one is used.
+// Cold ..." for every pair of Fire, Cold and Lightning. 3.30: a swap costs
+// "300 Lifeforce of two different types", and a damage swap a Crystallised
+// Rancour too. poedb's craft rows (checked 2026-11-26) name the two: one per
+// element of the swap, Fire Wild, Cold Primal, Lightning Vivid (Fire to Cold:
+// 300 Wild + 300 Primal).
 // Physical, attack and caster crafts are random reforges, not swaps, so they
 // aren't here.
 //
@@ -42,7 +42,7 @@ export function swapChaos (cost: SwapCost, price: (item: string) => number | nul
   return total
 }
 
-/** "300 Wild + 300 Vivid or Primal + 1 Rancour" */
+/** "300 Wild + 300 Primal + 1 Rancour" */
 export function swapCostText (cost: SwapCost): string {
   return cost.parts.map(p => `${p.amount} ${p.items.map(i => i.replace(' Crystallised Lifeforce', '').replace('Crystallised ', '')).join(' or ')}`).join(' + ')
 }
@@ -64,7 +64,8 @@ export interface SwapFamily {
   defaultOn: boolean
   /** Word that marks a stat as hit by this craft too, for the random-target warning. */
   catches: RegExp
-  cost: (to: string) => SwapCost
+  /** What changing the mod from one key to another costs. */
+  cost: (from: string, to: string) => SwapCost
 }
 
 export const ELEMENTS = ['fire', 'cold', 'lightning'] as const
@@ -79,21 +80,22 @@ export const KEY_LABEL: Record<string, string> = {
   int: 'Intelligence'
 }
 
-// What a Harvest swap to each element costs. Live prices come from poe.ninja.
+// Each element's lifeforce colour: a Harvest swap pays 300 of the colour of
+// the element it changes from and 300 of the one it changes to. Live prices
+// come from poe.ninja.
 const LIFEFORCE: Record<string, string> = {
   fire: 'Wild Crystallised Lifeforce',
-  cold: 'Vivid Crystallised Lifeforce',
-  lightning: 'Primal Crystallised Lifeforce'
+  cold: 'Primal Crystallised Lifeforce',
+  lightning: 'Vivid Crystallised Lifeforce'
 }
 export const HARVEST_SWAP_AMOUNT = 300
 function harvestCost (rancour: boolean) {
-  return (to: string): SwapCost => ({
+  return (from: string, to: string): SwapCost => ({
     parts: [
+      { items: [LIFEFORCE[from]], amount: HARVEST_SWAP_AMOUNT },
       { items: [LIFEFORCE[to]], amount: HARVEST_SWAP_AMOUNT },
-      { items: ELEMENTS.filter(e => e !== to).map(e => LIFEFORCE[e]), amount: HARVEST_SWAP_AMOUNT },
       ...(rancour ? [{ items: ['Crystallised Rancour'], amount: 1 }] : [])
-    ],
-    estimate: true
+    ]
   })
 }
 

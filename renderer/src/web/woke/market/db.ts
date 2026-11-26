@@ -69,12 +69,6 @@ export async function dailyHistory (league: string, item: { type: string, name: 
   return await (hostRequest('market-daily-item', { league, type: item.type, name: item.name, variant: item.variant }, SLOW_MS) as Promise<DailyRow[]>)
 }
 
-// For other modules and for export: every daily row of a league.
-export async function allDailyRows (league: string): Promise<DailyRow[]> {
-  await importOldHistory()
-  return await (hostRequest('market-daily-all', { league }, SLOW_MS) as Promise<DailyRow[]>)
-}
-
 // ---- one-time move from IndexedDB ----
 
 const OLD_DB_NAME = 'woke-market'
