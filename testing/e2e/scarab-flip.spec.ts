@@ -80,6 +80,7 @@ test('flips: the Threads tab shows each recipe as a range, not an average', asyn
   // A Thread can't give itself back: Expedition's worst is the next cheapest.
   const expedition = panel.locator('.w-row').filter({ hasText: 'Expedition' })
   await expect(expedition.locator('> :nth-child(3)')).toHaveText('0.6')
+  await expect(expedition.locator('> :nth-child(3) img[alt="c"]')).toHaveCount(1)
   await expect(expedition.getByText('0.3–4c')).toBeVisible()
   // Frayed Thread has no price: it opens to any Thread, so its range.
   await expect(panel.getByText(/opens to any thread, worth 0\.2 ?c to 4 ?c/)).toBeVisible()

@@ -14,9 +14,13 @@ describe('pickerKey', () => {
     expect(pickerKey('Enter', 5, 2)).toEqual({ kind: 'pick', hl: 1 })
   })
 
-  it('closes on Esc only while the list is open', () => {
+  it('closes on Esc while the list is open, and lets an empty box pass it on', () => {
     expect(pickerKey('Escape', 0, 2)).toEqual({ kind: 'close' })
     expect(pickerKey('Escape', 0, 0)).toBeNull()
+  })
+
+  it('empties a box with nothing matching on Esc, as the plain field does', () => {
+    expect(pickerKey('Escape', 0, 0, true)).toEqual({ kind: 'close' })
   })
 
   it('leaves every other key, and an empty list, to the field', () => {

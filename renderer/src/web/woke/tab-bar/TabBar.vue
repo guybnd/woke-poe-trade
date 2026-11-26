@@ -423,18 +423,30 @@ function forget (wmId: number) {
 // No "are you sure": remove now, offer Undo, in the same words as the
 // window's own delete button (P9).
 function forgetWithUndo (wmIds: number[], text: string) {
-  const configs = wm.widgets.value.filter(w => wmIds.includes(w.wmId))
-  const pinned = [...(props.config.pinned ?? [])]
-  const labels = { ...(props.config.labels ?? {}) }
+  // Each one with its place on the rail and its label, so Undo puts back only
+  // these and keeps whatever changed on the rail since.
+  const gone = wm.widgets.value.filter(w => wmIds.includes(w.wmId)).map(config => ({
+    config,
+    pin: (props.config.pinned ?? []).indexOf(config.wmId),
+    label: props.config.labels?.[config.wmId] ?? ''
+  }))
   for (const id of wmIds) forget(id)
   toast(text, {
     ms: 10000,
     undo: () => {
-      for (const c of configs) {
-        if (!wm.widgets.value.some(w => w.wmId === c.wmId)) wm.widgets.value.push(c)
+      for (const g of [...gone].sort((a, b) => a.pin - b.pin)) {
+        // Its id went to a new window meanwhile: it comes back under a fresh one.
+        if (wm.widgets.value.some(w => w.wmId === g.config.wmId)) {
+          g.config.wmId = Math.max(0, ...wm.widgets.value.map(w => w.wmId)) + 1
+        }
+        wm.widgets.value.push(g.config)
+        if (g.pin >= 0) {
+          const pinned = [...(props.config.pinned ?? [])]
+          pinned.splice(Math.min(g.pin, pinned.length), 0, g.config.wmId)
+          props.config.pinned = pinned
+        }
+        if (g.label) setLabel(g.config.wmId, g.label)
       }
-      props.config.pinned = pinned
-      props.config.labels = labels
     }
   })
 }

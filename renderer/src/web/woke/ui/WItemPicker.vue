@@ -46,7 +46,7 @@ function tip (item: T): ItemTipRef {
 }
 
 function onKey (e: KeyboardEvent) {
-  const step = pickerKey(e.key, hl.value, props.items.length)
+  const step = pickerKey(e.key, hl.value, props.items.length, props.modelValue !== '')
   if (!step) return
   e.preventDefault()
   e.stopPropagation()

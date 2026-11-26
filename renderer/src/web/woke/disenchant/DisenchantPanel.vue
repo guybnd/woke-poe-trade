@@ -184,10 +184,16 @@ function toggleBought (name: string) {
 function clearBought () {
   const id = league.value
   if (!id) return
-  const before = bought()
-  const n = (before[id] ?? []).length
-  props.config.bought = Object.fromEntries(Object.entries(before).filter(([k]) => k !== id))
-  toast(`Cleared ${n} ticked`, { anchor: panel.value?.el, undo: () => { props.config.bought = before } })
+  const cleared = bought()[id] ?? []
+  props.config.bought = Object.fromEntries(Object.entries(bought()).filter(([k]) => k !== id))
+  // Undo ticks those again, keeping any ticked since.
+  toast(`Cleared ${cleared.length} ticked`, {
+    anchor: panel.value?.el,
+    undo: () => {
+      const now = bought()[id] ?? []
+      props.config.bought = { ...bought(), [id]: [...now, ...cleared.filter(n => !now.includes(n))] }
+    }
+  })
 }
 
 function openTrade (r: DustRow) {
