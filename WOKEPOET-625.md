@@ -57,6 +57,14 @@ history:
     date: '2026-11-26T02:56:59.190Z'
     selfAttested: true
     id: c-2026-11-26t02-56-59-190z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 953 merged (136808c): sale-day divine rate, PoB folder and sites, log
+      catch-up, 250-char search. Stays open for in-game checks 632-634.
+    date: '2026-11-26T03:03:06.541Z'
+    selfAttested: true
+    id: c-2026-11-26t03-03-06-541z
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/948'
 subtasks:
