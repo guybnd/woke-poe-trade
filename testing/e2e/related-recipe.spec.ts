@@ -55,7 +55,7 @@ test('side window: Headhunter lists the cards that give it, priced as a stack', 
   await overlay.copyItem('items/unique-headhunter.txt')
   const side = overlay.page.locator('.w-pc-side')
   await expect(side).toBeVisible({ timeout: 20_000 })
-  await expect(side.getByText('Cards that give it')).toBeVisible()
+  await expect(side.getByText('Related cards')).toBeVisible()
   // 8 × 900c at 180c a divine.
   const doctor = side.locator('button[data-item-row]', { hasText: 'The Doctor' })
   // The Doctor, The Nurse, The Patient group isn't listed again under Drops from.
@@ -231,14 +231,19 @@ test('side window: a Foulborn unique lists its Foulborn kinds, priced, its own l
   const kinds = side.locator('[data-foul-kind]')
   await expect(kinds).toHaveCount(2)
   // Each kind: what it adds, what it loses, its price against a plain copy (20c).
-  const aura = kinds.filter({ hasText: 'Aura Effect' })
+  const aura = kinds.filter({ hasText: 'Non-Curse Auras' })
   await expect(aura).toContainText('(15-30)% increased Effect of Non-Curse Auras from your Skills on Enemies')
   await expect(aura).toContainText('(40-50)% increased Area Damage')
   // 360c at 180c a divine: 2 (divine icon), 18 times a plain copy's 20c.
   await expect(aura).toContainText(/Damage2×18$/)
   // The checked copy is the Intensify kind.
   const intensify = kinds.filter({ hasText: 'Intensify' })
-  await expect(intensify).toContainText('this one')
+  await expect(intensify).toHaveAttribute('data-own', 'true')
+  await expect(aura).not.toHaveAttribute('data-own')
+  // No captions: no kind name, no Chance it explainer, no footer hint.
+  await expect(side).not.toContainText('Aura Effect')
+  await expect(side).not.toContainText('Orb of Chance')
+  await expect(side).not.toContainText('Click to price check')
   await expect(intensify).toContainText(/90×4\.5$/)
   await expect(side.locator('[data-vestigial-mod]')).toHaveText('25% increased Area of Effect')
   // A random drop: chance it on its base.
@@ -258,6 +263,17 @@ test('side window: a Foulborn unique lists its Foulborn kinds, priced, its own l
   expect(url).toContain('"foulborn_item":{"option":"true"}')
   expect(url).toContain('"id":"explicit.stat_1636209393"')
   expect(url).toContain('"name":"Carcass Jack"')
+  // Folding Foulborn is remembered on the next unique checked.
+  const head = side.locator('[data-related-head]', { hasText: 'Foulborn' })
+  await head.click()
+  await expect(kinds).toHaveCount(0)
+  await overlay.copyItem('items/unique-impresence-fire.txt')
+  await expect(side.locator('[data-unique-version]')).toHaveCount(2, { timeout: 20_000 })
+  await overlay.copyItem('items/unique-carcass-jack-foulborn.txt')
+  await expect(side.locator('[data-related-head]', { hasText: 'Foulborn' })).toHaveAttribute('aria-expanded', 'false', { timeout: 20_000 })
+  await expect(kinds).toHaveCount(0)
+  await side.locator('[data-related-head]', { hasText: 'Foulborn' }).click()
+  await expect(kinds).toHaveCount(2)
 })
 
 test('side window: a unique with versions lists each, priced, its own lit; a click checks that version', async ({ overlay }) => {
