@@ -37,7 +37,7 @@
     <!-- The profile: the Map mods profile that keeps your Not list. One per build. -->
     <div v-if="config" :class="$style.line" data-valdo-template>
       <span class="w-dim text-xs" :class="$style.label">Profile</span>
-      <WSelect :model-value="String(config.activeProfile)" :options="profileOptions" aria-label="Profile (Map mods profile)"
+      <WSelect :class="$style.profile" :model-value="String(config.activeProfile)" :options="profileOptions" aria-label="Profile (Map mods profile)"
         title="Your Not mods are kept on this Map mods profile and apply to every Valdo map. Switching it switches Map mods too."
         data-valdo-template-pick @update:model-value="pickProfile" />
       <span class="w-dim text-xs w-trunc" data-valdo-saved>{{ savedNote }}</span>
@@ -377,6 +377,8 @@ const headline = computed(() => {
   color: var(--w-dim);
 }
 .tool:hover { color: var(--w-fg); }
+/* The Profile pick sits in the same small line as the Reward button above. */
+.profile { font-size: var(--w-fs-sm); }
 .toolOn { color: var(--w-fg); border-color: var(--w-accent); }
 .link:hover { color: var(--w-fg); text-decoration: underline; }
 .picker { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 4px 60px; }

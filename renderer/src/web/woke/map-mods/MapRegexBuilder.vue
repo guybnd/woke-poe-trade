@@ -1,5 +1,5 @@
 <template>
-  <WPanel :title="config.wmTitle || 'Map mods'" :icon="panelIcon" :hotkey="config.hotkey" width="60rem" max-height="85vh" :scroll="false" fill>
+  <WPanel :title="config.wmTitle || 'Map mods'" :icon="panelIcon" width="60rem" max-height="85vh" :scroll="false" fill>
     <template #actions>
       <span class="w-dim text-xs">Build</span>
       <WSelect :model-value="String(config.activeProfile)" :options="profileOptions"

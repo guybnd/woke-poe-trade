@@ -1,8 +1,8 @@
 <template>
   <Widget :config="config" move-handles="corners" :removable="false" :readonly="true" :inline-edit="false" @moved="config.moved = true">
-    <div ref="root" class="flex flex-col gap-1 items-stretch">
+    <div class="flex flex-col gap-1 items-stretch">
       <MapVerdictCard v-if="result && mapMods" :result="result" :config="mapMods" can-edit @edit-rewards="openRewards" />
-      <WPanel v-else title="Map check" icon="map" :hotkey="mapMods?.hotkey" :keys="windowKeys.help" width="22rem">
+      <WPanel v-else title="Map check" icon="map" :hotkey="mapMods?.hotkey" width="22rem">
         <WEmpty :art="{ mechanic: 'map' }">That item isn't a map, invitation, logbook, heist contract or chart.</WEmpty>
       </WPanel>
       <div class="flex gap-1 justify-between">
@@ -27,7 +27,6 @@ import type { ParsedItem } from '@/parser'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WEmpty, WButton } from '../ui'
-import { useWindowKeys } from '../ui/window-keys'
 import MapVerdictCard from './MapVerdictCard.vue'
 import { MAP_MODS_TARGET, showRewards } from './widget'
 import { checkMap, ensureMapModsConfig, findMapModsConfig, isMapLike } from './check'
@@ -39,9 +38,6 @@ const props = defineProps<{
 }>()
 
 const wm = inject<WidgetManager>('wm')!
-// The mouse's back button goes back to Map mods, as the button under the card.
-const root = shallowRef<HTMLElement | null>(null)
-const windowKeys = useWindowKeys(() => root.value, { back: () => openRegex() })
 
 const item = shallowRef<ParsedItem | null>(null)
 const mapMods = computed(() => findMapModsConfig())
