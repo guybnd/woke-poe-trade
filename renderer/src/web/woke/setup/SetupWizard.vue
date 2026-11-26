@@ -78,7 +78,7 @@
           <button v-for="l in leagues.list.value" :key="l.id" type="button" role="radio"
             :aria-checked="config.leagueId === l.id"
             :class="[$style.chip, { [$style.chipOn]: config.leagueId === l.id }]"
-            @click="AppConfig().leagueId = l.id">{{ l.id }}</button>
+            @click="AppConfig().leagueId = l.id; persist()">{{ l.id }}</button>
         </div>
 
         <h2 :class="$style.h2">Game language</h2>
@@ -165,7 +165,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue'
 import { DateTime } from 'luxon'
-import { AppConfig, saveConfig, pushHostConfig } from '@/web/Config'
+import { AppConfig, saveConfig, pushHostConfig, updateConfig } from '@/web/Config'
 import type { Config } from '@/web/Config'
 import { Host } from '@/web/background/IPC'
 import { useLeagues } from '@/web/background/Leagues'
@@ -177,6 +177,7 @@ import PresetBar from '../switchboard/PresetBar.vue'
 import ModuleList from '../switchboard/ModuleList.vue'
 import { fieldKey, hotkeyFields } from '../settings/hotkey-fields'
 import { startWelcome } from '../tab-bar/welcome'
+import { mergeConfigs } from '../settings/merge-live'
 
 interface FoundLog { path: string, source: 'running' | 'standalone' | 'steam' | 'folder', modified: number, size: number }
 interface Prefs {
@@ -223,6 +224,13 @@ const LANGUAGES: Array<{ id: Config['language'], label: string }> = [
 // config-changed, which swaps in a fresh config object.
 const config = computed(() => AppConfig())
 const wokeConfig = computed(() => ensureWokeConfig(AppConfig()))
+// The settings as this window last saved or loaded them. The overlay keeps
+// saving while setup is open (quietly, which never reaches this window), so a
+// save from here merges what this window changed since into the settings on
+// disk, instead of writing its own old copy over them: that once lost tool
+// windows and settings.
+ensureWokeConfig(AppConfig())
+let base = JSON.stringify(AppConfig())
 const version = Host.version
 
 const step = shallowRef(0)
@@ -252,7 +260,15 @@ async function browse () {
   } catch {}
 }
 
-watch(logChoice, (choice) => { AppConfig().clientLog = choice || null })
+watch(logChoice, (choice) => {
+  AppConfig().clientLog = choice || null
+  persist()
+})
+// Another window's save swaps this window's settings: the pick shown stays picked.
+watch(() => AppConfig(), (c) => {
+  const want = logChoice.value || null
+  if ((c.clientLog ?? null) !== want) c.clientLog = want
+})
 
 function ago (ms: number) {
   return DateTime.fromMillis(ms).toRelative() ?? 'a while ago'
@@ -265,6 +281,7 @@ leagues.load()
 function setLanguage (id: Config['language']) {
   if (AppConfig().language === id) return
   AppConfig().language = id
+  persist()
   // The league list comes from the language's own site.
   leagues.load()
 }
@@ -298,9 +315,31 @@ const keys = computed(() => {
 })
 
 // ── Flow ───────────────────────────────────────────────
-function persist () {
+let saving: Promise<void> = Promise.resolve()
+function persist (): Promise<void> {
+  saving = saving.then(saveMerged).catch(() => {})
+  return saving
+}
+
+async function saveMerged () {
+  const mineText = JSON.stringify(AppConfig())
+  const mine = JSON.parse(mineText) as Config
+  let onDisk: Config | null = null
+  try {
+    const text = await Host.getConfig()
+    const parsed = text ? JSON.parse(text) as Config : null
+    if (parsed && Array.isArray(parsed.widgets)) onDisk = parsed
+  } catch {}
+  if (onDisk) {
+    let next = mergeConfigs(mine, JSON.parse(base) as Config, onDisk)
+    // A click while the disk copy was on its way stays too.
+    const now = JSON.stringify(AppConfig())
+    if (now !== mineText) next = mergeConfigs(JSON.parse(now) as Config, mine, next)
+    updateConfig(next)
+  }
   saveConfig()
   pushHostConfig()
+  base = JSON.stringify(AppConfig())
 }
 
 function go (i: number) {
@@ -316,7 +355,7 @@ async function finish () {
   woke.setupDone = true
   // A fresh config is already in today's shape: no woke fix-up is due on it.
   woke.version ??= WOKE_CONFIG_VERSION
-  persist()
+  await persist()
   try {
     await hostRequest('setup-finish', {})
   } catch {
