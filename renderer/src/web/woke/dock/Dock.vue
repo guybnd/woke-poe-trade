@@ -18,6 +18,7 @@ import { useZone } from '../shared/zone'
 import { hoverZonesMoved } from '../shared/hover'
 import { openMenu } from '../ui'
 import type { MenuEntry } from '../ui/layer'
+import { followPointer } from '../ui/pointer-drag'
 
 const wm = inject<WidgetManager>('wm')!
 
@@ -57,13 +58,14 @@ const groups = computed(() => blocked.value ? [] : dockGroups.value)
 watch([groups, size], hoverZonesMoved)
 
 let drag: { dx: number, dy: number } | null = null
+let stopDrag: (() => void) | null = null
 function startDrag (e: PointerEvent) {
   const el = (e.currentTarget as HTMLElement).parentElement
   if (!el) return
   const r = el.getBoundingClientRect()
   drag = { dx: e.clientX - r.left, dy: e.clientY - r.top }
-  window.addEventListener('pointermove', onMove)
-  window.addEventListener('pointerup', endDrag, { once: true })
+  // Ends on letting go, or when the game takes the mouse back (pointer-drag.ts).
+  stopDrag = followPointer(onMove, endDrag)
   e.preventDefault()
 }
 function onMove (e: PointerEvent) {
@@ -74,7 +76,7 @@ function onMove (e: PointerEvent) {
 }
 function endDrag () {
   drag = null
-  window.removeEventListener('pointermove', onMove)
+  stopDrag = null
   saveDock()
 }
 function flip () {
@@ -85,7 +87,7 @@ function flip () {
 function clamp (v: number, lo: number, hi: number) {
   return Math.round(Math.min(hi, Math.max(lo, v)) * 10) / 10
 }
-onUnmounted(() => { window.removeEventListener('pointermove', onMove) })
+onUnmounted(() => { stopDrag?.() })
 </script>
 
 <style module>

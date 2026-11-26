@@ -1,5 +1,6 @@
 # Next release notes
 
+- Dragging the dock, or a Settings window edge to resize it, now stops when the game takes the mouse back mid-drag. Before, the dock kept following the mouse once you came back to the overlay.
 - Dragging a pinned card (or the dock, the glance bar, the post-map plaque) while you play no longer lets go halfway, which mostly happened when dragging it up. The game gets the mouse back once you let go.
 - Game icons on chips: league mechanics you met in a map (Delirium, Einhar, Mirage, Niko, Blight…) now show their art on the post-map plaque, the glance bar, Map history and over each map's bar in a run's Map times chart. The map price check's Farming goals, the Map planner's goals, and Net worth's Listed and Sales types show icons too.
 - Run summary: the filler captions are gone. "Worth a look" no longer says "only what the numbers back", and the bar charts show a small key (Usual / This run, Slow / Death / Average) instead of sentences like "Dark bar: your usual. Gold: this run."

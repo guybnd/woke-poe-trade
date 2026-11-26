@@ -81,6 +81,7 @@ import { mergeConfigs, placedHere } from './merge-live'
 import { PAGES, PAGE_BY_ID, pageByName, pageForWidgetType } from './pages'
 import type { SettingsPage } from './pages'
 import ModulePage from './ModulePage.vue'
+import { followPointer } from '../ui/pointer-drag'
 
 const props = defineProps<{ widget: Widget }>()
 const wm = inject<WidgetManager>('wm')!
@@ -403,13 +404,10 @@ function startResize (e: PointerEvent, edge: 'e' | 's' | 'se') {
     const h = edge !== 'e' ? start.h + (2 * (ev.clientY - start.y)) / rem : start.h
     size.value = { w: Math.max(40, Math.min(w, window.innerWidth / rem)), h: Math.max(28, Math.min(h, window.innerHeight / rem)) }
   }
-  const up = () => {
-    window.removeEventListener('pointermove', move)
-    window.removeEventListener('pointerup', up)
+  // Ends on letting go, or when the game takes the mouse back (pointer-drag.ts).
+  followPointer(move, () => {
     try { localStorage.setItem(SIZE_KEY, JSON.stringify(size.value)) } catch {}
-  }
-  window.addEventListener('pointermove', move)
-  window.addEventListener('pointerup', up)
+  })
 }
 </script>
 
