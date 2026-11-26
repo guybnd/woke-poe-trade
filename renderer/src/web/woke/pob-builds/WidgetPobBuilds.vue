@@ -36,7 +36,7 @@
              click shows the build. The order you set is kept in the app; the
              files only move when a build changes folder. -->
         <SavedTree :tree="tree" list-id="pob-folders" :active-id="selectedRow?.id ?? null" :title-of="r => r.relPath" :backspace="false"
-          @item-menu="buildMenu" @folder-menu="folderMenu" @item-key="onBuildKey">
+          @item-act="onRowAct" @item-menu="buildMenu" @folder-menu="folderMenu" @item-key="onBuildKey">
           <template #item="{ item: b }">
             <i v-if="config.activeBuild === b.relPath" class="fas fa-check-circle w-up" title="In use" />
             <span class="w-trunc">{{ b.name }}</span>
@@ -47,12 +47,12 @@
             <!-- Use always on; the rest on hover (WRowActs, the same in every saved list). -->
             <WRowActs>
               <template #hover>
-                <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': isPinned(b.relPath) }" :title="isPinned(b.relPath) ? 'Unpin (P)' : 'Pin to top (P)'" @click.stop="togglePin(b.relPath)"><i class="fas fa-thumbtack" /></button>
-                <button type="button" class="w-icon-btn" title="Rename (F2)" @click.stop="startEdit(b, 'rename')"><i class="fas fa-pen" /></button>
-                <button type="button" class="w-icon-btn" title="Remove (Del)" @click.stop="removeBuild(b)"><i class="fas fa-trash" /></button>
+                <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': isPinned(b.relPath) }" :title="isPinned(b.relPath) ? 'Unpin (P)' : 'Pin to top (P)'" data-row-act="pin"><i class="fas fa-thumbtack" /></button>
+                <button type="button" class="w-icon-btn" title="Rename (F2)" data-row-act="rename"><i class="fas fa-pen" /></button>
+                <button type="button" class="w-icon-btn" title="Remove (Del)" data-row-act="remove"><i class="fas fa-trash" /></button>
               </template>
               <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': config.activeBuild === b.relPath }" :title="config.activeBuild === b.relPath ? 'In use' : 'Use build'"
-                data-pob-use @click.stop="useBuild(b)"><i class="fas fa-check-circle" /></button>
+                data-pob-use data-row-act="use"><i class="fas fa-check-circle" /></button>
             </WRowActs>
           </template>
         </SavedTree>
@@ -443,6 +443,14 @@ watch(wm.active, (active) => { if (active && props.config.wmWants === 'show') re
 
 function isPinned (relPath: string) {
   return props.config.pinned.includes(relPath)
+}
+
+// The row buttons (WRowActs), through SavedTree's one listener.
+function onRowAct (act: string, b: PobBuildEntry) {
+  if (act === 'pin') togglePin(b.relPath)
+  else if (act === 'rename') startEdit(b, 'rename')
+  else if (act === 'remove') removeBuild(b)
+  else if (act === 'use') useBuild(b)
 }
 
 function buildMenu (e: MouseEvent, b: PobBuildEntry) {

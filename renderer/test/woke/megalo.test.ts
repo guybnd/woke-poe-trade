@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { nextNotableState } from '@/web/woke/megalo/cycle'
 import { buildTags, defaultOn, megaloQuery, notablePool, notableTags, scoreNotables, suggestedMinWeight, tagWeights, MAX_TRADE_FILTERS } from '@/web/woke/megalo/score'
 import { TAGS } from '@/web/woke/megalo/tags'
 
@@ -141,5 +142,17 @@ describe('megaloQuery', () => {
   })
   it('suggests a total two good fits reach', () => {
     expect(suggestedMinWeight([40, 100, 85])).toBe(185)
+  })
+})
+
+describe('a notable\'s click (cycle.ts)', () => {
+  it('steps off → Want → Must → off', () => {
+    expect(nextNotableState('off', 0)).toEqual({ next: 'want', full: false })
+    expect(nextNotableState('want', 0)).toEqual({ next: 'must', full: false })
+    expect(nextNotableState('must', 1)).toEqual({ next: 'off', full: false })
+  })
+  it('with 3 musts, a Want goes back to off and says why', () => {
+    expect(nextNotableState('want', 3)).toEqual({ next: 'off', full: true })
+    expect(nextNotableState('want', 2)).toEqual({ next: 'must', full: false })
   })
 })

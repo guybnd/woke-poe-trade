@@ -29,7 +29,7 @@
     <template v-else>
       <div class="flex justify-between gap-2 items-baseline">
         <span class="min-w-0 w-trunc">
-          <WBackLink to="Sessions" mouse @back="openId = null" />
+          <WBackLink to="Sessions" @back="openId = null" />
           <span class="font-medium">{{ formatSessionDate(open.startedAt) }}</span>
           <span class="w-dim"> · {{ formatDuration(open.endedAt - open.startedAt) }}</span>
         </span>

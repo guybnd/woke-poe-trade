@@ -34,7 +34,7 @@
         </template>
 
         <SavedTree :tree="tree" list-id="atlas-folders" :active-id="config.selectedId" :copy="copyCode"
-          @item-menu="rowMenu" @folder-menu="folderMenu">
+          @item-act="onRowAct" @item-menu="rowMenu" @folder-menu="folderMenu">
           <template #item="{ item: s }">
             <span class="w-trunc">{{ s.name || 'Untitled' }}</span>
             <span v-if="isDirty(config, s)" :class="$style.unsavedTag" title="Tree changes not saved">Unsaved</span>
@@ -46,12 +46,12 @@
             <!-- Open always on; the rest on hover (WRowActs, the same in every saved list). -->
             <WRowActs>
               <template #hover>
-                <button type="button" class="w-icon-btn" title="Rename (F2)" @click.stop="startEdit('strategy', String(s.id), 'rename')"><i class="fas fa-pen" /></button>
-                <button type="button" class="w-icon-btn" title="Copy strategy code (Ctrl + C)" @click.stop="copyCode([s])"><i class="fas fa-share-square" /></button>
-                <button type="button" class="w-icon-btn" title="Remove (Del)" @click.stop="remove(s)"><i class="fas fa-trash" /></button>
+                <button type="button" class="w-icon-btn" title="Rename (F2)" data-row-act="rename"><i class="fas fa-pen" /></button>
+                <button type="button" class="w-icon-btn" title="Copy strategy code (Ctrl + C)" data-row-act="copy"><i class="fas fa-share-square" /></button>
+                <button type="button" class="w-icon-btn" title="Remove (Del)" data-row-act="remove"><i class="fas fa-trash" /></button>
               </template>
               <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': config.selectedId === s.id }" :title="config.selectedId === s.id ? 'Open' : 'Open its tree'" data-atlas-open
-                @click.stop="config.selectedId = s.id"><i class="fas fa-chevron-right" /></button>
+                data-row-act="open"><i class="fas fa-chevron-right" /></button>
             </WRowActs>
           </template>
         </SavedTree>
@@ -457,6 +457,14 @@ function copyCode (list: AtlasStrategy[]) {
 async function codeFor (list: AtlasStrategy[], base = ''): Promise<string> {
   const { strategyCode } = await import('./strategy-code')
   return strategyCode(list.map(s => ({ ...s, regexes: regexesIn(regexFolderOf(s)).map(r => ({ name: r.name, text: r.text })) })), base)
+}
+
+// The row buttons (WRowActs), through SavedTree's one listener.
+function onRowAct (act: string, s: AtlasStrategy) {
+  if (act === 'rename') startEdit('strategy', String(s.id), 'rename')
+  else if (act === 'copy') copyCode([s])
+  else if (act === 'remove') remove(s)
+  else if (act === 'open') props.config.selectedId = s.id
 }
 
 function rowMenu (e: MouseEvent, s: AtlasStrategy) {

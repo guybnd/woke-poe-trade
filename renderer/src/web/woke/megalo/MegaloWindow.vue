@@ -96,6 +96,7 @@
 </template>
 
 <script setup lang="ts">
+import { nextNotableState } from './cycle'
 // The Megalomaniac searcher: reads your build's tags, scores every notable
 // Megalomaniac can roll, and searches trade for jewels with the ones you tick.
 import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
@@ -268,19 +269,15 @@ function setPick (name: string, change: NotablePick) {
   config.picks = { ...config.picks, [source.value.key]: mine }
 }
 function isOn (name: string): boolean { return isMust(name) || (picks.value[name]?.on ?? defaults.value.has(name)) }
-// Unticking a must-have drops the must too.
-function toggleOn (name: string) { setPick(name, isOn(name) ? { on: false, must: undefined } : { on: true }) }
 function isMust (name: string): boolean { return picks.value[name]?.must === true }
-function toggleMust (name: string) {
-  if (!isMust(name) && mustCount.value >= 3) { toast('Up to 3 must-haves: a Megalomaniac has 3 notables', { anchor: panel.value?.el }); return false }
-  setPick(name, isMust(name) ? { must: undefined } : { must: true, on: true })
-  return true
-}
-// One click for all three: off → Want → Must → off. With 3 musts already,
-// Want goes straight back to off (the toast says why).
+// One click for all three: off → Want → Must → off (cycle.ts). With 3 musts
+// already, Want goes straight back to off (the toast says why).
 function cycle (name: string) {
-  if (isMust(name) || !isOn(name)) toggleOn(name)
-  else if (!toggleMust(name)) toggleOn(name)
+  const { next, full } = nextNotableState(isMust(name) ? 'must' : isOn(name) ? 'want' : 'off', mustCount.value)
+  if (full) toast('Up to 3 must-haves: a Megalomaniac has 3 notables', { anchor: panel.value?.el })
+  if (next === 'off') setPick(name, { on: false, must: undefined })
+  else if (next === 'want') setPick(name, { on: true })
+  else setPick(name, { must: true, on: true })
 }
 function edited (name: string): boolean { return picks.value[name]?.weight != null }
 function weightOf (r: Scored): number { return picks.value[r.name]?.weight ?? r.weight }

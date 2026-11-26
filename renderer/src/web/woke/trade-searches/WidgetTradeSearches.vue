@@ -38,7 +38,7 @@
             <!-- The list (shared/SavedTree): nested folders that fold, drag, Ctrl /
                  Shift picks, Alt + arrows, F2. A click opens the search here. -->
             <SavedTree :tree="tree" list-id="trade-folders" :active-id="openId" :copy="copyLinks" :title-of="tooltip"
-              :folder-icon="path => iconSrc(folderIcon(config, path))" @item-menu="rowMenu" @folder-menu="folderMenu" @item-key="onEntryKey">
+              :folder-icon="path => iconSrc(folderIcon(config, path))" @item-act="onRowAct" @item-menu="rowMenu" @folder-menu="folderMenu" @item-key="onEntryKey">
               <template #item="{ item: entry }">
                 <i v-if="entry.pinned" class="fas fa-thumbtack w-accent text-xs" title="Pinned" />
                 <i v-if="isLiveSearch(entry.url)" class="fas fa-bolt w-accent" title="Live search" />
@@ -52,11 +52,11 @@
                 <!-- Open always on; the rest on hover (WRowActs, the same in every saved list). -->
                 <WRowActs>
                   <template #hover>
-                    <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': entry.pinned }" :title="entry.pinned ? 'Unpin (P)' : 'Pin to the top (P)'" @click.stop="togglePin(entry)"><i class="fas fa-thumbtack" /></button>
-                    <button type="button" class="w-icon-btn" title="Rename (F2)" @click.stop="tree.startEdit('item', String(entry.id), 'rename')"><i class="fas fa-pen" /></button>
-                    <button type="button" class="w-icon-btn" title="Remove (Del)" @click.stop="remove(entry)"><i class="fas fa-trash" /></button>
+                    <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': entry.pinned }" :title="entry.pinned ? 'Unpin (P)' : 'Pin to the top (P)'" data-row-act="pin"><i class="fas fa-thumbtack" /></button>
+                    <button type="button" class="w-icon-btn" title="Rename (F2)" data-row-act="rename"><i class="fas fa-pen" /></button>
+                    <button type="button" class="w-icon-btn" title="Remove (Del)" data-row-act="remove"><i class="fas fa-trash" /></button>
                   </template>
-                  <button @click.stop="open(entry, 'external')" class="w-icon-btn" title="Open in your browser">
+                  <button type="button" data-row-act="open" class="w-icon-btn" title="Open in your browser">
                     <i class="fas fa-external-link-alt" />
                   </button>
                 </WRowActs>
@@ -484,6 +484,14 @@ function removeMany (list: TradeSearchEntry[]) {
     anchor: panel.value?.el,
     undo: () => { props.config.entries = out.restore(props.config.entries, l => nextId([...l])); pushHostConfig() }
   })
+}
+
+// The row buttons (WRowActs), through SavedTree's one listener.
+function onRowAct (act: string, entry: TradeSearchEntry) {
+  if (act === 'pin') togglePin(entry)
+  else if (act === 'rename') tree.startEdit('item', String(entry.id), 'rename')
+  else if (act === 'remove') remove(entry)
+  else if (act === 'open') open(entry, 'external')
 }
 
 function rowMenu (e: MouseEvent, entry: TradeSearchEntry) {

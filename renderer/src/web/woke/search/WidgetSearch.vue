@@ -10,7 +10,7 @@
             <WPrice bulk :chaos="p.chaos" :divine="divine" />
           </button>
         </div>
-        <div :class="$style.find" data-widget-drag title="" @click="focusInput()">
+        <div :class="$style.find" data-widget-drag title="" @click="onFindClick">
           <i class="fas fa-search" />
           <input ref="input" v-model="query" :class="$style.input" spellcheck="false" aria-label="Search"
             :placeholder="placeholder" @keydown="onKey" @paste="onPaste" @input="noteTyped">
@@ -1631,6 +1631,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', catchTyping))
 // The foot's "Next time: Ctrl + Space from the game", for a palette found by
 // typing. It doesn't run out: it shows each time until × (Guy's tips review).
 const typedHint = useHint('search-from-game', { slot: false, shows: Infinity, when: () => openedByTyping.value && !!props.config.hotkey })
+// A click on the search bar around the box focuses it; one in the box itself is
+// left alone, so clicking mid-word or selecting text keeps the cursor there.
+function onFindClick (e: MouseEvent) {
+  if (e.target !== input.value) focusInput()
+}
+
 function focusInput (select = false) {
   nextTick(() => {
     const el = input.value

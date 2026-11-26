@@ -3,7 +3,7 @@
       <div :class="$style.wrap" data-qa="forbidden">
         <!-- Where the class comes from -->
         <div :class="$style.row">
-          <WBackLink v-if="shownClass" :to="config.source === 'class' ? config.pickClass : 'Yours'" mouse @back="shownClass = null" />
+          <WBackLink v-if="shownClass" :to="config.source === 'class' ? config.pickClass : 'Yours'" @back="shownClass = null" />
           <WSegmented v-model="config.source" :options="SOURCES" />
           <WSelect v-if="config.source === 'class' && !shownClass" :model-value="config.pickClass" @update:model-value="config.pickClass = $event as ClassName" :options="CLASS_OPTIONS" data-qa="forbidden-class" />
           <span v-else-if="shownClass" :class="$style.dim" data-qa="forbidden-class">{{ shownClass }}</span>

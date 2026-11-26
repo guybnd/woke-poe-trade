@@ -22,9 +22,13 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ (e: 'back'): void }>()
 
 const el = shallowRef<HTMLElement | null>(null)
-useMouseNav(() => props.mouse ? el.value?.closest('[id^="widget-"], [data-w-panel]') : null, {
-  back: () => { if (!props.disabled) emit('back') }
-})
+// Only with `mouse` (set once): each listener pair counts against the budget,
+// and a window whose own keys already take the back button leaves it off.
+if (props.mouse) {
+  useMouseNav(() => el.value?.closest('[id^="widget-"], [data-w-panel]'), {
+    back: () => { if (!props.disabled) emit('back') }
+  })
+}
 </script>
 
 <style>

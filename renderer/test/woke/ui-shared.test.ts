@@ -182,3 +182,16 @@ describe('settings switches (WToggle)', () => {
     expect(raw).toEqual([])
   })
 })
+
+describe('saved list row buttons (WRowActs in SavedTree)', () => {
+  // One listener in SavedTree for every row's buttons (item-act), not one per button.
+  it('use data-row-act, not a click handler per button', () => {
+    for (const f of ['atlas/AtlasWindow.vue', 'trade-searches/WidgetTradeSearches.vue', 'pob-builds/WidgetPobBuilds.vue']) {
+      const src = readFileSync(path.join(WOKE, f), 'utf8')
+      const acts = src.slice(src.indexOf('<WRowActs>'), src.indexOf('</WRowActs>'))
+      expect(acts, f).toContain('data-row-act=')
+      expect(acts, f).not.toMatch(/@click/)
+      expect(src, f).toMatch(/@item-act="onRowAct"/)
+    }
+  })
+})

@@ -68,6 +68,9 @@ const emit = defineEmits<{
   'open': [item: T]
   // A key on an item the list has its own use for (PoB builds: P pins).
   'item-key': [e: KeyboardEvent, item: T]
+  // A row button with data-row-act="<name>" (WRowActs' buttons): one listener
+  // here for every row's buttons, instead of one per button.
+  'item-act': [act: string, item: T]
 }>()
 
 const styles = useCssModule()
@@ -102,6 +105,11 @@ function onRow (e: Event, act: (row: TreeRow<T>) => void) {
 }
 function onClick (e: MouseEvent) {
   const row = rowOf(e)
+  const act = (e.target as Element).closest<HTMLElement>('[data-row-act]')?.dataset.rowAct
+  if (act) {
+    if (row?.kind === 'item') emit('item-act', act, row.item)
+    return
+  }
   if (row?.kind === 'folder') props.tree.toggleFolder(row.node.path)
   else if (row?.kind === 'item') props.tree.rowClick(e, row.item)
 }
