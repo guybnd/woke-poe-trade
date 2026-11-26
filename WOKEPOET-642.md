@@ -50,6 +50,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-26T11:22:40.238Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Done: follow-up cleanup PR 970
+      (https://github.com/guybnd/woke-poe-trade/pull/970, 19b198a): no filler
+      captions, unique groups remember open/folded, Related cards.
+    date: '2026-11-26T12:32:10.002Z'
+    selfAttested: true
+    id: c-2026-11-26t12-32-10-002z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/967'
 subtasks:
   - WOKEPOET-643
