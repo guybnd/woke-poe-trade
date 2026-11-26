@@ -18,6 +18,13 @@ export async function loadTimeline (runId: number): Promise<RunTimeline | null> 
   }
 }
 
+// For writing after: a file that is there but can't be read right now
+// throws, so the recorder never starts a new timeline over it.
+async function loadTimelineStrict (runId: number): Promise<RunTimeline | null> {
+  return asTimeline(await hostRequest('doc-get-strict', { collection: TIMELINE_COLLECTION, key: String(runId) }), runId)
+}
+const READ_RETRY_MS = 30_000
+
 function putTimeline (tl: RunTimeline): Promise<unknown> {
   return hostRequest('doc-put', { collection: TIMELINE_COLLECTION, key: String(tl.runId), value: tl })
 }
@@ -95,7 +102,9 @@ export function timelineRecorder () {
     if (cur) save(cur)
     const slot: Slot = { id, tl: null, queued: [], dirty: false, timer: null }
     cur = slot
-    loadTimeline(id).then(saved => {
+    // Kept trying while the run is the one recorded (a run left behind gives up).
+    const read = () => { loadTimelineStrict(id).then(ready, () => { if (slot === cur) setTimeout(read, READ_RETRY_MS) }) }
+    const ready = (saved: RunTimeline | null) => {
       const tl = slot.tl = saved ?? newTimeline(id)
       const changes = slot.queued ?? []
       slot.queued = null
@@ -106,7 +115,8 @@ export function timelineRecorder () {
       // A run that's no longer recorded is written now.
       if (slot === cur) saveSoon(slot)
       else { slot.dirty = true; save(slot) }
-    })
+    }
+    read()
     return slot
   }
 

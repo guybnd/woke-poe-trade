@@ -87,7 +87,7 @@ import { stashGains } from '../net-worth/gains'
 import type { StashGain } from '../net-worth/valuation'
 import { isSkippedArea } from './skip-areas'
 import type { MapRecord } from './map-log'
-import { DAY_MS_EXPORT, dayKey, readAllMaps, readMapDay, useNights } from './store'
+import { lastDays, readAllMaps, readMapDay, useNights } from './store'
 import { SESSION_STORY_TYPE } from './widget'
 import type { SessionStoryWidget } from './widget'
 const props = defineProps<{
@@ -116,7 +116,7 @@ watch(() => [props.range, on.value] as const, async ([range]) => {
   loading.value = true
   try {
     const got = range === '7d'
-      ? (await Promise.all(Array.from({ length: 8 }, (_, i) => readMapDay(dayKey(props.now - i * DAY_MS_EXPORT))))).flat()
+      ? (await Promise.all(lastDays(props.now, 8).map(k => readMapDay(k)))).flat()
           .sort((a, b) => b.enteredAt - a.enteredAt)
       : await readAllMaps()
     if (id !== readId) return
