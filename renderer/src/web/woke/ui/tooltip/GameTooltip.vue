@@ -414,6 +414,10 @@ const EDGE = 8
 // be taller than the screen: it shrinks to fit, never below 100%, so it can't
 // run off the bottom where nothing scrolls it.
 const fit = shallowRef(1)
+// Re-fits in a row: text can wrap differently at another zoom, so the sizes
+// may never settle. A few is enough (one, and one more after its content
+// loads); each new tip starts again.
+let fitPasses = 0
 function scale () {
   return (tip.value?.zoom ?? 1) * fit.value
 }
@@ -422,7 +426,8 @@ function fitScreen (t: { zoom: number }, r: DOMRect): boolean {
   const room = Math.min((window.innerHeight - 2 * EDGE) / (r.height / fit.value), (window.innerWidth - 2 * EDGE) / (r.width / fit.value))
   const floor = Math.min(1, 1 / t.zoom)
   const next = Math.max(floor, Math.min(1, room))
-  if (Math.abs(next - fit.value) < 0.001) return false
+  if (Math.abs(next - fit.value) < 0.001 || fitPasses >= 4) return false
+  fitPasses++
   fit.value = next
   return true
 }
@@ -488,6 +493,7 @@ function onPointer (e: MouseEvent) {
 watch(tip, async (t) => {
   placed.value = null
   fit.value = 1
+  fitPasses = 0
   if (!t) return
   await nextTick()
   if (!el.value) return
