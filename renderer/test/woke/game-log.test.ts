@@ -3,7 +3,7 @@
 // testing/fixtures/client-logs.
 import { beforeAll, describe, it, expect } from 'vitest'
 import { fixture } from '../helpers/game-data'
-import { parseLogLine, actFromAreaId, isTown } from '@/web/woke/campaign/log-parse'
+import { parseLogLine, actFromAreaId, isTown, isTownLike } from '@/web/woke/campaign/log-parse'
 import { pickStage } from '@/web/woke/pob-builds/build-model'
 import { gemData, gemsReady } from '@/web/woke/pob-builds/gems'
 import { bundledRoute, routeData } from '@/web/woke/campaign/route-data'
@@ -44,6 +44,8 @@ describe('Client.txt lines', () => {
     expect(actFromAreaId('2_6_town')).toBe(6)
     expect(actFromAreaId('MapWorldsStrand')).toBeNull()
     expect(isTown('1_1_town')).toBe(true)
+    expect(isTownLike('KalguuranSettlersLeague')).toBe(true)
+    expect(isTownLike('MapWorldsStrand')).toBe(false)
     expect(pickStage([{ title: 'Level 12', isActive: false }, { title: 'Level 30', isActive: true }], 20, null)?.item.title).toBe('Level 12')
   })
 })

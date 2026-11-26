@@ -189,12 +189,12 @@ describe('league mechanics', () => {
     expect(empty).toEqual([])
   })
 
-  it('safehouse scarab rewards name scarabs that exist', () => {
-    const scarabs = [...names].filter(n => / Scarab\b/.test(n))
-    const missing = Object.values(REWARDS).flat()
-      .map(r => /^(.+) Scarabs$/.exec(r)?.[1])
-      .filter((family): family is string => !!family && !scarabs.some(n => n.startsWith(`${family} Scarab`)))
+  it('safehouse ember rewards name embers that exist', () => {
+    const embers = Object.values(REWARDS).flat().filter(r => /^Embers /.test(r))
+    expect(embers.length).toBeGreaterThan(5)
+    const missing = embers.filter(r => !names.has(r.replace(/^Embers /, 'Allflame Ember ')))
     expect(missing).toEqual([])
+    expect(Object.values(REWARDS).flat().filter(r => /scarab/i.test(r))).toEqual([])
   })
 
   it('prices a replica unique as it drops, not its 6-link listing', () => {
