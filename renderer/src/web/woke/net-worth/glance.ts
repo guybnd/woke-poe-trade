@@ -39,7 +39,9 @@ export interface Glance {
   // Ctrl+Space. Missing in older glances.
   selling?: GlanceSell[]
 }
-export interface GlanceSell { name: string, count: number, chaos: number, d1: number, d7: number, lostChaos: number }
+// `tip`: the game's name when the row's differs ("Empower Support 4/20"), for the
+// item tooltip.
+export interface GlanceSell { name: string, count: number, chaos: number, d1: number, d7: number, lostChaos: number, tip?: string }
 
 export const DOCS = 'net-worth'
 export const glanceKey = (league: string) => `${league}-glance`

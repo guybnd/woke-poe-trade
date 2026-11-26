@@ -1,5 +1,5 @@
 // Net worth profit per hour of play, from the last stash read's saved glance.
-import { formatDuration } from '../../ui/format'
+import { formatAmount, formatDuration } from '../../ui/format'
 import { NET_WORTH_TYPE } from '../../net-worth/widget'
 import type { Glance, GlanceRate, GlanceRates } from '../../net-worth/glance'
 import type { Lookup, LookupRow } from './types'
@@ -72,15 +72,16 @@ function wantsSelling (query: string): boolean {
   return q.length >= 4 && SELL_WORDS.some(p => p.startsWith(q) && q.length >= Math.min(p.split(' ')[0].length, p.length))
 }
 
+const lostText = (chaos: number, divine: number | null) => divine && chaos >= divine ? `${(chaos / divine).toFixed(1)} div` : `${Math.round(chaos)} chaos`
 const pct = (c: number) => `${c > 0 ? '+' : c < 0 ? '−' : ''}${Math.abs(Math.round(c * 100))}%`
 
 // Net worth's Worth selling list, from the last read's saved glance.
 export function worthSellingLookup (glance: Glance | null): Lookup {
-  return (query) => {
+  return (query, ctx) => {
     if (!glance || !wantsSelling(query)) return []
     const list = glance.selling
     if (!list) return []
-    const rows: LookupRow[] = list.map(s => ({ label: `${s.count > 1 ? `${s.count} × ` : ''}${s.name}`, item: { name: s.name }, note: `${pct(s.d1)} · 7d ${pct(s.d7)}`, chaos: s.chaos }))
+    const rows: LookupRow[] = list.map(s => ({ label: `${s.count > 1 ? `${formatAmount(s.count)} × ` : ''}${s.name}`, item: { name: s.tip ?? s.name }, note: `${pct(s.d1)} · 7d ${pct(s.d7)}`, chaos: s.chaos }))
     const lost = list.reduce((n, s) => n + s.lostChaos, 0)
     return [{
       id: 'answer:net-worth-selling',
@@ -89,7 +90,7 @@ export function worthSellingLookup (glance: Glance | null): Lookup {
       sub: 'Net worth, from the last stash read',
       icon: 'fas fa-arrow-trend-down',
       sections: list.length
-        ? [{ rows }, { text: [`Worth ${Math.round(lost)} chaos more a week ago. Down 5% today and 15% over 7 days (or 20% today), 1 div or more held. Thin markets and your own prices left out.`] }]
+        ? [{ rows }, { text: [`Worth ${lostText(lost, glance.divine ?? ctx.divine)} more a week ago. Down 5% today and 15% over 7 days (or 20% today), 1 div or more held. Thin markets and your own prices left out.`] }]
         : [{ text: ['Down 5% today and 15% over 7 days (or 20% today), 1 div or more held. Thin markets and your own prices left out.'] }],
       actions: [{ label: 'Open Net worth', tool: NET_WORTH_TYPE }]
     }]

@@ -16,10 +16,9 @@ import { classify, resolveSpends } from './spend'
 import type { SpendMark } from './spend'
 import { addPoint, keepDiff, sellMinChaos, topChanges, valueByTab, worthSelling } from './ledger'
 import { glanceKey, glanceRates, ledgerKey } from './glance'
-import type { GlanceSell } from './glance'
 import { keptSales, listedGlance, listedTotal, listedWorth } from './pending-glance'
 import { lineOutDoc, loadLineOut, outIdsOf } from './line-out-store'
-import type { Glance } from './glance'
+import type { Glance, GlanceSell } from './glance'
 import type { LedgerPoint, TabValue } from './ledger'
 import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, StashTabLike, Valuation } from './valuation'
 import type { ReaderStatus } from './widget'
@@ -291,17 +290,36 @@ function listedNow (id: string): { listed?: number } {
 
 function glanceAt (id: string, at: number, chaos: number, netChaos: number | null, todayChaos: number | null): Glance {
   const rates = ratesAt(at)
-  const g: Glance = { league: id, at, chaos, netChaos, divine: divine.value, perHourChaos: rates.today.perHour, rates: glanceRates(rates), todayChaos, selling: sellingNow() }
+  const g: Glance = { league: id, at, chaos, netChaos, divine: divine.value, perHourChaos: rates.today.perHour, rates: glanceRates(rates), todayChaos, selling: sellingNow(id) }
   glance.value = g
   return g
 }
 
 // What Ctrl+Space lists as worth selling: the window's own list, a few rows.
-function sellingNow (): GlanceSell[] {
+// With no valuation (prices not loaded yet), the last saved list stays.
+function sellingNow (id: string): GlanceSell[] | undefined {
   const v = valuation.value
-  if (!v) return []
-  return worthSelling(v.lines, sellMinChaos(divine.value)).slice(0, 8).map(x => ({ name: x.name, count: x.count, chaos: x.chaos, d1: x.d1, d7: x.d7, lostChaos: x.lostChaos }))
+  const kept = glance.value?.league === id ? glance.value.selling : undefined
+  if (!v) return kept
+  const byKey = new Map(v.lines.map(l => [l.key, l]))
+  return worthSelling(v.lines, sellMinChaos(divine.value)).slice(0, 8).map(x => {
+    const l = byKey.get(x.key)
+    const tip = l?.tipName && l.tipName !== x.name ? { tip: l.tipName } : {}
+    return { name: x.name, count: x.count, chaos: x.chaos, d1: x.d1, d7: x.d7, lostChaos: x.lostChaos, ...tip }
+  })
 }
+
+// New prices, or your own price or leave out on an item: the saved list
+// follows now instead of at the next read.
+watch([() => ninja.updatedAt.value, prefs], () => {
+  const last = glance.value
+  if (!last || last.league !== loadedFor || !valuation.value) return
+  const selling = sellingNow(last.league)
+  if (JSON.stringify(selling) === JSON.stringify(last.selling)) return
+  const saved = { ...last, selling }
+  glance.value = saved
+  hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(last.league), value: saved }).catch(() => {})
+})
 
 // The Per hour choice changed (shared/rate-time.ts): the saved dock number
 // and Ctrl+Space's answer follow now instead of at the next read.

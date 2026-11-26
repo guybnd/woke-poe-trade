@@ -650,6 +650,10 @@
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/loot-filter/"
   ],
-  "window-menu-hide.spec.ts": []
+  "window-menu-hide.spec.ts": [],
+  "worth-selling.spec.ts": [
+   "renderer/src/web/woke/net-worth/",
+   "renderer/src/web/woke/search/lookups/net-worth.ts"
+  ]
  }
 }

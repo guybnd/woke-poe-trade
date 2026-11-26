@@ -308,7 +308,8 @@ export function worthSelling (lines: ReadonlyArray<Pick<ValuedLine, 'key' | 'nam
   for (const l of lines) {
     if (l.state || l.mine || l.heldSince != null || l.heldKind || !(l.chaos >= minChaos) || !(l.chaos > 0)) continue
     const g = l.graph ?? []
-    if (g.length < 7 || g.filter(v => v == null).length >= SELL_THIN_GAPS) continue
+    // Today's change needs both of the last two days priced, or it spans more.
+    if (g.length < 7 || g.filter(v => v == null).length >= SELL_THIN_GAPS || g[g.length - 2] == null) continue
     const d1 = change24h(g)
     const d7 = change7d(g)
     if (d1 == null || d7 == null) continue
