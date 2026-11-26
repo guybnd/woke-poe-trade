@@ -10,7 +10,7 @@
             <WPrice bulk :chaos="p.chaos" :divine="divine" />
           </button>
         </div>
-        <div :class="$style.find" data-widget-drag title="" @click="focusInput">
+        <div :class="$style.find" data-widget-drag title="" @click="focusInput()">
           <i class="fas fa-search" />
           <input ref="input" v-model="query" :class="$style.input" spellcheck="false" aria-label="Search"
             :placeholder="placeholder" @keydown="onKey" @paste="onPaste" @input="noteTyped">
