@@ -200,7 +200,7 @@ import { onStepChange } from './step-bus'
 import type { StepChange } from './step-bus'
 import { deleteTimelines, timelineRecorder } from './run-timeline-store'
 import {
-  applyBossSpeech, applyRunEvent, comparisonRun, endRun, formatDelta, headlineDelta, isComplete,
+  applyBossSpeech, applyRunEvent, gameRestarted, LOG_OPENING, comparisonRun, endRun, formatDelta, headlineDelta, isComplete,
   migrateRunTimer, parseHotkeyTarget, pauseRun, personalBest, resumeRun, runElapsed, runTotal, splitRows, startRun, sumOfBest, townElapsed
 } from './run-timer'
 import { CAMPAIGN_TYPE } from './widget'
@@ -345,6 +345,7 @@ function start () {
 function togglePause () {
   const r = props.config.run
   if (!r) return
+  r.pausedByClose = false
   if (r.runningSince != null) pauseRun(r, Date.now())
   else resumeRun(r, Date.now())
   now.value = Date.now()
@@ -400,7 +401,11 @@ function recordLine (ev: LogEvent | null, line: string, at: number, prevLevel: n
 function applyLines (lines: LogLine[]) {
   setTimeout(applyStepChanges, 0)
   let changed = false
+  let lastAt = props.config.lastLogAt ?? null
   for (const { ev, at, line } of lines) {
+    const prevAt = lastAt
+    lastAt = at
+    if (!ev && line.includes(LOG_OPENING) && gameRestarted(props.config, prevAt)) { changed = true; continue }
     const before = props.config.run
     const prevId = before?.id
     const prevLevel = before?.level ?? null

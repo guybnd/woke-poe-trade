@@ -24,7 +24,7 @@ import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, Stash
 import type { ReaderStatus } from './widget'
 import { markReadSeen, recordRunRead } from './run-store'
 import { kitPrice } from './run-kit'
-import { emptyMarks, feedMarks, playRates, startOfDay, trimMarks, RATE_WINDOWS } from './play-time'
+import { emptyMarks, feedMarks, marksUntil, playRates, startOfDay, trimMarks, RATE_WINDOWS } from './play-time'
 import type { PlayMarks, PlayRates } from './play-time'
 import { countsHub, countsOff } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
@@ -142,7 +142,7 @@ export function ratesAt (now: number, time: RateTime = rateTime()): PlayRates {
   // A purchase adds at most 0 (spend.ts).
   const points = ledgerRef.value.points.map(p => ({ at: p.at, netChaos: p.netChaos == null ? null : p.counted ?? p.netChaos }))
   const at = Math.max(now, points[points.length - 1]?.at ?? 0)
-  return playRates(points, marks.value.marks, at, marksFromLog.value, countsHub(time), marks.value.maps, countsOff(time))
+  return playRates(points, marksUntil(marks.value, at), at, marksFromLog.value, countsHub(time), marks.value.maps, countsOff(time))
 }
 
 export const lastDiff = computed(() => history.value.lastDiff)
