@@ -7,7 +7,7 @@
     <div class="flex gap-2 min-h-0 items-start">
       <WPanel ref="panel" :keys="LIST_KEYS" :title="config.wmTitle || 'PoB builds'" icon="wisdom" :busy="loading && builds.length > 0" width="20rem" max-height="70vh">
         <template #actions>
-          <button @click="importOpen = !importOpen" class="w-icon-btn" :class="{ 'w-icon-btn--on': importOpen }" title="Import a pobb.in / pastebin link or PoB code">
+          <button @click="importOpen = !importOpen" class="w-icon-btn" :class="{ 'w-icon-btn--on': importOpen }" title="Import a build link (pobb.in, poe.ninja, maxroll…) or PoB code">
             <i class="fas fa-file-import" />
           </button>
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': config.sortBy === 'manual' }" :title="config.sortBy === 'manual' ? 'Sort: My order. Click for latest save first' : 'Sort: latest save first. Click for My order'"
@@ -18,7 +18,7 @@
         </template>
         <template #toolbar>
           <div v-if="importOpen" class="flex gap-1 w-full">
-            <WField v-model="importText" icon="fas fa-link" placeholder="pobb.in link, pastebin link or PoB code" class="grow" @keydown.enter="doImport" />
+            <WField v-model="importText" icon="fas fa-link" placeholder="Build link (pobb.in, poe.ninja, maxroll…) or PoB code" class="grow" @keydown.enter="doImport" />
             <WButton size="sm" variant="primary" :disabled="importing || !importText.trim()" @click="doImport">{{ importing ? '…' : 'Import' }}</WButton>
           </div>
           <WField v-else v-model="filter" icon="fas fa-search" placeholder="Filter by name, class, skill, folder…" class="grow" />
@@ -56,7 +56,7 @@
           <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
         </WEmpty>
         <WEmpty v-else-if="!loading && !shown.length && !error" icon="fas fa-folder-open">
-          No builds in {{ dir || 'the builds folder' }}. Save one in Path of Building, or import a pobb.in link with the button above.
+          No builds in {{ dir || 'the builds folder' }}. Save one in Path of Building, or import a build link with the button above.
           <template #actions><WButton size="sm" @click="importOpen = true">Import a build</WButton></template>
         </WEmpty>
       </WPanel>

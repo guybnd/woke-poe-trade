@@ -106,8 +106,31 @@ export function saleColour (frameType: number): string {
   }
 }
 
+// The divine rate on the day of a sale (chaos per divine); null: not known.
+export type DivineOn = (at: number) => number | null
+// Carried on Rates under a symbol, so currency ids stay a plain record.
+export const DIVINE_ON: unique symbol = Symbol('divineOn')
+
 // Chaos per currency id (trade ids: chaos, divine, exalted...). chaos is 1.
-export type Rates = Record<string, number>
+// With DIVINE_ON, a sale in divines uses the rate of its own day.
+export type Rates = Record<string, number> & { [DIVINE_ON]?: DivineOn }
+
+// Within this long of a saved day's read, that day's rate stands for the sale.
+const DAY_RATE_MS = 36 * 3_600_000
+
+// The rate saved nearest a sale's time (Net worth saves one a day it reads
+// your stash), if one is close enough.
+export function divineOnFrom (days: Record<string, { at: number, divine: number | null }>): DivineOn {
+  const saved = Object.values(days).filter(d => d.divine != null && d.divine > 0)
+  return at => {
+    let best: { gap: number, divine: number } | null = null
+    for (const d of saved) {
+      const gap = Math.abs(d.at - at)
+      if (gap <= DAY_RATE_MS && (!best || gap < best.gap)) best = { gap, divine: d.divine! }
+    }
+    return best?.divine ?? null
+  }
+}
 
 // Trade currency ids valued through poe.ninja, besides chaos and divine.
 export const NINJA_CURRENCY: Record<string, string> = {
@@ -122,9 +145,14 @@ export const NINJA_CURRENCY: Record<string, string> = {
   mirror: 'Mirror of Kalandra'
 }
 
-export function saleChaos (s: Pick<Sale, 'price'>, rates: Rates): number | null {
+export function saleChaos (s: Pick<Sale, 'price'> & { at?: number }, rates: Rates): number | null {
   const { amount, currency } = s.price
   if (currency === 'chaos') return amount
+  const on = rates[DIVINE_ON]
+  if (currency === 'divine' && on && s.at != null) {
+    const then = on(s.at)
+    if (then) return amount * then
+  }
   const r = rates[currency]
   return r ? amount * r : null
 }

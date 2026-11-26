@@ -10,6 +10,7 @@ import { FilterTag } from '@/web/price-check/filters/interfaces'
 import { loadModTiers, tierClassKey, tierLadder } from '@/web/woke/ui/tooltip/mod-tiers'
 import { onSharedDataChange } from '@/web/woke/app/live-data'
 import { boundAt, isHybrid, shareScale } from './pseudo-split'
+import { MAX_SEARCH_LENGTH } from '../shared/library'
 import type { MenuEntry } from '@/web/woke/ui/layer'
 import type { LadderStep, TierData } from '@/web/woke/ui/tooltip/mod-tiers'
 import type { TipBase } from '@/web/woke/ui/tooltip/tip-content'
@@ -90,11 +91,13 @@ export function looseBound (f: StatFilter): number | null {
 }
 
 /** Text for the game's stash search box that finds items with this mod: the
- *  longest run of words in the mod text, quoted, within the box's 50 characters. */
+ *  longest run of words in the mod text, quoted, within the box's limit
+ *  (250 characters, shared/library.ts). */
 export function stashSearch (text: string): string | null {
   const runs = text.split(/[#\d.+\-%()]+/).map(s => s.trim().replace(/\s+/g, ' ')).filter(s => /[a-z]/i.test(s))
   if (!runs.length) return null
   let best = runs.reduce((a, b) => (b.length > a.length ? b : a)).toLowerCase()
-  if (best.length > 48) best = best.slice(0, 48).replace(/\s+\S*$/, '')
+  const room = MAX_SEARCH_LENGTH - 2
+  if (best.length > room) best = best.slice(0, room).replace(/\s+\S*$/, '')
   return `"${best}"`
 }

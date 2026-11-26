@@ -5,7 +5,7 @@ import zlib from 'zlib'
 import { spawn } from 'child_process'
 import { app, shell } from 'electron'
 import { parseBuild, summarize } from './pob-parse'
-import { findPobExe, pointPobAtBuild } from './pob-launch'
+import { findPobExe, pobSettingsPath, pointPobAtBuild } from './pob-launch'
 import type { PobDetails, PobSummary } from './pob-parse'
 
 const MAX_BUILDS = 1000
@@ -19,9 +19,35 @@ export interface PobBuildEntry extends PobSummary {
   mtime: number
 }
 
+// PoB's own builds folder, read when the list loads (readPobBuildsDir).
+let pobBuildsDir: string | null = null
+
 export function defaultBuildsDir (): string {
   // Both PoB Community and the original PoB use this folder by default.
-  return path.join(app.getPath('documents'), 'Path of Building', 'Builds')
+  return pobBuildsDir ?? path.join(app.getPath('documents'), 'Path of Building', 'Builds')
+}
+
+const XML_ENTITIES: Record<string, string> = { amp: '&', quot: '"', apos: "'", lt: '<', gt: '>' }
+
+// The "Build save path" set in PoB's options: Settings.xml's <Misc buildPath>.
+// PoB's Main.lua uses it in place of the default folder when it's set.
+export function buildPathFromSettings (settingsXml: string | null): string | null {
+  const misc = settingsXml ? /<Misc\b[^>]*>/.exec(settingsXml)?.[0] : undefined
+  const m = misc ? /\sbuildPath="([^"]*)"/.exec(misc) : null
+  const value = m?.[1].replace(/&(amp|quot|apos|lt|gt);/g, (_, e: string) => XML_ENTITIES[e]).trim()
+  return value || null
+}
+
+// Where PoB keeps builds: its Build save path, else Builds in its user folder
+// (Documents\Path of Building, or next to a portable copy's exe). null: PoB
+// not found.
+async function readPobBuildsDir (): Promise<string | null> {
+  const exe = await findPobExe().catch(() => null)
+  if (!exe) return null
+  const settings = await pobSettingsPath(exe)
+  let xml: string | null = null
+  try { xml = await fs.readFile(settings, 'utf8') } catch {}
+  return buildPathFromSettings(xml) ?? path.join(path.dirname(settings), 'Builds')
 }
 
 function resolveDir (dir: unknown): string {
@@ -80,6 +106,8 @@ async function walk (root: string, rel: string, depth: number, out: PobBuildEntr
 }
 
 export async function listBuilds (args: { dir?: string }): Promise<{ dir: string, builds: PobBuildEntry[] }> {
+  // No folder picked: follow PoB's own setting, read again each list.
+  if (!(typeof args?.dir === 'string' && args.dir.trim())) pobBuildsDir = await readPobBuildsDir().catch(() => null)
   const dir = resolveDir(args?.dir)
   // Once per folder after start: a folder move the app didn't finish.
   const root = path.resolve(dir)
@@ -123,12 +151,19 @@ export async function openBuild (args: { dir?: string, relPath: string, pobExe?:
   child.unref()
 }
 
-// Import a shared build: a pobb.in or pastebin link, or a raw PoB code.
-// The code is base64url(zlib(xml)); it's decoded here and written into the
-// builds folder so PoB sees it too.
-const LINK_RULES: Array<{ re: RegExp, raw: (id: string) => string }> = [
-  { re: /^https?:\/\/(?:www\.)?pobb\.in\/(?:u\/[^/]+\/)?([\w-]+)\/?$/i, raw: id => `https://pobb.in/${id}/raw` },
-  { re: /^https?:\/\/(?:www\.)?pastebin\.com\/(?:raw\/)?(\w+)\/?$/i, raw: id => `https://pastebin.com/raw/${id}` }
+// Import a shared build: a link from any site PoB itself imports from, or a
+// raw PoB code. The code is base64url(zlib(xml)); it's decoded here and
+// written into the builds folder so PoB sees it too. Sites and download
+// addresses are PoB Community's (src/Modules/BuildSiteTools.lua).
+export const LINK_RULES: Array<{ re: RegExp, raw: (id: string) => string }> = [
+  { re: /^https?:\/\/(?:www\.)?pobb\.in\/(?:u\/[^/]+\/)?([\w-]+)\/?$/i, raw: id => `https://pobb.in/pob/${id}` },
+  { re: /^https?:\/\/(?:www\.)?pastebin\.com\/(?:raw\/)?(\w+)\/?$/i, raw: id => `https://pastebin.com/raw/${id}` },
+  { re: /^https?:\/\/(?:www\.)?pastebinp\.com\/(?:raw\/)?(\w+)\/?$/i, raw: id => `https://pastebinp.com/raw/${id}` },
+  { re: /^https?:\/\/(?:www\.)?maxroll\.gg\/poe\/pob\/([\w-]+)\/?$/i, raw: id => `https://maxroll.gg/poe/api/pob/${id}` },
+  { re: /^https?:\/\/(?:www\.)?pob\.codes\/b\/([\w-]+)\/?(?:\?.*)?$/i, raw: id => `https://api.pob.codes/${id}/raw` },
+  { re: /^https?:\/\/(?:www\.)?poe\.ninja\/(?:poe1\/)?pob\/(\w+)\/?$/i, raw: id => `https://poe.ninja/poe1/pob/raw/${id}` },
+  { re: /^https?:\/\/(?:www\.)?rentry\.co\/(\w+)\/?$/i, raw: id => `https://rentry.co/paste/${id}/raw` },
+  { re: /^https?:\/\/(?:www\.)?poedb\.tw\/pob\/([\w-]+)\/?$/i, raw: id => `https://poedb.tw/pob/${id}/raw` }
 ]
 
 export function decodePobCode (code: string): string {
@@ -150,7 +185,7 @@ async function fetchCode (input: string): Promise<string> {
     if (!res.ok) throw new Error(`Couldn't download the build (${res.status})`)
     return await res.text()
   }
-  if (/^https?:\/\//i.test(text)) throw new Error('Only pobb.in and pastebin links are supported; paste the code instead')
+  if (/^https?:\/\//i.test(text)) throw new Error('That site isn\'t one PoB imports from (pobb.in, poe.ninja, maxroll, pob.codes, pastebin, rentry, poedb); paste the code instead')
   return text
 }
 
@@ -171,7 +206,7 @@ function samePath (a: string, b: string): boolean {
 }
 
 export async function importBuild (args: { dir?: string, input: string, name?: string }): Promise<{ relPath: string }> {
-  if (typeof args?.input !== 'string' || !args.input.trim()) throw new Error('Paste a pobb.in link, a pastebin link or a PoB code')
+  if (typeof args?.input !== 'string' || !args.input.trim()) throw new Error('Paste a build link (pobb.in, poe.ninja, maxroll…) or a PoB code')
   const xml = decodePobCode(await fetchCode(args.input))
   const root = path.resolve(resolveDir(args?.dir))
   const sum = summarize(parseBuild(xml))
