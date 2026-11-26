@@ -304,3 +304,4 @@
 - Housekeeping: unused code, styles and two unused packages are gone, and the expired What's new lines nothing needs are taken out. Nothing works differently.
 - Atlas strategies: a strategy shows what your Net worth runs of the same name earned, per hour (under your Per hour setting) and per map, and "Earnings per hour" sorts by it. It used to read the Farming window's sessions.
 - Farming, League investments and the Wealthy Exile window are gone for good. Net worth runs and Session analytics cover what Farming did. The download is 2 MB smaller.
+- Loot filter, Base types › Base ranks: drag a base onto another column (Build, Rank 1-3, Unranked, Never) to move it. Drag a picked base and all the picked ones move together; the column under the pointer lights up, and Exotic, which only NeverSink fills, stays shut. Dragging out of Build takes the base out of your build too. The pick bar buttons still work.

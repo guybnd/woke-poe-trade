@@ -422,6 +422,7 @@ import PricesTab from './PricesTab.vue'
 import PreviewTab from './PreviewTab.vue'
 import PresetsTab from './PresetsTab.vue'
 import GearTab from './GearTab.vue'
+import { gearRanksAsk, takeRanksAsk } from './gear-drag'
 import { GEAR_TYPE } from './gear'
 import LookStrip from './LookStrip.vue'
 import { ownActions } from './look'
@@ -491,6 +492,7 @@ function onSearchPaste (e: ClipboardEvent) {
 }
 
 const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
+watch(gearRanksAsk, () => { if (takeRanksAsk('tab')) tab.value = 'gear' }, { immediate: true })
 const search = ref('')
 const selType = ref<string | null>(null)
 const selTier = ref<string | null>(null)

@@ -1251,3 +1251,44 @@ test('profiles: copy the filter as a named profile that saves to its own file, a
   await expect(first).toHaveAttribute('aria-selected', 'true', { timeout: 20_000 })
   await expect.poll(() => fs.existsSync(path.join(folder, 'NeverSink (woke).filter')), { timeout: 20_000 }).toBe(true)
 })
+
+test('Base ranks: drag a base, then the picked set, onto another column', async ({ overlay, fakeApp }) => {
+  // A real NeverSink file: the sample has no gear ranks.
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', '1-REGULAR.filter.gz'))))
+  await overlay.boot({ widgets: [lootFilter(folder)] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await page.getByRole('tab', { name: /^Base types/ }).click()
+  await page.getByRole('tab', { name: /Base ranks/ }).click()
+  const lane = (key: string) => page.locator(`[data-lane="${key}"]`)
+  const cards = (key: string) => lane(key).locator('button[draggable="true"]')
+  const nameOf = async (key: string, i: number) => (await cards(key).nth(i).getAttribute('aria-label'))!.split(' · ')[0]
+  const card = (key: string, name: string) => lane(key).getByRole('button', { name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} ·`) })
+
+  // One card, no pick: Unranked to Rank 1.
+  const one = await nameOf('none', 0)
+  await cards('none').first().dragTo(lane('r1'), { targetPosition: { x: 40, y: 12 } })
+  await expect(card('r1', one)).toBeVisible()
+  await expect(card('none', one)).toHaveCount(0)
+
+  // Two picked: dragging either moves both to Never.
+  const a = await nameOf('r2', 0)
+  const b = await nameOf('r2', 1)
+  await cards('r2').nth(0).click()
+  await cards('r2').nth(1).click()
+  await expect(page.getByText('2 picked')).toBeVisible()
+  await overlay.snap('two bases picked, ready to drag')
+  // By hand, to see the columns light up mid-drag.
+  await cards('r2').nth(1).hover()
+  await page.mouse.down()
+  const to = (await lane('never').boundingBox())!
+  await page.mouse.move(to.x + 40, to.y + 12, { steps: 8 })
+  await page.mouse.move(to.x + 44, to.y + 14)
+  await expect(lane('never')).toHaveClass(/laneOver/)
+  await overlay.snap('dragging two bases over Never')
+  await page.mouse.up()
+  for (const n of [a, b]) await expect(card('never', n)).toBeVisible()
+  await expect(page.getByText('2 picked')).toHaveCount(0)
+  await overlay.snap('dragged to Never')
+})

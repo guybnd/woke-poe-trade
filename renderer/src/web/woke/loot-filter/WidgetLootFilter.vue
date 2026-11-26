@@ -87,6 +87,7 @@ import type { Notice } from './notices'
 import SampleCard from './SampleCard.vue'
 import FilterEditor from './FilterEditor.vue'
 import { useGoto } from '../tab-bar/goto'
+import { askGearRanks } from './gear-drag'
 import { useLootFilter } from './store'
 import { isValidEdit } from './edits'
 import { cleanEdit, setFilterApplier } from '../claude-link/suggestions'
@@ -175,7 +176,7 @@ if (props.config.sourceName || props.config.neversink.on || props.config.wmWants
 // What's new's Show me: the editor, with its profile chip.
 useGoto(props.config, 'woke-loot-filter', {
   editor: () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}) },
-  spots: { profiles: () => {} }
+  spots: { 'profiles': () => {}, 'gear-ranks': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); askGearRanks() } }
 })
 
 // A change Claude suggested, applied from the Suggestions card: added like an
