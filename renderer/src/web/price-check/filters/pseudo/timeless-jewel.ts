@@ -9,16 +9,20 @@ import type { ItemCategory } from '@/parser'
 
 // A family entry can name a ref the stat data no longer has: Glorious
 // Vanity's "Mazcotl" was renamed Ahuana, and the data keeps the old name in
-// the family while the Ahuana line only lists it as a matcher. Look the old
-// name up by its text instead of failing the whole price check.
-function resolveFamilyStat (ref: string, modType: ModifierType, category: ItemCategory | undefined): Stat | undefined {
+// the family while the Ahuana line isn't in it. A missing ref stands for the
+// lines that share the family but aren't named in it (matched by the family,
+// not by text, so it works in every language) instead of failing the check.
+function resolveFamilyStats (ref: string, family: readonly string[], modType: ModifierType, category: ItemCategory | undefined): Stat[] {
   const byRef = tryFindAndResolveByRef(ref, modType, category)
-  if (byRef) return byRef
+  if (byRef) return [byRef]
+  const key = JSON.stringify(family)
+  const found: Stat[] = []
   for (const stat of STATS_ITERATOR(ref)) {
     if (!(modType in stat.trade.ids)) continue
-    if (stat.matchers.some(m => m.string === ref || m.string.startsWith(`${ref}\n`))) return stat
+    if (stat.modFamily == null || JSON.stringify(stat.modFamily) !== key) continue
+    if (!family.includes(stat.ref)) found.push(stat)
   }
-  return undefined
+  return found
 }
 
 export function filterTimelessJewelKeystones (ctx: FiltersCreationContext) {
@@ -39,26 +43,26 @@ export function filterTimelessJewelKeystones (ctx: FiltersCreationContext) {
     ? treeSeedStat.stat.modFamily!
     : [treeSeedStat.stat.ref, ...treeSeedStat.stat.modFamily!]
   for (const familyStatRef of family) {
-    let calc: StatCalculated = treeSeedStat
     if (familyStatRef !== treeSeedStat.stat.ref) {
-      const familyStat = resolveFamilyStat(familyStatRef, treeSeedStat.type, ctx.item.category)
-      if (!familyStat || seen.has(familyStat.ref)) continue
-      seen.add(familyStat.ref)
-      calc = sumStatsByModType([{
-        info: treeSeedStat.sources[0].modifier.info,
-        stats: [{
-          stat: familyStat,
-          translation: familyStat.matchers[0],
-          roll: calc.sources[0].stat.roll
-        }]
-      }])[0]
+      for (const familyStat of resolveFamilyStats(familyStatRef, treeSeedStat.stat.modFamily!, treeSeedStat.type, ctx.item.category)) {
+        if (seen.has(familyStat.ref)) continue
+        seen.add(familyStat.ref)
+        const calc: StatCalculated = sumStatsByModType([{
+          info: treeSeedStat.sources[0].modifier.info,
+          stats: [{
+            stat: familyStat,
+            translation: familyStat.matchers[0],
+            roll: treeSeedStat.sources[0].stat.roll
+          }]
+        }])[0]
+        const filter = calculatedStatToFilter(calc, ctx.searchInRange, ctx.item)
+        filter.tag = FilterTag.Pseudo
+        filter.disabled = true
+        group.stats.push(filter)
+      }
+      continue
     }
-    const filter = calculatedStatToFilter(calc, ctx.searchInRange, ctx.item)
-    if (calc !== treeSeedStat) {
-      filter.tag = FilterTag.Pseudo
-      filter.disabled = true
-    }
-    group.stats.push(filter)
+    group.stats.push(calculatedStatToFilter(treeSeedStat, ctx.searchInRange, ctx.item))
   }
 
   ctx.statsByType = ctx.statsByType.filter(stat => stat !== treeSeedStat)
