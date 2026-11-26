@@ -69,9 +69,9 @@
           <RunRow v-for="r in madeRows" :key="'m' + r.key" data-run-made :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, r.net)" :count="tallyCount(r)" :chaos="madeVal(r)" sign="+" :sub="isEdited(rowKey.tally(r.key)) ? undefined : 'set price'" :divine="divine"
             :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
           <template v-for="r in came.slice(0, cameShown)" :key="r.key">
-            <RunRow data-run-came :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="tallyCount(r)" :chaos="cameRaw(r)" sign="+" :divine="divine"
+            <RunRow data-run-came :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="cameCount(r)" :chaos="cameVal(r)" sign="+" :divine="divine"
               :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
-            <RunRow v-if="preOf(r)" :class="$style.preRow" data-run-pre-part :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, preOf(r)!.n)" :count="preCount(r, true)" :chaos="cameTaken(r)" sign="−" sub="pre-run listings, not counted" :divine="divine" :editable="false" :can-leave-out="false" />
+            <RunRow v-if="preOf(r)" struck data-run-pre-part :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, preOf(r)!.n)" :count="preCount(r, true)" :chaos="cameTaken(r)" sub="from pre-run listings" :divine="divine" :editable="false" :can-leave-out="false" />
           </template>
           <RunRow v-for="m in manualIn" :key="m.id" :icon="m.icon" :name="m.name" :tip="tipOf(m.key ?? null, m.name, m.count)" :count="m.count" :chaos="m.count * m.each" :each="m.each" sign="+" sub="added" :divine="divine" :can-leave-out="false" removable
             @edit="editManual(m.id, $event)" @remove="removeManual(m.id)" />
@@ -472,6 +472,12 @@ const preOf = (r: TallyRow) => isOut(rowKey.tally(r.key)) ? null : preRun.value.
 const cameRaw = (r: TallyRow) => Math.abs(isOut(rowKey.tally(r.key)) ? r.netChaos : tallyVal(r))
 const cameTaken = (r: TallyRow) => Math.min(cameRaw(r), preOf(r)?.chaos ?? 0)
 const cameVal = (r: TallyRow) => cameRaw(r) - cameTaken(r)
+// The row shows the run's own part; how many is the stash's count less the
+// pre-run listings' (Guy's pick: "9 × Divine Orb +9.1", then the 16 crossed).
+const cameCount = (r: TallyRow) => {
+  const n = tallyCount(r)
+  return preOf(r) ? Math.max(0, Math.round((n - preCount(r, true)) * 100) / 100) : n
+}
 // In In, the part taken off can be capped at the row: its count follows.
 const preCount = (r: TallyRow, capped = false) => {
   const p = preOf(r)

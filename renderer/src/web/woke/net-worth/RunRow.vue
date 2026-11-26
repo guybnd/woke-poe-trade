@@ -2,7 +2,7 @@
   <!-- One line of a run (Runs view), the shared profit line (ui/line-item.ts):
        click the count or the value to change it, hover for leave out and ⋯,
        right-click for the same menu. -->
-  <div :class="[$style.row, 'w-line', { 'w-line-out': out }]" data-run-row tabindex="0" @contextmenu="onMenu" @keydown="onKeys">
+  <div :class="[$style.row, 'w-line', { 'w-line-out': out || struck }]" data-run-row tabindex="0" @contextmenu="onMenu" @keydown="onKeys">
     <img v-if="icon" :src="icon" alt="" :class="$style.icon" class="w-line-name"><span v-else :class="$style.icon" />
     <span :class="$style.name" class="w-trunc">
       <span :class="$style.nameText" class="w-line-name"><template v-if="count != null && count !== 1 && !editing"><WLineNum :editable="editable" :mine="edited" :out="out" :label="`Change how many ${name}`" @edit="startEdit('count')">{{ fmt(count) }}</WLineNum> × </template><span v-item-tip="tip">{{ name }}</span></span>
@@ -10,8 +10,8 @@
       <span v-else-if="sub" class="w-dim text-xs" :class="$style.sub">{{ sub }}</span>
       <slot name="sub" />
     </span>
-    <span class="w-num text-sm" :class="[$style.value, out ? 'w-dim' : tone]">
-      <WLineNum :editable="editable" :mine="edited" :out="out" :title="valueTitle" :label="`Change the price of ${name}`" data-run-edit @edit="startEdit('each')">{{ chaos == null ? '—' : `${sign}${amount(chaos)}` }}</WLineNum><Coin v-if="chaos != null" :chaos="!divine" />
+    <span class="w-num text-sm" :class="[$style.value, out || struck ? 'w-dim' : tone]">
+      <WLineNum :editable="editable" :mine="edited" :out="out || struck" :title="valueTitle" :label="`Change the price of ${name}`" data-run-edit @edit="startEdit('each')">{{ chaos == null ? '—' : `${sign}${amount(chaos)}` }}</WLineNum><Coin v-if="chaos != null" :chaos="!divine" />
     </span>
     <WLineActs :name="name" :out="out" :can-leave-out="canLeaveOut" :entries="entries" :head="headOf" @out="emit('out', $event)" />
     <!-- The editor opens under the row, full width, each box named. -->
@@ -65,7 +65,9 @@ const props = withDefaults(defineProps<{
   bought?: number | null
   // What one is worth, for the editor (default: value / count).
   each?: number | null
-}>(), { sign: '', sub: undefined, icon: undefined, out: false, edited: false, editable: true, canLeaveOut: true, removable: false, bought: undefined, each: null })
+  // Shown crossed out, counted nowhere (not a left-out row: no tag, no undo).
+  struck?: boolean
+}>(), { sign: '', sub: undefined, icon: undefined, out: false, struck: false, edited: false, editable: true, canLeaveOut: true, removable: false, bought: undefined, each: null })
 const emit = defineEmits<{
   (e: 'edit', v: { count?: number, each?: number, bought?: number | null }): void
   (e: 'out', v: boolean): void
