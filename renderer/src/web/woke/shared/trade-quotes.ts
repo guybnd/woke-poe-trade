@@ -18,6 +18,15 @@ export interface TradeQuote {
 // by every window until a week old (Guy's pick C1, 2026-11-24).
 const FRESH_MS = 60 * 60 * 1000
 export const SHOW_MS = 7 * 24 * 60 * 60 * 1000
+// In a league's first week prices move many-fold in days: a quote taken
+// then is used for 2 days only (Guy's pick, 2026-11-26).
+export const EARLY_SHOW_MS = 2 * 24 * 60 * 60 * 1000
+const LEAGUE_WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
+/** How long a quote taken at `ts` stands in for poe.ninja. */
+export function showMsFor (ts: number, leagueStart: number | null | undefined): number {
+  return leagueStart != null && ts < leagueStart + LEAGUE_WEEK_MS ? EARLY_SHOW_MS : SHOW_MS
+}
 const RETRY_MS = 5 * 60 * 1000
 // At most 6 searches a minute, against the site's limit of 15.
 const GAP_MS = 10_000
@@ -54,6 +63,8 @@ export interface TradePriceDeps {
   read: () => Stored
   write: (data: Stored) => void
   now?: () => number
+  /** When the league started (ms), if known: early quotes are kept shorter. */
+  leagueStart?: (league: string) => number | null
 }
 
 export function createTradePrices (deps: TradePriceDeps) {
@@ -78,7 +89,7 @@ export function createTradePrices (deps: TradePriceDeps) {
 
   function get (forLeague: string, name: string): TradeQuote | null {
     const q = stored.value[forLeague]?.[name]
-    if (!q || q.chaos == null || now() - q.ts > SHOW_MS) return null
+    if (!q || q.chaos == null || now() - q.ts > showMsFor(q.ts, deps.leagueStart?.(forLeague))) return null
     return { chaos: q.chaos, listings: q.listings, at: q.ts }
   }
 

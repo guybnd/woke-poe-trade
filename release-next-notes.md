@@ -1,5 +1,11 @@
 # Next release notes
 
+- PoB builds: import links from every site Path of Building imports from (poe.ninja, maxroll, pob.codes, pobb.in, pastebin, rentry, poedb), and the list follows the Build save path set in PoB's own options (or a portable PoB's folder).
+- Net worth: a sale in divines now counts at the divine price of the day it sold (from Net worth's own daily reads), so 7 day, 30 day and league totals no longer move with today's divine price. Each row still shows what it sold for. Before prices load, purchases are judged with your last saved divine price instead of a fixed 150c.
+- Prices no longer show as stale or leave divine sales unpriced when poe.ninja's Divine Orb price is under 30c or missing.
+- Unidentified unique prices from trade are used for 2 days in a league's first week (prices move fast then), 7 days after.
+- After the app was closed a while, the run timer, campaign guide and stacked decks catch up on everything since, not just the last 256 KB of Client.txt (trade chat filled that fast).
+- Price check: the stash search text for a mod is no longer cut at 48 characters; the box takes 250.
 - Saved data is safer (about 17 fixes). Your price check history is no longer reset each time the app starts. A file held for a moment by antivirus or a sync tool no longer loses a save or gets written over with less: your sales, stash tab picks, a campaign run's timeline, tonight's session story and finished nights and the AI link key are all safe now, and saves wait and try again instead of failing. Quitting right after a death or a campaign zone still saves it. Map history's 7 days no longer lists a day twice (or skips one) when the clocks change, and a map you go back into after midnight stays one map in the run summary. Offers you marked Traded no longer pile up in a hidden list, and the app uses less memory over a long league.
 - Campaign run timer: closing the game pauses the run at the last thing the game wrote, and it carries on when you next enter an area, so a night between sessions no longer lands in that act. A run you paused yourself stays paused.
 - Net worth per hour and a run's play time: no Client.txt line for 15 minutes now counts as time away from then on, like Session story, so a PC that went to sleep in a map no longer counts as map time.
