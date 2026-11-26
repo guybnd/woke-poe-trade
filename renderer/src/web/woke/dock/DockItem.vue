@@ -3,7 +3,7 @@
 // the icon, and the `card` slot when the mouse rests on it. The slot keeps
 // using this widget's state, so a widget can stay hidden while its icon shows.
 //
-//   <DockItem id="farming" icon="fas fa-coins" title="Farming" :show="inMap" :badge="perHour">
+//   <DockItem id="drop-counter" icon="fas fa-coins" title="Drop counter" :show="inMap" :badge="count">
 //     <template #card>…</template>
 //   </DockItem>
 import { computed, inject, onUnmounted, useSlots, watch } from 'vue'

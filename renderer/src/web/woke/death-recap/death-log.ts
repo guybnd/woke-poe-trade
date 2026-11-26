@@ -5,7 +5,7 @@
 // killer, no damage, no map mods. Mods only exist if the map was checked with
 // the item copy hotkeys before it was opened, so they're matched to the map by
 // name and level, and a match says how sure it is.
-import { isFarmedMap, isMapSideArea } from '../farming/farming'
+import { isFarmedMap, isMapSideArea } from '../shared/map-areas'
 import { parseLogLine, slainName, speakerOf } from '../campaign/log-parse'
 import { lineTime } from '../campaign/log-tail'
 
