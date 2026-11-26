@@ -24,13 +24,14 @@ import { watch } from 'vue'
 import { helpTip } from './help-tip'
 import { tip as gameTip } from './tooltip/tooltip'
 import { hotkeyParts } from './key-label'
+import { tipZoom } from './popup-zoom'
 
 const COLD_MS = 450
 // Moving from one title straight to the next shows it at once, like the system tooltip.
 const WARM_MS = 600
 
 const CARD_STYLE = [
-  'position:fixed', 'z-index:1002', 'zoom:var(--w-ui-scale,1)', 'left:0', 'top:0',
+  'position:fixed', 'z-index:1002', 'left:0', 'top:0',
   'width:max-content', 'max-width:300px', 'padding:8px 10px', 'pointer-events:none',
   'background:var(--w-tip-bg)', 'border:1px solid var(--w-line-strong)', 'border-radius:var(--w-r-sm)',
   'box-shadow:var(--w-shadow)', 'color:var(--w-fg)', 'font-size:var(--w-fs-sm)', 'font-weight:400',
@@ -100,8 +101,10 @@ export function installTitleTips (doc: Document = document): () => void {
       doc.body.appendChild(card)
     }
     fillTipCard(card, text, held.getAttribute('data-tip-keys'))
-    // With CSS zoom, left and top are in zoomed units.
-    const scale = parseFloat(win!.getComputedStyle(doc.documentElement).getPropertyValue('--w-ui-scale')) || 1
+    // As big as the window the title is in (popup-zoom.ts). With CSS zoom,
+    // left and top are in zoomed units.
+    const scale = tipZoom(held)
+    card.style.zoom = String(scale)
     const r = card.getBoundingClientRect()
     const p = placeAtPointer(at, r, { width: win!.innerWidth, height: win!.innerHeight })
     card.style.left = `${p.left / scale}px`

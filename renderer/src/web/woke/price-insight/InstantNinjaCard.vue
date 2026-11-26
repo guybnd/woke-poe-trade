@@ -1,7 +1,7 @@
 <template>
   <!-- woke: the instant price check for an exchange item poe.ninja prices: a small card by
        the item instead of the window (WOKEPOET-480). Space opens the window and searches. -->
-  <div ref="el" :class="[$style.anchor, { [$style.flipped]: flipped }]" :style="anchorStyle" data-testid="instant-ninja-card">
+  <div ref="el" :class="[$style.anchor, { [$style.flipped]: flipped }]" :style="anchorStyle" data-testid="instant-ninja-card" data-w-window-sized>
     <!-- The card by the mouse with its graph box under it, the related lists beside
          them (Guy's pick L2, 2026-11-25); left of the mouse, the lists go on the far side. -->
     <div :class="$style.main" data-main>

@@ -42,15 +42,19 @@ watch(tip, async (t) => {
   const card = el.value
   if (!card || tip.value !== t) return
   // With CSS zoom, left and top are in zoomed units.
-  const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--w-ui-scale')) || 1
+  const scale = t.zoom
   const r = card.getBoundingClientRect()
   const at = placeHelp(t.anchor, r, { width: window.innerWidth, height: window.innerHeight })
   placed.value = { left: at.left / scale, top: at.top / scale }
 })
 
-const pos = computed(() => placed.value
-  ? { left: `${placed.value.left}px`, top: `${placed.value.top}px` }
-  : { left: '0', top: '0', visibility: 'hidden' as const })
+// As big as the window its "?" is in (popup-zoom.ts).
+const pos = computed(() => {
+  const zoom = String(tip.value?.zoom ?? 1)
+  return placed.value
+    ? { zoom, left: `${placed.value.left}px`, top: `${placed.value.top}px` }
+    : { zoom, left: '0', top: '0', visibility: 'hidden' as const }
+})
 
 // It sits outside the panel, so nothing hides it with the panel, and the overlay
 // gets no mouse events once the game has focus: closing the overlay mid-hover
@@ -74,7 +78,7 @@ onUnmounted(() => {
 <style module>
 .lines { white-space: pre-line; }
 .card {
-  position: fixed; z-index: 1002; zoom: var(--w-ui-scale, 1);
+  position: fixed; z-index: 1002;
   width: 300px; padding: 8px 10px; pointer-events: none;
   background: var(--w-tip-bg); border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm);
   box-shadow: var(--w-shadow); color: var(--w-fg);

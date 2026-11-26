@@ -119,3 +119,22 @@ test('a cut label inside a titled button shows the button\'s title, not the labe
   await page.mouse.move(5, 5)
   expect(await page.locator('#titled').getAttribute('title')).toBe('Opens the whole list')
 })
+
+// Settings follows the price check's Size, and so does a title card from it.
+test('a title card in Settings is as big as Settings at a bigger Size', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true, widgets: [], titleTips: true, patch: (c: { fontSize: number }) => { c.fontSize = 20 } })
+  await overlay.widget('menu').locator('.fa-cog').click()
+  const page = overlay.page
+  const reload = page.getByTitle(RELOAD)
+  await expect(reload).toBeVisible()
+  const zoomOf = (el: Element) => (el as Element & { currentCSSZoom: number }).currentCSSZoom
+  const windowZoom = await reload.evaluate(zoomOf)
+  await reload.hover()
+  const card = page.getByRole('tooltip')
+  await expect(card).toHaveText(RELOAD)
+  expect(await card.evaluate(zoomOf)).toBeCloseTo(windowZoom * 1.25, 3)
+  const box = (await card.boundingBox())!
+  const view = page.viewportSize()!
+  expect(box.x + box.width).toBeLessThanOrEqual(view.width)
+  expect(box.y + box.height).toBeLessThanOrEqual(view.height)
+})
