@@ -164,6 +164,10 @@ describe('search and no match (WSearchField, WNoMatch)', () => {
   it('is on the launcher, Challenges, Hotkeys and Megalo', () => {
     for (const f of ['tab-bar/TabBar.vue', 'challenges/WidgetChallenges.vue', 'settings/HotkeysPage.vue', 'megalo/MegaloWindow.vue']) {
       expect(src(f), f).toMatch(/<WNoMatch [^>]*@clear=/)
+      // Only when something was typed: an empty list with no query isn't a miss
+      // (the launcher lists every tool when its box is empty).
+      const show = /<WNoMatch v-(?:else-)?if="([^"]*)"/.exec(src(f))?.[1] ?? ''
+      expect(show, f).toMatch(/trim\(\)|Misses|HasMatch/)
     }
   })
 })

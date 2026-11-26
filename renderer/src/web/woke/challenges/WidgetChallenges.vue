@@ -44,8 +44,8 @@
               <span v-if="r.need != null && !r.done" class="w-dim w-num text-xs">{{ r.have }}/{{ r.need }}</span>
             </div>
             <div v-if="!rows.length" class="w-dim text-xs" style="padding: 6px var(--w-pad);">Loading the guide…</div>
-            <WNoMatch v-else-if="!shown.length && filter.trim()" :query="filter" @clear="filter = ''" />
-            <div v-else-if="!shown.length" class="w-dim text-xs" style="padding: 6px var(--w-pad);">No challenges match.</div>
+            <WNoMatch v-else-if="!shown.length && filterMisses" :query="filter" @clear="filter = ''" />
+            <div v-else-if="!shown.length" class="w-dim text-xs" style="padding: 6px var(--w-pad);">{{ hideDone ? 'The matches are done (hidden).' : 'No challenges match.' }}</div>
           </div>
           <div class="w-dim text-xs" :class="$style.credit">Guide by CraniumCarnage</div>
         </div>
@@ -128,6 +128,8 @@ const merged = computed(() => mergeProgress(guide.value, profile.value))
 const rows = computed(() => merged.value.rows)
 const summary = computed(() => summarize(rows.value))
 const shown = computed(() => rows.value.filter(r => matchesFilter(r, filter.value) && !(hideDone.value && r.done)))
+// The filter itself finds nothing (not just done ones hidden): the no-match line.
+const filterMisses = computed(() => !!filter.value.trim() && !rows.value.some(r => matchesFilter(r, filter.value)))
 const firstOpenAnchor = computed(() => rows.value.find(r => !r.done)?.anchor ?? '')
 const syncTitle = computed(() => {
   const when = props.config.lastSynced
