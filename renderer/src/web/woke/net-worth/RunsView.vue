@@ -383,7 +383,7 @@ const totals = computed(() => {
   // history has for it (only a read for this run, never another run's).
   const read = runMaps.value.id === r.id ? mapsIn(r, runMaps.value.maps, now) : null
   const maps = shownMaps(r, read)
-  return runTotals(r, props.points, { maps, fights: shownFights(r, spent.value) }, now, mapCostKeys.value, outside.value)
+  return runTotals(r, props.points, { maps, fights: shownFights(r, spent.value) }, now, mapCostKeys.value, outsideSums(outside.value))
 })
 const unit = computed(() => totals.value ? unitOf(totals.value.maps, totals.value.fights) : 'map')
 // Small sample (pick S1): few maps, or one drop over half the profit.
