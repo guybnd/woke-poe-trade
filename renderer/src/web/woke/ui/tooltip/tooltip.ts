@@ -113,10 +113,26 @@ export type TipContent = GemTip | ItemTip | LookupTip | SwapTip | PassiveTip | M
 
 // `menu`: a right-click on the hovered row opens the item's menu (item-tip.ts),
 // so the tooltip can say so (shared/hints.ts).
-export const tip = shallowRef<{ content: TipContent, anchor: DOMRect, menu?: boolean } | null>(null)
+// `zoom`: the tooltip's size, that of the window it came from (tipZoom).
+export const tip = shallowRef<{ content: TipContent, anchor: DOMRect, menu?: boolean, zoom: number } | null>(null)
 
 export function showTipAt (target: HTMLElement, content: TipContent, opts: { menu?: boolean } = {}) {
-  tip.value = { content, anchor: target.getBoundingClientRect(), menu: opts.menu }
+  tip.value = { content, anchor: target.getBoundingClientRect(), menu: opts.menu, zoom: tipZoom(target) }
+}
+
+function rootVar (name: string): number {
+  return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name)) || 1
+}
+
+// The tooltip is as big as the window it came from. Panels are zoomed by Panel
+// size x UI size (--w-ui-scale), as before. The windows the price check's Size
+// sizes (the price check, map check, Settings: data-w-sized) are zoomed their
+// own way, and their text also grows with Size (--w-window-size, theme.css),
+// so a tooltip from one takes that window's zoom times Size.
+export function tipZoom (target: Element): number {
+  if (!target.closest('[data-w-sized]')) return rootVar('--w-ui-scale')
+  const zoom = (target as Element & { currentCSSZoom?: number }).currentCSSZoom
+  return (typeof zoom === 'number' && zoom > 0 ? zoom : rootVar('--w-ui-scale')) * rootVar('--w-window-size')
 }
 
 export function showTip (e: Event, content: TipContent) {

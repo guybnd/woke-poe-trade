@@ -19,6 +19,8 @@ export const textScale = storedPref('woke.textScale', parseTextScale)
 
 function apply (v: number) {
   document.documentElement.style.setProperty('--w-text-scale', String(v / 100))
+  // Text size alone: the windows Size sizes multiply it (theme.css [data-w-sized]).
+  document.documentElement.style.setProperty('--w-text-user', String(v / 100))
 }
 
 apply(textScale.value)

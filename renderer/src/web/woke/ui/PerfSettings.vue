@@ -215,7 +215,7 @@ async function copyReport () {
 </script>
 
 <style module>
-.table { width: 100%; border-collapse: collapse; font-size: calc(0.875rem * var(--w-text-scale, 1)); }
+.table { width: 100%; border-collapse: collapse; font-size: calc(0.875rem * var(--w-text-user, 1)); }
 .table td { padding: 2px 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 .head td { color: rgb(160, 174, 192); }
 .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }

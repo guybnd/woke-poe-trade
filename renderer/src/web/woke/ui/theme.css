@@ -246,7 +246,7 @@
 
 /* Text with no size of its own. */
 body {
-  font-size: calc(1rem * var(--w-text-scale, 1));
+  font-size: calc(1rem * var(--w-text-user, 1));
   /* No lone word on a paragraph's last line, anywhere (layout audit). */
   text-wrap: pretty;
 }
@@ -437,6 +437,28 @@ body {
 
 /* "Hide all panels" hotkey (shared/hide-all.ts). */
 body[data-woke-hidden] [data-w-panel] { display: none !important; }
+
+/* The windows the price check's Size sizes (the root font size: the price
+ * check, map check, Settings). Their rem lengths grow with it; this makes their
+ * px text grow too, so the whole window follows Size. The tokens are taken
+ * again here because a token keeps the value it got where it was declared
+ * (:root). Lengths in rem that also multiply by Text size use --w-text-user,
+ * which leaves Size out (rem holds it). Tooltips they open: tooltip.ts tipZoom. */
+[data-w-sized] {
+  --w-text-scale: calc(var(--w-text-user, 1) * var(--w-window-size, 1));
+  --w-fs-xs: calc(11px * var(--w-text-scale));
+  --w-fs-sm: calc(11.5px * var(--w-text-scale));
+  --w-fs-md: calc(13px * var(--w-text-scale));
+  --w-fs-lg: calc(15px * var(--w-text-scale));
+  --w-fs-xl: calc(18px * var(--w-text-scale));
+  --w-fs-caps: var(--w-fs-xs);
+  --w-row-h: calc(28px * var(--w-text-scale));
+  --w-ctl-h: calc(28px * var(--w-text-scale));
+}
+:root[data-woke-look="game"] [data-w-sized] { --w-fs-caps: var(--w-fs-md); }
+/* In the order :root takes them. */
+:root[data-woke-density="compact"] [data-w-sized] { --w-row-h: calc(24px * var(--w-text-scale)); --w-ctl-h: calc(24px * var(--w-text-scale)); }
+:root[data-woke-theme="native"] [data-w-sized] { --w-row-h: calc(30px * var(--w-text-scale)); }
 
 /* Panel size (ui/scale.ts). */
 [data-w-panel] { zoom: var(--w-ui-scale, 1); }
