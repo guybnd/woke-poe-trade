@@ -52,6 +52,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-26T03:45:44.177Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up PR 958 (https://github.com/guybnd/woke-poe-trade/pull/958,
+      d36b6e0): Net worth folds, Runs switches and no-match lines moved onto the
+      shared pieces.
+    date: '2026-11-26T04:30:15.704Z'
+    selfAttested: true
+    id: c-2026-11-26t04-30-15-704z
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/957'
