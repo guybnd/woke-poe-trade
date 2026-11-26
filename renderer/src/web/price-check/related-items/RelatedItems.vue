@@ -35,10 +35,9 @@
            gives up, priced, against a plain copy. Hover: the Foulborn copy's
            tooltip. Click: the trade site's search for that kind. -->
       <div v-if="sec.foul" :class="$style.list" data-goto-spot="foulborn">
-        <button v-for="(k, i) in sec.foul" :key="i" type="button" v-item-tip="foulTip(k)" data-foul-kind
+        <button v-for="(k, i) in sec.foul" :key="i" type="button" v-item-tip="foulTip(k)" data-foul-kind :data-own="k.own ? 'true' : undefined"
           :class="[$style.row, $style.foulRow, $style.click, { [$style.me]: k.own }]" @click="openFoul(k)">
           <span :class="$style.foulLines">
-            <span v-if="k.name" :class="$style.kindName">{{ k.name }}<span v-if="k.own" :class="$style.kby">this one</span></span>
             <span v-for="(l, j) in k.adds" :key="'a' + j" :class="$style.foul">{{ l }}</span>
             <span v-for="(l, j) in k.replaces" :key="'r' + j" :class="$style.gone">{{ l }}</span>
           </span>
@@ -97,7 +96,6 @@
       <div v-if="sec.note" :class="$style.note">{{ sec.note }}</div>
       </template>
     </template>
-    <div v-if="footer" :class="$style.ft">{{ footer }}</div>
   </div>
 </template>
 
@@ -127,6 +125,7 @@ import { useLeagues } from '@/web/background/Leagues'
 import { AppConfig, poeWebApi } from '@/web/Config'
 import { Host } from '@/web/background/IPC'
 import type { PriceCheckWidget } from '@/web/overlay/widgets'
+import { storedPref } from '@/web/woke/ui/stored-pref'
 
 const { findPriceByQuery, findPricesByName, autoCurrency, xchgRate } = usePoeninja()
 
@@ -245,7 +244,7 @@ function getCards (item: ParsedItem, tips: Record<string, { d?: string, n?: numb
     const each = findPriceByQuery({ ns: 'DIVINATION_CARD', name: c.card, variant: undefined })?.chaos
     rows.push({ ...sideRow(info, each != null ? autoCurrency(each * c.stack) : undefined, false, `card:${c.card}`), qty: c.stack, gives: c.gives > 1 ? c.gives : undefined, tag: c.corrupted ? 'corrupted' : undefined })
   }
-  return rows.length ? [{ key: 'cards', title: 'Cards that give it', rows }] : []
+  return rows.length ? [{ key: 'cards', title: 'Related cards', rows }] : []
 }
 
 // woke: what a checked card's full stack gives, when that's one named unique
@@ -551,7 +550,13 @@ function getChance (item: ParsedItem, data: UniquePack): ChanceInfo | null {
   return data.mod.chanceInfo(item.info.refName, item.info.unique?.base, dropOf(data.drops, item.info.refName))
 }
 
-const CHANCE_WHY_MAX = 160
+// The open or folded state the player last gave a unique's own groups, kept
+// across price checks (Guy, 2026-11-26).
+const UNIQUE_FOLD_KEYS = new Set(['versions', 'foulborn', 'vestigial', 'vestigial-from', 'chance-it'])
+const uniqueFolds = storedPref<Record<string, boolean>>('woke.uniqueSideFolds', raw => {
+  try { const v = JSON.parse(raw ?? '{}'); return v && typeof v === 'object' ? v : {} } catch { return {} }
+}, v => JSON.stringify(v))
+
 function chanceSection (chance: ChanceInfo | null) {
   if (!chance) return []
   const baseInfo = ITEM_BY_REF('ITEM', chance.base)?.[0]
@@ -562,12 +567,10 @@ function chanceSection (chance: ChanceInfo | null) {
     return [{
       key: 'chance-it',
       title: 'Chance it',
-      rows: [{ ...sideRow(baseInfo, chaos != null ? autoCurrency(chaos) : undefined, false, `chance-base:${chance.base}`), ref: { name: baseInfo.refName, rarity: 'normal' as const } }],
-      note: 'A random drop: an Orb of Chance on a normal base can make it.'
+      rows: [{ ...sideRow(baseInfo, chaos != null ? autoCurrency(chaos) : undefined, false, `chance-base:${chance.base}`), ref: { name: baseInfo.refName, rarity: 'normal' as const } }]
     }]
   }
-  const why = chance.why && chance.why.length > CHANCE_WHY_MAX ? `${chance.why.slice(0, CHANCE_WHY_MAX - 1).trimEnd()}\u2026` : chance.why
-  return [{ key: 'chance-it', title: `Can't be chanced: ${chance.label}`, rows: [] as SideRow[], note: why }]
+  return [{ key: 'chance-it', title: `Can't be chanced: ${chance.label}`, rows: [] as SideRow[] }]
 }
 
 // The Foulborn and Vestigial sections, then the uniques a Vestigial implicit comes from.
@@ -581,8 +584,7 @@ function uniqueSections (item: ParsedItem, info: UniqueInfo | null, versions: Ve
       key: 'vestigial',
       title: 'Vestigial',
       rows: [],
-      vest: info.vestigial,
-      note: 'Enshrouded and charged in Timeless Conflict, it drops another unique of its slot with this.'
+      vest: info.vestigial
     })
   }
   const from: SideRow[] = []
@@ -753,10 +755,10 @@ export default defineComponent({
         .map(sec => sec.key === 'drops' ? { ...sec, rows: sec.rows.filter(r => !reward.has(r.name)) } : sec)
         .filter(sec => sec.rows.length)
       // Where it comes from is said by its drop, boss or recipe section already:
-      // "Can't be chanced" keeps only its heading.
+      // no "Can't be chanced" heading then.
       const sourced = [...recipeSecs, ...extras, ...others].some(sec => /^(from:|boss$|recipe:|vault:)/.test(sec.key))
       const all = [...recipeSecs, ...extras, ...others]
-        .map(sec => sec.key === 'chance-it' && !sec.rows.length && sourced ? { ...sec, note: undefined } : sec)
+        .filter(sec => !(sec.key === 'chance-it' && !sec.rows.length && sourced))
       const data = conquest.value
       if (!data) return all
       return all.map(sec => sec.rows.some(r => data.ABYSS.some(a => a.jewel === r.info.refName)) ? { ...sec, rows: sec.rows.map(r => withKeystone(r, data)) } : sec)
@@ -796,13 +798,6 @@ export default defineComponent({
 
     const canOpen = (row: SideRow) => row.clickable && !row.highlight
     const countOf = (sec: Section) => sec.foul?.length ?? sec.versions?.length ?? (sec.vest ? 0 : sec.rows.length)
-    const footer = computed(() => {
-      const check = sections.value.some(sec => sec.rows.some(canOpen) || sec.versions?.some(v => !v.own))
-      const foul = sections.value.some(sec => sec.foul?.length)
-      if (check && foul) return 'Click to price check · a Foulborn kind: trade site'
-      if (foul) return 'Click a Foulborn kind: trade site'
-      return check ? 'Click to price check' : null
-    })
     // A Foulborn kind's tooltip: the Foulborn copy's, which says what it replaces.
     const foulTip = (k: FoulKindRow): ItemTipRef => ({ name: `Foulborn ${props.item!.info.refName}`, variant: k.name, noMenu: true })
     // A version's tooltip and click: that variant's mods, as a price check of it.
@@ -879,6 +874,7 @@ export default defineComponent({
       const next = new Set(opened.value)
       if (next.has(sec.key)) next.delete(sec.key); else next.add(sec.key)
       opened.value = next
+      if (UNIQUE_FOLD_KEYS.has(sec.key)) uniqueFolds.value = { ...uniqueFolds.value, [sec.key]: next.has(sec.key) }
     }
     function summary (sec: Section): { text: string, coin?: string } | null {
       if (sec.sum) return { text: `${sec.sum.label.toLowerCase()} ${sec.sum.value}` }
@@ -898,9 +894,12 @@ export default defineComponent({
     const FIT_MARGIN = 8
     async function fit () {
       const keys = sections.value.map(sec => sec.key)
-      opened.value = new Set(keys)
+      // A unique's own groups open or fold as the player last left them.
+      const kept = uniqueFolds.value
+      opened.value = new Set(keys.filter(k => kept[k] !== false))
       await nextTick()
       for (let i = keys.length - 1; i > 0; i--) {
+        if (kept[keys[i]] != null) continue
         const node = root.value
         if (!node || touched) return
         const box = node.getBoundingClientRect()
@@ -930,7 +929,6 @@ export default defineComponent({
       tipOf,
       priceText,
       countOf,
-      footer,
       foulTip,
       openFoul,
       versionTip,
