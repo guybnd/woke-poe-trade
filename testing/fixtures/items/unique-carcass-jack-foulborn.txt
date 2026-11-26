@@ -1,0 +1,33 @@
+Item Class: Body Armours
+Rarity: Unique
+Foulborn Carcass Jack
+Varnished Coat
+--------
+Evasion Rating: 812 (augmented)
+Energy Shield: 168 (augmented)
+--------
+Requirements:
+Level: 62
+Dex: 96
+Int: 96
+--------
+Sockets: B-G-B
+--------
+Item Level: 84
+--------
+{ Unique Modifier — Defences, Evasion, Energy Shield }
+140(120-150)% increased Evasion and Energy Shield
+{ Unique Modifier — Life }
++62(50-70) to maximum Life
+{ Unique Modifier — Elemental, Fire, Cold, Lightning, Resistance }
++11(9-12)% to all Elemental Resistances
+{ Foulborn Unique Modifier — Gem }
+Socketed Gems are Supported by Level 20 Intensify
+{ Unique Modifier — Damage }
+45(40-50)% increased Area Damage
+{ Unique Modifier }
+Extra gore
+--------
+"...The discomfort shown by the others is amusing, but none
+can deny that my work has made quite the splash..."
+- Maligaro's Journal

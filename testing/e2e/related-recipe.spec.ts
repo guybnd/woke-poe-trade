@@ -222,3 +222,27 @@ test('side window: a Delve boss unique drops from its boss, with the boss\'s oth
     await expect(side.locator('button[data-item-row]', { hasText: other })).toBeVisible()
   }
 })
+
+test('side window: a Foulborn unique lists its Foulborn kinds, priced, its own lit, and its Vestigial mod', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/unique-carcass-jack-foulborn.txt')
+  const side = overlay.page.locator('.w-pc-side')
+  await expect(side).toBeVisible({ timeout: 20_000 })
+  const kinds = side.locator('[data-foul-kind]')
+  await expect(kinds).toHaveCount(2)
+  // Each kind: what it adds, what it loses, its price against a plain copy (20c).
+  const aura = kinds.filter({ hasText: 'Aura Effect' })
+  await expect(aura).toContainText('(15-30)% increased Effect of Non-Curse Auras from your Skills on Enemies')
+  await expect(aura).toContainText('(40-50)% increased Area Damage')
+  await expect(aura).toContainText('2 div')
+  await expect(aura).toContainText('×18')
+  // The checked copy is the Intensify kind.
+  const intensify = kinds.filter({ hasText: 'Intensify' })
+  await expect(intensify).toContainText('this one')
+  await expect(intensify).toContainText('90')
+  await expect(intensify).toContainText('×4.5')
+  await expect(side.locator('[data-vestigial-mod]')).toHaveText('25% increased Area of Effect')
+  // Hover: the Foulborn copy's tooltip.
+  await intensify.hover()
+  await expect(overlay.page.getByRole('tooltip').getByText('Foulborn Carcass Jack').first()).toBeVisible()
+})
