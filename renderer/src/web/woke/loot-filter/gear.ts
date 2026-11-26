@@ -557,18 +557,22 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
   for (const b of quality) applyStyle(b, markOf(g))
   out.splice(lists.never.length ? 1 : 0, 0, ...quality)
   src.replaced.forEach(retire)
-  if (quality.length) src.quality.replaced.forEach(retire)
+  // The table owns over-quality while it's on, even with every row Off.
+  const ownQuality = g.quality.on && src.quality.replaced.length > 0
+  if (ownQuality) src.quality.replaced.forEach(retire)
   insertAt(doc, src.at, out)
   res.blocks += out.length
-  res.replaced += src.replaced.length + (quality.length ? src.quality.replaced.length : 0)
+  res.replaced += src.replaced.length + (ownQuality ? src.quality.replaced.length : 0)
   return res
 }
 
 // The over-quality mark: a white border unless you set your own.
 export const DEFAULT_MARK: StylePatch = { border: [255, 255, 255, 255] }
 const MARK_KEYS = ['border', 'sound', 'effect', 'icon'] as const
+// What the mark adds: a setting turned off adds nothing (the row keeps its own).
 export function markOf (g: GearSettings): StylePatch {
-  return { ...DEFAULT_MARK, ...g.look.quality }
+  const all = { ...DEFAULT_MARK, ...g.look.quality } as Record<string, unknown>
+  return Object.fromEntries(Object.entries(all).filter(([, v]) => v != null)) as StylePatch
 }
 // Only what a mark can set: the label itself stays the table's.
 export function cleanMark (p: StylePatch): StylePatch {
@@ -590,6 +594,13 @@ export function qualityLookFrom (src: TieredSource, row: GearRow, t: number | nu
 function qualityBlocks (src: TieredSource, g: GearSettings, lists: Record<Rank, string[]>, build: string[], never: Set<string>, section: string): FilterBlock[] {
   const base = [cond('Mirrored', '', ['False']), cond('Corrupted', '', ['False'])]
   const out: FilterBlock[] = []
+  // Never bases stay hidden at any item level: the any-base row goes by class.
+  const mins = QUALITY_ROWS.map(r => g.quality.min[r]).filter(Boolean)
+  if (never.size && mins.length) {
+    out.push(gearBlock(src.cells.get(key('r3', 2))?.block ?? src.replaced[0], 'quality-never', 'bases you never want, with quality', 'Hide', [
+      ...base, cond('Quality', '>=', [Math.min(...mins)]), rarityCondition(['magic', 'rare']), cond('BaseType', '==', [...never].sort())
+    ], section))
+  }
   const rows: Array<[GearRow, string[] | null]> = [['build', build], ['r1', lists.r1], ['r2', lists.r2], ['r3', lists.r3], ['any', null]]
   for (const [row, bases] of rows) {
     const min = g.quality.min[row]

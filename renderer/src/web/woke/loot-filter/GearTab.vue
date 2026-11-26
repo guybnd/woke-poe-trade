@@ -542,7 +542,7 @@ function sampleLook (r: GearRarity): StylePatch {
 function qualityActions (row: GearRow, r: GearRarity, t: number): FilterAction[] {
   const src = source.value
   const block = src ? qualityLookFrom(src, row, t) : null
-  let acts = (block?.actions ?? []).map(a => ({ key: a.key, args: [...a.args] }))
+  let acts = (block?.actions ?? []).filter(a => a.key !== 'DisableDropSound').map(a => ({ key: a.key, args: [...a.args] }))
   if (g.value.look.rarityText) acts = acts.filter(a => a.key !== 'SetTextColor')
   const tmp = { actions: acts } as unknown as Parameters<typeof applyStyleTo>[0]
   if (Object.keys(g.value.look[r]).length) applyStyleTo(tmp, g.value.look[r])
@@ -551,18 +551,29 @@ function qualityActions (row: GearRow, r: GearRarity, t: number): FilterAction[]
 }
 const qualitySamples = computed(() => {
   const out: Array<{ key: string, base: string, note: string, rarity: GearRarity, actions: FilterAction[] }> = []
-  const r1 = g.value.quality.min.r1
-  if (r1) out.push({ key: 'r1', base: sampleBase('rare'), note: `rare, rank 1, tier 5, ${r1}%+`, rarity: 'rare', actions: qualityActions('r1', 'rare', 5) })
-  if (r1) out.push({ key: 'r1m', base: sampleBase('magic'), note: `magic, rank 1, tier 3, ${r1}%+`, rarity: 'magic', actions: qualityActions('r1', 'magic', 3) })
+  // The first ranked row that shows over-quality bases, then the unranked row.
+  const row = (['r1', 'r2', 'r3'] as const).find(r => g.value.quality.min[r] && lists.value[r].length)
+  if (row) {
+    const min = g.value.quality.min[row]
+    const n = row.slice(1)
+    out.push({ key: row, base: lists.value[row][0], note: `rare, rank ${n}, tier 5, ${min}%+`, rarity: 'rare', actions: qualityActions(row, 'rare', 5) })
+    out.push({ key: `${row}m`, base: lists.value[row][1] ?? lists.value[row][0], note: `magic, rank ${n}, tier 3, ${min}%+`, rarity: 'magic', actions: qualityActions(row, 'magic', 3) })
+  }
   const any = g.value.quality.min.any
   if (any) {
-    const ranked = new Set([...lists.value.r1, ...lists.value.r2, ...lists.value.r3])
-    const base = universe.value.find(b => !ranked.has(b) && info(b).cls === 'Body Armours') ?? 'Plate Vest'
+    const skip = new Set([...lists.value.r1, ...lists.value.r2, ...lists.value.r3, ...lists.value.never])
+    const base = universe.value.find(b => !skip.has(b) && info(b).cls === 'Body Armours') ?? 'Plate Vest'
     out.push({ key: 'any', base, note: `rare, unranked, tier 4, ${any}%+`, rarity: 'rare', actions: qualityActions('any', 'rare', 4) })
   }
   return out
 })
-const qualityLook = computed(() => readStyle(qualitySamples.value[0]?.actions ?? []))
+// The editor shows the label as a sample, and only the mark's own extras:
+// a switch that's off means the mark adds none.
+const qualityLook = computed<StylePatch>(() => {
+  const label = readStyle(qualitySamples.value[0]?.actions ?? [])
+  const mark = markOf(g.value)
+  return { fontSize: label.fontSize, text: label.text, background: label.background, border: mark.border ?? null, sound: mark.sound, effect: mark.effect, icon: mark.icon }
+})
 
 // ---- Test drops: a pile of gear through the filter as built ----
 const seed = ref(1)

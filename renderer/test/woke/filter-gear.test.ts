@@ -213,6 +213,29 @@ describe('gear table', () => {
     expect(q.actions.find(a => a.key === 'SetBorderColor')?.args.slice(0, 3)).toEqual(['255', '255', '255'])
   })
 
+  it('keeps NeverSink\'s over-quality rules off with every row Off', () => {
+    const d = doc('1-REGULAR')
+    applyGear(d, gearOn(d, g => { g.quality.on = true; for (const r of ['build', 'r1', 'r2', 'r3', 'any'] as const) g.quality.min[r] = 0 }), [])
+    const m = matchItem(d, item({ baseType: 'Lich\'s Circlet', itemClass: 'Helmets', rarity: 'Magic', quality: 28, unidentifiedItemTier: 2 }))
+    expect(m.final?.block.type).not.toBe('crafting->qualityperfection')
+  })
+
+  it('hides Never bases with quality at any item level', () => {
+    const d = doc()
+    applyGear(d, gearOn(d, g => { g.quality.on = true; g.moves['Plate Vest'] = 'never' }), [])
+    expect(vis(d, { baseType: 'Plate Vest', itemClass: 'Body Armours', rarity: 'Rare', quality: 30, itemLevel: 40 })).toBe('Hide')
+  })
+
+  it('a mark switched off adds nothing, leaving the row\'s own', () => {
+    const d = doc()
+    applyGear(d, gearOn(d, g => { g.quality.on = true; g.quality.min.r1 = 21; g.look.quality = { effect: null, border: null } }), [])
+    const f = { ...R1, rarity: 'Rare' as const, unidentifiedItemTier: 5 }
+    const q = matchItem(d, item({ ...f, quality: 22 }))
+    const plain = matchItem(d, item({ ...f, quality: 0 }))
+    expect(q.actions.find(a => a.key === 'PlayEffect')).toEqual(plain.actions.find(a => a.key === 'PlayEffect'))
+    expect(q.actions.find(a => a.key === 'SetBorderColor')).toEqual(plain.actions.find(a => a.key === 'SetBorderColor'))
+  })
+
   it('keeps only a mark in a saved config', () => {
     const g = normalizeGear({ look: { rarityText: true, magic: {}, rare: {}, quality: { fontSize: 40, border: null } } })
     expect(g.look.quality).toEqual({ border: null })
