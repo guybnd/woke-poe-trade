@@ -19,7 +19,7 @@ describe('betrayalLookup', () => {
     expect(card.name).toBe('Cameria')
     const rows = card.sections[0].rows!
     expect(rows.map(r => r.label)).toEqual([
-      'Transportation: Toads Embers',
+      'Transportation: Embers of Toads',
       'Fortification: Trapped chest: jewels',
       'Research: Crafting bench: jewel',
       'Intervention: Trapped chest: unique axes'
@@ -37,6 +37,11 @@ describe('betrayalLookup', () => {
     expect(betrayalLookup()('mageblood', ctx)).toEqual([])
     expect(betrayalLookup()('scarab', ctx)).toEqual([])
     expect(betrayalLookup()('embers', ctx)).toEqual([])
+    // A currency word isn't a member's reward.
+    expect(betrayalLookup()('divine', ctx)).toEqual([])
+  })
+  it('finds a member by the uniques their Intervention chest holds', () => {
+    expect(betrayalLookup()('gloves', ctx).map(c => c.name)).toEqual(['Aisling'])
     expect(betrayalLookup()('crafting bench', ctx)).toEqual([])
   })
 })

@@ -190,10 +190,9 @@ describe('league mechanics', () => {
   })
 
   it('safehouse ember rewards name embers that exist', () => {
-    const embers = Object.values(REWARDS).flat().filter(r => / Embers$/.test(r))
+    const embers = Object.values(REWARDS).flat().filter(r => /^Embers /.test(r))
     expect(embers.length).toBeGreaterThan(5)
-    const missing = embers.filter(r => !/^(\w+) Embers$/.test(r) ||
-      ![...names].some(n => new RegExp(`^Allflame Ember of (the )?${r.split(' ')[0]}$`).test(n)))
+    const missing = embers.filter(r => !names.has(r.replace(/^Embers /, 'Allflame Ember ')))
     expect(missing).toEqual([])
     expect(Object.values(REWARDS).flat().filter(r => /scarab/i.test(r))).toEqual([])
   })

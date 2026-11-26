@@ -23,32 +23,33 @@ export const MEMBERS = [
 // [Transportation, Fortification, Research, Intervention]
 export const REWARDS: Record<string, [string, string, string, string]> = {
   'Aisling': ['Double-veiled items', 'Crafting bench: veiled exalt', 'Crafting bench: veiled chaos', 'Trapped chest: unique gloves'],
-  'Cameria': ['Toads Embers', 'Trapped chest: jewels', 'Crafting bench: jewel', 'Trapped chest: unique axes'],
-  'Elreon': ['Divine Embers', 'Trapped chest: Vaal gear', 'Crafting bench: tainted orbs', 'Trapped chest: unique staves'],
+  'Cameria': ['Embers of Toads', 'Trapped chest: jewels', 'Crafting bench: jewel', 'Trapped chest: unique axes'],
+  'Elreon': ['Embers of the Divine', 'Trapped chest: Vaal gear', 'Crafting bench: tainted orbs', 'Trapped chest: unique staves'],
   'Gravicius': ['Stack of divination cards', 'Trapped chest: divination cards', 'Swap a divination card for a random one', 'Trapped chest: unique sceptres and wands'],
   'Guff': ['Miscellaneous currency', 'Trapped chest: rare gear', 'Crafting bench: reflecting mist', 'Trapped chest: unique shields'],
-  'Haku': ['Unique strongbox', 'Flesh Embers', 'Crafting bench: influence', 'Trapped chest: unique maces'],
+  'Haku': ['Unique strongbox', 'Embers of Flesh', 'Crafting bench: influence', 'Trapped chest: unique maces'],
   'Hillock': ['Trapped chest: influenced gear', 'Crafting bench: influenced gear', 'Crafting bench: eldritch implicit', 'Trapped chest: unique body armours'],
   'It That Fled': ['Trapped chest: Foulborn uniques', 'Crafting bench: Breach ring', 'Crafting bench: tainted sockets', 'Trapped chest: unique amulets'],
-  'Janus': ['Gold piles', 'Gilded Embers', 'Unique vendor (gold prices)', 'Trapped chest: unique rings'],
-  'Jorgin': ['Resplendence Embers', 'Trapped chest: Delve gear', 'Crafting bench: talisman', 'Trapped chest: unique belts'],
-  'Korell': ['Cloister Embers', 'Crafting bench: essence gear', 'Crafting bench: essences', 'Trapped chest: unique boots'],
-  'Leo': ['Multitude Embers', 'Trapped chest: Vaal unique', 'Crafting bench: Djinn Vaal Orb', 'Trapped chest: unique helmets'],
+  'Janus': ['Gold piles', 'Embers of the Gilded', 'Unique vendor (gold prices)', 'Trapped chest: unique rings'],
+  'Jorgin': ['Embers of Resplendence', 'Trapped chest: Delve gear', 'Crafting bench: talisman', 'Trapped chest: unique belts'],
+  'Korell': ['Embers of the Cloister', 'Crafting bench: essence gear', 'Crafting bench: essences', 'Trapped chest: unique boots'],
+  'Leo': ['Embers of the Multitude', 'Trapped chest: Vaal unique', 'Crafting bench: Djinn Vaal Orb', 'Trapped chest: unique helmets'],
   'Riker': ['Unique items', 'Ancient Orbs', 'Crafting bench: Ancient Orb', 'Trapped chest: unique items'],
   'Rin': ['Originator maps', 'Threads', 'Trapped chest: Threads', 'Trapped chest: unique maps'],
   'Tora': ['Quality gems or experience lens', 'Trapped chest: gem', 'Crafting bench: gem', 'Trapped chest: unique bows'],
-  'Vagan': ['Wildwood Embers', 'Trapped chest: Enshrouded uniques', 'Crafting bench: Chaos Orb and fracture', 'Trapped chest: unique swords'],
+  'Vagan': ['Embers of the Wildwood', 'Trapped chest: Enshrouded uniques', 'Crafting bench: Chaos Orb and fracture', 'Trapped chest: unique swords'],
   'Vorici': ['Currency stack', "Crafting bench: jeweller's, chromatic or fusing", 'Trapped chest: Soul Core quality gems', 'Trapped chest: unique daggers and claws']
 }
 
 // How to price a reward: the best poe.ninja item that matches.
 function pricing (reward: string): PriceGroup | null {
-  // "Toads Embers": Allflame Ember of Toads (or "of the Divine").
-  const ember = /^(\w+) Embers$/.exec(reward)
-  if (ember) return { label: reward, types: ['AllflameEmber'], match: new RegExp(`^Allflame Ember of (the )?${ember[1]}$`) }
+  // "Embers of the Divine": Allflame Ember of the Divine.
+  const ember = /^Embers of ((the )?\w+)$/.exec(reward)
+  if (ember) return { label: reward, types: ['AllflameEmber'], match: new RegExp(`^Allflame Ember of ${ember[1]}$`) }
   switch (reward) {
+    // A Frayed Thread opens into a random Thread: not one itself.
     case 'Threads':
-    case 'Trapped chest: Threads': return { label: reward, types: ['Thread', 'Fragment'], match: /^\S+ Thread$/ }
+    case 'Trapped chest: Threads': return { label: reward, types: ['Thread', 'Fragment'], match: /^(?!Frayed )\S+ Thread$/ }
     case 'Ancient Orbs': return { label: reward, types: ['Currency'], match: /^Ancient Orb$/ }
     case 'Fossils': return { label: reward, types: ['Fossil'] }
     case 'Essences': return { label: reward, types: ['Essence'] }

@@ -39,7 +39,7 @@ export function betrayalLookup (overrides: () => Record<string, string> = () => 
     // from 4 letters, and not words every member has ("scarab", "bench").
     const byReward = q.length >= 4 && !STOP.test(q)
       ? MEMBERS.filter(m => !byName.includes(m) && REWARDS[m].some((r, di) => {
-          const what = (over[`${m}|${di}`]?.trim() || r).replace(/^(Crafting bench|Trapped chest): /, '')
+          const what = (over[`${m}|${di}`]?.trim() || r).replace(/^(Crafting bench|Trapped chest): (unique )?/i, '')
           return matchRank(what, q) === 0
         }))
       : []
