@@ -14,11 +14,11 @@ import {
 import { stashGains, stashGainsStrict, gainsKey } from './gains'
 import { classify, resolveSpends } from './spend'
 import type { SpendMark } from './spend'
-import { addPoint, keepDiff, topChanges, valueByTab } from './ledger'
-import { glanceKey, glanceRates, ledgerKey, sinceLabel } from './glance'
+import { addPoint, keepDiff, sellMinChaos, topChanges, valueByTab, worthSelling } from './ledger'
+import { glanceKey, glanceRates, isGlance, ledgerKey, sinceLabel } from './glance'
 import { keptSales, listedGlance, listedTotal, listedWorth } from './pending-glance'
 import { lineOutDoc, loadLineOut, outIdsOf } from './line-out-store'
-import type { Glance } from './glance'
+import type { Glance, GlanceSell } from './glance'
 import type { LedgerPoint, TabValue } from './ledger'
 import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, StashTabLike, Valuation } from './valuation'
 import type { ReaderStatus } from './widget'
@@ -175,16 +175,20 @@ async function loadLeague (id: string) {
   loadLineOut(id).catch(() => {})
   // Strict reads (undefined: the file is there but couldn't be read, locked
   // by antivirus or a sync tool); null only when there's no file yet.
-  const [saved, cache, led, own, gains, base] = await Promise.all([
+  const [saved, cache, led, own, gains, base, lastGlance] = await Promise.all([
     (hostRequest('doc-get-strict', { collection: COLLECTION, key: id }) as Promise<NetWorthHistory | null>).catch(() => undefined),
     (hostRequest('stash-cache', { league: id }) as Promise<CachedStash | null>).catch(() => null),
     (hostRequest('doc-get-strict', { collection: COLLECTION, key: ledgerKey(id) }) as Promise<Ledger | null>).catch(() => undefined),
     (hostRequest('doc-get-strict', { collection: COLLECTION, key: prefsKey(id) }) as Promise<PricePrefs | null>).catch(() => undefined),
     stashGains(id),
-    (hostRequest('doc-get', { collection: COLLECTION, key: `${id}-baseline` }) as Promise<Baseline | null>).catch(() => null)
+    (hostRequest('doc-get', { collection: COLLECTION, key: `${id}-baseline` }) as Promise<Baseline | null>).catch(() => null),
+    hostRequest('doc-get', { collection: COLLECTION, key: glanceKey(id) }).catch(() => null)
   ])
   if (loadedFor !== id) return
   baseline.value = base
+  // The last read's dock number, so new prices keep its Worth selling list
+  // current before the next read.
+  if (glance.value?.league !== id) glance.value = isGlance(lastGlance) && lastGlance.league === id ? lastGlance : null
   gainsRef.value = gains
   history.value = { ...emptyHistory(), ...(saved ?? {}) }
   ledgerRef.value = { ...emptyLedger(), ...(led ?? {}) }
@@ -298,10 +302,36 @@ function glanceAt (id: string, at: number, chaos: number, netChaos: number | nul
   const rates = ratesAt(at)
   // Kept only after a break (yesterday is the plain "today").
   const todayFrom = fromDay && sinceLabel(fromDay, at).label !== 'today' ? { todayFrom: fromDay } : {}
-  const g: Glance = { league: id, at, chaos, netChaos, divine: divine.value, perHourChaos: rates.today.perHour, rates: glanceRates(rates), todayChaos, ...todayFrom }
+  const g: Glance = { league: id, at, chaos, netChaos, divine: divine.value, perHourChaos: rates.today.perHour, rates: glanceRates(rates), todayChaos, selling: sellingNow(id), ...todayFrom }
   glance.value = g
   return g
 }
+
+// What Ctrl+Space lists as worth selling: the window's own list, a few rows.
+// With no valuation (prices not loaded yet), the last saved list stays.
+function sellingNow (id: string): GlanceSell[] | undefined {
+  const v = valuation.value
+  const kept = glance.value?.league === id ? glance.value.selling : undefined
+  if (!v) return kept
+  const byKey = new Map(v.lines.map(l => [l.key, l]))
+  return worthSelling(v.lines, sellMinChaos(divine.value)).slice(0, 8).map(x => {
+    const l = byKey.get(x.key)
+    const tip = l?.tipName && l.tipName !== x.name ? { tip: l.tipName } : {}
+    return { name: x.name, count: x.count, chaos: x.chaos, d1: x.d1, d7: x.d7, lostChaos: x.lostChaos, ...tip }
+  })
+}
+
+// New prices, a new stash, or your own price or leave out on an item: the
+// saved list follows now instead of at the next read.
+watch([valuation, divine], () => {
+  const last = glance.value
+  if (!last || last.league !== loadedFor || !valuation.value) return
+  const selling = sellingNow(last.league)
+  if (JSON.stringify(selling) === JSON.stringify(last.selling)) return
+  const saved = { ...last, selling }
+  glance.value = saved
+  hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(last.league), value: saved }).catch(() => {})
+})
 
 // The Per hour choice changed (shared/rate-time.ts): the saved dock number
 // and Ctrl+Space's answer follow now instead of at the next read.

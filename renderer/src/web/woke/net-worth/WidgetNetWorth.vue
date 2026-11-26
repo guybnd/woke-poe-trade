@@ -60,6 +60,7 @@ import type { NetWorthWidget, ReaderStatus } from './widget'
 import { useGoto } from '../tab-bar/goto'
 import { foldedOf, toggleFold } from './layout'
 import { askListed } from './listed-ask'
+import { revealSelling } from './selling-reveal'
 
 const NetWorthPanel = defineAsyncComponent(() => import('./NetWorthPanel.vue'))
 const NetWorthCard = defineAsyncComponent(() => import('./NetWorthCard.vue'))
@@ -86,6 +87,14 @@ useGoto(props.config, 'woke-net-worth', {
       if (foldedOf(props.config.layout).perHour) props.config.layout = { ...props.config.layout, folded: toggleFold(props.config.layout?.folded, 'perHour') }
     },
     'faustus-box': () => {},
+    // Worth selling sits under Details, and can be switched off or folded;
+    // with nothing in it, it shows for a minute anyway.
+    'worth-selling': () => {
+      props.config.detailsOpen = true
+      setSection(props.config, 'selling', true)
+      if (foldedOf(props.config.layout).selling) props.config.layout = { ...props.config.layout, folded: toggleFold(props.config.layout?.folded, 'selling') }
+      revealSelling()
+    },
     'still-cheapest': () => {},
     // Listed with its Stale chip picked.
     'stale': () => { askListed(props.config.wmId, 'stale') }
