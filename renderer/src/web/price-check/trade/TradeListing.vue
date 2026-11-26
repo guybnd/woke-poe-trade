@@ -713,7 +713,7 @@ export default defineComponent({
       return width
     })
     const columnCap = computed(() =>
-      // Text grows with Text size and, in this window, Size (theme.css [data-w-sized]).
+      // Text grows with Text size and, in this window, Size (theme.css [data-w-window-sized]).
       statColumnsThatFit(tableWidth.value, otherColumnsWidth.value, textScale.value / 100 * rootFontPx() / 16, allColumns.value.length))
     const shownColumns = computed(() => allColumns.value.slice(0, columnCap.value))
     const hiddenColumns = computed(() => allColumns.value.slice(columnCap.value))

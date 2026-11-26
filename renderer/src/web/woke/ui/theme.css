@@ -444,7 +444,7 @@ body[data-woke-hidden] [data-w-panel] { display: none !important; }
  * again here because a token keeps the value it got where it was declared
  * (:root). Lengths in rem that also multiply by Text size use --w-text-user,
  * which leaves Size out (rem holds it). Tooltips they open: tooltip.ts tipZoom. */
-[data-w-sized] {
+[data-w-window-sized] {
   --w-text-scale: calc(var(--w-text-user, 1) * var(--w-window-size, 1));
   --w-fs-xs: calc(11px * var(--w-text-scale));
   --w-fs-sm: calc(11.5px * var(--w-text-scale));
@@ -455,10 +455,10 @@ body[data-woke-hidden] [data-w-panel] { display: none !important; }
   --w-row-h: calc(28px * var(--w-text-scale));
   --w-ctl-h: calc(28px * var(--w-text-scale));
 }
-:root[data-woke-look="game"] [data-w-sized] { --w-fs-caps: var(--w-fs-md); }
+:root[data-woke-look="game"] [data-w-window-sized] { --w-fs-caps: var(--w-fs-md); }
 /* In the order :root takes them. */
-:root[data-woke-density="compact"] [data-w-sized] { --w-row-h: calc(24px * var(--w-text-scale)); --w-ctl-h: calc(24px * var(--w-text-scale)); }
-:root[data-woke-theme="native"] [data-w-sized] { --w-row-h: calc(30px * var(--w-text-scale)); }
+:root[data-woke-density="compact"] [data-w-window-sized] { --w-row-h: calc(24px * var(--w-text-scale)); --w-ctl-h: calc(24px * var(--w-text-scale)); }
+:root[data-woke-theme="native"] [data-w-window-sized] { --w-row-h: calc(30px * var(--w-text-scale)); }
 
 /* Panel size (ui/scale.ts). */
 [data-w-panel] { zoom: var(--w-ui-scale, 1); }

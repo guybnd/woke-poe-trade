@@ -126,11 +126,11 @@ function rootVar (name: string): number {
 
 // The tooltip is as big as the window it came from. Panels are zoomed by Panel
 // size x UI size (--w-ui-scale), as before. The windows the price check's Size
-// sizes (the price check, map check, Settings: data-w-sized) are zoomed their
+// sizes (the price check, map check, Settings: data-w-window-sized) are zoomed their
 // own way, and their text also grows with Size (--w-window-size, theme.css),
 // so a tooltip from one takes that window's zoom times Size.
 export function tipZoom (target: Element): number {
-  if (!target.closest('[data-w-sized]')) return rootVar('--w-ui-scale')
+  if (!target.closest('[data-w-window-sized]')) return rootVar('--w-ui-scale')
   const zoom = (target as Element & { currentCSSZoom?: number }).currentCSSZoom
   return (typeof zoom === 'number' && zoom > 0 ? zoom : rootVar('--w-ui-scale')) * rootVar('--w-window-size')
 }
