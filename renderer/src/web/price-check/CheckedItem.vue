@@ -404,7 +404,10 @@ export default defineComponent({
           (!CATEGORY_TO_TRADE_ID.has(item.category!) &&
             item.info.refName !== 'Mercenary Warrant') ||
           (item.isUnidentified) ||
-          (item.isVeiled)
+          (item.isVeiled) ||
+          // woke: priced by name from a click (Ctrl+Space's Enter, a menu's
+          // Price check): a base has no mods to pick first, so that click searches.
+          (props.live && item.rawText === 'VIRTUAL_ITEM')
         )
       }
 
