@@ -67,7 +67,7 @@ export async function checkCheapest (league: string, l: Listing, rates: Rates): 
   if (cheapestBusy.value.has(l.id)) return
   const body = cheapestQuery(l, transfiguredOf(l))
   if (!body) return
-  const mine = saleChaos(l, rates)
+  const mine = saleChaos({ price: l.price }, rates)
   if (mine == null) { setError(l.id, `No price for ${l.price.currency} yet (poe.ninja still loading?)`); return }
   setBusy(l.id, true)
   setError(l.id, null)

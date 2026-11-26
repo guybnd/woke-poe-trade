@@ -8,7 +8,8 @@ import { hostRequest } from '../shared/host'
 import { keptSales } from './pending-glance'
 import { ninjaPriceOf } from './prices'
 import { overCardCap } from './valuation'
-import { NINJA_CURRENCY, saleChaos, versusMarket } from './sales'
+import { DIVINE_ON, NINJA_CURRENCY, divineOnFrom, saleChaos, versusMarket } from './sales'
+import { divineDays } from './divine-days'
 import type { Rates, Sale, SalesReply } from './sales'
 
 const reply = shallowRef<SalesReply | null>(null)
@@ -27,7 +28,11 @@ export const salesFailed = computed(() => failed.value)
 export const rates = computed<Rates>(() => {
   // Read so a new price download values again.
   if (ninja.updatedAt.value == null) return { chaos: 1 }
-  const r: Rates = { chaos: 1 }
+  // A sale in divines counts at the rate of its own day where Net worth
+  // saved one, else today's (Guy's pick, 2026-11-26).
+  // Only that league's days: Net worth can be on another league than Sales.
+  const saved = divineDays.value
+  const r: Rates = { chaos: 1, ...(saved.league != null && saved.league === loadedFor ? { [DIVINE_ON]: divineOnFrom(saved.days) } : {}) }
   const div = ninja.xchgRate.value
   if (div) r.divine = div
   for (const [id, name] of Object.entries(NINJA_CURRENCY)) {
@@ -53,7 +58,8 @@ export function ninjaPriced (s: Sale): { chaos: number, thin?: boolean } | null 
   return p && p.chaos > 0 && !overCardCap(p) ? { chaos: p.chaos, ...(p.thin ? { thin: true } : {}) } : null
 }
 export function marketOf (s: Sale): number | null {
-  return versusMarket(saleChaos(s, rates.value), ninjaEach(s), s.stack)
+  // Against poe.ninja now, so both sides at today's rates.
+  return versusMarket(saleChaos({ price: s.price }, rates.value), ninjaEach(s), s.stack)
 }
 
 const ok = (r: unknown): r is SalesReply => !!r && typeof r === 'object' && Array.isArray((r as SalesReply).sales)

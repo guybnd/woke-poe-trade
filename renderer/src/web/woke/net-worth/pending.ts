@@ -127,7 +127,8 @@ export function pendingRows (doc: PendingDoc | null, sales: readonly Sale[], rat
     if (sold.has(item.id)) continue
     const firstAt = doc.firstSeen[item.id] ?? item.at
     const ageMs = Math.max(0, now - firstAt)
-    const chaos = saleChaos(item, rates)
+    // An ask, not a sale: today's rates.
+    const chaos = saleChaos({ price: item.price }, rates)
     const p = ninjaOf(item)
     const each = p && p.chaos > 0 ? p.chaos : null
     const vs = versusMarket(chaos, each, item.stack)

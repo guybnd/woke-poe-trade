@@ -244,7 +244,8 @@ export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: R
   let leftOutChaos = 0
   let leftOutCollectedChaos = 0
   const row = (item: Sale, isSale: boolean): OutsideRow => {
-    const read = saleChaos(item, rates)
+    // Listings are asks at today's rates; sales at their own day's.
+    const read = saleChaos(isSale ? item : { price: item.price }, rates)
     const collected = isSale && got.has(item.id)
     const before = isSale && (run.saleMarks?.[item.id]?.before ?? (isBefore(run, item) || carriedUsed.has(item.id)))
     // A collected sale is what the stash got: only leaving it out applies.

@@ -591,6 +591,16 @@ export function recordRead (h: NetWorthHistory, v: Valuation, divine: number | n
 }
 
 // Divines now against the last read of an earlier day (each in its own day's rate).
+// The newest divine rate the history saved: stands in while poe.ninja's
+// isn't loaded yet.
+export function lastDivine (h: NetWorthHistory): number | null {
+  let best: { at: number, divine: number } | null = null
+  for (const d of Object.values(h.days)) {
+    if (d.divine && d.divine > 0 && (!best || d.at > best.at)) best = { at: d.at, divine: d.divine }
+  }
+  return best?.divine ?? null
+}
+
 export function sinceYesterday (h: NetWorthHistory, chaosNow: number, divineNow: number | null, at: number): number | null {
   if (!divineNow) return null
   const today = dayOf(at)

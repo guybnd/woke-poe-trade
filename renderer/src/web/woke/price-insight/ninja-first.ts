@@ -7,6 +7,7 @@
 // The poe.ninja row for the exact item is exactDetailsId (price-check/trends/getDetailsId.ts).
 
 import { VARIABLE_UNIQUE_NAMES } from '../shared/variable-uniques'
+import { isCorpse } from '../shared/corpses'
 
 const VARIABLE = new Set(VARIABLE_UNIQUE_NAMES)
 
@@ -48,9 +49,11 @@ const PRICED_BY_TEXT = new Set(['Chronicle of Atzoatl', 'Expedition Logbook', 'M
 /**
  * Not sold on the exchange, but one fixed thing poe.ninja prices by name
  * (Guy's picks, WOKEPOET-480): divination cards, captured beasts, and items
- * such as reliquary keys, Wombgifts and Ducats. Not one whose price follows an
- * area level (Forbidden Tome), stored experience (Facetor's Lens), map area
- * (Scrying Orb) or item level (corpses): poe.ninja's row by name isn't its price.
+ * such as reliquary keys, Wombgifts, Ducats and corpses. Not one whose price
+ * follows an area level (Forbidden Tome), stored experience (Facetor's Lens)
+ * or map area (Scrying Orb): poe.ninja's row by name isn't its price.
+ * A corpse has no mods to roll and its item level doesn't change its price
+ * (Guy, 2026-11-26), so it gets the quick card too.
  */
 export function fixedPriceItem (item: FixedItem): boolean {
   const { info } = item
@@ -60,7 +63,7 @@ export function fixedPriceItem (item: FixedItem): boolean {
   if (info.namespace !== 'ITEM' || info.craftable) return false
   if (item.areaLevel != null || (item.storedExperience ?? 0) > 0 || item.mapArea != null) return false
   // A Wombgift's level band is part of its poe.ninja row (getDetailsId).
-  return item.itemLevel == null || info.refName.endsWith('Wombgift')
+  return item.itemLevel == null || info.refName.endsWith('Wombgift') || isCorpse(info.refName)
 }
 
 /** An unidentified unique jewel the price check has a unique for (picked or guessed, WOKEPOET-481). */

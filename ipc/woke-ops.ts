@@ -155,7 +155,7 @@ export interface WokeOps {
   'browse-path': Op<{ kind?: 'file' | 'dir', title?: string, defaultPath?: string, extensions?: string[] }, string | null>
   'live-data-cached': Op<{ language: unknown, bundled: number }, number | null>
   'live-data-check': Op<{ language: unknown, bundled: number, bundledShared?: unknown }, number | null>
-  'game-log-tail': Op<{ bytes?: number } | NoArgs, { path: string | null, lines: string[] }>
+  'game-log-tail': Op<{ bytes?: number, since?: number } | NoArgs, { path: string | null, lines: string[] }>
   // Zone, level-up and death lines written between two times (ms). sessions:
   // also game start and AFK on/off lines.
   'game-log-range': Op<{ from: number, to: number, sessions?: boolean }, { path: string | null, lines: string[] }>

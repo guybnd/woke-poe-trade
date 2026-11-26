@@ -76,7 +76,7 @@ export function followGameLog (opts: {
     caughtUp = false
     loading = true
     openedWhileLoading = null
-    logTail(path).then(tail => {
+    logTail(path, opts.since()).then(tail => {
       if (stopped) return
       missing = tail.path == null
       tailPath = tail.path

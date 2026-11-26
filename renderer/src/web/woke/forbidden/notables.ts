@@ -54,6 +54,12 @@ const CLASS_ONLY: Record<string, ClassName> = {
 // The group those go under.
 export const ONLY_HERE = 'Only on Forbidden jewels'
 
+// The class a Forbidden pair's notable belongs to: its ascendancy's, or the
+// class whose only-on-these-jewels notable it is. Null for any other node.
+export function notableClass (name: string, asc?: string): ClassName | null {
+  return asc ? ASC_CLASS[asc] ?? null : CLASS_ONLY[name] ?? null
+}
+
 // A class or ascendancy name (PoB's, the game's, the tree's) to its class.
 export function classOf (name: string | null | undefined): ClassName | null {
   if (!name) return null
