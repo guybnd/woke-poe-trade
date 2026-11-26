@@ -7,6 +7,8 @@
 // Pure: item-tip.ts loads the data.
 import { baseTip, buildTip, kindOfNinjaType, uniqueTip } from './tip-content'
 import type { TipKind, TipLine, TipModel, TipPack, TipTone } from './tip-content'
+import { isNinjaRowType } from './ninja-row-types'
+import type { NinjaRowType } from './ninja-row-types'
 
 export interface NinjaRowRef { name: string, type?: string, variant?: string }
 
@@ -16,7 +18,7 @@ export interface RowTip {
   // The row's own tooltip, when its name isn't an item's.
   build?: (pack: TipPack) => TipModel | null
   // A Forbidden jewel row: the notable, for its stats from the passive tree.
-  forbidden?: { notable: string, jewel: 'Forbidden Flame' | 'Forbidden Flesh' }
+  forbidden?: { notable: string, jewel?: 'Forbidden Flame' | 'Forbidden Flesh' }
   // A map row: the map, for the cards that drop there.
   map?: string
 }
@@ -31,22 +33,38 @@ const parts = (variant?: string) => (variant ?? '').split(',').map(s => s.trim()
 const FORBIDDEN = /^Forbidden (Flame|Flesh)$/
 
 // "Bastion of Hope", variant "Forbidden Flesh" (and maybe more): Forbidden
-// Flesh with that notable as its one mod.
+// Flesh with that notable as its one mod. A row with no jewel named (Ctrl+Space
+// groups both jewels' rows under the notable) is the pair: both jewels' lines.
 function forbiddenTip (ref: NinjaRowRef): RowTip {
-  const jewel = parts(ref.variant).find(p => FORBIDDEN.test(p))
-  const name = jewel === 'Forbidden Flesh' ? 'Forbidden Flesh' : 'Forbidden Flame'
-  const other = name === 'Forbidden Flame' ? 'Forbidden Flesh' : 'Forbidden Flame'
+  const jewel = parts(ref.variant).find(p => FORBIDDEN.test(p)) as ForbiddenJewel | undefined
   return {
     kind: 'unique',
-    forbidden: { notable: ref.name, jewel: name },
-    build: (pack) => {
-      const unique = pack.uniques?.[name] ?? pack['unique-extras']?.[name]
-      const mod = `Allocates ${ref.name} if you have the matching modifier on ${other}`
-      if (!unique) return { name, base: name === 'Forbidden Flame' ? 'Crimson Jewel' : 'Cobalt Jewel', frame: 'unique', sections: [[line(mod, 'mod')]] }
-      // The data lists every notable it can roll; this row is the one.
-      const v = unique.v.map(r => ({ ...r, e: [mod, ...(r.e ?? []).filter(e => !/^Allocates /.test(e))] }))
-      return uniqueTip(name, { ...unique, v }, pack.bases?.[unique.b])
-    }
+    forbidden: { notable: ref.name, jewel },
+    build: (pack) => jewel ? forbiddenJewelTip(pack, ref.name, jewel) : forbiddenPairTip(ref.name)
+  }
+}
+
+type ForbiddenJewel = 'Forbidden Flame' | 'Forbidden Flesh'
+const FORBIDDEN_BASE: Record<ForbiddenJewel, string> = { 'Forbidden Flame': 'Crimson Jewel', 'Forbidden Flesh': 'Cobalt Jewel' }
+const otherJewel = (j: ForbiddenJewel): ForbiddenJewel => j === 'Forbidden Flame' ? 'Forbidden Flesh' : 'Forbidden Flame'
+const allocates = (notable: string, j: ForbiddenJewel) => `Allocates ${notable} if you have the matching modifier on ${otherJewel(j)}`
+
+function forbiddenJewelTip (pack: TipPack, notable: string, name: ForbiddenJewel): TipModel {
+  const unique = pack.uniques?.[name] ?? pack['unique-extras']?.[name]
+  const mod = allocates(notable, name)
+  if (!unique) return { name, base: FORBIDDEN_BASE[name], frame: 'unique', sections: [[line(mod, 'mod')]] }
+  // The data lists every notable it can roll; this row is the one.
+  const v = unique.v.map(r => ({ ...r, e: [mod, ...(r.e ?? []).filter(e => !/^Allocates /.test(e))] }))
+  return uniqueTip(name, { ...unique, v }, pack.bases?.[unique.b])
+}
+
+function forbiddenPairTip (notable: string): TipModel {
+  const jewels: ForbiddenJewel[] = ['Forbidden Flame', 'Forbidden Flesh']
+  return {
+    name: 'Forbidden Flame + Flesh',
+    base: notable,
+    frame: 'unique',
+    sections: jewels.map(j => [[{ text: `${j} (${FORBIDDEN_BASE[j]})`, tone: 'unique' as const }], line(allocates(notable, j), 'mod')])
   }
 }
 
@@ -101,13 +119,10 @@ function mapTip (ref: NinjaRowRef): RowTip {
     map: name,
     build: (pack) => {
       const tier = m?.[2] ?? /^Tier (\d+)$/.exec(parts(ref.variant).find(p => /^Tier \d+$/.test(p)) ?? '')?.[1]
-      const own = buildTip(pack, { name, kind: 'item' })
-      const sections = present([
-        tier ? [pair('Map Tier', tier)] : [],
-        ...(own?.sections ?? [])
-      ])
       // Nothing to add: as the data has it (the hover may still add its cards).
-      return tier ? { name, frame: 'normal', sections } : own
+      if (!tier) return buildTip(pack, { name, kind: 'item', variant: ref.variant })
+      const own = buildTip(pack, { name, kind: 'item' })
+      return { name, base: own?.base, frame: own?.frame ?? 'normal', sections: present([[pair('Map Tier', tier)], ...(own?.sections ?? [])]) }
     }
   }
 }
@@ -184,7 +199,7 @@ function imbuedTip (ref: NinjaRowRef): RowTip {
   }
 }
 
-const SPECIAL: Record<string, (ref: NinjaRowRef) => RowTip> = {
+export const SPECIAL: Record<NinjaRowType, (ref: NinjaRowRef) => RowTip> = {
   ForbiddenJewel: forbiddenTip,
   ClusterJewel: clusterTip,
   Map: mapTip,
@@ -200,7 +215,7 @@ const SPECIAL: Record<string, (ref: NinjaRowRef) => RowTip> = {
 // How to show a row's tooltip. `kind` is for a ref with no type (worked out
 // from the name by the caller).
 export function ninjaRowTip (ref: NinjaRowRef, kind?: TipKind): RowTip {
-  const special = ref.type ? SPECIAL[ref.type] : undefined
+  const special = isNinjaRowType(ref.type) ? SPECIAL[ref.type] : undefined
   if (special) return special(ref)
   return { kind: kind ?? (ref.type ? kindOfNinjaType(ref.type) : 'item') }
 }

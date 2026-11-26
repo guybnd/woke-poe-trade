@@ -4,8 +4,10 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { TipLine, TipModel, TipPack } from '@/web/woke/ui/tooltip/tip-content'
-import { rowTipModel, withForbiddenNotable } from '@/web/woke/ui/tooltip/ninja-row-tip'
+import { SPECIAL, rowTipModel, withForbiddenNotable } from '@/web/woke/ui/tooltip/ninja-row-tip'
+import { NINJA_ROW_TYPES } from '@/web/woke/ui/tooltip/ninja-row-types'
 import { CATEGORY_GROUPS } from '@/web/woke/market/browser'
+import { CORPSE_MONSTERS } from '@/web/woke/shared/corpses'
 import { sampleRows } from '../helpers/ninja-rows'
 import type { SampleRow } from '../helpers/ninja-rows'
 
@@ -22,24 +24,41 @@ const OWN_TIP: Record<string, string> = {
 }
 // Categories the app's data has no rows of to sample.
 const NO_SAMPLE: Record<string, string> = {
-  DjinnCoin: 'not in the item data or the league dump yet',
-  UniqueIdol: 'not in the item data or the league dump yet'
+  DjinnCoin: 'not in the item data or the league dump yet'
 }
-// Rows that show only the price strip, and why. Each is missing text in the
-// tooltip data itself (public/data/tips), not a row the mapping misreads.
-const NO_TEXT: Array<{ type: string, name: RegExp, why: string }> = [
-  { type: 'Corpse', name: /./, why: 'RePoE has no text for corpses; their grave-crafting effects aren\'t in any data the app bundles' },
-  { type: 'Fragment', name: /./, why: 'RePoE has no text for these fragments (reliquary keys, Sacrifice, Mortal, Echo pieces)' },
-  { type: 'Currency', name: /Reliquary Key$|^Mortal |^Chronicle of Atzoatl$|^Divine Vessel$|^Forbidden Tome$|^Inscribed Ultimatum$|^Mirrored Tablet$/, why: 'RePoE has no text for it' },
-  { type: 'Currency', name: /^Viscera$/, why: 'the Viscera row has its own tooltip (OWN_TIP)' },
-  { type: 'Incubator', name: /./, why: 'RePoE has no text for incubators' },
-  { type: 'Map', name: /^(?:Shaper Guardian|Nightmare|Vaal Temple) Map$/, why: 'no tier in the row and no text; the hover adds the map\'s card drops where the card data has it' },
-  { type: 'BaseType', name: /Jewel$|^(?:Two-Stone|Shadowed) Ring$/, why: 'a base with no stats of its own; the hover adds its top tiers and uniques (withBaseExtras)' },
-  { type: 'SkillGem', name: /^Dark Pact|^Minion Pact Support$|^Arcane Link$|^Fireball of Radiation$/, why: 'not in RePoE\'s gem data' },
-  { type: 'UniqueArmour', name: /./, why: 'uniques poe.ninja and Path of Building have no text of yet; the hover shows the base (only the item data\'s uniques, not poe.ninja rows)' },
-  { type: 'UniqueTincture', name: /^Mightblade$/, why: 'not in the tooltip data' }
+const corpses = [...CORPSE_MONSTERS].flatMap(m => [m, `Perfect ${m}`, `Imperfect ${m}`])
+// Rows that show only the price strip, by name, and why. Each is missing text
+// in the tooltip data itself (public/data/tips), not a row the mapping misreads.
+const NO_TEXT: Array<{ type: string, names: string[], why: string }> = [
+  { type: 'Corpse', names: corpses, why: 'RePoE has no text for corpses; their grave-crafting effects aren\'t in any data the app bundles' },
+  {
+    type: 'Fragment',
+    names: ['Ancient Reliquary Key', 'Archive Reliquary Key', 'Cosmic Reliquary Key', 'Decaying Reliquary Key', 'Echo of Loneliness', 'Echo of Reverence', 'Echo of Trauma', 'Forgotten Reliquary Key', 'Lonely Reliquary Key', 'Mortal Ignorance', 'Mortal Rage', 'Oubliette Reliquary Key', 'Reverent Reliquary Key', 'Shiny Reliquary Key', 'Timeworn Reliquary Key', 'Traumatic Reliquary Key', 'Vaal Reliquary Key', 'Visceral Reliquary Key', 'Voidborn Reliquary Key'],
+    why: 'RePoE has no text for these fragments'
+  },
+  { type: 'Currency', names: ['Chronicle of Atzoatl', 'Divine Vessel', 'Forbidden Tome', 'Inscribed Ultimatum', 'Mirrored Tablet', 'Mortal Rage', 'Voidborn Reliquary Key'], why: 'RePoE has no text for it' },
+  { type: 'Currency', names: ['Viscera'], why: 'the Viscera row has its own tooltip (OWN_TIP)' },
+  {
+    type: 'Incubator',
+    names: ["Celestial Armoursmith's Incubator", "Celestial Jeweller's Incubator", 'Fine Incubator', "Gemcutter's Incubator", "Geomancer's Incubator", 'Honoured Incubator', 'Miraged Incubator', 'Ornate Incubator', 'Sacred Incubator', "Thaumaturge's Incubator"],
+    why: 'RePoE has no text for incubators'
+  },
+  { type: 'Map', names: ['Nightmare Map', 'Shaper Guardian Map', 'Vaal Temple Map'], why: 'no tier in the row and no text; the hover adds the map\'s card drops where the card data has it' },
+  {
+    type: 'BaseType',
+    names: ['Cobalt Jewel', 'Crimson Jewel', 'Ghastly Eye Jewel', 'Hypnotic Eye Jewel', 'Murderous Eye Jewel', 'Searching Eye Jewel', 'Shadowed Ring', 'Two-Stone Ring', 'Viridian Jewel'],
+    why: 'a base with no stats of its own; the hover adds its top tiers and uniques (withBaseExtras)'
+  },
+  { type: 'SkillGem', names: ['Arcane Link', 'Dark Pact', 'Dark Pact of Trarthus', 'Fireball of Radiation', 'Minion Pact Support'], why: 'not in RePoE\'s gem data' },
+  {
+    type: 'UniqueIdol',
+    names: ['Arbitrary Tenets', 'Black Thumb', 'Bold Undertakings', "Cassia's Pride", 'Crop Rotation', 'Crystallised Power', 'Dance of Destruction', 'Destructive Play', 'Dimensional Barrier', 'Eldritch Gaze', 'Endless Tide', 'Extreme Archaeology', 'Fungal Remission', 'Gruelling Gauntlet', 'Immutable Dogma', 'Loved by the Sun', 'Lucid Dreams', 'Meticulous Appraiser', 'Ominous Silence', 'Perceived Greatness', "Refiner's Bargain", 'Ruinous Wager', 'Sealed Domain', 'Secular Focus', 'Servant of Order', 'Shadow Shaping', 'Singular Focus', 'Smash and Grab', 'Speaker of the Dead', 'Straight and Narrow', 'Thorough Exploration', 'Timeless Conflict', 'Trade Embargo', 'Twist of Fate', 'Twisted Wish', 'Unending Nightmare', 'Well Supplied', 'Wellspring of Creation', 'Wrath of the Cosmos'],
+    why: 'unique idols poe.ninja and Path of Building have no text of yet (a tip-data rebuild may add them); the hover shows the base'
+  },
+  { type: 'UniqueArmour', names: ['Skin of the Lords'], why: 'no text in poe.ninja or Path of Building; the hover shows the base' },
+  { type: 'UniqueWeapon', names: ['The Wellhook'], why: 'no text in poe.ninja or Path of Building; the hover shows the base' }
 ]
-const why = (r: SampleRow) => NO_TEXT.find(x => x.type === r.type && x.name.test(r.name))?.why
+const why = (r: SampleRow) => NO_TEXT.find(x => x.type === r.type && x.names.includes(r.name))?.why
 
 describe('every Prices category', () => {
   const rows = sampleRows()
@@ -59,10 +78,10 @@ describe('every Prices category', () => {
     expect(missing).toEqual([])
   })
 
-  // Each exception still covers a row with no text: one that gains text leaves the list.
+  // Each name listed is still a row with no text: one that gains text leaves the list.
   it('allows only exceptions still needed', () => {
     const bare = rows.filter(r => !rowTipModel(pack, r)?.sections.length)
-    const stale = NO_TEXT.filter(x => !bare.some(r => r.type === x.type && x.name.test(r.name))).map(x => `${x.type} ${x.name}`)
+    const stale = NO_TEXT.flatMap(x => x.names.filter(n => !bare.some(r => r.type === x.type && r.name === n)).map(n => `${x.type}: ${n}`))
     expect(stale).toEqual([])
   })
 })
@@ -83,6 +102,22 @@ describe('rows named after what prices them', () => {
     expect(all(flame)).toContain('Allocates Bastion of Hope if you have the matching modifier on Forbidden Flesh')
   })
 
+  it('shows poe.ninja\'s own Forbidden rows (variant just the jewel)', () => {
+    const tip = rowTipModel(pack, { type: 'ForbiddenJewel', name: 'Void Beacon', variant: 'Forbidden Flesh' })!
+    expect(tip.name).toBe('Forbidden Flesh')
+    expect(all(tip).filter(l => l.startsWith('Allocates '))).toEqual(['Allocates Void Beacon if you have the matching modifier on Forbidden Flame'])
+  })
+
+  it('shows both jewels for a row that names neither (Ctrl+Space\'s pair)', () => {
+    const tip = rowTipModel(pack, { type: 'ForbiddenJewel', name: 'Bastion of Hope' })!
+    expect(tip.name).toBe('Forbidden Flame + Flesh')
+    expect(tip.base).toBe('Bastion of Hope')
+    expect(all(tip)).toEqual([
+      'Forbidden Flame (Crimson Jewel)', 'Allocates Bastion of Hope if you have the matching modifier on Forbidden Flesh',
+      'Forbidden Flesh (Cobalt Jewel)', 'Allocates Bastion of Hope if you have the matching modifier on Forbidden Flame'
+    ])
+  })
+
   it('adds the notable\'s class and stats from the tree', () => {
     const tip = rowTipModel(pack, { type: 'ForbiddenJewel', name: 'Bastion of Hope', variant: 'Forbidden Flesh' })!
     const lines = all(withForbiddenNotable(tip, { cls: 'Templar', group: 'Guardian', stats: ['Gain 2 Endurance Charges'] }))
@@ -96,6 +131,10 @@ describe('rows named after what prices them', () => {
     expect(all(tip)).toEqual(['Item Level: 84+', 'Adds 8 Passive Skills', 'Added Small Passive Skills grant: 12% increased Fire Damage'])
     expect(rowTipModel(pack, { type: 'ClusterJewel', name: 'x', variant: '5 passives' })!.name).toBe('Medium Cluster Jewel')
     expect(rowTipModel(pack, { type: 'ClusterJewel', name: 'x', variant: '3 passives' })!.name).toBe('Small Cluster Jewel')
+  })
+
+  it('maps only the types it lists, and lists every type it maps', () => {
+    expect(Object.keys(SPECIAL).sort()).toEqual([...NINJA_ROW_TYPES].sort())
   })
 
   it('reads a map row\'s tier from its name or its variant', () => {
