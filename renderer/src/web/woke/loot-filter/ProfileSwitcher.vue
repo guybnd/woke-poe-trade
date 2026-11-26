@@ -14,8 +14,8 @@
       <span v-if="draft && problem" class="text-xs" style="color: var(--w-warn);">{{ problem }}</span>
     </template>
     <template v-else-if="deleting">
-      <span class="text-xs">Delete <b>{{ deleting.name }}</b>? Its file stays in your filter folder.</span>
-      <WButton size="sm" variant="danger" @click="confirmDelete">Delete</WButton>
+      <span class="text-xs">Remove <b>{{ deleting.name }}</b>? Its file stays in your filter folder.</span>
+      <WButton size="sm" variant="danger" @click="confirmDelete">Remove</WButton>
       <WButton size="sm" variant="ghost" @click="deleting = null">Cancel</WButton>
     </template>
     <button v-else type="button" class="w-focusable" :class="[$style.tab, $style.add]" :disabled="store.switching.value"
@@ -35,7 +35,7 @@ import { activeProfile, addProfile, copyName, newProfileName, profileFile, profi
 import { LEVEL_NAMES } from './strictness'
 
 // Profiles as a row of tabs above the editor's own (Guy's pick B): click one to
-// switch, + to add, right-click for duplicate, rename and delete.
+// switch, + to add, right-click for duplicate, rename and remove.
 const props = defineProps<{
   config: LootFilterWidget
   store: LootFilterStore
@@ -62,7 +62,7 @@ function sourceOf (p: FilterProfile): string {
 
 function tipOf (p: FilterProfile): string {
   const lead = p.id === props.config.activeProfile ? 'In use' : 'Click to switch to it; the game loads it too'
-  return `${p.name} · ${sourceOf(p)}\nSaves to ${fileOf(p)}\n${lead}. Right-click to duplicate, rename or delete.`
+  return `${p.name} · ${sourceOf(p)}\nSaves to ${fileOf(p)}\n${lead}. Right-click to duplicate, rename or remove.`
 }
 
 function addMenu (e: MouseEvent) {
@@ -80,7 +80,7 @@ function tabMenu (e: MouseEvent, p: FilterProfile) {
     ...(p.id === props.config.activeProfile ? [] : [{ label: 'Switch to it', icon: 'fas fa-exchange-alt', action: () => { swap(p.id) } }]),
     { label: 'Duplicate', icon: 'far fa-clone', action: () => { startNaming('copy', undefined, p.id) } },
     { label: 'Rename', icon: 'fas fa-pen', action: () => { startNaming('rename', p.id) } },
-    { label: 'Delete', icon: 'fas fa-trash', danger: true, disabled: props.config.profiles.length < 2, action: () => { deleting.value = p } }
+    { label: 'Remove', icon: 'fas fa-trash', danger: true, disabled: props.config.profiles.length < 2, action: () => { deleting.value = p } }
   ])
 }
 
@@ -144,7 +144,7 @@ async function confirmDelete () {
     if (!other) return
     if (!await props.store.switchProfile(other.id)) return
   }
-  if (props.store.deleteProfile(p.id)) toast(`Deleted ${p.name}. Its file is still in your filter folder.`, { anchor: anchor() })
+  if (props.store.deleteProfile(p.id)) toast(`Removed ${p.name}. Its file is still in your filter folder.`, { anchor: anchor() })
 }
 </script>
 
