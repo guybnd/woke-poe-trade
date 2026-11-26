@@ -11,7 +11,7 @@ test('rows show their bonuses, sort by one and want them all', async ({ overlay 
 
   // A T17 mod's row: its numbers, its more-X tag and a tooltip with the whole mod.
   await panel.getByRole('searchbox').fill('Bloodstained Sawblades')
-  const row = panel.getByText('13/8/5').first()
+  const row = panel.getByText(/^Drops\s*13\s*Rarity\s*8\s*Pack\s*5$/).first()
   await expect(row).toBeVisible()
   await expect(panel.getByText('+47% Currency').first()).toBeVisible()
   await expect(panel.getByTitle(/Ultimate \(T17\)\n/).first()).toBeAttached()

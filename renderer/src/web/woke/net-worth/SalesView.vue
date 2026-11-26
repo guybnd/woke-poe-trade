@@ -6,7 +6,7 @@
     <section :class="$style.head">
       <span :class="$style.total" class="w-num" :title="inChaos(sum.chaos)">{{ div(sum.chaos) }}<Coin :chaos="!divine" /></span>
       <span class="w-dim text-xs">{{ sum.count }} {{ sum.count === 1 ? 'sale' : 'sales' }}<template v-if="sum.unpriced"> · {{ sum.unpriced }} in a currency without a price</template><template v-if="outInRange"> · <span data-sales-left-out>{{ outInRange }} left out</span></template></span>
-      <TextTabs v-model="range" :options="RANGES" :class="$style.range" />
+      <WSegmented :model-value="range" :options="RANGES" :class="$style.range" title="Which sales to count" @update:model-value="range = $event as SaleRange" />
     </section>
 
     <!-- Layout 1, ranked bars: one row per type, biggest first; a click filters the table. -->
@@ -22,7 +22,7 @@
     <div v-else class="w-dim text-xs" :class="$style.none">No sales in this range.</div>
 
     <section :class="$style.chips">
-      <WField v-model="query" type="search" icon="fas fa-search" placeholder="Search sales" :class="$style.search" />
+      <WSearchField v-model="query" things="sales" :class="$style.search" />
       <WChip v-if="type" clickable active :title="`Only ${typeLabel}. Click to show every type`" @click="type = null">{{ typeLabel }} ×</WChip>
       <WChip v-if="outInRange || onlyChanged" clickable :active="onlyChanged" title="Only the sales you left out of the totals" data-sales-changed @click="onlyChanged = !onlyChanged">Changed {{ outInRange }}</WChip>
     </section>
@@ -32,10 +32,9 @@
         <thead>
           <tr>
             <th v-for="c in COLS" :key="c.key" :class="{ [$style.left]: c.key === 'item' }" :aria-sort="sort.key === c.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'">
-              <button type="button" :class="[$style.sortBtn, { [$style.sorted]: sort.key === c.key }]" :title="c.tip" :aria-label="c.key === 'value' ? 'Sold for' : undefined" @click="sortBy(c.key)">
-                <Coin v-if="c.key === 'value'" :chaos="!divine" /><template v-else>{{ c.label }}</template>
-                <i v-if="sort.key === c.key" :class="['fas', sort.dir === 'asc' ? 'fa-caret-up' : 'fa-caret-down']" aria-hidden="true" />
-              </button>
+              <WSortHead :label="c.key === 'value' ? 'Sold for' : c.label" :active="sort.key === c.key" :desc="sort.dir !== 'asc'" :align="c.key === 'item' ? 'left' : 'right'" :title="c.tip" @sort="sortBy(c.key)">
+                <Coin v-if="c.key === 'value'" :chaos="!divine" />
+              </WSortHead>
             </th>
           </tr>
         </thead>
@@ -50,7 +49,7 @@
             <td class="w-num" :class="marketTone(s)">{{ marketText(marketOf(s)) || '—' }}</td>
             <td class="w-num w-dim" :title="new Date(s.at).toLocaleString()">{{ when(s.at) }}<WLineActs :name="saleName(s)" :out="isOut(s)" :entries="entriesOf(s)" :head="e => headOf(s, e)" @out="leaveOut(s, $event)" /></td>
           </tr>
-          <tr v-if="!rows.length"><td colspan="5" class="w-dim" :class="$style.left">Nothing matches.</td></tr>
+          <tr v-if="!rows.length"><td colspan="5" :class="$style.left"><WNoMatch v-if="query.trim()" :query="query" @clear="query = ''" /><span v-else class="w-dim">No sales of this type here.</span></td></tr>
           <tr v-if="rows.length > limit"><td colspan="5" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 100">{{ rows.length - limit }} more</WButton></td></tr>
         </tbody>
       </table>
@@ -62,12 +61,15 @@
 // The Sales view (pick C): your sales for a range, a ranked bar per type that
 // filters the table under it, and every sale kept.
 import { computed, shallowRef, watch } from 'vue'
-import { WButton, WChip, WEmpty, WField, WLineActs, vItemTip } from '../ui'
+import { WButton, WChip, WEmpty, WLineActs, vItemTip } from '../ui'
 import { saleTip } from './sale-tip'
 import { useSaleLines } from './sale-lines'
 import { formatAmount, nowMinute } from '../ui/format'
-import TextTabs from './TextTabs.vue'
+import WSegmented from '../ui/WSegmented.vue'
 import Coin from './Coin.vue'
+import WSortHead from '../ui/WSortHead.vue'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { byType, inRange, marketText, nextSaleSort, saleChaos, saleName, saleSortOf, saleType, sortSales, totals, SALE_TYPES } from './sales'
 import type { Sale, SaleRange, SaleSort, SaleSortKey, SaleType, TypeRow } from './sales'
 import { marketOf, rates, sales, salesReading } from './sales-store'
@@ -188,9 +190,6 @@ watch(types, (list) => { if (type.value && !list.some(t => t.id === type.value))
 .table td { padding: 2px 6px; text-align: right; border-bottom: 1px solid var(--w-line-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .table tbody tr:hover td { background: var(--w-panel-2); }
 .left { text-align: left !important; }
-.sortBtn { display: inline-flex; align-items: center; gap: 3px; font: inherit; color: inherit; text-transform: inherit; cursor: pointer; border-radius: var(--w-r-sm); }
-.sortBtn:hover, .sorted { color: var(--w-fg); }
-.sortBtn:focus-visible { outline: 1px solid var(--w-gold); }
 .name { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .sale { color: var(--w-gold); }

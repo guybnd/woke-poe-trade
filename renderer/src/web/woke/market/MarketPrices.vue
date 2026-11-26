@@ -13,7 +13,7 @@
 
     <div :class="$style.main">
       <div :class="$style.tools">
-        <WField v-model="query" icon="fas fa-search" :placeholder="category ? `Filter ${category.label}` : 'Filter'" class="grow" />
+        <WSearchField v-model="query" :things="category ? category.label : 'prices'" class="grow" />
         <WSegmented v-model="unit" title="Show values in chaos or divines" :options="[{ value: 'chaos', label: 'c' }, { value: 'div', label: 'div' }]" />
         <WSegmented v-model="range" aria-label="Time range for the price line and change" :options="rangeOptions" />
         <WCorruptedFilter v-if="category?.type === 'SkillGem'" v-model="corrupted" />
@@ -26,11 +26,12 @@
         <WEmpty v-else-if="!category" :art="{ currency: 'divine' }">{{ leagueId ? 'No poe.ninja prices for this league yet.' : 'Select a league in Settings.' }}</WEmpty>
         <template v-else>
           <div class="w-row w-row--head" :class="$style.grid">
-            <button type="button" :class="$style.sortBtn" @click="sortBy('name')">Name<i v-if="config.priceSort === 'name'" :class="sortIcon" /></button>
-            <button type="button" :class="[$style.sortBtn, $style.right]" @click="sortBy('value')">Value<i v-if="config.priceSort === 'value'" :class="sortIcon" /></button>
-            <button type="button" :class="[$style.sortBtn, $style.right]" :title="rangeTitle" @click="sortBy('change')">{{ rangeLong }}<i v-if="config.priceSort === 'change'" :class="sortIcon" /></button>
+            <WSortHead label="Name" :active="config.priceSort === 'name'" :desc="config.priceDesc" @sort="sortBy('name')" />
+            <WSortHead label="Value" :active="config.priceSort === 'value'" :desc="config.priceDesc" align="right" :class="$style.right" @sort="sortBy('value')" />
+            <WSortHead :label="rangeLong" :active="config.priceSort === 'change'" :desc="config.priceDesc" align="right" :class="$style.right" :title="rangeTitle" @sort="sortBy('change')" />
           </div>
-          <WEmpty v-if="!shown.length" icon="fas fa-search">No {{ category.label.toLowerCase() }} match<template v-if="query.trim()"> "{{ query.trim() }}"</template>.</WEmpty>
+          <WNoMatch v-if="!shown.length && query.trim()" :query="query" @clear="query = ''" />
+          <WEmpty v-else-if="!shown.length" icon="fas fa-search">No {{ category.label.toLowerCase() }} here.</WEmpty>
           <div v-for="r in shown" :key="r.key" v-item-tip="r" class="w-row" :class="$style.grid" @contextmenu="rowMenu($event, r)">
             <span class="w-trunc inline-flex items-center gap-2" :class="rarityClass(r.type)">
               <WIcon :src="rowIcon(r)" size="md" />
@@ -71,9 +72,12 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { usePoeninja } from '@/web/background/Prices'
 import { ninjaArt } from './ninja-icons'
-import { WChip, WDelta, WEmpty, WField, WIcon, WPrice, WSegmented, WSkeleton, WSpark, itemArt, ninjaIcon, openMenu, vItemTip } from '../ui'
+import { WChip, WDelta, WEmpty, WIcon, WPrice, WSegmented, WSkeleton, WSpark, itemArt, ninjaIcon, openMenu, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui/layer'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
+import WSortHead from '../ui/WSortHead.vue'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { rarityClass } from '../search/search'
 import { lastWokePrices, onWokePricesLoaded } from './hook'
 import { feedDays } from './parse'
@@ -232,7 +236,6 @@ function sortBy (sort: MarketSort) {
     props.config.priceDesc = sort !== 'name'
   }
 }
-const sortIcon = computed(() => ['fas ml-1 text-xs', props.config.priceDesc ? 'fa-caret-down' : 'fa-caret-up'])
 
 // The main value in the chosen unit; the other one under it once it's worth a divine.
 // Under 1c it is 'auto', so WPrice's bulk shows "1 div / N" as poe.ninja does.
@@ -306,7 +309,6 @@ function rowMenu (e: MouseEvent, r: MarketRow) {
 .tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); }
 .rows { flex: 1; min-height: 0; overflow-y: auto; }
 .grid { grid-template-columns: minmax(0, 1fr) 6.5rem 8.5rem; }
-.sortBtn { display: inline-flex; align-items: center; gap: 2px; color: inherit; font: inherit; }
 .right { justify-content: flex-end; }
 .value { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
 .sub { font-size: var(--w-fs-xs); }

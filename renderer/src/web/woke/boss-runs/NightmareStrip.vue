@@ -81,7 +81,7 @@
             <td class="w-dim">Profit <span :class="$style.mapcost">(map <WPriceText :text="chaos(mapPrice)" />)</span></td>
             <td v-for="c in cols" :key="c.id" :class="$style.profit" :data-nightmare-profit="c.id">
               <span v-if="c.profit != null" :class="c.profit >= 0 ? 'w-up' : 'w-down'"><WPriceText :text="signed(c.profit)" /></span>
-              <span v-else class="w-faint" title="No Nightmare Map price on poe.ninja">?</span>
+              <WPrice v-else :chaos="null" none="No poe.ninja price yet for the Nightmare Map" />
             </td>
           </tr>
         </tbody>
@@ -103,6 +103,7 @@ import { useFold } from '../ui/fold'
 import { AppConfig } from '@/web/Config'
 import WIcon from '../ui/WIcon.vue'
 import WPriceText from '../ui/WPriceText.vue'
+import WPrice from '../ui/WPrice.vue'
 import { formatAmount } from '../ui/format'
 import WSegmented from '../ui/WSegmented.vue'
 import VaultHoverCard from '../vaults/VaultHoverCard.vue'
@@ -132,7 +133,7 @@ function signed (n: number) { return `${n >= 0 ? '+' : ''}${chaos(n)}` }
 const prices = usePriceIndex()
 // Plain chaos in the grid: one unit across every cell, so columns compare at a glance.
 function chaos (n: number | null | undefined) {
-  return n == null ? '?' : `${formatAmount(n)}c`
+  return n == null ? '—' : `${formatAmount(n)}c`
 }
 
 const DEFAULT_PREFS: BossPrefs = {

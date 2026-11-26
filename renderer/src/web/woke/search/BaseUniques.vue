@@ -14,7 +14,7 @@ import type { PriceGroup } from './search'
 export interface PricedUnique { id: string, name: string, group: PriceGroup }
 export interface UnpricedUnique { name: string, refName: string, icon?: string }
 
-const props = defineProps<{ priced: PricedUnique[], unpriced: UnpricedUnique[], divine: number | null, noPrice: string }>()
+const props = defineProps<{ priced: PricedUnique[], unpriced: UnpricedUnique[], divine: number | null, noPrice?: string }>()
 const emit = defineEmits<{ pick: [entry: PricedUnique] }>()
 
 const rows = computed<UniqueOnBaseRow[]>(() => [

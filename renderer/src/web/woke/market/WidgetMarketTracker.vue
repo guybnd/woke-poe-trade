@@ -60,7 +60,7 @@
       <MarketPrices v-if="prices" :config="config" :open="config.wmWants === 'show'" />
       <template v-else-if="searching">
         <WSkeleton v-if="!latest && league" :rows="8" />
-        <WEmpty v-else-if="!searchGroups.length" icon="fas fa-search">Nothing on poe.ninja matches "{{ query.trim() }}"<template v-if="corrupted !== 'any'"> with the corrupted filter on</template>. Rares, bases, flasks and cluster jewels have no saved price.</WEmpty>
+        <WNoMatch v-else-if="!searchGroups.length" :query="query" @clear="query = ''"><template v-if="corrupted !== 'any'">The corrupted filter is on. </template>Rares, bases, flasks and cluster jewels have no saved price.</WNoMatch>
         <template v-else>
           <div class="w-row w-row--head" :class="$style.grid"><span /><span>Item</span><span>Then</span><span class="text-right">Now</span><span class="text-right">%</span></div>
           <template v-for="g in searchGroups" :key="groupKey(g)">
@@ -75,11 +75,11 @@
                 class="w-icon-btn" :class="{ 'w-icon-btn--on': isWatched(v) }">
                 <i :class="isWatched(v) ? 'fas fa-star' : 'far fa-star'" />
               </button>
-              <span v-if="g.variants.length > 1" class="w-trunc" :title="v.variant"><i v-if="isThin(v)" class="fas fa-exclamation-circle w-faint mr-1" :title="thinTitle(v)" />{{ v.variant }}</span>
+              <span v-if="g.variants.length > 1" class="w-trunc" :title="v.variant">{{ v.variant }}</span>
               <span v-else class="w-trunc inline-flex items-center gap-1.5" :class="rarityClass(v.type)" :title="v.type">
-                <WIcon :src="ninjaIcon(v.type, v.name) ?? undefined" /><i v-if="isThin(v)" class="fas fa-exclamation-circle w-faint mr-1" :title="thinTitle(v)" />{{ v.name }}<span v-if="v.variant" class="w-dim ml-1">{{ v.variant }}</span></span>
+                <WIcon :src="ninjaIcon(v.type, v.name) ?? undefined" />{{ v.name }}<span v-if="v.variant" class="w-dim ml-1">{{ v.variant }}</span></span>
               <WPrice :chaos="searchThen(v)" :divine="latest?.divine" :unit="unitFor({ name: v.name, now: v.chaos })" class="w-dim" />
-              <WPrice :chaos="v.chaos" :divine="latest?.divine" :unit="unitFor({ name: v.name, now: v.chaos })" />
+              <WPrice :chaos="v.chaos" :divine="latest?.divine" :unit="unitFor({ name: v.name, now: v.chaos })" :thin="isThin(v) && thinTitle(v)" />
               <WDelta :value="searchChange(v)" class="text-right" />
             </div>
           </template>
@@ -98,9 +98,9 @@
               <i :class="isWatched(m) ? 'fas fa-star' : 'far fa-star'" />
             </button>
             <span class="w-trunc inline-flex items-center gap-1.5" :class="rarityClass(m.type)">
-              <WIcon :src="ninjaIcon(m.type, m.name) ?? undefined" /><i v-if="isThin(m)" class="fas fa-exclamation-circle w-faint mr-1" :title="thinTitle(m)" />{{ m.name }}<span v-if="m.variant" class="w-dim ml-1">{{ m.variant }}</span></span>
+              <WIcon :src="ninjaIcon(m.type, m.name) ?? undefined" />{{ m.name }}<span v-if="m.variant" class="w-dim ml-1">{{ m.variant }}</span></span>
             <WPrice :chaos="m.then" :divine="latest?.divine" :unit="unitFor(m)" class="w-dim" />
-            <WPrice :chaos="m.now" :divine="latest?.divine" :unit="unitFor(m)" />
+            <WPrice :chaos="m.now" :divine="latest?.divine" :unit="unitFor(m)" :thin="isThin(m) && thinTitle(m)" />
             <WDelta :value="m.change" class="text-right" />
           </div>
         </template>
@@ -114,12 +114,12 @@
             <i class="fas fa-star" />
           </button>
           <span class="w-trunc inline-flex items-center gap-1.5" :class="rarityClass(w.item.type)">
-            <WIcon :src="ninjaIcon(w.item.type, w.item.name) ?? undefined" /><i v-if="w.thin" class="fas fa-exclamation-circle w-faint mr-1" :title="thinTitle({ gaps: w.gaps })" />{{ w.item.name }}<span v-if="w.item.variant" class="w-dim ml-1">{{ w.item.variant }}</span>
+            <WIcon :src="ninjaIcon(w.item.type, w.item.name) ?? undefined" />{{ w.item.name }}<span v-if="w.item.variant" class="w-dim ml-1">{{ w.item.variant }}</span>
             <button class="w-icon-btn ml-1" :class="{ 'w-icon-btn--on': hasAlert(w.item) }" :title="alertTitle(w.item)"
               @click="alertKey = alertKey === key(w.item) ? null : key(w.item)"><i class="fas fa-bell text-xs" /></button>
           </span>
           <WSpark :values="w.history" />
-          <WPrice :chaos="w.now" :divine="latest?.divine" />
+          <WPrice :chaos="w.now" :divine="latest?.divine" :thin="w.thin && thinTitle({ gaps: w.gaps })" />
           <WDelta :value="w.change" title="Change since yesterday" class="text-right" />
           <div v-if="alertKey === key(w.item)" class="flex flex-wrap gap-2 items-center py-1" style="grid-column: 2 / -1;">
             <span class="w-dim text-xs">Alert when</span>
@@ -155,6 +155,7 @@ import { computeMovers, trendBaseline } from './analysis'
 import { PRICE_GROUP_LIMIT, groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { WInfo, WPanel, WTabs, WSegmented, WSelect, WField, WPrice, WDelta, WSpark, WEmpty, WIcon, WKbd, WSkeleton, WBanner, WChip, ninjaIcon, openMenu, toast, vItemTip } from '../ui'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { copyText } from '../ui/copy'
 import type { Mover } from './analysis'
 import { isThin, itemKey, thinTitle, utcDate } from './types'

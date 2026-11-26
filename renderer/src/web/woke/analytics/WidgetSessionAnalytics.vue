@@ -133,7 +133,7 @@
           <template v-else>
             <div class="flex justify-between gap-2 items-baseline">
               <span class="min-w-0 w-trunc">
-                <button class="w-icon-btn" title="Back" @click="openId = null"><i class="fas fa-chevron-left" /></button>
+                <WBackLink to="Sessions" @back="openId = null" />
                 <span class="font-medium">{{ formatSessionDate(openSession.startedAt) }}</span>
                 <span class="w-dim"> · {{ openSession.strategy || 'Unnamed' }} · {{ formatDuration(openSession.durationMs) }}</span>
               </span>
@@ -181,7 +181,7 @@
               </datalist>
               <WButton size="sm" :disabled="renameTo.trim() === openSession.strategy" @click="rename">Rename</WButton>
               <span class="grow" />
-              <WButton size="sm" variant="ghost" icon="fas fa-trash" title="You can undo" @click="deleteSession(openSession)">Delete</WButton>
+              <WButton size="sm" variant="ghost" icon="fas fa-trash" title="You can undo" @click="deleteSession(openSession)">Remove</WButton>
             </div>
           </template>
         </template>
@@ -228,10 +228,11 @@ import { popupAnchor } from '../ui/window-anchor'
 import { defineAsyncComponent, inject, computed, nextTick, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { formatDuration } from '../ui/format'
+import { formatDuration, NO_PRICE } from '../ui/format'
 import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import { WInfo, WPanel, WTabs, WSegmented, WButton, WEmpty, WChip, WSpark, WIcon, WBanner, WSkeleton, WLineActs, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
+import WBackLink from '../ui/WBackLink.vue'
 import LootChip from './LootChip.vue'
 import { useWindowKeys } from '../ui/window-keys'
 import { copyText } from '../ui/copy'
@@ -542,7 +543,7 @@ function mapMenu (e: MouseEvent, r: MapRun) {
   openMenu(e, mapEntries(r))
 }
 function mapKeys (e: KeyboardEvent, r: MapRun) { lineKeys(e, { out: r.excluded, editable: false }, mapHandlers(r)) }
-const lootWorth = (l: SavedLoot) => l.chaos != null ? `${num(l.chaos * l.qty / (rate(openSession.value!) ?? 1))} ${unitLabel.value}` : 'no price'
+const lootWorth = (l: SavedLoot) => l.chaos != null ? `${num(l.chaos * l.qty / (rate(openSession.value!) ?? 1))} ${unitLabel.value}` : NO_PRICE
 function setPrice (run: number, line: number, chaos: number | null) {
   saveOpen(s => { const l = s.runs[run]?.loot[line]; if (l) setLootPrice(l, chaos) })
 }
@@ -598,7 +599,7 @@ function sessionMenu (e: MouseEvent, s: SessionRecord) {
     { label: 'Open', icon: 'fas fa-list', keys: 'Enter', action: () => { openId.value = s.id } },
     ...(strategyFilter.value ? [] : [{ label: `Only "${name}"`, icon: 'fas fa-filter', action: () => { strategyFilter.value = name } }]),
     { separator: true },
-    { label: 'Delete', icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => deleteSession(s) }
+    { label: 'Remove', icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => deleteSession(s) }
   ])
 }
 

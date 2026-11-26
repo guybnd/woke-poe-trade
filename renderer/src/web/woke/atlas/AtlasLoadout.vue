@@ -33,9 +33,8 @@
             <span class="w-num" :class="t.count > cap ? 'w-down' : ''">{{ t.count }}</span>
             <button class="w-icon-btn" title="One more" :disabled="t.count >= cap" @click="setCount(i, t.count + 1)"><i class="fas fa-plus" /></button>
           </div>
-          <span class="w-num w-dim text-xs" :title="pricedThreads[i]?.item ? pricedThreads[i].item!.name : 'No price yet: poe.ninja lists Threads once the league has some'">
-            {{ pricedThreads[i]?.item ? fmt(pricedThreads[i].item!.chaos * t.count) : 'no price' }}
-          </span>
+          <span v-if="pricedThreads[i]?.item" class="w-num w-dim text-xs" :title="pricedThreads[i].item!.name">{{ fmt(pricedThreads[i].item!.chaos * t.count) }}</span>
+          <WPrice v-else :chaos="null" class="text-xs" none="No poe.ninja price yet: it lists Threads once the league has some" />
           <button class="w-icon-btn" :class="$style.drop" title="Take this slot out" @click="removeThread(i)"><i class="fas fa-times" /></button>
         </div>
         <button v-if="strategy.threads.length < slotCount" type="button" :class="[$style.slot, $style.empty]" class="w-focusable" @click="addThread">
@@ -57,7 +56,8 @@
           <WIcon :src="p.item ? ninjaIcon(p.item.type, p.item.name) ?? undefined : undefined" fallback="fas fa-coins" />
           <span class="w-num w-dim">{{ p.qty }}×</span>
           <span class="w-trunc" :title="p.item ? undefined : 'No poe.ninja match'">{{ p.item?.name ?? p.name }}</span>
-          <span class="ml-auto w-num w-dim">{{ p.item ? fmt(p.item.chaos * p.qty) : '?' }}</span>
+          <span v-if="p.item" class="ml-auto w-num w-dim">{{ fmt(p.item.chaos * p.qty) }}</span>
+          <WPrice v-else :chaos="null" class="ml-auto" />
         </div>
       </template>
       <button v-else type="button" class="w-faint text-left hover:underline" @click="editing = true">None yet. Add what each map takes.</button>
@@ -164,7 +164,7 @@
 // currency), its regexes (kept in the Regex library), notes, and the tree read
 // as notables by mechanic.
 import { computed, nextTick, onBeforeUnmount, shallowRef, watch } from 'vue'
-import { WButton, WField, WPanel, WBanner, WIcon, WSkeleton, openMenu, toast, useCopy, vItemTip } from '../ui'
+import { WButton, WField, WPanel, WBanner, WIcon, WPrice, WSkeleton, openMenu, toast, useCopy, vItemTip } from '../ui'
 import { ninjaIcon } from '../ui/game-icons'
 import { usePriceText } from '../shared/price'
 import { usePriceIndex } from '../market/price-index'

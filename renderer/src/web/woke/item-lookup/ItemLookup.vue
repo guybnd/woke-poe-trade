@@ -28,7 +28,7 @@
       class="pointer-events-auto w-full h-full flex" width="100%" height="100%" />
     <div v-show="tab === 'bookmarks'" class="pointer-events-auto w-full h-full flex flex-col min-h-0">
       <div v-if="bookmarks.length" style="padding: 8px var(--w-pad);">
-        <WField v-model="filter" icon="fas fa-search" placeholder="Filter bookmarks" />
+        <WSearchField v-model="filter" things="bookmarks" />
       </div>
       <div class="w-scroll flex-1 min-h-0">
         <WListItem v-for="b in shown" :key="b.id" :active="tab === 'bookmarks' && pageId === b.id" @select="openBookmark(b)">
@@ -43,7 +43,7 @@
             </button>
           </template>
         </WListItem>
-        <WEmpty v-if="bookmarks.length && !shown.length" icon="fas fa-filter">Nothing matches "{{ filter }}".</WEmpty>
+        <WNoMatch v-if="bookmarks.length && !shown.length" :query="filter" @clear="filter = ''" />
         <WEmpty v-else-if="!bookmarks.length" icon="far fa-star">
           No bookmarks yet. Press the star on a page to save it here.
         </WEmpty>
@@ -57,7 +57,9 @@ import { computed, onBeforeUnmount, onMounted, shallowRef } from 'vue'
 import { Host, MainProcess } from '@/web/background/IPC'
 import { AppConfig } from '@/web/Config'
 import type { ItemCheckWidget } from '@/web/item-check/widget'
-import { WEmpty, WField, WKbd, WListItem, WPanel, WTabs, toast } from '../ui'
+import { WEmpty, WKbd, WListItem, WPanel, WTabs, toast } from '../ui'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import {
   POP_OUT_GUARD_MS, TAB_LABELS, isWebUrl, lookupKeyAction, lookupTabs, lookupUrl, matchBookmarks, panelKey, popOutUrl, toggleBookmark
 } from './lookup'

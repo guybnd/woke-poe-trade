@@ -39,7 +39,7 @@
           <tr>
             <th :class="$style.left">Item</th>
             <th>Asking</th>
-            <th title="poe.ninja's price now, for the whole stack. ~ is rough: its rolls, corruption or a thin market move the price">Suggest</th>
+            <th title="poe.ninja's price now, for the whole stack. Dim is rough: its rolls, corruption or a thin market (!) move the price">Suggest</th>
             <th title="Your asking price against poe.ninja's">vs ninja</th>
             <th data-goto-spot="still-cheapest" title="Still cheapest? Price check a listing with its own mods (your filters) to rank your price, then set a new one at the foot. The bolt is a quick search by name">Cheapest?</th>
             <th :title="`Since you first listed it (a reprice doesn't reset it). Orange: ${staleDays} days or more`">Listed</th>
@@ -54,7 +54,7 @@
             <td class="w-num" :class="[$style.ask, { [$style.struck]: isOut(r) }]">
               {{ fmt(r.item.price.amount) }} {{ r.item.price.currency }}<span v-if="targetOf(r)" class="w-warn" :title="`You set ${priceLabel(targetOf(r)!)} from the price check: reprice it at Faustus. It clears once a Refresh sees that price`" data-listed-target> → {{ priceLabel(targetOf(r)!) }}</span>
             </td>
-            <td class="w-num" :class="r.confidence === 'rough' ? 'w-dim' : ''" :title="suggestTitle(r)"><WPriceText :text="suggestText(r)" /></td>
+            <td class="w-num" :class="r.confidence === 'rough' ? 'w-dim' : ''" :title="r.ninja == null ? undefined : suggestTitle(r)"><WPrice v-if="r.ninja == null" :chaos="null" none="No poe.ninja price yet: price check it in game" /><template v-else><WPriceText :text="priceText(r.ninja)" /><WThin v-if="r.thin" /></template></td>
             <td class="w-num" :class="vsTone(r)">{{ vsText(r) }}</td>
             <td :class="$style.check" data-listed-check>
               <span v-if="busy.has(r.item.id)" class="w-dim">Checking…</span>
@@ -86,7 +86,8 @@
 // Sales › Listed (pending.ts): what's at Faustus and not sold, its asking
 // price against poe.ninja, and how long it has sat.
 import { computed, shallowRef, watch } from 'vue'
-import { WButton, WChip, WEmpty, WLineActs, WPriceText, WToggle, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
+import WThin from '../ui/WThin.vue'
+import { WButton, WChip, WEmpty, WLineActs, WPrice, WPriceText, WToggle, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui'
 import { itemMenuHead } from '../ui/tooltip/item-menu'
 import { lineOutDoc, loadLineOut, outIdsOf, setLineOut } from './line-out-store'
@@ -205,10 +206,6 @@ const div = (chaos: number) => {
 function priceText (chaos: number) {
   if (props.divine && chaos >= props.divine) return `${(chaos / props.divine).toFixed(chaos >= props.divine * 10 ? 0 : 1)} div`
   return `${Math.max(1, Math.round(chaos))}c`
-}
-function suggestText (r: PendingRow) {
-  if (r.ninja == null) return '—'
-  return `${r.confidence === 'rough' ? '~' : ''}${priceText(r.ninja)}`
 }
 function suggestTitle (r: PendingRow) {
   if (r.ninja == null) return 'No poe.ninja price for this one: price check it in game'

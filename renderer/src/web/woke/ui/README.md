@@ -58,7 +58,15 @@ art wherever the game has it, readable fonts (nothing under 11px).
 | `WListItem` | Clickable list row with `sub` line and trailing `actions`; `active` highlights. |
 | `WInfo` | A "?" with the explanation in a card on hover or focus (`text`). Format: the first line is a short lead; a line starting `- ` is a bullet, one per control or rule; `**Has**` bolds a name; `[[Right-click]]` or `[[Shift + Click]]` boxes keys; a blank line starts a paragraph. Keep the lead to one sentence and each bullet to one idea. Settings hints (`WSettingRow` `hint`) take the same format. Use it instead of grey paragraphs: warnings, empty states and prompts you need right then stay on screen. Not inside dock cards or game tooltips, where the mouse can't reach it, and no links in `text`, since the card takes no clicks. |
 | `WSettingRow` hint | `hint` shows behind a "?" on the label. `show-hint` keeps it on screen, for what goes wrong if it's missed. |
-| `WPrice` | Chaos value with the chaos/divine icon; switches to divines at 1 div unless `unit` is forced. |
+| `WPrice` | Chaos value with the chaos/divine icon; switches to divines at 1 div unless `unit` is forced. **No price** is `:chaos="null"`: a dim "—" with the reason on hover (`none`, default `NO_PRICE` "No poe.ninja price yet"). Never write "?", "no price" or "–" by hand. **Thin market** is `thin` (true, or a longer hover): the shared "!" after the price. |
+| `WThin` | The thin-market "!" on its own, after a price that isn't a `WPrice` (a text price). Hover: `THIN_MARKET` "Thin market: few poe.ninja days this week". Whether a price is thin comes from `shared/price-trust.ts` and `market/types.ts`. A verdict badge (the price check's "Thin" confidence) is a different thing and keeps its badge. |
+| `WSortButton` | A saved list's sort (Regex library, Trade searches, Atlas strategies, PoB builds): the sort icon in the panel's `actions`, a menu of the list's orders, lit when not in your own order (`manual`, default `'manual'`). `v-model` the list's saved sort setting. Import by path. |
+| `WSortHead` | A sortable table column heading, the same in every table: label (or the default slot, e.g. a coin), arrow on the sorted column (on the left for a right-aligned column), `@sort` on click. Props `label`, `active`, `desc`, `align`. The `th` sets `aria-sort` itself. Import by path. |
+| `WRowActs` | A saved list row's buttons (SavedTree `#actions`): the one main action always on in the default slot (Copy in Regex library, Open in Trade searches and Atlas strategies, Use in PoB builds), everything else (`#hover`: Edit or Rename, Pin, Remove) over the row to its left on hover or focus, on the shaded `w-line-acts` backing, taking no room and never over the main action. A list with pins pins on **P** too (listed in its "?"). Import by path. |
+| `WBackLink` | A drill-down's way back: "‹ <where it goes>" (`to`: "Runs", "Sessions") as a text link, top left of the view it replaces. `mouse` makes the mouse's back button on the window do the same while it shows. Never a bare chevron icon or a "Back" button. Import by path. |
+| `WSearchField`, `WNoMatch` | A list's filter: `WSearchField` is the magnifier and "Filter <things>" (`things`; `placeholder` only when it says more, as "Filter by name, tag…"), never a funnel. When the filter leaves nothing, `WNoMatch` says 'Nothing matches "x"' with a **Clear search** button (`@clear`); its slot adds why some things never have a row. A list that is empty for another reason keeps its own `WEmpty`. Finders that jump somewhere ("Find a passive") stay plain `WField`s. Import by path. |
+| `WFoldHead`, `WFoldCaret` | A fold toggle, one look: a chevron pointing right when folded, turning down when open (`WFoldCaret`). `WFoldHead` is the heading button (chevron + slot or `label`); with `fold="<key>"` it keeps its state in `ui/fold.ts` (as you left it, everywhere, across restarts), else `v-model`. A row that is itself the fold button (a day in Map history, a gear row) puts `<WFoldCaret :open>` first. Never ▾ ▸ › or `fa-caret` for a fold; dropdown carets (a menu button) are not folds. Import by path. |
+| `WRateChip` | A map mod's rating, the one look on every screen: Bad (red) / Care (yellow) / Want (green), "–" not rated. Words and hovers come from `RATE_WORD` / `RATE_TITLE` / `RATE_HEAD` (group headings: Bad, Care, Want, Not rated) in `map-mods/rules.ts`. Click steps to the next rating (`@rate` gets it), right-click picks one; `clickable=false` for read-only. The row itself never cycles the rating: row click is Has / Not / Any only where the list searches (the price check strips). Import by path. |
 | `WDelta` | Ratio change as a coloured percentage (`0.12` → `+12%`). |
 | `WSpark` | Sparkline with area fill and endpoint, coloured by direction. |
 | `WChip` | Tag or toggle chip (`clickable`, `active`); the look is `.w-chip` (`.on` when active), square small caps in the game look. |
@@ -69,11 +77,15 @@ art wherever the game has it, readable fonts (nothing under 11px).
 | `WSkeleton` | Grey placeholder rows for a first load (`rows`, `value`). |
 | `WBanner` | One-line error/warn/info above a panel's content with a fix button in `actions`. |
 
+## Moving windows
+
+Every window drags and keeps its spot (its `anchor`, saved with the widget): by its titled panel's header, or, with no header, by a strip marked `data-widget-drag` (the Ctrl+Space palette drags by its search bar; the input and buttons in it still click). Resize stays on the panel's edges. Exceptions, on purpose: the campaign strip (pinned to the top of the screen, beside the game's own bar) and small popovers that open beside what you clicked (menus, hover cards, the price check's side windows), which follow their anchor instead.
+
 ## Overlay layer
 
 `OverlayLayer.vue` is mounted once (via `WokeOverlay`). Use it through:
 
-- `openMenu(event, items)` for every right-click menu. Items: `{ label, action, icon?, gameIcon?, keys?, danger?, disabled? }` or `{ separator: true }`. Put destructive items last after a separator. Arrow keys, Enter and Esc work.
+- `openMenu(event, items)` for every right-click menu. Words and icons are the same everywhere: **Remove** (never Delete, `fas fa-trash`, key chip `Del`), Rename `fas fa-pen` (`F2`), Move to folder `fas fa-folder-open`, Duplicate `far fa-clone`. Items: `{ label, action, icon?, gameIcon?, keys?, danger?, disabled? }` or `{ separator: true }`. Put destructive items last after a separator. Arrow keys, Enter and Esc work.
 - `toast(text, { undo?, anchor? })` after an action instead of asking "are you sure?". Shows at the bottom of `anchor` (pass the panel element) for 5 s; Ctrl+Z also undoes.
 - `useCopy()` gives `{ copied, copy }` so a copy button can say "Copied" in place.
 

@@ -1,5 +1,6 @@
 <template>
-  <Widget :config="config" move-handles="none" :removable="false" :inline-edit="false" :readonly="true">
+  <!-- Drags by its search bar (data-widget-drag) and keeps the spot, as other windows do. -->
+  <Widget :config="config" move-handles="corners" :removable="false" :inline-edit="false" :readonly="true">
     <WPanel v-if="open" width="66rem" max-height="72vh" :scroll="false" :min-width="576" :min-height="288">
       <div :class="$style.root" data-search-palette @click="keepTyping" @keydown="onHotkey" @keyup="onHotkeyUp" @pointerdown="forgetHeld" @input="forgetHeld">
         <div v-if="pins.length" :class="$style.pins">
@@ -10,7 +11,7 @@
           </button>
           <button type="button" class="w-icon-btn" :class="$style.pinClear" title="Clear the comparison" aria-label="Clear the comparison" data-search-pins-clear @click="clearPins"><i class="fas fa-times" /></button>
         </div>
-        <label :class="$style.find">
+        <div :class="$style.find" data-widget-drag title="" @click="onFindClick">
           <i class="fas fa-search" />
           <input ref="input" v-model="query" :class="$style.input" spellcheck="false" aria-label="Search"
             :placeholder="placeholder" @keydown="onKey" @paste="onPaste" @input="noteTyped">
@@ -18,7 +19,7 @@
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': groupsOpen }" title="What search shows" aria-label="What search shows" data-search-groups-btn @click="toggleGroups"><i class="fas fa-cog" /></button>
           <WCorruptedFilter v-model="corrupted" />
           <WKbd keys="Esc" />
-        </label>
+        </div>
         <div v-if="chips.length && !groupsOpen" :class="$style.chips" data-search-chips>
           <button v-for="c in chips" :key="c.id" type="button" :class="[$style.chip, { [$style.chipOn]: c.id === chip }]" :aria-pressed="c.id === chip"
             :title="c.id === 'all' ? 'Everything, each group folded as the cog says' : `Only ${c.label.toLowerCase()}, every group in full`" @click="pickChip(c.id)">
@@ -72,10 +73,9 @@
               <div :class="[$style.grid, $style.gridHead, { [$style.gridExtra]: extraRange }]"><span>Variant</span><span class="text-right">Now</span><span v-if="extraRange" class="text-right" :title="extraTitle">{{ extraRange.label }} ago</span><span class="text-right">24h ago</span><span class="text-right">7d ago</span><span v-if="extraRange" class="text-right" :title="extraTitle">{{ extraRange.label }}</span><span class="text-right">24h</span><span class="text-right">7d</span><span /></div>
               <div v-for="v in selected.group.variants" :key="key(v)" v-item-tip="v" :class="[$style.grid, $style.row, { [$style.rowPicked]: shownVariant != null && v.variant === shownVariant, [$style.gridExtra]: extraRange }]">
                 <span class="w-trunc">{{ v.variant || selected.group.name }}
-                  <i v-if="isThin(v)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(v)" />
                   <!-- A sudden step up: the price check's doubt line, here as a mark (WOKEPOET-534). -->
                   <i v-if="stepOf(v) != null" class="fas fa-exclamation-triangle w-warn" data-price-step :title="stepTitle(v)" /></span>
-                <WPrice bulk :chaos="v.chaos" :divine="divine" class="text-right" />
+                <WPrice bulk :chaos="v.chaos" :divine="divine" :thin="isThin(v) && thinTitle(v)" class="text-right" />
                 <WPrice v-if="extraRange" bulk :chaos="extraThen(v)" :divine="divine" class="text-right w-dim" />
                 <WPrice bulk :chaos="v.d1" :divine="divine" class="text-right w-dim" />
                 <WPrice bulk :chaos="v.d7" :divine="divine" class="text-right w-dim" />
@@ -96,7 +96,7 @@
                 <span v-else class="text-right"><button class="w-icon-btn" title="Search trade for unidentified copies" aria-label="Search trade for unidentified copies" @click="lookUpUnid"><i class="fas fa-search" /></button></span>
               </div>
               <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
-              <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" no-price="No poe.ninja price" @pick="pickUnique" />
+              <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" @pick="pickUnique" />
               <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
               <CardDrops v-if="cardDropName" :name="cardDropName" />
               <div v-if="conv" :class="$style.convBox" :style="{ '--conv-cols': convCols }">
@@ -115,7 +115,7 @@
             <template v-else-if="selected?.kind === 'item'">
               <div v-item-tip="{ name: selected.info.refName }" :class="$style.title"><WIcon :src="selected.info.icon" size="lg" /><span>{{ selected.name }}</span></div>
               <p class="w-dim">{{ snapshot ? "poe.ninja has no price for this. Rares, bases, flasks and cluster jewels aren't in the saved prices." : 'No saved prices yet, so this has no price here.' }}</p>
-              <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" :no-price="snapshot ? 'No poe.ninja price' : 'No price'" @pick="pickUnique" />
+              <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" :no-price="snapshot ? undefined : 'No saved prices yet'" @pick="pickUnique" />
               <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
               <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
               <CardDrops v-if="cardDropName" :name="cardDropName" />
@@ -168,6 +168,7 @@ import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import type { BaseType } from '@/assets/data/interfaces'
 import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
 import { WPanel, WButton, WPrice, WPriceText, WDelta, WIcon, WKbd, itemRefFromName, ninjaIcon, nowMinute, toast, vItemTip, agoPhrase } from '../ui'
+import { NO_PRICE } from '../ui/format'
 import { ninjaArt } from '../market/ninja-icons'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
@@ -960,7 +961,7 @@ const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: b
   const groups = searchPrices(items, q, { corrupted: corrupted.value })
   const priced = pricedNames.value
   const other = searchNamed(gameItems().filter(i => !priced.has(i.refName)), q, i => i.name, 8)
-    .map((info): ItemEntry => ({ kind: 'item', id: `i:${info.namespace}:${info.name}`, name: info.name, sub: snapshot.value ? 'No poe.ninja price' : 'No price', info }))
+    .map((info): ItemEntry => ({ kind: 'item', id: `i:${info.namespace}:${info.name}`, name: info.name, sub: snapshot.value ? NO_PRICE : 'No saved prices yet', info }))
   // A base brings its uniques: "shagreen" lists Three-step Assault.
   const bases = basesWithUniques(q)
   const listed = new Set(groups.map(groupKey))
@@ -1633,6 +1634,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', catchTyping))
 // The foot's "Next time: Ctrl + Space from the game", for a palette found by
 // typing. It doesn't run out: it shows each time until × (Guy's tips review).
 const typedHint = useHint('search-from-game', { slot: false, shows: Infinity, when: () => openedByTyping.value && !!props.config.hotkey })
+// A click on the search bar around the box focuses it; one in the box itself is
+// left alone, so clicking mid-word or selecting text keeps the cursor there.
+function onFindClick (e: MouseEvent) {
+  if (e.target !== input.value) focusInput()
+}
+
 function focusInput (select = false) {
   nextTick(() => {
     const el = input.value

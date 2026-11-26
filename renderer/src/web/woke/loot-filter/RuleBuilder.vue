@@ -3,7 +3,7 @@
     <div class="flex items-center gap-2">
       <WField :model-value="rule.name" aria-label="Rule name" style="flex: 1; min-width: 0;" @update:model-value="v => rule.name = cleanValue(String(v)) || rule.name" />
       <WToggle v-model="rule.on" :title="rule.on ? 'Switch this rule off' : 'Switch it on'" />
-      <button class="w-icon-btn" title="Delete this rule" aria-label="Delete this rule" @click="emit('delete')"><i class="fas fa-trash" /></button>
+      <button class="w-icon-btn" title="Remove this rule" aria-label="Remove this rule" @click="emit('delete')"><i class="fas fa-trash" /></button>
       <WInfo text="Goes above NeverSink's rules, so it wins for every item it catches." />
     </div>
 

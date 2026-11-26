@@ -480,7 +480,7 @@ test('search: any item, drawn by the filter; on Preview it lands on the ground, 
   await box.fill('divine orb')
   await box.press('Enter')
   await expect(page.getByRole('tab', { name: 'Rules' })).toHaveAttribute('aria-selected', 'true')
-  await expect(page.getByText('Back', { exact: true })).toBeVisible()
+  await expect(page.locator('[data-back-link]')).toHaveText('Presets')
   await expect(box).toHaveValue('')
 })
 
@@ -622,7 +622,9 @@ test('prices: a hidden valuable unique lists what else would show, and Show it d
   // The way into its rule, and back.
   await page.getByRole('button', { name: 'Open the rule' }).click()
   await expect(page.getByRole('tab', { name: 'Rules' })).toHaveAttribute('aria-selected', 'true')
-  await page.getByText('Back', { exact: true }).click()
+  const back = page.locator('[data-back-link]')
+  await expect(back).toHaveText(/^Prices/)
+  await back.click()
   await expect(page.getByRole('tab', { name: /^Prices/ })).toHaveAttribute('aria-selected', 'true')
 
   await page.getByRole('button', { name: /Despot Axe/ }).click()
@@ -895,7 +897,7 @@ test('back from a rule returns to the same pile, by button and by the mouse back
   // Hidden items are on by default, so the whole pile is there.
   expect(await labels.count()).toBe(40)
 
-  const backButton = page.getByText('Back', { exact: true })
+  const backButton = page.locator('[data-back-link]', { hasText: 'Preview' })
   await ruled.first().dispatchEvent('click')
   await expect(backButton).toBeVisible()
   await expect(labels).toHaveCount(0)

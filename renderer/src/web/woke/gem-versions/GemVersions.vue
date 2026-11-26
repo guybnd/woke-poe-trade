@@ -1,7 +1,7 @@
 <template>
   <div v-if="versions.length > 1" :class="$style.wrap" data-gem-versions>
     <button type="button" :class="$style.fold" :aria-expanded="open" @click="open = !open">
-      <span :class="$style.caret">{{ open ? '▾' : '▸' }}</span>
+      <WFoldCaret :open="open" />
       <span :class="$style.count">{{ versions.length }} versions</span>
       <template v-if="!open">
         <span class="w-faint">·</span>
@@ -56,6 +56,7 @@ import { versionRows, type VersionRow } from './table'
 import { formatChaos } from '../ui/format'
 import { gemVersionsOpen as open } from './open'
 import { rawClone } from '@/web/woke/raw-clone'
+import WFoldCaret from '../ui/WFoldCaret.vue'
 
 const props = defineProps<{
   item: ParsedItem
@@ -151,7 +152,6 @@ function search (v: GemVersion) {
   background: none; border: 0; padding: 1px 0; color: var(--w-dim); cursor: pointer;
 }
 .fold:hover, .fold:focus-visible { color: var(--w-fg); outline: none; }
-.caret { width: 0.8em; }
 .count { color: var(--w-fg); }
 .table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .table th {

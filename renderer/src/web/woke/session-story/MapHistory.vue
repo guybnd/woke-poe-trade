@@ -30,7 +30,7 @@
           <!-- A day: its date and totals. -->
           <button v-if="line.kind === 'day'" type="button" :class="$style.day" data-history-day :data-folded="isFolded(line.at) || undefined"
             :aria-expanded="!isFolded(line.at)" @click="toggleDay(line.at)">
-            <i class="fas fa-fw w-dim" :class="[$style.fold, isFolded(line.at) ? 'fa-caret-right' : 'fa-caret-down']" aria-hidden="true" />
+            <WFoldCaret :open="!isFolded(line.at)" :class="$style.fold" />
             <span class="w-head-font w-accent" :class="$style.dayTitle">{{ dayLabel(line.at, now).title }}</span>
             <span v-if="dayLabel(line.at, now).date" class="w-dim text-xs">{{ dayLabel(line.at, now).date }}</span>
             <span class="ml-auto text-xs w-num w-dim">
@@ -90,6 +90,7 @@ import type { MapRecord } from './map-log'
 import { lastDays, readAllMaps, readMapDay, useNights } from './store'
 import { SESSION_STORY_TYPE } from './widget'
 import type { SessionStoryWidget } from './widget'
+import WFoldCaret from '../ui/WFoldCaret.vue'
 const props = defineProps<{
   range: AnalyticsRange
   league: string
@@ -310,7 +311,6 @@ onUnmounted(untip)
 }
 .day:first-child { margin-top: 0; }
 .day:hover .fold { color: var(--w-fg); }
-.fold { width: 1em; font-size: 0.85em; }
 .dayTitle { font-size: 1.05em; }
 .char { padding: 4px 0 1px; color: var(--w-accent); opacity: 0.8; }
 .mech {

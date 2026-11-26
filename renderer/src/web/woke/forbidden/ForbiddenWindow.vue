@@ -3,9 +3,10 @@
       <div :class="$style.wrap" data-qa="forbidden">
         <!-- Where the class comes from -->
         <div :class="$style.row">
+          <WBackLink v-if="shownClass" :to="config.source === 'class' ? config.pickClass : 'Yours'" @back="shownClass = null" />
           <WSegmented v-model="config.source" :options="SOURCES" />
           <WSelect v-if="config.source === 'class' && !shownClass" :model-value="config.pickClass" @update:model-value="config.pickClass = $event as ClassName" :options="CLASS_OPTIONS" data-qa="forbidden-class" />
-          <span v-else-if="shownClass" :class="$style.dim" data-qa="forbidden-class">{{ shownClass }} <WButton size="sm" variant="ghost" @click="shownClass = null">Back to {{ config.source === 'class' ? config.pickClass : 'yours' }}</WButton></span>
+          <span v-else-if="shownClass" :class="$style.dim" data-qa="forbidden-class">{{ shownClass }}</span>
           <span v-else-if="cls" :class="$style.dim" class="w-trunc" data-qa="forbidden-source" :title="who.label">{{ who.label }}</span>
           <WButton v-if="otherPath" size="sm" variant="ghost" title="Use the PoB build other windows use" @click="config.pobPath = null">Use the build in use</WButton>
           <WInfo :class="$style.end" text="Both jewels must name the same notable, from your class: any of its three ascendancies, or the one notable only these jewels give.
@@ -21,9 +22,8 @@
         <section v-for="g in groups" :key="g.group" :class="$style.sec" data-qa="forbidden-group">
           <div :class="$style.head"><span>{{ g.group }}</span><span v-if="g.mine" :class="$style.mine">yours</span></div>
           <div v-for="n in g.rows" :key="n.node" :ref="el => rowRef(n.name, el)" :class="[$style.nrow, { [$style.have]: has(n), [$style.focus]: marked === n.name }]"
-            data-qa="forbidden-row" data-no-item-tip="an ascendancy notable, not an item: its own tooltip says what it does"
-            @mouseenter="tip($event, n)" @mouseleave="untip">
-            <span :class="$style.name">{{ n.name }}<span v-if="has(n)" :class="$style.dim"> · you have it</span></span>
+            data-qa="forbidden-row" data-no-item-tip="an ascendancy notable, not an item: its own tooltip says what it does">
+            <span v-mod-tip="notableTip(n)" :class="$style.name">{{ n.name }}<span v-if="has(n)" :class="$style.dim"> · you have it</span></span>
             <span v-if="answer(n)?.state === 'done'" :class="$style.pair" data-qa="forbidden-pair">
               <span v-item-tip="{ name: FLAME }" data-item-tip>Flame</span> {{ fmtOr(answer(n)!.flame) }} +
               <span v-item-tip="{ name: FLESH }" data-item-tip>Flesh</span> {{ fmtOr(answer(n)!.flesh) }}
@@ -32,7 +32,7 @@
             <span v-else-if="answer(n)?.state === 'busy'" :class="$style.dim">Searching…</span>
             <span v-else-if="answer(n)?.state === 'error'" :class="$style.err" :title="answer(n)!.error">Search failed</span>
             <span v-else-if="estimate(n) != null" :class="$style.est" data-qa="forbidden-estimate" title="poe.ninja's price of both jewels">~{{ fmt(estimate(n)!) }}</span>
-            <span :class="$style.btns" @mouseenter="untip" @mouseleave="(e: MouseEvent) => tip(e, n, (e.currentTarget as HTMLElement).parentElement!)">
+            <span :class="$style.btns">
               <WButton size="sm" variant="ghost" data-qa="forbidden-price" :disabled="answer(n)?.state === 'busy'" title="Two trade searches: the cheapest Forbidden Flame and Forbidden Flesh with this notable" @click="price(n)">Price</WButton>
               <WButton v-item-tip="{ name: FLAME }" data-item-tip size="sm" variant="ghost" data-qa="forbidden-check-flame" @click="check(n, 'flame', $event)">Flame</WButton>
               <WButton v-item-tip="{ name: FLESH }" data-item-tip size="sm" variant="ghost" data-qa="forbidden-check-flesh" @click="check(n, 'flesh', $event)">Flesh</WButton>
@@ -55,7 +55,9 @@ import { usePoeninja } from '@/web/background/Prices'
 import { elementPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
 import type { TradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { WButton, WInfo, WPanel, WSegmented, WSelect, formatChaos, itemArt, vItemTip } from '../ui'
-import { hideHelp, showHelp } from '../ui/help-tip'
+import { vModTip } from '../ui/tooltip/mod-line-tip'
+import WBackLink from '../ui/WBackLink.vue'
+import type { ModLine } from '../ui/tooltip/mod-line-tip'
 import { useWindowKeys } from '../ui/window-keys'
 import { priceCheckTradeStatus } from '../shared/trade-status'
 import { askOnce, keptAnswer } from '../shared/on-demand'
@@ -249,19 +251,17 @@ function check (n: ForbiddenNotable, jewel: 'flame' | 'flesh', e: MouseEvent) {
   openPriceCheck({ name: jewel === 'flame' ? FLAME : FLESH, text: jewelText(n, jewel) }, elementPoint(e)).catch(() => {})
 }
 
-// ---- tooltip ----
-const tipOwner = {}
-function tip (e: Event, n: ForbiddenNotable, at?: HTMLElement) {
-  const parts = [
-    n.name,
-    n.stats.length ? n.stats.join('\n') : n.group === 'Ascendant' ? `The Ascendant's ${n.name} node.` : 'No stats in the tree data.',
-    `${n.group === ONLY_HERE ? 'Only Forbidden jewels give it' : `${n.group} notable`}. ${n.cls} jewels only.`,
-    ...(has(n) ? ['Your tree already has it.'] : [])
-  ]
-  showHelp(tipOwner, at ?? e.currentTarget as HTMLElement, parts.join('\n\n'), undefined, { lines: true })
+// ---- tooltip: the game-style mod card, as every mod row (v-mod-tip) ----
+function notableTip (n: ForbiddenNotable): ModLine {
+  return {
+    head: n.name,
+    text: n.stats.length ? n.stats : n.group === 'Ascendant' ? `The Ascendant's ${n.name} node.` : 'No stats in the tree data.',
+    notes: [
+      `${n.group === ONLY_HERE ? 'Only Forbidden jewels give it' : `${n.group} notable`}. ${n.cls} jewels only.`,
+      has(n) && 'Your tree already has it.'
+    ]
+  }
 }
-function untip () { hideHelp(tipOwner) }
-onBeforeUnmount(untip)
 </script>
 
 <style module>
