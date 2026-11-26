@@ -49,7 +49,19 @@ history:
     date: '2026-11-26T01:57:14.765Z'
     selfAttested: true
     id: c-2026-11-26t01-57-14-765z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 953 (Guy's picks) is open and in CI:
+      https://github.com/guybnd/woke-poe-trade/pull/953
+    date: '2026-11-26T02:56:59.190Z'
+    selfAttested: true
+    id: c-2026-11-26t02-56-59-190z
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/948'
+subtasks:
+  - WOKEPOET-632
+  - WOKEPOET-633
+  - WOKEPOET-634
 ---
 Validate the assumptions the app makes (game mechanics, data sources, prices).
