@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { buildModIndex, litParts, modQueryWords, searchMods } from '@/web/woke/search/mod-index'
+import { buildModIndex, litParts, modQueryWords, queryAtLeast, rollMax, searchMods } from '@/web/woke/search/mod-index'
 import { namedUniquePrices } from '@/web/woke/search/search'
 import { MOD_GROUP, chipOf, groupMode } from '@/web/woke/search/groups'
 import type { PriceItem } from '@/web/woke/market/types'
@@ -44,7 +44,21 @@ describe('unique mod search', () => {
     expect(searchMods(index, 'arity')).toEqual([])
     expect(searchMods(index, 'a b c d')).toEqual([])
     expect(modQueryWords('30% item rarity')).toEqual(['item', 'rarity'])
-    expect(searchMods(index, '30% item rarity').length).toBe(searchMods(index, 'item rarity').length)
+  })
+  it('takes a number as the least roll', () => {
+    expect(queryAtLeast('item rarity 50')).toBe(50)
+    expect(queryAtLeast('+30% rarity')).toBe(30)
+    expect(queryAtLeast('item rarity')).toBeNull()
+    expect(rollMax('(20-30)% increased Rarity of Items found')).toBe(30)
+    expect(rollMax('+250 to maximum Life')).toBe(250)
+    expect(rollMax('(-10-40)% increased Rarity')).toBe(40)
+    const all = searchMods(index, 'item rarity')
+    const fifty = searchMods(index, 'item rarity 50')
+    expect(fifty.length).toBeGreaterThan(0)
+    expect(fifty.length).toBeLessThan(all.length)
+    expect(fifty.every(h => (rollMax(h.line) ?? 0) >= 50)).toBe(true)
+    expect(fifty.map(h => h.unique)).toContain("Greed's Embrace")
+    expect(fifty.map(h => h.unique)).not.toContain('Goldrim')
   })
   it('ranks the words in order first', () => {
     expect(hit('item rarity', 'Kingmaker')?.rank).toBe(0)
