@@ -15,7 +15,9 @@
       <span>Where saves go</span>
       <label class="flex items-start gap-2">
         <input v-model="saveMode" type="radio" value="copy" style="margin-top: 2px;">
-        <span class="flex items-center gap-2">A separate copy (recommended) <w-info text="Saved as &quot;&lt;filter&gt; (woke).filter&quot;. The NeverSink file stays untouched, so downloading a new version never fights your edits. Pick the (woke) filter in game once." /></span>
+        <span class="flex items-center gap-2">A separate copy (recommended) <w-info text="Saved as **&lt;filter&gt; (woke).filter**.
+- The NeverSink file stays untouched, so a new version never fights your edits.
+- Pick the (woke) filter in game once." /></span>
       </label>
       <label class="flex items-start gap-2">
         <input v-model="saveMode" type="radio" value="overwrite" style="margin-top: 2px;">

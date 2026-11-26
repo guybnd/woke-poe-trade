@@ -120,7 +120,8 @@
       <div :class="$style.card">
         <div class="flex items-center gap-2">
           <span>How much gear this shows</span>
-          <WInfo text="Every gear base in the game, run through the table for each rarity and drop tier. Special gear (influenced, fractured and the rest) comes first in the filter and isn't counted here." />
+          <WInfo text="Every gear base in the game, run through the table for each rarity and drop tier.
+- Special gear (influenced, fractured and the rest) comes first in the filter and isn't counted here." />
           <span class="w-faint text-xs">Click a cell for its bases.</span>
         </div>
         <div :class="$style.pgrid">

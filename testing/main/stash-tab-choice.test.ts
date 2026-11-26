@@ -86,6 +86,17 @@ describe('saved per league', () => {
     expect(s.choice).toEqual({ template: 'custom', ids: ['t7'] })
   })
 
+  it('Undo of a delete puts the set back at its place and leaves the choice alone', async () => {
+    await saveSet('Standard', 'A', ['t1'])
+    await saveSet('Standard', 'B', ['t2'])
+    await saveSet('Standard', 'C', ['t3'])
+    await setChoice('Standard', { template: 'currency', ids: [] })
+    await deleteSet('Standard', 'B')
+    const s = await saveSet('Standard', 'B', ['t2'], { at: 1 })
+    expect(s.sets.map(x => x.name)).toEqual(['A', 'B', 'C'])
+    expect(s.choice).toEqual({ template: 'currency', ids: [] })
+  })
+
   it('a broken file reads as nothing chosen', async () => {
     const dir = path.join(process.env.WOKE_FAKE_USER_DATA!, 'woke-personal')
     fs.mkdirSync(dir, { recursive: true })

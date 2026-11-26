@@ -36,7 +36,7 @@
             <button type="button" role="radio" :aria-checked="template?.id === t.id" :class="template?.id === t.id && $style.on_any"
               :data-goal="`t:${t.name}`" :title="templateTitle(t)" @click="pickTemplate(t)">{{ t.name }}</button>
             <button type="button" :class="$style.tplDel" :data-template-delete="t.name" :aria-label="`Delete ${t.name}`"
-              :title="`Delete the ${t.name} template`" @click="deleteTemplate(t.id)"><i class="fas fa-times" /></button>
+              :title="`Delete the ${t.name} template`" @click="removeTemplate(t)"><i class="fas fa-times" /></button>
           </template>
         </span>
         <input v-if="naming" ref="nameBox" v-model="newName" type="text" maxlength="24" :class="$style.nameBox" data-template-name
@@ -136,7 +136,7 @@
           <span v-else :class="$style.rateGap" />
           <!-- Guy (2026-11-24): rare-only map mods are yellow in game and worth filtering for. -->
           <span v-if="isRareOnly(row)" :class="$style.rareIcon" title="Rare-only map mod" />
-          <span :class="[$style.text, { 'w-dim': row.mod.rating === 'ok' && !row.filter?.disabled }]">{{ row.mod.text }}</span>
+          <span v-mod-tip="modTip(row)" :class="[$style.text, { 'w-dim': row.mod.rating === 'ok' && !row.filter?.disabled }]">{{ row.mod.text }}</span>
           <!-- Guy (2026-11-24): any Evocator (or buried Sentinel) does the job, so Has and Not
                take all three until unticked. A tick box with a fixed label, left of the switches
                so they stay in one column ("which one am I clicking for?"). -->
@@ -160,8 +160,10 @@
 <script setup lang="ts">
 import { computed, h, inject, nextTick, onBeforeUnmount, shallowRef, watch, watchEffect } from 'vue'
 import type { ShallowRef } from 'vue'
-import { WIcon, WInfo } from '../ui'
+import { WIcon, WInfo, toast } from '../ui'
 import { useFold } from '../ui/fold'
+import { vModTip } from '../ui/tooltip/mod-line-tip'
+import type { ModLine } from '../ui/tooltip/mod-line-tip'
 import type { ParsedItem } from '@/parser'
 import { VERDICT_LABEL, modRatings, nextModRating, setModRatings, withModRating } from './rules'
 import type { ModRating } from './rules'
@@ -186,6 +188,12 @@ import type { FarmGoal } from './goal'
 const props = defineProps<{ item: ParsedItem, stats?: FilterOrGroup[], filters?: ItemFilters, addMods?: boolean, worth?: boolean }>()
 
 const open = useFold('map-mod-strip')
+
+// No "are you sure": delete now, offer Undo (P9).
+function removeTemplate (t: FarmTemplate) {
+  const undo = deleteTemplate(t.id)
+  if (undo) toast(`${t.name} template deleted`, { undo })
+}
 
 // Game art on each number tile (layout A, 2026-11-24): the item players link with what it raises.
 type IconProps = { src?: string, item?: string, fallback: string, title: string }
@@ -232,6 +240,18 @@ onBeforeUnmount(() => { if (owns) owns.value = null })
 // The second line: how many mods of each rating, so a folded section keeps
 // the verdict's reasons.
 const RATING_TITLE: Record<string, string> = { deadly: "Your build can't run this", warn: 'Risky for your build', good: 'Wanted (juice)', ok: 'Not rated' }
+// The mod's whole text on hover, with its rating and what a click does.
+function modTip (row: Row): ModLine {
+  return {
+    head: 'Map mod',
+    text: row.mod.text,
+    notes: [
+      row.rated && RATING_TITLE[row.mod.rating],
+      isRareOnly(row) && 'Rare-only map mod',
+      row.filter ? 'Click to cycle Has, Not, Any' : null
+    ]
+  }
+}
 const summary = computed(() => {
   const v = result.value!.verdict
   const n = (k: number, one: string, many: string) => k ? `${k} ${k === 1 ? one : many}` : ''

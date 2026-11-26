@@ -37,7 +37,7 @@
       </div>
       <div v-if="flip?.kind === 'tribes' && bestTribe" :class="$style.verdict" class="w-num w-verdict" data-flip-tribes>
         <b>Best 3 for 1: {{ bestTribe.tribe }}</b>
-        <span class="w-dim">+{{ amount(bestTribe.profitEach!) }}c each, putting in <span v-item-tip="{ name: bestTribe.cheapest!.name, type: family.ninjaType }">{{ shortName(bestTribe.cheapest!.name) }}</span> at {{ fmt(bestTribe.cheapest!.chaos) }}</span>
+        <span class="w-dim"><WPriceText :text="`+${amount(bestTribe.profitEach!)}c`" /> each, putting in <span v-item-tip="{ name: bestTribe.cheapest!.name, type: family.ninjaType }">{{ shortName(bestTribe.cheapest!.name) }}</span> at <WPriceText :text="fmt(bestTribe.cheapest!.chaos)" /></span>
       </div>
       <div v-if="flip?.kind === 'tribes' && flip.rows.length && !bestTribe" :class="$style.verdict" class="w-num w-verdict" data-flip-tribes>
         <b>No tribe is worth 3 for 1 right now</b>
@@ -69,9 +69,9 @@
           <div v-for="r in flip.rows" :key="r.name" class="w-row" :class="$style.rangeGrid" @contextmenu="rowMenu($event, r.name)">
             <FlipName :name="r.name" :item="r.name" :type="family.ninjaType" />
             <WPrice :chaos="r.chaos" :divine="divine" class="text-right" />
-            <span class="text-right w-num">{{ amount(r.cost) }}c</span>
+            <WPrice :chaos="r.cost" unit="chaos" class="text-right" />
             <span class="text-right w-num" :class="r.low.chaos > r.cost ? 'w-up' : r.high.chaos < r.cost ? 'w-down' : ''"
-              :title="r.low.chaos > r.cost ? 'Even the worst result pays' : r.high.chaos < r.cost ? 'Even the best result loses' : 'Could go either way'">{{ amount(r.low.chaos) }}–{{ amount(r.high.chaos) }}c</span>
+              :title="r.low.chaos > r.cost ? 'Even the worst result pays' : r.high.chaos < r.cost ? 'Even the best result loses' : 'Could go either way'"><WPriceText :text="`${amount(r.low.chaos)}–${amount(r.high.chaos)}c`" /></span>
           </div>
         </template>
       </template>
@@ -96,9 +96,9 @@
               </span>
               <WPrice :chaos="r.average" :divine="divine" class="text-right" />
               <span class="text-right w-num w-trunc">
-                <template v-if="r.cheapest"><span v-item-tip="{ name: r.cheapest.name, type: family.ninjaType }">{{ roleName(r.cheapest.name) }}</span> {{ amount(r.cheapest.chaos) }}c</template>
+                <template v-if="r.cheapest"><span v-item-tip="{ name: r.cheapest.name, type: family.ninjaType }">{{ roleName(r.cheapest.name) }}</span> <WPriceText :text="`${amount(r.cheapest.chaos)}c`" /></template>
               </span>
-              <span class="text-right w-num" :class="r.profitEach == null ? 'w-faint' : r.profitEach > 0 ? 'w-up' : 'w-down'">{{ r.profitEach == null ? '–' : signedAmount(r.profitEach) }}</span>
+              <span class="text-right w-num" :class="r.profitEach == null ? 'w-faint' : r.profitEach > 0 ? 'w-up' : 'w-down'"><template v-if="r.profitEach == null">–</template><WPriceText v-else :text="signedAmount(r.profitEach)" /></span>
             </div>
             <template v-if="openTribe === r.tribe">
               <div v-for="t in r.tattoos" :key="t.name" class="w-row" :class="[$style.tattooGrid]" @contextmenu="rowMenu($event, t.name)">
@@ -107,7 +107,7 @@
                 <WPrice v-else :chaos="t.chaos" :divine="divine" class="text-right" />
                 <span class="text-right w-num w-dim" title="Chance of this result">{{ pct(t.share) }}</span>
                 <span v-if="t.unpriced" />
-                <span v-else class="text-right w-num" :class="tattooProfitEach(r, t.chaos) > 0 ? 'w-up' : 'w-down'" title="Put in with 2 more like it, per Tattoo">{{ signedAmount(tattooProfitEach(r, t.chaos)) }}</span>
+                <span v-else class="text-right w-num" :class="tattooProfitEach(r, t.chaos) > 0 ? 'w-up' : 'w-down'" title="Put in with 2 more like it, per Tattoo"><WPriceText :text="signedAmount(tattooProfitEach(r, t.chaos))" /></span>
               </div>
             </template>
           </template>
@@ -129,7 +129,7 @@
           <div v-for="r in buy" :key="r.name" class="w-row" :class="$style.buyGrid" @contextmenu="rowMenu($event, itemName(r))">
             <FlipName :name="r.name" :item="itemName(r)" :type="family.ninjaType" :rare-cheap="'rareCheap' in r && r.rareCheap" :source="'weightSource' in r ? r.weightSource : undefined" />
             <WPrice :chaos="r.chaos" :divine="divine" class="text-right" />
-            <span class="text-right w-up w-num">+{{ amount(r.profitEach) }}c</span>
+            <WPriceText :text="`+${amount(r.profitEach)}c`" class="text-right w-up w-num" />
             <span v-if="hasVolume" class="text-right">{{ supplyLevel(r.supplyPerDay) ?? '' }}</span>
           </div>
         </template>
@@ -205,7 +205,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { Host, MainProcess } from '@/web/background/IPC'
 import { useLeagues } from '@/web/background/Leagues'
-import { WInfo, WPanel, WTabs, WSegmented, WPrice, WEmpty, WSkeleton, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WSegmented, WPrice, WPriceText, WEmpty, WSkeleton, toast, vItemTip } from '../ui'
 import { openItemMenu } from '../ui/tooltip/item-menu'
 import { copyText } from '../ui/copy'
 import { formatAmount } from '../ui/format'

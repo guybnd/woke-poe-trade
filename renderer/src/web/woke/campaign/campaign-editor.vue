@@ -39,7 +39,9 @@
     </div>
 
     <div>
-      <div class="mb-1 flex items-center gap-2">On screen while levelling <w-info text="Off by default. These widen the campaign icon, and never show in maps, hideouts or on a character past the campaign. Times need the Run timer." /></div>
+      <div class="mb-1 flex items-center gap-2">On screen while levelling <w-info text="Off by default. These widen the campaign icon.
+- Never in maps, hideouts or on a character past the campaign.
+- Times need the **Run timer**." /></div>
       <div class="flex flex-col gap-1">
         <w-toggle v-for="o in PIN_OPTIONS" :key="o.id" :model-value="configWidget.pins.includes(o.id)" @update:model-value="togglePin(o.id)">{{ o.label }}</w-toggle>
       </div>

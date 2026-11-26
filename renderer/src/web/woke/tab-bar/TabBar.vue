@@ -162,7 +162,7 @@
           </div>
           <hr :class="$style.rule">
           <button :class="$style.item" @click="resetRail(); closePopup()"><i class="fas fa-undo" />Reset toolbar position and size</button>
-          <div :class="$style.hint">Ctrl + scroll on the toolbar changes its size. Drag icons to reorder.</div>
+          <div :class="$style.hint"><WKbd keys="Ctrl + Wheel" /> on the toolbar changes its size. Drag icons to reorder.</div>
         </div>
 
         <!-- right-click menu -->
@@ -197,7 +197,7 @@
               <i class="fas fa-clone" />Remove extra copies ({{ menuTab.copies - 1 }})
             </button>
             <button :class="[$style.item, $style.danger]" @click="removeTab(menuTab)">
-              <i class="fas fa-trash" />{{ confirmRemove ? 'Click again to remove' : 'Remove from overlay' }}
+              <i class="fas fa-trash" />Remove from overlay
             </button>
           </template>
         </div>
@@ -223,7 +223,7 @@ import { MAX_UI_SIZE, MIN_UI_SIZE, nudgeUiSize, uiSize } from '../ui/ui-size'
 import { ICON_TOOL_NAMES, moduleSettingsPage, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, pickStarterPins, toolDescription } from './tools'
 import { pastedItemText } from '../search/pasted-item'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
-import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
+import { WIcon, WKbd, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, toast, vItemTip } from '../ui'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import { SEARCH_TYPE, searchRequest } from '../search/widget'
@@ -420,16 +420,43 @@ function forget (wmId: number) {
   setLabel(wmId, '')
   wm.remove(wmId)
 }
-const confirmRemove = ref(false)
+// No "are you sure": remove now, offer Undo, in the same words as the
+// window's own delete button (P9).
+function forgetWithUndo (wmIds: number[], text: string) {
+  // Each one with its place on the rail and its label, so Undo puts back only
+  // these and keeps whatever changed on the rail since.
+  const gone = wm.widgets.value.filter(w => wmIds.includes(w.wmId)).map(config => ({
+    config,
+    pin: (props.config.pinned ?? []).indexOf(config.wmId),
+    label: props.config.labels?.[config.wmId] ?? ''
+  }))
+  for (const id of wmIds) forget(id)
+  toast(text, {
+    ms: 10000,
+    undo: () => {
+      for (const g of [...gone].sort((a, b) => a.pin - b.pin)) {
+        // Its id went to a new window meanwhile: it comes back under a fresh one.
+        if (wm.widgets.value.some(w => w.wmId === g.config.wmId)) {
+          g.config.wmId = Math.max(0, ...wm.widgets.value.map(w => w.wmId)) + 1
+        }
+        wm.widgets.value.push(g.config)
+        if (g.pin >= 0) {
+          const pinned = [...(props.config.pinned ?? [])]
+          pinned.splice(Math.min(g.pin, pinned.length), 0, g.config.wmId)
+          props.config.pinned = pinned
+        }
+        if (g.label) setLabel(g.config.wmId, g.label)
+      }
+    }
+  })
+}
 function removeTab (tab: Tab) {
-  if (!confirmRemove.value) { confirmRemove.value = true; return }
-  forget(tab.wmId)
+  forgetWithUndo([tab.wmId], `${tab.name} deleted`)
   closePopup()
 }
 function removeCopies (tab: Tab) {
-  for (const w of listed.value) {
-    if (w.wmType === tab.wmType && w.wmId !== tab.wmId) forget(w.wmId)
-  }
+  const extra = listed.value.filter(w => w.wmType === tab.wmType && w.wmId !== tab.wmId).map(w => w.wmId)
+  forgetWithUndo(extra, extra.length === 1 ? `${tab.name} copy deleted` : `${extra.length} ${tab.name} copies deleted`)
   closePopup()
 }
 
@@ -510,7 +537,6 @@ function placePopup () {
 }
 function openMenu (tab: Tab, e: MouseEvent) {
   hideTip()
-  confirmRemove.value = false
   renaming.value = false
   popup.value = { kind: 'menu', x: e.clientX, y: e.clientY, above: e.clientY, wmId: tab.wmId }
   placePopup()
@@ -690,7 +716,6 @@ function openLauncher () {
 function closePopup () {
   popup.value = null
   renaming.value = false
-  confirmRemove.value = false
 }
 watch(() => wm.active.value, active => {
   if (!active) {

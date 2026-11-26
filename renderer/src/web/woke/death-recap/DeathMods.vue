@@ -15,12 +15,12 @@
       :title="config ? `Click to change: ${RATING_LABEL[mod.rating]}` : undefined"
       data-death-mod @click="cycle(mod)">
       <span :class="[$style.dot, $style[mod.rating]]" />
-      <span class="flex-1 text-left">{{ mod.text }}</span>
+      <span v-mod-tip="{ head: 'Map mod', text: mod.text, notes: [config ? `Click to change: ${RATING_LABEL[mod.rating]}` : null] }" class="flex-1 text-left">{{ mod.text }}</span>
       <span v-if="mod.rating !== 'ok'" :class="[$style.tag, $style[mod.rating]]">{{ RATING_LABEL[mod.rating] }}</span>
     </button>
     <div v-for="text in run.unknown" :key="text" :class="$style.mod" class="w-dim">
       <span :class="$style.dot" />
-      <span class="flex-1">{{ text }} <span class="w-faint">(not recognised)</span></span>
+      <span v-mod-tip="{ head: 'Map mod', text, notes: ['Not a mod this list knows, so it has no rating'] }" class="flex-1">{{ text }} <span class="w-faint">(not recognised)</span></span>
     </div>
     <div v-if="run.match === 'likely'" :class="$style.note">{{ likelyNote }}</div>
   </template>
@@ -33,6 +33,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { WKbd } from '../ui'
+import { vModTip } from '../ui/tooltip/mod-line-tip'
 import { findMapModsConfig } from '../map-mods/check'
 import { activeProfile } from '../map-mods/widget'
 import { fillRoll, modRatings, nextModRating, setModRatings, withModRating } from '../map-mods/rules'

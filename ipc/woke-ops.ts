@@ -272,7 +272,8 @@ export interface WokeOps {
   'stash-cache': Op<{ league?: string }, Json>
   'stash-tab-list': Op<NoArgs, Json>
   'stash-tab-choice': Op<{ league: string, template: string, ids: string[], set?: string }, Json>
-  'stash-tab-set-save': Op<{ league: string | undefined, name: string, ids: string[] }, Json>
+  // restoreAt: Undo of a delete puts the set back at that index and keeps the choice.
+  'stash-tab-set-save': Op<{ league: string | undefined, name: string, ids: string[], restoreAt?: number }, Json>
   'stash-tab-set-delete': Op<{ league: string | undefined, name: string }, Json>
   'worn-items': Op<{ character?: string }, Json>
   'character-sync': Op<{ character?: string, auto?: boolean, read?: 'now' }, Json>

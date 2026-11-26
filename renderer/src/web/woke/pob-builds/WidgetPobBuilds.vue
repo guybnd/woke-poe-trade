@@ -454,7 +454,8 @@ function buildMenu (e: MouseEvent, b: PobBuildEntry) {
     { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => startEdit(b, 'rename') },
     { label: 'Duplicate', icon: 'fas fa-clone', action: () => duplicateBuild(b) },
     { label: 'Move to folder', icon: 'fas fa-folder', action: () => startEdit(b, 'move') },
-    { label: 'Delete', icon: 'fas fa-trash-alt', keys: 'Del', action: () => removeBuild(b) }
+    { separator: true },
+    { label: 'Delete', icon: 'fas fa-trash-alt', keys: 'Del', danger: true, action: () => removeBuild(b) }
   ])
 }
 
