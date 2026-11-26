@@ -55,7 +55,7 @@ export interface GearSettings {
   // Labels the table shows: the game's rarity colour for the text (NeverSink
   // paints magic and rare alike), and your own look per rarity on top.
   // `quality` is the mark over-quality bases get on top of that look
-  // (colours first, then sound, beam, map icon; DEFAULT_MARK where it sets none).
+  // (border, sound, beam, map icon; DEFAULT_MARK where it sets none).
   look: { rarityText: boolean, magic: StylePatch, rare: StylePatch, quality: StylePatch }
   // Per-slot lines that differ from their row's (F2); slots not listed follow the row.
   slots: SlotLines
@@ -566,17 +566,17 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
   return res
 }
 
-// The over-quality colours, over the tier's: amber on dark brown unless you
-// set your own (NeverSink's teal is the same as its rank 1 gear). Size,
-// sound, beam and map icon stay the tier's unless you set them.
-export const DEFAULT_MARK: StylePatch = { text: [255, 200, 80, 255], border: [255, 170, 40, 255], background: [50, 28, 0, 255] }
-const MARK_KEYS = ['text', 'border', 'background', 'sound', 'effect', 'icon'] as const
+// The over-quality mark, over the tier's look (Guy's pick B): a pink border
+// and pink beam unless you set your own. What the mark sets wins over the
+// tier's; the rest stays the tier's.
+export const DEFAULT_MARK: StylePatch = { border: [255, 122, 217, 255], effect: { color: 'Pink', temp: false } }
+const MARK_KEYS = ['border', 'sound', 'effect', 'icon'] as const
 // What the mark adds: a setting turned off adds nothing (the row keeps its own).
 export function markOf (g: GearSettings): StylePatch {
   const all = { ...DEFAULT_MARK, ...g.look.quality } as Record<string, unknown>
   return Object.fromEntries(Object.entries(all).filter(([, v]) => v != null)) as StylePatch
 }
-// Only what a mark can set: the label's size stays the table's.
+// Only what a mark can set: the label itself stays the table's.
 export function cleanMark (p: StylePatch): StylePatch {
   const out: StylePatch = {}
   for (const k of MARK_KEYS) if (p[k] !== undefined) (out as Record<string, unknown>)[k] = p[k]

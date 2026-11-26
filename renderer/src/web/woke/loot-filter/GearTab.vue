@@ -104,10 +104,10 @@
         <div class="flex items-center gap-2">
           <WToggle :model-value="g.quality.on" @update:model-value="setQualityOn">Over-quality bases</WToggle>
           <WInfo text="White, magic or rare gear with at least this much quality, from each row's bases. Off hands it to the rules further down.
-- Their colours win over the drop tier's: amber until you change them. Size, sound, beam and map icon stay the tier's unless you set them.
-- They show even where the table hides that tier. Change look sets the colours, sound, beam and map icon." />
+- They keep the Magic or Rare look of their row and drop tier, with a mark on top that wins over it: a pink border and beam until you change it.
+- They show even where the table hides that tier. Change mark sets the border, sound, beam and map icon." />
           <template v-if="g.quality.on">
-            <WButton size="sm" @click="editing = editing === 'quality' ? null : 'quality'">{{ editing === 'quality' ? 'Done' : 'Change look' }}</WButton>
+            <WButton size="sm" @click="editing = editing === 'quality' ? null : 'quality'">{{ editing === 'quality' ? 'Done' : 'Change mark' }}</WButton>
             <WButton v-if="Object.keys(g.look.quality).length" size="sm" variant="ghost" @click="change(x => { x.look.quality = {} })">Reset</WButton>
           </template>
         </div>
@@ -187,7 +187,7 @@
                 · {{ d.tier ? `tier ${d.tier}` : 'no tier' }} · {{ ROW_LABEL[d.row as GearRow] }}
               </span>
               <span v-if="d.tags.length" :class="$style.dropTags">{{ d.tags.join(' · ') }}</span>
-              <button type="button" :class="$style.dropWhy" :title="d.gear ? (d.rule?.tier?.startsWith('quality-') ? 'Change the over-quality look of your Gear table' : `Change the ${d.rarity?.toLowerCase()} look of your Gear table`) : 'Open this rule in Rules to change its look'" @click="openDropRule(d)">
+              <button type="button" :class="$style.dropWhy" :title="d.gear ? (d.rule?.tier?.startsWith('quality-') ? 'Change the over-quality mark of your Gear table' : `Change the ${d.rarity?.toLowerCase()} look of your Gear table`) : 'Open this rule in Rules to change its look'" @click="openDropRule(d)">
                 {{ d.why }} <i class="fas fa-external-link-alt" />
               </button>
             </div>
@@ -578,7 +578,7 @@ const qualitySamples = computed(() => {
 const qualityLook = computed<StylePatch>(() => {
   const label = readStyle(qualitySamples.value[0]?.actions ?? [])
   const mark = markOf(g.value)
-  return { fontSize: label.fontSize, text: mark.text ?? label.text, background: mark.background ?? label.background, border: mark.border ?? null, sound: mark.sound, effect: mark.effect, icon: mark.icon }
+  return { fontSize: label.fontSize, text: label.text, background: label.background, border: mark.border ?? null, sound: mark.sound, effect: mark.effect, icon: mark.icon }
 })
 
 // ---- Test drops: a pile of gear through the filter as built ----
