@@ -106,6 +106,8 @@ let grab: { dx: number, dy: number } | null = null
 let stopDrag: (() => void) | null = null
 function startDrag (e: PointerEvent) {
   if (e.button !== 0) return
+  // A press while an old drag never heard its end: finish that one first.
+  stopDrag?.()
   const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
   grab = { dx: e.clientX - r.left, dy: e.clientY - r.top }
   dragging.value = true

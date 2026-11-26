@@ -394,6 +394,8 @@ const sizeStyle = computed(() => ({
   height: `min(${size.value.h}rem, calc(100vh - 8rem))`
 }))
 
+let stopResize: (() => void) | null = null
+onUnmounted(() => { stopResize?.() })
 function startResize (e: PointerEvent, edge: 'e' | 's' | 'se') {
   e.preventDefault()
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
@@ -405,7 +407,9 @@ function startResize (e: PointerEvent, edge: 'e' | 's' | 'se') {
     size.value = { w: Math.max(40, Math.min(w, window.innerWidth / rem)), h: Math.max(28, Math.min(h, window.innerHeight / rem)) }
   }
   // Ends on letting go, or when the game takes the mouse back (pointer-drag.ts).
-  followPointer(move, () => {
+  stopResize?.()
+  stopResize = followPointer(move, () => {
+    stopResize = null
     try { localStorage.setItem(SIZE_KEY, JSON.stringify(size.value)) } catch {}
   })
 }

@@ -62,6 +62,8 @@ let stopDrag: (() => void) | null = null
 function startDrag (e: PointerEvent) {
   const el = (e.currentTarget as HTMLElement).parentElement
   if (!el) return
+  // A press while an old drag never heard its end: finish that one first.
+  stopDrag?.()
   const r = el.getBoundingClientRect()
   drag = { dx: e.clientX - r.left, dy: e.clientY - r.top }
   // Ends on letting go, or when the game takes the mouse back (pointer-drag.ts).
