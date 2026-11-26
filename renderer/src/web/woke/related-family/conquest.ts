@@ -75,8 +75,6 @@ export const ABYSS: Array<{ jewel: string } & Conqueror> = [
   { jewel: 'Reclaimed Malevolence', id: 'zorath', name: 'Zorath', keystone: null }
 ]
 
-export const isAbyssConquest = (refName: string) => ABYSS.some(a => a.jewel === refName)
-
 // The conqueror of the jewel being checked, from its mods' trade ids.
 export function ownConquerorId (stats: ReadonlyArray<{ stat: { trade: { ids: Record<string, string[] | undefined> } } }>): string | null {
   for (const calc of stats) {

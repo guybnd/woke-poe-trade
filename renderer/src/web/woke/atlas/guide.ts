@@ -15,23 +15,6 @@ const REGEX_LINE = /^"[^"]*!?[^"]*"(\s+"[^"]*")*$/
 
 export interface ScarabLine { qty: number, name: string }
 
-// "4x Ambush Scarab of Potency", "Ambush Scarab of Potency x2", "2 Breach Scarabs"
-export function parseScarabs (text: string): ScarabLine[] {
-  const out: ScarabLine[] = []
-  for (const raw of text.split(/\r?\n|,|;/)) {
-    const line = raw.replace(/^[\s\-*•·]+/, '').trim()
-    if (!/scarab/i.test(line)) continue
-    let qty = 1
-    let name = line
-    const pre = /^(\d+)\s*[x×]?\s+(.+)$/i.exec(line)
-    const post = /^(.+?)\s*[x×]\s*(\d+)$/i.exec(line)
-    if (pre) { qty = Number(pre[1]); name = pre[2] } else if (post) { qty = Number(post[2]); name = post[1] }
-    name = name.replace(/\bScarabs\b/i, 'Scarab').trim()
-    if (name) out.push({ qty: Math.max(1, Math.min(qty, 20)), name })
-  }
-  return out
-}
-
 export function parseGuideText (text: string): Omit<AtlasStrategy, 'id'> {
   const lines = text.split(/\r?\n/).map(l => l.trim())
   const treeUrl = trimLinkEnd(TREE_URL.exec(text)?.[0] ?? '')

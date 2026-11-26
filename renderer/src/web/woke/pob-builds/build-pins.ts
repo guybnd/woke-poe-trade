@@ -4,8 +4,6 @@ import type { Pin } from '../pins/pins'
 import { gearLayout, loadoutOf, mainGroupOf, slotLabel } from './build-model'
 import type { LoadoutPick, PobDetails, PobSkillGroup } from './widget'
 
-export type BuildPiece = 'tree' | 'slot' | 'gems' | 'next'
-
 type NewPin = Omit<Pin, 'opacity' | 'spots'>
 
 // A chain by where it sits and its label, with a count for twins.

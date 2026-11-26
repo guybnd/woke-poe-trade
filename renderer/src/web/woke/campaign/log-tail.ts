@@ -45,15 +45,3 @@ export function lineTime (line: string): number | null {
   if (!m) return null
   return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime()
 }
-
-// Lines written after `since` (ms), with their timestamps. Lines from the
-// same second as `since` are kept out: they were already seen live.
-export function linesAfter (tail: LogTail, since: number): Array<{ line: string, at: number }> {
-  const out: Array<{ line: string, at: number }> = []
-  const sinceSec = Math.floor(since / 1000) * 1000
-  for (const line of tail.lines) {
-    const at = lineTime(line)
-    if (at != null && at > sinceSec) out.push({ line, at })
-  }
-  return out
-}

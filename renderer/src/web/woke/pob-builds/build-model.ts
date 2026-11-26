@@ -616,34 +616,3 @@ export function noteRuns (raw: string): Array<{ text: string, colour: string | n
 export function socketGroups (sockets: string): string[][] {
   return sockets.trim().toLowerCase().split(/\s+/).filter(Boolean).map(g => g.split('-').filter(Boolean))
 }
-
-// Does one linked group hold these gem colours? White sockets fit anything,
-// as do colourless gems.
-export function groupFits (group: string[], colours: GemColour[]): boolean {
-  if (group.length < colours.length) return false
-  const left = [...group]
-  const take = (c: string) => {
-    const i = left.indexOf(c)
-    if (i < 0) return false
-    left.splice(i, 1)
-    return true
-  }
-  let wild = 0
-  for (const c of colours) {
-    if (c === 'w') { wild++; continue }
-    if (!take(c) && !take('w')) return false
-  }
-  return left.length >= wild
-}
-
-// The longest prefix of the colours (active gem first) that one linked
-// group of the item holds, if it is 3 or more.
-export function bestFit (sockets: string, colours: GemColour[]): number {
-  let best = 0
-  for (const group of socketGroups(sockets)) {
-    for (let n = Math.min(group.length, colours.length); n >= 3; n--) {
-      if (groupFits(group, colours.slice(0, n))) { best = Math.max(best, n); break }
-    }
-  }
-  return best
-}
