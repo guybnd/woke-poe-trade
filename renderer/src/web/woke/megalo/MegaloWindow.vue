@@ -32,7 +32,8 @@
                 </WChip>
               </div>
             </div>
-            <span v-if="!tagGroups.length" :class="$style.dim">No tag matches.</span>
+            <WNoMatch v-if="!tagGroups.length && String(tagQuery).trim()" :query="String(tagQuery)" @clear="tagQuery = ''" />
+            <span v-else-if="!tagGroups.length" :class="$style.dim">No tags light any notable yet.</span>
           </div>
         </section>
 

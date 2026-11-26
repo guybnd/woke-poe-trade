@@ -72,9 +72,7 @@
           <span v-if="best" class="w-trunc" :title="inChaos(best.chaos)"><span :class="$style.caps">Best</span> <span v-item-tip="lineTip(best, best.count)">{{ best.name }}</span> {{ div(best.chaos) }}<Coin :chaos="!divine" /></span>
           <span v-if="session" :class="tone(session.div)"><span :class="$style.caps">Session</span> {{ signed(session.div) }}<Coin :chaos="!divine" /></span>
         </span>
-        <button v-if="anyDetails" type="button" :class="$style.toggle" :aria-expanded="detailsOpen" @click="config.detailsOpen = !detailsOpen">
-          Details <i :class="detailsOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
-        </button>
+        <WFoldHead v-if="anyDetails" :model-value="detailsOpen" :class="[$style.toggle, $style.foldHead]" @update:model-value="config.detailsOpen = !detailsOpen">Details</WFoldHead>
       </section>
 
       <template v-if="detailsOpen && anyDetails">
@@ -83,10 +81,10 @@
         <section v-if="shown.chart || shown.perHour" ref="topEl" :class="[$style.halves, { [$style.one]: !(shown.chart && shown.perHour) }]" :style="halvesStyle">
           <section v-if="shown.chart" :class="$style.chartBlock">
             <div v-if="fold.chart" :class="$style.chartHead">
-              <button type="button" :class="$style.foldHead" :aria-expanded="false" title="Open the chart" @click="flipFold('chart')"><i class="fas fa-chevron-right" /><span :class="$style.caps">Chart</span></button>
+              <WFoldHead :model-value="false" :class="$style.foldHead" title="Open the chart" @update:model-value="flipFold('chart')"><span :class="$style.caps">Chart</span></WFoldHead>
             </div>
             <div v-else :class="$style.chartHead">
-              <button type="button" :class="$style.fold" :aria-expanded="true" title="Fold the chart" aria-label="Fold the chart" @click="flipFold('chart')"><i class="fas fa-chevron-down" /></button>
+              <WFoldHead :model-value="true" :class="$style.fold" title="Fold the chart" aria-label="Fold the chart" @update:model-value="flipFold('chart')" />
               <WSegmented v-model="chartMode" :options="MODE_OPTIONS" title="What the chart shows" />
               <span v-if="goal" class="text-xs" :class="$style.goalLine">
                 {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }}<Coin /> ·
@@ -113,11 +111,11 @@
           </section>
           <div v-if="shown.perHour" :class="$style.box" data-goto-spot="per-hour">
             <div v-if="fold.perHour" :class="$style.boxHead">
-              <button type="button" :class="$style.foldHead" :aria-expanded="false" title="Open Per hour" @click="flipFold('perHour')"><i class="fas fa-chevron-right" /><span :class="$style.caps">Per hour</span></button>
+              <WFoldHead :model-value="false" :class="$style.foldHead" title="Open Per hour" @update:model-value="flipFold('perHour')"><span :class="$style.caps">Per hour</span></WFoldHead>
               <b class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b>
             </div>
             <div v-else :class="$style.boxHead">
-              <button type="button" :class="$style.fold" :aria-expanded="true" title="Fold Per hour" aria-label="Fold Per hour" @click="flipFold('perHour')"><i class="fas fa-chevron-down" /></button>
+              <WFoldHead :model-value="true" :class="$style.fold" title="Fold Per hour" aria-label="Fold Per hour" @update:model-value="flipFold('perHour')" />
               <WSegmented :model-value="rateWindow" :options="WINDOW_OPTIONS" title="The time Per hour counts" @update:model-value="rateWindow = $event as RateWindow" />
               <RateTimePick :class="$style.rateTime" />
             </div>
@@ -150,7 +148,7 @@
         <section v-if="showChanges || showSide" ref="colsEl" :class="[$style.cols, { [$style.colsFixed]: midFixed }]" :style="{ gridTemplateColumns: colsTemplate, height: midFixed ? midHShown + 'px' : undefined }">
           <div v-if="showChanges" :class="$style.changesCol">
             <div :class="$style.colHead">
-              <button type="button" :class="$style.foldHead" :aria-expanded="!fold.changes" :title="fold.changes ? 'Open' : 'Fold'" @click="flipFold('changes')"><i :class="fold.changes ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} ${session.maps === 1 ? 'map' : 'maps'}` : 'Since last refresh' }}</span></button>
+              <WFoldHead :model-value="!fold.changes" :class="$style.foldHead" :title="fold.changes ? 'Open' : 'Fold'" @update:model-value="flipFold('changes')"><span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} ${session.maps === 1 ? 'map' : 'maps'}` : 'Since last refresh' }}</span></WFoldHead>
               <b v-if="session" class="w-num" :class="tone(session.div)" :title="session.tip">{{ signed(session.div) }}<Coin :chaos="!divine" /><template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}<Coin :chaos="!divine" />/h</template></b>
               <span v-if="session && session.spent > 0" :class="$style.spendNote" class="w-num" title="Purchases in this session: left out of its profit">spent {{ div(session.spent) }}<Coin :chaos="!divine" /></span>
             </div>
@@ -160,7 +158,7 @@
               <div :class="$style.scroll">
                 <div v-for="(g, i) in groups.slice(0, groupLimit)" :key="g.key" :class="$style.group">
                   <button type="button" :class="$style.groupHead" :aria-expanded="groupOpen(g.key, i)" @click="toggleGroup(g.key, i)">
-                    <i :class="groupOpen(g.key, i) ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
+                    <WFoldCaret :open="groupOpen(g.key, i)" />
                     <span class="w-trunc">{{ g.title }}<template v-if="!groupOpen(g.key, i)"> · {{ g.lines.length }} {{ g.lines.length === 1 ? 'change' : 'changes' }}</template><span v-if="spendRows(g).some(r => r.spent)" :class="$style.spendChip" title="A purchase: it counts 0 toward profit per hour and the session">purchase</span><span v-if="groupSales(g).sales.length" :class="$style.saleChip" title="Items sold on pathofexile.com in this refresh">sale</span></span>
                     <b class="w-num" :class="tone(g.netChaos)" :title="inChaos(g.netChaos)">{{ signed(toDiv(g.netChaos)) }}<Coin :chaos="!divine" /></b>
                   </button>
@@ -193,7 +191,7 @@
           <div v-if="showSide" :class="$style.sideCol">
             <div v-if="showSold">
               <div :class="$style.sideHead">
-                <button type="button" :class="$style.fold" :aria-expanded="!fold.sold" :title="fold.sold ? 'Open Sold' : 'Fold Sold'" :aria-label="fold.sold ? 'Open Sold' : 'Fold Sold'" @click="flipFold('sold')"><i :class="fold.sold ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /></button>
+                <WFoldHead :model-value="!fold.sold" :class="$style.fold" :title="fold.sold ? 'Open Sold' : 'Fold Sold'" :aria-label="fold.sold ? 'Open Sold' : 'Fold Sold'" @update:model-value="flipFold('sold')" />
                 <button type="button" :class="$style.soldHead" title="Open the Sales view" @click="view = 'sales'">
                   <span :class="$style.caps">Sold</span>
                   <span class="w-num text-xs w-dim">today <b :class="$style.saleNum">{{ div(soldToday.chaos) }}</b> · 7 days <b :class="$style.saleNum">{{ div(soldWeek.chaos) }}</b><Coin :chaos="!divine" /></span>
@@ -208,14 +206,14 @@
               </div>
             </div>
             <div v-if="shown.where">
-              <button type="button" :class="[$style.foldHead, $style.sideTitle]" :aria-expanded="!fold.where" :title="fold.where ? 'Open' : 'Fold'" @click="flipFold('where')"><i :class="fold.where ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">Where it is</span></button>
+              <WFoldHead :model-value="!fold.where" :class="[$style.foldHead, $style.sideTitle]" :title="fold.where ? 'Open' : 'Fold'" @update:model-value="flipFold('where')"><span :class="$style.caps">Where it is</span></WFoldHead>
               <button v-for="c in fold.where ? [] : cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
                 :aria-pressed="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">
                 <span :class="$style.catName"><img v-if="c.icon" :src="c.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
               </button>
             </div>
             <div v-if="showMoves" :class="$style.movesCol">
-              <button type="button" :class="[$style.foldHead, $style.sideTitle]" :aria-expanded="!fold.moves" :title="fold.moves ? 'Open' : 'Fold'" @click="flipFold('moves')"><i :class="fold.moves ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">Price moves today</span></button>
+              <WFoldHead :model-value="!fold.moves" :class="[$style.foldHead, $style.sideTitle]" :title="fold.moves ? 'Open' : 'Fold'" @update:model-value="flipFold('moves')"><span :class="$style.caps">Price moves today</span></WFoldHead>
               <HoldLine v-for="m in fold.moves ? [] : moves.slice(0, 8)" :key="m.key" :icon="m.icon" :name="m.name" :text="m.name" :tip="tipFor(tips, m.key, m.name)"
                 :mine="holdOf(m.key)?.mine" :out="ignoredKeys.has(m.key)" :each="holdOf(m.key)?.unitChaos ?? null" :title="inChaos(m.valueChaos)"
                 @price="onPrice(m.key, $event)" @out="onIgnore(m.key, m.name, $event)"><span :class="tone(m.change)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span></HoldLine>
@@ -231,7 +229,7 @@
            out at the right, and the chevron (or the fade) opens them all below -->
       <section v-if="shown.tabs" :class="$style.tabLine">
         <button v-if="tabsOverflow" type="button" :class="$style.toggle" :aria-expanded="expanded" @click="config.tabsOpen = !expanded">
-          <i :class="expanded ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" /> Tabs
+          <WFoldCaret :open="expanded" /> Tabs
         </button>
         <span v-else :class="$style.caps">Tabs</span>
         <button type="button" :class="[$style.tabLabel, { [$style.tabOn]: !tabs.length }]" :aria-pressed="!tabs.length" title="Every tab" @click="tabs = []">All tabs</button>
@@ -326,6 +324,8 @@ import { chartHOf, clampChartH, clampMidH, colWeights, dragCols, dragTop, edges,
 import type { ColId, FoldId, PanelLayout } from './layout'
 import SplitHandle from './SplitHandle.vue'
 import WSegmented from '../ui/WSegmented.vue'
+import WFoldHead from '../ui/WFoldHead.vue'
+import WFoldCaret from '../ui/WFoldCaret.vue'
 import WSearchField from '../ui/WSearchField.vue'
 import RateTimePick from '../shared/RateTimePick.vue'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
@@ -1128,7 +1128,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .spark { margin-left: auto; }
 .toggle { display: inline-flex; align-items: center; gap: 5px; color: var(--w-dim); font-size: var(--w-fs-sm); cursor: pointer; padding: 1px 4px; border-radius: var(--w-r-sm); white-space: nowrap; }
 .toggle:hover { color: var(--w-fg); background: var(--w-panel-2); }
-.toggle i { font-size: calc(9px * var(--w-text-scale, 1)); }
 .chartBlock { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 6px var(--w-pad) 8px; border-bottom: 1px solid var(--w-line); }
 .chartHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 .goalLine { color: var(--w-up); }
@@ -1149,12 +1148,12 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .colsFixed .scrollBox { overflow-y: auto; overscroll-behavior: contain; }
 .colsFixed .scroll { max-height: none; overflow: visible; }
 .halves { position: relative; }
-.fold { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 14px; color: var(--w-dim); cursor: pointer; }
-.fold:hover { color: var(--w-fg); }
-.fold i, .foldHead i { font-size: calc(8px * var(--w-text-scale, 1)); }
-.foldHead { display: inline-flex; align-items: center; gap: 5px; min-width: 0; text-align: left; cursor: pointer; }
-.foldHead:hover .caps, .foldHead:hover i { color: var(--w-fg); }
-.foldHead i { width: 9px; color: var(--w-dim); flex: none; }
+/* WFoldHead fills its row; here it sits beside the section's controls. */
+.fold:global(.w-fold-head) { flex: none; justify-content: center; width: 14px; }
+.foldHead:global(.w-fold-head) { flex: 0 1 auto; width: auto; gap: 5px; }
+.toggle:global(.w-fold-head) { padding: 1px 4px; color: var(--w-dim); font-size: var(--w-fs-sm); }
+.toggle:global(.w-fold-head):hover { color: var(--w-fg); }
+.foldHead:hover .caps { color: var(--w-fg); }
 .foldHead .caps { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sideTitle { margin-bottom: 4px; }
 .sideHead { display: flex; align-items: baseline; gap: 2px; }
@@ -1167,7 +1166,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .groupHead { display: flex; align-items: baseline; gap: 6px; width: 100%; font-size: var(--w-fs-xs); color: var(--w-dim); border-bottom: 1px dashed var(--w-line); text-align: left; cursor: pointer; }
 .groupHead:hover { color: var(--w-fg); }
 .groupHead > span { flex: 1 1 auto; min-width: 0; }
-.groupHead > i { font-size: calc(8px * var(--w-text-scale, 1)); width: 8px; flex: none; }
 .changesCol { display: flex; flex-direction: column; }
 .scrollBox { flex: 1 1 auto; min-height: 0; }
 .scroll { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
