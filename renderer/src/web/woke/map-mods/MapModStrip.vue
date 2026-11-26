@@ -15,7 +15,11 @@
           <span class="w-dim text-xs">Juice</span>
           <span class="w-num w-accent font-semibold" data-map-juice>{{ result.juice.score }}</span>
         </template>
-        <WInfo text="The badge and dots are your Map mods ratings. Has finds maps with the mod, Not finds maps without it, Any ignores it; a number tile searches at least its minimum (type or scroll to change it). Kind finds only maps of this map's kind (its influence); click it to pick another. These change only this price check's search, and nothing is searched until you press Search." />
+        <WInfo text="Tunes this price check's search. Nothing is searched until you press **Search**.
+- **Has** finds maps with the mod, **Not** finds maps without it, **Any** ignores it.
+- A **number tile** searches at least its value. Type or [[Scroll]] to change it.
+- **Kind** finds only maps of this map's kind (its influence). Click it to pick another.
+- The badge and dots are your **Map mods** ratings." />
         <i class="fas w-dim text-xs" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
       </button>
       <div v-if="summary || picked" :class="$style.summary">
@@ -26,7 +30,7 @@
         <span class="w-dim text-xs" :class="$style.rowLabel">Farming</span>
         <span :class="$style.seg" role="radiogroup" aria-label="Farming goal" data-map-goal>
           <button v-for="g in FARM_GOALS" :key="g" type="button" role="radio" :aria-checked="!template && goal === g"
-            :class="!template && goal === g && $style.on_any" :data-goal="g" :title="GOAL_TITLE[g]" @click="setGoal(g)">{{ FARM_GOAL_LABEL[g] }}</button>
+            :class="!template && goal === g && $style.on_any" :data-goal="g" :title="GOAL_TITLE[g]" @click="setGoal(g)"><WIcon v-if="GOAL_ICON[g]" v-bind="GOAL_ICON[g]" size="sm" />{{ FARM_GOAL_LABEL[g] }}</button>
           <!-- Guy's pick F (2026-11-24): your own farming templates, saved from the current picks. -->
           <template v-for="t in templates" :key="t.id">
             <button type="button" role="radio" :aria-checked="template?.id === t.id" :class="template?.id === t.id && $style.on_any"
@@ -169,7 +173,7 @@ import type { KindChoice } from '@/web/price-check/filters/pseudo/map-kind'
 import type { AddedMod, FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
-import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalDisabled } from './goal'
+import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalAddsExtra, goalDisabled } from './goal'
 import { farmGoal, setFarmGoal } from './goal-config'
 import { activeTemplate, deleteTemplate, farmTemplates, nextTemplateName, saveTemplate, setActiveTemplate, notToSave, setExcludeNot, templateMin, templateNotMods } from './farm-templates'
 import type { FarmTemplate } from './farm-templates'
@@ -196,6 +200,11 @@ const PROP_ICON: Record<string, IconProps> = {
   'Div cards': { item: 'Stacked Deck', fallback: 'fas fa-clone', title: '' }
 }
 const MAP_ICON = '/images/maps/normal.png'
+// The farming goal buttons draw what they farm (Guy 2026-11-25: icons on chips).
+const GOAL_ICON: Partial<Record<FarmGoal, IconProps>> = {
+  currency: { src: '/images/chaos.png', fallback: 'fas fa-coins', title: '' },
+  atlas: { src: MAP_ICON, fallback: 'fas fa-map', title: '' }
+}
 
 const result = computed(() => {
   const config = findMapModsConfig()
@@ -614,16 +623,33 @@ function applyGoal (g: FarmGoal) {
     // An Always / Never tick you set on a number wins (price-insight/tick-prefs.ts).
     if (f && off !== undefined && !tickPref(f)) f.disabled = off
   }
+  // A More X number the map hasn't got: the goal adds it (min 1) or takes it off.
+  for (const f of extras.value) {
+    const on = goalAddsExtra(PROP_LABEL[f.tradeId[0]], g)
+    if (on === undefined || tickPref(f)) continue
+    f.disabled = !on
+    if (on && f.roll && typeof f.roll.min !== 'number') f.roll.min = 1
+  }
 }
 // The price check builds a map's numbers as it always did; the strip sets them
 // to the goal once per set of filters (a new item, or another preset), so
 // clicks after that are kept. The strip loads lazily, which keeps this out of
 // the startup budget.
 const goalApplied = new WeakSet<object>()
+// Guy (2026-11-25, "only yellow content"): rare-only (yellow) content adds to a
+// map's worth, so it starts Has and the price is for a map with it (a Mirror of
+// Delirium, the Viridian Wildwood, a Mirage, an Evocator). Not one you rated Bad
+// or Care, and not a buried Sentinel (Guy, 2026-11-24: never searched by default).
+function wantedMods (): StatFilter[] {
+  return rows.value.filter(r => r.filter?.mapMod && r.filter.disabled && isRareOnly(r) && !tickPref(r.filter) &&
+    (r.mod.rating === 'ok' || r.mod.rating === 'good') && !/buried \w+ Sentinel/.test(r.mod.text))
+    .map(r => r.filter!)
+}
 watch(() => [props.stats, result.value] as const, () => {
   const stats = props.stats
   if (!stats || !result.value || !isMap.value || goalApplied.has(stats)) return
   goalApplied.add(stats)
+  for (const f of wantedMods()) setState(f, 'has')
   if (template.value) applyTemplate(template.value)
   else if (goal.value !== 'any') applyGoal(goal.value)
 }, { immediate: true })
@@ -776,7 +802,7 @@ const picked = computed(() => {
 .has .text { color: var(--w-up); }
 .not .text { color: var(--w-down); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--w-down) 50%, transparent); }
 .seg { flex: none; display: inline-flex; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); overflow: hidden; }
-.seg button { padding: 0 6px; font-size: var(--w-fs-xs); color: var(--w-dim); border-left: 1px solid var(--w-line); }
+.seg button { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; font-size: var(--w-fs-xs); color: var(--w-dim); border-left: 1px solid var(--w-line); }
 .seg button:first-child { border-left: 0; }
 .seg button:hover { background: var(--w-chip-ground); }
 .seg .on_any { background: var(--w-panel-2); color: var(--w-fg); }

@@ -35,7 +35,16 @@
         <b>No odds measured</b>
         <span class="w-dim">{{ method.inputs }} {{ family.noun }}s give back 1 other: from <span v-item-tip="{ name: rangeSpan.low.name, type: family.ninjaType }">{{ shortName(rangeSpan.low.name) }}</span> at {{ fmt(rangeSpan.low.chaos) }} to <span v-item-tip="{ name: rangeSpan.high.name, type: family.ninjaType }">{{ shortName(rangeSpan.high.name) }}</span> at {{ fmt(rangeSpan.high.chaos) }}</span>
       </div>
+      <div v-if="flip?.kind === 'tribes' && bestTribe" :class="$style.verdict" class="w-num w-verdict" data-flip-tribes>
+        <b>Best 3 for 1: {{ bestTribe.tribe }}</b>
+        <span class="w-dim">+{{ amount(bestTribe.profitEach!) }}c each, putting in <span v-item-tip="{ name: bestTribe.cheapest!.name, type: family.ninjaType }">{{ shortName(bestTribe.cheapest!.name) }}</span> at {{ fmt(bestTribe.cheapest!.chaos) }}</span>
+      </div>
+      <div v-if="flip?.kind === 'tribes' && flip.rows.length && !bestTribe" :class="$style.verdict" class="w-num w-verdict" data-flip-tribes>
+        <b>No tribe is worth 3 for 1 right now</b>
+        <span class="w-dim">3 Tattoos of one tribe give 1 random Tattoo of that tribe</span>
+      </div>
       <div v-if="flip?.kind === 'range'" :class="[$style.note, $style.warning]">{{ RANGE_NOTE }}</div>
+      <div v-if="flip?.kind === 'tribes' && !countOwnWeights" :class="[$style.note, $style.warning]">{{ family.lowConfidence }}</div>
       <div v-if="warning" :class="[$style.note, $style.warning]">{{ warning }}</div>
       <div v-if="openerSpan" :class="$style.note" class="w-num">
         <span v-item-tip="{ name: family.opener!, type: family.ninjaType }">{{ family.opener }}</span> opens to any {{ family.noun }}, worth {{ fmt(openerSpan.low) }} to {{ fmt(openerSpan.high) }}. It has no price to buy at.
@@ -64,6 +73,44 @@
             <span class="text-right w-num" :class="r.low.chaos > r.cost ? 'w-up' : r.high.chaos < r.cost ? 'w-down' : ''"
               :title="r.low.chaos > r.cost ? 'Even the worst result pays' : r.high.chaos < r.cost ? 'Even the best result loses' : 'Could go either way'">{{ amount(r.low.chaos) }}–{{ amount(r.high.chaos) }}c</span>
           </div>
+        </template>
+      </template>
+
+      <template v-else-if="flip.kind === 'tribes'">
+        <WEmpty v-if="!flip.rows.length" icon="fas fa-recycle">poe.ninja has no tribe Tattoo prices yet.</WEmpty>
+        <template v-else>
+          <div class="w-row w-row--head" :class="$style.tribeGrid">
+            <span>Tribe</span>
+            <span class="text-right" title="What one Tattoo from the recipe sells for on average, after your sell discount">Average</span>
+            <span class="text-right" title="The cheapest Tattoo of the tribe to put in">Cheapest</span>
+            <span class="text-right" title="Average result minus 3 of the cheapest, per Tattoo put in">3 for 1</span>
+          </div>
+          <template v-for="r in flip.rows" :key="r.tribe">
+            <div role="button" tabindex="0" class="w-row" :class="[$style.tribeGrid, $style.tribeRow]" :aria-expanded="openTribe === r.tribe" :data-tribe="r.tribe"
+              :title="openTribe === r.tribe ? 'Hide its Tattoos' : 'Show its Tattoos'" @click="toggleTribe(r.tribe)" @keydown.enter.prevent="toggleTribe(r.tribe)" @keydown.space.prevent="toggleTribe(r.tribe)">
+              <span class="flex items-center gap-1 min-w-0">
+                <img v-if="tribeIcon(r.tribe)" :src="tribeIcon(r.tribe)!" alt="" :class="$style.tribeIcon" draggable="false" @error="($event.target as HTMLImageElement).style.visibility = 'hidden'">
+                <span class="w-trunc">{{ r.tribe }}</span>
+                <span v-if="r === bestTribe" class="w-up" :class="$style.bestTag">best</span>
+                <span v-else-if="r.unpriced" class="w-warn w-num" :class="$style.bestTag" :title="`${r.unpriced} of its Tattoos have no price and count at its cheapest, so the average is a guess`">{{ r.unpriced }} unpriced</span>
+              </span>
+              <WPrice :chaos="r.average" :divine="divine" class="text-right" />
+              <span class="text-right w-num w-trunc">
+                <template v-if="r.cheapest"><span v-item-tip="{ name: r.cheapest.name, type: family.ninjaType }">{{ roleName(r.cheapest.name) }}</span> {{ amount(r.cheapest.chaos) }}c</template>
+              </span>
+              <span class="text-right w-num" :class="r.profitEach == null ? 'w-faint' : r.profitEach > 0 ? 'w-up' : 'w-down'">{{ r.profitEach == null ? '–' : signedAmount(r.profitEach) }}</span>
+            </div>
+            <template v-if="openTribe === r.tribe">
+              <div v-for="t in r.tattoos" :key="t.name" class="w-row" :class="[$style.tattooGrid]" @contextmenu="rowMenu($event, t.name)">
+                <FlipName :name="t.name" :item="t.name" :type="family.ninjaType" />
+                <span v-if="t.unpriced" class="text-right w-faint w-num" title="poe.ninja has no price: counted at the tribe's cheapest">no price</span>
+                <WPrice v-else :chaos="t.chaos" :divine="divine" class="text-right" />
+                <span class="text-right w-num w-dim" title="Chance of this result">{{ pct(t.share) }}</span>
+                <span v-if="t.unpriced" />
+                <span v-else class="text-right w-num" :class="tattooProfitEach(r, t.chaos) > 0 ? 'w-up' : 'w-down'" title="Put in with 2 more like it, per Tattoo">{{ signedAmount(tattooProfitEach(r, t.chaos)) }}</span>
+              </div>
+            </template>
+          </template>
         </template>
       </template>
 
@@ -138,7 +185,7 @@
       </template>
 
       <template #footer>
-        <span>{{ footerText }}</span> <button v-if="pool || flip?.kind === 'range'" type="button" :class="$style.weightsLink" @click="openWeights">Weights</button> <WInfo :text="footerTitle" />
+        <span>{{ footerText }}</span> <button v-if="pool || flip?.kind === 'range' || flip?.kind === 'tribes'" type="button" :class="$style.weightsLink" @click="openWeights">Weights</button> <WInfo :text="footerTitle" />
       </template>
     </WPanel>
   </Widget>
@@ -181,6 +228,9 @@ import type { ScarabFlipWidget } from './widget'
 import { hostRequest } from '../shared/host'
 import { buildMarks, clearStashMarks, justCleared, stashClearCount, stashMarks } from './stash-marks'
 import type { StashRead } from './stash-marks'
+import { tattooProfitEach, tribeIconItem } from './tattoos'
+import { useGoto } from '../tab-bar/goto'
+import type { TattooTribe } from './tattoos'
 
 const props = defineProps<{
   config: ScarabFlipWidget
@@ -267,7 +317,13 @@ async function fetchExchange (id: string, type: string) {
 watch([league, collector.revision], load, { immediate: true })
 
 const dockShow = computed(() => Boolean(snapshot.value) && (zone.kind === 'town' || zone.kind === 'hideout'))
-const families = computed(() => pricedFamilies(snapshot.value?.items))
+// A tab Show me asked for stays even before poe.ninja prices it, so Show me lands on it.
+const pinnedFamily = shallowRef<string | null>(null)
+const families = computed(() => {
+  const priced = pricedFamilies(snapshot.value?.items)
+  const pinned = pinnedFamily.value ? knownFamily(pinnedFamily.value) : null
+  return pinned && !priced.includes(pinned) ? [...priced, pinned] : priced
+})
 const family = computed(() => shownFamily(props.config.family, families.value))
 const method = computed(() => {
   const picked = props.config.methods?.[family.value.id]
@@ -294,6 +350,28 @@ const rows = computed<Array<FlipRow | UpgradeRow>>(() => {
 const best = computed(() => snapshot.value && dockShow.value
   ? bestFlip(snapshot.value.items, exchanges.value, options.value, lifeforcePerItem.value, props.config.weights)
   : null)
+
+useGoto(props.config, 'woke-scarab-flip', {
+  tattoos: () => {
+    pinnedFamily.value = 'tattoos'
+    props.config.family = 'tattoos'
+  }
+})
+
+// Tattoos: the tribe whose list is open, and the best tribe to vendor.
+const openTribe = shallowRef<TattooTribe | null>(null)
+const bestTribe = computed(() => {
+  if (flip.value?.kind !== 'tribes') return null
+  // A tribe with an unpriced Tattoo has a guessed average, so it isn't called best.
+  const top = flip.value.rows.find(r => !r.unpriced)
+  return top?.profitEach != null && top.profitEach > 0 && top.cheapest ? top : null
+})
+const countOwnWeights = computed(() => Object.values(props.config.weights?.[family.value.id] ?? {}).filter(w => typeof w === 'number' && Number.isFinite(w) && w >= 0).length)
+function toggleTribe (tribe: TattooTribe) { openTribe.value = openTribe.value === tribe ? null : tribe }
+function tribeIcon (tribe: TattooTribe) { return gameIcon(tribeIconItem(tribe)) }
+// "Tattoo of the Kitava Rebel" -> "Rebel": the row already names the tribe.
+function roleName (name: string) { return shortName(name).replace(/^\S+ /, '') }
+function signedAmount (chaos: number) { return `${chaos > 0 ? '+' : chaos < 0 ? '−' : ''}${amount(Math.abs(chaos))}c` }
 
 // Odds and rarity need weights, so a known-result flip only has its list.
 const views = computed(() => {
@@ -576,6 +654,12 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 .sortHead:hover, .sortHead:focus-visible { color: var(--w-fg); }
 .sorted { color: var(--w-accent); }
 .rangeGrid { grid-template-columns: minmax(0, 1fr) 62px calc(72px * var(--w-text-scale, 1)) calc(96px * var(--w-text-scale, 1)); }
+.tribeGrid { grid-template-columns: minmax(0, 1fr) 62px calc(96px * var(--w-text-scale, 1)) calc(64px * var(--w-text-scale, 1)); }
+.tribeRow { cursor: pointer; }
+.tribeRow:hover, .tribeRow:focus-visible { background: var(--w-panel-2); outline: none; }
+.tribeIcon { width: 20px; height: 20px; object-fit: contain; flex: none; }
+.bestTag { font-size: var(--w-fs-caps); letter-spacing: 0.06em; text-transform: var(--w-caps-case); font-family: var(--w-caps-face); }
+.tattooGrid { grid-template-columns: minmax(0, 1fr) 62px 44px calc(64px * var(--w-text-scale, 1)); padding-left: calc(var(--w-pad) + 12px); }
 .rareGrid { grid-template-columns: minmax(0, 1fr) 62px 76px calc(64px * var(--w-text-scale, 1)); }
 .sourceGrid { grid-template-columns: minmax(0, 1fr) 76px 44px; }
 .note { padding: 8px var(--w-pad); color: var(--w-dim); font-size: var(--w-fs-sm); white-space: normal; overflow-wrap: anywhere; }

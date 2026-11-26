@@ -8,6 +8,8 @@ import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { dataFileUrl, onSharedDataChange } from '@/web/woke/app/live-data'
 import type { ModTip } from '@/web/woke/ui/tooltip/tooltip'
 import { rowLadder, tierDataSoon } from './tier-ladder'
+import { loadImplicitTable } from './eldritch-listing'
+import { ELDRITCH_TIERS, eldritchSteps } from './eldritch-roll'
 
 interface BenchData {
   cur: string[]
@@ -70,6 +72,7 @@ const GEN: Record<string, string> = { prefix: 'Prefix', suffix: 'Suffix' }
 
 /** The row's tooltip, or null when the data doesn't know its tiers. */
 export async function modTipFor (item: ParsedItem, f: StatFilter): Promise<ModTip | null> {
+  if (f.sources.length === 1 && f.sources[0].modifier.info.eldritch) return await eldritchTip(item, f)
   const [tiers, benchData] = await Promise.all([tierDataSoon(1500), loadBench()])
   if (!tiers) return null
   const ladder = rowLadder(tiers, item, f)
@@ -88,5 +91,21 @@ export async function modTipFor (item: ParsedItem, f: StatFilter): Promise<ModTi
     mine: ladder.mine,
     itemLevel: item.itemLevel,
     bench: benchData ? benchCraft(benchData, item.category, text) : undefined
+  }
+}
+
+/** An eldritch implicit's tiers, Lesser to Perfect, best first, with the item's own lit. */
+async function eldritchTip (item: ParsedItem, f: StatFilter): Promise<ModTip | null> {
+  const { modifier } = f.sources[0]
+  const table = await loadImplicitTable()
+  const found = eldritchSteps(f.sources[0], item.category, table?.shown)
+  if (!found) return null
+  const altar = modifier.info.eldritch === 'exarch' ? 'Searing Exarch' : 'Eater of Worlds'
+  return {
+    kind: 'mod',
+    title: f.roll ? f.text.replace('#', String(f.roll.value)) : f.text,
+    sub: [`${altar} implicit`, item.category].filter(Boolean).join(' · '),
+    steps: found.steps.map(s => ({ tier: s.rank, min: s.min, max: s.max, label: ELDRITCH_TIERS[s.rank - 1] })).reverse(),
+    mine: found.mine.rank
   }
 }

@@ -93,6 +93,9 @@ test('price check side window: a row shows its tooltip and menu, a click price c
   await expect(page.getByTestId('instant-ninja-card').locator('.w-pc-side')).toBeVisible({ timeout: 20_000 })
   const side = page.locator('.w-pc-side')
   await expect(side).toBeVisible({ timeout: 20_000 })
+  // Groups that don't fit above the screen's bottom start folded: open this one.
+  const head = side.locator('[data-related-head]', { hasText: 'Related to' })
+  if (await head.getAttribute('aria-expanded') !== 'true') await head.click()
   const row = side.getByText(/^Shrieking Essence of Misery$/).first()
   await expect(row).toBeVisible()
   await hoverShowsTip(page, row, 'Shrieking Essence of Misery')

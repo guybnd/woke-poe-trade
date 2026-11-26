@@ -35,13 +35,21 @@ test('right-clicking an item gives its strip: price check, stash search, watch',
   await row('The Doctor').click({ button: 'right' })
   await expect(menu).toContainText('The Doctor')
   const strip = menu.getByRole('group', { name: 'The Doctor' })
-  await expect(strip).toHaveText(/Price\s*Trade\s*Wiki\s*Copy\s*Stash\s*Unwatch/)
+  await expect(strip).toHaveText(/Price\s*Trade\s*Wiki\s*Copy\s*Stash\s*More\s*Unwatch/)
   await expect(menu.getByRole('menuitem', { name: 'Set price alert…' })).toBeVisible()
   await overlay.snap('item menu')
 
   await menu.getByRole('menuitem', { name: 'Find in your stash' }).click()
   await expect(menu).toHaveCount(0)
   await expect.poll(() => fakeApp.game.stashSearches).toEqual(['"The Doctor"'])
+
+  // More opens search on the item.
+  await row('The Doctor').click({ button: 'right' })
+  await menu.getByRole('menuitem', { name: /^More:/ }).click()
+  const box = overlay.widget('woke-search').getByRole('textbox', { name: 'Search', exact: true })
+  await expect(box).toHaveValue('The Doctor')
+  await overlay.page.keyboard.press('Escape')
+  await expect(box).toBeHidden()
 
   // Unwatch takes it off the watchlist.
   await row('The Doctor').click({ button: 'right' })

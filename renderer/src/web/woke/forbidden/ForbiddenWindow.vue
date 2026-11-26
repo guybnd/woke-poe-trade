@@ -8,7 +8,11 @@
           <span v-else-if="shownClass" :class="$style.dim" data-qa="forbidden-class">{{ shownClass }} <WButton size="sm" variant="ghost" @click="shownClass = null">Back to {{ config.source === 'class' ? config.pickClass : 'yours' }}</WButton></span>
           <span v-else-if="cls" :class="$style.dim" class="w-trunc" data-qa="forbidden-source" :title="who.label">{{ who.label }}</span>
           <WButton v-if="otherPath" size="sm" variant="ghost" title="Use the PoB build other windows use" @click="config.pobPath = null">Use the build in use</WButton>
-          <WInfo :class="$style.end" text="Both jewels must name the same notable, from your class: any of its three ascendancies, or the one notable only these jewels give. Each is Limited to 1, so a build has one pair. The estimate is poe.ninja's price of both jewels. Price runs two trade searches for the real cheapest pair. Flame and Flesh open the price check on that jewel." />
+          <WInfo :class="$style.end" text="Both jewels must name the same notable, from your class: any of its three ascendancies, or the one notable only these jewels give.
+- Each is **Limited to 1**, so a build has one pair.
+- The **estimate** is poe.ninja's price of both jewels.
+- **Price** runs two trade searches for the real cheapest pair.
+- **Flame** and **Flesh** open the price check on that jewel." />
         </div>
 
         <div v-if="!all.length" :class="$style.dim">{{ loadNote }}</div>

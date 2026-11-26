@@ -5,7 +5,7 @@
       <div :class="$style.tools">
         <div class="flex items-center gap-1 flex-wrap w-full">
           <span class="w-dim text-xs mr-1">I want</span>
-          <WChip v-for="g in PLAN_GOALS" :key="g" clickable :active="state.goal === g" @click="setGoal(g)">{{ BONUS_LABEL[g] }}</WChip>
+          <WChip v-for="g in PLAN_GOALS" :key="g" clickable :active="state.goal === g" @click="setGoal(g)"><WIcon v-bind="goalIcon(g)" size="sm" />{{ BONUS_LABEL[g] }}</WChip>
         </div>
         <div class="flex items-center gap-2 w-full">
           <span class="w-dim text-xs flex-1">
@@ -99,7 +99,8 @@ import { computed } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { useLeagues } from '@/web/background/Leagues'
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
-import { WButton, WChip, WEmpty, WField, WInfo, WSelect, toast } from '../ui'
+import { WButton, WChip, WEmpty, WField, WIcon, WInfo, WSelect, toast } from '../ui'
+import { MAP_NUMBER_ICONS } from '../ui/game-icons'
 import { useCopy } from '../ui/copy'
 import { tradeUrl } from '../search/search'
 import { priceCheckTradeStatus } from '../shared/trade-status'
@@ -113,6 +114,12 @@ import type { MapModProfile, ModRating } from './rules'
 import { plannerGoalFor } from './goal'
 import { farmGoal } from './goal-config'
 
+// Each goal chip draws what it brings (Guy 2026-11-25: icons on chips).
+const GOAL_ICON_KEY: Record<BonusKey, string> = { d: 'drops', r: 'rarity', p: 'pack', currency: 'currency', maps: 'maps', threads: 'threads', divCards: 'divCards', scarabs: 'scarabs' }
+function goalIcon (g: BonusKey): { src?: string, item?: string, fallback: string, title: string } {
+  const i = MAP_NUMBER_ICONS[GOAL_ICON_KEY[g]]
+  return { src: i?.src, item: i?.item, fallback: i?.fa ?? 'fas fa-percent', title: '' }
+}
 const props = defineProps<{ profile: MapModProfile, ratings: Record<string, ModRating> }>()
 
 const COLUMNS: BonusKey[] = ['d', 'r', 'p', 'currency', 'maps', 'threads']
@@ -159,10 +166,12 @@ const universe = computed(() => planUniverse(data.value))
 const alsoAvoid = computed(() => ratedAvoid(data.value, rows.value, props.ratings))
 const search = computed(() => planStashSearch(rows.value, ticked.value, state.value, universe.value, allMapNames(), alsoAvoid.value))
 const tokenInfo = computed(() => search.value.minToken > 3
-  ? `There was room, so each mod is searched by ${search.value.minToken} or more characters of its text where its text allows, instead of the shortest 3. ` +
-    'Longer text is less likely to also match a rare map\'s random name. It shortens again by itself when you tick more mods.'
-  : 'Each mod is searched by the shortest text (3 characters or more) that no other T17 mod has, so the search fits. ' +
-    'Text that short can, rarely, also match a rare map\'s random name. Tick fewer mods and it uses longer text by itself.')
+  ? `There was room, so each mod is searched by ${search.value.minToken} or more characters of its text where its text allows, instead of the shortest 3.\n` +
+    '- Longer text is less likely to also match a rare map\'s random name.\n' +
+    '- It shortens again by itself when you tick more mods.'
+  : 'Each mod is searched by the shortest text (3 characters or more) that no other T17 mod has, so the search fits.\n' +
+    '- Text that short can, rarely, also match a rare map\'s random name.\n' +
+    '- Tick fewer mods and it uses longer text by itself.')
 const usable = computed(() => !!search.value.text && !search.value.tooLong)
 
 const { copied, copy: copyText } = useCopy(1200)

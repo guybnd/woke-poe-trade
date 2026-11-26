@@ -1,7 +1,15 @@
 <template>
   <Teleport to="body">
     <div v-if="tip" ref="el" data-w-popup :class="[$style.card, { [$style.keysOnly]: !paragraphs.length }]" :style="pos" role="tooltip">
-      <p v-for="(p, i) in paragraphs" :key="i" :class="{ [$style.more]: i > 0, [$style.lines]: tip.lines }">{{ p }}</p>
+      <template v-if="tip.lines">
+        <p v-for="(p, i) in paragraphs" :key="i" :class="[$style.lines, { [$style.more]: i > 0 }]">{{ p }}</p>
+      </template>
+      <template v-for="(b, i) in blocks" v-else :key="i">
+        <p v-if="b.k === 'p'" :class="i === 0 ? $style.lead : [$style.next, $style.after]"><HelpInlines :parts="b.parts" /></p>
+        <ul v-else :class="[$style.list, { [$style.next]: i > 0 }]">
+          <li v-for="(item, j) in b.items" :key="j"><HelpInlines :parts="item" /></li>
+        </ul>
+      </template>
       <div v-if="tip.keys?.length" :class="[$style.keys, { [$style.more]: paragraphs.length }]">
         <template v-for="(k, i) in tip.keys" :key="i"><WKbd :keys="k.keys" /><span>{{ k.label }}</span></template>
       </div>
@@ -11,14 +19,21 @@
 
 <script setup lang="ts">
 // Mounted once in the overlay. Draws the card behind a WInfo "?".
-import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, defineComponent, h, inject, nextTick, onMounted, onUnmounted, ref, watch, type PropType } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
-import { helpParagraphs, helpTip as tip, hideHelp, placeHelp } from './help-tip'
+import { helpBlocks, helpParagraphs, helpTip as tip, hideHelp, placeHelp, type HelpInline } from './help-tip'
 import WKbd from './WKbd.vue'
+
+// Bold names and boxed keys inside a line (see helpBlocks).
+const HelpInlines = defineComponent({
+  props: { parts: { type: Array as PropType<HelpInline[]>, required: true } },
+  setup: (props) => () => props.parts.map(p => p.k === 'b' ? h('b', p.v) : p.k === 'kbd' ? h(WKbd, { keys: p.v }) : p.v)
+})
 
 const el = ref<HTMLElement | null>(null)
 const placed = ref<{ left: number, top: number } | null>(null)
 const paragraphs = computed(() => helpParagraphs(tip.value?.text ?? ''))
+const blocks = computed(() => tip.value?.lines ? [] : helpBlocks(tip.value?.text ?? ''))
 
 watch(tip, async (t) => {
   placed.value = null
@@ -69,4 +84,16 @@ onUnmounted(() => {
 .keysOnly { width: max-content; max-width: 300px; }
 .keys { display: grid; grid-template-columns: auto auto; gap: 4px 8px; align-items: center; }
 .more { margin-top: 6px !important; color: var(--w-dim); }
+/* Lead line and bullets in full colour; later paragraphs (notes, credits) dimmer, as before. Names in bold. */
+.lead { color: var(--w-fg); }
+.next { margin-top: 5px !important; }
+.after { color: var(--w-dim); }
+.card b { font-weight: 600; color: var(--w-fg); }
+.list { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+.list li { position: relative; padding-left: 12px; }
+.list li::before {
+  content: ''; position: absolute; left: 2px; top: 0.62em; width: 4px; height: 4px;
+  background: var(--w-accent); transform: rotate(45deg); opacity: 0.8;
+}
+.card :global(kbd) { vertical-align: 1px; }
 </style>

@@ -1,5 +1,7 @@
 // Turns the flat list of trade listings into table rows for the improved view:
-// one row per price, with a count, an age range and how stale the row looks.
+// one row per seller and price, with a count, an age range and how stale the row looks.
+// Only one seller's listings share a row (Guy's rule): a row is one place to travel
+// to, and listings from different sellers can't be bought together.
 // Pure functions, no Vue, so the grouping rules can be checked in isolation.
 import { DROP_LABEL, DropReason } from './insight'
 
@@ -26,7 +28,7 @@ export interface ListingRow<T extends RowListing> {
   /** First listing in the row: everything shown besides age and status is the same on all members. */
   lead: T
   members: T[]
-  /** Listings in the row, counting a seller's repeated ones. */
+  /** Listings in the row, counting a seller's repeated ones. Always one seller's. */
   count: number
   sellers: number
   /** The most available seller in the row. */
@@ -90,7 +92,7 @@ export function groupListings<T extends RowListing> (listings: readonly T[], opt
   const groups = new Map<string, T[]>()
   listings.forEach((l, idx) => {
     const key = opts.merge
-      ? [l.priceAmount, l.priceCurrency, l.hasFee, l.hasNote, l.isMine, opts.dropped?.get(l.id) ?? '', opts.detail?.(l) ?? ''].join('|')
+      ? [l.accountName, l.priceAmount, l.priceCurrency, l.hasFee, l.hasNote, l.isMine, opts.dropped?.get(l.id) ?? '', opts.detail?.(l) ?? ''].join('|')
       : `${idx}|${l.id}`
     const members = groups.get(key)
     if (members) members.push(l)

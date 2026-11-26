@@ -5,6 +5,8 @@
 import type { PriceItem } from '../market/types'
 import { TROPHY_SLOTS, slotMatcher } from './covens'
 import { BEAST_FAMILIES, beastKind } from './beast-kinds'
+import { TATTOO_TRIBES, tattooTribe, tribeIconItem } from '../scarab-flip/tattoos'
+import { gameIcon } from '../ui/game-icons'
 
 export interface PriceGroup {
   label: string
@@ -13,12 +15,16 @@ export interface PriceGroup {
   match?: RegExp
   // Show the price for this many units (lifeforce is traded per 100).
   unit?: number
+  // The name as the row shows it, when the full one is long ("Kitava Rebel").
+  rowName?: (item: PriceItem) => string
   // Short tag shown next to an item, e.g. the Expedition vendor.
   tag?: (item: PriceItem) => string | undefined
   // Rows split into kinds (beast families): each name gets its kind's icon,
   // and the full panel shows the kinds as chips that filter the list.
   kinds?: GroupKind[]
   kindOf?: (item: PriceItem) => string | undefined
+  // Rows keep their own item art instead of their kind's icon (Tattoos).
+  itemIcons?: boolean
   // Prices here can't rank the items against each other, so no "best" call.
   unranked?: boolean
   // A name with many priced variants (a Viscera's effects) shows its cheapest.
@@ -304,6 +310,31 @@ export const MECHANICS: Mechanic[] = [
     ]
   },
   {
+    id: 'settlers',
+    label: 'Settlers',
+    short: 'STL',
+    icon: 'fas fa-ship',
+    groups: [
+      {
+        label: 'Tattoos',
+        types: ['Tattoo'],
+        // Each tribe's chip wears its Makanga Tattoo, read when drawn: item data loads after this file.
+        kinds: TATTOO_TRIBES.map(tribe => ({ id: tribe, label: tribe, get icon () { return gameIcon(tribeIconItem(tribe)) ?? '' } })),
+        kindOf: i => tattooTribe(i.name) ?? undefined,
+        rowName: i => i.name.replace(/^Tattoo of the /, ''),
+        itemIcons: true,
+        limit: 12
+      },
+      { label: 'Runegrafts', types: ['Runegraft'], limit: 8 }
+    ],
+    tips: [
+      'Kingsmarch shipments to Karui ports bring Tattoos; to Kalguuran ports, Runegrafts.',
+      'The vendor takes 3 Tattoos of one tribe for 1 random Tattoo of that tribe. Flips, Tattoos tab, says which tribe pays.',
+      'The vendor takes 3 Runegrafts for 1 random Runegraft. Flips, Runegrafts tab, says which are worth it.'
+    ],
+    zone: /^Kingsmarch/i
+  },
+  {
     id: 'incursion',
     label: 'Incursion',
     short: 'INC',
@@ -350,6 +381,7 @@ export interface PricedRow {
   unit: number
   tag?: string
   kind?: GroupKind
+  rowName?: string
 }
 
 // leaveOut: drops a name whose chosen row it matches (a thin market, say)
@@ -372,7 +404,7 @@ export function priceGroup (group: PriceGroup, items: PriceItem[], leaveOut?: (i
   }
   const rows: PricedRow[] = [...best.values()].filter(item => !leaveOut?.(item)).map(item => {
     const kind = group.kindOf?.(item)
-    return { item, chaos: item.chaos * unit, unit, tag: group.tag?.(item), kind: group.kinds?.find(k => k.id === kind) }
+    return { item, chaos: item.chaos * unit, unit, tag: group.tag?.(item), kind: group.itemIcons ? undefined : group.kinds?.find(k => k.id === kind), rowName: group.rowName?.(item) }
   })
   rows.sort((a, b) => b.chaos - a.chaos)
   return rows.slice(0, group.limit ?? 20)

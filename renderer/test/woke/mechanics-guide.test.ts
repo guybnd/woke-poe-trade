@@ -33,6 +33,7 @@ describe('league mechanics guide', () => {
   it.each([
     ['Delve_Main', 'delve'],
     ['Azurite Mine', 'delve'],
+    ['Kingsmarch', 'settlers'],
     ['ExpeditionDesertRuins', 'expedition'],
     ['HarvestLeagueBoss', 'harvest'],
     ['The Sacred Grove', 'harvest'],

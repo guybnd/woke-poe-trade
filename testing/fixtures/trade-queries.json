@@ -383,6 +383,56 @@
    "type": "Divine Orb"
   }
  },
+ "currency-orb-of-intention.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Orb of Intention"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Orb of Intention"
+  }
+ },
  "currency-originators-exalted.txt": {
   "opened": {
    "status": {
@@ -2839,6 +2889,103 @@
    "type": "Valdo Map"
   }
  },
+ "normal-glorious-plate.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.chest"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ar": {
+       "min": 931
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.chest"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ar": {
+       "min": 931
+      },
+      "base_defence_percentile": {
+       "min": 0
+      }
+     }
+    }
+   }
+  }
+ },
  "rare-belt-catalysed.txt": {
   "opened": {
    "status": {
@@ -3189,6 +3336,9 @@
       },
       "ev": {
        "min": 1965
+      },
+      "base_defence_percentile": {
+       "min": 90
       }
      }
     }
@@ -3347,6 +3497,9 @@
      "filters": {
       "es": {
        "min": 1089
+      },
+      "base_defence_percentile": {
+       "min": 90
       }
      }
     }
@@ -3527,6 +3680,9 @@
      "filters": {
       "es": {
        "min": 1089
+      },
+      "base_defence_percentile": {
+       "min": 90
       }
      }
     }
@@ -3693,6 +3849,9 @@
      "filters": {
       "es": {
        "min": 1134
+      },
+      "base_defence_percentile": {
+       "min": 90
       }
      }
     }
@@ -3967,6 +4126,9 @@
       },
       "es": {
        "min": 31
+      },
+      "base_defence_percentile": {
+       "min": 0
       }
      }
     }
@@ -4696,6 +4858,9 @@
       },
       "block": {
        "min": 26
+      },
+      "base_defence_percentile": {
+       "min": 12
       }
      }
     }
@@ -5984,6 +6149,72 @@
    },
    "name": "Eber's Unification",
    "type": "Hubris Circlet"
+  }
+ },
+ "unique-hale-negator.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Hale Negator",
+   "type": "Mind Cage"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "es": {},
+      "base_defence_percentile": {
+       "min": 100
+      }
+     }
+    }
+   },
+   "name": "Hale Negator",
+   "type": "Mind Cage"
   }
  },
  "unique-headhunter.txt": {

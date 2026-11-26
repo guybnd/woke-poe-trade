@@ -226,9 +226,11 @@ import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './too
 import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
-import { searchRequest } from '../search/widget'
+import { SEARCH_TYPE, searchRequest } from '../search/widget'
+import { keyUsed, peekKey } from '../shared/key-peek'
 import { usePriceText } from '../shared/price'
 import { markNewsSeen, newsFor, seenNewsIds } from './news'
+import { MainProcess } from '@/web/background/IPC'
 import { personalOn } from '../personal'
 import { openSettingsPage } from '../dock/dock'
 
@@ -367,8 +369,17 @@ function toggle (tab: Tab) {
     return
   }
   if (tab.open) wm.hide(tab.wmId)
-  else wm.show(tab.wmId)
+  else {
+    wm.show(tab.wmId)
+    const w = wm.widgets.value.find(x => x.wmId === tab.wmId)
+    if (w) peekKey(w as unknown as Parameters<typeof peekKey>[0])
+  }
 }
+// A tool that opens while the overlay isn't up came from its key in the game:
+// its "Next time" peek has done its job.
+watch(() => wm.widgets.value.filter(w => w.wmWants === 'show').map(w => w.wmType), (now, before) => {
+  for (const t of now) if (!before?.includes(t)) keyUsed(t, !wm.active.value)
+})
 
 // Opens it from the launcher, whatever state it's in.
 function toggleOpen (tab: Tab) {
@@ -722,7 +733,7 @@ function entryHint (entry: LauncherEntry<Tab>): string | undefined {
 // ---- What's new (news.ts) ----
 const seenNews = computed(() => seenNewsIds(AppConfig().woke))
 function newsOf (entry: LauncherEntry<Tab>) {
-  return newsFor(entry.wmType, seenNews.value)
+  return newsFor(entry.wmType, seenNews.value, MainProcess.version.value)
 }
 // Counted on what the launcher lists, so a switched-off tool still counts.
 const newsCount = computed(() => new Set(launcherAll.value.map(e => newsOf(e)?.id).filter(Boolean)).size)
@@ -876,6 +887,29 @@ function onOverlayPaste (e: ClipboardEvent) {
 }
 onMounted(() => document.addEventListener('paste', onOverlayPaste))
 onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
+
+// Typing a letter or digit with the overlay open and no box in focus opens
+// search with it (hidden-features audit, C2). A window that uses the key itself
+// (preventDefault) keeps it: checked once every listener has run.
+const NO_TYPE_SEARCH = 'input, textarea, select, [contenteditable], [role="listbox"], [role="grid"], [role="menu"], [role="tree"], [data-no-type-search]'
+function onOverlayKey (e: KeyboardEvent) {
+  if (!wm.active.value || e.ctrlKey || e.altKey || e.metaKey || e.repeat) return
+  if (e.key.length !== 1 || !/[\p{L}\p{N}]/u.test(e.key)) return
+  if (popup.value) return
+  // Not over Settings, or an exclusive window (price check, map check, search):
+  // search would replace it, and a stray flask key would lose the check.
+  if (wm.widgets.value.some(w => w.wmWants === 'show' && (w.wmType === 'settings' || w.wmZorder === 'exclusive'))) return
+  if (!wm.widgets.value.some(w => w.wmType === SEARCH_TYPE) || !isWidgetTypeOn(AppConfig(), SEARCH_TYPE)) return
+  const t = e.target
+  if (t instanceof Element && t.closest(NO_TYPE_SEARCH)) return
+  setTimeout(() => {
+    if (e.defaultPrevented || !wm.active.value) return
+    closePopup()
+    searchRequest.value = { query: e.key, typed: true }
+  })
+}
+onMounted(() => window.addEventListener('keydown', onOverlayKey))
+onBeforeUnmount(() => window.removeEventListener('keydown', onOverlayKey))
 
 </script>
 

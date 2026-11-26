@@ -8,7 +8,7 @@
   }">
     <instant-ninja-card v-if="instant && item?.isOk()" :key="instantKey" :item="item.value" :at="instant"
       :active="config.wmWants === 'show'" :again-keys="config.hotkey && !advancedCheck ? `${config.hotkeyHold} + ${config.hotkey}` : null"
-      @placed="instantPlaced" @live="openWindow(true, $event === true)" @details="openWindow(false)" @close="closePriceCheck">
+      @placed="instantPlaced" @live="openWindow(true, $event === true)" @close="closePriceCheck">
       <template #verdict>
         <div v-if="item.value.info.refName === 'Stacked Deck'" :class="$style.instantVerdict">
           <woke-deck-verdict-chip :item="item.value" />
@@ -78,6 +78,8 @@
         <span :class="$style.edgeY" @mousedown.stop="startResize($event, false, true)" />
         <span :class="$style.corner" data-testid="price-window-resize" @mousedown.stop="startResize($event, true, true)" />
       </template>
+      <!-- woke: a one-off tour of the window on the 3rd check (shared/hints.ts). -->
+      <price-check-tour v-if="tourMay" :key="instantKey" />
     </div>
     <webview v-if="isBrowserShown" ref="iframeEl"
       class="pointer-events-auto flex-1"
@@ -131,6 +133,8 @@ import { floatingArea, floatingLayout, movedPosition, resizedPosition } from './
 import { dispatchPriceCheck } from '@/web/woke/ui/tooltip/item-price-check'
 import { exactDetailsId } from './trends/getDetailsId'
 import { instantCardShown } from '@/web/woke/price-insight/view'
+import { countPriceCheck, hintsOff, isHintDone } from '@/web/woke/shared/hints'
+import { PRICE_CHECK_TOUR, TOUR_AT_CHECK, TOUR_SHOWS } from '@/web/woke/price-insight/tour-steps'
 import { fixedPriceItem, chaosOrbRow } from '@/web/woke/price-insight/ninja-first'
 
 type ParseError = { name: string; message: string; rawText: ParsedItem['rawText']; unsupported?: boolean }
@@ -195,6 +199,7 @@ export default defineComponent({
     InstantNinjaCard: defineAsyncComponent(() => import('@/web/woke/price-insight/InstantNinjaCard.vue')),
     // A captured beast's Blood Altar recipes (WOKEPOET-485).
     BeastAltar: defineAsyncComponent(() => import('@/web/woke/price-insight/BeastAltar.vue')),
+    PriceCheckTour: defineAsyncComponent(() => import('@/web/woke/price-insight/PriceCheckTour.vue')),
     // A Stacked Deck's open-or-sell verdict on its instant card.
     WokeDeckVerdictChip: defineAsyncComponent(() => import('@/web/woke/stacked-decks/DeckVerdictChip.vue')),
     UnreadableItem,
@@ -265,6 +270,7 @@ export default defineComponent({
 
       if (item.value.isOk()) {
         queuePricesFetch()
+        if (!quick) countPriceCheck()
       }
     })
 
@@ -335,12 +341,14 @@ export default defineComponent({
       if (!Host.isElectron || advancedCheck.value || !rect.width || props.config.wmWants !== 'show') return
       sendTrackArea(trackFrom, { x: window.screenX + rect.x, y: window.screenY + rect.y, width: rect.width, height: rect.height })
     }
-    // From the card to the window: Live offers searches, Details doesn't. The
+    // From the card to the window (live: with a search). The
     // mouse is tracked into the window now, or leaving the card would close it.
     // A click on the card already gave the overlay the mouse (and ended the
     // tracking), so only a key (Space) needs the window tracked from here.
     function openWindow (live: boolean, byKey = false) {
       liveCheck.value = live
+      // woke: the small card opened into the window counts as a check there.
+      if (instant.value != null) countPriceCheck()
       instant.value = null
       if (byKey && Host.isElectron && !advancedCheck.value) trackWindowArea(trackFrom)
     }
@@ -365,6 +373,14 @@ export default defineComponent({
     const title = computed(() => leagues.selectedId.value || 'Awakened PoE Trade')
     const stableOrbCost = computed(() => (xchgRate.value) ? Math.round(xchgRate.value) : null)
     const isBrowserShown = computed(() => props.config.wmFlags.includes('has-browser'))
+
+    // woke: the tour waits for the 3rd check in the window, and goes once done.
+    // Mounted only while the window shows and the tour can still show (2 checks at most).
+    const tourMay = computed(() => {
+      const h = AppConfig().woke?.hints
+      return props.config.wmWants === 'show' && !isBrowserShown.value && instant.value == null && item.value?.isOk() === true &&
+        !hintsOff() && !isHintDone(PRICE_CHECK_TOUR) && (h?.checks ?? 0) >= TOUR_AT_CHECK && (h?.shows?.[PRICE_CHECK_TOUR] ?? 0) < TOUR_SHOWS
+    })
     const overlayKey = computed(() => AppConfig().overlayKey)
     const showCheckPos = computed(() => wm.active.value && props.config.showCursor)
     const isLeagueSelected = computed(() => Boolean(leagues.selectedId.value))
@@ -555,6 +571,7 @@ export default defineComponent({
       liveCheck,
       instant,
       instantKey,
+      tourMay,
       isBeast,
       instantPlaced,
       openWindow,
@@ -576,7 +593,8 @@ export default defineComponent({
 .edgeX, .edgeY, .corner { position: absolute; z-index: 2; }
 .zoomed { zoom: var(--w-ui-size, 1); }
 /* Under the instant card, close to it. */
-.zoomed.instantSide { margin-top: 6px; zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1)); }
+.zoomed.instantSide { margin-top: 0; display: flex; flex-direction: column; zoom: calc(var(--w-ui-size, 1) * var(--w-instant-scale, 1)); }
+.zoomed.instantSide > * { flex-shrink: 0; }
 .instantVerdict { display: flex; }
 .instantVerdict > * { margin-left: 0; }
 .edgeX { top: 8px; bottom: 8px; right: 0; width: 5px; cursor: ew-resize; }

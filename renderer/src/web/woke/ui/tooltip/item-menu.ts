@@ -18,6 +18,8 @@ import type { MarketTrackerWidget } from '../../market/widget'
 import { isWidgetTypeOn } from '../../modules'
 import { itemKey } from '../../market/types'
 import { tradeUrl } from '../../search/search'
+import { SEARCH_TYPE, searchRequest } from '../../search/widget'
+import type { SearchWidget } from '../../search/widget'
 import { priceCheckTradeStatus } from '../../shared/trade-status'
 import { copyText } from '../copy'
 import { formatUnitPrice } from '../format'
@@ -119,6 +121,24 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
       Host.sendEvent({ name: 'CLIENT->MAIN::user-action', payload: { action: 'stash-search', text: JSON.stringify(ref.name) } })
     }
   })
+
+  // More: Ctrl+Space on the item, for where it drops, recipes, cards that give
+  // it, your sales of it (hidden-features audit, C1).
+  const config = AppConfig()
+  const search = isWidgetTypeOn(config, SEARCH_TYPE) ? config.widgets.find(w => w.wmType === SEARCH_TYPE) as SearchWidget | undefined : undefined
+  if (search) {
+    const name = ref.name
+    actions.push({
+      label: 'More',
+      title: 'More: where it drops, recipes, your sales',
+      keys: search.hotkey ?? undefined,
+      icon: 'fas fa-magnifying-glass-plus',
+      action: () => {
+        hideTip()
+        searchRequest.value = { query: name }
+      }
+    })
+  }
 
   const tracker = marketTracker()
   // Market keeps its own Watch nowhere else, so this shows before prices load.

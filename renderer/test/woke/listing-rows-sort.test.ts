@@ -69,7 +69,7 @@ describe('sortByValue on rows', () => {
     const list = [
       listing('d1-a', 1, 'divine'),
       listing('c150', 150, 'chaos'),
-      listing('d1-b', 1, 'divine')
+      { ...listing('d1-b', 1, 'divine'), accountName: listing('d1-a', 1, 'divine').accountName }
     ]
     const rows = sortRowsByValue(groupListings(list, { now: 0, merge: true }), byLead)
     expect(rows.map(r => r.lead.id)).toEqual(['c150', 'd1-a'])

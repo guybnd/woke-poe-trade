@@ -23,7 +23,7 @@ describe('unique tooltip extras', () => {
   it('lists the card that gives it, with the set against the unique', () => {
     const prices = { card: (n: string) => n === 'The Apothecary' ? 3000 : null, unique: 20000, format: (c: number) => `${c}c` }
     const lines = text(uniqueExtraSections({ name: 'Mageblood' }, pack, prices))
-    expect(lines).toContain('From card: The Apothecary (5) · set 15000c · 25% cheaper')
+    expect(lines).toContain('From card: The Apothecary (5) · set 15000c · 25% less than buying it')
   })
   it('says a card reward comes corrupted, and leaves out prices it lacks', () => {
     const lines = text(uniqueExtraSections({ name: 'Headhunter' }, pack, noPrices))

@@ -4,9 +4,11 @@ import { averageWeight, buyList, familyQuotes, flipModel, flipRange, upgradeRows
 import type { ExchangeQuotes, FlipModel, FlipOptions, FlipRecipe, FlipRow, ItemWeight, Quote, RangeRow, UpgradeRow, WeightSource } from './calc'
 import { CATALYST_WEIGHTS, DEAFENING_ESSENCE_WEIGHTS, DELIRIUM_WEIGHTS, FOSSIL_WEIGHTS, RUNEGRAFT_WEIGHTS } from './family-weights'
 import type { PriceItem } from '../market/types'
+import { tattooTribe, tribeRows } from './tattoos'
+import type { TribeRow } from './tattoos'
 
 export type Lifeforce = 'Wild' | 'Vivid' | 'Primal'
-export type FlipMethodId = 'vendor' | 'harvest' | 'upgrade'
+export type FlipMethodId = 'vendor' | 'harvest' | 'upgrade' | 'tribe'
 
 // The wiki lists 30 lifeforce for these crafts, "proportional to stack size".
 export const DEFAULT_LIFEFORCE_PER_ITEM = 30
@@ -57,11 +59,15 @@ export interface FlipFamily {
   unmeasured?: boolean
   // An item that opens to a random one of the family, priced as the average.
   opener?: string
+  // Recipes stay inside a group (a Tattoo's tribe): shares are taken within it.
+  group?: (name: string) => string | null
 }
 
 const vendor3 = (excludeInput: boolean): FlipMethod => ({ id: 'vendor', label: 'Vendor 3 for 1', inputs: 3, excludeInput })
 const harvest = (lifeforce: Lifeforce): FlipMethod => ({ id: 'harvest', label: 'Harvest reroll', lifeforce, inputs: 1, excludeInput: true })
 const upgrade: FlipMethod = { id: 'upgrade', label: 'Vendor up a tier', inputs: 3, excludeInput: false }
+// 3 of one tribe for 1 random of that tribe, which can be one you put in.
+const tribe: FlipMethod = { id: 'tribe', label: 'Vendor 3 of a tribe for 1', inputs: 3, excludeInput: false }
 
 const OIL_TIERS = ['Clear', 'Sepia', 'Amber', 'Verdant', 'Teal', 'Azure', 'Indigo', 'Violet', 'Crimson', 'Black', 'Opalescent', 'Silver', 'Golden']
 const ESSENCE_TIERS = ['Whispering', 'Muttering', 'Weeping', 'Wailing', 'Screaming', 'Shrieking', 'Deafening']
@@ -179,6 +185,22 @@ export const FAMILIES: FlipFamily[] = [
     rareShare: null,
     source: 'Weights: PoeData.dev, 1 dataset, version 3.27.',
     lowConfidence: 'Low confidence: thin trading, one sample, and much of the average rests on a few very expensive results.'
+  },
+  {
+    id: 'tattoos',
+    label: 'Tattoos',
+    noun: 'tattoo',
+    ninjaType: 'Tattoo',
+    // Only tribe Tattoos: Journey, Honoured, Loyalty and the rest have no tribe.
+    match: name => tattooTribe(name) != null,
+    group: tattooTribe,
+    methods: [tribe],
+    // No one has measured the recipe: every Tattoo of the tribe counts as 1.
+    weightOf: () => ({ weight: 1, source: 'estimate' }),
+    rareShare: null,
+    sourceShort: 'None measured',
+    source: 'Weights: none measured yet, so every Tattoo of a tribe counts as equally likely.',
+    lowConfidence: 'No one has measured the odds, so the average counts every Tattoo of the tribe as equally likely. Set your own weights in Settings.'
   }
 ]
 
@@ -188,6 +210,7 @@ export function shortName (name: string): string {
     .replace(/ (Delirium Orb|Fossil|Catalyst|Thread)$/, '')
     .replace(/^(\S+) Essence of /, '$1 ')
     .replace(/^Runegraft of (the )?/, '')
+    .replace(/^Tattoo of the /, '')
 }
 
 export function familyById (id: string | undefined): FlipFamily {
@@ -268,6 +291,8 @@ export type FlipResult =
   // Unmeasured odds: each input's cost against its worst and best result.
   | { kind: 'range', rows: RangeRow[], quotes: Map<string, Quote>, cost: number }
   | { kind: 'upgrade', rows: UpgradeRow[] }
+  // Tattoos: one row per tribe, its average result against 3 of its cheapest.
+  | { kind: 'tribes', rows: TribeRow[] }
   // A Harvest flip with no lifeforce price to work out its cost.
   | { kind: 'no-cost' }
   // The family has prices, but none this flip can use.
@@ -288,6 +313,10 @@ export function priceFlip (
   if (!all.size) return null
   if (method.id === 'upgrade') {
     return { kind: 'upgrade', rows: upgradeRows(all, family.chains ?? [], options.sellDiscount) }
+  }
+  if (method.id === 'tribe') {
+    const recipe = flipRecipe(family, method, 0, weights?.[family.id])
+    return { kind: 'tribes', rows: tribeRows(all, options.sellDiscount, recipe.weightOf, hideUntraded) }
   }
   const quotes = family.pool ? new Map([...all].filter(([name]) => family.pool!(name))) : all
   if (!quotes.size) return { kind: 'no-pool' }
@@ -371,12 +400,20 @@ function familyWeights (family: FlipFamily, names: string[], own?: Record<string
 // What the Settings list shows: each item as a share of the results.
 export function weightRows (family: FlipFamily, names: string[], own?: Record<string, number>): WeightRow[] {
   const items = familyWeights(family, names, own)
-  const total = items.reduce((n, i) => n + (i.weight ?? 0), 0)
-  return items.map(({ name, weight, source }) => ({ name, source, percent: weight != null && total > 0 ? weight / total * 100 : null }))
+  const groupOf = (name: string) => family.group?.(name) ?? ''
+  const totals = new Map<string, number>()
+  for (const i of items) totals.set(groupOf(i.name), (totals.get(groupOf(i.name)) ?? 0) + (i.weight ?? 0))
+  return items.map(({ name, weight, source }) => {
+    const total = totals.get(groupOf(name)) ?? 0
+    return { name, source, percent: weight != null && total > 0 ? weight / total * 100 : null }
+  })
 }
 
 // The weight that makes `name` this share of the results, under 100%, the rest staying as they are.
 export function weightForPercent (family: FlipFamily, names: string[], own: Record<string, number> | undefined, name: string, percent: number): number {
-  const others = familyWeights(family, names, own).reduce((n, i) => n + (i.name === name ? 0 : i.weight ?? 0), 0)
+  const group = family.group?.(name) ?? ''
+  const others = familyWeights(family, names, own)
+    .filter(i => (family.group?.(i.name) ?? '') === group)
+    .reduce((n, i) => n + (i.name === name ? 0 : i.weight ?? 0), 0)
   return percent * others / (100 - percent)
 }

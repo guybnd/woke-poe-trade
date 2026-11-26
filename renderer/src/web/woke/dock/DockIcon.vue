@@ -1,7 +1,7 @@
 <template>
   <span ref="rootEl" :class="$style.root" :data-dock="host.props.id">
     <span ref="iconEl" data-woke-frame :class="[$style.icon, { [$style.peek]: peekText, [$style.hot]: cardOpen, [$style.withRead]: readouts.length, [$style.twoLine]: !peekText && twoLine, [$style.glow]: host.props.glow, [$style.withStack]: stack }]"
-      :title="wm.active.value ? `${host.props.title}${host.props.wmId != null ? ' · click to open' : ''}` : undefined"
+      :title="wm.active.value ? iconTitle : undefined"
       @click="click" @contextmenu.prevent="openIconMenu" @wheel="onWheel">
       <svg v-if="host.props.progress != null" :class="$style.ring" width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
         <circle cx="18" cy="18" r="16" :class="$style.ringTrack" />
@@ -77,6 +77,13 @@ const rootEl = shallowRef<HTMLElement | null>(null)
 const iconEl = shallowRef<HTMLElement | null>(null)
 const cardEl = shallowRef<HTMLElement | null>(null)
 const menuEl = shallowRef<HTMLElement | null>(null)
+// With the overlay open: what the icon's clicks, right-click and wheel do
+// (hidden-features audit F7).
+const iconTitle = computed(() => {
+  const p = props.host.props
+  const ways = [p.wmId != null ? 'Click: open' : null, 'Right-click: menu', p.wheel ? 'Scroll: change what it shows' : null]
+  return `${p.title}\n${ways.filter(Boolean).join(' · ')}`
+})
 
 const badge = computed(() => props.host.props.badge)
 // The badge wins: both sit on the icon.

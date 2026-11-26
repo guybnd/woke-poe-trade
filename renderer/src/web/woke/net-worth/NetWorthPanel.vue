@@ -101,7 +101,7 @@
                 <TextTabs v-model="range" :options="RANGE_OPTIONS" />
               </span>
             </div>
-            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" :mode="chartMode as 'total' | 'category'" :goal-div="chartListed ? goal?.div ?? null : goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :listed="chartListed" :maps="chartMaps" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
+            <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" axes :mode="chartMode as 'total' | 'category'" :goal-div="chartListed ? goal?.div ?? null : goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :listed="chartListed" :maps="chartMaps" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
             <div v-if="chartMode === 'category' && !fold.chart" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
             </div>
@@ -268,6 +268,10 @@
       </section>
       <ItemTable :lines="tableLines" :total="v?.chaos" :units="config.tableUnits" :filtered="cat !== 'all' || tabs.length > 0 || !!query.trim() || floor.minChaos > 0" :divine="divine" :changes="changes" :tab-names="tabNames"
         @units="config.tableUnits = $event" @clear="clearFilters" @price="onPrice" @ignore="onIgnore" />
+      <!-- Teaches the row's clicks until one is used (shared/hints.ts, ui/line-item.ts). -->
+      <WTipLine v-if="tableLines.length" :id="LINE_HINT">
+        <WKbd keys="Click" /> a dashed number: your own price · hover a row: ⊘ leave it out · <WKbd keys="Right-click" /> more
+      </WTipLine>
 
       <div class="w-dim text-xs" :class="$style.foot">
         <span>
@@ -294,7 +298,7 @@ import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shall
 import { AppConfig } from '@/web/Config'
 import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import { usePoeninja } from '@/web/background/Prices'
-import { WBanner, WButton, WChip, WEmpty, WField, WLineActs, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WField, WKbd, WLineActs, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
 import { lineTip, tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
@@ -329,6 +333,8 @@ import type { RateWindow } from './play-time'
 import LedgerChart from './LedgerChart.vue'
 import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
+import WTipLine from '../ui/WTipLine.vue'
+import { LINE_HINT } from '../ui/line-item'
 import HideChip from './HideChip.vue'
 import SalesView from './SalesView.vue'
 import HoldLine from './HoldLine.vue'
@@ -344,7 +350,7 @@ import RunsView from './RunsView.vue'
 import { loadRuns, runGlance, runsDoc } from './run-store'
 import { countLabel } from './runs'
 import { saleTip } from './sale-tip'
-import { inRange, marketText, saleChaos, saleName, salesInWindow, totals, withoutSold } from './sales'
+import { inRange, marketText, saleBaseName, saleChaos, saleColour, saleFact, saleName, salesInWindow, totals, withoutSold } from './sales'
 import type { Sale } from './sales'
 import { loadSales, marketOf, ninjaPriced, rates as saleRates, sales, salesFailed, salesReading, salesReply } from './sales-store'
 
@@ -967,10 +973,10 @@ function marketTone (s: Sale) {
   const x = marketOf(s)
   return x == null || Math.abs(x) < 0.03 ? 'w-dim' : x < 0 ? 'w-down' : 'w-up'
 }
-// The chart's dots: each sale, named for the hover card.
+// The chart's dots: each sale, named for the hover card (a rare by its base).
 const chartSales = computed<ChartSale[]>(() => sales.value.map(s => {
   const c = saleChaosOf(s)
-  return { at: s.at, text: `${saleName(s)} ${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, tip: saleTip(s), name: saleName(s), div: c == null ? null : toDiv(c), ...(saleOut(s) ? { out: true } : {}) }
+  return { at: s.at, text: saleBaseName(s), tip: saleTip(s), price: `${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, icon: s.icon || undefined, colour: saleColour(s.frameType), fact: saleFact(s) || undefined, name: saleName(s), div: c == null ? null : toDiv(c), ...(saleOut(s) ? { out: true } : {}) }
 }))
 // The chart's Faustus band (pick A), when listings count in your total: what
 // each refresh saved, else rebuilt from the listings and sales (listedAt).

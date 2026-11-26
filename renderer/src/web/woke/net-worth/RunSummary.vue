@@ -12,7 +12,7 @@
           <span class="w-num">{{ v.text }}</span>
           <span class="w-num text-xs" :class="v.tone">{{ v.delta }}</span>
         </div>
-        <div v-if="vsRows.length" class="w-dim text-xs">Dark bar: your usual. Gold: this run.</div>
+        <div v-if="vsRows.length" :class="$style.legend" class="text-xs"><span><i :class="[$style.sw, $style.swUsual]" />Usual</span><span><i :class="[$style.sw, $style.swMe]" />This run</span></div>
         <div v-else class="w-dim text-xs">No maps to compare per map or per hour yet.</div>
       </template>
       <div v-else class="w-dim text-xs">Your first {{ run.name }} run. The next one with this name is compared to it.</div>
@@ -32,13 +32,20 @@
       <div :class="$style.ph"><span>Map times</span>
         <span v-if="s.avgMapMs != null" :class="$style.phr" class="w-num">avg {{ clockOf(s.avgMapMs) }} · {{ s.deaths }} {{ s.deaths === 1 ? 'death' : 'deaths' }}</span></div>
       <template v-if="s.maps.length">
+        <!-- Room above the bars for the icons and death dots drawn over them. -->
+        <div :style="overRoom ? { paddingTop: `${overRoom}px` } : undefined">
         <div :class="$style.bars" role="img" :aria-label="`Time in each of ${s.maps.length} maps`">
           <span v-if="avgPct != null" :class="$style.avg" :style="{ bottom: `${avgPct}%` }" />
           <i v-for="m in s.maps" :key="m.enteredAt" :class="{ [$style.slow]: slowMs != null && m.mapMs > slowMs }" :style="{ height: `${Math.max(4, (m.mapMs / maxMs) * 100)}%` }" :title="barTitle(m)" data-summary-bar>
-            <b v-if="m.deaths" :class="$style.death" />
+            <!-- Guy (2026-11-25): the mechanics met in the map as icons over its bar, a death's dot under them. -->
+            <span v-if="m.deaths || mechsOf(m).length" :class="$style.over" data-summary-bar-mechs>
+              <b v-if="m.deaths" :class="$style.death" />
+              <WIcon v-for="n in mechsOf(m)" :key="n" :mechanic="logMechanic(n)" title="" size="sm" :class="$style.mechIcon" />
+            </span>
           </i>
         </div>
-        <div class="w-dim text-xs">Each bar is a map, oldest first. Red dot: a death.</div>
+        </div>
+        <div :class="$style.legend" class="text-xs"><span v-if="slowMs != null && s.maps.some(m => m.mapMs > slowMs!)"><i :class="[$style.sw, $style.swSlow]" />Slow</span><span v-if="s.deaths"><i :class="[$style.sw, $style.swDeath]" />Death</span><span v-if="avgPct != null"><i :class="[$style.sw, $style.swAvg]" />Average</span><span v-if="anyMech">Icons: mechanics met</span></div>
       </template>
       <div v-else class="w-dim text-xs">No map times: Client.txt didn't cover this run.</div>
     </div>
@@ -58,9 +65,9 @@
     </div>
 
     <div :class="[$style.panel, $style.full]" data-summary-tips>
-      <div :class="$style.ph"><span>Worth a look</span><span :class="$style.phr">only what the numbers back</span></div>
+      <div :class="$style.ph"><span>Worth a look</span></div>
       <div v-for="t in s.tips" :key="t.id" :class="$style.tip" data-summary-tip><b>{{ t.lead }}.</b> {{ t.text }}</div>
-      <div v-if="!s.tips.length" class="w-dim text-xs">Nothing stood out: steady pace, no slow maps, kit at its usual price.</div>
+      <div v-if="!s.tips.length" class="w-dim text-xs">Nothing stood out.</div>
       <button type="button" :class="$style.link" class="text-xs" @click="emit('details')">See every item in and out</button>
     </div>
   </div>
@@ -71,6 +78,8 @@
 // numbers come from run-summary.ts; map times from Client.txt's map log.
 import { computed, shallowRef, watch } from 'vue'
 import DropTile from './DropTile.vue'
+import WIcon from '../ui/WIcon.vue'
+import { logMechanic } from '../ui/game-icons'
 import { formatChaos } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { rateTime } from '../shared/rate-time-now'
@@ -83,6 +92,13 @@ import { readRunMapRecords, runsDoc } from './run-store'
 import { clockOf, lastRunKey, summarize, SLOW_FACTOR } from './run-summary'
 import type { LastRun, SummaryDrop, SummaryMap } from './run-summary'
 
+// The mechanics with art met in a map, once each.
+function mechsOf (m: SummaryMap): string[] {
+  return [...new Set(m.npcs)].filter(n => logMechanic(n))
+}
+// Room over the bars for the tallest stack of icons (15px each) and death dots.
+const anyMech = computed(() => s.value.maps.some(m => mechsOf(m).length > 0))
+const overRoom = computed(() => Math.max(0, ...s.value.maps.map(m => mechsOf(m).length * 15 + (m.deaths ? 6 : 0))))
 const props = defineProps<{
   run: Run
   done: readonly Run[]
@@ -235,10 +251,12 @@ watch(s, (sum) => {
 .drops { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 4px; }
 .note { color: var(--w-dim); border-left: 2px solid var(--w-line-strong); padding-left: 6px; }
 .bars { display: flex; align-items: flex-end; gap: 2px; height: 64px; border-bottom: 1px solid var(--w-line-strong); position: relative; }
-.bars i { flex: 1; min-width: 2px; background: var(--w-line-strong); position: relative; cursor: help; }
-.bars i.slow { background: var(--w-gold); opacity: 0.7; }
-.bars i:hover { background: var(--w-gold); opacity: 1; }
-.death { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--w-down); }
+.bars > i { flex: 1; min-width: 2px; background: var(--w-line-strong); position: relative; cursor: help; }
+.bars > i.slow { background: var(--w-gold); opacity: 0.7; }
+.bars > i:hover { background: var(--w-gold); opacity: 1; }
+.over { position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column-reverse; align-items: center; gap: 1px; pointer-events: none; }
+.death { display: block; width: 4px; height: 4px; border-radius: 50%; background: var(--w-down); }
+.mechIcon { width: 14px !important; height: 14px !important; }
 .avg { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--w-dim); pointer-events: none; }
 .stack { display: flex; height: 12px; border: 1px solid var(--w-line-strong); }
 .stack > span { display: block; }
@@ -246,6 +264,11 @@ watch(s, (sum) => {
 .kept { background: var(--w-up); opacity: 0.7; }
 .legend { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--w-dim); }
 .sw { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; }
+.swUsual { background: var(--w-line-strong); }
+.swMe { background: var(--w-gold); opacity: 0.6; }
+.swSlow { background: var(--w-gold); opacity: 0.7; }
+.swDeath { background: var(--w-down); border-radius: 50%; width: 5px; height: 5px; }
+.swAvg { height: 0; border-top: 1px dashed var(--w-dim); vertical-align: 3px; }
 .tip { font-size: var(--w-fs-sm); }
 .tip b { font-weight: 600; }
 .link { background: none; border: 0; padding: 0; color: var(--w-accent); cursor: pointer; font: inherit; align-self: flex-start; }

@@ -34,6 +34,12 @@ export class WokeHoverTracker {
   private listening = false
   // Holding a button means moving or casting: don't catch the mouse then.
   private heldButtons = new Set<unknown>()
+  // A left press that landed on the overlay (a pin's title, a slider) and is
+  // still down. The hook reports no moves during a drag, so the only position
+  // main knows is where the press was; zones the page sends as the dragged
+  // thing moves would be checked against that stale point and let go of the
+  // mouse mid-drag. Until the button comes up, the drag keeps the mouse.
+  private overlayPress = false
   private mouseX: number | null = null
   private mouseY = 0
   // When the hook last reported the mouse, for the log: a hook Windows dropped
@@ -105,7 +111,7 @@ export class WokeHoverTracker {
     screen.on('display-removed', convertAgain)
     // A button let go while the hook was down would keep the dock from ever
     // catching the mouse again.
-    powerMonitor.on('resume', () => { this.heldButtons.clear() })
+    powerMonitor.on('resume', () => { this.heldButtons.clear(); this.overlayPress = false })
     // A button on a card opened something that needs the real overlay (settings).
     this.server.onEventAnyClient('OVERLAY->MAIN::woke-open-overlay', () => {
       this.overlay.assertOverlayActive()
@@ -144,6 +150,7 @@ export class WokeHoverTracker {
       uIOhook.removeListener('mouseup', this.handleMouseUp)
       this.listening = false
       this.heldButtons.clear()
+      this.overlayPress = false
       this.mouseX = null
       this.lastHookAt = 0
       this.overlay.giveMouse('no dock zones left')
@@ -165,6 +172,7 @@ export class WokeHoverTracker {
     }
 
     if (!inActivateZone) {
+      if (this.overlayPress && this.overlay.isButtonHeld()) return inActivateZone
       this.overlay.giveMouse()
       this.overlay.releaseCard()
     } else if (this.heldButtons.size === 0) {
@@ -181,6 +189,7 @@ export class WokeHoverTracker {
   private readonly handleMouseUp = (e: UiohookMouseEvent) => {
     this.lastHookAt = Date.now()
     this.heldButtons.delete(e.button)
+    if (e.button === LEFT_BUTTON) this.overlayPress = false
     this.update(e.x, e.y)
   }
 
@@ -192,6 +201,7 @@ export class WokeHoverTracker {
     // Bring `inside` up to date first, so a click also counts as entering.
     const inActivateZone = this.update(e.x, e.y)
     this.heldButtons.add(e.button)
+    if (e.button === LEFT_BUTTON) this.overlayPress = inActivateZone && (reachedOverlay || this.overlay.isInteractable)
     if (inActivateZone && reachedOverlay) this.overlay.assertCardActive()
     // A right click needs the mouse taken: otherwise the game got it too, and it
     // may be a skill on its way past.

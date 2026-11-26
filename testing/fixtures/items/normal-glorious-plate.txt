@@ -1,0 +1,13 @@
+Item Class: Body Armours
+Rarity: Normal
+Glorious Plate
+--------
+Armour: 776
+--------
+Requirements:
+Level: 68
+Str: 191
+--------
+Sockets: R-R R 
+--------
+Item Level: 84

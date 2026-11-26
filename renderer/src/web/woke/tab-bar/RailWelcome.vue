@@ -1,5 +1,5 @@
 <template>
-  <welcome-card v-if="cardOn && cardPos" :pos="cardPos" @done="endCard" @net-worth="netWorth" />
+  <welcome-card v-if="cardOn && cardPos" :pos="cardPos" @done="endCard" @net-worth="netWorth" @try="tryIt" />
   <template v-if="labelsOn">
     <div v-for="l in labels" :key="l.text" data-rail-label :class="[$style.label, { [$style.left]: l.left, [$style.flat]: flat }]"
       :style="{ left: `${l.x}px`, top: `${l.y}px` }">
@@ -17,7 +17,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import { AppConfig, saveConfigQuietly } from '@/web/Config'
 import { WKbd } from '../ui'
 import { openSettingsPage } from '../dock/dock'
-import { SEARCH_TYPE } from '../search/widget'
+import { SEARCH_TYPE, searchRequest } from '../search/widget'
 import WelcomeCard from './WelcomeCard.vue'
 import { ICON_TOOL_NAMES } from './tools'
 import { dismissWelcome, labelsShown, welcomePhase } from './welcome'
@@ -127,6 +127,13 @@ watch(() => props.toolOpen, open => {
 function endCard () {
   dismissWelcome(state.value)
   saveConfigQuietly()
+}
+// "Try it": search opens on a real query, so the first look is an answer
+// (a price with its 24h and 7d change), not an empty box (audit, C3).
+const TRY_QUERY = 'mageblood'
+function tryIt () {
+  endCard()
+  nextTick(() => { searchRequest.value = { query: TRY_QUERY } })
 }
 function netWorth () {
   endCard()

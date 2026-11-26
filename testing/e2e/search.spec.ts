@@ -508,3 +508,46 @@ test('the palette resizes from its corner, adding room, and keeps its size', asy
   await page.getByRole('menuitem', { name: 'Reset size' }).click()
   await expect.poll(async () => Math.round((await panel.boundingBox())!.width)).toBe(Math.round(before.width))
 })
+
+test('typing in the overlay opens search with it, and says the key for next time', async ({ overlay }) => {
+  await overlay.boot({ ...bootOptions(), overlayActive: true, tips: true })
+  const page = overlay.page
+  const palette = overlay.widget('woke-search')
+  const box = palette.getByRole('textbox', { name: 'Search', exact: true })
+  // Nothing in focus: the keys reach the page itself.
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+  await page.keyboard.type('mage', { delay: 60 })
+  await expect(box).toBeVisible()
+  await expect(box).toHaveValue('mage')
+  const hint = palette.locator('[data-hint="search-from-game"]')
+  await expect(hint).toContainText('Next time')
+  await overlay.snap('search next time hint')
+  await page.keyboard.press('Escape')
+  await expect(box).toBeHidden()
+  // It doesn't run out: back every time, until ×.
+  for (let i = 0; i < 4; i++) {
+    await overlay.pressHotkey(overlay.config.overlayKey) // Esc went back to the game
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+    await page.keyboard.type('mage', { delay: 60 })
+    await expect(hint).toBeVisible()
+    if (i < 3) { await page.keyboard.press('Escape'); await expect(box).toBeHidden() }
+  }
+  await hint.getByRole('button', { name: 'Close tip' }).click()
+  await expect(hint).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await expect(box).toBeHidden()
+  await overlay.pressHotkey(overlay.config.overlayKey)
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+  await page.keyboard.type('mage', { delay: 60 })
+  await expect(box).toHaveValue('mage')
+  await expect(hint).toHaveCount(0)
+})
+
+test('"keys" lists the hotkeys you have set and the mouse tricks', async ({ overlay }) => {
+  await overlay.boot(bootOptions())
+  await overlay.pressHotkey(SEARCH_KEY)
+  const palette = overlay.widget('woke-search')
+  await palette.getByRole('textbox', { name: 'Search', exact: true }).fill('keys')
+  await expect(palette).toContainText('Keys and mouse')
+  await expect(palette).toContainText('Right-click an item')
+})

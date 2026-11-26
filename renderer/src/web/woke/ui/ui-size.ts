@@ -6,12 +6,12 @@
 // would get it twice.
 // Stored like the theme: per origin in localStorage, shared by the overlay and
 // settings windows through the storage event.
-import { shallowRef, watch } from 'vue'
+import { watch } from 'vue'
+import { storedPref } from './stored-pref'
 
 export const MIN_UI_SIZE = 70
 export const MAX_UI_SIZE = 160
 export const UI_SIZE_STEP = 5
-const STORAGE_KEY = 'woke.uiSize'
 
 export function parseUiSize (v: string | null): number {
   const n = Number(v)
@@ -23,11 +23,8 @@ export function clampUiSize (n: number): number {
   return Math.min(MAX_UI_SIZE, Math.max(MIN_UI_SIZE, Math.round(n / UI_SIZE_STEP) * UI_SIZE_STEP))
 }
 
-function readStored () {
-  try { return parseUiSize(localStorage.getItem(STORAGE_KEY)) } catch { return 100 }
-}
-
-export const uiSize = shallowRef(readStored())
+// Config.ts imports this, and unit tests run without a window (storedPref checks).
+export const uiSize = storedPref('woke.uiSize', parseUiSize)
 
 export function uiZoom (): number {
   return uiSize.value / 100
@@ -42,13 +39,4 @@ function apply (v: number) {
   if (typeof document !== 'undefined') document.documentElement.style.setProperty('--w-ui-size', String(v / 100))
 }
 apply(uiSize.value)
-watch(uiSize, (v) => {
-  apply(v)
-  try { localStorage.setItem(STORAGE_KEY, String(v)) } catch {}
-})
-// Config.ts imports this, and unit tests run without a window.
-if (typeof window !== 'undefined') {
-  window.addEventListener('storage', (e) => {
-    if (e.key === STORAGE_KEY) uiSize.value = readStored()
-  })
-}
+watch(uiSize, apply)

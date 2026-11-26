@@ -15,7 +15,12 @@
       <WToggle v-model="hideUntraded" />
     </WSettingRow>
     <WSettingRow label="Hotkey: outline flips in the open stash tab"
-      hint="Works on the Delirium, Delve, Essence and Blight tabs, in a game window 1080p or taller. Press once to draw the outlines. They clear on the next click, scroll or key press. Keep the mouse off the tab when you press it: a tooltip hides what's under it. Nothing reads the screen until you press it.">
+      hint="Press once to draw the outlines on the Delirium, Delve, Essence and Blight tabs.
+- They clear on the next click, scroll or key press.
+- Keep the mouse off the tab when you press it: a tooltip hides what's under it.
+- Needs a game window 1080p or taller.
+
+Nothing reads the screen until you press it.">
       <w-hotkey-cell v-model="stashHotkey" />
     </WSettingRow>
     <WSettingRow label="Show stack total on stash outlines" hint="Adds the whole stack's profit under the per item figure, counting whole recipes: threes for a vendor recipe, every item for a Harvest reroll. Needs a game window 1080p or taller.">

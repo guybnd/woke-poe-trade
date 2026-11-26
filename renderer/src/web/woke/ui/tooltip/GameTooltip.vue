@@ -14,9 +14,9 @@
         <section :class="$style.block" class="w-num" data-mod-ladder>
           <div :class="$style.ladder">
             <template v-for="s in modTip.steps" :key="s.tier">
-              <span :class="ladderClass(s)">T{{ s.tier }}</span>
+              <span :class="ladderClass(s)">{{ s.label ?? `T${s.tier}` }}</span>
               <span :class="ladderClass(s)">{{ s.min === s.max ? s.min : `${s.min}–${s.max}` }}</span>
-              <span :class="ladderClass(s)">ilvl {{ s.level }}</span>
+              <span :class="ladderClass(s)">{{ s.level != null ? `ilvl ${s.level}` : '' }}</span>
             </template>
           </div>
         </section>
@@ -198,6 +198,10 @@
           <span class="w-dim">unidentified<template v-if="lookup.market.unid.at"> · {{ agoPhrase(lookup.market.unid.at) }}</template></span>
         </footer>
       </template>
+      <!-- The right-click menu, until it's been used (shared/hints.ts). -->
+      <footer v-if="menuHint.show.value" :class="$style.keyLine" data-tip="menu-hint">
+        <WKbd keys="Right-click" /><span>wiki, trade, copy, price check</span>
+      </footer>
     </div>
   </Teleport>
 </template>
@@ -222,7 +226,9 @@ import WPrice from '../WPrice.vue'
 import { agoPhrase, bulkPerDivine, formatAmount } from '../format'
 import WSpark from '../WSpark.vue'
 import { hideTip, hideTipOnScroll, tip } from './tooltip'
-import { loadTipBases } from './item-tip'
+import { useHint } from '../../shared/hints'
+import { ITEM_MENU_HINT, loadTipBases } from './item-tip'
+import WKbd from '../WKbd.vue'
 import type { TipPack } from './tip-content'
 import { weaponBaseIn, weaponStats } from './weapon-stats'
 import { loadModTiers, tierClassKey, tiersOfMods } from './mod-tiers'
@@ -236,6 +242,8 @@ const $style = useCssModule()
 const el = ref<HTMLElement | null>(null)
 const placed = shallowRef<{ left: number, top: number } | null>(null)
 
+// The key line: 20 overlay opens, or until an item's been right-clicked.
+const menuHint = useHint(ITEM_MENU_HINT, { shows: 20, slot: false, when: () => tip.value?.menu === true })
 const item = computed<PobItem | null>(() => tip.value?.content.kind === 'item' ? tip.value.content.item : null)
 const listing = computed(() => tip.value?.content.kind === 'item' ? tip.value.content.listing ?? null : null)
 const itemCompare = computed(() => tip.value?.content.kind === 'item' ? tip.value.content.compare ?? null : null)
@@ -312,13 +320,13 @@ const modTip = computed<ModTip | null>(() => tip.value?.content.kind === 'mod' ?
 const ladderClass = (s: ModTip['steps'][number]) => {
   const m = modTip.value!
   if (s.tier === m.mine) return $style.value
-  return m.itemLevel != null && s.level > m.itemLevel ? $style.faint : $style.label
+  return m.itemLevel != null && s.level != null && s.level > m.itemLevel ? $style.faint : $style.label
 }
 // What the item's level lets it roll, when that's not every tier.
 const modReach = computed(() => {
   const m = modTip.value
   if (!m || m.itemLevel == null) return ''
-  const best = m.steps.find(s => s.level <= m.itemLevel!)
+  const best = m.steps.find(s => s.level != null && s.level <= m.itemLevel!)
   if (!best) return ''
   if (best.tier === 1) return `Item level ${m.itemLevel}: can roll every tier`
   return `Item level ${m.itemLevel}: T${best.tier} is the best it can roll (T1 needs ${m.steps[0].level})`
@@ -671,4 +679,14 @@ onUnmounted(() => {
   border-top: 1px solid rgba(var(--tip-rgb), 0.4);
 }
 .span { margin-left: auto; }
+.keyLine {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 3px 8px 4px;
+  border-top: 1px solid var(--w-line);
+  font-size: var(--w-fs-xs);
+  color: var(--w-dim);
+}
 </style>

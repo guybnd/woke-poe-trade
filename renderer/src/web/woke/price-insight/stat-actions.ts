@@ -14,6 +14,11 @@ import { clusterResColumnStats } from '@/web/price-check/filters/pseudo/cluster-
 import { openMenu, copyText, toast } from '@/web/woke/ui'
 import type { MenuEntry } from '@/web/woke/ui'
 import type { SwapController } from '@/web/woke/harvest-swap/useSwap'
+import { retireHint } from '@/web/woke/shared/hints'
+
+// The tip at the foot of the price check's mods (FiltersBlock.vue) that
+// teaches Ctrl / Alt + Click and the right-click menu.
+export const MOD_KEYS_HINT = 'price-check-mod-keys'
 
 interface Split {
   children: StatFilter[]
@@ -231,6 +236,7 @@ export function provideStatActions (
 
   // Ticks this row and unticks every other (Ctrl + Click on its tick box).
   function searchOnly (f: StatFilter) {
+    retireHint(MOD_KEYS_HINT)
     for (const s of stats.value) {
       if (isFilter(s)) s.disabled = (s !== f)
       else s.meta.disabled = true
@@ -243,6 +249,7 @@ export function provideStatActions (
 
   function toggleExclude (f: StatFilter) {
     if (!canExclude(f)) return
+    retireHint(MOD_KEYS_HINT)
     if (f.not) { include(f); return }
     // "Items without it" means any copy, not just a fractured one.
     setFracturedOnly(f, item.value, false)
@@ -252,6 +259,7 @@ export function provideStatActions (
   // Grouped under small headings (Guy's pick B); on/off lines show a ✓.
   // Only the "Price as" lines search, one search each.
   async function menu (e: MouseEvent, f: StatFilter) {
+    retireHint(MOD_KEYS_HINT)
     const at = { x: e.clientX, y: e.clientY, from: e.target instanceof Element ? e.target : null }
     const shownItem = item.value
     // Loaded on the first right-click, not with the price check.

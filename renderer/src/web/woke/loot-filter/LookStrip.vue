@@ -9,9 +9,11 @@
           @change="commit">
         <span class="w-num" :class="[$style.val, { [$style.moved]: draft[c.key] !== 100 }]">{{ draft[c.key] }}%</span>
       </label>
-      <WInfo text="Applies to every rule when the filter is written: NeverSink's, your own, presets and the safety net. Sizes stay between 18 and 45.
+      <WInfo text="Applies to every rule when the filter is written: NeverSink's, your own, presets and the safety net.
+- **Size** stays between 18 and 45.
+- **Colour** makes every label more muted or more vivid by the same amount, so tiers still read apart.
 
-Colour makes every label's colours more muted or more vivid by the same amount, so tiers still read apart. Rule editors show each rule's own style, before this strip." />
+Rule editors show each rule's own style, before this strip." />
       <span class="grow" />
       <WButton v-if="moved" size="sm" variant="ghost" icon="fas fa-undo" title="Every slider back to 100%" @click="reset">Reset</WButton>
     </div>

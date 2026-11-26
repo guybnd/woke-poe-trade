@@ -66,7 +66,13 @@ const shown = computed(() => props.full ? entries.value.slice().reverse() : rece
 
 probeOcr()
 
-const HOW_IT_WORKS = 'Scan mode reads the tooltip of the map under your mouse with on-screen text recognition, so no key press is needed per map. It re-reads whenever the tooltip changes, so rerolling the same map (chaos spamming) updates the verdict. Verdicts use this window\'s active build.\n\nFor long reroll sessions, hover the map and use Roll: it finds the tooltip once, then reads only that box (faster) until you stop rolling.\n\nIt only reads once the cursor rests on a map, and stops by itself after 3 minutes with nothing to read. A map that would pass but had lines it couldn\'t read clearly shows "?" instead of Safe; use the map check hotkey on it for an exact read.\n\nIt needs Windows and the OCR files. Keys are in Settings › Map mods.'
+const HOW_IT_WORKS = 'Reads the tooltip of the map under your mouse with on-screen text recognition, so no key press is needed per map.\n' +
+  '- It re-reads whenever the tooltip changes, so rerolling one map (chaos spamming) updates the verdict.\n' +
+  '- **Roll**, for long reroll sessions: hover the map first. It finds the tooltip once, then reads only that box (faster) until you stop.\n' +
+  '- It reads only once the cursor rests on a map, and stops by itself after 3 minutes with nothing to read.\n' +
+  '- **?** instead of Safe: the map would pass, but some lines weren\'t clear. Use the map check hotkey on it for an exact read.\n' +
+  '- Verdicts use this window\'s active build.\n\n' +
+  'Needs Windows and the OCR files. Keys are in Settings › Map mods.'
 
 const clearBtn = shallowRef<HTMLElement | null>(null)
 function toggle () { toggleScan().catch(() => {}) }

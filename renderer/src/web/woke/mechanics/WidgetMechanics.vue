@@ -150,6 +150,7 @@ import { isModuleOn } from '../modules'
 import { AppConfig } from '@/web/Config'
 import type { DockMenuAction } from '../dock/dock'
 import { mechanicIcon } from '../ui/game-icons'
+import { useGoto } from '../tab-bar/goto'
 import { dockIconEl, hideWhilePlaying, saveDock } from '../dock/dock'
 import MechanicPrices from './MechanicPrices.vue'
 import MechanicGlance from './MechanicGlance.vue'
@@ -178,6 +179,16 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.betrayalStars = []
   props.config.betrayalOverrides = {}
 }
+
+// What's new › Show me: the full panel on that mechanic. Before the check
+// below, so a window Show me just made isn't hidden as a collapsed icon.
+useGoto(props.config, 'woke-mechanics', {
+  settlers: () => {
+    if (props.config.hidden.includes('settlers')) props.config.hidden = props.config.hidden.filter(id => id !== 'settlers')
+    props.config.tab = 'settlers'
+    props.config.expanded = true
+  }
+})
 
 // The expanded window shows only with the overlay open; the dock covers play.
 hideWhilePlaying(props.config)

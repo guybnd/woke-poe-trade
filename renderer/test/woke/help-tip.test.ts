@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { helpParagraphs, helpTip, hideHelp, placeHelp, showHelp } from '@/web/woke/ui/help-tip'
+import { helpBlocks, helpParagraphs, helpPlain, helpTip, hideHelp, placeHelp, showHelp } from '@/web/woke/ui/help-tip'
 import { fillTipCard, placeAtPointer } from '@/web/woke/ui/title-tip'
 
 const screen = { width: 1000, height: 600 }
@@ -94,5 +94,30 @@ describe('fillTipCard', () => {
     fillTipCard(card as unknown as HTMLElement, 'Copy the name.', 'Ctrl + Shift + C')
     expect(card.children).toHaveLength(1)
     expect(card.children[0].children.map(k => [k.tag, k.textContent])).toEqual([['kbd', 'Ctrl'], ['kbd', 'Shift'], ['kbd', 'C']])
+  })
+})
+
+describe('helpBlocks (help text format)', () => {
+  it('keeps plain text as one paragraph', () => {
+    expect(helpBlocks('One line.\nStill one.')).toEqual([{ k: 'p', parts: [{ k: 'text', v: 'One line. Still one.' }] }])
+  })
+  it('reads a lead line, bullets, bold names and keys', () => {
+    const b = helpBlocks('Tunes the search.\n- **Has** finds maps with it.\n- [[Right-click]] marks it.\n\nNothing is searched.')
+    expect(b.map(x => x.k)).toEqual(['p', 'ul', 'p'])
+    expect(b[1]).toEqual({
+      k: 'ul',
+      items: [
+        [{ k: 'b', v: 'Has' }, { k: 'text', v: ' finds maps with it.' }],
+        [{ k: 'kbd', v: 'Right-click' }, { k: 'text', v: ' marks it.' }]
+      ]
+    })
+  })
+  it('ends a list at a plain line', () => {
+    expect(helpBlocks('- One\nAfter.').map(x => x.k)).toEqual(['ul', 'p'])
+  })
+  it('strips the markup for screen readers', () => {
+    expect(helpPlain('Lead.\n- **Has** with it\n- [[Shift + Click]] range')).toBe('Lead. Has with it. Shift + Click range.')
+    expect(helpPlain('Counts, first to last:\n- Typed\n- Estimates\n\nPrices from poe.ninja.')).toBe('Counts, first to last: Typed. Estimates. Prices from poe.ninja.')
+    expect(helpPlain('One.\n- Ends here.\n- Also.')).toBe('One. Ends here. Also.')
   })
 })

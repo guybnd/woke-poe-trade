@@ -18,7 +18,7 @@
       <div v-for="(row, i) in g.rows" :key="row.item.name" class="w-row" :class="$style.priceGrid">
         <span v-item-tip="row.item" class="flex items-center gap-1" :class="$style.name">
           <WIcon v-if="row.kind" :src="row.kind.icon" :title="`The ${row.kind.label}`" />
-          <WIcon v-else :src="ninjaIcon(row.item.type, row.item.name) ?? ninjaArt(row.item.type, row.item.name)" fallback="fas fa-coins" /><i v-if="isThin(row.item)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(row.item)" /><span :class="$style.label">{{ row.item.name }}</span><span v-if="row.tag" class="w-faint ml-1 text-xs" :class="$style.tag">{{ row.tag }}</span>
+          <WIcon v-else :src="ninjaIcon(row.item.type, row.item.name) ?? ninjaArt(row.item.type, row.item.name)" fallback="fas fa-coins" /><i v-if="isThin(row.item)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(row.item)" /><span :class="$style.label">{{ row.rowName ?? row.item.name }}</span><span v-if="row.tag" class="w-faint ml-1 text-xs" :class="$style.tag">{{ row.tag }}</span>
           <span v-if="i === 0 && !g.unranked" class="w-up ml-1" :class="$style.best">best</span>
         </span>
         <span :class="$style.bar"><i :style="{ width: barWidth(row.chaos, g.max) }" /></span>

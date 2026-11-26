@@ -29,7 +29,7 @@
       <WChip v-if="toReprice" clickable :active="filter === 'reprice'" title="Listings you set a new price on from the price check: reprice them at Faustus" @click="toggle('reprice')"><span class="w-warn">To reprice {{ toReprice }}</span></WChip>
       <WChip v-if="undercut" clickable :active="filter === 'undercut'" title="Your last Check found someone cheaper" @click="toggle('undercut')"><span class="w-down">Undercut {{ undercut }}</span></WChip>
       <WChip v-if="over" clickable :active="filter === 'over'" title="Asking 10% or more over poe.ninja's price" @click="toggle('over')">Overpriced {{ over }}</WChip>
-      <WChip v-for="t in types" :key="t.id" clickable :active="filter === t.id" @click="toggle(t.id)">{{ t.label }} {{ t.count }}</WChip>
+      <WChip v-for="t in types" :key="t.id" clickable :active="filter === t.id" :data-listed-type="t.id" @click="toggle(t.id)"><img v-if="t.icon" :src="t.icon" alt="" class="w-game-icon" :class="$style.chipIcon">{{ t.label }} {{ t.count }}</WChip>
       <WChip v-if="outCount" clickable :active="filter === 'changed'" title="Only the listings you left out of the total" data-listed-changed @click="toggle('changed')">Changed {{ outCount }}</WChip>
     </section>
     <WEmpty v-if="!rows.length" icon="fas fa-check">Nothing listed that hasn't sold.</WEmpty>
@@ -49,7 +49,7 @@
           <tr v-for="r in shown.slice(0, limit)" :key="r.item.id" :class="['w-line', { 'w-line-out': isOut(r) }]" tabindex="0" data-listed-row
             @contextmenu="onMenu($event, r)" @keydown="onKeys($event, r)">
             <td :class="$style.left">
-              <span :class="$style.name"><img v-if="r.item.icon" :src="r.item.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(r.item)" class="w-trunc w-line-name" :style="{ color: colourOf(r.item.frameType) }">{{ saleName(r.item) }}</span><span v-if="isOut(r)" class="w-line-tag">left out</span></span>
+              <span :class="$style.name"><img v-if="r.item.icon" :src="r.item.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(r.item)" class="w-trunc w-line-name" :style="{ color: saleColour(r.item.frameType) }">{{ saleName(r.item) }}</span><span v-if="isOut(r)" class="w-line-tag">left out</span></span>
             </td>
             <td class="w-num" :class="[$style.ask, { [$style.struck]: isOut(r) }]">
               {{ fmt(r.item.price.amount) }} {{ r.item.price.currency }}<span v-if="targetOf(r)" class="w-warn" :title="`You set ${priceLabel(targetOf(r)!)} from the price check: reprice it at Faustus. It clears once a Refresh sees that price`" data-listed-target> → {{ priceLabel(targetOf(r)!) }}</span>
@@ -88,7 +88,7 @@ import { lineOutDoc, loadLineOut, outIdsOf, setLineOut } from './line-out-store'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import Coin from './Coin.vue'
 import { saleMenuRef, saleTip } from './sale-tip'
-import { saleName, saleType, SALE_TYPES } from './sales'
+import { saleColour, saleName, saleType, SALE_TYPES } from './sales'
 import type { SaleType } from './sales'
 import { ninjaPriced, rates, sales } from './sales-store'
 import { canCheck, checkFor, rankText } from './cheapest'
@@ -149,7 +149,13 @@ const over = computed(() => rows.value.filter(isOver).length)
 const isUndercut = (r: PendingRow) => (checkOf(r)?.cheaper ?? 0) > 0
 const undercut = computed(() => rows.value.filter(isUndercut).length)
 const toReprice = computed(() => rows.value.filter(r => targetOf(r) != null).length)
-const types = computed(() => SALE_TYPES.map(t => ({ ...t, count: rows.value.filter(r => saleType(r.item) === t.id).length })).filter(t => t.count > 0))
+// Each type chip shows its priciest listing's art, as Net worth's categories do.
+const types = computed(() => SALE_TYPES.map((t) => {
+  const of = rows.value.filter(r => saleType(r.item) === t.id)
+  let top: PendingRow | null = null
+  for (const r of of) if (r.item.icon && (!top || (r.chaos ?? 0) > (top.chaos ?? 0))) top = r
+  return { ...t, count: of.length, icon: top?.item.icon ?? '' }
+}).filter(t => t.count > 0))
 watch(listedOpenStale, (on) => {
   if (!on) return
   listedOpenStale.value = false
@@ -261,17 +267,6 @@ async function reprice (r: PendingRow, e: MouseEvent) {
   const opened = await openPriceCheck(ref, at).catch(() => false)
   if (!opened) { repricing.value = null; toast("Can't price check this one by name: Ctrl+D it at Faustus in game") }
 }
-function colourOf (frame: number) {
-  switch (frame) {
-    case 1: return 'var(--w-r-magic)'
-    case 2: return 'var(--w-r-rare)'
-    case 3: return 'var(--w-r-unique)'
-    case 4: return 'var(--w-r-gem)'
-    case 5: return 'var(--w-r-currency)'
-    case 6: return 'var(--w-r-divination)'
-    default: return 'var(--w-fg)'
-  }
-}
 </script>
 
 <style module>
@@ -293,6 +288,7 @@ function colourOf (frame: number) {
 .struck { text-decoration: line-through; color: var(--w-dim); }
 .name { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
+.chipIcon { width: 16px; height: 16px; object-fit: contain; flex: none; }
 .ask { color: var(--w-gold); }
 .check { text-align: right; }
 .quick { opacity: 0; padding-inline: 2px; }

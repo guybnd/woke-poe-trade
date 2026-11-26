@@ -66,8 +66,9 @@ export function uniqueExtraSections (
         const worth = c.corrupted ? null : prices.unique
         if (worth != null && worth > 0) {
           const diff = Math.round((1 - set / worth) * 100)
-          if (diff >= 3) line.push(part(` · ${diff}% cheaper`, 'label'))
-          else if (diff <= -3) line.push(part(` · ${-diff}% dearer`, 'label'))
+          // Against buying the unique itself (Guy: "dearer" read as cryptic).
+          if (diff >= 3) line.push(part(` · ${diff}% less than buying it`, 'label'))
+          else if (diff <= -3) line.push(part(` · ${-diff}% more than buying it`, 'label'))
         }
       }
       lines.push(line)

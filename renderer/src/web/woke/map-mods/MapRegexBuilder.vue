@@ -231,13 +231,16 @@ const MINS_MODE_OPTIONS = [
   { value: 'any', label: 'any one' }
 ]
 const MIN_KEYS: MinStat[] = ['quantity', 'rarity', 'packSize', 'currency', 'scarabs', 'maps', 'divCards', 'quality']
-const REWARDS_HELP = 'Map must have: the lowest roll you accept, like 40 under More currency. Blank means no minimum. ' +
-  'The Alt+M card ticks or crosses each one, and when the stash search lights up maps to run, it shows only maps that have them. ' +
-  'Juice score: how much the stat counts toward the 0-100 score on the Alt+M card. ' +
-  'Every / any one: whether a map must meet all the minimums you set, or just one of them.'
-const JUICE_HELP = 'The Alt+M card scores each map from 0 to 100 on how rewarding it is. These squares set how much each stat counts. ' +
-  'Atlas drops, item rarity and pack size are weighed against each other. The More currency, threads, maps and div cards squares add on top. ' +
-  'No squares lit means the score ignores the stat. Click a square to set it, click the last lit one to lower it. ' +
+const REWARDS_HELP = 'What each column does.\n' +
+  '- **Map must have**: the lowest roll you accept, like 40 under More currency. Blank means no minimum. ' +
+  'The [[Alt + M]] card ticks or crosses each one, and the stash search lights up only maps that have them.\n' +
+  '- **Juice score**: how much the stat counts toward the 0-100 score on the [[Alt + M]] card.\n' +
+  '- **Every / any one**: a map must meet all the minimums you set, or just one of them.'
+const JUICE_HELP = 'The [[Alt + M]] card scores each map from 0 to 100 on how rewarding it is. These squares set how much each stat counts.\n' +
+  '- Atlas drops, item rarity and pack size are weighed against each other.\n' +
+  '- The More currency, threads, maps and div cards squares add on top.\n' +
+  '- No squares lit: the score ignores the stat.\n' +
+  '- Click a square to set it; click the last lit one to lower it.\n\n' +
   'This changes only the score, never the search.'
 // Juice weight squares: each is half a point, four make the 2× maximum.
 const PIP_STEP = 0.5

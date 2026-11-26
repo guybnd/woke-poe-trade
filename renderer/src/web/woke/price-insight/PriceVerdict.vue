@@ -12,7 +12,9 @@
         <span v-if="lowValue" :class="$style.priceText" :title="blendTitle">Not worth listing</span>
         <w-price v-else :class="$style.price" :title="blendTitle" :chaos="headline?.chaos ?? insight.range.fair" :divine="divine" />
         <span :class="$style.badge" :title="CONFIDENCE_HINT[insight.confidence]">{{ CONFIDENCE_LABEL[insight.confidence] }}</span>
-        <span v-if="!expanded" class="w-num" :class="$style.fact">Cheapest <w-price :class="$style.factPrice" :chaos="insight.range.low" :divine="divine" :unit="ninjaInfo ? 'auto' : rangeUnit" /></span>
+        <!-- woke: thin listings lead with the cheapest instant buyout (veteran critique, pick B1). -->
+        <span v-if="!lowValue && headline?.from === 'buyout'" :class="$style.fact">cheapest instant buyout</span>
+        <span v-if="!expanded && !(headline?.from === 'buyout' && headline.chaos === insight.range.low)" class="w-num" :class="$style.fact">Cheapest <w-price :class="$style.factPrice" :chaos="insight.range.low" :divine="divine" :unit="ninjaInfo ? 'auto' : rangeUnit" /></span>
       </template>
       <span v-if="!expanded && ninjaInfo" class="w-num" :class="$style.fact" :title="ninjaNotCounted ? 'poe.ninja isn\'t counted in this price' : undefined">
         <span :class="$style.ninjaName">poe.ninja</span>
@@ -229,7 +231,8 @@ const droppedTitle = computed(() => {
 const blendTitle = computed(() => {
   const lines = blend.value.points.map(p =>
     `${p.label}: ${Math.round(p.low)}${p.high > p.low ? '–' + Math.round(p.high) : ''}c${p.weight === 0 ? ' (not counted)' : ''}. ${p.note}`)
-  if (headline.value?.from === 'blend') lines.unshift('Blend of every source, listings count most:')
+  if (headline.value?.from === 'buyout') lines.unshift('The cheapest trusted instant buyout, close to what the other trusted listings ask: anyone can buy it at this price right now. Listings are few, so it leads over a blend.')
+  else if (headline.value?.from === 'blend') lines.unshift('Blend of every source, listings count most:')
   else if (headline.value?.chaos === props.insight.range?.low) lines.unshift('What sellers ask, since the trade site shows no sales: the cheapest trusted listing.')
   else lines.unshift('What sellers ask, since the trade site shows no sales: the middle of the cheapest trusted listings, counting online and recent sellers more.')
   return lines.join('\n')

@@ -14,7 +14,9 @@
         <span v-if="on.time" :class="{ 'w-warn': slow }" data-glance-time
           :title="pace != null ? `Your average for it: ${formatClock(pace)}` : undefined">{{ formatClock(elapsed) }}</span>
         <span v-if="on.deaths && map.deaths" class="w-down" data-glance-deaths><i class="fas fa-skull" /> {{ map.deaths }}</span>
-        <span v-if="on.mechanics && map.npcs.length" class="w-dim" data-glance-mechanics>{{ map.npcs.join(' · ') }}</span>
+        <span v-if="on.mechanics && map.npcs.length" :class="$style.mechs" class="w-dim" data-glance-mechanics>
+          <span v-for="n in map.npcs" :key="n" :class="$style.mech"><WIcon v-if="logMechanic(n)" :mechanic="logMechanic(n)" title="" size="sm" />{{ n }}</span>
+        </span>
       </template>
       <template v-else-if="outside && on.last && last">
         <span class="w-dim">Last</span>
@@ -77,6 +79,8 @@ import { avgMapMs, glanceFields, glanceOutside, glanceShow, hoursText, perHourOf
 import type { LastMap } from './glance-fields'
 import type { SessionStoryWidget } from './widget'
 import GlanceSettings from './GlanceSettings.vue'
+import WIcon from '../ui/WIcon.vue'
+import { logMechanic } from '../ui/game-icons'
 import { isSkippedArea } from './skip-areas'
 import { nightRateMs, nightUpTo, playedMs } from './night-rate'
 import { countedMs, leftOutText } from '../shared/rate-time'
@@ -245,6 +249,8 @@ const clock = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: '2-dig
 </script>
 
 <style module>
+.mechs { display: inline-flex; align-items: center; gap: 8px; }
+.mech { display: inline-flex; align-items: center; gap: 3px; }
 .bar {
   position: fixed;
   /* Below the dock's default row; the dock sits at z-index 900. */

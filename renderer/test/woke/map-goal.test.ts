@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const config = { widgets: [] as Array<Record<string, unknown>>, woke: { off: [] as string[] } }
 vi.mock('@/web/Config', () => ({ AppConfig: () => config }))
 
-const { FARM_GOALS, GOAL_KEYS, RAISES, goalDisabled, plannerGoalFor } = await import('@/web/woke/map-mods/goal')
+const { FARM_GOALS, GOAL_KEYS, RAISES, goalAddsExtra, goalDisabled, plannerGoalFor } = await import('@/web/woke/map-mods/goal')
 const { farmGoal, setFarmGoal } = await import('@/web/woke/map-mods/goal-config')
 const { mapBonusLookup } = await import('@/web/woke/search/lookups/map-bonus')
 
@@ -52,6 +52,16 @@ describe('farming goal', () => {
     const on = LABELS.filter(l => goalDisabled(l, 'atlas') === false).sort()
     expect(on).toEqual(['Drops', 'Maps', 'Pack', 'Threads'])
     expect(GOAL_KEYS.atlas).toContain('Drops')
+  })
+  it('adds the More X numbers it wants that the map has not got, and only those', () => {
+    const MORE = ['Currency', 'Threads', 'Maps']
+    expect(MORE.filter(l => goalAddsExtra(l, 'currency'))).toEqual(['Currency'])
+    expect(MORE.filter(l => goalAddsExtra(l, 'atlas')).sort()).toEqual(['Maps', 'Threads'])
+    expect(MORE.filter(l => goalAddsExtra(l, 'any'))).toEqual([])
+    // Each goal's More X numbers are ones it rings.
+    for (const g of FARM_GOALS) for (const l of MORE) if (goalAddsExtra(l, g)) expect(GOAL_KEYS[g]).toContain(l)
+    // Drops, Rarity and Pack missing means a plain map: never added.
+    for (const l of ['Drops', 'Rarity', 'Pack', 'Quant', 'Div cards']) expect(goalAddsExtra(l, 'currency')).toBeUndefined()
   })
   it('every chip says what it raises, and the Planner follows the goal', () => {
     for (const label of ['Drops', 'Rarity', 'Pack', 'Currency', 'Threads', 'Maps', 'Div cards']) expect(RAISES[label], label).toBeTruthy()

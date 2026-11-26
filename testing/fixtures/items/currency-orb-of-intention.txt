@@ -1,0 +1,9 @@
+Item Class: Stackable Currency
+Rarity: Currency
+Orb of Intention
+--------
+Stack Size: 1/20
+--------
+Rerolls the modifiers on an item, making it corrupted
+--------
+Right click this item then left click a magic or rare item to apply it.

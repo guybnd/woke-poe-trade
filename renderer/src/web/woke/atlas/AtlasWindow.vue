@@ -1,6 +1,6 @@
 <template>
     <div class="flex gap-2 min-h-0 items-start">
-      <WPanel ref="panel" :title="config.wmTitle || 'Atlas strategies'" icon="map" width="22rem" max-height="80vh"
+      <WPanel ref="panel" :keys="LIST_KEYS" :title="config.wmTitle || 'Atlas strategies'" icon="map" width="22rem" max-height="80vh"
         :updated="prices.snapshot.value?.ts ?? null" :fresh-min="60" :stale-min="360">
         <!-- Only while a strategy still lists 3.29 scarabs. -->
         <template v-if="hasScarabs" #banner>
@@ -100,6 +100,7 @@
 </template>
 
 <script setup lang="ts">
+import { savedListKeys } from '../shared/saved-list'
 // The Atlas strategies window: the list with folders, the tree, the loadout.
 // Loads the first time the window opens (WidgetAtlas.vue is the shell).
 import { computed, defineAsyncComponent, inject, nextTick, shallowRef, watch } from 'vue'
@@ -129,6 +130,9 @@ import { addRegex, joinFolder, libraryOn, regexesIn } from '../regex-library/fol
 import { claimNewRegexFolder, copyRegexes, refileRegexes } from './strategy-ops'
 import { atlasTreePin } from './atlas-pin'
 import { pins } from '../pins/pins'
+
+// The window's "?": the saved list's keys.
+const LIST_KEYS = savedListKeys({ copy: true })
 
 // The tree editor's code loads the first time a strategy is opened.
 const AtlasTree = defineAsyncComponent(() => import('./AtlasTree.vue'))

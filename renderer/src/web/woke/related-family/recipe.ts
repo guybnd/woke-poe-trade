@@ -59,7 +59,9 @@ function vendorRecipes (find: Find): UniqueRecipe[] {
   for (const r of RECIPES) {
     if (r.base || r.qty) continue
     const makes = find(r.get)
-    if (makes?.namespace !== 'UNIQUE') continue
+    // Uniques, and the oil ladder (3 Clear Oil -> 1 Sepia Oil): other currency
+    // swaps are vendor trades, not what an item is made from.
+    if (makes?.namespace !== 'UNIQUE' && !(makes && r.words === 'oil upgrade')) continue
     const parts = r.give.map(g => partOf(g, find))
     if (parts.some(p => p == null)) continue
     out.push({ kind: 'vendor', makes, parts: parts as RecipePart[], note: r.note })
@@ -89,8 +91,9 @@ function dropRecipes (drops: DropEntry[], find: Find, used: Set<DropEntry>): Uni
   for (const g of drops) {
     const q = g.query.map(keyName)
     // A helper item that turns each unique into the item at the same place:
-    // Flesh of Xesht, a vial, a Harbinger scroll.
-    const helperAt = q.findIndex(k => k.ns === 'ITEM' && (k.name === 'Flesh of Xesht' || k.name.startsWith('Vial of ') || k.name.endsWith(' Scroll')))
+    // Flesh of Xesht, a vial, a Harbinger scroll, a Coin of Restoration or
+    // Desecration (Fleshrender <-> Skysunder).
+    const helperAt = q.findIndex(k => k.ns === 'ITEM' && (k.name === 'Flesh of Xesht' || k.name.startsWith('Vial of ') || k.name.endsWith(' Scroll') || k.name === 'Coin of Restoration' || k.name === 'Coin of Desecration'))
     if (helperAt >= 0) {
       const helper = look(g.query[helperAt])
       const from = g.query.filter((_, i) => i !== helperAt)
@@ -118,10 +121,12 @@ function dropRecipes (drops: DropEntry[], find: Find, used: Set<DropEntry>): Uni
 }
 
 // From poedb: "Combine 300 Splinters to create a Simulacrum", 100 Timeless
-// splinters to an emblem, 10 Crescent Splinters to The Maven's Writ.
+// splinters to an emblem, 10 Crescent Splinters to The Maven's Writ, 100
+// Ritual Splinters to a Ritual Vessel.
 const SPLINTERS: Array<[string, number, string]> = [
   ['Simulacrum Splinter', 300, 'Simulacrum'],
   ['Crescent Splinter', 10, "The Maven's Writ"],
+  ['Ritual Splinter', 100, 'Ritual Vessel'],
   // The Eternal Empire's splinter makes the "Timeless Eternal Emblem".
   ...['Karui', 'Maraketh', 'Eternal Empire', 'Templar', 'Vaal'].map((who): [string, number, string] => [`Timeless ${who} Splinter`, 100, `Timeless ${who.split(' ')[0]} Emblem`])
 ]
@@ -209,24 +214,32 @@ export function recipeSum (parts: RecipePart[], makes: BaseType, priceOf: (info:
 // stack size. `gives` is how many of the item a full stack gives.
 export interface CardReward { card: string, stack: number, gives: number, corrupted: boolean }
 
+// A card's reward when it is one named unique or currency, plainly or
+// corrupted: "<currencyitem>{2x Exalted Orb}", "<size:30>{<currencyitem>{Mirror
+// of Kalandra}}". A reward with a level or links isn't the plain item: null.
+// "<uniqueitem>{Map}" (any unique map) parses, and the caller's item lookup
+// finds no such item.
+export interface NamedReward { namespace: 'UNIQUE' | 'ITEM', name: string, gives: number, corrupted: boolean }
+export function rewardOf (d: string): NamedReward | null {
+  const lines = d.split(/\r?\n/)
+  const first = /^<size:\d+>\{(.*)\}$/.exec(lines[0])?.[1] ?? lines[0]
+  const m = /^<(uniqueitem|currencyitem)>\{(?:(\d+)x )?(.+)\}$/.exec(first)
+  if (!m) return null
+  const rest = lines.slice(1)
+  if (rest.some(l => !/^<corrupted>\{Corrupted\}$/.test(l))) return null
+  return { namespace: m[1] === 'uniqueitem' ? 'UNIQUE' : 'ITEM', name: m[3], gives: m[2] ? Number(m[2]) : 1, corrupted: rest.length > 0 }
+}
+
 // Only a card for this exact item: a unique's card names that unique, a
-// currency's that currency. "<uniqueitem>{Map}" (any unique map) or a base
-// name ("a unique Agate Amulet") is a random item, not the checked one.
+// currency's that currency.
 export function cardsFor (item: { refName: string, namespace: string }, items: Record<string, { d?: string, n?: number }>): CardReward[] {
-  const tag = item.namespace === 'UNIQUE' ? 'uniqueitem' : item.namespace === 'ITEM' ? 'currencyitem' : null
-  if (!tag) return []
+  if (item.namespace !== 'UNIQUE' && item.namespace !== 'ITEM') return []
   const out: CardReward[] = []
   for (const [card, v] of Object.entries(items)) {
     if (!v.n || !v.d) continue
-    const lines = v.d.split(/\r?\n/)
-    // A big reward is wrapped in a size tag: "<size:30>{<currencyitem>{Mirror of Kalandra}}".
-    const first = /^<size:\d+>\{(.*)\}$/.exec(lines[0])?.[1] ?? lines[0]
-    const m = /^<(uniqueitem|currencyitem)>\{(?:(\d+)x )?(.+)\}$/.exec(first)
-    if (!m || m[1] !== tag || m[3] !== item.refName) continue
-    // A reward with more than its corruption (a level, links) isn't the plain item.
-    const rest = lines.slice(1)
-    if (rest.some(l => !/^<corrupted>\{Corrupted\}$/.test(l))) continue
-    out.push({ card, stack: v.n, gives: m[2] ? Number(m[2]) : 1, corrupted: rest.length > 0 })
+    const r = rewardOf(v.d)
+    if (!r || r.namespace !== item.namespace || r.name !== item.refName) continue
+    out.push({ card, stack: v.n, gives: r.gives, corrupted: r.corrupted })
   }
   return out.sort((a, b) => a.stack / a.gives - b.stack / b.gives || a.card.localeCompare(b.card))
 }
@@ -243,7 +256,7 @@ export function isFragmentSet (group: DropEntry): boolean {
 // currencies and Orb of Conflict (poedb: The Maven drops it). Timeless
 // splinters make the emblems, which the splinter recipe shows. Their items
 // are never shown as "Drops from" or "Drops in".
-const NOT_DROPS = new Set(['Essence of Insanity', 'Primal Crystallised Lifeforce', 'Golden Oil', 'Lesser Eldritch Ember', 'Lesser Eldritch Ichor', 'Timeless Eternal Empire Splinter'])
+const NOT_DROPS = new Set(['Ancient Orb', 'Essence of Insanity', 'Primal Crystallised Lifeforce', 'Golden Oil', 'Lesser Eldritch Ember', 'Lesser Eldritch Ichor', 'Timeless Eternal Empire Splinter'])
 
 // Items in a real drop group that poedb doesn't back: Perfect Forest Tiger is
 // an Azmeri corpse, not a drop of the King in the Mists.
@@ -256,6 +269,21 @@ export function dropsAreReal (group: DropEntry): boolean {
 // What a group really drops.
 export function realDrops (group: DropEntry): string[] {
   return dropsAreReal(group) ? group.items.filter(id => !NOT_DROP_ITEMS.has(id)) : []
+}
+
+// Upstream groups that aren't families, only things used together or a theme:
+// the Eldritch orbs with Exalted Orb, Orb of Annulment and the two Farric
+// beasts; ways to link (Orb of Fusing, an omen, a thread, two beasts);
+// Watcher's Eye with a beast; item quantity uniques; levelling uniques. A
+// recipe part or a shared theme isn't "related", so the price check never
+// lists them as "Related to" (Guy, 2026-11-25: Exalted Orb listed Farric
+// Wolf Alpha). Also Ancient Orb with Astragali, a reliquary key and Valdo's
+// Puzzle Box, a theme (ways to chase Headhunter and Mageblood), not one source
+// of those uniques, so its items aren't read as drops either (NOT_DROPS). Keyed by the group's first item.
+const NOT_RELATED = new Set(['Eldritch Orb of Annulment', 'Orb of Fusing', "Watcher's Eye", "Ventor's Gamble", 'Cast on Death Support', 'Ancient Orb'])
+
+export function isRelatedGroup (group: DropEntry): boolean {
+  return !NOT_RELATED.has(keyName(group.query[0]).name)
 }
 
 // For tests: the book is built once per game data load.
