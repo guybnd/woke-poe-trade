@@ -32,6 +32,8 @@ export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
   { id: 'loot-filter-over-quality-look', since: '1.330.23', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: over-quality gear keeps its Magic/Rare look with a mark on top (border, beam, icon); Change mark on Gear' },
+  { id: 'search-unique-mods', since: '1.330.23', wmType: 'woke-search', name: 'Search', note: 'New: type part of a mod ("item rarity") for every unique that has it, priced; Foulborn and Vestigial mods too' },
+  { id: 'loot-filter-drag-bases', since: '1.330.23', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: drag bases between rank columns in Base types; drag one or all the picked ones' },
   { id: 'loot-filter-profiles', since: '1.330.22', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: profiles, several whole filters (mapping, bossing...) each in its own file; switch at the top' },
   { id: 'price-check-unique-foulborn', since: '1.330.22', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a unique, its Foulborn kinds and versions priced, its Vestigial mod, and if it can be chanced' },
   { id: 'atlas-tree-planner-links', since: '1.330.22', wmType: 'woke-atlas-strategies', goto: 'strategies', name: 'Atlas strategies', note: 'New: imports Atlas Tree Planner links (atlas-blush-beta.vercel.app)' },

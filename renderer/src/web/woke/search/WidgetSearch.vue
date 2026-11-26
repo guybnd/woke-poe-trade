@@ -47,8 +47,10 @@
                 <WIcon v-else-if="e.kind === 'lookup' && isImageIcon(e.icon)" :src="e.icon" size="md" />
                 <i v-else :class="e.icon" :style="{ width: 'var(--w-icon-md)', textAlign: 'center' }" />
                 <span :class="$style.resName">
-                  <span class="w-trunc" :class="e.kind === 'price' ? rarityClass(e.group.type) : undefined">{{ e.name }}</span>
-                  <span class="w-dim w-trunc" :class="$style.small">{{ e.sub }}</span>
+                  <span class="w-trunc" :class="e.kind === 'price' ? rarityClass(e.group.type) : e.kind === 'item' && e.mod ? 'w-rarity-unique' : undefined">{{ e.name }}</span>
+                  <!-- A mod search's hit: the line it matched, the typed words lit. -->
+                  <span v-if="e.mod" class="w-trunc" :class="[$style.small, $style.modSub, { [$style.modVest]: e.mod.kind === 'vestigial', [$style.modFoul]: e.mod.kind === 'foulborn' }]" :title="e.sub" data-search-mod-hit><span v-if="e.mod.kind === 'vestigial'" :class="$style.modTag">Vestigial</span><span v-if="e.mod.pool" :class="$style.modTag" title="A jewel that can roll this mod, not one that always has it">Can roll</span><template v-for="(p, i) in e.mod.parts" :key="i"><mark v-if="p.lit" :class="$style.modLit">{{ p.text }}</mark><template v-else>{{ p.text }}</template></template></span>
+                  <span v-else class="w-dim w-trunc" :class="$style.small">{{ e.sub }}</span>
                 </span>
                 <span v-if="e.kind === 'price'" :class="$style.range"><template v-if="e.group.low !== e.group.high"><WPrice :bulk="e.group.high < 1" :chaos="e.group.low" :divine="divine" /> to </template><WPrice :bulk="e.group.high < 1" :chaos="e.group.high" :divine="divine" /></span>
                 <WKbd v-else-if="e.kind === 'command' && e.keys" :keys="e.keys" />
@@ -95,7 +97,7 @@
                 <span v-else-if="tradePrices.pending(unidName)" class="text-right w-faint">…</span>
                 <span v-else class="text-right"><button class="w-icon-btn" title="Search trade for unidentified copies" aria-label="Search trade for unidentified copies" @click="lookUpUnid"><i class="fas fa-search" /></button></span>
               </div>
-              <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
+              <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" :lit="selected.mod?.line" />
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" @pick="pickUnique" />
               <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
               <CardDrops v-if="cardDropName" :name="cardDropName" />
@@ -116,7 +118,7 @@
               <div v-item-tip="{ name: selected.info.refName }" :class="$style.title"><WIcon :src="selected.info.icon" size="lg" /><span>{{ selected.name }}</span></div>
               <p class="w-dim">{{ noPriceNote(selected) }}</p>
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" :no-price="snapshot ? undefined : 'No saved prices yet'" @pick="pickUnique" />
-              <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
+              <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" :lit="selected.mod?.line" />
               <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
               <CardDrops v-if="cardDropName" :name="cardDropName" />
               <ItemActions :name="selected.name" lookups :can-price="canPriceCheck(selected)" :market="false"
@@ -211,7 +213,9 @@ import { isFoulborn } from '../shared/item-identity'
 import { CHIPS, GROUP_CAP, chipOf, groupMode, shapeSections } from './groups'
 import type { ChipId, GroupMode } from './groups'
 import SearchGroups from './SearchGroups.vue'
-import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, bestName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
+import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, bestName, changeSince, groupKey, groupTip, namedUniquePrices, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
+import type { ModKind, ModLine } from './mod-index'
+import { MOD_GROUP } from './groups'
 import { basesOfUnique, hasUniques, uniquesOnBase } from '../shared/uniques-on-base'
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
@@ -324,7 +328,9 @@ const tradePrices = useTradePrices()
 const snapshot = useSearchSnapshot()
 
 // `line`: a row of the empty box's Saved or Recent, with its save and remove buttons.
-interface Base { id: string, name: string, sub: string, line?: SearchLine, saved?: boolean }
+// `mod`: a mod search's hit, the line it matched in pieces with the typed words lit.
+interface ModMark { line: string, parts: Array<{ text: string, lit: boolean }>, kind: ModKind, pool: boolean }
+interface Base { id: string, name: string, sub: string, line?: SearchLine, saved?: boolean, mod?: ModMark }
 interface PriceEntry extends Base { kind: 'price', group: PriceGroup }
 interface ItemEntry extends Base { kind: 'item', info: BaseType }
 interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting' | 'more' | 'again', icon: string, about: string, verb: string, keys?: string | null, aliases?: string[], action: () => void }
@@ -409,6 +415,71 @@ function onBaseEntry (group: PriceGroup, shown?: ReadonlySet<string>): PriceEntr
     entry.sub = group.variants.length > 1 ? `${base} · ${group.variants.length} prices` : base
   }
   return entry
+}
+
+// ---- uniques by their mods ----
+// "item rarity" lists every unique with a line that has it, Foulborn mods and
+// Vestigial implicits too (mod-index.ts). The index is built the first time a
+// query is long enough, from the tooltip files the unique details read.
+const modSearch = shallowRef<{ mod: typeof import('./mod-index'), index: ModLine[] } | null>(null)
+let modLoading = false
+let modGen = 0
+function loadModIndex () {
+  if (modSearch.value || modLoading) return
+  modLoading = true
+  // A read started before a data update is dropped.
+  const mine = modGen
+  Promise.all([import('./mod-index'), loadTipUniques(), orNull(loadTipVestigial())])
+    .then(([mod, uniques, vestigial]) => {
+      if (mine !== modGen || !uniques) return
+      modSearch.value = { mod, index: mod.buildModIndex(uniques, vestigial) }
+    })
+    .catch(() => {})
+    .finally(() => { if (mine === modGen) modLoading = false })
+}
+const wantsMods = () => open.value && query.value.trim().length >= 4
+watch([query, open], () => { if (wantsMods()) loadModIndex() })
+// Unique names with any poe.ninja row, whatever the filter.
+const pricedUniques = computed(() => new Set((snapshot.value?.items ?? []).filter(i => /^Unique/.test(i.type)).map(i => i.name)))
+// Unique items by their English name, for hits with no price.
+let uniqueRefsFrom: BaseType[] | null = null
+let uniqueRefs = new Map<string, BaseType>()
+function uniqueByRef (ref: string): BaseType | undefined {
+  const all = gameItems()
+  if (uniqueRefsFrom !== all) {
+    uniqueRefsFrom = all
+    uniqueRefs = new Map(all.filter(i => i.namespace === 'UNIQUE').map(i => [i.refName, i]))
+  }
+  return uniqueRefs.get(ref)
+}
+// The group: priced uniques first (the closest match, then dearest), then the
+// ones poe.ninja has no price for. Ones already listed above stay out.
+function modSection (q: string, items: readonly PriceItem[], shown: ReadonlySet<string>): { label: string, entries: Entry[], capped?: boolean } {
+  const ms = modSearch.value
+  const hits = ms ? ms.mod.searchMods(ms.index, q) : []
+  if (!ms || !hits.length) return { label: MOD_GROUP, entries: [] }
+  const byName = new Map(hits.map(h => [h.unique, h]))
+  const mark = (name: string): ModMark | undefined => {
+    const h = byName.get(name)
+    return h && { line: h.line, parts: ms.mod.litParts(h.line, q), kind: h.kind, pool: h.pool }
+  }
+  // Closest match first, a jewel that only can roll it after, then dearest.
+  const rankOf = (name: string) => { const h = byName.get(name); return h ? h.rank + (h.pool ? 2 : 0) : 9 }
+  const groups = namedUniquePrices(items, new Set(byName.keys()), { corrupted: corrupted.value, limit: Infinity })
+    .sort((a, b) => rankOf(a.name) - rankOf(b.name) || b.high - a.high)
+  const priced = pricedUniques.value
+  const entries: Entry[] = groups.filter(g => !shown.has(groupKey(g))).map(g => {
+    const m = mark(g.name)!
+    return { ...priceEntry(g), sub: m.line, mod: m }
+  })
+  for (const h of hits.sort((a, b) => a.rank - b.rank || a.unique.localeCompare(b.unique))) {
+    if (priced.has(h.unique)) continue
+    const info = uniqueByRef(h.unique)
+    if (!info) continue
+    if (shown.has(`i:${info.namespace}:${info.name}`)) continue
+    entries.push({ kind: 'item', id: `m:${info.namespace}:${info.name}`, name: info.name, sub: h.line, info, mod: mark(h.unique) })
+  }
+  return { label: MOD_GROUP, entries: entries.slice(0, PRICE_GROUP_LIMIT), capped: entries.length > PRICE_GROUP_LIMIT }
 }
 
 // ---- a base's uniques ----
@@ -846,6 +917,10 @@ function betrayalOverrides (): Record<string, string> {
 const stopDataWatch = onSharedDataChange(() => {
   detailPack.value = null
   detailGen++
+  modSearch.value = null
+  modGen++
+  modLoading = false
+  if (wantsMods()) loadModIndex()
   detailLoading = false
   if (detailName.value) loadDetailPack()
   tipItems.value = null
@@ -978,6 +1053,7 @@ const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: b
     items: [
       { label: 'Prices', entries: groups.map(priceEntry) as Entry[], capped: groups.length >= PRICE_GROUP_LIMIT },
       { label: bases.length === 1 ? `Uniques on ${bases[0].name}` : 'Uniques on these bases', entries: onBase.map(g => onBaseEntry(g, shownBases)) as Entry[] },
+      modSection(q, items, new Set([...listed, ...onBase.map(groupKey), ...other.map(e => e.id)])),
       { label: 'Other items', entries: other as Entry[] }
     ],
     cards: cardSections(cards, null, ['Answer', 'Search the web']),
@@ -1874,6 +1950,12 @@ const dataNote = computed(() => {
 .sel, .sel:hover { background: var(--w-accent-soft); box-shadow: inset 2px 0 0 var(--w-accent); }
 .resName { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .small { font-size: var(--w-fs-sm); }
+/* A mod hit's line: game mod blue, the typed words brighter. */
+.modSub { color: var(--w-r-magic); }
+.modVest { color: var(--w-mod-vestigial); }
+.modFoul { color: var(--w-mod-foulborn); }
+.modLit { background: none; color: var(--w-fg); font-weight: 600; }
+.modTag { font-size: 0.85em; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid currentColor; padding: 0 3px; margin-right: 4px; }
 .range { flex: none; display: inline-flex; align-items: center; gap: 4px; }
 .none { padding: var(--w-s3) var(--w-pad); color: var(--w-dim); }
 .detail { padding: var(--w-s3) var(--w-s4); min-width: 0; }
