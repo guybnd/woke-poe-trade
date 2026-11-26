@@ -42,20 +42,20 @@
         </template>
         <template #sub="{ item: entry }"><span class="w-mono">{{ effectiveText(entry) }}</span></template>
         <template #actions="{ item: entry }">
-          <!-- Edit and Remove lie over the row on hover (the shared w-line-acts), left of Copy, taking no room. -->
-          <span :class="$style.actsAt">
-            <span class="w-line-acts" :class="$style.lineActs">
+          <!-- Copy always on; Edit and Remove on hover (WRowActs, the same in every saved list). -->
+          <WRowActs>
+            <template #hover>
               <button type="button" class="w-icon-btn" title="Edit" data-qa="regex-edit" @click.stop="edit(entry)">
                 <i class="fas fa-pen" />
               </button>
               <button type="button" class="w-icon-btn" title="Remove (Undo for a moment after)" data-qa="regex-remove" @click.stop="remove(entry)">
-                <i class="far fa-trash-alt" />
+                <i class="fas fa-trash" />
               </button>
-            </span>
+            </template>
             <button @click.stop="copy(entry)" class="w-icon-btn" :class="{ 'w-up': copied === String(entry.id) }" title="Copy to clipboard">
               <i :class="copied === String(entry.id) ? 'fas fa-check' : 'far fa-copy'" />
             </button>
-          </span>
+          </WRowActs>
         </template>
       </SavedTree>
       <!-- Until any string has a hotkey (shared/hints.ts). -->
@@ -102,6 +102,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WChip, WKbd, WEmpty, WButton, openMenu, toast } from '../ui'
 import WSortButton from '../ui/WSortButton.vue'
+import WRowActs from '../ui/WRowActs.vue'
 import { removeEntries } from '../shared/saved-list'
 import { useSavedTree } from '../shared/use-saved-tree'
 import { onSavedOpen } from '../shared/saved-open'
@@ -326,7 +327,7 @@ function rowMenu (e: MouseEvent, entry: RegexEntry) {
     { label: 'Search stash', icon: 'fas fa-search', keys: 'Enter', action: () => stashSearch(effectiveText(entry)) },
     { label: 'Copy string', icon: 'far fa-copy', keys: 'Ctrl + C', action: () => { copy(entry).catch(() => {}) } },
     { label: 'Edit', icon: 'fas fa-pen', action: () => edit(entry) },
-    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => tree.startEdit('item', String(entry.id), 'rename') },
+    { label: 'Rename', icon: 'fas fa-pen', keys: 'F2', action: () => tree.startEdit('item', String(entry.id), 'rename') },
     { label: 'Move to folder', icon: 'fas fa-folder-open', action: () => tree.startEdit('item', String(entry.id), 'move') },
     ...(entry.tags.length ? [{ label: `Filter by "${entry.tags[0]}"`, icon: 'fas fa-filter', action: () => { filter.value = entry.tags[0] } }] : []),
     { separator: true },
@@ -395,8 +396,4 @@ const dockMenu = computed<DockMenuAction[]>(() => [
 <style module>
 /* Mock A: pencil and bin show on the row under the mouse (or with focus). */
 /* Edit and Remove: shaded, over the row just left of Copy; shown on hover or focus. */
-.actsAt { position: relative; display: inline-flex; align-items: center; }
-.actsAt > .lineActs { right: 100%; display: inline-flex; align-items: center; gap: 2px; padding: 0 2px; border-radius: var(--w-r-sm);
-  background: var(--w-panel-solid-base, #0a0806); box-shadow: -10px 0 8px 2px var(--w-panel-solid-base, #0a0806), 0 0 0 1px var(--w-line); }
-[data-row]:hover .actsAt > .lineActs, [data-row]:focus-within .actsAt > .lineActs { visibility: visible; }
 </style>

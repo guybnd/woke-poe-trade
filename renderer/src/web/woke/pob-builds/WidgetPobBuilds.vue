@@ -44,10 +44,16 @@
           </template>
           <template #sub="{ item: b }">{{ describe(b) }}</template>
           <template #actions="{ item: b }">
-            <button @click.stop="togglePin(b.relPath)" class="w-icon-btn" :class="{ 'w-icon-btn--on': isPinned(b.relPath) }"
-              :title="isPinned(b.relPath) ? 'Unpin' : 'Pin to top'">
-              <i class="fas fa-thumbtack" />
-            </button>
+            <!-- Use always on; the rest on hover (WRowActs, the same in every saved list). -->
+            <WRowActs>
+              <template #hover>
+                <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': isPinned(b.relPath) }" :title="isPinned(b.relPath) ? 'Unpin (P)' : 'Pin to top (P)'" @click.stop="togglePin(b.relPath)"><i class="fas fa-thumbtack" /></button>
+                <button type="button" class="w-icon-btn" title="Rename (F2)" @click.stop="startEdit(b, 'rename')"><i class="fas fa-pen" /></button>
+                <button type="button" class="w-icon-btn" title="Remove (Del)" @click.stop="removeBuild(b)"><i class="fas fa-trash" /></button>
+              </template>
+              <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': config.activeBuild === b.relPath }" :title="config.activeBuild === b.relPath ? 'In use' : 'Use build'"
+                data-pob-use @click.stop="useBuild(b)"><i class="fas fa-check-circle" /></button>
+            </WRowActs>
           </template>
         </SavedTree>
         <WEmpty v-if="!loading && !shown.length && !error && builds.length" icon="fas fa-filter">
@@ -87,6 +93,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WButton, WEmpty, WBanner, WSkeleton, openMenu, toast } from '../ui'
 import WSortButton from '../ui/WSortButton.vue'
+import WRowActs from '../ui/WRowActs.vue'
 import { useSavedTree } from '../shared/use-saved-tree'
 import { isUnder, movedPath } from '../shared/saved-tree'
 import SavedTree from '../shared/SavedTree.vue'
@@ -112,7 +119,7 @@ import { onSavedOpen } from '../shared/saved-open'
 import type { PobBuildEntry, PobDetails } from './widget'
 
 // The window's "?": the saved list's keys.
-const LIST_KEYS = savedListKeys({ copy: false })
+const LIST_KEYS = [...savedListKeys({ copy: false }), { keys: 'P', label: 'Pin to top (again: unpin)' }]
 
 // The tree loads on first open: it's big and most sessions never open it.
 const BuildTree = defineAsyncComponent(() => import('./BuildTree.vue'))
@@ -444,7 +451,7 @@ function buildMenu (e: MouseEvent, b: PobBuildEntry) {
   const active = props.config.activeBuild === b.relPath
   openMenu(e, [
     { label: selected.value === b.relPath ? 'Hide details' : 'Show details', icon: 'fas fa-info-circle', keys: 'Enter', action: () => select(b) },
-    { label: active ? 'In use' : 'Use build', icon: 'fas fa-check-circle', disabled: active, action: () => { props.config.activeBuild = b.relPath; saveConfig() } },
+    { label: active ? 'In use' : 'Use build', icon: 'fas fa-check-circle', disabled: active, action: () => useBuild(b) },
     { label: pinned ? 'Unpin' : 'Pin to top', icon: 'fas fa-thumbtack', keys: 'P', action: () => togglePin(b.relPath) },
     ...(selectedBuild.value && selectedBuild.value.relPath !== b.relPath
       ? [{
@@ -453,11 +460,11 @@ function buildMenu (e: MouseEvent, b: PobBuildEntry) {
           action: () => { comparing.value = { a: selectedBuild.value!.relPath, b: b.relPath } }
         }]
       : []),
-    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => startEdit(b, 'rename') },
-    { label: 'Duplicate', icon: 'fas fa-clone', action: () => duplicateBuild(b) },
-    { label: 'Move to folder', icon: 'fas fa-folder', action: () => startEdit(b, 'move') },
+    { label: 'Rename', icon: 'fas fa-pen', keys: 'F2', action: () => startEdit(b, 'rename') },
+    { label: 'Duplicate', icon: 'far fa-clone', action: () => duplicateBuild(b) },
+    { label: 'Move to folder', icon: 'fas fa-folder-open', action: () => startEdit(b, 'move') },
     { separator: true },
-    { label: 'Delete', icon: 'fas fa-trash-alt', keys: 'Del', danger: true, action: () => removeBuild(b) }
+    { label: 'Remove', icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => removeBuild(b) }
   ])
 }
 
@@ -471,6 +478,11 @@ function note (text: string, undo?: () => void) {
   toast(text, { anchor: panel.value?.el, undo })
 }
 
+function useBuild (b: PobBuildEntry) {
+  if (props.config.activeBuild === b.relPath) return
+  props.config.activeBuild = b.relPath
+  saveConfig()
+}
 function startEdit (b: PobBuildEntry, kind: 'rename' | 'move') {
   tree.startEdit('item', String(idOf(b.relPath)), kind)
 }

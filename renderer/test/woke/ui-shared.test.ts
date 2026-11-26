@@ -11,12 +11,13 @@ import WPrice from '@/web/woke/ui/WPrice.vue'
 import WThin from '@/web/woke/ui/WThin.vue'
 import WSortButton from '@/web/woke/ui/WSortButton.vue'
 import WSortHead from '@/web/woke/ui/WSortHead.vue'
+import WRowActs from '@/web/woke/ui/WRowActs.vue'
 import { NO_PRICE, THIN_MARKET } from '@/web/woke/ui/format'
 import { RATE_HEAD, RATE_WORD, nextModRating } from '@/web/woke/map-mods/rules'
 
 async function render (c: Component, props: Record<string, unknown> = {}, slots?: Record<string, () => unknown>) {
   const app = createSSRApp({ render: () => h(c, props, slots as never) })
-  return await renderToString(app)
+  return (await renderToString(app)).replace(/<!--[\s\S]*?-->/g, '')
 }
 
 const WOKE = path.resolve(__dirname, '../../src/web/woke')
@@ -106,5 +107,18 @@ describe('sort (WSortButton, WSortHead)', () => {
   it('is the only sort look in saved lists and tables', () => {
     expect(offenders(/fa-sort-amount-down/, ['ui/WSortButton.vue'])).toEqual([])
     expect(offenders(/\$style\.sortBtn|\$style\.sortHead|' ▾' : ' ▴'/)).toEqual([])
+  })
+})
+
+describe('saved list rows (WRowActs) and menu words', () => {
+  it('keeps the main action on and the rest on hover', async () => {
+    const html = await render(WRowActs, {}, { default: () => h('button', 'Copy'), hover: () => h('button', 'Edit') })
+    expect(html).toMatch(/<span class="w-line-acts w-row-acts-hover"><button>Edit<\/button><\/span><button>Copy<\/button>/)
+  })
+
+  it('says Remove with one icon set', () => {
+    expect(offenders(/label: 'Delete'|>Delete<\/WButton>|title="Delete/, ['campaign/run-timer-editor.vue'])).toEqual([])
+    expect(offenders(/label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: \(\) => (tree\.)?startEdit\((b|'item'|'strategy')/)).toEqual([])
+    expect(offenders(/label: 'Duplicate', icon: 'fas fa-clone'/)).toEqual([])
   })
 })

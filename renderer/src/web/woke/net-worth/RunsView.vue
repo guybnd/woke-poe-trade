@@ -156,7 +156,7 @@
               <td :class="[$style.num, tone(r.perMapNoTopChaos)]" class="w-num" :title="r.top ? `Per ${pastUnit} without your best drop (${r.top.name}, ${amountU(r.top.chaos)})` : undefined">
                 {{ r.perMapNoTopChaos != null ? signed(r.perMapNoTopChaos) : '—' }}
               </td>
-              <td v-if="!byName"><button type="button" :class="$style.x" :aria-label="`Delete ${r.name}`" title="Delete" @click="removeId(r.id)"><i class="fas fa-trash-alt" /></button></td>
+              <td v-if="!byName"><button type="button" :class="$style.x" :aria-label="`Remove ${r.name}`" title="Remove" @click="removeId(r.id)"><i class="fas fa-trash" /></button></td>
             </tr>
           </tbody>
         </table>

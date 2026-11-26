@@ -150,7 +150,7 @@
               </span>
               <span class="text-right w-num" :class="!isComplete(r) && 'w-faint'">{{ formatClock(runTotal(r) ?? lastSplit(r)) }}</span>
               <span class="text-right w-num w-dim">{{ formatDate(r.startedAt) }}</span>
-              <button class="w-icon-btn" title="Delete run. You can undo." @click.stop="removeRun(r.id)"><i class="fas fa-times text-xs" /></button>
+              <button class="w-icon-btn" title="Remove run. You can undo." @click.stop="removeRun(r.id)"><i class="fas fa-times text-xs" /></button>
             </div>
           </template>
         </template>

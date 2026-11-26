@@ -181,7 +181,7 @@
               </datalist>
               <WButton size="sm" :disabled="renameTo.trim() === openSession.strategy" @click="rename">Rename</WButton>
               <span class="grow" />
-              <WButton size="sm" variant="ghost" icon="fas fa-trash" title="You can undo" @click="deleteSession(openSession)">Delete</WButton>
+              <WButton size="sm" variant="ghost" icon="fas fa-trash" title="You can undo" @click="deleteSession(openSession)">Remove</WButton>
             </div>
           </template>
         </template>
@@ -598,7 +598,7 @@ function sessionMenu (e: MouseEvent, s: SessionRecord) {
     { label: 'Open', icon: 'fas fa-list', keys: 'Enter', action: () => { openId.value = s.id } },
     ...(strategyFilter.value ? [] : [{ label: `Only "${name}"`, icon: 'fas fa-filter', action: () => { strategyFilter.value = name } }]),
     { separator: true },
-    { label: 'Delete', icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => deleteSession(s) }
+    { label: 'Remove', icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => deleteSession(s) }
   ])
 }
 

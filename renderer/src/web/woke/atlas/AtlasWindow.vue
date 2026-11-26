@@ -42,6 +42,18 @@
               :title="`Net worth: ${countText(earnings.get(s.name)!.runs, 'run')} of this name`">{{ fmt(earnings.get(s.name)!.perHour!) }}/h</span>
           </template>
           <template #sub="{ item: s }">{{ describe(s) }}</template>
+          <template #actions="{ item: s }">
+            <!-- Open always on; the rest on hover (WRowActs, the same in every saved list). -->
+            <WRowActs>
+              <template #hover>
+                <button type="button" class="w-icon-btn" title="Rename (F2)" @click.stop="startEdit('strategy', String(s.id), 'rename')"><i class="fas fa-pen" /></button>
+                <button type="button" class="w-icon-btn" title="Copy strategy code (Ctrl + C)" @click.stop="copyCode([s])"><i class="fas fa-share-square" /></button>
+                <button type="button" class="w-icon-btn" title="Remove (Del)" @click.stop="remove(s)"><i class="fas fa-trash" /></button>
+              </template>
+              <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': config.selectedId === s.id }" :title="config.selectedId === s.id ? 'Open' : 'Open its tree'" data-atlas-open
+                @click.stop="config.selectedId = s.id"><i class="fas fa-chevron-right" /></button>
+            </WRowActs>
+          </template>
         </SavedTree>
         <WEmpty v-if="!config.strategies.length && !folders.length" :art="{ mechanic: 'map' }">
           No strategies yet. Start one and click passives on the tree, or import a guide's tree link or text.
@@ -107,6 +119,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import { MainProcess } from '@/web/background/IPC'
 import { WPanel, WField, WButton, WEmpty, WBanner, WSkeleton, openMenu, toast, useCopy } from '../ui'
 import WSortButton from '../ui/WSortButton.vue'
+import WRowActs from '../ui/WRowActs.vue'
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import {
   allFolders, claimRegexFolders, setPointsAt, takePointsAt, dropDraft, isDirty, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, isStrategyCode,
@@ -459,7 +472,7 @@ function rowMenu (e: MouseEvent, s: AtlasStrategy) {
     return
   }
   openMenu(e, [
-    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => startEdit('strategy', String(s.id), 'rename') },
+    { label: 'Rename', icon: 'fas fa-pen', keys: 'F2', action: () => startEdit('strategy', String(s.id), 'rename') },
     { label: 'Move to folder', icon: 'fas fa-folder-open', action: () => startEdit('strategy', String(s.id), 'move') },
     { label: 'Duplicate', icon: 'far fa-clone', action: () => duplicate(s) },
     { label: 'Copy strategy code', icon: 'fas fa-share-square', keys: 'Ctrl + C', action: () => copyCode([s]) },

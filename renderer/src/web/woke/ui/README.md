@@ -62,6 +62,7 @@ art wherever the game has it, readable fonts (nothing under 11px).
 | `WThin` | The thin-market "!" on its own, after a price that isn't a `WPrice` (a text price). Hover: `THIN_MARKET` "Thin market: few poe.ninja days this week". Whether a price is thin comes from `shared/price-trust.ts` and `market/types.ts`. A verdict badge (the price check's "Thin" confidence) is a different thing and keeps its badge. |
 | `WSortButton` | A saved list's sort (Regex library, Trade searches, Atlas strategies, PoB builds): the sort icon in the panel's `actions`, a menu of the list's orders, lit when not in your own order (`manual`, default `'manual'`). `v-model` the list's saved sort setting. Import by path. |
 | `WSortHead` | A sortable table column heading, the same in every table: label (or the default slot, e.g. a coin), arrow on the sorted column (on the left for a right-aligned column), `@sort` on click. Props `label`, `active`, `desc`, `align`. The `th` sets `aria-sort` itself. Import by path. |
+| `WRowActs` | A saved list row's buttons (SavedTree `#actions`): the one main action always on in the default slot (Copy in Regex library, Open in Trade searches and Atlas strategies, Use in PoB builds), everything else (`#hover`: Edit or Rename, Pin, Remove) over the row to its left on hover or focus, on the shaded `w-line-acts` backing, taking no room and never over the main action. A list with pins pins on **P** too (listed in its "?"). Import by path. |
 | `WRateChip` | A map mod's rating, the one look on every screen: Bad (red) / Care (yellow) / Want (green), "–" not rated. Words and hovers come from `RATE_WORD` / `RATE_TITLE` / `RATE_HEAD` (group headings: Bad, Care, Want, Not rated) in `map-mods/rules.ts`. Click steps to the next rating (`@rate` gets it), right-click picks one; `clickable=false` for read-only. The row itself never cycles the rating: row click is Has / Not / Any only where the list searches (the price check strips). Import by path. |
 | `WDelta` | Ratio change as a coloured percentage (`0.12` → `+12%`). |
 | `WSpark` | Sparkline with area fill and endpoint, coloured by direction. |
@@ -77,7 +78,7 @@ art wherever the game has it, readable fonts (nothing under 11px).
 
 `OverlayLayer.vue` is mounted once (via `WokeOverlay`). Use it through:
 
-- `openMenu(event, items)` for every right-click menu. Items: `{ label, action, icon?, gameIcon?, keys?, danger?, disabled? }` or `{ separator: true }`. Put destructive items last after a separator. Arrow keys, Enter and Esc work.
+- `openMenu(event, items)` for every right-click menu. Words and icons are the same everywhere: **Remove** (never Delete, `fas fa-trash`, key chip `Del`), Rename `fas fa-pen` (`F2`), Move to folder `fas fa-folder-open`, Duplicate `far fa-clone`. Items: `{ label, action, icon?, gameIcon?, keys?, danger?, disabled? }` or `{ separator: true }`. Put destructive items last after a separator. Arrow keys, Enter and Esc work.
 - `toast(text, { undo?, anchor? })` after an action instead of asking "are you sure?". Shows at the bottom of `anchor` (pass the panel element) for 5 s; Ctrl+Z also undoes.
 - `useCopy()` gives `{ copied, copy }` so a copy button can say "Copied" in place.
 

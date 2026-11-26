@@ -1407,9 +1407,9 @@ function ruleMenu (e: MouseEvent, r: OwnRule) {
     { label: r.on ? 'Switch off' : 'Switch on', icon: r.on ? 'fas fa-toggle-off' : 'fas fa-toggle-on', action: () => { r.on = !r.on } },
     { label: 'Move up (wins over the ones below)', icon: 'fas fa-arrow-up', action: () => moveRule(r, -1) },
     { label: 'Move down', icon: 'fas fa-arrow-down', action: () => moveRule(r, 1) },
-    { label: 'Duplicate', icon: 'fas fa-clone', action: () => { const copy: OwnRule = { ...JSON.parse(JSON.stringify(r)), id: nextEditId(), name: `${r.name} (copy)` }; props.config.rules = [...props.config.rules, copy]; editingRuleId.value = copy.id } },
+    { label: 'Duplicate', icon: 'far fa-clone', action: () => { const copy: OwnRule = { ...JSON.parse(JSON.stringify(r)), id: nextEditId(), name: `${r.name} (copy)` }; props.config.rules = [...props.config.rules, copy]; editingRuleId.value = copy.id } },
     { separator: true },
-    { label: 'Delete', icon: 'fas fa-trash', danger: true, action: () => deleteRule(r) }
+    { label: 'Remove', icon: 'fas fa-trash', danger: true, action: () => deleteRule(r) }
   ])
 }
 

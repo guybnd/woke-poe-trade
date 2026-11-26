@@ -38,7 +38,7 @@
           @update:model-value="profile.name = String($event)" />
         <WButton size="sm" icon="fas fa-plus" @click="addProfile">New</WButton>
         <WButton size="sm" icon="fas fa-copy" @click="copyProfile">Copy</WButton>
-        <WButton v-if="w.profiles.length > 1" size="sm" variant="danger" icon="fas fa-trash" @click="removeProfile">Delete</WButton>
+        <WButton v-if="w.profiles.length > 1" size="sm" variant="danger" icon="fas fa-trash" @click="removeProfile">Remove</WButton>
       </div>
       <div class="flex items-center gap-2 w-dim text-sm">How profiles work <w-info text="One profile per build.
 - Rate mods and set rewards (minimums and juice weights) in the Map mods window.

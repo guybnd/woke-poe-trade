@@ -193,7 +193,7 @@
                     <span class="w-dim w-num text-xs">{{ new Date(kill.ts).toLocaleDateString() }}</span>
                     <span class="w-trunc">{{ kill.drops.map(d => d.qty > 1 ? `${d.name} ×${d.qty}` : d.name).join(', ') || 'nothing of note' }}</span>
                     <WPrice :chaos="killValue(kill)" :divine="divine" />
-                    <button class="w-icon-btn" title="Delete. You can undo." @click="deleteKill(sel.boss.id, killsOf(sel.boss.id).length - 1 - i)"><i class="fas fa-times" /></button>
+                    <button class="w-icon-btn" title="Remove. You can undo." @click="deleteKill(sel.boss.id, killsOf(sel.boss.id).length - 1 - i)"><i class="fas fa-times" /></button>
                   </div>
                 </template>
               </template>
@@ -661,7 +661,7 @@ function bossMenu (e: MouseEvent, r: BossResult) {
 }
 
 function killMenu (e: MouseEvent, id: string, index: number) {
-  openMenu(e, [{ label: 'Delete kill', icon: 'fas fa-trash', danger: true, action: () => deleteKill(id, index) }])
+  openMenu(e, [{ label: 'Remove kill', icon: 'fas fa-trash', danger: true, action: () => deleteKill(id, index) }])
 }
 function killValue (kill: KillRecord) {
   return kill.drops.reduce((n, d) => n + (killDropPrice(d, px.value, props.config) ?? 0) * d.qty, 0)

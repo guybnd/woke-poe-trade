@@ -33,7 +33,7 @@
           <span class="font-medium">{{ formatSessionDate(open.startedAt) }}</span>
           <span class="w-dim"> · {{ formatDuration(open.endedAt - open.startedAt) }}</span>
         </span>
-        <WButton size="sm" variant="ghost" icon="fas fa-trash" title="You can undo" @click="remove(open)">Delete</WButton>
+        <WButton size="sm" variant="ghost" icon="fas fa-trash" title="You can undo" @click="remove(open)">Remove</WButton>
       </div>
       <DeckSummary :draws="open.draws" :price="savedPrice(open)" :held="savedHeld(open)" :deck-chaos="open.deckChaos" :divine="open.divine" :filter="filter" :luck="openLuck" :edits="open.edits" editable
         @price="(name, chaos) => editCard(open!, name, { each: chaos ?? undefined })" @out="(name, on) => leaveOut(open!, name, on)" />

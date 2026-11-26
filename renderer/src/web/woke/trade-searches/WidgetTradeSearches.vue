@@ -38,7 +38,7 @@
             <!-- The list (shared/SavedTree): nested folders that fold, drag, Ctrl /
                  Shift picks, Alt + arrows, F2. A click opens the search here. -->
             <SavedTree :tree="tree" list-id="trade-folders" :active-id="openId" :copy="copyLinks" :title-of="tooltip"
-              :folder-icon="path => iconSrc(folderIcon(config, path))" @item-menu="rowMenu" @folder-menu="folderMenu">
+              :folder-icon="path => iconSrc(folderIcon(config, path))" @item-menu="rowMenu" @folder-menu="folderMenu" @item-key="onEntryKey">
               <template #item="{ item: entry }">
                 <i v-if="entry.pinned" class="fas fa-thumbtack w-accent text-xs" title="Pinned" />
                 <i v-if="isLiveSearch(entry.url)" class="fas fa-bolt w-accent" title="Live search" />
@@ -49,9 +49,17 @@
                 <span :class="$style.num">{{ entry.openCount || '' }}</span>
               </template>
               <template #actions="{ item: entry }">
-                <button @click.stop="open(entry, 'external')" class="w-icon-btn" title="Open in your browser">
-                  <i class="fas fa-external-link-alt" />
-                </button>
+                <!-- Open always on; the rest on hover (WRowActs, the same in every saved list). -->
+                <WRowActs>
+                  <template #hover>
+                    <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': entry.pinned }" :title="entry.pinned ? 'Unpin (P)' : 'Pin to the top (P)'" @click.stop="togglePin(entry)"><i class="fas fa-thumbtack" /></button>
+                    <button type="button" class="w-icon-btn" title="Rename (F2)" @click.stop="tree.startEdit('item', String(entry.id), 'rename')"><i class="fas fa-pen" /></button>
+                    <button type="button" class="w-icon-btn" title="Remove (Del)" @click.stop="remove(entry)"><i class="fas fa-trash" /></button>
+                  </template>
+                  <button @click.stop="open(entry, 'external')" class="w-icon-btn" title="Open in your browser">
+                    <i class="fas fa-external-link-alt" />
+                  </button>
+                </WRowActs>
               </template>
               <template #after-folder="{ path }">
                 <div v-if="pickingIcon === path" :class="$style.icons" role="group" :aria-label="`Icon for ${path}`">
@@ -121,6 +129,7 @@ import type { PobBuildsWidget } from '../pob-builds/widget'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import WSortButton from '../ui/WSortButton.vue'
+import WRowActs from '../ui/WRowActs.vue'
 import { WPanel, WField, WChip, WKbd, WEmpty, WButton, ago, gameIcon, mechanicIcon, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui'
 import { copyText } from '../ui/copy'
@@ -132,7 +141,7 @@ import { FOLDER_ICONS, TRADE_SEARCHES_TYPE, ensureFolder, folderIcon, inView, is
 import type { OpenTarget, SearchSort, TradeSearchEntry } from './widget'
 
 // The window's "?": the saved list's keys.
-const LIST_KEYS = savedListKeys({ copy: true })
+const LIST_KEYS = [...savedListKeys({ copy: true }), { keys: 'P', label: 'Pin to the top (again: unpin)' }]
 
 const props = defineProps<{
   config: TradeSearchesWidget
@@ -457,6 +466,14 @@ function copyLinks (list: TradeSearchEntry[]) {
 // No "are you sure": remove now, offer Undo (P9), which puts back just these
 // where they were (shared/saved-list): changes made since stay.
 function remove (entry: TradeSearchEntry) { removeMany([entry]) }
+function togglePin (entry: TradeSearchEntry) {
+  entry.pinned = !entry.pinned
+  saveConfig()
+}
+// P pins, as in every saved list that has pins.
+function onEntryKey (e: KeyboardEvent, entry: TradeSearchEntry) {
+  if (e.key.toLowerCase() === 'p' && !e.ctrlKey && !e.altKey && !e.metaKey) { e.preventDefault(); togglePin(entry) }
+}
 function removeMany (list: TradeSearchEntry[]) {
   const out = removeEntries(props.config.entries, list.map(e => e.id))
   if (!out) return
@@ -485,9 +502,9 @@ function rowMenu (e: MouseEvent, entry: TradeSearchEntry) {
     { label: 'Open here', icon: 'far fa-window-maximize', keys: entry.hotkeyOverlay ?? 'Enter', action: () => open(entry, 'overlay') },
     { label: 'Open in browser', icon: 'fas fa-external-link-alt', keys: entry.hotkeyExternal ?? undefined, action: () => open(entry, 'external') },
     { label: 'Copy link', icon: 'far fa-copy', keys: 'Ctrl + C', action: () => copyLink(entry) },
-    { label: entry.pinned ? 'Unpin' : 'Pin to the top', icon: 'fas fa-thumbtack', action: () => { entry.pinned = !entry.pinned; saveConfig() } },
+    { label: entry.pinned ? 'Unpin' : 'Pin to the top', icon: 'fas fa-thumbtack', keys: 'P', action: () => togglePin(entry) },
     { label: 'Rename', icon: 'fas fa-pen', keys: 'F2', action: () => tree.startEdit('item', String(entry.id), 'rename') },
-    { label: 'Move to folder', icon: 'fas fa-folder', action: () => tree.startEdit('item', String(entry.id), 'move') },
+    { label: 'Move to folder', icon: 'fas fa-folder-open', action: () => tree.startEdit('item', String(entry.id), 'move') },
     { separator: true },
     { label: 'Remove', icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => remove(entry) }
   ])
