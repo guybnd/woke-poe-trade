@@ -143,7 +143,6 @@ export interface WokeOps {
   'ns-latest': Op<NoArgs, { version: string, changes: string }>
   'ns-download': Op<{ style?: string }, { version: string }>
   'ns-read': Op<{ version: string, style?: string, level: number }, { text: string }>
-  'ns-cached': Op<NoArgs, Array<{ version: string, styles: string[] }>>
   'ns-prune': Op<{ keep?: number }, void>
 
   // App and settings

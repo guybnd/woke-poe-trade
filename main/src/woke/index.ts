@@ -61,7 +61,6 @@ const handlers: Partial<WokeHandlers> = {
   'ns-latest': async () => await latestNeverSink(),
   'ns-download': downloadNeverSink,
   'ns-read': readNeverSink,
-  'ns-cached': async () => await cachedNeverSink(),
   'ns-prune': pruneNeverSink,
   'perf-stats': async () => perfSnapshot(),
   'ocr-check': async () => await ensureOcr(),
