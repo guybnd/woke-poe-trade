@@ -61,13 +61,12 @@ export interface NetWorthWidget extends Widget {
   chartMaps?: boolean
 }
 
-export type Section = 'chart' | 'perHour' | 'numbers' | 'moves' | 'selling' | 'changes' | 'sold' | 'where' | 'tabs'
+export type Section = 'chart' | 'perHour' | 'numbers' | 'moves' | 'changes' | 'sold' | 'where' | 'tabs'
 export const SECTIONS: Array<{ id: Section, label: string }> = [
   { id: 'chart', label: 'Chart' },
   { id: 'perHour', label: 'Per hour' },
   { id: 'numbers', label: 'Numbers' },
   { id: 'moves', label: 'Price moves' },
-  { id: 'selling', label: 'Worth selling' },
   { id: 'changes', label: 'Since last refresh' },
   { id: 'sold', label: 'Sold' },
   { id: 'where', label: 'Where it is' },
