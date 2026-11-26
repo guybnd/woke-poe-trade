@@ -32,7 +32,7 @@
                 </WChip>
               </div>
             </div>
-            <span v-if="!tagGroups.length" :class="$style.dim">No tag matches.</span>
+            <WNoMatch v-if="!tagGroups.length" :query="String(tagQuery)" @clear="tagQuery = ''" />
           </div>
         </section>
 

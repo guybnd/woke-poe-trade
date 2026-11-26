@@ -44,6 +44,7 @@
               <span v-if="r.need != null && !r.done" class="w-dim w-num text-xs">{{ r.have }}/{{ r.need }}</span>
             </div>
             <div v-if="!rows.length" class="w-dim text-xs" style="padding: 6px var(--w-pad);">Loading the guide…</div>
+            <WNoMatch v-else-if="!shown.length && filter.trim()" :query="filter" @clear="filter = ''" />
             <div v-else-if="!shown.length" class="w-dim text-xs" style="padding: 6px var(--w-pad);">No challenges match.</div>
           </div>
           <div class="w-dim text-xs" :class="$style.credit">Guide by CraniumCarnage</div>
@@ -72,6 +73,7 @@ import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { WBanner, WButton, WField, WPanel } from '../ui'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'

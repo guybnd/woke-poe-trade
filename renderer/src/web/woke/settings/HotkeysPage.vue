@@ -33,7 +33,8 @@
         </div>
       </w-setting-section>
     </template>
-    <w-empty v-if="!groups.length" icon="fas fa-keyboard">{{ onlyProblems ? 'No clashes. Every key does one thing.' : 'Nothing matches.' }}</w-empty>
+    <WNoMatch v-if="!groups.length && !onlyProblems && query.trim()" :query="query" @clear="query = ''" />
+    <w-empty v-else-if="!groups.length" icon="fas fa-keyboard">{{ onlyProblems ? 'No clashes. Every key does one thing.' : 'Nothing matches.' }}</w-empty>
 
     <w-setting-section title="Stash">
       <w-setting-row label="Scroll stash tabs with Ctrl + mouse wheel">
@@ -53,6 +54,7 @@
 import { computed, shallowRef } from 'vue'
 import type { Config } from '@/web/Config'
 import { WChip, WEmpty, WField, WHotkeyCell, WKbd, WSegmented, WSettingRow, WSettingSection, WToggle, normalizeKey, useHotkeyContext } from '../ui'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { RESCUE_HOTKEY } from '@ipc/KeyToCode'
 import { poeBindNote, reservedKeyNote } from '../ui/hotkey-context'
 import { fieldKey, hotkeyFields } from './hotkey-fields'
