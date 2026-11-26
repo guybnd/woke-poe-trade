@@ -5952,6 +5952,153 @@
    "type": "Murder Boots"
   }
  },
+ "unique-carcass-jack-foulborn.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_1999113824",
+       "value": {
+        "min": 137
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_3299347043",
+       "value": {
+        "min": 60
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2901986750",
+       "value": {
+        "min": 10
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.effect_429242364",
+       "value": {
+        "min": 20
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_4251717817",
+       "value": {
+        "min": 44
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3403461239",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Carcass Jack",
+   "type": "Varnished Coat"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_1999113824",
+       "value": {
+        "min": 137
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3299347043",
+       "value": {
+        "min": 60
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2901986750",
+       "value": {
+        "min": 10
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.effect_429242364",
+       "value": {
+        "min": 20
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_4251717817",
+       "value": {
+        "min": 44
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3403461239",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ev": {
+       "min": 1021
+      },
+      "es": {
+       "min": 208
+      },
+      "base_defence_percentile": {
+       "min": 0
+      }
+     }
+    }
+   },
+   "name": "Carcass Jack",
+   "type": "Varnished Coat"
+  }
+ },
  "unique-dawnbreaker.txt": {
   "opened": {
    "status": {
