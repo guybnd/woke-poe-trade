@@ -68,8 +68,11 @@
           <!-- A crafting run's new unpriced items: price them by hand. -->
           <RunRow v-for="r in madeRows" :key="'m' + r.key" data-run-made :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, r.net)" :count="tallyCount(r)" :chaos="madeVal(r)" sign="+" :sub="isEdited(rowKey.tally(r.key)) ? undefined : 'set price'" :divine="divine"
             :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
-          <RunRow v-for="r in came.slice(0, cameShown)" :key="r.key" data-run-came :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="tallyCount(r)" :chaos="cameVal(r)" sign="+" :sub="preSub(r)" :divine="divine"
-            :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
+          <template v-for="r in came.slice(0, cameShown)" :key="r.key">
+            <RunRow data-run-came :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="tallyCount(r)" :chaos="cameRaw(r)" sign="+" :divine="divine"
+              :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
+            <RunRow v-if="preOf(r)" :class="$style.preRow" data-run-pre-part :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, preOf(r)!.n)" :count="preCount(r)" :chaos="cameTaken(r)" sign="−" sub="pre-run listings, not counted" :divine="divine" :editable="false" :can-leave-out="false" />
+          </template>
           <RunRow v-for="m in manualIn" :key="m.id" :icon="m.icon" :name="m.name" :tip="tipOf(m.key ?? null, m.name, m.count)" :count="m.count" :chaos="m.count * m.each" :each="m.each" sign="+" sub="added" :divine="divine" :can-leave-out="false" removable
             @edit="editManual(m.id, $event)" @remove="removeManual(m.id)" />
           <button v-if="came.length > cameShown" type="button" :class="$style.link" class="text-xs" @click="cameShown += 15">+{{ came.length - cameShown }} more</button>
@@ -90,8 +93,11 @@
           <RunRow v-for="o in shownRun.once" :key="o.id" :name="o.name" :tip="tipOf(null, o.name)" :count="null" :chaos="o.chaos" sign="−" sub="once" :divine="divine" :editable="false" :can-leave-out="false" removable @remove="removeOnce(o.id)" />
           <RunRow v-for="m in manualOut" :key="m.id" :icon="m.icon" :name="m.name" :tip="tipOf(m.key ?? null, m.name, m.count)" :count="m.count" :chaos="m.count * m.each" :each="m.each" sign="−" sub="added" :divine="divine" :can-leave-out="false" removable
             @edit="editManual(m.id, $event)" @remove="removeManual(m.id)" />
-          <RunRow v-for="r in used.slice(0, usedShown)" :key="r.key" data-run-used :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="tallyCount(r)" :chaos="usedVal(r)" sign="−" :sub="preSub(r)" :divine="divine"
-            :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
+          <template v-for="r in used.slice(0, usedShown)" :key="r.key">
+            <RunRow data-run-used :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="tallyCount(r)" :chaos="usedRaw(r)" sign="−" :divine="divine"
+              :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
+            <RunRow v-if="preOf(r)" :class="$style.preRow" data-run-pre-part :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, preOf(r)!.n)" :count="preCount(r)" :chaos="preOf(r)!.chaos" sign="−" sub="pre-run listings, not counted" :divine="divine" :editable="false" :can-leave-out="false" />
+          </template>
           <button v-if="used.length > usedShown" type="button" :class="$style.link" class="text-xs" @click="usedShown += 15">+{{ used.length - usedShown }} more</button>
           <div v-if="otherOut && !onlyChanged" :class="$style.otherOut" class="text-xs w-num" title="Taken off Profit with no row of its own: last run's held items that reached the stash, left-out sales already collected, pre-run listings bigger than their row, and small rows. Keeps In − Out the same as Profit" data-run-other>
             <span class="w-dim">Other, not this run's</span><span :class="otherOut > 0 ? 'w-down' : 'w-up'">{{ otherOut > 0 ? '−' : '+' }}{{ amount(Math.abs(otherOut)) }}</span>
@@ -461,19 +467,18 @@ watch(() => shownRun.value?.id, () => { preOpen.value = false })
 const preRun = computed(() => preRunByKey(outside.value))
 const preTotal = computed(() => preSold.value.reduce((s, r) => s + (r.chaos ?? 0), 0))
 const preOf = (r: TallyRow) => isOut(rowKey.tally(r.key)) ? null : preRun.value.get(r.key) ?? null
-const cameVal = (r: TallyRow) => {
-  if (isOut(rowKey.tally(r.key))) return Math.abs(r.netChaos)
-  return Math.max(0, tallyVal(r) - (preOf(r)?.chaos ?? 0))
-}
-const preSub = (r: TallyRow) => {
-  const p = preOf(r)
-  return p ? `${Math.round(p.n * 100) / 100} from pre-run listings, not counted` : undefined
-}
+// A row as the stash read it, and below it the part from pre-run listings
+// (taken off, at most the row): the two add up to what In counts.
+const cameRaw = (r: TallyRow) => Math.abs(isOut(rowKey.tally(r.key)) ? r.netChaos : tallyVal(r))
+const cameTaken = (r: TallyRow) => Math.min(cameRaw(r), preOf(r)?.chaos ?? 0)
+const cameVal = (r: TallyRow) => cameRaw(r) - cameTaken(r)
+const preCount = (r: TallyRow) => Math.round((preOf(r)?.n ?? 0) * 100) / 100
 // Pick D's sums, so In − Out is the profit: a currency row that went down
 // overall takes the pre-run part as more used up, and whatever else Profit
 // takes off that no row shows (a row smaller than its pre-run part, last
 // run's held items that reached the stash, left-out sales collected, small
 // rows) shows as one line in Out.
+const usedRaw = (r: TallyRow) => Math.abs(isOut(rowKey.tally(r.key)) ? r.netChaos : tallyVal(r))
 const usedVal = (r: TallyRow) => {
   if (isOut(rowKey.tally(r.key))) return Math.abs(r.netChaos)
   return Math.max(0, -tallyVal(r)) + (preOf(r)?.chaos ?? 0)
@@ -678,6 +683,7 @@ function addPerMap (l: AddedLine) {
 .colSum { grid-column: 3; text-align: right; white-space: nowrap; }
 .colTitle { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); color: var(--w-gold); margin-right: auto; }
 .colFoot { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; margin-top: 4px; }
+.preRow { opacity: 0.75; }
 .otherOut { display: flex; justify-content: space-between; gap: var(--w-s2); padding: 2px 0; }
 .topDrop { display: flex; justify-content: flex-end; gap: 0.3em; max-width: 14em; margin-left: auto; }
 .x { background: none; border: 0; color: var(--w-dim); cursor: pointer; padding: 0; }
