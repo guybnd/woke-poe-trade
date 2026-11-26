@@ -90,9 +90,12 @@
           <RunRow v-for="o in shownRun.once" :key="o.id" :name="o.name" :tip="tipOf(null, o.name)" :count="null" :chaos="o.chaos" sign="−" sub="once" :divine="divine" :editable="false" :can-leave-out="false" removable @remove="removeOnce(o.id)" />
           <RunRow v-for="m in manualOut" :key="m.id" :icon="m.icon" :name="m.name" :tip="tipOf(m.key ?? null, m.name, m.count)" :count="m.count" :chaos="m.count * m.each" :each="m.each" sign="−" sub="added" :divine="divine" :can-leave-out="false" removable
             @edit="editManual(m.id, $event)" @remove="removeManual(m.id)" />
-          <RunRow v-for="r in used.slice(0, usedShown)" :key="r.key" data-run-used :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="tallyCount(r)" :chaos="Math.abs(isOut(rowKey.tally(r.key)) ? r.netChaos : tallyVal(r))" sign="−" :divine="divine"
+          <RunRow v-for="r in used.slice(0, usedShown)" :key="r.key" data-run-used :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="tallyCount(r)" :chaos="usedVal(r)" sign="−" :sub="preSub(r)" :divine="divine"
             :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
           <button v-if="used.length > usedShown" type="button" :class="$style.link" class="text-xs" @click="usedShown += 15">+{{ used.length - usedShown }} more</button>
+          <div v-if="otherOut && !onlyChanged" :class="$style.otherOut" class="text-xs w-num" title="Taken off Profit with no row of its own: last run's held items that reached the stash, left-out sales already collected, pre-run listings bigger than their row, and small rows. Keeps In − Out the same as Profit" data-run-other>
+            <span class="w-dim">Other, not this run's</span><span :class="otherOut > 0 ? 'w-down' : 'w-up'">{{ otherOut > 0 ? '−' : '+' }}{{ amount(Math.abs(otherOut)) }}</span>
+          </div>
           <RunAdd :known="knownItems" :lines="lines" :divine="divine" label="Add a cost" :per-map="!isCraft" :unit="unit" @add="addManual('out', $event)" @per-map="addPerMap" />
         </div>
 
@@ -111,7 +114,7 @@
               <button type="button" :class="[$style.chip, { [$style.on]: r.before }]" :title="r.before ? 'From before the run: not its profit. Click: it is the run\'s' : 'The run\'s. Click if the item was from before the run'" :aria-pressed="r.before" @click="markBefore(r.item.id, !r.before)">before</button>
             </template>
           </RunRow>
-          <button v-if="preSold.length" type="button" :class="$style.link" class="text-xs" :aria-expanded="preOpen" title="Sold during the run, listed before it: not this run's profit. Their currency shows under In" data-run-pre @click="preOpen = !preOpen">
+          <button v-if="preSold.length" type="button" :class="$style.link" class="text-xs" :aria-expanded="preOpen" title="Listed before the run, sold since: not this run's profit. Their currency shows under In, as not counted" data-run-pre @click="preOpen = !preOpen">
             <i :class="preOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" /> {{ preSold.length }} pre-run {{ preSold.length === 1 ? 'listing' : 'listings' }} sold · {{ amount(preTotal) }}
           </button>
           <template v-if="preOpen">
@@ -329,7 +332,20 @@ const outSum = computed(() => {
   const r = shownRun.value
   const t = totals.value
   if (!r || !t) return 0
-  return t.costChaos + t.onceChaos + manualOut.value.reduce((s, m) => s + m.count * m.each, 0) + rows.value.used.reduce((s, x) => s + Math.max(0, -tallyVal(x)), 0)
+  return t.costChaos + t.onceChaos + manualOut.value.reduce((s, m) => s + m.count * m.each, 0) + rows.value.used.reduce((s, x) => s + (isOut(rowKey.tally(x.key)) ? 0 : usedVal(x)), 0) + otherOut.value
+})
+const outShown = computed(() => {
+  const t = totals.value
+  if (!t) return 0
+  return t.costChaos + t.onceChaos + manualOut.value.reduce((s, m) => s + m.count * m.each, 0) + rows.value.used.reduce((s, x) => s + (isOut(rowKey.tally(x.key)) ? 0 : usedVal(x)), 0)
+})
+// What Profit takes off that no row shows (see usedVal). Under a tenth of a
+// divine it's rounding and day-rate drift: not worth a line.
+const otherOut = computed(() => {
+  const t = totals.value
+  if (!t || isCraft.value) return 0
+  const rest = inSum.value - outShown.value - t.profitChaos
+  return Math.abs(rest) >= Math.max(1, 0.1 * (props.divine ?? 0)) ? rest : 0
 })
 const costSub = (c: CostLine) => {
   const left = totals.value ? leftOf(c, totals.value.runs) : null
@@ -437,7 +453,9 @@ const sold = computed(() => onlyChanged.value ? outside.value.sold.filter(change
 // so In − Out is the profit.
 const isPre = (r: OutsideRow) => r.before && r.collected
 const runSold = computed(() => sold.value.filter(r => !isPre(r)))
-const preSold = computed(() => sold.value.filter(isPre))
+// Not under the Changed filter: these can't be edited, and the In rows
+// still say what they took out.
+const preSold = computed(() => outside.value.sold.filter(isPre))
 const preOpen = shallowRef(false)
 watch(() => shownRun.value?.id, () => { preOpen.value = false })
 const preRun = computed(() => preRunByKey(outside.value))
@@ -449,7 +467,16 @@ const cameVal = (r: TallyRow) => {
 }
 const preSub = (r: TallyRow) => {
   const p = preOf(r)
-  return p ? `${p.n} from pre-run listings, not counted` : undefined
+  return p ? `${Math.round(p.n * 100) / 100} from pre-run listings, not counted` : undefined
+}
+// Pick D's sums, so In − Out is the profit: a currency row that went down
+// overall takes the pre-run part as more used up, and whatever else Profit
+// takes off that no row shows (a row smaller than its pre-run part, last
+// run's held items that reached the stash, left-out sales collected, small
+// rows) shows as one line in Out.
+const usedVal = (r: TallyRow) => {
+  if (isOut(rowKey.tally(r.key))) return Math.abs(r.netChaos)
+  return Math.max(0, -tallyVal(r)) + (preOf(r)?.chaos ?? 0)
 }
 const usedShown = shallowRef(8)
 const cameShown = shallowRef(8)
@@ -509,9 +536,17 @@ async function stop () {
 const renaming = shallowRef(false)
 const renameText = shallowRef('')
 const renameBox = shallowRef<HTMLInputElement | null>(null)
-watch(() => shownRun.value?.id, () => { renaming.value = false })
+// The run being renamed: another one opening (the back button, Stop from
+// the dock) still saves what you typed to it.
+let renamingId: string | null = null
+let renamingWas = ''
+watch(() => shownRun.value?.id, () => { commitRename() })
 function startRename () {
-  renameText.value = shownRun.value?.name ?? ''
+  const r = shownRun.value
+  if (!r) return
+  renamingId = r.id
+  renamingWas = r.name
+  renameText.value = r.name
   renaming.value = true
   nextTick(() => { renameBox.value?.focus(); renameBox.value?.select() }).catch(() => {})
 }
@@ -519,7 +554,10 @@ function commitRename () {
   if (!renaming.value) return
   renaming.value = false
   const name = renameText.value.trim()
-  if (name && name !== shownRun.value?.name) edit(r => ({ ...r, name }))
+  const id = renamingId
+  renamingId = null
+  // A name changes no number: a finished run keeps its saved totals.
+  if (id && name && name !== renamingWas) editRun(props.league, id, r => ({ ...r, name }), props.points, props.divine, true).catch(() => {})
 }
 function renameId (id: string) {
   opened.value = id
@@ -640,6 +678,7 @@ function addPerMap (l: AddedLine) {
 .colSum { grid-column: 3; text-align: right; white-space: nowrap; }
 .colTitle { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); color: var(--w-gold); margin-right: auto; }
 .colFoot { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; margin-top: 4px; }
+.otherOut { display: flex; justify-content: space-between; gap: var(--w-s2); padding: 2px 0; }
 .topDrop { display: flex; justify-content: flex-end; gap: 0.3em; max-width: 14em; margin-left: auto; }
 .x { background: none; border: 0; color: var(--w-dim); cursor: pointer; padding: 0; }
 .x:hover { color: var(--w-down); }

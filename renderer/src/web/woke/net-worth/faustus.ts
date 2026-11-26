@@ -289,7 +289,7 @@ export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: R
 export function preRunByKey (o: Pick<OutsideTotals, 'sold'>): Map<string, { n: number, chaos: number }> {
   const out = new Map<string, { n: number, chaos: number }>()
   for (const r of o.sold) {
-    if (!r.before || !r.collected) continue
+    if (!r.before || !r.collected || r.chaos == null) continue
     const key = CURRENCY_ITEM[r.item.price.currency]
     if (!key) continue
     const was = out.get(key) ?? { n: 0, chaos: 0 }
