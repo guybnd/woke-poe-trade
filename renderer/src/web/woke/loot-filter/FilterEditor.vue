@@ -2,6 +2,7 @@
   <WPanel ref="panel" data-w-switches :keys="windowKeys.help" :title="config.wmTitle || 'Loot filter'" icon="wisdom" width="68rem" max-height="85vh" :scroll="false" fill :class="{ [$style.dirtyFrame]: unsaved }"
     :busy="store.loading.value && !!store.doc.value" :hotkey="config.editorHotkey ?? undefined">
     <template #tabs>
+      <ProfileSwitcher :config="config" :store="store" />
       <WTabs v-model="tab" :options="tabOptions" />
     </template>
     <template #toolbar>
@@ -409,6 +410,7 @@
 import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip, itemRefFromName } from '../ui'
 import WBackLink from '../ui/WBackLink.vue'
+import ProfileSwitcher from './ProfileSwitcher.vue'
 import { useWindowKeys } from '../ui/window-keys'
 import { copyText } from '../ui/copy'
 import LabelPreview from './LabelPreview.vue'

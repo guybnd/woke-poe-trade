@@ -10,12 +10,14 @@ export const GOTO_TARGETS = {
   'woke-mechanics': { settlers: 'Settlers' },
   // No tabs (NO_TABS): its one place is the list, with the picked strategy.
   'woke-atlas-strategies': { strategies: 'Strategies' },
-  'woke-pob-builds': { builds: 'Builds' }
+  'woke-pob-builds': { builds: 'Builds' },
+  // Its one place is the editor (the sample card isn't a tab).
+  'woke-loot-filter': { editor: 'Editor' }
 } as const satisfies Record<string, Record<string, string>>
 
 // Tools listed above that have no tabs: their one entry is the window itself,
 // so a line on one also needs a spot, or Show me shows nothing new.
-export const NO_TABS: readonly string[] = ['woke-atlas-strategies', 'woke-pob-builds']
+export const NO_TABS: readonly string[] = ['woke-atlas-strategies', 'woke-pob-builds', 'woke-loot-filter']
 
 // A spot: one thing on a tab that Show me scrolls to and flashes, for a
 // feature that isn't a whole tab. Each names the tab it's on. The tool's
@@ -24,7 +26,8 @@ export const NO_TABS: readonly string[] = ['woke-atlas-strategies', 'woke-pob-bu
 export const GOTO_SPOTS = {
   'woke-net-worth': { 'per-hour': 'holdings', 'faustus-box': 'holdings', 'worth-selling': 'holdings', 'still-cheapest': 'listed', 'stale': 'listed', 'past-runs': 'runs' },
   'woke-atlas-strategies': { results: 'strategies', import: 'strategies' },
-  'woke-pob-builds': { import: 'builds' }
+  'woke-pob-builds': { import: 'builds' },
+  'woke-loot-filter': { profiles: 'editor' }
 } as const satisfies { [T in keyof typeof GOTO_TARGETS]?: Record<string, keyof typeof GOTO_TARGETS[T]> }
 
 // What's new lines whose feature is a spot, by line id (news.ts). Kept here,
@@ -37,7 +40,8 @@ export const NEWS_SPOTS: Record<string, string> = {
   'atlas-results-from-runs': 'results',
   'atlas-planner-links': 'import',
   'atlas-tree-planner-links': 'import',
-  'pob-import-all-sites': 'import'
+  'pob-import-all-sites': 'import',
+  'loot-filter-profiles': 'profiles'
 }
 
 export function gotoSpots (wmType: string): Record<string, string> | null {
