@@ -8,6 +8,7 @@ import { loadGameData, fixture, parseItem } from '../helpers/game-data'
 import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import type { FilterGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import { buildStatIndexes } from '@/assets/data/build-indexes'
+import { applyConquestPick } from '@/web/woke/related-family/conquest-pick'
 
 const STATS = fs.readFileSync(path.resolve(__dirname, '../../public/data/en/stats.ndjson'), 'utf-8')
 const TIMELESS = STATS.split('\n').filter(l => l.includes('"modFamily"') && l.includes('Conquered by'))
@@ -76,6 +77,39 @@ describe('timeless jewel mods', () => {
       'Denoted service of # dekhara in the akhara of Nasima'
     ])
     expect(rows.every(r => r.roll?.value === 7993)).toBe(true)
+  })
+
+  // Every conqueror opens a price check with its seed searched and the other
+  // two conquerors ready to tick. Glorious Vanity's family still names
+  // "Mazcotl" (renamed Ahuana), which used to throw and kill the check.
+  for (const stat of TIMELESS) {
+    it(`price checks ${stat.ref} with all three conquerors`, () => {
+      const item = jewel(stat.matchers[0].string.replace('#', '2285(100-8000)'))
+      const groups = initUiModFilters(item, { searchStatRange: 10 })
+        .filter((f): f is FilterGroup => 'group' in f && f.group === 'one')
+      expect(groups).toHaveLength(1)
+      const rows = groups[0].stats as StatFilter[]
+      expect(rows).toHaveLength(3)
+      expect(new Set(rows.map(r => r.statRef)).size).toBe(3)
+      expect(rows.filter(r => !r.disabled).map(r => r.statRef)).toEqual([stat.ref])
+      expect(rows.every(r => r.roll?.value === 2285)).toBe(true)
+    })
+  }
+
+  it('price checks the 3.30 Glorious Vanity copy (Historic line, "(...)" name)', () => {
+    const item = parseItem(fixture('items/unique-glorious-vanity-historic.txt'))
+    expect(item.unknownModifiers).toEqual([])
+    const stats = initUiModFilters(item, { searchStatRange: 10 })
+    const group = stats.find((f): f is FilterGroup => 'group' in f && f.group === 'one')!
+    const rows = group.stats as StatFilter[]
+    expect(rows.map(r => r.statRef)).toEqual([
+      'Bathed in the blood of # sacrificed in the name of Xibaqua',
+      'Bathed in the blood of # sacrificed in the name of Ahuana',
+      'Bathed in the blood of # sacrificed in the name of Doryani'
+    ])
+    expect(rows[0].disabled).toBe(false)
+    expect(rows[0].roll?.value).toBe(2285)
+    expect(applyConquestPick(stats, 'ahuana')).toBe(true)
   })
 
   it('never indexes plain text another line already owns', () => {
