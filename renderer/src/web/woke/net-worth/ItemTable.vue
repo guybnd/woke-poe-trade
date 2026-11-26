@@ -3,11 +3,10 @@
     <thead>
       <tr>
         <th v-for="c in COLS" :key="c.id" :class="[c.id === 'name' ? $style.left : '', sort === c.id ? $style.on : '']"
-          :aria-sort="sort === c.id ? (desc ? 'descending' : 'ascending') : undefined" tabindex="0"
-          @click="sortBy(c.id)" @keydown.enter.prevent="sortBy(c.id)" @keydown.space.prevent="sortBy(c.id)">
-          {{ c.label }}<button v-if="(c.id === 'unit' || c.id === 'chaos') && divine" type="button" :class="$style.unitBtn"
+          :aria-sort="sort === c.id ? (desc ? 'descending' : 'ascending') : undefined" @click="sortBy(c.id)">
+          <WSortHead :label="c.label" :active="sort === c.id" :desc="desc" :align="c.id === 'name' ? 'left' : 'right'" @sort="sortBy(c.id)" /><button v-if="(c.id === 'unit' || c.id === 'chaos') && divine" type="button" :class="$style.unitBtn"
             :title="`In ${inChaos(c.id) ? 'chaos' : 'divines'}. Click for ${inChaos(c.id) ? 'divines' : 'chaos'}`"
-            @click.stop="swap(c.id)" @keydown.enter.stop @keydown.space.stop><Coin :chaos="inChaos(c.id)" /></button><Coin v-else-if="c.id === 'unit' || c.id === 'chaos'" chaos /><template v-if="sort === c.id">{{ desc ? ' ▾' : ' ▴' }}</template>
+            @click.stop="swap(c.id)" @keydown.enter.stop @keydown.space.stop><Coin :chaos="inChaos(c.id)" /></button><Coin v-else-if="c.id === 'unit' || c.id === 'chaos'" chaos />
         </th>
       </tr>
     </thead>
@@ -62,6 +61,7 @@ import type { ItemMenuRef } from '../ui/tooltip/item-menu'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import type { ValuedLine } from './valuation'
 import Coin from './Coin.vue'
+import WSortHead from '../ui/WSortHead.vue'
 import { heldNote, lineTip } from './tips'
 import { HOLD_RATIO, isUniqueFrame } from './valuation'
 

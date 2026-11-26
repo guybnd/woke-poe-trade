@@ -15,7 +15,7 @@
     </div>
     <div :class="$style.totals" class="w-num" data-night-totals>
       <span v-if="profit" @mouseenter="tip($event, profit.from)" @mouseleave="untip"><span class="w-dim">Profit</span> <span :class="profit.chaos >= 0 ? 'w-up' : 'w-down'">{{ signed(profit.chaos) }}</span></span>
-      <span v-if="perHour != null" @mouseenter="tip($event, hoursTip)" @mouseleave="untip"><span class="w-dim">per h</span> {{ formatChaos(perHour, story.divine) }}</span>
+      <span v-if="perHour != null" @mouseenter="tip($event, hoursTip)" @mouseleave="untip">{{ formatChaos(perHour, story.divine) }}<span class="w-dim">/h</span></span>
       <span v-if="story.maps.length"><span class="w-dim">Avg map</span> {{ formatClock(story.mapMs / story.maps.length) }}</span>
       <span v-if="mapsPerHour != null"><span class="w-dim">Maps/h</span> {{ mapsPerHour }}</span>
       <span v-for="r in outRows" :key="r.label" :data-night-out="r.label" @mouseenter="tip($event, OUT_TIPS[r.label])" @mouseleave="untip"><span class="w-dim">{{ r.label }}</span> {{ formatDuration(r.ms) }}</span>

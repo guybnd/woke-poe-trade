@@ -15,8 +15,11 @@
     </DockItem>
     <!-- One click listener for the panel's own buttons (data-act). -->
     <WPanel ref="panel" :keys="LIST_KEYS" :title="config.wmTitle || 'Regex library'" icon="stash" width="22rem" max-height="70vh" @click="onAction">
+      <template #actions>
+        <WSortButton :model-value="sortBy" :options="SORTS" @update:model-value="setSort" />
+      </template>
       <template #toolbar>
-        <WField v-model="filter" icon="fas fa-search" placeholder="Filter by name, tag, category…" class="grow" />
+        <WSearchField v-model="filter" things="searches" placeholder="Filter by name, tag, category…" class="grow" />
         <WButton size="sm" icon="fas fa-plus" title="Add a search string" data-qa="regex-new" data-act="new">New</WButton>
       </template>
 
@@ -39,30 +42,27 @@
         </template>
         <template #sub="{ item: entry }"><span class="w-mono">{{ effectiveText(entry) }}</span></template>
         <template #actions="{ item: entry }">
-          <!-- Edit and Remove lie over the row on hover (the shared w-line-acts), left of Copy, taking no room. -->
-          <span :class="$style.actsAt">
-            <span class="w-line-acts" :class="$style.lineActs">
+          <!-- Copy always on; Edit and Remove on hover (WRowActs, the same in every saved list). -->
+          <WRowActs>
+            <template #hover>
               <button type="button" class="w-icon-btn" title="Edit" data-qa="regex-edit" @click.stop="edit(entry)">
                 <i class="fas fa-pen" />
               </button>
               <button type="button" class="w-icon-btn" title="Remove (Undo for a moment after)" data-qa="regex-remove" @click.stop="remove(entry)">
-                <i class="far fa-trash-alt" />
+                <i class="fas fa-trash" />
               </button>
-            </span>
+            </template>
             <button @click.stop="copy(entry)" class="w-icon-btn" :class="{ 'w-up': copied === String(entry.id) }" title="Copy to clipboard">
               <i :class="copied === String(entry.id) ? 'fas fa-check' : 'far fa-copy'" />
             </button>
-          </span>
+          </WRowActs>
         </template>
       </SavedTree>
       <!-- Until any string has a hotkey (shared/hints.ts). -->
       <WTipLine v-if="config.entries.length && !hasHotkeys && config.enableHotkeys" :id="REGEX_KEY_HINT">
         Give a string a hotkey (<i class="fas fa-pen" aria-label="Edit" />, then Hotkey): press it in game and it goes into the stash search
       </WTipLine>
-      <WEmpty v-if="!tree.rows.value.length && config.entries.length && searching" icon="fas fa-filter">
-        Nothing matches "{{ filter }}".
-        <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
-      </WEmpty>
+      <WNoMatch v-if="!tree.rows.value.length && config.entries.length && searching" :query="filter" @clear="filter = ''" />
       <WEmpty v-else-if="!config.entries.length && !(config.folders ?? []).length && editing !== 'new'" :art="{ mechanic: 'stash' }">
         No saved searches yet. Add one, or build one on poe.re and save it from there.
         <template #actions>
@@ -97,7 +97,11 @@ import { MainProcess } from '@/web/background/IPC'
 import { pushHostConfig, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WField, WChip, WKbd, WEmpty, WButton, openMenu, toast } from '../ui'
+import { WPanel, WChip, WKbd, WEmpty, WButton, openMenu, toast } from '../ui'
+import WSortButton from '../ui/WSortButton.vue'
+import WRowActs from '../ui/WRowActs.vue'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { removeEntries } from '../shared/saved-list'
 import { useSavedTree } from '../shared/use-saved-tree'
 import { onSavedOpen } from '../shared/saved-open'
@@ -176,8 +180,29 @@ const isLocked = (path: string) => [ATLAS_FOLDER, POB_FOLDER].some(root => isUnd
 
 // The list's folders (categories with "/" nest), picking, drag and drop,
 // Alt + arrows and inline names: shared/use-saved-tree, as Atlas strategies.
+// The list's orders, as Atlas strategies sorts (WSortButton). Dragging and
+// Alt + arrows work on My order: other sorts switch back to it.
+type RegexSort = NonNullable<RegexLibraryWidget['sortBy']>
+const SORTS: Array<{ value: RegexSort, label: string }> = [
+  { value: 'manual', label: 'My order' },
+  { value: 'name', label: 'Name' },
+  { value: 'hotkey', label: 'Hotkeyed first' }
+]
+const sortBy = computed<RegexSort>(() => SORTS.some(s => s.value === props.config.sortBy) ? props.config.sortBy! : 'manual')
+function setSort (v: string) {
+  props.config.sortBy = v as RegexSort
+  saveConfig()
+}
+const byName = (a: RegexEntry, b: RegexEntry) => (a.name || effectiveText(a)).localeCompare(b.name || effectiveText(b), undefined, { numeric: true })
+
 const tree = useSavedTree<RegexEntry>({
   root: () => panel.value?.el,
+  sorted: (list) => sortBy.value === 'name'
+    ? [...list].sort(byName)
+    : sortBy.value === 'hotkey' ? [...list].sort((a, b) => Number(b.hotkey != null) - Number(a.hotkey != null)) : list,
+  manual: () => sortBy.value === 'manual',
+  toManual: () => { setSort('manual'); toast('Sorted by My order', { anchor: panel.value?.el }) },
+  foldersByName: () => sortBy.value === 'name',
   items: () => props.config.entries,
   setItems: (list) => { props.config.entries = list; pushHostConfig() },
   folderOf: e => e.category,
@@ -301,7 +326,7 @@ function rowMenu (e: MouseEvent, entry: RegexEntry) {
     { label: 'Search stash', icon: 'fas fa-search', keys: 'Enter', action: () => stashSearch(effectiveText(entry)) },
     { label: 'Copy string', icon: 'far fa-copy', keys: 'Ctrl + C', action: () => { copy(entry).catch(() => {}) } },
     { label: 'Edit', icon: 'fas fa-pen', action: () => edit(entry) },
-    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => tree.startEdit('item', String(entry.id), 'rename') },
+    { label: 'Rename', icon: 'fas fa-pen', keys: 'F2', action: () => tree.startEdit('item', String(entry.id), 'rename') },
     { label: 'Move to folder', icon: 'fas fa-folder-open', action: () => tree.startEdit('item', String(entry.id), 'move') },
     ...(entry.tags.length ? [{ label: `Filter by "${entry.tags[0]}"`, icon: 'fas fa-filter', action: () => { filter.value = entry.tags[0] } }] : []),
     { separator: true },
@@ -370,8 +395,4 @@ const dockMenu = computed<DockMenuAction[]>(() => [
 <style module>
 /* Mock A: pencil and bin show on the row under the mouse (or with focus). */
 /* Edit and Remove: shaded, over the row just left of Copy; shown on hover or focus. */
-.actsAt { position: relative; display: inline-flex; align-items: center; }
-.actsAt > .lineActs { right: 100%; display: inline-flex; align-items: center; gap: 2px; padding: 0 2px; border-radius: var(--w-r-sm);
-  background: var(--w-panel-solid-base, #0a0806); box-shadow: -10px 0 8px 2px var(--w-panel-solid-base, #0a0806), 0 0 0 1px var(--w-line); }
-[data-row]:hover .actsAt > .lineActs, [data-row]:focus-within .actsAt > .lineActs { visibility: visible; }
 </style>

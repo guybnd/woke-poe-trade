@@ -131,8 +131,7 @@
           :data-rare-only="isRareOnly(row) || undefined" data-map-mod
           :title="row.filter ? 'Click to cycle Has, Not, Any' : undefined" @click="row.filter && cycleState(row.filter)">
           <!-- Guy (2026-11-24): the chip is the rating; click it to change it, saved to the active Map mods profile. -->
-          <button v-if="row.rated" type="button" :class="[$style.rateChip, $style[`rate_${row.mod.rating}`]]" :title="rateTitle(row.mod.rating)"
-            :aria-label="`Rating: ${RATING_TITLE[row.mod.rating]}. Click to change`" :data-map-rate="row.mod.rating" @click.stop="rate(row.mod.matcher, row.mod.rating)">{{ RATE_WORD[row.mod.rating] }}</button>
+          <WRateChip v-if="row.rated" :rating="row.mod.rating" :save-to="profileName" @rate="rate(row.mod.matcher, $event)" />
           <span v-else :class="$style.rateGap" />
           <!-- Guy (2026-11-24): rare-only map mods are yellow in game and worth filtering for. -->
           <span v-if="isRareOnly(row)" :class="$style.rareIcon" title="Rare-only map mod" />
@@ -162,10 +161,11 @@ import { computed, h, inject, nextTick, onBeforeUnmount, shallowRef, watch, watc
 import type { ShallowRef } from 'vue'
 import { WIcon, WInfo, toast } from '../ui'
 import { useFold } from '../ui/fold'
+import WRateChip from '../ui/WRateChip.vue'
 import { vModTip } from '../ui/tooltip/mod-line-tip'
 import type { ModLine } from '../ui/tooltip/mod-line-tip'
 import type { ParsedItem } from '@/parser'
-import { VERDICT_LABEL, modRatings, nextModRating, setModRatings, withModRating } from './rules'
+import { RATE_TITLE, VERDICT_LABEL, modRatings, setModRatings, withModRating } from './rules'
 import type { ModRating } from './rules'
 import { activeProfile } from './widget'
 import { heistRowOf } from './data'
@@ -239,14 +239,13 @@ onBeforeUnmount(() => { if (owns) owns.value = null })
 
 // The second line: how many mods of each rating, so a folded section keeps
 // the verdict's reasons.
-const RATING_TITLE: Record<string, string> = { deadly: "Your build can't run this", warn: 'Risky for your build', good: 'Wanted (juice)', ok: 'Not rated' }
 // The mod's whole text on hover, with its rating and what a click does.
 function modTip (row: Row): ModLine {
   return {
     head: 'Map mod',
     text: row.mod.text,
     notes: [
-      row.rated && RATING_TITLE[row.mod.rating],
+      row.rated && RATE_TITLE[row.mod.rating],
       isRareOnly(row) && 'Rare-only map mod',
       row.filter ? 'Click to cycle Has, Not, Any' : null
     ]
@@ -308,12 +307,10 @@ const rows = computed<Row[]>(() => {
   return [...rest, ...rated]
 })
 // Guy (2026-11-24): a word chip per mod, clicked through Bad (red), Care (yellow), Want (green).
-const RATE_WORD: Record<ModRating, string> = { deadly: 'Bad', warn: 'Care', good: 'Want', ok: '–' }
-function rateTitle (r: ModRating): string {
+const profileName = computed(() => {
   const config = findMapModsConfig()
-  const name = config ? activeProfile(config).name : ''
-  return `${RATING_TITLE[r]}. Click for the next: Bad, Care, Want, none${name ? `; saved to ${name}` : ''}.`
-}
+  return config ? activeProfile(config).name : ''
+})
 const firstOrder = new WeakMap<ParsedItem, string[]>()
 function rowOrder (item: ParsedItem, matchers: string[]): string[] {
   const known = firstOrder.get(item) ?? []
@@ -321,14 +318,14 @@ function rowOrder (item: ParsedItem, matchers: string[]): string[] {
   firstOrder.set(item, order)
   return order
 }
-function rate (matcher: string, current: ModRating) {
+function rate (matcher: string, next: ModRating) {
   const config = findMapModsConfig()
   const mode = result.value?.mode
   if (!config || !mode) return
   const profile = activeProfile(config)
   const key = mode === 'heist' ? heistRowOf(matcher) ?? matcher : matcher
   const wordings = props.item.statsByType.find(c => c.stat.matchers.some(m => m.string === matcher))?.stat.matchers.map(m => m.string) ?? []
-  setModRatings(profile, mode, withModRating(modRatings(profile, mode), key, wordings, nextModRating(current)))
+  setModRatings(profile, mode, withModRating(modRatings(profile, mode), key, wordings, next))
 }
 function isRareOnly (row: Row): boolean {
   return row.filter?.tag === FilterTag.RareOnly
@@ -866,13 +863,7 @@ const picked = computed(() => {
 .dot.deadly { background: var(--w-down); }
 .dot.warn { background: var(--w-warn); }
 .dot.good { background: var(--w-up); }
-.rateChip { flex: none; width: 3.4em; padding: 0 2px; text-align: center; font-size: var(--w-fs-xs); line-height: 1.5;
-  border: 1px solid transparent; border-radius: var(--w-r-sm); color: var(--w-dim); cursor: pointer; }
 .rateGap { flex: none; width: 3.4em; }
-.rateChip:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
-.rate_deadly { color: var(--w-down); border-color: color-mix(in srgb, var(--w-down) 55%, transparent); background: color-mix(in srgb, var(--w-down) 14%, transparent); }
-.rate_warn { color: var(--w-warn); border-color: color-mix(in srgb, var(--w-warn) 55%, transparent); background: color-mix(in srgb, var(--w-warn) 14%, transparent); }
-.rate_good { color: var(--w-up); border-color: color-mix(in srgb, var(--w-up) 55%, transparent); background: color-mix(in srgb, var(--w-up) 14%, transparent); }
 /* Last, so it wins over the tile rules above. */
 @container (max-width: 92px) {
   /* Narrow: icon and value on one line, the min under it (the name is in the hover). */

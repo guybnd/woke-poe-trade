@@ -34,6 +34,8 @@
     <!-- The run going now, or a finished one you opened (pick L1: in and out side by side). -->
     <section v-if="shownRun && totals" :class="$style.card" data-run-card>
       <div :class="$style.head">
+        <!-- A finished run you opened: back to the runs (and the mouse's back button). -->
+        <WBackLink v-if="shownRun !== live" to="Runs" mouse @back="opened = null" />
         <span :class="$style.title" class="w-trunc">{{ shownRun.name }}</span>
         <span class="w-dim w-num text-xs">{{ clock(shownRun.startAt) }} → {{ shownRun.stoppedAt ? clock(shownRun.stoppedAt) : 'now' }} · {{ span(totals.ms) }} · {{ isCraft ? 'Crafting' : countLabel(totals.maps, totals.fights) }}</span>
         <WButton v-if="shownRun === live" size="sm" :disabled="faustusReading" :title="'Reads your stash one last time and your Faustus listings, then shows the summary'" @click="stop">{{ stopPhase === 'stash' ? 'Reading stash…' : stopPhase === 'listings' ? 'Stopping…' : 'Stop' }}</WButton>
@@ -42,7 +44,6 @@
             <button type="button" :class="{ [$style.on]: showSummary }" :aria-pressed="showSummary" data-run-summary-tab @click="summaryId = shownRun.id">Summary</button>
             <button type="button" :class="{ [$style.on]: !showSummary }" :aria-pressed="!showSummary" data-run-details-tab @click="summaryId = null">Details</button>
           </span>
-          <WButton size="sm" variant="ghost" @click="opened = null">Close</WButton>
         </span>
       </div>
       <div :class="$style.hero" class="w-num">
@@ -137,7 +138,7 @@
         <table :class="$style.table" data-compare>
           <thead><tr>
             <th v-for="c in COLUMNS" :key="c.id" :class="{ [$style.num]: c.id !== 'new' }" :aria-sort="sortBy === c.id ? (c.id === 'cost' ? 'ascending' : 'descending') : undefined">
-              <button type="button" :class="[$style.sortBtn, { [$style.on]: sortBy === c.id }]" :title="c.tip" @click="sortBy = c.id">{{ c.id === 'perMap' ? `Per ${pastUnit}` : c.label }}</button>
+              <WSortHead :label="c.id === 'perMap' ? `Per ${pastUnit}` : c.label" :active="sortBy === c.id" :desc="c.id !== 'cost'" :align="c.id === 'new' ? 'left' : 'right'" :title="c.tip" @sort="sortBy = c.id" />
             </th>
             <th v-if="!byName" />
           </tr></thead>
@@ -156,7 +157,7 @@
               <td :class="[$style.num, tone(r.perMapNoTopChaos)]" class="w-num" :title="r.top ? `Per ${pastUnit} without your best drop (${r.top.name}, ${amountU(r.top.chaos)})` : undefined">
                 {{ r.perMapNoTopChaos != null ? signed(r.perMapNoTopChaos) : '—' }}
               </td>
-              <td v-if="!byName"><button type="button" :class="$style.x" :aria-label="`Delete ${r.name}`" title="Delete" @click="removeId(r.id)"><i class="fas fa-trash-alt" /></button></td>
+              <td v-if="!byName"><button type="button" :class="$style.x" :aria-label="`Remove ${r.name}`" title="Remove" @click="removeId(r.id)"><i class="fas fa-trash" /></button></td>
             </tr>
           </tbody>
         </table>
@@ -183,6 +184,8 @@ import type { TipIndex } from './tips'
 import type { SummaryDrop } from './run-summary'
 import { span } from './play-time'
 import Coin from './Coin.vue'
+import WSortHead from '../ui/WSortHead.vue'
+import WBackLink from '../ui/WBackLink.vue'
 import { compareRows, countLabel, craftTime, shownFights, shownMaps, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, smallSample, sortCompare, tallyRows, tallyValue, topDrop, unitOf, SAMPLE_MIN_RUNS } from './runs'
 import { kitPrice } from './run-kit'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
@@ -607,8 +610,6 @@ function addPerMap (l: AddedLine) {
 .table td:first-child { max-width: 14rem; }
 .table .num { text-align: right; white-space: nowrap; }
 .table tr.on .pastOpen { color: var(--w-gold); }
-.sortBtn { background: none; border: 0; padding: 0; font: inherit; font-size: var(--w-fs-xs); color: var(--w-dim); cursor: pointer; font-family: var(--w-caps-face); text-transform: var(--w-caps-case); }
-.sortBtn.on, .sortBtn:hover { color: var(--w-gold); }
 .pastOpen { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .pastOpen:hover { color: var(--w-gold); }
 </style>

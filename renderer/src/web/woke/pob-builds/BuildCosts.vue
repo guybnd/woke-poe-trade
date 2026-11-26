@@ -23,7 +23,7 @@
         </WItemRow>
         <WItemRow v-for="(r, i) in s.unpriced" :key="`n${i}`" :item="tipOf(r.item)" action="price-check" :class="$style.line" class="w-focusable">
           <span class="w-rarity-unique w-trunc">{{ r.item.name }}</span>
-          <span class="ml-auto w-faint text-xs">no price</span>
+          <WPrice :chaos="null" class="ml-auto text-xs" />
         </WItemRow>
         <button v-for="(r, i) in s.rares" :key="`r${i}`" type="button" :class="$style.line" class="w-focusable" :title="`Price check this ${r.item.base} with its stats`" data-item-tip @click="openPriceCheck(r.item, $event)"
           @mouseenter="showTip($event, { kind: 'item', item: r.item })" @mouseleave="hideTip">

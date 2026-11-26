@@ -11,8 +11,7 @@
           <button class="w-icon-btn" title="New folder" @click="startFolder(newIn)"><i class="fas fa-folder-plus" /></button>
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': importOpen }" title="Import a tree link, guide text or strategy code"
             @click="importOpen = !importOpen"><i class="fas fa-file-import" /></button>
-          <button class="w-icon-btn" :class="{ 'w-icon-btn--on': sortBy !== 'manual' }" :title="`Sort: ${SORT_LABELS[sortBy]}`"
-            @click="sortMenu"><i class="fas fa-sort-amount-down" /></button>
+          <WSortButton :model-value="sortBy" :options="SORT_OPTIONS" @update:model-value="config.sortBy = $event as SortBy" />
         </template>
         <template #toolbar>
           <div v-if="importOpen" class="flex flex-col gap-1 w-full" @dragover="shotDragOver" @drop="shotDrop">
@@ -31,11 +30,11 @@
             </div>
             <div v-if="importError" class="w-down text-xs">{{ importError }}</div>
           </div>
-          <WField v-else v-model="filter" icon="fas fa-search" placeholder="Filter by name, Thread, folder…" class="grow" />
+          <WSearchField v-else v-model="filter" things="strategies" placeholder="Filter by name, Thread, folder…" class="grow" />
         </template>
 
         <SavedTree :tree="tree" list-id="atlas-folders" :active-id="config.selectedId" :copy="copyCode"
-          @item-menu="rowMenu" @folder-menu="folderMenu">
+          @item-act="onRowAct" @item-menu="rowMenu" @folder-menu="folderMenu">
           <template #item="{ item: s }">
             <span class="w-trunc">{{ s.name || 'Untitled' }}</span>
             <span v-if="isDirty(config, s)" :class="$style.unsavedTag" title="Tree changes not saved">Unsaved</span>
@@ -43,6 +42,18 @@
               :title="`Net worth: ${countText(earnings.get(s.name)!.runs, 'run')} of this name`">{{ fmt(earnings.get(s.name)!.perHour!) }}/h</span>
           </template>
           <template #sub="{ item: s }">{{ describe(s) }}</template>
+          <template #actions="{ item: s }">
+            <!-- Open always on; the rest on hover (WRowActs, the same in every saved list). -->
+            <WRowActs>
+              <template #hover>
+                <button type="button" class="w-icon-btn" title="Rename (F2)" data-row-act="rename"><i class="fas fa-pen" /></button>
+                <button type="button" class="w-icon-btn" title="Copy strategy code (Ctrl + C)" data-row-act="copy"><i class="fas fa-share-square" /></button>
+                <button type="button" class="w-icon-btn" title="Remove (Del)" data-row-act="remove"><i class="fas fa-trash" /></button>
+              </template>
+              <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': config.selectedId === s.id }" :title="config.selectedId === s.id ? 'Open' : 'Open its tree'" data-atlas-open
+                data-row-act="open"><i class="fas fa-chevron-right" /></button>
+            </WRowActs>
+          </template>
         </SavedTree>
         <WEmpty v-if="!config.strategies.length && !folders.length" :art="{ mechanic: 'map' }">
           No strategies yet. Start one and click passives on the tree, or import a guide's tree link or text.
@@ -51,10 +62,7 @@
             <WButton size="sm" icon="fas fa-file-import" @click="importOpen = true">Import</WButton>
           </template>
         </WEmpty>
-        <WEmpty v-else-if="filter && !tree.rows.value.length" icon="fas fa-search">
-          No strategy matches "{{ filter }}".
-          <template #actions><WButton size="sm" variant="ghost" @click="filter = ''">Clear filter</WButton></template>
-        </WEmpty>
+        <WNoMatch v-else-if="filter && !tree.rows.value.length" :query="filter" @clear="filter = ''" />
       </WPanel>
 
       <template v-if="selected">
@@ -107,6 +115,10 @@ import { computed, defineAsyncComponent, inject, nextTick, shallowRef, watch } f
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { MainProcess } from '@/web/background/IPC'
 import { WPanel, WField, WButton, WEmpty, WBanner, WSkeleton, openMenu, toast, useCopy } from '../ui'
+import WSortButton from '../ui/WSortButton.vue'
+import WRowActs from '../ui/WRowActs.vue'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import {
   allFolders, claimRegexFolders, setPointsAt, takePointsAt, dropDraft, isDirty, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, isStrategyCode,
@@ -169,13 +181,7 @@ const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 type SortBy = NonNullable<AtlasWidget['sortBy']>
 const SORT_LABELS: Record<SortBy, string> = { manual: 'My order', name: 'Name', earnings: 'Earnings per hour', changed: 'Last changed' }
 const sortBy = computed<SortBy>(() => props.config.sortBy && props.config.sortBy in SORT_LABELS ? props.config.sortBy : 'manual')
-function sortMenu (e: MouseEvent) {
-  openMenu(e, (Object.keys(SORT_LABELS) as SortBy[]).map(k => ({
-    label: SORT_LABELS[k],
-    icon: sortBy.value === k ? 'fas fa-check' : undefined,
-    action: () => { props.config.sortBy = k }
-  })))
-}
+const SORT_OPTIONS = (Object.keys(SORT_LABELS) as SortBy[]).map(value => ({ value, label: SORT_LABELS[value] }))
 const prices = usePriceIndex()
 const { fmt } = usePriceText(prices.snapshot)
 
@@ -454,6 +460,14 @@ async function codeFor (list: AtlasStrategy[], base = ''): Promise<string> {
   return strategyCode(list.map(s => ({ ...s, regexes: regexesIn(regexFolderOf(s)).map(r => ({ name: r.name, text: r.text })) })), base)
 }
 
+// The row buttons (WRowActs), through SavedTree's one listener.
+function onRowAct (act: string, s: AtlasStrategy) {
+  if (act === 'rename') startEdit('strategy', String(s.id), 'rename')
+  else if (act === 'copy') copyCode([s])
+  else if (act === 'remove') remove(s)
+  else if (act === 'open') props.config.selectedId = s.id
+}
+
 function rowMenu (e: MouseEvent, s: AtlasStrategy) {
   const group = tree.groupOf(s)
   if (group.length > 1) {
@@ -466,7 +480,7 @@ function rowMenu (e: MouseEvent, s: AtlasStrategy) {
     return
   }
   openMenu(e, [
-    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => startEdit('strategy', String(s.id), 'rename') },
+    { label: 'Rename', icon: 'fas fa-pen', keys: 'F2', action: () => startEdit('strategy', String(s.id), 'rename') },
     { label: 'Move to folder', icon: 'fas fa-folder-open', action: () => startEdit('strategy', String(s.id), 'move') },
     { label: 'Duplicate', icon: 'far fa-clone', action: () => duplicate(s) },
     { label: 'Copy strategy code', icon: 'fas fa-share-square', keys: 'Ctrl + C', action: () => copyCode([s]) },

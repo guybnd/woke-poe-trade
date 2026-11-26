@@ -28,7 +28,7 @@
         <img v-if="o.icon" :src="o.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
         <span v-item-tip="{ name: o.name }" class="w-trunc">{{ o.name }}</span>
         <span v-if="o.stash != null" class="w-dim text-xs">in stash · {{ fmt(o.stash) }}</span>
-        <span class="w-num text-xs" :class="$style.optPrice">{{ o.chaos != null ? priceText(o.chaos) : 'no price' }}</span>
+        <span class="w-num text-xs" :class="$style.optPrice"><template v-if="o.chaos != null">{{ priceText(o.chaos) }}</template><WPrice v-else :chaos="null" /></span>
       </div>
       <div class="w-dim text-xs" :class="$style.foot">↑↓ pick · Enter choose · prices from your stash, else poe.ninja</div>
     </div>
@@ -45,7 +45,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, shallowRef, watch } from 'vue'
-import { WButton, vItemTip } from '../ui'
+import { WButton, WPrice, vItemTip } from '../ui'
 import { formatAmount } from '../ui/format'
 import { gameIcon } from '../ui/game-icons'
 import { lastWokePrices } from '../market/hook'

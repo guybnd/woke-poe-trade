@@ -87,7 +87,7 @@
             </div>
             <div v-else :class="$style.chartHead">
               <button type="button" :class="$style.fold" :aria-expanded="true" title="Fold the chart" aria-label="Fold the chart" @click="flipFold('chart')"><i class="fas fa-chevron-down" /></button>
-              <TextTabs v-model="chartMode" :options="MODE_OPTIONS" />
+              <WSegmented v-model="chartMode" :options="MODE_OPTIONS" title="What the chart shows" />
               <span v-if="goal" class="text-xs" :class="$style.goalLine">
                 {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }}<Coin /> ·
                 <template v-if="eta.reached">reached</template>
@@ -98,7 +98,7 @@
                 <!-- Maps behind the line (pick D): off until switched on. -->
                 <button v-if="chartMode === 'total' && farming?.runs.length" type="button" :class="[$style.mapsBtn, { [$style.mapsOn]: mapsOn }]" :aria-pressed="mapsOn"
                   :title="mapsOn ? 'Hide your maps behind the line' : 'Show your maps behind the line'" data-chart-maps @click="config.chartMaps = !mapsOn">Maps</button>
-                <TextTabs v-model="range" :options="RANGE_OPTIONS" />
+                <WSegmented v-model="range" :options="RANGE_OPTIONS" title="How far back the chart goes" />
               </span>
             </div>
             <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" axes :mode="chartMode as 'total' | 'category'" :goal-div="chartListed ? goal?.div ?? null : goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :listed="chartListed" :maps="chartMaps" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
@@ -118,7 +118,7 @@
             </div>
             <div v-else :class="$style.boxHead">
               <button type="button" :class="$style.fold" :aria-expanded="true" title="Fold Per hour" aria-label="Fold Per hour" @click="flipFold('perHour')"><i class="fas fa-chevron-down" /></button>
-              <TextTabs v-model="rateWindow" :options="WINDOW_OPTIONS" />
+              <WSegmented :model-value="rateWindow" :options="WINDOW_OPTIONS" title="The time Per hour counts" @update:model-value="rateWindow = $event as RateWindow" />
               <RateTimePick :class="$style.rateTime" />
             </div>
             <div v-if="!fold.perHour" :class="$style.tiles">
@@ -270,7 +270,7 @@
       </section>
 
       <section :class="$style.chips">
-        <WField v-model="query" type="search" icon="fas fa-search" placeholder="Search items" :class="$style.search" />
+        <WSearchField v-model="query" things="items" :class="$style.search" />
         <WChip v-if="changedCount" clickable :active="onlyChanged" :title="onlyChanged ? 'Show every item' : 'Only the items you priced yourself or left out'" data-nw-changed @click="onlyChanged = !onlyChanged">Changed {{ changedCount }}</WChip>
         <WChip v-if="cat !== 'all'" clickable active :title="`Only ${catLabel}. Click to show every category`" @click="cat = 'all'">{{ catLabel }} ×</WChip>
         <HideChip v-if="divine" :value="hideBelow" :on="config.hideDivOn === true" :idle="floor.limiting === 'chaos'"
@@ -312,7 +312,7 @@ import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shall
 import { AppConfig } from '@/web/Config'
 import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import { usePoeninja } from '@/web/background/Prices'
-import { WBanner, WButton, WChip, WEmpty, WField, WKbd, WLineActs, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WKbd, WLineActs, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
 import { lineTip, tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
@@ -337,7 +337,8 @@ import { RATE_WINDOWS, rateTip, shortSpan, span, startOfDay } from './play-time'
 import { chartHOf, clampChartH, clampMidH, colWeights, dragCols, dragTop, edges, foldedOf, hasChartH, midHOf, toggleFold, topOf } from './layout'
 import type { ColId, FoldId, PanelLayout } from './layout'
 import SplitHandle from './SplitHandle.vue'
-import TextTabs from './TextTabs.vue'
+import WSegmented from '../ui/WSegmented.vue'
+import WSearchField from '../ui/WSearchField.vue'
 import RateTimePick from '../shared/RateTimePick.vue'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'

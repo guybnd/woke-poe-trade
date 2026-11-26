@@ -68,16 +68,16 @@ test('the Prices tab lists every category and filters and sorts one', async ({ o
   expect((await values()).length).toBeGreaterThan(1)
 
   await side.getByRole('button', { name: /^Divination Cards/ }).click()
-  await expect(panel.getByRole('textbox')).toHaveAttribute('placeholder', 'Filter Divination Cards')
+  await expect(panel.getByRole('searchbox')).toHaveAttribute('placeholder', 'Filter Divination Cards')
   const rowsBefore = await panel.locator('.w-row:not(.w-row--head)').count()
   expect(rowsBefore).toBeGreaterThan(1)
   // Under 1c a price reads per divine, as poe.ninja shows it ("1 div / 224").
   if (!process.env.MARKET_DENSE) await expect(panel.locator('.w-row', { hasText: 'Rain of Chaos' })).toContainText('/')
-  await panel.getByRole('textbox').fill('doctor')
+  await panel.getByRole('searchbox').fill('doctor')
   await expect(panel.locator('.w-row:not(.w-row--head)').first()).toContainText(/doctor/i)
-  await panel.getByRole('textbox').fill('zzzz no such card')
-  await expect(panel).toContainText('No divination cards match "zzzz no such card"')
-  await panel.getByRole('textbox').fill('')
+  await panel.getByRole('searchbox').fill('zzzz no such card')
+  await expect(panel).toContainText('Nothing matches "zzzz no such card"')
+  await panel.getByRole('searchbox').fill('')
 
   // Name sort, A first.
   await panel.getByRole('button', { name: 'Name' }).click()

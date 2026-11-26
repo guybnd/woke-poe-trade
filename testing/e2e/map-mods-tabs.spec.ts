@@ -8,12 +8,12 @@ test('tabs switch the list, picks sort to the top, the T17 switch hides T17 mods
   const panel = overlay.widget('woke-map-mods')
 
   await expect(panel.getByRole('tab', { name: /^Maps/ })).toHaveAttribute('aria-selected', 'true')
-  await expect(panel.getByPlaceholder(/Search \d+ map mods/)).toBeVisible()
+  await expect(panel.getByPlaceholder(/Filter \d+ map mods/)).toBeVisible()
   // The picks block is gone: the default profile's picks head the list.
-  await expect(panel.getByText(/^Careful · \d+$/)).toBeVisible()
+  await expect(panel.getByText(/^Care · \d+$/)).toBeVisible()
   await overlay.snap('map mods maps tab')
 
-  const search = panel.getByPlaceholder(/Search \d+ map mods/)
+  const search = panel.getByPlaceholder(/Filter \d+ map mods/)
   await search.fill('Drowning Orbs')
   await expect(panel.getByText('Area contains Drowning Orbs')).toBeVisible()
   await panel.getByRole('switch').click()
@@ -26,9 +26,11 @@ test('tabs switch the list, picks sort to the top, the T17 switch hides T17 mods
   await expect(panel.getByRole('switch')).toHaveCount(0)
   // Its own search: starts empty, and a pick fills only this one.
   await expect(panel.getByText('Rate mods to build a search')).toBeVisible()
-  await panel.getByText('Guards deal #% increased Damage').locator('..').getByRole('radio', { name: 'avoid' }).or(
-    panel.getByText('Guards deal #% increased Damage').locator('..').getByRole('button', { name: 'avoid' })
-  ).first().click()
+  // The rating chip (Bad / Care / Want): one click from unrated is Bad.
+  const guards = panel.getByText('Guards deal #% increased Damage').locator('..').locator('[data-map-rate]')
+  await expect(guards).toHaveText('–')
+  await guards.click()
+  await expect(guards).toHaveText('Bad')
   await expect(panel.getByText('Rate mods to build a search')).toHaveCount(0)
   await expect(panel.getByRole('tab', { name: /^Heist/ })).toContainText('1')
   await overlay.snap('map mods heist tab')

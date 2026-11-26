@@ -38,7 +38,7 @@
             <span :class="$style.rowHead">
               <span class="flex items-center gap-1">
                 <button v-if="SLOT_ROWS.includes(row)" type="button" :class="$style.expand" :aria-expanded="openRows.includes(row)"
-                  :title="openRows.includes(row) ? 'Hide the slots' : 'Give slots their own lines'" @click="toggle(openRows, row)">{{ openRows.includes(row) ? '▾' : '▸' }}</button>
+                  :title="openRows.includes(row) ? 'Hide the slots' : 'Give slots their own lines'" @click="toggle(openRows, row)"><WFoldCaret :open="openRows.includes(row)" /></button>
                 <span>{{ ROW_LABEL[row] }}</span>
                 <span v-if="slotCount(row)" :class="$style.slotDot" :title="`${slotCount(row)} slot(s) with their own line`">●</span>
               </span>
@@ -272,6 +272,7 @@ import { applyStyle as applyStyleTo, readStyle } from './edits'
 import type { StylePatch } from './edits'
 import type { FilterAction } from './parse'
 import { clickOf, togglePick } from '../shared/picks'
+import WFoldCaret from '../ui/WFoldCaret.vue'
 
 const props = defineProps<{
   store: LootFilterStore

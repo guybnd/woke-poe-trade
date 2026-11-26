@@ -52,7 +52,7 @@ export function lineMenu (s: LineState, on: LineHandlers, words: LineWords = {},
       ? { label: COUNT_AGAIN, icon: 'fas fa-undo', keys: 'Del', action: () => { out(false) } }
       : { label: LEAVE_OUT, icon: 'fas fa-ban', keys: 'Del', action: () => { out(true) } })
   }
-  if (s.removable && on.remove) items.push({ label: 'Remove', icon: 'fas fa-trash-alt', danger: true, action: on.remove })
+  if (s.removable && on.remove) items.push({ label: 'Remove', icon: 'fas fa-trash', danger: true, action: on.remove })
   if (extra.length) items.push({ separator: true }, ...extra)
   return items
 }

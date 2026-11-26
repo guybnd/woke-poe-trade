@@ -79,9 +79,8 @@
           @click="setEffect(c, look.effect?.temp ?? false)">
           <span :class="$style.beam" :style="{ background: `linear-gradient(to top, ${poeColour(c)}, transparent)` }" />
         </button>
-        <label v-if="look.effect" class="flex items-center gap-1 text-xs w-dim" style="margin-left: 6px;" title="A temporary beam shows for a few seconds when the item drops">
-          <input type="checkbox" :checked="look.effect.temp" @change="setEffect(look.effect!.color, ($event.target as HTMLInputElement).checked)"> only on drop
-        </label>
+        <WToggle v-if="look.effect" :model-value="look.effect.temp" class="text-xs" style="margin-left: 6px;" title="A temporary beam shows for a few seconds when the item drops"
+          @update:model-value="setEffect(look.effect!.color, $event)">Only on drop</WToggle>
       </span>
 
     </div>

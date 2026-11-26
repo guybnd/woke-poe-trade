@@ -53,6 +53,38 @@ test('the hotkey opens the palette ready to type, and Esc leaves it', async ({ o
   await expect(box).toBeHidden()
 })
 
+test('the palette drags by its search bar and keeps the spot', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const palette = overlay.widget('woke-search')
+  const panel = palette.locator('[data-w-panel]')
+  const box = palette.getByRole('textbox', { name: 'Search', exact: true })
+  await expect(box).toBeVisible()
+  const before = (await panel.boundingBox())!
+  // The bar's own edge, left of the magnifier: not the input or a button.
+  const bar = (await palette.locator('[data-search-palette] [data-widget-drag]').boundingBox())!
+  const page = overlay.page
+  await page.mouse.move(bar.x + 4, bar.y + bar.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(bar.x + 4 - 300, bar.y + bar.height / 2 + 150, { steps: 8 })
+  await page.mouse.up()
+  const after = (await panel.boundingBox())!
+  expect(Math.abs(after.x - (before.x - 300))).toBeLessThan(12)
+  expect(Math.abs(after.y - (before.y + 150))).toBeLessThan(12)
+  await expect(box).toBeFocused()
+
+  // Closed and opened again, it opens where you left it.
+  await page.keyboard.press('Escape')
+  await expect(panel).toBeHidden()
+  await overlay.pressHotkey(SEARCH_KEY)
+  await expect(panel).toBeVisible()
+  const again = (await panel.boundingBox())!
+  expect(Math.abs(again.x - after.x)).toBeLessThan(4)
+  expect(Math.abs(again.y - after.y)).toBeLessThan(4)
+})
+
 test('prices are grouped, and the detail shows every variant and its actions', async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await overlay.boot(bootOptions())
@@ -95,7 +127,7 @@ test('prices are grouped, and the detail shows every variant and its actions', a
   // Filtered out isn't the same as having no price.
   await box.fill('headhunter')
   await panel.getByRole('button', { name: /Corrupted gems are shown/ }).click()
-  await expect(panel.getByText('No poe.ninja price')).toHaveCount(1) // Replica Headhunter only
+  await expect(panel.getByText('No poe.ninja price yet')).toHaveCount(1) // Replica Headhunter only
   await panel.getByRole('button', { name: /Only corrupted gems/ }).click()
   await panel.getByRole('button', { name: /Corrupted gems are hidden/ }).click()
 
@@ -476,9 +508,10 @@ test('the palette resizes from its corner, adding room, and keeps its size', asy
   await page.mouse.move(g.x + 120, g.y + 80, { steps: 6 })
   await page.mouse.up()
   const after = (await panel.boundingBox())!
-  // The corner stays under the mouse: centred, it grows on both sides.
+  // The corner stays under the mouse; the palette moves now, so the far edge stays put.
   expect(Math.abs((after.x + after.width) - (before.x + before.width + 120))).toBeLessThan(12)
-  expect(after.width).toBeGreaterThan(before.width + 200)
+  expect(Math.abs(after.x - before.x)).toBeLessThan(12)
+  expect(after.width).toBeGreaterThan(before.width + 100)
   expect(after.height).toBeGreaterThan(before.height + 40)
   // More room, not bigger text.
   expect(await palette.locator('[data-search-palette]').evaluate(el => getComputedStyle(el).fontSize)).toBe(font)

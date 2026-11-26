@@ -98,13 +98,12 @@
               <span class="text-right w-num w-trunc">
                 <template v-if="r.cheapest"><span v-item-tip="{ name: r.cheapest.name, type: family.ninjaType }">{{ roleName(r.cheapest.name) }}</span> <WPriceText :text="`${amount(r.cheapest.chaos)}c`" /></template>
               </span>
-              <span class="text-right w-num" :class="r.profitEach == null ? 'w-faint' : r.profitEach > 0 ? 'w-up' : 'w-down'"><template v-if="r.profitEach == null">–</template><WPriceText v-else :text="signedAmount(r.profitEach)" /></span>
+              <span class="text-right w-num" :class="r.profitEach == null ? 'w-faint' : r.profitEach > 0 ? 'w-up' : 'w-down'"><WPrice v-if="r.profitEach == null" :chaos="null" /><WPriceText v-else :text="signedAmount(r.profitEach)" /></span>
             </div>
             <template v-if="openTribe === r.tribe">
               <div v-for="t in r.tattoos" :key="t.name" class="w-row" :class="[$style.tattooGrid]" @contextmenu="rowMenu($event, t.name)">
                 <FlipName :name="t.name" :item="t.name" :type="family.ninjaType" />
-                <span v-if="t.unpriced" class="text-right w-faint w-num" title="poe.ninja has no price: counted at the tribe's cheapest">no price</span>
-                <WPrice v-else :chaos="t.chaos" :divine="divine" class="text-right" />
+                <WPrice :chaos="t.unpriced ? null : t.chaos" :divine="divine" class="text-right" none="No poe.ninja price yet: counted at the tribe's cheapest" />
                 <span class="text-right w-num w-dim" title="Chance of this result">{{ pct(t.share) }}</span>
                 <span v-if="t.unpriced" />
                 <span v-else class="text-right w-num" :class="tattooProfitEach(r, t.chaos) > 0 ? 'w-up' : 'w-down'" title="Put in with 2 more like it, per Tattoo"><WPriceText :text="signedAmount(tattooProfitEach(r, t.chaos))" /></span>
@@ -119,11 +118,7 @@
         <template v-else>
           <div class="w-row w-row--head" :class="$style.buyGrid">
             <span v-for="c in buyColumns" :key="c.key" :class="c.key === 'item' ? '' : 'text-right'">
-              <button type="button" :class="[$style.sortHead, { [$style.sorted]: sort.key === c.key }]" :title="c.title" :aria-label="sortLabel(c)" @click="pickSort(c.key)">
-                <i v-if="sort.key === c.key && c.key !== 'item'" :class="sortArrow" aria-hidden="true" />
-                {{ c.label }}
-                <i v-if="sort.key === c.key && c.key === 'item'" :class="sortArrow" aria-hidden="true" />
-              </button>
+              <WSortHead :label="c.label" :active="sort.key === c.key" :desc="sort.dir !== 'asc'" :align="c.key === 'item' ? 'left' : 'right'" :title="c.title" @sort="pickSort(c.key)" />
             </span>
           </div>
           <div v-for="r in buy" :key="r.name" class="w-row" :class="$style.buyGrid" @contextmenu="rowMenu($event, itemName(r))">
@@ -207,6 +202,7 @@ import { Host, MainProcess } from '@/web/background/IPC'
 import { useLeagues } from '@/web/background/Leagues'
 import { WInfo, WPanel, WTabs, WSegmented, WPrice, WPriceText, WEmpty, WSkeleton, toast, vItemTip } from '../ui'
 import { openItemMenu } from '../ui/tooltip/item-menu'
+import WSortHead from '../ui/WSortHead.vue'
 import { copyText } from '../ui/copy'
 import { formatAmount } from '../ui/format'
 import { usePriceText } from '../shared/price'
@@ -399,7 +395,6 @@ function pickSort (key: FlipSortKey) {
   const { key: current, dir } = sort.value
   props.config.sort = { key, dir: current !== key ? firstSortDir(key) : dir === 'asc' ? 'desc' : 'asc' }
 }
-const sortArrow = computed(() => sort.value.dir === 'asc' ? 'fas fa-caret-up' : 'fas fa-caret-down')
 const buyColumns = computed(() => {
   const list: Array<{ key: FlipSortKey, label: string, title?: string }> = [
     { key: 'item', label: capitalize(family.value.noun) },
@@ -409,10 +404,6 @@ const buyColumns = computed(() => {
   if (hasVolume.value) list.push({ key: 'supply', label: 'Supply', title: supplyTitle.value })
   return list
 })
-function sortLabel (c: { key: FlipSortKey, label: string }) {
-  if (sort.value.key !== c.key) return `Sort by ${c.label}`
-  return `${c.label}, sorted ${sort.value.dir === 'asc' ? 'ascending' : 'descending'}`
-}
 const buy = computed(() => sortFlips<FlipRow | UpgradeRow>(buyList(rows.value, props.config.hideUntraded), sort.value, shortName))
 const rareCheap = computed(() => pool.value ? rareCheapList(pool.value) : [])
 const odds = computed(() => pool.value ? flipOdds(pool.value) : null)
@@ -650,9 +641,6 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 .buyGrid { grid-template-columns: minmax(0, 1fr) 62px calc(96px * var(--w-text-scale, 1)) calc(64px * var(--w-text-scale, 1)); }
 .weightsLink { all: unset; cursor: pointer; color: var(--w-accent); }
 .weightsLink:hover, .weightsLink:focus-visible { text-decoration: underline; }
-.sortHead { all: unset; cursor: pointer; white-space: nowrap; }
-.sortHead:hover, .sortHead:focus-visible { color: var(--w-fg); }
-.sorted { color: var(--w-accent); }
 .rangeGrid { grid-template-columns: minmax(0, 1fr) 62px calc(72px * var(--w-text-scale, 1)) calc(96px * var(--w-text-scale, 1)); }
 .tribeGrid { grid-template-columns: minmax(0, 1fr) 62px calc(96px * var(--w-text-scale, 1)) calc(64px * var(--w-text-scale, 1)); }
 .tribeRow { cursor: pointer; }

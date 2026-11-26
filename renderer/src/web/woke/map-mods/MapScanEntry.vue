@@ -16,11 +16,11 @@
 import { computed } from 'vue'
 import { VERDICT_LABEL } from './scan-session'
 import type { ScanEntry } from './scan-session'
+import { RATE_WORD } from './rules'
+import type { ModRating } from './rules'
 
 // detail: the flagged mods under the label (the Scan tab).
 const props = defineProps<{ entry: ScanEntry, showRerolls?: boolean, detail?: boolean }>()
-
-const RATING_WORD = { deadly: 'Avoid', warn: 'Careful', good: 'Want' } as const
 
 // Hover: what decided the verdict, in full.
 const tip = computed(() => {
@@ -28,7 +28,7 @@ const tip = computed(() => {
   const head = e.verdict === 'unsure'
     ? `Looks safe, but ${e.unsure} line${e.unsure > 1 ? 's' : ''} couldn't be read clearly`
     : `${VERDICT_LABEL[e.verdict]} · juice ${e.juice}`
-  const mods = e.flagged.map(m => `${RATING_WORD[m.rating as keyof typeof RATING_WORD] ?? m.rating}: ${m.text}`)
+  const mods = e.flagged.map(m => `${RATE_WORD[m.rating as ModRating] ?? m.rating}: ${m.text}`)
   const extra = e.rerolls ? [`Read ${e.rerolls + 1} times (rerolled in place)`] : []
   return [head, ...(mods.length ? mods : ['No rated mods']), ...extra].join('\n')
 })

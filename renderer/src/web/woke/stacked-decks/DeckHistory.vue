@@ -29,11 +29,11 @@
     <template v-else>
       <div class="flex justify-between gap-2 items-baseline">
         <span class="min-w-0 w-trunc">
-          <button class="w-icon-btn" title="Back" @click="openId = null"><i class="fas fa-chevron-left" /></button>
+          <WBackLink to="Sessions" @back="openId = null" />
           <span class="font-medium">{{ formatSessionDate(open.startedAt) }}</span>
           <span class="w-dim"> · {{ formatDuration(open.endedAt - open.startedAt) }}</span>
         </span>
-        <WButton size="sm" variant="ghost" icon="fas fa-trash" title="You can undo" @click="remove(open)">Delete</WButton>
+        <WButton size="sm" variant="ghost" icon="fas fa-trash" title="You can undo" @click="remove(open)">Remove</WButton>
       </div>
       <DeckSummary :draws="open.draws" :price="savedPrice(open)" :held="savedHeld(open)" :deck-chaos="open.deckChaos" :divine="open.divine" :filter="filter" :luck="openLuck" :edits="open.edits" editable
         @price="(name, chaos) => editCard(open!, name, { each: chaos ?? undefined })" @out="(name, on) => leaveOut(open!, name, on)" />
@@ -46,6 +46,7 @@
 // Session analytics' Stacked decks tab: every saved deck session.
 import { computed, shallowRef } from 'vue'
 import { WBanner, WButton, WEmpty, WSkeleton, lineToast, toast, vItemTip } from '../ui'
+import WBackLink from '../ui/WBackLink.vue'
 import { useWindowKeys } from '../ui/window-keys'
 import { formatChaos, formatDuration } from '../ui/format'
 import { formatSessionDate, inRange } from '../analytics/stats'

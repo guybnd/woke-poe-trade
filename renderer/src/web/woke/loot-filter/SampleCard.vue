@@ -76,9 +76,7 @@
           </button>
         </div>
         <div v-if="ladderRows.length" :class="$style.fold">
-          <button type="button" :class="$style.foldHead" @click="open.grid = !open.grid">
-            <span>By strictness</span><span class="w-faint">{{ open.grid ? '▾' : '›' }}</span>
-          </button>
+          <WFoldHead fold="alt-f.grid" :class="$style.foldHead"><span>By strictness</span></WFoldHead>
           <template v-if="open.grid">
             <table :class="$style.grid">
               <thead>
@@ -105,9 +103,7 @@
         </div>
 
         <div v-if="specialRows.length" :class="$style.fold">
-          <button type="button" :class="$style.foldHead" @click="open.special = !open.special">
-            <span>Special rules ({{ specialRows.length }})</span><span class="w-faint">{{ open.special ? '▾' : '›' }}</span>
-          </button>
+          <WFoldHead fold="alt-f.special" :class="$style.foldHead"><span>Special rules ({{ specialRows.length }})</span></WFoldHead>
           <template v-if="open.special">
             <div class="text-xs w-faint">The item only lands here with more than its name.</div>
             <button v-for="t in specialRows" :key="t.tier" type="button" :class="[$style.tierRow, { [$style.current]: t.current }]"
@@ -120,9 +116,9 @@
         </div>
 
         <div :class="$style.fold">
-          <button type="button" :class="$style.foldHead" @click="open.rule = !open.rule">
-            <span>Rule: {{ final.type?.startsWith('woke->') || isOwn ? placeOf(final) : `${groupName(final.type)} › ${currentLabel}` }}</span><span class="w-faint">{{ final.added ? 'added' : `line ${final.line}` }} {{ open.rule ? '▾' : '›' }}</span>
-          </button>
+          <WFoldHead fold="alt-f.rule" :class="$style.foldHead">
+            <span>Rule: {{ final.type?.startsWith('woke->') || isOwn ? placeOf(final) : `${groupName(final.type)} › ${currentLabel}` }}</span><span class="w-faint ml-auto">{{ final.added ? 'added' : `line ${final.line}` }}</span>
+          </WFoldHead>
           <template v-if="open.rule">
             <div :class="$style.conds">
               <div v-for="(c, i) in ruleMatch.final!.conditions" :key="i" class="w-trunc">
@@ -139,9 +135,7 @@
         </div>
 
         <div v-if="alsoIn.length" :class="$style.fold">
-          <button type="button" :class="$style.foldHead" @click="open.also = !open.also">
-            <span>Also listed in {{ alsoIn.length }} other {{ alsoIn.length === 1 ? 'rule' : 'rules' }}</span><span class="w-faint">{{ open.also ? '▾' : '›' }}</span>
-          </button>
+          <WFoldHead fold="alt-f.also" :class="$style.foldHead"><span>Also listed in {{ alsoIn.length }} other {{ alsoIn.length === 1 ? 'rule' : 'rules' }}</span></WFoldHead>
           <div v-if="open.also" class="flex flex-wrap items-center gap-1">
             <WChip v-for="a in alsoIn" :key="a.type + a.tier" clickable @click="emit('open-editor', { type: a.type, tier: a.tier })">{{ placeOf(a) }}</WChip>
           </div>
@@ -187,6 +181,7 @@
 import { conditionWords } from './ladder'
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useFold } from '../ui/fold'
+import WFoldHead from '../ui/WFoldHead.vue'
 import { WPanel, WBanner, WButton, WSegmented, WChip, openMenu, toast } from '../ui'
 import TierItemChips from './TierItemChips.vue'
 import { basePrice } from './economy'
@@ -703,16 +698,8 @@ function unknownKeys (m: BlockMatch): string[] {
   padding-top: 6px;
 }
 .foldHead {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  background: none;
-  border: none;
-  padding: 0;
   color: var(--w-dim);
   font-size: var(--w-fs-sm);
-  text-align: left;
-  cursor: pointer;
 }
 .foldHead:hover {
   color: var(--w-fg);

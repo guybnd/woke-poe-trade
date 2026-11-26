@@ -3,9 +3,7 @@
     <div class="flex items-center gap-2">
       <span :class="[$style.dot, $style[health.level]]" />
       <div class="flex-1">{{ health.text }}</div>
-      <label class="flex items-center gap-1 text-sm w-dim">
-        <input v-model="advanced" type="checkbox"> Advanced
-      </label>
+      <WToggle v-model="advanced" class="text-sm">Advanced</WToggle>
     </div>
 
     <div v-if="error" class="text-red-400 text-sm">Couldn't read the app's numbers: {{ error }}</div>
@@ -93,6 +91,7 @@ export default {
 
 <script setup lang="ts">
 import WInfo from './WInfo.vue'
+import WToggle from './WToggle.vue'
 import { useCopy } from './copy'
 import { computed, onUnmounted, shallowRef, watch } from 'vue'
 import { hostRequest } from '../shared/host'

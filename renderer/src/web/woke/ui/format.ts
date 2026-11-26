@@ -32,6 +32,11 @@ export function freshness (ts: number | null | undefined, freshMin = 15, staleMi
 
 // ---- prices ----
 
+// A price that isn't there yet: WPrice shows a dim "—" with this on hover, on every screen.
+export const NO_PRICE = 'No poe.ninja price yet'
+// A price from a thin market: WThin's "!" after the price, with this on hover.
+export const THIN_MARKET = 'Thin market: few poe.ninja days this week'
+
 // One rounding for every price on screen: 1 decimal under 10, whole above,
 // and under 0.1 the first digit that isn't zero, so it never reads as 0 or 0.1.
 export function formatAmount (v: number): string {

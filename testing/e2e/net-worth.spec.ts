@@ -533,7 +533,8 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const names = () => rows.locator('td:first-child').allInnerTexts()
     await expect(rows).toHaveCount(3, { timeout: 10_000 })
     await expect.poll(names).toEqual(['Empower Support 4/20', "Maven's Writ", 'Headhunter'])
-    const price = panel.getByRole('button', { name: 'Price', exact: true })
+    // The shared sortable heading (WSortHead) names its state: "Sort by Price", then "Price, sorted descending".
+    const price = panel.getByRole('button', { name: /^(Sort by Price|Price, sorted \w+)$/ })
     await price.click()
     await expect.poll(names).toEqual(['Headhunter', "Maven's Writ", 'Empower Support 4/20'])
     await expect(panel.locator('th[aria-sort="descending"]')).toContainText('Price')
@@ -558,7 +559,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await hhSale.hover()
     await hhSale.locator('[data-line-out]').click()
     await expect(panel.locator('[data-sales-left-out]')).toHaveCount(0)
-    await panel.getByRole('button', { name: 'When', exact: true }).click()
+    await panel.getByRole('button', { name: /^(Sort by When|When, sorted \w+)$/ }).click()
     await panel.getByRole('tab', { name: 'Holdings' }).click()
 
     // Off again, without asking, and the window goes. The fake app lives on
