@@ -27,6 +27,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-26T05:10:42.345Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up PR 962 (https://github.com/guybnd/woke-poe-trade/pull/962,
+      b74423e): the In row shows the run's own part, with the pre-run listings
+      part crossed out underneath.
+    date: '2026-11-26T06:50:38.412Z'
+    selfAttested: true
+    id: c-2026-11-26t06-50-38-412z
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/961'
