@@ -40,6 +40,15 @@ history:
     selfAttested: true
     pin: true
     id: c-2026-11-26t01-44-46-122z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 948 merged (76da9dc): Harvest swap colours, 3.30 Syndicate rewards,
+      Kingsmarch, Foulborn orbs, scry-from maps. Ticket stays open for the 23
+      picks waiting on Guy.
+    date: '2026-11-26T01:57:14.765Z'
+    selfAttested: true
+    id: c-2026-11-26t01-57-14-765z
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/948'
 ---
