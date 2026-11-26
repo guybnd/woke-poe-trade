@@ -259,3 +259,22 @@ test('side window: a Foulborn unique lists its Foulborn kinds, priced, its own l
   expect(url).toContain('"id":"explicit.stat_1636209393"')
   expect(url).toContain('"name":"Carcass Jack"')
 })
+
+test('side window: a unique with versions lists each, priced, its own lit; a click checks that version', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/unique-impresence-fire.txt')
+  const side = overlay.page.locator('.w-pc-side')
+  await expect(side).toBeVisible({ timeout: 20_000 })
+  const versions = side.locator('[data-unique-version]')
+  // The 6L row is the links' price, not a version's.
+  await expect(versions).toHaveCount(2)
+  await expect(versions.nth(0)).toContainText('Chaos')
+  await expect(versions.nth(0)).toContainText('Adds (17-22) to (23-34) Chaos Damage')
+  await expect(versions.filter({ hasText: 'Fire' })).toContainText('this one')
+  await versions.nth(0).click()
+  // The Chaos version's own mods, not an unidentified copy.
+  const panel = overlay.widget('price-check')
+  await expect(panel.getByText(/Chaos Damage/).first()).toBeVisible()
+  await expect(versions.filter({ hasText: 'Chaos' })).toContainText('this one')
+})
+

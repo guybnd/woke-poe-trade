@@ -6558,6 +6558,196 @@
    "type": "Leather Belt"
   }
  },
+ "unique-impresence-fire.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_1379411836",
+       "value": {
+        "min": 10
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_321077055",
+       "value": {
+        "min": 26
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_3299347043",
+       "value": {
+        "min": 50
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3372524247",
+       "value": {
+        "min": 20
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_836936635",
+       "value": {
+        "min": 1
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_3416664215",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_56919069",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2100165275",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1195140808",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2097195894",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3442107889",
+       "value": {},
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Impresence",
+   "type": "Onyx Amulet"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_1379411836",
+       "value": {
+        "min": 10
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_321077055",
+       "value": {
+        "min": 26
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3299347043",
+       "value": {
+        "min": 50
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3372524247",
+       "value": {
+        "min": 20
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_836936635",
+       "value": {
+        "min": 1
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3416664215",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_56919069",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2100165275",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1195140808",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2097195894",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3442107889",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Impresence",
+   "type": "Onyx Amulet"
+  }
+ },
  "unique-kaoms-heart-corrupted.txt": {
   "opened": {
    "status": {

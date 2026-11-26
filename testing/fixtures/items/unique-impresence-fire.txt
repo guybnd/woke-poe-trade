@@ -1,0 +1,37 @@
+Item Class: Amulets
+Rarity: Unique
+Impresence
+Onyx Amulet
+--------
+Requirements:
+Level: 64
+--------
+Item Level: 84
+--------
+{ Implicit Modifier }
++10(10-19) to all Attributes
+--------
+{ Unique Modifier }
+Adds 20(20-24) to 33(33-36) Fire Damage
+{ Unique Modifier }
++50(50-84) to maximum Life
+{ Unique Modifier }
++20(20-25)% to Fire Resistance
+{ Unique Modifier }
+Regenerate 1(1-1.2)% of Life per second
+{ Unique Modifier }
+Elemental Weakness has no Reservation if Cast as an Aura
+{ Unique Modifier }
+Enfeeble has no Reservation if Cast as an Aura
+{ Unique Modifier }
+Temporal Chains has no Reservation if Cast as an Aura
+{ Unique Modifier }
+Flammability has no Reservation if Cast as an Aura
+{ Unique Modifier }
+Punishment has no Reservation if Cast as an Aura
+{ Unique Modifier }
+Gain Maddening Presence for 10 seconds when you Kill a Rare or Unique Enemy
+--------
+Though its body was locked in stone,
+its essence wandered the infinite,
+learning, and preparing.

@@ -113,7 +113,9 @@ import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
 import { sideRow, type SideRow } from './side-row'
 import { familiesOf, familyRows, type Family } from '@/web/woke/related-family/family'
 import { isRelatedGroup, cardsFor, rewardOf, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resolveParts } from '@/web/woke/related-family/recipe'
-import { loadTipDrops, loadTipItems, loadTipUniques, loadTipVestigial, vItemTip } from '@/web/woke/ui/tooltip/item-tip'
+import { loadTipDrops, loadTipItems, loadTipUniques, loadTipVestigial, loadUniqueMods, vItemTip } from '@/web/woke/ui/tooltip/item-tip'
+import { uniqueItemText } from '@/web/woke/ui/tooltip/item-menu-logic'
+import { VARIABLE_ITEMS } from '@/web/woke/shared/unid-prices'
 import { dropOf, type TipPack } from '@/web/woke/ui/tooltip/tip-content'
 import { randomDropsOnBase } from '@/web/woke/loot-filter/random-drops'
 import type { VaultTable, Vault } from '@/web/woke/vaults/vaults'
@@ -533,14 +535,20 @@ function getVersions (item: ParsedItem, data: UniquePack): VersionRow[] {
   if (item.rarity !== ItemRarity.Unique || item.info.namespace !== 'UNIQUE') return []
   const name = item.info.refName
   const bases = ITEM_BY_REF('UNIQUE', name) ?? []
-  const oneBase = bases.length <= 1 ? item.info.unique?.base : undefined
+  // poe.ninja names a relic's or tincture's base by its kind (getDetailsId.ts).
+  const oneBase = bases.length > 1 ? undefined
+    : item.category === ItemCategory.SanctumRelic ? 'Relic'
+      : item.category === ItemCategory.Tincture ? 'Tincture'
+        : item.info.unique?.base
   return data.mod.uniqueVersions(name, findPricesByName('UNIQUE', name).map(r => ({ variant: r.variant, chaos: r.chaos })), getDetailsId(item)?.variant, data.uniques, oneBase)
 }
 
 // Whether an Orb of Chance can make it, on its base (Guy's pick 3).
 function getChance (item: ParsedItem, data: UniquePack): ChanceInfo | null {
   if (item.rarity !== ItemRarity.Unique || item.info.namespace !== 'UNIQUE') return null
-  return data.mod.chanceInfo(item.info.refName, item.info.unique?.base, dropOf(data.drops ?? undefined, item.info.refName))
+  // Without the drop file a boss-only unique would read as a random drop.
+  if (!data.drops) return null
+  return data.mod.chanceInfo(item.info.refName, item.info.unique?.base, dropOf(data.drops, item.info.refName))
 }
 
 const CHANCE_WHY_MAX = 160
@@ -548,7 +556,8 @@ function chanceSection (chance: ChanceInfo | null) {
   if (!chance) return []
   const baseInfo = ITEM_BY_REF('ITEM', chance.base)?.[0]
   if (chance.can) {
-    if (!baseInfo) return []
+    // A base only uniques use (Kalandra's Touch's "Ring") has no white copy.
+    if (!baseInfo || baseInfo.icon === '%NOT_FOUND%') return []
     const chaos = chaosOf(baseInfo)
     return [{
       key: 'chance-it',
@@ -745,7 +754,7 @@ export default defineComponent({
         .filter(sec => sec.rows.length)
       // Where it comes from is said by its drop, boss or recipe section already:
       // "Can't be chanced" keeps only its heading.
-      const sourced = [...recipeSecs, ...extras, ...others].some(sec => /^(from:|boss$|recipe:|cards$|vault:)/.test(sec.key))
+      const sourced = [...recipeSecs, ...extras, ...others].some(sec => /^(from:|boss$|recipe:|vault:)/.test(sec.key))
       const all = [...recipeSecs, ...extras, ...others]
         .map(sec => sec.key === 'chance-it' && !sec.rows.length && sourced ? { ...sec, note: undefined } : sec)
       const data = conquest.value
@@ -804,7 +813,15 @@ export default defineComponent({
       const seq = ++clickSeq
       const bases = ITEM_BY_REF('UNIQUE', item.info.refName) ?? []
       const info = bases.find(b => b.unique && v.variant.split(', ').includes(b.unique.base)) ?? item.info
-      const input = await priceCheckRequest({ name: info.refName, rarity: 'unique', variant: v.tipVariant }, info)
+      let text: string | undefined
+      // A rolled unique (Impresence, Atziri's Splendour...) is checked by name
+      // as an unidentified copy: a version is checked as that version's mods.
+      if (v.tipVariant && VARIABLE_ITEMS.has(info.refName) && info.unique) {
+        const mods = await loadUniqueMods(info.refName, v.tipVariant).catch(() => null)
+        const base = ITEM_BY_REF('ITEM', info.unique.base)?.[0]
+        if (mods && base) text = uniqueItemText(info.refName, base.refName, base.craftable?.category, mods)
+      }
+      const input = await priceCheckRequest({ name: info.refName, rarity: 'unique', variant: v.tipVariant, text }, info)
       if (input && seq === clickSeq && props.item === item) emit('check', input)
     }
     const leagues = useLeagues()
