@@ -1,7 +1,7 @@
 <template>
   <div :class="$style.nav" @keydown="onKey">
     <div :class="$style.tools">
-      <WField v-model="query" type="search" icon="fas fa-filter" placeholder="Filter groups" />
+      <WSearchField v-model="query" things="groups" />
       <WSegmented :model-value="config.ruleNav.mode" :options="MODE_OPTIONS" @update:model-value="setMode" />
       <div class="flex items-center gap-1">
         <WChip clickable :active="changedOnly" @click="changedOnly = !changedOnly">Only what I changed{{ changedTotal ? ` ${changedTotal}` : '' }}</WChip>
@@ -23,7 +23,8 @@
     <div ref="listEl" :class="$style.list" class="w-scroll">
       <!-- Filter results, the Changed list: flat, each saying where it lives. -->
       <template v-if="flatList">
-        <WEmpty v-if="!flatList.length" icon="fas fa-search">{{ emptyText }}</WEmpty>
+        <WNoMatch v-if="!flatList.length && query.trim() && !hiddenCount" :query="query" @clear="query = ''" />
+        <WEmpty v-else-if="!flatList.length" icon="fas fa-search">{{ emptyText }}</WEmpty>
         <WListItem v-for="s in flatList" :key="s.group.type" :active="s.group.type === selType" @select="pick(s)" @contextmenu="emit('group-menu', $event, s.group.type)">
           <span class="flex items-center gap-2 w-full min-w-0" :class="{ [$style.off]: s.group.hidden }">
             <span class="w-trunc">{{ nameOf(s.group) }}</span>
@@ -110,7 +111,9 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { WButton, WChip, WEmpty, WField, WListItem, WSegmented, gameIcon } from '../ui'
+import { WButton, WChip, WEmpty, WListItem, WSegmented, gameIcon } from '../ui'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import type { GroupNode, SectionNode } from './groups'
 import { allSpots, buildNav, filterNav, findSpot, levelUp, navStamp, openCategory, shortGroupName } from './nav'
 import type { NavCategory, NavChapter, NavMode, NavSpot } from './nav'

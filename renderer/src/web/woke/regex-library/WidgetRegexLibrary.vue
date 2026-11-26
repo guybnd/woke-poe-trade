@@ -19,7 +19,7 @@
         <WSortButton :model-value="sortBy" :options="SORTS" @update:model-value="setSort" />
       </template>
       <template #toolbar>
-        <WField v-model="filter" icon="fas fa-search" placeholder="Filter by name, tag, category…" class="grow" />
+        <WSearchField v-model="filter" things="searches" placeholder="Filter by name, tag, category…" class="grow" />
         <WButton size="sm" icon="fas fa-plus" title="Add a search string" data-qa="regex-new" data-act="new">New</WButton>
       </template>
 
@@ -62,10 +62,7 @@
       <WTipLine v-if="config.entries.length && !hasHotkeys && config.enableHotkeys" :id="REGEX_KEY_HINT">
         Give a string a hotkey (<i class="fas fa-pen" aria-label="Edit" />, then Hotkey): press it in game and it goes into the stash search
       </WTipLine>
-      <WEmpty v-if="!tree.rows.value.length && config.entries.length && searching" icon="fas fa-filter">
-        Nothing matches "{{ filter }}".
-        <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
-      </WEmpty>
+      <WNoMatch v-if="!tree.rows.value.length && config.entries.length && searching" :query="filter" @clear="filter = ''" />
       <WEmpty v-else-if="!config.entries.length && !(config.folders ?? []).length && editing !== 'new'" :art="{ mechanic: 'stash' }">
         No saved searches yet. Add one, or build one on poe.re and save it from there.
         <template #actions>
@@ -100,9 +97,11 @@ import { MainProcess } from '@/web/background/IPC'
 import { pushHostConfig, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WField, WChip, WKbd, WEmpty, WButton, openMenu, toast } from '../ui'
+import { WPanel, WChip, WKbd, WEmpty, WButton, openMenu, toast } from '../ui'
 import WSortButton from '../ui/WSortButton.vue'
 import WRowActs from '../ui/WRowActs.vue'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { removeEntries } from '../shared/saved-list'
 import { useSavedTree } from '../shared/use-saved-tree'
 import { onSavedOpen } from '../shared/saved-open'

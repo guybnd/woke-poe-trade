@@ -8,12 +8,12 @@ test('tabs switch the list, picks sort to the top, the T17 switch hides T17 mods
   const panel = overlay.widget('woke-map-mods')
 
   await expect(panel.getByRole('tab', { name: /^Maps/ })).toHaveAttribute('aria-selected', 'true')
-  await expect(panel.getByPlaceholder(/Search \d+ map mods/)).toBeVisible()
+  await expect(panel.getByPlaceholder(/Filter \d+ map mods/)).toBeVisible()
   // The picks block is gone: the default profile's picks head the list.
   await expect(panel.getByText(/^Care · \d+$/)).toBeVisible()
   await overlay.snap('map mods maps tab')
 
-  const search = panel.getByPlaceholder(/Search \d+ map mods/)
+  const search = panel.getByPlaceholder(/Filter \d+ map mods/)
   await search.fill('Drowning Orbs')
   await expect(panel.getByText('Area contains Drowning Orbs')).toBeVisible()
   await panel.getByRole('switch').click()

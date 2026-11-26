@@ -255,7 +255,7 @@
       </section>
 
       <section :class="$style.chips">
-        <WField v-model="query" type="search" icon="fas fa-search" placeholder="Search items" :class="$style.search" />
+        <WSearchField v-model="query" things="items" :class="$style.search" />
         <WChip v-if="changedCount" clickable :active="onlyChanged" :title="onlyChanged ? 'Show every item' : 'Only the items you priced yourself or left out'" data-nw-changed @click="onlyChanged = !onlyChanged">Changed {{ changedCount }}</WChip>
         <WChip v-if="cat !== 'all'" clickable active :title="`Only ${catLabel}. Click to show every category`" @click="cat = 'all'">{{ catLabel }} ×</WChip>
         <HideChip v-if="divine" :value="hideBelow" :on="config.hideDivOn === true" :idle="floor.limiting === 'chaos'"
@@ -297,7 +297,7 @@ import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shall
 import { AppConfig } from '@/web/Config'
 import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import { usePoeninja } from '@/web/background/Prices'
-import { WBanner, WButton, WChip, WEmpty, WField, WKbd, WLineActs, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WKbd, WLineActs, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
 import { lineTip, tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
@@ -321,6 +321,7 @@ import { chartHOf, clampChartH, clampMidH, colWeights, dragCols, dragTop, edges,
 import type { ColId, FoldId, PanelLayout } from './layout'
 import SplitHandle from './SplitHandle.vue'
 import WSegmented from '../ui/WSegmented.vue'
+import WSearchField from '../ui/WSearchField.vue'
 import RateTimePick from '../shared/RateTimePick.vue'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'

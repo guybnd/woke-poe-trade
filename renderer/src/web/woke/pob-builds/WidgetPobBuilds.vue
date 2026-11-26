@@ -20,7 +20,7 @@
             <WField v-model="importText" icon="fas fa-link" placeholder="Build link (pobb.in, poe.ninja, maxroll…) or PoB code" class="grow" @keydown.enter="doImport" />
             <WButton size="sm" variant="primary" :disabled="importing || !importText.trim()" @click="doImport">{{ importing ? '…' : 'Import' }}</WButton>
           </div>
-          <WField v-else v-model="filter" icon="fas fa-search" placeholder="Filter by name, class, skill, folder…" class="grow" />
+          <WSearchField v-else v-model="filter" things="builds" placeholder="Filter by name, class, skill, folder…" class="grow" />
         </template>
         <template v-if="error" #banner>
           <WBanner><span :title="error">{{ errorText }}</span><template #actions><WButton size="sm" @click="refresh">Retry</WButton></template></WBanner>
@@ -56,10 +56,7 @@
             </WRowActs>
           </template>
         </SavedTree>
-        <WEmpty v-if="!loading && !shown.length && !error && builds.length" icon="fas fa-filter">
-          Nothing matches "{{ filter }}".
-          <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
-        </WEmpty>
+        <WNoMatch v-if="!loading && !shown.length && !error && builds.length" :query="filter" @clear="filter = ''" />
         <WEmpty v-else-if="!loading && !shown.length && !error" icon="fas fa-folder-open">
           No builds in {{ dir || 'the builds folder' }}. Save one in Path of Building, or import a build link with the button above.
           <template #actions><WButton size="sm" @click="importOpen = true">Import a build</WButton></template>
@@ -94,6 +91,8 @@ import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WButton, WEmpty, WBanner, WSkeleton, openMenu, toast } from '../ui'
 import WSortButton from '../ui/WSortButton.vue'
 import WRowActs from '../ui/WRowActs.vue'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { useSavedTree } from '../shared/use-saved-tree'
 import { isUnder, movedPath } from '../shared/saved-tree'
 import SavedTree from '../shared/SavedTree.vue'

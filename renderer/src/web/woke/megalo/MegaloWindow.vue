@@ -44,7 +44,7 @@
 - [[Click]] a notable to step it through **Want** (it counts), **Must** (up to 3: every result has it) and off.
 - The **number** is its weight; the best fit is 100. Click it to change it, **↺** goes back to the suggestion.
 - Hover a notable to see what it does." />
-            <WField v-model="filter" :class="$style.end" :style="{ width: '11rem' }" placeholder="Filter notables or tags" icon="fas fa-filter" data-qa="megalo-filter" />
+            <WSearchField v-model="filter" :class="$style.end" :style="{ width: '11rem' }" things="notables or tags" data-qa="megalo-filter" />
           </div>
           <div v-if="!pool.length" :class="$style.dim">The notable list loads when the window opens…</div>
           <div v-for="g in shownGroups" :key="g.tag" :class="$style.ngroup">
@@ -66,7 +66,7 @@
           <WButton v-if="otherRows.length" size="sm" variant="ghost" :class="$style.more" @click="showOther = !showOther">
             {{ showOther ? 'Hide' : 'Show' }} {{ otherRows.length }} notables that fit none of your tags
           </WButton>
-          <span v-if="pool.length && !shownGroups.length" :class="$style.dim">No notable matches that filter.</span>
+          <WNoMatch v-if="pool.length && !shownGroups.length && filter.trim()" :query="filter" @clear="filter = ''" />
           <span v-if="unknown" :class="$style.dim" data-qa="megalo-unknown">{{ unknown }} new {{ unknown === 1 ? 'notable isn\'t' : 'notables aren\'t' }} in the trade data yet, so {{ unknown === 1 ? 'it\'s' : 'they\'re' }} left out.</span>
         </section>
 
@@ -105,6 +105,8 @@ import { useLeagues } from '@/web/background/Leagues'
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import { WButton, WChip, WField, WInfo, WPanel, WSegmented, toast } from '../ui'
 import { vModTip } from '../ui/tooltip/mod-line-tip'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import type { ModLine } from '../ui/tooltip/mod-line-tip'
 import { tradeUrl } from '../search/search'
 import { priceCheckTradeStatus } from '../shared/trade-status'
@@ -277,9 +279,8 @@ function toggleMust (name: string) {
 // One click for all three: off → Want → Must → off. With 3 musts already,
 // Want goes straight back to off (the toast says why).
 function cycle (name: string) {
-  if (isMust(name)) toggleOn(name)
-  else if (isOn(name)) { if (!toggleMust(name)) toggleOn(name) }
-  else toggleOn(name)
+  if (isMust(name) || !isOn(name)) toggleOn(name)
+  else if (!toggleMust(name)) toggleOn(name)
 }
 function edited (name: string): boolean { return picks.value[name]?.weight != null }
 function weightOf (r: Scored): number { return picks.value[r.name]?.weight ?? r.weight }
@@ -291,7 +292,7 @@ function setWeight (r: Scored, raw: string) {
 function resetWeight (name: string) { setPick(name, { weight: undefined }) }
 
 // ---- grouping and filter ----
-const filter = shallowRef<string | number>('')
+const filter = shallowRef('')
 const showOther = shallowRef(false)
 function matches (r: Scored, q: string): boolean {
   return !q || r.name.toLowerCase().includes(q) || r.tags.some(t => t.toLowerCase().includes(q)) ||

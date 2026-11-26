@@ -13,7 +13,7 @@
 
     <div :class="$style.main">
       <div :class="$style.tools">
-        <WField v-model="query" icon="fas fa-search" :placeholder="category ? `Filter ${category.label}` : 'Filter'" class="grow" />
+        <WSearchField v-model="query" :things="category ? category.label : 'prices'" class="grow" />
         <WSegmented v-model="unit" title="Show values in chaos or divines" :options="[{ value: 'chaos', label: 'c' }, { value: 'div', label: 'div' }]" />
         <WSegmented v-model="range" aria-label="Time range for the price line and change" :options="rangeOptions" />
         <WCorruptedFilter v-if="category?.type === 'SkillGem'" v-model="corrupted" />
@@ -30,7 +30,8 @@
             <WSortHead label="Value" :active="config.priceSort === 'value'" :desc="config.priceDesc" align="right" :class="$style.right" @sort="sortBy('value')" />
             <WSortHead :label="rangeLong" :active="config.priceSort === 'change'" :desc="config.priceDesc" align="right" :class="$style.right" :title="rangeTitle" @sort="sortBy('change')" />
           </div>
-          <WEmpty v-if="!shown.length" icon="fas fa-search">No {{ category.label.toLowerCase() }} match<template v-if="query.trim()"> "{{ query.trim() }}"</template>.</WEmpty>
+          <WNoMatch v-if="!shown.length && query.trim()" :query="query" @clear="query = ''" />
+          <WEmpty v-else-if="!shown.length" icon="fas fa-search">No {{ category.label.toLowerCase() }} here.</WEmpty>
           <div v-for="r in shown" :key="r.key" v-item-tip="r" class="w-row" :class="$style.grid" @contextmenu="rowMenu($event, r)">
             <span class="w-trunc inline-flex items-center gap-2" :class="rarityClass(r.type)">
               <WIcon :src="rowIcon(r)" size="md" />
@@ -71,10 +72,12 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { usePoeninja } from '@/web/background/Prices'
 import { ninjaArt } from './ninja-icons'
-import { WChip, WDelta, WEmpty, WField, WIcon, WPrice, WSegmented, WSkeleton, WSpark, itemArt, ninjaIcon, openMenu, vItemTip } from '../ui'
+import { WChip, WDelta, WEmpty, WIcon, WPrice, WSegmented, WSkeleton, WSpark, itemArt, ninjaIcon, openMenu, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui/layer'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import WSortHead from '../ui/WSortHead.vue'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { rarityClass } from '../search/search'
 import { lastWokePrices, onWokePricesLoaded } from './hook'
 import { feedDays } from './parse'

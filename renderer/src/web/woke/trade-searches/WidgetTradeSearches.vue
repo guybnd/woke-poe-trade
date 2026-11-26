@@ -17,7 +17,7 @@
     <div class="flex gap-2 min-w-0 min-h-0 items-start">
       <WPanel ref="panel" :keys="LIST_KEYS" class="shrink-0" :title="config.wmTitle || 'Trade searches'" icon="exalted" width="38rem" max-height="70vh">
         <template #toolbar>
-          <WField v-model="filter" icon="fas fa-search" placeholder="Filter every folder by name, tag…" class="grow" />
+          <WSearchField v-model="filter" things="searches" placeholder="Filter every folder by name, tag…" class="grow" />
         </template>
         <template #actions>
           <WSortButton v-model="sort" :options="SORTS" />
@@ -71,10 +71,7 @@
                 </div>
               </template>
             </SavedTree>
-            <WEmpty v-if="!tree.rows.value.length && filter" icon="fas fa-filter">
-              Nothing matches "{{ filter }}".
-              <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
-            </WEmpty>
+            <WNoMatch v-if="!tree.rows.value.length && filter" :query="filter" @clear="filter = ''" />
             <WEmpty v-else-if="!tree.rows.value.length && config.entries.length" icon="far fa-folder-open">
               Nothing here yet.
             </WEmpty>
@@ -130,7 +127,9 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import WSortButton from '../ui/WSortButton.vue'
 import WRowActs from '../ui/WRowActs.vue'
-import { WPanel, WField, WChip, WKbd, WEmpty, WButton, ago, gameIcon, mechanicIcon, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
+import { WPanel, WChip, WKbd, WEmpty, ago, gameIcon, mechanicIcon, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui'
 import { copyText } from '../ui/copy'
 import DockItem from '../dock/DockItem.vue'

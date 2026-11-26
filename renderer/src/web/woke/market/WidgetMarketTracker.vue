@@ -60,7 +60,7 @@
       <MarketPrices v-if="prices" :config="config" :open="config.wmWants === 'show'" />
       <template v-else-if="searching">
         <WSkeleton v-if="!latest && league" :rows="8" />
-        <WEmpty v-else-if="!searchGroups.length" icon="fas fa-search">Nothing on poe.ninja matches "{{ query.trim() }}"<template v-if="corrupted !== 'any'"> with the corrupted filter on</template>. Rares, bases, flasks and cluster jewels have no saved price.</WEmpty>
+        <WNoMatch v-else-if="!searchGroups.length" :query="query" @clear="query = ''"><template v-if="corrupted !== 'any'">The corrupted filter is on. </template>Rares, bases, flasks and cluster jewels have no saved price.</WNoMatch>
         <template v-else>
           <div class="w-row w-row--head" :class="$style.grid"><span /><span>Item</span><span>Then</span><span class="text-right">Now</span><span class="text-right">%</span></div>
           <template v-for="g in searchGroups" :key="groupKey(g)">
@@ -155,6 +155,7 @@ import { computeMovers, trendBaseline } from './analysis'
 import { PRICE_GROUP_LIMIT, groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { WInfo, WPanel, WTabs, WSegmented, WSelect, WField, WPrice, WDelta, WSpark, WEmpty, WIcon, WKbd, WSkeleton, WBanner, WChip, ninjaIcon, openMenu, toast, vItemTip } from '../ui'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { copyText } from '../ui/copy'
 import type { Mover } from './analysis'
 import { isThin, itemKey, thinTitle, utcDate } from './types'

@@ -13,6 +13,8 @@ import WSortButton from '@/web/woke/ui/WSortButton.vue'
 import WSortHead from '@/web/woke/ui/WSortHead.vue'
 import WRowActs from '@/web/woke/ui/WRowActs.vue'
 import WBackLink from '@/web/woke/ui/WBackLink.vue'
+import WSearchField from '@/web/woke/ui/WSearchField.vue'
+import WNoMatch from '@/web/woke/ui/WNoMatch.vue'
 import { NO_PRICE, THIN_MARKET } from '@/web/woke/ui/format'
 import { RATE_HEAD, RATE_WORD, nextModRating } from '@/web/woke/map-mods/rules'
 
@@ -133,5 +135,26 @@ describe('back (WBackLink)', () => {
 
   it('is the only back control in drill-downs', () => {
     expect(offenders(/title="Back" @click="openId = null"|icon="fas fa-arrow-left"[^>]*>Back</)).toEqual([])
+  })
+})
+
+describe('search and no match (WSearchField, WNoMatch)', () => {
+  it('filters with the magnifier and says what', async () => {
+    const html = await render(WSearchField, { modelValue: '', things: 'bookmarks' })
+    expect(html).toContain('fa-search')
+    expect(html).toContain('placeholder="Filter bookmarks"')
+  })
+
+  it('says nothing matches, with a way out', async () => {
+    const html = await render(WNoMatch, { query: ' fossil ' })
+    expect(html).toContain('Nothing matches &quot;fossil&quot;')
+    expect(html).toContain('Clear search')
+  })
+
+  it('has one look: no funnel in filter boxes, no hand-made no-match lines', () => {
+    expect(offenders(/<WField[^>]*icon="fas fa-filter"/)).toEqual([])
+    // Finders' dropdowns (an item picker, the launcher) say it in one dim line under the box.
+    const finders = ['ui/WNoMatch.vue', 'loot-filter/AddItemField.vue', 'loot-filter/ItemSearchField.vue', 'tab-bar/TabBar.vue', 'valdo/ValdoStrip.vue']
+    expect(offenders(/Nothing matches "\{\{|No \w+ matches? "\{\{|>No mods match\.<|>Nothing matches\.</, finders)).toEqual([])
   })
 })

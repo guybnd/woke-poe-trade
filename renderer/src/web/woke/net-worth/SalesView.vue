@@ -22,7 +22,7 @@
     <div v-else class="w-dim text-xs" :class="$style.none">No sales in this range.</div>
 
     <section :class="$style.chips">
-      <WField v-model="query" type="search" icon="fas fa-search" placeholder="Search sales" :class="$style.search" />
+      <WSearchField v-model="query" things="sales" :class="$style.search" />
       <WChip v-if="type" clickable active :title="`Only ${typeLabel}. Click to show every type`" @click="type = null">{{ typeLabel }} ×</WChip>
       <WChip v-if="outInRange || onlyChanged" clickable :active="onlyChanged" title="Only the sales you left out of the totals" data-sales-changed @click="onlyChanged = !onlyChanged">Changed {{ outInRange }}</WChip>
     </section>
@@ -49,7 +49,7 @@
             <td class="w-num" :class="marketTone(s)">{{ marketText(marketOf(s)) || '—' }}</td>
             <td class="w-num w-dim" :title="new Date(s.at).toLocaleString()">{{ when(s.at) }}<WLineActs :name="saleName(s)" :out="isOut(s)" :entries="entriesOf(s)" :head="e => headOf(s, e)" @out="leaveOut(s, $event)" /></td>
           </tr>
-          <tr v-if="!rows.length"><td colspan="5" class="w-dim" :class="$style.left">Nothing matches.</td></tr>
+          <tr v-if="!rows.length"><td colspan="5" :class="$style.left"><WNoMatch v-if="query.trim()" :query="query" @clear="query = ''" /><span v-else class="w-dim">No sales of this type here.</span></td></tr>
           <tr v-if="rows.length > limit"><td colspan="5" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 100">{{ rows.length - limit }} more</WButton></td></tr>
         </tbody>
       </table>
@@ -61,13 +61,15 @@
 // The Sales view (pick C): your sales for a range, a ranked bar per type that
 // filters the table under it, and every sale kept.
 import { computed, shallowRef, watch } from 'vue'
-import { WButton, WChip, WEmpty, WField, WLineActs, vItemTip } from '../ui'
+import { WButton, WChip, WEmpty, WLineActs, vItemTip } from '../ui'
 import { saleTip } from './sale-tip'
 import { useSaleLines } from './sale-lines'
 import { formatAmount, nowMinute } from '../ui/format'
 import WSegmented from '../ui/WSegmented.vue'
 import Coin from './Coin.vue'
 import WSortHead from '../ui/WSortHead.vue'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { byType, inRange, marketText, nextSaleSort, saleChaos, saleName, saleSortOf, saleType, sortSales, totals, SALE_TYPES } from './sales'
 import type { Sale, SaleRange, SaleSort, SaleSortKey, SaleType, TypeRow } from './sales'
 import { marketOf, rates, sales, salesReading } from './sales-store'

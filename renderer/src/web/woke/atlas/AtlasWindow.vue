@@ -30,7 +30,7 @@
             </div>
             <div v-if="importError" class="w-down text-xs">{{ importError }}</div>
           </div>
-          <WField v-else v-model="filter" icon="fas fa-search" placeholder="Filter by name, Thread, folder…" class="grow" />
+          <WSearchField v-else v-model="filter" things="strategies" placeholder="Filter by name, Thread, folder…" class="grow" />
         </template>
 
         <SavedTree :tree="tree" list-id="atlas-folders" :active-id="config.selectedId" :copy="copyCode"
@@ -62,10 +62,7 @@
             <WButton size="sm" icon="fas fa-file-import" @click="importOpen = true">Import</WButton>
           </template>
         </WEmpty>
-        <WEmpty v-else-if="filter && !tree.rows.value.length" icon="fas fa-search">
-          No strategy matches "{{ filter }}".
-          <template #actions><WButton size="sm" variant="ghost" @click="filter = ''">Clear filter</WButton></template>
-        </WEmpty>
+        <WNoMatch v-else-if="filter && !tree.rows.value.length" :query="filter" @clear="filter = ''" />
       </WPanel>
 
       <template v-if="selected">
@@ -120,6 +117,8 @@ import { MainProcess } from '@/web/background/IPC'
 import { WPanel, WField, WButton, WEmpty, WBanner, WSkeleton, openMenu, toast, useCopy } from '../ui'
 import WSortButton from '../ui/WSortButton.vue'
 import WRowActs from '../ui/WRowActs.vue'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import {
   allFolders, claimRegexFolders, setPointsAt, takePointsAt, dropDraft, isDirty, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, isStrategyCode,

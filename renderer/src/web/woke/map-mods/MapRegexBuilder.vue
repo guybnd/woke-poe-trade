@@ -65,7 +65,8 @@
               <span v-else-if="regex.dropped.includes(row.matcher)" class="w-warn text-xs" title="Left out to fit the search">trimmed</span>
             </div>
           </template>
-          <WEmpty v-if="!visible.length" icon="fas fa-search">No mods match.</WEmpty>
+          <WNoMatch v-if="!visible.length && search.trim()" :query="search" @clear="search = ''" />
+          <WEmpty v-else-if="!visible.length" icon="fas fa-search">No mods here.</WEmpty>
           <div v-if="hiddenCount" class="w-dim text-xs p-2 text-center">{{ hiddenCount }} more. Search to narrow the list.</div>
         </div>
       </div>
@@ -187,6 +188,7 @@ import type { ComponentPublicInstance } from 'vue'
 import { useFold } from '../ui/fold'
 import { vModTip } from '../ui/tooltip/mod-line-tip'
 import WRateChip from '../ui/WRateChip.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { MainProcess } from '@/web/background/IPC'
 import { pushHostConfig } from '@/web/Config'
 import { WPanel, WButton, WChip, WField, WInfo, WKbd, WSegmented, WSelect, WTabs, WToggle, WEmpty, toast } from '../ui'
@@ -300,7 +302,7 @@ const t17 = computed(() => tier17Mods())
 const ratings = computed(() => modRatings(profile.value, mode.value))
 const tabOptions = computed(() => searchOptions(profile.value, mode.value))
 const modeMods = computed(() => modsForMode(mode.value, profile.value))
-const searchHint = computed(() => `Search ${modeMods.value.length} ${MODE_NOUN[mode.value]} mods`)
+const searchHint = computed(() => `Filter ${modeMods.value.length} ${MODE_NOUN[mode.value]} mods`)
 
 // Tab labels shared with What's new's Show me (tab-bar/goto.ts).
 const TAB = GOTO_TARGETS['woke-map-mods']
