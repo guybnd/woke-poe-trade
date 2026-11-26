@@ -8,7 +8,7 @@ import type { ObjectDirective } from 'vue'
 import { ITEM_BY_REF } from '@/assets/data'
 import { Host } from '@/web/background/IPC'
 import { usePoeninja } from '@/web/background/Prices'
-import { buildTip, dropOf, dropSource, kindOfNinjaType, packFiles, randomDropsFirst } from './tip-content'
+import { buildTip, dropOf, dropSource, kindOfNinjaType, packFiles, randomDropsFirst, tieredMapBase } from './tip-content'
 import { isNinjaRowType } from './ninja-row-types'
 import type { TipCorpse, TipKind, TipModel, TipPack } from './tip-content'
 import { isCorpse } from '../../shared/corpses'
@@ -226,6 +226,12 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
   await Promise.all([...packFiles(kind), ...(kind === 'item' && isCorpse(ref.name) ? ['corpses' as const] : [])].map(loadFile))
   const base = kind === 'unique' ? ITEM_BY_REF('UNIQUE', ref.name)?.[0]?.unique?.base : undefined
   let model = buildTip(pack, { name: ref.name, kind, variant: ref.variant, base })
+  // A map by tier ("Map (Tier 16)", poe.ninja's 3.30 rows): its base, under that name.
+  const tiered = model ? null : tieredMapBase(ref.name)
+  if (tiered) {
+    const m = buildTip(pack, { name: tiered, kind })
+    if (m) model = { ...m, name: ref.name }
+  }
   const market = marketFor(ref, kind)
   if (model && kind === 'card') model = await withCardRarity(model, ref.name, market)
   if (model && kind === 'gem') model = await withGemExtras(model, ref)

@@ -49,28 +49,31 @@ test('lines fold under their tool: one group open at a time, × on a heading dis
   const groups = icon.locator('[data-whats-new-group]')
   const heads = icon.locator('[data-whats-new-group-head]')
   // Price check splits by topic; the group with the newest line starts open.
-  const tooltips = groups.filter({ has: overlay.page.getByText('· Tooltips') })
-  const maps = groups.filter({ has: overlay.page.getByText('· Maps') })
-  const nTips = NEWS.filter(n => n.topic === 'Tooltips').length
+  // We open whichever of Tooltips and Maps isn't open yet (`other`).
+  const tips = groups.filter({ has: overlay.page.getByText('· Tooltips') })
   await expect(icon.locator('[data-open]')).toHaveCount(1)
-  await expect(tooltips.locator('[data-whats-new-group-head]')).toContainText(String(nTips))
+  const otherTopic = await tips.getAttribute('data-open') == null ? 'Tooltips' : 'Maps'
+  const firstTopic = otherTopic === 'Maps' ? 'Tooltips' : 'Maps'
+  const first = groups.filter({ has: overlay.page.getByText(`· ${firstTopic}`) })
+  const other = groups.filter({ has: overlay.page.getByText(`· ${otherTopic}`) })
+  await expect(first.locator('[data-whats-new-group-head]')).toContainText(String(NEWS.filter(n => n.topic === firstTopic).length))
   await overlay.snap('what\'s new folded by tool')
-  await maps.locator('[data-whats-new-group-head]').click()
-  await expect(maps).toHaveAttribute('data-open', '')
+  await other.locator('[data-whats-new-group-head]').click()
+  await expect(other).toHaveAttribute('data-open', '')
   await expect(icon.locator('[data-open]')).toHaveCount(1)
-  await expect(maps.locator('[data-whats-new-line]').first()).toBeVisible()
-  await expect(tooltips.locator('[data-whats-new-line]').first()).toBeHidden()
+  await expect(other.locator('[data-whats-new-line]').first()).toBeVisible()
+  await expect(first.locator('[data-whats-new-line]').first()).toBeHidden()
   // A folded heading shows its newest line, faint; the open one doesn't.
-  await expect(tooltips.locator('[data-whats-new-preview]')).toContainText(NEWS.find(n => n.topic === 'Tooltips')!.note.replace(/^New: ./, '').slice(0, 20))
-  await expect(maps.locator('[data-whats-new-preview]')).toHaveCount(0)
-  // Remembered: the card reopens on Maps.
-  await expect.poll(() => fakeApp.readConfig()?.woke?.newsOpen).toBe('price-check:Maps')
+  await expect(first.locator('[data-whats-new-preview]')).toContainText(NEWS.find(n => n.topic === firstTopic)!.note.replace(/^New: ./, '').slice(0, 20))
+  await expect(other.locator('[data-whats-new-preview]')).toHaveCount(0)
+  // Remembered: the card reopens on the group we opened.
+  await expect.poll(() => fakeApp.readConfig()?.woke?.newsOpen).toBe(`price-check:${otherTopic}`)
   // Its heading's × takes every line of the group.
   const before = await icon.locator('[data-whats-new-line]').count()
-  const nMaps = NEWS.filter(n => n.topic === 'Maps').length
-  await maps.locator('[data-whats-new-dismiss-group]').click()
-  await expect(icon.locator('[data-whats-new-line]')).toHaveCount(before - nMaps)
-  await expect(icon).not.toContainText('· Maps')
+  const nOther = NEWS.filter(n => n.topic === otherTopic).length
+  await other.locator('[data-whats-new-dismiss-group]').click()
+  await expect(icon.locator('[data-whats-new-line]')).toHaveCount(before - nOther)
+  await expect(icon).not.toContainText(`· ${otherTopic}`)
   expect(await heads.count()).toBeGreaterThan(0)
 })
 

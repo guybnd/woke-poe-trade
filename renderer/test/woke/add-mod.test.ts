@@ -10,7 +10,8 @@ vi.mock('@/web/Config', () => ({
 }))
 
 /* eslint-disable import-x/first */
-import { STATS_ITERATOR } from '@/assets/data'
+import { STATS_ITERATOR, STAT_BY_REF_V2 } from '@/assets/data'
+import { ItemCategory } from '@/parser'
 import { createFilters } from '@/web/price-check/filters/create-item-filters'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { addedModFrom, buildAddIndex, kindCounts, searchAddIndex, AddEntry } from '@/web/woke/price-insight/add-mod-search'
@@ -78,6 +79,48 @@ describe('Add a mod', () => {
     filters.addedMods = [mod]
     const and = createTradeRequest(filters, []).query.stats[0]
     expect(and.filters).toContainEqual(expect.objectContaining({ id: 'explicit.stat_2878959938', value: expect.objectContaining({ min: undefined, max: -10 }) }))
+  })
+})
+
+// Guy's pick: a stat with a local and a global version takes the one the item
+// type uses. Before, "+# to maximum Energy Shield" on a body armour searched the
+// global stat and found nothing.
+describe('Add a mod: local or global by item type', () => {
+  let index: AddEntry[]
+  beforeAll(async () => {
+    await loadGameData()
+    index = buildAddIndex(STATS_ITERATOR(''))
+  })
+  const add = (ref: string, kind: 'explicit', category: ItemCategory) => {
+    const e = index.find(x => x.ref === ref)!
+    return addedModFrom(e, kind, { group: STAT_BY_REF_V2(ref), category }).tradeId
+  }
+  it('armour and shields get the local stat, jewellery the global one', () => {
+    expect(add('+# to maximum Energy Shield', 'explicit', ItemCategory.BodyArmour)).toEqual(['explicit.stat_4052037485'])
+    expect(add('+# to maximum Energy Shield', 'explicit', ItemCategory.Shield)).toEqual(['explicit.stat_4052037485'])
+    expect(add('+# to maximum Energy Shield', 'explicit', ItemCategory.Belt)).toEqual(['explicit.stat_3489782002'])
+    expect(add('+# to maximum Energy Shield', 'explicit', ItemCategory.Amulet)).toEqual(['explicit.stat_3489782002'])
+  })
+  it('whichever version the data lists first', () => {
+    // "#% increased Armour" lists the local one first: an amulet still gets the global.
+    expect(add('#% increased Armour', 'explicit', ItemCategory.Helmet)).toEqual(['explicit.stat_1062208444'])
+    expect(add('#% increased Armour', 'explicit', ItemCategory.Amulet)).toEqual(['explicit.stat_2866361420'])
+  })
+  it('weapons get the local stat', () => {
+    const local = add('Adds # to # Fire Damage', 'explicit', ItemCategory.Bow)
+    const global = add('Adds # to # Fire Damage', 'explicit', ItemCategory.Ring)
+    expect(local).not.toEqual(global)
+    expect(global).toEqual(['explicit.stat_321077055'])
+  })
+  it('searches the picked stat', () => {
+    const filters = createFilters(parseItem(fixture('items/rare-ring.txt')), OPTS)
+    const es = index.find(x => x.ref === '+# to maximum Energy Shield')!
+    filters.addedMods = [addedModFrom(es, 'explicit', { group: STAT_BY_REF_V2(es.ref), category: ItemCategory.Ring })]
+    expect(createTradeRequest(filters, []).query.stats[0].filters).toContainEqual(expect.objectContaining({ id: 'explicit.stat_3489782002' }))
+  })
+  it('a stat with one version keeps its ids', () => {
+    const life = index.find(x => x.ref === '+# to maximum Life')!
+    expect(addedModFrom(life, 'explicit', { group: STAT_BY_REF_V2(life.ref), category: ItemCategory.BodyArmour }).tradeId).toEqual(life.ids.explicit)
   })
 })
 

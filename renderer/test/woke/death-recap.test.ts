@@ -1,6 +1,6 @@
 // Log lines are in the real Client.txt's shape, checked against Guy's log.
 import { describe, expect, it } from 'vitest'
-import { DeathTracker, areaName, deathGroup, levelFits, matchCheck, modDeathStats, ordinal, shortTime, slainName } from '@/web/woke/death-recap/death-log'
+import { DeathTracker, areaName, deathGroup, isNameless, levelFits, matchCheck, runFromCheck, modDeathStats, ordinal, shortTime, slainName } from '@/web/woke/death-recap/death-log'
 import { parseAreaModLines } from '@/web/woke/death-recap/area-list'
 import { TooltipMatcher } from '@/web/woke/map-mods/tooltip-parse'
 import type { DeathRecord, MapCheck, MapEntry, RunRecord } from '@/web/woke/death-recap/death-log'
@@ -229,5 +229,31 @@ describe('the game mod list', () => {
 
   it('finds nothing in text that is no mod list', () => {
     expect(parseAreaModLines(['Area is corrupted', ''], matcher)).toEqual({ mods: [], weak: [] })
+  })
+})
+
+describe('a check with no area name (3.30 maps copy as "Map")', () => {
+  const at = 1_000_000_000
+  const check = (name: string, ago: number, tier: number | undefined = 16): MapCheck =>
+    ({ at: at - ago, name, tier, mods: [{ matcher: name + ago }], unknown: [] })
+  const map = { name: 'Beach', level: 83, at }
+
+  it('matches the newest nameless check of the same tier in the last 30 minutes, as likely', () => {
+    const newest = check('Map', 60_000)
+    const m = matchCheck([check('Map', 5 * 60_000), newest, check('Map', 30_000, 10)], map)
+    expect(m).toMatchObject({ check: newest, match: 'likely', candidates: 2, byTier: true })
+    expect(runFromCheck('k', map, m!)).toMatchObject({ match: 'likely', byTier: true, tier: 16 })
+  })
+
+  it('prefers a check by name, and refuses an older one, another tier or no tier', () => {
+    expect(matchCheck([check('Map', 1000), check('Beach', 60_000)], map)).toMatchObject({ match: 'exact' })
+    expect(matchCheck([check('Map', 31 * 60_000)], map)).toBeNull()
+    expect(matchCheck([check('Map', 60_000, 12)], map)).toBeNull()
+    expect(matchCheck([{ ...check('Map', 60_000), tier: undefined }], map)).toBeNull()
+  })
+
+  it('knows a nameless check', () => {
+    expect(isNameless('Map')).toBe(true)
+    expect(isNameless('Beach Map')).toBe(false)
   })
 })
