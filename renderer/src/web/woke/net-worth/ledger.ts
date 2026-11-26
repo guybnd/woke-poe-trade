@@ -272,6 +272,53 @@ export function priceMoves (lines: Array<Pick<ValuedLine, 'key' | 'name' | 'chao
   return out.sort((a, b) => Math.abs(b.valueChaos) - Math.abs(a.valueChaos)).slice(0, n)
 }
 
+// ---------- worth selling ----------
+
+// poe.ninja's change over its 7-day line: the first priced day to the last.
+// null under 3 days apart, or with no price on the last day.
+export function change7d (graph: Array<number | null> | undefined): number | null {
+  const g = graph ?? []
+  const last = g[g.length - 1]
+  const first = g.findIndex(v => v != null)
+  if (typeof last !== 'number' || first < 0 || g.length - 1 - first < 3) return null
+  const a = 1 + (g[first] as number) / 100
+  const b = 1 + last / 100
+  if (!(a > 0) || !(b > 0)) return null
+  return b / a - 1
+}
+
+export interface SellLine { key: string, name: string, icon: string, count: number, chaos: number, d1: number, d7: number, lostChaos: number }
+
+// Falling (pick R1): down 5% today and 15% over the week, or a sharp 20% today
+// with the week down too. A one-day dip on a steady item isn't a trend.
+export const SELL_DAY = -0.05
+export const SELL_WEEK = -0.15
+export const SELL_SHARP = -0.2
+// A thin market (poe.ninja had no price on this many of its 7 days): its
+// moves are a few listings, not the market.
+const SELL_THIN_GAPS = 3
+// Held worth at least 1 divine (150 chaos before a divine rate is known).
+export const sellMinChaos = (divine: number | null) => divine && divine > 0 ? divine : 150
+
+// What you hold enough of that has started losing value, biggest first.
+// Your own prices, held prices (a jump, a one-day price, a spike) and thin
+// markets are left out: their trend can't be trusted.
+export function worthSelling (lines: ReadonlyArray<Pick<ValuedLine, 'key' | 'name' | 'icon' | 'count' | 'chaos' | 'graph' | 'mine' | 'heldSince' | 'heldKind' | 'state'>>, minChaos: number): SellLine[] {
+  const out: SellLine[] = []
+  for (const l of lines) {
+    if (l.state || l.mine || l.heldSince != null || l.heldKind || !(l.chaos >= minChaos) || !(l.chaos > 0)) continue
+    const g = l.graph ?? []
+    if (g.length < 7 || g.filter(v => v == null).length >= SELL_THIN_GAPS) continue
+    const d1 = change24h(g)
+    const d7 = change7d(g)
+    if (d1 == null || d7 == null) continue
+    const falling = (d1 <= SELL_DAY && d7 <= SELL_WEEK) || (d1 <= SELL_SHARP && d7 < 0)
+    if (!falling) continue
+    out.push({ key: l.key, name: l.name, icon: l.icon, count: l.count, chaos: l.chaos, d1, d7, lostChaos: l.chaos / (1 + d7) - l.chaos })
+  }
+  return out.sort((a, b) => b.chaos - a.chaos)
+}
+
 // ---------- what changed (C1, C2) ----------
 
 // Recent refreshes' changes, kept small for the change view.

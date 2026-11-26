@@ -15,14 +15,15 @@ export const GOTO_TARGETS = {
 // element carries data-goto-spot="<id>", and its useGoto opens whatever
 // hides it (a folded section, Details).
 export const GOTO_SPOTS = {
-  'woke-net-worth': { 'per-hour': 'holdings', 'faustus-box': 'holdings', 'still-cheapest': 'listed', 'stale': 'listed' }
+  'woke-net-worth': { 'per-hour': 'holdings', 'faustus-box': 'holdings', 'worth-selling': 'holdings', 'still-cheapest': 'listed', 'stale': 'listed' }
 } as const satisfies { [T in keyof typeof GOTO_TARGETS]?: Record<string, keyof typeof GOTO_TARGETS[T]> }
 
 // What's new lines whose feature is a spot, by line id (news.ts). Kept here,
 // not on the line: NEWS loads at startup, this only with the dock's card.
 export const NEWS_SPOTS: Record<string, string> = {
   'listed-still-cheapest': 'still-cheapest',
-  'net-worth-listed': 'stale'
+  'net-worth-listed': 'stale',
+  'net-worth-worth-selling': 'worth-selling'
 }
 
 export function gotoSpots (wmType: string): Record<string, string> | null {

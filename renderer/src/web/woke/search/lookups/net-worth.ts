@@ -63,3 +63,35 @@ export function netWorthLookup (glance: Glance | null): Lookup {
     }]
   }
 }
+
+const SELL_WORDS = ['worth selling', 'selling', 'sell', 'liquidate', 'falling', 'dump', 'what to sell']
+
+// Typed in full up to at least the first word, as above.
+function wantsSelling (query: string): boolean {
+  const q = query.trim().toLowerCase().replace(/\s+/g, ' ')
+  return q.length >= 4 && SELL_WORDS.some(p => p.startsWith(q) && q.length >= Math.min(p.split(' ')[0].length, p.length))
+}
+
+const pct = (c: number) => `${c > 0 ? '+' : c < 0 ? '−' : ''}${Math.abs(Math.round(c * 100))}%`
+
+// Net worth's Worth selling list, from the last read's saved glance.
+export function worthSellingLookup (glance: Glance | null): Lookup {
+  return (query) => {
+    if (!glance || !wantsSelling(query)) return []
+    const list = glance.selling
+    if (!list) return []
+    const rows: LookupRow[] = list.map(s => ({ label: `${s.count > 1 ? `${s.count} × ` : ''}${s.name}`, item: { name: s.name }, note: `${pct(s.d1)} · 7d ${pct(s.d7)}`, chaos: s.chaos }))
+    const lost = list.reduce((n, s) => n + s.lostChaos, 0)
+    return [{
+      id: 'answer:net-worth-selling',
+      group: 'Answer',
+      name: list.length ? `Worth selling: ${list.length} ${list.length === 1 ? 'item' : 'items'} falling` : 'Worth selling: nothing you hold much of is falling',
+      sub: 'Net worth, from the last stash read',
+      icon: 'fas fa-arrow-trend-down',
+      sections: list.length
+        ? [{ rows }, { text: [`Worth ${Math.round(lost)} chaos more a week ago. Down 5% today and 15% over 7 days (or 20% today), 1 div or more held. Thin markets and your own prices left out.`] }]
+        : [{ text: ['Down 5% today and 15% over 7 days (or 20% today), 1 div or more held. Thin markets and your own prices left out.'] }],
+      actions: [{ label: 'Open Net worth', tool: NET_WORTH_TYPE }]
+    }]
+  }
+}

@@ -35,7 +35,11 @@ export interface Glance {
   todayChaos?: number | null
   // Per hour of play over the last 1, 2, 3 hours and today, at that read.
   rates?: GlanceRates
+  // Worth selling at that read (ledger.ts worthSelling), biggest first, for
+  // Ctrl+Space. Missing in older glances.
+  selling?: GlanceSell[]
 }
+export interface GlanceSell { name: string, count: number, chaos: number, d1: number, d7: number, lostChaos: number }
 
 export const DOCS = 'net-worth'
 export const glanceKey = (league: string) => `${league}-glance`

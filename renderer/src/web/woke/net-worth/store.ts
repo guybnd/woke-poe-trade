@@ -14,8 +14,9 @@ import {
 import { stashGains, stashGainsStrict, gainsKey } from './gains'
 import { classify, resolveSpends } from './spend'
 import type { SpendMark } from './spend'
-import { addPoint, keepDiff, topChanges, valueByTab } from './ledger'
+import { addPoint, keepDiff, sellMinChaos, topChanges, valueByTab, worthSelling } from './ledger'
 import { glanceKey, glanceRates, ledgerKey } from './glance'
+import type { GlanceSell } from './glance'
 import { keptSales, listedGlance, listedTotal, listedWorth } from './pending-glance'
 import { lineOutDoc, loadLineOut, outIdsOf } from './line-out-store'
 import type { Glance } from './glance'
@@ -290,9 +291,16 @@ function listedNow (id: string): { listed?: number } {
 
 function glanceAt (id: string, at: number, chaos: number, netChaos: number | null, todayChaos: number | null): Glance {
   const rates = ratesAt(at)
-  const g: Glance = { league: id, at, chaos, netChaos, divine: divine.value, perHourChaos: rates.today.perHour, rates: glanceRates(rates), todayChaos }
+  const g: Glance = { league: id, at, chaos, netChaos, divine: divine.value, perHourChaos: rates.today.perHour, rates: glanceRates(rates), todayChaos, selling: sellingNow() }
   glance.value = g
   return g
+}
+
+// What Ctrl+Space lists as worth selling: the window's own list, a few rows.
+function sellingNow (): GlanceSell[] {
+  const v = valuation.value
+  if (!v) return []
+  return worthSelling(v.lines, sellMinChaos(divine.value)).slice(0, 8).map(x => ({ name: x.name, count: x.count, chaos: x.chaos, d1: x.d1, d7: x.d7, lostChaos: x.lostChaos }))
 }
 
 // The Per hour choice changed (shared/rate-time.ts): the saved dock number
