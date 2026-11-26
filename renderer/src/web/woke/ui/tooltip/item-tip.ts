@@ -232,7 +232,8 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
   if (model && kind === 'unique') model = await withUniqueExtras(model, ref, market)
   if (kind === 'item' && / Map$/.test(ref.name)) model = await withMapCards(model, ref.name)
   if (model && kind === 'item' && /^(?:\w+ )?Essence of /.test(ref.name)) model = await withEssence(model, ref.name)
-  if (model && kind === 'item' && pack.bases?.[ref.name]) return await withBaseExtras(model, ref, market)
+  // Corpses have an empty bases entry; they take "You have" like currency.
+  if (model && kind === 'item' && pack.bases?.[ref.name] && !isCorpse(ref.name)) return await withBaseExtras(model, ref, market)
   if (model && (kind === 'item' || kind === 'card')) model = await withHeld(model, ref.name, market)
   return { model, market }
 }
