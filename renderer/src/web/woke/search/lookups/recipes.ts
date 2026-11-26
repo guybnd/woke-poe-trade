@@ -34,7 +34,7 @@ export function recipeCard (r: Recipe, ctx: LookupContext, i: number): LookupCar
     icon: 'fas fa-store',
     sections: [
       { label: 'Sell to a vendor', rows: r.give.map(g => ({ label: g })) },
-      { label: 'Get', rows: [{ label: `${r.qty ? `${r.qty} × ` : ''}${r.get}`, ...(each != null ? { chaos: each * (r.qty ?? 1), item: { name: r.get } } : {}) }] },
+      { label: 'Get', rows: [{ label: `${r.qty ? `${r.qty} × ` : ''}${r.get}`, ...(r.base ? {} : { item: { name: r.get } }), ...(each != null ? { chaos: each * (r.qty ?? 1) } : {}) }] },
       ...(r.note ? [{ text: [r.note] }] : [])
     ],
     actions: [{ label: 'Recipe list on poedb', url: 'https://poedb.tw/us/Vendor_recipe_system' }]
