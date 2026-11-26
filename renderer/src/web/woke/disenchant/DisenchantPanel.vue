@@ -1,6 +1,6 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
-    <WPanel :title="config.wmTitle || 'Disenchant'" icon="/images/dust.png" :updated="snapshot?.ts ?? null" :fresh-min="40" :stale-min="180" width="40rem" resizable>
+    <WPanel ref="panel" :title="config.wmTitle || 'Disenchant'" icon="/images/dust.png" :updated="snapshot?.ts ?? null" :fresh-min="40" :stale-min="180" width="40rem" resizable>
       <template #toolbar>
         <WSegmented :model-value="config.mode" :options="RANK_MODES" @update:model-value="pickMode" />
         <WField v-model="text" type="search" placeholder="Unique or base" icon="fas fa-search" style="width: 10rem;" />
@@ -121,6 +121,7 @@ const league = computed(() => leagues.selectedId.value)
 
 const text = shallowRef('')
 const limit = shallowRef(PAGE)
+const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 
 // Read once per price update; the item data only changes on a new download.
 const uniques = computed(() => snapshot.value ? dustUniques() : [])
@@ -179,10 +180,20 @@ function toggleBought (name: string) {
   const list = bought()[id] ?? []
   props.config.bought = { ...bought(), [id]: list.includes(name) ? list.filter(n => n !== name) : [...list, name] }
 }
+// No "are you sure": clear now, offer Undo (P9).
 function clearBought () {
   const id = league.value
   if (!id) return
+  const cleared = bought()[id] ?? []
   props.config.bought = Object.fromEntries(Object.entries(bought()).filter(([k]) => k !== id))
+  // Undo ticks those again, keeping any ticked since.
+  toast(`Cleared ${cleared.length} ticked`, {
+    anchor: panel.value?.el,
+    undo: () => {
+      const now = bought()[id] ?? []
+      props.config.bought = { ...bought(), [id]: [...now, ...cleared.filter(n => !now.includes(n))] }
+    }
+  })
 }
 
 function openTrade (r: DustRow) {

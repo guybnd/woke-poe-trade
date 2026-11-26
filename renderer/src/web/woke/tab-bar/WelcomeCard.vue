@@ -1,5 +1,5 @@
 <template>
-  <div data-w-popup data-welcome-card :class="$style.wrap" :style="pos" data-no-item-tip="First-run help card, names no items">
+  <div data-w-popup data-welcome-card :class="$style.wrap" :style="pos">
     <w-panel title="Getting started">
       <div :class="$style.rows">
         <template v-if="priceKey">

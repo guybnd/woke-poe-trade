@@ -271,8 +271,14 @@ function setType (i: number, type: string) {
 function setCount (i: number, count: number) {
   props.strategy.threads = props.strategy.threads.map((t, j) => j === i ? { ...t, count: Math.max(1, Math.min(cap.value, count)) } : t)
 }
+// No "are you sure": take it out now, offer Undo (P9).
 function removeThread (i: number) {
-  props.strategy.threads = props.strategy.threads.filter((_, j) => j !== i)
+  const strategy = props.strategy
+  const before = strategy.threads
+  const gone = before[i]
+  if (!gone) return
+  strategy.threads = before.filter((_, j) => j !== i)
+  toast(`${gone.type} Thread slot taken out`, { anchor: panel.value?.el, undo: () => { strategy.threads = before } })
 }
 
 // ---- prices ----

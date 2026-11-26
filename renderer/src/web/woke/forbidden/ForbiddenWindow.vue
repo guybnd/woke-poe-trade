@@ -1,5 +1,5 @@
 <template>
-    <WPanel ref="panel" size-key="forbidden" title="Forbidden pair finder" :icon="itemArt({ name: FLAME }) ?? undefined" width="30rem" max-height="80vh">
+    <WPanel ref="panel" size-key="forbidden" title="Forbidden pair finder" :keys="windowKeys.help" :icon="itemArt({ name: FLAME }) ?? undefined" width="30rem" max-height="80vh">
       <div :class="$style.wrap" data-qa="forbidden">
         <!-- Where the class comes from -->
         <div :class="$style.row">
@@ -56,6 +56,7 @@ import { elementPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
 import type { TradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { WButton, WInfo, WPanel, WSegmented, WSelect, formatChaos, itemArt, vItemTip } from '../ui'
 import { hideHelp, showHelp } from '../ui/help-tip'
+import { useWindowKeys } from '../ui/window-keys'
 import { priceCheckTradeStatus } from '../shared/trade-status'
 import { askOnce, keptAnswer } from '../shared/on-demand'
 import { usePriceIndex } from '../market/price-index'
@@ -77,6 +78,8 @@ const SOURCES = [{ value: 'pob', label: 'PoB build' }, { value: 'character', lab
 const CLASS_OPTIONS = CLASSES.map(c => ({ value: c, label: c }))
 
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
+// The mouse's back button: back from a class you looked at to yours, as "Back to yours".
+const windowKeys = useWindowKeys(() => panel.value?.el, { back: () => { shownClass.value = null } })
 const leagues = useLeagues()
 const active = useActiveBuild()
 const ninja = usePoeninja()

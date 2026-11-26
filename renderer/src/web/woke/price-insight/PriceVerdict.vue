@@ -5,7 +5,7 @@
       <span v-if="!insight.range && loading">Reading listings…</span>
       <template v-else-if="!insight.range">
         <w-price v-if="headline" :class="$style.price" :title="blendTitle" :chaos="headline.chaos" :divine="divine" />
-        <span :class="$style.badge">{{ blankSearch ? 'NO MODS' : (headline ? 'NO LISTINGS' : 'NO DATA') }}</span>
+        <span :class="$style.badge">{{ blankSearch ? 'No mods' : (headline ? 'No listings' : 'No data') }}</span>
         <span v-if="!headline" :class="$style.rowNote" :title="emptyText">{{ emptyText }}</span>
       </template>
       <template v-else>
@@ -125,7 +125,8 @@ watch(() => props.item, collapseForNewItem, { immediate: true })
 const expanded = computed(() => verdictExpanded.value)
 
 // 'OK', not 'Fair': this rates the data, and 'fair' already means the price.
-const CONFIDENCE_LABEL: Record<Confidence, string> = { high: 'SOLID', medium: 'OK', low: 'THIN', none: 'NO DATA' }
+// Normal case: the badge's caps come from the --w-caps-* tokens.
+const CONFIDENCE_LABEL: Record<Confidence, string> = { high: 'Solid', medium: 'OK', low: 'Thin', none: 'No data' }
 const CONFIDENCE_HINT: Record<Confidence, string> = {
   high: 'Plenty of listings that agree with each other',
   medium: 'Some listings, a bit spread out',
@@ -288,7 +289,9 @@ async function copy (n: { key: string, text: string }) {
 .notCounted { opacity: .6; }
 .badge {
   flex: none;
-  font-size: var(--w-fs-xs);
+  font-family: var(--w-caps-face);
+  text-transform: var(--w-caps-case);
+  font-size: var(--w-fs-caps);
   font-weight: 600;
   letter-spacing: .05em;
   line-height: calc(14px * var(--w-text-scale, 1));

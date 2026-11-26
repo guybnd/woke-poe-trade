@@ -103,13 +103,18 @@ export async function setChoice (league: string, choice: TabChoice): Promise<Lea
 }
 
 // Saves `ids` under `name` (replacing one of that name) and reads it from now on.
-export async function saveSet (league: string, name: string, ids: string[]): Promise<LeagueTabs> {
+// keepChoice: put a set back (Undo of a delete) at its old place, leaving the
+// choice as it is.
+export async function saveSet (league: string, name: string, ids: string[], keepChoice?: { at: number }): Promise<LeagueTabs> {
   const n = name.trim().slice(0, 40)
   if (!n) return await readLeagueTabs(league)
-  return await update(league, t => ({
-    sets: [...t.sets.filter(s => s.name !== n), { name: n, ids: [...ids] }],
-    choice: { template: 'custom', ids: [...ids], set: n }
-  }))
+  return await update(league, t => {
+    const others = t.sets.filter(s => s.name !== n)
+    const set = { name: n, ids: [...ids] }
+    if (!keepChoice) return { sets: [...others, set], choice: { template: 'custom', ids: [...ids], set: n } }
+    const at = Math.max(0, Math.min(others.length, Math.floor(keepChoice.at)))
+    return { sets: [...others.slice(0, at), set, ...others.slice(at)], choice: t.choice }
+  })
 }
 
 export async function deleteSet (league: string, name: string): Promise<LeagueTabs> {

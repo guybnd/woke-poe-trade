@@ -44,9 +44,14 @@ export function activeTemplate (): FarmTemplate | null {
   return id ? farmTemplates().find(t => t.id === id) ?? null : null
 }
 
+// Counts picks (a goal, a template, a save), so an Undo knows whether you
+// picked something else after a delete.
+let picks = 0
+
 export function setActiveTemplate (id: string | null): void {
   const w = widget()
   if (!w) return
+  picks++
   if (id) w.farmTemplate = id
   else delete w.farmTemplate
 }
@@ -58,14 +63,32 @@ export function saveTemplate (t: Omit<FarmTemplate, 'id'>): FarmTemplate | null 
   // Saving under a name already used replaces that one.
   w.farmTemplates = [...farmTemplates().filter(o => o.name !== t.name), saved]
   w.farmTemplate = saved.id
+  picks++
   return saved
 }
 
-export function deleteTemplate (id: string): void {
+// Returns a function that puts it back (for the Undo note), or null if nothing went.
+export function deleteTemplate (id: string): (() => void) | null {
   const w = widget()
-  if (!w) return
-  w.farmTemplates = farmTemplates().filter(t => t.id !== id)
-  if (w.farmTemplate === id) delete w.farmTemplate
+  if (!w) return null
+  const before = farmTemplates()
+  const at = before.findIndex(t => t.id === id)
+  if (at < 0) return null
+  const gone = before[at]
+  const wasActive = w.farmTemplate === id
+  w.farmTemplates = before.filter(t => t.id !== id)
+  if (wasActive) delete w.farmTemplate
+  const picksThen = picks
+  // Back at its place among the templates there are now; in use again only
+  // if it was and nothing else was picked since.
+  return () => {
+    const v = widget()
+    if (!v) return
+    const now = farmTemplates()
+    if (now.some(t => t.id === id || t.name === gone.name)) return
+    v.farmTemplates = [...now.slice(0, at), gone, ...now.slice(at)]
+    if (wasActive && picks === picksThen && !v.farmTemplate) v.farmTemplate = id
+  }
 }
 
 // A short name not used yet: "Farm 1", "Farm 2"...

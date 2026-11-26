@@ -29,29 +29,27 @@
       <input ref="input" v-model="query" type="text" :class="$style.input" placeholder="Unique name…"
         aria-label="Reward to search for" @keydown.enter.prevent="pickFirst" @keydown.esc.prevent="picking = false">
       <button type="button" :class="$style.option" data-valdo-option="any" @click="pickAny">Any reward</button>
-      <button v-for="u in matches" :key="u.refName" type="button" :class="$style.option" :data-valdo-option="u.name" @click="pick(u)">
+      <button v-for="u in matches" :key="u.refName" v-item-tip="{ name: u.name }" type="button" :class="$style.option" :data-valdo-option="u.name" @click="pick(u)">
         Foil {{ u.name }}
       </button>
       <span v-if="query && !matches.length" class="w-dim text-xs">No unique matches "{{ query }}"</span>
     </div>
-    <!-- The template: the Map mods profile that keeps your Not list. One per build. -->
+    <!-- The profile: the Map mods profile that keeps your Not list. One per build. -->
     <div v-if="config" :class="$style.line" data-valdo-template>
-      <span class="w-dim text-xs" :class="$style.label">Template</span>
-      <select :class="$style.tool" :value="config.activeProfile" aria-label="Template (Map mods profile)"
+      <span class="w-dim text-xs" :class="$style.label">Profile</span>
+      <WSelect :class="$style.profile" :model-value="String(config.activeProfile)" :options="profileOptions" aria-label="Profile (Map mods profile)"
         title="Your Not mods are kept on this Map mods profile and apply to every Valdo map. Switching it switches Map mods too."
-        data-valdo-template-pick @change="pickProfile(($event.target as HTMLSelectElement).value)">
-        <option v-for="p in config.profiles" :key="p.id" :value="p.id">{{ p.name }}</option>
-      </select>
+        data-valdo-template-pick @update:model-value="pickProfile" />
       <span class="w-dim text-xs w-trunc" data-valdo-saved>{{ savedNote }}</span>
     </div>
     <div v-if="shown.length" :class="$style.list" data-valdo-mods>
       <div v-for="(m, i) in shown" :key="i" :class="[$style.mod, $style[stateOf(m)]]" :data-valdo-mod="m.split('\n')[0]"
         :title="canCycle(m) ? 'Click to cycle Has, Not, Any' : undefined" @click="canCycle(m) && cycleState(m)">
-        <!-- As on a normal map: the chip is the mod's rating, clicked through Bad, Care, Want, none; saved to the template. -->
+        <!-- As on a normal map: the chip is the mod's rating, clicked through Bad, Care, Want, none; saved to the profile. -->
         <button v-if="m !== VOID_TEXT && canSkip" type="button" :class="[$style.rateChip, $style[`rate_${ratingOf(m)}`]]" :title="rateTitle(m)"
           :aria-label="`Rating: ${RATE_WORD[ratingOf(m)]}. Click to change`" :data-valdo-rate="ratingOf(m)" @click.stop="rate(m)">{{ RATE_WORD[ratingOf(m)] }}</button>
         <span v-else :class="$style.rateGap" />
-        <span :class="$style.text" :title="m">{{ m.split('\n')[0] }}</span>
+        <span v-mod-tip="modTip(m)" :class="$style.text">{{ m.split('\n')[0] }}</span>
         <span v-if="m !== VOID_TEXT && !onMap(m)" :class="$style.sub" title="Not on this map: it still filters the listings">other maps</span>
         <span v-if="m === VOID_TEXT && !hasVoid" :class="$style.sub" title="This map doesn't send you to the Void; the search looks for maps without it until you change it">not on this map</span>
         <span v-if="m === VOID_TEXT ? !!voidFilter : canSkip" :class="$style.seg" role="radiogroup" @click.stop :aria-label="`Search ${m.split('\n')[0]}`">
@@ -73,8 +71,10 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
-import { WInfo } from '../ui'
+import { WInfo, WSelect, vItemTip } from '../ui'
 import { useFold } from '../ui/fold'
+import { vModTip } from '../ui/tooltip/mod-line-tip'
+import type { ModLine } from '../ui/tooltip/mod-line-tip'
 import { CLIENT_STRINGS as _$, ITEMS_ITERATOR } from '@/assets/data'
 import type { BaseType } from '@/assets/data'
 import { ModifierType } from '@/parser/modifiers'
@@ -194,7 +194,7 @@ const mods = computed(() => {
 })
 // The Void line stays up when the list is folded: it's part of the search.
 const hasVoid = computed(() => props.item.statsByType.some(c => c.stat.ref === VOID_TEXT))
-// Rows for mods not on this map: ones added here, and the template's Not mods
+// Rows for mods not on this map: ones added here, and the profile's Not mods
 // that Valdo maps have (a Not from a normal map mod that no Valdo map has met stays quiet).
 const added = ref<string[]>([])
 const config = computed(() => valdoConfig())
@@ -240,6 +240,7 @@ watch([mods, valdoListingMods, valdoConfig], ([own, listed, w]) => {
   if (w) rememberSeen(w, [...own, ...listed])
 }, { immediate: true })
 
+const profileOptions = computed(() => (config.value?.profiles ?? []).map(p => ({ value: String(p.id), label: p.name })))
 function pickProfile (id: string) {
   const w = ensureMapModsConfig()
   if (w) w.activeProfile = Number(id)
@@ -258,7 +259,7 @@ const profile = computed(() => valdoProfile())
 const skips = computed<SkipEntry[]>(() => profile.value ? profileSkips(profile.value) : [])
 // Skipping works while the Map mods module is on (the first Not sets it up).
 const canSkip = computed(() => isModuleOn(AppConfig(), 'map-mods'))
-// The template's rating of a mod: Bad (can't run) also sets it Not, as the
+// The profile's rating of a mod: Bad (can't run) also sets it Not, as the
 // Map mods window's "can't run" does. Keyed as the Map mods table keys it
 // when it has the mod, else by the mod's text with numbers as "#".
 const RATE_WORD: Record<ModRating, string> = { deadly: 'Bad', warn: 'Care', good: 'Want', ok: '–' }
@@ -275,6 +276,17 @@ function ratingOf (m: string): ModRating {
 function rateTitle (m: string): string {
   const name = profile.value?.name
   return `${RATE_TITLE[ratingOf(m)]}. Click for the next: Bad, Care, Want, none${name ? `; saved to ${name}` : ''}.`
+}
+// The mod's whole text on hover (a Valdo mod can run over two lines).
+function modTip (m: string): ModLine {
+  return {
+    head: 'Valdo map mod',
+    text: m,
+    notes: [
+      m !== VOID_TEXT && canSkip.value && RATE_TITLE[ratingOf(m)],
+      canCycle(m) && 'Click to cycle Has, Not, Any'
+    ]
+  }
 }
 function rate (m: string) {
   const w = ensureMapModsConfig()
@@ -365,6 +377,8 @@ const headline = computed(() => {
   color: var(--w-dim);
 }
 .tool:hover { color: var(--w-fg); }
+/* The Profile pick sits in the same small line as the Reward button above. */
+.profile { font-size: var(--w-fs-sm); }
 .toolOn { color: var(--w-fg); border-color: var(--w-accent); }
 .link:hover { color: var(--w-fg); text-decoration: underline; }
 .picker { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 4px 60px; }

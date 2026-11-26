@@ -1,6 +1,8 @@
 <template>
   <template v-if="stages.length">
-    <div class="flex items-center gap-2" :class="$style.heading">Cost of each stage <WInfo text="poe.ninja, for gear and tree jewels. A range means its variants differ. Rares have no price without a search." /></div>
+    <div class="flex items-center gap-2" :class="$style.heading">Cost of each stage <WInfo text="Prices from poe.ninja, for gear and tree jewels.
+- A range means its variants differ.
+- Rares have no price without a search." /></div>
     <template v-for="s in stages" :key="s.title">
       <button type="button" :class="[$style.stage, { [$style.open]: open === s.title }]" class="w-focusable" :aria-expanded="open === s.title" @click="open = open === s.title ? null : s.title">
         <span class="w-trunc">{{ s.title }}</span>

@@ -171,15 +171,13 @@
                   <div class="flex flex-wrap gap-1">
                     <WChip v-for="d in sel.drops" :key="d.name" v-item-tip="{ name: d.name, type: typeByName.get(d.name), variant: d.variant }" clickable :active="!!logging[d.name]" @click="toggleLogged(d.name, d.variant)">{{ d.name }}<template v-if="(logging[d.name]?.qty ?? 0) > 1"> ×{{ logging[d.name].qty }}</template></WChip>
                   </div>
-                  <div class="relative">
-                    <WField v-model="logQuery" icon="fas fa-plus" placeholder="Something else… (search prices)" class="w-full" />
-                    <div v-if="logResults.length" class="w-surface absolute left-0 right-0 z-10 mt-1 py-1">
-                      <button v-for="item in logResults" :key="item.type + item.name + item.variant" v-item-tip="item" class="w-row w-full text-left" style="grid-template-columns: minmax(0,1fr) auto;" @click="toggleLogged(item.name, item.variant || undefined); logQuery = ''">
-                        <span class="w-trunc">{{ item.name }}<span v-if="item.variant" class="w-dim ml-1">{{ item.variant }}</span></span>
-                        <WPrice :chaos="item.chaos" :divine="divine" />
-                      </button>
-                    </div>
-                  </div>
+                  <WItemPicker v-model="logQuery" :items="logResults" :item-key="pickKey" icon="fas fa-plus" placeholder="Something else… (search prices)"
+                    @pick="item => { toggleLogged(item.name, item.variant || undefined); logQuery = '' }">
+                    <template #default="{ item }">
+                      <span class="w-trunc">{{ item.name }}<span v-if="item.variant" class="w-dim ml-1">{{ item.variant }}</span></span>
+                      <WPrice :chaos="item.chaos" :divine="divine" />
+                    </template>
+                  </WItemPicker>
                   <div class="flex gap-2">
                     <WButton variant="primary" icon="fas fa-check" @click="saveKill">Save kill</WButton>
                     <WButton variant="ghost" @click="logging = null">Cancel</WButton>
@@ -235,14 +233,14 @@ Prices are from poe.ninja. **Search trade** prices jewels from unidentified trad
                     <button v-if="isExtraDrop(sel.boss.id, d.name)" class="w-icon-btn" title="Remove this drop. You can undo." @click="removeDrop(sel.boss.id, d.name)"><i class="fas fa-trash" /></button>
                   </span>
                 </div>
-                <div class="relative" style="padding: 8px var(--w-pad);">
-                  <WField v-model="dropQuery" icon="fas fa-plus" placeholder="Add a drop to this boss…" class="w-full" />
-                  <div v-if="dropResults.length" class="w-surface absolute left-0 right-0 z-10 mt-1 py-1" style="margin: 0 var(--w-pad);">
-                    <button v-for="item in dropResults" :key="item.type + item.name + item.variant" v-item-tip="item" class="w-row w-full text-left" style="grid-template-columns: minmax(0,1fr) auto;" @click="addDrop(sel.boss.id, item.name, item.variant || undefined)">
+                <div style="padding: 8px var(--w-pad);">
+                  <WItemPicker v-model="dropQuery" :items="dropResults" :item-key="pickKey" icon="fas fa-plus" placeholder="Add a drop to this boss…"
+                    @pick="item => addDrop(sel.boss.id, item.name, item.variant || undefined)">
+                    <template #default="{ item }">
                       <span class="w-trunc">{{ item.name }}<span v-if="item.variant" class="w-dim ml-1">{{ item.variant }}</span></span>
                       <WPrice :chaos="item.chaos" :divine="divine" />
-                    </button>
-                  </div>
+                    </template>
+                  </WItemPicker>
                 </div>
               </template>
             </div>
@@ -294,8 +292,9 @@ import { inject, computed, nextTick, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { thinTitle } from '../market/types'
-import { WInfo, WPanel, WTabs, WSegmented, WField, WButton, WEmpty, WPrice, WChip, WListItem, WIcon, WBanner, WSkeleton, WLineActs, WLineNum, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WSegmented, WButton, WEmpty, WPrice, WChip, WListItem, WIcon, WBanner, WSkeleton, WLineActs, WLineNum, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui'
+import WItemPicker from '../ui/WItemPicker.vue'
 import { itemMenuHead } from '../ui/tooltip/item-menu'
 import { ninjaIcon } from '../ui/game-icons'
 import { usePriceIndex } from '../market/price-index'
@@ -499,6 +498,7 @@ function setRate (id: string, drop: string, text: string) {
 }
 
 const dropQuery = shallowRef('')
+const pickKey = (item: { type: string, name: string, variant?: string | null }) => `${item.type}|${item.name}|${item.variant ?? ''}`
 const dropResults = computed(() => prices.search(dropQuery.value))
 function addDrop (id: string, name: string, variant?: string) {
   const list = props.config.extraDrops[id] ?? (props.config.extraDrops[id] = [])

@@ -24,7 +24,7 @@
         <span :class="$style.ruleHead">{{ r.head }}</span>
         <LabelPreview :text="`${s.size} Cluster Jewel`" :actions="r.block.actions" :extras="false" style="max-width: 100%; overflow: hidden;" />
         <span :class="$style.nodes">
-          <span v-for="n in r.nodes" :key="n.node" :class="$style.node">{{ n.node }}<span v-if="n.chaos != null" class="w-faint">&nbsp;{{ fmt(n.chaos) }}</span><i v-if="pinOf(s.size, n.node)" class="fas fa-thumbtack" :class="$style.pinIcon" aria-label="your pick" /></span>
+          <span v-for="n in r.nodes" :key="n.node" :class="$style.node">{{ n.node }}<span v-if="n.chaos != null" class="w-faint">&nbsp;<WPriceText :text="`${formatAmount(n.chaos)}c`" /></span><i v-if="pinOf(s.size, n.node)" class="fas fa-thumbtack" :class="$style.pinIcon" aria-label="your pick" /></span>
         </span>
       </button>
       <details :class="$style.pins">
@@ -32,7 +32,7 @@
         <div class="text-xs w-faint" style="padding: 2px 0 4px;">Click to cycle: by price → always top → always good → never. Price is the best at item level 84.</div>
         <div class="flex flex-wrap gap-1">
           <button v-for="n in s.types" :key="n.node" type="button" class="w-focusable" :class="[$style.pick, pinOf(s.size, n.node) && $style[pinOf(s.size, n.node)!]]" :aria-label="`${n.node}: ${pinWords(pinOf(s.size, n.node))}`" @click="cyclePin(s.size, n.node)">
-            {{ n.node }}<span v-if="n.chaos != null" class="w-faint">&nbsp;{{ fmt(n.chaos) }}</span>
+            {{ n.node }}<span v-if="n.chaos != null" class="w-faint">&nbsp;<WPriceText :text="`${formatAmount(n.chaos)}c`" /></span>
             <span v-if="pinOf(s.size, n.node)" :class="$style.pinWord">&nbsp;{{ pinWords(pinOf(s.size, n.node)) }}</span>
           </button>
         </div>
@@ -46,7 +46,8 @@
 // at what price, the lines that sort passive types into top and good, and
 // your own picks.
 import { computed } from 'vue'
-import { WToggle, agoPhrase, vItemTip } from '../ui'
+import { WPriceText, WToggle, agoPhrase, vItemTip } from '../ui'
+import { formatAmount } from '../ui/format'
 import LabelPreview from './LabelPreview.vue'
 import { CLUSTER_PRICE_TYPE, MIN_LISTINGS, nodesOf, priceOnRule, rankOf, ruleKey } from './cluster-prices'
 import type { ClusterPin, ClusterPrice, ClusterPriceSettings } from './cluster-prices'
@@ -70,10 +71,6 @@ const status = computed(() => {
   if (props.prices) return "poe.ninja has no cluster jewel prices for this league yet; NeverSink's list stays."
   return 'Waiting for prices; NeverSink\'s list until then.'
 })
-
-function fmt (chaos: number): string {
-  return chaos >= 10 ? `${Math.round(chaos)}c` : `${chaos.toFixed(1)}c`
-}
 
 const sizes = computed(() => SIZES.map(size => {
   const blocks = props.doc.blocks.filter(b => b.type === CLUSTER_PRICE_TYPE && ruleKey(b)?.size === size)
