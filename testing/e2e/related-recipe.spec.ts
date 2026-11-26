@@ -222,3 +222,59 @@ test('side window: a Delve boss unique drops from its boss, with the boss\'s oth
     await expect(side.locator('button[data-item-row]', { hasText: other })).toBeVisible()
   }
 })
+
+test('side window: a Foulborn unique lists its Foulborn kinds, priced, its own lit, and its Vestigial mod', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/unique-carcass-jack-foulborn.txt')
+  const side = overlay.page.locator('.w-pc-side')
+  await expect(side).toBeVisible({ timeout: 20_000 })
+  const kinds = side.locator('[data-foul-kind]')
+  await expect(kinds).toHaveCount(2)
+  // Each kind: what it adds, what it loses, its price against a plain copy (20c).
+  const aura = kinds.filter({ hasText: 'Aura Effect' })
+  await expect(aura).toContainText('(15-30)% increased Effect of Non-Curse Auras from your Skills on Enemies')
+  await expect(aura).toContainText('(40-50)% increased Area Damage')
+  // 360c at 180c a divine: 2 (divine icon), 18 times a plain copy's 20c.
+  await expect(aura).toContainText(/Damage2×18$/)
+  // The checked copy is the Intensify kind.
+  const intensify = kinds.filter({ hasText: 'Intensify' })
+  await expect(intensify).toContainText('this one')
+  await expect(intensify).toContainText(/90×4\.5$/)
+  await expect(side.locator('[data-vestigial-mod]')).toHaveText('25% increased Area of Effect')
+  // A random drop: chance it on its base.
+  await expect(side.getByText('Chance it')).toBeVisible()
+  await expect(side.locator('[data-item-row]', { hasText: 'Varnished Coat' })).toBeVisible()
+  // Hover: the Foulborn copy's tooltip.
+  await intensify.hover()
+  await expect(overlay.page.getByRole('tooltip').getByText('Foulborn Carcass Jack').first()).toBeVisible()
+  // Click: the trade site's search for Foulborn copies with that kind's mod.
+  await overlay.page.evaluate(() => {
+    const w = window as unknown as { open: (url: string) => null, __opened?: string }
+    w.open = (url: string) => { w.__opened = url; return null }
+  })
+  await aura.click()
+  await expect.poll(() => overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')).toContain('trade')
+  const url = decodeURIComponent(await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? ''))
+  expect(url).toContain('"foulborn_item":{"option":"true"}')
+  expect(url).toContain('"id":"explicit.stat_1636209393"')
+  expect(url).toContain('"name":"Carcass Jack"')
+})
+
+test('side window: a unique with versions lists each, priced, its own lit; a click checks that version', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/unique-impresence-fire.txt')
+  const side = overlay.page.locator('.w-pc-side')
+  await expect(side).toBeVisible({ timeout: 20_000 })
+  const versions = side.locator('[data-unique-version]')
+  // The 6L row is the links' price, not a version's.
+  await expect(versions).toHaveCount(2)
+  await expect(versions.nth(0)).toContainText('Chaos')
+  await expect(versions.nth(0)).toContainText('Adds (17-22) to (23-34) Chaos Damage')
+  await expect(versions.filter({ hasText: 'Fire' })).toContainText('this one')
+  await versions.nth(0).click()
+  // The Chaos version's own mods, not an unidentified copy.
+  const panel = overlay.widget('price-check')
+  await expect(panel.getByText(/Chaos Damage/).first()).toBeVisible()
+  await expect(versions.filter({ hasText: 'Chaos' })).toContainText('this one')
+})
+

@@ -55,6 +55,8 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-conquest-keystones': { check: { name: 'Elegant Hubris', rarity: 'unique' }, spot: 'related' },
   // A Shaper's Exalted Orb: its family and two fragment groups, folded to fit.
   'related-folded-groups': { check: { name: "Shaper's Exalted Orb" }, spot: 'related' },
+  // A unique with two Foulborn kinds and a Vestigial mod.
+  'price-check-unique-foulborn': { check: { name: 'Carcass Jack', rarity: 'unique' }, spot: 'foulborn' },
   'price-check-unique-recipe': { check: { name: 'The Will of Uul-Netol', rarity: 'unique' }, spot: 'related' },
   'div-card-map-chance': { search: 'Strand Map' },
   // A rolled jewel, unidentified: the unid price card (nothing searched until a click).
