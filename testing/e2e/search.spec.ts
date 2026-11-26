@@ -508,9 +508,10 @@ test('the palette resizes from its corner, adding room, and keeps its size', asy
   await page.mouse.move(g.x + 120, g.y + 80, { steps: 6 })
   await page.mouse.up()
   const after = (await panel.boundingBox())!
-  // The corner stays under the mouse: centred, it grows on both sides.
+  // The corner stays under the mouse; the palette moves now, so the far edge stays put.
   expect(Math.abs((after.x + after.width) - (before.x + before.width + 120))).toBeLessThan(12)
-  expect(after.width).toBeGreaterThan(before.width + 200)
+  expect(Math.abs(after.x - before.x)).toBeLessThan(12)
+  expect(after.width).toBeGreaterThan(before.width + 100)
   expect(after.height).toBeGreaterThan(before.height + 40)
   // More room, not bigger text.
   expect(await palette.locator('[data-search-palette]').evaluate(el => getComputedStyle(el).fontSize)).toBe(font)

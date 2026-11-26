@@ -559,7 +559,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await hhSale.hover()
     await hhSale.locator('[data-line-out]').click()
     await expect(panel.locator('[data-sales-left-out]')).toHaveCount(0)
-    await panel.getByRole('button', { name: 'When', exact: true }).click()
+    await panel.getByRole('button', { name: /^(Sort by When|When, sorted \w+)$/ }).click()
     await panel.getByRole('tab', { name: 'Holdings' }).click()
 
     // Off again, without asking, and the window goes. The fake app lives on

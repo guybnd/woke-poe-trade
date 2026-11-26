@@ -998,7 +998,8 @@ function rememberPlace () {
 const backTo = computed(() => {
   const place = trail.value[trail.value.length - 1]
   if (!place) return 'Back'
-  return place.type || tabOptions.value.find(o => o.value === place.tab)?.label || 'Back'
+  if (place.tab === 'rules' && place.type) return groupName(place.type)
+  return tabOptions.value.find(o => o.value === place.tab)?.label || 'Back'
 })
 function goBack () {
   const place = trail.value[trail.value.length - 1]
