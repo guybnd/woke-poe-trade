@@ -123,7 +123,7 @@ const mode = ref<'card' | 'editor'>('editor')
 const sample = shallowRef<ItemFacts | null>(null)
 const samplePosition = shallowRef({ x: 1, y: 1 })
 const focus = shallowRef<{ type: string, tier: string } | null>(null)
-const openTab = shallowRef<{ tab: 'prices' | 'neversink' | 'changes' } | null>(null)
+const openTab = shallowRef<{ tab: 'prices' | 'neversink' | 'changes' | 'gear' } | null>(null)
 const areaOverride = ref<number | null>(null)
 
 // The card shows alone, not with every open panel, and closes when you go back
@@ -175,7 +175,7 @@ if (props.config.sourceName || props.config.neversink.on || props.config.wmWants
 // What's new's Show me: the editor, with its profile chip.
 useGoto(props.config, 'woke-loot-filter', {
   editor: () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}) },
-  spots: { profiles: () => {} }
+  spots: { 'profiles': () => {}, 'over-quality-look': () => { openTab.value = { tab: 'gear' } } }
 })
 
 // A change Claude suggested, applied from the Suggestions card: added like an

@@ -133,7 +133,7 @@ describe('gear table', () => {
     applyGear(d, gearOn(d, g => { g.quality.on = true; g.quality.min.r3 = 21 }), [])
     const f = { ...R3, rarity: 'Normal' as const, quality: 22 }
     expect(vis(d, f)).toBe('Show')
-    expect(matchItem(d, item(f)).final!.block.tier).toBe('quality-r3')
+    expect(matchItem(d, item(f)).final!.block.tier).toBe('quality-r3-notier')
   })
 
   it('writes a filter the save check accepts', () => {
@@ -182,6 +182,41 @@ describe('gear table', () => {
     // The game's rarity colour for the text: NeverSink's text colour is gone.
     expect(rare.actions.some(a => a.key === 'SetTextColor')).toBe(false)
     expect(rare.actions.find(a => a.key === 'SetBorderColor')?.args.slice(0, 3)).not.toEqual(['80', '80', '255'])
+  })
+
+  it('marks over-quality bases on top of their row\'s look', () => {
+    const d = doc()
+    const mark = { border: [255, 120, 220, 255] as [number, number, number, number], effect: { color: 'Pink', temp: false }, icon: { size: 0, color: 'Pink', shape: 'Star' } }
+    applyGear(d, gearOn(d, g => { g.quality.on = true; g.quality.min.r1 = 21; g.look.quality = mark; g.look.rare = { fontSize: 33 } }), [])
+    const f = { ...R1, rarity: 'Rare' as const, unidentifiedItemTier: 5 }
+    const q = matchItem(d, item({ ...f, quality: 22 }))
+    const plain = matchItem(d, item({ ...f, quality: 0 }))
+    expect(q.final!.block.tier).toBe('quality-r1-t5')
+    expect(plain.final!.block.tier).not.toMatch(/^quality/)
+    // The rare look of rank 1, tier 5 (yours included)...
+    expect(q.actions.find(a => a.key === 'SetFontSize')?.args).toEqual(['33'])
+    expect(q.actions.find(a => a.key === 'SetBackgroundColor')?.args).toEqual(plain.actions.find(a => a.key === 'SetBackgroundColor')?.args)
+    // ...with the mark on top.
+    expect(q.actions.find(a => a.key === 'SetBorderColor')?.args.slice(0, 3)).toEqual(['255', '120', '220'])
+    expect(q.actions.find(a => a.key === 'PlayEffect')?.args[0]).toBe('Pink')
+    expect(q.actions.find(a => a.key === 'MinimapIcon')?.args).toEqual(['0', 'Pink', 'Star'])
+    expect(plain.actions.find(a => a.key === 'SetBorderColor')?.args.slice(0, 3)).not.toEqual(['255', '120', '220'])
+  })
+
+  it('shows over-quality bases where the table hides their tier, with a white border by default', () => {
+    const d = doc()
+    applyGear(d, gearOn(d, g => { magicOff(g); g.quality.on = true; g.quality.min.r1 = 21 }), [])
+    const f = { ...R1, rarity: 'Magic' as const, unidentifiedItemTier: 2 }
+    expect(vis(d, f)).toBe('Hide')
+    const q = matchItem(d, item({ ...f, quality: 23 }))
+    expect(q.visibility).toBe('Show')
+    expect(q.actions.find(a => a.key === 'SetBorderColor')?.args.slice(0, 3)).toEqual(['255', '255', '255'])
+  })
+
+  it('keeps only a mark in a saved config', () => {
+    const g = normalizeGear({ look: { rarityText: true, magic: {}, rare: {}, quality: { fontSize: 40, border: null } } })
+    expect(g.look.quality).toEqual({ border: null })
+    expect(normalizeGear({}).look.quality).toEqual({})
   })
 
   it('shows exotic bases at any drop tier when asked', () => {
