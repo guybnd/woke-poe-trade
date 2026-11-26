@@ -52,9 +52,8 @@ const PRICED_BY_TEXT = new Set(['Chronicle of Atzoatl', 'Expedition Logbook', 'M
  * such as reliquary keys, Wombgifts, Ducats and corpses. Not one whose price
  * follows an area level (Forbidden Tome), stored experience (Facetor's Lens)
  * or map area (Scrying Orb): poe.ninja's row by name isn't its price.
- * A corpse has no mods to roll, so it gets the quick card too (Guy, 2026-11-26),
- * with its item level shown on it: players say a higher one sells for more,
- * which poe.ninja's one row by name doesn't tell apart.
+ * A corpse has no mods to roll and its item level doesn't change its price
+ * (Guy, 2026-11-26), so it gets the quick card too.
  */
 export function fixedPriceItem (item: FixedItem): boolean {
   const { info } = item

@@ -29,7 +29,7 @@ Item Level: 84
 { Suffix Modifier "of Tzteosh" (Tier: 1) — Elemental, Fire, Resistance }
 +47(46-48)% to Fire Resistance`
 
-// A corpse as the game copies it: its name and item level are what the check reads.
+// A corpse as the game copies it.
 export const CORPSE_ITEM = `Item Class: Corpses
 Rarity: Currency
 Perfect Hydra
@@ -38,8 +38,8 @@ Item Level: 84
 `
 
 export const NEWS_DEMOS: Record<string, NewsDemo> = {
-  // A corpse: the quick card with its item level (the window when poe.ninja has no row).
-  'price-check-corpse-card': { check: { name: 'Perfect Hydra', text: CORPSE_ITEM }, spot: 'corpse-ilvl' },
+  // A corpse: the quick price card (the window when poe.ninja has no row).
+  'price-check-corpse-card': { check: { name: 'Perfect Hydra', text: CORPSE_ITEM }, spot: 'ninja-card' },
   'price-check-seller-spread': { check: { name: 'Exalted Orb' }, spot: 'seller-spread' },
   'price-check-exchange-ladder': { check: { name: 'Exalted Orb' }, spot: 'exchange-ladder' },
   'price-check-card-stack': { check: { name: 'The Doctor' }, spot: 'related' },
