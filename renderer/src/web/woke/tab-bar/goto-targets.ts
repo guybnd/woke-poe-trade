@@ -36,6 +36,7 @@ export const NEWS_SPOTS: Record<string, string> = {
   'net-worth-rename-runs': 'past-runs',
   'atlas-results-from-runs': 'results',
   'atlas-planner-links': 'import',
+  'atlas-tree-planner-links': 'import',
   'pob-import-all-sites': 'import'
 }
 
