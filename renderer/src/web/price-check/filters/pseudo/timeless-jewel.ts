@@ -1,8 +1,25 @@
 import { calculatedStatToFilter, FiltersCreationContext } from '../create-stat-filters'
 import { sumStatsByModType } from '@/parser/modifiers'
 import { FilterTag, FilterGroup } from '../interfaces'
-import { findAndResolveByRef, metaCountOneFilter } from './utils'
-import { StatBetter } from '@/assets/data'
+import { tryFindAndResolveByRef, metaCountOneFilter } from './utils'
+import { StatBetter, STATS_ITERATOR } from '@/assets/data'
+import type { Stat } from '@/assets/data'
+import type { ModifierType, StatCalculated } from '@/parser/modifiers'
+import type { ItemCategory } from '@/parser'
+
+// A family entry can name a ref the stat data no longer has: Glorious
+// Vanity's "Mazcotl" was renamed Ahuana, and the data keeps the old name in
+// the family while the Ahuana line only lists it as a matcher. Look the old
+// name up by its text instead of failing the whole price check.
+function resolveFamilyStat (ref: string, modType: ModifierType, category: ItemCategory | undefined): Stat | undefined {
+  const byRef = tryFindAndResolveByRef(ref, modType, category)
+  if (byRef) return byRef
+  for (const stat of STATS_ITERATOR(ref)) {
+    if (!(modType in stat.trade.ids)) continue
+    if (stat.matchers.some(m => m.string === ref || m.string.startsWith(`${ref}\n`))) return stat
+  }
+  return undefined
+}
 
 export function filterTimelessJewelKeystones (ctx: FiltersCreationContext) {
   const treeSeedStat = ctx.statsByType.find(calc =>
@@ -17,10 +34,16 @@ export function filterTimelessJewelKeystones (ctx: FiltersCreationContext) {
     stats: []
   }
 
-  for (const familyStatRef of treeSeedStat.stat.modFamily!) {
-    let calc = treeSeedStat
+  const seen = new Set<string>([treeSeedStat.stat.ref])
+  const family = treeSeedStat.stat.modFamily!.includes(treeSeedStat.stat.ref)
+    ? treeSeedStat.stat.modFamily!
+    : [treeSeedStat.stat.ref, ...treeSeedStat.stat.modFamily!]
+  for (const familyStatRef of family) {
+    let calc: StatCalculated = treeSeedStat
     if (familyStatRef !== treeSeedStat.stat.ref) {
-      const familyStat = findAndResolveByRef(familyStatRef, treeSeedStat.type, ctx.item.category)
+      const familyStat = resolveFamilyStat(familyStatRef, treeSeedStat.type, ctx.item.category)
+      if (!familyStat || seen.has(familyStat.ref)) continue
+      seen.add(familyStat.ref)
       calc = sumStatsByModType([{
         info: treeSeedStat.sources[0].modifier.info,
         stats: [{
@@ -31,7 +54,7 @@ export function filterTimelessJewelKeystones (ctx: FiltersCreationContext) {
       }])[0]
     }
     const filter = calculatedStatToFilter(calc, ctx.searchInRange, ctx.item)
-    if (familyStatRef !== treeSeedStat.stat.ref) {
+    if (calc !== treeSeedStat) {
       filter.tag = FilterTag.Pseudo
       filter.disabled = true
     }
