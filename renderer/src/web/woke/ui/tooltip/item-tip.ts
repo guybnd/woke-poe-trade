@@ -9,6 +9,7 @@ import { ITEM_BY_REF } from '@/assets/data'
 import { Host } from '@/web/background/IPC'
 import { usePoeninja } from '@/web/background/Prices'
 import { buildTip, dropOf, dropSource, kindOfNinjaType, packFiles, randomDropsFirst } from './tip-content'
+import { ninjaRowTip, withForbiddenNotable } from './ninja-row-tip'
 import type { TipKind, TipModel, TipPack } from './tip-content'
 import { hideTip, marketFromRow, onTipHide, showTipAt } from './tooltip'
 import { retireHint } from '../../shared/hints'
@@ -211,6 +212,16 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
     return { model, market: null, uniques }
   }
   const kind = ref.type ? kindOfNinjaType(ref.type) : kindOfName(ref.name)
+  // A row named after what prices it (a Forbidden jewel's notable, a cluster
+  // jewel's enchant, a map tier): the item it stands for (ninja-row-tip.ts).
+  const row = ninjaRowTip(ref, kind)
+  if (row.build) {
+    await Promise.all(packFiles(row.kind).map(loadFile))
+    let model = row.build(pack)
+    if (model && row.forbidden) model = withForbiddenNotable(model, await forbiddenNotable(row.forbidden.notable))
+    if (row.map) model = await withMapCards(model, row.map)
+    return { model, market: marketFor(ref, kind) }
+  }
   await Promise.all(packFiles(kind).map(loadFile))
   const base = kind === 'unique' ? ITEM_BY_REF('UNIQUE', ref.name)?.[0]?.unique?.base : undefined
   let model = buildTip(pack, { name: ref.name, kind, variant: ref.variant, base })
@@ -223,6 +234,22 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
   if (model && kind === 'item' && pack.bases?.[ref.name]) return await withBaseExtras(model, ref, market)
   if (model && (kind === 'item' || kind === 'card')) model = await withHeld(model, ref.name, market)
   return { model, market }
+}
+
+// A Forbidden jewel's notable from the passive tree: its class, ascendancy and
+// stats. Without the tree the tooltip shows the jewel alone.
+async function forbiddenNotable (name: string): Promise<{ cls: string, group: string | null, stats: string[] } | null> {
+  try {
+    const [{ loadPassiveTree }, { notableClass, ascendancyShown }] = await Promise.all([import('../../pob-builds/passive-tree'), import('../../forbidden/notables')])
+    const tree = await loadPassiveTree()
+    for (const n of tree.values()) {
+      if (n.name !== name) continue
+      const cls = notableClass(n.name, n.asc)
+      if (!cls) continue
+      return { cls, group: ascendancyShown(n.asc), stats: n.stats.flatMap(s => s.split('\n')).map(s => s.trim()).filter(Boolean) }
+    }
+  } catch {}
+  return null
 }
 
 // "You have 34 · 1.2 div" from Net worth's last stash read (Guy's pick I9).

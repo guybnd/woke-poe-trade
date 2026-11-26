@@ -11,6 +11,8 @@
       <header :class="[$style.head, { [$style.art]: headArt }]" :style="headArt">
         <span v-item-tip="{ name: item.info.refName }" :class="$style.name"><img v-if="item.info.icon" :src="item.info.icon" alt="" :class="$style.headIcon"><span :class="$style.nameText">{{ item.info.refName }}</span></span>
       </header>
+      <!-- A corpse: its item level, which poe.ninja's one row by name doesn't tell apart. -->
+      <section v-if="corpseLevel" :class="$style.block"><div :class="$style.line" data-testid="instant-ninja-ilvl">Item Level: <span :class="$style.fg">{{ corpseLevel }}</span></div></section>
       <!-- The item against a chaos and a divine, as the game's Currency Exchange shows it. -->
       <section :class="[$style.block, $style.rates]">
         <div v-for="(r, i) in rates" :key="i" :class="$style.rate" :data-testid="i === 0 ? 'instant-ninja-price' : 'instant-ninja-rate'">
@@ -69,6 +71,7 @@ import type { ParsedItem } from '@/parser'
 import { ItemCategory } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
 import { ninjaTotal, divineTenths, chaosOrbRow, ninjaRates } from './ninja-first'
+import { isCorpse } from '../shared/corpses'
 import type { RateSide } from './ninja-first'
 import { instantCardKey, onKeyboardFocusedControl } from './instant-card-key'
 import { useNinjaDoubt } from './use-ninja-doubt'
@@ -124,6 +127,7 @@ const info = computed(() => {
 const badgeTip = computed(() => `This is used to provide instant pricing without any delay. For live data, press${props.againKeys ? ' the price check key again' : ''}:`)
 
 const isDivine = computed(() => props.item.info.refName === 'Divine Orb')
+const corpseLevel = computed(() => isCorpse(props.item.info.refName) ? props.item.itemLevel ?? null : null)
 // A Chaos Orb is 1c: its stack in chaos says nothing, and it has no graph (chaosOrbRow).
 const isChaos = computed(() => props.item.info.refName === 'Chaos Orb')
 const have = computed(() => props.item.stackSize?.value ?? 1)
