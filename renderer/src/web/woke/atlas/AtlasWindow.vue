@@ -11,8 +11,7 @@
           <button class="w-icon-btn" title="New folder" @click="startFolder(newIn)"><i class="fas fa-folder-plus" /></button>
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': importOpen }" title="Import a tree link, guide text or strategy code"
             @click="importOpen = !importOpen"><i class="fas fa-file-import" /></button>
-          <button class="w-icon-btn" :class="{ 'w-icon-btn--on': sortBy !== 'manual' }" :title="`Sort: ${SORT_LABELS[sortBy]}`"
-            @click="sortMenu"><i class="fas fa-sort-amount-down" /></button>
+          <WSortButton :model-value="sortBy" :options="SORT_OPTIONS" @update:model-value="config.sortBy = $event as SortBy" />
         </template>
         <template #toolbar>
           <div v-if="importOpen" class="flex flex-col gap-1 w-full" @dragover="shotDragOver" @drop="shotDrop">
@@ -107,6 +106,7 @@ import { computed, defineAsyncComponent, inject, nextTick, shallowRef, watch } f
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { MainProcess } from '@/web/background/IPC'
 import { WPanel, WField, WButton, WEmpty, WBanner, WSkeleton, openMenu, toast, useCopy } from '../ui'
+import WSortButton from '../ui/WSortButton.vue'
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import {
   allFolders, claimRegexFolders, setPointsAt, takePointsAt, dropDraft, isDirty, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, isStrategyCode,
@@ -168,13 +168,7 @@ const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 type SortBy = NonNullable<AtlasWidget['sortBy']>
 const SORT_LABELS: Record<SortBy, string> = { manual: 'My order', name: 'Name', earnings: 'Earnings per hour', changed: 'Last changed' }
 const sortBy = computed<SortBy>(() => props.config.sortBy && props.config.sortBy in SORT_LABELS ? props.config.sortBy : 'manual')
-function sortMenu (e: MouseEvent) {
-  openMenu(e, (Object.keys(SORT_LABELS) as SortBy[]).map(k => ({
-    label: SORT_LABELS[k],
-    icon: sortBy.value === k ? 'fas fa-check' : undefined,
-    action: () => { props.config.sortBy = k }
-  })))
-}
+const SORT_OPTIONS = (Object.keys(SORT_LABELS) as SortBy[]).map(value => ({ value, label: SORT_LABELS[value] }))
 const prices = usePriceIndex()
 const { fmt } = usePriceText(prices.snapshot)
 

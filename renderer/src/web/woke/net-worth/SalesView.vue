@@ -32,10 +32,9 @@
         <thead>
           <tr>
             <th v-for="c in COLS" :key="c.key" :class="{ [$style.left]: c.key === 'item' }" :aria-sort="sort.key === c.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'">
-              <button type="button" :class="[$style.sortBtn, { [$style.sorted]: sort.key === c.key }]" :title="c.tip" :aria-label="c.key === 'value' ? 'Sold for' : undefined" @click="sortBy(c.key)">
-                <Coin v-if="c.key === 'value'" :chaos="!divine" /><template v-else>{{ c.label }}</template>
-                <i v-if="sort.key === c.key" :class="['fas', sort.dir === 'asc' ? 'fa-caret-up' : 'fa-caret-down']" aria-hidden="true" />
-              </button>
+              <WSortHead :label="c.key === 'value' ? 'Sold for' : c.label" :active="sort.key === c.key" :desc="sort.dir !== 'asc'" :align="c.key === 'item' ? 'left' : 'right'" :title="c.tip" @sort="sortBy(c.key)">
+                <Coin v-if="c.key === 'value'" :chaos="!divine" />
+              </WSortHead>
             </th>
           </tr>
         </thead>
@@ -68,6 +67,7 @@ import { useSaleLines } from './sale-lines'
 import { formatAmount, nowMinute } from '../ui/format'
 import TextTabs from './TextTabs.vue'
 import Coin from './Coin.vue'
+import WSortHead from '../ui/WSortHead.vue'
 import { byType, inRange, marketText, nextSaleSort, saleChaos, saleName, saleSortOf, saleType, sortSales, totals, SALE_TYPES } from './sales'
 import type { Sale, SaleRange, SaleSort, SaleSortKey, SaleType, TypeRow } from './sales'
 import { marketOf, rates, sales, salesReading } from './sales-store'
@@ -188,9 +188,6 @@ watch(types, (list) => { if (type.value && !list.some(t => t.id === type.value))
 .table td { padding: 2px 6px; text-align: right; border-bottom: 1px solid var(--w-line-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .table tbody tr:hover td { background: var(--w-panel-2); }
 .left { text-align: left !important; }
-.sortBtn { display: inline-flex; align-items: center; gap: 3px; font: inherit; color: inherit; text-transform: inherit; cursor: pointer; border-radius: var(--w-r-sm); }
-.sortBtn:hover, .sorted { color: var(--w-fg); }
-.sortBtn:focus-visible { outline: 1px solid var(--w-gold); }
 .name { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .sale { color: var(--w-gold); }

@@ -9,6 +9,8 @@ import { describe, expect, it } from 'vitest'
 import WRateChip from '@/web/woke/ui/WRateChip.vue'
 import WPrice from '@/web/woke/ui/WPrice.vue'
 import WThin from '@/web/woke/ui/WThin.vue'
+import WSortButton from '@/web/woke/ui/WSortButton.vue'
+import WSortHead from '@/web/woke/ui/WSortHead.vue'
 import { NO_PRICE, THIN_MARKET } from '@/web/woke/ui/format'
 import { RATE_HEAD, RATE_WORD, nextModRating } from '@/web/woke/map-mods/rules'
 
@@ -83,5 +85,26 @@ describe('thin market (WThin)', () => {
   it('has one look: no faint icon before the name, no ", thin market" words', () => {
     expect(offenders(/fa-exclamation-circle w-faint/)).toEqual([])
     expect(offenders(/', thin market'|', few listings'|low confidence<\/span>/)).toEqual([])
+  })
+})
+
+describe('sort (WSortButton, WSortHead)', () => {
+  const options = [{ value: 'manual', label: 'My order' }, { value: 'name', label: 'Name' }]
+  it('names the list\'s order on the icon and lights it off My order', async () => {
+    expect(await render(WSortButton, { modelValue: 'manual', options })).toContain('title="Sort: My order"')
+    expect(await render(WSortButton, { modelValue: 'manual', options })).not.toContain('w-icon-btn--on')
+    expect(await render(WSortButton, { modelValue: 'name', options })).toContain('w-icon-btn--on')
+  })
+
+  it('heads a column with its state and one arrow', async () => {
+    expect(await render(WSortHead, { label: 'Price', active: false })).toContain('aria-label="Sort by Price"')
+    const on = await render(WSortHead, { label: 'Price', active: true, desc: false })
+    expect(on).toContain('aria-label="Price, sorted ascending"')
+    expect(on.match(/fa-caret-up/g)).toHaveLength(1)
+  })
+
+  it('is the only sort look in saved lists and tables', () => {
+    expect(offenders(/fa-sort-amount-down/, ['ui/WSortButton.vue'])).toEqual([])
+    expect(offenders(/\$style\.sortBtn|\$style\.sortHead|' ▾' : ' ▴'/)).toEqual([])
   })
 })

@@ -137,7 +137,7 @@
         <table :class="$style.table" data-compare>
           <thead><tr>
             <th v-for="c in COLUMNS" :key="c.id" :class="{ [$style.num]: c.id !== 'new' }" :aria-sort="sortBy === c.id ? (c.id === 'cost' ? 'ascending' : 'descending') : undefined">
-              <button type="button" :class="[$style.sortBtn, { [$style.on]: sortBy === c.id }]" :title="c.tip" @click="sortBy = c.id">{{ c.id === 'perMap' ? `Per ${pastUnit}` : c.label }}</button>
+              <WSortHead :label="c.id === 'perMap' ? `Per ${pastUnit}` : c.label" :active="sortBy === c.id" :desc="c.id !== 'cost'" :align="c.id === 'new' ? 'left' : 'right'" :title="c.tip" @sort="sortBy = c.id" />
             </th>
             <th v-if="!byName" />
           </tr></thead>
@@ -183,6 +183,7 @@ import type { TipIndex } from './tips'
 import type { SummaryDrop } from './run-summary'
 import { span } from './play-time'
 import Coin from './Coin.vue'
+import WSortHead from '../ui/WSortHead.vue'
 import { compareRows, countLabel, craftTime, shownFights, shownMaps, isMapCostItem, leftOf, lineCost, mapsIn, runPerHour, runTotals, smallSample, sortCompare, tallyRows, tallyValue, topDrop, unitOf, SAMPLE_MIN_RUNS } from './runs'
 import { kitPrice } from './run-kit'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
@@ -607,8 +608,6 @@ function addPerMap (l: AddedLine) {
 .table td:first-child { max-width: 14rem; }
 .table .num { text-align: right; white-space: nowrap; }
 .table tr.on .pastOpen { color: var(--w-gold); }
-.sortBtn { background: none; border: 0; padding: 0; font: inherit; font-size: var(--w-fs-xs); color: var(--w-dim); cursor: pointer; font-family: var(--w-caps-face); text-transform: var(--w-caps-case); }
-.sortBtn.on, .sortBtn:hover { color: var(--w-gold); }
 .pastOpen { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .pastOpen:hover { color: var(--w-gold); }
 </style>

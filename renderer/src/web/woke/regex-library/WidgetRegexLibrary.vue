@@ -15,6 +15,9 @@
     </DockItem>
     <!-- One click listener for the panel's own buttons (data-act). -->
     <WPanel ref="panel" :keys="LIST_KEYS" :title="config.wmTitle || 'Regex library'" icon="stash" width="22rem" max-height="70vh" @click="onAction">
+      <template #actions>
+        <WSortButton :model-value="sortBy" :options="SORTS" @update:model-value="setSort" />
+      </template>
       <template #toolbar>
         <WField v-model="filter" icon="fas fa-search" placeholder="Filter by name, tag, category…" class="grow" />
         <WButton size="sm" icon="fas fa-plus" title="Add a search string" data-qa="regex-new" data-act="new">New</WButton>
@@ -98,6 +101,7 @@ import { pushHostConfig, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WChip, WKbd, WEmpty, WButton, openMenu, toast } from '../ui'
+import WSortButton from '../ui/WSortButton.vue'
 import { removeEntries } from '../shared/saved-list'
 import { useSavedTree } from '../shared/use-saved-tree'
 import { onSavedOpen } from '../shared/saved-open'
@@ -176,8 +180,29 @@ const isLocked = (path: string) => [ATLAS_FOLDER, POB_FOLDER].some(root => isUnd
 
 // The list's folders (categories with "/" nest), picking, drag and drop,
 // Alt + arrows and inline names: shared/use-saved-tree, as Atlas strategies.
+// The list's orders, as Atlas strategies sorts (WSortButton). Dragging and
+// Alt + arrows work on My order: other sorts switch back to it.
+type RegexSort = NonNullable<RegexLibraryWidget['sortBy']>
+const SORTS: Array<{ value: RegexSort, label: string }> = [
+  { value: 'manual', label: 'My order' },
+  { value: 'name', label: 'Name' },
+  { value: 'hotkey', label: 'Hotkeyed first' }
+]
+const sortBy = computed<RegexSort>(() => SORTS.some(s => s.value === props.config.sortBy) ? props.config.sortBy! : 'manual')
+function setSort (v: string) {
+  props.config.sortBy = v as RegexSort
+  saveConfig()
+}
+const byName = (a: RegexEntry, b: RegexEntry) => (a.name || effectiveText(a)).localeCompare(b.name || effectiveText(b), undefined, { numeric: true })
+
 const tree = useSavedTree<RegexEntry>({
   root: () => panel.value?.el,
+  sorted: (list) => sortBy.value === 'name'
+    ? [...list].sort(byName)
+    : sortBy.value === 'hotkey' ? [...list].sort((a, b) => Number(b.hotkey != null) - Number(a.hotkey != null)) : list,
+  manual: () => sortBy.value === 'manual',
+  toManual: () => { setSort('manual'); toast('Sorted by My order', { anchor: panel.value?.el }) },
+  foldersByName: () => sortBy.value === 'name',
   items: () => props.config.entries,
   setItems: (list) => { props.config.entries = list; pushHostConfig() },
   folderOf: e => e.category,

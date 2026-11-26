@@ -10,8 +10,7 @@
           <button @click="importOpen = !importOpen" class="w-icon-btn" :class="{ 'w-icon-btn--on': importOpen }" title="Import a build link (pobb.in, poe.ninja, maxroll…) or PoB code">
             <i class="fas fa-file-import" />
           </button>
-          <button class="w-icon-btn" :class="{ 'w-icon-btn--on': config.sortBy === 'manual' }" :title="config.sortBy === 'manual' ? 'Sort: My order. Click for latest save first' : 'Sort: latest save first. Click for My order'"
-            @click="config.sortBy = config.sortBy === 'manual' ? undefined : 'manual'; saveConfig()"><i class="fas fa-sort-amount-down" /></button>
+          <WSortButton :model-value="config.sortBy ?? 'saved'" :options="SORTS" @update:model-value="config.sortBy = $event === 'manual' ? 'manual' : undefined; saveConfig()" />
           <button @click="refresh" class="w-icon-btn" title="Reload builds folder">
             <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }" />
           </button>
@@ -87,6 +86,7 @@ import { inject, computed, shallowRef, watch, defineAsyncComponent } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WButton, WEmpty, WBanner, WSkeleton, openMenu, toast } from '../ui'
+import WSortButton from '../ui/WSortButton.vue'
 import { useSavedTree } from '../shared/use-saved-tree'
 import { isUnder, movedPath } from '../shared/saved-tree'
 import SavedTree from '../shared/SavedTree.vue'
@@ -319,6 +319,8 @@ const rows = computed<BuildRow[]>(() => {
 })
 const selectedRow = computed(() => rows.value.find(r => r.relPath === selected.value) ?? null)
 const pickedFrom = shallowRef<number | null>(null)
+// The list's two orders (unset = latest save first, the default).
+const SORTS = [{ value: 'saved', label: 'Latest save first' }, { value: 'manual', label: 'My order' }]
 const manualOrder = computed(() => props.config.sortBy === 'manual')
 
 const tree = useSavedTree<BuildRow>({

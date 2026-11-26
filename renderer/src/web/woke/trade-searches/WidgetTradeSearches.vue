@@ -18,7 +18,9 @@
       <WPanel ref="panel" :keys="LIST_KEYS" class="shrink-0" :title="config.wmTitle || 'Trade searches'" icon="exalted" width="38rem" max-height="70vh">
         <template #toolbar>
           <WField v-model="filter" icon="fas fa-search" placeholder="Filter every folder by name, tag…" class="grow" />
-          <WSelect v-model="sort" :options="SORTS" title="Sort the list" />
+        </template>
+        <template #actions>
+          <WSortButton v-model="sort" :options="SORTS" />
         </template>
 
         <div :class="$style.split">
@@ -118,7 +120,8 @@ import { POB_BUILDS_TYPE } from '../pob-builds/widget'
 import type { PobBuildsWidget } from '../pob-builds/widget'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WField, WSelect, WChip, WKbd, WEmpty, WButton, ago, gameIcon, mechanicIcon, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
+import WSortButton from '../ui/WSortButton.vue'
+import { WPanel, WField, WChip, WKbd, WEmpty, WButton, ago, gameIcon, mechanicIcon, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui'
 import { copyText } from '../ui/copy'
 import DockItem from '../dock/DockItem.vue'
