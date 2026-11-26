@@ -1,4 +1,5 @@
-import { shallowRef, watch } from 'vue'
+import { watch } from 'vue'
+import { storedPref } from './stored-pref'
 // Bundled so text looks the same on every PC and works offline (P19).
 import '@fontsource/inter/400.css'
 import '@fontsource/inter/500.css'
@@ -28,19 +29,9 @@ export const WOKE_THEMES: Array<{ id: WokeTheme, label: string, short: string, h
   { id: 'classic', label: 'Classic APT', short: 'Classic', hint: 'Leave APT widgets as upstream ships them' }
 ]
 
-const STORAGE_KEY = 'woke.theme'
-
-function readStored (): WokeTheme {
-  try {
-    const v = localStorage.getItem(STORAGE_KEY)
-    if (v && WOKE_THEMES.some(t => t.id === v)) return v as WokeTheme
-  } catch {}
-  return 'hybrid'
-}
-
 // Stored per window in localStorage; the overlay and settings windows share an
 // origin, and the storage event keeps them in sync.
-export const wokeTheme = shallowRef<WokeTheme>(readStored())
+export const wokeTheme = storedPref<WokeTheme>('woke.theme', v => v && WOKE_THEMES.some(t => t.id === v) ? v as WokeTheme : 'hybrid')
 
 // Hybrid and Native wear the game look (pick S3 + T1, WOKEPOET-181): bronze frames,
 // bevelled controls, Fontin text. Modern and Classic keep their own.
@@ -56,17 +47,8 @@ export const UI_ARTS: Array<{ value: UiArt, label: string }> = [
   { value: 'poe2', label: 'PoE 2' },
   { value: 'simple', label: 'Simple' }
 ]
-const ART_KEY = 'woke.uiArt'
 
-function readArt (): UiArt {
-  try {
-    const v = localStorage.getItem(ART_KEY)
-    if (v && UI_ARTS.some(a => a.value === v)) return v as UiArt
-  } catch {}
-  return 'poe1'
-}
-
-export const uiArt = shallowRef<UiArt>(readArt())
+export const uiArt = storedPref<UiArt>('woke.uiArt', v => v && UI_ARTS.some(a => a.value === v) ? v as UiArt : 'poe1')
 
 /** Every look the pickers offer, in one list: the game look with PoE 1's or
  * PoE 2's window art first, then the themes. Hybrid and PoE-native are the game
@@ -101,15 +83,4 @@ function apply () {
 }
 
 apply()
-watch(wokeTheme, (theme) => {
-  apply()
-  try { localStorage.setItem(STORAGE_KEY, theme) } catch {}
-})
-watch(uiArt, (art) => {
-  apply()
-  try { localStorage.setItem(ART_KEY, art) } catch {}
-})
-window.addEventListener('storage', (e) => {
-  if (e.key === STORAGE_KEY) wokeTheme.value = readStored()
-  if (e.key === ART_KEY) uiArt.value = readArt()
-})
+watch([wokeTheme, uiArt], apply)

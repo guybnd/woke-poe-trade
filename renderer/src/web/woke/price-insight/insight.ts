@@ -1,6 +1,7 @@
 // Turns raw trade listings into a verdict: which listings to trust, a fair
 // price range, and a suggested list price. Pure functions, no Vue or IO, so the
 // rules can be checked in isolation.
+import { median } from '../shared/numbers'
 
 export interface InsightListing {
   id: string
@@ -114,12 +115,6 @@ export function toChaos (amount: number, currency: string, opts: InsightOptions)
   if (currency === 'divine') return opts.divine ? amount * opts.divine : null
   const rate = opts.otherRates?.[currency]
   return rate ? amount * rate : null
-}
-
-function median (values: number[]): number {
-  const s = [...values].sort((a, b) => a - b)
-  const mid = Math.floor(s.length / 2)
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2
 }
 
 // How much a listing says about what the item really sells for: sellers who

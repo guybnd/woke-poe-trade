@@ -20,6 +20,7 @@ let last: Square | null = null
 const UNID_UNIQUE = /^Rarity: Unique\r?$/m
 const UNIDENTIFIED = /^Unidentified\r?$/m
 
+// Same units as uiohook's mouse events: physical pixels on Windows.
 export function cursorInScreenPixels (): { x: number, y: number } {
   const p = screen.getCursorScreenPoint()
   return process.platform === 'win32' ? screen.dipToScreenPoint(p) : p

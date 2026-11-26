@@ -13,6 +13,7 @@ import type { NightDraft, NightStory } from './story'
 import { isMapRecord, keepMap } from './map-log'
 import { isSkippedArea, skipVersion } from './skip-areas'
 import type { MapRecord } from './map-log'
+import { localDay } from '../shared/numbers'
 
 export const NIGHTS_COLLECTION = 'session-story'
 export const NIGHTS_KEY = 'nights'
@@ -26,10 +27,7 @@ function isNightDraft (v: unknown): v is NightDraft {
 // their own small file, for the chip's average, Ctrl+Space and where the log
 // replay starts.
 export const MAPS_COLLECTION = 'map-history'
-export function dayKey (ms: number): string {
-  const d = new Date(ms)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+export function dayKey (ms: number): string { return localDay(ms) }
 const DAY_MS = 86_400_000
 export const DAY_MS_EXPORT = DAY_MS
 const RECENT = 20

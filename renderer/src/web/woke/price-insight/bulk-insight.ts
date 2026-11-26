@@ -2,6 +2,7 @@
 // per item. Pure functions, no Vue or IO.
 
 import type { Confidence } from './insight'
+import { median } from '../shared/numbers'
 
 export interface BulkListing {
   exchangeAmount: number
@@ -39,12 +40,6 @@ const WINDOW = 6
 const MIN_WITH_STOCK = 3
 const FAR_UNDER = 0.5
 const MAX_BELOW_FLOOR = 2
-
-function median (values: number[]): number {
-  const s = [...values].sort((a, b) => a - b)
-  const mid = Math.floor(s.length / 2)
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2
-}
 
 export function buildBulkInsight (listings: readonly BulkListing[], need: number): BulkInsight | null {
   // An offer whose stock can't fill one trade isn't really for sale.
