@@ -6,7 +6,7 @@
     <section :class="$style.head">
       <span :class="$style.total" class="w-num" :title="inChaos(sum.chaos)">{{ div(sum.chaos) }}<Coin :chaos="!divine" /></span>
       <span class="w-dim text-xs">{{ sum.count }} {{ sum.count === 1 ? 'sale' : 'sales' }}<template v-if="sum.unpriced"> · {{ sum.unpriced }} in a currency without a price</template><template v-if="outInRange"> · <span data-sales-left-out>{{ outInRange }} left out</span></template></span>
-      <TextTabs v-model="range" :options="RANGES" :class="$style.range" />
+      <WSegmented :model-value="range" :options="RANGES" :class="$style.range" title="Which sales to count" @update:model-value="range = $event as SaleRange" />
     </section>
 
     <!-- Layout 1, ranked bars: one row per type, biggest first; a click filters the table. -->
@@ -65,7 +65,7 @@ import { WButton, WChip, WEmpty, WField, WLineActs, vItemTip } from '../ui'
 import { saleTip } from './sale-tip'
 import { useSaleLines } from './sale-lines'
 import { formatAmount, nowMinute } from '../ui/format'
-import TextTabs from './TextTabs.vue'
+import WSegmented from '../ui/WSegmented.vue'
 import Coin from './Coin.vue'
 import WSortHead from '../ui/WSortHead.vue'
 import { byType, inRange, marketText, nextSaleSort, saleChaos, saleName, saleSortOf, saleType, sortSales, totals, SALE_TYPES } from './sales'
