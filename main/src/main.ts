@@ -7,6 +7,7 @@ import { uIOhook } from 'uiohook-napi'
 import os from 'node:os'
 import { startServer, eventPipe, httpRoutes, configFlushed } from './server'
 import { docWritesDone } from './woke/data-files'
+import { deathWritesDone } from './woke/death-recap-store'
 import { Logger } from './RemoteLogger'
 import { GameWindow } from './windowing/GameWindow'
 import { OverlayWindow } from './windowing/OverlayWindow'
@@ -45,7 +46,7 @@ if (process.platform !== 'darwin' && !appPrefs().gpuDrawing) {
 app.enableSandbox()
 
 // woke: documents written on the way out (the loot filter's history) too.
-saveBeforeQuit(eventPipe, async () => { await Promise.all([configFlushed(), docWritesDone()]) })
+saveBeforeQuit(eventPipe, async () => { await Promise.all([configFlushed(), docWritesDone(), deathWritesDone()]) })
 
 let tray: AppTray | undefined
 

@@ -28,21 +28,40 @@ function recordStore (dirName: string) {
     if (!cache) {
       cache = (async () => {
         const out = new Map<string, SessionRecord>()
+        // A file that exists but can't be read right now (antivirus, a sync
+        // tool) mustn't stay missing for the whole run: the next list reads
+        // everything again.
+        let unread = false
         for (const league of await listDir(root())) {
           const dir = path.join(root(), league)
           for (const name of await listDir(dir)) {
             if (!name.endsWith('.json')) continue
+            let text: string
             try {
-              const s = JSON.parse(await fs.readFile(path.join(dir, name), 'utf8')) as SessionRecord
+              text = await fs.readFile(path.join(dir, name), 'utf8')
+            } catch (e) {
+              if ((e as NodeJS.ErrnoException).code !== 'ENOENT') unread = true
+              continue
+            }
+            try {
+              const s = JSON.parse(text) as SessionRecord
               if (s && typeof s.id === 'string') out.set(s.id, s)
             } catch {}
           }
         }
+        if (unread) cache = null
         return out
       })()
       cache.catch(() => { cache = null })
     }
     return cache
+  }
+
+  // A list read again (after an unreadable file) may have started while a
+  // write was under way, from before it: it gets the change too.
+  async function alsoInNewer (used: Map<string, SessionRecord>, change: (m: Map<string, SessionRecord>) => void) {
+    const now = await cache?.catch(() => null)
+    if (now && now !== used) change(now)
   }
 
   // Writes go one at a time so two saves never interleave.
@@ -57,6 +76,7 @@ function recordStore (dirName: string) {
       // once the new one is written (a failed write keeps the session).
       if (old && fileOf(old) !== fileOf(s)) await fs.rm(fileOf(old), { force: true })
       all.set(s.id, s)
+      await alsoInNewer(all, m => m.set(s.id, s))
       return true
     })
   }
@@ -68,6 +88,7 @@ function recordStore (dirName: string) {
         if (all.has(s.id)) continue
         await writeAtomic(fileOf(s), JSON.stringify(s))
         all.set(s.id, s)
+        await alsoInNewer(all, m => m.set(s.id, s))
       }
       return true
     })
@@ -80,6 +101,7 @@ function recordStore (dirName: string) {
       if (old) {
         await fs.rm(fileOf(old), { force: true })
         all.delete(old.id)
+        await alsoInNewer(all, m => m.delete(old.id))
       }
       return true
     })

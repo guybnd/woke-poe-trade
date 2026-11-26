@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { parseLogLine } from '@/web/woke/campaign/log-parse'
 import {
-  HISTORY_LIMIT, SUB_SPLITS, applyBossSpeech, applyRunEvent, bestSegments, endRun, isCleanRun, newRun, personalBest, startRun, sumOfBest
+  HISTORY_LIMIT, SUB_SPLITS, applyBossSpeech, applyRunEvent, gameRestarted, runElapsed, townElapsed, bestSegments, endRun, isCleanRun, newRun, personalBest, startRun, sumOfBest
 } from '@/web/woke/campaign/run-timer'
 import type { CampaignRun, RunTimerWidget } from '@/web/woke/campaign/run-timer'
 
@@ -188,5 +188,30 @@ describe('run timer: town time', () => {
     enter(w, 'HideoutFelled', 8 * MIN)
     expect(townElapsed(w.run!, 9 * MIN)).toBe(3 * MIN)
     expect(runElapsed(w.run!, 9 * MIN)).toBe(9 * MIN)
+  })
+})
+
+describe('run timer and the game closing', () => {
+  it("time with the game closed isn't run time", () => {
+    const w = widget()
+    enter(w, '1_1_1', 0)
+    enter(w, '1_1_town', 10 * MIN)
+    // Last line at 15 min, the game opens again the next day.
+    const nextDay = 20 * 60 * MIN
+    expect(gameRestarted(w, 15 * MIN)).toBe(true)
+    expect(runElapsed(w.run!, nextDay)).toBe(15 * MIN)
+    enter(w, '1_1_2', nextDay)
+    expect(runElapsed(w.run!, nextDay + 5 * MIN)).toBe(20 * MIN)
+    expect(townElapsed(w.run!, nextDay + 5 * MIN)).toBe(5 * MIN)
+  })
+
+  it('a run paused by hand stays paused', () => {
+    const w = widget()
+    enter(w, '1_1_1', 0)
+    w.run!.elapsedMs = runElapsed(w.run!, 5 * MIN)
+    w.run!.runningSince = null
+    expect(gameRestarted(w, 6 * MIN)).toBe(false)
+    enter(w, '1_1_2', 60 * MIN)
+    expect(w.run!.runningSince).toBeNull()
   })
 })

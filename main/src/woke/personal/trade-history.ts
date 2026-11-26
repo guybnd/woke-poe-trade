@@ -8,7 +8,7 @@
 // (entering your hideout) runs at most every AUTO_EVERY_MS, a manual one at
 // most every MANUAL_GAP_MS, and the limiter uses only part of each window.
 import path from 'path'
-import { dataDir, leagueName, readJson, writeAtomic, writeQueue } from '../data-files'
+import { dataDir, leagueName, readJson, readJsonStrict, writeAtomic, writeQueue } from '../data-files'
 import { RateLimiter } from './rate-limit'
 import { POE_SITE } from './stash-reader'
 import type { Fetcher } from './stash-reader'
@@ -304,12 +304,24 @@ export class TradeHistory {
       this.setError(league, { kind: 'failed', message: "pathofexile.com's reply wasn't trade history." })
       return await this.reply(league)
     }
-    const next = await queued(async () => {
-      const old = await this.cache(league)
-      const c: SalesCache = { version: 1, league, readAt: this.deps.now(), sales: mergeSales(old.sales, fresh) }
-      await writeAtomic(this.file(league), JSON.stringify(c))
-      return c
-    })
+    let next: SalesCache
+    try {
+      next = await queued(async () => {
+        // Strict: a saved file that can't be read right now (antivirus, a sync
+        // tool) must stop the merge, or the saved sales the site no longer
+        // returns would be replaced by only the ones it does.
+        const saved = await readJsonStrict<SalesCache | null>(this.file(league), null)
+        const old = saved && saved.version === 1 && Array.isArray(saved.sales) ? saved : emptyCache(league)
+        const c: SalesCache = { version: 1, league, readAt: this.deps.now(), sales: mergeSales(old.sales, fresh) }
+        await writeAtomic(this.file(league), JSON.stringify(c))
+        return c
+      })
+    } catch (e) {
+      // Thrown, not answered: an answer would carry the sales read loosely
+      // from the same locked file (none), and the overlay would show none.
+      this.deps.log?.(`warn [trade-history] couldn't save: ${String(e)}`)
+      throw new Error("Couldn't save the sales file. Try again in a moment.")
+    }
     this.setError(league, null)
     return { ...next, error: null }
   }
