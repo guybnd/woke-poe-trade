@@ -11,6 +11,7 @@ import type { MapRecord } from '../session-story/map-log'
 import { addToTally, cleanDoc, compareRows, emptyRun, isLastRun, isRunGlance, lastRunKey, mapsIn, relive, runBoardKey, runGlanceKey, runsKey, runTotals, tallyFrom, topDrop, MAX_DONE_RUNS } from './runs'
 import type { CostLine, LivePrice, Outside, Run, RunBoard, RunGlance, RunsDoc } from './runs'
 import type { LedgerPoint } from './ledger'
+import { savedRunBoard } from './board-signal'
 import type { StashDiff } from './valuation'
 
 const COLLECTION = 'net-worth'
@@ -75,6 +76,7 @@ function saveBoard (league: string, doc: RunsDoc) {
     league,
     rows: all.map((r, i) => ({
       name: r.name,
+      ...(r.craft ? { craft: true as const } : {}),
       count: r.count,
       maps: r.maps,
       fights: r.fights,
@@ -90,6 +92,7 @@ function saveBoard (league: string, doc: RunsDoc) {
   const json = JSON.stringify(board)
   if (json === boardWas) return
   boardWas = json
+  savedRunBoard.value = board
   hostRequest('doc-put', { collection: COLLECTION, key: runBoardKey(league), value: board }).catch(() => { boardWas = '' })
 }
 

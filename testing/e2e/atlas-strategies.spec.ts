@@ -502,6 +502,6 @@ test('a strategy shows what Net worth runs of its name earned', async ({ overlay
   await expect(rate).toBeVisible()
   await expect(rate).toContainText('/h')
   await expect(atlas.getByText('Your results:')).toBeVisible()
-  await expect(atlas.getByText('over 42 maps')).toBeVisible()
+  await expect(atlas.getByText('over 41 maps · 1 fight')).toBeVisible()
   await overlay.snap('atlas strategy results from Net worth runs')
 })

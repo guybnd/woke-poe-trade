@@ -22,9 +22,14 @@ describe('Atlas earnings from Net worth runs', () => {
   it('keys by run name, per hour under the Per hour setting', () => {
     const board: RunBoard = { league: 'L', rows: [row({}), row({ name: 'Delirium', perHour: { play: null, hub: 50, all: 40 }, perMapChaos: null })] }
     const play = earningsFrom(board, 'play')
-    expect(play.get('Strand alch')).toEqual({ runs: 3, maps: 42, perHour: 900, perMap: 100 })
-    expect(play.get('Delirium')).toEqual({ runs: 3, maps: 42, perHour: null, perMap: null })
+    expect(play.get('Strand alch')).toEqual({ runs: 3, maps: 40, fights: 2, perHour: 900, perMap: 100 })
+    expect(play.get('Delirium')).toEqual({ runs: 3, maps: 40, fights: 2, perHour: null, perMap: null })
     expect(earningsFrom(board, 'all').get('Strand alch')!.perHour).toBe(600)
+  })
+
+  it('a crafting run of the same name never stands in for the maps', () => {
+    const board: RunBoard = { league: 'L', rows: [row({}), row({ craft: true, perHour: { play: 5, hub: 5, all: 5 } })] }
+    expect(earningsFrom(board, 'play').get('Strand alch')!.perHour).toBe(900)
   })
 
   it('no board, nothing to show', () => {

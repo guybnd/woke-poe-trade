@@ -62,7 +62,7 @@
       </template>
       <button v-else type="button" class="w-faint text-left hover:underline" @click="editing = true">None yet. Add what each map takes.</button>
       <div v-if="earn && (earn.perHour != null || earn.perMap != null)" class="w-dim text-xs" title="From Net worth's runs of the same name">
-        Your results: <span v-if="earn.perHour != null" class="w-num" :class="earn.perHour >= 0 ? 'w-up' : 'w-down'">{{ fmt(earn.perHour) }}/h</span>{{ earn.perHour != null && earn.perMap != null ? ', ' : '' }}<span v-if="earn.perMap != null" class="w-num">{{ fmt(earn.perMap) }}/map</span> over {{ earn.maps }} maps
+        Your results: <span v-if="earn.perHour != null" class="w-num" :class="earn.perHour >= 0 ? 'w-up' : 'w-down'">{{ fmt(earn.perHour) }}/h</span>{{ earn.perHour != null && earn.perMap != null ? ', ' : '' }}<span v-if="earn.perMap != null" class="w-num">{{ fmt(earn.perMap) }}/{{ unitOf(earn.maps, earn.fights) }}</span> over {{ countLabel(earn.maps, earn.fights) }}
       </div>
 
       <!-- Regexes, kept in the Regex library -->
@@ -167,7 +167,8 @@ import { WButton, WField, WPanel, WBanner, WIcon, WSkeleton, openMenu, toast, us
 import { ninjaIcon } from '../ui/game-icons'
 import { usePriceText } from '../shared/price'
 import { usePriceIndex } from '../market/price-index'
-import { loadRunBoard, strategyEarnings } from './run-earnings'
+import { followRunBoard, strategyEarnings } from './run-earnings'
+import { countLabel, unitOf } from '../net-worth/runs'
 import { SAVE_MESSAGE } from '../regex-library/save'
 import { addRegex, libraryOn as isLibraryOn, regexesIn, removeRegex } from '../regex-library/folders'
 import { refileRegexes } from './strategy-ops'
@@ -287,7 +288,7 @@ const mapCost = computed(() => {
   return parts.length ? parts.reduce((a, b) => a + b, 0) : null
 })
 
-loadRunBoard()
+followRunBoard()
 const earn = computed(() => strategyEarnings.value.get(props.strategy.name) ?? null)
 
 // ---- regexes ----

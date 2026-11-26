@@ -119,7 +119,7 @@ import { usePriceIndex } from '../market/price-index'
 import { useSavedTree } from '../shared/use-saved-tree'
 import SavedTree from '../shared/SavedTree.vue'
 import { usePriceText } from '../shared/price'
-import { loadRunBoard, strategyEarnings } from './run-earnings'
+import { followRunBoard, strategyEarnings } from './run-earnings'
 import { expandShortTreeLinks, extractTreeCode, trimLinkEnd } from './tree'
 import type { ShotRead } from './shot-import'
 // Not lazy: a paste right after the Import box opens must reach it.
@@ -179,7 +179,7 @@ const prices = usePriceIndex()
 const { fmt } = usePriceText(prices.snapshot)
 
 const earnings = strategyEarnings
-loadRunBoard(true)
+followRunBoard()
 const countText = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 function contentOf (s: AtlasStrategy): string {

@@ -24,7 +24,7 @@ test('with the overlay open: Show me opens the tool, dismiss takes a line off, t
   const lines = icon.locator('[data-whats-new-line]')
   await expect(lines).toHaveCount(NEWS.length)
 
-  await lines.filter({ hasText: 'Atlas strategies' }).first().locator('[data-whats-new-dismiss]').click()
+  await lines.filter({ hasText: 'poeatlasplanner.com' }).first().locator('[data-whats-new-dismiss]').click()
   await expect(lines).toHaveCount(NEWS.length - 1)
 
   await (await overlay.whatsNewLine('Planner tab for T17')).getByRole('button', { name: 'Show me' }).click()

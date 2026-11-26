@@ -596,6 +596,8 @@ export interface RunGlance {
 // Past runs by strategy (compareRows grouped), saved small for Ctrl+Space.
 export interface RunBoardRow {
   name: string
+  // A crafting session's row (no maps), beside a maps row of the same name.
+  craft?: true
   count: number
   maps: number
   fights: number
