@@ -60,6 +60,10 @@ export interface TipBaseExtra {
   fl?: { l?: number, m?: number, d?: number, u?: number, x?: number, b?: string[] }
   tc?: { mb: number, cd: number }
 }
+// A corpse (public/data/tips/corpses.json, from the PoE wiki's Corpse_item
+// table): its monster category, the spectre's abilities, and m when it only
+// comes from Mirage areas.
+export interface TipCorpse { c: string, a: string[], m?: 1 }
 export interface TipPack {
   'uniques'?: Record<string, TipUnique>
   // Uniques poe.ninja has no listing of, from Path of Building (scripts/build-unique-extras.mjs).
@@ -73,6 +77,8 @@ export interface TipPack {
   'vestigial'?: Record<string, string[][]>
   // The mod each essence forces per slot (scripts/build-essence-data.mjs).
   'essences'?: Record<string, Array<[string[], string[]]>>
+  // Corpses by name (TipCorpse). Loaded only for a corpse.
+  'corpses'?: Record<string, TipCorpse>
 }
 
 export type TipKind = 'unique' | 'gem' | 'card' | 'item'
@@ -427,6 +433,20 @@ export function itemTip (name: string, item: TipItem, kind: TipKind): TipModel {
   }
 }
 
+// A corpse: the spectre it raises, its category and abilities.
+export function corpseTip (name: string, corpse: TipCorpse): TipModel {
+  return {
+    name,
+    base: 'Raise Spectre corpse',
+    frame: 'currency',
+    sections: present([
+      [pair('Monster', corpse.c)],
+      corpse.a.map(l => plain(l, 'mod')),
+      corpse.m ? [plain('Mirage areas only', 'dim')] : []
+    ])
+  }
+}
+
 const seconds = (n: number) => n.toFixed(2)
 
 // A flask's or tincture's own lines, as the game words them.
@@ -485,6 +505,8 @@ export function buildTip (pack: TipPack, ref: { name: string, kind: TipKind, var
     const gem = pack.gems?.[name]
     return gem ? gemTip(name, gem, variant) : null
   }
+  const corpse = pack.corpses?.[name]
+  if (corpse) return corpseTip(name, corpse)
   const item = pack.items?.[name]
   if (item) return itemTip(name, item, kind)
   const base = pack.bases?.[name]
