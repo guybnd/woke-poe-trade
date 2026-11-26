@@ -53,6 +53,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-26T02:49:39.114Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up: PR 955 (https://github.com/guybnd/woke-poe-trade/pull/955,
+      merged c10d9ee): Run setup again merges picks into current settings
+      instead of saving a stale copy.
+    date: '2026-11-26T03:12:41.496Z'
+    selfAttested: true
+    id: c-2026-11-26t03-12-41-496z
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/949'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
