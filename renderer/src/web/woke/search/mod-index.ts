@@ -72,15 +72,17 @@ export function buildModIndex (
 
 // The number in a query ("rarity 50"): only lines that can roll it or more.
 export function queryAtLeast (query: string): number | null {
-  const m = /(?:^|\s)\+?(\d+(?:\.\d+)?)%?(?=\s|$)/.exec(query)
+  const m = /(?:^|[\s,;])\+?(\d+(?:\.\d+)?)%?(?=[\s.,;]|$)/.exec(query)
   return m ? Number(m[1]) : null
 }
-// The most a line's first number can roll: "(20-30)% increased" is 30,
-// "+250 to" is 250, "(-10-40)%" is 40. Null when the line has no number.
+// The most a line can roll: the top of its largest range ("Adds 1 to
+// (650-850)" is 850, "(-10-40)%" is 40), else its first number ("+250 to"
+// is 250, "1% per 15" is 1). Null when the line has no number.
 export function rollMax (line: string): number | null {
-  const m = /\((-?[\d.]+)-(-?[\d.]+)\)|(-?\d+(?:\.\d+)?)/.exec(line)
-  if (!m) return null
-  return m[3] != null ? Number(m[3]) : Math.max(Number(m[1]), Number(m[2]))
+  const tops = [...line.matchAll(/\((-?[\d.]+)-(-?[\d.]+)\)/g)].map(m => Math.max(Number(m[1]), Number(m[2])))
+  if (tops.length) return Math.max(...tops)
+  const m = /-?\d+(?:\.\d+)?/.exec(line)
+  return m ? Number(m[0]) : null
 }
 
 // One hit per unique, its best line: every query word starts a word of the
