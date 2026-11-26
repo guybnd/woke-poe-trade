@@ -70,7 +70,7 @@
             :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
           <template v-for="r in came.slice(0, cameShown)" :key="r.key">
             <RunRow data-run-came :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, Math.abs(r.net))" :count="cameCount(r)" :chaos="cameVal(r)" sign="+" :divine="divine"
-              :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editRow(rowKey.tally(r.key), $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
+              :out="isOut(rowKey.tally(r.key))" :edited="isEdited(rowKey.tally(r.key))" @edit="editCame(r, $event)" @out="leaveOut(rowKey.tally(r.key), $event, r.line.name)" @reset="resetRow(rowKey.tally(r.key))" />
             <RunRow v-if="preOf(r)" struck data-run-pre-part :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, preOf(r)!.n)" :count="preCount(r, true)" :chaos="cameTaken(r)" sub="from pre-run listings" :divine="divine" :editable="false" :can-leave-out="false" />
           </template>
           <RunRow v-for="m in manualIn" :key="m.id" :icon="m.icon" :name="m.name" :tip="tipOf(m.key ?? null, m.name, m.count)" :count="m.count" :chaos="m.count * m.each" :each="m.each" sign="+" sub="added" :divine="divine" :can-leave-out="false" removable
@@ -478,6 +478,10 @@ const cameCount = (r: TallyRow) => {
   const n = tallyCount(r)
   return preOf(r) ? Math.max(0, Math.round((n - preCount(r, true)) * 100) / 100) : n
 }
+// The count shown is the run's own part: an edit adds the pre-run part back,
+// since the edit is kept on the whole stash row.
+const editCame = (r: TallyRow, e: { count?: number, each?: number, bought?: number | null }) =>
+  editRow(rowKey.tally(r.key), e.count != null && preOf(r) ? { ...e, count: e.count + preCount(r, true) } : e)
 // In In, the part taken off can be capped at the row: its count follows.
 const preCount = (r: TallyRow, capped = false) => {
   const p = preOf(r)
