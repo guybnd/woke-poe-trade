@@ -31,27 +31,44 @@ test('a holding falling all week shows under Worth selling and in Ctrl+Space', a
   const settings = overlay.widget('settings')
   await settings.getByText('All modules', { exact: true }).first().click()
   // Settled first (as in net-worth.spec): a click while the page is still
-  // loading was lost on a loaded runner, so Turn on never showed.
+  // loading was lost on a loaded runner, so Turn on never showed. The fake
+  // app is shared by a worker's tests, so the reader may already be on, its
+  // tabs picked (net-worth.spec ran first).
   const reader = settings.getByRole('switch', { name: 'Net worth' })
   await expect(reader).toBeVisible()
-  await expect(reader).toHaveAttribute('aria-checked', 'false')
-  const turnOn = settings.getByRole('button', { name: 'Turn on' })
-  await expect(async () => {
-    if (!await turnOn.isVisible()) await reader.click()
-    await expect(turnOn).toBeVisible({ timeout: 2000 })
-  }).toPass({ timeout: 20_000 })
-  await turnOn.click()
-  await expect(reader).toHaveAttribute('aria-checked', 'true')
+  await expect(reader).toHaveAttribute('aria-checked', /true|false/)
+  const wasOn = await reader.getAttribute('aria-checked') === 'true'
+  if (!wasOn) {
+    const turnOn = settings.getByRole('button', { name: 'Turn on' })
+    await expect(async () => {
+      if (!await turnOn.isVisible()) await reader.click()
+      await expect(turnOn).toBeVisible({ timeout: 2000 })
+    }).toPass({ timeout: 20_000 })
+    await turnOn.click()
+    await expect(reader).toHaveAttribute('aria-checked', 'true')
+  }
   await expect(settings.getByText('Signed in as Tester#1234')).toBeVisible()
   await settings.getByTitle('Close').first().click()
 
   await overlay.widget('menu').getByRole('button', { name: 'All tools' }).click()
   await overlay.page.getByRole('button', { name: /Net worth/ }).first().click()
-  const picker = overlay.page.locator('[id^="widget-"]').filter({ has: overlay.page.getByText('Tabs to read') })
-  await expect(picker).toHaveCount(1)
-  const panel = overlay.page.locator(`#${await picker.getAttribute('id')}`)
-  await panel.getByRole('checkbox', { name: /Dump/ }).check()
-  await panel.getByRole('button', { name: 'Read these tabs' }).click()
+  // The tab picker on a first read; the Holdings view when tabs are picked.
+  const page = overlay.page
+  let panelId = ''
+  await expect(async () => {
+    for (const id of await page.locator('[id^="widget-"]').evaluateAll(els => els.map(e => e.id))) {
+      const w = page.locator(`#${id}`)
+      if (await w.getByText('Tabs to read').isVisible() || await w.getByRole('button', { name: 'Refresh' }).isVisible()) { panelId = id; return }
+    }
+    throw new Error('Net worth window not open yet')
+  }).toPass({ timeout: 20_000 })
+  const panel = page.locator(`#${panelId}`)
+  if (await panel.getByText('Tabs to read').isVisible()) {
+    await panel.getByRole('checkbox', { name: /Dump/ }).check()
+    await panel.getByRole('button', { name: 'Read these tabs' }).click()
+  } else {
+    await panel.getByRole('button', { name: 'Refresh' }).click()
+  }
   await expect(panel.getByText('Headhunter').first()).toBeVisible({ timeout: 20_000 })
 
   const details = panel.getByRole('button', { name: /^Details/ })

@@ -15,7 +15,7 @@ import { stashGains, stashGainsStrict, gainsKey } from './gains'
 import { classify, resolveSpends } from './spend'
 import type { SpendMark } from './spend'
 import { addPoint, keepDiff, sellMinChaos, topChanges, valueByTab, worthSelling } from './ledger'
-import { glanceKey, glanceRates, ledgerKey, sinceLabel } from './glance'
+import { glanceKey, glanceRates, isGlance, ledgerKey, sinceLabel } from './glance'
 import { keptSales, listedGlance, listedTotal, listedWorth } from './pending-glance'
 import { lineOutDoc, loadLineOut, outIdsOf } from './line-out-store'
 import type { Glance, GlanceSell } from './glance'
@@ -175,16 +175,20 @@ async function loadLeague (id: string) {
   loadLineOut(id).catch(() => {})
   // Strict reads (undefined: the file is there but couldn't be read, locked
   // by antivirus or a sync tool); null only when there's no file yet.
-  const [saved, cache, led, own, gains, base] = await Promise.all([
+  const [saved, cache, led, own, gains, base, lastGlance] = await Promise.all([
     (hostRequest('doc-get-strict', { collection: COLLECTION, key: id }) as Promise<NetWorthHistory | null>).catch(() => undefined),
     (hostRequest('stash-cache', { league: id }) as Promise<CachedStash | null>).catch(() => null),
     (hostRequest('doc-get-strict', { collection: COLLECTION, key: ledgerKey(id) }) as Promise<Ledger | null>).catch(() => undefined),
     (hostRequest('doc-get-strict', { collection: COLLECTION, key: prefsKey(id) }) as Promise<PricePrefs | null>).catch(() => undefined),
     stashGains(id),
-    (hostRequest('doc-get', { collection: COLLECTION, key: `${id}-baseline` }) as Promise<Baseline | null>).catch(() => null)
+    (hostRequest('doc-get', { collection: COLLECTION, key: `${id}-baseline` }) as Promise<Baseline | null>).catch(() => null),
+    hostRequest('doc-get', { collection: COLLECTION, key: glanceKey(id) }).catch(() => null)
   ])
   if (loadedFor !== id) return
   baseline.value = base
+  // The last read's dock number, so new prices keep its Worth selling list
+  // current before the next read.
+  if (glance.value?.league !== id) glance.value = isGlance(lastGlance) && lastGlance.league === id ? lastGlance : null
   gainsRef.value = gains
   history.value = { ...emptyHistory(), ...(saved ?? {}) }
   ledgerRef.value = { ...emptyLedger(), ...(led ?? {}) }
@@ -317,9 +321,9 @@ function sellingNow (id: string): GlanceSell[] | undefined {
   })
 }
 
-// New prices, or your own price or leave out on an item: the saved list
-// follows now instead of at the next read.
-watch([() => ninja.updatedAt.value, prefs], () => {
+// New prices, a new stash, or your own price or leave out on an item: the
+// saved list follows now instead of at the next read.
+watch([valuation, divine], () => {
   const last = glance.value
   if (!last || last.league !== loadedFor || !valuation.value) return
   const selling = sellingNow(last.league)
