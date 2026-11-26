@@ -2,6 +2,7 @@
 // overlay). Screens use v-item-tip (item-tip.ts) from an item's name; the build
 // panel passes its own gems and items.
 import { shallowRef } from 'vue'
+import { tipZoom } from '../popup-zoom'
 import type { PobItem } from '../../pob-builds/widget'
 import type { ListingDetail } from '../../price-insight/listing-tip-detail'
 import type { SwapResult } from '../../pob-builds/swap-check'
@@ -113,10 +114,11 @@ export type TipContent = GemTip | ItemTip | LookupTip | SwapTip | PassiveTip | M
 
 // `menu`: a right-click on the hovered row opens the item's menu (item-tip.ts),
 // so the tooltip can say so (shared/hints.ts).
-export const tip = shallowRef<{ content: TipContent, anchor: DOMRect, menu?: boolean } | null>(null)
+// `zoom`: the tooltip's size, that of the window it came from (popup-zoom.ts).
+export const tip = shallowRef<{ content: TipContent, anchor: DOMRect, menu?: boolean, zoom: number } | null>(null)
 
 export function showTipAt (target: HTMLElement, content: TipContent, opts: { menu?: boolean } = {}) {
-  tip.value = { content, anchor: target.getBoundingClientRect(), menu: opts.menu }
+  tip.value = { content, anchor: target.getBoundingClientRect(), menu: opts.menu, zoom: tipZoom(target) }
 }
 
 export function showTip (e: Event, content: TipContent) {

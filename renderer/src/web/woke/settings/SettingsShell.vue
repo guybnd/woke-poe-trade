@@ -1,5 +1,5 @@
 <template>
-  <div ref="winEl" class="w-corners" :class="$style.window" :style="sizeStyle" data-w-settings @keydown="onKeydown">
+  <div ref="winEl" class="w-corners" :class="$style.window" :style="sizeStyle" data-w-settings data-w-window-sized @keydown="onKeydown">
     <header :class="$style.bar">
       <span :class="$style.title">Settings</span>
       <span :class="$style.barEnd">

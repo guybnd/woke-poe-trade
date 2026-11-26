@@ -250,7 +250,7 @@ import { requestTradeResultList, requestResults, createTradeRequest, clearTradeC
 import { getTradeEndpoint, preventQueueCreation, RATE_LIMIT_RULES } from './common'
 import { clearDriverCaches } from '@/web/woke/price-insight/drivers'
 import { measuredDrivers } from '@/web/woke/price-insight/check-state'
-import { AppConfig } from '@/web/Config'
+import { AppConfig, rootFontPx } from '@/web/Config'
 import { PriceCheckWidget } from '@/web/overlay/interfaces'
 import { ItemFilters, FilterOrGroup } from '../filters/interfaces'
 import { ParsedItem } from '@/parser'
@@ -713,7 +713,8 @@ export default defineComponent({
       return width
     })
     const columnCap = computed(() =>
-      statColumnsThatFit(tableWidth.value, otherColumnsWidth.value, textScale.value / 100, allColumns.value.length))
+      // Text grows with Text size and, in this window, Size (theme.css [data-w-window-sized]).
+      statColumnsThatFit(tableWidth.value, otherColumnsWidth.value, textScale.value / 100 * rootFontPx() / 16, allColumns.value.length))
     const shownColumns = computed(() => allColumns.value.slice(0, columnCap.value))
     const hiddenColumns = computed(() => allColumns.value.slice(columnCap.value))
 

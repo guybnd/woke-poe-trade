@@ -1,15 +1,16 @@
 // The card behind a WInfo "?". One at a time, drawn by HelpCard.vue (mounted once
 // in the overlay), so a panel's edge can't cut it off.
 import { shallowRef } from 'vue'
+import { tipZoom } from './popup-zoom'
 
 // A key row: boxed keys, then what they do.
 export interface HelpKey { keys: string, label: string }
 
 // `lines`: each line break in a paragraph starts a new line (item mods, one per line).
-export const helpTip = shallowRef<{ owner: object, text: string, keys?: HelpKey[], anchor: DOMRect, lines?: boolean } | null>(null)
+export const helpTip = shallowRef<{ owner: object, text: string, keys?: HelpKey[], anchor: DOMRect, lines?: boolean, zoom: number } | null>(null)
 
 export function showHelp (owner: object, target: HTMLElement, text: string, keys?: HelpKey[], opts: { lines?: boolean } = {}) {
-  helpTip.value = { owner, text, keys, anchor: target.getBoundingClientRect(), lines: opts.lines }
+  helpTip.value = { owner, text, keys, anchor: target.getBoundingClientRect(), lines: opts.lines, zoom: tipZoom(target) }
 }
 
 export function hideHelp (owner?: object) {

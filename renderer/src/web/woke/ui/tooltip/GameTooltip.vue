@@ -411,7 +411,7 @@ const GAP = 8
 const EDGE = 8
 
 function scale () {
-  return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--w-ui-scale')) || 1
+  return tip.value?.zoom ?? 1
 }
 
 // Items follow the cursor, below and to its right, flipping at the screen's
@@ -488,9 +488,12 @@ watch(el, (now, was) => {
 })
 
 // Hidden until measured, so it never flashes in the wrong spot.
-const pos = computed(() => placed.value
-  ? { left: `${placed.value.left}px`, top: `${placed.value.top}px` }
-  : { left: '0', top: '0', visibility: 'hidden' as const })
+const pos = computed(() => {
+  const zoom = String(tip.value?.zoom ?? 1)
+  return placed.value
+    ? { zoom, left: `${placed.value.left}px`, top: `${placed.value.top}px` }
+    : { zoom, left: '0', top: '0', visibility: 'hidden' as const }
+})
 
 // It sits outside the panel, so nothing hides it with the panel, and the
 // overlay gets no mouse events once the game has focus: without this, closing
@@ -523,10 +526,12 @@ onUnmounted(() => {
   --tip-rgb: 200, 200, 200;
   position: fixed;
   z-index: 1000;
-  zoom: var(--w-ui-scale, 1);
+  /* Its zoom is the window's it came from (tooltip.ts tipZoom). Widths in px,
+   * not rem: the root font size is the price check's Size, which the zoom
+   * already holds. */
   width: max-content;
-  max-width: 27rem;
-  min-width: 15rem;
+  max-width: 432px;
+  min-width: 240px;
   pointer-events: none;
   text-align: center;
   font-family: var(--w-head);
@@ -602,7 +607,7 @@ onUnmounted(() => {
   font-family: var(--w-caps-face);
   text-align: center;
 }
-.wide { max-width: 46rem; --tip-range: #d9c48f; }
+.wide { max-width: 736px; --tip-range: #d9c48f; }
 .modGap { height: 8px; }
 .p-label { color: var(--w-faint); }
 .p-value { color: #fff; }
@@ -638,7 +643,7 @@ onUnmounted(() => {
 }
 .uniqueRow {
   display: grid;
-  grid-template-columns: minmax(8rem, 1fr) minmax(4.5rem, max-content) 6.5rem;
+  grid-template-columns: minmax(128px, 1fr) minmax(72px, max-content) 104px;
   gap: var(--w-s2);
   align-items: center;
   min-height: 20px;
@@ -647,7 +652,7 @@ onUnmounted(() => {
 /* A Viscera's effects: magic-mod blue, as the game shows them; the hovered one lit. */
 .effectRow {
   display: grid;
-  grid-template-columns: minmax(12rem, 1fr) max-content;
+  grid-template-columns: minmax(192px, 1fr) max-content;
   gap: var(--w-s3);
   align-items: baseline;
   padding: 1px 0;

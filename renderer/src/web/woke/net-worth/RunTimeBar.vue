@@ -68,7 +68,7 @@ const perMap = computed(() => split.value && props.maps > 0 ? formatDuration((sp
 <style module>
 .wrap { display: flex; flex-direction: column; gap: 4px; }
 .head { display: flex; align-items: baseline; gap: 10px; }
-.caps { font-size: calc(0.7rem * var(--w-text-scale, 1)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--w-dim); }
+.caps { font-size: calc(0.7rem * var(--w-text-user, 1)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--w-dim); }
 .pick { margin-left: auto; }
 .bar { display: flex; height: 10px; gap: 2px; border-radius: var(--w-r-sm); overflow: hidden; }
 .bar i { display: block; min-width: 3px; }
