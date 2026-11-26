@@ -87,6 +87,7 @@ useGoto(props.config, 'woke-net-worth', {
       if (foldedOf(props.config.layout).perHour) props.config.layout = { ...props.config.layout, folded: toggleFold(props.config.layout?.folded, 'perHour') }
     },
     'faustus-box': () => {},
+    'past-runs': () => {},
     // Worth selling sits under Details, and can be switched off or folded;
     // with nothing in it, it shows for a minute anyway.
     'worth-selling': () => {

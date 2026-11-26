@@ -31,6 +31,7 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
+  { id: 'net-worth-rename-runs', since: '1.330.22', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: rename a run: click its name, or the pen in Past runs' },
   { id: 'net-worth-worth-selling', since: '1.330.22', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: Worth selling lists what you hold 1 div or more of that has been falling all week' },
   { id: 'pob-import-all-sites', since: '1.330.22', wmType: 'woke-pob-builds', goto: 'builds', name: 'PoB builds', note: 'New: import poe.ninja, maxroll and pob.codes build links; your list follows PoB\'s own builds folder' },
   { id: 'atlas-results-from-runs', since: '1.330.22', wmType: 'woke-atlas-strategies', goto: 'strategies', name: 'Atlas strategies', note: 'New: each strategy shows what your strategy runs of the same name earn per hour and per map' },

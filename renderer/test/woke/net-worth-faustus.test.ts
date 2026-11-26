@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arrivalsOf, leftOver, listingsQuery, outsideSums, outsideTotals, setBefore, setEdit, startListingIds, toListing } from '@/web/woke/net-worth/faustus'
+import { arrivalsOf, leftOver, listingsQuery, outsideSums, outsideTotals, preRunByKey, setBefore, setEdit, startListingIds, toListing } from '@/web/woke/net-worth/faustus'
 import type { HeldItem, OutsideRun } from '@/web/woke/net-worth/faustus'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { addToTally, emptyRun, runTotals } from '@/web/woke/net-worth/runs'
@@ -203,6 +203,13 @@ describe('long shots and your prices outside the stash', () => {
       const t = runTotals(r, points, 5, T0 + H, undefined, outside)
       expect([t.profitChaos, t.leftOutChaos, t.totalChaos]).toEqual([1000, 4000, 1000])
     }
+  })
+  it('collected sales of pre-run listings add up by the currency row they came in as', () => {
+    const r = run({ startListings: ['a', 'b', 'c'], arrivals: [{ at: T0 + 6 * M, c: 'divine', n: 5 }] })
+    const sales = [item('a', T0 + 2 * M, 4, 'divine'), item('b', T0 + 3 * M, 1, 'divine'), item('c', T0 + 9 * M, 3, 'divine'), item('d', T0 + 4 * M, 2, 'chaos')]
+    const pre = preRunByKey(outsideTotals(r, sales, RATES))
+    // c sold after the last arrival: not collected yet. d is the run's own.
+    expect([...pre.entries()]).toEqual([['Divine Orb', { n: 5, chaos: 1000 }]])
   })
   it('your price on a listing replaces the asking price', () => {
     const r = run({ faustus: { at: T0 + 10 * M, listings: [item('b', T0 + M, 20, 'divine')] }, edits: { 'item:b': { each: 50 } } })

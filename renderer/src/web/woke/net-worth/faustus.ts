@@ -284,6 +284,20 @@ export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: R
   return { listed: listedRows, sold: soldRows, held: heldRows, heldChaos, listedChaos, waitingChaos, beforeChaos, faustusChaos: listedChaos + waitingChaos + heldChaos, leftOutChaos, leftOutCollectedChaos, unpriced }
 }
 
+// Collected sales of pre-run listings, by the stash row their currency came
+// in as ("Divine Orb"): the In column shows that part as not counted.
+export function preRunByKey (o: Pick<OutsideTotals, 'sold'>): Map<string, { n: number, chaos: number }> {
+  const out = new Map<string, { n: number, chaos: number }>()
+  for (const r of o.sold) {
+    if (!r.before || !r.collected) continue
+    const key = CURRENCY_ITEM[r.item.price.currency]
+    if (!key) continue
+    const was = out.get(key) ?? { n: 0, chaos: 0 }
+    out.set(key, { n: was.n + r.item.price.amount, chaos: was.chaos + (r.chaos ?? 0) })
+  }
+  return out
+}
+
 // The sums a run's totals need (runs.ts Outside).
 export function outsideSums (o: OutsideTotals) {
   return { beforeChaos: o.beforeChaos, faustusChaos: o.faustusChaos, leftOutCollectedChaos: o.leftOutCollectedChaos, leftOutChaos: o.leftOutChaos }
