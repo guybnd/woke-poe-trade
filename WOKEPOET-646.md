@@ -22,5 +22,21 @@ history:
     selfAttested: true
     pin: true
     id: c-2026-11-26t13-09-44-870z
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy picked B: keep the Magic/Rare look and add a mark. PR 973
+      (https://github.com/guybnd/woke-poe-trade/pull/973) is open, waiting on
+      Guy's look before merge.
+    date: '2026-11-26T13:24:24.304Z'
+    selfAttested: true
+    pin: true
+    id: c-2026-11-26t13-24-24-304z
+  - type: activity
+    user: Agent
+    date: '2026-11-26T13:24:25.010Z'
+    comment: Updated implementation link.
+    id: a-2026-11-26t13-24-25-010z
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/973'
 ---
 Over-quality bases get their own look. Branch: claude/project-thread-r8tiuh.
