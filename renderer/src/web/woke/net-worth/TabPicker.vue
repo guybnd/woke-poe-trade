@@ -1,5 +1,5 @@
 <template>
-  <div :class="$style.picker">
+  <div ref="rootEl" :class="$style.picker">
     <WSkeleton v-if="loading" :rows="5" />
     <WEmpty v-else-if="!list" icon="fas fa-layer-group">
       {{ failed }}
@@ -54,7 +54,7 @@
 // set or your own ticks. Shown before a league's first read, then from the
 // window's tab button.
 import { computed, onMounted, shallowRef } from 'vue'
-import { WBanner, WButton, WChip, WEmpty, WField, WSelect, WSkeleton } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WField, WSelect, WSkeleton, toast } from '../ui'
 import { hostRequest } from '../shared/host'
 import {
   KIND_OPTIONS, TEMPLATE_HINT, TEMPLATE_LABEL, UNREADABLE, choiceOf, shownTabs, startingPick, ticksFor, typeLabel
@@ -67,6 +67,7 @@ const emit = defineEmits<{ (e: 'done'): void }>()
 const TEMPLATES: TabTemplate[] = ['reasonable', 'currency', 'league']
 
 const list = shallowRef<TabList | null>(null)
+const rootEl = shallowRef<HTMLElement | null>(null)
 const loading = shallowRef(true)
 const failed = shallowRef('')
 const picked = shallowRef<Picked>({ kind: 'template', template: 'reasonable' })
@@ -141,10 +142,34 @@ function saveAsSet () {
   }).catch(() => {})
 }
 
+// No "are you sure": delete now, offer Undo (P9). The set lives on the host,
+// so Undo saves it back there, at its old place. If it was the set in use and
+// nothing else was chosen since, it's chosen again.
 function removeSet (name: string) {
+  const league = list.value?.league
+  const sets = list.value?.sets ?? []
+  const at = sets.findIndex(s => s.name === name)
+  const set = sets[at]
+  const choice = list.value?.choice ?? null
+  const was = picked.value
   run(async () => {
-    takeSets(await hostRequest('stash-tab-set-delete', { league: list.value?.league, name }) as SetsReply)
+    takeSets(await hostRequest('stash-tab-set-delete', { league, name }) as SetsReply)
+    const after = list.value?.choice ?? null
     if (picked.value.kind === 'set' && picked.value.name === name) picked.value = { kind: 'custom' }
+    const pickedAfter = picked.value
+    if (set) toast(`${name} deleted`, { anchor: rootEl.value, undo: () => { restoreSet({ league, set, at, choice, after, was, pickedAfter }) } })
+  }).catch(() => {})
+}
+function restoreSet (u: { league: string | undefined, set: SavedSet, at: number, choice: TabChoice | null, after: TabChoice | null, was: Picked, pickedAfter: Picked }) {
+  run(async () => {
+    const r = await hostRequest('stash-tab-set-save', { league: u.league, name: u.set.name, ids: u.set.ids, restoreAt: u.at }) as SetsReply
+    takeSets(r)
+    const untouched = JSON.stringify(r?.choice ?? null) === JSON.stringify(u.after)
+    if (u.league && untouched && u.choice?.set === u.set.name) {
+      const saved = await hostRequest('stash-tab-choice', { league: u.league, ...u.choice })
+      if (saved && list.value) list.value = { ...list.value, choice: u.choice }
+    }
+    if (picked.value === u.pickedAfter) picked.value = u.was
   }).catch(() => {})
 }
 

@@ -14,7 +14,9 @@
     <div class="flex items-center gap-2">
       <div class="flex-1 w-dim text-sm flex items-center gap-2">
         This session
-        <w-info text="Timings from this session. Updates every few seconds while this page is open. Use Copy report and paste it in the project chat to share the numbers." />
+        <w-info text="Timings from this session.
+- Updates every few seconds while this page is open.
+- To share the numbers, press **Copy report** and paste it in the project chat." />
       </div>
       <button class="btn" @click="copyReport">{{ copied ? 'Copied' : 'Copy report' }}</button>
     </div>
@@ -59,7 +61,9 @@
     </section>
 
     <section>
-      <div class="mb-1 flex items-center gap-2">CPU and memory <w-info text="Sampled every 15 seconds. CPU is percent of one core, summed over the app's processes. Memory is private memory, also summed." /></div>
+      <div class="mb-1 flex items-center gap-2">CPU and memory <w-info text="Sampled every 15 seconds, summed over the app's processes.
+- **CPU**: percent of one core.
+- **Memory**: private memory." /></div>
       <div v-if="!main?.processes.length" class="text-sm w-dim">First sample comes 15 seconds after launch.</div>
       <template v-else>
         <div class="text-sm mb-1">

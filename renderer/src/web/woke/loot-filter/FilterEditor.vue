@@ -322,8 +322,8 @@
           <span class="w-group-label" style="padding: 0;">History</span>
           <span class="w-faint text-xs">newest first</span>
           <span class="grow" />
-          <WButton size="sm" variant="ghost" icon="fas fa-undo" :disabled="store.timeline.value.at === 0" title="Ctrl + Z" @click="store.undoStep()">Undo</WButton>
-          <WButton size="sm" variant="ghost" icon="fas fa-redo" :disabled="store.timeline.value.at >= store.timeline.value.steps.length" title="Ctrl + Y" @click="store.redoStep()">Redo</WButton>
+          <WButton size="sm" variant="ghost" icon="fas fa-undo" :disabled="store.timeline.value.at === 0" title="Undo" data-tip-keys="Ctrl + Z" @click="store.undoStep()">Undo</WButton>
+          <WButton size="sm" variant="ghost" icon="fas fa-redo" :disabled="store.timeline.value.at >= store.timeline.value.steps.length" title="Redo" data-tip-keys="Ctrl + Y" @click="store.redoStep()">Redo</WButton>
         </div>
         <div v-for="s in shownSteps" :key="s.n" :class="[$style.changeRow, { [$style.undone]: s.n >= store.timeline.value.at }]">
           <span class="grow min-w-0 w-trunc" :title="s.label">{{ s.label }}</span>
@@ -1408,7 +1408,8 @@ function ruleMenu (e: MouseEvent, r: OwnRule) {
     { label: 'Move up (wins over the ones below)', icon: 'fas fa-arrow-up', action: () => moveRule(r, -1) },
     { label: 'Move down', icon: 'fas fa-arrow-down', action: () => moveRule(r, 1) },
     { label: 'Duplicate', icon: 'fas fa-clone', action: () => { const copy: OwnRule = { ...JSON.parse(JSON.stringify(r)), id: nextEditId(), name: `${r.name} (copy)` }; props.config.rules = [...props.config.rules, copy]; editingRuleId.value = copy.id } },
-    { label: 'Delete', icon: 'fas fa-trash', action: () => deleteRule(r) }
+    { separator: true },
+    { label: 'Delete', icon: 'fas fa-trash', danger: true, action: () => deleteRule(r) }
   ])
 }
 

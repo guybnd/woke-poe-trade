@@ -102,8 +102,8 @@
                 <div :class="[$style.conv, $style.gridHead]"><span v-item-tip="{ name: selected.group.name, type: selected.group.type }">{{ selected.group.name }}</span><span v-if="conv.rows[0].chaos != null" class="text-right">Chaos</span><span v-if="conv.rows[0].div != null" class="text-right">Divines</span></div>
                 <div v-for="r in conv.rows" :key="r.amount" :class="[$style.conv, $style.row]">
                   <span class="w-num">{{ convNumber(r.amount) }}</span>
-                  <span v-if="r.chaos != null" class="w-num text-right">{{ convNumber(r.chaos) }} c</span>
-                  <span v-if="r.div != null" class="w-num text-right">{{ convNumber(r.div) }} div</span>
+                  <WPriceText v-if="r.chaos != null" class="w-num text-right" :text="`${convNumber(r.chaos)}c`" />
+                  <WPriceText v-if="r.div != null" class="w-num text-right" :text="`${convNumber(r.div)} div`" />
                 </div>
                 <div v-if="conv.perDivine" class="w-dim" :class="$style.small">1 Divine Orb buys {{ convNumber(conv.perDivine) }}</div>
               </div>
@@ -166,7 +166,7 @@ import { notableOils, oilNames } from '@/web/price-check/filters/pseudo/anointme
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import type { BaseType } from '@/assets/data/interfaces'
 import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
-import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, itemRefFromName, ninjaIcon, nowMinute, toast, vItemTip, agoPhrase } from '../ui'
+import { WPanel, WButton, WPrice, WPriceText, WDelta, WIcon, WKbd, itemRefFromName, ninjaIcon, nowMinute, toast, vItemTip, agoPhrase } from '../ui'
 import { ninjaArt } from '../market/ninja-icons'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
@@ -1767,8 +1767,7 @@ watch(open, (now) => {
 const dataNote = computed(() => {
   const snap = snapshot.value
   if (!snap) return 'No saved prices yet'
-  const min = Math.max(0, Math.round((Date.now() - snap.ts) / 60000))
-  return `poe.ninja · ${snap.league} · ${min} min ago`
+  return `poe.ninja · ${snap.league} · ${agoPhrase(snap.ts)}`
 })
 </script>
 

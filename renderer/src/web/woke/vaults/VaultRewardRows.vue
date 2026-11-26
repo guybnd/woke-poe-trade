@@ -5,7 +5,7 @@
     <div v-for="r in rewards" :key="r.text" v-item-tip="r.item" :class="$style.row" :data-vault-reward="r.text">
       <WIcon :src="r.icon ? (itemArt({ name: r.icon }) ?? undefined) : undefined" :fallback="r.kind === 'unique' ? 'fas fa-ring' : 'fas fa-cube'" size="md" :class="r.kind === 'unique' && !r.icon ? $style.uniq : undefined" />
       <span :class="[$style.text, fit && $style.fit]" :title="fit && !r.item ? r.text : undefined">{{ r.text }}<span v-if="r.rare" :class="$style.rare">rare</span></span>
-      <span v-if="r.chaos != null" :class="$style.price">{{ chaos(r.chaos) }}</span>
+      <WPrice v-if="r.chaos != null" :chaos="r.chaos" unit="chaos" :class="$style.price" />
       <span v-else :class="[$style.price, $style.varies]">varies</span>
     </div>
   </div>
@@ -13,6 +13,7 @@
 
 <script setup lang="ts">
 import WIcon from '../ui/WIcon.vue'
+import WPrice from '../ui/WPrice.vue'
 import { vItemTip } from '../ui/tooltip/item-tip'
 import { itemArt } from '../ui/game-icons'
 
@@ -23,10 +24,6 @@ export interface RewardRow { text: string, kind: string, rare: boolean, chaos: n
 // fit: a fixed-width place (the price check); long names end in "…" with the
 // whole name on hover. Without it the rows grow to their names (the hover card).
 defineProps<{ rewards: RewardRow[], fit?: boolean }>()
-
-function chaos (n: number) {
-  return `${Math.abs(n) >= 10 ? Math.round(n) : +n.toFixed(1)}c`
-}
 </script>
 
 <style module>

@@ -7,7 +7,7 @@
         <span v-item-tip="tip(b)" class="flex items-center gap-1">
           <img v-if="baseIcon(b)" :src="baseIcon(b)!" :class="$style.chipArt" alt="">
           <span :class="{ [$style.here]: b === current }">{{ b }}</span>
-          <span v-if="priceOf(b) != null" class="w-num" :class="$style[`p_${priceGrade(priceOf(b), minChaos)}`]">{{ priceText(priceOf(b)!) }}</span>
+          <span v-if="priceOf(b) != null" class="w-num" :class="$style[`p_${priceGrade(priceOf(b), minChaos)}`]"><WPriceText :text="priceText(priceOf(b)!)" /></span>
           <i v-if="locked?.(b)" class="fas fa-lock w-faint" style="font-size: 0.75em;" title="You put it here, so prices won't move it" />
         </span>
       </WChip>
@@ -19,7 +19,8 @@
 <script setup lang="ts">
 // The items a tier lists by name: art, today's price, click to pick.
 // The editor's Rules tab and the item panel's "Whole tier" both use it.
-import { WChip, vItemTip } from '../ui'
+import { WChip, WPriceText, vItemTip } from '../ui'
+import { formatAmount } from '../ui/format'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import { baseIcon } from './label-style'
 import { priceGrade } from './health'
@@ -47,7 +48,7 @@ const emit = defineEmits<{
   (e: 'remove', base: string): void
 }>()
 
-const priceText = (chaos: number) => chaos >= 10 ? `${Math.round(chaos)}c` : (chaos < 0.1 ? '<0.1c' : `${Math.round(chaos * 10) / 10}c`)
+const priceText = (chaos: number) => chaos < 0.1 ? '<0.1c' : `${formatAmount(chaos)}c`
 </script>
 
 <style module>
