@@ -7,12 +7,11 @@ import type { TipLine, TipModel, TipPack } from '@/web/woke/ui/tooltip/tip-conte
 import { SPECIAL, rowTipModel, withForbiddenNotable } from '@/web/woke/ui/tooltip/ninja-row-tip'
 import { NINJA_ROW_TYPES } from '@/web/woke/ui/tooltip/ninja-row-types'
 import { CATEGORY_GROUPS } from '@/web/woke/market/browser'
-import { CORPSE_MONSTERS } from '@/web/woke/shared/corpses'
 import { sampleRows } from '../helpers/ninja-rows'
 import type { SampleRow } from '../helpers/ninja-rows'
 
 const read = (file: string) => JSON.parse(readFileSync(join(__dirname, '../../public/data/tips', `${file}.json`), 'utf8'))
-const pack: TipPack = { 'uniques': read('uniques'), 'unique-extras': read('unique-extras'), 'gems': read('gems'), 'items': read('items'), 'bases': read('bases'), 'base-extras': read('base-extras'), 'drops': read('drops') }
+const pack: TipPack = { 'uniques': read('uniques'), 'unique-extras': read('unique-extras'), 'gems': read('gems'), 'items': read('items'), 'bases': read('bases'), 'base-extras': read('base-extras'), 'drops': read('drops'), 'corpses': read('corpses') }
 
 const text = (line: TipLine) => line.map(p => p.text).join('')
 const all = (model: TipModel | null) => (model?.sections ?? []).flat().map(text)
@@ -26,11 +25,9 @@ const OWN_TIP: Record<string, string> = {
 const NO_SAMPLE: Record<string, string> = {
   DjinnCoin: 'not in the item data or the league dump yet'
 }
-const corpses = [...CORPSE_MONSTERS].flatMap(m => [m, `Perfect ${m}`, `Imperfect ${m}`])
 // Rows that show only the price strip, by name, and why. Each is missing text
 // in the tooltip data itself (public/data/tips), not a row the mapping misreads.
 const NO_TEXT: Array<{ type: string, names: string[], why: string }> = [
-  { type: 'Corpse', names: corpses, why: 'RePoE has no text for corpses; their grave-crafting effects aren\'t in any data the app bundles' },
   {
     type: 'Fragment',
     names: ['Ancient Reliquary Key', 'Archive Reliquary Key', 'Cosmic Reliquary Key', 'Decaying Reliquary Key', 'Echo of Loneliness', 'Echo of Reverence', 'Echo of Trauma', 'Forgotten Reliquary Key', 'Lonely Reliquary Key', 'Mortal Ignorance', 'Mortal Rage', 'Oubliette Reliquary Key', 'Reverent Reliquary Key', 'Shiny Reliquary Key', 'Timeworn Reliquary Key', 'Traumatic Reliquary Key', 'Vaal Reliquary Key', 'Visceral Reliquary Key', 'Voidborn Reliquary Key'],

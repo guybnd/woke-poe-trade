@@ -1,4 +1,4 @@
-// Necropolis corpses, by monster: each comes as "Imperfect X", "X" and
+// Corpse items (Raise Spectre corpses), by monster: each comes as "Imperfect X", "X" and
 // "Perfect X". The item data has no class for them, so the list is kept here;
 // test/woke/corpses.test.ts checks it against the item data.
 const CORPSES = new Set([

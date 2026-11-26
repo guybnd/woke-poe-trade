@@ -10,7 +10,8 @@ import { Host } from '@/web/background/IPC'
 import { usePoeninja } from '@/web/background/Prices'
 import { buildTip, dropOf, dropSource, kindOfNinjaType, packFiles, randomDropsFirst } from './tip-content'
 import { isNinjaRowType } from './ninja-row-types'
-import type { TipKind, TipModel, TipPack } from './tip-content'
+import type { TipCorpse, TipKind, TipModel, TipPack } from './tip-content'
+import { isCorpse } from '../../shared/corpses'
 import { hideTip, marketFromRow, onTipHide, showTipAt } from './tooltip'
 import { retireHint } from '../../shared/hints'
 import { offerItem, openItemMenu } from './item-menu'
@@ -127,6 +128,13 @@ export async function loadTipBases (): Promise<TipPack['bases'] | null> {
   return pack.bases ?? null
 }
 
+// A corpse's spectre: its category and abilities (tips/corpses.json), only
+// read for a corpse.
+export async function loadTipCorpse (name: string): Promise<TipCorpse | null> {
+  await loadFile('corpses')
+  return pack.corpses?.[name] ?? null
+}
+
 // Card rewards and stack sizes, currency texts: the tooltip's item file.
 export async function loadTipItems (): Promise<TipPack['items'] | null> {
   await loadFile('items')
@@ -215,7 +223,7 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
   // A row named after what prices it (a Forbidden jewel's notable, a cluster
   // jewel's enchant, a map tier): the item it stands for (ninja-row-tip.ts).
   if (isNinjaRowType(ref.type)) return rowTipFor(ref, kind)
-  await Promise.all(packFiles(kind).map(loadFile))
+  await Promise.all([...packFiles(kind), ...(kind === 'item' && isCorpse(ref.name) ? ['corpses' as const] : [])].map(loadFile))
   const base = kind === 'unique' ? ITEM_BY_REF('UNIQUE', ref.name)?.[0]?.unique?.base : undefined
   let model = buildTip(pack, { name: ref.name, kind, variant: ref.variant, base })
   const market = marketFor(ref, kind)

@@ -11,6 +11,12 @@
       <header :class="[$style.head, { [$style.art]: headArt }]" :style="headArt">
         <span v-item-tip="{ name: item.info.refName }" :class="$style.name"><img v-if="item.info.icon" :src="item.info.icon" alt="" :class="$style.headIcon"><span :class="$style.nameText">{{ item.info.refName }}</span></span>
       </header>
+      <!-- A corpse: the spectre it raises (tips/corpses.json, the PoE wiki's table). -->
+      <section v-if="corpse" :class="$style.block" data-testid="instant-ninja-corpse">
+        <div :class="$style.line">Raise Spectre corpse · <span :class="$style.fg">{{ corpse.c }}</span></div>
+        <div v-for="a in corpse.a" :key="a" :class="$style.ability">{{ a }}</div>
+        <div v-if="corpse.m" :class="$style.line">Mirage areas only</div>
+      </section>
       <!-- The item against a chaos and a divine, as the game's Currency Exchange shows it. -->
       <section :class="[$style.block, $style.rates]">
         <div v-for="(r, i) in rates" :key="i" :class="$style.rate" :data-testid="i === 0 ? 'instant-ninja-price' : 'instant-ninja-rate'">
@@ -69,6 +75,9 @@ import type { ParsedItem } from '@/parser'
 import { ItemCategory } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
 import { ninjaTotal, divineTenths, chaosOrbRow, ninjaRates } from './ninja-first'
+import { isCorpse } from '../shared/corpses'
+import { loadTipCorpse } from '../ui/tooltip/item-tip'
+import type { TipCorpse } from '../ui/tooltip/tip-content'
 import type { RateSide } from './ninja-first'
 import { instantCardKey, onKeyboardFocusedControl } from './instant-card-key'
 import { useNinjaDoubt } from './use-ninja-doubt'
@@ -124,6 +133,13 @@ const info = computed(() => {
 const badgeTip = computed(() => `This is used to provide instant pricing without any delay. For live data, press${props.againKeys ? ' the price check key again' : ''}:`)
 
 const isDivine = computed(() => props.item.info.refName === 'Divine Orb')
+// A corpse's spectre, read only for a corpse.
+const corpse = shallowRef<TipCorpse | null>(null)
+watch(() => props.item.info.refName, (name) => {
+  corpse.value = null
+  if (!isCorpse(name)) return
+  loadTipCorpse(name).then(c => { if (props.item.info.refName === name) corpse.value = c }).catch(() => {})
+}, { immediate: true })
 // A Chaos Orb is 1c: its stack in chaos says nothing, and it has no graph (chaosOrbRow).
 const isChaos = computed(() => props.item.info.refName === 'Chaos Orb')
 const have = computed(() => props.item.stackSize?.value ?? 1)
@@ -417,6 +433,7 @@ onUnmounted(() => {
 .block { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 12px; }
 /* The game's fading line between sections. */
 .block + .block { background: var(--sep, none) center top / auto 6px no-repeat, linear-gradient(90deg, transparent, rgba(var(--tip-rgb), .5), transparent) top / 80% 1px no-repeat; padding-top: 8px; }
+.ability { color: var(--w-r-magic, #8888ff); font-size: calc(15px * var(--w-text-scale, 1)); margin-top: 2px; }
 .line { color: var(--w-dim); font-size: calc(15px * var(--w-text-scale, 1)); margin-top: 2px; }
 .rates { gap: 0; }
 .rate { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; width: 100%; font-family: var(--w-num); font-size: calc(19px * var(--w-text-scale, 1)); color: #fff; line-height: 1.5; }

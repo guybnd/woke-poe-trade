@@ -14,6 +14,8 @@ import { CORPSE_MONSTERS, isCorpse } from '@/web/woke/shared/corpses'
 import { fixedPriceItem } from '@/web/woke/price-insight/ninja-first'
 import { createFilters } from '@/web/price-check/filters/create-item-filters'
 import { CORPSE_ITEM } from '@/web/woke/tab-bar/news-demos'
+import { buildTip } from '@/web/woke/ui/tooltip/tip-content'
+import type { TipCorpse } from '@/web/woke/ui/tooltip/tip-content'
 import { loadGameData } from '../helpers/game-data'
 /* eslint-enable import-x/first */
 
@@ -37,6 +39,22 @@ describe('corpses', () => {
     expect(isCorpse('Meatsack')).toBe(true)
     expect(isCorpse('Perfect Jewel')).toBe(false)
     expect(isCorpse('Divine Orb')).toBe(false)
+  })
+
+  const corpseData = JSON.parse(readFileSync(join(__dirname, '../../public/data/tips/corpses.json'), 'utf8')) as Record<string, TipCorpse>
+
+  it('has the spectre data for every corpse', () => {
+    const names = [...CORPSE_MONSTERS].flatMap(m => [m, `Perfect ${m}`, `Imperfect ${m}`])
+    expect(Object.keys(corpseData).sort()).toEqual(names.sort())
+  })
+
+  it('shows a corpse\'s spectre in its tooltip', () => {
+    const tip = buildTip({ corpses: corpseData }, { name: 'Perfect Guardian Turtle', kind: 'item' })!
+    expect(tip.base).toBe('Raise Spectre corpse')
+    const lines = tip.sections.flat().map(l => l.map(p => p.text).join(''))
+    expect(lines).toEqual(['Monster: Beast', "Buffs Owner with Rongokurai's Boon", 'Owner gains 5% Physical Damage Reduction', 'Casts Determination'])
+    const mirage = buildTip({ corpses: corpseData }, { name: 'Perfect Conjuror of Rot', kind: 'item' })!
+    expect(mirage.sections.flat().map(l => l.map(p => p.text).join(''))).toContain('Mirage areas only')
   })
 
   it('takes the What\'s new sample corpse to the quick card', () => {
