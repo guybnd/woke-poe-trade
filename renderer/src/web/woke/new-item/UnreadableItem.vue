@@ -3,7 +3,7 @@
        WOKEPOET-105): search it on trade by name where the text allows, and
        copy what the game copied. -->
   <div class="flex gap-2 flex-wrap" style="margin: 0 1rem;">
-    <WButton v-if="query && league && !unsupported" size="sm" variant="primary" icon="fas fa-external-link-alt" @click="search">Search on trade</WButton>
+    <WButton v-if="query && league && !unsupported && !query.transfigured" size="sm" variant="primary" icon="fas fa-external-link-alt" @click="search">Search on trade</WButton>
     <WButton size="sm" :icon="copied ? 'fas fa-check' : 'far fa-copy'" @click="copy(rawText)">{{ copied ? 'Copied' : 'Copy text' }}</WButton>
   </div>
 </template>

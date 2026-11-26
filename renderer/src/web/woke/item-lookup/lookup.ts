@@ -49,6 +49,8 @@ export function lookupUrl (tab: LookupTab, item: UrlItem, language: string): str
   const refName = item.info.refName
   switch (tab) {
     case 'wiki':
+      // 3.30 maps copy as plain "Map", with no area: the wiki's list of maps.
+      if (refName === 'Map') return 'https://www.poewiki.net/wiki/List_of_maps'
       return `https://www.poewiki.net/wiki/${encodeURIComponent(refName.replaceAll(' ', '_'))}`
     case 'poedb': {
       const slug = encodeURIComponent(refName.replaceAll("'", '').replaceAll(' ', '_'))

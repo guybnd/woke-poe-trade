@@ -270,6 +270,19 @@ export const defaultConfig = (): Config => ({
   }, [])
 })
 
+// woke: settings text from the file in today's shape, as this page would load
+// it; null when it can't be read or upgraded (the setup window merges into it).
+export function upgradedConfig (contents: string | null): Config | null {
+  if (!contents) return null
+  try {
+    const config = JSON.parse(contents) as Config
+    if (!config || !Array.isArray(config.widgets) || config.configVersion > defaultConfig().configVersion) return null
+    return upgradeConfig(config)
+  } catch {
+    return null
+  }
+}
+
 function upgradeConfig (_config: Config): Config {
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const config = _config as Omit<Config, 'widgets'> & { widgets: Array<Record<string, any>> }

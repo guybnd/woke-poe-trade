@@ -18,7 +18,7 @@
       <span v-if="perHour != null" @mouseenter="tip($event, hoursTip)" @mouseleave="untip">{{ formatChaos(perHour, story.divine) }}<span class="w-dim">/h</span></span>
       <span v-if="story.maps.length"><span class="w-dim">Avg map</span> {{ formatClock(story.mapMs / story.maps.length) }}</span>
       <span v-if="mapsPerHour != null"><span class="w-dim">Maps/h</span> {{ mapsPerHour }}</span>
-      <span @mouseenter="tip($event, HIDEOUT_TIP)" @mouseleave="untip"><span class="w-dim">Hideout</span> {{ formatDuration(story.otherMs) }}</span>
+      <span v-for="r in outRows" :key="r.label" :data-night-out="r.label" @mouseenter="tip($event, OUT_TIPS[r.label])" @mouseleave="untip"><span class="w-dim">{{ r.label }}</span> {{ formatDuration(r.ms) }}</span>
       <span v-if="(story.afkMs ?? 0) >= 60_000" @mouseenter="tip($event, AFK_TIP)" @mouseleave="untip"><span class="w-dim">AFK</span> {{ formatDuration(story.afkMs!) }}</span>
       <span v-if="story.longestBreakMs && story.longestBreakMs >= 60_000"><span class="w-dim">Longest break</span> {{ formatClock(story.longestBreakMs) }}</span>
       <span><span class="w-dim">Deaths</span> {{ story.deathsAt.length }}</span>
@@ -42,7 +42,7 @@ import { rateTime } from '../shared/rate-time-now'
 import RateTimePick from '../shared/RateTimePick.vue'
 import { clockTime } from './history-days'
 import { formatChaos, formatClock, formatDuration } from '../ui/format'
-import { bestItem } from './story'
+import { bestItem, outOfMapsRows } from './story'
 import { itemArt } from '../ui/game-icons'
 import type { NightStory, StripPart } from './story'
 import { vItemTip } from '../ui'
@@ -77,7 +77,8 @@ const perHour = computed(() => {
 })
 const mapsPerHour = computed(() => {
   const hours = rateHours.value
-  return hours >= 0.25 ? (props.story.maps.length / hours).toFixed(1) : null
+  // A night of bosses or Delve only has no maps to count.
+  return hours >= 0.25 && props.story.maps.length ? (props.story.maps.length / hours).toFixed(1) : null
 })
 const deathMarks = computed(() => {
   // The strip is drawn by the clock, AFK included.
@@ -87,7 +88,12 @@ const deathMarks = computed(() => {
 
 // The night's biggest drop shows its own art, the star where it has none.
 const bestArt = computed(() => props.story.best ? itemArt({ name: bestItem(props.story.best) }) : null)
-const HIDEOUT_TIP = "Hideout, town, vaults and anything else that isn't a map, AFK left out"
+const OUT_TIPS = {
+  'Hideout': 'Hideout and town, AFK left out',
+  'Other': 'Out of maps but not in the hideout: Delve, Heist, the lab, bosses, vaults, game closed. AFK left out',
+  'Out of maps': "Hideout, town, vaults and anything else that isn't a map, AFK left out"
+}
+const outRows = computed(() => outOfMapsRows(props.story))
 const AFK_TIP = 'AFK in the game, left out of the time played. 15 minutes AFK ends the session'
 
 // The app's own tooltip card, not the browser's.

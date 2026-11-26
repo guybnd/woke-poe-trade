@@ -47,12 +47,14 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
-import { STATS_ITERATOR } from '@/assets/data'
+import { STATS_ITERATOR, STAT_BY_REF_V2 } from '@/assets/data'
+import type { ItemCategory } from '@/parser'
 import type { AddedMod, ItemFilters } from './interfaces'
 import { ADD_KINDS, MAP_ADD_KINDS, AddFilter, AddHit, addedModFrom, kindCounts, searchAddIndex, sharedAddIndex } from '@/web/woke/price-insight/add-mod-search'
 
 // All first and by default (Guy's call): every match, its kind on the line.
-const props = defineProps<{ filters: ItemFilters, map?: boolean }>()
+// category: the item's, to pick a stat's local or global version.
+const props = defineProps<{ filters: ItemFilters, map?: boolean, category?: ItemCategory }>()
 
 // A map offers only map mods, so only the kinds a map has.
 const CHIPS = computed<ReadonlyArray<{ kind: AddFilter, label: string, title: string }>>(() => [
@@ -126,7 +128,7 @@ function add ({ entry: e, kind: k }: AddHit) {
   if (had) {
     had.disabled = false
   } else {
-    list.push(addedModFrom(e, k))
+    list.push(addedModFrom(e, k, { group: STAT_BY_REF_V2(e.ref), category: props.category }))
   }
   query.value = ''
   const at = had ? list.indexOf(had) : list.length - 1

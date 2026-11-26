@@ -48,7 +48,7 @@ import { agoPhrase, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { toast } from '../ui/layer'
 import { RUN_HOLD_TARGET, parseHotkeyTarget, parseListedTarget, setSection } from './widget'
-import { DOCS, GLANCE_LABELS, glanceFromPoints, glanceKey, glanceText, isGlance, ledgerKey, nextShows } from './glance'
+import { DOCS, glanceFromPoints, glanceLabel, glanceKey, glanceText, isGlance, ledgerKey, nextShows } from './glance'
 import type { Glance } from './glance'
 import { isRunGlance, runGlanceKey } from './runs'
 import type { RunGlance } from './runs'
@@ -201,7 +201,7 @@ function swapGlance (dir: 1 | -1) {
   if (!glance.value) return
   const next = nextShows(props.config.glanceShows, dir)
   props.config.glanceShows = next
-  dockEl.value?.peek(`${GLANCE_LABELS[next]}${stack.value ? '' : ': not yet'}`, 1500)
+  dockEl.value?.peek(`${glanceLabel(glance.value, next, nowMinute.value)}${stack.value ? '' : ': not yet'}`, 1500)
 }
 
 const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {

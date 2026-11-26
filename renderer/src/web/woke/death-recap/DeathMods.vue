@@ -3,6 +3,7 @@
     <span class="w-head-font w-accent flex-1">Mods</span>
     <span v-if="run?.match === 'screen'" :class="[$style.tag, $style.exact]" title="Read from the game's mod list while you were in this map">From screen</span>
     <span v-else-if="run?.match === 'exact'" :class="[$style.tag, $style.exact]" :title="checkedText">Exact</span>
+    <span v-else-if="run?.byTier" class="w-dim text-xs" :title="checkedText" data-death-by-tier>likely</span>
     <span v-else-if="run?.match === 'likely'" :class="[$style.tag, $style.likely]" :title="checkedText">
       Likely{{ (run.candidates ?? 1) > 1 ? `, 1 of ${run.candidates}` : '' }}
     </span>
@@ -59,6 +60,7 @@ const checkedText = computed(() => {
 
 const likelyNote = computed(() => {
   const n = props.run?.candidates ?? 1
+  if (props.run?.byTier) return `The map you copied had no area name, so these are the mods of the last ${props.run.tier ? `T${props.run.tier} ` : ''}map you checked before entering.`
   return n > 1
     ? `You checked ${n} maps that fit. This is the last one checked before you entered, so it may not be the one you opened.`
     : `${checkedText.value ?? 'Checked a while before'}, so it may be another map of the same name.`

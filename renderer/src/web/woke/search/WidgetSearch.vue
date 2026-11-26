@@ -9,6 +9,7 @@
             <span class="w-trunc" :class="rarityClass(p.type)">{{ p.name }}<span v-if="p.variant" class="w-dim ml-1">{{ p.variant }}</span></span>
             <WPrice bulk :chaos="p.chaos" :divine="divine" />
           </button>
+          <button type="button" class="w-icon-btn" :class="$style.pinClear" title="Clear the comparison" aria-label="Clear the comparison" data-search-pins-clear @click="clearPins"><i class="fas fa-times" /></button>
         </div>
         <div :class="$style.find" data-widget-drag title="" @click="onFindClick">
           <i class="fas fa-search" />
@@ -82,7 +83,7 @@
                 <WDelta :value="changeSince(v.chaos, v.d1)" class="text-right" />
                 <WDelta :value="changeSince(v.chaos, v.d7)" class="text-right" />
                 <span :class="$style.rowBtns">
-                  <button class="w-icon-btn" :class="{ 'w-icon-btn--on': isPinned(v) }" title="Pin to compare" aria-label="Pin to compare" @click="togglePin(v)"><i class="fas fa-thumbtack" /></button>
+                  <button class="w-icon-btn" :class="{ 'w-icon-btn--on': pinnedIn(config, v) }" title="Pin to compare" aria-label="Pin to compare" @click="togglePin(v)"><i class="fas fa-thumbtack" /></button>
                   <button v-if="tracker" class="w-icon-btn" :class="{ 'w-icon-btn--on': isWatched(v) }" :title="isWatched(v) ? 'Stop watching' : 'Watch price'" :aria-label="isWatched(v) ? 'Stop watching' : 'Watch price'" @click="toggleWatch(v)"><i :class="isWatched(v) ? 'fas fa-star' : 'far fa-star'" /></button>
                 </span>
               </div>
@@ -309,7 +310,7 @@ import { onSharedDataChange } from '../app/live-data'
 import { openDiscord, openReportDialog } from '../app/report'
 import { dropOf } from '../ui/tooltip/tip-content'
 import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
-import { SEARCH_TARGET, EARLY_PRESS_MS, earlySearchPress, searchRequest, addQuery, RECENT_MAX, sameLine, dropLine, saveLine, unsaveLine } from './widget'
+import { SEARCH_TARGET, EARLY_PRESS_MS, earlySearchPress, searchRequest, addQuery, RECENT_MAX, sameLine, dropLine, saveLine, unsaveLine, isPinned as pinnedIn, togglePin as togglePinLine } from './widget'
 import { VARIABLE_ITEMS, useTradePrices } from '../shared/unid-prices'
 import { poeWebApi, saveConfig } from '@/web/Config'
 import type { SearchWidget, SearchLine } from './widget'
@@ -342,14 +343,14 @@ function stepTitle (v: Stepped) {
 const corrupted = shallowRef<CorruptedFilter>('any')
 const input = shallowRef<HTMLInputElement | null>(null)
 const listEl = shallowRef<HTMLElement | null>(null)
-const pinKeys = shallowRef<string[]>([])
 
 // The tooltip's divine rate, else the saved prices'.
 const { divine } = usePriceText(snapshot)
 // Pins follow the latest prices, and go if the item isn't in them (a new league).
 const priceByKey = computed(() => new Map((snapshot.value?.items ?? []).map(i => [itemKey(i), i])))
-const pins = computed(() => pinKeys.value
-  .map(k => priceByKey.value.get(k))
+// Saved with the window (config.pins), so they're there after a restart.
+const pins = computed(() => (props.config.pins ?? [])
+  .map(p => priceByKey.value.get(itemKey(p)))
   .filter((p): p is PriceItem => !!p)
   .sort((a, b) => b.chaos - a.chaos))
 // Names with any price at all, whatever the filter or the list's limit.
@@ -1467,11 +1468,13 @@ function againEntry (q: string): ActionEntry {
 }
 
 // ---- pins ----
-const PIN_MAX = 5
-function isPinned (item: PriceItem) { return pinKeys.value.includes(key(item)) }
 function togglePin (item: PriceItem) {
-  const k = key(item)
-  pinKeys.value = isPinned(item) ? pinKeys.value.filter(p => p !== k) : [...pinKeys.value, k].slice(-PIN_MAX)
+  togglePinLine(props.config, item)
+  saveConfig()
+}
+function clearPins () {
+  props.config.pins = undefined
+  saveConfig()
 }
 
 // ---- Market ----
@@ -1796,6 +1799,7 @@ const dataNote = computed(() => {
 }
 .pin:hover { border-color: var(--w-line-strong); }
 .pinTop { border-color: var(--w-accent); background: var(--w-accent-soft); }
+.pinClear { flex: none; align-self: center; }
 .find {
   flex: none;
   display: flex;

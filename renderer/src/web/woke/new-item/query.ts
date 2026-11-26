@@ -2,6 +2,7 @@
 // searched by its name and base alone. Read from the copied text's first block,
 // in English only: other languages name the lines differently.
 
+import { ITEM_BY_REF } from '@/assets/data'
 import { tradeUrl } from '../search/search'
 
 export interface NewItemQuery {
@@ -16,6 +17,23 @@ export interface NewItemQuery {
   // word, and finds them by a filter instead.
   foulborn?: true
   vestigial?: true
+  // A new transfigured gem ("<Known Gem> of <Something>"): the trade site
+  // finds it by its base gem plus a variant the item data doesn't know yet,
+  // so there is nothing to search (Guy's pick: note only, no search).
+  transfigured?: true
+}
+
+// A known gem's name, from the item data.
+function isKnownGem (name: string): boolean {
+  return Boolean(ITEM_BY_REF('GEM', name)?.length)
+}
+
+// "Ice Nova of Snowfall" when the data knows Ice Nova but not this name.
+export function looksTransfigured (type: string, known: (name: string) => boolean = isKnownGem): boolean {
+  if (known(type)) return false
+  const at = type.lastIndexOf(' of ')
+  if (at <= 0) return false
+  return known(type.slice(0, at))
 }
 
 const FOULBORN = /^Foulborn /
@@ -30,7 +48,7 @@ function unmark (q: NewItemQuery): NewItemQuery {
 const SEPARATOR = '--------'
 const CANNOT_USE = 'You cannot use this item. Its stats will be ignored'
 
-export function newItemQuery (rawText: string): NewItemQuery | null {
+export function newItemQuery (rawText: string, knownGem: (name: string) => boolean = isKnownGem): NewItemQuery | null {
   const sections = rawText.replace(/\r\n/g, '\n').split(SEPARATOR)
     .map(section => section.split('\n').map(line => line.trim()).filter(Boolean))
   let head = sections[0] ?? []
@@ -54,8 +72,11 @@ export function newItemQuery (rawText: string): NewItemQuery | null {
     case 'Currency':
     case 'Divination Card':
       return lines.length === 1 ? { type: lines[0], kind: 'stack' } : null
-    case 'Gem':
-      return lines.length === 1 ? { type: lines[0].replace(/^Superior /, ''), kind: 'gem' } : null
+    case 'Gem': {
+      if (lines.length !== 1) return null
+      const type = lines[0].replace(/^Superior /, '')
+      return looksTransfigured(type, knownGem) ? { type, kind: 'gem', transfigured: true } : { type, kind: 'gem' }
+    }
     case 'Normal':
       // A magic item's name carries its affixes, so it can't be searched by name.
       return lines.length === 1 ? { type: lines[0].replace(/^Superior /, '') } : null
@@ -66,6 +87,7 @@ export function newItemQuery (rawText: string): NewItemQuery | null {
 
 // What the name-only search leaves out, and what the next data update brings.
 export function newItemNote (q: NewItemQuery): string {
+  if (q.transfigured) return 'New gem: no price until the next data update.'
   if (q.kind === 'stack') return 'New item. Searched single listings by name. Bulk exchange and poe.ninja prices come with the next item data update.'
   if (q.kind === 'gem') return 'New gem. Searched by name only. Level and quality filters come with the next item data update.'
   return 'New item. Searched by name only. Mod filters come with the next item data update.'

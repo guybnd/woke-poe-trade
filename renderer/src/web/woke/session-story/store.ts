@@ -8,7 +8,7 @@ import { usePoeninja } from '@/web/background/Prices'
 import { hostRequest } from '../shared/host'
 import { stashGainsBetween } from '../net-worth/gains'
 import { ledgerKey } from '../net-worth/glance'
-import { NIGHT_GAP_MS, bestDrop, hasMaps, isNightStory, keepNight, summarize } from './story'
+import { NIGHT_GAP_MS, bestDrop, hasPlay, isNightStory, keepNight, summarize } from './story'
 import type { NightDraft, NightStory } from './story'
 import { isMapRecord, keepMap } from './map-log'
 import { isSkippedArea, skipVersion } from './skip-areas'
@@ -194,7 +194,7 @@ export const useNights = createGlobalState(() => {
     const sig = d ? `${d.startedAt}:${d.segs.length}:${Math.floor(d.lastAt / 60_000)}` : ''
     if (sig === savedSig) return
     savedSig = sig
-    hostRequest('doc-put', { collection: NIGHTS_COLLECTION, key: DRAFT_KEY, value: d && hasMaps(d) ? d : null }).catch(() => {})
+    hostRequest('doc-put', { collection: NIGHTS_COLLECTION, key: DRAFT_KEY, value: d && hasPlay(d) ? d : null }).catch(() => {})
   }
   // The saved night, unless it's one already finished.
   async function readDraft (): Promise<NightDraft | null> {
@@ -219,7 +219,7 @@ export const useNights = createGlobalState(() => {
     const sig = d ? `${skipVersion()}:${d.startedAt}:${d.segs.length}:${d.deaths.length}:${d.levels?.length ?? 0}:${d.segs[d.segs.length - 1]?.name}:${Math.floor(d.lastAt / 60_000)}:${d.afkAt ?? ''}` : ''
     if (sig === liveSig) return
     liveSig = sig
-    live.value = d && hasMaps(d) ? { ...summarize(d), ...(d.afkAt != null ? { afkSince: d.afkAt } : {}) } : null
+    live.value = d && hasPlay(d) ? { ...summarize(d), ...(d.afkAt != null ? { afkSince: d.afkAt } : {}) } : null
   }
   const keptDraft = () => draft
 

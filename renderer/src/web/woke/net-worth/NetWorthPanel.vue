@@ -52,7 +52,7 @@
       <section :class="$style.summary">
         <span :class="$style.total" class="w-num" :title="totalTitle" data-net-total>{{ div(v.chaos + listedWorth) }}<Coin :chaos="!divine" /></span>
         <span class="w-num" :class="tone(sum?.sinceYesterdayDiv)" :title="todayTip">
-          <template v-if="sum?.sinceYesterdayDiv != null">{{ signed(sum.sinceYesterdayDiv) }}<Coin /> today</template><template v-else>— today</template>
+          <template v-if="sum?.sinceYesterdayDiv != null">{{ signed(sum.sinceYesterdayDiv) }}<Coin /> {{ since.label }}</template><template v-else>— today</template>
         </span>
         <!-- Per hour of play over the window picked under Details. -->
         <span v-if="rateShown.div != null && !(detailsOpen && shown.perHour)" class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h <span class="w-dim">{{ rateWindow === 'today' ? 'today' : rateWindow }}</span></span>
@@ -303,6 +303,7 @@ import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { isWidgetTypeOn } from '../modules'
 import { useNights } from '../session-story/store'
+import { sinceLabel } from './glance'
 import { SESSION_STORY_TYPE } from '../session-story/widget'
 import { stashGainsBetween } from './gains'
 import { CATEGORIES } from './valuation'
@@ -467,9 +468,11 @@ const splitLabel = computed(() => {
   }
   return null
 })
+// "today", or "since Tue" when the read it compares with is older than yesterday.
+const since = computed(() => sinceLabel(sum.value?.sinceDay, rates.value.at))
 const todayTip = computed(() => {
   const t = rates.value.today
-  return t.perHour == null ? "Since yesterday's last read" : `Since yesterday's last read
+  return t.perHour == null ? since.value.tip : `${since.value.tip}
 Per hour today: ${signed(toDiv(t.perHour))} ${unit.value}/h over ${duration(t.playMs)}, ${leftOutText(rateTime())}`
 })
 const best = computed(() => v.value?.lines[0] ?? null)
@@ -962,7 +965,7 @@ function marketTone (s: Sale) {
 // The chart's dots: each sale, named for the hover card (a rare by its base).
 const chartSales = computed<ChartSale[]>(() => sales.value.map(s => {
   const c = saleChaosOf(s)
-  return { at: s.at, text: saleBaseName(s), tip: saleTip(s), price: `${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, icon: s.icon || undefined, colour: saleColour(s.frameType), fact: saleFact(s) || undefined, name: saleName(s), div: c == null ? null : toDiv(c) }
+  return { at: s.at, text: saleBaseName(s), tip: saleTip(s), price: `${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, icon: s.icon || undefined, colour: saleColour(s.frameType), fact: saleFact(s) || undefined, name: saleName(s), div: c == null ? null : toDiv(c), ...(saleOut(s) ? { out: true } : {}) }
 }))
 // The chart's Faustus band (pick A), when listings count in your total: what
 // each refresh saved, else rebuilt from the listings and sales (listedAt).
