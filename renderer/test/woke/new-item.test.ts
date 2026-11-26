@@ -1,6 +1,7 @@
 // A new league's item, before the item data has it, is searched by name.
 import { describe, expect, it } from 'vitest'
-import { newItemNote, newItemQuery, newItemTradeUrl } from '@/web/woke/new-item/query'
+import { looksTransfigured, newItemNote, newItemQuery, newItemTradeUrl } from '@/web/woke/new-item/query'
+import { loadGameData } from '../helpers/game-data'
 
 const text = (...head: string[]) => [...head, '--------', 'Item Level: 84', '--------', 'Some mod'].join('\n')
 
@@ -52,5 +53,31 @@ describe('newItemQuery', () => {
     expect(q.query.filters.type_filters.filters.rarity.option).toBe('unique')
     expect(newItemQuery(text('Item Class: Rings', 'Rarity: Rare', 'Doom Loop', 'Vestigial Veil Ring')))
       .toEqual({ type: 'Veil Ring', rarity: 'nonunique', vestigial: true })
+  })
+})
+
+// Guy's pick: a new league's transfigured gem gets a note, not a trade search
+// the trade site can't answer.
+describe('a new transfigured gem', () => {
+  const known = (name: string) => ['Ice Nova', 'Herald of Ash', 'Vaal Rain of Arrows'].includes(name)
+  it('is a gem the data lacks named "<known gem> of <something>"', () => {
+    expect(looksTransfigured('Ice Nova of Snowfall', known)).toBe(true)
+    expect(looksTransfigured('Herald of Ash of Embers', known)).toBe(true)
+    expect(looksTransfigured('Ice Nova', known)).toBe(false)
+    expect(looksTransfigured('Wave of Veils', known)).toBe(false)
+    expect(looksTransfigured('Vaal Rain of Arrows', known)).toBe(false)
+    expect(looksTransfigured('Veil Strike', known)).toBe(false)
+  })
+  it('is marked, and its note says no price until the data update', () => {
+    const q = newItemQuery(text('Item Class: Skill Gems', 'Rarity: Gem', 'Superior Ice Nova of Snowfall'), known)
+    expect(q).toEqual({ type: 'Ice Nova of Snowfall', kind: 'gem', transfigured: true })
+    expect(newItemNote(q!)).toBe('New gem: no price until the next data update.')
+    expect(newItemQuery(text('Item Class: Skill Gems', 'Rarity: Gem', 'Veil Strike'), known)).toEqual({ type: 'Veil Strike', kind: 'gem' })
+  })
+  it('reads the real item data', async () => {
+    await loadGameData()
+    expect(looksTransfigured('Ice Nova of Snowfall')).toBe(true)
+    expect(looksTransfigured('Ice Nova of Frostbolts')).toBe(false)
+    expect(looksTransfigured('Veil Strike of Veils')).toBe(false)
   })
 })

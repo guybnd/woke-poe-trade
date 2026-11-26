@@ -7,7 +7,9 @@
     <div class="rounded px-2 py-1" style="background: var(--w-panel); border-left: 2px solid var(--w-accent)">
       {{ note }}
     </div>
-    <div v-if="state === 'loading'" class="w-dim"><i class="fas fa-dna fa-spin" /> Searching…</div>
+    <!-- A new transfigured gem: the trade site can't find it by this name, so no search. -->
+    <template v-if="query.transfigured" />
+    <div v-else-if="state === 'loading'" class="w-dim"><i class="fas fa-dna fa-spin" /> Searching…</div>
     <div v-else-if="state === 'error'" class="text-red-400">{{ error }}</div>
     <template v-else>
       <div class="w-dim">{{ total }} listed</div>
@@ -16,7 +18,7 @@
         <span class="w-dim truncate">{{ row.relativeDate }}</span>
       </div>
     </template>
-    <div><button class="btn" @click="openTrade">Open on trade site</button></div>
+    <div v-if="!query.transfigured"><button class="btn" @click="openTrade">Open on trade site</button></div>
   </div>
 </template>
 
@@ -44,6 +46,7 @@ const { options: rates } = useInsight(shallowRef([]), computed(() => props.leagu
 
 async function search () {
   const mine = ++run
+  if (props.query.transfigured) return
   state.value = 'loading'
   try {
     const body = newItemTradeBody(props.query) as unknown as TradeRequest

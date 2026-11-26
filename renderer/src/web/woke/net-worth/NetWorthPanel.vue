@@ -52,7 +52,7 @@
       <section :class="$style.summary">
         <span :class="$style.total" class="w-num" :title="totalTitle" data-net-total>{{ div(v.chaos + listedWorth) }}<Coin :chaos="!divine" /></span>
         <span class="w-num" :class="tone(sum?.sinceYesterdayDiv)" :title="todayTip">
-          <template v-if="sum?.sinceYesterdayDiv != null">{{ signed(sum.sinceYesterdayDiv) }}<Coin /> today</template><template v-else>— today</template>
+          <template v-if="sum?.sinceYesterdayDiv != null">{{ signed(sum.sinceYesterdayDiv) }}<Coin /> {{ since.label }}</template><template v-else>— today</template>
         </span>
         <!-- Per hour of play over the window picked under Details. -->
         <span v-if="rateShown.div != null && !(detailsOpen && shown.perHour)" class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h <span class="w-dim">{{ rateWindow === 'today' ? 'today' : rateWindow }}</span></span>
@@ -318,6 +318,7 @@ import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { isWidgetTypeOn } from '../modules'
 import { useNights } from '../session-story/store'
+import { sinceLabel } from './glance'
 import { SESSION_STORY_TYPE } from '../session-story/widget'
 import { stashGainsBetween } from './gains'
 import { CATEGORIES } from './valuation'
@@ -482,9 +483,11 @@ const splitLabel = computed(() => {
   }
   return null
 })
+// "today", or "since Tue" when the read it compares with is older than yesterday.
+const since = computed(() => sinceLabel(sum.value?.sinceDay, rates.value.at))
 const todayTip = computed(() => {
   const t = rates.value.today
-  return t.perHour == null ? "Since yesterday's last read" : `Since yesterday's last read
+  return t.perHour == null ? since.value.tip : `${since.value.tip}
 Per hour today: ${signed(toDiv(t.perHour))} ${unit.value}/h over ${duration(t.playMs)}, ${leftOutText(rateTime())}`
 })
 const best = computed(() => v.value?.lines[0] ?? null)
@@ -959,7 +962,8 @@ const listedReadLine = computed(() => {
   const d = pendingDoc.value
   return d && d.league === salesLeague.value ? `read ${agoPhrase(d.readAt)}` : ''
 })
-const saleChaosOf = (s: Sale) => saleChaos(s, saleRates.value)
+// A row shows what it sold for (2 div reads 2 div); totals use each sale's day rate.
+const saleChaosOf = (s: Sale) => saleChaos({ price: s.price }, saleRates.value)
 // In divines (chaos without a rate); a currency poe.ninja can't price as sold.
 function salePrice (s: Sale) {
   const c = saleChaosOf(s)
@@ -989,7 +993,7 @@ function marketTone (s: Sale) {
 // The chart's dots: each sale, named for the hover card (a rare by its base).
 const chartSales = computed<ChartSale[]>(() => sales.value.map(s => {
   const c = saleChaosOf(s)
-  return { at: s.at, text: saleBaseName(s), tip: saleTip(s), price: `${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, icon: s.icon || undefined, colour: saleColour(s.frameType), fact: saleFact(s) || undefined, name: saleName(s), div: c == null ? null : toDiv(c) }
+  return { at: s.at, text: saleBaseName(s), tip: saleTip(s), price: `${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, icon: s.icon || undefined, colour: saleColour(s.frameType), fact: saleFact(s) || undefined, name: saleName(s), div: c == null ? null : toDiv(c), ...(saleOut(s) ? { out: true } : {}) }
 }))
 // The chart's Faustus band (pick A), when listings count in your total: what
 // each refresh saved, else rebuilt from the listings and sales (listedAt).
@@ -1000,7 +1004,7 @@ const chartListed = computed(() => {
   const doc = d && d.league === salesLeague.value ? d : null
   if (!doc && !s.some(p => p.listedDiv)) return undefined
   const worth = new Map(listedRows.value.map(r => [r.item.id, rowWorth(r)]))
-  const rebuilt = listedAt(doc, sales.value, saleRates.value, l => listedOut.value.has(l.id) ? 0 : worth.get(l.id) ?? saleChaos(l, saleRates.value) ?? 0, s.map(p => p.at))
+  const rebuilt = listedAt(doc, sales.value, saleRates.value, l => listedOut.value.has(l.id) ? 0 : worth.get(l.id) ?? saleChaos({ price: l.price }, saleRates.value) ?? 0, s.map(p => p.at))
   const out = s.map((p, i) => p.listedDiv ?? toDiv(rebuilt[i]))
   return out.some(v => v > 0) ? out : undefined
 })

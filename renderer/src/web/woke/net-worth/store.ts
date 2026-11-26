@@ -9,13 +9,13 @@ import { identifyUnid, ninjaPriceOf } from './prices'
 import { historyRev, loadPriceHistory } from './history'
 import { lastWokePrices } from '../market/hook'
 import {
-  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, recordRead, sinceYesterday, tabSetOf, unidPrefs, valueStash, withTabShift
+  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, historyName, lastDivine, recordRead, sinceDayOf, sinceYesterday, tabSetOf, unidPrefs, valueStash, withTabShift
 } from './valuation'
 import { stashGains, stashGainsStrict, gainsKey } from './gains'
 import { classify, resolveSpends } from './spend'
 import type { SpendMark } from './spend'
 import { addPoint, keepDiff, sellMinChaos, topChanges, valueByTab, worthSelling } from './ledger'
-import { glanceKey, glanceRates, ledgerKey } from './glance'
+import { glanceKey, glanceRates, ledgerKey, sinceLabel } from './glance'
 import { keptSales, listedGlance, listedTotal, listedWorth } from './pending-glance'
 import { lineOutDoc, loadLineOut, outIdsOf } from './line-out-store'
 import type { Glance, GlanceSell } from './glance'
@@ -24,9 +24,10 @@ import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, Stash
 import type { ReaderStatus } from './widget'
 import { markReadSeen, recordRunRead } from './run-store'
 import { kitPrice } from './run-kit'
-import { emptyMarks, feedMarks, playRates, startOfDay, trimMarks, RATE_WINDOWS } from './play-time'
+import { emptyMarks, feedMarks, marksUntil, playRates, startOfDay, trimMarks, RATE_WINDOWS } from './play-time'
 import type { PlayMarks, PlayRates } from './play-time'
 import { countsHub, countsOff } from '../shared/rate-time'
+import { divineDays } from './divine-days'
 import { rateTime } from '../shared/rate-time-now'
 import type { RateTime } from '../shared/rate-time'
 
@@ -52,6 +53,8 @@ const prefsKey = (league: string) => `${league}-prices`
 const status = shallowRef<ReaderStatus | null>(null)
 const stash = shallowRef<CachedStash | null>(null)
 const history = shallowRef<NetWorthHistory>(emptyHistory())
+// Each day's rate, for valuing a sale at the rate of its own day.
+watch(history, h => { divineDays.value = { league: loadedFor, days: h.days } })
 const ledgerRef = shallowRef<Ledger>(emptyLedger())
 const prefs = shallowRef<PricePrefs>(emptyPrefs())
 // The last counted read's items and prices: a thin item's price jump is held
@@ -97,6 +100,8 @@ export const summary = computed(() => {
   return {
     chaos: v.chaos,
     sinceYesterdayDiv: sinceYesterday(history.value, v.chaos, divine.value, now),
+    // The day that compares with (glance.ts sinceLabel: "since Tue" after a break).
+    sinceDay: sinceDayOf(history.value, now),
     perHourChaos: ratesAt(now).today.perHour,
     tabs: stash.value?.tabs.length ?? 0
   }
@@ -142,7 +147,7 @@ export function ratesAt (now: number, time: RateTime = rateTime()): PlayRates {
   // A purchase adds at most 0 (spend.ts).
   const points = ledgerRef.value.points.map(p => ({ at: p.at, netChaos: p.netChaos == null ? null : p.counted ?? p.netChaos }))
   const at = Math.max(now, points[points.length - 1]?.at ?? 0)
-  return playRates(points, marks.value.marks, at, marksFromLog.value, countsHub(time), marks.value.maps, countsOff(time))
+  return playRates(points, marksUntil(marks.value, at), at, marksFromLog.value, countsHub(time), marks.value.maps, countsOff(time))
 }
 
 export const lastDiff = computed(() => history.value.lastDiff)
@@ -230,7 +235,8 @@ async function countRead (id: string, readAt: number) {
     // Every refresh's net change, for session profit elsewhere (gains.ts),
     // with the guess whether it's a purchase (spend.ts).
     const old = await stashGainsStrict(id).catch(() => null)
-    gain = gainOf(diff, since, divine.value, classify(diff, divine.value))
+    // Before poe.ninja's rate loads, the last saved one decides what's a purchase.
+    gain = gainOf(diff, since, divine.value, classify(diff, divine.value ?? lastDivine(history.value)))
     // Gains not read (locked): not saved over. This refresh's gain waits
     // in memory and joins the next save.
     const waiting = missedGains?.league === id ? missedGains.gains.slice(-100) : []
@@ -263,7 +269,7 @@ async function countRead (id: string, readAt: number) {
   await readMarks(Date.now())
   ledgerRef.value = nextLedger
   const todayDiv = sinceYesterday(next, v.chaos, divine.value, readAt)
-  const g = glanceAt(id, readAt, v.chaos, diff?.netChaos ?? null, todayDiv != null && divine.value ? todayDiv * divine.value : null)
+  const g = glanceAt(id, readAt, v.chaos, diff?.netChaos ?? null, todayDiv != null && divine.value ? todayDiv * divine.value : null, sinceDayOf(next, readAt))
   await hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(id), value: g }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: id, value: next }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: ledgerKey(id), value: nextLedger }).catch(() => {})
@@ -288,9 +294,11 @@ function listedNow (id: string): { listed?: number } {
 
 // The dock icon's number at a read (Ctrl+Space reads the saved one).
 
-function glanceAt (id: string, at: number, chaos: number, netChaos: number | null, todayChaos: number | null): Glance {
+function glanceAt (id: string, at: number, chaos: number, netChaos: number | null, todayChaos: number | null, fromDay?: string | null): Glance {
   const rates = ratesAt(at)
-  const g: Glance = { league: id, at, chaos, netChaos, divine: divine.value, perHourChaos: rates.today.perHour, rates: glanceRates(rates), todayChaos, selling: sellingNow(id) }
+  // Kept only after a break (yesterday is the plain "today").
+  const todayFrom = fromDay && sinceLabel(fromDay, at).label !== 'today' ? { todayFrom: fromDay } : {}
+  const g: Glance = { league: id, at, chaos, netChaos, divine: divine.value, perHourChaos: rates.today.perHour, rates: glanceRates(rates), todayChaos, selling: sellingNow(id), ...todayFrom }
   glance.value = g
   return g
 }
@@ -326,7 +334,7 @@ watch([() => ninja.updatedAt.value, prefs], () => {
 watch(rateTime, () => {
   const last = glance.value
   if (!last || last.league !== loadedFor) return
-  const saved = glanceAt(last.league, last.at, last.chaos, last.netChaos, last.todayChaos ?? null)
+  const saved = glanceAt(last.league, last.at, last.chaos, last.netChaos, last.todayChaos ?? null, last.todayFrom)
   hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(last.league), value: saved }).catch(() => {})
 })
 
@@ -383,7 +391,7 @@ export function setSpendMark (at: number, mark: SpendMark | null, amountChaos?: 
     // The saved dock number follows, when this was the last read.
     const last = glance.value
     if (last && last.league === id) {
-      const saved = glanceAt(id, last.at, last.chaos, last.netChaos, last.todayChaos ?? null)
+      const saved = glanceAt(id, last.at, last.chaos, last.netChaos, last.todayChaos ?? null, last.todayFrom)
       await hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(id), value: saved }).catch(() => {})
     }
   })

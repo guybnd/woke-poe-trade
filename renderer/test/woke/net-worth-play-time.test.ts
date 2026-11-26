@@ -1,7 +1,7 @@
 // Net worth per hour of play: hideout, town, closed and AFK time left out,
 // over the last 1, 2 and 3 hours (play-time.ts), and its Ctrl+Space card.
 import { describe, it, expect } from 'vitest'
-import { emptyMarks, feedMarks, playRate, playRates, rateTip, timeIn, trimMarks } from '@/web/woke/net-worth/play-time'
+import { IDLE_GAP_MS, emptyMarks, feedMarks, marksUntil, playRate, playRates, rateTip, timeIn, trimMarks } from '@/web/woke/net-worth/play-time'
 import { RATE_TIME_WHERE } from '@/web/woke/shared/rate-time'
 import { glanceRates } from '@/web/woke/net-worth/glance'
 import { netWorthLookup } from '@/web/woke/search/lookups/net-worth'
@@ -17,9 +17,30 @@ function line (min: number, text: string) {
 }
 const area = (min: number, id: string) => line(min, `Generating level 83 area "${id}" with seed 7`)
 
+// game-log-range (sessions) sends a plain line at least every 5 minutes while
+// the game writes any: these fixtures only hold the lines that matter, so the
+// gaps between them are filled the same way, except before the game starts again.
+const timeOf = (l: string) => {
+  const m = /^(\d{4})\/(\d\d)\/(\d\d) (\d\d):(\d\d):(\d\d)/.exec(l)
+  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : null
+}
+function busy (lines: readonly string[]): string[] {
+  const out: string[] = []
+  lines.forEach((l, i) => {
+    const prev = i ? timeOf(lines[i - 1]) : null
+    const at = timeOf(l)
+    if (prev != null && at != null && !l.includes('LOG FILE OPENING')) {
+      for (let t = prev + 5 * MIN; t < at; t += 5 * MIN) out.push(line((t - T0) / MIN, 'Got Instance Details from login server'))
+    }
+    out.push(l)
+  })
+  return out
+}
+const feed = (m: Parameters<typeof feedMarks>[0], lines: readonly string[]) => feedMarks(m, busy(lines))
+
 describe('play time from Client.txt', () => {
   it('splits time into maps, hideout and closed', () => {
-    const m = feedMarks(emptyMarks(), [
+    const m = feed(emptyMarks(), [
       area(0, 'MapWorldsStrand'),
       area(20, 'HideoutArenaSearingExarch'),
       area(30, 'MapWorldsFortress'),
@@ -33,7 +54,7 @@ describe('play time from Client.txt', () => {
   })
 
   it('AFK is left out and goes back to where you were', () => {
-    const m = feedMarks(emptyMarks(), [
+    const m = feed(emptyMarks(), [
       area(0, 'MapWorldsStrand'),
       line(10, ': AFK mode is now ON. Autoreply "x"'),
       line(25, ': AFK mode is now OFF.')
@@ -42,7 +63,7 @@ describe('play time from Client.txt', () => {
   })
 
   it('a crash in a map keeps the play up to the last line before the game started again', () => {
-    const m = feedMarks(emptyMarks(), [
+    const m = feed(emptyMarks(), [
       area(0, 'MapWorldsStrand'),
       line(40, '#Someone: chat while mapping'),
       line(60, '***** LOG FILE OPENING *****').replace(' 1 abc [DEBUG Client 1]', ''),
@@ -53,7 +74,7 @@ describe('play time from Client.txt', () => {
 
   it('a fresh read leaves out time before the game started', () => {
     // Read from 10:00; the game started at 12:00 (T0). The last stash read was yesterday.
-    const m = feedMarks(emptyMarks(T0 - 120 * MIN), [
+    const m = feed(emptyMarks(T0 - 120 * MIN), [
       line(0, '***** LOG FILE OPENING *****').replace(' 1 abc [DEBUG Client 1]', ''),
       area(1, 'MapWorldsStrand'),
       area(31, 'HideoutFoo')
@@ -65,22 +86,22 @@ describe('play time from Client.txt', () => {
   })
 
   it('AFK ends back in the hideout even after old marks are trimmed', () => {
-    const a = trimMarks(feedMarks(emptyMarks(), [area(0, 'HideoutFoo'), line(5, ': AFK mode is now ON. Autoreply "x"')]), T0 + 10 * MIN)
-    const b = feedMarks(a, [line(20, ': AFK mode is now OFF.')])
+    const a = trimMarks(feed(emptyMarks(), [area(0, 'HideoutFoo'), line(5, ': AFK mode is now ON. Autoreply "x"')]), T0 + 10 * MIN)
+    const b = feed(a, [line(20, ': AFK mode is now OFF.')])
     expect(b.marks[b.marks.length - 1].s).toBe('hub')
   })
 
   it('a later read adds only new lines', () => {
-    const a = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand'), area(10, 'HideoutFoo')])
+    const a = feed(emptyMarks(), [area(0, 'MapWorldsStrand'), area(10, 'HideoutFoo')])
     // The range is read again from the last line's second.
-    const b = feedMarks(a, [area(10, 'HideoutFoo'), area(15, 'MapWorldsStrand')])
+    const b = feed(a, [area(10, 'HideoutFoo'), area(15, 'MapWorldsStrand')])
     expect(b.marks.map(x => x.s)).toEqual(['map', 'hub', 'map'])
     expect(trimMarks(b, T0 + 12 * MIN).marks.map(x => x.s)).toEqual(['hub', 'map'])
   })
 })
 
 describe('profit per hour of play', () => {
-  const marks = feedMarks(emptyMarks(), [
+  const marks = feed(emptyMarks(), [
     area(0, 'MapWorldsStrand'),
     area(30, 'HideoutFoo'),
     area(60, 'MapWorldsStrand')
@@ -126,7 +147,7 @@ describe('maps and hideout time', () => {
     line(25, 'Generating level 83 area "MapWorldsFortress" with seed 9'),
     area(45, 'HideoutFoo')
   ]
-  const m = feedMarks(emptyMarks(), lines)
+  const m = feed(emptyMarks(), lines)
   const points = [{ at: T0, netChaos: null }, { at: T0 + 45 * MIN, netChaos: 450 }]
 
   it('counts a map once, however often you go back in', () => {
@@ -166,7 +187,7 @@ describe('maps and hideout time', () => {
 
   it('AFK and closed time count only with all time', () => {
     // 10 min in a map, 15 AFK in it, 5 in the hideout.
-    const afk = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand'), line(10, ': AFK mode is now ON. Autoreply "x"'), line(25, ': AFK mode is now OFF.'), area(25, 'HideoutFoo')])
+    const afk = feed(emptyMarks(), [area(0, 'MapWorldsStrand'), line(10, ': AFK mode is now ON. Autoreply "x"'), line(25, ': AFK mode is now OFF.'), area(25, 'HideoutFoo')])
     const pts = [{ at: T0, netChaos: null }, { at: T0 + 30 * MIN, netChaos: 300 }]
     const t = (withHub: boolean, withOff: boolean) => playRate(pts, afk.marks, T0, T0 + 30 * MIN, withHub, afk.maps, withOff)
     expect(t(false, false).playMs).toBe(10 * MIN)
@@ -178,7 +199,7 @@ describe('maps and hideout time', () => {
 
 describe('crafting and selling in the hideout', () => {
   // A map 0-30, then an hour in the hideout with reads at 30, 60 and 90.
-  const m = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand'), area(30, 'HideoutFoo')]).marks
+  const m = feed(emptyMarks(), [area(0, 'MapWorldsStrand'), area(30, 'HideoutFoo')]).marks
   const points = [{ at: T0, netChaos: null }, { at: T0 + 30 * MIN, netChaos: 300 }, { at: T0 + 60 * MIN, netChaos: -200 }, { at: T0 + 90 * MIN, netChaos: 50 }]
 
   it('keeps reads with no map out of the rate and shows them apart', () => {
@@ -211,7 +232,7 @@ describe('crafting and selling in the hideout', () => {
 
   it('an hour of crafting after a map in the same read says No maps', () => {
     // One read from before the map (0) to after 70 min in the hideout (100).
-    const mk = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand'), area(30, 'HideoutFoo')]).marks
+    const mk = feed(emptyMarks(), [area(0, 'MapWorldsStrand'), area(30, 'HideoutFoo')]).marks
     const pts = [{ at: T0, netChaos: null }, { at: T0 + 100 * MIN, netChaos: 200 }]
     const r = playRate(pts, mk, T0 + 40 * MIN, T0 + 100 * MIN)
     expect(r.perHour).toBeNull()
@@ -241,7 +262,7 @@ describe('hover text', () => {
 
 describe('Ctrl+Space per hour card', () => {
   const points = [{ at: T0, netChaos: null }, { at: T0 + 90 * MIN, netChaos: 600 }]
-  const marks = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand'), area(30, 'HideoutFoo'), area(60, 'MapWorldsStrand')]).marks
+  const marks = feed(emptyMarks(), [area(0, 'MapWorldsStrand'), area(30, 'HideoutFoo'), area(60, 'MapWorldsStrand')]).marks
   const glance: Glance = { league: 'L', at: T0 + 90 * MIN, chaos: 1000, netChaos: 600, divine: 200, rates: glanceRates(playRates(points, marks, T0 + 90 * MIN, true)) }
   const ctx = { price: () => null, items: [], tools: new Set<string>(), divine: 200, now: T0 + 95 * MIN, league: null } as LookupContext
 
@@ -258,7 +279,7 @@ describe('Ctrl+Space per hour card', () => {
 describe('boss fights in the zone lines', () => {
   it('counts each boss arena once, apart from maps', () => {
     const fight = (min: number, id: string, seed: number) => line(min, `Generating level 85 area "${id}" with seed ${seed}`)
-    const m = feedMarks(emptyMarks(), [
+    const m = feed(emptyMarks(), [
       area(0, 'MapWorldsStrand'),
       fight(10, 'MapWorldsShapersRealm', 11),
       area(15, 'HideoutFoo'),
@@ -272,7 +293,7 @@ describe('boss fights in the zone lines', () => {
   })
 
   it('counts an encounter a map opens as that map, not a new one', () => {
-    const m = feedMarks(emptyMarks(), [
+    const m = feed(emptyMarks(), [
       area(0, 'MapWorldsStrand'),
       line(3, 'Generating level 83 area "MapAtlasEncounterBoss" with seed 32'),
       area(5, 'MapWorldsStrand'),
@@ -283,7 +304,7 @@ describe('boss fights in the zone lines', () => {
   })
 
   it("doesn't count a Starfall Crater entered from a map as a fight", () => {
-    const m = feedMarks(emptyMarks(), [
+    const m = feed(emptyMarks(), [
       area(0, 'MapWorldsFortress'),
       line(5, 'Generating level 83 area "SettlersBossFallenStar" with seed 21'),
       area(8, 'MapWorldsFortress'),
@@ -295,5 +316,25 @@ describe('boss fights in the zone lines', () => {
     expect(m.maps).toHaveLength(1)
     expect(m.fights).toEqual([])
     expect(timeIn(m.marks, T0, T0 + 10 * MIN).map).toBe(10 * MIN)
+  })
+})
+
+describe('quiet log', () => {
+  it('no line for 15 minutes is time away, until the next line', () => {
+    const m = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand'), area(5, 'MapWorldsStrand'), line(65, 'Got Instance Details from login server')])
+    const t = timeIn(m.marks, T0, T0 + 70 * MIN)
+    expect(t).toEqual({ map: 5 * MIN + IDLE_GAP_MS + 5 * MIN, play: 0, hub: 0, off: 60 * MIN - IDLE_GAP_MS })
+  })
+
+  it('a PC asleep in a map right now stops counting after the gap', () => {
+    const m = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand')])
+    const now = T0 + 120 * MIN
+    expect(timeIn(marksUntil(m, now), T0, now).map).toBe(IDLE_GAP_MS)
+    expect(timeIn(marksUntil(m, T0 + 10 * MIN), T0, T0 + 10 * MIN).map).toBe(10 * MIN)
+  })
+
+  it('AFK through a quiet gap stays AFK', () => {
+    const m = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand'), line(1, ': AFK mode is now ON. Autoreply "x"'), line(60, 'Got Instance Details from login server')])
+    expect(timeIn(m.marks, T0, T0 + 61 * MIN).map).toBe(MIN)
   })
 })

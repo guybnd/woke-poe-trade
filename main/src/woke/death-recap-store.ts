@@ -8,6 +8,11 @@ import type { WokeHandlers } from '../../../ipc/woke-ops'
 const file = () => path.join(dataDir('woke-death-recap'), 'deaths.json')
 const queued = writeQueue()
 
+// Resolves once every death recap write asked for so far is on disk (quitting).
+export async function deathWritesDone (): Promise<void> {
+  await queued(async () => {})
+}
+
 export const deathRecapHandlers: Partial<WokeHandlers> = {
   // A locked or damaged file throws (see readJsonStrict), so the overlay never
   // takes it for an empty history and saves over it.

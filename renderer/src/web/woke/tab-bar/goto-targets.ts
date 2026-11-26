@@ -7,15 +7,24 @@ export const GOTO_TARGETS = {
   'woke-map-mods': { maps: 'Maps', heist: 'Heist', charts: 'Charts', planner: 'Planner', scan: 'Scan' },
   // Only the tabs a What's new line opens.
   'woke-scarab-flip': { tattoos: 'Tattoos' },
-  'woke-mechanics': { settlers: 'Settlers' }
+  'woke-mechanics': { settlers: 'Settlers' },
+  // No tabs (NO_TABS): its one place is the list, with the picked strategy.
+  'woke-atlas-strategies': { strategies: 'Strategies' },
+  'woke-pob-builds': { builds: 'Builds' }
 } as const satisfies Record<string, Record<string, string>>
+
+// Tools listed above that have no tabs: their one entry is the window itself,
+// so a line on one also needs a spot, or Show me shows nothing new.
+export const NO_TABS: readonly string[] = ['woke-atlas-strategies', 'woke-pob-builds']
 
 // A spot: one thing on a tab that Show me scrolls to and flashes, for a
 // feature that isn't a whole tab. Each names the tab it's on. The tool's
 // element carries data-goto-spot="<id>", and its useGoto opens whatever
 // hides it (a folded section, Details).
 export const GOTO_SPOTS = {
-  'woke-net-worth': { 'per-hour': 'holdings', 'faustus-box': 'holdings', 'worth-selling': 'holdings', 'still-cheapest': 'listed', 'stale': 'listed' }
+  'woke-net-worth': { 'per-hour': 'holdings', 'faustus-box': 'holdings', 'worth-selling': 'holdings', 'still-cheapest': 'listed', 'stale': 'listed' },
+  'woke-atlas-strategies': { results: 'strategies', import: 'strategies' },
+  'woke-pob-builds': { import: 'builds' }
 } as const satisfies { [T in keyof typeof GOTO_TARGETS]?: Record<string, keyof typeof GOTO_TARGETS[T]> }
 
 // What's new lines whose feature is a spot, by line id (news.ts). Kept here,
@@ -23,7 +32,10 @@ export const GOTO_SPOTS = {
 export const NEWS_SPOTS: Record<string, string> = {
   'listed-still-cheapest': 'still-cheapest',
   'net-worth-listed': 'stale',
-  'net-worth-worth-selling': 'worth-selling'
+  'net-worth-worth-selling': 'worth-selling',
+  'atlas-results-from-runs': 'results',
+  'atlas-planner-links': 'import',
+  'pob-import-all-sites': 'import'
 }
 
 export function gotoSpots (wmType: string): Record<string, string> | null {

@@ -63,7 +63,7 @@
         </template>
         <!-- woke: mods the item doesn't have, to search for on top of its own. -->
         <!-- woke: on a map the strip's mod list holds this (MapModStrip.vue). -->
-        <filter-add-mod v-if="canAddMods && !onStrip" :filters="filters" :map="isMap" />
+        <filter-add-mod v-if="canAddMods && !onStrip" :filters="filters" :map="isMap" :category="item.category" />
         <input type="submit" class="hidden" />
       </form>
       <!-- woke: teaches the row keys until one is used (shared/hints.ts). -->

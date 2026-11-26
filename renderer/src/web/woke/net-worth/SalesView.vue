@@ -116,7 +116,8 @@ const sort = computed(() => saleSortOf(props.sort))
 function sortBy (key: SaleSortKey) { emit('sort', nextSaleSort(sort.value, key)) }
 const sorted = computed(() => sortSales(rows.value, sort.value, rates.value, marketOf))
 
-const chaosOf = (s: Sale) => saleChaos(s, rates.value)
+// A row shows what it sold for (2 div reads 2 div); totals use each sale's day rate.
+const chaosOf = (s: Sale) => saleChaos({ price: s.price }, rates.value)
 const fmt = (n: number) => formatAmount(n)
 const inChaos = (chaos: number) => `${formatAmount(Math.round(chaos))} chaos`
 const toDiv = (chaos: number) => props.divine ? chaos / props.divine : chaos

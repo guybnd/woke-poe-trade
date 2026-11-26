@@ -32,7 +32,10 @@ export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
   { id: 'net-worth-worth-selling', since: '1.330.22', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: Worth selling lists what you hold 1 div or more of that has been falling all week' },
-  { id: 'atlas-results-from-runs', since: '1.330.22', wmType: 'woke-atlas-strategies', name: 'Atlas strategies', note: 'New: each strategy shows what your strategy runs of the same name earn per hour and per map' },
+  { id: 'pob-import-all-sites', since: '1.330.22', wmType: 'woke-pob-builds', goto: 'builds', name: 'PoB builds', note: 'New: import poe.ninja, maxroll and pob.codes build links; your list follows PoB\'s own builds folder' },
+  { id: 'atlas-results-from-runs', since: '1.330.22', wmType: 'woke-atlas-strategies', goto: 'strategies', name: 'Atlas strategies', note: 'New: each strategy shows what your strategy runs of the same name earn per hour and per map' },
+  { id: 'price-check-corpse-card', since: '1.330.22', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: corpses get the quick price card and a tooltip with the spectre\'s monster type and abilities' },
+  { id: 'map-price-check-exclude-bad-mods', since: '1.330.22', wmType: 'price-check', name: 'Price check', topic: 'Maps', note: 'New: Exclude my bad mods on a map\'s Farming template leaves out maps with any of its Not mods' },
   { id: 'flips-tattoo-tribes', since: '1.330.22', wmType: 'woke-scarab-flip', goto: 'tattoos', name: 'Flips', note: 'New: Tattoos tab, each tribe\'s average Tattoo and whether 3 of its cheapest are worth vendoring for 1' },
   { id: 'mechanics-settlers', since: '1.330.22', wmType: 'woke-mechanics', goto: 'settlers', name: 'League mechanics', note: 'New: Settlers tab, Tattoos by tribe and Runegrafts, priced' },
   { id: 'price-check-base-percentile', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: rare and magic armour show their base roll ("92% base") by its defence; click it to add it to the search' },
@@ -87,7 +90,7 @@ export const NEWS: NewsItem[] = [
   { id: 'listed-still-cheapest', since: '1.330.19', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: Check on a Listed row says if anyone sells it cheaper (one trade search)' },
   { id: 'net-worth-listed', since: '1.330.18', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: a Listed tab: what you have up at Faustus, unsold, and for how long' },
   { id: 'map-mods-t17-planner', since: '1.330.18', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: a Planner tab for T17 maps, and what each mod adds to a map' },
-  { id: 'atlas-planner-links', since: '1.330.18', wmType: 'woke-atlas-strategies', name: 'Atlas strategies', note: 'New: imports poeatlasplanner.com links' }
+  { id: 'atlas-planner-links', since: '1.330.18', wmType: 'woke-atlas-strategies', goto: 'strategies', name: 'Atlas strategies', note: 'New: imports poeatlasplanner.com links' }
 ]
 
 // A line shows for the release it ships in and the next one, then expires.

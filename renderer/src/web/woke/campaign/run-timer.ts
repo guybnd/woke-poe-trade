@@ -88,6 +88,8 @@ export interface CampaignRun {
   // run time the current one started (null when not in one).
   townMs?: number
   townSinceMs?: number | null
+  // Paused because the game closed; the next area entered resumes it.
+  pausedByClose?: boolean
 }
 
 export interface RunTimerWidget extends Widget {
@@ -183,6 +185,7 @@ export function resumeRun (run: CampaignRun, now: number) {
 
 export function finishRun (run: CampaignRun, now: number) {
   pauseRun(run, now)
+  run.pausedByClose = false
   run.finished = true
   run.endedAt = now
 }
@@ -237,6 +240,19 @@ export function startRun (w: HistoryHolder, now: number) {
   w.run = newRun(now)
 }
 
+// The game started again (its log's "LOG FILE OPENING" line): a running run
+// stops at `lastAt`, the last line before the game closed, so an evening
+// between sessions isn't run time. The next area entered resumes it.
+export const LOG_OPENING = '***** LOG FILE OPENING *****'
+
+export function gameRestarted (w: Pick<RunTimerWidget, 'run'>, lastAt: number | null): boolean {
+  const run = w.run
+  if (!run || run.finished || run.runningSince == null || lastAt == null) return false
+  pauseRun(run, Math.max(run.runningSince, lastAt))
+  run.pausedByClose = true
+  return true
+}
+
 // Applies one Client.txt event. Returns true when anything changed.
 export function applyRunEvent (
   w: HistoryHolder & Pick<RunTimerWidget, 'autoStart' | 'charName'> & { subSplits?: boolean },
@@ -254,6 +270,10 @@ export function applyRunEvent (
     }
     const run = w.run
     if (!run || run.finished) return false
+    if (run.pausedByClose) {
+      run.pausedByClose = false
+      resumeRun(run, now)
+    }
     // Town and hideout time: close the segment you're leaving, open the next.
     if (run.townSinceMs != null) {
       run.townMs = (run.townMs ?? 0) + Math.max(0, runElapsed(run, now) - run.townSinceMs)

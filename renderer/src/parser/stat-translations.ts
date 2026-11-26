@@ -388,7 +388,7 @@ function _mergeTradeIdsInto (dest: Stat, source: Stat, prefix?: string) {
   }
 }
 
-function testItemCategory (actual: ItemCategory | null, expected: string): boolean {
+export function testItemCategory (actual: ItemCategory | null, expected: string): boolean {
   if (actual === null) return false
 
   switch (expected) {

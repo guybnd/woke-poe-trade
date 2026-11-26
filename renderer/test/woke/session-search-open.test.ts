@@ -36,6 +36,12 @@ describe('Ctrl+Space maps card', () => {
     expect(card.sections[0].rows!.every(r => r.action == null)).toBe(true)
     const night = { id: '1', startedAt: 0, endedAt: 3_600_000, maps: [], strip: [], mapMs: 0, otherMs: 0, deathsAt: [], profitChaos: null, divine: null, best: null }
     expect(sessionStoryLookup(null, night)('tonight', ctx)[0].actions).toEqual([])
+    const rows = (n: object) => sessionStoryLookup(null, { ...night, ...n })('tonight', ctx)[0].sections![0].rows!.map(r => r.label)
+    expect(rows({ otherMs: 1_200_000, hubMs: 600_000 })).toEqual(expect.arrayContaining(['Hideout', 'Other']))
+    expect(rows({ otherMs: 600_000, hubMs: 600_000 })).not.toContain('Other')
+    // A night of bosses only: no average map, no maps per hour.
+    expect(rows({ otherMs: 3_600_000, hubMs: 600_000 })).not.toContain('Average map')
+    expect(rows({ otherMs: 3_600_000, hubMs: 600_000 })).not.toContain('Maps per hour')
     expect(sessionStoryLookup(null, night)('tonight', { ...ctx, tools: new Set(['woke-session-analytics']) })[0].actions).toEqual([{ label: 'Open Session analytics', open: { tool: 'woke-session-analytics', id: 'history' } }])
   })
 })

@@ -28,8 +28,9 @@
     <!-- The live run's start (runs.ts): a gold line where it counts from. -->
     <span v-if="runLine != null" :class="$style.runStart" :style="{ left: runLine + '%' }" />
     <!-- Sales (Guy's pick S2, 2026-11-24): a small tick on the bottom edge per
-         slot of time with a sale, off the line; the hover card counts them. -->
-    <span v-for="(m, i) in saleTicks" :key="'t' + i + ':' + m.at" :class="$style.saleTick" :style="{ left: m.x + '%' }" data-sale-tick />
+         slot of time with a sale, off the line; the hover card counts them.
+         Sales left out of your totals stay, dimmed (pick, 2026-11-25). -->
+    <span v-for="(m, i) in saleTicks" :key="'t' + i + ':' + m.at" :class="[$style.saleTick, { [$style.saleOut]: m.out }]" :style="{ left: m.x + '%' }" data-sale-tick />
     <template v-if="shown">
       <span :class="$style.dot" :style="{ left: shown.x + '%', top: shown.y + '%' }" />
       <!-- Follows the mouse; a click keeps it open (pinned), and then its item
@@ -40,12 +41,13 @@
         <span v-if="shown.listed" class="w-num">Stash {{ fmt(shown.p.div) }}<Coin /> · <span :class="$style.listedText">At Faustus {{ fmt(shown.listed) }}<Coin /></span></span>
         <span v-if="shownMap">{{ shownMap.name }}<template v-if="shownMap.gainDiv != null"> · {{ signed(shownMap.gainDiv) }}<Coin /></template></span>
         <!-- Hovered: the totals and what sold. Clicked (pinned): what changed too. -->
-        <span v-if="shownSales.count" :class="$style.saleText" class="w-num">Sold {{ shownSales.count }} {{ shownSales.count === 1 ? 'item' : 'items' }}<template v-if="shownSales.div > 0"> · {{ fmt(shownSales.div) }}<Coin /></template></span>
+        <span v-if="shownSales.count" :class="$style.saleText" class="w-num">Sold {{ shownSales.count }} {{ shownSales.count === 1 ? 'item' : 'items' }}<template v-if="shownSales.div > 0"> · {{ fmt(shownSales.div) }}<Coin /></template><span v-if="shownSales.out" class="w-dim"> · {{ shownSales.out }} left out</span></span>
+        <span v-else-if="shownSales.out" class="w-dim w-num">Sold {{ shownSales.out }} {{ shownSales.out === 1 ? 'item' : 'items' }}, left out</span>
         <span v-if="shown.p.spentDiv" :class="$style.spendText">Purchase: {{ fmt(shown.p.spentDiv) }}<Coin />, not counted as a loss</span>
         <span v-if="shown.p.daily" class="w-dim">That day's last read</span>
         <!-- What sold shows on hover too (Guy, 2026-11-24). The card ignores the
              mouse until pinned, so no item tooltip pops over it on hover. -->
-        <span v-for="(x, i) in shownSales.list" :key="'s' + i" :class="$style.soldRow"><img v-if="x.icon" :src="x.icon" alt="" :class="$style.soldIcon"><span v-item-tip="x.tip ?? null" :class="$style.item" :style="x.colour ? { color: x.colour } : undefined">{{ x.text }}</span><span v-if="x.fact" class="w-dim">{{ x.fact }}</span><span v-if="x.price" class="w-num">{{ x.price }}</span></span>
+        <span v-for="(x, i) in shownSales.list" :key="'s' + i" :class="[$style.soldRow, { [$style.soldOut]: x.out }]"><img v-if="x.icon" :src="x.icon" alt="" :class="$style.soldIcon"><span v-item-tip="x.tip ?? null" :class="$style.item" :style="x.colour ? { color: x.colour } : undefined">{{ x.text }}</span><span v-if="x.fact" class="w-dim">{{ x.fact }}</span><span v-if="x.price" class="w-num">{{ x.price }}</span><span v-if="x.out" class="w-dim"> · left out</span></span>
         <span v-if="shownSales.more" class="w-dim">+{{ shownSales.more }} more sold</span>
         <span v-if="pinned && shown.p.top.length">
           <template v-for="(t, i) in shown.p.top" :key="i"><span v-item-tip="tipOf ? topTip(t) : null" :class="$style.item">{{ t }}</span><template v-if="i < shown.p.top.length - 1">, </template></template>
@@ -83,7 +85,7 @@ import { tipPlacement } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { Category } from './valuation'
 import type { SpendMark } from './spend'
-import { groupSales, mapOf, timeTicks, valueTicks } from './chart-marks'
+import { groupSales, mapOf, soldSummary, timeTicks, valueTicks } from './chart-marks'
 import type { ChartMap, ChartSale } from './chart-marks'
 
 const props = defineProps<{
@@ -260,7 +262,7 @@ const goalY = computed(() => props.goalDiv && props.goalDiv <= span.value.hi && 
 const saleTicks = computed(() => {
   if (props.mode !== 'total' || props.series.length < 2 || !props.sales?.length) return []
   const { t0, t1 } = span.value
-  return groupSales(props.sales.filter(x => x.at >= t0 && x.at <= t1), t0, t1, 48).map(x => ({ at: x.at, x: xOf(x.at) / W * 100 }))
+  return groupSales(props.sales.filter(x => x.at >= t0 && x.at <= t1), t0, t1, 48).map(x => ({ at: x.at, x: xOf(x.at) / W * 100, out: x.out }))
 })
 // The map columns in view, and the best one named.
 const mapCols = computed(() => {
@@ -281,12 +283,12 @@ const shownMap = computed(() => shown.value && props.maps?.length && props.mode 
 const SOLD_LIST = 6
 const shownSales = computed(() => {
   const p = shown.value?.p
-  if (!p || !props.sales?.length) return { list: [], more: 0, count: 0, div: 0 }
+  if (!p || !props.sales?.length) return { list: [], more: 0, count: 0, div: 0, out: 0 }
   const i = props.series.findIndex(q => q.at === p.at)
   // The first point counts only sales at its own time, not the whole league before it.
   const from = i > 0 ? props.series[i - 1].at : p.at - 1
   const list = props.sales.filter(x => x.at > from && x.at <= p.at).sort((a, b) => (b.div ?? -1) - (a.div ?? -1))
-  return { list: list.slice(0, SOLD_LIST), more: Math.max(0, list.length - SOLD_LIST), count: list.length, div: list.reduce((n, x) => n + (x.div ?? 0), 0) }
+  return { list: list.slice(0, SOLD_LIST), more: Math.max(0, list.length - SOLD_LIST), ...soldSummary(list) }
 })
 
 // Values that would read the same once rounded show once.
@@ -377,6 +379,8 @@ function when (at: number) {
 .pinned .item { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
 .soldRow { padding-left: 8px; display: flex; align-items: center; gap: 4px; }
 .soldIcon { width: 14px; height: 14px; object-fit: contain; flex: none; }
+.soldOut { opacity: .55; }
+.saleOut { opacity: .35; }
 .chart { cursor: pointer; }
 .above { --ty: calc(-100% - 10px); }
 .below { --ty: 12px; }

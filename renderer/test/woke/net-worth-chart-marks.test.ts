@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { groupSales, mapOf, slotOf, timeTicks, valueTicks } from '@/web/woke/net-worth/chart-marks'
+import { groupSales, mapOf, slotOf, soldSummary, timeTicks, valueTicks } from '@/web/woke/net-worth/chart-marks'
 import { listedAt } from '@/web/woke/net-worth/pending'
 import type { PendingDoc } from '@/web/woke/net-worth/pending'
 import { addPoint, seriesFor } from '@/web/woke/net-worth/ledger'
@@ -61,6 +61,24 @@ describe('sale ticks by slot', () => {
     ]
     const g = groupSales(sales, t0, t0 + 7 * 24 * 60 * M)
     expect(g.map(x => [x.name, x.div, x.count])).toEqual([['Blunderbore', 20.5, 3], ['Hollow Lands', 1.4, 1]])
+  })
+})
+
+describe('sales left out of totals (pick: keep showing, dimmed)', () => {
+  const M = 60_000
+  const t0 = 1_000_000_000_000 - (1_000_000_000_000 % (12 * 60 * M))
+  it('dims a tick only when every sale in its slot is left out', () => {
+    const g = groupSales([
+      { at: t0 + M, text: '', div: 3, out: true },
+      { at: t0 + 2 * M, text: '', div: 1 },
+      { at: t0 + 2000 * M, text: '', div: 2, out: true }
+    ], t0, t0 + 7 * 24 * 60 * M)
+    expect(g.map(x => [x.count, x.out])).toEqual([[2, false], [1, true]])
+  })
+  it('counts only the kept ones in the card, and names how many were left out', () => {
+    expect(soldSummary([{ at: 1, text: '', div: 3, out: true }, { at: 2, text: '', div: 1 }, { at: 3, text: '', div: null }]))
+      .toEqual({ count: 2, div: 1, out: 1 })
+    expect(soldSummary([{ at: 1, text: '', div: 3, out: true }])).toEqual({ count: 0, div: 0, out: 1 })
   })
 })
 

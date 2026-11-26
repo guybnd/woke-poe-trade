@@ -50,7 +50,7 @@
         <button type="button" :class="$style.fold" title="Show Net worth" data-card-fold @click="tab = 'worth'">
           <span class="w-dim">Net worth</span>
           <b v-if="v" class="w-num" :title="totalTip">{{ div(v.chaos + listedAdd) }}<Coin :chaos="!divineRate" /></b>
-          <span v-if="today != null" class="w-num text-xs" :class="tone(today)">{{ today >= 0 ? '▲' : '▼' }} {{ signed(today) }} today</span>
+          <span v-if="today != null" class="w-num text-xs" :class="tone(today)" :title="since.tip">{{ today >= 0 ? '▲' : '▼' }} {{ signed(today) }} {{ since.label }}</span>
           <i class="fas fa-chevron-right w-dim" :class="$style.chev" />
         </button>
         <div :class="$style.foot">
@@ -66,7 +66,7 @@
       <template v-if="status?.lastReadAt">
         <div v-if="v" :class="$style.total">
           <b class="w-num" :title="totalTip">{{ div(v.chaos + listedAdd) }}<Coin :chaos="!divineRate" /></b>
-          <span v-if="today != null" class="w-num text-xs" :class="tone(today)">{{ today >= 0 ? '▲' : '▼' }} {{ signed(today) }} today</span>
+          <span v-if="today != null" class="w-num text-xs" :class="tone(today)" :title="since.tip">{{ today >= 0 ? '▲' : '▼' }} {{ signed(today) }} {{ since.label }}</span>
         </div>
         <div v-else class="w-dim text-xs">Waiting for poe.ninja prices…</div>
         <!-- Per hour of play, as in the window: hideout, town, closed and AFK left out. -->
@@ -121,6 +121,7 @@ import { refreshWaitMs, seriesFor, topCardChanges } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { ReaderStatus } from './widget'
 import type { RunGlance } from './runs'
+import { sinceLabel } from './glance'
 import { countLabel, craftTime, runPerHour, tallyRows, unitOf } from './runs'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
@@ -169,6 +170,8 @@ const listedAdd = computed(() => props.listedChaos ?? 0)
 const totalTip = computed(() => v.value && listedAdd.value ? `Stash ${div(v.value.chaos)} + at Faustus ${div(listedAdd.value)} (${divineRate.value ? 'div' : 'chaos'})` : undefined)
 const signedOut = computed(() => props.status?.error?.kind === 'signed-out' || (props.status != null && !props.status.account))
 const today = computed(() => sameLeague.value ? summary.value?.sinceYesterdayDiv ?? null : null)
+// "today", or "since Tue" after a break (glance.ts).
+const since = computed(() => sinceLabel(summary.value?.sinceDay, Date.now()))
 // Net worth over the picked window, as the window's chart draws it: its reads,
 // from the one before it starts.
 const series = computed<SeriesPoint[]>(() => {

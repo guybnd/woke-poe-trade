@@ -16,7 +16,7 @@
         </template>
         <template #toolbar>
           <div v-if="importOpen" class="flex flex-col gap-1 w-full" @dragover="shotDragOver" @drop="shotDrop">
-            <textarea class="w-input" v-model="importText" rows="4" :class="$style.textarea" data-import
+            <textarea class="w-input" v-model="importText" rows="4" :class="$style.textarea" data-import data-goto-spot="import"
               placeholder="An atlas tree link, a guide's text (tree link, Threads, currency, regex), a strategy code, or a pasted screenshot of the atlas tree"
               @keydown.esc="importOpen = false" @paste="shotPaste" />
             <ShotTray ref="shotTray" :model="atlasTree" @update="shotRead = $event" @pending="shotPending = $event" />
@@ -120,6 +120,7 @@ import { useSavedTree } from '../shared/use-saved-tree'
 import SavedTree from '../shared/SavedTree.vue'
 import { usePriceText } from '../shared/price'
 import { followRunBoard, strategyEarnings } from './run-earnings'
+import { useGoto } from '../tab-bar/goto'
 import { expandShortTreeLinks, extractTreeCode, trimLinkEnd } from './tree'
 import type { ShotRead } from './shot-import'
 // Not lazy: a paste right after the Import box opens must reach it.
@@ -676,6 +677,30 @@ function pasteSearch (text: string) {
     payload: { action: 'stash-search', text }
   })
 }
+
+function pickWithRuns () {
+  const list = props.config.strategies
+  if (!list.length) return
+  if (selected.value && earnings.value.has(selected.value.name)) return
+  const best = list.reduce<AtlasStrategy | null>((a, s) => (earnings.value.get(s.name)?.runs ?? 0) > (a ? earnings.value.get(a.name)?.runs ?? 0 : 0) ? s : a, null)
+  props.config.selectedId = (best ?? selected.value ?? list[0]).id
+}
+
+// What's new's Show me: your results sit in the picked strategy's loadout, so
+// open the one with the most runs (the picked one if it has any).
+useGoto(props.config, 'woke-atlas-strategies', {
+  strategies: () => {},
+  spots: {
+    results: () => {
+      pickWithRuns()
+      // A window Show me just opened reads the run board now: pick again once it's in.
+      if (earnings.value.size) return
+      const stop = watch(earnings, () => { stop(); pickWithRuns() })
+      setTimeout(stop, 5000)
+    },
+    import: () => { importOpen.value = true }
+  }
+})
 </script>
 
 <style module>
