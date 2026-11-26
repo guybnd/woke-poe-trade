@@ -153,7 +153,8 @@
       </section>
 
       <footer :class="$style.foot">
-        <span class="w-faint flex-1">You can change all of this later in Settings.</span>
+        <span v-if="saveError" class="w-down flex-1">Couldn't save: {{ saveError }}</span>
+        <span v-else class="w-faint flex-1">You can change all of this later in Settings.</span>
         <w-button v-if="step > 0" variant="ghost" @click="go(step - 1)">Back</w-button>
         <w-button v-if="step < STEPS.length - 1" variant="primary" @click="go(step + 1)">Next</w-button>
         <w-button v-else variant="primary" :disabled="finishing" @click="finish">Finish</w-button>
@@ -165,7 +166,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue'
 import { DateTime } from 'luxon'
-import { AppConfig, saveConfig, pushHostConfig, updateConfig } from '@/web/Config'
+import { AppConfig, saveConfig, pushHostConfig, updateConfig, upgradedConfig } from '@/web/Config'
 import type { Config } from '@/web/Config'
 import { Host } from '@/web/background/IPC'
 import { useLeagues } from '@/web/background/Leagues'
@@ -224,13 +225,14 @@ const LANGUAGES: Array<{ id: Config['language'], label: string }> = [
 // config-changed, which swaps in a fresh config object.
 const config = computed(() => AppConfig())
 const wokeConfig = computed(() => ensureWokeConfig(AppConfig()))
-// The settings as this window last saved or loaded them. The overlay keeps
-// saving while setup is open (quietly, which never reaches this window), so a
-// save from here merges what this window changed since into the settings on
-// disk, instead of writing its own old copy over them: that once lost tool
-// windows and settings.
+// The settings as this window last saved, loaded or was sent them. The overlay
+// keeps saving while setup is open (quietly, which never reaches this window),
+// so a save from here merges what this window changed since into the settings
+// as they are now, instead of writing its own old copy over them: that once
+// lost tool windows and settings.
 ensureWokeConfig(AppConfig())
 let base = JSON.stringify(AppConfig())
+const saveError = shallowRef('')
 const version = Host.version
 
 const step = shallowRef(0)
@@ -261,14 +263,19 @@ async function browse () {
 }
 
 watch(logChoice, (choice) => {
+  if ((AppConfig().clientLog ?? '') === choice) return
   AppConfig().clientLog = choice || null
   persist()
 })
-// Another window's save swaps this window's settings: the pick shown stays picked.
+// Another window's save swaps this window's settings: that is the new
+// starting point, and the log shown follows it.
 watch(() => AppConfig(), (c) => {
-  const want = logChoice.value || null
-  if ((c.clientLog ?? null) !== want) c.clientLog = want
+  ensureWokeConfig(c)
+  base = JSON.stringify(c)
+  logChoice.value = c.clientLog ?? ''
 })
+// Tools picked or switched off are saved straight away too.
+watch(() => JSON.stringify(AppConfig().woke?.off ?? []), () => { persist() })
 
 function ago (ms: number) {
   return DateTime.fromMillis(ms).toRelative() ?? 'a while ago'
@@ -317,20 +324,24 @@ const keys = computed(() => {
 // ── Flow ───────────────────────────────────────────────
 let saving: Promise<void> = Promise.resolve()
 function persist (): Promise<void> {
-  saving = saving.then(saveMerged).catch(() => {})
-  return saving
+  const run = saving.then(saveMerged)
+  saving = run.then(() => { saveError.value = '' }, (e: unknown) => {
+    saveError.value = e instanceof Error ? e.message : String(e)
+    console.warn('[setup] save failed', e)
+  })
+  return run
 }
 
 async function saveMerged () {
   const mineText = JSON.stringify(AppConfig())
+  // Nothing changed here since the last save (or since another window's).
+  if (mineText === base) return
   const mine = JSON.parse(mineText) as Config
-  let onDisk: Config | null = null
-  try {
-    const text = await Host.getConfig()
-    const parsed = text ? JSON.parse(text) as Config : null
-    if (parsed && Array.isArray(parsed.widgets)) onDisk = parsed
-  } catch {}
+  // The overlay saves what it holds first, then the file is read.
+  const text = await hostRequest('config-fresh', {}, 10_000)
+  const onDisk = upgradedConfig(text)
   if (onDisk) {
+    ensureWokeConfig(onDisk)
     let next = mergeConfigs(mine, JSON.parse(base) as Config, onDisk)
     // A click while the disk copy was on its way stays too.
     const now = JSON.stringify(AppConfig())
@@ -355,7 +366,13 @@ async function finish () {
   woke.setupDone = true
   // A fresh config is already in today's shape: no woke fix-up is due on it.
   woke.version ??= WOKE_CONFIG_VERSION
-  await persist()
+  try {
+    await persist()
+  } catch {
+    // Kept open: closing now would lose the picks. The error shows by Finish.
+    finishing.value = false
+    return
+  }
   try {
     await hostRequest('setup-finish', {})
   } catch {

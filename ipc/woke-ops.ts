@@ -176,6 +176,8 @@ export interface WokeOps {
   'rollback-cancel': Op<NoArgs, WokeRollbackState>
   'rollback-undo-skip': Op<NoArgs, WokeRollbackState>
   'setup-finish': Op<NoArgs, Ok>
+  // The settings file once the overlay has saved what it holds (setup window).
+  'config-fresh': Op<NoArgs, string | null>
   'crash-pending': Op<NoArgs, WokePendingCrash | null>
   'crash-dismiss': Op<NoArgs, Ok>
   'crash-report': Op<{ id?: string | null, context?: string, names?: string[] }, Ok>
