@@ -286,7 +286,7 @@ export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: R
 
 // The sums a run's totals need (runs.ts Outside).
 export function outsideSums (o: OutsideTotals) {
-  return { beforeChaos: o.beforeChaos, faustusChaos: o.faustusChaos, leftOutChaos: o.leftOutCollectedChaos, leftOutShownChaos: o.leftOutChaos }
+  return { beforeChaos: o.beforeChaos, faustusChaos: o.faustusChaos, leftOutCollectedChaos: o.leftOutCollectedChaos, leftOutChaos: o.leftOutChaos }
 }
 
 // Item ids listed at a run's start: those in Start's read listed by then,
