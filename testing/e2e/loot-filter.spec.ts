@@ -1220,3 +1220,33 @@ test('price check: an item the filter shows gets a quiet icon that can hide it',
     return fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : ''
   }).toMatch(ownRule('Glorious Plate', 'Hide'))
 })
+
+test('profiles: duplicate the filter as a named profile that saves to its own file, and switch back', async ({ overlay, fakeApp }) => {
+  const folder = filterFolder()
+  await overlay.boot({ widgets: [lootFilter(folder)] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  const chip = page.getByRole('button', { name: /^NeverSink/ }).first()
+  await expect(chip).toBeVisible({ timeout: 20_000 })
+  await chip.click()
+  await expect(page.getByText('Duplicate “NeverSink”')).toBeVisible()
+  // The menu fades in.
+  await page.waitForTimeout(600)
+  await overlay.snap('profile menu')
+  await page.getByText('Duplicate “NeverSink”').click()
+  const name = page.getByLabel('Name of the new profile')
+  await name.fill('Bossing')
+  await overlay.snap('naming a new profile')
+  await page.getByRole('button', { name: 'Add', exact: true }).click()
+  await expect(page.getByRole('button', { name: /^Bossing/ })).toBeVisible({ timeout: 20_000 })
+  await expect.poll(() => fs.existsSync(path.join(folder, 'Bossing (woke).filter')), { timeout: 20_000 }).toBe(true)
+  await overlay.snap('switched to Bossing')
+  await page.getByRole('button', { name: /^Bossing/ }).click()
+  const first = page.getByText('NeverSink', { exact: true }).last()
+  await expect(first).toBeVisible()
+  await page.waitForTimeout(600)
+  await overlay.snap('profile menu with two profiles')
+  await first.click()
+  await expect(page.getByRole('button', { name: /^NeverSink/ }).first()).toBeVisible({ timeout: 20_000 })
+  await expect.poll(() => fs.existsSync(path.join(folder, 'NeverSink (woke).filter')), { timeout: 20_000 }).toBe(true)
+})

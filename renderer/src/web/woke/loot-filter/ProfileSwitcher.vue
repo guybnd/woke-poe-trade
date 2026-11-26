@@ -50,7 +50,7 @@ const problem = computed(() => naming.value ? profileNameProblem(props.config, d
 function sourceOf (p: FilterProfile): string {
   const d = p.id === props.config.activeProfile ? props.config : (p.data ?? {})
   if (d.neversink?.on) return `NeverSink · ${LEVEL_NAMES[d.neversink.level] ?? ''}`
-  return d.sourceOnline ? (d.sourceTitle || 'Online filter') : (d.sourceName || 'No filter picked')
+  return d.sourceOnline ? (d.sourceTitle || 'Online filter') : (d.sourceName?.replace(/\.filter$/i, '') || 'No filter picked')
 }
 
 function open () {
@@ -61,7 +61,7 @@ function open () {
   const items: MenuEntry[] = [
     { separator: true, heading: 'Profiles' },
     ...props.config.profiles.map(p => ({
-      label: `${p.name}  ·  ${sourceOf(p)}`,
+      label: sourceOf(p) === p.name ? p.name : `${p.name}  ·  ${sourceOf(p)}`,
       checked: p.id === cur.id,
       action: () => { swap(p.id) }
     })),
