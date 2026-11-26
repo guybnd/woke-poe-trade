@@ -1,7 +1,8 @@
 // poe.ninja rows for every category the Market's Prices tab lists, for the
 // item tooltip check (ninja-row-tip.test.ts). From real data where the app
-// has it: the Ancestors league dump (public/data/league-invest, poe.ninja's
-// own names and variants), and the item data's names sorted into poe.ninja's
+// has it: rows kept from the Ancestors league poe.ninja dump
+// (ninja-rows.sample.json: poe.ninja's own names and variants; unique and
+// most gem rows left out, the item data covers them), and the item data's names sorted into poe.ninja's
 // categories. Rows whose format the dump lacks follow the price check's
 // lookups (getDetailsId.ts): Filled Coffins, cluster jewels.
 import { readFileSync } from 'node:fs'
@@ -13,7 +14,7 @@ const DATA = join(__dirname, '../../public/data')
 
 interface AppItem { name: string, namespace: string, craftable?: { category?: string }, unique?: { base: string } }
 const items: AppItem[] = readFileSync(join(DATA, 'en/items.ndjson'), 'utf8').trim().split('\n').map(l => JSON.parse(l))
-const dump = JSON.parse(readFileSync(join(DATA, 'league-invest/leagues.json'), 'utf8')) as Array<{ items: Array<{ type: string, name: string, variant?: string }> }>
+const dump = JSON.parse(readFileSync(join(__dirname, 'ninja-rows.sample.json'), 'utf8')) as SampleRow[]
 
 const plain = items.filter(i => i.namespace === 'ITEM' && !i.craftable).map(i => i.name)
 const corpseBases = new Set(plain.filter(n => /^Perfect /.test(n)).map(n => n.slice('Perfect '.length)))
@@ -77,7 +78,7 @@ function uniqueType (base: string | undefined): string | undefined {
 
 export function sampleRows (): SampleRow[] {
   const rows: SampleRow[] = []
-  for (const i of dump[0].items) rows.push({ type: i.type, name: i.name, variant: i.variant })
+  for (const i of dump) rows.push({ type: i.type, name: i.name, variant: i.variant })
   for (const name of plain) {
     const hit = BY_NAME.find(([, test]) => test(name))
     rows.push({ type: hit?.[0] ?? 'Currency', name })
