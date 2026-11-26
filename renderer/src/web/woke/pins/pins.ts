@@ -3,7 +3,8 @@
 // drag it, has its own see-through level, and keeps a separate spot for towns
 // and hideouts than for maps and the rest ("hideout repo", WOKEPOET-207).
 // Stored like the theme: per origin in localStorage.
-import { computed, shallowRef, watch } from 'vue'
+import { computed } from 'vue'
+import { storedPref } from '../ui/stored-pref'
 import { zone } from '../shared/zone'
 import type { ZoneKind } from '../shared/zone'
 
@@ -36,9 +37,6 @@ export const DEFAULT_PIN_OPACITY = 85
 
 export const MIN_PIN_SCALE = 50
 export const MAX_PIN_SCALE = 100
-
-const PINS_KEY = 'woke.pins'
-const SCALE_KEY = 'woke.pinScale'
 
 export function placeOf (kind: ZoneKind | null): PinPlace {
   return kind === 'town' || kind === 'hideout' ? 'town' : 'field'
@@ -92,27 +90,9 @@ export function parsePins (raw: string | null): Pin[] {
   return out
 }
 
-function readPins (): Pin[] {
-  try { return parsePins(localStorage.getItem(PINS_KEY)) } catch { return [] }
-}
-function readScale (): number {
-  try { return parsePinScale(localStorage.getItem(SCALE_KEY)) } catch { return MAX_PIN_SCALE }
-}
-
-export const pins = shallowRef<Pin[]>(readPins())
+export const pins = storedPref<Pin[]>('woke.pins', parsePins, JSON.stringify)
 // Size of pinned things, apart from the rest of the toolkit (pick B).
-export const pinScale = shallowRef(readScale())
-
-watch(pins, (list) => {
-  try { localStorage.setItem(PINS_KEY, JSON.stringify(list)) } catch {}
-})
-watch(pinScale, (v) => {
-  try { localStorage.setItem(SCALE_KEY, String(v)) } catch {}
-})
-window.addEventListener('storage', (e) => {
-  if (e.key === PINS_KEY) pins.value = readPins()
-  if (e.key === SCALE_KEY) pinScale.value = readScale()
-})
+export const pinScale = storedPref('woke.pinScale', parsePinScale)
 
 export const place = computed<PinPlace>(() => placeOf(zone.kind))
 

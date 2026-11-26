@@ -2,6 +2,8 @@
 // of past leagues: buy on league day `day`, sell on `day + horizon`.
 import { MAX_DAY } from './dumps'
 import type { ItemHistory, LeagueHistory } from './dumps'
+import { median } from '../shared/numbers'
+export { median }
 
 // Item types sold in bulk at one price: easy to buy many and to resell.
 export const BULK_TYPES = new Set([
@@ -55,13 +57,6 @@ export function priceOn (item: ItemHistory, d: number): number | null {
   const a = price(item.div[d - 1]); const b = price(item.div[d + 1])
   if (a != null && b != null) return (a + b) / 2
   return null
-}
-
-export function median (values: number[]): number {
-  if (!values.length) return NaN
-  const s = [...values].sort((x, y) => x - y)
-  const m = s.length >> 1
-  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
 }
 
 export function opportunityKey (o: { type: string, name: string, variant?: string, links?: string }): string {

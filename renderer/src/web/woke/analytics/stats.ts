@@ -1,6 +1,7 @@
 // Numbers for Session analytics. Pure functions over saved sessions.
 import type { AnalyticsRange, AnalyticsUnit, MapRun, SavedLoot, SessionRecord } from './types'
 import type { RateTime } from '../shared/rate-time'
+import { medianOrNull, seededRandom as mulberry32 } from '../shared/numbers'
 
 export const HOUR_MS = 3_600_000
 const DAY_MS = 24 * HOUR_MS
@@ -100,22 +101,8 @@ export function perHour (units: Unit[]): number | null {
   return ms > 60_000 ? p / (ms / HOUR_MS) : null
 }
 
-export function median (values: number[]): number | null {
-  if (!values.length) return null
-  const v = [...values].sort((a, b) => a - b)
-  const mid = Math.floor(v.length / 2)
-  return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2
-}
-
-function mulberry32 (seed: number) {
-  return () => {
-    seed |= 0
-    seed = (seed + 0x6D2B79F5) | 0
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
+// The typical value; null for none.
+export const median = medianOrNull
 
 // Per-hour values from resampling the units with replacement. A fixed seed
 // keeps the range from jumping between redraws.
