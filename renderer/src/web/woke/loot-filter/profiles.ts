@@ -56,7 +56,8 @@ export function profileFile (w: LootFilterWidget, p: FilterProfile): string {
     sourceOnline: d.sourceOnline ?? false,
     sourceTitle: d.sourceTitle ?? '',
     neversink: d.neversink,
-    profile: p
+    profile: p,
+    profiles: w.profiles
   })
 }
 
@@ -76,7 +77,9 @@ export function profileNameProblem (w: LootFilterWidget, name: string, forId: nu
 }
 
 function nextId (w: LootFilterWidget): number {
-  return Math.max(0, ...w.profiles.map(p => p.id)) + 1
+  const id = Math.max(0, w.lastProfileId ?? 0, ...w.profiles.map(p => p.id)) + 1
+  w.lastProfileId = id
+  return id
 }
 
 // A fresh profile: the same filter to start from, none of your changes.
@@ -100,8 +103,13 @@ export function blankProfileData (w: LootFilterWidget): ProfileData {
 // Adds a profile (a copy of the one in use, or a fresh one) without switching to it.
 export function addProfile (w: LootFilterWidget, name: string, from: 'copy' | 'blank'): FilterProfile {
   const data = from === 'copy' ? snapshotProfile(w) : blankProfileData(w)
-  // Its own file has never been written: it saves once you switch to it.
+  // Its own file has never been written: it saves once you switch to it, and
+  // reads unsaved until then.
   delete data.savedSourceHash
+  delete data.savedBuildSig
+  delete data.savedExtraSig
+  delete data.savedUserSig
+  delete data.savedClusterSig
   if (from === 'copy') {
     // Saved copies don't overwrite the source: the copy writes its own file.
     data.saveMode = 'copy'

@@ -153,6 +153,8 @@ export interface LootFilterWidget extends Widget {
   // Named filters you switch between, and the one in use.
   profiles: FilterProfile[]
   activeProfile: number
+  // The highest id ever given: a deleted profile's id (and its undo file) is never reused.
+  lastProfileId?: number
 }
 
 export function defaultPriceTiers (): PriceTiers {
@@ -318,6 +320,8 @@ export function normalizeProfiles (w: LootFilterWidget) {
     // The one in use is the one without a stored copy.
     w.activeProfile = (w.profiles.find(p => !p.data) ?? w.profiles[0]).id
   }
+  const top = Math.max(...w.profiles.map(p => p.id))
+  if (typeof w.lastProfileId !== 'number' || !(w.lastProfileId >= top)) w.lastProfileId = top
   // The one in use lives on the widget.
   const active = w.profiles.find(p => p.id === w.activeProfile)!
   if (active.data) delete active.data
@@ -388,10 +392,17 @@ export function outputName (w: OutputOf): string {
   const profile = w.profile !== undefined ? w.profile : w.profiles?.find(p => p.id === w.activeProfile)
   // A named profile writes "<name> (woke).filter"; the first one keeps the
   // file it had before profiles until it's renamed.
-  if (profile && !profile.legacyFile) {
-    const safe = cleanProfileName(profile.name)
-    if (safe) return `${safe} (woke).filter`
+  const named = profile ? cleanProfileName(profile.name) : ''
+  if (profile && !profile.legacyFile && named) return `${named} (woke).filter`
+  const legacy = legacyOutput(w)
+  // The first profile's old file can't be another profile's: two would write one file.
+  if (profile && named && w.profiles?.some(p => p.name !== profile.name && !p.legacyFile && `${cleanProfileName(p.name)} (woke).filter`.toLowerCase() === legacy.toLowerCase())) {
+    return `${named} (woke).filter`
   }
+  return legacy
+}
+
+function legacyOutput (w: OutputOf): string {
   if (w.neversink?.on) return NEVERSINK_OUTPUT
   // Working on an edited copy itself: it stays the copy.
   if (!w.sourceOnline && isWokeCopy(w.sourceName)) return w.sourceName

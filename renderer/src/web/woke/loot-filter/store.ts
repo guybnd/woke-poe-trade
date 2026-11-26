@@ -647,11 +647,14 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     await load()
   }
 
+  // A profile switch is under way (switchProfile): strictness waits.
+  const switching = ref(false)
   // Switches strictness and saves. Returns Undo, or null if nothing was saved.
   let levelSwitch = 0
   async function setLevel (level: number, opts: { auto?: boolean } = {}): Promise<(() => void) | null> {
     const ns = cfg().neversink
-    if (!ns.on) return null
+    if (!ns.on || switching.value) return null
+    const profile = cfg().activeProfile
     const before = ns.level
     const next = clampLevel(level)
     if (next === before) return null
@@ -660,13 +663,14 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     await load()
     // A newer switch (a second key press) saves its own level. Going by the switch,
     // not the level: A, B, A has this load's rules out of date with the level right.
-    if (mine !== levelSwitch) return null
+    if (mine !== levelSwitch || cfg().activeProfile !== profile) return null
     if (!doc.value || !await save({ auto: opts.auto })) return null
     return () => { setLevel(before).catch(() => {}) }
   }
 
   // Hotkey / button: one step, which pauses the ladder until you resume it.
   async function stepLevel (dir: 1 | -1) {
+    if (switching.value) return
     const ns = cfg().neversink
     if (!ns.on) {
       toast('Strictness keys need NeverSink from GitHub. Turn it on in the loot filter editor.')
@@ -707,6 +711,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // over from it. The reload waits for your click on the card: this can come from
   // a timer (scrolling), and GGG's rules don't allow a chat command from one.
   async function pickLevel (level: number) {
+    if (switching.value) return
     const ns = cfg().neversink
     const auto = cfg().strictAuto
     const next = clampLevel(level)
@@ -750,7 +755,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // for you to press Reload now.
   function followLadder (): boolean {
     const ns = cfg().neversink
-    if (!ns.on || !doc.value || saving.value) return false
+    if (!ns.on || !doc.value || saving.value || switching.value) return false
     const target = ladderTarget(cfg().strictAuto, recentAreas.value)
     if (target == null || target === ns.level) return false
     // woke: a switch saves, and you haven't said these are ready for the game.
@@ -1107,7 +1112,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     error.value = null
     try {
       const name = outputName(cfg())
-      if (!cfg().sourceOnline && (cfg().saveMode === 'overwrite' || isWokeCopy(cfg().sourceName)) && baseNeedsBackup.value) {
+      if (!cfg().sourceOnline && name.toLowerCase() === cfg().sourceName.toLowerCase() && baseNeedsBackup.value) {
         await hostRequest('filter-write', { dir: cfg().folder, name: cfg().sourceName + '.bak', text: baseText.value })
         baseNeedsBackup.value = false
       }
@@ -1233,22 +1238,27 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // woke: named filter profiles (profiles.ts). Switching saves the one you
   // leave, brings the other one in with its own undo steps, and (unless told
   // not to) saves it and has the game load it, as Save does.
-  const switching = ref(false)
   async function switchProfile (id: number, opts: { gameToo?: boolean } = {}): Promise<boolean> {
     const c = cfg()
     if (switching.value || id === c.activeProfile || !c.profiles.some(p => p.id === id)) return false
     switching.value = true
+    // A load or strictness switch still running belongs to the one you leave:
+    // it must not land in the other.
+    loadSeq++
+    levelSwitch++
+    const leaving = c.activeProfile
+    let mySeq = -1
     try {
-      if (settleTimer && history.isLoaded()) settle()
-      // What you leave gets its file written, so the game has your last changes
-      // if you come back to it. Nothing is lost if this fails: the changes stay
-      // in the profile.
-      if (doc.value && baseText.value != null && (dirty.value || sourceChanged.value) && !saving.value) {
-        await save({ auto: true }).catch(() => false)
-      } else {
-        await saveQueue
+      // The step you were making goes on the one you leave.
+      await history.ready.catch(() => {})
+      if (settleTimer) settle()
+      // Its file is brought up to date only when nothing of yours is unsaved
+      // (prices moved); your unsaved changes stay in the profile, as they are.
+      if (doc.value && baseText.value != null && (dirty.value || sourceChanged.value)) {
+        await save({ noReload: true }).catch(() => false)
       }
-      if (!switchProfileData(c, id)) return false
+      await saveQueue
+      if (cfg().activeProfile !== leaving || !switchProfileData(c, id)) return false
       // Taken from the profile, as on start.
       savedEdits.value = startSig()
       settled = copySettings()
@@ -1257,6 +1267,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       pendingReload.value = false
       netWaitsForReload.value = false
       problems.value = []
+      sentOver.value = null
+      ladderHeldFor = null
+      baseVersion.value = null
       clearUndoToasts()
       baseText.value = null
       doc.value = null
@@ -1264,11 +1277,13 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       loading.value = true
       await history.switchTo(historyDocFor(id))
       settled = copySettings()
+      // load() takes the next number; a newer load (a key press) owns the flag.
+      mySeq = loadSeq + 1
       await load()
-      loading.value = false
       if (opts.gameToo !== false && doc.value && cfg().activeProfile === id) await save()
       return true
     } finally {
+      if (mySeq === -1 || loadSeq === mySeq) loading.value = false
       switching.value = false
     }
   }
@@ -1276,6 +1291,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // A profile not in use goes, with its undo steps. Its .filter file stays.
   function deleteProfile (id: number): boolean {
     if (!dropProfile(cfg(), id)) return false
+    // Ids are never used again (lastProfileId), so a leftover file can't
+    // hand its steps to a new profile.
     hostRequest('doc-delete', historyDocFor(id)).catch(() => {})
     return true
   }

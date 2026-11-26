@@ -109,6 +109,32 @@ describe('loot filter profiles', () => {
     expect(w.profiles).toHaveLength(1)
   })
 
+  it('never gives a deleted profile\'s id to a new one', () => {
+    const w = widget()
+    const a = addProfile(w, 'A', 'blank')
+    deleteProfile(w, a.id)
+    const b = addProfile(w, 'B', 'blank')
+    expect(b.id).toBeGreaterThan(a.id)
+    const back = JSON.parse(JSON.stringify(w)) as LootFilterWidget
+    normalizeLootFilterWidget(back)
+    expect(addProfile(back, 'C', 'blank').id).toBeGreaterThan(b.id)
+  })
+
+  it('a duplicate reads unsaved until its own file is written', () => {
+    const w = widget(w => { w.savedExtraSig = 'x'; w.savedUserSig = 'y'; w.savedBuildSig = 'z' })
+    const p = addProfile(w, 'Copy', 'copy')
+    expect(p.data?.savedExtraSig).toBeUndefined()
+    expect(p.data?.savedUserSig).toBeUndefined()
+  })
+
+  it('the first profile never writes another profile\'s file', () => {
+    const w = widget(w => { w.sourceName = 'Old.filter' })
+    addProfile(w, 'Mapping', 'blank')
+    // Picks the other profile's output as its source: it would save over it.
+    w.sourceName = 'Mapping (woke).filter'
+    expect(outputName(w)).toBe('Old (woke).filter')
+  })
+
   it('repairs a damaged list', () => {
     const w = widget()
     w.profiles = [null, { id: 'x' }, { id: 2, name: 'Two', data: { edits: [] } }, { id: 2, name: 'Dup' }] as never

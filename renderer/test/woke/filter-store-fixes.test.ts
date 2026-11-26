@@ -119,7 +119,7 @@ describe('the safety net without prices', () => {
 })
 
 describe('filter profiles', () => {
-  it('switching saves the one you leave, then saves and loads the other in its own file', async () => {
+  it('switching keeps your unsaved changes in the one you leave, then saves and loads the other in its own file', async () => {
     const { normalizeLootFilterWidget } = await import('@/web/woke/loot-filter/widget')
     const { addProfile } = await import('@/web/woke/loot-filter/profiles')
     const { store, config } = await fromGitHub()
@@ -132,7 +132,8 @@ describe('filter profiles', () => {
     const before = host.writes.length
     expect(await store.switchProfile(boss.id)).toBe(true)
     const names = host.writes.slice(before).map(w => w.name)
-    expect(names).toEqual(['NeverSink (woke).filter', 'Bossing (woke).filter'])
+    // Your unsaved change isn't written to the game's file behind your back.
+    expect(names).toEqual(['Bossing (woke).filter'])
     expect(config.activeProfile).toBe(boss.id)
     expect(config.edits.length).toBe(edited - 1)
     expect(store.dirty.value).toBe(false)
@@ -144,7 +145,26 @@ describe('filter profiles', () => {
     expect(await store.switchProfile(1)).toBe(true)
     expect(config.edits.length).toBe(edited)
     expect(config.neversink.level).toBe(1)
+    // Coming back is switching to it: its file now has the change.
     expect(host.writes.at(-1)!.name).toBe('NeverSink (woke).filter')
     expect(config.profiles.find(p => p.id === boss.id)?.data?.neversink?.level).toBe(4)
+  })
+
+  it('a strictness switch still loading when you switch profiles stays with the one you left', async () => {
+    const { normalizeLootFilterWidget } = await import('@/web/woke/loot-filter/widget')
+    const { addProfile } = await import('@/web/woke/loot-filter/profiles')
+    const { store, config } = await fromGitHub()
+    normalizeLootFilterWidget(config)
+    await store.save()
+    const boss = addProfile(config, 'Bossing', 'copy')
+    const step = store.stepLevel(1)
+    await store.switchProfile(boss.id)
+    await step
+    expect(config.activeProfile).toBe(boss.id)
+    expect(config.neversink.level).toBe(1)
+    const last = host.writes.at(-1)!
+    expect(last.name).toBe('Bossing (woke).filter')
+    expect(parseFilter(last.text).strictness).toBe('1-REGULAR')
+    expect(host.writes.filter(w => w.name === 'Bossing (woke).filter').every(w => parseFilter(w.text).strictness === '1-REGULAR')).toBe(true)
   })
 })
