@@ -98,13 +98,12 @@
               <span class="text-right w-num w-trunc">
                 <template v-if="r.cheapest"><span v-item-tip="{ name: r.cheapest.name, type: family.ninjaType }">{{ roleName(r.cheapest.name) }}</span> <WPriceText :text="`${amount(r.cheapest.chaos)}c`" /></template>
               </span>
-              <span class="text-right w-num" :class="r.profitEach == null ? 'w-faint' : r.profitEach > 0 ? 'w-up' : 'w-down'"><template v-if="r.profitEach == null">–</template><WPriceText v-else :text="signedAmount(r.profitEach)" /></span>
+              <span class="text-right w-num" :class="r.profitEach == null ? 'w-faint' : r.profitEach > 0 ? 'w-up' : 'w-down'"><WPrice v-if="r.profitEach == null" :chaos="null" /><WPriceText v-else :text="signedAmount(r.profitEach)" /></span>
             </div>
             <template v-if="openTribe === r.tribe">
               <div v-for="t in r.tattoos" :key="t.name" class="w-row" :class="[$style.tattooGrid]" @contextmenu="rowMenu($event, t.name)">
                 <FlipName :name="t.name" :item="t.name" :type="family.ninjaType" />
-                <span v-if="t.unpriced" class="text-right w-faint w-num" title="poe.ninja has no price: counted at the tribe's cheapest">no price</span>
-                <WPrice v-else :chaos="t.chaos" :divine="divine" class="text-right" />
+                <WPrice :chaos="t.unpriced ? null : t.chaos" :divine="divine" class="text-right" none="No poe.ninja price yet: counted at the tribe's cheapest" />
                 <span class="text-right w-num w-dim" title="Chance of this result">{{ pct(t.share) }}</span>
                 <span v-if="t.unpriced" />
                 <span v-else class="text-right w-num" :class="tattooProfitEach(r, t.chaos) > 0 ? 'w-up' : 'w-down'" title="Put in with 2 more like it, per Tattoo"><WPriceText :text="signedAmount(tattooProfitEach(r, t.chaos))" /></span>

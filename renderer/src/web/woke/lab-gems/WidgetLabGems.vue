@@ -63,8 +63,8 @@
           </div>
           <div v-for="g in roll.top" :key="g.name" v-item-tip="gemTip(g.name)" class="w-row" :class="$style.gemGrid" @contextmenu="gemMenu($event, g.name)">
             <img v-if="gemIcon(g.name)" :src="gemIcon(g.name)!" :class="$style.icon" alt="" loading="lazy" decoding="async" draggable="false"><span v-else />
-            <span class="w-trunc w-rarity-gem"><i v-if="thin.has(g.name)" class="fas fa-exclamation-circle w-faint mr-1" :title="THIN_NOTE" />{{ g.name }}</span>
-            <WPrice :chaos="g.chaos ?? 0" :divine="divine" />
+            <span class="w-trunc w-rarity-gem">{{ g.name }}</span>
+            <WPrice :chaos="g.chaos ?? 0" :divine="divine" :thin="thin.has(g.name)" />
           </div>
         </div>
       </template>
@@ -78,15 +78,15 @@
               @contextmenu="gemMenu($event, p.baseName)">
               <span :class="[$style.dot, $style[p.color]]" />
               <span v-item-tip="gemTip(p.baseName)" :class="$style.named"><img v-if="gemIcon(p.baseName)" :src="gemIcon(p.baseName)!" :class="$style.icon" alt="" loading="lazy" decoding="async" draggable="false"><span v-else :class="$style.icon" /><span class="w-trunc">{{ p.baseName }} <i class="fas text-xs w-faint" :class="expanded === p.baseName ? 'fa-chevron-up' : 'fa-chevron-down'" /></span></span>
-              <span class="text-right w-dim" title="Base gem price"><WPrice v-if="p.baseChaos != null" :chaos="p.baseChaos" :divine="divine" /><template v-else>?</template></span>
+              <span class="text-right w-dim" :title="p.baseChaos != null ? 'Base gem price' : undefined"><WPrice :chaos="p.baseChaos" :divine="divine" /></span>
               <WPrice :chaos="value(p)" :divine="divine" />
               <span class="text-right w-up w-num" :title="config.runner ? 'Profit after the base gem and the lab entry' : 'Profit after buying the base gem'">+<WPrice :chaos="profit(p)" :divine="divine" /></span>
             </button>
             <template v-if="expanded === p.baseName">
               <div v-for="v in shownVariants(p)" :key="v.name" v-item-tip="gemTip(v.name)" class="w-row" :class="$style.gemGrid" @contextmenu="gemMenu($event, v.name)">
                 <img v-if="gemIcon(v.name)" :src="gemIcon(v.name)!" :class="$style.icon" alt="" loading="lazy" decoding="async" draggable="false"><span v-else />
-                <span class="w-trunc w-rarity-gem"><i v-if="thin.has(v.name)" class="fas fa-exclamation-circle w-faint mr-1" :title="THIN_NOTE" />{{ v.name }}</span>
-                <WPrice :chaos="v.chaos" :divine="divine" />
+                <span class="w-trunc w-rarity-gem">{{ v.name }}</span>
+                <WPrice :chaos="v.chaos" :divine="divine" :thin="thin.has(v.name)" />
               </div>
             </template>
           </template>
@@ -171,7 +171,6 @@ async function load () {
 }
 watch([league, collector.revision], load, { immediate: true })
 
-const THIN_NOTE = 'Thin market: poe.ninja saw little trade on this gem, so its price may be fake.'
 const thin = computed(() => snapshot.value ? thinGems(snapshot.value.items, props.config.gemState) : new Set<string>())
 
 const allPrices = computed(() => snapshot.value ? gemPrices(snapshot.value.items, props.config.gemState) : new Map<string, number>())

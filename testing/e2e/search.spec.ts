@@ -95,7 +95,7 @@ test('prices are grouped, and the detail shows every variant and its actions', a
   // Filtered out isn't the same as having no price.
   await box.fill('headhunter')
   await panel.getByRole('button', { name: /Corrupted gems are shown/ }).click()
-  await expect(panel.getByText('No poe.ninja price')).toHaveCount(1) // Replica Headhunter only
+  await expect(panel.getByText('No poe.ninja price yet')).toHaveCount(1) // Replica Headhunter only
   await panel.getByRole('button', { name: /Only corrupted gems/ }).click()
   await panel.getByRole('button', { name: /Corrupted gems are hidden/ }).click()
 

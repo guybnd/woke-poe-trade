@@ -1,0 +1,87 @@
+// The shared pieces Guy picked so screens can't drift (one per concept):
+// each renders its one look, and no screen goes back to a hand-rolled copy.
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import path from 'node:path'
+import { createSSRApp, h } from 'vue'
+import type { Component } from 'vue'
+import { renderToString } from 'vue/server-renderer'
+import { describe, expect, it } from 'vitest'
+import WRateChip from '@/web/woke/ui/WRateChip.vue'
+import WPrice from '@/web/woke/ui/WPrice.vue'
+import WThin from '@/web/woke/ui/WThin.vue'
+import { NO_PRICE, THIN_MARKET } from '@/web/woke/ui/format'
+import { RATE_HEAD, RATE_WORD, nextModRating } from '@/web/woke/map-mods/rules'
+
+async function render (c: Component, props: Record<string, unknown> = {}, slots?: Record<string, () => unknown>) {
+  const app = createSSRApp({ render: () => h(c, props, slots as never) })
+  return await renderToString(app)
+}
+
+const WOKE = path.resolve(__dirname, '../../src/web/woke')
+function vueFiles (dir = WOKE): string[] {
+  return readdirSync(dir).flatMap(name => {
+    const p = path.join(dir, name)
+    if (statSync(p).isDirectory()) return name === 'league-invest' ? [] : vueFiles(p)
+    return name.endsWith('.vue') ? [p] : []
+  })
+}
+const rel = (p: string) => path.relative(WOKE, p).replace(/\\/g, '/')
+function offenders (re: RegExp, except: string[] = []) {
+  return vueFiles().filter(p => !except.includes(rel(p)) && re.test(readFileSync(p, 'utf8'))).map(rel)
+}
+
+describe('rating words (WRateChip)', () => {
+  it('says Bad / Care / Want, and a dash when not rated', async () => {
+    expect(RATE_WORD).toEqual({ deadly: 'Bad', warn: 'Care', good: 'Want', ok: '–' })
+    expect(RATE_HEAD.ok).toBe('Not rated')
+    for (const r of ['deadly', 'warn', 'good', 'ok'] as const) {
+      const html = await render(WRateChip, { rating: r })
+      expect(html).toContain(`>${RATE_WORD[r]}</button>`)
+      expect(html).toContain(`data-map-rate="${r}"`)
+    }
+  })
+
+  it('is a plain label when it can\'t be changed', async () => {
+    const html = await render(WRateChip, { rating: 'warn', clickable: false })
+    expect(html).toMatch(/<span class="w-rate w-rate--warn"/)
+    expect(html).not.toContain('<button')
+  })
+
+  it('steps through Bad, Care, Want and back to none', () => {
+    expect(['ok', 'deadly', 'warn', 'good'].map(r => nextModRating(r as never))).toEqual(['deadly', 'warn', 'good', 'ok'])
+  })
+
+  it('is the only rating look: no screen keeps its own words', () => {
+    expect(offenders(/'Avoid'|'Careful'|RATE_BUTTONS|RATING_LABEL|"can't run", warn/)).toEqual([])
+  })
+})
+
+describe('no price (WPrice null)', () => {
+  it('is a dim dash with the reason on hover', async () => {
+    const html = await render(WPrice, { chaos: null })
+    expect(html).toContain('—')
+    expect(html).toContain(`title="${NO_PRICE}"`)
+    expect(await render(WPrice, { chaos: null, none: 'No saved prices yet' })).toContain('title="No saved prices yet"')
+  })
+
+  it('is never written by hand', () => {
+    expect(offenders(/>\s*no price\s*</i)).toEqual([])
+    expect(offenders(/: 'no price'|'No poe\.ninja price'/)).toEqual([])
+  })
+})
+
+describe('thin market (WThin)', () => {
+  it('is a "!" after the price with the reason on hover', async () => {
+    const html = await render(WPrice, { chaos: 5, thin: true })
+    expect(html).toMatch(/chaos\.png[^>]*>.*data-thin[^>]*>!<\/span>/s)
+    expect(html).toContain(`title="${THIN_MARKET}"`)
+    expect(await render(WThin, { title: 'Only 2 days' })).toContain('title="Only 2 days"')
+    // No price: no marker either.
+    expect(await render(WPrice, { chaos: null, thin: true })).not.toContain('data-thin')
+  })
+
+  it('has one look: no faint icon before the name, no ", thin market" words', () => {
+    expect(offenders(/fa-exclamation-circle w-faint/)).toEqual([])
+    expect(offenders(/', thin market'|', few listings'|low confidence<\/span>/)).toEqual([])
+  })
+})

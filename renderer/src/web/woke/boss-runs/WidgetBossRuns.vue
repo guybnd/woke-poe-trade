@@ -18,7 +18,7 @@
             <!-- Your own runs, once you've logged any. -->
             <template v-if="r.kills">
               <div class="flex justify-between" :class="$style.cardStats"><span class="w-dim">Entry</span>
-                <span class="w-down"><template v-if="r.entryMissing.length">?</template><WPrice v-else :chaos="-r.entry" :divine="divine" /></span></div>
+                <span class="w-down"><WPrice :chaos="r.entryMissing.length ? null : -r.entry" :divine="divine" :none="`No poe.ninja price yet for ${r.entryMissing.join(', ')}`" /></span></div>
               <div class="flex justify-between"><span class="w-dim">Your average drop</span><WPrice :chaos="r.myLoot" :divine="divine" /></div>
               <div v-if="r.ready" class="flex justify-between"><span class="w-dim">Per run</span>
                 <span :class="r.profit >= 0 ? 'w-up' : 'w-down'"><WPrice :chaos="r.profit" :divine="divine" /></span></div>
@@ -120,7 +120,6 @@
                     <span v-item-tip="{ name: d.name, type: typeByName.get(d.name) }" class="w-trunc flex items-center gap-1">
                       <WIcon :src="art(d.name)" fallback="fas fa-gem" class="w-line-name" /><span class="w-trunc w-line-name">{{ d.name }}</span><span v-if="d.qty > 1" class="w-dim">×{{ d.qty }}</span>
                       <span v-if="!d.included && !d.tooRare" class="w-line-tag">left out</span>
-                      <i v-if="dropThin(d)" class="fas fa-exclamation-circle w-faint" :title="d.priceSource === 'thin' ? `${thinTitle(dropThin(d)!)} Counted as 0 (Skip low confidence).` : thinTitle(dropThin(d)!)" />
                       <WChip v-if="d.tooRare" :title="`Rarer than 1 in ${config.plannedRuns} runs`">rare</WChip>
                     </span>
                     <span class="text-right w-num" :class="d.rateSource === 'community' ? 'w-dim' : d.rateSource === 'none' ? 'w-faint' : d.rateSource === 'estimate' ? '' : 'w-accent'" :style="d.rateSource === 'estimate' ? 'color: var(--w-warn);' : ''" :title="rateTitle(d.rateSource)">{{ d.chance == null ? '?' : (d.rateSource === 'estimate' ? '~' : '') + pct(d.chance) }}</span>
@@ -130,7 +129,7 @@
                       <input v-if="pricing === d.name" :ref="focusBox" v-model="priceDraft" type="number" min="0" step="any" class="w-input px-1 rounded text-right" style="width: 4.6rem;"
                         :aria-label="`Your price for one ${d.name}, in chaos`" title="Your price for one, in chaos. Enter keeps it, Esc cancels"
                         @keydown.enter.prevent="savePrice(d)" @keydown.esc.prevent.stop="pricing = null" @blur="savePrice(d)">
-                      <WLineNum v-else :mine="d.priceSource === 'custom'" :out="!d.included" :label="`${d.priceSource === 'custom' ? 'Change my' : 'Set my'} price for ${d.name}`" data-boss-price @edit="startPrice(d)"><WPrice :chaos="d.price" :divine="divine" /></WLineNum>
+                      <WLineNum v-else :mine="d.priceSource === 'custom'" :out="!d.included" :label="`${d.priceSource === 'custom' ? 'Change my' : 'Set my'} price for ${d.name}`" data-boss-price @edit="startPrice(d)"><WPrice :chaos="d.price" :divine="divine" :thin="dropThin(d) && (d.priceSource === 'thin' ? `${thinTitle(dropThin(d)!)} Counted as 0 (Skip low confidence).` : thinTitle(dropThin(d)!))" /></WLineNum>
                     </span>
                     <span class="text-right" :class="{ [$style.struck]: !d.included }"><WPrice :chaos="d.chance == null || d.price == null ? null : d.value" :divine="divine" /></span>
                     <span :class="$style.share"><i :style="{ width: (sel.loot > 0 ? d.value / sel.loot * 100 : 0) + '%' }" /></span>

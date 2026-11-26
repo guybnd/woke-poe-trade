@@ -1,5 +1,5 @@
 <template>
-  <UniquesOnBase v-if="list.length" :rows="list" title="Can drop as" :divine="store.prices.divine.value" no-price="—" :limit="LIMIT" :reset-key="facts.baseType">
+  <UniquesOnBase v-if="list.length" :rows="list" title="Can drop as" :divine="store.prices.divine.value" :limit="LIMIT" :reset-key="facts.baseType">
     <template #aside>
       <span class="w-faint" :class="$style.src">{{ store.prices.updatedAt.value ? `poe.ninja · ${agoPhrase(store.prices.updatedAt.value)}` : 'no poe.ninja prices yet' }}</span>
     </template>

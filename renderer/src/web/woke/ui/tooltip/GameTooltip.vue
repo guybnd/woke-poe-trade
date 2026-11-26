@@ -155,9 +155,8 @@
               <span :class="[$style.uniqueName, 'w-trunc']">{{ u.name }}</span>
               <span v-if="u.drop" :class="$style.noDrop" :title="u.drop.title">{{ u.drop.label }}</span>
             </span>
-            <WPrice bulk v-if="u.chaos != null" :chaos="u.chaos" :divine="xchgRate ?? null" />
-            <span v-else class="w-faint">no price</span>
-            <span :class="$style[`g-${u.grade}`]">{{ u.label }}{{ u.thin ? ', thin market' : '' }}</span>
+            <WPrice bulk :chaos="u.chaos" :divine="xchgRate ?? null" :thin="u.thin" />
+            <span :class="$style[`g-${u.grade}`]">{{ u.label }}</span>
           </div>
           <div v-if="moreUniques" class="w-faint">and {{ moreUniques }} more</div>
           <!-- Guy (tooltip audit I7): a boss-only unique can't be chanced, and must say so. -->

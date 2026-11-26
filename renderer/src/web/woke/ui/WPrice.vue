@@ -1,18 +1,20 @@
 <template>
   <span :class="[$style.price, bulkN != null ? $style.bulk : undefined]" class="w-num">
-    <template v-if="chaos == null"><span class="w-faint">—</span></template>
+    <template v-if="chaos == null"><span class="w-faint" :title="none" data-no-price>—</span></template>
     <template v-else-if="bulkN != null">
       1<img src="/images/divine.png" :class="$style.coin" alt="div"><span :class="$style.per">/</span>{{ bulkText }}
     </template>
     <template v-else>
       {{ text }}<img :src="useDivine ? '/images/divine.png' : '/images/chaos.png'" :class="$style.coin" :alt="useDivine ? 'div' : 'c'">
     </template>
+    <WThin v-if="thin && chaos != null" :title="typeof thin === 'string' ? thin : undefined" />
   </span>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { bulkPerDivine, formatAmount, worthADivine } from './format'
+import WThin from './WThin.vue'
+import { bulkPerDivine, formatAmount, NO_PRICE, worthADivine } from './format'
 
 // Shows a chaos value, switching to divines when it is worth at least one.
 // Pass unit to force one, e.g. so "then" and "now" in a row use the same unit.
@@ -25,7 +27,11 @@ const props = withDefaults(defineProps<{
   divine?: number | null
   unit?: 'auto' | 'chaos' | 'div'
   bulk?: boolean
-}>(), { divine: null, unit: 'auto', bulk: false })
+  // No price: a dim "—" with this reason on hover, the same on every screen.
+  none?: string
+  // A thin market: the shared "!" after the price (WThin); a string is its hover.
+  thin?: boolean | string | null
+}>(), { divine: null, unit: 'auto', bulk: false, none: NO_PRICE, thin: false })
 
 const useDivine = computed(() => {
   if (!props.divine || props.chaos == null || props.unit === 'chaos') return false

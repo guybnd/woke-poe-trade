@@ -228,7 +228,7 @@ import { popupAnchor } from '../ui/window-anchor'
 import { defineAsyncComponent, inject, computed, nextTick, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { formatDuration } from '../ui/format'
+import { formatDuration, NO_PRICE } from '../ui/format'
 import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import { WInfo, WPanel, WTabs, WSegmented, WButton, WEmpty, WChip, WSpark, WIcon, WBanner, WSkeleton, WLineActs, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
@@ -542,7 +542,7 @@ function mapMenu (e: MouseEvent, r: MapRun) {
   openMenu(e, mapEntries(r))
 }
 function mapKeys (e: KeyboardEvent, r: MapRun) { lineKeys(e, { out: r.excluded, editable: false }, mapHandlers(r)) }
-const lootWorth = (l: SavedLoot) => l.chaos != null ? `${num(l.chaos * l.qty / (rate(openSession.value!) ?? 1))} ${unitLabel.value}` : 'no price'
+const lootWorth = (l: SavedLoot) => l.chaos != null ? `${num(l.chaos * l.qty / (rate(openSession.value!) ?? 1))} ${unitLabel.value}` : NO_PRICE
 function setPrice (run: number, line: number, chaos: number | null) {
   saveOpen(s => { const l = s.runs[run]?.loot[line]; if (l) setLootPrice(l, chaos) })
 }

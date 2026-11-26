@@ -52,7 +52,7 @@ const pos = computed(() => placed.value
   : { left: '0', top: '0', visibility: 'hidden' as const })
 
 function chaos (n: number | null | undefined) {
-  return n == null ? '?' : `${formatAmount(n)}c`
+  return n == null ? '—' : `${formatAmount(n)}c`
 }
 </script>
 
