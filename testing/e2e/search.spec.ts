@@ -139,7 +139,7 @@ test('prices are grouped, and the detail shows every variant and its actions', a
 
   await box.fill('astral plate')
   await expect(panel.getByRole('button', { name: /Astral Plate/ })).toBeVisible()
-  await expect(panel.getByText('poe.ninja has no price')).toBeVisible()
+  await expect(panel.getByText('poe.ninja has no saved price')).toBeVisible()
   await overlay.snap('search-no-price')
 
   expect(overlay.errors).toEqual([])

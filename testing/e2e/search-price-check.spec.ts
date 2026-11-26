@@ -59,7 +59,7 @@ test('Enter price checks a base with no saved price: Manifold Ring', async ({ ov
   const acts = search.locator('[data-item-actions] button')
   await expect(acts.first()).toContainText('Price check')
   await expect(acts.nth(1)).toContainText('Trade site')
-  await expect(search).toContainText('Alt + Enter')
+  await expect(acts.nth(1).locator('.w-kbd')).toHaveCount(2)
   // Nothing searched until Enter.
   expect(searched).toEqual([])
   await overlay.snap('search base price check button')
