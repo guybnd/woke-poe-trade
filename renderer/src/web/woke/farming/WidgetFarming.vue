@@ -328,6 +328,23 @@ watch(() => props.config.costs, () => { rememberCosts(props.config) }, { deep: t
 // --- Session analytics ---
 const leagues = useLeagues()
 const sessionStore = useSessionStore()
+// Sessions that ended while their file couldn't be written: try again.
+if (props.config.unsaved?.length) {
+  const waiting = props.config.unsaved
+  // One that reached its file after all (and may have been edited since) is
+  // never saved over.
+  sessionStore.load(true).then(async () => {
+    const have = new Set(sessionStore.sessions.value.map(r => r.id))
+    const todo = waiting.filter(r => !have.has(r.id))
+    const done = await Promise.allSettled(todo.map(r => sessionStore.save(r)))
+    const left = todo.filter((_, i) => done[i].status === 'rejected')
+    // Ones that failed again while these were saving stay too.
+    const tried = new Set(waiting.map(r => r.id))
+    const later = (props.config.unsaved ?? []).filter(r => !tried.has(r.id))
+    props.config.unsaved = [...left, ...later]
+    saveConfig()
+  }).catch(() => {})
+}
 // Copies the old history (totals only) into Session analytics once.
 if (!props.config.historyExported) {
   if (!props.config.history.length) {
@@ -388,7 +405,12 @@ function end () {
       divine: divine.value,
       strategy: props.config.strategy
     })
-    sessionStore.save(record).catch(() => {})
+    sessionStore.save(record).catch((err: Error) => {
+      // Kept in settings, so the session and its maps aren't lost.
+      props.config.unsaved = [...(props.config.unsaved ?? []), record]
+      saveConfig()
+      toast(`Couldn't save the session yet: ${err.message}. It will be saved next time.`, { anchor: panel.value?.el })
+    })
     props.config.history.push({
       strategy: sess.strategy || props.config.strategy,
       endedAt: nowTs,

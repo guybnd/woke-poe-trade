@@ -4,6 +4,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { app, shell } from 'electron'
+import { renameRetrying } from './data-files'
 
 export interface FilterFileEntry {
   name: string
@@ -104,22 +105,6 @@ export async function writeFilter (args: { dir?: string, name: string, text: str
   await fs.writeFile(tmp, args.text, 'utf8')
   await renameRetrying(tmp, full)
   return { path: full }
-}
-
-// The game holds the filter open for a moment while it reads it, and Windows
-// refuses to replace an open file.
-async function renameRetrying (from: string, to: string, waits = [50, 150, 400, 1000]): Promise<void> {
-  for (const wait of waits) {
-    try {
-      await fs.rename(from, to)
-      return
-    } catch (e) {
-      const code = (e as NodeJS.ErrnoException).code
-      if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'EACCES') throw e
-      await new Promise(resolve => setTimeout(resolve, wait))
-    }
-  }
-  await fs.rename(from, to)
 }
 
 export async function showFilterFolder (args: { dir?: string }): Promise<void> {

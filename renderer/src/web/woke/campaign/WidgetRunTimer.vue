@@ -183,7 +183,7 @@ export default { widget: widgetRunTimerSpec }
 <script setup lang="ts">
 import { inject, computed, shallowRef, onUnmounted, watch } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
-import { AppConfig, saveConfig } from '@/web/Config'
+import { AppConfig, beforeQuitSave, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { formatClock } from '../ui/format'
@@ -276,6 +276,10 @@ const reviewCmpLabel = computed(() => {
 
 // Each run's zones, levels and deaths, saved in a file of its own.
 const recorder = timelineRecorder()
+// Quitting within the save delay still writes the last steps.
+const flushTimeline = () => { recorder.flush() }
+beforeQuitSave.add(flushTimeline)
+onUnmounted(() => { beforeQuitSave.delete(flushTimeline) })
 // Timelines of runs deleted from Past runs (Undo had its chance last session).
 const trash = (props.config.timelineTrash ?? []).filter(id => id !== props.config.run?.id && !props.config.history.some(r => r.id === id))
 if (trash.length) {

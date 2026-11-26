@@ -7,7 +7,7 @@
 //                                          daily/<YYYY-MM-DD>.json (array)
 import { promises as fs } from 'fs'
 import path from 'path'
-import { dataDir, readJson, safeName, writeAtomic } from './data-files'
+import { dataDir, readJson, readJsonStrict, safeName, writeAtomic } from './data-files'
 import type { WokeHandlers } from '../../../ipc/woke-ops'
 import { priceSeries } from './market-series'
 
@@ -77,14 +77,26 @@ async function saveDaily (league: string, rows: DailyRow[]) {
     if (list) list.push(r)
     else byDate.set(r.date, [r])
   }
-  const days = await loadDaily(league)
+  // Only the days being written are read: loading the whole league here kept
+  // every day of it (about 2 MB each) in memory for the rest of the run, for
+  // every league that ever saved. The history views still load it on demand.
+  const cached = dailyCache.get(league)
+  const days = cached ? await cached.catch(() => null) : null
   for (const [date, fresh] of byDate) {
+    const file = path.join(leagueDir(league), 'daily', `${date}.json`)
+    // Strict: a day file that can't be read right now isn't rewritten with
+    // only this snapshot's rows.
+    const before = days ? days.get(date) : await readJsonStrict<DailyRow[]>(file, [])
     // The latest snapshot of the day wins, item by item.
-    const merged = new Map((days.get(date) ?? []).map(r => [rowKey(r), r]))
+    const merged = new Map((Array.isArray(before) ? before : []).map(r => [rowKey(r), r]))
     for (const r of fresh) merged.set(rowKey(r), r)
     const list = [...merged.values()]
-    days.set(date, list)
-    await writeAtomic(path.join(leagueDir(league), 'daily', `${date}.json`), JSON.stringify(list))
+    days?.set(date, list)
+    await writeAtomic(file, JSON.stringify(list))
+    // A history view may have started reading the league meanwhile, from
+    // before this write: it gets this day as written.
+    const late = dailyCache.get(league)
+    if (late && late !== cached) (await late.catch(() => null))?.set(date, list)
   }
 }
 

@@ -125,7 +125,8 @@ async function readRunDays (run: Run, now: number): Promise<MapRecord[]> {
   const byKey = new Map<string, MapRecord>()
   for (const m of [...days.flat(), ...recent]) {
     const was = byKey.get(m.key)
-    byKey.set(m.key, was ? (m.leftAt > was.leftAt ? m : was) : m)
+    // Later wins a tie: the recent list comes last and holds a map's visits merged.
+    byKey.set(m.key, was ? (m.leftAt >= was.leftAt ? m : was) : m)
   }
   return [...byKey.values()].filter(m => !isSkippedArea(m.name))
 }

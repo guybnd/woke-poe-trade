@@ -39,7 +39,9 @@ let loaded = false
 let pendingWrite = false
 
 async function load () {
-  let list = valid(await (hostRequest('doc-get', DOC) as Promise<unknown>).catch(() => null))
+  // Strict: a file that can't be read right now throws, so this run's first
+  // check never replaces the whole log with one line.
+  let list = valid(await (hostRequest('doc-get-strict', DOC) as Promise<unknown>))
   try {
     const old = localStorage.getItem(OLD_STORAGE_KEY)
     if (old != null) {
@@ -59,11 +61,21 @@ async function load () {
     priceLog.value = list
   }
 }
-load().catch(() => { loaded = true })
+// Until the file has been read, checks stay in memory: tried again a minute
+// later, and on each new check after that.
+let reading = false
+let retry: ReturnType<typeof setTimeout> | null = null
+function tryLoad () {
+  if (loaded || reading) return
+  reading = true
+  if (retry) { clearTimeout(retry); retry = null }
+  load().catch(() => { retry = setTimeout(tryLoad, 60_000) }).finally(() => { reading = false })
+}
+tryLoad()
 
 function write (list: PriceLogEntry[]) {
   priceLog.value = list
-  if (!loaded) { pendingWrite = true; return }
+  if (!loaded) { pendingWrite = true; tryLoad(); return }
   hostRequest('doc-put', { ...DOC, value: list }).catch(() => {})
 }
 

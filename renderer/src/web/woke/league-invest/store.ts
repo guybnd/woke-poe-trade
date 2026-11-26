@@ -23,13 +23,16 @@ export async function loadLeagues (): Promise<LeagueHistory[]> {
     imported = importOldDb()
     imported.catch(() => { imported = null })
   }
-  await imported
+  // The saved files still list when the old import has to wait.
+  await imported.catch(() => {})
   const all = await (hostRequest('doc-list', { collection: COLLECTION }) as Promise<LeagueHistory[]>)
   return all.filter(h => h && typeof h.league === 'string').sort((a, b) => a.start.localeCompare(b.start))
 }
 
 async function importOldDb (): Promise<void> {
-  if (await hostRequest('doc-get', { collection: 'migrations', key: COLLECTION })) return
+  // Strict: a marker that can't be read right now must not bring the old
+  // copies back over newer files. The import is tried again next time.
+  if (await hostRequest('doc-get-strict', { collection: 'migrations', key: COLLECTION })) return
   const old = await readOldDb()
   for (const h of old) await saveLeague(h)
   await hostRequest('doc-put', { collection: 'migrations', key: COLLECTION, value: { at: Date.now(), count: old.length } })

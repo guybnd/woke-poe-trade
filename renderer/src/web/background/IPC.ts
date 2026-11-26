@@ -11,6 +11,11 @@ class HostTransport {
   version = shallowRef('0.0.00000')
   updateInfo = shallowRef<UpdateInfo>({ state: 'initial' })
   configNotice = shallowRef<ConfigNotice | null>(null)
+  // woke: modules can ask main for things while the page is still loading,
+  // before init() has connected (sending then threw, and the request failed).
+  connected = false
+  private markConnected!: () => void
+  readonly whenConnected = new Promise<void>((resolve) => { this.markConnected = resolve })
 
   async init () {
     this.onEvent('MAIN->CLIENT::log-entry', (entry) => {
@@ -33,6 +38,8 @@ class HostTransport {
         onopen: resolve
       })
     })
+    this.connected = true
+    this.markConnected()
   }
 
   selfDispatch (event: IpcEvent) {

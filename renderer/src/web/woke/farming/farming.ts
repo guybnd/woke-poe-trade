@@ -132,6 +132,9 @@ export interface FarmingWidget extends Widget {
   costsByStrategy?: Record<string, CostLine[]>
   // Old `history` was copied into Session analytics' files.
   historyExported?: boolean
+  // Ended sessions whose file couldn't be written yet (antivirus held it):
+  // kept here and saved again the next time the window opens.
+  unsaved?: SessionRecord[]
 }
 
 export interface SellRules { bulkFactor: number, junkBelow: number }

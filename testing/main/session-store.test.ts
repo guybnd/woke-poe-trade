@@ -15,7 +15,7 @@ describe('session store', () => {
   })
 
   it('keeps a session whose new league file could not be written', async () => {
-    const spy = vi.spyOn(fs.promises, 'writeFile').mockRejectedValueOnce(new Error('ENOSPC: no space left on device'))
+    const spy = vi.spyOn(fs.promises, 'open').mockRejectedValueOnce(new Error('ENOSPC: no space left on device'))
     await expect(sessionHandlers['sessions-save']({ session: session('Standard') })).rejects.toThrow('ENOSPC')
     spy.mockRestore()
     expect(fs.existsSync(path.join(dir(), 'Allflame', 's1.json'))).toBe(true)

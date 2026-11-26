@@ -3,10 +3,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const files = new Map<string, unknown>()
+let locked = false
 vi.mock('@/web/woke/shared/host', () => ({
   hostRequest: async (op: string, args: { key: string, value?: unknown }) => {
     await new Promise(resolve => setTimeout(resolve, 5))
-    if (op === 'doc-get') return files.get(args.key) ?? null
+    if (op === 'doc-get-strict' && locked) throw new Error('EBUSY')
+    if (op === 'doc-get' || op === 'doc-get-strict') return files.get(args.key) ?? null
     if (op === 'doc-put') { files.set(args.key, JSON.parse(JSON.stringify(args.value))); return true }
     return true
   }
@@ -15,7 +17,7 @@ vi.mock('@/web/woke/shared/host', () => ({
 const { timelineRecorder } = await import('@/web/woke/campaign/run-timeline-store')
 const { newTimeline, recordStep } = await import('@/web/woke/campaign/run-timeline')
 
-beforeEach(() => { files.clear() })
+beforeEach(() => { files.clear(); locked = false })
 
 describe('timeline recorder', () => {
   it('saves both runs when one batch ends a run and starts the next', async () => {
@@ -30,5 +32,21 @@ describe('timeline recorder', () => {
     const saved = files.get('1') as typeof old
     expect(saved.zones.map(z => z[0])).toEqual(['1_1_1', '1_1_town'])
     expect(rec.current(2)?.zones.map(z => z[0])).toEqual(['1_1_1'])
+  })
+
+  it("never starts a new timeline over one it can't read right now", async () => {
+    vi.useFakeTimers()
+    const old = newTimeline(1)
+    recordStep(old, { kind: 'area', areaId: '1_1_1' }, 0, 1000)
+    files.set('1', old)
+    locked = true
+    const rec = timelineRecorder()
+    rec.record(1, { kind: 'area', areaId: '1_1_town' }, 60_000, 2000)
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect((files.get('1') as typeof old).zones.map(z => z[0])).toEqual(['1_1_1'])
+    locked = false
+    await vi.advanceTimersByTimeAsync(40_000)
+    expect((files.get('1') as typeof old).zones.map(z => z[0])).toEqual(['1_1_1', '1_1_town'])
+    vi.useRealTimers()
   })
 })
