@@ -216,7 +216,7 @@
                  you hold a real amount of them (ledger.ts worthSelling). -->
             <div v-if="showSelling" :class="$style.movesCol" data-goto-spot="worth-selling" data-nw-selling>
               <div :class="$style.sideHead">
-                <button type="button" :class="[$style.foldHead, $style.sideTitle]" :aria-expanded="!fold.selling" :title="fold.selling ? 'Open' : 'Fold'" @click="flipFold('selling')"><i :class="fold.selling ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">Worth selling</span></button>
+                <WFoldHead :model-value="!fold.selling" :class="[$style.foldHead, $style.sideTitle]" :title="fold.selling ? 'Open' : 'Fold'" @update:model-value="flipFold('selling')"><span :class="$style.caps">Worth selling</span></WFoldHead>
                 <span v-if="selling.length" class="w-num text-xs w-dim" :class="$style.sellLost" :title="`What these were worth a week ago, less what they are worth now. ${SELL_RULE}`">{{ div(sellingLost) }}<Coin :chaos="!divine" /> lost this week</span>
               </div>
               <template v-if="!fold.selling">
