@@ -15,6 +15,7 @@ import WRowActs from '@/web/woke/ui/WRowActs.vue'
 import WBackLink from '@/web/woke/ui/WBackLink.vue'
 import WSearchField from '@/web/woke/ui/WSearchField.vue'
 import WNoMatch from '@/web/woke/ui/WNoMatch.vue'
+import WFoldHead from '@/web/woke/ui/WFoldHead.vue'
 import { NO_PRICE, THIN_MARKET } from '@/web/woke/ui/format'
 import { RATE_HEAD, RATE_WORD, nextModRating } from '@/web/woke/map-mods/rules'
 
@@ -156,5 +157,20 @@ describe('search and no match (WSearchField, WNoMatch)', () => {
     // Finders' dropdowns (an item picker, the launcher) say it in one dim line under the box.
     const finders = ['ui/WNoMatch.vue', 'loot-filter/AddItemField.vue', 'loot-filter/ItemSearchField.vue', 'tab-bar/TabBar.vue', 'valdo/ValdoStrip.vue']
     expect(offenders(/Nothing matches "\{\{|No \w+ matches? "\{\{|>No mods match\.<|>Nothing matches\.</, finders)).toEqual([])
+  })
+})
+
+describe('fold (WFoldHead, WFoldCaret)', () => {
+  it('is a chevron that turns when open', async () => {
+    const shut = await render(WFoldHead, { modelValue: false, label: 'Special rules' })
+    expect(shut).toContain('aria-expanded="false"')
+    expect(shut).toContain('fa-chevron-right w-fold-caret"')
+    const open = await render(WFoldHead, { modelValue: true, label: 'Special rules' })
+    expect(open).toContain('w-fold-caret--open')
+    expect(open).toContain('Special rules')
+  })
+
+  it('has one look: no glyph or caret folds', () => {
+    expect(offenders(/\? '▾' : '[▸›]'|'fa-caret-down' : 'fa-caret-right'|'fa-caret-right' : 'fa-caret-down'/)).toEqual([])
   })
 })
