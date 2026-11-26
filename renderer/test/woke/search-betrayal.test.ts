@@ -6,7 +6,7 @@ import type { LookupContext } from '@/web/woke/search/lookups/types'
 
 const ctx: LookupContext = {
   price: () => null,
-  items: [{ type: 'Scarab', name: 'Torment Scarab of Possession', variant: '', chaos: 12 }],
+  items: [{ type: 'AllflameEmber', name: 'Allflame Ember of Toads', variant: '', chaos: 12 }],
   tools: new Set([MECHANICS_TYPE]),
   divine: 200,
   now: 0,
@@ -15,16 +15,16 @@ const ctx: LookupContext = {
 
 describe('betrayalLookup', () => {
   it('shows a member with a reward per division', () => {
-    const [card] = betrayalLookup()('aisling', ctx)
-    expect(card.name).toBe('Aisling')
+    const [card] = betrayalLookup()('cameria', ctx)
+    expect(card.name).toBe('Cameria')
     const rows = card.sections[0].rows!
     expect(rows.map(r => r.label)).toEqual([
-      'Transportation: Double-veiled items',
-      'Fortification: Crafting bench: veiled exalt',
-      'Research: Crafting bench: veiled chaos',
-      'Intervention: Torment Scarabs'
+      'Transportation: Toads Embers',
+      'Fortification: Trapped chest: jewels',
+      'Research: Crafting bench: jewel',
+      'Intervention: Trapped chest: unique axes'
     ])
-    expect(rows[3].chaos).toBe(12)
+    expect(rows[0].chaos).toBe(12)
     expect(card.actions[0]).toEqual({ label: 'Open League mechanics', tool: MECHANICS_TYPE })
   })
   it('finds members by a reward, and follows edited slots', () => {
@@ -36,6 +36,7 @@ describe('betrayalLookup', () => {
     expect(betrayalLookup()('ai', ctx)).toEqual([])
     expect(betrayalLookup()('mageblood', ctx)).toEqual([])
     expect(betrayalLookup()('scarab', ctx)).toEqual([])
+    expect(betrayalLookup()('embers', ctx)).toEqual([])
     expect(betrayalLookup()('crafting bench', ctx)).toEqual([])
   })
 })

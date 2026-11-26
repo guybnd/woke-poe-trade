@@ -48,7 +48,7 @@ const active = computed(() => running.value ? run.value!.mode : null)
 
 function costText (to: string): string {
   const c = cand.value!
-  const pay = c.family.cost(to)
+  const pay = c.family.cost(c.from, to)
   const chaos = swap!.cost(c, to)
   const what = swapCostText(pay)
   const about = pay.estimate ? 'about ' : ''

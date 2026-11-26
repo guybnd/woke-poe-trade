@@ -131,10 +131,12 @@ const groups = computed(() => [
 
 const sel = computed(() => rows.value.find(r => r.map === config.selected) ?? ranked.value.good[0] ?? rows.value[0] ?? null)
 
-// Any tiered map can be the one you run: it needs no orb of its own.
+// The map you run needs no orb of its own, but the game only scries to or
+// from non-unique maps with bonus objectives (poedb Map_Scrying), so the same
+// rule as the targets.
 const fromOptions = computed(() => [
   { value: '', label: 'Not set' },
-  ...(data.value ? scryableMaps(data.value).map(m => ({ value: m, label: mapLabel(m) })) : [])
+  ...(data.value ? scryableMaps(data.value).filter(canScry).map(m => ({ value: m, label: mapLabel(m) })) : [])
 ])
 
 const fromUnpriced = computed(() => !!data.value && !!config.fromMap && fromValue(data.value, config.fromMap, cardPrice.value) == null)

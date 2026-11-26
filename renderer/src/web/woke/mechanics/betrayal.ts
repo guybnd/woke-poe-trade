@@ -1,5 +1,8 @@
 // Immortal Syndicate safehouse rewards for the current league, checked
-// against Exile-UI's betrayal data (data/english/Betrayal.json, July 2026).
+// against Exile-UI's betrayal data (data/english/Betrayal.json, 2026-11-12,
+// 3.30) and the 3.30 patch notes: scarabs are gone, Intervention gives a
+// trapped chest of one class of uniques, the old scarab chests give one
+// Allflame Ember, and Rin's Fortification and Research give Threads.
 // The 3.24 sheet APT ships (renderer/public/images/syndicate.jpg) is out of
 // date. Users can override any slot's text in the widget, so a patch change
 // does not need a release.
@@ -19,30 +22,34 @@ export const MEMBERS = [
 
 // [Transportation, Fortification, Research, Intervention]
 export const REWARDS: Record<string, [string, string, string, string]> = {
-  'Aisling': ['Double-veiled items', 'Crafting bench: veiled exalt', 'Crafting bench: veiled chaos', 'Torment Scarabs'],
-  'Cameria': ['Abyss Scarabs', 'Trapped chest: jewels', 'Crafting bench: jewel', 'Delirium Scarabs'],
-  'Elreon': ['Map fragments', 'Trapped chest: Vaal gear', 'Crafting bench: tainted orbs', 'Beyond Scarabs'],
-  'Gravicius': ['Stack of divination cards', 'Trapped chest: divination cards', 'Swap a divination card for a random one', 'Divination Scarabs'],
-  'Guff': ['Miscellaneous currency', 'Trapped chest: rare gear', 'Crafting bench: reflecting mist', 'Blight Scarabs'],
-  'Haku': ['Unique strongbox', 'Domination Scarabs', 'Crafting bench: influence', 'Ambush Scarabs'],
-  'Hillock': ['Trapped chest: influenced gear', 'Crafting bench: influenced gear', 'Crafting bench: eldritch implicit', 'Influencing Scarabs'],
-  'It That Fled': ['Trapped chest: Foulborn uniques', 'Crafting bench: Breach ring', 'Crafting bench: tainted sockets', 'Breach Scarabs'],
-  'Janus': ['Gold piles', 'Kalguuran Scarabs', 'Unique vendor (gold prices)', 'Expedition Scarabs'],
-  'Jorgin': ['Sulphite Scarabs', 'Trapped chest: Delve gear', 'Crafting bench: talisman', 'Bestiary Scarabs'],
-  'Korell': ['Anarchy Scarabs', 'Crafting bench: essence gear', 'Crafting bench: essences', 'Essence Scarabs'],
-  'Leo': ['Incursion Scarabs', 'Trapped chest: Vaal unique', 'Crafting bench: Djinn Vaal Orb', 'Ultimatum Scarabs'],
-  'Riker': ['Unique items', 'Trapped chest: unique item', 'Crafting bench: Ancient Orb', 'Titanic Scarabs'],
-  'Rin': ['Originator maps', 'Trapped chest: unique map', 'Trapped chest: scarabs', 'Cartography Scarabs'],
-  'Tora': ['Quality gems or experience lens', 'Trapped chest: gem', 'Crafting bench: gem', 'Ritual Scarabs'],
-  'Vagan': ['Trarthan Scarabs', 'Trapped chest: Enshrouded uniques', 'Crafting bench: Chaos Orb and fracture', 'Legion Scarabs'],
-  'Vorici': ['Currency stack', "Crafting bench: jeweller's, chromatic or fusing", 'Crafting bench: chance and scour', 'Harvest Scarabs']
+  'Aisling': ['Double-veiled items', 'Crafting bench: veiled exalt', 'Crafting bench: veiled chaos', 'Trapped chest: unique gloves'],
+  'Cameria': ['Toads Embers', 'Trapped chest: jewels', 'Crafting bench: jewel', 'Trapped chest: unique axes'],
+  'Elreon': ['Divine Embers', 'Trapped chest: Vaal gear', 'Crafting bench: tainted orbs', 'Trapped chest: unique staves'],
+  'Gravicius': ['Stack of divination cards', 'Trapped chest: divination cards', 'Swap a divination card for a random one', 'Trapped chest: unique sceptres and wands'],
+  'Guff': ['Miscellaneous currency', 'Trapped chest: rare gear', 'Crafting bench: reflecting mist', 'Trapped chest: unique shields'],
+  'Haku': ['Unique strongbox', 'Flesh Embers', 'Crafting bench: influence', 'Trapped chest: unique maces'],
+  'Hillock': ['Trapped chest: influenced gear', 'Crafting bench: influenced gear', 'Crafting bench: eldritch implicit', 'Trapped chest: unique body armours'],
+  'It That Fled': ['Trapped chest: Foulborn uniques', 'Crafting bench: Breach ring', 'Crafting bench: tainted sockets', 'Trapped chest: unique amulets'],
+  'Janus': ['Gold piles', 'Gilded Embers', 'Unique vendor (gold prices)', 'Trapped chest: unique rings'],
+  'Jorgin': ['Resplendence Embers', 'Trapped chest: Delve gear', 'Crafting bench: talisman', 'Trapped chest: unique belts'],
+  'Korell': ['Cloister Embers', 'Crafting bench: essence gear', 'Crafting bench: essences', 'Trapped chest: unique boots'],
+  'Leo': ['Multitude Embers', 'Trapped chest: Vaal unique', 'Crafting bench: Djinn Vaal Orb', 'Trapped chest: unique helmets'],
+  'Riker': ['Unique items', 'Ancient Orbs', 'Crafting bench: Ancient Orb', 'Trapped chest: unique items'],
+  'Rin': ['Originator maps', 'Threads', 'Trapped chest: Threads', 'Trapped chest: unique maps'],
+  'Tora': ['Quality gems or experience lens', 'Trapped chest: gem', 'Crafting bench: gem', 'Trapped chest: unique bows'],
+  'Vagan': ['Wildwood Embers', 'Trapped chest: Enshrouded uniques', 'Crafting bench: Chaos Orb and fracture', 'Trapped chest: unique swords'],
+  'Vorici': ['Currency stack', "Crafting bench: jeweller's, chromatic or fusing", 'Trapped chest: Soul Core quality gems', 'Trapped chest: unique daggers and claws']
 }
 
 // How to price a reward: the best poe.ninja item that matches.
 function pricing (reward: string): PriceGroup | null {
-  const scarab = /^(\w+) Scarabs$/.exec(reward)
-  if (scarab) return { label: reward, types: ['Scarab'], match: new RegExp(`\\b${scarab[1]}\\b`) }
+  // "Toads Embers": Allflame Ember of Toads (or "of the Divine").
+  const ember = /^(\w+) Embers$/.exec(reward)
+  if (ember) return { label: reward, types: ['AllflameEmber'], match: new RegExp(`^Allflame Ember of (the )?${ember[1]}$`) }
   switch (reward) {
+    case 'Threads':
+    case 'Trapped chest: Threads': return { label: reward, types: ['Thread', 'Fragment'], match: /^\S+ Thread$/ }
+    case 'Ancient Orbs': return { label: reward, types: ['Currency'], match: /^Ancient Orb$/ }
     case 'Fossils': return { label: reward, types: ['Fossil'] }
     case 'Essences': return { label: reward, types: ['Essence'] }
     case 'Catalysts': return { label: reward, types: ['Currency'], match: /Catalyst$/ }
