@@ -3,7 +3,7 @@
 // are folded to their title line. Pure: no Vue.
 
 export type ColId = 'changes' | 'side'
-export type FoldId = 'chart' | 'perHour' | 'changes' | 'sold' | 'where' | 'moves' | 'selling'
+export type FoldId = 'chart' | 'perHour' | 'changes' | 'sold' | 'where' | 'moves'
 
 export interface PanelLayout {
   // The left half's share of the top row (the chart's side). A new key:
@@ -51,7 +51,7 @@ export function dragTop (top: number, dx: number, widthPx: number): number {
   return widthPx > 0 ? clampTop(top + dx / widthPx) : clampTop(top)
 }
 
-const FOLDS: readonly FoldId[] = ['chart', 'perHour', 'changes', 'sold', 'where', 'moves', 'selling']
+const FOLDS: readonly FoldId[] = ['chart', 'perHour', 'changes', 'sold', 'where', 'moves']
 export function foldedOf (l: PanelLayout | undefined): Record<FoldId, boolean> {
   const list = Array.isArray(l?.folded) ? l.folded : []
   return Object.fromEntries(FOLDS.map(id => [id, list.includes(id)])) as Record<FoldId, boolean>

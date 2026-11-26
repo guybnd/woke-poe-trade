@@ -2,7 +2,7 @@
   <table :class="$style.table">
     <thead>
       <tr>
-        <th v-for="c in COLS" :key="c.id" :class="[c.id === 'name' ? $style.left : '', sort === c.id ? $style.on : '']"
+        <th v-for="c in cols" :key="c.id" :class="[c.id === 'name' ? $style.left : '', sort === c.id ? $style.on : '']"
           :aria-sort="sort === c.id ? (desc ? 'descending' : 'ascending') : undefined" @click="sortBy(c.id)">
           <WSortHead :label="c.label" :active="sort === c.id" :desc="desc" :align="c.id === 'name' ? 'left' : 'right'" @sort="sortBy(c.id)" /><button v-if="(c.id === 'unit' || c.id === 'chaos') && divine" type="button" :class="$style.unitBtn"
             :title="`In ${inChaos(c.id) ? 'chaos' : 'divines'}. Click for ${inChaos(c.id) ? 'divines' : 'chaos'}`"
@@ -37,14 +37,15 @@
           <template v-if="!l.state"><span class="w-num w-dim" :class="$style.pctText">{{ shareText(l.chaos) }}</span><span :class="$style.share"><i :style="{ width: Math.min(100, Math.max(2, share(l.chaos) * 100)) + '%' }" /></span></template>
         </td>
         <td class="w-num" :class="tone(changes.get(l.key))">{{ pct(changes.get(l.key)) }}</td>
+        <td v-if="week" class="w-num" :class="tone(week.get(l.key))" data-nw-week>{{ pct(week.get(l.key)) }}</td>
         <td class="w-dim w-trunc" :class="$style.tab" :title="l.tabIds.length > 1 ? l.tabIds.map(nameOfTab).join(', ') : undefined">{{ tabText(l) }}<WLineActs :name="l.name" :out="l.state === 'ignored'" :entries="entriesOf(l)" :head="e => itemMenuHead(menuOf(l), e)" @out="handlersOf(l).out($event)" /></td>
       </tr>
       <tr v-if="!lines.length">
-        <td colspan="7" class="w-dim" :class="$style.left">
+        <td :colspan="cols.length" class="w-dim" :class="$style.left">
           Nothing matches.<WButton v-if="filtered" size="sm" variant="ghost" @click="emit('clear')">Show all</WButton>
         </td>
       </tr>
-      <tr v-if="more > 0"><td colspan="7" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 200">{{ more }} more</WButton></td></tr>
+      <tr v-if="more > 0"><td :colspan="cols.length" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 200">{{ more }} more</WButton></td></tr>
     </tbody>
   </table>
 </template>
@@ -52,7 +53,7 @@
 <script setup lang="ts">
 // The item table (A1): sortable, the game tooltip on hover (with the tabs that
 // hold it, and poe.ninja's 7-day line), the item menu on right-click.
-import { computed, nextTick, shallowRef } from 'vue'
+import { computed, nextTick, shallowRef, watch } from 'vue'
 import { WButton, WLineActs, WLineNum, lineKeys, lineMenu, openMenu, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui/layer'
 import { formatAmount } from '../ui/format'
@@ -73,6 +74,8 @@ const props = defineProps<{
   tabNames: Map<string, string>
   // A filter is on: the empty row offers to clear it.
   filtered?: boolean
+  // poe.ninja's 7-day change by line key: a 7d column after 24h (the Falling chip).
+  week?: Map<string, number> | null
   // Net worth in chaos: Share is a row's part of it. Without it, of the rows given.
   total?: number
   // Each and Total in divines or chaos: a click on the header's icon swaps.
@@ -100,7 +103,7 @@ const show = (col: Col, chaos: number) => inChaos(col) ? chaosText(chaos) : div(
 // The hover gives the other unit.
 const other = (col: Col, chaos: number) => !props.divine ? undefined : inChaos(col) ? `${div(chaos)} div` : `${chaosText(chaos)} chaos`
 
-type Col = 'name' | 'count' | 'unit' | 'chaos' | 'share' | 'change' | 'tab'
+type Col = 'name' | 'count' | 'unit' | 'chaos' | 'share' | 'change' | 'week' | 'tab'
 const COLS: Array<{ id: Col, label: string }> = [
   { id: 'name', label: 'Item' },
   { id: 'count', label: 'Qty' },
@@ -110,10 +113,13 @@ const COLS: Array<{ id: Col, label: string }> = [
   { id: 'change', label: '24h' },
   { id: 'tab', label: 'Tab' }
 ]
+const cols = computed(() => props.week ? COLS.flatMap(c => c.id === 'change' ? [c, { id: 'week' as const, label: '7d' }] : [c]) : COLS)
 
 const sort = shallowRef<Col>('chaos')
 const desc = shallowRef(true)
 const limit = shallowRef(200)
+// The 7d column gone (Falling off): back to Total.
+watch(() => !!props.week, (on) => { if (!on && sort.value === 'week') { sort.value = 'chaos'; desc.value = true } })
 
 function sortBy (c: Col) {
   if (sort.value === c) desc.value = !desc.value
@@ -130,6 +136,7 @@ const sorted = computed(() => {
       case 'count': return l.count
       case 'unit': return l.unitChaos
       case 'change': return props.changes.get(l.key) ?? NaN
+      case 'week': return props.week?.get(l.key) ?? NaN
       case 'tab': return tabText(l).toLowerCase()
       default: return l.chaos
     }
