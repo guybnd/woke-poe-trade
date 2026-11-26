@@ -1,5 +1,5 @@
 // Net worth's Worth selling: a holding that has been falling all week, held
-// for 1 div or more, is listed beside Where it is with its item tooltip, and
+// for 1 div or more, shows under the table's Falling chip with its item tooltip, and
 // Ctrl+Space answers "sell" with the same list. Every row goes through the
 // tooltip gate (tip-audit.ts).
 import fs from 'fs'
@@ -10,7 +10,7 @@ const LIST = fs.readFileSync(path.join(FIXTURES, 'stash/tab-list.json'), 'utf8')
 const DUMP = fs.readFileSync(path.join(FIXTURES, 'stash/tab-dump.json'), 'utf8')
 const DENSE = '**/poe.ninja/poe1/api/economy/current/dense/overviews*'
 
-test('a holding falling all week shows under Worth selling and in Ctrl+Space', async ({ overlay, fakeApp }) => {
+test('a holding falling all week shows under the Falling chip and in Ctrl+Space', async ({ overlay, fakeApp }) => {
   test.setTimeout(60_000)
   // The fixture's prices, with Headhunter (50 div) down 20% today and 40% on the week.
   const dense = JSON.parse(fixtureText('http/poe.ninja/poe1/api/economy/current/dense/overviews.json'))
@@ -71,25 +71,26 @@ test('a holding falling all week shows under Worth selling and in Ctrl+Space', a
   }
   await expect(panel.getByText('Headhunter').first()).toBeVisible({ timeout: 20_000 })
 
-  const details = panel.getByRole('button', { name: /^Details/ })
-  if (await details.getAttribute('aria-expanded') !== 'true') await details.click()
-  const selling = panel.locator('[data-nw-selling]')
-  await expect(selling).toContainText('Worth selling')
-  const row = selling.locator('[data-hold-line]', { hasText: 'Headhunter' })
-  await expect(row).toContainText('−20% · 7d −40%')
-  await expect(selling).toContainText('lost this week')
+  // The Falling chip on the table: only what's worth selling, with a 7d column.
+  const chip = panel.locator('[data-nw-falling]')
+  await expect(chip).toHaveText('Falling 1')
+  const rows = panel.locator('[data-nw-row]')
+  const all = await rows.count()
+  expect(all).toBeGreaterThan(1)
+  await chip.click()
   // Steady items aren't listed.
-  await expect(selling.locator('[data-hold-line]')).toHaveCount(1)
-  await row.locator('[data-item-tip]').hover()
+  await expect(rows).toHaveCount(1)
+  const row = rows.first()
+  await expect(row).toContainText('Headhunter')
+  await expect(row.locator('[data-nw-week]')).toHaveText('−40.0%')
+  await row.locator('[data-item-tip]').first().hover()
   await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
   await overlay.snap('worth selling')
   await overlay.page.mouse.move(0, 0)
-
-  // Folded, it keeps its title.
-  await selling.getByRole('button', { name: 'Worth selling' }).click()
-  await expect(selling.locator('[data-hold-line]')).toHaveCount(0)
-  await selling.getByRole('button', { name: 'Worth selling' }).click()
-  await expect(selling.locator('[data-hold-line]')).toHaveCount(1)
+  // Off again: every item, no 7d column.
+  await chip.click()
+  await expect(rows).toHaveCount(all)
+  await expect(panel.locator('[data-nw-week]')).toHaveCount(0)
 
   // Ctrl+Space reads the list the read saved. With the overlay open, typing
   // opens it.

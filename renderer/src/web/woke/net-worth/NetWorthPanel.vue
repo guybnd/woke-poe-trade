@@ -214,21 +214,6 @@
                 <span :class="$style.catName"><img v-if="c.icon" :src="c.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
               </button>
             </div>
-            <!-- Worth selling: holdings that have started losing value while
-                 you hold a real amount of them (ledger.ts worthSelling). -->
-            <div v-if="showSelling" :class="$style.movesCol" data-goto-spot="worth-selling" data-nw-selling>
-              <div :class="$style.sideHead">
-                <button type="button" :class="[$style.foldHead, $style.sideTitle]" :aria-expanded="!fold.selling" :title="fold.selling ? 'Open' : 'Fold'" @click="flipFold('selling')"><i :class="fold.selling ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">Worth selling</span></button>
-                <span v-if="selling.length" class="w-num text-xs w-dim" :class="$style.sellLost" :title="`What these were worth a week ago, less what they are worth now. ${SELL_RULE}`">{{ div(sellingLost) }}<Coin :chaos="!divine" /> lost this week</span>
-              </div>
-              <template v-if="!fold.selling">
-                <HoldLine v-for="s in selling.slice(0, SELL_ROWS)" :key="s.key" :icon="s.icon" :name="s.name" :text="`${s.count > 1 ? `${fmt(s.count)} × ` : ''}${s.name}`" :tip="tipFor(tips, s.key, s.name, s.count)"
-                  :mine="holdOf(s.key)?.mine" :out="ignoredKeys.has(s.key)" :each="holdOf(s.key)?.unitChaos ?? null" :title="sellTitle(s)"
-                  @price="onPrice(s.key, $event)" @out="onIgnore(s.key, s.name, $event)"><span class="w-down" :class="$style.sellTrend">{{ pct0(s.d1) }} · 7d {{ pct0(s.d7) }}</span> {{ div(s.chaos) }}<Coin :chaos="!divine" /></HoldLine>
-                <div v-if="selling.length > SELL_ROWS" :class="$style.more" :title="selling.slice(SELL_ROWS).map(sellText).join('\n')">+{{ selling.length - SELL_ROWS }} more</div>
-                <div v-if="!selling.length" :class="$style.more" :title="SELL_RULE">Nothing you hold much of is falling</div>
-              </template>
-            </div>
             <div v-if="showMoves" :class="$style.movesCol">
               <button type="button" :class="[$style.foldHead, $style.sideTitle]" :aria-expanded="!fold.moves" :title="fold.moves ? 'Open' : 'Fold'" @click="flipFold('moves')"><i :class="fold.moves ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">Price moves today</span></button>
               <HoldLine v-for="m in fold.moves ? [] : moves.slice(0, 8)" :key="m.key" :icon="m.icon" :name="m.name" :text="m.name" :tip="tipFor(tips, m.key, m.name)"
@@ -271,7 +256,10 @@
 
       <section :class="$style.chips">
         <WSearchField v-model="query" things="items" :class="$style.search" />
-        <WChip v-if="changedCount" clickable :active="onlyChanged" :title="onlyChanged ? 'Show every item' : 'Only the items you priced yourself or left out'" data-nw-changed @click="onlyChanged = !onlyChanged">Changed {{ changedCount }}</WChip>
+        <WChip v-if="changedCount" clickable :active="onlyChanged" :title="onlyChanged ? 'Show every item' : 'Only the items you priced yourself or left out'" data-nw-changed @click="onlyChanged = !onlyChanged; onlyFalling = false">Changed {{ changedCount }}</WChip>
+        <!-- Worth selling (pick B, rule R1): what you hold 1 div or more of
+             that has been falling all week (ledger.ts worthSelling). -->
+        <WChip v-if="selling.length || sellRevealed" clickable :active="onlyFalling" :title="fallingTitle" data-goto-spot="worth-selling" data-nw-falling @click="onlyFalling = !onlyFalling; onlyChanged = false">Falling {{ selling.length }}</WChip>
         <WChip v-if="cat !== 'all'" clickable active :title="`Only ${catLabel}. Click to show every category`" @click="cat = 'all'">{{ catLabel }} ×</WChip>
         <HideChip v-if="divine" :value="hideBelow" :on="config.hideDivOn === true" :idle="floor.limiting === 'chaos'"
           :title="floor.limiting === 'chaos' ? 'The chaos limit is higher, so it is the one hiding rows' : 'Hide rows worth less in total. Scroll the number or click it to type'"
@@ -280,7 +268,7 @@
           :title="floor.limiting === 'div' ? 'The divine limit is higher, so it is the one hiding rows' : 'Hide rows worth less in total. Scroll the number or click it to type'"
           @on="config.hideChaosOn = $event" @value="config.hideBelowChaos = $event" />
       </section>
-      <ItemTable :lines="tableLines" :total="v?.chaos" :units="config.tableUnits" :filtered="cat !== 'all' || tabs.length > 0 || !!query.trim() || floor.minChaos > 0" :divine="divine" :changes="changes" :tab-names="tabNames"
+      <ItemTable :lines="tableLines" :total="v?.chaos" :units="config.tableUnits" :week="onlyFalling ? fallingWeek : null" :filtered="onlyFalling || cat !== 'all' || tabs.length > 0 || !!query.trim() || floor.minChaos > 0" :divine="divine" :changes="changes" :tab-names="tabNames"
         @units="config.tableUnits = $event" @clear="clearFilters" @price="onPrice" @ignore="onIgnore" />
       <!-- Teaches the row's clicks until one is used (shared/hints.ts, ui/line-item.ts). -->
       <WTipLine v-if="tableLines.length" :id="LINE_HINT">
@@ -324,7 +312,7 @@ import { stashGainsBetween } from './gains'
 import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
 import { change24h, sellMinChaos, worthSelling, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
-import type { ChartRange, PriceMove, SellLine } from './ledger'
+import type { ChartRange, PriceMove } from './ledger'
 import { SELL_REVEAL_MS, sellingRevealedAt } from './selling-reveal'
 import { divine, gainsNow, historyNow, leagueNow, ledger, pricePrefs, ratesAt, setIgnored, setMyPrice, setSpendMark, summary, tabValues, valuation, wantPrices } from './store'
 import { markAction, resolveSpends } from './spend'
@@ -509,9 +497,8 @@ function openSections (e: MouseEvent) {
 // Their widths, the chart's height can be dragged;
 // a drag shows a draft and saves once, when it ends.
 const showMoves = computed(() => shown.value.moves && moves.value.length > 0)
-const showSelling = computed(() => shown.value.selling && (selling.value.length > 0 || sellRevealed.value))
 const showSold = computed(() => shown.value.sold && recentSales.value.length > 0)
-const showSide = computed(() => shown.value.where || showMoves.value || showSelling.value || showSold.value)
+const showSide = computed(() => shown.value.where || showMoves.value || showSold.value)
 const colIds = computed<ColId[]>(() => [
   showChanges.value ? 'changes' : null,
   showSide.value ? 'side' : null
@@ -537,8 +524,7 @@ function flipFold (id: FoldId) {
 // The middle row: a dragged height, its lists scrolling inside. Every
 // section in it folded: as short as their titles.
 const midAllFolded = computed(() => (!showChanges.value || fold.value.changes) &&
-  (!showSold.value || fold.value.sold) && (!shown.value.where || fold.value.where) && (!showMoves.value || fold.value.moves) &&
-  (!showSelling.value || fold.value.selling))
+  (!showSold.value || fold.value.sold) && (!shown.value.where || fold.value.where) && (!showMoves.value || fold.value.moves))
 const midHShown = computed(() => draft.value?.midH ?? midHOf(props.config.layout))
 const midFixed = computed(() => midHShown.value != null && !midAllFolded.value)
 const sameIds = (a: readonly ColId[], b: readonly ColId[]) => a.length === b.length && a.every((x, i) => x === b[i])
@@ -604,7 +590,7 @@ function resetLayout (part: keyof PanelLayout) {
   // Left unset, each size falls back to its default (layout.ts).
   props.config.layout = { ...props.config.layout, [part]: undefined }
 }
-const anyDetails = computed(() => shown.value.chart || shown.value.perHour || shown.value.numbers || shown.value.moves || shown.value.selling || shown.value.changes || shown.value.where || showSold.value)
+const anyDetails = computed(() => shown.value.chart || shown.value.perHour || shown.value.numbers || shown.value.moves || shown.value.changes || shown.value.where || showSold.value)
 // Tab labels switched off: a tab pick nothing shows any more is dropped.
 watch(() => shown.value.tabs, (on) => { if (!on) tabs.value = [] })
 // "Since last refresh" only when it has something.
@@ -636,14 +622,18 @@ const changes = computed(() => new Map((v.value?.lines ?? []).map(l => [l.key, l
 const moves = computed(() => priceMoves(v.value?.lines ?? [], k => changes.value.get(k) ?? null).filter(m => Math.abs(toDiv(m.valueChaos)) >= 0.1))
 
 // ---------- worth selling ----------
-const SELL_ROWS = 5
+// The Falling chip on the table: only these rows, with a 7d column.
 const SELL_RULE = 'Down 5% today and 15% over 7 days (or 20% today with the week down too), 1 div or more held. Thin markets, held prices and your own prices are left out'
 const selling = computed(() => worthSelling(v.value?.lines ?? [], sellMinChaos(divine.value)))
 const sellingLost = computed(() => selling.value.reduce((s, x) => s + x.lostChaos, 0))
-const pct0 = (c: number) => `${c > 0 ? '+' : c < 0 ? '−' : ''}${Math.abs(Math.round(c * 100))}%`
-const sellTitle = (s: SellLine) => `Worth ${div(s.chaos)} ${unit.value} now, ${div(s.chaos + s.lostChaos)} ${unit.value} a week ago (${inChaos(s.chaos)}). Click to set your price`
-const sellText = (s: SellLine) => `${s.name} ${pct0(s.d1)} · 7d ${pct0(s.d7)} (${div(s.chaos)} ${unit.value})`
-// Show me (What's new) opens it for a minute even when nothing qualifies.
+const fallingKeys = computed(() => new Set(selling.value.map(x => x.key)))
+const fallingWeek = computed(() => new Map(selling.value.map(x => [x.key, x.d7])))
+const onlyFalling = shallowRef(false)
+watch(() => selling.value.length, (n) => { if (!n) onlyFalling.value = false })
+const fallingTitle = computed(() => selling.value.length
+  ? `${onlyFalling.value ? 'Show every item' : 'Only what is worth selling'}: ${div(sellingLost.value)} ${unit.value} lost this week. ${SELL_RULE}`
+  : `Nothing you hold much of is falling. ${SELL_RULE}`)
+// Show me (What's new) shows the chip for a minute even when nothing qualifies.
 const sellRevealed = computed(() => now.value - sellingRevealedAt.value < SELL_REVEAL_MS)
 
 // ---------- what changed (C2, C1) ----------
@@ -749,6 +739,7 @@ const cat = shallowRef<Category | 'all'>('all')
 const tabs = shallowRef<string[]>([])
 function clearFilters () {
   onlyChanged.value = false
+  onlyFalling.value = false
   cat.value = 'all'
   tabs.value = []
   query.value = ''
@@ -843,6 +834,7 @@ const tableLines = computed(() => {
   if (!val) return []
   const f = { cat: cat.value, tabs: tabs.value, query: query.value, minChaos: floor.value.minChaos }
   if (onlyChanged.value) return changedLines.value
+  if (onlyFalling.value) return filterLines(val.lines.filter(l => fallingKeys.value.has(l.key)), { ...f, minChaos: 0 })
   const out = showIgnored.value ? val.ignoredLines : val.ignoredLines.filter(l => justOut.value.has(l.key))
   const extra = [...(showUnpriced.value ? val.unpricedLines : []), ...out]
   return [...filterLines(val.lines, f), ...filterLines(extra, { ...f, minChaos: 0 })]
@@ -1119,8 +1111,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .boxHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 .sideCol { display: flex; flex-direction: column; gap: var(--w-s3); }
 .movesCol { display: flex; flex-direction: column; gap: 2px; }
-.sellLost { margin-left: auto; }
-.sellTrend { font-size: var(--w-fs-xs); margin-right: 4px; }
 .more { font-size: var(--w-fs-xs); color: var(--w-dim); }
 .split { position: relative; display: flex; height: 8px; border: 1px solid var(--w-line); border-radius: 2px; }
 .split > span:not(.splitLabel) { flex-basis: 0; position: relative; transition: opacity 0.1s; }
