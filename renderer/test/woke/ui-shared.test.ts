@@ -174,3 +174,11 @@ describe('fold (WFoldHead, WFoldCaret)', () => {
     expect(offenders(/\? '▾' : '[▸›]'|'fa-caret-down' : 'fa-caret-right'|'fa-caret-right' : 'fa-caret-down'/)).toEqual([])
   })
 })
+
+describe('settings switches (WToggle)', () => {
+  it('on/off settings are switches, not raw checkboxes', () => {
+    const files = ['essence-scan/essence-scan-editor.vue', 'loot-filter/loot-filter-editor.vue', 'map-mods/map-mods-editor.vue', 'ui/PerfSettings.vue']
+    const raw = vueFiles().filter(p => files.includes(rel(p)) && /type="checkbox"/.test(readFileSync(p, 'utf8'))).map(rel)
+    expect(raw).toEqual([])
+  })
+})

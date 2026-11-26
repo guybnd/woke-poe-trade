@@ -25,14 +25,11 @@
       </label>
     </div>
 
-    <label class="flex items-center gap-2">
-      <input v-model="reloadViaChat" type="checkbox">
-      <span>After saving, type <code>/itemfilter &lt;name&gt;</code> in chat so the game reloads the filter</span>
-    </label>
-    <label class="flex items-center gap-2 ml-6">
-      <input v-model="reloadWhenSafe" type="checkbox" :disabled="!reloadViaChat">
-      <span class="flex items-center gap-2">Quick fixes reload at once only in town or hideout <w-info text="Elsewhere they wait for &quot;Reload now&quot;. Automatic saves always wait: GGG's rules need a key press or click for every command." /></span>
-    </label>
+    <WToggle v-model="reloadViaChat">After saving, type <code>/itemfilter &lt;name&gt;</code> in chat so the game reloads the filter</WToggle>
+    <div class="flex items-center gap-2 ml-6">
+      <WToggle v-model="reloadWhenSafe" :disabled="!reloadViaChat">Quick fixes reload at once only in town or hideout</WToggle>
+      <w-info text="Elsewhere they wait for &quot;Reload now&quot;. Automatic saves always wait: GGG's rules need a key press or click for every command." />
+    </div>
 
     <div class="flex items-center gap-2 w-dim text-sm">
       How your edits are kept
@@ -45,12 +42,13 @@
 import { computed, defineComponent } from 'vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
 import WInfo from '../ui/WInfo.vue'
+import WToggle from '../ui/WToggle.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
 import type { LootFilterWidget } from './widget'
 
 export default defineComponent({
   name: 'Loot filter',
-  components: { WHotkeyCell, WInfo },
+  components: { WHotkeyCell, WInfo, WToggle },
   props: configProp<LootFilterWidget>(),
   setup (props) {
     return {

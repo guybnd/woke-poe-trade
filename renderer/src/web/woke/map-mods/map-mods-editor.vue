@@ -6,10 +6,7 @@
       <span>Hotkey: paste map regex into stash search</span>
       <w-hotkey-cell v-model="regexHotkey" />
     </div>
-    <label class="flex items-center gap-2">
-      <input type="checkbox" v-model="stripOnPriceCheck">
-      <span>Show the verdict strip on price check and item info</span>
-    </label>
+    <WToggle v-model="stripOnPriceCheck">Show the verdict strip on price check and item info</WToggle>
 
     <section v-if="scanOwner" class="flex flex-col gap-2" data-testid="map-scan-settings">
       <span class="w-group-label flex items-center gap-2" style="padding: 0;">Map scan <w-info text="Reads the tooltip of the map under your mouse on screen and puts the active profile's verdict next to it. No key press per map.
@@ -23,10 +20,7 @@
         <span>Hotkey: rolling mode (lock onto the hovered map)</span>
         <w-hotkey-cell v-model="scanRollHotkey" />
       </div>
-      <label class="flex items-center gap-2">
-        <input type="checkbox" v-model="scanAlertOnPass">
-        <span>Flash when a reroll turns a map into a "run"</span>
-      </label>
+      <WToggle v-model="scanAlertOnPass">Flash when a reroll turns a map into a "run"</WToggle>
     </section>
 
     <section class="flex flex-col gap-2">
@@ -67,6 +61,7 @@
 <script lang="ts">
 import { defineComponent, computed, watch } from 'vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
+import WToggle from '../ui/WToggle.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
 import { WButton, WField, WInfo, WSelect } from '../ui'
 import { everyStatLine } from './data'
@@ -88,7 +83,7 @@ const WEIGHT_LABELS: Record<keyof JuiceWeights, string> = {
 
 export default defineComponent({
   name: 'Map mods',
-  components: { WHotkeyCell, WButton, WField, WInfo, WSelect },
+  components: { WHotkeyCell, WToggle, WButton, WField, WInfo, WSelect },
   props: configProp<MapModsWidget>(),
   setup (props) {
     // Normalize in a watcher, never inside a computed: writes from a computed
