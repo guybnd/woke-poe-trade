@@ -42,6 +42,7 @@ describe('unique mod search', () => {
   it('waits for 4 letters, words must start words, numbers are ignored', () => {
     expect(searchMods(index, 'rar')).toEqual([])
     expect(searchMods(index, 'arity')).toEqual([])
+    expect(searchMods(index, 'a b c d')).toEqual([])
     expect(modQueryWords('30% item rarity')).toEqual(['item', 'rarity'])
     expect(searchMods(index, '30% item rarity').length).toBe(searchMods(index, 'item rarity').length)
   })

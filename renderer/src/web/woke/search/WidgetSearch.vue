@@ -437,7 +437,10 @@ function loadModIndex () {
     .catch(() => {})
     .finally(() => { if (mine === modGen) modLoading = false })
 }
-watch(query, (q) => { if (open.value && q.trim().length >= 4) loadModIndex() })
+const wantsMods = () => open.value && query.value.trim().length >= 4
+watch([query, open], () => { if (wantsMods()) loadModIndex() })
+// Unique names with any poe.ninja row, whatever the filter.
+const pricedUniques = computed(() => new Set((snapshot.value?.items ?? []).filter(i => /^Unique/.test(i.type)).map(i => i.name)))
 // Unique items by their English name, for hits with no price.
 let uniqueRefsFrom: BaseType[] | null = null
 let uniqueRefs = new Map<string, BaseType>()
@@ -460,10 +463,11 @@ function modSection (q: string, items: readonly PriceItem[], shown: ReadonlySet<
     const h = byName.get(name)
     return h && { line: h.line, parts: ms.mod.litParts(h.line, q), kind: h.kind, pool: h.pool }
   }
-  const rankOf = (name: string) => byName.get(name)?.rank ?? 9
+  // Closest match first, a jewel that only can roll it after, then dearest.
+  const rankOf = (name: string) => { const h = byName.get(name); return h ? h.rank + (h.pool ? 2 : 0) : 9 }
   const groups = namedUniquePrices(items, new Set(byName.keys()), { corrupted: corrupted.value, limit: Infinity })
     .sort((a, b) => rankOf(a.name) - rankOf(b.name) || b.high - a.high)
-  const priced = new Set(items.filter(i => /^Unique/.test(i.type)).map(i => i.name))
+  const priced = pricedUniques.value
   const entries: Entry[] = groups.filter(g => !shown.has(groupKey(g))).map(g => {
     const m = mark(g.name)!
     return { ...priceEntry(g), sub: m.line, mod: m }
@@ -472,7 +476,8 @@ function modSection (q: string, items: readonly PriceItem[], shown: ReadonlySet<
     if (priced.has(h.unique)) continue
     const info = uniqueByRef(h.unique)
     if (!info) continue
-    entries.push({ kind: 'item', id: `i:${info.namespace}:${info.name}`, name: info.name, sub: h.line, info, mod: mark(h.unique) })
+    if (shown.has(`i:${info.namespace}:${info.name}`)) continue
+    entries.push({ kind: 'item', id: `m:${info.namespace}:${info.name}`, name: info.name, sub: h.line, info, mod: mark(h.unique) })
   }
   return { label: MOD_GROUP, entries: entries.slice(0, PRICE_GROUP_LIMIT), capped: entries.length > PRICE_GROUP_LIMIT }
 }
@@ -915,6 +920,7 @@ const stopDataWatch = onSharedDataChange(() => {
   modSearch.value = null
   modGen++
   modLoading = false
+  if (wantsMods()) loadModIndex()
   detailLoading = false
   if (detailName.value) loadDetailPack()
   tipItems.value = null
@@ -1047,7 +1053,7 @@ const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: b
     items: [
       { label: 'Prices', entries: groups.map(priceEntry) as Entry[], capped: groups.length >= PRICE_GROUP_LIMIT },
       { label: bases.length === 1 ? `Uniques on ${bases[0].name}` : 'Uniques on these bases', entries: onBase.map(g => onBaseEntry(g, shownBases)) as Entry[] },
-      modSection(q, items, new Set([...listed, ...onBase.map(groupKey)])),
+      modSection(q, items, new Set([...listed, ...onBase.map(groupKey), ...other.map(e => e.id)])),
       { label: 'Other items', entries: other as Entry[] }
     ],
     cards: cardSections(cards, null, ['Answer', 'Search the web']),

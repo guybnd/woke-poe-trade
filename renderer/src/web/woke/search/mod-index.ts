@@ -82,7 +82,8 @@ export function buildModIndex (
 // "rarity"), and too few letters gives none.
 export function modQueryWords (query: string): string[] {
   const words = wordsOf(norm(query)).filter(w => !/^\d+$/.test(w))
-  return words.join('').length >= MOD_QUERY_MIN ? words : []
+  // "a b c d" is four letters but matches nearly every line: one word needs 3.
+  return words.join('').length >= MOD_QUERY_MIN && words.some(w => w.length >= 3) ? words : []
 }
 
 // One hit per unique, its best line: every query word starts a word of the
