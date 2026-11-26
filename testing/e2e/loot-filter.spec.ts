@@ -1226,7 +1226,7 @@ test('profiles: copy the filter as a named profile that saves to its own file, a
   await overlay.boot({ widgets: [lootFilter(folder)] })
   await openEditor(overlay, fakeApp)
   const page = overlay.page
-  const first = page.getByRole('tab', { name: 'NeverSink', exact: true }).first()
+  const first = page.getByRole('tab', { name: 'Profile NeverSink', exact: true })
   await expect(first).toHaveAttribute('aria-selected', 'true', { timeout: 20_000 })
   await page.getByRole('button', { name: 'New profile' }).click()
   await expect(page.getByText('Copy of “NeverSink”')).toBeVisible()
@@ -1238,7 +1238,7 @@ test('profiles: copy the filter as a named profile that saves to its own file, a
   await name.fill('Bossing')
   await overlay.snap('naming a new profile')
   await page.getByRole('button', { name: 'Add', exact: true }).click()
-  const boss = page.getByRole('tab', { name: 'Bossing', exact: true })
+  const boss = page.getByRole('tab', { name: 'Profile Bossing', exact: true })
   await expect(boss).toHaveAttribute('aria-selected', 'true', { timeout: 20_000 })
   await expect.poll(() => fs.existsSync(path.join(folder, 'Bossing (woke).filter')), { timeout: 20_000 }).toBe(true)
   await overlay.snap('switched to Bossing')

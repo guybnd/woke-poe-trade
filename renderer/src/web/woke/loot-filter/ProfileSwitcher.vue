@@ -1,6 +1,6 @@
 <template>
   <div ref="root" :class="$style.strip" data-goto-spot="profiles" role="tablist" aria-label="Profiles">
-    <button v-for="p in config.profiles" :key="p.id" type="button" role="tab" class="w-focusable" :aria-selected="p.id === config.activeProfile"
+    <button v-for="p in config.profiles" :key="p.id" type="button" role="tab" class="w-focusable" :aria-selected="p.id === config.activeProfile" :aria-label="`Profile ${p.name}`"
       :class="[$style.tab, { [$style.on]: p.id === config.activeProfile }]" :disabled="store.switching.value && p.id !== config.activeProfile"
       :title="tipOf(p)" @click="swap(p.id)" @contextmenu="tabMenu($event, p)">
       <i v-if="switchingTo === p.id" class="fas fa-spinner fa-spin" aria-hidden="true" />
