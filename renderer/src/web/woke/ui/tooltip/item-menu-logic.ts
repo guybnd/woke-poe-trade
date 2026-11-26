@@ -252,8 +252,8 @@ export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType
 }
 
 // Priced by what the copy says, which a name can't stand for: a Scrying Orb's
-// map, a warrant's mercenary, a Viscera's slot.
-const NOT_BY_NAME = new Set(['Scrying Orb', 'Mercenary Warrant', 'Viscera'])
+// map, a warrant's mercenary, a Viscera's slot, an Ultimatum's or a bottle's reward.
+const NOT_BY_NAME = new Set(['Scrying Orb', 'Mercenary Warrant', 'Viscera', 'Inscribed Ultimatum', 'Message in a Bottle'])
 
 // Bases priced as a white copy, by base type, as a real copy of one is: at
 // item level 86 (cluster jewels: the 84+ bracket), its chip ticked; one click

@@ -1568,6 +1568,11 @@ function noPriceNote (entry: ItemEntry) {
   return canPriceCheck(entry) ? `${why} Price check looks up live listings.` : `${why} Trade site lists it.`
 }
 function canPriceCheck (entry: PriceEntry | ItemEntry) {
+  // A Foulborn unique (its row, or a Foulborn kind picked under it): the item
+  // data has none, so the price check would price the plain one. The trade site
+  // searches Foulborn copies.
+  const name = entry.kind === 'price' ? entry.group.name : entry.name
+  if (isFoulborn(name) || (pickedFoul.value != null && detailName.value === baseUniqueName(name))) return false
   const info = infoFor(entry)
   return info?.namespace === 'UNIQUE' || visceraOf(entry) != null || canCheckByName(menuRef(entry), info)
 }

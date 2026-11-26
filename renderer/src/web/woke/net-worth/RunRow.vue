@@ -102,7 +102,7 @@ const handlers = {
 }
 const entries = computed(() => lineMenu(state.value, handlers))
 // The item header over the menu, as the item's own right-click shows it.
-const headOf = (e: MouseEvent) => props.tip ? itemMenuHead({ name: props.tip.name, type: props.tip.type, variant: props.tip.variant }, e) : null
+const headOf = (e: MouseEvent) => props.tip ? itemMenuHead(props.tip.menu ?? { name: props.tip.name, type: props.tip.type, variant: props.tip.variant }, e) : null
 function onMenu (e: MouseEvent) {
   // The open editor's own boxes and buttons keep the browser's menu.
   if (!entries.value.length || (e.target as Element).closest('input, [data-run-editor]')) return

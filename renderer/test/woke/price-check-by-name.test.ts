@@ -16,6 +16,7 @@ import { parseClipboard } from '@/parser'
 import { createPresets } from '@/web/price-check/filters/create-presets'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { kindOf, priceCheckInput } from '@/web/woke/ui/tooltip/item-menu-logic'
+import { frameRarity, lineTip } from '@/web/woke/net-worth/tips'
 /* eslint-enable import-x/first */
 
 beforeAll(loadGameData)
@@ -35,7 +36,7 @@ function query (name: string) {
 
 // What can't be priced by name: each needs something only a real copy says.
 const CANT = new Set([
-  'Scrying Orb', 'Mercenary Warrant', 'Viscera', 'Timeless Jewel', 'Map', 'Blighted Map', 'Blight-ravaged Map'
+  'Scrying Orb', 'Mercenary Warrant', 'Viscera', 'Inscribed Ultimatum', 'Message in a Bottle', 'Timeless Jewel', 'Map', 'Blighted Map', 'Blight-ravaged Map'
 ])
 const CANT_CATEGORY = new Set(['Viscera', 'Chart', 'Heist Blueprint', 'Unique Fragment'])
 
@@ -65,6 +66,13 @@ describe('price check by name', () => {
     const info = ITEM_BY_REF('ITEM', 'Two-Stone Ring')![0]
     expect(priceCheckInput({ name: 'Dread Shell', base: 'Two-Stone Ring' }, 'item', info)).toBeNull()
     expect(priceCheckInput({ name: 'Two-Stone Ring', rarity: 'rare' }, 'item', info)).toBeNull()
+    // A Net worth line of a rare in the stash is named by its base.
+    const menu = lineTip({ tipName: 'Two-Stone Ring', frame: 2 }).menu!
+    expect(menu.rarity).toBe('rare')
+    expect(priceCheckInput(menu, kindOf(menu), info)).toBeNull()
+    expect(frameRarity(1)).toBe('magic')
+    expect(frameRarity(0)).toBe('normal')
+    expect(frameRarity(5)).toBeUndefined()
   })
 
   it('builds a trade search for every item, bar the few that need a real copy', () => {
