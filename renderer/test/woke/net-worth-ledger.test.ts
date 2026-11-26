@@ -164,19 +164,6 @@ describe('what changed', () => {
   })
 })
 
-describe('End session from Net worth', () => {
-  it('ends only the Farming window it shows, and says when none is there', async () => {
-    const { onEndSessionRequest, requestEndSession } = await import('@/web/woke/farming/farming')
-    const ended: number[] = []
-    const stop1 = onEndSessionRequest(1, () => ended.push(1))
-    const stop2 = onEndSessionRequest(2, () => ended.push(2))
-    expect(requestEndSession(2)).toBe(true)
-    expect(ended).toEqual([2])
-    stop1(); stop2()
-    expect(requestEndSession(1)).toBe(false)
-  })
-})
-
 describe('table filters', () => {
   // Guy's two "Currency" tabs, a Fragment tab, and a category picked too.
   const lines = [

@@ -81,9 +81,6 @@ export interface DockEntry {
 
 // Fixed order, so icons don't jump around as they come and go.
 export const DOCK_ORDER = [
-  // Retired (modules.ts RETIRED_MODULES), out of the icon lists until they come
-  // back: 'farming' sat after 'mechanics', 'league-invest' after 'market',
-  // 'wealthy-exile' after 'scarab-flip'.
   'toolkit', 'whats-new', 'claude', 'trade', 'campaign', 'run-timer', 'lab', 'lab-gems', 'challenges', 'mechanics', 'drop-counter', 'stacked-decks', 'boss-runs', 'death-recap', 'session-story',
   'map-scan', 'essence-scan', 'trade-live', 'atlas', 'regex-library', 'market', 'scarab-flip', 'loot-filter', 'wickerman',
   // Last, where they sat before they were listed: an icon missing here can't
@@ -93,7 +90,7 @@ export const DOCK_ORDER = [
 
 // Icons that grow into a line when something happens: "no pop-ups" means
 // something for these.
-export const DOCK_PEEKS = new Set(['campaign', 'farming', 'session-story', 'drop-counter', 'lab', 'loot-filter', 'trade', 'trade-live'])
+export const DOCK_PEEKS = new Set(['campaign', 'session-story', 'drop-counter', 'lab', 'loot-filter', 'trade', 'trade-live'])
 
 export const DOCK_NAMES: Record<string, string> = {
   'toolkit': 'Toolkit health',
@@ -109,7 +106,6 @@ export const DOCK_NAMES: Record<string, string> = {
   'wickerman': 'Wickerman',
   'death-recap': 'Death recap',
   'session-story': 'Session analytics',
-  'farming': 'Farming',
   'drop-counter': 'Drop counter',
   'stacked-decks': 'Stacked decks',
   'boss-runs': 'Boss runs',
@@ -119,9 +115,7 @@ export const DOCK_NAMES: Record<string, string> = {
   'atlas': 'Atlas strategy',
   'regex-library': 'Regex library',
   'market': 'Market movers',
-  'league-invest': 'Investments',
   'scarab-flip': 'Flips',
-  'wealthy-exile': 'Wealthy Exile',
   'loot-filter': 'Loot filter',
   'net-worth': 'Net worth'
 }

@@ -10,7 +10,7 @@ import { bundledRoute, routeData } from '@/web/woke/campaign/route-data'
 import { actProgress, advanceOnEnter, resyncTo, DEFAULT_ROUTE_OPTIONS, xpMultiplier } from '@/web/woke/campaign/route-parse'
 import { routeAsleepAfter } from '@/web/woke/campaign/widget'
 import type { RouteOptions } from '@/web/woke/campaign/route-parse'
-import { countNewMap, isMapArea, isMapSideArea, newSession, onZoneChange, maybeAutoPause, AUTO_PAUSE_MS } from '@/web/woke/farming/farming'
+import { countNewMap, isMapArea, isMapSideArea } from '@/web/woke/shared/map-areas'
 import { expeditionVendorForSpeaker, mechanicForSpeaker, zoneTracker } from '@/web/woke/mechanics/zone'
 import { BOSS_AREAS, bossAreaIds } from '@/web/woke/shared/boss-areas'
 import { BOSS_ARENAS, arenaBosses, zoneKind } from '@/web/woke/shared/zone'
@@ -23,10 +23,6 @@ beforeAll(() => gemsReady)
 
 function logLines (name: string): string[] {
   return fixture(`client-logs/${name}`).split('\n').filter(l => l && !l.startsWith('#'))
-}
-
-function logTime (line: string): number {
-  return new Date(line.slice(0, 19).replace(/\//g, '-').replace(' ', 'T') + 'Z').getTime()
 }
 
 describe('Client.txt lines', () => {
@@ -104,38 +100,31 @@ describe('campaign route', () => {
   })
 })
 
-describe('farming', () => {
+describe('map areas', () => {
   it('counts each map instance once, not each portal back in', () => {
-    const s = newSession('Strand alch', logTime(logLines('mapping-session.txt')[0]))
+    const s: { lastMapInstance?: string } = {}
     let maps = 0
     for (const line of logLines('mapping-session.txt')) {
       const e = parseLogLine(line)
       if (e?.kind !== 'area') continue
-      const inMap = isMapArea(e.areaId)
-      onZoneChange(s, inMap, logTime(line))
-      if (inMap && countNewMap(s, e.areaId, e.seed)) maps++
+      if (isMapArea(e.areaId) && countNewMap(s, e.areaId, e.seed)) maps++
     }
     // Strand (twice, same seed) + Cemetery. Azurite Mine and the hideout aren't maps.
     expect(maps).toBe(2)
-    expect(s.mapMs).toBeGreaterThan(0)
-    expect(s.otherMs).toBeGreaterThan(0)
   })
 
   it('a Vaal side area is part of the map, not a new one', () => {
-    const s = newSession('x', 0)
+    const s: { lastMapInstance?: string } = {}
     let maps = 0
-    const enter = (areaId: string, seed: string, at: number) => {
-      const inMap = isMapArea(areaId)
-      onZoneChange(s, inMap || isMapSideArea(areaId), at)
-      if (inMap && countNewMap(s, areaId, seed)) maps++
+    const enter = (areaId: string, seed: string) => {
+      if (isMapArea(areaId) && countNewMap(s, areaId, seed)) maps++
     }
-    enter('MapWorldsStrand', '11', 1000)
-    enter('MapSideArea_VaalTemple', '22', 2000)
-    enter('MapWorldsStrand', '11', 3000)
-    enter('HideoutFelled', '33', 4000)
+    expect(isMapSideArea('MapSideArea_VaalTemple')).toBe(true)
+    enter('MapWorldsStrand', '11')
+    enter('MapSideArea_VaalTemple', '22')
+    enter('MapWorldsStrand', '11')
+    enter('HideoutFelled', '33')
     expect(maps).toBe(1)
-    // The side area's time is map time.
-    expect(s.mapMs).toBe(3000)
   })
 
   it('an encounter a map opens is not a new map', () => {
@@ -194,17 +183,6 @@ describe('farming', () => {
     for (const id of [...arenaBosses('MapWorldsPrimordialBoss3', ''), ...arenaBosses('MapWorldsPrimordialBoss4', '')]) {
       expect(BOSSES.find(b => b.id === id)!.drops.length).toBeGreaterThan(0)
     }
-  })
-
-  it('auto-pauses after idling, counting time only up to the limit', () => {
-    const s = newSession('x', 0)
-    onZoneChange(s, true, 1000)
-    expect(maybeAutoPause(s, 1000 + AUTO_PAUSE_MS - 1)).toBe(false)
-    expect(maybeAutoPause(s, 1000 + AUTO_PAUSE_MS + 60_000)).toBe(true)
-    expect(s.elapsedMs).toBe(1000 + AUTO_PAUSE_MS)
-    // The next zone change resumes it.
-    onZoneChange(s, false, 2_000_000)
-    expect(s.runningSince).toBe(2_000_000)
   })
 })
 

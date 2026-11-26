@@ -39,8 +39,8 @@
           <template #item="{ item: s }">
             <span class="w-trunc">{{ s.name || 'Untitled' }}</span>
             <span v-if="isDirty(config, s)" :class="$style.unsavedTag" title="Tree changes not saved">Unsaved</span>
-            <span v-if="earnings.get(s.name)" class="ml-auto w-num text-xs" :class="earnings.get(s.name)!.perHour >= 0 ? 'w-up' : 'w-down'"
-              :title="`${earnings.get(s.name)!.hours.toFixed(1)} h farmed`">{{ fmt(earnings.get(s.name)!.perHour) }}/h</span>
+            <span v-if="earnings.get(s.name)?.perHour != null" class="ml-auto w-num text-xs" :class="earnings.get(s.name)!.perHour! >= 0 ? 'w-up' : 'w-down'"
+              :title="`Net worth: ${countText(earnings.get(s.name)!.runs, 'run')} of this name`">{{ fmt(earnings.get(s.name)!.perHour!) }}/h</span>
           </template>
           <template #sub="{ item: s }">{{ describe(s) }}</template>
         </SavedTree>
@@ -108,7 +108,6 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import { MainProcess } from '@/web/background/IPC'
 import { WPanel, WField, WButton, WEmpty, WBanner, WSkeleton, openMenu, toast, useCopy } from '../ui'
 import type { AtlasStrategy, AtlasWidget } from './widget'
-import { AppConfig } from '@/web/Config'
 import {
   allFolders, claimRegexFolders, setPointsAt, takePointsAt, dropDraft, isDirty, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, isStrategyCode,
   strategyMatches, useAtlasData, retryAtlasData, atlasDataState
@@ -120,8 +119,7 @@ import { usePriceIndex } from '../market/price-index'
 import { useSavedTree } from '../shared/use-saved-tree'
 import SavedTree from '../shared/SavedTree.vue'
 import { usePriceText } from '../shared/price'
-import { FARMING_TYPE, strategyStats } from '../farming/farming'
-import type { FarmingWidget } from '../farming/farming'
+import { loadRunBoard, strategyEarnings } from './run-earnings'
 import { expandShortTreeLinks, extractTreeCode, trimLinkEnd } from './tree'
 import type { ShotRead } from './shot-import'
 // Not lazy: a paste right after the Import box opens must reach it.
@@ -180,12 +178,9 @@ function sortMenu (e: MouseEvent) {
 const prices = usePriceIndex()
 const { fmt } = usePriceText(prices.snapshot)
 
-const earnings = computed(() => {
-  const history = AppConfig().widgets
-    .filter(w => w.wmType === FARMING_TYPE)
-    .flatMap(w => (w as FarmingWidget).history ?? [])
-  return new Map(strategyStats(history).map(r => [r.strategy, r]))
-})
+const earnings = strategyEarnings
+loadRunBoard(true)
+const countText = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 function contentOf (s: AtlasStrategy): string {
   return JSON.stringify({ ...s, folder: undefined, regexFolder: undefined, changedAt: undefined })

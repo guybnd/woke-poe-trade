@@ -15,14 +15,11 @@ import { parseMonolith, rateMonolith, MEDS, ALL_ESSENCES } from '@/web/woke/esse
 import { BOSSES } from '@/web/woke/boss-runs/bosses'
 import { evaluateBoss, priceResolver, observedRates, parseRunTime, formatRunTime } from '@/web/woke/boss-runs/calc'
 import type { BossPrefs } from '@/web/woke/boss-runs/calc'
-import { DumpImporter, importLeagues } from '@/web/woke/league-invest/dumps'
-import type { LeagueHistory } from '@/web/woke/league-invest/dumps'
 import { MECHANICS, expeditionRows, mechanicById, priceGroup, verdict, weekChange } from '@/web/woke/mechanics/data'
 import { REWARDS, priceReward } from '@/web/woke/mechanics/betrayal'
 import { MECHANIC_ICONS } from '@/web/woke/ui/game-icons'
 import { mechanicOf } from '@/web/woke/atlas/tree'
 import type { AtlasNode } from '@/web/woke/atlas/tree'
-import { rankOpportunities } from '@/web/woke/league-invest/invest'
 
 describe('poe.ninja', () => {
   // The recorded dense overview the fake app serves (tools/make-ninja-fixture.mjs).
@@ -120,8 +117,13 @@ describe('price insight (trade listings)', () => {
 
 describe('essence corruption', () => {
   const PRICES: Record<string, number> = {
-    'Deafening Essence of Misery': 6, 'Deafening Essence of Envy': 4, 'Shrieking Essence of Greed': 0.5,
-    'Essence of Horror': 45, 'Essence of Hysteria': 20, 'Essence of Insanity': 25, 'Essence of Delirium': 30
+    'Deafening Essence of Misery': 6,
+    'Deafening Essence of Envy': 4,
+    'Shrieking Essence of Greed': 0.5,
+    'Essence of Horror': 45,
+    'Essence of Hysteria': 20,
+    'Essence of Insanity': 25,
+    'Essence of Delirium': 30
   }
   const price = (name: string) => PRICES[name] ?? null
 
@@ -263,8 +265,15 @@ describe('atlas tree', () => {
 
 describe('boss runs', () => {
   const NO_PREFS: BossPrefs = {
-    runSeconds: {}, rates: {}, extraDrops: {}, kills: {}, ownEntry: false, plannedRuns: 0,
-    dropToggles: {}, priceModes: {}, customPrices: {}
+    runSeconds: {},
+    rates: {},
+    extraDrops: {},
+    kills: {},
+    ownEntry: false,
+    plannedRuns: 0,
+    dropToggles: {},
+    priceModes: {},
+    customPrices: {}
   }
 
   it('boss data is sane', () => {
@@ -305,50 +314,6 @@ describe('boss runs', () => {
     expect(parseRunTime('90s')).toBe(90)
     expect(parseRunTime('1.5')).toBe(90) // minutes
     expect(formatRunTime(150)).toBe('2:30')
-  })
-})
-
-describe('league-start investments', () => {
-  // Two past leagues of poe.ninja dump CSVs: one scarab triples in a week
-  // both times, a card stays flat.
-  function dumps (league: string) {
-    const date = (d: number) => new Date(Date.UTC(2026, 0, 1 + d)).toISOString().slice(0, 10)
-    const cur = ['League;Date;Get;Pay;Value;Confidence']
-    const items = ['League;Date;Id;Type;Name;BaseType;Variant;Links;Value;Confidence']
-    for (let d = 0; d <= 14; d++) {
-      cur.push(`${league};${date(d)};Divine Orb;Chaos Orb;${100 + d * 5};High`)
-      items.push(`${league};${date(d)};1;Scarab;Rising Scarab;;;;${(5 * Math.pow(3, Math.min(d, 7) / 7) * (100 + d * 5) / 100).toFixed(2)};High`)
-      items.push(`${league};${date(d)};2;DivinationCard;Flat Card;;;;${(20 * (100 + d * 5) / 100).toFixed(2)};High`)
-    }
-    return [cur.join('\n'), items.join('\n')]
-  }
-
-  it('ranks the item that rose in every league, in divines', () => {
-    const imp = new DumpImporter()
-    for (const league of ['Alpha', 'Beta']) for (const csv of dumps(league)) imp.addCsv(csv)
-    const histories = imp.leagues().map(l => imp.build(l))
-    const ranked = rankOpportunities(histories, {
-      day: 0, horizon: 7, minLeagues: 2, minMultiple: 1.5, minReliability: 0, minBuyChaos: 1, bulkOnly: false
-    })
-    expect(ranked.map(o => o.name)).toEqual(['Rising Scarab'])
-    expect(ranked[0].median).toBeCloseTo(3, 1)
-    expect(ranked[0].leagues.sort()).toEqual(['Alpha', 'Beta'])
-  })
-
-  it('a league that cannot be built does not stop the others', async () => {
-    const imp = new DumpImporter()
-    for (const csv of dumps('Alpha')) imp.addCsv(csv)
-    imp.addCsv(dumps('NoCurrency')[1])
-    for (const csv of dumps('Omega')) imp.addCsv(csv)
-    const saved: LeagueHistory[] = []
-    const res = await importLeagues(imp, async (h) => { saved.push(h) })
-    expect(saved.map(h => h.league)).toEqual(['Alpha', 'Omega'])
-    expect(res.imported).toEqual(['Alpha', 'Omega'])
-    expect(res.failed).toEqual([expect.stringContaining('NoCurrency')])
-  })
-
-  it('refuses a file that is not a poe.ninja dump', () => {
-    expect(() => new DumpImporter().addCsv('a;b;c\n1;2;3')).toThrow(/poe.ninja dump/)
   })
 })
 

@@ -8,7 +8,7 @@
 // ends it, and a shorter AFK is left out of the night's time.
 import { lineTime } from '../campaign/log-tail'
 import { isTownLike, parseLogLine, slainName } from '../campaign/log-parse'
-import { isMapArea, mapNameFromArea } from '../farming/farming'
+import { isMapArea, mapNameFromArea } from '../shared/map-areas'
 import { staysInRun } from '../death-recap/death-log'
 import { isSkippedArea, knownAreaName } from './skip-areas'
 

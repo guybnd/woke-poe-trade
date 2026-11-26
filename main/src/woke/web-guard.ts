@@ -1,5 +1,5 @@
 // What pages inside the app may do. The overlay page is the app's own code;
-// everything in a <webview> (lab, Wealthy Exile, the trade site, the wiki) is
+// everything in a <webview> (lab, the trade site, the wiki) is
 // someone else's site, so it gets a plain locked-down browser tab and nothing
 // more. Links only ever leave the app as web addresses, whoever asked.
 //
