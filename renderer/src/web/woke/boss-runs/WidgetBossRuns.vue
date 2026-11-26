@@ -48,7 +48,7 @@
           <div class="w-group-label">Profitable now</div>
           <WListItem v-for="r in ranked.good" :key="r.boss.id" :active="r.boss.id === sel?.boss.id" @select="config.selected = r.boss.id" @contextmenu="bossMenu($event, r)">
             <span class="flex justify-between gap-2 w-full min-w-0">
-              <span class="flex items-center gap-2 min-w-0"><WIcon :src="art(r.boss.entry[0]?.name)" fallback="fas fa-skull" /><span class="w-trunc">{{ r.boss.name }}</span><WChip v-if="r.estimated" title="Uses estimated drop chances, not measured kills">est.</WChip></span>
+              <span class="flex items-center gap-2 min-w-0"><WIcon :src="art(r.boss.entry[0]?.name)" fallback="fas fa-skull" /><span class="w-trunc">{{ r.boss.name }}</span><WChip v-if="r.estimated" title="Uses estimated drop chances, not measured kills">estimate</WChip></span>
               <span :class="r.profit >= 0 ? 'w-up' : 'w-down'"><WPrice :chaos="config.sort === 'run' ? r.profit : r.perHour" :divine="divine" />{{ config.sort === 'run' ? '' : '/h' }}<span v-if="r.varies.length" class="w-faint" data-varies-mark :title="variesTitle(r)">*</span></span>
             </span>
             <template #sub>{{ subline(r) }}</template>
@@ -58,7 +58,7 @@
             <div class="w-group-label">Losing money</div>
             <WListItem v-for="r in ranked.losing" :key="r.boss.id" :active="r.boss.id === sel?.boss.id" @select="config.selected = r.boss.id" @contextmenu="bossMenu($event, r)">
               <span class="flex justify-between gap-2 w-full min-w-0">
-                <span class="flex items-center gap-2 min-w-0"><WIcon :src="art(r.boss.entry[0]?.name)" fallback="fas fa-skull" /><span class="w-trunc">{{ r.boss.name }}</span><WChip v-if="r.estimated" title="Uses estimated drop chances, not measured kills">est.</WChip></span>
+                <span class="flex items-center gap-2 min-w-0"><WIcon :src="art(r.boss.entry[0]?.name)" fallback="fas fa-skull" /><span class="w-trunc">{{ r.boss.name }}</span><WChip v-if="r.estimated" title="Uses estimated drop chances, not measured kills">estimate</WChip></span>
                 <span class="w-down"><WPrice :chaos="config.sort === 'run' ? r.profit : r.perHour" :divine="divine" />{{ config.sort === 'run' ? '' : '/h' }}<span v-if="r.varies.length" class="w-faint" data-varies-mark :title="variesTitle(r)">*</span></span>
               </span>
               <template #sub>{{ subline(r) }}</template>

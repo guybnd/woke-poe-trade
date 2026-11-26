@@ -39,7 +39,7 @@
         <span class="w-dim text-xs">Entry <WPrice :chaos="entryCost" :divine="divine" /></span>
         <span v-if="config.view === 'color' && bestRoll" class="ml-auto w-num" title="Best colour EV for each font craft in this lab, minus entry and gems, per run and per hour">
           <span :class="runProfit >= 0 ? 'w-up' : 'w-down'">{{ fmt(runProfit) }}</span> / run
-          <template v-if="perHour != null"> · {{ fmt(perHour) }} / h</template>
+          <template v-if="perHour != null"> · {{ fmt(perHour) }}/h</template>
         </span>
       </div>
 
