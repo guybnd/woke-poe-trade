@@ -30,8 +30,18 @@ test('a holding falling all week shows under Worth selling and in Ctrl+Space', a
   await overlay.widget('menu').locator('.fa-cog').click()
   const settings = overlay.widget('settings')
   await settings.getByText('All modules', { exact: true }).first().click()
-  await settings.getByRole('switch', { name: 'Net worth' }).click()
-  await settings.getByRole('button', { name: 'Turn on' }).click()
+  // Settled first (as in net-worth.spec): a click while the page is still
+  // loading was lost on a loaded runner, so Turn on never showed.
+  const reader = settings.getByRole('switch', { name: 'Net worth' })
+  await expect(reader).toBeVisible()
+  await expect(reader).toHaveAttribute('aria-checked', 'false')
+  const turnOn = settings.getByRole('button', { name: 'Turn on' })
+  await expect(async () => {
+    if (!await turnOn.isVisible()) await reader.click()
+    await expect(turnOn).toBeVisible({ timeout: 2000 })
+  }).toPass({ timeout: 20_000 })
+  await turnOn.click()
+  await expect(reader).toHaveAttribute('aria-checked', 'true')
   await expect(settings.getByText('Signed in as Tester#1234')).toBeVisible()
   await settings.getByTitle('Close').first().click()
 
