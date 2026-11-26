@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
-import { foulKindQuery, itemLine, statMatchTexts, uniqueInfo, vestigialLines, vestigialSources } from '@/web/woke/related-family/unique-info'
+import { chanceInfo, foulKindQuery, itemLine, uniqueVersions, statMatchTexts, uniqueInfo, vestigialLines, vestigialSources } from '@/web/woke/related-family/unique-info'
 import type { TipUnique } from '@/web/woke/ui/tooltip/tip-content'
 
 const read = (f: string) => JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/data/tips', f), 'utf8'))
@@ -82,5 +82,24 @@ describe('unique info', () => {
       stats: [{ type: 'and', filters: [{ id: 'explicit.stat_1' }, { id: 'explicit.stat_2' }] }],
       filters: { misc_filters: { filters: { foulborn_item: { option: 'true' } } } }
     })
+  })
+
+  it('versions: one row per poe.ninja variant, linked ones out, the base dropped, own marked, dearest first', () => {
+    const rows = [
+      { variant: 'Fire, Onyx Amulet', chaos: 50 },
+      { variant: 'Chaos, Onyx Amulet', chaos: 300 },
+      { variant: 'Chaos, Onyx Amulet, 6L', chaos: 900 }
+    ]
+    const v = uniqueVersions('Impresence', rows, 'Fire, Onyx Amulet', uniques, 'Onyx Amulet')
+    expect(v.map(r => [r.label, r.own])).toEqual([['Chaos', false], ['Fire', true]])
+    expect(v[0].tipVariant).toBe('Chaos')
+    expect(v[0].lines.length).toBeGreaterThan(0)
+    expect(uniqueVersions('Impresence', rows.slice(0, 1), undefined, uniques, 'Onyx Amulet')).toEqual([])
+  })
+
+  it('chance: a random drop can be chanced, a restricted one says why', () => {
+    expect(chanceInfo('Carcass Jack', 'Varnished Coat', undefined)).toEqual({ can: true, base: 'Varnished Coat' })
+    expect(chanceInfo('X', 'Leather Belt', { r: 1, s: 'Uber Eater', t: 'Drops from the Uber Eater.' })).toEqual({ can: false, base: 'Leather Belt', label: 'Uber Eater', why: 'Drops from the Uber Eater.' })
+    expect(chanceInfo('Replica Kaom\'s Heart', 'Glorious Plate', undefined)?.can).toBe(false)
   })
 })

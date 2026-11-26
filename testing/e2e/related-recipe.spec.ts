@@ -241,6 +241,9 @@ test('side window: a Foulborn unique lists its Foulborn kinds, priced, its own l
   await expect(intensify).toContainText('this one')
   await expect(intensify).toContainText(/90×4\.5$/)
   await expect(side.locator('[data-vestigial-mod]')).toHaveText('25% increased Area of Effect')
+  // A random drop: chance it on its base.
+  await expect(side.getByText('Chance it')).toBeVisible()
+  await expect(side.locator('[data-item-row]', { hasText: 'Varnished Coat' })).toBeVisible()
   // Hover: the Foulborn copy's tooltip.
   await intensify.hover()
   await expect(overlay.page.getByRole('tooltip').getByText('Foulborn Carcass Jack').first()).toBeVisible()

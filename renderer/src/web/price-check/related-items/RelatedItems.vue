@@ -53,6 +53,18 @@
           </span>
         </button>
       </div>
+      <!-- woke: the unique's versions, priced: the lines each one has alone.
+           Click: a price check of that version. -->
+      <div v-else-if="sec.versions" :class="$style.list">
+        <component :is="v.own ? 'div' : 'button'" v-for="v in sec.versions" :key="v.variant" :type="v.own ? undefined : 'button'" v-item-tip="versionTip(v)" data-unique-version
+          :class="[$style.row, $style.foulRow, { [$style.me]: v.own, [$style.click]: !v.own }]" @click="openVersion(v)">
+          <span :class="$style.foulLines">
+            <span :class="$style.verName">{{ v.label }}<span v-if="v.own" :class="$style.kby">this one</span></span>
+            <span v-for="(l, j) in v.lines" :key="j" :class="$style.verLine">{{ l }}</span>
+          </span>
+          <span :class="$style.price">{{ priceText(autoPrice(v.chaos)) }}<img :class="$style.coin" :src="coin(autoPrice(v.chaos))" alt=""></span>
+        </component>
+      </div>
       <!-- woke: the Vestigial mod the unique leaves on another unique of its slot. -->
       <div v-else-if="sec.vest" :class="$style.list">
         <div v-for="(mod, i) in sec.vest" :key="i" :class="$style.vestRow" data-vestigial-mod>
@@ -102,13 +114,13 @@ import { sideRow, type SideRow } from './side-row'
 import { familiesOf, familyRows, type Family } from '@/web/woke/related-family/family'
 import { isRelatedGroup, cardsFor, rewardOf, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resolveParts } from '@/web/woke/related-family/recipe'
 import { loadTipDrops, loadTipItems, loadTipUniques, loadTipVestigial, vItemTip } from '@/web/woke/ui/tooltip/item-tip'
-import type { TipPack } from '@/web/woke/ui/tooltip/tip-content'
+import { dropOf, type TipPack } from '@/web/woke/ui/tooltip/tip-content'
 import { randomDropsOnBase } from '@/web/woke/loot-filter/random-drops'
 import type { VaultTable, Vault } from '@/web/woke/vaults/vaults'
 import { bossOf } from '@/web/woke/related-family/boss-drops'
 import type { Conqueror } from '@/web/woke/related-family/conquest'
 import { conquestPick } from '@/web/woke/related-family/conquest-pick'
-import type { FoulKindRow, UniqueInfo } from '@/web/woke/related-family/unique-info'
+import type { ChanceInfo, FoulKindRow, UniqueInfo, VersionRow } from '@/web/woke/related-family/unique-info'
 import { useLeagues } from '@/web/background/Leagues'
 import { AppConfig, poeWebApi } from '@/web/Config'
 import { Host } from '@/web/background/IPC'
@@ -481,16 +493,16 @@ function getEmblems (item: ParsedItem, data: ConquestData | null) {
 // code and the tooltip's unique and Vestigial files load with the first
 // unique checked, not at startup.
 type UniqueInfoData = typeof import('@/web/woke/related-family/unique-info')
-interface UniquePack { mod: UniqueInfoData, uniques: TipPack['uniques'] | null, vestigial: TipPack['vestigial'] | null }
+interface UniquePack { mod: UniqueInfoData, uniques: TipPack['uniques'] | null, vestigial: TipPack['vestigial'] | null, drops: TipPack['drops'] | null }
 const uniquePack = shallowRef<UniquePack | null>(null)
 let uniqueJob: Promise<void> | null = null
 function needsUniqueInfo (item: ParsedItem) {
   if (item.rarity !== ItemRarity.Unique || uniquePack.value || uniqueJob) return
-  uniqueJob = Promise.all([import('@/web/woke/related-family/unique-info'), loadTipUniques(), loadTipVestigial()])
-    .then(([mod, uniques, vestigial]) => {
+  uniqueJob = Promise.all([import('@/web/woke/related-family/unique-info'), loadTipUniques(), loadTipVestigial(), loadTipDrops().catch(() => null)])
+    .then(([mod, uniques, vestigial, drops]) => {
       // Without the unique file there's nothing to show: the next check tries again.
       if (!uniques) { uniqueJob = null; return }
-      uniquePack.value = { mod, uniques, vestigial }
+      uniquePack.value = { mod, uniques, vestigial, drops }
     })
     .catch(() => { uniqueJob = null })
 }
@@ -516,10 +528,44 @@ function getUniqueInfo (item: ParsedItem, data: UniquePack): UniqueInfo | null {
   })
 }
 
+// The unique's versions, priced by poe.ninja (Guy's pick 4): two or more.
+function getVersions (item: ParsedItem, data: UniquePack): VersionRow[] {
+  if (item.rarity !== ItemRarity.Unique || item.info.namespace !== 'UNIQUE') return []
+  const name = item.info.refName
+  const bases = ITEM_BY_REF('UNIQUE', name) ?? []
+  const oneBase = bases.length <= 1 ? item.info.unique?.base : undefined
+  return data.mod.uniqueVersions(name, findPricesByName('UNIQUE', name).map(r => ({ variant: r.variant, chaos: r.chaos })), getDetailsId(item)?.variant, data.uniques, oneBase)
+}
+
+// Whether an Orb of Chance can make it, on its base (Guy's pick 3).
+function getChance (item: ParsedItem, data: UniquePack): ChanceInfo | null {
+  if (item.rarity !== ItemRarity.Unique || item.info.namespace !== 'UNIQUE') return null
+  return data.mod.chanceInfo(item.info.refName, item.info.unique?.base, dropOf(data.drops ?? undefined, item.info.refName))
+}
+
+const CHANCE_WHY_MAX = 160
+function chanceSection (chance: ChanceInfo | null) {
+  if (!chance) return []
+  const baseInfo = ITEM_BY_REF('ITEM', chance.base)?.[0]
+  if (chance.can) {
+    if (!baseInfo) return []
+    const chaos = chaosOf(baseInfo)
+    return [{
+      key: 'chance-it',
+      title: 'Chance it',
+      rows: [{ ...sideRow(baseInfo, chaos != null ? autoCurrency(chaos) : undefined, false, `chance-base:${chance.base}`), ref: { name: baseInfo.refName, rarity: 'normal' as const } }],
+      note: 'A random drop: an Orb of Chance on a normal base can make it.'
+    }]
+  }
+  const why = chance.why && chance.why.length > CHANCE_WHY_MAX ? `${chance.why.slice(0, CHANCE_WHY_MAX - 1).trimEnd()}\u2026` : chance.why
+  return [{ key: 'chance-it', title: `Can't be chanced: ${chance.label}`, rows: [] as SideRow[], note: why }]
+}
+
 // The Foulborn and Vestigial sections, then the uniques a Vestigial implicit comes from.
-function uniqueSections (item: ParsedItem, info: UniqueInfo | null) {
-  if (!info) return []
-  const out: Array<{ key: string, title: string, rows: SideRow[], foul?: FoulKindRow[], vest?: string[][], note?: string }> = []
+function uniqueSections (item: ParsedItem, info: UniqueInfo | null, versions: VersionRow[], chance: ChanceInfo | null) {
+  const out: Array<{ key: string, title: string, rows: SideRow[], foul?: FoulKindRow[], vest?: string[][], versions?: VersionRow[], note?: string }> = []
+  if (versions.length) out.push({ key: 'versions', title: 'Versions', rows: [], versions })
+  if (!info) return [...out, ...chanceSection(chance)]
   if (info.foulborn.length) out.push({ key: 'foulborn', title: 'Foulborn', rows: [], foul: info.foulborn })
   if (info.vestigial.length) {
     out.push({
@@ -544,7 +590,7 @@ function uniqueSections (item: ParsedItem, info: UniqueInfo | null) {
       rows: from
     })
   }
-  return out
+  return [...out, ...chanceSection(chance)]
 }
 
 function priceText (price: CurrencyValue) {
@@ -629,6 +675,7 @@ export default defineComponent({
       note?: string
       foul?: FoulKindRow[]
       vest?: string[][]
+      versions?: VersionRow[]
     }
     // The card rewards load with the first unique, currency or card checked, and
     // again on the next check if that load failed.
@@ -666,7 +713,7 @@ export default defineComponent({
       // Where it drops: the drop groups, else the boss table.
       const sources = id ? getSources(props.item, id, cards.length > 0, shown) : []
       return [
-        ...(uniquePack.value ? uniqueSections(props.item, getUniqueInfo(props.item, uniquePack.value)) : []),
+        ...(uniquePack.value ? uniqueSections(props.item, getUniqueInfo(props.item, uniquePack.value), getVersions(props.item, uniquePack.value), getChance(props.item, uniquePack.value)) : []),
         ...reward,
         ...getGemKinds(props.item, queryId?.variant),
         ...(tipDrops.value ? getChanceTargets(props.item, tipDrops.value) : []),
@@ -696,7 +743,11 @@ export default defineComponent({
         .filter(sec => !recipeSecs.length || !sec.rows.every(r => inRecipe.has(r.name)))
         .map(sec => sec.key === 'drops' ? { ...sec, rows: sec.rows.filter(r => !reward.has(r.name)) } : sec)
         .filter(sec => sec.rows.length)
+      // Where it comes from is said by its drop, boss or recipe section already:
+      // "Can't be chanced" keeps only its heading.
+      const sourced = [...recipeSecs, ...extras, ...others].some(sec => /^(from:|boss$|recipe:|cards$|vault:)/.test(sec.key))
       const all = [...recipeSecs, ...extras, ...others]
+        .map(sec => sec.key === 'chance-it' && !sec.rows.length && sourced ? { ...sec, note: undefined } : sec)
       const data = conquest.value
       if (!data) return all
       return all.map(sec => sec.rows.some(r => data.ABYSS.some(a => a.jewel === r.info.refName)) ? { ...sec, rows: sec.rows.map(r => withKeystone(r, data)) } : sec)
@@ -735,9 +786,9 @@ export default defineComponent({
     }
 
     const canOpen = (row: SideRow) => row.clickable && !row.highlight
-    const countOf = (sec: Section) => sec.foul?.length ?? (sec.vest ? 0 : sec.rows.length)
+    const countOf = (sec: Section) => sec.foul?.length ?? sec.versions?.length ?? (sec.vest ? 0 : sec.rows.length)
     const footer = computed(() => {
-      const check = sections.value.some(sec => sec.rows.some(canOpen))
+      const check = sections.value.some(sec => sec.rows.some(canOpen) || sec.versions?.some(v => !v.own))
       const foul = sections.value.some(sec => sec.foul?.length)
       if (check && foul) return 'Click to price check · a Foulborn kind: trade site'
       if (foul) return 'Click a Foulborn kind: trade site'
@@ -745,6 +796,17 @@ export default defineComponent({
     })
     // A Foulborn kind's tooltip: the Foulborn copy's, which says what it replaces.
     const foulTip = (k: FoulKindRow): ItemTipRef => ({ name: `Foulborn ${props.item!.info.refName}`, variant: k.name, noMenu: true })
+    // A version's tooltip and click: that variant's mods, as a price check of it.
+    const versionTip = (v: VersionRow): ItemTipRef => ({ name: props.item!.info.refName, variant: v.tipVariant, noMenu: true })
+    async function openVersion (v: VersionRow) {
+      const item = props.item
+      if (!item || v.own) return
+      const seq = ++clickSeq
+      const bases = ITEM_BY_REF('UNIQUE', item.info.refName) ?? []
+      const info = bases.find(b => b.unique && v.variant.split(', ').includes(b.unique.base)) ?? item.info
+      const input = await priceCheckRequest({ name: info.refName, rarity: 'unique', variant: v.tipVariant }, info)
+      if (input && seq === clickSeq && props.item === item) emit('check', input)
+    }
     const leagues = useLeagues()
     const showBrowser = inject<((url: string) => void) | undefined>('builtin-browser', undefined)
     function openFoul (k: FoulKindRow) {
@@ -803,8 +865,8 @@ export default defineComponent({
     }
     function summary (sec: Section): { text: string, coin?: string } | null {
       if (sec.sum) return { text: `${sec.sum.label.toLowerCase()} ${sec.sum.value}` }
-      if (sec.foul) {
-        const top = Math.max(-1, ...sec.foul.map(k => k.chaos ?? -1))
+      if (sec.foul || sec.versions) {
+        const top = Math.max(-1, ...(sec.foul ?? sec.versions ?? []).map(k => k.chaos ?? -1))
         if (top < 0) return null
         const p = autoCurrency(top)
         return { text: `top ${priceText(p)}`, coin: p.currency === 'div' ? '/images/divine.png' : '/images/chaos.png' }
@@ -854,6 +916,8 @@ export default defineComponent({
       footer,
       foulTip,
       openFoul,
+      versionTip,
+      openVersion,
       autoPrice: (chaos: number) => autoCurrency(chaos),
       ratioText: (r: number) => r >= 10 ? String(Math.round(r)) : String(Math.round(r * 10) / 10),
       coin: (price: CurrencyValue) => (price.currency === 'div') ? '/images/divine.png' : '/images/chaos.png'
@@ -944,6 +1008,8 @@ button.row { width: 100%; text-align: left; }
 .foulPrice { display: grid; justify-items: end; }
 .foulPrice > span:first-child { display: inline-flex; align-items: center; gap: 3px; }
 .ratio { font-size: var(--w-fs-xs); font-weight: 400; color: var(--w-faint); }
+.verName { color: var(--w-fg); }
+.verLine { color: var(--w-r-magic); }
 .vestRow { display: grid; gap: 1px; padding: 5px 12px; font-size: var(--w-fs-sm); line-height: 1.3; }
 .vest { color: var(--w-mod-vestigial); }
 .note { padding: 0 12px 5px; font-size: var(--w-fs-sm); color: var(--w-faint); }

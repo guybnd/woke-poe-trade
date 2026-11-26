@@ -141,3 +141,78 @@ export function statMatchTexts (line: string): string[] {
   const signed = plain.replace(/\(-?[\d.]+-[\d.]+\)/g, '#').replace(/\d+(?:\.\d+)?/g, '#')
   return unsigned === signed ? [unsigned] : [unsigned, signed]
 }
+
+// ---- versions (Guy's pick 4) ----
+
+export interface VersionRow {
+  // poe.ninja's variant, as the price check's own row names it.
+  variant: string
+  // What the side list calls it: the variant without the unique's one base.
+  label: string
+  // The data's variant name ("Fire"), for the tooltip and the mods it loads.
+  tipVariant?: string
+  // Lines only this version has.
+  lines: string[]
+  chaos: number
+  own: boolean
+}
+
+// A unique's poe.ninja rows as versions: one per variant, linked ones left
+// out (a 6L price is the links', not the version's). Shown when there are two
+// or more. `ownVariant` is the checked item's poe.ninja variant.
+export function uniqueVersions (
+  name: string,
+  rows: Array<{ variant?: string, chaos: number }>,
+  ownVariant: string | undefined,
+  uniques: Record<string, TipUnique> | null | undefined,
+  oneBase: string | undefined
+): VersionRow[] {
+  const details = uniqueDetails(name, uniques, null)
+  const unlinked = (v: string) => v.split(', ').filter(p => !/^\dL$/.test(p))
+  const ownKey = ownVariant != null ? unlinked(ownVariant).join(', ') : undefined
+  const seen = new Set<string>()
+  const out: VersionRow[] = []
+  for (const r of rows) {
+    if (!r.variant || /(^|, )\dL$/.test(r.variant)) continue
+    if (seen.has(r.variant)) continue
+    seen.add(r.variant)
+    const parts = r.variant.split(', ')
+    const label = parts.filter(p => p !== oneBase).join(', ')
+    if (!label) continue
+    const tip = details?.variants.find(v => v.name != null && parts.includes(v.name))
+    out.push({
+      variant: r.variant,
+      label,
+      tipVariant: tip?.name,
+      lines: (tip?.differs ?? []).map(plainLine),
+      chaos: r.chaos,
+      own: ownKey === r.variant
+    })
+  }
+  out.sort((a, b) => b.chaos - a.chaos)
+  return out.length >= 2 ? out : []
+}
+
+// ---- chance (Guy's pick 3) ----
+
+export interface ChanceInfo {
+  // An Orb of Chance on a normal base can make it.
+  can: boolean
+  base: string
+  // Why not, when it can't: the wiki's short source ("Uber Eater") and sentence.
+  label?: string
+  why?: string
+}
+
+export function chanceInfo (name: string, base: string | undefined, drop: { d?: 1, r?: 1, t?: string, s?: string } | undefined): ChanceInfo | null {
+  if (!base) return null
+  // A Heist replica is stolen, never dropped.
+  if (name.startsWith('Replica ')) return { can: false, base, label: 'Heist', why: 'Replicas come from Heist, not from drops.' }
+  if (!drop?.d && !drop?.r) return { can: true, base }
+  return {
+    can: false,
+    base,
+    label: drop.s ?? (drop.d ? 'No drop' : 'Restricted'),
+    why: drop.t ?? (drop.d ? 'The game never drops it.' : 'The PoE wiki doesn\'t say where it comes from.')
+  }
+}
