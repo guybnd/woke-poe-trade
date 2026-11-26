@@ -2,7 +2,11 @@
   <w-setting-section title="Icon row">
     <div class="w-dim flex items-center gap-2" :class="$style.intro">
       How the icons work
-      <w-info text="Small icons show while you play. Rest the mouse on one for its card. Right-click for its menu. Click one for its full window. With the overlay open, drag the row by its grip." />
+      <w-info text="Small icons show while you play.
+- Rest the mouse on one for its card.
+- [[Right-click]] for its menu.
+- [[Click]] one for its full window.
+- With the overlay open, drag the row by its grip." />
     </div>
     <w-setting-row label="Open cards on hover" hint="Off: clicking an icon opens its card, and the card's Open row opens the full window.">
       <w-toggle :model-value="dock.hoverOpens !== false" @update:model-value="dock.hoverOpens = $event" />
@@ -13,7 +17,10 @@
     <w-setting-row label="What's new after updates" hint="Off: no What's new icon, no NEW seals in All tools, no count on the rail.">
       <w-toggle :model-value="!woke.newsOff" @update:model-value="setNewsOff(woke, !$event)" />
     </w-setting-row>
-    <w-setting-row label="Tips" hint="A short line at the foot of a window or a tooltip for a key or click you might not know. Each one goes once you've used it. Never in a map.">
+    <w-setting-row label="Tips" hint="A short line for a key or click you might not know.
+- Shows at the foot of a window or a tooltip.
+- Each one goes once you've used it.
+- Never in a map.">
       <div class="flex items-center gap-2">
         <w-toggle :model-value="!woke.hints?.off" @update:model-value="setTipsOff(!$event)" />
         <w-button v-if="tipsUsed" size="sm" @click="tipsAgain">Show tips again</w-button>

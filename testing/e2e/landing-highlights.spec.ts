@@ -908,7 +908,7 @@ test('maps: essence scan says whether to corrupt', async ({ overlay }) => {
   const cursor = cursorOf('essence-real-25')
   await overlay.moveMouse(cursor.x, cursor.y)
   await overlay.pressHotkey('Alt + E')
-  const card = overlay.page.getByText('CORRUPT', { exact: true }).filter({ visible: true })
+  const card = overlay.page.getByText('Corrupt', { exact: true }).filter({ visible: true })
   await expect(card).toBeVisible({ timeout: 20_000 })
   await saveAround(overlay, 'hl-essence-scan', [card], 1280)
 })

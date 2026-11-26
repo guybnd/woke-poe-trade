@@ -20,7 +20,10 @@ Nothing reads the screen until you press it.">
       <w-hotkey-cell v-model="treeHotkey" />
     </WSettingRow>
     <WSettingRow label="Dock icon click draws on the passive tree"
-      hint="With the tree open in game, a click on the build's dock icon draws the build over it (a second click hides it). Anywhere else the click opens this window as before. Its right-click menu and hover card have the same option.">
+      hint="With the tree open in game, a click on the build's dock icon draws the build over it.
+- A second click hides it.
+- Anywhere else the click opens this window as before.
+- Its [[Right-click]] menu and hover card have the same option.">
       <WToggle v-model="treeOnIconClick" />
     </WSettingRow>
     <WSettingRow label="Mark nodes to refund on the passive tree"
@@ -29,11 +32,17 @@ Nothing reads the screen until you press it.">
     </WSettingRow>
     <template v-if="personalOn">
       <WSettingRow label="Mark gems against your character"
-        hint="In the build window, your level/quality in amber beside a gem where yours is lower, 'none' where you don't socket it. Hover a gem for your numbers. Also on the Links heading.">
+        hint="In the build window, beside each gem:
+- Your level/quality in amber where yours is lower.
+- **none** where you don't socket it.
+- Hover a gem for your numbers. Also on the Links heading.">
         <WToggle v-model="characterGemMarks" />
       </WSettingRow>
       <WSettingRow label="Read your character on area changes"
-        hint="For the build window's Character tab, which compares the character you play with a build. At most every 5 minutes. Off, it's read only when you press Read now. Reading never changes the build.">
+        hint="For the build window's **Character** tab, which compares the character you play with a build.
+- At most every 5 minutes.
+- Off, it's read only when you press **Read now**.
+- Reading never changes the build.">
         <WToggle v-model="characterAutoRead" />
       </WSettingRow>
       <WSettingRow label="Save your character as a PoB build"

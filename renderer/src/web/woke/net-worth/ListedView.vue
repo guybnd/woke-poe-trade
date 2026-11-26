@@ -59,8 +59,13 @@
             <td :class="$style.check" data-listed-check>
               <span v-if="busy.has(r.item.id)" class="w-dim">Checking…</span>
               <template v-else-if="canReprice(r.item)">
-                <WButton v-if="canCheck(r.item)" size="sm" variant="ghost" :class="[$style.quick, errors[r.item.id] ? `w-down ${$style.failed}` : '']" :title="errors[r.item.id] ? `Quick rank failed: ${errors[r.item.id]}. Click to try again` : 'Quick rank: one trade search by name, instant buyout only. It ignores the rolls'" aria-label="Quick rank" data-listed-quick @click="check(r)"><i class="fas fa-bolt" /></WButton>
-                <WButton size="sm" variant="ghost" :class="checkOf(r) ? (checkOf(r)!.cheaper ? 'w-down' : 'w-up') : ''" :title="checkOf(r) ? `${checkTitle(r)}\nClick to price check it again` : 'Price check this listing with its own mods: tune the filters, then set a new price at the foot'" data-listed-reprice @click="reprice(r, $event)">{{ checkOf(r) ? checkText(r) : 'Price check' }}</WButton>
+                <!-- The quick rank lies over the cell on hover (the shared w-line-acts), left of Price check, taking no room. -->
+                <span :class="$style.quickAt">
+                  <span v-if="canCheck(r.item)" class="w-line-acts" :class="[$style.quickActs, { 'w-line-acts-on': errors[r.item.id] }]">
+                    <button type="button" :class="[$style.quick, errors[r.item.id] && $style.failed]" :title="errors[r.item.id] ? `Quick rank failed: ${errors[r.item.id]}. Click to try again` : 'Quick rank: one trade search by name, instant buyout only. It ignores the rolls'" aria-label="Quick rank" data-listed-quick @click="check(r)"><i class="fas fa-bolt" /></button>
+                  </span>
+                  <WButton size="sm" variant="ghost" :class="checkOf(r) ? (checkOf(r)!.cheaper ? 'w-down' : 'w-up') : ''" :title="checkOf(r) ? `${checkTitle(r)}\nClick to price check it again` : 'Price check this listing with its own mods: tune the filters, then set a new price at the foot'" data-listed-reprice @click="reprice(r, $event)">{{ checkOf(r) ? checkText(r) : 'Price check' }}</WButton>
+                </span>
               </template>
               <span v-else-if="!canCheck(r.item)" class="w-dim" title="Rare gear read before its mods were kept: Refresh, or price check it in game">—</span>
               <WButton v-else-if="checkOf(r)" size="sm" variant="ghost" :class="checkOf(r)!.cheaper ? 'w-down' : 'w-up'" :title="checkTitle(r)" @click="check(r)">{{ checkText(r) }}</WButton>
@@ -291,8 +296,13 @@ async function reprice (r: PendingRow, e: MouseEvent) {
 .chipIcon { width: 16px; height: 16px; object-fit: contain; flex: none; }
 .ask { color: var(--w-gold); }
 .check { text-align: right; }
-.quick { opacity: 0; padding-inline: 2px; }
-.table tbody tr:hover .quick, .quick:focus-visible, .quick.failed { opacity: 1; }
+/* The quick rank: shaded, over the cell just left of Price check (w-line-acts shows it on hover). */
+.quickAt { position: relative; display: inline-block; }
+.quickAt > .quickActs { right: calc(100% + 2px); display: inline-flex; align-items: center; padding: 2px 6px; border-radius: var(--w-r-sm);
+  background: var(--w-panel-solid-base, #0a0806); box-shadow: -10px 0 8px 2px var(--w-panel-solid-base, #0a0806), 0 0 0 1px var(--w-line); }
+.quick { background: none; border: 0; padding: 0 1px; color: var(--w-dim); cursor: pointer; font-size: var(--w-fs-xs); line-height: 1; }
+.quick:hover, .quick:focus-visible { color: var(--w-gold); outline: none; }
+.quick.failed { color: var(--w-down); }
 .note { padding: 4px var(--w-pad); }
 .autoLine { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; justify-content: space-between; }
 .chips { display: flex; gap: var(--w-s1); padding: 6px var(--w-pad); flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--w-line); }

@@ -1,5 +1,6 @@
 # Next release notes
 
+- Small fixes so windows act alike: Stacked decks, Wickerman and Essence scan show their game icon and how old their poe.ninja prices are; Essence scan and Map mods show their hotkey in the title; the mouse back button works in Forbidden Flame and Flesh, Map check and Wealthy Exile; Delete in PoB builds' and loot filter rules' menus sits apart in red; Valdo maps call the Map mods profile "Profile"; price check and essence badges read in the usual small caps.
 - Dragging a pinned card (or the dock, the glance bar, the post-map plaque) while you play no longer lets go halfway, which mostly happened when dragging it up. The game gets the mouse back once you let go.
 - Game icons on chips: league mechanics you met in a map (Delirium, Einhar, Mirage, Niko, Blight…) now show their art on the post-map plaque, the glance bar, Map history and over each map's bar in a run's Map times chart. The map price check's Farming goals, the Map planner's goals, and Net worth's Listed and Sales types show icons too.
 - Run summary: the filler captions are gone. "Worth a look" no longer says "only what the numbers back", and the bar charts show a small key (Usual / This run, Slow / Death / Average) instead of sentences like "Dark bar: your usual. Gold: this run."

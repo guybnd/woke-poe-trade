@@ -57,7 +57,9 @@ export function useDeckPrices () {
   const deckChaos = computed<number | null>(() => lookup('ITEM', STACKED_DECK))
   const divine = computed<number | null>(() => ninja.xchgRate.value ?? null)
   const ready = computed(() => ninja.updatedAt.value != null)
-  return { price, held, deckChaos, divine, ready, fetch: () => { ninja.queuePricesFetch() } }
+  // When these prices were downloaded, for the panel's data age.
+  const updated = computed<number | null>(() => ninja.updatedAt.value ?? null)
+  return { price, held, deckChaos, divine, ready, updated, fetch: () => { ninja.queuePricesFetch() } }
 }
 
 export interface Luck {

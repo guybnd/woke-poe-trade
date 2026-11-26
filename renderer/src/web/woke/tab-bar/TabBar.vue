@@ -162,7 +162,7 @@
           </div>
           <hr :class="$style.rule">
           <button :class="$style.item" @click="resetRail(); closePopup()"><i class="fas fa-undo" />Reset toolbar position and size</button>
-          <div :class="$style.hint">Ctrl + scroll on the toolbar changes its size. Drag icons to reorder.</div>
+          <div :class="$style.hint"><WKbd keys="Ctrl + Wheel" /> on the toolbar changes its size. Drag icons to reorder.</div>
         </div>
 
         <!-- right-click menu -->
@@ -223,7 +223,7 @@ import { MAX_UI_SIZE, MIN_UI_SIZE, nudgeUiSize, uiSize } from '../ui/ui-size'
 import { ICON_TOOL_NAMES, moduleSettingsPage, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, pickStarterPins, toolDescription } from './tools'
 import { pastedItemText } from '../search/pasted-item'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
-import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
+import { WIcon, WKbd, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import { SEARCH_TYPE, searchRequest } from '../search/widget'

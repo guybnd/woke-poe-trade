@@ -1767,8 +1767,7 @@ watch(open, (now) => {
 const dataNote = computed(() => {
   const snap = snapshot.value
   if (!snap) return 'No saved prices yet'
-  const min = Math.max(0, Math.round((Date.now() - snap.ts) / 60000))
-  return `poe.ninja · ${snap.league} · ${min} min ago`
+  return `poe.ninja · ${snap.league} · ${agoPhrase(snap.ts)}`
 })
 </script>
 

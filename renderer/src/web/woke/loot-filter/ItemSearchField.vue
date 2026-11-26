@@ -17,14 +17,14 @@
           <span class="w-dim text-xs w-trunc">{{ r.line }}</span>
         </span>
       </button>
-      <div v-if="!rows.length" class="w-faint text-xs" :class="$style.none">No item matches "{{ modelValue.trim() }}". A rare's name is random: search its base, or copy it in game (Ctrl+C) and paste it here.</div>
+      <div v-if="!rows.length" class="w-faint text-xs" :class="$style.none">No item matches "{{ modelValue.trim() }}". A rare's name is random: search its base, or copy it in game (<WKbd keys="Ctrl + C" />) and paste it here.</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { WChip, WField, itemRefFromName, vItemTip } from '../ui'
+import { WChip, WField, WKbd, itemRefFromName, vItemTip } from '../ui'
 import { gameIcon } from '../ui/game-icons'
 import LabelPreview from './LabelPreview.vue'
 import { baseIcon } from './label-style'

@@ -151,7 +151,7 @@ test('record the demo', async ({ overlay, fakeApp }) => {
   await overlay.moveMouse(cursor.x, cursor.y)
   await record('essence-scan', async () => {
     await overlay.pressHotkey('Alt + E')
-    await expect(page.getByText('CORRUPT', { exact: true }).filter({ visible: true })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText('Corrupt', { exact: true }).filter({ visible: true })).toBeVisible({ timeout: 20_000 })
   })
   await record('essence-scan-stop', async () => { await overlay.pressHotkey('Alt + E') })
   await backToGame()

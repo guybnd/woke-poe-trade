@@ -6,7 +6,7 @@
         <div class="w-dim text-xs" style="padding: 6px var(--w-pad);">Click to open Wealthy Exile.</div>
       </template>
     </DockItem>
-    <WPanel size-key="site" :title="config.wmTitle || 'Wealthy Exile'" :scroll="false" max-height="none"
+    <WPanel ref="panel" size-key="site" :title="config.wmTitle || 'Wealthy Exile'" :keys="windowKeys.help" :scroll="false" max-height="none"
       width="70vw" height="85vh" :hotkey="config.hotkey">
       <template #actions>
         <button class="w-icon-btn mr-1" :disabled="!canGoBack" title="Back" @click="goBack"><i class="fas fa-arrow-left" /></button>
@@ -32,6 +32,7 @@ import { Host, MainProcess } from '@/web/background/IPC'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel } from '../ui'
+import { useWindowKeys } from '../ui/window-keys'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, showWithOverlay } from '../dock/dock'
@@ -66,6 +67,9 @@ const siteEl = shallowRef<WebviewEl | null>(null)
 // The site loads the first time the window is on screen, not at launch.
 const started = shallowRef(false)
 const canGoBack = shallowRef(false)
+// The mouse's back button on the window, as its Back button.
+const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
+const windowKeys = useWindowKeys(() => panel.value?.el, { back: () => { if (canGoBack.value) goBack() } })
 
 const onScreen = computed(() => props.config.wmWants === 'show' && wm.active.value)
 watch(onScreen, (yes) => { if (yes) started.value = true }, { immediate: true })

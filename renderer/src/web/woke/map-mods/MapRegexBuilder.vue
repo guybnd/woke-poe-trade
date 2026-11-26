@@ -1,5 +1,5 @@
 <template>
-  <WPanel :title="config.wmTitle || 'Map mods'" :icon="panelIcon" width="60rem" max-height="85vh" :scroll="false" fill>
+  <WPanel :title="config.wmTitle || 'Map mods'" :icon="panelIcon" :hotkey="config.hotkey" width="60rem" max-height="85vh" :scroll="false" fill>
     <template #actions>
       <span class="w-dim text-xs">Build</span>
       <WSelect :model-value="String(config.activeProfile)" :options="profileOptions"
@@ -142,7 +142,7 @@
             <span class="w-group-label flex-1" style="padding: 0;">Rewards</span>
             <WInfo :text="REWARDS_HELP" />
           </div>
-          <div class="w-dim text-xs">What you want from a map. Minimums are ticked on the Alt+M card and filter the stash search for maps to run. Squares set how much a stat adds to the juice score.</div>
+          <div class="w-dim text-xs">What you want from a map. Minimums are ticked on the <template v-if="config.hotkey"><WKbd :keys="config.hotkey" /> </template>map check card and filter the stash search for maps to run. Squares set how much a stat adds to the juice score.</div>
           <table :class="$style.rw">
             <thead>
               <tr>
@@ -193,7 +193,7 @@ import type { ComponentPublicInstance } from 'vue'
 import { useFold } from '../ui/fold'
 import { MainProcess } from '@/web/background/IPC'
 import { pushHostConfig } from '@/web/Config'
-import { WPanel, WButton, WChip, WField, WInfo, WSegmented, WSelect, WTabs, WToggle, WEmpty, toast } from '../ui'
+import { WPanel, WButton, WChip, WField, WInfo, WKbd, WSegmented, WSelect, WTabs, WToggle, WEmpty, toast } from '../ui'
 import { useCopy } from '../ui/copy'
 import { SAVE_MESSAGE, renameSavedRegex, replaceSavedRegex, saveToRegexLibrary, savedRegexName } from '../regex-library/save'
 import { regexesIn } from '../regex-library/folders'

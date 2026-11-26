@@ -1,5 +1,5 @@
 <template>
-  <WPanel :title="result.name" size-key="verdict" width="26rem" max-height="80vh">
+  <WPanel :title="result.name" size-key="verdict" :hotkey="config.hotkey" width="26rem" max-height="80vh">
     <template #actions>
       <span class="w-dim text-xs whitespace-nowrap pr-2">{{ result.sub }}</span>
     </template>

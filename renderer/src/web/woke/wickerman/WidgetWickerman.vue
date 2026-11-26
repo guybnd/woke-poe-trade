@@ -1,6 +1,6 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
-    <WPanel :title="config.wmTitle || 'Wickerman'" icon="fas fa-bone" width="38rem" max-height="70vh" resizable>
+    <WPanel :title="config.wmTitle || 'Wickerman'" :icon="ninjaArt('Viscera', ICON_VISCERA)" :updated="pricesUpdated" :fresh-min="40" :stale-min="180" width="38rem" max-height="70vh" resizable>
       <div :class="$style.bar">
         <WSegmented v-model="config.slot" :options="SLOTS" />
         <span class="ml-auto w-dim w-num text-xs">{{ rows.length }}</span>
@@ -61,6 +61,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WEmpty, WField, WInfo, WPanel, WPrice, WSegmented } from '../ui'
 import { popupAnchor } from '../ui/window-anchor'
+import { ninjaArt } from '../market/ninja-icons'
 import { actLine, levelTier, levelTierLabel, searchViscera } from './viscera'
 import { useZone } from '../shared/zone'
 import type { Viscera } from './viscera'
@@ -89,7 +90,9 @@ const SLOTS = [
 
 const table = useVisceraTable()
 const { here } = useVisceraHere()
-const { price, divine } = useVisceraPrices()
+const { price, divine, updated: pricesUpdated } = useVisceraPrices()
+// The panel's icon: a Viscera's own art (poe.ninja's, as in Market).
+const ICON_VISCERA = "Al-Hezmin's Head"
 const hereNames = computed(() => new Set(here.value.map(h => h.v.name)))
 const query = shallowRef('')
 const open = shallowRef<string | null>(null)

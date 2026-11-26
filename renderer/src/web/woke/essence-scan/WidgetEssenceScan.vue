@@ -20,7 +20,7 @@
         <div v-if="running && config.hotkey" class="w-faint text-xs px-3 py-1"><WKbd :keys="config.hotkey" /> to stop</div>
       </template>
     </DockItem>
-    <WPanel ref="panel" :title="config.wmTitle || 'Essence scan'" icon="essence" width="19rem">
+    <WPanel ref="panel" :title="config.wmTitle || 'Essence scan'" icon="essence" :hotkey="config.hotkey" :updated="prices.snapshot.value?.ts ?? null" :fresh-min="40" :stale-min="180" width="19rem">
       <template #actions>
         <button type="button" class="w-icon-btn" title="Read every essence on screen once" @click="readOnce"><i class="fas fa-expand" /></button>
         <span :class="[$style.led, { [$style.on]: running }]" />
@@ -35,7 +35,7 @@
         <WPrice :chaos="e.rated.totalChaos || null" :divine="divine" />
       </div>
       <WEmpty v-if="!entries.length" :art="{ mechanic: 'essence' }">
-        <template v-if="running">Hover a monolith to price it. CORRUPT marks one with {{ flagText }}.</template>
+        <template v-if="running">Hover a monolith to price it. <b>Corrupt</b> marks one with {{ flagText }}.</template>
         <template v-else-if="config.autoInMaps">Starts by itself when you enter a map<template v-if="config.hotkey">, or press <WKbd :keys="config.hotkey" /></template>.</template>
         <template v-else-if="config.hotkey">Press <WKbd :keys="config.hotkey" /> in game to start scanning.</template>
         <template v-else>Start scanning, then hover essence monoliths.</template>
@@ -121,7 +121,8 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 normalizeEssenceScanWidget(props.config)
 hideWhilePlaying(props.config)
 
-const VERDICT_LABEL: Record<EssenceVerdict, string> = { corrupt: 'CORRUPT', open: 'OPEN', done: 'DONE' }
+// Normal case: the tag's caps come from the --w-caps-* tokens.
+const VERDICT_LABEL: Record<EssenceVerdict, string> = { corrupt: 'Corrupt', open: 'Open', done: 'Done' }
 
 interface Entry {
   id: number
@@ -363,7 +364,9 @@ const dockMenu = computed<DockMenuAction[]>(() => [
   flex: none;
   min-width: 52px;
   text-align: center;
-  font-size: var(--w-fs-xs);
+  font-family: var(--w-caps-face);
+  text-transform: var(--w-caps-case);
+  font-size: var(--w-fs-caps);
   font-weight: 600;
   border-radius: var(--w-r-sm);
   color: var(--w-accent-fg);

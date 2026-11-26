@@ -38,6 +38,8 @@ export function useVisceraPrices () {
   const ninja = usePoeninja()
   return {
     divine: computed(() => ninja.xchgRate.value ?? null),
+    // When these prices were downloaded, for the panel's data age.
+    updated: computed(() => (ninja.updatedAt.value ?? 0) > 0 ? ninja.updatedAt.value : null),
     price (v: Viscera, tier: number): number | null {
       // Read so a template showing this follows price updates.
       if (ninja.updatedAt.value === -1) return null
