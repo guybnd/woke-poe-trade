@@ -151,7 +151,7 @@ const props = withDefaults(defineProps<{
   source?: StylePatch | null
   // Only the look: no Show / Hide switch (the Gear table decides that).
   lookOnly?: boolean
-  // Only a mark on top of another look: border, sound, beam and map icon.
+  // Only a mark on top of another look: colours, sound, beam and map icon (no size).
   markOnly?: boolean
 }>(), { copyFrom: () => [], source: null, lookOnly: false, markOnly: false })
 
@@ -171,7 +171,7 @@ const colourRows = computed(() => [
   { key: 'text' as const, label: 'Text', short: 'text', value: props.look.text ?? DEFAULT_TEXT },
   { key: 'border' as const, label: 'Border', short: 'border', value: props.look.border ?? null },
   { key: 'background' as const, label: 'Background', short: 'back', value: props.look.background ?? DEFAULT_BG }
-].filter(c => !props.markOnly || c.key === 'border'))
+])
 
 // A setting differs from the filter as it came, whichever way it's written.
 function changed (key: keyof StylePatch): boolean {

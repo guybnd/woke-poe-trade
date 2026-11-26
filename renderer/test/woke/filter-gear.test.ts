@@ -193,9 +193,9 @@ describe('gear table', () => {
     const plain = matchItem(d, item({ ...f, quality: 0 }))
     expect(q.final!.block.tier).toBe('quality-r1-t5')
     expect(plain.final!.block.tier).not.toMatch(/^quality/)
-    // The rare look of rank 1, tier 5 (yours included)...
+    // The size of rank 1, tier 5 (yours included), the over-quality colours...
     expect(q.actions.find(a => a.key === 'SetFontSize')?.args).toEqual(['33'])
-    expect(q.actions.find(a => a.key === 'SetBackgroundColor')?.args).toEqual(plain.actions.find(a => a.key === 'SetBackgroundColor')?.args)
+    expect(q.actions.find(a => a.key === 'SetBackgroundColor')?.args.slice(0, 3)).toEqual(['50', '28', '0'])
     // ...with the mark on top.
     expect(q.actions.find(a => a.key === 'SetBorderColor')?.args.slice(0, 3)).toEqual(['255', '120', '220'])
     expect(q.actions.find(a => a.key === 'PlayEffect')?.args[0]).toBe('Pink')
@@ -203,14 +203,16 @@ describe('gear table', () => {
     expect(plain.actions.find(a => a.key === 'SetBorderColor')?.args.slice(0, 3)).not.toEqual(['255', '120', '220'])
   })
 
-  it('shows over-quality bases where the table hides their tier, with a white border by default', () => {
+  it('shows over-quality bases where the table hides their tier, in the over-quality colours by default', () => {
     const d = doc()
     applyGear(d, gearOn(d, g => { magicOff(g); g.quality.on = true; g.quality.min.r1 = 21 }), [])
     const f = { ...R1, rarity: 'Magic' as const, unidentifiedItemTier: 2 }
     expect(vis(d, f)).toBe('Hide')
     const q = matchItem(d, item({ ...f, quality: 23 }))
     expect(q.visibility).toBe('Show')
-    expect(q.actions.find(a => a.key === 'SetBorderColor')?.args.slice(0, 3)).toEqual(['255', '255', '255'])
+    expect(q.actions.find(a => a.key === 'SetBorderColor')?.args.slice(0, 3)).toEqual(['255', '170', '40'])
+    expect(q.actions.find(a => a.key === 'SetTextColor')?.args.slice(0, 3)).toEqual(['255', '200', '80'])
+    expect(q.actions.find(a => a.key === 'SetBackgroundColor')?.args.slice(0, 3)).toEqual(['50', '28', '0'])
   })
 
   it('keeps NeverSink\'s over-quality rules off with every row Off', () => {
