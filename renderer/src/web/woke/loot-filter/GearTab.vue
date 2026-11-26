@@ -224,15 +224,16 @@
         <WButton size="sm" variant="ghost" @click="picked = []">Clear</WButton>
       </div>
 
-      <div :class="$style.lanes">
-        <div v-for="lane in lanes" :key="lane.key" :class="[$style.lane, lane.key === 'build' && $style.buildLane]">
+      <div :class="$style.lanes" data-goto-spot="gear-ranks">
+        <div v-for="lane in lanes" :key="lane.key" :class="[$style.lane, lane.key === 'build' && $style.buildLane, ...laneDragClass(lane.key)]" :data-lane="lane.key"
+          @dragover="onDragOver($event, lane.key)" @dragleave="onDragLeave($event, lane.key)" @drop="onDrop($event, lane.key)">
           <div :class="$style.laneHead">
             <span>{{ lane.label }}</span>
             <span class="w-faint text-xs">{{ lane.bases.length }}</span>
           </div>
           <div :class="$style.laneBody" class="w-scroll">
-            <button v-for="b in lane.bases.slice(0, LANE_CAP)" :key="b" v-item-tip="{ name: b, note: baseTitle(b, lane.key) }" type="button" :class="[$style.base, picked.includes(b) && $style.picked]"
-              :aria-label="baseTitle(b, lane.key)" :aria-pressed="picked.includes(b)" @click="pick(b, $event)">
+            <button v-for="b in lane.bases.slice(0, LANE_CAP)" :key="b" v-item-tip="{ name: b, note: baseTitle(b, lane.key) }" type="button" :class="[$style.base, picked.includes(b) && $style.picked, drag?.bases.includes(b) && $style.dragging]"
+              :aria-label="baseTitle(b, lane.key)" :aria-pressed="picked.includes(b)" draggable="true" @click="pick(b, $event)" @dragstart="onDragStart($event, b, lane.key)" @dragend="onDragEnd">
               <img v-if="info(b).icon" :src="info(b).icon!" alt="" :class="$style.icon">
               <span :class="$style.baseText">
                 <span>{{ b }}</span>
@@ -243,7 +244,7 @@
           </div>
         </div>
       </div>
-      <div class="w-faint text-xs">Click to pick, shift-click for a run. A move applies to every drop tier. "was R2" marks a base moved off NeverSink's rank. Exotic: talismans, experimented and other special bases NeverSink shows with their own rules, before this table; they only reach the table when those rules pass them by.</div>
+      <div class="w-faint text-xs">Click to pick, shift-click for a run. Drag a base, or the picked ones, onto a column to move them. A move applies to every drop tier. "was R2" marks a base moved off NeverSink's rank. Exotic: talismans, experimented and other special bases NeverSink shows with their own rules, before this table; they only reach the table when those rules pass them by.</div>
       <div class="flex gap-1">
         <WButton size="sm" variant="ghost" :disabled="!movedCount" @click="change(x => { x.moves = {} })">Reset ranks to NeverSink</WButton>
       </div>
@@ -252,8 +253,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useCssModule } from 'vue'
+import { computed, ref, useCssModule, watch } from 'vue'
 import { WButton, WChip, WField, WInfo, WToggle, openMenu, vItemTip } from '../ui'
+import { hideTip } from '../ui/tooltip/tooltip'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import { DROP_TIERS, GEAR_ROWS, GEAR_TYPE, NO_TIER, QUALITY_ROWS, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, rankLists, readTiered, shiftAll, takeOver, SLOT_GROUPS, SLOT_ROWS } from './gear'
@@ -273,6 +275,8 @@ import type { StylePatch } from './edits'
 import type { FilterAction } from './parse'
 import { clickOf, togglePick } from '../shared/picks'
 import WFoldCaret from '../ui/WFoldCaret.vue'
+import { canDrop, dragSet, dropMoves, gearRanksAsk, takeRanksAsk } from './gear-drag'
+import type { GearMove } from './gear-drag'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -284,7 +288,7 @@ const useCss = useCssModule()
 const RARITIES: GearRarity[] = ['magic', 'rare']
 const ROW_LABEL: Record<GearRow, string> = { build: 'Build bases', exotic: 'Exotic bases', r1: 'Rank 1', r2: 'Rank 2', r3: 'Rank 3', any: 'Unranked (trash)' }
 const LANE_CAP = 80
-const MOVE_TO: Array<{ lane: Lane | 'build' | 'unbuild', label: string }> = [
+const MOVE_TO: Array<{ lane: GearMove, label: string }> = [
   { lane: 'build', label: 'Add to Build' },
   { lane: 'unbuild', label: 'Out of Build' },
   { lane: 'r1', label: 'Rank 1' },
@@ -296,6 +300,8 @@ const MOVE_TO: Array<{ lane: Lane | 'build' | 'unbuild', label: string }> = [
 
 const g = computed(() => props.config.presets.gear)
 const view = ref<'table' | 'ranks'>('table')
+// What's new's Show me (gear-drag.ts): opens on Base ranks.
+watch(gearRanksAsk, () => { if (takeRanksAsk('view')) view.value = 'ranks' }, { immediate: true })
 
 // NeverSink's tiered gear rules as they came (with your edits): read while
 // the table is off, since on it they are commented out.
@@ -658,31 +664,84 @@ function baseTitle (b: string, lane: string): string {
   if (ex) parts.push(`NeverSink's Exotic bases show it first (${ex.map(tierLabel).join(', ')}); change those under Rules`)
   return parts.filter(Boolean).join(' · ')
 }
-function moveTo (lane: Lane | 'build' | 'unbuild') {
+function moveTo (lane: GearMove) {
   const bases = [...picked.value]
-  change(x => {
-    if (lane === 'build') {
-      x.build.removed = x.build.removed.filter(b => !bases.includes(b))
-      // Out of Never, or the build lane would drop it again.
-      x.moves = Object.fromEntries(Object.entries(x.moves).filter(([b, l]) => !(l === 'never' && bases.includes(b))))
-      x.build.extra = [...new Set([...x.build.extra, ...bases.filter(b => !autoBases.value.includes(b))])]
-      return
-    }
-    if (lane === 'unbuild') {
-      x.build.extra = x.build.extra.filter(b => !bases.includes(b))
-      x.build.removed = [...new Set([...x.build.removed, ...bases.filter(b => autoBases.value.includes(b))])]
-      return
-    }
-    const moves: Record<string, Lane> = Object.fromEntries(Object.entries(x.moves).filter(([b]) => !bases.includes(b)))
-    for (const b of bases) {
-      // Back where NeverSink had it: no move to remember.
-      const orig = source.value ? laneOf(source.value, { ...x, moves: {} }, b) : 'none'
-      if (orig !== lane) moves[b] = lane
-    }
-    x.moves = moves
-  })
+  change(x => { applyMove(x, lane, bases) })
   picked.value = []
   lastPick = null
+}
+function applyMove (x: GearSettings, lane: GearMove, bases: string[]) {
+  if (lane === 'build') {
+    x.build.removed = x.build.removed.filter(b => !bases.includes(b))
+    // Out of Never, or the build lane would drop it again.
+    x.moves = Object.fromEntries(Object.entries(x.moves).filter(([b, l]) => !(l === 'never' && bases.includes(b))))
+    x.build.extra = [...new Set([...x.build.extra, ...bases.filter(b => !autoBases.value.includes(b))])]
+    return
+  }
+  if (lane === 'unbuild') {
+    x.build.extra = x.build.extra.filter(b => !bases.includes(b))
+    x.build.removed = [...new Set([...x.build.removed, ...bases.filter(b => autoBases.value.includes(b))])]
+    return
+  }
+  const moves: Record<string, Lane> = Object.fromEntries(Object.entries(x.moves).filter(([b]) => !bases.includes(b)))
+  for (const b of bases) {
+    // Back where NeverSink had it: no move to remember.
+    const orig = source.value ? laneOf(source.value, { ...x, moves: {} }, b) : 'none'
+    if (orig !== lane) moves[b] = lane
+  }
+  x.moves = moves
+}
+
+// Drag a base, or the picked set it's in, onto another column.
+const drag = ref<{ bases: string[], from: string } | null>(null)
+const dropOver = ref<string | null>(null)
+function onDragStart (e: DragEvent, b: string, from: string) {
+  hideTip()
+  const bases = dragSet(picked.value, b)
+  drag.value = { bases, from }
+  if (!e.dataTransfer) return
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', bases.join('\n'))
+  if (bases.length > 1) {
+    // A count, not the one card under the pointer.
+    const ghost = document.createElement('div')
+    ghost.textContent = `${bases.length} bases`
+    ghost.className = useCss.dragGhost
+    document.body.appendChild(ghost)
+    e.dataTransfer.setDragImage(ghost, 12, 12)
+    setTimeout(() => { ghost.remove() }, 0)
+  }
+}
+function onDragEnd () {
+  drag.value = null
+  dropOver.value = null
+}
+function onDragOver (e: DragEvent, to: string) {
+  if (!drag.value || !canDrop(drag.value.from, to)) return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  dropOver.value = to
+}
+function onDragLeave (e: DragEvent, to: string) {
+  const into = e.relatedTarget as Node | null
+  if (into && (e.currentTarget as HTMLElement).contains(into)) return
+  if (dropOver.value === to) dropOver.value = null
+}
+function onDrop (e: DragEvent, to: string) {
+  const d = drag.value
+  onDragEnd()
+  if (!d) return
+  const moves = dropMoves(d.from, to)
+  if (!moves.length) return
+  e.preventDefault()
+  change(x => { for (const m of moves) applyMove(x, m, d.bases) })
+  picked.value = picked.value.filter(b => !d.bases.includes(b))
+  lastPick = null
+}
+function laneDragClass (key: string): string[] {
+  if (!drag.value) return []
+  if (dropOver.value === key) return [useCss.laneOver]
+  return canDrop(drag.value.from, key) ? [useCss.laneCan] : key === drag.value.from ? [] : [useCss.laneNo]
 }
 
 // Armour your build doesn't wear (by defence) and weapons it doesn't use.
@@ -1029,6 +1088,21 @@ function neverOffBuild () {
 }
 .base:hover { border-color: var(--w-border); }
 .picked { border-color: var(--w-accent, #e0b860); background: rgb(224 184 96 / 14%); }
+.dragging { opacity: 0.45; }
+.laneCan { outline: 1px dashed rgb(224 184 96 / 55%); }
+.laneOver { outline: 2px solid var(--w-accent, #e0b860); background: rgb(224 184 96 / 12%); }
+.laneNo { opacity: 0.5; }
+.dragGhost {
+  position: fixed;
+  top: -100px;
+  left: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--w-accent, #e0b860);
+  border-radius: var(--w-r-sm);
+  background: var(--w-panel, #1a1714);
+  color: var(--w-text, #e8dcc0);
+  font-size: var(--w-fs-xs);
+}
 .icon {
   width: 22px;
   height: 22px;

@@ -27,7 +27,7 @@ export const GOTO_SPOTS = {
   'woke-net-worth': { 'per-hour': 'holdings', 'faustus-box': 'holdings', 'worth-selling': 'holdings', 'still-cheapest': 'listed', 'stale': 'listed', 'past-runs': 'runs' },
   'woke-atlas-strategies': { results: 'strategies', import: 'strategies' },
   'woke-pob-builds': { import: 'builds' },
-  'woke-loot-filter': { profiles: 'editor' }
+  'woke-loot-filter': { 'profiles': 'editor', 'gear-ranks': 'editor' }
 } as const satisfies { [T in keyof typeof GOTO_TARGETS]?: Record<string, keyof typeof GOTO_TARGETS[T]> }
 
 // What's new lines whose feature is a spot, by line id (news.ts). Kept here,
@@ -41,7 +41,8 @@ export const NEWS_SPOTS: Record<string, string> = {
   'atlas-planner-links': 'import',
   'atlas-tree-planner-links': 'import',
   'pob-import-all-sites': 'import',
-  'loot-filter-profiles': 'profiles'
+  'loot-filter-profiles': 'profiles',
+  'loot-filter-drag-bases': 'gear-ranks'
 }
 
 export function gotoSpots (wmType: string): Record<string, string> | null {
