@@ -52,7 +52,7 @@
           <template v-for="row in visible" :key="row.kind === 'head' ? `head:${row.rating}` : row.matcher">
             <div v-if="row.kind === 'head'" :class="[$style.groupHead, $style[row.rating]]">{{ HEAD_LABEL[row.rating] }} · {{ row.count }}</div>
             <div v-else :class="$style.row">
-              <span class="flex-1 min-w-0" :class="{ 'w-dim': !ratings[row.matcher] }" :title="bonusRows[row.matcher]?.tip ?? row.matcher">
+              <span v-mod-tip="{ head: modHead(row.matcher), text: row.matcher, notes: [bonusRows[row.matcher]?.tip] }" class="flex-1 min-w-0" :class="{ 'w-dim': !ratings[row.matcher] }">
                 {{ row.matcher }}<span v-if="mode === 'maps' && t17.has(row.matcher)" :class="$style.t17">T17</span>
               </span>
               <span v-if="bonusRows[row.matcher]" :class="$style.bonus" :title="bonusRows[row.matcher].tip">
@@ -191,6 +191,7 @@ import { useGoto } from '../tab-bar/goto'
 import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import type { ComponentPublicInstance } from 'vue'
 import { useFold } from '../ui/fold'
+import { vModTip } from '../ui/tooltip/mod-line-tip'
 import { MainProcess } from '@/web/background/IPC'
 import { pushHostConfig } from '@/web/Config'
 import { WPanel, WButton, WChip, WField, WInfo, WKbd, WSegmented, WSelect, WTabs, WToggle, WEmpty, toast } from '../ui'
@@ -268,6 +269,12 @@ const shownPresets = computed(() => presetsOpen.value ? presets.value : presets.
 const search = shallowRef('')
 const filter = shallowRef('all')
 const mode = shallowRef<ModMode>('maps')
+// The head of a mod row's tooltip.
+function modHead (matcher: string): string {
+  if (mode.value === 'heist') return 'Contract mod'
+  if (mode.value === 'charts') return 'Chart mod'
+  return t17.value.has(matcher) ? 'T17 map mod' : 'Map mod'
+}
 // Map scan lives in the first Map mods window only.
 const scanOwner = computed(() => isScanOwner(props.config))
 // The Scan tab sits beside Maps, Heist and Charts; mode keeps the last of those.

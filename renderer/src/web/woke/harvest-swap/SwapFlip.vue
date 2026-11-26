@@ -6,7 +6,7 @@
     </div>
     <div v-for="cand of swap.candidates.value" :key="cand.filter.statRef" :class="$style.block">
       <div :class="$style.title">
-        <span>{{ modLine(cand) }}</span>
+        <span v-mod-tip="{ head: 'Mod', text: modLine(cand), notes: [`Harvest swap: ${cand.family.label}`] }">{{ modLine(cand) }}</span>
         <span class="w-faint">{{ cand.family.label }}</span>
       </div>
       <template v-if="runOf(cand)?.state === 'done'">
@@ -17,8 +17,8 @@
           <div v-for="p of runOf(cand)!.result!.prices" :key="p.key" :class="$style.row">
             <span>{{ p.key === cand.from ? `Keep ${KEY_LABEL[p.key]}` : KEY_LABEL[p.key] }}</span>
             <w-price :chaos="p.chaos" :divine="divine" />
-            <span class="w-num w-dim">{{ p.key === cand.from ? '—' : costText(cand, p.key) }}</span>
-            <span class="w-num" :class="toneOf(profit(cand, p.key))">{{ profitText(profit(cand, p.key)) }}</span>
+            <span class="w-num w-dim"><template v-if="p.key === cand.from">—</template><WPriceText v-else :text="costText(cand, p.key)" /></span>
+            <span class="w-num" :class="toneOf(profit(cand, p.key))"><WPriceText :text="profitText(profit(cand, p.key))" /></span>
             <span class="w-num" :class="{ 'w-faint': p.listings < MIN_LISTINGS }">
               <template v-if="p.listings >= MIN_LISTINGS">{{ p.listings }}</template>
               <template v-else-if="runOf(cand)!.refining === p.key">searching…</template>
@@ -29,7 +29,7 @@
             </span>
           </div>
           <div v-if="cand.family.random && average(cand) != null" :class="$style.row">
-            <span class="w-dim">Average of both</span><span /><span /><span class="w-num" :class="toneOf(average(cand))">{{ profitText(average(cand)) }}</span><span />
+            <span class="w-dim">Average of both</span><span /><span /><span class="w-num" :class="toneOf(average(cand))"><WPriceText :text="profitText(average(cand))" /></span><span />
           </div>
         </div>
         <div v-if="swap.stale(cand)" :class="$style.warn">
@@ -51,7 +51,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { WButton, WPrice } from '../ui'
+import { WButton, WPrice, WPriceText } from '../ui'
+import { formatChaos } from '../ui/format'
+import { vModTip } from '../ui/tooltip/mod-line-tip'
 import { usePoeninja } from '@/web/background/Prices'
 import { KEY_LABEL } from './families'
 import { MIN_LISTINGS } from './search'
@@ -92,9 +94,7 @@ function average (cand: SwapCandidate): number | null {
 }
 
 function money (chaos: number): string {
-  const d = divine.value
-  if (d && Math.abs(chaos) >= d) return `${(chaos / d).toFixed(1)} div`
-  return `${Math.round(chaos)}c`
+  return formatChaos(chaos, divine.value)
 }
 
 function profitText (v: number | null): string {

@@ -54,7 +54,7 @@
             <td class="w-num" :class="[$style.ask, { [$style.struck]: isOut(r) }]">
               {{ fmt(r.item.price.amount) }} {{ r.item.price.currency }}<span v-if="targetOf(r)" class="w-warn" :title="`You set ${priceLabel(targetOf(r)!)} from the price check: reprice it at Faustus. It clears once a Refresh sees that price`" data-listed-target> → {{ priceLabel(targetOf(r)!) }}</span>
             </td>
-            <td class="w-num" :class="r.confidence === 'rough' ? 'w-dim' : ''" :title="suggestTitle(r)">{{ suggestText(r) }}</td>
+            <td class="w-num" :class="r.confidence === 'rough' ? 'w-dim' : ''" :title="suggestTitle(r)"><WPriceText :text="suggestText(r)" /></td>
             <td class="w-num" :class="vsTone(r)">{{ vsText(r) }}</td>
             <td :class="$style.check" data-listed-check>
               <span v-if="busy.has(r.item.id)" class="w-dim">Checking…</span>
@@ -64,11 +64,11 @@
                   <span v-if="canCheck(r.item)" class="w-line-acts" :class="[$style.quickActs, { 'w-line-acts-on': errors[r.item.id] }]">
                     <button type="button" :class="[$style.quick, errors[r.item.id] && $style.failed]" :title="errors[r.item.id] ? `Quick rank failed: ${errors[r.item.id]}. Click to try again` : 'Quick rank: one trade search by name, instant buyout only. It ignores the rolls'" aria-label="Quick rank" data-listed-quick @click="check(r)"><i class="fas fa-bolt" /></button>
                   </span>
-                  <WButton size="sm" variant="ghost" :class="checkOf(r) ? (checkOf(r)!.cheaper ? 'w-down' : 'w-up') : ''" :title="checkOf(r) ? `${checkTitle(r)}\nClick to price check it again` : 'Price check this listing with its own mods: tune the filters, then set a new price at the foot'" data-listed-reprice @click="reprice(r, $event)">{{ checkOf(r) ? checkText(r) : 'Price check' }}</WButton>
+                  <WButton size="sm" variant="ghost" :class="checkOf(r) ? (checkOf(r)!.cheaper ? 'w-down' : 'w-up') : ''" :title="checkOf(r) ? `${checkTitle(r)}\nClick to price check it again` : 'Price check this listing with its own mods: tune the filters, then set a new price at the foot'" data-listed-reprice @click="reprice(r, $event)"><WPriceText v-if="checkOf(r)" :text="checkText(r)" /><template v-else>Price check</template></WButton>
                 </span>
               </template>
               <span v-else-if="!canCheck(r.item)" class="w-dim" title="Rare gear read before its mods were kept: Refresh, or price check it in game">—</span>
-              <WButton v-else-if="checkOf(r)" size="sm" variant="ghost" :class="checkOf(r)!.cheaper ? 'w-down' : 'w-up'" :title="checkTitle(r)" @click="check(r)">{{ checkText(r) }}</WButton>
+              <WButton v-else-if="checkOf(r)" size="sm" variant="ghost" :class="checkOf(r)!.cheaper ? 'w-down' : 'w-up'" :title="checkTitle(r)" @click="check(r)"><WPriceText :text="checkText(r)" /></WButton>
               <WButton v-else size="sm" variant="ghost" :class="errors[r.item.id] ? 'w-down' : ''" :title="errors[r.item.id] ? `Check failed: ${errors[r.item.id]}. Click to try again` : 'One trade search: where your price ranks among other instant buyout listings of it'" @click="check(r)">{{ errors[r.item.id] ? 'Retry' : 'Check' }}</WButton>
             </td>
             <td class="w-num" :class="r.stale && !isOut(r) ? 'w-warn' : 'w-dim'" :title="new Date(r.firstAt).toLocaleString()">{{ ageText(r.ageMs) }}<WLineActs :name="saleName(r.item)" :out="isOut(r)" :entries="entriesOf(r)" :head="e => itemMenuHead(saleMenuRef(r.item), e)" @out="leaveOut(r, $event)" /></td>
@@ -86,7 +86,7 @@
 // Sales › Listed (pending.ts): what's at Faustus and not sold, its asking
 // price against poe.ninja, and how long it has sat.
 import { computed, shallowRef, watch } from 'vue'
-import { WButton, WChip, WEmpty, WLineActs, WToggle, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
+import { WButton, WChip, WEmpty, WLineActs, WPriceText, WToggle, lineKeys, lineMenu, lineToast, openMenu, toast, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui'
 import { itemMenuHead } from '../ui/tooltip/item-menu'
 import { lineOutDoc, loadLineOut, outIdsOf, setLineOut } from './line-out-store'

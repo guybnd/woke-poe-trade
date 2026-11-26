@@ -61,11 +61,21 @@ export function saveTemplate (t: Omit<FarmTemplate, 'id'>): FarmTemplate | null 
   return saved
 }
 
-export function deleteTemplate (id: string): void {
+// Returns a function that puts it back (for the Undo note), or null if nothing went.
+export function deleteTemplate (id: string): (() => void) | null {
   const w = widget()
-  if (!w) return
-  w.farmTemplates = farmTemplates().filter(t => t.id !== id)
-  if (w.farmTemplate === id) delete w.farmTemplate
+  if (!w) return null
+  const before = farmTemplates()
+  const wasActive = w.farmTemplate === id
+  if (!before.some(t => t.id === id)) return null
+  w.farmTemplates = before.filter(t => t.id !== id)
+  if (wasActive) delete w.farmTemplate
+  return () => {
+    const v = widget()
+    if (!v) return
+    v.farmTemplates = before
+    if (wasActive) v.farmTemplate = id
+  }
 }
 
 // A short name not used yet: "Farm 1", "Farm 2"...

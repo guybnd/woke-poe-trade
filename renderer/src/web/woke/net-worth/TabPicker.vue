@@ -54,7 +54,7 @@
 // set or your own ticks. Shown before a league's first read, then from the
 // window's tab button.
 import { computed, onMounted, shallowRef } from 'vue'
-import { WBanner, WButton, WChip, WEmpty, WField, WSelect, WSkeleton } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WField, WSelect, WSkeleton, toast } from '../ui'
 import { hostRequest } from '../shared/host'
 import {
   KIND_OPTIONS, TEMPLATE_HINT, TEMPLATE_LABEL, UNREADABLE, choiceOf, shownTabs, startingPick, ticksFor, typeLabel
@@ -141,10 +141,28 @@ function saveAsSet () {
   }).catch(() => {})
 }
 
+// No "are you sure": delete now, offer Undo (P9). The set lives on the host,
+// so Undo saves it back there and puts the old choice back too.
 function removeSet (name: string) {
+  const league = list.value?.league
+  const set = list.value?.sets.find(s => s.name === name)
+  const choice = list.value?.choice ?? null
+  const was = picked.value
   run(async () => {
-    takeSets(await hostRequest('stash-tab-set-delete', { league: list.value?.league, name }) as SetsReply)
+    takeSets(await hostRequest('stash-tab-set-delete', { league, name }) as SetsReply)
     if (picked.value.kind === 'set' && picked.value.name === name) picked.value = { kind: 'custom' }
+    if (set) toast(`${name} deleted`, { undo: () => { restoreSet(league, set, choice, was) } })
+  }).catch(() => {})
+}
+function restoreSet (league: string | undefined, set: SavedSet, choice: TabChoice | null, was: Picked) {
+  run(async () => {
+    takeSets(await hostRequest('stash-tab-set-save', { league, name: set.name, ids: set.ids }) as SetsReply)
+    // Saving makes it the choice; put back the one in use before.
+    if (league && choice && choice.set !== set.name) {
+      const saved = await hostRequest('stash-tab-choice', { league, ...choice })
+      if (saved && list.value) list.value = { ...list.value, choice }
+    }
+    picked.value = was
   }).catch(() => {})
 }
 

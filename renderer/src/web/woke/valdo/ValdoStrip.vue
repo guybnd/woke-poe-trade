@@ -49,7 +49,7 @@
         <button v-if="m !== VOID_TEXT && canSkip" type="button" :class="[$style.rateChip, $style[`rate_${ratingOf(m)}`]]" :title="rateTitle(m)"
           :aria-label="`Rating: ${RATE_WORD[ratingOf(m)]}. Click to change`" :data-valdo-rate="ratingOf(m)" @click.stop="rate(m)">{{ RATE_WORD[ratingOf(m)] }}</button>
         <span v-else :class="$style.rateGap" />
-        <span :class="$style.text" :title="m">{{ m.split('\n')[0] }}</span>
+        <span v-mod-tip="modTip(m)" :class="$style.text">{{ m.split('\n')[0] }}</span>
         <span v-if="m !== VOID_TEXT && !onMap(m)" :class="$style.sub" title="Not on this map: it still filters the listings">other maps</span>
         <span v-if="m === VOID_TEXT && !hasVoid" :class="$style.sub" title="This map doesn't send you to the Void; the search looks for maps without it until you change it">not on this map</span>
         <span v-if="m === VOID_TEXT ? !!voidFilter : canSkip" :class="$style.seg" role="radiogroup" @click.stop :aria-label="`Search ${m.split('\n')[0]}`">
@@ -73,6 +73,8 @@
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { WInfo, WSelect, vItemTip } from '../ui'
 import { useFold } from '../ui/fold'
+import { vModTip } from '../ui/tooltip/mod-line-tip'
+import type { ModLine } from '../ui/tooltip/mod-line-tip'
 import { CLIENT_STRINGS as _$, ITEMS_ITERATOR } from '@/assets/data'
 import type { BaseType } from '@/assets/data'
 import { ModifierType } from '@/parser/modifiers'
@@ -274,6 +276,17 @@ function ratingOf (m: string): ModRating {
 function rateTitle (m: string): string {
   const name = profile.value?.name
   return `${RATE_TITLE[ratingOf(m)]}. Click for the next: Bad, Care, Want, none${name ? `; saved to ${name}` : ''}.`
+}
+// The mod's whole text on hover (a Valdo mod can run over two lines).
+function modTip (m: string): ModLine {
+  return {
+    head: 'Valdo map mod',
+    text: m,
+    notes: [
+      m !== VOID_TEXT && canSkip.value && RATE_TITLE[ratingOf(m)],
+      canCycle(m) && 'Click to cycle Has, Not, Any'
+    ]
+  }
 }
 function rate (m: string) {
   const w = ensureMapModsConfig()

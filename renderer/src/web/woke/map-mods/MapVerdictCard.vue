@@ -48,12 +48,12 @@
       :title="`Click to change: ${RATING_LABEL[mod.rating]}`"
       @click="cycle(mod)">
       <span :class="[$style.dot, $style[mod.rating]]" />
-      <span class="flex-1 text-left">{{ mod.text }}</span>
+      <span v-mod-tip="{ head: 'Mod', text: mod.text, notes: [`Click to change: ${RATING_LABEL[mod.rating]}`] }" class="flex-1 text-left">{{ mod.text }}</span>
       <span v-if="mod.rating !== 'ok'" :class="[$style.tag, $style[mod.rating]]">{{ RATING_LABEL[mod.rating] }}</span>
     </button>
     <div v-for="text in result.unknown" :key="text" :class="$style.mod" class="w-dim">
       <span :class="$style.dot" />
-      <span class="flex-1">{{ text }} <span class="w-faint">(not recognised)</span></span>
+      <span v-mod-tip="{ head: 'Mod', text, notes: ['Not a mod this list knows, so it has no rating'] }" class="flex-1">{{ text }} <span class="w-faint">(not recognised)</span></span>
     </div>
   </WPanel>
 </template>
@@ -61,6 +61,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { WPanel } from '../ui'
+import { vModTip } from '../ui/tooltip/mod-line-tip'
 import { heistRowOf } from './data'
 import { modRatings, nextModRating, setModRatings, shortLabel, VERDICT_LABEL, withModRating } from './rules'
 import type { CheckedMod, ModRating } from './rules'
