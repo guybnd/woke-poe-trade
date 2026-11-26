@@ -1098,7 +1098,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .boxHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 .sideCol { display: flex; flex-direction: column; gap: var(--w-s3); }
 .movesCol { display: flex; flex-direction: column; gap: 2px; }
-.moveRow { display: flex; justify-content: space-between; gap: var(--w-s2); min-width: 0; font-size: var(--w-fs-sm); }
 .more { font-size: var(--w-fs-xs); color: var(--w-dim); }
 .split { position: relative; display: flex; height: 8px; border: 1px solid var(--w-line); border-radius: 2px; }
 .split > span:not(.splitLabel) { flex-basis: 0; position: relative; transition: opacity 0.1s; }
@@ -1171,7 +1170,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .soldHead { display: flex; justify-content: space-between; align-items: baseline; gap: var(--w-s2); width: 100%; margin-bottom: 4px; text-align: left; cursor: pointer; }
 .soldHead:hover .caps { color: var(--w-fg); }
 .spendNote { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-info); }
-.feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
 /* A sale as a shared profit line (sale-lines.ts); its hover actions lie over
    the end of the name. */
 .saleLine { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); min-height: 20px; }
@@ -1186,7 +1184,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .moveName { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 /* A sale's "7% under" and price never wrap: the name is cut short instead. */
 .saleTag { flex: none; white-space: nowrap; font-size: var(--w-fs-xs); }
-.sideCol .moveRow > :global(.w-num) { flex: none; white-space: nowrap; }
 .catRow { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) 5em; gap: 6px; align-items: center; width: 100%; padding: 2px 4px; font-size: var(--w-fs-sm); color: var(--w-fg); text-align: left; border-radius: var(--w-r-sm); cursor: pointer; }
 .catRow:hover { background: var(--w-panel-2); }
 .catRow i { display: block; height: 8px; min-width: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--w-gold) 50%, transparent), var(--w-gold)); }

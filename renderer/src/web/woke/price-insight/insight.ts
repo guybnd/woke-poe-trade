@@ -38,7 +38,6 @@ export const FIX_TAG: Partial<Record<DropReason, string>> = {
 }
 
 /** Drop reasons that mean someone may be faking the price. */
-export const FIXING_REASONS = new Set<DropReason>(['fixer', 'underbuy', 'wall', 'dump'])
 
 export type FixRisk = 'none' | 'low' | 'medium' | 'high'
 

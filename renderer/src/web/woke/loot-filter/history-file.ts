@@ -101,5 +101,3 @@ export function useFilterHistory (legacy: Legacy, request: Request = hostRequest
     pending: () => timer != null
   }
 }
-
-export type FilterHistory = ReturnType<typeof useFilterHistory>

@@ -12,10 +12,6 @@ export interface SessionStoryWidget extends Widget {
   chipPlace?: ChipPlace
   // How long the line stays, in seconds; 0: until you go into a map.
   chipSeconds?: number
-  // No longer used: a click on the toast always closes it now. Old configs may hold it.
-  chipClick?: boolean
-  // No longer used: the corner zoomed the toast (PR 693). Old configs may hold it.
-  chipScale?: number
   // The toast's size in its own px, set by dragging its corner: more room, not bigger text.
   chipSize?: { w: number, h?: number }
   // Where the toast sits (its top centre, share of the screen), set by dragging its title bar.

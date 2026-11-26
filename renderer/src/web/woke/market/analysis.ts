@@ -76,21 +76,3 @@ export function trendBaseline (items: PriceItem[], period: '24h' | '7d'): { then
   const then = trendThen(items, period)
   return { then, divThen: findDivinePrice(then) }
 }
-
-export function formatChange (change: number): string {
-  const pct = change * 100
-  return `${pct >= 0 ? '+' : ''}${Math.abs(pct) >= 10 ? Math.round(pct) : pct.toFixed(1)}%`
-}
-
-// SVG polyline points for a small sparkline.
-export function sparklinePoints (values: number[], width: number, height: number): string {
-  if (values.length < 2) return ''
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const span = max - min || 1
-  return values.map((v, i) => {
-    const x = (i / (values.length - 1)) * width
-    const y = height - ((v - min) / span) * height
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  }).join(' ')
-}

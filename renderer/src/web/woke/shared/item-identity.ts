@@ -30,6 +30,7 @@ type Lookup = (ns: BaseType['namespace'], name: string) => BaseType[] | undefine
 // `lookup` (ITEM_BY_REF) for that, or gems read as plain names.
 export function readItemName (name: string, lookup?: Lookup): ItemName {
   for (const [variant, prefix] of PREFIX) {
+    if (variant === 'foulborn' && FOULBORN_ITEMS.has(name)) continue
     if (name.startsWith(prefix)) return { name, plain: name.slice(prefix.length), variant }
   }
   const gem = lookup?.('GEM', name)?.[0]?.gem
@@ -37,8 +38,17 @@ export function readItemName (name: string, lookup?: Lookup): ItemName {
   return { name, plain: name, variant: null }
 }
 
+// Currency the game itself names "Foulborn ..." (the orbs that make Foulborn
+// uniques). They are items of their own, not Foulborn copies of a unique. A
+// test checks this list against the item data.
+export const FOULBORN_ITEMS: ReadonlySet<string> = new Set([
+  'Foulborn Exalted Orb',
+  'Foulborn Orb of Augmentation',
+  'Foulborn Regal Orb'
+])
+
 export function isFoulborn (name: string): boolean {
-  return name.startsWith('Foulborn ')
+  return name.startsWith('Foulborn ') && !FOULBORN_ITEMS.has(name)
 }
 
 export function isReplica (name: string): boolean {
