@@ -72,11 +72,26 @@ describe('Atlas Tree Planner links', () => {
     expect(readCompact(m2, bytes)).toBeNull()
     expect(sorted(readCompact(m2, bytes, ids)!.nodes)).toEqual(SITE_READ)
     expect(sorted(decodeTree(plannerToLink(m2, LINK)!).nodes)).toEqual(SITE_READ)
-    // A link the site makes once it has the newer tree reads on it as well.
-    const code = siteCode(m2, new Set([...SITE_READ, 27261]), { 27261: 1 })
-    const t = decodeTree(plannerToLink(m2, `https://atlas-blush-beta.vercel.app/#${code}`)!)
-    expect(sorted(t.nodes)).toEqual(sorted([...SITE_READ, 27261]))
-    expect(t.masteries).toContainEqual({ node: 27261, effect: 2 })
+    // Any plan the site makes through 31171 and 302 (where the new notables
+    // hang) reads the same on the newer tree.
+    for (let seed = 1; seed <= 40; seed++) {
+      let x = seed
+      const rand = () => { x = (x * 1103515245 + 12345) % 2147483648; return x / 2147483648 }
+      const taken = new Set<number>()
+      const add = (target: number) => {
+        const prev = new Map<number, number>([[model.start, -1]])
+        const q = [model.start, ...taken]
+        for (const t of taken) prev.set(t, -1)
+        for (let i = 0; i < q.length && !prev.has(target); i++) for (const n of model.links.get(q[i]) ?? []) if (!prev.has(n)) { prev.set(n, q[i]); q.push(n) }
+        for (let c = target; c !== model.start && !taken.has(c) && c !== -1; c = prev.get(c)!) taken.add(c)
+      }
+      add(31171)
+      add(302)
+      const all = [...model.links.keys()].filter(id => id !== model.start)
+      while (taken.size < 60 + Math.floor(rand() * 90)) add(all[Math.floor(rand() * all.length)])
+      const code = siteCode(model, taken)
+      expect(sorted(decodeTree(plannerToLink(m2, `https://atlas-blush-beta.vercel.app/#${code}`)!).nodes), String(seed)).toEqual(sorted([...taken]))
+    }
   })
 
   it('round-trips a small plan with a picked type', () => {

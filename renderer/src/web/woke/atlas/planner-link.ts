@@ -14,8 +14,10 @@
 // The walk only means something on the tree it was made on. The site's tree
 // data (checked 2026-11-26) is an older export than GGG's current one: it
 // lacks PLANNER_LACKS, which sit in the walk and shift every bit after them.
-// So the link is read on both trees, and the read that uses its bits to the
-// end and no further wins.
+// So the link is read on the site's tree (GGG's without them), and on GGG's
+// only when that fails. A walk one bit out still reads as a tree, so the two
+// can't be told apart by how well the bits fit: when the site moves to the
+// newer tree, empty PLANNER_LACKS.
 import { encodeAtlasTree } from './atlas-tree'
 import type { AtlasTreeModel } from './atlas-tree'
 import { trimLinkEnd } from './tree'
@@ -26,7 +28,7 @@ export const PLANNER_LACKS = [27261, 53484]
 // Any link to the site.
 const ANY_LINK = /https?:\/\/atlas-blush-beta\.vercel\.app\/[^\s)"']*/gi
 
-interface Read { nodes: number[], picks: Map<number, number>, slack: number }
+interface Read { nodes: number[], picks: Map<number, number> }
 
 function bytesOf (code: string): Uint8Array | null {
   try {
@@ -66,15 +68,12 @@ export function readCompact (model: AtlasTreeModel, b: Uint8Array, skip: Readonl
   if (pos <= last) return null
   const nodes = order.slice(1)
   if (!nodes.length || nodes.length > 255) return null
-  return { nodes, picks, slack: pos - last }
+  return { nodes, picks }
 }
 
 function compactToLink (model: AtlasTreeModel, b: Uint8Array): string | null {
-  const reads = [readCompact(model, b, new Set(PLANNER_LACKS)), readCompact(model, b)]
-    .filter((r): r is Read => r != null)
-  if (!reads.length) return null
-  // The tightest fit; a tie stays with the site's own tree.
-  const best = reads.reduce((a, r) => r.slack < a.slack ? r : a)
+  const best = readCompact(model, b, new Set(PLANNER_LACKS)) ?? readCompact(model, b)
+  if (!best) return null
   const variants: Record<number, number> = {}
   for (const [id, i] of best.picks) {
     const effect = model.variants.get(id)?.[i]?.effect
