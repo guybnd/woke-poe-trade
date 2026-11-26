@@ -11,7 +11,11 @@
       <input v-model.number="fallbackAreaLevel" type="number" min="1" max="86" class="rounded w-input px-1 block w-24 font-sans">
     </div>
 
-    <div class="flex flex-col gap-1">
+    <div v-if="namedProfile" class="flex flex-col gap-1">
+      <span>Where saves go</span>
+      <span class="w-dim text-sm">The profile in use, {{ namedProfile }}, saves to its own file. Pick it in game once.</span>
+    </div>
+    <div v-else class="flex flex-col gap-1">
       <span>Where saves go</span>
       <label class="flex items-start gap-2">
         <input v-model="saveMode" type="radio" value="copy" style="margin-top: 2px;">
@@ -64,6 +68,12 @@ export default defineComponent({
         }
       }),
       saveMode: configModelValue(() => props.configWidget, 'saveMode'),
+      // A named profile always saves to "<name> (woke).filter": copy or overwrite doesn't apply.
+      namedProfile: computed(() => {
+        const w = props.configWidget
+        const p = w.profiles?.find(x => x.id === w.activeProfile)
+        return p && !p.legacyFile ? `${p.name} (woke).filter` : null
+      }),
       reloadViaChat: configModelValue(() => props.configWidget, 'reloadViaChat'),
       reloadWhenSafe: configModelValue(() => props.configWidget, 'reloadWhenSafe')
     }
