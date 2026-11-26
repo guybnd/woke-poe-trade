@@ -37,6 +37,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-26T04:09:07.042Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up PR 960 (https://github.com/guybnd/woke-poe-trade/pull/960,
+      578e09d): Worth selling is now a Falling chip on the Holdings table.
+    date: '2026-11-26T05:00:37.036Z'
+    selfAttested: true
+    id: c-2026-11-26t05-00-37-036z
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/956'
