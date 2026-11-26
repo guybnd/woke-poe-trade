@@ -77,7 +77,7 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
   })
 
   function cost (cand: SwapCandidate, to: string): number | null {
-    return detectCode.value!.swapChaos(cand.family.cost(to), name => {
+    return detectCode.value!.swapChaos(cand.family.cost(cand.from, to), name => {
       const found = ninja.findPriceByQuery({ ns: 'ITEM', name, variant: undefined })
       return found ? found.chaos : null
     })

@@ -9,7 +9,9 @@ import { dropOf } from '@/web/woke/ui/tooltip/tip-content'
 import { cheapestPrices } from '@/web/woke/disenchant/calc'
 import { readCounts } from '@/web/woke/disenchant/listings'
 import { dropUniques, ownUnique } from '@/web/woke/loot-filter/drop-uniques'
-import { dataUniqueName, isFated, isFoulborn, isReplica, readItemName, unfatedBase } from '@/web/woke/shared/item-identity'
+import { FOULBORN_ITEMS, dataUniqueName, isFated, isFoulborn, isReplica, readItemName, unfatedBase } from '@/web/woke/shared/item-identity'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { loadGameData } from '../helpers/game-data'
 import type { PriceItem } from '@/web/woke/market/types'
 
@@ -90,5 +92,18 @@ describe('readItemName', () => {
     expect(dataUniqueName('Replica X')).toBe('Replica X')
     expect(unfatedBase('Fated Lathi')).toBe('Lathi')
     expect(unfatedBase('Lathi')).toBe('Lathi')
+  })
+
+  it('keeps the game\'s own Foulborn currency apart from Foulborn uniques', () => {
+    // Every non-unique item the data names "Foulborn ..." must be on the list.
+    const own = readFileSync(join(__dirname, '../../public/data/en/items.ndjson'), 'utf8')
+      .split('\n').filter(Boolean).map(l => JSON.parse(l) as { name: string, namespace: string })
+      .filter(r => r.namespace !== 'UNIQUE' && r.name.startsWith('Foulborn ')).map(r => r.name)
+    expect(own.length).toBeGreaterThan(0)
+    expect(new Set(own)).toEqual(new Set(FOULBORN_ITEMS))
+    expect(isFoulborn('Foulborn Exalted Orb')).toBe(false)
+    expect(dataUniqueName('Foulborn Regal Orb')).toBe('Foulborn Regal Orb')
+    expect(readItemName('Foulborn Orb of Augmentation').variant).toBeNull()
+    expect(kindOfName('Foulborn Exalted Orb')).not.toBe('unique')
   })
 })

@@ -3,7 +3,7 @@
 // comes from Client.txt zone lines. Pure: no Vue, no requests.
 import { isTownLike, parseLogLine } from '../campaign/log-parse'
 import { lineTime } from '../campaign/log-tail'
-import { isFarmedMap, isMapSideArea } from '../farming/farming'
+import { isFarmedMap, isMapSideArea } from '../shared/map-areas'
 import { isBossArea } from '../shared/boss-areas'
 import { RATE_TIME_WHERE } from '../shared/rate-time'
 

@@ -434,7 +434,3 @@ export function serializeFilter (doc: FilterDoc, header?: string[]): string {
   // doesn't write one.
   return header?.length ? [...header, body].join(doc.eol) : (doc.bom ? '\uFEFF' : '') + body
 }
-
-export function blockKey (b: Pick<FilterBlock, 'type' | 'tier'>): string {
-  return `${b.type ?? ''}|${b.tier ?? ''}`
-}

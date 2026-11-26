@@ -4,7 +4,6 @@
 import type { PriceItem } from '../market/types'
 import type { AtlasStrategy, ThreadSlot } from './strategies'
 import { MAX_THREAD_SLOTS, MAX_THREADS, THREAD_TYPES } from './strategies'
-import { parseCostLines, priceLines } from './loadout'
 import { trimLinkEnd } from './tree'
 
 const TREE_URL = /https?:\/\/(?:www\.)?(?:pathofexile\.com\/(?:fullscreen-)?atlas-skill-tree\/[^\s)"']+|poeplanner\.com\/[^\s)"']+|poeatlasplanner\.com\/[^\s)"']+)/i
@@ -14,23 +13,6 @@ const THREAD_LINE = new RegExp(String.raw`^(?:(\d+)\s*[x×]?\s+)?(` + THREAD_TYP
 const REGEX_LINE = /^"[^"]*!?[^"]*"(\s+"[^"]*")*$/
 
 export interface ScarabLine { qty: number, name: string }
-
-// "4x Ambush Scarab of Potency", "Ambush Scarab of Potency x2", "2 Breach Scarabs"
-export function parseScarabs (text: string): ScarabLine[] {
-  const out: ScarabLine[] = []
-  for (const raw of text.split(/\r?\n|,|;/)) {
-    const line = raw.replace(/^[\s\-*•·]+/, '').trim()
-    if (!/scarab/i.test(line)) continue
-    let qty = 1
-    let name = line
-    const pre = /^(\d+)\s*[x×]?\s+(.+)$/i.exec(line)
-    const post = /^(.+?)\s*[x×]\s*(\d+)$/i.exec(line)
-    if (pre) { qty = Number(pre[1]); name = pre[2] } else if (post) { qty = Number(post[2]); name = post[1] }
-    name = name.replace(/\bScarabs\b/i, 'Scarab').trim()
-    if (name) out.push({ qty: Math.max(1, Math.min(qty, 20)), name })
-  }
-  return out
-}
 
 export function parseGuideText (text: string): Omit<AtlasStrategy, 'id'> {
   const lines = text.split(/\r?\n/).map(l => l.trim())
@@ -86,18 +68,4 @@ export function priceScarabs (lines: ScarabLine[], items: PriceItem[]): PricedSc
       .sort((a, b) => Math.abs(a.name.length - want.length) - Math.abs(b.name.length - want.length))[0]
     return { ...l, item: loose ?? null }
   })
-}
-
-// The scarab lines a strategy of this name costs per map, priced now. Takes each
-// Atlas widget's list: one that never mounted (its module is off) has none yet.
-export function strategyScarabCosts (lists: Array<AtlasStrategy[] | undefined>, name: string, items: PriceItem[] | null | undefined): Array<{ type: string, name: string, variant: string, qty: number }> | null {
-  if (!items || !name) return null
-  for (const list of lists) {
-    const st = (list ?? []).find(x => x.name.trim() === name)
-    if (!st?.scarabs) continue
-    const lines = priceLines(parseCostLines(st.scarabs), items).filter(p => p.item)
-    if (!lines.length) continue
-    return lines.map(p => ({ type: p.item!.type, name: p.item!.name, variant: p.item!.variant, qty: p.qty }))
-  }
-  return null
 }

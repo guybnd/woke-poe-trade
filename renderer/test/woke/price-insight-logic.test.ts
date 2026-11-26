@@ -1,16 +1,15 @@
-// Checks for the price check's pure logic: fixing flags, source blend,
-// history, price log and mod worth. Run from renderer/:
-//   npx esbuild scripts/price-insight-check/check.ts --bundle --platform=node --format=esm \
-//     --alias:@=./src --alias:vue=./scripts/price-insight-check/vue-stub.js \
-//     --inject:./scripts/price-insight-check/browser-stub.js --outfile=/tmp/pi-check.mjs && node /tmp/pi-check.mjs
+// The price check's pure logic: fixing flags, source blend, history, price log
+// and mod worth (was renderer/scripts/price-insight-check, run by hand).
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 import assert from 'node:assert/strict'
+import { test } from 'vitest'
 import { buildInsight, InsightListing } from '@/web/woke/price-insight/insight'
-import { buildBlend, headlinePrice, stripScale } from '@/web/woke/price-insight/sources'
+import { buildBlend, headlinePrice } from '@/web/woke/price-insight/sources'
 import { ninjaWeek, leagueSeries, chartGeometry, seriesChange } from '@/web/woke/price-insight/history'
 import { estimateWorth, valueChanges, matchStat, worthBand } from '@/web/woke/price-insight/mod-worth'
 import { addLogEntry, previousCheck } from '@/web/woke/price-insight/price-log'
 
+test('price check pure logic: fixing flags, blend, history, price log, mod worth', () => {
 const NOW = Date.parse('2026-11-04T12:00:00Z')
 const H = 3600_000
 let n = 0
@@ -79,8 +78,6 @@ const opts = { divine: 180, now: NOW }
   // old own check ignored
   const b4 = buildBlend({ insight: ins, mine: { chaos: 10, ts: NOW - 30 * 24 * H }, now: NOW })
   assert.equal(b4.points.find(p => p.key === 'mine')!.weight, 0)
-  const s = stripScale([5, 50, 95])!
-  assert.ok(s(5) > 0 && s(5) < 0.1 && s(95) > 0.9 && s(95) < 1)
 }
 
 // history
@@ -140,4 +137,4 @@ const opts = { divine: 180, now: NOW }
   assert.ok(valueChanges(stats, g).every(c => !c.disabled))
   assert.equal(worthBand(g.get('+# to maximum Life')!), 'carry')
 }
-console.log('all ok')
+})

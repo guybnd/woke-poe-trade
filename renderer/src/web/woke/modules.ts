@@ -109,16 +109,14 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
 // stay unregistered. To bring one back, move its entry into MODULES and drop
 // its widget type from removedTypes below.
 export const RETIRED_MODULES: ModuleDef[] = [
-  // Another site's net worth in a window, next to our own Net worth (veteran
-  // critique, Guy 2026-11-25).
-  { id: 'wealthy-exile', name: 'Wealthy Exile', description: 'The Wealthy Exile net worth site in an overlay window', group: 'economy', widgetTypes: ['woke-wealthy-exile'], icon: { fa: 'fas fa-wallet', src: '/images/art/crested-golden-idol.png' }, needs: ['hotkeys', 'network'] },
-  { id: 'league-invest', name: 'Investments', description: 'League-start buys ranked from past leagues', group: 'economy', widgetTypes: ['woke-league-invest'], icon: { fa: 'fas fa-seedling', item: 'Mirror Shard' }, needs: ['poll', 'network'] },
   // Folded into Map mods (WOKEPOET-458): its keys moved there (Config.ts
   // foldMapScan), so it isn't coming back as its own tool.
-  { id: 'map-scan', name: 'Map scan', description: 'Reads map tooltips on screen', group: 'mapping', widgetTypes: ['woke-map-scan'], icon: { fa: 'fas fa-crosshairs', mechanic: 'map' }, needs: ['ocr', 'hotkeys'] },
-  { id: 'farming', name: 'Farming', description: 'Session profit per hour', group: 'mapping', widgetTypes: ['woke-farming'], icon: { fa: 'fas fa-coins', currency: 'chaos' }, needs: ['log', 'prices', 'hotkeys'] }
+  { id: 'map-scan', name: 'Map scan', description: 'Reads map tooltips on screen', group: 'mapping', widgetTypes: ['woke-map-scan'], icon: { fa: 'fas fa-crosshairs', mechanic: 'map' }, needs: ['ocr', 'hotkeys'] }
 ]
-const retiredTypes = new Set(RETIRED_MODULES.flatMap(m => m.widgetTypes))
+// Tools deleted for good (Guy 2026-11-26): Farming, League investments and the
+// Wealthy Exile window. Their placed windows and saved data stay in config, never mounted.
+const DELETED_TYPES = ['woke-farming', 'woke-league-invest', 'woke-wealthy-exile']
+const retiredTypes = new Set([...RETIRED_MODULES.flatMap(m => m.widgetTypes), ...DELETED_TYPES])
 export function isRetiredWidgetType (wmType: string): boolean {
   return retiredTypes.has(wmType)
 }
@@ -279,7 +277,6 @@ export function setModuleOn (config: ConfigLike & { woke: WokeModulesConfig }, i
 
 // Default titles that saved configs may still hold. A title you typed stays.
 const OLD_DEFAULT_TITLES: Record<string, string> = {
-  'woke-farming|Farming profit': 'Farming',
   'woke-market-tracker|Market tracker': 'Market',
   'woke-map-mods|Map mod checker': 'Map mods',
   'woke-campaign|Campaign tracker': 'Campaign',

@@ -10,7 +10,6 @@ import { RUN_TIMER_TYPE } from './campaign/run-timer'
 import { ATLAS_TYPE } from './atlas/widget'
 import { LAB_TYPE } from './lab/lab'
 import { CHALLENGES_TYPE } from './challenges/widget'
-import { FARMING_TYPE } from './farming/farming'
 import { SESSION_STORY_TYPE } from './session-story/widget'
 import { DROP_COUNTER_TYPE } from './drop-counter/drop-counter'
 import { STACKED_DECKS_TYPE } from './stacked-decks/deck'
@@ -23,9 +22,7 @@ import { SCARAB_FLIP_TYPE } from './scarab-flip/widget'
 import { LAB_GEMS_TYPE } from './lab-gems/widget'
 import { BOSS_RUNS_TYPE } from './boss-runs/widget'
 import { MARKET_TRACKER_TYPE } from './market/widget'
-import { LEAGUE_INVEST_TYPE } from './league-invest/widget'
 import { DISENCHANT_TYPE } from './disenchant/widget'
-import { WEALTHY_EXILE_TYPE } from './wealthy-exile/widget'
 import { SEARCH_TYPE } from './search/widget'
 const RegexLibraryEditor = defineAsyncComponent(() => import('./regex-library/regex-library-editor.vue'))
 const TradeSearchesEditor = defineAsyncComponent(() => import('./trade-searches/trade-searches-editor.vue'))
@@ -35,7 +32,6 @@ const RunTimerEditor = defineAsyncComponent(() => import('./campaign/run-timer-e
 const AtlasEditor = defineAsyncComponent(() => import('./atlas/atlas-editor.vue'))
 const LabEditor = defineAsyncComponent(() => import('./lab/lab-editor.vue'))
 const ChallengesEditor = defineAsyncComponent(() => import('./challenges/challenges-editor.vue'))
-const FarmingEditor = defineAsyncComponent(() => import('./farming/farming-editor.vue'))
 const SessionStoryEditor = defineAsyncComponent(() => import('./session-story/session-story-editor.vue'))
 const DropCounterEditor = defineAsyncComponent(() => import('./drop-counter/drop-counter-editor.vue'))
 const StackedDecksEditor = defineAsyncComponent(() => import('./stacked-decks/stacked-decks-editor.vue'))
@@ -48,9 +44,7 @@ const FlipsEditor = defineAsyncComponent(() => import('./scarab-flip/flips-edito
 const LabGemsEditor = defineAsyncComponent(() => import('./lab-gems/lab-gems-editor.vue'))
 const BossRunsEditor = defineAsyncComponent(() => import('./boss-runs/boss-runs-editor.vue'))
 const MarketEditor = defineAsyncComponent(() => import('./market/market-editor.vue'))
-const LeagueInvestEditor = defineAsyncComponent(() => import('./league-invest/league-invest-editor.vue'))
 const DisenchantEditor = defineAsyncComponent(() => import('./disenchant/disenchant-editor.vue'))
-const WealthyExileEditor = defineAsyncComponent(() => import('./wealthy-exile/wealthy-exile-editor.vue'))
 const SearchEditor = defineAsyncComponent(() => import('./search/search-editor.vue'))
 
 const editors: Record<string, Component> = {
@@ -66,7 +60,6 @@ const editors: Record<string, Component> = {
   [ESSENCE_SCAN_TYPE]: EssenceScanEditor,
   [MECHANICS_TYPE]: MechanicsEditor,
   [LOOT_FILTER_TYPE]: LootFilterEditor,
-  [FARMING_TYPE]: FarmingEditor,
   [SESSION_STORY_TYPE]: SessionStoryEditor,
   [DROP_COUNTER_TYPE]: DropCounterEditor,
   [STACKED_DECKS_TYPE]: StackedDecksEditor,
@@ -75,9 +68,7 @@ const editors: Record<string, Component> = {
   [LAB_GEMS_TYPE]: LabGemsEditor,
   [BOSS_RUNS_TYPE]: BossRunsEditor,
   [MARKET_TRACKER_TYPE]: MarketEditor,
-  [LEAGUE_INVEST_TYPE]: LeagueInvestEditor,
   [DISENCHANT_TYPE]: DisenchantEditor,
-  [WEALTHY_EXILE_TYPE]: WealthyExileEditor,
   [SEARCH_TYPE]: SearchEditor
 }
 

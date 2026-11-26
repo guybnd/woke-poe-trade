@@ -8,8 +8,6 @@
 import { mapLabel, mapPool, valuePerCardDrop } from '../card-drops/card-drops'
 import type { CardDropData } from '../card-drops/card-drops'
 
-export const DEFAULT_CARDS_PER_MAP = 3
-
 // Maps a Scrying Orb can name: tiered atlas maps (unique maps have tier 0).
 // `canScry`: the trade site has a Scrying Orb for it. Guardian maps, Vaal
 // Temple, Ziggurat and a few others have none (no bonus objectives).

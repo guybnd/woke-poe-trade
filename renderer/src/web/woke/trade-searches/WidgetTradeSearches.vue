@@ -523,12 +523,10 @@ const dockMenu = computed<DockMenuAction[]>(() => [
 }
 .rl:hover { background: var(--w-accent-soft); }
 .on { background: var(--w-accent-soft); box-shadow: inset 2px 0 0 var(--w-accent); }
-.drop { outline: 1px dashed var(--w-accent); background: var(--w-accent-soft); }
 .add { color: var(--w-dim); }
 .ic { width: 18px; flex: none; text-align: center; font-size: var(--w-fs-xs); color: var(--w-dim); }
 .art { width: 18px; height: 18px; flex: none; object-fit: contain; }
 .n { margin-left: auto; font-family: var(--w-num); font-size: var(--w-fs-xs); color: var(--w-faint); }
-.sec { padding: var(--w-s2) var(--w-s2) 2px; }
 .edit { width: 100%; height: var(--w-row-h); padding: 0 var(--w-s2); }
 .icons { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 2px var(--w-s1) var(--w-s2); }
 .iconBtn { display: grid; place-items: center; height: 28px; border-radius: var(--w-r-sm); color: var(--w-dim); }

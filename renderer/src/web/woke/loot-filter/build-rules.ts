@@ -187,7 +187,3 @@ export function insertBuildBlocks (doc: FilterDoc, blocks: FilterBlock[]): void 
   doc.blocks.unshift(...blocks)
   doc.blocks.forEach((b, i) => { b.index = i })
 }
-
-export function describeRules (blocks: FilterBlock[]): string[] {
-  return [...new Set(blocks.map(b => b.tier ?? ''))]
-}

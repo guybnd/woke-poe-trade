@@ -66,18 +66,6 @@ export function moveRegexCategory (from: string, to: string): number {
   return moved
 }
 
-// Rewrites one entry in place, in whichever library holds it.
-export function updateRegex (id: number, change: Partial<Pick<RegexEntry, 'name' | 'text'>>, folder: string) {
-  for (const l of libraries()) {
-    const at = (l.entries ?? []).findIndex(e => e.id === id && norm(e.category) === norm(folder))
-    if (at < 0) continue
-    l.entries = l.entries.map((e, i) => i === at ? { ...e, ...change } : e)
-    saveConfig()
-    pushHostConfig()
-    return
-  }
-}
-
 // Takes one entry out; returns what puts it back.
 export function removeRegex (id: number, folder: string): () => void {
   for (const l of libraries()) {

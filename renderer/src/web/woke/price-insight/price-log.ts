@@ -122,5 +122,3 @@ export function previousCheck (key: string, now: number, list = priceLog.value):
   }
   return null
 }
-
-export function clearPriceLog () { write([]) }

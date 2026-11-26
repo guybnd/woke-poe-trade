@@ -159,7 +159,6 @@ export const tabValues = computed<TabValue[]>(() => {
   if (ninja.updatedAt.value == null || !stash.value) return []
   return valueByTab(stash.value.tabs, ninjaPriceOf(), prefs.value, guardNow())
 })
-export const readerStatus = computed(() => status.value)
 export const gainsNow = computed(() => gainsRef.value)
 export const pricesReady = computed(() => ninja.updatedAt.value != null)
 

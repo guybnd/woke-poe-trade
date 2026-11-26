@@ -647,13 +647,6 @@ function togglePin (relPath: string) {
 </script>
 
 <style module>
-.editRow {
-  display: flex;
-  align-items: center;
-  gap: var(--w-s2);
-  padding: 4px var(--w-s2);
-  border-bottom: 1px solid var(--w-line-soft);
-}
 .edit { flex: 1; min-width: 0; height: var(--w-row-h); padding: 0 var(--w-s2); }
 .folder {
   display: flex;

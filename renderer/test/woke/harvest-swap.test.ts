@@ -225,7 +225,7 @@ describe('priceByKey', () => {
 })
 
 describe('3.30 swap costs', () => {
-  it('prices 300 of the target colour, 300 of the cheaper other one, and a Rancour for damage', async () => {
+  it('prices 300 of the from and 300 of the to colour (Fire Wild, Cold Primal, Lightning Vivid), and a Rancour for damage', async () => {
     const { SWAP_FAMILIES, swapChaos, swapCostText } = await import('@/web/woke/harvest-swap/families')
     const price: Record<string, number> = {
       'Wild Crystallised Lifeforce': 0.1,
@@ -234,10 +234,15 @@ describe('3.30 swap costs', () => {
       'Crystallised Rancour': 4
     }
     const lookup = (name: string) => price[name] ?? null
-    const res = SWAP_FAMILIES.find(f => f.id === 'res')!.cost('fire')
-    expect(swapCostText(res)).toBe('300 Wild + 300 Vivid or Primal')
-    expect(swapChaos(res, lookup)).toBeCloseTo(300 * 0.1 + 300 * 0.05)
-    const dmg = SWAP_FAMILIES.find(f => f.id === 'eleDamage')!.cost('cold')
+    const res = SWAP_FAMILIES.find(f => f.id === 'res')!
+    // poedb Horticrafting rows.
+    expect(swapCostText(res.cost('fire', 'cold'))).toBe('300 Wild + 300 Primal')
+    expect(swapCostText(res.cost('lightning', 'fire'))).toBe('300 Vivid + 300 Wild')
+    expect(swapCostText(res.cost('cold', 'lightning'))).toBe('300 Primal + 300 Vivid')
+    expect(res.cost('fire', 'cold').estimate).toBeUndefined()
+    expect(swapChaos(res.cost('cold', 'fire'), lookup)).toBeCloseTo(300 * 0.08 + 300 * 0.1)
+    const dmg = SWAP_FAMILIES.find(f => f.id === 'eleDamage')!.cost('lightning', 'cold')
+    expect(swapCostText(dmg)).toBe('300 Vivid + 300 Primal + 1 Rancour')
     expect(swapChaos(dmg, lookup)).toBeCloseTo(300 * 0.05 + 300 * 0.08 + 4)
     expect(swapChaos(dmg, name => name === 'Crystallised Rancour' ? null : 1)).toBeNull()
   })

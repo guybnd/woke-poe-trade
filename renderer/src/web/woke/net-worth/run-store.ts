@@ -9,8 +9,9 @@ import { readMapDay, dayKey, NIGHTS_COLLECTION, RECENT_MAPS_KEY } from '../sessi
 import { isSkippedArea } from '../session-story/skip-areas'
 import type { MapRecord } from '../session-story/map-log'
 import { addToTally, cleanDoc, compareRows, emptyRun, isLastRun, isRunGlance, lastRunKey, mapsIn, relive, runBoardKey, runGlanceKey, runsKey, runTotals, tallyFrom, topDrop, MAX_DONE_RUNS } from './runs'
-import type { CostLine, LivePrice, OnceCost, Outside, Run, RunBoard, RunGlance, RunsDoc } from './runs'
+import type { CostLine, LivePrice, Outside, Run, RunBoard, RunGlance, RunsDoc } from './runs'
 import type { LedgerPoint } from './ledger'
+import { savedRunBoard } from './board-signal'
 import type { StashDiff } from './valuation'
 
 const COLLECTION = 'net-worth'
@@ -75,6 +76,7 @@ function saveBoard (league: string, doc: RunsDoc) {
     league,
     rows: all.map((r, i) => ({
       name: r.name,
+      ...(r.craft ? { craft: true as const } : {}),
       count: r.count,
       maps: r.maps,
       fights: r.fights,
@@ -90,6 +92,7 @@ function saveBoard (league: string, doc: RunsDoc) {
   const json = JSON.stringify(board)
   if (json === boardWas) return
   boardWas = json
+  savedRunBoard.value = board
   hostRequest('doc-put', { collection: COLLECTION, key: runBoardKey(league), value: board }).catch(() => { boardWas = '' })
 }
 
@@ -335,7 +338,4 @@ export function deleteRun (league: string, id: string) {
 
 export function addCost (r: Run, c: Omit<CostLine, 'id'>): Run {
   return { ...r, costs: [...r.costs, { ...c, id: newId() }] }
-}
-export function addOnce (r: Run, o: Omit<OnceCost, 'id'>): Run {
-  return { ...r, once: [...r.once, { ...o, id: newId() }] }
 }
