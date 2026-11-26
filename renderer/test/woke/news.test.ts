@@ -139,7 +139,8 @@ describe("What's new lines", () => {
       ...Object.values(NEWS_DEMOS).flatMap(d => 'spot' in d && d.spot ? [d.spot] : [])
     ])
     for (const spot of spots) {
-      expect(withSpot.some(t => t.includes(`"${spot}"`) || t.includes(`'${spot}'`)), `spot "${spot}": no element has data-goto-spot="${spot}"`).toBe(true)
+      // A literal data-goto-spot="x", or a bound :data-goto-spot naming 'x'.
+      expect(withSpot.some(t => t.includes(`data-goto-spot="${spot}"`) || (t.includes(':data-goto-spot') && t.includes(`'${spot}'`))), `spot "${spot}": no element has data-goto-spot="${spot}"`).toBe(true)
     }
     for (const type of Object.keys(GOTO_TARGETS)) {
       expect(src.some(t => new RegExp(`useGoto\\([^,]+, '${type}'`).test(t)), `${type}: its window never calls useGoto, so Show me's tab and spot do nothing`).toBe(true)

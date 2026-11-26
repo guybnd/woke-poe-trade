@@ -517,6 +517,7 @@ test("What's new's Show me opens the strategy with runs and flashes its results"
   // Alch and go is open and has no runs: it says where results come from.
   const atlas = await bootAtlas(overlay, '', { selectedId: 2, whatsNew: ['atlas-results-from-runs'] })
   await expect(atlas.locator('[data-goto-spot="results"]')).toContainText('none yet')
+  await expect(atlas.getByTitle('Net worth: 3 runs of this name')).toBeVisible()
   const icon = overlay.dockIcon('whats-new')
   await icon.click()
   await overlay.page.mouse.move(5, 5)

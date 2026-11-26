@@ -678,17 +678,25 @@ function pasteSearch (text: string) {
   })
 }
 
+function pickWithRuns () {
+  const list = props.config.strategies
+  if (!list.length) return
+  if (selected.value && earnings.value.has(selected.value.name)) return
+  const best = list.reduce<AtlasStrategy | null>((a, s) => (earnings.value.get(s.name)?.runs ?? 0) > (a ? earnings.value.get(a.name)?.runs ?? 0 : 0) ? s : a, null)
+  props.config.selectedId = (best ?? selected.value ?? list[0]).id
+}
+
 // What's new's Show me: your results sit in the picked strategy's loadout, so
 // open the one with the most runs (the picked one if it has any).
 useGoto(props.config, 'woke-atlas-strategies', {
   strategies: () => {},
   spots: {
     results: () => {
-      const list = props.config.strategies
-      if (!list.length) return
-      if (selected.value && earnings.value.has(selected.value.name)) return
-      const best = list.reduce<AtlasStrategy | null>((a, s) => (earnings.value.get(s.name)?.runs ?? 0) > (a ? earnings.value.get(a.name)?.runs ?? 0 : 0) ? s : a, null)
-      props.config.selectedId = (best ?? selected.value ?? list[0]).id
+      pickWithRuns()
+      // A window Show me just opened reads the run board now: pick again once it's in.
+      if (earnings.value.size) return
+      const stop = watch(earnings, () => { stop(); pickWithRuns() })
+      setTimeout(stop, 5000)
     },
     import: () => { importOpen.value = true }
   }
