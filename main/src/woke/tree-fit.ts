@@ -384,6 +384,12 @@ export function litProbes (bgra: Uint8Array, width: number, height: number, fit:
 // glow, so the core is looked for further either side (a fit can be 3 px
 // off). Its red stays high, which the glow (5, 65, 164) and the start's blue
 // art (50, 130, 195) don't have; unlit atlas lines are brown or grey.
+// Lit atlas blue has green well over red (lines 187, 211, 244 and 132, 163,
+// 213; taken frames the same). Planner sites draw every frame a point can go
+// next (the export's "can allocate" art) lavender, 150, 150, 210: green level
+// with red. Read as lit, they took every neighbour of the tree (243 of 149).
+const LAVENDER = 12
+
 function litAt (bgra: Uint8Array, width: number, x: number, y: number, tone: LitTone = 'gold'): boolean {
   let best = 0
   const reach = tone === 'gold' ? 2 : 4
@@ -393,7 +399,7 @@ function litAt (bgra: Uint8Array, width: number, x: number, y: number, tone: Lit
       const b = bgra[j]
       const g = bgra[j + 1]
       const r = bgra[j + 2]
-      if (tone === 'gold' || tone === 'cream') { if (r > b + 40) best = Math.max(best, (r + g) / 2) } else if (tone === 'pale') { if (b > r + 35 && r > 60) best = Math.max(best, b) } else if (b > r + 35 && r > 90) best = Math.max(best, b)
+      if (tone === 'gold' || tone === 'cream') { if (r > b + 40) best = Math.max(best, (r + g) / 2) } else if (tone === 'pale') { if (b > r + 35 && r > 60 && g > r + LAVENDER) best = Math.max(best, b) } else if (b > r + 35 && r > 90 && g > r + LAVENDER) best = Math.max(best, b)
     }
   }
   return best > (tone === 'gold' ? 165 : tone === 'cream' ? 125 : tone === 'pale' ? 140 : 180)
