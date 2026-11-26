@@ -313,12 +313,13 @@ export function stopRun (league: string, points: readonly LedgerPoint[], divine:
   })
 }
 
-// Edits the live run or a finished one (by id).
-export function editRun (league: string, id: string, fn: (r: Run) => Run, points: readonly LedgerPoint[], divine: number | null) {
+// Edits the live run or a finished one (by id). `keepFinal`: a change that
+// moves no number (a rename) keeps a finished run's saved totals as they are.
+export function editRun (league: string, id: string, fn: (r: Run) => Run, points: readonly LedgerPoint[], divine: number | null, keepFinal = false) {
   return queue(async () => {
     await loadRuns(league)
     const doc = runsDoc.value
-    const done = await Promise.all(doc.done.map(r => r.id === id ? withFinal(fn(r), points) : r))
+    const done = await Promise.all(doc.done.map(r => r.id !== id ? r : keepFinal ? fn(r) : withFinal(fn(r), points)))
     const next: RunsDoc = { live: doc.live?.id === id ? fn(doc.live) : doc.live, done }
     // No points (Net worth not loaded yet): the glance would read 0.
     if (await save(league, next) && next.live?.id === id && points.length) await saveGlance(league, next.live, points, divine)

@@ -300,12 +300,13 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], count: numb
   }
 }
 
-// Used up from the stash: map-cost items that went down, not typed.
+// Used up from the stash: map-cost items that went down, not typed. Rows
+// tallied before TallyLine.cost existed go by their name (maps).
 function usedUp (run: Run, mapCostKeys: ReadonlySet<string> = new Set()): number {
   const typedKeys = new Set(run.costs.map(c => c.key).filter((k): k is string => k != null))
   let used = 0
   for (const [k, t] of Object.entries(run.tally)) {
-    if (typedKeys.has(k) || !(t.cost || mapCostKeys.has(k))) continue
+    if (typedKeys.has(k) || !(t.cost || mapCostKeys.has(k) || isMapCostItem(t.name, undefined))) continue
     const net = tallyValue(t, run.edits?.[rowKey.tally(k)])
     if (net < 0) used += -net
   }

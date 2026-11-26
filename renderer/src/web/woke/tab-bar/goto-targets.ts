@@ -22,7 +22,7 @@ export const NO_TABS: readonly string[] = ['woke-atlas-strategies', 'woke-pob-bu
 // element carries data-goto-spot="<id>", and its useGoto opens whatever
 // hides it (a folded section, Details).
 export const GOTO_SPOTS = {
-  'woke-net-worth': { 'per-hour': 'holdings', 'faustus-box': 'holdings', 'worth-selling': 'holdings', 'still-cheapest': 'listed', 'stale': 'listed' },
+  'woke-net-worth': { 'per-hour': 'holdings', 'faustus-box': 'holdings', 'worth-selling': 'holdings', 'still-cheapest': 'listed', 'stale': 'listed', 'past-runs': 'runs' },
   'woke-atlas-strategies': { results: 'strategies', import: 'strategies' },
   'woke-pob-builds': { import: 'builds' }
 } as const satisfies { [T in keyof typeof GOTO_TARGETS]?: Record<string, keyof typeof GOTO_TARGETS[T]> }
@@ -33,6 +33,7 @@ export const NEWS_SPOTS: Record<string, string> = {
   'listed-still-cheapest': 'still-cheapest',
   'net-worth-listed': 'stale',
   'net-worth-worth-selling': 'worth-selling',
+  'net-worth-rename-runs': 'past-runs',
   'atlas-results-from-runs': 'results',
   'atlas-planner-links': 'import',
   'pob-import-all-sites': 'import'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addToTally, cleanDoc, countLabel, emptyRun, leftOf, lineCost, mapsIn, shownMaps, shownFights, runPerHour, runTotals, tallyFrom, tallyRows, unitOf } from '@/web/woke/net-worth/runs'
+import { addToTally, cleanDoc, costPerRun, countLabel, emptyRun, leftOf, lineCost, mapsIn, shownMaps, shownFights, runPerHour, runTotals, tallyFrom, tallyRows, unitOf } from '@/web/woke/net-worth/runs'
 import type { Run } from '@/web/woke/net-worth/runs'
 import { runsLookup } from '@/web/woke/search/lookups/runs'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
@@ -258,5 +258,16 @@ describe('shownFights', () => {
   it('the live run counts what was read', () => {
     expect(shownFights({}, { fights: 1 })).toBe(1)
     expect(shownFights({}, null)).toBe(0)
+  })
+})
+
+// Guy's 24 Nov run (2026-11-26): tallied before rows were marked as map
+// costs, its Nightmare Maps never counted and Past runs showed cost 0.00.
+describe('cost per map of an older run', () => {
+  it('a map row with no cost mark counts by its name', () => {
+    const tally = { 'R:Nightmare Map': { name: 'Nightmare Map (rare)', icon: '', added: 0, removed: 3, addedChaos: 0, removedChaos: 630 } }
+    expect(costPerRun(run({ tally }), 3)).toBe(210)
+    // Your count (17 used) counts too.
+    expect(costPerRun(run({ tally, edits: { 'tally:R:Nightmare Map': { count: 17 } } }), 17)).toBe(210)
   })
 })

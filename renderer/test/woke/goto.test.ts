@@ -8,7 +8,7 @@ const widget = (wmId: number) => ({ wmId, wmType: 'woke-net-worth', wmTitle: '',
 describe("What's new Show me: a window opens on the tab asked for", () => {
   it('asked before the window mounts (a new window) or while it is up, once each', async () => {
     const went: string[] = []
-    const go = { holdings: () => went.push('holdings'), sales: () => went.push('sales'), listed: () => went.push('listed'), runs: () => went.push('runs'), spots: { 'per-hour': () => went.push('spot:per-hour'), 'faustus-box': () => went.push('spot:faustus-box'), 'still-cheapest': () => went.push('spot:still-cheapest'), 'stale': () => went.push('spot:stale'), 'worth-selling': () => went.push('spot:worth-selling') } }
+    const go = { holdings: () => went.push('holdings'), sales: () => went.push('sales'), listed: () => went.push('listed'), runs: () => went.push('runs'), spots: { 'per-hour': () => went.push('spot:per-hour'), 'faustus-box': () => went.push('spot:faustus-box'), 'still-cheapest': () => went.push('spot:still-cheapest'), 'stale': () => went.push('spot:stale'), 'worth-selling': () => went.push('spot:worth-selling'), 'past-runs': () => went.push('spot:past-runs') } }
     requestGoto(41, 'listed')
     const scope = effectScope()
     scope.run(() => { useGoto(widget(41), 'woke-net-worth', go) })
