@@ -7,6 +7,7 @@ import { ModifierType, ModifierMechanic } from '@/parser/modifiers'
 import { BaseType, ITEM_BY_REF } from '@/assets/data'
 import { CATEGORY_TO_TRADE_ID, VISCERA_SLOT_TRADE_ID } from '../trade/pathofexile-trade'
 import { PERMANENT_SC } from '../../background/Leagues'
+import { isCorpse } from '@/web/woke/shared/corpses'
 
 // The unique line that locks an item's sockets (Skin of the Loyal / Lords).
 const SOCKETS_LOCKED = 'Sockets cannot be modified'
@@ -143,7 +144,8 @@ export function createFilters (
       // Incubators, Wombgifts
       filters.itemLevel = {
         value: item.itemLevel,
-        disabled: false
+        // woke: a corpse's item level doesn't change its price (Guy, 2026-11-26): the chip starts off.
+        disabled: isCorpse(item.info.refName)
       }
     }
     return filters

@@ -55,8 +55,10 @@ export const useOfferHistory = createGlobalState(() => {
     const mine = new Set(offers.value.map(o => o.id))
     offers.value = [...offers.value, ...list.filter(o => !mine.has(o.id) && !deleted.has(o.id))].sort(byClosed)
     // Removed offers a restart can no longer bring back have done their job.
+    // So have offers marked Traded by hand: the history never shows them, they
+    // only keep a restart from reopening the whisper, and they piled up for ever.
     for (const o of offers.value) {
-      if (o.removedAt != null && !replayCouldReopen(o, Date.now())) remove(o.id).catch(() => {})
+      if ((o.removedAt != null || o.traded) && !replayCouldReopen(o, Date.now())) remove(o.id).catch(() => {})
     }
   }
 

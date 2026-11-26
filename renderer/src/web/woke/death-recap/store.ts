@@ -7,6 +7,7 @@ import type { ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import { prepareMapStat } from '@/web/map-check/prepare-map-stats'
 import { hostRequest } from '../shared/host'
+import { beforeQuitSave } from '@/web/Config'
 import { deathGroup, matchCheck, runFromCheck } from './death-log'
 import type { DeathRecord, MapCheck, MapEntry, ModLine, RunRecord } from './death-log'
 
@@ -48,23 +49,32 @@ export const useDeathRecap = createGlobalState(() => {
   const sessionDeaths = computed(() => deaths.value.filter(d => d.at >= startedAt).length)
   const runByKey = computed(() => new Map(runs.value.map(r => [r.key, r])))
 
+  function write () {
+    saveTimer = null
+    dirty = false
+    hostRequest('death-recap-write', { deaths: deaths.value, runs: runs.value })
+      .catch(() => {
+        dirty = true
+        saveTimer = setTimeout(() => {
+          saveTimer = null
+          if (dirty) save()
+        }, RETRY_MS)
+      })
+  }
+
   function save () {
     dirty = true
     // Until the saved history is in, a write would replace it.
     if (!loaded || saveTimer) return
-    saveTimer = setTimeout(() => {
-      saveTimer = null
-      dirty = false
-      hostRequest('death-recap-write', { deaths: deaths.value, runs: runs.value })
-        .catch(() => {
-          dirty = true
-          saveTimer = setTimeout(() => {
-            saveTimer = null
-            if (dirty) save()
-          }, RETRY_MS)
-        })
-    }, SAVE_DELAY_MS)
+    saveTimer = setTimeout(write, SAVE_DELAY_MS)
   }
+
+  // Quitting within the save delay still writes the last death.
+  beforeQuitSave.add(() => {
+    if (!loaded || !dirty) return
+    if (saveTimer) clearTimeout(saveTimer)
+    write()
+  })
 
   // The nth of each death, once deaths from two sources have come together.
   function recount (list: DeathRecord[]): DeathRecord[] {

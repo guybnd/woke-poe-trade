@@ -1,6 +1,6 @@
 // Log lines are in the real Client.txt's shape (see death-recap.test.ts).
 import { afterEach, describe, expect, it } from 'vitest'
-import { NightTracker, NIGHT_GAP_MS, bestDrop, bestItem, farmingProfit, hasMaps, keepNight, summarize } from '@/web/woke/session-story/story'
+import { NightTracker, NIGHT_GAP_MS, bestDrop, bestItem, farmingProfit, hasPlay, isEndgameArea, keepNight, outOfMapsRows, summarize } from '@/web/woke/session-story/story'
 import { isSkippedArea, parseSkipAreas, setSkipAreas } from '@/web/woke/session-story/skip-areas'
 import type { NightDraft, NightStory } from '@/web/woke/session-story/story'
 
@@ -140,10 +140,8 @@ describe('a night from Client.txt', () => {
   })
 
   it("counts only your own deaths, not a party member's", () => {
-    const done: NightDraft[] = []
-    const tracker = new NightTracker((d) => { done.push(d) }, () => 'luminyahu')
-    for (const line of [area('21:00:00', 'MapWorldsStrand', '11'), slain('21:01:00', 'friend'), slain('21:02:00', 'friend'), slain('21:03:00')]) tracker.feed(line, 0)
-    expect(summarize(tracker.draft!).deathsAt).toHaveLength(1)
+    const { tracker } = follow([area('20:59:00', 'HideoutChurch', '1', 68), slain('21:00:00'), area('21:00:10', 'MapWorldsStrand', '11'), slain('21:01:00', 'friend'), slain('21:02:00', 'friend'), slain('21:03:00')])
+    expect(summarize(tracker.draft!).deathsAt).toHaveLength(2)
   })
 
   it('keeps encounters and towers inside a map as that map', () => {
@@ -207,10 +205,10 @@ describe('night extras', () => {
   })
 
   it('reads level-ups and the longest break between maps', () => {
-    const level = (time: string, n: number) => info(time, `: whekq (Gladiator) is now level ${n}`)
+    const level = (time: string, n: number) => info(time, `: luminyahu (Gladiator) is now level ${n}`)
     const { tracker } = follow([...NIGHT.slice(0, 5), level('21:06:00', 94), ...NIGHT.slice(5), level('21:21:00', 95), info('21:21:30', ': friend (Witch) is now level 40')])
     const s = summarize(tracker.draft!)
-    expect(s.levelUps).toEqual([{ char: 'whekq', from: 93, to: 95 }])
+    expect(s.levelUps).toEqual([{ char: 'luminyahu', from: 93, to: 95 }])
     // Gaps between maps: 1 min, 1 min, 2 min; not the 2 min before the first or after the last.
     expect(s.longestBreakMs).toBe(2 * 60_000)
   })
@@ -278,12 +276,156 @@ describe('areas on the skip list', () => {
 
   it('has no maps when the night was only vaults', () => {
     const d = follow(VAULT_NIGHT.slice(3, 8)).tracker.draft!
-    expect(hasMaps(d)).toBe(false)
+    expect(hasPlay(d)).toBe(false)
   })
 
   it('reads the list as typed', () => {
     expect(parseSkipAreas("Zealot's Vault, scholar's vault\n\n zealot's vault \nArkhon’s Vault")).toEqual(["Zealot's Vault", "scholar's vault", 'Arkhon’s Vault'])
     expect(isSkippedArea('Arkhon’s Vault')).toBe(true)
     expect(isSkippedArea('Vault')).toBe(false)
+  })
+})
+
+describe('your character in a night', () => {
+  const OPEN = `2026/11/05 20:00:00 ***** LOG FILE OPENING *****`
+  const level = (time: string, n: number, who = 'luminyahu') => info(time, `: ${who} (Witch) is now level ${n}`)
+
+  it('lets the first death or level-up decide, then ignores party members in maps', () => {
+    const { tracker } = follow([
+      OPEN,
+      area('21:00:00', 'MapWorldsStrand', '11'),
+      level('21:01:00', 90),
+      level('21:02:00', 40, 'friend'),
+      slain('21:03:00', 'friend'),
+      level('21:04:00', 91),
+      area('21:05:00', 'HideoutChurch', '1', 68)
+    ])
+    const s = summarize(tracker.draft!)
+    expect(s.levelUps).toEqual([{ char: 'luminyahu', from: 89, to: 91 }])
+    expect(s.deathsAt).toHaveLength(0)
+  })
+
+  it('takes the first name when nothing is known yet, even in a map', () => {
+    const { tracker } = follow([area('21:00:00', 'MapWorldsStrand', '11'), slain('21:01:00', 'friend'), level('21:02:00', 90)])
+    const s = summarize(tracker.draft!)
+    expect(s.deathsAt).toHaveLength(1)
+    expect(s.levelUps).toEqual([])
+  })
+
+  it('ignores other names until the game starts again, then the next one decides', () => {
+    const { tracker } = follow([
+      area('21:00:00', 'MapWorldsStrand', '11'),
+      level('21:01:00', 90),
+      area('21:02:00', 'HideoutChurch', '1', 68),
+      // A party member levelling while you're in the hideout.
+      level('21:03:00', 20, 'friend'),
+      `2026/11/05 21:04:00 ***** LOG FILE OPENING *****`,
+      area('21:05:00', 'HideoutChurch', '1', 68),
+      level('21:06:00', 20, 'alt'),
+      slain('21:07:00'),
+      area('21:08:00', 'MapWorldsCemetery', '12'),
+      slain('21:09:00', 'alt')
+    ])
+    const s = summarize(tracker.draft!)
+    expect(s.levelUps).toEqual([{ char: 'luminyahu', from: 89, to: 90 }, { char: 'alt', from: 19, to: 20 }])
+    expect(s.deathsAt).toEqual([at('21:09:00')])
+    expect(tracker.draft!.me).toBe('alt')
+  })
+
+  it('takes the login line as a new start', () => {
+    const { tracker } = follow([
+      area('21:00:00', 'HideoutChurch', '1', 68),
+      level('21:01:00', 90),
+      info('21:02:00', 'Connected to lon01.login.pathofexile.com in 31ms.'),
+      level('21:03:00', 20, 'alt')
+    ])
+    expect(tracker.draft!.me).toBe('alt')
+  })
+
+  it('keeps your character into the next night until the game starts again', () => {
+    const { tracker, done } = follow([
+      area('21:00:00', 'MapWorldsStrand', '11'),
+      level('21:01:00', 90),
+      area('22:00:00', 'MapWorldsCemetery', '12'),
+      level('22:01:00', 40, 'friend')
+    ])
+    expect(done).toHaveLength(1)
+    expect(summarize(tracker.draft!).levelUps).toEqual([])
+  })
+
+  it('follows the first character that levels in a draft saved before', () => {
+    const d: NightDraft = { startedAt: 0, lastAt: 1, segs: [], deaths: [], levels: [{ char: 'a', level: 10 }, { char: 'b', level: 50 }, { char: 'a', level: 11 }] }
+    expect(summarize(d).levelUps).toEqual([{ char: 'a', from: 9, to: 11 }])
+  })
+
+  it('keeps the level-ups read before the update in a night that spans it', () => {
+    const d: NightDraft = { startedAt: 0, lastAt: 1, segs: [], deaths: [], levels: [{ char: 'a', level: 90 }, { char: 'b', level: 50 }, { char: 'a', level: 91 }, { char: 'a', level: 92, mine: true }] }
+    expect(summarize(d).levelUps).toEqual([{ char: 'a', from: 89, to: 92 }])
+  })
+})
+
+describe('time out of maps', () => {
+  it('splits the hideout from other areas, and leaves Other out under a minute', () => {
+    const { tracker } = follow([
+      area('21:00:00', 'MapWorldsStrand', '11'),
+      area('21:10:00', 'HideoutChurch', '1', 68),
+      area('21:15:00', 'Delve_Main', '2', 83),
+      area('21:27:00', 'HideoutChurch', '1', 68),
+      area('21:29:00', 'MapWorldsCemetery', '12')
+    ])
+    const s = summarize(tracker.draft!, at('21:35:00'))
+    expect(outOfMapsRows(s)).toEqual([{ label: 'Hideout', ms: 7 * 60_000 }, { label: 'Other', ms: 12 * 60_000 }])
+    expect(outOfMapsRows({ otherMs: 7 * 60_000 + 30_000, hubMs: 7 * 60_000 })).toEqual([{ label: 'Hideout', ms: 7 * 60_000 }])
+  })
+
+  it('shows a night saved before the split as one line', () => {
+    expect(outOfMapsRows({ otherMs: 60_000 })).toEqual([{ label: 'Out of maps', ms: 60_000 }])
+  })
+})
+
+describe('nights without maps', () => {
+  it('keeps an evening of endgame play out of maps', () => {
+    const { tracker, done } = follow([
+      area('21:00:00', 'HideoutChurch', '1', 68),
+      area('21:05:00', 'MapWorldsElderArenaUber', '2', 85),
+      area('21:10:00', 'HideoutChurch', '1', 68),
+      area('21:12:00', 'Delve_Main', '3', 70),
+      area('21:20:00', 'HideoutChurch', '1', 68)
+    ])
+    expect(hasPlay(tracker.draft!)).toBe(true)
+    tracker.finish()
+    expect(done).toHaveLength(1)
+    const s = summarize(done[0], at('21:25:00'))
+    expect(s.maps).toEqual([])
+    expect(s.mapMs).toBe(0)
+    expect(outOfMapsRows(s)).toEqual([{ label: 'Hideout', ms: 12 * 60_000 }, { label: 'Other', ms: 13 * 60_000 }])
+  })
+
+  it('never keeps campaign, towns or the hideout alone', () => {
+    const { tracker, done } = follow([
+      area('21:00:00', 'HideoutChurch', '1', 68),
+      area('21:05:00', '1_10_town', '2', 67),
+      area('21:06:00', '1_10_2', '3', 67),
+      area('21:10:00', '2_9_1', '4', 61)
+    ])
+    expect(hasPlay(tracker.draft!)).toBe(false)
+    tracker.finish()
+    expect(done).toHaveLength(0)
+  })
+
+  it('tells endgame areas apart', () => {
+    // The mine's hub and levelling-depth Delve or Heist aren't endgame.
+    expect(isEndgameArea('Delve_Main', 70)).toBe(false)
+    expect(isEndgameArea('Delve_Generic_Fungal', 50)).toBe(false)
+    expect(isEndgameArea('Delve_Generic_Fungal', 75)).toBe(true)
+    expect(isEndgameArea('HeistMines', 50)).toBe(false)
+    expect(isEndgameArea('HeistMines', 75)).toBe(true)
+    expect(isEndgameArea('N_Labyrinth_Airlock', 68)).toBe(false)
+    expect(isEndgameArea('HeistHub', 68)).toBe(false)
+    expect(isEndgameArea('MavenBoss', 84)).toBe(true)
+    expect(isEndgameArea('SanctumCathedral', 83)).toBe(true)
+    expect(isEndgameArea('2_9_1', 61)).toBe(false)
+    expect(isEndgameArea('Labyrinth_Airlock', 33)).toBe(false)
+    expect(isEndgameArea('HideoutChurch', 68)).toBe(false)
   })
 })

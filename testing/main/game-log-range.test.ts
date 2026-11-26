@@ -68,6 +68,18 @@ describe('reading a time range of Client.txt', () => {
     expect((await readLogRange(f, start.getTime(), start.getTime() + 10_000, true)).lines).toHaveLength(4)
   })
 
+  it('with sessions, a line every 5 minutes keeps a long quiet map from looking like time away', async () => {
+    const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'woke-log-')), 'Client.txt')
+    const t = (s: number) => stamp(new Date(start.getTime() + s * 1000))
+    const out = [`${t(0)} 1 abc [DEBUG Client 1] Generating level 83 area "MapWorldsStrand" with seed 1`]
+    for (let s = 30; s <= 20 * 60; s += 30) out.push(`${t(s)} 1 abc [DEBUG Client 1] Got Instance Details from login server`)
+    fs.writeFileSync(f, out.join('\r\n') + '\r\n')
+    const range = [start.getTime(), start.getTime() + 30 * 60_000] as const
+    expect((await readLogRange(f, ...range)).lines).toHaveLength(1)
+    const lines = (await readLogRange(f, ...range, true)).lines
+    expect(lines.map(l => logLineTime(l)! - start.getTime())).toEqual([0, 5, 10, 15, 20].map(m => m * 60_000))
+  })
+
   it('reads the game timestamp as local time', () => {
     expect(logLineTime('2026/11/04 18:00:01 1 abc [INFO Client 1] x')).toBe(new Date(2026, 10, 4, 18, 0, 1).getTime())
     expect(logLineTime('nope')).toBeNull()

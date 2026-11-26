@@ -672,3 +672,40 @@ test('map: Save keeps the picks as a Farming button for the next maps', async ({
   expect(searches).toEqual([])
   expect(overlay.errors).toEqual([])
 })
+
+// Guy's pick: "Exclude my bad mods" beside Save, off by default and lit while on,
+// puts the template's Not mods in every search, even ones this map hasn't got.
+test('map: Exclude my bad mods searches the template\'s Not mods on every map', async ({ overlay }) => {
+  const searches = await fakeTrade(overlay.page)
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-originator-special.txt')
+  const panel = overlay.widget('price-check')
+  await expect(panel.locator('[data-map-prop="Currency"]')).toBeVisible({ timeout: 20_000 })
+  const strip = panel.locator('[data-map-trade] > button').first()
+  const rows = panel.locator('[data-map-mod]')
+  if (await rows.count() === 0) await strip.click()
+  await rows.filter({ hasText: 'Area contains a Mirage' }).locator('[data-state="not"]').click()
+  const exclude = panel.locator('[data-map-exclude-bad]')
+  await expect(exclude).toHaveCount(0)
+  await panel.locator('[data-template-save]').click()
+  await panel.locator('[data-template-name]').fill('No mirage')
+  await panel.locator('[data-template-name]').press('Enter')
+  await expect(exclude).toHaveText('Exclude my bad mods')
+  await expect(exclude).toHaveAttribute('aria-pressed', 'false')
+
+  // A map without a Mirage: off, the search leaves it out of Not; on, it's in.
+  await overlay.copyItem('items/map-originator-more.txt')
+  await expect(exclude).toHaveAttribute('aria-pressed', 'false')
+  await exclude.click()
+  await expect(exclude).toHaveAttribute('aria-pressed', 'true')
+  await overlay.snap('map-exclude-bad-mods-on')
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBe(1)
+  const not = searches[0].query.stats.find(g => g.type === 'not')
+  expect(not?.filters).toContainEqual(expect.objectContaining({ id: 'explicit.stat_2436559047', disabled: false }))
+
+  // Remembered on the template for the next map.
+  await overlay.copyItem('items/map-originator-special.txt')
+  await expect(exclude).toHaveAttribute('aria-pressed', 'true')
+  expect(overlay.errors).toEqual([])
+})

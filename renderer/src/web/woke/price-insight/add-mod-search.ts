@@ -1,6 +1,8 @@
 // "Add a mod" search: finds any trade stat by its text, every kind or one at a time.
 // Pure functions over a list of stats, so tests can pass their own.
-import type { Stat } from '@/assets/data'
+import type { Stat, StatOrGroup } from '@/assets/data'
+import type { ItemCategory } from '@/parser'
+import { testItemCategory } from '@/parser/stat-translations'
 import type { AddedMod, AddedModKind } from '@/web/price-check/filters/interfaces'
 
 export const ADD_KINDS: ReadonlyArray<{ kind: AddedModKind, label: string, title: string }> = [
@@ -125,11 +127,26 @@ export function kindCounts (index: readonly AddEntry[], query: string): Record<A
   return out
 }
 
-export function addedModFrom (entry: AddEntry, kind: AddedModKind): AddedMod {
+// A stat with a local and a global version ("+# to maximum Energy Shield" on a body
+// armour is local, on a belt global) is one entry with the first version's ids.
+// Guy's pick: choose by the item's category, the way the item's own mods are read:
+// armour, shields and weapons get the local stat, everything else the global one.
+export function idsForItem (entry: AddEntry, kind: AddedModKind, group: StatOrGroup | undefined, category: ItemCategory | undefined): string[] {
+  const own = entry.ids[kind]!
+  if (!group || !('stats' in group) || group.resolve.strat !== 'select') return own
+  const test = group.resolve.test
+  let at = test.findIndex(t => t !== null && testItemCategory(category ?? null, t))
+  if (at === -1) at = test.indexOf(null)
+  const stat = group.stats[at]
+  if (!stat || stat.ref !== entry.ref || Boolean(stat.trade.inverted) !== entry.inverted) return own
+  return stat.trade.ids[kind]?.length ? stat.trade.ids[kind] : own
+}
+
+export function addedModFrom (entry: AddEntry, kind: AddedModKind, pick?: { group: StatOrGroup | undefined, category: ItemCategory | undefined }): AddedMod {
   return {
     statRef: entry.ref,
     kind,
-    tradeId: entry.ids[kind]!,
+    tradeId: pick ? idsForItem(entry, kind, pick.group, pick.category) : entry.ids[kind]!,
     tradeInvert: entry.inverted || undefined,
     min: '',
     max: '',

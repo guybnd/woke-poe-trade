@@ -16,6 +16,14 @@ export interface Unit {
   ms: number
   ts: number
   name: string
+  // A session without map detail: the maps it holds (more than one).
+  maps?: number
+}
+
+// One profit per map: a session without map detail counts as its maps, each
+// an even share of its profit, not as one giant map.
+export function mapProfits (units: Unit[]): number[] {
+  return units.flatMap(u => u.maps && u.maps > 1 ? Array<number>(u.maps).fill(u.profit / u.maps) : [u.profit])
 }
 
 export function lootValue (lines: SavedLoot[]): number {
@@ -73,7 +81,7 @@ export function sessionUnits (s: SessionRecord, unit: AnalyticsUnit, fallbackDiv
   if (!rate) return []
   const total = sessionTotals(s)
   if (!s.runs.length) {
-    return [{ profit: total.profit / rate, ms: s.durationMs, ts: s.endedAt, name: '' }]
+    return [{ profit: total.profit / rate, ms: s.durationMs, ts: s.endedAt, name: '', ...(s.maps > 1 ? { maps: s.maps } : {}) }]
   }
   let runsMs = 0
   let runsProfit = 0
@@ -181,7 +189,8 @@ export function buildRow (key: string, strategy: string, kind: 'maps' | 'boss', 
   const profit = units.reduce((n, u) => n + u.profit, 0)
   const ms = units.reduce((n, u) => n + u.ms, 0)
   const hours = ms / HOUR_MS
-  const profits = units.map(u => u.profit)
+  // Typical map, best map and losing share go by map.
+  const profits = mapProfits(units)
   return {
     key,
     strategy,
@@ -198,7 +207,7 @@ export function buildRow (key: string, strategy: string, kind: 'maps' | 'boss', 
     range: hourRange(units),
     costPerMap: extra.costPerMap,
     mapsPerHour: hours > 1 / 60 ? extra.maps / hours : null,
-    losingShare: units.length ? profits.filter(p => p < 0).length / units.length : null,
+    losingShare: profits.length ? profits.filter(p => p < 0).length / profits.length : null,
     bestMap: profits.length ? Math.max(...profits) : null,
     mapShare: extra.mapShare,
     trend: extra.trend
