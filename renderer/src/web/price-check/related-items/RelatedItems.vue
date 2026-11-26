@@ -90,7 +90,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, nextTick, PropType, shallowRef, watch } from 'vue'
+import { computed, defineComponent, inject, nextTick, PropType, shallowRef, watch } from 'vue'
 import { BaseType, DropEntry, ITEM_BY_REF, ITEM_DROP, ITEMS_ITERATOR } from '@/assets/data'
 import { usePoeninja, CurrencyValue, displayRounding } from '@/web/background/Prices'
 import { getDetailsId } from '../trends/getDetailsId'
@@ -110,7 +110,9 @@ import type { Conqueror } from '@/web/woke/related-family/conquest'
 import { conquestPick } from '@/web/woke/related-family/conquest-pick'
 import type { FoulKindRow, UniqueInfo } from '@/web/woke/related-family/unique-info'
 import { useLeagues } from '@/web/background/Leagues'
-import { poeWebApi } from '@/web/Config'
+import { AppConfig, poeWebApi } from '@/web/Config'
+import { Host } from '@/web/background/IPC'
+import type { PriceCheckWidget } from '@/web/overlay/widgets'
 
 const { findPriceByQuery, findPricesByName, autoCurrency, xchgRate } = usePoeninja()
 
@@ -505,7 +507,8 @@ function getUniqueInfo (item: ParsedItem, data: UniquePack): UniqueInfo | null {
   return data.mod.uniqueInfo({
     name,
     foulborn: !!item.isFoulborn,
-    rawText: item.rawText,
+    // The tooltip data is English: a copy in another language matches none of it.
+    rawText: AppConfig().language === 'en' ? item.rawText : '',
     uniques: data.uniques,
     vestigial: data.vestigial,
     foulPrices,
@@ -743,6 +746,7 @@ export default defineComponent({
     // A Foulborn kind's tooltip: the Foulborn copy's, which says what it replaces.
     const foulTip = (k: FoulKindRow): ItemTipRef => ({ name: `Foulborn ${props.item!.info.refName}`, variant: k.name, noMenu: true })
     const leagues = useLeagues()
+    const showBrowser = inject<((url: string) => void) | undefined>('builtin-browser', undefined)
     function openFoul (k: FoulKindRow) {
       const item = props.item
       const league = leagues.selectedId.value
@@ -750,7 +754,12 @@ export default defineComponent({
       const base = item.info.unique?.base
       const query = { name: item.info.name, type: base ? (ITEM_BY_REF('ITEM', base)?.[0]?.name ?? base) : undefined }
       import('@/web/woke/related-family/unique-info-trade')
-        .then(m => { window.open(m.foulKindUrl(league, poeWebApi(), query, k.adds)) })
+        .then(m => {
+          const url = m.foulKindUrl(league, poeWebApi(), query, k.adds)
+          // As the price check's own Trade button: the built-in browser when it's on.
+          if (Host.isElectron && (AppConfig('price-check') as PriceCheckWidget | undefined)?.builtinBrowser && showBrowser) showBrowser(url)
+          else window.open(url)
+        })
         .catch(() => {})
     }
     // A unique's mods load before it opens: a later click, or a new check,

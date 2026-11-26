@@ -244,4 +244,15 @@ test('side window: a Foulborn unique lists its Foulborn kinds, priced, its own l
   // Hover: the Foulborn copy's tooltip.
   await intensify.hover()
   await expect(overlay.page.getByRole('tooltip').getByText('Foulborn Carcass Jack').first()).toBeVisible()
+  // Click: the trade site's search for Foulborn copies with that kind's mod.
+  await overlay.page.evaluate(() => {
+    const w = window as unknown as { open: (url: string) => null, __opened?: string }
+    w.open = (url: string) => { w.__opened = url; return null }
+  })
+  await aura.click()
+  await expect.poll(() => overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')).toContain('trade')
+  const url = decodeURIComponent(await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? ''))
+  expect(url).toContain('"foulborn_item":{"option":"true"}')
+  expect(url).toContain('"id":"explicit.stat_1636209393"')
+  expect(url).toContain('"name":"Carcass Jack"')
 })

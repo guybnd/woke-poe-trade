@@ -45,7 +45,7 @@ const MOST_SOURCES = 4
 
 export function uniqueInfo (input: UniqueInfoInput): UniqueInfo | null {
   const details = uniqueDetails(input.name, input.uniques, input.vestigial)
-  const itemShapes = new Set(input.rawText.split('\n').map(l => modShape(l.trim())))
+  const itemShapes = new Set(input.rawText.split(/\r?\n/).map(l => modShape(itemLine(l))))
   const priced = input.foulPrices
   const foulborn = (details?.foulborn ?? []).map((k): FoulKindRow => {
     // A kind is priced by its own row, or by the only row when it's the only kind.
@@ -79,14 +79,25 @@ export function uniqueInfo (input: UniqueInfoInput): UniqueInfo | null {
   return { foulborn, vestigial, vestigialFrom }
 }
 
-// The lines under the item's "{ Vestigial Implicit Modifier }" headers.
+// A mod line of the game's advanced copy as the data writes it: the rolled
+// value in front of its range ("22(15-30)%") and the trailing notes go.
+export function itemLine (line: string): string {
+  return line.trim()
+    .replace(/ \((?:implicit|crafted|fractured|enchant)\)$/, '')
+    .replace(/ — Unscalable Value$/, '')
+    .replace(/[+-]?\d+(?:\.\d+)?(?=\(-?[\d.]+-[\d.]+\))/g, '')
+}
+
+// The lines under the item's "{ Vestigial Implicit Modifier }" headers,
+// without the keyword reminders the copy prints under a mod "(Withered ...)".
 export function vestigialLines (rawText: string): string[] {
   const out: string[] = []
   let inside = false
   for (const line of rawText.split(/\r?\n/)) {
     if (line.startsWith('{')) { inside = line.includes('Vestigial Implicit Modifier'); continue }
     if (line.startsWith('--------')) { inside = false; continue }
-    if (inside && line.trim()) out.push(line.replace(/ \(implicit\)$/, '').trim())
+    const text = itemLine(line)
+    if (inside && text && !/^\(.*\)$/.test(text)) out.push(text)
   }
   return out
 }
@@ -102,14 +113,18 @@ export function vestigialSources (lines: string[], vestigial: Record<string, str
 }
 
 // The trade site's search for one Foulborn kind: Foulborn copies of the
-// unique with the kind's mods. A mod the stat data can't read is left out,
-// so the search is never narrower than the kind.
+// unique with the kind's mods. A mod is looked up whole, then line by line
+// (one on two lines in the data may be one stat or two); one the stat data
+// can't read is left out, so the search is never narrower than the kind.
 export function foulKindQuery (
   base: { name: string, type?: string },
   adds: string[],
-  statId: (line: string) => string | null
+  statId: (text: string) => string | null
 ): object {
-  const ids = [...new Set(adds.flatMap(a => a.split('\n')).map(statId).filter((id): id is string => id != null))]
+  const ids = [...new Set(adds.flatMap(a => {
+    const whole = statId(a)
+    return whole != null ? [whole] : a.split('\n').map(statId)
+  }).filter((id): id is string => id != null))]
   return {
     ...base,
     stats: ids.length ? [{ type: 'and', filters: ids.map(id => ({ id })) }] : undefined,
@@ -117,7 +132,12 @@ export function foulKindQuery (
   }
 }
 
-// "(15-30)% increased Effect" as the stat data's matcher reads it: "#% increased Effect".
-export function statMatchText (line: string): string {
-  return plainLine(line).replace(/\(-?[\d.]+-[\d.]+\)/g, '#').replace(/\d+(?:\.\d+)?/g, '#')
+// "+(15-30)% to Chaos Resistance" as the stat data's matchers read it:
+// "#% to Chaos Resistance" (the parser takes the sign with the number), and
+// the signed form, which a few matchers keep ("+# to Level of ...").
+export function statMatchTexts (line: string): string[] {
+  const plain = plainLine(line)
+  const unsigned = plain.replace(/[+-]?\(-?[\d.]+-[\d.]+\)/g, '#').replace(/[+-]?\d+(?:\.\d+)?/g, '#')
+  const signed = plain.replace(/\(-?[\d.]+-[\d.]+\)/g, '#').replace(/\d+(?:\.\d+)?/g, '#')
+  return unsigned === signed ? [unsigned] : [unsigned, signed]
 }
