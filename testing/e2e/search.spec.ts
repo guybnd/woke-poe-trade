@@ -426,6 +426,38 @@ test('a base lists its uniques with their prices', async ({ overlay }) => {
   await overlay.snap('search-priced-base')
 })
 
+test('a mod lists the uniques that have it, priced, with the matched words lit', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('onslaught')
+  await expect(panel.getByText('Uniques with this mod', { exact: true }).first()).toBeVisible()
+  // Priced ones first: Three-step Assault by its Evasion line.
+  const row = panel.getByRole('button', { name: /Three-step Assault/ }).first()
+  await expect(row).toBeVisible()
+  await expect(row.locator('[data-search-mod-hit]')).toHaveText('100% increased Evasion Rating during Onslaught')
+  await expect(row.locator('mark')).toHaveText('Onslaught')
+  await overlay.snap('search-unique-mods')
+
+  // Its item tooltip on hover, and picked, the details light the same line.
+  await row.hover()
+  await expect(overlay.page.getByRole('tooltip')).toContainText('Three-step Assault')
+  await row.click()
+  await expect(panel.getByText('100% increased Evasion Rating during Onslaught').last()).toBeVisible()
+
+  // The whole group, unpriced uniques after the priced.
+  await panel.locator('[data-search-more]').filter({ hasText: 'Uniques with this mod' }).click()
+  await expect(panel.getByRole('button', { name: /Circle of Ambition/ }).first()).toBeVisible()
+  await overlay.snap('search-unique-mods-all')
+
+  // Under 4 letters there are no mod hits.
+  await box.fill('ons')
+  await expect(panel.getByText('Uniques with this mod', { exact: true })).toHaveCount(0)
+})
+
 test("Trade site opens the price check's listings: Instant buyout, no Foulborn copies for a plain unique, a unique map on its Map base", async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await overlay.boot(bootOptions())
