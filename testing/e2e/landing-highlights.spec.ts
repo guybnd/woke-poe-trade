@@ -974,34 +974,6 @@ test('on screen: Betrayal, the slots worth having', async ({ overlay }) => {
   await saveAround(overlay, 'hl-betrayal', [w.locator('[data-w-panel]').first()], 1280)
 })
 
-// League investments is retired for now (modules.ts RETIRED_MODULES).
-test.skip('market: league-start investments', async ({ overlay }) => {
-  await livePrices(overlay)
-  await overlay.boot({
-    overlayActive: true,
-    widgets: [{
-      wmType: 'woke-league-invest',
-      wmTitle: 'League investments',
-      wmWants: 'show',
-      wmFlags: ['invisible-on-blur'],
-      anchor: { pos: 'tl', x: 4, y: 12 },
-      budgetDiv: 5,
-      slots: 5,
-      horizon: 7,
-      bulkOnly: false,
-      minMultiple: 1.2,
-      leagueStart: '',
-      dayOverride: 3
-    } as never]
-  })
-  await backdrop(overlay, 'frames/town.jpg')
-  const panel = overlay.page.locator('[data-w-panel]').filter({ hasText: 'League investments' }).first()
-  await expect(panel).toBeVisible()
-  await overlay.page.waitForTimeout(5000)
-  await overlay.page.mouse.move(1800, 1000)
-  await saveAround(overlay, 'hl-invest', [panel], 1280)
-})
-
 test('setup: pick how you play', async ({ overlay, fakeApp }) => {
   await overlay.boot({ firstRun: true, overlayActive: true })
   const page = overlay.page

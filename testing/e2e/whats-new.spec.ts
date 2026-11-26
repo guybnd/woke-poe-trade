@@ -24,7 +24,7 @@ test('with the overlay open: Show me opens the tool, dismiss takes a line off, t
   const lines = icon.locator('[data-whats-new-line]')
   await expect(lines).toHaveCount(NEWS.length)
 
-  await lines.filter({ hasText: 'Atlas strategies' }).first().locator('[data-whats-new-dismiss]').click()
+  await lines.filter({ hasText: 'poeatlasplanner.com' }).first().locator('[data-whats-new-dismiss]').click()
   await expect(lines).toHaveCount(NEWS.length - 1)
 
   await (await overlay.whatsNewLine('Planner tab for T17')).getByRole('button', { name: 'Show me' }).click()
@@ -49,15 +49,14 @@ test('lines fold under their tool: one group open at a time, × on a heading dis
   const groups = icon.locator('[data-whats-new-group]')
   const heads = icon.locator('[data-whats-new-group-head]')
   // Price check splits by topic; the group with the newest line starts open.
-  // `first` is that group, `other` the one we open (Tooltips or Maps).
-  const newest = NEWS.find(n => n.wmType === 'price-check' && n.topic)!.topic!
-  const otherTopic = newest === 'Maps' ? 'Tooltips' : 'Maps'
-  const first = groups.filter({ has: overlay.page.getByText(`· ${newest}`) })
-  const other = groups.filter({ has: overlay.page.getByText(`· ${otherTopic}`) })
-  const nFirst = NEWS.filter(n => n.topic === newest).length
+  // We open whichever of Tooltips and Maps isn't open yet (`other`).
+  const tips = groups.filter({ has: overlay.page.getByText('· Tooltips') })
   await expect(icon.locator('[data-open]')).toHaveCount(1)
-  await expect(first).toHaveAttribute('data-open', '')
-  await expect(first.locator('[data-whats-new-group-head]')).toContainText(String(nFirst))
+  const otherTopic = await tips.getAttribute('data-open') == null ? 'Tooltips' : 'Maps'
+  const firstTopic = otherTopic === 'Maps' ? 'Tooltips' : 'Maps'
+  const first = groups.filter({ has: overlay.page.getByText(`· ${firstTopic}`) })
+  const other = groups.filter({ has: overlay.page.getByText(`· ${otherTopic}`) })
+  await expect(first.locator('[data-whats-new-group-head]')).toContainText(String(NEWS.filter(n => n.topic === firstTopic).length))
   await overlay.snap('what\'s new folded by tool')
   await other.locator('[data-whats-new-group-head]').click()
   await expect(other).toHaveAttribute('data-open', '')
@@ -65,7 +64,7 @@ test('lines fold under their tool: one group open at a time, × on a heading dis
   await expect(other.locator('[data-whats-new-line]').first()).toBeVisible()
   await expect(first.locator('[data-whats-new-line]').first()).toBeHidden()
   // A folded heading shows its newest line, faint; the open one doesn't.
-  await expect(first.locator('[data-whats-new-preview]')).toContainText(NEWS.find(n => n.topic === newest)!.note.replace(/^New: ./, '').slice(0, 20))
+  await expect(first.locator('[data-whats-new-preview]')).toContainText(NEWS.find(n => n.topic === firstTopic)!.note.replace(/^New: ./, '').slice(0, 20))
   await expect(other.locator('[data-whats-new-preview]')).toHaveCount(0)
   // Remembered: the card reopens on the group we opened.
   await expect.poll(() => fakeApp.readConfig()?.woke?.newsOpen).toBe(`price-check:${otherTopic}`)

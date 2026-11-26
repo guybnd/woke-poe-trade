@@ -52,12 +52,10 @@ const WOKE_KEYS: Record<string, { page: string, keys: Array<[string, string]> }>
   'woke-campaign': { page: 'campaign', keys: [['hotkeyCard', 'Campaign: keep the card open'], ['hotkeyNext', 'Campaign: step done'], ['hotkeyPrev', 'Campaign: step back']] },
   'woke-run-timer': { page: 'campaign', keys: [['hotkeyPause', 'Run timer: pause / resume'], ['hotkeySplits', 'Run timer: show / hide splits']] },
   'woke-lab': { page: 'lab', keys: [['hotkeyOverlay', 'Lab layout in the overlay'], ['hotkeyExternal', 'Lab layout in your browser']] },
-  'woke-wealthy-exile': { page: 'market', keys: [['hotkey', 'Show / hide Wealthy Exile']] },
   'woke-challenges': { page: 'challenges', keys: [['hotkey', 'Show / hide the challenge guide']] },
   'woke-map-mods': { page: 'map-mods', keys: [['hotkey', 'Check the hovered map'], ['regexHotkey', 'Paste the map regex']] },
   'woke-essence-scan': { page: 'essence-scan', keys: [['hotkey', 'Essence scan on / off'], ['onceHotkey', 'Read every essence once']] },
   'woke-loot-filter': { page: 'loot-filter', keys: [['sampleHotkey', 'Loot filter rule for the hovered item'], ['editorHotkey', 'Open the loot filter editor'], ['reloadHotkey', 'Reload the saved loot filter in game'], ['stricterHotkey', 'Loot filter one step stricter'], ['looserHotkey', 'Loot filter one step looser']] },
-  'woke-farming': { page: 'farming', keys: [['lootHotkey', 'Farming: add the hovered item']] },
   'woke-drop-counter': { page: 'drop-counter', keys: [['hotkey', 'Drop counter: +1 the hovered item']] },
   // Registered by net-worth/enable.ts while the stash reader is on.
   'woke-net-worth': { page: 'net-worth', keys: [['hotkey', 'Net worth: show / hide'], ['listedHotkey', 'Net worth: open your Faustus listings']] },

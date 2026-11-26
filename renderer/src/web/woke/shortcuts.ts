@@ -10,8 +10,6 @@ import { LAB_TYPE, hotkeyTarget as labHotkeyTarget } from './lab/lab'
 import type { LabWidget } from './lab/lab'
 import { CHALLENGES_TYPE, challengesShortcuts } from './challenges/widget'
 import type { ChallengesWidget } from './challenges/widget'
-import { WEALTHY_EXILE_TYPE, wealthyExileShortcuts } from './wealthy-exile/widget'
-import type { WealthyExileWidget } from './wealthy-exile/widget'
 import { MAP_MODS_TYPE, MAP_MODS_TARGET } from './map-mods/widget'
 import type { MapModsWidget } from './map-mods/widget'
 import { rollHotkeyTarget, scanHotkeyTarget } from './map-mods/scan'
@@ -24,8 +22,6 @@ import { CAMPAIGN_TYPE, hotkeyTarget as campaignHotkeyTarget } from './campaign/
 import type { CampaignWidget } from './campaign/widget'
 import { RUN_TIMER_TYPE, hotkeyTarget as timerHotkeyTarget } from './campaign/run-timer'
 import type { RunTimerWidget } from './campaign/run-timer'
-import { FARMING_TYPE, FARMING_LOOT_TARGET } from './farming/farming'
-import type { FarmingWidget } from './farming/farming'
 import { DROP_COUNTER_TYPE, DROP_COUNTER_TARGET } from './drop-counter/drop-counter'
 import type { DropCounterWidget } from './drop-counter/drop-counter'
 import { SCARAB_FLIP_TYPE, stashHotkeyTarget } from './scarab-flip/widget'
@@ -125,7 +121,6 @@ export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: 
   const extra = extraShortcuts.get(widget.wmType)
   if (extra) return extra(widget)
   if (widget.wmType === CHALLENGES_TYPE) return challengesShortcuts(widget as ChallengesWidget)
-  if (widget.wmType === WEALTHY_EXILE_TYPE) return wealthyExileShortcuts(widget as WealthyExileWidget)
   if (widget.wmType === MAP_MODS_TYPE) {
     const mapMods = widget as MapModsWidget
     const actions: ShortcutAction[] = []
@@ -145,11 +140,6 @@ export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: 
       }
     }
     return actions
-  }
-  if (widget.wmType === FARMING_TYPE) {
-    const farming = widget as FarmingWidget
-    if (!farming.lootHotkey) return []
-    return [{ shortcut: farming.lootHotkey, action: { type: 'copy-item', target: FARMING_LOOT_TARGET } }]
   }
   if (widget.wmType === SESSION_STORY_TYPE) {
     const story = widget as SessionStoryWidget

@@ -11,7 +11,7 @@
 import { lineTime } from '../campaign/log-tail'
 import { actFromAreaId, isTownLike, parseLogLine, slainName } from '../campaign/log-parse'
 import { isBossArea } from '../shared/boss-areas'
-import { isMapArea, mapNameFromArea } from '../farming/farming'
+import { isMapArea, mapNameFromArea } from '../shared/map-areas'
 import { staysInRun } from '../death-recap/death-log'
 import { isSkippedArea, knownAreaName } from './skip-areas'
 import { MyChar, isGameStart } from './my-char'

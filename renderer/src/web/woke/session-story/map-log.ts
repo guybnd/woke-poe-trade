@@ -6,7 +6,7 @@
 // loot aren't logged.
 import { lineTime } from '../campaign/log-tail'
 import { parseLogLine, slainName, speakerOf } from '../campaign/log-parse'
-import { isMapArea, mapNameFromArea } from '../farming/farming'
+import { isMapArea, mapNameFromArea } from '../shared/map-areas'
 import { staysInRun } from '../death-recap/death-log'
 import { isSkippedArea, knownAreaName } from './skip-areas'
 import { NIGHT_GAP_MS } from './story'

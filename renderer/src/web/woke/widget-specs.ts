@@ -15,10 +15,8 @@ import { DISENCHANT_TYPE } from './disenchant/widget'
 import { WICKERMAN_TYPE } from './wickerman/widget'
 import { DROP_COUNTER_TYPE } from './drop-counter/drop-counter'
 import { ESSENCE_SCAN_TYPE } from './essence-scan/widget'
-import { FARMING_TYPE } from './farming/farming'
 import { LAB_GEMS_TYPE } from './lab-gems/widget'
 import { LAB_TYPE } from './lab/lab'
-import { LEAGUE_INVEST_TYPE } from './league-invest/widget'
 import { LOOT_FILTER_TYPE } from './loot-filter/widget'
 import { MAP_CHECK_TYPE, initMapCheckWidget } from './map-mods/map-check'
 import { MAP_MODS_TYPE } from './map-mods/widget'
@@ -36,7 +34,6 @@ import { STACKED_DECKS_TYPE, initStackedDecksWidget } from './stacked-decks/deck
 import { TRADE_SEARCHES_TYPE } from './trade-searches/widget'
 import { TRADE_TYPE } from './trade/widget'
 import { popupAnchor } from './ui/window-anchor'
-import { WEALTHY_EXILE_TYPE } from './wealthy-exile/widget'
 
 export const widgetRegexLibrarySpec = {
   type: REGEX_LIBRARY_TYPE,
@@ -103,12 +100,6 @@ export const widgetChallengesSpec = {
   trNameKey: 'Challenges'
 } satisfies WidgetSpec
 
-export const widgetFarmingSpec = {
-  type: FARMING_TYPE,
-  instances: 'multi',
-  trNameKey: 'Farming'
-} satisfies WidgetSpec
-
 export const widgetDropCounterSpec = {
   type: DROP_COUNTER_TYPE,
   instances: 'multi',
@@ -150,12 +141,6 @@ export const widgetLabGemsSpec = {
   type: LAB_GEMS_TYPE,
   instances: 'multi',
   trNameKey: 'Lab gems'
-} satisfies WidgetSpec
-
-export const widgetLeagueInvestSpec = {
-  type: LEAGUE_INVEST_TYPE,
-  instances: 'multi',
-  trNameKey: 'League investments'
 } satisfies WidgetSpec
 
 export const widgetBossRunsSpec = {
@@ -220,12 +205,6 @@ export const widgetSearchSpec = {
   instances: 'single',
   trNameKey: 'Search',
   initInstance: () => initSearchWidget(0)
-} satisfies WidgetSpec
-
-export const widgetWealthyExileSpec = {
-  type: WEALTHY_EXILE_TYPE,
-  instances: 'multi',
-  trNameKey: 'Wealthy Exile'
 } satisfies WidgetSpec
 
 export const widgetPoeReSpec = {
