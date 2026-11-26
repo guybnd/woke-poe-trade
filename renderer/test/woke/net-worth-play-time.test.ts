@@ -17,9 +17,9 @@ function line (min: number, text: string) {
 }
 const area = (min: number, id: string) => line(min, `Generating level 83 area "${id}" with seed 7`)
 
-// A game that's running writes lines all the time (instance details, chat,
-// NPCs): these fixtures only hold the lines that matter, so the quiet gaps
-// between them are filled, except before the game starts again.
+// game-log-range (sessions) sends a plain line at least every 5 minutes while
+// the game writes any: these fixtures only hold the lines that matter, so the
+// gaps between them are filled the same way, except before the game starts again.
 const timeOf = (l: string) => {
   const m = /^(\d{4})\/(\d\d)\/(\d\d) (\d\d):(\d\d):(\d\d)/.exec(l)
   return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : null

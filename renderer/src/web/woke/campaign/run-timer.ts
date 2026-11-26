@@ -185,6 +185,7 @@ export function resumeRun (run: CampaignRun, now: number) {
 
 export function finishRun (run: CampaignRun, now: number) {
   pauseRun(run, now)
+  run.pausedByClose = false
   run.finished = true
   run.endedAt = now
 }
