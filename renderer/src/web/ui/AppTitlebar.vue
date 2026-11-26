@@ -24,8 +24,8 @@ const emit = defineEmits<{
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: calc(1.5rem * var(--w-text-scale, 1));
-  line-height: calc(1.5rem * var(--w-text-scale, 1));
+  height: calc(1.5rem * var(--w-text-user, 1));
+  line-height: calc(1.5rem * var(--w-text-user, 1));
   /* woke: a full-height window must not squeeze the bar, which nudged everything below it. */
   flex-shrink: 0;
 

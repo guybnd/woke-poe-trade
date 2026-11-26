@@ -887,7 +887,7 @@ function neverOffBuild () {
 .barText {
   position: relative;
   padding: 0 6px;
-  line-height: calc(1.5rem * var(--w-text-scale, 1));
+  line-height: calc(1.5rem * var(--w-text-user, 1));
 }
 .looks {
   display: grid;

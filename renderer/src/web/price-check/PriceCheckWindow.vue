@@ -21,7 +21,7 @@
     <div v-if="!isBrowserShown" class="layout-column shrink-0"
       :style="{ width: floating ? `${floating.gap}px` : 'var(--game-panel)' }">
     </div>
-    <div id="price-window" ref="windowEl" class="layout-column shrink-0 text-gray-200 pointer-events-auto relative"
+    <div id="price-window" ref="windowEl" data-w-window-sized class="layout-column shrink-0 text-gray-200 pointer-events-auto relative"
       :class="{ [$style.movable]: !isBrowserShown, 'w-poe': poeOn }" :style="windowStyle" @mousedown="startMove"
       v-on="poeOn ? { keydown: onEsc } : {}">
       <AppTitleBar :class="$style.zoomed" @close="closePriceCheck" @click="openLeagueSelection" :title="title">
@@ -84,7 +84,7 @@
     <webview v-if="isBrowserShown" ref="iframeEl"
       class="pointer-events-auto flex-1"
       width="100%" height="100%" />
-    <div v-else class="layout-column flex-1 min-w-0">
+    <div v-else class="layout-column flex-1 min-w-0" data-w-window-sized>
       <div class="flex" :class="{
         [$style.zoomed]: true,
         'flex-row': clickPosition === 'stash',

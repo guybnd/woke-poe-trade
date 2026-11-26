@@ -64,6 +64,9 @@ export function rootFontPx (): number {
 function applyFontSize () {
   if (!_config.value || typeof document === 'undefined') return
   document.documentElement.style.fontSize = `${rootFontPx()}px`
+  // The same as a factor, for the text in those windows (theme.css
+  // [data-w-window-sized]) and the tooltips they open (tooltip.ts tipZoom).
+  document.documentElement.style.setProperty('--w-window-size', String(rootFontPx() / 16))
 }
 // Also when the price check's palette changes the size: the save (and its
 // echo) waits until the price check closes.

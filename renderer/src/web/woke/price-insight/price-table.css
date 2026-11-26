@@ -214,7 +214,7 @@
 .w-pc-table td.w-pc-stat-lower::before { content: "\25BC"; }
 
 /* The checked item's own numbers stay on screen under the column labels. */
-.w-pc-table { --w-pc-head-h: calc(1.5rem * var(--w-text-scale, 1) + 1px); }
+.w-pc-table { --w-pc-head-h: calc(1.5rem * var(--w-text-user, 1) + 1px); }
 :root:not([data-woke-theme="classic"]) .w-pc-table { --w-pc-head-h: calc(21px * var(--w-text-scale, 1)); }
 .w-pc-table tr.w-pc-yours td {
   position: sticky;
