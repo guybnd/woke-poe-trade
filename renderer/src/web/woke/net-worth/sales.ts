@@ -266,8 +266,9 @@ export function sortSales (sales: Sale[], sort: SaleSort, rates: Rates, market: 
     let v: number | string | null
     switch (sort.key) {
       case 'item': v = (s.name || s.typeLine).toLowerCase(); break
+      // As the row shows it: what it sold for, at today's rates.
       case 'price':
-      case 'value': v = saleChaos(s, rates); break
+      case 'value': v = saleChaos({ price: s.price }, rates); break
       case 'market': v = market(s); break
       default: v = s.at
     }

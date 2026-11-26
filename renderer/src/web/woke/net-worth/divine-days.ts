@@ -5,4 +5,4 @@
 import { shallowRef } from 'vue'
 import type { DaySnapshot } from './valuation'
 
-export const divineDays = shallowRef<Record<string, Pick<DaySnapshot, 'at' | 'divine'>>>({})
+export const divineDays = shallowRef<{ league: string | null, days: Record<string, Pick<DaySnapshot, 'at' | 'divine'>> }>({ league: null, days: {} })

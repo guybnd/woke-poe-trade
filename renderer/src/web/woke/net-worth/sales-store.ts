@@ -30,7 +30,9 @@ export const rates = computed<Rates>(() => {
   if (ninja.updatedAt.value == null) return { chaos: 1 }
   // A sale in divines counts at the rate of its own day where Net worth
   // saved one, else today's (Guy's pick, 2026-11-26).
-  const r: Rates = { chaos: 1, [DIVINE_ON]: divineOnFrom(divineDays.value) }
+  // Only that league's days: Net worth can be on another league than Sales.
+  const saved = divineDays.value
+  const r: Rates = { chaos: 1, ...(saved.league != null && saved.league === loadedFor ? { [DIVINE_ON]: divineOnFrom(saved.days) } : {}) }
   const div = ninja.xchgRate.value
   if (div) r.divine = div
   for (const [id, name] of Object.entries(NINJA_CURRENCY)) {

@@ -54,7 +54,7 @@ const status = shallowRef<ReaderStatus | null>(null)
 const stash = shallowRef<CachedStash | null>(null)
 const history = shallowRef<NetWorthHistory>(emptyHistory())
 // Each day's rate, for valuing a sale at the rate of its own day.
-watch(history, h => { divineDays.value = h.days })
+watch(history, h => { divineDays.value = { league: loadedFor, days: h.days } })
 const ledgerRef = shallowRef<Ledger>(emptyLedger())
 const prefs = shallowRef<PricePrefs>(emptyPrefs())
 // The last counted read's items and prices: a thin item's price jump is held

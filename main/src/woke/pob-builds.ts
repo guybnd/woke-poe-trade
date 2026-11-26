@@ -19,7 +19,7 @@ export interface PobBuildEntry extends PobSummary {
   mtime: number
 }
 
-// PoB's own builds folder, read when the list loads (readPobBuildsDir).
+// PoB's own builds folder (readPobBuildsDir), read by the build ops.
 let pobBuildsDir: string | null = null
 
 export function defaultBuildsDir (): string {
@@ -47,17 +47,29 @@ async function readPobBuildsDir (): Promise<string | null> {
   const settings = await pobSettingsPath(exe)
   let xml: string | null = null
   try { xml = await fs.readFile(settings, 'utf8') } catch {}
-  return buildPathFromSettings(xml) ?? path.join(path.dirname(settings), 'Builds')
+  const set = buildPathFromSettings(xml)
+  // A relative path counts from PoB's own folder, not this app's.
+  return set ? path.resolve(path.dirname(settings), set) : path.join(path.dirname(settings), 'Builds')
 }
 
-function resolveDir (dir: unknown): string {
-  return (typeof dir === 'string' && dir.trim()) ? dir.trim() : defaultBuildsDir()
+// PoB's folder is read again at most once a minute: finding PoB can ask the
+// registry, too slow for every build op.
+const POB_DIR_MS = 60_000
+let pobDirReadAt = 0
+
+async function resolveDir (dir: unknown): Promise<string> {
+  if (typeof dir === 'string' && dir.trim()) return dir.trim()
+  if (Date.now() - pobDirReadAt > POB_DIR_MS) {
+    pobBuildsDir = await readPobBuildsDir().catch(() => null)
+    pobDirReadAt = Date.now()
+  }
+  return defaultBuildsDir()
 }
 
 // Only files inside the builds folder with a .xml extension may be touched.
-function resolveBuild (dir: unknown, relPath: unknown): string {
+async function resolveBuild (dir: unknown, relPath: unknown): Promise<string> {
   if (typeof relPath !== 'string' || !relPath) throw new Error('Missing build path')
-  const root = path.resolve(resolveDir(dir))
+  const root = path.resolve(await resolveDir(dir))
   const full = path.resolve(root, relPath)
   if (!full.startsWith(root + path.sep) || path.extname(full).toLowerCase() !== '.xml') {
     throw new Error('Build path is outside the builds folder')
@@ -107,8 +119,8 @@ async function walk (root: string, rel: string, depth: number, out: PobBuildEntr
 
 export async function listBuilds (args: { dir?: string }): Promise<{ dir: string, builds: PobBuildEntry[] }> {
   // No folder picked: follow PoB's own setting, read again each list.
-  if (!(typeof args?.dir === 'string' && args.dir.trim())) pobBuildsDir = await readPobBuildsDir().catch(() => null)
-  const dir = resolveDir(args?.dir)
+  pobDirReadAt = 0
+  const dir = await resolveDir(args?.dir)
   // Once per folder after start: a folder move the app didn't finish.
   const root = path.resolve(dir)
   if (!recovered.has(root)) {
@@ -121,17 +133,17 @@ export async function listBuilds (args: { dir?: string }): Promise<{ dir: string
 }
 
 export async function readBuild (args: { dir?: string, relPath: string }): Promise<PobDetails> {
-  const full = resolveBuild(args?.dir, args?.relPath)
+  const full = await resolveBuild(args?.dir, args?.relPath)
   return parseBuild(await fs.readFile(full, 'utf8'))
 }
 
 export async function showBuild (args: { dir?: string, relPath: string }): Promise<void> {
-  shell.showItemInFolder(resolveBuild(args?.dir, args?.relPath))
+  shell.showItemInFolder(await resolveBuild(args?.dir, args?.relPath))
 }
 
 // Starts Path of Building on the build (see pob-launch.ts for how).
 export async function openBuild (args: { dir?: string, relPath: string, pobExe?: string }): Promise<void> {
-  const full = resolveBuild(args?.dir, args?.relPath)
+  const full = await resolveBuild(args?.dir, args?.relPath)
   // PoB would open on nothing: say so instead.
   await fs.access(full).catch(() => { throw new Error(`There's no ${args.relPath} in the builds folder yet.`) })
   // With --listen other machines can call this: never start a program they name.
@@ -208,7 +220,7 @@ function samePath (a: string, b: string): boolean {
 export async function importBuild (args: { dir?: string, input: string, name?: string }): Promise<{ relPath: string }> {
   if (typeof args?.input !== 'string' || !args.input.trim()) throw new Error('Paste a build link (pobb.in, poe.ninja, maxroll…) or a PoB code')
   const xml = decodePobCode(await fetchCode(args.input))
-  const root = path.resolve(resolveDir(args?.dir))
+  const root = path.resolve(await resolveDir(args?.dir))
   const sum = summarize(parseBuild(xml))
   const base = safeFileName(args.name || [sum.mainSkill, sum.ascendClassName || sum.className].filter(Boolean).join(' ') || 'Imported build')
   const folder = path.join(root, 'Imported')
@@ -248,8 +260,8 @@ function resolveFolder (root: string, folder: unknown): string {
 }
 
 export async function renameBuild (args: { dir?: string, relPath: string, name: string }): Promise<{ relPath: string }> {
-  const from = resolveBuild(args?.dir, args?.relPath)
-  const root = path.resolve(resolveDir(args?.dir))
+  const from = await resolveBuild(args?.dir, args?.relPath)
+  const root = path.resolve(await resolveDir(args?.dir))
   const base = typeof args?.name === 'string' ? cleanName(args.name.replace(/\.xml$/i, '')) : ''
   if (!base) throw new Error('Type a name')
   const folder = path.dirname(from)
@@ -262,8 +274,8 @@ export async function renameBuild (args: { dir?: string, relPath: string, name: 
 }
 
 export async function moveBuild (args: { dir?: string, relPath: string, folder: string }): Promise<{ relPath: string }> {
-  const from = resolveBuild(args?.dir, args?.relPath)
-  const root = path.resolve(resolveDir(args?.dir))
+  const from = await resolveBuild(args?.dir, args?.relPath)
+  const root = path.resolve(await resolveDir(args?.dir))
   const folder = resolveFolder(root, args?.folder)
   if (samePath(folder, path.dirname(from))) return { relPath: relOf(root, from) }
   await fs.mkdir(folder, { recursive: true })
@@ -278,7 +290,7 @@ export async function moveBuild (args: { dir?: string, relPath: string, folder: 
 // (a name is cleaned of characters a file name can't have). A folder that is
 // only in the list (no file in it yet) has nothing to move.
 export async function moveBuildFolder (args: { dir?: string, from: string, to: string }): Promise<{ to: string }> {
-  const root = path.resolve(resolveDir(args?.dir))
+  const root = path.resolve(await resolveDir(args?.dir))
   const from = resolveFolder(root, args?.from)
   const to = resolveFolder(root, args?.to)
   if (from === root || to === root) throw new Error('Not a folder name')
@@ -347,8 +359,8 @@ async function deepestUnder (dir: string): Promise<number> {
 }
 
 export async function duplicateBuild (args: { dir?: string, relPath: string }): Promise<{ relPath: string }> {
-  const from = resolveBuild(args?.dir, args?.relPath)
-  const root = path.resolve(resolveDir(args?.dir))
+  const from = await resolveBuild(args?.dir, args?.relPath)
+  const root = path.resolve(await resolveDir(args?.dir))
   const folder = path.dirname(from)
   const to = path.join(folder, await freeName(folder, `${path.basename(from, path.extname(from))} (copy)`))
   await fs.copyFile(from, to, fsConstants.COPYFILE_EXCL)
@@ -357,7 +369,7 @@ export async function duplicateBuild (args: { dir?: string, relPath: string }): 
 
 // To the Recycle Bin. Returns the file's text so Undo can put it back.
 export async function deleteBuild (args: { dir?: string, relPath: string }): Promise<{ xml: string }> {
-  const full = resolveBuild(args?.dir, args?.relPath)
+  const full = await resolveBuild(args?.dir, args?.relPath)
   const xml = await fs.readFile(full, 'utf8')
   await shell.trashItem(full)
   summaryCache.delete(full)
@@ -372,7 +384,7 @@ export async function saveLiveBuild (args: { dir?: string, name: string, xml: st
   if (typeof args?.xml !== 'string' || !/<PathOfBuilding/.test(args.xml)) throw new Error('That is not a Path of Building build')
   const name = (typeof args?.name === 'string' ? args.name : '').replace(/[^\w -]/g, '_').trim().slice(0, 60) || 'character'
   const relPath = `${LIVE_FOLDER}/${name}.xml`
-  const full = resolveBuild(args.dir, relPath)
+  const full = await resolveBuild(args.dir, relPath)
   // A file of yours by that name is left alone: only one this wrote is replaced.
   const was = await fs.readFile(full, 'utf8').catch(() => null)
   if (was != null && !was.includes(LIVE_MARK)) throw new Error(`${relPath} isn't a file this app wrote, so it was left as it is.`)
@@ -406,7 +418,7 @@ async function latestTreeVersion (): Promise<string> {
 
 // Undo of a delete: writes the build back, never over a file that's there.
 export async function restoreBuild (args: { dir?: string, relPath: string, xml: string }): Promise<void> {
-  const full = resolveBuild(args?.dir, args?.relPath)
+  const full = await resolveBuild(args?.dir, args?.relPath)
   if (typeof args?.xml !== 'string' || !/<PathOfBuilding/.test(args.xml)) throw new Error('That is not a Path of Building build')
   await fs.mkdir(path.dirname(full), { recursive: true })
   await fs.writeFile(full, args.xml, { encoding: 'utf8', flag: 'wx' })

@@ -35,7 +35,9 @@ async function load (since: number | null): Promise<LogTail> {
 export function logTail (path?: string, since?: number | null): Promise<LogTail> {
   // 0 (replay whatever the tail has) asks for no more than the tail.
   if (since != null && !(since > 0)) since = null
-  const covers = since == null || (pendingSince != null && pendingSince <= since)
+  // A read shared only when it fits: one with no time asked keeps to the
+  // last 256 KB, so tools that replay the whole tail don't get days of it.
+  const covers = since == null ? pendingSince == null : (pendingSince != null && pendingSince <= since)
   if (pending && (path == null || pendingFor === path) && covers) return pending
   const loading: Promise<LogTail> = load(since ?? null).finally(() => {
     if (pending === loading) pending = null
