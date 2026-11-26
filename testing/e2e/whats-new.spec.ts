@@ -24,7 +24,8 @@ test('with the overlay open: Show me opens the tool, dismiss takes a line off, t
   const lines = icon.locator('[data-whats-new-line]')
   await expect(lines).toHaveCount(NEWS.length)
 
-  await lines.filter({ hasText: 'poeatlasplanner.com' }).first().locator('[data-whats-new-dismiss]').click()
+  // Its tool's heading may be folded (only the newest tool's opens).
+  await (await overlay.whatsNewLine('poeatlasplanner.com')).first().locator('[data-whats-new-dismiss]').click()
   await expect(lines).toHaveCount(NEWS.length - 1)
 
   await (await overlay.whatsNewLine('Planner tab for T17')).getByRole('button', { name: 'Show me' }).click()
@@ -34,7 +35,8 @@ test('with the overlay open: Show me opens the tool, dismiss takes a line off, t
   // Net worth's reader is off: its line still shows, with nothing to show, so no
   // Show me (Guy: show it, or don't offer to). Dismiss all takes the icon.
   const netWorth = icon.locator('[data-whats-new-group]').filter({ hasText: 'Net worth' })
-  await netWorth.locator('[data-whats-new-group-head]').click()
+  // Opened, if it isn't already (the newest tool's group opens by itself).
+  if (await netWorth.first().getAttribute('data-open') === null) await netWorth.locator('[data-whats-new-group-head]').click()
   await expect(netWorth.locator('[data-whats-new-line]').first()).toBeVisible()
   await expect(netWorth.getByRole('button', { name: 'Show me' })).toHaveCount(0)
   await icon.locator('[data-whats-new-dismiss-all]').click()
