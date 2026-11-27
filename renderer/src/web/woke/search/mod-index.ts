@@ -8,7 +8,6 @@ import { plainLine } from './unique-details'
 import type { TipUnique } from '../ui/tooltip/tip-content'
 
 export { MOD_QUERY_MIN, modQueryWords }
-export { SHORT_NAME_KEYS } from './mod-words'
 
 export type ModKind = 'implicit' | 'explicit' | 'foulborn' | 'vestigial'
 

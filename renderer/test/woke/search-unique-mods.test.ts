@@ -3,8 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { SHORT_NAMES, SHORT_NAME_KEYS, buildModIndex, litParts, modQueryWords, queryAtLeast, readMods, rollMax, searchMods } from '@/web/woke/search/mod-index'
-import { hasShortName } from '@/web/woke/search/mod-words'
+import { buildModIndex, litParts, modQueryWords, queryAtLeast, readMods, rollMax, searchMods } from '@/web/woke/search/mod-index'
 import { namedUniquePrices } from '@/web/woke/search/search'
 import { MOD_GROUP, chipOf, groupMode } from '@/web/woke/search/groups'
 import type { PriceItem } from '@/web/woke/market/types'
@@ -153,11 +152,6 @@ describe('loose mod words', () => {
     const r = names('bow damage')
     expect(r).toContain('Hyrri\'s Ire')
     expect(names('charges flask').length).toBeGreaterThanOrEqual(names('flask charges').length)
-  })
-  it('knows its short names in the startup list', () => {
-    expect([...SHORT_NAME_KEYS].sort()).toEqual(Object.keys(SHORT_NAMES).sort())
-    expect(hasShortName('iir 50')).toBe(true)
-    expect(hasShortName('the')).toBe(false)
   })
   it('lights the read words', () => {
     expect(litParts('+(40-60) to maximum Energy Shield', ['energy', 'shield']).filter(p => p.lit).map(p => p.text)).toEqual(['Energy', 'Shield'])

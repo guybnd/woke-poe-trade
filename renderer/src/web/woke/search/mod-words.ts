@@ -26,10 +26,3 @@ export function modQueryWords (query: string): string[] {
 export function startsWords (words: readonly string[], parts: readonly string[]): boolean {
   return parts.every(p => words.some(w => w.startsWith(p)))
 }
-
-// Short names the mod search reads ("iir", "es"): mod-index.ts has what they
-// stand for. Here so Search knows to load the index for a 2-letter query.
-export const SHORT_NAME_KEYS: ReadonlySet<string> = new Set(['iir', 'iiq', 'ms', 'es', 'aoe', 'cdr', 'dot', 'ias', 'ci', 'eb', 'mom', 'rt'])
-export function hasShortName (query: string): boolean {
-  return wordsOf(normText(query)).some(w => SHORT_NAME_KEYS.has(w))
-}

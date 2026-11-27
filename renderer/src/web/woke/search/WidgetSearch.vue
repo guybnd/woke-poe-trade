@@ -216,7 +216,6 @@ import SearchGroups from './SearchGroups.vue'
 import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, bestName, changeSince, groupKey, groupTip, namedUniquePrices, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
 import type { ModKind, ModLine } from './mod-index'
 import { MOD_GROUP } from './groups'
-import { hasShortName } from './mod-words'
 import { basesOfUnique, hasUniques, uniquesOnBase } from '../shared/uniques-on-base'
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
@@ -441,8 +440,9 @@ function loadModIndex () {
     .catch(() => {})
     .finally(() => { if (mine === modGen) modLoading = false })
 }
-// 4 letters, or a short name ("es", "iir").
-const wantsMods = () => open.value && (query.value.trim().length >= 4 || hasShortName(query.value))
+// From 2 letters: short names ("es", "iir") search mods too. The index is
+// its own chunk, built once.
+const wantsMods = () => open.value && query.value.trim().length >= 2
 watch([query, open], () => { if (wantsMods()) loadModIndex() })
 // Unique names with any poe.ninja row, whatever the filter.
 const pricedUniques = computed(() => new Set((snapshot.value?.items ?? []).filter(i => /^Unique/.test(i.type)).map(i => i.name)))
