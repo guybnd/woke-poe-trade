@@ -231,7 +231,7 @@ describe('currency weights', () => {
     expect(categoryOf('Divine Vessel', 'mapenchantments')).toBe('fragother')
     expect(categoryOf('Blood-filled Vessel', 'fragments')).toBe('fragother')
     expect(categoryOf('Polaric Invitation', 'fragments')).toBe('invites')
-    expect(categoryOf('Royal Visage', 'mapenchantments')).toBe('other')
+    expect(categoryOf('Royal Visage', 'mapenchantments')).toBe('embers')
     expect(categoryOf('Allflame Ember of Kulemak', 'mapenchantments')).toBe('embers')
     // A thin price isn't a real one: still always shown.
     const thin: PriceLookup = (g, base) => base === 'Facetor\'s Lens' ? { chaos: 0.01, thin: true } : lookup(g, base)
