@@ -18,6 +18,10 @@
       <span :class="$style.lab">This item</span>
       <WSegmented :model-value="mode" :options="MODES" @update:model-value="setMode" />
     </div>
+    <label v-if="it && kindOf(it.cat) === 'cards'" :class="$style.row" data-currency-card-collect>
+      <span :class="$style.lab">Collecting</span>
+      <input type="checkbox" :checked="!!edit.min" @change="toggleCollect"> <span class="text-xs w-dim">every stack shows at least Normal</span>
+    </label>
 
     <div :class="$style.row">
       <span :class="$style.lab">Worth ×</span>
@@ -57,7 +61,8 @@ import WFoldHead from '../ui/WFoldHead.vue'
 import { WSegmented } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
-import { CSTEP_NAMES, ALL_CATEGORIES, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, scaled, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, scaled, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { cardFacts, loadCardFacts } from './card-facts'
 import type { CStep, CurrencyItem, ItemEdit } from './currency-weights'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
@@ -84,7 +89,8 @@ const raw = computed<CurrencyItem | null>(() => {
   const doc = props.store.doc.value
   const lookup = props.store.prices.lookup.value
   if (!doc || !lookup) return null
-  return currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup).find(i => i.name === props.name) ?? null
+  loadCardFacts()
+  return currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value).find(i => i.name === props.name) ?? null
 })
 const edit = computed<ItemEdit>(() => cfg.value.items[props.name] ?? {})
 const it = computed(() => raw.value && withEdit(raw.value, edit.value))
@@ -126,6 +132,11 @@ const nowLine = computed(() => {
   return `${pile} is ${CSTEP_NAMES[s]}${next ? `; ${CSTEP_NAMES[next.step]} from a stack of ${next.from}` : ''}.`
 })
 
+// Collecting (Guy's star N): at least Normal at any stack.
+function toggleCollect () {
+  const { min, ...rest } = edit.value
+  setEdit(min ? rest : { ...rest, min: 2 })
+}
 function setEdit (e: ItemEdit | null) {
   const items = Object.fromEntries(Object.entries(cfg.value.items).filter(([n]) => n !== props.name))
   if (e && Object.keys(e).length) items[props.name] = e

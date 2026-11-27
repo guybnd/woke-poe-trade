@@ -320,10 +320,12 @@ describe('currency weights', () => {
     }
   })
 
-  it('normalizes saved settings, the first beta\'s too', () => {
+  it('normalizes saved settings', () => {
+    // The first beta's normal/big/supplies/pins are no longer read (dropped
+    // to keep startup JS in budget, 2026-11-27).
     expect(normalizeCurrency(undefined)).toEqual(defaultCurrency())
-    const old = normalizeCurrency({ on: true, line: 99, normal: 50, big: 10, supplies: { 'Chaos Orb': 3, 'bad': -1, 'x"y': 2 }, pins: ['Scroll of Wisdom', 7] } as never)
-    expect(old).toMatchObject({ on: true, line: 0.2, from: [50, 50, 50, 60], items: { 'Chaos Orb': { supply: 3 }, 'Scroll of Wisdom': { supply: 1 } } })
+    expect(normalizeCurrency({ on: true, line: 99 } as never)).toMatchObject({ on: true, line: 0.2 })
+    expect(normalizeCurrency({ items: { 'The Doctor': { min: 2 }, 'Rain of Chaos': { min: 9 } } } as never).items).toEqual({ 'The Doctor': { min: 2 } })
     const c = normalizeCurrency({ from: [5, 2, 40, 90], nudge: { orbs: 2, oils: 9, Bad: 1, ess: 0 }, items: { 'Divine Orb': { step: 9, price: -1 }, 'Golden Oil': { step: 4, look: { fontSize: 40 } }, 'x"y': { step: 1 } } } as never)
     expect(c.from).toEqual([5, 5, 40, 90])
     expect(c.nudge).toEqual({ orbs: 2 })

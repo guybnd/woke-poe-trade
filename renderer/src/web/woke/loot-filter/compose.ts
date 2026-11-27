@@ -24,6 +24,7 @@ import type { ClusterPrice } from './cluster-prices'
 import type { BaseRename } from './gem-bases'
 import { applyWeights, filterBases } from './weights'
 import { applyCurrency } from './currency-weights'
+import type { CardFacts } from './card-classes'
 import type { CurrencyItem } from './currency-weights'
 import type { BaseRow } from './weights'
 
@@ -57,6 +58,8 @@ export interface ComposeInput {
   // Names the game's filter can't take and what to write instead; the game
   // data's transfigured gems unless given (tests).
   renameBase?: BaseRename
+  // Divination cards' set sizes and reward folds, once read (card-facts.ts).
+  cards?: CardFacts | null
 }
 
 export interface Composed {
@@ -95,7 +98,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const weightBases = cfg.presets.weights.on ? filterBases(next, cfg.presets.weights.ranks) : []
   const weights = applyWeights(next, cfg.presets.weights, weightBases)
   // Currency weights (beta) the same way: above everything NeverSink has.
-  const currency = applyCurrency(next, cfg.presets.currency, cfg.prices.lookup)
+  const currency = applyCurrency(next, cfg.presets.currency, cfg.prices.lookup, cfg.cards)
   // Build rules go in first, so edits to them (restyles) apply on top.
   const input = cfg.build
   let buildCount = 0
