@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-68
 title: 'Price check: small bugs from the critique'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-37
 history:
   - type: activity
@@ -39,7 +39,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T06:33:21.793Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:34.110Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 > TL;DR: Fix the life seed in What drives the price, second-page errors wiping loaded rows, stale bulk errors, price flooring on cheap items, the perfect-base tick on uniques, and add a way to force a fresh search.
 

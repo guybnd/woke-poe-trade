@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-36
 title: 'Overlay core critique: pick which fixes to start'
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - critique
   - overlay-core
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -95,6 +95,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:33.888Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:39.900Z'
 swimlane: null
 needsAction: null
 subtasks:
@@ -123,6 +128,9 @@ subtasks:
   - WOKEPOET-62
   - WOKEPOET-98
   - WOKEPOET-105
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Harsh critique of the overlay core, read-only on master be3d56a5.
 

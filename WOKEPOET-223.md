@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-223
 title: 'Loot filter: drop sound volume preset misses the safety net'
-status: Done
+status: Released
 priority: Low
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-218
 history:
   - type: activity
@@ -26,6 +26,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T11:54:36.438Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:28.917Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Safety-net blocks are added after presets apply, so their alert sound stays at full volume (store.ts compose, safety.ts).

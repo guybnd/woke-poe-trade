@@ -3,7 +3,7 @@ id: WOKEPOET-134
 title: >-
   Bug hunt 2026-11-06: tile max scroll, white socket blank search, Pages deploy
   race
-status: Done
+status: Released
 priority: Low
 effort: S
 assignee: unassigned
@@ -11,7 +11,7 @@ tags:
   - bug
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -75,8 +75,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:32.188Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:40.202Z'
 swimlane: null
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Sweep of recent merges found three small confirmed bugs, fixed in small PRs:
 

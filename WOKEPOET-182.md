@@ -3,14 +3,14 @@ id: WOKEPOET-182
 title: >-
   UI 2: move the picked game-look pieces into woke/ui as shared components and
   tokens
-status: Done
+status: Released
 priority: Medium
 effort: L
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-169
 history:
   - type: activity
@@ -138,6 +138,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-10T05:17:33.569Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:59.289Z'
 needsAction: null
 baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/296'
@@ -152,6 +157,9 @@ diffSummary:
   - file: renderer/test/woke/filter-rules.test.ts
     additions: 12
     deletions: 1
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > **TL;DR** Turn the price check's PoE look into theme tokens and shared parts in `woke/ui`, so Hybrid and Native get the game look (S3 + T1) everywhere and Modern and Classic stay as they are. The price check's Window style becomes a layout-only "Filter layout".
 

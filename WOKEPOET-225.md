@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-225
 title: 'Palette Trade site: transfigured gems search a type the site doesn''t have'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-218
 history:
   - type: activity
@@ -26,6 +26,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T11:54:37.586Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:28.758Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 WidgetSearch.vue openTrade sends "type":"Cleave of Rage"; the trade site needs {option, discriminator}. Use tradeQuery().

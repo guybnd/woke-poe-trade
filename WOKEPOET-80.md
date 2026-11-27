@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-80
 title: 'Price check: lead with the price and listing buttons (option 2)'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: Agent
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -38,8 +38,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:59.534Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:53.482Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/156'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > **TL;DR:** Guy found the top of the price check poorly used. He picked option 2 from https://claude.ai/artifact/HKPJbguGCxoY8Uxq5bV5fj: price with both listing buttons at the very top of the window, one source line, then the item name.

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-65
 title: 'Price check: stop poe.ninja dragging the headline below listings'
-status: Done
+status: Released
 priority: High
 effort: S
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-37
 history:
   - type: activity
@@ -47,8 +47,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:55.636Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:54.051Z'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > TL;DR: 4 listings at 1,000c and poe.ninja at 100c headlines 399c. Never headline below the cheapest trusted listing, and leave poe.ninja out of rolled searches and corrupted or Foulborn uniques.
 

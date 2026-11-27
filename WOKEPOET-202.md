@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-202
 title: 'PoB H: full game gem tooltips in the build panel'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-194
 history:
   - type: activity
@@ -46,7 +46,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-11T08:02:46.848Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:55.573Z'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > TL;DR: Guy's #9. Gem hovers in the build panel use the full skill tooltip other screens show (v-item-tip, gem data pack), with the where-to-get note under it. Branch pob-gem-tips (stacked on pob-hovers / PR #327).

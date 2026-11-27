@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-103
 title: Remove permanent hints from the dock cards
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -68,10 +68,18 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:11.765Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:53.156Z'
 swimlane: null
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/185'
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 Guy: "what the hell is this for and why show it all the time". The Trades card always shows the "next step" key hint, and every dock card with a window shows "Shift + Space then click the icon for the full window".
 

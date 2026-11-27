@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-166
 title: 'Price check: "PoE mode" window style (Settings > Prices: Standard / PoE)'
-status: Done
+status: Released
 priority: Medium
 effort: L
 assignee: Agent
@@ -10,7 +10,7 @@ tags:
   - ui
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -60,9 +60,17 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:20.217Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:40.491Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/290'
 needsAction: null
 reviewState: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Guy approved 2026-11-09. Design: branch claude/project-thread-c5mri8, design-mocks/price-check-poe-mode/ (PoeParts.dc.html = A4 main, Scen*.dc.html, HISTORY.md). Canvas https://claude.ai/artifact/MYHd5nhtF1dvB6vE243m9n.
 

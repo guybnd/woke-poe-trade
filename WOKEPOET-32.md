@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-32
 title: 'Campaign tracker: dock icon only, sleep on endgame characters'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - ui
   - campaign
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -78,10 +78,18 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:53.634Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:54.369Z'
 swimlane: null
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/117'
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 Tracker panel showed in Guy's hideout on an endgame character with the overlay open, and its header disagreed with its steps (A1 vs Act 4).
 

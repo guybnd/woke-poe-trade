@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-177
 title: 'Load a widget''s code on first use, so switched-off tools really don''t load'
-status: Done
+status: Released
 priority: Low
 effort: M
 assignee: unassigned
 tags:
   - overlay-core
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-168
 history:
   - type: activity
@@ -34,7 +34,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T06:21:31.951Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:34.727Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Review finding C1. The README says a switched-off tool "doesn't load", but all 28 widgets are imported up front in `renderer/src/web/woke/index.ts`; the startup budget is 2,190 KB of JavaScript (`testing/perf/budgets.json`).
 

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-133
 title: 'PoB G: tidier panel with saved stats'
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-131
 history:
   - type: activity
@@ -34,8 +34,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-08T09:55:04.037Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:03.057Z'
 needsAction: null
 swimlane: null
 implementationLink: a057e5e191b3b1b195b74dbe71d1bd2e18888d92
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 

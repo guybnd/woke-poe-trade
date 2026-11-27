@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-240
 title: 'Price check: bottom of tier on a catalysed row leaves out uncatalysed copies'
-status: Done
+status: Released
 priority: Low
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-218
 history:
   - type: activity
@@ -26,6 +26,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T11:54:48.914Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:27.470Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 tierBound applies catalyst quality (Dex T4 30-50 offers 36). Use the uncatalysed tier.

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-168
 title: 'Whole-project review: prioritised findings report'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - docs
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -88,6 +88,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:35.039Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:39.678Z'
 swimlane: null
 needsAction: null
 subtasks:
@@ -103,6 +108,9 @@ subtasks:
   - WOKEPOET-178
   - WOKEPOET-179
   - WOKEPOET-180
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Guy asked for a holistic review of woke-poe-trade: architecture, code quality, bugs and risk, UX consistency against the UI charter, performance, tests/CI, docs/landing, product gaps.
 

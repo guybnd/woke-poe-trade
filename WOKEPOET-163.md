@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-163
 title: 'Split pseudo totals into their mods, and a right-click menu on stat rows'
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
@@ -11,7 +11,7 @@ tags:
   - mocks
   - woke
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -88,6 +88,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-09T10:19:45.566Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:01.086Z'
 swimlane: null
 needsAction: null
 baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
@@ -102,6 +107,9 @@ diffSummary:
   - file: renderer/test/woke/filter-rules.test.ts
     additions: 12
     deletions: 1
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > **TL;DR:** Guy wants to click a pseudo chip (e.g. "total Elemental Resistance, Pseudo ×2") to split it into its mods, mainly so each gets a swap ⇄, plus right-click actions on stat rows. Mocks: https://claude.ai/artifact/QXX8betDrvkdL9ZS93YZ2d
 

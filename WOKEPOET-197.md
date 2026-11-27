@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-197
 title: 'PoB C: tie the gem and gear set pickers together'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - ui
   - mocks
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-194
 history:
   - type: activity
@@ -82,8 +82,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-11T08:02:50.046Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:55.245Z'
 swimlane: null
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > TL;DR: Guy's #3. Picking a gem set should pick the matching gear set (or a toggle decides), maybe shown as one connected list. Mocks first.

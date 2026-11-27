@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-162
 title: Price items on their best Harvest resistance/damage swap
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
@@ -11,7 +11,7 @@ tags:
   - mocks
   - woke
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -191,6 +191,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-09T07:51:07.098Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:01.345Z'
 swimlane: null
 needsAction: null
 baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
@@ -205,6 +210,9 @@ diffSummary:
   - file: renderer/test/woke/filter-rules.test.ts
     additions: 12
     deletions: 1
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > **TL;DR:** Price check should also consider what an item is worth after a Harvest swap (Fire/Cold/Lightning resistance or elemental damage), and show the swap cost in lifeforce. Design pass first: analysis + mocks for Guy to pick.
 

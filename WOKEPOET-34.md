@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-34
 title: 'Loot filter: fix every gap from the veteran critique'
-status: Done
+status: Released
 priority: High
 effort: XL
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - bug
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -21,10 +21,18 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:34.438Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:39.798Z'
 subtasks:
   - WOKEPOET-35
   - WOKEPOET-39
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 > **TL;DR** — Guy asked to **fix every gap** in the loot filter critique (https://claude.ai/artifact/KbtK2xQdjtpMf9W4CHrxJ6). Done means the safety net **really shows what it promises** on every strictness and on Hardcore, and each pitfall is fixed or has Guy's decision.
 

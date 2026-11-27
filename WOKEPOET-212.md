@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-212
 title: Weapon/armour stat header (F1)
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -57,6 +57,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T09:29:37.555Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:30.982Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/385'
 needsAction: null
 baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
@@ -65,6 +70,9 @@ diffSummary:
   - file: scripts/upstream-data.mjs
     additions: 21
     deletions: 1
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Build Guy's picked design F1 (Round 3) from https://claude.ai/artifact/JQEW387nXKJaisCjz94Xvu for the weapon/armour property block at the top of the price check.
 

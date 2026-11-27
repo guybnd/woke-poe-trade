@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-172
 title: 'Crash Report and help links go to GitHub Issues, which are off'
-status: Done
+status: Released
 priority: High
 effort: XS
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - bug
   - docs
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-168
 history:
   - type: activity
@@ -75,8 +75,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-10T06:12:36.495Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:58.730Z'
 swimlane: null
 needsAction: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 Review finding A4. Issues and Discussions are disabled on guybnd/woke-poe-trade, but these send players to `/issues/new`:
 - `main/src/woke/crash-reports.ts:12` (`ISSUES_URL`, the crash Report button)

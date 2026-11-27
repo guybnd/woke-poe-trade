@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-188
 title: I. Item tier buttons run T2-T5
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-149
 history:
   - type: activity
@@ -46,6 +46,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-11T04:30:43.453Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:56.662Z'
 needsAction: null
 baselineCommit: 1255c6130adfa2dd4dd3e8816e974721f413e568
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/323'
@@ -57,5 +62,8 @@ diffSummary:
   - file: renderer/test/woke/filter-rules.test.ts
     additions: 2
     deletions: 2
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > TL;DR: the patch notes say tiers run from 2 to 5, so the T1 button goes. PR #323.

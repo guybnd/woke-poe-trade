@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-73
 title: 'Settings Text size changes window size, not text'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -41,7 +41,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:57.892Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:53.699Z'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 Guy: the Settings "Text size" option makes windows bigger instead of text. It sets the root font size (rem), which scales the whole APT window. Fix: real text scale for all text; old control renamed to what it does.

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-97
 title: 'Dev launcher: Stop-Dev should find orphaned launchers'
-status: Done
+status: Released
 priority: Low
 effort: XS
 assignee: unassigned
 tags:
   - tooling
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -29,7 +29,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T06:32:54.572Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:34.317Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Seen 2026-11-05: the dev copy's Electron exited, but its launcher `cmd.exe` and `node build\script.mjs` stayed alive. main.pid pointed at another process, so Stop-Dev missed them. The orphan kept E:\Git\.woke-dev\main.log open, and `woke-dev.cmd master` then failed with "the app did not start ... Another copy may hold the single-instance lock", which was misleading.
 

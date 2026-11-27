@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-15
 title: 'Scarab flip module: EV of the vendor recipe'
-status: Done
+status: Released
 priority: None
 effort: M
 assignee: Agent
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -79,10 +79,18 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:49.988Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:54.904Z'
 swimlane: null
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/91'
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > **TL;DR:** A new economy panel that says whether vendoring cheap scarabs pays right now, using poe.ninja prices and community drop weights.
 

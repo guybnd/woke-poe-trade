@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-213
 title: 'Loot filter presets, second batch (12 one-click presets)'
-status: Done
+status: Released
 priority: Medium
 effort: L
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -63,6 +63,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T10:13:03.002Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:30.627Z'
 needsAction: null
 reviewState: approved
 baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
@@ -72,6 +77,9 @@ diffSummary:
   - file: scripts/upstream-data.mjs
     additions: 21
     deletions: 1
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Guy's picks for a second batch of Presets tab rows (all default off): hide white/blue gear in maps, cheap div cards, maps below tier N, flasks in maps, cheap uniques in maps, cheap splinter stacks, MS boots while levelling, R-G-B items in maps, 20% quality gems/flasks for the vendor, drop sound volume %, beams/icons for top tiers only, weapons for a build type while levelling (Auto from PoB / Caster / Melee / Bow / Minion).
 

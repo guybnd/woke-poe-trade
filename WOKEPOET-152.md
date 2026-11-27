@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-152
 title: 'C. Mocks: item tier in filter rules and price check'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-149
 history:
   - type: activity
@@ -82,6 +82,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-08T15:21:05.870Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:01.811Z'
 swimlane: null
 needsAction: null
 baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
@@ -96,5 +101,8 @@ diffSummary:
   - file: renderer/test/woke/filter-rules.test.ts
     additions: 12
     deletions: 1
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 Options for showing tier 1-5 on items: filter RuleBuilder control, strictness rows, price check badge. Guy picks before D builds it.

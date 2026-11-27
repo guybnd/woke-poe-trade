@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-180
 title: 'Housekeeping from the review: branches, npm updates, nosniff, lint warnings'
-status: Done
+status: Released
 priority: Low
 effort: S
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - cleanup
   - tooling
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-168
 history:
   - type: activity
@@ -48,7 +48,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T07:54:26.827Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:32.369Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Review finding C4.
 - 149 branches on GitHub; delete the merged ones (needs Guy's OK, deletion can't be undone easily). 60+ `woke-*` clone folders in `E:\Git`: list which are safe to remove, Guy deletes.

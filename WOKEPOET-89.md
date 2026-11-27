@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-89
 title: 'Run timer: auto-pause when idle or closed, split out town time'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -30,7 +30,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T07:17:05.403Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:33.268Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Step 7 of the [gameplay helpers critique](https://claude.ai/artifact/NjdEZhrQZBmKwRB56yTsoj). Mock first.
 

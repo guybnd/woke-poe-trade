@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-25
 title: Redesign the price check window UI
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: Agent
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -47,9 +47,17 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:51.138Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:54.729Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/101'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > **TL;DR:** Overhaul the price check window's look: compact verdict at top, cleaner toolbar (Classic/Improved no longer clipped), tighter listings table with same-price grouping and stale de-emphasis, consistent fonts and spacing, PoE-flavored. All functions kept. WOKEPOET-22 owns moving/resizing the window, so this stays out of PriceCheckWindow's positioning.
 

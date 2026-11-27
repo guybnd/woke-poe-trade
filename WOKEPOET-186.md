@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-186
 title: 'UI 6: dock icon glow pulses forever'
-status: Done
+status: Released
 priority: Low
 effort: XS
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-169
 history:
   - type: activity
@@ -81,6 +81,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-10T09:07:54.487Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:58.134Z'
 swimlane: null
 needsAction: null
 baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
@@ -95,6 +100,9 @@ diffSummary:
   - file: renderer/test/woke/filter-rules.test.ts
     additions: 12
     deletions: 1
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > **TL;DR** The Stacked decks dock icon glows steadily while decks are being opened, instead of pulsing forever. Merged as #306.
 

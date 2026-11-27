@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-175
 title: 'Declare the price check a hard fork, and give woke settings their own version'
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - overlay-core
   - docs
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-168
 history:
   - type: activity
@@ -36,7 +36,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T06:21:30.890Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:34.864Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Review finding B4. "APT core stays untouched" (`.docs/project-overview.md`) is no longer true: 75 upstream files modified, +4,397/−2,324 lines, 182 `woke:` markers. Biggest: `TradeListing.vue`, `Prices.ts`, `Widget.vue`, the price-check filter components. Upstream master is still at the fork point (31882089, 2026-09-25), so no conflicts yet.
 

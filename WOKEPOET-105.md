@@ -3,7 +3,7 @@ id: WOKEPOET-105
 title: >-
   Unknown items fall back to raw text and a trade link; clients in other
   languages
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
@@ -11,7 +11,7 @@ tags:
   - feature
   - overlay-core
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-36
 history:
   - type: activity
@@ -38,6 +38,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T07:48:43.049Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:32.551Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 > **TL;DR** Split from WOKEPOET-51. A parse failure on an unknown item is a dead end; show raw text and a trade link instead. Handle game clients in languages the app recognises but doesn't offer (detector has 10, the app 4). A league that adds new item text labels still needs a release, since `client_strings.js` isn't downloaded. Any new UI needs mocks first.

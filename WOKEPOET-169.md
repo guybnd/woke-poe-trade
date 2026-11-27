@@ -3,7 +3,7 @@ id: WOKEPOET-169
 title: >-
   Epic: game-look UI across the whole toolkit, modelled on the price check's PoE
   mode
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
@@ -11,7 +11,7 @@ tags:
   - ui
   - mocks
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-168
 history:
   - type: activity
@@ -29,6 +29,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:35.589Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:39.585Z'
 subtasks:
   - WOKEPOET-181
   - WOKEPOET-182
@@ -37,6 +42,9 @@ subtasks:
   - WOKEPOET-185
   - WOKEPOET-186
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Guy (2026-11-10): take the latest price check rework (PoE mode, #290/#292) as the inspiration and adopt game-looking UI elements across the tool, aligned holistically, not panel by panel.
 

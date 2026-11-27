@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-137
 title: 'Release after v0.1.0, with landing and README updated for what''s new'
-status: Done
+status: Released
 priority: High
 effort: M
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -45,8 +45,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:16.875Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:41.140Z'
 needsAction: null
 reviewState: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Guy asked for a new public Windows installer release after v0.1.0, made the same way (DEVELOPING.md), and the landing and features pages updated for what's new: stash tab reading #215, tooltip views #216/#217, number fields #213, corrupted chip #214, PoB #218 #219 #221 #225 (and #226 plus the shopping list PR if they land first), drop counter #222, death recap #220.
 

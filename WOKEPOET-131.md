@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-131
 title: PoB features A-G from the mocks (epic)
-status: Done
+status: Released
 priority: Medium
 effort: XL
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -27,11 +27,19 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:32.790Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:40.103Z'
 subtasks:
   - WOKEPOET-133
   - WOKEPOET-135
   - WOKEPOET-136
   - WOKEPOET-139
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 > Guy said yes to all of https://claude.ai/artifact/7KJ127gAMXnMYWjrCrWZ3h on 2026-11-06. Order: G with saved stats, C, D, A, B, E, F, then test A2 (real DPS via PoB's engine, no window may appear while he plays).

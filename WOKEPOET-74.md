@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-74
 title: 'Trades card: collapse offers, fix wrapped button row'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -86,10 +86,18 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:58.436Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:53.613Z'
 swimlane: null
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/147'
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 Guy wants to click an offer to collapse it for easier browsing with several offers. Today the top offer can't be collapsed (OfferRow accordion, `expand` in WidgetTrade.vue). The ✓ and ✕ buttons also wrap onto their own line in the 23rem card.
 

@@ -3,7 +3,7 @@ id: WOKEPOET-143
 title: >-
   Hover cards open the full window on click; Loot filter card goes straight to
   price changes
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
@@ -12,7 +12,7 @@ tags:
   - ui
   - mocks
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -92,8 +92,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:18.516Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:40.807Z'
 swimlane: null
 needsAction: null
 reviewState: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Guy: clicking the Loot filter hover card ("42 items would move to match today's prices") should open the Prices tab so the moves can be applied. Clicking any card or its icon should open the full window directly, without Shift+Space first. The footer tip is shared, so this is app-wide. Mocks first.

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-174
 title: 'Board sweep: close merged tickets, and move tickets to Done on merge'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - tooling
   - cleanup
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-168
 history:
   - type: activity
@@ -36,7 +36,15 @@ history:
     date: '2026-11-12T05:29:37.402Z'
     selfAttested: true
     id: c-2026-11-12t05-29-37-402z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:35.835Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Review finding B2. About 35 tickets sit in Ready though their work merged, including Critical WOKEPOET-63 and 64 (merged as #127, #131), 65-67 (#136, #138, #139), 81 (#157), 120 and 137 (releases published), 125 (#214), 160 (#275), 166 (#290). WOKEPOET-1 to 7 have been in Grooming since day one.
 

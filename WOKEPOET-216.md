@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-216
 title: Minimized panel bar jumps to the far right after a wide panel is minimized
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: Agent
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -49,6 +49,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T10:29:33.834Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:30.016Z'
 needsAction: null
 reviewState: approved
 baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
@@ -58,6 +63,9 @@ diffSummary:
   - file: scripts/upstream-data.mjs
     additions: 21
     deletions: 1
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Guy put Atlas strategies on the left, made it big, then minimized it: the bar landed on the far right.
 

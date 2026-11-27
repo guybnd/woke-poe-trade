@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-129
 title: 'PoB: set picker misreads titles; builds go stale after saving in PoB'
-status: Done
+status: Released
 priority: High
 effort: S
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -36,8 +36,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-08T09:55:04.102Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:02.897Z'
 needsAction: null
 swimlane: null
 implementationLink: e53df7acf522111b3d57a8a6b7a4cbf57a1cb2d6
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > Colour codes show on set names and break level matching, `{3}` and `2 Stone` read as levels, Endgame loses to Level 80, divider sets count as stages, and a PoB save isn't picked up until reselecting. Clone E:\Git\woke-pob.

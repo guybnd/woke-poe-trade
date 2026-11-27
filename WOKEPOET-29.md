@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-29
 title: Pick and apply a colour scheme for the price check window
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: Agent
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -82,9 +82,17 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:52.785Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:54.448Z'
 swimlane: null
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/118'
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > **TL;DR:** Guy thinks the window's colours are still off after #101. Mock up options on the real window, let Guy pick, then apply the pick.

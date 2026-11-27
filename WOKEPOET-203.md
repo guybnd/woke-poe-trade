@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-203
 title: 'PoB I: rename, duplicate, move and delete builds from the list'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-194
 history:
   - type: activity
@@ -43,7 +43,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-11T08:02:47.597Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:55.500Z'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > TL;DR: Guy's #10. Build list right-click menu gains Rename (F2), Duplicate, Move to folder, Delete (Del, Recycle Bin + Undo). Settings follow the file. Branch pob-manage off master.

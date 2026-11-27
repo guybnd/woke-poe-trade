@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-187
 title: 'Regex library: edit, create, delete in window; poe.re in app browser'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -75,8 +75,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T06:21:33.948Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:34.518Z'
 swimlane: null
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Guy: the Regex library window has no visible create/edit/delete, and "Generate on poe.re" opens the external browser.
 

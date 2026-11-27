@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-181
 title: 'UI 1: audit the PoE mode kit and mock the game look on four panels'
-status: Done
+status: Released
 priority: High
 effort: M
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - ui
   - mocks
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-169
 history:
   - type: activity
@@ -114,8 +114,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-10T04:27:43.544Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:59.458Z'
 swimlane: null
 needsAction: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 First step of the epic; everything else waits on Guy's pick here.
 

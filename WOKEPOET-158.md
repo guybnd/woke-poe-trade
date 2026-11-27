@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-158
 title: 'Landing: streamer feedback (GitHub link, hidden tabs, GIF slides)'
-status: Done
+status: Released
 priority: None
 effort: L
 assignee: unassigned
 tags:
   - landing
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -142,6 +142,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-08T12:07:41.844Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:02.402Z'
 swimlane: null
 needsAction: null
 baselineCommit: 4b4955af5e8527b5b62ac15c25b895bfe1dca024
@@ -162,6 +167,9 @@ diffSummary:
   - file: renderer/test/woke/flip-families.test.ts
     additions: 23
     deletions: 1
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > **TL;DR** Replace the landing slides with scripted looping clips of the real overlay (MP4/WebM), add a picture strip under each shot while keeping the name plates as tabs, and reorder the sections. GitHub link failure was not reproducible.
 

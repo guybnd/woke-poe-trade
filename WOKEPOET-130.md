@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-130
 title: 'PoB: price check shortcut from a build''s item, with pseudo stats'
-status: Done
+status: Released
 priority: High
 effort: S
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -33,8 +33,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-08T09:55:04.070Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:02.977Z'
 needsAction: null
 swimlane: null
 implementationLink: 2360dc435f70cb14ccca2b72680201a0c691dddb
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > Guy's ask 2026-11-06: from a gear row, open the normal price check on that item with its stats, pseudo where fitting (resists). Rebuild game item text from PoB's item, resolving rolled ranges.

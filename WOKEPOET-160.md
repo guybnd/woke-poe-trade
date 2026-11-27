@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-160
 title: Remove Heist gem OCR feature
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - cleanup
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -38,8 +38,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:19.120Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:40.709Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/275'
 needsAction: null
 reviewState: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Remove the Heist gem OCR feature: code, settings, hotkeys, tests/fixtures, docs/README and landing page references. Keep shared OCR code used by map mods, essences etc.

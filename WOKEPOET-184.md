@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-184
 title: 'UI 4: game art in place of generic icons'
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-169
 history:
   - type: activity
@@ -115,6 +115,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-10T07:05:49.508Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:58.327Z'
 swimlane: null
 needsAction: null
 baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
@@ -129,6 +134,9 @@ diffSummary:
   - file: renderer/test/woke/filter-rules.test.ts
     additions: 12
     deletions: 1
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > **TL;DR** Game art in place of generic module icons, from Guy's picks on https://claude.ai/artifact/4cvYuxsmteYZB46m98jBZd. Merged as #304.
 

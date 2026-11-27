@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-120
 title: Publish first public Windows release from master
-status: Done
+status: Released
 priority: High
 effort: S
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -53,9 +53,17 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:15.717Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:41.344Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/releases/tag/v0.1.0'
 needsAction: null
 reviewState: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 > **TL;DR:** Build the Windows installer from current master through release.yml as a draft release, check it without launching over PoE, then publish it.
 

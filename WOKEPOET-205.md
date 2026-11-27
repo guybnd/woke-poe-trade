@@ -3,7 +3,7 @@ id: WOKEPOET-205
 title: >-
   PoB tree: show socketed jewels and their effects (timeless, cluster, radius
   jewels)
-status: Done
+status: Released
 priority: None
 effort: L
 assignee: unassigned
@@ -11,7 +11,7 @@ tags:
   - feature
   - mocks
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-194
 history:
   - type: activity
@@ -87,6 +87,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T10:28:34.821Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:30.105Z'
 needsAction: null
 baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/392'
@@ -95,6 +100,9 @@ diffSummary:
   - file: scripts/upstream-data.mjs
     additions: 21
     deletions: 1
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 > TL;DR: Guy (2026-11-11): support and render every kind of jewel in the passive tree view, with their effects. Bigger work, later; mocks first.
 

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-66
 title: 'Price check: use the searched league''s prices and warn on missing data'
-status: Done
+status: Released
 priority: High
 effort: M
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-37
 history:
   - type: activity
@@ -46,8 +46,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:56.188Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:53.968Z'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > TL;DR: Picking another league keeps the selected league's divine rate and poe.ninja data, and with no rate divine listings silently drop out. Don't use another league's data, say when divine listings can't be converted, and warn when the account name is blank.
 

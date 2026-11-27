@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-109
 title: Clicking a dock icon closes its open card
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -36,8 +36,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:14.016Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:41.623Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/190'
 needsAction: null
 reviewState: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Guy: clicking a bubble whose card is open from hover should close it. Today a click only opens. In game only; with the overlay open a click still opens the full window.

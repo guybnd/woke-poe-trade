@@ -3,14 +3,14 @@ id: WOKEPOET-28
 title: >-
   Price check: verdict trusts months-old listings over poe.ninja, and the chart
   doesn't say what it is
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: Agent
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -41,8 +41,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:52.238Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:54.541Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/118'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > **TL;DR:** Guy's check showed SOLID, likely sells for 20c, from 20 listings aged 19 days to 3 months, beside a 100-146c chart. The chart is poe.ninja's price for the unique, not this search, and nothing says so. Old listings shouldn't be rated SOLID, and a big gap should be stated on the card.

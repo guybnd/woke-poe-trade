@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-81
 title: 'Keep good poe.ninja prices through bad replies, and remove duplicate rows'
-status: Done
+status: Released
 priority: High
 effort: S
 assignee: unassigned
 tags:
   - prices
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -40,9 +40,17 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:59.994Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:53.482Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/157'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 From the price data critique (https://claude.ai/artifact/1LS2iXRoSHqMWqpHg9fynH), steps 1 and 2. Guy said yes, 2026-11-05.
 

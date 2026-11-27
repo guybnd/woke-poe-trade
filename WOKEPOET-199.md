@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-199
 title: 'PoB E: own notes in the Notes tab'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-194
 history:
   - type: activity
@@ -52,7 +52,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T02:51:53.935Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:38.274Z'
 swimlane: null
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 > TL;DR: Guy's #6. Editable personal notes per build, stored in the app (PoB's own save would overwrite text written into an open build). Optional append-to-PoB later.

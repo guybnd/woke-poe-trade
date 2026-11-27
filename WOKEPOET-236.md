@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-236
 title: 'Price check: bottom of tier and hybrid search set mod numbers on APS, crit, ES'
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-218
 history:
   - type: activity
@@ -26,6 +26,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T11:54:46.666Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:27.809Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 pseudo-split.ts tierBound/pickAtTier treat one-source property rows as the mod's line. Skip Property rows.

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-183
 title: 'UI 3: roll the game look out panel by panel'
-status: Done
+status: Released
 priority: Medium
 effort: XL
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-169
 history:
   - type: activity
@@ -81,6 +81,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-10T06:17:44.785Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:58.651Z'
 needsAction: null
 baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/302'
@@ -95,6 +100,9 @@ diffSummary:
   - file: renderer/test/woke/filter-rules.test.ts
     additions: 12
     deletions: 1
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > **TL;DR** Roll the game look from 182 (PR #296) out to every panel, area by area, in a few PRs. Each panel's charter leftovers get cleared in the same pass, so each panel is touched once.
 

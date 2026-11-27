@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-82
 title: Low-confidence price tag and filter across price panels
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - prices
   - mocks
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -52,8 +52,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T06:49:59.855Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:33.862Z'
 swimlane: null
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Guy, 2026-11-05: low-confidence prices should have a filter and a tag, like the Lab gems toggle. Same thin rule as Lab gems (no poe.ninja price on 3 or more of the last 7 days). Mocks first, then Guy's pick.
 

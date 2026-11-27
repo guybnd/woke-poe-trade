@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-121
 title: Release build splits files across two draft releases
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -31,7 +31,15 @@ history:
     date: '2026-11-12T05:24:40.011Z'
     selfAttested: true
     id: c-2026-11-12t05-24-40-011z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:36.076Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 > **TL;DR:** The release build for v0.1.0 made two drafts for one tag, so one file landed in the wrong draft. Fix this before the next release, because a misplaced `latest.yml` or installer would break updates.
 

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-176
 title: Rewrite the help pages for this app
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - docs
   - landing
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-168
 history:
   - type: activity
@@ -35,7 +35,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T06:52:51.540Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:33.729Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Review finding B5.
 - `docs/faq.md` never mentions this app; none of the 28 tools has a help page.

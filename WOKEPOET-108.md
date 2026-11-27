@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-108
 title: 'Declutter: tighten overlay text to the anti-slop rules'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -39,8 +39,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:13.464Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:41.716Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/189'
 needsAction: null
 reviewState: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Guy's picks, items 19 to 23 of https://claude.ai/artifact/SeshAE9iZeUH9B4XhVrwBm: one name per tool, one waiting message, rewrite pack, PoB missing folder error, jargon. Item 24 (contractions) skipped as recommended. Rules: anzu-brain docs/operations/conventions/writing-style.md.

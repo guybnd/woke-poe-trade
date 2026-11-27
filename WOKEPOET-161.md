@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-161
 title: Stacked deck tracker
-status: Done
+status: Released
 priority: Medium
 effort: L
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -66,6 +66,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-08T17:14:57.646Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:01.497Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/276'
 baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
@@ -80,6 +85,9 @@ diffSummary:
   - file: renderer/test/woke/filter-rules.test.ts
     additions: 12
     deletions: 1
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 Stacked Deck tracker module. Guy's picks from mockup https://claude.ai/artifact/N4HKYnpmThD6DB3bQQ5atB : A1 + A3, B1, C1 + C2 + C3, D1 + D2.
 

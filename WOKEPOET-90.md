@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-90
 title: 'Campaign tracker: keep route, gems and run per character'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -30,7 +30,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T07:48:44.086Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:32.463Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Step 8 of the [gameplay helpers critique](https://claude.ai/artifact/NjdEZhrQZBmKwRB56yTsoj). Mock first.
 

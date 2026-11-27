@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-136
 title: 'PoB A and B: swap check on the price check, and a build hover icon'
-status: Done
+status: Released
 priority: None
 effort: M
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-131
 history:
   - type: activity
@@ -34,8 +34,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-08T09:55:04.005Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:03.158Z'
 needsAction: null
 swimlane: null
 implementationLink: d8d020b9b7ef8e1d5b41bd90b0535e64696f29be
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 

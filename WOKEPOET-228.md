@@ -3,14 +3,14 @@ id: WOKEPOET-228
 title: >-
   Atlas Settings: added or imported strategy shares regexes with a same-named
   one
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-218
 history:
   - type: activity
@@ -28,6 +28,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T11:54:39.237Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:28.511Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 atlas-editor.vue add/doImport don't claim a free regex folder. Call claimNewRegexFolder.

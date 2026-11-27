@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-198
 title: 'PoB D: gem hover shows where to get it for the build''s class'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-194
 history:
   - type: activity
@@ -46,7 +46,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-11T08:02:45.343Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:55.734Z'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > TL;DR: Guy's #4. Every gem hover in the Leveling tab adds the quest reward or vendor + act for the build's class (data the Gems by level list already has).

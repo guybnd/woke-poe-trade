@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-64
 title: 'Price check: no false verdict on rares with empty searches'
-status: Done
+status: Released
 priority: Critical
 effort: S
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-37
 history:
   - type: activity
@@ -46,8 +46,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:55.038Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:54.134Z'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > TL;DR: A rare with T1 mods can search with no mods ticked and read "Not worth listing". Tick T1 and T2 mods by default, and give no price or Not worth listing when a rare's search has no mods.
 

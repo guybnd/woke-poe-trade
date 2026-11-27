@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-91
 title: 'Gameplay helpers: remaining critique gaps'
-status: Done
+status: Released
 priority: Low
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -31,7 +31,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T08:23:42.036Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:31.813Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Step 9 of the [gameplay helpers critique](https://claude.ai/artifact/NjdEZhrQZBmKwRB56yTsoj). Split into subtasks when groomed; mocks for each new piece.
 

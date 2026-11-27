@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-159
 title: E. Item tier buttons in filter rules
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-149
 history:
   - type: activity
@@ -46,6 +46,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-08T15:21:04.610Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:01.891Z'
 needsAction: null
 baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/273'
@@ -60,5 +65,8 @@ diffSummary:
   - file: renderer/test/woke/filter-rules.test.ts
     additions: 12
     deletions: 1
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > TL;DR: Guy's pick E: T1-T5 buttons on a new Item tier rule condition, writing UnidentifiedItemTier >= n. PR #273.

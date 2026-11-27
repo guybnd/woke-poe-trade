@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-139
 title: 'PoB tree: full game art and in-game tooltips (Guy picked C)'
-status: Done
+status: Released
 priority: None
 effort: M
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-131
 history:
   - type: activity
@@ -34,8 +34,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-08T09:55:03.929Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:03.311Z'
 needsAction: null
 swimlane: null
 implementationLink: 61cb431dd18980f05d9ca20b1c2efe643b487e71
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 

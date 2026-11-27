@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-67
 title: 'Price check: make confidence and Sell fast honest'
-status: Done
+status: Released
 priority: High
 effort: M
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-37
 history:
   - type: activity
@@ -46,8 +46,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:56.735Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:53.875Z'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > TL;DR: One merchant's 10 rows reads SOLID, a 1c bait in a thin market survives, and Sell fast undercuts a single outlier. Count sellers, cap rows per seller, check bait on thin markets, base Sell fast on a trusted floor, and say asking price rather than "Likely sells for".
 

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-171
 title: 'Build workflow: Windows only, and a failure must be seen'
-status: Done
+status: Released
 priority: High
 effort: S
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - bug
   - tooling
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-168
 history:
   - type: activity
@@ -79,9 +79,17 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:21.188Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:40.298Z'
 needsAction: null
 swimlane: null
 reviewState: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Review finding A2. The last 30 runs of `.github/workflows/main.yml` are all cancelled (last success 2026-11-05): the Linux package job fails and fail-fast cancels Windows and macOS. It isn't a required check, so nobody was told. It also packages macOS and Linux, which are never released.
 

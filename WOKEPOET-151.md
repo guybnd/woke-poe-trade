@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-151
 title: B. Covens of Umbra league name and scarab views hidden from 3.30
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-149
 history:
   - type: activity
@@ -58,6 +58,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-08T10:41:22.634Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:02.572Z'
 needsAction: null
 baselineCommit: 4b4955af5e8527b5b62ac15c25b895bfe1dca024
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/266'
@@ -78,5 +83,8 @@ diffSummary:
   - file: renderer/test/woke/flip-families.test.ts
     additions: 23
     deletions: 1
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 Add the league to `background/Leagues.ts` / `league-invest` and the migration watcher. Hide scarab flips, stash scarab reader, scarab filter groups and dock entries when the league is 3.30+ (keep for Standard/old leagues). Before launch.

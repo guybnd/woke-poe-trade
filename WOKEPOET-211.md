@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-211
 title: 'Atlas strategies like PoB builds: tree editor, folders, Threads loadout'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - '3.30'
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-149
 history:
   - type: activity
@@ -86,8 +86,16 @@ history:
       notable (T1), #394 new icon (Maps wheel), #396 pick order + points slider
       (O1, pin follows).
     id: a-2026-11-12t11-04-14-498z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:29.672Z'
 swimlane: null
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 > **TL;DR** Turn the Atlas strategies tool into a PoB-builds-style tool: atlas tree viewer and editor (3.30 tree from GGG's export, pick-a-type notables), strategies in folders, and per-strategy settings for Threads (count per type) and currency per map. Mocks first; waiting on Guy's pick.
 

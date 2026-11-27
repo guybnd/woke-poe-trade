@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-106
 title: 'Declutter: move set-once controls from panels to Settings'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -39,9 +39,17 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:17:12.366Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:53.155Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/189'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 Guy's picks from https://claude.ai/artifact/SeshAE9iZeUH9B4XhVrwBm, items 1 to 10. Flips toolbar prefs, Lab gems Top N and runner setup, Boss Planned runs and owned entry, Market c min and Thin, Map mods fold Quick and minimums, Farming count maps, League investments data, Mechanics arrow, Hotkeys chips, Ask poeprices.
 

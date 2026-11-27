@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-72
 title: 'League mechanics settings: explain per mechanic what the overlay does'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -71,8 +71,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T06:21:34.891Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:34.414Z'
 swimlane: null
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 > **TL;DR** The League mechanics settings page reads like a Syndicate-only page. Rework it so each mechanic says what the overlay shows, when, and how to configure it. Mocks with options first; Guy picks; then build.
 

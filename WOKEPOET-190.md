@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-190
 title: K. Harvest swap and craft costs for 3.30
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-149
 history:
   - type: activity
@@ -50,6 +50,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-11T05:19:45.881Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:56.496Z'
 needsAction: null
 baselineCommit: 92ec973d050a54c53ee9e8b34249723293766ecd
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/324'
@@ -70,6 +75,9 @@ diffSummary:
   - file: renderer/test/woke/harvest-swap.test.ts
     additions: 19
     deletions: 0
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > TL;DR: Harvest swap prices use the old 500-of-one-colour cost. 3.30 changes it to 300 each of two colours.
 

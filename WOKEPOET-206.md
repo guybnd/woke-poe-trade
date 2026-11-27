@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-206
 title: Personal stash reader (POESESSID)
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -53,6 +53,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T01:06:35.245Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:38.749Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/336'
 needsAction: null
 baselineCommit: 07f0d76c04dce956b612747a57af8fe2004e7ee1
@@ -64,6 +69,9 @@ diffSummary:
   - file: scripts/trade-data-patch.mjs
     additions: 14
     deletions: 2
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 Personal-only stash reader via legacy character-window/get-stash-items with Guy's own POESESSID. Gated by personal.flag in userData. Mockups: https://claude.ai/artifact/FYYuDFZxMptKQJCA38ykAC — picks A1 B1 C1 D2.
 

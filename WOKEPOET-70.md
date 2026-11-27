@@ -3,14 +3,14 @@ id: WOKEPOET-70
 title: >-
   Universal search: hotkey palette, launcher prices, Market search with
   corrupted filter
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - search
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -40,8 +40,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T00:16:57.287Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:53.793Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/135'
 needsAction: null
 reviewState: null
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 Guy's pick from https://claude.ai/artifact/CYvdou1dAxLmrbEebotkxS, 2026-11-05: U2 (two-pane palette) from a gameplay hotkey; U3 (launcher box finds items) inside the overlay; M1 (search row) in Market tracker, plus a Vaal orb button to filter corrupted. Branch claude/universal-search in E:\Git\woke-market-search.

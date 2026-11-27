@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-135
 title: 'PoB C and D: next step, and the passive tree inside the overlay'
-status: Done
+status: Released
 priority: None
 effort: M
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-131
 history:
   - type: activity
@@ -34,8 +34,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-08T09:55:03.972Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:03.235Z'
 needsAction: null
 swimlane: null
 implementationLink: d8d020b9b7ef8e1d5b41bd90b0535e64696f29be
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-167
 title: 'Price check: footer toggles wrap, tier gutter, Classic/Improved to Settings'
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -47,6 +47,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-10T02:41:10.524Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:59.715Z'
 needsAction: null
 baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/293'
@@ -61,6 +66,9 @@ diffSummary:
   - file: renderer/test/woke/filter-rules.test.ts
     additions: 12
     deletions: 1
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 Guy's screenshot (PoE window style): Hidden filters / Item's mods labels wrap into two oversized lines and crowd the filter well; T1 tag stranded in a far-left gutter; pseudo ×N tag misaligned. Also move the Classic/Improved switch from the window to Settings > Price check.
 

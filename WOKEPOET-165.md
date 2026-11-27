@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-165
 title: Cluster jewel "also grant" resistances as pseudo rows
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - price-check
   - woke
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -42,6 +42,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-09T13:53:23.592Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:12:00.748Z'
 needsAction: null
 baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/280'
@@ -56,6 +61,9 @@ diffSummary:
   - file: renderer/test/woke/filter-rules.test.ts
     additions: 12
     deletions: 1
+version: '000054'
+releasedAt: '2026-11-27T16:11:53.153Z'
+releaseDocPath: release-notes/000054
 ---
 > **TL;DR:** A cluster jewel's "Added Small Passive Skills also grant: +X% <element> Resistance" line folds into a pseudo row that matches any element. Merged as #280 (95fdf444).
 

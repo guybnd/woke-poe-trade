@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-220
 title: Net worth prices Awakened and exceptional gems at level 1
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-218
 history:
   - type: activity
@@ -26,6 +26,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T11:54:35.336Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:11:29.085Z'
 needsAction: null
+version: '0000234'
+releasedAt: '2026-11-27T16:11:26.816Z'
+releaseDocPath: release-notes/0000234
 ---
 gemVariant turns any level under 20 into "1", so a level 5 Awakened gem is valued as level 1 (net-worth/valuation.ts, prices.ts). Fix: look up the gem's own level first.
