@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, fullBias, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, tierGuess, divineChaos } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, fullBias, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, tierGuess, divineChaos } from '@/web/woke/loot-filter/currency-weights'
 import type { CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { fullStack } from '@/web/woke/loot-filter/stack-sizes'
@@ -120,7 +120,7 @@ describe('currency weights', () => {
         const stacks = stacksFor(it, cfg)
         for (const n of [1, 2, 3, 5, 10, 20, 40]) {
           if (n > it.full) continue
-          const res = matchItem(doc, pile(it.name, n))
+          const res = matchItem(doc, { ...pile(it.name, n), itemClass: it.cls.split('|')[0] })
           const want = stepOfPile(stacks, n)
           expect(res.final?.block.type, `${it.name} ×${n} at ${line}c`).toBe(CURRENCY_TYPE)
           expect(res.final?.block.tier, `${it.name} ×${n} at ${line}c`).toBe(`s${want}`)
@@ -194,6 +194,24 @@ describe('currency weights', () => {
     applyCurrency(doc, on(c => { c.items = { 'Breach Thread': { step: 4 } } }), lookup)
     const hit = matchItem(doc, { ...pile('Breach Thread', 1), itemClass: 'Misc Map Items' })
     expect(hit.final?.block.tier).toBe('s4')
+  })
+
+  it('fills in the category colour as value climbs, a step edit is loudness for all', () => {
+    const c = on(x => { x.steps = { 4: { sound: { id: '7', volume: 250 }, fontSize: 44 } }; x.cats = { oils: { text: [10, 200, 20, 255] } } })
+    expect(currencyLook(1, 'essences', c).border).toBeNull()
+    expect(currencyLook(3, 'essences', c).border?.slice(0, 3)).toEqual([230, 140, 240])
+    const big = currencyLook(4, 'essences', c)
+    expect(big.background?.slice(0, 3)).toEqual([230, 140, 240])
+    expect(big.sound).toEqual({ id: '7', volume: 250 })
+    expect(big.icon).toMatchObject({ color: 'Pink', shape: 'Moon' })
+    expect(big.effect?.color).toBe('Pink')
+    expect(currencyLook(4, 'oils', c).background?.slice(0, 3)).toEqual([10, 200, 20])
+    const tink = currencyLook(5, 'essences', c)
+    expect(tink.border?.slice(0, 3)).toEqual([230, 140, 240])
+    expect(tink.effect?.color).toBe('Red')
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, c, lookup)
+    expect(validateFilter(doc).map(p => p.message)).toEqual([])
   })
 
   it('sorts essences into their tiers', () => {

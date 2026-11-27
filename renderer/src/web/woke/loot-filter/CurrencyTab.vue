@@ -19,7 +19,9 @@
 
     <div :class="$style.steps" role="group" aria-label="Where each step starts">
       <div v-for="s in [0, 1, 2, 3, 4, 5]" :key="s" :class="$style.step" :style="{ '--step': STEP_CSS[s] }">
-        <span :class="$style.stepName">{{ CSTEP_NAMES[s] }}</span>
+        <span :class="$style.stepName">{{ CSTEP_NAMES[s] }}
+          <button v-if="s > 0" type="button" :class="[$style.lookBtn, { [$style.lookOn]: stepEdit === s }]" :aria-expanded="stepEdit === s" :aria-label="`${CSTEP_NAMES[s]} look and sound`"
+            @click="stepEdit = stepEdit === s ? null : s as CStep"><i class="fas fa-pen" aria-hidden="true" /> Look<i v-if="c.steps[s]" :class="$style.dot" aria-hidden="true" /></button></span>
         <span v-if="s === 0" class="w-faint text-xs">under the line</span>
         <label v-else-if="s === 1" :class="$style.from">from
           <input :value="c.line" type="number" :min="LINE_MIN" :max="LINE_MAX" step="0.1" :class="$style.numIn" aria-label="Small from this many chaos (the line)" @change="setLine($event.target as HTMLInputElement)"> c</label>
@@ -28,6 +30,20 @@
             @change="setFrom(s - 2, $event.target as HTMLInputElement)"> c</label>
         <span class="w-faint text-xs">{{ STEP_NOTE[s] }}</span>
       </div>
+    </div>
+
+    <div v-if="stepEdit" :class="$style.stepEd" data-currency-step-editor>
+      <div :class="$style.stepEdHead">
+        <b>{{ CSTEP_NAMES[stepEdit] }}</b>
+        <span class="w-faint text-xs">Size, sound, beam and map icon for every category. Colours come from each category.</span>
+        <span class="flex-1" />
+        <WButton size="sm" variant="ghost" icon="fas fa-undo" :disabled="!c.steps[stepEdit]" @click="setStepLook(stepEdit, null)">Back to built-in</WButton>
+      </div>
+      <div :class="$style.samples">
+        <LabelPreview v-for="cat in SAMPLE_CATS" :key="cat" :text="catArt(cat)" :actions="[]" :style-override="currencyFullLook(stepEdit, cat, c)" visibility="Show" :extras="false" :scale="0.8" />
+      </div>
+      <StyleEditor look-only no-colours :look="currencyFullLook(stepEdit, 'orbs', c)" visibility="Show" :preview-text="catArt('orbs')"
+        @patch="p => setStepLook(stepEdit!, { ...c.steps[stepEdit!], ...loudOnly(p) })" />
     </div>
 
     <CurrencyPile v-if="baseItems.length" :items="items" :cfg="c" @go="goTo" />
@@ -50,6 +66,19 @@
         <span :class="$style.count">{{ g.shown }} of {{ g.all }} show</span>
         <span :class="$style.dots" aria-hidden="true"><i v-for="r in g.rows" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
         <span class="flex-1" />
+        <span :class="$style.catLook" @click.stop @keydown.stop>
+          <input type="color" :value="hexOf(catColour(g.cat.id, c).rgb)" :class="$style.swatch" :aria-label="`${g.cat.name} colour`" :title="`${g.cat.name} colour`"
+            @change="setCatLook(g.cat.id, { text: [...rgbOf(($event.target as HTMLInputElement).value), 255] })">
+          <select :value="catColour(g.cat.id, c).shape" :class="$style.sel2" :aria-label="`${g.cat.name} map icon shape`" :title="`${g.cat.name} map icon shape`"
+            @change="setCatIcon(g.cat.id, { shape: ($event.target as HTMLSelectElement).value })">
+            <option v-for="sh in ICON_SHAPES" :key="sh" :value="sh">{{ shapeGlyph(sh) }} {{ sh }}</option>
+          </select>
+          <select :value="catColour(g.cat.id, c).color" :class="$style.sel2" :aria-label="`${g.cat.name} map icon and beam colour`" :title="`${g.cat.name} map icon and beam colour`"
+            @change="setCatIcon(g.cat.id, { color: ($event.target as HTMLSelectElement).value })">
+            <option v-for="col in POE_COLOURS" :key="col" :value="col">{{ col }}</option>
+          </select>
+          <button v-if="c.cats[g.cat.id]" type="button" class="w-icon-btn" :title="`${g.cat.name} back to its own colours`" :aria-label="`Reset ${g.cat.name} colours`" @click="setCatLook(g.cat.id, null)"><i class="fas fa-undo" /></button>
+        </span>
         <label :class="$style.whole" :title="`Below this, ${g.cat.name} hide (a full stack counts for more). The step prices above stay the same.`" @click.stop @keydown.stop>Shows from
           <select :value="c.nudge[g.cat.id] ?? 0" :class="$style.sel2" :aria-label="`${g.cat.name} show from`" @change="setNudge(g.cat.id, Number(($event.target as HTMLSelectElement).value))">
             <option v-for="n in NUDGES" :key="n" :value="n">{{ chaosText(c.line * 2 ** n) }}{{ n === 0 ? ' (Small)' : '' }}</option>
@@ -84,7 +113,7 @@
             </span>
             <i class="fas fa-pen w-faint" :class="$style.pen" aria-hidden="true" />
           </WItemRow>
-          <CurrencyItemEditor v-if="sel === r.it.name" :it="r.it" :edit="c.items[r.it.name] ?? {}" :step="r.one" :base-price="baseChaos(r.it.name)" @change="e => setEdit(r.it.name, e)" />
+          <CurrencyItemEditor v-if="sel === r.it.name" :it="r.it" :edit="c.items[r.it.name] ?? {}" :step="r.one" :base-price="baseChaos(r.it.name)" :base-look="currencyFullLook(r.one === 0 ? 1 : r.one, r.it.cat, c)" @change="e => setEdit(r.it.name, e)" />
         </template>
         </template>
       </div>
@@ -100,9 +129,13 @@ import { computed, nextTick, ref } from 'vue'
 import { WButton, WChip, WIcon, WInfo, WItemRow, WToggle } from '../ui'
 import CurrencyPile from './CurrencyPile.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
+import LabelPreview from './LabelPreview.vue'
+import StyleEditor from './StyleEditor.vue'
+import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
+import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { CSTEP_NAMES, CURRENCY_CATEGORIES, SUBGROUPS, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile } from './currency-weights'
+import { CSTEP_NAMES, CURRENCY_CATEGORIES, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile } from './currency-weights'
 import type { CStep, CurrencyItem, ItemEdit } from './currency-weights'
 
 const props = defineProps<{
@@ -112,7 +145,7 @@ const props = defineProps<{
 
 const c = computed(() => props.config.presets.currency)
 const STEP_CSS = ['#3b372f', '#6d6250', '#a08d5e', '#cdb27a', '#ffe196', '#ff4040']
-const STEP_NOTE = ['', 'quiet', 'soft sound', 'sound, map icon', 'loud, yellow beam', 'the big sound, red on white, red beam']
+const STEP_NOTE = ['', 'dim, no box', 'outlined in the category colour', 'filled dark box, map icon', 'filled with the category colour, beam', 'red on white, red beam, the big sound']
 
 // Both write back to the field, so a refused or clamped number doesn't stay typed.
 function setLine (el: HTMLInputElement) {
@@ -253,6 +286,36 @@ const lineStop = computed(() => {
 })
 const hideNote = computed(() => `${rows.value.length - shownCount.value} of ${rows.value.length} items never show; a bigger stack of the rest can`)
 
+// Step looks: loudness only, for every category (Guy's L1).
+const stepEdit = ref<CStep | null>(null)
+const SAMPLE_CATS = ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
+const catArt = (id: string) => CURRENCY_CATEGORIES.find(x => x.id === id)?.art ?? id
+function loudOnly (p: StylePatch): StylePatch {
+  const out: StylePatch = {}
+  if (p.fontSize !== undefined) out.fontSize = p.fontSize
+  if (p.sound !== undefined) out.sound = p.sound
+  if (p.effect !== undefined) out.effect = p.effect
+  if (p.icon !== undefined) out.icon = p.icon
+  return out
+}
+function setStepLook (s: number, p: StylePatch | null) {
+  const next = Object.fromEntries(Object.entries(c.value.steps).filter(([k]) => k !== String(s)))
+  if (p && Object.keys(p).length) next[String(s)] = p
+  c.value.steps = next
+}
+// Category colours: the colour, the map icon's shape and the icon and beam colour.
+function setCatLook (id: string, p: StylePatch | null) {
+  const next = Object.fromEntries(Object.entries(c.value.cats).filter(([k]) => k !== id))
+  if (p) next[id] = { ...c.value.cats[id], ...p }
+  c.value.cats = next
+}
+function setCatIcon (id: string, p: { shape?: string, color?: string }) {
+  const cur = catColour(id, c.value)
+  setCatLook(id, { icon: { size: 1, color: p.color ?? cur.color, shape: p.shape ?? cur.shape } })
+}
+const hexOf = (rgb: number[]) => '#' + rgb.slice(0, 3).map(v => v.toString(16).padStart(2, '0')).join('')
+const rgbOf = (hex: string): [number, number, number] => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number]
+
 const NUDGES = Array.from({ length: NUDGE_MAX * 2 + 1 }, (_, i) => i - NUDGE_MAX)
 function setNudge (cat: string, v: number) {
   const next = Object.fromEntries(Object.entries(c.value.nudge).filter(([k]) => k !== cat))
@@ -281,12 +344,12 @@ const statusText = computed(() => {
 
 const changed = computed(() => {
   const d = defaultCurrency()
-  return c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || Object.keys(c.value.nudge).length > 0
+  return c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || Object.keys(c.value.nudge).length > 0 || Object.keys(c.value.steps).length > 0 || Object.keys(c.value.cats).length > 0
 })
 function reset () {
   const d = defaultCurrency()
   // Your item edits are a list you built: Defaults keeps them.
-  Object.assign(c.value, { line: d.line, from: d.from, nudge: d.nudge })
+  Object.assign(c.value, { line: d.line, from: d.from, nudge: d.nudge, steps: d.steps, cats: d.cats })
 }
 
 function chaosText (v: number): string {
@@ -359,11 +422,19 @@ function chaosText (v: number): string {
 .subFold { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; min-width: 0; }
 .subName { font-size: var(--w-fs-sm); color: #d8c89c; min-width: 5.5rem; }
 .whole { display: inline-flex; align-items: center; gap: 6px; color: var(--w-dim); font-size: var(--w-fs-xs); }
-.sel2 { background: var(--w-panel); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); color: inherit; padding: 0 4px; }
+.sel2 { max-width: 7.5rem; background: var(--w-panel); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); color: inherit; padding: 0 4px; }
 .minBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 10px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .minLab { color: #e2d3ad; font-size: var(--w-fs-sm); }
 .range { width: min(22rem, 100%); accent-color: var(--w-accent, #c8a565); }
 .minVal { font-size: var(--w-fs-sm); color: var(--w-accent, #c8a565); min-width: 3.5em; font-variant-numeric: tabular-nums; }
+.lookBtn { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-accent, #c8a565); background: var(--w-panel); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); padding: 0 5px; position: relative; }
+.lookOn { border-color: var(--w-accent, #c8a565); }
+.dot { position: absolute; top: -3px; right: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--w-accent, #c8a565); }
+.stepEd { border: 1px solid var(--w-accent, #c8a565); border-radius: var(--w-r-sm); background: var(--w-panel-2); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.stepEdHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.samples { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 6px; background: #1a1712; border-radius: var(--w-r-sm); }
+.catLook { display: inline-flex; align-items: center; gap: 4px; }
+.swatch { width: 20px; height: 18px; padding: 0; border: 1px solid var(--w-line); background: none; cursor: pointer; }
 .catBody { border-top: 1px solid var(--w-line); padding: 4px 6px; display: flex; flex-direction: column; }
 .row {
   display: grid;

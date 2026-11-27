@@ -35,9 +35,8 @@
 import { computed } from 'vue'
 import { WButton, WSegmented } from '../ui'
 import StyleEditor from './StyleEditor.vue'
-import { readStyle } from './edits'
 import type { StylePatch } from './edits'
-import { CSTEP_NAMES, currencyActions } from './currency-weights'
+import { CSTEP_NAMES } from './currency-weights'
 import type { CStep, CurrencyItem, ItemEdit } from './currency-weights'
 
 const props = defineProps<{
@@ -47,12 +46,14 @@ const props = defineProps<{
   step: CStep
   // poe.ninja's (or the guessed) price, before any of yours.
   basePrice: number
+  // How its step and category look, for the own look to start from.
+  baseLook: StylePatch
 }>()
 const emit = defineEmits<{ change: [edit: ItemEdit | null] }>()
 
 const stepOptions = [{ value: 'auto', label: 'Price decides' }, ...CSTEP_NAMES.map((n, i) => ({ value: String(i), label: n }))]
 const priceNow = computed(() => props.edit.price ?? props.basePrice)
-const stepLook = computed<StylePatch>(() => readStyle(currencyActions(props.step === 0 ? 1 : props.step)))
+const stepLook = computed<StylePatch>(() => props.baseLook)
 
 function put (patch: Partial<ItemEdit>) {
   const next = Object.fromEntries(Object.entries({ ...props.edit, ...patch }).filter(([, v]) => v !== undefined)) as ItemEdit

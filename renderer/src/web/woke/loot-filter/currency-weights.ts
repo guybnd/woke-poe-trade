@@ -280,22 +280,45 @@ export const CAT_LOOK: Record<string, { text: [number, number, number], color: s
   other: { text: [210, 190, 140], color: 'Grey', shape: 'Circle' }
 }
 
-// What a pile of one category at one step changes on top of currencyActions:
-// the step's own edits, then the category's colour (its own edits on top).
+// The ladder (Guy 2026-11-27, R2 "fill up"; one colour language, C1): the
+// text stays currency gold, the category's colour fills in as value climbs.
+// Small: dim, no box. Normal: an outline in the category colour. Decent: a
+// filled dark tint of it. Big: inverted, the category colour is the box.
+// Tink: red on white with the category's border and map icon (beam red).
+// A step sets loudness only (size, sound, beam, icon size): its edits apply to
+// every category. A category sets its colour and map icon.
+const mixTo = (c: number[], to: number, f: number) => c.map(v => Math.round(v + (to - v) * f))
+export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rgb: [number, number, number], color: string, shape: string } {
+  const d = CAT_LOOK[cat] ?? CAT_LOOK.other
+  const own = c.cats[cat]
+  return {
+    rgb: own?.text ? [own.text[0], own.text[1], own.text[2]] : d.text,
+    color: own?.icon?.color ?? d.color,
+    shape: own?.icon?.shape ?? d.shape
+  }
+}
+
 export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats'>): StylePatch {
   if (step === 0) return {}
+  const { rgb, color, shape } = catColour(cat, c)
   const own = c.steps[String(step)] ?? {}
-  if (step === 5) return own
-  const d = CAT_LOOK[cat] ?? CAT_LOOK.other
   const base = readStyle(currencyActions(step))
-  const icon = (own.icon !== undefined ? own.icon : base.icon)
-  const catOwn = c.cats[cat] ?? {}
-  return {
-    ...own,
-    text: [...d.text, 255],
-    ...(icon ? { icon: { ...icon, color: d.color, shape: d.shape } } : {}),
-    ...catOwn
+  const size = (own.icon !== undefined ? own.icon : base.icon)?.size
+  const effect = own.effect !== undefined ? own.effect : base.effect
+  const out: StylePatch = {}
+  if (own.fontSize !== undefined) out.fontSize = own.fontSize
+  if (own.sound !== undefined) out.sound = own.sound
+  const col = (a: number[], alpha = 255) => [a[0], a[1], a[2], alpha] as [number, number, number, number]
+  switch (step) {
+    case 1: Object.assign(out, { text: col([170, 158, 130]), border: null, background: col([0, 0, 0], 150) }); break
+    case 2: Object.assign(out, { text: col([215, 195, 145]), border: col(mixTo(rgb, 0, 0.3)), background: col([0, 0, 0], 225) }); break
+    case 3: Object.assign(out, { text: col([245, 225, 170]), border: col(rgb), background: col(mixTo(rgb, 0, 0.8)) }); break
+    case 4: Object.assign(out, { text: col([18, 13, 8]), border: col(mixTo(rgb, 255, 0.6)), background: col(rgb) }); break
+    case 5: Object.assign(out, { border: col(rgb) }); break
   }
+  out.icon = size == null ? null : { size, color, shape }
+  out.effect = effect ? { ...effect, color: step === 5 ? 'Red' : color } : null
+  return out
 }
 
 // The whole look of a pile, for the tab's previews.
@@ -362,7 +385,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[]): 
     for (const [s, k] of steps(it)) {
       const conds = [area, clsCond([it]), c('BaseType', '==', [it.name])]
       if (k > 1) conds.push(c('StackSize', '>=', [k]))
-      blocks.push(block(s, conds, `${it.name}, own look${k > 1 ? `, ${k}+` : ''}`, cfg.items[it.name]!.look))
+      blocks.push(block(s, conds, `${it.name}, own look${k > 1 ? `, ${k}+` : ''}`, { ...currencyLook(s, it.cat, cfg), ...cfg.items[it.name]!.look }))
     }
   }
   // The rest grouped: loudest first (the first rule that matches wins, so a
@@ -372,7 +395,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[]): 
   for (const it of rest) {
     for (const [s, k] of steps(it)) {
       // Tink looks the same for every category: one rule for all of them.
-      const cat = ''
+      const cat = it.cat
       const key = `${s}|${k}|${cat}`
       const g = groups.get(key) ?? { step: s, k, cat, list: [] }
       g.list.push(it)
@@ -382,7 +405,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[]): 
   for (const g of [...groups.values()].sort((x, y) => y.step - x.step || y.k - x.k)) {
     const conds = [area, clsCond(g.list), c('BaseType', '==', g.list.map(i => i.name).sort())]
     if (g.k > 1) conds.push(c('StackSize', '>=', [g.k]))
-    blocks.push(block(g.step, conds, g.k > 1 ? `${g.k}+` : ''))
+    blocks.push(block(g.step, conds, [g.cat, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', '), currencyLook(g.step, g.cat, cfg)))
   }
   if (items.length) blocks.push(block(0, [area, clsCond(items), c('BaseType', '==', items.map(i => i.name).sort())], 'under the line'))
   const chars = blocks.reduce((n, b) => n + 160 + b.conditions.reduce((m, x) => m + x.key.length + 12 + x.values.reduce((k, v) => k + v.length + 3, 0), 0), 0)

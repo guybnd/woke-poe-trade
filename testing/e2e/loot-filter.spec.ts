@@ -1367,8 +1367,17 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await page.waitForTimeout(500)
   await overlay.snap('currency weights tab')
 
+  // A step's Look edits loudness for every category; a category sets its colour.
+  await page.getByRole('button', { name: 'Big look and sound' }).click()
+  await expect(page.locator('[data-currency-step-editor]')).toBeVisible()
+  await overlay.snap('currency step look editor')
+  await page.getByRole('button', { name: 'Big look and sound' }).click()
+  await page.getByRole('combobox', { name: 'Oils map icon shape' }).selectOption('Star')
+  await expect(page.getByRole('button', { name: 'Reset Oils colours', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Reset Oils colours', exact: true }).click()
+
   // A category folds open; an item opens its editor under it.
-  await page.locator('[data-currency-cat="orbs"] [aria-expanded]').click()
+  await page.locator('[data-currency-cat="orbs"] [aria-expanded]').first().click({ position: { x: 12, y: 10 } })
   const alch = page.locator('[data-currency-item="Orb of Alchemy"]')
   await expect(alch).toBeVisible()
   await alch.click()
@@ -1382,7 +1391,7 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-currency-cat="orbs"]')).not.toContainText('edited')
 
   // Essences sit in tiers; a whole tier switches off in one pick.
-  await page.locator('[data-currency-cat="essences"] [aria-expanded]').first().click()
+  await page.locator('[data-currency-cat="essences"] [aria-expanded]').first().click({ position: { x: 12, y: 10 } })
   const deaf = page.locator('[data-currency-sub="Deafening"]')
   await expect(deaf).toBeVisible()
   await deaf.getByRole('button').click()

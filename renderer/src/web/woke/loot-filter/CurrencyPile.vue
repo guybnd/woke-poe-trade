@@ -28,12 +28,11 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { WButton, WChip, vItemTip } from '../ui'
 import LabelPreview from './LabelPreview.vue'
-import { readStyle } from './edits'
 import type { StylePatch } from './edits'
 import { labelBox, layoutLabels } from './shower'
 import type { Rect } from './shower'
 import { poeColour } from './colours'
-import { CSTEP_NAMES, currencyActions, stacksFor, stepOfPile } from './currency-weights'
+import { CSTEP_NAMES, currencyFullLook, stacksFor, stepOfPile } from './currency-weights'
 import type { CStep, CurrencyItem, CurrencySettings } from './currency-weights'
 
 const props = defineProps<{
@@ -77,7 +76,7 @@ const picks = computed(() => {
 const drops = computed(() => picks.value.map(p => {
   const step: CStep = stepOfPile(stacksFor(p.it, props.cfg), p.stack)
   const own = props.cfg.items[p.it.name]?.look
-  const look: StylePatch = { ...readStyle(currencyActions(step)), ...(step > 0 ? own ?? {} : {}) }
+  const look: StylePatch = { ...currencyFullLook(step, p.it.cat, props.cfg), ...(step > 0 ? own ?? {} : {}) }
   return { ...p, step, look, label: p.stack > 1 ? `${p.stack}x ${p.it.name}` : p.it.name }
 }))
 const hiddenCount = computed(() => drops.value.filter(d => d.step === 0).length)
