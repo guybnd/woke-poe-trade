@@ -139,8 +139,8 @@ const SHARD_OF: Record<string, string> = {
   'Horizon Shard': 'Orb of Horizons',
   "Engineer's Shard": "Engineer's Orb",
   "Harbinger's Shard": "Harbinger's Orb",
-  'Ancient Shard': 'Ancient Orb',
-  'Mirror Shard': 'Mirror of Kalandra'
+  'Ancient Shard': 'Ancient Orb'
+  // Not Mirror Shard: it often sells above a twentieth of a mirror (Guy).
 }
 const ANY_PAGE: EconomyGroup = { type: 'any', label: 'Any', ninja: ['*'] }
 function groupOf (type: string): EconomyGroup {
