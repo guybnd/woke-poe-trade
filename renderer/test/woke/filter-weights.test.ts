@@ -6,8 +6,8 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { WEIGHT_ROWS, WEIGHT_TYPE, MULT_STEPS, applyWeights, baseRanks, defaultWeights, filterBases, normalizeWeights, stepFor, weightLook, LOOK_KEYS } from '@/web/woke/loot-filter/weights'
-import type { WeightItem, WeightSettings, BaseRow, LookChannel, LookKey } from '@/web/woke/loot-filter/weights'
+import { WEIGHT_ROWS, WEIGHT_TYPE, MULT_STEPS, applyWeights, baseRanks, defaultWeights, filterBases, normalizeWeights, stepFor, weightLook, LOOK_KEYS, RANK_KEYS } from '@/web/woke/loot-filter/weights'
+import type { WeightItem, WeightSettings, BaseRow, LookChannel, LookKey, RankKey } from '@/web/woke/loot-filter/weights'
 import { BASE_FACTS } from '@/web/woke/loot-filter/base-facts'
 import { neverSink } from '../helpers/neversink'
 import { loadGameData } from '../helpers/game-data'
@@ -93,6 +93,13 @@ function randomLook (r: () => number): Record<LookChannel, LookKey[]> {
   return out
 }
 
+// Your own ranks for a few bases.
+function randomRanks (r: () => number, bases: BaseRow[]): Record<string, RankKey> {
+  const out: Record<string, RankKey> = {}
+  for (let n = 0; n < 40; n++) out[bases[Math.floor(r() * bases.length)].name] = RANK_KEYS[Math.floor(r() * RANK_KEYS.length)]
+  return out
+}
+
 function on (change: (w: WeightSettings) => void = () => {}): WeightSettings {
   const w = defaultWeights()
   w.on = true
@@ -149,13 +156,13 @@ describe('rare weights', () => {
       const raw = defaultWeights()
       for (const row of WEIGHT_ROWS) raw.mult[row.key] = MULT_STEPS[Math.floor(r() * MULT_STEPS.length)]
       const pins = ['x1', 'dc', 'fract', 'synth', 'l6', 'infl'] as const
-      const w = normalizeWeights({ ...raw, on: true, need: [0.5, 4, 32][round % 3], always: pins.filter(() => r() < 0.4) as never, loud: [[8, 32, 128], [16, 64, 256], [4, 90, 500]][round % 3], look: randomLook(r) })
-      const bases = filterBases(doc).filter(b => BASE_FACTS[b.name])
+      const w = normalizeWeights({ ...raw, on: true, need: [0.5, 4, 32][round % 3], always: pins.filter(() => r() < 0.4) as never, loud: [[8, 32, 128], [16, 64, 256], [4, 90, 500]][round % 3], look: randomLook(r), ranks: randomRanks(r, filterBases(doc)) })
+      const bases = filterBases(doc, w.ranks).filter(b => BASE_FACTS[b.name])
       const compiled = applyWeights(doc, w)!
       // Rows ranked above the score step split the step rules (×2 or more
       // each): the tab shows the rule count.
       const over = (['bg', 'text'] as const).some(ch => w.look[ch].indexOf('score') > 0)
-      expect(compiled.blocks.length).toBeLessThan(over ? 40000 : 6500)
+      expect(compiled.blocks.length).toBeLessThan(over ? 40000 : 9000)
       for (let n = 0; n < 500; n++) {
         const { it, facts } = randomRare(r, bases)
         const want = stepFor(it, w)
@@ -169,6 +176,26 @@ describe('rare weights', () => {
         }
       }
     }
+  })
+
+  it("your own rank: a base you don't care about hides even at tier 5, a strong mark still shows it", () => {
+    const doc = parseFilter(SEMI)
+    const base = filterBases(doc).find(b => b.rank === 'r0' && b.cls === 'Gloves' && BASE_FACTS[b.name])!
+    const w = on(x => { x.ranks = { [base.name]: 'rj' } })
+    applyWeights(doc, w)
+    const rows = filterBases(doc, w.ranks)
+    const row = rows.find(b => b.name === base.name)!
+    expect(row.rank).toBe('rj')
+    expect(row.was).toBe('r0')
+    const r = rng(3)
+    const it: WeightItem = { ...randomRare(r, [row]).it, rarity: 'Rare', tier: 5, itemLevel: 86, corruption: 'no', mirrored: false, links: 0, rgb: false, influenced: false, eldritch: false, quality: 0, fractured: false, synthesised: false, fated: false, abyssal: false, strands: 0, enchanted: false, crucible: false }
+    expect(stepFor(it, w)).toBe(0)
+    expect(stepFor({ ...it, fractured: true }, w)).toBeGreaterThan(0)
+    // A few dozen bases moved down cost few rules.
+    const many = Object.fromEntries(filterBases(parseFilter(SEMI)).filter(b => b.rank === 'r0').slice(0, 40).map(b => [b.name, 'rj' as const]))
+    const plain = applyWeights(parseFilter(SEMI), on())!.blocks.length
+    const junked = applyWeights(parseFilter(SEMI), on(x => { x.ranks = many }))!.blocks.length
+    expect(junked).toBeLessThan(plain * 1.3)
   })
 
   it('keeps marks at ×1 or more and drop tiers and item levels in order', () => {

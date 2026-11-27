@@ -17,10 +17,10 @@ import { readTiered } from './gear'
 import { allGearBases, baseInfo } from './gear-bases'
 import { BASE_FACTS } from './base-facts'
 import { LOOK_CHANNELS, LOOK_LABEL, LOUD_DEFAULT, WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
-import type { LookChannel, LookKey, WeightKey, WeightSettings } from './weight-settings'
+import type { LookChannel, LookKey, RankKey, WeightKey, WeightSettings } from './weight-settings'
 
-export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, MULT_STEPS, NEED_MIN, NEED_MAX, STAGES, MARK_ROWS, ORDERED_ROWS, PIN_ROWS, LOUD_DEFAULT, LOOK_CHANNELS, LOOK_LABEL, LOOK_KEYS, LOOK_DEFAULT, defaultWeights, multRange, normalizeWeights } from './weight-settings'
-export type { LookChannel, LookKey, WeightKey, WeightRow, WeightGroup, WeightSettings } from './weight-settings'
+export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, MULT_STEPS, NEED_MIN, NEED_MAX, STAGES, MARK_ROWS, ORDERED_ROWS, PIN_ROWS, LOUD_DEFAULT, LOOK_CHANNELS, LOOK_LABEL, LOOK_KEYS, LOOK_DEFAULT, RANK_KEYS, defaultWeights, multRange, normalizeWeights } from './weight-settings'
+export type { LookChannel, LookKey, RankKey, WeightKey, WeightRow, WeightGroup, WeightSettings } from './weight-settings'
 
 // ---- Steps (how loud) ---------------------------------------------------------
 
@@ -58,7 +58,7 @@ export const RARITY_KEY: Record<WeightRarity, WeightKey> = { Rare: 'wr', Magic: 
 export interface WeightItem {
   // Rare when left out.
   rarity?: WeightRarity
-  rank: 'x1' | 'x2' | 'r1' | 'r2' | 'r3' | 'r0'
+  rank: RankKey
   // 0: no drop tier, counted as tier 1.
   tier: number
   itemLevel: number
@@ -148,7 +148,8 @@ export function baseRanks (doc: FilterDoc): BaseRanks {
 }
 
 // One gear base, with what the weights read off it.
-export interface BaseRow { name: string, cls: string | null, rank: Rank, width: number, height: number, old: boolean }
+// was: the filter's rank, when you gave the base your own.
+export interface BaseRow { name: string, cls: string | null, rank: Rank, width: number, height: number, old: boolean, was?: Rank }
 
 // Every rare gear base: the filter's ranked lists plus every other gear base
 // the game has (rank "none"), with its size and age. `known` gives a base's
@@ -692,14 +693,19 @@ function popcount (x: number): number {
 // Writes the rules above everything else in the filter (applied before the
 // build rules, presets and your own rules, which then go on top of them).
 // The base table for this filter, from the app's item data.
-export function filterBases (doc: FilterDoc): BaseRow[] {
+export function filterBases (doc: FilterDoc, own: Record<string, Rank> = {}): BaseRow[] {
   // Before the item data loads nothing is known (and baseInfo would remember
   // that): every base counts as a plain one until then.
   if (!allGearBases().length) return []
-  return baseTable(baseRanks(doc), allGearBases(), n => ({ cls: baseInfo(n).cls, facts: BASE_FACTS[n] }))
+  return withRanks(baseTable(baseRanks(doc), allGearBases(), n => ({ cls: baseInfo(n).cls, facts: BASE_FACTS[n] })), own)
 }
 
-export function applyWeights (doc: FilterDoc, w: WeightSettings, bases = filterBases(doc)): Compiled | null {
+// Your own ranks over the filter's.
+export function withRanks (rows: BaseRow[], own: Record<string, Rank>): BaseRow[] {
+  return rows.map(b => own[b.name] && own[b.name] !== b.rank ? { ...b, rank: own[b.name], was: b.rank } : b)
+}
+
+export function applyWeights (doc: FilterDoc, w: WeightSettings, bases = filterBases(doc, w.ranks)): Compiled | null {
   // Without the item data every base would count as plain (exotic white
   // bases hidden): leave it all to NeverSink until the data is in.
   if (!w.on || !bases.length) return null
