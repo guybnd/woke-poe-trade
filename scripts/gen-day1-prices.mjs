@@ -150,7 +150,10 @@ async function main () {
 
   if (items.length < 500) throw new Error(`Only ${items.length} items priced: poe.ninja's history may have changed. Not writing.`)
   items.sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]) || a[2].localeCompare(b[2]))
-  await fs.writeFile(OUT, JSON.stringify({ league, made: new Date().toISOString().slice(0, 10), divine, items }) + '\n')
+  const made = new Date().toISOString().slice(0, 10)
+  await fs.writeFile(OUT, JSON.stringify({ league, made, divine, items }) + '\n')
+  // Read first by the app, to skip the table in the league it came from.
+  await fs.writeFile(OUT.replace(/\.json$/, '.meta.json'), JSON.stringify({ league, made, count: items.length }) + '\n')
   console.log(`wrote ${items.length} items to ${path.relative(process.cwd(), OUT)}`)
 }
 

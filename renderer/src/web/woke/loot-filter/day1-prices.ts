@@ -12,9 +12,14 @@ export interface Day1Table {
   items: Array<[type: string, name: string, variant: string, chaos: number]>
 }
 
-// The table is a few hundred KB: loaded on its own, only by the loot filter.
+// The table is a few hundred KB, so it's only loaded in a league other than
+// the one it was read from (a new league, where live prices are missing):
+// the tiny meta file says which league that is. Within that league nothing
+// loads (startup JS and the overlay's memory stay as they were).
 let loading: Promise<Day1Table | null> | null = null
-export function loadDay1 (): Promise<Day1Table | null> {
+export async function loadDay1 (liveLeague: string): Promise<Day1Table | null> {
+  const meta = await import('./day1-prices.meta.json').then(m => m.default as { league: string }).catch(() => null)
+  if (!meta?.league || meta.league === liveLeague) return null
   loading ??= import('./day1-prices.json')
     .then(m => (m.default as unknown as Day1Table))
     .catch(() => null)

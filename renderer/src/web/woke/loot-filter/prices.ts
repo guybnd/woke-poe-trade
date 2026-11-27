@@ -1,6 +1,6 @@
 // Prices for the loot filter: the latest poe.ninja snapshot of the selected
 // league as a PriceLookup, plus which uniques use which base.
-import { computed, shallowRef } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
 import { usePoeninja } from '@/web/background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
 import { usePriceIndex } from '../market/price-index'
@@ -39,7 +39,9 @@ export function useFilterPrices (rule: () => UniqueRule) {
   // Day-1 prices fill in what the live prices lack (a new league's first
   // hours). Live prices still have to be there: without them NeverSink decides.
   const day1 = shallowRef<Day1Table | null>(null)
-  loadDay1().then(t => { day1.value = t })
+  watch(() => index.snapshot.value?.league, league => {
+    if (league && !day1.value) loadDay1(league).then(t => { day1.value = t })
+  }, { immediate: true })
   const liveItems = computed(() => withDay1(index.snapshot.value?.items ?? [], day1.value))
   const lookup = computed<PriceLookup | null>(() => {
     const snap = index.snapshot.value
