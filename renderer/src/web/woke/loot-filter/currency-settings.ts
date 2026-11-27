@@ -53,7 +53,7 @@ export interface CurrencySettings {
 }
 
 export function defaultCurrency (): CurrencySettings {
-  return { on: false, line: 0.5, from: [3, 10, 30, 90], nudge: {}, items: {}, steps: {}, cats: {}, off: [], mult: null }
+  return { on: false, line: 0.2, from: [1, 4, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, off: [], mult: null }
 }
 
 const NAME = /^[^"\n]{1,80}$/

@@ -73,17 +73,17 @@ describe('currency weights', () => {
     const c = defaultCurrency()
     expect(scaled(c, '2-SEMI-STRICT')).toBe(c)
     const s = scaled(c, '3-STRICT')
-    expect(s.line).toBeCloseTo(0.625)
-    expect(s.from[0]).toBeCloseTo(3.75)
+    expect(s.line).toBeCloseTo(0.25)
+    expect(s.from[0]).toBeCloseTo(1.25)
     c.mult = 2
-    expect(scaled(c, '4-VERYSTRICT').from[3]).toBe(180)
+    expect(scaled(c, '4-VERYSTRICT').from[3]).toBe(120)
     expect(normalizeCurrency({ mult: 9 }).mult).toBe(null)
     expect(normalizeCurrency({ mult: 1.5 }).mult).toBe(1.5)
   })
 
   it('hides the piles of a step that is turned off', () => {
     const c = defaultCurrency()
-    const it = { name: 'Chaos Orb', cat: 'orbs', chaos: 1, full: 10, est: false } as never
+    const it = { name: 'Chaos Orb', cat: 'orbs', chaos: 0.3, full: 20, est: false } as never
     const all = stacksFor(it, c)
     c.off = [1]
     const s = stacksFor(it, c)
@@ -309,7 +309,7 @@ describe('currency weights', () => {
   it('normalizes saved settings, the first beta\'s too', () => {
     expect(normalizeCurrency(undefined)).toEqual(defaultCurrency())
     const old = normalizeCurrency({ on: true, line: 99, normal: 50, big: 10, supplies: { 'Chaos Orb': 3, 'bad': -1, 'x"y': 2 }, pins: ['Scroll of Wisdom', 7] } as never)
-    expect(old).toMatchObject({ on: true, line: 0.5, from: [50, 50, 50, 90], items: { 'Chaos Orb': { supply: 3 }, 'Scroll of Wisdom': { supply: 1 } } })
+    expect(old).toMatchObject({ on: true, line: 0.2, from: [50, 50, 50, 60], items: { 'Chaos Orb': { supply: 3 }, 'Scroll of Wisdom': { supply: 1 } } })
     const c = normalizeCurrency({ from: [5, 2, 40, 90], nudge: { orbs: 2, oils: 9, Bad: 1, ess: 0 }, items: { 'Divine Orb': { step: 9, price: -1 }, 'Golden Oil': { step: 4, look: { fontSize: 40 } }, 'x"y': { step: 1 } } } as never)
     expect(c.from).toEqual([5, 5, 40, 90])
     expect(c.nudge).toEqual({ orbs: 2 })
