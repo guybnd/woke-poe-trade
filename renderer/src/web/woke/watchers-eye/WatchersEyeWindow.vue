@@ -29,7 +29,7 @@
         <div :class="$style.add" @focusout="onAddBlur">
           <input v-model="addText" class="w-input" :class="$style.addInput" placeholder="Add aura…" aria-label="Add aura" data-qa="we-add-aura"
             @focus="addOpen = true" @input="addOpen = true; addAt = 0" @keydown.down.prevent="moveAdd(1)" @keydown.up.prevent="moveAdd(-1)"
-            @keydown.enter.prevent="pickAdd(addList[addAt])" @keydown.esc.stop="addOpen = false">
+            @keydown.enter.prevent="addOpen && pickAdd(addList[addAt])" @keydown.esc.stop="addOpen = false">
           <div v-if="addOpen && addList.length" :class="$style.drop" role="listbox" data-qa="we-add-list">
             <button v-for="(a, i) in addList" :key="a" type="button" role="option" :aria-selected="i === addAt" tabindex="-1"
               :class="[$style.opt, { [$style.optOn]: i === addAt }]" v-item-tip="{ name: a }" data-item-tip :data-qa="`we-add-${a}`"
@@ -64,14 +64,14 @@
     <template #footer>
       <div :class="$style.bar" data-qa="we-bar">
         <span :class="$style.dim">{{ active.length ? `${active.length} picked` : 'Pick mods to search' }}</span>
-        <WSelect v-if="active.length >= 3" :model-value="String(config.atLeast ?? 'all')" :options="matchOptions" data-qa="we-match"
+        <WSelect v-if="active.length >= 3" :model-value="String(atLeast ?? 'all')" :options="matchOptions" data-qa="we-match"
           @update:model-value="config.atLeast = $event === 'all' ? null : Number($event)" />
         <WButton size="sm" variant="ghost" :disabled="!active.length" @click="clearPicks">Clear</WButton>
         <span :class="$style.end" />
         <WButton size="sm" icon="fas fa-external-link-alt" :disabled="!active.length" data-qa="we-trade"
           title="Opens the trade site with these mods. No search from the app." @click="openTrade">Trade site</WButton>
-        <WButton size="sm" variant="primary" :disabled="!active.length || anyOf" data-qa="we-price"
-          :title="anyOf ? 'Any of: the price check searches all picks. Use Trade site.' : 'One trade search for a Watcher\'s Eye with all picked mods'"
+        <WButton size="sm" variant="primary" :disabled="!active.length || anyOf || !english" data-qa="we-price"
+          :title="!english ? 'Needs the English game client. Use Trade site.' : anyOf ? 'Any of: the price check searches all picks. Use Trade site.' : 'One trade search for a Watcher\'s Eye with all picked mods'"
           @click="priceCheck">Price check</WButton>
       </div>
     </template>
@@ -84,7 +84,7 @@
 // with them, in the price check or on the trade site.
 import { computed, nextTick, shallowRef, watch } from 'vue'
 import { ITEM_BY_REF } from '@/assets/data'
-import { poeWebApi } from '@/web/Config'
+import { AppConfig, poeWebApi } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import { WButton, WChip, WIcon, WInfo, WPanel, WSelect, itemArt, vItemTip } from '../ui'
 import { vModTip } from '../ui/tooltip/mod-line-tip'
@@ -200,13 +200,16 @@ function clearPicks () {
   config.picks = config.picks.filter(p => !active.value.includes(p))
   config.atLeast = null
 }
-const anyOf = computed(() => config.atLeast != null && config.atLeast < active.value.length)
+// "Any N" while it's below the picks shown; the saved choice is kept as it
+// is (a build still loading shows fewer picks for a moment).
+const atLeast = computed(() => config.atLeast != null && config.atLeast >= 2 && config.atLeast < active.value.length ? config.atLeast : null)
+const anyOf = computed(() => atLeast.value != null)
+// The price check reads the jewel's text in the client's language; this text is English.
+const english = computed(() => AppConfig().language === 'en')
 const matchOptions = computed(() => [
   { value: 'all', label: 'Has all' },
   ...Array.from({ length: active.value.length - 2 }, (_, i) => ({ value: String(i + 2), label: `Any ${i + 2}` }))
 ])
-// A count no longer below the picks reads as "all".
-watch(() => active.value.length, (n) => { if (config.atLeast != null && config.atLeast >= n) config.atLeast = null })
 
 // ---- saved setups ----
 const naming = shallowRef(false)
@@ -230,7 +233,7 @@ function saveSetup () {
   naming.value = false
   const name = saveName.value.trim()
   if (!name) return
-  const entry = { name, auras: [...shownList.value], picks: active.value.map(p => ({ ...p })), atLeast: config.atLeast }
+  const entry = { name, auras: [...shownList.value], picks: active.value.map(p => ({ ...p })), atLeast: atLeast.value }
   config.saved = [...config.saved.filter(s => s.name !== name), entry].sort((a, b) => a.name.localeCompare(b.name))
   setCurrent(name)
 }
@@ -259,7 +262,8 @@ const sections = new Map<string, HTMLElement>()
 function groupRef (aura: string, el: unknown) { if (el instanceof HTMLElement) sections.set(aura, el); else sections.delete(aura) }
 const marked = shallowRef<string | null>(null)
 watch([() => config.focus, mods], async ([focus]) => {
-  if (!focus || !mods.value.length) return
+  if (!focus) return
+  if (!mods.value.length) { if (loadNote.value.startsWith("Couldn't")) config.focus = null; return }
   config.focus = null
   let aura: WeAura | null = null
   if (focus.startsWith('aura:')) {
@@ -288,7 +292,7 @@ function priceCheck (e: MouseEvent) {
 function openTrade () {
   const league = leagues.selectedId.value
   if (!league) return
-  const q = weTradeQuery(mods.value, picksFor(), weStatId, { atLeast: config.atLeast, status: priceCheckTradeStatus().option })
+  const q = weTradeQuery(mods.value, picksFor(), weStatId, { atLeast: atLeast.value, status: priceCheckTradeStatus().option })
   const host = poeWebApi()
   // The international site takes English names, a regional one its own.
   if (host !== 'www.pathofexile.com') {

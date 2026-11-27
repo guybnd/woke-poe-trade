@@ -8,6 +8,7 @@ import { loadGameData, parseItem } from '../helpers/game-data'
 import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { weStatId } from '@/web/woke/watchers-eye/trade'
+import { watchersEyeLookup } from '@/web/woke/search/lookups/watchers-eye'
 import { WATCHERS_EYE, WE_AURAS, auraOfGem, byAura, clampMin, rolledLine, weItemText, weMods, weTradeQuery } from '@/web/woke/watchers-eye/mods'
 
 beforeAll(loadGameData)
@@ -38,8 +39,9 @@ describe("Watcher's Eye mods", () => {
     expect(g[0].mods.length).toBe(5)
   })
 
-  it('reads aura gems, Vaal ones too', () => {
-    expect(auraOfGem('Vaal Grace')).toBe('Grace')
+  it('reads aura gems, not their Vaal buffs', () => {
+    expect(auraOfGem('Grace')).toBe('Grace')
+    expect(auraOfGem('Vaal Grace')).toBe(null)
     expect(auraOfGem('Purity of Fire')).toBe('Purity of Fire')
     expect(auraOfGem('Fireball')).toBe(null)
   })
@@ -82,5 +84,22 @@ describe("Watcher's Eye mods", () => {
     expect(all.query.stats[0].filters.length).toBe(3)
     const two = weTradeQuery(MODS, picks, stat, { status: 'securable', atLeast: 2 })
     expect(two.query.stats[0]).toMatchObject({ type: 'count', value: { min: 2 } })
+  })
+})
+
+describe("Watcher's Eye in Ctrl+Space", () => {
+  const ctx = { tools: new Set(['woke-watchers-eye']) } as unknown as Parameters<ReturnType<typeof watchersEyeLookup>>[1]
+  const look = watchersEyeLookup(MODS)
+  it('an aura opens the finder on it; "purity" is a card per Purity', () => {
+    expect(look('grace', ctx).map(c => c.id)).toContain('we-aura:Grace')
+    expect(look('purity', ctx).filter(c => c.id.startsWith('we-aura:')).length).toBe(4)
+    expect(look('watcher', ctx).map(c => c.id)).toEqual(['we-finder'])
+    // A loose word doesn't bring up the finder.
+    expect(look('finder', ctx)).toEqual([])
+  })
+  it("a mod's words find the mod", () => {
+    const hits = look('suppress spell', ctx).filter(c => c.id.startsWith('we-mod:'))
+    expect(hits.length).toBe(1)
+    expect(hits[0].sub).toContain('Grace')
   })
 })

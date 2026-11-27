@@ -1,6 +1,8 @@
 // A Watcher's Eye mod's trade stat, from the app's stat data: the line with
-// its numbers as "#", as the stat matchers write it.
-import { STAT_BY_MATCH_STR } from '@/assets/data'
+// its numbers as "#", as the stat's English ref writes it (the same in every
+// client language, unlike the matchers).
+import { STAT_BY_REF_V2 } from '@/assets/data'
+import type { Stat } from '@/assets/data'
 import type { WeMod } from './mods'
 
 const RANGE = /\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)/g
@@ -12,21 +14,26 @@ function shapes (copy: string): string[] {
   const out: string[] = []
   for (const ranged of [copy.replace(/[+-]?\((-?[\d.]+)--?[\d.]+\)/g, '#'), copy.replace(RANGE, '#')]) {
     const hashed = ranged.replace(NUMBER, '#')
-    for (const t of [ranged, hashed, hashed.replace(/\+(?=#)/g, '')]) out.push(t, t.replace(/\n/g, ' '))
+    for (const t of [ranged, hashed, hashed.replace(/\+(?=#)/g, ''), ranged.replace(/-#/g, '+#')]) out.push(t, t.replace(/\n/g, ' '))
   }
   return [...new Set(out)]
 }
 
-const cache = new Map<string, string | null>()
+function byRef (ref: string): Stat | undefined {
+  const found = STAT_BY_REF_V2(ref)
+  if (found && 'stats' in found) return found.stats.find(s => s.ref === ref && s.trade.ids.explicit?.length)
+  return found
+}
+
+// Found ids only: a miss (stat data not read yet) is looked up again next time.
+const cache = new Map<string, string>()
 
 export function weStatId (mod: WeMod): string | null {
-  let id = cache.get(mod.id)
-  if (id !== undefined) return id
-  id = null
+  const known = cache.get(mod.id)
+  if (known) return known
   for (const s of shapes(mod.copy.replace(/\r/g, ''))) {
-    const ids = STAT_BY_MATCH_STR(s)?.stat.trade.ids.explicit
-    if (ids?.length) { id = ids[0]; break }
+    const ids = byRef(s)?.trade.ids.explicit
+    if (ids?.length) { cache.set(mod.id, ids[0]); return ids[0] }
   }
-  cache.set(mod.id, id)
-  return id
+  return null
 }

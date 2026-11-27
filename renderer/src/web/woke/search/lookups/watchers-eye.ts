@@ -14,7 +14,7 @@ const MAX_MODS = 3
 const words = (s: string) => s.toLowerCase().replace(/[’']/g, '').split(/[^a-z0-9]+/).filter(Boolean)
 
 // Every query word of 3 letters or more starts a word of the line, and
-// together they're at least 6 letters ("fire res" isn't enough on its own).
+// together they're at least 6 letters ("life" alone isn't enough).
 function modMatches (mod: WeMod, q: string[]): boolean {
   const lw = words(mod.line)
   const qw = q.filter(w => w.length >= 3 && !/^\d+$/.test(w))
@@ -27,8 +27,10 @@ export function watchersEyeLookup (mods: readonly WeMod[] | null): Lookup {
     const q = query.trim()
     if (q.length < 4 || !ctx.tools.has(WATCHERS_EYE_TYPE)) return []
     const out: LookupCard[] = []
-    const aura = WE_AURAS.find(a => matchRank(a, q) === 0)
-    if (aura || matchRank("Watcher's Eye finder", q) >= 0 || matchRank('Watchers Eye', q) >= 0) {
+    // "purity" is four auras: a card each.
+    const auras = WE_AURAS.filter(a => matchRank(a, q) === 0)
+    const tool = matchRank("Watcher's Eye finder", q) === 0 || matchRank('Watchers Eye', q) === 0
+    for (const aura of tool && !auras.length ? [null] : auras) {
       const list = aura ? (mods ?? []).filter(m => m.aura === aura) : []
       out.push({
         id: aura ? `we-aura:${aura}` : 'we-finder',

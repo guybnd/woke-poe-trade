@@ -13,9 +13,10 @@ export const WE_AURAS = [
 ] as const
 export type WeAura = typeof WE_AURAS[number]
 
-// Vaal, awakened and other copies of a gem name that still run the aura.
+// The aura a skill gem runs. Vaal auras (Vaal Grace, Vaal Haste) are a
+// buff of their own, not the aura, so they don't count.
 export function auraOfGem (gem: string): WeAura | null {
-  const name = gem.replace(/^Vaal /, '').replace(/ Support$/, '').trim()
+  const name = gem.trim()
   return (WE_AURAS as readonly string[]).includes(name) ? name as WeAura : null
 }
 
