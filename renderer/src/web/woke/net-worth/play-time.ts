@@ -3,7 +3,7 @@
 // comes from Client.txt zone lines. Pure: no Vue, no requests.
 import { isTownLike, parseLogLine } from '../campaign/log-parse'
 import { lineTime } from '../campaign/log-tail'
-import { isFarmedMap, isMapSideArea } from '../farming/farming'
+import { isFarmedMap, isMapSideArea } from '../shared/map-areas'
 import { isBossArea } from '../shared/boss-areas'
 import { RATE_TIME_WHERE } from '../shared/rate-time'
 
@@ -39,6 +39,9 @@ export const emptyMarks = (offFrom?: number): PlayMarks => offFrom == null
   : { marks: [{ at: offFrom, s: 'off' }], lastAt: null, lastLines: [], here: 'off', maps: [], recent: [], fights: [] }
 
 const RECENT_MAPS = 16
+// No Client.txt line for this long counts as away from that point on (the PC
+// slept, or you walked off without the game's AFK): Session story's quiet gap.
+export const IDLE_GAP_MS = 15 * 60_000
 const OPENING = '***** LOG FILE OPENING *****'
 const AFK_ON = /\] : AFK mode is now ON/
 const AFK_OFF = /\] : AFK mode is now OFF/
@@ -69,7 +72,15 @@ export function feedMarks (m: PlayMarks, lines: readonly string[]): PlayMarks {
     if (at == null) continue
     if (lastAt != null && at < lastAt) continue
     if (lastAt != null && at === lastAt && lastLines.includes(line)) continue
-    if (line.includes(OPENING)) {
+    const opening = line.includes(OPENING)
+    if (!opening && lastAt != null && at - lastAt >= IDLE_GAP_MS) {
+      // Away since the quiet gap began; back with this line, as you were
+      // (still AFK or closed if you were).
+      const was = marks[marks.length - 1]?.s
+      push(marks, lastAt + IDLE_GAP_MS, 'off')
+      if (was !== 'off') push(marks, at, here)
+    }
+    if (opening) {
       // The game was closed from its last line until now.
       if (lastAt != null && lastAt < at) push(marks, lastAt, 'off')
       push(marks, at, 'off')
@@ -99,6 +110,15 @@ export function feedMarks (m: PlayMarks, lines: readonly string[]): PlayMarks {
     if (at !== lastAt) { lastAt = at; lastLines = [line] } else lastLines = [...lastLines, line]
   }
   return { marks, lastAt, lastLines, here, maps, recent, fights }
+}
+
+// The marks up to `now`, with the quiet stretch since the last line counted
+// as away once it passes the gap, so a PC asleep in a map isn't map time.
+export function marksUntil (m: PlayMarks, now: number): PlayMarks['marks'] {
+  const last = m.marks[m.marks.length - 1]
+  if (m.lastAt == null || !last || last.s === 'off') return m.marks
+  const idleAt = m.lastAt + IDLE_GAP_MS
+  return now >= idleAt && idleAt > last.at ? [...m.marks, { at: idleAt, s: 'off' }] : m.marks
 }
 
 // Drops marks before `from`, keeping the one in force at `from`.

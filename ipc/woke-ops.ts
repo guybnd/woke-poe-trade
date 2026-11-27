@@ -143,7 +143,6 @@ export interface WokeOps {
   'ns-latest': Op<NoArgs, { version: string, changes: string }>
   'ns-download': Op<{ style?: string }, { version: string }>
   'ns-read': Op<{ version: string, style?: string, level: number }, { text: string }>
-  'ns-cached': Op<NoArgs, Array<{ version: string, styles: string[] }>>
   'ns-prune': Op<{ keep?: number }, void>
 
   // App and settings
@@ -156,7 +155,7 @@ export interface WokeOps {
   'browse-path': Op<{ kind?: 'file' | 'dir', title?: string, defaultPath?: string, extensions?: string[] }, string | null>
   'live-data-cached': Op<{ language: unknown, bundled: number }, number | null>
   'live-data-check': Op<{ language: unknown, bundled: number, bundledShared?: unknown }, number | null>
-  'game-log-tail': Op<{ bytes?: number } | NoArgs, { path: string | null, lines: string[] }>
+  'game-log-tail': Op<{ bytes?: number, since?: number } | NoArgs, { path: string | null, lines: string[] }>
   // Zone, level-up and death lines written between two times (ms). sessions:
   // also game start and AFK on/off lines.
   'game-log-range': Op<{ from: number, to: number, sessions?: boolean }, { path: string | null, lines: string[] }>
@@ -177,6 +176,8 @@ export interface WokeOps {
   'rollback-cancel': Op<NoArgs, WokeRollbackState>
   'rollback-undo-skip': Op<NoArgs, WokeRollbackState>
   'setup-finish': Op<NoArgs, Ok>
+  // The settings file once the overlay has saved what it holds (setup window).
+  'config-fresh': Op<{ waitMs?: number } | NoArgs, string | null>
   'crash-pending': Op<NoArgs, WokePendingCrash | null>
   'crash-dismiss': Op<NoArgs, Ok>
   'crash-report': Op<{ id?: string | null, context?: string, names?: string[] }, Ok>
@@ -273,7 +274,8 @@ export interface WokeOps {
   'stash-cache': Op<{ league?: string }, Json>
   'stash-tab-list': Op<NoArgs, Json>
   'stash-tab-choice': Op<{ league: string, template: string, ids: string[], set?: string }, Json>
-  'stash-tab-set-save': Op<{ league: string | undefined, name: string, ids: string[] }, Json>
+  // restoreAt: Undo of a delete puts the set back at that index and keeps the choice.
+  'stash-tab-set-save': Op<{ league: string | undefined, name: string, ids: string[], restoreAt?: number }, Json>
   'stash-tab-set-delete': Op<{ league: string | undefined, name: string }, Json>
   'worn-items': Op<{ character?: string }, Json>
   'character-sync': Op<{ character?: string, auto?: boolean, read?: 'now' }, Json>

@@ -244,7 +244,8 @@ export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: R
   let leftOutChaos = 0
   let leftOutCollectedChaos = 0
   const row = (item: Sale, isSale: boolean): OutsideRow => {
-    const read = saleChaos(item, rates)
+    // Listings are asks at today's rates; sales at their own day's.
+    const read = saleChaos(isSale ? item : { price: item.price }, rates)
     const collected = isSale && got.has(item.id)
     const before = isSale && (run.saleMarks?.[item.id]?.before ?? (isBefore(run, item) || carriedUsed.has(item.id)))
     // A collected sale is what the stash got: only leaving it out applies.
@@ -283,9 +284,23 @@ export function outsideTotals (run: OutsideRun, sales: readonly Sale[], rates: R
   return { listed: listedRows, sold: soldRows, held: heldRows, heldChaos, listedChaos, waitingChaos, beforeChaos, faustusChaos: listedChaos + waitingChaos + heldChaos, leftOutChaos, leftOutCollectedChaos, unpriced }
 }
 
+// Collected sales of pre-run listings, by the stash row their currency came
+// in as ("Divine Orb"): the In column shows that part as not counted.
+export function preRunByKey (o: Pick<OutsideTotals, 'sold'>): Map<string, { n: number, chaos: number }> {
+  const out = new Map<string, { n: number, chaos: number }>()
+  for (const r of o.sold) {
+    if (!r.before || !r.collected || r.chaos == null) continue
+    const key = CURRENCY_ITEM[r.item.price.currency]
+    if (!key) continue
+    const was = out.get(key) ?? { n: 0, chaos: 0 }
+    out.set(key, { n: was.n + r.item.price.amount, chaos: was.chaos + (r.chaos ?? 0) })
+  }
+  return out
+}
+
 // The sums a run's totals need (runs.ts Outside).
 export function outsideSums (o: OutsideTotals) {
-  return { beforeChaos: o.beforeChaos, faustusChaos: o.faustusChaos, leftOutChaos: o.leftOutCollectedChaos, leftOutShownChaos: o.leftOutChaos }
+  return { beforeChaos: o.beforeChaos, faustusChaos: o.faustusChaos, leftOutCollectedChaos: o.leftOutCollectedChaos, leftOutChaos: o.leftOutChaos }
 }
 
 // Item ids listed at a run's start: those in Start's read listed by then,
@@ -392,8 +407,4 @@ export function listingsQuery (account: string) {
     },
     sort: { indexed: 'desc' }
   }
-}
-
-export function isFaustusRead (x: unknown): x is FaustusRead {
-  return x != null && typeof x === 'object' && typeof (x as FaustusRead).at === 'number' && Array.isArray((x as FaustusRead).listings)
 }

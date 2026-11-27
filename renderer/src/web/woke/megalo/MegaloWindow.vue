@@ -32,7 +32,8 @@
                 </WChip>
               </div>
             </div>
-            <span v-if="!tagGroups.length" :class="$style.dim">No tag matches.</span>
+            <WNoMatch v-if="!tagGroups.length && String(tagQuery).trim()" :query="String(tagQuery)" @clear="tagQuery = ''" />
+            <span v-else-if="!tagGroups.length" :class="$style.dim">No tags light any notable yet.</span>
           </div>
         </section>
 
@@ -41,20 +42,19 @@
           <div :class="$style.head">
             <span>Notables</span>
             <WInfo text="Which notables count, and how much.
-- [[Click]] a notable to tick or untick it.
-- [[Right-click]] makes it a must-have (up to 3): every result has it.
+- [[Click]] a notable to step it through **Want** (it counts), **Must** (up to 3: every result has it) and off.
 - The **number** is its weight; the best fit is 100. Click it to change it, **↺** goes back to the suggestion.
 - Hover a notable to see what it does." />
-            <WField v-model="filter" :class="$style.end" :style="{ width: '11rem' }" placeholder="Filter notables or tags" icon="fas fa-filter" data-qa="megalo-filter" />
+            <WSearchField v-model="filter" :class="$style.end" :style="{ width: '11rem' }" things="notables or tags" data-qa="megalo-filter" />
           </div>
           <div v-if="!pool.length" :class="$style.dim">The notable list loads when the window opens…</div>
           <div v-for="g in shownGroups" :key="g.tag" :class="$style.ngroup">
             <span :class="$style.glabel">{{ g.tag }}</span>
             <div :class="$style.chips">
-              <span v-for="r in g.rows" :key="r.name" :class="[$style.nchip, { [$style.on]: isOn(r.name), [$style.must]: isMust(r.name) }]" data-qa="megalo-notable"
-                role="checkbox" :aria-checked="isOn(r.name)" tabindex="0"
-                @click="toggleOn(r.name)" @keydown.enter.space.prevent="toggleOn(r.name)" @contextmenu.prevent="toggleMust(r.name)"
-                @mouseenter="tip($event, r)" @mouseleave="untip" @focus="tip($event, r)" @blur="untip">
+              <!-- The WChip look (.w-chip); a click steps Want → Must → off. -->
+              <span v-for="r in g.rows" :key="r.name" class="w-chip" :class="[$style.nchip, { on: isOn(r.name), [$style.must]: isMust(r.name) }]" data-qa="megalo-notable"
+                role="checkbox" :aria-checked="isMust(r.name) ? 'true' : isOn(r.name) ? 'mixed' : 'false'" :data-state="isMust(r.name) ? 'must' : isOn(r.name) ? 'want' : 'off'" tabindex="0"
+                v-mod-tip="notableTip(r)" @click="cycle(r.name)" @keydown.enter.space.prevent="cycle(r.name)">
                 <i v-if="isMust(r.name)" class="fas fa-lock" :class="$style.lock" title="Must have: every result has it" />
                 <span>{{ r.name }}</span>
                 <input :class="[$style.wt, { [$style.edited]: edited(r.name) }]" type="number" min="0" max="100" step="5"
@@ -67,7 +67,7 @@
           <WButton v-if="otherRows.length" size="sm" variant="ghost" :class="$style.more" @click="showOther = !showOther">
             {{ showOther ? 'Hide' : 'Show' }} {{ otherRows.length }} notables that fit none of your tags
           </WButton>
-          <span v-if="pool.length && !shownGroups.length" :class="$style.dim">No notable matches that filter.</span>
+          <WNoMatch v-if="pool.length && !shownGroups.length && filter.trim()" :query="filter" @clear="filter = ''" />
           <span v-if="unknown" :class="$style.dim" data-qa="megalo-unknown">{{ unknown }} new {{ unknown === 1 ? 'notable isn\'t' : 'notables aren\'t' }} in the trade data yet, so {{ unknown === 1 ? 'it\'s' : 'they\'re' }} left out.</span>
         </section>
 
@@ -97,6 +97,7 @@
 </template>
 
 <script setup lang="ts">
+import { nextNotableState } from './cycle'
 // The Megalomaniac searcher: reads your build's tags, scores every notable
 // Megalomaniac can roll, and searches trade for jewels with the ones you tick.
 import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
@@ -105,7 +106,10 @@ import { AppConfig, poeWebApi } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import { WButton, WChip, WField, WInfo, WPanel, WSegmented, toast } from '../ui'
-import { hideHelp, showHelp } from '../ui/help-tip'
+import { vModTip } from '../ui/tooltip/mod-line-tip'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
+import type { ModLine } from '../ui/tooltip/mod-line-tip'
 import { tradeUrl } from '../search/search'
 import { priceCheckTradeStatus } from '../shared/trade-status'
 import SaveSearchButton from '../trade-searches/SaveSearchButton.vue'
@@ -266,12 +270,15 @@ function setPick (name: string, change: NotablePick) {
   config.picks = { ...config.picks, [source.value.key]: mine }
 }
 function isOn (name: string): boolean { return isMust(name) || (picks.value[name]?.on ?? defaults.value.has(name)) }
-// Unticking a must-have drops the must too.
-function toggleOn (name: string) { setPick(name, isOn(name) ? { on: false, must: undefined } : { on: true }) }
 function isMust (name: string): boolean { return picks.value[name]?.must === true }
-function toggleMust (name: string) {
-  if (!isMust(name) && mustCount.value >= 3) { toast('Up to 3 must-haves: a Megalomaniac has 3 notables', { anchor: panel.value?.el }); return }
-  setPick(name, isMust(name) ? { must: undefined } : { must: true, on: true })
+// One click for all three: off → Want → Must → off (cycle.ts). With 3 musts
+// already, Want goes straight back to off (the toast says why).
+function cycle (name: string) {
+  const { next, full } = nextNotableState(isMust(name) ? 'must' : isOn(name) ? 'want' : 'off', mustCount.value)
+  if (full) toast('Up to 3 must-haves: a Megalomaniac has 3 notables', { anchor: panel.value?.el })
+  if (next === 'off') setPick(name, { on: false, must: undefined })
+  else if (next === 'want') setPick(name, { on: true })
+  else setPick(name, { must: true, on: true })
 }
 function edited (name: string): boolean { return picks.value[name]?.weight != null }
 function weightOf (r: Scored): number { return picks.value[r.name]?.weight ?? r.weight }
@@ -283,7 +290,7 @@ function setWeight (r: Scored, raw: string) {
 function resetWeight (name: string) { setPick(name, { weight: undefined }) }
 
 // ---- grouping and filter ----
-const filter = shallowRef<string | number>('')
+const filter = shallowRef('')
 const showOther = shallowRef(false)
 function matches (r: Scored, q: string): boolean {
   return !q || r.name.toLowerCase().includes(q) || r.tags.some(t => t.toLowerCase().includes(q)) ||
@@ -307,23 +314,20 @@ const shownGroups = computed(() => {
   return out
 })
 
-// ---- tooltip ----
-const tipOwner = {}
-function tip (e: Event, r: Scored) {
+// ---- tooltip: the game-style mod card, as every mod row (v-mod-tip) ----
+function notableTip (r: Scored): ModLine {
   const hits = r.matched.map(id => r.weak.includes(id) ? `${id} (yours, not your minions')` : id)
-  const parts = [
-    r.name,
-    r.stats.join('\n'),
-    `Tags: ${r.tags.length ? r.tags.join(', ') : 'none'}`,
-    hits.length ? `Suggested ${r.weight}: fits ${hits.join(', ')}.` : 'Fits none of your tags.',
-    ...(edited(r.name) ? [`Your weight: ${weightOf(r)}.`] : []),
-    isMust(r.name) ? 'Must have: every result has it. Right-click to undo.' : 'Right-click: must have it.',
-    isOn(r.name) ? 'Click to leave it out of the search.' : 'Click to add it to the search.'
-  ]
-  showHelp(tipOwner, e.currentTarget as HTMLElement, parts.join('\n\n'), undefined, { lines: true })
+  return {
+    head: r.name,
+    text: r.stats,
+    notes: [
+      `Tags: ${r.tags.length ? r.tags.join(', ') : 'none'}`,
+      hits.length ? `Suggested ${r.weight}: fits ${hits.join(', ')}.` : 'Fits none of your tags.',
+      edited(r.name) && `Your weight: ${weightOf(r)}.`,
+      isMust(r.name) ? 'Must: every result has it. Click to leave it out.' : isOn(r.name) ? 'Want: it counts. Click to make it a must.' : 'Off. Click to want it.'
+    ]
+  }
 }
-function untip () { hideHelp(tipOwner) }
-onBeforeUnmount(untip)
 
 // ---- search ----
 const ticked = computed(() => scoredAll.value.filter(r => isOn(r.name)).sort((a, b) => Number(isMust(b.name)) - Number(isMust(a.name)) || weightOf(b) - weightOf(a)))
@@ -403,13 +407,9 @@ const sourceLine = computed(() => source.value.label)
 .browse { display: grid; gap: 6px; padding: 6px; background: var(--w-well); border: 1px solid var(--w-well-line); }
 .tgroup, .ngroup { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 8px; align-items: start; }
 .glabel { color: var(--w-dim); font-size: 0.9em; padding-top: 2px; }
-.nchip {
-  display: inline-flex; align-items: center; gap: 4px; padding: 1px 4px 1px 7px; cursor: pointer;
-  border: 1px solid var(--w-line); color: var(--w-dim); border-radius: var(--w-r-sm); background: none;
-}
-.nchip:hover, .nchip:focus-visible { color: var(--w-fg); outline: none; border-color: var(--w-line-strong); }
-.nchip.on { color: var(--w-fg); border-color: var(--w-accent); background: var(--w-accent-soft); }
-.nchip.must { border-color: var(--w-gold-hi); box-shadow: inset 0 0 0 1px var(--w-gold-hi); }
+.nchip { display: inline-flex; align-items: center; gap: 4px; padding-right: 4px; cursor: pointer; }
+.nchip:hover, .nchip:focus-visible { color: var(--w-fg); outline: none; }
+.must { box-shadow: inset 0 0 0 1px var(--w-gold-hi); }
 .lock { color: var(--w-gold-hi); font-size: 0.8em; }
 .wt {
   width: 3.1em; background: transparent; border: 1px solid transparent; color: var(--w-gold-hi);

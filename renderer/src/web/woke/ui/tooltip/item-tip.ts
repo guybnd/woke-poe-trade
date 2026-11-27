@@ -8,8 +8,10 @@ import type { ObjectDirective } from 'vue'
 import { ITEM_BY_REF } from '@/assets/data'
 import { Host } from '@/web/background/IPC'
 import { usePoeninja } from '@/web/background/Prices'
-import { buildTip, dropOf, dropSource, kindOfNinjaType, packFiles, randomDropsFirst } from './tip-content'
-import type { TipKind, TipModel, TipPack } from './tip-content'
+import { buildTip, dropOf, dropSource, kindOfNinjaType, packFiles, randomDropsFirst, tieredMapBase } from './tip-content'
+import { isNinjaRowType } from './ninja-row-types'
+import type { TipCorpse, TipKind, TipModel, TipPack } from './tip-content'
+import { isCorpse } from '../../shared/corpses'
 import { hideTip, marketFromRow, onTipHide, showTipAt } from './tooltip'
 import { retireHint } from '../../shared/hints'
 import { offerItem, openItemMenu } from './item-menu'
@@ -126,6 +128,13 @@ export async function loadTipBases (): Promise<TipPack['bases'] | null> {
   return pack.bases ?? null
 }
 
+// A corpse's spectre: its category and abilities (tips/corpses.json), only
+// read for a corpse.
+export async function loadTipCorpse (name: string): Promise<TipCorpse | null> {
+  await loadFile('corpses')
+  return pack.corpses?.[name] ?? null
+}
+
 // Card rewards and stack sizes, currency texts: the tooltip's item file.
 export async function loadTipItems (): Promise<TipPack['items'] | null> {
   await loadFile('items')
@@ -211,18 +220,71 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
     return { model, market: null, uniques }
   }
   const kind = ref.type ? kindOfNinjaType(ref.type) : kindOfName(ref.name)
-  await Promise.all(packFiles(kind).map(loadFile))
+  // A row named after what prices it (a Forbidden jewel's notable, a cluster
+  // jewel's enchant, a map tier): the item it stands for (ninja-row-tip.ts).
+  if (isNinjaRowType(ref.type)) return rowTipFor(ref, kind)
+  await Promise.all([...packFiles(kind), ...(kind === 'item' && isCorpse(ref.name) ? ['corpses' as const] : [])].map(loadFile))
   const base = kind === 'unique' ? ITEM_BY_REF('UNIQUE', ref.name)?.[0]?.unique?.base : undefined
   let model = buildTip(pack, { name: ref.name, kind, variant: ref.variant, base })
+  // A map by tier ("Map (Tier 16)", poe.ninja's 3.30 rows): its base, under that name.
+  const tiered = model ? null : tieredMapBase(ref.name)
+  if (tiered) {
+    const m = buildTip(pack, { name: tiered, kind })
+    if (m) model = { ...m, name: ref.name }
+  }
   const market = marketFor(ref, kind)
   if (model && kind === 'card') model = await withCardRarity(model, ref.name, market)
   if (model && kind === 'gem') model = await withGemExtras(model, ref)
   if (model && kind === 'unique') model = await withUniqueExtras(model, ref, market)
   if (kind === 'item' && / Map$/.test(ref.name)) model = await withMapCards(model, ref.name)
   if (model && kind === 'item' && /^(?:\w+ )?Essence of /.test(ref.name)) model = await withEssence(model, ref.name)
-  if (model && kind === 'item' && pack.bases?.[ref.name]) return await withBaseExtras(model, ref, market)
+  // Corpses have an empty bases entry; they take "You have" like currency.
+  if (model && kind === 'item' && pack.bases?.[ref.name] && !isCorpse(ref.name)) return await withBaseExtras(model, ref, market)
   if (model && (kind === 'item' || kind === 'card')) model = await withHeld(model, ref.name, market)
   return { model, market }
+}
+
+// A row that stands for another item (ninja-row-tip.ts, loaded only for these):
+// that item's tooltip, then the same extras its kind gets, for the item itself
+// (the row's price is the row's, not the item's).
+async function rowTipFor (ref: ItemTipRef, kind: TipKind): Promise<{ model: TipModel | null, market: TipMarket | null, uniques?: TipBaseUnique[] }> {
+  const { ninjaRowTip, withForbiddenNotable } = await import('./ninja-row-tip')
+  const row = ninjaRowTip(ref, kind)
+  await Promise.all(packFiles(row.kind).map(loadFile))
+  let model = row.build ? row.build(pack) : buildTip(pack, { name: ref.name, kind: row.kind, variant: ref.variant })
+  const market = marketFor(ref, kind)
+  if (model && row.forbidden) model = withForbiddenNotable(model, await forbiddenNotable(row.forbidden.notable))
+  if (row.map) model = await withMapCards(model, row.map)
+  if (!model) return { model, market }
+  const item: ItemTipRef = { name: model.name, noPrice: true }
+  // A real item's name only (not the Forbidden pair's).
+  const known = row.kind === 'unique' ? !!(pack.uniques?.[model.name] ?? pack['unique-extras']?.[model.name]) : true
+  if (row.kind === 'unique' && known) model = await withUniqueExtras(model, item, null)
+  if (row.kind === 'gem') model = await withGemExtras(model, item)
+  if (row.kind === 'item' && pack.bases?.[model.name] && !row.map) {
+    const done = await withBaseExtras(model, item, market)
+    model = done.model
+    if (done.uniques) return { model, market, uniques: done.uniques }
+  }
+  // "You have N" counts by name: only where the row is the item itself.
+  if (model.name === ref.name && (row.kind === 'item' || row.kind === 'card')) model = await withHeld(model, ref.name, market)
+  return { model, market }
+}
+
+// A Forbidden jewel's notable from the passive tree: its class, ascendancy and
+// stats. Without the tree the tooltip shows the jewel alone.
+async function forbiddenNotable (name: string): Promise<{ cls: string, group: string | null, stats: string[] } | null> {
+  try {
+    const [{ loadPassiveTree }, { notableClass, ascendancyShown }] = await Promise.all([import('../../pob-builds/passive-tree'), import('../../forbidden/notables')])
+    const tree = await loadPassiveTree()
+    for (const n of tree.values()) {
+      if (n.name !== name) continue
+      const cls = notableClass(n.name, n.asc)
+      if (!cls) continue
+      return { cls, group: ascendancyShown(n.asc), stats: n.stats.flatMap(s => s.split('\n')).map(s => s.trim()).filter(Boolean) }
+    }
+  } catch {}
+  return null
 }
 
 // "You have 34 · 1.2 div" from Net worth's last stash read (Guy's pick I9).

@@ -1,5 +1,6 @@
 // Loads the source filter, applies the widget's edits, and saves the result.
 import { computed, onUnmounted, shallowRef, ref, toRaw, watch } from 'vue'
+import type { BaseRow } from './weights'
 import { MainProcess } from '@/web/background/IPC'
 import { hostRequest } from '../shared/host'
 import { customSoundsIn, installPackSounds } from './sounds'
@@ -21,7 +22,8 @@ import { clusterPrices, clusterPricesFor, loadClusterPrices } from './cluster-ni
 import { describeStep, measureSteps, observe, settingsAt } from './timeline'
 import type { Settings } from './timeline'
 import { HISTORY_SIZE, baseFromCopy, isWokeCopy, outputName } from './widget'
-import { useFilterHistory } from './history-file'
+import { historyDocFor, useFilterHistory } from './history-file'
+import { deleteProfile as dropProfile, switchProfileData } from './profiles'
 import type { LootFilterWidget } from './widget'
 import { useBuildRuleInput } from './build-input'
 import { livePriceMoves, lockKey, lockedByEdits, mergeMoves, planRetier, tierRank } from './economy'
@@ -71,6 +73,10 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   const doc = shallowRef<FilterDoc | null>(null)
   const statuses = shallowRef<EditStatus[]>([])
   const buildBlockCount = ref(0)
+  // Rare weights (beta): rules written and about how many characters.
+  const weightRules = ref(0)
+  const weightChars = ref(0)
+  const weightBases = shallowRef<BaseRow[]>([])
   const loading = ref(false)
   const saving = ref(false)
   const error = ref<string | null>(null)
@@ -133,7 +139,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   const userSig = () => hash(JSON.stringify([cfg().edits, buildSig.value, cfg().priceTiers.on, cfg().priceTiers.moves.map(moveKey), cfg().rules, cfg().sourceName, cfg().sourceOnline, cfg().saveMode, presetsOn(cfg().presets) ? presetsSig() : null, sourceSig()]))
   // The build part is only known once the build file is read, so start from
   // what the last save used.
-  const savedEdits = ref(JSON.stringify([cfg().edits, cfg().savedBuildSig ?? hash(buildSig.value), cfg().savedExtraSig ?? extraSig()]))
+  const startSig = () => JSON.stringify([cfg().edits, cfg().savedBuildSig ?? hash(buildSig.value), cfg().savedExtraSig ?? extraSig()])
+  const savedEdits = ref(startSig())
   // woke: until a save records it, an old config counts as saved if its edits
   // match what the last save wrote.
   const userDirty = () => {
@@ -292,6 +299,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     builtRulesSig = rulesSig()
     const c = compose(baseText.value)
     buildBlockCount.value = c.buildCount
+    weightRules.value = c.weightRules
+    weightChars.value = c.weightChars
+    weightBases.value = c.weightBases
     safetyCount.value = c.netCount
     safetyStackCount.value = c.netStackCount
     safetyList.value = c.netList
@@ -400,7 +410,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       delete c.timeline
       delete c.history
     }
-  })
+  }, undefined, historyDocFor(cfg().activeProfile ?? 1))
   const timeline = history.timeline
   history.ready.then(() => idle(() => measureSteps(toRaw(timeline.value)))).catch(() => {})
   // Writes a change still waiting (quitting, or the widget going away),
@@ -645,11 +655,14 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     await load()
   }
 
+  // A profile switch is under way (switchProfile): strictness waits.
+  const switching = ref(false)
   // Switches strictness and saves. Returns Undo, or null if nothing was saved.
   let levelSwitch = 0
   async function setLevel (level: number, opts: { auto?: boolean } = {}): Promise<(() => void) | null> {
     const ns = cfg().neversink
-    if (!ns.on) return null
+    if (!ns.on || switching.value) return null
+    const profile = cfg().activeProfile
     const before = ns.level
     const next = clampLevel(level)
     if (next === before) return null
@@ -658,13 +671,14 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     await load()
     // A newer switch (a second key press) saves its own level. Going by the switch,
     // not the level: A, B, A has this load's rules out of date with the level right.
-    if (mine !== levelSwitch) return null
+    if (mine !== levelSwitch || cfg().activeProfile !== profile) return null
     if (!doc.value || !await save({ auto: opts.auto })) return null
     return () => { setLevel(before).catch(() => {}) }
   }
 
   // Hotkey / button: one step, which pauses the ladder until you resume it.
   async function stepLevel (dir: 1 | -1) {
+    if (switching.value) return
     const ns = cfg().neversink
     if (!ns.on) {
       toast('Strictness keys need NeverSink from GitHub. Turn it on in the loot filter editor.')
@@ -705,6 +719,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // over from it. The reload waits for your click on the card: this can come from
   // a timer (scrolling), and GGG's rules don't allow a chat command from one.
   async function pickLevel (level: number) {
+    if (switching.value) return
     const ns = cfg().neversink
     const auto = cfg().strictAuto
     const next = clampLevel(level)
@@ -748,7 +763,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // for you to press Reload now.
   function followLadder (): boolean {
     const ns = cfg().neversink
-    if (!ns.on || !doc.value || saving.value) return false
+    if (!ns.on || !doc.value || saving.value || switching.value) return false
     const target = ladderTarget(cfg().strictAuto, recentAreas.value)
     if (target == null || target === ns.level) return false
     // woke: a switch saves, and you haven't said these are ready for the game.
@@ -1105,7 +1120,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     error.value = null
     try {
       const name = outputName(cfg())
-      if (!cfg().sourceOnline && (cfg().saveMode === 'overwrite' || isWokeCopy(cfg().sourceName)) && baseNeedsBackup.value) {
+      if (!cfg().sourceOnline && name.toLowerCase() === cfg().sourceName.toLowerCase() && baseNeedsBackup.value) {
         await hostRequest('filter-write', { dir: cfg().folder, name: cfg().sourceName + '.bak', text: baseText.value })
         baseNeedsBackup.value = false
       }
@@ -1228,6 +1243,68 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // A new active build, or a rule switched on or off: show it right away.
   watch(buildSig, () => { if (baseText.value != null) rebuild() })
 
+  // woke: named filter profiles (profiles.ts). Switching saves the one you
+  // leave, brings the other one in with its own undo steps, and (unless told
+  // not to) saves it and has the game load it, as Save does.
+  async function switchProfile (id: number, opts: { gameToo?: boolean } = {}): Promise<boolean> {
+    const c = cfg()
+    if (switching.value || id === c.activeProfile || !c.profiles.some(p => p.id === id)) return false
+    switching.value = true
+    // A load or strictness switch still running belongs to the one you leave:
+    // it must not land in the other.
+    loadSeq++
+    levelSwitch++
+    const leaving = c.activeProfile
+    let mySeq = -1
+    try {
+      // The step you were making goes on the one you leave.
+      await history.ready.catch(() => {})
+      if (settleTimer) settle()
+      // Its file is brought up to date only when nothing of yours is unsaved
+      // (prices moved); your unsaved changes stay in the profile, as they are.
+      if (doc.value && baseText.value != null && (dirty.value || sourceChanged.value)) {
+        await save({ noReload: true }).catch(() => false)
+      }
+      await saveQueue
+      if (cfg().activeProfile !== leaving || !switchProfileData(c, id)) return false
+      // Taken from the profile, as on start.
+      savedEdits.value = startSig()
+      settled = copySettings()
+      lastSaved.value = null
+      sourceChanged.value = false
+      pendingReload.value = false
+      netWaitsForReload.value = false
+      problems.value = []
+      sentOver.value = null
+      ladderHeldFor = null
+      baseVersion.value = null
+      clearUndoToasts()
+      baseText.value = null
+      doc.value = null
+      // The skeleton, not "pick a filter", while the other one loads.
+      loading.value = true
+      await history.switchTo(historyDocFor(id))
+      settled = copySettings()
+      // load() takes the next number; a newer load (a key press) owns the flag.
+      mySeq = loadSeq + 1
+      await load()
+      if (opts.gameToo !== false && doc.value && cfg().activeProfile === id) await save()
+      return true
+    } finally {
+      if (mySeq === -1 || loadSeq === mySeq) loading.value = false
+      switching.value = false
+    }
+  }
+
+  // A profile not in use goes, with its undo steps. Its .filter file stays.
+  function deleteProfile (id: number): boolean {
+    if (!dropProfile(cfg(), id)) return false
+    // Ids are never used again (lastProfileId), so a leftover file can't
+    // hand its steps to a new profile.
+    hostRequest('doc-delete', historyDocFor(id)).catch(() => {})
+    return true
+  }
+
   const api = {
     get config () { return cfg() },
     prices,
@@ -1253,7 +1330,10 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     // Undo steps and save points (their own file, not the settings).
     timeline,
     saves: history.saves,
-    historyReady: history.ready,
+    get historyReady () { return history.ready },
+    switchProfile,
+    deleteProfile,
+    switching,
     flushHistory,
     sourceLook,
     sourceVisibility,
@@ -1285,6 +1365,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     resumeLadder,
     buildInput,
     buildBlockCount,
+    weightRules,
+    weightChars,
+    weightBases,
     files,
     folder,
     doc,

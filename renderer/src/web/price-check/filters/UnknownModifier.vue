@@ -2,7 +2,7 @@
   <div class="py-2 border-b border-gray-700 flex flex-col">
     <div class="pb-1 flex items-baseline">
       <i class="w-5 shrink-0 fas fa-exclamation-triangle text-orange-400"></i>
-      <div class="search-text mr-1 relative flex min-w-0" style="line-height: calc(1rem * var(--w-text-scale, 1));">
+      <div class="search-text mr-1 relative flex min-w-0" style="line-height: calc(1rem * var(--w-text-user, 1));">
         <span class="truncate"><ItemModifierText :text="stat.text" /></span>
         <span class="search-text-full whitespace-pre-wrap cursor-default"><ItemModifierText :text="stat.text" /></span>
       </div>

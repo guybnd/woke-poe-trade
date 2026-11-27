@@ -11,11 +11,17 @@
       <input v-model.number="fallbackAreaLevel" type="number" min="1" max="86" class="rounded w-input px-1 block w-24 font-sans">
     </div>
 
-    <div class="flex flex-col gap-1">
+    <div v-if="namedProfile" class="flex flex-col gap-1">
+      <span>Where saves go</span>
+      <span class="w-dim text-sm">The profile in use, {{ namedProfile }}, saves to its own file. Pick it in game once.</span>
+    </div>
+    <div v-else class="flex flex-col gap-1">
       <span>Where saves go</span>
       <label class="flex items-start gap-2">
         <input v-model="saveMode" type="radio" value="copy" style="margin-top: 2px;">
-        <span class="flex items-center gap-2">A separate copy (recommended) <w-info text="Saved as &quot;&lt;filter&gt; (woke).filter&quot;. The NeverSink file stays untouched, so downloading a new version never fights your edits. Pick the (woke) filter in game once." /></span>
+        <span class="flex items-center gap-2">A separate copy (recommended) <w-info text="Saved as **&lt;filter&gt; (woke).filter**.
+- The NeverSink file stays untouched, so a new version never fights your edits.
+- Pick the (woke) filter in game once." /></span>
       </label>
       <label class="flex items-start gap-2">
         <input v-model="saveMode" type="radio" value="overwrite" style="margin-top: 2px;">
@@ -23,14 +29,11 @@
       </label>
     </div>
 
-    <label class="flex items-center gap-2">
-      <input v-model="reloadViaChat" type="checkbox">
-      <span>After saving, type <code>/itemfilter &lt;name&gt;</code> in chat so the game reloads the filter</span>
-    </label>
-    <label class="flex items-center gap-2 ml-6">
-      <input v-model="reloadWhenSafe" type="checkbox" :disabled="!reloadViaChat">
-      <span class="flex items-center gap-2">Quick fixes reload at once only in town or hideout <w-info text="Elsewhere they wait for &quot;Reload now&quot;. Automatic saves always wait: GGG's rules need a key press or click for every command." /></span>
-    </label>
+    <WToggle v-model="reloadViaChat">After saving, type <code>/itemfilter &lt;name&gt;</code> in chat so the game reloads the filter</WToggle>
+    <div class="flex items-center gap-2 ml-6">
+      <WToggle v-model="reloadWhenSafe" :disabled="!reloadViaChat">Quick fixes reload at once only in town or hideout</WToggle>
+      <w-info text="Elsewhere they wait for &quot;Reload now&quot;. Automatic saves always wait: GGG's rules need a key press or click for every command." />
+    </div>
 
     <div class="flex items-center gap-2 w-dim text-sm">
       How your edits are kept
@@ -43,12 +46,13 @@
 import { computed, defineComponent } from 'vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
 import WInfo from '../ui/WInfo.vue'
+import WToggle from '../ui/WToggle.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
 import type { LootFilterWidget } from './widget'
 
 export default defineComponent({
   name: 'Loot filter',
-  components: { WHotkeyCell, WInfo },
+  components: { WHotkeyCell, WInfo, WToggle },
   props: configProp<LootFilterWidget>(),
   setup (props) {
     return {
@@ -64,6 +68,12 @@ export default defineComponent({
         }
       }),
       saveMode: configModelValue(() => props.configWidget, 'saveMode'),
+      // A named profile always saves to "<name> (woke).filter": copy or overwrite doesn't apply.
+      namedProfile: computed(() => {
+        const w = props.configWidget
+        const p = w.profiles?.find(x => x.id === w.activeProfile)
+        return p && !p.legacyFile ? `${p.name} (woke).filter` : null
+      }),
       reloadViaChat: configModelValue(() => props.configWidget, 'reloadViaChat'),
       reloadWhenSafe: configModelValue(() => props.configWidget, 'reloadWhenSafe')
     }

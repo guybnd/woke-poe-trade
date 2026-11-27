@@ -3,7 +3,7 @@
 // dismiss each line.
 import { test, expect } from './harness'
 import { NEWS } from '../../renderer/src/web/woke/tab-bar/news'
-import { gotoTargets } from '../../renderer/src/web/woke/tab-bar/goto-targets'
+import { NO_TABS, gotoTargets } from '../../renderer/src/web/woke/tab-bar/goto-targets'
 import { NEWS_DEMOS } from '../../renderer/src/web/woke/tab-bar/news-demos'
 
 test('players who update get a What\'s new icon in the dock; a hover lists the lines', async ({ overlay }) => {
@@ -24,7 +24,8 @@ test('with the overlay open: Show me opens the tool, dismiss takes a line off, t
   const lines = icon.locator('[data-whats-new-line]')
   await expect(lines).toHaveCount(NEWS.length)
 
-  await lines.filter({ hasText: 'Atlas strategies' }).first().locator('[data-whats-new-dismiss]').click()
+  // Its tool's heading may be folded (only the newest tool's opens).
+  await (await overlay.whatsNewLine('poeatlasplanner.com')).first().locator('[data-whats-new-dismiss]').click()
   await expect(lines).toHaveCount(NEWS.length - 1)
 
   await (await overlay.whatsNewLine('Planner tab for T17')).getByRole('button', { name: 'Show me' }).click()
@@ -34,7 +35,8 @@ test('with the overlay open: Show me opens the tool, dismiss takes a line off, t
   // Net worth's reader is off: its line still shows, with nothing to show, so no
   // Show me (Guy: show it, or don't offer to). Dismiss all takes the icon.
   const netWorth = icon.locator('[data-whats-new-group]').filter({ hasText: 'Net worth' })
-  await netWorth.locator('[data-whats-new-group-head]').click()
+  // Opened, if it isn't already (the newest tool's group opens by itself).
+  if (await netWorth.first().getAttribute('data-open') === null) await netWorth.locator('[data-whats-new-group-head]').click()
   await expect(netWorth.locator('[data-whats-new-line]').first()).toBeVisible()
   await expect(netWorth.getByRole('button', { name: 'Show me' })).toHaveCount(0)
   await icon.locator('[data-whats-new-dismiss-all]').click()
@@ -49,28 +51,31 @@ test('lines fold under their tool: one group open at a time, × on a heading dis
   const groups = icon.locator('[data-whats-new-group]')
   const heads = icon.locator('[data-whats-new-group-head]')
   // Price check splits by topic; the group with the newest line starts open.
-  const tooltips = groups.filter({ has: overlay.page.getByText('· Tooltips') })
-  const maps = groups.filter({ has: overlay.page.getByText('· Maps') })
-  const nTips = NEWS.filter(n => n.topic === 'Tooltips').length
+  // We open whichever of Tooltips and Maps isn't open yet (`other`).
+  const tips = groups.filter({ has: overlay.page.getByText('· Tooltips') })
   await expect(icon.locator('[data-open]')).toHaveCount(1)
-  await expect(tooltips.locator('[data-whats-new-group-head]')).toContainText(String(nTips))
+  const otherTopic = await tips.getAttribute('data-open') == null ? 'Tooltips' : 'Maps'
+  const firstTopic = otherTopic === 'Maps' ? 'Tooltips' : 'Maps'
+  const first = groups.filter({ has: overlay.page.getByText(`· ${firstTopic}`) })
+  const other = groups.filter({ has: overlay.page.getByText(`· ${otherTopic}`) })
+  await expect(first.locator('[data-whats-new-group-head]')).toContainText(String(NEWS.filter(n => n.topic === firstTopic).length))
   await overlay.snap('what\'s new folded by tool')
-  await maps.locator('[data-whats-new-group-head]').click()
-  await expect(maps).toHaveAttribute('data-open', '')
+  await other.locator('[data-whats-new-group-head]').click()
+  await expect(other).toHaveAttribute('data-open', '')
   await expect(icon.locator('[data-open]')).toHaveCount(1)
-  await expect(maps.locator('[data-whats-new-line]').first()).toBeVisible()
-  await expect(tooltips.locator('[data-whats-new-line]').first()).toBeHidden()
+  await expect(other.locator('[data-whats-new-line]').first()).toBeVisible()
+  await expect(first.locator('[data-whats-new-line]').first()).toBeHidden()
   // A folded heading shows its newest line, faint; the open one doesn't.
-  await expect(tooltips.locator('[data-whats-new-preview]')).toContainText(NEWS.find(n => n.topic === 'Tooltips')!.note.replace(/^New: ./, '').slice(0, 20))
-  await expect(maps.locator('[data-whats-new-preview]')).toHaveCount(0)
-  // Remembered: the card reopens on Maps.
-  await expect.poll(() => fakeApp.readConfig()?.woke?.newsOpen).toBe('price-check:Maps')
+  await expect(first.locator('[data-whats-new-preview]')).toContainText(NEWS.find(n => n.topic === firstTopic)!.note.replace(/^New: ./, '').slice(0, 20))
+  await expect(other.locator('[data-whats-new-preview]')).toHaveCount(0)
+  // Remembered: the card reopens on the group we opened.
+  await expect.poll(() => fakeApp.readConfig()?.woke?.newsOpen).toBe(`price-check:${otherTopic}`)
   // Its heading's × takes every line of the group.
   const before = await icon.locator('[data-whats-new-line]').count()
-  const nMaps = NEWS.filter(n => n.topic === 'Maps').length
-  await maps.locator('[data-whats-new-dismiss-group]').click()
-  await expect(icon.locator('[data-whats-new-line]')).toHaveCount(before - nMaps)
-  await expect(icon).not.toContainText('· Maps')
+  const nOther = NEWS.filter(n => n.topic === otherTopic).length
+  await other.locator('[data-whats-new-dismiss-group]').click()
+  await expect(icon.locator('[data-whats-new-line]')).toHaveCount(before - nOther)
+  await expect(icon).not.toContainText(`· ${otherTopic}`)
   expect(await heads.count()).toBeGreaterThan(0)
 })
 
@@ -82,7 +87,8 @@ test('a fresh install gets no What\'s new icon, even before setup is finished', 
 
 // Every line's Show me lands on the tab it names (tab-bar/goto.ts). Net worth's
 // lines have none here, since the stash reader is off (tested below with it on).
-for (const n of NEWS.filter(n => n.goto && n.wmType !== 'woke-net-worth' && !NEWS_DEMOS[n.id])) {
+// A tool with no tabs flashes its spot instead (atlas-strategies.spec.ts).
+for (const n of NEWS.filter(n => n.goto && n.wmType !== 'woke-net-worth' && !NEWS_DEMOS[n.id] && !NO_TABS.includes(n.wmType))) {
   test(`Show me on "${n.id}" opens ${n.name} on its tab`, async ({ overlay }) => {
     await overlay.boot({ overlayActive: true, whatsNew: true })
     const icon = overlay.dockIcon('whats-new')
@@ -94,6 +100,17 @@ for (const n of NEWS.filter(n => n.goto && n.wmType !== 'woke-net-worth' && !NEW
     await expect(overlay.page.getByRole('tab', { name: label, selected: true }).first()).toBeVisible()
   })
 }
+
+test('Show me on the PoB builds import line opens its import box and flashes it', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true, whatsNew: ['pob-import-all-sites'] })
+  const icon = overlay.dockIcon('whats-new')
+  await icon.click()
+  await overlay.page.mouse.move(5, 5)
+  await icon.locator('[data-whats-new-line]').getByRole('button', { name: 'Show me' }).click()
+  const box = overlay.page.locator('[data-goto-spot="import"]')
+  await expect(box).toBeVisible()
+  await expect(box).toHaveAttribute('data-goto-flashed', '')
+})
 
 test('Show me on a switched-off tool turns it on and opens the line\'s tab', async ({ overlay }) => {
   await overlay.boot({ overlayActive: true, whatsNew: true, off: ['map-mods'] })

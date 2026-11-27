@@ -48,7 +48,7 @@ import { agoPhrase, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { toast } from '../ui/layer'
 import { RUN_HOLD_TARGET, parseHotkeyTarget, parseListedTarget, setSection } from './widget'
-import { DOCS, GLANCE_LABELS, glanceFromPoints, glanceKey, glanceText, isGlance, ledgerKey, nextShows } from './glance'
+import { DOCS, glanceFromPoints, glanceLabel, glanceKey, glanceText, isGlance, ledgerKey, nextShows } from './glance'
 import type { Glance } from './glance'
 import { isRunGlance, runGlanceKey } from './runs'
 import type { RunGlance } from './runs'
@@ -60,6 +60,7 @@ import type { NetWorthWidget, ReaderStatus } from './widget'
 import { useGoto } from '../tab-bar/goto'
 import { foldedOf, toggleFold } from './layout'
 import { askListed } from './listed-ask'
+import { revealSelling } from './selling-reveal'
 
 const NetWorthPanel = defineAsyncComponent(() => import('./NetWorthPanel.vue'))
 const NetWorthCard = defineAsyncComponent(() => import('./NetWorthCard.vue'))
@@ -86,6 +87,10 @@ useGoto(props.config, 'woke-net-worth', {
       if (foldedOf(props.config.layout).perHour) props.config.layout = { ...props.config.layout, folded: toggleFold(props.config.layout?.folded, 'perHour') }
     },
     'faustus-box': () => {},
+    'past-runs': () => {},
+    // The Falling chip by the table's search; with nothing falling, it shows
+    // for a minute anyway.
+    'worth-selling': () => { revealSelling() },
     'still-cheapest': () => {},
     // Listed with its Stale chip picked.
     'stale': () => { askListed(props.config.wmId, 'stale') }
@@ -201,7 +206,7 @@ function swapGlance (dir: 1 | -1) {
   if (!glance.value) return
   const next = nextShows(props.config.glanceShows, dir)
   props.config.glanceShows = next
-  dockEl.value?.peek(`${GLANCE_LABELS[next]}${stack.value ? '' : ': not yet'}`, 1500)
+  dockEl.value?.peek(`${glanceLabel(glance.value, next, nowMinute.value)}${stack.value ? '' : ': not yet'}`, 1500)
 }
 
 const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {

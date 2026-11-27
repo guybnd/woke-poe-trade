@@ -40,7 +40,7 @@
       <template v-if="t.cheap.length">
         <button type="button" :class="[$style.row, $style.fold]" data-deck="cheap" :aria-expanded="cheapOpen"
           :title="cheapTitle" @click="cheapOpen = !cheapOpen">
-          <i class="fas text-xs" :class="cheapOpen ? 'fa-caret-down' : 'fa-caret-right'" />
+          <WFoldCaret :open="cheapOpen" />
           <span class="w-trunc">{{ t.cheapQty.toLocaleString('en-US') }} {{ t.cheapQty === 1 ? 'card' : 'cards' }} under {{ cutOff }}{{ filter && !filter.count ? ' · not counted' : '' }}</span>
           <span />
           <span class="w-num text-right">{{ money(t.cheapChaos) }}</span>
@@ -70,6 +70,7 @@ import CardLine from './CardLine.vue'
 import { WEIGHTS_CREDIT, dropChance, isCommonCard } from './weights'
 import type { HeldPrice, Luck } from './prices'
 import { heldWhy } from '../shared/price-trust'
+import WFoldCaret from '../ui/WFoldCaret.vue'
 
 const props = withDefaults(defineProps<{
   draws: string[]

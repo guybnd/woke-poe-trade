@@ -62,7 +62,7 @@ import { useNightList } from './nights'
 import { savedOpenRequest } from '../shared/saved-open'
 import { ANALYTICS_TYPE } from '../analytics/types'
 import { isSkippedArea, knownAreaName, setSkipAreas } from './skip-areas'
-import { setAreaSkip } from '../farming/farming'
+import { setAreaSkip } from '../shared/map-areas'
 import { CHIP_CLOSE_TARGET } from './widget'
 import { chipPlaceOf, glanceOn } from './glance'
 import type { SessionStoryWidget } from './widget'
@@ -223,7 +223,7 @@ const tracker = new NightTracker((draft) => {
     dockRef.value?.peek(peekText(story))
     chipPeek = false
   }).catch(() => {})
-}, () => mapLog.char?.name ?? null)
+})
 // Back after the module was off: carry on with the night it was reading.
 tracker.draft = store.keptDraft()
 

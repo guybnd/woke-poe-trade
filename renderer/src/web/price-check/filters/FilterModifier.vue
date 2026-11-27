@@ -26,7 +26,7 @@
               <span v-else-if="poeKind.corrupted" class="w-poe-corrupt" />
               <component :is="poeModText" class="w-pc-modtext" :text="text" :roll="roll?.value" :rolls="poePair" :ranges="poeRanges?.ranges" :top="poeRanges?.top" />
             </span>
-            <div v-else class="search-text flex-1 relative flex min-w-0" style="line-height: calc(1rem * var(--w-text-scale, 1));">
+            <div v-else class="search-text flex-1 relative flex min-w-0" style="line-height: calc(1rem * var(--w-text-user, 1));">
               <span class="truncate"><item-modifier-text :text="text" :roll="roll?.value" /></span>
               <span class="search-text-full whitespace-pre-wrap"><item-modifier-text :text="text" :roll="roll?.value" /></span>
             </div>
@@ -582,7 +582,7 @@ export default defineComponent({
   background: var(--w-pc-well, theme('colors.gray.900'));
   @apply text-gray-300;
   @apply text-center;
-  width: calc(3rem * (1 + (var(--w-text-scale, 1) - 1) / 2)); /* half the text growth: mod names need the room */
+  width: calc(3rem * (1 + (var(--w-text-user, 1) - 1) / 2)); /* half the text growth: mod names need the room */
   @apply px-1;
   @apply border border-transparent;
 
@@ -591,7 +591,7 @@ export default defineComponent({
 
   &::placeholder {
     @apply text-gray-700;
-    font-size: calc(0.8125rem * var(--w-text-scale, 1));
+    font-size: calc(0.8125rem * var(--w-text-user, 1));
   }
 
   /* &:not(:placeholder-shown) { @apply border-gray-600; } */
@@ -626,7 +626,7 @@ export default defineComponent({
 .qualityLabel {
   padding-right: theme('spacing.1');
   color: theme('colors.gray.500');
-  font-size: calc(0.8125rem * var(--w-text-scale, 1));
+  font-size: calc(0.8125rem * var(--w-text-user, 1));
   white-space: nowrap;
 }
 

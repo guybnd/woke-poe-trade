@@ -47,8 +47,14 @@ describe('fixedPriceItem', () => {
     expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Forbidden Tome' }, areaLevel: 70 })).toBe(false)
     expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: "Facetor's Lens" }, storedExperience: 5e9 })).toBe(false)
     expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Scrying Orb' }, mapArea: {} })).toBe(false)
-    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Perfect Hydra' }, itemLevel: 84 })).toBe(false)
+    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Decaying Reliquary Key' }, itemLevel: 84 })).toBe(false)
     expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Ancient Wombgift' }, itemLevel: 84 })).toBe(true)
+  })
+
+  it('takes corpses at any item level: they roll nothing', () => {
+    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Perfect Hydra' }, itemLevel: 84 })).toBe(true)
+    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Imperfect Guardian Turtle' }, itemLevel: 70 })).toBe(true)
+    expect(fixedPriceItem({ info: { namespace: 'ITEM', refName: 'Meatsack' }, itemLevel: 83 })).toBe(true)
   })
 
   it('holds the trade search of a fixed item', () => {

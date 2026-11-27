@@ -1,6 +1,6 @@
 // NeverSink's seven strictness levels and the ladder that picks one from the
 // area level of the maps you've been running.
-import { isMapArea } from '../farming/farming'
+import { isMapArea } from '../shared/map-areas'
 import { actFromAreaId } from '../campaign/log-parse'
 
 export const LEVEL_NAMES = ['Soft', 'Regular', 'Semi-strict', 'Strict', 'Very strict', 'Uber strict', 'Uber plus']

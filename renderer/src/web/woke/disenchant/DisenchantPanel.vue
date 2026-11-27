@@ -1,6 +1,6 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
-    <WPanel :title="config.wmTitle || 'Disenchant'" icon="/images/dust.png" :updated="snapshot?.ts ?? null" :fresh-min="40" :stale-min="180" width="40rem" resizable>
+    <WPanel ref="panel" :title="config.wmTitle || 'Disenchant'" icon="/images/dust.png" :updated="snapshot?.ts ?? null" :fresh-min="40" :stale-min="180" width="40rem" resizable>
       <template #toolbar>
         <WSegmented :model-value="config.mode" :options="RANK_MODES" @update:model-value="pickMode" />
         <WField v-model="text" type="search" placeholder="Unique or base" icon="fas fa-search" style="width: 10rem;" />
@@ -47,9 +47,9 @@
           @contextmenu="rowMenu($event, r)">
           <span :class="$style.named">
             <span v-item-tip="{ name: r.name }" class="w-trunc w-rarity-unique">{{ r.name }}</span>
-            <span class="w-trunc w-faint text-xs"><span v-item-tip="{ name: r.base }">{{ r.base }}</span><template v-if="r.quality === 0"> · q0</template><span v-if="r.catalyse" :class="$style.cat" :title="`Buy ${CATALYSTS_FOR_Q20} catalysts for 20% quality first; the cost includes them`"> · catalyse</span><span v-if="r.thin" class="w-down" title="Low confidence: poe.ninja had no price on 3 or more of the last 7 days"> · low confidence</span></span>
+            <span class="w-trunc w-faint text-xs"><span v-item-tip="{ name: r.base }">{{ r.base }}</span><template v-if="r.quality === 0"> · quality 0</template><span v-if="r.catalyse" :class="$style.cat" :title="`Buy ${CATALYSTS_FOR_Q20} catalysts for 20% quality first; the cost includes them`"> · catalyse</span></span>
           </span>
-          <WPrice :chaos="r.chaos" :divine="snapshot?.divine" class="text-right" />
+          <WPrice :chaos="r.chaos" :divine="snapshot?.divine" :thin="r.thin" class="text-right" />
           <span class="text-right w-num">{{ amount(r.dust) }}</span>
           <span class="text-right w-num w-accent">{{ amount(rankValue(r, rankOpts)) }}</span>
           <span class="text-right w-num w-dim">{{ amount(r.gold) }}</span>
@@ -121,6 +121,7 @@ const league = computed(() => leagues.selectedId.value)
 
 const text = shallowRef('')
 const limit = shallowRef(PAGE)
+const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 
 // Read once per price update; the item data only changes on a new download.
 const uniques = computed(() => snapshot.value ? dustUniques() : [])
@@ -179,10 +180,20 @@ function toggleBought (name: string) {
   const list = bought()[id] ?? []
   props.config.bought = { ...bought(), [id]: list.includes(name) ? list.filter(n => n !== name) : [...list, name] }
 }
+// No "are you sure": clear now, offer Undo (P9).
 function clearBought () {
   const id = league.value
   if (!id) return
+  const cleared = bought()[id] ?? []
   props.config.bought = Object.fromEntries(Object.entries(bought()).filter(([k]) => k !== id))
+  // Undo ticks those again, keeping any ticked since.
+  toast(`Cleared ${cleared.length} ticked`, {
+    anchor: panel.value?.el,
+    undo: () => {
+      const now = bought()[id] ?? []
+      props.config.bought = { ...bought(), [id]: [...now, ...cleared.filter(n => !now.includes(n))] }
+    }
+  })
 }
 
 function openTrade (r: DustRow) {

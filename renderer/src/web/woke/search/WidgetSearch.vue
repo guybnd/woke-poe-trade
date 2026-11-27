@@ -1,5 +1,6 @@
 <template>
-  <Widget :config="config" move-handles="none" :removable="false" :inline-edit="false" :readonly="true">
+  <!-- Drags by its search bar (data-widget-drag) and keeps the spot, as other windows do. -->
+  <Widget :config="config" move-handles="corners" :removable="false" :inline-edit="false" :readonly="true">
     <WPanel v-if="open" width="66rem" max-height="72vh" :scroll="false" :min-width="576" :min-height="288">
       <div :class="$style.root" data-search-palette @click="keepTyping" @keydown="onHotkey" @keyup="onHotkeyUp" @pointerdown="forgetHeld" @input="forgetHeld">
         <div v-if="pins.length" :class="$style.pins">
@@ -8,8 +9,9 @@
             <span class="w-trunc" :class="rarityClass(p.type)">{{ p.name }}<span v-if="p.variant" class="w-dim ml-1">{{ p.variant }}</span></span>
             <WPrice bulk :chaos="p.chaos" :divine="divine" />
           </button>
+          <button type="button" class="w-icon-btn" :class="$style.pinClear" title="Clear the comparison" aria-label="Clear the comparison" data-search-pins-clear @click="clearPins"><i class="fas fa-times" /></button>
         </div>
-        <label :class="$style.find">
+        <div :class="$style.find" data-widget-drag title="" @click="onFindClick">
           <i class="fas fa-search" />
           <input ref="input" v-model="query" :class="$style.input" spellcheck="false" aria-label="Search"
             :placeholder="placeholder" @keydown="onKey" @paste="onPaste" @input="noteTyped">
@@ -17,7 +19,7 @@
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': groupsOpen }" title="What search shows" aria-label="What search shows" data-search-groups-btn @click="toggleGroups"><i class="fas fa-cog" /></button>
           <WCorruptedFilter v-model="corrupted" />
           <WKbd keys="Esc" />
-        </label>
+        </div>
         <div v-if="chips.length && !groupsOpen" :class="$style.chips" data-search-chips>
           <button v-for="c in chips" :key="c.id" type="button" :class="[$style.chip, { [$style.chipOn]: c.id === chip }]" :aria-pressed="c.id === chip"
             :title="c.id === 'all' ? 'Everything, each group folded as the cog says' : `Only ${c.label.toLowerCase()}, every group in full`" @click="pickChip(c.id)">
@@ -45,8 +47,10 @@
                 <WIcon v-else-if="e.kind === 'lookup' && isImageIcon(e.icon)" :src="e.icon" size="md" />
                 <i v-else :class="e.icon" :style="{ width: 'var(--w-icon-md)', textAlign: 'center' }" />
                 <span :class="$style.resName">
-                  <span class="w-trunc" :class="e.kind === 'price' ? rarityClass(e.group.type) : undefined">{{ e.name }}</span>
-                  <span class="w-dim w-trunc" :class="$style.small">{{ e.sub }}</span>
+                  <span class="w-trunc" :class="e.kind === 'price' ? rarityClass(e.group.type) : e.kind === 'item' && e.mod ? 'w-rarity-unique' : undefined">{{ e.name }}</span>
+                  <!-- A mod search's hit: the line it matched, the typed words lit. -->
+                  <span v-if="e.mod" class="w-trunc" :class="[$style.small, $style.modSub, { [$style.modVest]: e.mod.kind === 'vestigial', [$style.modFoul]: e.mod.kind === 'foulborn' }]" :title="e.sub" data-search-mod-hit><span v-if="e.mod.kind === 'vestigial'" :class="$style.modTag">Vestigial</span><span v-if="e.mod.pool" :class="$style.modTag" title="A jewel that can roll this mod, not one that always has it">Can roll</span><template v-for="(p, i) in e.mod.parts" :key="i"><mark v-if="p.lit" :class="$style.modLit">{{ p.text }}</mark><template v-else>{{ p.text }}</template></template></span>
+                  <span v-else class="w-dim w-trunc" :class="$style.small">{{ e.sub }}</span>
                 </span>
                 <span v-if="e.kind === 'price'" :class="$style.range"><template v-if="e.group.low !== e.group.high"><WPrice :bulk="e.group.high < 1" :chaos="e.group.low" :divine="divine" /> to </template><WPrice :bulk="e.group.high < 1" :chaos="e.group.high" :divine="divine" /></span>
                 <WKbd v-else-if="e.kind === 'command' && e.keys" :keys="e.keys" />
@@ -71,10 +75,9 @@
               <div :class="[$style.grid, $style.gridHead, { [$style.gridExtra]: extraRange }]"><span>Variant</span><span class="text-right">Now</span><span v-if="extraRange" class="text-right" :title="extraTitle">{{ extraRange.label }} ago</span><span class="text-right">24h ago</span><span class="text-right">7d ago</span><span v-if="extraRange" class="text-right" :title="extraTitle">{{ extraRange.label }}</span><span class="text-right">24h</span><span class="text-right">7d</span><span /></div>
               <div v-for="v in selected.group.variants" :key="key(v)" v-item-tip="v" :class="[$style.grid, $style.row, { [$style.rowPicked]: shownVariant != null && v.variant === shownVariant, [$style.gridExtra]: extraRange }]">
                 <span class="w-trunc">{{ v.variant || selected.group.name }}
-                  <i v-if="isThin(v)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(v)" />
                   <!-- A sudden step up: the price check's doubt line, here as a mark (WOKEPOET-534). -->
                   <i v-if="stepOf(v) != null" class="fas fa-exclamation-triangle w-warn" data-price-step :title="stepTitle(v)" /></span>
-                <WPrice bulk :chaos="v.chaos" :divine="divine" class="text-right" />
+                <WPrice bulk :chaos="v.chaos" :divine="divine" :thin="isThin(v) && thinTitle(v)" class="text-right" />
                 <WPrice v-if="extraRange" bulk :chaos="extraThen(v)" :divine="divine" class="text-right w-dim" />
                 <WPrice bulk :chaos="v.d1" :divine="divine" class="text-right w-dim" />
                 <WPrice bulk :chaos="v.d7" :divine="divine" class="text-right w-dim" />
@@ -82,7 +85,7 @@
                 <WDelta :value="changeSince(v.chaos, v.d1)" class="text-right" />
                 <WDelta :value="changeSince(v.chaos, v.d7)" class="text-right" />
                 <span :class="$style.rowBtns">
-                  <button class="w-icon-btn" :class="{ 'w-icon-btn--on': isPinned(v) }" title="Pin to compare" aria-label="Pin to compare" @click="togglePin(v)"><i class="fas fa-thumbtack" /></button>
+                  <button class="w-icon-btn" :class="{ 'w-icon-btn--on': pinnedIn(config, v) }" title="Pin to compare" aria-label="Pin to compare" @click="togglePin(v)"><i class="fas fa-thumbtack" /></button>
                   <button v-if="tracker" class="w-icon-btn" :class="{ 'w-icon-btn--on': isWatched(v) }" :title="isWatched(v) ? 'Stop watching' : 'Watch price'" :aria-label="isWatched(v) ? 'Stop watching' : 'Watch price'" @click="toggleWatch(v)"><i :class="isWatched(v) ? 'fas fa-star' : 'far fa-star'" /></button>
                 </span>
               </div>
@@ -94,16 +97,16 @@
                 <span v-else-if="tradePrices.pending(unidName)" class="text-right w-faint">…</span>
                 <span v-else class="text-right"><button class="w-icon-btn" title="Search trade for unidentified copies" aria-label="Search trade for unidentified copies" @click="lookUpUnid"><i class="fas fa-search" /></button></span>
               </div>
-              <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
-              <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" no-price="No poe.ninja price" @pick="pickUnique" />
+              <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" :lit="selected.mod?.line" />
+              <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" @pick="pickUnique" />
               <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
               <CardDrops v-if="cardDropName" :name="cardDropName" />
               <div v-if="conv" :class="$style.convBox" :style="{ '--conv-cols': convCols }">
                 <div :class="[$style.conv, $style.gridHead]"><span v-item-tip="{ name: selected.group.name, type: selected.group.type }">{{ selected.group.name }}</span><span v-if="conv.rows[0].chaos != null" class="text-right">Chaos</span><span v-if="conv.rows[0].div != null" class="text-right">Divines</span></div>
                 <div v-for="r in conv.rows" :key="r.amount" :class="[$style.conv, $style.row]">
                   <span class="w-num">{{ convNumber(r.amount) }}</span>
-                  <span v-if="r.chaos != null" class="w-num text-right">{{ convNumber(r.chaos) }} c</span>
-                  <span v-if="r.div != null" class="w-num text-right">{{ convNumber(r.div) }} div</span>
+                  <WPriceText v-if="r.chaos != null" class="w-num text-right" :text="`${convNumber(r.chaos)}c`" />
+                  <WPriceText v-if="r.div != null" class="w-num text-right" :text="`${convNumber(r.div)} div`" />
                 </div>
                 <div v-if="conv.perDivine" class="w-dim" :class="$style.small">1 Divine Orb buys {{ convNumber(conv.perDivine) }}</div>
               </div>
@@ -113,9 +116,9 @@
             </template>
             <template v-else-if="selected?.kind === 'item'">
               <div v-item-tip="{ name: selected.info.refName }" :class="$style.title"><WIcon :src="selected.info.icon" size="lg" /><span>{{ selected.name }}</span></div>
-              <p class="w-dim">{{ snapshot ? "poe.ninja has no price for this. Rares, bases, flasks and cluster jewels aren't in the saved prices." : 'No saved prices yet, so this has no price here.' }}</p>
-              <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" :no-price="snapshot ? 'No poe.ninja price' : 'No price'" @pick="pickUnique" />
-              <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
+              <p class="w-dim">{{ noPriceNote(selected) }}</p>
+              <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" :no-price="snapshot ? undefined : 'No saved prices yet'" @pick="pickUnique" />
+              <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" :lit="selected.mod?.line" />
               <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
               <CardDrops v-if="cardDropName" :name="cardDropName" />
               <ItemActions :name="selected.name" lookups :can-price="canPriceCheck(selected)" :market="false"
@@ -132,7 +135,8 @@
         </div>
         <div :class="$style.foot">
           <span><WKbd keys="Up" /> <WKbd keys="Down" /> move</span>
-          <span><WKbd keys="Enter" /> {{ itemEntry() ? 'trade site' : 'open' }}</span>
+          <span><WKbd keys="Enter" /> {{ enterHint }}</span>
+          <span v-if="itemEntry() && canPriceCheck(itemEntry()!)"><WKbd keys="Alt + Enter" /> trade site</span>
           <span v-if="itemEntry()"><WKbd keys="Ctrl + F" /> find in stash</span>
           <span><WKbd keys="Ctrl + P" /> pin to compare</span>
           <span v-if="selected?.line && !queryOk"><WKbd keys="Delete" /> remove</span>
@@ -166,7 +170,8 @@ import { notableOils, oilNames } from '@/web/price-check/filters/pseudo/anointme
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import type { BaseType } from '@/assets/data/interfaces'
 import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
-import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, itemRefFromName, ninjaIcon, nowMinute, toast, vItemTip, agoPhrase } from '../ui'
+import { WPanel, WButton, WPrice, WPriceText, WDelta, WIcon, WKbd, itemRefFromName, ninjaIcon, nowMinute, toast, vItemTip, agoPhrase } from '../ui'
+import { NO_PRICE } from '../ui/format'
 import { ninjaArt } from '../market/ninja-icons'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
@@ -208,7 +213,9 @@ import { isFoulborn } from '../shared/item-identity'
 import { CHIPS, GROUP_CAP, chipOf, groupMode, shapeSections } from './groups'
 import type { ChipId, GroupMode } from './groups'
 import SearchGroups from './SearchGroups.vue'
-import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, bestName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
+import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, bestName, changeSince, groupKey, groupTip, namedUniquePrices, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
+import type { ModKind, ModLine } from './mod-index'
+import { MOD_GROUP } from './groups'
 import { basesOfUnique, hasUniques, uniquesOnBase } from '../shared/uniques-on-base'
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
@@ -265,7 +272,7 @@ import { POB_BUILDS_TYPE, lastBuildList, pobApi } from '../pob-builds/widget'
 import type { PobBuildsWidget } from '../pob-builds/widget'
 import { ATLAS_TYPE } from '../atlas/strategies'
 import type { AtlasWidget } from '../atlas/strategies'
-import { netWorthLookup } from './lookups/net-worth'
+import { netWorthLookup, worthSellingLookup } from './lookups/net-worth'
 import { runsLookup } from './lookups/runs'
 import { rateTime } from '../shared/rate-time-now'
 import { isLastRun, isRunBoard, isRunGlance, lastRunKey, runBoardKey, runGlanceKey } from '../net-worth/runs'
@@ -308,7 +315,7 @@ import { onSharedDataChange } from '../app/live-data'
 import { openDiscord, openReportDialog } from '../app/report'
 import { dropOf } from '../ui/tooltip/tip-content'
 import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
-import { SEARCH_TARGET, EARLY_PRESS_MS, earlySearchPress, searchRequest, addQuery, RECENT_MAX, sameLine, dropLine, saveLine, unsaveLine } from './widget'
+import { SEARCH_TARGET, EARLY_PRESS_MS, earlySearchPress, searchRequest, addQuery, RECENT_MAX, sameLine, dropLine, saveLine, unsaveLine, isPinned as pinnedIn, togglePin as togglePinLine } from './widget'
 import { VARIABLE_ITEMS, useTradePrices } from '../shared/unid-prices'
 import { poeWebApi, saveConfig } from '@/web/Config'
 import type { SearchWidget, SearchLine } from './widget'
@@ -321,7 +328,9 @@ const tradePrices = useTradePrices()
 const snapshot = useSearchSnapshot()
 
 // `line`: a row of the empty box's Saved or Recent, with its save and remove buttons.
-interface Base { id: string, name: string, sub: string, line?: SearchLine, saved?: boolean }
+// `mod`: a mod search's hit, the line it matched in pieces with the typed words lit.
+interface ModMark { line: string, parts: Array<{ text: string, lit: boolean }>, kind: ModKind, pool: boolean }
+interface Base { id: string, name: string, sub: string, line?: SearchLine, saved?: boolean, mod?: ModMark }
 interface PriceEntry extends Base { kind: 'price', group: PriceGroup }
 interface ItemEntry extends Base { kind: 'item', info: BaseType }
 interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting' | 'more' | 'again', icon: string, about: string, verb: string, keys?: string | null, aliases?: string[], action: () => void }
@@ -341,14 +350,14 @@ function stepTitle (v: Stepped) {
 const corrupted = shallowRef<CorruptedFilter>('any')
 const input = shallowRef<HTMLInputElement | null>(null)
 const listEl = shallowRef<HTMLElement | null>(null)
-const pinKeys = shallowRef<string[]>([])
 
 // The tooltip's divine rate, else the saved prices'.
 const { divine } = usePriceText(snapshot)
 // Pins follow the latest prices, and go if the item isn't in them (a new league).
 const priceByKey = computed(() => new Map((snapshot.value?.items ?? []).map(i => [itemKey(i), i])))
-const pins = computed(() => pinKeys.value
-  .map(k => priceByKey.value.get(k))
+// Saved with the window (config.pins), so they're there after a restart.
+const pins = computed(() => (props.config.pins ?? [])
+  .map(p => priceByKey.value.get(itemKey(p)))
   .filter((p): p is PriceItem => !!p)
   .sort((a, b) => b.chaos - a.chaos))
 // Names with any price at all, whatever the filter or the list's limit.
@@ -406,6 +415,71 @@ function onBaseEntry (group: PriceGroup, shown?: ReadonlySet<string>): PriceEntr
     entry.sub = group.variants.length > 1 ? `${base} · ${group.variants.length} prices` : base
   }
   return entry
+}
+
+// ---- uniques by their mods ----
+// "item rarity" lists every unique with a line that has it, Foulborn mods and
+// Vestigial implicits too (mod-index.ts). The index is built the first time a
+// query is long enough, from the tooltip files the unique details read.
+const modSearch = shallowRef<{ mod: typeof import('./mod-index'), index: ModLine[] } | null>(null)
+let modLoading = false
+let modGen = 0
+function loadModIndex () {
+  if (modSearch.value || modLoading) return
+  modLoading = true
+  // A read started before a data update is dropped.
+  const mine = modGen
+  Promise.all([import('./mod-index'), loadTipUniques(), orNull(loadTipVestigial())])
+    .then(([mod, uniques, vestigial]) => {
+      if (mine !== modGen || !uniques) return
+      modSearch.value = { mod, index: mod.buildModIndex(uniques, vestigial) }
+    })
+    .catch(() => {})
+    .finally(() => { if (mine === modGen) modLoading = false })
+}
+const wantsMods = () => open.value && query.value.trim().length >= 4
+watch([query, open], () => { if (wantsMods()) loadModIndex() })
+// Unique names with any poe.ninja row, whatever the filter.
+const pricedUniques = computed(() => new Set((snapshot.value?.items ?? []).filter(i => /^Unique/.test(i.type)).map(i => i.name)))
+// Unique items by their English name, for hits with no price.
+let uniqueRefsFrom: BaseType[] | null = null
+let uniqueRefs = new Map<string, BaseType>()
+function uniqueByRef (ref: string): BaseType | undefined {
+  const all = gameItems()
+  if (uniqueRefsFrom !== all) {
+    uniqueRefsFrom = all
+    uniqueRefs = new Map(all.filter(i => i.namespace === 'UNIQUE').map(i => [i.refName, i]))
+  }
+  return uniqueRefs.get(ref)
+}
+// The group: priced uniques first (the closest match, then dearest), then the
+// ones poe.ninja has no price for. Ones already listed above stay out.
+function modSection (q: string, items: readonly PriceItem[], shown: ReadonlySet<string>): { label: string, entries: Entry[], capped?: boolean } {
+  const ms = modSearch.value
+  const hits = ms ? ms.mod.searchMods(ms.index, q) : []
+  if (!ms || !hits.length) return { label: MOD_GROUP, entries: [] }
+  const byName = new Map(hits.map(h => [h.unique, h]))
+  const mark = (name: string): ModMark | undefined => {
+    const h = byName.get(name)
+    return h && { line: h.line, parts: ms.mod.litParts(h.line, q), kind: h.kind, pool: h.pool }
+  }
+  // Closest match first, a jewel that only can roll it after, then dearest.
+  const rankOf = (name: string) => { const h = byName.get(name); return h ? h.rank + (h.pool ? 2 : 0) : 9 }
+  const groups = namedUniquePrices(items, new Set(byName.keys()), { corrupted: corrupted.value, limit: Infinity })
+    .sort((a, b) => rankOf(a.name) - rankOf(b.name) || b.high - a.high)
+  const priced = pricedUniques.value
+  const entries: Entry[] = groups.filter(g => !shown.has(groupKey(g))).map(g => {
+    const m = mark(g.name)!
+    return { ...priceEntry(g), sub: m.line, mod: m }
+  })
+  for (const h of hits.sort((a, b) => a.rank - b.rank || a.unique.localeCompare(b.unique))) {
+    if (priced.has(h.unique)) continue
+    const info = uniqueByRef(h.unique)
+    if (!info) continue
+    if (shown.has(`i:${info.namespace}:${info.name}`)) continue
+    entries.push({ kind: 'item', id: `m:${info.namespace}:${info.name}`, name: info.name, sub: h.line, info, mod: mark(h.unique) })
+  }
+  return { label: MOD_GROUP, entries: entries.slice(0, PRICE_GROUP_LIMIT), capped: entries.length > PRICE_GROUP_LIMIT }
 }
 
 // ---- a base's uniques ----
@@ -843,6 +917,10 @@ function betrayalOverrides (): Record<string, string> {
 const stopDataWatch = onSharedDataChange(() => {
   detailPack.value = null
   detailGen++
+  modSearch.value = null
+  modGen++
+  modLoading = false
+  if (wantsMods()) loadModIndex()
   detailLoading = false
   if (detailName.value) loadDetailPack()
   tipItems.value = null
@@ -865,7 +943,7 @@ function flipsConfig (): ScarabFlipWidget | null {
   return (config.widgets.find(w => w.wmType === SCARAB_FLIP_TYPE) as ScarabFlipWidget | undefined) ?? null
 }
 const netWorthWidget = () => AppConfig().widgets.find(w => w.wmType === NET_WORTH_TYPE) as { staleDays?: number, countListed?: boolean } | undefined
-const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, forbiddenLookup(forbidden.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime(), runBoard.value, lastRun.value), salesLookup(salesList.value, lineOut.value.sale), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value, lineOut.value.listed), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), valdoLookup(name => AppConfig().language === 'en' && knownItem('UNIQUE', name)), keysLookup(setKeys), webLookup])
+const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, forbiddenLookup(forbidden.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), worthSellingLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime(), runBoard.value, lastRun.value), salesLookup(salesList.value, lineOut.value.sale), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value, lineOut.value.listed), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), valdoLookup(name => AppConfig().language === 'en' && knownItem('UNIQUE', name)), keysLookup(setKeys), webLookup])
 
 // "keys": the hotkeys you have set, as the Hotkeys page lists them.
 function setKeys () {
@@ -959,7 +1037,7 @@ const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: b
   const groups = searchPrices(items, q, { corrupted: corrupted.value })
   const priced = pricedNames.value
   const other = searchNamed(gameItems().filter(i => !priced.has(i.refName)), q, i => i.name, 8)
-    .map((info): ItemEntry => ({ kind: 'item', id: `i:${info.namespace}:${info.name}`, name: info.name, sub: snapshot.value ? 'No poe.ninja price' : 'No price', info }))
+    .map((info): ItemEntry => ({ kind: 'item', id: `i:${info.namespace}:${info.name}`, name: info.name, sub: snapshot.value ? NO_PRICE : 'No saved prices yet', info }))
   // A base brings its uniques: "shagreen" lists Three-step Assault.
   const bases = basesWithUniques(q)
   const listed = new Set(groups.map(groupKey))
@@ -975,6 +1053,7 @@ const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: b
     items: [
       { label: 'Prices', entries: groups.map(priceEntry) as Entry[], capped: groups.length >= PRICE_GROUP_LIMIT },
       { label: bases.length === 1 ? `Uniques on ${bases[0].name}` : 'Uniques on these bases', entries: onBase.map(g => onBaseEntry(g, shownBases)) as Entry[] },
+      modSection(q, items, new Set([...listed, ...onBase.map(groupKey), ...other.map(e => e.id)])),
       { label: 'Other items', entries: other as Entry[] }
     ],
     cards: cardSections(cards, null, ['Answer', 'Search the web']),
@@ -1083,6 +1162,12 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
 const entries = computed(() => sections.value.flatMap(s => s.entries))
 
 const selected = shallowRef<Entry | null>(null)
+// The foot's Enter hint: what Enter does on the picked row.
+const enterHint = computed(() => {
+  const entry = itemEntry()
+  if (!entry) return 'open'
+  return canPriceCheck(entry) ? 'price check' : 'trade site'
+})
 
 // Rolled uniques (jewels and the like) drop unidentified. poe.ninja's row is
 // their price; a click checks the middle of the cheapest unidentified listings
@@ -1274,12 +1359,16 @@ function onKey (e: KeyboardEvent) {
     e.preventDefault()
     e.stopPropagation()
     move(e.key === 'ArrowDown' ? 1 : -1)
+  } else if (e.key === 'Enter' && e.altKey && itemEntry()) {
+    // Alt+Enter: the trade site, when Enter price checks here.
+    e.preventDefault()
+    if (!e.repeat) openTrade(itemEntry()!)
   } else if (e.key === 'Enter' && e.ctrlKey && itemEntry()) {
+    // Ctrl+Enter, the old price check key: still a price check.
     e.preventDefault()
     if (e.repeat) return
     const entry = itemEntry()!
-    // From the keyboard there's no pointer: near the top of the window, as a paste opens it.
-    if (canPriceCheck(entry)) priceCheck(entry, { x: window.screenX + window.innerWidth / 2, y: window.screenY + 100 })
+    if (canPriceCheck(entry)) priceCheck(entry, keyboardPoint())
   } else if (e.key === 'Enter') {
     e.preventDefault()
     // Held down: one trade tab, not one per repeat.
@@ -1311,11 +1400,18 @@ function itemEntry (): PriceEntry | ItemEntry | null {
   return e?.kind === 'price' || e?.kind === 'item' ? e : null
 }
 
+// From the keyboard there's no pointer: near the top of the window, as a paste opens it.
+function keyboardPoint (): ScreenPoint {
+  return { x: window.screenX + window.innerWidth / 2, y: window.screenY + 100 }
+}
+
 function run (entry: Entry) {
   remember(entry)
-  // An item: Trade site, the detail pane's main button.
+  // An item: the detail pane's main button. Price check here when it can be
+  // priced (Enter is the click that spends the search), else the trade site.
   if (entry.kind === 'price' || entry.kind === 'item') {
-    openTrade(entry)
+    if (canPriceCheck(entry)) priceCheck(entry, keyboardPoint())
+    else openTrade(entry)
   } else if (entry.kind === 'lookup') {
     if (entry.card.actions[0]) act(entry.card.actions[0])
   } else {
@@ -1466,11 +1562,13 @@ function againEntry (q: string): ActionEntry {
 }
 
 // ---- pins ----
-const PIN_MAX = 5
-function isPinned (item: PriceItem) { return pinKeys.value.includes(key(item)) }
 function togglePin (item: PriceItem) {
-  const k = key(item)
-  pinKeys.value = isPinned(item) ? pinKeys.value.filter(p => p !== k) : [...pinKeys.value, k].slice(-PIN_MAX)
+  togglePinLine(props.config, item)
+  saveConfig()
+}
+function clearPins () {
+  props.config.pins = undefined
+  saveConfig()
 }
 
 // ---- Market ----
@@ -1540,7 +1638,17 @@ function visceraOf (entry: PriceEntry | ItemEntry) {
   const effect = entry.kind === 'price' && entry.group.variants.length === 1 ? entry.group.variants[0].variant : undefined
   return visceraByName(visceraTable.value, name, effect)
 }
+// Why an item row has no saved price, and what Enter does about it.
+function noPriceNote (entry: ItemEntry) {
+  const why = snapshot.value ? 'poe.ninja has no saved price for this.' : 'No saved prices yet.'
+  return canPriceCheck(entry) ? `${why} Price check looks up live listings.` : `${why} Trade site lists it.`
+}
 function canPriceCheck (entry: PriceEntry | ItemEntry) {
+  // A Foulborn unique (its row, or a Foulborn kind picked under it): the item
+  // data has none, so the price check would price the plain one. The trade site
+  // searches Foulborn copies.
+  const name = entry.kind === 'price' ? entry.group.name : entry.name
+  if (isFoulborn(name) || (pickedFoul.value != null && detailName.value === baseUniqueName(name))) return false
   const info = infoFor(entry)
   return info?.namespace === 'UNIQUE' || visceraOf(entry) != null || canCheckByName(menuRef(entry), info)
 }
@@ -1630,6 +1738,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', catchTyping))
 // The foot's "Next time: Ctrl + Space from the game", for a palette found by
 // typing. It doesn't run out: it shows each time until × (Guy's tips review).
 const typedHint = useHint('search-from-game', { slot: false, shows: Infinity, when: () => openedByTyping.value && !!props.config.hotkey })
+// A click on the search bar around the box focuses it; one in the box itself is
+// left alone, so clicking mid-word or selecting text keeps the cursor there.
+function onFindClick (e: MouseEvent) {
+  if (e.target !== input.value) focusInput()
+}
+
 function focusInput (select = false) {
   nextTick(() => {
     const el = input.value
@@ -1767,8 +1881,7 @@ watch(open, (now) => {
 const dataNote = computed(() => {
   const snap = snapshot.value
   if (!snap) return 'No saved prices yet'
-  const min = Math.max(0, Math.round((Date.now() - snap.ts) / 60000))
-  return `poe.ninja · ${snap.league} · ${min} min ago`
+  return `poe.ninja · ${snap.league} · ${agoPhrase(snap.ts)}`
 })
 </script>
 
@@ -1790,6 +1903,7 @@ const dataNote = computed(() => {
 }
 .pin:hover { border-color: var(--w-line-strong); }
 .pinTop { border-color: var(--w-accent); background: var(--w-accent-soft); }
+.pinClear { flex: none; align-self: center; }
 .find {
   flex: none;
   display: flex;
@@ -1836,6 +1950,12 @@ const dataNote = computed(() => {
 .sel, .sel:hover { background: var(--w-accent-soft); box-shadow: inset 2px 0 0 var(--w-accent); }
 .resName { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .small { font-size: var(--w-fs-sm); }
+/* A mod hit's line: game mod blue, the typed words brighter. */
+.modSub { color: var(--w-r-magic); }
+.modVest { color: var(--w-mod-vestigial); }
+.modFoul { color: var(--w-mod-foulborn); }
+.modLit { background: none; color: var(--w-fg); font-weight: 600; }
+.modTag { font-size: 0.85em; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid currentColor; padding: 0 3px; margin-right: 4px; }
 .range { flex: none; display: inline-flex; align-items: center; gap: 4px; }
 .none { padding: var(--w-s3) var(--w-pad); color: var(--w-dim); }
 .detail { padding: var(--w-s3) var(--w-s4); min-width: 0; }

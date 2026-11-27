@@ -91,6 +91,8 @@ export interface PendingRow {
   // Asking against poe.ninja: 0.18 is 18% over.
   vs: number | null
   confidence: Confidence | null
+  // poe.ninja's market for it is thin (the shared "!" marker).
+  thin?: boolean
 }
 
 export interface PendingTotals {
@@ -127,13 +129,14 @@ export function pendingRows (doc: PendingDoc | null, sales: readonly Sale[], rat
     if (sold.has(item.id)) continue
     const firstAt = doc.firstSeen[item.id] ?? item.at
     const ageMs = Math.max(0, now - firstAt)
-    const chaos = saleChaos(item, rates)
+    // An ask, not a sale: today's rates.
+    const chaos = saleChaos({ price: item.price }, rates)
     const p = ninjaOf(item)
     const each = p && p.chaos > 0 ? p.chaos : null
     const vs = versusMarket(chaos, each, item.stack)
     // Way off poe.ninja (versusMarket gives up): most likely another version.
     const confidence = each == null ? null : vs == null && chaos != null ? 'rough' : confidenceOf(item, p)
-    rows.push({ item, firstAt, ageMs, stale: ageMs >= staleMs, chaos, ninja: each != null ? each * Math.max(1, item.stack) : null, vs, confidence })
+    rows.push({ item, firstAt, ageMs, stale: ageMs >= staleMs, chaos, ninja: each != null ? each * Math.max(1, item.stack) : null, vs, confidence, thin: each != null && !!p?.thin })
   }
   return rows
 }

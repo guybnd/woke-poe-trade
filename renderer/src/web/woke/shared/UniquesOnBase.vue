@@ -17,12 +17,12 @@
             <span v-if="u.restricted" :class="$style.source" :title="u.restricted.title" data-testid="drop-source">{{ u.restricted.label }}</span>
             <span v-if="u.setsTier" :class="$style.tag" title="Your price tiers moved this base to its tier for this unique's price">sets tier</span>
           </span>
-          <span v-if="u.price" :class="[$style.range, { 'w-faint': u.price.thin }]" :title="u.price.thin ? 'Few listings: poe.ninja often had no price for it this week' : undefined">
-            <template v-if="u.price.low !== u.price.high"><WPrice :bulk="u.price.bulk" :chaos="u.price.low" :divine="divine" /> to </template><WPrice :bulk="u.price.bulk" :chaos="u.price.high" :divine="divine" />
+          <span v-if="u.price" :class="$style.range">
+            <template v-if="u.price.low !== u.price.high"><WPrice :bulk="u.price.bulk" :chaos="u.price.low" :divine="divine" /> to </template><WPrice :bulk="u.price.bulk" :chaos="u.price.high" :divine="divine" :thin="u.price.thin" />
           </span>
-          <span v-else class="w-dim text-right">{{ noPrice }}</span>
+          <WPrice v-else :chaos="null" :none="noPrice" class="text-right" />
           <span v-if="u.foulborn" :class="$style.foulborn">
-            Foulborn up to <WPrice :chaos="u.foulborn.max" :divine="divine" />{{ u.foulborn.thin ? ', few listings' : '' }}
+            Foulborn up to <WPrice :chaos="u.foulborn.max" :divine="divine" :thin="u.foulborn.thin" />
           </span>
         </template>
       </WItemRow>
@@ -42,6 +42,7 @@ import { computed, ref, watch } from 'vue'
 import WIcon from '../ui/WIcon.vue'
 import WItemRow from '../ui/WItemRow.vue'
 import WPrice from '../ui/WPrice.vue'
+import { NO_PRICE } from '../ui/format'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import type { BaseType } from '@/assets/data'
 import type { DropSource } from '../ui/tooltip/tip-content'
@@ -77,7 +78,7 @@ const props = withDefaults(defineProps<{
   limit?: number
   // Folds back to `limit` when this changes (a new base).
   resetKey?: string
-}>(), { noPrice: 'no price', limit: 0, resetKey: '' })
+}>(), { noPrice: NO_PRICE, limit: 0, resetKey: '' })
 
 const emit = defineEmits<{ pick: [row: UniqueOnBaseRow] }>()
 

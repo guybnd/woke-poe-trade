@@ -127,7 +127,7 @@ export default defineComponent({
 
 <style lang="postcss" module>
 .timer {
-  font-size: calc(2rem * var(--w-text-scale, 1));
+  font-size: calc(2rem * var(--w-text-user, 1));
   line-height: 1;
   @apply font-mono;
   text-shadow: 0 1px 3px rgb(0, 0, 0);

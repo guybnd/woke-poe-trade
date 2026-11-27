@@ -33,9 +33,18 @@ export interface Glance {
   // Per hour counts the time the Per hour setting counted then.
   perHourChaos?: number | null
   todayChaos?: number | null
+  // The day todayChaos compares with ("YYYY-MM-DD"), when it isn't yesterday
+  // (the first read after a break): the label says "since Tue".
+  todayFrom?: string
   // Per hour of play over the last 1, 2, 3 hours and today, at that read.
   rates?: GlanceRates
+  // Worth selling at that read (ledger.ts worthSelling), biggest first, for
+  // Ctrl+Space. Missing in older glances.
+  selling?: GlanceSell[]
 }
+// `tip`: the game's name when the row's differs ("Empower Support 4/20"), for the
+// item tooltip.
+export interface GlanceSell { name: string, count: number, chaos: number, d1: number, d7: number, lostChaos: number, tip?: string }
 
 export const DOCS = 'net-worth'
 export const glanceKey = (league: string) => `${league}-glance`
@@ -63,6 +72,30 @@ export const GLANCE_LABELS: Record<GlanceShows, string> = {
   total: 'Net worth',
   perHour: 'Per hour today',
   today: 'Today'
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+// What "+12 div today" calls its span. `fromDay` is the day it compares with
+// (sinceDayOf, "YYYY-MM-DD"): yesterday or none is "today"; after a break,
+// "since Tue" within the week, else "since 3 Nov". `tip` names that read.
+export function sinceLabel (fromDay: string | null | undefined, at: number): { label: string, tip: string } {
+  const m = fromDay ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(fromDay) : null
+  if (!m) return { label: 'today', tip: "Since yesterday's last read" }
+  const from = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  const now = new Date(at)
+  const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - from.getTime()) / 86_400_000)
+  if (days <= 1) return { label: 'today', tip: "Since yesterday's last read" }
+  const name = days <= 6 ? WEEKDAYS[from.getDay()] : `${from.getDate()} ${MONTHS[from.getMonth()]}`
+  return { label: `since ${name}`, tip: `Since the last read, on ${name} (${days} days of price moves)` }
+}
+
+// The wheel's name for what it shows: "Today", or "Since Tue" after a break.
+export function glanceLabel (g: Glance | null | undefined, shows: GlanceShows, now = Date.now()): string {
+  if (shows !== 'today' || !g?.todayFrom || !sameDay(g.at, now)) return GLANCE_LABELS[shows]
+  const l = sinceLabel(g.todayFrom, g.at).label
+  return l.charAt(0).toUpperCase() + l.slice(1)
 }
 
 export function nextShows (cur: GlanceShows | undefined, dir: 1 | -1): GlanceShows {

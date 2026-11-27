@@ -1,7 +1,7 @@
 // Your sales from pathofexile.com's trade history (main/src/woke/personal/
 // trade-history.ts): the reply parser, the merge, and how often it calls. No
 // live calls.
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -90,6 +90,21 @@ describe('parse', () => {
 })
 
 describe('reads', () => {
+  it("never saves over a sales file it can't read right now", async () => {
+    const { th, advance } = setup([ok(), ok(JSON.stringify({ result: [entry('z', '2026-11-21T11:00:00Z', { typeLine: 'Divine Orb', frameType: 5 })] }))])
+    await th.read('Covens', 'manual')
+    advance(MANUAL_GAP_MS + 1)
+    const real = fs.promises.readFile
+    const spy = vi.spyOn(fs.promises, 'readFile').mockImplementation(async (...a: Parameters<typeof real>) => {
+      if (String(a[0]).endsWith('Covens.json')) throw Object.assign(new Error('EBUSY'), { code: 'EBUSY' })
+      return await real(...a)
+    })
+    await expect(th.read('Covens', 'manual')).rejects.toThrow("Couldn't save")
+    spy.mockRestore()
+    const saved = JSON.parse(fs.readFileSync(path.join(dir, 'Covens.json'), 'utf8')) as { sales: unknown[] }
+    expect(saved.sales).toHaveLength(3)
+  })
+
   it('keeps every sale it has seen in a file per league', async () => {
     const { th } = setup([ok(), ok(JSON.stringify({ result: [entry('z', '2026-11-21T11:00:00Z', { typeLine: 'Divine Orb', frameType: 5 })] }))])
     const first = await th.read('Covens', 'manual')

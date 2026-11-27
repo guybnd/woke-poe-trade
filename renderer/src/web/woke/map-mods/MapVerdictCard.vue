@@ -1,5 +1,5 @@
 <template>
-  <WPanel :title="result.name" size-key="verdict" width="26rem" max-height="80vh">
+  <WPanel :title="result.name" size-key="verdict" :hotkey="config.hotkey" width="26rem" max-height="80vh">
     <template #actions>
       <span class="w-dim text-xs whitespace-nowrap pr-2">{{ result.sub }}</span>
     </template>
@@ -43,17 +43,15 @@
     </div>
     <div class="w-group-label">Mods</div>
     <div v-if="!result.verdict.mods.length && !result.unknown.length" class="w-dim px-3 pb-2">No mods</div>
-    <button v-for="(mod, i) in result.verdict.mods" :key="`${i}:${mod.matcher}`" type="button"
-      :class="[$style.mod, { 'w-dim': mod.rating === 'ok' }]"
-      :title="`Click to change: ${RATING_LABEL[mod.rating]}`"
-      @click="cycle(mod)">
-      <span :class="[$style.dot, $style[mod.rating]]" />
-      <span class="flex-1 text-left">{{ mod.text }}</span>
-      <span v-if="mod.rating !== 'ok'" :class="[$style.tag, $style[mod.rating]]">{{ RATING_LABEL[mod.rating] }}</span>
-    </button>
+    <!-- The rating is the chip (WRateChip, the same on every screen); the row itself takes no click. -->
+    <div v-for="(mod, i) in result.verdict.mods" :key="`${i}:${mod.matcher}`" data-verdict-mod
+      :class="[$style.mod, { 'w-dim': mod.rating === 'ok' }]">
+      <WRateChip :rating="mod.rating" :save-to="profileName" @rate="rate(mod, $event)" />
+      <span v-mod-tip="{ head: 'Mod', text: mod.text, notes: [RATE_TITLE[mod.rating]] }" class="flex-1 text-left">{{ mod.text }}</span>
+    </div>
     <div v-for="text in result.unknown" :key="text" :class="$style.mod" class="w-dim">
-      <span :class="$style.dot" />
-      <span class="flex-1">{{ text }} <span class="w-faint">(not recognised)</span></span>
+      <span :class="$style.gap" />
+      <span v-mod-tip="{ head: 'Mod', text, notes: ['Not a mod this list knows, so it has no rating'] }" class="flex-1">{{ text }} <span class="w-faint">(not recognised)</span></span>
     </div>
   </WPanel>
 </template>
@@ -61,8 +59,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { WPanel } from '../ui'
+import { vModTip } from '../ui/tooltip/mod-line-tip'
 import { heistRowOf } from './data'
-import { modRatings, nextModRating, setModRatings, shortLabel, VERDICT_LABEL, withModRating } from './rules'
+import { modRatings, RATE_TITLE, setModRatings, shortLabel, VERDICT_LABEL, withModRating } from './rules'
+import WRateChip from '../ui/WRateChip.vue'
 import type { CheckedMod, ModRating } from './rules'
 import { activeProfile } from './widget'
 import type { MapModsWidget } from './widget'
@@ -84,8 +84,6 @@ const wanted = computed(() => props.result.verdict.good.map(m => shortLabel(m.ma
 const showGoals = computed(() => props.result.goals != null && !props.result.unidentified &&
   (goalRows.value.length > 0 || wanted.value.length > 0 || props.canEdit))
 
-const RATING_LABEL: Record<ModRating, string> = { deadly: "can't run", warn: 'careful', good: 'juice', ok: 'ok' }
-
 const profileName = computed(() => activeProfile(props.config).name)
 
 const headline = computed(() => {
@@ -98,9 +96,8 @@ const headline = computed(() => {
   return "Nothing your build can't run"
 })
 
-function cycle (mod: CheckedMod) {
+function rate (mod: CheckedMod, next: ModRating) {
   const profile = activeProfile(props.config)
-  const next = nextModRating(mod.rating)
   const mode = props.result.mode
   const key = mode === 'heist' ? heistRowOf(mod.matcher) ?? mod.matcher : mod.matcher
   setModRatings(profile, mode, withModRating(modRatings(profile, mode), key, mod.wordings ?? [], next))
@@ -108,6 +105,7 @@ function cycle (mod: CheckedMod) {
 </script>
 
 <style module>
+.gap { flex: none; width: 3.4em; }
 .verdict {
   display: flex;
   align-items: center;
@@ -204,19 +202,4 @@ function cycle (mod: CheckedMod) {
   padding: 4px var(--w-pad);
   text-align: left;
 }
-button.mod:hover { background: var(--w-accent-soft); }
-.dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: var(--w-r-sm);
-  background: var(--w-panel-3);
-}
-.dot.deadly { background: var(--w-down); }
-.dot.warn { background: var(--w-warn); }
-.dot.good { background: var(--w-up); }
-.tag { font-size: var(--w-fs-sm); white-space: nowrap; }
-.tag.deadly { color: var(--w-down); }
-.tag.warn { color: var(--w-warn); }
-.tag.good { color: var(--w-up); }
 </style>

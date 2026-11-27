@@ -36,7 +36,7 @@
             <button type="button" role="radio" :aria-checked="template?.id === t.id" :class="template?.id === t.id && $style.on_any"
               :data-goal="`t:${t.name}`" :title="templateTitle(t)" @click="pickTemplate(t)">{{ t.name }}</button>
             <button type="button" :class="$style.tplDel" :data-template-delete="t.name" :aria-label="`Delete ${t.name}`"
-              :title="`Delete the ${t.name} template`" @click="deleteTemplate(t.id)"><i class="fas fa-times" /></button>
+              :title="`Delete the ${t.name} template`" @click="removeTemplate(t)"><i class="fas fa-times" /></button>
           </template>
         </span>
         <input v-if="naming" ref="nameBox" v-model="newName" type="text" maxlength="24" :class="$style.nameBox" data-template-name
@@ -44,6 +44,10 @@
         <button v-else type="button" :class="$style.tool" data-template-save
           title="Save what you picked (numbers and their mins, Kind, mods set to Not) as a Farming button for the next maps"
           @click="startSave"><i class="fas fa-plus" />Save</button>
+        <!-- Guy's pick: the template's Not mods in every search, even ones this map hasn't got.
+             Off by default, lit while on, remembered on the template. -->
+        <button v-if="template?.not?.length && filters && addMods" type="button" :class="[$style.tool, excludeOn && $style.toolOn]"
+          :aria-pressed="excludeOn" :title="excludeTitle" data-map-exclude-bad @click="toggleExclude"><i class="fas fa-ban" />Exclude my bad mods</button>
       </div>
       <!-- Guy (2026-11-24): a map's kind is its influence: normal, Elder, Shaper, a conqueror's, each with
            the Originator or without. The search finds only this map's kind; the menu picks another, Any
@@ -127,12 +131,11 @@
           :data-rare-only="isRareOnly(row) || undefined" data-map-mod
           :title="row.filter ? 'Click to cycle Has, Not, Any' : undefined" @click="row.filter && cycleState(row.filter)">
           <!-- Guy (2026-11-24): the chip is the rating; click it to change it, saved to the active Map mods profile. -->
-          <button v-if="row.rated" type="button" :class="[$style.rateChip, $style[`rate_${row.mod.rating}`]]" :title="rateTitle(row.mod.rating)"
-            :aria-label="`Rating: ${RATING_TITLE[row.mod.rating]}. Click to change`" :data-map-rate="row.mod.rating" @click.stop="rate(row.mod.matcher, row.mod.rating)">{{ RATE_WORD[row.mod.rating] }}</button>
+          <WRateChip v-if="row.rated" :rating="row.mod.rating" :save-to="profileName" @rate="rate(row.mod.matcher, $event)" />
           <span v-else :class="$style.rateGap" />
           <!-- Guy (2026-11-24): rare-only map mods are yellow in game and worth filtering for. -->
           <span v-if="isRareOnly(row)" :class="$style.rareIcon" title="Rare-only map mod" />
-          <span :class="[$style.text, { 'w-dim': row.mod.rating === 'ok' && !row.filter?.disabled }]">{{ row.mod.text }}</span>
+          <span v-mod-tip="modTip(row)" :class="[$style.text, { 'w-dim': row.mod.rating === 'ok' && !row.filter?.disabled }]">{{ row.mod.text }}</span>
           <!-- Guy (2026-11-24): any Evocator (or buried Sentinel) does the job, so Has and Not
                take all three until unticked. A tick box with a fixed label, left of the switches
                so they stay in one column ("which one am I clicking for?"). -->
@@ -156,10 +159,13 @@
 <script setup lang="ts">
 import { computed, h, inject, nextTick, onBeforeUnmount, shallowRef, watch, watchEffect } from 'vue'
 import type { ShallowRef } from 'vue'
-import { WIcon, WInfo } from '../ui'
+import { WIcon, WInfo, toast } from '../ui'
 import { useFold } from '../ui/fold'
+import WRateChip from '../ui/WRateChip.vue'
+import { vModTip } from '../ui/tooltip/mod-line-tip'
+import type { ModLine } from '../ui/tooltip/mod-line-tip'
 import type { ParsedItem } from '@/parser'
-import { VERDICT_LABEL, modRatings, nextModRating, setModRatings, withModRating } from './rules'
+import { RATE_TITLE, VERDICT_LABEL, modRatings, setModRatings, withModRating } from './rules'
 import type { ModRating } from './rules'
 import { activeProfile } from './widget'
 import { heistRowOf } from './data'
@@ -171,7 +177,7 @@ import { FilterTag } from '@/web/price-check/filters/interfaces'
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
 import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalAddsExtra, goalDisabled } from './goal'
 import { farmGoal, setFarmGoal } from './goal-config'
-import { activeTemplate, deleteTemplate, farmTemplates, nextTemplateName, saveTemplate, setActiveTemplate, templateMin } from './farm-templates'
+import { activeTemplate, deleteTemplate, farmTemplates, nextTemplateName, saveTemplate, setActiveTemplate, notToSave, setExcludeNot, templateMin, templateNotMods } from './farm-templates'
 import type { FarmTemplate } from './farm-templates'
 import { tickPref } from '../price-insight/tick-prefs'
 import { ItemCategory } from '@/parser'
@@ -182,6 +188,12 @@ import type { FarmGoal } from './goal'
 const props = defineProps<{ item: ParsedItem, stats?: FilterOrGroup[], filters?: ItemFilters, addMods?: boolean, worth?: boolean }>()
 
 const open = useFold('map-mod-strip')
+
+// No "are you sure": delete now, offer Undo (P9).
+function removeTemplate (t: FarmTemplate) {
+  const undo = deleteTemplate(t.id)
+  if (undo) toast(`${t.name} template deleted`, { undo })
+}
 
 // Game art on each number tile (layout A, 2026-11-24): the item players link with what it raises.
 type IconProps = { src?: string, item?: string, fallback: string, title: string }
@@ -227,7 +239,18 @@ onBeforeUnmount(() => { if (owns) owns.value = null })
 
 // The second line: how many mods of each rating, so a folded section keeps
 // the verdict's reasons.
-const RATING_TITLE: Record<string, string> = { deadly: "Your build can't run this", warn: 'Risky for your build', good: 'Wanted (juice)', ok: 'Not rated' }
+// The mod's whole text on hover, with its rating and what a click does.
+function modTip (row: Row): ModLine {
+  return {
+    head: 'Map mod',
+    text: row.mod.text,
+    notes: [
+      row.rated && RATE_TITLE[row.mod.rating],
+      isRareOnly(row) && 'Rare-only map mod',
+      row.filter ? 'Click to cycle Has, Not, Any' : null
+    ]
+  }
+}
 const summary = computed(() => {
   const v = result.value!.verdict
   const n = (k: number, one: string, many: string) => k ? `${k} ${k === 1 ? one : many}` : ''
@@ -284,12 +307,10 @@ const rows = computed<Row[]>(() => {
   return [...rest, ...rated]
 })
 // Guy (2026-11-24): a word chip per mod, clicked through Bad (red), Care (yellow), Want (green).
-const RATE_WORD: Record<ModRating, string> = { deadly: 'Bad', warn: 'Care', good: 'Want', ok: '–' }
-function rateTitle (r: ModRating): string {
+const profileName = computed(() => {
   const config = findMapModsConfig()
-  const name = config ? activeProfile(config).name : ''
-  return `${RATING_TITLE[r]}. Click for the next: Bad, Care, Want, none${name ? `; saved to ${name}` : ''}.`
-}
+  return config ? activeProfile(config).name : ''
+})
 const firstOrder = new WeakMap<ParsedItem, string[]>()
 function rowOrder (item: ParsedItem, matchers: string[]): string[] {
   const known = firstOrder.get(item) ?? []
@@ -297,14 +318,14 @@ function rowOrder (item: ParsedItem, matchers: string[]): string[] {
   firstOrder.set(item, order)
   return order
 }
-function rate (matcher: string, current: ModRating) {
+function rate (matcher: string, next: ModRating) {
   const config = findMapModsConfig()
   const mode = result.value?.mode
   if (!config || !mode) return
   const profile = activeProfile(config)
   const key = mode === 'heist' ? heistRowOf(matcher) ?? matcher : matcher
   const wordings = props.item.statsByType.find(c => c.stat.matchers.some(m => m.string === matcher))?.stat.matchers.map(m => m.string) ?? []
-  setModRatings(profile, mode, withModRating(modRatings(profile, mode), key, wordings, nextModRating(current)))
+  setModRatings(profile, mode, withModRating(modRatings(profile, mode), key, wordings, next))
 }
 function isRareOnly (row: Row): boolean {
   return row.filter?.tag === FilterTag.RareOnly
@@ -509,7 +530,7 @@ function setGoal (g: FarmGoal) {
 function templateTitle (t: FarmTemplate): string {
   const parts = [t.on.length ? `${t.on.join(', ')} on` : 'No numbers on']
   if (t.kind) parts.push(`Kind: ${t.kind === 'own' ? "the map's own" : choices.value.find(c => c.key === t.kind)?.label ?? t.kind}`)
-  if (t.not?.length) parts.push(`${t.not.length} ${t.not.length === 1 ? 'mod' : 'mods'} set to Not`)
+  if (t.not?.length) parts.push(`${t.not.length} ${t.not.length === 1 ? 'mod' : 'mods'} set to Not${t.excludeNot ? ', left out of every search' : ''}`)
   return `Your template ${t.name}: ${parts.join('; ')}. Remembered for the next maps.`
 }
 function pickTemplate (t: FarmTemplate) {
@@ -569,9 +590,49 @@ function confirmSave () {
   }
   const key = current.value?.key
   const kind = !key ? undefined : key === ownKey.value ? 'own' : key
-  const not = searchable.value.filter(f => f.mapMod && stateOf(f) === 'not').map(f => f.statRef)
-  saveTemplate({ name, on, minPct, extraMin, kind, not })
+  // Saved over the same name with Exclude on: its Not mods this map hasn't
+  // got stay in it, and so does Exclude. A new name starts with it off.
+  const prev = farmTemplates().find(t => t.name === name)
+  const here = searchable.value.filter(f => f.mapMod).map(f => f.statRef)
+  const not = notToSave(prev, here, searchable.value.filter(f => f.mapMod && stateOf(f) === 'not').map(f => f.statRef))
+  saveTemplate({ name, on, minPct, extraMin, kind, not, ...(prev?.excludeNot ? { excludeNot: true } : {}) })
 }
+// "Exclude my bad mods" (Guy's pick): a template's Not mods go in the search's
+// Not group even when this map hasn't got them, so the results can't hold maps
+// with the mods you avoid. Base map pauses it for this item.
+const excludePaused = shallowRef(false)
+watch(() => props.item, () => { excludePaused.value = false })
+const excludeOn = computed(() => !!template.value?.excludeNot && !excludePaused.value)
+function toggleExclude () {
+  const t = template.value
+  if (!t) return
+  if (excludePaused.value) {
+    excludePaused.value = false
+    if (t.excludeNot) return
+  }
+  setExcludeNot(t.id, !t.excludeNot)
+}
+const onMapRefs = computed(() => new Set(searchable.value.filter(f => f.mapMod).map(f => f.statRef)))
+watchEffect(() => {
+  const f = props.filters
+  if (!f) return
+  const t = template.value
+  const list = t && excludeOn.value && props.addMods && isMap.value ? templateNotMods(t, onMapRefs.value) : []
+  // Written only when it changes: a new key on the filters counts as an edit,
+  // which stops the price check's own first search (any item, not just maps).
+  if (list.length) f.templateNot = list
+  else if (f.templateNot) f.templateNot = undefined
+})
+const excludeTitle = computed(() => {
+  const t = template.value
+  if (!t?.not?.length) return ''
+  const n = t.not.length
+  const away = t.not.filter(ref => !onMapRefs.value.has(ref)).length
+  const mods = `${n} ${n === 1 ? 'mod' : 'mods'} set to Not`
+  return excludeOn.value
+    ? `On: every search leaves out maps with any of ${t.name}'s ${mods} (${away} not on this map). Click to turn off.`
+    : `Off: only this map's own mods are set to Not. Turn on to leave out maps with any of ${t.name}'s ${mods}, on every map.`
+})
 function applyGoal (g: FarmGoal) {
   for (const p of result.value?.props ?? []) {
     const f = propFilter(p.label)
@@ -628,8 +689,9 @@ const hasFilters = computed(() => propFilters.value.length > 0 || baseMods.value
 const baseOnly = computed(() =>
   !plainFilters.value.some(isOnFilter) &&
   baseMods.value.every(f => stateOf(f) === 'any') &&
-  (props.filters?.addedMods ?? []).every(m => m.disabled))
-interface BaseSnapshot { on: FilterOrGroup[], mods: Array<[StatFilter, ModState]>, added: AddedMod[] }
+  (props.filters?.addedMods ?? []).every(m => m.disabled) &&
+  !excludeOn.value)
+interface BaseSnapshot { on: FilterOrGroup[], mods: Array<[StatFilter, ModState]>, added: AddedMod[], exclude: boolean }
 const clearedRef = shallowRef<BaseSnapshot | null>(null)
 watch(() => props.item, () => { clearedRef.value = null })
 function toggleBase () {
@@ -637,11 +699,13 @@ function toggleBase () {
     const cleared: BaseSnapshot = {
       on: plainFilters.value.filter(isOnFilter),
       mods: baseMods.value.filter(f => stateOf(f) !== 'any').map(f => [f, stateOf(f)]),
-      added: (props.filters?.addedMods ?? []).filter(m => !m.disabled)
+      added: (props.filters?.addedMods ?? []).filter(m => !m.disabled),
+      exclude: excludeOn.value
     }
     cleared.on.forEach(f => { setOnFilter(f, false) })
     cleared.mods.forEach(([f]) => { setState(f, 'any') })
     cleared.added.forEach(m => { m.disabled = true })
+    if (cleared.exclude) excludePaused.value = true
     clearedRef.value = cleared
   } else if (clearedRef.value) {
     const cleared = clearedRef.value
@@ -651,6 +715,7 @@ function toggleBase () {
     cleared.mods.filter(([f]) => stats.includes(f)).forEach(([f, state]) => { setState(f, state) })
     const added = props.filters?.addedMods ?? []
     cleared.added.filter(m => added.includes(m)).forEach(m => { m.disabled = false })
+    if (cleared.exclude) excludePaused.value = false
     clearedRef.value = null
   }
 }
@@ -661,7 +726,8 @@ const baseTitle = computed(() => baseOnly.value
 const picked = computed(() => {
   // The influence is what the map is, not a pick.
   const has = baseMods.value.filter(f => stateOf(f) === 'has').length
-  const not = baseMods.value.filter(f => stateOf(f) === 'not').length
+  // The template's Not mods this map hasn't got ("Exclude my bad mods") count too.
+  const not = baseMods.value.filter(f => stateOf(f) === 'not').length + (props.filters?.templateNot?.length ?? 0)
   // Mods added from the line below count too, so a folded section still says what it searches.
   const added = (props.filters?.addedMods ?? []).filter(m => !m.disabled).length
   return [has ? `has ${has}` : '', not ? `not ${not}` : '', added ? `+${added} added` : ''].filter(Boolean).join(' · ')
@@ -797,13 +863,7 @@ const picked = computed(() => {
 .dot.deadly { background: var(--w-down); }
 .dot.warn { background: var(--w-warn); }
 .dot.good { background: var(--w-up); }
-.rateChip { flex: none; width: 3.4em; padding: 0 2px; text-align: center; font-size: var(--w-fs-xs); line-height: 1.5;
-  border: 1px solid transparent; border-radius: var(--w-r-sm); color: var(--w-dim); cursor: pointer; }
 .rateGap { flex: none; width: 3.4em; }
-.rateChip:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
-.rate_deadly { color: var(--w-down); border-color: color-mix(in srgb, var(--w-down) 55%, transparent); background: color-mix(in srgb, var(--w-down) 14%, transparent); }
-.rate_warn { color: var(--w-warn); border-color: color-mix(in srgb, var(--w-warn) 55%, transparent); background: color-mix(in srgb, var(--w-warn) 14%, transparent); }
-.rate_good { color: var(--w-up); border-color: color-mix(in srgb, var(--w-up) 55%, transparent); background: color-mix(in srgb, var(--w-up) 14%, transparent); }
 /* Last, so it wins over the tile rules above. */
 @container (max-width: 92px) {
   /* Narrow: icon and value on one line, the min under it (the name is in the hover). */

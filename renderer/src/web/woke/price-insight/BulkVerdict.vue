@@ -23,7 +23,7 @@
       <div v-if="ninjaNote" :class="$style.note" data-testid="bulk-verdict-ninja"><w-price-text :text="ninjaNote" /></div>
     </template>
     <div v-else :class="$style.eyebrow">
-      <span :class="$style.badge">{{ loading ? '…' : 'NO DATA' }}</span>
+      <span :class="$style.badge">{{ loading ? '…' : 'No data' }}</span>
       <span>{{ loading ? 'Reading offers…' : 'No offers that can be filled' }}</span>
     </div>
   </div>
@@ -51,7 +51,8 @@ const props = defineProps<{
   divineInChaos?: number | null
 }>()
 
-const CONFIDENCE_LABEL: Record<Confidence, string> = { high: 'SOLID', medium: 'OK', low: 'THIN', none: 'NO DATA' }
+// Normal case: the badge's caps come from the --w-caps-* tokens.
+const CONFIDENCE_LABEL: Record<Confidence, string> = { high: 'Solid', medium: 'OK', low: 'Thin', none: 'No data' }
 const CONFIDENCE_HINT: Record<Confidence, string> = {
   high: 'Several sellers ask about the same',
   medium: 'A few sellers, a bit spread out',
@@ -132,7 +133,9 @@ const fast = computed(() => {
 .count { color: var(--w-dim); font-size: var(--w-fs-xs); white-space: nowrap; }
 .badge {
   flex: none;
-  font-size: var(--w-fs-xs);
+  font-family: var(--w-caps-face);
+  text-transform: var(--w-caps-case);
+  font-size: var(--w-fs-caps);
   font-weight: 600;
   letter-spacing: .05em;
   line-height: calc(14px * var(--w-text-scale, 1));

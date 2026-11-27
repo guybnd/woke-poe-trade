@@ -44,6 +44,20 @@ function read (file: string, crop?: { x: number, y: number, w: number, h: number
   }
 }
 
+// The plan in atlas-tree-planner.png, as its planner link reads (149, start left out).
+const PLANNER_149 = [
+  565, 777, 866, 2111, 2328, 2730, 2792, 2929, 3204, 3296, 3795, 5720, 6530, 7540, 7791, 8132,
+  10209, 10321, 10431, 10448, 10944, 11045, 11214, 11223, 11915, 12291, 12836, 13448, 13833, 14287, 14369, 15324,
+  15921, 15961, 15967, 16341, 16490, 16780, 16822, 17151, 17584, 19675, 19729, 20223, 21096, 22689, 22844, 23195,
+  24040, 24106, 25259, 25273, 25923, 26007, 26601, 27028, 27186, 28220, 28477, 28834, 28873, 28971, 29088, 29137,
+  29605, 29621, 29991, 30044, 30207, 30266, 30277, 30402, 30893, 31171, 31240, 32019, 32157, 33008, 33684, 33820,
+  33837, 33868, 34393, 34502, 34662, 34850, 35176, 36458, 37420, 37913, 38084, 38465, 38692, 39147, 39158, 39362,
+  40369, 40490, 40832, 40846, 40852, 41053, 41351, 41591, 41694, 42156, 42605, 42692, 43052, 43591, 43714, 43872,
+  44917, 44993, 47095, 47222, 47914, 48107, 48296, 48316, 50511, 50686, 50991, 51014, 51133, 51572, 52079, 52974,
+  53193, 53540, 53613, 56639, 56860, 57123, 57566, 57854, 58023, 58167, 58224, 59989, 60045, 60645, 62796, 63460,
+  63753, 64178, 64218, 64609, 65535
+]
+
 const names = (ids: number[]) => ids.map(id => model.nodes.get(id)!.name).sort()
 
 describe('atlas tree screenshots to a strategy', () => {
@@ -131,6 +145,20 @@ describe('atlas tree screenshots to a strategy', () => {
     expect(r.nodes.length).toBeGreaterThanOrEqual(135)
     expect(r.nodes.length).toBeLessThanOrEqual(150)
     expect(r.joined).toBeLessThanOrEqual(5)
+  })
+
+  it('reads a planner site\'s tree (every frame a point can go next drawn lavender)', () => {
+    // Guy's import that came out over 150 (243 of 149): the planner's "can
+    // allocate" frames read as lit, so every neighbour of the tree was taken.
+    // The 149, from the same plan's link (planner-link.test.ts).
+    const png = PNG.sync.read(fs.readFileSync(path.join(__dirname, '../fixtures/screens/atlas-tree-planner.png')))
+    const px = new Uint8Array(png.data)
+    for (let i = 0; i < px.length; i += 4) { const t = px[i]; px[i] = px[i + 2]; px[i + 2] = t }
+    const res = readPicture({ px, width: png.width, height: png.height, pts, kind: ATLAS_FIT, snip: ATLAS_PICTURE_FIT, tone: 'blue', probes: rings.map(r => [...r]), extra: extra.map(e => [...e]) })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const r = readShots(model, lines, [res.extraLit], ringIds, [res.lit])
+    expect(r.nodes.sort((a, b) => a - b)).toEqual(PLANNER_149)
   })
 
   it('reads the website at a screen size, on its own page or a dark one', () => {

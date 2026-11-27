@@ -48,7 +48,7 @@
           <button type="button" :class="$style.link" class="w-focusable" @click="pickWhere(() => false)">none</button>
           <button v-if="upCount" type="button" :class="$style.link" class="w-focusable" title="Only items moving to a better tier" @click="pickWhere(isUp)">up only · {{ upCount }}</button>
           <button v-if="upCount < moves.length" type="button" :class="$style.link" class="w-focusable" title="Only items moving to a lower tier" @click="pickWhere(m => !isUp(m))">down only · {{ moves.length - upCount }}</button>
-          <WInfo text="Shift + click a box to tick or untick every row between it and the last one you clicked." />
+          <WInfo text="[[Shift + Click]] a box to tick or untick every row between it and the last one you clicked." />
         </span>
       </div>
       <div v-for="(m, n) in moves" :key="m.type + m.base" v-item-tip="baseTip(m.type, m.base)" :class="$style.row" @contextmenu="moveMenu($event, m)">
@@ -149,8 +149,8 @@
             <span v-else :class="$style.bigArt" />
             <span v-item-tip="{ name: i.name }" class="w-trunc text-sm">{{ i.name }}</span>
             <span :class="$style.bar"><i :class="$style[`g_${i.grade}`]" :style="{ width: `${priceBar(i.chaos, r.most)}%` }" /></span>
-            <span class="w-num text-xs" :class="$style[`${i.grade}Text`]">{{ i.chaos != null ? `${Math.round(i.chaos)}c` : 'no price' }}</span>
-            <span class="text-xs" :class="$style[`${i.grade}Text`]">{{ GRADE_LABEL[i.grade] }}{{ i.thin ? ', thin market' : '' }}</span>
+            <span class="w-num text-xs" :class="$style[`${i.grade}Text`]"><WPrice :chaos="i.chaos" unit="chaos" :thin="i.thin" /></span>
+            <span class="text-xs" :class="$style[`${i.grade}Text`]">{{ GRADE_LABEL[i.grade] }}</span>
           </div>
           <div v-if="r.trash" class="w-dim text-xs flex items-center gap-1" style="margin-top: 5px;">{{ r.trash }} of {{ r.items.length }} {{ r.trash === 1 ? 'is' : 'are' }} trash <WInfo text="A trash drop looks the same on the ground until you identify it." /></div>
         </div>

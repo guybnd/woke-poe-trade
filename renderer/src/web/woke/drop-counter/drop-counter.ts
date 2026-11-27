@@ -37,6 +37,13 @@ export function initDropCounter (w: DropCounterWidget) {
   w.hotkey = null
 }
 
+// The line an item counts on. 3.30 maps copy as plain "Map" whatever their
+// tier: each tier gets its own line, named as poe.ninja prices it ("Map (Tier 16)").
+export function dropName (item: { info: { refName: string }, mapTier?: number, rarity?: string }): string {
+  const name = item.info.refName
+  return item.mapTier && item.rarity !== 'Unique' && /^(Blighted |Blight-ravaged )?Map$/.test(name) ? `${name} (Tier ${item.mapTier})` : name
+}
+
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
 
 export function findLine (items: DropLine[], name: string): DropLine | undefined {

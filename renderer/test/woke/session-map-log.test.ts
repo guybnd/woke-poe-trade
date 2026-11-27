@@ -94,16 +94,53 @@ describe('maps from Client.txt', () => {
     expect(done.map(r => [r.name, r.mapMs, r.enteredAt])).toEqual([['Fortress', 190_000, new Date('2026-11-05T23:50:00').getTime()]])
   })
 
-  it('follows a character switch outside maps, not a party member inside one', () => {
-    const { log } = follow([
+  it('follows a character switch after the game starts again, never a party member', () => {
+    const { log, done } = follow([
       level('20:00:00', 94),
       area('21:00:00', 'MapWorldsStrand', '11'),
       level('21:01:00', 41, 'friend'),
+      slain('21:01:30', 'friend'),
       area('21:02:00', 'HideoutChurch', '1', 68),
+      // In your hideout too: a party member's.
+      level('21:03:00', 42, 'friend'),
+      area('21:04:00', 'MapWorldsCemetery', '13'),
+      area('21:05:00', 'HideoutChurch', '1', 68),
+      `2026/11/05 21:29:00 ***** LOG FILE OPENING *****`,
+      area('21:29:30', 'HideoutChurch', '1', 68),
       level('21:30:00', 70, 'alt'),
-      area('21:31:00', 'MapWorldsCemetery', '13')
+      area('21:31:00', 'MapWorldsDunes', '14')
     ])
-    expect(log.current).toMatchObject({ name: 'Cemetery', char: 'alt', charLevel: 70 })
+    expect(done.map(r => [r.name, r.char, r.deaths, r.levelsGained])).toEqual([['Strand', 'whekq', 0, 0], ['Cemetery', 'whekq', 0, 0]])
+    expect(log.current).toMatchObject({ name: 'Dunes', char: 'alt', charLevel: 70 })
+  })
+
+  it('a level-up after the death that named you fills in the map\'s class and level', () => {
+    const { log } = follow([
+      `2026/11/05 21:00:00 ***** LOG FILE OPENING *****`,
+      area('21:01:00', 'MapWorldsStrand', '11'),
+      slain('21:02:00'),
+      level('21:03:00', 95)
+    ])
+    expect(log.current).toMatchObject({ char: 'whekq', className: 'Gladiator', charLevel: 94, deaths: 1, levelsGained: 1 })
+  })
+
+  it('after the game starts, the first death or level-up in a map decides whose map it is', () => {
+    const { log } = follow([
+      level('20:00:00', 94),
+      `2026/11/05 21:00:00 ***** LOG FILE OPENING *****`,
+      area('21:01:00', 'MapWorldsStrand', '11'),
+      slain('21:02:00', 'alt'),
+      level('21:03:00', 95)
+    ])
+    expect(log.current).toMatchObject({ char: 'alt', className: null, charLevel: null, deaths: 1, levelsGained: 0 })
+    expect(log.char).toEqual({ name: 'alt', className: null, level: null })
+  })
+
+  it('takes a character known from a saved map as unsure: the first event decides', () => {
+    const { log } = follow([])
+    log.char = { name: 'old', className: 'Witch', level: 90 }
+    for (const line of [area('21:01:00', 'MapWorldsStrand', '11'), level('21:02:00', 95)]) log.feed(line, 0)
+    expect(log.current).toMatchObject({ char: 'whekq', className: 'Gladiator', charLevel: 94, levelsGained: 1 })
   })
 
   it('marks a map whose Mirage you stepped into, once, as Client.txt logs it', () => {

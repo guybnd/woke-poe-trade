@@ -21,6 +21,10 @@ function listen () {
 
 // The op's args and result come from ipc/woke-ops.ts.
 export function hostRequest<K extends WokeOp> (op: K, args: WokeArgs<K>, timeoutMs = 30_000): Promise<WokeResult<K>> {
+  // Asked while the page is still loading (a module's first read): send once
+  // the connection is up. Once connected this stays synchronous, so requests
+  // keep their order with other events (the quit flush relies on it).
+  if (MainProcess.connected === false) return MainProcess.whenConnected.then(async () => await hostRequest(op, args, timeoutMs))
   listen()
   const id = nextId++
   return new Promise<WokeResult<K>>((resolve, reject) => {

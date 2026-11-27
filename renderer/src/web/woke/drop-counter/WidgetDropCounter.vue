@@ -103,12 +103,12 @@ import { popupAnchor } from '../ui/window-anchor'
 import DockItem from '../dock/DockItem.vue'
 import { dockIconEl, showWithOverlay } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
-import { countNewMap, isFarmedMap } from '../farming/farming'
+import { countNewMap, isFarmedMap } from '../shared/map-areas'
 import { usePriceIndex } from '../market/price-index'
 import { searchPrices, typeLabel } from '../search/search'
 import { onGameLog } from '../shared/game-log'
 import { useZone } from '../shared/zone'
-import { DROP_COUNTER_TARGET, addLine, changeMaps, findLine, initDropCounter, lineDetail, minusOne, peekText, plusOne, removeLine, resetCounts, restoreCounts, restoreLine } from './drop-counter'
+import { DROP_COUNTER_TARGET, addLine, changeMaps, dropName, findLine, initDropCounter, lineDetail, minusOne, peekText, plusOne, removeLine, resetCounts, restoreCounts, restoreLine } from './drop-counter'
 import type { DropCounterWidget, DropLine } from './drop-counter'
 // The header shows the module's own art, the same as the dock and tab bar.
 const panelIcon = moduleIcon('drop-counter').art ?? 'divine'
@@ -271,7 +271,7 @@ const itemListener = MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {
   if (e.target !== DROP_COUNTER_TARGET) return
   const parsed = parseClipboard(e.clipboard).unwrapOr(null)
   if (!parsed) return
-  const name = parsed.info.refName
+  const name = dropName(parsed)
   const line = findLine(props.config.items, name) ??
     addLine(props.config, { type: prices.raw.value?.items.find(i => i.name === name)?.type ?? '', name })
   if (line) bump(line)

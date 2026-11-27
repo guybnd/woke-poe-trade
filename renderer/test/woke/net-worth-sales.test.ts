@@ -167,7 +167,10 @@ describe('tooltips', () => {
     expect(hh).toMatchObject({ name: 'Headhunter' })
     expect(hh.type).toBeUndefined()
     // A rare without its mods: its base's tooltip.
-    expect(saleTip(sale({ frameType: 2, name: 'Doom Loop', typeLine: 'Two-Toned Boots' }))).toEqual({ name: 'Two-Toned Boots', count: 1 })
+    // Its menu names the base as a base, so Price check doesn't price it as a white copy.
+    expect(saleTip(sale({ frameType: 2, name: 'Doom Loop', typeLine: 'Two-Toned Boots', baseType: 'Two-Toned Boots' }))).toEqual({
+      name: 'Two-Toned Boots', count: 1, menu: { name: 'Two-Toned Boots', base: 'Two-Toned Boots', noPrice: true }
+    })
   })
 })
 

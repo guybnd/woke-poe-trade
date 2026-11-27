@@ -52,7 +52,7 @@
       <section :class="$style.summary">
         <span :class="$style.total" class="w-num" :title="totalTitle" data-net-total>{{ div(v.chaos + listedWorth) }}<Coin :chaos="!divine" /></span>
         <span class="w-num" :class="tone(sum?.sinceYesterdayDiv)" :title="todayTip">
-          <template v-if="sum?.sinceYesterdayDiv != null">{{ signed(sum.sinceYesterdayDiv) }}<Coin /> today</template><template v-else>— today</template>
+          <template v-if="sum?.sinceYesterdayDiv != null">{{ signed(sum.sinceYesterdayDiv) }}<Coin /> {{ since.label }}</template><template v-else>— today</template>
         </span>
         <!-- Per hour of play over the window picked under Details. -->
         <span v-if="rateShown.div != null && !(detailsOpen && shown.perHour)" class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h <span class="w-dim">{{ rateWindow === 'today' ? 'today' : rateWindow }}</span></span>
@@ -72,9 +72,7 @@
           <span v-if="best" class="w-trunc" :title="inChaos(best.chaos)"><span :class="$style.caps">Best</span> <span v-item-tip="lineTip(best, best.count)">{{ best.name }}</span> {{ div(best.chaos) }}<Coin :chaos="!divine" /></span>
           <span v-if="session" :class="tone(session.div)"><span :class="$style.caps">Session</span> {{ signed(session.div) }}<Coin :chaos="!divine" /></span>
         </span>
-        <button v-if="anyDetails" type="button" :class="$style.toggle" :aria-expanded="detailsOpen" @click="config.detailsOpen = !detailsOpen">
-          Details <i :class="detailsOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
-        </button>
+        <WFoldHead v-if="anyDetails" :model-value="detailsOpen" :class="[$style.toggle, $style.foldHead]" @update:model-value="config.detailsOpen = !detailsOpen">Details</WFoldHead>
       </section>
 
       <template v-if="detailsOpen && anyDetails">
@@ -83,11 +81,11 @@
         <section v-if="shown.chart || shown.perHour" ref="topEl" :class="[$style.halves, { [$style.one]: !(shown.chart && shown.perHour) }]" :style="halvesStyle">
           <section v-if="shown.chart" :class="$style.chartBlock">
             <div v-if="fold.chart" :class="$style.chartHead">
-              <button type="button" :class="$style.foldHead" :aria-expanded="false" title="Open the chart" @click="flipFold('chart')"><i class="fas fa-chevron-right" /><span :class="$style.caps">Chart</span></button>
+              <WFoldHead :model-value="false" :class="$style.foldHead" title="Open the chart" @update:model-value="flipFold('chart')"><span :class="$style.caps">Chart</span></WFoldHead>
             </div>
             <div v-else :class="$style.chartHead">
-              <button type="button" :class="$style.fold" :aria-expanded="true" title="Fold the chart" aria-label="Fold the chart" @click="flipFold('chart')"><i class="fas fa-chevron-down" /></button>
-              <TextTabs v-model="chartMode" :options="MODE_OPTIONS" />
+              <WFoldHead :model-value="true" :class="$style.fold" title="Fold the chart" aria-label="Fold the chart" @update:model-value="flipFold('chart')" />
+              <WSegmented v-model="chartMode" :options="MODE_OPTIONS" title="What the chart shows" />
               <span v-if="goal" class="text-xs" :class="$style.goalLine">
                 {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }}<Coin /> ·
                 <template v-if="eta.reached">reached</template>
@@ -98,7 +96,7 @@
                 <!-- Maps behind the line (pick D): off until switched on. -->
                 <button v-if="chartMode === 'total' && farming?.runs.length" type="button" :class="[$style.mapsBtn, { [$style.mapsOn]: mapsOn }]" :aria-pressed="mapsOn"
                   :title="mapsOn ? 'Hide your maps behind the line' : 'Show your maps behind the line'" data-chart-maps @click="config.chartMaps = !mapsOn">Maps</button>
-                <TextTabs v-model="range" :options="RANGE_OPTIONS" />
+                <WSegmented v-model="range" :options="RANGE_OPTIONS" title="How far back the chart goes" />
               </span>
             </div>
             <LedgerChart v-if="!fold.chart" ref="chartComp" :series="series" axes :mode="chartMode as 'total' | 'category'" :goal-div="chartListed ? goal?.div ?? null : goalStashDiv" :height="shown.perHour ? undefined : chartHShown" :class="{ [$style.chartFill]: shown.perHour }" :style="shown.perHour && chartHShown != null ? { minHeight: chartHShown + 'px' } : undefined" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" :listed="chartListed" :maps="chartMaps" :run-from="!liveRun" :run-start-at="liveRun?.startAt ?? null" @spend="onChartSpend" @run="onChartRun" />
@@ -113,12 +111,12 @@
           </section>
           <div v-if="shown.perHour" :class="$style.box" data-goto-spot="per-hour">
             <div v-if="fold.perHour" :class="$style.boxHead">
-              <button type="button" :class="$style.foldHead" :aria-expanded="false" title="Open Per hour" @click="flipFold('perHour')"><i class="fas fa-chevron-right" /><span :class="$style.caps">Per hour</span></button>
+              <WFoldHead :model-value="false" :class="$style.foldHead" title="Open Per hour" @update:model-value="flipFold('perHour')"><span :class="$style.caps">Per hour</span></WFoldHead>
               <b class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b>
             </div>
             <div v-else :class="$style.boxHead">
-              <button type="button" :class="$style.fold" :aria-expanded="true" title="Fold Per hour" aria-label="Fold Per hour" @click="flipFold('perHour')"><i class="fas fa-chevron-down" /></button>
-              <TextTabs v-model="rateWindow" :options="WINDOW_OPTIONS" />
+              <WFoldHead :model-value="true" :class="$style.fold" title="Fold Per hour" aria-label="Fold Per hour" @update:model-value="flipFold('perHour')" />
+              <WSegmented :model-value="rateWindow" :options="WINDOW_OPTIONS" title="The time Per hour counts" @update:model-value="rateWindow = $event as RateWindow" />
               <RateTimePick :class="$style.rateTime" />
             </div>
             <div v-if="!fold.perHour" :class="$style.tiles">
@@ -150,7 +148,7 @@
         <section v-if="showChanges || showSide" ref="colsEl" :class="[$style.cols, { [$style.colsFixed]: midFixed }]" :style="{ gridTemplateColumns: colsTemplate, height: midFixed ? midHShown + 'px' : undefined }">
           <div v-if="showChanges" :class="$style.changesCol">
             <div :class="$style.colHead">
-              <button type="button" :class="$style.foldHead" :aria-expanded="!fold.changes" :title="fold.changes ? 'Open' : 'Fold'" @click="flipFold('changes')"><i :class="fold.changes ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} ${session.maps === 1 ? 'map' : 'maps'}` : 'Since last refresh' }}</span></button>
+              <WFoldHead :model-value="!fold.changes" :class="$style.foldHead" :title="fold.changes ? 'Open' : 'Fold'" @update:model-value="flipFold('changes')"><span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} ${session.maps === 1 ? 'map' : 'maps'}` : 'Since last refresh' }}</span></WFoldHead>
               <b v-if="session" class="w-num" :class="tone(session.div)" :title="session.tip">{{ signed(session.div) }}<Coin :chaos="!divine" /><template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}<Coin :chaos="!divine" />/h</template></b>
               <span v-if="session && session.spent > 0" :class="$style.spendNote" class="w-num" title="Purchases in this session: left out of its profit">spent {{ div(session.spent) }}<Coin :chaos="!divine" /></span>
             </div>
@@ -160,7 +158,7 @@
               <div :class="$style.scroll">
                 <div v-for="(g, i) in groups.slice(0, groupLimit)" :key="g.key" :class="$style.group">
                   <button type="button" :class="$style.groupHead" :aria-expanded="groupOpen(g.key, i)" @click="toggleGroup(g.key, i)">
-                    <i :class="groupOpen(g.key, i) ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
+                    <WFoldCaret :open="groupOpen(g.key, i)" />
                     <span class="w-trunc">{{ g.title }}<template v-if="!groupOpen(g.key, i)"> · {{ g.lines.length }} {{ g.lines.length === 1 ? 'change' : 'changes' }}</template><span v-if="spendRows(g).some(r => r.spent)" :class="$style.spendChip" title="A purchase: it counts 0 toward profit per hour and the session">purchase</span><span v-if="groupSales(g).sales.length" :class="$style.saleChip" title="Items sold on pathofexile.com in this refresh">sale</span></span>
                     <b class="w-num" :class="tone(g.netChaos)" :title="inChaos(g.netChaos)">{{ signed(toDiv(g.netChaos)) }}<Coin :chaos="!divine" /></b>
                   </button>
@@ -188,13 +186,12 @@
             </div>
             <div v-if="session && !fold.changes" :class="$style.sessionFoot">
               <span class="w-dim text-xs">Gains are read when you enter your hideout</span>
-              <WButton v-if="session.endable" size="sm" @click="endSession">End session</WButton>
             </div>
           </div>
           <div v-if="showSide" :class="$style.sideCol">
             <div v-if="showSold">
               <div :class="$style.sideHead">
-                <button type="button" :class="$style.fold" :aria-expanded="!fold.sold" :title="fold.sold ? 'Open Sold' : 'Fold Sold'" :aria-label="fold.sold ? 'Open Sold' : 'Fold Sold'" @click="flipFold('sold')"><i :class="fold.sold ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /></button>
+                <WFoldHead :model-value="!fold.sold" :class="$style.fold" :title="fold.sold ? 'Open Sold' : 'Fold Sold'" :aria-label="fold.sold ? 'Open Sold' : 'Fold Sold'" @update:model-value="flipFold('sold')" />
                 <button type="button" :class="$style.soldHead" title="Open the Sales view" @click="view = 'sales'">
                   <span :class="$style.caps">Sold</span>
                   <span class="w-num text-xs w-dim">today <b :class="$style.saleNum">{{ div(soldToday.chaos) }}</b> · 7 days <b :class="$style.saleNum">{{ div(soldWeek.chaos) }}</b><Coin :chaos="!divine" /></span>
@@ -209,14 +206,14 @@
               </div>
             </div>
             <div v-if="shown.where">
-              <button type="button" :class="[$style.foldHead, $style.sideTitle]" :aria-expanded="!fold.where" :title="fold.where ? 'Open' : 'Fold'" @click="flipFold('where')"><i :class="fold.where ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">Where it is</span></button>
+              <WFoldHead :model-value="!fold.where" :class="[$style.foldHead, $style.sideTitle]" :title="fold.where ? 'Open' : 'Fold'" @update:model-value="flipFold('where')"><span :class="$style.caps">Where it is</span></WFoldHead>
               <button v-for="c in fold.where ? [] : cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
                 :aria-pressed="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">
                 <span :class="$style.catName"><img v-if="c.icon" :src="c.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
               </button>
             </div>
             <div v-if="showMoves" :class="$style.movesCol">
-              <button type="button" :class="[$style.foldHead, $style.sideTitle]" :aria-expanded="!fold.moves" :title="fold.moves ? 'Open' : 'Fold'" @click="flipFold('moves')"><i :class="fold.moves ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" /><span :class="$style.caps">Price moves today</span></button>
+              <WFoldHead :model-value="!fold.moves" :class="[$style.foldHead, $style.sideTitle]" :title="fold.moves ? 'Open' : 'Fold'" @update:model-value="flipFold('moves')"><span :class="$style.caps">Price moves today</span></WFoldHead>
               <HoldLine v-for="m in fold.moves ? [] : moves.slice(0, 8)" :key="m.key" :icon="m.icon" :name="m.name" :text="m.name" :tip="tipFor(tips, m.key, m.name)"
                 :mine="holdOf(m.key)?.mine" :out="ignoredKeys.has(m.key)" :each="holdOf(m.key)?.unitChaos ?? null" :title="inChaos(m.valueChaos)"
                 @price="onPrice(m.key, $event)" @out="onIgnore(m.key, m.name, $event)"><span :class="tone(m.change)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span></HoldLine>
@@ -232,7 +229,7 @@
            out at the right, and the chevron (or the fade) opens them all below -->
       <section v-if="shown.tabs" :class="$style.tabLine">
         <button v-if="tabsOverflow" type="button" :class="$style.toggle" :aria-expanded="expanded" @click="config.tabsOpen = !expanded">
-          <i :class="expanded ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" /> Tabs
+          <WFoldCaret :open="expanded" /> Tabs
         </button>
         <span v-else :class="$style.caps">Tabs</span>
         <button type="button" :class="[$style.tabLabel, { [$style.tabOn]: !tabs.length }]" :aria-pressed="!tabs.length" title="Every tab" @click="tabs = []">All tabs</button>
@@ -256,8 +253,11 @@
       </section>
 
       <section :class="$style.chips">
-        <WField v-model="query" type="search" icon="fas fa-search" placeholder="Search items" :class="$style.search" />
-        <WChip v-if="changedCount" clickable :active="onlyChanged" :title="onlyChanged ? 'Show every item' : 'Only the items you priced yourself or left out'" data-nw-changed @click="onlyChanged = !onlyChanged">Changed {{ changedCount }}</WChip>
+        <WSearchField v-model="query" things="items" :class="$style.search" />
+        <WChip v-if="changedCount" clickable :active="onlyChanged" :title="onlyChanged ? 'Show every item' : 'Only the items you priced yourself or left out'" data-nw-changed @click="onlyChanged = !onlyChanged; onlyFalling = false">Changed {{ changedCount }}</WChip>
+        <!-- Worth selling (pick B, rule R1): what you hold 1 div or more of
+             that has been falling all week (ledger.ts worthSelling). -->
+        <WChip v-if="selling.length || sellRevealed" clickable :active="onlyFalling" :title="fallingTitle" data-goto-spot="worth-selling" data-nw-falling @click="onlyFalling = !onlyFalling; onlyChanged = false">Falling {{ selling.length }}</WChip>
         <WChip v-if="cat !== 'all'" clickable active :title="`Only ${catLabel}. Click to show every category`" @click="cat = 'all'">{{ catLabel }} ×</WChip>
         <HideChip v-if="divine" :value="hideBelow" :on="config.hideDivOn === true" :idle="floor.limiting === 'chaos'"
           :title="floor.limiting === 'chaos' ? 'The chaos limit is higher, so it is the one hiding rows' : 'Hide rows worth less in total. Scroll the number or click it to type'"
@@ -266,7 +266,7 @@
           :title="floor.limiting === 'div' ? 'The divine limit is higher, so it is the one hiding rows' : 'Hide rows worth less in total. Scroll the number or click it to type'"
           @on="config.hideChaosOn = $event" @value="config.hideBelowChaos = $event" />
       </section>
-      <ItemTable :lines="tableLines" :total="v?.chaos" :units="config.tableUnits" :filtered="cat !== 'all' || tabs.length > 0 || !!query.trim() || floor.minChaos > 0" :divine="divine" :changes="changes" :tab-names="tabNames"
+      <ItemTable :lines="tableLines" :total="v?.chaos" :units="config.tableUnits" :week="onlyFalling ? fallingWeek : null" :filtered="onlyFalling || cat !== 'all' || tabs.length > 0 || !!query.trim() || floor.minChaos > 0" :divine="divine" :changes="changes" :tab-names="tabNames"
         @units="config.tableUnits = $event" @clear="clearFilters" @price="onPrice" @ignore="onIgnore" />
       <!-- Teaches the row's clicks until one is used (shared/hints.ts, ui/line-item.ts). -->
       <WTipLine v-if="tableLines.length" :id="LINE_HINT">
@@ -298,20 +298,20 @@ import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shall
 import { AppConfig } from '@/web/Config'
 import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import { usePoeninja } from '@/web/background/Prices'
-import { WBanner, WButton, WChip, WEmpty, WField, WKbd, WLineActs, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WKbd, WLineActs, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
 import { lineTip, tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
-import { FARMING_TYPE, elapsed, requestEndSession } from '../farming/farming'
 import { isWidgetTypeOn } from '../modules'
 import { useNights } from '../session-story/store'
+import { sinceLabel } from './glance'
 import { SESSION_STORY_TYPE } from '../session-story/widget'
 import { stashGainsBetween } from './gains'
-import type { FarmingWidget } from '../farming/farming'
 import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
-import { change24h, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
+import { change24h, sellMinChaos, worthSelling, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
 import type { ChartRange, PriceMove } from './ledger'
+import { SELL_REVEAL_MS, sellingRevealedAt } from './selling-reveal'
 import { divine, gainsNow, historyNow, leagueNow, ledger, pricePrefs, ratesAt, setIgnored, setMyPrice, setSpendMark, summary, tabValues, valuation, wantPrices } from './store'
 import { markAction, resolveSpends } from './spend'
 import type { SpendMark } from './spend'
@@ -323,7 +323,10 @@ import { RATE_WINDOWS, rateTip, shortSpan, span, startOfDay } from './play-time'
 import { chartHOf, clampChartH, clampMidH, colWeights, dragCols, dragTop, edges, foldedOf, hasChartH, midHOf, toggleFold, topOf } from './layout'
 import type { ColId, FoldId, PanelLayout } from './layout'
 import SplitHandle from './SplitHandle.vue'
-import TextTabs from './TextTabs.vue'
+import WSegmented from '../ui/WSegmented.vue'
+import WFoldHead from '../ui/WFoldHead.vue'
+import WFoldCaret from '../ui/WFoldCaret.vue'
+import WSearchField from '../ui/WSearchField.vue'
 import RateTimePick from '../shared/RateTimePick.vue'
 import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
@@ -469,9 +472,11 @@ const splitLabel = computed(() => {
   }
   return null
 })
+// "today", or "since Tue" when the read it compares with is older than yesterday.
+const since = computed(() => sinceLabel(sum.value?.sinceDay, rates.value.at))
 const todayTip = computed(() => {
   const t = rates.value.today
-  return t.perHour == null ? "Since yesterday's last read" : `Since yesterday's last read
+  return t.perHour == null ? since.value.tip : `${since.value.tip}
 Per hour today: ${signed(toDiv(t.perHour))} ${unit.value}/h over ${duration(t.playMs)}, ${leftOutText(rateTime())}`
 })
 const best = computed(() => v.value?.lines[0] ?? null)
@@ -616,25 +621,34 @@ const tips = computed(() => tipIndex(v.value ? [...v.value.lines, ...v.value.unp
 const changes = computed(() => new Map((v.value?.lines ?? []).map(l => [l.key, l.mine || l.heldSince != null ? null : change24h(l.graph)])))
 const moves = computed(() => priceMoves(v.value?.lines ?? [], k => changes.value.get(k) ?? null).filter(m => Math.abs(toDiv(m.valueChaos)) >= 0.1))
 
+// ---------- worth selling ----------
+// The Falling chip on the table: only these rows, with a 7d column.
+const SELL_RULE = 'Down 5% today and 15% over 7 days (or 20% today with the week down too), 1 div or more held. Thin markets, held prices and your own prices are left out'
+const selling = computed(() => worthSelling(v.value?.lines ?? [], sellMinChaos(divine.value)))
+const sellingLost = computed(() => selling.value.reduce((s, x) => s + x.lostChaos, 0))
+const fallingKeys = computed(() => new Set(selling.value.map(x => x.key)))
+const fallingWeek = computed(() => new Map(selling.value.map(x => [x.key, x.d7])))
+const onlyFalling = shallowRef(false)
+watch(() => selling.value.length, (n) => { if (!n) onlyFalling.value = false })
+const fallingTitle = computed(() => selling.value.length
+  ? `${onlyFalling.value ? 'Show every item' : 'Only what is worth selling'}: ${div(sellingLost.value)} ${unit.value} lost this week. ${SELL_RULE}`
+  : `Nothing you hold much of is falling. ${SELL_RULE}`)
+// Show me (What's new) shows the chip for a minute even when nothing qualifies.
+const sellRevealed = computed(() => now.value - sellingRevealedAt.value < SELL_REVEAL_MS)
+
 // ---------- what changed (C2, C1) ----------
-// The Farming window's running session, if any: its maps come from Client.txt.
-// Its module must be on: off, the window isn't there to end it.
-const farmingWidget = computed(() => AppConfig().widgets.find(x =>
-  x.wmType === FARMING_TYPE && (x as FarmingWidget).session && isWidgetTypeOn(AppConfig(), x.wmType)) as FarmingWidget | undefined)
-// Farming is retired (modules.ts), so the session is usually tonight's night
-// from Session story: it starts and ends by itself, with its maps as runs.
+// The session is tonight's night from Session story: it starts and ends by
+// itself, with its maps as runs.
 const nightStore = useNights()
 // The night's time (AFK left out) runs to its last log line; past that, at
 // most this much more counts, so a long AFK doesn't drag profit per hour down.
 const NIGHT_TAIL_MS = 2 * 60_000
-interface PanelSession { startedAt: number, maps: number, runs: Array<{ name: string, enteredAt: number, mapMs: number }>, ms: (now: number) => number, endable: boolean }
+interface PanelSession { startedAt: number, maps: number, runs: Array<{ name: string, enteredAt: number, mapMs: number }>, ms: (now: number) => number }
 const farming = computed<PanelSession | null>(() => {
-  const s = farmingWidget.value?.session
-  if (s) return { startedAt: s.startedAt, maps: s.maps, runs: s.runs ?? [], ms: now => elapsed(s, now), endable: true }
   const n = isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nightStore.live.value : null
   if (!n) return null
   // The time the Per hour choice counts (night-rate.ts), as on the night card.
-  return { startedAt: n.startedAt, maps: n.maps.length, runs: n.maps, ms: now => nightRateMs(n, rateTime()) + Math.min(Math.max(0, now - n.endedAt), NIGHT_TAIL_MS), endable: false }
+  return { startedAt: n.startedAt, maps: n.maps.length, runs: n.maps, ms: now => nightRateMs(n, rateTime()) + Math.min(Math.max(0, now - n.endedAt), NIGHT_TAIL_MS) }
 })
 // The session's clock moves while you sit in the hideout.
 const now = shallowRef(Date.now())
@@ -660,8 +674,8 @@ const session = computed(() => {
   if (!s) return null
   const ms = s.ms(now.value)
   const divVal = toDiv(sessionChaos.value)
-  const tip = s.endable ? 'Per hour of the whole session' : `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}`
-  return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null, spent: sessionSpent.value, endable: s.endable, tip }
+  const tip = `Per hour, ${leftOutText(rateTime())}. ${RATE_TIME_WHERE}`
+  return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null, spent: sessionSpent.value, tip }
 })
 const gainAt = computed(() => new Map(gainsNow.value.map(g => [g.at, g])))
 // Every refresh's share of profit (spend.ts), worked out in time order.
@@ -718,10 +732,6 @@ watch(farming, (now, before) => {
   groupLimit.value = GROUP_STEP
   groupToggled.value = {}
 })
-function endSession () {
-  const w = farmingWidget.value
-  if (w) requestEndSession(w.wmId)
-}
 
 // ---------- categories, tabs, filters ----------
 const cat = shallowRef<Category | 'all'>('all')
@@ -729,6 +739,7 @@ const cat = shallowRef<Category | 'all'>('all')
 const tabs = shallowRef<string[]>([])
 function clearFilters () {
   onlyChanged.value = false
+  onlyFalling.value = false
   cat.value = 'all'
   tabs.value = []
   query.value = ''
@@ -823,6 +834,7 @@ const tableLines = computed(() => {
   if (!val) return []
   const f = { cat: cat.value, tabs: tabs.value, query: query.value, minChaos: floor.value.minChaos }
   if (onlyChanged.value) return changedLines.value
+  if (onlyFalling.value) return filterLines(val.lines.filter(l => fallingKeys.value.has(l.key)), { ...f, minChaos: 0 })
   const out = showIgnored.value ? val.ignoredLines : val.ignoredLines.filter(l => justOut.value.has(l.key))
   const extra = [...(showUnpriced.value ? val.unpricedLines : []), ...out]
   return [...filterLines(val.lines, f), ...filterLines(extra, { ...f, minChaos: 0 })]
@@ -943,7 +955,8 @@ const listedReadLine = computed(() => {
   const d = pendingDoc.value
   return d && d.league === salesLeague.value ? `read ${agoPhrase(d.readAt)}` : ''
 })
-const saleChaosOf = (s: Sale) => saleChaos(s, saleRates.value)
+// A row shows what it sold for (2 div reads 2 div); totals use each sale's day rate.
+const saleChaosOf = (s: Sale) => saleChaos({ price: s.price }, saleRates.value)
 // In divines (chaos without a rate); a currency poe.ninja can't price as sold.
 function salePrice (s: Sale) {
   const c = saleChaosOf(s)
@@ -973,7 +986,7 @@ function marketTone (s: Sale) {
 // The chart's dots: each sale, named for the hover card (a rare by its base).
 const chartSales = computed<ChartSale[]>(() => sales.value.map(s => {
   const c = saleChaosOf(s)
-  return { at: s.at, text: saleBaseName(s), tip: saleTip(s), price: `${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, icon: s.icon || undefined, colour: saleColour(s.frameType), fact: saleFact(s) || undefined, name: saleName(s), div: c == null ? null : toDiv(c) }
+  return { at: s.at, text: saleBaseName(s), tip: saleTip(s), price: `${salePrice(s)}${c == null ? '' : ` ${unit.value}`}`, icon: s.icon || undefined, colour: saleColour(s.frameType), fact: saleFact(s) || undefined, name: saleName(s), div: c == null ? null : toDiv(c), ...(saleOut(s) ? { out: true } : {}) }
 }))
 // The chart's Faustus band (pick A), when listings count in your total: what
 // each refresh saved, else rebuilt from the listings and sales (listedAt).
@@ -984,7 +997,7 @@ const chartListed = computed(() => {
   const doc = d && d.league === salesLeague.value ? d : null
   if (!doc && !s.some(p => p.listedDiv)) return undefined
   const worth = new Map(listedRows.value.map(r => [r.item.id, rowWorth(r)]))
-  const rebuilt = listedAt(doc, sales.value, saleRates.value, l => listedOut.value.has(l.id) ? 0 : worth.get(l.id) ?? saleChaos(l, saleRates.value) ?? 0, s.map(p => p.at))
+  const rebuilt = listedAt(doc, sales.value, saleRates.value, l => listedOut.value.has(l.id) ? 0 : worth.get(l.id) ?? saleChaos({ price: l.price }, saleRates.value) ?? 0, s.map(p => p.at))
   const out = s.map((p, i) => p.listedDiv ?? toDiv(rebuilt[i]))
   return out.some(v => v > 0) ? out : undefined
 })
@@ -1098,7 +1111,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .boxHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 .sideCol { display: flex; flex-direction: column; gap: var(--w-s3); }
 .movesCol { display: flex; flex-direction: column; gap: 2px; }
-.moveRow { display: flex; justify-content: space-between; gap: var(--w-s2); min-width: 0; font-size: var(--w-fs-sm); }
 .more { font-size: var(--w-fs-xs); color: var(--w-dim); }
 .split { position: relative; display: flex; height: 8px; border: 1px solid var(--w-line); border-radius: 2px; }
 .split > span:not(.splitLabel) { flex-basis: 0; position: relative; transition: opacity 0.1s; }
@@ -1116,7 +1128,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .spark { margin-left: auto; }
 .toggle { display: inline-flex; align-items: center; gap: 5px; color: var(--w-dim); font-size: var(--w-fs-sm); cursor: pointer; padding: 1px 4px; border-radius: var(--w-r-sm); white-space: nowrap; }
 .toggle:hover { color: var(--w-fg); background: var(--w-panel-2); }
-.toggle i { font-size: calc(9px * var(--w-text-scale, 1)); }
 .chartBlock { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 6px var(--w-pad) 8px; border-bottom: 1px solid var(--w-line); }
 .chartHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 .goalLine { color: var(--w-up); }
@@ -1137,12 +1148,12 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .colsFixed .scrollBox { overflow-y: auto; overscroll-behavior: contain; }
 .colsFixed .scroll { max-height: none; overflow: visible; }
 .halves { position: relative; }
-.fold { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 14px; color: var(--w-dim); cursor: pointer; }
-.fold:hover { color: var(--w-fg); }
-.fold i, .foldHead i { font-size: calc(8px * var(--w-text-scale, 1)); }
-.foldHead { display: inline-flex; align-items: center; gap: 5px; min-width: 0; text-align: left; cursor: pointer; }
-.foldHead:hover .caps, .foldHead:hover i { color: var(--w-fg); }
-.foldHead i { width: 9px; color: var(--w-dim); flex: none; }
+/* WFoldHead fills its row; here it sits beside the section's controls. */
+.fold:global(.w-fold-head) { flex: none; justify-content: center; width: 14px; }
+.foldHead:global(.w-fold-head) { flex: 0 1 auto; width: auto; gap: 5px; }
+.toggle:global(.w-fold-head) { padding: 1px 4px; color: var(--w-dim); font-size: var(--w-fs-sm); }
+.toggle:global(.w-fold-head):hover { color: var(--w-fg); }
+.foldHead:hover .caps { color: var(--w-fg); }
 .foldHead .caps { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sideTitle { margin-bottom: 4px; }
 .sideHead { display: flex; align-items: baseline; gap: 2px; }
@@ -1155,7 +1166,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .groupHead { display: flex; align-items: baseline; gap: 6px; width: 100%; font-size: var(--w-fs-xs); color: var(--w-dim); border-bottom: 1px dashed var(--w-line); text-align: left; cursor: pointer; }
 .groupHead:hover { color: var(--w-fg); }
 .groupHead > span { flex: 1 1 auto; min-width: 0; }
-.groupHead > i { font-size: calc(8px * var(--w-text-scale, 1)); width: 8px; flex: none; }
 .changesCol { display: flex; flex-direction: column; }
 .scrollBox { flex: 1 1 auto; min-height: 0; }
 .scroll { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
@@ -1171,7 +1181,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .soldHead { display: flex; justify-content: space-between; align-items: baseline; gap: var(--w-s2); width: 100%; margin-bottom: 4px; text-align: left; cursor: pointer; }
 .soldHead:hover .caps { color: var(--w-fg); }
 .spendNote { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-info); }
-.feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
 /* A sale as a shared profit line (sale-lines.ts); its hover actions lie over
    the end of the name. */
 .saleLine { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); min-height: 20px; }
@@ -1186,7 +1195,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .moveName { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 /* A sale's "7% under" and price never wrap: the name is cut short instead. */
 .saleTag { flex: none; white-space: nowrap; font-size: var(--w-fs-xs); }
-.sideCol .moveRow > :global(.w-num) { flex: none; white-space: nowrap; }
 .catRow { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) 5em; gap: 6px; align-items: center; width: 100%; padding: 2px 4px; font-size: var(--w-fs-sm); color: var(--w-fg); text-align: left; border-radius: var(--w-r-sm); cursor: pointer; }
 .catRow:hover { background: var(--w-panel-2); }
 .catRow i { display: block; height: 8px; min-width: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--w-gold) 50%, transparent), var(--w-gold)); }

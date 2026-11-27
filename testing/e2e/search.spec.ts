@@ -53,6 +53,38 @@ test('the hotkey opens the palette ready to type, and Esc leaves it', async ({ o
   await expect(box).toBeHidden()
 })
 
+test('the palette drags by its search bar and keeps the spot', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const palette = overlay.widget('woke-search')
+  const panel = palette.locator('[data-w-panel]')
+  const box = palette.getByRole('textbox', { name: 'Search', exact: true })
+  await expect(box).toBeVisible()
+  const before = (await panel.boundingBox())!
+  // The bar's own edge, left of the magnifier: not the input or a button.
+  const bar = (await palette.locator('[data-search-palette] [data-widget-drag]').boundingBox())!
+  const page = overlay.page
+  await page.mouse.move(bar.x + 4, bar.y + bar.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(bar.x + 4 - 300, bar.y + bar.height / 2 + 150, { steps: 8 })
+  await page.mouse.up()
+  const after = (await panel.boundingBox())!
+  expect(Math.abs(after.x - (before.x - 300))).toBeLessThan(12)
+  expect(Math.abs(after.y - (before.y + 150))).toBeLessThan(12)
+  await expect(box).toBeFocused()
+
+  // Closed and opened again, it opens where you left it.
+  await page.keyboard.press('Escape')
+  await expect(panel).toBeHidden()
+  await overlay.pressHotkey(SEARCH_KEY)
+  await expect(panel).toBeVisible()
+  const again = (await panel.boundingBox())!
+  expect(Math.abs(again.x - after.x)).toBeLessThan(4)
+  expect(Math.abs(again.y - after.y)).toBeLessThan(4)
+})
+
 test('prices are grouped, and the detail shows every variant and its actions', async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await overlay.boot(bootOptions())
@@ -62,20 +94,21 @@ test('prices are grouped, and the detail shows every variant and its actions', a
 
   await expect(panel.getByRole('button', { name: /^Trade site/ })).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Wiki', exact: true })).toBeVisible()
-  await expect(panel.getByRole('button', { name: 'Price check', exact: true })).toBeVisible()
-  // Trade site leads; Open in Market comes last, as a quiet link.
+  await expect(panel.getByRole('button', { name: /^Price check/ })).toBeVisible()
+  // Price check leads (Enter), then Trade site (Alt+Enter); Open in Market comes last, as a quiet link.
   const acts = panel.locator('[data-item-actions] button')
-  await expect(acts.first()).toContainText('Trade site')
+  await expect(acts.first()).toContainText('Price check')
+  await expect(acts.nth(1)).toContainText('Trade site')
   await expect(acts.last()).toHaveText('Market')
   await expect(panel.getByRole('button', { name: 'Copy name', exact: true })).toBeVisible()
   await overlay.snap('search-unique')
 
-  // Enter does what the main button does: the trade site, not the Market window.
+  // Alt+Enter: the trade site, not the Market window.
   await overlay.page.evaluate(() => {
     const w = window as unknown as { open: (url: string) => null, __opened?: string }
     w.open = (url: string) => { w.__opened = url; return null }
   })
-  await box.press('Enter')
+  await box.press('Alt+Enter')
   const opened = await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')
   expect(opened).toContain('/trade/search/')
 
@@ -95,7 +128,7 @@ test('prices are grouped, and the detail shows every variant and its actions', a
   // Filtered out isn't the same as having no price.
   await box.fill('headhunter')
   await panel.getByRole('button', { name: /Corrupted gems are shown/ }).click()
-  await expect(panel.getByText('No poe.ninja price')).toHaveCount(1) // Replica Headhunter only
+  await expect(panel.getByText('No poe.ninja price yet')).toHaveCount(1) // Replica Headhunter only
   await panel.getByRole('button', { name: /Only corrupted gems/ }).click()
   await panel.getByRole('button', { name: /Corrupted gems are hidden/ }).click()
 
@@ -106,7 +139,7 @@ test('prices are grouped, and the detail shows every variant and its actions', a
 
   await box.fill('astral plate')
   await expect(panel.getByRole('button', { name: /Astral Plate/ })).toBeVisible()
-  await expect(panel.getByText('poe.ninja has no price')).toBeVisible()
+  await expect(panel.getByText('poe.ninja has no saved price')).toBeVisible()
   await overlay.snap('search-no-price')
 
   expect(overlay.errors).toEqual([])
@@ -393,6 +426,47 @@ test('a base lists its uniques with their prices', async ({ overlay }) => {
   await overlay.snap('search-priced-base')
 })
 
+test('a mod lists the uniques that have it, priced, with the matched words lit', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('onslaught')
+  await expect(panel.getByText('Uniques with this mod', { exact: true }).first()).toBeVisible()
+  // Priced ones first: Three-step Assault by its Evasion line.
+  const row = panel.getByRole('button', { name: /Three-step Assault/ }).first()
+  await expect(row).toBeVisible()
+  await expect(row.locator('[data-search-mod-hit]')).toHaveText('100% increased Evasion Rating during Onslaught')
+  await expect(row.locator('mark')).toHaveText('Onslaught')
+  await overlay.snap('search-unique-mods')
+
+  // Its item tooltip on hover, and picked, the details light the same line.
+  await row.hover()
+  await expect(overlay.page.getByRole('tooltip')).toContainText('Three-step Assault')
+  await row.click()
+  await expect(panel.getByText('100% increased Evasion Rating during Onslaught').last()).toBeVisible()
+
+  // The whole group, unpriced uniques after the priced.
+  await panel.locator('[data-search-more]').filter({ hasText: 'Uniques with this mod' }).click()
+  await expect(panel.getByRole('button', { name: /Circle of Ambition/ }).first()).toBeVisible()
+  await overlay.snap('search-unique-mods-all')
+
+  // A number is the least roll: Watcher's Eye's "4 seconds" goes, Three-step Assault's 100% stays.
+  await box.fill('onslaught 100')
+  await expect(panel.getByRole('button', { name: /Three-step Assault/ }).first()).toBeVisible()
+  await expect(panel.locator('[data-search-mod-hit]').filter({ hasText: 'for 4 seconds' })).toHaveCount(0)
+
+  // The passive tree finds notables by what they do.
+  await box.fill('onslaught')
+  await expect(panel.getByRole('button', { name: /Dance of Blades/ })).toBeVisible({ timeout: 15_000 })
+
+  // Under 4 letters there are no mod hits.
+  await box.fill('ons')
+  await expect(panel.getByText('Uniques with this mod', { exact: true })).toHaveCount(0)
+})
+
 test("Trade site opens the price check's listings: Instant buyout, no Foulborn copies for a plain unique, a unique map on its Map base", async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await overlay.boot(bootOptions())
@@ -476,9 +550,10 @@ test('the palette resizes from its corner, adding room, and keeps its size', asy
   await page.mouse.move(g.x + 120, g.y + 80, { steps: 6 })
   await page.mouse.up()
   const after = (await panel.boundingBox())!
-  // The corner stays under the mouse: centred, it grows on both sides.
+  // The corner stays under the mouse; the palette moves now, so the far edge stays put.
   expect(Math.abs((after.x + after.width) - (before.x + before.width + 120))).toBeLessThan(12)
-  expect(after.width).toBeGreaterThan(before.width + 200)
+  expect(Math.abs(after.x - before.x)).toBeLessThan(12)
+  expect(after.width).toBeGreaterThan(before.width + 100)
   expect(after.height).toBeGreaterThan(before.height + 40)
   // More room, not bigger text.
   expect(await palette.locator('[data-search-palette]').evaluate(el => getComputedStyle(el).fontSize)).toBe(font)

@@ -64,6 +64,9 @@ export function rootFontPx (): number {
 function applyFontSize () {
   if (!_config.value || typeof document === 'undefined') return
   document.documentElement.style.fontSize = `${rootFontPx()}px`
+  // The same as a factor, for the text in those windows (theme.css
+  // [data-w-window-sized]) and the tooltips they open (tooltip.ts tipZoom).
+  document.documentElement.style.setProperty('--w-window-size', String(rootFontPx() / 16))
 }
 // Also when the price check's palette changes the size: the save (and its
 // echo) waits until the price check closes.
@@ -269,6 +272,19 @@ export const defaultConfig = (): Config => ({
     return widgets
   }, [])
 })
+
+// woke: settings text from the file in today's shape, as this page would load
+// it; null when it can't be read or upgraded (the setup window merges into it).
+export function upgradedConfig (contents: string | null): Config | null {
+  if (!contents) return null
+  try {
+    const config = JSON.parse(contents) as Config
+    if (!config || !Array.isArray(config.widgets) || config.configVersion > defaultConfig().configVersion) return null
+    return upgradeConfig(config)
+  } catch {
+    return null
+  }
+}
 
 function upgradeConfig (_config: Config): Config {
   /* eslint-disable @typescript-eslint/no-explicit-any */

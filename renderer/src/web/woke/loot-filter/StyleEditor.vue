@@ -6,12 +6,14 @@
     <WSegmented v-if="!lookOnly" :model-value="visibility" :options="visibilityOptions" @update:model-value="emit('visibility', $event as Visibility)" />
 
     <div :class="$style.grid">
-      <span class="w-dim">Size<button v-if="changed('fontSize')" type="button" :class="$style.mark" :title="`Back to ${source?.fontSize ?? DEFAULT_FONT}`" aria-label="Reset size" @click="reset('fontSize')" /></span>
-      <span class="flex items-center gap-2">
-        <input type="range" min="18" max="45" :value="look.fontSize ?? DEFAULT_FONT" class="grow"
-          @change="emit('patch', { fontSize: Number(($event.target as HTMLInputElement).value) })">
-        <span class="w-num" style="width: 2ch;">{{ look.fontSize ?? DEFAULT_FONT }}</span>
-      </span>
+      <template v-if="!markOnly">
+        <span class="w-dim">Size<button v-if="changed('fontSize')" type="button" :class="$style.mark" :title="`Back to ${source?.fontSize ?? DEFAULT_FONT}`" aria-label="Reset size" @click="reset('fontSize')" /></span>
+        <span class="flex items-center gap-2">
+          <input type="range" min="18" max="45" :value="look.fontSize ?? DEFAULT_FONT" class="grow"
+            @change="emit('patch', { fontSize: Number(($event.target as HTMLInputElement).value) })">
+          <span class="w-num" style="width: 2ch;">{{ look.fontSize ?? DEFAULT_FONT }}</span>
+        </span>
+      </template>
 
       <span class="w-dim">Colours</span>
       <span class="flex items-center flex-wrap" :class="$style.colours">
@@ -79,9 +81,8 @@
           @click="setEffect(c, look.effect?.temp ?? false)">
           <span :class="$style.beam" :style="{ background: `linear-gradient(to top, ${poeColour(c)}, transparent)` }" />
         </button>
-        <label v-if="look.effect" class="flex items-center gap-1 text-xs w-dim" style="margin-left: 6px;" title="A temporary beam shows for a few seconds when the item drops">
-          <input type="checkbox" :checked="look.effect.temp" @change="setEffect(look.effect!.color, ($event.target as HTMLInputElement).checked)"> only on drop
-        </label>
+        <WToggle v-if="look.effect" :model-value="look.effect.temp" class="text-xs" style="margin-left: 6px;" title="A temporary beam shows for a few seconds when the item drops"
+          @update:model-value="setEffect(look.effect!.color, $event)">Only on drop</WToggle>
       </span>
 
     </div>
@@ -150,7 +151,9 @@ const props = withDefaults(defineProps<{
   source?: StylePatch | null
   // Only the look: no Show / Hide switch (the Gear table decides that).
   lookOnly?: boolean
-}>(), { copyFrom: () => [], source: null, lookOnly: false })
+  // Only a mark on top of another look: border, sound, beam and map icon.
+  markOnly?: boolean
+}>(), { copyFrom: () => [], source: null, lookOnly: false, markOnly: false })
 
 const emit = defineEmits<{
   (e: 'patch', patch: StylePatch): void
@@ -168,7 +171,7 @@ const colourRows = computed(() => [
   { key: 'text' as const, label: 'Text', short: 'text', value: props.look.text ?? DEFAULT_TEXT },
   { key: 'border' as const, label: 'Border', short: 'border', value: props.look.border ?? null },
   { key: 'background' as const, label: 'Background', short: 'back', value: props.look.background ?? DEFAULT_BG }
-])
+].filter(c => !props.markOnly || c.key === 'border'))
 
 // A setting differs from the filter as it came, whichever way it's written.
 function changed (key: keyof StylePatch): boolean {

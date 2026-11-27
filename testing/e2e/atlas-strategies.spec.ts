@@ -61,7 +61,7 @@ async function serveExportFromCache (overlay: Overlay) {
   })
 }
 
-async function bootAtlas (overlay: Overlay, treeUrl: string) {
+async function bootAtlas (overlay: Overlay, treeUrl: string, more: { selectedId?: number, whatsNew?: string[] } = {}) {
   await serveExportFromCache(overlay)
   await overlay.boot({
     overlayActive: true,
@@ -72,12 +72,13 @@ async function bootAtlas (overlay: Overlay, treeUrl: string) {
       wmFlags: ['invisible-on-blur'],
       anchor: { pos: 'tl', x: 2, y: 8 },
       dataUrl: '',
-      selectedId: 1,
+      selectedId: more.selectedId ?? 1,
       strategies: [
         { id: 1, name: 'Breach threads', folder: 'Juicing', league: '', tags: [], treeUrl, threads: [{ type: 'Breach', count: 8 }], scarabs: '1x Vaal Orb\n1x Orb of Alchemy', device: '', regex: '', notes: '' },
         { id: 2, name: 'Alch and go', folder: 'Leaguestart', league: '', tags: [], treeUrl: '', threads: [], scarabs: '', device: '', regex: '', notes: '' }
       ]
-    } as never]
+    } as never],
+    whatsNew: more.whatsNew
   })
   return overlay.widget('woke-atlas-strategies')
 }
@@ -485,4 +486,43 @@ test('screenshots of the atlas tree import as a new strategy (pick B)', async ({
   await overlay.page.evaluate(() => window.dispatchEvent(new Event('blur')))
   const saved = savedAtlas((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string)
   expect(saved.strategies.find((s: { name: string }) => s.name === 'Shrine start')?.treeUrl).toMatch(/fullscreen-atlas-skill-tree\//)
+})
+
+// Farming is gone (Guy 2026-11-26): a strategy's results come from Net worth's
+// runs of the same name, its saved run board.
+test('a strategy shows what Net worth runs of its name earned', async ({ overlay, fakeApp }) => {
+  const dir = path.join(fakeApp.opts.userData, 'woke-docs', 'net-worth')
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(path.join(dir, 'Testleague-run-board.json'), JSON.stringify({
+    league: 'Testleague',
+    rows: [{ name: 'Breach threads', count: 3, maps: 41, fights: 1, profitChaos: 8400, perMapChaos: 200, perHour: { play: 2400, hub: 2000, all: 1800 }, costPerMapChaos: 30, perMapNoTopChaos: 150, small: false }]
+  }))
+  const atlas = await bootAtlas(overlay, '')
+  await expect(atlas.getByText('Juicing', { exact: true })).toBeVisible()
+  const rate = atlas.getByTitle('Net worth: 3 runs of this name')
+  await expect(rate).toBeVisible()
+  await expect(rate).toContainText('/h')
+  await expect(atlas.getByText('Your results:')).toBeVisible()
+  await expect(atlas.getByText('over 41 maps · 1 fight')).toBeVisible()
+  await overlay.snap('atlas strategy results from Net worth runs')
+})
+
+test("What's new's Show me opens the strategy with runs and flashes its results", async ({ overlay, fakeApp }) => {
+  const dir = path.join(fakeApp.opts.userData, 'woke-docs', 'net-worth')
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(path.join(dir, 'Testleague-run-board.json'), JSON.stringify({
+    league: 'Testleague',
+    rows: [{ name: 'Breach threads', count: 3, maps: 41, fights: 1, profitChaos: 8400, perMapChaos: 200, perHour: { play: 2400, hub: 2000, all: 1800 }, costPerMapChaos: 30, perMapNoTopChaos: 150, small: false }]
+  }))
+  // Alch and go is open and has no runs: it says where results come from.
+  const atlas = await bootAtlas(overlay, '', { selectedId: 2, whatsNew: ['atlas-results-from-runs'] })
+  await expect(atlas.locator('[data-goto-spot="results"]')).toContainText('none yet')
+  await expect(atlas.getByTitle('Net worth: 3 runs of this name')).toBeVisible()
+  const icon = overlay.dockIcon('whats-new')
+  await icon.click()
+  await overlay.page.mouse.move(5, 5)
+  await icon.locator('[data-whats-new-line]').getByRole('button', { name: 'Show me' }).click()
+  const results = atlas.locator('[data-goto-spot="results"]')
+  await expect(results).toContainText('over 41 maps · 1 fight')
+  await expect(results).toHaveAttribute('data-goto-flashed', '')
 })

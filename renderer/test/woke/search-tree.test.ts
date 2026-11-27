@@ -27,6 +27,16 @@ describe('treeLookup', () => {
     expect(lookup('sanctuary', ctx).map(c => c.sub)).toEqual(expect.arrayContaining(['Notable', 'Ascendancy notable']))
     expect(lookup('coated blade', ctx)[0].name).toBe('Coated Blade')
   })
+  it('finds passives by what they do, after the names', () => {
+    const cards = lookup('onslaught', ctx)
+    expect(cards.length).toBeGreaterThan(1)
+    expect(cards.every(c => /onslaught/i.test(c.sub))).toBe(true)
+    // Keystones and tree notables before cluster jewel notables.
+    const kinds = cards.map(c => c.sub.split(' · ')[0])
+    expect(kinds.indexOf('Cluster jewel notable')).not.toBe(0)
+    // A name hit still leads.
+    expect(lookup('iron reflexes', ctx)[0].name).toBe('Iron Reflexes')
+  })
   it('needs four letters, and lists no small passives', () => {
     expect(lookup('res', ctx)).toEqual([])
     expect(passives.some(p => p.name === 'Strength')).toBe(false)

@@ -5,7 +5,7 @@
 // killer, no damage, no map mods. Mods only exist if the map was checked with
 // the item copy hotkeys before it was opened, so they're matched to the map by
 // name and level, and a match says how sure it is.
-import { isFarmedMap, isMapSideArea } from '../farming/farming'
+import { isFarmedMap, isMapSideArea } from '../shared/map-areas'
 import { parseLogLine, slainName, speakerOf } from '../campaign/log-parse'
 import { lineTime } from '../campaign/log-tail'
 
@@ -46,6 +46,8 @@ export interface RunRecord {
   // How many checks could have been this map.
   candidates?: number
   checkedAt?: number
+  // Matched by tier alone: the copied map had no area name (3.30 maps).
+  byTier?: boolean
 }
 
 export interface DeathRecord {
@@ -74,6 +76,8 @@ const CHECK_MAX_AGE_MS = 12 * 60 * 60 * 1000
 // Past this a single candidate still might not be the map you opened.
 const EXACT_MAX_AGE_MS = 30 * 60 * 1000
 const VOICE_WINDOW_MS = 60 * 1000
+// A check with no area name matches by tier only, so only this recent.
+const NAMELESS_MAX_AGE_MS = 30 * 60 * 1000
 
 // Speakers are capitalised names on INFO lines. DEBUG and CRIT lines hold plenty
 // of "Word: value" too ("ALTERNATE TREE JEWEL: ...", "[...] Bone: ...").
@@ -94,6 +98,13 @@ export interface CheckMatch {
   check: MapCheck
   match: ModMatch
   candidates: number
+  byTier?: boolean
+}
+
+// 3.30 maps copy without an area name: the check is just "Map".
+export function isNameless (name: string): boolean {
+  const n = areaName(name)
+  return n === '' || n === 'map'
 }
 
 export function matchCheck (checks: MapCheck[], map: { name: string, level: number, at: number }): CheckMatch | null {
@@ -103,10 +114,24 @@ export function matchCheck (checks: MapCheck[], map: { name: string, level: numb
     map.at - c.at <= CHECK_MAX_AGE_MS &&
     areaName(c.name) === name &&
     levelFits(c.tier, map.level))
-  if (!fits.length) return null
+  if (!fits.length) return byTier(checks, map)
   const check = fits.reduce((a, b) => b.at >= a.at ? b : a)
   const exact = fits.length === 1 && map.at - check.at <= EXACT_MAX_AGE_MS
   return { check, match: exact ? 'exact' : 'likely', candidates: fits.length }
+}
+
+// No check by name: the newest nameless one of the map's tier in the last
+// 30 minutes. Never more than likely.
+function byTier (checks: MapCheck[], map: { level: number, at: number }): CheckMatch | null {
+  const fits = checks.filter(c =>
+    c.at <= map.at + 1000 &&
+    map.at - c.at <= NAMELESS_MAX_AGE_MS &&
+    c.tier != null &&
+    isNameless(c.name) &&
+    levelFits(c.tier, map.level))
+  if (!fits.length) return null
+  const check = fits.reduce((a, b) => b.at >= a.at ? b : a)
+  return { check, match: 'likely', candidates: fits.length, byTier: true }
 }
 
 export function runFromCheck (key: string, map: { name: string, level: number, at: number }, m: CheckMatch): RunRecord {
@@ -120,7 +145,8 @@ export function runFromCheck (key: string, map: { name: string, level: number, a
     unknown: m.check.unknown,
     match: m.match,
     candidates: m.candidates,
-    checkedAt: m.check.at
+    checkedAt: m.check.at,
+    ...(m.byTier ? { byTier: true } : {})
   }
 }
 

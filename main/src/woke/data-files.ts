@@ -10,19 +10,50 @@ export const dataDir = (name: string) => path.join(app.getPath('userData'), name
 
 // League names (and ids) as file names: short words with spaces.
 export function safeName (s: string): string {
-  return s.replace(/[^\w .-]/g, '_').slice(0, 80) || '_'
+  const name = s.replace(/[^\w .-]/g, '_').slice(0, 80)
+  // "." and ".." would point at the folder itself or the one above it.
+  return !name || /^\.+$/.test(name) ? '_' : name
 }
 
 export function leagueName (league: unknown): string {
   return safeName(typeof league === 'string' && league ? league : 'Unknown league')
 }
 
-// Write to a temp file and rename, so a crash never leaves half a file.
+// Windows refuses to replace a file another program (antivirus, a sync tool,
+// the game reading its filter) has open for a moment: try again a few times.
+export async function renameRetrying (from: string, to: string, waits = [50, 150, 400, 1000]): Promise<void> {
+  for (const wait of waits) {
+    try {
+      await fs.rename(from, to)
+      return
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code
+      if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'EACCES') throw e
+      await new Promise(resolve => setTimeout(resolve, wait))
+    }
+  }
+  await fs.rename(from, to)
+}
+
+// Write to a temp file, flush it to disk, and rename, so neither a crash nor
+// a power cut leaves half a file (or an empty one) behind. A rename that
+// antivirus blocks for a moment is retried instead of losing the save.
 export async function writeAtomic (file: string, data: string) {
   await fs.mkdir(path.dirname(file), { recursive: true })
   const tmp = `${file}.tmp`
-  await fs.writeFile(tmp, data, 'utf8')
-  await fs.rename(tmp, file)
+  const handle = await fs.open(tmp, 'w')
+  try {
+    await handle.writeFile(data, 'utf8')
+    await handle.sync()
+  } finally {
+    await handle.close()
+  }
+  try {
+    await renameRetrying(tmp, file)
+  } catch (e) {
+    await fs.rm(tmp, { force: true }).catch(() => {})
+    throw e
+  }
 }
 
 // JSON from a file, null when missing or unreadable.

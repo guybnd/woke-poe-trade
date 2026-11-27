@@ -7,7 +7,7 @@
           @change="setCards(($event.target as HTMLInputElement).value, $event)">
       </label>
       <label class="flex items-center gap-1 w-dim text-sm" title="The map you run and scry. Its own cards are what a scry replaces.">Your map
-        <WSelect :model-value="config.fromMap ?? ''" :options="fromOptions" data-qa="scry-from" @update:model-value="config.fromMap = $event || null" />
+        <WSelect :model-value="fromMap ?? ''" :options="fromOptions" data-qa="scry-from" @update:model-value="config.fromMap = $event || null" />
       </label>
       <WChip clickable :active="orbBusy" data-qa="scry-price-orbs"
         title="Look up the Scrying Orb of the top maps on trade (poe.ninja doesn't price them). One search every 10 seconds, kept for an hour."
@@ -61,9 +61,9 @@
           <span class="text-right"><WPrice :chaos="c.adds" :divine="divine" /></span>
         </div>
         <div class="text-xs w-faint" style="padding: 8px var(--w-pad);">
-          Card value: each of the map's own cards' price times its share of drops (the Prohibited Library weights, {{ data?.season ?? '' }}). Gain: {{ config.cardsPerMap }} cards a map{{ config.fromMap ? `, over ${mapLabel(config.fromMap)}'s own cards` : '' }}.
+          Card value: each of the map's own cards' price times its share of drops (the Prohibited Library weights, {{ data?.season ?? '' }}). Gain: {{ config.cardsPerMap }} cards a map{{ fromMap ? `, over ${mapLabel(fromMap)}'s own cards` : '' }}.
           Scrying works on non-unique maps with bonus objectives.
-          <span v-if="fromUnpriced" style="color: var(--w-warn);">None of {{ mapLabel(config.fromMap!) }}'s own cards has a price, so it counts as 0 and gains read high.</span>
+          <span v-if="fromUnpriced" style="color: var(--w-warn);">None of {{ mapLabel(fromMap!) }}'s own cards has a price, so it counts as 0 and gains read high.</span>
         </div>
       </div>
     </div>
@@ -110,13 +110,15 @@ const cardPrice = computed(() => {
 })
 
 const canScry = (map: string) => areaDisc(map) != null
+// A map saved before the list was limited to scryable maps counts as not set.
+const fromMap = computed(() => config.fromMap && canScry(config.fromMap) ? config.fromMap : null)
 
 const rows = computed<ScryRow[]>(() => {
   if (!data.value || !prices.snapshot.value) return []
   const forLeague = league.value
   return scryRows(data.value, cardPrice.value, {
     cardsPerMap: config.cardsPerMap,
-    fromMap: config.fromMap,
+    fromMap: fromMap.value,
     canScry,
     orbPrice: map => orbs.get(forLeague, map)
   })
@@ -131,13 +133,15 @@ const groups = computed(() => [
 
 const sel = computed(() => rows.value.find(r => r.map === config.selected) ?? ranked.value.good[0] ?? rows.value[0] ?? null)
 
-// Any tiered map can be the one you run: it needs no orb of its own.
+// The map you run needs no orb of its own, but the game only scries to or
+// from non-unique maps with bonus objectives (poedb Map_Scrying), so the same
+// rule as the targets.
 const fromOptions = computed(() => [
   { value: '', label: 'Not set' },
-  ...(data.value ? scryableMaps(data.value).map(m => ({ value: m, label: mapLabel(m) })) : [])
+  ...(data.value ? scryableMaps(data.value).filter(canScry).map(m => ({ value: m, label: mapLabel(m) })) : [])
 ])
 
-const fromUnpriced = computed(() => !!data.value && !!config.fromMap && fromValue(data.value, config.fromMap, cardPrice.value) == null)
+const fromUnpriced = computed(() => !!data.value && !!fromMap.value && fromValue(data.value, fromMap.value, cardPrice.value) == null)
 
 function subline (r: ScryRow): string {
   const parts: string[] = []

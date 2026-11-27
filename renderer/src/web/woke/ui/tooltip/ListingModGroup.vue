@@ -101,7 +101,7 @@ function rollColour (quality: number) {
 <style module>
 .chunk {
   display: grid;
-  grid-template-columns: 3.25rem 1fr 3.25rem;
+  grid-template-columns: 52px 1fr 52px;
   gap: 0 8px;
   align-items: center;
   margin: 0 -8px;
@@ -114,7 +114,7 @@ function rollColour (quality: number) {
 .headTags { display: inline-flex; gap: 2px; margin-left: 6px; vertical-align: 1px; }
 .tag.tagSm { min-width: 0; padding: 0 3px; font-size: var(--w-fs-xs); line-height: 1.25; }
 .tag {
-  min-width: 1.5rem;
+  min-width: 24px;
   padding: 0 3px;
   font-family: var(--w-num);
   font-size: var(--w-fs-sm);

@@ -14,7 +14,7 @@
       </template>
     </DockItem>
 
-    <WPanel ref="panel" :title="config.wmTitle || 'Stacked decks'" icon="fas fa-layer-group" width="26rem">
+    <WPanel ref="panel" :title="config.wmTitle || 'Stacked decks'" :icon="deckIcon" :keys="tab === 'past' ? PAST_KEYS : undefined" :updated="pricesUpdated" :fresh-min="40" :stale-min="180" width="26rem">
       <template #tabs>
         <WTabs v-model="tab" :options="tabOptions" />
       </template>
@@ -44,7 +44,7 @@
           :title="wm.active.value ? 'Drag to move' : undefined" @pointerdown="moveHit">
           <WIcon :src="art(hit.name)" fallback="fas fa-clone" size="lg" />
           <div class="min-w-0">
-            <div class="w-head-font w-accent w-trunc" :class="$style.hitName">{{ hit.name }}</div>
+            <div v-item-tip="{ name: hit.name, type: 'DivinationCard' }" class="w-head-font w-accent w-trunc" :class="$style.hitName">{{ hit.name }}</div>
             <div class="text-xs w-dim">Deck {{ hit.deck }} · session {{ hit.result != null ? signed(hit.result) : '—' }}</div>
           </div>
           <span class="w-num font-semibold" :class="$style.hitValue">{{ money(hit.chaos) }}</span>
@@ -67,9 +67,9 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { beforeQuitSave, saveConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
-import { WButton, WEmpty, WIcon, WPanel, WTabs, lineToast, toast } from '../ui'
+import { WButton, WEmpty, WIcon, WPanel, WTabs, lineToast, toast, vItemTip } from '../ui'
 import { formatChaos } from '../ui/format'
-import { ninjaIcon } from '../ui/game-icons'
+import { itemArt, ninjaIcon } from '../ui/game-icons'
 import { popupAnchor } from '../ui/window-anchor'
 import DockItem from '../dock/DockItem.vue'
 import { dockIconEl, openOverlay, showWithOverlay, tickWhile } from '../dock/dock'
@@ -79,6 +79,7 @@ import { followGameLog } from '../shared/game-log'
 import { lineTime } from '../campaign/log-tail'
 import DeckSummary from './DeckSummary.vue'
 import DeckHistory from './DeckHistory.vue'
+import { windowKeyHelp } from '../ui/window-keys'
 import { ACTIVE_MS, IDLE_END_MS, STACKED_DECK, cardFilterOf, initStackedDecks, isBigHit, isOver, markSeen, parseCardLine, replaySince, setCardEdit, startSession, toRecord, totals } from './deck'
 import type { CardEdit, StackedDecksWidget } from './deck'
 import { useDeckPrices, useLuck } from './prices'
@@ -102,7 +103,7 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 const store = useDeckStore()
 store.load()
 const leagues = useLeagues()
-const { price, held, deckChaos, divine, ready: pricesReady, fetch: fetchPrices } = useDeckPrices()
+const { price, held, deckChaos, divine, ready: pricesReady, updated: pricesUpdated, fetch: fetchPrices } = useDeckPrices()
 fetchPrices()
 
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
@@ -157,6 +158,10 @@ function setCountCheap (v: boolean) {
 const money = (chaos: number) => formatChaos(chaos, sessionDivine.value)
 const signed = (chaos: number) => `${chaos > 0 ? '+' : ''}${money(chaos)}`
 const art = (name: string) => ninjaIcon('DivinationCard', name) ?? undefined
+// Past sessions (DeckHistory) go back from an open one with the mouse's back button: the "?" lists it.
+const PAST_KEYS = windowKeyHelp({ back: () => {} })
+// The panel's icon: the Stacked Deck's own art.
+const deckIcon = itemArt({ name: STACKED_DECK }) ?? undefined
 const clock = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 
 // Luck (C3): only while the window is on screen, since it simulates sessions.

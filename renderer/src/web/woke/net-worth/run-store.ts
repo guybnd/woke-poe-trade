@@ -9,8 +9,9 @@ import { readMapDay, dayKey, NIGHTS_COLLECTION, RECENT_MAPS_KEY } from '../sessi
 import { isSkippedArea } from '../session-story/skip-areas'
 import type { MapRecord } from '../session-story/map-log'
 import { addToTally, cleanDoc, compareRows, emptyRun, isLastRun, isRunGlance, lastRunKey, mapsIn, relive, runBoardKey, runGlanceKey, runsKey, runTotals, tallyFrom, topDrop, MAX_DONE_RUNS } from './runs'
-import type { CostLine, LivePrice, OnceCost, Outside, Run, RunBoard, RunGlance, RunsDoc } from './runs'
+import type { CostLine, LivePrice, Outside, Run, RunBoard, RunGlance, RunsDoc } from './runs'
 import type { LedgerPoint } from './ledger'
+import { savedRunBoard } from './board-signal'
 import type { StashDiff } from './valuation'
 
 const COLLECTION = 'net-worth'
@@ -75,6 +76,7 @@ function saveBoard (league: string, doc: RunsDoc) {
     league,
     rows: all.map((r, i) => ({
       name: r.name,
+      ...(r.craft ? { craft: true as const } : {}),
       count: r.count,
       maps: r.maps,
       fights: r.fights,
@@ -90,6 +92,7 @@ function saveBoard (league: string, doc: RunsDoc) {
   const json = JSON.stringify(board)
   if (json === boardWas) return
   boardWas = json
+  savedRunBoard.value = board
   hostRequest('doc-put', { collection: COLLECTION, key: runBoardKey(league), value: board }).catch(() => { boardWas = '' })
 }
 
@@ -125,7 +128,8 @@ async function readRunDays (run: Run, now: number): Promise<MapRecord[]> {
   const byKey = new Map<string, MapRecord>()
   for (const m of [...days.flat(), ...recent]) {
     const was = byKey.get(m.key)
-    byKey.set(m.key, was ? (m.leftAt > was.leftAt ? m : was) : m)
+    // Later wins a tie: the recent list comes last and holds a map's visits merged.
+    byKey.set(m.key, was ? (m.leftAt >= was.leftAt ? m : was) : m)
   }
   return [...byKey.values()].filter(m => !isSkippedArea(m.name))
 }
@@ -309,12 +313,13 @@ export function stopRun (league: string, points: readonly LedgerPoint[], divine:
   })
 }
 
-// Edits the live run or a finished one (by id).
-export function editRun (league: string, id: string, fn: (r: Run) => Run, points: readonly LedgerPoint[], divine: number | null) {
+// Edits the live run or a finished one (by id). `keepFinal`: a change that
+// moves no number (a rename) keeps a finished run's saved totals as they are.
+export function editRun (league: string, id: string, fn: (r: Run) => Run, points: readonly LedgerPoint[], divine: number | null, keepFinal = false) {
   return queue(async () => {
     await loadRuns(league)
     const doc = runsDoc.value
-    const done = await Promise.all(doc.done.map(r => r.id === id ? withFinal(fn(r), points) : r))
+    const done = await Promise.all(doc.done.map(r => r.id !== id ? r : keepFinal ? fn(r) : withFinal(fn(r), points)))
     const next: RunsDoc = { live: doc.live?.id === id ? fn(doc.live) : doc.live, done }
     // No points (Net worth not loaded yet): the glance would read 0.
     if (await save(league, next) && next.live?.id === id && points.length) await saveGlance(league, next.live, points, divine)
@@ -334,7 +339,4 @@ export function deleteRun (league: string, id: string) {
 
 export function addCost (r: Run, c: Omit<CostLine, 'id'>): Run {
   return { ...r, costs: [...r.costs, { ...c, id: newId() }] }
-}
-export function addOnce (r: Run, o: Omit<OnceCost, 'id'>): Run {
-  return { ...r, once: [...r.once, { ...o, id: newId() }] }
 }

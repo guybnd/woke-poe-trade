@@ -38,7 +38,7 @@
             <span :class="$style.rowHead">
               <span class="flex items-center gap-1">
                 <button v-if="SLOT_ROWS.includes(row)" type="button" :class="$style.expand" :aria-expanded="openRows.includes(row)"
-                  :title="openRows.includes(row) ? 'Hide the slots' : 'Give slots their own lines'" @click="toggle(openRows, row)">{{ openRows.includes(row) ? '▾' : '▸' }}</button>
+                  :title="openRows.includes(row) ? 'Hide the slots' : 'Give slots their own lines'" @click="toggle(openRows, row)"><WFoldCaret :open="openRows.includes(row)" /></button>
                 <span>{{ ROW_LABEL[row] }}</span>
                 <span v-if="slotCount(row)" :class="$style.slotDot" :title="`${slotCount(row)} slot(s) with their own line`">●</span>
               </span>
@@ -100,11 +100,27 @@
         </div>
       </div>
 
-      <div :class="$style.card">
+      <div ref="qualityEl" :class="$style.card" data-goto-spot="over-quality-look">
         <div class="flex items-center gap-2">
           <WToggle :model-value="g.quality.on" @update:model-value="setQualityOn">Over-quality bases</WToggle>
-          <WInfo text="White, magic or rare gear with at least this much quality, from each row's bases. Off hands it to the rules further down." />
+          <WInfo text="White, magic or rare gear with at least this much quality, from each row's bases. Off hands it to the rules further down.
+- They keep the Magic or Rare look of their row and drop tier, with a mark on top that wins over it: a pink border and beam until you change it.
+- They show even where the table hides that tier. Change mark sets the border, sound, beam and map icon." />
+          <template v-if="g.quality.on">
+            <WButton size="sm" @click="editing = editing === 'quality' ? null : 'quality'">{{ editing === 'quality' ? 'Done' : 'Change mark' }}</WButton>
+            <WButton v-if="Object.keys(g.look.quality).length" size="sm" variant="ghost" @click="change(x => { x.look.quality = {} })">Reset</WButton>
+          </template>
         </div>
+        <template v-if="g.quality.on">
+          <div class="flex flex-wrap gap-2 items-end">
+            <span v-for="s in qualitySamples" :key="s.key" class="flex flex-col items-start gap-1">
+              <LabelPreview :text="s.base" :actions="s.actions" :extras="false" :default-text="s.rarity === 'magic' ? [136, 136, 255, 255] : [255, 255, 119, 255]" :scale="1.1" />
+              <span class="w-faint text-xs">{{ s.note }}</span>
+            </span>
+          </div>
+          <StyleEditor v-if="editing === 'quality'" look-only mark-only :look="qualityLook" visibility="Show" :preview-text="qualitySamples[0]?.base ?? 'Lich\'s Circlet'"
+            @patch="p => change(x => { x.look.quality = cleanMark({ ...x.look.quality, ...p }) })" />
+        </template>
         <div v-if="g.quality.on" :class="$style.qgrid">
           <span class="w-faint text-xs">Shows from quality</span>
           <span v-for="v in QUALITY_STEPS" :key="v" :class="$style.stepHead">{{ v ? `${v}%` : 'Off' }}</span>
@@ -120,7 +136,8 @@
       <div :class="$style.card">
         <div class="flex items-center gap-2">
           <span>How much gear this shows</span>
-          <WInfo text="Every gear base in the game, run through the table for each rarity and drop tier. Special gear (influenced, fractured and the rest) comes first in the filter and isn't counted here." />
+          <WInfo text="Every gear base in the game, run through the table for each rarity and drop tier.
+- Special gear (influenced, fractured and the rest) comes first in the filter and isn't counted here." />
           <span class="w-faint text-xs">Click a cell for its bases.</span>
         </div>
         <div :class="$style.pgrid">
@@ -170,7 +187,7 @@
                 · {{ d.tier ? `tier ${d.tier}` : 'no tier' }} · {{ ROW_LABEL[d.row as GearRow] }}
               </span>
               <span v-if="d.tags.length" :class="$style.dropTags">{{ d.tags.join(' · ') }}</span>
-              <button type="button" :class="$style.dropWhy" :title="d.gear ? `Change the ${d.rarity?.toLowerCase()} look of your Gear table` : 'Open this rule in Rules to change its look'" @click="openDropRule(d)">
+              <button type="button" :class="$style.dropWhy" :title="d.gear ? (d.rule?.tier?.startsWith('quality-') ? 'Change the over-quality mark of your Gear table' : `Change the ${d.rarity?.toLowerCase()} look of your Gear table`) : 'Open this rule in Rules to change its look'" @click="openDropRule(d)">
                 {{ d.why }} <i class="fas fa-external-link-alt" />
               </button>
             </div>
@@ -223,15 +240,16 @@
         <WButton size="sm" variant="ghost" @click="picked = []">Clear</WButton>
       </div>
 
-      <div :class="$style.lanes">
-        <div v-for="lane in lanes" :key="lane.key" :class="[$style.lane, lane.key === 'build' && $style.buildLane]">
+      <div :class="$style.lanes" data-goto-spot="gear-ranks">
+        <div v-for="lane in lanes" :key="lane.key" :class="[$style.lane, lane.key === 'build' && $style.buildLane, ...laneDragClass(lane.key)]" :data-lane="lane.key"
+          @dragover="onDragOver($event, lane.key)" @dragleave="onDragLeave($event, lane.key)" @drop="onDrop($event, lane.key)">
           <div :class="$style.laneHead">
             <span>{{ lane.label }}</span>
             <span class="w-faint text-xs">{{ lane.bases.length }}</span>
           </div>
           <div :class="$style.laneBody" class="w-scroll">
-            <button v-for="b in lane.bases.slice(0, LANE_CAP)" :key="b" v-item-tip="{ name: b, note: baseTitle(b, lane.key) }" type="button" :class="[$style.base, picked.includes(b) && $style.picked]"
-              :aria-label="baseTitle(b, lane.key)" :aria-pressed="picked.includes(b)" @click="pick(b, $event)">
+            <button v-for="b in lane.bases.slice(0, LANE_CAP)" :key="b" v-item-tip="{ name: b, note: baseTitle(b, lane.key) }" type="button" :class="[$style.base, picked.includes(b) && $style.picked, drag?.bases.includes(b) && $style.dragging]"
+              :aria-label="baseTitle(b, lane.key)" :aria-pressed="picked.includes(b)" draggable="true" @click="pick(b, $event)" @dragstart="onDragStart($event, b, lane.key)" @dragend="onDragEnd">
               <img v-if="info(b).icon" :src="info(b).icon!" alt="" :class="$style.icon">
               <span :class="$style.baseText">
                 <span>{{ b }}</span>
@@ -242,7 +260,7 @@
           </div>
         </div>
       </div>
-      <div class="w-faint text-xs">Click to pick, shift-click for a run. A move applies to every drop tier. "was R2" marks a base moved off NeverSink's rank. Exotic: talismans, experimented and other special bases NeverSink shows with their own rules, before this table; they only reach the table when those rules pass them by.</div>
+      <div class="w-faint text-xs">Click to pick, shift-click for a run. Drag a base, or the picked ones, onto a column to move them. A move applies to every drop tier. "was R2" marks a base moved off NeverSink's rank. Exotic: talismans, experimented and other special bases NeverSink shows with their own rules, before this table; they only reach the table when those rules pass them by.</div>
       <div class="flex gap-1">
         <WButton size="sm" variant="ghost" :disabled="!movedCount" @click="change(x => { x.moves = {} })">Reset ranks to NeverSink</WButton>
       </div>
@@ -251,11 +269,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useCssModule } from 'vue'
+import { computed, ref, useCssModule, watch } from 'vue'
 import { WButton, WChip, WField, WInfo, WToggle, openMenu, vItemTip } from '../ui'
+import { hideTip } from '../ui/tooltip/tooltip'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { DROP_TIERS, GEAR_ROWS, GEAR_TYPE, NO_TIER, QUALITY_ROWS, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, rankLists, readTiered, shiftAll, takeOver, SLOT_GROUPS, SLOT_ROWS } from './gear'
+import { cleanMark, DROP_TIERS, GEAR_ROWS, GEAR_TYPE, NO_TIER, QUALITY_ROWS, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, markOf, qualityLookFrom, rankLists, readTiered, shiftAll, takeOver, SLOT_GROUPS, SLOT_ROWS } from './gear'
 import type { GearRarity, GearRow, GearSettings, Lane, SlotGroup } from './gear'
 import { DEFENCES, DEFENCE_ATTR, DEFENCE_COLOURS, KIND_GROUPS, allGearBases, baseInfo, kindIcon } from './gear-bases'
 import type { BaseInfo, Defence } from './gear-bases'
@@ -271,6 +290,9 @@ import { applyStyle as applyStyleTo, readStyle } from './edits'
 import type { StylePatch } from './edits'
 import type { FilterAction } from './parse'
 import { clickOf, togglePick } from '../shared/picks'
+import WFoldCaret from '../ui/WFoldCaret.vue'
+import { canDrop, dragSet, dropMoves, gearRanksAsk, takeRanksAsk } from './gear-drag'
+import type { GearMove } from './gear-drag'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -282,7 +304,7 @@ const useCss = useCssModule()
 const RARITIES: GearRarity[] = ['magic', 'rare']
 const ROW_LABEL: Record<GearRow, string> = { build: 'Build bases', exotic: 'Exotic bases', r1: 'Rank 1', r2: 'Rank 2', r3: 'Rank 3', any: 'Unranked (trash)' }
 const LANE_CAP = 80
-const MOVE_TO: Array<{ lane: Lane | 'build' | 'unbuild', label: string }> = [
+const MOVE_TO: Array<{ lane: GearMove, label: string }> = [
   { lane: 'build', label: 'Add to Build' },
   { lane: 'unbuild', label: 'Out of Build' },
   { lane: 'r1', label: 'Rank 1' },
@@ -294,6 +316,8 @@ const MOVE_TO: Array<{ lane: Lane | 'build' | 'unbuild', label: string }> = [
 
 const g = computed(() => props.config.presets.gear)
 const view = ref<'table' | 'ranks'>('table')
+// What's new's Show me (gear-drag.ts): opens on Base ranks.
+watch(gearRanksAsk, () => { if (takeRanksAsk('view')) view.value = 'ranks' }, { immediate: true })
 
 // NeverSink's tiered gear rules as they came (with your edits): read while
 // the table is off, since on it they are commented out.
@@ -503,7 +527,7 @@ const picked2 = computed(() => {
 })
 
 // ---- Looks: samples from NeverSink's rank 1 rules with the table's look ----
-const editing = ref<GearRarity | null>(null)
+const editing = ref<GearRarity | 'quality' | null>(null)
 function sampleBase (r: GearRarity): string {
   return lists.value.r1[r === 'magic' ? 1 : 0] ?? 'Twilight Regalia'
 }
@@ -520,6 +544,42 @@ function sampleActions (r: GearRarity, t: number): FilterAction[] {
 function sampleLook (r: GearRarity): StylePatch {
   return readStyle(sampleActions(r, 5))
 }
+// Over-quality: the table's look for the row and drop tier, with the mark on top.
+function qualityActions (row: GearRow, r: GearRarity, t: number): FilterAction[] {
+  const src = source.value
+  const block = src ? qualityLookFrom(src, row, t) : null
+  let acts = (block?.actions ?? []).filter(a => a.key !== 'DisableDropSound').map(a => ({ key: a.key, args: [...a.args] }))
+  if (g.value.look.rarityText) acts = acts.filter(a => a.key !== 'SetTextColor')
+  const tmp = { actions: acts } as unknown as Parameters<typeof applyStyleTo>[0]
+  if (Object.keys(g.value.look[r]).length) applyStyleTo(tmp, g.value.look[r])
+  applyStyleTo(tmp, markOf(g.value))
+  return tmp.actions
+}
+const qualitySamples = computed(() => {
+  const out: Array<{ key: string, base: string, note: string, rarity: GearRarity, actions: FilterAction[] }> = []
+  // The first ranked row that shows over-quality bases, then the unranked row.
+  const row = (['r1', 'r2', 'r3'] as const).find(r => g.value.quality.min[r] && lists.value[r].length)
+  if (row) {
+    const min = g.value.quality.min[row]
+    const n = row.slice(1)
+    out.push({ key: row, base: lists.value[row][0], note: `rare, rank ${n}, tier 5, ${min}%+`, rarity: 'rare', actions: qualityActions(row, 'rare', 5) })
+    out.push({ key: `${row}m`, base: lists.value[row][1] ?? lists.value[row][0], note: `magic, rank ${n}, tier 3, ${min}%+`, rarity: 'magic', actions: qualityActions(row, 'magic', 3) })
+  }
+  const any = g.value.quality.min.any
+  if (any) {
+    const skip = new Set([...lists.value.r1, ...lists.value.r2, ...lists.value.r3, ...lists.value.never])
+    const base = universe.value.find(b => !skip.has(b) && info(b).cls === 'Body Armours') ?? 'Plate Vest'
+    out.push({ key: 'any', base, note: `rare, unranked, tier 4, ${any}%+`, rarity: 'rare', actions: qualityActions('any', 'rare', 4) })
+  }
+  return out
+})
+// The editor shows the label as a sample, and only the mark's own extras:
+// a switch that's off means the mark adds none.
+const qualityLook = computed<StylePatch>(() => {
+  const label = readStyle(qualitySamples.value[0]?.actions ?? [])
+  const mark = markOf(g.value)
+  return { fontSize: label.fontSize, text: label.text, background: label.background, border: mark.border ?? null, sound: mark.sound, effect: mark.effect, icon: mark.icon }
+})
 
 // ---- Test drops: a pile of gear through the filter as built ----
 const seed = ref(1)
@@ -568,7 +628,13 @@ const pile = computed(() => {
 })
 // A drop's rule: the table's own look here, anything else in Rules.
 const looksEl = ref<HTMLElement | null>(null)
+const qualityEl = ref<HTMLElement | null>(null)
 function openDropRule (d: { gear: boolean, rarity?: string, rule: { type: string, tier: string | null, base?: string } | null }) {
+  if (d.gear && d.rule?.tier?.startsWith('quality-')) {
+    editing.value = 'quality'
+    qualityEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    return
+  }
   if (d.gear) {
     editing.value = d.rarity === 'Magic' ? 'magic' : 'rare'
     looksEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -656,31 +722,85 @@ function baseTitle (b: string, lane: string): string {
   if (ex) parts.push(`NeverSink's Exotic bases show it first (${ex.map(tierLabel).join(', ')}); change those under Rules`)
   return parts.filter(Boolean).join(' · ')
 }
-function moveTo (lane: Lane | 'build' | 'unbuild') {
+function moveTo (lane: GearMove) {
   const bases = [...picked.value]
-  change(x => {
-    if (lane === 'build') {
-      x.build.removed = x.build.removed.filter(b => !bases.includes(b))
-      // Out of Never, or the build lane would drop it again.
-      x.moves = Object.fromEntries(Object.entries(x.moves).filter(([b, l]) => !(l === 'never' && bases.includes(b))))
-      x.build.extra = [...new Set([...x.build.extra, ...bases.filter(b => !autoBases.value.includes(b))])]
-      return
-    }
-    if (lane === 'unbuild') {
-      x.build.extra = x.build.extra.filter(b => !bases.includes(b))
-      x.build.removed = [...new Set([...x.build.removed, ...bases.filter(b => autoBases.value.includes(b))])]
-      return
-    }
-    const moves: Record<string, Lane> = Object.fromEntries(Object.entries(x.moves).filter(([b]) => !bases.includes(b)))
-    for (const b of bases) {
-      // Back where NeverSink had it: no move to remember.
-      const orig = source.value ? laneOf(source.value, { ...x, moves: {} }, b) : 'none'
-      if (orig !== lane) moves[b] = lane
-    }
-    x.moves = moves
-  })
+  change(x => { applyMove(x, lane, bases) })
   picked.value = []
   lastPick = null
+}
+function applyMove (x: GearSettings, lane: GearMove, bases: string[]) {
+  if (lane === 'build') {
+    x.build.removed = x.build.removed.filter(b => !bases.includes(b))
+    // Out of Never, or the build lane would drop it again.
+    x.moves = Object.fromEntries(Object.entries(x.moves).filter(([b, l]) => !(l === 'never' && bases.includes(b))))
+    x.build.extra = [...new Set([...x.build.extra, ...bases.filter(b => !autoBases.value.includes(b))])]
+    return
+  }
+  if (lane === 'unbuild') {
+    x.build.extra = x.build.extra.filter(b => !bases.includes(b))
+    x.build.removed = [...new Set([...x.build.removed, ...bases.filter(b => autoBases.value.includes(b))])]
+    return
+  }
+  const moves: Record<string, Lane> = Object.fromEntries(Object.entries(x.moves).filter(([b]) => !bases.includes(b)))
+  for (const b of bases) {
+    // Back where NeverSink had it: no move to remember.
+    const orig = source.value ? laneOf(source.value, { ...x, moves: {} }, b) : 'none'
+    if (orig !== lane) moves[b] = lane
+  }
+  x.moves = moves
+}
+
+// Drag a base, or the picked set it's in, onto another column.
+const drag = ref<{ bases: string[], from: string } | null>(null)
+const dropOver = ref<string | null>(null)
+function onDragStart (e: DragEvent, b: string, from: string) {
+  hideTip()
+  const bases = dragSet(picked.value, b)
+  drag.value = { bases, from }
+  if (!e.dataTransfer) return
+  e.dataTransfer.effectAllowed = 'move'
+  // Not text/plain: dropped on a text box it would type the names in.
+  e.dataTransfer.setData('application/x-woke-bases', bases.join('\n'))
+  if (bases.length > 1) {
+    // A count, not the one card under the pointer.
+    const ghost = document.createElement('div')
+    ghost.textContent = `${bases.length} bases`
+    ghost.className = useCss.dragGhost
+    document.body.appendChild(ghost)
+    e.dataTransfer.setDragImage(ghost, 12, 12)
+    setTimeout(() => { ghost.remove() }, 0)
+  }
+}
+function onDragEnd () {
+  drag.value = null
+  dropOver.value = null
+}
+function onDragOver (e: DragEvent, to: string) {
+  if (!drag.value || !canDrop(drag.value.from, to)) return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  dropOver.value = to
+}
+function onDragLeave (e: DragEvent, to: string) {
+  const into = e.relatedTarget as Node | null
+  if (into && (e.currentTarget as HTMLElement).contains(into)) return
+  if (dropOver.value === to) dropOver.value = null
+}
+function onDrop (e: DragEvent, to: string) {
+  const d = drag.value
+  onDragEnd()
+  if (!d) return
+  const moves = dropMoves(d.from, to)
+  if (!moves.length) return
+  e.preventDefault()
+  change(x => { for (const m of moves) applyMove(x, m, d.bases) })
+  picked.value = picked.value.filter(b => !d.bases.includes(b))
+  lastPick = null
+}
+function laneDragClass (key: string): string[] {
+  if (!drag.value) return []
+  if (dropOver.value === key) return [useCss.laneOver]
+  return canDrop(drag.value.from, key) ? [useCss.laneCan] : key === drag.value.from ? [] : [useCss.laneNo]
 }
 
 // Armour your build doesn't wear (by defence) and weapons it doesn't use.
@@ -885,7 +1005,7 @@ function neverOffBuild () {
 .barText {
   position: relative;
   padding: 0 6px;
-  line-height: calc(1.5rem * var(--w-text-scale, 1));
+  line-height: calc(1.5rem * var(--w-text-user, 1));
 }
 .looks {
   display: grid;
@@ -1027,6 +1147,21 @@ function neverOffBuild () {
 }
 .base:hover { border-color: var(--w-border); }
 .picked { border-color: var(--w-accent, #e0b860); background: rgb(224 184 96 / 14%); }
+.dragging { opacity: 0.45; }
+.laneCan { outline: 1px dashed rgb(224 184 96 / 55%); }
+.laneOver { outline: 2px solid var(--w-accent, #e0b860); background: rgb(224 184 96 / 12%); }
+.laneNo { opacity: 0.5; }
+.dragGhost {
+  position: fixed;
+  top: -100px;
+  left: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--w-accent, #e0b860);
+  border-radius: var(--w-r-sm);
+  background: var(--w-panel, #1a1714);
+  color: var(--w-text, #e8dcc0);
+  font-size: var(--w-fs-xs);
+}
 .icon {
   width: 22px;
   height: 22px;

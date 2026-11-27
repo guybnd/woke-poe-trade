@@ -1,8 +1,8 @@
 <template>
   <Widget :config="config" move-handles="corners" :removable="false" :readonly="true" :inline-edit="false" @moved="config.moved = true">
-    <div class="flex flex-col gap-1 items-stretch">
+    <div class="flex flex-col gap-1 items-stretch" data-w-window-sized>
       <MapVerdictCard v-if="result && mapMods" :result="result" :config="mapMods" can-edit @edit-rewards="openRewards" />
-      <WPanel v-else title="Map check" icon="map" width="22rem">
+      <WPanel v-else title="Map check" icon="map" :hotkey="mapMods?.hotkey" width="22rem">
         <WEmpty :art="{ mechanic: 'map' }">That item isn't a map, invitation, logbook, heist contract or chart.</WEmpty>
       </WPanel>
       <div class="flex gap-1 justify-between">

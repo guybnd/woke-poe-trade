@@ -30,6 +30,8 @@ export interface RegexLibraryWidget extends Widget {
   folders?: string[]
   folderOrder?: string[]
   closedFolders?: string[]
+  // The list's order (WSortButton); unset is My order.
+  sortBy?: 'manual' | 'name' | 'hotkey'
 }
 
 export function emptyEntry (entries: RegexEntry[]): RegexEntry {

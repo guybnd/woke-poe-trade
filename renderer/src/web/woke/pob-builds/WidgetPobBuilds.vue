@@ -7,21 +7,20 @@
     <div class="flex gap-2 min-h-0 items-start">
       <WPanel ref="panel" :keys="LIST_KEYS" :title="config.wmTitle || 'PoB builds'" icon="wisdom" :busy="loading && builds.length > 0" width="20rem" max-height="70vh">
         <template #actions>
-          <button @click="importOpen = !importOpen" class="w-icon-btn" :class="{ 'w-icon-btn--on': importOpen }" title="Import a pobb.in / pastebin link or PoB code">
+          <button @click="importOpen = !importOpen" class="w-icon-btn" :class="{ 'w-icon-btn--on': importOpen }" title="Import a build link (pobb.in, poe.ninja, maxroll…) or PoB code">
             <i class="fas fa-file-import" />
           </button>
-          <button class="w-icon-btn" :class="{ 'w-icon-btn--on': config.sortBy === 'manual' }" :title="config.sortBy === 'manual' ? 'Sort: My order. Click for latest save first' : 'Sort: latest save first. Click for My order'"
-            @click="config.sortBy = config.sortBy === 'manual' ? undefined : 'manual'; saveConfig()"><i class="fas fa-sort-amount-down" /></button>
+          <WSortButton :model-value="config.sortBy ?? 'saved'" :options="SORTS" @update:model-value="config.sortBy = $event === 'manual' ? 'manual' : undefined; saveConfig()" />
           <button @click="refresh" class="w-icon-btn" title="Reload builds folder">
             <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }" />
           </button>
         </template>
         <template #toolbar>
-          <div v-if="importOpen" class="flex gap-1 w-full">
-            <WField v-model="importText" icon="fas fa-link" placeholder="pobb.in link, pastebin link or PoB code" class="grow" @keydown.enter="doImport" />
+          <div v-if="importOpen" class="flex gap-1 w-full" data-goto-spot="import">
+            <WField v-model="importText" icon="fas fa-link" placeholder="Build link (pobb.in, poe.ninja, maxroll…) or PoB code" class="grow" @keydown.enter="doImport" />
             <WButton size="sm" variant="primary" :disabled="importing || !importText.trim()" @click="doImport">{{ importing ? '…' : 'Import' }}</WButton>
           </div>
-          <WField v-else v-model="filter" icon="fas fa-search" placeholder="Filter by name, class, skill, folder…" class="grow" />
+          <WSearchField v-else v-model="filter" things="builds" placeholder="Filter by name, class, skill, folder…" class="grow" />
         </template>
         <template v-if="error" #banner>
           <WBanner><span :title="error">{{ errorText }}</span><template #actions><WButton size="sm" @click="refresh">Retry</WButton></template></WBanner>
@@ -37,7 +36,7 @@
              click shows the build. The order you set is kept in the app; the
              files only move when a build changes folder. -->
         <SavedTree :tree="tree" list-id="pob-folders" :active-id="selectedRow?.id ?? null" :title-of="r => r.relPath" :backspace="false"
-          @item-menu="buildMenu" @folder-menu="folderMenu" @item-key="onBuildKey">
+          @item-act="onRowAct" @item-menu="buildMenu" @folder-menu="folderMenu" @item-key="onBuildKey">
           <template #item="{ item: b }">
             <i v-if="config.activeBuild === b.relPath" class="fas fa-check-circle w-up" title="In use" />
             <span class="w-trunc">{{ b.name }}</span>
@@ -45,18 +44,21 @@
           </template>
           <template #sub="{ item: b }">{{ describe(b) }}</template>
           <template #actions="{ item: b }">
-            <button @click.stop="togglePin(b.relPath)" class="w-icon-btn" :class="{ 'w-icon-btn--on': isPinned(b.relPath) }"
-              :title="isPinned(b.relPath) ? 'Unpin' : 'Pin to top'">
-              <i class="fas fa-thumbtack" />
-            </button>
+            <!-- Use always on; the rest on hover (WRowActs, the same in every saved list). -->
+            <WRowActs>
+              <template #hover>
+                <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': isPinned(b.relPath) }" :title="isPinned(b.relPath) ? 'Unpin (P)' : 'Pin to top (P)'" data-row-act="pin"><i class="fas fa-thumbtack" /></button>
+                <button type="button" class="w-icon-btn" title="Rename (F2)" data-row-act="rename"><i class="fas fa-pen" /></button>
+                <button type="button" class="w-icon-btn" title="Remove (Del)" data-row-act="remove"><i class="fas fa-trash" /></button>
+              </template>
+              <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': config.activeBuild === b.relPath }" :title="config.activeBuild === b.relPath ? 'In use' : 'Use build'"
+                data-pob-use data-row-act="use"><i class="fas fa-check-circle" /></button>
+            </WRowActs>
           </template>
         </SavedTree>
-        <WEmpty v-if="!loading && !shown.length && !error && builds.length" icon="fas fa-filter">
-          Nothing matches "{{ filter }}".
-          <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
-        </WEmpty>
+        <WNoMatch v-if="!loading && !shown.length && !error && builds.length" :query="filter" @clear="filter = ''" />
         <WEmpty v-else-if="!loading && !shown.length && !error" icon="fas fa-folder-open">
-          No builds in {{ dir || 'the builds folder' }}. Save one in Path of Building, or import a pobb.in link with the button above.
+          No builds in {{ dir || 'the builds folder' }}. Save one in Path of Building, or import a build link with the button above.
           <template #actions><WButton size="sm" @click="importOpen = true">Import a build</WButton></template>
         </WEmpty>
       </WPanel>
@@ -87,6 +89,10 @@ import { inject, computed, shallowRef, watch, defineAsyncComponent } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WButton, WEmpty, WBanner, WSkeleton, openMenu, toast } from '../ui'
+import WSortButton from '../ui/WSortButton.vue'
+import WRowActs from '../ui/WRowActs.vue'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { useSavedTree } from '../shared/use-saved-tree'
 import { isUnder, movedPath } from '../shared/saved-tree'
 import SavedTree from '../shared/SavedTree.vue'
@@ -97,6 +103,7 @@ import BuildDetail from './BuildDetail.vue'
 import BuildHoverCard from './BuildHoverCard.vue'
 import { CHARACTER_TREE, characterStatus, characterTreeNodes, characterTreeSpec, startCharacterSync } from './character'
 import { liveBuildXml } from './live-pob'
+import { useGoto } from '../tab-bar/goto'
 import { passiveTreeJewelSlots } from './passive-tree'
 import { personalOn } from '../personal'
 import { buildPinChoices, moveBuildPins, treePin } from './build-pins'
@@ -112,7 +119,7 @@ import { onSavedOpen } from '../shared/saved-open'
 import type { PobBuildEntry, PobDetails } from './widget'
 
 // The window's "?": the saved list's keys.
-const LIST_KEYS = savedListKeys({ copy: false })
+const LIST_KEYS = [...savedListKeys({ copy: false }), { keys: 'P', label: 'Pin to top (again: unpin)' }]
 
 // The tree loads on first open: it's big and most sessions never open it.
 const BuildTree = defineAsyncComponent(() => import('./BuildTree.vue'))
@@ -319,6 +326,8 @@ const rows = computed<BuildRow[]>(() => {
 })
 const selectedRow = computed(() => rows.value.find(r => r.relPath === selected.value) ?? null)
 const pickedFrom = shallowRef<number | null>(null)
+// The list's two orders (unset = latest save first, the default).
+const SORTS = [{ value: 'saved', label: 'Latest save first' }, { value: 'manual', label: 'My order' }]
 const manualOrder = computed(() => props.config.sortBy === 'manual')
 
 const tree = useSavedTree<BuildRow>({
@@ -437,12 +446,20 @@ function isPinned (relPath: string) {
   return props.config.pinned.includes(relPath)
 }
 
+// The row buttons (WRowActs), through SavedTree's one listener.
+function onRowAct (act: string, b: PobBuildEntry) {
+  if (act === 'pin') togglePin(b.relPath)
+  else if (act === 'rename') startEdit(b, 'rename')
+  else if (act === 'remove') removeBuild(b)
+  else if (act === 'use') useBuild(b)
+}
+
 function buildMenu (e: MouseEvent, b: PobBuildEntry) {
   const pinned = isPinned(b.relPath)
   const active = props.config.activeBuild === b.relPath
   openMenu(e, [
     { label: selected.value === b.relPath ? 'Hide details' : 'Show details', icon: 'fas fa-info-circle', keys: 'Enter', action: () => select(b) },
-    { label: active ? 'In use' : 'Use build', icon: 'fas fa-check-circle', disabled: active, action: () => { props.config.activeBuild = b.relPath; saveConfig() } },
+    { label: active ? 'In use' : 'Use build', icon: 'fas fa-check-circle', disabled: active, action: () => useBuild(b) },
     { label: pinned ? 'Unpin' : 'Pin to top', icon: 'fas fa-thumbtack', keys: 'P', action: () => togglePin(b.relPath) },
     ...(selectedBuild.value && selectedBuild.value.relPath !== b.relPath
       ? [{
@@ -451,10 +468,11 @@ function buildMenu (e: MouseEvent, b: PobBuildEntry) {
           action: () => { comparing.value = { a: selectedBuild.value!.relPath, b: b.relPath } }
         }]
       : []),
-    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => startEdit(b, 'rename') },
-    { label: 'Duplicate', icon: 'fas fa-clone', action: () => duplicateBuild(b) },
-    { label: 'Move to folder', icon: 'fas fa-folder', action: () => startEdit(b, 'move') },
-    { label: 'Delete', icon: 'fas fa-trash-alt', keys: 'Del', action: () => removeBuild(b) }
+    { label: 'Rename', icon: 'fas fa-pen', keys: 'F2', action: () => startEdit(b, 'rename') },
+    { label: 'Duplicate', icon: 'far fa-clone', action: () => duplicateBuild(b) },
+    { label: 'Move to folder', icon: 'fas fa-folder-open', action: () => startEdit(b, 'move') },
+    { separator: true },
+    { label: 'Remove', icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => removeBuild(b) }
   ])
 }
 
@@ -468,6 +486,11 @@ function note (text: string, undo?: () => void) {
   toast(text, { anchor: panel.value?.el, undo })
 }
 
+function useBuild (b: PobBuildEntry) {
+  if (props.config.activeBuild === b.relPath) return
+  props.config.activeBuild = b.relPath
+  saveConfig()
+}
 function startEdit (b: PobBuildEntry, kind: 'rename' | 'move') {
   tree.startEdit('item', String(idOf(b.relPath)), kind)
 }
@@ -644,16 +667,14 @@ function togglePin (relPath: string) {
     : [...props.config.pinned, relPath]
 }
 
+// What's new's Show me: the import box, for the build link sites.
+useGoto(props.config, 'woke-pob-builds', {
+  builds: () => {},
+  spots: { import: () => { importOpen.value = true } }
+})
 </script>
 
 <style module>
-.editRow {
-  display: flex;
-  align-items: center;
-  gap: var(--w-s2);
-  padding: 4px var(--w-s2);
-  border-bottom: 1px solid var(--w-line-soft);
-}
 .edit { flex: 1; min-width: 0; height: var(--w-row-h); padding: 0 var(--w-s2); }
 .folder {
   display: flex;

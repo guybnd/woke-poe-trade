@@ -6,7 +6,7 @@
     <button type="button" :class="$style.fold" :aria-expanded="open" data-nightmare-fold @click="open = !open">
       <span :class="$style.title">Worth running</span>
       <span class="flex-1" />
-      <span class="w-dim">as {{ cols[0].name }} <b :class="(cols[0].profit ?? cols[0].loot) >= 0 ? 'w-up' : 'w-down'">{{ cols[0].profit == null ? chaos(cols[0].loot) : signed(cols[0].profit) }}</b></span>
+      <span class="w-dim">as {{ cols[0].name }} <b :class="(cols[0].profit ?? cols[0].loot) >= 0 ? 'w-up' : 'w-down'"><WPriceText :text="cols[0].profit == null ? chaos(cols[0].loot) : signed(cols[0].profit)" /></b></span>
       <i class="fas w-dim" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
     </button>
     <!-- Guy's holistic pick A: profit bars for the five maps, the grid one click further. -->
@@ -15,7 +15,7 @@
       <template v-for="c in cols" :key="c.id">
         <span :title="c.name">{{ c.short }}</span>
         <span :class="$style.bar"><i :class="(c.profit ?? c.loot) >= 0 ? $style.barUp : $style.barDown" :style="{ width: barWidth(c) }" /></span>
-        <b :class="(c.profit ?? c.loot) >= 0 ? 'w-up' : 'w-down'">{{ c.profit == null ? chaos(c.loot) : signed(c.profit) }}</b>
+        <b :class="(c.profit ?? c.loot) >= 0 ? 'w-up' : 'w-down'"><WPriceText :text="c.profit == null ? chaos(c.loot) : signed(c.profit)" /></b>
         <!-- The vault this map can spawn; a tag, not in profit (Guy's pick, 2026-11-21). -->
         <span :class="$style.vault" :data-nightmare-vault="c.id" @mouseenter="hoverVault(c.vault, $event)" @mouseleave="hovered = null">{{ c.vault?.short ?? '' }}</span>
       </template>
@@ -39,7 +39,7 @@
           <span :class="$style.vtitle">{{ shownVault.name }}</span>
           <span class="w-dim">{{ shownVault.quadrant }}</span>
           <span class="flex-1" />
-          <span :class="$style.est" :title="TYPICAL_TIP">~{{ chaos(shownVault.typical) }} typical</span>
+          <span :class="$style.est" :title="TYPICAL_TIP">~<WPriceText :text="chaos(shownVault.typical)" /> typical</span>
         </div>
         <VaultRewardRows :rewards="shownVault.rewards" fit />
       </template>
@@ -54,7 +54,7 @@
         </thead>
         <tbody>
           <tr v-for="f in fragRows" :key="f.name" :data-nightmare-frag="f.name">
-            <td><span :class="$style.item"><WIcon :src="itemArt({ name: f.name, type: 'Fragment' }) ?? undefined" fallback="fas fa-puzzle-piece" size="sm" />{{ f.short }} <span class="w-dim">{{ chaos(f.price) }}</span></span></td>
+            <td><span :class="$style.item"><WIcon :src="itemArt({ name: f.name, type: 'Fragment' }) ?? undefined" fallback="fas fa-puzzle-piece" size="sm" />{{ f.short }} <span class="w-dim"><WPriceText :text="chaos(f.price)" /></span></span></td>
             <td v-for="(cell, i) in f.cells" :key="cols[i].id" :class="[cell.favoured ? $style.fav : $style.low, cell.estimate && cell.favoured && $style.est]">
               {{ cell.estimate ? '~' : '' }}{{ cell.pct }}%
             </td>
@@ -65,7 +65,7 @@
               <template v-if="c.unique">
                 <WIcon :src="itemArt({ name: c.unique.name }) ?? undefined" fallback="fas fa-gem" size="md" :class="$style.uicon" />
                 <div :class="c.unique.estimate && $style.est">{{ c.unique.estimate ? '~' : '' }}{{ c.unique.pct }}%</div>
-                <div>{{ chaos(c.unique.price) }}</div>
+                <div><WPriceText :text="chaos(c.unique.price)" /></div>
               </template>
             </td>
           </tr>
@@ -75,13 +75,13 @@
           </tr>
           <tr :class="$style.sep">
             <td class="w-dim">Loot</td>
-            <td v-for="c in cols" :key="c.id" :class="estimated && $style.est">{{ estimated ? '~' : '' }}{{ chaos(c.loot) }}</td>
+            <td v-for="c in cols" :key="c.id" :class="estimated && $style.est">{{ estimated ? '~' : '' }}<WPriceText :text="chaos(c.loot)" /></td>
           </tr>
           <tr>
-            <td class="w-dim">Profit <span :class="$style.mapcost">(map {{ chaos(mapPrice) }})</span></td>
+            <td class="w-dim">Profit <span :class="$style.mapcost">(map <WPriceText :text="chaos(mapPrice)" />)</span></td>
             <td v-for="c in cols" :key="c.id" :class="$style.profit" :data-nightmare-profit="c.id">
-              <span v-if="c.profit != null" :class="c.profit >= 0 ? 'w-up' : 'w-down'">{{ c.profit >= 0 ? '+' : '' }}{{ chaos(c.profit) }}</span>
-              <span v-else class="w-faint" title="No Nightmare Map price on poe.ninja">?</span>
+              <span v-if="c.profit != null" :class="c.profit >= 0 ? 'w-up' : 'w-down'"><WPriceText :text="signed(c.profit)" /></span>
+              <WPrice v-else :chaos="null" none="No poe.ninja price yet for the Nightmare Map" />
             </td>
           </tr>
         </tbody>
@@ -102,6 +102,9 @@ import { onSharedDataChange } from '../app/live-data'
 import { useFold } from '../ui/fold'
 import { AppConfig } from '@/web/Config'
 import WIcon from '../ui/WIcon.vue'
+import WPriceText from '../ui/WPriceText.vue'
+import WPrice from '../ui/WPrice.vue'
+import { formatAmount } from '../ui/format'
 import WSegmented from '../ui/WSegmented.vue'
 import VaultHoverCard from '../vaults/VaultHoverCard.vue'
 import VaultRewardRows from '../vaults/VaultRewardRows.vue'
@@ -130,8 +133,7 @@ function signed (n: number) { return `${n >= 0 ? '+' : ''}${chaos(n)}` }
 const prices = usePriceIndex()
 // Plain chaos in the grid: one unit across every cell, so columns compare at a glance.
 function chaos (n: number | null | undefined) {
-  if (n == null) return '?'
-  return `${Math.abs(n) >= 10 ? Math.round(n) : +n.toFixed(1)}c`
+  return n == null ? '—' : `${formatAmount(n)}c`
 }
 
 const DEFAULT_PREFS: BossPrefs = {

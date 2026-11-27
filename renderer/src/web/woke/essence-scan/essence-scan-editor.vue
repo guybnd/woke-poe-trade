@@ -6,14 +6,8 @@
       <span>Hotkey: read every essence on screen once</span>
       <w-hotkey-cell v-model="onceHotkey" />
     </div>
-    <label class="flex items-center gap-2">
-      <input v-model="autoInMaps" type="checkbox">
-      <span>Start in maps: scan by itself in every map, stop in town and hideout. Uses about 430 MB more memory while in maps.</span>
-    </label>
-    <label class="flex items-center gap-2">
-      <input v-model="iconWhenOff" type="checkbox">
-      <span>In maps, show the dock icon while the scan is off (click it to start)</span>
-    </label>
+    <WToggle v-model="autoInMaps">Start in maps: scan by itself in every map, stop in town and hideout. Uses about 430 MB more memory while in maps.</WToggle>
+    <WToggle v-model="iconWhenOff">In maps, show the dock icon while the scan is off (click it to start)</WToggle>
     <div>
       <div class="mb-1">Corrupt when the monolith holds any of these</div>
       <div class="flex flex-wrap gap-1">
@@ -31,7 +25,7 @@
     </label>
     <div class="flex items-center gap-2 text-sm" style="color: var(--w-dim);">
       How it decides
-      <w-info :text="'Essence scan reads the label of the essence monolith under your mouse with on-screen text recognition, prices its essences from poe.ninja and says whether to corrupt it.\n\nIt says CORRUPT when the monolith has one of the essences ticked here: Misery, Envy, Dread or Scorn can turn into Horror, Hysteria, Insanity or Delirium, which only come from corrupting. Under it is the best case after corrupting (minus a Vaal Orb). The odds of each outcome aren\'t published, so it shows what a corrupt can reach, not an average.\n\nScan mode reads the screen while your cursor rests, and only runs OCR when a label is there. With Start in maps on it runs in maps only.\n\nIt only reads the screen; you still use the Remnant of Corruption yourself. It needs Windows and the OCR files.'" />
+      <w-info :text="'Essence scan reads the label of the essence monolith under your mouse with on-screen text recognition, prices its essences from poe.ninja and says whether to corrupt it.\n\nIt says Corrupt when the monolith has one of the essences ticked here: Misery, Envy, Dread or Scorn can turn into Horror, Hysteria, Insanity or Delirium, which only come from corrupting. Under it is the best case after corrupting (minus a Vaal Orb). The odds of each outcome aren\'t published, so it shows what a corrupt can reach, not an average.\n\nScan mode reads the screen while your cursor rests, and only runs OCR when a label is there. With Start in maps on it runs in maps only.\n\nIt only reads the screen; you still use the Remnant of Corruption yourself. It needs Windows and the OCR files.'" />
     </div>
   </div>
 </template>
@@ -39,6 +33,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
+import WToggle from '../ui/WToggle.vue'
 import { WChip, WInfo } from '../ui'
 import { configProp, configModelValue } from '@/web/settings/utils'
 import { ESSENCE_TYPES, MEDS } from './essences'
@@ -46,7 +41,7 @@ import type { EssenceScanWidget } from './widget'
 
 export default defineComponent({
   name: 'Essence scan',
-  components: { WHotkeyCell, WChip, WInfo },
+  components: { WHotkeyCell, WToggle, WChip, WInfo },
   props: configProp<EssenceScanWidget>(),
   setup (props) {
     const flagTypes = configModelValue(() => props.configWidget, 'flagTypes')

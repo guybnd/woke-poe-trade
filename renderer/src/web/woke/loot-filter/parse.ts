@@ -200,7 +200,8 @@ export const EDITOR_GROUPS: Record<string, string> = {
   'woke->build': 'Your build',
   'woke->safety': 'Safety net',
   'woke->rule': 'Rules you made',
-  'woke->preset': 'Presets'
+  'woke->preset': 'Presets',
+  'woke->weights': 'Rare weights'
 }
 
 // A group and tier the way a person reads them; a rule with no tags has no
@@ -433,8 +434,4 @@ export function serializeFilter (doc: FilterDoc, header?: string[]): string {
   // A byte order mark only belongs at the very start of the file, and ours
   // doesn't write one.
   return header?.length ? [...header, body].join(doc.eol) : (doc.bom ? '\uFEFF' : '') + body
-}
-
-export function blockKey (b: Pick<FilterBlock, 'type' | 'tier'>): string {
-  return `${b.type ?? ''}|${b.tier ?? ''}`
 }

@@ -1,0 +1,20 @@
+Item Class: Skill Gems
+Rarity: Gem
+Ice Nova of Snowfall
+--------
+Spell, AoE, Cold, Nova
+Level: 1
+Cost: 9 Mana
+Cast Time: 0.70 sec
+Critical Strike Chance: 6.00%
+Effectiveness of Added Damage: 70%
+--------
+Requirements:
+Level: 12
+Int: 34
+--------
+A circle of ice expands from your location or a targeted Frostbolt.
+--------
+Experience: 1/15249
+--------
+Place into an item socket of the right colour to gain this skill. Right click to remove from a socket.

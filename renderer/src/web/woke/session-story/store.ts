@@ -8,7 +8,7 @@ import { usePoeninja } from '@/web/background/Prices'
 import { hostRequest } from '../shared/host'
 import { stashGainsBetween } from '../net-worth/gains'
 import { ledgerKey } from '../net-worth/glance'
-import { NIGHT_GAP_MS, bestDrop, hasMaps, isNightStory, keepNight, summarize } from './story'
+import { NIGHT_GAP_MS, bestDrop, hasPlay, isNightStory, keepNight, summarize } from './story'
 import type { NightDraft, NightStory } from './story'
 import { isMapRecord, keepMap } from './map-log'
 import { isSkippedArea, skipVersion } from './skip-areas'
@@ -28,8 +28,18 @@ function isNightDraft (v: unknown): v is NightDraft {
 // replay starts.
 export const MAPS_COLLECTION = 'map-history'
 export function dayKey (ms: number): string { return localDay(ms) }
-const DAY_MS = 86_400_000
-export const DAY_MS_EXPORT = DAY_MS
+// The day keys of the last `n` calendar days, newest first. Stepped by the
+// calendar, not by 24 hours: a 25-hour day (clocks back) gave the same day
+// twice, and a 23-hour one skipped a day.
+export function lastDays (now: number, n: number): string[] {
+  const d = new Date(now)
+  const out: string[] = []
+  for (let i = 0; i < n; i++) {
+    out.push(dayKey(d.getTime()))
+    d.setDate(d.getDate() - 1)
+  }
+  return out
+}
 const RECENT = 20
 export const RECENT_MAPS_KEY = 'recent-maps'
 const RECENT_KEY = RECENT_MAPS_KEY
@@ -66,8 +76,21 @@ export const useNights = createGlobalState(() => {
     // Strict: null only when there's no file (main keeps a broken one aside);
     // a locked one throws, and then nothing is saved over it this run.
     loading ??= (hostRequest('doc-get-strict', { collection: NIGHTS_COLLECTION, key: NIGHTS_KEY }) as Promise<unknown>)
-      .then((saved) => { nights.value = Array.isArray(saved) ? saved.filter(isNightStory) : [] })
-      .catch((e) => { loadError.value = e instanceof Error ? e.message : String(e) })
+      .then((saved) => {
+        // Nights finished while an earlier read failed stay, on top of the file's.
+        const list = Array.isArray(saved) ? saved.filter(isNightStory) : []
+        const unsaved = nights.value.filter(n => !list.some(m => m.id === n.id))
+        nights.value = nights.value.reduce(keepNight, list)
+        loadError.value = ''
+        // Saved now, not at the next night's end: quitting before that lost them.
+        if (unsaved.length) hostRequest('doc-put', { collection: NIGHTS_COLLECTION, key: NIGHTS_KEY, value: nights.value }).catch(() => {})
+      })
+      .catch((e) => {
+        loadError.value = e instanceof Error ? e.message : String(e)
+        // Read again next time (the next finished night), instead of never
+        // saving a night for the rest of the run.
+        loading = null
+      })
     return loading
   }
 
@@ -86,7 +109,11 @@ export const useNights = createGlobalState(() => {
 
   async function saveMap (rec: MapRecord): Promise<void> {
     await loadMaps()
-    const key = dayKey(rec.enteredAt)
+    // A map entered again after a quiet gap or a restart joins its first
+    // visit, so it's saved on that visit's day: past midnight, the second half
+    // went to the next day alone and the run summary kept only that half.
+    const first = maps.value.find(m => m.key === rec.key)
+    const key = dayKey(first ? Math.min(first.enteredAt, rec.enteredAt) : rec.enteredAt)
     const league = useLeagues().selectedId.value
     const row = { ...rec, npcs: [...rec.npcs], ...(league ? { league } : {}) }
     // Vaults go to their day only: the recent list feeds the toast's averages.
@@ -160,15 +187,25 @@ export const useNights = createGlobalState(() => {
   let draftRead = false
   function saveDraft (d: NightDraft | null) {
     if (!draftRead) return
+    // While the nights file can't be read, a night that finished in that time
+    // lives only in the draft: nothing replaces it until the nights are saved.
+    if (loadError.value) return
     // On an area change, and at most once a minute otherwise (long hideout stretches).
     const sig = d ? `${d.startedAt}:${d.segs.length}:${Math.floor(d.lastAt / 60_000)}` : ''
     if (sig === savedSig) return
     savedSig = sig
-    hostRequest('doc-put', { collection: NIGHTS_COLLECTION, key: DRAFT_KEY, value: d && hasMaps(d) ? d : null }).catch(() => {})
+    hostRequest('doc-put', { collection: NIGHTS_COLLECTION, key: DRAFT_KEY, value: d && hasPlay(d) ? d : null }).catch(() => {})
   }
   // The saved night, unless it's one already finished.
   async function readDraft (): Promise<NightDraft | null> {
-    const saved = await (hostRequest('doc-get', { collection: NIGHTS_COLLECTION, key: DRAFT_KEY }) as Promise<unknown>).catch(() => null)
+    // Strict: a draft that can't be read right now isn't "none", and a
+    // shorter night rebuilt from the log's tail mustn't be saved over it.
+    let saved: unknown
+    try {
+      saved = await (hostRequest('doc-get-strict', { collection: NIGHTS_COLLECTION, key: DRAFT_KEY }) as Promise<unknown>)
+    } catch {
+      return null
+    }
     draftRead = true
     if (!isNightDraft(saved)) return null
     if (nights.value.some(n => n.startedAt === saved.startedAt || n.endedAt >= saved.lastAt)) return null
@@ -182,7 +219,7 @@ export const useNights = createGlobalState(() => {
     const sig = d ? `${skipVersion()}:${d.startedAt}:${d.segs.length}:${d.deaths.length}:${d.levels?.length ?? 0}:${d.segs[d.segs.length - 1]?.name}:${Math.floor(d.lastAt / 60_000)}:${d.afkAt ?? ''}` : ''
     if (sig === liveSig) return
     liveSig = sig
-    live.value = d && hasMaps(d) ? { ...summarize(d), ...(d.afkAt != null ? { afkSince: d.afkAt } : {}) } : null
+    live.value = d && hasPlay(d) ? { ...summarize(d), ...(d.afkAt != null ? { afkSince: d.afkAt } : {}) } : null
   }
   const keptDraft = () => draft
 

@@ -1,12 +1,12 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
-    <WPanel :title="config.wmTitle || 'Wickerman'" icon="fas fa-bone" width="38rem" max-height="70vh" resizable>
+    <WPanel :title="config.wmTitle || 'Wickerman'" :icon="ninjaArt('Viscera', ICON_VISCERA)" :updated="pricesUpdated" :fresh-min="40" :stale-min="180" width="38rem" max-height="70vh" resizable>
       <div :class="$style.bar">
         <WSegmented v-model="config.slot" :options="SLOTS" />
         <span class="ml-auto w-dim w-num text-xs">{{ rows.length }}</span>
       </div>
       <div :class="$style.bar">
-        <WField v-model="query" icon="fas fa-search" placeholder="Search a Viscera, boss, map or effect" class="grow" />
+        <WSearchField v-model="query" things="Viscera" placeholder="Filter by Viscera, boss, map or effect" class="grow" />
       </div>
       <div class="w-faint text-xs" :class="$style.note">
         <template v-if="level != null">Mods of the {{ TIER_NAME[levelTierLabel(level)] }} versions, for area level {{ level }}.</template>
@@ -15,7 +15,8 @@
         <WInfo text="Which version drops where isn't published. This guesses Lesser in the acts, plain in maps up to area level 77, Greater from 78." />
       </div>
       <WEmpty v-if="!table" icon="fas fa-bone">Reading the Viscera list.</WEmpty>
-      <WEmpty v-else-if="!rows.length" icon="fas fa-bone">No Viscera match.</WEmpty>
+      <WNoMatch v-else-if="!rows.length && query.trim()" :query="query" @clear="query = ''" />
+      <WEmpty v-else-if="!rows.length" icon="fas fa-bone">No Viscera for this slot.</WEmpty>
       <div v-else :class="$style.list">
         <template v-for="v in (onScreen ? rows : [])" :key="v.name">
           <button type="button" :class="[$style.row, open === v.name && $style.on, hereNames.has(v.name) && $style.here]"
@@ -59,8 +60,11 @@ import { vItemTip } from '@/web/woke/ui/tooltip/item-tip'
 import { computed, inject, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WEmpty, WField, WInfo, WPanel, WPrice, WSegmented } from '../ui'
+import { WEmpty, WInfo, WPanel, WPrice, WSegmented } from '../ui'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import { popupAnchor } from '../ui/window-anchor'
+import { ninjaArt } from '../market/ninja-icons'
 import { actLine, levelTier, levelTierLabel, searchViscera } from './viscera'
 import { useZone } from '../shared/zone'
 import type { Viscera } from './viscera'
@@ -89,7 +93,9 @@ const SLOTS = [
 
 const table = useVisceraTable()
 const { here } = useVisceraHere()
-const { price, divine } = useVisceraPrices()
+const { price, divine, updated: pricesUpdated } = useVisceraPrices()
+// The panel's icon: a Viscera's own art (poe.ninja's, as in Market).
+const ICON_VISCERA = "Al-Hezmin's Head"
 const hereNames = computed(() => new Set(here.value.map(h => h.v.name)))
 const query = shallowRef('')
 const open = shallowRef<string | null>(null)

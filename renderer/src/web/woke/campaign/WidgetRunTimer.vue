@@ -150,13 +150,13 @@
               </span>
               <span class="text-right w-num" :class="!isComplete(r) && 'w-faint'">{{ formatClock(runTotal(r) ?? lastSplit(r)) }}</span>
               <span class="text-right w-num w-dim">{{ formatDate(r.startedAt) }}</span>
-              <button class="w-icon-btn" title="Delete run. You can undo." @click.stop="removeRun(r.id)"><i class="fas fa-times text-xs" /></button>
+              <button class="w-icon-btn" title="Remove run. You can undo." @click.stop="removeRun(r.id)"><i class="fas fa-times text-xs" /></button>
             </div>
           </template>
         </template>
 
         <template v-if="reviewRun" #footer>
-          <button class="w-accent hover:underline" @click="reviewId = null"><i class="fas fa-chevron-left text-xs" /> Runs</button>
+          <WBackLink to="Runs" @back="reviewId = null" />
           <span v-if="pb?.id === reviewRun.id" class="ml-auto" :class="$style.pbChip">PB</span>
           <span v-else-if="cmp?.id === reviewRun.id" class="ml-auto w-dim">Racing this run</span>
           <button v-else-if="isComplete(reviewRun)" class="ml-auto w-accent hover:underline" @click="pickCompare(reviewRun)">Race this run</button>
@@ -183,12 +183,13 @@ export default { widget: widgetRunTimerSpec }
 <script setup lang="ts">
 import { inject, computed, shallowRef, onUnmounted, watch } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
-import { AppConfig, saveConfig } from '@/web/Config'
+import { AppConfig, beforeQuitSave, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { formatClock } from '../ui/format'
 import { useVisibleClock } from '../shared/visible-clock'
 import { WPanel, WTabs, WChip, WEmpty, toast } from '../ui'
+import WBackLink from '../ui/WBackLink.vue'
 import { useWindowKeys } from '../ui/window-keys'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
@@ -200,7 +201,7 @@ import { onStepChange } from './step-bus'
 import type { StepChange } from './step-bus'
 import { deleteTimelines, timelineRecorder } from './run-timeline-store'
 import {
-  applyBossSpeech, applyRunEvent, comparisonRun, endRun, formatDelta, headlineDelta, isComplete,
+  applyBossSpeech, applyRunEvent, gameRestarted, LOG_OPENING, comparisonRun, endRun, formatDelta, headlineDelta, isComplete,
   migrateRunTimer, parseHotkeyTarget, pauseRun, personalBest, resumeRun, runElapsed, runTotal, splitRows, startRun, sumOfBest, townElapsed
 } from './run-timer'
 import { CAMPAIGN_TYPE } from './widget'
@@ -276,6 +277,10 @@ const reviewCmpLabel = computed(() => {
 
 // Each run's zones, levels and deaths, saved in a file of its own.
 const recorder = timelineRecorder()
+// Quitting within the save delay still writes the last steps.
+const flushTimeline = () => { recorder.flush() }
+beforeQuitSave.add(flushTimeline)
+onUnmounted(() => { beforeQuitSave.delete(flushTimeline) })
 // Timelines of runs deleted from Past runs (Undo had its chance last session).
 const trash = (props.config.timelineTrash ?? []).filter(id => id !== props.config.run?.id && !props.config.history.some(r => r.id === id))
 if (trash.length) {
@@ -341,6 +346,7 @@ function start () {
 function togglePause () {
   const r = props.config.run
   if (!r) return
+  r.pausedByClose = false
   if (r.runningSince != null) pauseRun(r, Date.now())
   else resumeRun(r, Date.now())
   now.value = Date.now()
@@ -396,7 +402,11 @@ function recordLine (ev: LogEvent | null, line: string, at: number, prevLevel: n
 function applyLines (lines: LogLine[]) {
   setTimeout(applyStepChanges, 0)
   let changed = false
+  let lastAt = props.config.lastLogAt ?? null
   for (const { ev, at, line } of lines) {
+    const prevAt = lastAt
+    lastAt = at
+    if (!ev && line.includes(LOG_OPENING) && gameRestarted(props.config, prevAt)) { changed = true; continue }
     const before = props.config.run
     const prevId = before?.id
     const prevLevel = before?.level ?? null

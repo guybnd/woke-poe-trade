@@ -3,6 +3,7 @@
 // Items still held use their table line; ones that are gone fall back to the
 // name. Pure: no Vue.
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
+import type { ItemMenuRef } from '../ui/tooltip/item-menu-logic'
 import type { ValuedLine } from './valuation'
 import { HOLD_MS, HOLD_RATIO, ONE_DAY_MIN, SPIKE_KEEP_DAYS, SPIKE_NEVER_RATIO, isUniqueFrame } from './valuation'
 import { DROP_RATE_CAP } from '../shared/card-cap'
@@ -31,8 +32,16 @@ export function lineTip (l: Pick<ValuedLine, 'tipName' | 'variant' | 'frame'>, c
     variant: l.variant,
     count,
     note,
-    menu: { name: l.tipName, variant: l.variant, rarity: isUniqueFrame(l.frame) ? 'unique' : undefined }
+    menu: { name: l.tipName, variant: l.variant, rarity: frameRarity(l.frame) }
   }
+}
+
+// The menu's rarity from the stash frame: a rare's or a magic item's name is
+// its base, which must not be priced as a white copy. Gems, cards and
+// currency: none, so the menu looks them up by name.
+export function frameRarity (frame: number): ItemMenuRef['rarity'] {
+  if (isUniqueFrame(frame)) return 'unique'
+  return frame === 2 ? 'rare' : frame === 1 ? 'magic' : frame === 0 ? 'normal' : undefined
 }
 
 // The name an item line shows, back to the game's: no gem level, map tier,

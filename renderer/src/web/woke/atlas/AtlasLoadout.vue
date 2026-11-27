@@ -33,9 +33,8 @@
             <span class="w-num" :class="t.count > cap ? 'w-down' : ''">{{ t.count }}</span>
             <button class="w-icon-btn" title="One more" :disabled="t.count >= cap" @click="setCount(i, t.count + 1)"><i class="fas fa-plus" /></button>
           </div>
-          <span class="w-num w-dim text-xs" :title="pricedThreads[i]?.item ? pricedThreads[i].item!.name : 'No price yet: poe.ninja lists Threads once the league has some'">
-            {{ pricedThreads[i]?.item ? fmt(pricedThreads[i].item!.chaos * t.count) : 'no price' }}
-          </span>
+          <span v-if="pricedThreads[i]?.item" class="w-num w-dim text-xs" :title="pricedThreads[i].item!.name">{{ fmt(pricedThreads[i].item!.chaos * t.count) }}</span>
+          <WPrice v-else :chaos="null" class="text-xs" none="No poe.ninja price yet: it lists Threads once the league has some" />
           <button class="w-icon-btn" :class="$style.drop" title="Take this slot out" @click="removeThread(i)"><i class="fas fa-times" /></button>
         </div>
         <button v-if="strategy.threads.length < slotCount" type="button" :class="[$style.slot, $style.empty]" class="w-focusable" @click="addThread">
@@ -57,17 +56,15 @@
           <WIcon :src="p.item ? ninjaIcon(p.item.type, p.item.name) ?? undefined : undefined" fallback="fas fa-coins" />
           <span class="w-num w-dim">{{ p.qty }}×</span>
           <span class="w-trunc" :title="p.item ? undefined : 'No poe.ninja match'">{{ p.item?.name ?? p.name }}</span>
-          <span class="ml-auto w-num w-dim">{{ p.item ? fmt(p.item.chaos * p.qty) : '?' }}</span>
+          <span v-if="p.item" class="ml-auto w-num w-dim">{{ fmt(p.item.chaos * p.qty) }}</span>
+          <WPrice v-else :chaos="null" class="ml-auto" />
         </div>
       </template>
       <button v-else type="button" class="w-faint text-left hover:underline" @click="editing = true">None yet. Add what each map takes.</button>
-      <WButton v-if="farmingWidget && (pricedLines.some(p => p.item) || pricedThreads.some(p => p.item))" size="sm" class="self-start" @click="useInFarming">
-        {{ usedInFarming ? 'Set in Farming' : 'Use in Farming' }}
-      </WButton>
-      <div v-if="earn" class="w-dim text-xs">
-        Your results: <span class="w-num" :class="earn.perHour >= 0 ? 'w-up' : 'w-down'">{{ fmt(earn.perHour) }}/h</span>,
-        <span class="w-num">{{ fmt(earn.perMap) }}</span>/map over {{ earn.maps }} maps
+      <div v-if="earn && (earn.perHour != null || earn.perMap != null)" class="w-dim text-xs" title="From Net worth's runs of the same name" data-goto-spot="results">
+        Your results: <span v-if="earn.perHour != null" class="w-num" :class="earn.perHour >= 0 ? 'w-up' : 'w-down'">{{ fmt(earn.perHour) }}/h</span>{{ earn.perHour != null && earn.perMap != null ? ', ' : '' }}<span v-if="earn.perMap != null" class="w-num">{{ fmt(earn.perMap) }}/{{ unitOf(earn.maps, earn.fights) }}</span> over {{ countLabel(earn.maps, earn.fights) }}
       </div>
+      <div v-else class="w-faint text-xs" data-goto-spot="results">Your results: none yet. Net worth runs named "{{ strategy.name || 'Untitled' }}" show here.</div>
 
       <!-- Regexes, kept in the Regex library -->
       <div :class="$style.heading" class="flex items-center">
@@ -167,14 +164,12 @@
 // currency), its regexes (kept in the Regex library), notes, and the tree read
 // as notables by mechanic.
 import { computed, nextTick, onBeforeUnmount, shallowRef, watch } from 'vue'
-import { AppConfig } from '@/web/Config'
-import { isWidgetTypeOn } from '../modules'
-import { WButton, WField, WPanel, WBanner, WIcon, WSkeleton, openMenu, toast, useCopy, vItemTip } from '../ui'
+import { WButton, WField, WPanel, WBanner, WIcon, WPrice, WSkeleton, openMenu, toast, useCopy, vItemTip } from '../ui'
 import { ninjaIcon } from '../ui/game-icons'
 import { usePriceText } from '../shared/price'
 import { usePriceIndex } from '../market/price-index'
-import { FARMING_TYPE, strategyStats, withScarabCosts } from '../farming/farming'
-import type { FarmingWidget } from '../farming/farming'
+import { followRunBoard, strategyEarnings } from './run-earnings'
+import { countLabel, unitOf } from '../net-worth/runs'
 import { SAVE_MESSAGE } from '../regex-library/save'
 import { addRegex, libraryOn as isLibraryOn, regexesIn, removeRegex } from '../regex-library/folders'
 import { refileRegexes } from './strategy-ops'
@@ -277,8 +272,14 @@ function setType (i: number, type: string) {
 function setCount (i: number, count: number) {
   props.strategy.threads = props.strategy.threads.map((t, j) => j === i ? { ...t, count: Math.max(1, Math.min(cap.value, count)) } : t)
 }
+// No "are you sure": take it out now, offer Undo (P9).
 function removeThread (i: number) {
-  props.strategy.threads = props.strategy.threads.filter((_, j) => j !== i)
+  const strategy = props.strategy
+  const before = strategy.threads
+  const gone = before[i]
+  if (!gone) return
+  strategy.threads = before.filter((_, j) => j !== i)
+  toast(`${gone.type} Thread slot taken out`, { anchor: panel.value?.el, undo: () => { strategy.threads = before } })
 }
 
 // ---- prices ----
@@ -294,25 +295,8 @@ const mapCost = computed(() => {
   return parts.length ? parts.reduce((a, b) => a + b, 0) : null
 })
 
-// Farming is retired (modules.ts): no window to send the costs to while it's off.
-const farmingWidget = computed(() => isWidgetTypeOn(AppConfig(), FARMING_TYPE) ? AppConfig<FarmingWidget>(FARMING_TYPE) : undefined)
-const usedInFarming = shallowRef(false)
-function useInFarming () {
-  const farm = farmingWidget.value
-  if (!farm) return
-  farm.strategy = props.strategy.name
-  const lines = [
-    ...pricedLines.value.filter(p => p.item).map(p => ({ type: p.item!.type, name: p.item!.name, variant: p.item!.variant, qty: p.qty })),
-    ...pricedThreads.value.filter(p => p.item).map(p => ({ type: p.item!.type, name: p.item!.name, variant: p.item!.variant, qty: p.count }))
-  ]
-  farm.costs = withScarabCosts(farm.costs, lines)
-  usedInFarming.value = true
-  setTimeout(() => { usedInFarming.value = false }, 1500)
-}
-const earn = computed(() => {
-  const history = AppConfig().widgets.filter(w => w.wmType === FARMING_TYPE).flatMap(w => (w as FarmingWidget).history ?? [])
-  return strategyStats(history).find(r => r.strategy === props.strategy.name) ?? null
-})
+followRunBoard()
+const earn = computed(() => strategyEarnings.value.get(props.strategy.name) ?? null)
 
 // ---- regexes ----
 

@@ -7,7 +7,7 @@
       <div :class="$style.head">
         <span :class="$style.name">{{ vault.name }}</span>
         <span class="w-dim">{{ vault.quadrant }}</span>
-        <span :class="$style.typical">~{{ chaos(vault.typical) }} typical</span>
+        <span :class="$style.typical">~<WPriceText :text="chaos(vault.typical)" /> typical</span>
       </div>
       <VaultRewardRows :rewards="vault.rewards" />
       <div :class="$style.foot">~ typical = the best of four offers; no reward weights are published. Unpriced rewards count as nothing. Gems at level 1.</div>
@@ -18,6 +18,8 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import VaultRewardRows from './VaultRewardRows.vue'
+import WPriceText from '../ui/WPriceText.vue'
+import { formatAmount } from '../ui/format'
 import type { RewardRow } from './VaultRewardRows.vue'
 import { placeHelp } from '../ui/help-tip'
 
@@ -50,8 +52,7 @@ const pos = computed(() => placed.value
   : { left: '0', top: '0', visibility: 'hidden' as const })
 
 function chaos (n: number | null | undefined) {
-  if (n == null) return '?'
-  return `${Math.abs(n) >= 10 ? Math.round(n) : +n.toFixed(1)}c`
+  return n == null ? '—' : `${formatAmount(n)}c`
 }
 </script>
 

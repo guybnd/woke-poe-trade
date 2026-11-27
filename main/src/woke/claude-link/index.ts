@@ -28,15 +28,26 @@ const ASK_TIMEOUT_MS = 8000
 const keyFile = () => path.join(app.getPath('userData'), 'apt-data', 'woke-claude-link.json')
 
 function readKey (): string {
+  let text: string
   try {
-    const k = (JSON.parse(fs.readFileSync(keyFile(), 'utf8')) as { token?: unknown }).token
+    text = fs.readFileSync(keyFile(), 'utf8')
+  } catch (e) {
+    // Only a missing file means "no key yet". One that can't be read right
+    // now (antivirus, a sync tool) keeps its key: replacing it would break
+    // the AI app already set up with it. This run gets a key of its own.
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') return newKey(false)
+    return newKey()
+  }
+  try {
+    const k = (JSON.parse(text) as { token?: unknown }).token
     if (typeof k === 'string' && k.length >= 20) return k
   } catch {}
   return newKey()
 }
 
-function newKey (): string {
+function newKey (save = true): string {
   const token = randomBytes(24).toString('base64url')
+  if (!save) return token
   try {
     fs.mkdirSync(path.dirname(keyFile()), { recursive: true })
     fs.writeFileSync(keyFile(), JSON.stringify({ token }, null, 2))

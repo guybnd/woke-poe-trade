@@ -1,14 +1,16 @@
 // Each map you run, read from Client.txt: time inside, deaths, level-ups, the
 // league NPCs that spoke, and the character. Pure: no Vue or IO.
 //
-// The log has no character on a zone line: the character is the last one seen
-// levelling (or dying), kept between runs. Kills, XP and loot aren't logged.
+// The log has no character on a zone line: after the game starts, the first
+// death or level-up decides (my-char.ts), kept between runs. Kills, XP and
+// loot aren't logged.
 import { lineTime } from '../campaign/log-tail'
 import { parseLogLine, slainName, speakerOf } from '../campaign/log-parse'
-import { isMapArea, mapNameFromArea } from '../farming/farming'
+import { isMapArea, mapNameFromArea } from '../shared/map-areas'
 import { staysInRun } from '../death-recap/death-log'
 import { isSkippedArea, knownAreaName } from './skip-areas'
 import { NIGHT_GAP_MS } from './story'
+import { MyChar, isGameStart } from './my-char'
 import { ITEM_BY_REF } from '@/assets/data'
 import type { BaseType } from '@/assets/data/interfaces'
 import { dataUniqueName } from '../shared/item-identity'
@@ -20,7 +22,8 @@ export const MAX_MAPS = 1000
 // Maps the "faster than usual" figure averages over.
 export const USUAL_OF = 10
 
-export interface CharInfo { name: string, className: string, level: number }
+// Class and level come with a level-up, not with a death.
+export interface CharInfo { name: string, className: string | null, level: number | null }
 
 export interface MapRecord {
   // `${areaId}:${seed}`: one map instance.
@@ -112,6 +115,8 @@ export class MapLog {
   // Side areas ("areaId:seed") of the current map: a portal back into one
   // from the hideout is back in the map.
   private sides = new Set<string>()
+  // Whether `char` is decided since the game started.
+  private who = new MyChar()
 
   constructor (private readonly events: MapLogEvents) {}
 
@@ -125,6 +130,7 @@ export class MapLog {
     // The game was closed, or nothing was written for a long time: the map
     // ended with the last line, not whenever the next one comes.
     if (this.lastAt && at - this.lastAt >= NIGHT_GAP_MS) this.finish(this.lastAt)
+    if (isGameStart(line)) this.who.start()
     if (line.includes(OPENING)) {
       // The game closed (a crash, a restart): the stretch inside ends with the
       // last line, but the map goes on if you're back in it soon (the same
@@ -185,32 +191,49 @@ export class MapLog {
       return
     }
     if (ev?.kind === 'level') {
-      const cur = this.current
-      // Party members' level-ups are logged too: inside a map run on a known
-      // character, another name is someone else's. Anywhere else it's yours
-      // (you switched characters).
-      if (this.inMap && cur?.char && cur.char !== ev.charName) return
+      if (!this.isMe(ev.charName)) return
       this.char = { name: ev.charName, className: ev.className, level: ev.level }
+      const cur = this.current
       if (this.inMap && cur) {
-        if (cur.char == null) {
-          cur.char = ev.charName
-          cur.className = ev.className
-          cur.charLevel = ev.level - 1
+        if (cur.char !== ev.charName) this.runOn(cur, ev.charName, ev.className, ev.level - 1)
+        // Set by a death first (no class or level then): fill them in now.
+        else if (cur.charLevel == null) {
+          cur.className ??= ev.className
+          cur.charLevel = ev.level - 1 - cur.levelsGained
         }
-        if (cur.char === ev.charName) cur.levelsGained++
+        cur.levelsGained++
       }
       return
     }
     if (ev) return
     const slain = slainName(line)
     if (slain) {
+      if (!this.isMe(slain)) return
+      if (this.char?.name !== slain) this.char = { name: slain, className: null, level: null }
       const cur = this.current
-      if (this.inMap && cur && (cur.char == null || cur.char === slain)) cur.deaths++
+      if (this.inMap && cur) {
+        if (cur.char !== slain) this.runOn(cur, slain, null, null)
+        cur.deaths++
+      }
       return
     }
     const speaker = speakerOf(line)
     const npc = speaker && /\[INFO Client \d+\]/.test(line) ? npcOf(speaker) : isMirageLoad(line) ? MIRAGE : null
     if (npc && this.inMap) this.mark(npc)
+  }
+
+  // A death or level-up of `name`: yours, or a party member's (my-char.ts).
+  private isMe (name: string): boolean {
+    this.who.name = this.char?.name ?? null
+    return this.who.seen(name)
+  }
+
+  // The map turns out to be run on another character than the one known when
+  // it started (none yet, or one from before the game started).
+  private runOn (rec: MapRecord, name: string, className: string | null, level: number | null): void {
+    rec.char = name
+    rec.className = className
+    rec.charLevel = level
   }
 
   // Adds a mechanic to the map you're in, once.

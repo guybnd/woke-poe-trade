@@ -2,10 +2,11 @@
   <WPanel ref="panel" data-w-switches :keys="windowKeys.help" :title="config.wmTitle || 'Loot filter'" icon="wisdom" width="68rem" max-height="85vh" :scroll="false" fill :class="{ [$style.dirtyFrame]: unsaved }"
     :busy="store.loading.value && !!store.doc.value" :hotkey="config.editorHotkey ?? undefined">
     <template #tabs>
+      <ProfileSwitcher :config="config" :store="store" />
       <WTabs v-model="tab" :options="tabOptions" />
     </template>
     <template #toolbar>
-      <WButton v-if="trail.length" size="sm" variant="ghost" icon="fas fa-arrow-left" title="Back to where you were (mouse back button)" @click="goBack">Back</WButton>
+      <WBackLink v-if="trail.length" :to="backTo" title="Back to where you were (mouse back button)" @back="goBack" />
       <WSelect :model-value="sourceKey" :options="fileOptions" style="max-width: 20rem;" @update:model-value="pickSource" />
       <WButton size="sm" variant="ghost" icon="fas fa-sync" title="Reload the file list and the filter" @click="refresh" />
       <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule. Works on your inventory, stash and labels on the ground. Hold Alt to reach items your filter hides.` : undefined" @paste.capture="onSearchPaste">
@@ -282,6 +283,7 @@
     <template v-else-if="tab === 'preview'" />
     <PresetsTab v-else-if="tab === 'presets'" :store="store" :config="config" />
     <GearTab v-else-if="tab === 'gear'" :store="store" :config="config" @open-rule="openRule" />
+    <WeightsTab v-else-if="tab === 'weights'" :store="store" :config="config" />
     <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" />
     <NeverSinkTab v-else-if="tab === 'neversink'" :store="store" :config="config" :anchor="panel?.el" />
 
@@ -322,8 +324,8 @@
           <span class="w-group-label" style="padding: 0;">History</span>
           <span class="w-faint text-xs">newest first</span>
           <span class="grow" />
-          <WButton size="sm" variant="ghost" icon="fas fa-undo" :disabled="store.timeline.value.at === 0" title="Ctrl + Z" @click="store.undoStep()">Undo</WButton>
-          <WButton size="sm" variant="ghost" icon="fas fa-redo" :disabled="store.timeline.value.at >= store.timeline.value.steps.length" title="Ctrl + Y" @click="store.redoStep()">Redo</WButton>
+          <WButton size="sm" variant="ghost" icon="fas fa-undo" :disabled="store.timeline.value.at === 0" title="Undo" data-tip-keys="Ctrl + Z" @click="store.undoStep()">Undo</WButton>
+          <WButton size="sm" variant="ghost" icon="fas fa-redo" :disabled="store.timeline.value.at >= store.timeline.value.steps.length" title="Redo" data-tip-keys="Ctrl + Y" @click="store.redoStep()">Redo</WButton>
         </div>
         <div v-for="s in shownSteps" :key="s.n" :class="[$style.changeRow, { [$style.undone]: s.n >= store.timeline.value.at }]">
           <span class="grow min-w-0 w-trunc" :title="s.label">{{ s.label }}</span>
@@ -408,6 +410,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip, itemRefFromName } from '../ui'
+import WBackLink from '../ui/WBackLink.vue'
+import ProfileSwitcher from './ProfileSwitcher.vue'
 import { useWindowKeys } from '../ui/window-keys'
 import { copyText } from '../ui/copy'
 import LabelPreview from './LabelPreview.vue'
@@ -419,6 +423,10 @@ import PricesTab from './PricesTab.vue'
 import PreviewTab from './PreviewTab.vue'
 import PresetsTab from './PresetsTab.vue'
 import GearTab from './GearTab.vue'
+import WeightsTab from './WeightsTab.vue'
+import { experimentalUnlocked } from '../personal'
+import { WEIGHT_TYPE } from './weights'
+import { gearRanksAsk, takeRanksAsk } from './gear-drag'
 import { GEAR_TYPE } from './gear'
 import LookStrip from './LookStrip.vue'
 import { ownActions } from './look'
@@ -474,7 +482,7 @@ const props = defineProps<{
   // Group/tier to show first (from the sample card).
   focus?: { type: string, tier: string } | null
   // A tab to show (from the dock card). A new object each time.
-  openTab?: { tab: 'prices' | 'neversink' | 'changes' } | null
+  openTab?: { tab: 'prices' | 'neversink' | 'changes' | 'gear' } | null
 }>()
 
 const emit = defineEmits<{ (e: 'close' | 'tab-opened'): void, (e: 'paste-item', text: string): void }>()
@@ -487,7 +495,8 @@ function onSearchPaste (e: ClipboardEvent) {
   emit('paste-item', text)
 }
 
-const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
+const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'weights' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
+watch(gearRanksAsk, () => { if (takeRanksAsk('tab')) tab.value = 'gear' }, { immediate: true })
 const search = ref('')
 const selType = ref<string | null>(null)
 const selTier = ref<string | null>(null)
@@ -545,9 +554,11 @@ const activePriceMoves = computed(() => props.config.priceTiers.on ? livePriceMo
 const tabOptions = computed(() => [
   { value: 'rules', label: 'Rules' },
   { value: 'gear', label: 'Base types', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear bases show, by rank and drop tier' },
+  // Beta: shown with the experimental tools, or while this profile uses it.
+  ...(experimentalUnlocked.value || props.config.presets.weights.on ? [{ value: 'weights', label: 'Rare weights', count: props.config.presets.weights.on ? '✓' : undefined, title: 'Beta: decide endgame rares by a weight you tune' }] : []),
   { value: 'preview', label: 'Preview' },
   // The look strip lives on Rules, so it isn't counted here.
-  { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && k !== 'clusterPrices' && x.on).length || undefined },
+  { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && k !== 'weights' && k !== 'clusterPrices' && x.on).length || undefined },
   { value: 'prices', label: 'Prices', count: props.store.plan.value?.moves.length || undefined },
   { value: 'neversink', label: props.config.neversink.on ? `NeverSink · ${LEVEL_NAMES[props.config.neversink.level]}` : 'NeverSink', count: props.store.updateReady.value ? 1 : undefined },
   { value: 'build', label: 'Build', count: props.store.buildBlockCount.value || undefined },
@@ -993,6 +1004,13 @@ function rememberPlace () {
   trail.value = [...trail.value.slice(-19), { tab: tab.value, type: selType.value, tier: selTier.value, search: search.value, stamp: navStamp() }]
 }
 
+// The back link names where it goes: the rule type, else the tab.
+const backTo = computed(() => {
+  const place = trail.value[trail.value.length - 1]
+  if (!place) return 'Back'
+  if (place.tab === 'rules' && place.type) return groupName(place.type)
+  return tabOptions.value.find(o => o.value === place.tab)?.label || 'Back'
+})
 function goBack () {
   const place = trail.value[trail.value.length - 1]
   if (!place) return
@@ -1054,6 +1072,7 @@ watch(() => props.focus, (f) => {
   if (!f) return
   // The Base types table's own rules live on that tab, not in the rule list.
   if (f.type === GEAR_TYPE) { tab.value = 'gear'; return }
+  if (f.type === WEIGHT_TYPE) { tab.value = 'weights'; return }
   goTo(f.type, f.tier)
 }, { immediate: true })
 
@@ -1407,8 +1426,9 @@ function ruleMenu (e: MouseEvent, r: OwnRule) {
     { label: r.on ? 'Switch off' : 'Switch on', icon: r.on ? 'fas fa-toggle-off' : 'fas fa-toggle-on', action: () => { r.on = !r.on } },
     { label: 'Move up (wins over the ones below)', icon: 'fas fa-arrow-up', action: () => moveRule(r, -1) },
     { label: 'Move down', icon: 'fas fa-arrow-down', action: () => moveRule(r, 1) },
-    { label: 'Duplicate', icon: 'fas fa-clone', action: () => { const copy: OwnRule = { ...JSON.parse(JSON.stringify(r)), id: nextEditId(), name: `${r.name} (copy)` }; props.config.rules = [...props.config.rules, copy]; editingRuleId.value = copy.id } },
-    { label: 'Delete', icon: 'fas fa-trash', action: () => deleteRule(r) }
+    { label: 'Duplicate', icon: 'far fa-clone', action: () => { const copy: OwnRule = { ...JSON.parse(JSON.stringify(r)), id: nextEditId(), name: `${r.name} (copy)` }; props.config.rules = [...props.config.rules, copy]; editingRuleId.value = copy.id } },
+    { separator: true },
+    { label: 'Remove', icon: 'fas fa-trash', danger: true, action: () => deleteRule(r) }
   ])
 }
 

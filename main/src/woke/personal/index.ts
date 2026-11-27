@@ -304,7 +304,8 @@ function startReader (ctx: PersonalContext): () => void {
     'stash-tab-set-save': async (args) => {
       const league = sameLeague(args)
       if (!league || typeof args?.name !== 'string') return null
-      return await saveSet(league, args.name, ids(args?.ids))
+      const at = typeof args?.restoreAt === 'number' && Number.isFinite(args.restoreAt) ? { at: args.restoreAt } : undefined
+      return await saveSet(league, args.name, ids(args?.ids), at)
     },
     'stash-tab-set-delete': async (args) => {
       const league = sameLeague(args)

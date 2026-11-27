@@ -6,23 +6,21 @@
       <span>Hotkey: paste map regex into stash search</span>
       <w-hotkey-cell v-model="regexHotkey" />
     </div>
-    <label class="flex items-center gap-2">
-      <input type="checkbox" v-model="stripOnPriceCheck">
-      <span>Show the verdict strip on price check and item info</span>
-    </label>
+    <WToggle v-model="stripOnPriceCheck">Show the verdict strip on price check and item info</WToggle>
 
     <section v-if="scanOwner" class="flex flex-col gap-2" data-testid="map-scan-settings">
-      <span class="w-group-label flex items-center gap-2" style="padding: 0;">Map scan <w-info text="Scan mode reads the tooltip of the map under your mouse with on-screen text recognition, so no key press is needed per map, and puts a verdict next to it from the active profile. Rerolling a map in place reads it again.&#10;&#10;Rolling mode locks onto one map's tooltip and re-reads only that box, for long reroll sessions.&#10;&#10;Start and stop it from the Scan tab of the Map mods window too. It needs Windows and the OCR files (Settings › Screen reading)." /></span>
+      <span class="w-group-label flex items-center gap-2" style="padding: 0;">Map scan <w-info text="Reads the tooltip of the map under your mouse on screen and puts the active profile's verdict next to it. No key press per map.
+- **Scan mode**: any map you hover. Rerolling a map in place reads it again.
+- **Rolling mode**: locks onto one map's tooltip and re-reads only that box, for long reroll sessions.
+- Start and stop it from the **Scan** tab of the Map mods window too.
+- Needs Windows and the OCR files (Settings › Screen reading)." /></span>
       <div class="grid gap-2 items-center" style="grid-template-columns: auto 1fr;">
         <span>Hotkey: scan mode on / off</span>
         <w-hotkey-cell v-model="scanHotkey" />
         <span>Hotkey: rolling mode (lock onto the hovered map)</span>
         <w-hotkey-cell v-model="scanRollHotkey" />
       </div>
-      <label class="flex items-center gap-2">
-        <input type="checkbox" v-model="scanAlertOnPass">
-        <span>Flash when a reroll turns a map into a "run"</span>
-      </label>
+      <WToggle v-model="scanAlertOnPass">Flash when a reroll turns a map into a "run"</WToggle>
     </section>
 
     <section class="flex flex-col gap-2">
@@ -34,9 +32,11 @@
           @update:model-value="profile.name = String($event)" />
         <WButton size="sm" icon="fas fa-plus" @click="addProfile">New</WButton>
         <WButton size="sm" icon="fas fa-copy" @click="copyProfile">Copy</WButton>
-        <WButton v-if="w.profiles.length > 1" size="sm" variant="danger" icon="fas fa-trash" @click="removeProfile">Delete</WButton>
+        <WButton v-if="w.profiles.length > 1" size="sm" variant="danger" icon="fas fa-trash" @click="removeProfile">Remove</WButton>
       </div>
-      <div class="flex items-center gap-2 w-dim text-sm">How profiles work <w-info text="One profile per build. Rate mods and set rewards (minimums and juice weights) in the Map mods window. Maps, heist and charts each keep their own picks." /></div>
+      <div class="flex items-center gap-2 w-dim text-sm">How profiles work <w-info text="One profile per build.
+- Rate mods and set rewards (minimums and juice weights) in the Map mods window.
+- Maps, heist and charts each keep their own picks." /></div>
       <div v-if="dead.length" class="text-sm flex items-center gap-2 flex-wrap" style="color: var(--w-warn);">
         <span :title="dead.join('\n')">{{ dead.length }} rated {{ dead.length === 1 ? "mod isn't" : "mods aren't" }} in the game any more, so {{ dead.length === 1 ? 'it' : 'they' }} can't match a map.</span>
         <WButton size="sm" @click="removeDead">Remove</WButton>
@@ -61,6 +61,7 @@
 <script lang="ts">
 import { defineComponent, computed, watch } from 'vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
+import WToggle from '../ui/WToggle.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
 import { WButton, WField, WInfo, WSelect } from '../ui'
 import { everyStatLine } from './data'
@@ -82,7 +83,7 @@ const WEIGHT_LABELS: Record<keyof JuiceWeights, string> = {
 
 export default defineComponent({
   name: 'Map mods',
-  components: { WHotkeyCell, WButton, WField, WInfo, WSelect },
+  components: { WHotkeyCell, WToggle, WButton, WField, WInfo, WSelect },
   props: configProp<MapModsWidget>(),
   setup (props) {
     // Normalize in a watcher, never inside a computed: writes from a computed

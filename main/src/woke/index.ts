@@ -2,6 +2,7 @@
 // with handlers registered by op name.
 import { net } from 'electron'
 import type { ServerEvents } from '../server'
+import { freshConfig } from '../server'
 import type { Logger } from '../RemoteLogger'
 import type { GameWindow } from '../windowing/GameWindow'
 import { deleteBuild, duplicateBuild, importBuild, listBuilds, moveBuild, moveBuildFolder, openBuild, readBuild, renameBuild, restoreBuild, saveLiveBuild, showBuild } from './pob-builds'
@@ -61,7 +62,6 @@ const handlers: Partial<WokeHandlers> = {
   'ns-latest': async () => await latestNeverSink(),
   'ns-download': downloadNeverSink,
   'ns-read': readNeverSink,
-  'ns-cached': async () => await cachedNeverSink(),
   'ns-prune': pruneNeverSink,
   'perf-stats': async () => perfSnapshot(),
   'ocr-check': async () => await ensureOcr(),
@@ -93,6 +93,7 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
       .then(n => { if (n) logger.write(`info [market] Trimmed ${n} old price snapshots (day rows kept)`) })
       .catch((e: unknown) => { logger.write(`error [market] Trimming old snapshots failed: ${String(e)}`) })
   }, TRIM_AFTER_START_MS).unref?.()
+  registerWokeHandler('config-fresh', async (args) => await freshConfig(typeof args?.waitMs === 'number' ? args.waitMs : undefined))
   registerWokeHandler('game-log-tail', async (args) => await readGameLogTail(gameLog, args ?? undefined))
   // "Report an issue" (Settings, Ctrl+Space): builds or opens the GitHub link.
   registerWokeHandler('issue-report', async (args) => await userIssue(args, logger))

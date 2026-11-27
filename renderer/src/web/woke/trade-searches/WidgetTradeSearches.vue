@@ -17,8 +17,10 @@
     <div class="flex gap-2 min-w-0 min-h-0 items-start">
       <WPanel ref="panel" :keys="LIST_KEYS" class="shrink-0" :title="config.wmTitle || 'Trade searches'" icon="exalted" width="38rem" max-height="70vh">
         <template #toolbar>
-          <WField v-model="filter" icon="fas fa-search" placeholder="Filter every folder by name, tag…" class="grow" />
-          <WSelect v-model="sort" :options="SORTS" title="Sort the list" />
+          <WSearchField v-model="filter" things="searches" placeholder="Filter every folder by name, tag…" class="grow" />
+        </template>
+        <template #actions>
+          <WSortButton v-model="sort" :options="SORTS" />
         </template>
 
         <div :class="$style.split">
@@ -36,7 +38,7 @@
             <!-- The list (shared/SavedTree): nested folders that fold, drag, Ctrl /
                  Shift picks, Alt + arrows, F2. A click opens the search here. -->
             <SavedTree :tree="tree" list-id="trade-folders" :active-id="openId" :copy="copyLinks" :title-of="tooltip"
-              :folder-icon="path => iconSrc(folderIcon(config, path))" @item-menu="rowMenu" @folder-menu="folderMenu">
+              :folder-icon="path => iconSrc(folderIcon(config, path))" @item-act="onRowAct" @item-menu="rowMenu" @folder-menu="folderMenu" @item-key="onEntryKey">
               <template #item="{ item: entry }">
                 <i v-if="entry.pinned" class="fas fa-thumbtack w-accent text-xs" title="Pinned" />
                 <i v-if="isLiveSearch(entry.url)" class="fas fa-bolt w-accent" title="Live search" />
@@ -47,9 +49,17 @@
                 <span :class="$style.num">{{ entry.openCount || '' }}</span>
               </template>
               <template #actions="{ item: entry }">
-                <button @click.stop="open(entry, 'external')" class="w-icon-btn" title="Open in your browser">
-                  <i class="fas fa-external-link-alt" />
-                </button>
+                <!-- Open always on; the rest on hover (WRowActs, the same in every saved list). -->
+                <WRowActs>
+                  <template #hover>
+                    <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': entry.pinned }" :title="entry.pinned ? 'Unpin (P)' : 'Pin to the top (P)'" data-row-act="pin"><i class="fas fa-thumbtack" /></button>
+                    <button type="button" class="w-icon-btn" title="Rename (F2)" data-row-act="rename"><i class="fas fa-pen" /></button>
+                    <button type="button" class="w-icon-btn" title="Remove (Del)" data-row-act="remove"><i class="fas fa-trash" /></button>
+                  </template>
+                  <button type="button" data-row-act="open" class="w-icon-btn" title="Open in your browser">
+                    <i class="fas fa-external-link-alt" />
+                  </button>
+                </WRowActs>
               </template>
               <template #after-folder="{ path }">
                 <div v-if="pickingIcon === path" :class="$style.icons" role="group" :aria-label="`Icon for ${path}`">
@@ -61,10 +71,7 @@
                 </div>
               </template>
             </SavedTree>
-            <WEmpty v-if="!tree.rows.value.length && filter" icon="fas fa-filter">
-              Nothing matches "{{ filter }}".
-              <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
-            </WEmpty>
+            <WNoMatch v-if="!tree.rows.value.length && filter" :query="filter" @clear="filter = ''" />
             <WEmpty v-else-if="!tree.rows.value.length && config.entries.length" icon="far fa-folder-open">
               Nothing here yet.
             </WEmpty>
@@ -118,7 +125,11 @@ import { POB_BUILDS_TYPE } from '../pob-builds/widget'
 import type { PobBuildsWidget } from '../pob-builds/widget'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WField, WSelect, WChip, WKbd, WEmpty, WButton, ago, gameIcon, mechanicIcon, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
+import WSortButton from '../ui/WSortButton.vue'
+import WRowActs from '../ui/WRowActs.vue'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
+import { WPanel, WChip, WKbd, WEmpty, ago, gameIcon, mechanicIcon, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui'
 import { copyText } from '../ui/copy'
 import DockItem from '../dock/DockItem.vue'
@@ -129,7 +140,7 @@ import { FOLDER_ICONS, TRADE_SEARCHES_TYPE, ensureFolder, folderIcon, inView, is
 import type { OpenTarget, SearchSort, TradeSearchEntry } from './widget'
 
 // The window's "?": the saved list's keys.
-const LIST_KEYS = savedListKeys({ copy: true })
+const LIST_KEYS = [...savedListKeys({ copy: true }), { keys: 'P', label: 'Pin to the top (again: unpin)' }]
 
 const props = defineProps<{
   config: TradeSearchesWidget
@@ -454,6 +465,14 @@ function copyLinks (list: TradeSearchEntry[]) {
 // No "are you sure": remove now, offer Undo (P9), which puts back just these
 // where they were (shared/saved-list): changes made since stay.
 function remove (entry: TradeSearchEntry) { removeMany([entry]) }
+function togglePin (entry: TradeSearchEntry) {
+  entry.pinned = !entry.pinned
+  saveConfig()
+}
+// P pins, as in every saved list that has pins.
+function onEntryKey (e: KeyboardEvent, entry: TradeSearchEntry) {
+  if (e.key.toLowerCase() === 'p' && !e.ctrlKey && !e.altKey && !e.metaKey) { e.preventDefault(); togglePin(entry) }
+}
 function removeMany (list: TradeSearchEntry[]) {
   const out = removeEntries(props.config.entries, list.map(e => e.id))
   if (!out) return
@@ -465,6 +484,14 @@ function removeMany (list: TradeSearchEntry[]) {
     anchor: panel.value?.el,
     undo: () => { props.config.entries = out.restore(props.config.entries, l => nextId([...l])); pushHostConfig() }
   })
+}
+
+// The row buttons (WRowActs), through SavedTree's one listener.
+function onRowAct (act: string, entry: TradeSearchEntry) {
+  if (act === 'pin') togglePin(entry)
+  else if (act === 'rename') tree.startEdit('item', String(entry.id), 'rename')
+  else if (act === 'remove') remove(entry)
+  else if (act === 'open') open(entry, 'external')
 }
 
 function rowMenu (e: MouseEvent, entry: TradeSearchEntry) {
@@ -482,9 +509,9 @@ function rowMenu (e: MouseEvent, entry: TradeSearchEntry) {
     { label: 'Open here', icon: 'far fa-window-maximize', keys: entry.hotkeyOverlay ?? 'Enter', action: () => open(entry, 'overlay') },
     { label: 'Open in browser', icon: 'fas fa-external-link-alt', keys: entry.hotkeyExternal ?? undefined, action: () => open(entry, 'external') },
     { label: 'Copy link', icon: 'far fa-copy', keys: 'Ctrl + C', action: () => copyLink(entry) },
-    { label: entry.pinned ? 'Unpin' : 'Pin to the top', icon: 'fas fa-thumbtack', action: () => { entry.pinned = !entry.pinned; saveConfig() } },
+    { label: entry.pinned ? 'Unpin' : 'Pin to the top', icon: 'fas fa-thumbtack', keys: 'P', action: () => togglePin(entry) },
     { label: 'Rename', icon: 'fas fa-pen', keys: 'F2', action: () => tree.startEdit('item', String(entry.id), 'rename') },
-    { label: 'Move to folder', icon: 'fas fa-folder', action: () => tree.startEdit('item', String(entry.id), 'move') },
+    { label: 'Move to folder', icon: 'fas fa-folder-open', action: () => tree.startEdit('item', String(entry.id), 'move') },
     { separator: true },
     { label: 'Remove', icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => remove(entry) }
   ])
@@ -523,12 +550,10 @@ const dockMenu = computed<DockMenuAction[]>(() => [
 }
 .rl:hover { background: var(--w-accent-soft); }
 .on { background: var(--w-accent-soft); box-shadow: inset 2px 0 0 var(--w-accent); }
-.drop { outline: 1px dashed var(--w-accent); background: var(--w-accent-soft); }
 .add { color: var(--w-dim); }
 .ic { width: 18px; flex: none; text-align: center; font-size: var(--w-fs-xs); color: var(--w-dim); }
 .art { width: 18px; height: 18px; flex: none; object-fit: contain; }
 .n { margin-left: auto; font-family: var(--w-num); font-size: var(--w-fs-xs); color: var(--w-faint); }
-.sec { padding: var(--w-s2) var(--w-s2) 2px; }
 .edit { width: 100%; height: var(--w-row-h); padding: 0 var(--w-s2); }
 .icons { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 2px var(--w-s1) var(--w-s2); }
 .iconBtn { display: grid; place-items: center; height: 28px; border-radius: var(--w-r-sm); color: var(--w-dim); }

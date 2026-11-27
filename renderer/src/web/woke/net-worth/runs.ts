@@ -122,9 +122,10 @@ export function unitOf (maps: number, fights = 0): 'map' | 'fight' | 'run' {
 
 // Outside the stash (faustus.ts outsideTotals): sales of items from before
 // the run that were collected come off profit; the Faustus line is apart.
-// `leftOutChaos`: left-out sales whose currency the stash counted (off profit);
-// `leftOutShownChaos`: everything left out outside the stash (shown only).
-export interface Outside { beforeChaos: number, faustusChaos: number, leftOutChaos?: number, leftOutShownChaos?: number }
+// `leftOutCollectedChaos`: left-out sales whose currency the stash counted
+// (off profit); `leftOutChaos`: everything left out outside the stash (shown
+// only). Named as in OutsideTotals, so either one means the same here.
+export interface Outside { beforeChaos: number, faustusChaos: number, leftOutCollectedChaos?: number, leftOutChaos?: number }
 
 // What a run's view and the dock icon show.
 export interface RunTotals {
@@ -271,8 +272,8 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], count: numb
   // Made items that left priced: not a loss (TallyLine.pricedOutChaos).
   for (const t of Object.values(run.tally)) editChaos += t.pricedOutChaos ?? 0
   const manualChaos = (run.manual ?? []).reduce((s, m) => s + (m.side === 'in' ? 1 : -1) * Math.max(0, m.count) * Math.max(0, m.each), 0)
-  const leftOutChaos = leftOutStash + (outside.leftOutShownChaos ?? 0)
-  const profitChaos = stashChaos - takenOverChaos - costChaos - onceChaos - beforeChaos + editChaos + manualChaos - (outside.leftOutChaos ?? 0)
+  const leftOutChaos = leftOutStash + (outside.leftOutChaos ?? 0)
+  const profitChaos = stashChaos - takenOverChaos - costChaos - onceChaos - beforeChaos + editChaos + manualChaos - (outside.leftOutCollectedChaos ?? 0)
   const faustusChaos = outside.faustusChaos
   const usedChaos = usedUp(run, mapCostKeys)
   const end = run.stoppedAt ?? now
@@ -299,12 +300,13 @@ export function runTotals (run: Run, points: readonly LedgerPoint[], count: numb
   }
 }
 
-// Used up from the stash: map-cost items that went down, not typed.
+// Used up from the stash: map-cost items that went down, not typed. Rows
+// tallied before TallyLine.cost existed go by their name (maps).
 function usedUp (run: Run, mapCostKeys: ReadonlySet<string> = new Set()): number {
   const typedKeys = new Set(run.costs.map(c => c.key).filter((k): k is string => k != null))
   let used = 0
   for (const [k, t] of Object.entries(run.tally)) {
-    if (typedKeys.has(k) || !(t.cost || mapCostKeys.has(k))) continue
+    if (typedKeys.has(k) || !(t.cost || mapCostKeys.has(k) || isMapCostItem(t.name, undefined))) continue
     const net = tallyValue(t, run.edits?.[rowKey.tally(k)])
     if (net < 0) used += -net
   }
@@ -596,6 +598,8 @@ export interface RunGlance {
 // Past runs by strategy (compareRows grouped), saved small for Ctrl+Space.
 export interface RunBoardRow {
   name: string
+  // A crafting session's row (no maps), beside a maps row of the same name.
+  craft?: true
   count: number
   maps: number
   fights: number

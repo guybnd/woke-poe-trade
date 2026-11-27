@@ -59,6 +59,24 @@ test('first run: the setup window picks tools; the overlay shows no second picke
   expect(off).not.toContain('run-timer')
 })
 
+test("setup never saves its old copy over what the overlay saved meanwhile", async ({ overlay, fakeApp }) => {
+  await overlay.boot({ firstRun: true, overlayActive: true })
+  const page = overlay.page
+  await page.goto(`${fakeApp.url}#setup`)
+  await page.reload()
+  await expect(page.getByRole('button', { name: /Tools/ })).toBeVisible()
+  // The overlay saves (quietly: the setup window never hears of it).
+  await fakeApp.settled()
+  const saved = fakeApp.readConfig()
+  saved.woke.hideAllHotkey = 'Alt + J'
+  fakeApp.writeConfig(saved)
+  await page.getByRole('button', { name: /Tools/ }).click()
+  await page.getByRole('radio', { name: 'Leveling' }).click()
+  await page.getByRole('button', { name: 'Next' }).click()
+  await expect.poll(() => fakeApp.readConfig()?.woke?.off ?? []).toContain('map-mods')
+  expect(fakeApp.readConfig().woke.hideAllHotkey).toBe('Alt + J')
+})
+
 test('hide-all hotkey hides the toolkit (dock included) and brings it back', async ({ overlay }) => {
   await overlay.boot({
     widgets: [{ wmType: 'woke-campaign' }],

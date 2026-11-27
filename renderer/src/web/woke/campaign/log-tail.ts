@@ -13,13 +13,15 @@ export interface LogTail {
 let pending: Promise<LogTail> | null = null
 // The log that read was asked for, when one was named.
 let pendingFor: string | null = null
+// The earliest time that read covers (null: just the last 256 KB).
+let pendingSince: number | null = null
 
-async function load (): Promise<LogTail> {
+async function load (since: number | null): Promise<LogTail> {
   // The log watcher starts once the overlay sends its config, which can be
   // a moment after widgets mount: retry a few times before giving up.
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
-      const tail = await hostRequest('game-log-tail', {}, 10_000)
+      const tail = await hostRequest('game-log-tail', since != null ? { since } : {}, 20_000)
       if (tail.path) return tail
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 2500))
@@ -29,13 +31,20 @@ async function load (): Promise<LogTail> {
 
 // `path`: a log that just opened. A read started before it (for no log
 // named, or another) can still have the old log's lines: read again.
-export function logTail (path?: string): Promise<LogTail> {
-  if (pending && (path == null || pendingFor === path)) return pending
-  const loading: Promise<LogTail> = load().finally(() => {
+// `since`: lines from then on are wanted, past the last 256 KB if need be.
+export function logTail (path?: string, since?: number | null): Promise<LogTail> {
+  // 0 (replay whatever the tail has) asks for no more than the tail.
+  if (since != null && !(since > 0)) since = null
+  // A read shared only when it fits: one with no time asked keeps to the
+  // last 256 KB, so tools that replay the whole tail don't get days of it.
+  const covers = since == null ? pendingSince == null : (pendingSince != null && pendingSince <= since)
+  if (pending && (path == null || pendingFor === path) && covers) return pending
+  const loading: Promise<LogTail> = load(since ?? null).finally(() => {
     if (pending === loading) pending = null
   })
   pending = loading
   pendingFor = path ?? null
+  pendingSince = since ?? null
   return loading
 }
 
@@ -44,16 +53,4 @@ export function lineTime (line: string): number | null {
   const m = /^(\d{4})\/(\d\d)\/(\d\d) (\d\d):(\d\d):(\d\d)/.exec(line)
   if (!m) return null
   return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime()
-}
-
-// Lines written after `since` (ms), with their timestamps. Lines from the
-// same second as `since` are kept out: they were already seen live.
-export function linesAfter (tail: LogTail, since: number): Array<{ line: string, at: number }> {
-  const out: Array<{ line: string, at: number }> = []
-  const sinceSec = Math.floor(since / 1000) * 1000
-  for (const line of tail.lines) {
-    const at = lineTime(line)
-    if (at != null && at > sinceSec) out.push({ line, at })
-  }
-  return out
 }

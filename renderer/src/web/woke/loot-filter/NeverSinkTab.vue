@@ -3,7 +3,7 @@
     <div :class="$style.card">
       <div class="flex items-center gap-3">
         <WToggle :model-value="ns.on" @update:model-value="store.useGitHub($event)">Get NeverSink from GitHub and keep it up to date</WToggle>
-        <WInfo :text="`All seven strictness levels are downloaded into the app's own folder, so your game's filter list doesn't fill up.\n- Your changes are saved to **${NEVERSINK_OUTPUT.replace('.filter', '')}**.\n- If you customise on FilterBlade, leave this off and keep picking your own file.`" />
+        <WInfo :text="`All seven strictness levels are downloaded into the app's own folder, so your game's filter list doesn't fill up.\n- Your changes are saved to **${nsOutput.replace('.filter', '')}**.\n- If you customise on FilterBlade, leave this off and keep picking your own file.`" />
         <span class="grow" />
         <span v-if="ns.on && ns.version" class="w-dim text-xs w-num">
           Version {{ ns.version }}<template v-if="ns.checkedAt"> · checked {{ agoPhrase(ns.checkedAt) }}</template>
@@ -71,7 +71,7 @@ import { computed } from 'vue'
 import { WButton, WInfo, WKbd, WSelect, WToggle, agoPhrase, toast } from '../ui'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { NEVERSINK_OUTPUT } from './widget'
+import { outputName } from './widget'
 import { LEVEL_NAMES, RECENT_MAPS, stepLabel } from './strictness'
 
 const props = defineProps<{
@@ -79,6 +79,8 @@ const props = defineProps<{
   config: LootFilterWidget
   anchor?: Element | null
 }>()
+// The file NeverSink from GitHub saves to for this profile.
+const nsOutput = computed(() => outputName({ ...props.config, neversink: { on: true } }))
 
 const ns = computed(() => props.config.neversink)
 const sortedLadder = computed(() => [...props.config.strictAuto.ladder].sort((a, b) => a.from - b.from))

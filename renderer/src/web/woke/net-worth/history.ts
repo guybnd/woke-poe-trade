@@ -73,10 +73,3 @@ export function loadPriceHistory (league: string, names: string[], now = Date.no
   })()
   return pending
 }
-
-// For tests.
-export function setPriceHistory (rows: Record<string, Array<number | null>>): void {
-  byKey = new Map(Object.entries(rows))
-  loaded = null
-  historyRev.value++
-}

@@ -16,7 +16,7 @@ test('Alt+E reads a monolith with Misery and Scorn: CORRUPT, with the flagged es
 
   // While you play the panel stays out of the way: a card by the monolith
   // and a dock icon counting monoliths worth corrupting.
-  const card = overlay.page.getByText('CORRUPT', { exact: true }).filter({ visible: true })
+  const card = overlay.page.getByText('Corrupt', { exact: true }).filter({ visible: true })
   await expect(card).toBeVisible({ timeout: 20_000 })
   for (const name of ['Misery', 'Rage', 'Scorn']) {
     await expect(overlay.page.locator('body')).toContainText(name)

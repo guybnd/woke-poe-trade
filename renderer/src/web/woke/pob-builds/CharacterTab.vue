@@ -78,7 +78,8 @@
           <span class="w-faint text-xs">{{ slotLabel(u.slot) }}</span>
           <span class="ml-auto whitespace-nowrap">
             <template v-if="u.price"><WPrice :chaos="u.price.chaos" :divine="divine" /><template v-if="u.price.high != null"><span class="w-dim text-xs"> to </span><WPrice :chaos="u.price.high" :divine="divine" /></template></template>
-            <span v-else class="w-dim text-xs">{{ u.unique ? (divine == null ? 'pricing…' : 'no price') : 'price check' }}</span>
+            <WPrice v-else-if="u.unique && divine != null" :chaos="null" class="text-xs" />
+            <span v-else class="w-dim text-xs">{{ u.unique ? 'pricing…' : 'price check' }}</span>
           </span>
         </button>
       </template>

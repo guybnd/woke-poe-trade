@@ -85,10 +85,11 @@ export const usePoeninja = createGlobalState(() => {
       emitWokePricesLoaded(league.id, PRICES_DB.filter(chunk => !chunk.lookupOnly))
       const divine = findPriceByQuery({ ns: 'ITEM', name: 'Divine Orb', variant: undefined })
       lastUpdateTime = Date.now()
-      if (divine && divine.chaos >= 30) {
-        xchgRate.value = divine.chaos
-        updatedAt.value = lastUpdateTime
-      }
+      // woke: any real divine price counts (Market reads it the same way). A
+      // missing Divine Orb row keeps the last rate but still marks prices
+      // as loaded, so nothing reads as stale or unpriced because of it.
+      if (divine && divine.chaos >= 1) xchgRate.value = divine.chaos
+      updatedAt.value = lastUpdateTime
       lastFailureTime = 0
     } catch (err) {
       if (downloadController !== controller) return

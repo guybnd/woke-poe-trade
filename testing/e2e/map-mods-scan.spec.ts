@@ -40,7 +40,7 @@ test('the scan box lists scanned maps, each with a hover card of what decided it
   await expect(box.getByTestId('map-scan-tally')).toContainText('1risky')
 
   await rows.nth(1).hover()
-  await expect(rows.nth(1)).toHaveAttribute('title', /Careful: Players have -12% to all maximum Resistances/)
+  await expect(rows.nth(1)).toHaveAttribute('title', /Care: Players have -12% to all maximum Resistances/)
   await rows.nth(0).hover()
   await expect(rows.nth(0)).toHaveAttribute('title', /No rated mods/)
   await overlay.snap('map mods scan box with two maps')

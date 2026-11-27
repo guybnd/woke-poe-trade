@@ -11,12 +11,11 @@
           <button class="w-icon-btn" title="New folder" @click="startFolder(newIn)"><i class="fas fa-folder-plus" /></button>
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': importOpen }" title="Import a tree link, guide text or strategy code"
             @click="importOpen = !importOpen"><i class="fas fa-file-import" /></button>
-          <button class="w-icon-btn" :class="{ 'w-icon-btn--on': sortBy !== 'manual' }" :title="`Sort: ${SORT_LABELS[sortBy]}`"
-            @click="sortMenu"><i class="fas fa-sort-amount-down" /></button>
+          <WSortButton :model-value="sortBy" :options="SORT_OPTIONS" @update:model-value="config.sortBy = $event as SortBy" />
         </template>
         <template #toolbar>
           <div v-if="importOpen" class="flex flex-col gap-1 w-full" @dragover="shotDragOver" @drop="shotDrop">
-            <textarea class="w-input" v-model="importText" rows="4" :class="$style.textarea" data-import
+            <textarea class="w-input" v-model="importText" rows="4" :class="$style.textarea" data-import data-goto-spot="import"
               placeholder="An atlas tree link, a guide's text (tree link, Threads, currency, regex), a strategy code, or a pasted screenshot of the atlas tree"
               @keydown.esc="importOpen = false" @paste="shotPaste" />
             <ShotTray ref="shotTray" :model="atlasTree" @update="shotRead = $event" @pending="shotPending = $event" />
@@ -31,18 +30,30 @@
             </div>
             <div v-if="importError" class="w-down text-xs">{{ importError }}</div>
           </div>
-          <WField v-else v-model="filter" icon="fas fa-search" placeholder="Filter by name, Thread, folder…" class="grow" />
+          <WSearchField v-else v-model="filter" things="strategies" placeholder="Filter by name, Thread, folder…" class="grow" />
         </template>
 
         <SavedTree :tree="tree" list-id="atlas-folders" :active-id="config.selectedId" :copy="copyCode"
-          @item-menu="rowMenu" @folder-menu="folderMenu">
+          @item-act="onRowAct" @item-menu="rowMenu" @folder-menu="folderMenu">
           <template #item="{ item: s }">
             <span class="w-trunc">{{ s.name || 'Untitled' }}</span>
             <span v-if="isDirty(config, s)" :class="$style.unsavedTag" title="Tree changes not saved">Unsaved</span>
-            <span v-if="earnings.get(s.name)" class="ml-auto w-num text-xs" :class="earnings.get(s.name)!.perHour >= 0 ? 'w-up' : 'w-down'"
-              :title="`${earnings.get(s.name)!.hours.toFixed(1)} h farmed`">{{ fmt(earnings.get(s.name)!.perHour) }}/h</span>
+            <span v-if="earnings.get(s.name)?.perHour != null" class="ml-auto w-num text-xs" :class="earnings.get(s.name)!.perHour! >= 0 ? 'w-up' : 'w-down'"
+              :title="`Net worth: ${countText(earnings.get(s.name)!.runs, 'run')} of this name`">{{ fmt(earnings.get(s.name)!.perHour!) }}/h</span>
           </template>
           <template #sub="{ item: s }">{{ describe(s) }}</template>
+          <template #actions="{ item: s }">
+            <!-- Open always on; the rest on hover (WRowActs, the same in every saved list). -->
+            <WRowActs>
+              <template #hover>
+                <button type="button" class="w-icon-btn" title="Rename (F2)" data-row-act="rename"><i class="fas fa-pen" /></button>
+                <button type="button" class="w-icon-btn" title="Copy strategy code (Ctrl + C)" data-row-act="copy"><i class="fas fa-share-square" /></button>
+                <button type="button" class="w-icon-btn" title="Remove (Del)" data-row-act="remove"><i class="fas fa-trash" /></button>
+              </template>
+              <button type="button" class="w-icon-btn" :class="{ 'w-icon-btn--on': config.selectedId === s.id }" :title="config.selectedId === s.id ? 'Open' : 'Open its tree'" data-atlas-open
+                data-row-act="open"><i class="fas fa-chevron-right" /></button>
+            </WRowActs>
+          </template>
         </SavedTree>
         <WEmpty v-if="!config.strategies.length && !folders.length" :art="{ mechanic: 'map' }">
           No strategies yet. Start one and click passives on the tree, or import a guide's tree link or text.
@@ -51,10 +62,7 @@
             <WButton size="sm" icon="fas fa-file-import" @click="importOpen = true">Import</WButton>
           </template>
         </WEmpty>
-        <WEmpty v-else-if="filter && !tree.rows.value.length" icon="fas fa-search">
-          No strategy matches "{{ filter }}".
-          <template #actions><WButton size="sm" variant="ghost" @click="filter = ''">Clear filter</WButton></template>
-        </WEmpty>
+        <WNoMatch v-else-if="filter && !tree.rows.value.length" :query="filter" @clear="filter = ''" />
       </WPanel>
 
       <template v-if="selected">
@@ -107,8 +115,11 @@ import { computed, defineAsyncComponent, inject, nextTick, shallowRef, watch } f
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { MainProcess } from '@/web/background/IPC'
 import { WPanel, WField, WButton, WEmpty, WBanner, WSkeleton, openMenu, toast, useCopy } from '../ui'
+import WSortButton from '../ui/WSortButton.vue'
+import WRowActs from '../ui/WRowActs.vue'
+import WSearchField from '../ui/WSearchField.vue'
+import WNoMatch from '../ui/WNoMatch.vue'
 import type { AtlasStrategy, AtlasWidget } from './widget'
-import { AppConfig } from '@/web/Config'
 import {
   allFolders, claimRegexFolders, setPointsAt, takePointsAt, dropDraft, isDirty, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, isStrategyCode,
   strategyMatches, useAtlasData, retryAtlasData, atlasDataState
@@ -120,8 +131,8 @@ import { usePriceIndex } from '../market/price-index'
 import { useSavedTree } from '../shared/use-saved-tree'
 import SavedTree from '../shared/SavedTree.vue'
 import { usePriceText } from '../shared/price'
-import { FARMING_TYPE, strategyStats } from '../farming/farming'
-import type { FarmingWidget } from '../farming/farming'
+import { followRunBoard, strategyEarnings } from './run-earnings'
+import { useGoto } from '../tab-bar/goto'
 import { expandShortTreeLinks, extractTreeCode, trimLinkEnd } from './tree'
 import type { ShotRead } from './shot-import'
 // Not lazy: a paste right after the Import box opens must reach it.
@@ -170,22 +181,13 @@ const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 type SortBy = NonNullable<AtlasWidget['sortBy']>
 const SORT_LABELS: Record<SortBy, string> = { manual: 'My order', name: 'Name', earnings: 'Earnings per hour', changed: 'Last changed' }
 const sortBy = computed<SortBy>(() => props.config.sortBy && props.config.sortBy in SORT_LABELS ? props.config.sortBy : 'manual')
-function sortMenu (e: MouseEvent) {
-  openMenu(e, (Object.keys(SORT_LABELS) as SortBy[]).map(k => ({
-    label: SORT_LABELS[k],
-    icon: sortBy.value === k ? 'fas fa-check' : undefined,
-    action: () => { props.config.sortBy = k }
-  })))
-}
+const SORT_OPTIONS = (Object.keys(SORT_LABELS) as SortBy[]).map(value => ({ value, label: SORT_LABELS[value] }))
 const prices = usePriceIndex()
 const { fmt } = usePriceText(prices.snapshot)
 
-const earnings = computed(() => {
-  const history = AppConfig().widgets
-    .filter(w => w.wmType === FARMING_TYPE)
-    .flatMap(w => (w as FarmingWidget).history ?? [])
-  return new Map(strategyStats(history).map(r => [r.strategy, r]))
-})
+const earnings = strategyEarnings
+followRunBoard()
+const countText = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 function contentOf (s: AtlasStrategy): string {
   return JSON.stringify({ ...s, folder: undefined, regexFolder: undefined, changedAt: undefined })
@@ -458,6 +460,14 @@ async function codeFor (list: AtlasStrategy[], base = ''): Promise<string> {
   return strategyCode(list.map(s => ({ ...s, regexes: regexesIn(regexFolderOf(s)).map(r => ({ name: r.name, text: r.text })) })), base)
 }
 
+// The row buttons (WRowActs), through SavedTree's one listener.
+function onRowAct (act: string, s: AtlasStrategy) {
+  if (act === 'rename') startEdit('strategy', String(s.id), 'rename')
+  else if (act === 'copy') copyCode([s])
+  else if (act === 'remove') remove(s)
+  else if (act === 'open') props.config.selectedId = s.id
+}
+
 function rowMenu (e: MouseEvent, s: AtlasStrategy) {
   const group = tree.groupOf(s)
   if (group.length > 1) {
@@ -470,7 +480,7 @@ function rowMenu (e: MouseEvent, s: AtlasStrategy) {
     return
   }
   openMenu(e, [
-    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => startEdit('strategy', String(s.id), 'rename') },
+    { label: 'Rename', icon: 'fas fa-pen', keys: 'F2', action: () => startEdit('strategy', String(s.id), 'rename') },
     { label: 'Move to folder', icon: 'fas fa-folder-open', action: () => startEdit('strategy', String(s.id), 'move') },
     { label: 'Duplicate', icon: 'far fa-clone', action: () => duplicate(s) },
     { label: 'Copy strategy code', icon: 'fas fa-share-square', keys: 'Ctrl + C', action: () => copyCode([s]) },
@@ -651,6 +661,12 @@ async function doImport () {
           const { rewriteHypostasisLinks } = await import('./hypostasis')
           full = rewriteHypostasisLinks(full, atlasTree.value)
         }
+        // So do the Atlas Tree Planner's (atlas-blush-beta.vercel.app).
+        if (/atlas-blush-beta\.vercel\.app\//i.test(full)) {
+          if (!atlasTree.value && (atlasTreeError.value || atlasDataError.value)) throw new Error(atlasTreeError.value || atlasDataError.value)
+          const { rewritePlannerLinks } = await import('./planner-link')
+          full = rewritePlannerLinks(full, atlasTree.value)
+        }
       } finally {
         importing.value = false
       }
@@ -681,6 +697,30 @@ function pasteSearch (text: string) {
     payload: { action: 'stash-search', text }
   })
 }
+
+function pickWithRuns () {
+  const list = props.config.strategies
+  if (!list.length) return
+  if (selected.value && earnings.value.has(selected.value.name)) return
+  const best = list.reduce<AtlasStrategy | null>((a, s) => (earnings.value.get(s.name)?.runs ?? 0) > (a ? earnings.value.get(a.name)?.runs ?? 0 : 0) ? s : a, null)
+  props.config.selectedId = (best ?? selected.value ?? list[0]).id
+}
+
+// What's new's Show me: your results sit in the picked strategy's loadout, so
+// open the one with the most runs (the picked one if it has any).
+useGoto(props.config, 'woke-atlas-strategies', {
+  strategies: () => {},
+  spots: {
+    results: () => {
+      pickWithRuns()
+      // A window Show me just opened reads the run board now: pick again once it's in.
+      if (earnings.value.size) return
+      const stop = watch(earnings, () => { stop(); pickWithRuns() })
+      setTimeout(stop, 5000)
+    },
+    import: () => { importOpen.value = true }
+  }
+})
 </script>
 
 <style module>

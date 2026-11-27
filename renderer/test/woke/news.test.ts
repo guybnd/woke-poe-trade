@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { NEWS, liveNews, newsExpired, markAllNewsSeen, markNewsSeen, seenNewsIds, unseenNews } from '@/web/woke/tab-bar/news'
 import { setNewsOff } from '@/web/woke/tab-bar/news-off'
-import { NEWS_SPOTS, gotoSpots, gotoTargets } from '@/web/woke/tab-bar/goto-targets'
-import { NEWS_DEMOS, hasShowMe } from '@/web/woke/tab-bar/news-demos'
+import { GOTO_SPOTS, GOTO_TARGETS, NEWS_SPOTS, NO_TABS, gotoSpots, gotoTargets } from '@/web/woke/tab-bar/goto-targets'
+import { NEWS_DEMOS, WHOLE_TOOL, hasShowMe } from '@/web/woke/tab-bar/news-demos'
 import { WORTH } from '@/web/woke/tab-bar/worth-knowing'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { WokeModulesConfig } from '@/web/woke/modules'
 
@@ -117,6 +118,35 @@ describe("What's new lines", () => {
     }
   })
 
+  it('Show me never just opens a window: a line names a tab, a spot, a sample or a Settings page, unless it is about a whole new tool', () => {
+    for (const n of NEWS) {
+      if (!hasShowMe(n)) continue
+      const somewhere = n.goto != null || n.settingsPage != null || NEWS_DEMOS[n.id] != null
+      if (WHOLE_TOOL.has(n.id)) continue
+      expect(somewhere, `${n.id}: Show me only opens ${n.wmType}, which shows nothing when it's already open. Give it a tab and a spot (goto-targets.ts), a sample (NEWS_DEMOS), or no Show me (NOTHING_TO_SHOW)`).toBe(true)
+      // A tool with no tabs: its one place is the window, so it needs a spot.
+      if (n.goto && NO_TABS.includes(n.wmType) && !NEWS_DEMOS[n.id]) expect(NEWS_SPOTS[n.id], `${n.id}: ${n.wmType} has no tabs, so Show me needs a spot to flash`).toBeDefined()
+    }
+    for (const id of WHOLE_TOOL) expect(NEWS.map(n => n.id), id).toContain(id)
+  })
+
+  it('every spot and tab Show me can name is wired up in the code', () => {
+    const src = sources(fileURLToPath(new URL('../../src', import.meta.url)))
+    const withSpot = src.filter(t => t.includes('data-goto-spot'))
+    const spots = new Set([
+      ...Object.values(NEWS_SPOTS),
+      ...Object.values(GOTO_SPOTS).flatMap(o => Object.keys(o)),
+      ...Object.values(NEWS_DEMOS).flatMap(d => 'spot' in d && d.spot ? [d.spot] : [])
+    ])
+    for (const spot of spots) {
+      // A literal data-goto-spot="x", or a bound :data-goto-spot naming 'x'.
+      expect(withSpot.some(t => t.includes(`data-goto-spot="${spot}"`) || (t.includes(':data-goto-spot') && t.includes(`'${spot}'`))), `spot "${spot}": no element has data-goto-spot="${spot}"`).toBe(true)
+    }
+    for (const type of Object.keys(GOTO_TARGETS)) {
+      expect(src.some(t => new RegExp(`useGoto\\([^,]+, '${type}'`).test(t)), `${type}: its window never calls useGoto, so Show me's tab and spot do nothing`).toBe(true)
+    }
+  })
+
   it('players who update see every line until dismissed; a fresh install sees none', () => {
     const updated: WokeModulesConfig = { setupDone: true, off: [] }
     expect(unseenNews(updated, '0.0.0-test')).toHaveLength(NEWS.length)
@@ -143,3 +173,13 @@ describe("What's new switched off", () => {
     expect(unseenNews(woke, '0.0.0-test')).toEqual([])
   })
 })
+
+function sources (dir: string): string[] {
+  const out: string[] = []
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name)
+    if (e.isDirectory()) out.push(...sources(p))
+    else if (/\.(vue|ts)$/.test(e.name)) out.push(readFileSync(p, 'utf8'))
+  }
+  return out
+}
