@@ -57,6 +57,7 @@ describe('loot tab bug hunt', () => {
   it('sorts Foulborn orbs with the orbs', () => {
     expect(categoryOf('Foulborn Orb of Augmentation', 'currency')).toBe('orbs')
     expect(categoryOf('Foulborn Exalted Orb', 'currency')).toBe('orbs')
+    expect(categoryOf('Ritual Splinter', 'currency')).toBe('splinters')
   })
 })
 
