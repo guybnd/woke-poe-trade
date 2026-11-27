@@ -33,7 +33,7 @@ export function topStepActions (cls: TopClass): FilterAction[] {
     a('SetTextColor', 255, 0, 0, 255),
     a('SetBorderColor', ...t.border, 255),
     a('SetBackgroundColor', 255, 255, 255, 255),
-    a('PlayAlertSound', 1, 300),
+    a('PlayAlertSound', 6, 300),
     a('PlayEffect', t.beam),
     a('MinimapIcon', 0, t.icon, t.shape)
   ]

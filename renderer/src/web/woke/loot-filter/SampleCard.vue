@@ -577,7 +577,7 @@ let clickedAway = false
 const onPointer = (e: PointerEvent) => { clickedAway = !panel.value?.el?.contains(e.target as Node) }
 const onBlur = () => { focused.value = false }
 
-// The rule that decided the item, in the editor: the Base types tab for the
+// The rule that decided the item, in the editor: the Drop tiers tab for the
 // table's own rules, the rule itself for anything else.
 // The rule behind the safety net, as "Show this rule in the editor" uses: the
 // net's own rules aren't in the rule list.

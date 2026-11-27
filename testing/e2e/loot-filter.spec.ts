@@ -1282,7 +1282,6 @@ test('Base ranks: drag a base, then the picked set, onto another column', async 
   await overlay.boot({ widgets: [lootFilter(folder)] })
   await openEditor(overlay, fakeApp)
   const page = overlay.page
-  await page.getByRole('tab', { name: /^Base types/ }).click()
   await page.getByRole('tab', { name: /Base ranks/ }).click()
   const lane = (key: string) => page.locator(`[data-lane="${key}"]`)
   const cards = (key: string) => lane(key).locator('button[draggable="true"]')
@@ -1360,10 +1359,10 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()
   await expect(page.locator('[data-currency-cat="orbs"]')).toBeVisible()
-  // The main slider moves the line for every category.
-  await page.getByRole('slider', { name: /Hide piles worth under/ }).fill('7')
-  await expect(page.locator('[data-currency-min]')).toContainText('2c')
-  await expect(page.getByRole('combobox', { name: 'Orbs show from', exact: true })).toContainText('2c (Small)')
+  // The strictness slider multiplies every step's price, every category.
+  await page.getByRole('slider', { name: /Strictness/ }).fill('2')
+  await expect(page.locator('[data-currency-min]')).toContainText('×2.00')
+  await expect(page.getByRole('combobox', { name: 'Orbs show from', exact: true })).toContainText('1c (Small)')
   await page.waitForTimeout(500)
   await overlay.snap('currency weights tab')
 
