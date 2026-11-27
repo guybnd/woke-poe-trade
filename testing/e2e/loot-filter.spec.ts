@@ -1334,6 +1334,15 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   await page.getByRole('button', { name: /Tune/ }).click()
   await expect(page.getByText(/\d+ of \d+ shown/).first()).toBeVisible()
   await expect(page.getByRole('button', { name: /^Line: / })).toBeVisible()
+  // Dragging the line only previews; the setting changes on release.
+  const line = page.getByRole('button', { name: /^Line: / })
+  const before = await line.getAttribute('aria-label')
+  const box = (await line.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height - 4)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height - 4, { steps: 5 })
+  await page.mouse.up()
+  await expect(line).not.toHaveAttribute('aria-label', before!)
   await expect(page.getByText('Your ranks')).toBeVisible()
   await page.waitForTimeout(800)
   await overlay.snap('rare weights tab')

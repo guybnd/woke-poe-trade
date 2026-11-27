@@ -12,18 +12,23 @@
     <div :class="$style.ruler">
       <div :class="$style.rulerTop">
         <span class="font-semibold text-sm">Score</span>
-        <span class="text-xs w-faint">{{ pile.length.toLocaleString() }} made-up map drops · drag a handle, or focus it and use ← →</span>
-        <span class="flex-1" />
+        <span class="text-xs w-dim">Every drop gets a score. Under the <b>Line</b> it's hidden. Over it, it shows, and gets bigger at <b>Normal</b>, <b>Big</b> and <b>Beam</b>. Drag the marks; the bars are {{ pile.length.toLocaleString() }} made-up map drops.</span>
+      </div>
+      <div :class="$style.rulerTop">
+        <span class="text-xs w-faint">Line at</span>
         <WChip v-for="st in STAGES" :key="st.label" clickable :active="Math.abs(points(st.need) - needPoints) < 0.5" :title="`Line at ${pointsText(points(st.need))}`" @click="w.need = st.need">{{ st.label }}</WChip>
       </div>
       <div ref="track" :class="$style.track">
         <div :class="$style.hist" aria-hidden="true">
           <span v-for="(b, k) in hist" :key="k" :style="{ height: `${b.h}%`, background: STEP_CSS[b.step], opacity: b.step ? 0.95 : 0.5 }" />
         </div>
+        <div :class="$style.band" aria-hidden="true">
+          <span v-for="z in zones" :key="z.step" :style="{ left: `${z.x0}%`, width: `${z.x1 - z.x0}%`, color: z.step ? STEP_CSS[z.step] : 'var(--w-faint)', borderColor: STEP_CSS[z.step] }">{{ z.name }}</span>
+        </div>
         <div :class="$style.axis" aria-hidden="true">
           <i v-for="t in ticks" :key="t" :style="{ left: `${xOf(t)}%` }">{{ pointsText(t) }}</i>
         </div>
-        <button v-for="h in handles" :key="h.key" type="button" :class="[$style.handle, { [$style.lineHandle]: h.key === 'line' }]" :style="{ left: `${xOf(h.p)}%`, color: h.color }"
+        <button v-for="h in handles" :key="h.key" type="button" :class="[$style.handle, { [$style.lineHandle]: h.key === 'line', [$style.dragging]: drag?.key === h.key, [$style.under]: h.under }]" :style="{ left: `${xOf(h.p)}%`, color: h.color }"
           :aria-label="`${h.name}: ${pointsText(h.p)}`" :title="h.title" @pointerdown="startDrag(h.key, $event)" @keydown.left.prevent="moveHandle(h.key, h.p - 1)" @keydown.right.prevent="moveHandle(h.key, h.p + 1)">
           <b>{{ h.name }} {{ pointsText(h.p) }}</b>
         </button>
@@ -191,9 +196,10 @@ const w = computed(() => props.config.presets.weights)
 const TEXT_OF: Record<string, Colour> = { Rare: [255, 255, 119, 255], Magic: [136, 136, 255, 255], Normal: [200, 200, 200, 255] }
 const STEP_CSS = ['#3a3a3a', '#8a8a8a', '#d8d877', '#29d2a0', '#e04848']
 
+const clampNeed = (p: number) => Math.min(NEED_MAX, Math.max(NEED_MIN, Number(fromPoints(p).toPrecision(4))))
 const needPoints = computed({
   get: () => points(w.value.need),
-  set: (p: number) => { if (Number.isFinite(p)) w.value.need = Math.min(NEED_MAX, Math.max(NEED_MIN, Number(fromPoints(p).toPrecision(4)))) }
+  set: (p: number) => { if (Number.isFinite(p)) w.value.need = clampNeed(p) }
 })
 
 // The bases the filter's rules were written from; while off, read from the
@@ -204,9 +210,25 @@ const bases = computed(() => {
   return doc ? filterBases(doc, w.value.ranks) : []
 })
 const pile = computed(() => samplePile(bases.value))
+type HandleKey = 'line' | 0 | 1 | 2
+// While a ruler mark is dragged, only the ruler previews the move; the
+// settings (and the filter build) change once on release.
+const drag = ref<{ key: HandleKey, p: number } | null>(null)
+const view = computed(() => {
+  const need = w.value.need
+  const loud = [...w.value.loud]
+  const d = drag.value
+  if (!d) return { need, loud }
+  if (d.key === 'line') return { need: clampNeed(d.p), loud }
+  loud[d.key] = clampLoud(d.key, d.p)
+  return { need, loud }
+})
+const pileWeights = computed(() => pile.value.map(p => weightOf(p.it, w.value.mult)))
 const pileSteps = computed(() => {
   const out = [0, 0, 0, 0, 0]
-  for (const p of pile.value) out[stepFor(p.it, w.value)]++
+  const { need, loud } = view.value
+  if (!drag.value) for (const p of pile.value) out[stepFor(p.it, w.value)]++
+  else for (const x of pileWeights.value) out[stepOf(x, need, loud)]++
   return out
 })
 const pct = (n: number) => pile.value.length ? `${(100 * n / pile.value.length).toFixed(n && n * 1000 < pile.value.length ? 1 : 0)}%` : ''
@@ -428,25 +450,42 @@ const BINS = 60
 const hist = computed(() => {
   const { lo, hi } = range.value
   const n = new Array<number>(BINS).fill(0)
-  for (const p of pile.value) {
-    const pt = points(weightOf(p.it, w.value.mult))
+  for (const x of pileWeights.value) {
+    const pt = points(x)
     const k = Math.floor((Math.min(hi - 1e-6, Math.max(lo, pt)) - lo) / (hi - lo) * BINS)
     n[k]++
   }
   const top = Math.sqrt(Math.max(1, ...n))
-  return n.map((c, k) => ({ h: c ? 6 + 94 * Math.sqrt(c) / top : 2, step: stepOf(fromPoints(lo + (k + 0.5) * (hi - lo) / BINS), w.value.need, w.value.loud) }))
+  return n.map((c, k) => ({ h: c ? 6 + 94 * Math.sqrt(c) / top : 2, step: stepOf(fromPoints(lo + (k + 0.5) * (hi - lo) / BINS), view.value.need, view.value.loud) }))
 })
-type HandleKey = 'line' | 0 | 1 | 2
-const handles = computed(() => [
-  { key: 'line' as HandleKey, name: 'Line', p: Math.round(needPoints.value), color: '#f3d48a', title: 'Under the line: hidden. Drag, or use the stage chips.' },
-  ...LOUD_NAMES.map((name, i) => ({ key: i as HandleKey, name, p: Math.round(points(w.value.loud[i])), color: STEP_CSS[i + 2], title: `${name} from this score, whatever the line` }))
-])
+// The named stretches under the bars: Hidden, Small, Normal, Big, Beam.
+const zones = computed(() => {
+  const { lo, hi } = range.value
+  const need = points(view.value.need)
+  const starts = [lo, need, ...view.value.loud.map(l => Math.max(need, points(l)))]
+  return starts.map((x0, step) => ({ step, name: STEP_NAMES[step], x0: xOf(x0), x1: xOf(starts[step + 1] ?? hi) }))
+    .filter(z => z.x1 - z.x0 > 0.5)
+})
+const handles = computed(() => {
+  const need = points(view.value.need)
+  return [
+    { key: 'line' as HandleKey, name: 'Line', p: Math.round(need), color: '#f3d48a', under: false, title: 'Drops under the line are hidden. Drag it, or pick a stage at the top right.' },
+    ...LOUD_NAMES.map((name, i) => {
+      const p = Math.round(points(view.value.loud[i]))
+      return { key: i as HandleKey, name, p, color: STEP_CSS[i + 2], under: p < need, title: p < need ? `${name} starts under the line, so drops get ${name} as soon as they pass the line` : `Drops scoring ${pointsText(p)} or more show as ${name}` }
+    })
+  ]
+})
+function clampLoud (key: 0 | 1 | 2, p: number) {
+  const l = w.value.loud
+  const lo = key > 0 ? l[key - 1] : NEED_MIN
+  const hi = key < 2 ? l[key + 1] : NEED_MAX * 64
+  return Math.min(hi, Math.max(lo, Number(fromPoints(p).toPrecision(4))))
+}
 function moveHandle (key: HandleKey, p: number) {
   if (key === 'line') { needPoints.value = p; return }
   const l = [...w.value.loud]
-  const lo = key > 0 ? l[key - 1] : NEED_MIN
-  const hi = key < 2 ? l[key + 1] : NEED_MAX * 64
-  l[key] = Math.min(hi, Math.max(lo, Number(fromPoints(p).toPrecision(4))))
+  l[key] = clampLoud(key, p)
   w.value.loud = l
 }
 function startDrag (key: HandleKey, e: PointerEvent) {
@@ -457,10 +496,15 @@ function startDrag (key: HandleKey, e: PointerEvent) {
   const at = (ev: PointerEvent) => {
     const r = el.getBoundingClientRect()
     const f = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width))
-    moveHandle(key, Math.round(range.value.lo + f * (range.value.hi - range.value.lo)))
+    drag.value = { key, p: Math.round(range.value.lo + f * (range.value.hi - range.value.lo)) }
   }
   const move = (ev: PointerEvent) => at(ev)
-  const up = () => { btn.removeEventListener('pointermove', move); btn.removeEventListener('pointerup', up); btn.removeEventListener('pointercancel', up) }
+  const up = () => {
+    const d = drag.value
+    drag.value = null
+    if (d) moveHandle(d.key, d.p)
+    btn.removeEventListener('pointermove', move); btn.removeEventListener('pointerup', up); btn.removeEventListener('pointercancel', up)
+  }
   btn.addEventListener('pointermove', move)
   btn.addEventListener('pointerup', up)
   btn.addEventListener('pointercancel', up)
@@ -739,10 +783,10 @@ function reset () {
 /* score ruler */
 .ruler { background: var(--w-panel-2); border-radius: var(--w-r-sm); padding: 4px 8px 6px; display: flex; flex-direction: column; gap: 2px; }
 .rulerTop { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.track { position: relative; height: 84px; margin: 0 6px; touch-action: none; }
+.track { position: relative; height: 98px; margin: 0 6px; touch-action: none; }
 .hist { position: absolute; left: 0; right: 0; top: 18px; height: 48px; display: flex; align-items: flex-end; gap: 1px; }
 .hist > span { flex: 1 1 0; min-width: 0; border-radius: 1px 1px 0 0; }
-.axis { position: absolute; left: 0; right: 0; top: 66px; height: 16px; border-top: 1px solid var(--w-line); }
+.axis { position: absolute; left: 0; right: 0; top: 82px; height: 14px; }
 .axis > i { position: absolute; top: 1px; transform: translateX(-50%); font-style: normal; font-size: var(--w-fs-xs); color: var(--w-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .handle { position: absolute; top: 0; height: 68px; width: 14px; margin-left: -7px; padding: 0; border: 0; background: none; cursor: ew-resize; z-index: 1; }
 .handle::before { content: ''; position: absolute; left: 6px; top: 14px; bottom: 0; width: 2px; background: currentColor; opacity: 0.8; }
@@ -751,6 +795,10 @@ function reset () {
 .handle:focus-visible { outline: none; }
 .handle:focus-visible > b { outline: 1px solid var(--w-accent); }
 .lineHandle::before { width: 3px; opacity: 1; }
+.dragging > b { outline: 1px solid var(--w-accent); }
+.under { opacity: 0.45; }
+.band { position: absolute; left: 0; right: 0; top: 66px; height: 14px; }
+.band > span { position: absolute; top: 0; height: 100%; border-top: 2px solid; font-size: var(--w-fs-xs); line-height: calc(12px * var(--w-text-scale, 1)); text-align: center; overflow: hidden; white-space: nowrap; text-overflow: clip; opacity: 0.9; }
 .lineHandle > b { color: var(--w-fg); border: 1px solid currentColor; }
 .zones { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: var(--w-fs-xs); color: var(--w-dim); }
 .zones > span { display: inline-flex; align-items: center; gap: 4px; }
