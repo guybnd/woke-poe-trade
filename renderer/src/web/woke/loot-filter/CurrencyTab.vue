@@ -68,15 +68,17 @@
         <span :class="$style.dots" aria-hidden="true"><i v-for="r in g.rows" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
         <span class="flex-1" />
         <span :class="$style.catLook" @click.stop @keydown.stop>
+          <span :class="$style.lookLab">Colour</span>
           <input type="color" :value="hexOf(catColour(g.cat.id, c).rgb)" :class="$style.swatch" :aria-label="`${g.cat.name} colour`" :title="`${g.cat.name} colour`"
             @change="setCatLook(g.cat.id, { text: [...rgbOf(($event.target as HTMLInputElement).value), 255] })">
+          <span :class="$style.lookLab">Map icon and beam</span>
           <select :value="catColour(g.cat.id, c).shape" :class="$style.sel2" :aria-label="`${g.cat.name} map icon shape`" :title="`${g.cat.name} map icon shape`"
             @change="setCatIcon(g.cat.id, { shape: ($event.target as HTMLSelectElement).value })">
             <option v-for="sh in ICON_SHAPES" :key="sh" :value="sh">{{ shapeGlyph(sh) }} {{ sh }}</option>
           </select>
           <select :value="catColour(g.cat.id, c).color" :class="$style.sel2" :aria-label="`${g.cat.name} map icon and beam colour`" :title="`${g.cat.name} map icon and beam colour`"
             @change="setCatIcon(g.cat.id, { color: ($event.target as HTMLSelectElement).value })">
-            <option v-for="col in POE_COLOURS" :key="col" :value="col">{{ col }}</option>
+            <option v-for="col in POE_COLOURS" :key="col" :value="col" :style="{ color: col.toLowerCase() }">● {{ col }}</option>
           </select>
           <button v-if="c.cats[g.cat.id]" type="button" class="w-icon-btn" :title="`${g.cat.name} back to its own colours`" :aria-label="`Reset ${g.cat.name} colours`" @click="setCatLook(g.cat.id, null)"><i class="fas fa-undo" /></button>
         </span>
@@ -432,6 +434,7 @@ function chaosText (v: number): string {
 .range { width: min(22rem, 100%); accent-color: var(--w-accent, #c8a565); }
 .minVal { font-size: var(--w-fs-sm); color: var(--w-accent, #c8a565); min-width: 3.5em; font-variant-numeric: tabular-nums; }
 .stepOff { opacity: 0.45; }
+.lookLab { font-size: var(--w-fs-xs); color: var(--w-muted, #a89a7a); }
 .offTog { display: flex; align-items: center; gap: 4px; font-size: var(--w-fs-xs); color: var(--w-muted, #a89a7a); cursor: pointer; }
 .lookBtn { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-accent, #c8a565); background: var(--w-panel); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); padding: 0 5px; position: relative; }
 .lookOn { border-color: var(--w-accent, #c8a565); }
