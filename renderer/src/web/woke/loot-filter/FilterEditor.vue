@@ -282,7 +282,7 @@
     <!-- Rendered below, kept alive so Back returns to the same pile. -->
     <template v-else-if="tab === 'preview'" />
     <PresetsTab v-else-if="tab === 'presets'" :store="store" :config="config" />
-    <GearTab v-else-if="tab === 'gear'" :store="store" :config="config" @open-rule="openRule" />
+    <GearTab v-else-if="tab === 'gear' || tab === 'ranks'" :store="store" :config="config" :view="tab === 'ranks' ? 'ranks' : 'table'" @open-rule="openRule" />
     <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" />
     <NeverSinkTab v-else-if="tab === 'neversink'" :store="store" :config="config" :anchor="panel?.el" />
 
@@ -491,8 +491,8 @@ function onSearchPaste (e: ClipboardEvent) {
   emit('paste-item', text)
 }
 
-const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
-watch(gearRanksAsk, () => { if (takeRanksAsk('tab')) tab.value = 'gear' }, { immediate: true })
+const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'ranks' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
+watch(gearRanksAsk, () => { if (takeRanksAsk('tab')) tab.value = 'ranks' }, { immediate: true })
 const search = ref('')
 const selType = ref<string | null>(null)
 const selTier = ref<string | null>(null)
@@ -549,7 +549,9 @@ const activePriceMoves = computed(() => props.config.priceTiers.on ? livePriceMo
 
 const tabOptions = computed(() => [
   { value: 'rules', label: 'Rules' },
-  { value: 'gear', label: 'Base types', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear bases show, by rank and drop tier' },
+  // Gear: two screens of their own, what shows (by rank and drop tier) and which bases sit in which rank.
+  { value: 'gear', label: 'Drop tiers', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear shows, by rank, rarity and drop tier' },
+  { value: 'ranks', label: 'Base ranks', count: Object.keys(props.config.presets.gear.moves).length || undefined, title: 'Which gear bases sit in which rank' },
   { value: 'preview', label: 'Preview' },
   // The look strip lives on Rules, so it isn't counted here.
   { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && k !== 'clusterPrices' && x.on).length || undefined },
@@ -1064,7 +1066,7 @@ function goTo (type: string, t: string, base?: string) {
 
 watch(() => props.focus, (f) => {
   if (!f) return
-  // The Base types table's own rules live on that tab, not in the rule list.
+  // The Drop tiers table's own rules live on that tab, not in the rule list.
   if (f.type === GEAR_TYPE) { tab.value = 'gear'; return }
   goTo(f.type, f.tier)
 }, { immediate: true })

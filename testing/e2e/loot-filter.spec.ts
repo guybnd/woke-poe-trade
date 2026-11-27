@@ -1259,7 +1259,6 @@ test('Base ranks: drag a base, then the picked set, onto another column', async 
   await overlay.boot({ widgets: [lootFilter(folder)] })
   await openEditor(overlay, fakeApp)
   const page = overlay.page
-  await page.getByRole('tab', { name: /^Base types/ }).click()
   await page.getByRole('tab', { name: /Base ranks/ }).click()
   const lane = (key: string) => page.locator(`[data-lane="${key}"]`)
   const cards = (key: string) => lane(key).locator('button[draggable="true"]')
