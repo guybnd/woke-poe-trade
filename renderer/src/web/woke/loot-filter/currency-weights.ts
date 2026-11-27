@@ -197,7 +197,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         type: b.type,
         tier: b.tier,
         cat: categoryOf(name, b.type),
-        chaos: own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess),
+        chaos: (own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess)) * (edits[name]?.mult ?? 1),
         est: own == null && !priced,
         ...(own != null ? { own: true } : {}),
         ...(own == null && (p == null || !(p.chaos > 0)) && isFree(name, b.type, b.tier) ? { free: true } : {}),
@@ -206,6 +206,12 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
     }
   }
   return [...seen.values()]
+}
+
+// An item with the player's own price and Worth × on top.
+export function withEdit (it: CurrencyItem, e: ItemEdit | undefined): CurrencyItem {
+  if (e?.price == null && !e?.mult) return it
+  return { ...it, chaos: (e.price ?? it.chaos) * (e.mult ?? 1), ...(e.price != null ? { est: false, own: true } : {}) }
 }
 
 // What a pile of `stack` counts for, in chaos (Guy 2026-11-27): its full

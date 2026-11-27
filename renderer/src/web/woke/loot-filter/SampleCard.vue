@@ -43,14 +43,16 @@
         </div>
       </div>
 
-      <div v-if="match.final" :class="$style.keys" role="toolbar" aria-label="Quick fixes">
+      <CurrencyCard v-if="isCurrency" :store="store" :config="config" :name="facts.baseType ?? facts.name" :stack="facts.stackSize ?? 1"
+        @open-tab="emit('open-editor', { type: CURRENCY_TYPE, tier: '' })" />
+      <div v-if="match.final && !isCurrency" :class="$style.keys" role="toolbar" aria-label="Quick fixes">
         <button v-for="q in quick" :key="q.key" type="button" class="w-focusable" :class="[$style.key, { [$style.keyOff]: q.disabled }]"
           :disabled="q.disabled" :title="q.title" @click="q.run()">
           <span :class="$style.cap" :style="focused ? '' : 'opacity: .55'">{{ q.key }}</span>
           <span>{{ q.label }}</span>
         </button>
       </div>
-      <div v-if="match.final && !focused" class="text-xs w-faint" style="margin-top: -8px;">Move the mouse onto this card, then press 1-5.</div>
+      <div v-if="match.final && !focused && !isCurrency" class="text-xs w-faint" style="margin-top: -8px;">Move the mouse onto this card, then press 1-5.</div>
 
       <WeightRankStrip :store="store" :config="config" :facts="facts" />
       <GearRankStrip v-if="!config.presets.weights.on" :store="store" :config="config" :facts="facts" />
@@ -99,7 +101,7 @@
           </template>
         </div>
 
-        <div v-if="!ladderRows.length && !isOwn && !final.tier?.startsWith('#') && final.type !== SAFETY_RULE_TYPE && final.type !== WEIGHT_TYPE" class="text-xs w-dim">
+        <div v-if="!ladderRows.length && !isOwn && !final.tier?.startsWith('#') && final.type !== SAFETY_RULE_TYPE && final.type !== WEIGHT_TYPE && !isCurrency" class="text-xs w-dim">
           This rule doesn't list items by name, so it can't move tiers. Change its look, or give the item its own rule.
         </div>
 
@@ -142,7 +144,7 @@
           </div>
         </div>
 
-        <div ref="lookSection" :class="$style.section">
+        <div v-if="!isCurrency" ref="lookSection" :class="$style.section">
           <div class="w-group-label" :class="$style.label">Change the look</div>
           <WSegmented v-if="!isOwn" v-model="scope" :options="scopeOptions" />
           <template v-if="scope === 'tier' && !isOwn && tierBases.length">
@@ -180,7 +182,8 @@
 
 <script setup lang="ts">
 import { conditionWords } from './ladder'
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { CURRENCY_TYPE } from './currency-settings'
 import { useFold } from '../ui/fold'
 import WFoldHead from '../ui/WFoldHead.vue'
 import { WPanel, WBanner, WButton, WSegmented, WChip, openMenu, toast } from '../ui'
@@ -261,6 +264,9 @@ const behind = computed<MatchResult | null>(() => {
 const ruleMatch = computed(() => behind.value?.final ? behind.value : props.match)
 const final = computed(() => ruleMatch.value.final!.block)
 const isOwn = computed(() => final.value.type === OWN_RULE_TYPE)
+// Currency weights decides this item: its own card (Guy's picks B, S, W1).
+const isCurrency = computed(() => props.match.final?.block.type === CURRENCY_TYPE)
+const CurrencyCard = defineAsyncComponent(() => import('./CurrencyCard.vue'))
 const base = computed(() => props.facts.baseType ?? '')
 
 // The NeverSink rule behind an own rule, so moves and tier edits still work.

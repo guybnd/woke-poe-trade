@@ -6,7 +6,8 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, levelOf, strictMult, scaled, tierGuess, divineChaos } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, levelOf, strictMult, scaled, tierGuess, divineChaos, withEdit } from '@/web/woke/loot-filter/currency-weights'
+import { normalizeItemEdit } from '@/web/woke/loot-filter/currency-settings'
 import type { CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { fullStack } from '@/web/woke/loot-filter/stack-sizes'
@@ -110,6 +111,17 @@ describe('currency weights', () => {
     expect(by.has('Splinter of Xoph')).toBe(false)
     expect(new Set(items.map(i => i.name)).size).toBe(items.length)
     expect(divineChaos(items)).toBe(160)
+  })
+
+  it('multiplies an item\'s worth by its own Worth ×', () => {
+    const doc = parseFilter(SEMI)
+    const plain = currencyItems(doc, lookup).find(i => i.name === 'Orb of Alchemy')!
+    const twice = currencyItems(doc, lookup, { 'Orb of Alchemy': { mult: 2 } }).find(i => i.name === 'Orb of Alchemy')!
+    expect(twice.chaos).toBeCloseTo(plain.chaos * 2)
+    expect(withEdit(plain, { price: 1, mult: 0.5 })).toMatchObject({ chaos: 0.5, own: true })
+    expect(withEdit(plain, undefined)).toBe(plain)
+    expect(normalizeItemEdit({ mult: 9 })).toBeNull()
+    expect(normalizeItemEdit({ mult: 1.5 })).toEqual({ mult: 1.5 })
   })
 
   it('caps a shard at a twentieth of its orb', () => {

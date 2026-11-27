@@ -28,6 +28,8 @@ export interface ItemEdit {
   price?: number
   // Always shown (at least Small) from this stack: crafting supplies.
   supply?: number
+  // Worth ×: a bonus or penalty on its price (MULT_MIN to MULT_MAX).
+  mult?: number
   // Its own look, on top of its step's.
   look?: StylePatch
 }
@@ -78,6 +80,8 @@ export function normalizeItemEdit (e: unknown): ItemEdit | null {
   if (price != null) out.price = price
   const supply = int(x.supply, 1, 100_000)
   if (supply != null) out.supply = supply
+  const mult = num(x.mult, MULT_MIN, MULT_MAX)
+  if (mult) out.mult = mult
   if (x.look && isPatch(x.look)) out.look = x.look as StylePatch
   return Object.keys(out).length ? out : null
 }

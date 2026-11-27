@@ -145,7 +145,7 @@ import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { CSTEP_NAMES, CURRENCY_CATEGORIES, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX } from './currency-weights'
+import { withEdit, CSTEP_NAMES, CURRENCY_CATEGORIES, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit } from './currency-weights'
 
@@ -189,10 +189,7 @@ const baseItems = computed<CurrencyItem[]>(() => {
 const baseByName = computed(() => new Map(baseItems.value.map(i => [i.name, i])))
 const baseChaos = (name: string) => baseByName.value.get(name)?.chaos ?? 0
 // With your own prices on top.
-const items = computed<CurrencyItem[]>(() => baseItems.value.map(it => {
-  const price = c.value.items[it.name]?.price
-  return price != null ? { ...it, chaos: price, est: false, own: true } : it
-}))
+const items = computed<CurrencyItem[]>(() => baseItems.value.map(it => withEdit(it, c.value.items[it.name])))
 
 interface Pill { step: CStep, text: string }
 function pillsOf (stacks: Array<number | null>, edit: ItemEdit | undefined): Pill[] {
