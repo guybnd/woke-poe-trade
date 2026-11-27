@@ -1,9 +1,9 @@
 <template>
-  <div :class="$style.wrap" class="w-scroll">
+  <div :class="$style.wrap" class="w-scroll" @paste="onPaste">
     <div :class="$style.top">
-      <WToggle v-model="w.on">Weights decide endgame rares</WToggle>
+      <WToggle v-model="w.on">Weights decide endgame gear</WToggle>
       <span :class="$style.beta">Beta</span>
-      <WInfo text="Every unidentified rare of item level 68+ gets points: its base rank plus each thing it has (drop tier, item level, corruption, size, and its biggest mark: links, influence, fractured...). Under the line it hides; over it, it shows, louder at +20, +40 and +60 over. Only this profile. Your own rules, build rules and presets still go on top." />
+      <WInfo text="Every white, unidentified magic and unidentified rare gear item of item level 68+ gets points: its rarity and base rank, times each thing it has (drop tier, item level, corruption, size, and its biggest mark: links, influence, fractured...). Under the line it hides. Over it, it shows, and its score alone sets how loud: Normal, Big and Beam start at fixed scores you set, whatever the line. Only this profile. Your own rules, build rules and presets still go on top." />
       <span class="w-faint text-xs">{{ w.on ? `${store.weightRules.value.toLocaleString()} rules · ${sizeText}` : 'Off: NeverSink decides' }}</span>
       <span class="flex-1" />
       <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" @click="reset">Defaults</WButton>
@@ -13,6 +13,9 @@
       <div v-for="g in WEIGHT_GROUPS" :key="g.key" :class="$style.group">
         <div :class="$style.groupHead"><i :class="g.icon" /> {{ g.label }}</div>
         <div v-for="r in g.rows" :key="r.key" :class="[$style.row, { [$style.moved]: w.mult[r.key] !== r.dflt }]" :title="`${r.label}: ×${w.mult[r.key]}${w.mult[r.key] !== r.dflt ? ` (default ×${r.dflt})` : ''}`">
+          <button v-if="PIN_ROWS.has(r.key)" type="button" :class="[$style.pin, { [$style.pinned]: w.always.includes(r.key) }]" :aria-pressed="w.always.includes(r.key)"
+            :title="w.always.includes(r.key) ? `Always shown (at least Small): ${r.label}. Click to let the score decide.` : `Always show ${r.label.toLowerCase()}, whatever its score`" @click="togglePin(r.key)"><i class="fas fa-thumbtack" /></button>
+          <span v-else :class="$style.pin" />
           <span :class="$style.rowName">{{ r.label }}</span>
           <button type="button" :class="$style.step" :aria-label="`Less for ${r.label}`" @click="nudge(r.key, -1)"><i class="fas fa-minus" /></button>
           <span :class="$style.num">{{ pointsText(points(w.mult[r.key])) }}</span>
@@ -27,6 +30,39 @@
       <span :class="$style.num">{{ pointsText(needPoints) }}</span>
       <WChip v-for="st in STAGES" :key="st.label" clickable :active="Math.abs(points(st.need) - needPoints) < 0.5" :title="`Line at ${pointsText(points(st.need))}`" @click="w.need = st.need">{{ st.label }}</WChip>
     </div>
+    <div :class="$style.loud">
+      <span class="text-xs w-dim">Louder from</span>
+      <span v-for="(name, i) in LOUD_NAMES" :key="name" :class="$style.loudStep" :title="`${name} from a score of ${pointsText(points(w.loud[i]))}, whatever the line`">
+        <span :style="{ color: STEP_CSS[i + 2] }">{{ name }}</span>
+        <button type="button" :class="$style.step" :aria-label="`${name} from a lower score`" @click="nudgeLoud(i, -1)"><i class="fas fa-minus" /></button>
+        <span :class="$style.num">{{ pointsText(points(w.loud[i])) }}</span>
+        <button type="button" :class="$style.step" :aria-label="`${name} from a higher score`" @click="nudgeLoud(i, 1)"><i class="fas fa-plus" /></button>
+      </span>
+    </div>
+    <div v-if="ownRanks.length" :class="$style.ownRanks">
+      <span class="text-xs w-dim">Your ranks</span>
+      <span v-for="r in ownRanks" :key="r.name" v-item-tip="{ name: r.name }" :class="$style.ownRank">
+        {{ r.name }} <span class="w-faint">{{ RANK_TEXT[r.from] }} →</span> <b>{{ RANK_TEXT[r.to] }}</b>
+        <button type="button" :class="$style.step" :aria-label="`Back to the filter's rank for ${r.name}`" @click="setRank(r.name, null)"><i class="fas fa-times" /></button>
+      </span>
+      <WButton size="sm" variant="ghost" icon="fas fa-undo" @click="w.ranks = {}">Reset all</WButton>
+    </div>
+    <div :class="$style.looks">
+      <div v-for="ch in LOOK_COLS" :key="ch.key" :class="[$style.lookCol, { [$style.lookOver]: dragOver === ch.key }]"
+        @dragover.prevent="dragOver = ch.key" @dragleave="dragOver === ch.key && (dragOver = null)" @drop.prevent="dropLook(ch.key, null)">
+        <div :class="$style.groupHead" :title="ch.job">{{ ch.label }} <span class="w-faint">· {{ ch.job }}</span></div>
+        <div v-for="(k, i) in lookList(ch.key)" :key="k" :class="[$style.lookRow, { [$style.lookDead]: deadLook(ch.key, i) }]" draggable="true"
+          :title="lookTitle(ch.key, k, i)" @dragstart="dragKey = k" @dragend="dragKey = null; dragOver = null" @drop.prevent.stop="dropLook(ch.key, i)">
+          <span :class="$style.lookN">{{ ch.key === 'unused' ? '' : i + 1 }}</span>
+          <span :class="$style.lookSw" :style="{ background: LOOK_SWATCH[k] }" />
+          <span :class="$style.rowName">{{ LOOK_LABEL[k] }}</span>
+          <span v-if="ch.key !== 'unused'" :class="$style.lookBtns">
+          <button v-if="i > 0" type="button" :class="$style.step" :aria-label="`${LOOK_LABEL[k]} higher`" @click="moveLook(ch.key, i, -1)"><i class="fas fa-chevron-up" /></button>
+          <button type="button" :class="$style.step" :aria-label="`Stop using ${LOOK_LABEL[k]} for ${ch.label.toLowerCase()}`" @click="unuseLook(k)"><i class="fas fa-times" /></button>
+          </span>
+        </div>
+      </div>
+    </div>
     <div :class="$style.shares">
       <div :class="$style.bar" aria-hidden="true">
         <span v-for="(n, k) in pileSteps" :key="k" :style="{ flexGrow: n, background: STEP_CSS[k] }" />
@@ -36,6 +72,15 @@
       </span>
     </div>
 
+    <div :class="$style.source">
+      <WChip clickable :active="source === 'set'" title="One of each kind of mark, and the mixes" @click="source = 'set'">Test set</WChip>
+      <WChip clickable :active="source === 'random'" title="Random map rares, with rough odds for each mark" @click="source === 'random' ? reroll() : (source = 'random')">Random</WChip>
+      <WButton v-if="source === 'random'" size="sm" variant="ghost" icon="fas fa-dice" @click="reroll">Reroll</WButton>
+      <WChip v-if="pasted.length" clickable :active="source === 'pasted'" title="Only the items you pasted, newest first (they also lie in the other views)" @click="source = 'pasted'">Pasted ({{ pasted.length }})</WChip>
+      <WButton size="sm" variant="ghost" icon="fas fa-paste" title="Copy an item in game (Ctrl+C), then paste here (Ctrl+V)" @click="pasteFromClipboard">Paste item</WButton>
+      <WButton v-if="pasted.length" size="sm" variant="ghost" icon="fas fa-times" @click="pasted = []; source === 'pasted' && (source = 'set')">Clear pasted</WButton>
+      <span v-if="pasteNote" class="text-xs w-faint">{{ pasteNote }}</span>
+    </div>
     <div v-if="!samples.length" class="w-faint text-sm">Load a NeverSink filter to see the test rares.</div>
     <div v-else :class="$style.grounds">
       <div v-for="side in grounds" :key="side.key" :class="$style.side">
@@ -47,11 +92,13 @@
           <span v-for="d in side.placed" :key="d.i" v-item-tip="samples[d.i].tip" :class="[$style.drop, { [$style.ghost]: d.hidden, [$style.on]: d.i === focus }]"
             :style="{ left: `${d.x}px`, top: `${d.y}px`, width: `${d.w}px` }" @mouseenter="focus = d.i" @click="pinned = pinned === d.i ? null : d.i">
             <span :class="$style.tags" data-no-item-tip="marks of the rare below, which has its tooltip">
+              <span :class="[$style.tag, $style.score]" :style="{ color: STEP_CSS[Math.max(1, samples[d.i].step)], borderColor: STEP_CSS[Math.max(1, samples[d.i].step)] }" :title="`Score ${pointsText(samples[d.i].pts)}, line ${pointsText(needPoints)}: ${STEP_NAMES[samples[d.i].step]}`">{{ pointsText(samples[d.i].pts) }}</span>
               <span v-for="t in samples[d.i].tags" :key="t.key" :class="[$style.tag, $style[signOf(t.key)], { [$style.off]: !t.counts }]"><i :class="ICON_OF[t.key]" />{{ t.text }}</span>
             </span>
             <span :class="$style.labelRow">
-              <span :class="[$style.deco, $style[signOf(samples[d.i].rankKey)]]" :title="WEIGHT_LABEL[samples[d.i].rankKey]">{{ RANK_TEXT[samples[d.i].rankKey] }}</span>
-              <LabelPreview :text="samples[d.i].row.name" :actions="d.actions" :style-override="!d.hidden && samples[d.i].overQual ? QUAL_MARK : undefined" :visibility="d.hidden ? 'Hide' : 'Show'" :default-text="RARE" :extras="false" :scale="SCALE" />
+              <button type="button" :class="[$style.deco, $style.rankBtn, $style[signOf(samples[d.i].rankKey)], { [$style.own]: samples[d.i].row.was }]" :title="rankTitle(samples[d.i].row)"
+                @click.stop="shiftRank(samples[d.i].row, 1)" @contextmenu.prevent.stop="shiftRank(samples[d.i].row, -1)">{{ RANK_TEXT[samples[d.i].rankKey] }}</button>
+              <LabelPreview :text="samples[d.i].row.name" :actions="d.actions" :visibility="d.hidden ? 'Hide' : 'Show'" :default-text="TEXT_OF[samples[d.i].it.rarity ?? 'Rare']" :extras="false" :scale="SCALE" />
               <span :class="$style.deco" :title="samples[d.i].tierText">{{ samples[d.i].tierShort }}</span>
             </span>
           </span>
@@ -72,7 +119,7 @@
 <script setup lang="ts">
 // Rare weights (beta, weights.ts): the switch, the line, the test rares and
 // the multipliers, all for this profile.
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, shallowRef } from 'vue'
 import { WButton, WChip, WInfo, WToggle, vItemTip } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
@@ -80,13 +127,14 @@ import type { LootFilterWidget } from './widget'
 import { matchItem } from './match'
 import { labelBox, layoutLabels } from './shower'
 import { readStyle } from './edits'
-import { DEFAULT_MARK } from './gear'
 import { poeColour } from './colours'
 import { ruleLabel } from './parse'
 import type { Colour } from './edits'
-import { MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, stepActions, stepOf, termsOf, weightOf } from './weights'
-import type { Step, WeightKey } from './weights'
-import { CHIP_LABEL, SAMPLES, sampleTip, factsOf, fromPoints, itemOf, points, pointsText, sampleBase, samplePile } from './weight-samples'
+import { LOOK_CHANNELS, LOOK_DEFAULT, LOOK_KEYS, LOOK_LABEL, RANK_KEYS, MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, weightLook, stepFor, PIN_ROWS, termsOf, weightOf } from './weights'
+import type { BaseRow, LookChannel, LookKey, RankKey, WeightItem, WeightKey } from './weights'
+import { itemFacts } from './item-facts'
+import type { ItemFacts } from './item-facts'
+import { CHIP_LABEL, SAMPLES, pastedRare, sampleTip, factsOf, fromPoints, itemOf, points, pointsText, sampleBase, samplePile } from './weight-samples'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -94,7 +142,8 @@ const props = defineProps<{
 }>()
 
 const w = computed(() => props.config.presets.weights)
-const RARE: Colour = [255, 255, 119, 255]
+// The game's label colour for each rarity.
+const TEXT_OF: Record<string, Colour> = { Rare: [255, 255, 119, 255], Magic: [136, 136, 255, 255], Normal: [200, 200, 200, 255] }
 const NEED_LO = Math.round(points(NEED_MIN))
 const NEED_HI = Math.round(points(NEED_MAX))
 const STEP_CSS = ['#3a3a3a', '#8a8a8a', '#d8d877', '#29d2a0', '#e04848']
@@ -109,12 +158,12 @@ const needPoints = computed({
 const bases = computed(() => {
   if (props.store.weightBases.value.length) return props.store.weightBases.value
   const doc = props.store.doc.value
-  return doc ? filterBases(doc) : []
+  return doc ? filterBases(doc, w.value.ranks) : []
 })
 const pile = computed(() => samplePile(bases.value))
 const pileSteps = computed(() => {
   const out = [0, 0, 0, 0, 0]
-  for (const p of pile.value) out[stepOf(weightOf(p.it, w.value.mult), w.value.need)]++
+  for (const p of pile.value) out[stepFor(p.it, w.value)]++
   return out
 })
 const pct = (n: number) => pile.value.length ? `${(100 * n / pile.value.length).toFixed(n && n * 1000 < pile.value.length ? 1 : 0)}%` : ''
@@ -124,20 +173,62 @@ const sizeText = computed(() => {
   return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.round(kb)} KB`
 })
 
+// What lies on the ground: the fixed test set, or a random roll, plus
+// whatever was pasted.
+const source = ref<'set' | 'random' | 'pasted'>('set')
+const seed = ref(11)
+const RANDOM_N = 40
+interface Drop { row: BaseRow, it: WeightItem, label: string, facts?: ItemFacts }
+const pasted = shallowRef<Drop[]>([])
+const pasteNote = ref('')
+function reroll () {
+  source.value = 'random'
+  seed.value = (seed.value * 48271) % 2147483647
+}
+const drops = computed<Drop[]>(() => {
+  if (source.value === 'pasted') return pasted.value
+  const base: Drop[] = source.value === 'set'
+    ? SAMPLES.flatMap(spec => {
+        const row = sampleBase(spec, bases.value)
+        return row ? [{ row, it: itemOf(row, spec.item), label: spec.label }] : []
+      })
+    : samplePile(bases.value, RANDOM_N, seed.value).map(p => ({ ...p, label: 'Random rare' }))
+  // Pasted items join the pile (first), they don't replace it.
+  return [...pasted.value, ...base]
+})
+function addPasted (text: string) {
+  const facts = itemFacts(text, null)
+  const got = pastedRare(facts, bases.value)
+  if (!got) {
+    pasteNote.value = facts.baseType ? `${facts.rarity !== 'Rare' ? 'Not a rare' : 'Base not in the table'}: ${facts.baseType}` : 'No item text on the clipboard'
+    return
+  }
+  pasteNote.value = ''
+  pasted.value = [{ ...got, label: 'Pasted', facts: { ...facts, areaLevel: 83 } }, ...pasted.value].slice(0, 40)
+}
+function onPaste (e: ClipboardEvent) {
+  const t = (e.target as HTMLElement | null)?.tagName
+  if (t === 'INPUT' || t === 'TEXTAREA') return
+  const text = e.clipboardData?.getData('text/plain') ?? ''
+  if (text) { e.preventDefault(); addPasted(text) }
+}
+async function pasteFromClipboard () {
+  try { addPasted(await navigator.clipboard.readText()) } catch { pasteNote.value = 'Could not read the clipboard: press Ctrl+V here instead' }
+}
+
 const samples = computed(() => {
   const doc = props.store.doc.value
   if (!doc) return []
   // NeverSink as it is now: the same filter without the weights' rules.
   const ns = { ...doc, blocks: doc.blocks.filter(b => b.type !== WEIGHT_TYPE) }
   const m = w.value.mult
-  return SAMPLES.flatMap(spec => {
-    const row = sampleBase(spec, bases.value)
-    if (!row) return []
-    const it = itemOf(row, spec.item)
+  return drops.value.flatMap(d => {
+    const { row, it, label } = d
+    const spec = { label }
     const counted = new Set(countedTerms(it, m))
     const terms = termsOf(it).map(key => ({ key, counts: counted.has(key) }))
     const weight = weightOf(it, m)
-    const facts = factsOf(row, it)
+    const facts = d.facts ?? factsOf(row, it)
     const nsHit = matchItem(ns, facts)
     let other = ''
     if (w.value.on) {
@@ -151,12 +242,12 @@ const samples = computed(() => {
       rankKey: it.rank as WeightKey,
       tierShort: it.tier ? `T${it.tier}` : 'T–',
       tierText: it.tier ? `Unidentified (Tier ${it.tier})` : 'No drop tier (counted as tier 1)',
-      overQual: it.quality >= 24,
+      it,
       spec,
       row,
       terms,
       pts: points(weight),
-      step: stepOf(weight, w.value.need) as Step,
+      step: stepFor(it, w.value),
       other,
       ns: nsHit.final ? { actions: nsHit.final.block.actions, visibility: nsHit.visibility } : null
     }]
@@ -194,6 +285,9 @@ const TAG_H = 13
 const DECO_W = 22
 // '' = the item level itself.
 const TAG_TEXT: Partial<Record<WeightKey, string>> = {
+  wm: 'Magic',
+  wn: 'White',
+  w86: 'Craft 86',
   i68: '',
   i75: '',
   i83: '',
@@ -220,9 +314,27 @@ const TAG_TEXT: Partial<Record<WeightKey, string>> = {
   big: 'Big',
   tiny: 'Tiny'
 }
-const RANK_TEXT: Partial<Record<WeightKey, string>> = { x1: 'X1', x2: 'X2', r1: 'R1', r2: 'R2', r3: 'R3', r0: 'R–' }
-// The over-quality mark's border (the Gear tab's default mark).
-const QUAL_MARK = { border: DEFAULT_MARK.border }
+const RANK_TEXT: Partial<Record<WeightKey, string>> = { x1: 'X1', x2: 'X2', r1: 'R1', r2: 'R2', r3: 'R3', r0: 'R–', rj: 'R✕' }
+
+// Your own base ranks: click a label's rank to lower it, right-click to raise.
+function setRank (name: string, rank: RankKey | null) {
+  const rest = Object.fromEntries(Object.entries(w.value.ranks).filter(([n]) => n !== name))
+  w.value.ranks = rank == null ? rest : { ...rest, [name]: rank }
+}
+function shiftRank (row: BaseRow, dir: 1 | -1) {
+  const i = RANK_KEYS.indexOf(row.rank)
+  const to = RANK_KEYS[Math.min(RANK_KEYS.length - 1, Math.max(0, i + dir))]
+  if (to === row.rank) return
+  setRank(row.name, to === (row.was ?? row.rank) && row.was ? null : to)
+}
+function rankTitle (row: BaseRow): string {
+  const own = row.was ? ` (yours; the filter says ${WEIGHT_LABEL[row.was]})` : ''
+  return `${row.name}: ${WEIGHT_LABEL[row.rank]}${own}. Click: lower rank. Right-click: higher.`
+}
+const ownRanks = computed(() => {
+  const was = new Map(bases.value.filter(b => b.was).map(b => [b.name, b.was as RankKey]))
+  return Object.entries(w.value.ranks).map(([name, to]) => ({ name, to, from: was.get(name) ?? to })).filter(r => r.from !== r.to).sort((a, b) => a.name.localeCompare(b.name))
+})
 
 // Places stay put while you tune: each rare gets a slot sized for the
 // biggest label, so only its look changes.
@@ -230,7 +342,7 @@ function layout (key: string) {
   const width = widths[key] || 420
   const boxes = samples.value.map(x => {
     const b = labelBox(x.row.name, 45, SCALE, measure)
-    const tagsW = x.tags.reduce((n, t) => n + measure(t.text, 9) + 18, 0)
+    const tagsW = x.tags.reduce((n, t) => n + measure(t.text, 9) + 18, 30)
     return { w: Math.ceil(Math.max(b.w + DECO_W * 2, tagsW)), h: b.h + TAG_H }
   })
   return layoutLabels(boxes, width, 220, 3, BEAM_ROOM)
@@ -238,7 +350,7 @@ function layout (key: string) {
 const grounds = computed(() => {
   const list = samples.value
   return [
-    { key: 'weights', title: 'Weights', look: (i: number) => ({ actions: stepActions(list[i].step), hidden: list[i].step === 0 }) },
+    { key: 'weights', title: 'Weights', look: (i: number) => ({ actions: weightLook(list[i].it, w.value.look, list[i].step), hidden: list[i].step === 0 }) },
     { key: 'ns', title: 'NeverSink now', look: (i: number) => ({ actions: list[i].ns?.actions ?? [], hidden: list[i].ns?.visibility === 'Hide' }) }
   ].map(side => {
     const { rects, height } = layout(side.key)
@@ -255,6 +367,22 @@ const grounds = computed(() => {
 const ICON_OF = Object.fromEntries(WEIGHT_GROUPS.flatMap(g => g.rows.map(x => [x.key, g.icon]))) as Record<WeightKey, string>
 const signOf = (k: WeightKey) => w.value.mult[k] > 1 ? 'plus' : w.value.mult[k] < 1 ? 'minus' : 'zero'
 
+// Normal, Big and Beam: 5 points a click, kept in order.
+const LOUD_NAMES = ['Normal', 'Big', 'Beam'] as const
+function nudgeLoud (i: number, dir: 1 | -1) {
+  const l = [...w.value.loud]
+  const v = Number(fromPoints(Math.round(points(l[i])) + 5 * dir).toPrecision(4))
+  const lo = i > 0 ? l[i - 1] : NEED_MIN
+  const hi = i < 2 ? l[i + 1] : NEED_MAX * 64
+  l[i] = Math.min(hi, Math.max(lo, v))
+  w.value.loud = l
+}
+
+function togglePin (key: WeightKey) {
+  const a = w.value.always
+  w.value.always = a.includes(key) ? a.filter(k => k !== key) : [...a, key]
+}
+
 function nudge (key: WeightKey, dir: 1 | -1) {
   const v = w.value.mult[key]
   const [lo, hi] = multRange(w.value.mult, key)
@@ -264,12 +392,89 @@ function nudge (key: WeightKey, dir: 1 | -1) {
 
 const changed = computed(() => {
   const d = defaultWeights()
-  return w.value.need !== d.need || (Object.keys(d.mult) as WeightKey[]).some(k => w.value.mult[k] !== d.mult[k])
+  return w.value.need !== d.need || w.value.always.length > 0 || w.value.loud.some((v, i) => v !== d.loud[i]) || lookChanged.value || Object.keys(w.value.ranks).length > 0 || (Object.keys(d.mult) as WeightKey[]).some(k => w.value.mult[k] !== d.mult[k])
 })
+// Look channels: drag rows to rank them or move them between channels.
+type LookCol = LookChannel | 'unused'
+const LOOK_COLS: Array<{ key: LookCol, label: string, job: string }> = [...LOOK_CHANNELS, { key: 'unused', label: 'Not used', job: 'Never changes the look' }]
+const LOOK_SWATCH: Record<LookKey, string> = {
+  qual: '#ff7ad9',
+  synth: '#6eaaff',
+  fract: '#d7b46e',
+  infl: '#be78ff',
+  eld: '#ff9628',
+  abyss: '#3cc88c',
+  ench: '#b4e1ff',
+  l6: '#ebffeb',
+  cruc: '#ff6e3c',
+  strand: '#78e6e6',
+  l5: '#82eb82',
+  fated: '#ffcd82',
+  mirr: '#a0c8ff',
+  corr: '#5a0000',
+  exotic: '#ff8c1a',
+  rarity: 'linear-gradient(90deg,#c8c8c8,#8888ff,#ffff77)',
+  score: 'linear-gradient(90deg,#232323,#141400,#004b1e,#5a0000)'
+}
+const dragKey = ref<LookKey | null>(null)
+const dragOver = ref<LookCol | null>(null)
+function lookList (ch: LookCol): LookKey[] {
+  if (ch !== 'unused') return w.value.look[ch]
+  const used = new Set(LOOK_CHANNELS.flatMap(c => w.value.look[c.key]))
+  return LOOK_KEYS.filter(k => !used.has(k))
+}
+// Rows under the score step in a channel it always paints never show.
+function deadLook (ch: LookCol, i: number): boolean {
+  if (ch === 'unused') return false
+  const at = w.value.look[ch].indexOf('score')
+  return ch === 'bg' && at >= 0 && i > at
+}
+function lookTitle (ch: LookCol, k: LookKey, i: number): string {
+  if (ch === 'unused') return `${LOOK_LABEL[k]}: not used. Drag it onto a channel.`
+  if (deadLook(ch, i)) return `${LOOK_LABEL[k]}: under the score step, which always sets the background, so it never shows`
+  const at = w.value.look[ch].indexOf('score')
+  const over = at > i && k !== 'score' ? ' Above the score step, it doubles the rules or more.' : ''
+  return `${LOOK_LABEL[k]}: rank ${i + 1} for ${ch === 'bg' ? 'background' : ch === 'text' ? 'text colour' : 'border'}. Drag to move.${over}`
+}
+function setLook (next: Record<LookChannel, LookKey[]>) { w.value.look = next }
+function without (k: LookKey): Record<LookChannel, LookKey[]> {
+  const l = w.value.look
+  return { border: l.border.filter(x => x !== k), bg: l.bg.filter(x => x !== k), text: l.text.filter(x => x !== k) }
+}
+function dropLook (ch: LookCol, at: number | null) {
+  const k = dragKey.value
+  dragKey.value = null
+  dragOver.value = null
+  if (!k) return
+  const next = without(k)
+  if (ch !== 'unused') {
+    const list = next[ch]
+    // Dropping on a row puts it there (after it when moving down the same list).
+    const from = w.value.look[ch].indexOf(k)
+    let i = at ?? list.length
+    if (at != null && from >= 0 && from < at) i = at
+    list.splice(Math.min(i, list.length), 0, k)
+  }
+  setLook(next)
+}
+function moveLook (ch: LookChannel, i: number, dir: -1 | 1) {
+  const list = [...w.value.look[ch]]
+  const j = i + dir
+  if (j < 0 || j >= list.length) return
+  ;[list[i], list[j]] = [list[j], list[i]]
+  setLook({ ...w.value.look, [ch]: list })
+}
+function unuseLook (k: LookKey) { setLook(without(k)) }
+const lookChanged = computed(() => LOOK_CHANNELS.some(c => w.value.look[c.key].join() !== LOOK_DEFAULT[c.key].join()))
+
 function reset () {
   const d = defaultWeights()
+  w.value.look = d.look
+  w.value.ranks = {}
   w.value.need = d.need
   Object.assign(w.value.mult, d.mult)
+  w.value.always = []
+  w.value.loud = [...d.loud]
 }
 </script>
 
@@ -313,7 +518,7 @@ function reset () {
 }
 .row {
   display: grid;
-  grid-template-columns: 1fr 16px 2.2rem 16px;
+  grid-template-columns: 14px 1fr 16px 2.2rem 16px;
   align-items: center;
   gap: 2px;
   font-size: var(--w-fs-xs);
@@ -332,7 +537,7 @@ function reset () {
   justify-content: center;
   border-radius: var(--w-r-sm);
   color: var(--w-faint);
-  font-size: calc(9px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-xs);
 }
 .step:hover { color: var(--w-fg); background: var(--w-panel); }
 .line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -360,6 +565,38 @@ function reset () {
     radial-gradient(ellipse at 75% 30%, rgba(60, 70, 80, 0.3), transparent 55%),
     linear-gradient(160deg, #24221d, #191814 60%, #1f1d18);
 }
+.pin {
+  flex: 0 0 auto;
+  width: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--w-faint);
+  opacity: 0.35;
+  cursor: pointer;
+  font-size: var(--w-fs-xs);
+}
+.pin:hover { opacity: 0.8; }
+.pin.pinned { color: var(--w-accent); opacity: 1; }
+.ownRanks { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.ownRank { display: inline-flex; align-items: center; gap: 3px; font-size: var(--w-fs-xs); background: var(--w-panel-2); border-radius: var(--w-r-sm); padding: 0 2px 0 6px; }
+.rankBtn { cursor: pointer; font-family: inherit; border: 0; padding: 0; }
+.deco.minus { color: #e08a8a; }
+.rankBtn:hover { outline: 1px solid var(--w-accent); }
+.own { box-shadow: inset 0 -2px 0 var(--w-accent); }
+.looks { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; align-items: start; }
+.lookCol { background: var(--w-panel-2); border-radius: var(--w-r-sm); padding: 4px 6px; min-height: 40px; outline: 1px dashed transparent; }
+.lookCol.lookOver { outline-color: var(--w-accent); }
+.lookRow { position: relative; display: grid; grid-template-columns: 12px 10px 1fr; align-items: center; gap: 3px; font-size: var(--w-fs-xs); line-height: 1.5; border-radius: var(--w-r-sm); cursor: grab; }
+.lookRow:hover { background: var(--w-panel); }
+.lookBtns { position: absolute; right: 0; top: 0; bottom: 0; display: none; align-items: center; gap: 1px; padding-left: 6px; background: linear-gradient(90deg, transparent, var(--w-panel) 6px); }
+.lookRow:hover .lookBtns, .lookRow:focus-within .lookBtns { display: flex; }
+.lookDead { opacity: 0.45; }
+.lookN { color: var(--w-faint); text-align: right; }
+.lookSw { width: 10px; height: 10px; border-radius: 2px; box-shadow: inset 0 0 0 1px #0008; }
+.loud { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.loudStep { display: inline-flex; align-items: center; gap: 3px; font-size: var(--w-fs-xs); }
+.source { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .drop {
   position: absolute;
   display: flex;
@@ -369,7 +606,7 @@ function reset () {
 }
 .tags { display: flex; justify-content: center; gap: 2px; height: 13px; line-height: calc(12px * var(--w-text-scale, 1)); white-space: nowrap; }
 .tag {
-  font-size: calc(9px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-xs);
   padding: 0 3px;
   border-radius: var(--w-r-sm);
   background: rgba(0, 0, 0, 0.55);
@@ -378,8 +615,9 @@ function reset () {
   align-items: center;
   gap: 2px;
 }
-.tag i { font-size: calc(7px * var(--w-text-scale, 1)); opacity: 0.8; }
+.tag i { font-size: var(--w-fs-xs); opacity: 0.8; }
 .tag.plus { color: #8fd18a; }
+.score { font-weight: 600; border: 1px solid; }
 .tag.minus { color: #e08a7a; }
 .tag.off { opacity: 0.5; text-decoration: line-through; }
 .labelRow { display: flex; align-items: center; justify-content: center; gap: 2px; min-width: 0; }
@@ -387,7 +625,7 @@ function reset () {
   flex: 0 0 auto;
   width: 20px;
   text-align: center;
-  font-size: calc(9px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-xs);
   line-height: calc(13px * var(--w-text-scale, 1));
   border-radius: var(--w-r-sm);
   background: rgba(0, 0, 0, 0.6);
@@ -415,7 +653,7 @@ function reset () {
   color: var(--w-fg);
   white-space: nowrap;
 }
-.chip i { font-size: calc(9px * var(--w-text-scale, 1)); opacity: 0.8; }
+.chip i { font-size: var(--w-fs-xs); opacity: 0.8; }
 .chip.plus { color: #8fd18a; background: rgba(80, 160, 80, 0.16); }
 .chip.minus { color: #e08a7a; background: rgba(200, 80, 60, 0.16); }
 .chip.zero { color: var(--w-dim); }

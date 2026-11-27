@@ -23,6 +23,8 @@ import { CLUSTER_PRICE_TYPE, applyClusterPrices } from './cluster-prices'
 import type { ClusterPrice } from './cluster-prices'
 import type { BaseRename } from './gem-bases'
 import { applyWeights, filterBases } from './weights'
+import { applyCurrency } from './currency-weights'
+import type { CurrencyItem } from './currency-weights'
 import type { BaseRow } from './weights'
 
 // The safety net's rule names (safetyBlocks): items, uniques, stacks20...
@@ -80,13 +82,20 @@ export interface Composed {
   weightChars: number
   // The bases the weights were written from (empty when off).
   weightBases: BaseRow[]
+  // Rules the currency weights wrote (0 when off), about how many
+  // characters, and the items they priced.
+  currencyRules: number
+  currencyChars: number
+  currencyItems: CurrencyItem[]
 }
 
 export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const next = parseFilterCopy(text)
   // Rare weights (beta) first, so everything below goes on top of them.
-  const weightBases = cfg.presets.weights.on ? filterBases(next) : []
+  const weightBases = cfg.presets.weights.on ? filterBases(next, cfg.presets.weights.ranks) : []
   const weights = applyWeights(next, cfg.presets.weights, weightBases)
+  // Currency weights (beta) the same way: above everything NeverSink has.
+  const currency = applyCurrency(next, cfg.presets.currency, cfg.prices.lookup)
   // Build rules go in first, so edits to them (restyles) apply on top.
   const input = cfg.build
   let buildCount = 0
@@ -179,5 +188,5 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Again over the net's and restyled rules: one transfigured gem name in a
   // BaseType list and the game refuses to load the whole filter.
   renameBases(next, renameBase)
-  return { doc: next, results, buildCount, netCount, netStackCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)), gearBlocks: gear.blocks, gearReplaced: gear.replaced, clusterSig, weightRules: weights?.blocks.length ?? 0, weightChars: weights?.chars ?? 0, weightBases }
+  return { doc: next, results, buildCount, netCount, netStackCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)), gearBlocks: gear.blocks, gearReplaced: gear.replaced, clusterSig, weightRules: weights?.blocks.length ?? 0, weightChars: weights?.chars ?? 0, weightBases, currencyRules: currency?.blocks.length ?? 0, currencyChars: currency?.chars ?? 0, currencyItems: currency?.items ?? [] }
 }

@@ -13,7 +13,7 @@ const MANIFEST = path.join(DATA, 'data-version.json')
 // Item tooltips and the passive tree: one copy for every language. Keep the
 // list the same as SHARED_FILES in main/src/woke/live-data.ts.
 export const SHARED = ['tips/bases.json', 'tips/base-extras.json', 'tips/drops.json', 'tips/gems.json', 'tips/items.json', 'tips/uniques.json', 'tips/unique-extras.json', 'tips/vestigial.json',
-  'tips/essences.json', 'tips/corpses.json', 'tree/passive-tree.json', 'league/viscera.json', 'mod-tiers.json', 'league/ninja-icons.json', 'league/vaults.json', 'map-bonuses.json']
+  'tips/essences.json', 'tips/corpses.json', 'tips/unique-drop-tiers.json', 'tree/passive-tree.json', 'league/viscera.json', 'mod-tiers.json', 'league/ninja-icons.json', 'league/vaults.json', 'map-bonuses.json']
 
 // Without carriage returns: a Windows checkout can add them, and the files on
 // GitHub don't have them.

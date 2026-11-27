@@ -68,6 +68,32 @@ describe('unique info', () => {
     expect(vestigialSources(['20% to Item Rarity'], vestigial, 'X')).toEqual([])
   })
 
+  it('Shadows and Dust with "+40% to Item Rarity": the exact value names Aurseize', () => {
+    const rawText = [
+      'Item Class: Gloves', 'Rarity: Unique', 'Shadows and Dust', 'Vestigial Clasped Mitts', '--------',
+      'Item Level: 85', '--------',
+      '{ Vestigial Implicit Modifier — Drop }', '+40% to Item Rarity', '--------',
+      '{ Unique Modifier }', 'Creates a Smoke Cloud on Rampage', '(Enemies standing in Smoke Clouds are Blinded)'
+    ].join('\n')
+    expect(vestigialLines(rawText)).toEqual(['+40% to Item Rarity'])
+    expect(uniqueInfo({ ...base, name: 'Shadows and Dust', rawText })!.vestigialFrom).toEqual(['Aurseize'])
+    expect(vestigialSources(['+15% to Item Rarity'], vestigial, 'X')).toEqual(["Sadima's Touch"])
+  })
+
+  it('a skill or support Vestigial mod matches the game wording, not only Path of Building\'s', () => {
+    expect(vestigialSources(['Socketed Gems are Supported by Level 30 Rage'], vestigial, 'X')).toEqual(['Hateforge'])
+    expect(vestigialSources(['Grants Level 20 Will of the Lords Skill'], vestigial, 'X')).toEqual(['Hand of the Lords'])
+    expect(vestigialSources(['Grants Level 20 Summon Harbinger of Focus'], vestigial, 'X')).toEqual(['The Unshattered Will'])
+  })
+
+  it('only uniques of the same slot are named', () => {
+    const gloves = (n: string) => n === 'Aurseize' || n === "Sadima's Touch"
+    // The shield's +35% is not a glove's: the gloves that leave some Item Rarity instead.
+    expect(vestigialSources(['+35% to Item Rarity'], vestigial, 'X')).toEqual(['Wheel of the Stormsail'])
+    expect(vestigialSources(['+35% to Item Rarity'], vestigial, 'X', gloves)).toEqual(['Aurseize', "Sadima's Touch"])
+    expect(vestigialSources(['+40% to Item Rarity'], vestigial, 'X', gloves)).toEqual(['Aurseize'])
+  })
+
   it('a unique with nothing to add gives nothing', () => {
     expect(uniqueInfo({ ...base, name: 'Not A Unique' })).toBeNull()
   })

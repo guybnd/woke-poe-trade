@@ -4,7 +4,7 @@
 // filter can be asked what it does with them.
 import type { ItemFacts } from './item-facts'
 import { BASE_FACTS } from './base-facts'
-import type { BaseRow, Rank, WeightItem, WeightKey } from './weights'
+import type { BaseRow, Rank, WeightItem, WeightKey, WeightRarity } from './weights'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 
 // Points: every +10 doubles (×2 = +10, ×0.5 = -10).
@@ -75,7 +75,15 @@ export const SAMPLES: SampleSpec[] = [
   { label: 'Fated', rank: 'r1', item: { tier: 3, fated: true } },
   { label: 'Mirrored', rank: 'r1', item: { tier: 4, itemLevel: 86, mirrored: true } },
   { label: 'Fractured and influenced', rank: 'r2', item: { tier: 2, fractured: true, influenced: true } },
-  { label: '6-link, corrupted implicit', rank: 'r1', size: 'big', item: { tier: 2, links: 6, corruption: 'implicit' } }
+  { label: '6-link, corrupted implicit', rank: 'r1', size: 'big', item: { tier: 2, links: 6, corruption: 'implicit' } },
+  { label: 'White, rank 1, ilvl 86', rank: 'r1', item: { rarity: 'Normal', tier: 0, itemLevel: 86 } },
+  { label: 'White exotic base', rank: 'x1', item: { rarity: 'Normal', tier: 0, itemLevel: 84 } },
+  { label: 'White, influenced', rank: 'r2', item: { rarity: 'Normal', tier: 0, itemLevel: 85, influenced: true } },
+  { label: 'White, fractured', rank: 'r0', item: { rarity: 'Normal', tier: 0, itemLevel: 83, fractured: true } },
+  { label: 'White, plain', rank: 'r0', item: { rarity: 'Normal', tier: 0, itemLevel: 75 } },
+  { label: 'Magic, rank 1, tier 5', rank: 'r1', item: { rarity: 'Magic', tier: 5, itemLevel: 84 } },
+  { label: 'Magic, plain', rank: 'r2', item: { rarity: 'Magic', tier: 1, itemLevel: 75 } },
+  { label: 'Magic, Eldritch', rank: 'r1', item: { rarity: 'Magic', tier: 2, itemLevel: 86, eldritch: true } }
 ]
 
 const sizeOf = (b: BaseRow): Size => b.width >= 2 && b.height >= 3 ? 'big' : b.height === 1 ? 'tiny' : 'normal'
@@ -101,7 +109,7 @@ export function factsOf (row: BaseRow, it: WeightItem): ItemFacts {
     name: row.name,
     baseType: row.name,
     itemClass: row.cls ?? '',
-    rarity: 'Rare',
+    rarity: it.rarity ?? 'Rare',
     itemLevel: it.itemLevel,
     dropLevel: BASE_FACTS[row.name]?.[0],
     areaLevel: 83,
@@ -110,7 +118,7 @@ export function factsOf (row: BaseRow, it: WeightItem): ItemFacts {
     height: row.height,
     memoryStrands: it.strands,
     socketGroups: groups,
-    identified: false,
+    identified: (it.rarity ?? 'Rare') === 'Normal',
     corrupted: it.corruption !== 'no',
     corruptedMods: it.corruption === 'double' ? 2 : it.corruption === 'implicit' ? 1 : 0,
     mirrored: it.mirrored,
@@ -147,10 +155,14 @@ export function samplePile (bases: BaseRow[], n = 2000, seed = 7): Array<{ row: 
     const lx = r()
     const links = !tall ? 0 : lx < 0.001 ? 6 : lx < 0.011 ? 5 : lx < 0.09 ? 4 : lx < 0.4 ? 3 : 0
     const cx = r()
+    // A guess: half the gear is magic, a third rare, the rest white.
+    const rx = r()
+    const rar: WeightRarity = rx < 0.5 ? 'Magic' : rx < 0.83 ? 'Rare' : 'Normal'
     out.push({
       row,
       it: itemOf(row, {
-        tier: tierAt(r()),
+        rarity: rar,
+        tier: rar === 'Normal' ? 0 : tierAt(r()),
         itemLevel: 68 + Math.floor(r() * 19),
         influenced: pick(0.03),
         eldritch: pick(0.03),
@@ -174,12 +186,17 @@ export function samplePile (bases: BaseRow[], n = 2000, seed = 7): Array<{ row: 
 
 // The chip for one multiplier: a short name for the row it comes from.
 export const CHIP_LABEL: Partial<Record<WeightKey, string>> = {
+  wr: 'Rare',
+  wm: 'Magic',
+  wn: 'White',
+  w86: 'Craft 86',
   x1: 'Exotic top',
   x2: 'Exotic',
   r1: 'Rank 1',
   r2: 'Rank 2',
   r3: 'Rank 3',
   r0: 'No rank',
+  rj: "Don't care",
   i68: 'ilvl 68-74',
   i75: 'ilvl 75-82',
   i83: 'ilvl 83-85',
@@ -215,7 +232,7 @@ export function sampleTip (row: BaseRow, it: WeightItem): ItemTipRef {
     it.strands >= 70 && `Memory Strands: ${it.strands}`,
     it.enchanted && 'Enchanted',
     it.crucible && 'Crucible passive tree',
-    it.tier ? `Unidentified (Tier ${it.tier})` : 'Unidentified'
+    it.rarity !== 'Normal' && (it.tier ? `Unidentified (Tier ${it.tier})` : 'Unidentified')
   ].filter((x): x is string => !!x)
   const implicits = [
     ...(it.eldritch ? ['Searing Exarch implicit'] : []),
@@ -228,7 +245,7 @@ export function sampleTip (row: BaseRow, it: WeightItem): ItemTipRef {
     content: {
       kind: 'item',
       item: {
-        rarity: 'RARE',
+        rarity: it.rarity === 'Normal' ? 'NORMAL' : it.rarity === 'Magic' ? 'MAGIC' : 'RARE',
         name: row.name,
         base: row.name,
         sockets: it.abyssal ? `${sockets}${sockets ? ' ' : ''}A` : sockets,
@@ -243,4 +260,35 @@ export function sampleTip (row: BaseRow, it: WeightItem): ItemTipRef {
       }
     }
   }
+}
+
+// A pasted item (Ctrl+C in game) as the weights see it; null when it isn't
+// white, magic or rare gear on a base the table knows.
+export function pastedRare (facts: ItemFacts, bases: BaseRow[]): { row: BaseRow, it: WeightItem } | null {
+  if (!(facts.rarity === 'Rare' || facts.rarity === 'Magic' || facts.rarity === 'Normal') || !facts.baseType) return null
+  const row = bases.find(b => b.name === facts.baseType)
+  if (!row) return null
+  const groups = facts.socketGroups ?? []
+  const links = Math.max(0, ...groups.map(g => g.replace(/A/g, '').length))
+  const cm = facts.corruptedMods ?? 0
+  const it = itemOf(row, {
+    rarity: facts.rarity,
+    tier: facts.unidentifiedItemTier ?? 0,
+    itemLevel: facts.itemLevel ?? 68,
+    influenced: facts.influences.length > 0,
+    eldritch: (facts.exarchTier ?? 0) > 0 || (facts.eaterTier ?? 0) > 0,
+    quality: facts.quality ?? 0,
+    fractured: !!facts.fractured,
+    synthesised: !!facts.synthesised,
+    fated: !!facts.fated,
+    mirrored: !!facts.mirrored,
+    abyssal: groups.some(g => g.includes('A')),
+    strands: facts.memoryStrands ?? 0,
+    enchanted: !!facts.anyEnchantment,
+    crucible: !!facts.crucibleTree,
+    links: links >= 3 ? links : 0,
+    rgb: groups.some(g => /R/.test(g) && /G/.test(g) && /B/.test(g)),
+    corruption: !facts.corrupted ? 'no' : cm >= 2 ? 'double' : cm === 1 ? 'implicit' : 'plain'
+  })
+  return { row, it }
 }

@@ -30,11 +30,17 @@ describe('arrangeSections', () => {
     expect(first('market', [tools[0]])).toEqual(tools[0])
     expect(EXAMPLES.find(e => e.query === 'market')!.shows).toBe('Opens Market')
   })
-  it('keeps prices ahead of a tool named like the query', () => {
+  it('puts a tool named like the query ahead of prices (pick B)', () => {
+    const price = (name: string): E => ({ id: `p:${name}`, name })
+    const finder = { id: 't:we', name: "Watcher's Eye finder" }
+    expect(first('watcher', [finder], [price("Watcher's Eye"), price('Vivid Watcher')])).toEqual(finder)
+    expect(first('essence', [{ id: 't:essence', name: 'Essence scan' }], [price('Deafening Essence of Greed')])!.name).toBe('Essence scan')
+  })
+  it('keeps prices first for an exact item name, a short query or a looser match', () => {
     const price = (name: string): E => ({ id: `p:${name}`, name })
     expect(first('stacked deck', [{ id: 't:decks', name: 'Stacked decks' }], [price('Stacked Deck')])!.name).toBe('Stacked Deck')
-    expect(first('essence', [{ id: 't:essence', name: 'Essence scan' }], [price('Deafening Essence of Greed')])!.name).toBe('Deafening Essence of Greed')
     expect(first('reg', [{ id: 't:regex', name: 'Regex library' }], [price('Regal Orb')])!.name).toBe('Regal Orb')
+    expect(first('eye', [{ id: 't:we', name: "Watcher's Eye finder" }], [price("Watcher's Eye")])!.name).toBe("Watcher's Eye")
   })
   it('puts the tool ahead of lookup cards', () => {
     const sections = arrangeSections<E>('market', {

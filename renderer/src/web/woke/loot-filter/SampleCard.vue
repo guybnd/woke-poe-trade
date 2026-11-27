@@ -52,7 +52,8 @@
       </div>
       <div v-if="match.final && !focused" class="text-xs w-faint" style="margin-top: -8px;">Move the mouse onto this card, then press 1-5.</div>
 
-      <GearRankStrip :store="store" :config="config" :facts="facts" />
+      <WeightRankStrip :store="store" :config="config" :facts="facts" />
+      <GearRankStrip v-if="!config.presets.weights.on" :store="store" :config="config" :facts="facts" />
       <DropUniques :store="store" :config="config" :facts="facts" />
 
       <template v-if="match.final">
@@ -207,6 +208,7 @@ import type { StylePatch } from './edits'
 import { ownActions } from './look'
 import { byPrice, findBase, groupName, pickBases } from './groups'
 import GearRankStrip from './GearRankStrip.vue'
+import WeightRankStrip from './WeightRankStrip.vue'
 
 const props = defineProps<{
   store: LootFilterStore
