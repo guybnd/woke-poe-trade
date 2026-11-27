@@ -45,6 +45,35 @@
         </button>
       </div>
     </div>
+    <div v-else-if="flask" :class="$style.body" data-score-flask>
+      <div :class="$style.top">
+        <LabelPreview :text="facts.baseType ?? facts.name" :actions="match.actions" :visibility="match.visibility" :scale="1.15" />
+        <span class="grow" />
+        <span :class="$style.verdict" :style="{ color: STEP_CSS[flask.step] }">{{ STEP_NAMES[flask.step] }}</span>
+      </div>
+      <div :class="$style.sum">
+        Score <b :style="{ color: STEP_CSS[Math.max(1, flask.step)] }">{{ pointsText(points(flask.weight)) }}</b>
+        <span class="w-dim">· line {{ pointsText(points(w.need)) }}</span>
+      </div>
+      <div :class="$style.terms" data-no-item-tip="the parts of the flask's score; the flask itself is named in the card title">
+        <div v-for="t in flask.terms" :key="t.label" :class="$style.term">
+          <span class="grow">{{ t.label }}</span>
+          <span :class="$style.pts">×{{ t.x }}</span>
+        </div>
+      </div>
+      <div :class="$style.rank">
+        <span class="text-xs w-dim">Rank of {{ flask.base }}</span>
+        <div class="flex flex-wrap gap-1">
+          <button v-for="r in FLASK_RANK_LABELS" :key="r.value" type="button" :class="[$style.lane, flask.rank === r.value && $style.laneOn]" :aria-pressed="flask.rank === r.value"
+            @click="setFlaskRank(r.value)">{{ r.label }}</button>
+        </div>
+      </div>
+      <div :class="$style.keys" role="toolbar" aria-label="Quick changes">
+        <button v-for="q in quick.slice(3)" :key="q.key" type="button" :class="$style.key" :title="q.title" @click="q.run()">
+          <span :class="$style.cap">{{ q.key }}</span><span>{{ q.label }}</span>
+        </button>
+      </div>
+    </div>
     <div v-else class="w-faint text-sm">Rare weights don't decide this item.</div>
   </WPanel>
 </template>
@@ -63,6 +92,8 @@ import { RANK_KEYS, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, counte
 import type { WeightKey } from './weights'
 import { points, pointsText } from './weight-samples'
 import { rankStep, setWeightRank, weightRow } from './weight-rank'
+import { FLASK_ILVL, FLASK_QUALITY, flaskRank, flaskStep, flaskWeight } from './flask-weights'
+import type { RankKey } from './weight-settings'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -75,10 +106,34 @@ const emit = defineEmits<{
   (e: 'neversink'): void
 }>()
 
-const STEP_CSS = ['#8a8a8a', '#a8a8a8', '#d8d877', '#29d2a0', '#e04848']
+// Beam is blue in the filter (red is kept for sure-profit drops).
+const STEP_CSS = ['#8a8a8a', '#a8a8a8', '#d8d877', '#29d2a0', '#5a9cff']
 const w = computed(() => props.config.presets.weights)
 const got = computed(() => weightRow(props.store, props.config, props.facts))
 const pts = computed(() => got.value ? points(weightOf(got.value.it, w.value.mult)) : 0)
+// A utility flask the Equipment tab's Flasks scores: rank × quality × item level.
+const FLASK_RANK_LABELS: Array<{ value: RankKey, label: string }> = [{ value: 'r1', label: 'Top' }, { value: 'r2', label: 'Good' }, { value: 'r3', label: 'Low' }, { value: 'rj', label: "Don't care" }]
+const flask = computed(() => {
+  if (got.value || !props.match.final?.block.tier?.startsWith('flask')) return null
+  const base = props.facts.baseType ?? props.facts.name
+  const quality = props.facts.quality ?? 0
+  const ilvl = props.facts.itemLevel ?? 0
+  const rank = flaskRank(w.value, base)
+  return {
+    base,
+    rank,
+    weight: flaskWeight(w.value, base, quality, ilvl),
+    step: flaskStep(w.value, base, quality, ilvl),
+    terms: [
+      { label: `Rank: ${FLASK_RANK_LABELS.find(r => r.value === rank)?.label ?? rank}`, x: w.value.mult[rank] },
+      { label: `Quality ${quality}%`, x: FLASK_QUALITY.find(b => quality >= b.at)!.x },
+      { label: `Item level ${ilvl}`, x: FLASK_ILVL.find(b => ilvl >= b.at)!.x }
+    ]
+  }
+})
+function setFlaskRank (r: RankKey) {
+  if (flask.value) w.value.ranks = { ...w.value.ranks, [flask.value.base]: r }
+}
 const step = computed(() => got.value ? stepFor(got.value.it, w.value) : 0)
 const GROUP_OF = Object.fromEntries(WEIGHT_GROUPS.flatMap(g => g.rows.map(r => [r.key, g]))) as Record<WeightKey, typeof WEIGHT_GROUPS[number]>
 const ICON_OF = Object.fromEntries(WEIGHT_GROUPS.flatMap(g => g.rows.map(r => [r.key, g.icon]))) as Record<WeightKey, string>
@@ -109,7 +164,7 @@ const quick = computed(() => {
     { key: '1', label: "Don't care", title: 'Rank this base as Don\'t care (a strong mark still shows it)', disabled: !row || row.rank === 'rj', run: () => row && setWeightRank(props.config, row, 'rj') },
     { key: '2', label: 'Lower rank', title: lower ? `Down to ${WEIGHT_LABEL[lower]}` : 'Already the lowest rank', disabled: !lower, run: () => row && lower && setWeightRank(props.config, row, lower) },
     { key: '3', label: 'Raise rank', title: higher ? `Up to ${WEIGHT_LABEL[higher]}` : 'Already the top rank', disabled: !higher, run: () => row && higher && setWeightRank(props.config, row, higher) },
-    { key: '4', label: 'Tune', title: 'Open Rare weights in the editor', disabled: false, run: () => emit('open-editor', { type: WEIGHT_TYPE, tier: 'weights' }) },
+    { key: '4', label: 'Tune', title: flask.value ? 'Open Flasks on the Equipment tab' : 'Open Rare weights in the editor', disabled: false, run: () => emit('open-editor', { type: WEIGHT_TYPE, tier: flask.value ? 'flask' : 'weights' }) },
     { key: '5', label: 'NeverSink view', title: 'The filter rule card, as without weights', disabled: false, run: () => emit('neversink') }
   ]
 })

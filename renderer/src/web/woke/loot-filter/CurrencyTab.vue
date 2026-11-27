@@ -136,7 +136,7 @@
 // Currency weights (beta, currency-weights.ts), Guy's design A (2026-11-27):
 // the steps and where they start, one ground pile, then every item in its
 // category, each with the stack it needs for each step and an editor.
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { WButton, WChip, WIcon, WInfo, WItemRow, WSegmented, WToggle } from '../ui'
 import CurrencyPile from './CurrencyPile.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
@@ -158,7 +158,9 @@ const props = withDefaults(defineProps<{
   config: LootFilterWidget
   // The Loot tab's class: Currency or Fragments, one engine and one ladder.
   kind?: LootKind
-}>(), { kind: 'currency' })
+  // An item to open and scroll to (Alt+F's "Open on the Loot tab").
+  focusItem?: string | null
+}>(), { kind: 'currency', focusItem: null })
 const KIND_NAME: Record<LootKind, string> = { currency: 'currency', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems' }
 const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.kind))
 
@@ -290,6 +292,13 @@ function toggle (id: string) {
 }
 
 const sel = ref<string | null>(null)
+// Once its item is listed (prices can come in after the tab opens).
+let focused: string | null = null
+watch([() => props.focusItem, () => items.value.length], ([name]) => {
+  if (!name || name === focused || !items.value.some(i => i.name === name)) return
+  focused = name
+  goTo(name).catch(() => {})
+}, { immediate: true })
 async function goTo (name: string) {
   const it = items.value.find(i => i.name === name)
   if (!it) return
