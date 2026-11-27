@@ -9,8 +9,8 @@ export const CURRENCY_TYPE = 'woke->currency'
 // The line: a pile worth less than this (in chaos, after the stack bias) hides.
 export const LINE_MIN = 0.1
 export const LINE_MAX = 10
-// A category's nudge: each notch doubles (see less) or halves (see more) the line.
-export const NUDGE_MAX = 3
+// A category's strictness: each notch ×1.25 (stricter) or ÷1.25 on every step's price.
+export const NUDGE_MAX = 4
 // The strictness multiplier on every step's price (Guy 2026-11-27): it
 // follows NeverSink's strictness, ×1.25 a level, until set by hand in 0.05s.
 export const MULT_MIN = 0.25
