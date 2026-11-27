@@ -208,7 +208,8 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         chaos: (own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess)) * (edits[name]?.mult ?? 1),
         est: own == null && !priced,
         ...(own != null ? { own: true } : {}),
-        ...(own == null && (p == null || !(p.chaos > 0)) && isFree(name, b.type, b.tier) ? { free: true } : {}),
+        // Odd items with no solid price (none, or a thin one) always show.
+        ...(own == null && !priced && isFree(name, b.type, b.tier) ? { free: true } : {}),
         // Fragments don't stack: one is the whole pile.
         full: frags && !thread ? 1 : fullStack(name)
       })
