@@ -203,8 +203,8 @@ describe('currency weights', () => {
     expect(stepStarts(less, 'oils')[0]).toBe(1)
     const items = currencyItems(parseFilter(SEMI), lookup)
     const alch = items.find(i => i.name === 'Orb of Alchemy')!
-    // 0.3c (a full stack is 6c, under Decent: discounted): shows from 5 at 1c; at 4c a full stack isn't enough.
-    expect(stacksFor(alch, base)[0]).toBe(5)
+    // 0.3c (a full stack is 6c, over Decent: full value): shows from 4 at 1c; a 4c line sits above Normal, so Small never applies.
+    expect(stacksFor(alch, base)[0]).toBe(4)
     expect(stacksFor(alch, less)[0]).toBeNull()
   })
 
