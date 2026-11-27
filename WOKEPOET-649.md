@@ -58,6 +58,15 @@ history:
     date: '2026-11-27T04:36:36.725Z'
     selfAttested: true
     id: c-2026-11-27t04-36-36-725z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 985 merged (https://github.com/guybnd/woke-poe-trade/pull/985,
+      eff80d3): Rare weights reroll random rares, Ctrl+V paste your own, mark
+      borders and a score on each label.
+    date: '2026-11-27T05:22:05.861Z'
+    selfAttested: true
+    id: c-2026-11-27t05-22-05-861z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/976'
 ---
 Epic: reimagine the loot filter as a clear visual funnel that shows how it decides. Design only, nothing built yet: 8 design options waiting on Guy's picks. Subtasks come after the picks.
