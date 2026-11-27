@@ -189,6 +189,7 @@ export const CHIP_LABEL: Partial<Record<WeightKey, string>> = {
   wr: 'Rare',
   wm: 'Magic',
   wn: 'White',
+  w86: 'Craft 86',
   x1: 'Exotic top',
   x2: 'Exotic',
   r1: 'Rank 1',

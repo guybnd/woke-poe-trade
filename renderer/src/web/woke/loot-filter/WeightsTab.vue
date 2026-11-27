@@ -251,6 +251,7 @@ const DECO_W = 22
 const TAG_TEXT: Partial<Record<WeightKey, string>> = {
   wm: 'Magic',
   wn: 'White',
+  w86: 'Craft 86',
   i68: '',
   i75: '',
   i83: '',
