@@ -4,21 +4,25 @@
        step starts at. -->
   <div v-if="it" :class="$style.card" data-currency-card>
     <div :class="$style.top">
-      <button type="button" :class="$style.cat" class="w-focusable" :style="{ '--c': catCss }" :title="`Open ${catName} on the Currency weights tab`" data-currency-card-cat
+      <button type="button" :class="$style.cat" class="w-focusable" :style="{ '--c': catCss }" :title="`Open ${catName} on the Loot tab`" data-currency-card-cat
         @click="emit('open-tab')"><i aria-hidden="true" />{{ catName }}</button>
       <span class="grow" />
       <span class="text-xs w-dim">{{ chaosText(base) }} each · {{ edit.price != null ? 'your price' : it.est ? 'guess' : 'poe.ninja' }}<template v-if="stack > 1"> · stack {{ stack }}/{{ Math.max(stack, it.full) }}</template></span>
     </div>
 
-    <div :class="$style.row">
-      <span :class="$style.lab">Show</span>
+    <div :class="$style.row" data-currency-card-section>
+      <span :class="$style.lab">{{ catName }}</span>
+      <WSegmented :model-value="secMode" :options="SECTION_MODES" @update:model-value="setSecMode" />
+    </div>
+    <div :class="$style.row" data-currency-card-item>
+      <span :class="$style.lab">This item</span>
       <WSegmented :model-value="mode" :options="MODES" @update:model-value="setMode" />
     </div>
 
     <div :class="$style.row">
       <span :class="$style.lab">Worth ×</span>
       <span class="text-xs w-faint">penalty</span>
-      <input type="range" :min="MULT_MIN" :max="MULT_MAX" step="0.05" :value="dragMult ?? mult" :class="$style.range" :disabled="mode !== 'auto'"
+      <input type="range" :min="MULT_MIN" :max="MULT_MAX" step="0.05" :value="dragMult ?? mult" :class="$style.range" :disabled="mode !== 'auto' || secMode === 'off'"
         aria-label="Worth multiplier for this item" data-currency-card-mult
         @input="dragMult = Number(($event.target as HTMLInputElement).value)" @change="commitMult(($event.target as HTMLInputElement).value)">
       <span class="text-xs w-faint">bonus</span>
@@ -43,7 +47,7 @@
       <CurrencyItemEditor v-if="open.more" :it="it" :edit="edit" :step="now" :base-price="base" :base-look="currencyFullLook(now === 0 ? 1 : now, it.cat, cfg)" @change="setEdit" />
     </div>
   </div>
-  <div v-else class="text-xs w-dim">Currency weights writes this rule; open the tab to see its items.</div>
+  <div v-else class="text-xs w-dim">The Loot tab writes this rule; open it to see its items.</div>
 </template>
 
 <script setup lang="ts">
@@ -68,7 +72,10 @@ const props = defineProps<{
 const emit = defineEmits<{ 'open-tab': [] }>()
 
 const open = reactive({ more: useFold('alt-f.currency-more') })
-const MODES = [{ value: 'off', label: 'Off' }, { value: 'auto', label: 'Weighted' }, { value: 'always', label: 'Always' }]
+// The whole category (Guy 2026-11-27: every section has Off / Weighted /
+// Always, and Alt+F sets the section or just the item).
+const SECTION_MODES = [{ value: 'off', label: 'Off' }, { value: 'auto', label: 'Weighted' }, { value: 'always', label: 'Always' }]
+const MODES = [{ value: 'auto', label: 'Same as section' }, { value: 'off', label: 'Off' }, { value: 'always', label: 'Always' }]
 
 const cfg = computed(() => props.config.presets.currency)
 const eff = computed(() => scaled(cfg.value, props.store.doc.value?.strictness ?? null))
@@ -88,6 +95,14 @@ const dragMult = ref<number | null>(null)
 const catName = computed(() => CURRENCY_CATEGORIES.find(x => x.id === it.value?.cat)?.name ?? 'Other')
 const catCss = computed(() => `rgb(${catColour(it.value?.cat ?? 'other', cfg.value).rgb.join(',')})`)
 
+const secMode = computed(() => (it.value && cfg.value.catMode[it.value.cat]) ?? 'auto')
+function setSecMode (v: string) {
+  const cat = it.value?.cat
+  if (!cat) return
+  const next = Object.fromEntries(Object.entries(cfg.value.catMode).filter(([k]) => k !== cat))
+  if (v === 'off' || v === 'always') next[cat] = v
+  cfg.value.catMode = next
+}
 const mode = computed(() => edit.value.step === 0 ? 'off' : edit.value.supply === 1 && edit.value.step == null ? 'always' : 'auto')
 const stacks = computed(() => it.value ? stacksFor(it.value, eff.value) : [null, null, null, null, null])
 const now = computed<CStep>(() => stepOfPile(stacks.value, props.stack))
@@ -105,6 +120,7 @@ const rows = computed<Row[]>(() => !it.value
 const nowLine = computed(() => {
   const s = now.value
   if (mode.value === 'off') return 'Off: no pile of it shows.'
+  if (secMode.value === 'off' && mode.value !== 'always') return `Off: ${catName.value} is off.`
   const next = rows.value.find(r => r.step > s && r.from != null)
   const pile = props.stack > 1 ? `A pile of ${props.stack}` : 'One'
   return `${pile} is ${CSTEP_NAMES[s]}${next ? `; ${CSTEP_NAMES[next.step]} from a stack of ${next.from}` : ''}.`

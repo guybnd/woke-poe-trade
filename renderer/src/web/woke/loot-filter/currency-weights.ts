@@ -26,8 +26,8 @@ import { topStepActions } from './top-step'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
 import type { CStep, CurrencySettings, ItemEdit } from './currency-settings'
 
-export { CURRENCY_TYPE, CSTEP_NAMES, LINE_MIN, LINE_MAX, NUDGE_MAX, MULT_MIN, MULT_MAX, defaultCurrency, normalizeCurrency } from './currency-settings'
-export type { CStep, CurrencySettings, ItemEdit } from './currency-settings'
+export { CURRENCY_TYPE, CSTEP_NAMES, FAINT_UNTIL, LINE_MIN, LINE_MAX, NUDGE_MAX, MULT_MIN, MULT_MAX, defaultCurrency, normalizeCurrency } from './currency-settings'
+export type { CStep, CurrencySettings, FaintSettings, ItemEdit, SectionMode } from './currency-settings'
 
 // NeverSink's currency types this step covers.
 const SCOPE = /^(currency(->(essence|fossil|oil|deliriumorbs|trial->omen|trial->tattoo|ducats|others|deadmansulphur|harvest|heist|splinter|splinter->simulacrum))?|mapenchantments|runesgrafts)$/
@@ -278,8 +278,12 @@ export function minStack (it: Pick<CurrencyItem, 'chaos' | 'full'>, at: number, 
 export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number | null> {
   const e = c.items[it.name]
   if (e?.step != null) return [1, 2, 3, 4, 5].map(s => s === e.step ? 1 : null)
+  // Its category set by hand: Off hides it unless the item itself is
+  // Always; Always shows every pile at least Small.
+  const mode = c.catMode?.[it.cat]
+  if (mode === 'off' && e?.supply !== 1) return [null, null, null, null, null]
   const out = stepStarts(c, it.cat).map(at => minStack(it, at, c.from[1]))
-  const supply = e?.supply ?? (it.free ? 1 : null)
+  const supply = e?.supply ?? (it.free || mode === 'always' ? 1 : null)
   if (supply != null) {
     const f = Math.min(supply, it.full)
     out[0] = out[0] == null ? f : Math.min(out[0], f)
@@ -289,6 +293,34 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   // A step turned off: piles that would get it hide (an item's own step stays).
   for (const s of c.off ?? []) if (s >= 1 && s <= 4) out[s - 1] = null
   return out
+}
+
+// Hidden by hand, so never Faint either: the item's own Off, or its
+// category's Off without the item's own Always.
+export function forcedHidden (it: Pick<CurrencyItem, 'name' | 'cat'>, c: Pick<CurrencySettings, 'items' | 'catMode'>): boolean {
+  const e = c.items[it.name]
+  return e?.step === 0 || (c.catMode?.[it.cat] === 'off' && e?.supply !== 1 && e?.step == null)
+}
+
+// The Strictness multiplier in force: the player's own, or the filter's level's.
+export function multOf (c: Pick<CurrencySettings, 'mult'>, strictness: string | null): number {
+  return c.mult ?? strictMult(levelOf(strictness))
+}
+// Faint is on while the multiplier is under its "until" (Guy's T1).
+export function faintOn (c: Pick<CurrencySettings, 'mult' | 'faint'>, strictness: string | null): boolean {
+  return !!c.faint?.on && multOf(c, strictness) < c.faint.until
+}
+// Faint's look (Guy's X1): the category colour at 40% opacity, small text,
+// no box, no sound.
+export function faintLook (rgb: readonly number[]): StylePatch {
+  return {
+    fontSize: 20,
+    text: [rgb[0], rgb[1], rgb[2], 100],
+    border: [0, 0, 0, 0],
+    background: [0, 0, 0, 0],
+    icon: null,
+    effect: null
+  }
 }
 
 // The step a pile of `stack` gets.
@@ -417,12 +449,21 @@ function block (step: CStep, conds: FilterCondition[], note: string, look?: Item
   return b
 }
 
+function faintBlock (conds: FilterCondition[], cat: string, rgb: readonly number[]): FilterBlock {
+  const b = block(1, conds, '')
+  b.tier = 'faint'
+  b.comment = `$type->${CURRENCY_TYPE} $tier->faint woke: currency weights, faint: ${cat}`
+  b.actions = [a('SetFontSize', 20), a('DisableDropSound', 'True')]
+  applyStyle(b, faintLook(rgb))
+  return b
+}
+
 export function divineChaos (items: CurrencyItem[]): number {
   const d = items.find(i => i.name === 'Divine Orb')
   return d && !d.est ? d.chaos : 150
 }
 
-export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[]): CurrencyCompiled {
+export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], opts: { faint?: boolean } = {}): CurrencyCompiled {
   const blocks: FilterBlock[] = []
   const stacks = new Map(items.map(it => [it.name, stacksFor(it, cfg)]))
   const area = c('AreaLevel', '>=', [68])
@@ -469,7 +510,15 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[]): 
     if (g.k > 1) conds.push(c('StackSize', '>=', [g.k]))
     blocks.push(block(g.step, conds, [g.cat, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', '), currencyLook(g.step, g.cat, cfg)))
   }
-  if (items.length) blocks.push(block(0, [area, clsCond(items), c('BaseType', '==', items.map(i => i.name).sort())], 'under the line'))
+  // Under the line: Faint in the category colour (Guy's T1, X1) while it's
+  // on, except what was hidden by hand; otherwise hidden.
+  if (opts.faint) {
+    const forced = items.filter(it => forcedHidden(it, cfg))
+    if (forced.length) blocks.push(block(0, [area, clsCond(forced), c('BaseType', '==', forced.map(i => i.name).sort())], 'off, set by hand'))
+    const byCat = new Map<string, CurrencyItem[]>()
+    for (const it of items) if (!forcedHidden(it, cfg)) byCat.set(it.cat, [...(byCat.get(it.cat) ?? []), it])
+    for (const [cat, list] of byCat) blocks.push(faintBlock([area, clsCond(list), c('BaseType', '==', list.map(i => i.name).sort())], cat, catColour(cat, cfg).rgb))
+  } else if (items.length) blocks.push(block(0, [area, clsCond(items), c('BaseType', '==', items.map(i => i.name).sort())], 'under the line'))
   const chars = blocks.reduce((n, b) => n + 160 + b.conditions.reduce((m, x) => m + x.key.length + 12 + x.values.reduce((k, v) => k + v.length + 3, 0), 0), 0)
   return { blocks, items, chars }
 }
@@ -481,7 +530,7 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   if (!cfg.on || !lookup) return null
   const items = currencyItems(doc, lookup, cfg.items)
   if (!items.length) return null
-  const compiled = compileCurrency(scaled(cfg, doc.strictness), items)
+  const compiled = compileCurrency(scaled(cfg, doc.strictness), items, { faint: faintOn(cfg, doc.strictness) })
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
   const at = first < 0 ? doc.chunks.length : first
   doc.chunks.splice(at, 0, ...compiled.blocks)

@@ -21,17 +21,25 @@
     </div>
 
     <div :class="$style.steps" role="group" aria-label="Where each step starts">
-      <div v-for="s in [0, 1, 2, 3, 4, 5]" :key="s" :class="[$style.step, { [$style.stepOff]: c.off.includes(s) }]" :style="{ '--step': STEP_CSS[s] }">
-        <span :class="$style.stepName">{{ CSTEP_NAMES[s] }}
+      <div v-for="s in [0, 1, 2, 3, 4, 5]" :key="s" :class="[$style.step, { [$style.stepOff]: s === 0 ? !faintActive : c.off.includes(s) }]" :style="{ '--step': STEP_CSS[s] }">
+        <span :class="$style.stepName">{{ s === 0 ? 'Faint' : CSTEP_NAMES[s] }}
           <button v-if="s > 0" type="button" :class="[$style.lookBtn, { [$style.lookOn]: stepEdit === s }]" :aria-expanded="stepEdit === s" :aria-label="`${CSTEP_NAMES[s]} look and sound`"
             @click="stepEdit = stepEdit === s ? null : s as CStep"><i class="fas fa-pen" aria-hidden="true" /> Look<i v-if="c.steps[s]" :class="$style.dot" aria-hidden="true" /></button></span>
-        <span v-if="s === 0" class="w-faint text-xs">under the line</span>
+        <template v-if="s === 0">
+          <span class="w-faint text-xs">under the line</span>
+          <label :class="$style.from" data-loot-faint-until>until
+            <select :value="c.faint.until" :class="$style.sel2" aria-label="Faint shows while Strictness is under this" :disabled="!c.faint.on" @change="c.faint = { ...c.faint, until: Number(($event.target as HTMLSelectElement).value) }">
+              <option v-for="u in FAINT_UNTILS" :key="u.v" :value="u.v">{{ u.label }}</option>
+            </select></label>
+          <span :class="$style.stepSample"><LabelPreview :text="catArt(sampleCat)" :actions="[]" :style-override="faintSample" visibility="Show" :extras="false" :scale="0.85" /></span>
+          <label :class="$style.offTog" :title="faintActive ? 'Faint shows now' : c.faint.on ? 'Off at this Strictness' : ''"><input type="checkbox" :checked="c.faint.on" aria-label="Show Faint" data-loot-faint @change="c.faint = { ...c.faint, on: !c.faint.on }"> Show<span v-if="c.faint.on && !faintActive" class="w-faint"> · off now</span></label>
+        </template>
         <label v-else-if="s === 1" :class="$style.from">from
           <input :value="c.line" type="number" :min="LINE_MIN" :max="LINE_MAX" step="0.1" :class="$style.numIn" aria-label="Small from this many chaos (the line)" @change="setLine($event.target as HTMLInputElement)"> c<span v-if="mult !== 1" :class="$style.eff">= {{ chaosText(eff.line) }}</span></label>
         <label v-else :class="$style.from">from
           <input :value="c.from[s - 2]" type="number" min="0.1" step="any" :class="$style.numIn" :aria-label="`${CSTEP_NAMES[s]} from this many chaos`"
             @change="setFrom(s - 2, $event.target as HTMLInputElement)"> c<span v-if="mult !== 1" :class="$style.eff">= {{ chaosText(eff.from[s - 2]) }}</span></label>
-        <span class="w-faint text-xs">{{ STEP_NOTE[s] }}</span>
+        <span v-if="s > 0" class="w-faint text-xs">{{ STEP_NOTE[s] }}</span>
         <button v-if="s > 0" type="button" :class="$style.stepSample" :title="`${catName(sampleCat)} at ${CSTEP_NAMES[s]}: click for another category`" :aria-label="`Show ${CSTEP_NAMES[s]} for another category`" data-currency-step-sample @click="nextSample">
           <LabelPreview :text="stepSample[s] ?? catArt(sampleCat)" :actions="[]" :style-override="currencyFullLook(s as CStep, sampleCat, c)" visibility="Show" :extras="false" :scale="0.85" />
         </button>
@@ -53,7 +61,7 @@
         @patch="p => setStepLook(stepEdit!, { ...c.steps[stepEdit!], ...loudOnly(p) })" />
     </div>
 
-    <CurrencyPile v-if="baseItems.length" :items="items" :cfg="eff" @go="goTo" />
+    <CurrencyPile v-if="baseItems.length" :items="items" :cfg="eff" :faint="faintActive" @go="goTo" />
 
     <div :class="$style.tools">
       <input v-model="query" type="search" placeholder="Find an item" :class="$style.search" aria-label="Find an item">
@@ -88,6 +96,9 @@
             <option v-for="col in POE_COLOURS" :key="col" :value="col" :style="{ color: col.toLowerCase() }">● {{ col }}</option>
           </select>
           <button v-if="c.cats[g.cat.id]" type="button" class="w-icon-btn" :title="`${g.cat.name} back to its own colours`" :aria-label="`Reset ${g.cat.name} colours`" @click="setCatLook(g.cat.id, null)"><i class="fas fa-undo" /></button>
+        </span>
+        <span :class="$style.secMode" data-loot-section-mode @click.stop @keydown.stop>
+          <WSegmented :model-value="c.catMode[g.cat.id] ?? 'auto'" :options="SECTION_MODES" role="group" :aria-label="`${g.cat.name}: Off, Weighted or Always`" @update:model-value="v => setCatMode(g.cat.id, v)" />
         </span>
         <label :class="$style.whole" :title="`${g.cat.name}' own strictness: multiplies every step's price for them, on top of the main Strictness`" @click.stop @keydown.stop>Strictness
           <select :value="c.nudge[g.cat.id] ?? 0" :class="$style.sel2" :aria-label="`${g.cat.name} strictness`" @change="setNudge(g.cat.id, Number(($event.target as HTMLSelectElement).value))">
@@ -136,7 +147,7 @@
 // the steps and where they start, one ground pile, then every item in its
 // category, each with the stack it needs for each step and an editor.
 import { computed, nextTick, ref } from 'vue'
-import { WButton, WChip, WIcon, WInfo, WItemRow, WToggle } from '../ui'
+import { WButton, WChip, WIcon, WInfo, WItemRow, WSegmented, WToggle } from '../ui'
 import CurrencyPile from './CurrencyPile.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import LabelPreview from './LabelPreview.vue'
@@ -145,7 +156,7 @@ import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { withEdit, CSTEP_NAMES, CURRENCY_CATEGORIES, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX } from './currency-weights'
+import { withEdit, CSTEP_NAMES, CURRENCY_CATEGORIES, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit } from './currency-weights'
 
@@ -191,12 +202,25 @@ const baseChaos = (name: string) => baseByName.value.get(name)?.chaos ?? 0
 // With your own prices on top.
 const items = computed<CurrencyItem[]>(() => baseItems.value.map(it => withEdit(it, c.value.items[it.name])))
 
+// Every section: Off / Weighted / Always (Guy 2026-11-27).
+const SECTION_MODES = [{ value: 'off', label: 'Off' }, { value: 'auto', label: 'Weighted' }, { value: 'always', label: 'Always' }]
+function setCatMode (cat: string, v: string) {
+  const next = Object.fromEntries(Object.entries(c.value.catMode).filter(([k]) => k !== cat))
+  if (v === 'off' || v === 'always') next[cat] = v
+  c.value.catMode = next
+}
+// Faint (Guy's T1): on below a Strictness you choose.
+const FAINT_UNTILS = [1, FAINT_UNTIL, 1.55, 1.95, 2.45, 99].map(v => ({ v, label: v >= 99 ? 'always' : `×${v.toFixed(2)}` }))
+const faintActive = computed(() => faintOn(c.value, props.store.doc.value?.strictness ?? null))
+const faintSample = computed(() => faintLook(catColour(sampleCat.value, c.value).rgb))
+
 interface Pill { step: CStep, text: string }
-function pillsOf (stacks: Array<number | null>, edit: ItemEdit | undefined): Pill[] {
-  if (stacks.every(k => k == null)) return [{ step: 0, text: edit?.step === 0 ? 'Hidden, set by you' : 'Hidden at any stack' }]
+function pillsOf (stacks: Array<number | null>, edit: ItemEdit | undefined, it: CurrencyItem): Pill[] {
+  const under = forcedHidden(it, c.value) || !faintActive.value ? 'Hidden' : 'Faint'
+  if (stacks.every(k => k == null)) return [{ step: 0, text: edit?.step === 0 ? 'Hidden, set by you' : c.value.catMode[it.cat] === 'off' && under === 'Hidden' ? 'Hidden, section off' : `${under} at any stack` }]
   if (edit?.step != null) return [{ step: edit.step, text: `${CSTEP_NAMES[edit.step]} at any stack, set by you` }]
   const out: Pill[] = []
-  if (stacks[0] != null && stacks[0] > 1) out.push({ step: 0, text: stacks[0] === 2 ? 'Hidden at 1' : `Hidden 1–${stacks[0] - 1}` })
+  if (stacks[0] != null && stacks[0] > 1) out.push({ step: 0, text: stacks[0] === 2 ? `${under} at 1` : `${under} 1–${stacks[0] - 1}` })
   stacks.forEach((k, i) => {
     if (k == null) return
     const next = stacks.slice(i + 1).find(v => v != null)
@@ -210,7 +234,7 @@ const rows = computed(() => items.value
   .map(it => {
     const stacks = stacksFor(it, eff.value)
     const edit = c.value.items[it.name]
-    return { it, one: stepOfPile(stacks, 1), shows: stacks.some(k => k != null), pills: pillsOf(stacks, edit), edited: edit != null }
+    return { it, one: stepOfPile(stacks, 1), shows: stacks.some(k => k != null), pills: pillsOf(stacks, edit, it), edited: edit != null }
   })
   .sort((x, y) => y.it.chaos - x.it.chaos || x.it.name.localeCompare(y.it.name)))
 const shownCount = computed(() => rows.value.filter(r => r.shows).length)
@@ -374,12 +398,12 @@ const statusText = computed(() => {
 
 const changed = computed(() => {
   const d = defaultCurrency()
-  return c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || Object.keys(c.value.nudge).length > 0 || Object.keys(c.value.steps).length > 0 || Object.keys(c.value.cats).length > 0 || c.value.off.length > 0 || c.value.mult != null
+  return Object.keys(c.value.catMode).length > 0 || c.value.faint.on !== d.faint.on || c.value.faint.until !== d.faint.until || c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || Object.keys(c.value.nudge).length > 0 || Object.keys(c.value.steps).length > 0 || Object.keys(c.value.cats).length > 0 || c.value.off.length > 0 || c.value.mult != null
 })
 function reset () {
   const d = defaultCurrency()
   // Your item edits are a list you built: Defaults keeps them.
-  Object.assign(c.value, { line: d.line, from: d.from, nudge: d.nudge, steps: d.steps, cats: d.cats, off: d.off, mult: d.mult })
+  Object.assign(c.value, { line: d.line, from: d.from, nudge: d.nudge, steps: d.steps, cats: d.cats, off: d.off, mult: d.mult, catMode: d.catMode, faint: d.faint })
 }
 
 function chaosText (v: number): string {
@@ -402,6 +426,7 @@ function chaosText (v: number): string {
 }
 :global([data-w-sized]) .wrap { max-height: none; }
 .top, .tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.secMode { display: inline-flex; }
 .beta {
   font-size: var(--w-fs-xs);
   color: var(--w-dim);
