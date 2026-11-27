@@ -33,7 +33,7 @@
             @change="setFrom(s - 2, $event.target as HTMLInputElement)"> c<span v-if="mult !== 1" :class="$style.eff">= {{ chaosText(eff.from[s - 2]) }}</span></label>
         <span class="w-faint text-xs">{{ STEP_NOTE[s] }}</span>
         <button v-if="s > 0" type="button" :class="$style.stepSample" :title="`${catName(sampleCat)} at ${CSTEP_NAMES[s]}: click for another category`" :aria-label="`Show ${CSTEP_NAMES[s]} for another category`" data-currency-step-sample @click="nextSample">
-          <LabelPreview :text="catArt(sampleCat)" :actions="[]" :style-override="currencyFullLook(s as CStep, sampleCat, c)" visibility="Show" :extras="false" :scale="0.85" />
+          <LabelPreview :text="stepSample[s] ?? catArt(sampleCat)" :actions="[]" :style-override="currencyFullLook(s as CStep, sampleCat, c)" visibility="Show" :extras="false" :scale="0.85" />
         </button>
         <label v-if="s >= 1 && s <= 4" :class="$style.offTog"><input type="checkbox" :checked="!c.off.includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]}`" @change="toggleOff(s)"> Show</label>
       </div>
@@ -305,6 +305,19 @@ function nextSample () {
   const ids = CURRENCY_CATEGORIES.map(x => x.id)
   sampleCat.value = ids[(ids.indexOf(sampleCat.value) + 1) % ids.length]
 }
+// Each step card's sample: an item of the picked category that one of shows
+// at that step, the one in the middle of the step's price range (Guy: the
+// sample should be something that really lands there).
+const stepSample = computed(() => {
+  const out: Record<number, string> = {}
+  for (const s of [1, 2, 3, 4, 5]) {
+    const at = rows.value.filter(r => r.one === s && !c.value.items[r.it.name]?.step)
+    const pool = at.filter(r => r.it.cat === sampleCat.value)
+    const list = (pool.length ? pool : at).map(r => r.it).sort((a, b) => a.chaos - b.chaos)
+    if (list.length) out[s] = list[Math.floor(list.length / 2)].name
+  }
+  return out
+})
 const catName = (id: string) => CURRENCY_CATEGORIES.find(x => x.id === id)?.name ?? id
 const catArt = (id: string) => CURRENCY_CATEGORIES.find(x => x.id === id)?.art ?? id
 function loudOnly (p: StylePatch): StylePatch {
