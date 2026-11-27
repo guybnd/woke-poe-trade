@@ -145,6 +145,15 @@ history:
     date: '2026-11-27T10:23:06.929Z'
     selfAttested: true
     id: c-2026-11-27t10-23-06-929z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 1000 (5a0ece4: Currency weights tab redesign) and PR 1002
+      (https://github.com/guybnd/woke-poe-trade/pull/1002, e4335cc: essences by
+      tier, unpriced odd items show, narrower list) merged.
+    date: '2026-11-27T12:05:43.570Z'
+    selfAttested: true
+    id: c-2026-11-27t12-05-43-570z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/976'
 ---
 Epic: reimagine the loot filter as a clear visual funnel that shows how it decides. Design only, nothing built yet: 8 design options waiting on Guy's picks. Subtasks come after the picks.
