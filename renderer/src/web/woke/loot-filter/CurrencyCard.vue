@@ -61,7 +61,7 @@ import WFoldHead from '../ui/WFoldHead.vue'
 import { WSegmented } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
-import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, scaled, sectionMode, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, faintOn, forcedHidden, scaled, sectionMode, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { gemLinesOf } from './gem-classes'
 import { gemItemFor } from './loot-focus'
@@ -141,10 +141,14 @@ const rows = computed<Row[]>(() => !it.value
 const nowLine = computed(() => {
   const s = now.value
   if (mode.value === 'off') return 'Off: no pile of it shows.'
-  if (secMode.value === 'off' && mode.value !== 'always') return `Off: ${catName.value} is off.`
+  // An Off section hides it unless the item shows anyway (its own step,
+  // Always or Collecting): read what the rules give it, not the mode.
+  if (secMode.value === 'off' && stacks.value.every(k => k == null)) return `Off: ${catName.value} is off.`
   const next = rows.value.find(r => r.step > s && r.from != null)
   const pile = props.stack > 1 ? `A pile of ${props.stack}` : 'One'
-  return `${pile} is ${CSTEP_NAMES[s]}${next ? `; ${CSTEP_NAMES[next.step]} from a stack of ${next.from}` : ''}.`
+  // Under the line with Faint on, it shows small and see-through.
+  const name = s === 0 && it.value && faintOn(cfg.value, props.store.doc.value?.strictness ?? null) && !forcedHidden(it.value, cfg.value) ? 'Faint' : CSTEP_NAMES[s]
+  return `${pile} is ${name}${next ? `; ${CSTEP_NAMES[next.step]} from a stack of ${next.from}` : ''}.`
 })
 
 // Collecting (Guy's star N): at least Normal at any stack.
