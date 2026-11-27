@@ -64,6 +64,12 @@ test("an aura in Ctrl+Space opens the Watcher's Eye finder, and Price check sear
   await need(2).click()
   await expect(finder.locator('[data-qa="we-price"]')).toBeEnabled()
 
+  // Save without typing a name: it keeps the setup under a made-up one.
+  await finder.locator('[data-qa="we-save"]').click()
+  await expect(finder.locator('[data-qa="we-save-name"]')).toHaveValue('Hatred, Grace · 2 mods')
+  await finder.locator('[data-qa="we-save-ok"]').click()
+  await expect(finder.locator('[data-qa="we-saved"] option[value="Hatred, Grace · 2 mods"]')).toHaveCount(1)
+
   // Save the setup, change it, and load it back.
   await finder.locator('[data-qa="we-save"]').click()
   await finder.locator('[data-qa="we-save-name"]').fill('Cold crit')

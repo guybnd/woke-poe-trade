@@ -8,6 +8,8 @@
             @update:model-value="loadSaved($event)" />
           <input v-if="naming" ref="nameBox" v-model="saveName" class="w-input" :class="$style.nameInput" placeholder="Name it…" aria-label="Setup name" data-qa="we-save-name"
             @keydown.enter.prevent="saveSetup" @keydown.esc.stop="naming = false" @blur="saveSetup">
+          <WButton v-if="naming" size="sm" variant="ghost" icon="fas fa-check" title="Save" data-qa="we-save-ok"
+            @mousedown.prevent @click="saveSetup" />
           <WButton v-else size="sm" variant="ghost" icon="fas fa-save" :disabled="!shown.size" data-qa="we-save"
             title="Save these auras and picks to look at again" @click="startSave">Save</WButton>
           <WButton v-if="current" size="sm" variant="ghost" icon="fas fa-trash" :title="`Remove ${current}`" data-qa="we-remove-saved" @click="removeSaved" />
@@ -227,8 +229,14 @@ const savedOptions = computed(() => [
   { value: '', label: current.value ?? 'Saved…' },
   ...config.saved.map(s => ({ value: s.name, label: s.name }))
 ])
+// A name to start from, so Save keeps the setup even if no name is typed.
+function defaultName (): string {
+  const auras = shownList.value.join(', ')
+  const n = active.value.length
+  return n ? `${auras} · ${n} mod${n === 1 ? '' : 's'}` : auras
+}
 async function startSave () {
-  saveName.value = current.value ?? ''
+  saveName.value = current.value ?? defaultName()
   naming.value = true
   await nextTick()
   nameBox.value?.focus()
@@ -237,7 +245,7 @@ async function startSave () {
 function saveSetup () {
   if (!naming.value) return
   naming.value = false
-  const name = saveName.value.trim()
+  const name = saveName.value.trim() || defaultName()
   if (!name) return
   const entry = { name, auras: [...shownList.value], picks: active.value.map(p => ({ ...p })), atLeast: need.value }
   config.saved = [...config.saved.filter(s => s.name !== name), entry].sort((a, b) => a.name.localeCompare(b.name))
