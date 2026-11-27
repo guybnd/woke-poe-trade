@@ -96,10 +96,10 @@ export function formatClock (ms: number, hours = false): string {
   return h || hours ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`
 }
 
-// A time of day, "09:05": always two digits for the hour, in the player's
-// own 12 or 24 hour clock.
+// A time of day, "09:05": always 24 hour with two digits, so time columns
+// stay one width on every locale.
 export function formatTimeOfDay (at: number | Date): string {
-  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 }
 
 // "45m" or "2h 05m".
