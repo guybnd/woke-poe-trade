@@ -20,7 +20,8 @@
 import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './parse'
 import { NET_GROUPS } from './economy'
 import type { EconomyGroup, PriceLookup } from './economy'
-import { applyStyle } from './edits'
+import { applyStyle, readStyle } from './edits'
+import type { StylePatch } from './edits'
 import { fullStack } from './stack-sizes'
 import { topStepActions } from './top-step'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
@@ -37,6 +38,8 @@ const TIER_GUESS = [150, 150, 60, 20, 5, 1.5, 0.5, 0.2, 0.1, 0.05]
 const UNTIERED_GUESS = 0.3
 // NeverSink tiers that it hides: worth nothing much.
 const HIDDEN_TIERS = /^(exhide|restex)$/
+// League threads (Breach Thread, Ritual Thread...), from the fragment rules.
+const THREAD = /^[A-Z][a-z]+ Thread$/
 
 // The tab's categories, in order. `art`: an item whose art stands for it.
 export interface CurrencyCategory { id: string, name: string, art: string }
@@ -54,6 +57,7 @@ export const CURRENCY_CATEGORIES: CurrencyCategory[] = [
   { id: 'omens', name: 'Omens', art: 'Omen of Fortune' },
   { id: 'tattoos', name: 'Tattoos', art: 'Journey Tattoo of the Body' },
   { id: 'ducats', name: 'Ducats', art: "Kishara's Ducat" },
+  { id: 'threads', name: 'Threads', art: 'Breach Thread' },
   { id: 'splinters', name: 'Splinters', art: 'Timeless Maraketh Splinter' },
   { id: 'harvest', name: 'Lifeforce', art: 'Sacred Crystallised Lifeforce' },
   { id: 'embers', name: 'Allflame Embers', art: 'Allflame Ember of Kulemak' },
@@ -73,6 +77,7 @@ const BY_TYPE: Record<string, string> = {
   'currency->splinter': 'splinters',
   'currency->splinter->simulacrum': 'splinters',
   'currency->harvest': 'harvest',
+  'fragments': 'threads',
   'mapenchantments': 'embers',
   'runesgrafts': 'runegrafts'
 }
@@ -149,12 +154,14 @@ function thinPrice (p: number, guess: number): number {
 export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits: Record<string, ItemEdit> = {}): CurrencyItem[] {
   const seen = new Map<string, CurrencyItem>()
   for (const b of doc.blocks) {
-    if (!b.type || !SCOPE.test(b.type)) continue
+    // League threads sit in NeverSink's fragment rules; Guy counts them as currency.
+    const threads = b.type === 'fragments'
+    if (!b.type || !(SCOPE.test(b.type) || threads)) continue
     const cls = b.conditions.find(x => x.key === 'Class')?.values ?? []
     const bt = b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))
-    if (!bt || !cls.length || !cls.every(x => /Stackable/.test(x))) continue
+    if (!bt || !cls.length || (!threads && !cls.every(x => /Stackable/.test(x)))) continue
     for (const name of bt.values) {
-      if (seen.has(name)) continue
+      if (seen.has(name) || (threads && !THREAD.test(name))) continue
       // Prices are in chaos, so poe.ninja doesn't list chaos itself.
       const p = name === 'Chaos Orb' ? { chaos: 1, thin: false } : lookup?.(groupOf(b.type), name) ?? null
       const priced = p != null && !p.thin && p.chaos > 0
@@ -162,7 +169,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       const own = edits[name]?.price
       seen.set(name, {
         name,
-        cls: cls.length === 1 ? cls[0] : 'Stackable Currency',
+        cls: threads ? cls.join('|') : cls.length === 1 ? cls[0] : 'Stackable Currency',
         type: b.type,
         tier: b.tier,
         cat: categoryOf(name, b.type),
@@ -247,6 +254,55 @@ export function currencyActions (step: CStep): FilterAction[] {
   }
 }
 
+// Each category's own colour (Guy 2026-11-27: "the colouring all being the
+// same for every item type feels lame"): text on Small to Big, and the map
+// icon's colour and shape where the step has one (Decent, Big). Tink stays
+// the shared red on white.
+export const CAT_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
+  orbs: { text: [235, 210, 150], color: 'Yellow', shape: 'Circle' },
+  influence: { text: [200, 160, 255], color: 'Purple', shape: 'Hexagon' },
+  catalysts: { text: [120, 220, 230], color: 'Cyan', shape: 'Triangle' },
+  atlas: { text: [140, 185, 255], color: 'Blue', shape: 'Diamond' },
+  expedition: { text: [255, 170, 90], color: 'Orange', shape: 'Square' },
+  tainted: { text: [235, 95, 95], color: 'Red', shape: 'Raindrop' },
+  essences: { text: [230, 140, 240], color: 'Pink', shape: 'Moon' },
+  fossils: { text: [220, 205, 175], color: 'Brown', shape: 'Kite' },
+  oils: { text: [255, 200, 90], color: 'Orange', shape: 'Raindrop' },
+  delirium: { text: [215, 215, 230], color: 'White', shape: 'Star' },
+  omens: { text: [150, 200, 255], color: 'Blue', shape: 'Moon' },
+  tattoos: { text: [140, 220, 140], color: 'Green', shape: 'Cross' },
+  ducats: { text: [255, 215, 60], color: 'Yellow', shape: 'Kite' },
+  threads: { text: [240, 160, 220], color: 'Purple', shape: 'Cross' },
+  splinters: { text: [180, 220, 255], color: 'Cyan', shape: 'Star' },
+  harvest: { text: [130, 230, 110], color: 'Green', shape: 'Raindrop' },
+  embers: { text: [255, 130, 60], color: 'Orange', shape: 'Triangle' },
+  runegrafts: { text: [255, 120, 160], color: 'Pink', shape: 'Hexagon' },
+  other: { text: [210, 190, 140], color: 'Grey', shape: 'Circle' }
+}
+
+// What a pile of one category at one step changes on top of currencyActions:
+// the step's own edits, then the category's colour (its own edits on top).
+export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats'>): StylePatch {
+  if (step === 0) return {}
+  const own = c.steps[String(step)] ?? {}
+  if (step === 5) return own
+  const d = CAT_LOOK[cat] ?? CAT_LOOK.other
+  const base = readStyle(currencyActions(step))
+  const icon = (own.icon !== undefined ? own.icon : base.icon)
+  const catOwn = c.cats[cat] ?? {}
+  return {
+    ...own,
+    text: [...d.text, 255],
+    ...(icon ? { icon: { ...icon, color: d.color, shape: d.shape } } : {}),
+    ...catOwn
+  }
+}
+
+// The whole look of a pile, for the tab's previews.
+export function currencyFullLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats'>): StylePatch {
+  return { ...readStyle(currencyActions(step)), ...currencyLook(step, cat, c) }
+}
+
 export interface CurrencyCompiled {
   blocks: FilterBlock[]
   items: CurrencyItem[]
@@ -272,7 +328,7 @@ function block (step: CStep, conds: FilterCondition[], note: string, look?: Item
     dirty: true,
     added: true
   } as FilterBlock
-  if (look && step > 0) applyStyle(b, look)
+  if (look && step > 0 && Object.keys(look).length) applyStyle(b, look)
   return b
 }
 
@@ -285,7 +341,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[]): 
   const blocks: FilterBlock[] = []
   const stacks = new Map(items.map(it => [it.name, stacksFor(it, cfg)]))
   const area = c('AreaLevel', '>=', [68])
-  const clsCond = (list: CurrencyItem[]) => c('Class', '==', [...new Set(list.map(i => i.cls))].sort())
+  const clsCond = (list: CurrencyItem[]) => c('Class', '==', [...new Set(list.flatMap(i => i.cls.split('|')))].sort())
   // The piles of one item that reach each step, loudest first: [step, stack].
   const steps = (it: CurrencyItem): Array<[CStep, number]> => {
     const st = stacks.get(it.name)!
@@ -312,11 +368,13 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[]): 
   // The rest grouped: loudest first (the first rule that matches wins, so a
   // big pile meets its louder rule before a quieter one), then by stack.
   const rest = items.filter(it => !cfg.items[it.name]?.look)
-  const groups = new Map<string, { step: CStep, k: number, list: CurrencyItem[] }>()
+  const groups = new Map<string, { step: CStep, k: number, cat: string, list: CurrencyItem[] }>()
   for (const it of rest) {
     for (const [s, k] of steps(it)) {
-      const key = `${s}|${k}`
-      const g = groups.get(key) ?? { step: s, k, list: [] }
+      // Tink looks the same for every category: one rule for all of them.
+      const cat = ''
+      const key = `${s}|${k}|${cat}`
+      const g = groups.get(key) ?? { step: s, k, cat, list: [] }
       g.list.push(it)
       groups.set(key, g)
     }

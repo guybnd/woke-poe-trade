@@ -187,6 +187,13 @@ describe('currency weights', () => {
     expect(items.get('Runegraft of Bellows')).toBe('runegrafts')
     expect(items.has('Dead Man\'s Sulphur')).toBe(true)
     expect(items.has('Rogue\'s Marker')).toBe(true)
+    // League threads come from the fragment rules; nothing else from there does.
+    expect(items.get('Breach Thread')).toBe('threads')
+    expect(items.has('Divine Vessel')).toBe(false)
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(c => { c.items = { 'Breach Thread': { step: 4 } } }), lookup)
+    const hit = matchItem(doc, { ...pile('Breach Thread', 1), itemClass: 'Misc Map Items' })
+    expect(hit.final?.block.tier).toBe('s4')
   })
 
   it('sorts essences into their tiers', () => {

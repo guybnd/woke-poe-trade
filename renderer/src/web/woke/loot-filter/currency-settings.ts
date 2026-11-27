@@ -37,14 +37,26 @@ export interface CurrencySettings {
   // Category id → notches: +1 sees less (line ×2), −1 sees more (line ÷2).
   nudge: Record<string, number>
   items: Record<string, ItemEdit>
+  // A step's look changed by hand ('1'..'5'), on top of the built-in one.
+  steps: Record<string, StylePatch>
+  // A category's look changed by hand (text colour, map icon), on Small to Big.
+  cats: Record<string, StylePatch>
 }
 
 export function defaultCurrency (): CurrencySettings {
-  return { on: false, line: 1, from: [3, 10, 30, 90], nudge: {}, items: {} }
+  return { on: false, line: 1, from: [3, 10, 30, 90], nudge: {}, items: {}, steps: {}, cats: {} }
 }
 
 const NAME = /^[^"\n]{1,80}$/
 const num = (v: unknown, lo: number, hi: number): number | null => typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi ? v : null
+
+function patches (v: unknown, key: RegExp): Record<string, StylePatch> {
+  const out: Record<string, StylePatch> = {}
+  if (v && typeof v === 'object') {
+    for (const [k, p] of Object.entries(v)) if (key.test(k) && isPatch(p) && Object.keys(p as object).length) out[k] = p as StylePatch
+  }
+  return out
+}
 
 export function normalizeItemEdit (e: unknown): ItemEdit | null {
   if (!e || typeof e !== 'object') return null
@@ -101,6 +113,8 @@ export function normalizeCurrency (c: (Partial<CurrencySettings> & OldCurrency) 
     line: num(c?.line, LINE_MIN, LINE_MAX) ?? d.line,
     from,
     nudge,
-    items
+    items,
+    steps: patches(c?.steps, /^[1-5]$/),
+    cats: patches(c?.cats, /^[a-z]{1,20}$/)
   }
 }
