@@ -3,22 +3,36 @@
     <div :class="$style.wrap" data-qa="watchers-eye">
       <div :class="$style.row">
         <span :class="$style.dim" class="w-trunc" data-qa="we-source">{{ sourceLabel }}</span>
-        <WInfo :class="$style.end" text="Tick the auras you run, then the mods you want on your Watcher's Eye.
-- Auras in your **PoB build** start ticked.
+        <WInfo :class="$style.end" text="Pick the auras you run, then the mods you want on your Watcher's Eye.
+- Auras in your **PoB build** start ticked. Click a chip to drop it.
+- **Add aura**: type to pick another; your build's come first.
 - A mod matches **any roll**. Type a number to ask for at least that roll.
 - **Price check** runs one trade search for a jewel with all your picks.
 - With 3 or more picks, **Any 2** finds jewels with some of them, on the trade site." />
       </div>
 
       <div :class="$style.chips" data-qa="we-auras">
-        <WChip v-for="a in WE_AURAS" :key="a" clickable :active="shown.has(a)" v-item-tip="{ name: a }" data-item-tip
-          :data-qa="`we-aura-${a}`" @click="toggleAura(a)">
-          <WIcon :src="itemArt({ name: a }) ?? undefined" fallback="fas fa-circle" size="sm" />{{ a }}<span v-if="fromBuild.has(a)" :class="$style.pob" title="In your PoB build">PoB</span>
+        <WChip v-for="a in shownList" :key="a" clickable active v-item-tip="{ name: a }" data-item-tip
+          :data-qa="`we-aura-${a}`" :title="`Remove ${a}`" @click="toggleAura(a)">
+          <WIcon :src="itemArt({ name: a }) ?? undefined" fallback="fas fa-circle" size="sm" />{{ a }}<span v-if="fromBuild.has(a)" :class="$style.pob" title="In your PoB build">PoB</span><i class="fas fa-times" :class="$style.x" />
         </WChip>
+        <div :class="$style.add" @focusout="onAddBlur">
+          <input v-model="addText" class="w-input" :class="$style.addInput" placeholder="Add aura…" aria-label="Add aura" data-qa="we-add-aura"
+            @focus="addOpen = true" @input="addOpen = true; addAt = 0" @keydown.down.prevent="moveAdd(1)" @keydown.up.prevent="moveAdd(-1)"
+            @keydown.enter.prevent="pickAdd(addList[addAt])" @keydown.esc.stop="addOpen = false">
+          <div v-if="addOpen && addList.length" :class="$style.drop" role="listbox" data-qa="we-add-list">
+            <button v-for="(a, i) in addList" :key="a" type="button" role="option" :aria-selected="i === addAt" tabindex="-1"
+              :class="[$style.opt, { [$style.optOn]: i === addAt }]" v-item-tip="{ name: a }" data-item-tip :data-qa="`we-add-${a}`"
+              @mousedown.prevent @mouseenter="addAt = i" @click="pickAdd(a)">
+              <WIcon :src="itemArt({ name: a }) ?? undefined" fallback="fas fa-circle" size="sm" /><span>{{ a }}</span>
+              <span v-if="fromBuild.has(a)" :class="$style.pob">In your build</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div v-if="!mods.length" :class="$style.dim">{{ loadNote }}</div>
-      <div v-else-if="!groups.length" :class="$style.dim">Tick an aura to see its mods.</div>
+      <div v-else-if="!groups.length" :class="$style.dim">Add an aura to see its mods.</div>
 
       <section v-for="g in groups" :key="g.aura" :ref="el => groupRef(g.aura, el)" :class="$style.sec" data-qa="we-group">
         <div :class="$style.head">
@@ -112,7 +126,7 @@ const shown = computed(() => new Set<string>([
 ]))
 const sourceLabel = computed(() => {
   const path = active$.relPath.value
-  if (!path) return 'No PoB build in use: tick the auras you run.'
+  if (!path) return 'No PoB build in use: add the auras you run.'
   const name = path.replace(/\.xml$/i, '').split(/[/\\]/).pop()
   if (!active$.details.value) return `Reading ${name}…`
   return fromBuild.value.size ? `${name}: ${[...fromBuild.value].join(', ')}` : `${name} runs no aura Watcher's Eye has mods for.`
@@ -132,6 +146,31 @@ function showAura (a: WeAura) {
 }
 
 const groups = computed(() => byAura(mods.value, [...shown.value]))
+const shownList = computed(() => WE_AURAS.filter(a => shown.value.has(a)))
+
+// ---- the Add aura box: type to filter, your build's auras first ----
+const addText = shallowRef('')
+const addOpen = shallowRef(false)
+const addAt = shallowRef(0)
+const addList = computed(() => {
+  const q = addText.value.trim().toLowerCase()
+  const left = WE_AURAS.filter(a => !shown.value.has(a) && (!q || a.toLowerCase().split(' ').some(w => w.startsWith(q)) || a.toLowerCase().startsWith(q)))
+  return [...left.filter(a => fromBuild.value.has(a)), ...left.filter(a => !fromBuild.value.has(a))]
+})
+function moveAdd (d: number) {
+  addOpen.value = true
+  const n = addList.value.length
+  if (n) addAt.value = (addAt.value + d + n) % n
+}
+function pickAdd (a: WeAura | undefined) {
+  if (!a) return
+  showAura(a)
+  addText.value = ''
+  addAt.value = 0
+}
+function onAddBlur (e: FocusEvent) {
+  if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node | null)) addOpen.value = false
+}
 
 // ---- picks ----
 const byId = computed(() => new Map(mods.value.map(m => [m.id, m])))
@@ -225,6 +264,13 @@ function modTip (m: WeMod): ModLine {
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chips :global(.w-chip) { display: inline-flex; align-items: center; gap: 4px; }
 .pob { color: var(--w-gold-hi); font-size: 0.8em; margin-left: 2px; }
+.x { font-size: 0.75em; opacity: 0.6; margin-left: 2px; }
+.add { position: relative; }
+.addInput { width: 9rem; }
+.drop { position: absolute; z-index: 5; top: calc(100% + 2px); left: 0; min-width: 14rem; max-height: 16rem; overflow-y: auto; background: var(--w-panel-solid-base); border: 1px solid var(--w-frame, var(--w-line)); display: grid; padding: 2px 0; }
+.opt { display: flex; align-items: center; gap: 6px; padding: 3px 8px; text-align: left; color: var(--w-fg); background: none; border: 0; cursor: pointer; }
+.opt .pob { margin-left: auto; }
+.optOn { background: var(--w-well); }
 .sec { display: grid; gap: 1px; scroll-margin-top: 4px; }
 .head { display: flex; align-items: center; gap: 6px; color: var(--w-label); border-bottom: 1px solid var(--w-line); padding-bottom: 2px; }
 .count { color: var(--w-dim); font-size: 0.85em; }

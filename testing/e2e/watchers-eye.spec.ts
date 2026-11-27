@@ -30,11 +30,17 @@ test("an aura in Ctrl+Space opens the Watcher's Eye finder, and Price check sear
   await expect(groups.first()).toContainText('Grace')
   await expect(groups.first().locator('[data-qa="we-mod"]')).toHaveCount(5)
 
-  // An aura chip shows the gem's tooltip.
-  await finder.locator('[data-qa="we-aura-Hatred"]').hover()
+  // Only the ticked aura has a chip; Add aura types another in, its gem tooltip on hover.
+  await expect(finder.locator('[data-qa^="we-aura-"]')).toHaveCount(1)
+  const add = finder.locator('[data-qa="we-add-aura"]')
+  await add.fill('hat')
+  await expect(finder.locator('[data-qa="we-add-list"] [role="option"]')).toHaveCount(1)
+  await finder.locator('[data-qa="we-add-Hatred"]').hover()
   await expect(overlay.page.getByRole('tooltip')).toContainText('Hatred')
-  await finder.locator('[data-qa="we-aura-Hatred"]').click()
+  await add.press('Enter')
   await expect(groups).toHaveCount(2)
+  await expect(finder.locator('[data-qa="we-aura-Hatred"]')).toBeVisible()
+  await add.blur()
 
   // A mod row's hover says what it rolls.
   const suppress = finder.locator('[data-qa="we-mod"]', { hasText: 'Suppress Spell Damage' })
