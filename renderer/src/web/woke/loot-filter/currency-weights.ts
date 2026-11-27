@@ -107,7 +107,7 @@ export function categoryOf (name: string, type: string): string {
   if (/^(Astragali|Burial Medallion|Exotic Coinage|Scrap Metal)$/.test(name)) return 'expedition'
   if (/Eldritch|^(Crusader|Hunter|Redeemer|Warlord|Shaper|Elder)'s Exalted Orb$|^Awakener's Orb$|^Orb of Dominance$|^Maven's Orb$/.test(name)) return 'influence'
   if (/Astrolabe|^Maven's Chisel|^Memory of|^Valdo's Puzzle Box$|Enshrouding Crystal|^Crescent Splinter$|^Reflecting Mist$|^Refracting Fog$|^Frayed Thread$|^Message in a Bottle$/.test(name)) return 'atlas'
-  if (/(Orb|Shard|Scroll|Prism|Bauble|Scrap|Whetstone)$|^Mirror|^Scroll|^Stacked Deck$|^Orb of /.test(name)) return 'orbs'
+  if (/(Orb|Shard|Scroll|Prism|Bauble|Scrap|Whetstone)$|^Mirror|^Scroll|^Stacked Deck$|^(Foulborn )?Orb of /.test(name)) return 'orbs'
   return 'other'
 }
 
@@ -450,7 +450,8 @@ export const CAT_LOOK: Record<string, { text: [number, number, number], color: s
   catalysts: { text: [120, 220, 230], color: 'Cyan', shape: 'Triangle' },
   atlas: { text: [140, 185, 255], color: 'Blue', shape: 'Diamond' },
   expedition: { text: [255, 170, 90], color: 'Orange', shape: 'Square' },
-  tainted: { text: [235, 95, 95], color: 'Red', shape: 'Raindrop' },
+  // Not red: red beams and map icons are kept for Tink (sure profit, Guy 2026-11-27).
+  tainted: { text: [235, 95, 95], color: 'Purple', shape: 'Raindrop' },
   essences: { text: [230, 140, 240], color: 'Pink', shape: 'Moon' },
   fossils: { text: [220, 205, 175], color: 'Brown', shape: 'Kite' },
   oils: { text: [255, 200, 90], color: 'Orange', shape: 'Raindrop' },
@@ -606,13 +607,24 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
     if (g.k > 1) conds.push(c('StackSize', '>=', [g.k]))
     blocks.push(block(g.step, conds, [g.cat, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', '), currencyLook(g.step, g.cat, cfg)))
   }
+  // What was hidden by hand (its own Off, or its section's) hides before the
+  // floors and Faint: a section set Off doesn't come back at 20% quality.
+  // A gem band keeps its own conditions (level, quality, TransfiguredGem
+  // False), so hiding one band or plain gems never hides the others.
+  const forced = items.filter(it => forcedHidden(it, cfg))
+  if (forced.length && (opts.faint || opts.floors?.length)) {
+    const byConds = new Map<string, CurrencyItem[]>()
+    for (const it of forced) {
+      const k = it.conds ? JSON.stringify(it.conds) : ''
+      byConds.set(k, [...(byConds.get(k) ?? []), it])
+    }
+    for (const list of byConds.values()) blocks.push(block(0, [area, clsCond(list), c('BaseType', '==', bts(list)), ...(list[0].conds ?? [])], 'off, set by hand'))
+  }
   // Floors (gems at 20% quality, transfigured gems): above the line.
   blocks.push(...(opts.floors ?? []))
   // Under the line: Faint in the category colour (Guy's T1, X1) while it's
   // on, except what was hidden by hand; otherwise hidden.
   if (opts.faint) {
-    const forced = items.filter(it => forcedHidden(it, cfg))
-    if (forced.length) blocks.push(block(0, [area, clsCond(forced), c('BaseType', '==', bts(forced))], 'off, set by hand'))
     const byCat = new Map<string, CurrencyItem[]>()
     for (const it of items) if (!forcedHidden(it, cfg)) byCat.set(it.cat, [...(byCat.get(it.cat) ?? []), it])
     for (const [cat, list] of byCat) blocks.push(faintBlock([area, clsCond(list), c('BaseType', '==', bts(list))], cat, catColour(cat, cfg).rgb))

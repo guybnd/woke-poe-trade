@@ -2,9 +2,9 @@
   <!-- Jewels on the Loot tab (Guy's Jewels A, 2026-11-27): cluster jewels
        priced by enchant, passive count and item level, from poe.ninja. The
        same rules as the Cluster page on Rules (ClusterPriceBand). Abyss and
-       plain jewels are rares, scored on Rare weights. -->
+       other jewels stay NeverSink's (Rare weights scores gear only). -->
   <div :class="$style.wrap" class="w-scroll" data-loot-jewels>
-    <p class="text-sm w-dim">Cluster jewels by enchant, passive count and item level, from poe.ninja. Abyss and other jewels are rares: Rare weights scores them.</p>
+    <p class="text-sm w-dim">Cluster jewels by enchant, passive count and item level, from poe.ninja. Abyss and other jewels still show the way NeverSink shows them.</p>
     <ClusterPriceBand v-if="store.doc.value" :doc="store.doc.value" :settings="config.presets.clusterPrices" :prices="clusterPricesFor(store.prices.currentLeague.value)"
       :updated-at="clusterPrices?.ts ?? null" :error="clusterPricesError" @open-rule="emit('open-rule', { type: CLUSTER_PRICE_TYPE, tier: $event })" />
   </div>
