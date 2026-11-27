@@ -52,10 +52,24 @@ export interface CurrencySettings {
   off: number[]
   // Every step's price × this; null follows the filter's strictness.
   mult: number | null
+  // A whole category set by hand (Guy 2026-11-27, Loot tab: Off / Weighted /
+  // Always on every section). Off hides it; Always shows every pile at least
+  // Small. An item's own Off or Always wins over its category's.
+  catMode: Record<string, SectionMode>
+  // The Faint step (Guy's T1 and X1): piles under the line show small and
+  // see-through in the category colour instead of hiding, while the
+  // Strictness multiplier is under `until`.
+  faint: FaintSettings
 }
 
+export type SectionMode = 'off' | 'always'
+export interface FaintSettings { on: boolean, until: number }
+// Faint shows below Strict (×1.25) unless set otherwise. Off by default:
+// the rules are maps-only, and T1 said off in maps until you turn it on.
+export const FAINT_UNTIL = 1.25
+
 export function defaultCurrency (): CurrencySettings {
-  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, off: [], mult: null }
+  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, off: [], mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL } }
 }
 
 const NAME = /^[^"\n]{1,80}$/
@@ -134,6 +148,10 @@ export function normalizeCurrency (c: (Partial<CurrencySettings> & OldCurrency) 
     steps: patches(c?.steps, /^[1-5]$/),
     cats: patches(c?.cats, /^[a-z]{1,20}$/),
     mult: num(c?.mult, MULT_MIN, MULT_MAX) ?? null,
-    off: [1, 2, 3, 4].filter(n => Array.isArray(c?.off) && c.off.includes(n))
+    off: [1, 2, 3, 4].filter(n => Array.isArray(c?.off) && c.off.includes(n)),
+    // Kept light (this runs at startup): what reads them takes only 'off',
+    // 'always', true and a number (currency-weights.ts).
+    catMode: { ...c?.catMode },
+    faint: { on: c?.faint?.on === true, until: Number(c?.faint?.until) || FAINT_UNTIL }
   }
 }

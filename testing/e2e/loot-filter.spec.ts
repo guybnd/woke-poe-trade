@@ -1330,9 +1330,16 @@ test('Currency weights: Alt + F on currency shows its category, Show switch, Wor
   // Worth × applies on release; Off hides every pile.
   await page.locator('[data-currency-card-mult]').fill('2')
   await expect(card).toContainText('×2.00')
-  await card.getByRole('button', { name: 'Off', exact: true }).click()
+  await card.locator('[data-currency-card-item]').getByRole('button', { name: 'Off', exact: true }).click()
   await expect(page.locator('[data-currency-card-now]')).toContainText('Off')
   await overlay.snap('currency card, off')
+  // The whole section from the same card (Guy: Alt+F sets the section or just the item).
+  await card.locator('[data-currency-card-item]').getByRole('button', { name: 'Same as section', exact: true }).click()
+  await card.locator('[data-currency-card-section]').getByRole('button', { name: 'Off', exact: true }).click()
+  await expect(page.locator('[data-currency-card-now]')).toContainText('Orbs is off')
+  await card.locator('[data-currency-card-item]').getByRole('button', { name: 'Always', exact: true }).click()
+  await expect(page.locator('[data-currency-card-now]')).not.toContainText('Off')
+  await overlay.snap('currency card, section off, item always')
 })
 
 test('Rare weights: Alt + F on an unidentified rare opens the Score card, and the redesigned tab', async ({ overlay, fakeApp }) => {
@@ -1375,7 +1382,12 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await overlay.boot({ widgets: [{ ...lootFilter(folder), presets: { currency: { on: true } } }] })
   await openEditor(overlay, fakeApp)
   const page = overlay.page
-  await page.getByRole('tab', { name: /Currency weights/ }).click()
+  await page.getByRole('tab', { name: /^Loot/ }).click()
+  // The Loot tab: a rail of classes, Currency first; the rest NeverSink's for now.
+  await expect(page.locator('[data-loot-class="currency"]')).toHaveAttribute('aria-pressed', 'true')
+  await page.locator('[data-loot-class="uniques"]').click()
+  await expect(page.locator('[data-loot-later]')).toContainText('NeverSink decides uniques')
+  await page.locator('[data-loot-class="currency"]').click()
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()
   await expect(page.locator('[data-currency-cat="orbs"]')).toBeVisible()
@@ -1391,9 +1403,13 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-currency-step-editor]')).toBeVisible()
   await overlay.snap('currency step look editor')
   await page.getByRole('button', { name: 'Big look and sound' }).click()
+  // A category's colour and icon sit inside it, once it's open.
+  const oilsHead = page.locator('[data-currency-cat="oils"] [aria-expanded]').first()
+  await oilsHead.click({ position: { x: 12, y: 10 } })
   await page.getByRole('combobox', { name: 'Oils map icon shape' }).selectOption('Star')
   await expect(page.getByRole('button', { name: 'Reset Oils colours', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Reset Oils colours', exact: true }).click()
+  await oilsHead.click({ position: { x: 12, y: 10 } })
 
   // A category folds open; an item opens its editor under it.
   await page.locator('[data-currency-cat="orbs"] [aria-expanded]').first().click({ position: { x: 12, y: 10 } })
@@ -1419,6 +1435,18 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await overlay.snap('currency essences by tier, Deafening off')
   await deaf.getByRole('combobox').selectOption('auto')
   await expect(page.locator('[data-currency-cat="essences"]').first()).not.toContainText('edited')
+
+  // Every section has Off / Weighted / Always; Off hides the whole section.
+  const oils = page.locator('[data-currency-cat="oils"]')
+  await oils.locator('[data-loot-section-mode]').getByRole('button', { name: 'Off', exact: true }).click()
+  await expect(oils).toContainText(/(^|\D)0 of \d+ show/)
+  await overlay.snap('loot tab, oils section off')
+  await oils.locator('[data-loot-section-mode]').getByRole('button', { name: 'Weighted', exact: true }).click()
+  await expect(oils).not.toContainText(/(^|\D)0 of \d+ show/)
+  // Faint: piles under the line show small and see-through, while it's on.
+  await page.locator('[data-loot-faint]').check()
+  await expect(page.locator('[data-loot-faint-until]')).toBeEnabled()
+  await overlay.snap('loot tab, faint on')
 
   // Search opens the categories that match.
   await page.getByRole('searchbox', { name: 'Find an item' }).fill('alc')

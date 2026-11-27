@@ -12,10 +12,10 @@
         <span v-if="d.step > 0 && d.look.effect" :class="$style.beam"
           :style="{ left: `${d.rect.x + d.rect.w / 2 - 1}px`, height: `${d.rect.y + 2}px`, background: `linear-gradient(to bottom, transparent, ${poeColour(d.look.effect.color)})` }" />
       </template>
-      <span v-for="d in placed.list" :key="d.id" v-item-tip="{ name: d.it.name }" :class="[$style.drop, { [$style.ghost]: d.step === 0 }]"
+      <span v-for="d in placed.list" :key="d.id" v-item-tip="{ name: d.it.name }" :class="[$style.drop, { [$style.ghost]: d.step === 0 && !d.faint }]"
         :style="{ left: `${d.rect.x}px`, top: `${d.rect.y}px` }" role="button" tabindex="0"
-        :aria-label="`${d.label}: ${CSTEP_NAMES[d.step]}. Open it`" @click="emit('go', d.it.name)" @keydown.enter="emit('go', d.it.name)">
-        <LabelPreview :text="d.label" :actions="[]" :style-override="d.look" :visibility="d.step === 0 ? 'Hide' : 'Show'" :extras="false" :scale="SCALE" />
+        :aria-label="`${d.label}: ${d.faint ? 'Faint' : CSTEP_NAMES[d.step]}. Open it`" @click="emit('go', d.it.name)" @keydown.enter="emit('go', d.it.name)">
+        <LabelPreview :text="d.label" :actions="[]" :style-override="d.look" :visibility="d.step === 0 && !d.faint ? 'Hide' : 'Show'" :extras="false" :scale="SCALE" />
       </span>
     </div>
   </div>
@@ -32,12 +32,14 @@ import type { StylePatch } from './edits'
 import { labelBox, layoutLabels } from './shower'
 import type { Rect } from './shower'
 import { poeColour } from './colours'
-import { CSTEP_NAMES, currencyFullLook, stacksFor, stepOfPile } from './currency-weights'
+import { CSTEP_NAMES, catColour, currencyFullLook, faintLook, forcedHidden, stacksFor, stepOfPile } from './currency-weights'
 import type { CStep, CurrencyItem, CurrencySettings } from './currency-weights'
 
 const props = defineProps<{
   items: CurrencyItem[]
   cfg: CurrencySettings
+  // Faint is on: piles under the line show faint, not struck through.
+  faint?: boolean
 }>()
 const emit = defineEmits<{ go: [name: string] }>()
 
@@ -76,10 +78,13 @@ const picks = computed(() => {
 const drops = computed(() => picks.value.map(p => {
   const step: CStep = stepOfPile(stacksFor(p.it, props.cfg), p.stack)
   const own = props.cfg.items[p.it.name]?.look
-  const look: StylePatch = { ...currencyFullLook(step, p.it.cat, props.cfg), ...(step > 0 ? own ?? {} : {}) }
-  return { ...p, step, look, label: p.stack > 1 ? `${p.stack}x ${p.it.name}` : p.it.name }
+  const faint = step === 0 && !!props.faint && !forcedHidden(p.it, props.cfg)
+  const look: StylePatch = faint
+    ? { ...currencyFullLook(0, p.it.cat, props.cfg), ...faintLook(catColour(p.it.cat, props.cfg).rgb) }
+    : { ...currencyFullLook(step, p.it.cat, props.cfg), ...(step > 0 ? own ?? {} : {}) }
+  return { ...p, step, faint, look, label: p.stack > 1 ? `${p.stack}x ${p.it.name}` : p.it.name }
 }))
-const hiddenCount = computed(() => drops.value.filter(d => d.step === 0).length)
+const hiddenCount = computed(() => drops.value.filter(d => d.step === 0 && !d.faint).length)
 
 // The ground's width, measured so labels lay out to the real space.
 const groundEl = ref<HTMLElement | null>(null)
@@ -102,7 +107,7 @@ function measure (text: string, px: number): number {
 }
 
 const placed = computed(() => {
-  const list = drops.value.filter(d => ghosts.value || d.step > 0)
+  const list = drops.value.filter(d => ghosts.value || d.step > 0 || d.faint)
   const { rects, height } = layoutLabels(list.map(d => labelBox(d.label, d.look.fontSize, SCALE, measure)), width.value, 200, seed.value, BEAM_ROOM)
   return { height, list: list.map((d, i) => ({ ...d, rect: rects[i] as Rect })) }
 })
