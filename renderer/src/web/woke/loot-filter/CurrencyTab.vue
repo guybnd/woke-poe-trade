@@ -156,7 +156,7 @@ const props = defineProps<{
 
 const c = computed(() => props.config.presets.currency)
 const STEP_CSS = ['#3b372f', '#6d6250', '#a08d5e', '#cdb27a', '#ffe196', '#ff4040']
-const STEP_NOTE = ['', 'dim, no box', 'outlined in the category colour', 'filled dark box, map icon', 'filled with the category colour, beam', 'red on white, red beam, the big sound']
+const STEP_NOTE = ['', 'outlined in the category colour', 'dark box, small icon', 'filled with the category colour, flash beam', 'light box, white edge, beam, Shboong', 'red on white, red beam and icon, Tink']
 
 // Both write back to the field, so a refused or clamped number doesn't stay typed.
 function setLine (el: HTMLInputElement) {
