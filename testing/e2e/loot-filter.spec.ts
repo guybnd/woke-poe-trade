@@ -1315,6 +1315,26 @@ test('Base ranks: drag a base, then the picked set, onto another column', async 
   await overlay.snap('dragged to Never')
 })
 
+test('Currency weights: Alt + F on currency shows its category, Show switch, Worth slider and the stack each step starts at', async ({ overlay, fakeApp }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters/neversink/3-STRICT.filter.gz'))))
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), presets: { currency: { on: true } } }] })
+  const page = overlay.page
+  await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+F')
+  await overlay.copyItem('items/currency-chaos.txt', 'Alt + F')
+  const card = page.locator('[data-currency-card]')
+  await expect(card).toBeVisible()
+  await expect(page.locator('[data-currency-card-cat]')).toContainText('Orbs')
+  await expect(card.getByRole('table', { name: 'The stack each step starts at' })).toBeVisible()
+  await overlay.snap('currency card')
+  // Worth × applies on release; Off hides every pile.
+  await page.locator('[data-currency-card-mult]').fill('2')
+  await expect(card).toContainText('×2.00')
+  await card.getByRole('button', { name: 'Off', exact: true }).click()
+  await expect(page.locator('[data-currency-card-now]')).toContainText('Off')
+  await overlay.snap('currency card, off')
+})
+
 test('Rare weights: Alt + F on an unidentified rare opens the Score card, and the redesigned tab', async ({ overlay, fakeApp }) => {
   // NeverSink's real Strict filter (its tiered gear and exotic lists).
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
