@@ -191,9 +191,11 @@ describe('net worth on the shared pieces', () => {
   it('folds its sections with WFoldHead and its lists with WFoldCaret', () => {
     const s = src('net-worth/NetWorthPanel.vue')
     expect(s).not.toMatch(/fa-chevron-(down|right)/)
-    expect(s).not.toMatch(/@click="flipFold\(/)
-    // Chart and Per hour (folded and open), Session, Sold, Where it is, Price moves, Details.
-    expect(s.match(/<WFoldHead /g)?.length).toBeGreaterThanOrEqual(9)
+    // No hand-made fold button; the side column's sections fold by their chips (pick A).
+    expect(s).not.toMatch(/<button[^>]*@click="flipFold\(/)
+    expect(s).toContain('@click="flipFold(c.id)"')
+    // Chart and Per hour (folded and open), Session, Details.
+    expect(s.match(/<WFoldHead /g)?.length).toBeGreaterThanOrEqual(6)
     expect(s).toContain('<WFoldCaret :open="groupOpen(g.key, i)" />')
   })
 
