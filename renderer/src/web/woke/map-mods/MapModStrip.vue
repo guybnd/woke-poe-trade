@@ -99,16 +99,17 @@
             <span :class="$style.tileVal" class="w-num">{{ p.value }}%</span>
           </div>
         </template>
-        <!-- Guy (2026-11-24): a number this map hasn't got, added from the + tile. -->
-        <div v-for="label in extraOn" :key="'x:' + label" :class="[$style.tile, $style.propOn, $style.extra]"
+        <!-- Guy (2026-11-24): a number this map hasn't got, added from the + tile. A goal's
+             own More X one shows off (Guy, 2026-11-27: never search a number the map hasn't got unasked). -->
+        <div v-for="label in extraTiles" :key="'x:' + label" :class="[$style.tile, isOn(label) ? $style.propOn : $style.propOff, $style.extra, goalKeys.includes(label) && $style.goalKey]"
           data-own-wheel data-map-tile data-map-extra @wheel.prevent.stop="wheelMin(label, $event)">
-          <button type="button" :class="$style.propBtn" aria-pressed="true" :data-map-prop="label"
+          <button type="button" :class="$style.propBtn" :aria-pressed="isOn(label)" :data-map-prop="label"
             :title="extraTitle(label)"
             @click="toggleProp(label)">
             <span :class="$style.tileHead"><WIcon v-bind="PROP_ICON[label] ?? { fallback: 'fas fa-percent' }" size="sm" /><span :class="$style.tileName">{{ label }}</span></span>
-            <span :class="$style.tileVal" class="w-dim" title="Not on this map: added to the search">–</span>
+            <span :class="$style.tileVal" class="w-dim" :title="isOn(label) ? 'Not on this map: added to the search' : 'Not on this map'">–</span>
           </button>
-          <label :class="$style.minBox" :title="`Search at least this ${label}`">≥<input type="number" min="0" :value="minOf(label) ?? ''"
+          <label v-if="isOn(label)" :class="$style.minBox" :title="`Search at least this ${label}`">≥<input type="number" min="0" :value="minOf(label) ?? ''"
             :aria-label="`${label} minimum`" :data-map-prop-min="label" @change="typeMin(label, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()"></label>
         </div>
       </div>
@@ -175,7 +176,7 @@ import type { KindChoice } from '@/web/price-check/filters/pseudo/map-kind'
 import type { AddedMod, FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
 import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
-import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalAddsExtra, goalDisabled } from './goal'
+import { FARM_GOALS, FARM_GOAL_LABEL, GOAL_KEYS, RAISES, goalShowsExtra, goalDisabled } from './goal'
 import { farmGoal, setFarmGoal } from './goal-config'
 import { activeTemplate, deleteTemplate, farmTemplates, nextTemplateName, saveTemplate, setActiveTemplate, notToSave, setExcludeNot, templateMin, templateNotMods } from './farm-templates'
 import type { FarmTemplate } from './farm-templates'
@@ -428,7 +429,18 @@ KindIcons.props = ['icons']
 const PROP_LABEL: Record<string, string> = Object.fromEntries(Object.entries(PROP_TRADE_ID).map(([l, id]) => [id, l]))
 const extras = computed(() => (props.stats ?? []).filter((s): s is StatFilter => !s.group && !!s.mapExtra && !!PROP_LABEL[s.tradeId[0]]))
 const extraOn = computed(() => extras.value.filter(f => !f.disabled).map(f => PROP_LABEL[f.tradeId[0]]))
-const extraOff = computed(() => extras.value.filter(f => f.disabled).map(f => PROP_LABEL[f.tradeId[0]]))
+const goal = computed(() => farmGoal())
+const templates = computed(() => farmTemplates())
+const template = computed(() => activeTemplate())
+const goalKeys = computed(() => template.value ? template.value.on : GOAL_KEYS[goal.value])
+// Tiles for numbers the map hasn't got: the ones added, and the goal's or
+// template's own More X (off until clicked; Rarity, Pack, Drops stay in +).
+function shownOff (label: string): boolean {
+  const t = template.value
+  return t ? goalShowsExtra(label) !== undefined && t.on.includes(label) : goalShowsExtra(label, goal.value) === true
+}
+const extraTiles = computed(() => extras.value.map(f => PROP_LABEL[f.tradeId[0]]).filter(label => isOn(label) || shownOff(label)))
+const extraOff = computed(() => extras.value.map(f => PROP_LABEL[f.tradeId[0]]).filter(label => !extraTiles.value.includes(label)))
 const addMenu = shallowRef(false)
 watch(() => [props.item, props.stats], () => { addMenu.value = false })
 watch(() => extraOff.value.length, (n) => { if (!n) addMenu.value = false })
@@ -445,11 +457,13 @@ watch(addMenu, (on) => {
 })
 onBeforeUnmount(() => { document.removeEventListener('pointerdown', closeAddMenu, true); document.removeEventListener('keydown', closeAddMenu, true) })
 function extraTitle (label: string): string {
-  return `${label}: ${RAISES[label] ? RAISES[label] + '\n\n' : ''}Not on this map: searching maps with at least the minimum. Click to remove it.`
+  const raises = RAISES[label] ? RAISES[label] + '\n\n' : ''
+  return isOn(label)
+    ? `${label}: ${raises}Not on this map: searching maps with at least the minimum. Click to remove it.`
+    : `${label}: ${raises}Not on this map, so not searched. Click to search maps with at least 1.`
 }
 function addExtra (label: string) {
-  const f = propFilter(label)
-  if (f) f.disabled = false
+  toggleProp(label, true)
   addMenu.value = false
 }
 
@@ -465,9 +479,12 @@ function minOf (label: string): number | null {
   const min = propFilter(label)?.roll?.min
   return typeof min === 'number' ? min : null
 }
-function toggleProp (label: string) {
+function toggleProp (label: string, on?: boolean) {
   const f = propFilter(label)
-  if (f) f.disabled = !f.disabled
+  if (!f) return
+  f.disabled = on === undefined ? !f.disabled : !on
+  // An added number with no minimum would search nothing: at least 1.
+  if (!f.disabled && f.mapExtra && f.roll && typeof f.roll.min !== 'number') f.roll.min = 1
 }
 // Never past the map's own number, or the search leaves this map out.
 function clampMin (f: StatFilter, n: number): number {
@@ -479,6 +496,8 @@ function wheelMin (label: string, e: WheelEvent) {
   const f = propFilter(label)
   // Sideways scroll and Ctrl+wheel (zoom) aren't a step, as on the other chips.
   if (!f?.roll || e.deltaY === 0 || e.ctrlKey) return
+  // A number the map hasn't got turns on only with a click, never a scroll past it.
+  if (f.mapExtra && f.disabled) return
   const now = typeof f.roll.min === 'number' ? f.roll.min : f.roll.value
   f.roll.min = clampMin(f, now + (e.deltaY < 0 ? 1 : -1))
   f.disabled = false
@@ -504,10 +523,6 @@ function propTitle (label: string): string {
 
 // The farming goal (goal.ts): picking one sets this map's number chips to the
 // goal's, and the next maps start that way.
-const goal = computed(() => farmGoal())
-const templates = computed(() => farmTemplates())
-const template = computed(() => activeTemplate())
-const goalKeys = computed(() => template.value ? template.value.on : GOAL_KEYS[goal.value])
 const GOAL_TITLE: Record<FarmGoal, string> = {
   currency: 'Farming currency: Rarity, Pack size and More Currency start on. Remembered for the next maps.',
   atlas: 'Farming maps and Threads: Atlas Drops, Pack size, More Maps and More Threads start on. Remembered for the next maps.',
@@ -546,10 +561,15 @@ function applyTemplate (t: FarmTemplate) {
     const pct = t.minPct?.[p.label]
     if (f.roll && pct != null && !f.disabled) f.roll.min = templateMin(pct, f.roll.value)
   }
+  // Only numbers the template added by hand (+) are searched on a map without
+  // them; one it had as the map's own shows off (Guy, 2026-11-27).
   for (const f of extras.value) {
     const label = PROP_LABEL[f.tradeId[0]]
-    f.disabled = !t.on.includes(label)
-    if (!f.disabled && f.roll) f.roll.min = t.extraMin?.[label] ?? 1
+    const min = t.extraMin?.[label]
+    // Saved before 2026-11-27 (no extraV), a min of 1 may be one the goal turned
+    // on by itself, not a + of yours: left off.
+    f.disabled = !(t.on.includes(label) && min != null && (t.extraV === 2 || min > 1))
+    if (!f.disabled && f.roll) f.roll.min = min!
   }
   if (t.kind && kindFs.value.length) {
     const key = t.kind === 'own' ? ownKey.value : t.kind
@@ -595,7 +615,7 @@ function confirmSave () {
   const prev = farmTemplates().find(t => t.name === name)
   const here = searchable.value.filter(f => f.mapMod).map(f => f.statRef)
   const not = notToSave(prev, here, searchable.value.filter(f => f.mapMod && stateOf(f) === 'not').map(f => f.statRef))
-  saveTemplate({ name, on, minPct, extraMin, kind, not, ...(prev?.excludeNot ? { excludeNot: true } : {}) })
+  saveTemplate({ name, on, minPct, extraMin, extraV: 2, kind, not, ...(prev?.excludeNot ? { excludeNot: true } : {}) })
 }
 // "Exclude my bad mods" (Guy's pick): a template's Not mods go in the search's
 // Not group even when this map hasn't got them, so the results can't hold maps
@@ -640,12 +660,11 @@ function applyGoal (g: FarmGoal) {
     // An Always / Never tick you set on a number wins (price-insight/tick-prefs.ts).
     if (f && off !== undefined && !tickPref(f)) f.disabled = off
   }
-  // A More X number the map hasn't got: the goal adds it (min 1) or takes it off.
+  // A More X number the map hasn't got is never turned on by a goal (Guy,
+  // 2026-11-27): the goal's own shows as an off tile (extraTiles), one click
+  // away. One the goal doesn't want goes off; one it wants stays as you set it.
   for (const f of extras.value) {
-    const on = goalAddsExtra(PROP_LABEL[f.tradeId[0]], g)
-    if (on === undefined || tickPref(f)) continue
-    f.disabled = !on
-    if (on && f.roll && typeof f.roll.min !== 'number') f.roll.min = 1
+    if (goalShowsExtra(PROP_LABEL[f.tradeId[0]], g) === false && !tickPref(f)) f.disabled = true
   }
 }
 // The price check builds a map's numbers as it always did; the strip sets them
