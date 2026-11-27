@@ -1403,9 +1403,13 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-currency-step-editor]')).toBeVisible()
   await overlay.snap('currency step look editor')
   await page.getByRole('button', { name: 'Big look and sound' }).click()
+  // A category's colour and icon sit inside it, once it's open.
+  const oilsHead = page.locator('[data-currency-cat="oils"] [aria-expanded]').first()
+  await oilsHead.click({ position: { x: 12, y: 10 } })
   await page.getByRole('combobox', { name: 'Oils map icon shape' }).selectOption('Star')
   await expect(page.getByRole('button', { name: 'Reset Oils colours', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Reset Oils colours', exact: true }).click()
+  await oilsHead.click({ position: { x: 12, y: 10 } })
 
   // A category folds open; an item opens its editor under it.
   await page.locator('[data-currency-cat="orbs"] [aria-expanded]').first().click({ position: { x: 12, y: 10 } })
@@ -1435,10 +1439,10 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   // Every section has Off / Weighted / Always; Off hides the whole section.
   const oils = page.locator('[data-currency-cat="oils"]')
   await oils.locator('[data-loot-section-mode]').getByRole('button', { name: 'Off', exact: true }).click()
-  await expect(oils).toContainText(/\b0 of \d+ show/)
+  await expect(oils).toContainText(/(^|\D)0 of \d+ show/)
   await overlay.snap('loot tab, oils section off')
   await oils.locator('[data-loot-section-mode]').getByRole('button', { name: 'Weighted', exact: true }).click()
-  await expect(oils).not.toContainText(/\b0 of \d+ show/)
+  await expect(oils).not.toContainText(/(^|\D)0 of \d+ show/)
   // Faint: piles under the line show small and see-through, while it's on.
   await page.locator('[data-loot-faint]').check()
   await expect(page.locator('[data-loot-faint-until]')).toBeEnabled()

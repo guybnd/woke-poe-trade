@@ -81,7 +81,17 @@
         <span :class="$style.count">{{ g.shown }} of {{ g.all }} show</span>
         <span :class="$style.dots" aria-hidden="true"><i v-for="r in g.rows" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
         <span class="flex-1" />
-        <span :class="$style.catLook" @click.stop @keydown.stop>
+        <span :class="$style.secMode" data-loot-section-mode @click.stop @keydown.stop>
+          <WSegmented :model-value="c.catMode[g.cat.id] ?? 'auto'" :options="SECTION_MODES" role="group" :aria-label="`${g.cat.name}: Off, Weighted or Always`" @update:model-value="v => setCatMode(g.cat.id, v)" />
+        </span>
+        <label :class="$style.whole" :title="`${g.cat.name}' own strictness: multiplies every step's price for them, on top of the main Strictness`" @click.stop @keydown.stop>Strictness
+          <select :value="c.nudge[g.cat.id] ?? 0" :class="$style.sel2" :aria-label="`${g.cat.name} strictness`" @change="setNudge(g.cat.id, Number(($event.target as HTMLSelectElement).value))">
+            <option v-for="n in NUDGES" :key="n" :value="n">×{{ (1.25 ** n).toFixed(2) }} · Small {{ chaosText(eff.line * 1.25 ** n) }}</option>
+          </select></label>
+      </div>
+      <div v-if="isOpen(g.cat.id)" :class="$style.catBody" role="table" :aria-label="`${g.cat.name} and when they show`">
+        <div :class="$style.catLook" data-currency-cat-look>
+          <span :class="$style.lookLab">Look</span>
           <span :class="$style.catSample" :title="`How a Normal ${g.cat.name} label looks`"><LabelPreview :text="catArt(g.cat.id)" :actions="[]" :style-override="currencyFullLook(2, g.cat.id, c)" visibility="Show" :extras="false" :scale="0.75" /></span>
           <span :class="$style.lookLab">Colour</span>
           <input type="color" :value="hexOf(catColour(g.cat.id, c).rgb)" :class="$style.swatch" :aria-label="`${g.cat.name} colour`" :title="`${g.cat.name} colour`"
@@ -96,16 +106,7 @@
             <option v-for="col in POE_COLOURS" :key="col" :value="col" :style="{ color: col.toLowerCase() }">● {{ col }}</option>
           </select>
           <button v-if="c.cats[g.cat.id]" type="button" class="w-icon-btn" :title="`${g.cat.name} back to its own colours`" :aria-label="`Reset ${g.cat.name} colours`" @click="setCatLook(g.cat.id, null)"><i class="fas fa-undo" /></button>
-        </span>
-        <span :class="$style.secMode" data-loot-section-mode @click.stop @keydown.stop>
-          <WSegmented :model-value="c.catMode[g.cat.id] ?? 'auto'" :options="SECTION_MODES" role="group" :aria-label="`${g.cat.name}: Off, Weighted or Always`" @update:model-value="v => setCatMode(g.cat.id, v)" />
-        </span>
-        <label :class="$style.whole" :title="`${g.cat.name}' own strictness: multiplies every step's price for them, on top of the main Strictness`" @click.stop @keydown.stop>Strictness
-          <select :value="c.nudge[g.cat.id] ?? 0" :class="$style.sel2" :aria-label="`${g.cat.name} strictness`" @change="setNudge(g.cat.id, Number(($event.target as HTMLSelectElement).value))">
-            <option v-for="n in NUDGES" :key="n" :value="n">×{{ (1.25 ** n).toFixed(2) }} · Small {{ chaosText(eff.line * 1.25 ** n) }}</option>
-          </select></label>
-      </div>
-      <div v-if="isOpen(g.cat.id)" :class="$style.catBody" role="table" :aria-label="`${g.cat.name} and when they show`">
+        </div>
         <template v-for="sg in g.subs" :key="sg.id">
         <div v-if="sg.name" :class="$style.subHead" :data-currency-sub="sg.name">
           <span :class="$style.subFold" role="button" tabindex="0" :aria-expanded="isOpen(`${g.cat.id}/${sg.name}`)"
@@ -470,13 +471,15 @@ function chaosText (v: number): string {
   color: inherit;
   padding: 1px 6px;
 }
-.cat { border: 1px solid var(--w-line); border-radius: var(--w-r-sm); max-width: 46rem; }
+.cat { border: 1px solid var(--w-line); border-radius: var(--w-r-sm); max-width: 60rem; }
 .count { font-size: var(--w-fs-xs); color: var(--w-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.catHead { display: flex; align-items: center; gap: 8px; padding: 4px 8px; cursor: pointer; }
+.catHead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 4px 8px; cursor: pointer; }
 .catHead:hover { background: var(--w-panel-2); }
 .catName { font-size: var(--w-fs-sm); color: #e2d3ad; white-space: nowrap; }
-.dots { display: flex; gap: 2px; flex-wrap: wrap; max-width: 16rem; min-width: 0; }
-.dots i { width: 7px; height: 7px; border-radius: 1px; display: block; }
+/* One row of dots, cut off when the header is crowded (a squeezed wrap made
+   one dot a line and the header as tall as the category). */
+.dots { display: flex; gap: 2px; flex-wrap: nowrap; overflow: hidden; max-width: 10rem; min-width: 0; flex: 0 1 auto; }
+.dots i { width: 7px; height: 7px; border-radius: 1px; display: block; flex: none; }
 .subHead { display: flex; align-items: center; gap: 8px; padding: 3px 2px; margin-top: 2px; border-bottom: 1px solid var(--w-line); }
 .subFold { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; min-width: 0; }
 .subName { font-size: var(--w-fs-sm); color: #d8c89c; min-width: 5.5rem; }
@@ -498,7 +501,7 @@ function chaosText (v: number): string {
 .stepEd { border: 1px solid var(--w-accent, #c8a565); border-radius: var(--w-r-sm); background: var(--w-panel-2); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
 .stepEdHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .samples { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 6px; background: #1a1712; border-radius: var(--w-r-sm); }
-.catLook { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.catLook { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 2px 2px 4px; border-bottom: 1px solid var(--w-line); }
 .swatch { flex-shrink: 0; width: 20px; height: 18px; padding: 0; border: 1px solid var(--w-line); background: none; cursor: pointer; }
 .catBody { border-top: 1px solid var(--w-line); padding: 4px 6px; display: flex; flex-direction: column; }
 .row {
