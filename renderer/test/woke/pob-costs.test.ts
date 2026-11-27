@@ -69,10 +69,10 @@ describe('compareBuilds', () => {
 
   it('shows real changes with their direction', () => {
     const row = (label: string) => r.stats.find(s => s.label === label)!
-    expect(row('Damage (DPS)')).toMatchObject({ a: '863.6M', b: '729.6M', delta: '-15.5%', tone: 'down' })
+    expect(row('Damage (DPS)')).toMatchObject({ a: '863.6M', b: '729.6M', delta: '−15.5%', tone: 'down' })
     expect(row('Energy shield')).toMatchObject({ delta: '+2,520', tone: 'up' })
     expect(row('Effective health')).toMatchObject({ delta: '+110%', tone: 'up' })
-    expect(row('Fire res spare over cap')).toMatchObject({ delta: '-28', tone: 'down' })
+    expect(row('Fire res spare over cap')).toMatchObject({ delta: '−28', tone: 'down' })
   })
 
   it('counts tree points only, when told which ids are', () => {

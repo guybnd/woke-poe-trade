@@ -57,7 +57,7 @@ export function removeEntry<T extends { id: number }> (list: readonly T[], id: n
 export function savedListKeys (opts: { copy: boolean }): Array<{ keys: string, label: string }> {
   return [
     { keys: 'F2', label: 'Rename' },
-    { keys: 'Delete', label: 'Remove (Undo for a moment after)' },
+    { keys: 'Del', label: 'Remove (Undo for a moment after)' },
     ...(opts.copy ? [{ keys: 'Ctrl + C', label: 'Copy' }] : []),
     { keys: 'Ctrl + Click', label: 'Pick another row' },
     { keys: 'Shift + Click', label: 'Pick the rows between' },

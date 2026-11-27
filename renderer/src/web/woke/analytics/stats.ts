@@ -2,6 +2,7 @@
 import type { AnalyticsRange, AnalyticsUnit, MapRun, SavedLoot, SessionRecord } from './types'
 import type { RateTime } from '../shared/rate-time'
 import { medianOrNull, seededRandom as mulberry32 } from '../shared/numbers'
+import { formatTimeOfDay } from '../ui/format'
 
 export const HOUR_MS = 3_600_000
 const DAY_MS = 24 * HOUR_MS
@@ -313,7 +314,7 @@ export function isBigDrop (run: MapRun, s: SessionRecord): boolean {
 export function formatSessionDate (ts: number): string {
   const d = new Date(ts)
   const day = d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).replace(/,/g, '')
-  return `${day} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return `${day} ${formatTimeOfDay(d)}`
 }
 
 function dropsText (lines: SavedLoot[]): string {

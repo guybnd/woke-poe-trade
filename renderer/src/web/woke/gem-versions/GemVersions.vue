@@ -53,7 +53,7 @@ import type { ItemTipRef } from '@/web/woke/ui/tooltip/item-tip'
 import { versionFilters, type GemForms, type GemVersion } from './versions'
 import { useGemVersions } from './useVersions'
 import { versionRows, type VersionRow } from './table'
-import { formatChaos } from '../ui/format'
+import { formatChaos, formatSigned } from '../ui/format'
 import { gemVersionsOpen as open } from './open'
 import { rawClone } from '@/web/woke/raw-clone'
 import WFoldCaret from '../ui/WFoldCaret.vue'
@@ -73,8 +73,7 @@ const hasOwnPrice = computed(() => versions.value.some(v => v.own))
 const cols = computed<Array<'clean' | 'corrupted' | 'vaal'>>(() => hasVaal.value ? ['clean', 'corrupted', 'vaal'] : ['clean', 'corrupted'])
 
 function signed (n: number): string {
-  const t = formatChaos(Math.abs(n), divine.value)
-  return n > 0 ? `+${t}` : n < 0 ? `−${t}` : '0'
+  return formatSigned(n, x => formatChaos(x, divine.value))
 }
 
 function rowSearched (r: VersionRow): boolean {

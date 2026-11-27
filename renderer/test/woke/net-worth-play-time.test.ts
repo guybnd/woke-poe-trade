@@ -241,7 +241,7 @@ describe('crafting and selling in the hideout', () => {
 
   it('the hover says what the no-map time did', () => {
     const r = playRate(points, m, T0, T0 + 90 * MIN)
-    expect(rateTip('2h', r, true, c => `${c}c`)).toBe(`Last 2 hours: 300c in 30m of play. Left out: 1h 0m with no map (-150c: crafting, selling)\n${RATE_TIME_WHERE}`)
+    expect(rateTip('2h', r, true, c => `${c}c`)).toBe(`Last 2 hours: 300c in 30m of play. Left out: 1h 00m with no map (-150c: crafting, selling)\n${RATE_TIME_WHERE}`)
   })
 })
 

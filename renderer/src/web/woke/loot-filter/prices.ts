@@ -12,6 +12,7 @@ import { loadTipDrops } from '../ui/tooltip/item-tip'
 import { onSharedDataChange } from '../app/live-data'
 import { randomDropsOnBase } from './random-drops'
 import type { TipPack } from '../ui/tooltip/tip-content'
+import { divineRate } from '../shared/price-row'
 
 export { uniquesOnBase, randomDropsOnBase }
 
@@ -51,7 +52,8 @@ export function useFilterPrices (rule: () => UniqueRule) {
   const items = computed(() => index.snapshot.value?.items ?? [])
   const updatedAt = computed(() => index.snapshot.value?.ts ?? null)
   const league = computed(() => index.snapshot.value?.league ?? null)
-  const divine = computed(() => index.snapshot.value?.divine ?? null)
+  // One divine rate in every window: live poe.ninja's, else the saved prices'.
+  const divine = computed(() => divineRate(ninja.xchgRate.value, index.snapshot.value?.divine))
   // poe.ninja is only downloaded while something wants prices.
   function wantPrices () {
     try { ninja.queuePricesFetch() } catch {}

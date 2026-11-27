@@ -64,7 +64,7 @@ import { computed, shallowRef, watch } from 'vue'
 import { WButton, WChip, WEmpty, WLineActs, vItemTip } from '../ui'
 import { saleTip } from './sale-tip'
 import { useSaleLines } from './sale-lines'
-import { formatAmount, nowMinute } from '../ui/format'
+import { formatAmount, nowMinute, formatTimeOfDay } from '../ui/format'
 import WSegmented from '../ui/WSegmented.vue'
 import Coin from './Coin.vue'
 import WSortHead from '../ui/WSortHead.vue'
@@ -146,7 +146,7 @@ function marketTone (s: Sale) {
 }
 function when (at: number) {
   const d = new Date(at)
-  const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  const t = formatTimeOfDay(d)
   return d.toDateString() === new Date().toDateString() ? t : `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${t}`
 }
 function colourOf (frame: number) {

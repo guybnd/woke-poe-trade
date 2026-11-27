@@ -7,6 +7,7 @@ import type { ItemMenuRef } from '../ui/tooltip/item-menu-logic'
 import type { ValuedLine } from './valuation'
 import { HOLD_MS, HOLD_RATIO, ONE_DAY_MIN, SPIKE_KEEP_DAYS, SPIKE_NEVER_RATIO, isUniqueFrame } from './valuation'
 import { DROP_RATE_CAP } from '../shared/card-cap'
+import { formatTimeOfDay } from '../ui/format'
 
 type TipLine = Pick<ValuedLine, 'key' | 'name' | 'tipName' | 'variant' | 'frame'>
 
@@ -69,7 +70,7 @@ export function parseTop (s: string): { count: number, name: string } {
   return { count: (m[1] ? -1 : 1) * (Number.isFinite(n) ? n : 1), name: m[3] }
 }
 
-const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+const clock = formatTimeOfDay
 
 // Why a held price (valuation.ts holdJump) isn't poe.ninja's. `price` writes
 // a chaos amount in the table's unit.
