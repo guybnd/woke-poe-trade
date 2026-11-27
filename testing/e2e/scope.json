@@ -656,5 +656,9 @@
    "renderer/src/web/woke/net-worth/",
    "renderer/src/web/woke/search/lookups/net-worth.ts"
   ]
- }
+ },
+ "watchers-eye.spec.ts": [
+  "renderer/src/web/woke/watchers-eye/",
+  "renderer/src/web/woke/search/"
+ ]
 }

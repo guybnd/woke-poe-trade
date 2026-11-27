@@ -25,6 +25,7 @@ import { MECHANICS_TYPE } from './mechanics/widget'
 import { MEGALO_TYPE, initMegaloWidget } from './megalo/widget'
 import { FORBIDDEN_TYPE, initForbiddenWidget } from './forbidden/widget'
 import { SCRYING_TYPE, initScryingWidget } from './scrying/widget'
+import { WATCHERS_EYE_TYPE, initWatchersEyeWidget } from './watchers-eye/widget'
 import { POB_BUILDS_TYPE } from './pob-builds/widget'
 import { POE_RE_TYPE, initPoeReWidget } from './regex-library/poe-re-widget'
 import { REGEX_LIBRARY_TYPE, RegexLibraryWidget, starterEntries } from './regex-library/widget'
@@ -232,4 +233,11 @@ export const widgetScryingSpec = {
   instances: 'multi',
   trNameKey: 'Scrying',
   defaultInstances: () => [initScryingWidget(0)]
+} satisfies WidgetSpec
+
+export const widgetWatchersEyeSpec = {
+  type: WATCHERS_EYE_TYPE,
+  instances: 'multi',
+  trNameKey: "Watcher's Eye finder",
+  defaultInstances: () => [initWatchersEyeWidget(0)]
 } satisfies WidgetSpec

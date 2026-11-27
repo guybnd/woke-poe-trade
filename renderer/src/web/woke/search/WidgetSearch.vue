@@ -252,6 +252,9 @@ import { megaloLookup } from './lookups/megalo'
 import { valdoLookup } from './lookups/valdo'
 import { askLookupAny } from '../valdo/skips'
 import { forbiddenLookup } from './lookups/forbidden'
+import { watchersEyeLookup } from './lookups/watchers-eye'
+import { WATCHERS_EYE, weMods } from '../watchers-eye/mods'
+import type { WeMod } from '../watchers-eye/mods'
 import { forbiddenNotables } from '../forbidden/notables'
 import type { ForbiddenNotable } from '../forbidden/notables'
 import { ringAnointLookup, ringAnoints } from './lookups/rings'
@@ -840,11 +843,17 @@ const passives = shallowRef<Passive[] | null>(null)
 const keystoneGrants = shallowRef<ReadonlyMap<string, string[]>>(new Map())
 // The notables a Forbidden Flame and Flesh pair can give, from the stat data and the tree.
 const forbidden = shallowRef<ForbiddenNotable[] | null>(null)
+// Watcher's Eye's aura mods, from the unique data.
+const weModList = shallowRef<WeMod[] | null>(null)
 let treeLoads = 0
 function loadTree () {
   if (passives.value) return
   // A read started before a data update is dropped.
   const mine = ++treeLoads
+  // Without the tree data too: they're the unique data's own lines.
+  loadTipUniques().then((uniques) => {
+    if (mine === treeLoads && uniques) weModList.value = weMods(uniques[WATCHERS_EYE]?.v.flatMap(v => v.e ?? []) ?? [])
+  }).catch(() => {})
   Promise.all([loadPassiveTree(), loadTipUniques().catch(() => null)]).then(([nodes, uniques]) => {
     if (mine !== treeLoads) return
     const list = passiveList(nodes.values(), passiveTreeClusters()?.named ?? null)
@@ -926,6 +935,7 @@ const stopDataWatch = onSharedDataChange(() => {
   tipItems.value = null
   passives.value = null
   forbidden.value = null
+  weModList.value = null
   visceraTable.value = null
   vaultTable.value = null
   treeLoads++
@@ -943,7 +953,7 @@ function flipsConfig (): ScarabFlipWidget | null {
   return (config.widgets.find(w => w.wmType === SCARAB_FLIP_TYPE) as ScarabFlipWidget | undefined) ?? null
 }
 const netWorthWidget = () => AppConfig().widgets.find(w => w.wmType === NET_WORTH_TYPE) as { staleDays?: number, countListed?: boolean } | undefined
-const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, forbiddenLookup(forbidden.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), worthSellingLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime(), runBoard.value, lastRun.value), salesLookup(salesList.value, lineOut.value.sale), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value, lineOut.value.listed), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), valdoLookup(name => AppConfig().language === 'en' && knownItem('UNIQUE', name)), keysLookup(setKeys), webLookup])
+const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), mapCardsLookup(cardDrops.value), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), mapBonusLookupFn.value, bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, forbiddenLookup(forbidden.value), watchersEyeLookup(weModList.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), worthSellingLookup(netWorthGlance.value), runsLookup(runGlance.value, rateTime(), runBoard.value, lastRun.value), salesLookup(salesList.value, lineOut.value.sale), listedLookup(listedDoc.value, salesList.value, netWorthWidget()?.staleDays, netWorthWidget()?.countListed !== false, cheapestChecks.value, lineOut.value.listed), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null, rateTime()), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), valdoLookup(name => AppConfig().language === 'en' && knownItem('UNIQUE', name)), keysLookup(setKeys), webLookup])
 
 // "keys": the hotkeys you have set, as the Hotkeys page lists them.
 function setKeys () {
