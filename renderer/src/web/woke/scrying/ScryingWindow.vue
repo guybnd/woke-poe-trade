@@ -83,6 +83,8 @@ import { fromValue, orbTradeUrl, rankScry, scryRows, scryableMaps } from './scry
 import type { ScryRow } from './scry'
 import { areaDisc, useOrbPrices } from './orb-prices'
 import type { ScryingWidget } from './widget'
+import { usePoeninja } from '@/web/background/Prices'
+import { divineRate } from '../shared/price-row'
 
 const props = defineProps<{ config: ScryingWidget }>()
 const config = props.config
@@ -95,7 +97,9 @@ const data = shallowRef<CardDropData | null>(null)
 loadCardDrops().then(d => { data.value = d }).catch(() => {})
 
 const prices = usePriceIndex()
-const divine = computed(() => prices.snapshot.value?.divine ?? null)
+// One divine rate in every window: live poe.ninja's, else the saved prices' (shared/price-row.ts).
+const liveRate = usePoeninja().xchgRate
+const divine = computed(() => divineRate(liveRate.value, prices.snapshot.value?.divine))
 const league = computed(() => prices.snapshot.value?.league ?? '')
 const orbs = useOrbPrices()
 

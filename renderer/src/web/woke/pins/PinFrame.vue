@@ -41,6 +41,7 @@ import { MAX_PIN_OPACITY, MIN_PIN_OPACITY, movePin, pinScale, place, removePin, 
 import type { Pin } from './pins'
 import WInfo from '../ui/WInfo.vue'
 import type { HelpKey } from '../ui/help-tip'
+import { followPointer } from '../ui/pointer-drag'
 
 const PIN_KEYS: HelpKey[] = [
   { keys: 'Drag', label: 'The title: move it. Towns and hideouts keep one spot, maps another' },
@@ -102,23 +103,20 @@ function fade (e: WheelEvent) {
 // While dragging, the spot lives here; it's saved once, on letting go.
 const live = shallowRef<{ x: number, y: number } | null>(null)
 let grab: { dx: number, dy: number } | null = null
+let stopDrag: (() => void) | null = null
 function startDrag (e: PointerEvent) {
   if (e.button !== 0) return
+  // A press while an old drag never heard its end: finish that one first.
+  stopDrag?.()
   const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
   grab = { dx: e.clientX - r.left, dy: e.clientY - r.top }
   dragging.value = true
-  window.addEventListener('pointermove', onMove)
-  window.addEventListener('pointerup', endDrag)
-  // The window can go click-through or lose focus mid-drag (the game took the
-  // mouse back): no pointerup comes then, so don't stay dragging.
-  window.addEventListener('pointercancel', endDrag)
-  window.addEventListener('blur', endDrag)
+  // Ends on letting go, or when the game takes the mouse back (pointer-drag.ts).
+  stopDrag = followPointer(onMove, endDrag)
   e.preventDefault()
 }
 function onMove (e: PointerEvent) {
   if (!grab) return
-  // Let go somewhere that never told us.
-  if (!e.buttons) { endDrag(); return }
   live.value = {
     x: Math.min(98, Math.max(0, (e.clientX - grab.dx) / window.innerWidth * 100)),
     y: Math.min(98, Math.max(0, (e.clientY - grab.dy) / window.innerHeight * 100))
@@ -129,10 +127,7 @@ function onMove (e: PointerEvent) {
 }
 let zoneFrame = 0
 function endDrag () {
-  window.removeEventListener('pointermove', onMove)
-  window.removeEventListener('pointerup', endDrag)
-  window.removeEventListener('pointercancel', endDrag)
-  window.removeEventListener('blur', endDrag)
+  stopDrag = null
   if (live.value) movePin(props.pin.id, { x: Math.round(live.value.x * 10) / 10, y: Math.round(live.value.y * 10) / 10 })
   live.value = null
   grab = null
@@ -153,7 +148,8 @@ onUnmounted(() => {
   if (restTimer) clearTimeout(restTimer)
   if (setTimer) clearTimeout(setTimer)
   if (zoneFrame) cancelAnimationFrame(zoneFrame)
-  endDrag()
+  if (stopDrag) stopDrag()
+  else endDrag()
   observer?.disconnect()
 })
 </script>

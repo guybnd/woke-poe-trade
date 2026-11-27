@@ -41,7 +41,7 @@ import { WButton, toast } from '../ui'
 import MapToast from './MapToast.vue'
 import GlanceBar from './GlanceBar.vue'
 import ChipSettings from './ChipSettings.vue'
-import { formatChaos, formatClock, formatDuration } from '../ui/format'
+import { formatChaos, formatClock, formatDuration, formatSigned } from '../ui/format'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, openOverlay } from '../dock/dock'
@@ -322,7 +322,7 @@ function showMe () {
 
 function peekText (s: NightStory): string {
   const p = profitOf(s)
-  const profit = p != null ? ` · ${p > 0 ? '+' : ''}${formatChaos(p, s.divine)}` : ''
+  const profit = p != null ? ` · ${formatSigned(p, x => formatChaos(x, s.divine))}` : ''
   return `${formatDuration(s.endedAt - s.startedAt - (s.afkMs ?? 0))} · ${s.maps.length} ${s.maps.length === 1 ? 'map' : 'maps'}${profit}`
 }
 

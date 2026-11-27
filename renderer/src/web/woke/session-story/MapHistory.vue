@@ -74,7 +74,7 @@ import { WBanner, WButton, WEmpty, WIcon, WSkeleton, openMenu, vItemTip } from '
 import { logMechanic } from '../ui/game-icons'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import { hideHelp, showHelp } from '../ui/help-tip'
-import { formatChaos, formatClock } from '../ui/format'
+import { formatChaos, formatClock, formatSigned } from '../ui/format'
 import { inRange } from '../analytics/stats'
 import type { AnalyticsRange } from '../analytics/types'
 import { isWidgetTypeOn } from '../modules'
@@ -220,7 +220,7 @@ const dayTotals = computed(() => interleave(maps.value, reads.value))
 const drawn = computed(() => withDays(items.value, limit.value, isSkippedArea, folded.value, dayTotals.value))
 // A day's stash income: in divines each read counts at its own rate, as its line does.
 function dayMoney (d: DayLine): string {
-  if (props.unit === 'div' && d.div != null) return `${d.div > 0 ? '+' : ''}${formatChaos(d.div, 1, 'div')}`
+  if (props.unit === 'div' && d.div != null) return formatSigned(d.div, x => formatChaos(x, 1, 'div'))
   return signed(d.chaos, d.rate)
 }
 const lines = computed(() => drawn.value.lines)
@@ -257,7 +257,7 @@ watch(() => props.focus, (at) => { pending = at ?? null; notSaved.value = false;
 watch(loading, () => { showPick() })
 // In the window's unit: a read's own divine rate, else today's.
 const money = (chaos: number, rate: number | null) => formatChaos(chaos, rate ?? props.divine ?? null, props.unit)
-const signed = (chaos: number, rate: number | null) => `${chaos > 0 ? '+' : ''}${money(chaos, rate)}`
+const signed = (chaos: number, rate: number | null) => formatSigned(chaos, x => money(x, rate))
 // As the chip counts it: maps under 30 s (a quick look in) left out.
 const counted = computed(() => maps.value.filter(m => m.mapMs > 30_000))
 const avgMs = computed(() => counted.value.reduce((s, m) => s + m.mapMs, 0) / Math.max(1, counted.value.length))

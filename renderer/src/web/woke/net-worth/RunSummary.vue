@@ -80,7 +80,7 @@ import { computed, shallowRef, watch } from 'vue'
 import DropTile from './DropTile.vue'
 import WIcon from '../ui/WIcon.vue'
 import { logMechanic } from '../ui/game-icons'
-import { formatChaos } from '../ui/format'
+import { formatChaos, formatSigned, formatTimeOfDay } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { rateTime } from '../shared/rate-time-now'
 import { tipFor } from './tips'
@@ -121,7 +121,7 @@ const emit = defineEmits<{
 
 const money = (chaos: number) => formatChaos(chaos, props.divine)
 const unit = computed(() => unitOf(props.totals.maps, props.totals.fights))
-const signedMoney = (chaos: number) => `${chaos > 0 ? '+' : chaos < 0 ? '−' : ''}${money(Math.abs(chaos))}`
+const signedMoney = (chaos: number) => formatSigned(chaos, money)
 
 // The run's maps, whole (deaths, NPCs), from the map log.
 const maps = shallowRef<SummaryMap[]>([])
@@ -201,7 +201,7 @@ const sampleNote = computed(() => {
 const maxMs = computed(() => Math.max(1, ...s.value.maps.map(m => m.mapMs)))
 const avgPct = computed(() => s.value.avgMapMs != null ? (s.value.avgMapMs / maxMs.value) * 100 : null)
 const slowMs = computed(() => s.value.medianMapMs != null && s.value.maps.length >= 6 ? s.value.medianMapMs * SLOW_FACTOR : null)
-const clock = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+const clock = formatTimeOfDay
 function barTitle (m: SummaryMap): string {
   const bits = [`${m.name} · ${clockOf(m.mapMs)} · entered ${clock(m.enteredAt)}`]
   if (m.deaths) bits.push(`${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}`)
