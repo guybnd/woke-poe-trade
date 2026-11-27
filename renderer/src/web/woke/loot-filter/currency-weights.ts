@@ -80,6 +80,18 @@ export function categoryOf (name: string, type: string): string {
   return 'other'
 }
 
+// Sub-groups inside a category, loudest first (Guy 2026-11-27: essences by
+// tier, so a whole tier can be looked over or switched off at once).
+export const ESSENCE_TIERS = ['Deafening', 'Shrieking', 'Screaming', 'Wailing', 'Weeping', 'Muttering', 'Whispering'] as const
+export const SUBGROUPS: Record<string, readonly string[]> = {
+  essences: [...ESSENCE_TIERS, 'Special']
+}
+export function subgroupOf (name: string, cat: string): string | null {
+  if (cat !== 'essences') return null
+  const tier = ESSENCE_TIERS.find(t => name.startsWith(`${t} Essence of `))
+  return tier ?? 'Special'
+}
+
 export interface CurrencyItem {
   name: string
   cls: string
@@ -94,11 +106,20 @@ export interface CurrencyItem {
   est: boolean
   // The player typed the price.
   own?: boolean
+  // An odd item poe.ninja has no price for at all (Facetor's Lens, Imprint,
+  // Scrying Orb): it shows at least Small (Guy 2026-11-27).
+  free?: boolean
   full: number
 }
 
 function groupOf (type: string): EconomyGroup {
   return NET_GROUPS.find(g => g.type === type) ?? NET_GROUPS[0]
+}
+
+// Odd utility items poe.ninja doesn't price (Facetor's Lens, Imprint, Scrying
+// Orb): the Other category, not shards or scraps, and not hidden by NeverSink.
+function isFree (name: string, type: string, tier: string | null): boolean {
+  return categoryOf(name, type) === 'other' && !/(Shard|Fragment|Splinter|Scrap)$/.test(name) && !(tier && HIDDEN_TIERS.test(tier))
 }
 
 export function tierGuess (tier: string | null): number {
@@ -137,6 +158,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         chaos: own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess),
         est: own == null && !priced,
         ...(own != null ? { own: true } : {}),
+        ...(own == null && (p == null || !(p.chaos > 0)) && isFree(name, b.type, b.tier) ? { free: true } : {}),
         full: fullStack(name)
       })
     }
@@ -182,8 +204,9 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   const e = c.items[it.name]
   if (e?.step != null) return [1, 2, 3, 4, 5].map(s => s === e.step ? 1 : null)
   const out = stepStarts(c, it.cat).map(at => minStack(it, at))
-  if (e?.supply != null) {
-    const f = Math.min(e.supply, it.full)
+  const supply = e?.supply ?? (it.free ? 1 : null)
+  if (supply != null) {
+    const f = Math.min(supply, it.full)
     out[0] = out[0] == null ? f : Math.min(out[0], f)
   }
   // A louder step never starts below a quieter one.

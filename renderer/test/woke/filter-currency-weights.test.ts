@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, fullBias, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, tierGuess, divineChaos } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, fullBias, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, tierGuess, divineChaos } from '@/web/woke/loot-filter/currency-weights'
 import type { CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { fullStack } from '@/web/woke/loot-filter/stack-sizes'
@@ -166,6 +166,23 @@ describe('currency weights', () => {
     // 0.3c: shows from 8 at 1c; at 4c a full stack isn't enough.
     expect(stacksFor(alch, base)[0]).toBe(8)
     expect(stacksFor(alch, less)[0]).toBeNull()
+  })
+
+  it('shows odd items poe.ninja has no price for, but not shards', () => {
+    const items = currencyItems(parseFilter(SEMI), lookup)
+    const free = items.filter(i => i.free).map(i => i.name)
+    expect(free).toContain('Facetor\'s Lens')
+    expect(free.some(n => /Shard$/.test(n))).toBe(false)
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(), lookup)
+    expect(matchItem(doc, pile('Facetor\'s Lens', 1)).visibility).toBe('Show')
+  })
+
+  it('sorts essences into their tiers', () => {
+    expect(subgroupOf('Deafening Essence of Greed', 'essences')).toBe('Deafening')
+    expect(subgroupOf('Whispering Essence of Hatred', 'essences')).toBe('Whispering')
+    expect(subgroupOf('Essence of Horror', 'essences')).toBe('Special')
+    expect(subgroupOf('Divine Orb', 'orbs')).toBeNull()
   })
 
   it('sorts every item into a category', () => {

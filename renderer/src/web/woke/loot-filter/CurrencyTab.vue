@@ -39,7 +39,7 @@
         <WIcon :item="g.cat.art" size="sm" />
         <span :class="$style.catName">{{ g.cat.name }}</span>
         <span v-if="g.edited" :class="$style.edited">{{ g.edited }} edited</span>
-        <span class="w-dim text-xs w-num">{{ g.shown }} of {{ g.all }} show</span>
+        <span :class="$style.count">{{ g.shown }} of {{ g.all }} show</span>
         <span :class="$style.dots" aria-hidden="true"><i v-for="r in g.rows" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
         <span class="flex-1" />
         <span :class="$style.nudge" @click.stop @keydown.stop>
@@ -49,10 +49,27 @@
         </span>
       </div>
       <div v-if="isOpen(g.cat.id)" :class="$style.catBody" role="table" :aria-label="`${g.cat.name} and when they show`">
-        <template v-for="r in g.rows" :key="r.it.name">
+        <template v-for="sg in g.subs" :key="sg.id">
+        <div v-if="sg.name" :class="$style.subHead" :data-currency-sub="sg.name">
+          <span :class="$style.subFold" role="button" tabindex="0" :aria-expanded="isOpen(`${g.cat.id}/${sg.name}`)"
+            @click="toggle(`${g.cat.id}/${sg.name}`)" @keydown.enter.prevent="toggle(`${g.cat.id}/${sg.name}`)" @keydown.space.prevent="toggle(`${g.cat.id}/${sg.name}`)">
+            <i class="fas text-xs w-dim" :class="isOpen(`${g.cat.id}/${sg.name}`) ? 'fa-chevron-down' : 'fa-chevron-right'" />
+            <span :class="$style.subName">{{ sg.name }}</span>
+            <span :class="$style.count">{{ sg.shown }} of {{ sg.all.length }} show</span>
+            <span :class="$style.dots" aria-hidden="true"><i v-for="r in sg.all" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
+          </span>
+          <span class="flex-1" />
+          <label :class="$style.whole">Whole tier
+            <select :value="sg.step" :class="$style.sel2" :aria-label="`Step for every ${sg.name} item`" @change="setSubStep(sg.all, ($event.target as HTMLSelectElement).value)">
+              <option v-if="sg.step === 'mixed'" value="mixed" disabled>Mixed</option>
+              <option value="auto">Price decides</option>
+              <option v-for="(n, i) in CSTEP_NAMES" :key="n" :value="String(i)">{{ i === 0 ? 'Hidden (off)' : n }}</option>
+            </select></label>
+        </div>
+        <template v-for="r in (sg.name && !isOpen(`${g.cat.id}/${sg.name}`) ? [] : sg.rows)" :key="r.it.name">
           <WItemRow :item="{ name: r.it.name }" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
             <span :class="$style.name">{{ r.it.name }}<span v-if="r.edited" :class="$style.edited"> edited</span></span>
-            <span :class="$style.price" :title="r.it.own ? 'Your price' : r.it.est ? `No usable price: a guess from NeverSink's ${r.it.tier ? `tier ${r.it.tier}` : 'tiers'}` : 'poe.ninja'">
+            <span :class="$style.price" :title="r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows at least Small' : r.it.est ? `No usable price: a guess from NeverSink's ${r.it.tier ? `tier ${r.it.tier}` : 'tiers'}` : 'poe.ninja'">
               {{ chaosText(r.it.chaos) }}<span v-if="r.it.est" :class="$style.est"> est.</span>
             </span>
             <span :class="$style.pills">
@@ -61,6 +78,7 @@
             <i class="fas fa-pen w-faint" :class="$style.pen" aria-hidden="true" />
           </WItemRow>
           <CurrencyItemEditor v-if="sel === r.it.name" :it="r.it" :edit="c.items[r.it.name] ?? {}" :step="r.one" :base-price="baseChaos(r.it.name)" @change="e => setEdit(r.it.name, e)" />
+        </template>
         </template>
       </div>
     </div>
@@ -77,7 +95,7 @@ import CurrencyPile from './CurrencyPile.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { CSTEP_NAMES, CURRENCY_CATEGORIES, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, catLine, currencyItems, defaultCurrency, stacksFor, stepOfPile } from './currency-weights'
+import { CSTEP_NAMES, CURRENCY_CATEGORIES, SUBGROUPS, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, catLine, currencyItems, defaultCurrency, stacksFor, stepOfPile } from './currency-weights'
 import type { CStep, CurrencyItem, ItemEdit } from './currency-weights'
 
 const props = defineProps<{
@@ -164,8 +182,36 @@ const visible = computed(() => {
 
 const groups = computed(() => CURRENCY_CATEGORIES.map(cat => {
   const all = rows.value.filter(r => r.it.cat === cat.id)
-  return { cat, all: all.length, shown: all.filter(r => r.shows).length, edited: all.filter(r => r.edited).length, rows: visible.value.filter(r => r.it.cat === cat.id) }
+  const rowsHere = visible.value.filter(r => r.it.cat === cat.id)
+  const names = SUBGROUPS[cat.id]
+  const subs = names
+    ? names.map(name => {
+        const inSub = all.filter(r => subgroupOf(r.it.name, cat.id) === name)
+        return { id: name, name, all: inSub, shown: inSub.filter(r => r.shows).length, step: wholeStep(inSub), rows: rowsHere.filter(r => subgroupOf(r.it.name, cat.id) === name) }
+      }).filter(sg => sg.rows.length)
+    : [{ id: '', name: '', all, shown: 0, step: 'auto', rows: rowsHere }]
+  return { cat, all: all.length, shown: all.filter(r => r.shows).length, edited: all.filter(r => r.edited).length, rows: rowsHere, subs }
 }).filter(g => g.rows.length))
+
+type Row = (typeof rows.value)[number]
+// The step every item of a sub-group has by hand, 'auto' when none has one,
+// 'mixed' otherwise.
+function wholeStep (list: Row[]): string {
+  const steps = new Set(list.map(r => c.value.items[r.it.name]?.step))
+  if (steps.size !== 1) return 'mixed'
+  const [s] = steps
+  return s == null ? 'auto' : String(s)
+}
+// Sets (or clears) the step of every item in a sub-group; their other edits stay.
+function setSubStep (list: Row[], v: string) {
+  const step = v === 'auto' ? undefined : Number(v) as CStep
+  const next = { ...c.value.items }
+  for (const r of list) {
+    const rest = Object.fromEntries(Object.entries(next[r.it.name] ?? {}).filter(([k]) => k !== 'step')) as ItemEdit
+    next[r.it.name] = step == null ? rest : { ...rest, step }
+  }
+  c.value.items = Object.fromEntries(Object.entries(next).filter(([, e]) => Object.keys(e).length))
+}
 
 // Folded by default; a search or a filter chip opens what it finds.
 const open = ref(new Set<string>())
@@ -289,7 +335,8 @@ function chaosText (v: number): string {
   color: inherit;
   padding: 1px 6px;
 }
-.cat { border: 1px solid var(--w-line); border-radius: var(--w-r-sm); }
+.cat { border: 1px solid var(--w-line); border-radius: var(--w-r-sm); max-width: 46rem; }
+.count { font-size: var(--w-fs-xs); color: var(--w-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .catHead { display: flex; align-items: center; gap: 8px; padding: 4px 8px; cursor: pointer; }
 .catHead:hover { background: var(--w-panel-2); }
 .catName { font-size: var(--w-fs-sm); color: #e2d3ad; white-space: nowrap; }
@@ -307,10 +354,15 @@ function chaosText (v: number): string {
 }
 .nudge button:disabled { opacity: 0.4; }
 .nudge span { min-width: 3.2em; text-align: center; color: var(--w-dim); }
+.subHead { display: flex; align-items: center; gap: 8px; padding: 3px 2px; margin-top: 2px; border-bottom: 1px solid var(--w-line); }
+.subFold { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; min-width: 0; }
+.subName { font-size: var(--w-fs-sm); color: #d8c89c; min-width: 5.5rem; }
+.whole { display: inline-flex; align-items: center; gap: 6px; color: var(--w-dim); font-size: var(--w-fs-xs); }
+.sel2 { background: var(--w-panel); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); color: inherit; padding: 0 4px; }
 .catBody { border-top: 1px solid var(--w-line); padding: 4px 6px; display: flex; flex-direction: column; }
 .row {
   display: grid;
-  grid-template-columns: 20px minmax(9rem, 1.3fr) 4.5rem minmax(0, 2.6fr) 14px;
+  grid-template-columns: 20px minmax(8rem, 15rem) 4rem minmax(0, 1fr) 14px;
   align-items: center;
   column-gap: 8px;
   font-size: var(--w-fs-sm);

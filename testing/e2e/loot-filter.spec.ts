@@ -1377,6 +1377,17 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await editor.getByRole('button', { name: 'Let the price decide again' }).click()
   await expect(page.locator('[data-currency-cat="orbs"]')).not.toContainText('edited')
 
+  // Essences sit in tiers; a whole tier switches off in one pick.
+  await page.locator('[data-currency-cat="essences"] [aria-expanded]').first().click()
+  const deaf = page.locator('[data-currency-sub="Deafening"]')
+  await expect(deaf).toBeVisible()
+  await deaf.getByRole('button').click()
+  await deaf.getByRole('combobox').selectOption('0')
+  await expect(page.locator('[data-currency-cat="essences"]')).toContainText('edited')
+  await overlay.snap('currency essences by tier, Deafening off')
+  await deaf.getByRole('combobox').selectOption('auto')
+  await expect(page.locator('[data-currency-cat="essences"]').first()).not.toContainText('edited')
+
   // Search opens the categories that match.
   await page.getByRole('searchbox', { name: 'Find an item' }).fill('alc')
   await expect(page.locator('[data-currency-item="Orb of Alchemy"]')).toBeVisible()
