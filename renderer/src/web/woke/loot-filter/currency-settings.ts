@@ -63,6 +63,8 @@ export interface CurrencySettings {
   // see-through in the category colour instead of hiding, while the
   // Strictness multiplier is under `until`.
   faint: FaintSettings
+  // Maps: normal maps under this tier hide (Guy's M1 slider); 1 shows all.
+  mapFrom: number
 }
 
 export type SectionMode = 'off' | 'auto' | 'always'
@@ -72,7 +74,7 @@ export interface FaintSettings { on: boolean, until: number }
 export const FAINT_UNTIL = 1.25
 
 export function defaultCurrency (): CurrencySettings {
-  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, off: [], mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL } }
+  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, off: [], mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1 }
 }
 
 const NAME = /^[^"\n]{1,80}$/
@@ -139,6 +141,7 @@ export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): Cu
     // Kept light (this runs at startup): what reads them takes only 'off',
     // 'always', true and a number (currency-weights.ts).
     catMode: { ...c?.catMode },
-    faint: { on: c?.faint?.on === true, until: Number(c?.faint?.until) || FAINT_UNTIL }
+    faint: { on: c?.faint?.on === true, until: Number(c?.faint?.until) || FAINT_UNTIL },
+    mapFrom: int(c?.mapFrom, 1, 17) ?? 1
   }
 }

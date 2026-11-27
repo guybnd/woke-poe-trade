@@ -1385,8 +1385,8 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await page.getByRole('tab', { name: /^Loot/ }).click()
   // The Loot tab: a rail of classes, Currency first; the rest NeverSink's for now.
   await expect(page.locator('[data-loot-class="currency"]')).toHaveAttribute('aria-pressed', 'true')
-  await page.locator('[data-loot-class="maps"]').click()
-  await expect(page.locator('[data-loot-later]')).toContainText('NeverSink decides maps')
+  await page.locator('[data-loot-class="jewels"]').click()
+  await expect(page.locator('[data-loot-later]')).toContainText('NeverSink decides jewels')
   // Fragments: priced on the same ladder, folded by boss.
   await page.locator('[data-loot-class="fragments"]').click()
   await expect(page.locator('[data-currency-cat="invites"]')).toBeVisible()
@@ -1420,6 +1420,13 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await exc.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
   await expect(exc.locator('[data-currency-item="Enlighten Support 4/20c"]')).toBeVisible()
   await overlay.snap('loot tab, gems')
+  // Maps: one slider for normal maps; special maps stay NeverSink's.
+  await page.locator('[data-loot-class="maps"]').click()
+  const from = page.getByRole('slider', { name: 'Show maps from tier' })
+  await from.fill('14')
+  await expect(page.locator('[data-loot-maps]')).toContainText('under tier 14 hide')
+  await overlay.snap('loot tab, maps')
+  await from.fill('1')
   await page.locator('[data-loot-class="currency"]').click()
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()
