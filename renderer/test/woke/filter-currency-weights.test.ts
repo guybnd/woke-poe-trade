@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, levelOf, strictMult, scaled, tierGuess, divineChaos, withEdit } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, ALL_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, levelOf, strictMult, scaled, tierGuess, divineChaos, withEdit } from '@/web/woke/loot-filter/currency-weights'
 import { normalizeItemEdit } from '@/web/woke/loot-filter/currency-settings'
 import type { CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
@@ -239,9 +239,10 @@ describe('currency weights', () => {
     expect(items.get('Runegraft of Bellows')).toBe('runegrafts')
     expect(items.has('Dead Man\'s Sulphur')).toBe(true)
     expect(items.has('Rogue\'s Marker')).toBe(true)
-    // League threads come from the fragment rules; nothing else from there does.
+    // League threads come from the fragment rules; the rest of those are the
+    // Fragments class (fragment-classes.ts).
     expect(items.get('Breach Thread')).toBe('threads')
-    expect(items.has('Divine Vessel')).toBe(false)
+    expect(items.get('Divine Vessel')).toBe('invites')
     const doc = parseFilter(SEMI)
     applyCurrency(doc, on(c => { c.items = { 'Breach Thread': { step: 4 } } }), lookup)
     const hit = matchItem(doc, { ...pile('Breach Thread', 1), itemClass: 'Misc Map Items' })
@@ -281,7 +282,7 @@ describe('currency weights', () => {
 
   it('sorts every item into a category', () => {
     const items = currencyItems(parseFilter(SEMI), lookup)
-    const ids = new Set(CURRENCY_CATEGORIES.map(c => c.id))
+    const ids = new Set(ALL_CATEGORIES.map(c => c.id))
     for (const it of items) expect(ids.has(it.cat), it.name).toBe(true)
     const of = (n: string) => items.find(i => i.name === n)?.cat
     expect(of('Orb of Alchemy')).toBe('orbs')

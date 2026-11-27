@@ -1,17 +1,17 @@
 <template>
   <!-- The Loot tab (Guy's pick A, 2026-11-27): a rail of loot classes on the
-       left, the picked class on the right. Currency is the first class that
+       left, the picked class on the right. Currency and Fragments are the classes that
        prices decide; the others stay NeverSink's until they are built. -->
   <div :class="$style.wrap" data-loot-tab>
     <nav :class="$style.rail" aria-label="Loot classes">
       <button v-for="k in LOOT_CLASSES" :key="k.id" type="button" :class="$style.cls" :aria-pressed="k.id === sel" :data-loot-class="k.id" @click="sel = k.id">
         <span :class="$style.sw" :style="{ background: `rgb(${k.rgb.join(',')})` }" aria-hidden="true" />
         <span :class="$style.name">{{ k.name }}</span>
-        <span v-if="k.id === 'currency'" :class="$style.state">{{ config.presets.currency.on ? 'On' : 'Off' }}</span>
+        <span v-if="PRICED.has(k.id)" :class="$style.state">{{ config.presets.currency.on ? 'On' : 'Off' }}</span>
         <span v-else :class="$style.ns">NeverSink</span>
       </button>
     </nav>
-    <CurrencyTab v-if="sel === 'currency'" :store="store" :config="config" :class="$style.main" />
+    <CurrencyTab v-if="sel === 'currency' || sel === 'fragments'" :key="sel" :kind="sel === 'fragments' ? 'fragments' : 'currency'" :store="store" :config="config" :class="$style.main" />
     <div v-else :class="$style.later" data-loot-later>
       <b :class="$style.title">{{ cls.name }}</b>
       <p class="text-sm w-dim">NeverSink decides {{ cls.name.toLowerCase() }} for now. Prices will decide them here too, class by class.</p>
@@ -44,6 +44,8 @@ const LOOT_CLASSES = [
 ] as const
 type ClassId = (typeof LOOT_CLASSES)[number]['id']
 
+// Classes prices decide already: one engine and one switch for both.
+const PRICED = new Set<ClassId>(['currency', 'fragments'])
 const sel = ref<ClassId>('currency')
 const cls = computed(() => LOOT_CLASSES.find(k => k.id === sel.value)!)
 </script>

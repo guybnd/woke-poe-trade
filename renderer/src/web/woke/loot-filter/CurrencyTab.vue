@@ -1,7 +1,7 @@
 <template>
   <div :class="$style.wrap" class="w-scroll">
     <div :class="$style.top">
-      <WToggle v-model="c.on">Prices decide endgame currency</WToggle>
+      <WToggle v-model="c.on">{{ kind === 'fragments' ? 'Prices decide endgame currency and fragments' : 'Prices decide endgame currency' }}</WToggle>
       <span :class="$style.beta">Beta</span>
       <WInfo text="In maps (area level 68+), each pile of currency, essences, fossils, oils, delirium orbs, omens, tattoos and ducats counts as its poe.ninja price × stack (10 Chaos is 10c); an item whose full stack is worth less than Decent counts × stack^0.75, so piles of cheap shards stay quiet. Under the line it hides; over it it shows Small, and Normal, Decent, Big and Tink start at the prices you set; untick Show on a step to hide everything that would get it. Each category has its own Strictness (×1.25 a notch on top of the main one); click an item to set its step, price, supply stack or look by hand. Items with no price get a guess from NeverSink's tier (est.). Only this profile. Your own rules, build rules and presets still go on top. In maps these rules replace NeverSink's for these items, so price moves and tier edits for them apply only below area level 68." />
       <span class="w-faint text-xs">{{ statusText }}</span>
@@ -57,7 +57,7 @@
       <div :class="$style.samples">
         <LabelPreview v-for="cat in SAMPLE_CATS" :key="cat" :text="catArt(cat)" :actions="[]" :style-override="currencyFullLook(stepEdit, cat, c)" visibility="Show" :extras="false" :scale="0.8" />
       </div>
-      <StyleEditor look-only no-colours :look="currencyFullLook(stepEdit, 'orbs', c)" visibility="Show" :preview-text="catArt('orbs')"
+      <StyleEditor look-only no-colours :look="currencyFullLook(stepEdit, SAMPLE_CATS[0], c)" visibility="Show" :preview-text="catArt(SAMPLE_CATS[0])"
         @patch="p => setStepLook(stepEdit!, { ...c.steps[stepEdit!], ...loudOnly(p) })" />
     </div>
 
@@ -156,14 +156,17 @@ import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { withEdit, CSTEP_NAMES, CURRENCY_CATEGORIES, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden } from './currency-weights'
+import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
-import type { CStep, CurrencyItem, ItemEdit } from './currency-weights'
+import type { CStep, CurrencyItem, ItemEdit, LootKind } from './currency-weights'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   store: LootFilterStore
   config: LootFilterWidget
-}>()
+  // The Loot tab's class: Currency or Fragments, one engine and one ladder.
+  kind?: LootKind
+}>(), { kind: 'currency' })
+const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.kind))
 
 const c = computed(() => props.config.presets.currency)
 const STEP_CSS = ['#3b372f', '#6d6250', '#a08d5e', '#cdb27a', '#ffe196', '#ff4040']
@@ -195,7 +198,7 @@ const baseItems = computed<CurrencyItem[]>(() => {
   const doc = props.store.doc.value
   const lookup = props.store.prices.lookup.value
   if (!doc || !lookup) return []
-  return currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup)
+  return currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup).filter(it => kindOf(it.cat) === props.kind)
 })
 const baseByName = computed(() => new Map(baseItems.value.map(i => [i.name, i])))
 const baseChaos = (name: string) => baseByName.value.get(name)?.chaos ?? 0
@@ -252,7 +255,7 @@ const visible = computed(() => {
       (only.value === 'edited' && r.edited)))
 })
 
-const groups = computed(() => CURRENCY_CATEGORIES.map(cat => {
+const groups = computed(() => CATS.value.map(cat => {
   const all = rows.value.filter(r => r.it.cat === cat.id)
   const rowsHere = visible.value.filter(r => r.it.cat === cat.id)
   const names = SUBGROUPS[cat.id]
@@ -319,11 +322,11 @@ const level = computed(() => levelOf(props.store.doc.value?.strictness ?? null))
 const mult = computed(() => c.value.mult ?? strictMult(level.value))
 const eff = computed(() => scaled(c.value, props.store.doc.value?.strictness ?? null))
 const dragMult = ref<number | null>(null)
-const SAMPLE_CATS = ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
+const SAMPLE_CATS = props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
 // The step cards' sample label: one category for all six, click to go to the next.
-const sampleCat = ref('orbs')
+const sampleCat = ref(SAMPLE_CATS[0])
 function nextSample () {
-  const ids = CURRENCY_CATEGORIES.map(x => x.id)
+  const ids = CATS.value.map(x => x.id)
   sampleCat.value = ids[(ids.indexOf(sampleCat.value) + 1) % ids.length]
 }
 // Each step card's sample: an item of the picked category that one of shows
@@ -339,8 +342,8 @@ const stepSample = computed(() => {
   }
   return out
 })
-const catName = (id: string) => CURRENCY_CATEGORIES.find(x => x.id === id)?.name ?? id
-const catArt = (id: string) => CURRENCY_CATEGORIES.find(x => x.id === id)?.art ?? id
+const catName = (id: string) => ALL_CATEGORIES.find(x => x.id === id)?.name ?? id
+const catArt = (id: string) => ALL_CATEGORIES.find(x => x.id === id)?.art ?? id
 function loudOnly (p: StylePatch): StylePatch {
   const out: StylePatch = {}
   if (p.fontSize !== undefined) out.fontSize = p.fontSize
@@ -384,9 +387,10 @@ function setEdit (name: string, e: ItemEdit | null) {
 }
 
 const emptyText = computed(() => {
-  if (!props.store.doc.value) return 'Load a NeverSink filter to see its currency.'
+  const what = props.kind === 'fragments' ? 'fragments' : 'currency'
+  if (!props.store.doc.value) return `Load a NeverSink filter to see its ${what}.`
   if (!props.store.prices.lookup.value) return 'Waiting for prices from poe.ninja.'
-  return 'No currency found in this filter.'
+  return `No ${what} found in this filter.`
 })
 const statusText = computed(() => {
   if (!c.value.on) return 'Off: NeverSink decides'
