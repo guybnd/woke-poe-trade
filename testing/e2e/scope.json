@@ -629,6 +629,12 @@
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/wickerman/"
   ],
+  "watchers-eye.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/watchers-eye/",
+   "renderer/src/web/woke/search/"
+  ],
   "welcome.spec.ts": [
    "renderer/src/web/woke/tab-bar/",
    "renderer/src/web/woke/setup/"
@@ -656,9 +662,5 @@
    "renderer/src/web/woke/net-worth/",
    "renderer/src/web/woke/search/lookups/net-worth.ts"
   ]
- },
- "watchers-eye.spec.ts": [
-  "renderer/src/web/woke/watchers-eye/",
-  "renderer/src/web/woke/search/"
- ]
+ }
 }
