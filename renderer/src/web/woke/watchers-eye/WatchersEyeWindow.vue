@@ -8,6 +8,8 @@
             @update:model-value="loadSaved($event)" />
           <input v-if="naming" ref="nameBox" v-model="saveName" class="w-input" :class="$style.nameInput" placeholder="Name it…" aria-label="Setup name" data-qa="we-save-name"
             @keydown.enter.prevent="saveSetup" @keydown.esc.stop="naming = false" @blur="saveSetup">
+          <WButton v-if="naming" size="sm" variant="ghost" icon="fas fa-check" title="Save" data-qa="we-save-ok"
+            @mousedown.prevent @click="saveSetup" />
           <WButton v-else size="sm" variant="ghost" icon="fas fa-save" :disabled="!shown.size" data-qa="we-save"
             title="Save these auras and picks to look at again" @click="startSave">Save</WButton>
           <WButton v-if="current" size="sm" variant="ghost" icon="fas fa-trash" :title="`Remove ${current}`" data-qa="we-remove-saved" @click="removeSaved" />
@@ -84,7 +86,7 @@
 // with them, in the price check or on the trade site.
 import { computed, nextTick, shallowRef, watch } from 'vue'
 import { ITEM_BY_REF } from '@/assets/data'
-import { AppConfig, poeWebApi } from '@/web/Config'
+import { AppConfig, poeWebApi, saveConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import { WButton, WChip, WIcon, WInfo, WPanel, WSegmented, WSelect, itemArt, vItemTip } from '../ui'
 import { vModTip } from '../ui/tooltip/mod-line-tip'
@@ -227,8 +229,18 @@ const savedOptions = computed(() => [
   { value: '', label: current.value ?? 'Saved…' },
   ...config.saved.map(s => ({ value: s.name, label: s.name }))
 ])
+// A name to start from, so Save keeps the setup even if no name is typed.
+function defaultName (): string {
+  const auras = shownList.value.join(', ')
+  const n = active.value.length
+  const base = n ? `${auras} · ${n} mod${n === 1 ? '' : 's'}` : auras
+  // Never over another saved setup: a typed name may replace one, this one won't.
+  let name = base
+  for (let i = 2; config.saved.some(s => s.name === name); i++) name = `${base} (${i})`
+  return name
+}
 async function startSave () {
-  saveName.value = current.value ?? ''
+  saveName.value = current.value ?? defaultName()
   naming.value = true
   await nextTick()
   nameBox.value?.focus()
@@ -237,11 +249,14 @@ async function startSave () {
 function saveSetup () {
   if (!naming.value) return
   naming.value = false
-  const name = saveName.value.trim()
+  const name = saveName.value.trim() || defaultName()
   if (!name) return
   const entry = { name, auras: [...shownList.value], picks: active.value.map(p => ({ ...p })), atLeast: need.value }
   config.saved = [...config.saved.filter(s => s.name !== name), entry].sort((a, b) => a.name.localeCompare(b.name))
   setCurrent(name)
+  // To disk now: the overlay otherwise saves only when it loses focus or
+  // quits cleanly, and a restart in between would lose the setup.
+  saveConfig()
 }
 function loadSaved (name: string) {
   const s = config.saved.find(s => s.name === name)
@@ -256,6 +271,7 @@ function loadSaved (name: string) {
 function removeSaved () {
   config.saved = config.saved.filter(s => s.name !== current.value)
   current.value = null
+  saveConfig()
 }
 // What the setup looks like when saved or loaded: a change after that drops the name.
 let currentShape = ''
