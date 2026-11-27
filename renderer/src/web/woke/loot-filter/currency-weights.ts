@@ -97,6 +97,8 @@ const BY_TYPE: Record<string, string> = {
 // NeverSink lists all of these as plain currency: sort them by name.
 export function categoryOf (name: string, type: string): string {
   if (type === 'fragments' && !THREAD.test(name)) return fragmentCategoryOf(name)
+  // NeverSink lists it with the Allflame Embers too; it's a fragment (Guy 2026-11-27).
+  if (name === 'Divine Vessel') return 'fragother'
   if (BY_TYPE[type]) return BY_TYPE[type]
   if (/Crystallised Lifeforce$/.test(name)) return 'harvest'
   if (/^Timeless .+ Splinter$|^Simulacrum Splinter$/.test(name)) return 'splinters'
@@ -258,7 +260,8 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         chaos: (own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess)) * (edits[name]?.mult ?? 1),
         est: own == null && !priced,
         ...(own != null ? { own: true } : {}),
-        ...(!card && own == null && (p == null || !(p.chaos > 0)) && isFree(name, b.type, b.tier) ? { free: true } : {}),
+        // Odd items with no solid price (none, or a thin one) always show.
+        ...(!card && own == null && !priced && isFree(name, b.type, b.tier) ? { free: true } : {}),
         // Fragments don't stack: one is the whole pile. A card's pile is at
         // most a set (10 until the sizes are read).
         full: card ? cards?.get(name)?.stack ?? 10 : frags && !thread ? 1 : fullStack(name)

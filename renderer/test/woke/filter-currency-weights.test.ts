@@ -229,6 +229,14 @@ describe('currency weights', () => {
     const doc = parseFilter(SEMI)
     applyCurrency(doc, on(), lookup)
     expect(matchItem(doc, pile('Facetor\'s Lens', 1)).visibility).toBe('Show')
+    expect(categoryOf('Divine Vessel', 'mapenchantments')).toBe('fragother')
+    expect(categoryOf('Blood-filled Vessel', 'fragments')).toBe('fragother')
+    expect(categoryOf('Polaric Invitation', 'fragments')).toBe('invites')
+    expect(categoryOf('Royal Visage', 'mapenchantments')).toBe('embers')
+    expect(categoryOf('Allflame Ember of Kulemak', 'mapenchantments')).toBe('embers')
+    // A thin price isn't a real one: still always shown.
+    const thin: PriceLookup = (g, base) => base === 'Facetor\'s Lens' ? { chaos: 0.01, thin: true } : lookup(g, base)
+    expect(currencyItems(parseFilter(SEMI), thin).find(i => i.name === 'Facetor\'s Lens')?.free).toBe(true)
   })
 
   it('covers every stackable NeverSink lists in maps, splinters, lifeforce, embers and runegrafts too', () => {
@@ -243,7 +251,7 @@ describe('currency weights', () => {
     // League threads come from the fragment rules; the rest of those are the
     // Fragments class (fragment-classes.ts).
     expect(items.get('Breach Thread')).toBe('threads')
-    expect(items.get('Divine Vessel')).toBe('invites')
+    expect(items.get('Divine Vessel')).toBe('fragother')
     const doc = parseFilter(SEMI)
     applyCurrency(doc, on(c => { c.items = { 'Breach Thread': { step: 4 } } }), lookup)
     const hit = matchItem(doc, { ...pile('Breach Thread', 1), itemClass: 'Misc Map Items' })

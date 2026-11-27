@@ -17,40 +17,28 @@
       <b :class="$style.minVal">×{{ (dragMult ?? mult).toFixed(2) }}</b>
       <WButton v-if="c.mult != null" size="sm" variant="ghost" icon="fas fa-undo" :title="`Back to ×${strictMult(level).toFixed(2)}, from NeverSink's ${LEVEL_NAMES[level]}`" @click="c.mult = null">Follow {{ LEVEL_NAMES[level] }}</WButton>
       <span v-else class="w-faint text-xs">follows {{ LEVEL_NAMES[level] }}</span>
-      <span class="w-faint text-xs">{{ hideNote }}</span>
+      <span class="flex-1" />
+      <button type="button" :class="$style.hidChip" title="List the items that never show" data-currency-hidden @click="only = 'hidden'">{{ rows.length - shownCount }} of {{ rows.length }} never show</button>
     </div>
 
-    <div :class="$style.steps" role="group" aria-label="Where each step starts">
-      <div v-for="s in [0, 1, 2, 3, 4, 5]" :key="s" :class="[$style.step, { [$style.stepOff]: s === 0 ? !faintActive : c.off.includes(s) }]" :style="{ '--step': STEP_CSS[s] }">
-        <span :class="$style.stepName">{{ s === 0 ? 'Faint' : CSTEP_NAMES[s] }}
-          <button v-if="s > 0" type="button" :class="[$style.lookBtn, { [$style.lookOn]: stepEdit === s }]" :aria-expanded="stepEdit === s" :aria-label="`${CSTEP_NAMES[s]} look and sound`"
-            @click="stepEdit = stepEdit === s ? null : s as CStep"><i class="fas fa-pen" aria-hidden="true" /> Look<i v-if="c.steps[s]" :class="$style.dot" aria-hidden="true" /></button></span>
-        <template v-if="s === 0">
-          <span class="w-faint text-xs">under the line</span>
-          <label :class="$style.from" data-loot-faint-until>until
-            <select :value="c.faint.until" :class="$style.sel2" aria-label="Faint shows while Strictness is under this" :disabled="!c.faint.on" @change="c.faint = { ...c.faint, until: Number(($event.target as HTMLSelectElement).value) }">
-              <option v-for="u in FAINT_UNTILS" :key="u.v" :value="u.v">{{ u.label }}</option>
-            </select></label>
-          <span :class="$style.stepSample"><LabelPreview :text="catArt(sampleCat)" :actions="[]" :style-override="faintSample" visibility="Show" :extras="false" :scale="0.85" /></span>
-          <label :class="$style.offTog" :title="faintActive ? 'Faint shows now' : c.faint.on ? 'Off at this Strictness' : ''"><input type="checkbox" :checked="c.faint.on" aria-label="Show Faint" data-loot-faint @change="c.faint = { ...c.faint, on: !c.faint.on }"> Show<span v-if="c.faint.on && !faintActive" class="w-faint"> · off now</span></label>
-        </template>
-        <label v-else-if="s === 1" :class="$style.from">from
-          <input :value="c.line" type="number" :min="LINE_MIN" :max="LINE_MAX" step="0.1" :class="$style.numIn" aria-label="Small from this many chaos (the line)" @change="setLine($event.target as HTMLInputElement)"> c<span v-if="mult !== 1" :class="$style.eff">= {{ chaosText(eff.line) }}</span></label>
-        <label v-else :class="$style.from">from
-          <input :value="c.from[s - 2]" type="number" min="0.1" step="any" :class="$style.numIn" :aria-label="`${CSTEP_NAMES[s]} from this many chaos`"
-            @change="setFrom(s - 2, $event.target as HTMLInputElement)"> c<span v-if="mult !== 1" :class="$style.eff">= {{ chaosText(eff.from[s - 2]) }}</span></label>
-        <span v-if="s > 0" class="w-faint text-xs">{{ STEP_NOTE[s] }}</span>
-        <button v-if="s > 0" type="button" :class="$style.stepSample" :title="`${catName(sampleCat)} at ${CSTEP_NAMES[s]}: click for another category`" :aria-label="`Show ${CSTEP_NAMES[s]} for another category`" data-currency-step-sample @click="nextSample">
-          <LabelPreview :text="stepSample[s] ?? catArt(sampleCat)" :actions="[]" :style-override="currencyFullLook(s as CStep, sampleCat, c)" visibility="Show" :extras="false" :scale="0.85" />
-        </button>
-        <label v-if="s >= 1 && s <= 4" :class="$style.offTog"><input type="checkbox" :checked="!c.off.includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]}`" @change="toggleOff(s)"> Show</label>
+    <StepRuler :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :edit="stepEdit" :samples="stepSample"
+      @edit="s => stepEdit = s" @set="setShown" />
+
+    <div v-if="stepEdit === 0" :class="$style.stepEd" data-currency-step-editor>
+      <div :class="$style.stepEdHead">
+        <b>Faint</b>
+        <label :class="$style.offTog"><input type="checkbox" :checked="c.faint.on" aria-label="Show Faint" data-loot-faint @change="c.faint = { ...c.faint, on: !c.faint.on }"> Show</label>
+        <label :class="$style.offTog" data-loot-faint-until>while Strictness is under
+          <select :value="c.faint.until" :class="$style.sel2" aria-label="Faint shows while Strictness is under this" :disabled="!c.faint.on" @change="c.faint = { ...c.faint, until: Number(($event.target as HTMLSelectElement).value) }">
+            <option v-for="u in FAINT_UNTILS" :key="u.v" :value="u.v">{{ u.label }}</option>
+          </select></label>
+        <span v-if="c.faint.on && !faintActive" class="w-faint text-xs">off now</span>
       </div>
     </div>
-
-    <div v-if="stepEdit" :class="$style.stepEd" data-currency-step-editor>
+    <div v-else-if="stepEdit" :class="$style.stepEd" data-currency-step-editor>
       <div :class="$style.stepEdHead">
         <b>{{ CSTEP_NAMES[stepEdit] }}</b>
-        <span class="w-faint text-xs">Size, sound, beam and map icon for every category. Colours come from each category.</span>
+        <label v-if="stepEdit <= 4" :class="$style.offTog"><input type="checkbox" :checked="!c.off.includes(stepEdit)" :aria-label="`Show ${CSTEP_NAMES[stepEdit]}`" @change="toggleOff(stepEdit)"> Show</label>
         <span class="flex-1" />
         <WButton size="sm" variant="ghost" icon="fas fa-undo" :disabled="!c.steps[stepEdit]" @click="setStepLook(stepEdit, null)">Back to built-in</WButton>
       </div>
@@ -154,6 +142,7 @@ import CurrencyPile from './CurrencyPile.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import LabelPreview from './LabelPreview.vue'
 import StyleEditor from './StyleEditor.vue'
+import StepRuler from './StepRuler.vue'
 import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
@@ -175,26 +164,21 @@ const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.ki
 
 const c = computed(() => props.config.presets.currency)
 const STEP_CSS = ['#3b372f', '#6d6250', '#a08d5e', '#cdb27a', '#ffe196', '#ff4040']
-const STEP_NOTE = ['', 'the category colour on black', 'vivid category colour, dark box, small icon', 'black on amber, flash beam', 'black on orange, beam, Shboong', 'red on white, red beam and icon, Tink']
 
-// Both write back to the field, so a refused or clamped number doesn't stay typed.
-function setLine (el: HTMLInputElement) {
-  const n = Number(el.value)
-  if (el.value.trim() && Number.isFinite(n)) c.value.line = Math.min(LINE_MAX, Math.max(LINE_MIN, n))
-  el.value = String(c.value.line)
-}
-function setFrom (i: number, el: HTMLInputElement) {
-  const raw = el.value
-  const n = Number(raw)
-  el.value = String(c.value.from[i])
-  if (!raw.trim() || !Number.isFinite(n) || n <= 0) return
+// The ruler hands back a price as shown (after Strictness); store it as yours.
+function setShown (i: number, shown: number) {
+  const n = Number((shown / mult.value).toPrecision(3))
+  if (i === 0) {
+    c.value.line = Math.min(LINE_MAX, Math.max(LINE_MIN, n))
+    return
+  }
+  const k = i - 1
   const from = [...c.value.from] as typeof c.value.from
-  from[i] = Math.min(1e6, n)
+  from[k] = Math.min(1e6, Math.max(0.01, n))
   // Each step starts at or above the one below it, and at or below the one above.
-  for (let k = i + 1; k < 4; k++) from[k] = Math.max(from[k], from[i])
-  for (let k = i - 1; k >= 0; k--) from[k] = Math.min(from[k], from[i])
+  for (let j = k + 1; j < 4; j++) from[j] = Math.max(from[j], from[k])
+  for (let j = k - 1; j >= 0; j--) from[j] = Math.min(from[j], from[k])
   c.value.from = from
-  el.value = String(from[i])
 }
 
 // The items as the filter lists them, with prices before any of yours; while
@@ -317,24 +301,16 @@ async function goTo (name: string) {
   document.querySelector(`[data-currency-item="${CSS.escape(name)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
 }
 
-// The main slider: every category's steps move with it (a category's own
-// Strictness multiplies on top).
-const hideNote = computed(() => `${rows.value.length - shownCount.value} of ${rows.value.length} items never show; a bigger stack of the rest can`)
-
 // Step looks: loudness only, for every category (Guy's L1).
-const stepEdit = ref<CStep | null>(null)
+const stepEdit = ref<CStep | null>(null) // 0 is Faint
 // The strictness multiplier: the player's own, or NeverSink's level's.
 const level = computed(() => levelOf(props.store.doc.value?.strictness ?? null))
 const mult = computed(() => c.value.mult ?? strictMult(level.value))
 const eff = computed(() => scaled(c.value, props.store.doc.value?.strictness ?? null))
 const dragMult = ref<number | null>(null)
 const SAMPLE_CATS = props.kind === 'gems' ? ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'] : props.kind === 'uniques' ? ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss'] : props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
-// The step cards' sample label: one category for all six, click to go to the next.
+// The colours the step ruler shows.
 const sampleCat = ref(SAMPLE_CATS[0])
-function nextSample () {
-  const ids = CATS.value.map(x => x.id)
-  sampleCat.value = ids[(ids.indexOf(sampleCat.value) + 1) % ids.length]
-}
 // Each step card's sample: an item of the picked category that one of shows
 // at that step, the one in the middle of the step's price range (Guy: the
 // sample should be something that really lands there).
@@ -348,7 +324,6 @@ const stepSample = computed(() => {
   }
   return out
 })
-const catName = (id: string) => ALL_CATEGORIES.find(x => x.id === id)?.name ?? id
 const catArt = (id: string) => ALL_CATEGORIES.find(x => x.id === id)?.art ?? id
 function loudOnly (p: StylePatch): StylePatch {
   const out: StylePatch = {}
@@ -449,30 +424,6 @@ function chaosText (v: number): string {
   border-radius: var(--w-r-sm);
   padding: 0 4px;
 }
-.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: 4px; }
-.step {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 4px 6px;
-  border: 1px solid var(--w-line);
-  border-top: 3px solid var(--step);
-  border-radius: var(--w-r-sm);
-  background: var(--w-panel-2);
-  min-width: 0;
-}
-.stepName { font-size: var(--w-fs-sm); color: var(--w-text); }
-.from { display: inline-flex; align-items: center; gap: 4px; font-size: var(--w-fs-xs); color: var(--w-dim); }
-.numIn {
-  width: 4.4em;
-  background: var(--w-panel);
-  border: 1px solid var(--w-line);
-  border-radius: var(--w-r-sm);
-  color: inherit;
-  padding: 0 4px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
 .search {
   flex: 0 1 12rem;
   background: var(--w-panel-2);
@@ -498,16 +449,12 @@ function chaosText (v: number): string {
 .minBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 10px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .minLab { color: #e2d3ad; font-size: var(--w-fs-sm); }
 .range { width: min(22rem, 100%); accent-color: var(--w-accent, #c8a565); }
+.hidChip { font-size: var(--w-fs-xs); color: var(--w-dim); background: var(--w-panel); border: 1px solid var(--w-line); border-radius: 10px; padding: 0 8px; cursor: pointer; white-space: nowrap; }
+.hidChip:hover { color: var(--w-accent, #c8a565); }
 .minVal { font-size: var(--w-fs-sm); color: var(--w-accent, #c8a565); min-width: 3.5em; font-variant-numeric: tabular-nums; }
-.stepOff { opacity: 0.45; }
-.eff { margin-left: 4px; color: var(--w-muted, #a89a7a); white-space: nowrap; }
-.stepSample { align-self: flex-start; background: none; border: 0; padding: 2px 0; cursor: pointer; }
 .catSample { display: inline-flex; pointer-events: none; }
 .lookLab { white-space: nowrap; font-size: var(--w-fs-xs); color: var(--w-muted, #a89a7a); }
 .offTog { display: flex; align-items: center; gap: 4px; font-size: var(--w-fs-xs); color: var(--w-muted, #a89a7a); cursor: pointer; }
-.lookBtn { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-accent, #c8a565); background: var(--w-panel); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); padding: 0 5px; position: relative; }
-.lookOn { border-color: var(--w-accent, #c8a565); }
-.dot { position: absolute; top: -3px; right: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--w-accent, #c8a565); }
 .stepEd { border: 1px solid var(--w-accent, #c8a565); border-radius: var(--w-r-sm); background: var(--w-panel-2); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
 .stepEdHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .samples { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 6px; background: #1a1712; border-radius: var(--w-r-sm); }
