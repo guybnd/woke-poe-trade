@@ -5,7 +5,7 @@
 export const WEIGHT_TYPE = 'woke->weights'
 
 export type WeightKey =
-  | 'x1' | 'x2' | 'r1' | 'r2' | 'r3' | 'r0'
+  | 'x1' | 'x2' | 'r1' | 'r2' | 'r3' | 'r0' | 'rj'
   | 'wr' | 'wm' | 'wn' | 'w86'
   | 't1' | 't2' | 't3' | 't4' | 't5'
   | 'mt1' | 'mt2' | 'mt3' | 'mt4' | 'mt5'
@@ -34,7 +34,9 @@ export const WEIGHT_GROUPS: WeightGroup[] = [
       { key: 'r1', label: 'Rank 1', dflt: 8 },
       { key: 'r2', label: 'Rank 2', dflt: 4 },
       { key: 'r3', label: 'Rank 3', dflt: 2 },
-      { key: 'r0', label: 'No rank', dflt: 1 }
+      { key: 'r0', label: 'No rank', dflt: 1 },
+      // Bases you moved down: under the line unless a strong mark lifts them.
+      { key: 'rj', label: "Don't care", dflt: 0.1 }
     ]
   },
   {
@@ -175,7 +177,13 @@ export interface WeightSettings {
   // Look channels: each a ranked list; the first thing on it an item has
   // paints that channel. 'score' is the score step's colour.
   look: Record<LookChannel, LookKey[]>
+  // Your own rank for a base (by name), over the filter's.
+  ranks: Record<string, RankKey>
 }
+
+export type RankKey = 'x1' | 'x2' | 'r1' | 'r2' | 'r3' | 'r0' | 'rj'
+// Best first.
+export const RANK_KEYS: readonly RankKey[] = ['x1', 'x2', 'r1', 'r2', 'r3', 'r0', 'rj']
 
 export type LookChannel = 'border' | 'bg' | 'text'
 export type LookKey =
@@ -234,7 +242,7 @@ export function normalizeLook (v: unknown): Record<LookChannel, LookKey[]> {
 export const LOUD_DEFAULT: readonly number[] = [16, 64, 256]
 
 export function defaultWeights (): WeightSettings {
-  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT], look: lookDefault() }
+  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT], look: lookDefault(), ranks: {} }
 }
 
 // The rows a pin (always show) can go on: ones a rule can name on their own.
@@ -275,6 +283,9 @@ export function normalizeWeights (w: Partial<WeightSettings> | undefined): Weigh
     mult,
     loud: Array.isArray(w?.loud) && w.loud.length === 3 && w.loud.every((v, i) => ok(v, NEED_MIN, NEED_MAX * 64) && (i === 0 || v >= w.loud![i - 1])) ? [...w.loud] : [...LOUD_DEFAULT],
     always: Array.isArray(w?.always) ? [...new Set(w.always.filter(k => PIN_ROWS.has(k)))] : [],
-    look: normalizeLook(w?.look)
+    look: normalizeLook(w?.look),
+    ranks: w?.ranks && typeof w.ranks === 'object'
+      ? Object.fromEntries(Object.entries(w.ranks).filter(([n, r]) => typeof n === 'string' && n.length < 80 && RANK_KEYS.includes(r)))
+      : {}
   }
 }

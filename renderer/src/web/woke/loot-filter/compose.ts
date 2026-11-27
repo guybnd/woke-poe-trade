@@ -85,7 +85,7 @@ export interface Composed {
 export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const next = parseFilterCopy(text)
   // Rare weights (beta) first, so everything below goes on top of them.
-  const weightBases = cfg.presets.weights.on ? filterBases(next) : []
+  const weightBases = cfg.presets.weights.on ? filterBases(next, cfg.presets.weights.ranks) : []
   const weights = applyWeights(next, cfg.presets.weights, weightBases)
   // Build rules go in first, so edits to them (restyles) apply on top.
   const input = cfg.build

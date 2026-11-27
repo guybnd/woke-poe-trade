@@ -196,6 +196,7 @@ export const CHIP_LABEL: Partial<Record<WeightKey, string>> = {
   r2: 'Rank 2',
   r3: 'Rank 3',
   r0: 'No rank',
+  rj: "Don't care",
   i68: 'ilvl 68-74',
   i75: 'ilvl 75-82',
   i83: 'ilvl 83-85',

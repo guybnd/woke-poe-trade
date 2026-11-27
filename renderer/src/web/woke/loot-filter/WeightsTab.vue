@@ -39,6 +39,14 @@
         <button type="button" :class="$style.step" :aria-label="`${name} from a higher score`" @click="nudgeLoud(i, 1)"><i class="fas fa-plus" /></button>
       </span>
     </div>
+    <div v-if="ownRanks.length" :class="$style.ownRanks">
+      <span class="text-xs w-dim">Your ranks</span>
+      <span v-for="r in ownRanks" :key="r.name" v-item-tip="{ name: r.name }" :class="$style.ownRank">
+        {{ r.name }} <span class="w-faint">{{ RANK_TEXT[r.from] }} →</span> <b>{{ RANK_TEXT[r.to] }}</b>
+        <button type="button" :class="$style.step" :aria-label="`Back to the filter's rank for ${r.name}`" @click="setRank(r.name, null)"><i class="fas fa-times" /></button>
+      </span>
+      <WButton size="sm" variant="ghost" icon="fas fa-undo" @click="w.ranks = {}">Reset all</WButton>
+    </div>
     <div :class="$style.looks">
       <div v-for="ch in LOOK_COLS" :key="ch.key" :class="[$style.lookCol, { [$style.lookOver]: dragOver === ch.key }]"
         @dragover.prevent="dragOver = ch.key" @dragleave="dragOver === ch.key && (dragOver = null)" @drop.prevent="dropLook(ch.key, null)">
@@ -88,7 +96,8 @@
               <span v-for="t in samples[d.i].tags" :key="t.key" :class="[$style.tag, $style[signOf(t.key)], { [$style.off]: !t.counts }]"><i :class="ICON_OF[t.key]" />{{ t.text }}</span>
             </span>
             <span :class="$style.labelRow">
-              <span :class="[$style.deco, $style[signOf(samples[d.i].rankKey)]]" :title="WEIGHT_LABEL[samples[d.i].rankKey]">{{ RANK_TEXT[samples[d.i].rankKey] }}</span>
+              <button type="button" :class="[$style.deco, $style.rankBtn, $style[signOf(samples[d.i].rankKey)], { [$style.own]: samples[d.i].row.was }]" :title="rankTitle(samples[d.i].row)"
+                @click.stop="shiftRank(samples[d.i].row, 1)" @contextmenu.prevent.stop="shiftRank(samples[d.i].row, -1)">{{ RANK_TEXT[samples[d.i].rankKey] }}</button>
               <LabelPreview :text="samples[d.i].row.name" :actions="d.actions" :visibility="d.hidden ? 'Hide' : 'Show'" :default-text="TEXT_OF[samples[d.i].it.rarity ?? 'Rare']" :extras="false" :scale="SCALE" />
               <span :class="$style.deco" :title="samples[d.i].tierText">{{ samples[d.i].tierShort }}</span>
             </span>
@@ -121,8 +130,8 @@ import { readStyle } from './edits'
 import { poeColour } from './colours'
 import { ruleLabel } from './parse'
 import type { Colour } from './edits'
-import { LOOK_CHANNELS, LOOK_DEFAULT, LOOK_KEYS, LOOK_LABEL, MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, weightLook, stepFor, PIN_ROWS, termsOf, weightOf } from './weights'
-import type { BaseRow, LookChannel, LookKey, WeightItem, WeightKey } from './weights'
+import { LOOK_CHANNELS, LOOK_DEFAULT, LOOK_KEYS, LOOK_LABEL, RANK_KEYS, MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, weightLook, stepFor, PIN_ROWS, termsOf, weightOf } from './weights'
+import type { BaseRow, LookChannel, LookKey, RankKey, WeightItem, WeightKey } from './weights'
 import { itemFacts } from './item-facts'
 import type { ItemFacts } from './item-facts'
 import { CHIP_LABEL, SAMPLES, pastedRare, sampleTip, factsOf, fromPoints, itemOf, points, pointsText, sampleBase, samplePile } from './weight-samples'
@@ -149,7 +158,7 @@ const needPoints = computed({
 const bases = computed(() => {
   if (props.store.weightBases.value.length) return props.store.weightBases.value
   const doc = props.store.doc.value
-  return doc ? filterBases(doc) : []
+  return doc ? filterBases(doc, w.value.ranks) : []
 })
 const pile = computed(() => samplePile(bases.value))
 const pileSteps = computed(() => {
@@ -305,7 +314,27 @@ const TAG_TEXT: Partial<Record<WeightKey, string>> = {
   big: 'Big',
   tiny: 'Tiny'
 }
-const RANK_TEXT: Partial<Record<WeightKey, string>> = { x1: 'X1', x2: 'X2', r1: 'R1', r2: 'R2', r3: 'R3', r0: 'R–' }
+const RANK_TEXT: Partial<Record<WeightKey, string>> = { x1: 'X1', x2: 'X2', r1: 'R1', r2: 'R2', r3: 'R3', r0: 'R–', rj: 'R✕' }
+
+// Your own base ranks: click a label's rank to lower it, right-click to raise.
+function setRank (name: string, rank: RankKey | null) {
+  const rest = Object.fromEntries(Object.entries(w.value.ranks).filter(([n]) => n !== name))
+  w.value.ranks = rank == null ? rest : { ...rest, [name]: rank }
+}
+function shiftRank (row: BaseRow, dir: 1 | -1) {
+  const i = RANK_KEYS.indexOf(row.rank)
+  const to = RANK_KEYS[Math.min(RANK_KEYS.length - 1, Math.max(0, i + dir))]
+  if (to === row.rank) return
+  setRank(row.name, to === (row.was ?? row.rank) && row.was ? null : to)
+}
+function rankTitle (row: BaseRow): string {
+  const own = row.was ? ` (yours; the filter says ${WEIGHT_LABEL[row.was]})` : ''
+  return `${row.name}: ${WEIGHT_LABEL[row.rank]}${own}. Click: lower rank. Right-click: higher.`
+}
+const ownRanks = computed(() => {
+  const was = new Map(bases.value.filter(b => b.was).map(b => [b.name, b.was as RankKey]))
+  return Object.entries(w.value.ranks).map(([name, to]) => ({ name, to, from: was.get(name) ?? to })).filter(r => r.from !== r.to).sort((a, b) => a.name.localeCompare(b.name))
+})
 
 // Places stay put while you tune: each rare gets a slot sized for the
 // biggest label, so only its look changes.
@@ -363,7 +392,7 @@ function nudge (key: WeightKey, dir: 1 | -1) {
 
 const changed = computed(() => {
   const d = defaultWeights()
-  return w.value.need !== d.need || w.value.always.length > 0 || w.value.loud.some((v, i) => v !== d.loud[i]) || lookChanged.value || (Object.keys(d.mult) as WeightKey[]).some(k => w.value.mult[k] !== d.mult[k])
+  return w.value.need !== d.need || w.value.always.length > 0 || w.value.loud.some((v, i) => v !== d.loud[i]) || lookChanged.value || Object.keys(w.value.ranks).length > 0 || (Object.keys(d.mult) as WeightKey[]).some(k => w.value.mult[k] !== d.mult[k])
 })
 // Look channels: drag rows to rank them or move them between channels.
 type LookCol = LookChannel | 'unused'
@@ -441,6 +470,7 @@ const lookChanged = computed(() => LOOK_CHANNELS.some(c => w.value.look[c.key].j
 function reset () {
   const d = defaultWeights()
   w.value.look = d.look
+  w.value.ranks = {}
   w.value.need = d.need
   Object.assign(w.value.mult, d.mult)
   w.value.always = []
@@ -548,6 +578,12 @@ function reset () {
 }
 .pin:hover { opacity: 0.8; }
 .pin.pinned { color: var(--w-accent); opacity: 1; }
+.ownRanks { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.ownRank { display: inline-flex; align-items: center; gap: 3px; font-size: var(--w-fs-xs); background: var(--w-panel-2); border-radius: var(--w-r-sm); padding: 0 2px 0 6px; }
+.rankBtn { cursor: pointer; font-family: inherit; border: 0; padding: 0; }
+.deco.minus { color: #e08a8a; }
+.rankBtn:hover { outline: 1px solid var(--w-accent); }
+.own { box-shadow: inset 0 -2px 0 var(--w-accent); }
 .looks { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; align-items: start; }
 .lookCol { background: var(--w-panel-2); border-radius: var(--w-r-sm); padding: 4px 6px; min-height: 40px; outline: 1px dashed transparent; }
 .lookCol.lookOver { outline-color: var(--w-accent); }
