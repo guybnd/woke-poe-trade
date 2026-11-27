@@ -1385,8 +1385,8 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await page.getByRole('tab', { name: /^Loot/ }).click()
   // The Loot tab: a rail of classes, Currency first; the rest NeverSink's for now.
   await expect(page.locator('[data-loot-class="currency"]')).toHaveAttribute('aria-pressed', 'true')
-  await page.locator('[data-loot-class="jewels"]').click()
-  await expect(page.locator('[data-loot-later]')).toContainText('NeverSink decides jewels')
+  await page.locator('[data-loot-class="league"]').click()
+  await expect(page.locator('[data-loot-later]')).toContainText('NeverSink decides league items')
   // Fragments: priced on the same ladder, folded by boss.
   await page.locator('[data-loot-class="fragments"]').click()
   await expect(page.locator('[data-currency-cat="invites"]')).toBeVisible()
@@ -1427,6 +1427,10 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-loot-maps]')).toContainText('under tier 14 hide')
   await overlay.snap('loot tab, maps')
   await from.fill('1')
+  // Jewels: the cluster price rules, as on the Rules tab's Cluster page.
+  await page.locator('[data-loot-class="jewels"]').click()
+  await expect(page.locator('[data-loot-jewels]')).toContainText('Follow poe.ninja')
+  await overlay.snap('loot tab, jewels')
   await page.locator('[data-loot-class="currency"]').click()
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()
