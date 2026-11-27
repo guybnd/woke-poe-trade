@@ -228,6 +228,7 @@ describe('currency weights', () => {
     const doc = parseFilter(SEMI)
     applyCurrency(doc, on(), lookup)
     expect(matchItem(doc, pile('Facetor\'s Lens', 1)).visibility).toBe('Show')
+    expect(categoryOf('Divine Vessel', 'mapenchantments')).toBe('invites')
     // A thin price isn't a real one: still always shown.
     const thin: PriceLookup = (g, base) => base === 'Facetor\'s Lens' ? { chaos: 0.01, thin: true } : lookup(g, base)
     expect(currencyItems(parseFilter(SEMI), thin).find(i => i.name === 'Facetor\'s Lens')?.free).toBe(true)
