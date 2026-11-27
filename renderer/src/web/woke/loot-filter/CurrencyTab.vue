@@ -11,9 +11,10 @@
 
     <div :class="$style.minBar" data-currency-min>
       <span :class="$style.minLab">Hide piles worth under</span>
-      <input type="range" min="0" :max="LINE_STOPS.length - 1" step="1" :value="lineStop" :class="$style.range" aria-label="Hide piles worth under this many chaos"
-        @input="c.line = LINE_STOPS[Number(($event.target as HTMLInputElement).value)]">
-      <b :class="$style.minVal">{{ chaosText(c.line) }}</b>
+      <input type="range" min="0" :max="LINE_STOPS.length - 1" step="1" :value="dragStop ?? lineStop" :class="$style.range" aria-label="Hide piles worth under this many chaos"
+        @input="dragStop = Number(($event.target as HTMLInputElement).value)"
+        @change="c.line = LINE_STOPS[Number(($event.target as HTMLInputElement).value)]; dragStop = null">
+      <b :class="$style.minVal">{{ chaosText(dragStop != null ? LINE_STOPS[dragStop] : c.line) }}</b>
       <span class="w-faint text-xs">{{ hideNote }}</span>
     </div>
 
@@ -295,6 +296,9 @@ const hideNote = computed(() => `${rows.value.length - shownCount.value} of ${ro
 
 // Step looks: loudness only, for every category (Guy's L1).
 const stepEdit = ref<CStep | null>(null)
+// While the slider is dragged: the stop under the thumb. The line (and the
+// whole tab) only updates when it is let go (Guy 2026-11-27: dragging lagged).
+const dragStop = ref<number | null>(null)
 const SAMPLE_CATS = ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
 // The step cards' sample label: one category for all six, click to go to the next.
 const sampleCat = ref('orbs')
