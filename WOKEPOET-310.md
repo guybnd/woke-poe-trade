@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-310
 title: 'Character: Gear tab shows your item beside the build''s (idea 1)'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - pob
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-304
 history:
   - type: activity
@@ -51,6 +51,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T07:58:54.628Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:19.941Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/505'
@@ -65,5 +70,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Each Gear tab slot shows the worn item under the build's, swap compare on hover. Blocked: first read had no item mods (raw reply kept by #497 to find out why).

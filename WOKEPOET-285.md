@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-285
 title: 'Campaign: auto-pass kill steps from boss lines; short boss names'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -47,6 +47,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T05:48:05.780Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:24.825Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/444'
 needsAction: null
 baselineCommit: ae072f60270fa58e9d206c73fab27bd78609319b
@@ -64,6 +69,9 @@ diffSummary:
   - file: renderer/test/woke/filter-price-flows.test.ts
     additions: 6
     deletions: 5
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > **TL;DR:** The campaign tracker ticks off a boss kill step when Client.txt logs that boss's defeat line (Sin naming the god, e.g. "Sin: Abberath!"). Kill steps show only the boss's first name.
 

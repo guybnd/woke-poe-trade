@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-254
 title: 'Loot filter rules: Item tier condition reads "Item tier: 4" for "4 and up"'
-status: Done
+status: Released
 priority: Low
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-218
 history:
   - type: activity
@@ -26,6 +26,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T11:55:01.212Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:32.647Z'
 needsAction: null
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 rules.ts describeCondition has no 'tier' case.

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-334
 title: 'Window menu: say Hide window, offer Undo'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -37,6 +37,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T16:28:32.701Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:00.720Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/541'
@@ -51,5 +56,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 > **TL;DR:** The window menu now says "Hide window" and offers Undo. Built and merged in PR #541 (420cdea4); this ticket records it.

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-318
 title: 'Character and stash readers: read 3.30''s mod objects'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -10,7 +10,7 @@ tags:
   - pob
   - '3.30'
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-304
 history:
   - type: activity
@@ -34,6 +34,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T06:47:16.689Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:21.570Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/504'
@@ -48,5 +53,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 In 3.30 the character and stash replies from pathofexile.com send each mod as `{ description, flags }`, not a string, so every worn item came through with no mods. This broke the Character tab, the price check's worn-gear compare and the stash reader. The readers now take both shapes and keep the crafted and fractured flags. Shipped in PR #504.

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-221
 title: 'Tree overlay: a left-drag anywhere moves the drawing'
-status: Done
+status: Released
 priority: Low
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-218
 history:
   - type: activity
@@ -64,6 +64,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T03:29:18.953Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:30.541Z'
 needsAction: null
 reviewState: approved
 baselineCommit: 9747783386088b67140c621fed5865bf72798b69
@@ -88,5 +93,8 @@ diffSummary:
   - file: renderer/test/woke/mechanics-guide.test.ts
     additions: 15
     deletions: 0
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 main/src/woke/tree-overlay.ts onDown follows any left button drag, e.g. on another monitor, until the next settle. Skipped for now: needs the game window's bounds in uiohook's pixel space (DPI) to be checked first.

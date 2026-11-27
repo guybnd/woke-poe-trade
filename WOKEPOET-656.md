@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-656
 title: Fix Vestigial mod source missing
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -28,6 +28,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-27T05:14:55.472Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:52.937Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/982'
@@ -42,5 +47,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 Vestigial mod source was missing; fixed, with a Vestigial data refresh (data version 36). PR: https://github.com/guybnd/woke-poe-trade/pull/982 (a165a4c).

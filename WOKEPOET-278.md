@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-278
 title: 'Loot filter card: drop old-league moves, no false broken change'
-status: Done
+status: Released
 priority: High
 effort: S
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-149
 history:
   - type: activity
@@ -59,6 +59,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T05:19:51.980Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:24.370Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/439'
@@ -73,6 +78,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > **TL;DR** Guy's dock card showed two notices that didn't need him. Old-league price moves now drop silently, and a safety-net edit waiting for its rule no longer counts as broken. PR https://github.com/guybnd/woke-poe-trade/pull/439.
 

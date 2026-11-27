@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-194
 title: 'Epic: PoB panel improvements (Guy''s 2026-11-11 list)'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -27,6 +27,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T01:45:07.503Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:31.640Z'
 subtasks:
   - WOKEPOET-195
   - WOKEPOET-196
@@ -40,6 +45,9 @@ subtasks:
   - WOKEPOET-204
   - WOKEPOET-205
 needsAction: null
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > TL;DR: Guy's eight improvement ideas for the PoB build panel (thread 2026-11-11). Layout changes get mocks first; the hover and dropdown changes are built directly.
 

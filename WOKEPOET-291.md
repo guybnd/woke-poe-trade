@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-291
 title: 'Chronicle of Atzoatl: read 3.30''s renamed Temple rooms'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - '3.30'
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -26,6 +26,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T05:20:37.733Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:23.878Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/480'
@@ -40,5 +45,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 The Chronicle of Atzoatl reader knows 3.30's renamed Temple rooms. Shipped in PR #480.

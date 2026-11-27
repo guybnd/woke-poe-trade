@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-623
 title: 'Deep audit: Consolidate duplicated code'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - refactor
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-621
 history:
   - type: activity
@@ -62,6 +62,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-27T04:51:49.708Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:53.424Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/947'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -76,5 +81,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 Consolidate duplicated code. Picks: https://claude.ai/artifact/1cpiDKsuoqisy4TNFh6eDo. First PR: https://github.com/guybnd/woke-poe-trade/pull/945 (merged bc566ef: shared saved-setting, median, seeded random and day-key helpers).

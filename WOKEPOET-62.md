@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-62
 title: 'Test whether holding a hotkey repeats it, and guard if so'
-status: Done
+status: Released
 priority: Medium
 effort: XS
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - bug
   - overlay-core
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-36
 history:
   - type: activity
@@ -56,7 +56,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T01:56:02.333Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:31.111Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/150'
 needsAction: null
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > **TL;DR** C17. The hotkey callback has no repeat guard (Shortcuts.ts register), and GGG's rules allow one action per press. Whether Windows repeats these hotkeys needs a test. A guard keyed on the uIOhook keyup is cheap either way: ignore a hotkey until its key has been released.

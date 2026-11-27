@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-322
 title: 'Loot filter Rules: ladder view (bands, border marks, specials)'
-status: Done
+status: Released
 priority: None
 effort: M
 assignee: unassigned
 tags:
   - loot-filter
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -44,6 +44,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T15:02:43.541Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:01.586Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/525'
@@ -58,6 +63,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 Guy found the Rules tab's middle table hard to read: conditions were cut off, the preview column was cramped, and the Deco border rules sat among the real tiers. He asked for one generic editor for every group.
 

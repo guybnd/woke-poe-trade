@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-335
 title: 'Alt+F card: list the uniques a base can be, with prices'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - loot-filter
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -54,6 +54,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-16T03:49:21.616Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:59.761Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/549'
@@ -68,5 +73,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 Guy's ask (2026-11-16): the Alt+F "Filter rule for this item" card on a unique base (e.g. unid Imperial Claw in All uniques > Low) lists the uniques that base can drop as, with cached poe.ninja prices, marking the one that sets the tier. Reuse the loot filter's priceBreakdown/uniquesOnBase (same item data as Ctrl+Space base uniques). No trade searches. Mocks first, then build the recommended one. Data has no drop-restricted/league flag.

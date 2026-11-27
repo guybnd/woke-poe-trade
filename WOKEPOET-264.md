@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-264
 title: 'Atlas strategies list: drag and drop and tidier folders'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - atlas
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -74,6 +74,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T14:28:26.827Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:28.581Z'
 swimlane: null
 needsAction: null
 baselineCommit: 3defd75f96d427b12eabf1301a1d6ad20d1b18ce
@@ -85,5 +90,8 @@ diffSummary:
   - file: renderer/src/web/woke/mechanics/guide.ts
     additions: 1
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Drag strategies to reorder and between folders, drag folders to reorder. Loose strategies currently draw under the last folder and look like its contents (the "0 on 3.30" report). Mocks: https://claude.ai/artifact/VNJuz38dxzkSfDc116PJCf (layout A/B/C + extras X1-X4), waiting on Guy's pick. Clone E:\Git\woke-atlas, branch woke/atlas-dnd.

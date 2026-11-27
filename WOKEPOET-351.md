@@ -3,7 +3,7 @@ id: WOKEPOET-351
 title: >-
   Alt+F Whole tier: list the tier's items with prices, pick and move them;
   on/off switches for Sound, Beam, Map icon
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -11,7 +11,7 @@ tags:
   - loot-filter
   - ux
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -31,6 +31,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-17T08:19:06.906Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:56.530Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/572'
@@ -45,5 +50,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 > **TL;DR:** Alt+F card's "Whole tier" lists the tier's items with prices so you can pick and move them, plus on/off switches for Sound, Beam and Map icon. Shipped in PR 572 (merged dba91e1a).

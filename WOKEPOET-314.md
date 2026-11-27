@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-314
 title: 'Character: PoB and character item tooltips as rich as the price search''s'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - pob
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-304
 history:
   - type: activity
@@ -59,6 +59,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T07:59:00.561Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:19.666Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/506'
@@ -73,5 +78,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Guy 2026-11-15: the item tooltip on PoB/character items shows only names + mod text, unlike the price search listing tooltip (layout J, #230/#283). Add: weapon DPS/APS/crit from base + local mods, mod tiers + roll % from mod data, crafted/fractured colours (modKinds now carried from 3.30 replies). Do with idea 1 (WOKEPOET-310, Gear compare on icon hover).

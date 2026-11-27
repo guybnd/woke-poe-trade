@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-655
 title: Make item tooltips follow the Size setting
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -28,6 +28,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-27T04:59:13.870Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:53.131Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/965'
@@ -42,5 +47,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 Item tooltips follow the price check Size setting (PR 963, see WOKEPOET-638) and shrink to fit the screen at a big Size (PR 965). PRs: https://github.com/guybnd/woke-poe-trade/pull/963 and https://github.com/guybnd/woke-poe-trade/pull/965 (195c7be).

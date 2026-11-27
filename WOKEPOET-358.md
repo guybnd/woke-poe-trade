@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-358
 title: One price lookup for every window
-status: Done
+status: Released
 priority: None
 effort: L
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - cleanup
   - prices
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-354
 history:
   - type: activity
@@ -50,6 +50,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-17T10:49:44.183Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:55.311Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/578'
@@ -64,6 +69,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 > **TL;DR:** Some windows read live poe.ninja prices, others the Market snapshot, and the unid jewel rule is wired into only three. One `priceOf(name, variant)` answers for all, so a row and its tooltip agree.
 

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-218
 title: 'Bug hunt round 2: 38 bugs across the toolkit'
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -39,6 +39,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T11:55:08.139Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:32.384Z'
 subtasks:
   - WOKEPOET-219
   - WOKEPOET-220
@@ -80,5 +85,8 @@ subtasks:
   - WOKEPOET-256
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/400'
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Guy asked (2026-11-12) for ~40 bugs and to fix every high-confidence one without asking unless a fix changes product design. Each bug is a subtask. Fixes land in one PR from branch claude/bug-hunt-3 (commits per area). Ledger: E:\Git\woke-poe-trade-bughunt\.bughunt\ledger.md.

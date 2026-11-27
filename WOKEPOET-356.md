@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-356
 title: One shared item row for every item list
-status: Done
+status: Released
 priority: None
 effort: L
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - cleanup
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-354
 history:
   - type: activity
@@ -58,6 +58,11 @@ history:
       Follow-up #577 merged (b2b85862): Alt+F and PoB build cost uniques price
       check on click (Guy's pick).
     id: a-2026-11-17t10-49-44-775z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:55.215Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/576'
@@ -72,6 +77,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 > **TL;DR:** Every list of items decides alone what hover, right-click and click do, so the same item opens in one list and does nothing in the next. One shared row gives art, tooltip, item menu and a click everywhere.
 

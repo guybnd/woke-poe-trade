@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-332
 title: 'Loot filter: make unsaved changes obvious, Ctrl+S to save'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -39,6 +39,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T15:54:11.194Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:01.062Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/539'
@@ -53,5 +58,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 > **TL;DR:** The loot filter editor now makes unsaved changes obvious, and Ctrl+S saves. Built and merged in PR #539 (7fae8592); this ticket records it.

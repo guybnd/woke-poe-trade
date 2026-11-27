@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-311
 title: 'Character: resists and attributes from gear and tree (idea 4)'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - pob
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-304
 history:
   - type: activity
@@ -51,6 +51,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T07:58:56.597Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:19.845Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/508'
@@ -65,5 +70,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Totals from worn gear + tree, uncapped resists, what a planned swap breaks. Blocked on item mods parsing (#497).

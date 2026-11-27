@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-360
 title: On-click trade searches share one queue and cache
-status: Done
+status: Released
 priority: None
 effort: M
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - cleanup
   - prices
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-354
 history:
   - type: activity
@@ -57,6 +57,11 @@ history:
       Follow-up #582 merged (cc9bf7fe): kept trade answers pruned (expired on
       read and set, at most 200).
     id: a-2026-11-17t11-55-48-493z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:54.368Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/581'
@@ -71,6 +76,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 > **TL;DR:** Gem versions, Harvest swap, price drivers and new-item search call trade on their own, with no cache, so reopening spends searches again. Route them through shared/trade-quotes.ts with one `useOnDemandQuote()` row state.
 

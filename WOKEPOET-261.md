@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-261
 title: Players get "OCR files missing" with no way to fix it in the app
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -43,6 +43,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T04:13:05.949Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:30.183Z'
 needsAction: null
 baselineCommit: 9747783386088b67140c621fed5865bf72798b69
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/409'
@@ -66,6 +71,9 @@ diffSummary:
   - file: renderer/test/woke/mechanics-guide.test.ts
     additions: 15
     deletions: 0
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 A player on the public release saw "OCR files missing: tesseract-core-simd.js, opencv.js, eng.traineddata" in Essence scan, pointing at Awakened PoE Trade's releases page.
 

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-275
 title: 'Campaign route: town visits skip zones, card shows wrong step'
-status: Done
+status: Released
 priority: High
 effort: S
 assignee: unassigned
 tags:
   - campaign
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -28,6 +28,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T04:19:39.269Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:26.154Z'
 baselineCommit: 407ba7f1f2c478fed465d0b71f60be15ccdb1be0
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/436'
@@ -36,6 +41,9 @@ diffSummary:
   - file: testing/e2e/loot-filter.spec.ts
     additions: 1
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > **TL;DR:** Entering a town no longer jumps the campaign route past zones you haven't done, so the card shows the step for the zone you're in.
 

@@ -3,14 +3,14 @@ id: WOKEPOET-215
 title: >-
   Flaky perf.spec 'every module on': DisenchantPanel throws undefined reading
   'Testleague' + main bundle 'reading pos' at startup
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -37,8 +37,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T01:45:20.047Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:31.553Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/405'
 needsAction: null
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Seen on #388's first fake-game CI run of `testing/perf/perf.spec.ts` ("every module on: startup, a map, a price check, memory"). It passed when re-run.
 

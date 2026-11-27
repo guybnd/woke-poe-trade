@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-277
 title: 'Campaign: mouse wheel steps the route back and forth'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags:
   - campaign
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -28,6 +28,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T04:46:14.222Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:25.733Z'
 baselineCommit: ae072f60270fa58e9d206c73fab27bd78609319b
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/438'
@@ -45,6 +50,9 @@ diffSummary:
   - file: renderer/test/woke/filter-price-flows.test.ts
     additions: 6
     deletions: 5
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > **TL;DR:** Scroll the wheel over the campaign dock icon or the card's steps: down marks the step done, up steps back.
 

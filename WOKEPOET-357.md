@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-357
 title: One "uniques on this base" list for Search and Alt+F
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - cleanup
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-354
 history:
   - type: activity
@@ -48,6 +48,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-17T10:26:01.467Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:55.713Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/576'
@@ -62,6 +67,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 > **TL;DR:** Search and the Alt+F filter card each list a base's uniques their own way; only one can be clicked. One component and one `uniquesOnBase(base)` for both.
 

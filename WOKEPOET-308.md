@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-308
 title: 'Character: jewels and clusters against the build (idea 15)'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - pob
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-304
 history:
   - type: activity
@@ -76,6 +76,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T07:58:50.468Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:20.149Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/502'
@@ -90,5 +95,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Socketed jewels vs build's: empty sockets, missing cluster notables, timeless mismatch. Needs tree.json jewelSlots (GGG x index → node) added to tree data. Cluster passives are excluded from the tree compare today (GGG hashes_ex ids ≠ PoB 65536+ ids).

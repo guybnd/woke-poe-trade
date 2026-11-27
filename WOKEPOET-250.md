@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-250
 title: 'Loot filter: Hide white and blue gear can make the filter unsaveable'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-218
 history:
   - type: activity
@@ -26,6 +26,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T11:54:58.963Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:32.978Z'
 needsAction: null
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 onlyRares leaves Rarity with no values; validateFilter refuses every save.

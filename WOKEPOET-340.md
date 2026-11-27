@@ -3,14 +3,14 @@ id: WOKEPOET-340
 title: >-
   Theme every control: no plain web toggles, buttons, checkboxes, selects,
   sliders or fields
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: Agent
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -59,6 +59,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-16T07:33:27.383Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:59.070Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/554'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -73,6 +78,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 Guy saw a web-style "On" pill in the loot filter Prices tab and asked for a scan of the whole overlay for controls that skip the PoE 1 look, then all of them switched to the themed parts (WToggle coin, w-btn plate, w-select/w-field wells, w-chip, w-seg, art slider).
 

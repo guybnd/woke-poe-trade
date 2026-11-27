@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-265
 title: Atlas import opens poeplanner short links
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - atlas
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -37,6 +37,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T14:20:09.859Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:28.675Z'
 needsAction: null
 baselineCommit: 3defd75f96d427b12eabf1301a1d6ad20d1b18ce
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/419'
@@ -48,5 +53,8 @@ diffSummary:
   - file: renderer/src/web/woke/mechanics/guide.ts
     additions: 1
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > **TL;DR** poeplanner.com/a/<id> short links import via api.poeplanner.com/api/b/<id>; proxy no longer cuts gzip bodies short. PR #419.

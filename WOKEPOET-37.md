@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-37
 title: 'Price check: fixes from the veteran critique'
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - woke
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -53,6 +53,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T01:56:04.438Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:30.922Z'
 swimlane: null
 needsAction: null
 subtasks:
@@ -63,6 +68,9 @@ subtasks:
   - WOKEPOET-67
   - WOKEPOET-68
   - WOKEPOET-69
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Harsh critique of the price check on master be3d56a5: https://claude.ai/artifact/NciFiZFWAd2WUQJBUrJhqU
 

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-346
 title: Performance audit of the overlay (master)
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - perf
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -54,6 +54,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-17T05:53:19.527Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:57.757Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/563'
@@ -68,6 +73,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 Guy finds the overlay slow, mostly the loot filter editor. Audit master broadly: renderer responsiveness, reactivity/watchers, unvirtualized lists, repeated filter parsing/matching, IPC, memory and listeners. Rank findings by impact, fix the clear wins via PRs. The Gear tab (woke/gear-page) is owned by the Gear redesign thread; don't touch it.
 

@@ -3,14 +3,14 @@ id: WOKEPOET-321
 title: >-
   Wickerman: make it findable in game (dock icon, mechanics line, window,
   prices)
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - league-3.30
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -48,6 +48,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T10:12:42.762Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:19.142Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/519'
@@ -62,5 +67,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Guy couldn't find the Wickerman module in game. Round 2 mocks: https://claude.ai/artifact/PMvnyzjUvoHDi7oXGVzDa5. He picked E (a dock icon where a boss drops a Viscera), F (a line on the League mechanics card) and G (a Wickerman window), plus prices per version. PR #519.

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-253
 title: 'Loot filter: Hide maps below tier 17 never hides T16'
-status: Done
+status: Released
 priority: Low
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-218
 history:
   - type: activity
@@ -26,6 +26,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T11:55:00.662Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:32.732Z'
 needsAction: null
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 NeverSink's T16 rule is MapTier >= 16 (no cap), so mapTierCap skips it.

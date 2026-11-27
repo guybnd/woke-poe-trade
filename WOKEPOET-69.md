@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-69
 title: 'Price check: show more, mocks first'
-status: Done
+status: Released
 priority: Medium
 effort: L
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-37
 history:
   - type: activity
@@ -110,8 +110,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T01:55:58.836Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:31.386Z'
 swimlane: null
 needsAction: null
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > TL;DR: Listing mods on hover, a corrupted column, a verdict for bulk items, price data age, weighted searches and real sales from the trade log. New UI, so mocks and Guy's pick come first.
 

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-57
 title: Stop replacing the whole config on every save
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - bug
   - overlay-core
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-36
 history:
   - type: activity
@@ -54,8 +54,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T01:45:21.300Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:31.472Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/405'
 needsAction: null
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > **TL;DR** C12. Each save echoes back as config-changed, then re-parses and replaces the whole 74 KB config. That costs work on zone changes, and an edit made during the round trip is overwritten.
 

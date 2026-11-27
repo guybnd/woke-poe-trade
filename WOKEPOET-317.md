@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-317
 title: Show sub-chaos bulk prices as 1 div / N
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -49,6 +49,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T07:00:29.596Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:21.145Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/507'
@@ -63,6 +68,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Guy's ask (2026-11-15): Ctrl+Space shows lifeforce at "0.009c". Items worth under 1c should read "1 div / 12,000" using the current divine rate, chaos value on hover.
 

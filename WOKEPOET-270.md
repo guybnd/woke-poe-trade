@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-270
 title: 'PoB tree overlay: hand a finished tree over to the next one'
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - pob
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -47,6 +47,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T02:44:36.098Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:27.236Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/430'
 needsAction: null
 baselineCommit: 407ba7f1f2c478fed465d0b71f60be15ccdb1be0
@@ -55,6 +60,9 @@ diffSummary:
   - file: testing/e2e/loot-filter.spec.ts
     additions: 1
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Guy (2026-11-14): auto mode doesn't move to the next tree as he levels. Level 29, Act 3, Elemental Hit Slayer guide.
 

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-281
 title: 'PoB auto: gems, gear and tree stay in step'
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - pob
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -39,6 +39,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T05:05:07.669Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:25.475Z'
 needsAction: null
 baselineCommit: ae072f60270fa58e9d206c73fab27bd78609319b
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/441'
@@ -56,5 +61,8 @@ diffSummary:
   - file: renderer/test/woke/filter-price-flows.test.ts
     additions: 6
     deletions: 5
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Guy (2026-11-14): "why is auto not synced between all 3". After #437 the tree moved by passive points while gems/gear stayed by title. PR https://github.com/guybnd/woke-poe-trade/pull/441: gems and gear follow the tree's same-named sets; Next skips empty specs; Tree row only when names differ. Live on dev (4520ac8e): L45/A6 → 54/54/54.

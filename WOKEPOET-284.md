@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-284
 title: 'Price check: a unique priced by name gets its mods as stat rows'
-status: Done
+status: Released
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -44,6 +44,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T05:54:03.072Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:24.739Z'
 needsAction: null
 baselineCommit: ae072f60270fa58e9d206c73fab27bd78609319b
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/445'
@@ -61,6 +66,9 @@ diffSummary:
   - file: renderer/test/woke/filter-price-flows.test.ts
     additions: 6
     deletions: 5
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Guy: "why cant i get any of the stats to filter when i price check from a searched item". A unique priced from Ctrl+Space search or the item menu had no game text, so it had no stat rows to filter on.
 

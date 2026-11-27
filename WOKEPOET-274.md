@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-274
 title: Move 3.30's moved trade stat ids onto our stats
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
@@ -10,7 +10,7 @@ tags:
   - price-check
   - '3.30'
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -55,6 +55,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T03:48:29.595Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:26.429Z'
 needsAction: null
 baselineCommit: 407ba7f1f2c478fed465d0b71f60be15ccdb1be0
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/434'
@@ -63,6 +68,9 @@ diffSummary:
   - file: testing/e2e/loot-filter.spec.ts
     additions: 1
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 The trade site moved granted skills and socketed supports to new ids (`explicit.effect_<n>`) with new words ("Grants Level 22 Anger", "...Added Fire Damage Support"), and dropped other ids. 365 ids in en/stats.ndjson were dead: price checks on those items failed ("Unknown stat provided") or left the mod unread.
 

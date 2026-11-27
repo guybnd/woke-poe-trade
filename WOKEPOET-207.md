@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-207
 title: 'Pins for PoB build and dock cards, smaller text, see-through pins'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -86,6 +86,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T01:45:01.081Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:31.823Z'
 swimlane: null
 needsAction: null
 baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
@@ -94,6 +99,9 @@ diffSummary:
   - file: scripts/upstream-data.mjs
     additions: 21
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Player feedback (Jacket, Discord): pin PoB build while buying/allocating, pin dock cards in maps, smaller text, see-through pinned tree, "hideout repo".
 

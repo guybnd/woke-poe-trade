@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-316
 title: 'Character: mod tiers and roll % in build and character tooltips'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - pob
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-304
 history:
   - type: activity
@@ -51,6 +51,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T07:59:02.373Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:19.575Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/512'
@@ -65,5 +70,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Follow-up to WOKEPOET-314. No tier data in the app (stats.ndjson has no tiers; affix caps read advanced copy text). Add a RePoE/poedb 3.30 mod-tier JSON under public/data (lazy-loaded, run bump-data-version), match PoB/character mod lines to tiers by stat text + item class + values, show "T3 · 82%" like the listing tooltip (layout J). Keep perf within budget.

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-342
 title: 'Price check: tick base type by default on fractured items'
-status: Done
+status: Released
 priority: None
 effort: XS
 assignee: unassigned
 tags:
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -46,6 +46,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-16T15:16:07.988Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:58.398Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/559'
@@ -60,6 +65,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 Guy (2026-11-16): when the item is fractured, the base type filter should start ticked in price check. No extra trade searches.
 

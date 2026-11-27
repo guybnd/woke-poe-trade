@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-300
 title: 'Investments: bundled leagues leave out empty variant/links'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - perf
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -26,6 +26,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T05:20:46.359Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:23.121Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/490'
@@ -40,5 +45,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 League-start investment data bundled with the app drops empty variant and links fields, about 60 KB less JavaScript. Shipped in PR #490.

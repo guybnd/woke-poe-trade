@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-255
 title: 'Loot filter: colour-blind preset leaves build rules'' Brown beam'
-status: Done
+status: Released
 priority: Low
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-218
 history:
   - type: activity
@@ -26,6 +26,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T11:55:01.762Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:32.561Z'
 needsAction: null
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 applyPresetChanges skips woke-> blocks before the colour-blind step.

@@ -3,14 +3,14 @@ id: WOKEPOET-257
 title: >-
   Minimized atlas bar still jumps right when the panel reaches the screen's
   right edge
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -46,6 +46,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T14:02:18.290Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:32.109Z'
 needsAction: null
 reviewState: approved
 baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
@@ -55,6 +60,9 @@ diffSummary:
   - file: scripts/upstream-data.mjs
     additions: 21
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Follow-up to WOKEPOET-216 / #393. Guy: on dev build at master 48ccec5c, Atlas strategies on the left, made big, minimized → bar still jumps to the right edge.
 

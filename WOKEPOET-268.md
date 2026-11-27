@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-268
 title: 'PoB gems list in campaign order (act, then quest)'
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - pob
   - ux
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -57,6 +57,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T02:01:36.305Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:27.640Z'
 needsAction: null
 baselineCommit: 407ba7f1f2c478fed465d0b71f60be15ccdb1be0
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/428'
@@ -65,6 +70,9 @@ diffSummary:
   - file: testing/e2e/loot-filter.spec.ts
     additions: 1
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Build panel "Gems by level" list sorted by gem level; Guy wants it ordered by when the campaign gives each gem (act, then quest order, then level), e.g. Fortify (A Fixture of Fate, Act 3) after Act 2 gems.
 

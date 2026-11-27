@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-345
 title: 'Loot filter Prices: bulk pick Would move items'
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - loot-filter
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -33,6 +33,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-17T03:40:39.948Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:58.108Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/561'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
@@ -47,6 +52,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 > **TL;DR** Guy asked why he can't bulk pick the "Would move" rows on the Prices tab. Added a pick-all box, all / none / up only / down only, and shift + click ranges. PR #561.
 

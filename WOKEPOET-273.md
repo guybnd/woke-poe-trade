@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-273
 title: Price check 3.30 Viscera (Wickerman trophies)
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-149
 history:
   - type: activity
@@ -56,6 +56,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T03:23:22.851Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:26.796Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/433'
 baselineCommit: 407ba7f1f2c478fed465d0b71f60be15ccdb1be0
@@ -64,6 +69,9 @@ diffSummary:
   - file: testing/e2e/loot-filter.spec.ts
     additions: 1
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Guy price-checked a Ghostly Claw (Item Class: Viscera, Upper Limb, ilvl 56, implicit "9(8-12)% chance to gain Elusive on Kill") and got Unknown Item.
 

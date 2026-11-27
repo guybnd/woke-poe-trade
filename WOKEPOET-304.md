@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-304
 title: 'Epic: use the live character across the PoB tabs'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - pob
   - epic
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -55,6 +55,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T08:17:22.767Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:19.486Z'
 subtasks:
   - WOKEPOET-305
   - WOKEPOET-306
@@ -81,6 +86,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Guy picked ideas 1, 2, 4, 5, 9, 13, 14, 15 from https://claude.ai/artifact/CBff6gMLPNJ637Pfbb7RiD (2026-11-15). Base: Character tab #484, hover #495, raw replies #497 (thread "Sync live character with PoB build").
 

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-283
 title: 'Price check: first check in PoE layout never searches'
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -44,6 +44,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T05:13:48.641Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:25.186Z'
 needsAction: null
 baselineCommit: ae072f60270fa58e9d206c73fab27bd78609319b
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/442'
@@ -61,6 +66,9 @@ diffSummary:
   - file: renderer/test/woke/filter-price-flows.test.ts
     additions: 6
     deletions: 5
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Guy priced Mortem Morsu from Ctrl+Space search (right-click > Price check) and the window sat at "Matched: ..." with no listings.
 

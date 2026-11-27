@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-276
 title: 'PoB tree follows passive points, not just its title'
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - pob
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -41,6 +41,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T04:29:59.346Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:25.982Z'
 needsAction: null
 baselineCommit: 180ce79856ea465a4ff92164b43dd6852169f75e
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/437'
@@ -52,6 +57,9 @@ diffSummary:
   - file: renderer/test/woke/campaign-town-jump.test.ts
     additions: 36
     deletions: 0
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Guy (2026-11-14): at level 39, auto still shows the Level 33 tree. Does it count quest passives?
 

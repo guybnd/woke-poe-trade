@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-323
 title: 'Search: unique mods, Foulborn swaps, vestigial mod'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -42,6 +42,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T12:35:42.822Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:18.209Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/530'
@@ -56,6 +61,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > **TL;DR:** Ctrl+Space search result details now show a unique's mods, its Foulborn swaps and the Vestigial mod under its prices. Built and merged in PR #530 (b2e23139); this ticket records it.
 

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-349
 title: Loot filter undo history out of the settings file
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - perf
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -30,6 +30,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-17T06:53:53.560Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:57.389Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/566'
@@ -44,5 +49,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 Follow-up to WOKEPOET-346. config.json had grown to 1.1 MB (97% of it the loot filter timeline and history). Moved to woke-docs/loot-filter/history.json with a migration; timeline capped at 500 KB.

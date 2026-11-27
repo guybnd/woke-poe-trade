@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-343
 title: 'Price check: timeless jewel mods not recognized in 3.30'
-status: Done
+status: Released
 priority: High
 effort: S
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -49,6 +49,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-16T15:25:17.495Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:58.301Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/560'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -63,6 +68,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 > **TL;DR** Every timeless jewel's seed + conqueror lines showed "Not recognized modifier" in price check. The stat index only held the advanced form ("…Asenath(Asenath-Nasima)"), which 3.30 copy text drops. Fix indexes the plain text too. Branch woke/timeless-jewel-mods.
 

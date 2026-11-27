@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-263
 title: Atlas strategies read poeplanner atlas tree links
-status: Done
+status: Released
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - atlas
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -43,6 +43,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T13:54:43.765Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:29.058Z'
 needsAction: null
 baselineCommit: 3defd75f96d427b12eabf1301a1d6ad20d1b18ce
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/418'
@@ -54,6 +59,9 @@ diffSummary:
   - file: renderer/src/web/woke/mechanics/guide.ts
     additions: 1
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > **TL;DR** Pasting a poeplanner.com/atlas-tree link into Atlas strategies now shows and edits the tree. PR #418.
 

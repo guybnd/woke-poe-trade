@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-262
 title: 'Price from search fails on uniques: Unknown item base type'
-status: Done
+status: Released
 priority: High
 effort: XS
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -41,6 +41,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T04:56:00.720Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:29.912Z'
 needsAction: null
 baselineCommit: 9747783386088b67140c621fed5865bf72798b69
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/411'
@@ -64,6 +69,9 @@ diffSummary:
   - file: renderer/test/woke/mechanics-guide.test.ts
     additions: 15
     deletions: 0
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > **TL;DR:** Ctrl+Space search → unique (Mageblood) → item menu Price sent the unique's name as the trade base type. Fixed by giving the virtual unique its base; PR #411.
 

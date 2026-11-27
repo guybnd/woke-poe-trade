@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-269
 title: 'Campaign: tick off Trial of Ascendancy from Izaro''s finished line'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags:
   - campaign
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -50,6 +50,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T02:29:52.392Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:27.444Z'
 needsAction: null
 baselineCommit: 407ba7f1f2c478fed465d0b71f60be15ccdb1be0
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/429'
@@ -58,6 +63,9 @@ diffSummary:
   - file: testing/e2e/loot-filter.spec.ts
     additions: 1
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > **TL;DR:** When Izaro says his trial-finished line in a campaign zone, the campaign card moves past the "Complete Trial of Ascendancy" step.
 

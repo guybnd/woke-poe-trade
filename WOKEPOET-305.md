@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-305
 title: 'Character: gem levels and quality against the build (idea 5)'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - pob
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-304
 history:
   - type: activity
@@ -75,6 +75,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T07:58:40.514Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:20.436Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/499'
@@ -89,5 +94,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Leveling/Gear gem lists tick off gems you socket, flag under-levelled or missing quality (Precision 14 → 20), dashed for missing. Data: snapshot gems (level, quality) from character-sync.

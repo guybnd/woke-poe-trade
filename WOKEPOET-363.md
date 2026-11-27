@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-363
 title: One saved list for libraries
-status: Done
+status: Released
 priority: None
 effort: L
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - cleanup
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-354
 history:
   - type: activity
@@ -50,6 +50,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-17T12:21:34.782Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:54.102Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/585'
@@ -64,6 +69,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 > **TL;DR:** Atlas strategies, Trade searches, Regex library and PoB builds each built their own list, so a key that works in one does nothing in the next. A shared SavedList (folders, F2, drag, delete with undo, search, Ctrl+C), Regex library and Trade searches first.
 

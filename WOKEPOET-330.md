@@ -3,14 +3,14 @@ id: WOKEPOET-330
 title: >-
   Loot filter rules: Show from picker, T16 on its own row, Maps to hide as
   switches
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -41,6 +41,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T15:28:38.913Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:01.406Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/537'
@@ -55,5 +60,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 > **TL;DR:** Loot filter rules get a Show from picker, T16 on its own row, and switches for the maps to hide. Built and merged in PR #537 (3ce69a1b); this ticket records it.

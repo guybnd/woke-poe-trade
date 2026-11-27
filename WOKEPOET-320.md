@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-320
 title: 'Price check: Harvest swap pick also filters the search'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - price-check
   - harvest
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -62,6 +62,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T07:40:21.617Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:20.697Z'
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -77,6 +82,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Guy (2026-11-15): pressing Any/Fire/Cold on a mod's ⇄ should also filter the price check for that pick, so he can find a cheaper item of another element to buy, not only see the swap cost. One search per click, never more.
 

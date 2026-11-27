@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-282
 title: 'Loot filter: pick levelling weapon types as chips'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags:
   - loot-filter
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -48,6 +48,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T05:23:22.811Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:25.083Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/443'
 needsAction: null
 reviewState: approved
@@ -66,6 +71,9 @@ diffSummary:
   - file: renderer/test/woke/filter-price-flows.test.ts
     additions: 6
     deletions: 5
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Presets tab, "While levelling, only weapons for [build type]" shows kept classes as plain text. Guy wants to toggle each weapon class; the build type dropdown fills the selection as a starting point, editing a chip turns it Custom.
 

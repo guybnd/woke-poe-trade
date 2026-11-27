@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-352
 title: 'Prices tab "Not moved": bulk Unlock and Move anyway, plus Undo'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -10,7 +10,7 @@ tags:
   - prices
   - ux
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -30,6 +30,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-17T09:01:19.810Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:56.333Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/573'
@@ -44,5 +49,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 > **TL;DR:** The Prices tab's "Not moved" list gets bulk Unlock and Move anyway, with Undo. Adds an optional `hides` field to PriceSkip in economy.ts. Shipped in PR 573 (merged 166d523e).

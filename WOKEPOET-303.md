@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-303
 title: 'Market tab redesign: poe.ninja-style market browser'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - mocks
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -75,6 +75,11 @@ history:
     date: '2026-11-15T11:00:56.675Z'
     selfAttested: true
     id: c-2026-11-15t11-00-56-675z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:18.803Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/498'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -89,5 +94,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Redesign the Market tab as a poe.ninja-style browser of item prices. Layout mocks are with Guy; build starts once he picks one. Work happens in the project thread "Add a poe.ninja-style market browser".

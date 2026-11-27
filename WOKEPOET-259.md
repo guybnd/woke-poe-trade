@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-259
 title: 'N. Covens league mechanic: Wickerman trophies and Fates'
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-149
 history:
   - type: activity
@@ -93,6 +93,11 @@ history:
       Follow-up #417 merged (f88b4651): the card says "Viscera", the game's word
       for the trophies, per poedb's Covens league page. The dev build is on it.
     id: a-2026-11-13t13-45-55-845z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:29.250Z'
 swimlane: null
 needsAction: null
 baselineCommit: 9747783386088b67140c621fed5865bf72798b69
@@ -116,6 +121,9 @@ diffSummary:
   - file: renderer/test/woke/mechanics-guide.test.ts
     additions: 15
     deletions: 0
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > TL;DR: a League mechanics card for Covens, the 3.30 league mechanic. The card's content waits on Guy's pick; trophy prices wait on poe.ninja.
 

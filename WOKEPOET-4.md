@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-4
 title: Pick lab and live-search icons
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -58,8 +58,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T01:56:01.042Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:31.214Z'
 swimlane: null
 needsAction: null
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > **TL;DR** — Guy **picks icons for lab and live search**, plus anything else the **icon-everything audit** flags. Done looks like recorded picks, ready to build.
 

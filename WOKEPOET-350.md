@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-350
 title: 'Atlas screenshot import: read pictures off the main thread'
-status: Done
+status: Released
 priority: Low
 effort: None
 assignee: unassigned
 tags:
   - atlas
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -48,6 +48,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-17T07:12:32.765Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:09:57.134Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/567'
@@ -62,5 +67,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 Follow-up from #565's merge review: main fit each pasted screenshot synchronously (~0.2 s at 1440p). PR #567 moves the fit to a short-lived worker (dist/picture.js). Branch woke/atlas-shot-async.

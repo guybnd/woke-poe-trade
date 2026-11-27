@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-266
 title: Loot filter presets and groups for NeverSink 8.21
-status: Done
+status: Released
 priority: High
 effort: S
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - bug
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-149
 history:
   - type: activity
@@ -59,6 +59,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-14T00:21:35.395Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:28.004Z'
 needsAction: null
 baselineCommit: 407ba7f1f2c478fed465d0b71f60be15ccdb1be0
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/426'
@@ -67,6 +72,9 @@ diffSummary:
   - file: testing/e2e/loot-filter.spec.ts
     additions: 1
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 > **TL;DR** NeverSink 8.21 dropped Scarabs and Vials and added Allflames/Map Enchantments, Viscera, Tiered Gear (UnidentifiedItemTier) and special map mods. Fix what our editor aims at the old sections; mock presets for the new ones before building.
 

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-313
 title: 'Price check: listing tooltip missing on Viscera results'
-status: Done
+status: Released
 priority: Medium
 effort: XS
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -55,6 +55,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T06:15:01.309Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:22.080Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/501'
@@ -69,6 +74,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '00024'
+releasedAt: '2026-11-27T16:10:17.975Z'
+releaseDocPath: release-notes/00024
 ---
 Hovering trade result rows for a 3.30 Viscera (e.g. Ancestor's Club, Upper Limb) showed no listing tooltip.
 

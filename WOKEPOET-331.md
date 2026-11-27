@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-331
 title: 'Price check: keep the influence icon on the mod line'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -37,6 +37,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T15:41:25.320Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T16:10:01.239Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/538'
@@ -51,5 +56,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '000012'
+releasedAt: '2026-11-27T16:09:47.375Z'
+releaseDocPath: release-notes/000012
 ---
 > **TL;DR:** In price check, the influence icon now stays on its mod's line. Built and merged in PR #538 (1fe652d8); this ticket records it.
