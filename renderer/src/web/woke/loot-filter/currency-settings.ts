@@ -93,7 +93,8 @@ export function normalizeCurrency (c: (Partial<CurrencySettings> & OldCurrency) 
     }
   }
   if (Array.isArray(c?.pins)) {
-    for (const n of c.pins) if (typeof n === 'string' && NAME.test(n) && items[n]?.step == null) items[n] = { ...items[n], step: 1 }
+    // A pin meant "always show it": every stack shows, and the price still decides the louder steps.
+    for (const n of c.pins) if (typeof n === 'string' && NAME.test(n)) items[n] = { ...items[n], supply: 1 }
   }
   return {
     on: typeof c?.on === 'boolean' ? c.on : false,

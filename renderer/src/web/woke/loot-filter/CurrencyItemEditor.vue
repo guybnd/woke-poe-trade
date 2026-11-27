@@ -7,7 +7,7 @@
       <span class="w-faint text-xs">{{ edit.price != null ? 'yours' : it.est ? `a guess from NeverSink's ${it.tier ? `tier ${it.tier}` : 'tiers'}` : 'poe.ninja' }}</span>
       <label :class="$style.lab2">Use my price
         <input :value="edit.price ?? ''" type="number" min="0" step="any" placeholder="–" :class="$style.numIn"
-          :aria-label="`Your price for ${it.name}, in chaos`" @change="setPrice(($event.target as HTMLInputElement).value)"> c</label>
+          :aria-label="`Your price for ${it.name}, in chaos`" @change="setPrice($event.target as HTMLInputElement)"> c</label>
     </div>
     <div :class="$style.row">
       <span :class="$style.lab">Step</span>
@@ -17,7 +17,7 @@
       <span :class="$style.lab">Supply</span>
       <label :class="$style.lab2">Always show from
         <input :value="edit.supply ?? ''" type="number" min="1" :max="it.full" placeholder="–" :class="$style.numIn"
-          :aria-label="`Always show ${it.name} from this stack size`" @change="setSupply(($event.target as HTMLInputElement).value)"> in a stack (full stack {{ it.full.toLocaleString() }})</label>
+          :aria-label="`Always show ${it.name} from this stack size`" @change="setSupply($event.target as HTMLInputElement)"> in a stack (full stack {{ it.full.toLocaleString() }})</label>
     </div>
     <div :class="$style.row">
       <span :class="$style.lab">Look</span>
@@ -59,13 +59,18 @@ function put (patch: Partial<ItemEdit>) {
   emit('change', Object.keys(next).length ? next : null)
 }
 function setStep (v: string) { put({ step: v === 'auto' ? undefined : Number(v) as CStep }) }
-function setPrice (raw: string) {
-  const n = Number(raw)
-  put({ price: raw.trim() && Number.isFinite(n) && n > 0 ? n : undefined })
+// Each writes back to the field, so a refused number doesn't stay typed.
+function setPrice (el: HTMLInputElement) {
+  const n = Number(el.value)
+  const price = el.value.trim() && Number.isFinite(n) && n > 0 ? Math.min(n, 1e7) : undefined
+  put({ price })
+  el.value = price == null ? '' : String(price)
 }
-function setSupply (raw: string) {
-  const n = Math.round(Number(raw))
-  put({ supply: raw.trim() && Number.isFinite(n) && n >= 1 ? Math.min(n, 100_000) : undefined })
+function setSupply (el: HTMLInputElement) {
+  const n = Math.round(Number(el.value))
+  const supply = el.value.trim() && Number.isFinite(n) && n >= 1 ? Math.min(n, 100_000) : undefined
+  put({ supply })
+  el.value = supply == null ? '' : String(supply)
 }
 function setLook (look: StylePatch | undefined) { put({ look }) }
 

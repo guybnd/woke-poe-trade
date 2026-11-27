@@ -14,10 +14,10 @@
         <span :class="$style.stepName">{{ CSTEP_NAMES[s] }}</span>
         <span v-if="s === 0" class="w-faint text-xs">under the line</span>
         <label v-else-if="s === 1" :class="$style.from">from
-          <input v-model.lazy.number="lineIn" type="number" :min="LINE_MIN" :max="LINE_MAX" step="0.1" :class="$style.numIn" aria-label="Small from this many chaos (the line)"> c</label>
+          <input :value="c.line" type="number" :min="LINE_MIN" :max="LINE_MAX" step="0.1" :class="$style.numIn" aria-label="Small from this many chaos (the line)" @change="setLine($event.target as HTMLInputElement)"> c</label>
         <label v-else :class="$style.from">from
           <input :value="c.from[s - 2]" type="number" min="0.1" step="any" :class="$style.numIn" :aria-label="`${CSTEP_NAMES[s]} from this many chaos`"
-            @change="setFrom(s - 2, ($event.target as HTMLInputElement).value)"> c</label>
+            @change="setFrom(s - 2, $event.target as HTMLInputElement)"> c</label>
         <span class="w-faint text-xs">{{ STEP_NOTE[s] }}</span>
       </div>
     </div>
@@ -89,12 +89,16 @@ const c = computed(() => props.config.presets.currency)
 const STEP_CSS = ['#3b372f', '#6d6250', '#a08d5e', '#cdb27a', '#ffe196', '#ff4040']
 const STEP_NOTE = ['', 'quiet', 'soft sound', 'sound, map icon', 'loud, yellow beam', 'the big sound, red on white, red beam']
 
-const lineIn = computed({
-  get: () => c.value.line,
-  set: (v: unknown) => { if (typeof v === 'number' && Number.isFinite(v)) c.value.line = Math.min(LINE_MAX, Math.max(LINE_MIN, v)) }
-})
-function setFrom (i: number, raw: string) {
+// Both write back to the field, so a refused or clamped number doesn't stay typed.
+function setLine (el: HTMLInputElement) {
+  const n = Number(el.value)
+  if (el.value.trim() && Number.isFinite(n)) c.value.line = Math.min(LINE_MAX, Math.max(LINE_MIN, n))
+  el.value = String(c.value.line)
+}
+function setFrom (i: number, el: HTMLInputElement) {
+  const raw = el.value
   const n = Number(raw)
+  el.value = String(c.value.from[i])
   if (!raw.trim() || !Number.isFinite(n) || n <= 0) return
   const from = [...c.value.from] as typeof c.value.from
   from[i] = Math.min(1e6, n)
@@ -102,6 +106,7 @@ function setFrom (i: number, raw: string) {
   for (let k = i + 1; k < 4; k++) from[k] = Math.max(from[k], from[i])
   for (let k = i - 1; k >= 0; k--) from[k] = Math.min(from[k], from[i])
   c.value.from = from
+  el.value = String(from[i])
 }
 
 // The items as the filter lists them, with prices before any of yours; while
