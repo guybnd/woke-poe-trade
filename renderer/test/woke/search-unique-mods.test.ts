@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { buildModIndex, litParts, modQueryWords, queryAtLeast, rollMax, searchMods } from '@/web/woke/search/mod-index'
+import { buildModIndex, litParts, modQueryWords, queryAtLeast, readMods, rollMax, searchMods } from '@/web/woke/search/mod-index'
 import { namedUniquePrices } from '@/web/woke/search/search'
 import { MOD_GROUP, chipOf, groupMode } from '@/web/woke/search/groups'
 import type { PriceItem } from '@/web/woke/market/types'
@@ -89,5 +89,57 @@ describe('mod hits priced', () => {
   it('is a folded group under the Prices chip', () => {
     expect(groupMode(MOD_GROUP, undefined)).toBe('folded')
     expect(chipOf(MOD_GROUP)).toBe('prices')
+  })
+})
+
+describe('loose mod words', () => {
+  const ITEMS = join(__dirname, '../../public/data/en/items.ndjson')
+  const cats = new Map<string, string>()
+  for (const l of readFileSync(ITEMS, 'utf8').split('\n')) {
+    if (!l) continue
+    const i = JSON.parse(l)
+    if (i.namespace === 'ITEM' && i.craftable) cats.set(i.refName, i.craftable.category)
+  }
+  const slotted = buildModIndex({ ...read('unique-extras.json'), ...read('uniques.json') }, read('vestigial.json'), b => cats.get(b))
+  const names = (q: string) => readMods(slotted, q).hits.map(h => h.unique).sort()
+  it('reads a kind word as a filter', () => {
+    const r = readMods(slotted, 'rarity vestig')
+    expect(r.notes).toEqual(['Vestigial'])
+    expect(r.hits.every(h => h.kind === 'vestigial')).toBe(true)
+    expect(names('rarity vestig')).toEqual(expect.arrayContaining(["Greed's Embrace", 'Goldwyrm', 'Wondertrap']))
+    expect(r.hits.every(h => /rarity/i.test(h.line))).toBe(true)
+  })
+  it('reads a slot word as a filter', () => {
+    const r = readMods(slotted, 'rarity boots')
+    expect(r.notes).toEqual(['Boots'])
+    expect(names('rarity boots')).toContain('Goldwyrm')
+    expect(names('rarity boots')).not.toContain("Greed's Embrace")
+  })
+  it('keeps words the mods have together', () => {
+    const r = readMods(slotted, 'energy shield')
+    expect(r.notes).toEqual([])
+    expect(r.hits.length).toBeGreaterThan(50)
+  })
+  it('reads short names', () => {
+    const r = readMods(slotted, 'iir')
+    expect(r.notes).toEqual(['Item Rarity'])
+    expect(r.words).toEqual(['item', 'rarity'])
+    expect(r.hits.map(h => h.unique)).toContain("Greed's Embrace")
+    expect(readMods(slotted, 'es boots').notes).toEqual(['Energy Shield', 'Boots'])
+  })
+  it('reads "can roll" as jewel pools', () => {
+    const r = readMods(slotted, 'can roll life')
+    expect(r.notes).toEqual(['Can roll'])
+    expect(r.hits.length).toBeGreaterThan(1)
+    expect(r.hits.every(h => h.pool)).toBe(true)
+  })
+  it('reads a filter word as mod text when the filter finds nothing', () => {
+    // No Vestigial line has "unholy might", but no line says "vestigial" either.
+    expect(readMods(slotted, 'unholy might vestigial').hits).toEqual([])
+    // "ring" on its own lists unique rings; with words no ring has, it's mod text.
+    expect(readMods(slotted, 'ring').notes).toEqual(['Rings'])
+  })
+  it('lights the read words', () => {
+    expect(litParts('+(40-60) to maximum Energy Shield', ['energy', 'shield']).filter(p => p.lit).map(p => p.text)).toEqual(['Energy', 'Shield'])
   })
 })

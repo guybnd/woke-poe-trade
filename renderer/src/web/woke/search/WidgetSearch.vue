@@ -33,7 +33,7 @@
           </div>
           <div v-else ref="listEl" :class="$style.list" class="w-scroll">
             <template v-for="section in sections" :key="section.label">
-              <div v-if="!section.more" :class="$style.head">{{ section.label }}<template v-if="section.capped"> · first {{ PRICE_GROUP_LIMIT }}, keep typing</template></div>
+              <div v-if="!section.more" :class="$style.head">{{ section.label }}<span v-if="section.note" data-search-mod-note> · {{ section.note }}</span><template v-if="section.capped"> · first {{ PRICE_GROUP_LIMIT }}, keep typing</template></div>
               <template v-for="e in section.entries" :key="e.id">
               <button v-if="e.kind === 'more'" tabindex="-1" :class="[section.more ? $style.fold : $style.more, { [$style.sel]: e === selected }]" data-search-more
                 :data-selected="e === selected || undefined" :title="e.about" @click="run(e)">
@@ -435,12 +435,13 @@ function loadModIndex () {
   Promise.all([import('./mod-index'), loadTipUniques(), orNull(loadTipVestigial())])
     .then(([mod, uniques, vestigial]) => {
       if (mine !== modGen || !uniques) return
-      modSearch.value = { mod, index: mod.buildModIndex(uniques, vestigial) }
+      modSearch.value = { mod, index: mod.buildModIndex(uniques, vestigial, base => ITEM_BY_REF('ITEM', base)?.[0]?.craftable?.category) }
     })
     .catch(() => {})
     .finally(() => { if (mine === modGen) modLoading = false })
 }
-const wantsMods = () => open.value && query.value.trim().length >= 4
+// 4 letters, or a short name ("es", "iir").
+const wantsMods = () => open.value && (query.value.trim().length >= 4 || /^[a-z]{2,3}$/i.test(query.value.trim()))
 watch([query, open], () => { if (wantsMods()) loadModIndex() })
 // Unique names with any poe.ninja row, whatever the filter.
 const pricedUniques = computed(() => new Set((snapshot.value?.items ?? []).filter(i => /^Unique/.test(i.type)).map(i => i.name)))
@@ -457,14 +458,15 @@ function uniqueByRef (ref: string): BaseType | undefined {
 }
 // The group: priced uniques first (the closest match, then dearest), then the
 // ones poe.ninja has no price for. Ones already listed above stay out.
-function modSection (q: string, items: readonly PriceItem[], shown: ReadonlySet<string>): { label: string, entries: Entry[], capped?: boolean } {
+function modSection (q: string, items: readonly PriceItem[], shown: ReadonlySet<string>): { label: string, entries: Entry[], capped?: boolean, note?: string } {
   const ms = modSearch.value
-  const hits = ms ? ms.mod.searchMods(ms.index, q) : []
+  const read = ms ? ms.mod.readMods(ms.index, q) : { hits: [], notes: [], words: [] }
+  const hits = read.hits
   if (!ms || !hits.length) return { label: MOD_GROUP, entries: [] }
   const byName = new Map(hits.map(h => [h.unique, h]))
   const mark = (name: string): ModMark | undefined => {
     const h = byName.get(name)
-    return h && { line: h.line, parts: ms.mod.litParts(h.line, q), kind: h.kind, pool: h.pool }
+    return h && { line: h.line, parts: ms.mod.litParts(h.line, read.words), kind: h.kind, pool: h.pool }
   }
   // Closest match first, a jewel that only can roll it after, then dearest.
   const rankOf = (name: string) => { const h = byName.get(name); return h ? h.rank + (h.pool ? 2 : 0) : 9 }
@@ -482,7 +484,8 @@ function modSection (q: string, items: readonly PriceItem[], shown: ReadonlySet<
     if (shown.has(`i:${info.namespace}:${info.name}`)) continue
     entries.push({ kind: 'item', id: `m:${info.namespace}:${info.name}`, name: info.name, sub: h.line, info, mod: mark(h.unique) })
   }
-  return { label: MOD_GROUP, entries: entries.slice(0, PRICE_GROUP_LIMIT), capped: entries.length > PRICE_GROUP_LIMIT }
+  // The heading says how the query was read: "Vestigial · Boots".
+  return { label: MOD_GROUP, entries: entries.slice(0, PRICE_GROUP_LIMIT), capped: entries.length > PRICE_GROUP_LIMIT, note: read.notes.join(' · ') || undefined }
 }
 
 // ---- a base's uniques ----
@@ -1024,7 +1027,7 @@ function liveAnswer (q: string): string | null {
 }
 
 // ---- results ----
-const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: boolean }>>(() => {
+const rawSections = computed<Array<{ label: string, entries: Entry[], capped?: boolean, note?: string }>>(() => {
   if (!open.value) return []
   if (helpOpen.value) return cardSections(exampleCards(liveAnswer, lookupTools.value), null)
   const items = snapshot.value?.items ?? []
@@ -1127,13 +1130,13 @@ function pickChip (id: ChipId) {
   chip.value = id
   focusInput()
 }
-const sections = computed<Array<{ label: string, entries: Entry[], capped?: boolean, more?: boolean }>>(() => {
+const sections = computed<Array<{ label: string, entries: Entry[], capped?: boolean, note?: string, more?: boolean }>>(() => {
   const raw = rawSections.value
   // The empty box and "?" are short lists of their own.
   if (!queryOk.value || helpOpen.value) return raw
   if (chip.value !== 'all') return raw.filter(s => chipOf(s.label) === chip.value)
   const shaped = shapeSections(query.value, raw, props.config.groups, expanded.value)
-  const out: Array<{ label: string, entries: Entry[], capped?: boolean, more?: boolean }> = shaped.sections.map(s => {
+  const out: Array<{ label: string, entries: Entry[], capped?: boolean, note?: string, more?: boolean }> = shaped.sections.map(s => {
     if (!s.hidden) return s
     const more: ActionEntry = {
       kind: 'more',
@@ -1145,7 +1148,7 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
       verb: 'Show them',
       action: () => { expand(s.label, s.firstHidden) }
     }
-    return { label: s.label, entries: [...s.entries, more], capped: s.capped }
+    return { label: s.label, entries: [...s.entries, more], capped: s.capped, note: s.note }
   })
   if (shaped.off.length) {
     const names = shaped.off.map(o => o.label)

@@ -22,6 +22,8 @@ export interface ModLine {
   // The line's words, lower case, accents and apostrophes gone.
   words: string[]
   text: string
+  // The unique's item class ("Boots", "Ring"), when its base is known.
+  slot?: string
 }
 
 export interface ModHit {
@@ -38,17 +40,27 @@ export interface ModHit {
 const MOST_IMPLICITS = 4
 const MOST_EXPLICITS = 12
 
+// `slotOf`: a base's item class ("Goathide Boots" is "Boots"), for slot words.
 export function buildModIndex (
   uniques: Readonly<Record<string, TipUnique>>,
-  vestigial: Readonly<Record<string, string[][]>> | null | undefined
+  vestigial: Readonly<Record<string, string[][]>> | null | undefined,
+  slotOf: (base: string) => string | undefined = () => undefined
 ): ModLine[] {
   const out: ModLine[] = []
+  const slots = new Map<string, string | undefined>()
+  const slotFor = (unique: string) => {
+    if (!slots.has(unique)) {
+      const base = uniques[unique]?.b ?? uniques[`Foulborn ${unique}`]?.b
+      slots.set(unique, base ? slotOf(base) : undefined)
+    }
+    return slots.get(unique)
+  }
   const add = (unique: string, raw: string, kind: ModKind, pool: boolean, seen: Set<string>) => {
     const line = plainLine(raw)
     if (seen.has(line)) return
     seen.add(line)
     const text = norm(line)
-    out.push({ unique, line, kind, pool, words: wordsOf(text), text })
+    out.push({ unique, line, kind, pool, words: wordsOf(text), text, slot: slotFor(unique) })
   }
   for (const [name, tip] of Object.entries(uniques)) {
     const seen = new Set<string>()
@@ -85,24 +97,142 @@ export function rollMax (line: string): number | null {
   return m ? Number(m[0]) : null
 }
 
-// One hit per unique, its best line: every query word starts a word of the
-// line, and a number in the query is a least roll. Order is the data's; the
-// caller sorts by price.
-export function searchMods (index: readonly ModLine[], query: string): ModHit[] {
-  const parts = modQueryWords(query)
-  if (!parts.length) return []
-  const least = queryAtLeast(query)
+// Words that filter instead of matching mod text: "rarity vestig" is
+// Vestigial lines with rarity. Kinds, then slots, then short names.
+const KIND_WORDS: ReadonlyArray<[string, ModKind | 'pool', string]> = [
+  ['vestigial', 'vestigial', 'Vestigial'],
+  ['foulborn', 'foulborn', 'Foulborn'],
+  ['implicit', 'implicit', 'Implicit'],
+  ['explicit', 'explicit', 'Explicit']
+]
+const POOL_WORDS = new Set(['roll', 'rolls', 'pool'])
+const WEAPONS = ['Claw', 'Bow', 'Sceptre', 'Wand', 'Staff', 'Warstaff', 'Dagger', 'Rune Dagger', 'One-Handed Axe', 'Two-Handed Axe', 'One-Handed Mace', 'Two-Handed Mace', 'One-Handed Sword', 'Two-Handed Sword']
+const SLOT_WORDS: ReadonlyArray<[string[], string[], string]> = [
+  [['helm', 'helms', 'helmet', 'helmets', 'hat'], ['Helmet'], 'Helmets'],
+  [['glove', 'gloves'], ['Gloves'], 'Gloves'],
+  [['boot', 'boots'], ['Boots'], 'Boots'],
+  [['body', 'chest', 'chests'], ['Body Armour'], 'Body armours'],
+  [['belt', 'belts'], ['Belt'], 'Belts'],
+  [['ring', 'rings'], ['Ring'], 'Rings'],
+  [['amulet', 'amulets', 'ammy', 'amu'], ['Amulet'], 'Amulets'],
+  [['shield', 'shields'], ['Shield'], 'Shields'],
+  [['quiver', 'quivers'], ['Quiver'], 'Quivers'],
+  [['jewel', 'jewels'], ['Jewel', 'Abyss Jewel', 'Cluster Jewel'], 'Jewels'],
+  [['flask', 'flasks'], ['Flask'], 'Flasks'],
+  [['sword', 'swords'], ['One-Handed Sword', 'Two-Handed Sword'], 'Swords'],
+  [['axe', 'axes'], ['One-Handed Axe', 'Two-Handed Axe'], 'Axes'],
+  [['mace', 'maces'], ['One-Handed Mace', 'Two-Handed Mace'], 'Maces'],
+  [['bow', 'bows'], ['Bow'], 'Bows'],
+  [['wand', 'wands'], ['Wand'], 'Wands'],
+  [['staff', 'staves', 'staffs'], ['Staff', 'Warstaff'], 'Staves'],
+  [['claw', 'claws'], ['Claw'], 'Claws'],
+  [['dagger', 'daggers'], ['Dagger', 'Rune Dagger'], 'Daggers'],
+  [['sceptre', 'sceptres', 'scepter'], ['Sceptre'], 'Sceptres'],
+  [['weapon', 'weapons'], WEAPONS, 'Weapons']
+]
+// Short names players type, as the words they stand for.
+export const SHORT_NAMES: Readonly<Record<string, { words: string[], label: string }>> = {
+  iir: { words: ['item', 'rarity'], label: 'Item Rarity' },
+  iiq: { words: ['item', 'quantity'], label: 'Item Quantity' },
+  ms: { words: ['movement', 'speed'], label: 'Movement Speed' },
+  es: { words: ['energy', 'shield'], label: 'Energy Shield' },
+  aoe: { words: ['area'], label: 'Area of Effect' },
+  cdr: { words: ['cooldown', 'recovery'], label: 'Cooldown Recovery' },
+  dot: { words: ['damage', 'over', 'time'], label: 'Damage over Time' },
+  ias: { words: ['attack', 'speed'], label: 'Attack Speed' },
+  ci: { words: ['chaos', 'inoculation'], label: 'Chaos Inoculation' },
+  eb: { words: ['eldritch', 'battery'], label: 'Eldritch Battery' },
+  mom: { words: ['mind', 'over', 'matter'], label: 'Mind Over Matter' },
+  rt: { words: ['resolute', 'technique'], label: 'Resolute Technique' }
+}
+
+export interface ModReading {
+  hits: ModHit[]
+  // What the query was read as, for the group's heading: "Vestigial", "Boots".
+  notes: string[]
+  // The words matched as mod text, for lighting: "es" is energy shield.
+  words: string[]
+}
+
+// Pairs of words found together in the mod text: "energy shield" or "flask
+// charges" are mod words, so there "shield" and "flask" aren't slots.
+const pairsOf = new WeakMap<readonly ModLine[], Set<string>>()
+function pairs (index: readonly ModLine[]): Set<string> {
+  let p = pairsOf.get(index)
+  if (!p) {
+    p = new Set()
+    for (const m of index) for (let i = 1; i < m.words.length; i++) p.add(`${m.words[i - 1]} ${m.words[i]}`)
+    pairsOf.set(index, p)
+  }
+  return p
+}
+interface Reading { parts: string[], kinds: Set<ModKind | 'pool'>, slots: Set<string>, notes: string[] }
+// The query read with filter words, or null when it has none.
+function filterReading (index: readonly ModLine[], raw: string[]): Reading | null {
+  const out: Reading = { parts: [], kinds: new Set(), slots: new Set(), notes: [] }
+  let filtered = false
+  raw.forEach((w, i) => {
+    const short = SHORT_NAMES[w]
+    if (short) { out.parts.push(...short.words); out.notes.push(short.label); filtered = true; return }
+    // A word in a pair the mod text has ("energy shield") stays a mod word.
+    const paired = (i > 0 && pairs(index).has(`${raw[i - 1]} ${w}`)) || (i + 1 < raw.length && pairs(index).has(`${w} ${raw[i + 1]}`))
+    if (!paired) {
+      const kind = w.length >= 4 ? KIND_WORDS.find(([word]) => word.startsWith(w)) : undefined
+      if (kind) { out.kinds.add(kind[1]); out.notes.push(kind[2]); filtered = true; return }
+      // "can roll" is one filter.
+      if (w === 'can' && POOL_WORDS.has(raw[i + 1])) return
+      if (POOL_WORDS.has(w)) { out.kinds.add('pool'); out.notes.push('Can roll'); filtered = true; return }
+      const slot = SLOT_WORDS.find(([words]) => words.includes(w))
+      if (slot) { for (const c of slot[1]) out.slots.add(c); out.notes.push(slot[2]); filtered = true; return }
+    }
+    out.parts.push(w)
+  })
+  return filtered ? out : null
+}
+
+function run (index: readonly ModLine[], r: Reading, least: number | null): ModHit[] {
+  const { parts } = r
+  // A filter alone ("vestigial boots") lists every line it keeps.
+  if (!parts.length && !r.kinds.size && !r.slots.size) return []
   const phrase = parts.join(' ')
   const best = new Map<string, ModHit>()
   for (const m of index) {
-    if (!startsWords(m.words, parts)) continue
+    if (r.kinds.size && !(r.kinds.has(m.kind) || (r.kinds.has('pool') && m.pool))) continue
+    if (r.slots.size && !(m.slot && r.slots.has(m.slot))) continue
+    if (parts.length && !startsWords(m.words, parts)) continue
     if (least != null && !((rollMax(m.line) ?? -Infinity) >= least)) continue
-    const rank = m.text.includes(phrase) ? 0 : 1
+    const rank = parts.length && m.text.includes(phrase) ? 0 : 1
     const hit = { unique: m.unique, line: m.line, kind: m.kind, pool: m.pool, rank }
     const had = best.get(m.unique)
     if (!had || order(hit) < order(had)) best.set(m.unique, hit)
   }
   return [...best.values()]
+}
+
+// The query read loosely: filter words and short names first; if that finds
+// nothing, every word as mod text. One hit per unique, its best line; a
+// number is a least roll. Order is the data's; the caller sorts by price.
+export function readMods (index: readonly ModLine[], query: string): ModReading {
+  const words = modQueryWords(query)
+  if (!words.length) {
+    // "iir", "es": too short on their own, but a short name.
+    const only = wordsOf(norm(query)).filter(w => !/^\d+$/.test(w))
+    if (!(only.length && only.every(w => SHORT_NAMES[w]))) return { hits: [], notes: [], words: [] }
+    words.push(...only)
+  }
+  const least = queryAtLeast(query)
+  const filter = filterReading(index, words)
+  if (filter) {
+    const hits = run(index, filter, least)
+    if (hits.length) return { hits, notes: filter.notes, words: filter.parts }
+  }
+  const plain: Reading = { parts: words, kinds: new Set(), slots: new Set(), notes: [] }
+  return { hits: run(index, plain, least), notes: [], words }
+}
+
+// The hits alone.
+export function searchMods (index: readonly ModLine[], query: string): ModHit[] {
+  return readMods(index, query).hits
 }
 // A unique's own mods before its Vestigial one, a pool's lines last, then the
 // words in order before words anywhere.
@@ -111,8 +241,9 @@ function order (h: ModHit): number {
 }
 
 // The line in pieces, the query's words lit: each word the query starts.
-export function litParts (line: string, query: string): Array<{ text: string, lit: boolean }> {
-  const parts = modQueryWords(query)
+// `query` is the typed text, or the words readMods matched.
+export function litParts (line: string, query: string | readonly string[]): Array<{ text: string, lit: boolean }> {
+  const parts = typeof query === 'string' ? modQueryWords(query) : query
   const out: Array<{ text: string, lit: boolean }> = []
   // Words and the gaps between them, so the line reads as it was.
   for (const piece of line.split(/([\p{L}\p{N}'’]+)/u)) {

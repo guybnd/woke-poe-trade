@@ -68,11 +68,13 @@ export function withMode (modes: Readonly<Record<string, GroupMode>> | undefined
   return out
 }
 
-export interface Section<E> { label: string, entries: E[], capped?: boolean }
+export interface Section<E> { label: string, entries: E[], capped?: boolean, note?: string }
 export interface Shaped<E> {
   label: string
   entries: E[]
   capped?: boolean
+  // How the query was read ("Vestigial"), for the heading.
+  note?: string
   // Rows left out, and the first of them.
   hidden: number
   firstHidden: E | null
@@ -102,7 +104,7 @@ export function shapeSections<E extends { name: string }> (
     if (set === 'off' && !opened) { off.push({ label: s.label, count: s.entries.length }); continue }
     if (opened || s.entries.length <= GROUP_CAP) { out.push({ ...s, entries: ordered, hidden: 0, firstHidden: null }); continue }
     const rest = ordered.slice(GROUP_CAP)
-    out.push({ label: s.label, entries: ordered.slice(0, GROUP_CAP), capped: s.capped, hidden: rest.length, firstHidden: rest[0] ?? null })
+    out.push({ label: s.label, entries: ordered.slice(0, GROUP_CAP), capped: s.capped, note: s.note, hidden: rest.length, firstHidden: rest[0] ?? null })
   }
   return { sections: out, off }
 }
