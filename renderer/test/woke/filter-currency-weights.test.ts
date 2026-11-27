@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, tierGuess, divineChaos } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, levelOf, strictMult, scaled, tierGuess, divineChaos } from '@/web/woke/loot-filter/currency-weights'
 import type { CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { fullStack } from '@/web/woke/loot-filter/stack-sizes'
@@ -62,6 +62,23 @@ describe('currency weights', () => {
       expect(pileWorth({ chaos: 0.3, full: 20 }, k, 10)).toBeGreaterThanOrEqual(at)
       if (k > 1) expect(pileWorth({ chaos: 0.3, full: 20 }, k - 1, 10)).toBeLessThan(at)
     }
+  })
+
+  it('multiplies every step by the strictness', () => {
+    expect(levelOf('4-VERYSTRICT')).toBe(4)
+    expect(levelOf(null)).toBe(2)
+    expect(strictMult(2)).toBe(1)
+    expect(strictMult(3)).toBe(1.25)
+    expect(strictMult(4)).toBe(1.55)
+    const c = defaultCurrency()
+    expect(scaled(c, '2-SEMI-STRICT')).toBe(c)
+    const s = scaled(c, '3-STRICT')
+    expect(s.line).toBeCloseTo(1.25)
+    expect(s.from[0]).toBeCloseTo(3.75)
+    c.mult = 2
+    expect(scaled(c, '4-VERYSTRICT').from[3]).toBe(180)
+    expect(normalizeCurrency({ mult: 9 }).mult).toBe(null)
+    expect(normalizeCurrency({ mult: 1.5 }).mult).toBe(1.5)
   })
 
   it('hides the piles of a step that is turned off', () => {

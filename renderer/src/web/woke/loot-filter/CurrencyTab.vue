@@ -10,11 +10,13 @@
     </div>
 
     <div :class="$style.minBar" data-currency-min>
-      <span :class="$style.minLab">Hide piles worth under</span>
-      <input type="range" min="0" :max="LINE_STOPS.length - 1" step="1" :value="dragStop ?? lineStop" :class="$style.range" aria-label="Hide piles worth under this many chaos"
-        @input="dragStop = Number(($event.target as HTMLInputElement).value)"
-        @change="c.line = LINE_STOPS[Number(($event.target as HTMLInputElement).value)]; dragStop = null">
-      <b :class="$style.minVal">{{ chaosText(dragStop != null ? LINE_STOPS[dragStop] : c.line) }}</b>
+      <span :class="$style.minLab">Strictness</span>
+      <input type="range" :min="MULT_MIN" :max="MULT_MAX" step="0.05" :value="dragMult ?? mult" :class="$style.range" aria-label="Strictness: every step's price times this"
+        @input="dragMult = Number(($event.target as HTMLInputElement).value)"
+        @change="c.mult = Number(($event.target as HTMLInputElement).value); dragMult = null">
+      <b :class="$style.minVal">×{{ (dragMult ?? mult).toFixed(2) }}</b>
+      <WButton v-if="c.mult != null" size="sm" variant="ghost" icon="fas fa-undo" :title="`Back to ×${strictMult(level).toFixed(2)}, from NeverSink's ${LEVEL_NAMES[level]}`" @click="c.mult = null">Follow {{ LEVEL_NAMES[level] }}</WButton>
+      <span v-else class="w-faint text-xs">follows {{ LEVEL_NAMES[level] }}</span>
       <span class="w-faint text-xs">{{ hideNote }}</span>
     </div>
 
@@ -25,10 +27,10 @@
             @click="stepEdit = stepEdit === s ? null : s as CStep"><i class="fas fa-pen" aria-hidden="true" /> Look<i v-if="c.steps[s]" :class="$style.dot" aria-hidden="true" /></button></span>
         <span v-if="s === 0" class="w-faint text-xs">under the line</span>
         <label v-else-if="s === 1" :class="$style.from">from
-          <input :value="c.line" type="number" :min="LINE_MIN" :max="LINE_MAX" step="0.1" :class="$style.numIn" aria-label="Small from this many chaos (the line)" @change="setLine($event.target as HTMLInputElement)"> c</label>
+          <input :value="c.line" type="number" :min="LINE_MIN" :max="LINE_MAX" step="0.1" :class="$style.numIn" aria-label="Small from this many chaos (the line)" @change="setLine($event.target as HTMLInputElement)"> c<span v-if="mult !== 1" :class="$style.eff">= {{ chaosText(eff.line) }}</span></label>
         <label v-else :class="$style.from">from
           <input :value="c.from[s - 2]" type="number" min="0.1" step="any" :class="$style.numIn" :aria-label="`${CSTEP_NAMES[s]} from this many chaos`"
-            @change="setFrom(s - 2, $event.target as HTMLInputElement)"> c</label>
+            @change="setFrom(s - 2, $event.target as HTMLInputElement)"> c<span v-if="mult !== 1" :class="$style.eff">= {{ chaosText(eff.from[s - 2]) }}</span></label>
         <span class="w-faint text-xs">{{ STEP_NOTE[s] }}</span>
         <button v-if="s > 0" type="button" :class="$style.stepSample" :title="`${catName(sampleCat)} at ${CSTEP_NAMES[s]}: click for another category`" :aria-label="`Show ${CSTEP_NAMES[s]} for another category`" data-currency-step-sample @click="nextSample">
           <LabelPreview :text="catArt(sampleCat)" :actions="[]" :style-override="currencyFullLook(s as CStep, sampleCat, c)" visibility="Show" :extras="false" :scale="0.85" />
@@ -51,7 +53,7 @@
         @patch="p => setStepLook(stepEdit!, { ...c.steps[stepEdit!], ...loudOnly(p) })" />
     </div>
 
-    <CurrencyPile v-if="baseItems.length" :items="items" :cfg="c" @go="goTo" />
+    <CurrencyPile v-if="baseItems.length" :items="items" :cfg="eff" @go="goTo" />
 
     <div :class="$style.tools">
       <input v-model="query" type="search" placeholder="Find an item" :class="$style.search" aria-label="Find an item">
@@ -89,7 +91,7 @@
         </span>
         <label :class="$style.whole" :title="`Below this, ${g.cat.name} hide (a full stack counts for more). The step prices above stay the same.`" @click.stop @keydown.stop>Shows from
           <select :value="c.nudge[g.cat.id] ?? 0" :class="$style.sel2" :aria-label="`${g.cat.name} show from`" @change="setNudge(g.cat.id, Number(($event.target as HTMLSelectElement).value))">
-            <option v-for="n in NUDGES" :key="n" :value="n">{{ chaosText(c.line * 2 ** n) }}{{ n === 0 ? ' (Small)' : '' }}</option>
+            <option v-for="n in NUDGES" :key="n" :value="n">{{ chaosText(eff.line * 2 ** n) }}{{ n === 0 ? ' (Small)' : '' }}</option>
           </select></label>
       </div>
       <div v-if="isOpen(g.cat.id)" :class="$style.catBody" role="table" :aria-label="`${g.cat.name} and when they show`">
@@ -143,7 +145,8 @@ import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { CSTEP_NAMES, CURRENCY_CATEGORIES, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile } from './currency-weights'
+import { CSTEP_NAMES, CURRENCY_CATEGORIES, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX } from './currency-weights'
+import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit } from './currency-weights'
 
 const props = defineProps<{
@@ -208,7 +211,7 @@ function pillsOf (stacks: Array<number | null>, edit: ItemEdit | undefined): Pil
 
 const rows = computed(() => items.value
   .map(it => {
-    const stacks = stacksFor(it, c.value)
+    const stacks = stacksFor(it, eff.value)
     const edit = c.value.items[it.name]
     return { it, one: stepOfPile(stacks, 1), shows: stacks.some(k => k != null), pills: pillsOf(stacks, edit), edited: edit != null }
   })
@@ -286,19 +289,15 @@ async function goTo (name: string) {
 
 // The main slider: every category's line moves with it (a category's
 // Shows from stays relative: ×2, ×½).
-const LINE_STOPS = [0.1, 0.2, 0.3, 0.5, 0.75, 1, 1.5, 2, 3, 5, 7.5, 10]
-const lineStop = computed(() => {
-  let best = 0
-  LINE_STOPS.forEach((v, i) => { if (Math.abs(Math.log(v / c.value.line)) < Math.abs(Math.log(LINE_STOPS[best] / c.value.line))) best = i })
-  return best
-})
 const hideNote = computed(() => `${rows.value.length - shownCount.value} of ${rows.value.length} items never show; a bigger stack of the rest can`)
 
 // Step looks: loudness only, for every category (Guy's L1).
 const stepEdit = ref<CStep | null>(null)
-// While the slider is dragged: the stop under the thumb. The line (and the
-// whole tab) only updates when it is let go (Guy 2026-11-27: dragging lagged).
-const dragStop = ref<number | null>(null)
+// The strictness multiplier: the player's own, or NeverSink's level's.
+const level = computed(() => levelOf(props.store.doc.value?.strictness ?? null))
+const mult = computed(() => c.value.mult ?? strictMult(level.value))
+const eff = computed(() => scaled(c.value, props.store.doc.value?.strictness ?? null))
+const dragMult = ref<number | null>(null)
 const SAMPLE_CATS = ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
 // The step cards' sample label: one category for all six, click to go to the next.
 const sampleCat = ref('orbs')
@@ -365,12 +364,12 @@ const statusText = computed(() => {
 
 const changed = computed(() => {
   const d = defaultCurrency()
-  return c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || Object.keys(c.value.nudge).length > 0 || Object.keys(c.value.steps).length > 0 || Object.keys(c.value.cats).length > 0 || c.value.off.length > 0
+  return c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || Object.keys(c.value.nudge).length > 0 || Object.keys(c.value.steps).length > 0 || Object.keys(c.value.cats).length > 0 || c.value.off.length > 0 || c.value.mult != null
 })
 function reset () {
   const d = defaultCurrency()
   // Your item edits are a list you built: Defaults keeps them.
-  Object.assign(c.value, { line: d.line, from: d.from, nudge: d.nudge, steps: d.steps, cats: d.cats, off: d.off })
+  Object.assign(c.value, { line: d.line, from: d.from, nudge: d.nudge, steps: d.steps, cats: d.cats, off: d.off, mult: d.mult })
 }
 
 function chaosText (v: number): string {
@@ -449,6 +448,7 @@ function chaosText (v: number): string {
 .range { width: min(22rem, 100%); accent-color: var(--w-accent, #c8a565); }
 .minVal { font-size: var(--w-fs-sm); color: var(--w-accent, #c8a565); min-width: 3.5em; font-variant-numeric: tabular-nums; }
 .stepOff { opacity: 0.45; }
+.eff { margin-left: 4px; color: var(--w-muted, #a89a7a); white-space: nowrap; }
 .stepSample { align-self: flex-start; background: none; border: 0; padding: 2px 0; cursor: pointer; }
 .catSample { display: inline-flex; pointer-events: none; }
 .lookLab { white-space: nowrap; font-size: var(--w-fs-xs); color: var(--w-muted, #a89a7a); }

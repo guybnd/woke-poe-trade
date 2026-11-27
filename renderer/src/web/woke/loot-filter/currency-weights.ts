@@ -26,7 +26,7 @@ import { topStepActions } from './top-step'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
 import type { CStep, CurrencySettings, ItemEdit } from './currency-settings'
 
-export { CURRENCY_TYPE, CSTEP_NAMES, LINE_MIN, LINE_MAX, NUDGE_MAX, defaultCurrency, normalizeCurrency } from './currency-settings'
+export { CURRENCY_TYPE, CSTEP_NAMES, LINE_MIN, LINE_MAX, NUDGE_MAX, MULT_MIN, MULT_MAX, defaultCurrency, normalizeCurrency } from './currency-settings'
 export type { CStep, CurrencySettings, ItemEdit } from './currency-settings'
 
 // NeverSink's currency types this step covers.
@@ -194,6 +194,25 @@ export function stackPow (it: Pick<CurrencyItem, 'chaos' | 'full'>, decent: numb
 }
 export function pileWorth (it: Pick<CurrencyItem, 'chaos' | 'full'>, stack: number, decent: number): number {
   return it.chaos * Math.max(1, stack) ** stackPow(it, decent)
+}
+
+// NeverSink's strictness level from its header ("4-VERYSTRICT" → 4);
+// Semi-strict (2) when the filter doesn't say.
+export function levelOf (strictness: string | null): number {
+  const n = Number(/^(\d)/.exec(strictness ?? '')?.[1])
+  return Number.isFinite(n) && n >= 0 && n <= 6 ? n : 2
+}
+// The multiplier a strictness level gives: ×1 at Semi-strict, ×1.25 a level
+// stricter, ÷1.25 a level looser, in 0.05s.
+export function strictMult (level: number): number {
+  return Math.round(1.25 ** (level - 2) * 20) / 20
+}
+// The settings as they apply: every step's price × the multiplier (the
+// player's own, or the filter's strictness).
+export function scaled (c: CurrencySettings, strictness: string | null): CurrencySettings {
+  const m = c.mult ?? strictMult(levelOf(strictness))
+  if (m === 1) return c
+  return { ...c, line: c.line * m, from: c.from.map(f => f * m) as CurrencySettings['from'] }
 }
 
 // The line for a category, after its nudge.
@@ -424,7 +443,7 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   if (!cfg.on || !lookup) return null
   const items = currencyItems(doc, lookup, cfg.items)
   if (!items.length) return null
-  const compiled = compileCurrency(cfg, items)
+  const compiled = compileCurrency(scaled(cfg, doc.strictness), items)
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
   const at = first < 0 ? doc.chunks.length : first
   doc.chunks.splice(at, 0, ...compiled.blocks)

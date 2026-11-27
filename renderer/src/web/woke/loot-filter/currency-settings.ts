@@ -11,6 +11,10 @@ export const LINE_MIN = 0.1
 export const LINE_MAX = 10
 // A category's nudge: each notch doubles (see less) or halves (see more) the line.
 export const NUDGE_MAX = 3
+// The strictness multiplier on every step's price (Guy 2026-11-27): it
+// follows NeverSink's strictness, ×1.25 a level, until set by hand in 0.05s.
+export const MULT_MIN = 0.25
+export const MULT_MAX = 4
 
 // The steps, quiet to loud (Guy's pick S2, 2026-11-27). 0 is hidden.
 export type CStep = 0 | 1 | 2 | 3 | 4 | 5
@@ -44,10 +48,12 @@ export interface CurrencySettings {
   // Steps turned off (1..4): piles that would get one hide instead (Guy
   // 2026-11-27: "turn an entire section off like small off").
   off: number[]
+  // Every step's price × this; null follows the filter's strictness.
+  mult: number | null
 }
 
 export function defaultCurrency (): CurrencySettings {
-  return { on: false, line: 1, from: [3, 10, 30, 90], nudge: {}, items: {}, steps: {}, cats: {}, off: [] }
+  return { on: false, line: 1, from: [3, 10, 30, 90], nudge: {}, items: {}, steps: {}, cats: {}, off: [], mult: null }
 }
 
 const NAME = /^[^"\n]{1,80}$/
@@ -119,6 +125,7 @@ export function normalizeCurrency (c: (Partial<CurrencySettings> & OldCurrency) 
     items,
     steps: patches(c?.steps, /^[1-5]$/),
     cats: patches(c?.cats, /^[a-z]{1,20}$/),
+    mult: num(c?.mult, MULT_MIN, MULT_MAX) ?? null,
     off: Array.isArray(c?.off) ? [...new Set((c.off as unknown[]).filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 4))].sort((a, b) => a - b) : []
   }
 }
