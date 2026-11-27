@@ -1400,6 +1400,8 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   // The strictness slider multiplies every step's price, every category.
   await page.getByRole('slider', { name: /Strictness/ }).fill('2')
   await expect(page.locator('[data-currency-min]')).toContainText('×2.00')
+  // The steps sit on one price ruler; a handle's value is the price after Strictness.
+  await expect(page.getByRole('spinbutton', { name: 'Normal from this many chaos' })).toHaveValue('2')
   await expect(page.getByRole('combobox', { name: 'Orbs strictness', exact: true })).toContainText('×1.00')
   await page.waitForTimeout(500)
   await overlay.snap('currency weights tab')
@@ -1450,6 +1452,7 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await oils.locator('[data-loot-section-mode]').getByRole('button', { name: 'Weighted', exact: true }).click()
   await expect(oils).not.toContainText(/(^|\D)0 of \d+ show/)
   // Faint: piles under the line show small and see-through, while it's on.
+  await page.getByRole('button', { name: 'Faint settings' }).click()
   await page.locator('[data-loot-faint]').check()
   await expect(page.locator('[data-loot-faint-until]')).toBeEnabled()
   await overlay.snap('loot tab, faint on')
