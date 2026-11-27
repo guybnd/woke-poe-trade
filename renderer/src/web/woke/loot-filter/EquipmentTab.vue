@@ -15,18 +15,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import WeightsTab from './WeightsTab.vue'
 import FlasksTab from './FlasksTab.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 
-defineProps<{ store: LootFilterStore, config: LootFilterWidget }>()
+const props = defineProps<{ store: LootFilterStore, config: LootFilterWidget, focus?: string | null }>()
 const CLASSES = [
   { id: 'rares', name: 'Rare gear', rgb: '#ffff77' },
   { id: 'flasks', name: 'Flasks', rgb: '#8888ff' }
 ] as const
-const sel = ref<'rares' | 'flasks'>('rares')
+// A flask rule (Alt+F on a flask) opens on Flasks.
+const sel = ref<'rares' | 'flasks'>(props.focus?.startsWith('flask') ? 'flasks' : 'rares')
+watch(() => props.focus, f => { if (f) sel.value = f.startsWith('flask') ? 'flasks' : 'rares' })
 </script>
 
 <style module>

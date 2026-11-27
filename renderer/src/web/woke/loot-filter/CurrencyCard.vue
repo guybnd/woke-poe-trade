@@ -5,7 +5,7 @@
   <div v-if="it" :class="$style.card" data-currency-card>
     <div :class="$style.top">
       <button type="button" :class="$style.cat" class="w-focusable" :style="{ '--c': catCss }" :title="`Open ${catName} on the Loot tab`" data-currency-card-cat
-        @click="emit('open-tab')"><i aria-hidden="true" />{{ catName }}</button>
+        @click="emit('open-tab', it.cat, it.name)"><i aria-hidden="true" />{{ catName }}</button>
       <span class="grow" />
       <span class="text-xs w-dim">{{ chaosText(base) }} each · {{ edit.price != null ? 'your price' : it.est ? 'guess' : 'poe.ninja' }}<template v-if="stack > 1"> · stack {{ stack }}/{{ Math.max(stack, it.full) }}</template></span>
     </div>
@@ -61,10 +61,13 @@ import WFoldHead from '../ui/WFoldHead.vue'
 import { WSegmented } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
-import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, scaled, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, scaled, sectionMode, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
-import type { CStep, CurrencyItem, ItemEdit } from './currency-weights'
+import { gemLinesOf } from './gem-classes'
+import { gemItemFor } from './loot-focus'
+import type { CStep, CurrencyItem, ItemEdit, SectionMode } from './currency-weights'
 import type { StylePatch } from './edits'
+import type { FilterCondition } from './parse'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 
@@ -73,8 +76,13 @@ const props = defineProps<{
   config: LootFilterWidget
   name: string
   stack: number
+  // A gem's level, quality and corruption: which of its poe.ninja bands it is.
+  gem?: { level: number, quality: number, corrupted: boolean } | null
+  // The rule that caught it (a gem's band rule says which band it is).
+  rule?: FilterCondition[] | null
 }>()
-const emit = defineEmits<{ 'open-tab': [] }>()
+// The item's category and the name its row has on the Loot tab.
+const emit = defineEmits<{ 'open-tab': [cat: string, name: string] }>()
 
 const open = reactive({ more: useFold('alt-f.currency-more') })
 // The whole category (Guy 2026-11-27: every section has Off / Weighted /
@@ -90,9 +98,13 @@ const raw = computed<CurrencyItem | null>(() => {
   const lookup = props.store.prices.lookup.value
   if (!doc || !lookup) return null
   loadCardFacts()
-  return currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value).find(i => i.name === props.name) ?? null
+  const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null)
+  if (!props.gem) return all.find(i => i.name === props.name) ?? null
+  return gemItemFor(all, props.name, props.gem, props.rule)
 })
-const edit = computed<ItemEdit>(() => cfg.value.items[props.name] ?? {})
+// The row's name on the Loot tab ("Arc 20/20" for a gem band).
+const itemName = computed(() => raw.value?.name ?? props.name)
+const edit = computed<ItemEdit>(() => cfg.value.items[itemName.value] ?? {})
 const it = computed(() => raw.value && withEdit(raw.value, edit.value))
 const base = computed(() => edit.value.price ?? raw.value?.chaos ?? 0)
 const mult = computed(() => edit.value.mult ?? 1)
@@ -101,12 +113,15 @@ const dragMult = ref<number | null>(null)
 const catName = computed(() => ALL_CATEGORIES.find(x => x.id === it.value?.cat)?.name ?? 'Other')
 const catCss = computed(() => `rgb(${catColour(it.value?.cat ?? 'other', cfg.value).rgb.join(',')})`)
 
-const secMode = computed(() => (it.value && cfg.value.catMode[it.value.cat]) ?? 'auto')
+// Its section's mode, its default included (boss-only uniques, Exceptional
+// gems: Always), as the Loot tab shows it.
+const secMode = computed(() => it.value ? sectionMode(cfg.value, it.value.cat) : 'auto')
 function setSecMode (v: string) {
   const cat = it.value?.cat
   if (!cat) return
   const next = Object.fromEntries(Object.entries(cfg.value.catMode).filter(([k]) => k !== cat))
-  if (v === 'off' || v === 'always') next[cat] = v
+  // Kept when it differs from the section's default, so Weighted sticks on an Always-by-default section.
+  if (v !== sectionMode({ catMode: {} }, cat)) next[cat] = v as SectionMode
   cfg.value.catMode = next
 }
 const mode = computed(() => edit.value.step === 0 ? 'off' : edit.value.supply === 1 && edit.value.step == null ? 'always' : 'auto')
@@ -138,8 +153,9 @@ function toggleCollect () {
   setEdit(min ? rest : { ...rest, min: 2 })
 }
 function setEdit (e: ItemEdit | null) {
-  const items = Object.fromEntries(Object.entries(cfg.value.items).filter(([n]) => n !== props.name))
-  if (e && Object.keys(e).length) items[props.name] = e
+  const name = itemName.value
+  const items = Object.fromEntries(Object.entries(cfg.value.items).filter(([n]) => n !== name))
+  if (e && Object.keys(e).length) items[name] = e
   cfg.value.items = items
 }
 function put (patch: Partial<ItemEdit>) {

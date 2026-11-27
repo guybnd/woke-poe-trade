@@ -136,7 +136,7 @@
 // Currency weights (beta, currency-weights.ts), Guy's design A (2026-11-27):
 // the steps and where they start, one ground pile, then every item in its
 // category, each with the stack it needs for each step and an editor.
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { WButton, WChip, WIcon, WInfo, WItemRow, WSegmented, WToggle } from '../ui'
 import CurrencyPile from './CurrencyPile.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
@@ -158,7 +158,9 @@ const props = withDefaults(defineProps<{
   config: LootFilterWidget
   // The Loot tab's class: Currency or Fragments, one engine and one ladder.
   kind?: LootKind
-}>(), { kind: 'currency' })
+  // An item to open and scroll to (Alt+F's "Open on the Loot tab").
+  focusItem?: string | null
+}>(), { kind: 'currency', focusItem: null })
 const KIND_NAME: Record<LootKind, string> = { currency: 'currency', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems' }
 const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.kind))
 
@@ -290,12 +292,21 @@ function toggle (id: string) {
 }
 
 const sel = ref<string | null>(null)
+// Once its item is listed (prices can come in after the tab opens).
+let focused: string | null = null
+watch([() => props.focusItem, () => items.value.length], ([name]) => {
+  if (!name || name === focused || !items.value.some(i => i.name === name)) return
+  focused = name
+  goTo(name).catch(() => {})
+}, { immediate: true })
 async function goTo (name: string) {
   const it = items.value.find(i => i.name === name)
   if (!it) return
   query.value = ''
   only.value = 'all'
-  open.value = new Set([...open.value, it.cat])
+  // Its sub-fold too (essences by tier), or the row isn't on the page.
+  const sub = subgroupOf(it.name, it.cat)
+  open.value = new Set([...open.value, it.cat, ...(sub ? [`${it.cat}/${sub}`] : [])])
   sel.value = name
   await nextTick()
   document.querySelector(`[data-currency-item="${CSS.escape(name)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
@@ -388,12 +399,17 @@ const statusText = computed(() => {
 
 const changed = computed(() => {
   const d = defaultCurrency()
-  return Object.keys(c.value.catMode).length > 0 || c.value.faint.on !== d.faint.on || c.value.faint.until !== d.faint.until || c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || Object.keys(c.value.nudge).length > 0 || Object.keys(c.value.steps).length > 0 || Object.keys(c.value.cats).length > 0 || c.value.off.length > 0 || c.value.mult != null
+  const mine = (o: Record<string, unknown>) => Object.keys(o).some(k => catIds.value.has(k))
+  return mine(c.value.catMode) || c.value.faint.on !== d.faint.on || c.value.faint.until !== d.faint.until || c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || mine(c.value.nudge) || Object.keys(c.value.steps).length > 0 || mine(c.value.cats) || c.value.off.length > 0 || c.value.mult != null
 })
+// This class's categories: Defaults leaves the other classes' sections (and
+// the League items' Offs) as they are.
+const catIds = computed(() => new Set(CATS.value.map(x => x.id)))
 function reset () {
   const d = defaultCurrency()
-  // Your item edits are a list you built: Defaults keeps them.
-  Object.assign(c.value, { line: d.line, from: d.from, nudge: d.nudge, steps: d.steps, cats: d.cats, off: d.off, mult: d.mult, catMode: d.catMode, faint: d.faint })
+  const others = <T>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).filter(([k]) => !catIds.value.has(k)))
+  // Your item edits are a list you built: Defaults keeps them. The steps are shared by every class.
+  Object.assign(c.value, { line: d.line, from: d.from, nudge: others(c.value.nudge), steps: d.steps, cats: others(c.value.cats), off: d.off, mult: d.mult, catMode: others(c.value.catMode), faint: d.faint })
 }
 
 function chaosText (v: number): string {

@@ -10,7 +10,7 @@
         <span :class="$style.state">{{ (k.id === 'jewels' ? config.presets.clusterPrices.on : config.presets.currency.on) ? 'On' : 'Off' }}</span>
       </button>
     </nav>
-    <CurrencyTab v-if="PRICED.has(sel)" :key="sel" :kind="lootKind" :store="store" :config="config" :class="$style.main" />
+    <CurrencyTab v-if="PRICED.has(sel)" :key="sel" :kind="lootKind" :store="store" :config="config" :focus-item="focusItem" :class="$style.main" />
     <MapsTab v-else-if="sel === 'maps'" :config="config" :class="$style.main" />
     <LeagueTab v-else-if="sel === 'league'" :config="config" :class="$style.main" />
     <JewelsTab v-else :store="store" :config="config" :class="$style.main" @open-rule="r => emit('open-rule', r)" />
@@ -18,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import CurrencyTab from './CurrencyTab.vue'
 import MapsTab from './MapsTab.vue'
 import JewelsTab from './JewelsTab.vue'
@@ -26,10 +26,14 @@ import LeagueTab from './LeagueTab.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { LootKind } from './currency-weights'
+import { lootFocus } from './loot-focus'
 
-defineProps<{
+const props = defineProps<{
   store: LootFilterStore
   config: LootFilterWidget
+  // The tier of a rule to open on: "cat:<category>:<item>" (Alt+F), the map
+  // floor, a league section, or a priced class's own rule.
+  focus?: string | null
 }>()
 const emit = defineEmits<{ (e: 'open-rule', r: { type: string, tier: string }): void }>()
 
@@ -50,6 +54,14 @@ type ClassId = (typeof LOOT_CLASSES)[number]['id']
 // Classes prices decide already: one engine and one switch for both.
 const PRICED = new Set<ClassId>(['currency', 'fragments', 'cards', 'uniques', 'gems'])
 const sel = ref<ClassId>('currency')
+const focusItem = ref<string | null>(null)
+watch(() => props.focus, f => {
+  if (!f) return
+  const at = lootFocus(f)
+  if (!at) return
+  sel.value = at.cls
+  focusItem.value = at.item
+}, { immediate: true })
 // The priced classes' ids are the engine's kinds.
 const lootKind = computed(() => sel.value as LootKind)
 </script>

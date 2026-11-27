@@ -283,8 +283,8 @@
     <template v-else-if="tab === 'preview'" />
     <PresetsTab v-else-if="tab === 'presets'" :store="store" :config="config" />
     <GearTab v-else-if="tab === 'gear' || tab === 'ranks'" :key="tab" :store="store" :config="config" :view="tab === 'ranks' ? 'ranks' : 'table'" @open-rule="openRule" />
-    <EquipmentTab v-else-if="tab === 'weights'" :store="store" :config="config" />
-    <LootTab v-else-if="tab === 'currency'" :store="store" :config="config" @open-rule="r => jumpTo(r.type, r.tier)" />
+    <EquipmentTab v-else-if="tab === 'weights'" :store="store" :config="config" :focus="tabFocus" />
+    <LootTab v-else-if="tab === 'currency'" :store="store" :config="config" :focus="tabFocus" @open-rule="r => jumpTo(r.type, r.tier)" />
     <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" />
     <NeverSinkTab v-else-if="tab === 'neversink'" :store="store" :config="config" :anchor="panel?.el" />
 
@@ -498,6 +498,7 @@ function onSearchPaste (e: ClipboardEvent) {
   emit('paste-item', text)
 }
 
+const tabFocus = ref<string | null>(null)
 const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'ranks' | 'weights' | 'currency' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
 watch(gearRanksAsk, () => { if (takeRanksAsk('tab')) tab.value = 'ranks' }, { immediate: true })
 const search = ref('')
@@ -1078,8 +1079,14 @@ watch(() => props.focus, (f) => {
   if (!f) return
   // The Drop tiers table's own rules live on that tab, not in the rule list.
   if (f.type === GEAR_TYPE) { tab.value = 'gear'; return }
-  if (f.type === WEIGHT_TYPE) { tab.value = 'weights'; return }
-  if (f.type === CURRENCY_TYPE) { tab.value = 'currency'; return }
+  if (f.type === WEIGHT_TYPE || f.type === CURRENCY_TYPE) {
+    // The rule's tier says which class of the tab to open (Alt+F's "Open on
+    // the Loot tab"); once, so opening the tab later starts where it always does.
+    tabFocus.value = f.tier || null
+    tab.value = f.type === WEIGHT_TYPE ? 'weights' : 'currency'
+    nextTick(() => { tabFocus.value = null }).catch(() => {})
+    return
+  }
   goTo(f.type, f.tier)
 }, { immediate: true })
 

@@ -194,7 +194,8 @@ const props = defineProps<{
 const w = computed(() => props.config.presets.weights)
 // The game's label colour for each rarity.
 const TEXT_OF: Record<string, Colour> = { Rare: [255, 255, 119, 255], Magic: [136, 136, 255, 255], Normal: [200, 200, 200, 255] }
-const STEP_CSS = ['#3a3a3a', '#8a8a8a', '#d8d877', '#29d2a0', '#e04848']
+// Beam is blue in the filter (red is kept for sure-profit drops).
+const STEP_CSS = ['#3a3a3a', '#8a8a8a', '#d8d877', '#29d2a0', '#5a9cff']
 
 const clampNeed = (p: number) => Math.min(NEED_MAX, Math.max(NEED_MIN, Number(fromPoints(p).toPrecision(4))))
 const needPoints = computed({
