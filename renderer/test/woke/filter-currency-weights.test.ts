@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency, fullBias, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, tierGuess, divineChaos } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, fullBias, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, tierGuess, divineChaos } from '@/web/woke/loot-filter/currency-weights'
 import type { CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { fullStack } from '@/web/woke/loot-filter/stack-sizes'
@@ -116,9 +116,8 @@ describe('currency weights', () => {
       const cfg = on(c => { c.line = line })
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, cfg, lookup)!
-      const starts = stepStarts(cfg, divineChaos(compiled.items))
       for (const it of compiled.items) {
-        const stacks = stacksFor(it, cfg, starts)
+        const stacks = stacksFor(it, cfg)
         for (const n of [1, 2, 3, 5, 10, 20, 40]) {
           if (n > it.full) continue
           const res = matchItem(doc, pile(it.name, n))
@@ -135,20 +134,63 @@ describe('currency weights', () => {
     }
   })
 
-  it('shows supplies from their stack and pins always', () => {
+  it('shows supplies from their stack, and a step set by hand for every pile', () => {
     const doc = parseFilter(SEMI)
-    applyCurrency(doc, on(c => { c.line = 2; c.supplies = { 'Orb of Transmutation': 10 }; c.pins = ['Scroll of Wisdom'] }), lookup)
+    applyCurrency(doc, on(c => { c.line = 2; c.items = { 'Orb of Transmutation': { supply: 10 }, 'Scroll of Wisdom': { step: 3 }, 'Divine Orb': { step: 0 } } }), lookup)
     expect(matchItem(doc, pile('Orb of Transmutation', 9)).visibility).toBe('Hide')
-    expect(matchItem(doc, pile('Orb of Transmutation', 10)).visibility).toBe('Show')
-    expect(matchItem(doc, pile('Scroll of Wisdom', 1)).visibility).toBe('Show')
+    expect(matchItem(doc, pile('Orb of Transmutation', 10)).final?.block.tier).toBe('s1')
+    expect(matchItem(doc, pile('Scroll of Wisdom', 1)).final?.block.tier).toBe('s3')
+    expect(matchItem(doc, pile('Scroll of Wisdom', 40)).final?.block.tier).toBe('s3')
+    expect(matchItem(doc, pile('Divine Orb', 5)).visibility).toBe('Hide')
     expect(matchItem(doc, pile('Orb of Augmentation', 1)).visibility).toBe('Hide')
+  })
+
+  it('takes your own price and gives an item its own look', () => {
+    const doc = parseFilter(SEMI)
+    const res = applyCurrency(doc, on(c => { c.items = { 'Orb of Scouring': { price: 100, look: { text: [0, 255, 0, 255] } } } }), lookup)!
+    expect(res.items.find(i => i.name === 'Orb of Scouring')).toMatchObject({ chaos: 100, est: false, own: true })
+    const hit = matchItem(doc, pile('Orb of Scouring', 1)).final!.block
+    expect(hit.tier).toBe('s5')
+    expect(hit.actions.find(a => a.key === 'SetTextColor')?.args.join(' ')).toBe('0 255 0 255')
+    expect(hit.actions.find(a => a.key === 'PlayEffect')?.args.join(' ')).toBe('Red')
+    expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
+  })
+
+  it('a category nudge moves its line only', () => {
+    const base = on(c => { c.line = 1 })
+    const less = on(c => { c.line = 1; c.nudge = { orbs: 2 } })
+    expect(stepStarts(less, 'orbs')[0]).toBe(4)
+    expect(stepStarts(less, 'oils')[0]).toBe(1)
+    const items = currencyItems(parseFilter(SEMI), lookup)
+    const alch = items.find(i => i.name === 'Orb of Alchemy')!
+    // 0.3c: shows from 8 at 1c; at 4c a full stack isn't enough.
+    expect(stacksFor(alch, base)[0]).toBe(8)
+    expect(stacksFor(alch, less)[0]).toBeNull()
+  })
+
+  it('sorts every item into a category', () => {
+    const items = currencyItems(parseFilter(SEMI), lookup)
+    const ids = new Set(CURRENCY_CATEGORIES.map(c => c.id))
+    for (const it of items) expect(ids.has(it.cat), it.name).toBe(true)
+    const of = (n: string) => items.find(i => i.name === n)?.cat
+    expect(of('Orb of Alchemy')).toBe('orbs')
+    expect(of('Mirror of Kalandra')).toBe('orbs')
+    expect(of('Prismatic Catalyst')).toBe('catalysts')
+    expect(of("Crusader's Exalted Orb")).toBe('influence')
+    expect(of('Chaotic Astrolabe')).toBe('atlas')
+    expect(of('Astragali')).toBe('expedition')
+    expect(of('Tainted Chaos Orb')).toBe('tainted')
+    expect(of('Deafening Essence of Greed')).toBe('essences')
+    expect(categoryOf('Fractured Fossil', 'currency->fossil')).toBe('fossils')
+    // "Other" stays small: a new item lands in a real category.
+    expect(items.filter(i => i.cat === 'other').length).toBeLessThan(25)
   })
 
   it('makes a chase drop red on white with a beam', () => {
     const doc = parseFilter(SEMI)
     applyCurrency(doc, on(), lookup)
     const hit = matchItem(doc, pile('Mirror of Kalandra', 1)).final!.block
-    expect(hit.tier).toBe('s4')
+    expect(hit.tier).toBe('s5')
     const act = (k: string) => hit.actions.find(a => a.key === k)?.args.join(' ')
     expect(act('SetBackgroundColor')).toBe('255 255 255 255')
     expect(act('SetTextColor')).toBe('255 0 0 255')
@@ -166,9 +208,13 @@ describe('currency weights', () => {
     }
   })
 
-  it('normalizes saved settings', () => {
+  it('normalizes saved settings, the first beta\'s too', () => {
     expect(normalizeCurrency(undefined)).toEqual(defaultCurrency())
-    const c = normalizeCurrency({ on: true, line: 99, normal: 50, big: 10, supplies: { 'Chaos Orb': 3, 'bad': -1, 'x"y': 2 } as never, pins: ['Chaos Orb', 'Chaos Orb', 7] as never })
-    expect(c).toMatchObject({ on: true, line: 1, normal: 50, big: 50, supplies: { 'Chaos Orb': 3 }, pins: ['Chaos Orb'] })
+    const old = normalizeCurrency({ on: true, line: 99, normal: 50, big: 10, supplies: { 'Chaos Orb': 3, 'bad': -1, 'x"y': 2 }, pins: ['Scroll of Wisdom', 7] } as never)
+    expect(old).toMatchObject({ on: true, line: 1, from: [50, 50, 50, 90], items: { 'Chaos Orb': { supply: 3 }, 'Scroll of Wisdom': { supply: 1 } } })
+    const c = normalizeCurrency({ from: [5, 2, 40, 90], nudge: { orbs: 2, oils: 9, Bad: 1, ess: 0 }, items: { 'Divine Orb': { step: 9, price: -1 }, 'Golden Oil': { step: 4, look: { fontSize: 40 } }, 'x"y': { step: 1 } } } as never)
+    expect(c.from).toEqual([5, 5, 40, 90])
+    expect(c.nudge).toEqual({ orbs: 2 })
+    expect(c.items).toEqual({ 'Golden Oil': { step: 4, look: { fontSize: 40 } } })
   })
 })

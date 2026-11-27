@@ -1349,3 +1349,43 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   await page.getByRole('button', { name: /Looks/ }).click()
   await overlay.snap('rare weights tab, looks open')
 })
+
+test('Currency weights: categories fold open, an item opens its editor, and the ground pile opens an item', async ({ overlay, fakeApp }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters/neversink/3-STRICT.filter.gz'))))
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), presets: { currency: { on: true } } }] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await page.getByRole('tab', { name: /Currency weights/ }).click()
+  await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
+  await expect(page.locator('[data-currency-pile]')).toBeVisible()
+  await expect(page.locator('[data-currency-cat="orbs"]')).toBeVisible()
+  await page.waitForTimeout(500)
+  await overlay.snap('currency weights tab')
+
+  // A category folds open; an item opens its editor under it.
+  await page.locator('[data-currency-cat="orbs"] [aria-expanded]').click()
+  const alch = page.locator('[data-currency-item="Orb of Alchemy"]')
+  await expect(alch).toBeVisible()
+  await alch.click()
+  const editor = page.locator('[data-currency-editor]')
+  await expect(editor).toBeVisible()
+  await editor.getByRole('button', { name: 'Tink' }).click()
+  await expect(page.locator('[data-currency-cat="orbs"]')).toContainText('1 edited')
+  await editor.getByRole('button', { name: 'Its own look' }).click()
+  await overlay.snap('currency item editor, own look')
+  await editor.getByRole('button', { name: 'Let the price decide again' }).click()
+  await expect(page.locator('[data-currency-cat="orbs"]')).not.toContainText('edited')
+
+  // Search opens the categories that match.
+  await page.getByRole('searchbox', { name: 'Find an item' }).fill('alc')
+  await expect(page.locator('[data-currency-item="Orb of Alchemy"]')).toBeVisible()
+  await page.getByRole('searchbox', { name: 'Find an item' }).fill('')
+
+  // A label on the ground opens its item.
+  const drop = page.locator('[data-currency-pile] [role="button"]').first()
+  const label = await drop.getAttribute('aria-label')
+  await drop.click()
+  await expect(editor).toBeVisible()
+  expect(label).toBeTruthy()
+})
