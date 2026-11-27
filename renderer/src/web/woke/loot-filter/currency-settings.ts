@@ -32,6 +32,9 @@ export interface ItemEdit {
   mult?: number
   // Its own look, on top of its step's.
   look?: StylePatch
+  // Shows at least this step at any stack: a card you collect (Guy's star,
+  // 2026-11-27: Collecting shows at least Normal).
+  min?: CStep
 }
 
 export interface CurrencySettings {
@@ -97,22 +100,16 @@ export function normalizeItemEdit (e: unknown): ItemEdit | null {
   const mult = num(x.mult, MULT_MIN, MULT_MAX)
   if (mult) out.mult = mult
   if (x.look && isPatch(x.look)) out.look = x.look as StylePatch
+  const min = int(x.min, 1, 5)
+  if (min) out.min = min as CStep
   return Object.keys(out).length ? out : null
 }
 
-// Older saves (the first beta): normal/big/beamDiv, supplies and pins.
-interface OldCurrency { normal?: unknown, big?: unknown, supplies?: unknown, pins?: unknown }
-
-export function normalizeCurrency (c: (Partial<CurrencySettings> & OldCurrency) | undefined): CurrencySettings {
+export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): CurrencySettings {
   const d = defaultCurrency()
   const from = [...d.from] as CurrencySettings['from']
   if (Array.isArray(c?.from) && c.from.length === 4) {
     c.from.forEach((v, i) => { const n = num(v, 0.01, 1e6); if (n != null) from[i] = n })
-  } else {
-    const normal = num(c?.normal, 0.1, 10_000)
-    const big = num(c?.big, 0.1, 100_000)
-    if (normal != null) from[0] = normal
-    if (big != null) from[2] = big
   }
   // Each step starts at or above the one below it.
   for (let i = 1; i < 4; i++) from[i] = Math.max(from[i], from[i - 1])
@@ -128,16 +125,6 @@ export function normalizeCurrency (c: (Partial<CurrencySettings> & OldCurrency) 
       const ok = NAME.test(n) ? normalizeItemEdit(e) : null
       if (ok) items[n] = ok
     }
-  }
-  if (c?.supplies && typeof c.supplies === 'object') {
-    for (const [n, k] of Object.entries(c.supplies as Record<string, unknown>)) {
-      const supply = int(k, 1, 100_000)
-      if (NAME.test(n) && supply != null) items[n] = { ...items[n], supply }
-    }
-  }
-  if (Array.isArray(c?.pins)) {
-    // A pin meant "always show it": every stack shows, and the price still decides the louder steps.
-    for (const n of c.pins) if (typeof n === 'string' && NAME.test(n)) items[n] = { ...items[n], supply: 1 }
   }
   return {
     on: typeof c?.on === 'boolean' ? c.on : false,

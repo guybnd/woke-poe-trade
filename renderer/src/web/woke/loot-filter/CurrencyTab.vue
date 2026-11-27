@@ -1,7 +1,7 @@
 <template>
   <div :class="$style.wrap" class="w-scroll">
     <div :class="$style.top">
-      <WToggle v-model="c.on">{{ kind === 'fragments' ? 'Prices decide endgame currency and fragments' : 'Prices decide endgame currency' }}</WToggle>
+      <WToggle v-model="c.on">{{ kind === 'currency' ? 'Prices decide endgame currency' : `Prices decide endgame currency and ${kind === 'cards' ? 'cards' : 'fragments'}` }}</WToggle>
       <span :class="$style.beta">Beta</span>
       <WInfo text="In maps (area level 68+), each pile of currency, essences, fossils, oils, delirium orbs, omens, tattoos and ducats counts as its poe.ninja price × stack (10 Chaos is 10c); an item whose full stack is worth less than Decent counts × stack^0.75, so piles of cheap shards stay quiet. Under the line it hides; over it it shows Small, and Normal, Decent, Big and Tink start at the prices you set; untick Show on a step to hide everything that would get it. Each category has its own Strictness (×1.25 a notch on top of the main one); click an item to set its step, price, supply stack or look by hand. Items with no price get a guess from NeverSink's tier (est.). Only this profile. Your own rules, build rules and presets still go on top. In maps these rules replace NeverSink's for these items, so price moves and tier edits for them apply only below area level 68." />
       <span class="w-faint text-xs">{{ statusText }}</span>
@@ -126,7 +126,8 @@
         </div>
         <template v-for="r in (sg.name && !isOpen(`${g.cat.id}/${sg.name}`) ? [] : sg.rows)" :key="r.it.name">
           <WItemRow :item="{ name: r.it.name }" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
-            <span :class="$style.name">{{ r.it.name }}<span v-if="r.edited" :class="$style.edited"> edited</span></span>
+            <span :class="$style.name"><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
+              :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ r.it.name }}<span v-if="r.edited" :class="$style.edited"> edited</span></span>
             <span :class="$style.price" :title="r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows at least Small' : r.it.est ? `No usable price: a guess from NeverSink's ${r.it.tier ? `tier ${r.it.tier}` : 'tiers'}` : 'poe.ninja'">
               {{ chaosText(r.it.chaos) }}<span v-if="r.it.est" :class="$style.est"> est.</span>
             </span>
@@ -160,6 +161,7 @@ import type { LootFilterWidget } from './widget'
 import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit, LootKind } from './currency-weights'
+import { cardFacts, loadCardFacts } from './card-facts'
 
 const props = withDefaults(defineProps<{
   store: LootFilterStore
@@ -199,7 +201,8 @@ const baseItems = computed<CurrencyItem[]>(() => {
   const doc = props.store.doc.value
   const lookup = props.store.prices.lookup.value
   if (!doc || !lookup) return []
-  return currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup).filter(it => kindOf(it.cat) === props.kind)
+  if (props.kind === 'cards') loadCardFacts()
+  return currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value).filter(it => kindOf(it.cat) === props.kind)
 })
 const baseByName = computed(() => new Map(baseItems.value.map(i => [i.name, i])))
 const baseChaos = (name: string) => baseByName.value.get(name)?.chaos ?? 0
@@ -323,7 +326,7 @@ const level = computed(() => levelOf(props.store.doc.value?.strictness ?? null))
 const mult = computed(() => c.value.mult ?? strictMult(level.value))
 const eff = computed(() => scaled(c.value, props.store.doc.value?.strictness ?? null))
 const dragMult = ref<number | null>(null)
-const SAMPLE_CATS = props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
+const SAMPLE_CATS = props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
 // The step cards' sample label: one category for all six, click to go to the next.
 const sampleCat = ref(SAMPLE_CATS[0])
 function nextSample () {
@@ -381,6 +384,11 @@ function setNudge (cat: string, v: number) {
   c.value.nudge = next
 }
 
+// Collecting (Guy's star N): the card shows at least Normal, at any stack.
+function toggleCollect (name: string) {
+  const { min, ...rest } = c.value.items[name] ?? {}
+  setEdit(name, min ? (Object.keys(rest).length ? rest : null) : { ...rest, min: 2 })
+}
 function setEdit (name: string, e: ItemEdit | null) {
   const next = Object.fromEntries(Object.entries(c.value.items).filter(([k]) => k !== name))
   if (e) next[name] = e
@@ -388,7 +396,7 @@ function setEdit (name: string, e: ItemEdit | null) {
 }
 
 const emptyText = computed(() => {
-  const what = props.kind === 'fragments' ? 'fragments' : 'currency'
+  const what = props.kind === 'cards' ? 'divination cards' : props.kind === 'fragments' ? 'fragments' : 'currency'
   if (!props.store.doc.value) return `Load a NeverSink filter to see its ${what}.`
   if (!props.store.prices.lookup.value) return 'Waiting for prices from poe.ninja.'
   return `No ${what} found in this filter.`
@@ -521,4 +529,7 @@ function chaosText (v: number): string {
 .pill { font-size: var(--w-fs-xs); padding: 0 5px; border-radius: 2px; line-height: 1.5; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .edited { color: var(--w-accent, #c8a565); font-size: var(--w-fs-xs); }
 .pen { font-size: var(--w-fs-xs); }
+.star { background: none; border: 0; padding: 0 5px 0 0; color: var(--w-faint); cursor: pointer; font-size: var(--w-fs-xs); }
+.star:hover { color: #e8c96a; }
+.starOn { color: #f0c040; }
 </style>

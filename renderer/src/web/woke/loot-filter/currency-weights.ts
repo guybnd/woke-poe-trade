@@ -24,6 +24,8 @@ import type { StylePatch } from './edits'
 import { fullStack } from './stack-sizes'
 import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
+import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
+import type { CardFacts } from './card-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
 import type { CStep, CurrencySettings, ItemEdit } from './currency-settings'
 
@@ -65,9 +67,9 @@ export const CURRENCY_CATEGORIES: CurrencyCategory[] = [
   { id: 'other', name: 'Other', art: 'Scrying Orb' }
 ]
 // Every class's categories (the Loot tab's rail shows one class at a time).
-export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES]
-export type LootKind = 'currency' | 'fragments'
-export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : 'currency'
+export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES]
+export type LootKind = 'currency' | 'fragments' | 'cards'
+export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : 'currency'
 
 const BY_TYPE: Record<string, string> = {
   'currency->essence': 'essences',
@@ -172,17 +174,20 @@ function thinPrice (p: number, guess: number): number {
 
 // The items, from the filter's own currency rules, with their prices (and
 // the player's own, when `edits` has one).
-export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits: Record<string, ItemEdit> = {}): CurrencyItem[] {
+// `cards`: each card's set size and reward fold (card-classes.ts), once read.
+export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits: Record<string, ItemEdit> = {}, cards: CardFacts | null = null): CurrencyItem[] {
   const seen = new Map<string, CurrencyItem>()
   const find = (type: string, name: string) => lookup?.(groupOf(type), name) ?? lookup?.(ANY_PAGE, name) ?? null
   for (const b of doc.blocks) {
     // NeverSink's fragment rules: league threads (Guy counts them as
     // currency) and the fragments (their own class on the Loot tab).
     const frags = b.type === 'fragments'
-    if (!b.type || !(SCOPE.test(b.type) || frags)) continue
+    // Divination cards: their own class too.
+    const card = b.type === 'divination'
+    if (!b.type || !(SCOPE.test(b.type) || frags || card)) continue
     const cls = b.conditions.find(x => x.key === 'Class')?.values ?? []
     const bt = b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))
-    if (!bt || !cls.length || (!frags && !cls.every(x => /Stackable/.test(x)))) continue
+    if (!bt || !cls.length || (!frags && !card && !cls.every(x => /Stackable/.test(x)))) continue
     for (const name of bt.values) {
       if (seen.has(name)) continue
       const thread = frags && THREAD.test(name)
@@ -201,16 +206,17 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       const own = edits[name]?.price
       seen.set(name, {
         name,
-        cls: frags ? cls.join('|') : cls.length === 1 ? cls[0] : 'Stackable Currency',
+        cls: frags || card ? cls.join('|') : cls.length === 1 ? cls[0] : 'Stackable Currency',
         type: b.type,
         tier: b.tier,
-        cat: categoryOf(name, b.type),
+        cat: card ? cards?.get(name)?.cat ?? 'cardother' : categoryOf(name, b.type),
         chaos: (own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess)) * (edits[name]?.mult ?? 1),
         est: own == null && !priced,
         ...(own != null ? { own: true } : {}),
-        ...(own == null && (p == null || !(p.chaos > 0)) && isFree(name, b.type, b.tier) ? { free: true } : {}),
-        // Fragments don't stack: one is the whole pile.
-        full: frags && !thread ? 1 : fullStack(name)
+        ...(!card && own == null && (p == null || !(p.chaos > 0)) && isFree(name, b.type, b.tier) ? { free: true } : {}),
+        // Fragments don't stack: one is the whole pile. A card's pile is at
+        // most a set (10 until the sizes are read).
+        full: card ? cards?.get(name)?.stack ?? 10 : frags && !thread ? 1 : fullStack(name)
       })
     }
   }
@@ -290,7 +296,7 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   // Its category set by hand: Off hides it unless the item itself is
   // Always; Always shows every pile at least Small.
   const mode = c.catMode?.[it.cat]
-  if (mode === 'off' && e?.supply !== 1) return [null, null, null, null, null]
+  if (mode === 'off' && e?.supply !== 1 && !e?.min) return [null, null, null, null, null]
   const out = stepStarts(c, it.cat).map(at => minStack(it, at, c.from[1]))
   const supply = e?.supply ?? (it.free || mode === 'always' ? 1 : null)
   if (supply != null) {
@@ -301,6 +307,9 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   for (let i = out.length - 2; i >= 0; i--) if (out[i + 1] != null && (out[i] == null || out[i]! > out[i + 1]!)) out[i] = out[i + 1]
   // A step turned off: piles that would get it hide (an item's own step stays).
   for (const s of c.off ?? []) if (s >= 1 && s <= 4) out[s - 1] = null
+  // Collecting (a floor step): every pile gets at least it, whatever hides
+  // the rest (Guy's star, 2026-11-27).
+  if (e?.min) out[e.min - 1] = 1
   return out
 }
 
@@ -308,7 +317,7 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
 // category's Off without the item's own Always.
 export function forcedHidden (it: Pick<CurrencyItem, 'name' | 'cat'>, c: Pick<CurrencySettings, 'items' | 'catMode'>): boolean {
   const e = c.items[it.name]
-  return e?.step === 0 || (c.catMode?.[it.cat] === 'off' && e?.supply !== 1 && e?.step == null)
+  return e?.step === 0 || (c.catMode?.[it.cat] === 'off' && e?.supply !== 1 && e?.step == null && !e?.min)
 }
 
 // The Strictness multiplier in force: the player's own, or the filter's level's.
@@ -391,7 +400,7 @@ const mixTo = (c: number[], to: number, f: number) => c.map(v => Math.round(v + 
 // The colour pushed 80% further from grey (Normal: "as now but more saturated").
 const vivid = (c: number[]) => { const g = (c[0] + c[1] + c[2]) / 3; return c.map(v => Math.max(0, Math.min(255, Math.round(v + (v - g) * 0.8)))) }
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rgb: [number, number, number], color: string, shape: string } {
-  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CAT_LOOK.other
+  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? CAT_LOOK.other
   const own = c.cats[cat]
   return {
     rgb: own?.text ? [own.text[0], own.text[1], own.text[2]] : d.text,
@@ -534,10 +543,10 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
 
 // Writes the rules above everything else in the filter (like the rare
 // weights: build rules, presets and your own rules then go on top).
-export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: PriceLookup | null): CurrencyCompiled | null {
+export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: PriceLookup | null, cards: CardFacts | null = null): CurrencyCompiled | null {
   // Without prices every item would be a guess: leave it to NeverSink.
   if (!cfg.on || !lookup) return null
-  const items = currencyItems(doc, lookup, cfg.items)
+  const items = currencyItems(doc, lookup, cfg.items, cards)
   if (!items.length) return null
   const compiled = compileCurrency(scaled(cfg, doc.strictness), items, { faint: faintOn(cfg, doc.strictness) })
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')

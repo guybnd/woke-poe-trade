@@ -11,7 +11,7 @@
         <span v-else :class="$style.ns">NeverSink</span>
       </button>
     </nav>
-    <CurrencyTab v-if="sel === 'currency' || sel === 'fragments'" :key="sel" :kind="sel === 'fragments' ? 'fragments' : 'currency'" :store="store" :config="config" :class="$style.main" />
+    <CurrencyTab v-if="PRICED.has(sel)" :key="sel" :kind="sel === 'fragments' || sel === 'cards' ? sel : 'currency'" :store="store" :config="config" :class="$style.main" />
     <div v-else :class="$style.later" data-loot-later>
       <b :class="$style.title">{{ cls.name }}</b>
       <p class="text-sm w-dim">NeverSink decides {{ cls.name.toLowerCase() }} for now. Prices will decide them here too, class by class.</p>
@@ -45,7 +45,7 @@ const LOOT_CLASSES = [
 type ClassId = (typeof LOOT_CLASSES)[number]['id']
 
 // Classes prices decide already: one engine and one switch for both.
-const PRICED = new Set<ClassId>(['currency', 'fragments'])
+const PRICED = new Set<ClassId>(['currency', 'fragments', 'cards'])
 const sel = ref<ClassId>('currency')
 const cls = computed(() => LOOT_CLASSES.find(k => k.id === sel.value)!)
 </script>
