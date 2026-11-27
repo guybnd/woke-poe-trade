@@ -10,6 +10,7 @@ import { matchRank } from '../search'
 import type { Lookup, LookupAction, LookupCard, LookupContext, LookupRow } from './types'
 import { shortName, typicalPick, vaultForNightmare } from '../../vaults/vaults'
 import type { Vault, VaultTable } from '../../vaults/vaults'
+import { formatSigned } from '../../ui/format'
 
 // The boss behind each map, for searches by boss name (poedb, 3.30).
 const BOSS_NAMES: Record<string, string[]> = {
@@ -124,7 +125,7 @@ function mapCard (r: BossResult, prefs: BossPrefs, vaults: VaultTable | null, ct
     id: `nightmare:${r.boss.id}`,
     group: 'Bosses',
     name: `${r.boss.name} (Nightmare)`,
-    sub: `${BOSS_NAMES[r.boss.id][0]} · ${r.entryMissing.length ? 'T17' : `${r.profit >= 0 ? '+' : ''}${Math.round(r.profit)} c a map`}`,
+    sub: `${BOSS_NAMES[r.boss.id][0]} · ${r.entryMissing.length ? 'T17' : `${formatSigned(Math.round(r.profit), x => `${x} c`)} a map`}`,
     icon: 'fas fa-dragon',
     tip: { name: NIGHTMARE_MAP },
     sections: [

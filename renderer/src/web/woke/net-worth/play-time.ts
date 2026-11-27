@@ -6,6 +6,7 @@ import { lineTime } from '../campaign/log-tail'
 import { isFarmedMap, isMapSideArea } from '../shared/map-areas'
 import { isBossArea } from '../shared/boss-areas'
 import { RATE_TIME_WHERE } from '../shared/rate-time'
+import { formatDuration } from '../ui/format'
 
 // map: in a map (its side areas too); play: any other area (campaign, boss
 // arenas); hub: hideout, town and the like; off: the game closed (between a
@@ -307,10 +308,7 @@ export const shortSpan = (ms: number) => {
   if (s >= 600) return span(ms)
   return s >= 60 ? `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s` : `${s}s`
 }
-export const span = (ms: number) => {
-  const m = Math.round(ms / 60_000)
-  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`
-}
+export const span = (ms: number) => formatDuration(ms)
 
 // A window's hover text, the same in the window and the dock card.
 // `amount`: a chaos sum as shown, unit included ("+0.8 d").

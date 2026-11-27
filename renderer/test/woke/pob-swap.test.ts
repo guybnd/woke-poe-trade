@@ -33,9 +33,9 @@ describe('swapCheck', () => {
     expect(r.verdict).toBe('worse')
     expect(r.summary).toContain('already over the cap')
     const row = (label: string) => r.rows.find(x => x.label === label)!
-    expect(row('Life')).toMatchObject({ yours: '108', theirs: '72', delta: '-36', tone: 'down' })
-    expect(row('Movement speed').delta).toBe('-5%')
-    expect(row('Energy shield').delta).toBe('-77')
+    expect(row('Life')).toMatchObject({ yours: '108', theirs: '72', delta: '−36', tone: 'down' })
+    expect(row('Movement speed').delta).toBe('−5%')
+    expect(row('Energy shield').delta).toBe('−77')
     expect(row('Fire resistance')).toMatchObject({ tone: 'dim', note: 'over cap 58 to 102: no change' })
   })
 

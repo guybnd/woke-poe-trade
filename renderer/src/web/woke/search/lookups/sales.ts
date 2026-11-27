@@ -5,6 +5,7 @@ import { NINJA_CURRENCY, inRange, saleChaos, saleName, searchSales, totals } fro
 import type { Rates, Sale } from '../../net-worth/sales'
 import { saleLookupTip } from '../../net-worth/sale-tip'
 import type { Lookup, LookupCard, LookupRow } from './types'
+import { formatTimeOfDay } from '../../ui/format'
 
 const WORDS = ['sold', 'sales', 'my sales', 'sold items', 'trade history']
 
@@ -15,7 +16,7 @@ function wantsTotals (query: string): boolean {
 
 const when = (at: number, now: number) => {
   const d = new Date(at)
-  const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  const t = formatTimeOfDay(d)
   return d.toDateString() === new Date(now).toDateString() ? `today ${t}` : `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${t}`
 }
 

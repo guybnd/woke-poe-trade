@@ -204,7 +204,7 @@ import { WInfo, WPanel, WTabs, WSegmented, WPrice, WPriceText, WEmpty, WSkeleton
 import { openItemMenu } from '../ui/tooltip/item-menu'
 import WSortHead from '../ui/WSortHead.vue'
 import { copyText } from '../ui/copy'
-import { formatAmount } from '../ui/format'
+import { formatAmount, formatSigned } from '../ui/format'
 import { usePriceText } from '../shared/price'
 import { gameIcon, moduleIcon } from '../ui/game-icons'
 import { useMarketCollector } from '../market/collector'
@@ -367,7 +367,7 @@ function toggleTribe (tribe: TattooTribe) { openTribe.value = openTribe.value ==
 function tribeIcon (tribe: TattooTribe) { return gameIcon(tribeIconItem(tribe)) }
 // "Tattoo of the Kitava Rebel" -> "Rebel": the row already names the tribe.
 function roleName (name: string) { return shortName(name).replace(/^\S+ /, '') }
-function signedAmount (chaos: number) { return `${chaos > 0 ? '+' : chaos < 0 ? '−' : ''}${amount(Math.abs(chaos))}c` }
+function signedAmount (chaos: number) { return formatSigned(chaos, x => `${amount(x)}c`) }
 
 // Odds and rarity need weights, so a known-result flip only has its list.
 const views = computed(() => {

@@ -22,7 +22,7 @@
         <span class="w-dim">Last</span>
         <span :class="$style.name" data-glance-last>{{ last.name }}</span>
         <span>{{ formatClock(last.mapMs) }}</span>
-        <span v-if="last.diff != null && Math.abs(last.diff) >= 1000" :class="last.diff > 0 ? 'w-down' : 'w-up'" title="Against your average for it">{{ last.diff > 0 ? '+' : '−' }}{{ formatClock(Math.abs(last.diff)) }}</span>
+        <span v-if="last.diff != null && Math.abs(last.diff) >= 1000" :class="last.diff > 0 ? 'w-down' : 'w-up'" title="Against your average for it">{{ formatSigned(last.diff, formatClock) }}</span>
       </template>
       <!-- In maps only: the map you just left, for a few seconds (its time against your usual). -->
       <span v-else-if="after" :class="$style.name" data-glance-after>{{ after }}</span>
@@ -36,7 +36,7 @@
           <span v-if="runMaps || !run.fights" data-glance-run-maps>{{ runMaps }} {{ runMaps === 1 ? 'map' : 'maps' }}</span>
           <span v-if="run.fights">{{ run.fights }} {{ run.fights === 1 ? 'fight' : 'fights' }}</span>
         </template>
-        <span v-if="on.profit" :class="run.profitChaos >= 0 ? 'w-up' : 'w-down'" :title="run.readAt ? `Profit at the last stash read, ${clock(run.readAt)}` : undefined">{{ run.profitChaos > 0 ? '+' : '' }}{{ formatChaos(run.profitChaos, run.divine) }}</span>
+        <span v-if="on.profit" :class="run.profitChaos >= 0 ? 'w-up' : 'w-down'" :title="run.readAt ? `Profit at the last stash read, ${clock(run.readAt)}` : undefined">{{ formatSigned(run.profitChaos, chaosAt(run.divine)) }}</span>
         <span v-if="on.perHour && runRate != null" data-glance-rate :title="leftOutText(time)">{{ formatChaos(runRate, run.divine) }}/h</span>
         <span v-if="on.total" data-glance-total title="Since the run started">{{ hoursText(clockNow - run.startAt) }}</span>
         <span v-if="on.avg && runAvg != null" class="w-dim" data-glance-avg title="Average map time in the run, its last 20 maps at most">avg {{ formatClock(runAvg) }}</span>
@@ -45,7 +45,7 @@
         <span :class="$style.sep" />
         <span class="w-dim" data-glance-session>This session</span>
         <span v-if="on.maps">{{ night.maps.length }} {{ night.maps.length === 1 ? 'map' : 'maps' }}</span>
-        <span v-if="on.profit && profit != null" :class="profit >= 0 ? 'w-up' : 'w-down'">{{ profit > 0 ? '+' : '' }}{{ formatChaos(profit, night.divine) }}</span>
+        <span v-if="on.profit && profit != null" :class="profit >= 0 ? 'w-up' : 'w-down'">{{ formatSigned(profit, chaosAt(night.divine)) }}</span>
         <span v-if="on.perHour && nightRate != null" data-glance-rate :title="leftOutText(time)">{{ formatChaos(nightRate, night.divine) }}/h</span>
         <span v-if="on.total" data-glance-total title="This session so far, AFK left out">{{ hoursText(playedMs(nightNow ?? night)) }}</span>
         <span v-if="on.avg && nightAvg != null" class="w-dim" data-glance-avg>avg {{ formatClock(nightAvg) }}</span>
@@ -67,7 +67,7 @@
 import { computed, nextTick, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { hostRequest } from '../shared/host'
-import { formatChaos, formatClock, nowMinute } from '../ui/format'
+import { formatChaos, formatClock, nowMinute, formatSigned, formatTimeOfDay } from '../ui/format'
 import { tickWhile } from '../dock/dock'
 import { tierText, usualMapMs } from './map-log'
 import { dragSpot } from '../ui/drag-spot'
@@ -245,7 +245,9 @@ const pace = computed(() => {
   return same.length ? same.reduce((s, r) => s + r.mapMs, 0) / same.length : usualMapMs(others)
 })
 const slow = computed(() => pace.value != null && elapsed.value > pace.value)
-const clock = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+const clock = formatTimeOfDay
+// Chaos at a divine rate, for formatSigned.
+const chaosAt = (divine: number | null | undefined) => (chaos: number) => formatChaos(chaos, divine)
 </script>
 
 <style module>

@@ -26,6 +26,7 @@ import { hideTip, showTipAt } from '../ui/tooltip/tooltip'
 import type { PobItem, PobStats } from './widget'
 import { askWornGear, worn, WORN_STALE_MS } from './worn-gear'
 import { personalOn } from '../personal'
+import { formatTimeOfDay } from '../ui/format'
 
 const props = defineProps<{ item: ParsedItem }>()
 const build = useActiveBuild()
@@ -100,7 +101,7 @@ const slots = computed(() => props.item.isUnidentified ? [] : slotsFor(props.ite
 watch([() => props.item, personalOn], ([, on]) => { if (slots.value.length && on) askWornGear(hint.value) }, { immediate: true })
 
 function readTime (at: number) {
-  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return formatTimeOfDay(at)
 }
 
 const swap = computed<Swap | null>(() => {

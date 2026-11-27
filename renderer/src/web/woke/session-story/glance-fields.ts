@@ -2,6 +2,7 @@
 // map"). Loads with the Session story chunk, not at startup: widget.ts only
 // holds the saved values' types.
 import type { GlanceField, GlanceShow } from './widget'
+import { formatDuration } from '../ui/format'
 
 export const GLANCE_FIELDS: ReadonlyArray<{ id: GlanceField, label: string, hint: string }> = [
   { id: 'map', label: 'Map and tier', hint: 'The map you are in and its tier' },
@@ -62,8 +63,7 @@ export function perHourOf (profitChaos: number | null, ms: number): number | nul
   return profitChaos != null && ms >= MIN_RATE_MS ? profitChaos / (ms / 3_600_000) : null
 }
 
-// "2:31" for hours and minutes; under an hour "45m".
+// "45m", "2h 31m": whole minutes so far (it never runs ahead of the clock).
 export function hoursText (ms: number): string {
-  const m = Math.max(0, Math.floor(ms / 60_000))
-  return m < 60 ? `${m}m` : `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
+  return formatDuration(Math.max(0, Math.floor(ms / 60_000)) * 60_000)
 }
