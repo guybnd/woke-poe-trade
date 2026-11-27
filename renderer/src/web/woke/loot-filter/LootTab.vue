@@ -8,11 +8,13 @@
         <span :class="$style.sw" :style="{ background: `rgb(${k.rgb.join(',')})` }" aria-hidden="true" />
         <span :class="$style.name">{{ k.name }}</span>
         <span v-if="PRICED.has(k.id) || k.id === 'maps'" :class="$style.state">{{ config.presets.currency.on ? 'On' : 'Off' }}</span>
+        <span v-else-if="k.id === 'jewels'" :class="$style.state">{{ config.presets.clusterPrices.on ? 'On' : 'Off' }}</span>
         <span v-else :class="$style.ns">NeverSink</span>
       </button>
     </nav>
     <CurrencyTab v-if="PRICED.has(sel)" :key="sel" :kind="lootKind" :store="store" :config="config" :class="$style.main" />
     <MapsTab v-else-if="sel === 'maps'" :config="config" :class="$style.main" />
+    <JewelsTab v-else-if="sel === 'jewels'" :store="store" :config="config" :class="$style.main" @open-rule="r => emit('open-rule', r)" />
     <div v-else :class="$style.later" data-loot-later>
       <b :class="$style.title">{{ cls.name }}</b>
       <p class="text-sm w-dim">NeverSink decides {{ cls.name.toLowerCase() }} for now. Prices will decide them here too, class by class.</p>
@@ -24,6 +26,7 @@
 import { computed, ref } from 'vue'
 import CurrencyTab from './CurrencyTab.vue'
 import MapsTab from './MapsTab.vue'
+import JewelsTab from './JewelsTab.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { LootKind } from './currency-weights'
@@ -32,6 +35,7 @@ defineProps<{
   store: LootFilterStore
   config: LootFilterWidget
 }>()
+const emit = defineEmits<{ (e: 'open-rule', r: { type: string, tier: string }): void }>()
 
 // The classes, in the order Guy picked (round 1 and 2 mockups). Colours are
 // each class's family colour.
