@@ -1385,8 +1385,8 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await page.getByRole('tab', { name: /^Loot/ }).click()
   // The Loot tab: a rail of classes, Currency first; the rest NeverSink's for now.
   await expect(page.locator('[data-loot-class="currency"]')).toHaveAttribute('aria-pressed', 'true')
-  await page.locator('[data-loot-class="gems"]').click()
-  await expect(page.locator('[data-loot-later]')).toContainText('NeverSink decides gems')
+  await page.locator('[data-loot-class="maps"]').click()
+  await expect(page.locator('[data-loot-later]')).toContainText('NeverSink decides maps')
   // Fragments: priced on the same ladder, folded by boss.
   await page.locator('[data-loot-class="fragments"]').click()
   await expect(page.locator('[data-currency-cat="invites"]')).toBeVisible()
@@ -1413,6 +1413,13 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await plain.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
   await expect(plain.locator('[data-currency-item]').first()).toBeVisible()
   await overlay.snap('loot tab, uniques')
+  // Gems: a row per poe.ninja band (level, quality, corrupted); Exceptional is Always.
+  await page.locator('[data-loot-class="gems"]').click()
+  const exc = page.locator('[data-currency-cat="gemexc"]')
+  await expect(exc.locator('[data-loot-section-mode]').getByRole('button', { name: 'Always', pressed: true })).toBeVisible()
+  await exc.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
+  await expect(exc.locator('[data-currency-item="Enlighten Support 4/20c"]')).toBeVisible()
+  await overlay.snap('loot tab, gems')
   await page.locator('[data-loot-class="currency"]').click()
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()

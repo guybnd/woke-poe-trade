@@ -11,7 +11,7 @@
         <span v-else :class="$style.ns">NeverSink</span>
       </button>
     </nav>
-    <CurrencyTab v-if="PRICED.has(sel)" :key="sel" :kind="sel === 'fragments' || sel === 'cards' || sel === 'uniques' ? sel : 'currency'" :store="store" :config="config" :class="$style.main" />
+    <CurrencyTab v-if="PRICED.has(sel)" :key="sel" :kind="lootKind" :store="store" :config="config" :class="$style.main" />
     <div v-else :class="$style.later" data-loot-later>
       <b :class="$style.title">{{ cls.name }}</b>
       <p class="text-sm w-dim">NeverSink decides {{ cls.name.toLowerCase() }} for now. Prices will decide them here too, class by class.</p>
@@ -24,6 +24,7 @@ import { computed, ref } from 'vue'
 import CurrencyTab from './CurrencyTab.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
+import type { LootKind } from './currency-weights'
 
 defineProps<{
   store: LootFilterStore
@@ -45,8 +46,10 @@ const LOOT_CLASSES = [
 type ClassId = (typeof LOOT_CLASSES)[number]['id']
 
 // Classes prices decide already: one engine and one switch for both.
-const PRICED = new Set<ClassId>(['currency', 'fragments', 'cards', 'uniques'])
+const PRICED = new Set<ClassId>(['currency', 'fragments', 'cards', 'uniques', 'gems'])
 const sel = ref<ClassId>('currency')
+// The priced classes' ids are the engine's kinds.
+const lootKind = computed(() => sel.value as LootKind)
 const cls = computed(() => LOOT_CLASSES.find(k => k.id === sel.value)!)
 </script>
 
