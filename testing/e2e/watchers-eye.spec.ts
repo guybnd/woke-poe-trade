@@ -55,6 +55,17 @@ test("an aura in Ctrl+Space opens the Watcher's Eye finder, and Price check sear
   const pen = finder.locator('[data-qa="we-mod"]', { hasText: 'Penetrates (10-15)% Cold Resistance' })
   await pen.click()
   await expect(finder.locator('[data-qa="we-bar"]')).toContainText('2 picked')
+
+  // Save the setup, change it, and load it back.
+  await finder.locator('[data-qa="we-save"]').click()
+  await finder.locator('[data-qa="we-save-name"]').fill('Cold crit')
+  await finder.locator('[data-qa="we-save-name"]').press('Enter')
+  await finder.locator('[data-qa="we-aura-Hatred"]').click()
+  await expect(groups).toHaveCount(1)
+  await finder.locator('[data-qa="we-saved"]').selectOption('Cold crit')
+  await expect(groups).toHaveCount(2)
+  await expect(finder.locator('[data-qa="we-bar"]')).toContainText('2 picked')
+  await expect(suppress.locator('[data-qa="we-min"]')).toHaveValue('14')
   await overlay.snap('watchers-eye-finder')
 
   // Nothing searched trade until Price check.

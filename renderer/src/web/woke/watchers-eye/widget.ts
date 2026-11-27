@@ -4,6 +4,8 @@ import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { popupAnchor } from '../ui/window-anchor'
 import type { WePick } from './mods'
 
+export interface WeSaved { name: string, auras: string[], picks: WePick[], atLeast: number | null }
+
 export const WATCHERS_EYE_TYPE = 'woke-watchers-eye'
 
 export type WatchersEyeWidget = Widget & {
@@ -16,6 +18,8 @@ export type WatchersEyeWidget = Widget & {
   picks: WePick[]
   // "Any N" of the picks instead of all of them (trade site only).
   atLeast: number | null
+  // Named setups to look at again: auras, picks and the count.
+  saved: WeSaved[]
   // An aura or mod asked for from the search palette ("aura:Grace", "mod:<id>").
   focus?: string | null
 }
@@ -32,6 +36,7 @@ export function initWatchersEyeWidget (wmId: number): WatchersEyeWidget {
     auras: [],
     offAuras: [],
     picks: [],
-    atLeast: null
+    atLeast: null,
+    saved: []
   }
 }

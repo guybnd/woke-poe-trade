@@ -3,9 +3,19 @@
     <div :class="$style.wrap" data-qa="watchers-eye">
       <div :class="$style.row">
         <span :class="$style.dim" class="w-trunc" data-qa="we-source">{{ sourceLabel }}</span>
-        <WInfo :class="$style.end" text="Pick the auras you run, then the mods you want on your Watcher's Eye.
+        <span :class="$style.saves">
+          <WSelect v-if="config.saved.length" :model-value="''" :options="savedOptions" data-qa="we-saved" title="Load a saved setup"
+            @update:model-value="loadSaved($event)" />
+          <input v-if="naming" ref="nameBox" v-model="saveName" class="w-input" :class="$style.nameInput" placeholder="Name it…" aria-label="Setup name" data-qa="we-save-name"
+            @keydown.enter.prevent="saveSetup" @keydown.esc.stop="naming = false" @blur="saveSetup">
+          <WButton v-else size="sm" variant="ghost" icon="fas fa-save" :disabled="!shown.size" data-qa="we-save"
+            title="Save these auras and picks to look at again" @click="startSave">Save</WButton>
+          <WButton v-if="current" size="sm" variant="ghost" icon="fas fa-trash" :title="`Remove ${current}`" data-qa="we-remove-saved" @click="removeSaved" />
+        </span>
+        <WInfo text="Pick the auras you run, then the mods you want on your Watcher's Eye.
 - Auras in your **PoB build** start ticked. Click a chip to drop it.
 - **Add aura**: type to pick another; your build's come first.
+- **Save** keeps the auras and picks under a name; load one from the list next to it.
 - A mod matches **any roll**. Type a number to ask for at least that roll.
 - **Price check** runs one trade search for a jewel with all your picks.
 - With 3 or more picks, **Any 2** finds jewels with some of them, on the trade site." />
@@ -198,6 +208,52 @@ const matchOptions = computed(() => [
 // A count no longer below the picks reads as "all".
 watch(() => active.value.length, (n) => { if (config.atLeast != null && config.atLeast >= n) config.atLeast = null })
 
+// ---- saved setups ----
+const naming = shallowRef(false)
+const saveName = shallowRef('')
+const nameBox = shallowRef<HTMLInputElement | null>(null)
+// The setup loaded or saved last, while nothing changed since.
+const current = shallowRef<string | null>(null)
+const savedOptions = computed(() => [
+  { value: '', label: current.value ?? 'Saved…' },
+  ...config.saved.map(s => ({ value: s.name, label: s.name }))
+])
+async function startSave () {
+  saveName.value = current.value ?? ''
+  naming.value = true
+  await nextTick()
+  nameBox.value?.focus()
+  nameBox.value?.select()
+}
+function saveSetup () {
+  if (!naming.value) return
+  naming.value = false
+  const name = saveName.value.trim()
+  if (!name) return
+  const entry = { name, auras: [...shownList.value], picks: active.value.map(p => ({ ...p })), atLeast: config.atLeast }
+  config.saved = [...config.saved.filter(s => s.name !== name), entry].sort((a, b) => a.name.localeCompare(b.name))
+  setCurrent(name)
+}
+function loadSaved (name: string) {
+  const s = config.saved.find(s => s.name === name)
+  if (!s) return
+  const want = new Set(s.auras)
+  config.auras = s.auras.filter(a => !fromBuild.value.has(a as WeAura))
+  config.offAuras = [...fromBuild.value].filter(a => !want.has(a))
+  config.picks = s.picks.map(p => ({ ...p }))
+  config.atLeast = s.atLeast
+  setCurrent(name)
+}
+function removeSaved () {
+  config.saved = config.saved.filter(s => s.name !== current.value)
+  current.value = null
+}
+// What the setup looks like when saved or loaded: a change after that drops the name.
+let currentShape = ''
+const shape = () => JSON.stringify([shownList.value, active.value, config.atLeast])
+function setCurrent (name: string) { current.value = name; currentShape = shape() }
+watch(shape, (now) => { if (current.value && now !== currentShape) current.value = null })
+
 // ---- the row the search palette asked for ----
 const sections = new Map<string, HTMLElement>()
 function groupRef (aura: string, el: unknown) { if (el instanceof HTMLElement) sections.set(aura, el); else sections.delete(aura) }
@@ -259,6 +315,8 @@ function modTip (m: WeMod): ModLine {
 <style module>
 .wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; font-size: var(--w-fs-sm); }
 .row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.saves { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; flex: none; }
+.nameInput { width: 8rem; }
 .end { margin-left: auto; }
 .dim { color: var(--w-dim); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
