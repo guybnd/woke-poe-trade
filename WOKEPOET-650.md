@@ -66,6 +66,16 @@ history:
     date: '2026-11-27T05:34:48.697Z'
     selfAttested: true
     id: c-2026-11-27t05-34-48-697z
+  - type: comment
+    user: Agent
+    comment: >-
+      Bug fix PR 992 (https://github.com/guybnd/woke-poe-trade/pull/992,
+      7ee61a8): Save always keeps the setup. Guy's earlier saved template was
+      never written (saved[] empty in every config backup from 04:23Z on); he'll
+      need to save it again.
+    date: '2026-11-27T07:24:45.183Z'
+    selfAttested: true
+    id: c-2026-11-27t07-24-45-183z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/979'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
