@@ -99,7 +99,7 @@
           </template>
         </div>
 
-        <div v-if="!ladderRows.length && !isOwn && !final.tier?.startsWith('#') && final.type !== SAFETY_RULE_TYPE" class="text-xs w-dim">
+        <div v-if="!ladderRows.length && !isOwn && !final.tier?.startsWith('#') && final.type !== SAFETY_RULE_TYPE && final.type !== WEIGHT_TYPE" class="text-xs w-dim">
           This rule doesn't list items by name, so it can't move tiers. Change its look, or give the item its own rule.
         </div>
 
@@ -209,6 +209,9 @@ import { ownActions } from './look'
 import { byPrice, findBase, groupName, pickBases } from './groups'
 import GearRankStrip from './GearRankStrip.vue'
 import WeightRankStrip from './WeightRankStrip.vue'
+import { rankStep, setWeightRank, weightRow } from './weight-rank'
+import { WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
+import type { BaseRow } from './weights'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -505,7 +508,23 @@ const tierIndex = computed(() => ladder.value.findIndex(t => t.tier === final.va
 const shownNow = computed(() => props.match.visibility !== 'Hide')
 const name = computed(() => base.value || props.facts.name)
 
+// Rare weights decide it: the keys change its base's rank instead of tiers.
+const wRow = computed(() => final.value.type === WEIGHT_TYPE ? weightRow(props.store, props.config, props.facts) : null)
+function weightKeys (row: BaseRow) {
+  const lower = rankStep(row.rank, 1)
+  const higher = rankStep(row.rank, -1)
+  return [
+    { key: '1', label: "Don't care", title: `Rank ${row.name} as Don't care in Rare weights (a strong mark still shows it)`, disabled: row.rank === 'rj', run: () => setWeightRank(props.config, row, 'rj') },
+    { key: '2', label: 'Lower rank', title: lower ? `${row.name}: ${WEIGHT_LABEL[row.rank]} → ${WEIGHT_LABEL[lower]}` : 'Already the lowest rank', disabled: !lower, run: () => lower && setWeightRank(props.config, row, lower) },
+    { key: '3', label: 'Raise rank', title: higher ? `${row.name}: ${WEIGHT_LABEL[row.rank]} → ${WEIGHT_LABEL[higher]}` : 'Already the top rank', disabled: !higher, run: () => higher && setWeightRank(props.config, row, higher) }
+  ]
+}
+
 const quick = computed(() => {
+  const own = baseQuick.value
+  return wRow.value ? [...weightKeys(wRow.value.row), ...own.slice(3)] : own
+})
+const baseQuick = computed(() => {
   const i = tierIndex.value
   const lower = i >= 0 ? ladder.value[i + 1] : undefined
   const higher = i > 0 ? ladder.value[i - 1] : undefined
