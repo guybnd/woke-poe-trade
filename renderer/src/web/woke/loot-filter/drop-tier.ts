@@ -16,9 +16,9 @@ export function rankOnBase (name: string, base: string, onBase: string[], tiers:
   if (own == null || ranked.length < 2 || !ranked.includes(name)) return null
   const others = ranked.filter(u => u !== name).map(u => tiers[u])
   const n = ranked.length
-  if (others.every(t => t > own)) return `The rarest of the ${n} uniques on ${base}.`
-  if (others.every(t => t < own)) return `The most common of the ${n} uniques on ${base}.`
+  if (others.every(t => t > own)) return `The rarest of the ${n} uniques on ${base} that drop anywhere.`
+  if (others.every(t => t < own)) return `The most common of the ${n} uniques on ${base} that drop anywhere.`
   const min = Math.min(own, ...others)
   const max = Math.max(own, ...others)
-  return min === max ? `All ${n} uniques on ${base} are T${own}.` : `The ${n} uniques on ${base} drop T${min} to T${max}.`
+  return min === max ? `All ${n} uniques on ${base} that drop anywhere are T${own}.` : `The ${n} uniques on ${base} that drop anywhere are T${min} to T${max}.`
 }

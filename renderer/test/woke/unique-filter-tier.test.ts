@@ -54,10 +54,10 @@ describe('drop tier words and rank on a base', () => {
     expect(dropTierWord(5)).toBe('common')
   })
   it('says where a unique stands among its base\'s uniques', () => {
-    expect(rankOnBase('A', 'Ring', ['A', 'B', 'C'], tiers)).toBe('The rarest of the 3 uniques on Ring.')
-    expect(rankOnBase('C', 'Ring', ['A', 'B', 'C'], tiers)).toBe('The most common of the 3 uniques on Ring.')
-    expect(rankOnBase('B', 'Ring', ['A', 'B', 'C'], tiers)).toBe('The 3 uniques on Ring drop T0 to T5.')
-    expect(rankOnBase('B', 'Ring', ['B', 'D'], tiers)).toBe('All 2 uniques on Ring are T3.')
+    expect(rankOnBase('A', 'Ring', ['A', 'B', 'C'], tiers)).toBe('The rarest of the 3 uniques on Ring that drop anywhere.')
+    expect(rankOnBase('C', 'Ring', ['A', 'B', 'C'], tiers)).toBe('The most common of the 3 uniques on Ring that drop anywhere.')
+    expect(rankOnBase('B', 'Ring', ['A', 'B', 'C'], tiers)).toBe('The 3 uniques on Ring that drop anywhere are T0 to T5.')
+    expect(rankOnBase('B', 'Ring', ['B', 'D'], tiers)).toBe('All 2 uniques on Ring that drop anywhere are T3.')
     expect(rankOnBase('B', 'Ring', ['B', 'X'], tiers)).toBeNull()
   })
   it('the shipped table names real uniques with tiers 0 to 5', () => {

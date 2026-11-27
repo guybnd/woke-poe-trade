@@ -930,6 +930,8 @@ export default defineComponent({
     }
     watch(() => props.item, () => { touched = false; expanded.value = new Set() })
     watch(() => sections.value.map(sec => sec.key).join('\u0000'), () => { if (!touched) fit() }, { immediate: true })
+    // The Tier line loads after the groups were fitted: fit again once it shows.
+    watch(tierShown, on => { if (on && !touched) fit() })
 
     return {
       root,
