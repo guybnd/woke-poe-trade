@@ -3,6 +3,7 @@
 import { kindOf } from './currency-weights'
 import { LEAGUE_SECTIONS } from './league-classes'
 import { gemBand } from './gem-classes'
+import type { FilterCondition } from './parse'
 
 export type LootClassId = 'currency' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps' | 'jewels' | 'league'
 
@@ -17,11 +18,19 @@ export function lootFocus (tier: string | null | undefined): { cls: LootClassId,
   return null
 }
 
-// A gem's row on the Loot tab: the most valuable of its poe.ninja bands it
-// falls in ("Arc 20/20"), as the rules go loudest first.
-export function gemItemFor<T extends { name: string, bt?: string, chaos: number }> (items: readonly T[], gem: string, g: { level: number, quality: number, corrupted: boolean }): T | null {
-  return items
-    .filter(i => i.bt === gem)
+const BAND_KEYS = ['GemLevel', 'Quality', 'Corrupted']
+const bandSig = (cs: readonly FilterCondition[]) => JSON.stringify(cs.filter(c => BAND_KEYS.includes(c.key)).map(c => [c.key, c.op, c.values]))
+
+// A gem's row on the Loot tab ("Arc 20/20"): the band whose rule caught it
+// (`rule`: that rule's conditions), else the most valuable band it falls in.
+export function gemItemFor<T extends { name: string, bt?: string, chaos: number, conds?: FilterCondition[] }> (items: readonly T[], gem: string, g: { level: number, quality: number, corrupted: boolean }, rule?: readonly FilterCondition[] | null): T | null {
+  const mine = items.filter(i => i.bt === gem)
+  if (rule?.some(c => c.key === 'GemLevel')) {
+    const sig = bandSig(rule)
+    const hit = mine.find(i => i.conds && bandSig(i.conds) === sig)
+    if (hit) return hit
+  }
+  return mine
     .filter(i => {
       const b = gemBand(i.name.slice(gem.length + 1))
       return b != null && g.level >= b.level && g.quality >= b.quality && (!b.corrupted || g.corrupted)

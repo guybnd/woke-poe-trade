@@ -127,7 +127,7 @@ const flask = computed(() => {
     terms: [
       { label: `Rank: ${FLASK_RANK_LABELS.find(r => r.value === rank)?.label ?? rank}`, x: w.value.mult[rank] },
       { label: `Quality ${quality}%`, x: FLASK_QUALITY.find(b => quality >= b.at)!.x },
-      { label: `Item level ${ilvl}`, x: FLASK_ILVL.find(b => ilvl >= b.at)!.x }
+      { label: props.facts.itemLevel == null ? 'Item level unknown' : `Item level ${ilvl}`, x: FLASK_ILVL.find(b => ilvl >= b.at)!.x }
     ]
   }
 })
@@ -174,7 +174,8 @@ function onKey (e: KeyboardEvent) {
   if (e.ctrlKey || e.altKey || e.metaKey || e.repeat) return
   const t = e.target as HTMLElement | null
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
-  const q = quick.value.find(x => x.key === e.key)
+  // The flask view has only Tune and NeverSink view.
+  const q = quick.value.slice(flask.value ? 3 : 0).find(x => x.key === e.key)
   if (!q) return
   e.preventDefault()
   if (!q.disabled) q.run()

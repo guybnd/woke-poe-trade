@@ -67,6 +67,7 @@ import { gemLinesOf } from './gem-classes'
 import { gemItemFor } from './loot-focus'
 import type { CStep, CurrencyItem, ItemEdit, SectionMode } from './currency-weights'
 import type { StylePatch } from './edits'
+import type { FilterCondition } from './parse'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 
@@ -77,6 +78,8 @@ const props = defineProps<{
   stack: number
   // A gem's level, quality and corruption: which of its poe.ninja bands it is.
   gem?: { level: number, quality: number, corrupted: boolean } | null
+  // The rule that caught it (a gem's band rule says which band it is).
+  rule?: FilterCondition[] | null
 }>()
 // The item's category and the name its row has on the Loot tab.
 const emit = defineEmits<{ 'open-tab': [cat: string, name: string] }>()
@@ -97,7 +100,7 @@ const raw = computed<CurrencyItem | null>(() => {
   loadCardFacts()
   const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null)
   if (!props.gem) return all.find(i => i.name === props.name) ?? null
-  return gemItemFor(all, props.name, props.gem)
+  return gemItemFor(all, props.name, props.gem, props.rule)
 })
 // The row's name on the Loot tab ("Arc 20/20" for a gem band).
 const itemName = computed(() => raw.value?.name ?? props.name)

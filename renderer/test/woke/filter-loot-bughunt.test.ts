@@ -3,12 +3,16 @@ import { describe, it, expect } from 'vitest'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
-import { ALL_CATEGORIES, applyCurrency, categoryOf, currencyLook, defaultCurrency } from '@/web/woke/loot-filter/currency-weights'
+import { ALL_CATEGORIES, CURRENCY_TYPE, applyCurrency, categoryOf, currencyLook, defaultCurrency } from '@/web/woke/loot-filter/currency-weights'
 import type { CStep, CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import type { GemLine } from '@/web/woke/loot-filter/gem-classes'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { renameBases } from '@/web/woke/loot-filter/gem-bases'
 import { gemItemFor, lootFocus } from '@/web/woke/loot-filter/loot-focus'
+import { composeFilter } from '@/web/woke/loot-filter/compose'
+import { DEFAULT_BUILD_RULES } from '@/web/woke/loot-filter/build-rules'
+import { defaultPresets } from '@/web/woke/loot-filter/presets'
+import { WEIGHT_TYPE } from '@/web/woke/loot-filter/weights'
 import { neverSink } from '../helpers/neversink'
 
 const SEMI = neverSink('2-SEMI-STRICT')
@@ -98,5 +102,35 @@ describe('Alt+F jumps to the right place', () => {
     expect(gemItemFor(items, 'Arc', { level: 21, quality: 20, corrupted: true })?.name).toBe('Arc 21/20c')
     expect(gemItemFor(items, 'Arc', { level: 21, quality: 20, corrupted: false })?.name).toBe('Arc 20/20')
     expect(gemItemFor(items, 'Arc', { level: 5, quality: 0, corrupted: false })?.name).toBe('Arc 1')
+  })
+  it('takes the band whose rule caught the gem, as your edits ordered them', () => {
+    const lv = (n: number) => ({ key: 'GemLevel', op: '>=', count: null, values: [String(n)] } as never)
+    const q = (n: number) => ({ key: 'Quality', op: '>=', count: null, values: [String(n)] } as never)
+    const items = [
+      { name: 'Arc 1', bt: 'Arc', chaos: 0.1, conds: [lv(1)] },
+      { name: 'Arc 20/20', bt: 'Arc', chaos: 2, conds: [lv(20), q(20)] }
+    ]
+    // "Arc 1" set to Big by hand: its rule comes first and catches a 20/20.
+    expect(gemItemFor(items, 'Arc', { level: 20, quality: 20, corrupted: false }, [lv(1)])?.name).toBe('Arc 1')
+    // A floor rule (no level) falls back to the most valuable band.
+    expect(gemItemFor(items, 'Arc', { level: 20, quality: 20, corrupted: false }, [q(20)])?.name).toBe('Arc 20/20')
+  })
+})
+
+describe('colour-blind reaches the Loot and Equipment rules', () => {
+  it('swaps red and green beams and icons in currency and weights rules', () => {
+    const p = defaultPresets()
+    p.currency.on = true
+    p.weights.on = true
+    p.colourBlind.on = true
+    const out = composeFilter(SEMI, { presets: p, rules: [], edits: [], buildRules: { ...DEFAULT_BUILD_RULES }, build: null, moves: [], safetyNet: { on: false, minChaos: 20 }, prices: { lookup, safety: null, breakdown: null }, dustList: null, heldBack: () => false, stackHeld: () => false })
+    const ours = out.doc.blocks.filter(b => b.type === CURRENCY_TYPE || b.type === WEIGHT_TYPE)
+    expect(ours.length).toBeGreaterThan(0)
+    for (const b of ours) {
+      for (const a of b.actions) {
+        if (a.key === 'PlayEffect') expect(['Red', 'Green', 'Pink', 'Brown']).not.toContain(a.args[0])
+        if (a.key === 'MinimapIcon') expect(['Red', 'Green', 'Pink', 'Brown']).not.toContain(a.args[1])
+      }
+    }
   })
 })

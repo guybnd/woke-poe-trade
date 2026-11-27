@@ -1079,10 +1079,14 @@ watch(() => props.focus, (f) => {
   if (!f) return
   // The Drop tiers table's own rules live on that tab, not in the rule list.
   if (f.type === GEAR_TYPE) { tab.value = 'gear'; return }
-  // The rule's tier says which class of the tab to open (Alt+F's "Open on the Loot tab").
-  tabFocus.value = f.tier || null
-  if (f.type === WEIGHT_TYPE) { tab.value = 'weights'; return }
-  if (f.type === CURRENCY_TYPE) { tab.value = 'currency'; return }
+  if (f.type === WEIGHT_TYPE || f.type === CURRENCY_TYPE) {
+    // The rule's tier says which class of the tab to open (Alt+F's "Open on
+    // the Loot tab"); once, so opening the tab later starts where it always does.
+    tabFocus.value = f.tier || null
+    tab.value = f.type === WEIGHT_TYPE ? 'weights' : 'currency'
+    nextTick(() => { tabFocus.value = null }).catch(() => {})
+    return
+  }
   goTo(f.type, f.tier)
 }, { immediate: true })
 
