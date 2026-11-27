@@ -1221,6 +1221,27 @@ test('price check: an item the filter shows gets a quiet icon that can hide it',
   }).toMatch(ownRule('Glorious Plate', 'Hide'))
 })
 
+test('price check: a unique\'s side list shows its filter tier in the label\'s look, and opens to its rule', async ({ overlay }) => {
+  test.slow()
+  const folder = kaomFilter(false)
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), reloadWhenSafe: false }] })
+  await overlay.copyItem('items/unique-kaoms-heart.txt')
+  const pc = overlay.widget('price-check')
+  const head = pc.locator('[data-filter-tier-head]')
+  await expect(head).toBeVisible()
+  await expect(head).toContainText('Loot filter')
+  await expect(head).toContainText('T3')
+  if (await head.getAttribute('aria-expanded') !== 'true') await head.click()
+  const body = pc.locator('[data-filter-tier]')
+  await expect(body).toContainText('Tier 3')
+  await expect(body).toContainText('every unique Glorious Plate drops like this')
+  await expect(body.getByRole('button', { name: 'Go to rule ›' })).toBeVisible()
+  await overlay.snap('unique filter tier, open')
+  // A click folds it.
+  await head.click()
+  await expect(body).toHaveCount(0)
+})
+
 test('profiles: copy the filter as a named profile that saves to its own file, and switch back', async ({ overlay, fakeApp }) => {
   const folder = filterFolder()
   await overlay.boot({ widgets: [lootFilter(folder)] })

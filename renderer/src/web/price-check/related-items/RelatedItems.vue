@@ -1,8 +1,10 @@
 <template>
-  <div v-if="result || sections.length || keystones" ref="root" :class="$style.wrapper" class="w-pc-side" data-goto-spot="related">
+  <div v-if="result || sections.length || keystones || showTier" ref="root" :class="$style.wrapper" class="w-pc-side" data-goto-spot="related">
     <div v-if="result && 'error' in result" class="p-2">
       {{ result.error }}
     </div>
+    <!-- woke: a unique's loot filter tier (FilterTierLine.vue). -->
+    <FilterTierLine v-if="showTier" :item="item!" />
     <!-- woke: a Timeless jewel's keystones, one per conqueror. A click ticks that
          conqueror's line alone with no number and searches once (CheckedItem.vue). -->
     <template v-if="keystones">
@@ -100,7 +102,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, inject, nextTick, PropType, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, defineComponent, inject, nextTick, PropType, shallowRef, watch } from 'vue'
 import { BaseType, DropEntry, ITEM_BY_REF, ITEM_DROP, ITEMS_ITERATOR } from '@/assets/data'
 import { usePoeninja, CurrencyValue, displayRounding } from '@/web/background/Prices'
 import { getDetailsId } from '../trends/getDetailsId'
@@ -126,6 +128,7 @@ import { AppConfig, poeWebApi } from '@/web/Config'
 import { Host } from '@/web/background/IPC'
 import type { PriceCheckWidget } from '@/web/overlay/widgets'
 import { storedPref } from '@/web/woke/ui/stored-pref'
+import { useActiveFilter } from '@/web/woke/loot-filter/active-filter'
 
 const { findPriceByQuery, findPricesByName, autoCurrency, xchgRate } = usePoeninja()
 
@@ -641,7 +644,11 @@ function getItemPrices (queryId: string) {
 }
 
 export default defineComponent({
-  components: { WItemRow },
+  components: {
+    WItemRow,
+    // The loot filter tier line loads with the first unique checked, not at startup.
+    FilterTierLine: defineAsyncComponent(() => import('@/web/woke/loot-filter/FilterTierLine.vue'))
+  },
   directives: { ItemTip: vItemTip },
   props: {
     item: {
@@ -783,6 +790,10 @@ export default defineComponent({
       return out
     }
 
+    // woke: a unique's loot filter tier, when a loot filter is set up.
+    const activeFilter = useActiveFilter()
+    const showTier = computed(() => props.item?.rarity === ItemRarity.Unique && !!activeFilter.value?.doc.value)
+
     // woke: a Timeless jewel's conquerors and their keystones.
     const keystones = computed(() => {
       const item = props.item
@@ -915,6 +926,7 @@ export default defineComponent({
 
     return {
       root,
+      showTier,
       expanded,
       shownRows,
       isOpen,
