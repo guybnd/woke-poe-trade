@@ -130,19 +130,19 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     // Double-click fits it to what's in it again.
     await bar.dblclick()
     await expect.poll(async () => Math.round((await row.boundingBox())!.height)).toBeLessThan(before + 10)
-    // Folded, Where it is keeps its title and drops its rows.
-    const where = panel.getByRole('button', { name: 'Where it is' })
+    // Its chip (pick A) hides Where it is and shows it again; the chip stays.
+    const where = panel.locator('[data-side-chip="where"]')
     // A category row: a button with its share bar (an <i>) right inside
     // (not a row's leave-out button, which is one too).
     const catRows = panel.locator('button[aria-pressed]:not([data-line-out]):has(> i)')
-    await expect(where).toHaveAttribute('aria-expanded', 'true')
+    await expect(where).toHaveAttribute('aria-pressed', 'true')
     expect(await catRows.count()).toBeGreaterThan(0)
     await where.click()
-    await expect(where).toHaveAttribute('aria-expanded', 'false')
+    await expect(where).toHaveAttribute('aria-pressed', 'false')
     await expect(catRows).toHaveCount(0)
     await overlay.snap('net worth where it is folded')
     await where.click()
-    await expect(where).toHaveAttribute('aria-expanded', 'true')
+    await expect(where).toHaveAttribute('aria-pressed', 'true')
 
     // Strategy runs (WOKEPOET-515): start one from the last read, read again,
     // and the run shows what came in, its typed costs, and lands in Past runs.
@@ -570,6 +570,19 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await hhSale.locator('[data-line-out]').click()
     await expect(panel.locator('[data-sales-left-out]')).toHaveCount(0)
     await panel.getByRole('button', { name: /^(Sort by When|When, sorted \w+)$/ }).click()
+    await panel.getByRole('tab', { name: 'Holdings' }).click()
+    // Holdings' Sold section (pick S1): its chip hides and shows it like the
+    // others, without leaving Holdings; All sales › is the way to Sales.
+    const soldChip = panel.locator('[data-side-chip="sold"]')
+    await expect(soldChip).toHaveAttribute('aria-pressed', 'true')
+    await expect(panel.locator('[data-side-sale]').first()).toBeVisible()
+    await soldChip.click()
+    await expect(panel.locator('[data-side-sale]')).toHaveCount(0)
+    await expect(panel.getByRole('tab', { name: 'Holdings' })).toHaveAttribute('aria-selected', 'true')
+    await soldChip.click()
+    await overlay.snap('net worth side chips')
+    await panel.locator('[data-all-sales]').click()
+    await expect(panel.getByRole('tab', { name: 'Sales' })).toHaveAttribute('aria-selected', 'true')
     await panel.getByRole('tab', { name: 'Holdings' }).click()
 
     // Off again, without asking, and the window goes. The fake app lives on
