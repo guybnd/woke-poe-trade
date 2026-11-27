@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-644
 title: Fix atlas tree import from planner link and screenshot
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -26,6 +26,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-26T10:23:25.571Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:51.492Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/968'
@@ -40,5 +45,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Atlas strategies: import Atlas Tree Planner links, and planner screenshots are read correctly. PR: https://github.com/guybnd/woke-poe-trade/pull/968 (dcb7d04).

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-629
 title: 'UX consistency: real item tooltips on every Prices category, plus corpse info'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - polish
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-622
 history:
   - type: activity
@@ -43,6 +43,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-26T02:53:58.156Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:53.187Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/952'
@@ -57,5 +62,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Real item tooltips on every Prices category, plus corpse info. Building.

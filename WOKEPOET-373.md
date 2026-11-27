@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-373
 title: 'Tools launcher overhaul: easier to read'
-status: Done
+status: Released
 priority: None
 effort: M
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -92,6 +92,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T12:42:47.542Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:57.219Z'
 swimlane: null
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/625'
@@ -106,6 +111,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 > **TL;DR** Guy finds the tools launcher (rail grid button: search box + Economy / Mapping / Campaign & lab / Builds & trade / Overlay columns, icons, pins, "Off" labels) hard to read. Mock options in the PoE look, Guy picks, then build.
 

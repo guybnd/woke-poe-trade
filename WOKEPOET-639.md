@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-639
 title: 'Instant ninja card, title tips and help cards should follow Size too'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - bug
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-638
 history:
   - type: activity
@@ -44,6 +44,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-26T07:02:33.126Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:52.009Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/963'
@@ -58,5 +63,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Follow-up to 638: the instant poe.ninja card, title tips and help cards should also follow the price check Size setting.

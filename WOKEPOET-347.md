@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-347
 title: 'Gear tab: per-slot lines (F2) and Alt+F rank moves'
-status: Done
+status: Released
 priority: Medium
 effort: M
 assignee: unassigned
@@ -10,7 +10,7 @@ tags:
   - '3.30'
   - ux
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -47,6 +47,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T07:01:35.265Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:31:00.771Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/606'
@@ -61,6 +66,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 > **TL;DR:** Guy picked F2 from the Gear canvas (per-slot lines), and asked for the Alt+F card to show a base's Gear rank with easy up/down. Branch woke/gear-slots, on the dev build for him to try.
 

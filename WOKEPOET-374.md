@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-374
 title: 'Loot filter: tiers keyed on numbers, not names (cluster jewels first)'
-status: Done
+status: Released
 priority: Medium
 effort: L
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -118,6 +118,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T12:47:31.226Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:57.081Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/626'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -132,6 +137,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 > **TL;DR** Make loot filter tiers that differ by numbers (cluster passives + item level, flask area level + quality…) readable and editable; merge the cluster price group into the cluster page and price its passive types live from poe.ninja. Guy picked A, 1+2, M, All, P on the mockups (https://claude.ai/artifact/Q5BRTNyyaz4HX6d4LFXcJ5).
 

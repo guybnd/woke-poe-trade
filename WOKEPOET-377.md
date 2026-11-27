@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-377
 title: 'Net worth: Share as a percent of net worth'
-status: Done
+status: Released
 priority: None
 effort: XS
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -44,6 +44,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T12:16:52.223Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:57.645Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/623'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -58,5 +63,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Guy asked what Share means (bar was scaled to the top row) and agreed it should be a real percent. PR https://github.com/guybnd/woke-poe-trade/pull/623: % of Valuation.chaos with text beside the bar. Reviewed + lint/build/tests pass.

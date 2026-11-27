@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-638
 title: Price check Size scales all text and its tooltips
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - bug
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -43,6 +43,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-26T07:02:34.357Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:51.927Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/963'
 subtasks:
   - WOKEPOET-639
@@ -59,5 +64,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 The price check Size setting should scale all of its text and its tooltips (Guy, 2026-11-26). PR: https://github.com/guybnd/woke-poe-trade/pull/963 (in CI).

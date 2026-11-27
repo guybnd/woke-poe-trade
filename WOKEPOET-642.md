@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-642
 title: Add Foulborn and Vestigial info to unique price check
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -59,6 +59,11 @@ history:
     date: '2026-11-26T12:32:10.002Z'
     selfAttested: true
     id: c-2026-11-26t12-32-10-002z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:51.115Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/967'
 subtasks:
   - WOKEPOET-643
@@ -75,5 +80,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Unique price check shows Foulborn and Vestigial info. Draft PR: https://github.com/guybnd/woke-poe-trade/pull/967 (branch claude/project-thread-6cp05w).

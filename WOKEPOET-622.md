@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-622
 title: 'Deep audit: UX consistency'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - polish
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-621
 history:
   - type: activity
@@ -45,6 +45,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-26T04:30:24.538Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:52.539Z'
 subtasks:
   - WOKEPOET-627
   - WOKEPOET-628
@@ -65,5 +70,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 UX consistency audit. Picks: https://claude.ai/artifact/YVXzJ8BPQfbqgpQdvePH9A

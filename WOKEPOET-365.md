@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-365
 title: 'Diagnostics freezes: safety-net walk and price history saves'
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - perf
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -29,6 +29,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T05:57:14.812Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:31:03.052Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/596'
@@ -43,5 +48,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 From Guy's Diagnostics (save to history 1.5 s, overlay busy up to 1.4 s, first paint 7.9 s). PR #596: byBase safety-net walk (1.8x), price saves send once + skip day-file rewrite on repeats. First paint is dev-build only. Open: 647 MB woke-market folder (old league snapshots), Guy's call.

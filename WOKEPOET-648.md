@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-648
 title: 'Ctrl+Space: search uniques by their mods (Foulborn, Vestigial)'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -62,6 +62,11 @@ history:
     date: '2026-11-26T14:56:37.704Z'
     selfAttested: true
     id: c-2026-11-26t14-56-37-704z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:50.725Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/974'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -76,5 +81,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Ctrl+Space search finds uniques by their mods, including Foulborn and Vestigial. PR: https://github.com/guybnd/woke-poe-trade/pull/974

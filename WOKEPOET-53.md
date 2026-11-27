@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-53
 title: 'Updates: prompt when the game is closed, rollback, signing, log errors'
-status: Done
+status: Released
 priority: Medium
 effort: L
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - overlay-core
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-36
 history:
   - type: activity
@@ -101,6 +101,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T07:40:06.998Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:59.919Z'
 subtasks:
   - WOKEPOET-260
 needsAction: null
@@ -117,5 +122,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 > **TL;DR** C8. Update timing is fine, but there's no way back from a bad release, no code signing, update errors aren't logged (AppUpdater.ts), and it installs only on quit, which tray apps rarely do. Signing costs money, so that part is Guy's decision. Consider replacing the PowerShell call in runningGameLog, which antivirus tools dislike. Logging the error is an easy first step.

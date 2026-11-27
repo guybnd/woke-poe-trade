@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-367
 title: 'Price check: show where each cluster notable sits (front/back)'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: Agent
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -56,6 +56,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T05:05:15.574Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:31:03.679Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/600'
@@ -70,6 +75,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 > **TL;DR:** On a Large (and Medium) cluster price check, show which notables sit at the front (next to the entry) and which at the back, as PoB lays them out, with the points to reach each one. Mocks first, Guy picks.
 

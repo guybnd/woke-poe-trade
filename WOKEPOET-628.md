@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-628
 title: 'UX consistency: shared UI pieces for Guy''s 15 picks'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - polish
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-622
 history:
   - type: activity
@@ -61,6 +61,11 @@ history:
     date: '2026-11-26T04:30:15.704Z'
     selfAttested: true
     id: c-2026-11-26t04-30-15-704z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:52.644Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/957'
@@ -75,5 +80,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Shared UI pieces for Guy's 15 picks: rating chip, no-price dash, thin-market "!", sort menu/header, Net worth period picker, saved-list row buttons, Megalo click cycle, back link, filter box + Clear search, Ctrl+Space drag, plain labels, fold header, shared item rows, "Remove" verb, mod hover card. Building. Picks: https://claude.ai/artifact/YVXzJ8BPQfbqgpQdvePH9A

@@ -3,7 +3,7 @@ id: WOKEPOET-371
 title: >-
   Base types: save refused with empty Class line when a row is fully split into
   slots
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
@@ -11,7 +11,7 @@ tags:
   - loot-filter
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -31,6 +31,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T08:20:34.497Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:59.410Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/614'
@@ -45,6 +50,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 > **TL;DR:** Saving failed ("R1-t5: Class has no values") when all five slots of a row had their own line: the row's leftover rule got `Class ==` with no values. Fix in PR #614 (branch woke/gear-empty-class); blocks v1.330.10.
 

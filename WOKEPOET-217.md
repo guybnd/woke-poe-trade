@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-217
 title: 'Ctrl+Space: more lookups (Guy''s picks)'
-status: Done
+status: Released
 priority: Medium
 effort: L
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -72,6 +72,11 @@ history:
       Maybes merged as #611 (ac9cc166): zone cards, Pantheon, saved items.
       https://github.com/guybnd/woke-poe-trade/pull/611
     id: a-2026-11-18t07-19-14-088z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:31:00.205Z'
 needsAction: null
 baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/611'
@@ -80,6 +85,9 @@ diffSummary:
   - file: scripts/upstream-data.mjs
     additions: 21
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 > **TL;DR:** Ctrl+Space search learns new lookups Guy picked on 2026-11-12, plus a "?" card with examples at the end.
 

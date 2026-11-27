@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-338
 title: 'Loot filter clarity fixes, PR 2'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - loot-filter
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -46,6 +46,11 @@ history:
       last 101 raw NeverSink tags (r01, maps_a_t14…); the test now fails on any
       unnamed tag. Guy OK'd the names 2026-11-18.
     id: a-2026-11-18t07-13-28-858z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:31:00.362Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/550'
@@ -60,5 +65,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 The rest of the 10 filter clarity fixes (review artifact XWpdtdgRaK1WkbsEzJAGiV). PR 1 is #547 (PR-547 ticket); this covers the second PR, still to come. Worktree wt/filter-clarity-2.

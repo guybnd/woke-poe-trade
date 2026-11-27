@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-626
 title: 'Deep audit: Hunt rancid bugs'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-621
 history:
   - type: activity
@@ -62,6 +62,11 @@ history:
     date: '2026-11-26T03:12:41.496Z'
     selfAttested: true
     id: c-2026-11-26t03-12-41-496z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:52.735Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/949'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -76,5 +81,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Hunt long-standing, rancid bugs.

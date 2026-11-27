@@ -71,5 +71,7 @@ subtasks:
   - WOKEPOET-632
   - WOKEPOET-633
   - WOKEPOET-634
+  - WOKEPOET-651
+  - WOKEPOET-652
 ---
 Validate the assumptions the app makes (game mechanics, data sources, prices).

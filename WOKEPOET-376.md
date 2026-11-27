@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-376
 title: 'Stacked decks window: session analytics in its own tab'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -57,6 +57,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T12:16:47.257Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:57.783Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/624'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -71,6 +76,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Guy: "move the stacked deck session analytics section into its own tab from here too".
 

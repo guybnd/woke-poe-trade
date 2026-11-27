@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-375
 title: 'Alt+F card: obvious Go to rule button (and G key)'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - loot-filter
   - ux
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -27,6 +27,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T11:35:13.294Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:58.578Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/620'
@@ -41,5 +46,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 > **TL;DR:** The Alt+F card's "Open editor" was easy to miss; a "Go to rule ›" button beside the verdict (and G key) now opens the editor on the deciding rule (Base types tab for table rules). Guy picked option A from the mock and approved it on the dev build. Branch woke/altf-go-to-rule, handed over for PR.

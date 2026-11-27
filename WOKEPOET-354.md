@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-354
 title: Generalize one-off features
-status: Done
+status: Released
 priority: Medium
 effort: XL
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - epic
   - cleanup
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -42,6 +42,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T05:57:28.683Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:31:02.702Z'
 subtasks:
   - WOKEPOET-355
   - WOKEPOET-356
@@ -67,6 +72,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 > **TL;DR:** Nine places where the same behaviour was written by hand in several windows get one shared version each, so a fix in one list applies to all. Guy said "Let's do all" on the audit page.
 

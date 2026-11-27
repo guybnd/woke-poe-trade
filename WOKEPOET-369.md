@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-369
 title: '1.330.10 picks: graphics card on by default, trim old price snapshots'
-status: Done
+status: Released
 priority: High
 effort: None
 assignee: unassigned
 tags:
   - perf
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -29,6 +29,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T06:34:35.202Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:31:01.513Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/605'
@@ -43,5 +48,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Guy's pre-release picks. PR #605: gpuDrawing defaults on (gpuDrawingChosen keeps a player's own choice; release note: untick the tray's graphics-card box if the screen goes black). Old price snapshots trimmed a minute after start to day rows + newest + 6 h/24 h movers' points (~450 MB on Guy's PC).

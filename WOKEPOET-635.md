@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-635
 title: Worth selling section in Net worth
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -45,6 +45,11 @@ history:
     date: '2026-11-26T05:00:37.036Z'
     selfAttested: true
     id: c-2026-11-26t05-00-37-036z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:52.279Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/956'
@@ -59,5 +64,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Net worth gets a Worth selling list of falling holdings (Guy, 2026-11-26). PR: https://github.com/guybnd/woke-poe-trade/pull/956 (42e9ff4).

@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-192
 title: 'M. Boss runs: Atziri moves to the Temple'
-status: Done
+status: Released
 priority: Low
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-149
 history:
   - type: activity
@@ -56,6 +56,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T06:46:12.759Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:31:01.181Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/607'
@@ -70,6 +75,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 > TL;DR: the Uber Atziri entry in boss runs assumes the old Alluring Abyss and fragments. Both are gone in 3.30.
 

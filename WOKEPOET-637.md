@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-637
 title: 'Run summary: rename, reconcile, cost fix'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - feature
   - bug
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -36,6 +36,11 @@ history:
     date: '2026-11-26T06:50:38.412Z'
     selfAttested: true
     id: c-2026-11-26t06-50-38-412z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:52.097Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/961'
@@ -50,5 +55,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Net worth runs (Guy, 2026-11-26): rename a run, In − Out adds up to Profit, "Per map, no best drop" column, map cost fixed on older runs. PR: https://github.com/guybnd/woke-poe-trade/pull/961 (0bc8bdf).

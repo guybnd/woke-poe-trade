@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-366
 title: 'Price check: pick another cluster jewel type'
-status: Done
+status: Released
 priority: Medium
 effort: S
 assignee: Agent
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -74,6 +74,11 @@ history:
       https://github.com/guybnd/woke-poe-trade/pull/602 (832efb9a). Another size
       searches its whole passive range; Yours keeps the copy's count.
     id: a-2026-11-18t05-33-49-252z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:31:03.194Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/600'
@@ -88,6 +93,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 > **TL;DR:** On a cluster jewel price check, a dropdown swaps the enchant type (e.g. Attack Damage while Dual Wielding → Spell Damage) so Guy can price a different cluster of the same size. Mocks first, Guy picks.
 

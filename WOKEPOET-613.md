@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-613
 title: Structured help tooltips app-wide
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - epic
   - polish
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -51,6 +51,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-25T12:29:45.742Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:54.825Z'
 subtasks:
   - WOKEPOET-614
   - WOKEPOET-615
@@ -71,5 +76,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Epic: help tooltips are wordy and hard to read. Turn them into proper sentences with bullet points and formatting, audited across the whole app (Guy, 2026-11-25: "these kind of tooltips are so wordy and hard to read, why not in proper sentence with bullet points and formatting. we need a proper audit across the board for this too").

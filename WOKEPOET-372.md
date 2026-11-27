@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-372
 title: 'Megalomaniac searcher: build-aware notable search'
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -106,6 +106,11 @@ history:
       E:\Git\woke\wt\megalo-launcher (git worktree already removed) couldn't be
       deleted (permission denied); delete it by hand.
     id: a-2026-11-18t11-46-02-315z
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:58.308Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/617'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
@@ -120,6 +125,9 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Guy's ask (2026-11-18): a "Megalomaniac searcher" that suggests a trade search for the Megalomaniac notables relevant to his build.
 

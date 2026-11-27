@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-641
 title: Fix Timeless jewel price check
-status: Done
+status: Released
 priority: None
 effort: None
 assignee: unassigned
@@ -9,7 +9,7 @@ tags:
   - bug
   - price-check
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -27,6 +27,11 @@ history:
     to: Done
     user: Agent
     date: '2026-11-26T09:48:10.685Z'
+  - type: status_change
+    from: Done
+    to: Released
+    user: Guy
+    date: '2026-11-27T04:30:51.659Z'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/966'
@@ -41,5 +46,8 @@ diffSummary:
   - file: renderer/test/woke/pob-builds.test.ts
     additions: 39
     deletions: 1
+version: '0003'
+releasedAt: '2026-11-27T04:30:50.393Z'
+releaseDocPath: release-notes/0003
 ---
 Glorious Vanity price check failed. Cause: stale conqueror name Mazcotl in the stat data. PR: https://github.com/guybnd/woke-poe-trade/pull/966 (d3400c2).
