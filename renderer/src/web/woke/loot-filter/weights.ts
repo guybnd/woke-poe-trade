@@ -16,11 +16,11 @@ import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './pa
 import { readTiered } from './gear'
 import { allGearBases, baseInfo } from './gear-bases'
 import { BASE_FACTS } from './base-facts'
-import { LOUD_DEFAULT, WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
-import type { WeightKey, WeightSettings } from './weight-settings'
+import { LOOK_CHANNELS, LOOK_LABEL, LOUD_DEFAULT, WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
+import type { LookChannel, LookKey, WeightKey, WeightSettings } from './weight-settings'
 
-export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, MULT_STEPS, NEED_MIN, NEED_MAX, STAGES, MARK_ROWS, ORDERED_ROWS, PIN_ROWS, LOUD_DEFAULT, defaultWeights, multRange, normalizeWeights } from './weight-settings'
-export type { WeightKey, WeightRow, WeightGroup, WeightSettings } from './weight-settings'
+export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, MULT_STEPS, NEED_MIN, NEED_MAX, STAGES, MARK_ROWS, ORDERED_ROWS, PIN_ROWS, LOUD_DEFAULT, LOOK_CHANNELS, LOOK_LABEL, LOOK_KEYS, LOOK_DEFAULT, defaultWeights, multRange, normalizeWeights } from './weight-settings'
+export type { LookChannel, LookKey, WeightKey, WeightRow, WeightGroup, WeightSettings } from './weight-settings'
 
 // ---- Steps (how loud) ---------------------------------------------------------
 
@@ -38,14 +38,15 @@ export function stepOf (weight: number, need: number, loud: readonly number[] = 
 
 const a = (key: string, ...args: Array<string | number>): FilterAction => ({ key, args: args.map(String) })
 
-// The look of each step. Calm at the bottom, NeverSink-like colours on top.
+// How loud each step is: size, sound, beam, map icon. Colours come from the
+// look channels (the score step's colours are one row there).
 export function stepActions (step: Step): FilterAction[] {
   switch (step) {
     case 0: return [a('SetFontSize', 18), a('DisableDropSound', 'True')]
-    case 1: return [a('SetFontSize', 32), a('SetBackgroundColor', 35, 35, 35, 230)]
-    case 2: return [a('SetFontSize', 38), a('SetBackgroundColor', 20, 20, 0, 255)]
-    case 3: return [a('SetFontSize', 42), a('SetTextColor', 0, 240, 190, 255), a('SetBackgroundColor', 0, 75, 30, 255), a('PlayAlertSound', 3, 300), a('MinimapIcon', 1, 'Cyan', 'Diamond')]
-    case 4: return [a('SetFontSize', 45), a('SetTextColor', 255, 255, 255, 255), a('SetBackgroundColor', 90, 0, 0, 255), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Red'), a('MinimapIcon', 0, 'Red', 'Star')]
+    case 1: return [a('SetFontSize', 32)]
+    case 2: return [a('SetFontSize', 38)]
+    case 3: return [a('SetFontSize', 42), a('PlayAlertSound', 3, 300), a('MinimapIcon', 1, 'Cyan', 'Diamond')]
+    case 4: return [a('SetFontSize', 45), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Red'), a('MinimapIcon', 0, 'Red', 'Star')]
   }
 }
 
@@ -212,55 +213,70 @@ const MARKS: Mark[] = [
 ]
 export const MARK_KEYS: ReadonlySet<WeightKey> = new Set(MARKS.map(x => x.key))
 
-// ---- Decorators: what a rare has shows in its border -----------------------
-// The steps set loudness (size, background, sound, beam); the border is the
-// rare's most valuable mark, so a fractured or influenced rare looks it at
-// any step. Written as Continue rules ahead of the steps, least valuable
-// first, so the biggest multiplier's colour is the one that stays.
-type RGB = [number, number, number]
-// minQ: an over-quality shade, brighter the more quality (filters can't
-// thicken a border).
-interface Deco { key: WeightKey, yes: FilterCondition[], rgb: RGB, minQ?: number }
-const DECOS: Deco[] = [
-  { key: 'cp', yes: [T('Corrupted'), c('CorruptedMods', '', [0])], rgb: [120, 0, 0] },
-  { key: 'ci', yes: [T('Corrupted'), c('CorruptedMods', '', [1])], rgb: [210, 40, 40] },
-  { key: 'dc', yes: [T('Corrupted'), c('CorruptedMods', '>=', [2])], rgb: [255, 90, 90] },
-  { key: 'mirr', yes: [T('Mirrored')], rgb: [160, 200, 255] },
-  { key: 'l4', yes: [c('LinkedSockets', '', [4])], rgb: [90, 160, 90] },
-  { key: 'l5', yes: [c('LinkedSockets', '', [5])], rgb: [130, 235, 130] },
-  { key: 'l6', yes: [c('LinkedSockets', '>=', [6])], rgb: [235, 255, 235] },
-  { key: 'rgb', yes: [c('SocketGroup', '', ['RGB'])], rgb: [200, 200, 200] },
-  { key: 'infl', yes: [c('HasInfluence', '', INFLUENCES)], rgb: [190, 120, 255] },
-  { key: 'eld', yes: [c('HasSearingExarchImplicit', '>=', [1])], rgb: [255, 150, 40] },
-  { key: 'eld', yes: [c('HasEaterOfWorldsImplicit', '>=', [1])], rgb: [255, 150, 40] },
-  { key: 'qual', yes: [c('Quality', '>=', [24])], rgb: [200, 110, 175], minQ: 24 },
-  { key: 'qual', yes: [c('Quality', '>=', [26])], rgb: [235, 115, 200], minQ: 26 },
-  { key: 'qual', yes: [c('Quality', '>=', [28])], rgb: [255, 122, 217], minQ: 28 },
-  { key: 'qual', yes: [c('Quality', '>=', [30])], rgb: [255, 60, 210], minQ: 30 },
-  { key: 'fract', yes: [T('FracturedItem')], rgb: [215, 180, 110] },
-  { key: 'synth', yes: [T('SynthesisedItem')], rgb: [110, 170, 255] },
-  { key: 'fated', yes: [T('Fated')], rgb: [255, 205, 130] },
-  { key: 'ench', yes: [T('AnyEnchantment')], rgb: [180, 225, 255] },
-  { key: 'strand', yes: [c('MemoryStrands', '>=', [70])], rgb: [120, 230, 230] },
-  { key: 'cruc', yes: [T('HasCruciblePassiveTree')], rgb: [255, 110, 60] },
-  { key: 'abyss', yes: [c('SocketGroup', '', ['A'])], rgb: [60, 200, 140] }
-]
-export const DECO_KEYS: ReadonlySet<WeightKey> = new Set(DECOS.map(x => x.key))
-// Least valuable first (the rule order); the last one a rare has wins.
-// Over-quality always wins (Guy, 2026-11-27): a quick pick that's easy to miss.
-const decoRank = (m: Record<WeightKey, number>, k: WeightKey) => k === 'qual' ? Infinity : m[k]
-const decoOrder = (m: Record<WeightKey, number>) => DECOS.map((d, i) => ({ d, i })).sort((p, q) => (decoRank(m, p.d.key) - decoRank(m, q.d.key)) || p.i - q.i).map(x => x.d)
-const decoAction = (d: Deco) => a('SetBorderColor', ...d.rgb, 255)
+// ---- Look channels: border, background, text colour ----------------------
+// Each channel is a ranked list (settings.look): the first thing on it an
+// item has paints that channel. Steps set loudness only. Written as Continue
+// rules ahead of the steps, lowest rank first, so the top one's colour is the
+// one that stays. 'score' is the step's own colour, so it's set by the step
+// rules themselves; whatever ranks above it there is worked out per rule.
+type RGBA = [number, number, number, number]
+// One way an item has a look row, most general first (over-quality: brighter
+// the more quality, since a filter can't thicken a border).
+interface Alt { conds: FilterCondition[], rgb: RGBA, has: (it: WeightItem) => boolean }
+const op = (rgb: [number, number, number]): RGBA => [...rgb, 255]
+const RARITY_TEXT: Record<WeightRarity, RGBA> = { Normal: [200, 200, 200, 255], Magic: [136, 136, 255, 255], Rare: [255, 255, 119, 255] }
+const RARITY_BG: Record<WeightRarity, RGBA> = { Normal: [42, 42, 42, 255], Magic: [26, 26, 64, 255], Rare: [46, 42, 8, 255] }
+const rarityOf = (it: WeightItem): WeightRarity => it.rarity ?? 'Rare'
+const termHas = (k: WeightKey) => (it: WeightItem) => termsOf(it).includes(k)
+const mark = (k: WeightKey, yes: FilterCondition[], rgb: [number, number, number]): Alt => ({ conds: yes, rgb: op(rgb), has: termHas(k) })
 
-// The mark whose colour this rare's border takes, if any.
-function decoHit (it: WeightItem, m: Record<WeightKey, number>): Deco | null {
-  const has = new Set(termsOf(it))
-  const hits = decoOrder(m).filter(d => has.has(d.key) && (d.minQ == null || it.quality >= d.minQ))
-  return hits.length ? hits[hits.length - 1] : null
+function lookAlts (k: Exclude<LookKey, 'score'>, ch: LookChannel, exotic: string[]): Alt[] {
+  switch (k) {
+    case 'qual': return ([[24, [200, 110, 175]], [26, [235, 115, 200]], [28, [255, 122, 217]], [30, [255, 60, 210]]] as Array<[number, [number, number, number]]>)
+      .map(([q, rgb]) => ({ conds: [c('Quality', '>=', [q])], rgb: op(rgb), has: (it: WeightItem) => it.quality >= q }))
+    case 'synth': return [mark('synth', [T('SynthesisedItem')], [110, 170, 255])]
+    case 'fract': return [mark('fract', [T('FracturedItem')], [215, 180, 110])]
+    case 'infl': return [mark('infl', [c('HasInfluence', '', INFLUENCES)], [190, 120, 255])]
+    case 'eld': return [mark('eld', [c('HasSearingExarchImplicit', '>=', [1])], [255, 150, 40]), mark('eld', [c('HasEaterOfWorldsImplicit', '>=', [1])], [255, 150, 40])]
+    case 'abyss': return [mark('abyss', [c('SocketGroup', '', ['A'])], [60, 200, 140])]
+    case 'ench': return [mark('ench', [T('AnyEnchantment')], [180, 225, 255])]
+    case 'l6': return [mark('l6', [c('LinkedSockets', '>=', [6])], [235, 255, 235])]
+    case 'cruc': return [mark('cruc', [T('HasCruciblePassiveTree')], [255, 110, 60])]
+    case 'strand': return [mark('strand', [c('MemoryStrands', '>=', [70])], [120, 230, 230])]
+    case 'l5': return [mark('l5', [c('LinkedSockets', '', [5])], [130, 235, 130])]
+    case 'fated': return [mark('fated', [T('Fated')], [255, 205, 130])]
+    case 'mirr': return [mark('mirr', [T('Mirrored')], [160, 200, 255])]
+    case 'corr': return [{ conds: [T('Corrupted')], rgb: ch === 'border' ? [210, 40, 40, 255] : [90, 0, 0, 255], has: it => it.corruption !== 'no' }]
+    case 'exotic': return exotic.length ? [{ conds: [c('BaseType', '==', exotic)], rgb: [255, 140, 26, 255], has: it => it.rank === 'x1' || it.rank === 'x2' }] : []
+    case 'rarity': return (['Normal', 'Magic', 'Rare'] as WeightRarity[]).map(r => ({ conds: [c('Rarity', '', [r])], rgb: ch === 'bg' ? RARITY_BG[r] : RARITY_TEXT[r], has: (it: WeightItem) => rarityOf(it) === r }))
+  }
 }
-export function decoOf (it: WeightItem, m: Record<WeightKey, number>): WeightKey | null {
-  return decoHit(it, m)?.key ?? null
+const LOOK_ACTION: Record<LookChannel, string> = { border: 'SetBorderColor', bg: 'SetBackgroundColor', text: 'SetTextColor' }
+// The score step's colour per channel (none: the step doesn't paint it).
+const STEP_PAINT: Record<LookChannel, Array<RGBA | null>> = {
+  border: [null, null, null, null, null],
+  bg: [null, [35, 35, 35, 230], [20, 20, 0, 255], [0, 75, 30, 255], [90, 0, 0, 255]],
+  text: [null, null, null, [0, 240, 190, 255], [255, 255, 255, 255]]
 }
+const paint = (ch: LookChannel, rgb: RGBA) => a(LOOK_ACTION[ch], ...rgb)
+// Score paints this channel at every shown step: rows after it never show,
+// and rows before it are worked out in the step rules (no Continue needed).
+const scoreOwns = (list: readonly LookKey[], ch: LookChannel) => list.includes('score') && STEP_PAINT[ch].slice(1).every(Boolean)
+
+// The colour this item gets in one channel at this step, if any.
+function lookOf (it: WeightItem, ch: LookChannel, list: readonly LookKey[], step: Step): RGBA | null {
+  for (const k of list) {
+    if (k === 'score') {
+      const s = STEP_PAINT[ch][step]
+      if (s) return s
+      continue
+    }
+    const hits = lookAlts(k, ch, ['x']).filter(x => x.has(it))
+    if (hits.length) return hits[hits.length - 1].rgb
+  }
+  return null
+}
+
 // The step a rare lands on: its score's, or Small at least when a pinned
 // row ("always show") is one of its terms.
 export function stepFor (it: WeightItem, w: Pick<WeightSettings, 'mult' | 'need' | 'always' | 'loud'>): Step {
@@ -270,11 +286,25 @@ export function stepFor (it: WeightItem, w: Pick<WeightSettings, 'mult' | 'need'
   return w.always.some(k => has.has(k)) ? 1 : 0
 }
 
-// The look the filter gives this rare at this step: the step's loudness and
-// its most valuable mark's border.
-export function weightLook (it: WeightItem, m: Record<WeightKey, number>, step: Step): FilterAction[] {
-  const d = decoHit(it, m)
-  return d && step > 0 ? [decoAction(d), ...stepActions(step)] : stepActions(step)
+// The look the filter gives this item at this step: the step's loudness and
+// each channel's colour.
+export function weightLook (it: WeightItem, look: Record<LookChannel, readonly LookKey[]>, step: Step): FilterAction[] {
+  if (step === 0) return stepActions(0)
+  const out: FilterAction[] = []
+  for (const ch of ['border', 'bg', 'text'] as LookChannel[]) {
+    const rgb = lookOf(it, ch, look[ch], step)
+    if (rgb) out.push(paint(ch, rgb))
+  }
+  return [...out, ...stepActions(step)]
+}
+
+// Which look row a channel shows for this item, if any (for the tab).
+export function lookKeyOf (it: WeightItem, look: Record<LookChannel, readonly LookKey[]>, ch: LookChannel, step: Step): LookKey | null {
+  for (const k of look[ch]) {
+    if (k === 'score') { if (STEP_PAINT[ch][step]) return k; continue }
+    if (lookAlts(k, ch, ['x']).some(x => x.has(it))) return k
+  }
+  return null
 }
 
 // The marks over ×1: of these only the biggest counts.
@@ -337,7 +367,9 @@ function pinConds (k: WeightKey, bases: BaseRow[]): FilterCondition[][] {
     return names.length ? [[c('BaseType', '==', names)]] : []
   }
   if (k === 'w86') return [[c('Rarity', '', ['Normal', 'Magic']), c('ItemLevel', '>=', [86])]]
-  return DECOS.filter(d => d.key === k && (d.minQ == null || d.minQ === 24)).map(d => d.yes)
+  if (k === 'cp' || k === 'ci' || k === 'dc') return [[T('Corrupted'), c('CorruptedMods', k === 'dc' ? '>=' : '', [k === 'dc' ? 2 : k === 'ci' ? 1 : 0])]]
+  if (k === 'mirr') return [[T('Mirrored')]]
+  return MARKS.filter(x => x.key === k).map(x => x.yes)
 }
 
 // Each rarity's drop tier rows, best first.
@@ -431,6 +463,34 @@ const BASE_CONDS = (): FilterCondition[] => [
 // one", "this one or better"...), each counted at its lowest multiplier, so a
 // rule never shows a rare that's too light. A rule another kept rule covers
 // is dropped.
+// Whether a rule's conditions settle an item having these: 'yes' (always),
+// 'no' (never) or '?' (can't tell).
+const eqOp = (o: string) => o === '' || o === '=' || o === '=='
+function implies (r: FilterCondition, x: FilterCondition): boolean {
+  if (eqOp(r.op) && eqOp(x.op)) return r.values.every(v => x.values.includes(v))
+  if (x.op === '>=') {
+    const n = Number(x.values[0])
+    if (r.op === '>=') return Number(r.values[0]) >= n
+    if (eqOp(r.op)) return r.values.every(v => Number(v) >= n)
+  }
+  return false
+}
+function clashes (r: FilterCondition, x: FilterCondition): boolean {
+  if (eqOp(r.op) && eqOp(x.op)) return !r.values.some(v => x.values.includes(v))
+  if (x.op === '>=' && eqOp(r.op)) return r.values.every(v => Number(v) < Number(x.values[0]))
+  if (eqOp(x.op) && r.op === '>=') return x.values.every(v => Number(v) < Number(r.values[0]))
+  return false
+}
+function know (rule: FilterCondition[], alt: FilterCondition[]): 'yes' | 'no' | '?' {
+  let all = true
+  for (const x of alt) {
+    const same = rule.filter(r => r.key === x.key)
+    if (same.some(r => clashes(r, x))) return 'no'
+    if (!same.some(r => implies(r, x))) all = false
+  }
+  return all ? 'yes' : '?'
+}
+
 export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
   const m = w.mult
   const up = upMarks(m)
@@ -460,7 +520,34 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
   const blocks: FilterBlock[] = []
   const perStep = [0, 0, 0, 0, 0]
   let chars = 0
+  const look = w.look
+  const exotic = bases.filter(b => b.rank === 'x1' || b.rank === 'x2').map(b => b.name)
+  // Where the step rules paint a channel themselves ('score' on its list),
+  // rows ranked above it: an item that has one gets that colour instead. A
+  // rule that can't tell is split: first the ones that have it, then the rest.
+  const variants = (conds: FilterCondition[], step: Step, chans: LookChannel[]): Array<{ conds: FilterCondition[], acts: FilterAction[] }> => {
+    if (!chans.length) return [{ conds, acts: [] }]
+    const [ch, ...more] = chans
+    const list = look[ch]
+    const out: Array<{ conds: FilterCondition[], acts: FilterAction[] }> = []
+    const tail = (cs: FilterCondition[], rgb: RGBA) => variants(cs, step, more).map(v => ({ conds: v.conds, acts: [paint(ch, rgb), ...v.acts] }))
+    const rule = [...BASE_CONDS(), ...conds]
+    for (const k of list.slice(0, list.indexOf('score'))) {
+      if (k === 'score') break
+      for (const alt of [...lookAlts(k, ch, exotic)].reverse()) {
+        const got = know(rule, alt.conds)
+        if (got === 'no') continue
+        if (got === 'yes') return [...out, ...tail(conds, alt.rgb)]
+        out.push(...tail([...conds, ...alt.conds], alt.rgb))
+      }
+    }
+    return [...out, ...tail(conds, STEP_PAINT[ch][step]!)]
+  }
   const emit = (conds: FilterCondition[], step: Step, note: string) => {
+    const chans = LOOK_CHANNELS.map(x => x.key).filter(ch => look[ch].includes('score') && STEP_PAINT[ch][step])
+    for (const v of step === 0 ? [{ conds, acts: [] as FilterAction[] }] : variants(conds, step, chans)) push(v.conds, step, note, v.acts)
+  }
+  const push = (conds: FilterCondition[], step: Step, note: string, paints: FilterAction[]) => {
     perStep[step]++
     // A rule with a base list doesn't need the class list.
     const listed = conds.some(x => x.key === 'BaseType')
@@ -476,7 +563,7 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
       type: WEIGHT_TYPE,
       tier: `s${step}`,
       conditions: all,
-      actions: stepActions(step),
+      actions: [...paints, ...stepActions(step)],
       continue: false,
       section: '[[0050]] Rare weights (woke)',
       subsection: '',
@@ -529,28 +616,38 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
     }
   }
 
-  for (const d of decoOrder(m)) {
-    for (const scope of SCOPES()) {
-      const conds = [...BASE_CONDS(), ...scope, ...d.yes].map(x => ({ ...x, values: [...x.values] }))
-      chars += 160
-      blocks.push({
-        kind: 'block',
-        index: -1,
-        line: 1,
-        visibility: 'Show',
-        disabled: false,
-        comment: `$type->${WEIGHT_TYPE} $tier->deco woke: rare weights, border for ${WEIGHT_LABEL[d.key].toLowerCase()}`,
-        type: WEIGHT_TYPE,
-        tier: 'deco',
-        conditions: conds,
-        actions: [decoAction(d)],
-        continue: true,
-        section: '[[0050]] Rare weights (woke)',
-        subsection: '',
-        raw: [],
-        dirty: true,
-        added: true
-      } as FilterBlock)
+  // The look channels' Continue rules, lowest rank first (the last one an
+  // item meets is the colour it keeps).
+  for (const ch of LOOK_CHANNELS.map(x => x.key)) {
+    const list = look[ch]
+    if (scoreOwns(list, ch)) continue
+    for (const k of [...list].reverse()) {
+      if (k === 'score') continue
+      for (const alt of lookAlts(k, ch, exotic)) {
+        for (const scope of SCOPES()) {
+          if (know([...BASE_CONDS(), ...scope], alt.conds) === 'no') continue
+          const conds = [...BASE_CONDS(), ...scope, ...alt.conds].map(x => ({ ...x, values: [...x.values] }))
+          chars += 160 + alt.conds.reduce((n, x) => n + x.values.reduce((q, v) => q + v.length + 3, 0), 0)
+          blocks.push({
+            kind: 'block',
+            index: -1,
+            line: 1,
+            visibility: 'Show',
+            disabled: false,
+            comment: `$type->${WEIGHT_TYPE} $tier->deco woke: rare weights, ${ch === 'bg' ? 'background' : ch} for ${LOOK_LABEL[k].toLowerCase()}`,
+            type: WEIGHT_TYPE,
+            tier: 'deco',
+            conditions: conds,
+            actions: [paint(ch, alt.rgb)],
+            continue: true,
+            section: '[[0050]] Rare weights (woke)',
+            subsection: '',
+            raw: [],
+            dirty: true,
+            added: true
+          } as FilterBlock)
+        }
+      }
     }
   }
 

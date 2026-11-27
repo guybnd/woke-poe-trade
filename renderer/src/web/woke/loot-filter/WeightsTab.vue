@@ -39,6 +39,22 @@
         <button type="button" :class="$style.step" :aria-label="`${name} from a higher score`" @click="nudgeLoud(i, 1)"><i class="fas fa-plus" /></button>
       </span>
     </div>
+    <div :class="$style.looks">
+      <div v-for="ch in LOOK_COLS" :key="ch.key" :class="[$style.lookCol, { [$style.lookOver]: dragOver === ch.key }]"
+        @dragover.prevent="dragOver = ch.key" @dragleave="dragOver === ch.key && (dragOver = null)" @drop.prevent="dropLook(ch.key, null)">
+        <div :class="$style.groupHead" :title="ch.job">{{ ch.label }} <span class="w-faint">· {{ ch.job }}</span></div>
+        <div v-for="(k, i) in lookList(ch.key)" :key="k" :class="[$style.lookRow, { [$style.lookDead]: deadLook(ch.key, i) }]" draggable="true"
+          :title="lookTitle(ch.key, k, i)" @dragstart="dragKey = k" @dragend="dragKey = null; dragOver = null" @drop.prevent.stop="dropLook(ch.key, i)">
+          <span :class="$style.lookN">{{ ch.key === 'unused' ? '' : i + 1 }}</span>
+          <span :class="$style.lookSw" :style="{ background: LOOK_SWATCH[k] }" />
+          <span :class="$style.rowName">{{ LOOK_LABEL[k] }}</span>
+          <span v-if="ch.key !== 'unused'" :class="$style.lookBtns">
+          <button v-if="i > 0" type="button" :class="$style.step" :aria-label="`${LOOK_LABEL[k]} higher`" @click="moveLook(ch.key, i, -1)"><i class="fas fa-chevron-up" /></button>
+          <button type="button" :class="$style.step" :aria-label="`Stop using ${LOOK_LABEL[k]} for ${ch.label.toLowerCase()}`" @click="unuseLook(k)"><i class="fas fa-times" /></button>
+          </span>
+        </div>
+      </div>
+    </div>
     <div :class="$style.shares">
       <div :class="$style.bar" aria-hidden="true">
         <span v-for="(n, k) in pileSteps" :key="k" :style="{ flexGrow: n, background: STEP_CSS[k] }" />
@@ -105,8 +121,8 @@ import { readStyle } from './edits'
 import { poeColour } from './colours'
 import { ruleLabel } from './parse'
 import type { Colour } from './edits'
-import { MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, weightLook, stepFor, PIN_ROWS, termsOf, weightOf } from './weights'
-import type { BaseRow, WeightItem, WeightKey } from './weights'
+import { LOOK_CHANNELS, LOOK_DEFAULT, LOOK_KEYS, LOOK_LABEL, MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, weightLook, stepFor, PIN_ROWS, termsOf, weightOf } from './weights'
+import type { BaseRow, LookChannel, LookKey, WeightItem, WeightKey } from './weights'
 import { itemFacts } from './item-facts'
 import type { ItemFacts } from './item-facts'
 import { CHIP_LABEL, SAMPLES, pastedRare, sampleTip, factsOf, fromPoints, itemOf, points, pointsText, sampleBase, samplePile } from './weight-samples'
@@ -305,7 +321,7 @@ function layout (key: string) {
 const grounds = computed(() => {
   const list = samples.value
   return [
-    { key: 'weights', title: 'Weights', look: (i: number) => ({ actions: weightLook(list[i].it, w.value.mult, list[i].step), hidden: list[i].step === 0 }) },
+    { key: 'weights', title: 'Weights', look: (i: number) => ({ actions: weightLook(list[i].it, w.value.look, list[i].step), hidden: list[i].step === 0 }) },
     { key: 'ns', title: 'NeverSink now', look: (i: number) => ({ actions: list[i].ns?.actions ?? [], hidden: list[i].ns?.visibility === 'Hide' }) }
   ].map(side => {
     const { rects, height } = layout(side.key)
@@ -347,10 +363,84 @@ function nudge (key: WeightKey, dir: 1 | -1) {
 
 const changed = computed(() => {
   const d = defaultWeights()
-  return w.value.need !== d.need || w.value.always.length > 0 || w.value.loud.some((v, i) => v !== d.loud[i]) || (Object.keys(d.mult) as WeightKey[]).some(k => w.value.mult[k] !== d.mult[k])
+  return w.value.need !== d.need || w.value.always.length > 0 || w.value.loud.some((v, i) => v !== d.loud[i]) || lookChanged.value || (Object.keys(d.mult) as WeightKey[]).some(k => w.value.mult[k] !== d.mult[k])
 })
+// Look channels: drag rows to rank them or move them between channels.
+type LookCol = LookChannel | 'unused'
+const LOOK_COLS: Array<{ key: LookCol, label: string, job: string }> = [...LOOK_CHANNELS, { key: 'unused', label: 'Not used', job: 'Never changes the look' }]
+const LOOK_SWATCH: Record<LookKey, string> = {
+  qual: '#ff7ad9',
+  synth: '#6eaaff',
+  fract: '#d7b46e',
+  infl: '#be78ff',
+  eld: '#ff9628',
+  abyss: '#3cc88c',
+  ench: '#b4e1ff',
+  l6: '#ebffeb',
+  cruc: '#ff6e3c',
+  strand: '#78e6e6',
+  l5: '#82eb82',
+  fated: '#ffcd82',
+  mirr: '#a0c8ff',
+  corr: '#5a0000',
+  exotic: '#ff8c1a',
+  rarity: 'linear-gradient(90deg,#c8c8c8,#8888ff,#ffff77)',
+  score: 'linear-gradient(90deg,#232323,#141400,#004b1e,#5a0000)'
+}
+const dragKey = ref<LookKey | null>(null)
+const dragOver = ref<LookCol | null>(null)
+function lookList (ch: LookCol): LookKey[] {
+  if (ch !== 'unused') return w.value.look[ch]
+  const used = new Set(LOOK_CHANNELS.flatMap(c => w.value.look[c.key]))
+  return LOOK_KEYS.filter(k => !used.has(k))
+}
+// Rows under the score step in a channel it always paints never show.
+function deadLook (ch: LookCol, i: number): boolean {
+  if (ch === 'unused') return false
+  const at = w.value.look[ch].indexOf('score')
+  return ch === 'bg' && at >= 0 && i > at
+}
+function lookTitle (ch: LookCol, k: LookKey, i: number): string {
+  if (ch === 'unused') return `${LOOK_LABEL[k]}: not used. Drag it onto a channel.`
+  if (deadLook(ch, i)) return `${LOOK_LABEL[k]}: under the score step, which always sets the background, so it never shows`
+  const at = w.value.look[ch].indexOf('score')
+  const over = at > i && k !== 'score' ? ' Above the score step, it doubles the rules or more.' : ''
+  return `${LOOK_LABEL[k]}: rank ${i + 1} for ${ch === 'bg' ? 'background' : ch === 'text' ? 'text colour' : 'border'}. Drag to move.${over}`
+}
+function setLook (next: Record<LookChannel, LookKey[]>) { w.value.look = next }
+function without (k: LookKey): Record<LookChannel, LookKey[]> {
+  const l = w.value.look
+  return { border: l.border.filter(x => x !== k), bg: l.bg.filter(x => x !== k), text: l.text.filter(x => x !== k) }
+}
+function dropLook (ch: LookCol, at: number | null) {
+  const k = dragKey.value
+  dragKey.value = null
+  dragOver.value = null
+  if (!k) return
+  const next = without(k)
+  if (ch !== 'unused') {
+    const list = next[ch]
+    // Dropping on a row puts it there (after it when moving down the same list).
+    const from = w.value.look[ch].indexOf(k)
+    let i = at ?? list.length
+    if (at != null && from >= 0 && from < at) i = at
+    list.splice(Math.min(i, list.length), 0, k)
+  }
+  setLook(next)
+}
+function moveLook (ch: LookChannel, i: number, dir: -1 | 1) {
+  const list = [...w.value.look[ch]]
+  const j = i + dir
+  if (j < 0 || j >= list.length) return
+  ;[list[i], list[j]] = [list[j], list[i]]
+  setLook({ ...w.value.look, [ch]: list })
+}
+function unuseLook (k: LookKey) { setLook(without(k)) }
+const lookChanged = computed(() => LOOK_CHANNELS.some(c => w.value.look[c.key].join() !== LOOK_DEFAULT[c.key].join()))
+
 function reset () {
   const d = defaultWeights()
+  w.value.look = d.look
   w.value.need = d.need
   Object.assign(w.value.mult, d.mult)
   w.value.always = []
@@ -458,6 +548,16 @@ function reset () {
 }
 .pin:hover { opacity: 0.8; }
 .pin.pinned { color: var(--w-accent); opacity: 1; }
+.looks { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; align-items: start; }
+.lookCol { background: var(--w-panel-2); border-radius: var(--w-r-sm); padding: 4px 6px; min-height: 40px; outline: 1px dashed transparent; }
+.lookCol.lookOver { outline-color: var(--w-accent); }
+.lookRow { position: relative; display: grid; grid-template-columns: 12px 10px 1fr; align-items: center; gap: 3px; font-size: var(--w-fs-xs); line-height: 1.5; border-radius: var(--w-r-sm); cursor: grab; }
+.lookRow:hover { background: var(--w-panel); }
+.lookBtns { position: absolute; right: 0; top: 0; bottom: 0; display: none; align-items: center; gap: 1px; padding-left: 6px; background: linear-gradient(90deg, transparent, var(--w-panel) 6px); }
+.lookRow:hover .lookBtns, .lookRow:focus-within .lookBtns { display: flex; }
+.lookDead { opacity: 0.45; }
+.lookN { color: var(--w-faint); text-align: right; }
+.lookSw { width: 10px; height: 10px; border-radius: 2px; box-shadow: inset 0 0 0 1px #0008; }
 .loud { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 .loudStep { display: inline-flex; align-items: center; gap: 3px; font-size: var(--w-fs-xs); }
 .source { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
