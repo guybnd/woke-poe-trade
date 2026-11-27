@@ -23,6 +23,7 @@ import { applyStyle, readStyle } from './edits'
 import type { StylePatch } from './edits'
 import { fullStack } from './stack-sizes'
 import { topStepActions } from './top-step'
+import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
 import type { CStep, CurrencySettings, ItemEdit } from './currency-settings'
 
@@ -63,6 +64,10 @@ export const CURRENCY_CATEGORIES: CurrencyCategory[] = [
   { id: 'runegrafts', name: 'Runegrafts', art: 'Runegraft of Bellows' },
   { id: 'other', name: 'Other', art: 'Scrying Orb' }
 ]
+// Every class's categories (the Loot tab's rail shows one class at a time).
+export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES]
+export type LootKind = 'currency' | 'fragments'
+export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : 'currency'
 
 const BY_TYPE: Record<string, string> = {
   'currency->essence': 'essences',
@@ -83,6 +88,7 @@ const BY_TYPE: Record<string, string> = {
 
 // NeverSink lists all of these as plain currency: sort them by name.
 export function categoryOf (name: string, type: string): string {
+  if (type === 'fragments' && !THREAD.test(name)) return fragmentCategoryOf(name)
   if (BY_TYPE[type]) return BY_TYPE[type]
   if (/Crystallised Lifeforce$/.test(name)) return 'harvest'
   if (/^Timeless .+ Splinter$|^Simulacrum Splinter$/.test(name)) return 'splinters'
@@ -170,14 +176,16 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   const seen = new Map<string, CurrencyItem>()
   const find = (type: string, name: string) => lookup?.(groupOf(type), name) ?? lookup?.(ANY_PAGE, name) ?? null
   for (const b of doc.blocks) {
-    // League threads sit in NeverSink's fragment rules; Guy counts them as currency.
-    const threads = b.type === 'fragments'
-    if (!b.type || !(SCOPE.test(b.type) || threads)) continue
+    // NeverSink's fragment rules: league threads (Guy counts them as
+    // currency) and the fragments (their own class on the Loot tab).
+    const frags = b.type === 'fragments'
+    if (!b.type || !(SCOPE.test(b.type) || frags)) continue
     const cls = b.conditions.find(x => x.key === 'Class')?.values ?? []
     const bt = b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))
-    if (!bt || !cls.length || (!threads && !cls.every(x => /Stackable/.test(x)))) continue
+    if (!bt || !cls.length || (!frags && !cls.every(x => /Stackable/.test(x)))) continue
     for (const name of bt.values) {
-      if (seen.has(name) || (threads && !THREAD.test(name))) continue
+      if (seen.has(name)) continue
+      const thread = frags && THREAD.test(name)
       // Prices are in chaos, so poe.ninja doesn't list chaos itself.
       // Threads (and anything poe.ninja lists on another page than the
       // filter's group) are found by name on any page.
@@ -193,7 +201,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       const own = edits[name]?.price
       seen.set(name, {
         name,
-        cls: threads ? cls.join('|') : cls.length === 1 ? cls[0] : 'Stackable Currency',
+        cls: frags ? cls.join('|') : cls.length === 1 ? cls[0] : 'Stackable Currency',
         type: b.type,
         tier: b.tier,
         cat: categoryOf(name, b.type),
@@ -201,7 +209,8 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         est: own == null && !priced,
         ...(own != null ? { own: true } : {}),
         ...(own == null && (p == null || !(p.chaos > 0)) && isFree(name, b.type, b.tier) ? { free: true } : {}),
-        full: fullStack(name)
+        // Fragments don't stack: one is the whole pile.
+        full: frags && !thread ? 1 : fullStack(name)
       })
     }
   }
@@ -382,7 +391,7 @@ const mixTo = (c: number[], to: number, f: number) => c.map(v => Math.round(v + 
 // The colour pushed 80% further from grey (Normal: "as now but more saturated").
 const vivid = (c: number[]) => { const g = (c[0] + c[1] + c[2]) / 3; return c.map(v => Math.max(0, Math.min(255, Math.round(v + (v - g) * 0.8)))) }
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rgb: [number, number, number], color: string, shape: string } {
-  const d = CAT_LOOK[cat] ?? CAT_LOOK.other
+  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CAT_LOOK.other
   const own = c.cats[cat]
   return {
     rgb: own?.text ? [own.text[0], own.text[1], own.text[2]] : d.text,

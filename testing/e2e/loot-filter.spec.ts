@@ -1387,6 +1387,12 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-loot-class="currency"]')).toHaveAttribute('aria-pressed', 'true')
   await page.locator('[data-loot-class="uniques"]').click()
   await expect(page.locator('[data-loot-later]')).toContainText('NeverSink decides uniques')
+  // Fragments: priced on the same ladder, folded by boss.
+  await page.locator('[data-loot-class="fragments"]').click()
+  await expect(page.locator('[data-currency-cat="invites"]')).toBeVisible()
+  await expect(page.locator('[data-currency-cat="shaper"]')).toBeVisible()
+  await expect(page.locator('[data-currency-cat="orbs"]')).toHaveCount(0)
+  await overlay.snap('loot tab, fragments')
   await page.locator('[data-loot-class="currency"]').click()
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()

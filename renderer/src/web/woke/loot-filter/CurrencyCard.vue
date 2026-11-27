@@ -57,7 +57,7 @@ import WFoldHead from '../ui/WFoldHead.vue'
 import { WSegmented } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
-import { CSTEP_NAMES, CURRENCY_CATEGORIES, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, scaled, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { CSTEP_NAMES, ALL_CATEGORIES, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, scaled, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
 import type { CStep, CurrencyItem, ItemEdit } from './currency-weights'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
@@ -92,7 +92,7 @@ const base = computed(() => edit.value.price ?? raw.value?.chaos ?? 0)
 const mult = computed(() => edit.value.mult ?? 1)
 const dragMult = ref<number | null>(null)
 
-const catName = computed(() => CURRENCY_CATEGORIES.find(x => x.id === it.value?.cat)?.name ?? 'Other')
+const catName = computed(() => ALL_CATEGORIES.find(x => x.id === it.value?.cat)?.name ?? 'Other')
 const catCss = computed(() => `rgb(${catColour(it.value?.cat ?? 'other', cfg.value).rgb.join(',')})`)
 
 const secMode = computed(() => (it.value && cfg.value.catMode[it.value.cat]) ?? 'auto')
