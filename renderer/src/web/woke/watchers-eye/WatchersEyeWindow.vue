@@ -239,7 +239,7 @@ function saveSetup () {
   naming.value = false
   const name = saveName.value.trim()
   if (!name) return
-  const entry = { name, auras: [...shownList.value], picks: active.value.map(p => ({ ...p })), atLeast: atLeast.value }
+  const entry = { name, auras: [...shownList.value], picks: active.value.map(p => ({ ...p })), atLeast: need.value }
   config.saved = [...config.saved.filter(s => s.name !== name), entry].sort((a, b) => a.name.localeCompare(b.name))
   setCurrent(name)
 }
