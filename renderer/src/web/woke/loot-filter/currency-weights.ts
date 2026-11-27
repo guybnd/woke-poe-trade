@@ -127,6 +127,21 @@ export interface CurrencyItem {
   full: number
 }
 
+const SHARD_OF: Record<string, string> = {
+  'Alchemy Shard': 'Orb of Alchemy',
+  'Alteration Shard': 'Orb of Alteration',
+  'Transmutation Shard': 'Orb of Transmutation',
+  'Chaos Shard': 'Chaos Orb',
+  'Regal Shard': 'Regal Orb',
+  'Exalted Shard': 'Exalted Orb',
+  'Annulment Shard': 'Orb of Annulment',
+  'Binding Shard': 'Orb of Binding',
+  'Horizon Shard': 'Orb of Horizons',
+  "Engineer's Shard": "Engineer's Orb",
+  "Harbinger's Shard": "Harbinger's Orb",
+  'Ancient Shard': 'Ancient Orb',
+  'Mirror Shard': 'Mirror of Kalandra'
+}
 const ANY_PAGE: EconomyGroup = { type: 'any', label: 'Any', ninja: ['*'] }
 function groupOf (type: string): EconomyGroup {
   return NET_GROUPS.find(g => g.type === type) ?? NET_GROUPS[0]
@@ -153,6 +168,7 @@ function thinPrice (p: number, guess: number): number {
 // the player's own, when `edits` has one).
 export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits: Record<string, ItemEdit> = {}): CurrencyItem[] {
   const seen = new Map<string, CurrencyItem>()
+  const find = (type: string, name: string) => lookup?.(groupOf(type), name) ?? lookup?.(ANY_PAGE, name) ?? null
   for (const b of doc.blocks) {
     // League threads sit in NeverSink's fragment rules; Guy counts them as currency.
     const threads = b.type === 'fragments'
@@ -165,7 +181,13 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       // Prices are in chaos, so poe.ninja doesn't list chaos itself.
       // Threads (and anything poe.ninja lists on another page than the
       // filter's group) are found by name on any page.
-      const p = name === 'Chaos Orb' ? { chaos: 1, thin: false } : lookup?.(groupOf(b.type), name) ?? lookup?.(ANY_PAGE, name) ?? null
+      const listed = name === 'Chaos Orb' ? { chaos: 1, thin: false } : find(b.type, name)
+      // 20 shards make the orb, so a shard is worth at most a twentieth of
+      // it. poe.ninja's shard lines are thin and can be far off (Alchemy
+      // Shard at 1.12c, Guy 2026-11-27): the orb's price caps them.
+      const orb = SHARD_OF[name]
+      const whole = orb ? (orb === 'Chaos Orb' ? 1 : find(b.type, orb)?.chaos) : undefined
+      const p = whole != null && whole > 0 && !(listed != null && listed.chaos > 0 && listed.chaos <= whole / 20) ? { chaos: whole / 20, thin: false } : listed
       const priced = p != null && !p.thin && p.chaos > 0
       const guess = tierGuess(b.tier)
       const own = edits[name]?.price
