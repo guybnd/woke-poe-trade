@@ -17,22 +17,25 @@ const OUT = path.resolve(import.meta.dirname, '../renderer/src/web/woke/loot-fil
 const UA = { 'User-Agent': 'woke-poe-trade day1-prices (GitHub Actions)' }
 
 // poe.ninja's pages. Currency-style pages have their own history call.
-const CURRENCY_TYPES = ['Currency', 'Fragment']
+// poe.ninja moved many pages to the exchange (currency) layout; each type
+// is tried there first, then as an item page.
+const CURRENCY_TYPES = ['Currency', 'Fragment', 'DivinationCard', 'Essence', 'Fossil', 'Resonator', 'Oil', 'DeliriumOrb', 'Omen', 'Tattoo', 'Scarab',
+  'Vial', 'Artifact', 'Runegraft', 'AllflameEmber', 'Astrolabe', 'Ducat', 'EnshroudingCrystal']
 const ITEM_TYPES = [
-  'DivinationCard', 'Essence', 'Fossil', 'Resonator', 'Oil', 'DeliriumOrb', 'Omen', 'Tattoo', 'Scarab',
-  'Vial', 'Invitation', 'Artifact', 'Runegraft', 'AllflameEmber', 'Astrolabe', 'Ducat', 'EnshroudingCrystal',
-  'UniqueWeapon', 'UniqueArmour', 'UniqueAccessory', 'UniqueFlask', 'UniqueJewel', 'UniqueMap', 'UniqueRelic', 'UniqueTincture',
+  'Invitation', 'UniqueWeapon', 'UniqueArmour', 'UniqueAccessory', 'UniqueFlask', 'UniqueJewel', 'UniqueMap', 'UniqueRelic', 'UniqueTincture',
   'SkillGem', 'Map', 'BlightedMap', 'BlightRavagedMap', 'Beast', 'ClusterJewel'
 ]
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
-async function get (url, tries = 4) {
+async function get (url, tries = 6) {
   for (let i = 1; ; i++) {
     try {
       const res = await fetch(url, { headers: UA })
       if (res.status === 404) return null
       if (res.ok) return await res.json()
+      // Too many requests: wait as long as poe.ninja asks, or a while.
+      if (res.status === 429) await sleep((Number(res.headers.get('retry-after')) || 20) * 1000)
       throw new Error(`HTTP ${res.status}`)
     } catch (e) {
       if (i >= tries) {
@@ -58,14 +61,14 @@ export function firstDays (points) {
 }
 
 // A few requests at a time, so poe.ninja isn't hammered.
-async function pool (jobs, size = 4) {
+async function pool (jobs, size = 2) {
   const out = []
   let next = 0
   await Promise.all(Array.from({ length: size }, async () => {
     while (next < jobs.length) {
       const i = next++
       out[i] = await jobs[i]()
-      await sleep(150)
+      await sleep(400)
     }
   }))
   return out
@@ -106,7 +109,7 @@ async function main () {
 
   for (const type of CURRENCY_TYPES) {
     const page = await get(`${NINJA}/currency/overview?league=${q}&type=${type}`)
-    if (!page?.lines?.length) { console.warn(`no ${type} page`); continue }
+    if (!page?.lines?.length) { ITEM_TYPES.push(type); continue }
     const idOf = new Map((page.currencyDetails ?? []).map(d => [d.name, d.id]))
     const jobs = page.lines.map(line => ({ name: line.currencyTypeName, id: idOf.get(line.currencyTypeName), details: line.detailsId }))
     const url = await pickHistory([
