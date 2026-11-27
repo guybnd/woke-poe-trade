@@ -3,10 +3,10 @@
     <div :class="$style.top">
       <WToggle v-model="c.on">Prices decide endgame currency</WToggle>
       <span :class="$style.beta">Beta</span>
-      <WInfo text="In maps (area level 68+), each pile of currency, essences, fossils, oils, delirium orbs, omens, tattoos and ducats counts as its poe.ninja price × stack (10 Chaos is 10c); an item whose full stack is worth less than Decent counts × stack^0.75, so piles of cheap shards stay quiet. Under the line it hides; over it it shows Small, and Normal, Decent, Big and Tink start at the prices you set; untick Show on a step to hide everything that would get it. Each category can see more or less; click an item to set its step, price, supply stack or look by hand. Items with no price get a guess from NeverSink's tier (est.). Only this profile. Your own rules, build rules and presets still go on top. In maps these rules replace NeverSink's for these items, so price moves and tier edits for them apply only below area level 68." />
+      <WInfo text="In maps (area level 68+), each pile of currency, essences, fossils, oils, delirium orbs, omens, tattoos and ducats counts as its poe.ninja price × stack (10 Chaos is 10c); an item whose full stack is worth less than Decent counts × stack^0.75, so piles of cheap shards stay quiet. Under the line it hides; over it it shows Small, and Normal, Decent, Big and Tink start at the prices you set; untick Show on a step to hide everything that would get it. Each category has its own Strictness (×1.25 a notch on top of the main one); click an item to set its step, price, supply stack or look by hand. Items with no price get a guess from NeverSink's tier (est.). Only this profile. Your own rules, build rules and presets still go on top. In maps these rules replace NeverSink's for these items, so price moves and tier edits for them apply only below area level 68." />
       <span class="w-faint text-xs">{{ statusText }}</span>
       <span class="flex-1" />
-      <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" title="Line, step prices and category nudges back to the start; your item edits stay" @click="reset">Defaults</WButton>
+      <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" title="Line, step prices and category strictness back to the start; your item edits stay" @click="reset">Defaults</WButton>
     </div>
 
     <div :class="$style.minBar" data-currency-min>
@@ -89,9 +89,9 @@
           </select>
           <button v-if="c.cats[g.cat.id]" type="button" class="w-icon-btn" :title="`${g.cat.name} back to its own colours`" :aria-label="`Reset ${g.cat.name} colours`" @click="setCatLook(g.cat.id, null)"><i class="fas fa-undo" /></button>
         </span>
-        <label :class="$style.whole" :title="`Below this, ${g.cat.name} hide (a full stack counts for more). The step prices above stay the same.`" @click.stop @keydown.stop>Shows from
-          <select :value="c.nudge[g.cat.id] ?? 0" :class="$style.sel2" :aria-label="`${g.cat.name} show from`" @change="setNudge(g.cat.id, Number(($event.target as HTMLSelectElement).value))">
-            <option v-for="n in NUDGES" :key="n" :value="n">{{ chaosText(eff.line * 2 ** n) }}{{ n === 0 ? ' (Small)' : '' }}</option>
+        <label :class="$style.whole" :title="`${g.cat.name}' own strictness: multiplies every step's price for them, on top of the main Strictness`" @click.stop @keydown.stop>Strictness
+          <select :value="c.nudge[g.cat.id] ?? 0" :class="$style.sel2" :aria-label="`${g.cat.name} strictness`" @change="setNudge(g.cat.id, Number(($event.target as HTMLSelectElement).value))">
+            <option v-for="n in NUDGES" :key="n" :value="n">×{{ (1.25 ** n).toFixed(2) }} · Small {{ chaosText(eff.line * 1.25 ** n) }}</option>
           </select></label>
       </div>
       <div v-if="isOpen(g.cat.id)" :class="$style.catBody" role="table" :aria-label="`${g.cat.name} and when they show`">
@@ -284,8 +284,8 @@ async function goTo (name: string) {
   document.querySelector(`[data-currency-item="${CSS.escape(name)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
 }
 
-// The main slider: every category's line moves with it (a category's
-// Shows from stays relative: ×2, ×½).
+// The main slider: every category's steps move with it (a category's own
+// Strictness multiplies on top).
 const hideNote = computed(() => `${rows.value.length - shownCount.value} of ${rows.value.length} items never show; a bigger stack of the rest can`)
 
 // Step looks: loudness only, for every category (Guy's L1).

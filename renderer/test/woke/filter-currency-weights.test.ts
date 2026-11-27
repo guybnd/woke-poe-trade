@@ -208,16 +208,16 @@ describe('currency weights', () => {
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
   })
 
-  it('a category nudge moves its line only', () => {
+  it('a category strictness multiplies all its steps, ×1.25 a notch', () => {
     const base = on(c => { c.line = 1 })
     const less = on(c => { c.line = 1; c.nudge = { orbs: 2 } })
-    expect(stepStarts(less, 'orbs')[0]).toBe(4)
-    expect(stepStarts(less, 'oils')[0]).toBe(1)
+    expect(stepStarts(less, 'orbs')).toEqual(stepStarts(base, 'orbs').map(v => v * 1.5625))
+    expect(stepStarts(less, 'oils')).toEqual(stepStarts(base, 'oils'))
     const items = currencyItems(parseFilter(SEMI), lookup)
     const alch = items.find(i => i.name === 'Orb of Alchemy')!
-    // 0.3c (a full stack is 6c, over Decent: full value): shows from 4 at 1c; a 4c line sits above Normal, so Small never applies.
+    // 0.3c a piece: shows from 4 at a 1c line, from 6 at 1.5625c.
     expect(stacksFor(alch, base)[0]).toBe(4)
-    expect(stacksFor(alch, less)[0]).toBeNull()
+    expect(stacksFor(alch, less)[0]).toBe(6)
   })
 
   it('shows odd items poe.ninja has no price for, but not shards', () => {

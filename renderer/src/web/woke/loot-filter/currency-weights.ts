@@ -247,15 +247,19 @@ export function scaled (c: CurrencySettings, strictness: string | null): Currenc
 }
 
 // The line for a category, after its nudge.
+// A category's own strictness (Guy 2026-11-27): each notch ×1.25 (or ÷),
+// on top of the main multiplier, on every step's price.
+export const catMult = (c: Pick<CurrencySettings, 'nudge'>, cat: string): number => 1.25 ** (c.nudge[cat] ?? 0)
 export function catLine (c: Pick<CurrencySettings, 'line' | 'nudge'>, cat: string): number {
-  return c.line * 2 ** (c.nudge[cat] ?? 0)
+  return c.line * catMult(c, cat)
 }
 
-// Where each step 1..5 starts, in chaos: Small at the (nudged) line, the
-// louder ones at their own price, never under it.
+// Where each step 1..5 starts, in chaos, with the category's strictness:
+// Small at the line, the louder ones at their own price, never under it.
 export function stepStarts (c: Pick<CurrencySettings, 'line' | 'from' | 'nudge'>, cat = ''): number[] {
-  const line = catLine(c, cat)
-  return [line, ...c.from.map(f => Math.max(line, f))]
+  const k = catMult(c, cat)
+  const line = c.line * k
+  return [line, ...c.from.map(f => Math.max(line, f * k))]
 }
 
 // The smallest pile (1 up to a full stack) that counts for `at`, or null.
