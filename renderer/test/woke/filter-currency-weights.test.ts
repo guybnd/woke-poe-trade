@@ -250,7 +250,7 @@ describe('currency weights', () => {
     // League threads come from the fragment rules; the rest of those are the
     // Fragments class (fragment-classes.ts).
     expect(items.get('Breach Thread')).toBe('threads')
-    expect(items.get('Divine Vessel')).toBe('invites')
+    expect(items.get('Divine Vessel')).toBe('fragother')
     const doc = parseFilter(SEMI)
     applyCurrency(doc, on(c => { c.items = { 'Breach Thread': { step: 4 } } }), lookup)
     const hit = matchItem(doc, { ...pile('Breach Thread', 1), itemClass: 'Misc Map Items' })
