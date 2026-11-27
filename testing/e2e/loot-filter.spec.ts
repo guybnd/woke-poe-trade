@@ -1383,10 +1383,8 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await openEditor(overlay, fakeApp)
   const page = overlay.page
   await page.getByRole('tab', { name: /^Loot/ }).click()
-  // The Loot tab: a rail of classes, Currency first; the rest NeverSink's for now.
+  // The Loot tab: a rail of classes, Currency first.
   await expect(page.locator('[data-loot-class="currency"]')).toHaveAttribute('aria-pressed', 'true')
-  await page.locator('[data-loot-class="league"]').click()
-  await expect(page.locator('[data-loot-later]')).toContainText('NeverSink decides league items')
   // Fragments: priced on the same ladder, folded by boss.
   await page.locator('[data-loot-class="fragments"]').click()
   await expect(page.locator('[data-currency-cat="invites"]')).toBeVisible()
@@ -1431,6 +1429,12 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await page.locator('[data-loot-class="jewels"]').click()
   await expect(page.locator('[data-loot-jewels]')).toContainText('Follow poe.ninja')
   await overlay.snap('loot tab, jewels')
+  // League items: a mechanic you don't run goes Off in one click.
+  await page.locator('[data-loot-class="league"]').click()
+  await page.locator('[data-loot-league-section="lgexped"]').getByRole('button', { name: 'Off' }).click()
+  await expect(page.locator('[data-loot-league]')).toContainText('1 hidden in maps')
+  await overlay.snap('loot tab, league')
+  await page.locator('[data-loot-league-section="lgexped"]').getByRole('button', { name: 'NeverSink' }).click()
   await page.locator('[data-loot-class="currency"]').click()
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()
