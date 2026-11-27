@@ -62,6 +62,8 @@ describe('cardLookup', () => {
   it('finds the cards that turn into an item', () => {
     expect(lookup('headhunter', ctx).map(c => c.title)).toEqual(['The Doctor'])
     expect(lookup('ex', ctx)).toEqual([])
+    // A corrupted reward has no fixed price but is still the card's item.
+    expect(lookup('fertile mind', ctx).map(c => c.title)).toEqual(["A Mother's Parting Gift"])
   })
   it('says when the reward has no fixed price', () => {
     const [card] = lookup('mothers parting', ctx)

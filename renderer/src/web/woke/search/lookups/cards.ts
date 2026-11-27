@@ -18,6 +18,9 @@ export interface Reward {
   // False when the reward has rolls a price can't follow (corrupted
   // implicits, item level, random uniques).
   priceable: boolean
+  // A real item by that name (not "Jewel" or "Currency"), priced or not: a
+  // search for it lists the card.
+  named?: boolean
   text: string
 }
 
@@ -57,10 +60,11 @@ export function parseReward (lines: string[], known: KnownItem = () => true): Re
     // poe.ninja's gem names: "21/20c", "21c", "4", quality 16-20 counted as 20.
     const q = Number(quality)
     const variant = `${gem[1]}${q ? `/${q >= 16 && q <= 20 ? 20 : q}` : ''}${corrupted ? 'c' : ''}`
-    return { name, qty, variant, priceable: plain && known('GEM', name), text }
+    return { name, qty, variant, priceable: plain && known('GEM', name), named: known('GEM', name), text }
   }
   const ns = TAG_NS[tag]
-  return { name, qty, priceable: !!ns && rest.length === 0 && !ROLLED.has(name) && known(ns, name), text }
+  const named = !!ns && known(ns, name)
+  return { name, qty, priceable: named && rest.length === 0 && !ROLLED.has(name), named, text }
 }
 
 export function cardCard (name: string, info: CardInfo, ctx: LookupContext, known?: KnownItem): LookupCard {
@@ -109,7 +113,8 @@ export function cardLookup (cards: ReadonlyMap<string, CardInfo>, known?: KnownI
   const byReward = new Map<string, string[]>()
   for (const [name, info] of cards) {
     const r = parseReward(info.lines, known)
-    if (!r?.priceable) continue
+    // Rolled or corrupted rewards too: "watchers eye" lists its card, unpriced.
+    if (!r?.named) continue
     const list = byReward.get(r.name) ?? []
     list.push(name)
     byReward.set(r.name, list)
