@@ -33,8 +33,8 @@ describe('pasted rare', () => {
     expect(it.fractured).toBe(true)
     expect(it.corruption).toBe('plain')
   })
-  it('skips non-rares and unknown bases', () => {
-    expect(pastedRare(itemFacts(TEXT.replace('Rare', 'Magic'), null), [ROW])).toBeNull()
+  it('skips uniques and unknown bases', () => {
+    expect(pastedRare(itemFacts(TEXT.replace('Rarity: Rare', 'Rarity: Unique'), null), [ROW])).toBeNull()
     expect(pastedRare(itemFacts(TEXT, null), [])).toBeNull()
   })
 })
