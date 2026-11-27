@@ -127,6 +127,7 @@ export interface CurrencyItem {
   full: number
 }
 
+const ANY_PAGE: EconomyGroup = { type: 'any', label: 'Any', ninja: ['*'] }
 function groupOf (type: string): EconomyGroup {
   return NET_GROUPS.find(g => g.type === type) ?? NET_GROUPS[0]
 }
@@ -162,7 +163,9 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
     for (const name of bt.values) {
       if (seen.has(name) || (threads && !THREAD.test(name))) continue
       // Prices are in chaos, so poe.ninja doesn't list chaos itself.
-      const p = name === 'Chaos Orb' ? { chaos: 1, thin: false } : lookup?.(groupOf(b.type), name) ?? null
+      // Threads (and anything poe.ninja lists on another page than the
+      // filter's group) are found by name on any page.
+      const p = name === 'Chaos Orb' ? { chaos: 1, thin: false } : lookup?.(groupOf(b.type), name) ?? lookup?.(ANY_PAGE, name) ?? null
       const priced = p != null && !p.thin && p.chaos > 0
       const guess = tierGuess(b.tier)
       const own = edits[name]?.price

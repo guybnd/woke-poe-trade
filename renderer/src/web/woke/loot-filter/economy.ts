@@ -97,10 +97,12 @@ function priceFinder (items: PriceItem[], rule: VariantRule = 'market') {
   const byName = new Map<string, PriceItem[]>()
   for (const i of items) {
     if (/\b[56]L\b|links?|^relic$/i.test(i.variant)) continue
-    const key = `${i.type}\u0000${i.name}`
-    const list = byName.get(key)
-    if (list) list.push(i)
-    else byName.set(key, [i])
+    // '*' finds a name under any type (poe.ninja moves things between pages).
+    for (const key of [`${i.type}\u0000${i.name}`, `*\u0000${i.name}`]) {
+      const list = byName.get(key)
+      if (list) list.push(i)
+      else byName.set(key, [i])
+    }
   }
   const best = (list: PriceItem[]) => list.reduce((a, b) => b.chaos > a.chaos ? b : a)
   return (types: string[], name: string, base?: string) => {
