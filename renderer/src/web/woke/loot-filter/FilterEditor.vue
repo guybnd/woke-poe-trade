@@ -282,7 +282,7 @@
     <!-- Rendered below, kept alive so Back returns to the same pile. -->
     <template v-else-if="tab === 'preview'" />
     <PresetsTab v-else-if="tab === 'presets'" :store="store" :config="config" />
-    <GearTab v-else-if="tab === 'gear'" :store="store" :config="config" @open-rule="openRule" />
+    <GearTab v-else-if="tab === 'gear' || tab === 'ranks'" :key="tab" :store="store" :config="config" :view="tab === 'ranks' ? 'ranks' : 'table'" @open-rule="openRule" />
     <WeightsTab v-else-if="tab === 'weights'" :store="store" :config="config" />
     <CurrencyTab v-else-if="tab === 'currency'" :store="store" :config="config" />
     <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" />
@@ -498,8 +498,8 @@ function onSearchPaste (e: ClipboardEvent) {
   emit('paste-item', text)
 }
 
-const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'weights' | 'currency' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
-watch(gearRanksAsk, () => { if (takeRanksAsk('tab')) tab.value = 'gear' }, { immediate: true })
+const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'ranks' | 'weights' | 'currency' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
+watch(gearRanksAsk, () => { if (takeRanksAsk('tab')) tab.value = 'ranks' }, { immediate: true })
 const search = ref('')
 const selType = ref<string | null>(null)
 const selTier = ref<string | null>(null)
@@ -556,7 +556,9 @@ const activePriceMoves = computed(() => props.config.priceTiers.on ? livePriceMo
 
 const tabOptions = computed(() => [
   { value: 'rules', label: 'Rules' },
-  { value: 'gear', label: 'Base types', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear bases show, by rank and drop tier' },
+  // Gear: two screens of their own, what shows (by rank and drop tier) and which bases sit in which rank.
+  { value: 'gear', label: 'Drop tiers', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear shows, by rank, rarity and drop tier' },
+  { value: 'ranks', label: 'Base ranks', count: Object.keys(props.config.presets.gear.moves).length || undefined, title: 'Which gear bases sit in which rank' },
   // Beta: shown with the experimental tools, or while this profile uses it.
   ...(experimentalUnlocked.value || props.config.presets.weights.on ? [{ value: 'weights', label: 'Rare weights', count: props.config.presets.weights.on ? '✓' : undefined, title: 'Beta: decide endgame rares by a weight you tune' }] : []),
   ...(experimentalUnlocked.value || props.config.presets.currency.on ? [{ value: 'currency', label: 'Currency weights', count: props.config.presets.currency.on ? '✓' : undefined, title: 'Beta: show endgame currency by what the pile is worth' }] : []),
@@ -1074,7 +1076,7 @@ function goTo (type: string, t: string, base?: string) {
 
 watch(() => props.focus, (f) => {
   if (!f) return
-  // The Base types table's own rules live on that tab, not in the rule list.
+  // The Drop tiers table's own rules live on that tab, not in the rule list.
   if (f.type === GEAR_TYPE) { tab.value = 'gear'; return }
   if (f.type === WEIGHT_TYPE) { tab.value = 'weights'; return }
   if (f.type === CURRENCY_TYPE) { tab.value = 'currency'; return }

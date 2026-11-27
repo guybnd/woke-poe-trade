@@ -26,9 +26,8 @@ export function dropMoves (from: string, to: string): GearMove[] {
   return from === 'build' && lane !== 'never' ? ['unbuild', lane] : [lane]
 }
 
-// What's new's Show me: opens the editor on Base types › Base ranks. Each
-// reader (the editor's tab, the Gear tab's view) acts on an ask once, even
-// when it's drawn again later.
+// What's new's Show me: opens the editor on its Base ranks tab. The reader
+// (the editor's tab) acts on an ask once, even when it's drawn again later.
 // An ask nobody took within a few seconds (no filter loaded) is dropped, so
 // opening the tab by hand later doesn't jump.
 export const gearRanksAsk = ref(0)
@@ -37,7 +36,7 @@ export function askGearRanks () {
   askedAt = Date.now()
   gearRanksAsk.value++
 }
-const seen = { tab: 0, view: 0 }
+const seen = { tab: 0 }
 export function takeRanksAsk (reader: keyof typeof seen): boolean {
   if (gearRanksAsk.value <= seen[reader]) return false
   if (Date.now() - askedAt > 15_000) { seen[reader] = gearRanksAsk.value; return false }

@@ -33,10 +33,10 @@ export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 export const NEWS: NewsItem[] = [
   { id: 'price-check-unique-filter-tier', since: '1.330.24', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a unique, how rare a drop it is (T0 to T5) and the tier your loot filter puts it in' },
   { id: 'watchers-eye-finder', since: '1.330.24', wmType: 'woke-watchers-eye', name: "Watcher's Eye finder", note: "New: tick your auras, pick Watcher's Eye mods from the full list, and price that jewel in one search" },
-  { id: 'loot-filter-over-quality-look', since: '1.330.23', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: over-quality gear keeps its tier look with a pink mark on top; Change mark on Base types' },
+  { id: 'loot-filter-over-quality-look', since: '1.330.23', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: over-quality gear keeps its tier look with a pink mark on top; Change mark on Drop tiers' },
   { id: 'search-tree-by-stat', since: '1.330.23', wmType: 'woke-search', name: 'Search', note: 'New: type what a passive does ("onslaught") for the keystones and notables that do it' },
   { id: 'search-unique-mods', since: '1.330.23', wmType: 'woke-search', name: 'Search', note: 'New: type part of a mod ("item rarity 50") for every unique with it, priced; Foulborn and Vestigial too' },
-  { id: 'loot-filter-drag-bases', since: '1.330.23', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: drag bases between rank columns in Base types; drag one or all the picked ones' },
+  { id: 'loot-filter-drag-bases', since: '1.330.23', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: drag bases between rank columns on Base ranks; drag one or all the picked ones' },
   { id: 'loot-filter-profiles', since: '1.330.22', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: profiles, several whole filters (mapping, bossing...) each in its own file; switch at the top' },
   { id: 'price-check-unique-foulborn', since: '1.330.22', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a unique, its Foulborn kinds and versions priced, its Vestigial mod, and if it can be chanced' },
   { id: 'atlas-tree-planner-links', since: '1.330.22', wmType: 'woke-atlas-strategies', goto: 'strategies', name: 'Atlas strategies', note: 'New: imports Atlas Tree Planner links (atlas-blush-beta.vercel.app)' },
