@@ -56,11 +56,12 @@
           <span v-for="d in side.placed" :key="d.i" v-item-tip="samples[d.i].tip" :class="[$style.drop, { [$style.ghost]: d.hidden, [$style.on]: d.i === focus }]"
             :style="{ left: `${d.x}px`, top: `${d.y}px`, width: `${d.w}px` }" @mouseenter="focus = d.i" @click="pinned = pinned === d.i ? null : d.i">
             <span :class="$style.tags" data-no-item-tip="marks of the rare below, which has its tooltip">
+              <span :class="[$style.tag, $style.score]" :style="{ color: STEP_CSS[Math.max(1, samples[d.i].step)], borderColor: STEP_CSS[Math.max(1, samples[d.i].step)] }" :title="`Score ${pointsText(samples[d.i].pts)}, line ${pointsText(needPoints)}: ${STEP_NAMES[samples[d.i].step]}`">{{ pointsText(samples[d.i].pts) }}</span>
               <span v-for="t in samples[d.i].tags" :key="t.key" :class="[$style.tag, $style[signOf(t.key)], { [$style.off]: !t.counts }]"><i :class="ICON_OF[t.key]" />{{ t.text }}</span>
             </span>
             <span :class="$style.labelRow">
               <span :class="[$style.deco, $style[signOf(samples[d.i].rankKey)]]" :title="WEIGHT_LABEL[samples[d.i].rankKey]">{{ RANK_TEXT[samples[d.i].rankKey] }}</span>
-              <LabelPreview :text="samples[d.i].row.name" :actions="d.actions" :style-override="!d.hidden && samples[d.i].overQual ? QUAL_MARK : undefined" :visibility="d.hidden ? 'Hide' : 'Show'" :default-text="RARE" :extras="false" :scale="SCALE" />
+              <LabelPreview :text="samples[d.i].row.name" :actions="d.actions" :visibility="d.hidden ? 'Hide' : 'Show'" :default-text="RARE" :extras="false" :scale="SCALE" />
               <span :class="$style.deco" :title="samples[d.i].tierText">{{ samples[d.i].tierShort }}</span>
             </span>
           </span>
@@ -89,11 +90,10 @@ import type { LootFilterWidget } from './widget'
 import { matchItem } from './match'
 import { labelBox, layoutLabels } from './shower'
 import { readStyle } from './edits'
-import { DEFAULT_MARK } from './gear'
 import { poeColour } from './colours'
 import { ruleLabel } from './parse'
 import type { Colour } from './edits'
-import { MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, stepActions, stepOf, termsOf, weightOf } from './weights'
+import { MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, weightLook, stepOf, termsOf, weightOf } from './weights'
 import type { BaseRow, Step, WeightItem, WeightKey } from './weights'
 import { itemFacts } from './item-facts'
 import type { ItemFacts } from './item-facts'
@@ -202,7 +202,7 @@ const samples = computed(() => {
       rankKey: it.rank as WeightKey,
       tierShort: it.tier ? `T${it.tier}` : 'T–',
       tierText: it.tier ? `Unidentified (Tier ${it.tier})` : 'No drop tier (counted as tier 1)',
-      overQual: it.quality >= 24,
+      it,
       spec,
       row,
       terms,
@@ -272,8 +272,6 @@ const TAG_TEXT: Partial<Record<WeightKey, string>> = {
   tiny: 'Tiny'
 }
 const RANK_TEXT: Partial<Record<WeightKey, string>> = { x1: 'X1', x2: 'X2', r1: 'R1', r2: 'R2', r3: 'R3', r0: 'R–' }
-// The over-quality mark's border (the Gear tab's default mark).
-const QUAL_MARK = { border: DEFAULT_MARK.border }
 
 // Places stay put while you tune: each rare gets a slot sized for the
 // biggest label, so only its look changes.
@@ -281,7 +279,7 @@ function layout (key: string) {
   const width = widths[key] || 420
   const boxes = samples.value.map(x => {
     const b = labelBox(x.row.name, 45, SCALE, measure)
-    const tagsW = x.tags.reduce((n, t) => n + measure(t.text, 9) + 18, 0)
+    const tagsW = x.tags.reduce((n, t) => n + measure(t.text, 9) + 18, 30)
     return { w: Math.ceil(Math.max(b.w + DECO_W * 2, tagsW)), h: b.h + TAG_H }
   })
   return layoutLabels(boxes, width, 220, 3, BEAM_ROOM)
@@ -289,7 +287,7 @@ function layout (key: string) {
 const grounds = computed(() => {
   const list = samples.value
   return [
-    { key: 'weights', title: 'Weights', look: (i: number) => ({ actions: stepActions(list[i].step), hidden: list[i].step === 0 }) },
+    { key: 'weights', title: 'Weights', look: (i: number) => ({ actions: weightLook(list[i].it, w.value.mult, list[i].step), hidden: list[i].step === 0 }) },
     { key: 'ns', title: 'NeverSink now', look: (i: number) => ({ actions: list[i].ns?.actions ?? [], hidden: list[i].ns?.visibility === 'Hide' }) }
   ].map(side => {
     const { rects, height } = layout(side.key)
@@ -432,6 +430,7 @@ function reset () {
 }
 .tag i { font-size: calc(7px * var(--w-text-scale, 1)); opacity: 0.8; }
 .tag.plus { color: #8fd18a; }
+.score { font-weight: 600; border: 1px solid; }
 .tag.minus { color: #e08a7a; }
 .tag.off { opacity: 0.5; text-decoration: line-through; }
 .labelRow { display: flex; align-items: center; justify-content: center; gap: 2px; min-width: 0; }
