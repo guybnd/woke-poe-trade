@@ -76,6 +76,14 @@ history:
     date: '2026-11-27T05:55:45.816Z'
     selfAttested: true
     id: c-2026-11-27t05-55-45-816z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 988 merged (https://github.com/guybnd/woke-poe-trade/pull/988,
+      088d4a6): whites and magics mostly hidden, ilvl 86 crafting-base row.
+    date: '2026-11-27T06:35:59.867Z'
+    selfAttested: true
+    id: c-2026-11-27t06-35-59-867z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/976'
 ---
 Epic: reimagine the loot filter as a clear visual funnel that shows how it decides. Design only, nothing built yet: 8 design options waiting on Guy's picks. Subtasks come after the picks.
