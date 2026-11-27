@@ -73,6 +73,10 @@ export interface TipPack {
   'bases'?: Record<string, TipBase>
   'base-extras'?: Record<string, TipBaseExtra>
   'drops'?: Record<string, TipDrop>
+  // How rare a unique drops, 0 (rarest) to 5 (most common): the PoE wiki's
+  // "Analysis of unique item tiers" (Prohibited Library estimates, CC BY-NC
+  // 3.0), latest league column, drop-anywhere uniques only.
+  'unique-drop-tiers'?: Record<string, number>
   // A unique's Vestigial implicit, one list of lines per mod (scripts/build-vestigial-data.mjs).
   'vestigial'?: Record<string, string[][]>
   // The mod each essence forces per slot (scripts/build-essence-data.mjs).

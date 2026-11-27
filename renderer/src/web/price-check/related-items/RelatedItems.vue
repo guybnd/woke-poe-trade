@@ -1,10 +1,10 @@
 <template>
-  <div v-if="result || sections.length || keystones || showTier" ref="root" :class="$style.wrapper" class="w-pc-side" data-goto-spot="related">
+  <div v-if="result || sections.length || keystones || showTier" v-show="tierShown || result || sections.length || keystones" ref="root" :class="$style.wrapper" class="w-pc-side" data-goto-spot="related">
     <div v-if="result && 'error' in result" class="p-2">
       {{ result.error }}
     </div>
-    <!-- woke: a unique's loot filter tier (FilterTierLine.vue). -->
-    <FilterTierLine v-if="showTier" :item="item!" />
+    <!-- woke: a unique's drop rarity and loot filter tier (UniqueTierLine.vue). -->
+    <UniqueTierLine v-if="showTier" :item="item!" @shown="tierShown = $event" />
     <!-- woke: a Timeless jewel's keystones, one per conqueror. A click ticks that
          conqueror's line alone with no number and searches once (CheckedItem.vue). -->
     <template v-if="keystones">
@@ -113,7 +113,7 @@ import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
 import { sideRow, type SideRow } from './side-row'
 import { familiesOf, familyRows, type Family } from '@/web/woke/related-family/family'
 import { isRelatedGroup, cardsFor, rewardOf, isFragmentSet, realDrops, recipeBook, recipesOf, recipeSum, recipeTitle, resolveParts } from '@/web/woke/related-family/recipe'
-import { loadTipDrops, loadTipItems, loadTipUniques, loadTipVestigial, loadUniqueMods, vItemTip } from '@/web/woke/ui/tooltip/item-tip'
+import { loadTipDrops, loadTipDropTiers, loadTipItems, loadTipUniques, loadTipVestigial, loadUniqueMods, vItemTip } from '@/web/woke/ui/tooltip/item-tip'
 import { uniqueItemText } from '@/web/woke/ui/tooltip/item-menu-logic'
 import { VARIABLE_ITEMS } from '@/web/woke/shared/unid-prices'
 import { dropOf, type TipPack } from '@/web/woke/ui/tooltip/tip-content'
@@ -128,7 +128,6 @@ import { AppConfig, poeWebApi } from '@/web/Config'
 import { Host } from '@/web/background/IPC'
 import type { PriceCheckWidget } from '@/web/overlay/widgets'
 import { storedPref } from '@/web/woke/ui/stored-pref'
-import { useActiveFilter } from '@/web/woke/loot-filter/active-filter'
 
 const { findPriceByQuery, findPricesByName, autoCurrency, xchgRate } = usePoeninja()
 
@@ -312,7 +311,7 @@ function getGemKinds (item: ParsedItem, variant: string | undefined) {
 // those that drop at random on that base (a boss-only or league unique, or a
 // Heist replica, never comes from one), dearest first, each priced on this
 // base. Chance works only on a normal item that isn't corrupted or mirrored.
-function getChanceTargets (item: ParsedItem, drops: TipPack['drops']) {
+function getChanceTargets (item: ParsedItem, drops: TipPack['drops'], dropTiers: Record<string, number> | null) {
   if (item.rarity !== ItemRarity.Normal || item.isCorrupted || item.isMirrored) return []
   const base = item.info.refName
   const rows: SideRow[] = []
@@ -323,11 +322,15 @@ function getChanceTargets (item: ParsedItem, drops: TipPack['drops']) {
     const info = all.find(u => u.unique?.base === base) ?? all[0]
     if (!info) continue
     const chaos = findPriceByQuery({ ns: 'UNIQUE', name, variant: base })?.chaos ?? chaosOf(info)
-    rows.push(sideRow(info, chaos != null ? autoCurrency(chaos) : undefined, false, `chance:${name}`))
+    const row = sideRow(info, chaos != null ? autoCurrency(chaos) : undefined, false, `chance:${name}`)
+    // How rare a drop each is (Guy, 2026-11-27): the odds aren't known, only which are rarer.
+    const tier = dropTiers?.[name]
+    rows.push(tier != null ? { ...row, tag: `T${tier}`, ownTag: true } : row)
   }
   if (!rows.length) return []
   rows.sort((a, b) => chaosOfPrice(b.price) - chaosOfPrice(a.price))
-  return [{ key: 'chance', title: `Uniques on ${item.info.name}`, rows, note: 'An Orb of Chance can make one of these.' }]
+  const tiered = rows.some(r => r.tag)
+  return [{ key: 'chance', title: `Uniques on ${item.info.name}`, rows, note: `An Orb of Chance can make one of these.${tiered ? ' T0 is the rarest drop, T5 the most common.' : ''}` }]
 }
 
 // woke: a Templar Vault reward: the vault that gives it and its other
@@ -646,8 +649,8 @@ function getItemPrices (queryId: string) {
 export default defineComponent({
   components: {
     WItemRow,
-    // The loot filter tier line loads with the first unique checked, not at startup.
-    FilterTierLine: defineAsyncComponent(() => import('@/web/woke/loot-filter/FilterTierLine.vue'))
+    // The tier line loads with the first unique checked, not at startup.
+    UniqueTierLine: defineAsyncComponent(() => import('@/web/woke/loot-filter/UniqueTierLine.vue'))
   },
   directives: { ItemTip: vItemTip },
   props: {
@@ -706,9 +709,11 @@ export default defineComponent({
     }, { immediate: true })
     // Which uniques drop at random, for a normal or magic base's chance list.
     const tipDrops = shallowRef<TipPack['drops'] | null>(null)
+    const dropTiers = shallowRef<Record<string, number> | null>(null)
     watch(() => props.item, item => {
       if (tipDrops.value || !item || item.rarity !== ItemRarity.Normal) return
       loadTipDrops().then(drops => { tipDrops.value = drops }).catch(() => {})
+      loadTipDropTiers().then(t => { dropTiers.value = t ?? null }).catch(() => {})
     }, { immediate: true })
     // Templar Vault rewards, read on the first check. The vault code loads
     // then too, not at startup.
@@ -734,7 +739,7 @@ export default defineComponent({
         ...(uniquePack.value ? uniqueSections(props.item, getUniqueInfo(props.item, uniquePack.value), getVersions(props.item, uniquePack.value), getChance(props.item, uniquePack.value)) : []),
         ...reward,
         ...getGemKinds(props.item, queryId?.variant),
-        ...(tipDrops.value ? getChanceTargets(props.item, tipDrops.value) : []),
+        ...(tipDrops.value ? getChanceTargets(props.item, tipDrops.value, dropTiers.value) : []),
         ...getEmblems(props.item, conquest.value),
         ...recipes,
         ...cards,
@@ -790,9 +795,11 @@ export default defineComponent({
       return out
     }
 
-    // woke: a unique's loot filter tier, when a loot filter is set up.
-    const activeFilter = useActiveFilter()
-    const showTier = computed(() => props.item?.rarity === ItemRarity.Unique && !!activeFilter.value?.doc.value)
+    // woke: a unique's drop rarity and loot filter tier. The line says when it
+    // has something to show, so a unique with nothing else shows no empty box.
+    const showTier = computed(() => props.item?.rarity === ItemRarity.Unique)
+    const tierShown = shallowRef(false)
+    watch(showTier, on => { if (!on) tierShown.value = false })
 
     // woke: a Timeless jewel's conquerors and their keystones.
     const keystones = computed(() => {
@@ -927,6 +934,7 @@ export default defineComponent({
     return {
       root,
       showTier,
+      tierShown,
       expanded,
       shownRows,
       isOpen,

@@ -1221,20 +1221,22 @@ test('price check: an item the filter shows gets a quiet icon that can hide it',
   }).toMatch(ownRule('Glorious Plate', 'Hide'))
 })
 
-test('price check: a unique\'s side list shows its filter tier in the label\'s look, and opens to its rule', async ({ overlay }) => {
+test('price check: a unique\'s side list shows its drop tier and filter tier in the label\'s look, and opens to its rule', async ({ overlay }) => {
   test.slow()
   const folder = kaomFilter(false)
   await overlay.boot({ widgets: [{ ...lootFilter(folder), reloadWhenSafe: false }] })
   await overlay.copyItem('items/unique-kaoms-heart.txt')
   const pc = overlay.widget('price-check')
-  const head = pc.locator('[data-filter-tier-head]')
+  const head = pc.locator('[data-unique-tier-head]')
   await expect(head).toBeVisible()
-  await expect(head).toContainText('Loot filter')
-  await expect(head).toContainText('T3')
+  await expect(head).toContainText('Tier')
+  await expect(head.locator('[data-drop-tier]')).toHaveText('Drop T2')
+  await expect(head.locator('[data-filter-tier-chip]')).toContainText('T3')
   if (await head.getAttribute('aria-expanded') !== 'true') await head.click()
-  const body = pc.locator('[data-filter-tier]')
+  const body = pc.locator('[data-unique-tier]')
+  await expect(body.locator('[data-drop-tier-note]')).toContainText('very rare')
   await expect(body).toContainText('Tier 3')
-  await expect(body).toContainText('every unique Glorious Plate drops like this')
+  await expect(body).toContainText('other uniques on Glorious Plate drop like this too')
   await expect(body.getByRole('button', { name: 'Go to rule ›' })).toBeVisible()
   await overlay.snap('unique filter tier, open')
   // A click folds it.

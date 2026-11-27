@@ -9,6 +9,7 @@ import type { ParsedItem } from '@/parser'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
 import type { FilterDoc } from '@/web/woke/loot-filter/parse'
 import { shortTier, uniqueTier } from '@/web/woke/loot-filter/unique-tier'
+import { dropTierWord, rankOnBase } from '@/web/woke/loot-filter/drop-tier'
 import type { LootFilterStore } from '@/web/woke/loot-filter/store'
 import { loadGameData } from '../helpers/game-data'
 import { neverSink } from '../helpers/neversink'
@@ -45,6 +46,29 @@ beforeAll(async () => {
   regular = parseFilter(neverSink('1-REGULAR'))
 })
 
+describe('drop tier words and rank on a base', () => {
+  const tiers = { A: 0, B: 3, C: 5, D: 3 }
+  it('names tiers as the game labels them', () => {
+    expect(dropTierWord(0)).toBe('extremely rare')
+    expect(dropTierWord(2)).toBe('very rare')
+    expect(dropTierWord(5)).toBe('common')
+  })
+  it('says where a unique stands among its base\'s uniques', () => {
+    expect(rankOnBase('A', 'Ring', ['A', 'B', 'C'], tiers)).toBe('The rarest of the 3 uniques on Ring.')
+    expect(rankOnBase('C', 'Ring', ['A', 'B', 'C'], tiers)).toBe('The most common of the 3 uniques on Ring.')
+    expect(rankOnBase('B', 'Ring', ['A', 'B', 'C'], tiers)).toBe('The 3 uniques on Ring drop T0 to T5.')
+    expect(rankOnBase('B', 'Ring', ['B', 'D'], tiers)).toBe('All 2 uniques on Ring are T3.')
+    expect(rankOnBase('B', 'Ring', ['B', 'X'], tiers)).toBeNull()
+  })
+  it('the shipped table names real uniques with tiers 0 to 5', () => {
+    const table = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/data/tips/unique-drop-tiers.json'), 'utf8')) as Record<string, number>
+    expect(Object.keys(table).length).toBeGreaterThan(600)
+    expect(table.Headhunter).toBe(0)
+    expect(table["Wurm's Molt"]).toBe(5)
+    expect(Object.values(table).every(t => Number.isInteger(t) && t >= 0 && t <= 5)).toBe(true)
+  })
+})
+
 describe('unique filter tier', () => {
   it('names plain tiers T1-T3 and the rest by their words', () => {
     expect(shortTier('t1')).toBe('T1')
@@ -57,11 +81,11 @@ describe('unique filter tier', () => {
     const t = uniqueTier(fakeStore(SMALL, [{ name: "Kaom's Heart", chaos: 500, thin: false }, { name: 'Other', chaos: 3, thin: false }]), item('unique-kaoms-heart.txt'))!
     expect(t.short).toBe('T2')
     expect(t.where).toBe('All uniques › Tier 2')
-    expect(t.byBase).toBe(true)
+    expect(t.byBase).toBe('plain')
     expect(t.base).toBe('Glorious Plate')
     expect(t.rule).toEqual({ type: 'uniques', tier: 't2' })
     expect(t.actions.some(a => a.key === 'SetBackgroundColor')).toBe(true)
-    expect(t.dearest).toEqual({ name: "Kaom's Heart", chaos: 500, thin: false, setsTier: false })
+    expect(t.dearest).toEqual({ name: "Kaom's Heart", chaos: 500, setsTier: false })
   })
 
   it('says a price move set the tier only when it names that unique', () => {
@@ -76,7 +100,7 @@ describe('unique filter tier', () => {
     const six = parseFilter(['Show # $type->uniques $tier->ex6link', '\tLinkedSockets >= 0', '\tRarity Unique', ''].join('\n'))
     const t = uniqueTier(fakeStore(six, [{ name: "Kaom's Heart", chaos: 500, thin: false }]), item('unique-kaoms-heart.txt'))!
     expect(t.short).toBe('Special 6 link')
-    expect(t.byBase).toBe(false)
+    expect(t.byBase).toBeNull()
     expect(t.dearest).toBeNull()
   })
 
@@ -90,7 +114,29 @@ describe('unique filter tier', () => {
     const t = uniqueTier(fakeStore(regular), item('unique-carcass-jack-foulborn.txt'))!
     expect(t.rule?.type).toBe('uniques->foulborn')
     expect(t.where).toBe('Uniques › Foulborn › Tier 3')
-    expect(t.byBase).toBe(true)
+    expect(t.byBase).toBe('foulborn')
+    // A plain unique's price doesn't say what a Foulborn tier is.
+    expect(t.dearest).toBeNull()
+  })
+
+  it('an own rule and the safety net read as such, and keep Go to rule', () => {
+    const own = parseFilter(['Show # $type->woke->own $tier->e1', '\tRarity Unique', '\tBaseType == "Glorious Plate"', ''].join('\n'))
+    const t = uniqueTier(fakeStore(own), item('unique-kaoms-heart.txt'))!
+    expect(t.short).toBe('Your rule')
+    expect(t.rule).toEqual({ type: 'woke->own', tier: 'e1' })
+    expect(t.byBase).toBeNull()
+    const net = parseFilter(['Show # $type->woke->safety $tier->net', '\tRarity Unique', ''].join('\n'))
+    const s = uniqueTier(fakeStore(net), item('unique-kaoms-heart.txt'))!
+    expect(s.short).toBe('Safety net')
+    expect(s.safety).toBe(true)
+  })
+
+  it('a unique checked by name (no copied text) still reads its base tier', () => {
+    const real = item('unique-kaoms-heart.txt')
+    const byName = { ...real, rawText: 'VIRTUAL_ITEM' } as ParsedItem
+    const t = uniqueTier(fakeStore(SMALL), byName)!
+    expect(t.short).toBe('T2')
+    expect(t.base).toBe('Glorious Plate')
   })
 
   it('shows nothing without a filter or for an item that is not unique', () => {
