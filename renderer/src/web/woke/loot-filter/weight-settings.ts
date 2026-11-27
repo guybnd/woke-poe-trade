@@ -172,13 +172,69 @@ export interface WeightSettings {
   // Where Normal, Big and Beam start (weights, rising): fixed, so moving the
   // line only hides or shows the low end.
   loud: number[]
+  // Look channels: each a ranked list; the first thing on it an item has
+  // paints that channel. 'score' is the score step's colour.
+  look: Record<LookChannel, LookKey[]>
+}
+
+export type LookChannel = 'border' | 'bg' | 'text'
+export type LookKey =
+  | 'qual' | 'synth' | 'fract' | 'infl' | 'eld' | 'abyss' | 'ench' | 'l6' | 'cruc' | 'strand' | 'l5' | 'fated' | 'mirr'
+  | 'corr' | 'exotic' | 'rarity' | 'score'
+export const LOOK_CHANNELS: Array<{ key: LookChannel, label: string, job: string }> = [
+  { key: 'border', label: 'Border', job: 'The best special mark' },
+  { key: 'bg', label: 'Background', job: 'How good it is, at a glance' },
+  { key: 'text', label: 'Text colour', job: 'What kind of item it is' }
+]
+export const LOOK_LABEL: Record<LookKey, string> = {
+  qual: 'Over-quality',
+  synth: 'Synthesised',
+  fract: 'Fractured',
+  infl: 'Influenced',
+  eld: 'Eldritch implicit',
+  abyss: 'Abyssal socket',
+  ench: 'Enchanted',
+  l6: '6-link',
+  cruc: 'Crucible tree',
+  strand: 'Memory strands 70+',
+  l5: '5-link',
+  fated: 'Fated',
+  mirr: 'Mirrored',
+  corr: 'Corrupted',
+  exotic: 'Exotic base',
+  rarity: 'Rarity',
+  score: 'Score step'
+}
+export const LOOK_KEYS = Object.keys(LOOK_LABEL) as LookKey[]
+// Guy's order (look channels page, 2026-11-27).
+export const LOOK_DEFAULT: Readonly<Record<LookChannel, readonly LookKey[]>> = {
+  border: ['qual', 'synth', 'fract', 'infl', 'eld', 'abyss', 'ench', 'l6', 'cruc', 'strand', 'l5', 'fated', 'mirr'],
+  bg: ['corr', 'score'],
+  text: ['exotic', 'rarity']
+}
+const lookDefault = (): Record<LookChannel, LookKey[]> => ({ border: [...LOOK_DEFAULT.border], bg: [...LOOK_DEFAULT.bg], text: [...LOOK_DEFAULT.text] })
+
+// Each key once, in one channel at most.
+export function normalizeLook (v: unknown): Record<LookChannel, LookKey[]> {
+  const raw = v as Partial<Record<LookChannel, unknown>> | undefined
+  if (!raw || typeof raw !== 'object' || !LOOK_CHANNELS.every(c => Array.isArray(raw[c.key]))) return lookDefault()
+  const seen = new Set<LookKey>()
+  const out = { border: [], bg: [], text: [] } as Record<LookChannel, LookKey[]>
+  for (const c of LOOK_CHANNELS) {
+    for (const k of raw[c.key] as unknown[]) {
+      if (typeof k !== 'string' || !(k in LOOK_LABEL) || seen.has(k as LookKey)) continue
+      seen.add(k as LookKey)
+      out[c.key].push(k as LookKey)
+    }
+  }
+  return out
 }
 
 // +40, +60, +80.
 export const LOUD_DEFAULT: readonly number[] = [16, 64, 256]
 
 export function defaultWeights (): WeightSettings {
-  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT] }
+  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT], look: lookDefault() }
 }
 
 // The rows a pin (always show) can go on: ones a rule can name on their own.
@@ -218,6 +274,7 @@ export function normalizeWeights (w: Partial<WeightSettings> | undefined): Weigh
     need: ok(w?.need, NEED_MIN, NEED_MAX) ? w.need : d.need,
     mult,
     loud: Array.isArray(w?.loud) && w.loud.length === 3 && w.loud.every((v, i) => ok(v, NEED_MIN, NEED_MAX * 64) && (i === 0 || v >= w.loud![i - 1])) ? [...w.loud] : [...LOUD_DEFAULT],
-    always: Array.isArray(w?.always) ? [...new Set(w.always.filter(k => PIN_ROWS.has(k)))] : []
+    always: Array.isArray(w?.always) ? [...new Set(w.always.filter(k => PIN_ROWS.has(k)))] : [],
+    look: normalizeLook(w?.look)
   }
 }

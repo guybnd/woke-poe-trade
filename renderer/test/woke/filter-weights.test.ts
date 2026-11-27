@@ -6,8 +6,8 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { WEIGHT_ROWS, WEIGHT_TYPE, MULT_STEPS, applyWeights, baseRanks, defaultWeights, filterBases, normalizeWeights, stepFor, weightLook } from '@/web/woke/loot-filter/weights'
-import type { WeightItem, WeightSettings, BaseRow } from '@/web/woke/loot-filter/weights'
+import { WEIGHT_ROWS, WEIGHT_TYPE, MULT_STEPS, applyWeights, baseRanks, defaultWeights, filterBases, normalizeWeights, stepFor, weightLook, LOOK_KEYS } from '@/web/woke/loot-filter/weights'
+import type { WeightItem, WeightSettings, BaseRow, LookChannel, LookKey } from '@/web/woke/loot-filter/weights'
 import { BASE_FACTS } from '@/web/woke/loot-filter/base-facts'
 import { neverSink } from '../helpers/neversink'
 import { loadGameData } from '../helpers/game-data'
@@ -84,6 +84,15 @@ function randomRare (r: () => number, bases: BaseRow[]): { it: WeightItem, facts
   return { it, facts }
 }
 
+// Look rows dealt at random into the channels (some left out).
+function randomLook (r: () => number): Record<LookChannel, LookKey[]> {
+  const keys = [...LOOK_KEYS].sort(() => r() - 0.5)
+  const out = { border: [], bg: [], text: [] } as Record<LookChannel, LookKey[]>
+  const chs = ['border', 'bg', 'text', null] as const
+  for (const k of keys) { const ch = chs[Math.floor(r() * 4)]; if (ch) out[ch].push(k) }
+  return out
+}
+
 function on (change: (w: WeightSettings) => void = () => {}): WeightSettings {
   const w = defaultWeights()
   w.on = true
@@ -122,10 +131,12 @@ describe('rare weights', () => {
         expect(res.final?.block.type, JSON.stringify(it)).toBe(WEIGHT_TYPE)
         expect(res.final?.block.tier, `${facts.name} ${JSON.stringify(it)}`).toBe(`s${want}`)
         expect(res.visibility === 'Hide').toBe(want === 0)
-        // The border is the rare's most valuable mark, as the tab shows it.
+        // Border, background and text colour as the look channels say, as the tab shows them.
         if (want > 0) {
-          const border = (acts: Array<{ key: string, args: string[] }>) => JSON.stringify(acts.filter(x => x.key === 'SetBorderColor').pop()?.args ?? null)
-          expect(border(res.actions), JSON.stringify(it)).toBe(border(weightLook(it, w.mult, want)))
+          for (const key of ['SetBorderColor', 'SetBackgroundColor', 'SetTextColor']) {
+            const col = (acts: Array<{ key: string, args: string[] }>) => JSON.stringify(acts.filter(x => x.key === key).pop()?.args ?? null)
+            expect(col(res.actions), `${key} ${JSON.stringify(it)}`).toBe(col(weightLook(it, w.look, want)))
+          }
         }
       }
     })
@@ -138,14 +149,24 @@ describe('rare weights', () => {
       const raw = defaultWeights()
       for (const row of WEIGHT_ROWS) raw.mult[row.key] = MULT_STEPS[Math.floor(r() * MULT_STEPS.length)]
       const pins = ['x1', 'dc', 'fract', 'synth', 'l6', 'infl'] as const
-      const w = normalizeWeights({ ...raw, on: true, need: [0.5, 4, 32][round % 3], always: pins.filter(() => r() < 0.4) as never, loud: [[8, 32, 128], [16, 64, 256], [4, 90, 500]][round % 3] })
+      const w = normalizeWeights({ ...raw, on: true, need: [0.5, 4, 32][round % 3], always: pins.filter(() => r() < 0.4) as never, loud: [[8, 32, 128], [16, 64, 256], [4, 90, 500]][round % 3], look: randomLook(r) })
       const bases = filterBases(doc).filter(b => BASE_FACTS[b.name])
       const compiled = applyWeights(doc, w)!
-      expect(compiled.blocks.length).toBeLessThan(6000)
+      // Rows ranked above the score step split the step rules (×2 or more
+      // each): the tab shows the rule count.
+      const over = (['bg', 'text'] as const).some(ch => w.look[ch].indexOf('score') > 0)
+      expect(compiled.blocks.length).toBeLessThan(over ? 40000 : 6500)
       for (let n = 0; n < 500; n++) {
         const { it, facts } = randomRare(r, bases)
         const want = stepFor(it, w)
-        expect(matchItem(doc, facts).final?.block.tier, `${facts.name} ${JSON.stringify(it)} ${JSON.stringify(w.mult)}`).toBe(`s${want}`)
+        const res = matchItem(doc, facts)
+        expect(res.final?.block.tier, `${facts.name} ${JSON.stringify(it)} ${JSON.stringify(w.mult)}`).toBe(`s${want}`)
+        if (want > 0) {
+          for (const key of ['SetBorderColor', 'SetBackgroundColor', 'SetTextColor']) {
+            const col = (acts: Array<{ key: string, args: string[] }>) => JSON.stringify(acts.filter(x => x.key === key).pop()?.args ?? null)
+            expect(col(res.actions), `${key} ${JSON.stringify(it)} ${JSON.stringify(w.look)}`).toBe(col(weightLook(it, w.look, want)))
+          }
+        }
       }
     }
   })
