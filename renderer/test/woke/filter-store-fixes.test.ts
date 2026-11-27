@@ -21,7 +21,7 @@ vi.mock('@/web/background/IPC', () => ({
 }))
 vi.mock('@/web/woke/shared/game-log', () => ({ onGameLog: (fn: (lines: unknown[]) => void) => { sent.log = fn; return () => {} } }))
 vi.mock('@/web/woke/loot-filter/build-input', () => ({ useBuildRuleInput: () => ref(null) }))
-vi.mock('@/web/woke/loot-filter/prices', () => ({ useFilterPrices: () => ({ lookup: shallowRef(null), safety: shallowRef(null), currentLeague: shallowRef('Test'), updatedAt: shallowRef(null), wantPrices () {} }) }))
+vi.mock('@/web/woke/loot-filter/prices', () => ({ useFilterPrices: () => ({ lookup: shallowRef(null), lootLookup: shallowRef(null), safety: shallowRef(null), currentLeague: shallowRef('Test'), updatedAt: shallowRef(null), wantPrices () {} }) }))
 vi.mock('@/web/woke/loot-filter/active-filter', () => ({ publishActiveFilter () {} }))
 vi.mock('@/web/woke/loot-filter/sounds', () => ({ customSoundsIn: () => [], installPackSounds: async () => 0 }))
 vi.mock('@/web/woke/ui', () => ({ toast: (text: string) => { sent.toasts.push(text) } }))

@@ -33,6 +33,8 @@ vi.mock('@/web/woke/ui', () => ({ toast: (text: string) => { sent.toasts.push(te
 
 const P = {
   lookup: shallowRef<PriceLookup | null>(null),
+  // The Loot tab's lookup follows the test's prices too.
+  get lootLookup () { return P.lookup },
   safety: shallowRef<PriceLookup | null>(null),
   currentLeague: shallowRef<string | null>('Allflame'),
   updatedAt: shallowRef<number | null>(null),

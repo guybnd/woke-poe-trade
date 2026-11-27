@@ -187,7 +187,7 @@ function setShown (i: number, shown: number) {
 // off, read from the filter as it is.
 const baseItems = computed<CurrencyItem[]>(() => {
   const doc = props.store.doc.value
-  const lookup = props.store.prices.lookup.value
+  const lookup = props.store.prices.lootLookup.value
   if (!doc || !lookup) return []
   if (props.kind === 'cards') loadCardFacts()
   return currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.kind === 'gems' ? gemLinesOf(props.store.prices.items.value) : null).filter(it => kindOf(it.cat) === props.kind)

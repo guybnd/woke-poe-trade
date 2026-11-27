@@ -95,7 +95,7 @@ const eff = computed(() => scaled(cfg.value, props.store.doc.value?.strictness ?
 // The item as the filter lists it, with poe.ninja's price (none of yours).
 const raw = computed<CurrencyItem | null>(() => {
   const doc = props.store.doc.value
-  const lookup = props.store.prices.lookup.value
+  const lookup = props.store.prices.lootLookup.value
   if (!doc || !lookup) return null
   loadCardFacts()
   const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null)

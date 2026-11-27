@@ -46,6 +46,8 @@ export interface ComposeInput {
   safetyNet: SafetyNet
   prices: {
     lookup: PriceLookup | null
+    // The Loot tab's lookup (always a base's best unique); lookup when unset.
+    loot?: PriceLookup | null
     // The safety net's own lookup (never the "cheapest unique" setting).
     safety: PriceLookup | null
     breakdown: UniqueBreakdown | null
@@ -106,7 +108,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Utility flasks score on the same line (Equipment › Flasks).
   applyFlasks(next, cfg.presets.weights)
   // Currency weights (beta) the same way: above everything NeverSink has.
-  const currency = applyCurrency(next, cfg.presets.currency, cfg.prices.lookup, cfg.cards, cfg.gems)
+  const currency = applyCurrency(next, cfg.presets.currency, cfg.prices.loot ?? cfg.prices.lookup, cfg.cards, cfg.gems)
   // Maps under the Loot tab's tier slider hide.
   applyMapFloor(next, cfg.presets.currency)
   // League mechanics set Off on the Loot tab hide in maps.
