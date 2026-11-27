@@ -300,7 +300,7 @@ import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import { usePoeninja } from '@/web/background/Prices'
 import { WBanner, WButton, WChip, WEmpty, WKbd, WLineActs, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
 import { lineTip, tipFor, tipIndex } from './tips'
-import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
+import { agoPhrase, formatAmount, nowMinute, formatSigned, formatTimeOfDay, formatDuration } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { isWidgetTypeOn } from '../modules'
 import { useNights } from '../session-story/store'
@@ -404,13 +404,10 @@ const div = (chaos: number) => {
   const d = toDiv(chaos)
   return d >= 100 ? formatAmount(d) : d >= 1 ? d.toFixed(1) : d.toFixed(2)
 }
-const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n) >= 100 ? formatAmount(Math.abs(n)) : Math.abs(n).toFixed(1)}`
-const signedPct = (c: number) => `${c > 0 ? '+' : '−'}${Math.abs(c * 100).toFixed(1)}%`
+const signed = (n: number) => formatSigned(n, x => x >= 100 ? formatAmount(x) : x.toFixed(1))
+const signedPct = (c: number) => formatSigned(c, x => `${(x * 100).toFixed(1)}%`)
 const tone = (n: number | null | undefined) => n == null || n === 0 ? '' : n > 0 ? 'w-up' : 'w-down'
-const duration = (ms: number) => {
-  const m = Math.round(ms / 60_000)
-  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`
-}
+const duration = formatDuration
 const moveText = (m: PriceMove) => `${m.name} ${signedPct(m.change)} (${signed(toDiv(m.valueChaos))} ${unit.value})`
 const etaText = (days: number) => days < 1 ? `${Math.max(1, Math.round(days * 24))} h` : days < 60 ? `${Math.round(days)} days` : `${Math.round(days / 30)} months`
 
@@ -704,7 +701,7 @@ function spendRows (g: ChangeGroup) {
     if (!x || !action) return []
     if (!x.mark && !x.auto && !r?.back && !(x.cashChaos != null && x.cashChaos <= -smallCash)) return []
     const spent = r?.spent ?? 0
-    const when = g.reads.length > 1 ? `${new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}: ` : ''
+    const when = g.reads.length > 1 ? `${formatTimeOfDay(at)}: ` : ''
     const text = spent > 0
       ? `${when}Purchase, ${div(spent)} ${unit.value} not counted`
       : r?.back
@@ -972,7 +969,7 @@ const soldWeek = computed(() => totals(inRange(countedSales.value, '7d', now.val
 const recentSales = computed(() => sales.value.slice(0, 6))
 const clockOf = (at: number) => {
   const d = new Date(at)
-  const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  const t = formatTimeOfDay(d)
   return d.toDateString() === new Date().toDateString() ? t : d.toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
 function saleTitle (s: Sale) {

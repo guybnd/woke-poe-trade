@@ -5,6 +5,7 @@
 import type { ItemFacts } from './item-facts'
 import { BASE_FACTS } from './base-facts'
 import type { BaseRow, Rank, WeightItem, WeightKey } from './weights'
+import type { ItemTipRef } from '../ui/tooltip/item-tip'
 
 // Points: every +10 doubles (×2 = +10, ×0.5 = -10).
 export const points = (mult: number): number => mult > 0 ? 10 * Math.log2(mult) : -Infinity
@@ -201,4 +202,75 @@ export const CHIP_LABEL: Partial<Record<WeightKey, string>> = {
   abyss: 'Abyssal',
   mirr: 'Mirrored',
   fated: 'Fated'
+}
+
+// The test rare as its own item tooltip: what it is (item level, drop tier,
+// sockets, influence, corruption, its marks), not just the plain base.
+export function sampleTip (row: BaseRow, it: WeightItem): ItemTipRef {
+  const marks = [
+    it.fractured && 'Fractured',
+    it.synthesised && 'Synthesised',
+    it.fated && 'Fated',
+    it.abyssal && 'Abyssal socket',
+    it.strands >= 70 && `Memory Strands: ${it.strands}`,
+    it.enchanted && 'Enchanted',
+    it.crucible && 'Crucible passive tree',
+    it.tier ? `Unidentified (Tier ${it.tier})` : 'Unidentified'
+  ].filter((x): x is string => !!x)
+  const implicits = [
+    ...(it.eldritch ? ['Searing Exarch implicit'] : []),
+    ...(it.corruption === 'implicit' ? ['Corrupted implicit'] : it.corruption === 'double' ? ['Corrupted implicit', 'Corrupted implicit'] : [])
+  ]
+  const sockets = it.links ? (it.rgb ? 'R-G-B' : 'R-R-R').slice(0, it.links * 2 - 1) + '-R'.repeat(Math.max(0, it.links - 3)) : ''
+  return {
+    name: row.name,
+    noMenu: true,
+    content: {
+      kind: 'item',
+      item: {
+        rarity: 'RARE',
+        name: row.name,
+        base: row.name,
+        sockets: it.abyssal ? `${sockets}${sockets ? ' ' : ''}A` : sockets,
+        implicits,
+        mods: marks,
+        itemLevel: it.itemLevel,
+        quality: it.quality || undefined,
+        corrupted: it.corruption !== 'no',
+        twiceCorrupted: it.corruption === 'double',
+        mirrored: it.mirrored,
+        influences: it.influenced ? ['Shaper'] : []
+      }
+    }
+  }
+}
+
+// A pasted item (Ctrl+C in game) as the weights see it; null when it isn't
+// a rare on a base the table knows.
+export function pastedRare (facts: ItemFacts, bases: BaseRow[]): { row: BaseRow, it: WeightItem } | null {
+  if (facts.rarity !== 'Rare' || !facts.baseType) return null
+  const row = bases.find(b => b.name === facts.baseType)
+  if (!row) return null
+  const groups = facts.socketGroups ?? []
+  const links = Math.max(0, ...groups.map(g => g.replace(/A/g, '').length))
+  const cm = facts.corruptedMods ?? 0
+  const it = itemOf(row, {
+    tier: facts.unidentifiedItemTier ?? 0,
+    itemLevel: facts.itemLevel ?? 68,
+    influenced: facts.influences.length > 0,
+    eldritch: (facts.exarchTier ?? 0) > 0 || (facts.eaterTier ?? 0) > 0,
+    quality: facts.quality ?? 0,
+    fractured: !!facts.fractured,
+    synthesised: !!facts.synthesised,
+    fated: !!facts.fated,
+    mirrored: !!facts.mirrored,
+    abyssal: groups.some(g => g.includes('A')),
+    strands: facts.memoryStrands ?? 0,
+    enchanted: !!facts.anyEnchantment,
+    crucible: !!facts.crucibleTree,
+    links: links >= 3 ? links : 0,
+    rgb: groups.some(g => /R/.test(g) && /G/.test(g) && /B/.test(g)),
+    corruption: !facts.corrupted ? 'no' : cm >= 2 ? 'double' : cm === 1 ? 'implicit' : 'plain'
+  })
+  return { row, it }
 }

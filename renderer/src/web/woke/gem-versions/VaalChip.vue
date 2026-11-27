@@ -47,7 +47,7 @@ import type { ParsedItem } from '@/parser'
 import { ItemCategory } from '@/parser'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import WPrice from '@/web/woke/ui/WPrice.vue'
-import { formatChaos } from '../ui/format'
+import { formatChaos, formatSigned } from '../ui/format'
 import { useGemVersions } from './useVersions'
 import { vaalEv } from './vaal-ev'
 
@@ -60,8 +60,7 @@ const r = computed(() => isGem.value ? vaalEv(versions.value, vaalOrb.value, !!f
 const startText = computed(() => r.value ? `${r.value.start.level}/${r.value.start.quality}` : '')
 
 function signed (n: number): string {
-  const t = formatChaos(Math.abs(n), divine.value)
-  return n >= 0 ? `+${t}` : `−${t}`
+  return formatSigned(n, x => formatChaos(x, divine.value))
 }
 const pct = (x: number) => `${Math.round(x * 100)}%`
 const chance = (x: number) => `${+(x * 100).toFixed(1)}%`

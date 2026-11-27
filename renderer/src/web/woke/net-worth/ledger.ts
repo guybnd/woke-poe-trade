@@ -3,6 +3,7 @@
 // hold, the goal's ETA and gains grouped per map. Pure: no Vue, no requests.
 import { dayOf, emptyPrefs, itemKey, priceItem, stashItem } from './valuation'
 import type { Category, DaySnapshot, DiffLine, HoldGuard, PriceOf, PricePrefs, StashDiff, StashItemLike, Valuation, ValuedLine } from './valuation'
+import { formatTimeOfDay } from '../ui/format'
 
 // ---------- per tab (D5) ----------
 
@@ -364,7 +365,7 @@ const rowsOf = (diffs: StashDiff[]) => {
     .sort((a, b) => b.chaos - a.chaos)
 }
 
-const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+const clock = formatTimeOfDay
 const mmss = (ms: number) => `${Math.floor(ms / 60_000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`
 
 // C2: inside a session, each refresh's change goes to the map run before it

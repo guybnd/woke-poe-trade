@@ -38,6 +38,8 @@ export interface UniqueInfoInput {
   foulPrices: Array<{ variant?: string, chaos: number }>
   // A plain copy's price in chaos.
   plain: number | null
+  // Whether a unique is of the checked item's slot (see vestigialSources).
+  sameSlot?: (name: string) => boolean
 }
 
 // More uniques than this leave the same Vestigial mod shape: too vague to name.
@@ -73,7 +75,7 @@ export function uniqueInfo (input: UniqueInfoInput): UniqueInfo | null {
       else k.own = false
     }
   }
-  const vestigialFrom = vestigialSources(vestigialLines(input.rawText), input.vestigial, input.name)
+  const vestigialFrom = vestigialSources(vestigialLines(input.rawText), input.vestigial, input.name, input.sameSlot)
   const vestigial = details?.vestigial ?? []
   if (!foulborn.length && !vestigial.length && !vestigialFrom.length) return null
   return { foulborn, vestigial, vestigialFrom }
@@ -102,14 +104,42 @@ export function vestigialLines (rawText: string): string[] {
   return out
 }
 
-// The uniques whose Vestigial mod reads as these lines, numbers aside (the
-// item rolled a value; the data lists one).
-export function vestigialSources (lines: string[], vestigial: Record<string, string[][]> | null | undefined, self: string): string[] {
+// The uniques whose Vestigial mod reads as these lines. Each Vestigial mod has
+// one fixed value, so the same text with its numbers names the source even
+// when many uniques leave that kind of mod ("+40% to Item Rarity" is
+// Aurseize's; four others leave other amounts). Only when no unique leaves
+// those exact numbers (data a patch behind) is it matched with numbers aside,
+// and then too many matches name none. A Vestigial mod comes from a unique of
+// the item's own slot: sameSlot, when given, keeps only those (it answers
+// true for a unique whose slot it doesn't know).
+export function vestigialSources (
+  lines: string[],
+  vestigial: Record<string, string[][]> | null | undefined,
+  self: string,
+  sameSlot?: (name: string) => boolean
+): string[] {
   if (!lines.length || !vestigial) return []
-  const want = lines.map(modShape).sort().join('\u0000')
-  const out = Object.keys(vestigial).filter(name =>
-    name !== self && vestigial[name].some(mod => mod.flatMap(l => l.split('\n')).map(modShape).sort().join('\u0000') === want))
+  const names = Object.keys(vestigial).filter(name => name !== self && (!sameSlot || sameSlot(name)))
+  const key = (ls: string[], f: (l: string) => string) => ls.map(l => f(gemWording(l))).sort().join('\u0000')
+  const match = (f: (l: string) => string) => {
+    const want = key(lines, f)
+    return names.filter(name => vestigial[name].some(mod => key(mod.flatMap(l => l.split('\n')), f) === want))
+  }
+  const exact = match(l => l.trim().toLowerCase())
+  if (exact.length) return exact.length <= MOST_SOURCES ? exact : []
+  const out = match(modShape)
   return out.length <= MOST_SOURCES ? out : []
+}
+
+// Path of Building and the game word skill mods apart: "Supported by Level 30
+// Rage Support" / "...Level 30 Rage", "Grants Level 20 Ravenous" / "...Ravenous
+// Skill", "Grants Summon Harbinger of Focus" / "Grants Level 20 Summon ...".
+// Both sides drop the words that differ before comparing.
+function gemWording (line: string): string {
+  let l = plainLine(line).trim()
+  if (/Supported by /i.test(l)) l = l.replace(/ Support$/i, '')
+  if (/^Grants /i.test(l)) l = l.replace(/^Grants Level [+-]?\d+ /i, 'Grants ').replace(/ Skill$/i, '')
+  return l
 }
 
 // The trade site's search for one Foulborn kind: Foulborn copies of the

@@ -197,7 +197,7 @@ import { itemMenuHead } from '../ui/tooltip/item-menu'
 import { AppConfig } from '@/web/Config'
 import { NET_WORTH_TYPE, runHotkeyOf } from './widget'
 import type { NetWorthWidget } from './widget'
-import { formatAmount, nowMinute } from '../ui/format'
+import { formatAmount, nowMinute, formatSigned, formatTimeOfDay } from '../ui/format'
 import { tipFor } from './tips'
 import type { TipIndex } from './tips'
 import type { SummaryDrop } from './run-summary'
@@ -270,9 +270,9 @@ const toDiv = (chaos: number) => props.divine ? chaos / props.divine : chaos
 const amount = (chaos: number) => { const d = toDiv(chaos); return Math.abs(d) >= 100 ? formatAmount(d) : d.toFixed(Math.abs(d) < 1 && props.divine ? 2 : 1) }
 // With its unit, for hover text.
 const amountU = (chaos: number) => `${amount(chaos)}${props.divine ? ' div' : 'c'}`
-const signed = (chaos: number) => `${chaos > 0 ? '+' : chaos < 0 ? '−' : ''}${amount(Math.abs(chaos))}`
+const signed = (chaos: number) => formatSigned(chaos, amount)
 const tone = (n: number | null | undefined) => n == null || Math.abs(n) < 0.05 ? '' : n > 0 ? 'w-up' : 'w-down'
-const clock = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+const clock = formatTimeOfDay
 const day = (ms: number) => new Date(ms).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) + ' ' + clock(ms)
 // A clock time today, the day too for anything older.
 const when = (ms: number) => new Date(ms).toDateString() === new Date().toDateString() ? clock(ms) : day(ms)

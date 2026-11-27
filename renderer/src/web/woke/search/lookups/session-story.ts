@@ -1,5 +1,5 @@
 // The night so far, or the last one, from Session story.
-import { formatChaos, formatClock, formatDuration } from '../../ui/format'
+import { formatChaos, formatClock, formatDuration, formatSigned } from '../../ui/format'
 import { ANALYTICS_TYPE } from '../../analytics/types'
 import { bestItem, outOfMapsRows } from '../../session-story/story'
 import type { NightStory } from '../../session-story/story'
@@ -21,7 +21,7 @@ function wanted (query: string): boolean {
 }
 
 function signed (chaos: number, divine: number | null): string {
-  return `${chaos > 0 ? '+' : ''}${formatChaos(chaos, divine)}`
+  return formatSigned(chaos, x => formatChaos(x, divine))
 }
 
 // AFK left out, as on the night card.

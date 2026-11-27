@@ -7,6 +7,7 @@
 
 import type { DailyRow } from '../market/types'
 import type { PriceLogEntry } from './price-log'
+import { formatTimeOfDay } from '../ui/format'
 
 export interface HistoryPoint { ts: number, chaos: number }
 
@@ -106,7 +107,7 @@ export function chartGeometry (points: HistoryPoint[], width: number, height: nu
     const d = new Date(ts)
     return span > 2 * DAY_MS
       ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-      : d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+      : formatTimeOfDay(d)
   }
   const xTicks = [
     { x: dots[0].x, label: fmt(minTs) },
