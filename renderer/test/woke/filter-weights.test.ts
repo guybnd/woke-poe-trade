@@ -35,7 +35,7 @@ function randomRare (r: () => number, bases: BaseRow[]): { it: WeightItem, facts
     itemLevel: [68, 74, 75, 82, 83, 85, 86][Math.floor(r() * 7)],
     influenced: pick(0.15),
     eldritch: pick(0.15),
-    quality: pick(0.15) ? 25 : 5,
+    quality: pick(0.15) ? [24, 25, 27, 29, 30][Math.floor(r() * 5)] : 5,
     fractured: pick(0.15),
     synthesised: pick(0.1),
     fated: pick(0.1),
