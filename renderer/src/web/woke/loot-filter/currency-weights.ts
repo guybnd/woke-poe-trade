@@ -19,6 +19,7 @@ import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './pa
 import { NET_GROUPS } from './economy'
 import type { EconomyGroup, PriceLookup } from './economy'
 import { fullStack } from './stack-sizes'
+import { topStepActions } from './top-step'
 import { CURRENCY_TYPE } from './currency-settings'
 import type { CurrencySettings } from './currency-settings'
 
@@ -146,15 +147,14 @@ const a = (key: string, ...args: Array<string | number>): FilterAction => ({ key
 const c = (key: string, op: string, values: Array<string | number>): FilterCondition => ({ key, op, count: null, values: values.map(String) } as FilterCondition)
 
 // How each step looks. Currency keeps its own colour up to Big; Beam is the
-// classic red on white for every class (Guy, 2026-11-27), with currency's
-// own minimap shape (a circle) as its mark.
+// shared top step (top-step.ts): red on white, currency's accent is red too.
 export function currencyActions (step: CStep): FilterAction[] {
   switch (step) {
     case 0: return [a('SetFontSize', 18), a('DisableDropSound', 'True')]
     case 1: return [a('SetFontSize', 32), a('SetTextColor', 170, 158, 130, 255), a('SetBorderColor', 0, 0, 0, 0), a('SetBackgroundColor', 0, 0, 0, 180)]
     case 2: return [a('SetFontSize', 38), a('SetTextColor', 210, 190, 140, 255), a('SetBorderColor', 170, 158, 130, 160), a('SetBackgroundColor', 20, 16, 10, 230)]
     case 3: return [a('SetFontSize', 42), a('SetTextColor', 255, 225, 150, 255), a('SetBorderColor', 255, 225, 150, 255), a('SetBackgroundColor', 70, 55, 25, 240), a('PlayAlertSound', 3, 300), a('MinimapIcon', 1, 'Yellow', 'Circle')]
-    case 4: return [a('SetFontSize', 45), a('SetTextColor', 255, 0, 0, 255), a('SetBorderColor', 255, 0, 0, 255), a('SetBackgroundColor', 255, 255, 255, 255), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Red'), a('MinimapIcon', 0, 'Red', 'Circle')]
+    case 4: return topStepActions('currency')
   }
 }
 
