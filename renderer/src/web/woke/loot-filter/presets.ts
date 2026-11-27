@@ -12,8 +12,8 @@ import { RULE_TYPE, addedBlock } from './rules'
 import { BUILD_RULE_TYPE, WEAPON_CLASSES } from './build-rules'
 import { GEAR_TYPE, defaultGear, normalizeGear } from './gear'
 import type { GearSettings } from './gear'
-import { defaultWeights, normalizeWeights } from './weight-settings'
-import { defaultCurrency, normalizeCurrency } from './currency-settings'
+import { WEIGHT_TYPE, defaultWeights, normalizeWeights } from './weight-settings'
+import { CURRENCY_TYPE, defaultCurrency, normalizeCurrency } from './currency-settings'
 import type { CurrencySettings } from './currency-settings'
 import type { WeightSettings } from './weight-settings'
 import { defaultLook, lookChanges, normalizeLook } from './look'
@@ -832,9 +832,9 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
     // the presets' own too.
     if (p.volume.on && p.volume.percent < 100 && scaleVolume(b, p.volume.percent)) touched = true
     if (b.type?.startsWith('woke->') && b.type !== GEAR_TYPE) {
-      // Build rules and the presets' own beams and icons get the colour-blind
-      // colours too; your own rules keep what you picked.
-      if (p.colourBlind.on && (b.type === BUILD_RULE_TYPE || b.type === PRESET_TYPE) && colourBlindActions(b)) touched = true
+      // Build rules, the presets' own and the Loot and Equipment tabs' rules
+      // get the colour-blind colours too; your own rules keep what you picked.
+      if (p.colourBlind.on && (b.type === BUILD_RULE_TYPE || b.type === PRESET_TYPE || b.type === CURRENCY_TYPE || b.type === WEIGHT_TYPE) && colourBlindActions(b)) touched = true
       if (touched) { b.dirty = true; changed++ }
       continue
     }
