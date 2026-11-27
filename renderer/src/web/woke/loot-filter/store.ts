@@ -15,6 +15,7 @@ import { onGameLog } from '../shared/game-log'
 import { parseFilter, parseFilterCopy, serializeFilter } from './parse'
 import { composeFilter } from './compose'
 import { cardFacts, loadCardFacts } from './card-facts'
+import { gemLinesOf } from './gem-classes'
 import type { FilterDoc, Visibility } from './parse'
 import { addEdit, blocksOf, nextEditId, readStyle } from './edits'
 import { lookChanges } from './look'
@@ -261,6 +262,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     })
   }
 
+  // poe.ninja's gem lines: the Loot tab's gem bands.
+  const gemLines = computed(() => gemLinesOf(prices.items.value))
   // Divination cards' set sizes and folds: starts the read, gives what's there.
   function cardsNow () {
     loadCardFacts()
@@ -300,7 +303,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       stackHeld: (group, base) => cfg().netDismissed[`${group.type}|${base}`] != null || movedDown(group, base),
       clusterPrices: clusterPricesFor(prices.currentLeague.value),
       // Read when the Loot tab's prices are on (a rebuild follows the read).
-      cards: cfg().presets.currency.on ? cardsNow() : null
+      cards: cfg().presets.currency.on ? cardsNow() : null,
+      gems: cfg().presets.currency.on ? gemLines.value : null
     })
   }
 

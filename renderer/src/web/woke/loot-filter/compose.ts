@@ -25,6 +25,7 @@ import type { BaseRename } from './gem-bases'
 import { applyWeights, filterBases } from './weights'
 import { applyCurrency } from './currency-weights'
 import type { CardFacts } from './card-classes'
+import type { GemLine } from './gem-classes'
 import type { CurrencyItem } from './currency-weights'
 import type { BaseRow } from './weights'
 
@@ -60,6 +61,8 @@ export interface ComposeInput {
   renameBase?: BaseRename
   // Divination cards' set sizes and reward folds, once read (card-facts.ts).
   cards?: CardFacts | null
+  // poe.ninja's gem lines, each a band (gem-classes.ts).
+  gems?: readonly GemLine[] | null
 }
 
 export interface Composed {
@@ -98,7 +101,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const weightBases = cfg.presets.weights.on ? filterBases(next, cfg.presets.weights.ranks) : []
   const weights = applyWeights(next, cfg.presets.weights, weightBases)
   // Currency weights (beta) the same way: above everything NeverSink has.
-  const currency = applyCurrency(next, cfg.presets.currency, cfg.prices.lookup, cfg.cards)
+  const currency = applyCurrency(next, cfg.presets.currency, cfg.prices.lookup, cfg.cards, cfg.gems)
   // Build rules go in first, so edits to them (restyles) apply on top.
   const input = cfg.build
   let buildCount = 0

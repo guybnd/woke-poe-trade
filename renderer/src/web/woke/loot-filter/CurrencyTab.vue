@@ -125,7 +125,7 @@
             </select></label>
         </div>
         <template v-for="r in (sg.name && !isOpen(`${g.cat.id}/${sg.name}`) ? [] : sg.rows)" :key="r.it.name">
-          <WItemRow :item="r.it.top ? { name: r.it.top, type: r.it.name } : { name: r.it.name }" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
+          <WItemRow :item="r.it.top ? { name: r.it.top, type: r.it.name } : { name: r.it.bt ?? r.it.name }" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
             <span :class="$style.name"><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
               :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ r.it.name }}<span v-if="r.it.top" :class="$style.top" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.edited" :class="$style.edited"> edited</span></span>
             <span :class="$style.price" :title="r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows at least Small' : r.it.est ? `No usable price: a guess from NeverSink's ${r.it.tier ? `tier ${r.it.tier}` : 'tiers'}` : 'poe.ninja'">
@@ -162,6 +162,7 @@ import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, cu
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
+import { gemLinesOf } from './gem-classes'
 
 const props = withDefaults(defineProps<{
   store: LootFilterStore
@@ -169,7 +170,7 @@ const props = withDefaults(defineProps<{
   // The Loot tab's class: Currency or Fragments, one engine and one ladder.
   kind?: LootKind
 }>(), { kind: 'currency' })
-const KIND_NAME: Record<LootKind, string> = { currency: 'currency', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques' }
+const KIND_NAME: Record<LootKind, string> = { currency: 'currency', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems' }
 const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.kind))
 
 const c = computed(() => props.config.presets.currency)
@@ -203,7 +204,7 @@ const baseItems = computed<CurrencyItem[]>(() => {
   const lookup = props.store.prices.lookup.value
   if (!doc || !lookup) return []
   if (props.kind === 'cards') loadCardFacts()
-  return currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value).filter(it => kindOf(it.cat) === props.kind)
+  return currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.kind === 'gems' ? gemLinesOf(props.store.prices.items.value) : null).filter(it => kindOf(it.cat) === props.kind)
 })
 const baseByName = computed(() => new Map(baseItems.value.map(i => [i.name, i])))
 const baseChaos = (name: string) => baseByName.value.get(name)?.chaos ?? 0
@@ -327,7 +328,7 @@ const level = computed(() => levelOf(props.store.doc.value?.strictness ?? null))
 const mult = computed(() => c.value.mult ?? strictMult(level.value))
 const eff = computed(() => scaled(c.value, props.store.doc.value?.strictness ?? null))
 const dragMult = ref<number | null>(null)
-const SAMPLE_CATS = props.kind === 'uniques' ? ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss'] : props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
+const SAMPLE_CATS = props.kind === 'gems' ? ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'] : props.kind === 'uniques' ? ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss'] : props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
 // The step cards' sample label: one category for all six, click to go to the next.
 const sampleCat = ref(SAMPLE_CATS[0])
 function nextSample () {
