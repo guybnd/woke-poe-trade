@@ -101,7 +101,7 @@ export function categoryOf (name: string, type: string): string {
   if (name === 'Divine Vessel') return 'fragother'
   if (BY_TYPE[type]) return BY_TYPE[type]
   if (/Crystallised Lifeforce$/.test(name)) return 'harvest'
-  if (/^Timeless .+ Splinter$|^Simulacrum Splinter$/.test(name)) return 'splinters'
+  if (/^Timeless .+ Splinter$|^(Simulacrum|Ritual) Splinter$/.test(name)) return 'splinters'
   if (/Catalyst$/.test(name)) return 'catalysts'
   if (/^Tainted /.test(name)) return 'tainted'
   if (/^(Astragali|Burial Medallion|Exotic Coinage|Scrap Metal)$/.test(name)) return 'expedition'
