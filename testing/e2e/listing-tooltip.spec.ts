@@ -132,3 +132,34 @@ for (const at of [null, { width: 2560, height: 1440 }] as const) {
     }).toBe(true)
   })
 }
+
+// At a big Size a tall tooltip would be taller than the screen: it shrinks to
+// fit, never below 100%, and stays on screen.
+test('a tall tooltip from the price check fits the screen at a big Size', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 1920, height: 800 })
+  await fakeTrade(overlay.page)
+  await overlay.boot()
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const panel = overlay.widget('price-check')
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect(panel.locator('.w-pc-foot')).toBeVisible()
+  // Size up to 150% (24px) from the palette, after the search.
+  await overlay.page.locator('[data-price-style] button').first().click()
+  for (let i = 0; i < 8; i++) await overlay.page.locator('[data-price-size="bigger"]').click()
+  await expect(overlay.page.locator('[data-price-size-pct]')).toHaveText('150%')
+  await overlay.page.keyboard.press('Escape')
+  await expect(overlay.page.locator('[data-price-size-pct]')).toHaveCount(0)
+  // The bigger window pushes the listings below the screen: the row is
+  // entered as a hover would, with the pointer near the top.
+  await overlay.page.mouse.move(900, 40)
+  await panel.locator('.w-pc-table tbody tr').nth(1).dispatchEvent('mouseenter')
+  const tip = overlay.page.getByRole('tooltip')
+  await expect(tip).toContainText('Mind Thirst')
+  await expect.poll(async () => {
+    const b = await tip.boundingBox()
+    return b != null && b.y >= 0 && b.y + b.height <= 800
+  }).toBe(true)
+  const zoom = await tip.evaluate(el => (el as HTMLElement & { currentCSSZoom: number }).currentCSSZoom)
+  expect(zoom).toBeLessThan(1.5)
+  expect(zoom).toBeGreaterThanOrEqual(1)
+})
