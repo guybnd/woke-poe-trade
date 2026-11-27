@@ -41,6 +41,14 @@ history:
     date: '2026-11-27T03:40:23.041Z'
     comment: Updated implementation link.
     id: a-2026-11-27t03-40-23-041z
+  - type: comment
+    user: Agent
+    comment: >-
+      Rare weights beta tab merged in PR 976 (e6fa69a), off by default behind
+      the experimental unlock. Epic stays open for the funnel picks and scoring.
+    date: '2026-11-27T04:04:15.109Z'
+    selfAttested: true
+    id: c-2026-11-27t04-04-15-109z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/976'
 ---
 Epic: reimagine the loot filter as a clear visual funnel that shows how it decides. Design only, nothing built yet: 8 design options waiting on Guy's picks. Subtasks come after the picks.
