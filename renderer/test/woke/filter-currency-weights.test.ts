@@ -112,6 +112,19 @@ describe('currency weights', () => {
     expect(divineChaos(items)).toBe(160)
   })
 
+  it('caps a shard at a twentieth of its orb', () => {
+    const items = currencyItems(parseFilter(SEMI), (g, base) => {
+      if (base === 'Alchemy Shard') return { chaos: 1.12, thin: false }
+      if (base === 'Orb of Alchemy') return { chaos: 0.6, thin: false }
+      if (base === 'Alteration Shard') return { chaos: 0.002, thin: false }
+      if (base === 'Orb of Alteration') return { chaos: 0.1, thin: false }
+      return null
+    })
+    const by = new Map(items.map(i => [i.name, i]))
+    expect(by.get('Alchemy Shard')).toMatchObject({ chaos: 0.03, est: false })
+    expect(by.get('Alteration Shard')?.chaos).toBe(0.002)
+  })
+
   it('prices chaos itself, asks for astrolabes and holds thin prices near the guess', () => {
     const asked = new Set<string>()
     const items = currencyItems(parseFilter(SEMI), (g, base) => {
@@ -232,7 +245,7 @@ describe('currency weights', () => {
     expect(decent.effect).toMatchObject({ color: 'Pink', temp: true })
     const big = currencyLook(4, 'essences', c)
     expect(big.background?.slice(0, 3)).toEqual([196, 119, 204])
-    expect(big.border?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(big.border?.slice(0, 3)).toEqual([255, 40, 40])
     expect(big.sound).toEqual({ id: '7', volume: 250 })
     expect(big.icon).toMatchObject({ size: 0, color: 'Pink', shape: 'Moon' })
     expect(big.effect?.color).toBe('Pink')
