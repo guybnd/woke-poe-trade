@@ -525,7 +525,12 @@ function getUniqueInfo (item: ParsedItem, data: UniquePack): UniqueInfo | null {
     uniques: data.uniques,
     vestigial: data.vestigial,
     foulPrices,
-    plain: chaosOf(item.info)
+    plain: chaosOf(item.info),
+    sameSlot: other => {
+      const base = ITEM_BY_REF('UNIQUE', other)?.[0]?.unique?.base
+      const cat = base != null ? ITEM_BY_REF('ITEM', base)?.[0]?.craftable?.category : undefined
+      return cat == null || item.category == null || cat === item.category
+    }
   })
 }
 
