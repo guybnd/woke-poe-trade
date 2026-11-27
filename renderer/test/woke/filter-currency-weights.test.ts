@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, fullBias, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, tierGuess, divineChaos } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, fullBias, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, tierGuess, divineChaos } from '@/web/woke/loot-filter/currency-weights'
 import type { CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { fullStack } from '@/web/woke/loot-filter/stack-sizes'
@@ -120,7 +120,7 @@ describe('currency weights', () => {
         const stacks = stacksFor(it, cfg)
         for (const n of [1, 2, 3, 5, 10, 20, 40]) {
           if (n > it.full) continue
-          const res = matchItem(doc, pile(it.name, n))
+          const res = matchItem(doc, { ...pile(it.name, n), itemClass: it.cls.split('|')[0] })
           const want = stepOfPile(stacks, n)
           expect(res.final?.block.type, `${it.name} ×${n} at ${line}c`).toBe(CURRENCY_TYPE)
           expect(res.final?.block.tier, `${it.name} ×${n} at ${line}c`).toBe(`s${want}`)
@@ -166,6 +166,59 @@ describe('currency weights', () => {
     // 0.3c: shows from 8 at 1c; at 4c a full stack isn't enough.
     expect(stacksFor(alch, base)[0]).toBe(8)
     expect(stacksFor(alch, less)[0]).toBeNull()
+  })
+
+  it('shows odd items poe.ninja has no price for, but not shards', () => {
+    const items = currencyItems(parseFilter(SEMI), lookup)
+    const free = items.filter(i => i.free).map(i => i.name)
+    expect(free).toContain('Facetor\'s Lens')
+    expect(free.some(n => /Shard$/.test(n))).toBe(false)
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(), lookup)
+    expect(matchItem(doc, pile('Facetor\'s Lens', 1)).visibility).toBe('Show')
+  })
+
+  it('covers every stackable NeverSink lists in maps, splinters, lifeforce, embers and runegrafts too', () => {
+    const items = new Map(currencyItems(parseFilter(SEMI), lookup).map(i => [i.name, i.cat]))
+    expect(items.get('Timeless Karui Splinter')).toBe('splinters')
+    expect(items.get('Simulacrum Splinter')).toBe('splinters')
+    expect(items.get('Vivid Crystallised Lifeforce')).toBe('harvest')
+    expect(items.get('Allflame Ember of Kulemak')).toBe('embers')
+    expect(items.get('Runegraft of Bellows')).toBe('runegrafts')
+    expect(items.has('Dead Man\'s Sulphur')).toBe(true)
+    expect(items.has('Rogue\'s Marker')).toBe(true)
+    // League threads come from the fragment rules; nothing else from there does.
+    expect(items.get('Breach Thread')).toBe('threads')
+    expect(items.has('Divine Vessel')).toBe(false)
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(c => { c.items = { 'Breach Thread': { step: 4 } } }), lookup)
+    const hit = matchItem(doc, { ...pile('Breach Thread', 1), itemClass: 'Misc Map Items' })
+    expect(hit.final?.block.tier).toBe('s4')
+  })
+
+  it('fills in the category colour as value climbs, a step edit is loudness for all', () => {
+    const c = on(x => { x.steps = { 4: { sound: { id: '7', volume: 250 }, fontSize: 44 } }; x.cats = { oils: { text: [10, 200, 20, 255] } } })
+    expect(currencyLook(1, 'essences', c).border).toBeNull()
+    expect(currencyLook(3, 'essences', c).border?.slice(0, 3)).toEqual([230, 140, 240])
+    const big = currencyLook(4, 'essences', c)
+    expect(big.background?.slice(0, 3)).toEqual([230, 140, 240])
+    expect(big.sound).toEqual({ id: '7', volume: 250 })
+    expect(big.icon).toMatchObject({ color: 'Pink', shape: 'Moon' })
+    expect(big.effect?.color).toBe('Pink')
+    expect(currencyLook(4, 'oils', c).background?.slice(0, 3)).toEqual([10, 200, 20])
+    const tink = currencyLook(5, 'essences', c)
+    expect(tink.border?.slice(0, 3)).toEqual([230, 140, 240])
+    expect(tink.effect?.color).toBe('Red')
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, c, lookup)
+    expect(validateFilter(doc).map(p => p.message)).toEqual([])
+  })
+
+  it('sorts essences into their tiers', () => {
+    expect(subgroupOf('Deafening Essence of Greed', 'essences')).toBe('Deafening')
+    expect(subgroupOf('Whispering Essence of Hatred', 'essences')).toBe('Whispering')
+    expect(subgroupOf('Essence of Horror', 'essences')).toBe('Special')
+    expect(subgroupOf('Divine Orb', 'orbs')).toBeNull()
   })
 
   it('sorts every item into a category', () => {
