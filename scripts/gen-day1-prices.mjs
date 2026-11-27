@@ -74,13 +74,42 @@ async function pool (jobs, size = 4) {
 
 const round = v => v >= 100 ? Math.round(v) : Number(v.toPrecision(3))
 
+// What each candidate answers, for the log: poe.ninja moves its API now and then.
+async function probe (urls) {
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { headers: UA })
+      const text = await res.text()
+      console.log(`probe ${res.status} ${url}\n  ${text.slice(0, 300).replace(/\s+/g, ' ')}`)
+    } catch (e) {
+      console.log(`probe failed ${url}: ${e.message}`)
+    }
+  }
+}
+
+const CHALLENGE = l => l && !/Standard|Hardcore|HC|SSF|Ruthless/i.test(l)
+
 async function main () {
   let league = process.argv[2]
   if (!league) {
     const index = await get(`${API}/getindexstate`)
-    league = index?.economyLeagues?.find(l => !/Standard|Hardcore|HC|SSF|Ruthless/i.test(l.name))?.name
-    if (!league) throw new Error('No challenge league in poe.ninja\'s index.')
+    league = index?.economyLeagues?.map(l => l.name).find(CHALLENGE)
   }
+  if (!league) {
+    // GGG's own list, as the app reads it.
+    const list = await get('https://www.pathofexile.com/api/leagues?type=main&realm=pc')
+    league = Array.isArray(list) ? list.map(l => l.id).find(CHALLENGE) : undefined
+  }
+  if (!league) throw new Error('No challenge league found.')
+  const q0 = encodeURIComponent(league)
+  await probe([
+    `${API}/getindexstate`,
+    `${API}/currencyoverview?league=${q0}&type=Currency`,
+    `${API}/currencyhistory?league=${q0}&type=Currency&currencyId=2`,
+    `${API}/itemoverview?league=${q0}&type=DivinationCard`,
+    `https://poe.ninja/poe1/api/economy/stash/current/item/overview?league=${q0}&type=DivinationCard`,
+    `https://poe.ninja/poe1/api/economy/stash/current/currency/overview?league=${q0}&type=Currency`
+  ])
   const q = encodeURIComponent(league)
   console.log(`league ${league}`)
   const items = []
