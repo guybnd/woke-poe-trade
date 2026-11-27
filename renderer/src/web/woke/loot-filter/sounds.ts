@@ -24,8 +24,19 @@ export function isPackSound (id: string): boolean {
   return NEVERSINK_SOUNDS.some(s => s.file.toLowerCase() === id.toLowerCase())
 }
 
+// What the game's own sounds sound like, in Guy's words (2026-11-27).
+export const GAME_SOUND_NAMES: Record<string, string> = {
+  1: 'Shboong (big)',
+  2: 'Normal',
+  3: 'Decent',
+  4: 'Map drop',
+  5: 'Big map',
+  6: 'Tink',
+  9: 'Small'
+}
+
 export function soundLabel (id: string): string {
-  if (!isCustomSound(id)) return `Game sound ${id}`
+  if (!isCustomSound(id)) return GAME_SOUND_NAMES[id] ? `Game sound ${id}: ${GAME_SOUND_NAMES[id]}` : `Game sound ${id}`
   const pack = NEVERSINK_SOUNDS.find(s => s.file.toLowerCase() === id.toLowerCase())
   return pack ? `NeverSink: ${pack.label}` : id.replace(/\.(mp3|wav|ogg)$/i, '')
 }

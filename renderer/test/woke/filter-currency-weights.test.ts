@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, fullBias, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, tierGuess, divineChaos } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, CURRENCY_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, levelOf, strictMult, scaled, tierGuess, divineChaos } from '@/web/woke/loot-filter/currency-weights'
 import type { CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { fullStack } from '@/web/woke/loot-filter/stack-sizes'
@@ -47,23 +47,50 @@ describe('currency weights', () => {
     expect(fullStack('Not an item')).toBe(10)
   })
 
-  it('scores a pile as price × √stack × the full-stack bonus', () => {
+  it('scores a pile at full value, cheap items discounted', () => {
     const chaos = { chaos: 1, full: 10 }
-    expect(fullBias(chaos)).toBeCloseTo(1.5)
-    expect(pileWorth(chaos, 4)).toBeCloseTo(3)
-    // A full stack worth under 1c gets no bonus; a rich one at most ×2.5.
-    expect(fullBias({ chaos: 0.02, full: 40 })).toBe(1)
-    expect(fullBias({ chaos: 60000, full: 10 })).toBe(2.5)
-    // The smallest pile over a line, never more than a full stack.
-    expect(minStack(chaos, 3)).toBe(4)
-    expect(minStack(chaos, 1.5)).toBe(1)
-    expect(minStack({ chaos: 0.02, full: 40 }, 1)).toBeNull()
+    // A full stack of Chaos (10c) reaches Decent at 10c: full value.
+    expect(pileWorth(chaos, 10, 10)).toBe(10)
+    expect(minStack(chaos, 5, 10)).toBe(5)
+    // A full stack worth under Decent: price × stack^0.75.
+    const shard = { chaos: 0.05, full: 20 }
+    expect(pileWorth(shard, 16, 10)).toBeCloseTo(0.4)
+    expect(minStack({ chaos: 0.02, full: 40 }, 1, 10)).toBeNull()
     for (const at of [0.1, 0.7, 1, 2.3, 5]) {
-      const k = minStack({ chaos: 0.3, full: 20 }, at)
+      const k = minStack({ chaos: 0.3, full: 20 }, at, 10)
       if (k == null) continue
-      expect(pileWorth({ chaos: 0.3, full: 20 }, k)).toBeGreaterThanOrEqual(at)
-      if (k > 1) expect(pileWorth({ chaos: 0.3, full: 20 }, k - 1)).toBeLessThan(at)
+      expect(pileWorth({ chaos: 0.3, full: 20 }, k, 10)).toBeGreaterThanOrEqual(at)
+      if (k > 1) expect(pileWorth({ chaos: 0.3, full: 20 }, k - 1, 10)).toBeLessThan(at)
     }
+  })
+
+  it('multiplies every step by the strictness', () => {
+    expect(levelOf('4-VERYSTRICT')).toBe(4)
+    expect(levelOf(null)).toBe(2)
+    expect(strictMult(2)).toBe(1)
+    expect(strictMult(3)).toBe(1.25)
+    expect(strictMult(4)).toBe(1.55)
+    const c = defaultCurrency()
+    expect(scaled(c, '2-SEMI-STRICT')).toBe(c)
+    const s = scaled(c, '3-STRICT')
+    expect(s.line).toBeCloseTo(0.625)
+    expect(s.from[0]).toBeCloseTo(3.75)
+    c.mult = 2
+    expect(scaled(c, '4-VERYSTRICT').from[3]).toBe(180)
+    expect(normalizeCurrency({ mult: 9 }).mult).toBe(null)
+    expect(normalizeCurrency({ mult: 1.5 }).mult).toBe(1.5)
+  })
+
+  it('hides the piles of a step that is turned off', () => {
+    const c = defaultCurrency()
+    const it = { name: 'Chaos Orb', cat: 'orbs', chaos: 1, full: 10, est: false } as never
+    const all = stacksFor(it, c)
+    c.off = [1]
+    const s = stacksFor(it, c)
+    expect(s).toEqual([null, ...all.slice(1)])
+    expect(stepOfPile(s, 1)).toBe(0)
+    expect(stepOfPile(s, 10)).toBe(stepOfPile(all, 10))
+    expect(normalizeCurrency(JSON.parse('{"off":[1,1,5,"x",2]}')).off).toEqual([1, 2])
   })
 
   it('guesses a price from NeverSink tiers', () => {
@@ -163,8 +190,8 @@ describe('currency weights', () => {
     expect(stepStarts(less, 'oils')[0]).toBe(1)
     const items = currencyItems(parseFilter(SEMI), lookup)
     const alch = items.find(i => i.name === 'Orb of Alchemy')!
-    // 0.3c: shows from 8 at 1c; at 4c a full stack isn't enough.
-    expect(stacksFor(alch, base)[0]).toBe(8)
+    // 0.3c (a full stack is 6c, under Decent: discounted): shows from 5 at 1c; at 4c a full stack isn't enough.
+    expect(stacksFor(alch, base)[0]).toBe(5)
     expect(stacksFor(alch, less)[0]).toBeNull()
   })
 
@@ -254,7 +281,7 @@ describe('currency weights', () => {
     for (const line of [0.1, 1, 5]) {
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, on(c => { c.line = line }), lookup)!
-      expect(compiled.blocks.length).toBeLessThan(120)
+      expect(compiled.blocks.length).toBeLessThan(200)
       const text = serializeFilter(doc)
       expect(text.length - SEMI.length).toBeLessThan(120_000)
       expect(validateFilter(parseFilter(text)).map(p => p.message)).toEqual([])
@@ -264,7 +291,7 @@ describe('currency weights', () => {
   it('normalizes saved settings, the first beta\'s too', () => {
     expect(normalizeCurrency(undefined)).toEqual(defaultCurrency())
     const old = normalizeCurrency({ on: true, line: 99, normal: 50, big: 10, supplies: { 'Chaos Orb': 3, 'bad': -1, 'x"y': 2 }, pins: ['Scroll of Wisdom', 7] } as never)
-    expect(old).toMatchObject({ on: true, line: 1, from: [50, 50, 50, 90], items: { 'Chaos Orb': { supply: 3 }, 'Scroll of Wisdom': { supply: 1 } } })
+    expect(old).toMatchObject({ on: true, line: 0.5, from: [50, 50, 50, 90], items: { 'Chaos Orb': { supply: 3 }, 'Scroll of Wisdom': { supply: 1 } } })
     const c = normalizeCurrency({ from: [5, 2, 40, 90], nudge: { orbs: 2, oils: 9, Bad: 1, ess: 0 }, items: { 'Divine Orb': { step: 9, price: -1 }, 'Golden Oil': { step: 4, look: { fontSize: 40 } }, 'x"y': { step: 1 } } } as never)
     expect(c.from).toEqual([5, 5, 40, 90])
     expect(c.nudge).toEqual({ orbs: 2 })

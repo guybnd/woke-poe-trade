@@ -72,6 +72,14 @@ describe('price groups', () => {
   })
 })
 
+describe('price by name on any page', () => {
+  it("'*' finds a name whatever poe.ninja page it is on", () => {
+    const prices = priceLookup([{ type: 'Wombgift', name: 'Ritual Thread', variant: '', chaos: 0.4 }], noUniques)
+    expect(prices({ type: 'fragments', label: '', ninja: ['Fragment'] }, 'Ritual Thread')).toBeNull()
+    expect(prices({ type: 'any', label: '', ninja: ['*'] }, 'Ritual Thread')?.chaos).toBe(0.4)
+  })
+})
+
 describe('tier ranks', () => {
   it('reads tN, suffixed currency tiers, and skips special ones', () => {
     expect(tierRank('t1', ['t1', 't2'])).toBe(1)

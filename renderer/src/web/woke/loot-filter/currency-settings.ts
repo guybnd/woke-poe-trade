@@ -11,6 +11,10 @@ export const LINE_MIN = 0.1
 export const LINE_MAX = 10
 // A category's nudge: each notch doubles (see less) or halves (see more) the line.
 export const NUDGE_MAX = 3
+// The strictness multiplier on every step's price (Guy 2026-11-27): it
+// follows NeverSink's strictness, ×1.25 a level, until set by hand in 0.05s.
+export const MULT_MIN = 0.25
+export const MULT_MAX = 4
 
 // The steps, quiet to loud (Guy's pick S2, 2026-11-27). 0 is hidden.
 export type CStep = 0 | 1 | 2 | 3 | 4 | 5
@@ -41,14 +45,20 @@ export interface CurrencySettings {
   steps: Record<string, StylePatch>
   // A category's look changed by hand (text colour, map icon), on Small to Big.
   cats: Record<string, StylePatch>
+  // Steps turned off (1..4): piles that would get one hide instead (Guy
+  // 2026-11-27: "turn an entire section off like small off").
+  off: number[]
+  // Every step's price × this; null follows the filter's strictness.
+  mult: number | null
 }
 
 export function defaultCurrency (): CurrencySettings {
-  return { on: false, line: 1, from: [3, 10, 30, 90], nudge: {}, items: {}, steps: {}, cats: {} }
+  return { on: false, line: 0.5, from: [3, 10, 30, 90], nudge: {}, items: {}, steps: {}, cats: {}, off: [], mult: null }
 }
 
 const NAME = /^[^"\n]{1,80}$/
 const num = (v: unknown, lo: number, hi: number): number | null => typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi ? v : null
+const int = (v: unknown, lo: number, hi: number): number | null => Number.isInteger(v) ? num(v, lo, hi) : null
 
 function patches (v: unknown, key: RegExp): Record<string, StylePatch> {
   const out: Record<string, StylePatch> = {}
@@ -62,10 +72,12 @@ export function normalizeItemEdit (e: unknown): ItemEdit | null {
   if (!e || typeof e !== 'object') return null
   const x = e as Record<string, unknown>
   const out: ItemEdit = {}
-  if (typeof x.step === 'number' && Number.isInteger(x.step) && x.step >= 0 && x.step <= 5) out.step = x.step as CStep
+  const step = int(x.step, 0, 5)
+  if (step != null) out.step = step as CStep
   const price = num(x.price, 0.0001, 1e7)
   if (price != null) out.price = price
-  if (typeof x.supply === 'number' && Number.isInteger(x.supply) && x.supply >= 1 && x.supply <= 100_000) out.supply = x.supply
+  const supply = int(x.supply, 1, 100_000)
+  if (supply != null) out.supply = supply
   if (x.look && isPatch(x.look)) out.look = x.look as StylePatch
   return Object.keys(out).length ? out : null
 }
@@ -89,7 +101,7 @@ export function normalizeCurrency (c: (Partial<CurrencySettings> & OldCurrency) 
   const nudge: Record<string, number> = {}
   if (c?.nudge && typeof c.nudge === 'object') {
     for (const [k, v] of Object.entries(c.nudge)) {
-      if (/^[a-z]{1,20}$/.test(k) && typeof v === 'number' && Number.isInteger(v) && v !== 0 && Math.abs(v) <= NUDGE_MAX) nudge[k] = v
+      if (/^[a-z]{1,20}$/.test(k) && v && int(v, -NUDGE_MAX, NUDGE_MAX) != null) nudge[k] = v as number
     }
   }
   const items: Record<string, ItemEdit> = {}
@@ -101,7 +113,8 @@ export function normalizeCurrency (c: (Partial<CurrencySettings> & OldCurrency) 
   }
   if (c?.supplies && typeof c.supplies === 'object') {
     for (const [n, k] of Object.entries(c.supplies as Record<string, unknown>)) {
-      if (NAME.test(n) && typeof k === 'number' && Number.isInteger(k) && k >= 1 && k <= 100_000) items[n] = { ...items[n], supply: k }
+      const supply = int(k, 1, 100_000)
+      if (NAME.test(n) && supply != null) items[n] = { ...items[n], supply }
     }
   }
   if (Array.isArray(c?.pins)) {
@@ -115,6 +128,8 @@ export function normalizeCurrency (c: (Partial<CurrencySettings> & OldCurrency) 
     nudge,
     items,
     steps: patches(c?.steps, /^[1-5]$/),
-    cats: patches(c?.cats, /^[a-z]{1,20}$/)
+    cats: patches(c?.cats, /^[a-z]{1,20}$/),
+    mult: num(c?.mult, MULT_MIN, MULT_MAX) ?? null,
+    off: [1, 2, 3, 4].filter(n => Array.isArray(c?.off) && c.off.includes(n))
   }
 }

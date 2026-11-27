@@ -48,7 +48,7 @@
             <option v-for="f in ownSounds" :key="f" :value="f">{{ f }}</option>
           </optgroup>
           <optgroup label="Game sounds (play only in game)">
-            <option v-for="id in SOUND_IDS" :key="id" :value="id">{{ id }}{{ uses.get(id)?.length ? ` · ${uses.get(id)!.slice(0, 3).join(', ')}` : '' }}</option>
+            <option v-for="id in SOUND_IDS" :key="id" :value="id">{{ id }}{{ GAME_SOUND_NAMES[id] ? ` ${GAME_SOUND_NAMES[id]}` : '' }}{{ uses.get(id)?.length ? ` · ${uses.get(id)!.slice(0, 3).join(', ')}` : '' }}</option>
           </optgroup>
           <option v-if="look.sound && !known(look.sound.id)" :value="look.sound.id">{{ soundLabel(look.sound.id) }}</option>
         </select>
@@ -137,7 +137,7 @@ import { DEFAULT_BG, DEFAULT_FONT, DEFAULT_TEXT } from './edits'
 import type { Colour, StylePatch } from './edits'
 import { ICON_SHAPES, ICON_SIZES, POE_COLOURS, SOUND_IDS, poeColour, shapeGlyph } from './colours'
 import { useActiveFilter } from './active-filter'
-import { NEVERSINK_SOUNDS, installPackSounds, isCustomSound, isPackSound, listFolderSounds, playSound, soundLabel, soundUses } from './sounds'
+import { NEVERSINK_SOUNDS, installPackSounds, isCustomSound, isPackSound, listFolderSounds, GAME_SOUND_NAMES, playSound, soundLabel, soundUses } from './sounds'
 
 const active = useActiveFilter()
 

@@ -3,9 +3,8 @@
 // (plan: /mnt/project-files/filter-funnel/score-everything-else.html; the
 // tab's design: currency-tab-redesign.html, Guy's picks A, S2, G1, E1).
 //
-// A pile counts as chaos each × √stack × a full-stack bonus: an orb whose full
-// stack is worth a lot gets up to ×2.5, one whose full stack is junk gets
-// nothing (Guy's pick B4). Under the line it hides; over it it shows Small,
+// A pile counts as chaos each × stack; an item whose full stack is worth
+// less than Decent counts × stack^0.75 instead (Guy 2026-11-27). Under the line it hides; over it it shows Small,
 // and Normal, Decent, Big and Tink start at fixed prices whatever the line.
 // Each category can nudge the line; each item can be set by hand: its step,
 // its price, a supply stack, its own look.
@@ -27,7 +26,7 @@ import { topStepActions } from './top-step'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
 import type { CStep, CurrencySettings, ItemEdit } from './currency-settings'
 
-export { CURRENCY_TYPE, CSTEP_NAMES, LINE_MIN, LINE_MAX, NUDGE_MAX, defaultCurrency, normalizeCurrency } from './currency-settings'
+export { CURRENCY_TYPE, CSTEP_NAMES, LINE_MIN, LINE_MAX, NUDGE_MAX, MULT_MIN, MULT_MAX, defaultCurrency, normalizeCurrency } from './currency-settings'
 export type { CStep, CurrencySettings, ItemEdit } from './currency-settings'
 
 // NeverSink's currency types this step covers.
@@ -128,6 +127,7 @@ export interface CurrencyItem {
   full: number
 }
 
+const ANY_PAGE: EconomyGroup = { type: 'any', label: 'Any', ninja: ['*'] }
 function groupOf (type: string): EconomyGroup {
   return NET_GROUPS.find(g => g.type === type) ?? NET_GROUPS[0]
 }
@@ -163,7 +163,9 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
     for (const name of bt.values) {
       if (seen.has(name) || (threads && !THREAD.test(name))) continue
       // Prices are in chaos, so poe.ninja doesn't list chaos itself.
-      const p = name === 'Chaos Orb' ? { chaos: 1, thin: false } : lookup?.(groupOf(b.type), name) ?? null
+      // Threads (and anything poe.ninja lists on another page than the
+      // filter's group) are found by name on any page.
+      const p = name === 'Chaos Orb' ? { chaos: 1, thin: false } : lookup?.(groupOf(b.type), name) ?? lookup?.(ANY_PAGE, name) ?? null
       const priced = p != null && !p.thin && p.chaos > 0
       const guess = tierGuess(b.tier)
       const own = edits[name]?.price
@@ -184,14 +186,36 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   return [...seen.values()]
 }
 
-// The full-stack bonus: 1 + log10(full stack in chaos) / 2, between ×1 and ×2.5.
-export function fullBias (it: Pick<CurrencyItem, 'chaos' | 'full'>): number {
-  return Math.min(2.5, 1 + Math.log10(Math.max(1, it.chaos * it.full)) / 2)
+// What a pile of `stack` counts for, in chaos (Guy 2026-11-27): its full
+// value, price × stack. Only an item whose full stack is worth less than
+// Decent (`decent`, chaos) is discounted, to price × stack^0.75, so a big
+// pile of cheap shards doesn't shout. (It used to be √stack for all, under
+// which 10 Chaos counted 4.7c and looked like nothing.)
+export const CHEAP_POW = 0.75
+export function stackPow (it: Pick<CurrencyItem, 'chaos' | 'full'>, decent: number): number {
+  return it.chaos * it.full < decent ? CHEAP_POW : 1
+}
+export function pileWorth (it: Pick<CurrencyItem, 'chaos' | 'full'>, stack: number, decent: number): number {
+  return it.chaos * Math.max(1, stack) ** stackPow(it, decent)
 }
 
-// What a pile of `stack` counts for, in chaos.
-export function pileWorth (it: Pick<CurrencyItem, 'chaos' | 'full'>, stack: number): number {
-  return it.chaos * Math.sqrt(Math.max(1, stack)) * fullBias(it)
+// NeverSink's strictness level from its header ("4-VERYSTRICT" → 4);
+// Semi-strict (2) when the filter doesn't say.
+export function levelOf (strictness: string | null): number {
+  const n = Number(/^(\d)/.exec(strictness ?? '')?.[1])
+  return Number.isFinite(n) && n >= 0 && n <= 6 ? n : 2
+}
+// The multiplier a strictness level gives: ×1 at Semi-strict, ×1.25 a level
+// stricter, ÷1.25 a level looser, in 0.05s.
+export function strictMult (level: number): number {
+  return Math.round(1.25 ** (level - 2) * 20) / 20
+}
+// The settings as they apply: every step's price × the multiplier (the
+// player's own, or the filter's strictness).
+export function scaled (c: CurrencySettings, strictness: string | null): CurrencySettings {
+  const m = c.mult ?? strictMult(levelOf(strictness))
+  if (m === 1) return c
+  return { ...c, line: c.line * m, from: c.from.map(f => f * m) as CurrencySettings['from'] }
 }
 
 // The line for a category, after its nudge.
@@ -207,12 +231,13 @@ export function stepStarts (c: Pick<CurrencySettings, 'line' | 'from' | 'nudge'>
 }
 
 // The smallest pile (1 up to a full stack) that counts for `at`, or null.
-export function minStack (it: Pick<CurrencyItem, 'chaos' | 'full'>, at: number): number | null {
-  const per = it.chaos * fullBias(it)
+export function minStack (it: Pick<CurrencyItem, 'chaos' | 'full'>, at: number, decent: number): number | null {
+  const per = it.chaos
   if (per <= 0) return null
-  // √k ≥ at / per; rounding can land one short, so check.
-  let k = Math.max(1, Math.ceil((at / per) ** 2 - 1e-9))
-  if (pileWorth(it, k) < at) k++
+  const pow = stackPow(it, decent)
+  // k ** pow ≥ at / per; rounding can land one short, so check.
+  let k = Math.max(1, Math.ceil((at / per) ** (1 / pow) - 1e-9))
+  if (pileWorth(it, k, decent) < at) k++
   return k <= it.full ? k : null
 }
 
@@ -221,7 +246,7 @@ export function minStack (it: Pick<CurrencyItem, 'chaos' | 'full'>, at: number):
 export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number | null> {
   const e = c.items[it.name]
   if (e?.step != null) return [1, 2, 3, 4, 5].map(s => s === e.step ? 1 : null)
-  const out = stepStarts(c, it.cat).map(at => minStack(it, at))
+  const out = stepStarts(c, it.cat).map(at => minStack(it, at, c.from[1]))
   const supply = e?.supply ?? (it.free ? 1 : null)
   if (supply != null) {
     const f = Math.min(supply, it.full)
@@ -229,6 +254,8 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   }
   // A louder step never starts below a quieter one.
   for (let i = out.length - 2; i >= 0; i--) if (out[i + 1] != null && (out[i] == null || out[i]! > out[i + 1]!)) out[i] = out[i + 1]
+  // A step turned off: piles that would get it hide (an item's own step stays).
+  for (const s of c.off ?? []) if (s >= 1 && s <= 4) out[s - 1] = null
   return out
 }
 
@@ -247,9 +274,9 @@ export function currencyActions (step: CStep): FilterAction[] {
   switch (step) {
     case 0: return [a('SetFontSize', 18), a('DisableDropSound', 'True')]
     case 1: return [a('SetFontSize', 30), a('SetTextColor', 170, 158, 130, 255), a('SetBorderColor', 0, 0, 0, 0), a('SetBackgroundColor', 0, 0, 0, 180)]
-    case 2: return [a('SetFontSize', 35), a('SetTextColor', 210, 190, 140, 255), a('SetBorderColor', 170, 158, 130, 160), a('SetBackgroundColor', 20, 16, 10, 230), a('PlayAlertSound', 3, 150)]
-    case 3: return [a('SetFontSize', 39), a('SetTextColor', 235, 210, 150, 255), a('SetBorderColor', 235, 210, 150, 220), a('SetBackgroundColor', 45, 36, 18, 240), a('PlayAlertSound', 2, 200), a('MinimapIcon', 2, 'Yellow', 'Circle')]
-    case 4: return [a('SetFontSize', 42), a('SetTextColor', 255, 225, 150, 255), a('SetBorderColor', 255, 225, 150, 255), a('SetBackgroundColor', 70, 55, 25, 240), a('PlayAlertSound', 2, 300), a('PlayEffect', 'Yellow', 'Temp'), a('MinimapIcon', 1, 'Yellow', 'Circle')]
+    case 2: return [a('SetFontSize', 35), a('SetTextColor', 210, 190, 140, 255), a('SetBorderColor', 170, 158, 130, 160), a('SetBackgroundColor', 20, 16, 10, 230), a('PlayAlertSound', 2, 150)]
+    case 3: return [a('SetFontSize', 39), a('SetTextColor', 235, 210, 150, 255), a('SetBorderColor', 235, 210, 150, 220), a('SetBackgroundColor', 45, 36, 18, 240), a('PlayAlertSound', 3, 200), a('MinimapIcon', 2, 'Yellow', 'Circle')]
+    case 4: return [a('SetFontSize', 42), a('SetTextColor', 255, 225, 150, 255), a('SetBorderColor', 255, 225, 150, 255), a('SetBackgroundColor', 70, 55, 25, 240), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Yellow', 'Temp'), a('MinimapIcon', 1, 'Yellow', 'Circle')]
     case 5: return topStepActions('currency')
   }
 }
@@ -419,7 +446,7 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   if (!cfg.on || !lookup) return null
   const items = currencyItems(doc, lookup, cfg.items)
   if (!items.length) return null
-  const compiled = compileCurrency(cfg, items)
+  const compiled = compileCurrency(scaled(cfg, doc.strictness), items)
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
   const at = first < 0 ? doc.chunks.length : first
   doc.chunks.splice(at, 0, ...compiled.blocks)
