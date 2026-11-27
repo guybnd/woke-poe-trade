@@ -1,6 +1,7 @@
 // Map history's list as drawn: a header for each day (with that day's totals),
 // a line naming the character when it changes, then the maps and stash reads.
 import type { HistoryItem } from './income'
+import { formatTimeOfDay } from '../ui/format'
 
 export interface DayLine {
   kind: 'day'
@@ -137,6 +138,5 @@ export function dayLabel (at: number, now: number): { title: string, date: strin
 }
 
 export function clockTime (ts: number): string {
-  const d = new Date(ts)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return formatTimeOfDay(ts)
 }

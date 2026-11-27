@@ -68,7 +68,7 @@ import Widget from '@/web/overlay/Widget.vue'
 import { beforeQuitSave, saveConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import { WButton, WEmpty, WIcon, WPanel, WTabs, lineToast, toast, vItemTip } from '../ui'
-import { formatChaos } from '../ui/format'
+import { formatChaos, formatSigned, formatTimeOfDay } from '../ui/format'
 import { itemArt, ninjaIcon } from '../ui/game-icons'
 import { popupAnchor } from '../ui/window-anchor'
 import DockItem from '../dock/DockItem.vue'
@@ -156,13 +156,13 @@ function setCountCheap (v: boolean) {
 }
 
 const money = (chaos: number) => formatChaos(chaos, sessionDivine.value)
-const signed = (chaos: number) => `${chaos > 0 ? '+' : ''}${money(chaos)}`
+const signed = (chaos: number) => formatSigned(chaos, money)
 const art = (name: string) => ninjaIcon('DivinationCard', name) ?? undefined
 // Past sessions (DeckHistory) go back from an open one with the mouse's back button: the "?" lists it.
 const PAST_KEYS = windowKeyHelp({ back: () => {} })
 // The panel's icon: the Stacked Deck's own art.
 const deckIcon = itemArt({ name: STACKED_DECK }) ?? undefined
-const clock = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+const clock = formatTimeOfDay
 
 // Luck (C3): only while the window is on screen, since it simulates sessions.
 const windowShown = computed(() => props.config.wmWants === 'show' && wm.active.value)

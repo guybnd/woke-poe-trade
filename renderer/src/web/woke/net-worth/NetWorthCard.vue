@@ -115,7 +115,7 @@
 import { computed, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { WSegmented, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
-import { agoPhrase, formatAmount, formatDuration } from '../ui/format'
+import { agoPhrase, formatAmount, formatDuration, formatSigned } from '../ui/format'
 import { divine as divineRate, historyNow, ledger, onStatus, ratesAt, pricePrefs, setLeague, stashNow, summary, valuation, wantPrices } from './store'
 import { refreshWaitMs, seriesFor, topCardChanges } from './ledger'
 import type { SeriesPoint } from './ledger'
@@ -289,7 +289,7 @@ const div = (chaos: number) => {
   const d = toDiv(chaos)
   return d >= 100 ? formatAmount(d) : d >= 1 ? d.toFixed(1) : d.toFixed(2)
 }
-const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n) >= 100 ? formatAmount(Math.abs(n)) : Math.abs(n).toFixed(1)}`
+const signed = (n: number) => formatSigned(n, x => x >= 100 ? formatAmount(x) : x.toFixed(1))
 const inChaos = (chaos: number) => `${formatAmount(Math.round(chaos))} chaos`
 const tone = (n: number | null | undefined) => n == null || n === 0 ? 'w-dim' : n > 0 ? 'w-up' : 'w-down'
 </script>

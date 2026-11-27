@@ -1,5 +1,5 @@
 // Net worth profit per hour of play, from the last stash read's saved glance.
-import { formatAmount, formatDuration } from '../../ui/format'
+import { formatAmount, formatDuration, formatSigned } from '../../ui/format'
 import { NET_WORTH_TYPE } from '../../net-worth/widget'
 import type { Glance, GlanceRate, GlanceRates } from '../../net-worth/glance'
 import type { Lookup, LookupRow } from './types'
@@ -73,7 +73,7 @@ function wantsSelling (query: string): boolean {
 }
 
 const lostText = (chaos: number, divine: number | null) => divine && chaos >= divine ? `${(chaos / divine).toFixed(1)} div` : `${Math.round(chaos)} chaos`
-const pct = (c: number) => `${c > 0 ? '+' : c < 0 ? '−' : ''}${Math.abs(Math.round(c * 100))}%`
+const pct = (c: number) => formatSigned(Math.round(c * 100), x => `${x}%`)
 
 // Net worth's Worth selling list, from the last read's saved glance.
 export function worthSellingLookup (glance: Glance | null): Lookup {

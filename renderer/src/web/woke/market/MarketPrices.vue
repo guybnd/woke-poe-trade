@@ -72,7 +72,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { usePoeninja } from '@/web/background/Prices'
 import { ninjaArt } from './ninja-icons'
-import { WChip, WDelta, WEmpty, WIcon, WPrice, WSegmented, WSkeleton, WSpark, itemArt, ninjaIcon, openMenu, vItemTip } from '../ui'
+import { WChip, WDelta, WEmpty, WIcon, WPrice, WSegmented, WSkeleton, WSpark, itemArt, ninjaIcon, openMenu, vItemTip, formatSigned } from '../ui'
 import type { MenuEntry } from '../ui/layer'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import WSortHead from '../ui/WSortHead.vue'
@@ -268,7 +268,7 @@ function categoryIcon (c: Category): string | undefined {
   return undefined
 }
 
-const pct = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v) >= 10 ? Math.round(Math.abs(v)) : Math.abs(v).toFixed(1)}%`
+const pct = (v: number) => formatSigned(v, x => `${x >= 10 ? Math.round(x) : x.toFixed(1)}%`)
 
 // Right-click: the item strip (watch, trade, wiki…) from v-item-tip, then
 // what poe.ninja says about the row.

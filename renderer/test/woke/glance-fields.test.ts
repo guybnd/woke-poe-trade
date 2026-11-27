@@ -44,6 +44,6 @@ describe('glance bar fields', () => {
 
   it('writes hours and minutes', () => {
     expect(hoursText(45 * 60_000)).toBe('45m')
-    expect(hoursText((2 * 60 + 31) * 60_000)).toBe('2:31')
+    expect(hoursText((2 * 60 + 31) * 60_000)).toBe('2h 31m')
   })
 })

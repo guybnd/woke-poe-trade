@@ -3,6 +3,7 @@
 import { ItemCategory } from '@/parser'
 import type { ParsedItem } from '@/parser'
 import type { PobStats } from './widget'
+import { formatSigned } from '../ui/format'
 
 const SLOTS: Partial<Record<ItemCategory, string[]>> = {
   [ItemCategory.Helmet]: ['Helmet'],
@@ -87,7 +88,7 @@ const KEY_STATS: Array<{ label: string, read: (item: ParsedItem, totals: Map<str
 ]
 
 function signed (n: number): string {
-  return n > 0 ? `+${n}` : String(n)
+  return formatSigned(n, String)
 }
 
 function shown (n: number, unit = ''): string {

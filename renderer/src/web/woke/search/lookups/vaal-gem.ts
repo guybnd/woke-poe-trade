@@ -4,12 +4,13 @@ import { matchRank } from '../search'
 import { listVersions } from '../../gem-versions/versions'
 import { vaalEv } from '../../gem-versions/vaal-ev'
 import type { Lookup, LookupCard, LookupContext } from './types'
+import { formatSigned } from '../../ui/format'
 
 const QUERY = /^(?:vaal(?:ing)?|corrupt)\s+(.{3,})$/i
 const SKIP = /^(it|orb|orbs|gem|gems)$/i
 
 function signed (n: number): string {
-  return `${n >= 0 ? '+' : '−'}${Math.abs(Math.round(n))} c`
+  return formatSigned(Math.round(n), x => `${x} c`)
 }
 
 export function vaalGemCard (name: string, ctx: LookupContext): LookupCard | null {
