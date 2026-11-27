@@ -6,7 +6,7 @@ export const WEIGHT_TYPE = 'woke->weights'
 
 export type WeightKey =
   | 'x1' | 'x2' | 'r1' | 'r2' | 'r3' | 'r0'
-  | 'wr' | 'wm' | 'wn'
+  | 'wr' | 'wm' | 'wn' | 'w86'
   | 't1' | 't2' | 't3' | 't4' | 't5'
   | 'mt1' | 'mt2' | 'mt3' | 'mt4' | 'mt5'
   | 'i68' | 'i75' | 'i83' | 'i86'
@@ -43,8 +43,10 @@ export const WEIGHT_GROUPS: WeightGroup[] = [
     icon: 'fas fa-star',
     rows: [
       { key: 'wr', label: 'Rare', dflt: 1 },
-      { key: 'wm', label: 'Magic', dflt: 0.7 },
-      { key: 'wn', label: 'White', dflt: 0.7 }
+      { key: 'wm', label: 'Magic', dflt: 0.1 },
+      { key: 'wn', label: 'White', dflt: 0.1 },
+      // Crafting bases: raise (or pin) when hunting ilvl 86 white or magic bases.
+      { key: 'w86', label: 'White or magic, ilvl 86', dflt: 1 }
     ]
   },
   {
@@ -174,10 +176,10 @@ export function defaultWeights (): WeightSettings {
 }
 
 // The rows a pin (always show) can go on: ones a rule can name on their own.
-export const PIN_ROWS: ReadonlySet<WeightKey> = new Set<WeightKey>(['x1', 'x2', 'r1', 'r2', 'r3', 'l6', 'l5', 'l4', 'rgb', 'infl', 'eld', 'qual', 'fract', 'synth', 'fated', 'mirr', 'abyss', 'strand', 'ench', 'cruc', 'cp', 'ci', 'dc'])
+export const PIN_ROWS: ReadonlySet<WeightKey> = new Set<WeightKey>(['w86', 'x1', 'x2', 'r1', 'r2', 'r3', 'l6', 'l5', 'l4', 'rgb', 'infl', 'eld', 'qual', 'fract', 'synth', 'fated', 'mirr', 'abyss', 'strand', 'ench', 'cruc', 'cp', 'ci', 'dc'])
 
 // Marks only add (×1 or more): a mark under ×1 would split every rule.
-export const MARK_ROWS: WeightKey[] = ['l6', 'l5', 'l4', 'infl', 'eld', 'qual', 'fract', 'synth', 'fated', 'ench', 'strand', 'cruc', 'abyss', 'rgb']
+export const MARK_ROWS: WeightKey[] = ['w86', 'l6', 'l5', 'l4', 'infl', 'eld', 'qual', 'fract', 'synth', 'fated', 'ench', 'strand', 'cruc', 'abyss', 'rgb']
 // Rows that stay in order, lowest first: a higher drop tier or item level is
 // never worth less than a lower one.
 export const ORDERED_ROWS: WeightKey[][] = [['t1', 't2', 't3', 't4', 't5'], ['mt1', 'mt2', 'mt3', 'mt4', 'mt5'], ['i68', 'i75', 'i83', 'i86']]

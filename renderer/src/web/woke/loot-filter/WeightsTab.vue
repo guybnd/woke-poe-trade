@@ -43,9 +43,9 @@
       <WChip clickable :active="source === 'set'" title="One of each kind of mark, and the mixes" @click="source = 'set'">Test set</WChip>
       <WChip clickable :active="source === 'random'" title="Random map rares, with rough odds for each mark" @click="source === 'random' ? reroll() : (source = 'random')">Random</WChip>
       <WButton v-if="source === 'random'" size="sm" variant="ghost" icon="fas fa-dice" @click="reroll">Reroll</WButton>
-      <WButton size="sm" variant="ghost" icon="fas fa-paste" title="Copy a rare in game (Ctrl+C), then paste here (Ctrl+V)" @click="pasteFromClipboard">Paste item</WButton>
-      <span v-if="pasted.length" class="text-xs w-dim">{{ pasted.length }} pasted</span>
-      <WButton v-if="pasted.length" size="sm" variant="ghost" icon="fas fa-times" @click="pasted = []">Clear pasted</WButton>
+      <WChip v-if="pasted.length" clickable :active="source === 'pasted'" title="Only the items you pasted, newest first" @click="source = 'pasted'">Pasted ({{ pasted.length }})</WChip>
+      <WButton size="sm" variant="ghost" icon="fas fa-paste" title="Copy an item in game (Ctrl+C), then paste here (Ctrl+V)" @click="pasteFromClipboard">Paste item</WButton>
+      <WButton v-if="pasted.length && source === 'pasted'" size="sm" variant="ghost" icon="fas fa-times" @click="pasted = []; source = 'set'">Clear pasted</WButton>
       <span v-if="pasteNote" class="text-xs w-faint">{{ pasteNote }}</span>
     </div>
     <div v-if="!samples.length" class="w-faint text-sm">Load a NeverSink filter to see the test rares.</div>
@@ -141,7 +141,7 @@ const sizeText = computed(() => {
 
 // What lies on the ground: the fixed test set, or a random roll, plus
 // whatever was pasted.
-const source = ref<'set' | 'random'>('set')
+const source = ref<'set' | 'random' | 'pasted'>('set')
 const seed = ref(11)
 const RANDOM_N = 40
 interface Drop { row: BaseRow, it: WeightItem, label: string, facts?: ItemFacts }
@@ -152,13 +152,14 @@ function reroll () {
   seed.value = (seed.value * 48271) % 2147483647
 }
 const drops = computed<Drop[]>(() => {
+  if (source.value === 'pasted') return pasted.value
   const base: Drop[] = source.value === 'set'
     ? SAMPLES.flatMap(spec => {
         const row = sampleBase(spec, bases.value)
         return row ? [{ row, it: itemOf(row, spec.item), label: spec.label }] : []
       })
     : samplePile(bases.value, RANDOM_N, seed.value).map(p => ({ ...p, label: 'Random rare' }))
-  return [...pasted.value, ...base]
+  return base
 })
 function addPasted (text: string) {
   const facts = itemFacts(text, null)
@@ -168,7 +169,8 @@ function addPasted (text: string) {
     return
   }
   pasteNote.value = ''
-  pasted.value = [{ ...got, label: 'Pasted', facts: { ...facts, areaLevel: 83 } }, ...pasted.value].slice(0, 20)
+  pasted.value = [{ ...got, label: 'Pasted', facts: { ...facts, areaLevel: 83 } }, ...pasted.value].slice(0, 40)
+  source.value = 'pasted'
 }
 function onPaste (e: ClipboardEvent) {
   const t = (e.target as HTMLElement | null)?.tagName
@@ -251,6 +253,7 @@ const DECO_W = 22
 const TAG_TEXT: Partial<Record<WeightKey, string>> = {
   wm: 'Magic',
   wn: 'White',
+  w86: 'Craft 86',
   i68: '',
   i75: '',
   i83: '',

@@ -90,6 +90,7 @@ export function termsOf (it: WeightItem): WeightKey[] {
   const t = it.tier >= 2 && it.tier <= 5 ? it.tier : 1
   out.push(`${(it.rarity ?? 'Rare') === 'Rare' ? 't' : 'mt'}${t}` as WeightKey)
   out.push(it.itemLevel >= 86 ? 'i86' : it.itemLevel >= 83 ? 'i83' : it.itemLevel >= 75 ? 'i75' : 'i68')
+  if ((it.rarity ?? 'Rare') !== 'Rare' && it.itemLevel >= 86) out.push('w86')
   if (it.corruption === 'double') out.push('dc')
   else if (it.corruption === 'implicit') out.push('ci')
   else if (it.corruption === 'plain') out.push('cp')
@@ -242,7 +243,9 @@ const DECOS: Deco[] = [
 ]
 export const DECO_KEYS: ReadonlySet<WeightKey> = new Set(DECOS.map(x => x.key))
 // Least valuable first (the rule order); the last one a rare has wins.
-const decoOrder = (m: Record<WeightKey, number>) => DECOS.map((d, i) => ({ d, i })).sort((p, q) => m[p.d.key] - m[q.d.key] || p.i - q.i).map(x => x.d)
+// Over-quality always wins (Guy, 2026-11-27): a quick pick that's easy to miss.
+const decoRank = (m: Record<WeightKey, number>, k: WeightKey) => k === 'qual' ? Infinity : m[k]
+const decoOrder = (m: Record<WeightKey, number>) => DECOS.map((d, i) => ({ d, i })).sort((p, q) => (decoRank(m, p.d.key) - decoRank(m, q.d.key)) || p.i - q.i).map(x => x.d)
 const decoAction = (d: Deco) => a('SetBorderColor', ...d.rgb, 255)
 
 // The mark whose colour this rare's border takes, if any.
@@ -327,6 +330,7 @@ function pinConds (k: WeightKey, bases: BaseRow[]): FilterCondition[][] {
     const names = bases.filter(b => b.rank === k).map(b => b.name)
     return names.length ? [[c('BaseType', '==', names)]] : []
   }
+  if (k === 'w86') return [[c('Rarity', '', ['Normal', 'Magic']), c('ItemLevel', '>=', [86])]]
   return DECOS.filter(d => d.key === k).map(d => d.yes)
 }
 
@@ -426,10 +430,12 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
   const up = upMarks(m)
   const ILVL: Array<[number, WeightKey]> = [[86, 'i86'], [83, 'i83'], [75, 'i75'], [68, 'i68']]
   // Drop tier and item level, for one rarity's tier rows (best first).
+  // On white and magic gear ilvl 86 also counts the crafting-base row.
   const dimsFor = (tiers: readonly WeightKey[]) => {
+    const craft = tiers === MAGIC_TIERS ? m.w86 : 1
     const opts: Option[][] = [
       cumulative(tiers.map(t => m[t]), k => [c('UnidentifiedItemTier', '>=', [5 - k])]),
-      cumulative(ILVL.map(x => m[x[1]]), k => [c('ItemLevel', '>=', [ILVL[k][0]])])
+      cumulative(ILVL.map(x => m[x[1]] * (x[1] === 'i86' ? craft : 1)), k => [c('ItemLevel', '>=', [ILVL[k][0]])])
     ]
     const full = opts.map(o => o[o.length - 1].mask)
     const lo: number[] = []
