@@ -140,7 +140,7 @@ describe('rare weights', () => {
       expect(compiled.blocks.length).toBeLessThan(3000)
       const text = serializeFilter(doc)
       expect(text.length - SEMI.length).toBeLessThan(4_000_000)
-      const problems = validateFilter(parseFilter(text)).filter(p => p.level === 'error')
+      const problems = validateFilter(parseFilter(text)).map(p => p.message)
       expect(problems).toEqual([])
     }
   })

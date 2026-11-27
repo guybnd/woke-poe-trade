@@ -72,6 +72,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   const doc = shallowRef<FilterDoc | null>(null)
   const statuses = shallowRef<EditStatus[]>([])
   const buildBlockCount = ref(0)
+  // Rare weights (beta): rules written and about how many characters.
+  const weightRules = ref(0)
+  const weightChars = ref(0)
   const loading = ref(false)
   const saving = ref(false)
   const error = ref<string | null>(null)
@@ -294,6 +297,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     builtRulesSig = rulesSig()
     const c = compose(baseText.value)
     buildBlockCount.value = c.buildCount
+    weightRules.value = c.weightRules
+    weightChars.value = c.weightChars
     safetyCount.value = c.netCount
     safetyStackCount.value = c.netStackCount
     safetyList.value = c.netList
@@ -1357,6 +1362,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     resumeLadder,
     buildInput,
     buildBlockCount,
+    weightRules,
+    weightChars,
     files,
     folder,
     doc,

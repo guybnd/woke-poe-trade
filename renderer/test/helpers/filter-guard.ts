@@ -16,6 +16,7 @@ import type { FilterEdit } from '@/web/woke/loot-filter/edits'
 import { PRESET_NAMES } from '@/web/woke/loot-filter/timeline'
 import { LOOK_LIMITS, scaledFont } from '@/web/woke/loot-filter/look'
 import { defaultGear } from '@/web/woke/loot-filter/gear'
+import { defaultWeights } from '@/web/woke/loot-filter/weights'
 import { LEVELS, neverSink, neverSinkStyled } from './neversink'
 
 export const FILTERS = [
@@ -250,7 +251,8 @@ export const HARSHEST: { [K in Key]: Presets[K] } = {
   weapons: { on: true, archetype: 'custom', classes: [] },
   look: { on: true, size: LOOK_LIMITS.size.min, background: LOOK_LIMITS.background.min, colour: LOOK_LIMITS.colour.min },
   lowTiers: { on: true, tier: 5 },
-  gear: { ...defaultGear(), on: true }
+  gear: { ...defaultGear(), on: true },
+  weights: { ...defaultWeights(), on: true }
 }
 
 // Cluster prices hide nothing by themselves: they only pick which passive types
@@ -363,6 +365,8 @@ export function losses (before: Look, after: Look, s: Setup): string[] {
   const may = allowedLoss(s, before.rank)
   const out: string[] = []
   if (before.shown && !after.shown) out.push(`hidden (by ${after.rule})`)
+  // Rare weights redo the look of every rare they decide: only hiding counts.
+  if (s.presets.weights.on && after.rule?.startsWith('woke->weights')) return out
   if (before.sound && !after.sound && !may.sound) out.push(`silenced (by ${after.rule})`)
   if (before.beam && !after.beam && !may.beam) out.push(`lost its beam (by ${after.rule})`)
   if (before.icon && !after.icon && !may.beam) out.push(`lost its map icon (by ${after.rule})`)

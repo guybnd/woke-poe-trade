@@ -79,12 +79,13 @@ Each one on every file. "Taken away" is what the preset is allowed to take, as i
 | Label look (smallest text, no background, grey) | nothing |
 | Hide low item tiers (below tier 5) | nothing |
 | Gear table | nothing |
+| Rare weights | Two-Stone Ring, item tier 5: beam off; Stygian Vise, item tier 5: beam off |
 | Quiet mode and fewer beams saved at 1 tier | nothing |
-| Every preset, default settings | nothing |
-| Every preset, harshest settings | nothing |
-| Every preset, harshest, safety net on | nothing |
+| Every preset, default settings | Two-Stone Ring, item tier 5: beam off; Stygian Vise, item tier 5: beam off |
+| Every preset, harshest settings | Two-Stone Ring, item tier 5: beam off; Stygian Vise, item tier 5: beam off |
+| Every preset, harshest, safety net on | Two-Stone Ring, item tier 5: beam off; Stygian Vise, item tier 5: beam off |
 
-Also: all 231 pairs of presets at their harshest (on Regular and Uber+), and 200 seeded random mixes of presets and settings, 25 per file, with the safety net on in about half (`filter-guard-pairs` and `filter-guard-random` tests, run on every push to master rather than on each pull request).
+Also: all 253 pairs of presets at their harshest (on Regular and Uber+), and 200 seeded random mixes of presets and settings, 25 per file, with the safety net on in about half (`filter-guard-pairs` and `filter-guard-random` tests, run on every push to master rather than on each pull request).
 
 ## Also checked
 
