@@ -1,6 +1,7 @@
 // Loads the source filter, applies the widget's edits, and saves the result.
 import { computed, onUnmounted, shallowRef, ref, toRaw, watch } from 'vue'
 import type { BaseRow } from './weights'
+import type { CurrencyItem } from './currency-weights'
 import { MainProcess } from '@/web/background/IPC'
 import { hostRequest } from '../shared/host'
 import { customSoundsIn, installPackSounds } from './sounds'
@@ -77,6 +78,10 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   const weightRules = ref(0)
   const weightChars = ref(0)
   const weightBases = shallowRef<BaseRow[]>([])
+  // Currency weights (beta): rules written, characters, and the priced items.
+  const currencyRules = ref(0)
+  const currencyChars = ref(0)
+  const currencyItems = shallowRef<CurrencyItem[]>([])
   const loading = ref(false)
   const saving = ref(false)
   const error = ref<string | null>(null)
@@ -302,6 +307,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     weightRules.value = c.weightRules
     weightChars.value = c.weightChars
     weightBases.value = c.weightBases
+    currencyRules.value = c.currencyRules
+    currencyChars.value = c.currencyChars
+    currencyItems.value = c.currencyItems
     safetyCount.value = c.netCount
     safetyStackCount.value = c.netStackCount
     safetyList.value = c.netList
@@ -1368,6 +1376,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     weightRules,
     weightChars,
     weightBases,
+    currencyRules,
+    currencyChars,
+    currencyItems,
     files,
     folder,
     doc,

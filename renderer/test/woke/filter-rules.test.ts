@@ -12,6 +12,7 @@ import { CONDITION_KINDS, ITEM_TIERS, newCondition, newRule, ruleBlocks, rulePro
 import type { OwnRule } from '@/web/woke/loot-filter/rules'
 import { defaultGear } from '@/web/woke/loot-filter/gear'
 import { defaultWeights } from '@/web/woke/loot-filter/weights'
+import { defaultCurrency } from '@/web/woke/loot-filter/currency-settings'
 import { PRESET_TYPE, RECIPE_SLOTS, applyPresetChanges, defaultPresets, normalizePresets, presetBlocks } from '@/web/woke/loot-filter/presets'
 import type { Presets } from '@/web/woke/loot-filter/presets'
 import { insertBuildBlocks } from '@/web/woke/loot-filter/build-rules'
@@ -126,7 +127,8 @@ describe('presets', () => {
     look: { on: true, size: 100, background: 100, colour: 100 },
     lowTiers: { on: true, tier: 3 },
     gear: defaultGear(),
-    weights: defaultWeights()
+    weights: defaultWeights(),
+    currency: defaultCurrency()
   }
   const lookup = () => ({ chaos: 1, thin: false }) as never
   const breakdown = () => [{ name: 'x', chaos: 1, thin: false }]
