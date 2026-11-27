@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, ALL_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, levelOf, strictMult, scaled, tierGuess, divineChaos, withEdit } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, ALL_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, levelOf, strictMult, scaled, tierGuess, divineChaos, withEdit, kindOf } from '@/web/woke/loot-filter/currency-weights'
 import { normalizeItemEdit } from '@/web/woke/loot-filter/currency-settings'
 import type { CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
@@ -168,7 +168,8 @@ describe('currency weights', () => {
       const cfg = on(c => { c.line = line })
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, cfg, lookup)!
-      for (const it of compiled.items) {
+      // Uniques are matched by rarity: filter-loot-uniques.test.ts.
+      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques')) {
         const stacks = stacksFor(it, cfg)
         for (const n of [1, 2, 3, 5, 10, 20, 40]) {
           if (n > it.full) continue
@@ -315,7 +316,8 @@ describe('currency weights', () => {
       const compiled = applyCurrency(doc, on(c => { c.line = line }), lookup)!
       expect(compiled.blocks.length).toBeLessThan(200)
       const text = serializeFilter(doc)
-      expect(text.length - SEMI.length).toBeLessThan(120_000)
+      // About 100k for currency, fragments and cards, 25k for uniques.
+      expect(text.length - SEMI.length).toBeLessThan(150_000)
       expect(validateFilter(parseFilter(text)).map(p => p.message)).toEqual([])
     }
   })

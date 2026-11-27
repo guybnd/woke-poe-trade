@@ -26,8 +26,9 @@ import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
+import { UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
-import type { CStep, CurrencySettings, ItemEdit } from './currency-settings'
+import type { CStep, CurrencySettings, ItemEdit, SectionMode } from './currency-settings'
 
 export { CURRENCY_TYPE, CSTEP_NAMES, FAINT_UNTIL, LINE_MIN, LINE_MAX, NUDGE_MAX, MULT_MIN, MULT_MAX, defaultCurrency, normalizeCurrency } from './currency-settings'
 export type { CStep, CurrencySettings, FaintSettings, ItemEdit, SectionMode } from './currency-settings'
@@ -67,9 +68,12 @@ export const CURRENCY_CATEGORIES: CurrencyCategory[] = [
   { id: 'other', name: 'Other', art: 'Scrying Orb' }
 ]
 // Every class's categories (the Loot tab's rail shows one class at a time).
-export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES]
-export type LootKind = 'currency' | 'fragments' | 'cards'
-export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : 'currency'
+export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES]
+export type LootKind = 'currency' | 'fragments' | 'cards' | 'uniques'
+export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : 'currency'
+// A section's Off / Weighted / Always: yours, else its default (boss-only
+// uniques: Always).
+export const sectionMode = (c: Pick<CurrencySettings, 'catMode'>, cat: string): SectionMode => c.catMode?.[cat] ?? UNIQUE_MODES[cat] ?? 'auto'
 
 const BY_TYPE: Record<string, string> = {
   'currency->essence': 'essences',
@@ -133,6 +137,10 @@ export interface CurrencyItem {
   // Scrying Orb): it shows at least Small (Guy 2026-11-27).
   free?: boolean
   full: number
+  // A unique base: the unique whose price it carries, and how many priced
+  // uniques drop on it.
+  top?: string
+  of?: number
 }
 
 const SHARD_OF: Record<string, string> = {
@@ -151,6 +159,7 @@ const SHARD_OF: Record<string, string> = {
   // Not Mirror Shard: it often sells above a twentieth of a mirror (Guy).
 }
 const ANY_PAGE: EconomyGroup = { type: 'any', label: 'Any', ninja: ['*'] }
+const UNIQUE_PAGE = NET_GROUPS.find(g => g.unique)!
 function groupOf (type: string): EconomyGroup {
   return NET_GROUPS.find(g => g.type === type) ?? NET_GROUPS[0]
 }
@@ -184,6 +193,35 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
     const frags = b.type === 'fragments'
     // Divination cards: their own class too.
     const card = b.type === 'divination'
+    // Uniques: NeverSink's plain tiers, a list of bases and nothing else.
+    const ucat = b.type === 'uniques' ? uniqueCategoryOf(b.tier) : null
+    if (ucat) {
+      const bt = b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))
+      if (!bt || b.conditions.some(x => x !== bt && x.key !== 'Rarity')) continue
+      for (const name of bt.values) {
+        if (seen.has(name)) continue
+        const p = lookup?.(UNIQUE_PAGE, name) ?? null
+        const guess = uniqueGuess(b.tier)
+        const priced = p != null && !p.thin && p.chaos > 0
+        // Early league: a thin price never takes it below the guess.
+        const thin = p != null && p.chaos > 0 ? (ucat === 'uniqearly' ? Math.max(guess, p.chaos) : thinPrice(p.chaos, guess)) : guess
+        const own = edits[name]?.price
+        const m = p?.note?.match(/^(.*?)(?:, 1 of (\d+))?$/)
+        seen.set(name, {
+          name,
+          cls: UNIQUE_CLS,
+          type: 'uniques',
+          tier: b.tier,
+          cat: ucat,
+          chaos: (own ?? (priced ? p.chaos : thin)) * (edits[name]?.mult ?? 1),
+          est: own == null && !priced,
+          ...(own != null ? { own: true } : {}),
+          full: 1,
+          ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {})
+        })
+      }
+      continue
+    }
     if (!b.type || !(SCOPE.test(b.type) || frags || card)) continue
     const cls = b.conditions.find(x => x.key === 'Class')?.values ?? []
     const bt = b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))
@@ -295,7 +333,7 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   if (e?.step != null) return [1, 2, 3, 4, 5].map(s => s === e.step ? 1 : null)
   // Its category set by hand: Off hides it unless the item itself is
   // Always; Always shows every pile at least Small.
-  const mode = c.catMode?.[it.cat]
+  const mode = sectionMode(c, it.cat)
   if (mode === 'off' && e?.supply !== 1 && !e?.min) return [null, null, null, null, null]
   const out = stepStarts(c, it.cat).map(at => minStack(it, at, c.from[1]))
   const supply = e?.supply ?? (it.free || mode === 'always' ? 1 : null)
@@ -317,7 +355,7 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
 // category's Off without the item's own Always.
 export function forcedHidden (it: Pick<CurrencyItem, 'name' | 'cat'>, c: Pick<CurrencySettings, 'items' | 'catMode'>): boolean {
   const e = c.items[it.name]
-  return e?.step === 0 || (c.catMode?.[it.cat] === 'off' && e?.supply !== 1 && e?.step == null && !e?.min)
+  return e?.step === 0 || (sectionMode(c, it.cat) === 'off' && e?.supply !== 1 && e?.step == null && !e?.min)
 }
 
 // The Strictness multiplier in force: the player's own, or the filter's level's.
@@ -400,7 +438,7 @@ const mixTo = (c: number[], to: number, f: number) => c.map(v => Math.round(v + 
 // The colour pushed 80% further from grey (Normal: "as now but more saturated").
 const vivid = (c: number[]) => { const g = (c[0] + c[1] + c[2]) / 3; return c.map(v => Math.max(0, Math.min(255, Math.round(v + (v - g) * 0.8)))) }
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rgb: [number, number, number], color: string, shape: string } {
-  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? CAT_LOOK.other
+  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? CAT_LOOK.other
   const own = c.cats[cat]
   return {
     rgb: own?.text ? [own.text[0], own.text[1], own.text[2]] : d.text,
@@ -485,7 +523,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   const blocks: FilterBlock[] = []
   const stacks = new Map(items.map(it => [it.name, stacksFor(it, cfg)]))
   const area = c('AreaLevel', '>=', [68])
-  const clsCond = (list: CurrencyItem[]) => c('Class', '==', [...new Set(list.flatMap(i => i.cls.split('|')))].sort())
+  const clsCond = (list: CurrencyItem[]) => list[0]?.cls === UNIQUE_CLS ? c('Rarity', '', ['Unique']) : c('Class', '==', [...new Set(list.flatMap(i => i.cls.split('|')))].sort())
   // The piles of one item that reach each step, loudest first: [step, stack].
   const steps = (it: CurrencyItem): Array<[CStep, number]> => {
     const st = stacks.get(it.name)!
@@ -546,15 +584,59 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
 export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: PriceLookup | null, cards: CardFacts | null = null): CurrencyCompiled | null {
   // Without prices every item would be a guess: leave it to NeverSink.
   if (!cfg.on || !lookup) return null
-  const items = currencyItems(doc, lookup, cfg.items, cards)
-  if (!items.length) return null
-  const compiled = compileCurrency(scaled(cfg, doc.strictness), items, { faint: faintOn(cfg, doc.strictness) })
+  const all = currencyItems(doc, lookup, cfg.items, cards)
+  if (!all.length) return null
+  const eff = scaled(cfg, doc.strictness)
+  const faint = faintOn(cfg, doc.strictness)
+  const items = all.filter(it => it.cls !== UNIQUE_CLS)
+  const compiled = items.length ? compileCurrency(eff, items, { faint }) : { blocks: [], items: [], chars: 0 }
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
-  const at = first < 0 ? doc.chunks.length : first
-  doc.chunks.splice(at, 0, ...compiled.blocks)
-  const line = doc.blocks[0]?.line ?? 1
-  compiled.blocks.forEach(b => { b.line = line })
-  doc.blocks.unshift(...compiled.blocks)
-  doc.blocks.forEach((b, i) => { b.index = i })
-  return compiled
+  insertBlocks(doc, first < 0 ? doc.chunks.length : first, compiled.blocks)
+  const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS), faint)
+  if (!uniq) return compiled
+  return { blocks: [...compiled.blocks, ...uniq.blocks], items: [...compiled.items, ...uniq.items], chars: compiled.chars + uniq.chars }
+}
+
+function insertBlocks (doc: FilterDoc, at: number, blocks: FilterBlock[]) {
+  if (!blocks.length) return
+  const after = doc.chunks.slice(at).find((ch): ch is FilterBlock => ch.kind === 'block')
+  doc.chunks.splice(at, 0, ...blocks)
+  const line = after?.line ?? doc.blocks[doc.blocks.length - 1]?.line ?? 1
+  blocks.forEach(b => { b.line = line })
+  const i = after ? doc.blocks.indexOf(after) : doc.blocks.length
+  doc.blocks.splice(i < 0 ? doc.blocks.length : i, 0, ...blocks)
+  doc.blocks.forEach((b, k) => { b.index = k })
+}
+
+// Uniques go where NeverSink's unique tiers start, under its special rules
+// that come first (6-link, synthesised, abyss sockets; Foulborn and replicas
+// earlier still). The specials NeverSink lists among its tiers (corrupted
+// implicits, 5-link, 6 sockets, Vestigial...) are copied in between, so a
+// valuable base keeps its loud look, a special one on a cheap base keeps
+// NeverSink's, and nothing special is hidden by a price. Below area level 68
+// NeverSink's own rules still decide.
+function applyUniques (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
+  if (!items.length) return null
+  const anchor = doc.blocks.find(b => b.type === 'uniques' && uniqueCategoryOf(b.tier) != null)
+  if (!anchor) return null
+  const compiled = compileCurrency(cfg, items, { faint })
+  const loud = compiled.blocks.filter(b => b.visibility === 'Show' && Number(b.tier?.slice(1)) >= 3)
+  const quiet = compiled.blocks.filter(b => !loud.includes(b))
+  const area = c('AreaLevel', '>=', [68])
+  const specials = doc.blocks
+    .filter(b => b.index > anchor.index && b.type === 'uniques' && uniqueCategoryOf(b.tier) == null && b.visibility === 'Show' && !b.disabled)
+    .map(b => ({
+      ...b,
+      comment: `$type->${CURRENCY_TYPE} $tier->u-${b.tier} woke: currency weights, NeverSink's ${b.tier} uniques kept above the priced ones`,
+      type: CURRENCY_TYPE,
+      tier: `u-${b.tier}`,
+      conditions: [area, ...b.conditions.map(x => ({ ...x, values: [...x.values] }))],
+      actions: b.actions.map(x => ({ ...x, args: [...x.args] })),
+      dirty: true,
+      added: true,
+      inherited: true
+    }) as FilterBlock)
+  const blocks = [...loud, ...specials, ...quiet]
+  insertBlocks(doc, doc.chunks.indexOf(anchor), blocks)
+  return { ...compiled, blocks }
 }

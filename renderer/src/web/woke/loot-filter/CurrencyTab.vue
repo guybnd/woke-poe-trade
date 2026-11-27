@@ -1,7 +1,7 @@
 <template>
   <div :class="$style.wrap" class="w-scroll">
     <div :class="$style.top">
-      <WToggle v-model="c.on">{{ kind === 'currency' ? 'Prices decide endgame currency' : `Prices decide endgame currency and ${kind === 'cards' ? 'cards' : 'fragments'}` }}</WToggle>
+      <WToggle v-model="c.on">{{ kind === 'currency' ? 'Prices decide endgame currency' : `Prices decide endgame currency and ${KIND_NAME[kind]}` }}</WToggle>
       <span :class="$style.beta">Beta</span>
       <WInfo text="In maps (area level 68+), each pile of currency, essences, fossils, oils, delirium orbs, omens, tattoos and ducats counts as its poe.ninja price × stack (10 Chaos is 10c); an item whose full stack is worth less than Decent counts × stack^0.75, so piles of cheap shards stay quiet. Under the line it hides; over it it shows Small, and Normal, Decent, Big and Tink start at the prices you set; untick Show on a step to hide everything that would get it. Each category has its own Strictness (×1.25 a notch on top of the main one); click an item to set its step, price, supply stack or look by hand. Items with no price get a guess from NeverSink's tier (est.). Only this profile. Your own rules, build rules and presets still go on top. In maps these rules replace NeverSink's for these items, so price moves and tier edits for them apply only below area level 68." />
       <span class="w-faint text-xs">{{ statusText }}</span>
@@ -82,7 +82,7 @@
         <span :class="$style.dots" aria-hidden="true"><i v-for="r in g.rows" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
         <span class="flex-1" />
         <span :class="$style.secMode" data-loot-section-mode @click.stop @keydown.stop>
-          <WSegmented :model-value="c.catMode[g.cat.id] ?? 'auto'" :options="SECTION_MODES" role="group" :aria-label="`${g.cat.name}: Off, Weighted or Always`" @update:model-value="v => setCatMode(g.cat.id, v)" />
+          <WSegmented :model-value="sectionMode(c, g.cat.id)" :options="SECTION_MODES" role="group" :aria-label="`${g.cat.name}: Off, Weighted or Always`" @update:model-value="v => setCatMode(g.cat.id, v)" />
         </span>
         <label :class="$style.whole" :title="`${g.cat.name}' own strictness: multiplies every step's price for them, on top of the main Strictness`" @click.stop @keydown.stop>Strictness
           <select :value="c.nudge[g.cat.id] ?? 0" :class="$style.sel2" :aria-label="`${g.cat.name} strictness`" @change="setNudge(g.cat.id, Number(($event.target as HTMLSelectElement).value))">
@@ -125,9 +125,9 @@
             </select></label>
         </div>
         <template v-for="r in (sg.name && !isOpen(`${g.cat.id}/${sg.name}`) ? [] : sg.rows)" :key="r.it.name">
-          <WItemRow :item="{ name: r.it.name }" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
+          <WItemRow :item="r.it.top ? { name: r.it.top, type: r.it.name } : { name: r.it.name }" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
             <span :class="$style.name"><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
-              :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ r.it.name }}<span v-if="r.edited" :class="$style.edited"> edited</span></span>
+              :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ r.it.name }}<span v-if="r.it.top" :class="$style.top" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.edited" :class="$style.edited"> edited</span></span>
             <span :class="$style.price" :title="r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows at least Small' : r.it.est ? `No usable price: a guess from NeverSink's ${r.it.tier ? `tier ${r.it.tier}` : 'tiers'}` : 'poe.ninja'">
               {{ chaosText(r.it.chaos) }}<span v-if="r.it.est" :class="$style.est"> est.</span>
             </span>
@@ -158,9 +158,9 @@ import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden } from './currency-weights'
+import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
-import type { CStep, CurrencyItem, ItemEdit, LootKind } from './currency-weights'
+import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
 
 const props = withDefaults(defineProps<{
@@ -169,6 +169,7 @@ const props = withDefaults(defineProps<{
   // The Loot tab's class: Currency or Fragments, one engine and one ladder.
   kind?: LootKind
 }>(), { kind: 'currency' })
+const KIND_NAME: Record<LootKind, string> = { currency: 'currency', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques' }
 const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.kind))
 
 const c = computed(() => props.config.presets.currency)
@@ -213,7 +214,7 @@ const items = computed<CurrencyItem[]>(() => baseItems.value.map(it => withEdit(
 const SECTION_MODES = [{ value: 'off', label: 'Off' }, { value: 'auto', label: 'Weighted' }, { value: 'always', label: 'Always' }]
 function setCatMode (cat: string, v: string) {
   const next = Object.fromEntries(Object.entries(c.value.catMode).filter(([k]) => k !== cat))
-  if (v === 'off' || v === 'always') next[cat] = v
+  if (v !== sectionMode({ catMode: {} }, cat)) next[cat] = v as SectionMode
   c.value.catMode = next
 }
 // Faint (Guy's T1): on below a Strictness you choose.
@@ -224,7 +225,7 @@ const faintSample = computed(() => faintLook(catColour(sampleCat.value, c.value)
 interface Pill { step: CStep, text: string }
 function pillsOf (stacks: Array<number | null>, edit: ItemEdit | undefined, it: CurrencyItem): Pill[] {
   const under = forcedHidden(it, c.value) || !faintActive.value ? 'Hidden' : 'Faint'
-  if (stacks.every(k => k == null)) return [{ step: 0, text: edit?.step === 0 ? 'Hidden, set by you' : c.value.catMode[it.cat] === 'off' && under === 'Hidden' ? 'Hidden, section off' : `${under} at any stack` }]
+  if (stacks.every(k => k == null)) return [{ step: 0, text: edit?.step === 0 ? 'Hidden, set by you' : sectionMode(c.value, it.cat) === 'off' && under === 'Hidden' ? 'Hidden, section off' : `${under} at any stack` }]
   if (edit?.step != null) return [{ step: edit.step, text: `${CSTEP_NAMES[edit.step]} at any stack, set by you` }]
   const out: Pill[] = []
   if (stacks[0] != null && stacks[0] > 1) out.push({ step: 0, text: stacks[0] === 2 ? `${under} at 1` : `${under} 1–${stacks[0] - 1}` })
@@ -326,7 +327,7 @@ const level = computed(() => levelOf(props.store.doc.value?.strictness ?? null))
 const mult = computed(() => c.value.mult ?? strictMult(level.value))
 const eff = computed(() => scaled(c.value, props.store.doc.value?.strictness ?? null))
 const dragMult = ref<number | null>(null)
-const SAMPLE_CATS = props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
+const SAMPLE_CATS = props.kind === 'uniques' ? ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss'] : props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
 // The step cards' sample label: one category for all six, click to go to the next.
 const sampleCat = ref(SAMPLE_CATS[0])
 function nextSample () {
@@ -396,7 +397,7 @@ function setEdit (name: string, e: ItemEdit | null) {
 }
 
 const emptyText = computed(() => {
-  const what = props.kind === 'cards' ? 'divination cards' : props.kind === 'fragments' ? 'fragments' : 'currency'
+  const what = props.kind === 'currency' ? 'currency' : KIND_NAME[props.kind]
   if (!props.store.doc.value) return `Load a NeverSink filter to see its ${what}.`
   if (!props.store.prices.lookup.value) return 'Waiting for prices from poe.ninja.'
   return `No ${what} found in this filter.`
@@ -528,6 +529,7 @@ function chaosText (v: number): string {
 .pills { display: flex; gap: 3px; flex-wrap: wrap; min-width: 0; }
 .pill { font-size: var(--w-fs-xs); padding: 0 5px; border-radius: 2px; line-height: 1.5; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .edited { color: var(--w-accent, #c8a565); font-size: var(--w-fs-xs); }
+.top { color: #af6025; font-size: var(--w-fs-xs); }
 .pen { font-size: var(--w-fs-xs); }
 .star { background: none; border: 0; padding: 0 5px 0 0; color: var(--w-faint); cursor: pointer; font-size: var(--w-fs-xs); }
 .star:hover { color: #e8c96a; }
