@@ -462,7 +462,16 @@ test('a mod lists the uniques that have it, priced, with the matched words lit',
   await box.fill('onslaught')
   await expect(panel.getByRole('button', { name: /Dance of Blades/ })).toBeVisible({ timeout: 15_000 })
 
-  // Under 4 letters there are no mod hits.
+  // Kind and slot words filter, and the heading says how it read them.
+  await box.fill('rarity vestig')
+  await expect(panel.locator('[data-search-mod-note]')).toHaveText('· Vestigial')
+  await expect(panel.locator('[data-search-mod-hit]').first()).toContainText('Item Rarity')
+  await overlay.snap('search-unique-mods-vestigial')
+  await box.fill('iir boots')
+  await expect(panel.locator('[data-search-mod-note]')).toHaveText('· Item Rarity · Boots')
+  await expect(panel.getByRole('button', { name: /Goldwyrm/ }).first()).toBeVisible()
+
+  // Under 4 letters there are no mod hits, short names aside.
   await box.fill('ons')
   await expect(panel.getByText('Uniques with this mod', { exact: true })).toHaveCount(0)
 })

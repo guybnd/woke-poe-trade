@@ -42,7 +42,6 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-corpse-card': { check: { name: 'Perfect Hydra', text: CORPSE_ITEM }, spot: 'ninja-card' },
   'price-check-seller-spread': { check: { name: 'Exalted Orb' }, spot: 'seller-spread' },
   'price-check-exchange-ladder': { check: { name: 'Exalted Orb' }, spot: 'exchange-ladder' },
-  'price-check-card-stack': { check: { name: 'The Doctor' }, spot: 'related' },
   'price-check-gem-kinds': { check: { name: 'Ice Nova of Frostbolts' }, spot: 'related' },
   // A base has no check by name: the game's text of a plain one.
   'price-check-chance-uniques': { check: { name: 'Glorious Plate', rarity: 'normal', text: 'Item Class: Body Armours\nRarity: Normal\nGlorious Plate\n--------\nArmour: 776\n--------\nItem Level: 84\n' }, spot: 'related' },
@@ -68,6 +67,8 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'search-keys-list': { search: 'keys' },
   // Uniques with a mod: priced rows, Goldwyrm's Vestigial line among them.
   'search-unique-mods': { search: 'item rarity' },
+  // A kind word filters: the heading says Vestigial.
+  'search-mod-filter-words': { search: 'rarity vestigial' },
   // Notables and keystones by their stats, under Passive tree.
   'search-tree-by-stat': { search: 'onslaught' },
   // A base with no saved price: its Price check button leads.
