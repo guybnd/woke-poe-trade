@@ -1362,7 +1362,7 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   // The strictness slider multiplies every step's price, every category.
   await page.getByRole('slider', { name: /Strictness/ }).fill('2')
   await expect(page.locator('[data-currency-min]')).toContainText('×2.00')
-  await expect(page.getByRole('combobox', { name: 'Orbs show from', exact: true })).toContainText('1c (Small)')
+  await expect(page.getByRole('combobox', { name: 'Orbs show from', exact: true })).toContainText('0.4c (Small)')
   await page.waitForTimeout(500)
   await overlay.snap('currency weights tab')
 
