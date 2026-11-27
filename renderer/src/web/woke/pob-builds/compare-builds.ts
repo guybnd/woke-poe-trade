@@ -2,6 +2,7 @@
 // saved stats describe.
 import { buildDps, gearOrder, gemsOf, isGearSlot, shortNumber, slotLabel } from './build-model'
 import type { PobDetails, PobItem, PobStats } from './widget'
+import { formatSigned } from '../ui/format'
 
 export interface StatCompare {
   label: string
@@ -42,7 +43,7 @@ const STATS: Array<{ label: string, read: Read, percent?: boolean, overCap?: boo
 ]
 
 function signed (n: number): string {
-  return `${n > 0 ? '+' : ''}${shortNumber(n)}`
+  return formatSigned(n, shortNumber)
 }
 
 function compareStat (a: number | undefined, b: number | undefined, percent?: boolean): Pick<StatCompare, 'delta' | 'tone'> {
@@ -50,7 +51,7 @@ function compareStat (a: number | undefined, b: number | undefined, percent?: bo
   const tone = b > a ? 'up' : 'down'
   if (percent && a > 0) {
     const pct = (b - a) / a * 100
-    return { delta: `${pct > 0 ? '+' : ''}${pct.toFixed(Math.abs(pct) >= 100 ? 0 : 1)}%`, tone }
+    return { delta: formatSigned(pct, v => `${v.toFixed(Math.abs(pct) >= 100 ? 0 : 1)}%`), tone }
   }
   return { delta: signed(b - a), tone }
 }

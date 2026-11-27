@@ -28,7 +28,7 @@
 // The Claude link's switch, under the experimental rows. Off by default; the
 // server in main starts only when this is on.
 import { computed, onMounted, shallowRef } from 'vue'
-import { WBanner, WButton, WToggle } from '../ui'
+import { WBanner, WButton, WToggle, formatTimeOfDay } from '../ui'
 import { toast } from '../ui/layer'
 import { copyText } from '../ui/copy'
 import { hostRequest } from '../shared/host'
@@ -62,8 +62,7 @@ function copy (text: string, what: string) {
 }
 
 function time (at: number) {
-  const d = new Date(at)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return formatTimeOfDay(at)
 }
 </script>
 

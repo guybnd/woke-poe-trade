@@ -56,7 +56,7 @@
 import { computed, nextTick, shallowRef, watch } from 'vue'
 import { WButton, WLineActs, WLineNum, lineKeys, lineMenu, openMenu, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui/layer'
-import { formatAmount } from '../ui/format'
+import { formatAmount, formatSigned } from '../ui/format'
 import { itemMenuHead } from '../ui/tooltip/item-menu'
 import type { ItemMenuRef } from '../ui/tooltip/item-menu'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
@@ -176,7 +176,7 @@ const div = (chaos: number) => {
   return d >= 100 ? formatAmount(d) : d >= 1 ? d.toFixed(1) : d >= 0.01 ? d.toFixed(2) : formatAmount(d)
 }
 const qty = (n: number) => formatAmount(n)
-const pct = (c: number | null | undefined) => c == null ? '—' : `${c > 0 ? '+' : c < 0 ? '−' : ''}${Math.abs(c * 100).toFixed(1)}%`
+const pct = (c: number | null | undefined) => c == null ? '—' : formatSigned(c, x => `${(x * 100).toFixed(1)}%`)
 const tone = (c: number | null | undefined) => c == null || Math.abs(c) < 0.0005 ? 'w-dim' : c > 0 ? 'w-up' : 'w-down'
 
 function colourOf (l: ValuedLine) {

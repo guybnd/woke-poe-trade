@@ -159,6 +159,8 @@ import { DIVISIONS, MEMBERS, adviceFor, slotKey } from './betrayal'
 import { useBetrayalSlots } from './betrayal-slots'
 import type { AdviceKind } from './betrayal'
 import { useMechanicZone } from './zone'
+import { usePoeninja } from '@/web/background/Prices'
+import { divineRate } from '../shared/price-row'
 
 const props = defineProps<{
   config: MechanicsWidget
@@ -212,7 +214,9 @@ if (!props.config.posChecked) {
 
 const prices = usePriceIndex()
 const items = computed(() => prices.snapshot.value?.items ?? [])
-const divine = computed(() => prices.snapshot.value?.divine ?? null)
+// One divine rate in every window: live poe.ninja's, else the saved prices' (shared/price-row.ts).
+const liveRate = usePoeninja().xchgRate
+const divine = computed(() => divineRate(liveRate.value, prices.snapshot.value?.divine))
 const hasPrices = computed(() => items.value.length > 0)
 
 const visible = computed(() => MECHANICS.filter(m => !props.config.hidden.includes(m.id)))

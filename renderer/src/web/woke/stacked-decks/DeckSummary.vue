@@ -62,7 +62,7 @@
 import { computed } from 'vue'
 import { useFold } from '../ui/fold'
 import { WInfo, WSegmented } from '../ui'
-import { formatChaos } from '../ui/format'
+import { formatChaos, formatSigned } from '../ui/format'
 import ResultChart from './ResultChart.vue'
 import { MIN_CALIBRATION_DECKS, luckText, runningResult, totals } from './deck'
 import type { CardEdits, CardFilter, PriceOf } from './deck'
@@ -134,7 +134,7 @@ const cheapTitle = computed(() => props.filter?.count === false
 const shown = computed(() => props.limit > 0 ? t.value.rows.slice(0, props.limit) : t.value.rows)
 
 const money = (chaos: number) => formatChaos(chaos, props.divine)
-const signed = (chaos: number) => `${chaos > 0 ? '+' : ''}${money(chaos)}`
+const signed = (chaos: number) => formatSigned(chaos, money)
 const tone = (v: number | null) => v == null ? '' : v >= 0 ? 'w-up' : 'w-down'
 
 const luckInfo = computed(() => {

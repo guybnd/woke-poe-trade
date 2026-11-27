@@ -8,6 +8,7 @@
 import { isFarmedMap, isMapSideArea } from '../shared/map-areas'
 import { parseLogLine, slainName, speakerOf } from '../campaign/log-parse'
 import { lineTime } from '../campaign/log-tail'
+import { formatTimeOfDay } from '../ui/format'
 
 export { slainName }
 
@@ -314,7 +315,7 @@ export function shortTime (ms: number): string {
 
 export function whenText (at: number, now = Date.now()): string {
   const d = new Date(at)
-  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  const time = formatTimeOfDay(d)
   if (d.toDateString() === new Date(now).toDateString()) return `today ${time}`
   return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${time}`
 }
