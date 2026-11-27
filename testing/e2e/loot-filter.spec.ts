@@ -1364,9 +1364,10 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   const line = page.getByRole('button', { name: /^Line: / })
   const before = await line.getAttribute('aria-label')
   const box = (await line.boundingBox())!
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height - 4)
+  // Grabbed by its label: a step's name can sit over the handle's foot.
+  await page.mouse.move(box.x + box.width / 2, box.y + 6)
   await page.mouse.down()
-  await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height - 4, { steps: 5 })
+  await page.mouse.move(box.x + box.width / 2 + 80, box.y + 6, { steps: 5 })
   await page.mouse.up()
   await expect(line).not.toHaveAttribute('aria-label', before!)
   await expect(page.getByText('Your ranks')).toBeVisible()
@@ -1374,6 +1375,13 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   await overlay.snap('rare weights tab')
   await page.getByRole('button', { name: /Looks/ }).click()
   await overlay.snap('rare weights tab, looks open')
+  // Flasks score on the same line: base rank × quality × item level.
+  await page.locator('[data-equip-class="flasks"]').click()
+  const qs = page.locator('[data-equip-flask="Quicksilver Flask"]')
+  await expect(qs).toBeVisible()
+  await qs.getByRole('button', { name: "Don't care" }).click()
+  await expect(qs.getByRole('button', { name: "Don't care" })).toHaveAttribute('aria-pressed', 'true')
+  await overlay.snap('equipment tab, flasks')
 })
 
 test('Currency weights: categories fold open, an item opens its editor, and the ground pile opens an item', async ({ overlay, fakeApp }) => {

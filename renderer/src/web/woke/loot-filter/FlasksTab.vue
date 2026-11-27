@@ -1,0 +1,57 @@
+<template>
+  <!-- Flasks on the Equipment tab (Guy's F1, 2026-11-27): base rank ×
+       quality × item level, on Rare weights' line and steps. -->
+  <div :class="$style.wrap" class="w-scroll" data-equip-flasks>
+    <div :class="$style.top">
+      <WToggle v-model="w.on">Score endgame rares and flasks</WToggle>
+      <span :class="$style.beta">Beta</span>
+      <WInfo text="In maps (area level 68+), a white or magic utility flask scores its base rank × quality (×2 at 20%, ×4 at 26%) × item level (×2 at 85+, where the top mods roll), on the same line and steps as rares. Under the line it hides. Life and mana flasks, tinctures and levelling stay NeverSink's. The same switch as Rare gear." />
+    </div>
+    <div :class="$style.head" aria-hidden="true">
+      <span :class="$style.name" />
+      <span :class="$style.rank">Rank</span>
+      <span v-for="b in BANDS" :key="b.label" :class="$style.cell">{{ b.label }}</span>
+    </div>
+    <div v-for="r in rows" :key="r.name" :class="$style.row" :data-equip-flask="r.name">
+      <span v-item-tip="{ name: r.name }" :class="$style.name">{{ r.name }}</span>
+      <WSegmented :class="$style.rank" :model-value="r.rank" :options="RANKS" role="group" :aria-label="`${r.name}: rank`" @update:model-value="v => setRank(r.name, v)" />
+      <span v-for="(s, i) in r.steps" :key="i" :class="$style.cell"><span :class="$style.pill" :style="{ background: STEP_CSS[s], color: s >= 3 ? '#140f08' : '#efe4cc' }">{{ STEP_NAMES[s] }}</span></span>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { WInfo, WSegmented, WToggle, vItemTip } from '../ui'
+import { FLASK_BASES, flaskRank, flaskStep } from './flask-weights'
+import { STEP_NAMES } from './weights'
+import type { RankKey } from './weight-settings'
+import type { LootFilterWidget } from './widget'
+
+const props = defineProps<{ config: LootFilterWidget }>()
+const w = computed(() => props.config.presets.weights)
+const RANKS = [{ value: 'r1', label: 'Top' }, { value: 'r2', label: 'Good' }, { value: 'r3', label: 'Low' }, { value: 'rj', label: "Don't care" }]
+const BANDS = [{ label: 'Plain', q: 0, i: 0 }, { label: '20%', q: 20, i: 0 }, { label: '20%, ilvl 85', q: 20, i: 85 }, { label: '26%, ilvl 85', q: 26, i: 85 }]
+const STEP_CSS = ['#3a3328', '#6b5a3a', '#9a7d45', '#d8b25a', '#f0e0b0']
+const rows = computed(() => FLASK_BASES.map(name => ({
+  name,
+  rank: flaskRank(w.value, name),
+  steps: BANDS.map(b => flaskStep(w.value, name, b.q, b.i))
+})))
+function setRank (name: string, v: string) {
+  w.value.ranks = { ...w.value.ranks, [name]: v as RankKey }
+}
+</script>
+
+<style module>
+.wrap { flex: 1 1 auto; min-width: 0; padding: 10px var(--w-pad); display: flex; flex-direction: column; gap: 4px; }
+.top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.beta { font-size: var(--w-fs-xs); color: var(--w-dim); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); padding: 0 4px; }
+.head, .row { display: grid; grid-template-columns: minmax(8rem, 1fr) auto repeat(4, 6.5rem); align-items: center; gap: 8px; }
+.head { font-size: var(--w-fs-xs); color: var(--w-dim); }
+.row { padding: 2px 6px; border-bottom: 1px solid var(--w-line); }
+.name { min-width: 0; color: #8888ff; font-size: var(--w-fs-sm); }
+.rank { justify-self: start; }
+.cell { text-align: center; }
+.pill { display: inline-block; padding: 0 6px; border-radius: 2px; font-size: var(--w-fs-xs); }
+</style>

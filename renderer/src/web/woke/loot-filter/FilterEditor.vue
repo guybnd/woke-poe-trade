@@ -283,7 +283,7 @@
     <template v-else-if="tab === 'preview'" />
     <PresetsTab v-else-if="tab === 'presets'" :store="store" :config="config" />
     <GearTab v-else-if="tab === 'gear' || tab === 'ranks'" :key="tab" :store="store" :config="config" :view="tab === 'ranks' ? 'ranks' : 'table'" @open-rule="openRule" />
-    <WeightsTab v-else-if="tab === 'weights'" :store="store" :config="config" />
+    <EquipmentTab v-else-if="tab === 'weights'" :store="store" :config="config" />
     <LootTab v-else-if="tab === 'currency'" :store="store" :config="config" @open-rule="r => jumpTo(r.type, r.tier)" />
     <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" />
     <NeverSinkTab v-else-if="tab === 'neversink'" :store="store" :config="config" :anchor="panel?.el" />
@@ -424,7 +424,7 @@ import PricesTab from './PricesTab.vue'
 import PreviewTab from './PreviewTab.vue'
 import PresetsTab from './PresetsTab.vue'
 import GearTab from './GearTab.vue'
-import WeightsTab from './WeightsTab.vue'
+import EquipmentTab from './EquipmentTab.vue'
 import LootTab from './LootTab.vue'
 import { CURRENCY_TYPE } from './currency-settings'
 import { experimentalUnlocked } from '../personal'
@@ -560,7 +560,7 @@ const tabOptions = computed(() => [
   { value: 'gear', label: 'Drop tiers', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear shows, by rank, rarity and drop tier' },
   { value: 'ranks', label: 'Base ranks', count: Object.keys(props.config.presets.gear.moves).length || undefined, title: 'Which gear bases sit in which rank' },
   // Beta: shown with the experimental tools, or while this profile uses it.
-  ...(experimentalUnlocked.value || props.config.presets.weights.on ? [{ value: 'weights', label: 'Rare weights', count: props.config.presets.weights.on ? '✓' : undefined, title: 'Beta: decide endgame rares by a weight you tune' }] : []),
+  ...(experimentalUnlocked.value || props.config.presets.weights.on ? [{ value: 'weights', label: 'Equipment', count: props.config.presets.weights.on ? '✓' : undefined, title: 'Beta: decide endgame rares and flasks by a score you tune' }] : []),
   ...(experimentalUnlocked.value || props.config.presets.currency.on ? [{ value: 'currency', label: 'Loot', count: props.config.presets.currency.on ? '✓' : undefined, title: 'Beta: show endgame loot by what it is worth, class by class' }] : []),
   { value: 'preview', label: 'Preview' },
   // The look strip lives on Rules, so it isn't counted here.
