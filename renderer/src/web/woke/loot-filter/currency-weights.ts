@@ -296,9 +296,9 @@ export function currencyActions (step: CStep): FilterAction[] {
   switch (step) {
     case 0: return [a('SetFontSize', 18), a('DisableDropSound', 'True')]
     case 1: return [a('SetFontSize', 32), a('SetTextColor', 235, 210, 150, 255), a('SetBorderColor', 106, 95, 68, 255), a('SetBackgroundColor', 0, 0, 0, 215)]
-    case 2: return [a('SetFontSize', 37), a('SetTextColor', 240, 220, 175, 255), a('SetBorderColor', 235, 210, 150, 255), a('SetBackgroundColor', 52, 46, 33, 240), a('PlayAlertSound', 2, 180), a('MinimapIcon', 2, 'Yellow', 'Circle')]
-    case 3: return [a('SetFontSize', 41), a('SetTextColor', 18, 13, 8, 255), a('SetBorderColor', 245, 232, 202, 255), a('SetBackgroundColor', 235, 210, 150, 255), a('PlayAlertSound', 3, 250), a('PlayEffect', 'Yellow', 'Temp'), a('MinimapIcon', 1, 'Yellow', 'Circle')]
-    case 4: return [a('SetFontSize', 45), a('SetTextColor', 255, 255, 255, 255), a('SetBorderColor', 255, 40, 40, 255), a('SetBackgroundColor', 200, 179, 128, 255), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Yellow'), a('MinimapIcon', 0, 'Yellow', 'Circle')]
+    case 2: return [a('SetFontSize', 37), a('SetTextColor', 255, 219, 111, 255), a('SetBorderColor', 255, 219, 111, 255), a('SetBackgroundColor', 51, 44, 22, 255), a('PlayAlertSound', 2, 180), a('MinimapIcon', 2, 'Yellow', 'Circle')]
+    case 3: return [a('SetFontSize', 41), a('SetTextColor', 0, 0, 0, 255), a('SetBorderColor', 235, 210, 150, 255), a('SetBackgroundColor', 255, 190, 0, 255), a('PlayAlertSound', 3, 250), a('PlayEffect', 'Yellow', 'Temp'), a('MinimapIcon', 1, 'Yellow', 'Circle')]
+    case 4: return [a('SetFontSize', 45), a('SetTextColor', 0, 0, 0, 255), a('SetBorderColor', 235, 210, 150, 255), a('SetBackgroundColor', 255, 93, 27, 255), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Yellow'), a('MinimapIcon', 0, 'Yellow', 'Circle')]
     case 5: return topStepActions('currency')
   }
 }
@@ -329,14 +329,16 @@ export const CAT_LOOK: Record<string, { text: [number, number, number], color: s
   other: { text: [210, 190, 140], color: 'Grey', shape: 'Circle' }
 }
 
-// The ladder (Guy 2026-11-27, R2 "fill up"; one colour language, C1): the
-// text stays currency gold, the category's colour fills in as value climbs.
-// Small: dim, no box. Normal: an outline in the category colour. Decent: a
-// filled dark tint of it. Big: inverted, the category colour is the box.
-// Tink: red on white with the category's border and map icon (beam red).
+// The ladder (Guy 2026-11-27, O2C: the orange the game's players know).
+// Small: the category colour on black. Normal: a vivid category colour on a
+// dark box of it. Decent: black on amber, Big: black on orange, both edged in
+// the category colour. Tink: red on white with the category's border and map
+// icon (beam red).
 // A step sets loudness only (size, sound, beam, icon size): its edits apply to
 // every category. A category sets its colour and map icon.
 const mixTo = (c: number[], to: number, f: number) => c.map(v => Math.round(v + (to - v) * f))
+// The colour pushed 80% further from grey (Normal: "as now but more saturated").
+const vivid = (c: number[]) => { const g = (c[0] + c[1] + c[2]) / 3; return c.map(v => Math.max(0, Math.min(255, Math.round(v + (v - g) * 0.8)))) }
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rgb: [number, number, number], color: string, shape: string } {
   const d = CAT_LOOK[cat] ?? CAT_LOOK.other
   const own = c.cats[cat]
@@ -360,10 +362,9 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
   const col = (a: number[], alpha = 255) => [a[0], a[1], a[2], alpha] as [number, number, number, number]
   switch (step) {
     case 1: Object.assign(out, { text: col(rgb), border: col(mixTo(rgb, 0, 0.55)), background: col([0, 0, 0], 215) }); break
-    case 2: Object.assign(out, { text: col(mixTo(rgb, 255, 0.25)), border: col(rgb), background: col(mixTo(rgb, 0, 0.78), 240) }); break
-    case 3: Object.assign(out, { text: col([18, 13, 8]), border: col(mixTo(rgb, 255, 0.5)), background: col(rgb) }); break
-    // Big: white text and a red edge on a deeper category fill (Guy 2026-11-27: X, then R).
-    case 4: Object.assign(out, { text: col([255, 255, 255]), border: col([255, 40, 40]), background: col(mixTo(rgb, 0, 0.15)) }); break
+    case 2: { const k = vivid(rgb); Object.assign(out, { text: col(k), border: col(k), background: col(mixTo(k, 0, 0.8)) }); break }
+    case 3: Object.assign(out, { text: col([0, 0, 0]), border: col(rgb), background: col([255, 190, 0]) }); break
+    case 4: Object.assign(out, { text: col([0, 0, 0]), border: col(rgb), background: col([255, 93, 27]) }); break
     case 5: Object.assign(out, { border: col(rgb) }); break
   }
   // Tink's icon is red, in the category's shape (Guy 2026-11-27).
