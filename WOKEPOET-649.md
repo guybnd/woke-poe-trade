@@ -67,6 +67,15 @@ history:
     date: '2026-11-27T05:22:05.861Z'
     selfAttested: true
     id: c-2026-11-27t05-22-05-861z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 987 merged (https://github.com/guybnd/woke-poe-trade/pull/987,
+      1e9341b): Weights cover white and magic gear (Rarity row, own drop tier
+      rows), always-show pins, no rules before item data loads.
+    date: '2026-11-27T05:55:45.816Z'
+    selfAttested: true
+    id: c-2026-11-27t05-55-45-816z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/976'
 ---
 Epic: reimagine the loot filter as a clear visual funnel that shows how it decides. Design only, nothing built yet: 8 design options waiting on Guy's picks. Subtasks come after the picks.
