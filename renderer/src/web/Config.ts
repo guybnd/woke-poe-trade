@@ -15,6 +15,7 @@ import { POE_RE_TYPE, initPoeReWidget } from './woke/regex-library/poe-re-widget
 import { MEGALO_TYPE, initMegaloWidget } from './woke/megalo/widget'
 import { FORBIDDEN_TYPE, initForbiddenWidget } from './woke/forbidden/widget'
 import { SCRYING_TYPE, initScryingWidget } from './woke/scrying/widget'
+import { WATCHERS_EYE_TYPE, initWatchersEyeWidget } from './woke/watchers-eye/widget'
 import { SEARCH_TYPE, initSearchWidget, moveSearchKey } from './woke/search/widget'
 import type { SearchWidget } from './woke/search/widget'
 import { moveStashSearchToLibrary } from './woke/regex-library/apt-import'
@@ -552,7 +553,8 @@ function upgradeConfig (_config: Config): Config {
       [POE_RE_TYPE, initPoeReWidget],
       [MEGALO_TYPE, initMegaloWidget],
       [FORBIDDEN_TYPE, initForbiddenWidget],
-      [SCRYING_TYPE, initScryingWidget, 'scrying', 'boss-runs']
+      [SCRYING_TYPE, initScryingWidget, 'scrying', 'boss-runs'],
+      [WATCHERS_EYE_TYPE, initWatchersEyeWidget, 'watchers-eye', 'forbidden']
     ]
     for (const [type, init, module, follows, always] of singles) {
       if (config.widgets.some(w => w.wmType === type)) continue

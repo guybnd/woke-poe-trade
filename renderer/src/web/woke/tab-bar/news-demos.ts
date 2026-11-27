@@ -94,7 +94,7 @@ const NOTHING_TO_SHOW = new Set(['search-recent-queries', 'search-recent-save', 
   'deck-card-line-item', 'analytics-line-item'])
 // Lines about a whole new tool: opening its window is the show. Any other
 // line needs a tab, a spot, a sample or a Settings page (news.test.ts).
-export const WHOLE_TOOL = new Set(['scrying-helper'])
+export const WHOLE_TOOL = new Set(['scrying-helper', 'watchers-eye-finder'])
 
 // Whether Show me has somewhere real to go: a tab, a sample, the Settings
 // page the feature lives on, or the tool's own window. `byName`: the client
