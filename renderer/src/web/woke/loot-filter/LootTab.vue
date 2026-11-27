@@ -7,11 +7,12 @@
       <button v-for="k in LOOT_CLASSES" :key="k.id" type="button" :class="$style.cls" :aria-pressed="k.id === sel" :data-loot-class="k.id" @click="sel = k.id">
         <span :class="$style.sw" :style="{ background: `rgb(${k.rgb.join(',')})` }" aria-hidden="true" />
         <span :class="$style.name">{{ k.name }}</span>
-        <span v-if="PRICED.has(k.id)" :class="$style.state">{{ config.presets.currency.on ? 'On' : 'Off' }}</span>
+        <span v-if="PRICED.has(k.id) || k.id === 'maps'" :class="$style.state">{{ config.presets.currency.on ? 'On' : 'Off' }}</span>
         <span v-else :class="$style.ns">NeverSink</span>
       </button>
     </nav>
-    <CurrencyTab v-if="sel === 'currency' || sel === 'fragments'" :key="sel" :kind="sel === 'fragments' ? 'fragments' : 'currency'" :store="store" :config="config" :class="$style.main" />
+    <CurrencyTab v-if="PRICED.has(sel)" :key="sel" :kind="lootKind" :store="store" :config="config" :class="$style.main" />
+    <MapsTab v-else-if="sel === 'maps'" :config="config" :class="$style.main" />
     <div v-else :class="$style.later" data-loot-later>
       <b :class="$style.title">{{ cls.name }}</b>
       <p class="text-sm w-dim">NeverSink decides {{ cls.name.toLowerCase() }} for now. Prices will decide them here too, class by class.</p>
@@ -22,8 +23,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import CurrencyTab from './CurrencyTab.vue'
+import MapsTab from './MapsTab.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
+import type { LootKind } from './currency-weights'
 
 defineProps<{
   store: LootFilterStore
@@ -45,8 +48,10 @@ const LOOT_CLASSES = [
 type ClassId = (typeof LOOT_CLASSES)[number]['id']
 
 // Classes prices decide already: one engine and one switch for both.
-const PRICED = new Set<ClassId>(['currency', 'fragments'])
+const PRICED = new Set<ClassId>(['currency', 'fragments', 'cards', 'uniques', 'gems'])
 const sel = ref<ClassId>('currency')
+// The priced classes' ids are the engine's kinds.
+const lootKind = computed(() => sel.value as LootKind)
 const cls = computed(() => LOOT_CLASSES.find(k => k.id === sel.value)!)
 </script>
 
