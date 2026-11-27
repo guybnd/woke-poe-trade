@@ -1,5 +1,6 @@
 # Next release notes
 
+- Loot filter (beta): Rare weights is now the Equipment tab, with a rail like Loot's: Rare gear (the score as before) and Flasks. A white or magic utility flask scores its base rank (Top, Good, Low or Don't care, yours to set) × quality (×2 at 20%, ×4 at 26%) × item level (×2 at 85+), on the same line and steps as rares. Life and mana flasks, tinctures and levelling stay NeverSink's.
 - Loot filter (beta): League items on the Loot tab: one row per mechanic (Heist contracts and blueprints, Expedition logbooks, Sanctum research, Reliquary keys, Charts, Viscera, Chronicles, Inscribed Ultimatums, Mercenary warrants). Set a mechanic you don't run to Off and it hides in maps; the rest show as NeverSink shows them. Every class on the Loot tab now has its page.
 - Loot filter (beta): Jewels on the Loot tab: the cluster jewel price rules (enchant, passive count and item level, from poe.ninja) now sit here too, with their On switch, Top and Good lines and your picks. Abyss and other jewels are rares, scored on Rare weights.
 - Loot filter (beta): Maps on the Loot tab: one slider, "Show maps from tier N". Normal maps under it hide in maps; special maps (unique, blighted, blight-ravaged, Valdo, Originator, influenced, 8-mod, corrupted implicits) still show the way NeverSink shows them. Same switch as the other priced classes.

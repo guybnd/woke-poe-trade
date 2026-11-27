@@ -2,6 +2,7 @@
 // order: build rules, the presets' own rules, your rules, price moves, your
 // edits, the presets' changes to NeverSink's rules, then the safety net.
 // Pure, so the tests run the same path the save does (store.ts compose).
+import { applyFlasks } from './flask-weights'
 import { parseFilterCopy } from './parse'
 import type { FilterDoc } from './parse'
 import { nameCheck, ruleBlocks } from './rules'
@@ -102,6 +103,8 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Rare weights (beta) first, so everything below goes on top of them.
   const weightBases = cfg.presets.weights.on ? filterBases(next, cfg.presets.weights.ranks) : []
   const weights = applyWeights(next, cfg.presets.weights, weightBases)
+  // Utility flasks score on the same line (Equipment › Flasks).
+  applyFlasks(next, cfg.presets.weights)
   // Currency weights (beta) the same way: above everything NeverSink has.
   const currency = applyCurrency(next, cfg.presets.currency, cfg.prices.lookup, cfg.cards, cfg.gems)
   // Maps under the Loot tab's tier slider hide.
