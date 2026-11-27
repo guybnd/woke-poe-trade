@@ -49,6 +49,15 @@ history:
     date: '2026-11-27T04:04:15.109Z'
     selfAttested: true
     id: c-2026-11-27t04-04-15-109z
+  - type: comment
+    user: Agent
+    comment: >-
+      Rare weights redesign merged in PR 980
+      (https://github.com/guybnd/woke-poe-trade/pull/980, 65d4d2f): dense table
+      on top, test rares on the ground.
+    date: '2026-11-27T04:36:36.725Z'
+    selfAttested: true
+    id: c-2026-11-27t04-36-36-725z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/976'
 ---
 Epic: reimagine the loot filter as a clear visual funnel that shows how it decides. Design only, nothing built yet: 8 design options waiting on Guy's picks. Subtasks come after the picks.
