@@ -135,6 +135,16 @@ history:
     date: '2026-11-27T09:31:58.492Z'
     selfAttested: true
     id: c-2026-11-27t09-31-58-492z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 996 merged (https://github.com/guybnd/woke-poe-trade/pull/996,
+      ac3c9ba): Rare weights tab redesign and an Alt+F Score card. PR 998 merged
+      (https://github.com/guybnd/woke-poe-trade/pull/998, 4b93b05): shared
+      top-step look with a colour per class (T2).
+    date: '2026-11-27T10:23:06.929Z'
+    selfAttested: true
+    id: c-2026-11-27t10-23-06-929z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/976'
 ---
 Epic: reimagine the loot filter as a clear visual funnel that shows how it decides. Design only, nothing built yet: 8 design options waiting on Guy's picks. Subtasks come after the picks.
