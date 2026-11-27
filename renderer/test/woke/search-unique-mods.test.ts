@@ -3,7 +3,8 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { buildModIndex, litParts, modQueryWords, queryAtLeast, readMods, rollMax, searchMods } from '@/web/woke/search/mod-index'
+import { SHORT_NAMES, SHORT_NAME_KEYS, buildModIndex, litParts, modQueryWords, queryAtLeast, readMods, rollMax, searchMods } from '@/web/woke/search/mod-index'
+import { hasShortName } from '@/web/woke/search/mod-words'
 import { namedUniquePrices } from '@/web/woke/search/search'
 import { MOD_GROUP, chipOf, groupMode } from '@/web/woke/search/groups'
 import type { PriceItem } from '@/web/woke/market/types'
@@ -138,6 +139,25 @@ describe('loose mod words', () => {
     expect(readMods(slotted, 'unholy might vestigial').hits).toEqual([])
     // "ring" on its own lists unique rings; with words no ring has, it's mod text.
     expect(readMods(slotted, 'ring').notes).toEqual(['Rings'])
+  })
+  it('survives words that are object keys', () => {
+    expect(() => readMods(slotted, 'constructor')).not.toThrow()
+    expect(() => readMods(slotted, 'to string')).not.toThrow()
+  })
+  it('needs 6 letters of a kind word, so "expl" is still explode', () => {
+    expect(readMods(slotted, 'expl').notes).toEqual([])
+    expect(readMods(slotted, 'expl').hits.every(h => /expl/i.test(h.line))).toBe(true)
+    expect(readMods(slotted, 'rarity vestig').notes).toEqual(['Vestigial'])
+  })
+  it('keeps lines that have the slot word itself', () => {
+    const r = names('bow damage')
+    expect(r).toContain('Hyrri\'s Ire')
+    expect(names('charges flask').length).toBeGreaterThanOrEqual(names('flask charges').length)
+  })
+  it('knows its short names in the startup list', () => {
+    expect([...SHORT_NAME_KEYS].sort()).toEqual(Object.keys(SHORT_NAMES).sort())
+    expect(hasShortName('iir 50')).toBe(true)
+    expect(hasShortName('the')).toBe(false)
   })
   it('lights the read words', () => {
     expect(litParts('+(40-60) to maximum Energy Shield', ['energy', 'shield']).filter(p => p.lit).map(p => p.text)).toEqual(['Energy', 'Shield'])

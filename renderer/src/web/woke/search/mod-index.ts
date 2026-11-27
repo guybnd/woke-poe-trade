@@ -8,6 +8,7 @@ import { plainLine } from './unique-details'
 import type { TipUnique } from '../ui/tooltip/tip-content'
 
 export { MOD_QUERY_MIN, modQueryWords }
+export { SHORT_NAME_KEYS } from './mod-words'
 
 export type ModKind = 'implicit' | 'explicit' | 'foulborn' | 'vestigial'
 
@@ -50,7 +51,7 @@ export function buildModIndex (
   const slots = new Map<string, string | undefined>()
   const slotFor = (unique: string) => {
     if (!slots.has(unique)) {
-      const base = uniques[unique]?.b ?? uniques[`Foulborn ${unique}`]?.b
+      const base = uniques[unique]?.b ?? uniques[unique.replace(/^Foulborn /, '')]?.b
       slots.set(unique, base ? slotOf(base) : undefined)
     }
     return slots.get(unique)
@@ -166,24 +167,30 @@ function pairs (index: readonly ModLine[]): Set<string> {
   }
   return p
 }
-interface Reading { parts: string[], kinds: Set<ModKind | 'pool'>, slots: Set<string>, notes: string[] }
+// `slotWords`: the slot words as typed. A line that has the word itself
+// counts too, so "bow damage" keeps "Damage with Bow Attacks" on a quiver.
+interface Reading { parts: string[], kinds: Set<ModKind | 'pool'>, slots: Set<string>, slotWords: string[], notes: string[] }
+const shortName = (w: string) => Object.hasOwn(SHORT_NAMES, w) ? SHORT_NAMES[w] : undefined
+// A kind word, whole or its first 6 letters ("vestig"): fewer would catch
+// words on the way to others ("expl" is explode too).
+const KIND_PREFIX = 6
 // The query read with filter words, or null when it has none.
 function filterReading (index: readonly ModLine[], raw: string[]): Reading | null {
-  const out: Reading = { parts: [], kinds: new Set(), slots: new Set(), notes: [] }
+  const out: Reading = { parts: [], kinds: new Set(), slots: new Set(), slotWords: [], notes: [] }
   let filtered = false
   raw.forEach((w, i) => {
-    const short = SHORT_NAMES[w]
+    const short = shortName(w)
     if (short) { out.parts.push(...short.words); out.notes.push(short.label); filtered = true; return }
     // A word in a pair the mod text has ("energy shield") stays a mod word.
     const paired = (i > 0 && pairs(index).has(`${raw[i - 1]} ${w}`)) || (i + 1 < raw.length && pairs(index).has(`${w} ${raw[i + 1]}`))
     if (!paired) {
-      const kind = w.length >= 4 ? KIND_WORDS.find(([word]) => word.startsWith(w)) : undefined
+      const kind = w.length >= KIND_PREFIX ? KIND_WORDS.find(([word]) => word.startsWith(w)) : undefined
       if (kind) { out.kinds.add(kind[1]); out.notes.push(kind[2]); filtered = true; return }
       // "can roll" is one filter.
       if (w === 'can' && POOL_WORDS.has(raw[i + 1])) return
       if (POOL_WORDS.has(w)) { out.kinds.add('pool'); out.notes.push('Can roll'); filtered = true; return }
       const slot = SLOT_WORDS.find(([words]) => words.includes(w))
-      if (slot) { for (const c of slot[1]) out.slots.add(c); out.notes.push(slot[2]); filtered = true; return }
+      if (slot) { for (const c of slot[1]) out.slots.add(c); out.slotWords.push(w); out.notes.push(slot[2]); filtered = true; return }
     }
     out.parts.push(w)
   })
@@ -198,7 +205,7 @@ function run (index: readonly ModLine[], r: Reading, least: number | null): ModH
   const best = new Map<string, ModHit>()
   for (const m of index) {
     if (r.kinds.size && !(r.kinds.has(m.kind) || (r.kinds.has('pool') && m.pool))) continue
-    if (r.slots.size && !(m.slot && r.slots.has(m.slot))) continue
+    if (r.slots.size && !((m.slot && r.slots.has(m.slot)) || startsWords(m.words, r.slotWords))) continue
     if (parts.length && !startsWords(m.words, parts)) continue
     if (least != null && !((rollMax(m.line) ?? -Infinity) >= least)) continue
     const rank = parts.length && m.text.includes(phrase) ? 0 : 1
@@ -217,7 +224,7 @@ export function readMods (index: readonly ModLine[], query: string): ModReading 
   if (!words.length) {
     // "iir", "es": too short on their own, but a short name.
     const only = wordsOf(norm(query)).filter(w => !/^\d+$/.test(w))
-    if (!(only.length && only.every(w => SHORT_NAMES[w]))) return { hits: [], notes: [], words: [] }
+    if (!(only.length && only.every(w => shortName(w)))) return { hits: [], notes: [], words: [] }
     words.push(...only)
   }
   const least = queryAtLeast(query)
@@ -226,7 +233,7 @@ export function readMods (index: readonly ModLine[], query: string): ModReading 
     const hits = run(index, filter, least)
     if (hits.length) return { hits, notes: filter.notes, words: filter.parts }
   }
-  const plain: Reading = { parts: words, kinds: new Set(), slots: new Set(), notes: [] }
+  const plain: Reading = { parts: words, kinds: new Set(), slots: new Set(), slotWords: [], notes: [] }
   return { hits: run(index, plain, least), notes: [], words }
 }
 
