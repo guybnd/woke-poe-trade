@@ -29,6 +29,9 @@
           <input :value="c.from[s - 2]" type="number" min="0.1" step="any" :class="$style.numIn" :aria-label="`${CSTEP_NAMES[s]} from this many chaos`"
             @change="setFrom(s - 2, $event.target as HTMLInputElement)"> c</label>
         <span class="w-faint text-xs">{{ STEP_NOTE[s] }}</span>
+        <button v-if="s > 0" type="button" :class="$style.stepSample" :title="`${catName(sampleCat)} at ${CSTEP_NAMES[s]}: click for another category`" :aria-label="`Show ${CSTEP_NAMES[s]} for another category`" data-currency-step-sample @click="nextSample">
+          <LabelPreview :text="catArt(sampleCat)" :actions="[]" :style-override="currencyFullLook(s as CStep, sampleCat, c)" visibility="Show" :extras="false" :scale="0.85" />
+        </button>
         <label v-if="s >= 1 && s <= 4" :class="$style.offTog"><input type="checkbox" :checked="!c.off.includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]}`" @change="toggleOff(s)"> Show</label>
       </div>
     </div>
@@ -68,10 +71,11 @@
         <span :class="$style.dots" aria-hidden="true"><i v-for="r in g.rows" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
         <span class="flex-1" />
         <span :class="$style.catLook" @click.stop @keydown.stop>
+          <span :class="$style.catSample" :title="`How a Normal ${g.cat.name} label looks`"><LabelPreview :text="catArt(g.cat.id)" :actions="[]" :style-override="currencyFullLook(2, g.cat.id, c)" visibility="Show" :extras="false" :scale="0.75" /></span>
           <span :class="$style.lookLab">Colour</span>
           <input type="color" :value="hexOf(catColour(g.cat.id, c).rgb)" :class="$style.swatch" :aria-label="`${g.cat.name} colour`" :title="`${g.cat.name} colour`"
             @change="setCatLook(g.cat.id, { text: [...rgbOf(($event.target as HTMLInputElement).value), 255] })">
-          <span :class="$style.lookLab">Map icon and beam</span>
+          <span :class="$style.lookLab" title="Map icon and beam">Icon</span>
           <select :value="catColour(g.cat.id, c).shape" :class="$style.sel2" :aria-label="`${g.cat.name} map icon shape`" :title="`${g.cat.name} map icon shape`"
             @change="setCatIcon(g.cat.id, { shape: ($event.target as HTMLSelectElement).value })">
             <option v-for="sh in ICON_SHAPES" :key="sh" :value="sh">{{ shapeGlyph(sh) }} {{ sh }}</option>
@@ -292,6 +296,13 @@ const hideNote = computed(() => `${rows.value.length - shownCount.value} of ${ro
 // Step looks: loudness only, for every category (Guy's L1).
 const stepEdit = ref<CStep | null>(null)
 const SAMPLE_CATS = ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
+// The step cards' sample label: one category for all six, click to go to the next.
+const sampleCat = ref('orbs')
+function nextSample () {
+  const ids = CURRENCY_CATEGORIES.map(x => x.id)
+  sampleCat.value = ids[(ids.indexOf(sampleCat.value) + 1) % ids.length]
+}
+const catName = (id: string) => CURRENCY_CATEGORIES.find(x => x.id === id)?.name ?? id
 const catArt = (id: string) => CURRENCY_CATEGORIES.find(x => x.id === id)?.art ?? id
 function loudOnly (p: StylePatch): StylePatch {
   const out: StylePatch = {}
@@ -434,7 +445,9 @@ function chaosText (v: number): string {
 .range { width: min(22rem, 100%); accent-color: var(--w-accent, #c8a565); }
 .minVal { font-size: var(--w-fs-sm); color: var(--w-accent, #c8a565); min-width: 3.5em; font-variant-numeric: tabular-nums; }
 .stepOff { opacity: 0.45; }
-.lookLab { font-size: var(--w-fs-xs); color: var(--w-muted, #a89a7a); }
+.stepSample { align-self: flex-start; background: none; border: 0; padding: 2px 0; cursor: pointer; }
+.catSample { display: inline-flex; pointer-events: none; }
+.lookLab { white-space: nowrap; font-size: var(--w-fs-xs); color: var(--w-muted, #a89a7a); }
 .offTog { display: flex; align-items: center; gap: 4px; font-size: var(--w-fs-xs); color: var(--w-muted, #a89a7a); cursor: pointer; }
 .lookBtn { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-accent, #c8a565); background: var(--w-panel); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); padding: 0 5px; position: relative; }
 .lookOn { border-color: var(--w-accent, #c8a565); }
@@ -442,8 +455,8 @@ function chaosText (v: number): string {
 .stepEd { border: 1px solid var(--w-accent, #c8a565); border-radius: var(--w-r-sm); background: var(--w-panel-2); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
 .stepEdHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .samples { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 6px; background: #1a1712; border-radius: var(--w-r-sm); }
-.catLook { display: inline-flex; align-items: center; gap: 4px; }
-.swatch { width: 20px; height: 18px; padding: 0; border: 1px solid var(--w-line); background: none; cursor: pointer; }
+.catLook { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.swatch { flex-shrink: 0; width: 20px; height: 18px; padding: 0; border: 1px solid var(--w-line); background: none; cursor: pointer; }
 .catBody { border-top: 1px solid var(--w-line); padding: 4px 6px; display: flex; flex-direction: column; }
 .row {
   display: grid;
