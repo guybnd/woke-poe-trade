@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { WEIGHT_ROWS, WEIGHT_TYPE, MULT_STEPS, applyWeights, baseRanks, defaultWeights, filterBases, normalizeWeights, stepOf, weightOf } from '@/web/woke/loot-filter/weights'
+import { WEIGHT_ROWS, WEIGHT_TYPE, MULT_STEPS, applyWeights, baseRanks, defaultWeights, filterBases, normalizeWeights, stepOf, weightLook, weightOf } from '@/web/woke/loot-filter/weights'
 import type { WeightItem, WeightSettings, BaseRow } from '@/web/woke/loot-filter/weights'
 import { BASE_FACTS } from '@/web/woke/loot-filter/base-facts'
 import { neverSink } from '../helpers/neversink'
@@ -120,6 +120,11 @@ describe('rare weights', () => {
         expect(res.final?.block.type, JSON.stringify(it)).toBe(WEIGHT_TYPE)
         expect(res.final?.block.tier, `${facts.name} ${JSON.stringify(it)}`).toBe(`s${want}`)
         expect(res.visibility === 'Hide').toBe(want === 0)
+        // The border is the rare's most valuable mark, as the tab shows it.
+        if (want > 0) {
+          const border = (acts: Array<{ key: string, args: string[] }>) => JSON.stringify(acts.filter(x => x.key === 'SetBorderColor').pop()?.args ?? null)
+          expect(border(res.actions), JSON.stringify(it)).toBe(border(weightLook(it, w.mult, want)))
+        }
       }
     })
   }

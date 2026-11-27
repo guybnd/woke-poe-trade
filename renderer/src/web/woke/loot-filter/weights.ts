@@ -44,9 +44,9 @@ export function stepActions (step: Step): FilterAction[] {
   switch (step) {
     case 0: return [a('SetFontSize', 18), a('DisableDropSound', 'True')]
     case 1: return [a('SetFontSize', 32), a('SetBackgroundColor', 35, 35, 35, 230)]
-    case 2: return [a('SetFontSize', 38), a('SetBorderColor', 255, 255, 119, 255), a('SetBackgroundColor', 20, 20, 0, 255)]
-    case 3: return [a('SetFontSize', 42), a('SetTextColor', 0, 240, 190, 255), a('SetBorderColor', 0, 240, 190, 255), a('SetBackgroundColor', 0, 75, 30, 255), a('PlayAlertSound', 3, 300), a('MinimapIcon', 1, 'Cyan', 'Diamond')]
-    case 4: return [a('SetFontSize', 45), a('SetTextColor', 255, 255, 255, 255), a('SetBorderColor', 255, 64, 64, 255), a('SetBackgroundColor', 90, 0, 0, 255), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Red'), a('MinimapIcon', 0, 'Red', 'Star')]
+    case 2: return [a('SetFontSize', 38), a('SetBackgroundColor', 20, 20, 0, 255)]
+    case 3: return [a('SetFontSize', 42), a('SetTextColor', 0, 240, 190, 255), a('SetBackgroundColor', 0, 75, 30, 255), a('PlayAlertSound', 3, 300), a('MinimapIcon', 1, 'Cyan', 'Diamond')]
+    case 4: return [a('SetFontSize', 45), a('SetTextColor', 255, 255, 255, 255), a('SetBackgroundColor', 90, 0, 0, 255), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Red'), a('MinimapIcon', 0, 'Red', 'Star')]
   }
 }
 
@@ -204,6 +204,53 @@ const MARKS: Mark[] = [
   { key: 'rgb', yes: [c('SocketGroup', '', ['RGB'])] }
 ]
 export const MARK_KEYS: ReadonlySet<WeightKey> = new Set(MARKS.map(x => x.key))
+
+// ---- Decorators: what a rare has shows in its border -----------------------
+// The steps set loudness (size, background, sound, beam); the border is the
+// rare's most valuable mark, so a fractured or influenced rare looks it at
+// any step. Written as Continue rules ahead of the steps, least valuable
+// first, so the biggest multiplier's colour is the one that stays.
+type RGB = [number, number, number]
+interface Deco { key: WeightKey, yes: FilterCondition[], rgb: RGB }
+const DECOS: Deco[] = [
+  { key: 'cp', yes: [T('Corrupted'), c('CorruptedMods', '', [0])], rgb: [120, 0, 0] },
+  { key: 'ci', yes: [T('Corrupted'), c('CorruptedMods', '', [1])], rgb: [210, 40, 40] },
+  { key: 'dc', yes: [T('Corrupted'), c('CorruptedMods', '>=', [2])], rgb: [255, 90, 90] },
+  { key: 'mirr', yes: [T('Mirrored')], rgb: [160, 200, 255] },
+  { key: 'l4', yes: [c('LinkedSockets', '', [4])], rgb: [90, 160, 90] },
+  { key: 'l5', yes: [c('LinkedSockets', '', [5])], rgb: [130, 235, 130] },
+  { key: 'l6', yes: [c('LinkedSockets', '>=', [6])], rgb: [235, 255, 235] },
+  { key: 'rgb', yes: [c('SocketGroup', '', ['RGB'])], rgb: [200, 200, 200] },
+  { key: 'infl', yes: [c('HasInfluence', '', INFLUENCES)], rgb: [190, 120, 255] },
+  { key: 'eld', yes: [c('HasSearingExarchImplicit', '>=', [1])], rgb: [255, 150, 40] },
+  { key: 'eld', yes: [c('HasEaterOfWorldsImplicit', '>=', [1])], rgb: [255, 150, 40] },
+  { key: 'qual', yes: [c('Quality', '>=', [24])], rgb: [255, 122, 217] },
+  { key: 'fract', yes: [T('FracturedItem')], rgb: [215, 180, 110] },
+  { key: 'synth', yes: [T('SynthesisedItem')], rgb: [110, 170, 255] },
+  { key: 'fated', yes: [T('Fated')], rgb: [255, 205, 130] },
+  { key: 'ench', yes: [T('AnyEnchantment')], rgb: [180, 225, 255] },
+  { key: 'strand', yes: [c('MemoryStrands', '>=', [70])], rgb: [120, 230, 230] },
+  { key: 'cruc', yes: [T('HasCruciblePassiveTree')], rgb: [255, 110, 60] },
+  { key: 'abyss', yes: [c('SocketGroup', '', ['A'])], rgb: [60, 200, 140] }
+]
+export const DECO_KEYS: ReadonlySet<WeightKey> = new Set(DECOS.map(x => x.key))
+// Least valuable first (the rule order); the last one a rare has wins.
+const decoOrder = (m: Record<WeightKey, number>) => DECOS.map((d, i) => ({ d, i })).sort((p, q) => m[p.d.key] - m[q.d.key] || p.i - q.i).map(x => x.d)
+const decoAction = (d: Deco) => a('SetBorderColor', ...d.rgb, 255)
+
+// The mark whose colour this rare's border takes, if any.
+export function decoOf (it: WeightItem, m: Record<WeightKey, number>): WeightKey | null {
+  const has = new Set(termsOf(it))
+  const hits = decoOrder(m).filter(d => has.has(d.key))
+  return hits.length ? hits[hits.length - 1].key : null
+}
+// The look the filter gives this rare at this step: the step's loudness and
+// its most valuable mark's border.
+export function weightLook (it: WeightItem, m: Record<WeightKey, number>, step: Step): FilterAction[] {
+  const k = decoOf(it, m)
+  const d = k && DECOS.find(x => x.key === k)
+  return d && step > 0 ? [decoAction(d), ...stepActions(step)] : stepActions(step)
+}
 
 // The marks over ×1: of these only the biggest counts.
 export function upMarks (m: Record<WeightKey, number>): WeightKey[] {
@@ -412,6 +459,29 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
       }
       for (const r of kept) emit([...prefix, ...r.conds], step, note)
     }
+  }
+
+  for (const d of decoOrder(m)) {
+    const conds = [...BASE_CONDS(), ...d.yes].map(x => ({ ...x, values: [...x.values] }))
+    chars += 160
+    blocks.push({
+      kind: 'block',
+      index: -1,
+      line: 1,
+      visibility: 'Show',
+      disabled: false,
+      comment: `$type->${WEIGHT_TYPE} $tier->deco woke: rare weights, border for ${WEIGHT_LABEL[d.key].toLowerCase()}`,
+      type: WEIGHT_TYPE,
+      tier: 'deco',
+      conditions: conds,
+      actions: [decoAction(d)],
+      continue: true,
+      section: '[[0050]] Rare weights (woke)',
+      subsection: '',
+      raw: [],
+      dirty: true,
+      added: true
+    } as FilterBlock)
   }
 
   const ss = splits(bases, m)

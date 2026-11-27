@@ -1,5 +1,5 @@
 <template>
-  <div :class="$style.wrap" class="w-scroll">
+  <div :class="$style.wrap" class="w-scroll" @paste="onPaste">
     <div :class="$style.top">
       <WToggle v-model="w.on">Weights decide endgame rares</WToggle>
       <span :class="$style.beta">Beta</span>
@@ -36,6 +36,15 @@
       </span>
     </div>
 
+    <div :class="$style.source">
+      <WChip clickable :active="source === 'set'" title="One of each kind of mark, and the mixes" @click="source = 'set'">Test set</WChip>
+      <WChip clickable :active="source === 'random'" title="Random map rares, with rough odds for each mark" @click="source === 'random' ? reroll() : (source = 'random')">Random</WChip>
+      <WButton v-if="source === 'random'" size="sm" variant="ghost" icon="fas fa-dice" @click="reroll">Reroll</WButton>
+      <WButton size="sm" variant="ghost" icon="fas fa-paste" title="Copy a rare in game (Ctrl+C), then paste here (Ctrl+V)" @click="pasteFromClipboard">Paste item</WButton>
+      <span v-if="pasted.length" class="text-xs w-dim">{{ pasted.length }} pasted</span>
+      <WButton v-if="pasted.length" size="sm" variant="ghost" icon="fas fa-times" @click="pasted = []">Clear pasted</WButton>
+      <span v-if="pasteNote" class="text-xs w-faint">{{ pasteNote }}</span>
+    </div>
     <div v-if="!samples.length" class="w-faint text-sm">Load a NeverSink filter to see the test rares.</div>
     <div v-else :class="$style.grounds">
       <div v-for="side in grounds" :key="side.key" :class="$style.side">
@@ -47,11 +56,12 @@
           <span v-for="d in side.placed" :key="d.i" v-item-tip="samples[d.i].tip" :class="[$style.drop, { [$style.ghost]: d.hidden, [$style.on]: d.i === focus }]"
             :style="{ left: `${d.x}px`, top: `${d.y}px`, width: `${d.w}px` }" @mouseenter="focus = d.i" @click="pinned = pinned === d.i ? null : d.i">
             <span :class="$style.tags" data-no-item-tip="marks of the rare below, which has its tooltip">
+              <span :class="[$style.tag, $style.score]" :style="{ color: STEP_CSS[Math.max(1, samples[d.i].step)], borderColor: STEP_CSS[Math.max(1, samples[d.i].step)] }" :title="`Score ${pointsText(samples[d.i].pts)}, line ${pointsText(needPoints)}: ${STEP_NAMES[samples[d.i].step]}`">{{ pointsText(samples[d.i].pts) }}</span>
               <span v-for="t in samples[d.i].tags" :key="t.key" :class="[$style.tag, $style[signOf(t.key)], { [$style.off]: !t.counts }]"><i :class="ICON_OF[t.key]" />{{ t.text }}</span>
             </span>
             <span :class="$style.labelRow">
               <span :class="[$style.deco, $style[signOf(samples[d.i].rankKey)]]" :title="WEIGHT_LABEL[samples[d.i].rankKey]">{{ RANK_TEXT[samples[d.i].rankKey] }}</span>
-              <LabelPreview :text="samples[d.i].row.name" :actions="d.actions" :style-override="!d.hidden && samples[d.i].overQual ? QUAL_MARK : undefined" :visibility="d.hidden ? 'Hide' : 'Show'" :default-text="RARE" :extras="false" :scale="SCALE" />
+              <LabelPreview :text="samples[d.i].row.name" :actions="d.actions" :visibility="d.hidden ? 'Hide' : 'Show'" :default-text="RARE" :extras="false" :scale="SCALE" />
               <span :class="$style.deco" :title="samples[d.i].tierText">{{ samples[d.i].tierShort }}</span>
             </span>
           </span>
@@ -72,7 +82,7 @@
 <script setup lang="ts">
 // Rare weights (beta, weights.ts): the switch, the line, the test rares and
 // the multipliers, all for this profile.
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, shallowRef } from 'vue'
 import { WButton, WChip, WInfo, WToggle, vItemTip } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
@@ -80,13 +90,14 @@ import type { LootFilterWidget } from './widget'
 import { matchItem } from './match'
 import { labelBox, layoutLabels } from './shower'
 import { readStyle } from './edits'
-import { DEFAULT_MARK } from './gear'
 import { poeColour } from './colours'
 import { ruleLabel } from './parse'
 import type { Colour } from './edits'
-import { MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, stepActions, stepOf, termsOf, weightOf } from './weights'
-import type { Step, WeightKey } from './weights'
-import { CHIP_LABEL, SAMPLES, sampleTip, factsOf, fromPoints, itemOf, points, pointsText, sampleBase, samplePile } from './weight-samples'
+import { MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, weightLook, stepOf, termsOf, weightOf } from './weights'
+import type { BaseRow, Step, WeightItem, WeightKey } from './weights'
+import { itemFacts } from './item-facts'
+import type { ItemFacts } from './item-facts'
+import { CHIP_LABEL, SAMPLES, pastedRare, sampleTip, factsOf, fromPoints, itemOf, points, pointsText, sampleBase, samplePile } from './weight-samples'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -124,20 +135,60 @@ const sizeText = computed(() => {
   return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.round(kb)} KB`
 })
 
+// What lies on the ground: the fixed test set, or a random roll, plus
+// whatever was pasted.
+const source = ref<'set' | 'random'>('set')
+const seed = ref(11)
+const RANDOM_N = 40
+interface Drop { row: BaseRow, it: WeightItem, label: string, facts?: ItemFacts }
+const pasted = shallowRef<Drop[]>([])
+const pasteNote = ref('')
+function reroll () {
+  source.value = 'random'
+  seed.value = (seed.value * 48271) % 2147483647
+}
+const drops = computed<Drop[]>(() => {
+  const base: Drop[] = source.value === 'set'
+    ? SAMPLES.flatMap(spec => {
+        const row = sampleBase(spec, bases.value)
+        return row ? [{ row, it: itemOf(row, spec.item), label: spec.label }] : []
+      })
+    : samplePile(bases.value, RANDOM_N, seed.value).map(p => ({ ...p, label: 'Random rare' }))
+  return [...pasted.value, ...base]
+})
+function addPasted (text: string) {
+  const facts = itemFacts(text, null)
+  const got = pastedRare(facts, bases.value)
+  if (!got) {
+    pasteNote.value = facts.baseType ? `${facts.rarity !== 'Rare' ? 'Not a rare' : 'Base not in the table'}: ${facts.baseType}` : 'No item text on the clipboard'
+    return
+  }
+  pasteNote.value = ''
+  pasted.value = [{ ...got, label: 'Pasted', facts: { ...facts, areaLevel: 83 } }, ...pasted.value].slice(0, 20)
+}
+function onPaste (e: ClipboardEvent) {
+  const t = (e.target as HTMLElement | null)?.tagName
+  if (t === 'INPUT' || t === 'TEXTAREA') return
+  const text = e.clipboardData?.getData('text/plain') ?? ''
+  if (text) { e.preventDefault(); addPasted(text) }
+}
+async function pasteFromClipboard () {
+  try { addPasted(await navigator.clipboard.readText()) } catch { pasteNote.value = 'Could not read the clipboard: press Ctrl+V here instead' }
+}
+
 const samples = computed(() => {
   const doc = props.store.doc.value
   if (!doc) return []
   // NeverSink as it is now: the same filter without the weights' rules.
   const ns = { ...doc, blocks: doc.blocks.filter(b => b.type !== WEIGHT_TYPE) }
   const m = w.value.mult
-  return SAMPLES.flatMap(spec => {
-    const row = sampleBase(spec, bases.value)
-    if (!row) return []
-    const it = itemOf(row, spec.item)
+  return drops.value.flatMap(d => {
+    const { row, it, label } = d
+    const spec = { label }
     const counted = new Set(countedTerms(it, m))
     const terms = termsOf(it).map(key => ({ key, counts: counted.has(key) }))
     const weight = weightOf(it, m)
-    const facts = factsOf(row, it)
+    const facts = d.facts ?? factsOf(row, it)
     const nsHit = matchItem(ns, facts)
     let other = ''
     if (w.value.on) {
@@ -151,7 +202,7 @@ const samples = computed(() => {
       rankKey: it.rank as WeightKey,
       tierShort: it.tier ? `T${it.tier}` : 'T–',
       tierText: it.tier ? `Unidentified (Tier ${it.tier})` : 'No drop tier (counted as tier 1)',
-      overQual: it.quality >= 24,
+      it,
       spec,
       row,
       terms,
@@ -221,8 +272,6 @@ const TAG_TEXT: Partial<Record<WeightKey, string>> = {
   tiny: 'Tiny'
 }
 const RANK_TEXT: Partial<Record<WeightKey, string>> = { x1: 'X1', x2: 'X2', r1: 'R1', r2: 'R2', r3: 'R3', r0: 'R–' }
-// The over-quality mark's border (the Gear tab's default mark).
-const QUAL_MARK = { border: DEFAULT_MARK.border }
 
 // Places stay put while you tune: each rare gets a slot sized for the
 // biggest label, so only its look changes.
@@ -230,7 +279,7 @@ function layout (key: string) {
   const width = widths[key] || 420
   const boxes = samples.value.map(x => {
     const b = labelBox(x.row.name, 45, SCALE, measure)
-    const tagsW = x.tags.reduce((n, t) => n + measure(t.text, 9) + 18, 0)
+    const tagsW = x.tags.reduce((n, t) => n + measure(t.text, 9) + 18, 30)
     return { w: Math.ceil(Math.max(b.w + DECO_W * 2, tagsW)), h: b.h + TAG_H }
   })
   return layoutLabels(boxes, width, 220, 3, BEAM_ROOM)
@@ -238,7 +287,7 @@ function layout (key: string) {
 const grounds = computed(() => {
   const list = samples.value
   return [
-    { key: 'weights', title: 'Weights', look: (i: number) => ({ actions: stepActions(list[i].step), hidden: list[i].step === 0 }) },
+    { key: 'weights', title: 'Weights', look: (i: number) => ({ actions: weightLook(list[i].it, w.value.mult, list[i].step), hidden: list[i].step === 0 }) },
     { key: 'ns', title: 'NeverSink now', look: (i: number) => ({ actions: list[i].ns?.actions ?? [], hidden: list[i].ns?.visibility === 'Hide' }) }
   ].map(side => {
     const { rects, height } = layout(side.key)
@@ -360,6 +409,7 @@ function reset () {
     radial-gradient(ellipse at 75% 30%, rgba(60, 70, 80, 0.3), transparent 55%),
     linear-gradient(160deg, #24221d, #191814 60%, #1f1d18);
 }
+.source { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .drop {
   position: absolute;
   display: flex;
@@ -380,6 +430,7 @@ function reset () {
 }
 .tag i { font-size: var(--w-fs-xs); opacity: 0.8; }
 .tag.plus { color: #8fd18a; }
+.score { font-weight: 600; border: 1px solid; }
 .tag.minus { color: #e08a7a; }
 .tag.off { opacity: 0.5; text-decoration: line-through; }
 .labelRow { display: flex; align-items: center; justify-content: center; gap: 2px; min-width: 0; }
