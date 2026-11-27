@@ -1315,3 +1315,28 @@ test('Base ranks: drag a base, then the picked set, onto another column', async 
   await expect(page.getByText('2 picked')).toHaveCount(0)
   await overlay.snap('dragged to Never')
 })
+
+test('Rare weights: Alt + F on an unidentified rare opens the Score card, and the redesigned tab', async ({ overlay, fakeApp }) => {
+  // NeverSink's real Strict filter (its tiered gear and exotic lists).
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters/neversink/3-STRICT.filter.gz'))))
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), presets: { weights: { on: true } } }] })
+  const page = overlay.page
+  await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+F')
+  await overlay.copyItem('items/rare-unid-gloves.txt', 'Alt + F')
+  await expect(page.getByText('Item score')).toBeVisible()
+  await expect(page.getByText('Total')).toBeVisible()
+  await overlay.snap('score card')
+  await page.getByRole('button', { name: /Don't care/ }).first().click()
+  await overlay.snap('score card, base set to Don\'t care')
+
+  // Tune opens the Rare weights tab.
+  await page.getByRole('button', { name: /Tune/ }).click()
+  await expect(page.getByText(/\d+ of \d+ shown/).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Line: / })).toBeVisible()
+  await expect(page.getByText('Your ranks')).toBeVisible()
+  await page.waitForTimeout(800)
+  await overlay.snap('rare weights tab')
+  await page.getByRole('button', { name: /Looks/ }).click()
+  await overlay.snap('rare weights tab, looks open')
+})
