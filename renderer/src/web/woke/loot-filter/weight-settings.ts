@@ -169,10 +169,16 @@ export interface WeightSettings {
   mult: Record<WeightKey, number>
   // Rows whose gear always shows (at least Small), whatever its score.
   always: WeightKey[]
+  // Where Normal, Big and Beam start (weights, rising): fixed, so moving the
+  // line only hides or shows the low end.
+  loud: number[]
 }
 
+// +40, +60, +80.
+export const LOUD_DEFAULT: readonly number[] = [16, 64, 256]
+
 export function defaultWeights (): WeightSettings {
-  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [] }
+  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT] }
 }
 
 // The rows a pin (always show) can go on: ones a rule can name on their own.
@@ -211,6 +217,7 @@ export function normalizeWeights (w: Partial<WeightSettings> | undefined): Weigh
     on: typeof w?.on === 'boolean' ? w.on : false,
     need: ok(w?.need, NEED_MIN, NEED_MAX) ? w.need : d.need,
     mult,
+    loud: Array.isArray(w?.loud) && w.loud.length === 3 && w.loud.every((v, i) => ok(v, NEED_MIN, NEED_MAX * 64) && (i === 0 || v >= w.loud![i - 1])) ? [...w.loud] : [...LOUD_DEFAULT],
     always: Array.isArray(w?.always) ? [...new Set(w.always.filter(k => PIN_ROWS.has(k)))] : []
   }
 }

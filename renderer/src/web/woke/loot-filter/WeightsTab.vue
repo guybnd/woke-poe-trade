@@ -3,7 +3,7 @@
     <div :class="$style.top">
       <WToggle v-model="w.on">Weights decide endgame gear</WToggle>
       <span :class="$style.beta">Beta</span>
-      <WInfo text="Every white, unidentified magic and unidentified rare gear item of item level 68+ gets points: its rarity and base rank, times each thing it has (drop tier, item level, corruption, size, and its biggest mark: links, influence, fractured...). Under the line it hides; over it, it shows, louder at +20, +40 and +60 over. Only this profile. Your own rules, build rules and presets still go on top." />
+      <WInfo text="Every white, unidentified magic and unidentified rare gear item of item level 68+ gets points: its rarity and base rank, times each thing it has (drop tier, item level, corruption, size, and its biggest mark: links, influence, fractured...). Under the line it hides. Over it, it shows, and its score alone sets how loud: Normal, Big and Beam start at fixed scores you set, whatever the line. Only this profile. Your own rules, build rules and presets still go on top." />
       <span class="w-faint text-xs">{{ w.on ? `${store.weightRules.value.toLocaleString()} rules · ${sizeText}` : 'Off: NeverSink decides' }}</span>
       <span class="flex-1" />
       <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" @click="reset">Defaults</WButton>
@@ -29,6 +29,15 @@
       <input v-model.lazy.number="needPoints" type="range" :min="NEED_LO" :max="NEED_HI" step="1" :class="$style.slider" aria-label="Points a rare needs to show">
       <span :class="$style.num">{{ pointsText(needPoints) }}</span>
       <WChip v-for="st in STAGES" :key="st.label" clickable :active="Math.abs(points(st.need) - needPoints) < 0.5" :title="`Line at ${pointsText(points(st.need))}`" @click="w.need = st.need">{{ st.label }}</WChip>
+    </div>
+    <div :class="$style.loud">
+      <span class="text-xs w-dim">Louder from</span>
+      <span v-for="(name, i) in LOUD_NAMES" :key="name" :class="$style.loudStep" :title="`${name} from a score of ${pointsText(points(w.loud[i]))}, whatever the line`">
+        <span :style="{ color: STEP_CSS[i + 2] }">{{ name }}</span>
+        <button type="button" :class="$style.step" :aria-label="`${name} from a lower score`" @click="nudgeLoud(i, -1)"><i class="fas fa-minus" /></button>
+        <span :class="$style.num">{{ pointsText(points(w.loud[i])) }}</span>
+        <button type="button" :class="$style.step" :aria-label="`${name} from a higher score`" @click="nudgeLoud(i, 1)"><i class="fas fa-plus" /></button>
+      </span>
     </div>
     <div :class="$style.shares">
       <div :class="$style.bar" aria-hidden="true">
@@ -313,6 +322,17 @@ const grounds = computed(() => {
 const ICON_OF = Object.fromEntries(WEIGHT_GROUPS.flatMap(g => g.rows.map(x => [x.key, g.icon]))) as Record<WeightKey, string>
 const signOf = (k: WeightKey) => w.value.mult[k] > 1 ? 'plus' : w.value.mult[k] < 1 ? 'minus' : 'zero'
 
+// Normal, Big and Beam: 5 points a click, kept in order.
+const LOUD_NAMES = ['Normal', 'Big', 'Beam'] as const
+function nudgeLoud (i: number, dir: 1 | -1) {
+  const l = [...w.value.loud]
+  const v = Number(fromPoints(Math.round(points(l[i])) + 5 * dir).toPrecision(4))
+  const lo = i > 0 ? l[i - 1] : NEED_MIN
+  const hi = i < 2 ? l[i + 1] : NEED_MAX * 64
+  l[i] = Math.min(hi, Math.max(lo, v))
+  w.value.loud = l
+}
+
 function togglePin (key: WeightKey) {
   const a = w.value.always
   w.value.always = a.includes(key) ? a.filter(k => k !== key) : [...a, key]
@@ -327,13 +347,14 @@ function nudge (key: WeightKey, dir: 1 | -1) {
 
 const changed = computed(() => {
   const d = defaultWeights()
-  return w.value.need !== d.need || w.value.always.length > 0 || (Object.keys(d.mult) as WeightKey[]).some(k => w.value.mult[k] !== d.mult[k])
+  return w.value.need !== d.need || w.value.always.length > 0 || w.value.loud.some((v, i) => v !== d.loud[i]) || (Object.keys(d.mult) as WeightKey[]).some(k => w.value.mult[k] !== d.mult[k])
 })
 function reset () {
   const d = defaultWeights()
   w.value.need = d.need
   Object.assign(w.value.mult, d.mult)
   w.value.always = []
+  w.value.loud = [...d.loud]
 }
 </script>
 
@@ -437,6 +458,8 @@ function reset () {
 }
 .pin:hover { opacity: 0.8; }
 .pin.pinned { color: var(--w-accent); opacity: 1; }
+.loud { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.loudStep { display: inline-flex; align-items: center; gap: 3px; font-size: var(--w-fs-xs); }
 .source { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .drop {
   position: absolute;

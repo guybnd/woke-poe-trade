@@ -16,25 +16,24 @@ import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './pa
 import { readTiered } from './gear'
 import { allGearBases, baseInfo } from './gear-bases'
 import { BASE_FACTS } from './base-facts'
-import { WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
+import { LOUD_DEFAULT, WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
 import type { WeightKey, WeightSettings } from './weight-settings'
 
-export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, MULT_STEPS, NEED_MIN, NEED_MAX, STAGES, MARK_ROWS, ORDERED_ROWS, PIN_ROWS, defaultWeights, multRange, normalizeWeights } from './weight-settings'
+export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, MULT_STEPS, NEED_MIN, NEED_MAX, STAGES, MARK_ROWS, ORDERED_ROWS, PIN_ROWS, LOUD_DEFAULT, defaultWeights, multRange, normalizeWeights } from './weight-settings'
 export type { WeightKey, WeightRow, WeightGroup, WeightSettings } from './weight-settings'
 
 // ---- Steps (how loud) ---------------------------------------------------------
 
 export type Step = 0 | 1 | 2 | 3 | 4
 export const STEP_NAMES = ['Hidden', 'Small', 'Normal', 'Big, sound', 'Beam'] as const
-// Each step starts at need × this.
-export const STEP_AT = [0, 1, 4, 16, 64]
-
-export function stepOf (weight: number, need: number): Step {
+// Normal, Big and Beam start at fixed weights (weight-settings LOUD_DEFAULT);
+// the line only decides what hides (Small starts there).
+export function stepOf (weight: number, need: number, loud: readonly number[] = LOUD_DEFAULT): Step {
   if (!(weight >= need)) return 0
-  if (weight < need * 4) return 1
-  if (weight < need * 16) return 2
-  if (weight < need * 64) return 3
-  return 4
+  if (weight >= loud[2]) return 4
+  if (weight >= loud[1]) return 3
+  if (weight >= loud[0]) return 2
+  return 1
 }
 
 const a = (key: string, ...args: Array<string | number>): FilterAction => ({ key, args: args.map(String) })
@@ -256,8 +255,8 @@ export function decoOf (it: WeightItem, m: Record<WeightKey, number>): WeightKey
 }
 // The step a rare lands on: its score's, or Small at least when a pinned
 // row ("always show") is one of its terms.
-export function stepFor (it: WeightItem, w: Pick<WeightSettings, 'mult' | 'need' | 'always'>): Step {
-  const step = stepOf(weightOf(it, w.mult), w.need)
+export function stepFor (it: WeightItem, w: Pick<WeightSettings, 'mult' | 'need' | 'always' | 'loud'>): Step {
+  const step = stepOf(weightOf(it, w.mult), w.need, w.loud)
   if (step > 0 || !w.always.length) return step
   const has = new Set(termsOf(it))
   return w.always.some(k => has.has(k)) ? 1 : 0
@@ -480,11 +479,15 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
     } as FilterBlock)
   }
 
+  // Where each step starts: Small at the line, the louder ones at their own
+  // weight (never under the line).
+  const atOf = (step: Step) => step === 1 ? w.need : Math.max(w.need, w.loud[step - 2])
   // The rules for one part.
   const part = (prefix: FilterCondition[], start: number, note: string, { opts, full, lo, hi }: Dims) => {
     if (start * hi[0] < w.need) return
     for (const step of [4, 3, 2, 1] as Step[]) {
-      const at = w.need * STEP_AT[step]
+      const at = atOf(step)
+      if (step < 4 && at === atOf((step + 1) as Step)) continue
       const rules: Array<{ masks: number[], conds: FilterCondition[] }> = []
       const picked: number[] = []
       const walk = (i: number, weight: number) => {
