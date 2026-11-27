@@ -13,7 +13,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-const API = 'https://poe.ninja/api/data'
 const OUT = path.resolve(import.meta.dirname, '../renderer/src/web/woke/loot-filter/day1-prices.json')
 const UA = { 'User-Agent': 'woke-poe-trade day1-prices (GitHub Actions)' }
 
@@ -74,70 +73,72 @@ async function pool (jobs, size = 4) {
 
 const round = v => v >= 100 ? Math.round(v) : Number(v.toPrecision(3))
 
-// What each candidate answers, for the log: poe.ninja moves its API now and then.
-async function probe (urls) {
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, { headers: UA })
-      const text = await res.text()
-      console.log(`probe ${res.status} ${url}\n  ${text.slice(0, 300).replace(/\s+/g, ' ')}`)
-    } catch (e) {
-      console.log(`probe failed ${url}: ${e.message}`)
-    }
-  }
-}
+const NINJA = 'https://poe.ninja/poe1/api/economy/stash/current'
+const CHALLENGE = l => l && !/Standard|Hardcore|Solo Self-Found|SSF|HC|Ruthless/i.test(l)
 
-const CHALLENGE = l => l && !/Standard|Hardcore|HC|SSF|Ruthless/i.test(l)
+// A history answer in any of the shapes poe.ninja has used.
+const pointsOf = h => Array.isArray(h) ? h : h?.receiveCurrencyGraphData ?? h?.data ?? h?.history ?? null
+
+// poe.ninja moves its API now and then: try the history URLs it has used,
+// on one item, and keep the first that answers with points. Logged.
+async function pickHistory (templates, sample) {
+  for (const t of templates) {
+    const url = t(sample)
+    const h = await get(url, 1)
+    const pts = pointsOf(h)
+    console.log(`history ${Array.isArray(pts) ? `ok (${pts.length} points)` : 'no'}: ${url}${h && !Array.isArray(pts) ? `\n  ${JSON.stringify(h).slice(0, 200)}` : ''}`)
+    if (Array.isArray(pts) && pts.length) return t
+  }
+  return null
+}
 
 async function main () {
   let league = process.argv[2]
-  if (!league) {
-    const index = await get(`${API}/getindexstate`)
-    league = index?.economyLeagues?.map(l => l.name).find(CHALLENGE)
-  }
   if (!league) {
     // GGG's own list, as the app reads it.
     const list = await get('https://www.pathofexile.com/api/leagues?type=main&realm=pc')
     league = Array.isArray(list) ? list.map(l => l.id).find(CHALLENGE) : undefined
   }
   if (!league) throw new Error('No challenge league found.')
-  const q0 = encodeURIComponent(league)
-  await probe([
-    `${API}/getindexstate`,
-    `${API}/currencyoverview?league=${q0}&type=Currency`,
-    `${API}/currencyhistory?league=${q0}&type=Currency&currencyId=2`,
-    `${API}/itemoverview?league=${q0}&type=DivinationCard`,
-    `https://poe.ninja/poe1/api/economy/stash/current/item/overview?league=${q0}&type=DivinationCard`,
-    `https://poe.ninja/poe1/api/economy/stash/current/currency/overview?league=${q0}&type=Currency`
-  ])
   const q = encodeURIComponent(league)
   console.log(`league ${league}`)
   const items = []
-  let divine = null
 
   for (const type of CURRENCY_TYPES) {
-    const page = await get(`${API}/currencyoverview?league=${q}&type=${type}`)
-    if (!page?.lines) { console.warn(`no ${type} page`); continue }
+    const page = await get(`${NINJA}/currency/overview?league=${q}&type=${type}`)
+    if (!page?.lines?.length) { console.warn(`no ${type} page`); continue }
     const idOf = new Map((page.currencyDetails ?? []).map(d => [d.name, d.id]))
-    const rows = await pool(page.lines.map(line => async () => {
-      const id = idOf.get(line.currencyTypeName)
-      if (id == null) return null
-      const h = await get(`${API}/currencyhistory?league=${q}&type=${type}&currencyId=${id}`)
-      const v = firstDays(h?.receiveCurrencyGraphData)
-      return v ? [type, line.currencyTypeName, '', round(v)] : null
+    const jobs = page.lines.map(line => ({ name: line.currencyTypeName, id: idOf.get(line.currencyTypeName), details: line.detailsId }))
+    const url = await pickHistory([
+      j => `${NINJA}/currency/history?league=${q}&type=${type}&id=${j.id}`,
+      j => `${NINJA}/currency/history?league=${q}&type=${type}&currencyId=${j.id}`,
+      j => `${NINJA}/currency/history?league=${q}&type=${type}&detailsId=${j.details}`,
+      j => `https://poe.ninja/api/data/currencyhistory?league=${q}&type=${type}&currencyId=${j.id}`
+    ], jobs.find(j => j.id != null) ?? jobs[0])
+    if (!url) { console.warn(`no history for ${type}`); continue }
+    const rows = await pool(jobs.map(j => async () => {
+      const v = firstDays(pointsOf(await get(url(j))))
+      return v ? [type, j.name, '', round(v)] : null
     }))
     for (const r of rows) if (r) items.push(r)
-    console.log(`${type}: ${rows.filter(Boolean).length} of ${page.lines.length}`)
+    console.log(`${type}: ${rows.filter(Boolean).length} of ${jobs.length}`)
   }
-  divine = items.find(r => r[0] === 'Currency' && r[1] === 'Divine Orb')?.[3] ?? null
+  const divine = items.find(r => r[0] === 'Currency' && r[1] === 'Divine Orb')?.[3] ?? null
 
+  let itemUrl = null
   for (const type of ITEM_TYPES) {
-    const page = await get(`${API}/itemoverview?league=${q}&type=${type}`)
-    if (!page?.lines) { console.warn(`no ${type} page`); continue }
+    const page = await get(`${NINJA}/item/overview?league=${q}&type=${type}`)
+    if (!page?.lines?.length) { console.warn(`no ${type} page`); continue }
     const lines = page.lines.filter(l => !(l.links >= 5))
+    itemUrl ??= await pickHistory([
+      (l, t = type) => `${NINJA}/item/history?league=${q}&type=${t}&id=${l.id}`,
+      (l, t = type) => `${NINJA}/item/history?league=${q}&type=${t}&itemId=${l.id}`,
+      (l, t = type) => `${NINJA}/item/history?league=${q}&type=${t}&detailsId=${l.detailsId}`,
+      (l, t = type) => `https://poe.ninja/api/data/itemhistory?league=${q}&type=${t}&itemId=${l.id}`
+    ], lines[0])
+    if (!itemUrl) { console.warn('no item history'); break }
     const rows = await pool(lines.map(line => async () => {
-      const h = await get(`${API}/itemhistory?league=${q}&type=${type}&itemId=${line.id}`)
-      const v = firstDays(Array.isArray(h) ? h : h?.data)
+      const v = firstDays(pointsOf(await get(itemUrl(line, type))))
       return v ? [type, line.name, line.variant ?? (line.gemLevel ? `${line.gemLevel}/${line.gemQuality ?? 0}${line.corrupted ? 'c' : ''}` : ''), round(v)] : null
     }))
     for (const r of rows) if (r) items.push(r)
