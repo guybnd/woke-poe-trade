@@ -15,7 +15,7 @@
     <div v-for="r in rows" :key="r.name" :class="$style.row" :data-equip-flask="r.name">
       <span v-item-tip="{ name: r.name }" :class="$style.name">{{ r.name }}</span>
       <WSegmented :class="$style.rank" :model-value="r.rank" :options="RANKS" role="group" :aria-label="`${r.name}: rank`" @update:model-value="v => setRank(r.name, v)" />
-      <span v-for="(s, i) in r.steps" :key="i" :class="$style.cell"><span :class="$style.pill" :style="{ background: STEP_CSS[s], color: s >= 3 ? '#140f08' : '#efe4cc' }">{{ STEP_NAMES[s] }}</span></span>
+      <span v-for="(s, i) in r.steps" :key="i" :class="$style.cell"><span :class="$style.pill" :style="{ background: STEP_CSS[s], color: s >= 1 ? '#140f08' : '#efe4cc' }">{{ STEP_NAMES[s] }}</span></span>
     </div>
   </div>
 </template>
@@ -31,8 +31,9 @@ import type { LootFilterWidget } from './widget'
 const props = defineProps<{ config: LootFilterWidget }>()
 const w = computed(() => props.config.presets.weights)
 const RANKS = [{ value: 'r1', label: 'Top' }, { value: 'r2', label: 'Good' }, { value: 'r3', label: 'Low' }, { value: 'rj', label: "Don't care" }]
-const BANDS = [{ label: 'Plain', q: 0, i: 0 }, { label: '20%', q: 20, i: 0 }, { label: '20%, ilvl 85', q: 20, i: 85 }, { label: '26%, ilvl 85', q: 26, i: 85 }]
-const STEP_CSS = ['#3a3328', '#6b5a3a', '#9a7d45', '#d8b25a', '#f0e0b0']
+const BANDS = [{ label: 'Plain', q: 0, i: 0 }, { label: 'ilvl 85', q: 0, i: 85 }, { label: '20%', q: 20, i: 0 }, { label: '20%, ilvl 85', q: 20, i: 85 }, { label: '26%, ilvl 85', q: 26, i: 85 }]
+// The same step colours as Rare gear's (Beam blue, as in game).
+const STEP_CSS = ['#3a3a3a', '#8a8a8a', '#d8d877', '#29d2a0', '#5a9cff']
 const rows = computed(() => FLASK_BASES.map(name => ({
   name,
   rank: flaskRank(w.value, name),
@@ -47,7 +48,7 @@ function setRank (name: string, v: string) {
 .wrap { flex: 1 1 auto; min-width: 0; padding: 10px var(--w-pad); display: flex; flex-direction: column; gap: 4px; }
 .top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
 .beta { font-size: var(--w-fs-xs); color: var(--w-dim); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); padding: 0 4px; }
-.head, .row { display: grid; grid-template-columns: minmax(8rem, 1fr) auto repeat(4, 6.5rem); align-items: center; gap: 8px; }
+.head, .row { display: grid; grid-template-columns: minmax(8rem, 1fr) auto repeat(5, 6.5rem); align-items: center; gap: 8px; }
 .head { font-size: var(--w-fs-xs); color: var(--w-dim); }
 .row { padding: 2px 6px; border-bottom: 1px solid var(--w-line); }
 .name { min-width: 0; color: #8888ff; font-size: var(--w-fs-sm); }

@@ -387,6 +387,8 @@ const emptyText = computed(() => {
   const what = props.kind === 'currency' ? 'currency' : KIND_NAME[props.kind]
   if (!props.store.doc.value) return `Load a NeverSink filter to see its ${what}.`
   if (!props.store.prices.lookup.value) return 'Waiting for prices from poe.ninja.'
+  // Gem rows come from poe.ninja's gem prices, not from the filter.
+  if (props.kind === 'gems') return 'No gem prices from poe.ninja yet.'
   return `No ${what} found in this filter.`
 })
 const statusText = computed(() => {

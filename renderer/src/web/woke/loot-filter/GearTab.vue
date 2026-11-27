@@ -11,6 +11,10 @@
     </div>
 
     <template v-if="view === 'table'">
+      <!-- Equipment's rules come first: in maps they decide this gear. -->
+      <p v-if="config.presets.weights.on" class="w-dim text-xs" :class="$style.over" data-gear-weights-note>
+        Equipment is on: it decides white, magic and unidentified rare gear from maps (item level 68+) by its score. This table then only reaches identified rares, through its Always cells and Never bases.
+      </p>
 
       <div :class="$style.card">
         <div :class="$style.grid">
@@ -186,6 +190,9 @@
     </template>
 
     <template v-else>
+      <p v-if="config.presets.weights.on" class="w-dim text-xs" :class="$style.over" data-gear-weights-note>
+        Equipment is on: in maps it scores bases by its own ranks (Equipment › Rare gear). Moves here apply to the Drop tiers table.
+      </p>
       <div :class="$style.card">
         <div class="flex items-center gap-2 flex-wrap">
           <span>{{ buildName ? `Build: ${buildName}` : 'No PoB build linked' }}</span>
@@ -823,6 +830,7 @@ function neverOffBuild () {
   gap: 8px;
 }
 :global([data-w-sized]) .wrap { max-height: none; }
+.over { margin: 0; padding: 4px 8px; border-left: 2px solid var(--w-accent); }
 .card {
   display: flex;
   flex-direction: column;
