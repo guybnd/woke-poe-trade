@@ -218,7 +218,9 @@ export const MARK_KEYS: ReadonlySet<WeightKey> = new Set(MARKS.map(x => x.key))
 // any step. Written as Continue rules ahead of the steps, least valuable
 // first, so the biggest multiplier's colour is the one that stays.
 type RGB = [number, number, number]
-interface Deco { key: WeightKey, yes: FilterCondition[], rgb: RGB }
+// minQ: an over-quality shade, brighter the more quality (filters can't
+// thicken a border).
+interface Deco { key: WeightKey, yes: FilterCondition[], rgb: RGB, minQ?: number }
 const DECOS: Deco[] = [
   { key: 'cp', yes: [T('Corrupted'), c('CorruptedMods', '', [0])], rgb: [120, 0, 0] },
   { key: 'ci', yes: [T('Corrupted'), c('CorruptedMods', '', [1])], rgb: [210, 40, 40] },
@@ -231,7 +233,10 @@ const DECOS: Deco[] = [
   { key: 'infl', yes: [c('HasInfluence', '', INFLUENCES)], rgb: [190, 120, 255] },
   { key: 'eld', yes: [c('HasSearingExarchImplicit', '>=', [1])], rgb: [255, 150, 40] },
   { key: 'eld', yes: [c('HasEaterOfWorldsImplicit', '>=', [1])], rgb: [255, 150, 40] },
-  { key: 'qual', yes: [c('Quality', '>=', [24])], rgb: [255, 122, 217] },
+  { key: 'qual', yes: [c('Quality', '>=', [24])], rgb: [200, 110, 175], minQ: 24 },
+  { key: 'qual', yes: [c('Quality', '>=', [26])], rgb: [235, 115, 200], minQ: 26 },
+  { key: 'qual', yes: [c('Quality', '>=', [28])], rgb: [255, 122, 217], minQ: 28 },
+  { key: 'qual', yes: [c('Quality', '>=', [30])], rgb: [255, 60, 210], minQ: 30 },
   { key: 'fract', yes: [T('FracturedItem')], rgb: [215, 180, 110] },
   { key: 'synth', yes: [T('SynthesisedItem')], rgb: [110, 170, 255] },
   { key: 'fated', yes: [T('Fated')], rgb: [255, 205, 130] },
@@ -248,10 +253,13 @@ const decoOrder = (m: Record<WeightKey, number>) => DECOS.map((d, i) => ({ d, i 
 const decoAction = (d: Deco) => a('SetBorderColor', ...d.rgb, 255)
 
 // The mark whose colour this rare's border takes, if any.
-export function decoOf (it: WeightItem, m: Record<WeightKey, number>): WeightKey | null {
+function decoHit (it: WeightItem, m: Record<WeightKey, number>): Deco | null {
   const has = new Set(termsOf(it))
-  const hits = decoOrder(m).filter(d => has.has(d.key))
-  return hits.length ? hits[hits.length - 1].key : null
+  const hits = decoOrder(m).filter(d => has.has(d.key) && (d.minQ == null || it.quality >= d.minQ))
+  return hits.length ? hits[hits.length - 1] : null
+}
+export function decoOf (it: WeightItem, m: Record<WeightKey, number>): WeightKey | null {
+  return decoHit(it, m)?.key ?? null
 }
 // The step a rare lands on: its score's, or Small at least when a pinned
 // row ("always show") is one of its terms.
@@ -265,8 +273,7 @@ export function stepFor (it: WeightItem, w: Pick<WeightSettings, 'mult' | 'need'
 // The look the filter gives this rare at this step: the step's loudness and
 // its most valuable mark's border.
 export function weightLook (it: WeightItem, m: Record<WeightKey, number>, step: Step): FilterAction[] {
-  const k = decoOf(it, m)
-  const d = k && DECOS.find(x => x.key === k)
+  const d = decoHit(it, m)
   return d && step > 0 ? [decoAction(d), ...stepActions(step)] : stepActions(step)
 }
 
@@ -330,7 +337,7 @@ function pinConds (k: WeightKey, bases: BaseRow[]): FilterCondition[][] {
     return names.length ? [[c('BaseType', '==', names)]] : []
   }
   if (k === 'w86') return [[c('Rarity', '', ['Normal', 'Magic']), c('ItemLevel', '>=', [86])]]
-  return DECOS.filter(d => d.key === k).map(d => d.yes)
+  return DECOS.filter(d => d.key === k && (d.minQ == null || d.minQ === 24)).map(d => d.yes)
 }
 
 // Each rarity's drop tier rows, best first.
