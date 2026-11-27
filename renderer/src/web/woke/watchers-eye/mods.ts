@@ -13,6 +13,9 @@ export const WE_AURAS = [
 ] as const
 export type WeAura = typeof WE_AURAS[number]
 
+// Aura mods one Watcher's Eye can have.
+export const WE_MAX_MODS = 3
+
 // The aura a skill gem runs. Vaal auras (Vaal Grace, Vaal Haste) are a
 // buff of their own, not the aura, so they don't count.
 export function auraOfGem (gem: string): WeAura | null {

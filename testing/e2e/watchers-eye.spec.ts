@@ -55,6 +55,14 @@ test("an aura in Ctrl+Space opens the Watcher's Eye finder, and Price check sear
   const pen = finder.locator('[data-qa="we-mod"]', { hasText: 'Penetrates (10-15)% Cold Resistance' })
   await pen.click()
   await expect(finder.locator('[data-qa="we-bar"]')).toContainText('2 picked')
+  // At least 2 by default, which is both picks; 3 needs a third pick.
+  const need = (n: number) => finder.locator(`[data-qa="we-need-${n}"]`)
+  await expect(need(2)).toHaveAttribute('aria-pressed', 'true')
+  await expect(need(3)).toBeDisabled()
+  await need(1).click()
+  await expect(finder.locator('[data-qa="we-price"]')).toBeDisabled()
+  await need(2).click()
+  await expect(finder.locator('[data-qa="we-price"]')).toBeEnabled()
 
   // Save the setup, change it, and load it back.
   await finder.locator('[data-qa="we-save"]').click()

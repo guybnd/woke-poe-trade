@@ -110,6 +110,12 @@ export function ninjaIcon (type: string, name: string): string | null {
   return gameIcon(name, ns) ?? (ns === 'UNIQUE' && isFoulborn(name) ? gameIcon(dataUniqueName(name), ns) : null)
 }
 
+// An item's art by name whatever kind it is: a base or currency, a unique
+// (Watcher's Eye) or a gem (Enlighten Support).
+function artByName (name: string): string | null {
+  return gameIcon(name) ?? gameIcon(name, 'UNIQUE') ?? gameIcon(name, 'GEM')
+}
+
 // A module's icon: its game art (null when it has none or the art isn't
 // loaded) and the Font Awesome fallback. Same everywhere it's drawn.
 export function moduleIcon (moduleId: string): { art: string | null, fa: string } {
@@ -119,7 +125,7 @@ export function moduleIcon (moduleId: string): { art: string | null, fa: string 
   const art = i.src ? i.src
     : i.mechanic ? mechanicIcon(i.mechanic).src
       : i.currency ? CURRENCY_ICONS[i.currency] ?? null
-        : i.item ? gameIcon(i.item)
+        : i.item ? artByName(i.item)
           : null
   return { art, fa: i.fa }
 }

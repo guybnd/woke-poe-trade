@@ -2,13 +2,15 @@
 // that aura's Watcher's Eye mods, or the mod, with a button that opens the
 // Watcher's Eye finder on it.
 import { matchRank } from '../search'
+import { gameIcon } from '../../ui/game-icons'
 import { WATCHERS_EYE_TYPE } from '../../watchers-eye/widget'
 import { WATCHERS_EYE, WE_AURAS } from '../../watchers-eye/mods'
 import type { WeMod } from '../../watchers-eye/mods'
 import type { Lookup, LookupCard } from './types'
 
 const GROUP = "Watcher's Eye mods"
-const ICON = 'fas fa-eye'
+// The jewel's own art, the eye glyph until the item data is read.
+const icon = () => gameIcon(WATCHERS_EYE, 'UNIQUE') ?? 'fas fa-eye'
 const MAX_MODS = 3
 
 const words = (s: string) => s.toLowerCase().replace(/[’']/g, '').split(/[^a-z0-9]+/).filter(Boolean)
@@ -37,7 +39,7 @@ export function watchersEyeLookup (mods: readonly WeMod[] | null): Lookup {
         group: GROUP,
         name: aura ? `${aura} on Watcher's Eye` : "Watcher's Eye finder",
         sub: aura ? `${list.length || 'Its'} Watcher's Eye mods, in the finder` : 'Every mod for the auras you run, priced in one search',
-        icon: ICON,
+        icon: icon(),
         tip: { name: WATCHERS_EYE },
         sections: aura && list.length
           ? [{ label: `What Watcher's Eye can roll for ${aura}`, text: list.map(m => m.line) }]
@@ -53,7 +55,7 @@ export function watchersEyeLookup (mods: readonly WeMod[] | null): Lookup {
         group: GROUP,
         name: m.line,
         sub: `Watcher's Eye · ${m.aura}`,
-        icon: ICON,
+        icon: icon(),
         tip: { name: WATCHERS_EYE },
         sections: [{ label: `Watcher's Eye mod, while affected by ${m.aura}`, text: [m.line] }],
         actions: [{ label: 'Pick it in the finder', open: { tool: WATCHERS_EYE_TYPE, id: `mod:${m.id}` } }]
