@@ -20,7 +20,8 @@ export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color
   uniqplain: { text: [175, 96, 37], color: 'Brown', shape: 'Star' },
   uniqvar: { text: [210, 130, 60], color: 'Orange', shape: 'Star' },
   uniqearly: { text: [200, 150, 90], color: 'Yellow', shape: 'Star' },
-  uniqboss: { text: [190, 80, 40], color: 'Red', shape: 'Pentagon' }
+  // Not red: red beams and map icons are kept for Tink (Guy 2026-11-27).
+  uniqboss: { text: [190, 80, 40], color: 'Orange', shape: 'Pentagon' }
 }
 
 // Boss-only bases show whatever they are (Guy: "boss-only likely always on").
