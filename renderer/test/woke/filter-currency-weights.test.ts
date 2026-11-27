@@ -73,7 +73,7 @@ describe('currency weights', () => {
     expect(s).toEqual([null, ...all.slice(1)])
     expect(stepOfPile(s, 1)).toBe(0)
     expect(stepOfPile(s, 10)).toBe(stepOfPile(all, 10))
-    expect(normalizeCurrency({ off: [1, 1, 5, 'x', 2] }).off).toEqual([1, 2])
+    expect(normalizeCurrency(JSON.parse('{"off":[1,1,5,"x",2]}')).off).toEqual([1, 2])
   })
 
   it('guesses a price from NeverSink tiers', () => {

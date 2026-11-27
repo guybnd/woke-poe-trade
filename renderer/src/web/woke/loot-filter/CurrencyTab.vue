@@ -313,7 +313,7 @@ function loudOnly (p: StylePatch): StylePatch {
   return out
 }
 function toggleOff (s: number) {
-  c.value.off = c.value.off.includes(s) ? c.value.off.filter(x => x !== s) : [...c.value.off, s].sort()
+  c.value.off = c.value.off.includes(s) ? c.value.off.filter(x => x !== s) : [...c.value.off, s].sort((a, b) => a - b)
 }
 function setStepLook (s: number, p: StylePatch | null) {
   const next = Object.fromEntries(Object.entries(c.value.steps).filter(([k]) => k !== String(s)))

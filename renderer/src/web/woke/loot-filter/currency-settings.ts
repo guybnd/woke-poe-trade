@@ -119,6 +119,6 @@ export function normalizeCurrency (c: (Partial<CurrencySettings> & OldCurrency) 
     items,
     steps: patches(c?.steps, /^[1-5]$/),
     cats: patches(c?.cats, /^[a-z]{1,20}$/),
-    off: Array.isArray(c?.off) ? [...new Set((c.off as unknown[]).filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 4))].sort() : []
+    off: Array.isArray(c?.off) ? [...new Set((c.off as unknown[]).filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 4))].sort((a, b) => a - b) : []
   }
 }
