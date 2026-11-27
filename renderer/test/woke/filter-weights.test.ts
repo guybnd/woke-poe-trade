@@ -138,7 +138,7 @@ describe('rare weights', () => {
       const raw = defaultWeights()
       for (const row of WEIGHT_ROWS) raw.mult[row.key] = MULT_STEPS[Math.floor(r() * MULT_STEPS.length)]
       const pins = ['x1', 'dc', 'fract', 'synth', 'l6', 'infl'] as const
-      const w = normalizeWeights({ ...raw, on: true, need: [0.5, 4, 32][round % 3], always: pins.filter(() => r() < 0.4) as never })
+      const w = normalizeWeights({ ...raw, on: true, need: [0.5, 4, 32][round % 3], always: pins.filter(() => r() < 0.4) as never, loud: [[8, 32, 128], [16, 64, 256], [4, 90, 500]][round % 3] })
       const bases = filterBases(doc).filter(b => BASE_FACTS[b.name])
       const compiled = applyWeights(doc, w)!
       expect(compiled.blocks.length).toBeLessThan(6000)
