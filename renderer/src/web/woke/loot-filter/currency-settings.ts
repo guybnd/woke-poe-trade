@@ -84,14 +84,6 @@ function patches (v: unknown, key: RegExp): Record<string, StylePatch> {
   return out
 }
 
-function modes (v: unknown): Record<string, SectionMode> {
-  const out: Record<string, SectionMode> = {}
-  if (v && typeof v === 'object') {
-    for (const [k, m] of Object.entries(v)) if (/^[a-z]{1,20}$/.test(k) && (m === 'off' || m === 'always')) out[k] = m
-  }
-  return out
-}
-
 export function normalizeItemEdit (e: unknown): ItemEdit | null {
   if (!e || typeof e !== 'object') return null
   const x = e as Record<string, unknown>
@@ -157,10 +149,9 @@ export function normalizeCurrency (c: (Partial<CurrencySettings> & OldCurrency) 
     cats: patches(c?.cats, /^[a-z]{1,20}$/),
     mult: num(c?.mult, MULT_MIN, MULT_MAX) ?? null,
     off: [1, 2, 3, 4].filter(n => Array.isArray(c?.off) && c.off.includes(n)),
-    catMode: modes(c?.catMode),
-    faint: {
-      on: typeof c?.faint?.on === 'boolean' ? c.faint.on : d.faint.on,
-      until: num(c?.faint?.until, MULT_MIN, 99) ?? d.faint.until
-    }
+    // Kept light (this runs at startup): what reads them takes only 'off',
+    // 'always', true and a number (currency-weights.ts).
+    catMode: { ...c?.catMode },
+    faint: { on: c?.faint?.on === true, until: Number(c?.faint?.until) || FAINT_UNTIL }
   }
 }
