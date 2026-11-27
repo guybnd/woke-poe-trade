@@ -65,7 +65,7 @@ export interface CurrencySettings {
   faint: FaintSettings
 }
 
-export type SectionMode = 'off' | 'always'
+export type SectionMode = 'off' | 'auto' | 'always'
 export interface FaintSettings { on: boolean, until: number }
 // Faint shows below Strict (×1.25) unless set otherwise. Off by default:
 // the rules are maps-only, and T1 said off in maps until you turn it on.
