@@ -117,6 +117,15 @@ history:
     date: '2026-11-27T07:15:15.284Z'
     selfAttested: true
     id: c-2026-11-27t07-15-15-284z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 994 merged (https://github.com/guybnd/woke-poe-trade/pull/994,
+      eadd18a): your own base ranks, a Don't care rank, and the Alt+F rank
+      strip.
+    date: '2026-11-27T08:23:35.560Z'
+    selfAttested: true
+    id: c-2026-11-27t08-23-35-560z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/976'
 ---
 Epic: reimagine the loot filter as a clear visual funnel that shows how it decides. Design only, nothing built yet: 8 design options waiting on Guy's picks. Subtasks come after the picks.
