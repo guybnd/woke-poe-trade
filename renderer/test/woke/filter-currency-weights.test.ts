@@ -178,6 +178,17 @@ describe('currency weights', () => {
     expect(matchItem(doc, pile('Facetor\'s Lens', 1)).visibility).toBe('Show')
   })
 
+  it('covers every stackable NeverSink lists in maps, splinters, lifeforce, embers and runegrafts too', () => {
+    const items = new Map(currencyItems(parseFilter(SEMI), lookup).map(i => [i.name, i.cat]))
+    expect(items.get('Timeless Karui Splinter')).toBe('splinters')
+    expect(items.get('Simulacrum Splinter')).toBe('splinters')
+    expect(items.get('Vivid Crystallised Lifeforce')).toBe('harvest')
+    expect(items.get('Allflame Ember of Kulemak')).toBe('embers')
+    expect(items.get('Runegraft of Bellows')).toBe('runegrafts')
+    expect(items.has('Dead Man\'s Sulphur')).toBe(true)
+    expect(items.has('Rogue\'s Marker')).toBe(true)
+  })
+
   it('sorts essences into their tiers', () => {
     expect(subgroupOf('Deafening Essence of Greed', 'essences')).toBe('Deafening')
     expect(subgroupOf('Whispering Essence of Hatred', 'essences')).toBe('Whispering')

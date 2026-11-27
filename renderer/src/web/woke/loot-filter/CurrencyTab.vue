@@ -9,6 +9,14 @@
       <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" title="Line, step prices and category nudges back to the start; your item edits stay" @click="reset">Defaults</WButton>
     </div>
 
+    <div :class="$style.minBar" data-currency-min>
+      <span :class="$style.minLab">Hide piles worth under</span>
+      <input type="range" min="0" :max="LINE_STOPS.length - 1" step="1" :value="lineStop" :class="$style.range" aria-label="Hide piles worth under this many chaos"
+        @input="c.line = LINE_STOPS[Number(($event.target as HTMLInputElement).value)]">
+      <b :class="$style.minVal">{{ chaosText(c.line) }}</b>
+      <span class="w-faint text-xs">{{ hideNote }}</span>
+    </div>
+
     <div :class="$style.steps" role="group" aria-label="Where each step starts">
       <div v-for="s in [0, 1, 2, 3, 4, 5]" :key="s" :class="$style.step" :style="{ '--step': STEP_CSS[s] }">
         <span :class="$style.stepName">{{ CSTEP_NAMES[s] }}</span>
@@ -42,11 +50,10 @@
         <span :class="$style.count">{{ g.shown }} of {{ g.all }} show</span>
         <span :class="$style.dots" aria-hidden="true"><i v-for="r in g.rows" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
         <span class="flex-1" />
-        <span :class="$style.nudge" @click.stop @keydown.stop>
-          <button type="button" :disabled="(c.nudge[g.cat.id] ?? 0) <= -NUDGE_MAX" :aria-label="`See more ${g.cat.name}`" title="See more: halves the line for this category" @click="nudge(g.cat.id, -1)">−</button>
-          <span class="w-num text-xs" :title="`Line for ${g.cat.name}: ${chaosText(catLine(c, g.cat.id))}`">{{ nudgeText(g.cat.id) }}</span>
-          <button type="button" :disabled="(c.nudge[g.cat.id] ?? 0) >= NUDGE_MAX" :aria-label="`See less ${g.cat.name}`" title="See less: doubles the line for this category" @click="nudge(g.cat.id, 1)">+</button>
-        </span>
+        <label :class="$style.whole" :title="`Below this, ${g.cat.name} hide (a full stack counts for more). The step prices above stay the same.`" @click.stop @keydown.stop>Shows from
+          <select :value="c.nudge[g.cat.id] ?? 0" :class="$style.sel2" :aria-label="`${g.cat.name} show from`" @change="setNudge(g.cat.id, Number(($event.target as HTMLSelectElement).value))">
+            <option v-for="n in NUDGES" :key="n" :value="n">{{ chaosText(c.line * 2 ** n) }}{{ n === 0 ? ' (Small)' : '' }}</option>
+          </select></label>
       </div>
       <div v-if="isOpen(g.cat.id)" :class="$style.catBody" role="table" :aria-label="`${g.cat.name} and when they show`">
         <template v-for="sg in g.subs" :key="sg.id">
@@ -95,7 +102,7 @@ import CurrencyPile from './CurrencyPile.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { CSTEP_NAMES, CURRENCY_CATEGORIES, SUBGROUPS, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, catLine, currencyItems, defaultCurrency, stacksFor, stepOfPile } from './currency-weights'
+import { CSTEP_NAMES, CURRENCY_CATEGORIES, SUBGROUPS, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile } from './currency-weights'
 import type { CStep, CurrencyItem, ItemEdit } from './currency-weights'
 
 const props = defineProps<{
@@ -236,15 +243,21 @@ async function goTo (name: string) {
   document.querySelector(`[data-currency-item="${CSS.escape(name)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
 }
 
-function nudge (cat: string, d: number) {
-  const v = Math.max(-NUDGE_MAX, Math.min(NUDGE_MAX, (c.value.nudge[cat] ?? 0) + d))
+// The main slider: every category's line moves with it (a category's
+// Shows from stays relative: ×2, ×½).
+const LINE_STOPS = [0.1, 0.2, 0.3, 0.5, 0.75, 1, 1.5, 2, 3, 5, 7.5, 10]
+const lineStop = computed(() => {
+  let best = 0
+  LINE_STOPS.forEach((v, i) => { if (Math.abs(Math.log(v / c.value.line)) < Math.abs(Math.log(LINE_STOPS[best] / c.value.line))) best = i })
+  return best
+})
+const hideNote = computed(() => `${rows.value.length - shownCount.value} of ${rows.value.length} items never show; a bigger stack of the rest can`)
+
+const NUDGES = Array.from({ length: NUDGE_MAX * 2 + 1 }, (_, i) => i - NUDGE_MAX)
+function setNudge (cat: string, v: number) {
   const next = Object.fromEntries(Object.entries(c.value.nudge).filter(([k]) => k !== cat))
   if (v !== 0) next[cat] = v
   c.value.nudge = next
-}
-const nudgeText = (cat: string) => {
-  const v = c.value.nudge[cat] ?? 0
-  return v === 0 ? '·' : v > 0 ? `less ${v}` : `more ${-v}`
 }
 
 function setEdit (name: string, e: ItemEdit | null) {
@@ -342,23 +355,15 @@ function chaosText (v: number): string {
 .catName { font-size: var(--w-fs-sm); color: #e2d3ad; white-space: nowrap; }
 .dots { display: flex; gap: 2px; flex-wrap: wrap; max-width: 16rem; min-width: 0; }
 .dots i { width: 7px; height: 7px; border-radius: 1px; display: block; }
-.nudge { display: inline-flex; align-items: center; gap: 4px; }
-.nudge button {
-  width: 18px;
-  height: 18px;
-  line-height: 1;
-  border: 1px solid var(--w-line);
-  border-radius: var(--w-r-sm);
-  background: var(--w-panel-2);
-  color: inherit;
-}
-.nudge button:disabled { opacity: 0.4; }
-.nudge span { min-width: 3.2em; text-align: center; color: var(--w-dim); }
 .subHead { display: flex; align-items: center; gap: 8px; padding: 3px 2px; margin-top: 2px; border-bottom: 1px solid var(--w-line); }
 .subFold { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; min-width: 0; }
 .subName { font-size: var(--w-fs-sm); color: #d8c89c; min-width: 5.5rem; }
 .whole { display: inline-flex; align-items: center; gap: 6px; color: var(--w-dim); font-size: var(--w-fs-xs); }
 .sel2 { background: var(--w-panel); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); color: inherit; padding: 0 4px; }
+.minBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 10px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
+.minLab { color: #e2d3ad; font-size: var(--w-fs-sm); }
+.range { width: min(22rem, 100%); accent-color: var(--w-accent, #c8a565); }
+.minVal { font-size: var(--w-fs-sm); color: var(--w-accent, #c8a565); min-width: 3.5em; font-variant-numeric: tabular-nums; }
 .catBody { border-top: 1px solid var(--w-line); padding: 4px 6px; display: flex; flex-direction: column; }
 .row {
   display: grid;

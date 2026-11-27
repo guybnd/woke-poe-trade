@@ -8,7 +8,7 @@ export const CURRENCY_TYPE = 'woke->currency'
 
 // The line: a pile worth less than this (in chaos, after the stack bias) hides.
 export const LINE_MIN = 0.1
-export const LINE_MAX = 5
+export const LINE_MAX = 10
 // A category's nudge: each notch doubles (see less) or halves (see more) the line.
 export const NUDGE_MAX = 3
 

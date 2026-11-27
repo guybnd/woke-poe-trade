@@ -30,7 +30,7 @@ export { CURRENCY_TYPE, CSTEP_NAMES, LINE_MIN, LINE_MAX, NUDGE_MAX, defaultCurre
 export type { CStep, CurrencySettings, ItemEdit } from './currency-settings'
 
 // NeverSink's currency types this step covers.
-const SCOPE = /^currency(->(essence|fossil|oil|deliriumorbs|trial->omen|trial->tattoo|ducats|others))?$/
+const SCOPE = /^(currency(->(essence|fossil|oil|deliriumorbs|trial->omen|trial->tattoo|ducats|others|deadmansulphur|harvest|heist|splinter|splinter->simulacrum))?|mapenchantments|runesgrafts)$/
 // A guess in chaos for an item without a usable price, by NeverSink's tier
 // number (t1exalted, t4chaos, t3...): rough, and marked est. in the tab.
 const TIER_GUESS = [150, 150, 60, 20, 5, 1.5, 0.5, 0.2, 0.1, 0.05]
@@ -54,6 +54,10 @@ export const CURRENCY_CATEGORIES: CurrencyCategory[] = [
   { id: 'omens', name: 'Omens', art: 'Omen of Fortune' },
   { id: 'tattoos', name: 'Tattoos', art: 'Journey Tattoo of the Body' },
   { id: 'ducats', name: 'Ducats', art: "Kishara's Ducat" },
+  { id: 'splinters', name: 'Splinters', art: 'Timeless Maraketh Splinter' },
+  { id: 'harvest', name: 'Lifeforce', art: 'Sacred Crystallised Lifeforce' },
+  { id: 'embers', name: 'Allflame Embers', art: 'Allflame Ember of Kulemak' },
+  { id: 'runegrafts', name: 'Runegrafts', art: 'Runegraft of Bellows' },
   { id: 'other', name: 'Other', art: 'Scrying Orb' }
 ]
 
@@ -65,12 +69,19 @@ const BY_TYPE: Record<string, string> = {
   'currency->trial->omen': 'omens',
   'currency->trial->tattoo': 'tattoos',
   'currency->ducats': 'ducats',
-  'currency->others': 'other'
+  'currency->others': 'other',
+  'currency->splinter': 'splinters',
+  'currency->splinter->simulacrum': 'splinters',
+  'currency->harvest': 'harvest',
+  'mapenchantments': 'embers',
+  'runesgrafts': 'runegrafts'
 }
 
 // NeverSink lists all of these as plain currency: sort them by name.
 export function categoryOf (name: string, type: string): string {
   if (BY_TYPE[type]) return BY_TYPE[type]
+  if (/Crystallised Lifeforce$/.test(name)) return 'harvest'
+  if (/^Timeless .+ Splinter$|^Simulacrum Splinter$/.test(name)) return 'splinters'
   if (/Catalyst$/.test(name)) return 'catalysts'
   if (/^Tainted /.test(name)) return 'tainted'
   if (/^(Astragali|Burial Medallion|Exotic Coinage|Scrap Metal)$/.test(name)) return 'expedition'
