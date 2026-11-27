@@ -7,7 +7,7 @@
       <button type="button" :class="$style.cat" class="w-focusable" :style="{ '--c': catCss }" :title="`Open ${catName} on the Currency weights tab`" data-currency-card-cat
         @click="emit('open-tab')"><i aria-hidden="true" />{{ catName }}</button>
       <span class="grow" />
-      <span class="text-xs w-dim">{{ chaosText(base) }} each · {{ edit.price != null ? 'your price' : it.est ? 'guess' : 'poe.ninja' }}<template v-if="stack > 1"> · stack {{ stack }}/{{ it.full }}</template></span>
+      <span class="text-xs w-dim">{{ chaosText(base) }} each · {{ edit.price != null ? 'your price' : it.est ? 'guess' : 'poe.ninja' }}<template v-if="stack > 1"> · stack {{ stack }}/{{ Math.max(stack, it.full) }}</template></span>
     </div>
 
     <div :class="$style.row">
@@ -30,7 +30,7 @@
       <thead><tr><th>Step</th><th>Stack</th><th>Pile worth</th></tr></thead>
       <tbody>
         <tr v-for="r in rows" :key="r.step" :class="{ [$style.cur]: r.step === now, [$style.never]: r.from == null }">
-          <td><LabelPreview :text="r.step === now && stack > 1 ? `${stack}x ${it.name}` : it.name" :actions="[]" :style-override="r.look" visibility="Show" :extras="false" :scale="0.7" /></td>
+          <td><LabelPreview :text="r.from != null && r.from > 1 ? `${r.from}x ${it.name}` : it.name" :actions="[]" :style-override="r.look" visibility="Show" :extras="false" :scale="0.7" /></td>
           <td>{{ r.from == null ? 'never' : r.from > 1 ? `${r.from}+` : 'any' }}</td>
           <td class="w-dim">{{ r.note }}</td>
         </tr>
