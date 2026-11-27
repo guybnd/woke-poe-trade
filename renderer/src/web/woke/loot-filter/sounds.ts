@@ -31,7 +31,8 @@ export const GAME_SOUND_NAMES: Record<string, string> = {
   3: 'Decent',
   4: 'Map drop',
   5: 'Big map',
-  6: 'Tink'
+  6: 'Tink',
+  9: 'Small'
 }
 
 export function soundLabel (id: string): string {

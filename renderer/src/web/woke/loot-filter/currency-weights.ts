@@ -271,9 +271,9 @@ export function currencyActions (step: CStep): FilterAction[] {
   switch (step) {
     case 0: return [a('SetFontSize', 18), a('DisableDropSound', 'True')]
     case 1: return [a('SetFontSize', 30), a('SetTextColor', 170, 158, 130, 255), a('SetBorderColor', 0, 0, 0, 0), a('SetBackgroundColor', 0, 0, 0, 180)]
-    case 2: return [a('SetFontSize', 35), a('SetTextColor', 210, 190, 140, 255), a('SetBorderColor', 170, 158, 130, 160), a('SetBackgroundColor', 20, 16, 10, 230), a('PlayAlertSound', 3, 150)]
-    case 3: return [a('SetFontSize', 39), a('SetTextColor', 235, 210, 150, 255), a('SetBorderColor', 235, 210, 150, 220), a('SetBackgroundColor', 45, 36, 18, 240), a('PlayAlertSound', 2, 200), a('MinimapIcon', 2, 'Yellow', 'Circle')]
-    case 4: return [a('SetFontSize', 42), a('SetTextColor', 255, 225, 150, 255), a('SetBorderColor', 255, 225, 150, 255), a('SetBackgroundColor', 70, 55, 25, 240), a('PlayAlertSound', 2, 300), a('PlayEffect', 'Yellow', 'Temp'), a('MinimapIcon', 1, 'Yellow', 'Circle')]
+    case 2: return [a('SetFontSize', 35), a('SetTextColor', 210, 190, 140, 255), a('SetBorderColor', 170, 158, 130, 160), a('SetBackgroundColor', 20, 16, 10, 230), a('PlayAlertSound', 2, 150)]
+    case 3: return [a('SetFontSize', 39), a('SetTextColor', 235, 210, 150, 255), a('SetBorderColor', 235, 210, 150, 220), a('SetBackgroundColor', 45, 36, 18, 240), a('PlayAlertSound', 3, 200), a('MinimapIcon', 2, 'Yellow', 'Circle')]
+    case 4: return [a('SetFontSize', 42), a('SetTextColor', 255, 225, 150, 255), a('SetBorderColor', 255, 225, 150, 255), a('SetBackgroundColor', 70, 55, 25, 240), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Yellow', 'Temp'), a('MinimapIcon', 1, 'Yellow', 'Circle')]
     case 5: return topStepActions('currency')
   }
 }
