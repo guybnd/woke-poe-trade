@@ -9,7 +9,7 @@ tags:
   - feature
   - price-check
 createdBy: Agent
-updatedBy: Guy
+updatedBy: Agent
 history:
   - type: activity
     user: Agent
@@ -57,6 +57,15 @@ history:
     to: Released
     user: Guy
     date: '2026-11-27T04:30:50.395Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up PR 984 (https://github.com/guybnd/woke-poe-trade/pull/984,
+      7cf88ae): jewel art icon, At least 1/2/3 match toggles (Guy: more than 3
+      picked defaults to "at least 3").
+    date: '2026-11-27T05:34:48.697Z'
+    selfAttested: true
+    id: c-2026-11-27t05-34-48-697z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/979'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
