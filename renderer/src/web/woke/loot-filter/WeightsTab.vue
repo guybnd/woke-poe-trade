@@ -1,9 +1,9 @@
 <template>
   <div :class="$style.wrap" class="w-scroll" @paste="onPaste">
     <div :class="$style.top">
-      <WToggle v-model="w.on">Weights decide endgame rares</WToggle>
+      <WToggle v-model="w.on">Weights decide endgame gear</WToggle>
       <span :class="$style.beta">Beta</span>
-      <WInfo text="Every unidentified rare of item level 68+ gets points: its base rank plus each thing it has (drop tier, item level, corruption, size, and its biggest mark: links, influence, fractured...). Under the line it hides; over it, it shows, louder at +20, +40 and +60 over. Only this profile. Your own rules, build rules and presets still go on top." />
+      <WInfo text="Every white, unidentified magic and unidentified rare gear item of item level 68+ gets points: its rarity and base rank, times each thing it has (drop tier, item level, corruption, size, and its biggest mark: links, influence, fractured...). Under the line it hides; over it, it shows, louder at +20, +40 and +60 over. Only this profile. Your own rules, build rules and presets still go on top." />
       <span class="w-faint text-xs">{{ w.on ? `${store.weightRules.value.toLocaleString()} rules · ${sizeText}` : 'Off: NeverSink decides' }}</span>
       <span class="flex-1" />
       <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" @click="reset">Defaults</WButton>
@@ -13,6 +13,9 @@
       <div v-for="g in WEIGHT_GROUPS" :key="g.key" :class="$style.group">
         <div :class="$style.groupHead"><i :class="g.icon" /> {{ g.label }}</div>
         <div v-for="r in g.rows" :key="r.key" :class="[$style.row, { [$style.moved]: w.mult[r.key] !== r.dflt }]" :title="`${r.label}: ×${w.mult[r.key]}${w.mult[r.key] !== r.dflt ? ` (default ×${r.dflt})` : ''}`">
+          <button v-if="PIN_ROWS.has(r.key)" type="button" :class="[$style.pin, { [$style.pinned]: w.always.includes(r.key) }]" :aria-pressed="w.always.includes(r.key)"
+            :title="w.always.includes(r.key) ? `Always shown (at least Small): ${r.label}. Click to let the score decide.` : `Always show ${r.label.toLowerCase()}, whatever its score`" @click="togglePin(r.key)"><i class="fas fa-thumbtack" /></button>
+          <span v-else :class="$style.pin" />
           <span :class="$style.rowName">{{ r.label }}</span>
           <button type="button" :class="$style.step" :aria-label="`Less for ${r.label}`" @click="nudge(r.key, -1)"><i class="fas fa-minus" /></button>
           <span :class="$style.num">{{ pointsText(points(w.mult[r.key])) }}</span>
@@ -61,7 +64,7 @@
             </span>
             <span :class="$style.labelRow">
               <span :class="[$style.deco, $style[signOf(samples[d.i].rankKey)]]" :title="WEIGHT_LABEL[samples[d.i].rankKey]">{{ RANK_TEXT[samples[d.i].rankKey] }}</span>
-              <LabelPreview :text="samples[d.i].row.name" :actions="d.actions" :visibility="d.hidden ? 'Hide' : 'Show'" :default-text="RARE" :extras="false" :scale="SCALE" />
+              <LabelPreview :text="samples[d.i].row.name" :actions="d.actions" :visibility="d.hidden ? 'Hide' : 'Show'" :default-text="TEXT_OF[samples[d.i].it.rarity ?? 'Rare']" :extras="false" :scale="SCALE" />
               <span :class="$style.deco" :title="samples[d.i].tierText">{{ samples[d.i].tierShort }}</span>
             </span>
           </span>
@@ -93,8 +96,8 @@ import { readStyle } from './edits'
 import { poeColour } from './colours'
 import { ruleLabel } from './parse'
 import type { Colour } from './edits'
-import { MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, weightLook, stepOf, termsOf, weightOf } from './weights'
-import type { BaseRow, Step, WeightItem, WeightKey } from './weights'
+import { MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, weightLook, stepFor, PIN_ROWS, termsOf, weightOf } from './weights'
+import type { BaseRow, WeightItem, WeightKey } from './weights'
 import { itemFacts } from './item-facts'
 import type { ItemFacts } from './item-facts'
 import { CHIP_LABEL, SAMPLES, pastedRare, sampleTip, factsOf, fromPoints, itemOf, points, pointsText, sampleBase, samplePile } from './weight-samples'
@@ -105,7 +108,8 @@ const props = defineProps<{
 }>()
 
 const w = computed(() => props.config.presets.weights)
-const RARE: Colour = [255, 255, 119, 255]
+// The game's label colour for each rarity.
+const TEXT_OF: Record<string, Colour> = { Rare: [255, 255, 119, 255], Magic: [136, 136, 255, 255], Normal: [200, 200, 200, 255] }
 const NEED_LO = Math.round(points(NEED_MIN))
 const NEED_HI = Math.round(points(NEED_MAX))
 const STEP_CSS = ['#3a3a3a', '#8a8a8a', '#d8d877', '#29d2a0', '#e04848']
@@ -125,7 +129,7 @@ const bases = computed(() => {
 const pile = computed(() => samplePile(bases.value))
 const pileSteps = computed(() => {
   const out = [0, 0, 0, 0, 0]
-  for (const p of pile.value) out[stepOf(weightOf(p.it, w.value.mult), w.value.need)]++
+  for (const p of pile.value) out[stepFor(p.it, w.value)]++
   return out
 })
 const pct = (n: number) => pile.value.length ? `${(100 * n / pile.value.length).toFixed(n && n * 1000 < pile.value.length ? 1 : 0)}%` : ''
@@ -207,7 +211,7 @@ const samples = computed(() => {
       row,
       terms,
       pts: points(weight),
-      step: stepOf(weight, w.value.need) as Step,
+      step: stepFor(it, w.value),
       other,
       ns: nsHit.final ? { actions: nsHit.final.block.actions, visibility: nsHit.visibility } : null
     }]
@@ -245,6 +249,8 @@ const TAG_H = 13
 const DECO_W = 22
 // '' = the item level itself.
 const TAG_TEXT: Partial<Record<WeightKey, string>> = {
+  wm: 'Magic',
+  wn: 'White',
   i68: '',
   i75: '',
   i83: '',
@@ -304,6 +310,11 @@ const grounds = computed(() => {
 const ICON_OF = Object.fromEntries(WEIGHT_GROUPS.flatMap(g => g.rows.map(x => [x.key, g.icon]))) as Record<WeightKey, string>
 const signOf = (k: WeightKey) => w.value.mult[k] > 1 ? 'plus' : w.value.mult[k] < 1 ? 'minus' : 'zero'
 
+function togglePin (key: WeightKey) {
+  const a = w.value.always
+  w.value.always = a.includes(key) ? a.filter(k => k !== key) : [...a, key]
+}
+
 function nudge (key: WeightKey, dir: 1 | -1) {
   const v = w.value.mult[key]
   const [lo, hi] = multRange(w.value.mult, key)
@@ -313,12 +324,13 @@ function nudge (key: WeightKey, dir: 1 | -1) {
 
 const changed = computed(() => {
   const d = defaultWeights()
-  return w.value.need !== d.need || (Object.keys(d.mult) as WeightKey[]).some(k => w.value.mult[k] !== d.mult[k])
+  return w.value.need !== d.need || w.value.always.length > 0 || (Object.keys(d.mult) as WeightKey[]).some(k => w.value.mult[k] !== d.mult[k])
 })
 function reset () {
   const d = defaultWeights()
   w.value.need = d.need
   Object.assign(w.value.mult, d.mult)
+  w.value.always = []
 }
 </script>
 
@@ -362,7 +374,7 @@ function reset () {
 }
 .row {
   display: grid;
-  grid-template-columns: 1fr 16px 2.2rem 16px;
+  grid-template-columns: 14px 1fr 16px 2.2rem 16px;
   align-items: center;
   gap: 2px;
   font-size: var(--w-fs-xs);
@@ -409,6 +421,19 @@ function reset () {
     radial-gradient(ellipse at 75% 30%, rgba(60, 70, 80, 0.3), transparent 55%),
     linear-gradient(160deg, #24221d, #191814 60%, #1f1d18);
 }
+.pin {
+  flex: 0 0 auto;
+  width: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--w-faint);
+  opacity: 0.35;
+  cursor: pointer;
+  font-size: var(--w-fs-xs);
+}
+.pin:hover { opacity: 0.8; }
+.pin.pinned { color: var(--w-accent); opacity: 1; }
 .source { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .drop {
   position: absolute;

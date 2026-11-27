@@ -6,7 +6,9 @@ export const WEIGHT_TYPE = 'woke->weights'
 
 export type WeightKey =
   | 'x1' | 'x2' | 'r1' | 'r2' | 'r3' | 'r0'
+  | 'wr' | 'wm' | 'wn'
   | 't1' | 't2' | 't3' | 't4' | 't5'
+  | 'mt1' | 'mt2' | 'mt3' | 'mt4' | 'mt5'
   | 'i68' | 'i75' | 'i83' | 'i86'
   | 'infl' | 'eld' | 'qual'
   | 'fract' | 'synth' | 'fated' | 'mirr'
@@ -36,6 +38,16 @@ export const WEIGHT_GROUPS: WeightGroup[] = [
     ]
   },
   {
+    key: 'rarity',
+    label: 'Rarity',
+    icon: 'fas fa-star',
+    rows: [
+      { key: 'wr', label: 'Rare', dflt: 1 },
+      { key: 'wm', label: 'Magic', dflt: 0.7 },
+      { key: 'wn', label: 'White', dflt: 0.7 }
+    ]
+  },
+  {
     key: 'tier',
     label: 'Drop tier',
     icon: 'fas fa-gem',
@@ -45,6 +57,20 @@ export const WEIGHT_GROUPS: WeightGroup[] = [
       { key: 't3', label: 'Tier 3', dflt: 3 },
       { key: 't4', label: 'Tier 4', dflt: 6 },
       { key: 't5', label: 'Tier 5', dflt: 8 }
+    ]
+  },
+  {
+    // On a magic item a good drop tier is a crafting start, not a finished
+    // item: gentler. White gear has no drop tier (counts as tier 1 here).
+    key: 'mtier',
+    label: 'Drop tier, magic and white',
+    icon: 'fas fa-gem',
+    rows: [
+      { key: 'mt1', label: 'Tier 1', dflt: 1 },
+      { key: 'mt2', label: 'Tier 2', dflt: 1.25 },
+      { key: 'mt3', label: 'Tier 3', dflt: 1.5 },
+      { key: 'mt4', label: 'Tier 4', dflt: 2 },
+      { key: 'mt5', label: 'Tier 5', dflt: 3 }
     ]
   },
   {
@@ -139,17 +165,22 @@ export interface WeightSettings {
   // The weight a rare needs to show.
   need: number
   mult: Record<WeightKey, number>
+  // Rows whose gear always shows (at least Small), whatever its score.
+  always: WeightKey[]
 }
 
 export function defaultWeights (): WeightSettings {
-  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number> }
+  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [] }
 }
+
+// The rows a pin (always show) can go on: ones a rule can name on their own.
+export const PIN_ROWS: ReadonlySet<WeightKey> = new Set<WeightKey>(['x1', 'x2', 'r1', 'r2', 'r3', 'l6', 'l5', 'l4', 'rgb', 'infl', 'eld', 'qual', 'fract', 'synth', 'fated', 'mirr', 'abyss', 'strand', 'ench', 'cruc', 'cp', 'ci', 'dc'])
 
 // Marks only add (×1 or more): a mark under ×1 would split every rule.
 export const MARK_ROWS: WeightKey[] = ['l6', 'l5', 'l4', 'infl', 'eld', 'qual', 'fract', 'synth', 'fated', 'ench', 'strand', 'cruc', 'abyss', 'rgb']
 // Rows that stay in order, lowest first: a higher drop tier or item level is
 // never worth less than a lower one.
-export const ORDERED_ROWS: WeightKey[][] = [['t1', 't2', 't3', 't4', 't5'], ['i68', 'i75', 'i83', 'i86']]
+export const ORDERED_ROWS: WeightKey[][] = [['t1', 't2', 't3', 't4', 't5'], ['mt1', 'mt2', 'mt3', 'mt4', 'mt5'], ['i68', 'i75', 'i83', 'i86']]
 
 // The range one multiplier may take, given the others.
 export function multRange (mult: Record<WeightKey, number>, key: WeightKey): [number, number] {
@@ -177,6 +208,7 @@ export function normalizeWeights (w: Partial<WeightSettings> | undefined): Weigh
   return {
     on: typeof w?.on === 'boolean' ? w.on : false,
     need: ok(w?.need, NEED_MIN, NEED_MAX) ? w.need : d.need,
-    mult
+    mult,
+    always: Array.isArray(w?.always) ? [...new Set(w.always.filter(k => PIN_ROWS.has(k)))] : []
   }
 }
