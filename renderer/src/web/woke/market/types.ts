@@ -97,6 +97,9 @@ export interface PriceItem {
   // poe.ninja's price looks fake (shared/price-trust.ts): `chaos` is still
   // poe.ninja's; the price index counts held.chaos instead (none when null).
   held?: HeldPrice
+  // Not live: the price over a league's first days (loot-filter/day1-prices.ts),
+  // standing in for an item poe.ninja has no line for yet.
+  day1?: boolean
 }
 
 // Thin market: poe.ninja had no price on 3+ of the last 7 days.

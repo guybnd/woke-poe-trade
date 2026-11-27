@@ -134,7 +134,7 @@ const chaosText = (v: number) => v >= 1000 ? `${Math.round(v / 1000)}kc` : `${ro
 .names { position: relative; height: 50px; }
 .name { position: absolute; white-space: nowrap; }
 .nameBtn { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; cursor: pointer; }
-.pen { font-size: calc(10px * var(--w-text-scale, 1)); color: var(--w-accent, #c8a565); opacity: 0; transition: opacity .12s; }
+.pen { font-size: var(--w-fs-xs); color: var(--w-accent, #c8a565); opacity: 0; transition: opacity .12s; }
 .nameBtn:hover .pen, .nameBtn:focus-visible .pen, .cur .pen { opacity: 1; }
 .off { opacity: .35; text-decoration: line-through; }
 .bar { position: relative; height: 14px; margin-top: 2px; }
@@ -146,7 +146,7 @@ const chaosText = (v: number) => v >= 1000 ? `${Math.round(v / 1000)}kc` : `${ro
   background: #e8dcc0; border: 1px solid #000; border-radius: 2px; cursor: ew-resize; touch-action: none;
 }
 .handle:hover, .handle:focus-visible, .drag { background: #fff; box-shadow: 0 0 0 2px var(--w-accent, #c8a565); }
-.scale { position: relative; height: 14px; font-size: calc(10px * var(--w-text-scale, 1)); color: var(--w-faint); }
+.scale { position: relative; height: 14px; font-size: var(--w-fs-xs); color: var(--w-faint); }
 .scale span { position: absolute; transform: translateX(-50%); }
 .vals { position: relative; height: 22px; }
 .val { position: absolute; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 1px; font-size: var(--w-fs-xs); color: var(--w-dim); white-space: nowrap; }

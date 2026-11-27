@@ -78,6 +78,8 @@ export interface PricePoint {
   swing?: PriceSwing
   // For uniques: which unique set the price.
   note?: string
+  // A day-1 price standing in for a live one (day1-prices.ts).
+  day1?: boolean
 }
 
 // Price of a base type in one group, or null when poe.ninja has none.
@@ -145,7 +147,7 @@ export function priceLookup (
   const find = priceFinder(items, variants)
   const point = (i: PriceItem): PricePoint => {
     const swing = priceSwing(i)
-    return { chaos: i.chaos, thin: isThin(i), volatile: swing != null, ...(swing ? { swing } : {}) }
+    return { chaos: i.chaos, thin: isThin(i), volatile: swing != null, ...(swing ? { swing } : {}), ...(i.day1 ? { day1: true } : {}) }
   }
   return (group, base) => {
     if (!group.unique) {
