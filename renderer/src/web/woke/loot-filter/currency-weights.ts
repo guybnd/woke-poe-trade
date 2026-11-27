@@ -89,8 +89,8 @@ const BY_TYPE: Record<string, string> = {
 // NeverSink lists all of these as plain currency: sort them by name.
 export function categoryOf (name: string, type: string): string {
   if (type === 'fragments' && !THREAD.test(name)) return fragmentCategoryOf(name)
-  // NeverSink lists it with the Allflame Embers; it opens an uber boss (Guy 2026-11-27).
-  if (name === 'Divine Vessel') return 'invites'
+  // NeverSink lists it with the Allflame Embers too; it's a fragment (Guy 2026-11-27).
+  if (name === 'Divine Vessel') return 'fragother'
   // Also listed with the embers, but isn't one.
   if (name === 'Royal Visage') return 'other'
   if (BY_TYPE[type]) return BY_TYPE[type]

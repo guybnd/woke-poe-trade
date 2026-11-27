@@ -29,7 +29,7 @@ export const FRAGMENT_LOOK: Record<string, { text: [number, number, number], col
 
 // A fragment's fold, by its name.
 export function fragmentCategoryOf (name: string): string {
-  if (/Invitation$|^The Maven's Writ$|Vessel$/.test(name)) return 'invites'
+  if (/Invitation$|^The Maven's Writ$/.test(name)) return 'invites'
   if (/^Fragment of (the )?(Chimera|Hydra|Minotaur|Phoenix|Constriction|Enslavement|Eradication|Purification|Emptiness|Shape|Knowledge|Terror)$/.test(name)) return 'shaper'
   if (/^[A-Z][a-z]+ Fragment$/.test(name)) return 'uber'
   if (/'s Crest$/.test(name)) return 'crests'

@@ -228,7 +228,9 @@ describe('currency weights', () => {
     const doc = parseFilter(SEMI)
     applyCurrency(doc, on(), lookup)
     expect(matchItem(doc, pile('Facetor\'s Lens', 1)).visibility).toBe('Show')
-    expect(categoryOf('Divine Vessel', 'mapenchantments')).toBe('invites')
+    expect(categoryOf('Divine Vessel', 'mapenchantments')).toBe('fragother')
+    expect(categoryOf('Blood-filled Vessel', 'fragments')).toBe('fragother')
+    expect(categoryOf('Polaric Invitation', 'fragments')).toBe('invites')
     expect(categoryOf('Royal Visage', 'mapenchantments')).toBe('other')
     expect(categoryOf('Allflame Ember of Kulemak', 'mapenchantments')).toBe('embers')
     // A thin price isn't a real one: still always shown.
