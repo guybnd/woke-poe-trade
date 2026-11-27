@@ -46,7 +46,8 @@ export function stepActions (step: Step): FilterAction[] {
     case 1: return [a('SetFontSize', 32)]
     case 2: return [a('SetFontSize', 38)]
     case 3: return [a('SetFontSize', 42), a('PlayAlertSound', 3, 300), a('MinimapIcon', 1, 'Cyan', 'Diamond')]
-    case 4: return [a('SetFontSize', 45), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Red'), a('MinimapIcon', 0, 'Red', 'Star')]
+    // Not red: red beams and stars are kept for sure-profit drops (Guy 2026-11-27).
+    case 4: return [a('SetFontSize', 45), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Blue'), a('MinimapIcon', 0, 'Blue', 'Star')]
   }
 }
 
@@ -256,7 +257,7 @@ const LOOK_ACTION: Record<LookChannel, string> = { border: 'SetBorderColor', bg:
 // The score step's colour per channel (none: the step doesn't paint it).
 const STEP_PAINT: Record<LookChannel, Array<RGBA | null>> = {
   border: [null, null, null, null, null],
-  bg: [null, [35, 35, 35, 230], [20, 20, 0, 255], [0, 75, 30, 255], [90, 0, 0, 255]],
+  bg: [null, [35, 35, 35, 230], [20, 20, 0, 255], [0, 75, 30, 255], [0, 45, 110, 255]],
   text: [null, null, null, [0, 240, 190, 255], [255, 255, 255, 255]]
 }
 const paint = (ch: LookChannel, rgb: RGBA) => a(LOOK_ACTION[ch], ...rgb)
