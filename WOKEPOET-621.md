@@ -21,5 +21,6 @@ subtasks:
   - WOKEPOET-624
   - WOKEPOET-625
   - WOKEPOET-626
+  - WOKEPOET-654
 ---
 Epic: deep audit of the app (Guy, 2026-11-26). Five parts: UX consistency, consolidate duplicated code, clean up dead code, validate assumptions, hunt rancid bugs.

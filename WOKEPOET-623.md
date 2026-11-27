@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-623
 title: 'Deep audit: Consolidate duplicated code'
-status: In Progress
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -36,6 +36,45 @@ history:
     date: '2026-11-27T04:51:06.215Z'
     selfAttested: true
     id: c-2026-11-27t04-51-06-215z
-implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/945'
+  - type: comment
+    user: Agent
+    comment: >-
+      Consolidation done across PRs 945 and 947. Risky leftovers filed
+      separately.
+    date: '2026-11-27T04:51:40.675Z'
+    completionComment: true
+    id: c-2026-11-27t04-51-40-675z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-27T04:51:40.675Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Done across PRs 945 and 947 (final 54ca81b). Risky leftovers in
+      WOKEPOET-654.
+    completionComment: true
+    date: '2026-11-27T04:51:49.261Z'
+    id: c-2026-11-27t04-51-49-261z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-27T04:51:49.708Z'
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/947'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Consolidate duplicated code. Picks: https://claude.ai/artifact/1cpiDKsuoqisy4TNFh6eDo. First PR: https://github.com/guybnd/woke-poe-trade/pull/945 (merged bc566ef: shared saved-setting, median, seeded random and day-key helpers).
