@@ -13,7 +13,7 @@
     <template v-if="view === 'table'">
       <!-- Equipment's rules come first: in maps they decide this gear. -->
       <p v-if="config.presets.weights.on" class="w-dim text-xs" :class="$style.over" data-gear-weights-note>
-        Equipment is on: it decides white, magic and unidentified rare gear of item level 68 and up (everything from maps) by its score. This table still decides gear below item level 68 and identified rares.
+        Equipment is on: it decides white, magic and unidentified rare gear from maps (item level 68+) by its score. This table then only reaches identified rares, through its Always cells and Never bases.
       </p>
 
       <div :class="$style.card">
