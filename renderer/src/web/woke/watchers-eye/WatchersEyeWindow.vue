@@ -84,7 +84,7 @@
 // with them, in the price check or on the trade site.
 import { computed, nextTick, shallowRef, watch } from 'vue'
 import { ITEM_BY_REF } from '@/assets/data'
-import { AppConfig, poeWebApi } from '@/web/Config'
+import { AppConfig, poeWebApi, saveConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import { WButton, WChip, WIcon, WInfo, WPanel, WSegmented, WSelect, itemArt, vItemTip } from '../ui'
 import { vModTip } from '../ui/tooltip/mod-line-tip'
@@ -242,6 +242,9 @@ function saveSetup () {
   const entry = { name, auras: [...shownList.value], picks: active.value.map(p => ({ ...p })), atLeast: need.value }
   config.saved = [...config.saved.filter(s => s.name !== name), entry].sort((a, b) => a.name.localeCompare(b.name))
   setCurrent(name)
+  // To disk now: the overlay otherwise saves only when it loses focus or
+  // quits cleanly, and a restart in between would lose the setup.
+  saveConfig()
 }
 function loadSaved (name: string) {
   const s = config.saved.find(s => s.name === name)
@@ -256,6 +259,7 @@ function loadSaved (name: string) {
 function removeSaved () {
   config.saved = config.saved.filter(s => s.name !== current.value)
   current.value = null
+  saveConfig()
 }
 // What the setup looks like when saved or loaded: a change after that drops the name.
 let currentShape = ''
