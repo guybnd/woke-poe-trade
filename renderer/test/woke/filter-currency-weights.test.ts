@@ -231,6 +231,7 @@ describe('currency weights', () => {
     expect(decent.background?.slice(0, 3)).toEqual([230, 140, 240])
     expect(decent.effect).toMatchObject({ color: 'Pink', temp: true })
     const big = currencyLook(4, 'essences', c)
+    expect(big.background?.slice(0, 3)).toEqual([196, 119, 204])
     expect(big.border?.slice(0, 3)).toEqual([255, 255, 255])
     expect(big.sound).toEqual({ id: '7', volume: 250 })
     expect(big.icon).toMatchObject({ size: 0, color: 'Pink', shape: 'Moon' })

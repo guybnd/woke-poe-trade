@@ -276,7 +276,7 @@ export function currencyActions (step: CStep): FilterAction[] {
     case 1: return [a('SetFontSize', 32), a('SetTextColor', 235, 210, 150, 255), a('SetBorderColor', 106, 95, 68, 255), a('SetBackgroundColor', 0, 0, 0, 215)]
     case 2: return [a('SetFontSize', 37), a('SetTextColor', 240, 220, 175, 255), a('SetBorderColor', 235, 210, 150, 255), a('SetBackgroundColor', 52, 46, 33, 240), a('PlayAlertSound', 2, 180), a('MinimapIcon', 2, 'Yellow', 'Circle')]
     case 3: return [a('SetFontSize', 41), a('SetTextColor', 18, 13, 8, 255), a('SetBorderColor', 245, 232, 202, 255), a('SetBackgroundColor', 235, 210, 150, 255), a('PlayAlertSound', 3, 250), a('PlayEffect', 'Yellow', 'Temp'), a('MinimapIcon', 1, 'Yellow', 'Circle')]
-    case 4: return [a('SetFontSize', 45), a('SetTextColor', 18, 13, 8, 255), a('SetBorderColor', 255, 255, 255, 255), a('SetBackgroundColor', 238, 218, 168, 255), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Yellow'), a('MinimapIcon', 0, 'Yellow', 'Circle')]
+    case 4: return [a('SetFontSize', 45), a('SetTextColor', 255, 255, 255, 255), a('SetBorderColor', 255, 255, 255, 255), a('SetBackgroundColor', 200, 179, 128, 255), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Yellow'), a('MinimapIcon', 0, 'Yellow', 'Circle')]
     case 5: return topStepActions('currency')
   }
 }
@@ -340,7 +340,8 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
     case 1: Object.assign(out, { text: col(rgb), border: col(mixTo(rgb, 0, 0.55)), background: col([0, 0, 0], 215) }); break
     case 2: Object.assign(out, { text: col(mixTo(rgb, 255, 0.25)), border: col(rgb), background: col(mixTo(rgb, 0, 0.78), 240) }); break
     case 3: Object.assign(out, { text: col([18, 13, 8]), border: col(mixTo(rgb, 255, 0.5)), background: col(rgb) }); break
-    case 4: Object.assign(out, { text: col([18, 13, 8]), border: col([255, 255, 255]), background: col(mixTo(rgb, 255, 0.15)) }); break
+    // Big: white text and edge on a deeper category fill (Guy 2026-11-27 picked X: Big looked too close to Decent).
+    case 4: Object.assign(out, { text: col([255, 255, 255]), border: col([255, 255, 255]), background: col(mixTo(rgb, 0, 0.15)) }); break
     case 5: Object.assign(out, { border: col(rgb) }); break
   }
   // Tink's icon is red, in the category's shape (Guy 2026-11-27).
