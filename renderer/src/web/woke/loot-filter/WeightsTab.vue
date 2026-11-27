@@ -44,9 +44,16 @@
           <template v-for="d in side.placed" :key="'b' + d.i">
             <span v-if="d.beam" :class="$style.beam" :style="{ left: `${d.x + d.w / 2 - 1}px`, height: `${d.y + 2}px`, background: `linear-gradient(to bottom, transparent, ${d.beam})` }" />
           </template>
-          <span v-for="d in side.placed" :key="d.i" v-item-tip="{ name: samples[d.i].row.name }" :class="[$style.drop, { [$style.ghost]: d.hidden, [$style.on]: d.i === focus }]"
+          <span v-for="d in side.placed" :key="d.i" v-item-tip="samples[d.i].tip" :class="[$style.drop, { [$style.ghost]: d.hidden, [$style.on]: d.i === focus }]"
             :style="{ left: `${d.x}px`, top: `${d.y}px`, width: `${d.w}px` }" @mouseenter="focus = d.i" @click="pinned = pinned === d.i ? null : d.i">
-            <LabelPreview :text="samples[d.i].row.name" :actions="d.actions" :visibility="d.hidden ? 'Hide' : 'Show'" :default-text="RARE" :extras="false" :scale="SCALE" />
+            <span :class="$style.tags" data-no-item-tip="marks of the rare below, which has its tooltip">
+              <span v-for="t in samples[d.i].tags" :key="t.key" :class="[$style.tag, $style[signOf(t.key)], { [$style.off]: !t.counts }]"><i :class="ICON_OF[t.key]" />{{ t.text }}</span>
+            </span>
+            <span :class="$style.labelRow">
+              <span :class="[$style.deco, $style[signOf(samples[d.i].rankKey)]]" :title="WEIGHT_LABEL[samples[d.i].rankKey]">{{ RANK_TEXT[samples[d.i].rankKey] }}</span>
+              <LabelPreview :text="samples[d.i].row.name" :actions="d.actions" :style-override="!d.hidden && samples[d.i].overQual ? QUAL_MARK : undefined" :visibility="d.hidden ? 'Hide' : 'Show'" :default-text="RARE" :extras="false" :scale="SCALE" />
+              <span :class="$style.deco" :title="samples[d.i].tierText">{{ samples[d.i].tierShort }}</span>
+            </span>
           </span>
         </div>
       </div>
@@ -73,12 +80,13 @@ import type { LootFilterWidget } from './widget'
 import { matchItem } from './match'
 import { labelBox, layoutLabels } from './shower'
 import { readStyle } from './edits'
+import { DEFAULT_MARK } from './gear'
 import { poeColour } from './colours'
 import { ruleLabel } from './parse'
 import type { Colour } from './edits'
 import { MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, stepActions, stepOf, termsOf, weightOf } from './weights'
 import type { Step, WeightKey } from './weights'
-import { CHIP_LABEL, SAMPLES, factsOf, fromPoints, itemOf, points, pointsText, sampleBase, samplePile } from './weight-samples'
+import { CHIP_LABEL, SAMPLES, sampleTip, factsOf, fromPoints, itemOf, points, pointsText, sampleBase, samplePile } from './weight-samples'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -136,7 +144,14 @@ const samples = computed(() => {
       const hit = matchItem(doc, facts).final?.block
       if (hit && hit.type !== WEIGHT_TYPE) other = `decided by ${ruleLabel(hit.type, hit.tier)}`
     }
+    const tags = terms.filter(t => TAG_TEXT[t.key] != null).map(t => ({ ...t, text: TAG_TEXT[t.key] === '' ? String(it.itemLevel) : TAG_TEXT[t.key] as string }))
     return [{
+      tip: sampleTip(row, it),
+      tags,
+      rankKey: it.rank as WeightKey,
+      tierShort: it.tier ? `T${it.tier}` : 'T–',
+      tierText: it.tier ? `Unidentified (Tier ${it.tier})` : 'No drop tier (counted as tier 1)',
+      overQual: it.quality >= 24,
       spec,
       row,
       terms,
@@ -173,12 +188,51 @@ function measure (text: string, px: number): number {
   return ctx.measureText(text).width
 }
 const BEAM_ROOM = 34
+// What sits around each label: marks above (item level, links, influence...),
+// the base rank before the name and the drop tier after it.
+const TAG_H = 13
+const DECO_W = 22
+// '' = the item level itself.
+const TAG_TEXT: Partial<Record<WeightKey, string>> = {
+  i68: '',
+  i75: '',
+  i83: '',
+  i86: '',
+  cp: 'Corr',
+  ci: 'Corr imp',
+  dc: 'Corr ×2',
+  l4: '4L',
+  l5: '5L',
+  l6: '6L',
+  rgb: 'RGB',
+  infl: 'Infl',
+  eld: 'Eldritch',
+  qual: 'Q',
+  fract: 'Frac',
+  synth: 'Synth',
+  fated: 'Fated',
+  ench: 'Ench',
+  strand: 'Strands',
+  cruc: 'Crucible',
+  abyss: 'Abyss',
+  mirr: 'Mirror',
+  old: 'Old',
+  big: 'Big',
+  tiny: 'Tiny'
+}
+const RANK_TEXT: Partial<Record<WeightKey, string>> = { x1: 'X1', x2: 'X2', r1: 'R1', r2: 'R2', r3: 'R3', r0: 'R–' }
+// The over-quality mark's border (the Gear tab's default mark).
+const QUAL_MARK = { border: DEFAULT_MARK.border }
 
 // Places stay put while you tune: each rare gets a slot sized for the
 // biggest label, so only its look changes.
 function layout (key: string) {
   const width = widths[key] || 420
-  const boxes = samples.value.map(x => labelBox(x.row.name, 45, SCALE, measure))
+  const boxes = samples.value.map(x => {
+    const b = labelBox(x.row.name, 45, SCALE, measure)
+    const tagsW = x.tags.reduce((n, t) => n + measure(t.text, 9) + 18, 0)
+    return { w: Math.ceil(Math.max(b.w + DECO_W * 2, tagsW)), h: b.h + TAG_H }
+  })
   return layoutLabels(boxes, width, 220, 3, BEAM_ROOM)
 }
 const grounds = computed(() => {
@@ -309,9 +363,39 @@ function reset () {
 .drop {
   position: absolute;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   cursor: pointer;
 }
+.tags { display: flex; justify-content: center; gap: 2px; height: 13px; line-height: 12px; white-space: nowrap; }
+.tag {
+  font-size: 9px;
+  padding: 0 3px;
+  border-radius: var(--w-r-sm);
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--w-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.tag i { font-size: 7px; opacity: 0.8; }
+.tag.plus { color: #8fd18a; }
+.tag.minus { color: #e08a7a; }
+.tag.off { opacity: 0.5; text-decoration: line-through; }
+.labelRow { display: flex; align-items: center; justify-content: center; gap: 2px; min-width: 0; }
+.deco {
+  flex: 0 0 auto;
+  width: 20px;
+  text-align: center;
+  font-size: 9px;
+  line-height: 13px;
+  border-radius: var(--w-r-sm);
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--w-fg);
+  font-variant-numeric: tabular-nums;
+}
+.deco.plus { color: #8fd18a; }
+.deco.zero { color: var(--w-dim); }
 .drop:hover, .drop.on { filter: brightness(1.25); z-index: 2; }
 .drop.on { outline: 1px solid var(--w-accent); outline-offset: 1px; }
 .ghost { filter: grayscale(0.6); opacity: 0.55; }
