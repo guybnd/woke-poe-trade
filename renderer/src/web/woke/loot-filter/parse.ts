@@ -200,7 +200,9 @@ export const EDITOR_GROUPS: Record<string, string> = {
   'woke->build': 'Your build',
   'woke->safety': 'Safety net',
   'woke->rule': 'Rules you made',
-  'woke->preset': 'Presets'
+  'woke->preset': 'Presets',
+  'woke->weights': 'Rare weights',
+  'woke->currency': 'Currency weights'
 }
 
 // A group and tier the way a person reads them; a rule with no tags has no

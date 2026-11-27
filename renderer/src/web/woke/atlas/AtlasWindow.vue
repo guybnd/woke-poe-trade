@@ -141,6 +141,7 @@ import { addRegex, joinFolder, libraryOn, regexesIn } from '../regex-library/fol
 import { claimNewRegexFolder, copyRegexes, refileRegexes } from './strategy-ops'
 import { atlasTreePin } from './atlas-pin'
 import { pins } from '../pins/pins'
+import { folderMenuEntries } from '../shared/folder-menu'
 
 // The window's "?": the saved list's keys.
 const LIST_KEYS = savedListKeys({ copy: true })
@@ -490,22 +491,12 @@ function rowMenu (e: MouseEvent, s: AtlasStrategy) {
 }
 
 function folderMenu (e: MouseEvent, path: string) {
-  openMenu(e, [
-    { label: 'New strategy here', icon: 'fas fa-plus', action: () => addStrategy(path) },
-    { label: 'New folder inside', icon: 'fas fa-folder-plus', action: () => startFolder(path) },
-    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => startEdit('folder', path, 'rename') },
-    { label: 'Move', icon: 'fas fa-folder-open', action: () => startEdit('folder', path, 'move') },
-    { label: 'Copy folder code', icon: 'fas fa-share-square', disabled: !inFolder(path).length, action: () => { codeFor(inFolder(path), path).then(copy).then(() => toast('Folder code copied', { anchor: panel.value?.el })).catch(() => {}) } },
-    { separator: true },
-    { label: 'Sort this folder A to Z', icon: 'fas fa-sort-alpha-down', action: () => sortFolder(path) },
-    { label: 'Fold all folders', icon: 'fas fa-compress-alt', action: tree.foldAll },
-    { label: 'Open all folders', icon: 'fas fa-expand-alt', action: tree.openAll },
-    { separator: true },
-    { label: 'Remove folder', icon: 'fas fa-trash', danger: true, action: () => removeFolder(path) }
-  ])
+  openMenu(e, folderMenuEntries(tree, path, {
+    newHere: { label: 'New strategy here', action: () => addStrategy(path) },
+    extra: [{ label: 'Copy folder code', icon: 'fas fa-share-square', disabled: !inFolder(path).length, action: () => { codeFor(inFolder(path), path).then(copy).then(() => toast('Folder code copied', { anchor: panel.value?.el })).catch(() => {}) } }],
+    remove: { action: () => removeFolder(path) }
+  }))
 }
-
-const sortFolder = tree.sortFolder
 
 // Takes the folder and every strategy in it; Undo puts all of it back.
 function removeFolder (path: string) {

@@ -12,6 +12,10 @@ import { RULE_TYPE, addedBlock } from './rules'
 import { BUILD_RULE_TYPE, WEAPON_CLASSES } from './build-rules'
 import { GEAR_TYPE, defaultGear, normalizeGear } from './gear'
 import type { GearSettings } from './gear'
+import { defaultWeights, normalizeWeights } from './weight-settings'
+import { defaultCurrency, normalizeCurrency } from './currency-settings'
+import type { CurrencySettings } from './currency-settings'
+import type { WeightSettings } from './weight-settings'
 import { defaultLook, lookChanges, normalizeLook } from './look'
 import type { Look } from './look'
 
@@ -72,6 +76,12 @@ export interface Presets {
   lowTiers: { on: boolean, tier: number }
   // The Gear page's table (gear.ts): replaces NeverSink's tiered gear rules.
   gear: GearSettings
+  // Rare weights (beta, weights.ts): decides endgame rares by weight instead
+  // of NeverSink's tiers, when on.
+  weights: WeightSettings
+  // Currency weights (beta, currency-weights.ts): endgame currency shows by
+  // what the pile is worth instead of NeverSink's tiers, when on.
+  currency: CurrencySettings
 }
 
 export type Archetype = 'auto' | 'caster' | 'melee' | 'bow' | 'minion' | 'custom'
@@ -100,6 +110,8 @@ export function defaultPresets (): Presets {
     look: defaultLook(),
     lowTiers: { on: false, tier: 3 },
     gear: defaultGear(),
+    weights: defaultWeights(),
+    currency: defaultCurrency(),
     clusterPrices: normalizeClusterPrices(undefined)
   }
 }
@@ -154,6 +166,8 @@ export function normalizePresets (p: Partial<Presets> | undefined): Presets {
     look: normalizeLook(p?.look),
     lowTiers: { on: on(p?.lowTiers), tier: Math.round(num(p?.lowTiers?.tier, ITEM_TIER_MIN, ITEM_TIER_MAX, d.lowTiers.tier)) },
     gear: normalizeGear(p?.gear),
+    weights: normalizeWeights(p?.weights),
+    currency: normalizeCurrency(p?.currency),
     clusterPrices: normalizeClusterPrices(p?.clusterPrices)
   }
 }

@@ -18,6 +18,9 @@ export interface FarmTemplate {
   minPct?: Record<string, number>
   // The min for numbers the map hasn't got (added with +).
   extraMin?: Record<string, number>
+  // 2: saved after the goals stopped turning More X numbers on by themselves
+  // (2026-11-27), so every extraMin is one you added with +.
+  extraV?: 2
   // The kind menu's choice: 'own' (the map's own kind), 'any', or a choice key.
   kind?: string
   // Map mods (their stat refs) set to Not.

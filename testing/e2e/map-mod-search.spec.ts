@@ -366,38 +366,52 @@ test('map: the farming goal picks which number chips start on', async ({ overlay
 })
 
 // Guy (2026-11-25): "i picked currency template why isnt it adding currency box".
-// A goal adds the More X numbers it wants that the map hasn't got, as + tiles.
-test('map: a farming goal adds its More X tiles to a map without them', async ({ overlay }) => {
+// A goal shows the More X numbers it wants that the map hasn't got, as tiles, but
+// off (Guy, 2026-11-27: searching "above 1 currency" for a map with none is
+// misleading). One click searches it at min 1.
+test('map: a farming goal shows its More X tiles off on a map without them', async ({ overlay }) => {
   const searches = await fakeTrade(overlay.page)
   await overlay.boot({ widgets: [{ wmType: 'woke-map-mods', goal: 'currency' }] })
   await overlay.copyItem('items/map-nightmare-330.txt')
   const panel = overlay.widget('price-check')
   const extra = (label: string) => panel.locator(`[data-map-extra] [data-map-prop="${label}"]`)
   const goal = (g: string) => panel.locator(`[data-map-goal] [data-goal="${g}"]`)
-  // The remembered goal adds More Currency to the next map.
+  // The remembered goal shows More Currency on the next map, off.
   await expect(extra('Currency')).toBeVisible({ timeout: 20_000 })
+  await expect(extra('Currency')).toHaveAttribute('aria-pressed', 'false')
+  await expect(panel.locator('[data-map-prop-min="Currency"]')).toHaveCount(0)
   await expect(goal('currency')).toHaveAttribute('aria-checked', 'true')
   await expect(extra('Maps')).toHaveCount(0)
-  await overlay.snap('map goal adds currency tile')
+  await overlay.snap('map goal shows currency tile off')
 
-  // Maps & Threads swaps it for More Maps and More Threads.
+  // Maps & Threads swaps it for More Maps and More Threads, off too.
   await goal('atlas').click()
-  await expect(extra('Maps')).toBeVisible()
-  await expect(extra('Threads')).toBeVisible()
+  await expect(extra('Maps')).toHaveAttribute('aria-pressed', 'false')
+  await expect(extra('Threads')).toHaveAttribute('aria-pressed', 'false')
   await expect(extra('Currency')).toHaveCount(0)
   // Any takes them off again.
   await goal('any').click()
   await expect(panel.locator('[data-map-extra]')).toHaveCount(0)
 
+  // Searched as it stands: no More Currency in the query.
   await goal('currency').click()
   await expect(extra('Currency')).toBeVisible()
-  await panel.getByRole('button', { name: 'Search', exact: true }).click()
-  await expect.poll(() => searches.length).toBeGreaterThan(0)
-  const and = searches[0].query.stats.find(g => g.type === 'and')!
-  const cur = and.filters.find(f => f.id === 'pseudo.pseudo_map_more_currency_drops')
+  const search = panel.getByRole('button', { name: 'Search', exact: true })
+  await search.click()
+  await expect.poll(() => searches.length).toBe(1)
+  const ids = (n: number) => searches[n].query.stats.flatMap(g => g.filters).filter(f => !f.disabled).map(f => f.id)
+  expect(ids(0)).not.toContain('pseudo.pseudo_map_more_currency_drops')
+
+  // A click searches it, at min 1.
+  await extra('Currency').click({ position: { x: 12, y: 8 } })
+  await expect(extra('Currency')).toHaveAttribute('aria-pressed', 'true')
+  await expect(panel.locator('[data-map-prop-min="Currency"]')).toHaveValue('1')
+  await search.click()
+  await expect.poll(() => searches.length).toBe(2)
+  const cur = searches[1].query.stats.flatMap(g => g.filters).find(f => f.id === 'pseudo.pseudo_map_more_currency_drops')
   expect(cur?.disabled).toBeFalsy()
   expect(cur?.value?.min).toBe(1)
-  expect(and.filters.find(f => f.id === 'pseudo.pseudo_map_more_map_drops')).toBeUndefined()
+  expect(ids(1)).not.toContain('pseudo.pseudo_map_more_map_drops')
   expect(overlay.errors).toEqual([])
 })
 

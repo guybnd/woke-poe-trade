@@ -104,7 +104,7 @@ import { AppConfig } from '@/web/Config'
 import WIcon from '../ui/WIcon.vue'
 import WPriceText from '../ui/WPriceText.vue'
 import WPrice from '../ui/WPrice.vue'
-import { formatAmount } from '../ui/format'
+import { formatAmount, formatSigned } from '../ui/format'
 import WSegmented from '../ui/WSegmented.vue'
 import VaultHoverCard from '../vaults/VaultHoverCard.vue'
 import VaultRewardRows from '../vaults/VaultRewardRows.vue'
@@ -127,7 +127,7 @@ function barWidth (c: { profit: number | null, loot: number }) {
   const top = Math.max(...cols.value.map(v), 1)
   return `${Math.round(v(c) / top * 100)}%`
 }
-function signed (n: number) { return `${n >= 0 ? '+' : ''}${chaos(n)}` }
+function signed (n: number) { return formatSigned(n, chaos) }
 
 // Mounted only with the Boss runs module on (CheckedItem.vue).
 const prices = usePriceIndex()

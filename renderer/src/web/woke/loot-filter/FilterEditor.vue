@@ -283,6 +283,8 @@
     <template v-else-if="tab === 'preview'" />
     <PresetsTab v-else-if="tab === 'presets'" :store="store" :config="config" />
     <GearTab v-else-if="tab === 'gear' || tab === 'ranks'" :key="tab" :store="store" :config="config" :view="tab === 'ranks' ? 'ranks' : 'table'" @open-rule="openRule" />
+    <WeightsTab v-else-if="tab === 'weights'" :store="store" :config="config" />
+    <CurrencyTab v-else-if="tab === 'currency'" :store="store" :config="config" />
     <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" />
     <NeverSinkTab v-else-if="tab === 'neversink'" :store="store" :config="config" :anchor="panel?.el" />
 
@@ -422,6 +424,11 @@ import PricesTab from './PricesTab.vue'
 import PreviewTab from './PreviewTab.vue'
 import PresetsTab from './PresetsTab.vue'
 import GearTab from './GearTab.vue'
+import WeightsTab from './WeightsTab.vue'
+import CurrencyTab from './CurrencyTab.vue'
+import { CURRENCY_TYPE } from './currency-settings'
+import { experimentalUnlocked } from '../personal'
+import { WEIGHT_TYPE } from './weights'
 import { gearRanksAsk, takeRanksAsk } from './gear-drag'
 import { GEAR_TYPE } from './gear'
 import LookStrip from './LookStrip.vue'
@@ -491,7 +498,7 @@ function onSearchPaste (e: ClipboardEvent) {
   emit('paste-item', text)
 }
 
-const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'ranks' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
+const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'ranks' | 'weights' | 'currency' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
 watch(gearRanksAsk, () => { if (takeRanksAsk('tab')) tab.value = 'ranks' }, { immediate: true })
 const search = ref('')
 const selType = ref<string | null>(null)
@@ -552,9 +559,12 @@ const tabOptions = computed(() => [
   // Gear: two screens of their own, what shows (by rank and drop tier) and which bases sit in which rank.
   { value: 'gear', label: 'Drop tiers', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear shows, by rank, rarity and drop tier' },
   { value: 'ranks', label: 'Base ranks', count: Object.keys(props.config.presets.gear.moves).length || undefined, title: 'Which gear bases sit in which rank' },
+  // Beta: shown with the experimental tools, or while this profile uses it.
+  ...(experimentalUnlocked.value || props.config.presets.weights.on ? [{ value: 'weights', label: 'Rare weights', count: props.config.presets.weights.on ? '✓' : undefined, title: 'Beta: decide endgame rares by a weight you tune' }] : []),
+  ...(experimentalUnlocked.value || props.config.presets.currency.on ? [{ value: 'currency', label: 'Currency weights', count: props.config.presets.currency.on ? '✓' : undefined, title: 'Beta: show endgame currency by what the pile is worth' }] : []),
   { value: 'preview', label: 'Preview' },
   // The look strip lives on Rules, so it isn't counted here.
-  { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && k !== 'clusterPrices' && x.on).length || undefined },
+  { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && k !== 'weights' && k !== 'currency' && k !== 'clusterPrices' && x.on).length || undefined },
   { value: 'prices', label: 'Prices', count: props.store.plan.value?.moves.length || undefined },
   { value: 'neversink', label: props.config.neversink.on ? `NeverSink · ${LEVEL_NAMES[props.config.neversink.level]}` : 'NeverSink', count: props.store.updateReady.value ? 1 : undefined },
   { value: 'build', label: 'Build', count: props.store.buildBlockCount.value || undefined },
@@ -1068,6 +1078,8 @@ watch(() => props.focus, (f) => {
   if (!f) return
   // The Drop tiers table's own rules live on that tab, not in the rule list.
   if (f.type === GEAR_TYPE) { tab.value = 'gear'; return }
+  if (f.type === WEIGHT_TYPE) { tab.value = 'weights'; return }
+  if (f.type === CURRENCY_TYPE) { tab.value = 'currency'; return }
   goTo(f.type, f.tier)
 }, { immediate: true })
 

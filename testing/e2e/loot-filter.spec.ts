@@ -1221,6 +1221,29 @@ test('price check: an item the filter shows gets a quiet icon that can hide it',
   }).toMatch(ownRule('Glorious Plate', 'Hide'))
 })
 
+test('price check: a unique\'s side list shows its drop tier and filter tier in the label\'s look, and opens to its rule', async ({ overlay }) => {
+  test.slow()
+  const folder = kaomFilter(false)
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), reloadWhenSafe: false }] })
+  await overlay.copyItem('items/unique-kaoms-heart.txt')
+  const pc = overlay.widget('price-check')
+  const head = pc.locator('[data-unique-tier-head]')
+  await expect(head).toBeVisible()
+  await expect(head).toContainText('Tier')
+  await expect(head.locator('[data-drop-tier]')).toHaveText('Drop T2')
+  await expect(head.locator('[data-filter-tier-chip]')).toContainText('T3')
+  if (await head.getAttribute('aria-expanded') !== 'true') await head.click()
+  const body = pc.locator('[data-unique-tier]')
+  await expect(body.locator('[data-drop-tier-note]')).toContainText('very rare')
+  await expect(body).toContainText('Tier 3')
+  await expect(body).toContainText('other uniques on Glorious Plate drop like this too')
+  await expect(body.getByRole('button', { name: 'Go to rule ›' })).toBeVisible()
+  await overlay.snap('unique filter tier, open')
+  // A click folds it.
+  await head.click()
+  await expect(body).toHaveCount(0)
+})
+
 test('profiles: copy the filter as a named profile that saves to its own file, and switch back', async ({ overlay, fakeApp }) => {
   const folder = filterFolder()
   await overlay.boot({ widgets: [lootFilter(folder)] })
@@ -1290,4 +1313,102 @@ test('Base ranks: drag a base, then the picked set, onto another column', async 
   for (const n of [a, b]) await expect(card('never', n)).toBeVisible()
   await expect(page.getByText('2 picked')).toHaveCount(0)
   await overlay.snap('dragged to Never')
+})
+
+test('Rare weights: Alt + F on an unidentified rare opens the Score card, and the redesigned tab', async ({ overlay, fakeApp }) => {
+  // NeverSink's real Strict filter (its tiered gear and exotic lists).
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters/neversink/3-STRICT.filter.gz'))))
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), presets: { weights: { on: true } } }] })
+  const page = overlay.page
+  await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+F')
+  await overlay.copyItem('items/rare-unid-gloves.txt', 'Alt + F')
+  await expect(page.getByText('Item score')).toBeVisible()
+  await expect(page.getByText('Total')).toBeVisible()
+  await overlay.snap('score card')
+  await page.getByRole('button', { name: /Don't care/ }).first().click()
+  await overlay.snap('score card, base set to Don\'t care')
+
+  // Tune opens the Rare weights tab.
+  await page.getByRole('button', { name: /Tune/ }).click()
+  await expect(page.getByText(/\d+ of \d+ shown/).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Line: / })).toBeVisible()
+  // Dragging the line only previews; the setting changes on release.
+  const line = page.getByRole('button', { name: /^Line: / })
+  const before = await line.getAttribute('aria-label')
+  const box = (await line.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height - 4)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height - 4, { steps: 5 })
+  await page.mouse.up()
+  await expect(line).not.toHaveAttribute('aria-label', before!)
+  await expect(page.getByText('Your ranks')).toBeVisible()
+  await page.waitForTimeout(800)
+  await overlay.snap('rare weights tab')
+  await page.getByRole('button', { name: /Looks/ }).click()
+  await overlay.snap('rare weights tab, looks open')
+})
+
+test('Currency weights: categories fold open, an item opens its editor, and the ground pile opens an item', async ({ overlay, fakeApp }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters/neversink/3-STRICT.filter.gz'))))
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), presets: { currency: { on: true } } }] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await page.getByRole('tab', { name: /Currency weights/ }).click()
+  await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
+  await expect(page.locator('[data-currency-pile]')).toBeVisible()
+  await expect(page.locator('[data-currency-cat="orbs"]')).toBeVisible()
+  // The main slider moves the line for every category.
+  await page.getByRole('slider', { name: /Hide piles worth under/ }).fill('7')
+  await expect(page.locator('[data-currency-min]')).toContainText('2c')
+  await expect(page.getByRole('combobox', { name: 'Orbs show from', exact: true })).toContainText('2c (Small)')
+  await page.waitForTimeout(500)
+  await overlay.snap('currency weights tab')
+
+  // A step's Look edits loudness for every category; a category sets its colour.
+  await page.getByRole('button', { name: 'Big look and sound' }).click()
+  await expect(page.locator('[data-currency-step-editor]')).toBeVisible()
+  await overlay.snap('currency step look editor')
+  await page.getByRole('button', { name: 'Big look and sound' }).click()
+  await page.getByRole('combobox', { name: 'Oils map icon shape' }).selectOption('Star')
+  await expect(page.getByRole('button', { name: 'Reset Oils colours', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Reset Oils colours', exact: true }).click()
+
+  // A category folds open; an item opens its editor under it.
+  await page.locator('[data-currency-cat="orbs"] [aria-expanded]').first().click({ position: { x: 12, y: 10 } })
+  const alch = page.locator('[data-currency-item="Orb of Alchemy"]')
+  await expect(alch).toBeVisible()
+  await alch.click()
+  const editor = page.locator('[data-currency-editor]')
+  await expect(editor).toBeVisible()
+  await editor.getByRole('button', { name: 'Tink' }).click()
+  await expect(page.locator('[data-currency-cat="orbs"]')).toContainText('1 edited')
+  await editor.getByRole('button', { name: 'Its own look' }).click()
+  await overlay.snap('currency item editor, own look')
+  await editor.getByRole('button', { name: 'Let the price decide again' }).click()
+  await expect(page.locator('[data-currency-cat="orbs"]')).not.toContainText('edited')
+
+  // Essences sit in tiers; a whole tier switches off in one pick.
+  await page.locator('[data-currency-cat="essences"] [aria-expanded]').first().click({ position: { x: 12, y: 10 } })
+  const deaf = page.locator('[data-currency-sub="Deafening"]')
+  await expect(deaf).toBeVisible()
+  await deaf.getByRole('button').click()
+  await deaf.getByRole('combobox').selectOption('0')
+  await expect(page.locator('[data-currency-cat="essences"]')).toContainText('edited')
+  await overlay.snap('currency essences by tier, Deafening off')
+  await deaf.getByRole('combobox').selectOption('auto')
+  await expect(page.locator('[data-currency-cat="essences"]').first()).not.toContainText('edited')
+
+  // Search opens the categories that match.
+  await page.getByRole('searchbox', { name: 'Find an item' }).fill('alc')
+  await expect(page.locator('[data-currency-item="Orb of Alchemy"]')).toBeVisible()
+  await page.getByRole('searchbox', { name: 'Find an item' }).fill('')
+
+  // A label on the ground opens its item.
+  const drop = page.locator('[data-currency-pile] [role="button"]').first()
+  const label = await drop.getAttribute('aria-label')
+  await drop.click()
+  await expect(editor).toBeVisible()
+  expect(label).toBeTruthy()
 })

@@ -116,6 +116,12 @@ export async function loadTipDrops (): Promise<TipPack['drops'] | null> {
   return pack.drops ?? null
 }
 
+// How rare each drop-anywhere unique is, T0 (rarest) to T5.
+export async function loadTipDropTiers (): Promise<TipPack['unique-drop-tiers'] | null> {
+  await loadFile('unique-drop-tiers')
+  return pack['unique-drop-tiers'] ?? null
+}
+
 // Gems by level (stats, requirements): the tooltip's gem file.
 export async function loadTipGems (): Promise<TipPack['gems'] | null> {
   await loadFile('gems')

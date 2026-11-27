@@ -410,8 +410,26 @@ function kindClass (i: number) {
 const GAP = 8
 const EDGE = 8
 
+// A tooltip from a window at a big Size (the instant card at 150% is 2.1x) can
+// be taller than the screen: it shrinks to fit, never below 100%, so it can't
+// run off the bottom where nothing scrolls it.
+const fit = shallowRef(1)
+// Re-fits in a row: text can wrap differently at another zoom, so the sizes
+// may never settle. A few is enough (one, and one more after its content
+// loads); each new tip starts again.
+let fitPasses = 0
 function scale () {
-  return tip.value?.zoom ?? 1
+  return (tip.value?.zoom ?? 1) * fit.value
+}
+
+function fitScreen (t: { zoom: number }, r: DOMRect): boolean {
+  const room = Math.min((window.innerHeight - 2 * EDGE) / (r.height / fit.value), (window.innerWidth - 2 * EDGE) / (r.width / fit.value))
+  const floor = Math.min(1, 1 / t.zoom)
+  const next = Math.max(floor, Math.min(1, room))
+  if (Math.abs(next - fit.value) < 0.001 || fitPasses >= 4) return false
+  fitPasses++
+  fit.value = next
+  return true
 }
 
 // Items follow the cursor, below and to its right, flipping at the screen's
@@ -458,6 +476,8 @@ function reposition () {
   const t = tip.value
   if (!t || !el.value) return
   const r = el.value.getBoundingClientRect()
+  // Its new zoom resizes it: measure and place it again once that's drawn.
+  if (fitScreen(t, r)) { nextTick(reposition).catch(() => {}); return }
   const s = scale()
   const p = t.content.kind !== 'gem' && pointer.value
     ? nearCursor(pointer.value, r.width, r.height)
@@ -472,6 +492,8 @@ function onPointer (e: MouseEvent) {
 
 watch(tip, async (t) => {
   placed.value = null
+  fit.value = 1
+  fitPasses = 0
   if (!t) return
   await nextTick()
   if (!el.value) return
@@ -489,7 +511,7 @@ watch(el, (now, was) => {
 
 // Hidden until measured, so it never flashes in the wrong spot.
 const pos = computed(() => {
-  const zoom = String(tip.value?.zoom ?? 1)
+  const zoom = String(scale())
   return placed.value
     ? { zoom, left: `${placed.value.left}px`, top: `${placed.value.top}px` }
     : { zoom, left: '0', top: '0', visibility: 'hidden' as const }

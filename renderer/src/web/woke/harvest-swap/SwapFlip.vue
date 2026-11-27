@@ -52,7 +52,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { WButton, WPrice, WPriceText } from '../ui'
-import { formatChaos } from '../ui/format'
+import { formatChaos, formatSigned } from '../ui/format'
 import { vModTip } from '../ui/tooltip/mod-line-tip'
 import { usePoeninja } from '@/web/background/Prices'
 import { KEY_LABEL } from './families'
@@ -99,7 +99,7 @@ function money (chaos: number): string {
 
 function profitText (v: number | null): string {
   if (v == null) return '—'
-  return (v > 0 ? '+' : v < 0 ? '−' : '') + money(Math.abs(v))
+  return formatSigned(v, money)
 }
 
 function toneOf (v: number | null): string {

@@ -130,7 +130,6 @@ import WRowActs from '../ui/WRowActs.vue'
 import WSearchField from '../ui/WSearchField.vue'
 import WNoMatch from '../ui/WNoMatch.vue'
 import { WPanel, WChip, WKbd, WEmpty, ago, gameIcon, mechanicIcon, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
-import type { MenuEntry } from '../ui'
 import { copyText } from '../ui/copy'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
@@ -138,6 +137,7 @@ import { hideWhilePlaying, saveDock } from '../dock/dock'
 import { useLeagues } from '@/web/background/Leagues'
 import { FOLDER_ICONS, TRADE_SEARCHES_TYPE, ensureFolder, folderIcon, inView, isLiveSearch, isValidUrl, leagueOf, matchesFilter, parseHotkeyTarget, pinnedFirst, sortEntries, withLeague } from './widget'
 import type { OpenTarget, SearchSort, TradeSearchEntry } from './widget'
+import { folderMenuEntries } from '../shared/folder-menu'
 
 // The window's "?": the saved list's keys.
 const LIST_KEYS = [...savedListKeys({ copy: true }), { keys: 'P', label: 'Pin to the top (again: unpin)' }]
@@ -354,19 +354,11 @@ function setIcon (folder: string, key: string | undefined) {
 }
 
 function folderMenu (e: MouseEvent, folder: string) {
-  const items: MenuEntry[] = [
-    { label: 'New folder inside', icon: 'fas fa-folder-plus', action: () => tree.startFolder(folder) },
-    { label: 'Rename', icon: 'fas fa-pen', keys: 'F2', action: () => tree.startEdit('folder', folder, 'rename') },
-    { label: 'Change icon', icon: 'far fa-image', action: () => { pickingIcon.value = pickingIcon.value === folder ? null : folder } },
-    { label: 'Move', icon: 'fas fa-folder-open', action: () => tree.startEdit('folder', folder, 'move') },
-    { separator: true },
-    { label: 'Sort this folder A to Z', icon: 'fas fa-sort-alpha-down', action: () => tree.sortFolder(folder) },
-    { label: 'Fold all folders', icon: 'fas fa-compress-alt', action: tree.foldAll },
-    { label: 'Open all folders', icon: 'fas fa-expand-alt', action: tree.openAll },
-    { separator: true },
-    { label: 'Delete folder', icon: 'fas fa-trash', danger: true, action: () => removeFolder(folder) }
-  ]
-  openMenu(e, items)
+  openMenu(e, folderMenuEntries(tree, folder, {
+    extra: [{ label: 'Change icon', icon: 'far fa-image', action: () => { pickingIcon.value = pickingIcon.value === folder ? null : folder } }],
+    // Its searches move up to the top (with Undo), not away.
+    remove: { label: 'Remove folder, keep searches', action: () => removeFolder(folder) }
+  }))
 }
 
 // No "are you sure": its searches (and folders) move up to the top, with Undo.

@@ -80,6 +80,7 @@ Each one on every file. "Taken away" is what the preset is allowed to take, as i
 | Hide low item tiers (below tier 5) | nothing |
 | Gear table | nothing |
 | Quiet mode and fewer beams saved at 1 tier | nothing |
+| Rare weights | nothing |
 | Every preset, default settings | nothing |
 | Every preset, harshest settings | nothing |
 | Every preset, harshest, safety net on | nothing |

@@ -57,6 +57,8 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'related-folded-groups': { check: { name: "Shaper's Exalted Orb" }, spot: 'related' },
   // A unique with two Foulborn kinds and a Vestigial mod.
   'price-check-unique-foulborn': { check: { name: 'Carcass Jack', rarity: 'unique' }, spot: 'foulborn' },
+  // A unique: its drop tier (and its loot filter tier, with a filter loaded) heads the side list.
+  'price-check-unique-filter-tier': { check: { name: 'Carcass Jack', rarity: 'unique' }, spot: 'unique-tier' },
   'price-check-unique-recipe': { check: { name: 'The Will of Uul-Netol', rarity: 'unique' }, spot: 'related' },
   'div-card-map-chance': { search: 'Strand Map' },
   // A rolled jewel, unidentified: the unid price card (nothing searched until a click).
@@ -94,7 +96,7 @@ const NOTHING_TO_SHOW = new Set(['search-recent-queries', 'search-recent-save', 
   'deck-card-line-item', 'analytics-line-item'])
 // Lines about a whole new tool: opening its window is the show. Any other
 // line needs a tab, a spot, a sample or a Settings page (news.test.ts).
-export const WHOLE_TOOL = new Set(['scrying-helper'])
+export const WHOLE_TOOL = new Set(['scrying-helper', 'watchers-eye-finder'])
 
 // Whether Show me has somewhere real to go: a tab, a sample, the Settings
 // page the feature lives on, or the tool's own window. `byName`: the client
