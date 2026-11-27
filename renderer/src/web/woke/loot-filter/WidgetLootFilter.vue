@@ -46,7 +46,9 @@
       </template>
     </DockItem>
     <template v-if="mode === 'card'">
-      <SampleCard v-if="sample && match" :store="store" :config="config" :facts="sample" :match="match" :game-match="gameMatch" :area-level="effectiveAreaLevel"
+      <ScoreCard v-if="sample && match && scoreView" :store="store" :config="config" :facts="sample" :match="match"
+        @close="close" @open-editor="openEditorFromCard" @neversink="nsView = true" />
+      <SampleCard v-else-if="sample && match" :store="store" :config="config" :facts="sample" :match="match" :game-match="gameMatch" :area-level="effectiveAreaLevel"
         @close="close" @open-editor="openEditorFromCard" @area-level="areaOverride = $event" />
       <WPanel v-else title="Filter rule for this item" icon="wisdom" width="24rem" :resizable="false">
         <template v-if="store.error.value" #banner>
@@ -70,7 +72,7 @@ export default { widget: widgetLootFilterSpec }
 </script>
 
 <script setup lang="ts">
-import { computed, inject, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, inject, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { beforeQuitSave } from '@/web/Config'
 import { MainProcess } from '@/web/background/IPC'
 import { parseClipboard } from '@/parser'
@@ -85,6 +87,7 @@ import { LEVEL_NAMES, LEVEL_SHORT, clampLevel, stepLabel } from './strictness'
 import { canTurnOff, markSeen, noticeAction, visibleNotices } from './notices'
 import type { Notice } from './notices'
 import SampleCard from './SampleCard.vue'
+import { WEIGHT_TYPE as WEIGHT_TYPE_ID } from './weight-settings'
 import FilterEditor from './FilterEditor.vue'
 import { useGoto } from '../tab-bar/goto'
 import { askGearRanks } from './gear-drag'
@@ -141,6 +144,12 @@ watch(mode, (m) => {
 }, { flush: 'sync' })
 
 const effectiveAreaLevel = computed(() => areaOverride.value ?? store.areaLevel.value ?? props.config.fallbackAreaLevel)
+
+const ScoreCard = defineAsyncComponent(() => import('./ScoreCard.vue'))
+// Items Rare weights decide open the Score card (the rule card stays one key away).
+const nsView = ref(false)
+watch(sample, () => { nsView.value = false })
+const scoreView = computed(() => !nsView.value && match.value?.final?.block.type === WEIGHT_TYPE_ID)
 
 const match = computed(() => {
   const doc = store.doc.value

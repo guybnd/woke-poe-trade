@@ -41,7 +41,7 @@ import { leftOutText, RATE_TIME_WHERE } from '../shared/rate-time'
 import { rateTime } from '../shared/rate-time-now'
 import RateTimePick from '../shared/RateTimePick.vue'
 import { clockTime } from './history-days'
-import { formatChaos, formatClock, formatDuration } from '../ui/format'
+import { formatChaos, formatClock, formatDuration, formatSigned } from '../ui/format'
 import { bestItem, outOfMapsRows } from './story'
 import { itemArt } from '../ui/game-icons'
 import type { NightStory, StripPart } from './story'
@@ -118,7 +118,7 @@ function partTitle (p: StripPart): string {
 // The same clock as Map history's rows.
 const clock = clockTime
 function signed (chaos: number): string {
-  return `${chaos > 0 ? '+' : ''}${formatChaos(chaos, props.story.divine)}`
+  return formatSigned(chaos, x => formatChaos(x, props.story.divine))
 }
 </script>
 

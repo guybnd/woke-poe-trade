@@ -1,0 +1,18 @@
+Item Class: Gloves
+Rarity: Rare
+Spiked Gloves
+--------
+Quality: +20% (augmented)
+Evasion Rating: 240 (augmented)
+Energy Shield: 48 (augmented)
+--------
+Requirements:
+Level: 70
+Dex: 95
+Int: 95
+--------
+Sockets: B-B-G-R 
+--------
+Item Level: 84
+--------
+Unidentified (Tier 4)

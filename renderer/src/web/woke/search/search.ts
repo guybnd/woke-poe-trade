@@ -195,10 +195,12 @@ export function tradeUrl (league: string, item: { name?: string | { option: stri
   return `https://${host}/trade/search/${encodeURIComponent(league)}?q=${encodeURIComponent(JSON.stringify(query))}`
 }
 
-// The palette's result groups in order. Prices and items always lead; a tool
-// whose name starts with the query comes next, ahead of the lookup cards, so
-// "market" opens Market, not The Marketplace zone, and "atlas" Atlas
-// strategies before the regexes filed under it, while "reg" stays Regal Orb.
+// The palette's result groups in order. A tool whose name starts with the
+// query (4 letters or more) leads, ahead of prices (Guy's pick B): "watcher"
+// opens the Watcher's Eye finder, "market" Market, not The Marketplace zone.
+// An item named exactly what was typed ("stacked deck") keeps its price first,
+// and "reg" stays Regal Orb. Otherwise prices and items lead and Tools come
+// after the lookup cards.
 export interface ResultSection<E> { label: string, entries: E[], capped?: boolean }
 export function arrangeSections<E> (query: string, parts: {
   answer: Array<ResultSection<E>>
@@ -209,11 +211,16 @@ export function arrangeSections<E> (query: string, parts: {
   web: Array<ResultSection<E>>
 }): Array<ResultSection<E>> {
   const tools: ResultSection<E> = { label: 'Tools', entries: parts.tools }
-  const lead = parts.tools.some(t => matchRank(t.name, query) === 0)
+  const q = normalize(query)
+  const exactItem = parts.items.some(s => s.entries.some(e => {
+    const name = (e as { name?: unknown }).name
+    return typeof name === 'string' && normalize(name) === q
+  }))
+  const lead = q.length >= 4 && !exactItem && parts.tools.some(t => matchRank(t.name, query) === 0)
   return [
     ...parts.answer,
-    ...parts.items,
     ...(lead ? [tools] : []),
+    ...parts.items,
     ...parts.cards,
     ...(lead ? [] : [tools]),
     ...parts.rest,

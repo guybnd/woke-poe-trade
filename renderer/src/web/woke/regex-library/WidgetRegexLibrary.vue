@@ -116,6 +116,7 @@ import DockItem from '../dock/DockItem.vue'
 import { saveDock } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
 import { useZone } from '../shared/zone'
+import { folderMenuEntries } from '../shared/folder-menu'
 
 // The window's "?": the saved list's keys.
 const LIST_KEYS = savedListKeys({ copy: true })
@@ -335,19 +336,11 @@ function rowMenu (e: MouseEvent, entry: RegexEntry) {
 }
 
 function folderMenu (e: MouseEvent, path: string) {
-  const locked = isLocked(path)
-  openMenu(e, [
-    { label: 'New string here', icon: 'fas fa-plus', action: () => startNew(path) },
-    { label: 'New folder inside', icon: 'fas fa-folder-plus', action: () => tree.startFolder(path) },
-    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', disabled: locked, action: () => tree.startEdit('folder', path, 'rename') },
-    { label: 'Move', icon: 'fas fa-folder-open', disabled: locked, action: () => tree.startEdit('folder', path, 'move') },
-    { separator: true },
-    { label: 'Sort this folder A to Z', icon: 'fas fa-sort-alpha-down', action: () => tree.sortFolder(path) },
-    { label: 'Fold all folders', icon: 'fas fa-compress-alt', action: tree.foldAll },
-    { label: 'Open all folders', icon: 'fas fa-expand-alt', action: tree.openAll },
-    { separator: true },
-    { label: 'Remove folder', icon: 'fas fa-trash', danger: true, disabled: locked, action: () => removeFolder(path) }
-  ])
+  openMenu(e, folderMenuEntries(tree, path, {
+    newHere: { label: 'New string here', action: () => startNew(path) },
+    remove: { action: () => removeFolder(path) },
+    locked: isLocked(path)
+  }))
 }
 
 // Takes the folder and every string in it; Undo puts all of it back.

@@ -148,7 +148,7 @@
         <section v-if="showChanges || showSide" ref="colsEl" :class="[$style.cols, { [$style.colsFixed]: midFixed }]" :style="{ gridTemplateColumns: colsTemplate, height: midFixed ? midHShown + 'px' : undefined }">
           <div v-if="showChanges" :class="$style.changesCol">
             <div :class="$style.colHead">
-              <WFoldHead :model-value="!fold.changes" :class="$style.foldHead" :title="fold.changes ? 'Open' : 'Fold'" @update:model-value="flipFold('changes')"><span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} ${session.maps === 1 ? 'map' : 'maps'}` : 'Since last refresh' }}</span></WFoldHead>
+              <WFoldHead :model-value="!fold.changes" :class="$style.foldHead" @update:model-value="flipFold('changes')"><span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} ${session.maps === 1 ? 'map' : 'maps'}` : 'Since last refresh' }}</span></WFoldHead>
               <b v-if="session" class="w-num" :class="tone(session.div)" :title="session.tip">{{ signed(session.div) }}<Coin :chaos="!divine" /><template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}<Coin :chaos="!divine" />/h</template></b>
               <span v-if="session && session.spent > 0" :class="$style.spendNote" class="w-num" title="Purchases in this session: left out of its profit">spent {{ div(session.spent) }}<Coin :chaos="!divine" /></span>
             </div>
@@ -189,35 +189,38 @@
             </div>
           </div>
           <div v-if="showSide" :class="$style.sideCol">
-            <div v-if="showSold">
+            <!-- One chip per section (pick A): shows or hides it, so every
+                 section is in view even when the open ones fill the column. -->
+            <div :class="$style.sideChips" data-side-chips>
+              <WChip v-for="c in sideChips" :key="c.id" clickable :active="!fold[c.id]" :aria-pressed="!fold[c.id]" :data-side-chip="c.id" @click="flipFold(c.id)">{{ c.label }}<span v-if="c.count" class="w-num" :class="$style.chipCount">{{ c.count }}</span></WChip>
+            </div>
+            <div v-if="showSold && !fold.sold">
               <div :class="$style.sideHead">
-                <WFoldHead :model-value="!fold.sold" :class="$style.fold" :title="fold.sold ? 'Open Sold' : 'Fold Sold'" :aria-label="fold.sold ? 'Open Sold' : 'Fold Sold'" @update:model-value="flipFold('sold')" />
-                <button type="button" :class="$style.soldHead" title="Open the Sales view" @click="view = 'sales'">
-                  <span :class="$style.caps">Sold</span>
-                  <span class="w-num text-xs w-dim">today <b :class="$style.saleNum">{{ div(soldToday.chaos) }}</b> · 7 days <b :class="$style.saleNum">{{ div(soldWeek.chaos) }}</b><Coin :chaos="!divine" /></span>
-                </button>
+                <span :class="$style.caps">Sold</span>
+                <span class="w-num text-xs w-dim">today <b :class="$style.saleNum">{{ div(soldToday.chaos) }}</b> · 7 days <b :class="$style.saleNum">{{ div(soldWeek.chaos) }}</b><Coin :chaos="!divine" /></span>
               </div>
-              <div v-for="s in fold.sold ? [] : recentSales" :key="s.id" :class="[$style.saleLine, 'w-line', { 'w-line-out': saleOut(s) }]" tabindex="0" data-side-sale
+              <div v-for="s in recentSales" :key="s.id" :class="[$style.saleLine, 'w-line', { 'w-line-out': saleOut(s) }]" tabindex="0" data-side-sale
                 @contextmenu="onSaleMenu($event, s)" @keydown="onSaleKeys($event, s)">
                 <img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon" class="w-line-name"><span v-else :class="$style.icon" />
                 <span :class="$style.moveName"><span v-item-tip="saleTip(s)" class="w-trunc w-line-name">{{ saleName(s) }}</span><span v-if="saleOut(s)" class="w-line-tag">left out</span><span v-else-if="marketOf(s) != null" :class="[$style.saleTag, marketTone(s)]">{{ marketText(marketOf(s)) }}</span></span>
                 <span class="w-num" :class="$style.saleNum" :title="saleTitle(s)"><span :class="{ [$style.struck]: saleOut(s) }">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /></span> · {{ clockOf(s.at) }}</span>
                 <WLineActs :name="saleName(s)" :out="saleOut(s)" :entries="saleEntries(s)" :head="e => saleHead(s, e)" @out="leaveSaleOut(s, $event)" />
               </div>
+              <button type="button" :class="$style.allSales" data-all-sales @click="view = 'sales'">All sales ›</button>
             </div>
-            <div v-if="shown.where">
-              <WFoldHead :model-value="!fold.where" :class="[$style.foldHead, $style.sideTitle]" :title="fold.where ? 'Open' : 'Fold'" @update:model-value="flipFold('where')"><span :class="$style.caps">Where it is</span></WFoldHead>
-              <button v-for="c in fold.where ? [] : cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
+            <div v-if="shown.where && !fold.where">
+              <div :class="$style.sideHead"><span :class="$style.caps">Where it is</span></div>
+              <button v-for="c in cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
                 :aria-pressed="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">
                 <span :class="$style.catName"><img v-if="c.icon" :src="c.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
               </button>
             </div>
-            <div v-if="showMoves" :class="$style.movesCol">
-              <WFoldHead :model-value="!fold.moves" :class="[$style.foldHead, $style.sideTitle]" :title="fold.moves ? 'Open' : 'Fold'" @update:model-value="flipFold('moves')"><span :class="$style.caps">Price moves today</span></WFoldHead>
-              <HoldLine v-for="m in fold.moves ? [] : moves.slice(0, 8)" :key="m.key" :icon="m.icon" :name="m.name" :text="m.name" :tip="tipFor(tips, m.key, m.name)"
+            <div v-if="showMoves && !fold.moves" :class="$style.movesCol">
+              <div :class="$style.sideHead"><span :class="$style.caps">Price moves today</span></div>
+              <HoldLine v-for="m in moves.slice(0, 8)" :key="m.key" :icon="m.icon" :name="m.name" :text="m.name" :tip="tipFor(tips, m.key, m.name)"
                 :mine="holdOf(m.key)?.mine" :out="ignoredKeys.has(m.key)" :each="holdOf(m.key)?.unitChaos ?? null" :title="inChaos(m.valueChaos)"
                 @price="onPrice(m.key, $event)" @out="onIgnore(m.key, m.name, $event)"><span :class="tone(m.change)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span></HoldLine>
-              <div v-if="moves.length > 8 && !fold.moves" :class="$style.more" :title="moves.slice(8).map(moveText).join('\n')">+{{ moves.length - 8 }} more</div>
+              <div v-if="moves.length > 8" :class="$style.more" :title="moves.slice(8).map(moveText).join('\n')">+{{ moves.length - 8 }} more</div>
             </div>
           </div>
           <SplitHandle v-for="(e, i) in colEdges" :key="i" dir="x" :style="{ left: e * 100 + '%' }" @start="startDrag" @move="dragCol(i, $event)" @end="saveLayout" @reset="resetLayout('cols')" />
@@ -300,7 +303,7 @@ import { GOTO_TARGETS } from '../tab-bar/goto-targets'
 import { usePoeninja } from '@/web/background/Prices'
 import { WBanner, WButton, WChip, WEmpty, WKbd, WLineActs, WPanel, WSpark, WTabs, lineToast, openMenu, toast, vItemTip } from '../ui'
 import { lineTip, tipFor, tipIndex } from './tips'
-import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
+import { agoPhrase, formatAmount, nowMinute, formatSigned, formatTimeOfDay, formatDuration } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { isWidgetTypeOn } from '../modules'
 import { useNights } from '../session-story/store'
@@ -404,13 +407,10 @@ const div = (chaos: number) => {
   const d = toDiv(chaos)
   return d >= 100 ? formatAmount(d) : d >= 1 ? d.toFixed(1) : d.toFixed(2)
 }
-const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n) >= 100 ? formatAmount(Math.abs(n)) : Math.abs(n).toFixed(1)}`
-const signedPct = (c: number) => `${c > 0 ? '+' : '−'}${Math.abs(c * 100).toFixed(1)}%`
+const signed = (n: number) => formatSigned(n, x => x >= 100 ? formatAmount(x) : x.toFixed(1))
+const signedPct = (c: number) => formatSigned(c, x => `${(x * 100).toFixed(1)}%`)
 const tone = (n: number | null | undefined) => n == null || n === 0 ? '' : n > 0 ? 'w-up' : 'w-down'
-const duration = (ms: number) => {
-  const m = Math.round(ms / 60_000)
-  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`
-}
+const duration = formatDuration
 const moveText = (m: PriceMove) => `${m.name} ${signedPct(m.change)} (${signed(toDiv(m.valueChaos))} ${unit.value})`
 const etaText = (days: number) => days < 1 ? `${Math.max(1, Math.round(days * 24))} h` : days < 60 ? `${Math.round(days)} days` : `${Math.round(days / 30)} months`
 
@@ -499,6 +499,12 @@ function openSections (e: MouseEvent) {
 const showMoves = computed(() => shown.value.moves && moves.value.length > 0)
 const showSold = computed(() => shown.value.sold && recentSales.value.length > 0)
 const showSide = computed(() => shown.value.where || showMoves.value || showSold.value)
+// The side column's chips (pick A), in the order the sections show.
+const sideChips = computed(() => [
+  ...(showSold.value ? [{ id: 'sold' as const, label: 'Sold', count: recentSales.value.length }] : []),
+  ...(shown.value.where ? [{ id: 'where' as const, label: 'Where it is', count: 0 }] : []),
+  ...(showMoves.value ? [{ id: 'moves' as const, label: 'Price moves', count: moves.value.length }] : [])
+])
 const colIds = computed<ColId[]>(() => [
   showChanges.value ? 'changes' : null,
   showSide.value ? 'side' : null
@@ -704,7 +710,7 @@ function spendRows (g: ChangeGroup) {
     if (!x || !action) return []
     if (!x.mark && !x.auto && !r?.back && !(x.cashChaos != null && x.cashChaos <= -smallCash)) return []
     const spent = r?.spent ?? 0
-    const when = g.reads.length > 1 ? `${new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}: ` : ''
+    const when = g.reads.length > 1 ? `${formatTimeOfDay(at)}: ` : ''
     const text = spent > 0
       ? `${when}Purchase, ${div(spent)} ${unit.value} not counted`
       : r?.back
@@ -972,7 +978,7 @@ const soldWeek = computed(() => totals(inRange(countedSales.value, '7d', now.val
 const recentSales = computed(() => sales.value.slice(0, 6))
 const clockOf = (at: number) => {
   const d = new Date(at)
-  const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  const t = formatTimeOfDay(d)
   return d.toDateString() === new Date().toDateString() ? t : d.toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
 function saleTitle (s: Sale) {
@@ -1155,9 +1161,11 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .toggle:global(.w-fold-head):hover { color: var(--w-fg); }
 .foldHead:hover .caps { color: var(--w-fg); }
 .foldHead .caps { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sideTitle { margin-bottom: 4px; }
-.sideHead { display: flex; align-items: baseline; gap: 2px; }
-.sideHead .soldHead { flex: 1 1 auto; min-width: 0; }
+.sideHead { display: flex; justify-content: space-between; align-items: baseline; gap: var(--w-s2); margin-bottom: 4px; }
+.sideChips { display: flex; flex-wrap: wrap; gap: var(--w-s1); padding-bottom: var(--w-s2); border-bottom: 1px solid var(--w-line); }
+.chipCount { margin-left: 5px; color: var(--w-fg); }
+.allSales { margin-top: 2px; padding: 0 0 0 22px; color: var(--w-dim); font-size: var(--w-fs-xs); text-align: left; cursor: pointer; }
+.allSales:hover, .allSales:focus-visible { color: var(--w-gold); }
 .cols > div:not([role=separator]) { padding: var(--w-s2) var(--w-pad); min-width: 0; }
 .cols > div:not([role=separator]) + div:not([role=separator]) { border-left: 1px solid var(--w-line); }
 .colHead { display: flex; justify-content: space-between; gap: 2px var(--w-s2); flex-wrap: wrap; min-width: 0; margin-bottom: 2px; }
@@ -1178,8 +1186,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .soldToday:hover { text-decoration: underline; }
 .listedChip { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .leftOut { color: var(--w-dim); text-decoration: line-through; }
-.soldHead { display: flex; justify-content: space-between; align-items: baseline; gap: var(--w-s2); width: 100%; margin-bottom: 4px; text-align: left; cursor: pointer; }
-.soldHead:hover .caps { color: var(--w-fg); }
 .spendNote { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-info); }
 /* A sale as a shared profit line (sale-lines.ts); its hover actions lie over
    the end of the name. */

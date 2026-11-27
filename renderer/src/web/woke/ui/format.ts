@@ -78,6 +78,13 @@ export function formatUnitPrice (chaos: number, divine: number | null | undefine
   return n != null ? `1 div / ${n.toLocaleString('en-US')}` : formatChaos(chaos, divine)
 }
 
+// A gain or loss: "+12 c", "−12 c" (a true minus, not a hyphen), and no sign
+// for no change. `fmt` writes the size (e.g. formatChaos); it gets 0 or more.
+export function formatSigned (n: number, fmt: (size: number) => string = formatAmount): string {
+  if (n === 0 || !Number.isFinite(n)) return fmt(n === 0 ? 0 : n)
+  return `${n > 0 ? '+' : '−'}${fmt(Math.abs(n))}`
+}
+
 // ---- time ----
 
 // "4:05", or "1:04:05" past an hour (always with hours when `hours` is set).
@@ -87,6 +94,12 @@ export function formatClock (ms: number, hours = false): string {
   const m = Math.floor((s % 3600) / 60)
   const sec = String(s % 60).padStart(2, '0')
   return h || hours ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`
+}
+
+// A time of day, "09:05": always 24 hour with two digits, so time columns
+// stay one width on every locale.
+export function formatTimeOfDay (at: number | Date): string {
+  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 }
 
 // "45m" or "2h 05m".

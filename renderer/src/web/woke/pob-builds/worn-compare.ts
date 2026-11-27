@@ -10,6 +10,7 @@ import { slotLabel } from './build-model'
 import { swapCheck } from './swap-check'
 import type { SwapResult } from './swap-check'
 import type { PobItem } from './widget'
+import { formatTimeOfDay } from '../ui/format'
 
 export interface WornCompare { title: string, source?: string, result: SwapResult }
 
@@ -29,7 +30,7 @@ const note = (title: string, source: string, verdict: SwapResult['verdict'], sum
 export function wornCompare (slot: string, buildItem: PobItem): WornCompare | null {
   const s = personalOn.value ? character.value : null
   if (!s) return null
-  const at = new Date(s.readAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const at = formatTimeOfDay(s.readAt)
   const source = `Yours: what ${s.character.name} wore at ${at}, read from pathofexile.com.`
   const g = group(slot)
 

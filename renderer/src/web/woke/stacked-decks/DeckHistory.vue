@@ -48,7 +48,7 @@ import { computed, shallowRef } from 'vue'
 import { WBanner, WButton, WEmpty, WSkeleton, lineToast, toast, vItemTip } from '../ui'
 import WBackLink from '../ui/WBackLink.vue'
 import { useWindowKeys } from '../ui/window-keys'
-import { formatChaos, formatDuration } from '../ui/format'
+import { formatChaos, formatDuration, formatSigned } from '../ui/format'
 import { formatSessionDate, inRange } from '../analytics/stats'
 import type { AnalyticsRange, AnalyticsUnit } from '../analytics/types'
 import DeckSummary from './DeckSummary.vue'
@@ -115,8 +115,7 @@ function signed (v: number, r?: DeckRecord) {
   // allResult is already in the unit; a row is in chaos.
   const n = r && props.unit === 'div' ? v / (r.divine ?? divine.value ?? NaN) : v
   if (!Number.isFinite(n)) return '—'
-  const text = props.unit === 'div' ? formatChaos(n, 1, 'div') : formatChaos(n, null, 'chaos')
-  return `${n > 0 ? '+' : ''}${text}`
+  return formatSigned(n, x => props.unit === 'div' ? formatChaos(x, 1, 'div') : formatChaos(x, null, 'chaos'))
 }
 const tone = (v: number | null) => v == null ? '' : v >= 0 ? 'w-up' : 'w-down'
 

@@ -15,8 +15,8 @@
         </span>
       </template>
 
-      <span class="w-dim">Colours</span>
-      <span class="flex items-center flex-wrap" :class="$style.colours">
+      <span v-if="!noColours" class="w-dim">Colours</span>
+      <span v-if="!noColours" class="flex items-center flex-wrap" :class="$style.colours">
         <span v-for="c in colourRows" :key="c.key" class="flex items-center gap-1" :title="c.value ? c.value.slice(0, 3).join(' ') : 'none'">
           <input type="color" :value="draft?.key === c.key ? draft.value : hex(c.value)" :class="$style.swatch" :aria-label="c.label"
             @input="drag(c.key, ($event.target as HTMLInputElement).value)" @change="drag(c.key, ($event.target as HTMLInputElement).value)" @blur="commitDraft">
@@ -153,7 +153,9 @@ const props = withDefaults(defineProps<{
   lookOnly?: boolean
   // Only a mark on top of another look: border, sound, beam and map icon.
   markOnly?: boolean
-}>(), { copyFrom: () => [], source: null, lookOnly: false, markOnly: false })
+  // No colour pickers: the colours come from elsewhere (currency categories).
+  noColours?: boolean
+}>(), { copyFrom: () => [], source: null, lookOnly: false, markOnly: false, noColours: false })
 
 const emit = defineEmits<{
   (e: 'patch', patch: StylePatch): void

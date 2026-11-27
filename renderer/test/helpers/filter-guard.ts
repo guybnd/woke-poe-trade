@@ -17,6 +17,7 @@ import { PRESET_NAMES } from '@/web/woke/loot-filter/timeline'
 import { LOOK_LIMITS, scaledFont } from '@/web/woke/loot-filter/look'
 import { defaultGear } from '@/web/woke/loot-filter/gear'
 import { defaultWeights } from '@/web/woke/loot-filter/weights'
+import { defaultCurrency } from '@/web/woke/loot-filter/currency-settings'
 import { LEVELS, neverSink, neverSinkStyled } from './neversink'
 
 export const FILTERS = [
@@ -252,14 +253,17 @@ export const HARSHEST: { [K in Key]: Presets[K] } = {
   look: { on: true, size: LOOK_LIMITS.size.min, background: LOOK_LIMITS.background.min, colour: LOOK_LIMITS.colour.min },
   lowTiers: { on: true, tier: 5 },
   gear: { ...defaultGear(), on: true },
-  weights: { ...defaultWeights(), on: true }
+  weights: { ...defaultWeights(), on: true },
+  // Currency weights hide cheap piles by design and are tested on their own
+  // (filter-currency-weights.test.ts); kept off here.
+  currency: defaultCurrency()
 }
 
 // Cluster prices hide nothing by themselves: they only pick which passive types
 // the price rules name, from prices these setups don't have.
 // Rare weights replace every endgame rare's look by design: their own setup,
 // not mixed into the others (which would skip checking those rares).
-export const PRESET_KEYS = (Object.keys(HARSHEST) as Key[]).filter(k => k !== 'clusterPrices' && k !== 'weights')
+export const PRESET_KEYS = (Object.keys(HARSHEST) as Key[]).filter(k => k !== 'clusterPrices' && k !== 'weights' && k !== 'currency')
 
 // The harshest settings in words, for setup names.
 const HARSH_WORDS: Partial<Record<Key, string>> = {

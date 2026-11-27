@@ -57,7 +57,7 @@
 // a click-to-move across it still reaches the game; a click on it closes it,
 // and its corner resizes it.
 import { computed, onUnmounted, shallowRef, watch } from 'vue'
-import { formatClock } from '../ui/format'
+import { formatClock, formatSigned } from '../ui/format'
 import WKbd from '../ui/WKbd.vue'
 import WIcon from '../ui/WIcon.vue'
 import { logMechanic } from '../ui/game-icons'
@@ -292,7 +292,7 @@ const tags = computed(() => {
 
 function signed (diff: number): string {
   if (Math.abs(diff) < 1000) return '±0:00'
-  return `${diff < 0 ? '−' : '+'}${formatClock(Math.abs(diff))}`
+  return formatSigned(diff, formatClock)
 }
 function tone (diff: number): string {
   return Math.abs(diff) < 1000 ? 'w-dim' : diff < 0 ? 'w-up' : 'w-down'

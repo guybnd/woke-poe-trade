@@ -5363,6 +5363,96 @@
    }
   }
  },
+ "rare-unid-gloves.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.gloves"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.gloves"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ev": {
+       "min": 240
+      },
+      "es": {
+       "min": 48
+      }
+     }
+    }
+   }
+  }
+ },
  "unique-baleful-dominion.txt": {
   "opened": {
    "status": {

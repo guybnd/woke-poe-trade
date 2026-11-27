@@ -20,6 +20,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const POB = 'https://raw.githubusercontent.com/PathOfBuildingCommunity/PathOfBuilding/dev/src/Data/'
+// Path of Building's spelling -> the game's, so lookups by the game's name hit.
+const GAME_NAME = { 'Doppelganger Guise': 'Doppelgänger Guise' }
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), '../public/data/tips/vestigial.json')
 
 /** @param {string} name */
@@ -53,7 +55,8 @@ export function vestigialByUnique (vestigialLua, modsLua) {
   for (const m of vestigialLua.matchAll(/\["(Divergent[^"]+)"\] = \{([^}]*)\}/g)) {
     const mod = lines.get(m[1])
     if (!mod?.length) continue
-    for (const name of strings(m[2])) {
+    for (const pobName of strings(m[2])) {
+      const name = GAME_NAME[/** @type {keyof typeof GAME_NAME} */ (pobName)] ?? pobName
       const list = out[name] ??= []
       if (!list.some(l => l.join('\n') === mod.join('\n'))) list.push(mod)
     }

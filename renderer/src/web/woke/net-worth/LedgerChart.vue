@@ -78,7 +78,7 @@
 import { computed, onUnmounted, shallowRef, watch } from 'vue'
 import { vItemTip } from '../ui'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
-import { formatAmount } from '../ui/format'
+import { formatAmount, formatSigned, formatTimeOfDay } from '../ui/format'
 import { parseTop } from './tips'
 import Coin from './Coin.vue'
 import { tipPlacement } from './ledger'
@@ -336,11 +336,11 @@ function onMove (e: MouseEvent) {
 
 const sumCats = (p: SeriesPoint) => CAT_ORDER.reduce((s, c) => s + p.byCategory[c], 0)
 const fmt = (n: number) => formatAmount(n)
-const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${formatAmount(Math.abs(n))}`
+const signed = (n: number) => formatSigned(n)
 function when (at: number) {
   const d = new Date(at)
   const today = new Date().toDateString() === d.toDateString()
-  const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  const t = formatTimeOfDay(d)
   return today ? `Today ${t}` : `${d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} ${t}`
 }
 </script>
