@@ -257,7 +257,9 @@ export const HARSHEST: { [K in Key]: Presets[K] } = {
 
 // Cluster prices hide nothing by themselves: they only pick which passive types
 // the price rules name, from prices these setups don't have.
-export const PRESET_KEYS = (Object.keys(HARSHEST) as Key[]).filter(k => k !== 'clusterPrices')
+// Rare weights replace every endgame rare's look by design: their own setup,
+// not mixed into the others (which would skip checking those rares).
+export const PRESET_KEYS = (Object.keys(HARSHEST) as Key[]).filter(k => k !== 'clusterPrices' && k !== 'weights')
 
 // The harshest settings in words, for setup names.
 const HARSH_WORDS: Partial<Record<Key, string>> = {
@@ -299,9 +301,10 @@ export const SETUPS: Setup[] = [
   ...PRESET_KEYS.map(k => ({ name: harshName(k), presets: presets({ [k]: HARSHEST[k] }) })),
   // A config saved before the minimum of 2 still holds a 1.
   { name: 'Quiet mode and fewer beams saved at 1 tier', presets: presets({ quiet: { on: true, keepTiers: 1 }, beams: { on: true, keepTiers: 1 } }) },
+  { name: 'Rare weights', presets: presets({ weights: HARSHEST.weights }) },
   { name: 'Every preset, default settings', presets: allOn() },
-  { name: 'Every preset, harshest settings', presets: presets(HARSHEST) },
-  { name: 'Every preset, harshest, safety net on', presets: presets(HARSHEST), netOn: true }
+  { name: 'Every preset, harshest settings', presets: presets({ ...HARSHEST, weights: defaultWeights() }) },
+  { name: 'Every preset, harshest, safety net on', presets: presets({ ...HARSHEST, weights: defaultWeights() }), netOn: true }
 ]
 
 // Every pair of presets at their harshest.

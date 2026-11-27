@@ -22,7 +22,8 @@ import { gemBaseName, renameBases } from './gem-bases'
 import { CLUSTER_PRICE_TYPE, applyClusterPrices } from './cluster-prices'
 import type { ClusterPrice } from './cluster-prices'
 import type { BaseRename } from './gem-bases'
-import { applyWeights } from './weights'
+import { applyWeights, filterBases } from './weights'
+import type { BaseRow } from './weights'
 
 // The safety net's rule names (safetyBlocks): items, uniques, stacks20...
 const NET_TIER = /^(items|uniques|stacks\d+)$/
@@ -77,12 +78,15 @@ export interface Composed {
   // Rules the rare weights wrote (0 when off), and about how many characters.
   weightRules: number
   weightChars: number
+  // The bases the weights were written from (empty when off).
+  weightBases: BaseRow[]
 }
 
 export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const next = parseFilterCopy(text)
   // Rare weights (beta) first, so everything below goes on top of them.
-  const weights = applyWeights(next, cfg.presets.weights)
+  const weightBases = cfg.presets.weights.on ? filterBases(next) : []
+  const weights = applyWeights(next, cfg.presets.weights, weightBases)
   // Build rules go in first, so edits to them (restyles) apply on top.
   const input = cfg.build
   let buildCount = 0
@@ -175,5 +179,5 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Again over the net's and restyled rules: one transfigured gem name in a
   // BaseType list and the game refuses to load the whole filter.
   renameBases(next, renameBase)
-  return { doc: next, results, buildCount, netCount, netStackCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)), gearBlocks: gear.blocks, gearReplaced: gear.replaced, clusterSig, weightRules: weights?.blocks.length ?? 0, weightChars: weights?.chars ?? 0 }
+  return { doc: next, results, buildCount, netCount, netStackCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)), gearBlocks: gear.blocks, gearReplaced: gear.replaced, clusterSig, weightRules: weights?.blocks.length ?? 0, weightChars: weights?.chars ?? 0, weightBases }
 }

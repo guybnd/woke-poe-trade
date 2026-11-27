@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { WEIGHT_TYPE, applyWeights, baseRanks, defaultWeights, filterBases, normalizeWeights, stepOf, weightOf } from '@/web/woke/loot-filter/weights'
+import { WEIGHT_ROWS, WEIGHT_TYPE, MULT_STEPS, applyWeights, baseRanks, defaultWeights, filterBases, normalizeWeights, stepOf, weightOf } from '@/web/woke/loot-filter/weights'
 import type { WeightItem, WeightSettings, BaseRow } from '@/web/woke/loot-filter/weights'
 import { BASE_FACTS } from '@/web/woke/loot-filter/base-facts'
 import { neverSink } from '../helpers/neversink'
@@ -74,7 +74,7 @@ function randomRare (r: () => number, bases: BaseRow[]): { it: WeightItem, facts
     anyEnchantment: it.enchanted,
     crucibleTree: it.crucible,
     exarchTier: it.eldritch ? 2 : 0,
-    eaterTier: 0,
+    eaterTier: it.eldritch && r() < 0.5 ? 2 : 0,
     unidentifiedItemTier: it.tier || undefined,
     influences: it.influenced ? ['Shaper'] : [],
     explicitModNames: []
@@ -123,6 +123,40 @@ describe('rare weights', () => {
       }
     })
   }
+
+  it('any saved multipliers: every rare still lands on its step, in a sane number of rules', () => {
+    const r = rng(99)
+    for (let round = 0; round < 6; round++) {
+      const doc = parseFilter(SEMI)
+      const raw = defaultWeights()
+      for (const row of WEIGHT_ROWS) raw.mult[row.key] = MULT_STEPS[Math.floor(r() * MULT_STEPS.length)]
+      const w = normalizeWeights({ ...raw, on: true, need: [0.5, 4, 32][round % 3] })
+      const bases = filterBases(doc).filter(b => BASE_FACTS[b.name])
+      const compiled = applyWeights(doc, w)!
+      expect(compiled.blocks.length).toBeLessThan(6000)
+      for (let n = 0; n < 500; n++) {
+        const { it, facts } = randomRare(r, bases)
+        const want = stepOf(weightOf(it, w.mult), w.need)
+        expect(matchItem(doc, facts).final?.block.tier, `${facts.name} ${JSON.stringify(it)} ${JSON.stringify(w.mult)}`).toBe(`s${want}`)
+      }
+    }
+  })
+
+  it('keeps marks at ×1 or more and drop tiers and item levels in order', () => {
+    const w = normalizeWeights({ on: true, need: 4, mult: { ...defaultWeights().mult, fract: 0.25, t5: 2, i68: 3 } })
+    expect(w.mult.fract).toBe(1)
+    expect(w.mult.t5).toBeGreaterThanOrEqual(w.mult.t4)
+    expect(w.mult.i75).toBeGreaterThanOrEqual(w.mult.i68)
+  })
+
+  it('leaves non-gear bases on NeverSink\'s exotic list alone', () => {
+    const doc = parseFilter(SEMI)
+    const names = filterBases(doc).map(b => b.name)
+    expect(names).not.toContain('Prismatic Jewel')
+    applyWeights(doc, on())
+    const jewel = { name: 'Prismatic Jewel', baseType: 'Prismatic Jewel', itemClass: 'Jewels', rarity: 'Rare', identified: false, itemLevel: 86, width: 1, height: 1, influences: [], explicitModNames: [] } as unknown as ItemFacts
+    expect(matchItem(doc, jewel).final?.block.type).not.toBe(WEIGHT_TYPE)
+  })
 
   it('leaves identified rares and other items to NeverSink', () => {
     const doc = parseFilter(SEMI)

@@ -19,7 +19,7 @@ import { BASE_FACTS } from './base-facts'
 import { WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
 import type { WeightKey, WeightSettings } from './weight-settings'
 
-export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, MULT_STEPS, NEED_MIN, NEED_MAX, STAGES, defaultWeights, normalizeWeights } from './weight-settings'
+export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, MULT_STEPS, NEED_MIN, NEED_MAX, STAGES, MARK_ROWS, ORDERED_ROWS, defaultWeights, multRange, normalizeWeights } from './weight-settings'
 export type { WeightKey, WeightRow, WeightGroup, WeightSettings } from './weight-settings'
 
 // ---- Steps (how loud) ---------------------------------------------------------
@@ -152,7 +152,9 @@ export function baseTable (ranks: BaseRanks, gear: string[], known: (name: strin
   const out: BaseRow[] = []
   for (const name of names) {
     const k = known(name)
-    if (k.cls && !GEAR_CLASSES.includes(k.cls)) continue
+    // Only gear the app knows: a jewel or flask on NeverSink's exotic list
+    // isn't rare gear.
+    if (!k.cls || !GEAR_CLASSES.includes(k.cls)) continue
     const [drop, width, height] = k.facts ?? [0, 0, 0]
     out.push({ name, cls: k.cls, rank: rankOf.get(name) ?? 'r0', width, height, old: !!k.facts && !!k.cls && OLD_CLASSES.includes(k.cls) && drop < OLD_DROP_LEVEL })
   }
@@ -175,8 +177,9 @@ export function baseTerms (b: Pick<BaseRow, 'rank' | 'width' | 'height' | 'old'>
 // quality...): of those over ×1 only the biggest counts, so a fractured
 // 6-link counts the 6-link, and only on a rare that isn't corrupted or
 // mirrored. That keeps the filter to a sane number of rules, and a rare
-// never shows louder than its full weight would say. A mark set under ×1
-// always counts.
+// never shows louder than its full weight would say. Marks never go under
+// ×1, and drop tiers and item levels stay in order (weight-settings.ts):
+// either would multiply the rules or need rules the game can't write.
 
 const T = (v: string) => c(v, '', ['True'])
 const F = (v: string) => c(v, '', ['False'])
@@ -201,26 +204,20 @@ const MARKS: Mark[] = [
   { key: 'rgb', yes: [c('SocketGroup', '', ['RGB'])] }
 ]
 export const MARK_KEYS: ReadonlySet<WeightKey> = new Set(MARKS.map(x => x.key))
-// Most marks under ×1 the filter handles; past it the ones nearest ×1 count
-// as ×1.
-export const MAX_DOWN = 4
 
-// The marks under ×1 (always count) and over ×1 (only the biggest counts).
-export function markKinds (m: Record<WeightKey, number>): { down: WeightKey[], up: WeightKey[] } {
-  const keys = [...MARK_KEYS]
-  const down = keys.filter(k => m[k] < 1).sort((x, y) => m[x] - m[y] || keys.indexOf(x) - keys.indexOf(y)).slice(0, MAX_DOWN)
-  const up = keys.filter(k => m[k] > 1)
-  return { down, up }
+// The marks over ×1: of these only the biggest counts.
+export function upMarks (m: Record<WeightKey, number>): WeightKey[] {
+  return [...MARK_KEYS].filter(k => m[k] > 1)
 }
 
 // The multipliers that count for this rare, in table order.
 export function countedTerms (it: WeightItem, mult: Record<WeightKey, number>): WeightKey[] {
   const all = termsOf(it)
-  const { down, up } = markKinds(mult)
+  const up = upMarks(mult)
   const plain = it.corruption === 'no' && !it.mirrored
   const ups = plain ? all.filter(k => up.includes(k)) : []
   const best = ups.length ? ups.reduce((x, k) => mult[k] > mult[x] ? k : x) : null
-  return all.filter(k => !MARK_KEYS.has(k) || down.includes(k) || k === best)
+  return all.filter(k => !MARK_KEYS.has(k) || k === best)
 }
 
 export function weightOf (it: WeightItem, mult: Record<WeightKey, number>): number {
@@ -263,7 +260,7 @@ function cumulative (factors: number[], cond: (k: number) => FilterCondition[]):
 // before it hide what they don't show.
 interface Split { parts: Array<{ conds: FilterCondition[], factor: number, note: string }>, rest?: boolean }
 
-function splits (bases: BaseRow[], m: Record<WeightKey, number>, down: WeightKey[]): Split[] {
+function splits (bases: BaseRow[], m: Record<WeightKey, number>): Split[] {
   const own = (keys: WeightKey[]) => keys.reduce((p, k) => p * m[k], 1)
   const groups = new Map<string, { keys: WeightKey[], names: string[] }>()
   for (const b of bases) {
@@ -300,13 +297,6 @@ function splits (bases: BaseRow[], m: Record<WeightKey, number>, down: WeightKey
         { conds: [F('Corrupted')], factor: 1, note: '' }
       ]
     },
-    ...MARKS.filter(x => down.includes(x.key)).map(x => ({
-      rest: true,
-      parts: [
-        { conds: x.yes, factor: m[x.key], note: WEIGHT_LABEL[x.key].toLowerCase() },
-        { conds: [], factor: 1, note: '' }
-      ]
-    })),
     {
       // Bases worth more than the rest come first, then the rest, then...
       // the lighter ones must come before the rest too (a rule can't say "not
@@ -338,7 +328,7 @@ const BASE_CONDS = (): FilterCondition[] => [
 // is dropped.
 export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
   const m = w.mult
-  const { down, up } = markKinds(m)
+  const up = upMarks(m)
   const TIERS = ['t5', 't4', 't3', 't2', 't1'] as const
   const ILVL: Array<[number, WeightKey]> = [[86, 'i86'], [83, 'i83'], [75, 'i75'], [68, 'i68']]
   const opts: Option[][] = [
@@ -424,7 +414,7 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
     }
   }
 
-  const ss = splits(bases, m, down)
+  const ss = splits(bases, m)
   const walkSplits = (list: Split[], i: number, prefix: FilterCondition[], start: number, notes: string[]) => {
     if (i === list.length) { part(prefix, start, notes.filter(Boolean).join(', ')); return }
     const sp = list[i]
@@ -458,12 +448,15 @@ function popcount (x: number): number {
 // build rules, presets and your own rules, which then go on top of them).
 // The base table for this filter, from the app's item data.
 export function filterBases (doc: FilterDoc): BaseRow[] {
+  // Before the item data loads nothing is known (and baseInfo would remember
+  // that): every base counts as a plain one until then.
+  if (!allGearBases().length) return []
   return baseTable(baseRanks(doc), allGearBases(), n => ({ cls: baseInfo(n).cls, facts: BASE_FACTS[n] }))
 }
 
-export function applyWeights (doc: FilterDoc, w: WeightSettings): Compiled | null {
+export function applyWeights (doc: FilterDoc, w: WeightSettings, bases = filterBases(doc)): Compiled | null {
   if (!w.on) return null
-  const compiled = compileWeights(w, filterBases(doc))
+  const compiled = compileWeights(w, bases)
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
   const at = first < 0 ? doc.chunks.length : first
   doc.chunks.splice(at, 0, ...compiled.blocks)

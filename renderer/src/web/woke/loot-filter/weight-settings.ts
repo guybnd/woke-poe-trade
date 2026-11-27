@@ -145,6 +145,25 @@ export function defaultWeights (): WeightSettings {
   return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number> }
 }
 
+// Marks only add (×1 or more): a mark under ×1 would split every rule.
+export const MARK_ROWS: WeightKey[] = ['l6', 'l5', 'l4', 'infl', 'eld', 'qual', 'fract', 'synth', 'fated', 'ench', 'strand', 'cruc', 'abyss', 'rgb']
+// Rows that stay in order, lowest first: a higher drop tier or item level is
+// never worth less than a lower one.
+export const ORDERED_ROWS: WeightKey[][] = [['t1', 't2', 't3', 't4', 't5'], ['i68', 'i75', 'i83', 'i86']]
+
+// The range one multiplier may take, given the others.
+export function multRange (mult: Record<WeightKey, number>, key: WeightKey): [number, number] {
+  let lo = MARK_ROWS.includes(key) ? 1 : 0
+  let hi = 1000
+  for (const row of ORDERED_ROWS) {
+    const i = row.indexOf(key)
+    if (i < 0) continue
+    if (i > 0) lo = Math.max(lo, mult[row[i - 1]])
+    if (i < row.length - 1) hi = Math.min(hi, mult[row[i + 1]])
+  }
+  return [lo, hi]
+}
+
 export function normalizeWeights (w: Partial<WeightSettings> | undefined): WeightSettings {
   const d = defaultWeights()
   const ok = (v: unknown, lo: number, hi: number): v is number => typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi
@@ -153,6 +172,8 @@ export function normalizeWeights (w: Partial<WeightSettings> | undefined): Weigh
     const v = w?.mult?.[r.key]
     if (ok(v, 0, 1000)) mult[r.key] = v
   }
+  for (const k of MARK_ROWS) mult[k] = Math.max(1, mult[k])
+  for (const row of ORDERED_ROWS) for (let i = 1; i < row.length; i++) mult[row[i]] = Math.max(mult[row[i]], mult[row[i - 1]])
   return {
     on: typeof w?.on === 'boolean' ? w.on : false,
     need: ok(w?.need, NEED_MIN, NEED_MAX) ? w.need : d.need,

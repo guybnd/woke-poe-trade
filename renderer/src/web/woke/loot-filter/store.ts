@@ -1,5 +1,6 @@
 // Loads the source filter, applies the widget's edits, and saves the result.
 import { computed, onUnmounted, shallowRef, ref, toRaw, watch } from 'vue'
+import type { BaseRow } from './weights'
 import { MainProcess } from '@/web/background/IPC'
 import { hostRequest } from '../shared/host'
 import { customSoundsIn, installPackSounds } from './sounds'
@@ -75,6 +76,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // Rare weights (beta): rules written and about how many characters.
   const weightRules = ref(0)
   const weightChars = ref(0)
+  const weightBases = shallowRef<BaseRow[]>([])
   const loading = ref(false)
   const saving = ref(false)
   const error = ref<string | null>(null)
@@ -299,6 +301,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     buildBlockCount.value = c.buildCount
     weightRules.value = c.weightRules
     weightChars.value = c.weightChars
+    weightBases.value = c.weightBases
     safetyCount.value = c.netCount
     safetyStackCount.value = c.netStackCount
     safetyList.value = c.netList
@@ -1364,6 +1367,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     buildBlockCount,
     weightRules,
     weightChars,
+    weightBases,
     files,
     folder,
     doc,

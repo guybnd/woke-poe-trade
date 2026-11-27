@@ -15,7 +15,7 @@
     <div :class="$style.card">
       <div class="flex items-center gap-2">
         <span class="font-semibold">Line</span>
-        <input v-model.number="needPoints" type="range" :min="NEED_LO" :max="NEED_HI" step="1" :class="$style.slider" aria-label="Weight a rare needs to show, in points">
+        <input v-model.lazy.number="needPoints" type="range" :min="NEED_LO" :max="NEED_HI" step="1" :class="$style.slider" aria-label="Weight a rare needs to show, in points">
         <span :class="$style.num">{{ pointsText(needPoints) }}</span>
         <WInfo text="Points: every +10 doubles. A rare shows when its points reach the line." />
       </div>
@@ -91,8 +91,9 @@ import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import { matchItem } from './match'
+import { ruleLabel } from './parse'
 import type { Colour } from './edits'
-import { MULT_STEPS, NEED_MAX, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, stepActions, stepOf, termsOf, weightOf } from './weights'
+import { MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, stepActions, stepOf, termsOf, weightOf } from './weights'
 import type { Step, WeightKey } from './weights'
 import { CHIP_LABEL, SAMPLES, factsOf, fromPoints, itemOf, points, pointsText, sampleBase, samplePile } from './weight-samples'
 
@@ -112,7 +113,10 @@ const needPoints = computed({
   set: (p: number) => { if (Number.isFinite(p)) w.value.need = Math.min(NEED_MAX, Math.max(NEED_MIN, Number(fromPoints(p).toPrecision(4)))) }
 })
 
+// The bases the filter's rules were written from; while off, read from the
+// filter as it is.
 const bases = computed(() => {
+  if (props.store.weightBases.value.length) return props.store.weightBases.value
   const doc = props.store.doc.value
   return doc ? filterBases(doc) : []
 })
@@ -147,7 +151,7 @@ const samples = computed(() => {
     let other = ''
     if (w.value.on) {
       const hit = matchItem(doc, facts).final?.block
-      if (hit && hit.type !== WEIGHT_TYPE) other = hit.type ? `decided by ${hit.type}` : 'decided by a rule above'
+      if (hit && hit.type !== WEIGHT_TYPE) other = `decided by ${ruleLabel(hit.type, hit.tier)}`
     }
     return [{
       spec,
@@ -163,8 +167,9 @@ const samples = computed(() => {
 
 function nudge (key: WeightKey, dir: 1 | -1) {
   const v = w.value.mult[key]
+  const [lo, hi] = multRange(w.value.mult, key)
   const next = dir > 0 ? MULT_STEPS.find(x => x > v + 1e-9) : [...MULT_STEPS].reverse().find(x => x < v - 1e-9)
-  if (next != null) w.value.mult[key] = next
+  if (next != null) w.value.mult[key] = Math.min(hi, Math.max(lo, next))
 }
 
 const changed = computed(() => {
