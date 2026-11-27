@@ -73,7 +73,6 @@ export const NEWS: NewsItem[] = [
   { id: 'price-check-related-upgrades', since: '1.330.20', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a unique, its upgrade, where it drops and the cards that give it, with prices' },
   { id: 'scrying-helper', since: '1.330.20', wmType: 'woke-scrying', name: 'Scrying', note: 'New: which map to scry, ranked by the cards a Scrying Orb adds per map, with the orb\'s price and a Buy link' },
   { id: 'price-check-unique-recipe', since: '1.330.20', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: a recipe part (Lost Unity rings) lists the other parts and what they make, with prices' },
-  { id: 'listed-reprice', since: '1.330.20', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: price check an item you have listed and set its new price at the foot' },
   { id: 'deck-card-line-item', since: '1.330.20', wmType: 'woke-stacked-decks', name: 'Stacked decks', note: 'New: click a card\'s value to set your price; hover it to leave it out of Got and Result' },
   { id: 'analytics-line-item', since: '1.330.20', wmType: 'woke-session-analytics', name: 'Session analytics', note: 'New: right-click a map\'s loot for your price or to leave it out' },
   { id: 'price-check-ninja-trust', since: '1.330.19', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: the instant card says when poe.ninja\'s price looks fake, with the item\'s usual price' },
@@ -81,7 +80,6 @@ export const NEWS: NewsItem[] = [
   { id: 'div-card-map-chance', since: '1.330.19', wmType: 'woke-search', name: 'Search', note: 'New: type a map to see how likely each of its cards is, and what one is worth on average' },
   { id: 'listed-still-cheapest', since: '1.330.19', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: Check on a Listed row says if anyone sells it cheaper (one trade search)' },
   { id: 'net-worth-listed', since: '1.330.18', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: a Listed tab: what you have up at Faustus, unsold, and for how long' },
-  { id: 'map-mods-t17-planner', since: '1.330.18', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: a Planner tab for T17 maps, and what each mod adds to a map' },
   { id: 'atlas-planner-links', since: '1.330.18', wmType: 'woke-atlas-strategies', goto: 'strategies', name: 'Atlas strategies', note: 'New: imports poeatlasplanner.com links' }
 ]
 
