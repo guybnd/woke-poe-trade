@@ -306,7 +306,6 @@ const MOVE_TO: Array<{ lane: GearMove, label: string }> = [
 ]
 
 const g = computed(() => props.config.presets.gear)
-// What's new's Show me (gear-drag.ts): opens on Base ranks.
 
 // NeverSink's tiered gear rules as they came (with your edits): read while
 // the table is off, since on it they are commented out.
