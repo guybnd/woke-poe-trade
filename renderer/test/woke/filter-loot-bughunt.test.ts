@@ -13,6 +13,7 @@ import { composeFilter } from '@/web/woke/loot-filter/compose'
 import { DEFAULT_BUILD_RULES } from '@/web/woke/loot-filter/build-rules'
 import { defaultPresets } from '@/web/woke/loot-filter/presets'
 import { WEIGHT_TYPE } from '@/web/woke/loot-filter/weights'
+import { cardCategoryOf } from '@/web/woke/loot-filter/card-classes'
 import { neverSink } from '../helpers/neversink'
 
 const SEMI = neverSink('2-SEMI-STRICT')
@@ -132,5 +133,30 @@ describe('colour-blind reaches the Loot and Equipment rules', () => {
         if (a.key === 'MinimapIcon') expect(['Red', 'Green', 'Pink', 'Brown']).not.toContain(a.args[1])
       }
     }
+  })
+})
+
+describe('card folds', () => {
+  it('reads a reward whose size wrapper closes on a later line', () => {
+    expect(cardCategoryOf('<size:31>{<gemitem>{Support Gem}\r\n<default>{Quality:} <augmented>{+23%}\r\n<corrupted>{Corrupted}}'.split('\n'))).toBe('cardgem')
+    expect(cardCategoryOf('<size:27>{<uniqueitem>{The Eternity Shroud}\r\n<corrupted>{Two-Implicit}'.split('\n'))).toBe('carduniq')
+    expect(cardCategoryOf('<size:28>{<rareitem>{Elder Guardian Occupied Map}\r\n<default>{Modifiers:}'.split('\n'))).toBe('cardmap')
+    expect(cardCategoryOf('<size:26>{<rareitem>{Map}}\r\n<size:26>{<default>{Map Tier:}'.split('\n'))).toBe('cardmap')
+    expect(cardCategoryOf(['<size:26>{<currencyitem>{10x Divine Orb}}'])).toBe('cardcur')
+  })
+})
+
+describe('the Loot tab prices a unique base by its best unique', () => {
+  it('whatever the cheapest unique setting on the Prices tab says', () => {
+    const cheap: PriceLookup = (g, base) => base === 'Heavy Belt' ? { chaos: 1, thin: false } : lookup(g, base)
+    const best: PriceLookup = (g, base) => base === 'Heavy Belt' ? { chaos: 5000, thin: false } : lookup(g, base)
+    const p = defaultPresets()
+    p.currency.on = true
+    const ours = (prices: { lookup: PriceLookup, loot?: PriceLookup }) => {
+      const out = composeFilter(SEMI, { presets: p, rules: [], edits: [], buildRules: { ...DEFAULT_BUILD_RULES }, build: null, moves: [], safetyNet: { on: false, minChaos: 20 }, prices: { ...prices, safety: null, breakdown: null }, dustList: null, heldBack: () => false, stackHeld: () => false })
+      return JSON.stringify(out.doc.blocks.filter(b => b.type === CURRENCY_TYPE))
+    }
+    expect(ours({ lookup: cheap })).not.toBe(ours({ lookup: best }))
+    expect(ours({ lookup: cheap, loot: best })).toBe(ours({ lookup: best }))
   })
 })

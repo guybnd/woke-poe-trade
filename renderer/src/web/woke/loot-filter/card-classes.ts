@@ -29,7 +29,9 @@ export const CARD_LOOK: Record<string, { text: [number, number, number], color: 
 // What a set turns into, from the first line of its reward text
 // ("<uniqueitem>{Headhunter}", "<size:26>{<currencyitem>{10x Divine Orb}}").
 export function cardCategoryOf (lines: readonly string[]): string {
-  const first = (lines[0] ?? '').trim().replace(/^<size:\d+>\{(.*)\}$/, '$1')
+  // The size wrapper can close lines later ("<size:31>{<gemitem>{Support Gem}",
+  // then the quality and corruption lines), and the data has \r\n endings.
+  const first = (lines[0] ?? '').trim().replace(/^<size:\d+>\{/, '')
   const m = /^<(\w+)>\s*\{([^}]*)\}/.exec(first)
   if (!m) return 'cardother'
   const [, tag, inner] = m

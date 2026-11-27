@@ -39,6 +39,15 @@ export function useFilterPrices (rule: () => UniqueRule) {
     if (!snap?.items.length || !dropsReady.value) return null
     return priceLookup(snap.items, randomOnBase.value, rule())
   })
+  // The Loot tab's rules: always a base's best unique, whatever the Prices
+  // tab's "cheapest unique" setting says, so a cheap unique on the same base
+  // never hides a valuable one there.
+  const lootLookup = computed<PriceLookup | null>(() => {
+    if (rule() === 'max') return lookup.value
+    const snap = index.snapshot.value
+    if (!snap?.items.length || !dropsReady.value) return null
+    return priceLookup(snap.items, randomOnBase.value, 'max')
+  })
   // What this snapshot has at all: a type it lacks isn't priced at zero.
   const pricedTypes = computed(() => new Set((index.snapshot.value?.items ?? []).map(i => i.type)))
   // Never follows the "cheapest unique" setting: see safetyLookup.
@@ -58,5 +67,5 @@ export function useFilterPrices (rule: () => UniqueRule) {
   function wantPrices () {
     try { ninja.queuePricesFetch() } catch {}
   }
-  return { lookup, safety, pricedTypes, currentLeague, breakdown, items, updatedAt, league, divine, wantPrices }
+  return { lookup, lootLookup, safety, pricedTypes, currentLeague, breakdown, items, updatedAt, league, divine, wantPrices }
 }

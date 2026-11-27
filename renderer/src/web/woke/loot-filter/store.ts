@@ -294,6 +294,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       // and reading one makes the rebuild follow it.
       prices: {
         lookup: prices.lookup.value,
+        loot: cfg().presets.currency.on ? prices.lootLookup.value : null,
         safety: cfg().safetyNet.on ? prices.safety.value : null,
         breakdown: cfg().presets.cheapUniques.on ? prices.breakdown.value : null,
         pricedTypes: cfg().safetyNet.on ? prices.pricedTypes?.value : null
