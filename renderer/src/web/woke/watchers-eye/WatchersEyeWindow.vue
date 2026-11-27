@@ -233,7 +233,11 @@ const savedOptions = computed(() => [
 function defaultName (): string {
   const auras = shownList.value.join(', ')
   const n = active.value.length
-  return n ? `${auras} · ${n} mod${n === 1 ? '' : 's'}` : auras
+  const base = n ? `${auras} · ${n} mod${n === 1 ? '' : 's'}` : auras
+  // Never over another saved setup: a typed name may replace one, this one won't.
+  let name = base
+  for (let i = 2; config.saved.some(s => s.name === name); i++) name = `${base} (${i})`
+  return name
 }
 async function startSave () {
   saveName.value = current.value ?? defaultName()
