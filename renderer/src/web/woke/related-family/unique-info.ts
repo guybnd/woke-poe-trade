@@ -102,13 +102,24 @@ export function vestigialLines (rawText: string): string[] {
   return out
 }
 
-// The uniques whose Vestigial mod reads as these lines, numbers aside (the
-// item rolled a value; the data lists one).
+// The uniques whose Vestigial mod reads as these lines. Each Vestigial mod has
+// one fixed value, so the same text with its numbers names the source even
+// when many uniques leave that kind of mod ("+40% to Item Rarity" is
+// Aurseize's; four others leave other amounts). Only when no unique leaves
+// those exact numbers (data a patch behind) is it matched with numbers aside,
+// and then too many matches name none.
 export function vestigialSources (lines: string[], vestigial: Record<string, string[][]> | null | undefined, self: string): string[] {
   if (!lines.length || !vestigial) return []
-  const want = lines.map(modShape).sort().join('\u0000')
-  const out = Object.keys(vestigial).filter(name =>
-    name !== self && vestigial[name].some(mod => mod.flatMap(l => l.split('\n')).map(modShape).sort().join('\u0000') === want))
+  const key = (ls: string[], f: (l: string) => string) => ls.map(f).sort().join('\u0000')
+  const exactText = (l: string) => plainLine(l).trim().toLowerCase()
+  const match = (f: (l: string) => string) => {
+    const want = key(lines, f)
+    return Object.keys(vestigial).filter(name =>
+      name !== self && vestigial[name].some(mod => key(mod.flatMap(l => l.split('\n')), f) === want))
+  }
+  const exact = match(exactText)
+  if (exact.length) return exact.length <= MOST_SOURCES ? exact : []
+  const out = match(modShape)
   return out.length <= MOST_SOURCES ? out : []
 }
 

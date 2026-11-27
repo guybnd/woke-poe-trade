@@ -68,6 +68,18 @@ describe('unique info', () => {
     expect(vestigialSources(['20% to Item Rarity'], vestigial, 'X')).toEqual([])
   })
 
+  it('Shadows and Dust with "+40% to Item Rarity": the exact value names Aurseize', () => {
+    const rawText = [
+      'Item Class: Gloves', 'Rarity: Unique', 'Shadows and Dust', 'Vestigial Clasped Mitts', '--------',
+      'Item Level: 85', '--------',
+      '{ Vestigial Implicit Modifier — Drop }', '+40% to Item Rarity', '--------',
+      '{ Unique Modifier }', 'Creates a Smoke Cloud on Rampage', '(Enemies standing in Smoke Clouds are Blinded)'
+    ].join('\n')
+    expect(vestigialLines(rawText)).toEqual(['+40% to Item Rarity'])
+    expect(uniqueInfo({ ...base, name: 'Shadows and Dust', rawText })!.vestigialFrom).toEqual(['Aurseize'])
+    expect(vestigialSources(['+15% to Item Rarity'], vestigial, 'X')).toEqual(["Sadima's Touch"])
+  })
+
   it('a unique with nothing to add gives nothing', () => {
     expect(uniqueInfo({ ...base, name: 'Not A Unique' })).toBeNull()
   })
