@@ -83,10 +83,16 @@ describe('Loot frame', () => {
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
   })
 
-  it('normalizes section modes and Faint', () => {
-    const c = normalizeCurrency({ catMode: { orbs: 'off', oils: 'always', Bad: 'off', ess: 'weird' }, faint: { on: true, until: 99 } } as never)
-    expect(c.catMode).toEqual({ orbs: 'off', oils: 'always' })
+  it('keeps section modes and Faint, and ignores anything else in them', () => {
+    // The normalizer runs at startup, so it stays light; readers take only
+    // 'off', 'always', true and a number.
+    const c = normalizeCurrency({ catMode: { orbs: 'off', oils: 'always', ess: 'weird' }, faint: { on: true, until: 99 } } as never)
+    expect(c.catMode).toMatchObject({ orbs: 'off', oils: 'always' })
     expect(c.faint).toEqual({ on: true, until: 99 })
-    expect(normalizeCurrency({ faint: { on: 'x', until: -1 } } as never).faint).toEqual(defaultCurrency().faint)
+    expect(forcedHidden({ name: 'Essence of Woe', cat: 'ess' }, c)).toBe(false)
+    const bad = normalizeCurrency({ catMode: 'x', faint: { on: 'x', until: 'y' } } as never)
+    expect(bad.faint).toEqual(defaultCurrency().faint)
+    expect(faintOn(bad, null)).toBe(false)
+    expect(forcedHidden({ name: 'Divine Orb', cat: 'orbs' }, bad)).toBe(false)
   })
 })
