@@ -28,6 +28,7 @@ export const EXAMPLES: Example[] = [
   { query: 'awakened enlighten', shows: 'Where it drops, drop chance', icon: 'fas fa-gift' },
   { query: 'rustic sash', shows: 'Weapon + sash + whetstone → 40-84% inc. phys', icon: 'fas fa-store' },
   { query: 'herald of ash', shows: 'Quest reward and vendors, by class', icon: 'fas fa-gem' },
+  { query: 'item rarity', shows: 'Every unique with that mod, priced', icon: 'fas fa-list' },
   { query: 'resolute technique', shows: 'Keystone stats; uniques that grant it', icon: 'fas fa-dharmachakra' },
   { query: 'lord of drought', shows: 'Cluster jewel notable stats', icon: 'fas fa-circle-nodes' },
   { query: 'the coast', shows: 'Act, area level, waypoint, next zones', icon: 'fas fa-map-location-dot' },

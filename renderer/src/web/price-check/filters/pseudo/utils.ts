@@ -40,6 +40,15 @@ function _findAndResolveByRef (
   return undefined
 }
 
+export function tryFindAndResolveByRef (
+  name: string,
+  modType: ModifierType,
+  itemCategory: ItemCategory | undefined,
+  hint?: ResolveHint
+): Stat | undefined {
+  return _findAndResolveByRef(name, modType, itemCategory, hint)
+}
+
 export function findAndResolveByRef (
   name: string,
   modType: ModifierType,

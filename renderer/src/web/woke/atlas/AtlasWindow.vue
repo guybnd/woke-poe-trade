@@ -661,6 +661,12 @@ async function doImport () {
           const { rewriteHypostasisLinks } = await import('./hypostasis')
           full = rewriteHypostasisLinks(full, atlasTree.value)
         }
+        // So do the Atlas Tree Planner's (atlas-blush-beta.vercel.app).
+        if (/atlas-blush-beta\.vercel\.app\//i.test(full)) {
+          if (!atlasTree.value && (atlasTreeError.value || atlasDataError.value)) throw new Error(atlasTreeError.value || atlasDataError.value)
+          const { rewritePlannerLinks } = await import('./planner-link')
+          full = rewritePlannerLinks(full, atlasTree.value)
+        }
       } finally {
         importing.value = false
       }

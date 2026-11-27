@@ -234,12 +234,52 @@ export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType
     const item = createVirtualItem({ category: ItemCategory.Gem, info, gemLevel: 1, isCorrupted: !!info.gem?.vaal })
     return { clipboard: item.rawText, item }
   }
+  // A base (gear, flasks, jewels, heist gear, idols): priced as a white copy.
+  // Not a rare or magic item named with its base: a white copy isn't its price.
+  const base = !ref.base && (!ref.rarity || ref.rarity === 'normal') ? basePriceItem(info) : null
+  if (base) return { clipboard: base.rawText, item: base }
   if (!english) return null
   if (kind === 'card') return { clipboard: stackText(info.refName, 'Divination Card', 'Divination Cards') }
   // Currency, scarabs, essences, fragments, tattoos: what trades in bulk.
   // Facetor's Lens trades one by one (no bulk tag): searched by name.
   if (info.tradeTag || info.refName === "Facetor's Lens") return { clipboard: stackText(info.refName, 'Currency', 'Stackable Currency') }
+  // The rest with no category (ducats, coins, resonators, corpses, vials,
+  // reliquary keys, wombgifts): searched by name, as the game's copy of one is.
+  if (!info.craftable && info.namespace === 'ITEM' && !NOT_BY_NAME.has(info.refName)) {
+    return { clipboard: stackText(info.refName, 'Currency', 'Stackable Currency') }
+  }
   return null
+}
+
+// Priced by what the copy says, which a name can't stand for: a Scrying Orb's
+// map, a warrant's mercenary, a Viscera's slot, an Ultimatum's or a bottle's reward.
+const NOT_BY_NAME = new Set(['Scrying Orb', 'Mercenary Warrant', 'Viscera', 'Inscribed Ultimatum', 'Message in a Bottle'])
+
+// Bases priced as a white copy, by base type, as a real copy of one is: at
+// item level 86 (cluster jewels: the 84+ bracket), its chip ticked; one click
+// drops it.
+const BASE_ILVL = 86
+// Not priceable as a base: a chart and a blighted map need their area, a
+// Viscera its slot, a blueprint its wings, and a unique-only base (Timeless
+// Jewel, the plain Map, unique pieces) has no white copies.
+const NO_BASE_CATEGORY = new Set<string>([ItemCategory.Chart, ItemCategory.Viscera, ItemCategory.MercenaryWarrant, ItemCategory.HeistBlueprint, 'Unique Fragment'])
+const NO_BASE = new Set(['Timeless Jewel', 'Map', 'Blighted Map', 'Blight-ravaged Map'])
+// Priced by area level: asked at 83, which the price check lets you change.
+const AREA_LEVEL: Record<string, number> = { 'Chronicle of Atzoatl': 83, 'Mirrored Tablet': 83, 'Forbidden Tome': 83, 'Expedition Logbook': 83 }
+
+export function basePriceItem (info: BaseType): ParsedItem | null {
+  if (info.namespace !== 'ITEM') return null
+  const areaLevel = AREA_LEVEL[info.refName]
+  if (areaLevel) {
+    const category = info.refName === 'Expedition Logbook' ? ItemCategory.ExpeditionLogbook : ItemCategory.Currency
+    // A logbook is priced by area: one with no area mods.
+    if (category === ItemCategory.ExpeditionLogbook) return createVirtualItem({ category, rarity: ItemRarity.Normal, info, areaLevel, logbookAreaMods: [[]] })
+    return createVirtualItem({ category, info, areaLevel })
+  }
+  const category = info.craftable?.category
+  if (!category || info.tradeTag || NO_BASE_CATEGORY.has(category) || NO_BASE.has(info.refName)) return null
+  const itemLevel = category === ItemCategory.ClusterJewel ? 84 : BASE_ILVL
+  return createVirtualItem({ category, rarity: ItemRarity.Normal, info, itemLevel })
 }
 
 // ---- trade site ----

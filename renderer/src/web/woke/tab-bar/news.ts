@@ -31,6 +31,15 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
+  { id: 'watchers-eye-finder', since: '1.330.24', wmType: 'woke-watchers-eye', name: "Watcher's Eye finder", note: "New: tick your auras, pick Watcher's Eye mods from the full list, and price that jewel in one search" },
+  { id: 'loot-filter-over-quality-look', since: '1.330.23', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: over-quality gear keeps its tier look with a pink mark on top; Change mark on Base types' },
+  { id: 'search-tree-by-stat', since: '1.330.23', wmType: 'woke-search', name: 'Search', note: 'New: type what a passive does ("onslaught") for the keystones and notables that do it' },
+  { id: 'search-unique-mods', since: '1.330.23', wmType: 'woke-search', name: 'Search', note: 'New: type part of a mod ("item rarity 50") for every unique with it, priced; Foulborn and Vestigial too' },
+  { id: 'loot-filter-drag-bases', since: '1.330.23', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: drag bases between rank columns in Base types; drag one or all the picked ones' },
+  { id: 'loot-filter-profiles', since: '1.330.22', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: profiles, several whole filters (mapping, bossing...) each in its own file; switch at the top' },
+  { id: 'price-check-unique-foulborn', since: '1.330.22', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a unique, its Foulborn kinds and versions priced, its Vestigial mod, and if it can be chanced' },
+  { id: 'atlas-tree-planner-links', since: '1.330.22', wmType: 'woke-atlas-strategies', goto: 'strategies', name: 'Atlas strategies', note: 'New: imports Atlas Tree Planner links (atlas-blush-beta.vercel.app)' },
+  { id: 'search-price-check-bases', since: '1.330.22', wmType: 'woke-search', name: 'Search', note: 'New: Enter price checks bases, flasks, jewels and corpses in the overlay; Alt+Enter opens the trade site' },
   { id: 'net-worth-rename-runs', since: '1.330.22', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: rename a run: click its name, or the pen in Past runs' },
   { id: 'net-worth-worth-selling', since: '1.330.22', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: a Falling chip on Holdings lists what you hold 1 div or more of that has been falling all week' },
   { id: 'pob-import-all-sites', since: '1.330.22', wmType: 'woke-pob-builds', goto: 'builds', name: 'PoB builds', note: 'New: import poe.ninja, maxroll and pob.codes build links; your list follows PoB\'s own builds folder' },

@@ -525,6 +525,7 @@
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/market/",
    "renderer/src/web/woke/search/",
+   "renderer/src/web/woke/ui/tooltip/item-menu-logic.ts",
    "renderer/src/web/woke/wickerman/"
   ],
   "search-settings.spec.ts": [
@@ -627,6 +628,12 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/wickerman/"
+  ],
+  "watchers-eye.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/watchers-eye/",
+   "renderer/src/web/woke/search/"
   ],
   "welcome.spec.ts": [
    "renderer/src/web/woke/tab-bar/",

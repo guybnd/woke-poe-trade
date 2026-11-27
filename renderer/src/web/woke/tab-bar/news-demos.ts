@@ -55,6 +55,8 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-conquest-keystones': { check: { name: 'Elegant Hubris', rarity: 'unique' }, spot: 'related' },
   // A Shaper's Exalted Orb: its family and two fragment groups, folded to fit.
   'related-folded-groups': { check: { name: "Shaper's Exalted Orb" }, spot: 'related' },
+  // A unique with two Foulborn kinds and a Vestigial mod.
+  'price-check-unique-foulborn': { check: { name: 'Carcass Jack', rarity: 'unique' }, spot: 'foulborn' },
   'price-check-unique-recipe': { check: { name: 'The Will of Uul-Netol', rarity: 'unique' }, spot: 'related' },
   'div-card-map-chance': { search: 'Strand Map' },
   // A rolled jewel, unidentified: the unid price card (nothing searched until a click).
@@ -62,6 +64,12 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'valdo-map-skips': { check: { name: 'Valdo Map', text: valdoMapText('Headhunter') }, spot: 'valdo-strip' },
   'valdo-map-lookup': { search: 'valdo headhunter' },
   'search-keys-list': { search: 'keys' },
+  // Uniques with a mod: priced rows, Goldwyrm's Vestigial line among them.
+  'search-unique-mods': { search: 'item rarity' },
+  // Notables and keystones by their stats, under Passive tree.
+  'search-tree-by-stat': { search: 'onslaught' },
+  // A base with no saved price: its Price check button leads.
+  'search-price-check-bases': { search: 'manifold ring' },
   // A rare with tiered mods: hover one for its ladder.
   'price-check-mod-tiers': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' },
   // A rare armour: its base roll % beside its defence, to search.
@@ -86,7 +94,7 @@ const NOTHING_TO_SHOW = new Set(['search-recent-queries', 'search-recent-save', 
   'deck-card-line-item', 'analytics-line-item'])
 // Lines about a whole new tool: opening its window is the show. Any other
 // line needs a tab, a spot, a sample or a Settings page (news.test.ts).
-export const WHOLE_TOOL = new Set(['scrying-helper'])
+export const WHOLE_TOOL = new Set(['scrying-helper', 'watchers-eye-finder'])
 
 // Whether Show me has somewhere real to go: a tab, a sample, the Settings
 // page the feature lives on, or the tool's own window. `byName`: the client

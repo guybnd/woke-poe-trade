@@ -1,11 +1,14 @@
 <template>
-  <!-- The detail pane's actions: Trade site first (what Enter does), then
-       groups by purpose, and Open in Market last as a quiet link. -->
+  <!-- The detail pane's actions: what Enter does first (Price check, or
+       Trade site when it can't be priced here), then groups by purpose, and
+       Open in Market last as a quiet link. -->
   <div :class="$style.acts" data-item-actions>
-    <WButton variant="primary" size="sm" icon="fas fa-right-left" :title="`Search the trade site for ${name}.`" data-tip-keys="Enter" @click="$emit('trade')">
-      Trade site <WKbd keys="Enter" :class="$style.kbd" />
+    <WButton v-if="canPrice" variant="primary" size="sm" icon="fas fa-coins" title="Price it from live listings, here in the overlay." data-tip-keys="Enter" @click="$emit('price', $event)">
+      Price check <WKbd keys="Enter" :class="$style.kbd" />
     </WButton>
-    <WButton v-if="canPrice" size="sm" icon="fas fa-coins" title="Price it from live listings." data-tip-keys="Ctrl + Enter" @click="$emit('price', $event)">Price check</WButton>
+    <WButton :variant="canPrice ? undefined : 'primary'" size="sm" icon="fas fa-right-left" :title="`Search the trade site for ${name}.`" :data-tip-keys="canPrice ? 'Alt + Enter' : 'Enter'" @click="$emit('trade')">
+      Trade site <WKbd :keys="canPrice ? 'Alt + Enter' : 'Enter'" :class="$style.kbd" />
+    </WButton>
     <template v-if="lookups">
       <span :class="$style.sep" />
       <WButton size="sm" icon="fas fa-book" title="Open the PoE wiki page." @click="$emit('wiki')">Wiki</WButton>

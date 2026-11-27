@@ -86,6 +86,8 @@ import { canTurnOff, markSeen, noticeAction, visibleNotices } from './notices'
 import type { Notice } from './notices'
 import SampleCard from './SampleCard.vue'
 import FilterEditor from './FilterEditor.vue'
+import { useGoto } from '../tab-bar/goto'
+import { askGearRanks } from './gear-drag'
 import { useLootFilter } from './store'
 import { isValidEdit } from './edits'
 import { cleanEdit, setFilterApplier } from '../claude-link/suggestions'
@@ -122,7 +124,7 @@ const mode = ref<'card' | 'editor'>('editor')
 const sample = shallowRef<ItemFacts | null>(null)
 const samplePosition = shallowRef({ x: 1, y: 1 })
 const focus = shallowRef<{ type: string, tier: string } | null>(null)
-const openTab = shallowRef<{ tab: 'prices' | 'neversink' | 'changes' } | null>(null)
+const openTab = shallowRef<{ tab: 'prices' | 'neversink' | 'changes' | 'gear' } | null>(null)
 const areaOverride = ref<number | null>(null)
 
 // The card shows alone, not with every open panel, and closes when you go back
@@ -171,6 +173,11 @@ function ensureLoaded () {
 // Never set up: read nothing until it's first used, so an overlay you haven't
 // touched stays quiet.
 if (props.config.sourceName || props.config.neversink.on || props.config.wmWants === 'show') ensureLoaded()
+// What's new's Show me: the editor, with its profile chip.
+useGoto(props.config, 'woke-loot-filter', {
+  editor: () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}) },
+  spots: { 'profiles': () => {}, 'gear-ranks': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); askGearRanks() }, 'over-quality-look': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); openTab.value = { tab: 'gear' } } }
+})
 
 // A change Claude suggested, applied from the Suggestions card: added like an
 // edit made here, kept only when the filter takes it, then saved.

@@ -103,7 +103,7 @@ describe('SEARCH_GROUPS', () => {
       const src = readFileSync(path.join(dir, file), 'utf8')
       for (const m of src.matchAll(/\bgroup: '([^']+)'/g)) groups.add(m[1])
       for (const m of src.matchAll(/\bgroup: ([A-Z_]+)\b/g)) {
-        const value = new RegExp(`\\b${m[1]} = '([^']+)'`).exec(src)?.[1]
+        const value = new RegExp(`\\b${m[1]} = (?:'([^']+)'|"([^"]+)")`).exec(src)?.slice(1).find(Boolean)
         expect(value, `${file}: ${m[1]}`).toBeTruthy()
         groups.add(value!)
       }

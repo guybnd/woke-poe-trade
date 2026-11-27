@@ -54,7 +54,9 @@ export interface GearSettings {
   build: { auto: boolean, extra: string[], removed: string[] }
   // Labels the table shows: the game's rarity colour for the text (NeverSink
   // paints magic and rare alike), and your own look per rarity on top.
-  look: { rarityText: boolean, magic: StylePatch, rare: StylePatch }
+  // `quality` is the mark over-quality bases get on top of that look
+  // (border, sound, beam, map icon; DEFAULT_MARK where it sets none).
+  look: { rarityText: boolean, magic: StylePatch, rare: StylePatch, quality: StylePatch }
   // Per-slot lines that differ from their row's (F2); slots not listed follow the row.
   slots: SlotLines
 }
@@ -75,7 +77,7 @@ export function defaultGear (): GearSettings {
     quality: { on: false, min: { build: 21, exotic: 0, r1: 24, r2: 24, r3: 28, any: 30 } },
     moves: {},
     build: { auto: true, extra: [], removed: [] },
-    look: { rarityText: true, magic: {}, rare: {} },
+    look: { rarityText: true, magic: {}, rare: {}, quality: {} },
     slots: {}
   }
 }
@@ -127,7 +129,8 @@ export function normalizeGear (g: Partial<GearSettings> | undefined): GearSettin
     look: {
       rarityText: typeof g?.look?.rarityText === 'boolean' ? g.look.rarityText : true,
       magic: isPatch(g?.look?.magic) ? { ...g!.look!.magic } : {},
-      rare: isPatch(g?.look?.rare) ? { ...g!.look!.rare } : {}
+      rare: isPatch(g?.look?.rare) ? { ...g!.look!.rare } : {},
+      quality: isPatch(g?.look?.quality) ? cleanMark(g!.look!.quality) : {}
     }
   }
 }
@@ -544,50 +547,81 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
     noTier('any', null, lowAny.block, copyConditions(lowAny.block))
   }
 
+  // Over-quality bases: the look of their row and drop tier, with your mark
+  // on top. Right after Never, so they win over the table's own lines (and
+  // still show where the table hides their tier).
+  const quality = g.quality.on && src.quality.replaced.length ? qualityBlocks(src, g, lists, build, never, section) : []
   // Bases moved to Never come out of NeverSink's other gear rules' lists only
   // through this table: the Never rule sits first.
-  for (const b of out) if (b.visibility === 'Show') lookUp(b, g)
+  for (const b of [...out, ...quality]) if (b.visibility === 'Show') lookUp(b, g)
+  for (const b of quality) applyStyle(b, markOf(g))
+  out.splice(lists.never.length ? 1 : 0, 0, ...quality)
   src.replaced.forEach(retire)
+  // The table owns over-quality while it's on, even with every row Off.
+  const ownQuality = g.quality.on && src.quality.replaced.length > 0
+  if (ownQuality) src.quality.replaced.forEach(retire)
   insertAt(doc, src.at, out)
   res.blocks += out.length
-  res.replaced += src.replaced.length
-
-  if (g.quality.on && src.quality.replaced.length) {
-    const q = applyQuality(doc, src, g, lists, build, never)
-    res.blocks += q
-    res.replaced += src.quality.replaced.length
-  }
+  res.replaced += src.replaced.length + (ownQuality ? src.quality.replaced.length : 0)
   return res
 }
 
-function applyQuality (doc: FilterDoc, src: TieredSource, g: GearSettings, lists: Record<Rank, string[]>, build: string[], never: Set<string>): number {
-  const qAnchor = src.quality.replaced[0]
-  const styleFor = (min: number) => {
-    // NeverSink's looks: q1 for 28%+, q2 for 24%+, the any-base rule below.
-    const want = min >= 28 ? /q1$/ : min >= 24 ? /q2$/ : ANY_QUALITY_TIER
-    return src.quality.replaced.find(b => want.test(b.tier ?? '')) ?? qAnchor
-  }
+// The over-quality mark, over the tier's look (Guy's pick B): a pink border
+// and pink beam unless you set your own. What the mark sets wins over the
+// tier's; the rest stays the tier's.
+export const DEFAULT_MARK: StylePatch = { border: [255, 122, 217, 255], effect: { color: 'Pink', temp: false } }
+const MARK_KEYS = ['border', 'sound', 'effect', 'icon'] as const
+// What the mark adds: a setting turned off adds nothing (the row keeps its own).
+export function markOf (g: GearSettings): StylePatch {
+  const all = { ...DEFAULT_MARK, ...g.look.quality } as Record<string, unknown>
+  return Object.fromEntries(Object.entries(all).filter(([, v]) => v != null)) as StylePatch
+}
+// Only what a mark can set: the label itself stays the table's.
+export function cleanMark (p: StylePatch): StylePatch {
+  const out: StylePatch = {}
+  for (const k of MARK_KEYS) if (p[k] !== undefined) (out as Record<string, unknown>)[k] = p[k]
+  return out
+}
+
+// The block an over-quality line of this row and drop tier (null: no tier)
+// takes its look from: the table's own line for it.
+export function qualityLookFrom (src: TieredSource, row: GearRow, t: number | null): FilterBlock {
+  const anchor = src.replaced[0]
+  const lowAny = src.any[src.any.length - 1]?.block
+  if (row === 'any') return (t == null ? lowAny : src.any.find(a => t >= a.min)?.block) ?? lowAny ?? anchor
+  const rank: Rank = row === 'build' || row === 'exotic' ? 'r1' : row
+  return src.cells.get(key(rank, t ?? 2))?.block ?? anchor
+}
+
+function qualityBlocks (src: TieredSource, g: GearSettings, lists: Record<Rank, string[]>, build: string[], never: Set<string>, section: string): FilterBlock[] {
   const base = [cond('Mirrored', '', ['False']), cond('Corrupted', '', ['False'])]
   const out: FilterBlock[] = []
-  const rows: Array<[GearRow, string[] | null]> = [['build', build], ['r1', lists.r1], ['r2', lists.r2], ['r3', lists.r3]]
+  // Never bases stay hidden at any item level: the any-base row goes by class.
+  const mins = QUALITY_ROWS.map(r => g.quality.min[r]).filter(Boolean)
+  if (never.size && mins.length) {
+    out.push(gearBlock(src.cells.get(key('r3', 2))?.block ?? src.replaced[0], 'quality-never', 'bases you never want, with quality', 'Hide', [
+      ...base, cond('Quality', '>=', [Math.min(...mins)]), rarityCondition(['magic', 'rare']), cond('BaseType', '==', [...never].sort())
+    ], section))
+  }
+  const rows: Array<[GearRow, string[] | null]> = [['build', build], ['r1', lists.r1], ['r2', lists.r2], ['r3', lists.r3], ['any', null]]
   for (const [row, bases] of rows) {
     const min = g.quality.min[row]
+    if (!min) continue
     const list = (bases ?? []).filter(b => !never.has(b))
-    if (!min || !list.length) continue
-    out.push(gearBlock(styleFor(min), `quality-${row}`, `${row === 'build' ? 'your build\'s' : `rank ${row.slice(1)}`} bases with ${min}%+ quality`, 'Show', [
-      ...base, cond('Quality', '>=', [min]), cond('BaseType', '==', list)
-    ], qAnchor.section))
+    if (bases && !list.length) continue
+    if (!bases && !src.quality.anyClasses) continue
+    const what = bases ? cond('BaseType', '==', list) : cond('Class', '==', src.quality.anyClasses!)
+    const label = row === 'build' ? 'your build\'s bases' : row === 'any' ? 'any base' : `rank ${row.slice(1)} bases`
+    // Each drop tier in the look the table gives it, then no tier at all.
+    for (const t of [...DROP_TIERS, null]) {
+      for (const { rarities } of byDecision(() => 'Show')) {
+        out.push(gearBlock(qualityLookFrom(src, row, t), `quality-${row}-${t == null ? 'notier' : `t${t}`}`, `${label} with ${min}%+ quality, ${t == null ? 'no drop tier' : `drop tier ${t}`}`, 'Show', [
+          ...base, cond('Quality', '>=', [min]), ...(t == null ? [] : [cond('UnidentifiedItemTier', '>=', [t])]), rarityCondition(rarities), what
+        ], section))
+      }
+    }
   }
-  const anyMin = g.quality.min.any
-  if (anyMin && src.quality.anyClasses) {
-    const anyStyle = src.quality.replaced.find(b => ANY_QUALITY_TIER.test(b.tier ?? '')) ?? qAnchor
-    out.push(gearBlock(anyStyle, 'quality-any', `any base with ${anyMin}%+ quality`, 'Show', [
-      ...base, cond('Quality', '>=', [anyMin]), cond('Class', '==', src.quality.anyClasses)
-    ], qAnchor.section))
-  }
-  src.quality.replaced.forEach(retire)
-  insertAt(doc, qAnchor, out)
-  return out.length
+  return out
 }
 
 // The first change to an untouched table starts from NeverSink's numbers for

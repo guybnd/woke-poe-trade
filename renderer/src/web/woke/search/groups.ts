@@ -12,7 +12,10 @@ export const GROUP_CAP = 3
 // Every group a search can show, in the order they come, with its default.
 // Groups not listed (a new lookup) start folded too.
 export interface GroupInfo { id: string, name: string, mode: GroupMode, note?: string }
+// A mod search's uniques ("item rarity"): mod-index.ts.
+export const MOD_GROUP = 'Uniques with this mod'
 export const SEARCH_GROUPS: readonly GroupInfo[] = [
+  { id: MOD_GROUP, name: MOD_GROUP, mode: 'folded', note: 'type part of a mod, Foulborn and Vestigial too' },
   { id: 'Other items', name: 'Other items', mode: 'folded', note: 'items with no price' },
   { id: 'Tools', name: 'Tools', mode: 'folded' },
   { id: 'Bosses', name: 'Bosses', mode: 'folded' },
@@ -30,6 +33,7 @@ export const SEARCH_GROUPS: readonly GroupInfo[] = [
   { id: 'Ring anoints', name: 'Ring anoints', mode: 'folded' },
   { id: 'Megalomaniac', name: 'Megalomaniac', mode: 'folded' },
   { id: 'Forbidden pairs', name: 'Forbidden pairs', mode: 'folded' },
+  { id: "Watcher's Eye mods", name: "Watcher's Eye mods", mode: 'folded' },
   { id: 'Pantheon', name: 'Pantheon', mode: 'folded' },
   { id: 'Zones', name: 'Zones', mode: 'folded' },
   { id: 'Your saved items', name: 'Your saved items', mode: 'folded' },
@@ -115,7 +119,7 @@ export const CHIPS: ReadonlyArray<{ id: ChipId, label: string }> = [
   { id: 'web', label: 'Web' }
 ]
 export function chipOf (label: string): ChipId {
-  if (label === 'Answer' || label === 'Prices' || label.startsWith('Uniques on ')) return 'prices'
+  if (label === 'Answer' || label === 'Prices' || label.startsWith('Uniques on ') || label === MOD_GROUP) return 'prices'
   if (label === 'Other items') return 'items'
   if (label === 'Tools' || label === 'Do it now') return 'tools'
   if (label === 'Settings') return 'settings'

@@ -60,7 +60,8 @@ test('a group shows its top 3, "+N more" opens the rest, and its rows keep their
   await panel.locator('[data-search-more]').filter({ hasText: 'Passive tree' }).click()
   const opened = await groupRows(overlay, 'Passive tree')
   expect(opened.length).toBeGreaterThan(3)
-  expect(opened.some(r => /more/.test(r))).toBe(false)
+  // A passive's stat line can say "more" too: only the "+N more" row counts.
+  expect(opened.some(r => /^\+\d+ more/.test(r))).toBe(false)
   await expect(panel.locator('[data-selected]')).toContainText(opened[3].split(' ')[0])
   // Enter on a "+N more" row does the same.
   const more = panel.locator('[data-search-more]').filter({ hasText: 'Other items' })

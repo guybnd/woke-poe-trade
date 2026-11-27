@@ -67,8 +67,7 @@ describe('priceCheckInput', () => {
     expect(priceCheckInput({ name: 'Divine Orb' }, 'item', orb, false)).toBeNull()
   })
 
-  it('has no price check for a plain base, and uses a build item\'s own text', () => {
-    expect(input('Rustic Sash', 'item')).toBeNull()
+  it('uses a build item\'s own text', () => {
     expect(priceCheckInput({ name: 'Dread Shell', text: 'TEXT' }, 'item', undefined)).toEqual({ clipboard: 'TEXT' })
   })
 })
