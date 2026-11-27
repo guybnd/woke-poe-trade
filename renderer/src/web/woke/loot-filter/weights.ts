@@ -243,7 +243,9 @@ const DECOS: Deco[] = [
 ]
 export const DECO_KEYS: ReadonlySet<WeightKey> = new Set(DECOS.map(x => x.key))
 // Least valuable first (the rule order); the last one a rare has wins.
-const decoOrder = (m: Record<WeightKey, number>) => DECOS.map((d, i) => ({ d, i })).sort((p, q) => m[p.d.key] - m[q.d.key] || p.i - q.i).map(x => x.d)
+// Over-quality always wins (Guy, 2026-11-27): a quick pick that's easy to miss.
+const decoRank = (m: Record<WeightKey, number>, k: WeightKey) => k === 'qual' ? Infinity : m[k]
+const decoOrder = (m: Record<WeightKey, number>) => DECOS.map((d, i) => ({ d, i })).sort((p, q) => (decoRank(m, p.d.key) - decoRank(m, q.d.key)) || p.i - q.i).map(x => x.d)
 const decoAction = (d: Deco) => a('SetBorderColor', ...d.rgb, 255)
 
 // The mark whose colour this rare's border takes, if any.
