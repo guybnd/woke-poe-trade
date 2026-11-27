@@ -103,7 +103,7 @@ import { DEFAULT_REPLIES, REPLY_LABELS, parseHotkeyTarget, replyText } from './w
 import type { ReplyId } from './widget'
 import { artNames, offerLabel, parseTradeLine, priceLabel } from './whispers'
 import { bulkDelta, priceChaos } from './value'
-import { formatChaos } from '../ui/format'
+import { formatChaos, formatSigned, formatTimeOfDay } from '../ui/format'
 import { usePriceText } from '../shared/price'
 import { tradeTotals, tradesInRange, useOfferHistory, useTradeLog } from './log-store'
 // The header shows the module's own art, the same as the dock and tab bar.
@@ -578,13 +578,13 @@ function money (chaos: number): string {
   return formatChaos(chaos, divine.value)
 }
 function signed (chaos: number): string {
-  return `${chaos >= 0 ? '+' : '−'}${money(Math.abs(chaos))}`
+  return formatSigned(chaos, money)
 }
 function timeOf (ts: number): string {
   const d = new Date(ts)
   const sameDay = new Date().toDateString() === d.toDateString()
   return sameDay
-    ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    ? formatTimeOfDay(d)
     : d.toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
 

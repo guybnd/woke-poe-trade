@@ -311,6 +311,8 @@ import type { BossResult, DropRow, KillRecord, PriceMode, RateSource } from './c
 import { ESTIMATE_SOURCE_LABEL, estimateUrl } from './estimates'
 import { useTradePrices } from '../shared/unid-prices'
 import { OWN_RATE_KILLS } from './calc'
+import { usePoeninja } from '@/web/background/Prices'
+import { divineRate } from '../shared/price-row'
 
 const props = defineProps<{
   config: BossRunsWidget
@@ -346,7 +348,9 @@ const tierOptions = [{ value: 'all', label: 'All' }, { value: 'uber', label: 'Ub
 const sortOptions = [{ value: 'hour', label: 'Per hour' }, { value: 'run', label: 'Per run' }, { value: 'safe', label: 'Safest' }]
 
 const prices = usePriceIndex()
-const divine = computed(() => prices.snapshot.value?.divine ?? null)
+// One divine rate in every window: live poe.ninja's, else the saved prices' (shared/price-row.ts).
+const liveRate = usePoeninja().xchgRate
+const divine = computed(() => divineRate(liveRate.value, prices.snapshot.value?.divine))
 const tradePrices = useTradePrices()
 const px = computed(() => {
   const league = prices.snapshot.value?.league ?? ''

@@ -3,7 +3,7 @@
 // best one. Uses the Flips panel's own options and weights. The palette's prices
 // have no volume, so these rank by profit per item, not by supply.
 import { matchRank } from '../search'
-import { formatAmount } from '../../ui/format'
+import { formatAmount, formatSigned } from '../../ui/format'
 import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, RANGE_NOTE, bestFlip, parseLifeforce, priceFlip, rangeOnly, shortName } from '../../scarab-flip/families'
 import type { FlipFamily, FlipMethod, FlipResult } from '../../scarab-flip/families'
 import type { FlipOptions } from '../../scarab-flip/calc'
@@ -32,8 +32,7 @@ function settingsOf (config: ScarabFlipWidget | null): Settings {
 
 // The panel's own rounding, so both read the same.
 function signed (chaos: number): string {
-  const text = formatAmount(Math.abs(chaos))
-  return `${chaos > 0 ? '+' : chaos < 0 ? '−' : ''}${text}c`
+  return formatSigned(chaos, x => `${formatAmount(x)}c`)
 }
 
 function openAction (ctx: LookupContext): LookupAction[] {

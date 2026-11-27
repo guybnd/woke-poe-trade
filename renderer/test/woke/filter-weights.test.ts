@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { WEIGHT_ROWS, WEIGHT_TYPE, MULT_STEPS, applyWeights, baseRanks, defaultWeights, filterBases, normalizeWeights, stepOf, weightOf } from '@/web/woke/loot-filter/weights'
+import { WEIGHT_ROWS, WEIGHT_TYPE, MULT_STEPS, applyWeights, baseRanks, defaultWeights, filterBases, normalizeWeights, stepFor, weightLook } from '@/web/woke/loot-filter/weights'
 import type { WeightItem, WeightSettings, BaseRow } from '@/web/woke/loot-filter/weights'
 import { BASE_FACTS } from '@/web/woke/loot-filter/base-facts'
 import { neverSink } from '../helpers/neversink'
@@ -27,9 +27,11 @@ function randomRare (r: () => number, bases: BaseRow[]): { it: WeightItem, facts
   const corruption = (['no', 'plain', 'implicit', 'double'] as const)[Math.floor(r() * 4)]
   const pick = (p: number) => r() < p
   const links = [0, 3, 4, 5, 6][Math.floor(r() * 5)]
+  const rarity = (['Rare', 'Rare', 'Magic', 'Normal'] as const)[Math.floor(r() * 4)]
   const it: WeightItem = {
+    rarity,
     rank: row.rank,
-    tier: Math.floor(r() * 6),
+    tier: rarity === 'Normal' ? 0 : Math.floor(r() * 6),
     itemLevel: [68, 74, 75, 82, 83, 85, 86][Math.floor(r() * 7)],
     influenced: pick(0.15),
     eldritch: pick(0.15),
@@ -55,7 +57,7 @@ function randomRare (r: () => number, bases: BaseRow[]): { it: WeightItem, facts
     name: row.name,
     baseType: row.name,
     itemClass: row.cls ?? 'Gloves',
-    rarity: 'Rare',
+    rarity,
     itemLevel: it.itemLevel,
     dropLevel: BASE_FACTS[row.name]?.[0],
     areaLevel: 83,
@@ -116,10 +118,15 @@ describe('rare weights', () => {
       for (let n = 0; n < 1500; n++) {
         const { it, facts } = randomRare(r, bases)
         const res = matchItem(doc, facts)
-        const want = stepOf(weightOf(it, w.mult), need)
+        const want = stepFor(it, w)
         expect(res.final?.block.type, JSON.stringify(it)).toBe(WEIGHT_TYPE)
         expect(res.final?.block.tier, `${facts.name} ${JSON.stringify(it)}`).toBe(`s${want}`)
         expect(res.visibility === 'Hide').toBe(want === 0)
+        // The border is the rare's most valuable mark, as the tab shows it.
+        if (want > 0) {
+          const border = (acts: Array<{ key: string, args: string[] }>) => JSON.stringify(acts.filter(x => x.key === 'SetBorderColor').pop()?.args ?? null)
+          expect(border(res.actions), JSON.stringify(it)).toBe(border(weightLook(it, w.mult, want)))
+        }
       }
     })
   }
@@ -130,13 +137,14 @@ describe('rare weights', () => {
       const doc = parseFilter(SEMI)
       const raw = defaultWeights()
       for (const row of WEIGHT_ROWS) raw.mult[row.key] = MULT_STEPS[Math.floor(r() * MULT_STEPS.length)]
-      const w = normalizeWeights({ ...raw, on: true, need: [0.5, 4, 32][round % 3] })
+      const pins = ['x1', 'dc', 'fract', 'synth', 'l6', 'infl'] as const
+      const w = normalizeWeights({ ...raw, on: true, need: [0.5, 4, 32][round % 3], always: pins.filter(() => r() < 0.4) as never })
       const bases = filterBases(doc).filter(b => BASE_FACTS[b.name])
       const compiled = applyWeights(doc, w)!
       expect(compiled.blocks.length).toBeLessThan(6000)
       for (let n = 0; n < 500; n++) {
         const { it, facts } = randomRare(r, bases)
-        const want = stepOf(weightOf(it, w.mult), w.need)
+        const want = stepFor(it, w)
         expect(matchItem(doc, facts).final?.block.tier, `${facts.name} ${JSON.stringify(it)} ${JSON.stringify(w.mult)}`).toBe(`s${want}`)
       }
     }
@@ -158,12 +166,12 @@ describe('rare weights', () => {
     expect(matchItem(doc, jewel).final?.block.type).not.toBe(WEIGHT_TYPE)
   })
 
-  it('leaves identified rares and other items to NeverSink', () => {
+  it('leaves identified rares, uniques and other items to NeverSink', () => {
     const doc = parseFilter(SEMI)
     applyWeights(doc, on())
     const { facts } = randomRare(rng(5), filterBases(doc))
     expect(matchItem(doc, { ...facts, identified: true }).final?.block.type).not.toBe(WEIGHT_TYPE)
-    expect(matchItem(doc, { ...facts, rarity: 'Magic' }).final?.block.type).not.toBe(WEIGHT_TYPE)
+    expect(matchItem(doc, { ...facts, rarity: 'Unique' }).final?.block.type).not.toBe(WEIGHT_TYPE)
     expect(matchItem(doc, { ...facts, itemLevel: 60 }).final?.block.type).not.toBe(WEIGHT_TYPE)
   })
 
@@ -171,9 +179,9 @@ describe('rare weights', () => {
     for (const need of [0.25, 4, 48]) {
       const doc = parseFilter(SEMI)
       const compiled = applyWeights(doc, on(x => { x.need = need }))!
-      expect(compiled.blocks.length).toBeLessThan(3000)
+      expect(compiled.blocks.length).toBeLessThan(6000)
       const text = serializeFilter(doc)
-      expect(text.length - SEMI.length).toBeLessThan(4_000_000)
+      expect(text.length - SEMI.length).toBeLessThan(6_000_000)
       const problems = validateFilter(parseFilter(text)).map(p => p.message)
       expect(problems).toEqual([])
     }

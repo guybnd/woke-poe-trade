@@ -47,7 +47,7 @@ test('cards from the log add up on the dock card, and a big hit pops up', async 
   // 2 decks at 3c, cards worth 1.5c.
   await expect(stats.locator('[data-stat="spent"]')).toHaveText('6 c', { timeout: 15_000 })
   await expect(stats.locator('[data-stat="got"]')).toHaveText('1.5 c')
-  await expect(stats.locator('[data-stat="result"]')).toHaveText('-4.5 c')
+  await expect(stats.locator('[data-stat="result"]')).toHaveText('−4.5 c')
   // Both are under 2c: folded into one line, still counted.
   await expect(icon.locator('[data-deck="card"]')).toHaveCount(0)
   await expect(icon.locator('[data-deck="cheap"]')).toContainText('2 cards under 2 c')
@@ -63,7 +63,7 @@ test('cards from the log add up on the dock card, and a big hit pops up', async 
   await expect(stats.locator('[data-stat="opened"]')).toHaveText('3')
   // 901.5c of cards for 9c: +892.5c, about 5 div; without the Doctor, -7.5c.
   await expect(stats.locator('[data-stat="result"]')).toHaveText('+5 div')
-  await expect(stats.locator('[data-stat="without-top"]')).toHaveText('-7.5 c')
+  await expect(stats.locator('[data-stat="without-top"]')).toHaveText('−7.5 c')
   await expect(icon.locator('[data-deck="card"]').first()).toContainText('The Doctor')
   // Each card is the shared line item: leave The Doctor out (it stays,
   // struck) and Result drops it; count it again.
@@ -71,7 +71,7 @@ test('cards from the log add up on the dock card, and a big hit pops up', async 
   await doctor.hover()
   await doctor.locator('[data-line-out]').click()
   await expect(doctor).toContainText('left out')
-  await expect(stats.locator('[data-stat="result"]')).toHaveText('-7.5 c')
+  await expect(stats.locator('[data-stat="result"]')).toHaveText('−7.5 c')
   await doctor.locator('[data-line-out]').click()
   await expect(doctor).not.toContainText('left out')
   await expect(stats.locator('[data-stat="result"]')).toHaveText('+5 div')
@@ -103,7 +103,7 @@ test('cheap cards can be left out of Got and Result', async ({ overlay, page }) 
   const stats = icon.locator('[data-deck="stats"]')
   await expect(stats.locator('[data-stat="spent"]')).toHaveText('9 c', { timeout: 15_000 })
   await expect(stats.locator('[data-stat="got"]')).toHaveText('0 c')
-  await expect(stats.locator('[data-stat="result"]')).toHaveText('-9 c')
+  await expect(stats.locator('[data-stat="result"]')).toHaveText('−9 c')
   await expect(icon.locator('[data-deck="card"]')).toHaveCount(0)
   await expect(icon).toContainText("1 card isn't on poe.ninja")
   const fold = icon.locator('[data-deck="cheap"]')

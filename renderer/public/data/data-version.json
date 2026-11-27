@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "version": 36,
+  "version": 37,
   "files": {
     "en": {
       "items": "4cb2d22ac9922d0906ed453b0a7e051819a4f1f2ca41daea95ebbc8099922a91",
@@ -27,7 +27,7 @@
     "tips/items.json": "71e58b9322b321ee8f96215de5907089a5ba71c336164798bb0b79a32965a663",
     "tips/uniques.json": "5c4d2848f4dcf7ff47704d2db0624f502d94563666a395936fe7bd526a588c0f",
     "tips/unique-extras.json": "b2748ed4c21161312db0eb78faa1ec7a60aad002a3562ade15ef03028bf897dd",
-    "tips/vestigial.json": "18b2215e5480dff77a4f0caf4359f525cbaae0dafdfa4b54060dac1a3b97bb6f",
+    "tips/vestigial.json": "e84241941322b28a20e56a44224b2a76e7e5aa0dbd244dbaa7d34a7309a1005c",
     "tips/essences.json": "2d4d989a1548c861892540af19b7ba6c12d43518e2583795f52a1fa9484c7165",
     "tips/corpses.json": "f617aec015b4dfbf70f85699f4c27b8a8a4e70a2d562cd851d3cf453e726ea70",
     "tips/unique-drop-tiers.json": "898cca35914bd04320d3c738d04b3ca8807894c9033e5ada10dec24b41b6eee3",

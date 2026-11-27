@@ -97,6 +97,8 @@ import { DIVISIONS, MEMBERS, REWARDS, slotKey } from './betrayal'
 import { GUIDE, GUIDE_GROUPS, KIND_LABEL } from './guide'
 import { NPC_MECHANIC } from './zone'
 import type { MechanicsWidget } from './widget'
+import { usePoeninja } from '@/web/background/Prices'
+import { divineRate } from '../shared/price-row'
 
 const props = defineProps<{
   config: Config
@@ -114,7 +116,9 @@ const rewardsOpen = useFold('betrayal-rewards')
 
 const prices = usePriceIndex()
 const items = computed(() => prices.snapshot.value?.items ?? [])
-const divine = computed(() => prices.snapshot.value?.divine ?? null)
+// One divine rate in every window: live poe.ninja's, else the saved prices' (shared/price-row.ts).
+const liveRate = usePoeninja().xchgRate
+const divine = computed(() => divineRate(liveRate.value, prices.snapshot.value?.divine))
 
 const autoSwitch = computed({
   get: () => props.configWidget.autoSwitch,

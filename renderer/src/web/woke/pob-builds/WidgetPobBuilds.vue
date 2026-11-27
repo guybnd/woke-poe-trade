@@ -117,6 +117,7 @@ import { statLine } from './build-model'
 import { POB_BUILDS_TYPE, buildMatches, describe, groupBuilds, lastBuildList, migratePobWidget, moveBuildRefs, pobApi, sortBuilds, treeHotkeyOf } from './widget'
 import { onSavedOpen } from '../shared/saved-open'
 import type { PobBuildEntry, PobDetails } from './widget'
+import { folderMenuEntries } from '../shared/folder-menu'
 
 // The window's "?": the saved list's keys.
 const LIST_KEYS = [...savedListKeys({ copy: false }), { keys: 'P', label: 'Pin to top (again: unpin)' }]
@@ -584,15 +585,8 @@ async function moveFolderOnDisk (from: string, asked: string) {
 }
 
 function folderMenu (e: MouseEvent, path: string) {
-  openMenu(e, [
-    { label: 'New folder inside', icon: 'fas fa-folder-plus', action: () => tree.startFolder(path) },
-    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => tree.startEdit('folder', path, 'rename') },
-    { label: 'Move', icon: 'fas fa-folder-open', action: () => tree.startEdit('folder', path, 'move') },
-    { separator: true },
-    { label: 'Sort this folder A to Z', icon: 'fas fa-sort-alpha-down', action: () => tree.sortFolder(path) },
-    { label: 'Fold all folders', icon: 'fas fa-compress-alt', action: tree.foldAll },
-    { label: 'Open all folders', icon: 'fas fa-expand-alt', action: tree.openAll }
-  ])
+  // Folders here are the builds folder's own: removing one is left to the file manager.
+  openMenu(e, folderMenuEntries(tree, path))
 }
 
 function followFile (from: string, to: string) {
