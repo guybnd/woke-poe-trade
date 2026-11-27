@@ -223,7 +223,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
           tier: b.tier,
           cat: ucat,
           chaos: (own ?? (priced ? p.chaos : thin)) * (edits[name]?.mult ?? 1),
-          est: own == null && !priced,
+          est: own == null && (!priced || Boolean(p?.day1)),
           ...(own != null ? { own: true } : {}),
           full: 1,
           ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {})
@@ -258,7 +258,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         tier: b.tier,
         cat: card ? cards?.get(name)?.cat ?? 'cardother' : categoryOf(name, b.type),
         chaos: (own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess)) * (edits[name]?.mult ?? 1),
-        est: own == null && !priced,
+        est: own == null && (!priced || Boolean(p?.day1)),
         ...(own != null ? { own: true } : {}),
         // Odd items with no solid price (none, or a thin one) always show.
         ...(!card && own == null && !priced && isFree(name, b.type, b.tier) ? { free: true } : {}),

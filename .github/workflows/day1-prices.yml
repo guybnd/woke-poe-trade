@@ -1,0 +1,53 @@
+name: Day-1 prices
+
+# The loot filter's fallback prices for the first hours of a league: every
+# item's price over a league's first three days, from poe.ninja's history
+# (scripts/gen-day1-prices.mjs). Run it by hand once a league is a few days
+# old, or on a pull request that changes the script; it commits the table
+# to the branch it ran on and starts that branch's tests.
+on:
+  workflow_dispatch:
+    inputs:
+      league:
+        description: League (empty for poe.ninja's current challenge league)
+        required: false
+  pull_request:
+    paths:
+      - scripts/gen-day1-prices.mjs
+      - .github/workflows/day1-prices.yml
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: day1-prices-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  fetch:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        ref: ${{ github.head_ref || github.ref_name }}
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version: 22
+    - name: Read poe.ninja's history
+      run: node scripts/gen-day1-prices.mjs "${{ inputs.league }}"
+    - name: Commit the table
+      env:
+        GH_TOKEN: ${{ github.token }}
+        BRANCH: ${{ github.head_ref || github.ref_name }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add renderer/src/web/woke/loot-filter/day1-prices.json
+        if git diff --cached --quiet; then echo "No change."; exit 0; fi
+        git commit -m "Day-1 prices from poe.ninja"
+        git push origin "HEAD:$BRANCH"
+        # A push by this workflow doesn't start the tests on its own.
+        gh workflow run test.yml --ref "$BRANCH"

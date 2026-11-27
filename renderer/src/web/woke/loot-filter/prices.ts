@@ -13,6 +13,8 @@ import { onSharedDataChange } from '../app/live-data'
 import { randomDropsOnBase } from './random-drops'
 import type { TipPack } from '../ui/tooltip/tip-content'
 import { divineRate } from '../shared/price-row'
+import { loadDay1, withDay1 } from './day1-prices'
+import type { Day1Table } from './day1-prices'
 
 export { uniquesOnBase, randomDropsOnBase }
 
@@ -34,10 +36,15 @@ export function useFilterPrices (rule: () => UniqueRule) {
   // New data from GitHub, or a load that failed: try again.
   onSharedDataChange(loadDrops)
   const randomOnBase = computed(() => randomDropsOnBase(drops.value))
+  // Day-1 prices fill in what the live prices lack (a new league's first
+  // hours). Live prices still have to be there: without them NeverSink decides.
+  const day1 = shallowRef<Day1Table | null>(null)
+  loadDay1().then(t => { day1.value = t })
+  const liveItems = computed(() => withDay1(index.snapshot.value?.items ?? [], day1.value))
   const lookup = computed<PriceLookup | null>(() => {
     const snap = index.snapshot.value
     if (!snap?.items.length || !dropsReady.value) return null
-    return priceLookup(snap.items, randomOnBase.value, rule())
+    return priceLookup(liveItems.value, randomOnBase.value, rule())
   })
   // What this snapshot has at all: a type it lacks isn't priced at zero.
   const pricedTypes = computed(() => new Set((index.snapshot.value?.items ?? []).map(i => i.type)))
@@ -45,7 +52,7 @@ export function useFilterPrices (rule: () => UniqueRule) {
   const safety = computed<PriceLookup | null>(() => {
     const snap = index.snapshot.value
     if (!snap?.items.length || !dropsReady.value) return null
-    return safetyLookup(snap.items, randomOnBase.value)
+    return safetyLookup(liveItems.value, randomOnBase.value)
   })
   // Every unique on the base, for lists that show them all (Alt+F, tooltips).
   const breakdown = computed(() => priceBreakdown(index.snapshot.value?.items ?? [], uniquesOnBase))
