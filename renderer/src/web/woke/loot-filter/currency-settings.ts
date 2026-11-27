@@ -41,10 +41,13 @@ export interface CurrencySettings {
   steps: Record<string, StylePatch>
   // A category's look changed by hand (text colour, map icon), on Small to Big.
   cats: Record<string, StylePatch>
+  // Steps turned off (1..4): piles that would get one hide instead (Guy
+  // 2026-11-27: "turn an entire section off like small off").
+  off: number[]
 }
 
 export function defaultCurrency (): CurrencySettings {
-  return { on: false, line: 1, from: [3, 10, 30, 90], nudge: {}, items: {}, steps: {}, cats: {} }
+  return { on: false, line: 1, from: [3, 10, 30, 90], nudge: {}, items: {}, steps: {}, cats: {}, off: [] }
 }
 
 const NAME = /^[^"\n]{1,80}$/
@@ -115,6 +118,7 @@ export function normalizeCurrency (c: (Partial<CurrencySettings> & OldCurrency) 
     nudge,
     items,
     steps: patches(c?.steps, /^[1-5]$/),
-    cats: patches(c?.cats, /^[a-z]{1,20}$/)
+    cats: patches(c?.cats, /^[a-z]{1,20}$/),
+    off: Array.isArray(c?.off) ? [...new Set((c.off as unknown[]).filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 4))].sort() : []
   }
 }

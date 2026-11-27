@@ -3,9 +3,8 @@
 // (plan: /mnt/project-files/filter-funnel/score-everything-else.html; the
 // tab's design: currency-tab-redesign.html, Guy's picks A, S2, G1, E1).
 //
-// A pile counts as chaos each × √stack × a full-stack bonus: an orb whose full
-// stack is worth a lot gets up to ×2.5, one whose full stack is junk gets
-// nothing (Guy's pick B4). Under the line it hides; over it it shows Small,
+// A pile counts as chaos each × stack; an item whose full stack is worth
+// less than Decent counts × stack^0.75 instead (Guy 2026-11-27). Under the line it hides; over it it shows Small,
 // and Normal, Decent, Big and Tink start at fixed prices whatever the line.
 // Each category can nudge the line; each item can be set by hand: its step,
 // its price, a supply stack, its own look.
@@ -184,14 +183,17 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   return [...seen.values()]
 }
 
-// The full-stack bonus: 1 + log10(full stack in chaos) / 2, between ×1 and ×2.5.
-export function fullBias (it: Pick<CurrencyItem, 'chaos' | 'full'>): number {
-  return Math.min(2.5, 1 + Math.log10(Math.max(1, it.chaos * it.full)) / 2)
+// What a pile of `stack` counts for, in chaos (Guy 2026-11-27): its full
+// value, price × stack. Only an item whose full stack is worth less than
+// Decent (`decent`, chaos) is discounted, to price × stack^0.75, so a big
+// pile of cheap shards doesn't shout. (It used to be √stack for all, under
+// which 10 Chaos counted 4.7c and looked like nothing.)
+export const CHEAP_POW = 0.75
+export function stackPow (it: Pick<CurrencyItem, 'chaos' | 'full'>, decent: number): number {
+  return it.chaos * it.full < decent ? CHEAP_POW : 1
 }
-
-// What a pile of `stack` counts for, in chaos.
-export function pileWorth (it: Pick<CurrencyItem, 'chaos' | 'full'>, stack: number): number {
-  return it.chaos * Math.sqrt(Math.max(1, stack)) * fullBias(it)
+export function pileWorth (it: Pick<CurrencyItem, 'chaos' | 'full'>, stack: number, decent: number): number {
+  return it.chaos * Math.max(1, stack) ** stackPow(it, decent)
 }
 
 // The line for a category, after its nudge.
@@ -207,12 +209,13 @@ export function stepStarts (c: Pick<CurrencySettings, 'line' | 'from' | 'nudge'>
 }
 
 // The smallest pile (1 up to a full stack) that counts for `at`, or null.
-export function minStack (it: Pick<CurrencyItem, 'chaos' | 'full'>, at: number): number | null {
-  const per = it.chaos * fullBias(it)
+export function minStack (it: Pick<CurrencyItem, 'chaos' | 'full'>, at: number, decent: number): number | null {
+  const per = it.chaos
   if (per <= 0) return null
-  // √k ≥ at / per; rounding can land one short, so check.
-  let k = Math.max(1, Math.ceil((at / per) ** 2 - 1e-9))
-  if (pileWorth(it, k) < at) k++
+  const pow = stackPow(it, decent)
+  // k ** pow ≥ at / per; rounding can land one short, so check.
+  let k = Math.max(1, Math.ceil((at / per) ** (1 / pow) - 1e-9))
+  if (pileWorth(it, k, decent) < at) k++
   return k <= it.full ? k : null
 }
 
@@ -221,7 +224,7 @@ export function minStack (it: Pick<CurrencyItem, 'chaos' | 'full'>, at: number):
 export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number | null> {
   const e = c.items[it.name]
   if (e?.step != null) return [1, 2, 3, 4, 5].map(s => s === e.step ? 1 : null)
-  const out = stepStarts(c, it.cat).map(at => minStack(it, at))
+  const out = stepStarts(c, it.cat).map(at => minStack(it, at, c.from[1]))
   const supply = e?.supply ?? (it.free ? 1 : null)
   if (supply != null) {
     const f = Math.min(supply, it.full)
@@ -229,6 +232,8 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   }
   // A louder step never starts below a quieter one.
   for (let i = out.length - 2; i >= 0; i--) if (out[i + 1] != null && (out[i] == null || out[i]! > out[i + 1]!)) out[i] = out[i + 1]
+  // A step turned off: piles that would get it hide (an item's own step stays).
+  for (const s of c.off ?? []) if (s >= 1 && s <= 4) out[s - 1] = null
   return out
 }
 

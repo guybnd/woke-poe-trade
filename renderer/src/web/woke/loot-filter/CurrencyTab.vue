@@ -3,7 +3,7 @@
     <div :class="$style.top">
       <WToggle v-model="c.on">Prices decide endgame currency</WToggle>
       <span :class="$style.beta">Beta</span>
-      <WInfo text="In maps (area level 68+), each pile of currency, essences, fossils, oils, delirium orbs, omens, tattoos and ducats counts as its poe.ninja price × √stack, plus a bonus of up to ×2.5 when a full stack of it is worth a lot. Under the line it hides; over it it shows Small, and Normal, Decent, Big and Tink start at the prices you set. Each category can see more or less; click an item to set its step, price, supply stack or look by hand. Items with no price get a guess from NeverSink's tier (est.). Only this profile. Your own rules, build rules and presets still go on top. In maps these rules replace NeverSink's for these items, so price moves and tier edits for them apply only below area level 68." />
+      <WInfo text="In maps (area level 68+), each pile of currency, essences, fossils, oils, delirium orbs, omens, tattoos and ducats counts as its poe.ninja price × stack (10 Chaos is 10c); an item whose full stack is worth less than Decent counts × stack^0.75, so piles of cheap shards stay quiet. Under the line it hides; over it it shows Small, and Normal, Decent, Big and Tink start at the prices you set; untick Show on a step to hide everything that would get it. Each category can see more or less; click an item to set its step, price, supply stack or look by hand. Items with no price get a guess from NeverSink's tier (est.). Only this profile. Your own rules, build rules and presets still go on top. In maps these rules replace NeverSink's for these items, so price moves and tier edits for them apply only below area level 68." />
       <span class="w-faint text-xs">{{ statusText }}</span>
       <span class="flex-1" />
       <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" title="Line, step prices and category nudges back to the start; your item edits stay" @click="reset">Defaults</WButton>
@@ -18,7 +18,7 @@
     </div>
 
     <div :class="$style.steps" role="group" aria-label="Where each step starts">
-      <div v-for="s in [0, 1, 2, 3, 4, 5]" :key="s" :class="$style.step" :style="{ '--step': STEP_CSS[s] }">
+      <div v-for="s in [0, 1, 2, 3, 4, 5]" :key="s" :class="[$style.step, { [$style.stepOff]: c.off.includes(s) }]" :style="{ '--step': STEP_CSS[s] }">
         <span :class="$style.stepName">{{ CSTEP_NAMES[s] }}
           <button v-if="s > 0" type="button" :class="[$style.lookBtn, { [$style.lookOn]: stepEdit === s }]" :aria-expanded="stepEdit === s" :aria-label="`${CSTEP_NAMES[s]} look and sound`"
             @click="stepEdit = stepEdit === s ? null : s as CStep"><i class="fas fa-pen" aria-hidden="true" /> Look<i v-if="c.steps[s]" :class="$style.dot" aria-hidden="true" /></button></span>
@@ -29,6 +29,7 @@
           <input :value="c.from[s - 2]" type="number" min="0.1" step="any" :class="$style.numIn" :aria-label="`${CSTEP_NAMES[s]} from this many chaos`"
             @change="setFrom(s - 2, $event.target as HTMLInputElement)"> c</label>
         <span class="w-faint text-xs">{{ STEP_NOTE[s] }}</span>
+        <label v-if="s >= 1 && s <= 4" :class="$style.offTog"><input type="checkbox" :checked="!c.off.includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]}`" @change="toggleOff(s)"> Show</label>
       </div>
     </div>
 
@@ -298,6 +299,9 @@ function loudOnly (p: StylePatch): StylePatch {
   if (p.icon !== undefined) out.icon = p.icon
   return out
 }
+function toggleOff (s: number) {
+  c.value.off = c.value.off.includes(s) ? c.value.off.filter(x => x !== s) : [...c.value.off, s].sort()
+}
 function setStepLook (s: number, p: StylePatch | null) {
   const next = Object.fromEntries(Object.entries(c.value.steps).filter(([k]) => k !== String(s)))
   if (p && Object.keys(p).length) next[String(s)] = p
@@ -344,12 +348,12 @@ const statusText = computed(() => {
 
 const changed = computed(() => {
   const d = defaultCurrency()
-  return c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || Object.keys(c.value.nudge).length > 0 || Object.keys(c.value.steps).length > 0 || Object.keys(c.value.cats).length > 0
+  return c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || Object.keys(c.value.nudge).length > 0 || Object.keys(c.value.steps).length > 0 || Object.keys(c.value.cats).length > 0 || c.value.off.length > 0
 })
 function reset () {
   const d = defaultCurrency()
   // Your item edits are a list you built: Defaults keeps them.
-  Object.assign(c.value, { line: d.line, from: d.from, nudge: d.nudge, steps: d.steps, cats: d.cats })
+  Object.assign(c.value, { line: d.line, from: d.from, nudge: d.nudge, steps: d.steps, cats: d.cats, off: d.off })
 }
 
 function chaosText (v: number): string {
@@ -427,6 +431,8 @@ function chaosText (v: number): string {
 .minLab { color: #e2d3ad; font-size: var(--w-fs-sm); }
 .range { width: min(22rem, 100%); accent-color: var(--w-accent, #c8a565); }
 .minVal { font-size: var(--w-fs-sm); color: var(--w-accent, #c8a565); min-width: 3.5em; font-variant-numeric: tabular-nums; }
+.stepOff { opacity: 0.45; }
+.offTog { display: flex; align-items: center; gap: 4px; font-size: var(--w-fs-xs); color: var(--w-muted, #a89a7a); cursor: pointer; }
 .lookBtn { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-accent, #c8a565); background: var(--w-panel); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); padding: 0 5px; position: relative; }
 .lookOn { border-color: var(--w-accent, #c8a565); }
 .dot { position: absolute; top: -3px; right: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--w-accent, #c8a565); }
