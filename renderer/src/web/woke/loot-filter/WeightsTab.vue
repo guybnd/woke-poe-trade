@@ -52,9 +52,9 @@
       <WChip clickable :active="source === 'set'" title="One of each kind of mark, and the mixes" @click="source = 'set'">Test set</WChip>
       <WChip clickable :active="source === 'random'" title="Random map rares, with rough odds for each mark" @click="source === 'random' ? reroll() : (source = 'random')">Random</WChip>
       <WButton v-if="source === 'random'" size="sm" variant="ghost" icon="fas fa-dice" @click="reroll">Reroll</WButton>
-      <WChip v-if="pasted.length" clickable :active="source === 'pasted'" title="Only the items you pasted, newest first" @click="source = 'pasted'">Pasted ({{ pasted.length }})</WChip>
+      <WChip v-if="pasted.length" clickable :active="source === 'pasted'" title="Only the items you pasted, newest first (they also lie in the other views)" @click="source = 'pasted'">Pasted ({{ pasted.length }})</WChip>
       <WButton size="sm" variant="ghost" icon="fas fa-paste" title="Copy an item in game (Ctrl+C), then paste here (Ctrl+V)" @click="pasteFromClipboard">Paste item</WButton>
-      <WButton v-if="pasted.length && source === 'pasted'" size="sm" variant="ghost" icon="fas fa-times" @click="pasted = []; source = 'set'">Clear pasted</WButton>
+      <WButton v-if="pasted.length" size="sm" variant="ghost" icon="fas fa-times" @click="pasted = []; source === 'pasted' && (source = 'set')">Clear pasted</WButton>
       <span v-if="pasteNote" class="text-xs w-faint">{{ pasteNote }}</span>
     </div>
     <div v-if="!samples.length" class="w-faint text-sm">Load a NeverSink filter to see the test rares.</div>
@@ -168,7 +168,8 @@ const drops = computed<Drop[]>(() => {
         return row ? [{ row, it: itemOf(row, spec.item), label: spec.label }] : []
       })
     : samplePile(bases.value, RANDOM_N, seed.value).map(p => ({ ...p, label: 'Random rare' }))
-  return base
+  // Pasted items join the pile (first), they don't replace it.
+  return [...pasted.value, ...base]
 })
 function addPasted (text: string) {
   const facts = itemFacts(text, null)
@@ -179,7 +180,6 @@ function addPasted (text: string) {
   }
   pasteNote.value = ''
   pasted.value = [{ ...got, label: 'Pasted', facts: { ...facts, areaLevel: 83 } }, ...pasted.value].slice(0, 40)
-  source.value = 'pasted'
 }
 function onPaste (e: ClipboardEvent) {
   const t = (e.target as HTMLElement | null)?.tagName
