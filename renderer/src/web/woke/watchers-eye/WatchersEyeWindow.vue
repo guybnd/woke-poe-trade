@@ -64,14 +64,14 @@
     <template #footer>
       <div :class="$style.bar" data-qa="we-bar">
         <span :class="$style.dim">{{ active.length ? `${active.length} picked` : 'Pick mods to search' }}</span>
-        <WSelect v-if="active.length >= 3" :model-value="String(atLeast ?? 'all')" :options="matchOptions" data-qa="we-match"
-          @update:model-value="config.atLeast = $event === 'all' ? null : Number($event)" />
+        <WSegmented v-if="active.length >= 2" :model-value="String(need)" :options="matchOptions" data-qa="we-match"
+          @update:model-value="config.atLeast = Number($event)" />
         <WButton size="sm" variant="ghost" :disabled="!active.length" @click="clearPicks">Clear</WButton>
         <span :class="$style.end" />
         <WButton size="sm" icon="fas fa-external-link-alt" :disabled="!active.length" data-qa="we-trade"
           title="Opens the trade site with these mods. No search from the app." @click="openTrade">Trade site</WButton>
         <WButton size="sm" variant="primary" :disabled="!active.length || anyOf || !english" data-qa="we-price"
-          :title="!english ? 'Needs the English game client. Use Trade site.' : anyOf ? 'Any of: the price check searches all picks. Use Trade site.' : 'One trade search for a Watcher\'s Eye with all picked mods'"
+          :title="!english ? 'Needs the English game client. Use Trade site.' : anyOf ? `At least ${need} of ${active.length}: the price check searches all picks. Use Trade site.` : 'One trade search for a Watcher\'s Eye with all picked mods'"
           @click="priceCheck">Price check</WButton>
       </div>
     </template>
@@ -86,7 +86,7 @@ import { computed, nextTick, shallowRef, watch } from 'vue'
 import { ITEM_BY_REF } from '@/assets/data'
 import { AppConfig, poeWebApi } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
-import { WButton, WChip, WIcon, WInfo, WPanel, WSelect, itemArt, vItemTip } from '../ui'
+import { WButton, WChip, WIcon, WInfo, WPanel, WSegmented, WSelect, itemArt, vItemTip } from '../ui'
 import { vModTip } from '../ui/tooltip/mod-line-tip'
 import type { ModLine } from '../ui/tooltip/mod-line-tip'
 import { elementPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
@@ -94,7 +94,7 @@ import { loadTipUniques } from '../ui/tooltip/item-tip'
 import { priceCheckTradeStatus } from '../shared/trade-status'
 import { useActiveBuild } from '../pob-builds/active'
 import { loadoutOf } from '../pob-builds/build-model'
-import { WATCHERS_EYE, WATCHERS_EYE_BASE, WE_AURAS, auraOfGem, byAura, clampMin, weItemText, weMods, weTradeQuery } from './mods'
+import { WATCHERS_EYE, WATCHERS_EYE_BASE, WE_AURAS, WE_MAX_MODS, auraOfGem, byAura, clampMin, weItemText, weMods, weTradeQuery } from './mods'
 import type { WeAura, WeMod } from './mods'
 import { weStatId } from './trade'
 import type { WatchersEyeWidget } from './widget'
@@ -200,16 +200,22 @@ function clearPicks () {
   config.picks = config.picks.filter(p => !active.value.includes(p))
   config.atLeast = null
 }
-// "Any N" while it's below the picks shown; the saved choice is kept as it
-// is (a build still loading shows fewer picks for a moment).
-const atLeast = computed(() => config.atLeast != null && config.atLeast >= 2 && config.atLeast < active.value.length ? config.atLeast : null)
+// "At least 1, 2 or 3" of the picks (a jewel rolls 3 aura mods at most),
+// 2 unless changed. Never more than the picks shown; the saved choice is kept
+// as it is (a build still loading shows fewer picks for a moment).
+const DEFAULT_NEED = 2
+const need = computed(() => Math.max(1, Math.min(config.atLeast ?? DEFAULT_NEED, WE_MAX_MODS, active.value.length)))
+// Fewer than all picks: a count search, which the price check can't do.
+const atLeast = computed(() => need.value < active.value.length ? need.value : null)
 const anyOf = computed(() => atLeast.value != null)
 // The price check reads the jewel's text in the client's language; this text is English.
 const english = computed(() => AppConfig().language === 'en')
-const matchOptions = computed(() => [
-  { value: 'all', label: 'Has all' },
-  ...Array.from({ length: active.value.length - 2 }, (_, i) => ({ value: String(i + 2), label: `Any ${i + 2}` }))
-])
+const matchOptions = computed(() => [1, 2, 3].map(n => ({
+  value: String(n),
+  label: `At least ${n}`,
+  title: n > active.value.length ? `Pick ${n} mods for this` : `A jewel with at least ${n} of the picked mods`,
+  attrs: { 'data-qa': `we-need-${n}`, ...(n > active.value.length ? { disabled: '' } : {}) } as Record<string, string>
+})))
 
 // ---- saved setups ----
 const naming = shallowRef(false)
@@ -233,7 +239,7 @@ function saveSetup () {
   naming.value = false
   const name = saveName.value.trim()
   if (!name) return
-  const entry = { name, auras: [...shownList.value], picks: active.value.map(p => ({ ...p })), atLeast: atLeast.value }
+  const entry = { name, auras: [...shownList.value], picks: active.value.map(p => ({ ...p })), atLeast: need.value }
   config.saved = [...config.saved.filter(s => s.name !== name), entry].sort((a, b) => a.name.localeCompare(b.name))
   setCurrent(name)
 }
