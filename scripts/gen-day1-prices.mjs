@@ -21,12 +21,17 @@ const UA = { 'User-Agent': 'woke-poe-trade day1-prices (GitHub Actions)' }
 // is tried there first, then as an item page.
 const CURRENCY_TYPES = ['Currency', 'Fragment', 'DivinationCard', 'Essence', 'Fossil', 'Resonator', 'Oil', 'DeliriumOrb', 'Omen', 'Tattoo', 'Scarab',
   'Vial', 'Artifact', 'Runegraft', 'AllflameEmber', 'Astrolabe', 'Ducat', 'EnshroudingCrystal']
+// Exchange types with no exchange page go first, in their order.
+let itemNext = 0
 const ITEM_TYPES = [
   'Invitation', 'UniqueWeapon', 'UniqueArmour', 'UniqueAccessory', 'UniqueFlask', 'UniqueJewel', 'UniqueMap', 'UniqueRelic', 'UniqueTincture',
   'SkillGem', 'Map', 'BlightedMap', 'BlightRavagedMap', 'Beast', 'ClusterJewel'
 ]
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+// The job has 5 hours: stop asking after 4 and write what there is.
+const DEADLINE = Date.now() + 4 * 3600e3
+let late = 0
 
 async function get (url, tries = 6) {
   for (let i = 1; ; i++) {
@@ -67,11 +72,22 @@ async function pool (jobs, size = 2) {
   await Promise.all(Array.from({ length: size }, async () => {
     while (next < jobs.length) {
       const i = next++
+      if (Date.now() > DEADLINE) { late++; continue }
       out[i] = await jobs[i]()
       await sleep(400)
     }
   }))
   return out
+}
+
+export function plainGems (lines) {
+  const best = new Map()
+  for (const l of lines) {
+    if (l.corrupted) continue
+    const b = best.get(l.name)
+    if (!b || (l.gemLevel ?? 0) < (b.gemLevel ?? 0) || ((l.gemLevel ?? 0) === (b.gemLevel ?? 0) && (l.gemQuality ?? 0) < (b.gemQuality ?? 0))) best.set(l.name, l)
+  }
+  return [...best.values()]
 }
 
 const round = v => v >= 100 ? Math.round(v) : Number(v.toPrecision(3))
@@ -109,7 +125,7 @@ async function main () {
 
   for (const type of CURRENCY_TYPES) {
     const page = await get(`${NINJA}/currency/overview?league=${q}&type=${type}`)
-    if (!page?.lines?.length) { ITEM_TYPES.push(type); continue }
+    if (!page?.lines?.length) { ITEM_TYPES.splice(itemNext++, 0, type); continue }
     const idOf = new Map((page.currencyDetails ?? []).map(d => [d.name, d.id]))
     const jobs = page.lines.map(line => ({ name: line.currencyTypeName, id: idOf.get(line.currencyTypeName), details: line.detailsId }))
     const url = await pickHistory([
@@ -132,7 +148,9 @@ async function main () {
   for (const type of ITEM_TYPES) {
     const page = await get(`${NINJA}/item/overview?league=${q}&type=${type}`)
     if (!page?.lines?.length) { console.warn(`no ${type} page`); continue }
-    const lines = page.lines.filter(l => !(l.links >= 5))
+    // Gems: only each gem's plainest line (lowest level, not corrupted), as
+    // dropped; every level and quality would take hours.
+    const lines = type === 'SkillGem' ? plainGems(page.lines) : page.lines.filter(l => !(l.links >= 5))
     itemUrl ??= await pickHistory([
       (l, t = type) => `${NINJA}/item/history?league=${q}&type=${t}&id=${l.id}`,
       (l, t = type) => `${NINJA}/item/history?league=${q}&type=${t}&itemId=${l.id}`,
@@ -148,6 +166,7 @@ async function main () {
     console.log(`${type}: ${rows.filter(Boolean).length} of ${lines.length}`)
   }
 
+  if (late) console.warn(`out of time: ${late} items not asked`)
   if (items.length < 500) throw new Error(`Only ${items.length} items priced: poe.ninja's history may have changed. Not writing.`)
   items.sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]) || a[2].localeCompare(b[2]))
   const made = new Date().toISOString().slice(0, 10)
