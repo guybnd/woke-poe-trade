@@ -154,6 +154,16 @@ history:
     date: '2026-11-27T12:05:43.570Z'
     selfAttested: true
     id: c-2026-11-27t12-05-43-570z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 1036 merged (https://github.com/guybnd/woke-poe-trade/pull/1036,
+      5ab6fc2): Loot walk-through — maps ground, special maps, gold, unique
+      ground tooltips, jewels, league items, flask line, gold ruler, gem bands.
+      Also PR 1040 (afd6cef): a Decent and Big look per class.
+    date: '2026-11-28T02:52:00.852Z'
+    selfAttested: true
+    id: c-2026-11-28t02-52-00-852z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/976'
 subtasks:
   - WOKEPOET-687
