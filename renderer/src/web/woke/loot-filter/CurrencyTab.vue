@@ -147,7 +147,7 @@ import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, catMult, currencyItems, defaultCurrency, offSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode } from './currency-weights'
+import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
@@ -234,7 +234,7 @@ const rows = computed(() => items.value
     const stacks = stacksFor(it, eff.value)
     const edit = c.value.items[it.name]
     const off = offSteps(it, c.value)
-    return { it, one: stepOfPile(stacks, 1, off), shows: stacks.some((k, i) => k != null && !off.includes(i + 1)), pills: pillsOf(stacks, edit, it, off), edited: edit != null }
+    return { it, one: stepOfPile(stacks, 1, off), shows: pileSteps(stacks, off).some(([, , hidden]) => !hidden), pills: pillsOf(stacks, edit, it, off), edited: edit != null }
   })
   .sort((x, y) => y.it.chaos - x.it.chaos || x.it.name.localeCompare(y.it.name)))
 const shownCount = computed(() => rows.value.filter(r => r.shows).length)

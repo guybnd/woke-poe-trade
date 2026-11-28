@@ -96,6 +96,31 @@ describe('hidden by hand keeps a gem band to itself', () => {
   })
 })
 
+describe('a step turned off, with gems', () => {
+  const sup = (name: string, level: number, quality: number): ItemFacts => ({ ...gem(name, level, quality), itemClass: 'Support Gems' } as ItemFacts)
+  it('Exceptional Off hides Awakened Enlighten, though Awakened is Always', () => {
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(c => { c.catMode = { gemexc: 'off' } }), lookup, null, GEMS)
+    expect(matchItem(doc, sup('Awakened Enlighten Support', 1, 0)).visibility).toBe('Hide')
+    expect(matchItem(doc, sup('Enlighten Support', 3, 20)).visibility).toBe('Hide')
+    expect(matchItem(doc, sup('Awakened Multistrike Support', 1, 0)).visibility).toBe('Show')
+  })
+  it('a band hidden by an Off step leaves a band with its own step showing', () => {
+    const lines: GemLine[] = [{ name: 'Arc', variant: '1', chaos: 30, thin: false }, { name: 'Arc', variant: '21/20', chaos: 30, thin: false }]
+    const doc = parseFilter(SEMI)
+    const cfg = on(c => { c.items = { 'Arc 21/20': { step: 3 } } })
+    applyCurrency(doc, cfg, lookup, null, lines)
+    const shown = matchItem(doc, gem('Arc', 21, 20)).visibility
+    expect(shown).toBe('Show')
+    const step = (matchItem(doc, gem('Arc', 5, 0)).final?.block.tier ?? '')
+    expect(step).toMatch(/^s[1-4]$/)
+    const doc2 = parseFilter(SEMI)
+    applyCurrency(doc2, on(c => { c.items = { 'Arc 21/20': { step: 3 } }; c.off = [Number(step.slice(1))] }), lookup, null, lines)
+    expect(matchItem(doc2, gem('Arc', 5, 0)).visibility).toBe('Hide')
+    expect(matchItem(doc2, gem('Arc', 21, 20)).visibility).toBe('Show')
+  })
+})
+
 describe('Alt+F jumps to the right place', () => {
   it('opens the item\'s own class on the Loot tab', () => {
     expect(lootFocus('cat:carduniq:The Doctor')).toEqual({ cls: 'cards', item: 'The Doctor' })

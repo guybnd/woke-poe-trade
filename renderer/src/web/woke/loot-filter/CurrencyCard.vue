@@ -145,7 +145,7 @@ const nowLine = computed(() => {
   // An Off section hides it unless the item shows anyway (its own step,
   // Always or Collecting): read what the rules give it, not the mode.
   if (secMode.value === 'off' && stacks.value.every(k => k == null)) return `Off: ${catName.value} is off.`
-  const next = rows.value.find(r => r.step > s && r.from != null && !off.value.includes(r.step))
+  const next = rows.value.find(r => r.step > stepOfPile(stacks.value, props.stack) && r.from != null && !off.value.includes(r.step))
   const pile = props.stack > 1 ? `A pile of ${props.stack}` : 'One'
   // Under the line with Faint on, it shows small and see-through.
   const name = s === 0 && it.value && stepOfPile(stacks.value, props.stack) === 0 && faintOn(cfg.value, props.store.doc.value?.strictness ?? null) && !forcedHidden(it.value, cfg.value) ? 'Faint' : CSTEP_NAMES[s]
