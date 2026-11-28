@@ -36,6 +36,15 @@ history:
     date: '2026-11-28T10:22:36.288Z'
     selfAttested: true
     id: c-2026-11-28t10-22-36-288z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 1093 merged (67064ec): rare weights without the white/magic penalty,
+      plain crafting bases take their own cut, Special gear over the weights'
+      Hide. https://github.com/guybnd/woke-poe-trade/pull/1093
+    date: '2026-11-28T11:45:03.785Z'
+    selfAttested: true
+    id: c-2026-11-28t11-45-03-785z
 needsAction: null
 ---
 Scope per the plan page: https://claude.ai/artifact/ADHxqYmDL51xGAoivNEDZt
