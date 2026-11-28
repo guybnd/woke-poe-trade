@@ -1,39 +1,29 @@
 <template>
-  <!-- One item, set by hand (Guy's pick E1): its step, its price, a supply stack, its own look. -->
+  <!-- One item, set by hand (Guy's pick E1): its step, its price, a supply
+       stack, its own look, as one line of chips (E1, 2026-11-28). -->
   <div :class="$style.ed" data-currency-editor>
-    <div :class="$style.row">
-      <span :class="$style.lab">Price</span>
-      <span class="w-num">{{ chaosText(priceNow) }} each</span>
-      <span class="w-faint text-xs">{{ edit.price != null ? 'yours' : it.est ? `a guess from NeverSink's ${it.tier ? `tier ${it.tier}` : 'tiers'}` : 'poe.ninja' }}</span>
-      <label :class="$style.lab2">Use my price
-        <input :value="edit.price ?? ''" type="number" min="0" step="any" placeholder="–" :class="$style.numIn"
-          :aria-label="`Your price for ${it.name}, in chaos`" @change="setPrice($event.target as HTMLInputElement)"> c</label>
-    </div>
-    <div :class="$style.row">
+    <div :class="$style.line">
       <span :class="$style.lab">Step</span>
-      <WSegmented :model-value="edit.step == null ? 'auto' : String(edit.step)" :options="stepOptions" @update:model-value="setStep" />
-    </div>
-    <div :class="$style.row">
-      <span :class="$style.lab">Supply</span>
-      <label :class="$style.lab2">Always show from
-        <input :value="edit.supply ?? ''" type="number" min="1" :max="it.full" placeholder="–" :class="$style.numIn"
-          :aria-label="`Always show ${it.name} from this stack size`" @change="setSupply($event.target as HTMLInputElement)"> in a stack (full stack {{ it.full.toLocaleString() }})</label>
-    </div>
-    <div :class="$style.row">
+      <StateChip :model-value="edit.step == null ? 'auto' : String(edit.step)" :options="stepOptions" :title="`${it.name}: step`" dflt="auto" @update:model-value="setStep" />
+      <label :class="$style.lab" :title="`Your price replaces ${source}'s for this item`">Price
+        <input :value="edit.price ?? ''" type="number" min="0" step="any" :placeholder="basePrice > 0 ? String(basePrice >= 10 ? Math.round(basePrice) : Number(basePrice.toPrecision(2))) : '–'" :class="[$style.numIn, { [$style.moved]: edit.price != null }]"
+          :aria-label="`Your price for ${it.name}, in chaos`" @change="setPrice($event.target as HTMLInputElement)"><span :class="$style.unit">c · {{ edit.price != null ? 'yours' : source }}</span></label>
+      <label :class="$style.lab" :title="`A stack of this many or more always shows, at least Small (full stack ${it.full.toLocaleString()})`">Always from
+        <input :value="edit.supply ?? ''" type="number" min="1" :max="it.full" placeholder="–" :class="[$style.numIn, $style.short, { [$style.moved]: edit.supply != null }]"
+          :aria-label="`Always show ${it.name} from this stack size`" @change="setSupply($event.target as HTMLInputElement)"><span :class="$style.unit">of {{ it.full.toLocaleString() }}</span></label>
       <span :class="$style.lab">Look</span>
-      <WSegmented :model-value="edit.look ? 'own' : 'step'" :options="[{ value: 'step', label: 'Its step\'s look' }, { value: 'own', label: 'Its own look' }]" @update:model-value="v => v === 'own' ? setLook(edit.look ?? {}) : setLook(undefined)" />
-      <span class="w-faint text-xs">{{ edit.look ? 'On top of its step: colours, sound, beam and map icon' : '' }}</span>
+      <StateChip :model-value="edit.look ? 'own' : 'step'" :options="LOOKS" :title="`${it.name}: look`" dflt="step" @update:model-value="v => v === 'own' ? setLook(edit.look ?? {}) : setLook(undefined)" />
+      <span class="flex-1" />
+      <button type="button" class="w-icon-btn" :disabled="!Object.keys(edit).length" title="Let the price decide again: clears your step, price, stack and look" aria-label="Let the price decide again"
+        @click="emit('change', null)"><i class="fas fa-undo" aria-hidden="true" /></button>
     </div>
     <StyleEditor v-if="edit.look" look-only :look="{ ...stepLook, ...edit.look }" visibility="Show" :preview-text="it.name" @patch="p => setLook({ ...edit.look, ...p })" />
-    <div :class="$style.row">
-      <WButton size="sm" variant="ghost" icon="fas fa-undo" :disabled="!Object.keys(edit).length" @click="emit('change', null)">Let the price decide again</WButton>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { WButton, WSegmented } from '../ui'
+import StateChip from './StateChip.vue'
 import StyleEditor from './StyleEditor.vue'
 import type { StylePatch } from './edits'
 import { CSTEP_NAMES } from './currency-weights'
@@ -51,8 +41,17 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ change: [edit: ItemEdit | null] }>()
 
-const stepOptions = [{ value: 'auto', label: 'Price decides' }, ...CSTEP_NAMES.map((n, i) => ({ value: String(i), label: n }))]
-const priceNow = computed(() => props.edit.price ?? props.basePrice)
+// The Loot tab's step colours.
+const STEP_CSS = ['#3b372f', '#6d6250', '#a08d5e', '#cdb27a', '#ffe196', '#ff4040']
+const stepOptions = [
+  { value: 'auto', label: 'Price decides', desc: 'Its price × stack picks the step.', dot: 'var(--w-gold)' },
+  ...CSTEP_NAMES.map((n, i) => ({ value: String(i), label: n, desc: i === 0 ? 'Never shows in maps.' : `Always looks ${n}, whatever the price.`, dot: STEP_CSS[i], hollow: i === 0 }))
+]
+const LOOKS = [
+  { value: 'step', label: "Its step's look", desc: 'Looks like the rest of its step.', dot: 'var(--w-gold)' },
+  { value: 'own', label: 'Its own look', desc: 'Your colours, sound, beam and map icon, on top of its step.', dot: 'var(--w-gold-hi)', glow: true }
+]
+const source = computed(() => props.it.est ? `a guess from NeverSink's ${props.it.tier ? `tier ${props.it.tier}` : 'tiers'}` : 'poe.ninja')
 const stepLook = computed<StylePatch>(() => props.baseLook)
 
 function put (patch: Partial<ItemEdit>) {
@@ -74,37 +73,32 @@ function setSupply (el: HTMLInputElement) {
   el.value = supply == null ? '' : String(supply)
 }
 function setLook (look: StylePatch | undefined) { put({ look }) }
-
-function chaosText (v: number): string {
-  if (v >= 100) return `${Math.round(v).toLocaleString()}c`
-  if (v >= 10) return `${Math.round(v)}c`
-  if (v >= 1) return `${Number(v.toFixed(1))}c`
-  return `${Number(v.toPrecision(2))}c`
-}
 </script>
 
 <style module>
 .ed {
   margin: 2px 0 6px 26px;
-  padding: 8px 10px;
-  border: 1px solid var(--w-line);
-  border-radius: var(--w-r-sm);
-  background: var(--w-panel-2);
+  padding: 4px 8px;
+  border-left: 2px solid var(--w-line);
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--w-fs-sm); }
-.lab { color: var(--w-dim); min-width: 4.5rem; font-size: var(--w-fs-xs); }
-.lab2 { display: inline-flex; align-items: center; gap: 4px; color: var(--w-dim); }
+.line { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; font-size: var(--w-fs-sm); }
+.lab { display: inline-flex; align-items: center; gap: 4px; color: var(--w-dim); font-size: var(--w-fs-xs); }
+.unit { color: var(--w-faint); }
 .numIn {
-  width: 4.6em;
-  background: var(--w-panel);
-  border: 1px solid var(--w-line);
+  width: 4.2em;
+  background: none;
+  border: 1px solid transparent;
+  border-bottom-color: var(--w-line);
   border-radius: var(--w-r-sm);
-  color: inherit;
-  padding: 0 4px;
+  color: var(--w-fg);
+  padding: 0 3px;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+.numIn:hover, .numIn:focus { border-color: var(--w-line); background: var(--w-panel-2); }
+.short { width: 3.2em; }
+.moved { border-color: var(--w-frame); }
 </style>
