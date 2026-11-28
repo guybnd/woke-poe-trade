@@ -6,11 +6,11 @@
       <span :class="$style.lab">Step</span>
       <StateChip :model-value="edit.step == null ? 'auto' : String(edit.step)" :options="stepOptions" :title="`${it.name}: step`" dflt="auto" @update:model-value="setStep" />
       <label :class="$style.lab" :title="`Your price replaces ${source}'s for this item`">Price
-        <input :value="edit.price ?? ''" type="number" min="0" step="any" :placeholder="chaosText(basePrice).replace(/c$/, '')" :class="[$style.numIn, { [$style.moved]: edit.price != null }]"
+        <input :value="edit.price ?? ''" type="number" min="0" step="any" :placeholder="basePrice > 0 ? String(basePrice >= 10 ? Math.round(basePrice) : Number(basePrice.toPrecision(2))) : '–'" :class="[$style.numIn, { [$style.moved]: edit.price != null }]"
           :aria-label="`Your price for ${it.name}, in chaos`" @change="setPrice($event.target as HTMLInputElement)"><span :class="$style.unit">c · {{ edit.price != null ? 'yours' : source }}</span></label>
       <label :class="$style.lab" :title="`A stack of this many or more always shows, at least Small (full stack ${it.full.toLocaleString()})`">Always from
         <input :value="edit.supply ?? ''" type="number" min="1" :max="it.full" placeholder="–" :class="[$style.numIn, $style.short, { [$style.moved]: edit.supply != null }]"
-          :aria-label="`Always show ${it.name} from this stack size`" @change="setSupply($event.target as HTMLInputElement)"><span :class="$style.unit">stack</span></label>
+          :aria-label="`Always show ${it.name} from this stack size`" @change="setSupply($event.target as HTMLInputElement)"><span :class="$style.unit">of {{ it.full.toLocaleString() }}</span></label>
       <span :class="$style.lab">Look</span>
       <StateChip :model-value="edit.look ? 'own' : 'step'" :options="LOOKS" :title="`${it.name}: look`" dflt="step" @update:model-value="v => v === 'own' ? setLook(edit.look ?? {}) : setLook(undefined)" />
       <span class="flex-1" />
@@ -51,7 +51,7 @@ const LOOKS = [
   { value: 'step', label: "Its step's look", desc: 'Looks like the rest of its step.', dot: 'var(--w-gold)' },
   { value: 'own', label: 'Its own look', desc: 'Your colours, sound, beam and map icon, on top of its step.', dot: 'var(--w-gold-hi)', glow: true }
 ]
-const source = computed(() => props.it.est ? 'a guess' : 'poe.ninja')
+const source = computed(() => props.it.est ? `a guess from NeverSink's ${props.it.tier ? `tier ${props.it.tier}` : 'tiers'}` : 'poe.ninja')
 const stepLook = computed<StylePatch>(() => props.baseLook)
 
 function put (patch: Partial<ItemEdit>) {
@@ -73,13 +73,6 @@ function setSupply (el: HTMLInputElement) {
   el.value = supply == null ? '' : String(supply)
 }
 function setLook (look: StylePatch | undefined) { put({ look }) }
-
-function chaosText (v: number): string {
-  if (v >= 100) return `${Math.round(v).toLocaleString()}c`
-  if (v >= 10) return `${Math.round(v)}c`
-  if (v >= 1) return `${Number(v.toFixed(1))}c`
-  return `${Number(v.toPrecision(2))}c`
-}
 </script>
 
 <style module>
