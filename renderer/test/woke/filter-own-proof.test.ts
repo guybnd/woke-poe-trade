@@ -229,6 +229,13 @@ describe('our own filter against NeverSink Very strict', () => {
     expect(at({ itemClass: 'Life Flasks', baseType: 'Divine Life Flask', rarity: 'Magic', identified: false, quality: 26, itemLevel: 70, width: 1, height: 2 })).toBe('Show')
   })
 
+  // Every flask and tincture base has a rule of its own in maps, not the
+  // plain catch-all (Guy's walk: a magic Aquamarine Flask, item level 84).
+  it.each(['real', 'none'] as Prices[])('gives every flask and tincture base a real rule in maps (%s prices)', kind => {
+    const plain = rows[kind].filter(r => r.area >= 68 && /Flasks$|^Tinctures$/.test(r.group) && r.ours.rule === `${OWN_REST_TYPE}/other`).map(show)
+    expect(plain).toEqual([])
+  })
+
   // Pink is for an item no rule of ours knows. Every class the game data or
   // NeverSink's file names has one, at every stack size (Guy's walk,
   // 2026-11-28: 6 Alchemy Shards, 16 Gold, a Wombgift, an unpriced card).
