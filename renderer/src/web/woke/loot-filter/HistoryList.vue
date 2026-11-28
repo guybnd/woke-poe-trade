@@ -139,7 +139,7 @@ function timeTitle (r: HistoryRow) {
   font-weight: 500;
 }
 .count {
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--w-text-scale, 1));
   color: var(--w-dim);
   border: 1px solid var(--w-line-soft);
   border-radius: 8px;
@@ -155,6 +155,6 @@ function timeTitle (r: HistoryRow) {
 }
 .line {
   padding: 2px 0;
-  font-size: 0.875rem;
+  font-size: calc(0.875rem * var(--w-text-scale, 1));
 }
 </style>
