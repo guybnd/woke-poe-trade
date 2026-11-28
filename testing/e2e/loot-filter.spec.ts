@@ -1597,6 +1597,13 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-maps-pile] [data-map-drop]').first()).toBeVisible()
   await expect(page.locator('[data-loot-jewels]')).toContainText('Follow poe.ninja')
   await overlay.snap('loot tab, jewels')
+  // The cluster jewel part of the page, base rows and price rules.
+  const clusBases = page.locator('[data-currency-cat="jewclus"]')
+  await clusBases.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
+  for (const [i, el] of [clusBases, page.locator('[data-loot-jewels]')].entries()) {
+    await el.scrollIntoViewIfNeeded()
+    await test.info().attach(`loot tab, cluster part ${i + 1}`, { body: await el.screenshot(), contentType: 'image/png' })
+  }
   const ujewel = page.locator('[data-unique-jewel]').first()
   if (await ujewel.count()) {
     const name = await ujewel.getAttribute('data-unique-jewel')
