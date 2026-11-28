@@ -234,9 +234,9 @@ function setVisibility (block: FilterBlock, visibility: Visibility): void {
 
 // While edits apply, the blocks by type: each edit asks for its tier, and a
 // filter of 6,000 rules was walked once per edit (176 edits on every change).
-let blockIndex: { doc: FilterDoc, byType: Map<string | undefined, FilterBlock[]> } | null = null
-function indexBlocks (doc: FilterDoc): Map<string | undefined, FilterBlock[]> {
-  const byType = new Map<string | undefined, FilterBlock[]>()
+let blockIndex: { doc: FilterDoc, byType: Map<string | null, FilterBlock[]> } | null = null
+function indexBlocks (doc: FilterDoc): Map<string | null, FilterBlock[]> {
+  const byType = new Map<string | null, FilterBlock[]>()
   for (const b of doc.blocks) {
     const list = byType.get(b.type)
     if (list) list.push(b)
