@@ -18,6 +18,14 @@ history:
     user: Agent
     date: '2026-11-28T15:59:38.843Z'
     comment: Created ticket.
+    id: a-2026-11-28t15-59-38-843z
+  - type: activity
+    user: Agent
+    date: '2026-11-28T16:12:46.500Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/1129 open; waiting on CI.
+      Shots: E:\Git\woke\shots\filter-tutorial\{1080p,4k}\
+    id: a-2026-11-28t16-12-46-500z
 ---
 Guy's picks A + C, F1 (mock https://claude.ai/artifact/FtQxvcuANikFBwZsbjzvEh).
 
