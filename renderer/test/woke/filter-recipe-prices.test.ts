@@ -45,7 +45,7 @@ describe('recipe steps by price', () => {
   it('follows strictness and the section bias', () => {
     const strict = scaled(on(c => { c.mult = 4 }), null)
     expect(recipeStep(strict, 'six', lookup)).toBe(0)
-    expect(recipeStep(on(c => { c.nudge.orbs = 3 }), 'gem20', lookup)).toBe(1)
+    expect(recipeStep(on(c => { c.bias = { ...c.bias, orbs: 51 } }), 'gem20', lookup)).toBe(1)
   })
   it('never goes past Big', () => {
     expect(recipeStep(on(), 'link6', () => ({ chaos: 50, thin: false }))).toBe(4)

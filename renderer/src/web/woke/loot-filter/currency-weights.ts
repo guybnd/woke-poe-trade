@@ -1240,7 +1240,7 @@ export function recipeWorth (lookup: PriceLookup | null, id: RecipeId, edits: Re
   const p = e?.price ?? basePrice(lookup, 'currency', r.art)
   return p == null ? null : p * (e?.mult ?? 1) * r.count
 }
-type PriceSteps = Pick<CurrencySettings, 'line' | 'from' | 'nudge'> & Partial<Pick<CurrencySettings, 'rulers' | 'items' | 'offBy' | 'catMode'>>
+type PriceSteps = Pick<CurrencySettings, 'line' | 'from' | 'bias'> & Partial<Pick<CurrencySettings, 'rulers' | 'items' | 'offBy' | 'catMode'>>
 // The step that price reaches, Small to Big, on the steps of the reward's
 // currency section (its strictness and bias too): Off under the line, and
 // Off on a step turned off there, as the reward itself hides. `c`: the
