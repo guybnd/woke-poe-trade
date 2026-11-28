@@ -600,6 +600,13 @@ export const CLASS_FILL: Partial<Record<LootKind, { decent: { bg: Rgb, text: Rgb
   maps: { decent: { bg: [205, 205, 205], text: [0, 0, 0] }, big: { bg: [255, 255, 255], text: [0, 0, 0], edge: [230, 190, 40] } }
 }
 
+// A category with a fill of its own, whatever its class: gold (currency
+// class) reads yellow, not amber.
+export const CAT_FILL: Record<string, NonNullable<typeof CLASS_FILL[LootKind]>> = {
+  gold: { decent: { bg: [255, 215, 90], text: [0, 0, 0] }, big: { bg: [120, 95, 10], text: [255, 255, 255], edge: [255, 240, 190] } }
+}
+const fillOf = (cat: string) => CAT_FILL[cat] ?? CLASS_FILL[kindOf(cat)]
+
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rgb: [number, number, number], color: string, shape: string } {
   const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? CAT_LOOK.other
   const own = c.cats[cat]
@@ -624,8 +631,8 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
   switch (step) {
     case 1: Object.assign(out, { text: col(rgb), border: col(mixTo(rgb, 0, 0.55)), background: col([0, 0, 0], 215) }); break
     case 2: { const k = vivid(rgb); Object.assign(out, { text: col(k), border: col(k), background: col(mixTo(k, 0, 0.8)) }); break }
-    case 3: { const f = CLASS_FILL[kindOf(cat)]; Object.assign(out, f ? { text: col(f.decent.text), border: col(mixTo(rgb, 0, 0.55)), background: col(f.decent.bg) } : { text: col([0, 0, 0]), border: col(rgb), background: col([255, 190, 0]) }); break }
-    case 4: { const f = CLASS_FILL[kindOf(cat)]; Object.assign(out, f ? { text: col(f.big.text), border: col(c.cats[cat]?.text ? rgb : f.big.edge), background: col(f.big.bg) } : { text: col([0, 0, 0]), border: col(rgb), background: col([255, 93, 27]) }); break }
+    case 3: { const f = fillOf(cat); Object.assign(out, f ? { text: col(f.decent.text), border: col(mixTo(rgb, 0, 0.55)), background: col(f.decent.bg) } : { text: col([0, 0, 0]), border: col(rgb), background: col([255, 190, 0]) }); break }
+    case 4: { const f = fillOf(cat); Object.assign(out, f ? { text: col(f.big.text), border: col(c.cats[cat]?.text ? rgb : f.big.edge), background: col(f.big.bg) } : { text: col([0, 0, 0]), border: col(rgb), background: col([255, 93, 27]) }); break }
     case 5: Object.assign(out, { border: col(rgb) }); break
   }
   // Tink's icon is red, in the category's shape (Guy 2026-11-27).
