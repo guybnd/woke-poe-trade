@@ -5,8 +5,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
 import { currencyItems } from '@/web/woke/loot-filter/currency-weights'
-import { ownType } from '@/web/woke/loot-filter/own-lists'
-import * as ownUniques from '@/web/woke/loot-filter/own-uniques'
+import * as rules from '@/web/woke/loot-filter/own-rules'
 import type { ListRow, OwnTables } from '@/web/woke/loot-filter/own-lists'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import table from '@/web/woke/loot-filter/item-lists.json'
@@ -14,7 +13,7 @@ import { neverSink } from '../helpers/neversink'
 
 const doc = parseFilter(neverSink('0-SOFT'))
 const lists = (table as unknown as { items: ListRow[] }).items
-const tables = (guesses: Record<string, number> = {}): OwnTables => ({ lists, guesses: new Map(Object.entries(guesses)) })
+const tables = (guesses: Record<string, number> = {}): OwnTables => ({ lists, guesses: new Map(Object.entries(guesses)), rules })
 const SCOPE_KINDS = new Set(['currency', 'fragments', 'cards'])
 const plain = (items: ReturnType<typeof currencyItems>) => items.filter(i => !i.conds && !i.bts && i.cls !== 'Unique' && i.type !== 'uniques' && i.type !== 'gems' && i.type !== 'maps' && i.type !== 'jewels' && i.type !== 'league' && i.type !== 'gold')
 
@@ -65,10 +64,10 @@ describe('own item lists', () => {
   })
 
   it('sorts by art and name', () => {
-    expect(ownType('Deafening Essence of Greed', 'Stackable Currency', 'Currency/Essence/GreedEssence7')).toBe('currency->essence')
-    expect(ownType('Abyss Scarab', 'Map Fragments', 'Currency/Scarabs/Abyss')).toBeNull()
-    expect(ownType('Rain of Chaos', 'Divination Cards', 'Divination/InventoryIcon')).toBe('divination')
-    expect(ownType('Two-Stone Ring', 'Rings', 'Rings/TwoStone')).toBeNull()
+    expect(rules.ownType('Deafening Essence of Greed', 'Stackable Currency', 'Currency/Essence/GreedEssence7')).toBe('currency->essence')
+    expect(rules.ownType('Abyss Scarab', 'Map Fragments', 'Currency/Scarabs/Abyss')).toBeNull()
+    expect(rules.ownType('Rain of Chaos', 'Divination Cards', 'Divination/InventoryIcon')).toBe('divination')
+    expect(rules.ownType('Two-Stone Ring', 'Rings', 'Rings/TwoStone')).toBeNull()
     expect(SCOPE_KINDS.size).toBe(3)
   })
 
@@ -82,8 +81,7 @@ describe('own item lists', () => {
         ['Small Cluster Jewel', ['Wolfsong']],
         ['Plank Kite Shield', ['Never Priced']]
       ]),
-      variable: new Set(['Wolfsong']),
-      uniques: ownUniques
+      variable: new Set(['Wolfsong'])
     }
     const lookup: PriceLookup = (g, base) => g.unique && base === 'Leather Belt' ? { chaos: 9000, thin: false } : !g.unique && base === 'Divine Orb' ? { chaos: 200, thin: false } : null
     const u = new Map(currencyItems(parseFilter(neverSink('1-REGULAR')), lookup, {}, null, null, t).filter(i => i.type === 'uniques' && i.cls === 'Rarity Unique' && !i.conds && !i.bts).map(i => [i.name, i]))
@@ -95,6 +93,6 @@ describe('own item lists', () => {
     // that the game data has no unique for.
     expect(u.has('Plank Kite Shield')).toBe(false)
     expect(u.has('Simple Robe')).toBe(false)
-    expect(ownUniques.baseGuess(t, 'Leather Belt')).toMatchObject({ chaos: 2500.5, early: false })
+    expect(rules.baseGuess(t, 'Leather Belt')).toMatchObject({ chaos: 2500.5, early: false })
   })
 })

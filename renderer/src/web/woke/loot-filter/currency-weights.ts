@@ -256,7 +256,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         const p = lookup?.(UNIQUE_PAGE, name) ?? null
         // Last league's usual price (its first days' for Early league),
         // else NeverSink's tier guess.
-        const last = lists?.uniques?.baseGuess(lists, name) ?? null
+        const last = lists?.rules?.baseGuess(lists, name) ?? null
         const guess = last ? (ucat === 'uniqearly' ? Math.max(last.chaos, last.first) : last.chaos) : uniqueGuess(b.tier)
         const priced = p != null && !p.thin && p.chaos > 0
         // Early league: a thin price never takes it below the guess.
