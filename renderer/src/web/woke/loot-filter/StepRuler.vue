@@ -2,14 +2,14 @@
   <!-- The steps as one price ruler (Guy's pick B): a log bar coloured by step,
        a handle where each step starts, its name in its look over it. Hover a
        name for the pencil; click it for that step's look and switch. -->
-  <div :class="$style.ruler" role="group" :aria-label="gold ? 'Gold pile size where each step starts' : 'Where each step starts'" :data-currency-ruler="gold ? undefined : ''" :data-gold-ruler="gold ? '' : undefined">
+  <div :class="$style.ruler" role="group" :aria-label="gold ? 'Gold pile size where each step starts' : `${pfx}Where each step starts`" :data-currency-ruler="gold ? undefined : ''" :data-gold-ruler="gold ? '' : undefined">
     <div :class="$style.names">
       <span v-for="s in STEPS" :key="s" :class="[$style.name, { [$style.off]: isOff(s), [$style.cur]: edit === s }]"
         :style="{ left: `min(${at(s)}%, calc(100% - 4.5rem))`, top: s % 2 ? '0' : '26px' }">
         <button v-if="toggles && s >= 1 && s <= 4" type="button" :class="[$style.eye, { [$style.eyeOff]: isOff(s) }]" role="switch" :aria-checked="!isOff(s)"
-          :aria-label="`Show ${CSTEP_NAMES[s]}`" :title="isOff(s) ? `${CSTEP_NAMES[s]} is off: click to show it` : `Click to hide ${CSTEP_NAMES[s]}`" :data-currency-step-dot="s" @click="emit('toggle', s)" />
-        <button type="button" :class="$style.nameBtn" :title="title(s)" :aria-label="s === 0 ? 'Faint settings' : `${CSTEP_NAMES[s]} look and sound`" :aria-expanded="edit === s"
-          :data-currency-step="s" @click="emit('edit', edit === s ? null : s)">
+          :aria-label="`${pfx}Show ${CSTEP_NAMES[s]}`" :title="isOff(s) ? `${CSTEP_NAMES[s]} is off: click to show it` : `Click to hide ${CSTEP_NAMES[s]}`" :data-currency-step-dot="page ? undefined : s" @click="emit('toggle', s)" />
+        <button type="button" :class="$style.nameBtn" :title="title(s)" :aria-label="s === 0 ? `${pfx}Faint settings` : `${pfx}${CSTEP_NAMES[s]} look and sound`" :aria-expanded="edit === s"
+          :data-currency-step="page ? undefined : s" @click="emit('edit', edit === s ? null : s)">
           <LabelPreview :text="s === 0 ? 'Faint' : CSTEP_NAMES[s]" :style-override="look(s)" visibility="Show" :extras="false" :scale="0.72" />
           <i class="fas fa-pen" :class="$style.pen" aria-hidden="true" />
         </button>
@@ -20,7 +20,7 @@
       <span v-for="seg in segs" :key="seg.s" :class="[$style.seg, { [$style.segOff]: isOff(seg.s) }]" :style="{ left: `${seg.a}%`, width: `${seg.b - seg.a}%`, '--c': seg.css }" />
       <i v-for="t in ticks" :key="t" :class="$style.tick" :style="{ left: `${x(t)}%` }" />
       <button v-for="(v, i) in vals" :key="i" type="button" role="slider" :class="[$style.handle, { [$style.drag]: drag?.i === i }]" :style="{ left: `${x(v)}%` }"
-        :aria-label="`${CSTEP_NAMES[i + 1]} starts at`" :aria-valuenow="v" :aria-valuetext="chaosText(v)" :title="`${CSTEP_NAMES[i + 1]} from ${chaosText(v)}: drag, or arrow keys`"
+        :aria-label="`${pfx}${CSTEP_NAMES[i + 1]} starts at`" :aria-valuenow="v" :aria-valuetext="chaosText(v)" :title="`${CSTEP_NAMES[i + 1]} from ${chaosText(v)}: drag, or arrow keys`"
         @pointerdown="startDrag(i, $event)" @pointermove="moveDrag" @pointerup="endDrag" @pointercancel="drag = null"
         @keydown.right.prevent="bump(i, 1)" @keydown.up.prevent="bump(i, 1)" @keydown.left.prevent="bump(i, -1)" @keydown.down.prevent="bump(i, -1)" />
     </div>
@@ -29,7 +29,7 @@
     </div>
     <div :class="$style.vals">
       <label v-for="(v, i) in vals" :key="i" :class="$style.val" :style="{ left: `${x(v)}%` }">
-        <input :value="round(v)" type="number" :min="gold ? 1 : 0.01" :step="gold ? 1 : 'any'" :class="$style.num" :aria-label="`${CSTEP_NAMES[i + 1]} from this many ${unit}`"
+        <input :value="round(v)" type="number" :min="gold ? 1 : 0.01" :step="gold ? 1 : 'any'" :class="$style.num" :aria-label="`${pfx}${CSTEP_NAMES[i + 1]} from this many ${unit}`"
           @change="typed(i, $event.target as HTMLInputElement)">{{ gold ? '' : 'c' }}
       </label>
     </div>
@@ -62,6 +62,10 @@ const props = defineProps<{
   main?: boolean
   // A dot by Small to Big that turns the step on or off here (Guy's H1).
   toggles?: boolean
+  // A category's own bar (Currency, Uniques...): its own ruler, else All
+  // loot's; its name goes in front of every control's name.
+  page?: string
+  pageName?: string
 }>()
 // Prices come back as shown (after Strictness); the tab turns them into yours.
 const emit = defineEmits<{ edit: [CStep | null], set: [step: number, chaos: number], toggle: [step: number] }>()
@@ -79,7 +83,12 @@ const title = (s: CStep) => s === 0
 const drag = ref<{ i: number, v: number, id: number } | null>(null)
 // The picked section's real prices: its own Strictness on top (Guy 2026-11-28).
 const unit = props.gold ? 'gold' : 'chaos'
-const shown = computed(() => props.gold ? props.eff.gold : stepStarts(props.main ? { ...props.eff, rulers: {} } : props.eff, props.cat))
+const shown = computed(() => props.gold
+  ? props.eff.gold
+  : props.page
+    ? stepStarts({ ...props.eff, rulers: props.eff.rulers?.[props.page] ? { [props.page]: props.eff.rulers[props.page] } : {} }, props.page)
+    : stepStarts(props.main ? { ...props.eff, rulers: {} } : props.eff, props.cat))
+const pfx = props.pageName ? `${props.pageName}: ` : ''
 const vals = computed(() => shown.value.map((v, i) => drag.value?.i === i ? drag.value.v : v))
 
 // Log scale, wide enough for the line and Tink with room either side.
