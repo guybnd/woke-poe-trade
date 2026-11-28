@@ -157,6 +157,45 @@ function offDefenceBases (bits: number): string[] {
   })
 }
 
+// Flask sizes in drop order, with the level they start dropping (RePoE).
+const LIFE_SIZES: ReadonlyArray<readonly [string, number]> = [['Small', 1], ['Medium', 3], ['Large', 6], ['Greater', 12], ['Grand', 18], ['Giant', 24], ['Colossal', 30], ['Sacred', 36], ['Hallowed', 42], ['Sanctified', 50], ['Divine', 60], ['Eternal', 65]]
+const HYBRID_SIZES: ReadonlyArray<readonly [string, number]> = [['Small', 10], ['Medium', 20], ['Large', 30], ['Colossal', 40], ['Sacred', 50], ['Hallowed', 60]]
+const sized = (list: ReadonlyArray<readonly [string, number]>, kind: string) => list.map(([z, d]) => [`${z} ${kind} Flask`, d] as const)
+export const LV_FLASK_SIZES: ReadonlyArray<{ cls: string, sizes: ReadonlyArray<readonly [string, number]> }> = [
+  { cls: 'Life Flasks', sizes: sized(LIFE_SIZES, 'Life') },
+  { cls: 'Mana Flasks', sizes: sized(LIFE_SIZES, 'Mana') },
+  { cls: 'Hybrid Flasks', sizes: sized(HYBRID_SIZES, 'Hybrid') }
+]
+
+// Flasks (pick B): a life, mana or hybrid size shows while it is one of the
+// two newest that drop in the area, the newest louder with a sound in the
+// levels it is new; older sizes without quality hide. Every utility flask
+// until maps, Quicksilver louder.
+function flaskBlocks (cfg: CurrencySettings, push: (conds: FilterCondition[] | null, step: CStep, note: string, rgb: readonly number[]) => void, from: (lo: number, hi?: number) => FilterCondition[] | null) {
+  const plain = cond('Rarity', '', ['Normal', 'Magic'])
+  const rgbOf = (r: string) => RARITY_RGB[r]
+  for (const { cls, sizes } of LV_FLASK_SIZES) {
+    sizes.forEach(([base, drop], i) => {
+      const next = sizes[i + 1]?.[1] ?? 68
+      const after = sizes[i + 2]?.[1] ?? 68
+      for (const r of ['Normal', 'Magic']) {
+        const one = [cond('Rarity', '', [r]), cond('Class', '==', [cls]), cond('BaseType', '==', [base])]
+        const isNew = from(drop, Math.min(67, next - 1))
+        push(isNew && [...isNew, ...one], 3, `${base}, the newest size`, rgbOf(r))
+        const second = next <= 67 ? from(next, Math.min(67, after - 1)) : null
+        push(second && [...second, ...one], 2, `${base}, one of the two newest sizes`, rgbOf(r))
+      }
+      const old = after <= 67 ? from(after) : null
+      push(old && [...old, plain, cond('Class', '==', [cls]), cond('BaseType', '==', [base]), cond('Quality', '<', [1])], 0, `${base} once two newer sizes drop`, RARITY_RGB.Normal)
+    })
+  }
+  const lv = lvConds(cfg)
+  for (const r of ['Normal', 'Magic']) {
+    push(lv && [...lv, cond('Rarity', '', [r]), cond('Class', '==', ['Utility Flasks']), cond('BaseType', '==', ['Quicksilver Flask'])], 3, 'Quicksilver Flasks', rgbOf(r))
+    push(lv && [...lv, cond('Rarity', '', [r]), cond('Class', '==', ['Utility Flasks'])], 2, 'utility flasks', rgbOf(r))
+  }
+}
+
 // Rules for gear below maps, highest first; empty when the layer is off.
 export function levellingGearBlocks (cfg: CurrencySettings, weapons: Presets['weapons'], build: { weaponClasses: string[], rareBases: string[] } | null): FilterBlock[] {
   const lv = lvConds(cfg)
@@ -182,6 +221,8 @@ export function levellingGearBlocks (cfg: CurrencySettings, weapons: Presets['we
   }
   const gear = ['Normal', 'Magic', 'Rare']
   const plain = ['Normal', 'Magic']
+
+  flaskBlocks(cfg, push, from)
 
   // Links: 5- and 6-links always, 4-links until maps, 3-links until Act 3.
   // Your build's colours are louder on the Build tab.

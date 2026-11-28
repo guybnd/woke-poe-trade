@@ -232,3 +232,38 @@ describe('levelling gear', () => {
     expect(lvDefences(defaultCurrency(), { on: false, archetype: 'auto', classes: [] })).toBe(DEF_ALL)
   })
 })
+
+describe('levelling flasks', () => {
+  beforeAll(() => loadGameData(), 60_000)
+  const doc = (() => {
+    const d = parseFilter(SEMI)
+    const cfg = on()
+    applyCurrency(d, cfg, lookup)
+    insertBuildBlocks(d, levellingGearBlocks(cfg, { on: false, archetype: 'auto', classes: [] }, null))
+    return d
+  })()
+  const flask = (itemClass: string, baseType: string, areaLevel: number, quality = 0): ItemFacts => ({
+    name: baseType, baseType, itemClass, rarity: 'Normal', areaLevel, itemLevel: areaLevel, quality, influences: [], explicitModNames: [], width: 1, height: 2
+  } as ItemFacts)
+  const lvStep = (f: ItemFacts) => {
+    const m = matchItem(doc, f)
+    return m.final?.block.type === LV_GEAR_TYPE ? (m.visibility === 'Hide' ? 0 : Number(m.final.block.tier?.slice(1))) : null
+  }
+
+  it('two newest sizes show, the newest louder; older ones without quality hide', () => {
+    // Area 20: Grand (18) is newest, Greater (12) second, Large (6) old.
+    expect(lvStep(flask('Life Flasks', 'Grand Life Flask', 20))).toBe(3)
+    expect(lvStep(flask('Life Flasks', 'Greater Life Flask', 20))).toBe(2)
+    expect(lvStep(flask('Life Flasks', 'Large Life Flask', 20))).toBe(0)
+    expect(lvStep(flask('Life Flasks', 'Large Life Flask', 20, 10))).toBeNull()
+    expect(lvStep(flask('Mana Flasks', 'Eternal Mana Flask', 66))).toBe(3)
+    expect(lvStep(flask('Hybrid Flasks', 'Medium Hybrid Flask', 25))).toBe(3)
+    expect(lvStep(flask('Life Flasks', 'Grand Life Flask', 70))).toBeNull()
+  })
+
+  it('utility flasks until maps, Quicksilver louder', () => {
+    expect(lvStep(flask('Utility Flasks', 'Quicksilver Flask', 30))).toBe(3)
+    expect(lvStep(flask('Utility Flasks', 'Ruby Flask', 30))).toBe(2)
+    expect(lvStep(flask('Utility Flasks', 'Ruby Flask', 70))).toBeNull()
+  })
+})

@@ -58,6 +58,7 @@
       <li>White and blue weapons of your build on a base that drops within 5 levels of the area at Normal.</li>
       <li>Every rare Normal until Act 3, then rares on a base within 10 levels of the area. Big rares (2x3 and up) one step quieter. Rare boots and jewellery always Normal.</li>
       <li>Every white and blue ring, amulet and belt until Act 2, then Ruby, Sapphire, Topaz and Two-Stone rings, Leather and Heavy belts, Amber, Jade, Lapis and Onyx amulets until Act 6.</li>
+      <li>Life, mana and hybrid flasks: the two newest sizes for the area, the newest louder with a sound; older sizes without quality hide. Every utility flask, Quicksilver louder.</li>
       <li>Every unique at least Normal; prices make it louder.</li>
       <li>Every gem at least Normal before Act 4, gems with quality Small until maps. Your build's gems stay on the Build tab, louder.</li>
     </ul>
