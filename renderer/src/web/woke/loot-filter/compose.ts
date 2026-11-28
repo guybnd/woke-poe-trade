@@ -29,6 +29,7 @@ import { applyCurrency, recipeStep, scaled } from './currency-weights'
 import { applyMapFloor, applyMapLooks } from './map-floor'
 import type { CardFacts } from './card-classes'
 import type { GemLine } from './gem-classes'
+import type { OwnTables } from './own-lists'
 import type { CurrencyItem } from './currency-weights'
 import type { BaseRow } from './weights'
 
@@ -68,6 +69,8 @@ export interface ComposeInput {
   cards?: CardFacts | null
   // poe.ninja's gem lines, each a band (gem-classes.ts).
   gems?: readonly GemLine[] | null
+  // The Loot tab's own item lists and guesses (own-lists.ts), once read.
+  own?: OwnTables | null
 }
 
 export interface Composed {
@@ -132,7 +135,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Utility flasks score on the same line (Equipment › Flasks).
   applyFlasks(next, cfg.presets.weights)
   // Currency weights (beta) the same way: above everything NeverSink has.
-  const currency = applyCurrency(next, migrated.currency, cfg.prices.loot ?? cfg.prices.lookup, cfg.cards, cfg.gems)
+  const currency = applyCurrency(next, migrated.currency, cfg.prices.loot ?? cfg.prices.lookup, cfg.cards, cfg.gems, cfg.own)
   // Maps under the Loot tab's tier slider hide.
   applyMapFloor(next, migrated.currency)
   applyMapLooks(next, migrated.currency)
