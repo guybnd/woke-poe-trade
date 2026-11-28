@@ -6,6 +6,7 @@
 import { ALL_CATEGORIES, CSTEP_NAMES, CURRENCY_TYPE, currencyItems } from './currency-weights'
 import type { CurrencyItem } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
+import { loadOwnTables, ownTables } from './own-lists'
 import { gemLinesOf } from './gem-classes'
 import { gemItemFor, itemFor } from './loot-focus'
 import { evalCondition } from './match'
@@ -21,9 +22,10 @@ export function lootPlaceOf (store: LootFilterStore, facts: ItemFacts, block: Fi
   const lookup = store.prices.lootLookup.value
   if (!step || !doc || !lookup) return null
   loadCardFacts()
+  loadOwnTables()
   const name = facts.baseType ?? facts.name
   const gem = / Gems$/.test(facts.itemClass ?? '') ? { level: facts.gemLevel ?? 1, quality: facts.quality ?? 0, corrupted: !!facts.corrupted } : null
-  const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, gem ? gemLinesOf(store.prices.items.value) : null)
+  const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, gem ? gemLinesOf(store.prices.items.value) : null, ownTables.value)
   const it: CurrencyItem | null | undefined = gem
     ? gemItemFor(all, name, gem, block.conditions)
     : itemFor(all, name, block.conditions) ?? all

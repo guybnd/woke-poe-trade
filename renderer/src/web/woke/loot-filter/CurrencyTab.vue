@@ -88,7 +88,7 @@
 
     <div v-if="!rows.length" class="w-faint text-sm">{{ emptyText }}</div>
     <div v-for="g in groups" v-else :key="g.cat.id" :class="$style.cat" :data-currency-cat="g.cat.id">
-      <div :class="$style.catHead" role="button" tabindex="0" :aria-expanded="isOpen(g.cat.id)" :data-goto-spot="g.cat.id === 'lgchron' ? 'league-always' : g.cat.id === 'mapend' ? 'map-looks' : g.cat.id === 'jewplain' ? 'jewels-no-price' : undefined" @click="toggle(g.cat.id)" @keydown.enter.prevent="toggle(g.cat.id)" @keydown.space.prevent="toggle(g.cat.id)">
+      <div :class="$style.catHead" role="button" tabindex="0" :aria-expanded="isOpen(g.cat.id)" :data-goto-spot="g.cat.id === 'lgchron' ? 'league-always' : g.cat.id === 'mapend' ? 'map-looks' : g.cat.id === 'jewplain' ? 'jewels-no-price' : g.cat.id === 'orbs' ? 'own-lists' : undefined" @click="toggle(g.cat.id)" @keydown.enter.prevent="toggle(g.cat.id)" @keydown.space.prevent="toggle(g.cat.id)">
         <i class="fas text-xs w-dim" :class="isOpen(g.cat.id) ? 'fa-chevron-down' : 'fa-chevron-right'" />
         <WIcon :item="g.cat.art" size="sm" />
         <span :class="$style.catName">{{ g.cat.name }}</span>
@@ -214,6 +214,7 @@ import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, cu
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
+import { loadOwnTables, ownTables } from './own-lists'
 import { gemBand, gemLinesOf } from './gem-classes'
 
 const props = withDefaults(defineProps<{
@@ -280,7 +281,8 @@ const baseItems = computed<CurrencyItem[]>(() => {
   const lookup = props.store.prices.lootLookup.value
   if (!doc || !lookup) return []
   if (props.kind === 'cards') loadCardFacts()
-  return currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.kind === 'gems' ? gemLinesOf(props.store.prices.items.value) : null).filter(it => kindOf(it.cat) === props.kind)
+  loadOwnTables()
+  return currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.kind === 'gems' ? gemLinesOf(props.store.prices.items.value) : null, ownTables.value).filter(it => kindOf(it.cat) === props.kind)
 })
 const baseByName = computed(() => new Map(baseItems.value.map(i => [i.name, i])))
 const baseChaos = (name: string) => baseByName.value.get(name)?.chaos ?? 0
