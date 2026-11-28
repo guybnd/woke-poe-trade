@@ -44,8 +44,10 @@
       </div>
 
       <CurrencyCard v-if="isCurrency" :store="store" :config="config" :name="facts.baseType ?? facts.name" :stack="facts.stackSize ?? 1"
-        :gem="/ Gems$/.test(facts.itemClass ?? '') ? { level: facts.gemLevel ?? 1, quality: facts.quality ?? 0, corrupted: !!facts.corrupted } : null" :rule="match.final?.block.conditions ?? null"
-        @open-tab="(cat, name) => emit('open-editor', { type: CURRENCY_TYPE, tier: `cat:${cat}:${name}` })" />
+        :gem="/ Gems$/.test(facts.itemClass ?? '') ? { level: facts.gemLevel ?? 1, quality: facts.quality ?? 0, corrupted: !!facts.corrupted } : null" :rule="match.final?.block.conditions ?? null" :facts="facts"
+        :tier="match.final?.block.tier ?? null" :note="match.final?.block.comment ?? null"
+        @open-tab="(cat, name) => emit('open-editor', { type: CURRENCY_TYPE, tier: `cat:${cat}:${name}` })"
+        @open-rule="tier => emit('open-editor', { type: CURRENCY_TYPE, tier })" @place="p => lootPlace = p" @uniques="v => cardUniques = v" />
       <div v-if="match.final && !isCurrency" :class="$style.keys" role="toolbar" aria-label="Quick fixes">
         <button v-for="q in quick" :key="q.key" type="button" class="w-focusable" :class="[$style.key, { [$style.keyOff]: q.disabled }]"
           :disabled="q.disabled" :title="q.title" @click="q.run()">
@@ -57,7 +59,7 @@
 
       <WeightRankStrip :store="store" :config="config" :facts="facts" />
       <GearRankStrip v-if="!config.presets.weights.on" :store="store" :config="config" :facts="facts" />
-      <DropUniques :store="store" :config="config" :facts="facts" />
+      <DropUniques v-if="!cardUniques" :store="store" :config="config" :facts="facts" />
 
       <template v-if="match.final">
         <div v-if="ladderRows.length" :class="$style.section">
@@ -184,7 +186,7 @@
 <script setup lang="ts">
 import { conditionWords } from './ladder'
 import { computed, defineAsyncComponent, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { CURRENCY_TYPE } from './currency-settings'
+import { CSTEP_NAMES, CURRENCY_TYPE } from './currency-settings'
 import { useFold } from '../ui/fold'
 import WFoldHead from '../ui/WFoldHead.vue'
 import { WPanel, WBanner, WButton, WSegmented, WChip, openMenu, toast } from '../ui'
@@ -253,7 +255,17 @@ const areaLevelModel = computed({
   }
 })
 
-const placeOf = (r: { type: string | null, tier: string | null }) => ruleLabel(r.type, r.tier)
+// A Loot tab step rule (tier s0-s5) is one rule for many sections: name it by
+// the item's section, as the card below finds it (a unique base read
+// "Currency weights › S0").
+const lootPlace = ref<{ cat: string, catName: string, name: string } | null>(null)
+// The card below lists what the base can be: no second list.
+const cardUniques = ref(false)
+const lootStep = (r: { type: string | null, tier: string | null }) => r.type === CURRENCY_TYPE && lootPlace.value ? /^s([0-5])$/.exec(r.tier ?? '') : null
+const placeOf = (r: { type: string | null, tier: string | null }) => {
+  const m = lootStep(r)
+  return m ? `Loot › ${lootPlace.value!.catName}, ${CSTEP_NAMES[Number(m[1])]}` : ruleLabel(r.type, r.tier)
+}
 
 // When the safety net is what shows the item, the panel still works on the
 // NeverSink rule behind it: that's where tiers, moves and the look live.
@@ -581,7 +593,8 @@ const focused = ref(document.hasFocus())
 const onFocus = () => { focused.value = true }
 // The last click landed in another overlay window: keys are for that one now.
 let clickedAway = false
-const onPointer = (e: PointerEvent) => { clickedAway = !panel.value?.el?.contains(e.target as Node) }
+// A chip's menu (StateChip) is drawn outside the card but belongs to it.
+const onPointer = (e: PointerEvent) => { clickedAway = !panel.value?.el?.contains(e.target as Node) && !(e.target as Element | null)?.closest?.('[data-state-chip-menu]') }
 const onBlur = () => { focused.value = false }
 
 // The rule that decided the item, in the editor: the Drop tiers tab for the
@@ -599,6 +612,8 @@ const goToLabel = computed(() => {
 function goToRule () {
   const b = ruleMatch.value.final?.block
   if (!b?.type || !b.tier || b.tier.startsWith('#')) { emit('open-editor'); return }
+  // A step rule opens the item's own row on the Loot tab, not the step.
+  if (lootStep(b)) { emit('open-editor', { type: CURRENCY_TYPE, tier: `cat:${lootPlace.value!.cat}:${lootPlace.value!.name}` }); return }
   emit('open-editor', { type: b.type, tier: b.tier })
 }
 

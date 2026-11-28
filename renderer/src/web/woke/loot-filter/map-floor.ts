@@ -7,6 +7,8 @@
 import type { FilterBlock, FilterCondition, FilterDoc } from './parse'
 import type { CurrencySettings } from './currency-settings'
 import { CURRENCY_TYPE } from './currency-settings'
+import { applyStyle, readStyle } from './edits'
+import type { StylePatch } from './edits'
 
 const PLAIN_TIER = /^maps_[a-z]_t\d+$/
 
@@ -37,4 +39,30 @@ export function applyMapFloor (doc: FilterDoc, cfg: Pick<CurrencySettings, 'on' 
   doc.blocks.splice(doc.blocks.indexOf(anchor), 0, b)
   doc.blocks.forEach((x, i) => { x.index = i })
   return b
+}
+
+// Normal maps' look (Guy's B, 2026-11-28): the black on white map players
+// know, darker for lower tiers, and a white square icon (NeverSink's red one
+// read as Tink). Only NeverSink's plain tier rules; size, sound and beam stay
+// its own, and your restyles still go on top.
+const BAND_LOOK: Array<{ from: number, style: StylePatch }> = [
+  { from: 16, style: { text: [0, 0, 0, 255], border: [230, 190, 40, 255], background: [255, 255, 255, 255] } },
+  { from: 11, style: { text: [0, 0, 0, 255], border: [150, 150, 150, 255], background: [235, 235, 235, 255] } },
+  { from: 6, style: { text: [0, 0, 0, 255], border: [120, 120, 120, 255], background: [190, 190, 190, 255] } },
+  { from: 1, style: { text: [180, 180, 180, 255], border: [70, 70, 70, 255], background: [0, 0, 0, 200] } }
+]
+
+export function applyMapLooks (doc: FilterDoc, cfg: Pick<CurrencySettings, 'on'>): number {
+  if (!cfg.on) return 0
+  let n = 0
+  for (const b of doc.blocks) {
+    const m = b.type === 'maps' && b.visibility === 'Show' ? /^maps_[a-z]_t(\d+)$/.exec(b.tier ?? '') : null
+    if (!m) continue
+    const band = BAND_LOOK.find(x => Number(m[1]) >= x.from)!
+    const icon = readStyle(b.actions).icon
+    applyStyle(b, { ...band.style, ...(icon ? { icon: { ...icon, color: 'White', shape: 'Square' } } : {}) })
+    b.dirty = true
+    n++
+  }
+  return n
 }

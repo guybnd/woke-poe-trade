@@ -51,8 +51,14 @@ export interface CurrencySettings {
   // A category's look changed by hand (text colour, map icon), on Small to Big.
   cats: Record<string, StylePatch>
   // Steps turned off (1..4): piles that would get one hide instead (Guy
-  // 2026-11-27: "turn an entire section off like small off").
-  off: number[]
+  // 2026-11-27: "turn an entire section off like small off"). 'all' is
+  // every Loot page; a class page ('currency', 'uniques'...) or a section
+  // that sets its own wins over it (Guy 2026-11-28: all, then page, then section).
+  offBy: Record<string, number[]>
+  // A section's own ruler (Guy's pick A, 2026-11-28): where Small, Normal,
+  // Decent, Big and Tink start in it, before Strictness. It leaves the main
+  // ruler and the section's Price bias; Strictness still moves it.
+  rulers: Record<string, number[]>
   // Every step's price × this; null follows the filter's strictness.
   mult: number | null
   // A whole category set by hand (Guy 2026-11-27, Loot tab: Off / Weighted /
@@ -65,6 +71,20 @@ export interface CurrencySettings {
   faint: FaintSettings
   // Maps: normal maps under this tier hide (Guy's M1 slider); 1 shows all.
   mapFrom: number
+  // Gold: the pile size where Small, Normal, Decent, Big and Tink start
+  // (Guy 2026-11-28: its own sections to slide).
+  gold: number[]
+  // The Chase uniques look, a CHASE_LOOKS id (unique-classes.ts); unset is
+  // the default one (Guy 2026-11-28: a picker on the section's header).
+  chaseLook?: string
+  // Uniques left out of their base's average drop (Guy 2026-11-28: a special
+  // drop like Precursor's Emblem); toggleNotAvg flips one.
+  notAvg?: string[]
+  // Size cut on big uniques (Guy's picks S2, Z1, W2, E1, 2026-11-28): 'on',
+  // 'off', or unset for Auto (on from Strict, ×1.25, up).
+  sizeCut?: 'on' | 'off'
+  // Worked out by scaled() from sizeCut and the strictness; never saved.
+  sizeOn?: boolean
 }
 
 export type SectionMode = 'off' | 'auto' | 'always'
@@ -73,8 +93,16 @@ export interface FaintSettings { on: boolean, until: number }
 // the rules are maps-only, and T1 said off in maps until you turn it on.
 export const FAINT_UNTIL = 1.25
 
+// Leave a unique out of its base's average drop, or count it again.
+export function toggleNotAvg (c: Pick<CurrencySettings, 'notAvg'>, name: string): string[] {
+  const now = new Set(c.notAvg ?? [])
+  if (now.has(name)) now.delete(name)
+  else now.add(name)
+  return [...now].sort()
+}
+
 export function defaultCurrency (): CurrencySettings {
-  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, off: [], mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1 }
+  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, offBy: { all: [] }, rulers: {}, mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1, gold: [1, 500, 3000, 10000, 50000] }
 }
 
 const NAME = /^[^"\n]{1,80}$/
@@ -107,6 +135,26 @@ export function normalizeItemEdit (e: unknown): ItemEdit | null {
   return Object.keys(out).length ? out : null
 }
 
+// The old one list was for every page: it becomes 'all'. Saved before 'all'
+// existed, it sat on the Currency page: it goes back to every page.
+function offOf (c: Partial<CurrencySettings> & { off?: unknown } | undefined): Record<string, number[]> {
+  const src: Record<string, unknown> = c?.offBy && typeof c.offBy === 'object' ? { ...c.offBy } : { all: c?.off }
+  if (!('all' in src)) { src.all = src.currency; delete src.currency }
+  const out: Record<string, number[]> = { all: [] }
+  for (const [k, v] of Object.entries(src)) if (/^[a-z]{1,20}$/.test(k) && Array.isArray(v)) out[k] = [1, 2, 3, 4].filter(n => v.includes(n))
+  return out
+}
+
+function rulersOf (v: unknown): Record<string, number[]> {
+  const out: Record<string, number[]> = {}
+  if (v && typeof v === 'object') {
+    for (const [k, r] of Object.entries(v)) {
+      if (/^[a-z]{1,20}$/.test(k) && Array.isArray(r) && r.length === 5 && r.every((x, i) => num(x, 0.01, 1e6) != null && (!i || x >= r[i - 1]))) out[k] = [...r]
+    }
+  }
+  return out
+}
+
 export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): CurrencySettings {
   const d = defaultCurrency()
   const from = [...d.from] as CurrencySettings['from']
@@ -137,11 +185,16 @@ export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): Cu
     steps: patches(c?.steps, /^[1-5]$/),
     cats: patches(c?.cats, /^[a-z]{1,20}$/),
     mult: num(c?.mult, MULT_MIN, MULT_MAX) ?? null,
-    off: [1, 2, 3, 4].filter(n => Array.isArray(c?.off) && c.off.includes(n)),
+    offBy: offOf(c),
+    rulers: rulersOf(c?.rulers),
     // Kept light (this runs at startup): what reads them takes only 'off',
     // 'always', true and a number (currency-weights.ts).
     catMode: { ...c?.catMode },
     faint: { on: c?.faint?.on === true, until: Number(c?.faint?.until) || FAINT_UNTIL },
-    mapFrom: int(c?.mapFrom, 1, 17) ?? 1
+    mapFrom: int(c?.mapFrom, 1, 17) ?? 1,
+    ...(Array.isArray(c?.notAvg) && c.notAvg.length ? { notAvg: [...new Set(c.notAvg.filter(n => typeof n === 'string' && NAME.test(n)))].sort() } : {}),
+    ...(c?.sizeCut === 'on' || c?.sizeCut === 'off' ? { sizeCut: c.sizeCut } : {}),
+    ...(typeof c?.chaseLook === 'string' && /^[A-Z][0-9]$/.test(c.chaseLook) ? { chaseLook: c.chaseLook } : {}),
+    gold: Array.isArray(c?.gold) && c.gold.length === 5 && c.gold.every((g, i) => int(g, 1, 1e7) != null && (!i || g >= c.gold![i - 1])) ? [...c.gold] : d.gold
   }
 }

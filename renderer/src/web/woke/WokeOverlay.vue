@@ -38,7 +38,7 @@ import { isModuleOn, isWidgetTypeOn } from './modules'
 import type { WokeModulesConfig } from './modules'
 import { toast } from './ui'
 import { LOOT_FILTER_SAMPLE_TARGET } from './loot-filter/widget'
-import { unseenNews } from './tab-bar/news'
+import { newsIsOff, unseenNews } from './tab-bar/news'
 import { dayOf, refreshWorth, worthLine } from './tab-bar/worth-knowing'
 import { hintPlaceOk, overlayOpen } from './shared/hints'
 import { zone } from './shared/zone'
@@ -57,14 +57,14 @@ function worthCtx (woke: WokeModulesConfig) {
 }
 const worthDue = computed(() => {
   const woke = AppConfig().woke
-  return woke?.setupDone === true && !woke.newsOff && hintPlaceOk() && worthLine(woke.hints, worthCtx(woke)) != null
+  return woke?.setupDone === true && !newsIsOff(woke) && hintPlaceOk() && worthLine(woke.hints, worthCtx(woke)) != null
 })
 const newsUnseen = computed(() => unseenNews(AppConfig().woke, MainProcess.version.value).length > 0 || worthDue.value)
 // The line of the day is picked at start, as the overlay opens, and on
 // reaching town or a hideout (for players who only use hotkeys and the dock).
 watch([overlayOpen, () => zone.kind], ([open, kind]) => {
   const woke = AppConfig().woke
-  if (!(open || kind == null || kind === 'town' || kind === 'hideout') || !woke?.setupDone || woke.newsOff) return
+  if (!(open || kind == null || kind === 'town' || kind === 'hideout') || !woke?.setupDone || newsIsOff(woke)) return
   woke.hints ??= {}
   if (refreshWorth(woke.hints, dayOf(new Date()), worthCtx(woke))) saveConfigQuietly()
 }, { immediate: true })

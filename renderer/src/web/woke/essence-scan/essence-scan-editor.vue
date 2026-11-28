@@ -25,7 +25,7 @@
     </label>
     <div class="flex items-center gap-2 text-sm" style="color: var(--w-dim);">
       How it decides
-      <w-info :text="'Essence scan reads the label of the essence monolith under your mouse with on-screen text recognition, prices its essences from poe.ninja and says whether to corrupt it.\n\nIt says Corrupt when the monolith has one of the essences ticked here: Misery, Envy, Dread or Scorn can turn into Horror, Hysteria, Insanity or Delirium, which only come from corrupting. Under it is the best case after corrupting (minus a Vaal Orb). The odds of each outcome aren\'t published, so it shows what a corrupt can reach, not an average.\n\nScan mode reads the screen while your cursor rests, and only runs OCR when a label is there. With Start in maps on it runs in maps only.\n\nIt only reads the screen; you still use the Remnant of Corruption yourself. It needs Windows and the OCR files.'" />
+      <w-info :text="'Reads the essence monolith under your mouse, prices its essences from poe.ninja and says whether to corrupt it.\n- **Corrupt** when it holds an essence ticked here: Misery, Envy, Dread and Scorn can become Horror, Hysteria, Insanity or Delirium.\n- Under it: the best case after corrupting, minus a Vaal Orb. The odds aren\'t published, so it\'s not an average.\n- **Scan mode** reads only while your cursor rests on a label. **Start in maps** runs it in maps only.\n\nIt only reads the screen; you use the Remnant yourself. Needs Windows and the OCR files.'" />
     </div>
   </div>
 </template>

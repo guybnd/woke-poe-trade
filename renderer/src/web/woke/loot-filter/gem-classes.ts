@@ -9,6 +9,7 @@
 import type { LootCategory } from './fragment-classes'
 import type { SectionMode } from './currency-settings'
 import { isThin } from '../market/types'
+import { GEM_DROPS } from '../search/lookups/gem-drops'
 
 export const GEM_CATEGORIES: LootCategory[] = [
   { id: 'gemexc', name: 'Exceptional', art: 'Enlighten Support' },
@@ -22,13 +23,13 @@ export const GEM_IDS = new Set(GEM_CATEGORIES.map(x => x.id))
 
 // The gem cyan, a shade per fold.
 export const GEM_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
-  gemexc: { text: [60, 230, 230], color: 'Cyan', shape: 'Star' },
-  gemawk: { text: [110, 210, 255], color: 'Cyan', shape: 'Diamond' },
-  gemtrans: { text: [120, 240, 200], color: 'Cyan', shape: 'Hexagon' },
+  gemexc: { text: [60, 230, 230], color: 'Cyan', shape: 'Triangle' },
+  gemawk: { text: [110, 210, 255], color: 'Cyan', shape: 'Triangle' },
+  gemtrans: { text: [120, 240, 200], color: 'Cyan', shape: 'Triangle' },
   // Not red: red beams and map icons are kept for Tink (Guy 2026-11-27).
   gemvaal: { text: [220, 90, 90], color: 'Pink', shape: 'Triangle' },
   gemsup: { text: [27, 200, 190], color: 'Cyan', shape: 'Triangle' },
-  gemskill: { text: [27, 162, 155], color: 'Cyan', shape: 'Circle' }
+  gemskill: { text: [27, 162, 155], color: 'Cyan', shape: 'Triangle' }
 }
 
 export const GEM_MODES: Record<string, SectionMode> = { gemexc: 'always', gemawk: 'always', gemtrans: 'always' }
@@ -47,7 +48,9 @@ const EXCEPTIONAL = /^(Awakened )?(Enlighten|Empower|Enhance) Support$/
 // `names`: every gem poe.ninja lists, to tell "Ice Nova of Frostbolts"
 // (transfigured) from "Herald of Ice".
 export function gemCategoryOf (name: string, names: ReadonlySet<string>): string {
-  if (EXCEPTIONAL.test(name)) return 'gemexc'
+  // The boss-drop exceptional gems (Greater Spell Echo, Eclipse...: Guy
+  // 2026-11-28), not the old Greater Multiple Projectiles or Greater Volley.
+  if (EXCEPTIONAL.test(name) || GEM_DROPS[name]?.voidstone) return 'gemexc'
   if (name.startsWith('Awakened ')) return 'gemawk'
   const of = name.indexOf(' of ')
   if (of > 0 && names.has(name.slice(0, of))) return 'gemtrans'

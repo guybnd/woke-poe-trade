@@ -3,7 +3,7 @@
     <input class="w-input rounded px-1 w-48" placeholder="Widget title" v-model="title" />
     <div class="flex items-center gap-2 w-dim text-sm">
       How it works
-      <w-info :text="'The timer reads Client.txt, so set its path in Settings. A run splits when you first enter each new act and finishes when you reach the Epilogue after Kitava.\n\nUse the strip\'s buttons (with the overlay active) to start, pause or end a run by hand.\n\nWith the campaign tracker placed, the run time shows in the tracker\'s strip and this widget only shows the splits panel.'" />
+      <w-info :text="'Times your campaign from Client.txt (set its path in Settings).\n- A run splits when you first enter each act and ends at the Epilogue after Kitava.\n- The strip\'s buttons start, pause or end a run by hand (overlay active).\n- With the campaign tracker placed, the time shows in its strip and this shows only the splits.'" />
     </div>
     <w-toggle v-model="autoStart">Start a new run when a character enters The Twilight Strand</w-toggle>
     <w-toggle v-model="subSplits">Sub-splits for key bosses (Brutus, Merveil, Dominus, Kitava…), timed when they first speak, or when you enter their area</w-toggle>

@@ -149,20 +149,9 @@ export const WEIGHT_GROUPS: WeightGroup[] = [
 export const WEIGHT_ROWS: WeightRow[] = WEIGHT_GROUPS.flatMap(g => g.rows)
 export const WEIGHT_LABEL = Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.label])) as Record<WeightKey, string>
 
-// The steps a multiplier moves through, and the line's range.
-export const MULT_STEPS = [0, 0.05, 0.1, 0.15, 0.25, 0.35, 0.5, 0.7, 0.85, 1, 1.2, 1.4, 1.5, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 128]
+// The line's range.
 export const NEED_MIN = 1 / 16
 export const NEED_MAX = 1024
-// Strictness stages named like NeverSink's, at the default multipliers.
-export const STAGES: Array<{ label: string, need: number }> = [
-  { label: 'Soft', need: 0.25 },
-  { label: 'Regular', need: 1 },
-  { label: 'Semi-strict', need: 2 },
-  { label: 'Strict', need: 4 },
-  { label: 'Very strict', need: 8 },
-  { label: 'Uber', need: 16 },
-  { label: 'Uber+', need: 48 }
-]
 
 export interface WeightSettings {
   on: boolean
@@ -179,6 +168,9 @@ export interface WeightSettings {
   look: Record<LookChannel, LookKey[]>
   // Your own rank for a base (by name), over the filter's.
   ranks: Record<string, RankKey>
+  // The score a utility flask needs to show (Guy's flasks A, 2026-11-28):
+  // its own, since rares' line is set for scores in the hundreds.
+  flaskLine: number
 }
 
 export type RankKey = 'x1' | 'x2' | 'r1' | 'r2' | 'r3' | 'r0' | 'rj'
@@ -242,7 +234,7 @@ export function normalizeLook (v: unknown): Record<LookChannel, LookKey[]> {
 export const LOUD_DEFAULT: readonly number[] = [16, 64, 256]
 
 export function defaultWeights (): WeightSettings {
-  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT], look: lookDefault(), ranks: {} }
+  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT], look: lookDefault(), ranks: {}, flaskLine: 8 }
 }
 
 // The rows a pin (always show) can go on: ones a rule can name on their own.
@@ -253,19 +245,6 @@ export const MARK_ROWS: WeightKey[] = ['w86', 'l6', 'l5', 'l4', 'infl', 'eld', '
 // Rows that stay in order, lowest first: a higher drop tier or item level is
 // never worth less than a lower one.
 export const ORDERED_ROWS: WeightKey[][] = [['t1', 't2', 't3', 't4', 't5'], ['mt1', 'mt2', 'mt3', 'mt4', 'mt5'], ['i68', 'i75', 'i83', 'i86']]
-
-// The range one multiplier may take, given the others.
-export function multRange (mult: Record<WeightKey, number>, key: WeightKey): [number, number] {
-  let lo = MARK_ROWS.includes(key) ? 1 : 0
-  let hi = 1000
-  for (const row of ORDERED_ROWS) {
-    const i = row.indexOf(key)
-    if (i < 0) continue
-    if (i > 0) lo = Math.max(lo, mult[row[i - 1]])
-    if (i < row.length - 1) hi = Math.min(hi, mult[row[i + 1]])
-  }
-  return [lo, hi]
-}
 
 export function normalizeWeights (w: Partial<WeightSettings> | undefined): WeightSettings {
   const d = defaultWeights()
@@ -284,6 +263,7 @@ export function normalizeWeights (w: Partial<WeightSettings> | undefined): Weigh
     loud: Array.isArray(w?.loud) && w.loud.length === 3 && w.loud.every((v, i) => ok(v, NEED_MIN, NEED_MAX * 64) && (i === 0 || v >= w.loud![i - 1])) ? [...w.loud] : [...LOUD_DEFAULT],
     always: Array.isArray(w?.always) ? [...new Set(w.always.filter(k => PIN_ROWS.has(k)))] : [],
     look: normalizeLook(w?.look),
+    flaskLine: ok(w?.flaskLine, NEED_MIN, NEED_MAX) ? w.flaskLine : d.flaskLine,
     ranks: w?.ranks && typeof w.ranks === 'object'
       ? Object.fromEntries(Object.entries(w.ranks).filter(([n, r]) => typeof n === 'string' && n.length < 80 && RANK_KEYS.includes(r)))
       : {}

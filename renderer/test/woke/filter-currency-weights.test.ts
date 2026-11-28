@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, ALL_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, levelOf, strictMult, scaled, tierGuess, divineChaos, withEdit, kindOf } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, ALL_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, minStack, normalizeCurrency, offSteps, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, levelOf, strictMult, scaled, tierGuess, divineChaos, withEdit, kindOf } from '@/web/woke/loot-filter/currency-weights'
 import { normalizeItemEdit } from '@/web/woke/loot-filter/currency-settings'
 import type { CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
@@ -86,12 +86,37 @@ describe('currency weights', () => {
     const c = defaultCurrency()
     const it = { name: 'Chaos Orb', cat: 'orbs', chaos: 0.3, full: 20, est: false } as never
     const all = stacksFor(it, c)
-    c.off = [1]
+    c.offBy = { currency: [1] }
     const s = stacksFor(it, c)
-    expect(s).toEqual([null, ...all.slice(1)])
-    expect(stepOfPile(s, 1)).toBe(0)
-    expect(stepOfPile(s, 10)).toBe(stepOfPile(all, 10))
-    expect(normalizeCurrency(JSON.parse('{"off":[1,1,5,"x",2]}')).off).toEqual([1, 2])
+    // Where each step starts stays; the piles on a step turned off hide.
+    expect(s).toEqual(all)
+    expect(stepOfPile(s, 1, offSteps(it, c))).toBe(0)
+    expect(stepOfPile(s, 10, offSteps(it, c))).toBe(stepOfPile(all, 10))
+    expect(normalizeCurrency(JSON.parse('{"offBy":{"all":[],"currency":[1,1,5,"x",2]}}')).offBy).toEqual({ all: [], currency: [1, 2] })
+  })
+
+  it('a step turned off on one page or section stays there (Guy 2026-11-28)', () => {
+    const c = defaultCurrency()
+    const orb = { name: 'Chaos Orb', cat: 'orbs' } as never
+    const ess = { name: 'Essence of Greed', cat: 'essences' } as never
+    const uniq = { name: 'Leather Belt', cat: 'uniqplain' } as never
+    c.offBy = { currency: [2] }
+    expect(offSteps(orb, c)).toEqual([2])
+    expect(offSteps(ess, c)).toEqual([2])
+    expect(offSteps(uniq, c)).toEqual([])
+    // A section's own steps win over its page's, both ways.
+    c.offBy = { currency: [2], essences: [], uniqplain: [1] }
+    expect(offSteps(orb, c)).toEqual([2])
+    expect(offSteps(ess, c)).toEqual([])
+    expect(offSteps(uniq, c)).toEqual([1])
+    // Every page, then a page, then a section.
+    c.offBy = { all: [1], uniques: [] }
+    expect(offSteps(orb, c)).toEqual([1])
+    expect(offSteps(uniq, c)).toEqual([])
+    // The old one list was every page's; saved before 'all', it sat on Currency.
+    expect(normalizeCurrency(JSON.parse('{"off":[2]}')).offBy).toEqual({ all: [2] })
+    expect(normalizeCurrency(JSON.parse('{"offBy":{"currency":[2],"essences":[]}}')).offBy).toEqual({ all: [2], essences: [] })
+    expect(normalizeCurrency({}).offBy).toEqual({ all: [] })
   })
 
   it('guesses a price from NeverSink tiers', () => {
@@ -163,13 +188,61 @@ describe('currency weights', () => {
     expect(serializeFilter(doc)).toBe(serializeFilter(parseFilter(SEMI)))
   })
 
+  it('a section with its own ruler starts its steps there, Strictness on top, bias left out (Guy\'s A)', () => {
+    const c = defaultCurrency()
+    c.nudge = { essences: 2 }
+    c.rulers = { essences: [1, 2, 4, 8, 100] }
+    expect(stepStarts(c, 'essences')).toEqual([1, 2, 4, 8, 100])
+    expect(stepStarts(c, 'orbs')).toEqual([c.line, ...c.from.map(f => Math.max(c.line, f))])
+    c.mult = 2
+    expect(scaled(c, null).rulers.essences).toEqual([2, 4, 8, 16, 200])
+    expect(normalizeCurrency(JSON.parse('{"rulers":{"essences":[1,2,4,8,100],"oils":[5,1,2,3,4],"orbs":[1,2]}}')).rulers).toEqual({ essences: [1, 2, 4, 8, 100] })
+  })
+
+  it('a step turned off keeps its look on the hidden piles, quiet, for Alt (Guy 2026-11-28)', () => {
+    const compiled = applyCurrency(parseFilter(SEMI), on(c => { c.line = 0.5; c.offBy = { currency: [2] } }), lookup)!
+    const off = compiled.blocks.filter(b => b.comment.includes('Normal off'))
+    expect(off.length).toBeGreaterThan(0)
+    for (const b of off) {
+      expect(b.visibility).toBe('Hide')
+      const keys = b.actions.map(a => a.key)
+      expect(keys).toEqual(expect.arrayContaining(['SetTextColor', 'SetBorderColor', 'SetBackgroundColor']))
+      expect(b.actions.find(a => a.key === 'SetFontSize')?.args[0]).toBe('37')
+      for (const k of ['PlayAlertSound', 'PlayEffect', 'MinimapIcon']) expect(keys).not.toContain(k)
+    }
+  })
+
+  it('a step turned off in the middle hides its piles instead of showing them quieter (Guy 2026-11-28)', () => {
+    for (const off of [[3], [2, 4], [1]]) {
+      const cfg = on(c => { c.line = 0.5; c.offBy = Object.fromEntries(['currency', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels', 'league'].map(k => [k, off])) })
+      const doc = parseFilter(SEMI)
+      const compiled = applyCurrency(doc, cfg, lookup)!
+      let hidden = 0
+      // Map, gold, jewel and league rows are named for their kind, not a base: tested on their own.
+      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold' && i.type !== 'jewels' && i.type !== 'league')) {
+        const stacks = stacksFor(it, cfg)
+        for (const n of [1, 2, 5, 10, 20, 40]) {
+          if (n > it.full) continue
+          const res = matchItem(doc, { ...pile(it.name, n), itemClass: it.cls.split('|')[0] })
+          const raw = stepOfPile(stacks, n)
+          const want = stepOfPile(stacks, n, offSteps(it, cfg))
+          if (off.includes(raw)) hidden++
+          expect(res.visibility === 'Hide', `${it.name} ×${n} off ${off}`).toBe(want === 0)
+          if (want > 0) expect(res.final?.block.tier, `${it.name} ×${n} off ${off}`).toBe(`s${want}`)
+        }
+      }
+      expect(hidden).toBeGreaterThan(0)
+    }
+  })
+
   it('gives every pile the step its worth says, in maps only', () => {
     for (const line of [0.1, 0.5, 1, 3, 5]) {
       const cfg = on(c => { c.line = line })
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, cfg, lookup)!
-      // Uniques are matched by rarity: filter-loot-uniques.test.ts.
-      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques')) {
+      // Uniques are matched by rarity (filter-loot-uniques.test.ts), maps by
+      // their own conditions (filter-loot-special-maps.test.ts).
+      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold' && i.type !== 'jewels' && i.type !== 'league')) {
         const stacks = stacksFor(it, cfg)
         for (const n of [1, 2, 3, 5, 10, 20, 40]) {
           if (n > it.full) continue
@@ -270,16 +343,36 @@ describe('currency weights', () => {
     expect(big.background?.slice(0, 3)).toEqual([255, 93, 27])
     expect(big.border?.slice(0, 3)).toEqual([230, 140, 240])
     expect(big.sound).toEqual({ id: '7', volume: 250 })
-    expect(big.icon).toMatchObject({ size: 0, color: 'Pink', shape: 'Moon' })
+    expect(big.icon).toMatchObject({ size: 0, color: 'Pink', shape: 'Circle' })
     expect(big.effect?.color).toBe('Pink')
     expect(currencyLook(3, 'oils', c).border?.slice(0, 3)).toEqual([10, 200, 20])
     const tink = currencyLook(5, 'essences', c)
     expect(tink.border?.slice(0, 3)).toEqual([230, 140, 240])
     expect(tink.effect?.color).toBe('Red')
-    expect(tink.icon).toMatchObject({ color: 'Red', shape: 'Moon' })
+    expect(tink.icon).toMatchObject({ color: 'Red', shape: 'Circle' })
     const doc = parseFilter(SEMI)
     applyCurrency(doc, c, lookup)
     expect(validateFilter(doc).map(p => p.message)).toEqual([])
+  })
+
+  it('gives every class its own Decent and Big, red stays Tink', () => {
+    const c = on(() => {})
+    const fills = (cat: string) => [3, 4].map(s => currencyLook(s as 3 | 4, cat, c).background?.slice(0, 3))
+    const kinds = ['orbs', 'gemskill', 'uniqplain', 'cardcur', 'invites', 'mapblight']
+    const all = kinds.filter(k => k !== 'mapblight').flatMap(fills).map(x => x!.join(','))
+    // Maps (Guy's B): black on white at Decent and Big, told apart by their tint's edge.
+    expect(fills('mapblight')).toEqual([[255, 255, 255], [255, 255, 255]])
+    expect(currencyLook(4, 'mapblight', c).border).not.toEqual(currencyLook(4, 'maporig', c).border)
+    expect(new Set(all).size).toBe(all.length)
+    expect(fills('gemsup')).toEqual(fills('gemskill'))
+    expect(currencyLook(4, 'gemskill', c).text?.slice(0, 3)).toEqual([255, 255, 255])
+    for (const cat of kinds) {
+      for (const s of [1, 2, 3, 4] as const) {
+        const l = currencyLook(s, cat, c)
+        expect(l.effect?.color ?? '').not.toBe('Red')
+        expect(l.icon?.color ?? '').not.toBe('Red')
+      }
+    }
   })
 
   it('sorts essences into their tiers', () => {
@@ -322,10 +415,12 @@ describe('currency weights', () => {
     for (const line of [0.1, 1, 5]) {
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, on(c => { c.line = line }), lookup)!
-      expect(compiled.blocks.length).toBeLessThan(200)
+      // Jewel and league rows are a compile each (they overlap), so a few more.
+      expect(compiled.blocks.length).toBeLessThan(300)
       const text = serializeFilter(doc)
-      // About 100k for currency, fragments and cards, 25k for uniques.
-      expect(text.length - SEMI.length).toBeLessThan(150_000)
+      // About 100k for currency, fragments and cards, 25k for uniques, 25k
+      // for jewels and league items (Viscera's long base lists).
+      expect(text.length - SEMI.length).toBeLessThan(200_000)
       expect(validateFilter(parseFilter(text)).map(p => p.message)).toEqual([])
     }
   })

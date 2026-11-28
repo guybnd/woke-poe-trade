@@ -82,7 +82,7 @@
               <WButton v-if="Object.keys(g.look[r]).length" size="sm" variant="ghost" @click="change(x => { x.look[r] = {} })">Reset</WButton>
             </div>
             <div class="flex flex-wrap gap-2 items-end">
-              <span v-for="t in [5, 3]" :key="t" class="flex flex-col items-start gap-1">
+              <span v-for="t in [5, 3]" :key="t" v-item-tip="{ name: sampleBase(r), noPrice: true }" class="flex flex-col items-start gap-1">
                 <LabelPreview :text="sampleBase(r)" :actions="sampleActions(r, t)" :extras="false" :default-text="r === 'magic' ? [136, 136, 255, 255] : [255, 255, 119, 255]" :scale="1.1" />
                 <span class="w-faint text-xs">rank 1, tier {{ t }}</span>
               </span>
@@ -97,7 +97,7 @@
         <div class="flex items-center gap-2">
           <WToggle :model-value="g.quality.on" @update:model-value="setQualityOn">Over-quality bases</WToggle>
           <WInfo text="White, magic or rare gear with at least this much quality, from each row's bases. Off hands it to the rules further down.
-- They keep the Magic or Rare look of their row and drop tier, with a mark on top that wins over it: a pink border and beam until you change it.
+- They keep their row's Magic or Rare look, with a mark on top: a pink border and beam until you change it.
 - They show even where the table hides that tier. Change mark sets the border, sound, beam and map icon." />
           <template v-if="g.quality.on">
             <WButton size="sm" @click="editing = editing === 'quality' ? null : 'quality'">{{ editing === 'quality' ? 'Done' : 'Change mark' }}</WButton>
@@ -106,7 +106,7 @@
         </div>
         <template v-if="g.quality.on">
           <div class="flex flex-wrap gap-2 items-end">
-            <span v-for="s in qualitySamples" :key="s.key" class="flex flex-col items-start gap-1">
+            <span v-for="s in qualitySamples" :key="s.key" v-item-tip="{ name: s.base, noPrice: true }" class="flex flex-col items-start gap-1">
               <LabelPreview :text="s.base" :actions="s.actions" :extras="false" :default-text="s.rarity === 'magic' ? [136, 136, 255, 255] : [255, 255, 119, 255]" :scale="1.1" />
               <span class="w-faint text-xs">{{ s.note }}</span>
             </span>
@@ -173,7 +173,7 @@
         <template v-for="group in pileGroups" :key="group.key">
           <div v-if="group.drops.length" :class="$style.pileHead">{{ group.label }} · {{ group.drops.length }}</div>
           <div v-if="group.drops.length" :class="$style.ground">
-            <div v-for="d in group.drops" :key="d.id" :class="[$style.drop, group.key === 'hidden' && $style.hiddenDrop]" :title="d.title">
+            <div v-for="d in group.drops" :key="d.id" v-item-tip="{ name: d.label, noPrice: true, note: d.title }" :class="[$style.drop, group.key === 'hidden' && $style.hiddenDrop]">
               <LabelPreview :text="d.label" :actions="d.actions" :visibility="'Show'" :extras="false" :default-text="d.colour" :scale="1.15" />
               <span :class="$style.dropWhat">
                 <b :style="{ color: d.rarity === 'Magic' ? '#a8a8ff' : '#f3e27a' }">{{ d.rarity }}</b>
@@ -191,7 +191,7 @@
 
     <template v-else>
       <p v-if="config.presets.weights.on" class="w-dim text-xs" :class="$style.over" data-gear-weights-note>
-        Equipment is on: in maps it scores bases by its own ranks (Equipment › Rare gear). Moves here apply to the Drop tiers table.
+        Equipment is on: a move here also sets the base's rank there (Equipment › Rare gear). Exotic bases and Never stay on the Drop tiers table only.
       </p>
       <div :class="$style.card">
         <div class="flex items-center gap-2 flex-wrap">
@@ -232,7 +232,7 @@
 
       <div v-if="picked.length" :class="$style.selBar">
         <span>{{ picked.length }} picked</span>
-        <WButton v-for="l in MOVE_TO" :key="l.lane" size="sm" @click="moveTo(l.lane)">{{ l.label }}</WButton>
+        <WButton v-for="l in moveButtons" :key="l.lane" size="sm" @click="moveTo(l.lane)">{{ l.label }}</WButton>
         <WButton size="sm" variant="ghost" @click="picked = []">Clear</WButton>
       </div>
 
@@ -249,14 +249,14 @@
               <img v-if="info(b).icon" :src="info(b).icon!" alt="" :class="$style.icon">
               <span :class="$style.baseText">
                 <span>{{ b }}</span>
-                <span class="w-faint" style="font-size: var(--w-fs-xs, 10px);">{{ [info(b).slot, info(b).defence].filter(Boolean).join(' · ') }}<template v-if="wasRank(b, lane.key)"> · was {{ wasRank(b, lane.key) }}</template><template v-if="lane.key !== 'exotic' && exotics.has(b)"> · <span style="color: #e0b860;">exotic</span></template></span>
+                <span class="w-faint" style="font-size: var(--w-fs-xs, 10px);">{{ [info(b).slot, info(b).defence].filter(Boolean).join(' · ') }}<template v-if="wasRank(b, lane.key)"> · was {{ wasRank(b, lane.key) }}</template><template v-if="!isExoticLane(lane.key) && exotics.has(b)"> · <span style="color: #e0b860;">exotic</span></template></span>
               </span>
             </button>
             <span v-if="lane.bases.length > LANE_CAP" class="w-faint text-xs">+{{ lane.bases.length - LANE_CAP }} more, narrow with search</span>
           </div>
         </div>
       </div>
-      <div class="w-faint text-xs">Click to pick, shift-click for a run. Drag a base, or the picked ones, onto a column to move them. A move applies to every drop tier. "was R2" marks a base moved off NeverSink's rank. Exotic: talismans, experimented and other special bases NeverSink shows with their own rules, before this table; they only reach the table when those rules pass them by.</div>
+      <div class="w-faint text-xs">Click to pick, shift-click for a run. Drag a base, or the picked ones, onto a column to move them. A move applies to every drop tier. "was R2" marks a base moved off NeverSink's rank. Exotic: talismans, experimented and other special bases NeverSink shows with their own rules, before this table; they only reach the table when those rules pass them by. Exotic, valuable: the ones worth about a divine or more (NeverSink's top exotic tiers). Drag between the two exotic columns to change it; Rare gear's score and text colour follow.</div>
       <div class="flex gap-1">
         <WButton size="sm" variant="ghost" :disabled="!movedCount" @click="change(x => { x.moves = {} })">Reset ranks to NeverSink</WButton>
       </div>
@@ -266,6 +266,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useCssModule } from 'vue'
+import { isExoticLane, moveExotics, moveWeightRanks, valuableExotics } from './weight-rank'
 import { WButton, WChip, WField, WInfo, WToggle, openMenu, vItemTip } from '../ui'
 import { hideTip } from '../ui/tooltip/tooltip'
 import type { LootFilterStore } from './store'
@@ -287,8 +288,8 @@ import type { StylePatch } from './edits'
 import type { FilterAction } from './parse'
 import { clickOf, togglePick } from '../shared/picks'
 import WFoldCaret from '../ui/WFoldCaret.vue'
-import { canDrop, dragSet, dropMoves } from './gear-drag'
-import type { GearMove } from './gear-drag'
+import { canDrop, dragSet, dropMoves } from './gear-drop'
+import type { GearMove } from './gear-drop'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -309,10 +310,14 @@ const MOVE_TO: Array<{ lane: GearMove, label: string }> = [
   { lane: 'r2', label: 'Rank 2' },
   { lane: 'r3', label: 'Rank 3' },
   { lane: 'none', label: 'Unranked' },
-  { lane: 'never', label: 'Never' }
+  { lane: 'never', label: 'Never' },
+  { lane: 'exotichi', label: 'Exotic, valuable' },
+  { lane: 'exotic', label: 'Exotic' }
 ]
 
 const g = computed(() => props.config.presets.gear)
+// The exotic lanes only take exotic bases.
+const moveButtons = computed(() => MOVE_TO.filter(l => !isExoticLane(l.lane) || (picked.value.length && picked.value.every(b => exotics.value.has(b)))))
 
 // NeverSink's tiered gear rules as they came (with your edits): read while
 // the table is off, since on it they are commented out.
@@ -686,13 +691,16 @@ const lanes = computed(() => {
   const ranked = new Set([...lists.value.r1, ...lists.value.r2, ...lists.value.r3, ...lists.value.never])
   const unranked = universe.value.filter(b => !ranked.has(b) && !exotics.value.has(b))
   const exotic = [...exotics.value.keys()].filter(b => !ranked.has(b) && info(b).slot).sort()
+  const doc = props.store.doc.value
+  const hi = doc ? valuableExotics(doc, props.config.presets.weights.ranks, exotic) : new Set<string>()
   const lane = (key: string, label: string, bases: string[]) => ({ key, label, bases: bases.filter(visible) })
   return [
     lane('build', 'Build', build.value),
     lane('r1', 'Rank 1', lists.value.r1),
     lane('r2', 'Rank 2', lists.value.r2),
     lane('r3', 'Rank 3', lists.value.r3),
-    lane('exotic', 'Exotic', exotic),
+    lane('exotichi', 'Exotic, valuable', exotic.filter(b => hi.has(b))),
+    lane('exotic', 'Exotic', exotic.filter(b => !hi.has(b))),
     lane('none', 'Unranked (trash)', unranked),
     lane('never', 'Never', lists.value.never)
   ]
@@ -724,6 +732,10 @@ function moveTo (lane: GearMove) {
   lastPick = null
 }
 function applyMove (x: GearSettings, lane: GearMove, bases: string[]) {
+  if (isExoticLane(lane)) {
+    moveExotics(props.store, props.config, bases.filter(b => exotics.value.has(b)), lane)
+    return
+  }
   if (lane === 'build') {
     x.build.removed = x.build.removed.filter(b => !bases.includes(b))
     // Out of Never, or the build lane would drop it again.
@@ -743,6 +755,7 @@ function applyMove (x: GearSettings, lane: GearMove, bases: string[]) {
     if (orig !== lane) moves[b] = lane
   }
   x.moves = moves
+  moveWeightRanks(props.store, props.config, bases, lane)
 }
 
 // Drag a base, or the picked set it's in, onto another column.
@@ -1071,7 +1084,7 @@ function neverOffBuild () {
 }
 .lanes {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 6px;
 }
 .lane {

@@ -58,7 +58,7 @@ import { registry } from '@/web/overlay/widget-registry'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { AppConfig, pushHostConfig, saveConfigQuietly } from '@/web/Config'
 import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '../modules'
-import { markNewsSeen, unseenNews } from '../tab-bar/news'
+import { markNewsSeen, newsIsOff, unseenNews } from '../tab-bar/news'
 import { MainProcess } from '@/web/background/IPC'
 import { setNewsOff } from '../tab-bar/news-off'
 import type { NewsItem } from '../tab-bar/news'
@@ -98,7 +98,7 @@ const groups = computed(() => groupNews(lines.value))
 // What's new off). Shaped as a line, so Show me and dismiss work the same.
 const worth = computed<NewsItem | null>(() => {
   const woke = AppConfig().woke
-  if (!woke || woke.newsOff || !hintPlaceOk()) return null
+  if (!woke || newsIsOff(woke) || !hintPlaceOk()) return null
   const l = worthLine(woke.hints, {
     unseenNews: new Set(lines.value.map(n => n.id)),
     byName: AppConfig().language === 'en',

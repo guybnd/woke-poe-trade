@@ -9,7 +9,7 @@
       <WBackLink v-if="trail.length" :to="backTo" title="Back to where you were (mouse back button)" @back="goBack" />
       <WSelect :model-value="sourceKey" :options="fileOptions" style="max-width: 20rem;" @update:model-value="pickSource" />
       <WButton size="sm" variant="ghost" icon="fas fa-sync" title="Reload the file list and the filter" @click="refresh" />
-      <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule. Works on your inventory, stash and labels on the ground. Hold Alt to reach items your filter hides.` : undefined" @paste.capture="onSearchPaste">
+      <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule: inventory, stash or ground labels. Hold Alt for items your filter hides.` : undefined" @paste.capture="onSearchPaste">
         <ItemSearchField v-model="search" :doc="store.doc.value" :area-level="searchAreaLevel" :drop="tab === 'preview'" @open-rule="openRule" @drop-item="dropPick" />
       </span>
     </template>
@@ -283,9 +283,9 @@
     <template v-else-if="tab === 'preview'" />
     <PresetsTab v-else-if="tab === 'presets'" :store="store" :config="config" />
     <GearTab v-else-if="tab === 'gear' || tab === 'ranks'" :key="tab" :store="store" :config="config" :view="tab === 'ranks' ? 'ranks' : 'table'" @open-rule="openRule" />
-    <EquipmentTab v-else-if="tab === 'weights'" :store="store" :config="config" :focus="tabFocus" />
+    <EquipmentTab v-else-if="tab === 'weights'" :store="store" :config="config" :focus="tabFocus" @open-rule="openRule" />
     <LootTab v-else-if="tab === 'currency'" :store="store" :config="config" :focus="tabFocus" @open-rule="r => jumpTo(r.type, r.tier)" />
-    <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" />
+    <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" @open-loot="tab = 'currency'" />
     <NeverSinkTab v-else-if="tab === 'neversink'" :store="store" :config="config" :anchor="panel?.el" />
 
     <!-- build rules -->
@@ -296,7 +296,9 @@
       <template v-else>
         <div class="w-dim text-sm flex items-center gap-2" :class="$style.buildIntro">
           <span>Rules for <span class="w-accent">{{ buildInput.buildName }}</span></span>
-          <WInfo text="They go at the top of your saved copy, ahead of NeverSink's own. They follow the active build, and you can restyle them under Rules › Your build." />
+          <WInfo text="Rules for your active build's gems, link colours and uniques.
+- They go at the top of your saved copy, ahead of NeverSink's.
+- Restyle them under **Rules › Your build**." />
         </div>
         <div v-for="r in buildRows" :key="r.key" :class="$style.changeRow">
           <WChip clickable :active="config.buildRules[r.key]" :title="config.buildRules[r.key] ? 'Turn off' : 'Turn on'" @click="config.buildRules[r.key] = !config.buildRules[r.key]">
@@ -395,7 +397,7 @@
           <template v-if="store.error.value">{{ store.error.value }}</template>
           <template v-else>
             <template v-if="unsaved">Not in the game until you save · </template>Saves to <span class="w-num">{{ outName }}</span>
-            <span v-if="config.sourceOnline" style="color: var(--w-warn);" title="Edits can't be written into an online filter, so they go into a local copy. Pick that copy in game. When the online filter updates, reopen the editor and save again."> (local copy: won't auto-update)</span>
+            <span v-if="config.sourceOnline" style="color: var(--w-warn);" title="Online filters can't be edited, so edits go into a local copy: pick it in game. When the online filter updates, open the editor and save again."> (local copy: won't auto-update)</span>
             <template v-if="!store.dirty.value && store.lastSaved.value"> · saved</template>
             <template v-if="store.pendingReload.value && !unsaved"> · press Reload now to use it</template>
           </template>
@@ -409,7 +411,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip, itemRefFromName } from '../ui'
 import WBackLink from '../ui/WBackLink.vue'
 import ProfileSwitcher from './ProfileSwitcher.vue'
@@ -425,9 +427,11 @@ import PreviewTab from './PreviewTab.vue'
 import PresetsTab from './PresetsTab.vue'
 import GearTab from './GearTab.vue'
 import EquipmentTab from './EquipmentTab.vue'
-import LootTab from './LootTab.vue'
 import { CURRENCY_TYPE } from './currency-settings'
 import { experimentalUnlocked } from '../personal'
+// The Loot tab loads when opened: the price check's score card shares this
+// chunk, and the Loot tab's pages and grounds would ride along into memory.
+const LootTab = defineAsyncComponent(() => import('./LootTab.vue'))
 import { WEIGHT_TYPE } from './weights'
 import { gearRanksAsk, takeRanksAsk } from './gear-drag'
 import { GEAR_TYPE } from './gear'
@@ -499,8 +503,21 @@ function onSearchPaste (e: ClipboardEvent) {
 }
 
 const tabFocus = ref<string | null>(null)
+// The tab a jump's focus is for. Kept until another tab opens: the Loot tab
+// is a lazy chunk that mounts after the next tick, so a focus cleared then
+// never reached it (Guy 2026-11-28: Go to rule opened Currency, not Gems).
+let focusTab: string | null = null
 const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'ranks' | 'weights' | 'currency' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
-watch(gearRanksAsk, () => { if (takeRanksAsk('tab')) tab.value = 'ranks' }, { immediate: true })
+// Equipment shows (beta): Base ranks is its section, else a top tab.
+const equipShown = computed(() => experimentalUnlocked.value || props.config.presets.weights.on)
+function openRanks () {
+  if (!equipShown.value) { tab.value = 'ranks'; return }
+  tabFocus.value = 'ranks'
+  tab.value = 'weights'
+  nextTick(() => { tabFocus.value = null }).catch(() => {})
+}
+watch(gearRanksAsk, () => { if (takeRanksAsk('tab')) openRanks() }, { immediate: true })
+watch(equipShown, v => { if (v && tab.value === 'ranks') openRanks() })
 const search = ref('')
 const selType = ref<string | null>(null)
 const selTier = ref<string | null>(null)
@@ -559,9 +576,9 @@ const tabOptions = computed(() => [
   { value: 'rules', label: 'Rules' },
   // Gear: two screens of their own, what shows (by rank and drop tier) and which bases sit in which rank.
   { value: 'gear', label: 'Drop tiers', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear shows, by rank, rarity and drop tier' },
-  { value: 'ranks', label: 'Base ranks', count: Object.keys(props.config.presets.gear.moves).length || undefined, title: 'Which gear bases sit in which rank' },
+  ...(equipShown.value ? [] : [{ value: 'ranks', label: 'Base ranks', count: Object.keys(props.config.presets.gear.moves).length || undefined, title: 'Which gear bases sit in which rank' }]),
   // Beta: shown with the experimental tools, or while this profile uses it.
-  ...(experimentalUnlocked.value || props.config.presets.weights.on ? [{ value: 'weights', label: 'Equipment', count: props.config.presets.weights.on ? '✓' : undefined, title: 'Beta: decide endgame rares and flasks by a score you tune' }] : []),
+  ...(equipShown.value ? [{ value: 'weights', label: 'Equipment', count: props.config.presets.weights.on ? '✓' : undefined, title: 'Beta: decide endgame rares and flasks by a score you tune' }] : []),
   ...(experimentalUnlocked.value || props.config.presets.currency.on ? [{ value: 'currency', label: 'Loot', count: props.config.presets.currency.on ? '✓' : undefined, title: 'Beta: show endgame loot by what it is worth, class by class' }] : []),
   { value: 'preview', label: 'Preview' },
   // The look strip lives on Rules, so it isn't counted here.
@@ -1084,11 +1101,13 @@ watch(() => props.focus, (f) => {
     // the Loot tab"); once, so opening the tab later starts where it always does.
     tabFocus.value = f.tier || null
     tab.value = f.type === WEIGHT_TYPE ? 'weights' : 'currency'
-    nextTick(() => { tabFocus.value = null }).catch(() => {})
+    focusTab = tab.value
     return
   }
   goTo(f.type, f.tier)
 }, { immediate: true })
+
+watch(tab, t => { if (focusTab && t !== focusTab) { focusTab = null; tabFocus.value = null } })
 
 watch(() => props.openTab, (t) => {
   if (!t) return

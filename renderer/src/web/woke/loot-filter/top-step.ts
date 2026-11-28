@@ -17,11 +17,11 @@ interface Accent {
 export const TOP_ACCENTS: Record<TopClass, Accent> = {
   currency: { border: [255, 0, 0], beam: 'Red', icon: 'Red', shape: 'Circle' },
   uniques: { border: [175, 96, 37], beam: 'Orange', icon: 'Orange', shape: 'Star' },
-  cards: { border: [0, 90, 220], beam: 'Blue', icon: 'Blue', shape: 'Square' },
+  cards: { border: [0, 90, 220], beam: 'Blue', icon: 'Blue', shape: 'Diamond' },
   gems: { border: [0, 140, 130], beam: 'Cyan', icon: 'Cyan', shape: 'Triangle' },
   fragments: { border: [140, 40, 200], beam: 'Purple', icon: 'Purple', shape: 'Kite' },
-  maps: { border: [150, 110, 0], beam: 'Yellow', icon: 'Yellow', shape: 'Diamond' },
-  jewels: { border: [0, 140, 40], beam: 'Green', icon: 'Green', shape: 'Hexagon' }
+  maps: { border: [150, 110, 0], beam: 'Yellow', icon: 'Yellow', shape: 'Square' },
+  jewels: { border: [0, 140, 40], beam: 'Green', icon: 'Green', shape: 'Raindrop' }
 }
 
 const a = (key: string, ...args: Array<string | number>): FilterAction => ({ key, args: args.map(String) })

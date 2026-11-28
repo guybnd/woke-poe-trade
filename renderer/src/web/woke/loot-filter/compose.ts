@@ -8,6 +8,7 @@ import type { FilterDoc } from './parse'
 import { nameCheck, ruleBlocks } from './rules'
 import type { OwnRule } from './rules'
 import { applyPresetChanges, colourBlindActions, presetBlocks, scaleVolume } from './presets'
+import { levellingOnly, lootPresets, migratedPresets } from './loot-presets'
 import type { Presets, UniqueBreakdown } from './presets'
 import { applyEdits } from './edits'
 import { applyGear } from './gear'
@@ -25,8 +26,7 @@ import type { ClusterPrice } from './cluster-prices'
 import type { BaseRename } from './gem-bases'
 import { applyWeights, filterBases } from './weights'
 import { applyCurrency } from './currency-weights'
-import { applyMapFloor } from './map-floor'
-import { applyLeagueOff } from './league-classes'
+import { applyMapFloor, applyMapLooks } from './map-floor'
 import type { CardFacts } from './card-classes'
 import type { GemLine } from './gem-classes'
 import type { CurrencyItem } from './currency-weights'
@@ -100,19 +100,42 @@ export interface Composed {
   currencyItems: CurrencyItem[]
 }
 
+// One name the game doesn't know in a BaseType list and it refuses the whole
+// filter (Guy 2026-11-28: "Vaal Absolution (Absolution of ..." from a price
+// list). The rules woke writes keep only names the game knows; a rule left
+// with an empty list is written commented out.
+export function dropUnknownBases (doc: FilterDoc): number {
+  const known = nameCheck({ ...doc, blocks: doc.blocks.filter(b => !b.type?.startsWith('woke->')) })
+  let dropped = 0
+  for (const b of doc.blocks) {
+    if (!b.type?.startsWith('woke->') || b.disabled) continue
+    for (const c of b.conditions) {
+      if (c.key !== 'BaseType') continue
+      const keep = c.values.filter(v => known('BaseType', v))
+      if (keep.length === c.values.length) continue
+      dropped += c.values.length - keep.length
+      c.values = keep
+      b.dirty = true
+      if (!keep.length) b.disabled = true
+    }
+  }
+  return dropped
+}
+
 export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const next = parseFilterCopy(text)
+  // The Loot tab's first-time carry-over, even before the tab is opened.
+  const migrated = migratedPresets(cfg.presets)
   // Rare weights (beta) first, so everything below goes on top of them.
   const weightBases = cfg.presets.weights.on ? filterBases(next, cfg.presets.weights.ranks) : []
   const weights = applyWeights(next, cfg.presets.weights, weightBases)
   // Utility flasks score on the same line (Equipment › Flasks).
   applyFlasks(next, cfg.presets.weights)
   // Currency weights (beta) the same way: above everything NeverSink has.
-  const currency = applyCurrency(next, cfg.presets.currency, cfg.prices.loot ?? cfg.prices.lookup, cfg.cards, cfg.gems)
+  const currency = applyCurrency(next, migrated.currency, cfg.prices.loot ?? cfg.prices.lookup, cfg.cards, cfg.gems)
   // Maps under the Loot tab's tier slider hide.
-  applyMapFloor(next, cfg.presets.currency)
-  // League mechanics set Off on the Loot tab hide in maps.
-  applyLeagueOff(next, cfg.presets.currency)
+  applyMapFloor(next, migrated.currency)
+  applyMapLooks(next, migrated.currency)
   // Build rules go in first, so edits to them (restyles) apply on top.
   const input = cfg.build
   let buildCount = 0
@@ -121,8 +144,10 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
     insertBuildBlocks(next, blocks)
     buildCount = blocks.length
   }
+  // Presets the Loot tab covers leave maps to it (lootPresets).
+  const presets = lootPresets(migrated, currency != null)
   // Presets' rules, then your own rules above them: yours win.
-  const presetTop = presetBlocks(next, cfg.presets, cfg.prices.lookup, cfg.dustList, {
+  const presetTop = presetBlocks(next, presets, cfg.prices.lookup, cfg.dustList, {
     breakdown: cfg.presets.cheapUniques.on ? cfg.prices.breakdown : null,
     build: input ? { uniqueBases: input.uniqueBases, weaponClasses: input.weaponClasses } : null
   })
@@ -147,7 +172,8 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const gear = applyGear(next, cfg.presets.gear, input?.rareBases ?? [])
   // Quiet mode, bigger labels, colour-blind colours: over NeverSink's rules
   // as you left them.
-  const presetChanges = applyPresetChanges(next, cfg.presets)
+  const presetChanges = applyPresetChanges(next, presets)
+  if (currency) levellingOnly(next)
   // Before the net reads what the rules hide: as the game will read them.
   const renameBase = cfg.renameBase ?? gemBaseName
   renameBases(next, renameBase)
@@ -205,5 +231,6 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Again over the net's and restyled rules: one transfigured gem name in a
   // BaseType list and the game refuses to load the whole filter.
   renameBases(next, renameBase)
+  dropUnknownBases(next)
   return { doc: next, results, buildCount, netCount, netStackCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)), gearBlocks: gear.blocks, gearReplaced: gear.replaced, clusterSig, weightRules: weights?.blocks.length ?? 0, weightChars: weights?.chars ?? 0, weightBases, currencyRules: currency?.blocks.length ?? 0, currencyChars: currency?.chars ?? 0, currencyItems: currency?.items ?? [] }
 }

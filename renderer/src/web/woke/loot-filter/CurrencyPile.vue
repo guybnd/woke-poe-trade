@@ -12,7 +12,7 @@
         <span v-if="d.step > 0 && d.look.effect" :class="$style.beam"
           :style="{ left: `${d.rect.x + d.rect.w / 2 - 1}px`, height: `${d.rect.y + 2}px`, background: `linear-gradient(to bottom, transparent, ${poeColour(d.look.effect.color)})` }" />
       </template>
-      <span v-for="d in placed.list" :key="d.id" v-item-tip="d.it.top ? { name: d.it.top, type: d.it.name } : { name: d.it.bt ?? d.it.name }" :class="[$style.drop, { [$style.ghost]: d.step === 0 && !d.faint }]"
+      <span v-for="d in placed.list" :key="d.id" v-item-tip="tip ? tip(d.it) : { name: d.it.bt ?? d.it.name }" :class="[$style.drop, { [$style.ghost]: d.step === 0 && !d.faint }]"
         :style="{ left: `${d.rect.x}px`, top: `${d.rect.y}px` }" role="button" tabindex="0"
         :aria-label="`${d.label}: ${d.faint ? 'Faint' : CSTEP_NAMES[d.step]}. Open it`" @click="emit('go', d.it.name)" @keydown.enter="emit('go', d.it.name)">
         <LabelPreview :text="d.label" :actions="[]" :style-override="d.look" :visibility="d.step === 0 && !d.faint ? 'Hide' : 'Show'" :extras="false" :scale="SCALE" />
@@ -27,12 +27,13 @@
 // gives. Clicking a label opens that item in the list.
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { WButton, WChip, vItemTip } from '../ui'
+import type { ItemTipRef } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { StylePatch } from './edits'
 import { labelBox, layoutLabels } from './shower'
 import type { Rect } from './shower'
 import { poeColour } from './colours'
-import { CSTEP_NAMES, catColour, currencyFullLook, faintLook, forcedHidden, stacksFor, stepOfPile } from './currency-weights'
+import { CSTEP_NAMES, catColour, currencyFullLook, faintLook, forcedHidden, offSteps, stacksFor, stepOfPile } from './currency-weights'
 import type { CStep, CurrencyItem, CurrencySettings } from './currency-weights'
 
 const props = defineProps<{
@@ -40,6 +41,8 @@ const props = defineProps<{
   cfg: CurrencySettings
   // Faint is on: piles under the line show faint, not struck through.
   faint?: boolean
+  // A label's tooltip (a unique base lists its uniques); else its own item.
+  tip?: (it: CurrencyItem) => ItemTipRef
 }>()
 const emit = defineEmits<{ go: [name: string] }>()
 
@@ -72,13 +75,21 @@ const picks = computed(() => {
     const stack = it.full > 1 && it.chaos < 20 ? Math.max(1, Math.round(Math.pow(r(), 2.2) * Math.min(it.full, 40))) : 1
     out.push({ id: k, it, stack })
   }
+  // A chase base always lies in the pile, so its look shows (Guy 2026-11-28).
+  const chase = pool.filter(i => i.cat === 'uniqchase')
+  if (chase.length && out.length && !out.some(p => p.it.cat === 'uniqchase')) {
+    out[out.length - 1] = { id: out.length - 1, it: chase[Math.floor(r() * chase.length)], stack: 1 }
+  }
   return out
 })
 
 const drops = computed(() => picks.value.map(p => {
-  const step: CStep = stepOfPile(stacksFor(p.it, props.cfg), p.stack)
+  const stacks = stacksFor(p.it, props.cfg)
+  // A pile on a step turned off hides (never Faint).
+  const offBand = stepOfPile(stacks, p.stack) !== stepOfPile(stacks, p.stack, offSteps(p.it, props.cfg))
+  const step: CStep = offBand ? 0 : stepOfPile(stacks, p.stack)
   const own = props.cfg.items[p.it.name]?.look
-  const faint = step === 0 && !!props.faint && !forcedHidden(p.it, props.cfg)
+  const faint = step === 0 && !offBand && !!props.faint && !forcedHidden(p.it, props.cfg)
   const look: StylePatch = faint
     ? { ...currencyFullLook(0, p.it.cat, props.cfg), ...faintLook(catColour(p.it.cat, props.cfg).rgb) }
     : { ...currencyFullLook(step, p.it.cat, props.cfg), ...(step > 0 ? own ?? {} : {}) }
@@ -99,6 +110,9 @@ watch(groundEl, el => {
 }, { immediate: true })
 onBeforeUnmount(() => ro?.disconnect())
 
+// Labels are re-measured once the label font has loaded.
+const fontsReady = ref(0)
+document.fonts?.ready.then(() => { fontsReady.value++ }).catch(() => {})
 const ctx = document.createElement('canvas').getContext('2d')
 function measure (text: string, px: number): number {
   if (!ctx) return text.length * px * 0.68
@@ -108,7 +122,8 @@ function measure (text: string, px: number): number {
 
 const placed = computed(() => {
   const list = drops.value.filter(d => ghosts.value || d.step > 0 || d.faint)
-  const { rects, height } = layoutLabels(list.map(d => labelBox(d.label, d.look.fontSize, SCALE, measure)), width.value, 200, seed.value, BEAM_ROOM)
+  const m = fontsReady.value >= 0 ? measure : undefined
+  const { rects, height } = layoutLabels(list.map(d => labelBox(d.label, d.look.fontSize, SCALE, m)), width.value, 200, seed.value, BEAM_ROOM)
   return { height, list: list.map((d, i) => ({ ...d, rect: rects[i] as Rect })) }
 })
 </script>
@@ -129,7 +144,8 @@ const placed = computed(() => {
     repeating-radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.015) 0 2px, transparent 2px 7px),
     linear-gradient(160deg, #24221d, #191814 60%, #1f1d18);
 }
-.drop { position: absolute; cursor: pointer; }
+/* Flex, so no line box makes it taller than the label it was laid out for. */
+.drop { position: absolute; display: flex; cursor: pointer; }
 .drop:hover, .drop:focus-visible { filter: brightness(1.25); z-index: 2; outline: 1px solid var(--w-accent); outline-offset: 1px; }
 .ghost { opacity: 0.55; text-decoration: line-through; filter: grayscale(0.7); }
 .beam { position: absolute; top: 0; width: 3px; opacity: 0.85; pointer-events: none; }

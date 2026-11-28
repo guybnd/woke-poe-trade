@@ -141,9 +141,9 @@ const luckInfo = computed(() => {
   const l = props.luck
   if (!l) return ''
   const how = l.scale !== 1
-    ? `Scaled by ${l.scale.toFixed(2)} to match your other ${l.ownDecks.toLocaleString('en-US')} decks, since the raw weights are known to expect too little.`
-    : `Raw weights, which are known to expect too little; after ${MIN_CALIBRATION_DECKS} of your own decks they're scaled to match what you get.`
-  return `An estimate.\n- **Expected**: the value of a deck by how often each card drops, at today's poe.ninja prices. ${how}\n` +
+    ? `The raw weights expect too little, so they're scaled by ${l.scale.toFixed(2)} to match your ${l.ownDecks.toLocaleString('en-US')} decks.`
+    : `The raw weights expect too little; after ${MIN_CALIBRATION_DECKS} of your own decks they're scaled to match.`
+  return `An estimate.\n- **Expected**: a deck's value by how often each card drops, at today's poe.ninja prices.\n- ${how}\n` +
     `- **Luck**: how this session compares with simulated sessions of the same number of decks.\n\n${WEIGHTS_CREDIT}`
 })
 </script>

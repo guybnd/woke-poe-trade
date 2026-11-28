@@ -51,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, inject, onMounted, onUnmounted, shallowRef, useCssModule, watch } from 'vue'
+import { computed, defineAsyncComponent, defineComponent, inject, onMounted, onUnmounted, shallowRef, useCssModule, watch } from 'vue'
 import type { PropType } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { Host } from '@/web/background/IPC'
@@ -61,9 +61,10 @@ import { DOCK_NAMES, dockArt, dockCardOwner, dockConfig, dockIcon, dockPinId, ho
 import { wheelStep } from './wheel'
 import { addPin, isPinned } from '../pins/pins'
 import { clickWhilePlaying } from './click'
-import DockMenu from './DockMenu.vue'
 // The card head shows the icon's own art, as the dock does.
 import ToolIcon from '../tab-bar/ToolIcon.vue'
+// Loaded on the first right-click: kept out of the startup JS (perf budget).
+const DockMenu = defineAsyncComponent(() => import('./DockMenu.vue'))
 
 const props = defineProps<{
   host: DockEntry
