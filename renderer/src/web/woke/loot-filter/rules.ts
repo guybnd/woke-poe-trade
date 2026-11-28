@@ -126,6 +126,8 @@ export function gameNameCheck (own?: ReadonlyArray<readonly [string, ...unknown[
     if (key === 'Class') return KNOWN_CLASSES.has(value)
     // 3.30 maps go by tier, and the game data has no base for them.
     if (/^Map \(Tier \d+\)$/.test(value)) return true
+    // Gold has no item in the game data, but the game knows its BaseType.
+    if (value === 'Gold') return true
     return value in BASE_FACTS || !dataLoaded || (['ITEM', 'GEM', 'DIVINATION_CARD'] as const).some(ns => ITEM_BY_REF(ns, value)?.length)
   }
 }
