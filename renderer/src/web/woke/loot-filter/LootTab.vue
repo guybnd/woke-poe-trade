@@ -4,7 +4,7 @@
        (Jewels: cluster jewels also have their own price switch). -->
   <div :class="$style.wrap" data-loot-tab>
     <nav :class="$style.rail" aria-label="Loot classes" data-no-item-tip="loot class names, not items">
-      <button v-for="k in LOOT_CLASSES" :key="k.id" type="button" :class="$style.cls" :aria-pressed="k.id === sel" :data-loot-class="k.id" :data-goto-spot="k.id === 'gold' ? 'loot-gold' : k.id === 'levelling' ? 'loot-levelling' : k.id === 'special' ? 'loot-special' : k.id === 'flasks' ? 'loot-flasks' : undefined" @click="sel = k.id">
+      <button v-for="k in LOOT_CLASSES" :key="k.id" type="button" :class="$style.cls" :aria-pressed="k.id === sel" :data-loot-class="k.id" :data-goto-spot="k.id === 'gold' ? 'loot-gold' : k.id === 'levelling' ? 'loot-levelling' : k.id === 'flasks' ? 'loot-flasks' : undefined" @click="sel = k.id">
         <WIcon :item="k.art" :ns="k.ns" :title="k.name" :fallback="k.fa" />
         <span :class="$style.name">{{ k.name }}</span>
         <span :class="$style.state">{{ (config.presets.currency.on || (k.id === 'jewels' && config.presets.clusterPrices.on)) ? 'On' : 'Off' }}</span>
@@ -57,20 +57,20 @@ const LOOT_CLASSES = [
   { id: 'jewels', name: 'Jewels', art: 'Large Cluster Jewel', ns: 'ITEM', fa: 'fas fa-circle' },
   { id: 'league', name: 'League items', art: 'Expedition Logbook', ns: 'ITEM', fa: 'fas fa-book' },
   { id: 'flasks', name: 'Flasks and tinctures', art: 'Divine Life Flask', ns: 'ITEM', fa: 'fas fa-flask' },
-  { id: 'special', name: 'Special gear', art: 'Vermillion Ring', ns: 'ITEM', fa: 'fas fa-ring' },
   { id: 'recipes', name: 'Recipes', art: 'Chromatic Orb', ns: 'ITEM', fa: 'fas fa-flask' },
   { id: 'levelling', name: 'Levelling', art: 'Scroll of Wisdom', ns: 'ITEM', fa: 'fas fa-seedling' }
 ] as const satisfies ReadonlyArray<{ id: string, name: string, art: string, ns: Ns, fa: string }>
 type ClassId = (typeof LOOT_CLASSES)[number]['id']
 
 // Classes prices decide already: one engine and one switch for both.
-const PRICED = new Set<ClassId>(['currency', 'gold', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels', 'league', 'special', 'flasks'])
+const PRICED = new Set<ClassId>(['currency', 'gold', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels', 'league', 'flasks'])
 const sel = ref<ClassId>('currency')
 const focusItem = ref<string | null>(null)
 watch(() => props.focus, f => {
   if (!f) return
   const at = lootFocus(f)
-  if (!at) return
+  // Special gear lives on the Equipment tab.
+  if (!at || at.cls === 'special') return
   sel.value = at.cls
   focusItem.value = at.item
 }, { immediate: true })
