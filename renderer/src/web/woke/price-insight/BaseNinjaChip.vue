@@ -15,7 +15,6 @@ import type { ParsedItem } from '@/parser'
 import { usePoeninja, displayRounding } from '@/web/background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
 import { getDetailsId, isValuableBasetype } from '@/web/price-check/trends/getDetailsId'
-import { canUseBasePreset } from './base-preset-gate'
 
 const props = defineProps<{ item: ParsedItem, league: string }>()
 const emit = defineEmits<{ (e: 'search'): void }>()
@@ -27,7 +26,7 @@ const row = computed(() => {
   const it = props.item
   // Read first, so the chip shows once prices load after the item opened.
   if (updatedAt.value == null) return null
-  if (!canUseBasePreset(it) || !isValuableBasetype(it) || it.isFractured || it.isSynthesised || it.isCorrupted) return null
+  if (!isValuableBasetype(it) || it.isUnidentified || it.isFractured || it.isSynthesised || it.isCorrupted) return null
   // poe.ninja only holds the league picked in settings.
   if (props.league !== selectedId.value) return null
   const id = getDetailsId(it)

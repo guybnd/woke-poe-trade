@@ -93,3 +93,8 @@ export function restoreBasePreset (filters: ItemFilters, snap: BaseSnapshot) {
     }
   }
 }
+
+/** What the Base step changes, to tell when a later edit undid it. */
+export function baseSignature (filters: ItemFilters, stats: FilterOrGroup[]): string {
+  return JSON.stringify([{ ...filters, trade: undefined }, stats.flatMap(s => s.group ? [s.meta, ...s.stats] : [s]).map(f => [f.disabled, f.roll?.min, f.roll?.max])])
+}

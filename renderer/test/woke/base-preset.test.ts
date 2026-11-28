@@ -12,8 +12,8 @@ vi.mock('@/web/Config', () => ({
 import { createFilters } from '@/web/price-check/filters/create-item-filters'
 import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
-import { applyBasePreset, restoreBasePreset } from '@/web/woke/price-insight/base-preset'
-import { baseSignature, canUseBasePreset } from '@/web/woke/price-insight/base-preset-gate'
+import { applyBasePreset, restoreBasePreset, baseSignature } from '@/web/woke/price-insight/base-preset'
+import { isValuableBasetype } from '@/web/price-check/trends/getDetailsId'
 /* eslint-enable import-x/first */
 
 const OPTS = { league: 'Mirage', merchantOnly: true, currency: null, collapseListings: 'api' as const, activateStockFilter: false, searchStatRange: 10, useEn: false, exact: false }
@@ -78,7 +78,7 @@ describe('Base step', () => {
 
   it('ticks base, item level, influence and quality over 20, and unticks the mods', () => {
     const { item, filters, stats } = setup(HUNTER_GLOVES)
-    expect(canUseBasePreset(item)).toBe(true)
+    expect(isValuableBasetype(item)).toBe(true)
     applyBasePreset(item, filters, stats)
     expect(filters.searchRelaxed?.disabled).toBe(true)
     expect(filters.itemLevel).toMatchObject({ value: 85, disabled: false })
@@ -117,6 +117,6 @@ describe('Base step', () => {
   })
 
   it('is not offered on uniques', () => {
-    expect(canUseBasePreset(parseItem(fixture('items/unique-headhunter.txt')))).toBe(false)
+    expect(isValuableBasetype(parseItem(fixture('items/unique-headhunter.txt')))).toBe(false)
   })
 })

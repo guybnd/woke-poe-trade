@@ -17,7 +17,7 @@ import { estimateWorth, valueChanges, applyValueChanges, WORTH_SOURCE_LABEL } fr
 import { driverSeed } from './drivers'
 import { priceView } from './view'
 import { poepricesState, measuredDrivers, checkedFair, modWorth, loadPoeprices } from './check-state'
-import { canUseBasePreset, baseSignature } from './base-preset-gate'
+import { isValuableBasetype } from '@/web/price-check/trends/getDetailsId'
 import type { BaseSnapshot } from './base-preset'
 
 const props = defineProps<{ stats: FilterOrGroup[], item: ParsedItem, league: string, filters?: ItemFilters }>()
@@ -26,8 +26,9 @@ const emit = defineEmits<{ (e: 'apply', preset: RollPreset | 'value' | 'base'): 
 
 const showValue = computed(() => priceView.value === 'improved' && props.item.rarity === ItemRarity.Rare)
 
-const showBase = computed(() => props.filters != null && canUseBasePreset(props.item))
-const BASE_TITLE = 'Price it as its base: base type, item level, influence and quality over 20 on, every mod off. Fractured, synthesised and Exceptional or better eldritch mods stay on. Click again for your old ticks.'
+// Gear that isn't unique (base-preset.ts, loaded on the first click).
+const showBase = computed(() => props.filters != null && !props.item.isUnidentified && isValuableBasetype(props.item))
+const BASE_TITLE = 'Price it as its base: base, item level, influence and quality over 20 on, mods off. Click again to undo.'
 
 const options = computed(() => [
   ...(showBase.value ? [{ value: 'base', label: 'Base', title: BASE_TITLE, attrs: { 'data-base-preset': '' } }] : []),
@@ -90,8 +91,8 @@ const sig = () => JSON.stringify(props.stats)
 watch(() => props.item, () => { valueSig.value = null; base.value = null })
 
 // "Base" stays lit until a box or tick is changed by hand; a second click puts the old ticks back.
-const base = shallowRef<{ snap: BaseSnapshot, sig: string } | null>(null)
-const baseOn = computed(() => base.value != null && props.filters != null && base.value.sig === baseSignature(props.filters, props.stats))
+const base = shallowRef<{ snap: BaseSnapshot, sig: string, sign: typeof import('./base-preset').baseSignature } | null>(null)
+const baseOn = computed(() => base.value != null && props.filters != null && base.value.sig === base.value.sign(props.filters, props.stats))
 
 const active = computed(() => {
   if (baseOn.value) return 'base'
@@ -107,7 +108,7 @@ async function pickBase () {
   baseBusy = true
   let mod: typeof import('./base-preset')
   try { mod = await import('./base-preset') } finally { baseBusy = false }
-  const { applyBasePreset, restoreBasePreset } = mod
+  const { applyBasePreset, restoreBasePreset, baseSignature } = mod
   // Another item or preset came up while the code loaded.
   if (props.item !== item || props.filters !== filters) return
   if (baseOn.value) {
@@ -115,7 +116,7 @@ async function pickBase () {
     base.value = null
   } else {
     const snap = applyBasePreset(item, filters, props.stats)
-    base.value = { snap, sig: baseSignature(filters, props.stats) }
+    base.value = { snap, sig: baseSignature(filters, props.stats), sign: baseSignature }
   }
   valueSig.value = null
   emit('apply', 'base')
