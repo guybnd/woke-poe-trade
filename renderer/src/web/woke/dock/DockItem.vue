@@ -8,7 +8,7 @@
 //   </DockItem>
 import { computed, inject, onUnmounted, useSlots, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
-import { PEEK_MS, dockConfig, isDismissed, peeksOn, registerDockEntry, unregisterDockEntry, wakeIcon } from './dock'
+import { PEEK_MS, iconHidden, isDismissed, peeksOn, registerDockEntry, unregisterDockEntry, wakeIcon } from './dock'
 import type { DockLed, DockMenuAction, DockTone } from './dock'
 
 const props = withDefaults(defineProps<{
@@ -95,7 +95,7 @@ function unpeek () {
 // click's pin ends with the overlay.
 function togglePin () {
   // No icon to hold a card open on: don't arm it for later.
-  if (!props.show || dockConfig().hidden.includes(props.id) || isDismissed(props.id)) return
+  if (!props.show || iconHidden(props) || isDismissed(props.id)) return
   entry.pinned = entry.pinned ? null : 'key'
 }
 watch(() => props.show && !isDismissed(props.id), (show) => { if (!show) entry.pinned = null })

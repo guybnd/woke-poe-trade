@@ -11,7 +11,8 @@ import { moduleIcon } from '../ui/game-icons'
 import { Host } from '@/web/background/IPC'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { zone } from '../shared/zone'
-import { endOfToday, hereEnded, hereScope, timeLeft } from './dismiss-rules'
+import { endOfToday, hereEnded, hereScope, iconHiddenIn, timeLeft } from './dismiss-rules'
+import { markAllNewsSeen } from '../tab-bar/news'
 import type { HereScope } from './dismiss-rules'
 
 export type DockTone = 'accent' | 'up' | 'down' | 'warn'
@@ -237,8 +238,15 @@ export function holdOpen (entry: DockEntry, open: boolean) {
 
 // Whether a module's icon has its place in the row now, even if dismissed for a
 // while (the run timer stays out of the row while the campaign icon is away).
+// Switched off for good: its own id, or the icon it folds into ("Always" on a
+// host hides what's folded in then; one that only shows later, like Lab gems
+// in the lab, must not turn up as its own icon).
+export function iconHidden (p: { id: string, into?: string }, hidden = dockConfig().hidden): boolean {
+  return iconHiddenIn(p, hidden)
+}
+
 export function dockIconShowing (id: string): boolean {
-  return !dockConfig().hidden.includes(id) && dockEntries.value.some(e => e.props.id === id && e.props.show)
+  return dockEntries.value.some(e => e.props.id === id && e.props.show && !iconHidden(e.props))
 }
 
 export function unregisterDockEntry (entry: DockEntry) {
@@ -260,7 +268,7 @@ export interface DockGroup {
 // folded into their host when it's there.
 export const dockGroups = computed<DockGroup[]>(() => {
   const hidden = dockConfig().hidden
-  const shown = dockEntries.value.filter(e => e.props.show && !hidden.includes(e.props.id) && !isDismissed(e.props.id))
+  const shown = dockEntries.value.filter(e => e.props.show && !iconHidden(e.props, hidden) && !isDismissed(e.props.id))
   const hosts = shown.filter(e => !e.props.into || !shown.some(h => h.props.id === e.props.into && !h.props.into))
   const groups = hosts
     .sort((a, b) => orderOf(a.props.id) - orderOf(b.props.id) || a.key - b.key)
@@ -297,7 +305,8 @@ function without<T> (map: Record<string, T>, ids: string[]): Record<string, T> {
 export function dismissIcons (ids: string[], what: DismissFor, now = Date.now()): DismissUndo {
   const d = ensureDockConfig()
   const had = <T>(map: Record<string, T>) => Object.fromEntries(Object.entries(map).filter(([id]) => ids.includes(id)))
-  const before = { here: had(dismissedHere.value), timed: had(d.dismissed ?? {}), hidden: d.hidden.filter(id => ids.includes(id)) }
+  const woke = ensureWokeConfig(AppConfig()).woke
+  const before = { here: had(dismissedHere.value), timed: had(d.dismissed ?? {}), hidden: d.hidden.filter(id => ids.includes(id)), seenNews: woke.seenNews }
   let phrase = 'for good'
   dismissClock.value = now
   if (what === 'here') {
@@ -306,6 +315,8 @@ export function dismissIcons (ids: string[], what: DismissFor, now = Date.now())
     dismissedHere.value = { ...dismissedHere.value, ...Object.fromEntries(ids.map(id => [id, scope])) }
   } else if (what === 'always') {
     d.hidden = [...new Set([...d.hidden, ...ids])]
+    // As What's new switched off: bringing it back shows only what came after.
+    if (ids.includes('whats-new')) markAllNewsSeen(woke)
     dismissedHere.value = without(dismissedHere.value, ids)
     d.dismissed = without(d.dismissed ?? {}, ids)
   } else {
@@ -321,6 +332,7 @@ export function dismissIcons (ids: string[], what: DismissFor, now = Date.now())
       dismissedHere.value = { ...without(dismissedHere.value, ids), ...before.here }
       cur.dismissed = { ...without(cur.dismissed ?? {}, ids), ...before.timed }
       cur.hidden = [...cur.hidden.filter(id => !ids.includes(id)), ...before.hidden]
+      if (what === 'always' && ids.includes('whats-new')) ensureWokeConfig(AppConfig()).woke.seenNews = before.seenNews
       saveDock()
     }
   }
