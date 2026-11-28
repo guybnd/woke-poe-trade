@@ -39,9 +39,16 @@
         <span v-if="ownSteps.length" class="w-faint text-xs" :title="ownSteps.join(', ')">· {{ ownSteps.length === 1 ? `${ownSteps[0]} sets its own` : `${ownSteps.length} sections set their own` }}</span>
       </span>
     </div>
+    <!-- Gold has no price: its page's ruler steps piles by size. -->
+    <div v-if="kind === 'gold'" :class="$style.goldRuler">
+      <span :class="$style.lookLab">Pile size for each step</span>
+      <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, 'gold')" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
+    </div>
+    <template v-else>
     <div :class="$style.mainLab" data-currency-main-ruler><b>Main ruler</b><span class="w-faint text-xs">every Loot page{{ ownRulers.length ? ` · ${ownRulers.length === 1 ? `${ownRulers[0]} has its own` : `${ownRulers.length} sections have their own`}` : '' }}</span></div>
     <StepRuler main :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="stepSample"
       @edit="s => stepEdit = s" @set="setShown" />
+    </template>
 
     <div v-if="stepEdit === 0" :class="$style.stepEd" data-currency-step-editor>
       <div :class="$style.stepEdHead">
@@ -76,6 +83,7 @@
       <WChip clickable :active="only === 'shown'" @click="only = 'shown'">Can show {{ shownCount }}</WChip>
       <WChip clickable :active="only === 'hidden'" @click="only = 'hidden'">Always hidden {{ rows.length - shownCount }}</WChip>
       <WChip clickable :active="only === 'edited'" @click="only = 'edited'">Edited {{ editedCount }}</WChip>
+      <WChip v-if="biasedCount || only === 'biased'" clickable :active="only === 'biased'" title="Items with their own Price bias" data-loot-only-biased @click="only = 'biased'">Own price bias {{ biasedCount }}</WChip>
     </div>
 
     <div v-if="!rows.length" class="w-faint text-sm">{{ emptyText }}</div>
@@ -139,10 +147,6 @@
           </span>
           <StepRuler v-if="c.rulers[g.cat.id]" :c="c" :eff="eff" :cat="g.cat.id" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, g.cat.id)" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="(i, v) => setOwn(g.cat.id, i, v)" />
         </div>
-        <div v-if="g.cat.id === 'gold'" :class="$style.goldRuler">
-          <span :class="$style.lookLab">Pile size for each step</span>
-          <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, 'gold')" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
-        </div>
         <template v-for="sg in g.subs" :key="sg.id">
         <div v-if="sg.name" :class="$style.subHead" :data-currency-sub="sg.name">
           <span :class="$style.subFold" role="button" tabindex="0" :aria-expanded="isOpen(`${g.cat.id}/${sg.name}`)"
@@ -164,7 +168,7 @@
           <WItemRow :item="tipOf(r.it)" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
             <span :class="$style.name"><input v-if="kind === 'uniques'" type="checkbox" :class="$style.onBox" :checked="c.items[r.it.name]?.step !== 0" :aria-label="`Show ${r.it.name}`"
               title="Untick to hide this base in maps (you don't care about it)" data-loot-unique-on @click.stop="toggleOn(r.it.name)" @keydown.stop><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
-              :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ rowName(r.it) }}<span v-if="gemCorrupted(r.it)" :class="$style.corr" title="Corrupted: this price is for a corrupted gem of this level and quality"><WIcon currency="Vaal Orb" size="sm" />Corrupted</span><span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.it.avg && r.it.of && r.it.of > 1" :class="$style.uniqTop" :title="`Priced by an average drop: each of the ${r.it.of} uniques that drop on it, counted by how often it turns up`"> · average of {{ r.it.of }}</span><span v-if="r.it.uniques?.some(u => u.out)" :class="$style.uniqTop" title="You left these out of the average"> · left out: {{ r.it.uniques.filter(u => u.out).map(u => u.name).join(', ') }}</span><span v-if="r.it.chase" :class="$style.uniqTop" :title="`The rarest kind of unique (T0): it doesn't count in the average; the base shows in Chase uniques with its own look`"> · chase: {{ r.it.chase.map(x => `${x.name} ${chaosText(x.chaos)}`).join(', ') }}</span><span v-if="sizeCutNow(r.it, eff) < 1" :class="$style.uniqTop" :title="`Size cut: a ${r.it.size} item counts ${Math.round(sizeCutNow(r.it, eff) * 100)}% of its price`"> · {{ r.it.size }} · {{ Math.round(sizeCutNow(r.it, eff) * 100) }}%</span><span v-if="r.edited" :class="$style.edited"> edited</span></span>
+              :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ rowName(r.it) }}<span v-if="gemCorrupted(r.it)" :class="$style.corr" title="Corrupted: this price is for a corrupted gem of this level and quality"><WIcon currency="Vaal Orb" size="sm" />Corrupted</span><span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.it.avg && r.it.of && r.it.of > 1" :class="$style.uniqTop" :title="`Priced by an average drop: each of the ${r.it.of} uniques that drop on it, counted by how often it turns up`"> · average of {{ r.it.of }}</span><span v-if="r.it.uniques?.some(u => u.out)" :class="$style.uniqTop" title="You left these out of the average"> · left out: {{ r.it.uniques.filter(u => u.out).map(u => u.name).join(', ') }}</span><span v-if="r.it.chase" :class="$style.uniqTop" :title="`The rarest kind of unique (T0): it doesn't count in the average; the base shows in Chase uniques with its own look`"> · chase: {{ r.it.chase.map(x => `${x.name} ${chaosText(x.chaos)}`).join(', ') }}</span><span v-if="sizeCutNow(r.it, eff) < 1" :class="$style.uniqTop" :title="`Size cut: a ${r.it.size} item counts ${Math.round(sizeCutNow(r.it, eff) * 100)}% of its price`"> · {{ r.it.size }} · {{ Math.round(sizeCutNow(r.it, eff) * 100) }}%</span><span v-if="r.bias" :class="$style.edited"> · bias {{ r.bias }}</span><span v-else-if="r.edited" :class="$style.edited"> edited</span></span>
             <span :class="$style.price" :title="r.it.type === 'gold' ? 'No price: the Gold ruler steps each pile by its size' : r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows at least Small' : r.it.est ? `No usable price: a guess from NeverSink's ${r.it.tier ? `tier ${r.it.tier}` : 'tiers'}` : 'poe.ninja'">
               <template v-if="r.it.type === 'gold'">by size</template><template v-else>{{ chaosText(r.it.chaos) }}<span v-if="r.it.est" :class="$style.est"> est.</span></template>
             </span>
@@ -220,10 +224,18 @@ const props = withDefaults(defineProps<{
   // An item to open and scroll to (Alt+F's "Open on the Loot tab").
   focusItem?: string | null
 }>(), { kind: 'currency', focusItem: null })
-const KIND_NAME: Record<LootKind, string> = { currency: 'currency', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems', maps: 'special maps', jewels: 'jewels', league: 'league items' }
+const KIND_NAME: Record<LootKind, string> = { currency: 'currency', gold: 'gold', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems', maps: 'special maps', jewels: 'jewels', league: 'league items' }
 const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.kind))
 // The "?" (help format A: a lead line and bullets, checked by help-format.test.ts).
-const INFO = `In maps (area level 68+), ${KIND_NAME[props.kind]} show by poe.ninja price, in place of NeverSink's tiers.
+const INFO = props.kind === 'gold'
+  ? `In maps (area level 68+), a gold pile shows by its size, in place of NeverSink's tiers.
+- Slide where each step starts on the **ruler**: bigger piles get a louder step.
+- **Strictness** scales every size.
+- Untick **Show** on a step to hide its piles.
+- The section's chip sets **Hide**, **By price** or **Always**.
+
+Only this profile. Your own rules, build rules and presets still win.`
+  : `In maps (area level 68+), ${KIND_NAME[props.kind]} show by poe.ninja price, in place of NeverSink's tiers.
 ${props.kind === 'currency' || props.kind === 'fragments' || props.kind === 'cards' ? '- A stack counts at its whole price. Big stacks of cheap items count less.' : ''}
 - Under the **line** it hides. Above it, each step starts at the price you set.
 - Untick a step to hide it: every page, one page or one section.
@@ -329,14 +341,20 @@ const rows = computed(() => items.value
     const stacks = stacksFor(it, eff.value)
     const edit = c.value.items[it.name]
     const off = offSteps(it, c.value)
-    return { it, one: stepOfPile(stacks, 1, off), shows: pileSteps(stacks, off).some(([, , hidden]) => !hidden), pills: pillsOf(stacks, edit, it, off), edited: edit != null }
+    return { it, one: stepOfPile(stacks, 1, off), shows: pileSteps(stacks, off).some(([, , hidden]) => !hidden), pills: pillsOf(stacks, edit, it, off), edited: edit != null, bias: biasText(edit?.mult) }
   })
   .sort((x, y) => y.it.chaos - x.it.chaos || x.it.name.localeCompare(y.it.name)))
 const shownCount = computed(() => rows.value.filter(r => r.shows).length)
 const editedCount = computed(() => rows.value.filter(r => r.edited).length)
+const biasedCount = computed(() => rows.value.filter(r => r.bias).length)
+// An item's own Price bias as the Alt+F card words it ("+25%"), or ''.
+function biasText (m: number | undefined) {
+  const p = m == null ? 0 : Math.round((m - 1) * 100)
+  return p === 0 ? '' : `${p > 0 ? '+' : '−'}${Math.abs(p)}%`
+}
 
 const query = ref('')
-const only = ref<'all' | 'shown' | 'hidden' | 'edited'>('all')
+const only = ref<'all' | 'shown' | 'hidden' | 'edited' | 'biased'>('all')
 const visible = computed(() => {
   const q = query.value.trim().toLowerCase()
   return rows.value.filter(r =>
@@ -344,7 +362,8 @@ const visible = computed(() => {
     (only.value === 'all' ||
       (only.value === 'shown' && r.shows) ||
       (only.value === 'hidden' && !r.shows) ||
-      (only.value === 'edited' && r.edited)))
+      (only.value === 'edited' && r.edited) ||
+      (only.value === 'biased' && r.bias)))
 })
 
 const groups = computed(() => CATS.value.map(cat => {
@@ -381,7 +400,7 @@ function setSubStep (list: Row[], v: string) {
 }
 
 // Folded by default; a search or a filter chip opens what it finds.
-const open = ref(new Set<string>())
+const open = ref(new Set<string>(props.kind === 'gold' ? ['gold'] : []))
 const filtering = computed(() => query.value.trim() !== '' || only.value !== 'all')
 const isOpen = (id: string) => filtering.value || open.value.has(id)
 function toggle (id: string) {
@@ -419,7 +438,7 @@ const level = computed(() => levelOf(props.store.doc.value?.strictness ?? null))
 const mult = computed(() => c.value.mult ?? strictMult(level.value))
 const eff = computed(() => scaled(c.value, props.store.doc.value?.strictness ?? null))
 const dragMult = ref<number | null>(null)
-const SAMPLE_CATS = props.kind === 'maps' ? ['mapblight', 'mapravaged'] : props.kind === 'jewels' ? ['jewabyss', 'jewplain'] : props.kind === 'league' ? ['lgexped', 'lgheist', 'lgviscera'] : props.kind === 'gems' ? ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'] : props.kind === 'uniques' ? ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss', 'uniqfoul'] : props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
+const SAMPLE_CATS = props.kind === 'gold' ? ['gold'] : props.kind === 'maps' ? ['mapblight', 'mapravaged'] : props.kind === 'jewels' ? ['jewabyss', 'jewplain'] : props.kind === 'league' ? ['lgexped', 'lgheist', 'lgviscera'] : props.kind === 'gems' ? ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'] : props.kind === 'uniques' ? ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss', 'uniqfoul'] : props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
 // The colours the step ruler shows.
 const sampleCat = ref(SAMPLE_CATS[0])
 // Each step card's sample: an item of the picked category that one of shows

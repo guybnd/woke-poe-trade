@@ -1331,6 +1331,8 @@ test('Currency weights: Alt + F on currency shows its step first, a Shows switch
   // Price bias applies on release, in the sections' words.
   await page.locator('[data-currency-card-mult]').fill('2')
   await expect(card).toContainText('+56%')
+  // Its own bias makes This item Custom (Guy 2026-11-28).
+  await expect(card.locator('[data-currency-card-item]')).toContainText('Custom')
   // The Shows switch hides every pile.
   await card.locator('[data-currency-card-shows]').click()
   await expect(page.locator('[data-currency-card-now]')).toContainText('Hidden')
@@ -1347,6 +1349,30 @@ test('Currency weights: Alt + F on currency shows its step first, a Shows switch
   await page.getByRole('menuitemradio', { name: /^Always/ }).click()
   await expect(page.locator('[data-currency-card-now]')).not.toContainText('Hidden')
   await overlay.snap('currency card, section off, item always')
+})
+
+test('Currency weights: Go to rule on an Alt + F card opens that item on its own Loot page', async ({ overlay, fakeApp }) => {
+  test.slow()
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters/neversink/3-STRICT.filter.gz'))))
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), presets: { currency: { on: true } } }] })
+  const page = overlay.page
+  await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+F')
+  // Guy 2026-11-28: a gem opened the Currency page (the Loot tab loads late
+  // and its focus was already gone). Currency last: it's the page it opens on anyway.
+  for (const [file, cls] of [['items/gem-transfigured.txt', 'gems'], ['items/card-the-doctor.txt', 'cards'], ['items/essence-deafening-misery.txt', 'currency']]) {
+    // Back in the game: Alt + F works there, not in the editor.
+    fakeApp.focusGame(true)
+    await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 10_000 }).toContain('Alt+F')
+    await overlay.copyItem(file, 'Alt + F')
+    await expect(page.locator('[data-currency-card], [data-currency-card-place]')).toBeVisible()
+    // A priced item has its row; a section's own rule (Transfigured gems: Always) only its page.
+    const name = await page.locator('[data-currency-card]').getAttribute('data-currency-card', { timeout: 500 }).catch(() => null)
+    await page.getByRole('button', { name: 'Go to rule ›' }).click()
+    await expect(page.locator(`[data-loot-class="${cls}"]`)).toHaveAttribute('aria-pressed', 'true')
+    if (name) await expect(page.locator(`[data-currency-item="${name}"]`)).toBeInViewport()
+    await overlay.snap(`go to rule, ${cls}`)
+  }
 })
 
 test('Rare weights: Alt + F on an unidentified rare opens the Score card, and the redesigned tab', async ({ overlay, fakeApp }) => {
@@ -1409,6 +1435,12 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await page.getByRole('tab', { name: /^Loot/ }).click()
   // The Loot tab: a rail of classes, Currency first.
   await expect(page.locator('[data-loot-class="currency"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('[data-currency-cat="gold"]')).toHaveCount(0)
+  // Gold: its own page, open, with the pile size ruler on top.
+  await page.locator('[data-loot-class="gold"]').click()
+  await expect(page.locator('[data-currency-item="Gold"]')).toBeVisible()
+  await expect(page.locator('[data-currency-cat="orbs"]')).toHaveCount(0)
+  await overlay.snap('loot tab, gold')
   // Fragments: priced on the same ladder, folded by boss.
   await page.locator('[data-loot-class="fragments"]').click()
   await expect(page.locator('[data-currency-cat="invites"]')).toBeVisible()
