@@ -15,7 +15,7 @@
       <w-toggle v-model="dock.peeks" />
     </w-setting-row>
     <w-setting-row label="What's new after updates" hint="Off: no What's new icon, no NEW seals in All tools, no count on the rail.">
-      <w-toggle :model-value="!woke.newsOff" @update:model-value="setNewsOff(woke, !$event)" />
+      <w-toggle :model-value="!newsIsOff(woke)" @update:model-value="setNewsOff(woke, !$event)" />
     </w-setting-row>
     <w-setting-row label="Tips" hint="A short line for a key or click you might not know.
 - Shows at the foot of a window or a tooltip.
@@ -56,6 +56,7 @@ import { WButton, WInfo, WSettingRow, WSettingSection, WToggle } from '../ui'
 import { ensureWokeConfig, isWidgetTypeOn } from '../modules'
 import { DEFAULT_DOCK, DOCK_ORDER, dockListName } from './dock'
 import { setNewsOff } from '../tab-bar/news-off'
+import { markAllNewsSeen, newsIsOff } from '../tab-bar/news'
 import type { DockConfig } from './dock'
 
 // `config` is the settings window's working copy; changes apply as you make them.
@@ -89,6 +90,8 @@ function toggle (list: string[], id: string) {
   const i = list.indexOf(id)
   if (i >= 0) list.splice(i, 1)
   else list.push(id)
+  // Hiding What's new is switching it off: bringing it back shows only what came after.
+  if (i < 0 && id === 'whats-new' && list === dock.value.hidden) markAllNewsSeen(woke.value)
 }
 
 function resetPosition () {

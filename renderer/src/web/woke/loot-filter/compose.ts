@@ -100,6 +100,28 @@ export interface Composed {
   currencyItems: CurrencyItem[]
 }
 
+// One name the game doesn't know in a BaseType list and it refuses the whole
+// filter (Guy 2026-11-28: "Vaal Absolution (Absolution of ..." from a price
+// list). The rules woke writes keep only names the game knows; a rule left
+// with an empty list is written commented out.
+export function dropUnknownBases (doc: FilterDoc): number {
+  const known = nameCheck({ ...doc, blocks: doc.blocks.filter(b => !b.type?.startsWith('woke->')) })
+  let dropped = 0
+  for (const b of doc.blocks) {
+    if (!b.type?.startsWith('woke->') || b.disabled) continue
+    for (const c of b.conditions) {
+      if (c.key !== 'BaseType') continue
+      const keep = c.values.filter(v => known('BaseType', v))
+      if (keep.length === c.values.length) continue
+      dropped += c.values.length - keep.length
+      c.values = keep
+      b.dirty = true
+      if (!keep.length) b.disabled = true
+    }
+  }
+  return dropped
+}
+
 export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const next = parseFilterCopy(text)
   // The Loot tab's first-time carry-over, even before the tab is opened.
@@ -208,5 +230,6 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Again over the net's and restyled rules: one transfigured gem name in a
   // BaseType list and the game refuses to load the whole filter.
   renameBases(next, renameBase)
+  dropUnknownBases(next)
   return { doc: next, results, buildCount, netCount, netStackCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)), gearBlocks: gear.blocks, gearReplaced: gear.replaced, clusterSig, weightRules: weights?.blocks.length ?? 0, weightChars: weights?.chars ?? 0, weightBases, currencyRules: currency?.blocks.length ?? 0, currencyChars: currency?.chars ?? 0, currencyItems: currency?.items ?? [] }
 }

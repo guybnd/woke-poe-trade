@@ -357,3 +357,19 @@ describe('Alt+F on the Loot tab\'s own rows', () => {
     expect(lootFocus('recipes')?.cls).toBe('recipes')
   })
 })
+
+describe('a name the game does not know never reaches the filter', () => {
+  it('drops unknown BaseType names from woke rules, and comments out a rule left empty', async () => {
+    const { dropUnknownBases } = await import('@/web/woke/loot-filter/compose')
+    const doc = parseFilter(SEMI)
+    const cond = (values: string[]) => ({ key: 'BaseType', op: '==', count: null, values })
+    const mk = (values: string[]) => ({ ...doc.blocks[0], type: 'woke->currency', tier: 's1', disabled: false, conditions: [cond(values)] })
+    const a = mk(['Vaal Absolution (Absolution of Inspiring)', 'Arc'])
+    const b = mk(['Vaal Absolution (Absolution of Inspiring)'])
+    doc.blocks.unshift(a, b)
+    expect(dropUnknownBases(doc)).toBe(2)
+    expect(a.conditions[0].values).toEqual(['Arc'])
+    expect(b.disabled).toBe(true)
+    expect(doc.blocks.find(x => x.type === 'currency' && !x.disabled)?.conditions.find(c => c.key === 'BaseType')?.values.length).toBeGreaterThan(0)
+  })
+})

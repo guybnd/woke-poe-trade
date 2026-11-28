@@ -116,11 +116,19 @@ export function markAllNewsSeen (woke: WokeModulesConfig): void {
   markNewsSeen(woke, NEWS.map(n => n.id))
 }
 
+// What's new is off: switched off in Settings, or its dock icon dismissed for
+// good ("Always", or its Show switch in Settings › Icon row). A player who hid
+// the icon meant "stop telling me": no NEW seals or rail count after the next
+// update either (they used to come back with every update).
+export function newsIsOff (woke: WokeModulesConfig | undefined): boolean {
+  return !!(woke?.newsOff || woke?.dock?.hidden?.includes('whats-new'))
+}
+
 // What counts as seen. Before setup's first Finish (or with it closed
 // unfinished) it's all of it: a new player has nothing "new". The same with
 // What's new switched off, for players who update every day or two.
 export function seenNewsIds (woke: WokeModulesConfig | undefined): readonly string[] {
-  return woke?.setupDone && !woke.newsOff ? (woke.seenNews ?? []) : NEWS.map(n => n.id)
+  return woke?.setupDone && !newsIsOff(woke) ? (woke.seenNews ?? []) : NEWS.map(n => n.id)
 }
 
 // Lines not seen yet. Like the All tools count, a switched-off tool's line
