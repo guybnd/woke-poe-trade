@@ -190,7 +190,7 @@
 
     <template v-else>
       <p v-if="config.presets.weights.on" class="w-dim text-xs" :class="$style.over" data-gear-weights-note>
-        Equipment is on: a move here also sets the base's rank there (Equipment › Rare gear). Exotic bases and Never stay on the Drop tiers table only.
+        A move here also sets the base's rank for the score (Gear › Rare gear).
       </p>
       <div :class="$style.card">
         <div class="flex items-center gap-2 flex-wrap">

@@ -46,6 +46,7 @@
 
     <h3 :class="$style.head">Your build</h3>
     <BuildSection :config="config" :store="store" :class="$style.build" />
+    <slot />
   </div>
 </template>
 
@@ -82,7 +83,7 @@ interface TRow { name: string, art: string, look: string, tip: string, segs: Seg
 const AXIS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Maps']
 const all = (look: Look): Seg[] => [{ from: 1, to: 10, look }]
 const TIMELINE: TRow[] = [
-  { name: '5- and 6-links', art: 'Astral Plate', look: 'Big', segs: all('big'), tip: 'Any 5- or 6-link. Links in your build\'s colours stay on the Build tab, louder.' },
+  { name: '5- and 6-links', art: 'Astral Plate', look: 'Big', segs: all('big'), tip: 'Any 5- or 6-link. Links in your build\'s colours show louder, from Your build below.' },
   { name: '4-links', art: 'Simple Robe', look: 'Decent', segs: all('decent'), tip: 'Any 4-link.' },
   { name: '3-links', art: 'Plate Vest', look: 'Normal', segs: [{ from: 1, to: 3, look: 'normal' }], tip: 'Any 3-link until Act 3.' },
   { name: 'Small R-G-B', art: 'Chromatic Orb', look: 'Small', segs: [{ from: 1, to: 3, look: 'small' }], tip: 'Small items with red, green and blue linked sockets, for the Chromatic recipe.' },
@@ -97,7 +98,7 @@ const TIMELINE: TRow[] = [
   { name: 'Utility flasks', art: 'Quicksilver Flask', look: 'Normal', segs: all('normal'), tip: 'Every utility flask and tincture; Quicksilver one step louder.' },
   { name: 'Your armour', art: 'Plate Vest', look: 'Small', segs: [{ from: 1, to: 1, look: 'small', label: 'All' }, { from: 2, to: 10, look: 'small', label: 'New base' }], tip: 'White and blue armour in your defences: every piece in Act 1, then on a base within 5 levels of the area. Other white and blue gear hides.' },
   { name: 'Uniques', art: 'Goldrim', look: 'Normal+', segs: all('normal'), tip: 'Every unique at least Normal; prices make it louder.' },
-  { name: 'Gems', art: 'Arc', look: 'Normal', segs: [{ from: 1, to: 3, look: 'normal' }, { from: 4, to: 10, look: 'small', label: 'Quality' }], tip: 'Every gem before Act 4, then gems with quality Small. Your build\'s gems stay on the Build tab, louder.' },
+  { name: 'Gems', art: 'Arc', look: 'Normal', segs: [{ from: 1, to: 3, look: 'normal' }, { from: 4, to: 10, look: 'small', label: 'Quality' }], tip: 'Every gem before Act 4, then gems with quality Small. Your build\'s gems show louder, from Your build below.' },
   { name: 'Quest-like items', art: 'Treasure Key', look: 'Green', segs: [{ from: 1, to: 11, look: 'green' }], tip: 'Lab trinkets and keys, incursion items and heist targets: green with a moon on the minimap, everywhere.' }
 ]
 

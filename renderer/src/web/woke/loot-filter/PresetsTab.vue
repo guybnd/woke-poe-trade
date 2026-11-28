@@ -1,17 +1,17 @@
 <template>
-  <div :class="$style.wrap" class="w-scroll">
-    <div class="w-dim text-sm flex items-center gap-2">
+  <div :class="[$style.wrap, only ? $style.bare : 'w-scroll']">
+    <div v-if="!only" class="w-dim text-sm flex items-center gap-2">
       <span>{{ store.presetChanges.value ? `Adjusting ${store.presetChanges.value} of NeverSink's rules` : 'Common changes in one click' }}</span>
       <WInfo text="They're kept across NeverSink updates and never touch your own rules or the safety net." />
     </div>
-    <div v-if="covered.length" :class="$style.card" data-presets-loot-covers>
+    <div v-if="!only && covered.length" :class="$style.card" data-presets-loot-covers>
       <div class="text-sm">The Loot tab is on: in maps it now decides what these did. While levelling they still work.</div>
       <ul class="text-xs w-dim" :class="$style.covers">
         <li v-for="x in covered" :key="x.key"><b>{{ x.label }}</b> → {{ x.now }}</li>
       </ul>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('cheapCurrency')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.cheapCurrency.on">Hide currency worth under</WToggle>
         <WField v-model.number="cheapChaos" type="number" suffix="c" style="width: 5rem;" aria-label="Cheap currency line in chaos" />
@@ -24,7 +24,7 @@
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('chaosRecipe')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.chaosRecipe.on">Chaos recipe: unidentified item level 60-74 rares</WToggle>
         <WInfo text="One colour per slot. Click a slot to drop it once you have enough." />
@@ -38,7 +38,7 @@
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('quiet')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.quiet.on">Quiet mode: sounds only for tiers 1 to</WToggle>
         <WSelect :model-value="String(p.quiet.keepTiers)" :options="[2, 3, 4, 5].map(n => ({ value: String(n), label: String(n) }))" style="width: 4rem;"
@@ -47,7 +47,7 @@
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('bigger')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.bigger.on">Bigger labels: never smaller than</WToggle>
         <WField v-model.number="biggerSize" type="number" style="width: 4.5rem;" aria-label="Smallest label font size" />
@@ -55,7 +55,7 @@
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('colourBlind')" :class="$style.card">
       <WToggle v-model="p.colourBlind.on">Colour-blind safe beams and map icons</WToggle>
       <div class="flex items-center gap-2 text-xs w-dim">
         <span v-for="(to, from) in SWAPS" :key="from" class="flex items-center gap-1">
@@ -65,7 +65,7 @@
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('dust')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.dust.on">Show uniques worth disenchanting for dust</WToggle>
         <WInfo text="Switches on NeverSink's three dust tiers, which ship switched off. They list bases with a high dust value, whatever the price." />
@@ -83,21 +83,21 @@
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('sixSockets')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.sixSockets.on">Show 6-socket items for the vendor</WToggle>
         <WInfo text="Seven Jeweller's Orbs each, in grey, above NeverSink's rules." />
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('hideGear')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.hideGear.on">Hide white and blue gear once you're in maps</WToggle>
         <WInfo text="Keeps what NeverSink ranks higher: item level 86 bases, 6-sockets, influenced and exotic bases, flasks and the jewellery it highlights." />
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('lowTiers')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.lowTiers.on">Hide magic and rare gear below tier</WToggle>
         <WSelect :model-value="String(p.lowTiers.tier)" :options="itemTiers" style="width: 4.5rem;"
@@ -113,7 +113,7 @@ These still show:
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('cheapCards')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.cheapCards.on">Hide divination cards worth under</WToggle>
         <WField v-model.number="cardsChaos" type="number" suffix="c" style="width: 5rem;" aria-label="Cheap card line in chaos" />
@@ -122,7 +122,7 @@ These still show:
       <div v-if="p.cheapCards.on" class="w-faint text-xs">{{ priceNote(cards) }}</div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('lowMaps')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.lowMaps.on">Hide maps below tier</WToggle>
         <WSelect :model-value="String(p.lowMaps.tier)" :options="mapTiers" style="width: 4.5rem;"
@@ -131,14 +131,14 @@ These still show:
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('hideFlasks')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.hideFlasks.on">Hide flasks once you're in maps</WToggle>
         <WInfo text="20% quality and unique flasks still show." />
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('cheapUniques')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.cheapUniques.on">Hide uniques worth under</WToggle>
         <WField v-model.number="uniquesChaos" type="number" suffix="c" style="width: 5rem;" aria-label="Cheap unique line in chaos" />
@@ -153,7 +153,7 @@ These still show:
       <div v-if="p.cheapUniques.on" class="w-faint text-xs">{{ uniqueNote }}</div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('cheapSplinters')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.cheapSplinters.on">Hide splinter and shard stacks worth under</WToggle>
         <WField v-model.number="splintersChaos" type="number" suffix="c" style="width: 5rem;" aria-label="Cheap splinter line in chaos" />
@@ -162,28 +162,28 @@ These still show:
       <div v-if="p.cheapSplinters.on" class="w-faint text-xs">{{ priceNote(splinters) }}</div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('msBoots')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.msBoots.on">Highlight boots with movement speed while levelling</WToggle>
         <WInfo text="Magic and rare boots with Runner's or better, with a border and a sound." />
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('hideRgb')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.hideRgb.on">Hide R-G-B linked items once you're in maps</WToggle>
         <WInfo text="Stops NeverSink's chromatic orb recipe rules in maps. They still show while levelling." />
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('vendorQuality')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.vendorQuality.on">Show 20% quality gems and flasks for the vendor</WToggle>
         <WInfo text="For the Gemcutter's Prism and Glassblower's Bauble recipes, while levelling and in early maps (area level 77 and below)." />
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('volume')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.volume.on">Drop sound volume</WToggle>
         <WField v-model.number="volumePercent" type="number" suffix="%" style="width: 5rem;" aria-label="Drop sound volume" />
@@ -191,7 +191,7 @@ These still show:
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('beams')" :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.beams.on">Beams and map icons only for tiers 1 to</WToggle>
         <WSelect :model-value="String(p.beams.keepTiers)" :options="[2, 3, 4, 5].map(n => ({ value: String(n), label: String(n) }))" style="width: 4rem;"
@@ -200,7 +200,7 @@ These still show:
       </div>
     </div>
 
-    <div :class="$style.card">
+    <div v-if="shown('weapons')" :class="$style.card">
       <div class="flex flex-wrap items-center gap-2">
         <WToggle v-model="p.weapons.on">While levelling, only weapons for</WToggle>
         <WSegmented :model-value="p.weapons.archetype" :options="archetypeOptions" aria-label="Build type"
@@ -230,6 +230,7 @@ import { WChip, WField, WInfo, WSegmented, WSelect, WToggle } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
+import type { Presets } from './presets'
 import { ARCHETYPES, DUST_ILVL, ITEM_TIER_MAX, ITEM_TIER_MIN, RECIPE_SLOTS, archetypeClasses, toggleWeaponClass, cheapCards, cheapCurrencyBases, cheapSplinters, cheapUniqueBases, isNeverSinkDustTier, neverSinkDustBases } from './presets'
 import { WEAPON_CLASSES } from './build-rules'
 import { dustBases } from '../disenchant/calc'
@@ -240,7 +241,11 @@ import { LOOT_COVERS } from './loot-presets'
 const props = defineProps<{
   store: LootFilterStore
   config: LootFilterWidget
+  // Just these presets, as a section of a Loot page (Look & sound, Recipes,
+  // Levelling): the window has no Presets tab since NeverSink went.
+  only?: ReadonlyArray<keyof Presets>
 }>()
+const shown = (k: keyof Presets) => !props.only || props.only.includes(k)
 
 const p = computed(() => props.config.presets)
 // Presets the Loot tab and Equipment cover (Guy's pick, 2026-11-28).
@@ -369,6 +374,7 @@ function toggleSlot (key: string) {
   flex-direction: column;
   gap: 8px;
 }
+.bare { max-height: none; flex: none; padding: 8px 0 0; }
 :global([data-w-sized]) .wrap { max-height: none; }
 .card {
   display: flex;
