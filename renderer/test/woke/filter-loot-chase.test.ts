@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
 import { currencyItems, currencyLook, defaultCurrency, sectionMode } from '@/web/woke/loot-filter/currency-weights'
-import { normalizeCurrency } from '@/web/woke/loot-filter/currency-settings'
+import { normalizeCurrency, toggleNotAvg } from '@/web/woke/loot-filter/currency-settings'
 import { NET_GROUPS, dropLookup } from '@/web/woke/loot-filter/economy'
 import type { PriceItem } from '@/web/woke/market/types'
 import { neverSink } from '../helpers/neversink'
@@ -31,13 +31,27 @@ describe('unique bases by their average drop', () => {
     const p = look(U, 'Leather Belt')!
     expect(p.chaos).toBeGreaterThan(1)
     expect(p.chaos).toBeLessThan(3)
-    expect(p.drop).toEqual({ of: 3, chase: [{ name: 'Headhunter', chaos: 50000 }] })
+    expect(p.drop).toMatchObject({ of: 3, chase: [{ name: 'Headhunter', chaos: 50000 }] })
+    expect(p.drop?.uniques.find(u => u.name === 'Headhunter')).toMatchObject({ chase: true, counted: false, out: false })
   })
 
   it('one 4c unique among 1c ones doesn\'t carry the base', () => {
     const p = look(U, 'Coral Amulet')!
     expect(p.chaos).toBeLessThan(2)
     expect(p.drop?.chase).toEqual([])
+  })
+
+  it('a unique you leave out doesn\'t count; leaving out all counts all', () => {
+    const out = dropLookup(ITEMS, b => ON[b] ?? [], TIERS, new Set(['The Primordial Chain']))
+    const p = out(U, 'Coral Amulet')!
+    expect(p.drop?.of).toBe(2)
+    expect(p.drop?.uniques.find(u => u.name === 'The Primordial Chain')).toMatchObject({ out: true, counted: false })
+    expect(p.chaos).toBeLessThan(look(U, 'Coral Amulet')!.chaos)
+    const all = dropLookup(ITEMS, b => ON[b] ?? [], TIERS, new Set(['Voll\'s Devotion']))
+    expect(all(U, 'Agate Amulet')?.chaos).toBe(7)
+    expect(toggleNotAvg({ notAvg: ['B'] }, 'A')).toEqual(['A', 'B'])
+    expect(toggleNotAvg({ notAvg: ['A', 'B'] }, 'A')).toEqual(['B'])
+    expect(normalizeCurrency({ ...defaultCurrency(), notAvg: ['Tavukai', 'bad"name'] }).notAvg).toEqual(['Tavukai'])
   })
 
   it('only T0 is a chase: a valuable T2 unique still counts', () => {

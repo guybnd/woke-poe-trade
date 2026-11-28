@@ -89,7 +89,9 @@ export interface PricePoint {
   // Uniques priced by their average drop (dropLookup): how many uniques
   // counted, and the chase uniques left out of the average (rare and worth
   // the chase line or more), most valuable first.
-  drop?: { of: number, chase: Array<{ name: string, chaos: number }> }
+  // `uniques`: every priced unique on the base, cheapest last, with whether
+  // the average counts it (`out`: you left it out, notAvg).
+  drop?: { of: number, chase: Array<{ name: string, chaos: number }>, uniques: DropUnique[] }
 }
 
 // Price of a base type in one group, or null when poe.ninja has none.
@@ -241,20 +243,27 @@ export function dropWeight (tiers: Record<string, number> | null, name: string):
 // their average, and is a chase base too.
 // Everything that isn't a plain unique base (Foulborn, special rolls) is
 // priced by its best line, as before.
+export interface DropUnique { name: string, chaos: number, tier: number | null, counted: boolean, chase: boolean, out: boolean }
+
 export function dropLookup (
   items: PriceItem[],
   uniquesOnBase: (base: string) => string[],
-  tiers: Record<string, number> | null
+  tiers: Record<string, number> | null,
+  // Uniques you left out of the average (Guy 2026-11-28: Precursor's Emblem,
+  // a special drop). A base whose uniques are all left out counts them all.
+  notAvg: ReadonlySet<string> = new Set()
 ): PriceLookup {
   const max = priceLookup(items, uniquesOnBase, 'max')
   const find = priceFinder(items, 'market')
   return (group, base) => {
     if (!group.unique || group.foulborn || group.links || group.special) return max(group, base)
-    const priced = uniquesOnBase(base)
+    const all = uniquesOnBase(base)
       .filter(name => !isReplica(name))
       .map(name => ({ name, hit: find(group.ninja, name, base) }))
       .filter((x): x is { name: string, hit: PriceItem } => Boolean(x.hit))
-    if (!priced.length) return null
+    if (!all.length) return null
+    const kept = all.filter(x => !notAvg.has(x.name))
+    const priced = kept.length ? kept : all
     const isChase = (x: { name: string }) => (tiers?.[x.name] ?? 9) <= CHASE_TIER
     const chase = priced.filter(isChase)
     const counted = chase.length < priced.length ? priced.filter(x => !isChase(x)) : priced
@@ -273,7 +282,15 @@ export function dropLookup (
       note: counted.length > 1 ? `average of ${counted.length}` : lead.name,
       drop: {
         of: counted.length,
-        chase: chase.map(x => ({ name: x.name, chaos: x.hit.chaos })).sort((a, b) => b.chaos - a.chaos)
+        chase: chase.map(x => ({ name: x.name, chaos: x.hit.chaos })).sort((a, b) => b.chaos - a.chaos),
+        uniques: all.map(x => ({
+          name: x.name,
+          chaos: x.hit.chaos,
+          tier: tiers?.[x.name] ?? null,
+          counted: counted.includes(x),
+          chase: chase.includes(x),
+          out: !priced.includes(x)
+        })).sort((a, b) => b.chaos - a.chaos)
       }
     }
   }

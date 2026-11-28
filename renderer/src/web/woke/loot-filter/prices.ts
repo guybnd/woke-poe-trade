@@ -18,7 +18,7 @@ import type { Day1Table } from './day1-prices'
 
 export { uniquesOnBase, randomDropsOnBase }
 
-export function useFilterPrices (rule: () => UniqueRule) {
+export function useFilterPrices (rule: () => UniqueRule, notAvg: () => string[] = () => []) {
   const index = usePriceIndex()
   const ninja = usePoeninja()
   const currentLeague = useLeagues().selectedId
@@ -59,7 +59,7 @@ export function useFilterPrices (rule: () => UniqueRule) {
   // "cheapest unique" setting never applies here.
   const lootLookup = computed<PriceLookup | null>(() => {
     if (!index.snapshot.value?.items.length || !dropsReady.value) return null
-    return dropLookup(liveItems.value, randomOnBase.value, dropTiers.value)
+    return dropLookup(liveItems.value, randomOnBase.value, dropTiers.value, new Set(notAvg()))
   })
   // What this snapshot has at all: a type it lacks isn't priced at zero.
   const pricedTypes = computed(() => new Set((index.snapshot.value?.items ?? []).map(i => i.type)))

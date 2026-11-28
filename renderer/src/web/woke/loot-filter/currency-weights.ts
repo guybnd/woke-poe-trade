@@ -18,7 +18,7 @@
 // sees these items in maps. Off (the default), nothing is written.
 import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './parse'
 import { NET_GROUPS } from './economy'
-import type { EconomyGroup, PriceLookup } from './economy'
+import type { DropUnique, EconomyGroup, PriceLookup } from './economy'
 import { applyStyle, readStyle } from './edits'
 import type { StylePatch } from './edits'
 import { fullStack } from './stack-sizes'
@@ -173,6 +173,8 @@ export interface CurrencyItem {
   // valuable uniques left out of that average, most valuable first.
   avg?: true
   chase?: Array<{ name: string, chaos: number }>
+  // Every priced unique on the base and how the average treats it.
+  uniques?: DropUnique[]
   // A gem band: the gem's name (BaseType) and its level, quality and
   // corruption conditions; `name` is the band ("Arc 20/20").
   bt?: string
@@ -262,7 +264,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
           ...(own != null ? { own: true } : {}),
           full: 1,
           ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {}),
-          ...(p?.drop ? { of: p.drop.of, avg: true, ...(p.drop.chase.length ? { chase: p.drop.chase } : {}) } : {})
+          ...(p?.drop ? { of: p.drop.of, avg: true, uniques: p.drop.uniques, ...(p.drop.chase.length ? { chase: p.drop.chase } : {}) } : {})
         })
       }
       continue
