@@ -193,10 +193,11 @@ export function baseTable (ranks: BaseRanks, gear: string[], known: (name: strin
 // The multipliers a base brings (rank, size, age).
 export function baseTerms (b: Pick<BaseRow, 'rank' | 'width' | 'height' | 'old'>): WeightKey[] {
   const out: WeightKey[] = [b.rank]
-  if (b.width >= 2 && b.height >= 3) out.push('big')
-  else if (b.height === 1) out.push('tiny')
-  // An exotic base is worth its implicit, not its defences: never old.
-  if (b.old && b.rank !== 'x1' && b.rank !== 'x2') out.push('old')
+  // An exotic base is worth its implicit, not its size or defences: never
+  // Large or old (NeverSink shows them loud at any size, M8).
+  const exotic = b.rank === 'x1' || b.rank === 'x2'
+  if (b.width >= 2 && b.height >= 3) { if (!exotic) out.push('big') } else if (b.height === 1) out.push('tiny')
+  if (b.old && !exotic) out.push('old')
   return out
 }
 

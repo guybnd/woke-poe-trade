@@ -258,11 +258,11 @@ export function normalizeLook (v: unknown): Record<LookChannel, LookKey[]> {
 export const LOUD_DEFAULT: readonly number[] = [16, 64, 256]
 
 export function defaultWeights (): WeightSettings {
-  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT], look: lookDefault(), ranks: {}, flaskLine: 8, v: WEIGHTS_V }
+  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT], look: lookDefault(), ranks: {}, flaskLine: 4, v: WEIGHTS_V }
 }
 
 // Bumped when a saved setting is moved once on load.
-export const WEIGHTS_V = 2
+export const WEIGHTS_V = 3
 
 // The rows a pin (always show) can go on: ones a rule can name on their own.
 export const PIN_ROWS: ReadonlySet<WeightKey> = new Set<WeightKey>(['w86', 'x1', 'x2', 'r1', 'r2', 'r3', 'l6', 'l5', 'l4', 'rgb', 'infl', 'eld', 'qual', 'fract', 'synth', 'fated', 'mirr', 'abyss', 'strand', 'ench', 'cruc', 'cp', 'ci', 'dc', 'ig1'])
@@ -306,7 +306,9 @@ export function normalizeWeights (w: Partial<WeightSettings> | undefined): Weigh
     loud: Array.isArray(w?.loud) && w.loud.length === 3 && w.loud.every((v, i) => ok(v, NEED_MIN, NEED_MAX * 64) && (i === 0 || v >= w.loud![i - 1])) ? [...w.loud] : [...LOUD_DEFAULT],
     always: Array.isArray(w?.always) ? [...new Set(w.always.filter(k => PIN_ROWS.has(k)))] : [],
     look: normalizeLook(w?.look),
-    flaskLine: ok(w?.flaskLine, NEED_MIN, NEED_MAX) ? w.flaskLine : d.flaskLine,
+    // v3 (NeverSink retirement M8): the flask line at the old 8 goes to 4,
+    // so Good flasks show and Low ones show with quality or item level 85+.
+    flaskLine: ok(w?.flaskLine, NEED_MIN, NEED_MAX) ? (w.flaskLine === 8 && !((w.v ?? 0) >= 3) ? d.flaskLine : w.flaskLine) : d.flaskLine,
     v: WEIGHTS_V,
     ranks: w?.ranks && typeof w.ranks === 'object'
       ? Object.fromEntries(Object.entries(w.ranks).filter(([n, r]) => typeof n === 'string' && n.length < 80 && RANK_KEYS.includes(r)))
