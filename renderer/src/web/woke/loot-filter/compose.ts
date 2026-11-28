@@ -26,7 +26,7 @@ import type { ClusterPrice } from './cluster-prices'
 import type { BaseRename } from './gem-bases'
 import { applyWeights, filterBases } from './weights'
 import { applyCurrency, recipeStep, scaled } from './currency-weights'
-import { levellingGearBlocks } from './levelling-gear'
+import { levellingGearBlocks, questlikeBlocks, retireNeverSinkLevelling } from './levelling-gear'
 import { applyMapFloor, applyMapLooks } from './map-floor'
 import type { CardFacts } from './card-classes'
 import type { GemLine } from './gem-classes'
@@ -143,7 +143,10 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const input = cfg.build
   // Gear while levelling (Loot › Levelling): over NeverSink's levelling
   // gear, under the build rules, presets and your own rules.
-  if (currency) insertBuildBlocks(next, levellingGearBlocks(migrated.currency, cfg.presets.weapons, input ? { weaponClasses: input.weaponClasses, rareBases: input.rareBases } : null))
+  if (currency) {
+    retireNeverSinkLevelling(next, migrated.currency)
+    insertBuildBlocks(next, [...questlikeBlocks(), ...levellingGearBlocks(migrated.currency, cfg.presets.weapons, input ? { weaponClasses: input.weaponClasses, rareBases: input.rareBases } : null)])
+  }
   // Build rules go in first, so edits to them (restyles) apply on top.
   let buildCount = 0
   if (input) {
