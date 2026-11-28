@@ -428,3 +428,4 @@
 - Loot filter: the fractured jewel and over-quality flask rows now show at least Decent even with Small and Normal turned off. Divination cards named like a retired item (Blessing of God) and the Assembled Eye Jewel now get their Loot rows.
 - Alt + F on a Loot tab item no longer shows the old Tier list under its Loot card. That list named the item's tier after another section (a flask or Vaal Orb read "S3 Corpses").
 - Loot filter window: the editor for our own filter now has five tabs, Loot, Gear, Style, Preview and History. Your rules are the first row of Loot, gear scoring (rare gear, base ranks, special gear, utility flasks, tinctures) lives on Gear, and the look and sound settings are on Style. The profile picker is a chip in the title bar.
+- Loot filter, Loot tab: All loot opens as its full ruler (press its name to fold it, and it stays that way), and each page shows its On the ground pile beside its own ruler.
