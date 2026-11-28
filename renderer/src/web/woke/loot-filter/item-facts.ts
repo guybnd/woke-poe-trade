@@ -187,7 +187,7 @@ export function itemFacts (clipboard: string, parsed: ParsedItem | null): ItemFa
     // Without the parser's data only a gem can be unsure.
     transfigured: parsed ? Boolean(parsed.info.gem?.transfigured) : (isGem ? undefined : false),
     filterBase: parsed?.info.gem?.transfigured ? parsed.info.gem.normalVariant : undefined,
-    zanaMemory: all.some(l => /\bZana'?s? Memory\b/i.test(l)),
+    zanaMemory: all.some(l => /\bZana'?s? Memory\b|\bOriginator's Memories\b/i.test(l)),
     exceptional: isGem && all.some(l => /(^|, )Exceptional(,|$)/.test(l)),
     imbued: parsed?.imbuedGem ?? all.some(l => /^Imbued\b/.test(l)),
     // The copy doesn't show crucible trees; they only exist on legacy items.

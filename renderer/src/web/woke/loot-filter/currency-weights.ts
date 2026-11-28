@@ -759,9 +759,12 @@ export function faintLook (rgb: readonly number[]): StylePatch {
 
 // Steps turned off (Guy 2026-11-28: they hide, they don't fall to the
 // quieter step) for this item: never its own step or its Collecting floor.
-export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<CurrencyItem, 'fixed'>>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
+export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<CurrencyItem, 'fixed' | 'est' | 'own'>>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
   const e = c.items[it.name]
   if (e?.step != null || fixedOf(it, e, sectionMode({ catMode: c.catMode ?? {} }, it.cat))) return []
+  // A guessed special map never hides on a step turned off (Guy 2026-11-28:
+  // Originator T16 at a 4c guess hid with Normal off, real price 30c).
+  if (it.est && !it.own && SPECIAL_MAP_CATS.has(it.cat)) return []
   // A section set Always (Chase uniques, Boss drops by default) shows
   // whatever steps are turned off (Guy 2026-11-28: chase bases hid with
   // Small and Normal off).
