@@ -27,7 +27,7 @@ import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
-import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, chaseLookOf, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
+import { FOULBORN_PREFIX, FOULBORN_TYPE, SIXLINK_CAT, SIXLINK_LOOK, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, chaseLookOf, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
 import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS } from './league-classes'
 import { JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_MODES, JEWEL_ROWS, JEWEL_TYPE } from './jewel-classes'
@@ -192,6 +192,13 @@ export interface CurrencyItem {
   // No price can judge it (a jewel row): this step at any stack, 0 Off,
   // until you set a step or a price (fixedOf).
   fixed?: CStep
+  // Never quieter than this step unless you set its step or price ("Any
+  // unique, 6-link" at Big).
+  floor?: CStep
+  // Bases whose plain unique is worth more than the row (by its plain price):
+  // the filter gives each its own rule at that price, so a 6-linked chase
+  // unique keeps its plain step (Tink) while the row stays Big.
+  per?: Array<{ bt: string, chaos: number }>
 }
 
 const SHARD_OF: Record<string, string> = {
@@ -368,7 +375,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
     for (const g of gems) {
       const band = gemBand(g.variant)
       if (g.thin || !band || !(g.chaos > 0)) continue
-      solidBands.set(g.name, [...(solidBands.get(g.name) ?? []), { band, chaos: g.chaos }])
+      pushTo(solidBands, g.name, { band, chaos: g.chaos })
     }
     const thinCap = (g: GemLine, b: GemBand): number | null => {
       const better = (solidBands.get(g.name) ?? []).filter(x => x.band.level >= b.level && x.band.quality >= b.quality && x.band.corrupted === b.corrupted)
@@ -415,29 +422,39 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       const conds = b.conditions.filter(x => x !== bt && x.key !== 'Rarity').map(x => ({ ...x, values: [...x.values] }))
       const links = conds.some(x => x.key === 'LinkedSockets')
       const group: EconomyGroup = { ...UNIQUE_PAGE, special: true, links }
-      // NeverSink's any-base 6-link rule is one row (Guy's R1, 2026-11-28),
-      // priced by the most valuable 6-linked unique, so it shows the way
-      // NeverSink shows every 6-linked unique (Tink) unless you set its step.
+      // NeverSink's any-base 6-link rule is one row (Guy's R1, 2026-11-28).
+      // A random 6-linked unique is worth its 20 Fusings, not the best
+      // 6-linked unique there is (Guy 2026-11-28: "any unique 6link should
+      // not be tink"): priced at the Fusings, never below Big, in the
+      // 6-links section's own look. A base whose plain unique is worth more
+      // keeps that price (per).
       if (!bt) {
         const name = `Any unique, ${label}`
         if (seen.has(name)) continue
         const lines = plainBases.map(base => ({ base, p: lookup(group, base) })).filter(x => x.p && x.p.chaos > 0)
         if (!lines.length) continue
-        const low = lines.reduce((x, y) => y.p!.chaos > x.p!.chaos ? y : x)
+        const top = lines.reduce((x, y) => y.p!.chaos > x.p!.chaos ? y : x)
         const own = edits[name]?.price
+        const mult = edits[name]?.mult ?? 1
+        const chaos = (own ?? (links ? linkFloor : top.p!.chaos)) * mult
+        const per = links
+          ? lines.map(x => ({ bt: x.base, chaos: (seen.get(x.base)?.chaos ?? 0) * mult })).filter(x => x.chaos > chaos)
+          : []
         seen.set(name, {
           name,
           cls: UNIQUE_CLS,
           type: 'uniques',
           tier: b.tier,
-          cat: 'uniqspec',
-          chaos: (own ?? (links ? Math.max(low.p!.chaos, linkFloor) : low.p!.chaos)) * (edits[name]?.mult ?? 1),
-          est: own == null && (low.p!.thin || Boolean(low.p!.day1)),
+          cat: links ? SIXLINK_CAT : 'uniqspec',
+          chaos,
+          est: own == null && (links ? !(fusing && fusing.chaos > 0) : top.p!.thin || Boolean(top.p!.day1)),
           ...(own != null ? { own: true } : {}),
           full: 1,
           bts: lines.map(x => x.base),
           conds,
-          of: lines.length
+          of: lines.length,
+          ...(links ? { floor: 4 as CStep } : {}),
+          ...(per.length ? { per } : {})
         })
         continue
       }
@@ -453,9 +470,13 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
           cls: UNIQUE_CLS,
           type: 'uniques',
           tier: b.tier,
-          cat: 'uniqspec',
-          chaos: (own ?? (links ? Math.max(p.chaos, linkFloor) : p.chaos)) * (edits[name]?.mult ?? 1),
-          est: own == null && (p.thin || Boolean(p.day1)),
+          cat: links ? SIXLINK_CAT : 'uniqspec',
+          // A 6-link (Tabula) by its Fusings, or its base's plain unique
+          // when that's worth more, never its 6-link market: late in the
+          // league a 6-link Tabula is near worthless (Guy 2026-11-28).
+          chaos: (own ?? (links ? Math.max(seen.get(base)?.chaos ?? 0, linkFloor) : p.chaos)) * (edits[name]?.mult ?? 1),
+          est: own == null && (links ? !(fusing && fusing.chaos > 0) : p.thin || Boolean(p.day1)),
+          ...(links ? { floor: 4 as CStep } : {}),
           ...(own != null ? { own: true } : {}),
           full: 1,
           bt: base,
@@ -736,6 +757,8 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   // Collecting (a floor step): every pile gets at least it, whatever hides
   // the rest (Guy's star, 2026-11-27).
   if (e?.min) out[e.min - 1] = 1
+  // A floor of its own ("Any unique, 6-link" at Big) until you set a price.
+  else if (it.floor && e?.price == null) out[it.floor - 1] = 1
   return out
 }
 
@@ -770,7 +793,7 @@ export function faintLook (rgb: readonly number[]): StylePatch {
 
 // Steps turned off (Guy 2026-11-28: they hide, they don't fall to the
 // quieter step) for this item: never its own step or its Collecting floor.
-export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<CurrencyItem, 'fixed' | 'est' | 'own'>>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
+export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<CurrencyItem, 'fixed' | 'est' | 'own' | 'floor'>>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
   const e = c.items[it.name]
   if (e?.step != null || fixedOf(it, e, sectionMode({ catMode: c.catMode ?? {} }, it.cat))) return []
   // A guessed special map never hides on a step turned off (Guy 2026-11-28:
@@ -780,7 +803,10 @@ export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<
   // whatever steps are turned off (Guy 2026-11-28: chase bases hid with
   // Small and Normal off).
   if (sectionMode({ catMode: c.catMode ?? {} }, it.cat) === 'always') return []
-  return stepsOffIn(c, it.cat).filter(s => s >= 1 && s <= 4 && s !== e?.min)
+  // A row's own floor (6-links at Big) stays on, like Collecting: turning
+  // Big off on the Uniques page mustn't hide every 6-linked unique.
+  const floor = it.floor && e?.price == null ? it.floor : undefined
+  return stepsOffIn(c, it.cat).filter(s => s >= 1 && s <= 4 && s !== e?.min && s !== floor)
 }
 // The steps off in a section: its own when it sets them, else its page's,
 // else every page's (Guy 2026-11-28).
@@ -792,6 +818,13 @@ export function stepOfPile (stacks: ReadonlyArray<number | null>, stack: number,
   return 0
 }
 
+// Adds to a map of lists in place (copying the list on every add made big
+// lists quadratic: thousands of gems in one category).
+function pushTo<K, V> (m: Map<K, V[]>, k: K, v: V): void {
+  const list = m.get(k)
+  if (list) list.push(v)
+  else m.set(k, [v])
+}
 const a = (key: string, ...args: Array<string | number>): FilterAction => ({ key, args: args.map(String) })
 const c = (key: string, op: string, values: Array<string | number>): FilterCondition => ({ key, op, count: null, values: values.map(String) } as FilterCondition)
 
@@ -914,6 +947,20 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
   // special look for itself"): one look below Tink whatever the price, picked
   // from CHASE_LOOKS on the section's header, with its own sound. Your own
   // colour and icon for the section win.
+  // 6-linked uniques (Guy 2026-11-28: "a unique look to not bait into
+  // tink"): one look below Tink whatever the price, white on the unique
+  // brown with a white beam and star. Your own colour for the section wins.
+  if (cat === SIXLINK_CAT && step < 5) {
+    const t = c.cats[cat]?.text
+    Object.assign(out, {
+      fontSize: own.fontSize ?? 45,
+      text: col(t ?? SIXLINK_LOOK.text),
+      border: col(t ?? SIXLINK_LOOK.edge),
+      background: col(SIXLINK_LOOK.bg)
+    })
+    out.icon = { size: 0, color, shape }
+    out.effect = { color, temp: false }
+  }
   if (cat === 'uniqchase' && step < 5) {
     const l = chaseLookOf(c.chaseLook)
     const t = c.cats[cat]?.text
@@ -1032,13 +1079,25 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   // gem (Arc 1 catches Arc 21/20): a narrower band that shows gets its rule
   // again just above the Hide, so it keeps its own step.
   const rescued = new Set<string>()
+  // Each gem band's thresholds once, by base: a rescue only looks at bands
+  // of the same gem (it ran over every item for every hidden one).
+  const bands = new Map<CurrencyItem, NonNullable<ReturnType<typeof bandOfConds>>>()
+  const bandsByBt = new Map<string | undefined, CurrencyItem[]>()
+  for (const it of items) {
+    const b = bandOfConds(it)
+    if (!b) continue
+    bands.set(it, b)
+    const list = bandsByBt.get(it.bt)
+    if (list) list.push(it)
+    else bandsByBt.set(it.bt, [it])
+  }
   const rescue = (list: CurrencyItem[], step: CStep = 5) => {
     for (const it of list) {
-      const a = bandOfConds(it)
+      const a = bands.get(it)
       if (!a) continue
-      for (const n of items) {
-        const b = bandOfConds(n)
-        if (n === it || !b || n.bt !== it.bt || rescued.has(`${it.name}|${n.name}`) || forcedHidden(n, cfg)) continue
+      for (const n of bandsByBt.get(it.bt) ?? []) {
+        const b = bands.get(n)!
+        if (n === it || rescued.has(`${it.name}|${n.name}`) || forcedHidden(n, cfg)) continue
         if (!(b.level >= a.level && b.quality >= a.quality && (b.corrupted || !a.corrupted) && b.trans === a.trans)) continue
         const top = steps(n)[0]
         // A louder one's rule is above the Hide already.
@@ -1093,7 +1152,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
     const byConds = new Map<string, CurrencyItem[]>()
     for (const it of forced) {
       const k = it.conds ? JSON.stringify(it.conds) : ''
-      byConds.set(k, [...(byConds.get(k) ?? []), it])
+      pushTo(byConds, k, it)
     }
     for (const list of byConds.values()) blocks.push(block(0, [...area, ...clsCond(list), ...btCond(list), ...(list[0].conds ?? [])], 'off, set by hand'))
   }
@@ -1109,7 +1168,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   }
   if (opts.faint) {
     const byCat = new Map<string, CurrencyItem[]>()
-    for (const it of items) if (!forcedHidden(it, cfg)) byCat.set(it.cat, [...(byCat.get(it.cat) ?? []), it])
+    for (const it of items) if (!forcedHidden(it, cfg)) pushTo(byCat, it.cat, it)
     for (const [cat, list] of byCat) blocks.push(faintBlock([...area, ...clsCond(list), ...btCond(list), ...shared(list)], cat, catColour(cat, cfg).rgb))
   } else if (items.length) blocks.push(block(0, [...area, ...clsCond(items), ...btCond(items), ...shared(items)], 'under the line'))
   for (const f of opts.lvl ?? []) lvFloor(blocks, f, items.filter(it => (!f.names || f.names.has(it.name)) && !forcedHidden(it, cfg)), cfg, clsCond, btCond)
@@ -1148,9 +1207,16 @@ function gemLvFloors (cfg: CurrencySettings): LvFloor[] {
 function lvFloor (blocks: FilterBlock[], f: LvFloor, list: CurrencyItem[], cfg: CurrencySettings, clsCond: (l: CurrencyItem[]) => FilterCondition[], btCond: (l: CurrencyItem[]) => FilterCondition[]) {
   if (!list.length) return
   const names = new Set(list.flatMap(i => i.bts ?? [i.bt ?? i.name]))
+  // Asked of the same blocks for every put: once each.
+  const touched = new WeakMap<FilterBlock, boolean>()
   const touches = (b: FilterBlock) => {
-    const bt = b.conditions.find(x => x.key === 'BaseType')
-    return !f.names || !bt || bt.values.some(v => names.has(v))
+    if (!f.names) return true
+    let t = touched.get(b)
+    if (t === undefined) {
+      const bt = b.conditions.find(x => x.key === 'BaseType')
+      touched.set(b, t = !bt || bt.values.some(v => names.has(v)))
+    }
+    return t
   }
   const stepOf = (b: FilterBlock) => b.visibility === 'Hide' || b.tier === 'faint' ? 0 : Number(b.tier?.slice(1)) || 0
   const put = (step: CStep, conds: FilterCondition[], note: string, cat: string) => {
@@ -1159,14 +1225,14 @@ function lvFloor (blocks: FilterBlock[], f: LvFloor, list: CurrencyItem[], cfg: 
     blocks.splice(at, 0, block(step, conds, `levelling: ${note}`, currencyLook(step, cat, cfg)))
   }
   const byCat = new Map<string, CurrencyItem[]>()
-  for (const it of list) byCat.set(it.cat, [...(byCat.get(it.cat) ?? []), it])
+  for (const it of list) pushTo(byCat, it.cat, it)
   for (const [cat, group] of byCat) {
     const base = [...f.conds, ...clsCond(group), ...(f.names ? btCond(group) : [])]
     // Louder piles first, each stack size on its own.
     const sizes = new Map<number, CurrencyItem[]>()
     for (const it of group) {
       const k = f.stack?.get(it.name)
-      if (k && f.step < 5) sizes.set(k, [...(sizes.get(k) ?? []), it])
+      if (k && f.step < 5) pushTo(sizes, k, it)
     }
     for (const [k, l] of [...sizes].sort((x, y) => y[0] - x[0])) put((f.step + 1) as CStep, [...f.conds, ...clsCond(l), ...btCond(l), c('StackSize', '>=', [k])], `${cat}, ${k}+`, cat)
     put(f.step, base, cat, cat)
@@ -1211,8 +1277,8 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   insertBlocks(doc, anchor(doc.blocks.find(b => b.type === '6l' && b.tier === 'others') ?? doc.blocks.find(b => b.type === '6l')), link6)
   insertBlocks(doc, anchor(doc.blocks.find(b => b.type === 'socketslinks')), recipes.filter(b => !link6.includes(b)))
   const foul = applyFoulborn(doc, eff, all.filter(it => it.cat === 'uniqfoul'), faint) ?? none
-  const spec = applySpecialRolls(doc, eff, all.filter(it => it.cat === 'uniqspec'), faint) ?? none
-  const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec'), faint) ?? none
+  const spec = applySpecialRolls(doc, eff, all.filter(it => it.cat === 'uniqspec' || it.cat === SIXLINK_CAT), faint) ?? none
+  const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec' && it.cat !== SIXLINK_CAT), faint) ?? none
   const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
   const jewels = applyJewels(doc, eff, all.filter(it => it.type === 'jewels'), faint) ?? none
   const league = applyLeague(doc, eff, all.filter(it => it.type === 'league'), faint) ?? none
@@ -1418,7 +1484,7 @@ function applyLeague (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem
   if (!items.length) return null
   const rows = items.filter(it => it.conds)
   const lists = new Map<string, CurrencyItem[]>()
-  for (const it of items) if (!it.conds) lists.set(it.cat, [...(lists.get(it.cat) ?? []), it])
+  for (const it of items) if (!it.conds) pushTo(lists, it.cat, it)
   const parts = [...rows.map(it => compileCurrency(cfg, [it], { faint })), ...[...lists.values()].map(l => compileCurrency(cfg, l, { faint }))]
   const blocks = parts.flatMap(x => x.blocks)
   const shown = blocks.filter(b => b.visibility === 'Show' && b.tier !== 'faint').sort((x, y) => Number(y.tier?.slice(1) ?? 0) - Number(x.tier?.slice(1) ?? 0))
@@ -1451,11 +1517,37 @@ function applySpecialRolls (doc: FilterDoc, cfg: CurrencySettings, items: Curren
   const at = anchor ? doc.chunks.indexOf(anchor) : ownBottom(doc)
   if (at < 0) return null
   const byTier = new Map<string, CurrencyItem[]>()
-  for (const it of items) byTier.set(it.tier ?? '', [...(byTier.get(it.tier ?? '') ?? []), it])
+  for (const it of items) for (const x of splitPer(it, cfg)) pushTo(byTier, x.tier ?? '', x)
   const parts = [...byTier.values()].map(l => compileCurrency(cfg, l, { faint }))
   const blocks = parts.flatMap(x => x.blocks)
   insertBlocks(doc, at, blocks)
   return { blocks, items, chars: parts.reduce((n, x) => n + x.chars, 0) }
+}
+
+// The row as the filter writes it for one base: a base the row splits off
+// (per) carries its own price. For Alt+F's card, so it says what the game shows.
+export function rowForBase (it: CurrencyItem, base: string, cfg: Pick<CurrencySettings, 'items'>): CurrencyItem {
+  const e = cfg.items[it.name]
+  const hit = it.per?.find(x => x.bt === base)
+  if (!hit || e?.step != null || e?.price != null || e?.look) return it
+  return { ...it, chaos: hit.chaos }
+}
+
+// "Any unique, 6-link" with bases worth more than the row: each such base
+// gets a rule of its own at its plain price (same floor), before the row, so
+// it never shows quieter than it would unlinked. Only while the row has no
+// edit of yours: your step, price or look decides for every base then.
+function splitPer (it: CurrencyItem, cfg: CurrencySettings): CurrencyItem[] {
+  const e = cfg.items[it.name]
+  if (!it.per?.length || !it.bts || e?.step != null || e?.price != null || e?.look) return [it]
+  const hot = new Set(it.per.map(x => x.bt))
+  const rest = it.bts.filter(b => !hot.has(b))
+  const row: CurrencyItem = { ...it }
+  delete row.per
+  return [
+    ...it.per.map(x => ({ ...row, name: `${it.name}, ${x.bt}`, chaos: x.chaos, bt: x.bt, bts: [x.bt] })),
+    ...(rest.length ? [{ ...row, bts: rest }] : [])
+  ]
 }
 
 // Foulborn uniques go where NeverSink's Foulborn tiers start, so the plain
