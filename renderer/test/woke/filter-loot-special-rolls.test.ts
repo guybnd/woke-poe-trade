@@ -27,9 +27,11 @@ describe('special unique rolls on the Loot tab', () => {
   it('prices each special rule per base, a 6-link at least 20 Fusings', () => {
     const items = new Map(currencyItems(parseFilter(REGULAR), lookup).filter(i => i.cat === 'uniqspec').map(i => [i.name, i]))
     expect(items.get('Simple Robe, 6-link')).toMatchObject({ chaos: 10, bt: 'Simple Robe' })
-    // Any other 6-linked unique: one row (Guy's R1), at its best base's price.
+    // Any other 6-linked unique: one row (Guy's R1).
     expect(items.get('Vaal Regalia, 6-link')).toBeUndefined()
-    expect(items.get('Any unique, 6-link')).toMatchObject({ chaos: 400 })
+    // Priced at its 20 Fusings and never below Big, not at the best 6-link
+    // there is (Guy: "any unique 6link should not be tink").
+    expect(items.get('Any unique, 6-link')).toMatchObject({ chaos: 10, floor: 4 })
     expect(items.get('Any unique, 6-link')?.bts).toContain('Vaal Regalia')
     expect(items.get('Onyx Amulet, Shaper and Elder')?.chaos).toBe(5000)
     expect(items.get('Glorious Plate, no sockets')?.chaos).toBe(0.1)
@@ -57,7 +59,8 @@ describe('special unique rolls on the Loot tab', () => {
     const doc = parseFilter(REGULAR)
     applyCurrency(doc, cfg, lookup)
     const hit = (base: string, more: Partial<ItemFacts> = {}) => matchItem(doc, unique(base, more)).final?.block
-    expect(hit('Vaal Regalia', { socketGroups: ['RRRRRR'] } as Partial<ItemFacts>)).toMatchObject({ type: CURRENCY_TYPE, tier: 's5' })
+    // A random 6-linked unique shows Big, not Tink.
+    expect(hit('Vaal Regalia', { socketGroups: ['RRRRRR'] } as Partial<ItemFacts>)).toMatchObject({ type: CURRENCY_TYPE, tier: 's4' })
     // Kaom's Heart at 0.1c: under the line, hidden.
     const kaom = hit('Glorious Plate', { socketGroups: [] } as Partial<ItemFacts>)
     expect(kaom).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Hide' })
@@ -65,5 +68,21 @@ describe('special unique rolls on the Loot tab', () => {
     // Without the special roll, the base is the plain uniques' (1c, not s5).
     expect(hit('Vaal Regalia')?.tier).not.toBe('s5')
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
+  })
+
+  it('a 6-linked unique on a base worth more than Big keeps its own step', () => {
+    const rich: PriceLookup = (g, base) => !g.special && !g.links && g.unique && base === 'Vaal Regalia' ? { chaos: 5000, thin: false } : lookup(g, base)
+    const cfg = defaultCurrency()
+    cfg.on = true
+    const doc = parseFilter(REGULAR)
+    applyCurrency(doc, cfg, rich)
+    const six = { socketGroups: ['RRRRRR'] } as Partial<ItemFacts>
+    expect(matchItem(doc, unique('Vaal Regalia', six)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's5' })
+    expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
+    // Your step on the row decides for every base.
+    cfg.items['Any unique, 6-link'] = { step: 2 }
+    const doc2 = parseFilter(REGULAR)
+    applyCurrency(doc2, cfg, rich)
+    expect(matchItem(doc2, unique('Vaal Regalia', six)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's2' })
   })
 })

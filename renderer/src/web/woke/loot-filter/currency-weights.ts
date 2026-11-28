@@ -191,6 +191,13 @@ export interface CurrencyItem {
   // No price can judge it (a jewel row): this step at any stack, 0 Off,
   // until you set a step or a price (fixedOf).
   fixed?: CStep
+  // Never quieter than this step unless you set its step or price ("Any
+  // unique, 6-link" at Big).
+  floor?: CStep
+  // Bases whose plain unique is worth more than the row (by its plain price):
+  // the filter gives each its own rule at that price, so a 6-linked chase
+  // unique keeps its plain step (Tink) while the row stays Big.
+  per?: Array<{ bt: string, chaos: number }>
 }
 
 const SHARD_OF: Record<string, string> = {
@@ -414,29 +421,38 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       const conds = b.conditions.filter(x => x !== bt && x.key !== 'Rarity').map(x => ({ ...x, values: [...x.values] }))
       const links = conds.some(x => x.key === 'LinkedSockets')
       const group: EconomyGroup = { ...UNIQUE_PAGE, special: true, links }
-      // NeverSink's any-base 6-link rule is one row (Guy's R1, 2026-11-28),
-      // priced by the most valuable 6-linked unique, so it shows the way
-      // NeverSink shows every 6-linked unique (Tink) unless you set its step.
+      // NeverSink's any-base 6-link rule is one row (Guy's R1, 2026-11-28).
+      // A random 6-linked unique is worth its 20 Fusings, not the best
+      // 6-linked unique there is (Guy 2026-11-28: "any unique 6link should
+      // not be tink"): priced at the Fusings and never below Big. A base
+      // whose plain unique is worth more keeps that price (per).
       if (!bt) {
         const name = `Any unique, ${label}`
         if (seen.has(name)) continue
         const lines = plainBases.map(base => ({ base, p: lookup(group, base) })).filter(x => x.p && x.p.chaos > 0)
         if (!lines.length) continue
-        const low = lines.reduce((x, y) => y.p!.chaos > x.p!.chaos ? y : x)
+        const top = lines.reduce((x, y) => y.p!.chaos > x.p!.chaos ? y : x)
         const own = edits[name]?.price
+        const mult = edits[name]?.mult ?? 1
+        const chaos = (own ?? (links ? linkFloor : top.p!.chaos)) * mult
+        const per = links
+          ? lines.map(x => ({ bt: x.base, chaos: (seen.get(x.base)?.chaos ?? 0) * mult })).filter(x => x.chaos > chaos)
+          : []
         seen.set(name, {
           name,
           cls: UNIQUE_CLS,
           type: 'uniques',
           tier: b.tier,
           cat: 'uniqspec',
-          chaos: (own ?? (links ? Math.max(low.p!.chaos, linkFloor) : low.p!.chaos)) * (edits[name]?.mult ?? 1),
-          est: own == null && (low.p!.thin || Boolean(low.p!.day1)),
+          chaos,
+          est: own == null && (links ? !(fusing && fusing.chaos > 0) : top.p!.thin || Boolean(top.p!.day1)),
           ...(own != null ? { own: true } : {}),
           full: 1,
           bts: lines.map(x => x.base),
           conds,
-          of: lines.length
+          of: lines.length,
+          ...(links ? { floor: 4 as CStep } : {}),
+          ...(per.length ? { per } : {})
         })
         continue
       }
@@ -734,6 +750,8 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   // Collecting (a floor step): every pile gets at least it, whatever hides
   // the rest (Guy's star, 2026-11-27).
   if (e?.min) out[e.min - 1] = 1
+  // A floor of its own ("Any unique, 6-link" at Big) until you set a price.
+  else if (it.floor && e?.price == null) out[it.floor - 1] = 1
   return out
 }
 
@@ -1437,11 +1455,28 @@ function applySpecialRolls (doc: FilterDoc, cfg: CurrencySettings, items: Curren
   const anchor = doc.blocks.find(b => b.type === 'uniques' && b.tier != null && b.tier in SPECIAL_ROLLS)
   if (!anchor) return null
   const byTier = new Map<string, CurrencyItem[]>()
-  for (const it of items) byTier.set(it.tier ?? '', [...(byTier.get(it.tier ?? '') ?? []), it])
+  for (const it of items) byTier.set(it.tier ?? '', [...(byTier.get(it.tier ?? '') ?? []), ...splitPer(it, cfg)])
   const parts = [...byTier.values()].map(l => compileCurrency(cfg, l, { faint }))
   const blocks = parts.flatMap(x => x.blocks)
   insertBlocks(doc, doc.chunks.indexOf(anchor), blocks)
   return { blocks, items, chars: parts.reduce((n, x) => n + x.chars, 0) }
+}
+
+// "Any unique, 6-link" with bases worth more than the row: each such base
+// gets a rule of its own at its plain price (same floor), before the row, so
+// it never shows quieter than it would unlinked. Only while the row has no
+// edit of yours: your step, price or look decides for every base then.
+function splitPer (it: CurrencyItem, cfg: CurrencySettings): CurrencyItem[] {
+  const e = cfg.items[it.name]
+  if (!it.per?.length || !it.bts || (e && Object.keys(e).length)) return [it]
+  const hot = new Set(it.per.map(x => x.bt))
+  const rest = it.bts.filter(b => !hot.has(b))
+  const row: CurrencyItem = { ...it }
+  delete row.per
+  return [
+    ...it.per.map(x => ({ ...row, name: `${it.name}, ${x.bt}`, chaos: x.chaos, bt: x.bt, bts: [x.bt] })),
+    ...(rest.length ? [{ ...row, bts: rest }] : [])
+  ]
 }
 
 // Foulborn uniques go where NeverSink's Foulborn tiers start, so the plain
