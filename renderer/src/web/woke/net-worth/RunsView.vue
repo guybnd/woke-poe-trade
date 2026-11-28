@@ -99,7 +99,7 @@
             <RunRow v-if="preOf(r)" :class="$style.preRow" data-run-pre-part :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, preOf(r)!.n)" :count="preCount(r)" :chaos="preOf(r)!.chaos" sign="−" sub="spent, came from pre-run listings" :divine="divine" :editable="false" :can-leave-out="false" />
           </template>
           <button v-if="used.length > usedShown" type="button" :class="$style.link" class="text-xs" @click="usedShown += 15">+{{ used.length - usedShown }} more</button>
-          <div v-if="otherOut && !onlyChanged" :class="$style.otherOut" class="text-xs w-num" title="Taken off Profit, no row of its own: last run's held items, collected left-out sales, oversized pre-run listings, small rows. Keeps In − Out = Profit" data-run-other>
+          <div v-if="otherOut && !onlyChanged" :class="$style.otherOut" class="text-xs w-num" title="Taken off Profit with no row of its own: last run's held items, collected left-out sales, oversized pre-run listings, small rows." data-run-other>
             <span class="w-dim">Other, not this run's</span><span :class="otherOut > 0 ? 'w-down' : 'w-up'">{{ otherOut > 0 ? '−' : '+' }}{{ amount(Math.abs(otherOut)) }}</span>
           </div>
           <RunAdd :known="knownItems" :lines="lines" :divine="divine" label="Add a cost" :per-map="!isCraft" :unit="unit" @add="addManual('out', $event)" @per-map="addPerMap" />
@@ -295,7 +295,7 @@ const listedSub = (l: Sale) => {
   const ninja = stale(l) ? ninjaOf(l) : null
   return `listed ${when(l.at)}${stale(l) ? ` · ninja ${ninja != null ? amount(ninja) : '—'}` : ''}`
 }
-const faustusInfo = 'Listed at Faustus during the run (your asking price), sold but not collected yet, and items you hold. Profit counts a sale once its currency is in your stash.'
+const faustusInfo = 'Listed at Faustus during the run (your price), sold but not collected, and items you hold. A sale counts in Profit once its currency is in your stash.'
 
 // ---------- your edits (L1): leave out, count and price, added by hand ----------
 const editOf = (key: string) => shownRun.value?.edits?.[key]

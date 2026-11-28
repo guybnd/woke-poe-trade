@@ -2,7 +2,7 @@
   <div :class="$style.body" data-listed>
     <!-- The quiet refresh, said where it acts (Guy: "should be clear on the page"). -->
     <section :class="$style.autoLine">
-      <WToggle :model-value="auto" title="On entering your hideout, at most every 30 min: one trade search on your account. Starts after your first Refresh. Never while you stay put or AFK." @update:model-value="emit('auto', $event)">
+      <WToggle :model-value="auto" title="One trade search on your account when you enter your hideout, at most every 30 min, after your first Refresh. Never while AFK." @update:model-value="emit('auto', $event)">
         <span class="text-xs">Auto-refresh in hideout · every 30 min</span>
       </WToggle>
       <span class="w-dim text-xs">{{ doc ? `Read ${agoPhrase(doc.readAt)}` : 'Not read yet' }}</span>
