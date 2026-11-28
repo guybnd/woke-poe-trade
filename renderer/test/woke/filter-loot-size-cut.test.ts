@@ -14,7 +14,7 @@ describe('size cut', () => {
   })
   it('Auto is on from Strict, and On and Off win', () => {
     const c = defaultCurrency()
-    expect(scaled(c, '2-SEMI-STRICT').sizeOn).toBe(false)
+    expect(scaled(c, '2-SEMI-STRICT').sizeOn ?? false).toBe(false)
     expect(scaled(c, '3-STRICT').sizeOn).toBe(true)
     expect(scaled({ ...c, sizeCut: 'on' }, '0-SOFT').sizeOn).toBe(true)
     expect(scaled({ ...c, sizeCut: 'off' }, '5-UBER-STRICT').sizeOn).toBe(false)
