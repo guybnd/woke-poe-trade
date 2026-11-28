@@ -69,7 +69,6 @@ export const NEWS: NewsItem[] = [
   { id: 'search-keys-list', since: '1.330.21', wmType: 'woke-search', name: 'Search', note: 'New: type "keys" for every hotkey you have set and every mouse trick, in one list' },
   { id: 'price-check-gem-kinds', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a gem, its transfigured kinds, priced' },
   { id: 'price-check-chance-uniques', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a normal base, the uniques an Orb of Chance can make' },
-  { id: 'price-check-vault-rewards', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a Templar Vault reward, its vault and the other rewards in it' },
   { id: 'price-check-boss-uniques', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: "New: beside a Delve, Abyss or league boss's unique, the boss and its other uniques" },
   { id: 'price-check-related-exalts', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a currency, every kind of it (all the exalts) and the cards that give a stack of it' },
   { id: 'search-recent-queries', since: '1.330.20', wmType: 'woke-search', name: 'Search', note: 'New: your last 3 searches wait under Recent, even ones you only looked at. Enter or a click puts one back' },

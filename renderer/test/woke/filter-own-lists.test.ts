@@ -5,7 +5,8 @@
 import { describe, expect, it } from 'vitest'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
 import { currencyItems } from '@/web/woke/loot-filter/currency-weights'
-import { baseGuess, ownType } from '@/web/woke/loot-filter/own-lists'
+import { ownType } from '@/web/woke/loot-filter/own-lists'
+import * as ownUniques from '@/web/woke/loot-filter/own-uniques'
 import type { ListRow, OwnTables } from '@/web/woke/loot-filter/own-lists'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import table from '@/web/woke/loot-filter/item-lists.json'
@@ -81,7 +82,8 @@ describe('own item lists', () => {
         ['Small Cluster Jewel', ['Wolfsong']],
         ['Plank Kite Shield', ['Never Priced']]
       ]),
-      variable: new Set(['Wolfsong'])
+      variable: new Set(['Wolfsong']),
+      uniques: ownUniques
     }
     const lookup: PriceLookup = (g, base) => g.unique && base === 'Leather Belt' ? { chaos: 9000, thin: false } : !g.unique && base === 'Divine Orb' ? { chaos: 200, thin: false } : null
     const u = new Map(currencyItems(parseFilter(neverSink('1-REGULAR')), lookup, {}, null, null, t).filter(i => i.type === 'uniques' && i.cls === 'Rarity Unique' && !i.conds && !i.bts).map(i => [i.name, i]))
@@ -93,6 +95,6 @@ describe('own item lists', () => {
     // that the game data has no unique for.
     expect(u.has('Plank Kite Shield')).toBe(false)
     expect(u.has('Simple Robe')).toBe(false)
-    expect(baseGuess(t, 'Leather Belt')).toMatchObject({ chaos: 2500.5, early: false })
+    expect(ownUniques.baseGuess(t, 'Leather Belt')).toMatchObject({ chaos: 2500.5, early: false })
   })
 })

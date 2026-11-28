@@ -36,7 +36,7 @@ import type { GemBand, GemLine } from './gem-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
 import { LV_GEMS_UNTIL, LV_UNIQUE_STEP, gateConds, lvConds, lvCurrencyOf } from './levelling'
 import type { CStep, CurrencySettings, ItemEdit, SectionMode } from './currency-settings'
-import { baseGuess, itemSource } from './own-lists'
+import { itemSource } from './own-lists'
 import type { OwnTables } from './own-lists'
 
 export { CURRENCY_TYPE, CSTEP_NAMES, FAINT_UNTIL, LINE_MIN, LINE_MAX, NUDGE_MAX, MULT_MIN, MULT_MAX, defaultCurrency, normalizeCurrency } from './currency-settings'
@@ -256,7 +256,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         const p = lookup?.(UNIQUE_PAGE, name) ?? null
         // Last league's usual price (its first days' for Early league),
         // else NeverSink's tier guess.
-        const last = lists ? baseGuess(lists, name) : null
+        const last = lists?.uniques?.baseGuess(lists, name) ?? null
         const guess = last ? (ucat === 'uniqearly' ? Math.max(last.chaos, last.first) : last.chaos) : uniqueGuess(b.tier)
         const priced = p != null && !p.thin && p.chaos > 0
         // Early league: a thin price never takes it below the guess.
