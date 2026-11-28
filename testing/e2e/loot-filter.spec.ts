@@ -1615,6 +1615,8 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await page.locator('[data-loot-class="league"]').click()
   const logs = page.locator('[data-currency-cat="lgexped"]')
   await expect(logs).toBeVisible()
+  // Wombgifts have their own section (Guy 2026-11-28), so Alt+F gives them the Loot card.
+  await expect(page.locator('[data-currency-cat="lgwomb"]')).toContainText('Wombgifts')
   await logs.locator('[data-loot-section-mode]').getByRole('button').click()
   await page.getByRole('menuitemradio', { name: /^Hide/ }).click()
   await logs.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })

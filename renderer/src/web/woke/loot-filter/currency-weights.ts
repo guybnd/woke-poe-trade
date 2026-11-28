@@ -31,7 +31,7 @@ import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
 import { FOULBORN_PREFIX, FOULBORN_TYPE, REPLICA_GUESS, REPLICA_PREFIX, REPLICA_TYPE, SIXLINK_CAT, SIXLINK_LOOK, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, chaseLookOf, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
-import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS, corpseGuess } from './league-classes'
+import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS, WOMBGIFTS, corpseGuess, wombgiftGuess } from './league-classes'
 import { CLUSTER_BASE_TYPE, CLUSTER_ROWS, JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_MODES, JEWEL_ROWS, JEWEL_TYPE, clusterFloor } from './jewel-classes'
 import { FLASK_CATEGORIES, FLASK_IDS, FLASK_LOOK, FLASK_ROWS, FLASK_RULE_TYPE } from './flask-classes'
 import type { ClusterPrice } from './cluster-prices'
@@ -649,24 +649,26 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       conds: r.conds.map(x => ({ ...x, values: [...x.values] }))
     })
   }
-  // Corpses (M4a): priced by name; the names from the game data's lists,
-  // else the filter's own corpse rules.
-  {
-    const fromLists = lists?.lists.filter(r => r[1] === 'Corpses').map(r => r[0]) ?? []
-    const names = fromLists.length ? fromLists : [...new Set(doc.blocks.filter(b => b.type === 'corpses').flatMap(b => b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))?.values ?? []))]
-    const group = groupOf('corpses')
+  // Corpses (M4a) and Wombgifts (Guy 2026-11-28: they only had our fallback
+  // rule, so Alt+F showed the old card): priced by name; the names from the
+  // game data's lists, else the filter's own rules, else a known list.
+  const byName = (cls: string, cat: string, groupType: string, guessOf: (name: string) => number, fallback: string[]) => {
+    const fromLists = lists?.lists.filter(r => r[1] === cls).map(r => r[0]) ?? []
+    const fromRules = [...new Set(doc.blocks.filter(b => b.type === groupType).flatMap(b => b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))?.values ?? []))]
+    const names = fromLists.length ? fromLists : fromRules.length ? fromRules : fallback
+    const group = groupOf(groupType)
     for (const name of names) {
       if (seen.has(name)) continue
       const p = lookup?.(group, name) ?? null
       const priced = p != null && !p.thin && p.chaos > 0
-      const guess = corpseGuess(name)
+      const guess = guessOf(name)
       const own = edits[name]?.price
       seen.set(name, {
         name,
-        cls: 'Corpses',
+        cls,
         type: 'league',
         tier: null,
-        cat: 'lgcorpse',
+        cat,
         chaos: (own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess)) * (edits[name]?.mult ?? 1),
         est: own == null && (!priced || Boolean(p?.day1)),
         ...(own != null ? { own: true } : {}),
@@ -674,6 +676,8 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       })
     }
   }
+  byName('Corpses', 'lgcorpse', 'corpses', corpseGuess, [])
+  byName('Wombgifts', 'lgwomb', 'wombgifts', wombgiftGuess, WOMBGIFTS)
   // Special gear (special-gear.ts): a row per thing a filter can see (a
   // mod's name, fractured, influence...), each at a fixed step you can change.
   for (const r of SPECIAL_ROWS) setRow(r, 'special', r.tip)

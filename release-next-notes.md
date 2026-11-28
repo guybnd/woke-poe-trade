@@ -1,5 +1,6 @@
 # Next release notes
 
+- Loot filter, Loot tab League items: Wombgifts have their own section, one row per Wombgift priced from poe.ninja (a guess when it has no price), so Alt+F on one opens its Loot card instead of the old rule card. The Alt+F card's header no longer shows the NeverSink strictness name.
 - Loot filter: NeverSink is retired. Every filter now runs on our own base: nothing is downloaded, and your Loot, Equipment, Levelling and own rules decide what shows. Strictness, Follow my maps and the Stricter/Looser hotkeys work as before (on the Loot tab's Main ruler and the dock card). Your saved file keeps its name, so the game keeps using it. Your changes, prices and profiles carry over. The file picker and its refresh button are gone from the editor's top bar.
 - Loot filter, Loot tab: All loot takes one line: Strictness, Maps and where each step starts (Normal 2.5c · Decent 5.6c...). Click All loot or the prices to open the ruler. What Strictness does is in its tooltip, and the page's Size cut and "never show" count sit on its top row.
 - Loot filter, Loot tab: each page has its own bar again, under All loot (Currency, Uniques...). It follows All loot until you change it: turn a step off for that page only, or give the page its own ruler. A section can still have its own.
