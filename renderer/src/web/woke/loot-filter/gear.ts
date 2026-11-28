@@ -220,6 +220,16 @@ export function readTiered (doc: FilterDoc): TieredSource | null {
   return { ranks, cells, any, replaced, at, quality: { replaced: qualityReplaced, anyClasses, anyMin } }
 }
 
+// The ranks to show and move bases between: NeverSink's tiered rules when
+// the file has them, else our own table with no cells (our own base, Guy
+// 2026-11-28: every base read "Unranked" there).
+export function rankSource (doc: FilterDoc): TieredSource {
+  const src = readTiered(doc)
+  if (src) return src
+  const t = baseRankTable()
+  return { ranks: { r1: [...t.r1], r2: [...t.r2], r3: [...t.r3] }, cells: new Map(), any: [], replaced: [], at: null, quality: { replaced: [], anyClasses: null, anyMin: 0 } }
+}
+
 // What NeverSink shows today, as table values (both rarities alike: its rules
 // take Normal, Magic and Rare together).
 export function sourceShowFrom (src: TieredSource): Record<Exclude<GearRow, 'build' | 'exotic'>, number> {
@@ -259,6 +269,12 @@ export function exoticBases (doc: FilterDoc): Map<string, string[]> {
       if (!list.includes(b.tier)) list.push(b.tier)
       out.set(v, list)
     }
+  }
+  // No NeverSink exotic rules (our own base): our table's exotic bases.
+  if (!doc.blocks.some(b => b.type === 'exoticbases')) {
+    const t = baseRankTable()
+    for (const v of t.x1) out.set(v, ['exotic_valuable'])
+    for (const v of t.x2) if (!out.has(v)) out.set(v, ['exotic'])
   }
   return out
 }

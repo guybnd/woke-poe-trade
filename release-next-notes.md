@@ -1,5 +1,7 @@
 # Next release notes
 
+- Loot filter: Equipment › Base ranks fills its Rank 1-3 and Exotic lanes on our own filter too (every base read Unranked there).
+- Loot filter, Base ranks: the AR / EV / ES / Ward chips sit inside Armour and narrow armour only. Picking a weapon or jewellery kind no longer hides it.
 - Loot filter, Loot tab: a section set to Always now has a green dot on its chip, so it no longer looks like By price (gold). Hide stays a hollow grey dot.
 - Loot filter, Loot tab: every row now has the tick box Uniques and Jewels had. The section header decides for all its rows; untick one to hide just it, tick it again to follow the header. In a section on Hide the boxes grey out.
 - Loot filter: the sound picker now plays the game's own alert sounds, 1 to 16 and the named ones (ShAlchemy, ShDivine...), which are new in the list. They are read from your Path of Exile install the first time you press play (a second or two), so they sound exactly as in game; nothing of the game's is shipped with the app. The Preview tab's sound buttons play them too.
