@@ -17,7 +17,7 @@
 // levelling floors below maps). The rules sit above everything NeverSink
 // has and end with their own Hide, so NeverSink never sees these items. Off (the default), nothing is written.
 import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './parse'
-import { NET_GROUPS } from './economy'
+import { NET_GROUPS, basePrice } from './economy'
 import type { DropUnique, EconomyGroup, PriceLookup } from './economy'
 import { applyStyle, readStyle } from './edits'
 import type { StylePatch } from './edits'
@@ -30,7 +30,7 @@ import type { CardFacts } from './card-classes'
 import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, chaseLookOf, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
 import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS } from './league-classes'
-import { JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_ROWS, JEWEL_TYPE } from './jewel-classes'
+import { JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_MODES, JEWEL_ROWS, JEWEL_TYPE } from './jewel-classes'
 import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK, SPECIAL_MAPS, SPECIAL_MAP_CATS } from './map-classes'
 import type { GemBand, GemLine } from './gem-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
@@ -87,7 +87,7 @@ export type LootKind = 'currency' | 'gold' | 'fragments' | 'cards' | 'uniques' |
 export const kindOf = (cat: string): LootKind => cat === 'gold' ? 'gold' : FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : MAP_IDS.has(cat) ? 'maps' : JEWEL_IDS.has(cat) ? 'jewels' : LEAGUE_IDS.has(cat) ? 'league' : 'currency'
 // A section's Off / Weighted / Always: yours, else its default (boss-only
 // uniques: Always).
-export const sectionMode = (c: Pick<CurrencySettings, 'catMode'>, cat: string): SectionMode => c.catMode?.[cat] ?? UNIQUE_MODES[cat] ?? GEM_MODES[cat] ?? LEAGUE_MODES[cat] ?? 'auto'
+export const sectionMode = (c: Pick<CurrencySettings, 'catMode'>, cat: string): SectionMode => c.catMode?.[cat] ?? UNIQUE_MODES[cat] ?? GEM_MODES[cat] ?? LEAGUE_MODES[cat] ?? JEWEL_MODES[cat] ?? 'auto'
 
 const BY_TYPE: Record<string, string> = {
   'currency->essence': 'essences',
@@ -694,9 +694,11 @@ export function sizeCutNow (it: Pick<CurrencyItem, 'size' | 'cat'>, c: Pick<Curr
   return sizeCut(it.size)
 }
 
-// A row's fixed step while you haven't set a step, a price or By price on it.
-export function fixedOf (it: Pick<CurrencyItem, 'fixed'>, e: ItemEdit | undefined): CStep | undefined {
-  return e?.step == null && e?.price == null && !e?.priced && e?.supply == null ? it.fixed : undefined
+// A row's set step (jewels: no price) while its section is Always and you
+// haven't given the row its own step, price or By price. The section on By
+// price puts every such row on the price ladder (Guy 2026-11-28).
+export function fixedOf (it: Pick<CurrencyItem, 'fixed'>, e: ItemEdit | undefined, mode?: SectionMode): CStep | undefined {
+  return mode !== 'auto' && e?.step == null && e?.price == null && !e?.priced && e?.supply == null ? it.fixed : undefined
 }
 
 export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number | null> {
@@ -706,7 +708,7 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   // Always; Always shows every pile at least Small.
   const mode = sectionMode(c, it.cat)
   if (mode === 'off' && e?.supply !== 1 && !e?.min) return [null, null, null, null, null]
-  const fx = fixedOf(it, e)
+  const fx = fixedOf(it, e, mode)
   if (fx != null && !(fx === 0 && mode === 'always')) return [1, 2, 3, 4, 5].map(s => s === fx ? 1 : null)
   const cut = sizeCutNow(it, c)
   const worth = cut < 1 ? { ...it, chaos: it.chaos * cut } : it
@@ -731,7 +733,7 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
 export function forcedHidden (it: Pick<CurrencyItem, 'name' | 'cat' | 'fixed'>, c: Pick<CurrencySettings, 'items' | 'catMode'>): boolean {
   const e = c.items[it.name]
   const mode = sectionMode(c, it.cat)
-  return e?.step === 0 || (mode === 'off' && e?.supply !== 1 && e?.step == null && !e?.min) || (fixedOf(it, e) === 0 && mode !== 'always')
+  return e?.step === 0 || (mode === 'off' && e?.supply !== 1 && e?.step == null && !e?.min) || (fixedOf(it, e, mode) === 0 && mode !== 'always')
 }
 
 // The Strictness multiplier in force: the player's own, or the filter's level's.
@@ -759,7 +761,7 @@ export function faintLook (rgb: readonly number[]): StylePatch {
 // quieter step) for this item: never its own step or its Collecting floor.
 export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<CurrencyItem, 'fixed' | 'est' | 'own'>>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
   const e = c.items[it.name]
-  if (e?.step != null || fixedOf(it, e)) return []
+  if (e?.step != null || fixedOf(it, e, sectionMode({ catMode: c.catMode ?? {} }, it.cat))) return []
   // A guessed special map never hides on a step turned off (Guy 2026-11-28:
   // Originator T16 at a 4c guess hid with Normal off, real price 30c).
   if (it.est && !it.own && SPECIAL_MAP_CATS.has(it.cat)) return []
@@ -1172,7 +1174,7 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const goldItems = all.filter(it => it.type === 'gold')
   const none: CurrencyCompiled = { blocks: [], items: [], chars: 0 }
   const compiled = items.length ? compileCurrency(eff, items, { faint, lvl: currencyFloors(eff, items) }) : none
-  const gemsOut = gemItems.length ? compileCurrency(eff, gemItems, { faint, floors: gemFloors(eff), lvl: gemLvFloors(eff) }) : none
+  const gemsOut = gemItems.length ? compileCurrency(eff, gemItems, { faint, floors: gemFloors(eff, lookup), lvl: gemLvFloors(eff) }) : none
   // Gold on its own, so its rules (the line's too) only ever name Gold.
   const goldOut = goldItems.length ? compileCurrency(eff, goldItems, { faint }) : none
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
@@ -1181,7 +1183,7 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   // (rares, flasks) and NeverSink's valuable rules (influenced, top bases),
   // so a recipe never caps something worth more.
   // The 6-link one under NeverSink's top-base 6-links, above its other 6-links.
-  const recipes = recipeBlocks(eff)
+  const recipes = recipeBlocks(eff, lookup)
   const ns = doc.chunks.findIndex(ch => ch.kind === 'block' && !(ch as FilterBlock).type?.startsWith('woke->'))
   const anchor = (b?: FilterBlock) => b ? doc.chunks.indexOf(b) : ns < 0 ? doc.chunks.length : ns
   const link6 = recipes.filter(b => b.comment.endsWith(': recipe: 6-link'))
@@ -1198,26 +1200,64 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
 }
 
 // Vendor recipes (Guy's pick, 2026-11-28: a Recipes fold on the Loot tab):
-// each shows its items in maps at its step, or not at all (0). Kept in
-// catMode as `rc<id>`: a number, so the settings that load at startup
-// don't grow. R-G-B at 0 also stops NeverSink's chromatic rules in maps.
+// each shows its items in maps at its step, or not at all (0). By default
+// the step is the price of what the vendor gives (Guy 2026-11-28: "auto
+// priced per the value of what it gives"), on the same steps as that
+// currency's own section; a step picked by hand wins. Kept in catMode as
+// `rc<id>`: a number, so the settings that load at startup don't grow.
+// R-G-B at 0 also stops NeverSink's chromatic rules in maps. `dflt`: the
+// step while there are no prices.
 export const RECIPES = [
-  { id: 'link6', name: '6-link', gives: '20 Orbs of Fusing', art: 'Orb of Fusing', dflt: 4 },
-  { id: 'six', name: '6 sockets', gives: '7 Jeweller\'s Orbs', art: 'Jeweller\'s Orb', dflt: 2 },
-  { id: 'gem20', name: '20% quality gems', gives: 'Gemcutter\'s Prism', art: 'Gemcutter\'s Prism', dflt: 1 },
-  { id: 'flask20', name: '20% quality flasks', gives: 'Glassblower\'s Bauble', art: 'Glassblower\'s Bauble', dflt: 1 },
-  { id: 'rgb', name: 'R-G-B linked', gives: 'Chromatic Orb', art: 'Chromatic Orb', dflt: 0 }
+  { id: 'link6', name: '6-link', gives: '20 Orbs of Fusing', art: 'Orb of Fusing', count: 20, dflt: 4 },
+  { id: 'six', name: '6 sockets', gives: '7 Jeweller\'s Orbs', art: 'Jeweller\'s Orb', count: 7, dflt: 2 },
+  { id: 'gem20', name: '20% quality gems', gives: 'Gemcutter\'s Prism', art: 'Gemcutter\'s Prism', count: 1, dflt: 1 },
+  { id: 'flask20', name: '20% quality flasks', gives: 'Glassblower\'s Bauble', art: 'Glassblower\'s Bauble', count: 1, dflt: 1 },
+  { id: 'rgb', name: 'R-G-B linked', gives: 'Chromatic Orb', art: 'Chromatic Orb', count: 1, dflt: 0 }
 ] as const
 export type RecipeId = (typeof RECIPES)[number]['id']
-export function recipeStep (c: Pick<CurrencySettings, 'catMode'>, id: RecipeId): CStep {
+const recipeOf = (id: RecipeId) => RECIPES.find(r => r.id === id)!
+// The step picked by hand, or null (the price decides).
+export function recipePicked (c: Pick<CurrencySettings, 'catMode'>, id: RecipeId): CStep | null {
   const v = (c.catMode as Record<string, unknown>)[`rc${id}`]
-  return (Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 5 ? v : RECIPES.find(r => r.id === id)!.dflt) as CStep
+  return Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 5 ? v as CStep : null
 }
-export function setRecipeStep (c: Pick<CurrencySettings, 'catMode'>, id: RecipeId, step: CStep) {
-  c.catMode = { ...c.catMode, [`rc${id}`]: step as unknown as SectionMode }
+// What the vendor gives for it today, in chaos (null: no price): your own
+// price and Worth × on the reward (Currency's row) when you set them.
+export function recipeWorth (lookup: PriceLookup | null, id: RecipeId, edits: Record<string, ItemEdit> = {}): number | null {
+  const r = recipeOf(id)
+  const e = edits[r.art]
+  const p = e?.price ?? basePrice(lookup, 'currency', r.art)
+  return p == null ? null : p * (e?.mult ?? 1) * r.count
+}
+type PriceSteps = Pick<CurrencySettings, 'line' | 'from' | 'nudge'> & Partial<Pick<CurrencySettings, 'rulers' | 'items' | 'offBy' | 'catMode'>>
+// The step that price reaches, Small to Big, on the steps of the reward's
+// currency section (its strictness and bias too): Off under the line, and
+// Off on a step turned off there, as the reward itself hides. `c`: the
+// settings as they apply (scaled).
+export function recipePriceStep (c: PriceSteps, id: RecipeId, worth: number): CStep {
+  const art = recipeOf(id).art
+  const cat = categoryOf(art, 'currency')
+  const starts = stepStarts(c, cat)
+  let s = 0
+  for (let i = 0; i < 4; i++) if (worth >= starts[i]) s = i + 1
+  return (s && offSteps({ name: art, cat }, { items: c.items ?? {}, offBy: c.offBy ?? {}, catMode: c.catMode }).includes(s) ? 0 : s) as CStep
+}
+// The step a recipe shows at: picked by hand, else its price's (with
+// `lookup`; `c` scaled then), else its default.
+export function recipeStep (c: CurrencySettings | Pick<CurrencySettings, 'catMode'>, id: RecipeId, lookup: PriceLookup | null = null): CStep {
+  const picked = recipePicked(c, id)
+  if (picked != null) return picked
+  const worth = 'line' in c ? recipeWorth(lookup, id, c.items) : null
+  if (worth != null && 'line' in c) return recipePriceStep(c, id, worth)
+  return recipeOf(id).dflt as CStep
+}
+export function setRecipeStep (c: Pick<CurrencySettings, 'catMode'>, id: RecipeId, step: CStep | null) {
+  const key = `rc${id}`
+  const rest = Object.fromEntries(Object.entries(c.catMode).filter(([k]) => k !== key))
+  c.catMode = (step == null ? rest : { ...rest, [key]: step }) as CurrencySettings['catMode']
 }
 
-function recipeBlocks (cfg: CurrencySettings): FilterBlock[] {
+function recipeBlocks (cfg: CurrencySettings, lookup: PriceLookup | null): FilterBlock[] {
   const area = gateConds(cfg)
   const gear = c('Rarity', '<=', ['Rare'])
   const conds: Partial<Record<RecipeId, FilterCondition[]>> = {
@@ -1228,7 +1268,7 @@ function recipeBlocks (cfg: CurrencySettings): FilterBlock[] {
   }
   const out: FilterBlock[] = []
   for (const r of RECIPES) {
-    const s = recipeStep(cfg, r.id)
+    const s = recipeStep(cfg, r.id, lookup)
     const cs = conds[r.id]
     if (s && cs) out.push(block(s, [...area, ...cs], `recipe: ${r.name}`, currencyLook(s, 'other', cfg)))
   }
@@ -1238,7 +1278,7 @@ function recipeBlocks (cfg: CurrencySettings): FilterBlock[] {
 // Gems that show at least Small whatever their band says: 20% quality (a
 // Gemcutter's Prism at the vendor, Guy's G2), and the Always sections, which
 // also catch gems poe.ninja doesn't list.
-function gemFloors (cfg: CurrencySettings): FilterBlock[] {
+function gemFloors (cfg: CurrencySettings, lookup: PriceLookup | null): FilterBlock[] {
   const area = gateConds(cfg)
   const cls = c('Class', '==', ['Skill Gems', 'Support Gems'])
   const q20 = c('Quality', '>=', [20])
@@ -1262,7 +1302,7 @@ function gemFloors (cfg: CurrencySettings): FilterBlock[] {
   const last = Math.max(mode.lastIndexOf('off'), mode.lastIndexOf('always'))
   // The 20% floor is the Gemcutter's recipe (Loot › Recipes): its step, or
   // none, and then nothing at 20% needs settling either.
-  const g = recipeStep(cfg, 'gem20')
+  const g = recipeStep(cfg, 'gem20', lookup)
   const look = currencyLook(g, 'gemskill', cfg)
   const out: FilterBlock[] = []
   cats.slice(0, last + 1).forEach(([cat, cond], i) => {
