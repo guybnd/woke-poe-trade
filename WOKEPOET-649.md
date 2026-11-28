@@ -177,5 +177,6 @@ subtasks:
   - WOKEPOET-687
   - WOKEPOET-689
   - WOKEPOET-690
+  - WOKEPOET-691
 ---
 Epic: reimagine the loot filter as a clear visual funnel that shows how it decides. Design only, nothing built yet: 8 design options waiting on Guy's picks. Subtasks come after the picks.
