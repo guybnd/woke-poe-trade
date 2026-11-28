@@ -31,13 +31,10 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
-<<<<<<< HEAD
   { id: 'loot-filter-jewels-no-price', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: every jewel shows, corrupted implicits louder, with no guessed price to hide them; Off is one click' },
-=======
   { id: 'loot-filter-gold-page', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Gold has its own page on the Loot tab, and each loot class shows its item art' },
   { id: 'loot-filter-section-ruler', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: give a Loot section its own step ruler (Own ruler in the section); Strictness still moves it' },
   { id: 'loot-filter-section-steps', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: each Loot section can turn its own steps off (Steps row); the ruler\'s Show is that page only' },
->>>>>>> origin/master
   { id: 'loot-filter-map-looks', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: maps look like maps again, black on white, each special kind with its own edge colour and square map icon' },
   { id: 'loot-filter-league-always', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Chronicles, Viscera, Reliquary keys, Ultimatums, warrants and logbooks always show; Hide is one click' },
   { id: 'search-mod-filter-words', since: '1.330.24', wmType: 'woke-search', name: 'Search', note: 'New: add "vestigial", "foulborn" or a slot ("rarity boots") to a mod search; short names like "iir" work' },

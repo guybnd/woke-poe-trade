@@ -751,11 +751,7 @@ export function faintLook (rgb: readonly number[]): StylePatch {
 
 // Steps turned off (Guy 2026-11-28: they hide, they don't fall to the
 // quieter step) for this item: never its own step or its Collecting floor.
-<<<<<<< HEAD
-export function offSteps (it: Pick<CurrencyItem, 'name'> & Partial<Pick<CurrencyItem, 'cat' | 'fixed'>>, c: Pick<CurrencySettings, 'items' | 'off'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
-=======
-export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
->>>>>>> origin/master
+export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<CurrencyItem, 'fixed'>>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
   const e = c.items[it.name]
   if (e?.step != null || fixedOf(it, e)) return []
   // A section set Always (Chase uniques, Boss drops by default) shows
