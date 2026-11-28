@@ -215,15 +215,17 @@
               <span>{{ k.label }}</span>
             </button>
           </div>
+          <div v-if="grp.label === 'Armour'" class="flex flex-wrap gap-1" data-gear-defences>
+            <button v-for="d in DEFENCES" :key="d" type="button" :class="[$style.kind, defences.includes(d) && $style.kindOn]" :aria-pressed="defences.includes(d)"
+              :title="`${d} armour: needs ${DEFENCE_ATTR[d]}. Weapons and jewellery stay as they are.`" @click="toggle(defences, d)">
+              <span v-for="part in d.split('/')" :key="part" :class="$style.defDot" :style="{ background: DEFENCE_COLOURS[part] }" />
+              <span>{{ d }}</span>
+            </button>
+          </div>
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-1">
         <WField v-model="search" placeholder="Find a base…" style="width: 12rem;" aria-label="Find a base" />
-        <button v-for="d in DEFENCES" :key="d" type="button" :class="[$style.kind, defences.includes(d) && $style.kindOn]" :aria-pressed="defences.includes(d)"
-          :title="`${d}: needs ${DEFENCE_ATTR[d]}`" @click="toggle(defences, d)">
-          <span v-for="part in d.split('/')" :key="part" :class="$style.defDot" :style="{ background: DEFENCE_COLOURS[part] }" />
-          <span>{{ d }}</span>
-        </button>
         <span class="w-dim text-xs" style="margin-left: 6px;">Drop level</span>
         <WField v-model.number="minLevel" type="number" style="width: 4.5rem;" aria-label="Lowest base drop level" />
         <span class="w-dim text-xs">and up</span>
@@ -668,6 +670,7 @@ const kindCounts = computed(() => {
 })
 const kindCount = (cat: string) => kindCounts.value.get(cat) ?? 0
 const defences = ref<Defence[]>([])
+const ARMOUR_CATS = new Set(KIND_GROUPS.find(g => g.label === 'Armour')?.kinds.map(k => k.category) ?? [])
 const minLevel = ref(0)
 const picked = ref<string[]>([])
 let lastPick: string | null = null
@@ -682,7 +685,8 @@ function visible (b: string): boolean {
   const i = info(b)
   if (search.value.trim() && !b.toLowerCase().includes(search.value.trim().toLowerCase())) return false
   if (kinds.value.length && (!i.category || !kinds.value.includes(i.category))) return false
-  if (defences.value.length && (!i.defence || !defences.value.includes(i.defence))) return false
+  // Defence picks narrow armour only: weapons and jewellery keep showing.
+  if (defences.value.length && ARMOUR_CATS.has(i.category ?? '') && (!i.defence || !defences.value.includes(i.defence))) return false
   if (minLevel.value > 0 && (i.dropLevel ?? 0) < minLevel.value) return false
   return true
 }
