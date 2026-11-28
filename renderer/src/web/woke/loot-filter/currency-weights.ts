@@ -26,7 +26,7 @@ import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
-import { UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, uniqueCategoryOf, uniqueGuess } from './unique-classes'
+import { FOULBORN_PREFIX, FOULBORN_TYPE, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
 import type { GemLine } from './gem-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
@@ -168,6 +168,7 @@ const SHARD_OF: Record<string, string> = {
 }
 const ANY_PAGE: EconomyGroup = { type: 'any', label: 'Any', ninja: ['*'] }
 const UNIQUE_PAGE = NET_GROUPS.find(g => g.unique)!
+const FOULBORN_PAGE: EconomyGroup = { ...UNIQUE_PAGE, foulborn: true }
 function groupOf (type: string): EconomyGroup {
   return NET_GROUPS.find(g => g.type === type) ?? NET_GROUPS[0]
 }
@@ -226,6 +227,37 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
           est: own == null && (!priced || Boolean(p?.day1)),
           ...(own != null ? { own: true } : {}),
           full: 1,
+          ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {})
+        })
+      }
+      continue
+    }
+    // Foulborn uniques: NeverSink's Foulborn tiers, a list of bases. Named
+    // "Foulborn <base>" so they never meet the plain unique on that base.
+    const fcat = b.type === FOULBORN_TYPE ? foulCategoryOf(b.tier) : null
+    if (fcat) {
+      const bt = b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))
+      if (!bt || b.conditions.some(x => x !== bt && x.key !== 'Rarity' && x.key !== 'Foulborn')) continue
+      for (const base of bt.values) {
+        const name = FOULBORN_PREFIX + base
+        if (seen.has(name)) continue
+        const p = lookup?.(FOULBORN_PAGE, base) ?? null
+        const guess = foulGuess(b.tier)
+        const priced = p != null && !p.thin && p.chaos > 0
+        const own = edits[name]?.price
+        const m = p?.note?.match(/^(.*?)(?:, 1 of (\d+))?$/)
+        seen.set(name, {
+          name,
+          cls: UNIQUE_CLS,
+          type: 'uniques',
+          tier: b.tier,
+          cat: fcat,
+          chaos: (own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess)) * (edits[name]?.mult ?? 1),
+          est: own == null && (!priced || Boolean(p?.day1)),
+          ...(own != null ? { own: true } : {}),
+          full: 1,
+          bt: base,
+          conds: [c('Foulborn', '', ['True'])],
           ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {})
         })
       }
@@ -624,11 +656,17 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   blocks.push(...(opts.floors ?? []))
   // Under the line: Faint in the category colour (Guy's T1, X1) while it's
   // on, except what was hidden by hand; otherwise hidden.
+  // A list whose items all carry the same extra conditions (Foulborn True)
+  // keeps them, so it never catches the plain items on those bases.
+  const shared = (list: CurrencyItem[]) => {
+    const k = list[0]?.conds ? JSON.stringify(list[0].conds) : ''
+    return k && list.every(it => it.conds && JSON.stringify(it.conds) === k) ? list[0].conds! : []
+  }
   if (opts.faint) {
     const byCat = new Map<string, CurrencyItem[]>()
     for (const it of items) if (!forcedHidden(it, cfg)) byCat.set(it.cat, [...(byCat.get(it.cat) ?? []), it])
-    for (const [cat, list] of byCat) blocks.push(faintBlock([area, clsCond(list), c('BaseType', '==', bts(list))], cat, catColour(cat, cfg).rgb))
-  } else if (items.length) blocks.push(block(0, [area, clsCond(items), c('BaseType', '==', bts(items))], 'under the line'))
+    for (const [cat, list] of byCat) blocks.push(faintBlock([area, clsCond(list), c('BaseType', '==', bts(list)), ...shared(list)], cat, catColour(cat, cfg).rgb))
+  } else if (items.length) blocks.push(block(0, [area, clsCond(items), c('BaseType', '==', bts(items)), ...shared(items)], 'under the line'))
   const chars = blocks.reduce((n, b) => n + 160 + b.conditions.reduce((m, x) => m + x.key.length + 12 + x.values.reduce((k, v) => k + v.length + 3, 0), 0), 0)
   return { blocks, items, chars }
 }
@@ -649,8 +687,9 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const gemsOut = gemItems.length ? compileCurrency(eff, gemItems, { faint, floors: gemFloors(eff) }) : none
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
   insertBlocks(doc, first < 0 ? doc.chunks.length : first, [...compiled.blocks, ...gemsOut.blocks])
-  const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS), faint) ?? none
-  const parts = [compiled, gemsOut, uniq]
+  const foul = applyFoulborn(doc, eff, all.filter(it => it.cat === 'uniqfoul'), faint) ?? none
+  const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul'), faint) ?? none
+  const parts = [compiled, gemsOut, foul, uniq]
   return { blocks: parts.flatMap(x => x.blocks), items: parts.flatMap(x => x.items), chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 
@@ -679,6 +718,17 @@ function insertBlocks (doc: FilterDoc, at: number, blocks: FilterBlock[]) {
   const i = after ? doc.blocks.indexOf(after) : doc.blocks.length
   doc.blocks.splice(i < 0 ? doc.blocks.length : i, 0, ...blocks)
   doc.blocks.forEach((b, k) => { b.index = k })
+}
+
+// Foulborn uniques go where NeverSink's Foulborn tiers start, so the plain
+// unique rules below never see them. Every rule matches `Foulborn True`.
+function applyFoulborn (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
+  if (!items.length) return null
+  const anchor = doc.blocks.find(b => b.type === FOULBORN_TYPE)
+  if (!anchor) return null
+  const compiled = compileCurrency(cfg, items, { faint })
+  insertBlocks(doc, doc.chunks.indexOf(anchor), compiled.blocks)
+  return compiled
 }
 
 // Uniques go where NeverSink's unique tiers start, under its special rules
