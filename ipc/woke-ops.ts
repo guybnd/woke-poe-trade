@@ -139,6 +139,8 @@ export interface WokeOps {
   'filter-sound-install': Op<FilterDir & { name: string, data: string }, { written: boolean }>
   // The game's own alert sound (1-16, ShAlchemy...), decoded from the install.
   'filter-game-sound': Op<{ id: string }, { data: string, mime: string }>
+  // The game's master x item filter volume (0-1), for previews.
+  'filter-sound-gain': Op<NoArgs, { gain: number }>
   'game-filter': Op<NoArgs, { name: string | null, loaded: boolean | null }>
 
   // NeverSink filter downloads

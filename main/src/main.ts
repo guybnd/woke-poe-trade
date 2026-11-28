@@ -20,6 +20,7 @@ import { GameLogWatcher } from './host-files/GameLogWatcher'
 import { HttpProxy } from './proxy'
 import { initWoke, initWokeOverlay, registerWokeHandler } from './woke'
 import { gameFilterSetting } from './woke/neversink'
+import { gameSoundGain } from './woke/game-sounds'
 import { perfMark } from './woke/perf'
 import { startCrashReporting, attachCrashLogger } from './woke/crash-reports'
 import { initSetup, maybeOpenSetup, openSetupWindow, refreshSetupIcon, savedAppIcon } from './woke/setup'
@@ -100,6 +101,7 @@ app.on('ready', async () => {
     eventPipe.sendEventTo('broadcast', { name: 'MAIN->CLIENT::woke-event', payload: { topic: 'reset-overlay-key', data: { key: DEFAULT_OVERLAY_KEY } } })
   }
   registerWokeHandler('game-filter', async () => await gameFilterSetting(gameConfig.actualPath))
+  registerWokeHandler('filter-sound-gain', async () => await gameSoundGain(gameConfig.actualPath))
   initSetup(appUpdater)
   appTray.onRunSetup = openSetupWindow
   // woke: going back, from the tray too (a broken overlay can't reach About),

@@ -8,6 +8,7 @@ import { promises as fs } from 'fs'
 import { execFile } from 'child_process'
 import { createHash } from 'crypto'
 import path from 'path'
+import ini from 'ini'
 import { app } from 'electron'
 import { runningGameLog } from '../host-files/GameLogWatcher'
 import { findGameLogs } from './game-log-finder'
@@ -221,5 +222,30 @@ export async function readGameSound (args: { id: string }): Promise<{ data: stri
     return { data: (await fs.readFile(path.join(dir, `${sample}.wav`))).toString('base64'), mime: 'audio/wav' }
   } catch {
     throw new Error(`The game has no sound ${args.id}`)
+  }
+}
+
+// How loud the game plays filter sounds: its master volume times its item
+// filter alert volume (Options › Sound, 0-100 each), from
+// production_Config.ini. The preview scales by it, so it sounds as loud as
+// in game. 1 when the file or the values aren't there.
+export function soundGainFrom (parsed: Record<string, Record<string, unknown> | undefined>): number {
+  const sound = parsed.SOUND ?? {}
+  const part = (...keys: string[]) => {
+    for (const k of keys) {
+      const n = Number(sound[k])
+      if (sound[k] != null && sound[k] !== '' && Number.isFinite(n)) return Math.max(0, Math.min(1, n / 100))
+    }
+    return 1
+  }
+  return part('master_volume2', 'master_volume') * part('item_filter_sound_volume2', 'item_filter_sound_volume')
+}
+
+export async function gameSoundGain (configPath: string | null): Promise<{ gain: number }> {
+  if (!configPath) return { gain: 1 }
+  try {
+    return { gain: soundGainFrom(ini.parse((await fs.readFile(configPath, 'utf8')).trimStart())) }
+  } catch {
+    return { gain: 1 }
   }
 }

@@ -115,8 +115,19 @@ async function urlOf (id: string, dir: string, why: Why): Promise<string | null>
 let playing: HTMLAudioElement | null = null
 let latest = 0
 
+// The game's master x item filter volume, read on each play so a change in
+// the game's options counts. Full volume when it can't be read.
+async function gameGain (): Promise<number> {
+  try {
+    const { gain } = await hostRequest('filter-sound-gain', null, 5_000)
+    return Number.isFinite(gain) ? Math.max(0, Math.min(1, gain)) : 1
+  } catch {
+    return 1
+  }
+}
+
 // Plays a custom, pack or game sound at the filter's volume (0-300, 300 =
-// full). Returns what to tell the player when it can't, else null. Only the
+// full), times the game's own sound volume, so it's as loud as in game. Returns what to tell the player when it can't, else null. Only the
 // last click plays: an earlier one still loading (the first game sound
 // decodes for a second or two) is dropped.
 export async function playSound (id: string, volume: number, dir: string): Promise<string | null> {
@@ -126,9 +137,11 @@ export async function playSound (id: string, volume: number, dir: string): Promi
   if (mine !== latest) return null
   const failed = `Couldn't play ${soundLabel(id)}${why.error ? `: ${why.error}` : ''}`
   if (!url) return failed
+  const gain = await gameGain()
+  if (mine !== latest) return null
   playing?.pause()
   const audio = new Audio(url)
-  audio.volume = Math.max(0, Math.min(1, volume / 300))
+  audio.volume = Math.max(0, Math.min(1, volume / 300 * gain))
   playing = audio
   try {
     await audio.play()

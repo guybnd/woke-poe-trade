@@ -6,7 +6,7 @@ import { execFileSync } from 'child_process'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { DECODE_SCRIPT, GAME_SOUND_SAMPLES, fsbSlice, sampleFor } from '../../main/src/woke/game-sounds'
+import { DECODE_SCRIPT, GAME_SOUND_SAMPLES, fsbSlice, sampleFor, soundGainFrom } from '../../main/src/woke/game-sounds'
 
 describe('sampleFor', () => {
   it('maps 1-16 and the Sh sounds, any case', () => {
@@ -19,6 +19,20 @@ describe('sampleFor', () => {
 
   it.each([['0'], ['17'], ['01'], ['ping.mp3'], ['../x'], [''], [7], [null]])('refuses %s', (id) => {
     expect(sampleFor(id)).toBeNull()
+  })
+})
+
+describe('soundGainFrom', () => {
+  it('is the game master volume times its item filter volume', () => {
+    expect(soundGainFrom({ SOUND: { master_volume2: '9', item_filter_sound_volume2: '36' } })).toBeCloseTo(0.0324)
+    expect(soundGainFrom({ SOUND: { master_volume: '50', item_filter_sound_volume: '100' } })).toBeCloseTo(0.5)
+  })
+
+  it('is full volume when the values are missing or odd, never above it', () => {
+    expect(soundGainFrom({})).toBe(1)
+    expect(soundGainFrom({ SOUND: { master_volume2: 'x', item_filter_sound_volume2: '' } })).toBe(1)
+    expect(soundGainFrom({ SOUND: { master_volume2: '250' } })).toBe(1)
+    expect(soundGainFrom({ SOUND: { master_volume2: '0' } })).toBe(0)
   })
 })
 
