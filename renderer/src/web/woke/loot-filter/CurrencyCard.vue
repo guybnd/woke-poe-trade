@@ -157,6 +157,8 @@ const placeLine = computed(() => {
   }
   const league = LEAGUE_SECTIONS.find(x => x.id === t)
   if (league) return `League: ${league.name} is Off.`
+  const rec = /: recipe: (.+)$/.exec(props.note ?? '')
+  if (rec) return `Recipes: ${rec[1]} shows at this step in maps (Loot › Recipes).`
   if (t.startsWith('u-')) return `Uniques: NeverSink's ${t.slice(2)} rule, kept above the priced uniques.`
   return floorLine.value || 'The Loot tab writes this rule; open it to see its items.'
 })

@@ -4,6 +4,12 @@
       <span>{{ store.presetChanges.value ? `Adjusting ${store.presetChanges.value} of NeverSink's rules` : 'Common changes in one click' }}</span>
       <WInfo text="They're kept across NeverSink updates and never touch your own rules or the safety net." />
     </div>
+    <div v-if="covered.length" :class="$style.card" data-presets-loot-covers>
+      <div class="text-sm">The Loot tab is on: in maps it now decides what these did. While levelling they still work.</div>
+      <ul class="text-xs w-dim" :class="$style.covers">
+        <li v-for="x in covered" :key="x.key"><b>{{ x.label }}</b> → {{ x.now }}</li>
+      </ul>
+    </div>
 
     <div :class="$style.card">
       <div class="flex items-center gap-2">
@@ -229,6 +235,7 @@ import { WEAPON_CLASSES } from './build-rules'
 import { dustBases } from '../disenchant/calc'
 import { basesWithoutDust, dustUniques } from '../disenchant/data'
 import { poeColour } from './colours'
+import { LOOT_COVERS } from './loot-presets'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -236,6 +243,9 @@ const props = defineProps<{
 }>()
 
 const p = computed(() => props.config.presets)
+// Presets the Loot tab and Equipment cover (Guy's pick, 2026-11-28).
+const COVER_LABEL: Record<string, string> = { cheapCurrency: 'Hide cheap currency', cheapSplinters: 'Cheap splinters', cheapCards: 'Cheap cards', cheapUniques: 'Cheap uniques', lowMaps: 'Low maps', hideRgb: 'Hide R-G-B', sixSockets: '6 sockets', vendorQuality: 'Vendor quality', hideFlasks: 'Hide flasks' }
+const covered = computed(() => LOOT_COVERS.filter(x => (x.equipment ? p.value.weights.on : p.value.currency.on) && (p.value[x.key] as { on?: boolean }).on).map(x => ({ ...x, label: COVER_LABEL[x.key] })))
 const SWAPS: Record<string, string> = { Green: 'Blue', Brown: 'Yellow', Red: 'Orange', Pink: 'Purple' }
 
 // What the price presets keep, read from NeverSink's file as it came.
@@ -342,6 +352,7 @@ function toggleSlot (key: string) {
 </script>
 
 <style module>
+.covers { margin: 0; padding-left: 1.2em; }
 .weaponGroups {
   display: grid;
   grid-template-columns: auto 1fr;

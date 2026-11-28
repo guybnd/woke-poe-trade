@@ -258,3 +258,55 @@ describe('one rank list for Base ranks and Equipment', () => {
     }
   })
 })
+
+describe('Recipes and the presets the Loot tab covers', () => {
+  const rare = (extra: Partial<ItemFacts>): ItemFacts => ({ name: 'x', baseType: 'Vaal Regalia', itemClass: 'Body Armours', rarity: 'Rare', itemLevel: 84, areaLevel: 83, influences: [], explicitModNames: [], identified: true, ...extra } as ItemFacts)
+  it('shows 6-links, 6 sockets and 20% flasks at their steps in maps, and Off leaves them', async () => {
+    const { setRecipeStep } = await import('@/web/woke/loot-filter/currency-weights')
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(c => setRecipeStep(c, 'rgb', 1)), lookup)
+    const tier = (f: ItemFacts) => matchItem(doc, f).final?.block.tier
+    expect(tier(rare({ socketGroups: ['RRGGBB'] }))).toBe('s4')
+    expect(tier(rare({ socketGroups: ['RG', 'GB', 'BR'] }))).toBe('s2')
+    expect(tier(rare({ socketGroups: ['RGB'] }))).toBe('s1')
+    expect(tier({ ...rare({}), baseType: 'Divine Life Flask', itemClass: 'Life Flasks', rarity: 'Magic', quality: 20 } as ItemFacts)).toBe('s1')
+    const off = parseFilter(SEMI)
+    applyCurrency(off, on(c => { setRecipeStep(c, 'six', 0); setRecipeStep(c, 'gem20', 0) }), lookup, null, GEMS)
+    expect(matchItem(off, rare({ socketGroups: ['RG', 'GB', 'BR'] })).final?.block.comment ?? '').not.toContain('recipe')
+    expect(matchItem(off, gem('Fireball', 5, 20)).final?.block.comment ?? '').not.toContain('20% quality')
+  })
+  it('turns maps-only covered presets off and keeps the rest for levelling', async () => {
+    const { lootPresets, levellingOnly } = await import('@/web/woke/loot-filter/loot-presets')
+    const { normalizePresets, presetBlocks, PRESET_TYPE } = await import('@/web/woke/loot-filter/presets')
+    const p = normalizePresets({ cheapCurrency: { on: true, chaos: 1 }, lowMaps: { on: true, tier: 10 }, sixSockets: { on: true }, hideFlasks: { on: true } })
+    const lp = lootPresets(p, true, false)
+    expect(lp.cheapCurrency.on).toBe(false)
+    expect(lp.lowMaps.on).toBe(false)
+    expect(lp.sixSockets.on).toBe(true)
+    expect(lp.hideFlasks.on).toBe(true)
+    expect(lp.hideRgb.on).toBe(true)
+    expect(lootPresets(p, false, true).hideFlasks.on).toBe(false)
+    expect(lootPresets(p, false, false)).toBe(p)
+    const doc = parseFilter(SEMI)
+    const blocks = presetBlocks(doc, lp, null, null, { breakdown: null, build: null })
+    doc.blocks.unshift(...blocks)
+    levellingOnly(doc)
+    const six = doc.blocks.find(b => b.type === PRESET_TYPE && b.tier === 'sixsockets')!
+    expect(six.conditions.some(x => x.key === 'AreaLevel' && x.op === '<' && x.values[0] === '68')).toBe(true)
+  })
+  it('carries the old preset settings over the first time', async () => {
+    const { migrateLootPresets } = await import('@/web/woke/loot-filter/loot-presets')
+    const { normalizePresets } = await import('@/web/woke/loot-filter/presets')
+    const { recipeStep } = await import('@/web/woke/loot-filter/currency-weights')
+    const p = normalizePresets({ cheapCurrency: { on: true, chaos: 2 }, lowMaps: { on: true, tier: 12 } })
+    p.currency.on = true
+    migrateLootPresets(p)
+    expect(p.currency.line).toBe(2)
+    expect(p.currency.mapFrom).toBe(12)
+    expect(recipeStep(p.currency, 'rgb')).toBe(1)
+    expect(recipeStep(p.currency, 'six')).toBe(0)
+    p.currency.line = 0.5
+    migrateLootPresets(p)
+    expect(p.currency.line).toBe(0.5)
+  })
+})
