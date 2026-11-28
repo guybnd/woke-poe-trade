@@ -31,6 +31,7 @@ import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQU
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
 import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS } from './league-classes'
 import { JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_MODES, JEWEL_ROWS, JEWEL_TYPE } from './jewel-classes'
+import { SPECIAL_CATEGORIES, SPECIAL_IDS, SPECIAL_LOOK, SPECIAL_MODES, SPECIAL_ROWS, retireSpecial, specialAnchor } from './special-gear'
 import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK, SPECIAL_MAPS, SPECIAL_MAP_CATS } from './map-classes'
 import type { GemBand, GemLine } from './gem-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
@@ -82,12 +83,12 @@ export const CURRENCY_CATEGORIES: CurrencyCategory[] = [
 // ruler (CurrencySettings.gold).
 export const GOLD_NAME = 'Gold'
 // Every class's categories (the Loot tab's rail shows one class at a time).
-export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES, ...MAP_CATEGORIES, ...JEWEL_CATEGORIES, ...LEAGUE_CATEGORIES]
-export type LootKind = 'currency' | 'gold' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps' | 'jewels' | 'league'
-export const kindOf = (cat: string): LootKind => cat === 'gold' ? 'gold' : FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : MAP_IDS.has(cat) ? 'maps' : JEWEL_IDS.has(cat) ? 'jewels' : LEAGUE_IDS.has(cat) ? 'league' : 'currency'
+export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES, ...MAP_CATEGORIES, ...JEWEL_CATEGORIES, ...LEAGUE_CATEGORIES, ...SPECIAL_CATEGORIES]
+export type LootKind = 'currency' | 'gold' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps' | 'jewels' | 'league' | 'special'
+export const kindOf = (cat: string): LootKind => cat === 'gold' ? 'gold' : FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : MAP_IDS.has(cat) ? 'maps' : JEWEL_IDS.has(cat) ? 'jewels' : LEAGUE_IDS.has(cat) ? 'league' : SPECIAL_IDS.has(cat) ? 'special' : 'currency'
 // A section's Off / Weighted / Always: yours, else its default (boss-only
 // uniques: Always).
-export const sectionMode = (c: Pick<CurrencySettings, 'catMode'>, cat: string): SectionMode => c.catMode?.[cat] ?? UNIQUE_MODES[cat] ?? GEM_MODES[cat] ?? LEAGUE_MODES[cat] ?? JEWEL_MODES[cat] ?? 'auto'
+export const sectionMode = (c: Pick<CurrencySettings, 'catMode'>, cat: string): SectionMode => c.catMode?.[cat] ?? UNIQUE_MODES[cat] ?? GEM_MODES[cat] ?? LEAGUE_MODES[cat] ?? JEWEL_MODES[cat] ?? SPECIAL_MODES[cat] ?? 'auto'
 
 const BY_TYPE: Record<string, string> = {
   'currency->essence': 'essences',
@@ -521,29 +522,34 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       })
     }
   }
+  // A row of conditions with a guess or a fixed step (jewels, special gear).
+  const setRow = (r: { name: string, cls: string, cat: string, guess: number, fixed?: CStep, bts: string[], conds: FilterCondition[] }, type: string, bt: string) => {
+    const own = edits[r.name]?.price
+    seen.set(r.name, {
+      name: r.name,
+      cls: r.cls,
+      type,
+      tier: null,
+      cat: r.cat,
+      chaos: (own ?? r.guess) * (edits[r.name]?.mult ?? 1),
+      est: own == null,
+      ...(own != null ? { own: true } : {}),
+      full: 1,
+      ...(r.fixed != null ? { fixed: r.fixed } : {}),
+      bt,
+      bts: [...r.bts],
+      conds: r.conds.map(x => ({ ...x, values: [...x.values] }))
+    })
+  }
   // Abyss and plain jewels (Guy's Jewels A, 2026-11-28): a row per rarity and
   // item level band; most have a fixed step (no price can judge them), the
   // low abyss bands a guess you set the step or price of.
   if (doc.blocks.some(b => b.type != null && JEWEL_TYPE.test(b.type))) {
-    for (const j of JEWEL_ROWS) {
-      const own = edits[j.name]?.price
-      seen.set(j.name, {
-        name: j.name,
-        cls: j.cls,
-        type: 'jewels',
-        tier: null,
-        cat: j.cat,
-        chaos: (own ?? j.guess) * (edits[j.name]?.mult ?? 1),
-        est: own == null,
-        ...(own != null ? { own: true } : {}),
-        full: 1,
-        ...(j.fixed != null ? { fixed: j.fixed } : {}),
-        bt: j.bts[0],
-        bts: j.bts,
-        conds: j.conds.map(x => ({ ...x, values: [...x.values] }))
-      })
-    }
+    for (const j of JEWEL_ROWS) setRow(j, 'jewels', j.bts[0])
   }
+  // Special gear (special-gear.ts): a row per thing a filter can see (a
+  // mod's name, fractured, influence...), each at a fixed step you can change.
+  for (const r of SPECIAL_ROWS) setRow(r, 'special', r.tip)
   // League items (Guy's League A, 2026-11-28): priced sections by name, the
   // rest a row per thing a filter can see, each a guess you can change.
   if (doc.blocks.some(b => b.type === 'expedition->logbook' || b.type?.startsWith('heist->') || b.type === 'viscera' || b.type === 'miscmapitemsextra')) {
@@ -853,7 +859,9 @@ export const CLASS_FILL: Partial<Record<LootKind, { decent: { bg: Rgb, text: Rgb
   fragments: { decent: { bg: [195, 145, 255], text: [0, 0, 0] }, big: { bg: [90, 30, 150], text: [255, 255, 255], edge: [235, 215, 255] } },
   // Maps (Guy's B, 2026-11-28): black on white, edged in the kind's tint
   // (MAP_STEP below; Tink is red text on white with a red beam).
-  maps: { decent: { bg: [255, 255, 255], text: [0, 0, 0] }, big: { bg: [255, 255, 255], text: [0, 0, 0], edge: [255, 255, 255] } }
+  maps: { decent: { bg: [255, 255, 255], text: [0, 0, 0] }, big: { bg: [255, 255, 255], text: [0, 0, 0], edge: [255, 255, 255] } },
+  // Special gear: a green no other class uses.
+  special: { decent: { bg: [110, 225, 160], text: [0, 0, 0] }, big: { bg: [10, 95, 55], text: [255, 255, 255], edge: [200, 255, 220] } }
 }
 
 // A category with a fill of its own, whatever its class: gold (currency
@@ -868,7 +876,7 @@ const fillOf = (cat: string) => CAT_FILL[cat] ?? CLASS_FILL[kindOf(cat)]
 const MAP_STEP: Partial<Record<CStep, Rgb>> = { 2: [205, 205, 205], 3: [255, 255, 255], 4: [255, 255, 255] }
 
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats' | 'chaseLook'>): { rgb: [number, number, number], color: string, shape: string } {
-  const d = cat === 'uniqchase' ? { ...UNIQUE_LOOK.uniqchase, text: chaseLookOf(c.chaseLook).text as [number, number, number], color: chaseLookOf(c.chaseLook).color } : CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? JEWEL_LOOK[cat] ?? LEAGUE_LOOK[cat] ?? CAT_LOOK.other
+  const d = cat === 'uniqchase' ? { ...UNIQUE_LOOK.uniqchase, text: chaseLookOf(c.chaseLook).text as [number, number, number], color: chaseLookOf(c.chaseLook).color } : CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? JEWEL_LOOK[cat] ?? LEAGUE_LOOK[cat] ?? SPECIAL_LOOK[cat] ?? CAT_LOOK.other
   const own = c.cats[cat]
   return {
     rgb: own?.text ? [own.text[0], own.text[1], own.text[2]] : d.text,
@@ -1173,7 +1181,7 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const eff = scaled(cfg, doc.strictness)
   const faint = faintOn(cfg, doc.strictness)
   const gemItems = all.filter(it => it.type === 'gems')
-  const items = all.filter(it => it.cls !== UNIQUE_CLS && it.type !== 'gems' && it.type !== 'maps' && it.type !== 'gold' && it.type !== 'jewels' && it.type !== 'league')
+  const items = all.filter(it => it.cls !== UNIQUE_CLS && it.type !== 'gems' && it.type !== 'maps' && it.type !== 'gold' && it.type !== 'jewels' && it.type !== 'league' && it.type !== 'special')
   const goldItems = all.filter(it => it.type === 'gold')
   const none: CurrencyCompiled = { blocks: [], items: [], chars: 0 }
   const compiled = items.length ? compileCurrency(eff, items, { faint, lvl: currencyFloors(eff, items) }) : none
@@ -1198,7 +1206,8 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
   const jewels = applyJewels(doc, eff, all.filter(it => it.type === 'jewels'), faint) ?? none
   const league = applyLeague(doc, eff, all.filter(it => it.type === 'league'), faint) ?? none
-  const parts = [{ blocks: recipes, items: [], chars: recipes.length * 220 }, compiled, gemsOut, goldOut, foul, spec, uniq, maps, jewels, league]
+  const special = applySpecial(doc, eff, all.filter(it => it.type === 'special')) ?? none
+  const parts = [{ blocks: recipes, items: [], chars: recipes.length * 220 }, compiled, gemsOut, goldOut, foul, spec, uniq, maps, jewels, league, special]
   return { blocks: parts.flatMap(x => x.blocks), items: parts.flatMap(x => x.items), chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 
@@ -1404,6 +1413,20 @@ function applyLeague (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
   insertBlocks(doc, first < 0 ? doc.chunks.length : first, [...shown, ...rest])
   return { blocks: [...shown, ...rest], items, chars: parts.reduce((n, x) => n + x.chars, 0) }
+}
+
+// Special gear (special-gear.ts) goes where NeverSink's influenced rules
+// start, one compile per row so each rule keeps its row's conditions, loudest
+// first. Nothing is hidden: a row Off, or under the line on By price, writes
+// no rule, so the item meets the gear rules below. In maps NeverSink's copies
+// of these rules stop.
+function applySpecial (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[]): CurrencyCompiled | null {
+  if (!items.length) return null
+  const parts = items.map(it => compileCurrency(cfg, [it]))
+  const shown = parts.flatMap(x => x.blocks).filter(b => b.visibility === 'Show' && b.tier !== 'faint').sort((x, y) => Number(y.tier?.slice(1) ?? 0) - Number(x.tier?.slice(1) ?? 0))
+  insertBlocks(doc, specialAnchor(doc), shown)
+  retireSpecial(doc, gateConds(cfg))
+  return { blocks: shown, items, chars: shown.length * 400 }
 }
 
 // Special unique rolls go just above NeverSink's own special rules, one

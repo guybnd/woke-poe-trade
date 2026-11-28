@@ -2,7 +2,6 @@
 // Show me runs a sample instead, then flashes the feature in it
 // (goto-flash.ts). Read only by the dock's card, so not at startup.
 import type { ItemMenuRef } from '../ui/tooltip/item-menu-logic'
-import { valdoMapText } from '../valdo/map-text'
 
 export type NewsDemo =
   // A price check of this item (one trade search, as a check is), and the
@@ -65,7 +64,6 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-unique-recipe': { check: { name: 'The Will of Uul-Netol', rarity: 'unique' }, spot: 'related' },
   'div-card-map-chance': { search: 'Strand Map' },
   // A rolled jewel, unidentified: the unid price card (nothing searched until a click).
-  'valdo-map-skips': { check: { name: 'Valdo Map', text: valdoMapText('Headhunter') }, spot: 'valdo-strip' },
   'search-keys-list': { search: 'keys' },
   // Uniques with a mod: priced rows, Goldwyrm's Vestigial line among them.
   'search-unique-mods': { search: 'item rarity' },
@@ -75,8 +73,6 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'search-tree-by-stat': { search: 'onslaught' },
   // A base with no saved price: its Price check button leads.
   'search-price-check-bases': { search: 'manifold ring' },
-  // A rare with tiered mods: hover one for its ladder.
-  'price-check-mod-tiers': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' },
   // A rare: the roll strip's Base step prices it as its base.
   'price-check-base-step': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'base-preset' },
   // Worth knowing lines (worth-knowing.ts).
