@@ -5,7 +5,7 @@ import type { ChipOption } from './StateChip.vue'
 export const SECTION_MODES: ChipOption[] = [
   { value: 'off', label: 'Hide', desc: 'Hidden in maps (area level 68+).', dot: 'var(--w-faint)', hollow: true },
   { value: 'auto', label: 'By price', desc: 'Its price × stack picks the step.', dot: 'var(--w-gold)' },
-  { value: 'always', label: 'Always', desc: 'Shows as at least Small, whatever the price.', dot: 'var(--w-gold-hi)', glow: true }
+  { value: 'always', label: 'Always', desc: 'Shows as at least Small, whatever the price.', dot: 'var(--w-up, #6fbf5a)', glow: true }
 ]
 // One item on the Alt+F card.
 export const ITEM_MODES = [{ value: 'auto', label: 'Same as section' }, { value: 'off', label: 'Hide' }, { value: 'always', label: 'Always' }]

@@ -285,6 +285,9 @@ describe('rare weights: No rank and Large penalties (Guy, 2026-11-28)', () => {
     // An old exotic base (Basemetal Treads, Gale Crown) isn't old: its implicit is the point.
     const oldExotic = rows.find(b => b.rank === 'x2' && b.old)!
     expect(stepFor(white(oldExotic), w)).toBeGreaterThan(0)
+    // Nor is a large one Large, even at area 70 (Psychotic Axe, Foundry Bow).
+    const bigExotic = rows.find(b => b.rank === 'x2' && b.width >= 2 && b.height >= 3)!
+    expect(stepFor(white(bigExotic, { itemLevel: 70 }), w)).toBeGreaterThan(0)
     expect(stepFor(white(row('r0'), { fractured: true }), w)).toBeGreaterThan(0)
     expect(stepFor(white(row('r0'), { links: 6 }), w)).toBeGreaterThan(0)
     // The best crafting base at item level 86, not lower; plain bases never.

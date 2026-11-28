@@ -160,7 +160,7 @@ const ITEM_CHIPS = computed<ChipOption[]>(() => [
   edit.value.mult != null || edit.value.price != null || edit.value.look
     ? { value: 'auto', label: 'Custom', desc: 'Its section decides, with your bias, price or look.', dot: 'var(--w-gold)' }
     : { value: 'auto', label: 'Same as section', desc: 'Its section decides.', dot: 'var(--w-gold)' },
-  { value: 'always', label: 'Always', desc: 'Shows as at least Small, whatever the price.', dot: 'var(--w-gold-hi)', glow: true }
+  { value: 'always', label: 'Always', desc: 'Shows as at least Small, whatever the price.', dot: 'var(--w-up, #6fbf5a)', glow: true }
 ])
 const BIAS_HELP = `Makes this item count above or below its price, so it shows louder or quieter.
 - Pick This item (only this one) or its section (every item in it). Both apply.
