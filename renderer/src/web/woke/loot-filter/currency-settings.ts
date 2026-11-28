@@ -37,6 +37,8 @@ export interface ItemEdit {
   // Shows at least this step at any stack: a card you collect (Guy's star,
   // 2026-11-27: Collecting shows at least Normal).
   min?: CStep
+  // By price, on a row that has a fixed step (a jewel row with no price).
+  priced?: true
 }
 
 export interface CurrencySettings {
