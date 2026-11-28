@@ -1363,7 +1363,7 @@ test('Base ranks: drag a base, then the picked set, onto another column', async 
   await overlay.snap('talismans moved to Exotic')
 })
 
-test('Currency weights: Alt + F on currency shows its step first, a Shows switch, the step ruler and a Price bias', async ({ overlay, fakeApp }) => {
+test('Currency weights: Alt + F on currency: the rule path picks the level, Show it, a typed price, the ruler and a needle you drag for the bias', async ({ overlay, fakeApp }) => {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
   fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters/neversink/3-STRICT.filter.gz'))))
   await overlay.boot({ widgets: [{ ...lootFilter(folder), presets: { currency: { on: true } } }] })
@@ -1372,38 +1372,53 @@ test('Currency weights: Alt + F on currency shows its step first, a Shows switch
   await overlay.copyItem('items/currency-chaos.txt', 'Alt + F')
   const card = page.locator('[data-currency-card]')
   await expect(card).toBeVisible()
-  await expect(page.locator('[data-currency-card-cat]')).toContainText('Orbs')
-  // No old tier picker under it: the Loot steps are shared by every section,
-  // so it named the item's tier after another one (Guy: "S3 Corpses").
+  // Guy's M4: the rule path (Loot › Orbs › Chaos Orb) is the level switch.
+  await expect(card.locator('[data-currency-card-level="sec"]')).toHaveText('Orbs')
+  await expect(card.locator('[data-currency-card-level="item"]')).toHaveAttribute('aria-pressed', 'true')
+  // One answer: the card above doesn't repeat it, and the footer has no
+  // Open editor or Reload now (Go to rule and Save + reload do those).
+  await expect(page.getByText('✓ Shows')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Open editor' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Reload now' })).toHaveCount(0)
+  await expect(page.locator('[data-currency-card-now]')).toContainText('Shows')
+  // No old tier picker under it (Guy: "S3 Corpses").
   await expect(page.getByText('Pick a tier below to move it there.')).toHaveCount(0)
   await expect(page.getByText('By strictness')).toHaveCount(0)
-  // The ruler names all five steps.
   for (const n of ['Small', 'Normal', 'Decent', 'Big', 'Tink']) await expect(card.locator('[data-currency-card-ruler]')).toContainText(n)
+  await expect(card.locator('[data-currency-card-decides]')).toBeVisible()
   await overlay.snap('currency card')
-  // One Price bias (Guy's F1): this item's by default, in %; it applies on
-  // release, and the Steps from line turns This item gold.
-  await page.locator('[data-currency-card-mult] [data-bias-range]').fill('150')
-  await expect(card.locator('[data-currency-card-item]')).toContainText('150%')
-  // Its own bias makes This item Custom (Guy 2026-11-28).
-  await expect(card.locator('[data-currency-card-item]')).toContainText('Custom')
-  // The dropdown moves the whole section's bias instead.
-  await card.locator('[data-currency-card-bias-of]').selectOption('sec')
-  await page.locator('[data-currency-card-sec-bias] [data-bias-num]').fill('80')
-  await page.locator('[data-currency-card-sec-bias] [data-bias-num]').press('Enter')
-  await expect(card.locator('[data-currency-card-section]')).toContainText('80%')
-  // The Shows switch hides every pile.
-  await card.locator('[data-currency-card-shows]').click()
+  // Dragging the needle sets this item's bias, applied on release.
+  const bar = card.locator('[data-currency-card-bar]')
+  const box = (await bar.boundingBox())!
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width * 0.95, box.y + box.height / 2, { steps: 4 })
+  await page.mouse.up()
+  await expect(card.locator('[data-currency-card-pct]')).not.toHaveText('100%')
+  await expect(card.locator('[data-currency-card-decides]')).toContainText('Chaos Orb:')
+  await card.locator('[data-currency-card-bias-reset]').click()
+  await expect(card.locator('[data-currency-card-pct]')).toHaveText('100%')
+  // A typed price, at the price.
+  await card.locator('[data-currency-card-price-edit]').click()
+  await card.locator('[data-currency-card-price-in]').fill('500')
+  await card.locator('[data-currency-card-price-in]').press('Enter')
+  await expect(card.locator('[data-currency-card-price]')).toContainText('yours')
+  await expect(page.locator('[data-currency-card-now]')).toContainText('Tink')
+  await card.locator('[data-currency-card-price-reset]').click()
+  await expect(card.locator('[data-currency-card-price]')).not.toContainText('yours')
+  // Always hide, just this item.
+  await card.locator('[data-currency-card-mode-off]').click()
   await expect(page.locator('[data-currency-card-now]')).toContainText('Hidden')
+  await expect(card.locator('[data-currency-card-why]')).toContainText('Always hide')
   await overlay.snap('currency card, off')
-  // The whole section from the same card (Guy: Alt+F sets the section or just the item).
-  await card.locator('[data-currency-card-shows]').click()
-  await card.locator('[data-currency-card-section]').getByRole('button', { name: /^Orbs:/ }).click()
-  await page.getByRole('menuitemradio', { name: /^Hide/ }).click()
-  // Its bias is on the card's one slider now, so the menu closes on a pick.
-  await expect(page.locator('[data-state-chip-menu]')).toHaveCount(0)
-  await expect(page.locator('[data-currency-card-now]')).toContainText('Orbs is set to Hide')
-  await card.locator('[data-currency-card-item]').getByRole('button', { name: /^Chaos Orb:/ }).click()
-  await page.getByRole('menuitemradio', { name: /^Always/ }).click()
+  await card.locator('[data-currency-card-mode-auto]').click()
+  // Up a level: Always hide every Orb; the item follows it until set.
+  await card.locator('[data-currency-card-level="sec"]').click()
+  await card.locator('[data-currency-card-mode-off]').click()
+  await expect(page.locator('[data-currency-card-why]')).toContainText('Orbs is set to Always hide')
+  await card.locator('[data-currency-card-level="item"]').click()
+  await expect(card.locator('[data-currency-card-level-note]')).toContainText('Follows Orbs')
+  await card.locator('[data-currency-card-mode-always]').click()
   await expect(page.locator('[data-currency-card-now]')).not.toContainText('Hidden')
   await overlay.snap('currency card, section off, item always')
 })
@@ -1577,14 +1592,14 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await page.locator('[data-loot-class="uniques"]').click()
   const plain = page.locator('[data-currency-cat="uniqplain"]')
   await expect(plain).toBeVisible()
-  await expect(page.locator('[data-currency-cat="uniqboss"] [data-loot-section-mode]').getByRole('button', { name: /: Always/ })).toBeVisible()
+  await expect(page.locator('[data-currency-cat="uniqboss"] [data-loot-section-mode]').getByRole('button', { name: /: Always show/ })).toBeVisible()
   await plain.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
   await expect(plain.locator('[data-currency-item]').first()).toBeVisible()
   await overlay.snap('loot tab, uniques')
   // Gems: a row per poe.ninja band (level, quality, corrupted); Exceptional is Always.
   await page.locator('[data-loot-class="gems"]').click()
   const exc = page.locator('[data-currency-cat="gemexc"]')
-  await expect(exc.locator('[data-loot-section-mode]').getByRole('button', { name: /: Always/ })).toBeVisible()
+  await expect(exc.locator('[data-loot-section-mode]').getByRole('button', { name: /: Always show/ })).toBeVisible()
   await exc.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
   await expect(exc.locator('[data-currency-item="Enlighten Support 4/20c"]')).toBeVisible()
   await overlay.snap('loot tab, gems')
@@ -1615,7 +1630,7 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(head).toContainText('By price')
   await expect(row86).toContainText('est.')
   // The menu stays open: pick Always again from it.
-  await page.locator('[data-state-chip-menu]').getByRole('menuitemradio', { name: /Always/ }).click()
+  await page.locator('[data-state-chip-menu]').getByRole('menuitemradio', { name: /Always show/ }).click()
   await expect(row86).not.toContainText('est.')
   await page.keyboard.press('Escape')
   await expect(page.locator('[data-maps-pile] [data-map-drop]').first()).toBeVisible()
@@ -1648,7 +1663,7 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   // Wombgifts have their own section (Guy 2026-11-28), so Alt+F gives them the Loot card.
   await expect(page.locator('[data-currency-cat="lgwomb"]')).toContainText('Wombgifts')
   await logs.locator('[data-loot-section-mode]').getByRole('button').click()
-  await page.getByRole('menuitemradio', { name: /^Hide/ }).click()
+  await page.getByRole('menuitemradio', { name: /^Always hide/ }).click()
   await logs.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
   await expect(logs.locator('[data-currency-item="Logbook, item level 83+"]')).toContainText('Hidden')
   await expect(page.locator('[data-maps-pile] [data-map-drop]').first()).toBeVisible()
@@ -1707,7 +1722,7 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-currency-strict-line]')).toContainText('25% higher')
   // The steps sit on one price ruler; a handle's value is the price after Strictness.
   await expect(page.getByRole('spinbutton', { name: 'Normal from this many chaos', exact: true })).toHaveValue('1.3')
-  await expect(page.locator('[data-currency-cat="orbs"] [data-loot-section-mode]').getByRole('button')).toHaveAccessibleName('Orbs: By price')
+  await expect(page.locator('[data-currency-cat="orbs"] [data-loot-section-mode]').getByRole('button')).toHaveAccessibleName('Orbs: By price estimate')
   await page.waitForTimeout(500)
   await overlay.snap('currency weights tab')
 
@@ -1790,11 +1805,11 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await deaf.getByRole('combobox').selectOption('auto')
   await expect(page.locator('[data-currency-cat="essences"]').first()).not.toContainText('edited')
 
-  // Every section has one chip: Hide / By price / Always, and a price bias.
+  // Every section has one chip: Always hide / By price estimate / Always show, and a price bias.
   const oils = page.locator('[data-currency-cat="oils"]')
   const oilChip = oils.locator('[data-loot-section-mode]').getByRole('button')
   await oilChip.click()
-  await page.getByRole('menuitemradio', { name: /^Hide/ }).click()
+  await page.getByRole('menuitemradio', { name: /^Always hide/ }).click()
   await expect(oils).toContainText(/(^|\D)0 of \d+ show/)
   await overlay.snap('loot tab, oils section chip menu')
   await page.getByRole('menuitemradio', { name: /^By price/ }).click()
@@ -1807,7 +1822,7 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await oilChip.click()
   await page.getByRole('button', { name: 'Price bias back to none' }).click()
   await page.keyboard.press('Escape')
-  await expect(oilChip).toHaveAccessibleName('Oils: By price')
+  await expect(oilChip).toHaveAccessibleName('Oils: By price estimate')
   // Faint: piles under the line show small and see-through, while it's on.
   await page.getByRole('button', { name: 'Faint settings', exact: true }).click()
   await page.locator('[data-loot-faint]').check()
