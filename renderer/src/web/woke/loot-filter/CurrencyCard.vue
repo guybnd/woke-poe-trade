@@ -7,7 +7,7 @@
       <button type="button" :class="$style.cat" class="w-focusable" :style="{ '--c': catCss }" :title="`Open ${catName} on the Loot tab`" data-currency-card-cat
         @click="emit('open-tab', it.cat, it.name)"><i aria-hidden="true" />{{ catName }}</button>
       <span class="grow" />
-      <span class="text-xs w-dim">{{ chaosText(base) }} each · {{ edit.price != null ? 'your price' : it.est ? 'guess' : 'poe.ninja' }}<template v-if="stack > 1"> · stack {{ stack }}/{{ Math.max(stack, it.full) }}</template></span>
+      <span class="text-xs w-dim"><template v-if="fixed != null">no price</template><template v-else>{{ chaosText(base) }} each · {{ edit.price != null ? 'your price' : it.est ? 'guess' : 'poe.ninja' }}</template><template v-if="stack > 1"> · stack {{ stack }}/{{ Math.max(stack, it.full) }}</template></span>
     </div>
 
     <div :class="$style.row" data-currency-card-section>
@@ -66,7 +66,7 @@ import { WButton, WSegmented } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import { ITEM_MODES, SECTION_MODES } from './section-modes'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
-import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, faintOn, forcedHidden, offSteps, scaled, sectionMode, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, faintOn, fixedOf, forcedHidden, offSteps, scaled, sectionMode, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { gemLinesOf } from './gem-classes'
 import { LEAGUE_SECTIONS } from './league-classes'
@@ -152,7 +152,9 @@ function setSecMode (v: string) {
   if (v !== sectionMode({ catMode: {} }, cat)) next[cat] = v as SectionMode
   cfg.value.catMode = next
 }
-const mode = computed(() => edit.value.step === 0 ? 'off' : edit.value.supply === 1 && edit.value.step == null ? 'always' : 'auto')
+// A jewel row's fixed step (no price) reads as Always, or Off for step 0.
+const fixed = computed(() => it.value ? fixedOf(it.value, edit.value) : undefined)
+const mode = computed(() => edit.value.step === 0 || fixed.value === 0 ? 'off' : (edit.value.supply === 1 && edit.value.step == null) || fixed.value != null ? 'always' : 'auto')
 const stacks = computed(() => it.value ? stacksFor(it.value, eff.value) : [null, null, null, null, null])
 const off = computed(() => it.value ? offSteps(it.value, cfg.value) : [])
 const now = computed<CStep>(() => stepOfPile(stacks.value, props.stack, off.value))
@@ -223,9 +225,12 @@ function put (patch: Partial<ItemEdit>) {
   setEdit(Object.fromEntries(Object.entries({ ...edit.value, ...patch }).filter(([, v]) => v !== undefined)) as ItemEdit)
 }
 function setMode (v: string) {
-  if (v === 'off') put({ step: 0, supply: undefined })
-  else if (v === 'always') put({ step: undefined, supply: 1 })
-  else put({ step: undefined, supply: edit.value.supply === 1 ? undefined : edit.value.supply })
+  const fx = it.value?.fixed
+  // A row with a fixed step: Always goes back to it, By price leaves it.
+  if (v === 'always' && fx) put({ step: undefined, supply: undefined, priced: undefined })
+  else if (v === 'off') put({ step: 0, supply: undefined, priced: undefined })
+  else if (v === 'always') put({ step: undefined, supply: 1, priced: undefined })
+  else put({ step: undefined, supply: edit.value.supply === 1 ? undefined : edit.value.supply, priced: fx != null ? true : undefined })
 }
 // Applies on release (Guy: sliders apply when you let go).
 function commitMult (v: string) {

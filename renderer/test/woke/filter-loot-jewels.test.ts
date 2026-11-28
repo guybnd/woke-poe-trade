@@ -18,7 +18,7 @@ const jewel = (base: string, cls: string, rarity: ItemFacts['rarity'], itemLevel
 describe('jewels on the Loot tab', () => {
   it('lists the Abyss and Jewels rows as the jewels kind', () => {
     const items = currencyItems(parseFilter(SEMI), lookup).filter(i => i.type === 'jewels')
-    expect(items.length).toBe(11)
+    expect(items.length).toBe(12)
     expect(new Set(items.map(i => kindOf(i.cat)))).toEqual(new Set(['jewels']))
     expect(items.every(i => i.est)).toBe(true)
   })
@@ -48,6 +48,41 @@ describe('jewels on the Loot tab', () => {
     expect(hit(jewel('Large Cluster Jewel', 'Jewels', 'Rare', 84)).final?.block.type).not.toBe(CURRENCY_TYPE)
     expect(hit(jewel('Prismatic Jewel', 'Jewels', 'Unique', 84)).final?.block.comment).toMatch(/uniq/)
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
+  })
+
+  // Guy 2026-11-28: a filter can't see which corruption implicit a jewel has,
+  // so those rows (and rare jewels) have a fixed step, not a price, and show
+  // with Small and Normal turned off.
+  it('shows the rows no price can judge whatever steps are off', () => {
+    const cfg = defaultCurrency()
+    cfg.on = true
+    cfg.off = [1, 2]
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, cfg, lookup)
+    const hit = (f: ItemFacts) => matchItem(doc, f)
+    const step = (f: ItemFacts) => Number(hit(f).final?.block.tier?.slice(1))
+    expect(step(jewel('Cobalt Jewel', 'Jewels', 'Rare', 84, { corrupted: true, corruptedMods: 1 }))).toBe(3)
+    expect(step(jewel('Viridian Jewel', 'Jewels', 'Magic', 84, { corrupted: true, corruptedMods: 1 }))).toBe(2)
+    expect(step(jewel('Crimson Jewel', 'Jewels', 'Rare', 84))).toBe(1)
+    expect(hit(jewel('Crimson Jewel', 'Jewels', 'Magic', 84)).visibility).toBe('Hide')
+    expect(step(jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 83))).toBe(1)
+    expect(step(jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Magic', 70, { corrupted: true, corruptedMods: 1 }))).toBe(2)
+    expect(hit(jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 75)).visibility).toBe('Hide')
+  })
+
+  it('a fixed row goes by price once you say so', () => {
+    const cfg = defaultCurrency()
+    cfg.on = true
+    cfg.line = 1
+    const rare = jewel('Crimson Jewel', 'Jewels', 'Rare', 84)
+    let doc = parseFilter(SEMI)
+    applyCurrency(doc, cfg, lookup)
+    expect(matchItem(doc, rare).visibility).toBe('Show')
+    cfg.items = { 'Rare jewel': { priced: true } }
+    doc = parseFilter(SEMI)
+    applyCurrency(doc, cfg, lookup)
+    // Its 0.5c guess is under a 1c line.
+    expect(matchItem(doc, jewel('Crimson Jewel', 'Jewels', 'Rare', 84)).visibility).toBe('Hide')
   })
 
   it('a section set Off hides its jewels; below area level 68 NeverSink decides', () => {
