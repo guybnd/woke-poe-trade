@@ -94,7 +94,7 @@
         <span :class="$style.catName">{{ g.cat.name }}</span>
         <span v-if="g.edited" :class="$style.edited">{{ g.edited }} edited</span>
         <span v-if="c.rulers[g.cat.id]" :class="$style.edited">own ruler</span>
-        <span :class="$style.count">{{ g.shown }} of {{ g.all }} show</span>
+        <span :class="$style.count">{{ g.shown }} of {{ g.all }} show<template v-if="g.always"> · {{ g.always }} always</template></span>
         <span :class="$style.dots" aria-hidden="true"><i v-for="r in g.rows" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
         <span class="flex-1" />
         <span data-loot-section-mode>
@@ -173,6 +173,7 @@
               <template v-if="r.it.type === 'gold'">by size</template><template v-else-if="fixedOf(r.it, c.items[r.it.name]) != null"><WPrice :chaos="null" none="No price: a filter can't see which implicit or mods a jewel has, so it shows at a set step" /></template><template v-else>{{ chaosText(r.it.chaos) }}<span v-if="r.it.est" :class="$style.est"> est.</span></template>
             </span>
             <span :class="$style.pills">
+              <button v-if="r.it.fixed != null" type="button" :class="[$style.rowMode, $style['mode_' + rowMode(r.it)]]" :title="ROW_MODE_TIP[rowMode(r.it)]" data-loot-row-mode @click.stop="cycleRowMode(r.it)" @keydown.stop>{{ ROW_MODE_TEXT[rowMode(r.it)] }}</button>
               <span v-for="p in r.pills" :key="p.text" :class="$style.pill" :style="{ background: STEP_CSS[p.step], color: p.step >= 3 ? '#140f08' : '#efe4cc' }">{{ p.text }}</span>
             </span>
             <i class="fas fa-pen w-faint" :class="$style.pen" aria-hidden="true" />
@@ -324,6 +325,8 @@ function pillsOf (stacks: Array<number | null>, edit: ItemEdit | undefined, it: 
   const under = forcedHidden(it, c.value) || !faintActive.value ? 'Hidden' : 'Faint'
   if (stacks.every(k => k == null)) return [{ step: 0, text: edit?.step === 0 ? 'Hidden, set by you' : sectionMode(c.value, it.cat) === 'off' && under === 'Hidden' ? 'Hidden, section off' : `${under} at any stack` }]
   if (edit?.step != null) return [{ step: edit.step, text: `${CSTEP_NAMES[edit.step]} at any stack, set by you` }]
+  const fx = fixedOf(it, edit)
+  if (fx != null) return [{ step: fx, text: CSTEP_NAMES[fx] }]
   const out: Pill[] = []
   if (stacks[0] != null && stacks[0] > 1) out.push({ step: 0, text: stacks[0] === 2 ? `${under} at 1` : `${under} 1–${stacks[0] - 1}` })
   stacks.forEach((k, i) => {
@@ -378,7 +381,7 @@ const groups = computed(() => CATS.value.map(cat => {
         return { id: name, name, all: inSub, shown: inSub.filter(r => r.shows).length, step: wholeStep(inSub), rows: rowsHere.filter(r => subgroupOf(r.it.name, cat.id) === name) }
       }).filter(sg => sg.rows.length)
     : [{ id: '', name: '', all, shown: 0, step: 'auto', rows: rowsHere }]
-  return { cat, all: all.length, shown: all.filter(r => r.shows).length, edited: all.filter(r => r.edited).length, rows: rowsHere, subs }
+  return { cat, all: all.length, shown: all.filter(r => r.shows).length, edited: all.filter(r => r.edited).length, always: all.filter(r => r.it.fixed != null && rowMode(r.it) === 'always').length, rows: rowsHere, subs }
 }).filter(g => g.rows.length))
 
 type Row = (typeof rows.value)[number]
@@ -555,6 +558,25 @@ function toggleOn (name: string) {
   const { step, ...rest } = c.value.items[name] ?? {}
   setEdit(name, step === 0 ? (Object.keys(rest).length ? rest : null) : { ...rest, step: 0 })
 }
+// A row with a set look and no price (jewels): Always shows it at that look,
+// By price puts it on the price ladder, Off hides it. A click moves along.
+type RowMode = 'always' | 'price' | 'off'
+const ROW_MODE_TEXT: Record<RowMode, string> = { always: 'Always', price: 'By price', off: 'Off' }
+const ROW_MODE_TIP: Record<RowMode, string> = {
+  always: 'Always shows, at the look beside it. Click for By price',
+  price: 'Shows by its guessed price and the ruler. Click for Off',
+  off: 'Hidden. Click for Always'
+}
+function rowMode (it: CurrencyItem): RowMode {
+  const e = c.value.items[it.name]
+  return e?.step === 0 ? 'off' : fixedOf(it, e) != null ? 'always' : 'price'
+}
+function cycleRowMode (it: CurrencyItem) {
+  const rest: ItemEdit = Object.fromEntries(Object.entries(c.value.items[it.name] ?? {}).filter(([k]) => !['step', 'priced', 'price', 'supply'].includes(k)))
+  const mode = rowMode(it)
+  const next: ItemEdit = mode === 'always' ? { ...rest, priced: true } : mode === 'price' ? { ...rest, step: 0 } : rest
+  setEdit(it.name, Object.keys(next).length ? next : null)
+}
 function setEdit (name: string, e: ItemEdit | null) {
   const next = Object.fromEntries(Object.entries(c.value.items).filter(([k]) => k !== name))
   if (e) next[name] = e
@@ -676,6 +698,10 @@ function chaosText (v: number): string {
 .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c9b98c; }
 .price { text-align: right; font-variant-numeric: tabular-nums; }
 .est { color: var(--w-faint); font-size: var(--w-fs-xs); }
+.rowMode { font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 3px; border: 1px solid #5a4a30; background: transparent; color: #c8a565; cursor: pointer; white-space: nowrap; }
+.rowMode:hover { border-color: #c8a565; }
+.mode_price { color: #a89f8c; }
+.mode_off { color: #7a7266; border-style: dashed; }
 .pills { display: flex; gap: 3px; flex-wrap: wrap; min-width: 0; }
 .pill { font-size: var(--w-fs-xs); padding: 0 5px; border-radius: 2px; line-height: 1.5; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .edited { color: var(--w-accent, #c8a565); font-size: var(--w-fs-xs); }

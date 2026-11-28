@@ -1488,6 +1488,18 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(abyss).toBeVisible()
   await abyss.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
   await expect(abyss.locator('[data-currency-item="Rare abyss jewel, item level 86+"]')).toBeVisible()
+  // A jewel row has a set look and no price: its state reads Always, and a
+  // click moves it to By price, Off, then back (Guy, 2026-11-28).
+  const mode = abyss.locator('[data-currency-item="Rare abyss jewel, item level 86+"] [data-loot-row-mode]')
+  await expect(mode).toHaveText('Always')
+  await expect(abyss.locator('[aria-expanded]').first()).toContainText('always')
+  await overlay.snap('loot tab, abyss jewel rows')
+  await mode.click()
+  await expect(mode).toHaveText('By price')
+  await mode.click()
+  await expect(mode).toHaveText('Off')
+  await mode.click()
+  await expect(mode).toHaveText('Always')
   await expect(page.locator('[data-maps-pile] [data-map-drop]').first()).toBeVisible()
   await expect(page.locator('[data-loot-jewels]')).toContainText('Follow poe.ninja')
   await overlay.snap('loot tab, jewels')
