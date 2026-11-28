@@ -31,6 +31,7 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
+  { id: 'loot-filter-special-gear', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Special gear: veiled, temple and league mods, fractured, influenced, idols, each with its own look' },
   { id: 'loot-filter-recipes-by-price', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Recipes steps follow the price of what the vendor gives' },
   { id: 'price-check-base-step', since: '1.330.24', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a Base step beside Low / Approx / High prices gear as its base in one click' },
   { id: 'loot-levelling', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Levelling: Loot looks while levelling, gear for your build' },
@@ -64,7 +65,6 @@ export const NEWS: NewsItem[] = [
   { id: 'flips-tattoo-tribes', since: '1.330.22', wmType: 'woke-scarab-flip', goto: 'tattoos', name: 'Flips', note: 'New: Tattoos tab, each tribe\'s average Tattoo and whether 3 of its cheapest are worth vendoring for 1' },
   { id: 'mechanics-settlers', since: '1.330.22', wmType: 'woke-mechanics', goto: 'settlers', name: 'League mechanics', note: 'New: Settlers tab, Tattoos by tribe and Runegrafts, priced' },
   { id: 'essence-tip-slots', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Tooltips', note: 'New: an essence\'s tooltip lists the mod it forces on each slot' },
-  { id: 'price-check-conquest-keystones', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a Timeless jewel lists each conqueror\'s keystone beside it. Click one to search it, any number' },
   { id: 'price-check-mod-tiers', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Tooltips', note: 'New: hover a mod for its tiers, the item level each needs, and the bench craft for it' },
   { id: 'search-keys-list', since: '1.330.21', wmType: 'woke-search', name: 'Search', note: 'New: type "keys" for every hotkey you have set and every mouse trick, in one list' },
   { id: 'search-recent-queries', since: '1.330.20', wmType: 'woke-search', name: 'Search', note: 'New: your last 3 searches wait under Recent, even ones you only looked at. Enter or a click puts one back' },

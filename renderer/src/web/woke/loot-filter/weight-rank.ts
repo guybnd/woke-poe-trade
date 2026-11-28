@@ -48,14 +48,14 @@ export type ExoticLane = 'exotichi' | 'exotic'
 export const isExoticLane = (lane: string): lane is ExoticLane => lane === 'exotichi' || lane === 'exotic'
 
 export function valuableExotics (doc: FilterDoc, own: Record<string, RankKey>, exotics: Iterable<string>): Set<string> {
-  const top = new Set(baseRanks(doc).x1)
+  const top = new Set(baseRanks().x1)
   return new Set([...exotics].filter(b => (own[b] ?? (top.has(b) ? 'x1' : 'x2')) === 'x1'))
 }
 
 export function moveExotics (store: LootFilterStore, config: LootFilterWidget, bases: readonly string[], lane: ExoticLane) {
   const doc = store.doc.value
   if (!doc) return
-  const top = new Set(baseRanks(doc).x1)
+  const top = new Set(baseRanks().x1)
   const to: RankKey = lane === 'exotichi' ? 'x1' : 'x2'
   const w = config.presets.weights
   const rest = Object.entries(w.ranks).filter(([n]) => !bases.includes(n))

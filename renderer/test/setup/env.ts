@@ -30,3 +30,7 @@ if (!('localStorage' in globalThis)) {
     get length () { return store.size }
   }
 }
+
+// The loot filter's own base ranks load with the filter in the app; tests
+// read them straight away.
+await import('@/web/woke/loot-filter/base-ranks').then(m => m.loadBaseRanks())
