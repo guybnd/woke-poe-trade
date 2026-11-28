@@ -2,10 +2,8 @@
 // section per mechanic. poe.ninja prices almost none of these (contracts,
 // blueprints, logbooks, tomes), so a section is on (NeverSink's rules) or
 // Off: a mechanic you don't run goes away in maps in one click.
-import type { FilterBlock, FilterCondition, FilterDoc } from './parse'
+import type { FilterCondition } from './parse'
 import type { LootCategory } from './fragment-classes'
-import type { CurrencySettings } from './currency-settings'
-import { CURRENCY_TYPE } from './currency-settings'
 
 const cond = (key: string, op: string, values: string[]): FilterCondition => ({ key, op, count: null, values } as FilterCondition)
 
