@@ -16,6 +16,7 @@ export type WeightKey =
   | 'l4' | 'l5' | 'l6' | 'rgb'
   | 'cp' | 'ci' | 'dc'
   | 'big' | 'tiny' | 'old'
+  | 'ig1' | 'ig2' | 'ig3' | 'idr' | 'idm'
 
 export interface WeightRow { key: WeightKey, label: string, dflt: number }
 export interface WeightGroup { key: string, label: string, icon: string, base?: boolean, rows: WeightRow[] }
@@ -144,6 +145,22 @@ export const WEIGHT_GROUPS: WeightGroup[] = [
       { key: 'tiny', label: 'Tiny (1 high)', dflt: 1.4 },
       { key: 'old', label: 'Old armour base (drop level under 40)', dflt: 0.25 }
     ]
+  },
+  {
+    // Identified gear (Guy's pick A, 2026-11-28): each mod from the price
+    // check's list of valuable mods adds by its tier, the top 5 of the list
+    // most. Great: a top 5 mod at tier 1. Good: tier 2, or another listed
+    // mod at tier 1. Fair: tier 3, or another at tier 2.
+    key: 'idmods',
+    label: 'Identified mods',
+    icon: 'fas fa-scroll',
+    rows: [
+      { key: 'ig1', label: 'Great mod', dflt: 3 },
+      { key: 'ig2', label: 'Good mod', dflt: 2 },
+      { key: 'ig3', label: 'Fair mod', dflt: 1.4 },
+      { key: 'idr', label: 'Identified rare', dflt: 1.5 },
+      { key: 'idm', label: 'Identified magic', dflt: 1 }
+    ]
   }
 ]
 
@@ -248,9 +265,11 @@ export const PIN_ROWS: ReadonlySet<WeightKey> = new Set<WeightKey>(['w86', 'x1',
 
 // Marks only add (×1 or more): a mark under ×1 would split every rule.
 export const MARK_ROWS: WeightKey[] = ['w86', 'l6', 'l5', 'l4', 'infl', 'eld', 'qual', 'fract', 'synth', 'fated', 'ench', 'strand', 'cruc', 'abyss', 'rgb']
+// Identified mods only add too: the filter counts them, it can't take away.
+export const ID_ROWS: WeightKey[] = ['ig1', 'ig2', 'ig3', 'idr', 'idm']
 // Rows that stay in order, lowest first: a higher drop tier or item level is
 // never worth less than a lower one.
-export const ORDERED_ROWS: WeightKey[][] = [['t1', 't2', 't3', 't4', 't5'], ['mt1', 'mt2', 'mt3', 'mt4', 'mt5'], ['i68', 'i75', 'i83', 'i86']]
+export const ORDERED_ROWS: WeightKey[][] = [['t1', 't2', 't3', 't4', 't5'], ['mt1', 'mt2', 'mt3', 'mt4', 'mt5'], ['i68', 'i75', 'i83', 'i86'], ['ig3', 'ig2', 'ig1']]
 
 export function normalizeWeights (w: Partial<WeightSettings> | undefined): WeightSettings {
   const d = defaultWeights()
@@ -266,7 +285,7 @@ export function normalizeWeights (w: Partial<WeightSettings> | undefined): Weigh
     if (mult.r0 === 1) mult.r0 = 0.5
     if (mult.big === 1 || mult.big === 0.85) mult.big = 0.7
   }
-  for (const k of MARK_ROWS) mult[k] = Math.max(1, mult[k])
+  for (const k of [...MARK_ROWS, ...ID_ROWS]) mult[k] = Math.max(1, mult[k])
   for (const row of ORDERED_ROWS) for (let i = 1; i < row.length; i++) mult[row[i]] = Math.max(mult[row[i]], mult[row[i - 1]])
   return {
     on: typeof w?.on === 'boolean' ? w.on : false,

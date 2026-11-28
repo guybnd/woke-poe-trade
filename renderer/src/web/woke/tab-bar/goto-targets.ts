@@ -27,7 +27,7 @@ export const GOTO_SPOTS = {
   'woke-net-worth': { 'per-hour': 'holdings', 'faustus-box': 'holdings', 'worth-selling': 'holdings', 'still-cheapest': 'listed', 'stale': 'listed', 'past-runs': 'runs' },
   'woke-atlas-strategies': { results: 'strategies', import: 'strategies' },
   'woke-pob-builds': { import: 'builds' },
-  'woke-loot-filter': { 'profiles': 'editor', 'gear-ranks': 'editor', 'over-quality-look': 'editor', 'league-always': 'editor', 'loot-gold': 'editor', 'loot-levelling': 'editor', 'loot-special': 'editor', 'section-steps': 'editor', 'section-ruler': 'editor', 'map-looks': 'editor', 'jewels-no-price': 'editor', 'own-lists': 'editor', 'history': 'editor', 'recipes-by-price': 'editor', 'loot-strictness': 'editor' }
+  'woke-loot-filter': { 'profiles': 'editor', 'gear-ranks': 'editor', 'over-quality-look': 'editor', 'league-always': 'editor', 'loot-gold': 'editor', 'loot-levelling': 'editor', 'loot-special': 'editor', 'section-steps': 'editor', 'section-ruler': 'editor', 'map-looks': 'editor', 'jewels-no-price': 'editor', 'own-lists': 'editor', 'history': 'editor', 'recipes-by-price': 'editor', 'loot-strictness': 'editor', 'id-mods': 'editor' }
 } as const satisfies { [T in keyof typeof GOTO_TARGETS]?: Record<string, keyof typeof GOTO_TARGETS[T]> }
 
 // What's new lines whose feature is a spot, by line id (news.ts). Kept here,
@@ -43,10 +43,8 @@ export const NEWS_SPOTS: Record<string, string> = {
   'listed-still-cheapest': 'still-cheapest',
   'net-worth-listed': 'stale',
   'net-worth-worth-selling': 'worth-selling',
-  'net-worth-rename-runs': 'past-runs',
   'atlas-results-from-runs': 'results',
   'atlas-planner-links': 'import',
-  'atlas-tree-planner-links': 'import',
   'pob-import-all-sites': 'import',
   'loot-filter-profiles': 'profiles',
   'loot-filter-over-quality-look': 'over-quality-look',
@@ -56,7 +54,8 @@ export const NEWS_SPOTS: Record<string, string> = {
   'loot-levelling': 'loot-levelling',
   'loot-filter-special-gear': 'loot-special',
   'loot-filter-recipes-by-price': 'recipes-by-price',
-  'loot-filter-strictness-menu': 'loot-strictness'
+  'loot-filter-strictness-menu': 'loot-strictness',
+  'loot-filter-identified-mods': 'id-mods'
 }
 
 export function gotoSpots (wmType: string): Record<string, string> | null {
