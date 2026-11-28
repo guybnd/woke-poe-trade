@@ -796,13 +796,22 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const compiled = items.length ? compileCurrency(eff, items, { faint }) : none
   const gemsOut = gemItems.length ? compileCurrency(eff, gemItems, { faint, floors: gemFloors(eff) }) : none
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
+  insertBlocks(doc, first < 0 ? doc.chunks.length : first, [...compiled.blocks, ...gemsOut.blocks])
+  // Recipes go where NeverSink's own socket recipes start: below Equipment
+  // (rares, flasks) and NeverSink's valuable rules (influenced, top bases),
+  // so a recipe never caps something worth more.
+  // The 6-link one under NeverSink's top-base 6-links, above its other 6-links.
   const recipes = recipeBlocks(eff)
-  insertBlocks(doc, first < 0 ? doc.chunks.length : first, [...recipes, ...compiled.blocks, ...gemsOut.blocks])
+  const ns = doc.chunks.findIndex(ch => ch.kind === 'block' && !(ch as FilterBlock).type?.startsWith('woke->'))
+  const anchor = (b?: FilterBlock) => b ? doc.chunks.indexOf(b) : ns < 0 ? doc.chunks.length : ns
+  const link6 = recipes.filter(b => b.comment.endsWith(': recipe: 6-link'))
+  insertBlocks(doc, anchor(doc.blocks.find(b => b.type === '6l' && b.tier === 'others') ?? doc.blocks.find(b => b.type === '6l')), link6)
+  insertBlocks(doc, anchor(doc.blocks.find(b => b.type === 'socketslinks')), recipes.filter(b => !link6.includes(b)))
   const foul = applyFoulborn(doc, eff, all.filter(it => it.cat === 'uniqfoul'), faint) ?? none
   const spec = applySpecialRolls(doc, eff, all.filter(it => it.cat === 'uniqspec'), faint) ?? none
   const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec'), faint) ?? none
   const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
-  const parts = [{ blocks: recipes, items: [], chars: 0 }, compiled, gemsOut, foul, spec, uniq, maps]
+  const parts = [{ blocks: recipes, items: [], chars: recipes.length * 220 }, compiled, gemsOut, foul, spec, uniq, maps]
   return { blocks: parts.flatMap(x => x.blocks), items: parts.flatMap(x => x.items), chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 

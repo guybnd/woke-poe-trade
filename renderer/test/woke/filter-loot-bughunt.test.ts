@@ -266,7 +266,7 @@ describe('Recipes and the presets the Loot tab covers', () => {
     const doc = parseFilter(SEMI)
     applyCurrency(doc, on(c => setRecipeStep(c, 'rgb', 1)), lookup)
     const tier = (f: ItemFacts) => matchItem(doc, f).final?.block.tier
-    expect(tier(rare({ socketGroups: ['RRGGBB'] }))).toBe('s4')
+    expect(tier(rare({ socketGroups: ['RRGGBB'], baseType: 'Simple Robe' }))).toBe('s4')
     expect(tier(rare({ socketGroups: ['RG', 'GB', 'BR'] }))).toBe('s2')
     expect(tier(rare({ socketGroups: ['RGB'] }))).toBe('s1')
     expect(tier({ ...rare({}), baseType: 'Divine Life Flask', itemClass: 'Life Flasks', rarity: 'Magic', quality: 20 } as ItemFacts)).toBe('s1')
@@ -275,18 +275,30 @@ describe('Recipes and the presets the Loot tab covers', () => {
     expect(matchItem(off, rare({ socketGroups: ['RG', 'GB', 'BR'] })).final?.block.comment ?? '').not.toContain('recipe')
     expect(matchItem(off, gem('Fireball', 5, 20)).final?.block.comment ?? '').not.toContain('20% quality')
   })
+  it('puts the recipes where NeverSink\'s own recipes are, below its valuable rules', async () => {
+    const { setRecipeStep } = await import('@/web/woke/loot-filter/currency-weights')
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(c => setRecipeStep(c, 'rgb', 1)), lookup)
+    const at = (re: RegExp) => doc.blocks.findIndex(b => re.test(b.comment))
+    const six = doc.blocks.findIndex(b => b.type === 'socketslinks')
+    expect(at(/recipe: 6 sockets/)).toBeLessThan(six)
+    expect(at(/recipe: 6 sockets/)).toBeGreaterThan(doc.blocks.findIndex(b => b.type === 'influenced'))
+    const l6 = doc.blocks.findIndex(b => b.type === '6l' && b.tier === 'others')
+    expect(at(/recipe: 6-link/)).toBe(l6 - 1)
+    // A 6-link on a top base keeps NeverSink's loud look.
+    expect(matchItem(doc, rare({ socketGroups: ['RRGGBB'], corrupted: false, mirrored: false })).final?.block.type).toBe('6l')
+  })
   it('turns maps-only covered presets off and keeps the rest for levelling', async () => {
     const { lootPresets, levellingOnly } = await import('@/web/woke/loot-filter/loot-presets')
     const { normalizePresets, presetBlocks, PRESET_TYPE } = await import('@/web/woke/loot-filter/presets')
     const p = normalizePresets({ cheapCurrency: { on: true, chaos: 1 }, lowMaps: { on: true, tier: 10 }, sixSockets: { on: true }, hideFlasks: { on: true } })
-    const lp = lootPresets(p, true, false)
+    const lp = lootPresets(p, true)
     expect(lp.cheapCurrency.on).toBe(false)
     expect(lp.lowMaps.on).toBe(false)
     expect(lp.sixSockets.on).toBe(true)
     expect(lp.hideFlasks.on).toBe(true)
     expect(lp.hideRgb.on).toBe(true)
-    expect(lootPresets(p, false, true).hideFlasks.on).toBe(false)
-    expect(lootPresets(p, false, false)).toBe(p)
+    expect(lootPresets(p, false)).toBe(p)
     const doc = parseFilter(SEMI)
     const blocks = presetBlocks(doc, lp, null, null, { breakdown: null, build: null })
     doc.blocks.unshift(...blocks)
@@ -308,5 +320,20 @@ describe('Recipes and the presets the Loot tab covers', () => {
     p.currency.line = 0.5
     migrateLootPresets(p)
     expect(p.currency.line).toBe(0.5)
+  })
+  it('keeps a line and maps tier you set, and carries over before the Loot tab opens', async () => {
+    const { migratedPresets } = await import('@/web/woke/loot-filter/loot-presets')
+    const { normalizePresets } = await import('@/web/woke/loot-filter/presets')
+    const { recipeStep } = await import('@/web/woke/loot-filter/currency-weights')
+    const p = normalizePresets({ cheapCurrency: { on: true, chaos: 2 }, lowMaps: { on: true, tier: 12 }, hideRgb: { on: true } })
+    p.currency.on = true
+    p.currency.line = 0.7
+    p.currency.mapFrom = 5
+    const m = migratedPresets(p)
+    expect(m.currency.line).toBe(0.7)
+    expect(m.currency.mapFrom).toBe(5)
+    expect(recipeStep(m.currency, 'rgb')).toBe(0)
+    expect('rcmig' in p.currency.catMode).toBe(false)
+    expect(migratedPresets(m)).toBe(m)
   })
 })
