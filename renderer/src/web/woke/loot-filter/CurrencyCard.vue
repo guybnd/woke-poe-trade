@@ -8,7 +8,7 @@
       <LabelPreview :text="it.name" :actions="[]" :style-override="currencyFullLook(shown === 0 ? 1 : shown, it.cat, cfg)" :visibility="shown === 0 ? 'Hide' : 'Show'" :extras="false" :scale="0.6" />
       <span :class="$style.big" data-currency-card-now>{{ verdict }}</span>
       <span class="grow" />
-      <span class="text-xs w-dim" :title="edit.price != null ? 'Your price' : it.est ? 'A guess from NeverSink\'s tiers' : 'poe.ninja'"><template v-if="fixed != null">no price</template><template v-else>{{ chaosText(base) }} {{ it.uniques?.length ? 'avg' : 'each' }}<template v-if="edit.price != null"> · yours</template><template v-else-if="it.est"> · guess</template><template v-if="liveMult !== 1"> · counts {{ chaosText(base * liveMult) }} with bias</template></template></span>
+      <span class="text-xs w-dim" :title="edit.price != null ? 'Your price' : it.est ? 'A guess from NeverSink\'s tiers' : 'poe.ninja'"><WPrice v-if="fixed != null" :chaos="null" none="No price: a filter can't see which implicit or mods a jewel has, so it shows at a set step" /><template v-else>{{ chaosText(base) }} {{ it.uniques?.length ? 'avg' : 'each' }}<template v-if="edit.price != null"> · yours</template><template v-else-if="it.est"> · guess</template><template v-if="liveMult !== 1"> · counts {{ chaosText(base * liveMult) }} with bias</template></template></span>
       <WToggle :model-value="mode !== 'off'" data-currency-card-shows @update:model-value="v => setMode(v ? 'auto' : 'off')">Shows</WToggle>
     </div>
 
@@ -92,7 +92,7 @@
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useFold } from '../ui/fold'
 import WFoldHead from '../ui/WFoldHead.vue'
-import { WButton, WInfo, WToggle } from '../ui'
+import { WButton, WInfo, WPrice, WToggle } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import StateChip from './StateChip.vue'
 import type { ChipOption } from './StateChip.vue'

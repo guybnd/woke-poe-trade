@@ -157,7 +157,7 @@ export function buildRuleBlocks (input: BuildRuleInput, on: BuildRuleSwitches): 
       act('SetTextColor', 255, 255, 119, 255),
       act('SetBorderColor', 255, 255, 119, 255),
       act('SetBackgroundColor', 30, 30, 10, 240),
-      act('MinimapIcon', 2, 'Yellow', 'Circle')
+      act('MinimapIcon', 2, 'Yellow', 'Hexagon')
     ]))
   }
 

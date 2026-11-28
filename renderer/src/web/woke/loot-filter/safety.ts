@@ -37,7 +37,7 @@ export interface NetList {
 export const DEFAULT_SAFETY_NET: SafetyNet = { on: true, minChaos: 20 }
 
 // The look of an item the safety net catches: big, white on dark red, a
-// temporary red beam and a red minimap diamond. Distinct from NeverSink's
+// temporary red beam and a red minimap house. Distinct from NeverSink's
 // tiers so you can tell the net caught it.
 export const SAFETY_LOOK: StylePatch = {
   fontSize: 42,
@@ -45,7 +45,7 @@ export const SAFETY_LOOK: StylePatch = {
   border: [255, 255, 255, 255],
   background: [140, 20, 20, 255],
   effect: { color: 'Red', temp: true },
-  icon: { size: 1, color: 'Red', shape: 'Diamond' },
+  icon: { size: 1, color: 'Red', shape: 'UpsideDownHouse' },
   // A valuable catch shouldn't be silent.
   sound: { id: '6', volume: 200 }
 }

@@ -71,9 +71,9 @@ export function stepActions (step: Step): FilterAction[] {
     case 0: return [a('SetFontSize', 18), a('DisableDropSound', 'True')]
     case 1: return [a('SetFontSize', 32)]
     case 2: return [a('SetFontSize', 38)]
-    case 3: return [a('SetFontSize', 42), a('PlayAlertSound', 3, 300), a('MinimapIcon', 1, 'Cyan', 'Diamond')]
-    // Not red: red beams and stars are kept for sure-profit drops (Guy 2026-11-27).
-    case 4: return [a('SetFontSize', 45), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Blue'), a('MinimapIcon', 0, 'Blue', 'Star')]
+    case 3: return [a('SetFontSize', 42), a('PlayAlertSound', 3, 300), a('MinimapIcon', 1, 'Cyan', 'Hexagon')]
+    // Not red: red beams are kept for sure-profit drops (Guy 2026-11-27).
+    case 4: return [a('SetFontSize', 45), a('PlayAlertSound', 1, 300), a('PlayEffect', 'Blue'), a('MinimapIcon', 0, 'Blue', 'Hexagon')]
   }
 }
 
