@@ -1700,6 +1700,14 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(orbRuler.locator('[data-currency-ruler]')).toHaveCount(0)
   const alch = page.locator('[data-currency-item="Orb of Alchemy"]')
   await expect(alch).toBeVisible()
+  // Every row has the Jewels tick box (Guy 2026-11-28): untick hides this
+  // one, tick again follows the section.
+  const alchOn = alch.locator('[data-loot-row-on]')
+  await expect(alchOn).toBeChecked()
+  await alchOn.click()
+  await expect(alch).toContainText('Hidden, set by you')
+  await alchOn.click()
+  await expect(alchOn).toBeChecked()
   await alch.click()
   const editor = page.locator('[data-currency-editor]')
   await expect(editor).toBeVisible()

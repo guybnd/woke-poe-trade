@@ -55,7 +55,7 @@ const RANK_LOOK = [
 ] as const
 const RANKS = computed(() => RANK_LOOK.map(r => ({ ...r, desc: `Base score ×${w.value.mult[r.value as RankKey]}.` })))
 const BANDS = [{ label: 'Under 20%', q: 0, i: 0 }, { label: 'ilvl 85+', q: 0, i: 85 }, { label: '20%+', q: 20, i: 0 }, { label: '20%+ · ilvl 85+', q: 20, i: 85 }, { label: '26%+ · ilvl 85+', q: 26, i: 85 }]
-// The flask line's notches (a score; Top is 8 before quality and item level).
+// The flask line's notches (a score; Top is 8, Good 4 before quality and item level).
 const LINES = [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64]
 const lineIdx = computed(() => {
   const v = w.value.flaskLine
