@@ -1,0 +1,340 @@
+diff --git a/release-next-notes.md b/release-next-notes.md
+index 669c96a11..fb6224e35 100644
+--- a/release-next-notes.md
++++ b/release-next-notes.md
+@@ -1,5 +1,6 @@
+ # Next release notes
+ 
++- Loot filter, Loot tab Uniques: 6-linked uniques, Tabula Rasa too, no longer drop as Tink. They have a new 6-links section with a look of their own (white on unique brown, a white beam and star) at Big loudness, priced at the 20 Orbs of Fusing a vendor gives for one instead of the best 6-linked unique's price. A 6-linked unique whose base is worth Tink on its own still shows Tink. Set a row's step or price to change it.
+ - Loot filter: changing a setting is much faster again. Each change rebuilds the filter, and with our own rules in it that had grown to 2 to 4 seconds; it now takes well under a second.
+ - Loot filter: on our own rules alone (no NeverSink file underneath), uniques, maps, jewels, special gear and the special unique kinds (unique jewels and idols, heist uniques, replicas, double corrupted, abyss sockets, over-quality, 5-link, Vestigial) keep their Loot rules and looks. Before prices load, last league's prices decide instead of nothing. A unique, map or rare jewel no rule took still shows in its usual look; plain life, mana and hybrid flasks and plain jewels hide in maps.
+ - Loot filter: Alt+F on a magic, rare or white Crimson or Viridian Jewel, or an abyss jewel, showed the unique jewel card for that base, with its uniques and price. It now shows the jewel's own Loot row (Magic or white jewel, Rare jewel...) and its step.
+diff --git a/renderer/src/web/woke/loot-filter/CurrencyCard.vue b/renderer/src/web/woke/loot-filter/CurrencyCard.vue
+index 240cfeb90..e216434fd 100644
+--- a/renderer/src/web/woke/loot-filter/CurrencyCard.vue
++++ b/renderer/src/web/woke/loot-filter/CurrencyCard.vue
+@@ -114,7 +114,7 @@ import BiasSlider from './BiasSlider.vue'
+ import type { ChipOption } from './StateChip.vue'
+ import { SECTION_MODES } from './section-modes'
+ import CurrencyItemEditor from './CurrencyItemEditor.vue'
+-import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, catColour, currencyFullLook, currencyItems, faintOn, fixedOf, forcedHidden, minStack, offSteps, pileWorth, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
++import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, catColour, currencyFullLook, currencyItems, faintOn, fixedOf, forcedHidden, minStack, offSteps, pileWorth, rowForBase, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+ import { toggleNotAvg } from './currency-settings'
+ import { lvCurrencyOf, setLvCurrency } from './levelling'
+ import { DEFAULT_BG, DEFAULT_TEXT } from './edits'
+@@ -185,7 +185,8 @@ const raw = computed<CurrencyItem | null>(() => {
+   const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null, ownTables.value)
+   if (!props.gem) {
+     const hit = itemFor(all, props.name, props.rule)
+-    return (hit && !wrongRarity(hit) ? hit : null) ?? rowFor(all) ?? null
++    const row = (hit && !wrongRarity(hit) ? hit : null) ?? rowFor(all) ?? null
++    return row && props.facts?.baseType ? rowForBase(row, props.facts.baseType, cfg.value) : row
+   }
+   return gemItemFor(all, props.name, props.gem, props.rule)
+ })
+diff --git a/renderer/src/web/woke/loot-filter/currency-weights.ts b/renderer/src/web/woke/loot-filter/currency-weights.ts
+index 317961dc7..dcb522830 100644
+--- a/renderer/src/web/woke/loot-filter/currency-weights.ts
++++ b/renderer/src/web/woke/loot-filter/currency-weights.ts
+@@ -27,7 +27,7 @@ import { topStepActions } from './top-step'
+ import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
+ import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
+ import type { CardFacts } from './card-classes'
+-import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, chaseLookOf, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
++import { FOULBORN_PREFIX, FOULBORN_TYPE, SIXLINK_CAT, SIXLINK_LOOK, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, chaseLookOf, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
+ import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
+ import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS } from './league-classes'
+ import { JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_MODES, JEWEL_ROWS, JEWEL_TYPE } from './jewel-classes'
+@@ -192,6 +192,13 @@ export interface CurrencyItem {
+   // No price can judge it (a jewel row): this step at any stack, 0 Off,
+   // until you set a step or a price (fixedOf).
+   fixed?: CStep
++  // Never quieter than this step unless you set its step or price ("Any
++  // unique, 6-link" at Big).
++  floor?: CStep
++  // Bases whose plain unique is worth more than the row (by its plain price):
++  // the filter gives each its own rule at that price, so a 6-linked chase
++  // unique keeps its plain step (Tink) while the row stays Big.
++  per?: Array<{ bt: string, chaos: number }>
+ }
+ 
+ const SHARD_OF: Record<string, string> = {
+@@ -415,29 +422,39 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
+       const conds = b.conditions.filter(x => x !== bt && x.key !== 'Rarity').map(x => ({ ...x, values: [...x.values] }))
+       const links = conds.some(x => x.key === 'LinkedSockets')
+       const group: EconomyGroup = { ...UNIQUE_PAGE, special: true, links }
+-      // NeverSink's any-base 6-link rule is one row (Guy's R1, 2026-11-28),
+-      // priced by the most valuable 6-linked unique, so it shows the way
+-      // NeverSink shows every 6-linked unique (Tink) unless you set its step.
++      // NeverSink's any-base 6-link rule is one row (Guy's R1, 2026-11-28).
++      // A random 6-linked unique is worth its 20 Fusings, not the best
++      // 6-linked unique there is (Guy 2026-11-28: "any unique 6link should
++      // not be tink"): priced at the Fusings, never below Big, in the
++      // 6-links section's own look. A base whose plain unique is worth more
++      // keeps that price (per).
+       if (!bt) {
+         const name = `Any unique, ${label}`
+         if (seen.has(name)) continue
+         const lines = plainBases.map(base => ({ base, p: lookup(group, base) })).filter(x => x.p && x.p.chaos > 0)
+         if (!lines.length) continue
+-        const low = lines.reduce((x, y) => y.p!.chaos > x.p!.chaos ? y : x)
++        const top = lines.reduce((x, y) => y.p!.chaos > x.p!.chaos ? y : x)
+         const own = edits[name]?.price
++        const mult = edits[name]?.mult ?? 1
++        const chaos = (own ?? (links ? linkFloor : top.p!.chaos)) * mult
++        const per = links
++          ? lines.map(x => ({ bt: x.base, chaos: (seen.get(x.base)?.chaos ?? 0) * mult })).filter(x => x.chaos > chaos)
++          : []
+         seen.set(name, {
+           name,
+           cls: UNIQUE_CLS,
+           type: 'uniques',
+           tier: b.tier,
+-          cat: 'uniqspec',
+-          chaos: (own ?? (links ? Math.max(low.p!.chaos, linkFloor) : low.p!.chaos)) * (edits[name]?.mult ?? 1),
+-          est: own == null && (low.p!.thin || Boolean(low.p!.day1)),
++          cat: links ? SIXLINK_CAT : 'uniqspec',
++          chaos,
++          est: own == null && (links ? !(fusing && fusing.chaos > 0) : top.p!.thin || Boolean(top.p!.day1)),
+           ...(own != null ? { own: true } : {}),
+           full: 1,
+           bts: lines.map(x => x.base),
+           conds,
+-          of: lines.length
++          of: lines.length,
++          ...(links ? { floor: 4 as CStep } : {}),
++          ...(per.length ? { per } : {})
+         })
+         continue
+       }
+@@ -453,9 +470,13 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
+           cls: UNIQUE_CLS,
+           type: 'uniques',
+           tier: b.tier,
+-          cat: 'uniqspec',
+-          chaos: (own ?? (links ? Math.max(p.chaos, linkFloor) : p.chaos)) * (edits[name]?.mult ?? 1),
+-          est: own == null && (p.thin || Boolean(p.day1)),
++          cat: links ? SIXLINK_CAT : 'uniqspec',
++          // A 6-link (Tabula) by its Fusings, or its base's plain unique
++          // when that's worth more, never its 6-link market: late in the
++          // league a 6-link Tabula is near worthless (Guy 2026-11-28).
++          chaos: (own ?? (links ? Math.max(seen.get(base)?.chaos ?? 0, linkFloor) : p.chaos)) * (edits[name]?.mult ?? 1),
++          est: own == null && (links ? !(fusing && fusing.chaos > 0) : p.thin || Boolean(p.day1)),
++          ...(links ? { floor: 4 as CStep } : {}),
+           ...(own != null ? { own: true } : {}),
+           full: 1,
+           bt: base,
+@@ -736,6 +757,8 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number
+   // Collecting (a floor step): every pile gets at least it, whatever hides
+   // the rest (Guy's star, 2026-11-27).
+   if (e?.min) out[e.min - 1] = 1
++  // A floor of its own ("Any unique, 6-link" at Big) until you set a price.
++  else if (it.floor && e?.price == null) out[it.floor - 1] = 1
+   return out
+ }
+ 
+@@ -770,7 +793,7 @@ export function faintLook (rgb: readonly number[]): StylePatch {
+ 
+ // Steps turned off (Guy 2026-11-28: they hide, they don't fall to the
+ // quieter step) for this item: never its own step or its Collecting floor.
+-export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<CurrencyItem, 'fixed' | 'est' | 'own'>>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
++export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<CurrencyItem, 'fixed' | 'est' | 'own' | 'floor'>>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
+   const e = c.items[it.name]
+   if (e?.step != null || fixedOf(it, e, sectionMode({ catMode: c.catMode ?? {} }, it.cat))) return []
+   // A guessed special map never hides on a step turned off (Guy 2026-11-28:
+@@ -780,7 +803,10 @@ export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<
+   // whatever steps are turned off (Guy 2026-11-28: chase bases hid with
+   // Small and Normal off).
+   if (sectionMode({ catMode: c.catMode ?? {} }, it.cat) === 'always') return []
+-  return stepsOffIn(c, it.cat).filter(s => s >= 1 && s <= 4 && s !== e?.min)
++  // A row's own floor (6-links at Big) stays on, like Collecting: turning
++  // Big off on the Uniques page mustn't hide every 6-linked unique.
++  const floor = it.floor && e?.price == null ? it.floor : undefined
++  return stepsOffIn(c, it.cat).filter(s => s >= 1 && s <= 4 && s !== e?.min && s !== floor)
+ }
+ // The steps off in a section: its own when it sets them, else its page's,
+ // else every page's (Guy 2026-11-28).
+@@ -921,6 +947,20 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
+   // special look for itself"): one look below Tink whatever the price, picked
+   // from CHASE_LOOKS on the section's header, with its own sound. Your own
+   // colour and icon for the section win.
++  // 6-linked uniques (Guy 2026-11-28: "a unique look to not bait into
++  // tink"): one look below Tink whatever the price, white on the unique
++  // brown with a white beam and star. Your own colour for the section wins.
++  if (cat === SIXLINK_CAT && step < 5) {
++    const t = c.cats[cat]?.text
++    Object.assign(out, {
++      fontSize: own.fontSize ?? 45,
++      text: col(t ?? SIXLINK_LOOK.text),
++      border: col(t ?? SIXLINK_LOOK.edge),
++      background: col(SIXLINK_LOOK.bg)
++    })
++    out.icon = { size: 0, color, shape }
++    out.effect = { color, temp: false }
++  }
+   if (cat === 'uniqchase' && step < 5) {
+     const l = chaseLookOf(c.chaseLook)
+     const t = c.cats[cat]?.text
+@@ -1237,8 +1277,8 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
+   insertBlocks(doc, anchor(doc.blocks.find(b => b.type === '6l' && b.tier === 'others') ?? doc.blocks.find(b => b.type === '6l')), link6)
+   insertBlocks(doc, anchor(doc.blocks.find(b => b.type === 'socketslinks')), recipes.filter(b => !link6.includes(b)))
+   const foul = applyFoulborn(doc, eff, all.filter(it => it.cat === 'uniqfoul'), faint) ?? none
+-  const spec = applySpecialRolls(doc, eff, all.filter(it => it.cat === 'uniqspec'), faint) ?? none
+-  const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec'), faint) ?? none
++  const spec = applySpecialRolls(doc, eff, all.filter(it => it.cat === 'uniqspec' || it.cat === SIXLINK_CAT), faint) ?? none
++  const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec' && it.cat !== SIXLINK_CAT), faint) ?? none
+   const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
+   const jewels = applyJewels(doc, eff, all.filter(it => it.type === 'jewels'), faint) ?? none
+   const league = applyLeague(doc, eff, all.filter(it => it.type === 'league'), faint) ?? none
+@@ -1477,13 +1517,39 @@ function applySpecialRolls (doc: FilterDoc, cfg: CurrencySettings, items: Curren
+   const at = anchor ? doc.chunks.indexOf(anchor) : ownBottom(doc)
+   if (at < 0) return null
+   const byTier = new Map<string, CurrencyItem[]>()
+-  for (const it of items) pushTo(byTier, it.tier ?? '', it)
++  for (const it of items) for (const x of splitPer(it, cfg)) pushTo(byTier, x.tier ?? '', x)
+   const parts = [...byTier.values()].map(l => compileCurrency(cfg, l, { faint }))
+   const blocks = parts.flatMap(x => x.blocks)
+   insertBlocks(doc, at, blocks)
+   return { blocks, items, chars: parts.reduce((n, x) => n + x.chars, 0) }
+ }
+ 
++// The row as the filter writes it for one base: a base the row splits off
++// (per) carries its own price. For Alt+F's card, so it says what the game shows.
++export function rowForBase (it: CurrencyItem, base: string, cfg: Pick<CurrencySettings, 'items'>): CurrencyItem {
++  const e = cfg.items[it.name]
++  const hit = it.per?.find(x => x.bt === base)
++  if (!hit || e?.step != null || e?.price != null || e?.look) return it
++  return { ...it, chaos: hit.chaos }
++}
++
++// "Any unique, 6-link" with bases worth more than the row: each such base
++// gets a rule of its own at its plain price (same floor), before the row, so
++// it never shows quieter than it would unlinked. Only while the row has no
++// edit of yours: your step, price or look decides for every base then.
++function splitPer (it: CurrencyItem, cfg: CurrencySettings): CurrencyItem[] {
++  const e = cfg.items[it.name]
++  if (!it.per?.length || !it.bts || e?.step != null || e?.price != null || e?.look) return [it]
++  const hot = new Set(it.per.map(x => x.bt))
++  const rest = it.bts.filter(b => !hot.has(b))
++  const row: CurrencyItem = { ...it }
++  delete row.per
++  return [
++    ...it.per.map(x => ({ ...row, name: `${it.name}, ${x.bt}`, chaos: x.chaos, bt: x.bt, bts: [x.bt] })),
++    ...(rest.length ? [{ ...row, bts: rest }] : [])
++  ]
++}
++
+ // Foulborn uniques go where NeverSink's Foulborn tiers start, so the plain
+ // unique rules below never see them. Every rule matches `Foulborn True`.
+ function applyFoulborn (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
+diff --git a/renderer/src/web/woke/loot-filter/unique-classes.ts b/renderer/src/web/woke/loot-filter/unique-classes.ts
+index 6d6715188..66c1f5daf 100644
+--- a/renderer/src/web/woke/loot-filter/unique-classes.ts
++++ b/renderer/src/web/woke/loot-filter/unique-classes.ts
+@@ -19,8 +19,13 @@ export const UNIQUE_CATEGORIES: LootCategory[] = [
+   // own section, apart from boss-only): priced by those world drops.
+   { id: 'uniqbossmix', name: 'Boss drops, also world drops', art: 'Agate Amulet' },
+   { id: 'uniqfoul', name: 'Foulborn', art: 'Paua Amulet' },
+-  { id: 'uniqspec', name: 'Special rolls', art: 'Simple Robe' }
++  { id: 'uniqspec', name: 'Special rolls', art: 'Simple Robe' },
++  // 6-linked uniques, Tabula too (Guy 2026-11-28): their own look, not Tink.
++  { id: 'uniqlinks', name: '6-links', art: 'Vaal Regalia' }
+ ]
++export const SIXLINK_CAT = 'uniqlinks'
++// White on the unique brown, white edge (the look NeverSink gave 6-links).
++export const SIXLINK_LOOK = { text: [255, 255, 255] as [number, number, number], edge: [255, 255, 255] as [number, number, number], bg: [175, 96, 37] as [number, number, number] }
+ export const UNIQUE_IDS = new Set(UNIQUE_CATEGORIES.map(x => x.id))
+ 
+ // The unique brown, a shade per fold.
+@@ -35,7 +40,8 @@ export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color
+   uniqboss: { text: [190, 80, 40], color: 'Orange', shape: 'Star' },
+   uniqbossmix: { text: [200, 125, 70], color: 'Orange', shape: 'Star' },
+   uniqfoul: { text: [190, 110, 200], color: 'Purple', shape: 'Star' },
+-  uniqspec: { text: [230, 160, 80], color: 'Brown', shape: 'Star' }
++  uniqspec: { text: [230, 160, 80], color: 'Brown', shape: 'Star' },
++  uniqlinks: { text: [255, 255, 255], color: 'White', shape: 'Star' }
+ }
+ 
+ // Boss-only bases show whatever they are (Guy: "boss-only likely always on"),
+diff --git a/renderer/test/woke/filter-loot-special-rolls.test.ts b/renderer/test/woke/filter-loot-special-rolls.test.ts
+index badb7ec40..aae682dbb 100644
+--- a/renderer/test/woke/filter-loot-special-rolls.test.ts
++++ b/renderer/test/woke/filter-loot-special-rolls.test.ts
+@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
+ import { matchItem } from '@/web/woke/loot-filter/match'
+ import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
+ import { validateFilter } from '@/web/woke/loot-filter/validate'
+-import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency } from '@/web/woke/loot-filter/currency-weights'
++import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency, rowForBase } from '@/web/woke/loot-filter/currency-weights'
+ import { NET_GROUPS, priceLookup } from '@/web/woke/loot-filter/economy'
+ import type { PriceLookup } from '@/web/woke/loot-filter/economy'
+ import type { PriceItem } from '@/web/woke/market/types'
+@@ -25,11 +25,13 @@ const unique = (baseType: string, more: Partial<ItemFacts> = {}): ItemFacts => (
+ 
+ describe('special unique rolls on the Loot tab', () => {
+   it('prices each special rule per base, a 6-link at least 20 Fusings', () => {
+-    const items = new Map(currencyItems(parseFilter(REGULAR), lookup).filter(i => i.cat === 'uniqspec').map(i => [i.name, i]))
+-    expect(items.get('Simple Robe, 6-link')).toMatchObject({ chaos: 10, bt: 'Simple Robe' })
+-    // Any other 6-linked unique: one row (Guy's R1), at its best base's price.
++    const items = new Map(currencyItems(parseFilter(REGULAR), lookup).filter(i => i.cat === 'uniqspec' || i.cat === 'uniqlinks').map(i => [i.name, i]))
++    expect(items.get('Simple Robe, 6-link')).toMatchObject({ chaos: 10, bt: 'Simple Robe', cat: 'uniqlinks', floor: 4 })
++    // Any other 6-linked unique: one row (Guy's R1).
+     expect(items.get('Vaal Regalia, 6-link')).toBeUndefined()
+-    expect(items.get('Any unique, 6-link')).toMatchObject({ chaos: 400 })
++    // Priced at its 20 Fusings and never below Big, not at the best 6-link
++    // there is (Guy: "any unique 6link should not be tink").
++    expect(items.get('Any unique, 6-link')).toMatchObject({ chaos: 10, floor: 4, cat: 'uniqlinks' })
+     expect(items.get('Any unique, 6-link')?.bts).toContain('Vaal Regalia')
+     expect(items.get('Onyx Amulet, Shaper and Elder')?.chaos).toBe(5000)
+     expect(items.get('Glorious Plate, no sockets')?.chaos).toBe(0.1)
+@@ -57,7 +59,15 @@ describe('special unique rolls on the Loot tab', () => {
+     const doc = parseFilter(REGULAR)
+     applyCurrency(doc, cfg, lookup)
+     const hit = (base: string, more: Partial<ItemFacts> = {}) => matchItem(doc, unique(base, more)).final?.block
+-    expect(hit('Vaal Regalia', { socketGroups: ['RRRRRR'] } as Partial<ItemFacts>)).toMatchObject({ type: CURRENCY_TYPE, tier: 's5' })
++    // A random 6-linked unique shows Big in the 6-links look, not Tink.
++    const six = hit('Vaal Regalia', { socketGroups: ['RRRRRR'] } as Partial<ItemFacts>)
++    expect(six).toMatchObject({ type: CURRENCY_TYPE, tier: 's4' })
++    const act = (k: string) => six?.actions.find(a => a.key === k)?.args.join(' ')
++    expect(act('SetBackgroundColor')).toBe('175 96 37 255')
++    expect(act('SetTextColor')).toBe('255 255 255 255')
++    expect(act('PlayEffect')).toBe('White')
++    // Tabula too, whatever its 6-link market says.
++    expect(hit('Simple Robe', { socketGroups: ['RRRRRR'] } as Partial<ItemFacts>)?.actions.find(a => a.key === 'SetBackgroundColor')?.args.join(' ')).toBe('175 96 37 255')
+     // Kaom's Heart at 0.1c: under the line, hidden.
+     const kaom = hit('Glorious Plate', { socketGroups: [] } as Partial<ItemFacts>)
+     expect(kaom).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Hide' })
+@@ -66,4 +76,33 @@ describe('special unique rolls on the Loot tab', () => {
+     expect(hit('Vaal Regalia')?.tier).not.toBe('s5')
+     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
+   })
++
++  it('a 6-linked unique on a base worth more than Big keeps its own step', () => {
++    const rich: PriceLookup = (g, base) => !g.special && !g.links && g.unique && base === 'Vaal Regalia' ? { chaos: 5000, thin: false } : lookup(g, base)
++    const cfg = defaultCurrency()
++    cfg.on = true
++    const doc = parseFilter(REGULAR)
++    applyCurrency(doc, cfg, rich)
++    const six = { socketGroups: ['RRRRRR'] } as Partial<ItemFacts>
++    expect(matchItem(doc, unique('Vaal Regalia', six)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's5' })
++    expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
++    // Alt+F's card prices that base as the filter does.
++    const row = currencyItems(parseFilter(REGULAR), rich).find(i => i.name === 'Any unique, 6-link')!
++    expect(rowForBase(row, 'Vaal Regalia', cfg).chaos).toBe(5000)
++    expect(rowForBase(row, 'Simple Robe', cfg).chaos).toBe(10)
++    // Your step on the row decides for every base.
++    cfg.items['Any unique, 6-link'] = { step: 2 }
++    const doc2 = parseFilter(REGULAR)
++    applyCurrency(doc2, cfg, rich)
++    expect(matchItem(doc2, unique('Vaal Regalia', six)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's2' })
++  })
++
++  it('Big turned off on the Uniques page still shows 6-linked uniques at Big', () => {
++    const cfg = defaultCurrency()
++    cfg.on = true
++    cfg.offBy = { uniques: [4] }
++    const doc = parseFilter(REGULAR)
++    applyCurrency(doc, cfg, lookup)
++    expect(matchItem(doc, unique('Vaal Regalia', { socketGroups: ['RRRRRR'] } as Partial<ItemFacts>)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's4', visibility: 'Show' })
++  })
+ })
