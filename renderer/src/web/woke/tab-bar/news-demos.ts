@@ -56,7 +56,6 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   // A corpse: the quick price card (the window when poe.ninja has no row).
   'price-check-corpse-card': { check: { name: 'Perfect Hydra', text: CORPSE_ITEM }, spot: 'ninja-card' },
   'price-check-seller-spread': { check: { name: 'Exalted Orb' }, spot: 'seller-spread' },
-  'price-check-exchange-ladder': { check: { name: 'Exalted Orb' }, spot: 'exchange-ladder' },
   'price-check-gem-kinds': { check: { name: 'Ice Nova of Frostbolts' }, spot: 'related' },
   // A base has no check by name: the game's text of a plain one.
   'price-check-chance-uniques': { check: { name: 'Glorious Plate', rarity: 'normal', text: 'Item Class: Body Armours\nRarity: Normal\nGlorious Plate\n--------\nArmour: 776\n--------\nItem Level: 84\n' }, spot: 'related' },
@@ -106,11 +105,10 @@ const WINDOWLESS = new Set(['price-check'])
 // Type-to-search and the item strip's More start from your own keys and items.
 // A line about one part of a window without a spot to flash: opening the
 // window doesn't point at it (and does nothing when it's already open).
-const NOTHING_TO_SHOW = new Set(['search-recent-queries', 'search-recent-save', 'search-type-to-open', 'item-menu-more',
-  'deck-card-line-item', 'analytics-line-item'])
+const NOTHING_TO_SHOW = new Set(['search-recent-queries', 'search-recent-save', 'search-type-to-open', 'item-menu-more'])
 // Lines about a whole new tool: opening its window is the show. Any other
 // line needs a tab, a spot, a sample or a Settings page (news.test.ts).
-export const WHOLE_TOOL = new Set(['scrying-helper', 'watchers-eye-finder'])
+export const WHOLE_TOOL = new Set(['watchers-eye-finder'])
 
 // Whether Show me has somewhere real to go: a tab, a sample, the Settings
 // page the feature lives on, or the tool's own window. `byName`: the client
