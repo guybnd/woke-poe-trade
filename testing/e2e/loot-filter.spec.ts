@@ -1409,6 +1409,12 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await page.getByRole('tab', { name: /^Loot/ }).click()
   // The Loot tab: a rail of classes, Currency first.
   await expect(page.locator('[data-loot-class="currency"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('[data-currency-cat="gold"]')).toHaveCount(0)
+  // Gold: its own page, open, with the pile size ruler on top.
+  await page.locator('[data-loot-class="gold"]').click()
+  await expect(page.locator('[data-currency-item="Gold"]')).toBeVisible()
+  await expect(page.locator('[data-currency-cat="orbs"]')).toHaveCount(0)
+  await overlay.snap('loot tab, gold')
   // Fragments: priced on the same ladder, folded by boss.
   await page.locator('[data-loot-class="fragments"]').click()
   await expect(page.locator('[data-currency-cat="invites"]')).toBeVisible()

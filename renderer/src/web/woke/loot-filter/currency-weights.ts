@@ -80,8 +80,8 @@ export const CURRENCY_CATEGORIES: CurrencyCategory[] = [
 export const GOLD_NAME = 'Gold'
 // Every class's categories (the Loot tab's rail shows one class at a time).
 export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES, ...MAP_CATEGORIES, ...JEWEL_CATEGORIES, ...LEAGUE_CATEGORIES]
-export type LootKind = 'currency' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps' | 'jewels' | 'league'
-export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : MAP_IDS.has(cat) ? 'maps' : JEWEL_IDS.has(cat) ? 'jewels' : LEAGUE_IDS.has(cat) ? 'league' : 'currency'
+export type LootKind = 'currency' | 'gold' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps' | 'jewels' | 'league'
+export const kindOf = (cat: string): LootKind => cat === 'gold' ? 'gold' : FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : MAP_IDS.has(cat) ? 'maps' : JEWEL_IDS.has(cat) ? 'jewels' : LEAGUE_IDS.has(cat) ? 'league' : 'currency'
 // A section's Off / Weighted / Always: yours, else its default (boss-only
 // uniques: Always).
 export const sectionMode = (c: Pick<CurrencySettings, 'catMode'>, cat: string): SectionMode => c.catMode?.[cat] ?? UNIQUE_MODES[cat] ?? GEM_MODES[cat] ?? LEAGUE_MODES[cat] ?? 'auto'
@@ -797,7 +797,7 @@ export const CAT_LOOK: Record<string, { text: [number, number, number], color: s
   harvest: { text: [130, 230, 110], color: 'Green', shape: 'Circle' },
   embers: { text: [255, 130, 60], color: 'Orange', shape: 'Circle' },
   runegrafts: { text: [255, 120, 160], color: 'Pink', shape: 'Circle' },
-  gold: { text: [255, 211, 90], color: 'Yellow', shape: 'Circle' },
+  gold: { text: [255, 211, 90], color: 'Yellow', shape: 'Moon' },
   other: { text: [210, 190, 140], color: 'Grey', shape: 'Circle' }
 }
 
