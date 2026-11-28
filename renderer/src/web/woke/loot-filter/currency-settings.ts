@@ -65,6 +65,9 @@ export interface CurrencySettings {
   faint: FaintSettings
   // Maps: normal maps under this tier hide (Guy's M1 slider); 1 shows all.
   mapFrom: number
+  // Gold: the pile size where Small, Normal, Decent, Big and Tink start
+  // (Guy 2026-11-28: its own sections to slide).
+  gold: number[]
 }
 
 export type SectionMode = 'off' | 'auto' | 'always'
@@ -74,7 +77,7 @@ export interface FaintSettings { on: boolean, until: number }
 export const FAINT_UNTIL = 1.25
 
 export function defaultCurrency (): CurrencySettings {
-  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, off: [], mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1 }
+  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, off: [], mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1, gold: [1, 500, 3000, 10000, 50000] }
 }
 
 const NAME = /^[^"\n]{1,80}$/
@@ -142,6 +145,7 @@ export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): Cu
     // 'always', true and a number (currency-weights.ts).
     catMode: { ...c?.catMode },
     faint: { on: c?.faint?.on === true, until: Number(c?.faint?.until) || FAINT_UNTIL },
-    mapFrom: int(c?.mapFrom, 1, 17) ?? 1
+    mapFrom: int(c?.mapFrom, 1, 17) ?? 1,
+    gold: Array.isArray(c?.gold) && c.gold.length === 5 && c.gold.every((g, i) => int(g, 1, 1e7) != null && (!i || g >= c.gold![i - 1])) ? [...c.gold] : d.gold
   }
 }

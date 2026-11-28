@@ -74,15 +74,9 @@ export const CURRENCY_CATEGORIES: CurrencyCategory[] = [
   { id: 'other', name: 'Other', art: 'Scrying Orb' }
 ]
 
-// Gold piles by size, larger first (NeverSink's own sizes). The guesses put
-// them on Decent, Normal, Small and Small at the default steps.
-// Each row a band, so setting a bigger pile Off never leaves it to a smaller row.
-export const GOLD_PILES: Array<{ name: string, min: number | null, max: number | null, guess: number }> = [
-  { name: 'Gold 3,000+', min: 3001, max: null, guess: 4 },
-  { name: 'Gold 500+', min: 500, max: 3000, guess: 1.5 },
-  { name: 'Gold 150+', min: 150, max: 499, guess: 0.4 },
-  { name: 'Gold under 150', min: null, max: 149, guess: 0.25 }
-]
+// Gold has no price: its piles get their step by size, from the Gold
+// ruler (CurrencySettings.gold).
+export const GOLD_NAME = 'Gold'
 // Every class's categories (the Loot tab's rail shows one class at a time).
 export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES, ...MAP_CATEGORIES, ...JEWEL_CATEGORIES, ...LEAGUE_CATEGORIES]
 export type LootKind = 'currency' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps' | 'jewels' | 'league'
@@ -425,24 +419,9 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
     }
   }
   // Gold (Guy 2026-11-28, "we also missing a gold section"): no trade price,
-  // so a row per pile size, each a guess (est.) you set the step or price of.
+  // so one row, its piles stepped by size on the Gold ruler.
   if (doc.blocks.some(b => b.conditions.some(x => x.key === 'BaseType' && x.values.includes('Gold')))) {
-    for (const g of GOLD_PILES) {
-      const own = edits[g.name]?.price
-      seen.set(g.name, {
-        name: g.name,
-        cls: '',
-        type: 'gold',
-        tier: null,
-        cat: 'gold',
-        chaos: (own ?? g.guess) * (edits[g.name]?.mult ?? 1),
-        est: own == null,
-        ...(own != null ? { own: true } : {}),
-        full: 1,
-        bt: 'Gold',
-        conds: [...(g.min ? [c('StackSize', '>=', [g.min])] : []), ...(g.max ? [c('StackSize', '<=', [g.max])] : [])]
-      })
-    }
+    seen.set(GOLD_NAME, { name: GOLD_NAME, cls: '', type: 'gold', tier: null, cat: 'gold', chaos: 0, est: true, full: 1e7, bt: 'Gold' })
   }
   // Special maps (Guy 2026-11-28): endgame and guardian maps priced by
   // poe.ninja, the rest from a guess.
@@ -587,7 +566,7 @@ export function strictMult (level: number): number {
 export function scaled (c: CurrencySettings, strictness: string | null): CurrencySettings {
   const m = c.mult ?? strictMult(levelOf(strictness))
   if (m === 1) return c
-  return { ...c, line: c.line * m, from: c.from.map(f => f * m) as CurrencySettings['from'] }
+  return { ...c, line: c.line * m, from: c.from.map(f => f * m) as CurrencySettings['from'], gold: c.gold.map(g => Math.max(1, Math.round(g * m))) }
 }
 
 // The line for a category, after its nudge.
@@ -626,7 +605,7 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   // Always; Always shows every pile at least Small.
   const mode = sectionMode(c, it.cat)
   if (mode === 'off' && e?.supply !== 1 && !e?.min) return [null, null, null, null, null]
-  const out = stepStarts(c, it.cat).map(at => minStack(it, at, c.from[1]))
+  const out = it.type === 'gold' ? [...c.gold] as Array<number | null> : stepStarts(c, it.cat).map(at => minStack(it, at, c.from[1]))
   const supply = e?.supply ?? (it.free || mode === 'always' ? 1 : null)
   if (supply != null) {
     const f = Math.min(supply, it.full)
