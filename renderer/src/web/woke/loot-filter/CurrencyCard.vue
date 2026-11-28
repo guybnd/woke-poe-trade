@@ -8,19 +8,25 @@
       <LabelPreview :text="it.name" :actions="[]" :style-override="currencyFullLook(shown === 0 ? 1 : shown, it.cat, cfg)" :visibility="shown === 0 ? 'Hide' : 'Show'" :extras="false" :scale="0.6" />
       <span :class="$style.big" data-currency-card-now>{{ verdict }}</span>
       <span class="grow" />
-      <span class="text-xs w-dim" :title="edit.price != null ? 'Your price' : it.est ? 'A guess from NeverSink\'s tiers' : 'poe.ninja'">{{ chaosText(base) }} {{ it.uniques?.length ? 'avg' : 'each' }}<template v-if="edit.price != null"> · yours</template><template v-else-if="it.est"> · guess</template></span>
+      <span class="text-xs w-dim" :title="edit.price != null ? 'Your price' : it.est ? 'A guess from NeverSink\'s tiers' : 'poe.ninja'">{{ chaosText(base) }} {{ it.uniques?.length ? 'avg' : 'each' }}<template v-if="edit.price != null"> · yours</template><template v-else-if="it.est"> · guess</template><template v-if="liveMult !== 1"> · counts {{ chaosText(base * liveMult) }} with bias</template></span>
       <WToggle :model-value="mode !== 'off'" data-currency-card-shows @update:model-value="v => setMode(v ? 'auto' : 'off')">Shows</WToggle>
     </div>
 
     <div v-if="mode !== 'off'" :class="$style.ruler" data-currency-card-ruler>
-      <div v-if="markAt != null" :class="$style.mark" :style="{ left: `${markAt}%` }">{{ chaosText(liveWorth) }}</div>
-      <div :class="$style.bar">
-        <div v-for="r in rows" :key="r.step" :class="{ [$style.off]: r.off, [$style.past]: !r.off && r.step < shown, [$style.cur]: r.step === shown }">
-          <LabelPreview :text="CSTEP_NAMES[r.step]" :actions="[]" :style-override="r.look" visibility="Show" :extras="false" :scale="0.45" />
-          <span :class="$style.pr">{{ r.off ? 'off' : chaosText(r.at) }}</span>
-        </div>
+      <div v-if="markAt != null" :class="$style.markRow">
+        <span :class="[$style.mark, markAt < 15 ? $style.markL : markAt > 85 ? $style.markR : '']" :style="{ left: `${markAt}%` }" data-currency-card-mark>{{ markLabel }}</span>
       </div>
-      <div v-if="stackLine" class="text-xs w-dim" data-currency-card-stack>{{ stackLine }}</div>
+      <div :class="$style.bar">
+        <span v-for="r in rows" :key="r.step" :class="[$style.seg, { [$style.off]: r.off, [$style.past]: !r.off && r.step < shown, [$style.cur]: r.step === shown }]" :style="r.css">{{ CSTEP_NAMES[r.step] }}</span>
+        <i v-if="markAt != null" :class="$style.needle" :style="{ left: `${markAt}%` }" aria-hidden="true" />
+      </div>
+      <div :class="$style.under">
+        <span v-for="r in rows" :key="r.step" :class="{ [$style.cur]: r.step === shown }">
+          <span :class="{ [$style.struck]: r.off }">{{ r.off ? 'turned off' : `from ${chaosText(r.at)}` }}</span>
+          <span v-if="stackable && !r.off" class="w-faint">{{ r.from == null ? 'never' : r.from > 1 ? `stack ${r.from}+` : 'any stack' }}</span>
+        </span>
+      </div>
+      <div v-if="overFull" class="text-xs w-faint" data-currency-card-stack>Drops stack to {{ it.full }}: a bigger pile counts as {{ it.full }}.</div>
     </div>
 
     <div v-if="mode !== 'off'" :class="$style.row">
@@ -92,8 +98,10 @@ import StateChip from './StateChip.vue'
 import type { ChipOption } from './StateChip.vue'
 import { SECTION_MODES } from './section-modes'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
-import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, NUDGE_MAX, catColour, currencyFullLook, currencyItems, faintOn, forcedHidden, offSteps, pileWorth, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, NUDGE_MAX, catColour, currencyFullLook, currencyItems, faintOn, forcedHidden, minStack, offSteps, pileWorth, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
 import { toggleNotAvg } from './currency-settings'
+import { DEFAULT_BG, DEFAULT_TEXT } from './edits'
+import { cssColour } from './label-style'
 import { DROP_WEIGHT } from './economy'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { gemLinesOf } from './gem-classes'
@@ -102,7 +110,6 @@ import { gemItemFor, itemFor, lootFocus } from './loot-focus'
 import { evalCondition } from './match'
 import type { ItemFacts } from './item-facts'
 import type { CStep, CurrencyItem, ItemEdit, SectionMode } from './currency-weights'
-import type { StylePatch } from './edits'
 import type { FilterCondition } from './parse'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
@@ -233,15 +240,39 @@ const liveWorth = computed(() => {
   const i = it.value
   if (!i) return 0
   const cut = sizeCutNow(i, cfg.value)
-  return pileWorth({ chaos: base.value * liveMult.value * cut, full: i.full }, props.stack, eff.value.from[1])
+  return pileWorth({ chaos: base.value * liveMult.value * cut, full: i.full }, pile.value, eff.value.from[1])
+})
+// Drops never stack past a full stack; a stash pile can, and the rules
+// count it as a full stack.
+const pile = computed(() => Math.max(1, Math.min(props.stack, it.value?.full ?? 1)))
+const overFull = computed(() => !!it.value && props.stack > it.value.full)
+const stackable = computed(() => (it.value?.full ?? 1) > 1 && edit.value.step == null)
+// What the mark is: this pile's worth, after the bias.
+const markLabel = computed(() => {
+  const v = chaosText(liveWorth.value)
+  if (!stackable.value) return it.value?.uniques?.length ? `${v} avg` : v
+  return props.stack > 1 ? `Stack of ${props.stack} · ${v}` : `One · ${v}`
 })
 // While the bias drags, the step its price would get; else what the rules give it.
 const shown = computed<CStep>(() => dragNotch.value != null && mode.value === 'auto' && secMode.value !== 'off' && edit.value.step == null ? stepAt(liveWorth.value) : now.value)
 
-interface Row { step: CStep, at: number, off: boolean, look: StylePatch }
-const rows = computed<Row[]>(() => !it.value
-  ? []
-  : ([1, 2, 3, 4, 5] as CStep[]).map(s => ({ step: s, at: starts.value[s - 1], off: off.value.includes(s), look: currencyFullLook(s, it.value!.cat, cfg.value) })))
+interface Row { step: CStep, at: number, off: boolean, from: number | null, css: Record<string, string> }
+const rows = computed<Row[]>(() => {
+  const i = it.value
+  if (!i) return []
+  // The stack each step starts at; while the bias drags, at the dragged price.
+  const live = dragNotch.value != null ? { chaos: base.value * liveMult.value * sizeCutNow(i, cfg.value), full: i.full } : null
+  return ([1, 2, 3, 4, 5] as CStep[]).map(s => {
+    const look = currencyFullLook(s, i.cat, cfg.value)
+    return {
+      step: s,
+      at: starts.value[s - 1],
+      off: off.value.includes(s),
+      from: live ? minStack(live, starts.value[s - 1], eff.value.from[1]) : stacks.value[s - 1],
+      css: { color: cssColour(look.text ?? DEFAULT_TEXT), background: cssColour(look.background ?? DEFAULT_BG), borderColor: look.border ? cssColour(look.border) : 'transparent' }
+    }
+  })
+})
 // Where the worth sits on the ruler, in %: each step a fifth, spaced by
 // price ratio inside it. None when its step is set by hand.
 const markAt = computed(() => {
@@ -269,15 +300,6 @@ const verdict = computed(() => {
   if (pile !== 0) return `Hidden · ${CSTEP_NAMES[pile]} is off`
   // Under the line with Faint on, it shows small and see-through.
   return it.value && faintOn(cfg.value, props.store.doc.value?.strictness ?? null) && !forcedHidden(it.value, cfg.value) ? 'Faint' : 'Hidden'
-})
-// Only for an item that stacks: what this pile is and the next step up.
-const stackLine = computed(() => {
-  if (!it.value || it.value.full <= 1 || edit.value.step != null) return ''
-  const has = stepOfPile(stacks.value, props.stack)
-  const next = ([1, 2, 3, 4, 5] as CStep[]).find(s => s > has && stacks.value[s - 1] != null && !off.value.includes(s))
-  const parts = [props.stack > 1 ? `A stack of ${props.stack} is ${CSTEP_NAMES[now.value]}` : '']
-  if (next) parts.push(`${CSTEP_NAMES[next]} from a stack of ${stacks.value[next - 1]}`)
-  return parts.filter(Boolean).join(' · ')
 })
 
 // What the base can be (Guy 2026-11-28: every unique with its price and
@@ -360,16 +382,25 @@ function chaosText (v: number): string {
 .lab { color: var(--w-dim); min-width: 4.5rem; font-size: var(--w-fs-xs); }
 .range { flex: 1; min-width: 6rem; accent-color: var(--w-accent); }
 .mx { font-variant-numeric: tabular-nums; color: var(--w-accent); min-width: 3.2em; text-align: right; font-weight: 400; }
-.ruler { position: relative; padding-top: 20px; display: flex; flex-direction: column; gap: 4px; }
-.mark { position: absolute; top: 0; transform: translateX(-50%); font-size: var(--w-fs-xs); color: var(--w-fg); white-space: nowrap; text-align: center; font-variant-numeric: tabular-nums; transition: left .12s; }
-.mark::after { content: ""; display: block; margin: 1px auto 0; width: 0; height: 0; border: 5px solid transparent; border-top-color: var(--w-fg); }
-.bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
-.bar > div { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; overflow: hidden; }
-.pr { font-size: var(--w-fs-xs); color: var(--w-dim); font-variant-numeric: tabular-nums; }
-.off > :first-child { opacity: .35; }
-.off .pr { text-decoration: line-through; }
-.past > :first-child { opacity: .5; }
-.cur .pr { color: var(--w-accent); }
+.ruler { display: flex; flex-direction: column; gap: 3px; }
+.markRow { position: relative; height: 18px; }
+.mark { position: absolute; bottom: 0; transform: translateX(-50%); font-size: var(--w-fs-sm); color: var(--w-fg); white-space: nowrap; font-variant-numeric: tabular-nums; transition: left .12s; }
+.markL { transform: translateX(-6px); }
+.markR { transform: translateX(calc(-100% + 6px)); }
+.bar { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; }
+.seg {
+  height: 26px; display: flex; align-items: center; justify-content: center; padding: 0 6px;
+  border: 1px solid transparent; font-size: var(--w-fs-md); font-family: var(--w-head); letter-spacing: .02em;
+  white-space: nowrap; overflow: hidden;
+}
+.seg.off { opacity: .3; background-image: repeating-linear-gradient(135deg, transparent 0 4px, rgba(0, 0, 0, .45) 4px 6px); }
+.seg.past { opacity: .55; }
+.seg.cur { box-shadow: 0 0 0 1px var(--w-fg); }
+.needle { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--w-fg); box-shadow: 0 0 0 1px rgba(0, 0, 0, .6); transition: left .12s; pointer-events: none; }
+.under { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; font-size: var(--w-fs-sm); color: var(--w-dim); font-variant-numeric: tabular-nums; }
+.under > span { display: flex; flex-direction: column; padding-left: 2px; min-width: 0; }
+.under .cur { color: var(--w-fg); }
+.struck { text-decoration: line-through; color: var(--w-faint); }
 .uq { display: flex; flex-direction: column; gap: 1px; font-size: var(--w-fs-sm); }
 .uqHead { display: flex; align-items: center; gap: 4px; color: var(--w-dim); font-size: var(--w-fs-xs); }
 .uqRow { display: grid; grid-template-columns: 16px 1fr auto 3.6em 3.6em; align-items: center; gap: 6px; padding: 1px 0; cursor: pointer; }
