@@ -652,11 +652,11 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   // Corpses (M4a) and Wombgifts (Guy 2026-11-28: they only had our fallback
   // rule, so Alt+F showed the old card): priced by name; the names from the
   // game data's lists, else the filter's own rules, else a known list.
-  const byName = (cls: string, cat: string, groupType: string, guessOf: (name: string) => number, fallback: string[]) => {
+  const byName = (cls: string, cat: string, groupType: string | EconomyGroup, guessOf: (name: string) => number, fallback: string[]) => {
     const fromLists = lists?.lists.filter(r => r[1] === cls).map(r => r[0]) ?? []
-    const fromRules = [...new Set(doc.blocks.filter(b => b.type === groupType).flatMap(b => b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))?.values ?? []))]
+    const fromRules = typeof groupType !== 'string' ? [] : [...new Set(doc.blocks.filter(b => b.type === groupType).flatMap(b => b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))?.values ?? []))]
     const names = fromLists.length ? fromLists : fromRules.length ? fromRules : fallback
-    const group = groupOf(groupType)
+    const group = typeof groupType === 'string' ? groupOf(groupType) : groupType
     for (const name of names) {
       if (seen.has(name)) continue
       const p = lookup?.(group, name) ?? null
@@ -739,6 +739,15 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       ...(own != null ? { own: true } : {}),
       full: 1
     })
+  }
+  // Viscera and Reliquary keys the base filter's tiers didn't list (our own
+  // skeleton has none): a row each from the game data, priced by name
+  // (Guy 2026-11-28: every item gets a Loot row, so Alt+F's Loot card).
+  if (lists?.lists.length) {
+    for (const sec of LEAGUE_PRICED) {
+      const cls = sec.cat === 'lgkeys' ? 'Vault Keys' : sec.cls
+      byName(cls, sec.cat, { type: sec.cat, label: sec.cat, ninja: sec.ninja }, () => sec.guess(null), [])
+    }
   }
   return [...seen.values()]
 }
