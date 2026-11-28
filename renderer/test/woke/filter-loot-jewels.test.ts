@@ -46,7 +46,7 @@ describe('jewels on the Loot tab', () => {
     // Corrupted implicit beats the plain magic row.
     expect(hit(jewel('Viridian Jewel', 'Jewels', 'Magic', 84, { corrupted: true, corruptedMods: 1 })).visibility).toBe('Show')
     // Cluster jewels go to their own base rows; unique jewels stay the Uniques page's.
-    expect(hit(jewel('Large Cluster Jewel', 'Jewels', 'Rare', 84)).final?.block.type).toBe(CURRENCY_TYPE)
+    expect(hit(jewel('Large Cluster Jewel', 'Jewels', 'Rare', 84, { enchantmentPassiveNum: 8 })).final?.block.type).toBe(CURRENCY_TYPE)
     expect(hit(jewel('Prismatic Jewel', 'Jewels', 'Unique', 84)).final?.block.comment).toMatch(/uniq/)
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
   })

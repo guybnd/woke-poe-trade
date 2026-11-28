@@ -8,8 +8,8 @@
 // have a fixed step instead (Guy's Jewels A + Abyss A): corrupted ones with an
 // implicit are loud, and every other jewel shows at least Small (Guy: "Why
 // hide the lower ones? Users can turn it off if they wish"). Set a row Off,
-// a step or By price to change it. Cluster jewels keep their own
-// priced band (ClusterPriceBand).
+// a step or By price to change it. Cluster jewels are
+// priced rows, folded by size (clusterEnchantRows).
 import type { LootCategory } from './fragment-classes'
 import type { FilterCondition } from './parse'
 import type { CStep, SectionMode } from './currency-settings'
@@ -17,7 +17,7 @@ import type { CStep, SectionMode } from './currency-settings'
 export const JEWEL_CATEGORIES: LootCategory[] = [
   { id: 'jewabyss', name: 'Abyss jewels', art: 'Murderous Eye Jewel' },
   { id: 'jewplain', name: 'Jewels', art: 'Cobalt Jewel' },
-  { id: 'jewclus', name: 'Cluster jewel bases', art: 'Large Cluster Jewel' }
+  { id: 'jewclus', name: 'Cluster jewels', art: 'Large Cluster Jewel' }
 ]
 export const JEWEL_IDS = new Set(JEWEL_CATEGORIES.map(x => x.id))
 // Both start Always: each row shows at its set look; By price on the
@@ -79,44 +79,103 @@ export const JEWEL_TYPE = /^jewels->(special|leveling|abyss|generic)$/
 // A unique priced on a jewel base (the Uniques page owns them).
 export const isJewelBase = (base: string): boolean => /Jewel$/.test(base)
 
-// Cluster jewel bases (NeverSink retirement M4a, 2026-11-28): what a filter
-// sees on a cluster jewel without its passive type, size, passive count and
-// item level. Each row is worth the cheapest cluster jewel of that kind on
-// poe.ninja (any passive type, at least 5 listings): what a drop of it sells
-// for at least. The cluster price rules (ClusterPriceBand) still catch the
-// valuable passive types first; these go under them. `guess` while poe.ninja
-// has no line. Rows of a size never overlap except the last, which catches
-// the rest.
+// Cluster jewels (Guy's redesign, WOKEPOET-726): one section, a fold per
+// size. Each size has band rows (passive count and item level: what a filter
+// sees on a cluster jewel besides its passive type), each worth the cheapest
+// cluster jewel of that band on poe.ninja (any passive type, at least 5
+// listings), and an enchant row for every passive type that sells well above
+// its band (clusterEnchantRows). Enchant rows are louder, so they come first
+// in the filter; the band row catches the rest. All above NeverSink's cluster
+// price rules, which stay below for whatever these leave. `guess` while
+// poe.ninja has no line. Band rows of a size never overlap.
 export const CLUSTER_BASE_TYPE = 'jewels->cluster'
+export type ClusterSizeName = 'Small' | 'Medium' | 'Large'
+export const CLUSTER_SIZES: ClusterSizeName[] = ['Large', 'Medium', 'Small']
 export interface ClusterRow extends JewelRow {
-  size: 'Small' | 'Medium' | 'Large'
+  size: ClusterSizeName
   // Passive counts and item levels a poe.ninja line must have to count.
   passives: [number, number]
   ilvl: [number, number]
+  // An enchant row's passive type (EnchantmentPassiveNode).
+  node?: string
 }
 const NOT_UNIQUE = cnd('Rarity', '', ['Normal', 'Magic', 'Rare'])
 const passives = (op: string, n: number) => cnd('EnchantmentPassiveNum', op, [String(n)])
-const cluster = (size: ClusterRow['size'], name: string, guess: number, pas: [number, number], lv: [number, number], conds: FilterCondition[]): ClusterRow =>
-  ({ cat: 'jewclus', name, cls: '', bts: [`${size} Cluster Jewel`], size, guess, passives: pas, ilvl: lv, conds: [NOT_UNIQUE, ...conds] })
+const pasText = (p: [number, number]) => p[0] === p[1] ? `${p[0]} passives` : `${p[0]}-${p[1]} passives`
+const lvText = (lv: [number, number]) => lv[1] >= 100 ? `item level ${lv[0]}+` : lv[0] <= 1 ? `item level under ${lv[1] + 1}` : `item level ${lv[0]}-${lv[1]}`
+const cluster = (size: ClusterSizeName, guess: number, pas: [number, number], lv: [number, number], conds: FilterCondition[]): ClusterRow =>
+  ({ cat: 'jewclus', name: `${size} Cluster Jewel, ${pasText(pas)}, ${lvText(lv)}`, cls: '', bts: [`${size} Cluster Jewel`], size, guess, passives: pas, ilvl: lv, conds: [NOT_UNIQUE, ...conds] })
+// poe.ninja prices at item level 1, 50, 68, 75 and 84: 84 is where the
+// price jumps for every size (Small Reservation Efficiency: 13c at 75,
+// 1,976c at 84). Small keeps 75-83 apart so you can see it.
 export const CLUSTER_ROWS: ClusterRow[] = [
-  cluster('Large', 'Large Cluster Jewel, 12 passives, item level 84+', 5, [12, 12], [84, 100], [passives('>=', 12), ilvl('>=', 84)]),
-  cluster('Large', 'Large Cluster Jewel, 8 passives, item level 84+', 5, [8, 8], [84, 100], [passives('<=', 8), ilvl('>=', 84)]),
-  cluster('Large', 'Large Cluster Jewel, 8 passives, item level under 84', 1.5, [8, 8], [1, 83], [passives('<=', 8), ilvl('<', 84)]),
-  cluster('Large', 'Large Cluster Jewel, other', 0.1, [9, 12], [1, 100], []),
-  cluster('Medium', 'Medium Cluster Jewel, 4-5 passives, item level 84+', 5, [4, 5], [84, 100], [passives('<=', 5), ilvl('>=', 84)]),
-  cluster('Medium', 'Medium Cluster Jewel, 4-5 passives, item level under 84', 1.5, [4, 5], [1, 83], [passives('<=', 5), ilvl('<', 84)]),
-  cluster('Medium', 'Medium Cluster Jewel, other', 0.1, [6, 6], [1, 100], []),
-  cluster('Small', 'Small Cluster Jewel, item level 84+', 1.5, [2, 3], [84, 100], [ilvl('>=', 84)]),
-  cluster('Small', 'Small Cluster Jewel, item level under 84', 0.1, [2, 3], [1, 83], [ilvl('<', 84)])
+  cluster('Large', 5, [12, 12], [84, 100], [passives('>=', 12), ilvl('>=', 84)]),
+  cluster('Large', 5, [9, 11], [84, 100], [passives('>=', 9), passives('<=', 11), ilvl('>=', 84)]),
+  cluster('Large', 5, [8, 8], [84, 100], [passives('<=', 8), ilvl('>=', 84)]),
+  cluster('Large', 1.5, [8, 8], [1, 83], [passives('<=', 8), ilvl('<', 84)]),
+  cluster('Large', 0.1, [9, 12], [1, 83], [passives('>=', 9), ilvl('<', 84)]),
+  cluster('Medium', 5, [4, 5], [84, 100], [passives('<=', 5), ilvl('>=', 84)]),
+  cluster('Medium', 1.5, [4, 5], [1, 83], [passives('<=', 5), ilvl('<', 84)]),
+  cluster('Medium', 0.1, [6, 6], [1, 100], [passives('>=', 6)]),
+  cluster('Small', 1.5, [2, 3], [84, 100], [ilvl('>=', 84)]),
+  cluster('Small', 0.5, [2, 3], [75, 83], [ilvl('>=', 75), ilvl('<', 84)]),
+  cluster('Small', 0.1, [2, 3], [1, 74], [ilvl('<', 75)])
 ]
 
+export interface ClusterLine { size: string, passives: number, ilvl: number, node?: string, chaos: number, listings: number }
+const inRow = (row: ClusterRow, l: ClusterLine, minListings: number) =>
+  l.size === row.size && l.listings >= minListings && l.chaos > 0 &&
+  l.passives >= row.passives[0] && l.passives <= row.passives[1] && l.ilvl >= row.ilvl[0] && l.ilvl <= row.ilvl[1]
+
 // The cheapest solid poe.ninja line for a row, or null.
-export function clusterFloor (row: ClusterRow, lines: ReadonlyArray<{ size: string, passives: number, ilvl: number, chaos: number, listings: number }>, minListings = 5): number | null {
+export function clusterFloor (row: ClusterRow, lines: readonly ClusterLine[], minListings = 5): number | null {
   let low: number | null = null
   for (const l of lines) {
-    if (l.size !== row.size || l.listings < minListings || !(l.chaos > 0)) continue
-    if (l.passives < row.passives[0] || l.passives > row.passives[1] || l.ilvl < row.ilvl[0] || l.ilvl > row.ilvl[1]) continue
+    if (!inRow(row, l, minListings)) continue
     if (low == null || l.chaos < low) low = l.chaos
   }
   return low
+}
+
+// An enchant worth at least this, and this many times its band's floor,
+// gets a row of its own.
+export const ENCHANT_MIN = 5
+export const ENCHANT_TIMES = 3
+
+// The money enchants: for each band row, every passive type whose best
+// poe.ninja line there is worth ENCHANT_MIN and ENCHANT_TIMES its floor.
+// Under item level 84 poe.ninja's lines are thin (an under-75 Small Evasion
+// at 659c), so a price there is capped at the same enchant's 84+ price.
+export function clusterEnchantRows (lines: readonly ClusterLine[], minListings = 5): Array<ClusterRow & { chaos: number }> {
+  const out: Array<ClusterRow & { chaos: number }> = []
+  const best = (row: ClusterRow) => {
+    const m = new Map<string, number>()
+    for (const l of lines) if (l.node && inRow(row, l, minListings)) m.set(l.node, Math.max(m.get(l.node) ?? 0, l.chaos))
+    return m
+  }
+  for (const row of CLUSTER_ROWS) {
+    const floor = clusterFloor(row, lines, minListings)
+    if (floor == null) continue
+    const here = best(row)
+    // The 84+ rows of this size that share a passive count with this one.
+    const twins = row.ilvl[0] >= 84 ? [] : CLUSTER_ROWS.filter(t => t.size === row.size && t.ilvl[0] >= 84 && t.passives[0] <= row.passives[1] && t.passives[1] >= row.passives[0])
+    const top = twins.length ? twins.map(best) : []
+    for (const [node, raw] of here) {
+      let chaos = raw
+      if (twins.length) {
+        const caps = top.map(m => m.get(node)).filter((x): x is number => x != null)
+        const twinFloor = Math.max(...twins.map(t => clusterFloor(t, lines, minListings) ?? 0), ENCHANT_MIN)
+        chaos = Math.min(raw, caps.length ? Math.max(...caps) : twinFloor)
+      }
+      if (chaos < Math.max(ENCHANT_MIN, floor * ENCHANT_TIMES)) continue
+      out.push({ ...row, node, chaos, guess: chaos, name: `${row.size} Cluster Jewel, ${node}, ${pasText(row.passives)}, ${lvText(row.ilvl)}`, conds: [...row.conds, cnd('EnchantmentPassiveNode', '==', [node])] })
+    }
+  }
+  return out.sort((a, b) => b.chaos - a.chaos || a.name.localeCompare(b.name))
+}
+
+// The size fold a cluster row sits in.
+export function clusterSizeOf (name: string): ClusterSizeName | null {
+  const m = /^(Large|Medium|Small) Cluster Jewel, /.exec(name)
+  return m ? m[1] as ClusterSizeName : null
 }
