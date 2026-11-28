@@ -68,7 +68,7 @@
       <div v-if="p.dust.on" class="flex items-center gap-2">
         <WToggle v-model="p.dust.fromPrices">Also from today's prices, at</WToggle>
         <WField v-model.number="dustLine" type="number" suffix="dust/c" style="width: 7.5rem;" aria-label="Dust per chaos line" />
-        <WInfo :text="`Adds bases where every unique gives that much dust per chaos or more, as a drop of item level ${DUST_ILVL}+. A base with any valuable or unpriced unique is left out.`" />
+        <WInfo :text="`Adds bases where every unique gives that much dust per chaos or more, at item level ${DUST_ILVL}+.\n- A base with any valuable or unpriced unique is left out.`" />
       </div>
       <div v-if="p.dust.on && p.dust.fromPrices" class="w-faint text-xs">
         <template v-if="!store.prices.lookup.value">Waiting for poe.ninja prices.</template>

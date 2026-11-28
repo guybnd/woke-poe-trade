@@ -66,11 +66,11 @@ const shown = computed(() => props.full ? entries.value.slice().reverse() : rece
 
 probeOcr()
 
-const HOW_IT_WORKS = 'Reads the tooltip of the map under your mouse with on-screen text recognition, so no key press is needed per map.\n' +
-  '- It re-reads whenever the tooltip changes, so rerolling one map (chaos spamming) updates the verdict.\n' +
-  '- **Roll**, for long reroll sessions: hover the map first. It finds the tooltip once, then reads only that box (faster) until you stop.\n' +
-  '- It reads only once the cursor rests on a map, and stops by itself after 3 minutes with nothing to read.\n' +
-  '- **?** instead of Safe: the map would pass, but some lines weren\'t clear. Use the map check hotkey on it for an exact read.\n' +
+const HOW_IT_WORKS = 'Reads the tooltip of the map under your mouse, so no key press is needed per map.\n' +
+  '- It re-reads when the tooltip changes, so rerolling a map updates the verdict.\n' +
+  '- **Roll**, for long reroll sessions: hover the map first, and it reads only that box (faster) until you stop.\n' +
+  '- It reads once the cursor rests on a map, and stops after 3 minutes with nothing to read.\n' +
+  '- **?** instead of Safe: some lines weren\'t clear. Use the map check hotkey for an exact read.\n' +
   '- Verdicts use this window\'s active build.\n\n' +
   'Needs Windows and the OCR files. Keys are in Settings › Map mods.'
 
