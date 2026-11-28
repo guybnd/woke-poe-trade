@@ -223,8 +223,8 @@ describe('quiet mode and fewer beams reach the Loot and Equipment tabs', () => {
       const loud = b.actions.some(a => a.key === 'PlayEffect' || a.key === 'MinimapIcon' || a.key === 'PlayAlertSound')
       if (wokeTier(b)! > 2) expect(loud, b.comment).toBe(false)
     }
-    expect(wokeTier({ type: CURRENCY_TYPE, tier: 's5' })).toBe(1)
-    expect(wokeTier({ type: WEIGHT_TYPE, tier: 's4' })).toBe(1)
-    expect(wokeTier({ type: 'currency', tier: 's5' })).toBeNaN()
+    expect(wokeTier({ type: CURRENCY_TYPE, tier: 's5', comment: '' })).toBe(1)
+    expect(wokeTier({ type: WEIGHT_TYPE, tier: 's4', comment: '' })).toBe(1)
+    expect(wokeTier({ type: 'currency', tier: 's5', comment: '' })).toBeNaN()
   })
 })
