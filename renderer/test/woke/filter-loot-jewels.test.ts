@@ -91,14 +91,17 @@ describe('jewels on the Loot tab', () => {
     expect(matchItem(doc, jewel('Crimson Jewel', 'Jewels', 'Rare', 84)).visibility).toBe('Hide')
   })
 
-  it('a section set Off hides its jewels; below area level 68 NeverSink decides', () => {
+  it('a section set Off hides its jewels, while levelling too unless the Loot rules are maps only', () => {
     const cfg = defaultCurrency()
     cfg.on = true
     cfg.catMode = { jewabyss: 'off' }
     const doc = parseFilter(SEMI)
     applyCurrency(doc, cfg, lookup)
     expect(matchItem(doc, jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 86)).visibility).toBe('Hide')
-    const low = matchItem(doc, jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 86, { areaLevel: 40 }))
+    expect(matchItem(doc, jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 86, { areaLevel: 40 })).visibility).toBe('Hide')
+    const maps = parseFilter(SEMI)
+    applyCurrency(maps, { ...cfg, catMode: { ...cfg.catMode, lvgate: 0 as unknown as 'auto' } }, lookup)
+    const low = matchItem(maps, jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 86, { areaLevel: 40 }))
     expect(low.final?.block.type).not.toBe(CURRENCY_TYPE)
   })
 
