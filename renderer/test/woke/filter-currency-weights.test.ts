@@ -190,7 +190,7 @@ describe('currency weights', () => {
 
   it('a section with its own ruler starts its steps there, Strictness on top, bias left out (Guy\'s A)', () => {
     const c = defaultCurrency()
-    c.nudge = { essences: 2 }
+    c.bias = { essences: 64 }
     c.rulers = { essences: [1, 2, 4, 8, 100] }
     expect(stepStarts(c, 'essences')).toEqual([1, 2, 4, 8, 100])
     expect(stepStarts(c, 'orbs')).toEqual([c.line, ...c.from.map(f => Math.max(c.line, f))])
@@ -288,9 +288,9 @@ describe('currency weights', () => {
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
   })
 
-  it('a category strictness multiplies all its steps, ×1.25 a notch', () => {
+  it('a section Price bias of 64% makes its items count at 64%: every step costs 1/0.64', () => {
     const base = on(c => { c.line = 1 })
-    const less = on(c => { c.line = 1; c.nudge = { orbs: 2 } })
+    const less = on(c => { c.line = 1; c.bias = { orbs: 64 } })
     expect(stepStarts(less, 'orbs')).toEqual(stepStarts(base, 'orbs').map(v => v * 1.5625))
     expect(stepStarts(less, 'oils')).toEqual(stepStarts(base, 'oils'))
     const items = currencyItems(parseFilter(SEMI), lookup)
@@ -366,9 +366,27 @@ describe('currency weights', () => {
     const fills = (cat: string) => [3, 4].map(s => currencyLook(s as 3 | 4, cat, c).background?.slice(0, 3))
     const kinds = ['orbs', 'gemskill', 'uniqplain', 'cardcur', 'invites', 'mapblight']
     const all = kinds.filter(k => k !== 'mapblight').flatMap(fills).map(x => x!.join(','))
-    // Maps (Guy's B): black on white at Decent and Big, told apart by their tint's edge.
-    expect(fills('mapblight')).toEqual([[255, 255, 255], [255, 255, 255]])
-    expect(currencyLook(4, 'mapblight', c).border).not.toEqual(currencyLook(4, 'maporig', c).border)
+    // Special maps (pick A): a pale tint card on Decent, the full tint on Big
+    // with a white edge, never a plain map's white.
+    expect(fills('mapblight')).toEqual([[182, 227, 143], [150, 215, 95]])
+    expect(currencyLook(4, 'mapblight', c).border?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(currencyLook(4, 'mapblight', c).background).not.toEqual(currencyLook(4, 'maporig', c).background)
+    for (const cat of ['mapend', 'mapguard', 'maporig', 'mapmods', 'mapcorr', 'mapblight', 'mapravaged']) {
+      for (const s of [2, 3, 4] as const) expect(currencyLook(s, cat, c).background?.slice(0, 3)).not.toEqual([255, 255, 255])
+    }
+    // A dark colour you pick for a section gets white text on Big.
+    const dark = { ...c, cats: { ...c.cats, mapguard: { text: [60, 30, 90, 255] } } } as typeof c
+    expect(currencyLook(4, 'mapguard', dark).text?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(currencyLook(4, 'mapguard', c).text?.slice(0, 3)).toEqual([0, 0, 0])
+    // The Style picker: a dark card, or white with the tint on the edge.
+    const dk = currencyLook(4, 'maporig', { ...c, mapLook: 'dark' })
+    expect(dk.text?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(dk.border?.slice(0, 3)).toEqual([255, 225, 120])
+    const wh = currencyLook(3, 'maporig', { ...c, mapLook: 'edge' })
+    expect(wh.background?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(wh.border?.slice(0, 3)).toEqual([255, 225, 120])
+    expect(normalizeCurrency({ mapLook: 'dark' } as never).mapLook).toBe('dark')
+    expect(normalizeCurrency({ mapLook: 'bogus' } as never).mapLook).toBeUndefined()
     expect(new Set(all).size).toBe(all.length)
     expect(fills('gemsup')).toEqual(fills('gemskill'))
     expect(currencyLook(4, 'gemskill', c).text?.slice(0, 3)).toEqual([255, 255, 255])
@@ -441,7 +459,9 @@ describe('currency weights', () => {
     expect(normalizeCurrency({ items: { 'The Doctor': { min: 2 }, 'Rain of Chaos': { min: 9 } } } as never).items).toEqual({ 'The Doctor': { min: 2 } })
     const c = normalizeCurrency({ from: [5, 2, 40, 90], nudge: { orbs: 2, oils: 9, Bad: 1, ess: 0 }, items: { 'Divine Orb': { step: 9, price: -1 }, 'Golden Oil': { step: 4, look: { fontSize: 40 } }, 'x"y': { step: 1 } } } as never)
     expect(c.from).toEqual([5, 5, 40, 90])
-    expect(c.nudge).toEqual({ orbs: 2 })
+    // Old notches become a %: one notch up counted its items at 80%.
+    expect(c.bias).toEqual({ orbs: 64 })
+    expect(normalizeCurrency({ bias: { orbs: 150, oils: 500, gems: 100, essences: 20.5 } } as never).bias).toEqual({ orbs: 150 })
     expect(c.items).toEqual({ 'Golden Oil': { step: 4, look: { fontSize: 40 } } })
   })
 })
