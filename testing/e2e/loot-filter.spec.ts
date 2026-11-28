@@ -1236,7 +1236,7 @@ test('price check: a unique\'s side list shows its drop tier and filter tier in 
   const body = pc.locator('[data-unique-tier]')
   await expect(body.locator('[data-drop-tier-note]')).toContainText('very rare')
   await expect(body).toContainText('Tier 3')
-  await expect(body).toContainText('other uniques on Glorious Plate drop like this too')
+  await expect(body).toContainText('by base')
   await expect(body.getByRole('button', { name: 'Go to rule ›' })).toBeVisible()
   await overlay.snap('unique filter tier, open')
   // A click folds it.
