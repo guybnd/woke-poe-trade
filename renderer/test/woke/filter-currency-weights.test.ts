@@ -92,7 +92,7 @@ describe('currency weights', () => {
     expect(s).toEqual(all)
     expect(stepOfPile(s, 1, offSteps(it, c))).toBe(0)
     expect(stepOfPile(s, 10, offSteps(it, c))).toBe(stepOfPile(all, 10))
-    expect(normalizeCurrency(JSON.parse('{"offBy":{"currency":[1,1,5,"x",2]}}')).offBy).toEqual({ currency: [1, 2] })
+    expect(normalizeCurrency(JSON.parse('{"offBy":{"all":[],"currency":[1,1,5,"x",2]}}')).offBy).toEqual({ all: [], currency: [1, 2] })
   })
 
   it('a step turned off on one page or section stays there (Guy 2026-11-28)', () => {
@@ -109,9 +109,14 @@ describe('currency weights', () => {
     expect(offSteps(orb, c)).toEqual([2])
     expect(offSteps(ess, c)).toEqual([])
     expect(offSteps(uniq, c)).toEqual([1])
-    // The old one list for every page was set on the Currency page.
-    expect(normalizeCurrency(JSON.parse('{"off":[2]}')).offBy).toEqual({ currency: [2] })
-    expect(normalizeCurrency({}).offBy).toEqual({})
+    // Every page, then a page, then a section.
+    c.offBy = { all: [1], uniques: [] }
+    expect(offSteps(orb, c)).toEqual([1])
+    expect(offSteps(uniq, c)).toEqual([])
+    // The old one list was every page's; saved before 'all', it sat on Currency.
+    expect(normalizeCurrency(JSON.parse('{"off":[2]}')).offBy).toEqual({ all: [2] })
+    expect(normalizeCurrency(JSON.parse('{"offBy":{"currency":[2],"essences":[]}}')).offBy).toEqual({ all: [2], essences: [] })
+    expect(normalizeCurrency({}).offBy).toEqual({ all: [] })
   })
 
   it('guesses a price from NeverSink tiers', () => {

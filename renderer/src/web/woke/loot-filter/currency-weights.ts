@@ -747,9 +747,9 @@ export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'>, c: Pick<Curren
   if (sectionMode({ catMode: c.catMode ?? {} }, it.cat) === 'always') return []
   return stepsOffIn(c, it.cat).filter(s => s >= 1 && s <= 4 && s !== e?.min)
 }
-// The steps off in a section: its own when it sets them, else its page's
-// (the ruler's), never another page's (Guy 2026-11-28).
-export const stepsOffIn = (c: Pick<CurrencySettings, 'offBy'>, cat: string): number[] => c.offBy?.[cat] ?? c.offBy?.[kindOf(cat)] ?? []
+// The steps off in a section: its own when it sets them, else its page's,
+// else every page's (Guy 2026-11-28).
+export const stepsOffIn = (c: Pick<CurrencySettings, 'offBy'>, cat: string): number[] => c.offBy?.[cat] ?? c.offBy?.[kindOf(cat)] ?? c.offBy?.all ?? []
 
 // The step a pile of `stack` gets: Hidden when it lands on a step turned off.
 export function stepOfPile (stacks: ReadonlyArray<number | null>, stack: number, off: readonly number[] = []): CStep {
@@ -797,7 +797,7 @@ export const CAT_LOOK: Record<string, { text: [number, number, number], color: s
   harvest: { text: [130, 230, 110], color: 'Green', shape: 'Circle' },
   embers: { text: [255, 130, 60], color: 'Orange', shape: 'Circle' },
   runegrafts: { text: [255, 120, 160], color: 'Pink', shape: 'Circle' },
-  gold: { text: [255, 211, 90], color: 'Yellow', shape: 'Moon' },
+  gold: { text: [255, 211, 90], color: 'Yellow', shape: 'Cross' },
   other: { text: [210, 190, 140], color: 'Grey', shape: 'Circle' }
 }
 
