@@ -5,7 +5,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency, kindOf } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency, kindOf, sectionMode } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { leaguePile } from '@/web/woke/loot-filter/league-pile'
 import { neverSink } from '../helpers/neversink'
@@ -49,6 +49,23 @@ describe('league items on the Loot tab', () => {
     expect(at(item('Forbidden Tome', 'Sanctum Research')).final?.block.type).toBe(CURRENCY_TYPE)
     expect(at(item('Gold', 'Currency')).final?.block.comment).not.toMatch(/lgsanctum|lgcharts/)
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
+  })
+
+  it('always shows the drops you chose to run, however cheap (Guy, 2026-11-28)', () => {
+    for (const cat of ['lgchron', 'lgviscera', 'lgkeys', 'lgult', 'lgmerc', 'lgexped']) expect(sectionMode({ catMode: {} }, cat), cat).toBe('always')
+    for (const cat of ['lgheist', 'lgsanctum', 'lgcharts']) expect(sectionMode({ catMode: {} }, cat), cat).toBe('auto')
+    const lookup: PriceLookup = (_g, base) => base === 'Divine Orb' ? { chaos: 160, thin: false } : { chaos: 0.01, thin: false }
+    const doc = parseFilter(REGULAR)
+    applyCurrency(doc, { ...defaultCurrency(), on: true, line: 50 }, lookup)
+    for (const [bt, cls] of [["Maven's Orrery", 'Viscera'], ['Ancient Reliquary Key', 'Vault Keys'], ['Chronicle of Atzoatl', 'Misc Map Items'], ['Inscribed Ultimatum', 'Misc Map Items'], ['Mercenary Warrant', 'Misc Map Items']]) {
+      const m = matchItem(doc, item(bt, cls))
+      expect(m.visibility, bt).toBe('Show')
+      expect(m.final?.block.type, bt).toBe(CURRENCY_TYPE)
+    }
+    // Hide still hides it.
+    const off = parseFilter(REGULAR)
+    applyCurrency(off, { ...defaultCurrency(), on: true, catMode: { lgviscera: 'off' as const } }, lookup)
+    expect(matchItem(off, item("Maven's Orrery", 'Viscera')).visibility).toBe('Hide')
   })
 
   it('drops every league item on the ground, each naming its row', () => {

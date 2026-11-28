@@ -28,7 +28,7 @@ import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
 import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
-import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_PRICED, LEAGUE_ROWS } from './league-classes'
+import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS } from './league-classes'
 import { JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_ROWS, JEWEL_TYPE } from './jewel-classes'
 import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK, SPECIAL_MAPS, SPECIAL_MAP_CATS } from './map-classes'
 import type { GemBand, GemLine } from './gem-classes'
@@ -83,7 +83,7 @@ export type LootKind = 'currency' | 'fragments' | 'cards' | 'uniques' | 'gems' |
 export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : MAP_IDS.has(cat) ? 'maps' : JEWEL_IDS.has(cat) ? 'jewels' : LEAGUE_IDS.has(cat) ? 'league' : 'currency'
 // A section's Off / Weighted / Always: yours, else its default (boss-only
 // uniques: Always).
-export const sectionMode = (c: Pick<CurrencySettings, 'catMode'>, cat: string): SectionMode => c.catMode?.[cat] ?? UNIQUE_MODES[cat] ?? GEM_MODES[cat] ?? 'auto'
+export const sectionMode = (c: Pick<CurrencySettings, 'catMode'>, cat: string): SectionMode => c.catMode?.[cat] ?? UNIQUE_MODES[cat] ?? GEM_MODES[cat] ?? LEAGUE_MODES[cat] ?? 'auto'
 
 const BY_TYPE: Record<string, string> = {
   'currency->essence': 'essences',
