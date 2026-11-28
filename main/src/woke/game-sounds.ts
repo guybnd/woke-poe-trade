@@ -6,6 +6,7 @@
 // game's is shipped with the app.
 import { promises as fs } from 'fs'
 import { execFile } from 'child_process'
+import { createHash } from 'crypto'
 import path from 'path'
 import { app } from 'electron'
 import { runningGameLog } from '../host-files/GameLogWatcher'
@@ -140,8 +141,11 @@ function runDecode (script: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile('powershell', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, ...args],
       { windowsHide: true, timeout: 90_000, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
-        if (err) reject(new Error((stderr || err.message).trim().split(/\r?\n/)[0] || 'Decoding failed'))
-        else resolve(stdout.trim())
+        if (!err) { resolve(stdout.trim()); return }
+        // PowerShell's own first line names the FMOD step that failed; the
+        // command line (every path in it) never reaches the UI.
+        const why = err.killed ? 'decoding timed out' : (stderr.trim().split(/\r?\n/)[0] || 'couldn\'t decode the game\'s sounds')
+        reject(new Error(why.replace(/^Exception calling "Run" with "\d+" argument\(s\): /, '').replace(/^"|"$/g, '')))
       })
   })
 }
@@ -170,7 +174,10 @@ async function soundsDir (): Promise<string> {
   if (process.platform !== 'win32') throw new Error('Only on Windows')
   const found = await findBank()
   if (!found) throw new Error('Path of Exile install not found')
-  const dir = path.join(cacheRoot(), `${found.size}-${found.mtime}`)
+  // One folder per install and bank version: Steam and standalone side by
+  // side keep their own, and a patch gets a fresh one.
+  const install = createHash('sha1').update(found.dir.toLowerCase()).digest('hex').slice(0, 8)
+  const dir = path.join(cacheRoot(), `${install}-${found.size}-${found.mtime}`)
   try {
     await fs.access(path.join(dir, DONE))
     return dir
@@ -184,15 +191,19 @@ async function soundsDir (): Promise<string> {
   await fs.writeFile(script, DECODE_SCRIPT, 'utf8')
   try {
     const out = await runDecode(script, ['-Poe', found.dir, '-Fsb', fsbPath, '-Out', dir, '-Names', Object.values(GAME_SOUND_SAMPLES).join(',')])
-    if (!(Number(out.split(/\s+/).pop()) > 0)) throw new Error('No sounds decoded')
+    const written = Number(out.split(/\s+/).pop())
+    const wanted = Object.keys(GAME_SOUND_SAMPLES).length
+    // A sound the bank lacks would fail until the next patch: cache only a
+    // full set, so the next click tries again.
+    if (written !== wanted) throw new Error(`only ${Number.isFinite(written) ? written : 0} of ${wanted} sounds decoded`)
   } finally {
     await fs.rm(fsbPath, { force: true })
     await fs.rm(script, { force: true })
   }
   await fs.writeFile(path.join(dir, DONE), JSON.stringify({ from: found.bank, at: Date.now() }))
-  // Older patches' sounds aren't needed any more.
+  // This install's older patches aren't needed any more.
   for (const old of await fs.readdir(cacheRoot())) {
-    if (old !== path.basename(dir)) await fs.rm(path.join(cacheRoot(), old), { recursive: true, force: true }).catch(() => {})
+    if (old !== path.basename(dir) && old.startsWith(`${install}-`)) await fs.rm(path.join(cacheRoot(), old), { recursive: true, force: true }).catch(() => {})
   }
   return dir
 }

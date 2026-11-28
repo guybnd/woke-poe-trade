@@ -76,10 +76,10 @@ export function packUrl (file: string): string {
 
 const dataUrls = new Map<string, string>()
 
-// Why the last game sound didn't play (no install found, say).
-export let gameSoundError = ''
+// What a failed load says, for the toast (no install found, say).
+type Why = { error: string }
 
-async function gameUrl (id: string): Promise<string | null> {
+async function gameUrl (id: string, why: Why): Promise<string | null> {
   const key = `game|${id.toLowerCase()}`
   const cached = dataUrls.get(key)
   if (cached) return cached
@@ -88,16 +88,15 @@ async function gameUrl (id: string): Promise<string | null> {
     const got = await hostRequest('filter-game-sound', { id }, 120_000)
     const url = `data:${got.mime};base64,${got.data}`
     dataUrls.set(key, url)
-    gameSoundError = ''
     return url
   } catch (e) {
-    gameSoundError = (e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method '[^']*': (Error: )?/, '')
+    why.error = (e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method '[^']*': (Error: )?/, '')
     return null
   }
 }
 
-async function urlOf (id: string, dir: string): Promise<string | null> {
-  if (isGameSound(id)) return await gameUrl(id)
+async function urlOf (id: string, dir: string, why: Why): Promise<string | null> {
+  if (isGameSound(id)) return await gameUrl(id, why)
   if (!isCustomSound(id)) return null
   const key = `${dir}|${id}`
   const cached = dataUrls.get(key)
@@ -114,21 +113,28 @@ async function urlOf (id: string, dir: string): Promise<string | null> {
 }
 
 let playing: HTMLAudioElement | null = null
+let latest = 0
 
 // Plays a custom, pack or game sound at the filter's volume (0-300, 300 =
-// full). Returns false when it can't be played.
-export async function playSound (id: string, volume: number, dir: string): Promise<boolean> {
-  const url = await urlOf(id, dir)
-  if (!url) return false
+// full). Returns what to tell the player when it can't, else null. Only the
+// last click plays: an earlier one still loading (the first game sound
+// decodes for a second or two) is dropped.
+export async function playSound (id: string, volume: number, dir: string): Promise<string | null> {
+  const mine = ++latest
+  const why: Why = { error: '' }
+  const url = await urlOf(id, dir, why)
+  if (mine !== latest) return null
+  const failed = `Couldn't play ${soundLabel(id)}${why.error ? `: ${why.error}` : ''}`
+  if (!url) return failed
   playing?.pause()
   const audio = new Audio(url)
   audio.volume = Math.max(0, Math.min(1, volume / 300))
   playing = audio
   try {
     await audio.play()
-    return true
+    return null
   } catch {
-    return false
+    return mine === latest ? `Couldn't play ${soundLabel(id)}` : null
   }
 }
 

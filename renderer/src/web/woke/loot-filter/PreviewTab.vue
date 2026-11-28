@@ -76,7 +76,7 @@ import type { ShownDrop } from './shower'
 import { poeColour, shapeGlyph } from './colours'
 import { LEVEL_NAMES } from './strictness'
 import { ruleLabel } from './parse'
-import { canPreview, gameSoundError, isGameSound, playSound, soundLabel } from './sounds'
+import { canPreview, playSound, soundLabel } from './sounds'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -288,8 +288,8 @@ function clickDrop (d: ShownDrop) {
 }
 
 async function play (id: string, volume: number) {
-  if (await playSound(id, volume, props.config.folder)) return
-  toast(isGameSound(id) && gameSoundError ? `Couldn't play ${soundLabel(id)}: ${gameSoundError}` : `Couldn't play ${soundLabel(id)}`, { anchor: props.anchor })
+  const failed = await playSound(id, volume, props.config.folder)
+  if (failed) toast(failed, { anchor: props.anchor })
 }
 
 function dropMenu (e: MouseEvent, d: ShownDrop) {

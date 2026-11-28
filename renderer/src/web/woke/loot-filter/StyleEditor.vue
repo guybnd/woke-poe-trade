@@ -138,7 +138,7 @@ import { DEFAULT_BG, DEFAULT_FONT, DEFAULT_TEXT } from './edits'
 import type { Colour, StylePatch } from './edits'
 import { ICON_SHAPES, ICON_SIZES, POE_COLOURS, SOUND_IDS, poeColour, shapeGlyph } from './colours'
 import { useActiveFilter } from './active-filter'
-import { NEVERSINK_SOUNDS, SH_SOUNDS, canPreview, gameSoundError, installPackSounds, isGameSound, isPackSound, listFolderSounds, GAME_SOUND_NAMES, playSound, soundLabel, soundUses } from './sounds'
+import { NEVERSINK_SOUNDS, SH_SOUNDS, canPreview, installPackSounds, isPackSound, listFolderSounds, GAME_SOUND_NAMES, playSound, soundLabel, soundUses } from './sounds'
 
 const active = useActiveFilter()
 
@@ -283,8 +283,8 @@ async function play (id: string, volume: number) {
     toast(`${soundLabel(id)} can't be played here`)
     return
   }
-  if (await playSound(id, volume, dir.value)) return
-  toast(isGameSound(id) && gameSoundError ? `Couldn't play ${soundLabel(id)}: ${gameSoundError}` : `Couldn't play ${soundLabel(id)}`)
+  const failed = await playSound(id, volume, dir.value)
+  if (failed) toast(failed)
 }
 
 function setSound (id: string, volume: number) {
