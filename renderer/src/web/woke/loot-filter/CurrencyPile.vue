@@ -12,7 +12,7 @@
         <span v-if="d.step > 0 && d.look.effect" :class="$style.beam"
           :style="{ left: `${d.rect.x + d.rect.w / 2 - 1}px`, height: `${d.rect.y + 2}px`, background: `linear-gradient(to bottom, transparent, ${poeColour(d.look.effect.color)})` }" />
       </template>
-      <span v-for="d in placed.list" :key="d.id" v-item-tip="d.it.chase ? { name: d.it.chase[0].name, type: d.it.name } : d.it.top ? { name: d.it.top, type: d.it.name } : { name: d.it.bt ?? d.it.name }" :class="[$style.drop, { [$style.ghost]: d.step === 0 && !d.faint }]"
+      <span v-for="d in placed.list" :key="d.id" v-item-tip="d.it.top ? { name: d.it.top, type: d.it.name } : { name: d.it.bt ?? d.it.name }" :class="[$style.drop, { [$style.ghost]: d.step === 0 && !d.faint }]"
         :style="{ left: `${d.rect.x}px`, top: `${d.rect.y}px` }" role="button" tabindex="0"
         :aria-label="`${d.label}: ${d.faint ? 'Faint' : CSTEP_NAMES[d.step]}. Open it`" @click="emit('go', d.it.name)" @keydown.enter="emit('go', d.it.name)">
         <LabelPreview :text="d.label" :actions="[]" :style-override="d.look" :visibility="d.step === 0 && !d.faint ? 'Hide' : 'Show'" :extras="false" :scale="SCALE" />
