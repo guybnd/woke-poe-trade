@@ -475,7 +475,7 @@ const props = defineProps<{
   // Group/tier to show first (from the sample card).
   focus?: { type: string, tier: string } | null
   // A tab to show (from the dock card). A new object each time.
-  openTab?: { tab: 'prices' | 'neversink' | 'changes' | 'gear' } | null
+  openTab?: { tab: 'prices' | 'neversink' | 'changes' | 'gear' | 'weights' } | null
 }>()
 
 const emit = defineEmits<{ (e: 'close' | 'tab-opened'): void, (e: 'paste-item', text: string): void }>()

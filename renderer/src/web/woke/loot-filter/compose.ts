@@ -25,6 +25,7 @@ import { CLUSTER_PRICE_TYPE, applyClusterPrices } from './cluster-prices'
 import type { ClusterPrice } from './cluster-prices'
 import type { BaseRename } from './gem-bases'
 import { applyWeights, filterBases } from './weights'
+import type { IdGroup } from './id-mods'
 import { applyCurrency, recipeStep, scaled } from './currency-weights'
 import { levellingGearBlocks } from './levelling-gear'
 import { applyMapFloor, applyMapLooks } from './map-floor'
@@ -72,6 +73,8 @@ export interface ComposeInput {
   gems?: readonly GemLine[] | null
   // The Loot tab's own item lists and guesses (own-lists.ts), once read.
   own?: OwnTables | null
+  // Identified gear's mod lists for Rare weights (id-mods.ts), once read.
+  ids?: IdGroup[] | null
 }
 
 export interface Composed {
@@ -132,7 +135,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const migrated = migratedPresets(cfg.presets)
   // Rare weights (beta) first, so everything below goes on top of them.
   const weightBases = cfg.presets.weights.on ? filterBases(next, cfg.presets.weights.ranks) : []
-  const weights = applyWeights(next, cfg.presets.weights, weightBases)
+  const weights = applyWeights(next, cfg.presets.weights, weightBases, cfg.ids ?? [])
   // Utility flasks score on the same line (Equipment › Flasks).
   applyFlasks(next, cfg.presets.weights)
   // Currency weights (beta) the same way: above everything NeverSink has.

@@ -11,15 +11,18 @@
 // Branches are written in order with the "none of these" branch last, and the
 // rules sit above everything NeverSink has, so NeverSink never sees these rares.
 // Off (the default), nothing is written and NeverSink decides as before.
-// Identified rares aren't touched: NeverSink's mod rules keep them.
+// Identified rares and magic gear score by their mods (id-mods.ts) when the
+// mod table is loaded; without it identified rares are left to NeverSink.
 import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './parse'
 import { readTiered } from './gear'
 import { allGearBases, baseInfo } from './gear-bases'
 import { BASE_FACTS } from './base-facts'
-import { LOOK_CHANNELS, LOOK_LABEL, LOUD_DEFAULT, MARK_ROWS, ORDERED_ROWS, WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
+import { ID_ROWS, LOOK_CHANNELS, LOOK_LABEL, LOUD_DEFAULT, MARK_ROWS, ORDERED_ROWS, WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
 import type { LookChannel, LookKey, RankKey, WeightKey, WeightSettings } from './weight-settings'
+import { MAX_MODS, countConds, minimalCounts } from './id-mods'
+import type { IdGroup, IdRarity } from './id-mods'
 
-export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, NEED_MIN, NEED_MAX, MARK_ROWS, ORDERED_ROWS, PIN_ROWS, LOUD_DEFAULT, LOOK_CHANNELS, LOOK_LABEL, LOOK_KEYS, LOOK_DEFAULT, RANK_KEYS, defaultWeights, normalizeWeights } from './weight-settings'
+export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, NEED_MIN, NEED_MAX, MARK_ROWS, ID_ROWS, ORDERED_ROWS, PIN_ROWS, LOUD_DEFAULT, LOOK_CHANNELS, LOOK_LABEL, LOOK_KEYS, LOOK_DEFAULT, RANK_KEYS, defaultWeights, normalizeWeights } from './weight-settings'
 
 // Kept out of weight-settings (startup JS): only the Rare weights tab uses them.
 // The steps a multiplier moves through.
@@ -36,7 +39,7 @@ export const STAGES: Array<{ label: string, need: number }> = [
 ]
 // The range one multiplier may take, given the others.
 export function multRange (mult: Record<WeightKey, number>, key: WeightKey): [number, number] {
-  let lo = MARK_ROWS.includes(key) ? 1 : 0
+  let lo = MARK_ROWS.includes(key) || ID_ROWS.includes(key) ? 1 : 0
   let hi = 1000
   for (const row of ORDERED_ROWS) {
     const i = row.indexOf(key)
@@ -479,9 +482,11 @@ function splits (bases: BaseRow[], m: Record<WeightKey, number>): Split[] {
 }
 
 // Unidentified rares, and white or magic gear: the two kinds a rule can name.
-const SCOPES = (): FilterCondition[][] => [
+// Identified rares too when their mods are scored.
+const SCOPES = (ids = false): FilterCondition[][] => [
   [c('Rarity', '', ['Rare']), F('Identified')],
-  [c('Rarity', '', ['Normal', 'Magic'])]
+  [c('Rarity', '', ['Normal', 'Magic'])],
+  ...(ids ? [[c('Rarity', '', ['Rare']), T('Identified')]] : [])
 ]
 
 // The gear the rules cover (with one of SCOPES, or the rarity split).
@@ -526,7 +531,7 @@ function know (rule: FilterCondition[], alt: FilterCondition[]): 'yes' | 'no' | 
   return all ? 'yes' : '?'
 }
 
-export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
+export function compileWeights (w: WeightSettings, bases: BaseRow[], ids: IdGroup[] = []): Compiled {
   const m = w.mult
   const up = upMarks(m)
   const ILVL: Array<[number, WeightKey]> = [[86, 'i86'], [83, 'i83'], [75, 'i75'], [68, 'i68']]
@@ -585,7 +590,7 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
   const push = (conds: FilterCondition[], step: Step, note: string, paints: FilterAction[]) => {
     perStep[step]++
     // A rule with a base list doesn't need the class list.
-    const listed = conds.some(x => x.key === 'BaseType')
+    const listed = conds.some(x => x.key === 'BaseType' || x.key === 'Class')
     const all = [...BASE_CONDS().filter(x => !(listed && x.key === 'Class')), ...conds].map(x => ({ ...x, values: [...x.values] }))
     chars += all.reduce((n, x) => n + x.key.length + 12 + x.values.reduce((k, v) => k + v.length + 3, 0), 120)
     blocks.push({
@@ -659,7 +664,7 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
     for (const k of [...list].reverse()) {
       if (k === 'score') continue
       for (const alt of lookAlts(k, ch, exotic)) {
-        for (const scope of SCOPES()) {
+        for (const scope of SCOPES(ids.length > 0)) {
           if (know([...BASE_CONDS(), ...scope], alt.conds) === 'no') continue
           const conds = [...BASE_CONDS(), ...scope, ...alt.conds].map(x => ({ ...x, values: [...x.values] }))
           chars += 160 + alt.conds.reduce((n, x) => n + x.values.reduce((q, v) => q + v.length + 3, 0), 0)
@@ -681,6 +686,26 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
             dirty: true,
             added: true
           } as FilterBlock)
+        }
+      }
+    }
+  }
+
+  // Identified gear: its mods' points over the rarity's own, loudest step
+  // first. A rare that reaches no step hides with the rest at the end; magic
+  // goes on to the base rules below (its base can still make it worth it).
+  const ptsOf = (x: number) => x > 0 ? 10 * Math.log2(x) : -Infinity
+  for (const g of ids) {
+    const levels = g.levels.map(l => l.pts)
+    for (const rarity of ['Rare', 'Magic'] as IdRarity[]) {
+      const own = ptsOf(m[rarity === 'Rare' ? 'idr' : 'idm'])
+      for (const step of [4, 3, 2, 1] as Step[]) {
+        const at = atOf(step)
+        if (step < 4 && at === atOf((step + 1) as Step)) continue
+        const need = ptsOf(at) - own
+        for (const counts of minimalCounts(levels, need, MAX_MODS[rarity])) {
+          const n = counts[counts.length - 1]
+          emit([c('Rarity', '', [rarity]), T('Identified'), c('Class', '==', g.classes), ...countConds(g, counts)], step, `identified ${rarity.toLowerCase()}, ${n} mod${n === 1 ? '' : 's'}`)
         }
       }
     }
@@ -714,7 +739,7 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
     walkSplits([ss[0], ...ss.slice(3)], 0, [...x.yes, F('Corrupted'), F('Mirrored')], m[x.key], [WEIGHT_LABEL[x.key].toLowerCase()])
   }
   walkSplits(ss, 0, [], 1, [])
-  for (const scope of SCOPES()) hide(scope, 'the rest')
+  for (const scope of SCOPES(ids.length > 0)) hide(scope, 'the rest')
   return { blocks, perStep, chars }
 }
 
@@ -739,11 +764,11 @@ export function withRanks (rows: BaseRow[], own: Record<string, Rank>): BaseRow[
   return rows.map(b => own[b.name] && own[b.name] !== b.rank ? { ...b, rank: own[b.name], was: b.rank } : b)
 }
 
-export function applyWeights (doc: FilterDoc, w: WeightSettings, bases = filterBases(doc, w.ranks)): Compiled | null {
+export function applyWeights (doc: FilterDoc, w: WeightSettings, bases = filterBases(doc, w.ranks), ids: IdGroup[] = []): Compiled | null {
   // Without the item data every base would count as plain (exotic white
   // bases hidden): leave it all to NeverSink until the data is in.
   if (!w.on || !bases.length) return null
-  const compiled = compileWeights(w, bases)
+  const compiled = compileWeights(w, bases, ids)
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
   const at = first < 0 ? doc.chunks.length : first
   doc.chunks.splice(at, 0, ...compiled.blocks)
