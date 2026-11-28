@@ -606,6 +606,16 @@ export function tierNumber (b: Pick<FilterBlock, 'type' | 'tier' | 'comment'>): 
   return m ? Number(m[1]) : null
 }
 
+// The tier a Loot or Equipment tab rule counts as for quiet mode and fewer
+// beams: Tink (Loot) and Beam (Equipment) are tier 1. NeverSink's special
+// unique rules copied onto the Loot tab (u-*) stay untiered, as in NeverSink.
+export function wokeTier (b: Pick<FilterBlock, 'type' | 'tier'>): number | null {
+  if (b.type !== CURRENCY_TYPE && b.type !== WEIGHT_TYPE) return null
+  const m = /^s([1-5])$/.exec(b.tier ?? '')
+  if (!m) return null
+  return (b.type === CURRENCY_TYPE ? 6 : 5) - Number(m[1])
+}
+
 // The highest map tier a block can catch, or null when it has no cap.
 export function mapTierCap (b: FilterBlock): number | null {
   let cap: number | null = null
@@ -835,6 +845,17 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
       // Build rules, the presets' own and the Loot and Equipment tabs' rules
       // get the colour-blind colours too; your own rules keep what you picked.
       if (p.colourBlind.on && (b.type === BUILD_RULE_TYPE || b.type === PRESET_TYPE || b.type === CURRENCY_TYPE || b.type === WEIGHT_TYPE) && colourBlindActions(b)) touched = true
+      // Quiet mode and fewer beams reach the Loot and Equipment tabs' steps
+      // too (Guy's pick, 2026-11-28): their loudest step counts as tier 1.
+      const n = wokeTier(b)
+      if (n != null && p.quiet.on && n > p.quiet.keepTiers && b.actions.some(a => SOUND_KEYS.includes(a.key))) {
+        b.actions = b.actions.filter(a => !SOUND_KEYS.includes(a.key))
+        touched = true
+      }
+      if (n != null && p.beams.on && n > p.beams.keepTiers && b.actions.some(a => BEAM_KEYS.includes(a.key))) {
+        b.actions = b.actions.filter(a => !BEAM_KEYS.includes(a.key))
+        touched = true
+      }
       if (touched) { b.dirty = true; changed++ }
       continue
     }

@@ -173,3 +173,21 @@ describe('the Loot tab prices a unique base by its best unique', () => {
     expect(ours({ lookup: cheap, loot: best })).toBe(ours({ lookup: best }))
   })
 })
+
+describe('quiet mode and fewer beams reach the Loot and Equipment tabs', () => {
+  it('drops sounds and beams below the kept tiers, Tink and Big keep theirs', async () => {
+    const { applyPresetChanges, normalizePresets, wokeTier } = await import('@/web/woke/loot-filter/presets')
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(), (_g, base) => ({ chaos: base === 'Divine Orb' ? 160 : base === 'Chaos Orb' ? 1 : 0.2, thin: false }))
+    const ours = () => doc.blocks.filter(b => b.type === CURRENCY_TYPE && b.visibility === 'Show' && /^s\d$/.test(b.tier ?? ''))
+    expect(ours().some(b => wokeTier(b)! > 2 && b.actions.some(a => a.key === 'PlayEffect'))).toBe(true)
+    applyPresetChanges(doc, normalizePresets({ quiet: { on: true, keepTiers: 2 }, beams: { on: true, keepTiers: 2 } }))
+    for (const b of ours()) {
+      const loud = b.actions.some(a => a.key === 'PlayEffect' || a.key === 'MinimapIcon' || a.key === 'PlayAlertSound')
+      if (wokeTier(b)! > 2) expect(loud, b.comment).toBe(false)
+    }
+    expect(wokeTier({ type: CURRENCY_TYPE, tier: 's5' })).toBe(1)
+    expect(wokeTier({ type: WEIGHT_TYPE, tier: 's4' })).toBe(1)
+    expect(wokeTier({ type: 'currency', tier: 's5' })).toBe(null)
+  })
+})
