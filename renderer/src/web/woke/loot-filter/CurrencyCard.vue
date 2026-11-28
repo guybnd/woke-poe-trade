@@ -59,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useFold } from '../ui/fold'
 import WFoldHead from '../ui/WFoldHead.vue'
 import { WButton, WSegmented } from '../ui'
@@ -97,7 +97,7 @@ const props = defineProps<{
   facts?: ItemFacts | null
 }>()
 // The item's category and the name its row has on the Loot tab.
-const emit = defineEmits<{ 'open-tab': [cat: string, name: string], 'open-rule': [tier: string] }>()
+const emit = defineEmits<{ 'open-tab': [cat: string, name: string], 'open-rule': [tier: string], place: [p: { cat: string, catName: string, name: string } | null] }>()
 
 const open = reactive({ more: useFold('alt-f.currency-more') })
 // The whole category (Guy 2026-11-27: every section has Hide / By price /
@@ -135,6 +135,10 @@ const mult = computed(() => edit.value.mult ?? 1)
 const dragMult = ref<number | null>(null)
 
 const catName = computed(() => ALL_CATEGORIES.find(x => x.id === it.value?.cat)?.name ?? 'Other')
+// Tells the card above which section and row this is (its Go to rule and
+// rule name follow it).
+watch(() => it.value && [it.value.cat, catName.value, it.value.name] as const, p => emit('place', p ? { cat: p[0], catName: p[1], name: p[2] } : null), { immediate: true })
+onBeforeUnmount(() => emit('place', null))
 const catCss = computed(() => `rgb(${catColour(it.value?.cat ?? 'other', cfg.value).rgb.join(',')})`)
 
 // Its section's mode, its default included (boss-only uniques, Exceptional
