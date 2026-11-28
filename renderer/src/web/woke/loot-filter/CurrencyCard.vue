@@ -181,8 +181,8 @@ const MODE_HELP = `What this level does with the item:
 - **Always show**: at least Small, whatever the price.
 - **Always hide**: never shows in maps.`
 const AT_HELP = `The step it always shows at.
-Its price: the step its price lands on, at least Small.
-Small to Tink: always that step, whatever the price.`
+- Its price: the step its price lands on, at least Small.
+- Small to Tink: always that step, whatever the price.`
 const LEVEL_HELP = `The highlighted step is what your changes cover.
 - Click the section to change every item in it, and the item to come back down.
 - Loot (All loot: its steps and Strictness) changes only on the Loot tab.`
