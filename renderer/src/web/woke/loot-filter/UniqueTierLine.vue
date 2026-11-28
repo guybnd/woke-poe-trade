@@ -9,15 +9,13 @@
       <span :class="[$style.chev, { [$style.open]: open }]">▶</span>
       <span :class="$style.title">Tier</span>
       <span :class="$style.top">
-        <span v-if="drop" :class="$style.drop" :title="`Drop rarity: ${drop.word}`" data-drop-tier>Drop T{{ drop.tier }}</span>
+        <span v-if="drop" :class="$style.drop" :title="`Drop rarity: ${drop.word}`" data-drop-tier><span :class="$style.pips" aria-hidden="true"><i v-for="n in 6" :key="n" :class="{ [$style.on]: n <= 6 - drop.tier }" /></span>T{{ drop.tier }}</span>
         <span v-if="tier" :class="$style.chip" :title="`Loot filter: ${tier.where}`" data-filter-tier-chip><LabelPreview :text="tier.short" :actions="tier.actions" :visibility="tier.visibility" :default-text="UNIQUE_TEXT" :extras="false" /></span>
       </span>
     </button>
     <div v-if="open" :class="$style.body" data-unique-tier>
       <div v-if="drop" :class="$style.ln" data-drop-tier-note>
-        <span :class="$style.pips" aria-hidden="true"><i v-for="n in 6" :key="n" :class="{ [$style.on]: n <= 6 - drop.tier }" /></span>
-        <b>T{{ drop.tier }}</b>
-        <span :class="$style.dim">{{ drop.word }}<template v-if="drop.onBase"> · {{ drop.onBase }}</template></span>
+        <span :class="$style.dim"><b>{{ capital(drop.word) }}</b> drop<template v-if="drop.onBase"> · {{ drop.onBase }}</template></span>
         <WInfo :text="help" />
       </div>
       <div v-if="tier" :class="$style.ln" data-no-item-tip="the checked item's own drop look; the price check above is that item">
@@ -30,7 +28,7 @@
         <span :class="$style.dim">{{ tier.dearest.setsTier ? 'Sets the tier:' : 'Best on base:' }}</span>
         <span v-if="tier.dearest.name !== item.info.refName" v-item-tip="{ name: tier.dearest.name, type: tier.base }" :class="$style.uname">{{ tier.dearest.name }}</span>
         <span v-else :class="$style.dim">this one</span>
-        <span v-if="price" :class="$style.price">{{ price.text }}<img :class="$style.coin" :src="price.coin" alt=""></span>
+        <span v-if="price" :class="$style.price">{{ price.text }}<img :class="$style.coin" :src="price.coin" :alt="price.unit" :title="price.unit"></span>
       </div>
     </div>
   </template>
@@ -99,8 +97,10 @@ const price = computed(() => {
   if (chaos == null) return null
   const p = autoCurrency(chaos)
   const text = p.min === p.max ? displayRounding(p.min, true) : `${displayRounding(p.min, true)}–${displayRounding(p.max, true)}`
-  return { text, coin: p.currency === 'div' ? '/images/divine.png' : '/images/chaos.png' }
+  return { text, unit: p.currency === 'div' ? 'divine' : 'chaos', coin: p.currency === 'div' ? '/images/divine.png' : '/images/chaos.png' }
 })
+
+const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 // Short: the section, and the two cases that change how to read it.
 const whereText = computed(() => {
@@ -151,7 +151,7 @@ function goToRule () {
 .chev.open { transform: rotate(90deg); }
 .title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .top { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-family: var(--w-body); }
-.drop { font-size: var(--w-fs-sm); color: var(--w-dim); white-space: nowrap; }
+.drop { display: inline-flex; align-items: center; gap: 5px; font-size: var(--w-fs-sm); color: var(--w-dim); white-space: nowrap; }
 .chip { display: inline-flex; min-width: 0; max-width: 9rem; }
 .body { display: grid; gap: 4px; padding: 6px 12px 7px; }
 .ln { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; min-width: 0; font-size: var(--w-fs-sm); }
