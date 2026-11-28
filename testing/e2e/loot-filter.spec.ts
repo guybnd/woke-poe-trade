@@ -1450,12 +1450,17 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
     await expect(page.locator('[data-loot-class="uniques"]')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator(`[data-currency-item="${name}"]`)).toBeVisible()
   }
-  // League items: a mechanic you don't run goes Off in one click.
+  // League items: a fold per mechanic, rows by item level; a mechanic you
+  // don't run goes Off in one click.
   await page.locator('[data-loot-class="league"]').click()
-  await page.locator('[data-loot-league-section="lgexped"]').getByRole('button', { name: 'Off' }).click()
-  await expect(page.locator('[data-loot-league]')).toContainText('1 hidden in maps')
+  const logs = page.locator('[data-currency-cat="lgexped"]')
+  await expect(logs).toBeVisible()
+  await logs.locator('[data-loot-section-mode]').getByRole('button', { name: 'Off' }).click()
+  await logs.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
+  await expect(logs.locator('[data-currency-item="Logbook, item level 83+"]')).toContainText('Hidden')
+  await expect(page.locator('[data-maps-pile] [data-map-drop]').first()).toBeVisible()
   await overlay.snap('loot tab, league')
-  await page.locator('[data-loot-league-section="lgexped"]').getByRole('button', { name: 'NeverSink' }).click()
+  await logs.locator('[data-loot-section-mode]').getByRole('button', { name: 'Weighted' }).click()
   await page.locator('[data-loot-class="currency"]').click()
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()

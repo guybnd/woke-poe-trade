@@ -14,7 +14,6 @@
       <template v-if="sel === 'maps'" #extra><MapsTab :config="config" /></template>
       <template v-if="sel === 'jewels'" #after><JewelsTab :store="store" :config="config" @open-rule="r => emit('open-rule', r)" @open-unique="openUnique" /></template>
     </CurrencyTab>
-    <LeagueTab v-else :config="config" :class="$style.main" />
   </div>
 </template>
 
@@ -23,7 +22,6 @@ import { computed, ref, watch } from 'vue'
 import CurrencyTab from './CurrencyTab.vue'
 import MapsTab from './MapsTab.vue'
 import JewelsTab from './JewelsTab.vue'
-import LeagueTab from './LeagueTab.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { LootKind } from './currency-weights'
@@ -53,7 +51,7 @@ const LOOT_CLASSES = [
 type ClassId = (typeof LOOT_CLASSES)[number]['id']
 
 // Classes prices decide already: one engine and one switch for both.
-const PRICED = new Set<ClassId>(['currency', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels'])
+const PRICED = new Set<ClassId>(['currency', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels', 'league'])
 const sel = ref<ClassId>('currency')
 const focusItem = ref<string | null>(null)
 watch(() => props.focus, f => {

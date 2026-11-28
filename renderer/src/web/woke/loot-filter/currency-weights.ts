@@ -28,6 +28,7 @@ import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
 import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
+import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_PRICED, LEAGUE_ROWS } from './league-classes'
 import { JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_ROWS, JEWEL_TYPE } from './jewel-classes'
 import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK, SPECIAL_MAPS, SPECIAL_MAP_CATS } from './map-classes'
 import type { GemBand, GemLine } from './gem-classes'
@@ -83,9 +84,9 @@ export const GOLD_PILES: Array<{ name: string, min: number | null, max: number |
   { name: 'Gold under 150', min: null, max: 149, guess: 0.25 }
 ]
 // Every class's categories (the Loot tab's rail shows one class at a time).
-export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES, ...MAP_CATEGORIES, ...JEWEL_CATEGORIES]
-export type LootKind = 'currency' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps' | 'jewels'
-export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : MAP_IDS.has(cat) ? 'maps' : JEWEL_IDS.has(cat) ? 'jewels' : 'currency'
+export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES, ...MAP_CATEGORIES, ...JEWEL_CATEGORIES, ...LEAGUE_CATEGORIES]
+export type LootKind = 'currency' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps' | 'jewels' | 'league'
+export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : MAP_IDS.has(cat) ? 'maps' : JEWEL_IDS.has(cat) ? 'jewels' : LEAGUE_IDS.has(cat) ? 'league' : 'currency'
 // A section's Off / Weighted / Always: yours, else its default (boss-only
 // uniques: Always).
 export const sectionMode = (c: Pick<CurrencySettings, 'catMode'>, cat: string): SectionMode => c.catMode?.[cat] ?? UNIQUE_MODES[cat] ?? GEM_MODES[cat] ?? 'auto'
@@ -489,6 +490,65 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       })
     }
   }
+  // League items (Guy's League A, 2026-11-28): priced sections by name, the
+  // rest a row per thing a filter can see, each a guess you can change.
+  if (doc.blocks.some(b => b.type === 'expedition->logbook' || b.type?.startsWith('heist->') || b.type === 'viscera' || b.type === 'miscmapitemsextra')) {
+    const guessed = (name: string, cat: string, cls: string, bts: string[], guess: number, conds: FilterCondition[], tip?: string) => {
+      const own = edits[name]?.price
+      seen.set(name, {
+        name,
+        cls,
+        type: 'league',
+        tier: null,
+        cat,
+        chaos: (own ?? guess) * (edits[name]?.mult ?? 1),
+        est: own == null,
+        ...(own != null ? { own: true } : {}),
+        full: 1,
+        ...(tip ?? bts[0] ? { bt: tip ?? bts[0] } : {}),
+        bts,
+        conds: conds.map(x => ({ ...x, values: [...x.values] }))
+      })
+    }
+    for (const r of LEAGUE_ROWS) guessed(r.name, r.cat, r.cls, r.bts, r.guess, r.conds, r.tip)
+    for (const sec of LEAGUE_PRICED) {
+      const group: EconomyGroup = { type: sec.cat, label: sec.cat, ninja: sec.ninja }
+      for (const b of doc.blocks) {
+        if (b.type !== sec.type || !sec.tiers.includes(b.tier ?? '')) continue
+        const bt = b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))
+        for (const name of bt?.values ?? []) {
+          if (seen.has(name)) continue
+          const p = lookup?.(group, name) ?? null
+          const priced = p != null && p.chaos > 0
+          const own = edits[name]?.price
+          seen.set(name, {
+            name,
+            cls: sec.cls,
+            type: 'league',
+            tier: b.tier,
+            cat: sec.cat,
+            chaos: (own ?? (priced ? p.chaos : sec.guess(b.tier))) * (edits[name]?.mult ?? 1),
+            est: own == null && (!priced || p.thin || Boolean(p.day1)),
+            ...(own != null ? { own: true } : {}),
+            full: 1
+          })
+        }
+      }
+    }
+    const p = lookup?.({ type: CHRONICLE.cat, label: CHRONICLE.cat, ninja: CHRONICLE.ninja }, CHRONICLE.name) ?? null
+    const own = edits[CHRONICLE.name]?.price
+    seen.set(CHRONICLE.name, {
+      name: CHRONICLE.name,
+      cls: '',
+      type: 'league',
+      tier: null,
+      cat: CHRONICLE.cat,
+      chaos: (own ?? (p && p.chaos > 0 ? p.chaos : CHRONICLE.guess)) * (edits[CHRONICLE.name]?.mult ?? 1),
+      est: own == null && (!p || !(p.chaos > 0) || p.thin || Boolean(p.day1)),
+      ...(own != null ? { own: true } : {}),
+      full: 1
+    })
+  }
   return [...seen.values()]
 }
 
@@ -679,7 +739,7 @@ const mixTo = (c: number[], to: number, f: number) => c.map(v => Math.round(v + 
 // The colour pushed 80% further from grey (Normal: "as now but more saturated").
 const vivid = (c: number[]) => { const g = (c[0] + c[1] + c[2]) / 3; return c.map(v => Math.max(0, Math.min(255, Math.round(v + (v - g) * 0.8)))) }
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rgb: [number, number, number], color: string, shape: string } {
-  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? JEWEL_LOOK[cat] ?? CAT_LOOK.other
+  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? JEWEL_LOOK[cat] ?? LEAGUE_LOOK[cat] ?? CAT_LOOK.other
   const own = c.cats[cat]
   return {
     rgb: own?.text ? [own.text[0], own.text[1], own.text[2]] : d.text,
@@ -785,6 +845,11 @@ function bandOfConds (it: CurrencyItem): { level: number, quality: number, corru
 export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], opts: { faint?: boolean, floors?: FilterBlock[] } = {}): CurrencyCompiled {
   const blocks: FilterBlock[] = []
   const bts = (list: CurrencyItem[]) => [...new Set(list.flatMap(i => i.bts ?? [i.bt ?? i.name]))].sort()
+  // An item of a whole class (charts, Sanctum research) names no BaseType.
+  const btCond = (list: CurrencyItem[]): FilterCondition[] => {
+    const v = bts(list)
+    return v.length ? [c('BaseType', '==', v)] : []
+  }
   const stacks = new Map(items.map(it => [it.name, stacksFor(it, cfg)]))
   const area = c('AreaLevel', '>=', [68])
   // No class (gold, whose BaseType is its own): no Class condition.
@@ -818,7 +883,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   const own = items.filter(it => cfg.items[it.name]?.look)
   for (const it of own) {
     for (const [s, k, hidden] of steps(it)) {
-      const conds = [area, ...clsCond([it]), c('BaseType', '==', bts([it])), ...(it.conds ?? [])]
+      const conds = [area, ...clsCond([it]), ...btCond([it]), ...(it.conds ?? [])]
       if (k > 1) conds.push(c('StackSize', '>=', [k]))
       if (hidden) {
         rescue([it])
@@ -841,7 +906,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
     }
   }
   for (const g of [...groups.values()].sort((x, y) => y.step - x.step || y.k - x.k)) {
-    const conds = [area, ...clsCond(g.list), c('BaseType', '==', bts(g.list)), ...(g.list[0].conds ?? [])]
+    const conds = [area, ...clsCond(g.list), ...btCond(g.list), ...(g.list[0].conds ?? [])]
     if (g.k > 1) conds.push(c('StackSize', '>=', [g.k]))
     if (g.hidden) {
       rescue(g.list, g.step)
@@ -859,7 +924,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
       const k = it.conds ? JSON.stringify(it.conds) : ''
       byConds.set(k, [...(byConds.get(k) ?? []), it])
     }
-    for (const list of byConds.values()) blocks.push(block(0, [area, ...clsCond(list), c('BaseType', '==', bts(list)), ...(list[0].conds ?? [])], 'off, set by hand'))
+    for (const list of byConds.values()) blocks.push(block(0, [area, ...clsCond(list), ...btCond(list), ...(list[0].conds ?? [])], 'off, set by hand'))
   }
   // Floors (gems at 20% quality, transfigured gems): above the line.
   blocks.push(...(opts.floors ?? []))
@@ -874,8 +939,8 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   if (opts.faint) {
     const byCat = new Map<string, CurrencyItem[]>()
     for (const it of items) if (!forcedHidden(it, cfg)) byCat.set(it.cat, [...(byCat.get(it.cat) ?? []), it])
-    for (const [cat, list] of byCat) blocks.push(faintBlock([area, ...clsCond(list), c('BaseType', '==', bts(list)), ...shared(list)], cat, catColour(cat, cfg).rgb))
-  } else if (items.length) blocks.push(block(0, [area, ...clsCond(items), c('BaseType', '==', bts(items)), ...shared(items)], 'under the line'))
+    for (const [cat, list] of byCat) blocks.push(faintBlock([area, ...clsCond(list), ...btCond(list), ...shared(list)], cat, catColour(cat, cfg).rgb))
+  } else if (items.length) blocks.push(block(0, [area, ...clsCond(items), ...btCond(items), ...shared(items)], 'under the line'))
   const chars = blocks.reduce((n, b) => n + 160 + b.conditions.reduce((m, x) => m + x.key.length + 12 + x.values.reduce((k, v) => k + v.length + 3, 0), 0), 0)
   return { blocks, items, chars }
 }
@@ -890,7 +955,7 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const eff = scaled(cfg, doc.strictness)
   const faint = faintOn(cfg, doc.strictness)
   const gemItems = all.filter(it => it.type === 'gems')
-  const items = all.filter(it => it.cls !== UNIQUE_CLS && it.type !== 'gems' && it.type !== 'maps' && it.type !== 'gold' && it.type !== 'jewels')
+  const items = all.filter(it => it.cls !== UNIQUE_CLS && it.type !== 'gems' && it.type !== 'maps' && it.type !== 'gold' && it.type !== 'jewels' && it.type !== 'league')
   const goldItems = all.filter(it => it.type === 'gold')
   const none: CurrencyCompiled = { blocks: [], items: [], chars: 0 }
   const compiled = items.length ? compileCurrency(eff, items, { faint }) : none
@@ -904,7 +969,8 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec'), faint) ?? none
   const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
   const jewels = applyJewels(doc, eff, all.filter(it => it.type === 'jewels'), faint) ?? none
-  const parts = [compiled, gemsOut, goldOut, foul, spec, uniq, maps, jewels]
+  const league = applyLeague(doc, eff, all.filter(it => it.type === 'league'), faint) ?? none
+  const parts = [compiled, gemsOut, goldOut, foul, spec, uniq, maps, jewels, league]
   return { blocks: parts.flatMap(x => x.blocks), items: parts.flatMap(x => x.items), chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 
@@ -1006,6 +1072,23 @@ function applyJewels (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem
   const shown = blocks.filter(b => b.visibility === 'Show' && b.tier !== 'faint').sort((x, y) => Number(y.tier?.slice(1) ?? 0) - Number(x.tier?.slice(1) ?? 0))
   const rest = blocks.filter(b => !shown.includes(b))
   insertBlocks(doc, doc.chunks.indexOf(first), [...shown, ...rest])
+  return { blocks: [...shown, ...rest], items, chars: parts.reduce((n, x) => n + x.chars, 0) }
+}
+
+// League items go at the top with the currency: each row compiled on its own
+// (they overlap: an enchanted blueprint is also item level 83+), the priced
+// lists a section at a time. Loudest first.
+function applyLeague (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
+  if (!items.length) return null
+  const rows = items.filter(it => it.conds)
+  const lists = new Map<string, CurrencyItem[]>()
+  for (const it of items) if (!it.conds) lists.set(it.cat, [...(lists.get(it.cat) ?? []), it])
+  const parts = [...rows.map(it => compileCurrency(cfg, [it], { faint })), ...[...lists.values()].map(l => compileCurrency(cfg, l, { faint }))]
+  const blocks = parts.flatMap(x => x.blocks)
+  const shown = blocks.filter(b => b.visibility === 'Show' && b.tier !== 'faint').sort((x, y) => Number(y.tier?.slice(1) ?? 0) - Number(x.tier?.slice(1) ?? 0))
+  const rest = blocks.filter(b => !shown.includes(b))
+  const first = doc.chunks.findIndex(ch => ch.kind === 'block')
+  insertBlocks(doc, first < 0 ? doc.chunks.length : first, [...shown, ...rest])
   return { blocks: [...shown, ...rest], items, chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 
