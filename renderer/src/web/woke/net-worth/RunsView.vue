@@ -99,7 +99,7 @@
             <RunRow v-if="preOf(r)" :class="$style.preRow" data-run-pre-part :icon="r.line.icon" :name="r.line.name" :tip="tipOf(r.key, r.line.name, preOf(r)!.n)" :count="preCount(r)" :chaos="preOf(r)!.chaos" sign="−" sub="spent, came from pre-run listings" :divine="divine" :editable="false" :can-leave-out="false" />
           </template>
           <button v-if="used.length > usedShown" type="button" :class="$style.link" class="text-xs" @click="usedShown += 15">+{{ used.length - usedShown }} more</button>
-          <div v-if="otherOut && !onlyChanged" :class="$style.otherOut" class="text-xs w-num" title="Taken off Profit with no row of its own: last run's held items that reached the stash, left-out sales already collected, pre-run listings bigger than their row, and small rows. Keeps In − Out the same as Profit" data-run-other>
+          <div v-if="otherOut && !onlyChanged" :class="$style.otherOut" class="text-xs w-num" title="Taken off Profit, no row of its own: last run's held items, collected left-out sales, oversized pre-run listings, small rows. Keeps In − Out = Profit" data-run-other>
             <span class="w-dim">Other, not this run's</span><span :class="otherOut > 0 ? 'w-down' : 'w-up'">{{ otherOut > 0 ? '−' : '+' }}{{ amount(Math.abs(otherOut)) }}</span>
           </div>
           <RunAdd :known="knownItems" :lines="lines" :divine="divine" label="Add a cost" :per-map="!isCraft" :unit="unit" @add="addManual('out', $event)" @per-map="addPerMap" />

@@ -5,7 +5,7 @@
     <div :class="$style.top">
       <WToggle v-model="c.on">Prices decide endgame loot</WToggle>
       <span :class="$style.beta">Beta</span>
-      <WInfo text="Items worth vendoring for currency, in maps (area level 68+). Each shows at the step you pick, above the Loot and Equipment rules, or Off: left to them and NeverSink. R-G-B Off also stops NeverSink's chromatic rules in maps. While levelling the presets (6 sockets, vendor quality) still decide. The same switch as the other priced classes." />
+      <WInfo :text="INFO" />
     </div>
     <div v-for="r in rows" :key="r.id" :class="$style.row" :data-loot-recipe="r.id">
       <WIcon :item="r.art" size="sm" />
@@ -29,6 +29,11 @@ import type { LootFilterWidget } from './widget'
 
 const props = defineProps<{ config: LootFilterWidget }>()
 const c = computed(() => props.config.presets.currency)
+const INFO = `Items worth vendoring for currency, shown in maps (area level 68+) at the step you pick.
+- Off leaves the item to NeverSink.
+- R-G-B Off also stops NeverSink's chromatic rules in maps.
+- Equipment and NeverSink's valuable rules come first, so a recipe never makes a better item quieter.
+- While levelling, the presets (6 sockets, vendor quality) still decide.`
 const STEPS = [0, 1, 2, 3, 4].map(s => ({ value: String(s), label: s ? CSTEP_NAMES[s] : 'Off' }))
 const rows = computed(() => RECIPES.map(r => ({ ...r, step: recipeStep(c.value, r.id) })))
 const note = computed(() => {

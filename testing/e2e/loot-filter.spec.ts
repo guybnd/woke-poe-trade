@@ -1330,15 +1330,15 @@ test('Currency weights: Alt + F on currency shows its category, Show switch, Wor
   // Worth × applies on release; Off hides every pile.
   await page.locator('[data-currency-card-mult]').fill('2')
   await expect(card).toContainText('×2.00')
-  await card.locator('[data-currency-card-item]').getByRole('button', { name: 'Off', exact: true }).click()
-  await expect(page.locator('[data-currency-card-now]')).toContainText('Off')
+  await card.locator('[data-currency-card-item]').getByRole('button', { name: 'Hide', exact: true }).click()
+  await expect(page.locator('[data-currency-card-now]')).toContainText('Hidden')
   await overlay.snap('currency card, off')
   // The whole section from the same card (Guy: Alt+F sets the section or just the item).
   await card.locator('[data-currency-card-item]').getByRole('button', { name: 'Same as section', exact: true }).click()
-  await card.locator('[data-currency-card-section]').getByRole('button', { name: 'Off', exact: true }).click()
-  await expect(page.locator('[data-currency-card-now]')).toContainText('Orbs is off')
+  await card.locator('[data-currency-card-section]').getByRole('button', { name: 'Hide', exact: true }).click()
+  await expect(page.locator('[data-currency-card-now]')).toContainText('Orbs is set to Hide')
   await card.locator('[data-currency-card-item]').getByRole('button', { name: 'Always', exact: true }).click()
-  await expect(page.locator('[data-currency-card-now]')).not.toContainText('Off')
+  await expect(page.locator('[data-currency-card-now]')).not.toContainText('Hidden')
   await overlay.snap('currency card, section off, item always')
 })
 
@@ -1379,8 +1379,9 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   await page.locator('[data-equip-class="flasks"]').click()
   const qs = page.locator('[data-equip-flask="Quicksilver Flask"]')
   await expect(qs).toBeVisible()
-  await qs.getByRole('button', { name: "Don't care" }).click()
-  await expect(qs.getByRole('button', { name: "Don't care" })).toHaveAttribute('aria-pressed', 'true')
+  await qs.getByRole('button', { name: /rank:/ }).click()
+  await page.getByRole('menuitemradio', { name: /^Don't care/ }).click()
+  await expect(qs.getByRole('button', { name: /rank: Don't care/ })).toBeVisible()
   await overlay.snap('equipment tab, flasks')
 })
 
@@ -1415,14 +1416,14 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await page.locator('[data-loot-class="uniques"]').click()
   const plain = page.locator('[data-currency-cat="uniqplain"]')
   await expect(plain).toBeVisible()
-  await expect(page.locator('[data-currency-cat="uniqboss"] [data-loot-section-mode]').getByRole('button', { name: 'Always', pressed: true })).toBeVisible()
+  await expect(page.locator('[data-currency-cat="uniqboss"] [data-loot-section-mode]').getByRole('button', { name: /: Always/ })).toBeVisible()
   await plain.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
   await expect(plain.locator('[data-currency-item]').first()).toBeVisible()
   await overlay.snap('loot tab, uniques')
   // Gems: a row per poe.ninja band (level, quality, corrupted); Exceptional is Always.
   await page.locator('[data-loot-class="gems"]').click()
   const exc = page.locator('[data-currency-cat="gemexc"]')
-  await expect(exc.locator('[data-loot-section-mode]').getByRole('button', { name: 'Always', pressed: true })).toBeVisible()
+  await expect(exc.locator('[data-loot-section-mode]').getByRole('button', { name: /: Always/ })).toBeVisible()
   await exc.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
   await expect(exc.locator('[data-currency-item="Enlighten Support 4/20c"]')).toBeVisible()
   await overlay.snap('loot tab, gems')
@@ -1439,10 +1440,12 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await overlay.snap('loot tab, jewels')
   // League items: a mechanic you don't run goes Off in one click.
   await page.locator('[data-loot-class="league"]').click()
-  await page.locator('[data-loot-league-section="lgexped"]').getByRole('button', { name: 'Off' }).click()
+  await page.locator('[data-loot-league-section="lgexped"]').getByRole('button').click()
+  await page.getByRole('menuitemradio', { name: /^Hide/ }).click()
   await expect(page.locator('[data-loot-league]')).toContainText('1 hidden in maps')
   await overlay.snap('loot tab, league')
-  await page.locator('[data-loot-league-section="lgexped"]').getByRole('button', { name: 'NeverSink' }).click()
+  await page.locator('[data-loot-league-section="lgexped"]').getByRole('button').click()
+  await page.getByRole('menuitemradio', { name: /^NeverSink/ }).click()
   // Recipes: each vendor recipe Off or the step it shows at in maps.
   await page.locator('[data-loot-class="recipes"]').click()
   // (Its start carries over the 6 sockets preset, off here: Off.)
@@ -1461,7 +1464,7 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-currency-min]')).toContainText('×2.00')
   // The steps sit on one price ruler; a handle's value is the price after Strictness.
   await expect(page.getByRole('spinbutton', { name: 'Normal from this many chaos' })).toHaveValue('2')
-  await expect(page.getByRole('combobox', { name: 'Orbs strictness', exact: true })).toContainText('×1.00')
+  await expect(page.locator('[data-currency-cat="orbs"] [data-loot-section-mode]').getByRole('button')).toHaveAccessibleName('Orbs: By price')
   await page.waitForTimeout(500)
   await overlay.snap('currency weights tab')
 
@@ -1503,13 +1506,24 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await deaf.getByRole('combobox').selectOption('auto')
   await expect(page.locator('[data-currency-cat="essences"]').first()).not.toContainText('edited')
 
-  // Every section has Off / Weighted / Always; Off hides the whole section.
+  // Every section has one chip: Hide / By price / Always, and a price bias.
   const oils = page.locator('[data-currency-cat="oils"]')
-  await oils.locator('[data-loot-section-mode]').getByRole('button', { name: 'Off', exact: true }).click()
+  const oilChip = oils.locator('[data-loot-section-mode]').getByRole('button')
+  await oilChip.click()
+  await page.getByRole('menuitemradio', { name: /^Hide/ }).click()
   await expect(oils).toContainText(/(^|\D)0 of \d+ show/)
-  await overlay.snap('loot tab, oils section off')
-  await oils.locator('[data-loot-section-mode]').getByRole('button', { name: 'Weighted', exact: true }).click()
+  await overlay.snap('loot tab, oils section chip menu')
+  await page.getByRole('menuitemradio', { name: /^By price/ }).click()
   await expect(oils).not.toContainText(/(^|\D)0 of \d+ show/)
+  // A penalty: oils count under their price, and the chip says so.
+  await page.locator('[data-state-chip-bias]').fill('-1')
+  await expect(oilChip).toHaveAccessibleName(/price bias −20%/)
+  await page.keyboard.press('Escape')
+  await expect(page.locator('[data-state-chip-menu]')).toHaveCount(0)
+  await oilChip.click()
+  await page.getByRole('button', { name: 'No bias' }).click()
+  await page.keyboard.press('Escape')
+  await expect(oilChip).toHaveAccessibleName('Oils: By price')
   // Faint: piles under the line show small and see-through, while it's on.
   await page.getByRole('button', { name: 'Faint settings' }).click()
   await page.locator('[data-loot-faint]').check()

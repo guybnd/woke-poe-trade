@@ -1,7 +1,8 @@
 <template>
   <div class="max-w-xl p-2 flex flex-col gap-3">
     <div class="grid gap-2 items-center" style="grid-template-columns: auto 1fr;">
-      <span class="flex items-center gap-2">Hotkey: show the rule for the hovered item <w-info text="Works in your inventory, stash and on ground labels. Keep Alt in this hotkey to reach items your filter hides, since those only have a label while Alt is held." /></span>
+      <span class="flex items-center gap-2">Hotkey: show the rule for the hovered item <w-info text="Works in your inventory, stash and on ground labels.
+- Keep [[Alt]] in the hotkey to reach hidden items: they only have a label while Alt is held." /></span>
       <w-hotkey-cell v-model="sampleHotkey" />
       <span>Hotkey: open the editor</span>
       <w-hotkey-cell v-model="editorHotkey" />
@@ -25,7 +26,9 @@
       </label>
       <label class="flex items-start gap-2">
         <input v-model="saveMode" type="radio" value="overwrite" style="margin-top: 2px;">
-        <span class="flex items-center gap-2">Overwrite the NeverSink file <w-info text="Keeps your in-game filter choice. The original is kept as &quot;&lt;filter&gt;.filter.bak&quot;; after downloading a new NeverSink version, open the editor and save to put your edits back." /></span>
+        <span class="flex items-center gap-2">Overwrite the NeverSink file <w-info text="Keeps your in-game filter choice.
+- The original is kept as **&lt;filter&gt;.filter.bak**.
+- After a new NeverSink download, open the editor and save to put your edits back." /></span>
       </label>
     </div>
 
@@ -37,7 +40,7 @@
 
     <div class="flex items-center gap-2 w-dim text-sm">
       How your edits are kept
-      <w-info :text="'Edits are stored as a list of changes (moves, restyles, hidden tiers, your own item rules) keyed by NeverSink\'s $type and $tier tags, and are reapplied every time the filter is opened.\n\nWhen NeverSink updates, changes that no longer fit (an item left the group, a tier was renamed) are flagged under Changes, where you can give each one a new home.\n\nFilters you follow on the website (the game\'s OnlineFilters folder) can be picked too; they\'re read only, so edits are saved as a local copy that won\'t auto-update. If the chat command doesn\'t pick up the change, use the refresh button next to the filter in Options › Game.'" />
+      <w-info :text="'Your edits are a list of changes, put back on NeverSink\'s filter each time it opens.\n- Moves, restyles, hidden tiers and your own rules all count.\n- After a NeverSink update, a change that no longer fits shows under **Changes**, to give it a new home.\n- A filter you follow on the website is read only: edits save as a local copy that won\'t auto-update.\n- If the chat command misses a change, press refresh by the filter in the game\'s Options › Game.'" />
     </div>
   </div>
 </template>

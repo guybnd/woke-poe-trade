@@ -1,6 +1,6 @@
 <template>
   <!-- Alt+F on an item Currency weights decides (Guy's picks B, S, W1): its
-       category, Off / Weighted / Always, a Worth × slider and the stack each
+       category, Hide / By price / Always, a Worth × slider and the stack each
        step starts at. -->
   <div v-if="it" :class="$style.card" data-currency-card>
     <div :class="$style.top">
@@ -64,6 +64,7 @@ import { useFold } from '../ui/fold'
 import WFoldHead from '../ui/WFoldHead.vue'
 import { WButton, WSegmented } from '../ui'
 import LabelPreview from './LabelPreview.vue'
+import { ITEM_MODES, SECTION_MODES } from './section-modes'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, faintOn, forcedHidden, offSteps, scaled, sectionMode, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
@@ -94,10 +95,9 @@ const props = defineProps<{
 const emit = defineEmits<{ 'open-tab': [cat: string, name: string], 'open-rule': [tier: string] }>()
 
 const open = reactive({ more: useFold('alt-f.currency-more') })
-// The whole category (Guy 2026-11-27: every section has Off / Weighted /
+// The whole category (Guy 2026-11-27: every section has Hide / By price /
 // Always, and Alt+F sets the section or just the item).
-const SECTION_MODES = [{ value: 'off', label: 'Off' }, { value: 'auto', label: 'Weighted' }, { value: 'always', label: 'Always' }]
-const MODES = [{ value: 'auto', label: 'Same as section' }, { value: 'off', label: 'Off' }, { value: 'always', label: 'Always' }]
+const MODES = ITEM_MODES
 
 const cfg = computed(() => props.config.presets.currency)
 const eff = computed(() => scaled(cfg.value, props.store.doc.value?.strictness ?? null))
@@ -129,7 +129,7 @@ function setSecMode (v: string) {
   const cat = it.value?.cat
   if (!cat) return
   const next = Object.fromEntries(Object.entries(cfg.value.catMode).filter(([k]) => k !== cat))
-  // Kept when it differs from the section's default, so Weighted sticks on an Always-by-default section.
+  // Kept when it differs from the section's default, so By price sticks on an Always-by-default section.
   if (v !== sectionMode({ catMode: {} }, cat)) next[cat] = v as SectionMode
   cfg.value.catMode = next
 }
@@ -145,7 +145,7 @@ const SECTION_NAMES: Record<string, string> = { gemexc: 'Exceptional gems', gema
 const floorLine = computed(() => {
   const note = props.note ?? ''
   const sec = /: (gem[a-z]+), (always|off)\b/.exec(note)
-  if (sec) return sec[2] === 'always' ? `Shown: ${SECTION_NAMES[sec[1]] ?? sec[1]} is Always, which also shows gems poe.ninja doesn't list.` : `Hidden: ${SECTION_NAMES[sec[1]] ?? sec[1]} is Off.`
+  if (sec) return sec[2] === 'always' ? `Shown: ${SECTION_NAMES[sec[1]] ?? sec[1]} is Always, which also shows gems poe.ninja doesn't list.` : `Hidden: ${SECTION_NAMES[sec[1]] ?? sec[1]} is set to Hide.`
   if (/20% quality$/.test(note)) return 'Shown at Small by the 20% quality floor: a Gemcutter\'s Prism at the vendor.'
   return ''
 })
@@ -156,7 +156,7 @@ const placeLine = computed(() => {
     return from > 16 ? 'Maps: every normal map hides. Special maps still show.' : `Maps: shown from tier ${from}. Lower normal maps hide.`
   }
   const league = LEAGUE_SECTIONS.find(x => x.id === t)
-  if (league) return `League: ${league.name} is Off.`
+  if (league) return `League: ${league.name} is set to Hide.`
   const rec = /: recipe: (.+)$/.exec(props.note ?? '')
   if (rec) return `Recipes: ${rec[1]} shows at this step in maps (Loot › Recipes).`
   if (t.startsWith('u-')) return `Uniques: NeverSink's ${t.slice(2)} rule, kept above the priced uniques.`
@@ -177,10 +177,10 @@ const rows = computed<Row[]>(() => !it.value
     })))
 const nowLine = computed(() => {
   const s = now.value
-  if (mode.value === 'off') return 'Off: no pile of it shows.'
+  if (mode.value === 'off') return 'Hidden: no pile of it shows.'
   // An Off section hides it unless the item shows anyway (its own step,
   // Always or Collecting): read what the rules give it, not the mode.
-  if (secMode.value === 'off' && stacks.value.every(k => k == null)) return `Off: ${catName.value} is off.`
+  if (secMode.value === 'off' && stacks.value.every(k => k == null)) return `Hidden: ${catName.value} is set to Hide.`
   const next = rows.value.find(r => r.step > stepOfPile(stacks.value, props.stack) && r.from != null && !off.value.includes(r.step))
   const pile = props.stack > 1 ? `A pile of ${props.stack}` : 'One'
   // Under the line with Faint on, it shows small and see-through.
