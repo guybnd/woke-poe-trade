@@ -1426,7 +1426,7 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await exc.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
   await expect(exc.locator('[data-currency-item="Enlighten Support 4/20c"]')).toBeVisible()
   await overlay.snap('loot tab, gems')
-  // Maps: one slider for normal maps; special maps stay NeverSink's.
+  // Maps: one slider for normal maps; blighted maps are priced below it.
   await page.locator('[data-loot-class="maps"]').click()
   const from = page.getByRole('slider', { name: 'Show maps from tier' })
   await from.fill('14')
