@@ -9,10 +9,10 @@
     </div>
     <div :class="$style.bar" data-loot-map-from>
       <span :class="$style.lab">Show maps from</span>
-      <input type="range" min="1" max="16" step="1" :value="drag ?? c.mapFrom" :class="$style.range" aria-label="Show maps from tier"
+      <input type="range" min="1" max="17" step="1" :value="drag ?? c.mapFrom" :class="$style.range" aria-label="Show maps from tier"
         @input="drag = Number(($event.target as HTMLInputElement).value)"
         @change="c.mapFrom = Number(($event.target as HTMLInputElement).value); drag = null">
-      <b :class="$style.val">{{ (drag ?? c.mapFrom) <= 1 ? 'every tier' : `tier ${drag ?? c.mapFrom}` }}</b>
+      <b :class="$style.val">{{ (drag ?? c.mapFrom) <= 1 ? 'every tier' : (drag ?? c.mapFrom) > 16 ? 'none (special maps only)' : `tier ${drag ?? c.mapFrom}` }}</b>
     </div>
     <div :class="$style.tiers" aria-hidden="true">
       <span v-for="t in 16" :key="t" :class="[$style.tier, { [$style.off]: t < (drag ?? c.mapFrom) }]">{{ t }}</span>
@@ -33,6 +33,8 @@ const note = computed(() => {
   const from = drag.value ?? c.value.mapFrom
   if (!c.value.on) return 'Off: NeverSink decides maps.'
   if (from <= 1) return 'Every map shows, as NeverSink shows it.'
+  // Past 16 (Guy 2026-11-28): every normal map hides.
+  if (from > 16) return 'Every normal map hides. Special maps still show.'
   return `Normal maps under tier ${from} hide. Special maps still show.`
 })
 </script>

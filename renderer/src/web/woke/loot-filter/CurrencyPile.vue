@@ -32,7 +32,7 @@ import type { StylePatch } from './edits'
 import { labelBox, layoutLabels } from './shower'
 import type { Rect } from './shower'
 import { poeColour } from './colours'
-import { CSTEP_NAMES, catColour, currencyFullLook, faintLook, forcedHidden, stacksFor, stepOfPile } from './currency-weights'
+import { CSTEP_NAMES, catColour, currencyFullLook, faintLook, forcedHidden, offSteps, stacksFor, stepOfPile } from './currency-weights'
 import type { CStep, CurrencyItem, CurrencySettings } from './currency-weights'
 
 const props = defineProps<{
@@ -76,9 +76,12 @@ const picks = computed(() => {
 })
 
 const drops = computed(() => picks.value.map(p => {
-  const step: CStep = stepOfPile(stacksFor(p.it, props.cfg), p.stack)
+  const stacks = stacksFor(p.it, props.cfg)
+  // A pile on a step turned off hides (never Faint).
+  const offBand = stepOfPile(stacks, p.stack) !== stepOfPile(stacks, p.stack, offSteps(p.it, props.cfg))
+  const step: CStep = offBand ? 0 : stepOfPile(stacks, p.stack)
   const own = props.cfg.items[p.it.name]?.look
-  const faint = step === 0 && !!props.faint && !forcedHidden(p.it, props.cfg)
+  const faint = step === 0 && !offBand && !!props.faint && !forcedHidden(p.it, props.cfg)
   const look: StylePatch = faint
     ? { ...currencyFullLook(0, p.it.cat, props.cfg), ...faintLook(catColour(p.it.cat, props.cfg).rgb) }
     : { ...currencyFullLook(step, p.it.cat, props.cfg), ...(step > 0 ? own ?? {} : {}) }

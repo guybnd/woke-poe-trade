@@ -48,9 +48,21 @@ describe('loot tab bug hunt', () => {
       expect(matchItem(doc, gem('Arc', 20, 20)).visibility, `faint ${faint}`).toBe('Hide')
       expect(matchItem(doc, gem('Arc', 5, 20)).visibility, `faint ${faint}`).toBe('Hide')
     }
-    // Other gems at 20% still show.
+    // Unlisted gems of that section hide at 20% too; other sections still show.
     const doc = parseFilter(SEMI)
     applyCurrency(doc, on(c => { c.catMode = { gemskill: 'off' } }), lookup, null, GEMS)
+    expect(matchItem(doc, gem('Fireball', 5, 20)).visibility).toBe('Hide')
+    const sup = (name: string): ItemFacts => ({ ...gem(name, 5, 20), itemClass: 'Support Gems' } as ItemFacts)
+    expect(matchItem(doc, sup('Spell Echo Support')).visibility).toBe('Show')
+  })
+
+  it('Supports Off hides unlisted 20% supports but not Awakened or exceptional ones', () => {
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(c => { c.catMode = { gemsup: 'off', gemawk: 'auto', gemexc: 'auto' } }), lookup, null, GEMS)
+    const sup = (name: string, quality = 20): ItemFacts => ({ ...gem(name, 5, quality), itemClass: 'Support Gems' } as ItemFacts)
+    expect(matchItem(doc, sup('Spell Echo Support')).visibility).toBe('Hide')
+    expect(matchItem(doc, sup('Awakened Spell Echo Support')).visibility).toBe('Show')
+    expect(matchItem(doc, sup('Enlighten Support')).visibility).toBe('Show')
     expect(matchItem(doc, gem('Fireball', 5, 20)).visibility).toBe('Show')
   })
 

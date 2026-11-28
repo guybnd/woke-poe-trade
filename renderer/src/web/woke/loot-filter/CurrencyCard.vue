@@ -61,7 +61,7 @@ import WFoldHead from '../ui/WFoldHead.vue'
 import { WSegmented } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
-import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, faintOn, forcedHidden, scaled, sectionMode, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, faintOn, forcedHidden, offSteps, scaled, sectionMode, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { gemLinesOf } from './gem-classes'
 import { gemItemFor } from './loot-focus'
@@ -126,7 +126,8 @@ function setSecMode (v: string) {
 }
 const mode = computed(() => edit.value.step === 0 ? 'off' : edit.value.supply === 1 && edit.value.step == null ? 'always' : 'auto')
 const stacks = computed(() => it.value ? stacksFor(it.value, eff.value) : [null, null, null, null, null])
-const now = computed<CStep>(() => stepOfPile(stacks.value, props.stack))
+const off = computed(() => it.value ? offSteps(it.value, cfg.value) : [])
+const now = computed<CStep>(() => stepOfPile(stacks.value, props.stack, off.value))
 const starts = computed(() => stepStarts(eff.value, it.value?.cat ?? ''))
 
 interface Row { step: CStep, from: number | null, note: string, look: StylePatch }
@@ -135,7 +136,7 @@ const rows = computed<Row[]>(() => !it.value
   : ([1, 2, 3, 4, 5] as CStep[]).map(s => ({
       step: s,
       from: stacks.value[s - 1],
-      note: edit.value.step != null ? (edit.value.step === s ? 'set by you' : '') : `from ${chaosText(starts.value[s - 1])}`,
+      note: edit.value.step != null ? (edit.value.step === s ? 'set by you' : '') : off.value.includes(s) ? 'off: these piles hide' : `from ${chaosText(starts.value[s - 1])}`,
       look: currencyFullLook(s, it.value!.cat, cfg.value)
     })))
 const nowLine = computed(() => {
@@ -144,11 +145,12 @@ const nowLine = computed(() => {
   // An Off section hides it unless the item shows anyway (its own step,
   // Always or Collecting): read what the rules give it, not the mode.
   if (secMode.value === 'off' && stacks.value.every(k => k == null)) return `Off: ${catName.value} is off.`
-  const next = rows.value.find(r => r.step > s && r.from != null)
+  const next = rows.value.find(r => r.step > s && r.from != null && !off.value.includes(r.step))
   const pile = props.stack > 1 ? `A pile of ${props.stack}` : 'One'
   // Under the line with Faint on, it shows small and see-through.
-  const name = s === 0 && it.value && faintOn(cfg.value, props.store.doc.value?.strictness ?? null) && !forcedHidden(it.value, cfg.value) ? 'Faint' : CSTEP_NAMES[s]
-  return `${pile} is ${name}${next ? `; ${CSTEP_NAMES[next.step]} from a stack of ${next.from}` : ''}.`
+  const name = s === 0 && it.value && stepOfPile(stacks.value, props.stack) === 0 && faintOn(cfg.value, props.store.doc.value?.strictness ?? null) && !forcedHidden(it.value, cfg.value) ? 'Faint' : CSTEP_NAMES[s]
+  const why = s === 0 && stepOfPile(stacks.value, props.stack) !== 0 ? ` (${CSTEP_NAMES[stepOfPile(stacks.value, props.stack)]} is off)` : ''
+  return `${pile} is ${name}${why}${next ? `; ${CSTEP_NAMES[next.step]} from a stack of ${next.from}` : ''}.`
 })
 
 // Collecting (Guy's star N): at least Normal at any stack.
