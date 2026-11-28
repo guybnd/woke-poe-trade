@@ -13,7 +13,7 @@ export type { FilterProfile }
 export const PROFILE_KEYS = [
   'sourceName', 'sourceOnline', 'sourceTitle', 'saveMode', 'edits', 'lastVersion',
   'buildRules', 'savedBuildSig', 'savedExtraSig', 'savedClusterSig', 'savedUserSig', 'savedSourceHash',
-  'priceTiers', 'safetyNet', 'neversink', 'strictAuto', 'rules', 'presets',
+  'priceTiers', 'safetyNet', 'neversink', 'ownBase', 'strictAuto', 'rules', 'presets',
   'healthDismissed', 'netDismissed'
 ] as const satisfies ReadonlyArray<keyof LootFilterWidget>
 
@@ -86,6 +86,11 @@ function nextId (w: LootFilterWidget): number {
 export function blankProfileData (w: LootFilterWidget): ProfileData {
   const fresh = { wmId: w.wmId, wmType: w.wmType, wmTitle: '', wmWants: 'hide', wmZorder: null, wmFlags: [] } as unknown as LootFilterWidget
   initLootFilterWidget(fresh)
+  // A new profile starts with the Loot and Equipment tabs on.
+  fresh.presets.currency.on = true
+  fresh.presets.weights.on = true
+  // On the same source as the profile it's made beside.
+  fresh.ownBase = w.ownBase
   fresh.sourceName = w.sourceName
   fresh.sourceOnline = w.sourceOnline
   fresh.sourceTitle = w.sourceTitle

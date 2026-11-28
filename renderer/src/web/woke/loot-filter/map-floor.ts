@@ -7,6 +7,7 @@
 import type { FilterBlock, FilterCondition, FilterDoc } from './parse'
 import type { CurrencySettings } from './currency-settings'
 import { CURRENCY_TYPE } from './currency-settings'
+import { OWN_REST_TYPE } from './own-base'
 import { applyStyle, readStyle } from './edits'
 import type { StylePatch } from './edits'
 
@@ -14,7 +15,8 @@ const PLAIN_TIER = /^maps_[a-z]_t\d+$/
 
 export function applyMapFloor (doc: FilterDoc, cfg: Pick<CurrencySettings, 'on' | 'mapFrom'>): FilterBlock | null {
   if (!cfg.on || !(cfg.mapFrom > 1)) return null
-  const anchor = doc.blocks.find(b => b.type === 'maps' && PLAIN_TIER.test(b.tier ?? ''))
+  // On our own skeleton: above its plain map rules.
+  const anchor = doc.blocks.find(b => b.type === 'maps' && PLAIN_TIER.test(b.tier ?? '')) ?? doc.blocks.find(b => b.type === OWN_REST_TYPE && /^maps\d+$/.test(b.tier ?? ''))
   if (!anchor) return null
   const cond = (key: string, op: string, values: string[]): FilterCondition => ({ key, op, count: null, values } as FilterCondition)
   const b = {
@@ -43,10 +45,11 @@ export function applyMapFloor (doc: FilterDoc, cfg: Pick<CurrencySettings, 'on' 
 
 // Normal maps' look (Guy's B, 2026-11-28): the black on white map players
 // know, darker for lower tiers, and a white square icon (NeverSink's red one
-// read as Tink). Only NeverSink's plain tier rules; size, sound and beam stay
+// read as Tink). T16's edge is grey, not gold: a coloured card or edge means
+// a special map (Guy 2026-11-28). Only NeverSink's plain tier rules; size, sound and beam stay
 // its own, and your restyles still go on top.
-const BAND_LOOK: Array<{ from: number, style: StylePatch }> = [
-  { from: 16, style: { text: [0, 0, 0, 255], border: [230, 190, 40, 255], background: [255, 255, 255, 255] } },
+export const MAP_BANDS: Array<{ from: number, style: StylePatch }> = [
+  { from: 16, style: { text: [0, 0, 0, 255], border: [150, 150, 150, 255], background: [255, 255, 255, 255] } },
   { from: 11, style: { text: [0, 0, 0, 255], border: [150, 150, 150, 255], background: [235, 235, 235, 255] } },
   { from: 6, style: { text: [0, 0, 0, 255], border: [120, 120, 120, 255], background: [190, 190, 190, 255] } },
   { from: 1, style: { text: [180, 180, 180, 255], border: [70, 70, 70, 255], background: [0, 0, 0, 200] } }
@@ -58,7 +61,7 @@ export function applyMapLooks (doc: FilterDoc, cfg: Pick<CurrencySettings, 'on'>
   for (const b of doc.blocks) {
     const m = b.type === 'maps' && b.visibility === 'Show' ? /^maps_[a-z]_t(\d+)$/.exec(b.tier ?? '') : null
     if (!m) continue
-    const band = BAND_LOOK.find(x => Number(m[1]) >= x.from)!
+    const band = MAP_BANDS.find(x => Number(m[1]) >= x.from)!
     const icon = readStyle(b.actions).icon
     applyStyle(b, { ...band.style, ...(icon ? { icon: { ...icon, color: 'White', shape: 'Square' } } : {}) })
     b.dirty = true

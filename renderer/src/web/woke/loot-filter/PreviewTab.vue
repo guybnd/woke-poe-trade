@@ -45,9 +45,9 @@
       </div>
       <div v-if="side.sounds.length" :class="$style.sounds">
         <span class="w-dim text-xs">Sounds</span>
-        <button v-for="s in side.sounds" :key="s.id" type="button" :class="$style.sound" :disabled="!isCustomSound(s.id)"
-          :title="isCustomSound(s.id) ? `Play ${soundLabel(s.id)}` : 'The game\'s own sounds play only in game'" @click="play(s.id, s.volume)">
-          <i :class="isCustomSound(s.id) ? 'fas fa-play' : 'fas fa-volume-up'" /> {{ soundLabel(s.id) }} <span class="w-faint">×{{ s.count }}</span>
+        <button v-for="s in side.sounds" :key="s.id" type="button" :class="$style.sound" :disabled="!canPreview(s.id)"
+          :title="canPreview(s.id) ? `Play ${soundLabel(s.id)}` : 'This sound can\'t be played here'" @click="play(s.id, s.volume)">
+          <i :class="canPreview(s.id) ? 'fas fa-play' : 'fas fa-volume-up'" /> {{ soundLabel(s.id) }} <span class="w-faint">×{{ s.count }}</span>
         </button>
       </div>
     </div>
@@ -65,6 +65,7 @@ import type { ItemTipRef } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
+import { levelsOn } from './widget'
 import type { FilterDoc } from './parse'
 import { defaultTextColour, rollDrops } from './drops'
 import type { Drop } from './drops'
@@ -76,7 +77,7 @@ import type { ShownDrop } from './shower'
 import { poeColour, shapeGlyph } from './colours'
 import { LEVEL_NAMES } from './strictness'
 import { ruleLabel } from './parse'
-import { isCustomSound, playSound, soundLabel } from './sounds'
+import { canPreview, playSound, soundLabel } from './sounds'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -118,10 +119,10 @@ const areaOptions = computed(() => {
 const compareOptions = computed(() => {
   const list = [
     { value: 'off', label: 'No comparison' },
-    { value: 'untouched', label: 'vs NeverSink as it came' }
+    { value: 'untouched', label: props.config.ownBase ? 'vs our base, no rules on it' : 'vs NeverSink as it came' }
   ]
   const ns = props.config.neversink
-  if (ns.on) {
+  if (levelsOn(props.config)) {
     LEVEL_NAMES.forEach((name, i) => { if (i !== ns.level) list.push({ value: String(i), label: `vs ${name}, with your changes` }) })
   }
   return list
@@ -236,7 +237,7 @@ function makeSides () {
   const theirs = other.value ? runDrops(other.value, drops.value) : null
   const out = [{
     key: 'mine',
-    title: props.config.neversink.on ? `Your filter · ${LEVEL_NAMES[props.config.neversink.level]}` : 'Your filter',
+    title: levelsOn(props.config) ? `Your filter · ${LEVEL_NAMES[props.config.neversink.level]}` : 'Your filter',
     sum: summarize(mine),
     sounds: soundsOf(mine),
     diff: diffText(mine, theirs),
@@ -288,7 +289,8 @@ function clickDrop (d: ShownDrop) {
 }
 
 async function play (id: string, volume: number) {
-  if (!await playSound(id, volume, props.config.folder)) toast(`Couldn't play ${soundLabel(id)}`, { anchor: props.anchor })
+  const failed = await playSound(id, volume, props.config.folder)
+  if (failed) toast(failed, { anchor: props.anchor })
 }
 
 function dropMenu (e: MouseEvent, d: ShownDrop) {
@@ -300,7 +302,7 @@ function dropMenu (e: MouseEvent, d: ShownDrop) {
   }
   openMenu(e, [
     ...(d.type ? [{ label: `Open ${ruleName(d)}`, icon: 'fas fa-external-link-alt', action: () => clickDrop(d) }] : []),
-    ...(d.look.sound && isCustomSound(d.look.sound.id) ? [{ label: `Play ${soundLabel(d.look.sound.id)}`, icon: 'fas fa-play', action: () => { play(d.look.sound!.id, d.look.sound!.volume) } }] : []),
+    ...(d.look.sound && canPreview(d.look.sound.id) ? [{ label: `Play ${soundLabel(d.look.sound.id)}`, icon: 'fas fa-play', action: () => { play(d.look.sound!.id, d.look.sound!.volume) } }] : []),
     ...(canOwn && d.visibility === 'Hide' ? [{ label: `Always show ${base}`, icon: 'fas fa-eye', action: own('Show', `${base} now shows`) }] : []),
     ...(canOwn && d.visibility !== 'Hide' ? [{ label: `Hide ${base}`, icon: 'fas fa-eye-slash', action: own('Hide', `${base} is hidden`) }] : [])
   ])

@@ -1,6 +1,7 @@
 // The whole road from a key press to the file the game reads: pick a filter,
 // change something, save, reload. The real store runs against a fake folder and
 // game, and every result is checked by parsing what was written.
+import { LEVEL_IDS } from '@/web/woke/loot-filter/strictness'
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { reactive, ref, shallowRef } from 'vue'
 import { formatBlock, parseFilter, ruleLabel, serializeFilter, tierName } from '@/web/woke/loot-filter/parse'
@@ -434,12 +435,31 @@ describe('sources', () => {
     expect(store.doc.value).toBeNull()
   })
 
-  it('with no filter picked, it starts from the newest NeverSink file', async () => {
+  it('with no filter picked, no NeverSink file is picked for you; our own filter loads once chosen (NeverSink retired)', async () => {
     host.files.set('NeverSink strict.filter', neverSink('3-STRICT'))
     const config = widget()
     const store = useLootFilter(() => config)
     await store.load()
-    expect(config.sourceName).toBe('NeverSink strict.filter')
+    expect(config.sourceName).toBe('')
+    expect(store.doc.value).toBeNull()
+    config.ownBase = true
+    await store.load()
+    expect(store.doc.value?.blocks.some(b => b.type === 'woke->rest')).toBe(true)
+    expect(store.doc.value?.strictness).toBe(LEVEL_IDS[config.neversink.level])
+  })
+
+  it('on our own filter, changes saved against NeverSink tiers go; ones that fit stay (clean slate)', async () => {
+    const stale: FilterEdit[] = [
+      { id: 1, kind: 'visibility', type: 'currency', tier: 't7chance', visibility: 'Hide' },
+      { id: 2, kind: 'stack', type: 'gold', tier: 'stack1', size: 170 },
+      { id: 3, kind: 'move', type: 'currency', base: "Blacksmith's Whetstone", from: 't6chrom', to: 't7chance' }
+    ]
+    const config = widget({ ownBase: true, edits: [...stale, { id: 4, kind: 'group', type: 'woke->rest', hidden: true }] })
+    const store = useLootFilter(() => config)
+    await store.load()
+    expect(store.doc.value?.blocks.some(b => b.type === 'woke->rest')).toBe(true)
+    expect(config.edits.map(e => e.id)).toEqual([4])
+    expect(store.failed.value).toEqual([])
   })
 
   it('a level picked on the dock card saves, keeps your changes, pauses auto and waits for your reload', async () => {

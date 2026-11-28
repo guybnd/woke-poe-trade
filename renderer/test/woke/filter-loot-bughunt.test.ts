@@ -309,14 +309,15 @@ describe('Recipes and the presets the Loot tab covers', () => {
   it('carries the old preset settings over the first time', async () => {
     const { migrateLootPresets } = await import('@/web/woke/loot-filter/loot-presets')
     const { normalizePresets } = await import('@/web/woke/loot-filter/presets')
-    const { recipeStep } = await import('@/web/woke/loot-filter/currency-weights')
+    const { recipePicked } = await import('@/web/woke/loot-filter/currency-weights')
     const p = normalizePresets({ cheapCurrency: { on: true, chaos: 2 }, lowMaps: { on: true, tier: 12 } })
     p.currency.on = true
     migrateLootPresets(p)
     expect(p.currency.line).toBe(2)
     expect(p.currency.mapFrom).toBe(12)
-    expect(recipeStep(p.currency, 'rgb')).toBe(1)
-    expect(recipeStep(p.currency, 'six')).toBe(0)
+    // Presets left at their defaults pin no recipe: the price decides.
+    expect(recipePicked(p.currency, 'rgb')).toBeNull()
+    expect(recipePicked(p.currency, 'six')).toBeNull()
     p.currency.line = 0.5
     migrateLootPresets(p)
     expect(p.currency.line).toBe(0.5)
@@ -356,6 +357,31 @@ describe('Alt+F on the Loot tab\'s own rows', () => {
     expect(itemFor(items, 'Map (Tier 14)', [])).toBe(null)
     expect(lootFocus('recipes')?.cls).toBe('recipes')
   })
+
+  // Guy 2026-11-28: Alt+F on a magic Crimson Jewel showed the unique Crimson
+  // Jewel's card. The jewel rows name every plain base, but `bt` only Cobalt.
+  it('finds a magic or rare jewel row on any of its bases, never the unique of that base', async () => {
+    const { itemFor, notItsRarity } = await import('@/web/woke/loot-filter/loot-focus')
+    const { JEWEL_ROWS } = await import('@/web/woke/loot-filter/jewel-classes')
+    const rows = [
+      { name: 'Crimson Jewel', type: 'uniques', cat: 'uniqjewel' },
+      ...JEWEL_ROWS.map(j => ({ name: j.name, type: 'jewels', cat: j.cat, bt: j.bts[0], bts: j.bts, conds: j.conds }))
+    ]
+    for (const j of JEWEL_ROWS) {
+      for (const base of j.bts) {
+        const rule = [{ key: 'Class', op: '==', count: null, values: [j.cls] }, { key: 'BaseType', op: '==', count: null, values: j.bts }, ...j.conds]
+        expect(itemFor(rows, base, rule)?.name, `${j.name} on ${base}`).toBe(j.name)
+      }
+    }
+    expect(notItsRarity(rows[0], 'Magic')).toBe(true)
+    expect(notItsRarity(rows[0], 'Unique')).toBe(false)
+    expect(notItsRarity(rows[1], 'Magic')).toBe(false)
+    // A row of one base beats a row of many with the same conditions.
+    const six = { key: 'LinkedSockets', op: '>=', count: null, values: ['6'] }
+    const any = { name: 'Any unique, 6-link', type: 'uniques', cat: 'uniqspec', bts: ['Astral Plate', 'Simple Robe'], conds: [six] }
+    const robe = { name: 'Simple Robe, 6-link', type: 'uniques', cat: 'uniqspec', bt: 'Simple Robe', conds: [six] }
+    expect(itemFor([any, robe], 'Simple Robe', [six])?.name).toBe('Simple Robe, 6-link')
+  })
 })
 
 describe('a name the game does not know never reaches the filter', () => {
@@ -371,5 +397,17 @@ describe('a name the game does not know never reaches the filter', () => {
     expect(a.conditions[0].values).toEqual(['Arc'])
     expect(b.disabled).toBe(true)
     expect(doc.blocks.find(x => x.type === 'currency' && !x.disabled)?.conditions.find(c => c.key === 'BaseType')?.values.length).toBeGreaterThan(0)
+  })
+
+  it('trusts the game data and our own lists, not a name only NeverSink lists (M3)', async () => {
+    const { dropUnknownBases } = await import('@/web/woke/loot-filter/compose')
+    const doc = parseFilter(SEMI)
+    const ns = { ...doc.blocks[0], type: 'currency', tier: 'zz', disabled: false, conditions: [{ key: 'BaseType', op: '==', count: null, values: ['Imaginary Orb'] }] }
+    const mk = (values: string[]) => ({ ...doc.blocks[0], type: 'woke->currency', tier: 's1', disabled: false, conditions: [{ key: 'BaseType', op: '==', count: null, values }] })
+    const a = mk(['Imaginary Orb', 'Chaos Orb', 'Map (Tier 3)', 'Own List Orb'])
+    doc.blocks.unshift(a, ns)
+    expect(dropUnknownBases(doc, { lists: [['Own List Orb', 'Stackable Currency', '']], guesses: new Map() })).toBe(1)
+    expect(a.conditions[0].values).toEqual(['Chaos Orb', 'Map (Tier 3)', 'Own List Orb'])
+    expect(ns.conditions[0].values).toEqual(['Imaginary Orb'])
   })
 })

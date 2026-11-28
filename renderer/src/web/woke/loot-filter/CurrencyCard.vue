@@ -1,8 +1,9 @@
 <template>
   <!-- Alt+F on an item the Loot tab prices (Guy's picks A and Y,
        2026-11-28): the answer first (its look and step), a Shows switch, a
-       ruler of the five steps with a mark at its worth, a Price bias, every
-       unique the base can be, then its section and its own state. -->
+       ruler of the five steps with a mark at its worth, one Price bias (this
+       item or its section), every unique the base can be, then the Steps from
+       line: All loot, its section, the item, the deciding one in gold (F1). -->
   <div v-if="it" :class="$style.card" :data-currency-card="it.name">
     <div :class="$style.verdict">
       <LabelPreview :text="it.name" :actions="[]" :style-override="currencyFullLook(shown === 0 ? 1 : shown, it.cat, cfg)" :visibility="shown === 0 ? 'Hide' : 'Show'" :extras="false" :scale="0.6" />
@@ -29,15 +30,17 @@
       <div v-if="overFull" class="text-xs w-faint" data-currency-card-stack>Drops stack to {{ it.full }}: a bigger pile counts as {{ it.full }}.</div>
     </div>
 
-    <div v-if="mode !== 'off'" :class="$style.row">
+    <div v-if="mode !== 'off'" :class="$style.row" data-currency-card-bias>
       <span :class="$style.lab">Price bias<WInfo :text="BIAS_HELP" /></span>
-      <span class="text-xs w-faint">Penalty</span>
-      <input type="range" :min="-NUDGE_MAX" :max="NUDGE_MAX" step="1" :value="dragNotch ?? notch" :class="$style.range" :disabled="mode !== 'auto' || secMode === 'off'"
-        aria-label="Price bias for this item" data-currency-card-mult
-        @input="dragNotch = Number(($event.target as HTMLInputElement).value)" @change="commitNotch(Number(($event.target as HTMLInputElement).value))">
-      <span class="text-xs w-faint">Bonus</span>
-      <b :class="$style.mx">{{ pctText(liveMult) }}</b>
-      <button v-if="mult !== 1" type="button" class="w-icon-btn" title="No bias" aria-label="No price bias" @click="commitNotch(0)"><i aria-hidden="true" class="fas fa-undo" /></button>
+      <select v-model="biasOf" :class="$style.sel" aria-label="Which price bias" data-currency-card-bias-of>
+        <option value="item">This item</option>
+        <option value="sec">{{ catName }} (every item)</option>
+      </select>
+      <BiasSlider v-if="biasOf === 'item'" :model-value="itemPct" label="Price bias for this item" :disabled="mode !== 'auto' || secMode === 'off'" data-currency-card-mult
+        @drag="v => dragItem = v" @update:model-value="setItemPct" />
+      <BiasSlider v-else-if="!ownRuler" :model-value="secPct" :label="`Price bias for ${catName}`" :disabled="secMode === 'off'" :class="$style.secBias" data-currency-card-sec-bias
+        @drag="v => dragSec = v" @update:model-value="setSecPct" />
+      <span v-else class="text-xs w-dim">{{ catName }} has its own ruler: set its prices on the Loot tab.</span>
     </div>
 
     <div v-if="canBe.length" :class="$style.uq" data-currency-card-uniques>
@@ -60,20 +63,32 @@
       </template>
     </div>
 
-    <div :class="$style.row" data-currency-card-section>
-      <span :class="$style.lab">Section</span>
-      <button type="button" :class="$style.cat" class="w-focusable" :style="{ '--c': catCss }" :title="`Open ${catName} on the Loot tab`" data-currency-card-cat
-        @click="emit('open-tab', it.cat, it.name)"><i aria-hidden="true" />{{ catName }}</button>
-      <StateChip :model-value="secMode" :options="SECTION_MODES" :title="catName" :dflt="sectionMode({ catMode: {} }, it.cat)"
-        :bias="cfg.nudge[it.cat] ?? 0" no-bias-in="off" @update:model-value="setSecMode" @update:bias="setNudge" />
-    </div>
-    <div :class="$style.row" data-currency-card-item>
-      <span :class="$style.lab">This item</span>
-      <StateChip :model-value="mode === 'always' ? 'always' : 'auto'" :options="ITEM_CHIPS" :title="it.name" dflt="auto" :bias="-notch" @update:model-value="setMode" @update:bias="n => commitNotch(-n)" />
+    <div :class="$style.layers" data-currency-card-layers>
+      <span class="text-xs w-dim">Steps from</span>
+      <button type="button" :class="[$style.layer, { [$style.top]: layer === 'all' }]" class="w-focusable" title="The main ruler, Strictness and steps turned off, on the Loot tab" data-currency-card-all
+        @click="emit('open-tab', it.cat, it.name)">All loot</button>
+      <i class="fas fa-angle-right w-faint" aria-hidden="true" />
+      <span :class="[$style.layer, { [$style.top]: layer === 'sec' }]" data-currency-card-section>
+        <button type="button" :class="$style.cat" class="w-focusable" :style="{ '--c': catCss }" :title="`Open ${catName} on the Loot tab`" data-currency-card-cat
+          @click="emit('open-tab', it.cat, it.name)"><i aria-hidden="true" />{{ catName }}</button>
+        <StateChip :model-value="secMode" :options="SECTION_MODES" :title="catName" :dflt="sectionMode({ catMode: {} }, it.cat)" @update:model-value="setSecMode" />
+        <span v-if="ownRuler" class="text-xs">own ruler</span>
+        <span v-else-if="secPct !== 100" class="text-xs">{{ secPct }}%</span>
+      </span>
+      <i class="fas fa-angle-right w-faint" aria-hidden="true" />
+      <span :class="[$style.layer, { [$style.top]: layer === 'item' }]" data-currency-card-item>
+        <span class="text-xs w-dim">This item</span>
+        <StateChip :model-value="mode === 'always' ? 'always' : 'auto'" :options="ITEM_CHIPS" :title="it.name" dflt="auto" @update:model-value="setMode" />
+        <span v-if="itemPct !== 100" class="text-xs">{{ itemPct }}%</span>
+      </span>
     </div>
     <label v-if="kindOf(it.cat) === 'cards'" :class="$style.row" data-currency-card-collect>
       <span :class="$style.lab">Collecting</span>
-      <input type="checkbox" :checked="!!edit.min" @change="toggleCollect"> <span class="text-xs w-dim">every stack shows at least Normal</span>
+      <input type="checkbox" :checked="!!edit.min" @change="toggleCollect"> <span class="text-xs w-dim">every stack shows as at least Normal</span>
+    </label>
+    <label v-if="LV_KINDS.has(kindOf(it.cat))" :class="$style.row" data-currency-card-levelling>
+      <span :class="$style.lab">Levelling</span>
+      <input type="checkbox" :checked="!!lvCurrencyOf(cfg, it.name)" @change="setLvCurrency(cfg, it.name, !lvCurrencyOf(cfg, it.name))"> <span class="text-xs w-dim">shows as at least Normal below maps</span>
     </label>
     <div v-if="floorLine" class="text-xs w-dim" data-currency-card-floor>{{ floorLine }}</div>
 
@@ -95,11 +110,14 @@ import WFoldHead from '../ui/WFoldHead.vue'
 import { WButton, WInfo, WPrice, WToggle } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import StateChip from './StateChip.vue'
+import BiasSlider from './BiasSlider.vue'
 import type { ChipOption } from './StateChip.vue'
 import { SECTION_MODES } from './section-modes'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
-import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, NUDGE_MAX, catColour, currencyFullLook, currencyItems, faintOn, fixedOf, forcedHidden, minStack, offSteps, pileWorth, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, catColour, currencyFullLook, currencyItems, faintOn, fixedOf, forcedHidden, minStack, offSteps, pileWorth, rowForBase, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { clusterPricesFor } from './cluster-ninja'
 import { toggleNotAvg } from './currency-settings'
+import { lvCurrencyOf, setLvCurrency } from './levelling'
 import { DEFAULT_BG, DEFAULT_TEXT } from './edits'
 import { cssColour } from './label-style'
 import { DROP_WEIGHT } from './economy'
@@ -107,7 +125,7 @@ import { cardFacts, loadCardFacts } from './card-facts'
 import { loadOwnTables, ownTables } from './own-lists'
 import { gemLinesOf } from './gem-classes'
 import { LEAGUE_SECTIONS } from './league-classes'
-import { gemItemFor, itemFor, lootFocus } from './loot-focus'
+import { gemItemFor, itemFor, lootFocus, notItsRarity } from './loot-focus'
 import { evalCondition } from './match'
 import type { ItemFacts } from './item-facts'
 import type { CStep, CurrencyItem, ItemEdit, SectionMode } from './currency-weights'
@@ -143,11 +161,11 @@ const ITEM_CHIPS = computed<ChipOption[]>(() => [
   edit.value.mult != null || edit.value.price != null || edit.value.look
     ? { value: 'auto', label: 'Custom', desc: 'Its section decides, with your bias, price or look.', dot: 'var(--w-gold)' }
     : { value: 'auto', label: 'Same as section', desc: 'Its section decides.', dot: 'var(--w-gold)' },
-  { value: 'always', label: 'Always', desc: 'Shows at least Small, whatever the price.', dot: 'var(--w-gold-hi)', glow: true }
+  { value: 'always', label: 'Always', desc: 'Shows as at least Small, whatever the price.', dot: 'var(--w-up, #6fbf5a)', glow: true }
 ])
 const BIAS_HELP = `Makes this item count above or below its price, so it shows louder or quieter.
-- Only this item (a unique base: only this base). Other items keep theirs.
-- Its section has its own bias, on the section chip. Both apply.
+- Pick This item (only this one) or its section (every item in it). Both apply.
+- 100% is none. 200% counts a 2c item as 4c.
 - The mark and step move as you drag; it applies when you let go.`
 const UNIQUES_HELP = `Every unique this base can drop as, with its chance, price and the step that price gets.
 - The base is priced by the average drop.
@@ -155,6 +173,8 @@ const UNIQUES_HELP = `Every unique this base can drop as, with its chance, price
 - A chase unique is never in the average: the base shows in Chase uniques.`
 
 const cfg = computed(() => props.config.presets.currency)
+// Kinds the levelling floor covers (levelling.ts): the main currency compile.
+const LV_KINDS = new Set(['currency', 'fragments', 'cards'])
 const eff = computed(() => scaled(cfg.value, props.store.doc.value?.strictness ?? null))
 // The item as the filter lists it, with poe.ninja's price (none of yours).
 const raw = computed<CurrencyItem | null>(() => {
@@ -163,10 +183,15 @@ const raw = computed<CurrencyItem | null>(() => {
   if (!doc || !lookup) return null
   loadCardFacts()
   loadOwnTables()
-  const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null, ownTables.value)
-  if (!props.gem) return itemFor(all, props.name, props.rule) ?? rowFor(all) ?? null
+  const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null, ownTables.value, clusterPricesFor(props.store.prices.currentLeague.value))
+  if (!props.gem) {
+    const hit = itemFor(all, props.name, props.rule)
+    const row = (hit && !wrongRarity(hit) ? hit : null) ?? rowFor(all) ?? null
+    return row && props.facts?.baseType ? rowForBase(row, props.facts.baseType, cfg.value) : row
+  }
   return gemItemFor(all, props.name, props.gem, props.rule)
 })
+const wrongRarity = (i: CurrencyItem) => notItsRarity(i, props.facts?.rarity)
 // A row whose BaseTypes and conditions fit the item; the dearest first, as
 // the rules go loudest first.
 function rowFor (all: CurrencyItem[]): CurrencyItem | undefined {
@@ -174,7 +199,7 @@ function rowFor (all: CurrencyItem[]): CurrencyItem | undefined {
   if (!f) return undefined
   return all
     // A row for a whole class (Sanctum research, charts) has no BaseTypes.
-    .filter(i => (i.bts?.length === 0 ? i.cls === f.itemClass : (i.bts ?? [i.bt ?? i.name]).includes(props.name)) && (i.conds ?? []).every(x => evalCondition(x, f) !== false))
+    .filter(i => !wrongRarity(i) && (i.bts?.length === 0 ? i.cls === f.itemClass : (i.bts ?? [i.bt ?? i.name]).includes(props.name)) && (i.conds ?? []).every(x => evalCondition(x, f) !== false))
     .sort((a, b) => b.chaos - a.chaos)[0]
 }
 // The row's name on the Loot tab ("Arc 20/20" for a gem band).
@@ -182,11 +207,28 @@ const itemName = computed(() => raw.value?.name ?? props.name)
 const edit = computed<ItemEdit>(() => cfg.value.items[itemName.value] ?? {})
 const it = computed(() => raw.value && withEdit(raw.value, edit.value))
 const base = computed(() => edit.value.price ?? raw.value?.chaos ?? 0)
-const mult = computed(() => edit.value.mult ?? 1)
-// Price bias in notches of ×1.25, as the sections' bias (Guy's pick Y).
-const notch = computed(() => Math.max(-NUDGE_MAX, Math.min(NUDGE_MAX, Math.round(Math.log(mult.value) / Math.log(1.25)))))
-const dragNotch = ref<number | null>(null)
-const liveMult = computed(() => dragNotch.value != null ? 1.25 ** dragNotch.value : mult.value)
+// One Price bias slider (Guy's F1, 2026-11-28), in % (20 to 300): this
+// item's own, or its whole section's, picked in its dropdown.
+const biasOf = ref<'item' | 'sec'>('item')
+const itemPct = computed(() => Math.round((edit.value.mult ?? 1) * 100))
+const secPct = computed(() => cfg.value.bias[it.value?.cat ?? ''] ?? 100)
+const ownRuler = computed(() => !!cfg.value.rulers[it.value?.cat ?? ''])
+const dragItem = ref<number | null>(null)
+const dragSec = ref<number | null>(null)
+const dragging = computed(() => dragItem.value != null || dragSec.value != null)
+// What the price counts for: the item's bias, and while the section's drags,
+// the change from where its steps are now (a bias moves them the other way).
+const liveMult = computed(() => (dragItem.value ?? itemPct.value) / 100 * (dragSec.value != null ? dragSec.value / secPct.value : 1))
+// The layer that decides this item, gold on the Steps from line: the item
+// when it has its own say, else its section when that has, else All loot.
+const layer = computed(() => {
+  const cat = it.value?.cat ?? ''
+  const e = edit.value
+  if (e.mult != null || e.price != null || e.look || e.step != null || mode.value === 'always' || e.min) return 'item'
+  const c = cfg.value
+  if (c.catMode[cat] != null || c.rulers[cat] || c.bias[cat] != null || c.offBy[cat] != null) return 'sec'
+  return 'all'
+})
 
 const catName = computed(() => ALL_CATEGORIES.find(x => x.id === it.value?.cat)?.name ?? 'Other')
 // Tells the card above which section and row this is (its Go to rule and
@@ -211,7 +253,7 @@ function setSecMode (v: string) {
   cfg.value.catMode = next
 }
 // A jewel row's fixed step (no price) reads as Always, or Off for step 0.
-const fixed = computed(() => it.value ? fixedOf(it.value, edit.value) : undefined)
+const fixed = computed(() => it.value ? fixedOf(it.value, edit.value, secMode.value as SectionMode) : undefined)
 const mode = computed(() => edit.value.step === 0 || fixed.value === 0 ? 'off' : (edit.value.supply === 1 && edit.value.step == null) || fixed.value != null ? 'always' : 'auto')
 const stacks = computed(() => it.value ? stacksFor(it.value, eff.value) : [null, null, null, null, null])
 const off = computed(() => it.value ? offSteps(it.value, cfg.value) : [])
@@ -268,14 +310,14 @@ const markLabel = computed(() => {
   return props.stack > 1 ? `Stack of ${props.stack} · ${v}` : `One · ${v}`
 })
 // While the bias drags, the step its price would get; else what the rules give it.
-const shown = computed<CStep>(() => dragNotch.value != null && mode.value === 'auto' && secMode.value !== 'off' && edit.value.step == null ? stepAt(liveWorth.value) : now.value)
+const shown = computed<CStep>(() => dragging.value && mode.value === 'auto' && secMode.value !== 'off' && edit.value.step == null ? stepAt(liveWorth.value) : now.value)
 
 interface Row { step: CStep, at: number, off: boolean, from: number | null, css: Record<string, string> }
 const rows = computed<Row[]>(() => {
   const i = it.value
   if (!i) return []
   // The stack each step starts at; while the bias drags, at the dragged price.
-  const live = dragNotch.value != null ? { chaos: base.value * liveMult.value * sizeCutNow(i, cfg.value), full: i.full } : null
+  const live = dragging.value ? { chaos: base.value * liveMult.value * sizeCutNow(i, cfg.value), full: i.full } : null
   return ([1, 2, 3, 4, 5] as CStep[]).map(s => {
     const look = currencyFullLook(s, i.cat, cfg.value)
     return {
@@ -310,7 +352,7 @@ const verdict = computed(() => {
   // Always or Collecting): read what the rules give it, not the mode.
   if (secMode.value === 'off' && stacks.value.every(k => k == null)) return `Hidden · ${catName.value} is set to Hide`
   if (s !== 0) return CSTEP_NAMES[s]
-  const pile = dragNotch.value != null ? 0 : stepOfPile(stacks.value, props.stack)
+  const pile = dragging.value ? 0 : stepOfPile(stacks.value, props.stack)
   if (pile !== 0) return `Hidden · ${CSTEP_NAMES[pile]} is off`
   // Under the line with Faint on, it shows small and see-through.
   return it.value && faintOn(cfg.value, props.store.doc.value?.strictness ?? null) && !forcedHidden(it.value, cfg.value) ? 'Faint' : 'Hidden'
@@ -360,22 +402,18 @@ function setMode (v: string) {
   else if (v === 'always') put({ step: undefined, supply: 1, priced: undefined })
   else put({ step: undefined, supply: edit.value.supply === 1 ? undefined : edit.value.supply, priced: fx != null ? true : undefined })
 }
-// Applies on release (Guy: sliders apply when you let go).
-function commitNotch (k: number) {
-  dragNotch.value = null
-  const n = Math.min(MULT_MAX, Math.max(MULT_MIN, Math.round(1.25 ** k * 100) / 100))
-  put({ mult: !Number.isFinite(n) || k === 0 ? undefined : n })
+// Both apply on release (Guy: sliders apply when you let go).
+function setItemPct (v: number) {
+  dragItem.value = null
+  put({ mult: v === 100 ? undefined : v / 100 })
 }
-function pctText (m: number) {
-  const p = Math.round((m - 1) * 100)
-  return p === 0 ? 'none' : `${p > 0 ? '+' : '−'}${Math.abs(p)}%`
-}
-function setNudge (n: number) {
+function setSecPct (v: number) {
+  dragSec.value = null
   const cat = it.value?.cat
   if (!cat) return
-  const next = Object.fromEntries(Object.entries(cfg.value.nudge).filter(([k]) => k !== cat))
-  if (n !== 0) next[cat] = n
-  cfg.value.nudge = next
+  const next = Object.fromEntries(Object.entries(cfg.value.bias).filter(([k]) => k !== cat))
+  if (v !== 100) next[cat] = v
+  cfg.value.bias = next
 }
 
 function chaosText (v: number): string {
@@ -398,8 +436,12 @@ function chaosText (v: number): string {
 .cat i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
 .row { display: flex; align-items: center; gap: 8px; font-size: var(--w-fs-sm); }
 .lab { display: inline-flex; align-items: center; gap: 3px; color: var(--w-dim); min-width: 4.5rem; font-size: var(--w-fs-xs); }
-.range { flex: 1; min-width: 6rem; accent-color: var(--w-accent); }
-.mx { font-variant-numeric: tabular-nums; color: var(--w-accent); min-width: 3.2em; text-align: right; font-weight: 400; }
+.sel { background: var(--w-panel-2); color: var(--w-fg); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); font-size: var(--w-fs-xs); padding: 1px 2px; max-width: 11rem; }
+.secBias :global(input[type=range]) { accent-color: var(--w-gold); }
+.layers { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.layer { display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: none; color: var(--w-dim); font-size: var(--w-fs-xs); cursor: default; }
+button.layer { cursor: pointer; }
+.layer.top { border-color: var(--w-gold); color: var(--w-fg); }
 .ruler { display: flex; flex-direction: column; gap: 3px; }
 .markRow { position: relative; height: 18px; }
 .mark { position: absolute; bottom: 0; transform: translateX(-50%); font-size: var(--w-fs-sm); color: var(--w-fg); white-space: nowrap; font-variant-numeric: tabular-nums; transition: left .12s; }

@@ -110,13 +110,25 @@ export type NameCheck = (key: 'BaseType' | 'Class', value: string) => boolean
 // Before the game data has loaded, any base passes (nothing to check against).
 export function nameCheck (doc: FilterDoc | null): NameCheck {
   const listed = { BaseType: new Set(knownValues(doc, 'BaseType')), Class: new Set(knownValues(doc, 'Class')) }
+  const game = gameNameCheck()
+  return (key, value) => listed[key].has(value) || game(key, value) || (key === 'Class' && listed.Class.size === 0)
+}
+
+// The same from the game data alone (NeverSink retirement M3): names the
+// game data knows, plus our own item lists (item-lists.json, also from the
+// game data). Not the names NeverSink's file lists. Before the game data has
+// loaded, any base passes.
+export function gameNameCheck (own?: ReadonlyArray<readonly [string, ...unknown[]]>): NameCheck {
+  const ownNames = new Set(own?.map(r => r[0]))
   const dataLoaded = Boolean(ITEM_BY_REF('ITEM', 'Chaos Orb')?.length)
   return (key, value) => {
-    if (listed[key].has(value)) return true
-    if (key === 'Class') return KNOWN_CLASSES.has(value) || listed.Class.size === 0
+    if (key === 'BaseType' && ownNames.has(value)) return true
+    if (key === 'Class') return KNOWN_CLASSES.has(value)
     // 3.30 maps go by tier, and the game data has no base for them.
     if (/^Map \(Tier \d+\)$/.test(value)) return true
-    return value in BASE_FACTS || !dataLoaded || Boolean(ITEM_BY_REF('ITEM', value)?.length || ITEM_BY_REF('GEM', value)?.length)
+    // Gold has no item in the game data, but the game knows its BaseType.
+    if (value === 'Gold') return true
+    return value in BASE_FACTS || !dataLoaded || (['ITEM', 'GEM', 'DIVINATION_CARD'] as const).some(ns => ITEM_BY_REF(ns, value)?.length)
   }
 }
 

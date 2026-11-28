@@ -3,8 +3,8 @@
 // on the same steps. A filter names them "Map (Tier 14)" plus BlightedMap or
 // UberBlightedMap, so a step's rule lists its tiers and the rule count stays
 // small. The rules go where NeverSink's blighted maps start, under its unique,
-// Valdo and Originator maps. Unique maps stay NeverSink's: poe.ninja gives
-// them no tier, and a filter can tell them apart only by tier.
+// Valdo and Originator maps. Unique maps are one row (a filter can't tell
+// them apart): what the cheapest one sells for on poe.ninja, Always shown.
 import type { LootCategory } from './fragment-classes'
 import type { FilterCondition } from './parse'
 
@@ -15,12 +15,14 @@ export const MAP_CATEGORIES: LootCategory[] = [
   { id: 'mapmods', name: 'Content mods', art: 'Map' },
   { id: 'mapcorr', name: 'Corrupted', art: 'Map' },
   { id: 'mapblight', name: 'Blighted maps', art: 'Blighted Map' },
-  { id: 'mapravaged', name: 'Blight-ravaged maps', art: 'Blight-ravaged Map' }
+  { id: 'mapravaged', name: 'Blight-ravaged maps', art: 'Blight-ravaged Map' },
+  { id: 'mapuniq', name: 'Unique maps', art: "Acton's Nightmare" }
 ]
 export const MAP_IDS = new Set(MAP_CATEGORIES.map(x => x.id))
 
-// Each kind's tint (Guy's B, 2026-11-28): the map look players know, black on
-// white, with the kind on the border, beam and minimap icon. Map icons are
+// Each kind's tint (Guy 2026-11-28): the card's fill from Normal up
+// (currency-weights.ts mapCard; plain maps stay white), the beam and the
+// minimap icon. Map icons are
 // always squares in the kind's tint (Guy: "always square with content
 // tint"). Red stays Tink's.
 export const MAP_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
@@ -30,8 +32,11 @@ export const MAP_LOOK: Record<string, { text: [number, number, number], color: s
   mapmods: { text: [110, 220, 235], color: 'Cyan', shape: 'Square' },
   mapcorr: { text: [255, 120, 165], color: 'Pink', shape: 'Square' },
   mapblight: { text: [150, 215, 95], color: 'Green', shape: 'Square' },
-  mapravaged: { text: [220, 150, 70], color: 'Brown', shape: 'Square' }
+  mapravaged: { text: [220, 150, 70], color: 'Brown', shape: 'Square' },
+  mapuniq: { text: [175, 96, 37], color: 'Brown', shape: 'Square' }
 }
+// A unique map is a rare drop: Always, its price lifts it above Small.
+export const MAP_MODES: Record<string, 'always'> = { mapuniq: 'always' }
 
 // NeverSink's blighted section, where the rules go.
 export const BLIGHT_TYPE = 'maps->blighted'
@@ -46,7 +51,8 @@ export const MAP_KINDS = [
 // sections"), on the same steps. Endgame and guardian/Citadel maps are priced
 // by poe.ninja's Map page; Originator, content-mod and corrupted maps have no
 // price anywhere, so they start from a guess (est.) near NeverSink's look and
-// you set the step or price by hand. Each goes above NeverSink's map rules,
+// you set the step or price by hand. Originator guesses from the bulk
+// exchange (Covens, 2026-11-28: T16 about 30c). Each goes above NeverSink's map rules,
 // which still decide whatever these don't catch (lower-tier guardian maps,
 // Valdo and unique maps).
 export interface SpecialMap {
@@ -56,6 +62,8 @@ export interface SpecialMap {
   bts: string[]
   // poe.ninja lines to price it by (the cheapest wins); none: `guess`.
   ninja?: string[]
+  // Priced by every unique map in the item data (the cheapest solid line).
+  uniqueMaps?: true
   guess?: number
   conds: FilterCondition[]
 }
@@ -74,10 +82,10 @@ export const SPECIAL_MAPS: SpecialMap[] = [
   { cat: 'mapend', name: 'Shaper Guardian Map', bts: ['Shaper Guardian Map'], ninja: ['Shaper Guardian Map'], conds: [NOT_UNIQUE] },
   { cat: 'mapguard', name: 'Elder guardian maps (Tier 16)', bts: ['Map (Tier 16)'], ninja: ['The Enslaver Map (Tier 16)', 'The Eradicator Map (Tier 16)', 'The Constrictor Map (Tier 16)', 'The Purifier Map (Tier 16)'], conds: [NOT_UNIQUE, cnd('HasInfluence', '', ['Elder'])] },
   { cat: 'mapguard', name: 'Citadel maps (Tier 16)', bts: ['Map (Tier 16)'], ninja: ['Al-Hezmin Map (Tier 16)', 'Baran Map (Tier 16)', 'Drox Map (Tier 16)', 'Veritania Map (Tier 16)'], conds: [NOT_UNIQUE, cnd('HasInfluence', '', ['Crusader', 'Hunter', 'Redeemer', 'Warlord'])] },
-  { cat: 'maporig', name: 'Originator Map (Tier 16)', bts: ['Map (Tier 16)'], guess: 4, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
-  { cat: 'maporig', name: 'Originator Map (Tier 15)', bts: ['Map (Tier 15)'], guess: 2, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
-  { cat: 'maporig', name: 'Originator Map (Tier 14)', bts: ['Map (Tier 14)'], guess: 1.5, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
-  { cat: 'maporig', name: 'Originator maps (Tier 1-13)', bts: tiers(1, 13), guess: 0.5, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
+  { cat: 'maporig', name: 'Originator Map (Tier 16)', bts: ['Map (Tier 16)'], guess: 30, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
+  { cat: 'maporig', name: 'Originator Map (Tier 15)', bts: ['Map (Tier 15)'], guess: 6, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
+  { cat: 'maporig', name: 'Originator Map (Tier 14)', bts: ['Map (Tier 14)'], guess: 3, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
+  { cat: 'maporig', name: 'Originator maps (Tier 1-13)', bts: tiers(1, 13), guess: 1, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
   { cat: 'mapmods', name: 'Mirage (of Zarokh)', bts: tiers(1, 16), guess: 10, conds: [...NOT_BLIGHT, IDENTIFIED, cnd('HasExplicitMod', '', ['of Zarokh'])] },
   { cat: 'mapmods', name: 'Wildwood (of the Woods)', bts: tiers(1, 16), guess: 10, conds: [...NOT_BLIGHT, IDENTIFIED, cnd('HasExplicitMod', '', ['of the Woods'])] },
   { cat: 'mapmods', name: 'Sentinel (of Unearthed Technology)', bts: tiers(1, 16), guess: 4, conds: [...NOT_BLIGHT, IDENTIFIED, cnd('HasExplicitMod', '', ['of Unearthed Technology'])] },
@@ -85,6 +93,7 @@ export const SPECIAL_MAPS: SpecialMap[] = [
   { cat: 'mapmods', name: "Beidat, Ghorr or K'Tash", bts: tiers(1, 16), guess: 4, conds: [...NOT_BLIGHT, IDENTIFIED, cnd('HasExplicitMod', '', ['of Beidat', 'of Ghorr', "of K'Tash"])] },
   { cat: 'mapcorr', name: '8 mods', bts: tiers(1, 16), guess: 4, conds: [...NOT_BLIGHT, IDENTIFIED, cnd('Corrupted', '', ['True']), cnd('HasExplicitMod', '>=', ['a', 'e', 'i', 'o', 'u', 'y'], 7)] },
   { cat: 'mapcorr', name: 'Corrupted implicit', bts: tiers(1, 16), guess: 1, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('CorruptedMods', '>=', ['1'])] },
-  { cat: 'mapcorr', name: 'Enchanted', bts: tiers(1, 16), guess: 1, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('AnyEnchantment', '', ['True'])] }
+  { cat: 'mapcorr', name: 'Enchanted', bts: tiers(1, 16), guess: 1, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('AnyEnchantment', '', ['True'])] },
+  { cat: 'mapuniq', name: 'Unique map', bts: [], uniqueMaps: true, guess: 5, conds: [cnd('Rarity', '', ['Unique'])] }
 ]
 export const SPECIAL_MAP_CATS = new Set(SPECIAL_MAPS.map(m => m.cat))

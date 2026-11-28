@@ -2,19 +2,25 @@
   <!-- The Loot tab (Guy's pick A, 2026-11-27): a rail of loot classes on the
        left, the picked class on the right. Every class shares the one switch
        (Jewels: cluster jewels also have their own price switch). -->
-  <div :class="$style.wrap" data-loot-tab>
+  <div :class="$style.outer" data-loot-tab>
+  <!-- All loot (Guy's H1): above the page list and the page, so it reads as
+       the one every page follows. The priced page puts its card here. -->
+  <div :class="$style.allTop" data-loot-all-top />
+  <div :class="$style.wrap">
     <nav :class="$style.rail" aria-label="Loot classes" data-no-item-tip="loot class names, not items">
-      <button v-for="k in LOOT_CLASSES" :key="k.id" type="button" :class="$style.cls" :aria-pressed="k.id === sel" :data-loot-class="k.id" :data-goto-spot="k.id === 'gold' ? 'loot-gold' : undefined" @click="sel = k.id">
+      <button v-for="k in LOOT_CLASSES" :key="k.id" type="button" :class="$style.cls" :aria-pressed="k.id === sel" :data-loot-class="k.id" :data-goto-spot="k.id === 'gold' ? 'loot-gold' : k.id === 'levelling' ? 'loot-levelling' : k.id === 'flasks' ? 'loot-flasks' : undefined" @click="sel = k.id">
         <WIcon :item="k.art" :ns="k.ns" :title="k.name" :fallback="k.fa" />
         <span :class="$style.name">{{ k.name }}</span>
         <span :class="$style.state">{{ (config.presets.currency.on || (k.id === 'jewels' && config.presets.clusterPrices.on)) ? 'On' : 'Off' }}</span>
       </button>
     </nav>
-    <CurrencyTab v-if="PRICED.has(sel)" :key="sel" :kind="lootKind" :store="store" :config="config" :focus-item="focusItem" :class="$style.main">
+    <CurrencyTab v-if="PRICED.has(sel)" :key="sel" :kind="lootKind" :store="store" :config="config" :focus-item="focusItem" top-to="[data-loot-all-top]" :class="$style.main">
       <template v-if="sel === 'maps'" #extra><MapsTab :config="config" /></template>
       <template v-if="sel === 'jewels'" #after><JewelsTab :store="store" :config="config" @open-rule="r => emit('open-rule', r)" @open-unique="openUnique" /></template>
     </CurrencyTab>
-    <RecipesTab v-else-if="sel === 'recipes'" :config="config" :class="$style.main" />
+    <RecipesTab v-else-if="sel === 'recipes'" :store="store" :config="config" :class="$style.main" />
+    <LevellingTab v-else-if="sel === 'levelling'" :config="config" :store="store" :class="$style.main" />
+  </div>
   </div>
 </template>
 
@@ -25,6 +31,7 @@ import CurrencyTab from './CurrencyTab.vue'
 import MapsTab from './MapsTab.vue'
 import JewelsTab from './JewelsTab.vue'
 import RecipesTab from './RecipesTab.vue'
+import LevellingTab from './LevellingTab.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { LootKind } from './currency-weights'
@@ -54,18 +61,21 @@ const LOOT_CLASSES = [
   { id: 'maps', name: 'Maps', art: 'Map', ns: 'ITEM', fa: 'fas fa-map' },
   { id: 'jewels', name: 'Jewels', art: 'Large Cluster Jewel', ns: 'ITEM', fa: 'fas fa-circle' },
   { id: 'league', name: 'League items', art: 'Expedition Logbook', ns: 'ITEM', fa: 'fas fa-book' },
-  { id: 'recipes', name: 'Recipes', art: 'Chromatic Orb', ns: 'ITEM', fa: 'fas fa-flask' }
+  { id: 'flasks', name: 'Life and mana flasks', art: 'Divine Life Flask', ns: 'ITEM', fa: 'fas fa-flask' },
+  { id: 'recipes', name: 'Recipes', art: 'Chromatic Orb', ns: 'ITEM', fa: 'fas fa-flask' },
+  { id: 'levelling', name: 'Levelling', art: 'Scroll of Wisdom', ns: 'ITEM', fa: 'fas fa-seedling' }
 ] as const satisfies ReadonlyArray<{ id: string, name: string, art: string, ns: Ns, fa: string }>
 type ClassId = (typeof LOOT_CLASSES)[number]['id']
 
 // Classes prices decide already: one engine and one switch for both.
-const PRICED = new Set<ClassId>(['currency', 'gold', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels', 'league'])
+const PRICED = new Set<ClassId>(['currency', 'gold', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels', 'league', 'flasks'])
 const sel = ref<ClassId>('currency')
 const focusItem = ref<string | null>(null)
 watch(() => props.focus, f => {
   if (!f) return
   const at = lootFocus(f)
-  if (!at) return
+  // Special gear lives on the Equipment tab.
+  if (!at || at.cls === 'special') return
   sel.value = at.cls
   focusItem.value = at.item
 }, { immediate: true })
@@ -81,6 +91,9 @@ const lootKind = computed(() => sel.value as LootKind)
 </script>
 
 <style module>
+.outer { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.allTop { flex: none; padding: 6px 6px 0; }
+.allTop:empty { display: none; }
 .wrap { display: flex; flex: 1 1 auto; min-height: 0; }
 .rail {
   flex: 0 0 11rem;

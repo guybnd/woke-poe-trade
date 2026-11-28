@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency, kindOf } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency, kindOf, offSteps } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { neverSink } from '../helpers/neversink'
 
@@ -96,14 +96,14 @@ describe('special maps on the Loot tab', () => {
     expect(corr.final?.block.actions.find(a => a.key === 'SetTextColor')?.args.slice(0, 3)).toEqual(['255', '120', '165'])
     const low = matchItem(strict, map(10, { corruptedMods: 1, corrupted: true }))
     expect(low.final?.block.type).not.toBe(CURRENCY_TYPE)
-    // A unique map is never caught.
-    expect(hit(map(16, { rarity: 'Unique', zanaMemory: true }))?.type).not.toBe(CURRENCY_TYPE)
+    // A unique map is the Unique maps row's (Always), never a special map's.
+    expect(hit(map(16, { rarity: 'Unique', zanaMemory: true }))?.comment).toMatch(/mapuniq/)
     // Plain maps are still NeverSink's.
     expect(hit(map(16))?.type).not.toBe(CURRENCY_TYPE)
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
   })
 
-  it('special maps are black on white from Normal up, edged in their tint, with a square icon', () => {
+  it('special maps are black on their tint from Normal up, with a square icon', () => {
     const cfg = defaultCurrency()
     cfg.on = true
     const doc = parseFilter(REGULAR)
@@ -113,8 +113,8 @@ describe('special maps on the Loot tab', () => {
     expect(m.final?.block.tier).toBe('s4')
     const act = (k: string) => m.final?.block.actions.find(a => a.key === k)?.args
     expect(act('SetTextColor')?.slice(0, 3)).toEqual(['0', '0', '0'])
-    expect(act('SetBackgroundColor')?.slice(0, 3)).toEqual(['255', '255', '255'])
-    expect(act('SetBorderColor')?.slice(0, 3)).toEqual(['200', '165', '255'])
+    expect(act('SetBackgroundColor')?.slice(0, 3)).toEqual(['200', '165', '255'])
+    expect(act('SetBorderColor')?.slice(0, 3)).toEqual(['255', '255', '255'])
     expect(act('MinimapIcon')?.slice(1)).toEqual(['Purple', 'Square'])
   })
 
@@ -138,5 +138,35 @@ describe('special maps on the Loot tab', () => {
     expect(ravaged.visibility).toBe('Show')
     expect(ravaged.final?.block.comment).not.toContain('mapcorr')
     expect(Number(ravaged.final?.block.tier?.slice(1))).toBeGreaterThanOrEqual(4)
+  })
+})
+
+describe('Originator maps from the clipboard', () => {
+  it('reads "Originator\'s Memories" as a Zana memory map', async () => {
+    const fs = await import('fs')
+    const { itemFacts } = await import('@/web/woke/loot-filter/item-facts')
+    for (const f of ['map-originator-t16', 'map-originator-implicit']) {
+      const text = fs.readFileSync(`../testing/fixtures/items/${f}.txt`, 'utf8')
+      expect(itemFacts(text, null).zanaMemory, f).toBe(true)
+    }
+  })
+})
+
+describe('a guessed special map on a step turned off', () => {
+  it('still shows: Originator T16 with every step off', () => {
+    const cfg = defaultCurrency()
+    cfg.on = true
+    cfg.offBy = { all: [1, 2, 3, 4] }
+    const doc = parseFilter(REGULAR)
+    applyCurrency(doc, cfg, lookup)
+    const orig = map(16, { rarity: 'Rare', zanaMemory: true, hasImplicitMod: true })
+    const hit = matchItem(doc, orig)
+    expect(hit.visibility).toBe('Show')
+    expect(hit.final?.block.type).toBe(CURRENCY_TYPE)
+    // At its own step, not the guessed-under-the-line fallback, and the tab
+    // doesn't call it hidden.
+    expect(hit.final?.block.comment).not.toMatch(/under the line/)
+    const it = currencyItems(parseFilter(REGULAR), lookup).find(i => i.name === 'Originator Map (Tier 16)')!
+    expect(offSteps(it, cfg)).toEqual([])
   })
 })
