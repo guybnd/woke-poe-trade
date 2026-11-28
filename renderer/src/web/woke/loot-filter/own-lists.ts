@@ -12,28 +12,49 @@
 // no row. Without prices at all the Loot tab keeps NeverSink's lists, so a
 // fresh install still lists everything.
 //
+// Unique bases (WOKEPOET-697) the same way: every base the game has a unique
+// on gets a row while one of its uniques is priced (or was last league), in
+// a section from our own data: boss-only and chase from the drop data
+// (economy.ts), High variance when a unique on it hides its roll until
+// identified (variable-uniques.ts), Early league when its uniques sold for
+// 3x their usual price in last league's first days. NeverSink's special
+// unique rules (links, Foulborn, corrupted implicits) stay.
+//
 // Both tables load on first use, so startup JS doesn't grow.
 import { shallowRef } from 'vue'
 import type { FilterBlock, FilterCondition } from './parse'
 import type { EconomyGroup, PriceLookup } from './economy'
+import { uniqueCategoryOf } from './unique-classes'
 
 export type ListRow = [name: string, cls: string, art: string]
 export interface OwnTables {
   lists: ListRow[]
   // Chaos each over the last league read, by name (plain lines only).
   guesses: Map<string, number>
+  // Last league's first-days price, by name (uniques only, day1-prices.json).
+  day1?: Map<string, number>
+  // Every base with a unique on it, and its uniques (shared/uniques-on-base).
+  bases?: () => ReadonlyMap<string, string[]>
+  // Uniques whose roll is hidden until identified (variable-uniques.ts).
+  variable?: ReadonlySet<string>
 }
 
 export const ownTables = shallowRef<OwnTables | null>(null)
 let loading: Promise<void> | null = null
 export function loadOwnTables (): Promise<void> {
-  loading ??= Promise.all([import('./item-lists.json'), import('./item-guesses.json')]).then(([l, g]) => {
+  loading ??= Promise.all([import('./item-lists.json'), import('./item-guesses.json'), import('./day1-prices.json'), import('../shared/uniques-on-base'), import('../shared/variable-uniques')]).then(([l, g, d, u, v]) => {
     const lists = (l.default as unknown as { items: ListRow[] }).items ?? []
-    const guesses = new Map<string, number>()
-    for (const [, name, variant, chaos] of (g.default as unknown as { items: Array<[string, string, string, number]> }).items ?? []) {
-      if (!variant && chaos > 0 && !guesses.has(name)) guesses.set(name, chaos)
+    type Row = [type: string, name: string, variant: string, chaos: number]
+    const read = (rows: Row[] | undefined, keep: (type: string) => boolean) => {
+      const out = new Map<string, number>()
+      for (const [type, name, variant, chaos] of rows ?? []) {
+        if (!variant && chaos > 0 && keep(type) && !out.has(name)) out.set(name, chaos)
+      }
+      return out
     }
-    ownTables.value = lists.length ? { lists, guesses } : null
+    const guesses = read((g.default as unknown as { items: Row[] }).items, () => true)
+    const day1 = read((d.default as unknown as { items: Row[] }).items, type => /^Unique/.test(type))
+    ownTables.value = lists.length ? { lists, guesses, day1, bases: u.uniqueBases, variable: new Set(v.VARIABLE_UNIQUE_NAMES) } : null
   }).catch(() => { loading = null })
   return loading
 }
@@ -107,15 +128,71 @@ export function ownBlocks (t: OwnTables, find: (type: string, name: string) => n
 // NeverSink's types the own lists stand in for.
 export const OWN_TYPES = /^(currency(->(essence|fossil|oil|deliriumorbs|trial->omen|trial->tattoo|ducats|others|deadmansulphur|harvest|heist|splinter|splinter->simulacrum))?|mapenchantments|runesgrafts|fragments|divination)$/
 
+// Early league (Guy's pick, 2026-11-28): a base whose uniques sold for this
+// many times their usual price in last league's first days, and for at
+// least EARLY_MIN chaos.
+export const EARLY_RATIO = 3
+export const EARLY_MIN = 5
+
+// What last league says about a unique base: its uniques' usual price and
+// their first days' price (plain averages), and whether they started well
+// above it.
+export function baseGuess (t: OwnTables, base: string): { chaos: number, first: number, early: boolean } | null {
+  const names = t.bases?.().get(base) ?? []
+  const usual = names.map(n => t.guesses.get(n)).filter((x): x is number => x != null)
+  if (!usual.length) return null
+  const chaos = usual.reduce((a, b) => a + b, 0) / usual.length
+  const first = names.map(n => t.day1?.get(n)).filter((x): x is number => x != null)
+  const day1 = first.length ? first.reduce((a, b) => a + b, 0) / first.length : 0
+  return { chaos, first: day1, early: day1 >= EARLY_MIN && day1 >= chaos * EARLY_RATIO }
+}
+
+// Own unique tiers, read by uniqueCategoryOf like NeverSink's plain ones.
+export const OWN_UNIQUE_TIER = { plain: 'own', variable: 'ownvar', early: 'ownearly' } as const
+
+// The unique bases as rules, one per section, with only the bases one of
+// whose uniques is priced now or was last league. `find`: a live price.
+export function ownUniqueBlocks (t: OwnTables, find: (base: string) => number | null, listed: ReadonlySet<string> = new Set()): FilterBlock[] {
+  const by = new Map<string, string[]>()
+  for (const [base, names] of t.bases?.() ?? []) {
+    const live = find(base)
+    const g = baseGuess(t, base)
+    if (!(live != null && live > 0) && !g && !listed.has(base)) continue
+    const tier = g?.early ? OWN_UNIQUE_TIER.early : names.some(n => t.variable?.has(n)) ? OWN_UNIQUE_TIER.variable : OWN_UNIQUE_TIER.plain
+    by.set(tier, [...by.get(tier) ?? [], base])
+  }
+  return [...by].map(([tier, names], i) => ({
+    kind: 'block',
+    index: -1001 - i,
+    line: 0,
+    visibility: 'Show',
+    disabled: false,
+    comment: `own list, uniques ${tier}`,
+    type: 'uniques',
+    tier,
+    conditions: [cond('Rarity', ['Unique']), cond('BaseType', names)],
+    actions: [],
+    continue: false,
+    section: '',
+    subsection: '',
+    raw: [],
+    dirty: false
+  }))
+}
+
 // The blocks to read items from: the own lists, then NeverSink's other rules
-// (uniques, gems, maps... still theirs). NeverSink's lists when there are no
-// prices yet or no tables.
-export function itemSource (blocks: FilterBlock[], t: OwnTables | null, lookup: PriceLookup | null, groupOf: (type: string) => EconomyGroup, any: EconomyGroup): FilterBlock[] {
+// (special uniques, gems, maps... still theirs). NeverSink's lists when there
+// are no prices yet or no tables.
+export function itemSource (blocks: FilterBlock[], t: OwnTables | null, lookup: PriceLookup | null, groupOf: (type: string) => EconomyGroup, any: EconomyGroup, uniquePage?: EconomyGroup): FilterBlock[] {
   if (!t?.lists.length || !lookup) return blocks
   const find = (type: string, name: string) => (lookup(groupOf(type), name) ?? lookup(any, name))?.chaos ?? null
   const own = (b: FilterBlock) => b.type != null && OWN_TYPES.test(b.type)
+  // NeverSink's plain unique tiers, when the game's unique bases are read.
+  const ownUniques = Boolean(uniquePage && t.bases?.().size)
+  const plainUnique = (b: FilterBlock) => ownUniques && b.type === 'uniques' && uniqueCategoryOf(b.tier) != null
   // Until last league's prices are read (no guesses yet), an unpriced item
   // the base filter lists keeps its row, so nothing drops off the tab.
-  const listed = new Set(t.guesses.size ? [] : blocks.filter(own).flatMap(b => b.conditions.flatMap(c => c.key === 'BaseType' ? c.values : [])))
-  return [...ownBlocks(t, find, listed), ...blocks.filter(b => !own(b))]
+  const names = (keep: (b: FilterBlock) => boolean) => new Set(t.guesses.size ? [] : blocks.filter(keep).flatMap(b => b.conditions.flatMap(c => c.key === 'BaseType' ? c.values : [])))
+  const uniques = ownUniques ? ownUniqueBlocks(t, base => lookup(uniquePage!, base)?.chaos ?? null, names(plainUnique)) : []
+  return [...ownBlocks(t, find, names(own)), ...uniques, ...blocks.filter(b => !own(b) && !plainUnique(b))]
 }

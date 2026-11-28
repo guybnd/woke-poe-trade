@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
 import { currencyItems } from '@/web/woke/loot-filter/currency-weights'
-import { ownType } from '@/web/woke/loot-filter/own-lists'
+import { baseGuess, ownType } from '@/web/woke/loot-filter/own-lists'
 import type { ListRow, OwnTables } from '@/web/woke/loot-filter/own-lists'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import table from '@/web/woke/loot-filter/item-lists.json'
@@ -69,5 +69,30 @@ describe('own item lists', () => {
     expect(ownType('Rain of Chaos', 'Divination Cards', 'Divination/InventoryIcon')).toBe('divination')
     expect(ownType('Two-Stone Ring', 'Rings', 'Rings/TwoStone')).toBeNull()
     expect(SCOPE_KINDS.size).toBe(3)
+  })
+
+  it('lists unique bases from the game data, in sections from our own data', () => {
+    const t: OwnTables = {
+      ...tables({ 'Headhunter': 5000, 'Mageblood Lite': 1, 'Bonehead': 2, 'Wolfsong': 3, 'Forgotten': 0.5 }),
+      day1: new Map([['Bonehead', 30]]),
+      bases: () => new Map([
+        ['Leather Belt', ['Headhunter', 'Mageblood Lite']],
+        ['Bone Helmet', ['Bonehead']],
+        ['Small Cluster Jewel', ['Wolfsong']],
+        ['Plank Kite Shield', ['Never Priced']]
+      ]),
+      variable: new Set(['Wolfsong'])
+    }
+    const lookup: PriceLookup = (g, base) => g.unique && base === 'Leather Belt' ? { chaos: 9000, thin: false } : !g.unique && base === 'Divine Orb' ? { chaos: 200, thin: false } : null
+    const u = new Map(currencyItems(parseFilter(neverSink('1-REGULAR')), lookup, {}, null, null, t).filter(i => i.type === 'uniques' && i.cls === 'Rarity Unique' && !i.conds && !i.bts).map(i => [i.name, i]))
+    expect(u.get('Leather Belt')).toMatchObject({ cat: 'uniqplain', chaos: 9000, est: false })
+    // Started at 15x its usual 2c: Early league, guessed at its first days' price.
+    expect(u.get('Bone Helmet')).toMatchObject({ cat: 'uniqearly', chaos: 30, est: true })
+    expect(u.get('Small Cluster Jewel')).toMatchObject({ cat: 'uniqvar', chaos: 3, est: true })
+    // Never priced, now or last league: no row. Nor what NeverSink lists
+    // that the game data has no unique for.
+    expect(u.has('Plank Kite Shield')).toBe(false)
+    expect(u.has('Simple Robe')).toBe(false)
+    expect(baseGuess(t, 'Leather Belt')).toMatchObject({ chaos: 2500.5, early: false })
   })
 })
