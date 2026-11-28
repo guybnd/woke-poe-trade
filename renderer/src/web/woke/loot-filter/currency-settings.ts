@@ -53,9 +53,9 @@ export interface CurrencySettings {
   // A category's look changed by hand (text colour, map icon), on Small to Big.
   cats: Record<string, StylePatch>
   // Steps turned off (1..4): piles that would get one hide instead (Guy
-  // 2026-11-27: "turn an entire section off like small off"). Keyed by a
-  // class page (its ruler: 'currency', 'uniques'...) or a section that sets
-  // its own (Guy 2026-11-28: Normal off on Currency hid it on every page).
+  // 2026-11-27: "turn an entire section off like small off"). 'all' is
+  // every Loot page; a class page ('currency', 'uniques'...) or a section
+  // that sets its own wins over it (Guy 2026-11-28: all, then page, then section).
   offBy: Record<string, number[]>
   // A section's own ruler (Guy's pick A, 2026-11-28): where Small, Normal,
   // Decent, Big and Tink start in it, before Strictness. It leaves the main
@@ -104,7 +104,7 @@ export function toggleNotAvg (c: Pick<CurrencySettings, 'notAvg'>, name: string)
 }
 
 export function defaultCurrency (): CurrencySettings {
-  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, offBy: {}, rulers: {}, mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1, gold: [1, 500, 3000, 10000, 50000] }
+  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, offBy: { all: [] }, rulers: {}, mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1, gold: [1, 500, 3000, 10000, 50000] }
 }
 
 const NAME = /^[^"\n]{1,80}$/
@@ -137,10 +137,12 @@ export function normalizeItemEdit (e: unknown): ItemEdit | null {
   return Object.keys(out).length ? out : null
 }
 
-// The old one list for every page was set on the Currency page: it stays there.
+// The old one list was for every page: it becomes 'all'. Saved before 'all'
+// existed, it sat on the Currency page: it goes back to every page.
 function offOf (c: Partial<CurrencySettings> & { off?: unknown } | undefined): Record<string, number[]> {
-  const src = c?.offBy && typeof c.offBy === 'object' ? c.offBy : { currency: c?.off }
-  const out: Record<string, number[]> = {}
+  const src: Record<string, unknown> = c?.offBy && typeof c.offBy === 'object' ? { ...c.offBy } : { all: c?.off }
+  if (!('all' in src)) { src.all = src.currency; delete src.currency }
+  const out: Record<string, number[]> = { all: [] }
   for (const [k, v] of Object.entries(src)) if (/^[a-z]{1,20}$/.test(k) && Array.isArray(v)) out[k] = [1, 2, 3, 4].filter(n => v.includes(n))
   return out
 }
