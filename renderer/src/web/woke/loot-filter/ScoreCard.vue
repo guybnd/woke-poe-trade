@@ -24,7 +24,7 @@
             <span class="w-faint">›</span>
             <button type="button" :class="[$style.cr, { [$style.on]: level === 'base' }]" :aria-pressed="level === 'base'" data-score-level="base" data-no-item-tip="the base the player is checking, named in its own price check" @click="level = 'base'">{{ baseName }}</button>
           </template>
-          <WInfo :text="levelHelp" />
+          <WInfo v-if="flask" :text="LEVEL_HELP_FLASK" /><WInfo v-else :text="LEVEL_HELP" />
         </div>
         <div v-if="level === 'base' && canMode" :class="$style.line">
           <span class="w-dim">Show it</span>
@@ -53,7 +53,7 @@
         </span>
         <b :class="$style.verdict" :style="{ color: shownStep ? STEP_CSS[Math.max(1, shownStep)] : 'var(--w-down, #c46a5a)' }" data-score-answer>{{ shownStep ? `Shows · ${STEP_SHORT[shownStep]}` : 'Hidden' }}</b>
         <span class="grow" />
-        <span :class="$style.score" data-score-pts><b>{{ pointsText(shownPts) }} pts</b> <small class="w-faint">score</small><WInfo :text="view.id ? SCORE_ID_HELP : SCORE_HELP" /></span>
+        <span :class="$style.score" data-score-pts><b>{{ pointsText(shownPts) }} pts</b> <small class="w-faint">score</small><WInfo v-if="view.id" :text="SCORE_ID_HELP" /><WInfo v-else :text="SCORE_HELP" /></span>
       </div>
 
       <ScoreRuler :pts="shownPts" :line="view.line" :loud="view.loud" :step="rawStep" :drag="canDrag" @drag="dragTo" @drop="dropAt" />
@@ -326,13 +326,14 @@ const decides = computed(() => {
   if (shownRank.value === 'rj' && rawStep.value === 0) return `${base}: Don't care`
   return ''
 })
-const levelHelp = computed(() => {
-  const all = flask.value ? 'Flasks' : 'Rare gear'
-  const lines = ['The highlighted step is what your changes cover.', `- **${all}**: every ${flask.value ? 'flask' : 'rare'}: the line and every weight (‹ › on an open score row).`]
-  if (baseName.value) lines.push(`- **${baseName.value}**: every ${flask.value ? '' : 'rare '}${baseName.value}: its rank${canMode.value ? ' and Show it' : ''}.`)
-  lines.push('- Loot (All loot) changes only on the Loot tab.')
-  return lines.join('\n')
-})
+const LEVEL_HELP = `The highlighted step is what your changes cover.
+- **Rare gear**: every rare: the line and every weight (‹ › on an open score row).
+- **The base**: every rare of it: its rank and Show it.
+- Loot (All loot) changes only on the Loot tab.`
+const LEVEL_HELP_FLASK = `The highlighted step is what your changes cover.
+- **Flasks**: every flask: the line.
+- **The base**: every flask of it: its rank.
+- Loot (All loot) changes only on the Loot tab.`
 const RANK_HELP = `This base's rank: it adds or takes points for every one of it.
 - Drag the needle on the ruler, or pick a rank on the card.
 - It's the same rank as on Base ranks.`
@@ -467,7 +468,7 @@ function tune () {
 .verdict { font-family: var(--w-head); font-size: var(--w-fs-lg); font-weight: 400; white-space: nowrap; }
 .score { font-size: var(--w-fs-sm, 13px); white-space: nowrap; }
 .decides { display: flex; align-items: center; gap: 6px; font-size: var(--w-fs-xs); padding: 3px 6px; border-left: 3px solid #e0b860; background: rgb(224 184 96 / 8%); }
-.tag { font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: #000; background: #e0b860; padding: 0 4px; border-radius: 2px; }
+.tag { font-size: var(--w-fs-xs); text-transform: uppercase; letter-spacing: .06em; color: #000; background: #e0b860; padding: 0 4px; border-radius: 2px; }
 .sh { font-size: var(--w-fs-xs); letter-spacing: .08em; text-transform: uppercase; color: var(--w-faint); padding: 0 2px 2px; }
-.cap { display: inline-grid; place-items: center; min-width: 1rem; height: 1rem; border: 1px solid #e0b860; border-radius: 3px; font-size: 10px; margin-right: 4px; }
+.cap { display: inline-grid; place-items: center; min-width: 1rem; height: 1rem; border: 1px solid #e0b860; border-radius: 3px; font-size: var(--w-fs-xs); margin-right: 4px; }
 </style>
