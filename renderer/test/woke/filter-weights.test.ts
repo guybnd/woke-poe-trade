@@ -115,7 +115,7 @@ describe('rare weights', () => {
   })
 
   it('reads NeverSink\'s base lists', () => {
-    const ranks = baseRanks(parseFilter(SEMI))
+    const ranks = baseRanks()
     expect(ranks.x1).toContain('Simplex Amulet')
     expect(ranks.r1).toContain("Lich's Circlet")
     expect(ranks.r1.length).toBeGreaterThan(10)

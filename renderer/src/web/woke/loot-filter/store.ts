@@ -16,6 +16,7 @@ import { parseFilter, parseFilterCopy, serializeFilter } from './parse'
 import { composeFilter } from './compose'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { loadOwnTables, ownTables } from './own-lists'
+import { loadBaseRanks } from './base-ranks'
 import { gemLinesOf } from './gem-classes'
 import type { FilterDoc, Visibility } from './parse'
 import { addEdit, blocksOf, nextEditId, readStyle } from './edits'
@@ -899,6 +900,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   async function load () {
     const seq = ++loadSeq
     forgetGameFile()
+    // Our own base ranks, read by the gear rules: there before the first build.
+    await loadBaseRanks()
+    if (seq !== loadSeq) return
     if (cfg().neversink.on) {
       loading.value = true
       error.value = null
