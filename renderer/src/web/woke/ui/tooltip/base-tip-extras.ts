@@ -4,6 +4,7 @@
 // by item-tip.ts. Pure; loaded on the first base hover.
 import type { TierData } from './mod-tiers'
 import type { TipLine, TipPart } from './tip-content'
+import type { TipBaseUnique } from './tooltip'
 
 const part = (text: string, tone: TipPart['tone']): TipPart => ({ text, tone })
 
@@ -55,4 +56,20 @@ export function topTierLine (data: TierData, key: string): TipLine | null {
     line.push(part(String(level), 'value'), part(` ${byLevel.get(level)!.slice(0, 3).join(', ')}`, 'label'))
   })
   return line
+}
+
+// The game's words for the drop tiers T0..T5 (loot-filter/drop-tier.ts).
+const RARITY_WORD = ['extremely rare', 'very rare', 'very rare', 'rare', 'uncommon', 'common']
+
+// Each unique on a base says how often it turns up, and a very or extremely
+// rare one worth 1 div or more says "chase": the Loot tab leaves it out of
+// the base's average-drop price and shows the base as a chase base.
+export function rarityLabels (list: TipBaseUnique[], tiers: Record<string, number> | undefined, divine: number): TipBaseUnique[] {
+  if (!tiers) return list
+  return list.map(u => {
+    const t = tiers[u.name]
+    if (t == null) return u
+    const chase = t <= 2 && u.chaos != null && u.chaos >= divine
+    return { ...u, grade: chase ? 'high' : 'unknown', label: chase ? 'chase' : RARITY_WORD[t] ?? '' }
+  })
 }

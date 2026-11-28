@@ -353,16 +353,19 @@ async function withBaseExtras (model: TipModel, ref: ItemTipRef, market: TipMark
       if (line) model = { ...model, sections: [...model.sections, [line]] }
     } catch {}
   }
-  await loadFile('drops')
+  await Promise.all([loadFile('drops'), loadFile('unique-drop-tiers')])
   const names = uniquesOnBase(ref.name)
   if (!names.length) return { model, market }
+  const extras = import('./base-tip-extras').catch(() => null)
   price ??= usePrice()
   const p = price
   const listed = names.map((name): TipBaseUnique => {
     const found = p.isVariable(name) ? null : p.priceOf(name, { ns: 'UNIQUE' })
     return { name, chaos: found?.chaos ?? null, grade: 'unknown', label: '', thin: false }
   }).sort((a, b) => (b.chaos ?? -1) - (a.chaos ?? -1))
-  return { model, market, uniques: withDrops(listed, pack.drops) }
+  // How often each turns up and which is the chase (Guy's V1, 2026-11-28).
+  const marked = (await extras)?.rarityLabels(listed, pack['unique-drop-tiers'], p.divine.value ?? 150) ?? listed
+  return { model, market, uniques: withDrops(marked, pack.drops) }
 }
 
 // A unique's Foulborn swap, Vestigial implicit and the cards that give it
