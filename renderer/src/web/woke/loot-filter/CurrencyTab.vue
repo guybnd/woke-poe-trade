@@ -704,7 +704,7 @@ function chaosText (v: number): string {
 .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c9b98c; }
 .price { text-align: right; font-variant-numeric: tabular-nums; }
 .est { color: var(--w-faint); font-size: var(--w-fs-xs); }
-.rowMode { font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 3px; border: 1px solid #5a4a30; background: transparent; color: #c8a565; cursor: pointer; white-space: nowrap; }
+.rowMode { font-size: calc(11px * var(--w-text-scale, 1)); line-height: calc(16px * var(--w-text-scale, 1)); padding: 0 6px; border-radius: 3px; border: 1px solid #5a4a30; background: transparent; color: #c8a565; cursor: pointer; white-space: nowrap; }
 .rowMode:hover { border-color: #c8a565; }
 .mode_price { color: #a89f8c; }
 .mode_off { color: #7a7266; border-style: dashed; }
