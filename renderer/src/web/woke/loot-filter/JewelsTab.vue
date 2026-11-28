@@ -88,7 +88,7 @@ function chaosText (v: number): string {
 .name { font-size: var(--w-fs-sm); color: #e2d3ad; white-space: nowrap; }
 .count { font-size: var(--w-fs-xs); color: var(--w-dim); }
 .body { border-top: 1px solid var(--w-line); padding: 4px 8px 6px; }
-.row { display: grid; grid-template-columns: minmax(0, 1fr) 4.5rem auto 1rem; align-items: center; gap: 8px; padding: 1px 4px; }
+.row { display: grid; grid-template-columns: auto minmax(0, 1fr) 5.5rem auto 1rem; align-items: center; gap: 8px; padding: 1px 4px; }
 .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c9b98c; }
 .price { text-align: right; font-variant-numeric: tabular-nums; }
 .pill { font-size: var(--w-fs-xs); padding: 0 5px; border-radius: 2px; line-height: 1.5; white-space: nowrap; }

@@ -59,6 +59,13 @@ describe('unique bases by their average drop', () => {
     expect(v(U, 'Large Cluster Jewel')).toMatchObject({ chaos: 1200, noWorld: true })
   })
 
+  it('a unique with only variant lines is worth its cheapest real one (what most drops are)', () => {
+    const v1 = { ...line('Voices', 164000, 'UniqueJewel'), variant: '1 passive' } as PriceItem
+    const v7 = { ...line('Voices', 300, 'UniqueJewel'), variant: '7 passives' } as PriceItem
+    const v = dropLookup([v1, v7], () => [], null, new Set(), () => ['Voices'])
+    expect(v(U, 'Large Cluster Jewel')?.chaos).toBe(300)
+  })
+
   it('only T0 is a chase: a valuable T2 unique still counts', () => {
     expect(look(U, 'Agate Amulet')?.chaos).toBe(7)
     expect(look(U, 'Agate Amulet')?.drop?.chase).toEqual([])
