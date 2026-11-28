@@ -12,13 +12,16 @@
 // priced band (ClusterPriceBand).
 import type { LootCategory } from './fragment-classes'
 import type { FilterCondition } from './parse'
-import type { CStep } from './currency-settings'
+import type { CStep, SectionMode } from './currency-settings'
 
 export const JEWEL_CATEGORIES: LootCategory[] = [
   { id: 'jewabyss', name: 'Abyss jewels', art: 'Murderous Eye Jewel' },
   { id: 'jewplain', name: 'Jewels', art: 'Cobalt Jewel' }
 ]
 export const JEWEL_IDS = new Set(JEWEL_CATEGORIES.map(x => x.id))
+// Both start Always: each row shows at its set look; By price on the
+// section puts them on the price ladder instead (Guy 2026-11-28).
+export const JEWEL_MODES: Record<string, SectionMode> = { jewabyss: 'always', jewplain: 'always' }
 
 export const JEWEL_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
   jewabyss: { text: [150, 215, 120], color: 'Green', shape: 'Raindrop' },

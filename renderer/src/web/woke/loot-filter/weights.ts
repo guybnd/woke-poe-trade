@@ -12,8 +12,8 @@
 // rules sit above everything NeverSink has, so NeverSink never sees these rares.
 // Off (the default), nothing is written and NeverSink decides as before.
 // Identified rares aren't touched: NeverSink's mod rules keep them.
+import { baseRankTable } from './base-ranks'
 import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './parse'
-import { readTiered } from './gear'
 import { allGearBases, baseInfo } from './gear-bases'
 import { BASE_FACTS } from './base-facts'
 import { LOOK_CHANNELS, LOOK_LABEL, LOUD_DEFAULT, MARK_ROWS, ORDERED_ROWS, WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
@@ -153,23 +153,13 @@ const c = (key: string, op: string, values: Array<string | number>): FilterCondi
 export type Rank = WeightItem['rank']
 export interface BaseRanks { x1: string[], x2: string[], r1: string[], r2: string[], r3: string[] }
 
-// The filter's own base lists: NeverSink's exotic bases (its top two tiers
-// apart from the rest) and the three ranks of its tiered gear. A base takes
-// the first list it's on.
-export function baseRanks (doc: FilterDoc): BaseRanks {
+// Our own base lists (base-ranks.ts). A base takes the first list it's on.
+export function baseRanks (): BaseRanks {
   const out: BaseRanks = { x1: [], x2: [], r1: [], r2: [], r3: [] }
   const seen = new Set<string>()
-  const put = (list: string[], bases: string[]) => { for (const b of bases) if (!seen.has(b)) { seen.add(b); list.push(b) } }
-  const exotic = (tiers: RegExp) => doc.blocks
-    .filter(b => b.type === 'exoticbases' && !b.disabled && b.visibility === 'Show' && tiers.test(b.tier ?? ''))
-    .flatMap(b => b.conditions.find(x => x.key === 'BaseType' && x.op === '==')?.values ?? [])
-  put(out.x1, exotic(/^t[12]$/))
-  put(out.x2, exotic(/^t[345]$/))
-  const src = readTiered(doc)
-  if (src) {
-    put(out.r1, src.ranks.r1)
-    put(out.r2, src.ranks.r2)
-    put(out.r3, src.ranks.r3)
+  const t = baseRankTable()
+  for (const r of ['x1', 'x2', 'r1', 'r2', 'r3'] as const) {
+    for (const b of t[r]) if (!seen.has(b)) { seen.add(b); out[r].push(b) }
   }
   return out
 }
@@ -731,7 +721,7 @@ export function filterBases (doc: FilterDoc, own: Record<string, Rank> = {}): Ba
   // Before the item data loads nothing is known (and baseInfo would remember
   // that): every base counts as a plain one until then.
   if (!allGearBases().length) return []
-  return withRanks(baseTable(baseRanks(doc), allGearBases(), n => ({ cls: baseInfo(n).cls, facts: BASE_FACTS[n] })), own)
+  return withRanks(baseTable(baseRanks(), allGearBases(), n => ({ cls: baseInfo(n).cls, facts: BASE_FACTS[n] })), own)
 }
 
 // Your own ranks over the filter's.

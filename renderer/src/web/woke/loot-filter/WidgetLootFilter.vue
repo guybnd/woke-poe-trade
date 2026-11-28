@@ -47,7 +47,7 @@
     </DockItem>
     <template v-if="mode === 'card'">
       <ScoreCard v-if="sample && match && scoreView" :store="store" :config="config" :facts="sample" :match="match"
-        @close="close" @open-editor="openEditorFromCard" @neversink="nsView = true" />
+        @close="close" @open-editor="openEditorFromCard" />
       <SampleCard v-else-if="sample && match" :store="store" :config="config" :facts="sample" :match="match" :game-match="gameMatch" :area-level="effectiveAreaLevel"
         @close="close" @open-editor="openEditorFromCard" @area-level="areaOverride = $event" />
       <WPanel v-else title="Filter rule for this item" icon="wisdom" width="24rem" :resizable="false">
@@ -185,10 +185,11 @@ if (props.config.sourceName || props.config.neversink.on || props.config.wmWants
 // Show me on a Loot tab section or item: open the editor there.
 const openEditor = () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}) }
 const lootSpot = (tier: string) => () => { openEditor(); focus.value = { type: 'woke->currency', tier } }
-// What's new's Show me: the editor, with its profile chip.
+// What's new's Show me: the editor, with its profile chip. Special gear
+// (cat:sg...) opens on the Equipment tab.
 useGoto(props.config, 'woke-loot-filter', {
   editor: openEditor,
-  spots: { 'loot-gold': lootSpot('cat:gold:'), 'profiles': () => {}, 'gear-ranks': () => { openEditor(); askGearRanks() }, 'over-quality-look': () => { openEditor(); openTab.value = { tab: 'gear' } }, 'league-always': lootSpot('lgchron'), 'section-steps': lootSpot('cat:orbs:Chaos Orb'), 'section-ruler': lootSpot('cat:orbs:Chaos Orb'), 'map-looks': lootSpot('mapfloor'), 'jewels-no-price': lootSpot('jewplain'), 'own-lists': lootSpot('cat:orbs:Divine Orb'), 'history': () => { openEditor(); openTab.value = { tab: 'changes' } } }
+  spots: { 'loot-gold': lootSpot('cat:gold:'), 'loot-levelling': lootSpot('levelling'), 'loot-special': lootSpot('cat:sgveil:'), 'profiles': () => {}, 'gear-ranks': () => { openEditor(); askGearRanks() }, 'over-quality-look': () => { openEditor(); openTab.value = { tab: 'gear' } }, 'league-always': lootSpot('lgchron'), 'section-steps': lootSpot('cat:orbs:Chaos Orb'), 'section-ruler': lootSpot('cat:orbs:Chaos Orb'), 'map-looks': lootSpot('mapfloor'), 'jewels-no-price': lootSpot('jewplain'), 'own-lists': lootSpot('cat:orbs:Divine Orb'), 'history': () => { openEditor(); openTab.value = { tab: 'changes' } }, 'recipes-by-price': lootSpot('recipes') }
 })
 
 // A change Claude suggested, applied from the Suggestions card: added like an

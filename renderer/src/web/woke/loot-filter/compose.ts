@@ -25,7 +25,8 @@ import { CLUSTER_PRICE_TYPE, applyClusterPrices } from './cluster-prices'
 import type { ClusterPrice } from './cluster-prices'
 import type { BaseRename } from './gem-bases'
 import { applyWeights, filterBases } from './weights'
-import { applyCurrency } from './currency-weights'
+import { applyCurrency, recipeStep, scaled } from './currency-weights'
+import { levellingGearBlocks, questlikeBlocks, retireNeverSinkLevelling } from './levelling-gear'
 import { applyMapFloor, applyMapLooks } from './map-floor'
 import type { CardFacts } from './card-classes'
 import type { GemLine } from './gem-classes'
@@ -139,8 +140,14 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Maps under the Loot tab's tier slider hide.
   applyMapFloor(next, migrated.currency)
   applyMapLooks(next, migrated.currency)
-  // Build rules go in first, so edits to them (restyles) apply on top.
   const input = cfg.build
+  // Gear while levelling (Loot › Levelling): over NeverSink's levelling
+  // gear, under the build rules, presets and your own rules.
+  if (currency) {
+    retireNeverSinkLevelling(next, migrated.currency)
+    insertBuildBlocks(next, [...questlikeBlocks(), ...levellingGearBlocks(migrated.currency, cfg.presets.weapons, input ? { weaponClasses: input.weaponClasses, rareBases: input.rareBases } : null)])
+  }
+  // Build rules go in first, so edits to them (restyles) apply on top.
   let buildCount = 0
   if (input) {
     const blocks = buildRuleBlocks(input, cfg.buildRules)
@@ -148,7 +155,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
     buildCount = blocks.length
   }
   // Presets the Loot tab covers leave maps to it (lootPresets).
-  const presets = lootPresets(migrated, currency != null)
+  const presets = lootPresets(migrated, currency != null, recipeStep(scaled(migrated.currency, next.strictness), 'rgb', cfg.prices.loot ?? cfg.prices.lookup))
   // Presets' rules, then your own rules above them: yours win.
   const presetTop = presetBlocks(next, presets, cfg.prices.lookup, cfg.dustList, {
     breakdown: cfg.presets.cheapUniques.on ? cfg.prices.breakdown : null,

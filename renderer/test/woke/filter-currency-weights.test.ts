@@ -219,7 +219,7 @@ describe('currency weights', () => {
       const compiled = applyCurrency(doc, cfg, lookup)!
       let hidden = 0
       // Map, gold, jewel and league rows are named for their kind, not a base: tested on their own.
-      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold' && i.type !== 'jewels' && i.type !== 'league')) {
+      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold' && i.type !== 'jewels' && i.type !== 'league' && i.type !== 'special')) {
         const stacks = stacksFor(it, cfg)
         for (const n of [1, 2, 5, 10, 20, 40]) {
           if (n > it.full) continue
@@ -235,14 +235,14 @@ describe('currency weights', () => {
     }
   })
 
-  it('gives every pile the step its worth says, in maps only', () => {
+  it('gives every pile the step its worth says', () => {
     for (const line of [0.1, 0.5, 1, 3, 5]) {
       const cfg = on(c => { c.line = line })
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, cfg, lookup)!
       // Uniques are matched by rarity (filter-loot-uniques.test.ts), maps by
       // their own conditions (filter-loot-special-maps.test.ts).
-      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold' && i.type !== 'jewels' && i.type !== 'league')) {
+      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold' && i.type !== 'jewels' && i.type !== 'league' && i.type !== 'special')) {
         const stacks = stacksFor(it, cfg)
         for (const n of [1, 2, 3, 5, 10, 20, 40]) {
           if (n > it.full) continue
@@ -253,8 +253,14 @@ describe('currency weights', () => {
           expect(res.visibility === 'Hide', `${it.name} ×${n}`).toBe(want === 0)
         }
       }
-      // Levelling is NeverSink's.
-      expect(matchItem(doc, pile('Orb of Transmutation', 1, 40)).final?.block.type).not.toBe(CURRENCY_TYPE)
+      // Levelling: the Loot rules apply there too, a leveller's supplies at
+      // least Normal (levelling.ts).
+      expect(matchItem(doc, pile('Orb of Transmutation', 1, 40)).final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Show' })
+      expect(Number(matchItem(doc, pile('Orb of Transmutation', 1, 40)).final?.block.tier?.slice(1))).toBeGreaterThanOrEqual(2)
+      // Maps only: levelling is NeverSink's.
+      const mapsOnly = parseFilter(SEMI)
+      applyCurrency(mapsOnly, on(c => { c.line = line; c.catMode = { lvgate: 0 as unknown as 'auto' } }), lookup)
+      expect(matchItem(mapsOnly, pile('Orb of Transmutation', 1, 40)).final?.block.type).not.toBe(CURRENCY_TYPE)
       // Other items too.
       expect(matchItem(doc, { ...pile('Splinter of Xoph', 1), itemClass: 'Stackable Currency' }).final?.block.type).not.toBe(CURRENCY_TYPE)
     }
@@ -415,12 +421,14 @@ describe('currency weights', () => {
     for (const line of [0.1, 1, 5]) {
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, on(c => { c.line = line }), lookup)!
-      // Jewel and league rows are a compile each (they overlap), so a few more.
-      expect(compiled.blocks.length).toBeLessThan(300)
+      // Jewel, league and special gear rows are a compile each (they
+      // overlap), so a few more.
+      expect(compiled.blocks.length).toBeLessThan(360)
       const text = serializeFilter(doc)
       // About 100k for currency, fragments and cards, 25k for uniques, 25k
-      // for jewels and league items (Viscera's long base lists).
-      expect(text.length - SEMI.length).toBeLessThan(200_000)
+      // for jewels and league items (Viscera's long base lists), 25k for
+      // special gear (its rows name every gear class).
+      expect(text.length - SEMI.length).toBeLessThan(230_000)
       expect(validateFilter(parseFilter(text)).map(p => p.message)).toEqual([])
     }
   })

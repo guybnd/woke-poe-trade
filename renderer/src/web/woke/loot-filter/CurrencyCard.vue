@@ -75,6 +75,10 @@
       <span :class="$style.lab">Collecting</span>
       <input type="checkbox" :checked="!!edit.min" @change="toggleCollect"> <span class="text-xs w-dim">every stack shows at least Normal</span>
     </label>
+    <label v-if="LV_KINDS.has(kindOf(it.cat))" :class="$style.row" data-currency-card-levelling>
+      <span :class="$style.lab">Levelling</span>
+      <input type="checkbox" :checked="!!lvCurrencyOf(cfg, it.name)" @change="setLvCurrency(cfg, it.name, !lvCurrencyOf(cfg, it.name))"> <span class="text-xs w-dim">shows at least Normal below maps</span>
+    </label>
     <div v-if="floorLine" class="text-xs w-dim" data-currency-card-floor>{{ floorLine }}</div>
 
     <div :class="$style.fold">
@@ -100,6 +104,7 @@ import { SECTION_MODES } from './section-modes'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, NUDGE_MAX, catColour, currencyFullLook, currencyItems, faintOn, fixedOf, forcedHidden, minStack, offSteps, pileWorth, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
 import { toggleNotAvg } from './currency-settings'
+import { lvCurrencyOf, setLvCurrency } from './levelling'
 import { DEFAULT_BG, DEFAULT_TEXT } from './edits'
 import { cssColour } from './label-style'
 import { DROP_WEIGHT } from './economy'
@@ -155,6 +160,8 @@ const UNIQUES_HELP = `Every unique this base can drop as, with its chance, price
 - A chase unique is never in the average: the base shows in Chase uniques.`
 
 const cfg = computed(() => props.config.presets.currency)
+// Kinds the levelling floor covers (levelling.ts): the main currency compile.
+const LV_KINDS = new Set(['currency', 'fragments', 'cards'])
 const eff = computed(() => scaled(cfg.value, props.store.doc.value?.strictness ?? null))
 // The item as the filter lists it, with poe.ninja's price (none of yours).
 const raw = computed<CurrencyItem | null>(() => {
@@ -211,7 +218,7 @@ function setSecMode (v: string) {
   cfg.value.catMode = next
 }
 // A jewel row's fixed step (no price) reads as Always, or Off for step 0.
-const fixed = computed(() => it.value ? fixedOf(it.value, edit.value) : undefined)
+const fixed = computed(() => it.value ? fixedOf(it.value, edit.value, secMode.value as SectionMode) : undefined)
 const mode = computed(() => edit.value.step === 0 || fixed.value === 0 ? 'off' : (edit.value.supply === 1 && edit.value.step == null) || fixed.value != null ? 'always' : 'auto')
 const stacks = computed(() => it.value ? stacksFor(it.value, eff.value) : [null, null, null, null, null])
 const off = computed(() => it.value ? offSteps(it.value, cfg.value) : [])

@@ -5,7 +5,7 @@ import { LEAGUE_SECTIONS } from './league-classes'
 import { gemBand } from './gem-classes'
 import type { FilterCondition } from './parse'
 
-export type LootClassId = 'currency' | 'gold' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps' | 'jewels' | 'league' | 'recipes'
+export type LootClassId = 'currency' | 'gold' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps' | 'jewels' | 'league' | 'special' | 'recipes' | 'levelling'
 
 // "cat:<category>:<item>", the map floor, Recipes, a league section, a unique special.
 export function lootFocus (tier: string | null | undefined): { cls: LootClassId, item: string | null } | null {
@@ -14,6 +14,7 @@ export function lootFocus (tier: string | null | undefined): { cls: LootClassId,
   if (m) return { cls: kindOf(m[1]), item: m[2] || null }
   if (tier === 'mapfloor') return { cls: 'maps', item: null }
   if (tier === 'recipes') return { cls: 'recipes', item: null }
+  if (tier === 'levelling') return { cls: 'levelling', item: null }
   if (LEAGUE_SECTIONS.some(s => s.id === tier)) return { cls: 'league', item: null }
   if (tier.startsWith('u-')) return { cls: 'uniques', item: null }
   return null

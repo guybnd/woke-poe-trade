@@ -76,7 +76,7 @@ describe('jewels on the Loot tab', () => {
     expect(matchItem(off, jewel('Crimson Jewel', 'Jewels', 'Magic', 84)).visibility).toBe('Hide')
   })
 
-  it('a fixed row goes by price once you say so', () => {
+  it('the section on By price puts its rows on the price ladder', () => {
     const cfg = defaultCurrency()
     cfg.on = true
     cfg.line = 1
@@ -84,21 +84,24 @@ describe('jewels on the Loot tab', () => {
     let doc = parseFilter(SEMI)
     applyCurrency(doc, cfg, lookup)
     expect(matchItem(doc, rare).visibility).toBe('Show')
-    cfg.items = { 'Rare jewel': { priced: true } }
+    cfg.catMode = { jewplain: 'auto' }
     doc = parseFilter(SEMI)
     applyCurrency(doc, cfg, lookup)
     // Its 0.5c guess is under a 1c line.
     expect(matchItem(doc, jewel('Crimson Jewel', 'Jewels', 'Rare', 84)).visibility).toBe('Hide')
   })
 
-  it('a section set Off hides its jewels; below area level 68 NeverSink decides', () => {
+  it('a section set Off hides its jewels, while levelling too unless the Loot rules are maps only', () => {
     const cfg = defaultCurrency()
     cfg.on = true
     cfg.catMode = { jewabyss: 'off' }
     const doc = parseFilter(SEMI)
     applyCurrency(doc, cfg, lookup)
     expect(matchItem(doc, jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 86)).visibility).toBe('Hide')
-    const low = matchItem(doc, jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 86, { areaLevel: 40 }))
+    expect(matchItem(doc, jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 86, { areaLevel: 40 })).visibility).toBe('Hide')
+    const maps = parseFilter(SEMI)
+    applyCurrency(maps, { ...cfg, catMode: { ...cfg.catMode, lvgate: 0 as unknown as 'auto' } }, lookup)
+    const low = matchItem(maps, jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 86, { areaLevel: 40 }))
     expect(low.final?.block.type).not.toBe(CURRENCY_TYPE)
   })
 
