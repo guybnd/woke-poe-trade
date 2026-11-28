@@ -124,8 +124,8 @@ export async function playSound (id: string, volume: number, dir: string): Promi
   if (!url) return failed
   const gain = await gameGain()
   if (mine !== latest) return null
-  if (gain === 0) return 'The game\'s sound is muted (Options › Sound: Master or Item filter alert)'
   playing?.pause()
+  if (gain === 0) return 'The game\'s sound is muted (Options › Sound: Master or Item filter alert)'
   const audio = new Audio(url)
   audio.volume = Math.max(0, Math.min(1, volume / 300 * gain))
   playing = audio
