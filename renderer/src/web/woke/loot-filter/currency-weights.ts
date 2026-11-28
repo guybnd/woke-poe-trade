@@ -924,7 +924,7 @@ const mapCard = (step: CStep, rgb: number[], style: MapStyle | undefined): { bg:
   if (style === 'edge') { const bg = step === 2 ? [205, 205, 205] : [255, 255, 255]; return { bg, edge: rgb, text: [0, 0, 0] } }
   if (style === 'dark') {
     const bg = mixTo(rgb, 0, step === 4 ? 0.62 : step === 3 ? 0.8 : 0.85)
-    return { bg, edge: rgb, text: step === 4 ? [255, 255, 255] : lum(rgb) < 0.35 ? [255, 255, 255] : rgb }
+    return { bg, edge: rgb, text: step === 4 ? [255, 255, 255] : lum(rgb) < 0.45 ? [255, 255, 255] : rgb }
   }
   const bg = step === 4 ? rgb : mixTo(rgb, 255, step === 3 ? 0.3 : 0.5)
   return { bg, edge: step === 4 ? [255, 255, 255] : mixTo(rgb, 0, step === 3 ? 0.45 : 0.35), text: ink(bg) }
