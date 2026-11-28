@@ -1,9 +1,11 @@
 <template>
   <WPanel ref="panel" data-w-switches :keys="windowKeys.help" :title="config.wmTitle || 'Loot filter'" icon="wisdom" width="68rem" max-height="85vh" :scroll="false" fill :class="{ [$style.dirtyFrame]: unsaved }"
     :busy="store.loading.value && !!store.doc.value" :hotkey="config.editorHotkey ?? undefined">
-    <template #tabs>
+    <template #actions>
       <ProfileSwitcher :config="config" :store="store" />
-      <WTabs v-model="tab" :options="tabOptions" />
+    </template>
+    <template #tabs>
+      <WTabs v-model="tab" :options="tabOptions" data-goto-spot="editor-tabs" />
     </template>
     <template #toolbar>
       <WBackLink v-if="trail.length" :to="backTo" title="Back to where you were (mouse back button)" @back="goBack" />
@@ -283,31 +285,31 @@
 
     <!-- Rendered below, kept alive so Back returns to the same pile. -->
     <template v-else-if="tab === 'preview'" />
-    <PresetsTab v-else-if="tab === 'presets'" :store="store" :config="config" />
-    <GearTab v-else-if="tab === 'gear' || tab === 'ranks'" :key="tab" :store="store" :config="config" :view="tab === 'ranks' ? 'ranks' : 'table'" @open-rule="openRule" />
-    <EquipmentTab v-else-if="tab === 'weights'" :store="store" :config="config" :focus="tabFocus" @open-rule="openRule" />
     <LootTab v-else-if="tab === 'currency'" :store="store" :config="config" :focus="tabFocus" @open-rule="r => jumpTo(r.type, r.tier)" />
+    <EquipmentTab v-else-if="tab === 'weights'" :store="store" :config="config" :focus="tabFocus" @open-rule="openRule" />
+    <LookPage v-else-if="tab === 'style'" :store="store" :config="config" />
+    <!-- A filter file that isn't ours: its own rules, presets and price moves. -->
+    <PresetsTab v-else-if="tab === 'presets'" :store="store" :config="config" />
+    <GearTab v-else-if="tab === 'gear'" :store="store" :config="config" view="table" @open-rule="openRule" />
     <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" @open-loot="tab = 'currency'" />
 
-    <!-- build rules -->
-    <div v-else-if="tab === 'build'" :class="$style.changes" class="w-scroll" data-filter-build-tab>
-      <BuildSection :config="config" :store="store" :class="$style.buildBody" />
-    </div>
-
     <!-- changes -->
-    <div v-else :class="$style.changes" class="w-scroll">
+    <div v-else :class="$style.changes" class="w-scroll" data-filter-history-tab>
       <div v-if="store.problems.value.length" :class="$style.problems">
         <div v-for="(p, i) in store.problems.value.slice(0, 6)" :key="i" class="text-sm">
           <i class="fas fa-exclamation-triangle" style="color: var(--w-down);" /> {{ describeProblem(p) }}
           <WButton v-if="p.block.type && p.block.tier" size="sm" variant="ghost" @click="jumpTo(p.block.type!, p.block.tier!)">Open rule</WButton>
         </div>
       </div>
+      <div :class="$style.changeRow">
+        <i class="fas fa-bell w-dim" />
+        <WToggle :model-value="dockNotice" @update:model-value="setDockNotice">Tell me on the dock icon</WToggle>
+      </div>
       <HistoryList :store="store" data-goto-spot="history" />
       <div class="w-group-label" v-if="config.edits.length || activePriceMoves" :class="$style.historyLabel">In effect now</div>
       <div v-if="activePriceMoves" :class="$style.changeRow">
         <i class="fas fa-chart-line w-dim" />
         <span class="grow min-w-0">{{ activePriceMoves }} item{{ activePriceMoves === 1 ? '' : 's' }} moved by prices</span>
-        <WButton size="sm" variant="ghost" @click="tab = 'prices'">See them</WButton>
       </div>
       <WEmpty v-if="!config.edits.length && !activePriceMoves" icon="fas fa-pen">No changes yet. Sample an item with <WKbd v-if="config.sampleHotkey" :keys="config.sampleHotkey" /> or edit a tier here.</WEmpty>
       <div v-for="s in store.statuses.value" :key="s.edit.id" :class="[$style.changeRow, { [$style.failed]: !s.ok }]">
@@ -384,17 +386,18 @@ import ProfileSwitcher from './ProfileSwitcher.vue'
 import { useWindowKeys } from '../ui/window-keys'
 import { copyText } from '../ui/copy'
 import LabelPreview from './LabelPreview.vue'
-import BuildSection from './BuildSection.vue'
 import ItemSearchField from './ItemSearchField.vue'
 import type { SearchItem } from './item-search'
 import { itemCatalog } from './item-search'
 import type { FilterRarity, ItemFacts } from './item-facts'
-import PricesTab from './PricesTab.vue'
 import PreviewTab from './PreviewTab.vue'
+import EquipmentTab from './EquipmentTab.vue'
 import PresetsTab from './PresetsTab.vue'
 import GearTab from './GearTab.vue'
-import EquipmentTab from './EquipmentTab.vue'
+import PricesTab from './PricesTab.vue'
+import LookPage from './LookPage.vue'
 import { CURRENCY_TYPE } from './currency-settings'
+import { TURN_OFF_IDS } from './notices'
 // The Loot tab loads when opened: the price check's score card shares this
 // chunk, and the Loot tab's pages and grounds would ride along into memory.
 const LootTab = defineAsyncComponent(() => import('./LootTab.vue'))
@@ -469,8 +472,12 @@ const tabFocus = ref<string | null>(null)
 // is a lazy chunk that mounts after the next tick, so a focus cleared then
 // never reached it (Guy 2026-11-28: Go to rule opened Currency, not Gems).
 let focusTab: string | null = null
-const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'ranks' | 'weights' | 'currency' | 'prices' | 'build' | 'changes'>('rules')
-// Base ranks is a section of the Equipment tab.
+// Loot, Gear, Style, Preview and History (Guy's layout A, 2026-11-28). With
+// our own filter "rules" has no tab: it is the file's own rule list, where a
+// jump lands only when no page owns the rule. A filter file that isn't ours
+// also gets Rules, Drop tiers, Presets and Prices, which edit that file.
+const tab = ref<'rules' | 'preview' | 'currency' | 'weights' | 'style' | 'presets' | 'gear' | 'prices' | 'changes'>(props.config.ownBase === true ? 'currency' : 'rules')
+// Base ranks is a section of the Gear tab.
 function openRanks () {
   tabFocus.value = 'ranks'
   tab.value = 'weights'
@@ -528,24 +535,36 @@ function dropPick (p: { item: SearchItem, rarity: FilterRarity, facts?: ItemFact
 const targets = computed(() => props.store.doc.value && selType.value ? moveTargets(props.store.doc.value, selType.value) : [])
 const outName = computed(() => props.config.sourceName || levelsOn(props.config) ? outputName(props.config) : '—')
 
+// The dock icon's notices (prices, safety net): on or off as a set.
+const dockNotice = computed(() => !TURN_OFF_IDS.every(id => props.config.noticesOff.includes(id)))
+function setDockNotice (on: boolean) {
+  props.config.noticesOff = on
+    ? props.config.noticesOff.filter(id => !TURN_OFF_IDS.includes(id))
+    : [...new Set([...props.config.noticesOff, ...TURN_OFF_IDS])]
+}
+
 // Stored moves only count while re-tiering is on: otherwise they aren't applied.
 const activePriceMoves = computed(() => props.config.priceTiers.on ? livePriceMoves(props.config.priceTiers.moves).length : 0)
 
+const ours = computed(() => props.config.ownBase === true)
 const tabOptions = computed(() => [
-  { value: 'rules', label: 'Rules' },
-  // Gear: two screens of their own, what shows (by rank and drop tier) and which bases sit in which rank.
-  { value: 'gear', label: 'Drop tiers', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear shows, by rank, rarity and drop tier' },
-  // Beta: shown with the experimental tools, or while this profile uses it.
-  { value: 'weights', label: 'Equipment', count: props.config.presets.weights.on ? '✓' : undefined, title: 'Decide endgame rares and flasks by a score you tune' },
-  { value: 'currency', label: 'Loot', count: props.config.presets.currency.on ? '✓' : undefined, title: 'Show endgame loot by what it is worth, class by class' },
+  { value: 'currency', label: 'Loot', title: 'Everything that drops, by what it is worth, with your own rules first' },
+  { value: 'weights', label: 'Gear', title: 'Rare gear, flasks and tinctures by a score you tune, base ranks and special gear' },
+  { value: 'style', label: 'Style', title: 'The look and sound of the whole filter' },
+  ...(ours.value
+    ? []
+    : [
+        { value: 'rules', label: 'Rules', title: 'This filter file\'s own rules' },
+        { value: 'gear', label: 'Drop tiers', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear shows, by rank, rarity and drop tier' },
+        { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && k !== 'weights' && k !== 'currency' && k !== 'clusterPrices' && x.on).length || undefined },
+        { value: 'prices', label: 'Prices', count: props.store.plan.value?.moves.length || undefined }
+      ]),
   { value: 'preview', label: 'Preview' },
-  // The look strip lives on Rules, so it isn't counted here.
-  { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && k !== 'weights' && k !== 'currency' && k !== 'clusterPrices' && x.on).length || undefined },
-  { value: 'prices', label: 'Prices', count: props.store.plan.value?.moves.length || undefined },
-  { value: 'build', label: 'Build', count: props.store.buildBlockCount.value || undefined },
   // Price moves are changes to your filter too.
-  { value: 'changes', label: 'Changes', count: props.config.edits.length + activePriceMoves.value }
+  { value: 'changes', label: 'History', count: props.config.edits.length + activePriceMoves.value }
 ])
+// Back to Loot when the profile switches to our own filter on a file's tab.
+watch(ours, o => { if (o && (tab.value === 'rules' || tab.value === 'presets' || tab.value === 'gear' || tab.value === 'prices')) tab.value = 'currency' })
 
 // Online filters are keyed "online:<id>" in the picker; GitHub is "github",
 // our own filter "own".
@@ -1024,14 +1043,15 @@ function goTo (type: string, t: string, base?: string) {
 
 watch(() => props.focus, (f) => {
   if (!f) return
-  // The Drop tiers table's own rules live on that tab, not in the rule list.
-  if (f.type === GEAR_TYPE) { tab.value = 'gear'; return }
-  if (f.type === WEIGHT_TYPE || f.type === CURRENCY_TYPE) {
-    // The rule's tier says which class of the tab to open (Alt+F's "Open on
-    // the Loot tab"); once, so opening the tab later starts where it always does.
-    tabFocus.value = f.tier || null
-    // Special gear's rows are on the Equipment tab (Guy's pick B).
-    tab.value = f.type === WEIGHT_TYPE || /^cat:sg[a-z]+:/.test(f.tier ?? '') ? 'weights' : 'currency'
+  // The Drop tiers table's own rules live on that tab, while it has one.
+  if (f.type === GEAR_TYPE && !ours.value) { tab.value = 'gear'; return }
+  if (f.type === GEAR_TYPE || f.type === WEIGHT_TYPE || f.type === CURRENCY_TYPE) {
+    // The rule's tier says which page to open (Alt+F's "Open on the Loot
+    // tab"); once, so opening the tab later starts where it always does. The
+    // old Drop tiers table's rules open on Rare gear; special gear's rows are
+    // on the Gear tab (Guy's pick B).
+    tabFocus.value = f.type === GEAR_TYPE ? 'rares' : f.tier || null
+    tab.value = f.type === CURRENCY_TYPE && !/^cat:sg[a-z]+:/.test(f.tier ?? '') ? 'currency' : 'weights'
     focusTab = tab.value
     return
   }
@@ -1042,9 +1062,15 @@ watch(tab, t => { if (focusTab && t !== focusTab) { focusTab = null; tabFocus.va
 
 watch(() => props.openTab, (t) => {
   if (!t) return
-  if (t.tab === 'weights') {
-    // Rare gear (What's new "Show me"), whichever Equipment section was open.
+  if (t.tab === 'weights' || (t.tab === 'gear' && ours.value)) {
+    // Rare gear (What's new "Show me"), whichever Gear section was open; with
+    // our own filter there's no Drop tiers table, so its spots land here too.
     tabFocus.value = 'rares'; tab.value = 'weights'; nextTick(() => { tabFocus.value = null }).catch(() => {})
+    emit('tab-opened')
+    return
+  }
+  if (t.tab === 'prices' && ours.value) {
+    tab.value = 'currency'
     emit('tab-opened')
     return
   }

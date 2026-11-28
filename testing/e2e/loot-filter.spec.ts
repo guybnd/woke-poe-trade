@@ -230,7 +230,7 @@ test('history: a change shows before and after, a dot resets it, Ctrl + Z and th
   await slider.dispatchEvent('change')
   await page.waitForTimeout(700)
 
-  await page.getByRole('tab', { name: /^Changes/ }).click()
+  await page.getByRole('tab', { name: /^History/ }).click()
   await expect(page.getByText(new RegExp(`Tier 1: font size ${start} → 20`)).first()).toBeVisible()
   await overlay.snap('history')
   await page.getByRole('button', { name: 'Undo', exact: true }).first().click()
@@ -259,7 +259,7 @@ test('history: a Loot tab change says what moved and on which item, and opens to
   await expect(star).toHaveAttribute('aria-pressed', 'true')
   await page.waitForTimeout(700)
 
-  await page.getByRole('tab', { name: /^Changes/ }).click()
+  await page.getByRole('tab', { name: /^History/ }).click()
   const row = page.locator('[data-history-row]').first()
   await expect(row).toContainText(`${card} · Collecting (at least Normal)`)
   await expect(page.getByText('Changed currency weights')).toHaveCount(0)
@@ -698,7 +698,7 @@ test('dock card: its button goes straight to the notice\'s tab, without the over
   const box = (await review.boundingBox())!
   await overlay.moveMouse(Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2))
   await review.click()
-  await expect(page.getByRole('tab', { name: /^Changes/ })).toHaveAttribute('aria-selected', 'true', { timeout: 5000 })
+  await expect(page.getByRole('tab', { name: /^History/ })).toHaveAttribute('aria-selected', 'true', { timeout: 5000 })
   await expect.poll(() => fakeApp.game.focused).toBe(false)
   await expect(review).toHaveCount(0)
   fakeApp.focusGame(true) // Tests in a file share the fake game.
@@ -716,7 +716,7 @@ test('dock icon: a click goes straight to the first notice\'s tab', async ({ ove
   }).toPass({ timeout: 30_000 })
   await overlay.moveMouse(1000, 900)
   await overlay.restAndClickDockIcon('loot-filter')
-  await expect(page.getByRole('tab', { name: /^Changes/ })).toHaveAttribute('aria-selected', 'true', { timeout: 5000 })
+  await expect(page.getByRole('tab', { name: /^History/ })).toHaveAttribute('aria-selected', 'true', { timeout: 5000 })
   await expect.poll(() => fakeApp.game.focused).toBe(false)
   fakeApp.focusGame(true) // Tests in a file share the fake game.
 })
@@ -814,10 +814,10 @@ test('stack sizes: type a number or drag a line, the bar follows and the file ch
   await expect(scale.getByRole('slider').first()).toHaveAttribute('aria-valuenow', '3000')
   await field.fill('4000')
   await field.blur()
-  await expect(page.getByRole('tab', { name: /^Changes/ })).toContainText('0')
+  await expect(page.getByRole('tab', { name: /^History/ })).toContainText('0')
   await field.fill('3000')
   await field.blur()
-  await expect(page.getByRole('tab', { name: /^Changes/ })).toContainText('1')
+  await expect(page.getByRole('tab', { name: /^History/ })).toContainText('1')
 
   // Dragging stops at its neighbour, and the number follows.
   const line = scale.getByRole('slider').first()
@@ -829,7 +829,7 @@ test('stack sizes: type a number or drag a line, the bar follows and the file ch
   await expect(field).toHaveValue('501')
 
   // The Changes tab says what happened.
-  await page.getByRole('tab', { name: /^Changes/ }).click()
+  await page.getByRole('tab', { name: /^History/ }).click()
   await expect(page.getByText(/stacks of 501 or more/).first()).toBeVisible()
 
   // Gold's piles get the same bar.
@@ -957,7 +957,7 @@ test('ladder: maps read by tier, border rules are marks, a band changes all its 
   await page.getByText('T11–13', { exact: true }).click()
   await expect(page.getByText(/Changes here go to all 3 tiers/)).toBeVisible()
   await page.getByRole('button', { name: 'Hidden', exact: true }).nth(1).click()
-  await expect(page.getByRole('tab', { name: /^Changes/ })).toContainText('3')
+  await expect(page.getByRole('tab', { name: /^History/ })).toContainText('3')
   await page.getByRole('button', { name: /Save \+ reload/ }).click()
   const out = path.join(folder, 'NeverSink (woke).filter')
   await expect.poll(() => fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : '').toMatch(/^Show[^\n]*\$tier->maps_b_t12/m)
@@ -1062,8 +1062,8 @@ test('prices: Apply only stages the moves; Save + reload writes them once', asyn
 // A window made taller than a tab's usual height: the tab's list fills it, no
 // blank band under it (Prices drew a few rows, then empty floor). A window
 // never resized keeps a short tab short.
-// The Build tab's list (a short tab, whatever build is active).
-const buildGap = (page: Overlay['page']) => page.locator('[data-filter-build-tab]').evaluate(list => {
+// The History tab's list (a short tab with no changes yet).
+const buildGap = (page: Overlay['page']) => page.locator('[data-filter-history-tab]').evaluate(list => {
   const body = list.parentElement!
   return Math.round(body.getBoundingClientRect().bottom - list.getBoundingClientRect().bottom)
 })
@@ -1081,7 +1081,7 @@ test('prices: a taller window, the list fills it to the bottom', async ({ overla
   await expect(page.getByRole('switch', { name: /Re-tier from poe.ninja prices/ })).toBeVisible()
   await expect.poll(() => tabGap(page, 'Re-tier from poe.ninja prices')).toBeLessThan(4)
   await overlay.snap('prices tab in a tall window')
-  await page.getByRole('tab', { name: /^Build/ }).click()
+  await page.getByRole('tab', { name: /^History/ }).click()
   await expect.poll(() => buildGap(page)).toBeLessThan(4)
 })
 
@@ -1089,13 +1089,13 @@ test('a window never resized keeps a short tab short', async ({ overlay, fakeApp
   await overlay.boot({ widgets: [lootFilter(filterFolder())] })
   await openEditor(overlay, fakeApp)
   const page = overlay.page
-  await page.getByRole('tab', { name: /^Build/ }).click()
-  await expect(page.locator('[data-filter-build-tab]')).toBeVisible()
-  // The build section, the same as on Loot › Levelling.
-  await expect(page.locator('[data-filter-build-tab] [data-levelling-build]')).toBeVisible()
+  await page.getByRole('tab', { name: /^History/ }).click()
+  await expect(page.locator('[data-filter-history-tab]')).toBeVisible()
   expect(await buildGap(page)).toBeLessThan(4)
-  const panel = (await page.locator('[data-w-panel]').filter({ has: page.locator('[data-filter-build-tab]') }).first().boundingBox())!
-  expect(panel.height).toBeLessThan(500)
+  const panel = (await page.locator('[data-w-panel]').filter({ has: page.locator('[data-filter-history-tab]') }).first().boundingBox())!
+  // Its own rows' height, not stretched to the window's 85vh.
+  const vh = page.viewportSize()!.height
+  expect(panel.height).toBeLessThan(vh * 0.85 - 40)
 })
 
 test('prices: kept items list under Not moved, unlock in bulk, and both steps undo', async ({ overlay, fakeApp }) => {
@@ -1283,9 +1283,10 @@ test('profiles: copy the filter as a named profile that saves to its own file, a
   await overlay.boot({ widgets: [lootFilter(folder)] })
   await openEditor(overlay, fakeApp)
   const page = overlay.page
-  const first = page.getByRole('tab', { name: 'Profile NeverSink', exact: true })
-  await expect(first).toHaveAttribute('aria-selected', 'true', { timeout: 20_000 })
-  await page.getByRole('button', { name: 'New profile' }).click()
+  // One chip in the title bar (Guy's P1): the profile in use, and a menu.
+  const chip = page.locator('[data-profile-chip]')
+  await expect(chip).toHaveText(/NeverSink/, { timeout: 20_000 })
+  await chip.click()
   await expect(page.getByText('Copy of “NeverSink”')).toBeVisible()
   // The menu fades in.
   await page.waitForTimeout(600)
@@ -1295,17 +1296,15 @@ test('profiles: copy the filter as a named profile that saves to its own file, a
   await name.fill('Bossing')
   await overlay.snap('naming a new profile')
   await page.getByRole('button', { name: 'Add', exact: true }).click()
-  const boss = page.getByRole('tab', { name: 'Profile Bossing', exact: true })
-  await expect(boss).toHaveAttribute('aria-selected', 'true', { timeout: 20_000 })
+  await expect(chip).toHaveText(/Bossing/, { timeout: 20_000 })
   await expect.poll(() => fs.existsSync(path.join(folder, 'Bossing (woke).filter')), { timeout: 20_000 }).toBe(true)
   await overlay.snap('switched to Bossing')
-  await boss.click({ button: 'right' })
-  await expect(page.getByText('Rename', { exact: true })).toBeVisible()
+  await chip.click()
+  await expect(page.getByText('Rename “Bossing”')).toBeVisible()
   await page.waitForTimeout(600)
-  await overlay.snap('profile tab menu')
-  await page.keyboard.press('Escape')
-  await first.click()
-  await expect(first).toHaveAttribute('aria-selected', 'true', { timeout: 20_000 })
+  await overlay.snap('profile menu')
+  await page.getByText('NeverSink', { exact: true }).click()
+  await expect(chip).toHaveText(/NeverSink/, { timeout: 20_000 })
   await expect.poll(() => fs.existsSync(path.join(folder, 'NeverSink (woke).filter')), { timeout: 20_000 }).toBe(true)
 })
 
@@ -1316,8 +1315,8 @@ test('Base ranks: drag a base, then the picked set, onto another column', async 
   await overlay.boot({ widgets: [lootFilter(folder)] })
   await openEditor(overlay, fakeApp)
   const page = overlay.page
-  // Base ranks is a section of the Equipment tab.
-  await page.getByRole('tab', { name: /^Equipment/ }).click()
+  // Base ranks is a section of the Gear tab.
+  await page.getByRole('tab', { name: /^Gear/ }).click()
   await page.locator('[data-equip-class="ranks"]').click()
   const lane = (key: string) => page.locator(`[data-lane="${key}"]`)
   const cards = (key: string) => lane(key).locator('button[draggable="true"]')
@@ -1864,6 +1863,16 @@ test('our own filter: no file needed, strictness on the Loot tab, saved as our f
   await expect(page.locator('[data-loot-strictness]')).toBeVisible()
   await expect(page.locator('[data-loot-strict-maps]')).toBeVisible()
   await expect(page.getByRole('tab', { name: /^NeverSink/ })).toHaveCount(0)
+  // Our own filter's window: Loot, Gear, Style, Preview and History, no file tabs.
+  await expect(page.getByRole('tab')).toHaveText([/^Loot/, /^Gear/, /^Style/, /^Preview/, /^History/])
+  await expect(page.locator('[data-loot-class="own"]')).toBeVisible()
+  await overlay.snap('our own filter window')
+  await page.getByRole('tab', { name: /^Style/ }).click()
+  await expect(page.locator('[data-loot-look]')).toBeVisible()
+  await overlay.snap('style tab')
+  await page.getByRole('tab', { name: /^Loot/ }).click()
+  await page.locator('[data-loot-class="own"]').click()
+  await expect(page.locator('[data-own-rules]')).toBeVisible()
   await page.getByRole('button', { name: /^Save/ }).click()
   await expect.poll(() => fs.existsSync(path.join(folder, 'Loot filter (woke).filter')), { timeout: 20_000 }).toBe(true)
   const text = fs.readFileSync(path.join(folder, 'Loot filter (woke).filter'), 'utf8')
