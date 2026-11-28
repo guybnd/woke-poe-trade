@@ -13,7 +13,7 @@
 // Price check chip: what your loot filter does with the checked item, shown
 // only when it matters (hidden, or a valuable item with a small label). Its
 // Fix menu goes to the rule in the editor, or makes the change here.
-import { computed } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
 import { ItemRarity } from '@/parser'
 import type { ParsedItem } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
@@ -30,6 +30,8 @@ import { SAFETY_LOOK, SAFETY_RULE_TYPE } from './safety'
 import { ruleLabel } from './parse'
 import { openRuleInEditor } from './open-rule'
 import type { RuleRef } from './open-rule'
+import { CURRENCY_TYPE } from './currency-settings'
+import type { LootPlace } from './loot-place'
 
 const props = defineProps<{ item: ParsedItem }>()
 const active = useActiveFilter()
@@ -52,20 +54,38 @@ interface Verdict {
   fix?: { label: string, run: () => void }
 }
 
-const verdict = computed<Verdict | null>(() => {
+const matched = computed(() => {
   const store = active.value
   const doc = store?.doc.value
   if (!store || !doc || props.item.rawText === 'VIRTUAL_ITEM' || props.item.rollsFromData) return null
   const facts = checkedItemFacts(doc, props.item.rawText, props.item)
-  const m = matchItem(doc, { ...facts, areaLevel: store.areaLevel.value ?? store.config.fallbackAreaLevel })
+  const at = { ...facts, areaLevel: store.areaLevel.value ?? store.config.fallbackAreaLevel }
+  return { store, facts: at, m: matchItem(doc, at) }
+})
+// A Loot tab step rule is named by the item's section and opens its row
+// (loot-place.ts, loaded only for those).
+const place = shallowRef<LootPlace | null>(null)
+watch(matched, (x) => {
+  const b = x?.m.final?.block
+  if (!x || b?.type !== CURRENCY_TYPE || !/^s[0-5]$/.test(b.tier ?? '')) { place.value = null; return }
+  import('./loot-place').then(({ lootPlaceOf }) => {
+    if (matched.value === x) place.value = lootPlaceOf(x.store, x.facts, b)
+  }).catch(() => { place.value = null })
+}, { immediate: true })
+
+const verdict = computed<Verdict | null>(() => {
+  const x = matched.value
+  if (!x) return null
+  const { store, facts, m } = x
   const b = m.final?.block
-  const where = ruleLabel(b?.type ?? null, b?.tier ?? null)
+  const p = place.value
+  const where = p?.label ?? ruleLabel(b?.type ?? null, b?.tier ?? null)
   const price = chaos.value
   const line = store.config.safetyNet.minChaos
   const base = facts.baseType
   const unique = props.item.rarity === ItemRarity.Unique
   const canOwn = Boolean(base && b?.type && b.tier && !b.type.startsWith('woke->'))
-  const rule = b?.type && b.tier && !b.tier.startsWith('#') ? { type: b.type, tier: b.tier } : undefined
+  const rule = p ? { type: CURRENCY_TYPE, tier: `cat:${p.cat}:${p.name}` } : b?.type && b.tier && !b.tier.startsWith('#') ? { type: b.type, tier: b.tier } : undefined
   const own = (visibility: 'Show' | 'Hide', patch: StylePatch, text: string) => () => {
     const undo = store.editWithUndo({ kind: 'item', type: b!.type!, tier: b!.tier!, base: base!, visibility, patch, anchor: conditionSignature(b!), pin: visibility === 'Show' })
     store.save()

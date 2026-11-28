@@ -4,6 +4,7 @@
 // Off: a mechanic you don't run goes away in maps in one click.
 import type { FilterCondition } from './parse'
 import type { LootCategory } from './fragment-classes'
+import type { SectionMode } from './currency-settings'
 
 const cond = (key: string, op: string, values: string[]): FilterCondition => ({ key, op, count: null, values } as FilterCondition)
 
@@ -37,6 +38,10 @@ export const LEAGUE_CATEGORIES: LootCategory[] = [
   { id: 'lgmerc', name: 'Mercenary warrants', art: 'Mercenary Warrant' }
 ]
 export const LEAGUE_IDS = new Set(LEAGUE_CATEGORIES.map(x => x.id))
+
+// Always by default (Guy, 2026-11-28): one drop a run, from an encounter you
+// chose to do, not ground litter, so price only lifts them above Small.
+export const LEAGUE_MODES: Record<string, SectionMode> = { lgchron: 'always', lgviscera: 'always', lgkeys: 'always', lgult: 'always', lgmerc: 'always', lgexped: 'always' }
 
 export const LEAGUE_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
   lgexped: { text: [220, 170, 120], color: 'Orange', shape: 'Kite' },

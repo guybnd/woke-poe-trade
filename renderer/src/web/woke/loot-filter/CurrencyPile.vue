@@ -75,6 +75,11 @@ const picks = computed(() => {
     const stack = it.full > 1 && it.chaos < 20 ? Math.max(1, Math.round(Math.pow(r(), 2.2) * Math.min(it.full, 40))) : 1
     out.push({ id: k, it, stack })
   }
+  // A chase base always lies in the pile, so its look shows (Guy 2026-11-28).
+  const chase = pool.filter(i => i.cat === 'uniqchase')
+  if (chase.length && out.length && !out.some(p => p.it.cat === 'uniqchase')) {
+    out[out.length - 1] = { id: out.length - 1, it: chase[Math.floor(r() * chase.length)], stack: 1 }
+  }
   return out
 })
 
