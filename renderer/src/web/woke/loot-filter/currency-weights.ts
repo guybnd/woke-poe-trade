@@ -303,6 +303,11 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   }
   if (gems?.length) {
     const names = new Set(gems.map(g => g.name))
+    // A thin band (poe.ninja had no price most days) is often a few hand-set
+    // listings: "More Duration Support 21/23c" at 150 div (Guy 2026-11-28).
+    // It counts at most 3× the gem's most valuable solid band, when it has one.
+    const solid = new Map<string, number>()
+    for (const g of gems) if (!g.thin && g.chaos > 0) solid.set(g.name, Math.max(solid.get(g.name) ?? 0, g.chaos))
     for (const g of gems) {
       const band = gemBand(g.variant)
       const name = `${g.name} ${g.variant}`
@@ -321,7 +326,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         type: 'gems',
         tier: null,
         cat,
-        chaos: (own ?? g.chaos) * (edits[name]?.mult ?? 1),
+        chaos: (own ?? (g.thin && solid.has(g.name) ? Math.min(g.chaos, solid.get(g.name)! * 3) : g.chaos)) * (edits[name]?.mult ?? 1),
         est: own == null && g.thin,
         ...(own != null ? { own: true } : {}),
         full: 1,

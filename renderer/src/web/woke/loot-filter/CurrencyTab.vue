@@ -51,7 +51,8 @@
         @patch="p => setStepLook(stepEdit!, { ...c.steps[stepEdit!], ...loudOnly(p) })" />
     </div>
 
-    <CurrencyPile v-if="baseItems.length" :items="items" :cfg="eff" :faint="faintActive" @go="goTo" />
+    <MapsPile v-if="kind === 'maps'" :doc="store.doc.value" :priced="pricedNames" @go="goTo" />
+    <CurrencyPile v-else-if="baseItems.length" :items="items" :cfg="eff" :faint="faintActive" @go="goTo" />
 
     <div :class="$style.tools">
       <input v-model="query" type="search" placeholder="Find an item" :class="$style.search" aria-label="Find an item">
@@ -117,7 +118,7 @@
         <template v-for="r in (sg.name && !isOpen(`${g.cat.id}/${sg.name}`) ? [] : sg.rows)" :key="r.it.name">
           <WItemRow :item="r.it.top ? { name: r.it.top, type: r.it.name } : { name: r.it.bt ?? r.it.name }" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
             <span :class="$style.name"><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
-              :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ r.it.name }}<span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.edited" :class="$style.edited"> edited</span></span>
+              :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ rowName(r.it) }}<span v-if="gemCorrupted(r.it)" :class="$style.corr" title="Corrupted: this price is for a corrupted gem of this level and quality"><WIcon currency="Vaal Orb" size="sm" />Corrupted</span><span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.edited" :class="$style.edited"> edited</span></span>
             <span :class="$style.price" :title="r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows at least Small' : r.it.est ? `No usable price: a guess from NeverSink's ${r.it.tier ? `tier ${r.it.tier}` : 'tiers'}` : 'poe.ninja'">
               {{ chaosText(r.it.chaos) }}<span v-if="r.it.est" :class="$style.est"> est.</span>
             </span>
@@ -141,6 +142,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { WButton, WChip, WIcon, WInfo, WItemRow, WSegmented, WToggle } from '../ui'
 import CurrencyPile from './CurrencyPile.vue'
+import MapsPile from './MapsPile.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import LabelPreview from './LabelPreview.vue'
 import StyleEditor from './StyleEditor.vue'
@@ -153,7 +155,7 @@ import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, cu
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
-import { gemLinesOf } from './gem-classes'
+import { gemBand, gemLinesOf } from './gem-classes'
 
 const props = withDefaults(defineProps<{
   store: LootFilterStore
@@ -198,6 +200,17 @@ const baseByName = computed(() => new Map(baseItems.value.map(i => [i.name, i]))
 const baseChaos = (name: string) => baseByName.value.get(name)?.chaos ?? 0
 // With your own prices on top.
 const items = computed<CurrencyItem[]>(() => baseItems.value.map(it => withEdit(it, c.value.items[it.name])))
+// The Maps page's ground opens a priced map (a blighted tier) on click.
+const pricedNames = computed(() => new Set(baseItems.value.map(it => it.name)))
+// A gem row: "Eclipse Support 4/23", with a Corrupted mark instead of a bare "c".
+const gemVariant = (it: CurrencyItem) => it.type === 'gems' && it.bt && it.name.startsWith(`${it.bt} `) ? it.name.slice(it.bt.length + 1) : null
+function gemCorrupted (it: CurrencyItem): boolean {
+  const v = gemVariant(it)
+  return v != null && gemBand(v)?.corrupted === true
+}
+function rowName (it: CurrencyItem): string {
+  return gemCorrupted(it) ? it.name.replace(/c$/, '') : it.name
+}
 
 // Every section: Off / Weighted / Always (Guy 2026-11-27).
 const SECTION_MODES = [{ value: 'off', label: 'Off' }, { value: 'auto', label: 'Weighted' }, { value: 'always', label: 'Always' }]
@@ -499,6 +512,8 @@ function chaosText (v: number): string {
 .pill { font-size: var(--w-fs-xs); padding: 0 5px; border-radius: 2px; line-height: 1.5; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .edited { color: var(--w-accent, #c8a565); font-size: var(--w-fs-xs); }
 .uniqTop { color: #af6025; font-size: var(--w-fs-xs); }
+.corr { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; color: #d26b6b; font-size: var(--w-fs-xs); vertical-align: middle; }
+.corr :global(img) { width: 14px; height: 14px; }
 .pen { font-size: var(--w-fs-xs); }
 .star { background: none; border: 0; padding: 0 5px 0 0; color: var(--w-faint); cursor: pointer; font-size: var(--w-fs-xs); }
 .star:hover { color: #e8c96a; }
