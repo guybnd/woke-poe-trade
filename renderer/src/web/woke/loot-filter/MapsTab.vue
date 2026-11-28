@@ -1,10 +1,11 @@
 <template>
   <!-- Normal maps on the Loot tab (Guy's Maps A, 2026-11-27): one slider.
-       Blighted and blight-ravaged maps are priced below it (M1). -->
+       Special maps (endgame, guardian, Originator, content mods, corrupted,
+       blighted) have their own folds below it (2026-11-28). -->
   <div :class="$style.wrap" data-loot-maps>
     <div :class="$style.bar" data-loot-map-from>
       <span :class="$style.lab">Show normal maps from</span>
-      <WInfo text="Normal maps are almost all worth under a chaos, so they show by tier instead of price: maps under the tier you pick hide. Blighted and blight-ravaged maps are priced by tier below. Unique, Valdo, Originator, influenced, 8-mod and corrupted-implicit maps still show the way NeverSink shows them." />
+      <WInfo text="Normal maps are almost all worth under a chaos, so they show by tier instead of price: maps under the tier you pick hide. Special maps have folds below: Endgame, Guardian and Citadel, and Blighted maps are priced by poe.ninja; Originator, Content mods and Corrupted have no price anywhere, so they start from a guess (est.) and you set the step or price. A guess under the line never hides a map: NeverSink shows it as before. Unique and Valdo maps stay with Uniques and NeverSink." />
       <input type="range" min="1" max="16" step="1" :value="drag ?? c.mapFrom" :class="$style.range" aria-label="Show maps from tier"
         @input="drag = Number(($event.target as HTMLInputElement).value)"
         @change="c.mapFrom = Number(($event.target as HTMLInputElement).value); drag = null">

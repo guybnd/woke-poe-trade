@@ -7,7 +7,7 @@
       <b :class="$style.title">On the ground</b>
       <WButton size="sm" variant="ghost" icon="fas fa-dice" @click="seed++">Drop a new pile</WButton>
       <WChip clickable :active="ghosts" @click="ghosts = !ghosts">Show hidden, struck through</WChip>
-      <span class="w-dim text-xs w-num">{{ hiddenCount }} of {{ drops.length }} hidden · hover a label for the map, click a priced one to open it</span>
+      <span class="w-dim text-xs w-num">{{ hiddenCount }} of {{ drops.length }} hidden · click a special map to open its row</span>
     </div>
     <div ref="groundEl" :class="$style.ground" :style="{ height: `${placed.height}px` }" data-maps-pile>
       <template v-for="d in placed.list" :key="'b' + d.id">
@@ -41,7 +41,7 @@ import type { FilterDoc } from './parse'
 
 const props = defineProps<{
   doc: FilterDoc | null
-  // Names of the priced map items (blighted tiers), to open on click.
+  // Names of the Maps page's rows, to open one on click.
   priced: Set<string>
 }>()
 const emit = defineEmits<{ go: [name: string] }>()

@@ -28,7 +28,7 @@ import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
 import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
-import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK } from './map-classes'
+import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK, SPECIAL_MAPS, SPECIAL_MAP_CATS } from './map-classes'
 import type { GemBand, GemLine } from './gem-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
 import type { CStep, CurrencySettings, ItemEdit, SectionMode } from './currency-settings'
@@ -149,6 +149,8 @@ export interface CurrencyItem {
   // A gem band: the gem's name (BaseType) and its level, quality and
   // corruption conditions; `name` is the band ("Arc 20/20").
   bt?: string
+  // Several BaseTypes (a special map of any tier); `bt` is the one its tooltip shows.
+  bts?: string[]
   conds?: FilterCondition[]
 }
 
@@ -407,6 +409,31 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
           conds: [c(k.cond, '', ['True'])]
         })
       }
+    }
+  }
+  // Special maps (Guy 2026-11-28): endgame and guardian maps priced by
+  // poe.ninja, the rest from a guess.
+  if (lookup && doc.blocks.some(b => b.type?.startsWith('maps'))) {
+    const group: EconomyGroup = { type: 'maps', label: 'Maps', ninja: ['Map'] }
+    for (const m of SPECIAL_MAPS) {
+      const prices = (m.ninja ?? []).map(n => lookup(group, n)).filter((p): p is NonNullable<typeof p> => !!p && p.chaos > 0)
+      if (m.ninja && !prices.length) continue
+      const p = prices.length ? prices.reduce((a, b) => (b.chaos < a.chaos ? b : a)) : null
+      const own = edits[m.name]?.price
+      seen.set(m.name, {
+        name: m.name,
+        cls: 'Maps',
+        type: 'maps',
+        tier: null,
+        cat: m.cat,
+        chaos: (own ?? p?.chaos ?? m.guess ?? 1) * (edits[m.name]?.mult ?? 1),
+        est: own == null && (!p || p.thin || Boolean(p.day1)),
+        ...(own != null ? { own: true } : {}),
+        full: 1,
+        bt: m.bts[m.bts.length - 1],
+        bts: m.bts,
+        conds: m.conds.map(x => ({ ...x, values: [...x.values] }))
+      })
     }
   }
   return [...seen.values()]
@@ -673,7 +700,7 @@ export function divineChaos (items: CurrencyItem[]): number {
 
 export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], opts: { faint?: boolean, floors?: FilterBlock[] } = {}): CurrencyCompiled {
   const blocks: FilterBlock[] = []
-  const bts = (list: CurrencyItem[]) => [...new Set(list.map(i => i.bt ?? i.name))].sort()
+  const bts = (list: CurrencyItem[]) => [...new Set(list.flatMap(i => i.bts ?? [i.bt ?? i.name]))].sort()
   const stacks = new Map(items.map(it => [it.name, stacksFor(it, cfg)]))
   const area = c('AreaLevel', '>=', [68])
   const clsCond = (list: CurrencyItem[]) => list[0]?.cls === UNIQUE_CLS ? c('Rarity', '', ['Unique']) : c('Class', '==', [...new Set(list.flatMap(i => i.cls.split('|')))].sort())
@@ -807,12 +834,37 @@ function insertBlocks (doc: FilterDoc, at: number, blocks: FilterBlock[]) {
 // UberBlightedMap condition and never touches plain maps of those tiers.
 function applySpecialMaps (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
   if (!items.length) return null
+  const out: CurrencyCompiled[] = []
   const anchor = doc.blocks.find(b => b.type === BLIGHT_TYPE)
-  if (!anchor) return null
-  const parts = MAP_KINDS.map(k => items.filter(it => it.cat === k.cat)).filter(l => l.length).map(l => compileCurrency(cfg, l, { faint }))
-  const blocks = parts.flatMap(x => x.blocks)
-  insertBlocks(doc, doc.chunks.indexOf(anchor), blocks)
-  return { blocks, items, chars: parts.reduce((n, x) => n + x.chars, 0) }
+  if (anchor) {
+    const parts = MAP_KINDS.map(k => items.filter(it => it.cat === k.cat)).filter(l => l.length).map(l => compileCurrency(cfg, l, { faint }))
+    insertBlocks(doc, doc.chunks.indexOf(anchor), parts.flatMap(x => x.blocks))
+    out.push(...parts)
+  }
+  // The special map folds go above NeverSink's first map rule (its
+  // Originator and influenced maps). One compile per item, so each rule, the
+  // line's and Faint's too, keeps that item's own conditions and never
+  // touches plain maps. Loudest first: a map that is two kinds at once (an
+  // Originator map with a Mirage) gets the louder one.
+  const special = items.filter(it => SPECIAL_MAP_CATS.has(it.cat))
+  const first = doc.blocks.find(b => b.type?.startsWith('maps'))
+  if (special.length && first) {
+    // A guessed price never hides a map: under the line it falls through to
+    // NeverSink's rules (a corrupted-implicit T16 still shows as a T16).
+    // Only a section or item set Off by hand hides it.
+    const guessed = (it: CurrencyItem) => it.est && !it.own
+    const parts = special.map(it => {
+      const x = compileCurrency(cfg, [it], { faint })
+      return guessed(it) && !forcedHidden(it, cfg) ? { ...x, blocks: x.blocks.filter(b => b.tier !== 'faint' && !b.comment.endsWith(': under the line')) } : x
+    })
+    const blocks = parts.flatMap(x => x.blocks)
+    const shown = blocks.filter(b => b.visibility === 'Show' && b.tier !== 'faint').sort((x, y) => Number(y.tier?.slice(1) ?? 0) - Number(x.tier?.slice(1) ?? 0))
+    const rest = blocks.filter(b => !shown.includes(b))
+    insertBlocks(doc, doc.chunks.indexOf(first), [...shown, ...rest])
+    out.push(...parts)
+  }
+  if (!out.length) return null
+  return { blocks: out.flatMap(x => x.blocks), items, chars: out.reduce((n, x) => n + x.chars, 0) }
 }
 
 // Special unique rolls go just above NeverSink's own special rules, one

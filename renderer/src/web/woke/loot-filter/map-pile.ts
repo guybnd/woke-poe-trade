@@ -52,31 +52,31 @@ const anyRarity = (r: () => number): FilterRarity => RARITIES[Math.floor(r() * R
 const plain = (t: number) => `Map (Tier ${t})`
 
 // Rare-only content mods NeverSink looks for (its exoticmod rules).
-const CONTENT_MODS: Array<{ mod: string, tag: string }> = [
-  { mod: 'of Zarokh', tag: 'Mirage' },
-  { mod: 'of the Woods', tag: 'Wildwood' },
-  { mod: 'of Unearthed Technology', tag: 'Sentinel' },
-  { mod: 'of Insanity', tag: 'Delirium mirror' },
-  { mod: 'of Beidat', tag: 'Beidat' },
-  { mod: "of K'Tash", tag: "K'Tash" },
-  { mod: 'of Ghorr', tag: 'Ghorr' }
+const CONTENT_MODS: Array<{ mod: string, tag: string, row: string }> = [
+  { mod: 'of Zarokh', tag: 'Mirage', row: 'Mirage (of Zarokh)' },
+  { mod: 'of the Woods', tag: 'Wildwood', row: 'Wildwood (of the Woods)' },
+  { mod: 'of Unearthed Technology', tag: 'Sentinel', row: 'Sentinel (of Unearthed Technology)' },
+  { mod: 'of Insanity', tag: 'Delirium mirror', row: 'Delirium mirror (of Insanity)' },
+  { mod: 'of Beidat', tag: 'Beidat', row: "Beidat, Ghorr or K'Tash" },
+  { mod: "of K'Tash", tag: "K'Tash", row: "Beidat, Ghorr or K'Tash" },
+  { mod: 'of Ghorr', tag: 'Ghorr', row: "Beidat, Ghorr or K'Tash" }
 ]
 const EIGHT = ['Magnifying', 'Fecund', 'Chaining', 'Savage', 'of Balance', 'of Exposure', 'of Stasis', 'of Toughness']
 const CONQUERORS = ['Crusader', 'Hunter', 'Redeemer', 'Warlord']
 
 const KINDS: Kind[] = [
   { id: 'normal', w: 40, make: (t, r) => ({ key: `normal-${t}`, label: plain(t), kind: null, tip: plain(t), facts: facts(plain(t), t, { rarity: anyRarity(r), corrupted: r() < 0.1 }) }) },
-  { id: 'originator', w: 12, make: (t, r) => { t = Math.max(t, 14); return { key: `orig-${t}`, label: plain(t), kind: 'Originator', tip: plain(t), facts: facts(plain(t), t, { rarity: anyRarity(r), zanaMemory: true, hasImplicitMod: true }) } } },
+  { id: 'originator', w: 12, make: (t, r) => { t = Math.max(t, 14); return { key: `orig-${t}`, label: plain(t), kind: 'Originator', tip: plain(t), facts: facts(plain(t), t, { rarity: anyRarity(r), zanaMemory: true, hasImplicitMod: true }), priced: `Originator Map (Tier ${t})` } } },
   { id: 'blighted', w: 6, make: t => ({ key: `blight-${t}`, label: `Blighted Map (Tier ${t})`, kind: null, tip: `Blighted Map (Tier ${t})`, facts: facts(plain(t), t, { blightedMap: true }), priced: `Blighted Map (Tier ${t})` }) },
   { id: 'ravaged', w: 2, make: t => { t = Math.max(t, 14); return { key: `ravaged-${t}`, label: `Blight-ravaged Map (Tier ${t})`, kind: null, tip: `Blight-ravaged Map (Tier ${t})`, facts: facts(plain(t), t, { uberBlightedMap: true, rarity: 'Rare' }), priced: `Blight-ravaged Map (Tier ${t})` } } },
-  { id: 'content', w: 5, make: (_t, r) => { const c = CONTENT_MODS[Math.floor(r() * CONTENT_MODS.length)]; return { key: `mod-${c.tag}`, label: plain(16), kind: c.tag, tip: plain(16), facts: facts(plain(16), 16, { rarity: 'Rare', identified: true, explicitModNames: ['Fecund', 'Chaining', c.mod] }) } } },
-  { id: 'eight', w: 2, make: () => ({ key: 'eight', label: plain(16), kind: '8 mods', tip: plain(16), facts: facts(plain(16), 16, { rarity: 'Rare', identified: true, corrupted: true, explicitModNames: EIGHT }) }) },
-  { id: 'corrimpl', w: 3, make: (t, r) => ({ key: `corr-${t}`, label: plain(t), kind: 'Corrupted implicit', tip: plain(t), facts: facts(plain(t), t, { rarity: anyRarity(r), corrupted: true, corruptedMods: 1, hasImplicitMod: true }) }) },
-  { id: 'elder', w: 2, make: () => ({ key: 'elder', label: plain(16), kind: 'Elder guardian', tip: plain(16), facts: facts(plain(16), 16, { rarity: 'Rare', influences: ['Elder'], hasImplicitMod: true }) }) },
-  { id: 'citadel', w: 2, make: (_t, r) => { const c = CONQUERORS[Math.floor(r() * CONQUERORS.length)]; return { key: `citadel-${c}`, label: plain(16), kind: 'Citadel', tip: plain(16), facts: facts(plain(16), 16, { rarity: 'Rare', influences: [c], hasImplicitMod: true }) } } },
-  { id: 'nightmare', w: 1.5, make: () => ({ key: 'nightmare', label: 'Nightmare Map', kind: null, tip: 'Nightmare Map', facts: facts('Nightmare Map', 17) }) },
-  { id: 'temple', w: 1.2, make: () => ({ key: 'temple', label: 'Vaal Temple Map', kind: null, tip: 'Vaal Temple Map', facts: facts('Vaal Temple Map', 16) }) },
-  { id: 'guardian', w: 1, make: () => ({ key: 'guardian', label: 'Shaper Guardian Map', kind: null, tip: 'Shaper Guardian Map', facts: facts('Shaper Guardian Map', 16) }) },
+  { id: 'content', w: 5, make: (_t, r) => { const c = CONTENT_MODS[Math.floor(r() * CONTENT_MODS.length)]; return { key: `mod-${c.tag}`, label: plain(16), kind: c.tag, tip: plain(16), facts: facts(plain(16), 16, { rarity: 'Rare', identified: true, explicitModNames: ['Fecund', 'Chaining', c.mod] }), priced: c.row } } },
+  { id: 'eight', w: 2, make: () => ({ key: 'eight', label: plain(16), kind: '8 mods', tip: plain(16), facts: facts(plain(16), 16, { rarity: 'Rare', identified: true, corrupted: true, explicitModNames: EIGHT }), priced: '8 mods' }) },
+  { id: 'corrimpl', w: 3, make: (t, r) => ({ key: `corr-${t}`, label: plain(t), kind: 'Corrupted implicit', tip: plain(t), facts: facts(plain(t), t, { rarity: anyRarity(r), corrupted: true, corruptedMods: 1, hasImplicitMod: true }), priced: 'Corrupted implicit' }) },
+  { id: 'elder', w: 2, make: () => ({ key: 'elder', label: plain(16), kind: 'Elder guardian', tip: plain(16), facts: facts(plain(16), 16, { rarity: 'Rare', influences: ['Elder'], hasImplicitMod: true }), priced: 'Elder guardian maps (Tier 16)' }) },
+  { id: 'citadel', w: 2, make: (_t, r) => { const c = CONQUERORS[Math.floor(r() * CONQUERORS.length)]; return { key: `citadel-${c}`, label: plain(16), kind: 'Citadel', tip: plain(16), facts: facts(plain(16), 16, { rarity: 'Rare', influences: [c], hasImplicitMod: true }), priced: 'Citadel maps (Tier 16)' } } },
+  { id: 'nightmare', w: 1.5, make: () => ({ key: 'nightmare', label: 'Nightmare Map', kind: null, tip: 'Nightmare Map', facts: facts('Nightmare Map', 17), priced: 'Nightmare Map' }) },
+  { id: 'temple', w: 1.2, make: () => ({ key: 'temple', label: 'Vaal Temple Map', kind: null, tip: 'Vaal Temple Map', facts: facts('Vaal Temple Map', 16), priced: 'Vaal Temple Map' }) },
+  { id: 'guardian', w: 1, make: () => ({ key: 'guardian', label: 'Shaper Guardian Map', kind: null, tip: 'Shaper Guardian Map', facts: facts('Shaper Guardian Map', 16), priced: 'Shaper Guardian Map' }) },
   { id: 'valdo', w: 1, make: () => ({ key: 'valdo', label: 'Valdo Map', kind: null, tip: 'Valdo Map', facts: facts('Valdo Map', 16, { rarity: 'Unique' }) }) }
 ]
 // Kinds that are always in a pile, so the page shows each look at once.
