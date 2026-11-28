@@ -109,6 +109,7 @@ import { DEFAULT_BG, DEFAULT_TEXT } from './edits'
 import { cssColour } from './label-style'
 import { DROP_WEIGHT } from './economy'
 import { cardFacts, loadCardFacts } from './card-facts'
+import { loadOwnTables, ownTables } from './own-lists'
 import { gemLinesOf } from './gem-classes'
 import { LEAGUE_SECTIONS } from './league-classes'
 import { gemItemFor, itemFor, lootFocus } from './loot-focus'
@@ -168,7 +169,8 @@ const raw = computed<CurrencyItem | null>(() => {
   const lookup = props.store.prices.lootLookup.value
   if (!doc || !lookup) return null
   loadCardFacts()
-  const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null)
+  loadOwnTables()
+  const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null, ownTables.value)
   if (!props.gem) return itemFor(all, props.name, props.rule) ?? rowFor(all) ?? null
   return gemItemFor(all, props.name, props.gem, props.rule)
 })

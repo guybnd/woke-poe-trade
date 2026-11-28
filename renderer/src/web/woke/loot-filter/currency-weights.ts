@@ -36,6 +36,8 @@ import type { GemBand, GemLine } from './gem-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
 import { LV_GEMS_UNTIL, LV_UNIQUE_STEP, gateConds, lvConds, lvCurrencyOf } from './levelling'
 import type { CStep, CurrencySettings, ItemEdit, SectionMode } from './currency-settings'
+import { itemSource } from './own-lists'
+import type { OwnTables } from './own-lists'
 
 export { CURRENCY_TYPE, CSTEP_NAMES, FAINT_UNTIL, LINE_MIN, LINE_MAX, NUDGE_MAX, MULT_MIN, MULT_MAX, defaultCurrency, normalizeCurrency } from './currency-settings'
 export type { CStep, CurrencySettings, FaintSettings, ItemEdit, SectionMode } from './currency-settings'
@@ -233,10 +235,12 @@ function thinPrice (p: number, guess: number): number {
 // the player's own, when `edits` has one).
 // `cards`: each card's set size and reward fold (card-classes.ts), once read.
 // `gems`: poe.ninja's gem lines, each a band (gem-classes.ts).
-export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits: Record<string, ItemEdit> = {}, cards: CardFacts | null = null, gems: readonly GemLine[] | null = null): CurrencyItem[] {
+// `lists`: the Loot tab's own item lists and guesses (own-lists.ts), once read:
+// currency, fragments and cards come from them, not NeverSink's lists.
+export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits: Record<string, ItemEdit> = {}, cards: CardFacts | null = null, gems: readonly GemLine[] | null = null, lists: OwnTables | null = null): CurrencyItem[] {
   const seen = new Map<string, CurrencyItem>()
   const find = (type: string, name: string) => lookup?.(groupOf(type), name) ?? lookup?.(ANY_PAGE, name) ?? null
-  for (const b of doc.blocks) {
+  for (const b of itemSource(doc.blocks, lists, lookup, groupOf, ANY_PAGE)) {
     // NeverSink's fragment rules: league threads (Guy counts them as
     // currency) and the fragments (their own class on the Loot tab).
     const frags = b.type === 'fragments'
@@ -328,7 +332,8 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       const whole = orb ? (orb === 'Chaos Orb' ? 1 : find(b.type, orb)?.chaos) : undefined
       const p = whole != null && whole > 0 && !(listed != null && listed.chaos > 0 && listed.chaos <= whole / 20) ? { chaos: whole / 20, thin: false } : listed
       const priced = p != null && !p.thin && p.chaos > 0
-      const guess = tierGuess(b.tier)
+      // Last league's typical price, else (NeverSink's lists) its tier's.
+      const guess = lists?.guesses.get(name) ?? tierGuess(b.tier)
       const own = edits[name]?.price
       seen.set(name, {
         name,
@@ -1152,10 +1157,10 @@ function lvFloor (blocks: FilterBlock[], f: LvFloor, list: CurrencyItem[], cfg: 
 
 // Writes the rules above everything else in the filter (like the rare
 // weights: build rules, presets and your own rules then go on top).
-export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: PriceLookup | null, cards: CardFacts | null = null, gems: readonly GemLine[] | null = null): CurrencyCompiled | null {
+export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: PriceLookup | null, cards: CardFacts | null = null, gems: readonly GemLine[] | null = null, lists: OwnTables | null = null): CurrencyCompiled | null {
   // Without prices every item would be a guess: leave it to NeverSink.
   if (!cfg.on || !lookup) return null
-  const all = currencyItems(doc, lookup, cfg.items, cards, gems)
+  const all = currencyItems(doc, lookup, cfg.items, cards, gems, lists)
   if (!all.length) return null
   const eff = scaled(cfg, doc.strictness)
   const faint = faintOn(cfg, doc.strictness)
