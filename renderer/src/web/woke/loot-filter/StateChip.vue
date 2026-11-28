@@ -13,7 +13,7 @@
       <i class="fas fa-caret-down" :class="$style.car" aria-hidden="true" />
     </button>
     <Teleport to="body">
-      <div v-if="open" ref="pop" :class="$style.pop" :style="popStyle" role="menu" :aria-label="title" data-state-chip-menu @click.stop @keydown.esc.stop="close(true)">
+      <div v-if="open" ref="pop" data-w-popup :class="$style.pop" :style="popStyle" role="menu" :aria-label="title" data-state-chip-menu @click.stop @keydown.esc.stop="close(true)">
         <div :class="$style.head">{{ title }}</div>
         <button v-for="o in options" :key="o.value" type="button" role="menuitemradio" :aria-checked="o.value === modelValue" :class="$style.opt"
           @click="pick(o.value)">
@@ -27,7 +27,7 @@
             @input="dragBias = -Number(($event.target as HTMLInputElement).value)"
             @change="commitBias(-Number(($event.target as HTMLInputElement).value))">
           <div :class="$style.ticks"><span>Penalty</span><span>none</span><span>Bonus</span></div>
-          <div :class="$style.desc">{{ biasOff ? `Only for ${options.find(o => o.value === biasMode)?.label ?? 'price'}.` : biasLine(dragBias ?? bias) }}</div>
+          <div :class="$style.desc">{{ biasOff ? `Not used while ${cur?.label ?? 'off'}.` : biasLine(dragBias ?? bias) }}</div>
           <button v-if="bias !== 0" type="button" :class="$style.reset" @click="commitBias(0)">No bias</button>
         </div>
       </div>
@@ -38,6 +38,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import { NUDGE_MAX } from './currency-settings'
+import { tipZoom } from '../ui/popup-zoom'
 
 export interface ChipOption { value: string, label: string, desc?: string, dot?: string, hollow?: boolean, glow?: boolean }
 
@@ -51,8 +52,8 @@ const props = defineProps<{
   // A section's own strictness as notches (×1.25 on its step prices per
   // notch); shown as a price bias. Left out: no slider.
   bias?: number
-  // The mode the bias works in (By price).
-  biasMode?: string
+  // The mode the bias does nothing in (Hide); it counts in every other.
+  noBiasIn?: string
 }>()
 const emit = defineEmits<{ 'update:modelValue': [v: string], 'update:bias': [n: number] }>()
 
@@ -63,7 +64,7 @@ const popStyle = ref<Record<string, string>>({})
 const dragBias = ref<number | null>(null)
 
 const cur = computed(() => props.options.find(o => o.value === props.modelValue))
-const biasOff = computed(() => props.biasMode != null && props.modelValue !== props.biasMode)
+const biasOff = computed(() => props.noBiasIn != null && props.modelValue === props.noBiasIn)
 // A notch up makes every step cost ×1.25: the items count at 1/1.25 of their price.
 function pct (n: number) { return Math.round((1.25 ** -n - 1) * 100) }
 function pctText (n: number) { const p = pct(n); return p === 0 ? 'none' : `${p > 0 ? '+' : '−'}${Math.abs(p)}%` }
@@ -79,14 +80,19 @@ function dotStyle (o?: ChipOption) {
   return o?.hollow ? { border: `1px solid ${c}` } : { background: c, boxShadow: o?.glow ? `0 0 5px ${c}` : undefined }
 }
 
+// As big as the window the chip is in (popup-zoom.ts); with CSS zoom, left
+// and top are in zoomed units.
+const W = 270
 function place () {
   const r = btn.value?.getBoundingClientRect()
   if (!r) return
-  const w = 270
-  const h = pop.value?.offsetHeight ?? 260
+  const z = btn.value ? tipZoom(btn.value) : 1
+  const w = W * z
+  const h = pop.value?.getBoundingClientRect().height ?? 260 * z
   const left = Math.max(4, Math.min(r.right - w, window.innerWidth - w - 4))
-  const below = r.bottom + 4 + h <= window.innerHeight - 4
-  popStyle.value = { left: `${left}px`, top: `${below ? r.bottom + 4 : Math.max(4, r.top - 4 - h)}px`, width: `${w}px` }
+  const below = r.bottom + 4 + h <= window.innerHeight - 4 || r.top - 4 - h < 4
+  const top = below ? Math.min(r.bottom + 4, Math.max(4, window.innerHeight - 4 - h)) : r.top - 4 - h
+  popStyle.value = { zoom: String(z), left: `${left / z}px`, top: `${top / z}px`, width: `${W}px` }
 }
 function onDoc (e: MouseEvent) {
   const t = e.target as Node
@@ -94,11 +100,23 @@ function onDoc (e: MouseEvent) {
   close(false)
 }
 function onKey (e: KeyboardEvent) { if (e.key === 'Escape') close(true) }
-function onScroll () { place() }
+// The menu follows its chip on a scroll, and closes once the chip scrolls out
+// of its list (it would float over other rows).
+function onScroll (e: Event) {
+  if (pop.value?.contains(e.target as Node)) return
+  const r = btn.value?.getBoundingClientRect()
+  let box: Element | null = btn.value?.parentElement ?? null
+  while (box && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) box = box.parentElement
+  const v = box?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight }
+  if (!r || r.bottom < v.top || r.top > v.bottom) close(false)
+  else place()
+}
 async function toggle () {
   if (open.value) { close(false); return }
   open.value = true
   dragBias.value = null
+  // Measured at its real width, hidden, then placed.
+  popStyle.value = { width: `${W}px`, left: '0', top: '0', visibility: 'hidden', zoom: String(btn.value ? tipZoom(btn.value) : 1) }
   await nextTick()
   place()
   document.addEventListener('mousedown', onDoc, true)

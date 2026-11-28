@@ -73,7 +73,7 @@
         <span class="flex-1" />
         <span data-loot-section-mode>
           <StateChip :model-value="sectionMode(c, g.cat.id)" :options="SECTION_MODES" :title="g.cat.name" :dflt="sectionMode({ catMode: {} }, g.cat.id)"
-            :bias="c.nudge[g.cat.id] ?? 0" bias-mode="auto" @update:model-value="v => setCatMode(g.cat.id, v)" @update:bias="n => setNudge(g.cat.id, n)" />
+            :bias="c.nudge[g.cat.id] ?? 0" no-bias-in="off" @update:model-value="v => setCatMode(g.cat.id, v)" @update:bias="n => setNudge(g.cat.id, n)" />
         </span>
       </div>
       <div v-if="isOpen(g.cat.id)" :class="$style.catBody" role="table" :aria-label="`${g.cat.name} and when they show`">
