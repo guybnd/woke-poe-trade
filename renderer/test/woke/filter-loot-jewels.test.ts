@@ -17,7 +17,7 @@ const jewel = (base: string, cls: string, rarity: ItemFacts['rarity'], itemLevel
 
 describe('jewels on the Loot tab', () => {
   it('lists the Abyss and Jewels rows as the jewels kind', () => {
-    const items = currencyItems(parseFilter(SEMI), lookup).filter(i => i.type === 'jewels')
+    const items = currencyItems(parseFilter(SEMI), lookup).filter(i => i.type === 'jewels' && i.cat !== 'jewclus')
     expect(items.length).toBe(12)
     expect(new Set(items.map(i => kindOf(i.cat)))).toEqual(new Set(['jewels']))
     expect(items.every(i => i.est)).toBe(true)
@@ -45,8 +45,8 @@ describe('jewels on the Loot tab', () => {
     expect(hit(jewel('Hypnotic Eye Jewel', 'Abyss Jewels', 'Rare', 75, { corrupted: true, corruptedMods: 1 })).visibility).toBe('Show')
     // Corrupted implicit beats the plain magic row.
     expect(hit(jewel('Viridian Jewel', 'Jewels', 'Magic', 84, { corrupted: true, corruptedMods: 1 })).visibility).toBe('Show')
-    // Cluster jewels stay NeverSink's; unique jewels stay the Uniques page's.
-    expect(hit(jewel('Large Cluster Jewel', 'Jewels', 'Rare', 84)).final?.block.type).not.toBe(CURRENCY_TYPE)
+    // Cluster jewels go to their own base rows; unique jewels stay the Uniques page's.
+    expect(hit(jewel('Large Cluster Jewel', 'Jewels', 'Rare', 84)).final?.block.type).toBe(CURRENCY_TYPE)
     expect(hit(jewel('Prismatic Jewel', 'Jewels', 'Unique', 84)).final?.block.comment).toMatch(/uniq/)
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
   })
