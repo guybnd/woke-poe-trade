@@ -336,9 +336,12 @@ function getChanceTargets (item: ParsedItem, drops: TipPack['drops'], dropTiers:
 // woke: a Templar Vault reward: the vault that gives it and its other
 // rewards that are one item, each priced as the vault table prices it
 // (gems at level 1). A vault with no other such reward (Machinist's: only
-// Stacked Decks) adds nothing, so it isn't listed.
+// Stacked Decks) adds nothing, so it isn't listed. A Nightmare Map gets
+// none: its map check's Worth running shows the vaults (Guy, 2026-11-28:
+// Arkhon's rewards beside it were a duplicate, not a related list).
 function getVaults (item: ParsedItem, vaults: Vault[]) {
   const own = item.info.refName
+  if (own === 'Nightmare Map') return []
   return vaults.flatMap(v => {
     const rows: SideRow[] = []
     const seen = new Set<string>()
@@ -354,13 +357,14 @@ function getVaults (item: ParsedItem, vaults: Vault[]) {
     }
     if (!rows.some(r => !r.highlight)) return []
     rows.sort((a, b) => chaosOfPrice(b.price) - chaosOfPrice(a.price))
-    const others = v.rewards.filter(r => !r.items?.length).length
+    // The rewards that aren't one item, named ("Threads"), not counted.
+    const others = v.rewards.filter(r => !r.items?.length).map(r => r.text.replace(/^[\d#-]+x\s+/, '').replace(/\s*\(.*\)$/, ''))
     const gems = rows.some(r => r.info.namespace === 'GEM')
     return [{
       key: `vault:${v.id}`,
       title: `Drops from ${v.name}`,
       rows,
-      note: `The vault offers four rewards and you take one${others ? `. It has ${others} more kinds that vary` : ''}.${gems ? ' Gems are priced at level 1.' : ''}`
+      note: `The vault offers four rewards and you take one.${others.length ? ` It can also give ${others.join(', ')}.` : ''}${gems ? ' Gems are priced at level 1.' : ''}`
     }]
   })
 }
