@@ -1,7 +1,6 @@
 <template>
   <div v-if="show" :class="$style.row" data-roll-presets :data-goto-spot="showBase ? 'base-preset' : undefined">
     <w-segmented :model-value="active" :options="options"
-      :title="title"
       @update:model-value="pick" />
   </div>
 </template>
@@ -30,18 +29,14 @@ const showValue = computed(() => priceView.value === 'improved' && props.item.ra
 const showBase = computed(() => props.filters != null && !props.item.isUnidentified && isValuableBasetype(props.item))
 const BASE_TITLE = 'Price it as its base: base, item level, influence, quality over 20; mods off. Click again to undo.'
 
+// One short title per button, for every ticked mod; each runs the search.
 const options = computed(() => [
   ...(showBase.value ? [{ value: 'base', label: 'Base', title: BASE_TITLE, attrs: { 'data-base-preset': '' } }] : []),
-  { value: 'low', label: 'Low' },
-  { value: 'current', label: 'Approx' },
-  ...(canUseHighRolls(props.stats) ? [{ value: 'high', label: 'High' }] : []),
-  ...(showValue.value ? [{ value: 'value', label: sourceText.value === 'measured' ? 'By value\u00a0\u00a0' : 'By value ≈' }] : [])
+  { value: 'low', label: 'Low', title: 'Any roll of each ticked mod. Runs the search.' },
+  { value: 'current', label: 'Approx', title: 'Close to this item\'s rolls (map stats: this roll or better). Runs the search.' },
+  ...(canUseHighRolls(props.stats) ? [{ value: 'high', label: 'High', title: 'The best quarter of each ticked mod\'s range. Runs the search.' }] : []),
+  ...(showValue.value ? [{ value: 'value', label: sourceText.value === 'measured' ? 'By value\u00a0\u00a0' : 'By value ≈', title: valueTitle.value }] : [])
 ])
-
-const title = computed(() => 'For every ticked mod. Low: any roll of its range. Approx: a tight window around this item\'s roll, or this roll and better on map stats. High: the best quarter of its range.' +
-  (showValue.value ? ' By value: tight on the mods that carry the price, loose on the rest, mods worth nothing unticked.' : '') +
-  (showValue.value ? ' ' + sourceTitle.value : '') +
-  ' Runs the search.')
 
 const show = computed(() => showBase.value || canUseRollPresets(props.stats))
 
@@ -78,11 +73,10 @@ const sourceText = computed(() => {
   if (pp?.item === props.item && pp.status === 'loading') return 'asking poeprices…'
   return 'rough guess'
 })
-// A ≈ on By value marks worth that isn't measured; the source itself is on hover.
-const sourceTitle = computed(() => {
+// A ≈ on By value marks worth that isn't measured; the source is on hover.
+const valueTitle = computed(() => {
   const known = Array.from(sources.value).map(s => WORTH_SOURCE_LABEL[s]).join(', ')
-  return 'By value now uses ' + (known ? `mod worth ${known}` : sourceText.value) +
-    '. Measure in "What drives the price" for exact numbers.'
+  return 'Tight on mods that carry the price, loose on the rest, worthless ones unticked. Worth: ' + (known || sourceText.value) + '.'
 })
 
 // "By value" stays highlighted until a box or tick is changed by hand.
