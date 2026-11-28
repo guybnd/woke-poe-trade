@@ -1421,6 +1421,13 @@ test('Currency weights: Alt + F on currency: the rule path picks the level, Show
   await card.locator('[data-currency-card-mode-always]').click()
   await expect(page.locator('[data-currency-card-now]')).not.toContainText('Hidden')
   await overlay.snap('currency card, section off, item always')
+  // Always show at a step you pick (the fold has no Step or Price any more).
+  await card.locator('[data-currency-card-at-4]').click()
+  await expect(page.locator('[data-currency-card-now]')).toContainText('Big')
+  await expect(card.locator('[data-currency-card-mode-always]')).toBeVisible()
+  // Ctrl + Z on the card undoes it.
+  await page.keyboard.press('Control+z')
+  await expect(page.locator('[data-currency-card-now]')).not.toContainText('Big')
 })
 
 test('Currency weights: Go to rule on an Alt + F card opens that item on its own Loot page', async ({ overlay, fakeApp }) => {

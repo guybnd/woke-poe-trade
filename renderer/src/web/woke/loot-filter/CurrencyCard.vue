@@ -21,6 +21,11 @@
         <WSegmented :model-value="levelMode" :options="MODES" data-currency-card-mode @update:model-value="setLevelMode" />
         <WInfo :text="MODE_HELP" />
       </div>
+      <div v-if="level === 'item' && mode === 'always'" :class="$style.line" data-currency-card-at>
+        <span class="w-dim">At</span>
+        <WSegmented :model-value="atStep" :options="atOptions" @update:model-value="setAt" />
+        <WInfo :text="AT_HELP" />
+      </div>
       <div class="text-xs w-faint" data-currency-card-level-note>{{ levelNote }}</div>
     </div>
 
@@ -100,8 +105,8 @@
     </label>
     <div v-if="floorLine" class="text-xs w-dim" data-currency-card-floor>{{ floorLine }}</div>
     <div :class="$style.fold">
-      <WFoldHead fold="alt-f.currency-more" :class="$style.foldHead"><span>Own step, stack and look</span></WFoldHead>
-      <CurrencyItemEditor v-if="open.more" :it="it" :edit="edit" :step="now" :base-price="base" :base-look="currencyFullLook(now === 0 ? 1 : now, it.cat, cfg)" no-avg @change="setEdit" />
+      <WFoldHead fold="alt-f.currency-more" :class="$style.foldHead"><span>Own stack and look</span></WFoldHead>
+      <CurrencyItemEditor v-if="open.more" :it="it" :edit="edit" :step="now" :base-price="base" :base-look="currencyFullLook(now === 0 ? 1 : now, it.cat, cfg)" no-avg slim @change="setEdit" />
     </div>
   </div>
   <div v-else class="flex items-center gap-2 text-xs w-dim" data-currency-card-place>
@@ -166,6 +171,9 @@ const MODE_HELP = `What this level does with the item:
 - **By price estimate**: its price picks the step on the ruler.
 - **Always show**: at least Small, whatever the price.
 - **Always hide**: never shows in maps.`
+const AT_HELP = `The step it always shows at.
+Its price: the step its price lands on, at least Small.
+Small to Tink: always that step, whatever the price.`
 const LEVEL_HELP = `The highlighted step is what your changes cover.
 - Click the section to change every item in it, and the item to come back down.
 - Loot (All loot: its steps and Strictness) changes only on the Loot tab.`
@@ -266,7 +274,20 @@ function setSecMode (v: string) {
 }
 // A jewel row's fixed step (no price) reads as Always, or Off for step 0.
 const fixed = computed(() => it.value ? fixedOf(it.value, edit.value, secMode.value as SectionMode) : undefined)
-const mode = computed(() => edit.value.step === 0 || fixed.value === 0 ? 'off' : (edit.value.supply === 1 && edit.value.step == null) || fixed.value != null ? 'always' : 'auto')
+// A step set by hand (1 to 5) is Always show at that step (Guy 2026-11-28:
+// the step chips sit under Always show, not in the fold).
+const mode = computed(() => edit.value.step === 0 || fixed.value === 0 ? 'off' : (edit.value.supply === 1 && edit.value.step == null) || (edit.value.step ?? 0) > 0 || fixed.value != null ? 'always' : 'auto')
+// Always show at: its price's step (at least Small), or a step you pick.
+const atStep = computed(() => (edit.value.step ?? 0) > 0 ? String(edit.value.step) : 'price')
+const atOptions = computed(() => [
+  { value: 'price', label: it.value?.fixed != null ? 'Its set step' : 'Its price', attrs: { 'data-currency-card-at-price': '' } },
+  ...([1, 2, 3, 4, 5] as const).map(n => ({ value: String(n), label: CSTEP_NAMES[n], attrs: { [`data-currency-card-at-${n}`]: '' } }))
+])
+function setAt (v: string) {
+  if (v !== 'price') put({ step: Number(v) as CStep, supply: undefined, priced: undefined })
+  else if (it.value?.fixed != null) put({ step: undefined, supply: undefined, priced: undefined })
+  else put({ step: undefined, supply: 1, priced: undefined })
+}
 const stacks = computed(() => it.value ? stacksFor(it.value, eff.value) : [null, null, null, null, null])
 const off = computed(() => it.value ? offSteps(it.value, cfg.value) : [])
 const now = computed<CStep>(() => stepOfPile(stacks.value, props.stack, off.value))

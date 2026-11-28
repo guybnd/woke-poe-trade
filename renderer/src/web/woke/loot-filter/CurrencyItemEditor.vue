@@ -3,18 +3,22 @@
        stack, its own look, as one line of chips (E1, 2026-11-28). -->
   <div :class="$style.ed" data-currency-editor>
     <div :class="$style.line">
+      <template v-if="!slim">
       <span :class="$style.lab">Step</span>
       <StateChip :model-value="edit.step == null ? 'auto' : String(edit.step)" :options="stepOptions" :title="`${it.name}: step`" dflt="auto" @update:model-value="setStep" />
       <label :class="$style.lab" :title="`Your price replaces ${source}'s for this item`">Price
         <input :value="edit.price ?? ''" type="number" min="0" step="any" :placeholder="basePrice > 0 ? String(basePrice >= 10 ? Math.round(basePrice) : Number(basePrice.toPrecision(2))) : '–'" :class="[$style.numIn, { [$style.moved]: edit.price != null }]"
           :aria-label="`Your price for ${it.name}, in chaos`" @change="setPrice($event.target as HTMLInputElement)"><span :class="$style.unit">c · {{ edit.price != null ? 'yours' : source }}</span></label>
+      </template>
       <label :class="$style.lab" :title="`A stack of this many or more always shows, at least Small (full stack ${it.full.toLocaleString()})`">Always from
         <input :value="edit.supply ?? ''" type="number" min="1" :max="it.full" placeholder="–" :class="[$style.numIn, $style.short, { [$style.moved]: edit.supply != null }]"
           :aria-label="`Always show ${it.name} from this stack size`" @change="setSupply($event.target as HTMLInputElement)"><span :class="$style.unit">of {{ it.full.toLocaleString() }}</span></label>
       <span :class="$style.lab">Look</span>
       <StateChip :model-value="edit.look ? 'own' : 'step'" :options="LOOKS" :title="`${it.name}: look`" dflt="step" @update:model-value="v => v === 'own' ? setLook(edit.look ?? {}) : setLook(undefined)" />
       <span class="flex-1" />
-      <button type="button" class="w-icon-btn" :disabled="!Object.keys(edit).length" title="Let the price decide again: clears your step, price, stack and look" aria-label="Let the price decide again"
+      <button v-if="slim" type="button" class="w-icon-btn" :disabled="edit.look == null && (edit.supply == null || edit.supply === 1)" title="Clears your stack and look" aria-label="Clear your stack and look"
+        @click="clearSlim"><i class="fas fa-undo" aria-hidden="true" /></button>
+      <button v-else type="button" class="w-icon-btn" :disabled="!Object.keys(edit).length" title="Let the price decide again: clears your step, price, stack and look" aria-label="Let the price decide again"
         @click="emit('change', null)"><i class="fas fa-undo" aria-hidden="true" /></button>
     </div>
     <div v-if="!noAvg && it.uniques && it.uniques.length > 1" :class="$style.line" data-loot-avg-uniques>
@@ -48,6 +52,8 @@ const props = defineProps<{
   baseLook: StylePatch
   // The Alt+F card lists the uniques itself.
   noAvg?: boolean
+  // The Alt+F card sets the step (Always show at) and the price itself.
+  slim?: boolean
 }>()
 const emit = defineEmits<{ change: [edit: ItemEdit | null], notAvg: [name: string] }>()
 const RARITY = ['extremely rare', 'very rare', 'very rare', 'rare', 'uncommon', 'common']
@@ -86,6 +92,8 @@ function setSupply (el: HTMLInputElement) {
   el.value = supply == null ? '' : String(supply)
 }
 function setLook (look: StylePatch | undefined) { put({ look }) }
+// Always show is a stack of 1: clearing the stack leaves it alone.
+function clearSlim () { put({ look: undefined, supply: props.edit.supply === 1 ? 1 : undefined }) }
 </script>
 
 <style module>
