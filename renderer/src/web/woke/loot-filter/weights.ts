@@ -249,7 +249,7 @@ function lookAlts (k: Exclude<LookKey, 'score'>, ch: LookChannel, exotic: string
     case 'fated': return [mark('fated', [T('Fated')], [255, 205, 130])]
     case 'mirr': return [mark('mirr', [T('Mirrored')], [160, 200, 255])]
     case 'corr': return [{ conds: [T('Corrupted')], rgb: ch === 'border' ? [210, 40, 40, 255] : [90, 0, 0, 255], has: it => it.corruption !== 'no' }]
-    case 'exotic': return exotic.length ? [{ conds: [c('BaseType', '==', exotic)], rgb: [170, 255, 80, 255], has: it => it.rank === 'x1' || it.rank === 'x2' }] : []
+    case 'exotic': return exotic.length ? [{ conds: [c('BaseType', '==', exotic)], rgb: [255, 120, 180, 255], has: it => it.rank === 'x1' || it.rank === 'x2' }] : []
     case 'rarity': return (['Normal', 'Magic', 'Rare'] as WeightRarity[]).map(r => ({ conds: [c('Rarity', '', [r])], rgb: ch === 'bg' ? RARITY_BG[r] : RARITY_TEXT[r], has: (it: WeightItem) => rarityOf(it) === r }))
   }
 }
