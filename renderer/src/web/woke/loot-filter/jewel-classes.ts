@@ -16,16 +16,18 @@ import type { CStep, SectionMode } from './currency-settings'
 
 export const JEWEL_CATEGORIES: LootCategory[] = [
   { id: 'jewabyss', name: 'Abyss jewels', art: 'Murderous Eye Jewel' },
-  { id: 'jewplain', name: 'Jewels', art: 'Cobalt Jewel' }
+  { id: 'jewplain', name: 'Jewels', art: 'Cobalt Jewel' },
+  { id: 'jewclus', name: 'Cluster jewel bases', art: 'Large Cluster Jewel' }
 ]
 export const JEWEL_IDS = new Set(JEWEL_CATEGORIES.map(x => x.id))
 // Both start Always: each row shows at its set look; By price on the
 // section puts them on the price ladder instead (Guy 2026-11-28).
-export const JEWEL_MODES: Record<string, SectionMode> = { jewabyss: 'always', jewplain: 'always' }
+export const JEWEL_MODES: Record<string, SectionMode> = { jewabyss: 'always', jewplain: 'always', jewclus: 'always' }
 
 export const JEWEL_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
   jewabyss: { text: [150, 215, 120], color: 'Green', shape: 'Raindrop' },
-  jewplain: { text: [120, 190, 240], color: 'Blue', shape: 'Raindrop' }
+  jewplain: { text: [120, 190, 240], color: 'Blue', shape: 'Raindrop' },
+  jewclus: { text: [225, 195, 120], color: 'Yellow', shape: 'Raindrop' }
 }
 
 export const ABYSS_BASES = ['Ghastly Eye Jewel', 'Hypnotic Eye Jewel', 'Murderous Eye Jewel', 'Searching Eye Jewel']
@@ -76,3 +78,45 @@ export const JEWEL_TYPE = /^jewels->(special|leveling|abyss|generic)$/
 
 // A unique priced on a jewel base (the Uniques page owns them).
 export const isJewelBase = (base: string): boolean => /Jewel$/.test(base)
+
+// Cluster jewel bases (NeverSink retirement M4a, 2026-11-28): what a filter
+// sees on a cluster jewel without its passive type, size, passive count and
+// item level. Each row is worth the cheapest cluster jewel of that kind on
+// poe.ninja (any passive type, at least 5 listings): what a drop of it sells
+// for at least. The cluster price rules (ClusterPriceBand) still catch the
+// valuable passive types first; these go under them. `guess` while poe.ninja
+// has no line. Rows of a size never overlap except the last, which catches
+// the rest.
+export const CLUSTER_BASE_TYPE = 'jewels->cluster'
+export interface ClusterRow extends JewelRow {
+  size: 'Small' | 'Medium' | 'Large'
+  // Passive counts and item levels a poe.ninja line must have to count.
+  passives: [number, number]
+  ilvl: [number, number]
+}
+const NOT_UNIQUE = cnd('Rarity', '', ['Normal', 'Magic', 'Rare'])
+const passives = (op: string, n: number) => cnd('EnchantmentPassiveNum', op, [String(n)])
+const cluster = (size: ClusterRow['size'], name: string, guess: number, pas: [number, number], lv: [number, number], conds: FilterCondition[]): ClusterRow =>
+  ({ cat: 'jewclus', name, cls: '', bts: [`${size} Cluster Jewel`], size, guess, passives: pas, ilvl: lv, conds: [NOT_UNIQUE, ...conds] })
+export const CLUSTER_ROWS: ClusterRow[] = [
+  cluster('Large', 'Large Cluster Jewel, 12 passives, item level 84+', 5, [12, 12], [84, 100], [passives('>=', 12), ilvl('>=', 84)]),
+  cluster('Large', 'Large Cluster Jewel, 8 passives, item level 84+', 5, [8, 8], [84, 100], [passives('<=', 8), ilvl('>=', 84)]),
+  cluster('Large', 'Large Cluster Jewel, 8 passives, item level under 84', 1.5, [8, 8], [1, 83], [passives('<=', 8), ilvl('<', 84)]),
+  cluster('Large', 'Large Cluster Jewel, other', 0.1, [9, 12], [1, 100], []),
+  cluster('Medium', 'Medium Cluster Jewel, 4-5 passives, item level 84+', 5, [4, 5], [84, 100], [passives('<=', 5), ilvl('>=', 84)]),
+  cluster('Medium', 'Medium Cluster Jewel, 4-5 passives, item level under 84', 1.5, [4, 5], [1, 83], [passives('<=', 5), ilvl('<', 84)]),
+  cluster('Medium', 'Medium Cluster Jewel, other', 0.1, [6, 6], [1, 100], []),
+  cluster('Small', 'Small Cluster Jewel, item level 84+', 1.5, [2, 3], [84, 100], [ilvl('>=', 84)]),
+  cluster('Small', 'Small Cluster Jewel, item level under 84', 0.1, [2, 3], [1, 83], [ilvl('<', 84)])
+]
+
+// The cheapest solid poe.ninja line for a row, or null.
+export function clusterFloor (row: ClusterRow, lines: ReadonlyArray<{ size: string, passives: number, ilvl: number, chaos: number, listings: number }>, minListings = 5): number | null {
+  let low: number | null = null
+  for (const l of lines) {
+    if (l.size !== row.size || l.listings < minListings || !(l.chaos > 0)) continue
+    if (l.passives < row.passives[0] || l.passives > row.passives[1] || l.ilvl < row.ilvl[0] || l.ilvl > row.ilvl[1]) continue
+    if (low == null || l.chaos < low) low = l.chaos
+  }
+  return low
+}

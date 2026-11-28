@@ -32,6 +32,8 @@ export interface EconomyGroup {
   unique?: boolean
   // Uniques priced by their Foulborn lines ("Foulborn Doryani's Fist").
   foulborn?: boolean
+  // Uniques priced by their Replica lines (Replica Headhunter on Leather Belt).
+  replica?: boolean
   // A special roll (Guy's spec A, 2026-11-28): its best line counts, thin or
   // not; `links`: only the 6-link lines.
   special?: boolean
@@ -164,7 +166,7 @@ export function priceBreakdown (
 ) {
   const find = priceFinder(items, 'safety')
   return (group: EconomyGroup, base: string): Array<{ name: string, chaos: number | null, thin: boolean }> => {
-    const names = group.unique ? uniquesOnBase(base).filter(name => !isReplica(name)) : [base]
+    const names = group.unique ? uniquesOnBase(base).filter(name => isReplica(name) === Boolean(group.replica)) : [base]
     return names.map(plain => {
       // A Foulborn page lists each unique by its Foulborn line.
       const name = group.foulborn ? `Foulborn ${plain}` : plain
@@ -195,10 +197,11 @@ export function priceLookup (
       const hit = find(group.ninja, base)
       return hit ? point(hit) : null
     }
-    // Replicas have their own NeverSink blocks above the unique tiers, so
-    // they never land in them and must not set the base's price.
+    // Replicas have their own rules above the unique tiers, so they never
+    // land in them and must not set the base's price; a replica group is
+    // priced by them alone.
     const priced = uniquesOnBase(base)
-      .filter(name => !isReplica(name))
+      .filter(name => isReplica(name) === Boolean(group.replica))
       .map(name => finder(group)(group.ninja, group.foulborn ? `Foulborn ${name}` : name, base))
       .filter((x): x is PriceItem => Boolean(x))
     if (!priced.length) return null
@@ -282,7 +285,7 @@ export function dropLookup (
   const best = priceLookup(items, allOnBase, 'max', 'drop')
   const find = priceFinder(items, 'drop')
   return memoLookup((group, base) => {
-    if (!group.unique || group.foulborn || group.links || group.special) return max(group, base)
+    if (!group.unique || group.foulborn || group.replica || group.links || group.special) return max(group, base)
     const world = uniquesOnBase(base).filter(name => !isReplica(name))
     if (!world.length) return { ...(best(group, base) ?? { chaos: 0, thin: true }), noWorld: true }
     const all = world

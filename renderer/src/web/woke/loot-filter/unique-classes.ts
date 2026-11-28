@@ -20,6 +20,7 @@ export const UNIQUE_CATEGORIES: LootCategory[] = [
   { id: 'uniqbossmix', name: 'Boss drops, also world drops', art: 'Agate Amulet' },
   { id: 'uniqfoul', name: 'Foulborn', art: 'Paua Amulet' },
   { id: 'uniqspec', name: 'Special rolls', art: 'Simple Robe' },
+  { id: 'uniqrep', name: 'Replicas', art: 'Leather Belt' },
   // 6-linked uniques, Tabula too (Guy 2026-11-28): their own look, not Tink.
   { id: 'uniqlinks', name: '6-links', art: 'Vaal Regalia' }
 ]
@@ -41,6 +42,7 @@ export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color
   uniqbossmix: { text: [200, 125, 70], color: 'Orange', shape: 'Star' },
   uniqfoul: { text: [190, 110, 200], color: 'Purple', shape: 'Star' },
   uniqspec: { text: [230, 160, 80], color: 'Brown', shape: 'Star' },
+  uniqrep: { text: [235, 120, 90], color: 'Orange', shape: 'Star' },
   uniqlinks: { text: [255, 255, 255], color: 'White', shape: 'Star' }
 }
 
@@ -67,7 +69,8 @@ export const chaseLookOf = (id?: string) => CHASE_LOOKS.find(l => l.id === (id ?
 // Guy's pick on the chase look page (2026-11-28): Sage.
 export const CHASE_DEFAULT = 'T6'
 
-export const UNIQUE_MODES: Record<string, SectionMode> = { uniqboss: 'always', uniqchase: 'always' }
+// Replicas drop only from Heist's reward rooms: Always, price lifts them.
+export const UNIQUE_MODES: Record<string, SectionMode> = { uniqboss: 'always', uniqchase: 'always', uniqrep: 'always' }
 
 // NeverSink's tiers that list bases by price. Every other unique tier is a
 // special rule and stays NeverSink's.
@@ -99,6 +102,13 @@ export const foulCategoryOf = (tier: string | null): string | null => tier && FO
 const FOUL_GUESS: Record<string, number> = { t1: 300, t2: 50, multi: 10, t3: 2 }
 export const foulGuess = (tier: string | null): number => (tier && FOUL_GUESS[tier]) || 1
 export const FOULBORN_PREFIX = 'Foulborn '
+
+// Replica uniques (NeverSink retirement M4a, 2026-11-28): a row per base a
+// Replica drops on (the item data), priced by its most valuable Replica on
+// poe.ninja. Named "Replica <base>" so they never meet the plain base.
+export const REPLICA_TYPE = 'uniques->replicas'
+export const REPLICA_PREFIX = 'Replica '
+export const REPLICA_GUESS = 10
 
 // NeverSink's special unique rolls above its tiers (Guy's spec A, 2026-11-28):
 // priced per base. A fixed outcome (a 6-link Tabula, a socketless Kaom's

@@ -151,6 +151,10 @@ function currencyChanges (b: Partial<CurrencySettings>, a: Partial<CurrencySetti
   for (let i = 0; i < 5; i++) {
     if (!same(b.gold?.[i], a.gold?.[i])) out.push({ tab: L, key: `cur.gold.${i}`, where: 'Gold ruler', what: `${CSTEP_NAMES[i + 1]} from pile`, from: plain(b.gold?.[i]), to: plain(a.gold?.[i]) })
   }
+  if (!same(b.mapLook, a.mapLook)) {
+    const look = (id?: string) => ({ dark: 'Dark card', edge: 'White card' } as Record<string, string>)[id ?? ''] ?? 'Tinted card'
+    out.push({ tab: L, key: 'cur.mapLook', where: 'Special maps', what: 'style', from: look(b.mapLook), to: look(a.mapLook) })
+  }
   if (!same(b.chaseLook, a.chaseLook)) {
     const look = (id?: string) => id ? CHASE_LOOKS.find(l => l.id === id)?.name ?? id : 'default'
     out.push({ tab: L, key: 'cur.chaseLook', where: 'Chase uniques', what: 'look', from: look(b.chaseLook), to: look(a.chaseLook) })
@@ -164,7 +168,7 @@ function currencyChanges (b: Partial<CurrencySettings>, a: Partial<CurrencySetti
     const s = (v?: string) => v === 'on' ? 'On' : v === 'off' ? 'Off' : 'Auto'
     out.push({ tab: L, key: 'cur.sizeCut', where: 'Uniques', what: 'size cut', from: s(b.sizeCut), to: s(a.sizeCut) })
   }
-  const known = new Set(['on', 'line', 'from', 'mult', 'bias', 'catMode', 'rulers', 'offBy', 'items', 'steps', 'cats', 'faint', 'mapFrom', 'gold', 'chaseLook', 'notAvg', 'sizeCut', 'sizeOn'])
+  const known = new Set(['on', 'line', 'from', 'mult', 'bias', 'catMode', 'rulers', 'offBy', 'items', 'steps', 'cats', 'faint', 'mapFrom', 'gold', 'chaseLook', 'mapLook', 'notAvg', 'sizeCut', 'sizeOn'])
   for (const k of keysOf(b, a)) {
     if (!known.has(k)) out.push(...leaves(L, `cur.${k}`, 'Loot tab', (b as Record<string, unknown>)[k], (a as Record<string, unknown>)[k], [k]))
   }
