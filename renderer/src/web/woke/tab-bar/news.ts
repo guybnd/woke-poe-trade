@@ -34,6 +34,7 @@ export const NEWS: NewsItem[] = [
   { id: 'loot-filter-window-tabs', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: the editor now has Loot, Gear, Style, Preview and History tabs, with your own rules first on Loot' },
   { id: 'loot-filter-own-filter', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: our own loot filter replaces NeverSink: no download, same strictness and hotkeys' },
   { id: 'loot-filter-equip-tinctures', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Gear › Tinctures ranks each tincture base by quality and item level, like Flasks' },
+  { id: 'loot-filter-share-profile', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: share a profile, or some Loot pages, as a code or file (profile menu, Share)' },
   { id: 'loot-filter-game-sounds', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: the sound picker plays the game\'s own alert sounds 1-16 and ShAlchemy and friends' },
   { id: 'loot-filter-loot-on', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot and Equipment are on for every filter and out of beta; the NeverSink tab is gone' },
   { id: 'loot-filter-identified-mods', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Rare gear scores identified rares and magic items by their mods' },

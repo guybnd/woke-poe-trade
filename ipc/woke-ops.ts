@@ -155,6 +155,9 @@ export interface WokeOps {
   'lab-layout-image': Op<{ url: string }, string | null>
   'path-stat': Op<{ path?: string | null }, WokePathStat>
   'browse-path': Op<{ kind?: 'file' | 'dir', title?: string, defaultPath?: string, extensions?: string[] }, string | null>
+  // A small text file saved where the player picks, or read from one (share codes).
+  'text-file-save': Op<{ name?: string, text?: string, title?: string, extensions?: string[] }, string | null>
+  'text-file-open': Op<{ title?: string, extensions?: string[] }, { path: string, text: string } | null>
   'live-data-cached': Op<{ language: unknown, bundled: number }, number | null>
   'live-data-check': Op<{ language: unknown, bundled: number, bundledShared?: unknown }, number | null>
   'game-log-tail': Op<{ bytes?: number, since?: number } | NoArgs, { path: string | null, lines: string[] }>
