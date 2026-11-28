@@ -254,15 +254,19 @@ export function dropLookup (
   tiers: Record<string, number> | null,
   // Uniques you left out of the average (Guy 2026-11-28: Precursor's Emblem,
   // a special drop). A base whose uniques are all left out counts them all.
-  notAvg: ReadonlySet<string> = new Set()
+  notAvg: ReadonlySet<string> = new Set(),
+  // Every unique on the base, boss and special ones too: a base with no
+  // world drop is worth its best one, since that's what lies on the ground
+  // (Guy 2026-11-28: a unique Large Cluster Jewel is Voices, ~1200c).
+  allOnBase: (base: string) => string[] = uniquesOnBase
 ): PriceLookup {
   const max = priceLookup(items, uniquesOnBase, 'max')
+  const best = priceLookup(items, allOnBase, 'max')
   const find = priceFinder(items, 'market')
   return (group, base) => {
     if (!group.unique || group.foulborn || group.links || group.special) return max(group, base)
     const world = uniquesOnBase(base).filter(name => !isReplica(name))
-    // No price of its own: NeverSink's tier guesses, as for boss drops.
-    if (!world.length) return { chaos: 0, thin: true, noWorld: true }
+    if (!world.length) return { ...(best(group, base) ?? { chaos: 0, thin: true }), noWorld: true }
     const all = world
       .map(name => ({ name, hit: find(group.ninja, name, base) }))
       .filter((x): x is { name: string, hit: PriceItem } => Boolean(x.hit))

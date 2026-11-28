@@ -59,7 +59,7 @@ export function useFilterPrices (rule: () => UniqueRule, notAvg: () => string[] 
   // "cheapest unique" setting never applies here.
   const lootLookup = computed<PriceLookup | null>(() => {
     if (!index.snapshot.value?.items.length || !dropsReady.value) return null
-    return dropLookup(liveItems.value, randomOnBase.value, dropTiers.value, new Set(notAvg()))
+    return dropLookup(liveItems.value, randomOnBase.value, dropTiers.value, new Set(notAvg()), uniquesOnBase)
   })
   // What this snapshot has at all: a type it lacks isn't priced at zero.
   const pricedTypes = computed(() => new Set((index.snapshot.value?.items ?? []).map(i => i.type)))

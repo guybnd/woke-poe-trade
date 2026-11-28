@@ -54,6 +54,11 @@ describe('unique bases by their average drop', () => {
     expect(normalizeCurrency({ ...defaultCurrency(), notAvg: ['Tavukai', 'bad"name'] }).notAvg).toEqual(['Tavukai'])
   })
 
+  it('a base with no world drop is worth its best unique (what lies on the ground)', () => {
+    const v = dropLookup([line('Voices', 1200, 'UniqueJewel')], () => [], null, new Set(), () => ['Voices'])
+    expect(v(U, 'Large Cluster Jewel')).toMatchObject({ chaos: 1200, noWorld: true })
+  })
+
   it('only T0 is a chase: a valuable T2 unique still counts', () => {
     expect(look(U, 'Agate Amulet')?.chaos).toBe(7)
     expect(look(U, 'Agate Amulet')?.drop?.chase).toEqual([])
