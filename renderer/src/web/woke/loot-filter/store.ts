@@ -15,6 +15,7 @@ import { onGameLog } from '../shared/game-log'
 import { parseFilter, parseFilterCopy, serializeFilter } from './parse'
 import { composeFilter } from './compose'
 import { cardFacts, loadCardFacts } from './card-facts'
+import { loadOwnTables, ownTables } from './own-lists'
 import { gemLinesOf } from './gem-classes'
 import type { FilterDoc, Visibility } from './parse'
 import { addEdit, blocksOf, nextEditId, readStyle } from './edits'
@@ -269,6 +270,11 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     loadCardFacts()
     return cardFacts.value
   }
+  // The Loot tab's own item lists and guesses: starts the read, gives what's there.
+  function ownNow () {
+    loadOwnTables()
+    return ownTables.value
+  }
 
   const sourceStamp = (text: string) => `${cfg().sourceName}|${hash(text)}`
 
@@ -305,7 +311,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       clusterPrices: clusterPricesFor(prices.currentLeague.value),
       // Read when the Loot tab's prices are on (a rebuild follows the read).
       cards: cfg().presets.currency.on ? cardsNow() : null,
-      gems: cfg().presets.currency.on ? gemLines.value : null
+      gems: cfg().presets.currency.on ? gemLines.value : null,
+      own: cfg().presets.currency.on ? ownNow() : null
     })
   }
 
@@ -555,6 +562,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
 
   // Cluster jewel prices come in their own request.
   watch(clusterPrices, () => { if (baseText.value != null) rebuild() })
+  watch(ownTables, () => { if (baseText.value != null && cfg().presets.currency.on) rebuild() })
   watch([prices.currentLeague, () => baseText.value != null], ([league, loaded]) => { if (loaded) loadClusterPrices(league) })
 
   // Price index updates, or settings that change the net: refresh.

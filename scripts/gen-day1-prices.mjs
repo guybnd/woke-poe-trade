@@ -14,6 +14,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 const OUT = path.resolve(import.meta.dirname, '../renderer/src/web/woke/loot-filter/day1-prices.json')
+const GUESSES = path.resolve(import.meta.dirname, '../renderer/src/web/woke/loot-filter/item-guesses.json')
 const UA = { 'User-Agent': 'woke-poe-trade day1-prices (GitHub Actions)' }
 
 // poe.ninja's pages. Currency-style pages have their own history call.
@@ -63,6 +64,20 @@ export function firstDays (points) {
     .sort((a, b) => a - b)
   if (!vals.length) return null
   return vals[Math.floor(vals.length / 2)]
+}
+
+// A typical price over the whole league (Guy 2026-11-28, NeverSink
+// retirement M1): the middle of every day's value, the league's first
+// three days left out (they're the day-1 price). The Loot tab's guess for an
+// item with no live price or a thin one, in place of NeverSink's tier guess.
+export function typical (points) {
+  const days = (points ?? [])
+    .filter(p => p && Number.isFinite(p.daysAgo) && p.value > 0)
+    .sort((a, b) => b.daysAgo - a.daysAgo)
+  const vals = (days.length > 6 ? days.slice(3) : days).map(p => p.value).sort((a, b) => a - b)
+  if (!vals.length) return null
+  const mid = Math.floor(vals.length / 2)
+  return vals.length % 2 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2
 }
 
 // A few requests at a time, so poe.ninja isn't hammered.
@@ -122,6 +137,7 @@ async function main () {
   const q = encodeURIComponent(league)
   console.log(`league ${league}`)
   const items = []
+  const guesses = []
 
   for (const type of CURRENCY_TYPES) {
     const page = await get(`${NINJA}/currency/overview?league=${q}&type=${type}`)
@@ -136,11 +152,16 @@ async function main () {
     ], jobs.find(j => j.id != null) ?? jobs[0])
     if (!url) { console.warn(`no history for ${type}`); continue }
     const rows = await pool(jobs.map(j => async () => {
-      const v = firstDays(pointsOf(await get(url(j))))
-      return v ? [type, j.name, '', round(v)] : null
+      const pts = pointsOf(await get(url(j)))
+      const v = firstDays(pts)
+      const t = typical(pts)
+      return [v ? [type, j.name, '', round(v)] : null, t ? [type, j.name, '', round(t)] : null]
     }))
-    for (const r of rows) if (r) items.push(r)
-    console.log(`${type}: ${rows.filter(Boolean).length} of ${jobs.length}`)
+    for (const [r, g] of rows.filter(Boolean)) {
+      if (r) items.push(r)
+      if (g) guesses.push(g)
+    }
+    console.log(`${type}: ${rows.filter(r => r?.[0]).length} of ${jobs.length}`)
   }
   const divine = items.find(r => r[0] === 'Currency' && r[1] === 'Divine Orb')?.[3] ?? null
 
@@ -159,11 +180,17 @@ async function main () {
     ], lines[0])
     if (!itemUrl) { console.warn('no item history'); break }
     const rows = await pool(lines.map(line => async () => {
-      const v = firstDays(pointsOf(await get(itemUrl(line, type))))
-      return v ? [type, line.name, line.variant ?? (line.gemLevel ? `${line.gemLevel}/${line.gemQuality ?? 0}${line.corrupted ? 'c' : ''}` : ''), round(v)] : null
+      const pts = pointsOf(await get(itemUrl(line, type)))
+      const variant = line.variant ?? (line.gemLevel ? `${line.gemLevel}/${line.gemQuality ?? 0}${line.corrupted ? 'c' : ''}` : '')
+      const v = firstDays(pts)
+      const t = typical(pts)
+      return [v ? [type, line.name, variant, round(v)] : null, t ? [type, line.name, variant, round(t)] : null]
     }))
-    for (const r of rows) if (r) items.push(r)
-    console.log(`${type}: ${rows.filter(Boolean).length} of ${lines.length}`)
+    for (const [r, g] of rows.filter(Boolean)) {
+      if (r) items.push(r)
+      if (g) guesses.push(g)
+    }
+    console.log(`${type}: ${rows.filter(r => r?.[0]).length} of ${lines.length}`)
   }
 
   if (late) console.warn(`out of time: ${late} items not asked`)
@@ -174,6 +201,11 @@ async function main () {
   // Read first by the app, to skip the table in the league it came from.
   await fs.writeFile(OUT.replace(/\.json$/, '.meta.json'), JSON.stringify({ league, made, count: items.length }) + '\n')
   console.log(`wrote ${items.length} items to ${path.relative(process.cwd(), OUT)}`)
+  // The guesses: always read by the Loot tab, so only what it can use (no
+  // gem levels: gems are priced by live bands).
+  const kept = guesses.filter(g => g[0] !== 'SkillGem').sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]) || a[2].localeCompare(b[2]))
+  await fs.writeFile(GUESSES, JSON.stringify({ league, made, items: kept }) + '\n')
+  console.log(`wrote ${kept.length} guesses to ${path.relative(process.cwd(), GUESSES)}`)
 }
 
 if (process.argv[1] && import.meta.filename === path.resolve(process.argv[1])) {
