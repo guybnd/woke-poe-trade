@@ -21,7 +21,7 @@ import { moveWeightRanks } from './weight-rank'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
-import { NO_TIER, SLOT_GROUPS, buildBases, exoticBases, laneOf, readTiered, takeOver } from './gear'
+import { NO_TIER, SLOT_GROUPS, buildBases, exoticBases, laneOf, rankSource, takeOver } from './gear'
 import type { GearRarity, GearRow, Lane, Rank } from './gear'
 import { baseInfo } from './gear-bases'
 import { tierLabel } from './names'
@@ -38,7 +38,7 @@ const LANE_LABEL: Record<Lane, string> = { r1: 'Rank 1', r2: 'Rank 2', r3: 'Rank
 
 const g = computed(() => props.config.presets.gear)
 const base = computed(() => props.facts.baseType ?? '')
-const source = computed(() => props.store.doc.value ? readTiered(props.store.doc.value) : null)
+const source = computed(() => props.store.doc.value ? rankSource(props.store.doc.value) : null)
 const isGear = computed(() => {
   const b = base.value
   if (!b || props.facts.rarity === 'Unique') return false
@@ -81,7 +81,7 @@ function moveTo (to: Lane) {
   const x = g.value
   takeOver(x, doc)
   const b = base.value
-  const src = readTiered(doc)
+  const src = rankSource(doc)
   const orig = src ? laneOf(src, { ...x, moves: {} }, b) : 'none'
   const moves: Record<string, Lane> = Object.fromEntries(Object.entries(x.moves).filter(([k]) => k !== b))
   if (orig !== to) moves[b] = to

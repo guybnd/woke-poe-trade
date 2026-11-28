@@ -34,11 +34,11 @@ intervals ticked, DOM elements per widget).
   delay, which usually finds it.
 - **An OCR worker before any scan**: something loads opencv + tesseract
   (100-200 MB) at startup. Load it on first use.
-- **All JS** (`bundle.allJs`): a fixed 5 MB target (5120 KB). Don't raise it per
+- **All JS** (`bundle.allJs`): a fixed target (5600 KB; Guy raised it from 5120 on 2026-11-28). Don't raise it per
   feature. Startup JS (`bundle.startupJs`) is the one that costs RAM: keep it strict.
 - **Heap and DOM nodes**: expected to grow a little with features.
   When the growth is intended, refresh the budgets and commit them:
 
 ```sh
-WOKE_PERF_UPDATE=1 npm run test:perf   # rewrites perf/budgets.json (+15%, times 3x; All JS stays at 5120)
+WOKE_PERF_UPDATE=1 npm run test:perf   # rewrites perf/budgets.json (+15%, times 3x; All JS stays at 5600)
 ```

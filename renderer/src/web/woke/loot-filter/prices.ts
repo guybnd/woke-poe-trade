@@ -21,7 +21,8 @@ export { uniquesOnBase, randomDropsOnBase }
 export function useFilterPrices (rule: () => UniqueRule, notAvg: () => string[] = () => []) {
   const index = usePriceIndex()
   const ninja = usePoeninja()
-  const currentLeague = useLeagues().selectedId
+  const leagues = useLeagues()
+  const currentLeague = leagues.selectedId
   // The wiki drop data. The prices wait for it, so the filter isn't written
   // once with every unique and again without; a failed load counts every one.
   const drops = shallowRef<TipPack['drops'] | null>(null)
@@ -41,10 +42,10 @@ export function useFilterPrices (rule: () => UniqueRule, notAvg: () => string[] 
   onSharedDataChange(loadDrops)
   const randomOnBase = computed(() => randomDropsOnBase(drops.value))
   // Day-1 prices fill in what the live prices lack (a new league's first
-  // hours). Live prices still have to be there: without them NeverSink decides.
+  // days). Live prices still have to be there: without them NeverSink decides.
   const day1 = shallowRef<Day1Table | null>(null)
-  watch(() => index.snapshot.value?.league, league => {
-    if (league && !day1.value) loadDay1(league).then(t => { day1.value = t })
+  watch([() => index.snapshot.value?.league, leagues.startedAt], ([league, startedAt]) => {
+    if (league && !day1.value) loadDay1(league, startedAt).then(t => { day1.value = t })
   }, { immediate: true })
   const liveItems = computed(() => withDay1(index.snapshot.value?.items ?? [], day1.value))
   const lookup = computed<PriceLookup | null>(() => {

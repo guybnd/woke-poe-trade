@@ -63,14 +63,17 @@ export default {
 </script>
 
 <script setup lang="ts">
-import { inject, nextTick } from 'vue'
+import { defineAsyncComponent, inject, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Host } from '@/web/background/IPC'
 import { WidgetManager } from './interfaces'
 
-import DndContainer from 'vuedraggable'
 import Widget from './Widget.vue'
 import FullscreenImage from '@/web/ui/FullscreenImage.vue'
+
+// woke: loaded when the strip shows, not at startup (sortablejs + vuedraggable
+// were ~95 KB of startup JS).
+const DndContainer = defineAsyncComponent(() => import('vuedraggable'))
 
 const props = defineProps<{
   config: ImageStripWidget

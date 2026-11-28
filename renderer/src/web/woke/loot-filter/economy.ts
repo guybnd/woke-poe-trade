@@ -16,7 +16,7 @@
 //  - a price that jumped or crashed this week (volatile) waits;
 //  - groups whose tiers aren't ordered by price are left alone.
 import type { FilterBlock, FilterDoc } from './parse'
-import { applyEdits, blockHasBase, blocksOf } from './edits'
+import { applyEdits, blockHasBase, blocksOf, withBlockIndex } from './edits'
 import type { FilterEdit } from './edits'
 import type { PriceItem } from '../market/types'
 import { isThin } from '../market/types'
@@ -32,6 +32,8 @@ export interface EconomyGroup {
   unique?: boolean
   // Uniques priced by their Foulborn lines ("Foulborn Doryani's Fist").
   foulborn?: boolean
+  // Uniques priced by their Replica lines (Replica Headhunter on Leather Belt).
+  replica?: boolean
   // A special roll (Guy's spec A, 2026-11-28): its best line counts, thin or
   // not; `links`: only the 6-link lines.
   special?: boolean
@@ -71,6 +73,7 @@ export const NET_GROUPS: EconomyGroup[] = [
     return g
   }),
   { type: 'corpses', label: 'Corpses', ninja: ['Corpse'] },
+  { type: 'wombgifts', label: 'Wombgifts', ninja: ['Wombgift'] },
   { type: 'runesgrafts', label: 'Runegrafts', ninja: ['Runegraft'] },
   { type: 'miscmapitemsextra', label: 'Reliquary keys', ninja: ['Fragment'] }
 ]
@@ -101,6 +104,21 @@ export interface PricePoint {
 export type PriceLookup = (group: EconomyGroup, base: string) => PricePoint | null
 
 export type UniqueRule = 'max' | 'min'
+
+// A lookup remembers what it found: one snapshot gives one answer per group
+// and base, and a rebuild asks for the same thousands of bases again and
+// again (every rule's BaseType list, for every group). The lookup is made
+// anew when prices change, so the memory never goes stale.
+export function memoLookup (lookup: PriceLookup): PriceLookup {
+  const seen = new WeakMap<EconomyGroup, Map<string, PricePoint | null>>()
+  return (group, base) => {
+    let m = seen.get(group)
+    if (!m) seen.set(group, m = new Map())
+    let hit = m.get(base)
+    if (hit === undefined) m.set(base, hit = lookup(group, base))
+    return hit
+  }
+}
 
 // One price per (type, name, base). 5-link, 6-link and relic lines of uniques are
 // not what drops. A plain line is the price; when there are only variants
@@ -149,7 +167,7 @@ export function priceBreakdown (
 ) {
   const find = priceFinder(items, 'safety')
   return (group: EconomyGroup, base: string): Array<{ name: string, chaos: number | null, thin: boolean }> => {
-    const names = group.unique ? uniquesOnBase(base).filter(name => !isReplica(name)) : [base]
+    const names = group.unique ? uniquesOnBase(base).filter(name => isReplica(name) === Boolean(group.replica)) : [base]
     return names.map(plain => {
       // A Foulborn page lists each unique by its Foulborn line.
       const name = group.foulborn ? `Foulborn ${plain}` : plain
@@ -175,15 +193,16 @@ export function priceLookup (
     const swing = priceSwing(i)
     return { chaos: i.chaos, thin: isThin(i), volatile: swing != null, ...(swing ? { swing } : {}), ...(i.day1 ? { day1: true } : {}) }
   }
-  return (group, base) => {
+  return memoLookup((group, base) => {
     if (!group.unique) {
       const hit = find(group.ninja, base)
       return hit ? point(hit) : null
     }
-    // Replicas have their own NeverSink blocks above the unique tiers, so
-    // they never land in them and must not set the base's price.
+    // Replicas have their own rules above the unique tiers, so they never
+    // land in them and must not set the base's price; a replica group is
+    // priced by them alone.
     const priced = uniquesOnBase(base)
-      .filter(name => !isReplica(name))
+      .filter(name => isReplica(name) === Boolean(group.replica))
       .map(name => finder(group)(group.ninja, group.foulborn ? `Foulborn ${name}` : name, base))
       .filter((x): x is PriceItem => Boolean(x))
     if (!priced.length) return null
@@ -191,7 +210,7 @@ export function priceLookup (
     // unique is never hidden because it shares a base with junk.
     const pick = priced.reduce((a, b) => (rule === 'max' ? b.chaos > a.chaos : b.chaos < a.chaos) ? b : a)
     return { ...point(pick), note: priced.length > 1 ? `${pick.name}, 1 of ${priced.length}` : pick.name }
-  }
+  })
 }
 
 // How far a price moved: what it was a day or a week ago.
@@ -266,8 +285,8 @@ export function dropLookup (
   const max = priceLookup(items, uniquesOnBase, 'max', 'drop')
   const best = priceLookup(items, allOnBase, 'max', 'drop')
   const find = priceFinder(items, 'drop')
-  return (group, base) => {
-    if (!group.unique || group.foulborn || group.links || group.special) return max(group, base)
+  return memoLookup((group, base) => {
+    if (!group.unique || group.foulborn || group.replica || group.links || group.special) return max(group, base)
     const world = uniquesOnBase(base).filter(name => !isReplica(name))
     if (!world.length) return { ...(best(group, base) ?? { chaos: 0, thin: true }), noWorld: true }
     const all = world
@@ -305,7 +324,7 @@ export function dropLookup (
         })).sort((a, b) => b.chaos - a.chaos)
       }
     }
-  }
+  })
 }
 
 // What the net and the health list judge by: always a base's best unique, and
@@ -554,11 +573,11 @@ export function mergeMoves (stored: PriceMove[], next: PriceMove[]): PriceMove[]
 // read off a fresh parse before the moves go on. A move to where NeverSink has
 // since put the item itself changes nothing, so its old tier isn't its home.
 export function movesOutOfPlace (doc: FilterDoc, moves: PriceMove[]): PriceMove[] {
-  return moves.filter(m => {
+  return withBlockIndex(doc, () => moves.filter(m => {
     const blocks = blocksOf(doc, m.type)
     return blocks.some(b => b.tier === m.from && blockHasBase(b, m.base)) &&
       !blocks.some(b => b.tier === m.to && blockHasBase(b, m.base))
-  })
+  }))
 }
 
 // Applies stored price moves to a fresh parse. A move only holds while the item
@@ -567,10 +586,12 @@ export function movesOutOfPlace (doc: FilterDoc, moves: PriceMove[]): PriceMove[
 // A move that took a tier's namesake out (stored before that was refused) is
 // dropped.
 export function applyPriceMoves (doc: FilterDoc, moves: PriceMove[]): number {
-  const edits: FilterEdit[] = livePriceMoves(moves)
-    .filter(m => blocksOf(doc, m.type).some(b => (b.tier === m.from || b.tier === m.to) && blockHasBase(b, m.base)))
-    .map((m, i) => ({ id: -1 - i, kind: 'move', type: m.type, base: m.base, from: m.from, to: m.to }))
-  return applyEdits(doc, edits).filter(s => s.ok).length
+  return withBlockIndex(doc, () => {
+    const edits: FilterEdit[] = livePriceMoves(moves)
+      .filter(m => blocksOf(doc, m.type).some(b => (b.tier === m.from || b.tier === m.to) && blockHasBase(b, m.base)))
+      .map((m, i) => ({ id: -1 - i, kind: 'move', type: m.type, base: m.base, from: m.from, to: m.to }))
+    return applyEdits(doc, edits).filter(s => s.ok).length
+  })
 }
 
 // Keys of items the user moved or gave their own rule.

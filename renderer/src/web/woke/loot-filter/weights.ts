@@ -11,15 +11,18 @@
 // Branches are written in order with the "none of these" branch last, and the
 // rules sit above everything NeverSink has, so NeverSink never sees these rares.
 // Off (the default), nothing is written and NeverSink decides as before.
-// Identified rares aren't touched: NeverSink's mod rules keep them.
+// Identified rares and magic gear score by their mods (id-mods.ts) when the
+// mod table is loaded; without it identified rares are left to NeverSink.
+import { baseRankTable } from './base-ranks'
 import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './parse'
-import { readTiered } from './gear'
 import { allGearBases, baseInfo } from './gear-bases'
 import { BASE_FACTS } from './base-facts'
-import { LOOK_CHANNELS, LOOK_LABEL, LOUD_DEFAULT, MARK_ROWS, ORDERED_ROWS, WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
+import { ID_ROWS, LOOK_CHANNELS, LOOK_LABEL, LOUD_DEFAULT, MARK_ROWS, ORDERED_ROWS, WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
 import type { LookChannel, LookKey, RankKey, WeightKey, WeightSettings } from './weight-settings'
+import { MAX_MODS, countConds, minimalCounts } from './id-mods'
+import type { IdGroup, IdRarity } from './id-mods'
 
-export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, NEED_MIN, NEED_MAX, MARK_ROWS, ORDERED_ROWS, PIN_ROWS, LOUD_DEFAULT, LOOK_CHANNELS, LOOK_LABEL, LOOK_KEYS, LOOK_DEFAULT, RANK_KEYS, defaultWeights, normalizeWeights } from './weight-settings'
+export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, NEED_MIN, NEED_MAX, MARK_ROWS, ID_ROWS, ORDERED_ROWS, PIN_ROWS, LOUD_DEFAULT, LOOK_CHANNELS, LOOK_LABEL, LOOK_KEYS, LOOK_DEFAULT, RANK_KEYS, defaultWeights, normalizeWeights } from './weight-settings'
 
 // Kept out of weight-settings (startup JS): only the Rare weights tab uses them.
 // The steps a multiplier moves through.
@@ -36,7 +39,7 @@ export const STAGES: Array<{ label: string, need: number }> = [
 ]
 // The range one multiplier may take, given the others.
 export function multRange (mult: Record<WeightKey, number>, key: WeightKey): [number, number] {
-  let lo = MARK_ROWS.includes(key) ? 1 : 0
+  let lo = MARK_ROWS.includes(key) || ID_ROWS.includes(key) ? 1 : 0
   let hi = 1000
   for (const row of ORDERED_ROWS) {
     const i = row.indexOf(key)
@@ -153,23 +156,13 @@ const c = (key: string, op: string, values: Array<string | number>): FilterCondi
 export type Rank = WeightItem['rank']
 export interface BaseRanks { x1: string[], x2: string[], r1: string[], r2: string[], r3: string[] }
 
-// The filter's own base lists: NeverSink's exotic bases (its top two tiers
-// apart from the rest) and the three ranks of its tiered gear. A base takes
-// the first list it's on.
-export function baseRanks (doc: FilterDoc): BaseRanks {
+// Our own base lists (base-ranks.ts). A base takes the first list it's on.
+export function baseRanks (): BaseRanks {
   const out: BaseRanks = { x1: [], x2: [], r1: [], r2: [], r3: [] }
   const seen = new Set<string>()
-  const put = (list: string[], bases: string[]) => { for (const b of bases) if (!seen.has(b)) { seen.add(b); list.push(b) } }
-  const exotic = (tiers: RegExp) => doc.blocks
-    .filter(b => b.type === 'exoticbases' && !b.disabled && b.visibility === 'Show' && tiers.test(b.tier ?? ''))
-    .flatMap(b => b.conditions.find(x => x.key === 'BaseType' && x.op === '==')?.values ?? [])
-  put(out.x1, exotic(/^t[12]$/))
-  put(out.x2, exotic(/^t[345]$/))
-  const src = readTiered(doc)
-  if (src) {
-    put(out.r1, src.ranks.r1)
-    put(out.r2, src.ranks.r2)
-    put(out.r3, src.ranks.r3)
+  const t = baseRankTable()
+  for (const r of ['x1', 'x2', 'r1', 'r2', 'r3'] as const) {
+    for (const b of t[r]) if (!seen.has(b)) { seen.add(b); out[r].push(b) }
   }
   return out
 }
@@ -200,9 +193,11 @@ export function baseTable (ranks: BaseRanks, gear: string[], known: (name: strin
 // The multipliers a base brings (rank, size, age).
 export function baseTerms (b: Pick<BaseRow, 'rank' | 'width' | 'height' | 'old'>): WeightKey[] {
   const out: WeightKey[] = [b.rank]
-  if (b.width >= 2 && b.height >= 3) out.push('big')
-  else if (b.height === 1) out.push('tiny')
-  if (b.old) out.push('old')
+  // An exotic base is worth its implicit, not its size or defences: never
+  // Large or old (NeverSink shows them loud at any size, M8).
+  const exotic = b.rank === 'x1' || b.rank === 'x2'
+  if (b.width >= 2 && b.height >= 3) { if (!exotic) out.push('big') } else if (b.height === 1) out.push('tiny')
+  if (b.old && !exotic) out.push('old')
   return out
 }
 
@@ -241,6 +236,39 @@ const MARKS: Mark[] = [
 ]
 export const MARK_KEYS: ReadonlySet<WeightKey> = new Set(MARKS.map(x => x.key))
 
+// "Hasn't this mark", for the marks a rule can say that of (identified gear
+// with one scores by it, not by its mods). Abyss and R-G-B sockets can't be.
+const MARK_NOT: Partial<Record<WeightKey, FilterCondition[]>> = {
+  l6: [c('LinkedSockets', '<', [6])],
+  l5: [c('LinkedSockets', '<', [5])],
+  l4: [c('LinkedSockets', '<', [4])],
+  infl: [c('HasInfluence', '', ['None'])],
+  eld: [c('HasSearingExarchImplicit', '<', [1]), c('HasEaterOfWorldsImplicit', '<', [1])],
+  qual: [c('Quality', '<', [24])],
+  fract: [F('FracturedItem')],
+  synth: [F('SynthesisedItem')],
+  fated: [F('Fated')],
+  ench: [F('AnyEnchantment')],
+  strand: [c('MemoryStrands', '<', [70])],
+  cruc: [F('HasCruciblePassiveTree')]
+}
+// The conditions an identified item without any mark that counts meets.
+// (Links: the fewest that count, so a 6-link isn't scored by mods when only
+// 4-links count... it goes to the mark rules, which leave it at its base.)
+export function idUnmarked (m: Record<WeightKey, number>): FilterCondition[] {
+  const up = upMarks(m).filter(k => MARK_NOT[k])
+  const links = (['l4', 'l5', 'l6'] as WeightKey[]).find(k => up.includes(k))
+  return [...(links ? MARK_NOT[links]! : []), ...up.filter(k => !k.startsWith('l')).flatMap(k => MARK_NOT[k]!)]
+}
+// Whether this identified item scores by a mark instead of its mods.
+export function idMarked (it: WeightItem, m: Record<WeightKey, number>): boolean {
+  const up = upMarks(m).filter(k => MARK_NOT[k])
+  const has = termsOf(it)
+  const links = (['l4', 'l5', 'l6'] as WeightKey[]).find(k => up.includes(k))
+  if (links && it.links >= Number(links.slice(1))) return true
+  return up.some(k => !k.startsWith('l') && has.includes(k))
+}
+
 // ---- Look channels: border, background, text colour ----------------------
 // Each channel is a ranked list (settings.look): the first thing on it an
 // item has paints that channel. Steps set loudness only. Written as Continue
@@ -263,6 +291,13 @@ const mark = (k: WeightKey, yes: FilterCondition[], rgb: [number, number, number
 export const EXOTIC_RGB: Record<'x1' | 'x2', [number, number, number]> = { x1: [255, 50, 200], x2: [255, 120, 180] }
 export interface ExoticLists { x1: string[], x2: string[] }
 const ANY_EXOTIC: ExoticLists = { x1: ['x'], x2: ['x'] }
+// Guy's pick (2026-11-28, E1 + "border and white background, tink style"):
+// a valuable exotic gets magenta text and border on white, above every other
+// look row in every channel.
+export const EXOTIC_TOP: Record<LookChannel, [number, number, number]> = { border: EXOTIC_RGB.x1, bg: [255, 255, 255], text: EXOTIC_RGB.x1 }
+export function withTop (look: Record<LookChannel, readonly LookKey[]>): Record<LookChannel, readonly LookKey[]> {
+  return { border: ['exotop', ...look.border], bg: ['exotop', ...look.bg], text: ['exotop', ...look.text] }
+}
 
 function lookAlts (k: Exclude<LookKey, 'score'>, ch: LookChannel, exotic: ExoticLists): Alt[] {
   switch (k) {
@@ -281,6 +316,7 @@ function lookAlts (k: Exclude<LookKey, 'score'>, ch: LookChannel, exotic: Exotic
     case 'fated': return [mark('fated', [T('Fated')], [255, 205, 130])]
     case 'mirr': return [mark('mirr', [T('Mirrored')], [160, 200, 255])]
     case 'corr': return [{ conds: [T('Corrupted')], rgb: ch === 'border' ? [210, 40, 40, 255] : [90, 0, 0, 255], has: it => it.corruption !== 'no' }]
+    case 'exotop': return exotic.x1.length ? [{ conds: [c('BaseType', '==', exotic.x1)], rgb: op(EXOTIC_TOP[ch]), has: (it: WeightItem) => it.rank === 'x1' }] : []
     case 'exotic': return (['x2', 'x1'] as const).filter(r => exotic[r].length)
       .map(r => ({ conds: [c('BaseType', '==', exotic[r])], rgb: op(EXOTIC_RGB[r]), has: (it: WeightItem) => it.rank === r }))
     case 'rarity': return (['Normal', 'Magic', 'Rare'] as WeightRarity[]).map(r => ({ conds: [c('Rarity', '', [r])], rgb: ch === 'bg' ? RARITY_BG[r] : RARITY_TEXT[r], has: (it: WeightItem) => rarityOf(it) === r }))
@@ -327,7 +363,7 @@ export function weightLook (it: WeightItem, look: Record<LookChannel, readonly L
   if (step === 0) return stepActions(0)
   const out: FilterAction[] = []
   for (const ch of ['border', 'bg', 'text'] as LookChannel[]) {
-    const rgb = lookOf(it, ch, look[ch], step)
+    const rgb = lookOf(it, ch, withTop(look)[ch], step)
     if (rgb) out.push(paint(ch, rgb))
   }
   return [...out, ...stepActions(step)]
@@ -335,7 +371,7 @@ export function weightLook (it: WeightItem, look: Record<LookChannel, readonly L
 
 // Which look row a channel shows for this item, if any (for the tab).
 export function lookKeyOf (it: WeightItem, look: Record<LookChannel, readonly LookKey[]>, ch: LookChannel, step: Step): LookKey | null {
-  for (const k of look[ch]) {
+  for (const k of withTop(look)[ch]) {
     if (k === 'score') { if (STEP_PAINT[ch][step]) return k; continue }
     if (lookAlts(k, ch, ANY_EXOTIC).some(x => x.has(it))) return k
   }
@@ -354,7 +390,10 @@ export function countedTerms (it: WeightItem, mult: Record<WeightKey, number>): 
   const plain = it.corruption === 'no' && !it.mirrored
   const ups = plain ? all.filter(k => up.includes(k)) : []
   const best = ups.length ? ups.reduce((x, k) => mult[k] > mult[x] ? k : x) : null
-  return all.filter(k => !MARK_KEYS.has(k) || k === best)
+  const out = all.filter(k => !MARK_KEYS.has(k) || k === best)
+  // A plain crafting base, white or magic: no mark counts, not an exotic.
+  if ((it.rarity ?? 'Rare') !== 'Rare' && !best && it.rank !== 'x1' && it.rank !== 'x2') out.push('wc')
+  return out
 }
 
 export function weightOf (it: WeightItem, mult: Record<WeightKey, number>): number {
@@ -411,7 +450,7 @@ function pinConds (k: WeightKey, bases: BaseRow[]): FilterCondition[][] {
 const RARE_TIERS: readonly WeightKey[] = ['t5', 't4', 't3', 't2', 't1']
 const MAGIC_TIERS: readonly WeightKey[] = ['mt5', 'mt4', 'mt3', 'mt2', 'mt1']
 
-interface Split { parts: Array<{ conds: FilterCondition[], factor: number, note: string, tiers?: readonly WeightKey[] }>, rest?: boolean }
+interface Split { parts: Array<{ conds: FilterCondition[], factor: number, note: string, tiers?: readonly WeightKey[], noTier?: boolean }>, rest?: boolean }
 
 function splits (bases: BaseRow[], m: Record<WeightKey, number>): Split[] {
   const own = (keys: WeightKey[]) => keys.reduce((p, k) => p * m[k], 1)
@@ -479,9 +518,11 @@ function splits (bases: BaseRow[], m: Record<WeightKey, number>): Split[] {
 }
 
 // Unidentified rares, and white or magic gear: the two kinds a rule can name.
-const SCOPES = (): FilterCondition[][] => [
+// Identified rares too when their mods are scored.
+const SCOPES = (ids = false): FilterCondition[][] => [
   [c('Rarity', '', ['Rare']), F('Identified')],
-  [c('Rarity', '', ['Normal', 'Magic'])]
+  [c('Rarity', '', ['Normal', 'Magic'])],
+  ...(ids ? [[c('Rarity', '', ['Rare']), T('Identified')]] : [])
 ]
 
 // The gear the rules cover (with one of SCOPES, or the rarity split).
@@ -526,23 +567,26 @@ function know (rule: FilterCondition[], alt: FilterCondition[]): 'yes' | 'no' | 
   return all ? 'yes' : '?'
 }
 
-export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
+export function compileWeights (w: WeightSettings, bases: BaseRow[], ids: IdGroup[] = []): Compiled {
   const m = w.mult
   const up = upMarks(m)
   const ILVL: Array<[number, WeightKey]> = [[86, 'i86'], [83, 'i83'], [75, 'i75'], [68, 'i68']]
   // Drop tier and item level, for one rarity's tier rows (best first).
   // On white and magic gear ilvl 86 also counts the crafting-base row.
-  const dimsFor = (tiers: readonly WeightKey[]) => {
+  // Identified items have no drop tier (counted as tier 1).
+  const dimsFor = (tiers: readonly WeightKey[], noTier = false) => {
     const craft = tiers === MAGIC_TIERS ? m.w86 : 1
     const opts: Option[][] = [
-      cumulative(tiers.map(t => m[t]), k => [c('UnidentifiedItemTier', '>=', [5 - k])]),
+      ...(noTier ? [] : [cumulative(tiers.map(t => m[t]), k => [c('UnidentifiedItemTier', '>=', [5 - k])])]),
       cumulative(ILVL.map(x => m[x[1]] * (x[1] === 'i86' ? craft : 1)), k => [c('ItemLevel', '>=', [ILVL[k][0]])])
     ]
+    // No drop tier counts as tier 1.
+    const t1 = noTier ? m[tiers[tiers.length - 1]] : 1
     const full = opts.map(o => o[o.length - 1].mask)
     const lo: number[] = []
     const hi: number[] = []
-    lo[opts.length] = 1
-    hi[opts.length] = 1
+    lo[opts.length] = t1
+    hi[opts.length] = t1
     for (let i = opts.length - 1; i >= 0; i--) {
       const fs = opts[i].map(o => o.factor)
       lo[i] = lo[i + 1] * Math.min(...fs)
@@ -555,7 +599,7 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
   const blocks: FilterBlock[] = []
   const perStep = [0, 0, 0, 0, 0]
   let chars = 0
-  const look = w.look
+  const look = withTop(w.look)
   const exotic: ExoticLists = { x1: bases.filter(b => b.rank === 'x1').map(b => b.name), x2: bases.filter(b => b.rank === 'x2').map(b => b.name) }
   // Where the step rules paint a channel themselves ('score' on its list),
   // rows ranked above it: an item that has one gets that colour instead. A
@@ -585,7 +629,7 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
   const push = (conds: FilterCondition[], step: Step, note: string, paints: FilterAction[]) => {
     perStep[step]++
     // A rule with a base list doesn't need the class list.
-    const listed = conds.some(x => x.key === 'BaseType')
+    const listed = conds.some(x => x.key === 'BaseType' || x.key === 'Class')
     const all = [...BASE_CONDS().filter(x => !(listed && x.key === 'Class')), ...conds].map(x => ({ ...x, values: [...x.values] }))
     chars += all.reduce((n, x) => n + x.key.length + 12 + x.values.reduce((k, v) => k + v.length + 3, 0), 120)
     blocks.push({
@@ -659,7 +703,7 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
     for (const k of [...list].reverse()) {
       if (k === 'score') continue
       for (const alt of lookAlts(k, ch, exotic)) {
-        for (const scope of SCOPES()) {
+        for (const scope of SCOPES(ids.length > 0)) {
           if (know([...BASE_CONDS(), ...scope], alt.conds) === 'no') continue
           const conds = [...BASE_CONDS(), ...scope, ...alt.conds].map(x => ({ ...x, values: [...x.values] }))
           chars += 160 + alt.conds.reduce((n, x) => n + x.values.reduce((q, v) => q + v.length + 3, 0), 0)
@@ -686,12 +730,57 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
     }
   }
 
+  // Identified gear: its mods' points over the rarity's own, loudest step
+  // first. A rare that reaches no step hides with the rest at the end; magic
+  // goes on to the base rules below (its base can still make it worth it).
+  // An item with a mark that counts (6-link, influence, fractured...) skips
+  // these and scores like an unidentified one, so its mark is never lost.
+  const ptsOf = (x: number) => x > 0 ? 10 * Math.log2(x) : -Infinity
+  const unmarked = idUnmarked(m)
+  for (const g of ids) {
+    const levels = g.levels.map(l => l.pts)
+    for (const rarity of ['Rare', 'Magic'] as IdRarity[]) {
+      const own = ptsOf(m[rarity === 'Rare' ? 'idr' : 'idm'])
+      for (const step of [4, 3, 2, 1] as Step[]) {
+        const at = atOf(step)
+        if (step < 4 && at === atOf((step + 1) as Step)) continue
+        // Magic needs one counted mod at least (its rarity alone is its base's call).
+        const need = rarity === 'Magic' ? Math.max(ptsOf(at) - own, 1e-3) : ptsOf(at) - own
+        for (const counts of minimalCounts(levels, need, MAX_MODS[rarity])) {
+          const n = counts[counts.length - 1]
+          // Magic its rarity alone shows is left to its base's rules.
+          if (rarity === 'Magic' && !n) continue
+          emit([c('Rarity', '', [rarity]), T('Identified'), c('Class', '==', g.classes), ...unmarked, ...(rarity === 'Magic' && m.w86 > 1 ? [c('ItemLevel', '<', [86])] : []), ...countConds(g, counts)], step, `identified ${rarity.toLowerCase()}, ${n} mod${n === 1 ? '' : 's'}`)
+        }
+      }
+      // Great mod pinned: one is enough for Small (louder ones went above).
+      const k = g.levels.filter(l => l.pts >= ptsOf(m.ig1) - 1e-6).length
+      if (w.always.includes('ig1') && k) {
+        const counts = g.levels.slice(0, k).map((_, j) => j === k - 1 ? 1 : 0)
+        emit([c('Rarity', '', [rarity]), T('Identified'), c('Class', '==', g.classes), ...unmarked, ...countConds({ ...g, levels: g.levels.slice(0, k) }, counts)], 1, `identified ${rarity.toLowerCase()}, always: ${WEIGHT_LABEL.ig1.toLowerCase()}`)
+      }
+    }
+  }
+
   const ss = splits(bases, m)
   // Pinned rows ("always show"): what reaches a Hide with one of them shows
   // Small instead (louder ones were shown above already).
   const pins = w.always.flatMap(k => pinConds(k, bases).map(conds => ({ k, conds })))
+  const bare = new Set<WeightKey>()
   const hide = (pre: FilterCondition[], note: string) => {
-    for (const p of pins) emit([...pre, ...p.conds], 1, `${note ? `${note}, ` : ''}always: ${WEIGHT_LABEL[p.k].toLowerCase()}`)
+    const plain = pre.some(x => x.key === 'Corrupted' && x.values[0] === 'False') && pre.some(x => x.key === 'Mirrored' && x.values[0] === 'False') && !pre.some(x => x.key === 'Identified' && x.values[0] === 'True')
+    const always = (k: WeightKey) => `${note ? `${note}, ` : ''}always: ${WEIGHT_LABEL[k].toLowerCase()}`
+    for (const p of pins) {
+      // A mark's pin after its own rules (below) already took what reaches here.
+      if (plain && bare.has(p.k)) continue
+      // Only where the pin can meet this Hide (a 5-link pin never meets a
+      // 6-link Hide, an exotic base never a plain base's list).
+      const conds = joinConds(pre, p.conds)
+      if (!conds) continue
+      // Everything here has it: Small instead of the Hide.
+      if (JSON.stringify(conds) === JSON.stringify(pre)) { emit(pre, 1, always(p.k)); return }
+      emit(conds, 1, always(p.k))
+    }
     emit(pre, 0, note)
   }
   const rareDims = dimsFor(RARE_TIERS)
@@ -701,7 +790,7 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
     const rest = sp.parts[sp.parts.length - 1].factor
     sp.parts.forEach((p, k) => {
       const pre = [...prefix, ...p.conds]
-      walkSplits(list, i + 1, pre, start * p.factor, [...notes, p.note], p.tiers ? dimsFor(p.tiers) : dims)
+      walkSplits(list, i + 1, pre, start * p.factor, [...notes, p.note], p.tiers ? dimsFor(p.tiers, p.noTier) : dims)
       // A part before a "rest" that's lighter than the rest hides what it
       // didn't show, so the rest doesn't count it heavier than it is.
       if (sp.rest && k < sp.parts.length - 1 && p.factor < rest) hide(pre, [...notes, p.note].filter(Boolean).join(', '))
@@ -710,12 +799,78 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
   // Rares with a mark over ×1 (not corrupted or mirrored), biggest mark
   // first. One that doesn't show here is never heavier further down.
   const ups = MARKS.filter(x => up.includes(x.key)).sort((p, q) => m[q.key] - m[p.key])
-  for (const x of ups) {
+  ups.forEach((x, i) => {
     walkSplits([ss[0], ...ss.slice(3)], 0, [...x.yes, F('Corrupted'), F('Mirrored')], m[x.key], [WEIGHT_LABEL[x.key].toLowerCase()])
+    // A pinned mark, after its last rules: whatever has it and wasn't shown
+    // scores less everywhere below (marks go biggest first, the rest has
+    // none), so it shows Small here instead of at every Hide below.
+    if (!w.always.includes(x.key) || ups[i + 1]?.key === x.key) return
+    for (const y of MARKS.filter(z => z.key === x.key)) {
+      for (const p of ss[0].parts) emit([...y.yes, F('Corrupted'), F('Mirrored'), ...p.conds], 1, `${p.note ? `${p.note}, ` : ''}always: ${WEIGHT_LABEL[x.key].toLowerCase()}`)
+    }
+    bare.add(x.key)
+  })
+  // Identified rares with a mark: as unidentified ones (no drop tier).
+  if (ids.length) {
+    const idRare: Split = { parts: [{ conds: [c('Rarity', '', ['Rare']), T('Identified')], factor: m.wr, note: 'identified', tiers: RARE_TIERS, noTier: true }] }
+    for (const x of ups) {
+      if (!MARK_NOT[x.key]) continue
+      walkSplits([idRare, ...ss.slice(3)], 0, [...x.yes, F('Corrupted'), F('Mirrored')], m[x.key], [WEIGHT_LABEL[x.key].toLowerCase()])
+    }
   }
-  walkSplits(ss, 0, [], 1, [])
-  for (const scope of SCOPES()) hide(scope, 'the rest')
+  // The rest (no mark counts): rares, then white and magic, whose plain
+  // crafting bases (not the exotic ones) take their own cut.
+  const [rare, ...low] = ss[0].parts
+  walkSplits([{ parts: [rare] }, ...ss.slice(1)], 0, [], 1, [])
+  const craft = splits(bases, { ...m, ...Object.fromEntries((['r0', 'r1', 'r2', 'r3', 'rj'] as WeightKey[]).map(k => [k, m[k] * m.wc])) })
+  walkSplits([{ parts: low }, ...craft.slice(1)], 0, [], 1, [])
+  for (const scope of SCOPES(ids.length > 0)) hide(scope, 'the rest')
   return { blocks, perStep, chars }
+}
+
+// Conditions `add` on top of `pre`, or null when no item can meet both:
+// base lists and rarities are intersected, numbers kept to the range both
+// allow, a True/False the other contradicts drops the pair.
+const NUMERIC = new Set(['LinkedSockets', 'ItemLevel', 'Quality', 'MemoryStrands', 'CorruptedMods', 'AreaLevel', 'HasSearingExarchImplicit', 'HasEaterOfWorldsImplicit'])
+function range (cs: readonly FilterCondition[]): [number, number] {
+  let lo = -Infinity
+  let hi = Infinity
+  for (const x of cs) {
+    const v = Number(x.values[0])
+    if (x.op === '>=') lo = Math.max(lo, v)
+    else if (x.op === '>') lo = Math.max(lo, v + 1)
+    else if (x.op === '<=') hi = Math.min(hi, v)
+    else if (x.op === '<') hi = Math.min(hi, v - 1)
+    else { lo = Math.max(lo, v); hi = Math.min(hi, v) }
+  }
+  return [lo, hi]
+}
+export function joinConds (pre: readonly FilterCondition[], add: readonly FilterCondition[]): FilterCondition[] | null {
+  const out = pre.map(x => ({ ...x, values: [...x.values] }))
+  for (const a of add) {
+    const same = out.filter(x => x.key === a.key)
+    if ((a.key === 'BaseType' && a.op === '==') || (a.key === 'Rarity' && a.op === '')) {
+      const lists = same.filter(x => x.op === a.op)
+      if (lists.length) {
+        for (const x of lists) {
+          x.values = x.values.filter(v => a.values.includes(v))
+          if (!x.values.length) return null
+        }
+        continue
+      }
+    } else if (NUMERIC.has(a.key)) {
+      const [lo, hi] = range([...same, a])
+      if (lo > hi) return null
+    } else if (a.values.length === 1 && (a.values[0] === 'True' || a.values[0] === 'False')) {
+      if (same.some(x => x.values.length === 1 && x.values[0] !== a.values[0])) return null
+      if (same.some(x => x.values[0] === a.values[0])) continue
+    } else if (a.key === 'HasInfluence') {
+      const none = (x: FilterCondition) => x.values.length === 1 && x.values[0] === 'None'
+      if (same.some(x => none(x) !== none(a))) return null
+    }
+    out.push({ ...a, values: [...a.values] })
+  }
+  return out
 }
 
 function popcount (x: number): number {
@@ -731,7 +886,7 @@ export function filterBases (doc: FilterDoc, own: Record<string, Rank> = {}): Ba
   // Before the item data loads nothing is known (and baseInfo would remember
   // that): every base counts as a plain one until then.
   if (!allGearBases().length) return []
-  return withRanks(baseTable(baseRanks(doc), allGearBases(), n => ({ cls: baseInfo(n).cls, facts: BASE_FACTS[n] })), own)
+  return withRanks(baseTable(baseRanks(), allGearBases(), n => ({ cls: baseInfo(n).cls, facts: BASE_FACTS[n] })), own)
 }
 
 // Your own ranks over the filter's.
@@ -739,11 +894,11 @@ export function withRanks (rows: BaseRow[], own: Record<string, Rank>): BaseRow[
   return rows.map(b => own[b.name] && own[b.name] !== b.rank ? { ...b, rank: own[b.name], was: b.rank } : b)
 }
 
-export function applyWeights (doc: FilterDoc, w: WeightSettings, bases = filterBases(doc, w.ranks)): Compiled | null {
+export function applyWeights (doc: FilterDoc, w: WeightSettings, bases = filterBases(doc, w.ranks), ids: IdGroup[] = []): Compiled | null {
   // Without the item data every base would count as plain (exotic white
   // bases hidden): leave it all to NeverSink until the data is in.
   if (!w.on || !bases.length) return null
-  const compiled = compileWeights(w, bases)
+  const compiled = compileWeights(w, bases, ids)
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
   const at = first < 0 ? doc.chunks.length : first
   doc.chunks.splice(at, 0, ...compiled.blocks)

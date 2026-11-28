@@ -283,7 +283,10 @@ export default defineComponent({
       if (cfg.wokeNinjaFirst === false || cfg.wokeNinjaInstant === false) return false
       if (!(it.info.tradeTag || fixedPriceItem(it)) || !leagues.selectedId.value) return false
       const q = exactDetailsId(it)
-      return Boolean(chaosOrbRow(it, poeninja.xchgRate.value) ?? (q && (poeninja.findPriceByQuery(q)?.chaos ?? 0) > 0))
+      if (chaosOrbRow(it, poeninja.xchgRate.value) ?? (q && (poeninja.findPriceByQuery(q)?.chaos ?? 0) > 0)) return true
+      // A divination card poe.ninja doesn't price yet (a new league) still gets the
+      // card, for what its set gives; a search waits for Space (Guy, 2026-11-28).
+      return it.info.namespace === 'DIVINATION_CARD' && poeninja.updatedAt.value != null
     }
     // A new card each check, so it measures itself and reports its area again.
     const instantKey = shallowRef(0)

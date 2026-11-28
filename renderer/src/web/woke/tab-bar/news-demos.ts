@@ -2,7 +2,6 @@
 // Show me runs a sample instead, then flashes the feature in it
 // (goto-flash.ts). Read only by the dock's card, so not at startup.
 import type { ItemMenuRef } from '../ui/tooltip/item-menu-logic'
-import { valdoMapText } from '../valdo/map-text'
 
 export type NewsDemo =
   // A price check of this item (one trade search, as a check is), and the
@@ -37,22 +36,27 @@ Perfect Hydra
 Item Level: 84
 `
 
+// A divination card as the game copies it.
+export const DOCTOR_CARD = `Item Class: Divination Cards
+Rarity: Divination Card
+The Doctor
+--------
+Stack Size: 1/8
+--------
+Headhunter
+Leather Belt
+--------
+A mind unfettered, a body freed of shackles.
+`
+
 export const NEWS_DEMOS: Record<string, NewsDemo> = {
+  // A divination card: its full set's reward on the quick price card.
+  'price-check-card-set': { check: { name: 'The Doctor', text: DOCTOR_CARD }, spot: 'card-set' },
   // A corpse: the quick price card (the window when poe.ninja has no row).
   'price-check-corpse-card': { check: { name: 'Perfect Hydra', text: CORPSE_ITEM }, spot: 'ninja-card' },
   'price-check-seller-spread': { check: { name: 'Exalted Orb' }, spot: 'seller-spread' },
-  'price-check-gem-kinds': { check: { name: 'Ice Nova of Frostbolts' }, spot: 'related' },
-  // A base has no check by name: the game's text of a plain one.
-  'price-check-chance-uniques': { check: { name: 'Glorious Plate', rarity: 'normal', text: 'Item Class: Body Armours\nRarity: Normal\nGlorious Plate\n--------\nArmour: 776\n--------\nItem Level: 84\n' }, spot: 'related' },
-  'price-check-vault-rewards': { check: { name: 'Orb of Intention' }, spot: 'related' },
-  'price-check-boss-uniques': { check: { name: 'Hale Negator', rarity: 'unique' }, spot: 'related' },
-  'price-check-related-exalts': { check: { name: 'Exalted Orb' }, spot: 'related' },
   // A Breach unique and its blessed upgrade.
   'price-check-related-upgrades': { check: { name: "Xoph's Inception", rarity: 'unique' }, spot: 'related' },
-  // A Timeless jewel: its conquerors' keystones in the side list.
-  'price-check-conquest-keystones': { check: { name: 'Elegant Hubris', rarity: 'unique' }, spot: 'related' },
-  // A Shaper's Exalted Orb: its family and two fragment groups, folded to fit.
-  'related-folded-groups': { check: { name: "Shaper's Exalted Orb" }, spot: 'related' },
   // A unique with two Foulborn kinds and a Vestigial mod.
   'price-check-unique-foulborn': { check: { name: 'Carcass Jack', rarity: 'unique' }, spot: 'foulborn' },
   // A unique: its drop tier (and its loot filter tier, with a filter loaded) heads the side list.
@@ -60,7 +64,6 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-unique-recipe': { check: { name: 'The Will of Uul-Netol', rarity: 'unique' }, spot: 'related' },
   'div-card-map-chance': { search: 'Strand Map' },
   // A rolled jewel, unidentified: the unid price card (nothing searched until a click).
-  'valdo-map-skips': { check: { name: 'Valdo Map', text: valdoMapText('Headhunter') }, spot: 'valdo-strip' },
   'search-keys-list': { search: 'keys' },
   // Uniques with a mod: priced rows, Goldwyrm's Vestigial line among them.
   'search-unique-mods': { search: 'item rarity' },
@@ -70,10 +73,8 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'search-tree-by-stat': { search: 'onslaught' },
   // A base with no saved price: its Price check button leads.
   'search-price-check-bases': { search: 'manifold ring' },
-  // A rare with tiered mods: hover one for its ladder.
-  'price-check-mod-tiers': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' },
-  // A rare armour: its base roll % beside its defence, to search.
-  'price-check-base-percentile': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'base-percentile' },
+  // A rare: the roll strip's Base step prices it as its base.
+  'price-check-base-step': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'base-preset' },
   // Worth knowing lines (worth-knowing.ts).
   'wk-mod-ctrl-click': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' },
   'wk-search-sums': { search: '2 div + 30c' },

@@ -6,12 +6,12 @@
       :badge="dockBadge" :tone="dockTone" :readouts="dockReadouts" :wm-id="config.wmId" card-width="24rem" @activate="openFromDock">
       <template #card>
         <div :class="$style.dock">
-          <template v-if="config.neversink.on">
+          <template v-if="levelsOn(config)">
             <div :class="$style.status">
               <span :class="$style.levelName">{{ LEVEL_NAMES[shownLevel] }}</span>
               <span class="w-faint text-xs">{{ config.strictAuto.on ? (config.strictAuto.paused ? 'auto paused' : 'auto') : 'manual' }}</span>
               <span class="grow" />
-              <span v-if="!(config.strictAuto.on && config.strictAuto.paused)" class="w-faint text-xs w-num">NeverSink {{ config.neversink.version }}</span>
+              <span v-if="!(config.strictAuto.on && config.strictAuto.paused)" class="w-faint text-xs w-num">{{ nsDownload(config) ? `NeverSink ${config.neversink.version}` : '' }}</span>
               <WButton v-else size="sm" variant="ghost" title="Let your map tier pick the strictness again" @click="backToAuto">Back to auto</WButton>
               <WInfo v-if="keysHelp.length" :keys="keysHelp" />
             </div>
@@ -39,7 +39,7 @@
             <WButton v-if="dismissable.some(canTurnOff)" size="sm" variant="ghost" icon="fas fa-bell-slash" aria-label="Don't tell me about this"
               title="Don't tell me about this again. You can turn it back on in the Prices tab" @click="turnOff" />
           </div>
-          <div v-if="config.editorHotkey && !config.neversink.on" class="w-faint text-xs">Open the editor with <WKbd :keys="config.editorHotkey" /></div>
+          <div v-if="config.editorHotkey && !levelsOn(config)" class="w-faint text-xs">Open the editor with <WKbd :keys="config.editorHotkey" /></div>
           <!-- The filter's least known key (hidden-features audit F6). -->
           <div v-if="config.sampleHotkey" class="w-faint text-xs" data-filter-sample-key><WKbd :keys="config.sampleHotkey" /> on an item: the rule that shows or hides it</div>
         </div>
@@ -47,7 +47,7 @@
     </DockItem>
     <template v-if="mode === 'card'">
       <ScoreCard v-if="sample && match && scoreView" :store="store" :config="config" :facts="sample" :match="match"
-        @close="close" @open-editor="openEditorFromCard" @neversink="nsView = true" />
+        @close="close" @open-editor="openEditorFromCard" />
       <SampleCard v-else-if="sample && match" :store="store" :config="config" :facts="sample" :match="match" :game-match="gameMatch" :area-level="effectiveAreaLevel"
         @close="close" @open-editor="openEditorFromCard" @area-level="areaOverride = $event" />
       <WPanel v-else title="Filter rule for this item" icon="wisdom" width="24rem" :resizable="false">
@@ -56,7 +56,7 @@
         </template>
         <WSkeleton v-if="store.loading.value" :rows="3" />
         <WEmpty v-else-if="!store.error.value" :art="{ item: 'Orb of Scouring' }">
-          No filter picked yet. Open the editor and choose your NeverSink filter.
+          No filter picked yet. Open the editor to start with our own filter.
         </WEmpty>
         <template #footer><WButton size="sm" variant="primary" @click="mode = 'editor'">Open editor</WButton></template>
       </WPanel>
@@ -99,7 +99,7 @@ import { pressedKeys, sortKeys } from './hotkey-match'
 import { itemFacts } from './item-facts'
 import type { ItemFacts } from './item-facts'
 import { matchItem, sameOutcome } from './match'
-import { LOOT_FILTER_SAMPLE_TARGET, initLootFilterWidget, normalizeLootFilterWidget, parseEditorHotkeyTarget, parseReloadHotkeyTarget, parseStrictnessTarget } from './widget'
+import { LOOT_FILTER_SAMPLE_TARGET, initLootFilterWidget, levelsOn, nsDownload, normalizeLootFilterWidget, parseEditorHotkeyTarget, parseReloadHotkeyTarget, parseStrictnessTarget } from './widget'
 import type { LootFilterWidget } from './widget'
 
 const props = defineProps<{
@@ -110,6 +110,9 @@ const wm = inject<WidgetManager>('wm')!
 
 if (props.config.wmFlags[0] === 'uninitialized') {
   initLootFilterWidget(props.config)
+  // A new filter starts with the Loot and Equipment tabs on.
+  props.config.presets.currency.on = true
+  props.config.presets.weights.on = true
   wm.show(props.config.wmId)
 }
 normalizeLootFilterWidget(props.config)
@@ -127,7 +130,7 @@ const mode = ref<'card' | 'editor'>('editor')
 const sample = shallowRef<ItemFacts | null>(null)
 const samplePosition = shallowRef({ x: 1, y: 1 })
 const focus = shallowRef<{ type: string, tier: string } | null>(null)
-const openTab = shallowRef<{ tab: 'prices' | 'neversink' | 'changes' | 'gear' } | null>(null)
+const openTab = shallowRef<{ tab: 'prices' | 'currency' | 'changes' | 'gear' | 'weights' } | null>(null)
 const areaOverride = ref<number | null>(null)
 
 // The card shows alone, not with every open panel, and closes when you go back
@@ -181,14 +184,15 @@ function ensureLoaded () {
 }
 // Never set up: read nothing until it's first used, so an overlay you haven't
 // touched stays quiet.
-if (props.config.sourceName || props.config.neversink.on || props.config.wmWants === 'show') ensureLoaded()
+if (props.config.sourceName || levelsOn(props.config) || props.config.wmWants === 'show') ensureLoaded()
 // Show me on a Loot tab section or item: open the editor there.
 const openEditor = () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}) }
 const lootSpot = (tier: string) => () => { openEditor(); focus.value = { type: 'woke->currency', tier } }
-// What's new's Show me: the editor, with its profile chip.
+// What's new's Show me: the editor, with its profile chip. Special gear
+// (cat:sg...) opens on the Equipment tab.
 useGoto(props.config, 'woke-loot-filter', {
   editor: openEditor,
-  spots: { 'loot-gold': lootSpot('cat:gold:'), 'profiles': () => {}, 'gear-ranks': () => { openEditor(); askGearRanks() }, 'over-quality-look': () => { openEditor(); openTab.value = { tab: 'gear' } }, 'league-always': lootSpot('lgchron'), 'section-steps': lootSpot('cat:orbs:Chaos Orb'), 'section-ruler': lootSpot('cat:orbs:Chaos Orb'), 'map-looks': lootSpot('mapfloor'), 'jewels-no-price': lootSpot('jewplain'), 'own-lists': lootSpot('cat:orbs:Divine Orb') }
+  spots: { 'loot-gold': lootSpot('cat:gold:'), 'loot-levelling': lootSpot('levelling'), 'loot-special': lootSpot('cat:sgveil:'), 'loot-flasks': lootSpot('cat:flasklife:'), 'equip-tinctures': () => { openEditor(); focus.value = { type: WEIGHT_TYPE_ID, tier: 'flasktinc' } }, 'profiles': () => {}, 'gear-ranks': () => { openEditor(); askGearRanks() }, 'over-quality-look': () => { openEditor(); openTab.value = { tab: 'gear' } }, 'league-always': lootSpot('lgchron'), 'section-steps': lootSpot('cat:orbs:Chaos Orb'), 'section-ruler': lootSpot('cat:orbs:Chaos Orb'), 'map-looks': lootSpot('mapfloor'), 'jewels-no-price': lootSpot('jewplain'), 'own-lists': lootSpot('cat:orbs:Divine Orb'), 'history': () => { openEditor(); openTab.value = { tab: 'changes' } }, 'recipes-by-price': lootSpot('recipes'), 'loot-strictness': lootSpot('cat:orbs:Chaos Orb'), 'id-mods': () => { openEditor(); openTab.value = { tab: 'weights' } }, 'loot-on': lootSpot('cat:orbs:Chaos Orb'), 'own-filter': lootSpot('cat:orbs:Chaos Orb') }
 })
 
 // A change Claude suggested, applied from the Suggestions card: added like an
@@ -359,7 +363,7 @@ const ladderAt = computed(() => LEVEL_SHORT.map((_, level) => sortedLadder.value
 const allNotes = computed<Notice[]>(() => {
   const out: Notice[] = []
   const ready = store.updateReady.value
-  if (ready) out.push({ id: 'update', value: ready.version, tab: 'neversink', text: `NeverSink ${ready.version} is ready: ${ready.ok} of ${ready.total} changes fit${ready.movesTotal > ready.movesFit ? `, and ${ready.movesTotal - ready.movesFit} price moves will go back to NeverSink's tiers` : ''}. Update in the editor.` })
+  if (ready) out.push({ id: 'update', value: ready.version, tab: 'changes', text: `NeverSink ${ready.version} is ready: ${ready.ok} of ${ready.total} changes fit${ready.movesTotal > ready.movesFit ? `, and ${ready.movesTotal - ready.movesFit} price moves will go back to NeverSink's tiers` : ''}. Update in the editor.` })
   const moves = store.plan.value?.moves.length ?? 0
   if (moves) out.push({ id: 'prices', value: moves, tab: 'prices', text: `${moves} item${moves > 1 ? 's' : ''} would move to match today's prices.` })
   // Only what the Prices list shows: small stacks the net catches aren't listed
@@ -431,7 +435,7 @@ const dockReadouts = computed(() => reloadWaiting.value ? [{ id: 'reload', text:
 // picker (Guy, 2026-11-24: no strictness chip on screen all the time).
 // A card you pinned stays too.
 const dockShow = computed(() => reloadWaiting.value || (Boolean(store.doc.value) &&
-  (dockNotes.value.length > 0 || (props.config.neversink.on &&
+  (dockNotes.value.length > 0 || (levelsOn(props.config) &&
     (wm.active.value || isPinned(dockPinId('loot-filter')) || Boolean(dockRef.value?.pinned))))))
 const dockBadge = computed(() => dockNotes.value.length || null)
 const dockTone = computed(() => dockNotes.value.some(n => n.warn) ? 'warn' : (dockNotes.value.some(n => n.id === 'update') ? 'accent' : undefined))
@@ -465,7 +469,7 @@ const cardAnchor = computed(() => {
 // The icon's right-click menu.
 const dockMenu = computed<DockMenuAction[]>(() => [
   // Each sets the filter once, from this click.
-  ...(props.config.neversink.on
+  ...(levelsOn(props.config)
     ? [
         { label: 'Stricter', icon: 'fas fa-filter', action: () => { store.stepLevel(1).catch(() => {}) } },
         { label: 'Looser', icon: 'fas fa-border-none', action: () => { store.stepLevel(-1).catch(() => {}) } }

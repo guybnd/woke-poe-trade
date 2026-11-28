@@ -45,22 +45,22 @@ const OUTPUT = 'NeverSink (woke).filter'
 const SOURCE = [
   'Show # $type->divination $tier->t1',
   '\tClass == "Divination Cards"',
-  '\tBaseType == "Top One" "Top Two"',
+  '\tBaseType == "House of Mirrors" "The Doctor"',
   '\tSetFontSize 45',
   '',
   'Show # $type->divination $tier->t2',
   '\tClass == "Divination Cards"',
-  '\tBaseType == "Mid One" "Mid Two"',
+  '\tBaseType == "The Hermit" "The Lover"',
   '\tSetFontSize 40',
   '',
   'Hide # $type->divination $tier->t3',
   '\tClass == "Divination Cards"',
-  '\tBaseType == "Low One" "Low Two"',
+  '\tBaseType == "Rain of Chaos" "The Carrion Crow"',
   ''
 ].join('\n')
 
 const prices = (list: Record<string, number>): PriceLookup => (_, base) => list[base] != null ? { chaos: list[base], thin: false } : null
-const VALUABLE = prices({ 'Top One': 1000, 'Top Two': 900, 'Mid One': 50, 'Mid Two': 40, 'Low One': 300, 'Low Two': 0.01 })
+const VALUABLE = prices({ 'House of Mirrors': 1000, 'The Doctor': 900, 'The Hermit': 50, 'The Lover': 40, 'Rain of Chaos': 300, 'The Carrion Crow': 0.01 })
 
 let host: FakeHost
 beforeAll(loadGameData)
@@ -115,7 +115,7 @@ describe('the net follows prices into the file', () => {
     expect(netBases()).toEqual([])
     P.safety.value = VALUABLE
     await settled()
-    expect(netBases()).toEqual(['Low One'])
+    expect(netBases()).toEqual(['Rain of Chaos'])
     expect(store.dirty.value).toBe(false)
     // Nobody pressed a key, so nothing is typed into the game for it.
     expect(sent.chat.filter(c => c.startsWith('/itemfilter'))).toHaveLength(chatBefore)
@@ -131,7 +131,7 @@ describe('the net follows prices into the file', () => {
     await settled()
     expect(netBases()).toEqual([])
     await store.save()
-    expect(netBases()).toEqual(['Low One', 'Mid One', 'Mid Two'])
+    expect(netBases()).toEqual(['Rain of Chaos', 'The Hermit', 'The Lover'])
   })
 
   it('never starts a file you have not saved yet', async () => {
@@ -146,12 +146,12 @@ describe('the net follows prices into the file', () => {
     await store.save()
     P.safety.value = VALUABLE
     await settled()
-    expect(config.safetyNet.last?.plain).toContain('Low One')
+    expect(config.safetyNet.last?.plain).toContain('Rain of Chaos')
     P.safety.value = null
     await settled()
     expect(store.netWithoutPrices.value).toBe(true)
     await store.save()
-    expect(netBases()).toEqual(['Low One'])
+    expect(netBases()).toEqual(['Rain of Chaos'])
   })
 
   it('your own move down holds, and an old "off this list" doesn\'t touch the net', async () => {
@@ -159,12 +159,12 @@ describe('the net follows prices into the file', () => {
     await store.save()
     P.safety.value = VALUABLE
     await settled()
-    config.healthDismissed = { 'divination|Low One': 300 }
+    config.healthDismissed = { 'divination|Rain of Chaos': 300 }
     await settled()
-    expect(netBases()).toEqual(['Low One'])
-    store.edit({ kind: 'move', type: 'divination', base: 'Mid One', from: 't2', to: 't3' })
+    expect(netBases()).toEqual(['Rain of Chaos'])
+    store.edit({ kind: 'move', type: 'divination', base: 'The Hermit', from: 't2', to: 't3' })
     await store.save()
-    expect(netBases()).toEqual(['Low One'])
+    expect(netBases()).toEqual(['Rain of Chaos'])
   })
 
   it('remembers what was valuable, so a stricter level is judged without prices', async () => {
@@ -175,9 +175,9 @@ describe('the net follows prices into the file', () => {
     P.safety.value = null
     await settled()
     store.edit({ kind: 'visibility', type: 'divination', tier: 't2', visibility: 'Hide' })
-    expect(config.safetyNet.last?.plain).toContain('Mid One')
+    expect(config.safetyNet.last?.plain).toContain('The Hermit')
     await store.save()
-    expect(netBases()).toEqual(['Low One', 'Mid One', 'Mid Two'])
+    expect(netBases()).toEqual(['Rain of Chaos', 'The Hermit', 'The Lover'])
   })
 
   it('holds a dismissed item back from the file', async () => {
@@ -185,14 +185,14 @@ describe('the net follows prices into the file', () => {
     await store.save()
     P.safety.value = VALUABLE
     await settled()
-    config.netDismissed = { 'divination|Low One': 300 }
+    config.netDismissed = { 'divination|Rain of Chaos': 300 }
     await settled()
     expect(netBases()).toEqual([])
     expect(store.dirty.value).toBe(false)
   })
 })
 
-const MOVE: PriceMove = { type: 'divination', base: 'Mid One', from: 't2', to: 't1', chaos: 500 }
+const MOVE: PriceMove = { type: 'divination', base: 'The Hermit', from: 't2', to: 't1', chaos: 500 }
 const UP = (league?: string): PriceMove => ({ ...MOVE, league })
 const inTier = (tier: string) => written().blocks.find(b => b.tier === tier)!.conditions.find(c => c.key === 'BaseType')!.values
 
@@ -202,13 +202,13 @@ describe('moves belong to a league', () => {
   it('applies moves in their own league', async () => {
     const { store } = await opened(moved('Allflame'))
     await store.save()
-    expect(inTier('t1')).toContain('Mid One')
+    expect(inTier('t1')).toContain('The Hermit')
   })
 
   it('leaves another league\'s moves out of the file, kept in case you go back', async () => {
     const { store, config } = await opened(moved('Mirage'))
     await store.save()
-    expect(inTier('t2')).toContain('Mid One')
+    expect(inTier('t2')).toContain('The Hermit')
     expect(config.priceTiers.moves).toHaveLength(1)
     expect(store.dirty.value).toBe(false)
   })
@@ -216,28 +216,28 @@ describe('moves belong to a league', () => {
   it('new moves start over instead of building on the old league', async () => {
     P.lookup.value = VALUABLE
     const { store, config } = await opened(moved('Mirage'))
-    store.applyPrices([{ ...MOVE, base: 'Mid Two' }])
-    expect(config.priceTiers.moves.map(m => m.base)).toEqual(['Mid Two'])
+    store.applyPrices([{ ...MOVE, base: 'The Lover' }])
+    expect(config.priceTiers.moves.map(m => m.base)).toEqual(['The Lover'])
     expect(config.priceTiers.moves[0].league).toBe('Allflame')
   })
 
   it('undo brings back the old league\'s moves still marked as theirs', async () => {
     const { store, config } = await opened(moved('Mirage'))
-    const undo = store.applyPrices([{ ...MOVE, base: 'Mid Two' }])
+    const undo = store.applyPrices([{ ...MOVE, base: 'The Lover' }])
     undo()
     await store.save()
     expect(config.priceTiers.moves[0].league).toBe('Mirage')
-    expect(inTier('t2')).toContain('Mid One')
+    expect(inTier('t2')).toContain('The Hermit')
   })
 
   it('switching league takes them out of the file by itself, and nothing reads as unsaved', async () => {
     P.safety.value = VALUABLE
     const { store, config } = await opened(moved('Allflame'))
     await store.save()
-    expect(inTier('t1')).toContain('Mid One')
+    expect(inTier('t1')).toContain('The Hermit')
     P.currentLeague.value = 'Mirage'
     await settled()
-    expect(inTier('t2')).toContain('Mid One')
+    expect(inTier('t2')).toContain('The Hermit')
     expect(store.dirty.value).toBe(false)
     // Switching back brings them back: only the file left them out.
     expect(config.priceTiers.moves).toHaveLength(1)
@@ -247,9 +247,9 @@ describe('moves belong to a league', () => {
     P.lookup.value = VALUABLE
     const { store, config } = await opened(moved())
     await store.save()
-    expect(inTier('t1')).toContain('Mid One')
+    expect(inTier('t1')).toContain('The Hermit')
     expect(config.priceTiers.moves[0].league).toBeUndefined()
-    store.applyPrices([{ ...MOVE, base: 'Mid Two' }])
+    store.applyPrices([{ ...MOVE, base: 'The Lover' }])
     expect(config.priceTiers.moves.map(m => m.league)).toEqual(['Allflame', 'Allflame'])
   })
 
@@ -258,12 +258,12 @@ describe('moves belong to a league', () => {
     const { store, config } = await opened(moved('Allflame'))
     await store.save()
     expect(config.priceTiers.moves).toHaveLength(1)
-    expect(inTier('t1')).toContain('Mid One')
+    expect(inTier('t1')).toContain('The Hermit')
   })
 })
 
 describe('the filter you started from changes', () => {
-  const changed = SOURCE.replace('"Mid Two"', '"Mid Two" "Mid Three"')
+  const changed = SOURCE.replace('"The Lover"', '"The Lover" "The Mayor"')
 
   it('brings the copy along by itself, with nothing typed into the game', async () => {
     const { config } = await opened()
@@ -276,7 +276,7 @@ describe('the filter you started from changes', () => {
     await again.listFiles()
     await again.load()
     await settled()
-    expect(inTier('t2')).toContain('Mid Three')
+    expect(inTier('t2')).toContain('The Mayor')
     expect(sent.chat.length).toBe(chat)
     expect(again.sourceChanged.value).toBe(false)
   })
@@ -292,7 +292,7 @@ describe('the filter you started from changes', () => {
     await again.listFiles()
     await again.load()
     await settled()
-    expect(inTier('t2')).not.toContain('Mid Three')
+    expect(inTier('t2')).not.toContain('The Mayor')
     expect(again.sourceChanged.value).toBe(true)
   })
 })
@@ -325,16 +325,16 @@ describe('auto saves stay out of your way', () => {
     config.priceTiers.on = false
     await settled()
     expect(store.dirty.value).toBe(true)
-    expect(inTier('t1')).toContain('Mid One')
+    expect(inTier('t1')).toContain('The Hermit')
   })
 
   it('your move to a tier outside the ranks holds, for one item and for its stacks', async () => {
     const { store } = await opened()
     await store.save()
-    store.edit({ kind: 'move', type: 'divination', base: 'Low One', from: 't3', to: 'exhide' })
+    store.edit({ kind: 'move', type: 'divination', base: 'Rain of Chaos', from: 't3', to: 'exhide' })
     P.safety.value = VALUABLE
     await store.save()
-    expect(netBases()).not.toContain('Low One')
+    expect(netBases()).not.toContain('Rain of Chaos')
   })
 
   it('remembers stacks, and forgets a list made at a lower line', async () => {
@@ -358,7 +358,7 @@ describe('auto saves stay out of your way', () => {
     host.files.set('Other.filter', SOURCE)
     config.sourceName = 'Other.filter'
     await store.load()
-    P.safety.value = prices({ 'Low Two': 500 })
+    P.safety.value = prices({ 'The Carrion Crow': 500 })
     await settled()
     expect(host.files.has('Other (woke).filter')).toBe(false)
     expect(store.sourceChanged.value).toBe(false)
@@ -370,7 +370,7 @@ describe('auto saves stay out of your way', () => {
     P.safety.value = VALUABLE
     await settled()
     expect(store.netWaitsForReload.value).toBe(true)
-    config.netDismissed = { 'divination|Low One': 300 }
+    config.netDismissed = { 'divination|Rain of Chaos': 300 }
     await store.save({ reloadNow: true })
     await settled()
     expect(store.netWaitsForReload.value).toBe(false)
@@ -379,11 +379,11 @@ describe('auto saves stay out of your way', () => {
   it('your own move up doesn\'t hold the net back', async () => {
     const { store } = await opened()
     await store.save()
-    store.edit({ kind: 'move', type: 'divination', base: 'Low One', from: 't3', to: 't2' })
+    store.edit({ kind: 'move', type: 'divination', base: 'Rain of Chaos', from: 't3', to: 't2' })
     store.edit({ kind: 'visibility', type: 'divination', tier: 't2', visibility: 'Hide' })
     P.safety.value = VALUABLE
     await store.save()
-    expect(netBases()).toContain('Low One')
+    expect(netBases()).toContain('Rain of Chaos')
   })
 })
 
@@ -454,30 +454,30 @@ describe('auto strictness and your unsaved changes', () => {
 describe('planning moves', () => {
   const DIV = ECONOMY_GROUPS.find(g => g.type === 'divination')!
   const doc = () => parseFilter(SOURCE)
-  const base = { 'Top One': 1000, 'Top Two': 1000, 'Mid One': 100, 'Mid Two': 100, 'Low One': 10, 'Low Two': 10 }
+  const base = { 'House of Mirrors': 1000, 'The Doctor': 1000, 'The Hermit': 100, 'The Lover': 100, 'Rain of Chaos': 10, 'The Carrion Crow': 10 }
 
   it('going down takes a bigger drop than going up takes a rise', () => {
-    const up = planRetier(doc(), prices({ ...base, 'Mid One': 1000 }), { groups: [DIV] }).moves
-    expect(up.map(m => m.base)).toEqual(['Mid One'])
+    const up = planRetier(doc(), prices({ ...base, 'The Hermit': 1000 }), { groups: [DIV] }).moves
+    expect(up.map(m => m.base)).toEqual(['The Hermit'])
     // At 130c it's under the line by more than 20%, but not by 50%.
-    expect(planRetier(doc(), prices({ ...base, 'Top One': 130 }), { groups: [DIV], bufferDown: 0.2 }).moves.map(m => m.base)).toEqual(['Top One'])
-    expect(planRetier(doc(), prices({ ...base, 'Top One': 130 }), { groups: [DIV] }).moves).toEqual([])
-    expect(planRetier(doc(), prices({ ...base, 'Top One': 100 }), { groups: [DIV] }).moves.map(m => m.base)).toEqual(['Top One'])
+    expect(planRetier(doc(), prices({ ...base, 'House of Mirrors': 130 }), { groups: [DIV], bufferDown: 0.2 }).moves.map(m => m.base)).toEqual(['House of Mirrors'])
+    expect(planRetier(doc(), prices({ ...base, 'House of Mirrors': 130 }), { groups: [DIV] }).moves).toEqual([])
+    expect(planRetier(doc(), prices({ ...base, 'House of Mirrors': 100 }), { groups: [DIV] }).moves.map(m => m.base)).toEqual(['House of Mirrors'])
   })
 
   it('marks a move into a tier this strictness hides', () => {
-    const moves = planRetier(doc(), prices({ ...base, 'Mid One': 2 }), { groups: [DIV] }).moves
-    expect(moves[0]).toMatchObject({ base: 'Mid One', to: 't3', hides: true })
+    const moves = planRetier(doc(), prices({ ...base, 'The Hermit': 2 }), { groups: [DIV] }).moves
+    expect(moves[0]).toMatchObject({ base: 'The Hermit', to: 't3', hides: true })
   })
 
   it('holds a price that jumped, and says why', () => {
     const jumpy: PriceLookup = (group, b) => {
-      const p = prices({ ...base, 'Mid One': 1000 })(group, b)
-      return p && b === 'Mid One' ? { ...p, volatile: true } : p
+      const p = prices({ ...base, 'The Hermit': 1000 })(group, b)
+      return p && b === 'The Hermit' ? { ...p, volatile: true } : p
     }
     const plan = planRetier(doc(), jumpy, { groups: [DIV] })
     expect(plan.moves).toEqual([])
-    expect(plan.skipped[0]).toMatchObject({ base: 'Mid One', reason: 'volatile' })
+    expect(plan.skipped[0]).toMatchObject({ base: 'The Hermit', reason: 'volatile' })
   })
 
   it('reads a jump from the week and the day', () => {
@@ -503,17 +503,17 @@ describe('planning moves', () => {
   })
 
   it('carries the swing from the price to the held row', () => {
-    const items = [{ type: 'DivinationCard', name: 'Mid One', variant: '', chaos: 1000, d7: 100 }]
+    const items = [{ type: 'DivinationCard', name: 'The Hermit', variant: '', chaos: 1000, d7: 100 }]
     const lookup = priceLookup(items, () => [])
-    const p = lookup(DIV, 'Mid One')
+    const p = lookup(DIV, 'The Hermit')
     expect(p).toMatchObject({ volatile: true, swing: { was: 100, days: 7 } })
-    const jumpy: PriceLookup = (group, b) => b === 'Mid One' ? p : prices(base)(group, b)
+    const jumpy: PriceLookup = (group, b) => b === 'The Hermit' ? p : prices(base)(group, b)
     const plan = planRetier(doc(), jumpy, { groups: [DIV] })
-    expect(plan.skipped[0]).toMatchObject({ base: 'Mid One', reason: 'volatile', swing: { was: 100, days: 7 } })
+    expect(plan.skipped[0]).toMatchObject({ base: 'The Hermit', reason: 'volatile', swing: { was: 100, days: 7 } })
   })
 
   it('a new move starts from where the item is, when the stored one gave way', () => {
-    const stored: PriceMove = { type: 'divination', base: 'Mid One', from: 't2', to: 't1', chaos: 500 }
+    const stored: PriceMove = { type: 'divination', base: 'The Hermit', from: 't2', to: 't1', chaos: 500 }
     // NeverSink has it in t3 now, so the stored move no longer holds.
     expect(mergeMoves([stored], [{ ...stored, from: 't3', to: 't2' }])).toEqual([{ ...stored, from: 't3', to: 't2' }])
     // It did hold: this is one move in two steps, and going back drops it.
@@ -524,7 +524,7 @@ describe('planning moves', () => {
   it('gives way to NeverSink when it has re-tiered the item since', () => {
     const d = doc()
     // Stored from t3, but this version has the item in t2 already.
-    expect(applyPriceMoves(d, [{ type: 'divination', base: 'Mid One', from: 't3', to: 't1', chaos: 500 }])).toBe(0)
-    expect(d.blocks.find(b => b.tier === 't2')!.conditions.find(c => c.key === 'BaseType')!.values).toContain('Mid One')
+    expect(applyPriceMoves(d, [{ type: 'divination', base: 'The Hermit', from: 't3', to: 't1', chaos: 500 }])).toBe(0)
+    expect(d.blocks.find(b => b.tier === 't2')!.conditions.find(c => c.key === 'BaseType')!.values).toContain('The Hermit')
   })
 })

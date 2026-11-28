@@ -1,7 +1,7 @@
 // Day-1 prices: they fill in only what the live prices lack, marked as day-1,
 // and the script takes the middle of a league's first three days.
 import { describe, expect, it } from 'vitest'
-import { withDay1 } from '@/web/woke/loot-filter/day1-prices'
+import { day1Applies, withDay1 } from '@/web/woke/loot-filter/day1-prices'
 import type { Day1Table } from '@/web/woke/loot-filter/day1-prices'
 import { priceLookup } from '@/web/woke/loot-filter/economy'
 
@@ -35,6 +35,16 @@ describe('day-1 prices', () => {
     expect(firstDays([])).toBeNull()
   })
 
+  it('applies only in another league\'s first week', () => {
+    const start = Date.parse('2027-03-06T20:00:00Z')
+    const day = 86400e3
+    expect(day1Applies('Next', 'Covens', start, start + day)).toBe(true)
+    expect(day1Applies('Covens', 'Covens', start, start + day)).toBe(false)
+    expect(day1Applies('Next', 'Covens', start, start + 8 * day)).toBe(false)
+    expect(day1Applies('Standard', 'Covens', null, start)).toBe(false)
+    expect(day1Applies('Next', '', start, start + day)).toBe(false)
+  })
+
   it('the typical price is the middle of the league after its first three days', async () => {
     const { typical } = await import(/* @vite-ignore */ SCRIPT) as { typical: (p: Array<{ daysAgo: number, value: number }>) => number | null }
     // Days 10..1: the first three (500, 400, 300) are left out.
@@ -42,5 +52,28 @@ describe('day-1 prices', () => {
     expect(typical(pts)).toBe(4)
     expect(typical([{ daysAgo: 2, value: 6 }, { daysAgo: 1, value: 2 }])).toBe(4)
     expect(typical([])).toBeNull()
+  })
+
+  it('reads an exchange details answer as dated points', async () => {
+    const { exchangePoints, firstDays } = await import(/* @vite-ignore */ SCRIPT) as {
+      exchangePoints: (d: unknown, now: number) => Array<{ daysAgo: number, value: number }>
+      firstDays: (p: Array<{ daysAgo: number, value: number }>) => number | null
+    }
+    const now = Date.parse('2026-11-28T06:00:00Z')
+    const d = {
+      pairs: [{ id: 'divine', history: [] }, {
+        id: 'chaos',
+        history: [
+          { timestamp: '2026-11-28T00:00:00Z', rate: 9 },
+          { timestamp: '2026-10-31T00:00:00Z', rate: 30 },
+          { timestamp: '2026-10-30T00:00:00Z', rate: 50 },
+          { timestamp: '2026-10-29T00:00:00Z', rate: 40 }
+        ]
+      }]
+    }
+    const pts = exchangePoints(d, now)
+    expect(pts[0]).toEqual({ daysAgo: 0, value: 9 })
+    expect(firstDays(pts)).toBe(40)
+    expect(exchangePoints(null, now)).toEqual([])
   })
 })

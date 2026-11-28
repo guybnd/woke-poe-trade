@@ -152,6 +152,10 @@
         <!-- Guy: any other mod goes in from here; the price check's own rows keep only special ones (enchants). -->
         <FilterAddMod v-if="filters && addMods" :filters="filters" map data-map-add-mod />
       </div>
+      <!-- Folded, the mods' place says so and opens them (Guy, 2026-11-28: "hard to see that its closed"). -->
+      <button v-else type="button" :class="$style.unfold" data-map-unfold @click="open = true">
+        <i class="fas fa-chevron-down" />Show the map mods<span v-if="rows.length" class="w-dim">{{ rows.length }}</span>
+      </button>
     </section>
     <slot name="worth" />
   </div>
@@ -188,7 +192,10 @@ import type { FarmGoal } from './goal'
 // worth: the worth slot is filled (a Nightmare Map).
 const props = defineProps<{ item: ParsedItem, stats?: FilterOrGroup[], filters?: ItemFilters, addMods?: boolean, worth?: boolean }>()
 
-const open = useFold('map-mod-strip')
+// Trade search is open on every check, unless Worth running is (Guy, 2026-11-28:
+// "open always unless another panel is open"). Folding it by hand lasts for
+// this item only, so it is never left folded for the next map.
+const open = shallowRef(true)
 
 // No "are you sure": delete now, offer Undo (P9).
 function removeTemplate (t: FarmTemplate) {
@@ -226,11 +233,12 @@ const result = computed(() => {
 // is open at a time, so neither pushes the other out of the window (Guy, 2026-11-20).
 // The strip is reused from item to item, so it watches the worth prop rather
 // than checking once at setup.
+// Folding Worth running opens Trade search again.
 const worthOpen = useFold('nightmare-strip', true)
 const accordion = computed(() => !!props.worth && !!result.value)
-watch(accordion, (on) => { if (on && open.value && worthOpen.value) open.value = false }, { immediate: true })
+watch(() => [props.item, accordion.value] as const, () => { open.value = !(accordion.value && worthOpen.value) }, { immediate: true })
 watch(open, (now) => { if (now && accordion.value) worthOpen.value = false })
-watch(worthOpen, (now) => { if (now && accordion.value) open.value = false })
+watch(worthOpen, (now) => { if (accordion.value) open.value = !now })
 
 // Tells the price check which number rows the chips stand in for (CheckedItem.vue).
 const owns = inject<ShallowRef<ReadonlySet<string> | null> | null>('map-strip-owns', null)
@@ -831,6 +839,9 @@ const picked = computed(() => {
 .toolOn { color: var(--w-fg); border-color: var(--w-accent); background: var(--w-accent-soft); }
 .ic { width: var(--w-icon-sm); height: var(--w-icon-sm); object-fit: contain; }
 .list { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; border-top: 1px solid var(--w-line); }
+.unfold { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 4px; padding: 3px 0; font-size: var(--w-fs-sm); color: var(--w-fg); border: 1px dashed var(--w-line-strong); border-radius: var(--w-r-sm); }
+.unfold:hover { background: var(--w-chip-ground); border-style: solid; }
+.unfold .fas { font-size: var(--w-fs-xs); color: var(--w-accent); }
 .mod { display: flex; align-items: center; gap: 6px; font-size: var(--w-fs-sm); padding: 1px 2px; border-radius: var(--w-r-sm); }
 .mod[title] { cursor: pointer; }
 .mod[title]:hover { background: var(--w-chip-ground); }

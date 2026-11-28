@@ -1,8 +1,9 @@
 <template>
   <!-- Under the Jewels page's Abyss and Jewels folds (Guy's Jewels A + U1,
        2026-11-28): the unique jewels, read only (the Uniques page owns them,
-       so two settings never fight over one jewel), then the cluster jewels
-       priced by enchant, passive count and item level (ClusterPriceBand). -->
+       so two settings never fight over one jewel). Cluster jewels are a
+       section of their own above, folded by size (WOKEPOET-726); NeverSink's
+       cluster price rules stay on the Rules tab's Cluster page. -->
   <div :class="$style.wrap" data-loot-jewels>
     <div v-if="uniques.length" :class="$style.cat" data-loot-unique-jewels>
       <div :class="$style.head" role="button" tabindex="0" :aria-expanded="open" @click="open = !open" @keydown.enter.prevent="open = !open" @keydown.space.prevent="open = !open">
@@ -20,26 +21,12 @@
         </WItemRow>
       </div>
     </div>
-    <div :class="$style.cat">
-      <div :class="[$style.head, $style.static]">
-        <WIcon item="Large Cluster Jewel" size="sm" />
-        <span :class="$style.name">Cluster jewels</span>
-        <span :class="$style.count">by enchant, passive count and item level, from poe.ninja</span>
-      </div>
-      <div :class="$style.body">
-        <ClusterPriceBand v-if="store.doc.value" :doc="store.doc.value" :settings="config.presets.clusterPrices" :prices="clusterPricesFor(store.prices.currentLeague.value)"
-          :updated-at="clusterPrices?.ts ?? null" :error="clusterPricesError" @open-rule="emit('open-rule', { type: CLUSTER_PRICE_TYPE, tier: $event })" />
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { WIcon, WItemRow } from '../ui'
-import ClusterPriceBand from './ClusterPriceBand.vue'
-import { clusterPrices, clusterPricesError, clusterPricesFor } from './cluster-ninja'
-import { CLUSTER_PRICE_TYPE } from './cluster-prices'
 import { CSTEP_NAMES, CURRENCY_TYPE, currencyItems, scaled, stacksFor, stepOfPile, withEdit } from './currency-weights'
 import type { CurrencyItem } from './currency-weights'
 import { isJewelBase } from './jewel-classes'
@@ -84,7 +71,7 @@ function chaosText (v: number): string {
 .wrap { display: flex; flex-direction: column; gap: 8px; }
 .cat { border: 1px solid var(--w-line); border-radius: var(--w-r-sm); max-width: 60rem; }
 .head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 4px 8px; cursor: pointer; }
-.static { cursor: default; }
+
 .name { font-size: var(--w-fs-sm); color: #e2d3ad; white-space: nowrap; }
 .count { font-size: var(--w-fs-xs); color: var(--w-dim); }
 .body { border-top: 1px solid var(--w-line); padding: 4px 8px 6px; }
