@@ -748,9 +748,9 @@ export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'>, c: Pick<Curren
   if (sectionMode({ catMode: c.catMode ?? {} }, it.cat) === 'always') return []
   return stepsOffIn(c, it.cat).filter(s => s >= 1 && s <= 4 && s !== e?.min)
 }
-// The steps off in a section: its own when it sets them, else its page's
-// (the ruler's), never another page's (Guy 2026-11-28).
-export const stepsOffIn = (c: Pick<CurrencySettings, 'offBy'>, cat: string): number[] => c.offBy?.[cat] ?? c.offBy?.[kindOf(cat)] ?? []
+// The steps off in a section: its own when it sets them, else its page's,
+// else every page's (Guy 2026-11-28).
+export const stepsOffIn = (c: Pick<CurrencySettings, 'offBy'>, cat: string): number[] => c.offBy?.[cat] ?? c.offBy?.[kindOf(cat)] ?? c.offBy?.all ?? []
 
 // The step a pile of `stack` gets: Hidden when it lands on a step turned off.
 export function stepOfPile (stacks: ReadonlyArray<number | null>, stack: number, off: readonly number[] = []): CStep {
