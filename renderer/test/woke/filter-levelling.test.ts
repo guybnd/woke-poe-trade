@@ -13,7 +13,7 @@ import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { neverSink } from '../helpers/neversink'
 import { loadGameData } from '../helpers/game-data'
 import { insertBuildBlocks } from '@/web/woke/loot-filter/build-rules'
-import { DEF_ALL, DEF_AR, DEF_ES, DEF_EV, LV_GEAR_TYPE, levellingGearBlocks, lvDefences, setLvDefences } from '@/web/woke/loot-filter/levelling-gear'
+import { DEF_ALL, DEF_AR, DEF_ES, DEF_EV, LV_GEAR_TYPE, levellingGearBlocks, lvDefences, questlikeBlocks, retireNeverSinkLevelling, setLvDefences } from '@/web/woke/loot-filter/levelling-gear'
 import type { Presets } from '@/web/woke/loot-filter/presets'
 
 const SEMI = neverSink('2-SEMI-STRICT')
@@ -265,5 +265,55 @@ describe('levelling flasks', () => {
     expect(lvStep(flask('Utility Flasks', 'Quicksilver Flask', 30))).toBe(3)
     expect(lvStep(flask('Utility Flasks', 'Ruby Flask', 30))).toBe(2)
     expect(lvStep(flask('Utility Flasks', 'Ruby Flask', 70))).toBeNull()
+  })
+})
+
+describe('NeverSink levelling retired, quest-like items', () => {
+  beforeAll(() => loadGameData(), 60_000)
+  const build = (f?: (c: CurrencySettings) => void) => {
+    const d = parseFilter(SEMI)
+    const cfg = on(f)
+    applyCurrency(d, cfg, lookup)
+    const n = retireNeverSinkLevelling(d, cfg)
+    insertBuildBlocks(d, [...questlikeBlocks(), ...levellingGearBlocks(cfg, { on: false, archetype: 'caster', classes: [] }, null)])
+    return { d, n }
+  }
+  const item = (itemClass: string, baseType: string, rarity: string, areaLevel: number, more: Partial<ItemFacts> = {}): ItemFacts => ({
+    name: baseType, baseType, itemClass, rarity, areaLevel, itemLevel: areaLevel, influences: [], explicitModNames: [], identified: true, ...more
+  } as ItemFacts)
+
+  it('turns NeverSink\'s levelling sections off, but keeps its last layers', () => {
+    const { d, n } = build()
+    expect(n).toBeGreaterThan(100)
+    const ns = d.blocks.filter(b => !b.added && /Leveling - /.test(b.section))
+    expect(ns.some(b => !b.disabled && /Hide All known/i.test(b.subsection))).toBe(true)
+    expect(ns.filter(b => !b.disabled && !/Hide All known|Show All unknown/i.test(b.subsection))).toEqual([])
+    expect(validateFilter(parseFilter(serializeFilter(d))).map(p => p.message)).toEqual([])
+  })
+
+  it('what our rules don\'t show below maps hides; your Act 1 armour shows', () => {
+    const { d } = build()
+    // An old energy shield helmet in Act 6 hides; a new one shows Small.
+    expect(matchItem(d, item('Helmets', 'Vine Circlet', 'Normal', 50, { dropLevel: 1, width: 2, height: 2 })).visibility).toBe('Hide')
+    expect(matchItem(d, item('Helmets', 'Vine Circlet', 'Normal', 50, { dropLevel: 48, width: 2, height: 2 })).final?.block.type).toBe(LV_GEAR_TYPE)
+    expect(matchItem(d, item('Body Armours', 'Plate Vest', 'Normal', 5, { dropLevel: 1, width: 2, height: 3 })).visibility).toBe('Show')
+  })
+
+  it('from the hideout: NeverSink keeps acts 1 to 8', () => {
+    const { d, n } = build(c => setLvGate(c, 1))
+    expect(n).toBeGreaterThan(100)
+    const kept = d.blocks.filter(b => !b.added && !b.disabled && /Leveling - Rules/.test(b.section))
+    expect(kept.length).toBeGreaterThan(10)
+    expect(kept.every(b => b.conditions.some(x => x.key === 'AreaLevel' && x.op === '<' && x.values[0] === '60'))).toBe(true)
+    expect(build(c => setLvGate(c, 0)).n).toBe(0)
+    expect(build(c => setLvOn(c, false)).n).toBe(0)
+  })
+
+  it('quest-like items are green with the moon icon everywhere', () => {
+    const { d } = build()
+    for (const area of [10, 80]) {
+      const m = matchItem(d, item('Labyrinth Trinkets', 'Dummy', 'Normal', area))
+      expect(m.final?.block.actions.find(x => x.key === 'MinimapIcon')?.args).toEqual(['0', 'Green', 'Moon'])
+    }
   })
 })
