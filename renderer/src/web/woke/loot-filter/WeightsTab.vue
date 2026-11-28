@@ -77,6 +77,7 @@ Only this profile. Your own rules, build rules and presets still win." />
               </div>
               <div v-else :class="$style.group">
                 <div :class="$style.groupHead"><i :class="g.icon" /> {{ g.label }}</div>
+                <div v-if="g.key === 'idmods'" :class="$style.groupNote" data-weights-id-note data-goto-spot="id-mods">Mods from Price check's list of valuable mods. Great: a top 5 mod at tier 1. Good: tier 2, or another at tier 1. Fair: one tier lower.</div>
                 <div v-for="r in g.rows" :key="r.key" :class="$style.row" :title="`${r.label}: ×${w.mult[r.key]}${moved(r.key) ? ` (default ×${r.dflt})` : ''}`">
                   <button v-if="PIN_ROWS.has(r.key)" type="button" :class="[$style.pin, { [$style.pinned]: w.always.includes(r.key) }]" :aria-pressed="w.always.includes(r.key)"
                     :title="w.always.includes(r.key) ? `Always shown (at least Small): ${r.label}. Click to let the score decide.` : `Always show ${r.label.toLowerCase()}, whatever its score`" @click="togglePin(r.key)"><i class="fas fa-thumbtack" /></button>
@@ -559,7 +560,7 @@ const GROUP_BY_KEY = new Map(WEIGHT_GROUPS.map(g => [g.key, g]))
 const groupsOf = (keys: string[]) => keys.flatMap(k => GROUP_BY_KEY.get(k) ?? [])
 const TABLE_COLS = [
   { label: 'The base', groups: groupsOf(['rank', 'rarity', 'size', 'ilvl', 'corr']) },
-  { label: 'The drop · what it has', groups: groupsOf(['tier', 'infl', 'special', 'links']) }
+  { label: 'The drop · what it has', groups: groupsOf(['tier', 'infl', 'special', 'links', 'idmods']) }
 ]
 const TIER_ROWS: Array<{ label: string, keys: WeightKey[] }> = [
   { label: 'Rare', keys: ['t1', 't2', 't3', 't4', 't5'] },
@@ -698,6 +699,7 @@ function reset () {
   gap: 4px;
   padding-bottom: 2px;
 }
+.groupNote { font-size: var(--w-fs-xs); color: var(--w-faint); line-height: 1.35; padding: 0 2px 3px; }
 .row {
   display: grid;
   position: relative;

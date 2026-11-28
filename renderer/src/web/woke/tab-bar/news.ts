@@ -32,6 +32,7 @@ export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
   { id: 'loot-filter-loot-on', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot and Equipment are on for every filter and out of beta; the NeverSink tab is gone' },
+  { id: 'loot-filter-identified-mods', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Rare gear scores identified rares and magic items by their mods' },
   { id: 'loot-filter-strictness-menu', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: pick strictness and follow your maps from the Loot tab\'s Main ruler' },
   { id: 'loot-filter-special-gear', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Equipment › Special gear: veiled, temple and league mods, fractured, influenced gear, idols' },
   { id: 'loot-filter-recipes-by-price', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Recipes steps follow the price of what the vendor gives' },
@@ -56,9 +57,7 @@ export const NEWS: NewsItem[] = [
   { id: 'loot-filter-drag-bases', since: '1.330.23', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: drag bases between rank columns on Base ranks; drag one or all the picked ones' },
   { id: 'loot-filter-profiles', since: '1.330.22', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: profiles, several whole filters (mapping, bossing...) each in its own file; switch at the top' },
   { id: 'price-check-unique-foulborn', since: '1.330.22', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a unique, its Foulborn kinds and versions priced, its Vestigial mod, and if it can be chanced' },
-  { id: 'atlas-tree-planner-links', since: '1.330.22', wmType: 'woke-atlas-strategies', goto: 'strategies', name: 'Atlas strategies', note: 'New: imports Atlas Tree Planner links (atlas-blush-beta.vercel.app)' },
   { id: 'search-price-check-bases', since: '1.330.22', wmType: 'woke-search', name: 'Search', note: 'New: Enter price checks bases, flasks, jewels and corpses in the overlay; Alt+Enter opens the trade site' },
-  { id: 'net-worth-rename-runs', since: '1.330.22', wmType: 'woke-net-worth', name: 'Net worth', goto: 'runs', note: 'New: rename a run: click its name, or the pen in Past runs' },
   { id: 'net-worth-worth-selling', since: '1.330.22', wmType: 'woke-net-worth', name: 'Net worth', goto: 'holdings', note: 'New: a Falling chip on Holdings lists what you hold 1 div or more of that has been falling all week' },
   { id: 'pob-import-all-sites', since: '1.330.22', wmType: 'woke-pob-builds', goto: 'builds', name: 'PoB builds', note: 'New: import poe.ninja, maxroll and pob.codes build links; your list follows PoB\'s own builds folder' },
   { id: 'atlas-results-from-runs', since: '1.330.22', wmType: 'woke-atlas-strategies', goto: 'strategies', name: 'Atlas strategies', note: 'New: each strategy shows what your strategy runs of the same name earn per hour and per map' },

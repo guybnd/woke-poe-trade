@@ -472,7 +472,7 @@ const props = defineProps<{
   // Group/tier to show first (from the sample card).
   focus?: { type: string, tier: string } | null
   // A tab to show (from the dock card). A new object each time.
-  openTab?: { tab: 'prices' | 'currency' | 'changes' | 'gear' } | null
+  openTab?: { tab: 'prices' | 'currency' | 'changes' | 'gear' | 'weights' } | null
 }>()
 
 const emit = defineEmits<{ (e: 'close' | 'tab-opened'): void, (e: 'paste-item', text: string): void }>()
@@ -1098,6 +1098,12 @@ watch(tab, t => { if (focusTab && t !== focusTab) { focusTab = null; tabFocus.va
 
 watch(() => props.openTab, (t) => {
   if (!t) return
+  if (t.tab === 'weights') {
+    // Rare gear (What's new "Show me"), whichever Equipment section was open.
+    if (equipShown.value) { tabFocus.value = 'rares'; tab.value = 'weights'; nextTick(() => { tabFocus.value = null }).catch(() => {}) }
+    emit('tab-opened')
+    return
+  }
   tab.value = t.tab
   // Once: the editor is rebuilt each time it opens, and must not come back here.
   emit('tab-opened')

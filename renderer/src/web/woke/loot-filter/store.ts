@@ -16,6 +16,8 @@ import { parseFilter, parseFilterCopy, serializeFilter } from './parse'
 import { composeFilter } from './compose'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { loadOwnTables, ownTables } from './own-lists'
+import { affixTable, idGroups, loadAffixTable } from './id-mods'
+import { driverSeed } from '../price-insight/seed'
 import { loadBaseRanks } from './base-ranks'
 import { gemLinesOf } from './gem-classes'
 import type { FilterDoc, Visibility } from './parse'
@@ -277,6 +279,14 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     return ownTables.value
   }
 
+  // Identified gear's mod lists (Rare weights): starts the read, gives what's
+  // there, from the price check's list of valuable mods.
+  function idsNow () {
+    loadAffixTable()
+    const t = affixTable.value
+    return t ? idGroups(t, driverSeed.value, cfg().presets.weights.mult) : null
+  }
+
   const sourceStamp = (text: string) => `${cfg().sourceName}|${hash(text)}`
 
   // What the net leaves hidden because you said so: "Not for me" on a hidden
@@ -314,6 +324,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       cards: cfg().presets.currency.on ? cardsNow() : null,
       gems: cfg().presets.currency.on ? gemLines.value : null,
       own: cfg().presets.currency.on ? ownNow() : null,
+      ids: cfg().presets.weights.on ? idsNow() : null,
       ownBase: cfg().ownBase === true
     })
   }
@@ -566,6 +577,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   watch(clusterPrices, () => { if (baseText.value != null) rebuild() })
   watch(() => cfg().ownBase, () => { if (baseText.value != null) rebuild() })
   watch(ownTables, () => { if (baseText.value != null && cfg().presets.currency.on) rebuild() })
+  watch([affixTable, driverSeed], () => { if (baseText.value != null && cfg().presets.weights.on) rebuild() })
   watch([prices.currentLeague, () => baseText.value != null], ([league, loaded]) => { if (loaded) loadClusterPrices(league) })
 
   // Price index updates, or settings that change the net: refresh.

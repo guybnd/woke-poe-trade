@@ -130,7 +130,7 @@ const mode = ref<'card' | 'editor'>('editor')
 const sample = shallowRef<ItemFacts | null>(null)
 const samplePosition = shallowRef({ x: 1, y: 1 })
 const focus = shallowRef<{ type: string, tier: string } | null>(null)
-const openTab = shallowRef<{ tab: 'prices' | 'currency' | 'changes' | 'gear' } | null>(null)
+const openTab = shallowRef<{ tab: 'prices' | 'currency' | 'changes' | 'gear' | 'weights' } | null>(null)
 const areaOverride = ref<number | null>(null)
 
 // The card shows alone, not with every open panel, and closes when you go back
@@ -192,7 +192,7 @@ const lootSpot = (tier: string) => () => { openEditor(); focus.value = { type: '
 // (cat:sg...) opens on the Equipment tab.
 useGoto(props.config, 'woke-loot-filter', {
   editor: openEditor,
-  spots: { 'loot-gold': lootSpot('cat:gold:'), 'loot-levelling': lootSpot('levelling'), 'loot-special': lootSpot('cat:sgveil:'), 'profiles': () => {}, 'gear-ranks': () => { openEditor(); askGearRanks() }, 'over-quality-look': () => { openEditor(); openTab.value = { tab: 'gear' } }, 'league-always': lootSpot('lgchron'), 'section-steps': lootSpot('cat:orbs:Chaos Orb'), 'section-ruler': lootSpot('cat:orbs:Chaos Orb'), 'map-looks': lootSpot('mapfloor'), 'jewels-no-price': lootSpot('jewplain'), 'own-lists': lootSpot('cat:orbs:Divine Orb'), 'history': () => { openEditor(); openTab.value = { tab: 'changes' } }, 'recipes-by-price': lootSpot('recipes'), 'loot-strictness': lootSpot('cat:orbs:Chaos Orb'), 'loot-on': lootSpot('cat:orbs:Chaos Orb') }
+  spots: { 'loot-gold': lootSpot('cat:gold:'), 'loot-levelling': lootSpot('levelling'), 'loot-special': lootSpot('cat:sgveil:'), 'profiles': () => {}, 'gear-ranks': () => { openEditor(); askGearRanks() }, 'over-quality-look': () => { openEditor(); openTab.value = { tab: 'gear' } }, 'league-always': lootSpot('lgchron'), 'section-steps': lootSpot('cat:orbs:Chaos Orb'), 'section-ruler': lootSpot('cat:orbs:Chaos Orb'), 'map-looks': lootSpot('mapfloor'), 'jewels-no-price': lootSpot('jewplain'), 'own-lists': lootSpot('cat:orbs:Divine Orb'), 'history': () => { openEditor(); openTab.value = { tab: 'changes' } }, 'recipes-by-price': lootSpot('recipes'), 'loot-strictness': lootSpot('cat:orbs:Chaos Orb'), 'id-mods': () => { openEditor(); openTab.value = { tab: 'weights' } }, 'loot-on': lootSpot('cat:orbs:Chaos Orb') }
 })
 
 // A change Claude suggested, applied from the Suggestions card: added like an
