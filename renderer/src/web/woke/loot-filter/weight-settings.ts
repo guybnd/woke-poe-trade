@@ -190,6 +190,9 @@ export interface WeightSettings {
   look: Record<LookChannel, LookKey[]>
   // Your own rank for a base (by name), over the filter's.
   ranks: Record<string, RankKey>
+  // A base's own Show it (Guy's R1 Alt+F card, 2026-11-28): every rare of it
+  // always shows (at least Small) or always hides, whatever its score.
+  bases: Record<string, BaseMode>
   // The score a utility flask needs to show (Guy's flasks A, 2026-11-28):
   // its own, since rares' line is set for scores in the hundreds.
   flaskLine: number
@@ -197,6 +200,7 @@ export interface WeightSettings {
   v: number
 }
 
+export type BaseMode = 'always' | 'off'
 export type RankKey = 'x1' | 'x2' | 'r1' | 'r2' | 'r3' | 'r0' | 'rj'
 // Best first.
 export const RANK_KEYS: readonly RankKey[] = ['x1', 'x2', 'r1', 'r2', 'r3', 'r0', 'rj']
@@ -262,7 +266,7 @@ export function normalizeLook (v: unknown): Record<LookChannel, LookKey[]> {
 export const LOUD_DEFAULT: readonly number[] = [16, 64, 256]
 
 export function defaultWeights (): WeightSettings {
-  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT], look: lookDefault(), ranks: {}, flaskLine: 4, v: WEIGHTS_V }
+  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT], look: lookDefault(), ranks: {}, bases: {}, flaskLine: 4, v: WEIGHTS_V }
 }
 
 // Bumped when a saved setting is moved once on load.
@@ -316,6 +320,9 @@ export function normalizeWeights (w: Partial<WeightSettings> | undefined): Weigh
     v: WEIGHTS_V,
     ranks: w?.ranks && typeof w.ranks === 'object'
       ? Object.fromEntries(Object.entries(w.ranks).filter(([n, r]) => typeof n === 'string' && n.length < 80 && RANK_KEYS.includes(r)))
+      : {},
+    bases: w?.bases && typeof w.bases === 'object'
+      ? Object.fromEntries(Object.entries(w.bases).filter(([n, m]) => typeof n === 'string' && n.length < 80 && (m === 'always' || m === 'off')))
       : {}
   }
 }

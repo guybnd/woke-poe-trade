@@ -199,6 +199,22 @@ describe('rare weights', () => {
     expect(junked).toBeLessThan(plain * 1.3)
   })
 
+  it("a base's own Show it (Guy's R1 card): Always show lifts its weak rares to Small, Always hide hides even strong ones", () => {
+    const doc = parseFilter(SEMI)
+    const rows = filterBases(doc).filter(b => b.cls === 'Gloves' && BASE_FACTS[b.name])
+    const weak = rows.find(b => b.rank === 'r0')!
+    const strong = rows.find(b => b.rank === 'r1') ?? rows.find(b => b.name !== weak.name)!
+    const w = on(x => { x.bases = { [weak.name]: 'always', [strong.name]: 'off' }; x.always = [] })
+    applyWeights(doc, w)
+    const r = rng(5)
+    const plain = (f: ItemFacts, extra: Partial<ItemFacts>): ItemFacts => ({ ...f, rarity: 'Rare', corrupted: false, corruptedMods: 0, mirrored: false, fractured: false, synthesised: false, fated: false, anyEnchantment: false, crucibleTree: false, exarchTier: 0, eaterTier: 0, influences: [], socketGroups: [], quality: 0, memoryStrands: 0, ...extra })
+    const lo = matchItem(doc, plain(randomRare(r, [weak]).facts, { itemLevel: 68, unidentifiedItemTier: undefined }))
+    expect(lo.final?.block.tier).toBe('s1')
+    const hi = matchItem(doc, plain(randomRare(r, [strong]).facts, { itemLevel: 86, unidentifiedItemTier: 5, fractured: true }))
+    expect(hi.visibility).toBe('Hide')
+    expect(normalizeWeights({ bases: { a: 'always', b: 'off', c: 'x' as never } }).bases).toEqual({ a: 'always', b: 'off' })
+  })
+
   it('keeps marks at ×1 or more and drop tiers and item levels in order', () => {
     const w = normalizeWeights({ on: true, need: 4, mult: { ...defaultWeights().mult, fract: 0.25, t5: 2, i68: 3 } })
     expect(w.mult.fract).toBe(1)
