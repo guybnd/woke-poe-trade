@@ -7,7 +7,7 @@
       <b :class="$style.title">On the ground</b>
       <WButton size="sm" variant="ghost" icon="fas fa-dice" @click="seed++">Drop a new pile</WButton>
       <WChip clickable :active="ghosts" @click="ghosts = !ghosts">Show hidden, struck through</WChip>
-      <span class="w-dim text-xs w-num">{{ hiddenCount }} of {{ drops.length }} hidden · click a special map to open its row</span>
+      <span class="w-dim text-xs w-num">{{ hiddenCount }} of {{ drops.length }} hidden · {{ hint ?? 'click a special map to open its row' }}</span>
     </div>
     <div ref="groundEl" :class="$style.ground" :style="{ height: `${placed.height}px` }" data-maps-pile>
       <template v-for="d in placed.list" :key="'b' + d.id">
@@ -37,12 +37,16 @@ import { matchItem } from './match'
 import { defaultTextColour } from './drops'
 import { ruleLabel } from './parse'
 import { mapPile } from './map-pile'
+import type { MapDrop } from './map-pile'
 import type { FilterDoc } from './parse'
 
 const props = defineProps<{
   doc: FilterDoc | null
   // Names of the Maps page's rows, to open one on click.
   priced: Set<string>
+  // Another page's pile (the Jewels page's), and the hint that goes with it.
+  pile?: (seed: number) => MapDrop[]
+  hint?: string
 }>()
 const emit = defineEmits<{ go: [name: string] }>()
 
@@ -55,7 +59,7 @@ const ghosts = ref(true)
 const drops = computed(() => {
   const doc = props.doc
   if (!doc) return []
-  return mapPile(seed.value).map(d => {
+  return (props.pile ?? mapPile)(seed.value).map(d => {
     const m = matchItem(doc, d.facts, { brief: true })
     const rule = m.final?.block
     const by = !rule ? 'no rule matched' : rule.type?.startsWith('woke->') ? `decided by ${ruleLabel(rule.type, rule.tier)}` : `NeverSink: ${ruleLabel(rule.type, rule.tier)}`

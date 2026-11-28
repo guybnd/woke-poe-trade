@@ -1433,10 +1433,23 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-loot-maps]')).toContainText('under tier 14 hide')
   await overlay.snap('loot tab, maps')
   await from.fill('1')
-  // Jewels: the cluster price rules, as on the Rules tab's Cluster page.
+  // Jewels: Abyss and Jewels folds, the unique jewels (set in Uniques), and
+  // the cluster price rules, as on the Rules tab's Cluster page.
   await page.locator('[data-loot-class="jewels"]').click()
+  const abyss = page.locator('[data-currency-cat="jewabyss"]')
+  await expect(abyss).toBeVisible()
+  await abyss.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
+  await expect(abyss.locator('[data-currency-item="Rare abyss jewel, item level 86+"]')).toBeVisible()
+  await expect(page.locator('[data-maps-pile] [data-map-drop]').first()).toBeVisible()
   await expect(page.locator('[data-loot-jewels]')).toContainText('Follow poe.ninja')
   await overlay.snap('loot tab, jewels')
+  const ujewel = page.locator('[data-unique-jewel]').first()
+  if (await ujewel.count()) {
+    const name = await ujewel.getAttribute('data-unique-jewel')
+    await ujewel.click()
+    await expect(page.locator('[data-loot-class="uniques"]')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator(`[data-currency-item="${name}"]`)).toBeVisible()
+  }
   // League items: a mechanic you don't run goes Off in one click.
   await page.locator('[data-loot-class="league"]').click()
   await page.locator('[data-loot-league-section="lgexped"]').getByRole('button', { name: 'Off' }).click()

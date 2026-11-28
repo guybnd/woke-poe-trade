@@ -51,7 +51,7 @@
         @patch="p => setStepLook(stepEdit!, { ...c.steps[stepEdit!], ...loudOnly(p) })" />
     </div>
 
-    <MapsPile v-if="kind === 'maps'" :doc="store.doc.value" :priced="pricedNames" @go="goTo" />
+    <MapsPile v-if="kind === 'maps' || kind === 'jewels'" :doc="store.doc.value" :priced="pricedNames" :pile="kind === 'jewels' ? jewelPile : undefined" :hint="kind === 'jewels' ? 'click a jewel to open its row' : undefined" @go="goTo" />
     <CurrencyPile v-else-if="baseItems.length" :items="items" :cfg="eff" :faint="faintActive" :tip="tipOf" @go="goTo" />
 
     <div :class="$style.tools">
@@ -132,6 +132,7 @@
         </template>
       </div>
     </div>
+    <slot name="after" />
   </div>
 </template>
 
@@ -144,6 +145,7 @@ import { WButton, WChip, WIcon, WInfo, WItemRow, WSegmented, WToggle } from '../
 import CurrencyPile from './CurrencyPile.vue'
 import { lootTipRef } from './base-tip'
 import MapsPile from './MapsPile.vue'
+import { jewelPile } from './jewel-pile'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import LabelPreview from './LabelPreview.vue'
 import StyleEditor from './StyleEditor.vue'
@@ -166,7 +168,7 @@ const props = withDefaults(defineProps<{
   // An item to open and scroll to (Alt+F's "Open on the Loot tab").
   focusItem?: string | null
 }>(), { kind: 'currency', focusItem: null })
-const KIND_NAME: Record<LootKind, string> = { currency: 'currency', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems', maps: 'special maps' }
+const KIND_NAME: Record<LootKind, string> = { currency: 'currency', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems', maps: 'special maps', jewels: 'jewels' }
 const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.kind))
 
 const c = computed(() => props.config.presets.currency)
@@ -342,7 +344,7 @@ const level = computed(() => levelOf(props.store.doc.value?.strictness ?? null))
 const mult = computed(() => c.value.mult ?? strictMult(level.value))
 const eff = computed(() => scaled(c.value, props.store.doc.value?.strictness ?? null))
 const dragMult = ref<number | null>(null)
-const SAMPLE_CATS = props.kind === 'maps' ? ['mapblight', 'mapravaged'] : props.kind === 'gems' ? ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'] : props.kind === 'uniques' ? ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss', 'uniqfoul'] : props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
+const SAMPLE_CATS = props.kind === 'maps' ? ['mapblight', 'mapravaged'] : props.kind === 'jewels' ? ['jewabyss', 'jewplain'] : props.kind === 'gems' ? ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'] : props.kind === 'uniques' ? ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss', 'uniqfoul'] : props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
 // The colours the step ruler shows.
 const sampleCat = ref(SAMPLE_CATS[0])
 // Each step card's sample: an item of the picked category that one of shows

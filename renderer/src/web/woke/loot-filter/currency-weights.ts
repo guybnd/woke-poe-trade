@@ -28,6 +28,7 @@ import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
 import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
+import { JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_ROWS, JEWEL_TYPE } from './jewel-classes'
 import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK, SPECIAL_MAPS, SPECIAL_MAP_CATS } from './map-classes'
 import type { GemBand, GemLine } from './gem-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
@@ -82,9 +83,9 @@ export const GOLD_PILES: Array<{ name: string, min: number | null, max: number |
   { name: 'Gold under 150', min: null, max: 149, guess: 0.25 }
 ]
 // Every class's categories (the Loot tab's rail shows one class at a time).
-export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES, ...MAP_CATEGORIES]
-export type LootKind = 'currency' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps'
-export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : MAP_IDS.has(cat) ? 'maps' : 'currency'
+export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES, ...MAP_CATEGORIES, ...JEWEL_CATEGORIES]
+export type LootKind = 'currency' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps' | 'jewels'
+export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : MAP_IDS.has(cat) ? 'maps' : JEWEL_IDS.has(cat) ? 'jewels' : 'currency'
 // A section's Off / Weighted / Always: yours, else its default (boss-only
 // uniques: Always).
 export const sectionMode = (c: Pick<CurrencySettings, 'catMode'>, cat: string): SectionMode => c.catMode?.[cat] ?? UNIQUE_MODES[cat] ?? GEM_MODES[cat] ?? 'auto'
@@ -467,6 +468,27 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       })
     }
   }
+  // Abyss and plain jewels (Guy's Jewels A, 2026-11-28): a row per rarity and
+  // item level band, each a guess you set the step or price of.
+  if (doc.blocks.some(b => b.type != null && JEWEL_TYPE.test(b.type))) {
+    for (const j of JEWEL_ROWS) {
+      const own = edits[j.name]?.price
+      seen.set(j.name, {
+        name: j.name,
+        cls: j.cls,
+        type: 'jewels',
+        tier: null,
+        cat: j.cat,
+        chaos: (own ?? j.guess) * (edits[j.name]?.mult ?? 1),
+        est: own == null,
+        ...(own != null ? { own: true } : {}),
+        full: 1,
+        bt: j.bts[0],
+        bts: j.bts,
+        conds: j.conds.map(x => ({ ...x, values: [...x.values] }))
+      })
+    }
+  }
   return [...seen.values()]
 }
 
@@ -657,7 +679,7 @@ const mixTo = (c: number[], to: number, f: number) => c.map(v => Math.round(v + 
 // The colour pushed 80% further from grey (Normal: "as now but more saturated").
 const vivid = (c: number[]) => { const g = (c[0] + c[1] + c[2]) / 3; return c.map(v => Math.max(0, Math.min(255, Math.round(v + (v - g) * 0.8)))) }
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rgb: [number, number, number], color: string, shape: string } {
-  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? CAT_LOOK.other
+  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? JEWEL_LOOK[cat] ?? CAT_LOOK.other
   const own = c.cats[cat]
   return {
     rgb: own?.text ? [own.text[0], own.text[1], own.text[2]] : d.text,
@@ -868,7 +890,7 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const eff = scaled(cfg, doc.strictness)
   const faint = faintOn(cfg, doc.strictness)
   const gemItems = all.filter(it => it.type === 'gems')
-  const items = all.filter(it => it.cls !== UNIQUE_CLS && it.type !== 'gems' && it.type !== 'maps' && it.type !== 'gold')
+  const items = all.filter(it => it.cls !== UNIQUE_CLS && it.type !== 'gems' && it.type !== 'maps' && it.type !== 'gold' && it.type !== 'jewels')
   const goldItems = all.filter(it => it.type === 'gold')
   const none: CurrencyCompiled = { blocks: [], items: [], chars: 0 }
   const compiled = items.length ? compileCurrency(eff, items, { faint }) : none
@@ -881,7 +903,8 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const spec = applySpecialRolls(doc, eff, all.filter(it => it.cat === 'uniqspec'), faint) ?? none
   const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec'), faint) ?? none
   const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
-  const parts = [compiled, gemsOut, goldOut, foul, spec, uniq, maps]
+  const jewels = applyJewels(doc, eff, all.filter(it => it.type === 'jewels'), faint) ?? none
+  const parts = [compiled, gemsOut, goldOut, foul, spec, uniq, maps, jewels]
   return { blocks: parts.flatMap(x => x.blocks), items: parts.flatMap(x => x.items), chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 
@@ -968,6 +991,22 @@ function applySpecialMaps (doc: FilterDoc, cfg: CurrencySettings, items: Currenc
   }
   if (!out.length) return null
   return { blocks: out.flatMap(x => x.blocks), items, chars: out.reduce((n, x) => n + x.chars, 0) }
+}
+
+// Jewel rows go above NeverSink's first jewel rule (its special corrupted
+// ones), one compile per row so each rule keeps its own rarity and item level
+// conditions. Loudest first: a corrupted 5-mod abyss jewel of item level 86
+// gets the louder of its two rows. Below area level 68 NeverSink decides.
+function applyJewels (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
+  if (!items.length) return null
+  const first = doc.blocks.find(b => b.type != null && JEWEL_TYPE.test(b.type))
+  if (!first) return null
+  const parts = items.map(it => compileCurrency(cfg, [it], { faint }))
+  const blocks = parts.flatMap(x => x.blocks)
+  const shown = blocks.filter(b => b.visibility === 'Show' && b.tier !== 'faint').sort((x, y) => Number(y.tier?.slice(1) ?? 0) - Number(x.tier?.slice(1) ?? 0))
+  const rest = blocks.filter(b => !shown.includes(b))
+  insertBlocks(doc, doc.chunks.indexOf(first), [...shown, ...rest])
+  return { blocks: [...shown, ...rest], items, chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 
 // Special unique rolls go just above NeverSink's own special rules, one

@@ -1,20 +1,20 @@
 <template>
   <!-- The Loot tab (Guy's pick A, 2026-11-27): a rail of loot classes on the
        left, the picked class on the right. Every class shares the one switch
-       (Jewels: the cluster price switch). -->
+       (Jewels: cluster jewels also have their own price switch). -->
   <div :class="$style.wrap" data-loot-tab>
     <nav :class="$style.rail" aria-label="Loot classes">
       <button v-for="k in LOOT_CLASSES" :key="k.id" type="button" :class="$style.cls" :aria-pressed="k.id === sel" :data-loot-class="k.id" @click="sel = k.id">
         <span :class="$style.sw" :style="{ background: `rgb(${k.rgb.join(',')})` }" aria-hidden="true" />
         <span :class="$style.name">{{ k.name }}</span>
-        <span :class="$style.state">{{ (k.id === 'jewels' ? config.presets.clusterPrices.on : config.presets.currency.on) ? 'On' : 'Off' }}</span>
+        <span :class="$style.state">{{ (config.presets.currency.on || (k.id === 'jewels' && config.presets.clusterPrices.on)) ? 'On' : 'Off' }}</span>
       </button>
     </nav>
     <CurrencyTab v-if="PRICED.has(sel)" :key="sel" :kind="lootKind" :store="store" :config="config" :focus-item="focusItem" :class="$style.main">
       <template v-if="sel === 'maps'" #extra><MapsTab :config="config" /></template>
+      <template v-if="sel === 'jewels'" #after><JewelsTab :store="store" :config="config" @open-rule="r => emit('open-rule', r)" @open-unique="openUnique" /></template>
     </CurrencyTab>
-    <LeagueTab v-else-if="sel === 'league'" :config="config" :class="$style.main" />
-    <JewelsTab v-else :store="store" :config="config" :class="$style.main" @open-rule="r => emit('open-rule', r)" />
+    <LeagueTab v-else :config="config" :class="$style.main" />
   </div>
 </template>
 
@@ -53,7 +53,7 @@ const LOOT_CLASSES = [
 type ClassId = (typeof LOOT_CLASSES)[number]['id']
 
 // Classes prices decide already: one engine and one switch for both.
-const PRICED = new Set<ClassId>(['currency', 'fragments', 'cards', 'uniques', 'gems', 'maps'])
+const PRICED = new Set<ClassId>(['currency', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels'])
 const sel = ref<ClassId>('currency')
 const focusItem = ref<string | null>(null)
 watch(() => props.focus, f => {
@@ -63,6 +63,11 @@ watch(() => props.focus, f => {
   sel.value = at.cls
   focusItem.value = at.item
 }, { immediate: true })
+// A unique jewel opens on the Uniques page, which owns it (Guy's U1).
+function openUnique (name: string) {
+  sel.value = 'uniques'
+  focusItem.value = name
+}
 // The priced classes' ids are the engine's kinds.
 const lootKind = computed(() => sel.value as LootKind)
 </script>
