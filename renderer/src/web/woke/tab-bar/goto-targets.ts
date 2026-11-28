@@ -33,6 +33,9 @@ export const GOTO_SPOTS = {
 // What's new lines whose feature is a spot, by line id (news.ts). Kept here,
 // not on the line: NEWS loads at startup, this only with the dock's card.
 export const NEWS_SPOTS: Record<string, string> = {
+  'atlas-planner-links': 'import',
+  'net-worth-listed': 'stale',
+  'listed-still-cheapest': 'still-cheapest',
   'loot-filter-section-ruler': 'section-ruler',
   'loot-filter-section-steps': 'section-steps',
   'loot-filter-league-always': 'league-always',
@@ -47,8 +50,7 @@ export const NEWS_SPOTS: Record<string, string> = {
   'loot-filter-drag-bases': 'gear-ranks',
   'loot-filter-valuable-exotics': 'gear-ranks',
   'loot-filter-gold-page': 'loot-gold',
-  'loot-filter-levelling': 'loot-levelling',
-  'loot-filter-levelling-gear': 'loot-levelling'
+  'loot-filter-levelling': 'loot-levelling'
 }
 
 export function gotoSpots (wmType: string): Record<string, string> | null {
