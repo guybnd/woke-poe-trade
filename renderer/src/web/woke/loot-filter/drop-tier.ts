@@ -8,17 +8,18 @@ export function dropTierWord (tier: number): string {
   return WORDS[tier] ?? 'unknown'
 }
 
-// Where it stands among the uniques of its base that have a drop tier: the
-// odds an Orb of Chance gives aren't known, only which ones are rarer.
+// Where it stands among the uniques of its base that have a drop tier, in a
+// few words: the odds an Orb of Chance gives aren't known, only which ones
+// are rarer.
 export function rankOnBase (name: string, base: string, onBase: string[], tiers: Record<string, number>): string | null {
   const own = tiers[name]
   const ranked = onBase.filter(u => tiers[u] != null)
   if (own == null || ranked.length < 2 || !ranked.includes(name)) return null
   const others = ranked.filter(u => u !== name).map(u => tiers[u])
   const n = ranked.length
-  if (others.every(t => t > own)) return `The rarest of the ${n} uniques on ${base} that drop anywhere.`
-  if (others.every(t => t < own)) return `The most common of the ${n} uniques on ${base} that drop anywhere.`
+  if (others.every(t => t > own)) return `rarest of ${n} on ${base}`
+  if (others.every(t => t < own)) return `most common of ${n} on ${base}`
   const min = Math.min(own, ...others)
   const max = Math.max(own, ...others)
-  return min === max ? `All ${n} uniques on ${base} that drop anywhere are T${own}.` : `The ${n} uniques on ${base} that drop anywhere are T${min} to T${max}.`
+  return min === max ? `all ${n} on ${base} are T${own}` : `${n} on ${base}: T${min} to T${max}`
 }
