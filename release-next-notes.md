@@ -1,5 +1,6 @@
 # Next release notes
 
+- Loot filter (beta): Alt+F on a Loot tab item names its section ("Loot › Early league, Hidden" instead of "Currency weights › S0"), and Go to rule opens that item on the Loot tab.
 - Loot filter, Loot tab Gems: Transfigured, Vaal, Supports and Skill gems fold by level and quality: corrupted ones first (21/23, 21/20, 20/23, 20/20, 20/0, 1/20, 1/0+), then the rest (20/20, 20/0, 1/20, 1/0+), each with a Whole band step.
 - Loot filter, Loot tab: Gold has its own ruler. Slide where Small, Normal, Decent, Big and Tink start by pile size (default every pile shows, 500+ Normal, 3,000+ Decent).
 - Loot filter (beta): fixed the filter failing to load in game over a gem name the game doesn't know ("Vaal Absolution (Absolution of ..."). Rules the app writes now keep only names the game knows.
