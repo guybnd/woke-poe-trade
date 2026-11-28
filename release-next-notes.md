@@ -1,5 +1,6 @@
 # Next release notes
 
+- Loot filter (beta): exotic bases (Synaptic Ring, Stygian Vise...) now get lime green text on Equipment › Rare gear instead of orange, so they no longer look like uniques.
 - Loot filter (beta): fixed the filter failing to load in game over a gem name the game doesn't know ("Vaal Absolution (Absolution of ..."). Rules the app writes now keep only names the game knows.
 - Loot filter (beta): with the Loot tab on, the Prices tab says that the Loot tab prices these items in maps and its moves only change levelling, with an Open Loot button. Its cheapest/best unique switch is hidden then, since the Loot tab always prices a base by its best unique.
 - Loot filter (beta): Base ranks is now a section of Equipment, next to Rare gear and Flasks, so there's one place to rank a base. Rare gear's list of your ranks gets an Open Base ranks button. Without Equipment, Base ranks stays a top tab.
