@@ -18,15 +18,16 @@
 // sees these items in maps. Off (the default), nothing is written.
 import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './parse'
 import { NET_GROUPS } from './economy'
-import type { EconomyGroup, PriceLookup } from './economy'
+import type { DropUnique, EconomyGroup, PriceLookup } from './economy'
 import { applyStyle, readStyle } from './edits'
 import type { StylePatch } from './edits'
 import { fullStack } from './stack-sizes'
+import { ITEM_BY_REF } from '@/assets/data'
 import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
-import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
+import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, chaseLookOf, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
 import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS } from './league-classes'
 import { JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_ROWS, JEWEL_TYPE } from './jewel-classes'
@@ -169,10 +170,18 @@ export interface CurrencyItem {
   // uniques drop on it.
   top?: string
   of?: number
+  // Priced by its average drop over `of` uniques (dropLookup), and the rare
+  // valuable uniques left out of that average, most valuable first.
+  avg?: true
+  chase?: Array<{ name: string, chaos: number }>
+  // Every priced unique on the base and how the average treats it.
+  uniques?: DropUnique[]
+  // A unique base's inventory size ("2x3"), for the size cut.
+  size?: string
   // A gem band: the gem's name (BaseType) and its level, quality and
   // corruption conditions; `name` is the band ("Arc 20/20").
   bt?: string
-  // Several BaseTypes (a special map of any tier); `bt` is the one its tooltip shows.
+  // Several BaseTypes (a special map of any tier, "Any unique, 6-link"); `bt` is the one its tooltip shows.
   bts?: string[]
   conds?: FilterCondition[]
 }
@@ -242,18 +251,26 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         // Early league: a thin price never takes it below the guess.
         const thin = p != null && p.chaos > 0 ? (ucat === 'uniqearly' ? Math.max(guess, p.chaos) : thinPrice(p.chaos, guess)) : guess
         const own = edits[name]?.price
-        const m = p?.note?.match(/^(.*?)(?:, 1 of (\d+))?$/)
+        const m = p?.drop ? null : p?.note?.match(/^(.*?)(?:, 1 of (\d+))?$/)
+        // Guy's S1: a boss base that also drops world uniques is priced by
+        // those (the boss's own unique is left out); a boss-only one stays
+        // Boss drops. A base with a chase unique on it goes to Chase uniques.
+        // A base with no world-drop unique at all (Guy 2026-11-28: Cabalist
+        // Regalia, Fishing Rod...) goes there too, whatever NeverSink's tier.
+        const cat = p?.noWorld ? 'uniqboss' : ucat === 'uniqboss' && p?.drop ? 'uniqbossmix' : ucat
         seen.set(name, {
           name,
           cls: UNIQUE_CLS,
           type: 'uniques',
           tier: b.tier,
-          cat: ucat,
+          cat: p?.drop?.chase.length && cat !== 'uniqboss' ? 'uniqchase' : cat,
           chaos: (own ?? (priced ? p.chaos : thin)) * (edits[name]?.mult ?? 1),
           est: own == null && (!priced || Boolean(p?.day1)),
           ...(own != null ? { own: true } : {}),
           full: 1,
-          ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {})
+          ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {}),
+          ...sizeOf(name),
+          ...(p?.drop ? { of: p.drop.of, avg: true, uniques: p.drop.uniques, ...(p.drop.chase.length ? { chase: p.drop.chase } : {}) } : {})
         })
       }
       continue
@@ -384,7 +401,33 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       const conds = b.conditions.filter(x => x !== bt && x.key !== 'Rarity').map(x => ({ ...x, values: [...x.values] }))
       const links = conds.some(x => x.key === 'LinkedSockets')
       const group: EconomyGroup = { ...UNIQUE_PAGE, special: true, links }
-      for (const base of bt?.values ?? plainBases) {
+      // NeverSink's any-base 6-link rule is one row (Guy's R1, 2026-11-28),
+      // priced by the most valuable 6-linked unique, so it shows the way
+      // NeverSink shows every 6-linked unique (Tink) unless you set its step.
+      if (!bt) {
+        const name = `Any unique, ${label}`
+        if (seen.has(name)) continue
+        const lines = plainBases.map(base => ({ base, p: lookup(group, base) })).filter(x => x.p && x.p.chaos > 0)
+        if (!lines.length) continue
+        const low = lines.reduce((x, y) => y.p!.chaos > x.p!.chaos ? y : x)
+        const own = edits[name]?.price
+        seen.set(name, {
+          name,
+          cls: UNIQUE_CLS,
+          type: 'uniques',
+          tier: b.tier,
+          cat: 'uniqspec',
+          chaos: (own ?? (links ? Math.max(low.p!.chaos, linkFloor) : low.p!.chaos)) * (edits[name]?.mult ?? 1),
+          est: own == null && (low.p!.thin || Boolean(low.p!.day1)),
+          ...(own != null ? { own: true } : {}),
+          full: 1,
+          bts: lines.map(x => x.base),
+          conds,
+          of: lines.length
+        })
+        continue
+      }
+      for (const base of bt.values) {
         const name = `${base}, ${label}`
         if (seen.has(name)) continue
         const p = lookup(group, base)
@@ -402,6 +445,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
           ...(own != null ? { own: true } : {}),
           full: 1,
           bt: base,
+          ...sizeOf(base),
           conds,
           ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {})
         })
@@ -582,8 +626,10 @@ export function strictMult (level: number): number {
 // player's own, or the filter's strictness).
 export function scaled (c: CurrencySettings, strictness: string | null): CurrencySettings {
   const m = c.mult ?? strictMult(levelOf(strictness))
-  if (m === 1) return c
-  return { ...c, line: c.line * m, from: c.from.map(f => f * m) as CurrencySettings['from'], gold: c.gold.map(g => Math.max(1, Math.round(g * m))) }
+  // The size cut: Auto turns it on from Strict (×1.25) up (Guy's W2).
+  const sizeOn = c.sizeCut === 'on' || (c.sizeCut !== 'off' && m >= 1.25)
+  if (m === 1) return sizeOn === Boolean(c.sizeOn) ? c : { ...c, sizeOn }
+  return { ...c, sizeOn, line: c.line * m, from: c.from.map(f => f * m) as CurrencySettings['from'], gold: c.gold.map(g => Math.max(1, Math.round(g * m))) }
 }
 
 // The line for a category, after its nudge.
@@ -615,6 +661,25 @@ export function minStack (it: Pick<CurrencyItem, 'chaos' | 'full'>, at: number, 
 
 // For each step 1..5, the smallest pile that reaches it (null: never).
 // A step set by hand gives every pile that step; a supply lowers Small.
+// A unique base's size, from the item data (none until it has loaded).
+function sizeOf (base: string): { size?: string } {
+  const b = ITEM_BY_REF('ITEM', base)?.[0]
+  return b ? { size: `${b.w ?? 1}x${b.h ?? 1}` } : {}
+}
+// The size cut (Guy's S2 and Z1): 2x2 counts 75% of its price, 2x3 60%,
+// 2x4 50%; smaller items keep all of it.
+export function sizeCut (size: string | undefined): number {
+  const m = /^(\d)x(\d)$/.exec(size ?? '')
+  const cells = m ? Number(m[1]) * Number(m[2]) : 1
+  return cells >= 8 ? 0.5 : cells >= 6 ? 0.6 : cells >= 4 ? 0.75 : 1
+}
+// The cut an item gets now: only with the cut on, never in an Always
+// section (Guy's E1: chase and boss-only bases show whatever their size).
+export function sizeCutNow (it: Pick<CurrencyItem, 'size' | 'cat'>, c: Pick<CurrencySettings, 'sizeOn' | 'catMode'>): number {
+  if (!c.sizeOn || !it.size || sectionMode(c, it.cat) === 'always') return 1
+  return sizeCut(it.size)
+}
+
 export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number | null> {
   const e = c.items[it.name]
   if (e?.step != null) return [1, 2, 3, 4, 5].map(s => s === e.step ? 1 : null)
@@ -622,7 +687,9 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   // Always; Always shows every pile at least Small.
   const mode = sectionMode(c, it.cat)
   if (mode === 'off' && e?.supply !== 1 && !e?.min) return [null, null, null, null, null]
-  const out = it.type === 'gold' ? [...c.gold] as Array<number | null> : stepStarts(c, it.cat).map(at => minStack(it, at, c.from[1]))
+  const cut = sizeCutNow(it, c)
+  const worth = cut < 1 ? { ...it, chaos: it.chaos * cut } : it
+  const out = it.type === 'gold' ? [...c.gold] as Array<number | null> : stepStarts(c, it.cat).map(at => minStack(worth, at, c.from[1]))
   const supply = e?.supply ?? (it.free || mode === 'always' ? 1 : null)
   if (supply != null) {
     const f = Math.min(supply, it.full)
@@ -668,9 +735,13 @@ export function faintLook (rgb: readonly number[]): StylePatch {
 
 // Steps turned off (Guy 2026-11-28: they hide, they don't fall to the
 // quieter step) for this item: never its own step or its Collecting floor.
-export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'>, c: Pick<CurrencySettings, 'items' | 'offBy'>): number[] {
+export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
   const e = c.items[it.name]
   if (e?.step != null) return []
+  // A section set Always (Chase uniques, Boss drops by default) shows
+  // whatever steps are turned off (Guy 2026-11-28: chase bases hid with
+  // Small and Normal off).
+  if (sectionMode({ catMode: c.catMode ?? {} }, it.cat) === 'always') return []
   return stepsOffIn(c, it.cat).filter(s => s >= 1 && s <= 4 && s !== e?.min)
 }
 // The steps off in a section: its own when it sets them, else its page's
@@ -762,8 +833,8 @@ export const CAT_FILL: Record<string, NonNullable<typeof CLASS_FILL[LootKind]>> 
 }
 const fillOf = (cat: string) => CAT_FILL[cat] ?? CLASS_FILL[kindOf(cat)]
 
-export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rgb: [number, number, number], color: string, shape: string } {
-  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? JEWEL_LOOK[cat] ?? LEAGUE_LOOK[cat] ?? CAT_LOOK.other
+export function catColour (cat: string, c: Pick<CurrencySettings, 'cats' | 'chaseLook'>): { rgb: [number, number, number], color: string, shape: string } {
+  const d = cat === 'uniqchase' ? { ...UNIQUE_LOOK.uniqchase, text: chaseLookOf(c.chaseLook).text as [number, number, number], color: chaseLookOf(c.chaseLook).color } : CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? JEWEL_LOOK[cat] ?? LEAGUE_LOOK[cat] ?? CAT_LOOK.other
   const own = c.cats[cat]
   return {
     rgb: own?.text ? [own.text[0], own.text[1], own.text[2]] : d.text,
@@ -772,7 +843,7 @@ export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rg
   }
 }
 
-export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats'>): StylePatch {
+export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats' | 'chaseLook'>): StylePatch {
   if (step === 0) return {}
   const { rgb, color, shape } = catColour(cat, c)
   const own = c.steps[String(step)] ?? {}
@@ -793,11 +864,28 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
   // Tink's icon is red, in the category's shape (Guy 2026-11-27).
   out.icon = size == null ? null : { size, color: step === 5 ? 'Red' : color, shape }
   out.effect = effect ? { ...effect, color: step === 5 ? 'Red' : color } : null
+  // Chase uniques (Guy 2026-11-28: "the T0 unique container", "needs a
+  // special look for itself"): one look below Tink whatever the price, picked
+  // from CHASE_LOOKS on the section's header, with its own sound. Your own
+  // colour and icon for the section win.
+  if (cat === 'uniqchase' && step < 5) {
+    const l = chaseLookOf(c.chaseLook)
+    const t = c.cats[cat]?.text
+    Object.assign(out, {
+      fontSize: own.fontSize ?? 45,
+      text: col(t ?? l.text),
+      border: col(t ?? l.edge),
+      background: col(l.bg)
+    })
+    out.icon = { size: 1, color, shape }
+    out.effect = { color, temp: true }
+    if (own.sound === undefined) out.sound = { id: '3', volume: 250 }
+  }
   return out
 }
 
 // The whole look of a pile, for the tab's previews.
-export function currencyFullLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats'>): StylePatch {
+export function currencyFullLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats' | 'chaseLook'>): StylePatch {
   return { ...readStyle(currencyActions(step)), ...currencyLook(step, cat, c) }
 }
 

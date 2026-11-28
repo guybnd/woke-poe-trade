@@ -17,6 +17,9 @@
       <b :class="$style.minVal">×{{ (dragMult ?? mult).toFixed(2) }}</b>
       <WButton v-if="c.mult != null" size="sm" variant="ghost" icon="fas fa-undo" :title="`Back to ×${strictMult(level).toFixed(2)}, from NeverSink's ${LEVEL_NAMES[level]}`" @click="c.mult = null">Follow {{ LEVEL_NAMES[level] }}</WButton>
       <span v-else class="w-faint text-xs">follows {{ LEVEL_NAMES[level] }}</span>
+      <span v-if="kind === 'uniques'" :class="$style.minLab" data-loot-size-cut title="Big uniques count part of their price: 2x2 75%, 2x3 60%, 2x4 50%. Chase and Always sections skip it.">Size cut
+        <StateChip :model-value="c.sizeCut ?? 'auto'" :options="SIZE_CUTS" title="Size cut" dflt="auto" @update:model-value="v => c.sizeCut = v === 'auto' ? undefined : v as 'on' | 'off'" />
+        <span class="w-faint text-xs">{{ eff.sizeOn ? 'on now' : 'off now' }}</span></span>
       <span class="flex-1" />
       <button type="button" :class="$style.hidChip" title="List the items that never show" data-currency-hidden @click="only = 'hidden'">{{ rows.length - shownCount }} of {{ rows.length }} never show</button>
     </div>
@@ -82,6 +85,13 @@
         <div :class="$style.catLook" data-currency-cat-look>
           <span :class="$style.lookLab">Look</span>
           <span :class="$style.catSample" :title="`How a Normal ${g.cat.name} label looks`"><LabelPreview :text="catArt(g.cat.id)" :actions="[]" :style-override="currencyFullLook(2, g.cat.id, c)" visibility="Show" :extras="false" :scale="0.75" /></span>
+          <template v-if="g.cat.id === 'uniqchase'">
+            <span :class="$style.lookLab">Style</span>
+            <select :value="chaseLookOf(c.chaseLook).id" :class="$style.sel2" aria-label="Chase uniques style" title="The ground, edge and icon colour every chase base gets" data-loot-chase-look
+              @change="setChaseLook(($event.target as HTMLSelectElement).value)">
+              <option v-for="l in CHASE_LOOKS" :key="l.id" :value="l.id">{{ l.name }}</option>
+            </select>
+          </template>
           <span :class="$style.lookLab">Colour</span>
           <input type="color" :value="hexOf(catColour(g.cat.id, c).rgb)" :class="$style.swatch" :aria-label="`${g.cat.name} colour`" :title="`${g.cat.name} colour`"
             @change="setCatLook(g.cat.id, { text: [...rgbOf(($event.target as HTMLInputElement).value), 255] })">
@@ -125,8 +135,9 @@
         </div>
         <template v-for="r in (sg.name && !isOpen(`${g.cat.id}/${sg.name}`) ? [] : sg.rows)" :key="r.it.name">
           <WItemRow :item="tipOf(r.it)" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
-            <span :class="$style.name"><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
-              :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ rowName(r.it) }}<span v-if="gemCorrupted(r.it)" :class="$style.corr" title="Corrupted: this price is for a corrupted gem of this level and quality"><WIcon currency="Vaal Orb" size="sm" />Corrupted</span><span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.edited" :class="$style.edited"> edited</span></span>
+            <span :class="$style.name"><input v-if="kind === 'uniques'" type="checkbox" :class="$style.onBox" :checked="c.items[r.it.name]?.step !== 0" :aria-label="`Show ${r.it.name}`"
+              title="Untick to hide this base in maps (you don't care about it)" data-loot-unique-on @click.stop="toggleOn(r.it.name)" @keydown.stop><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
+              :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ rowName(r.it) }}<span v-if="gemCorrupted(r.it)" :class="$style.corr" title="Corrupted: this price is for a corrupted gem of this level and quality"><WIcon currency="Vaal Orb" size="sm" />Corrupted</span><span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.it.avg && r.it.of && r.it.of > 1" :class="$style.uniqTop" :title="`Priced by an average drop: each of the ${r.it.of} uniques that drop on it, counted by how often it turns up`"> · average of {{ r.it.of }}</span><span v-if="r.it.uniques?.some(u => u.out)" :class="$style.uniqTop" title="You left these out of the average"> · left out: {{ r.it.uniques.filter(u => u.out).map(u => u.name).join(', ') }}</span><span v-if="r.it.chase" :class="$style.uniqTop" :title="`The rarest kind of unique (T0): it doesn't count in the average; the base shows in Chase uniques with its own look`"> · chase: {{ r.it.chase.map(x => `${x.name} ${chaosText(x.chaos)}`).join(', ') }}</span><span v-if="sizeCutNow(r.it, eff) < 1" :class="$style.uniqTop" :title="`Size cut: a ${r.it.size} item counts ${Math.round(sizeCutNow(r.it, eff) * 100)}% of its price`"> · {{ r.it.size }} · {{ Math.round(sizeCutNow(r.it, eff) * 100) }}%</span><span v-if="r.edited" :class="$style.edited"> edited</span></span>
             <span :class="$style.price" :title="r.it.type === 'gold' ? 'No price: the Gold ruler steps each pile by its size' : r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows at least Small' : r.it.est ? `No usable price: a guess from NeverSink's ${r.it.tier ? `tier ${r.it.tier}` : 'tiers'}` : 'poe.ninja'">
               <template v-if="r.it.type === 'gold'">by size</template><template v-else>{{ chaosText(r.it.chaos) }}<span v-if="r.it.est" :class="$style.est"> est.</span></template>
             </span>
@@ -135,7 +146,7 @@
             </span>
             <i class="fas fa-pen w-faint" :class="$style.pen" aria-hidden="true" />
           </WItemRow>
-          <CurrencyItemEditor v-if="sel === r.it.name" :it="r.it" :edit="c.items[r.it.name] ?? {}" :step="r.one" :base-price="baseChaos(r.it.name)" :base-look="currencyFullLook(r.one === 0 ? 1 : r.one, r.it.cat, c)" @change="e => setEdit(r.it.name, e)" />
+          <CurrencyItemEditor v-if="sel === r.it.name" :it="r.it" :edit="c.items[r.it.name] ?? {}" :step="r.one" :base-price="baseChaos(r.it.name)" :base-look="currencyFullLook(r.one === 0 ? 1 : r.one, r.it.cat, c)" @change="e => setEdit(r.it.name, e)" @not-avg="n => c.notAvg = toggleNotAvg(c, n)" />
         </template>
         </template>
       </div>
@@ -166,7 +177,9 @@ import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode, stepsOffIn } from './currency-weights'
+import { CHASE_LOOKS, chaseLookOf } from './unique-classes'
+import { toggleNotAvg } from './currency-settings'
+import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode, sizeCutNow, stepsOffIn } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
@@ -434,6 +447,16 @@ function setCatLook (id: string, p: StylePatch | null) {
   if (p) next[id] = { ...c.value.cats[id], ...p }
   c.value.cats = next
 }
+const SIZE_CUTS = [
+  { value: 'auto', label: 'Auto', desc: 'On from Strict (×1.25) up.', dot: 'var(--w-gold)' },
+  { value: 'on', label: 'On', desc: 'Big uniques always count part of their price.', dot: 'var(--w-gold-hi)' },
+  { value: 'off', label: 'Off', desc: 'Every unique counts its whole price.', dot: 'var(--w-faint)', hollow: true }
+]
+// The Chase uniques style: a picked style drops your own colours for the section.
+function setChaseLook (id: string) {
+  c.value.chaseLook = id
+  setCatLook('uniqchase', null)
+}
 function setCatIcon (id: string, p: { shape?: string, color?: string }) {
   const cur = catColour(id, c.value)
   setCatLook(id, { icon: { size: 1, color: p.color ?? cur.color, shape: p.shape ?? cur.shape } })
@@ -451,6 +474,12 @@ function setNudge (cat: string, v: number) {
 function toggleCollect (name: string) {
   const { min, ...rest } = c.value.items[name] ?? {}
   setEdit(name, min ? (Object.keys(rest).length ? rest : null) : { ...rest, min: 2 })
+}
+// A unique base ticked off (Guy 2026-11-28): its own Off, which wins over
+// the section's Always; ticked again it goes back to the price.
+function toggleOn (name: string) {
+  const { step, ...rest } = c.value.items[name] ?? {}
+  setEdit(name, step === 0 ? (Object.keys(rest).length ? rest : null) : { ...rest, step: 0 })
 }
 function setEdit (name: string, e: ItemEdit | null) {
   const next = Object.fromEntries(Object.entries(c.value.items).filter(([k]) => k !== name))
@@ -575,6 +604,7 @@ function chaosText (v: number): string {
 .corr { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; color: #d26b6b; font-size: var(--w-fs-xs); vertical-align: middle; }
 .corr :global(img) { width: 14px; height: 14px; }
 .pen { font-size: var(--w-fs-xs); }
+.onBox { margin: 0 6px 0 0; vertical-align: middle; accent-color: #c8a565; cursor: pointer; }
 .star { background: none; border: 0; padding: 0 5px 0 0; color: var(--w-faint); cursor: pointer; font-size: var(--w-fs-xs); }
 .star:hover { color: #e8c96a; }
 .starOn { color: #f0c040; }
