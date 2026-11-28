@@ -54,6 +54,28 @@ history:
     to: Done
     user: Agent
     date: '2026-11-28T06:35:50.231Z'
+  - type: comment
+    user: Agent
+    comment: PR 1061 merged (e7e410a).
+    date: '2026-11-28T06:39:04.109Z'
+    completionComment: true
+    id: c-2026-11-28t06-39-04-109z
+  - type: status_change
+    from: Done
+    to: Ready
+    user: Agent
+    date: '2026-11-28T06:39:04.109Z'
+  - type: comment
+    user: Agent
+    comment: Merged at e7e410a; dev build reloaded.
+    completionComment: true
+    date: '2026-11-28T06:39:12.832Z'
+    id: c-2026-11-28t06-39-12-832z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-28T06:39:13.727Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/1061'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
