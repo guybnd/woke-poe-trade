@@ -301,5 +301,5 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 .link { border: 0; background: none; padding: 0; font: inherit; color: #f3d48a; cursor: pointer; border-bottom: 1px dotted #e0b860; }
 .link:hover { color: var(--w-fg); }
 .foot { display: flex; align-items: center; gap: 8px; font-size: var(--w-fs-xs); color: var(--w-faint); border-top: 1px solid var(--w-line); padding-top: 5px; }
-.cap { display: inline-grid; place-items: center; min-width: 1rem; height: 1rem; border: 1px solid var(--w-border); border-radius: 3px; font-size: 10px; margin: 0 2px 0 4px; }
+.cap { display: inline-grid; place-items: center; min-width: 1rem; height: 1rem; border: 1px solid var(--w-border); border-radius: 3px; font-size: var(--w-fs-xs); margin: 0 2px 0 4px; }
 </style>
