@@ -11,8 +11,18 @@ import { neverSink } from '../helpers/neversink'
 
 const REGULAR = neverSink('1-REGULAR')
 const map = (tier: number, more: Partial<ItemFacts> = {}): ItemFacts => ({
-  name: 'Strand Map', baseType: 'Strand Map', itemClass: 'Maps', rarity: 'Normal', mapTier: tier, areaLevel: 83, influences: [], explicitModNames: [],
-  corrupted: false, blightedMap: false, uberBlightedMap: false, ...more
+  name: 'Strand Map',
+  baseType: 'Strand Map',
+  itemClass: 'Maps',
+  rarity: 'Normal',
+  mapTier: tier,
+  areaLevel: 83,
+  influences: [],
+  explicitModNames: [],
+  corrupted: false,
+  blightedMap: false,
+  uberBlightedMap: false,
+  ...more
 } as ItemFacts)
 
 describe('maps on the Loot tab', () => {

@@ -23,7 +23,12 @@ const GEMS: GemLine[] = [
   { name: 'Arc', variant: '1', chaos: 0.05, thin: false },
   { name: 'Ice Nova', variant: '1', chaos: 0.05, thin: false },
   { name: 'Ice Nova of Frostbolts', variant: '1', chaos: 0.1, thin: false },
-  { name: 'Herald of Ice', variant: '1', chaos: 0.05, thin: false }
+  { name: 'Herald of Ice', variant: '1', chaos: 0.05, thin: false },
+  { name: 'More Duration Support', variant: '21/23c', chaos: 8, thin: false },
+  { name: 'More Duration Support', variant: '20/20c', chaos: 20700, thin: true },
+  { name: 'More Duration Support', variant: '1', chaos: 1, thin: false },
+  { name: 'Eclipse Support', variant: '3/20c', chaos: 20000, thin: true },
+  { name: 'Eclipse Support', variant: '4/23c', chaos: 27600, thin: true }
 ]
 const gem = (name: string, level: number, quality = 0, more: Partial<ItemFacts> = {}): ItemFacts => ({
   name, baseType: name, itemClass: name.endsWith('Support') ? 'Support Gems' : 'Skill Gems', gemLevel: level, quality, corrupted: false, transfigured: false, areaLevel: 83, influences: [], explicitModNames: [], ...more
@@ -37,8 +42,16 @@ describe('gems on the Loot tab', () => {
     expect(gemCategoryOf('Ice Nova of Frostbolts', names)).toBe('gemtrans')
     expect(gemCategoryOf('Herald of Ice', names)).toBe('gemskill')
     expect(gemCategoryOf('Awakened Enlighten Support', names)).toBe('gemexc')
+    expect(gemCategoryOf('Greater Spell Echo Support', names)).toBe('gemexc')
+    expect(gemCategoryOf('Eclipse Support', names)).toBe('gemexc')
+    expect(gemCategoryOf('Greater Multiple Projectiles Support', names)).toBe('gemsup')
     expect(kindOf('gemawk')).toBe('gems')
     const items = currencyItems(parseFilter(SEMI), lookup, {}, null, GEMS).filter(i => kindOf(i.cat) === 'gems')
+    // A thin band counts at most 3× a solid band at least as good; a cheaper,
+    // worse band (level 1) never caps it; with none, as poe.ninja has it.
+    expect(items.find(i => i.name === 'More Duration Support 20/20c')).toMatchObject({ chaos: 24, est: true })
+    expect(items.find(i => i.name === 'Eclipse Support 3/20c')).toMatchObject({ chaos: 20000, est: true })
+    expect(items.find(i => i.name === 'Eclipse Support 4/23c')).toMatchObject({ chaos: 27600, est: true, cat: 'gemexc' })
     expect(items.find(i => i.name === 'Arc 21/20c')).toMatchObject({ bt: 'Arc', chaos: 40, cls: 'Skill Gems', cat: 'gemskill' })
   })
 

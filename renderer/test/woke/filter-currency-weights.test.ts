@@ -170,7 +170,8 @@ describe('currency weights', () => {
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, cfg, lookup)!
       let hidden = 0
-      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques')) {
+      // Map, gold, jewel and league rows are named for their kind, not a base: tested on their own.
+      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold' && i.type !== 'jewels' && i.type !== 'league')) {
         const stacks = stacksFor(it, cfg)
         for (const n of [1, 2, 5, 10, 20, 40]) {
           if (n > it.full) continue
@@ -191,8 +192,9 @@ describe('currency weights', () => {
       const cfg = on(c => { c.line = line })
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, cfg, lookup)!
-      // Uniques are matched by rarity: filter-loot-uniques.test.ts.
-      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques')) {
+      // Uniques are matched by rarity (filter-loot-uniques.test.ts), maps by
+      // their own conditions (filter-loot-special-maps.test.ts).
+      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold' && i.type !== 'jewels' && i.type !== 'league')) {
         const stacks = stacksFor(it, cfg)
         for (const n of [1, 2, 3, 5, 10, 20, 40]) {
           if (n > it.full) continue
@@ -362,10 +364,12 @@ describe('currency weights', () => {
     for (const line of [0.1, 1, 5]) {
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, on(c => { c.line = line }), lookup)!
-      expect(compiled.blocks.length).toBeLessThan(200)
+      // Jewel and league rows are a compile each (they overlap), so a few more.
+      expect(compiled.blocks.length).toBeLessThan(300)
       const text = serializeFilter(doc)
-      // About 100k for currency, fragments and cards, 25k for uniques.
-      expect(text.length - SEMI.length).toBeLessThan(150_000)
+      // About 100k for currency, fragments and cards, 25k for uniques, 25k
+      // for jewels and league items (Viscera's long base lists).
+      expect(text.length - SEMI.length).toBeLessThan(200_000)
       expect(validateFilter(parseFilter(text)).map(p => p.message)).toEqual([])
     }
   })

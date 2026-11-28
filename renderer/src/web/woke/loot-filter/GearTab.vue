@@ -82,7 +82,7 @@
               <WButton v-if="Object.keys(g.look[r]).length" size="sm" variant="ghost" @click="change(x => { x.look[r] = {} })">Reset</WButton>
             </div>
             <div class="flex flex-wrap gap-2 items-end">
-              <span v-for="t in [5, 3]" :key="t" class="flex flex-col items-start gap-1">
+              <span v-for="t in [5, 3]" :key="t" v-item-tip="{ name: sampleBase(r), noPrice: true }" class="flex flex-col items-start gap-1">
                 <LabelPreview :text="sampleBase(r)" :actions="sampleActions(r, t)" :extras="false" :default-text="r === 'magic' ? [136, 136, 255, 255] : [255, 255, 119, 255]" :scale="1.1" />
                 <span class="w-faint text-xs">rank 1, tier {{ t }}</span>
               </span>
@@ -106,7 +106,7 @@
         </div>
         <template v-if="g.quality.on">
           <div class="flex flex-wrap gap-2 items-end">
-            <span v-for="s in qualitySamples" :key="s.key" class="flex flex-col items-start gap-1">
+            <span v-for="s in qualitySamples" :key="s.key" v-item-tip="{ name: s.base, noPrice: true }" class="flex flex-col items-start gap-1">
               <LabelPreview :text="s.base" :actions="s.actions" :extras="false" :default-text="s.rarity === 'magic' ? [136, 136, 255, 255] : [255, 255, 119, 255]" :scale="1.1" />
               <span class="w-faint text-xs">{{ s.note }}</span>
             </span>
@@ -173,7 +173,7 @@
         <template v-for="group in pileGroups" :key="group.key">
           <div v-if="group.drops.length" :class="$style.pileHead">{{ group.label }} · {{ group.drops.length }}</div>
           <div v-if="group.drops.length" :class="$style.ground">
-            <div v-for="d in group.drops" :key="d.id" :class="[$style.drop, group.key === 'hidden' && $style.hiddenDrop]" :title="d.title">
+            <div v-for="d in group.drops" :key="d.id" v-item-tip="{ name: d.label, noPrice: true, note: d.title }" :class="[$style.drop, group.key === 'hidden' && $style.hiddenDrop]">
               <LabelPreview :text="d.label" :actions="d.actions" :visibility="'Show'" :extras="false" :default-text="d.colour" :scale="1.15" />
               <span :class="$style.dropWhat">
                 <b :style="{ color: d.rarity === 'Magic' ? '#a8a8ff' : '#f3e27a' }">{{ d.rarity }}</b>

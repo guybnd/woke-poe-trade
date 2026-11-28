@@ -16,10 +16,36 @@ import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './pa
 import { readTiered } from './gear'
 import { allGearBases, baseInfo } from './gear-bases'
 import { BASE_FACTS } from './base-facts'
-import { LOOK_CHANNELS, LOOK_LABEL, LOUD_DEFAULT, WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
+import { LOOK_CHANNELS, LOOK_LABEL, LOUD_DEFAULT, MARK_ROWS, ORDERED_ROWS, WEIGHT_LABEL, WEIGHT_TYPE } from './weight-settings'
 import type { LookChannel, LookKey, RankKey, WeightKey, WeightSettings } from './weight-settings'
 
-export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, MULT_STEPS, NEED_MIN, NEED_MAX, STAGES, MARK_ROWS, ORDERED_ROWS, PIN_ROWS, LOUD_DEFAULT, LOOK_CHANNELS, LOOK_LABEL, LOOK_KEYS, LOOK_DEFAULT, RANK_KEYS, defaultWeights, multRange, normalizeWeights } from './weight-settings'
+export { WEIGHT_TYPE, WEIGHT_GROUPS, WEIGHT_ROWS, WEIGHT_LABEL, NEED_MIN, NEED_MAX, MARK_ROWS, ORDERED_ROWS, PIN_ROWS, LOUD_DEFAULT, LOOK_CHANNELS, LOOK_LABEL, LOOK_KEYS, LOOK_DEFAULT, RANK_KEYS, defaultWeights, normalizeWeights } from './weight-settings'
+
+// Kept out of weight-settings (startup JS): only the Rare weights tab uses them.
+// The steps a multiplier moves through.
+export const MULT_STEPS = [0, 0.05, 0.1, 0.15, 0.25, 0.35, 0.5, 0.7, 0.85, 1, 1.2, 1.4, 1.5, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 128]
+// Strictness stages named like NeverSink's, at the default multipliers.
+export const STAGES: Array<{ label: string, need: number }> = [
+  { label: 'Soft', need: 0.25 },
+  { label: 'Regular', need: 1 },
+  { label: 'Semi-strict', need: 2 },
+  { label: 'Strict', need: 4 },
+  { label: 'Very strict', need: 8 },
+  { label: 'Uber', need: 16 },
+  { label: 'Uber+', need: 48 }
+]
+// The range one multiplier may take, given the others.
+export function multRange (mult: Record<WeightKey, number>, key: WeightKey): [number, number] {
+  let lo = MARK_ROWS.includes(key) ? 1 : 0
+  let hi = 1000
+  for (const row of ORDERED_ROWS) {
+    const i = row.indexOf(key)
+    if (i < 0) continue
+    if (i > 0) lo = Math.max(lo, mult[row[i - 1]])
+    if (i < row.length - 1) hi = Math.min(hi, mult[row[i + 1]])
+  }
+  return [lo, hi]
+}
 export type { LookChannel, LookKey, RankKey, WeightKey, WeightRow, WeightGroup, WeightSettings } from './weight-settings'
 
 // ---- Steps (how loud) ---------------------------------------------------------

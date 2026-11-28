@@ -1,6 +1,6 @@
 // Flasks on the Equipment tab (Guy's F1, 2026-11-27): a utility flask's
-// score is its base rank × quality × item level, on Rare weights' line and
-// steps. Ranks are yours (saved with the rare base ranks); quality matters
+// score is its base rank × quality × item level, on its own line (Guy's
+// flasks A, 2026-11-28) and Rare weights' steps. Ranks are yours (saved with the rare base ranks); quality matters
 // because 20% is worth crafting on, item level because 85+ rolls the top
 // mods. Life and mana flasks, tinctures and levelling stay NeverSink's.
 import type { FilterBlock, FilterCondition, FilterDoc } from './parse'
@@ -46,8 +46,10 @@ export function flaskWeight (w: Pick<WeightSettings, 'mult' | 'ranks'>, base: st
   return w.mult[flaskRank(w, base)] * q * i
 }
 
-export function flaskStep (w: Pick<WeightSettings, 'mult' | 'ranks' | 'need' | 'loud'>, base: string, quality: number, ilvl: number): Step {
-  return stepOf(flaskWeight(w, base, quality, ilvl), w.need, w.loud)
+// Flasks have their own line; Normal, Big and Beam start at 2, 4 and 8 times it.
+export const flaskLoud = (line: number): number[] => [line * 2, line * 4, line * 8]
+export function flaskStep (w: Pick<WeightSettings, 'mult' | 'ranks' | 'flaskLine'>, base: string, quality: number, ilvl: number): Step {
+  return stepOf(flaskWeight(w, base, quality, ilvl), w.flaskLine, flaskLoud(w.flaskLine))
 }
 
 const c = (key: string, op: string, values: Array<string | number>): FilterCondition => ({ key, op, count: null, values: values.map(String) } as FilterCondition)

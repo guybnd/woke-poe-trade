@@ -44,7 +44,7 @@
       </div>
 
       <CurrencyCard v-if="isCurrency" :store="store" :config="config" :name="facts.baseType ?? facts.name" :stack="facts.stackSize ?? 1"
-        :gem="/ Gems$/.test(facts.itemClass ?? '') ? { level: facts.gemLevel ?? 1, quality: facts.quality ?? 0, corrupted: !!facts.corrupted } : null" :rule="match.final?.block.conditions ?? null"
+        :gem="/ Gems$/.test(facts.itemClass ?? '') ? { level: facts.gemLevel ?? 1, quality: facts.quality ?? 0, corrupted: !!facts.corrupted } : null" :rule="match.final?.block.conditions ?? null" :facts="facts"
         :tier="match.final?.block.tier ?? null" :note="match.final?.block.comment ?? null"
         @open-tab="(cat, name) => emit('open-editor', { type: CURRENCY_TYPE, tier: `cat:${cat}:${name}` })"
         @open-rule="tier => emit('open-editor', { type: CURRENCY_TYPE, tier })" />

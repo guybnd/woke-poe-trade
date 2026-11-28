@@ -144,7 +144,7 @@ Only this profile. Your own rules, build rules and presets still win." />
             <template v-for="d in ground.placed" :key="'b' + d.i">
               <span v-if="d.beam" :class="$style.beam" :style="{ left: `${d.x + d.w / 2 - 1}px`, height: `${d.y + 2}px`, background: `linear-gradient(to bottom, transparent, ${d.beam})` }" />
             </template>
-            <span v-for="d in ground.placed" :key="d.i" v-item-tip="samples[d.i].tip" :class="[$style.drop, { [$style.ghost]: d.hidden, [$style.on]: d.i === focus }]"
+            <span v-for="d in ground.placed" :key="d.i" v-item-tip="samples[d.i].tip" :data-drop="d.i" :class="[$style.drop, { [$style.ghost]: d.hidden, [$style.on]: d.i === focus }]"
               :style="{ left: `${d.x}px`, top: `${d.y}px`, width: `${d.w}px` }" @mouseenter="focus = d.i" @click="pinned = pinned === d.i ? null : d.i">
               <span :class="$style.tags" data-no-item-tip="marks of the item below, which has its tooltip">
                 <span :class="[$style.tag, $style.score]" :style="{ color: STEP_CSS[Math.max(1, samples[d.i].step)], borderColor: STEP_CSS[Math.max(1, samples[d.i].step)] }" :title="`Score ${pointsText(samples[d.i].pts)}, line ${pointsText(needPoints)}: ${STEP_NAMES[samples[d.i].step]}`">{{ pointsText(samples[d.i].pts) }}</span>
@@ -175,7 +175,7 @@ Only this profile. Your own rules, build rules and presets still win." />
 <script setup lang="ts">
 // Rare weights (beta, weights.ts): the switch, the line, the test rares and
 // the multipliers, all for this profile.
-import { computed, reactive, ref, shallowRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, onUpdated, reactive, ref, shallowRef } from 'vue'
 import { WButton, WChip, WInfo, WToggle, vItemTip } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
@@ -336,15 +336,22 @@ const shown = computed(() => samples.value[pinned.value ?? focus.value] ?? null)
 
 const widths = reactive<Record<string, number>>({})
 const observers = new Map<string, ResizeObserver>()
+const groundEls = new Map<string, HTMLElement>()
 function setGround (key: string, el: HTMLElement | null) {
   observers.get(key)?.disconnect()
   observers.delete(key)
+  groundEls.delete(key)
   if (!el) return
+  groundEls.set(key, el)
   const ro = new ResizeObserver(() => { widths[key] = el.clientWidth })
   ro.observe(el)
   observers.set(key, ro)
   widths[key] = el.clientWidth
 }
+onBeforeUnmount(() => { for (const ro of observers.values()) ro.disconnect() })
+// Labels are re-measured once the label font has loaded.
+const fontsReady = ref(0)
+document.fonts?.ready.then(() => { fontsReady.value++ }).catch(() => {})
 const ctx = document.createElement('canvas').getContext('2d')
 function measure (text: string, px: number): number {
   if (!ctx) return text.length * px * 0.68
@@ -411,15 +418,44 @@ const ownRanks = computed(() => {
 
 // Places stay put while you tune: each rare gets a slot sized for the
 // biggest label, so only its look changes.
+// Each slot is the whole drop: the chip row above, the rank and tier chips
+// beside and the label. The chips use the app's font and text size, so a
+// first guess is checked against what the ground really drew, and a slot
+// only ever grows (it settles, and the pile doesn't shuffle as you tune).
+const drawn = reactive<Record<string, { w: number, h: number }>>({})
+const drawnKey = (x: { row: BaseRow, tags: Array<{ text: string }> }) => `${x.row.name}|${x.tags.map(t => t.text).join('|')}`
 function layout (key: string) {
   const width = widths[key] || 420
+  const m = fontsReady.value >= 0 ? measure : undefined
   const boxes = samples.value.map(x => {
-    const b = labelBox(x.row.name, 45, SCALE, measure)
-    const tagsW = x.tags.reduce((n, t) => n + measure(t.text, 9) + 18, 30)
-    return { w: Math.ceil(Math.max(b.w + DECO_W * 2, tagsW)), h: b.h + TAG_H }
+    const b = labelBox(x.row.name, 45, SCALE, m)
+    // Score chip, then each mark: 3px padding a side, icon, 2px between.
+    const tagsW = x.tags.reduce((n, t) => n + (m ? m(t.text, 11) : t.text.length * 7) + 22, 40)
+    const seen = drawn[drawnKey(x)]
+    return { w: Math.ceil(Math.max(b.w + DECO_W * 2, tagsW, seen?.w ?? 0)), h: Math.ceil(Math.max(b.h + TAG_H, seen?.h ?? 0)) }
   })
   return layoutLabels(boxes, width, 220, 3, BEAM_ROOM)
 }
+function measureDrawn () {
+  const el = groundEls.get('ground')
+  if (!el) return
+  for (const node of el.querySelectorAll<HTMLElement>('[data-drop]')) {
+    const x = samples.value[Number(node.dataset.drop)]
+    const tags = node.firstElementChild as HTMLElement | null
+    const row = node.lastElementChild as HTMLElement | null
+    const label = row?.querySelector<HTMLElement>('[data-label-preview] > span')
+    if (!x || !tags || !row || !label) continue
+    // The label clips its text to the slot, so its scroll width is the real one.
+    const labelW = label.scrollWidth + (label.offsetWidth - label.clientWidth)
+    const w = Math.ceil(Math.max(tags.scrollWidth, tags.offsetWidth, row.offsetWidth - label.offsetWidth + labelW))
+    const h = Math.ceil(Math.max(node.offsetHeight, node.scrollHeight))
+    const k = drawnKey(x)
+    const was = drawn[k]
+    if (!was || w > was.w || h > was.h) drawn[k] = { w: Math.max(w, was?.w ?? 0), h: Math.max(h, was?.h ?? 0) }
+  }
+}
+onMounted(measureDrawn)
+onUpdated(measureDrawn)
 const GROUND_SIDES = [{ key: 'weights', title: 'Weights' }, { key: 'ns', title: 'NeverSink now' }] as const
 const side = ref<'weights' | 'ns'>('weights')
 const ground = computed(() => {

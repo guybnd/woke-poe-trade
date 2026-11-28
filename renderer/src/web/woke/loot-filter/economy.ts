@@ -142,7 +142,9 @@ export function priceBreakdown (
   const find = priceFinder(items, 'safety')
   return (group: EconomyGroup, base: string): Array<{ name: string, chaos: number | null, thin: boolean }> => {
     const names = group.unique ? uniquesOnBase(base).filter(name => !isReplica(name)) : [base]
-    return names.map(name => {
+    return names.map(plain => {
+      // A Foulborn page lists each unique by its Foulborn line.
+      const name = group.foulborn ? `Foulborn ${plain}` : plain
       const hit = find(group.ninja, name, base)
       return { name, chaos: hit?.chaos ?? null, thin: hit ? isThin(hit) : false }
     })
