@@ -1390,6 +1390,10 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   await expect(page.locator('[data-score-ruler] [data-score-needle]')).toBeVisible()
   await expect(page.getByRole('button', { name: /NeverSink view/ })).toHaveCount(0)
   await overlay.snap('score card')
+  // Hovering the label says what sets its border, background and text.
+  await page.locator('[data-score-look]').hover()
+  await expect(page.locator('[data-score-look-why]')).toContainText('Background')
+  await overlay.snap('score card, why this look')
   // A row's ‹ › changes it for every rare, says so, and undoes.
   const tier = page.locator('[data-score-term="t4"]')
   await tier.hover()

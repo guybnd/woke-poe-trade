@@ -7,7 +7,15 @@
     <template #actions><span class="w-faint text-xs">{{ flask ? 'Flasks' : 'Rare weights' }}</span></template>
     <div v-if="view" :class="$style.body" :data-score-flask="flask ? '' : undefined">
       <div :class="$style.top">
-        <LabelPreview :text="facts.baseType ?? facts.name" :actions="match.actions" :visibility="match.visibility" :scale="1.15" />
+        <span :class="$style.lookWrap" tabindex="0" data-score-look>
+          <LabelPreview :text="facts.baseType ?? facts.name" :actions="match.actions" :visibility="match.visibility" :scale="1.15" />
+          <span v-if="lookWhy.length" :class="$style.why" role="tooltip" data-score-look-why>
+            <span v-for="l in lookWhy" :key="l.ch" :class="$style.whyRow">
+              <i :class="[$style.sw, $style[`sw_${l.ch}`]]" :style="{ '--c': l.css }" aria-hidden="true" />
+              <b>{{ l.name }}</b><span>{{ l.why }}</span>
+            </span>
+          </span>
+        </span>
         <span class="grow" />
         <div :class="$style.answer" data-score-answer>
           <b :style="{ color: STEP_CSS[Math.max(1, view.step)] }">{{ view.step ? `Shows · ${STEP_SHORT[view.step]}` : 'Hidden' }}</b>
@@ -82,13 +90,15 @@ import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
 import type { MatchResult } from './match'
-import { MULT_STEPS, NEED_MAX, NEED_MIN, RANK_KEYS, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, multRange, stepFor, stepOf, termsOf, weightOf } from './weights'
-import type { WeightKey } from './weights'
+import { MULT_STEPS, NEED_MAX, NEED_MIN, RANK_KEYS, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, lookKeyOf, LOOK_LABEL, multRange, stepFor, stepOf, termsOf, weightOf } from './weights'
+import type { LookChannel, Step, WeightKey } from './weights'
 import { fromPoints, points, pointsText } from './weight-samples'
 import { setWeightRank, weightRow } from './weight-rank'
 import { FLASK_ILVL, FLASK_QUALITY, FLASK_RANKS, flaskLoud, flaskRank, flaskWeight } from './flask-weights'
 import type { RankKey } from './weight-settings'
 import { STEP_CSS, STEP_SHORT } from './score-steps'
+import { readStyle } from './edits'
+import { cssColour } from './label-style'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -177,6 +187,22 @@ const view = computed<View | null>(() => {
   }
 })
 
+// What each part of the label means (Guy, 2026-11-28): the look row that
+// paints its border, background and text, and the step behind its size.
+const CH_NAME: Record<LookChannel, string> = { border: 'Border', bg: 'Background', text: 'Text' }
+const lookWhy = computed(() => {
+  const v = view.value
+  if (!got.value || !v || v.step === 0) return []
+  const { it } = got.value
+  const st = readStyle(props.match.actions)
+  const colour = { border: st.border, bg: st.background, text: st.text }
+  const out = (['border', 'bg', 'text'] as LookChannel[]).map(ch => {
+    const k = lookKeyOf(it, w.value.look, ch, v.step as Step)
+    const why = !k ? 'game default' : k === 'score' ? `${STEP_SHORT[v.step]} step (its score)` : k === 'rarity' ? `${it.rarity ?? 'Rare'} item` : LOOK_LABEL[k]
+    return { ch, name: CH_NAME[ch], why, css: colour[ch] ? cssColour(colour[ch]!) : 'transparent' }
+  })
+  return [...out, { ch: 'size', name: 'Size, sound', why: `${STEP_SHORT[v.step]} step`, css: 'transparent' }]
+})
 const wasLabel = computed(() => got.value?.row.was ? WEIGHT_LABEL[got.value.row.was] : null)
 const pinnedBy = computed(() => {
   const v = view.value
@@ -266,6 +292,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 <style module>
 .body { display: flex; flex-direction: column; gap: 7px; padding: 10px 12px; }
 .top { display: flex; align-items: center; gap: 8px; }
+.lookWrap { position: relative; display: inline-flex; outline: none; }
+.why { display: none; position: absolute; left: 0; top: calc(100% + 4px); z-index: 5; flex-direction: column; gap: 2px; padding: 6px 8px; min-width: 15rem; background: #15120e; border: 1px solid var(--w-border); border-radius: var(--w-r-sm); box-shadow: 0 4px 12px rgb(0 0 0 / 60%); font-size: var(--w-fs-xs); color: var(--w-dim); white-space: nowrap; }
+.lookWrap:hover .why, .lookWrap:focus .why { display: flex; }
+.whyRow { display: flex; align-items: center; gap: 6px; }
+.whyRow b { color: var(--w-fg); font-weight: 400; min-width: 5.5em; }
+.sw { width: 14px; height: 10px; flex: none; border-radius: 2px; }
+.sw_border { border: 2px solid var(--c); }
+.sw_bg { background: var(--c); outline: 1px solid var(--w-border); }
+.sw_text { background: var(--c); height: 3px; }
+.sw_size { visibility: hidden; }
 .answer { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
 .answer b { font-family: var(--w-head); font-size: var(--w-fs-lg); font-weight: 400; }
 .answer span { font-size: var(--w-fs-xs); color: var(--w-dim); }
