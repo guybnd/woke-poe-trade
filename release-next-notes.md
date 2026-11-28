@@ -1,6 +1,6 @@
 # Next release notes
 
-- Loot filter, Loot tab Gems: Transfigured, Vaal, Supports and Skill gems fold by level and quality (21/23, 21/20, 20/23, 20/20, 20/0, 1/20, 1/0+, and corrupted with no change), each with a Whole band step.
+- Loot filter, Loot tab Gems: Transfigured, Vaal, Supports and Skill gems fold by level and quality: corrupted ones first (21/23, 21/20, 20/23, 20/20, 20/0, 1/20, 1/0+), then the rest (20/20, 20/0, 1/20, 1/0+), each with a Whole band step.
 - Loot filter, Loot tab: Gold has its own ruler. Slide where Small, Normal, Decent, Big and Tink start by pile size (default every pile shows, 500+ Normal, 3,000+ Decent).
 - Loot filter (beta): a Recipes page on the Loot tab. 6-link, 6 sockets, 20% quality gems, 20% quality flasks and R-G-B linked items each show in maps at the step you pick, or Off. R-G-B Off also stops NeverSink's chromatic rules in maps. While the Loot tab is on, the presets it covers (cheap currency, cards, splinters and uniques, low maps, R-G-B, 6 sockets, vendor quality, and Hide flasks with Equipment on) leave maps to it and keep working while levelling; the Presets tab lists them. Your cheap currency line, low maps tier, R-G-B and 6 sockets settings carry over the first time.
 - Help "?" cards read as a short lead line and bullets everywhere, starting with the loot filter: each Loot class (Currency, Fragments, Cards, Uniques, Gems, Maps) explains itself instead of one wall of text about currency, and Rare gear, Flasks and League items are cut down too. Long hover texts are shorter.
