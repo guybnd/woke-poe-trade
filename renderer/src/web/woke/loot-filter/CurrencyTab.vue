@@ -30,7 +30,9 @@
       <WButton v-if="c.mult != null" size="sm" variant="ghost" icon="fas fa-undo" :title="`Back to the filter's strictness, ${LEVEL_NAMES[level]} now`" @click="c.mult = null">Default</WButton>
       <StrictnessMenu :store="store" :config="config" />
       <span class="flex-1" />
-      <button v-if="!allOpen" type="button" :class="$style.allPrices" title="Where each step starts, after Strictness. Click to open the ruler" data-loot-all-prices @click="allOpen = true">{{ allPrices }}</button>
+      <button v-if="!allOpen" type="button" :class="$style.allPrices" :title="`Where each step starts, after Strictness: ${allPrices.map(p => `${p.name} ${p.off ? 'off' : p.price}`).join(', ')}. Click to open the ruler`" data-loot-all-prices @click="allOpen = true">
+        <span v-for="p in allPrices" :key="p.step" :class="{ [$style.allOff]: p.off }" :title="p.off ? `${p.name}: off everywhere` : `${p.name} from ${p.price}`"><LabelPreview :text="p.name" :actions="[]" :style-override="currencyFullLook(p.step, sampleCat, c)" visibility="Show" :extras="false" :scale="0.6" /></span>
+      </button>
     </div>
     <template v-if="allOpen">
     <div class="w-faint text-xs" data-currency-strict-line>{{ strictLine }}</div>
@@ -63,27 +65,17 @@
     </div>
     </Teleport>
 
-    <!-- The page's own bar (Guy 2026-11-28): under All loot, in the page's
-         look. Its steps and ruler follow All loot until you change them;
-         a section can still have its own. -->
-    <div v-if="kind !== 'gold'" :class="$style.goldRuler" data-currency-page-ruler>
+    <!-- The category's own bar (Guy 2026-11-28: "1 bar at the top for all loot, then one per category that override it"): a full ruler, All loot's until you drag a handle or click a dot here. -->
+    <div v-if="kind !== 'gold'" :class="$style.pageCard" data-currency-page-ruler>
       <span :class="$style.ownHead">
         <b>{{ PAGE_LABEL }}</b>
-        <span :class="$style.lookLab" :title="`Untick a step to hide what lands on it on the ${PAGE_LABEL} page`">Steps</span>
-        <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!pageOff.includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} on the ${PAGE_LABEL} page`" @change="togglePageOff(s)"> {{ CSTEP_NAMES[s] }}</label>
-        <span v-if="c.offBy[kind] == null" class="w-faint text-xs">as All loot</span>
-        <button v-else type="button" class="w-icon-btn" :title="`${PAGE_LABEL} steps back to All loot's`" :aria-label="`${PAGE_LABEL} steps back to All loot's`" @click="setOff(kind, null)"><i class="fas fa-undo" /></button>
-        <span :class="$style.lookLab">Prices</span>
-        <template v-if="c.rulers[kind]">
-          <span class="text-xs">Own ruler, Strictness still moves it</span>
-          <button type="button" class="w-icon-btn" :title="`${PAGE_LABEL} back to All loot's ruler`" :aria-label="`${PAGE_LABEL} back to All loot's ruler`" @click="setRuler(kind, null)"><i class="fas fa-undo" /></button>
-        </template>
-        <template v-else>
-          <span class="w-faint text-xs">as All loot</span>
-          <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" :title="`Give the ${PAGE_LABEL} page its own ruler, starting where All loot's steps are now`" data-currency-page-own @click="ownPageRuler">Own ruler</WButton>
-        </template>
+        <span v-if="!c.rulers[kind] && c.offBy[kind] == null" class="w-faint text-xs">as All loot: drag a handle or click a dot to change it for {{ KIND_NAME[kind] }} only</span>
+        <span v-else class="text-xs">its own, over All loot{{ c.rulers[kind] ? '; Strictness still moves it' : '' }}</span>
+        <button v-if="c.offBy[kind] != null" type="button" class="w-icon-btn" :title="`${PAGE_LABEL} steps back to All loot's`" :aria-label="`${PAGE_LABEL} steps back to All loot's`" @click="setOff(kind, null)"><i class="fas fa-undo" /></button>
+        <button v-if="c.rulers[kind]" type="button" class="w-icon-btn" :title="`${PAGE_LABEL} back to All loot's ruler`" :aria-label="`${PAGE_LABEL} back to All loot's ruler`" data-currency-page-undo @click="setRuler(kind, null)"><i class="fas fa-sliders-h" /></button>
       </span>
-      <StepRuler v-if="c.rulers[kind]" :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="(i, v) => setOwn(kind, i, v)" />
+      <StepRuler toggles :page="kind" :page-name="PAGE_LABEL" :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="{}"
+        @edit="s => stepEdit = s" @set="(i, v) => setOwn(kind, i, v)" @toggle="togglePageOff" />
     </div>
 
     <slot name="extra" />
@@ -562,7 +554,9 @@ function setOwn (cat: string, i: number, shown: number) {
 const allOff = computed(() => c.value.offBy.all ?? [])
 // The folded All loot line's step prices, after Strictness; a step turned
 // off everywhere is left out.
-const allPrices = computed(() => stepStarts({ ...eff.value, rulers: {} }).map((v, i) => allOff.value.includes(i + 1) ? null : `${CSTEP_NAMES[i + 1]} ${chaosText(v)}`).filter(Boolean).join(' · '))
+// Each shows as its own label (Guy 2026-11-28: colour coded, labels not
+// numbers); a step off everywhere is struck through, as on the ruler.
+const allPrices = computed(() => stepStarts({ ...eff.value, rulers: {} }).map((v, i) => ({ step: (i + 1) as CStep, name: CSTEP_NAMES[i + 1], price: chaosText(v), off: allOff.value.includes(i + 1) })))
 // Picking a step's look opens the card, where its editor shows.
 watch(stepEdit, v => { if (v != null) allOpen.value = true })
 function toggleAll (s: number) {
@@ -575,9 +569,6 @@ const pageOff = computed(() => c.value.offBy[props.kind] ?? allOff.value)
 function togglePageOff (s: number) {
   const list = flip(pageOff.value, s)
   setOff(props.kind, list.join() === allOff.value.join() ? null : list)
-}
-function ownPageRuler () {
-  setRuler(props.kind, stepStarts({ ...c.value, rulers: {} }).map(v => Number(v.toPrecision(3))))
 }
 const ownCount = computed(() => CATS.value.filter(x => c.value.offBy[x.id] != null || c.value.rulers[x.id]).length)
 const flip = (list: readonly number[], s: number) => list.includes(s) ? list.filter(x => x !== s) : [...list, s].sort((a, b) => a - b)
@@ -705,8 +696,10 @@ function chaosText (v: number): string {
 <style module>
 .allLine { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; }
 .allFold { display: inline-flex; align-items: center; gap: 5px; background: none; border: 0; padding: 0; color: var(--w-text); cursor: pointer; font-size: var(--w-fs-sm); }
-.allPrices { background: none; border: 0; padding: 0; color: var(--w-dim); font-size: var(--w-fs-xs); cursor: pointer; font-variant-numeric: tabular-nums; }
-.allPrices:hover { color: var(--w-text); }
+.allPrices { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; cursor: pointer; }
+.allPrices > span { display: inline-flex; pointer-events: none; }
+.allOff { opacity: .45; text-decoration: line-through; }
+.pageCard { display: flex; flex-direction: column; gap: 2px; padding: 4px 8px 2px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .allCard { display: flex; flex-direction: column; gap: 6px; padding: 5px 10px; border: 1px solid var(--w-accent, #c8a565); border-radius: var(--w-r-sm); background: var(--w-panel); }
 .wrap {
   max-height: min(40rem, calc(78vh / var(--w-ui-scale, 1)));

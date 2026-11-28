@@ -1664,7 +1664,7 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
     await expect(page.locator('[data-loot-all-prices]')).toContainText('Decent')
     await allOpenBtn.click()
   }
-  await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Where each step starts', exact: true })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()
   await expect(page.locator('[data-currency-cat="orbs"]')).toBeVisible()
   // Strictness by level name (Guy's H1): one level up, every step's price 25% higher.
@@ -1672,16 +1672,16 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-currency-strict-level]')).toHaveText('Strict')
   await expect(page.locator('[data-currency-strict-line]')).toContainText('25% higher')
   // The steps sit on one price ruler; a handle's value is the price after Strictness.
-  await expect(page.getByRole('spinbutton', { name: 'Normal from this many chaos' })).toHaveValue('1.3')
+  await expect(page.getByRole('spinbutton', { name: 'Normal from this many chaos', exact: true })).toHaveValue('1.3')
   await expect(page.locator('[data-currency-cat="orbs"] [data-loot-section-mode]').getByRole('button')).toHaveAccessibleName('Orbs: By price')
   await page.waitForTimeout(500)
   await overlay.snap('currency weights tab')
 
   // A step's Look edits loudness for every category; a category sets its colour.
-  await page.getByRole('button', { name: 'Big look and sound' }).click()
+  await page.getByRole('button', { name: 'Big look and sound', exact: true }).click()
   await expect(page.locator('[data-currency-step-editor]')).toBeVisible()
   await overlay.snap('currency step look editor')
-  await page.getByRole('button', { name: 'Big look and sound' }).click()
+  await page.getByRole('button', { name: 'Big look and sound', exact: true }).click()
   // A category's colour and icon sit inside it, once it's open.
   const oilsHead = page.locator('[data-currency-cat="oils"] [aria-expanded]').first()
   await oilsHead.click({ position: { x: 12, y: 10 } })
@@ -1712,11 +1712,16 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(orbRuler.locator('[data-currency-ruler]')).toHaveCount(0)
   // The page's own bar (Guy 2026-11-28): follows All loot until it gets its own ruler.
   const pageBar = page.locator('[data-currency-page-ruler]')
-  await expect(pageBar).toContainText('Currency')
-  await pageBar.locator('[data-currency-page-own]').click()
+  await expect(pageBar).toContainText('as All loot')
   await expect(pageBar.locator('[data-currency-ruler]')).toBeVisible()
-  await pageBar.getByRole('button', { name: "Currency back to All loot's ruler" }).click()
-  await expect(pageBar.locator('[data-currency-ruler]')).toHaveCount(0)
+  // Typing a price here gives Currency its own ruler, over All loot; undo goes back.
+  const pageNormal = pageBar.getByRole('spinbutton', { name: 'Currency: Normal from this many chaos' })
+  await pageNormal.fill('9')
+  await pageNormal.press('Enter')
+  await expect(pageBar).toContainText('its own, over All loot')
+  await overlay.snap('loot tab, currency bar under All loot')
+  await pageBar.locator('[data-currency-page-undo]').click()
+  await expect(pageBar).toContainText('as All loot')
   const alch = page.locator('[data-currency-item="Orb of Alchemy"]')
   await expect(alch).toBeVisible()
   // Every row has the Jewels tick box (Guy 2026-11-28): untick hides this

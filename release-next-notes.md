@@ -1,5 +1,6 @@
 # Next release notes
 
+- Loot filter, Loot tab: each category (Currency, Uniques, Gems...) now shows its own full ruler under All loot. It follows All loot until you drag a handle or click a step's dot there, then it is that category's own; undo puts it back. The folded All loot line shows the step labels in their colours, with steps that are off struck through.
 - Loot filter, Loot tab: All loot takes one line: Strictness, Maps and where each step starts (Normal 2.5c · Decent 5.6c...). Click All loot or the prices to open the ruler. What Strictness does is in its tooltip, and the page's Size cut and "never show" count sit on its top row.
 - Loot filter, Loot tab: each page has its own bar again, under All loot (Currency, Uniques...). It follows All loot until you change it: turn a step off for that page only, or give the page its own ruler. A section can still have its own.
 - Loot filter: Equipment › Base ranks fills its Rank 1-3 and Exotic lanes on our own filter too (every base read Unranked there).
