@@ -69,7 +69,7 @@
     </div>
     <div :class="$style.row" data-currency-card-item>
       <span :class="$style.lab">This item</span>
-      <StateChip :model-value="mode === 'always' ? 'always' : 'auto'" :options="ITEM_CHIPS" :title="it.name" dflt="auto" @update:model-value="setMode" />
+      <StateChip :model-value="mode === 'always' ? 'always' : 'auto'" :options="ITEM_CHIPS" :title="it.name" dflt="auto" :bias="-notch" @update:model-value="setMode" @update:bias="n => commitNotch(-n)" />
     </div>
     <label v-if="kindOf(it.cat) === 'cards'" :class="$style.row" data-currency-card-collect>
       <span :class="$style.lab">Collecting</span>
@@ -137,10 +137,13 @@ const emit = defineEmits<{ 'open-tab': [cat: string, name: string], 'open-rule':
 
 const open = reactive({ more: useFold('alt-f.currency-more') })
 // The item on its own: its section's state or Always. Hide is the Shows switch.
-const ITEM_CHIPS: ChipOption[] = [
-  { value: 'auto', label: 'Same as section', desc: 'Its section decides.', dot: 'var(--w-gold)' },
+// With its own bias, price or look it says Custom (Guy 2026-11-28).
+const ITEM_CHIPS = computed<ChipOption[]>(() => [
+  edit.value.mult != null || edit.value.price != null || edit.value.look
+    ? { value: 'auto', label: 'Custom', desc: 'Its section decides, with your bias, price or look.', dot: 'var(--w-gold)' }
+    : { value: 'auto', label: 'Same as section', desc: 'Its section decides.', dot: 'var(--w-gold)' },
   { value: 'always', label: 'Always', desc: 'Shows at least Small, whatever the price.', dot: 'var(--w-gold-hi)', glow: true }
-]
+])
 const BIAS_HELP = `Makes this item count above or below its price, so it shows louder or quieter.
 - Only this item (a unique base: only this base). Other items keep theirs.
 - Its section has its own bias, on the section chip. Both apply.

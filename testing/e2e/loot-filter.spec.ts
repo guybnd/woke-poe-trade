@@ -1331,6 +1331,8 @@ test('Currency weights: Alt + F on currency shows its step first, a Shows switch
   // Price bias applies on release, in the sections' words.
   await page.locator('[data-currency-card-mult]').fill('2')
   await expect(card).toContainText('+56%')
+  // Its own bias makes This item Custom (Guy 2026-11-28).
+  await expect(card.locator('[data-currency-card-item]')).toContainText('Custom')
   // The Shows switch hides every pile.
   await card.locator('[data-currency-card-shows]').click()
   await expect(page.locator('[data-currency-card-now]')).toContainText('Hidden')
