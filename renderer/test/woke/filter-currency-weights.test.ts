@@ -170,8 +170,8 @@ describe('currency weights', () => {
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, cfg, lookup)!
       let hidden = 0
-      // Map and gold rows are named for their kind, not a base: tested on their own.
-      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold')) {
+      // Map, gold, jewel and league rows are named for their kind, not a base: tested on their own.
+      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold' && i.type !== 'jewels' && i.type !== 'league')) {
         const stacks = stacksFor(it, cfg)
         for (const n of [1, 2, 5, 10, 20, 40]) {
           if (n > it.full) continue

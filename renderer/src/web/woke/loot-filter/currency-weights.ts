@@ -873,7 +873,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
         // A louder one's rule is above the Hide already.
         if (!top || top[2] || top[0] > step) continue
         rescued.add(`${it.name}|${n.name}`)
-        const conds = [area, ...clsCond([n]), c('BaseType', '==', bts([n])), ...(n.conds ?? [])]
+        const conds = [area, ...clsCond([n]), ...btCond([n]), ...(n.conds ?? [])]
         const look = cfg.items[n.name]?.look
         blocks.push(block(top[0], conds, `${n.name}, above ${it.name}`, { ...currencyLook(top[0], n.cat, cfg), ...look }))
       }
