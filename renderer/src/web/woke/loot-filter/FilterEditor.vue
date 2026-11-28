@@ -7,8 +7,6 @@
     </template>
     <template #toolbar>
       <WBackLink v-if="trail.length" :to="backTo" title="Back to where you were (mouse back button)" @back="goBack" />
-      <WSelect :model-value="sourceKey" :options="fileOptions" style="max-width: 20rem;" data-goto-spot="own-filter" @update:model-value="pickSource" />
-      <WButton size="sm" variant="ghost" icon="fas fa-sync" :title="nsDownload(config) ? 'Reload the file list and the filter, and check for a NeverSink update' : 'Reload the file list and the filter'" @click="refresh" />
       <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule: inventory, stash or ground labels. Hold Alt for items your filter hides.` : undefined" @paste.capture="onSearchPaste">
         <ItemSearchField v-model="search" :doc="store.doc.value" :area-level="searchAreaLevel" :drop="tab === 'preview'" @open-rule="openRule" @drop-item="dropPick" />
       </span>
@@ -29,8 +27,11 @@
     </div>
     <WEmpty v-else-if="!store.doc.value" :art="{ item: 'Orb of Scouring' }">
       <template v-if="store.error.value">The filter couldn't be read. Pick another one above, or fix the file and press Retry.</template>
-      <template v-else>Pick a NeverSink filter from your filter folder above. If the list is empty, download one from FilterBlade or NeverSink's GitHub first.</template>
-      <template #actions><WButton size="sm" icon="fas fa-folder-open" @click="openFolder">Open filter folder</WButton></template>
+      <template v-else>Start with our own filter, or pick a filter file from the list above.</template>
+      <template #actions>
+        <WButton v-if="!store.error.value" size="sm" variant="primary" icon="fas fa-filter" @click="pickSource('own')">Use our own filter</WButton>
+        <WButton size="sm" icon="fas fa-folder-open" @click="openFolder">Open filter folder</WButton>
+      </template>
     </WEmpty>
 
     <div v-else-if="tab === 'rules'" :class="$style.rulesPage">
@@ -594,21 +595,6 @@ const buildRows = computed(() => {
 // Online filters are keyed "online:<id>" in the picker; GitHub is "github",
 // our own filter "own".
 const sourceKey = computed(() => props.config.ownBase ? 'own' : props.config.neversink.on ? 'github' : props.config.sourceOnline ? `online:${props.config.sourceName}` : props.config.sourceName)
-
-const fileOptions = computed(() => {
-  const opts = props.store.files.value
-    .map(f => f.online
-      ? { value: `online:${f.name}`, label: `${f.title ?? f.name} (online, read only)` }
-      : { value: f.name, label: f.name.replace(/\.filter$/i, '') })
-  // NeverSink is retired: GitHub stays listed only while it's the one in use.
-  if (nsDownload(props.config)) opts.unshift({ value: 'github', label: 'NeverSink from GitHub (retired)' })
-  if (props.config.sourceName && !props.config.ownBase && !props.config.neversink.on && !opts.some(o => o.value === sourceKey.value)) {
-    opts.unshift({ value: sourceKey.value, label: props.config.sourceOnline ? `${props.config.sourceTitle} (online)` : props.config.sourceName.replace(/\.filter$/i, '') })
-  }
-  opts.unshift({ value: 'own', label: 'Our own filter' })
-
-  return opts
-})
 
 interface BannerAction { label: string, run: () => void, primary?: boolean }
 const banner = computed<{ text: string, tone: 'warn' | 'info', actions: BannerAction[] } | null>(() => {

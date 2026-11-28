@@ -56,7 +56,7 @@
         </template>
         <WSkeleton v-if="store.loading.value" :rows="3" />
         <WEmpty v-else-if="!store.error.value" :art="{ item: 'Orb of Scouring' }">
-          No filter picked yet. Open the editor and choose your NeverSink filter.
+          No filter picked yet. Open the editor to start with our own filter.
         </WEmpty>
         <template #footer><WButton size="sm" variant="primary" @click="mode = 'editor'">Open editor</WButton></template>
       </WPanel>
@@ -192,7 +192,7 @@ const lootSpot = (tier: string) => () => { openEditor(); focus.value = { type: '
 // (cat:sg...) opens on the Equipment tab.
 useGoto(props.config, 'woke-loot-filter', {
   editor: openEditor,
-  spots: { 'loot-gold': lootSpot('cat:gold:'), 'loot-levelling': lootSpot('levelling'), 'loot-special': lootSpot('cat:sgveil:'), 'profiles': () => {}, 'gear-ranks': () => { openEditor(); askGearRanks() }, 'over-quality-look': () => { openEditor(); openTab.value = { tab: 'gear' } }, 'league-always': lootSpot('lgchron'), 'section-steps': lootSpot('cat:orbs:Chaos Orb'), 'section-ruler': lootSpot('cat:orbs:Chaos Orb'), 'map-looks': lootSpot('mapfloor'), 'jewels-no-price': lootSpot('jewplain'), 'own-lists': lootSpot('cat:orbs:Divine Orb'), 'history': () => { openEditor(); openTab.value = { tab: 'changes' } }, 'recipes-by-price': lootSpot('recipes'), 'loot-strictness': lootSpot('cat:orbs:Chaos Orb'), 'id-mods': () => { openEditor(); openTab.value = { tab: 'weights' } }, 'loot-on': lootSpot('cat:orbs:Chaos Orb'), 'own-filter': openEditor }
+  spots: { 'loot-gold': lootSpot('cat:gold:'), 'loot-levelling': lootSpot('levelling'), 'loot-special': lootSpot('cat:sgveil:'), 'profiles': () => {}, 'gear-ranks': () => { openEditor(); askGearRanks() }, 'over-quality-look': () => { openEditor(); openTab.value = { tab: 'gear' } }, 'league-always': lootSpot('lgchron'), 'section-steps': lootSpot('cat:orbs:Chaos Orb'), 'section-ruler': lootSpot('cat:orbs:Chaos Orb'), 'map-looks': lootSpot('mapfloor'), 'jewels-no-price': lootSpot('jewplain'), 'own-lists': lootSpot('cat:orbs:Divine Orb'), 'history': () => { openEditor(); openTab.value = { tab: 'changes' } }, 'recipes-by-price': lootSpot('recipes'), 'loot-strictness': lootSpot('cat:orbs:Chaos Orb'), 'id-mods': () => { openEditor(); openTab.value = { tab: 'weights' } }, 'loot-on': lootSpot('cat:orbs:Chaos Orb'), 'own-filter': lootSpot('cat:orbs:Chaos Orb') }
 })
 
 // A change Claude suggested, applied from the Suggestions card: added like an

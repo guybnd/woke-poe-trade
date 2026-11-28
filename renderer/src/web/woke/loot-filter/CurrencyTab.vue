@@ -44,7 +44,7 @@
       <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, 'gold')" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
     </div>
     <template v-else>
-    <div :class="$style.mainLab" data-currency-main-ruler><b>Main ruler</b><span class="w-faint text-xs">every Loot page{{ ownRulers.length ? ` · ${ownRulers.length === 1 ? `${ownRulers[0]} has its own` : `${ownRulers.length} sections have their own`}` : '' }}</span><span class="flex-1" /><StrictnessMenu :store="store" :config="config" /></div>
+    <div :class="$style.mainLab" data-currency-main-ruler data-goto-spot="own-filter"><b>Main ruler</b><span class="w-faint text-xs">every Loot page{{ ownRulers.length ? ` · ${ownRulers.length === 1 ? `${ownRulers[0]} has its own` : `${ownRulers.length} sections have their own`}` : '' }}</span><span class="flex-1" /><StrictnessMenu :store="store" :config="config" /></div>
     <StepRuler main :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="stepSample"
       @edit="s => stepEdit = s" @set="setShown" />
     </template>

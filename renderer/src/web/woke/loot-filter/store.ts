@@ -920,8 +920,6 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     // Our own base ranks, read by the gear rules: there before the first build.
     await loadBaseRanks()
     if (seq !== loadSeq) return
-    // NeverSink is retired: a filter with nothing picked yet starts on ours.
-    if (!cfg().ownBase && !cfg().sourceName && !cfg().neversink.on) cfg().ownBase = true
     if (cfg().ownBase) {
       // Our own filter: nothing to read or download, the skeleton at the
       // level you picked, with every woke rule on top.
@@ -971,20 +969,10 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       return
     }
     if (!cfg().sourceName) {
+      // NeverSink is retired: nothing is picked for you. The editor offers our
+      // own filter (or a file from the list).
       await listFiles()
-      if (seq !== loadSeq) return
-      // Start from what the game is using, else the most recently changed
-      // NeverSink file.
-      await readGameFilter()
-      if (seq !== loadSeq) return
-      const inGame = gameFilter.value.name
-      const ns = files.value.find(f => inGame != null && f.name === inGame) ??
-        files.value.find(f => !f.online && /neversink/i.test(f.name) && !/\(woke\)/i.test(f.name)) ??
-        files.value.find(f => f.online && /neversink/i.test(f.title ?? ''))
-      if (!ns) return
-      cfg().sourceName = ns.name
-      cfg().sourceOnline = Boolean(ns.online)
-      cfg().sourceTitle = ns.title ?? ''
+      return
     }
     loading.value = true
     error.value = null
