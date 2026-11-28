@@ -26,7 +26,7 @@ import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
-import { FOULBORN_PREFIX, FOULBORN_TYPE, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
+import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
 import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK } from './map-classes'
 import type { GemLine } from './gem-classes'
@@ -328,6 +328,44 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         bt: g.name,
         conds
       })
+    }
+  }
+  // Special unique rolls: each base of each of NeverSink's special rules,
+  // with that rule's conditions (6 links, both influences, no sockets...).
+  if (lookup) {
+    const fusing = find('currency', 'Orb of Fusing')
+    // No Fusing price yet: about what 20 have cost in past leagues.
+    const linkFloor = fusing && fusing.chaos > 0 ? fusing.chaos * 20 : 10
+    const plainBases = [...seen.values()].filter(it => it.cls === UNIQUE_CLS && it.type === 'uniques' && !it.conds).map(it => it.name)
+    for (const b of doc.blocks) {
+      const label = b.type === 'uniques' && b.tier ? SPECIAL_ROLLS[b.tier] : undefined
+      if (!label || b.visibility !== 'Show' || b.disabled) continue
+      const bt = b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))
+      const conds = b.conditions.filter(x => x !== bt && x.key !== 'Rarity').map(x => ({ ...x, values: [...x.values] }))
+      const links = conds.some(x => x.key === 'LinkedSockets')
+      const group: EconomyGroup = { ...UNIQUE_PAGE, special: true, links }
+      for (const base of bt?.values ?? plainBases) {
+        const name = `${base}, ${label}`
+        if (seen.has(name)) continue
+        const p = lookup(group, base)
+        if (!p || !(p.chaos > 0)) continue
+        const own = edits[name]?.price
+        const m = p.note?.match(/^(.*?)(?:, 1 of (\d+))?$/)
+        seen.set(name, {
+          name,
+          cls: UNIQUE_CLS,
+          type: 'uniques',
+          tier: b.tier,
+          cat: 'uniqspec',
+          chaos: (own ?? (links ? Math.max(p.chaos, linkFloor) : p.chaos)) * (edits[name]?.mult ?? 1),
+          est: own == null && (p.thin || Boolean(p.day1)),
+          ...(own != null ? { own: true } : {}),
+          full: 1,
+          bt: base,
+          conds,
+          ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {})
+        })
+      }
     }
   }
   // Blighted and blight-ravaged maps: a tier poe.ninja prices is an item;
@@ -715,9 +753,10 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
   insertBlocks(doc, first < 0 ? doc.chunks.length : first, [...compiled.blocks, ...gemsOut.blocks])
   const foul = applyFoulborn(doc, eff, all.filter(it => it.cat === 'uniqfoul'), faint) ?? none
-  const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul'), faint) ?? none
+  const spec = applySpecialRolls(doc, eff, all.filter(it => it.cat === 'uniqspec'), faint) ?? none
+  const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec'), faint) ?? none
   const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
-  const parts = [compiled, gemsOut, foul, uniq, maps]
+  const parts = [compiled, gemsOut, foul, spec, uniq, maps]
   return { blocks: parts.flatMap(x => x.blocks), items: parts.flatMap(x => x.items), chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 
@@ -756,6 +795,21 @@ function applySpecialMaps (doc: FilterDoc, cfg: CurrencySettings, items: Currenc
   const anchor = doc.blocks.find(b => b.type === BLIGHT_TYPE)
   if (!anchor) return null
   const parts = MAP_KINDS.map(k => items.filter(it => it.cat === k.cat)).filter(l => l.length).map(l => compileCurrency(cfg, l, { faint }))
+  const blocks = parts.flatMap(x => x.blocks)
+  insertBlocks(doc, doc.chunks.indexOf(anchor), blocks)
+  return { blocks, items, chars: parts.reduce((n, x) => n + x.chars, 0) }
+}
+
+// Special unique rolls go just above NeverSink's own special rules, one
+// compile per rule so each of its rules, the line's too, keeps that rule's
+// conditions. NeverSink's rules stay below for whatever poe.ninja can't price.
+function applySpecialRolls (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
+  if (!items.length) return null
+  const anchor = doc.blocks.find(b => b.type === 'uniques' && b.tier != null && b.tier in SPECIAL_ROLLS)
+  if (!anchor) return null
+  const byTier = new Map<string, CurrencyItem[]>()
+  for (const it of items) byTier.set(it.tier ?? '', [...(byTier.get(it.tier ?? '') ?? []), it])
+  const parts = [...byTier.values()].map(l => compileCurrency(cfg, l, { faint }))
   const blocks = parts.flatMap(x => x.blocks)
   insertBlocks(doc, doc.chunks.indexOf(anchor), blocks)
   return { blocks, items, chars: parts.reduce((n, x) => n + x.chars, 0) }

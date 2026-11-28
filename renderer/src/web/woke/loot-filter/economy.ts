@@ -32,6 +32,10 @@ export interface EconomyGroup {
   unique?: boolean
   // Uniques priced by their Foulborn lines ("Foulborn Doryani's Fist").
   foulborn?: boolean
+  // A special roll (Guy's spec A, 2026-11-28): its best line counts, thin or
+  // not; `links`: only the 6-link lines.
+  special?: boolean
+  links?: boolean
   // Extra non-`tN` tiers that take part, with their rank.
   extraTiers?: Record<string, number>
 }
@@ -97,10 +101,11 @@ export type UniqueRule = 'max' | 'min'
 //  - 'safety': the best of all, for never hiding what might be worth it.
 type VariantRule = 'market' | 'safety'
 
-function priceFinder (items: PriceItem[], rule: VariantRule = 'market') {
+// `all`: the best line even when a plain one exists (a special roll).
+function priceFinder (items: PriceItem[], rule: VariantRule = 'market', links = false, all = false) {
   const byName = new Map<string, PriceItem[]>()
   for (const i of items) {
-    if (/\b[56]L\b|links?|^relic$/i.test(i.variant)) continue
+    if (links ? !/\b6L\b|6 links?/i.test(i.variant) : /\b[56]L\b|links?|^relic$/i.test(i.variant)) continue
     // '*' finds a name under any type (poe.ninja moves things between pages).
     for (const key of [`${i.type}\u0000${i.name}`, `*\u0000${i.name}`]) {
       const list = byName.get(key)
@@ -113,7 +118,7 @@ function priceFinder (items: PriceItem[], rule: VariantRule = 'market') {
     for (const t of types) {
       const lines = byName.get(`${t}\u0000${name}`)
       if (!lines) continue
-      const plain = lines.find(i => !i.variant)
+      const plain = all ? undefined : lines.find(i => !i.variant)
       if (plain) return plain
       // A unique that comes on several bases is priced per base.
       const onBase = base ? lines.filter(i => i.variant.split(', ').includes(base)) : []
@@ -147,6 +152,11 @@ export function priceLookup (
   variants: VariantRule = 'market'
 ): PriceLookup {
   const find = priceFinder(items, variants)
+  let safe: ReturnType<typeof priceFinder> | null = null
+  let linked: ReturnType<typeof priceFinder> | null = null
+  const finder = (group: EconomyGroup) => group.links
+    ? (linked ??= priceFinder(items, 'safety', true, true))
+    : group.special ? (safe ??= priceFinder(items, 'safety', false, true)) : find
   const point = (i: PriceItem): PricePoint => {
     const swing = priceSwing(i)
     return { chaos: i.chaos, thin: isThin(i), volatile: swing != null, ...(swing ? { swing } : {}), ...(i.day1 ? { day1: true } : {}) }
@@ -160,7 +170,7 @@ export function priceLookup (
     // they never land in them and must not set the base's price.
     const priced = uniquesOnBase(base)
       .filter(name => !isReplica(name))
-      .map(name => find(group.ninja, group.foulborn ? `Foulborn ${name}` : name, base))
+      .map(name => finder(group)(group.ninja, group.foulborn ? `Foulborn ${name}` : name, base))
       .filter((x): x is PriceItem => Boolean(x))
     if (!priced.length) return null
     // "max": the base is worth what its best unique is worth, so a valuable
