@@ -1,6 +1,5 @@
-// Alert sounds: the game's own 1-16 and Sh sounds (previewed from the
-// player's own install, decoded by main),
-// NeverSink's sound pack the app ships (MIT, public/sounds/neversink), and
+// Alert sounds: the game's own 1-16 and Sh sounds (copies the app ships in
+// public/sounds/game, taken from the game's ItemFilter.bank), NeverSink's sound pack the app ships (MIT, public/sounds/neversink), and
 // your own mp3/wav/ogg files in the filter folder (CustomAlertSound).
 import { hostRequest } from '../shared/host'
 import type { FilterDoc } from './parse'
@@ -74,29 +73,16 @@ export function packUrl (file: string): string {
   return `${import.meta.env.BASE_URL}sounds/neversink/${encodeURIComponent(file)}`
 }
 
-const dataUrls = new Map<string, string>()
-
-// What a failed load says, for the toast (no install found, say).
-type Why = { error: string }
-
-async function gameUrl (id: string, why: Why): Promise<string | null> {
-  const key = `game|${id.toLowerCase()}`
-  const cached = dataUrls.get(key)
-  if (cached) return cached
-  try {
-    // The first one decodes all of them from the install: a few seconds.
-    const got = await hostRequest('filter-game-sound', { id }, 120_000)
-    const url = `data:${got.mime};base64,${got.data}`
-    dataUrls.set(key, url)
-    return url
-  } catch (e) {
-    why.error = (e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method '[^']*': (Error: )?/, '')
-    return null
-  }
+// The game's own sound, by its filter id (any case: "shalchemy" too).
+export function gameUrl (id: string): string {
+  const name = SH_SOUNDS.find(x => x.toLowerCase() === id.toLowerCase()) ?? String(Number(id))
+  return `${import.meta.env.BASE_URL}sounds/game/${name}.ogg`
 }
 
-async function urlOf (id: string, dir: string, why: Why): Promise<string | null> {
-  if (isGameSound(id)) return await gameUrl(id, why)
+const dataUrls = new Map<string, string>()
+
+async function urlOf (id: string, dir: string): Promise<string | null> {
+  if (isGameSound(id)) return gameUrl(id)
   if (!isCustomSound(id)) return null
   const key = `${dir}|${id}`
   const cached = dataUrls.get(key)
@@ -129,14 +115,12 @@ async function gameGain (): Promise<number> {
 // Plays a custom, pack or game sound at the filter's volume (0-300, 300 =
 // full), times the game's own sound volume, so it's as loud as in game.
 // Returns what to tell the player when it can't, else null. Only the last
-// click plays: an earlier one still loading (the first game sound decodes
-// for a second or two) is dropped.
+// click plays: an earlier one still loading is dropped.
 export async function playSound (id: string, volume: number, dir: string): Promise<string | null> {
   const mine = ++latest
-  const why: Why = { error: '' }
-  const url = await urlOf(id, dir, why)
+  const url = await urlOf(id, dir)
   if (mine !== latest) return null
-  const failed = `Couldn't play ${soundLabel(id)}${why.error ? `: ${why.error}` : ''}`
+  const failed = `Couldn't play ${soundLabel(id)}`
   if (!url) return failed
   const gain = await gameGain()
   if (mine !== latest) return null
