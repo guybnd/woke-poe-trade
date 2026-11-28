@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, ALL_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, minStack, normalizeCurrency, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, levelOf, strictMult, scaled, tierGuess, divineChaos, withEdit, kindOf } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, ALL_CATEGORIES, applyCurrency, categoryOf, currencyItems, defaultCurrency, minStack, normalizeCurrency, offSteps, pileWorth, stacksFor, stepOfPile, stepStarts, subgroupOf, currencyLook, levelOf, strictMult, scaled, tierGuess, divineChaos, withEdit, kindOf } from '@/web/woke/loot-filter/currency-weights'
 import { normalizeItemEdit } from '@/web/woke/loot-filter/currency-settings'
 import type { CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
@@ -88,9 +88,10 @@ describe('currency weights', () => {
     const all = stacksFor(it, c)
     c.off = [1]
     const s = stacksFor(it, c)
-    expect(s).toEqual([null, ...all.slice(1)])
-    expect(stepOfPile(s, 1)).toBe(0)
-    expect(stepOfPile(s, 10)).toBe(stepOfPile(all, 10))
+    // Where each step starts stays; the piles on a step turned off hide.
+    expect(s).toEqual(all)
+    expect(stepOfPile(s, 1, offSteps(it, c))).toBe(0)
+    expect(stepOfPile(s, 10, offSteps(it, c))).toBe(stepOfPile(all, 10))
     expect(normalizeCurrency(JSON.parse('{"off":[1,1,5,"x",2]}')).off).toEqual([1, 2])
   })
 
@@ -161,6 +162,29 @@ describe('currency weights', () => {
     expect(applyCurrency(doc, defaultCurrency(), lookup)).toBeNull()
     expect(applyCurrency(doc, on(), null)).toBeNull()
     expect(serializeFilter(doc)).toBe(serializeFilter(parseFilter(SEMI)))
+  })
+
+  it('a step turned off in the middle hides its piles instead of showing them quieter (Guy 2026-11-28)', () => {
+    for (const off of [[3], [2, 4], [1]]) {
+      const cfg = on(c => { c.line = 0.5; c.off = off })
+      const doc = parseFilter(SEMI)
+      const compiled = applyCurrency(doc, cfg, lookup)!
+      let hidden = 0
+      // Map and gold rows are named for their kind, not a base: tested on their own.
+      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold')) {
+        const stacks = stacksFor(it, cfg)
+        for (const n of [1, 2, 5, 10, 20, 40]) {
+          if (n > it.full) continue
+          const res = matchItem(doc, { ...pile(it.name, n), itemClass: it.cls.split('|')[0] })
+          const raw = stepOfPile(stacks, n)
+          const want = stepOfPile(stacks, n, offSteps(it, cfg))
+          if (off.includes(raw)) hidden++
+          expect(res.visibility === 'Hide', `${it.name} ×${n} off ${off}`).toBe(want === 0)
+          if (want > 0) expect(res.final?.block.tier, `${it.name} ×${n} off ${off}`).toBe(`s${want}`)
+        }
+      }
+      expect(hidden).toBeGreaterThan(0)
+    }
   })
 
   it('gives every pile the step its worth says, in maps only', () => {

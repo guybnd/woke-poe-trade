@@ -45,7 +45,9 @@
 
       <CurrencyCard v-if="isCurrency" :store="store" :config="config" :name="facts.baseType ?? facts.name" :stack="facts.stackSize ?? 1"
         :gem="/ Gems$/.test(facts.itemClass ?? '') ? { level: facts.gemLevel ?? 1, quality: facts.quality ?? 0, corrupted: !!facts.corrupted } : null" :rule="match.final?.block.conditions ?? null" :facts="facts"
-        @open-tab="(cat, name) => emit('open-editor', { type: CURRENCY_TYPE, tier: `cat:${cat}:${name}` })" />
+        :tier="match.final?.block.tier ?? null" :note="match.final?.block.comment ?? null"
+        @open-tab="(cat, name) => emit('open-editor', { type: CURRENCY_TYPE, tier: `cat:${cat}:${name}` })"
+        @open-rule="tier => emit('open-editor', { type: CURRENCY_TYPE, tier })" />
       <div v-if="match.final && !isCurrency" :class="$style.keys" role="toolbar" aria-label="Quick fixes">
         <button v-for="q in quick" :key="q.key" type="button" class="w-focusable" :class="[$style.key, { [$style.keyOff]: q.disabled }]"
           :disabled="q.disabled" :title="q.title" @click="q.run()">

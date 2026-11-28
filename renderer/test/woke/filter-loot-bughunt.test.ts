@@ -1,5 +1,5 @@
 // Loot tab bugs found in the overnight hunt (2026-11-27), one test each.
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
@@ -15,6 +15,9 @@ import { defaultPresets } from '@/web/woke/loot-filter/presets'
 import { WEIGHT_TYPE } from '@/web/woke/loot-filter/weights'
 import { cardCategoryOf } from '@/web/woke/loot-filter/card-classes'
 import { neverSink } from '../helpers/neversink'
+import { loadGameData } from '../helpers/game-data'
+
+beforeAll(loadGameData, 60000)
 
 const SEMI = neverSink('2-SEMI-STRICT')
 const lookup: PriceLookup = (_g, base) => base === 'Divine Orb' ? { chaos: 160, thin: false } : null
@@ -48,9 +51,21 @@ describe('loot tab bug hunt', () => {
       expect(matchItem(doc, gem('Arc', 20, 20)).visibility, `faint ${faint}`).toBe('Hide')
       expect(matchItem(doc, gem('Arc', 5, 20)).visibility, `faint ${faint}`).toBe('Hide')
     }
-    // Other gems at 20% still show.
+    // Unlisted gems of that section hide at 20% too; other sections still show.
     const doc = parseFilter(SEMI)
     applyCurrency(doc, on(c => { c.catMode = { gemskill: 'off' } }), lookup, null, GEMS)
+    expect(matchItem(doc, gem('Fireball', 5, 20)).visibility).toBe('Hide')
+    const sup = (name: string): ItemFacts => ({ ...gem(name, 5, 20), itemClass: 'Support Gems' } as ItemFacts)
+    expect(matchItem(doc, sup('Spell Echo Support')).visibility).toBe('Show')
+  })
+
+  it('Supports Off hides unlisted 20% supports but not Awakened or exceptional ones', () => {
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(c => { c.catMode = { gemsup: 'off', gemawk: 'auto', gemexc: 'auto' } }), lookup, null, GEMS)
+    const sup = (name: string, quality = 20): ItemFacts => ({ ...gem(name, 5, quality), itemClass: 'Support Gems' } as ItemFacts)
+    expect(matchItem(doc, sup('Spell Echo Support')).visibility).toBe('Hide')
+    expect(matchItem(doc, sup('Awakened Spell Echo Support')).visibility).toBe('Show')
+    expect(matchItem(doc, sup('Enlighten Support')).visibility).toBe('Show')
     expect(matchItem(doc, gem('Fireball', 5, 20)).visibility).toBe('Show')
   })
 
@@ -81,6 +96,43 @@ describe('hidden by hand keeps a gem band to itself', () => {
     applyCurrency(doc, on(c => { c.items = { 'Arc 20/20': { step: 0 } } }), lookup, null, lines)
     expect(matchItem(doc, gem('Arc', 5, 20)).visibility).toBe('Show')
     expect(matchItem(doc, gem('Arc', 20, 20)).visibility).toBe('Hide')
+  })
+})
+
+describe('a step turned off, with gems', () => {
+  const sup = (name: string, level: number, quality: number): ItemFacts => ({ ...gem(name, level, quality), itemClass: 'Support Gems' } as ItemFacts)
+  it('Exceptional Off hides Awakened Enlighten, though Awakened is Always', () => {
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(c => { c.catMode = { gemexc: 'off' } }), lookup, null, GEMS)
+    expect(matchItem(doc, sup('Awakened Enlighten Support', 1, 0)).visibility).toBe('Hide')
+    expect(matchItem(doc, sup('Enlighten Support', 3, 20)).visibility).toBe('Hide')
+    expect(matchItem(doc, sup('Awakened Multistrike Support', 1, 0)).visibility).toBe('Show')
+  })
+  it('a band hidden by an Off step leaves a band with its own step showing', () => {
+    const lines: GemLine[] = [{ name: 'Arc', variant: '1', chaos: 30, thin: false }, { name: 'Arc', variant: '21/20', chaos: 30, thin: false }]
+    const doc = parseFilter(SEMI)
+    const cfg = on(c => { c.items = { 'Arc 21/20': { step: 3 } } })
+    applyCurrency(doc, cfg, lookup, null, lines)
+    const shown = matchItem(doc, gem('Arc', 21, 20)).visibility
+    expect(shown).toBe('Show')
+    const step = (matchItem(doc, gem('Arc', 5, 0)).final?.block.tier ?? '')
+    expect(step).toMatch(/^s[1-4]$/)
+    const doc2 = parseFilter(SEMI)
+    applyCurrency(doc2, on(c => { c.items = { 'Arc 21/20': { step: 3 } }; c.off = [Number(step.slice(1))] }), lookup, null, lines)
+    expect(matchItem(doc2, gem('Arc', 5, 0)).visibility).toBe('Hide')
+    expect(matchItem(doc2, gem('Arc', 21, 20)).visibility).toBe('Show')
+  })
+  it('a narrow band hidden by an Off step stays hidden under a broader band that shows', () => {
+    const lines: GemLine[] = [{ name: 'Arc', variant: '20/20', chaos: 0.3, thin: false }, { name: 'Arc', variant: '21/20', chaos: 30, thin: false }]
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(), lookup, null, lines)
+    const hi = matchItem(doc, gem('Arc', 21, 20)).final?.block.tier ?? ''
+    const lo = matchItem(doc, gem('Arc', 20, 20)).final?.block.tier ?? ''
+    expect(hi > lo && /^s[1-4]$/.test(hi)).toBe(true)
+    const doc2 = parseFilter(SEMI)
+    applyCurrency(doc2, on(c => { c.off = [Number(hi.slice(1))] }), lookup, null, lines)
+    expect(matchItem(doc2, gem('Arc', 21, 20)).visibility).toBe('Hide')
+    expect(matchItem(doc2, gem('Arc', 20, 20)).visibility).toBe('Show')
   })
 })
 
@@ -159,5 +211,50 @@ describe('the Loot tab prices a unique base by its best unique', () => {
     }
     expect(ours({ lookup: cheap })).not.toBe(ours({ lookup: best }))
     expect(ours({ lookup: cheap, loot: best })).toBe(ours({ lookup: best }))
+  })
+})
+
+describe('quiet mode and fewer beams reach the Loot and Equipment tabs', () => {
+  it('drops sounds and beams below the kept tiers, Tink and Big keep theirs', async () => {
+    const { applyPresetChanges, normalizePresets, tierNumber: wokeTier } = await import('@/web/woke/loot-filter/presets')
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(), (_g, base) => ({ chaos: base === 'Divine Orb' ? 160 : base === 'Chaos Orb' ? 1 : 0.2, thin: false }))
+    const ours = () => doc.blocks.filter(b => b.type === CURRENCY_TYPE && b.visibility === 'Show' && /^s\d$/.test(b.tier ?? ''))
+    expect(ours().some(b => wokeTier(b)! > 2 && b.actions.some(a => a.key === 'PlayEffect'))).toBe(true)
+    applyPresetChanges(doc, normalizePresets({ quiet: { on: true, keepTiers: 2 }, beams: { on: true, keepTiers: 2 } }))
+    for (const b of ours()) {
+      const loud = b.actions.some(a => a.key === 'PlayEffect' || a.key === 'MinimapIcon' || a.key === 'PlayAlertSound')
+      if (wokeTier(b)! > 2) expect(loud, b.comment).toBe(false)
+    }
+    expect(wokeTier({ type: CURRENCY_TYPE, tier: 's5', comment: '' })).toBe(1)
+    expect(wokeTier({ type: WEIGHT_TYPE, tier: 's4', comment: '' })).toBe(1)
+    expect(wokeTier({ type: 'currency', tier: 's5', comment: '' })).toBeNaN()
+  })
+})
+
+describe('one rank list for Base ranks and Equipment', () => {
+  it('a Base ranks move sets the Equipment rank; exotic bases and Never keep theirs', async () => {
+    const { moveWeightRanks } = await import('@/web/woke/loot-filter/weight-rank')
+    const { filterBases } = await import('@/web/woke/loot-filter/weights')
+    const doc = parseFilter(SEMI)
+    const rows = filterBases(doc)
+    const r1 = rows.find(r => r.rank === 'r1')!.name
+    const r3 = rows.find(r => r.rank === 'r3')!.name
+    const ex = rows.find(r => r.rank === 'x1')?.name
+    type Cfg = Parameters<typeof moveWeightRanks>[1]
+    const config = { presets: { weights: { ranks: { [r3]: 'rj' } } } } as unknown as Cfg
+    const store = { doc: { value: doc } } as unknown as Parameters<typeof moveWeightRanks>[0]
+    moveWeightRanks(store, config, [r1], 'r3')
+    expect(config.presets.weights.ranks[r1]).toBe('r3')
+    moveWeightRanks(store, config, [r1], 'r1')
+    expect(r1 in config.presets.weights.ranks).toBe(false)
+    moveWeightRanks(store, config, [r3], 'never')
+    expect(config.presets.weights.ranks[r3]).toBe('rj')
+    moveWeightRanks(store, config, [r3], 'none')
+    expect(config.presets.weights.ranks[r3]).toBe('r0')
+    if (ex) {
+      moveWeightRanks(store, config, [ex], 'r2')
+      expect(ex in config.presets.weights.ranks).toBe(false)
+    }
   })
 })

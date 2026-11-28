@@ -191,7 +191,7 @@
 
     <template v-else>
       <p v-if="config.presets.weights.on" class="w-dim text-xs" :class="$style.over" data-gear-weights-note>
-        Equipment is on: in maps it scores bases by its own ranks (Equipment › Rare gear). Moves here apply to the Drop tiers table.
+        Equipment is on: a move here also sets the base's rank there (Equipment › Rare gear). Exotic bases and Never stay on the Drop tiers table only.
       </p>
       <div :class="$style.card">
         <div class="flex items-center gap-2 flex-wrap">
@@ -266,6 +266,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useCssModule } from 'vue'
+import { moveWeightRanks } from './weight-rank'
 import { WButton, WChip, WField, WInfo, WToggle, openMenu, vItemTip } from '../ui'
 import { hideTip } from '../ui/tooltip/tooltip'
 import type { LootFilterStore } from './store'
@@ -743,6 +744,7 @@ function applyMove (x: GearSettings, lane: GearMove, bases: string[]) {
     if (orig !== lane) moves[b] = lane
   }
   x.moves = moves
+  moveWeightRanks(props.store, props.config, bases, lane)
 }
 
 // Drag a base, or the picked set it's in, onto another column.

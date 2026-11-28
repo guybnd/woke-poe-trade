@@ -17,6 +17,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { moveWeightRanks } from './weight-rank'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
@@ -85,6 +86,7 @@ function moveTo (to: Lane) {
   const moves: Record<string, Lane> = Object.fromEntries(Object.entries(x.moves).filter(([k]) => k !== b))
   if (orig !== to) moves[b] = to
   x.moves = moves
+  moveWeightRanks(props.store, props.config, [b], to)
 }
 </script>
 

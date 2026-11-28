@@ -37,7 +37,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import LabelPreview from './LabelPreview.vue'
-import { CSTEP_NAMES, currencyFullLook, catColour } from './currency-weights'
+import { CSTEP_NAMES, currencyFullLook, catColour, stepStarts } from './currency-weights'
 import type { CStep } from './currency-weights'
 import type { CurrencySettings } from './currency-settings'
 import type { Colour, StylePatch } from './edits'
@@ -67,7 +67,8 @@ const title = (s: CStep) => s === 0
   : `${CSTEP_NAMES[s]}${props.samples[s] ? `, e.g. ${props.samples[s]}` : ''}${isOff(s) ? ' (off)' : ''}`
 
 const drag = ref<{ i: number, v: number, id: number } | null>(null)
-const shown = computed(() => [props.eff.line, ...props.eff.from])
+// The picked section's real prices: its own Strictness on top (Guy 2026-11-28).
+const shown = computed(() => stepStarts(props.eff, props.cat))
 const vals = computed(() => shown.value.map((v, i) => drag.value?.i === i ? drag.value.v : v))
 
 // Log scale, wide enough for the line and Tink with room either side.
