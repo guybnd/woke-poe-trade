@@ -110,6 +110,9 @@ const wm = inject<WidgetManager>('wm')!
 
 if (props.config.wmFlags[0] === 'uninitialized') {
   initLootFilterWidget(props.config)
+  // A new filter starts with the Loot and Equipment tabs on.
+  props.config.presets.currency.on = true
+  props.config.presets.weights.on = true
   wm.show(props.config.wmId)
 }
 normalizeLootFilterWidget(props.config)
@@ -127,7 +130,7 @@ const mode = ref<'card' | 'editor'>('editor')
 const sample = shallowRef<ItemFacts | null>(null)
 const samplePosition = shallowRef({ x: 1, y: 1 })
 const focus = shallowRef<{ type: string, tier: string } | null>(null)
-const openTab = shallowRef<{ tab: 'prices' | 'neversink' | 'changes' | 'gear' | 'weights' } | null>(null)
+const openTab = shallowRef<{ tab: 'prices' | 'currency' | 'changes' | 'gear' | 'weights' } | null>(null)
 const areaOverride = ref<number | null>(null)
 
 // The card shows alone, not with every open panel, and closes when you go back
@@ -189,7 +192,7 @@ const lootSpot = (tier: string) => () => { openEditor(); focus.value = { type: '
 // (cat:sg...) opens on the Equipment tab.
 useGoto(props.config, 'woke-loot-filter', {
   editor: openEditor,
-  spots: { 'loot-gold': lootSpot('cat:gold:'), 'loot-levelling': lootSpot('levelling'), 'loot-special': lootSpot('cat:sgveil:'), 'profiles': () => {}, 'gear-ranks': () => { openEditor(); askGearRanks() }, 'over-quality-look': () => { openEditor(); openTab.value = { tab: 'gear' } }, 'league-always': lootSpot('lgchron'), 'section-steps': lootSpot('cat:orbs:Chaos Orb'), 'section-ruler': lootSpot('cat:orbs:Chaos Orb'), 'map-looks': lootSpot('mapfloor'), 'jewels-no-price': lootSpot('jewplain'), 'own-lists': lootSpot('cat:orbs:Divine Orb'), 'history': () => { openEditor(); openTab.value = { tab: 'changes' } }, 'recipes-by-price': lootSpot('recipes'), 'loot-strictness': lootSpot('cat:orbs:Chaos Orb'), 'id-mods': () => { openEditor(); openTab.value = { tab: 'weights' } } }
+  spots: { 'loot-gold': lootSpot('cat:gold:'), 'loot-levelling': lootSpot('levelling'), 'loot-special': lootSpot('cat:sgveil:'), 'profiles': () => {}, 'gear-ranks': () => { openEditor(); askGearRanks() }, 'over-quality-look': () => { openEditor(); openTab.value = { tab: 'gear' } }, 'league-always': lootSpot('lgchron'), 'section-steps': lootSpot('cat:orbs:Chaos Orb'), 'section-ruler': lootSpot('cat:orbs:Chaos Orb'), 'map-looks': lootSpot('mapfloor'), 'jewels-no-price': lootSpot('jewplain'), 'own-lists': lootSpot('cat:orbs:Divine Orb'), 'history': () => { openEditor(); openTab.value = { tab: 'changes' } }, 'recipes-by-price': lootSpot('recipes'), 'loot-strictness': lootSpot('cat:orbs:Chaos Orb'), 'id-mods': () => { openEditor(); openTab.value = { tab: 'weights' } }, 'loot-on': lootSpot('cat:orbs:Chaos Orb') }
 })
 
 // A change Claude suggested, applied from the Suggestions card: added like an
@@ -360,7 +363,7 @@ const ladderAt = computed(() => LEVEL_SHORT.map((_, level) => sortedLadder.value
 const allNotes = computed<Notice[]>(() => {
   const out: Notice[] = []
   const ready = store.updateReady.value
-  if (ready) out.push({ id: 'update', value: ready.version, tab: 'neversink', text: `NeverSink ${ready.version} is ready: ${ready.ok} of ${ready.total} changes fit${ready.movesTotal > ready.movesFit ? `, and ${ready.movesTotal - ready.movesFit} price moves will go back to NeverSink's tiers` : ''}. Update in the editor.` })
+  if (ready) out.push({ id: 'update', value: ready.version, tab: 'changes', text: `NeverSink ${ready.version} is ready: ${ready.ok} of ${ready.total} changes fit${ready.movesTotal > ready.movesFit ? `, and ${ready.movesTotal - ready.movesFit} price moves will go back to NeverSink's tiers` : ''}. Update in the editor.` })
   const moves = store.plan.value?.moves.length ?? 0
   if (moves) out.push({ id: 'prices', value: moves, tab: 'prices', text: `${moves} item${moves > 1 ? 's' : ''} would move to match today's prices.` })
   // Only what the Prices list shows: small stacks the net catches aren't listed
