@@ -45,9 +45,9 @@
       </div>
       <div v-if="side.sounds.length" :class="$style.sounds">
         <span class="w-dim text-xs">Sounds</span>
-        <button v-for="s in side.sounds" :key="s.id" type="button" :class="$style.sound" :disabled="!isCustomSound(s.id)"
-          :title="isCustomSound(s.id) ? `Play ${soundLabel(s.id)}` : 'The game\'s own sounds play only in game'" @click="play(s.id, s.volume)">
-          <i :class="isCustomSound(s.id) ? 'fas fa-play' : 'fas fa-volume-up'" /> {{ soundLabel(s.id) }} <span class="w-faint">×{{ s.count }}</span>
+        <button v-for="s in side.sounds" :key="s.id" type="button" :class="$style.sound" :disabled="!canPreview(s.id)"
+          :title="canPreview(s.id) ? `Play ${soundLabel(s.id)}` : 'This sound can\'t be played here'" @click="play(s.id, s.volume)">
+          <i :class="canPreview(s.id) ? 'fas fa-play' : 'fas fa-volume-up'" /> {{ soundLabel(s.id) }} <span class="w-faint">×{{ s.count }}</span>
         </button>
       </div>
     </div>
@@ -76,7 +76,7 @@ import type { ShownDrop } from './shower'
 import { poeColour, shapeGlyph } from './colours'
 import { LEVEL_NAMES } from './strictness'
 import { ruleLabel } from './parse'
-import { isCustomSound, playSound, soundLabel } from './sounds'
+import { canPreview, playSound, soundLabel } from './sounds'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -288,7 +288,8 @@ function clickDrop (d: ShownDrop) {
 }
 
 async function play (id: string, volume: number) {
-  if (!await playSound(id, volume, props.config.folder)) toast(`Couldn't play ${soundLabel(id)}`, { anchor: props.anchor })
+  const failed = await playSound(id, volume, props.config.folder)
+  if (failed) toast(failed, { anchor: props.anchor })
 }
 
 function dropMenu (e: MouseEvent, d: ShownDrop) {
@@ -300,7 +301,7 @@ function dropMenu (e: MouseEvent, d: ShownDrop) {
   }
   openMenu(e, [
     ...(d.type ? [{ label: `Open ${ruleName(d)}`, icon: 'fas fa-external-link-alt', action: () => clickDrop(d) }] : []),
-    ...(d.look.sound && isCustomSound(d.look.sound.id) ? [{ label: `Play ${soundLabel(d.look.sound.id)}`, icon: 'fas fa-play', action: () => { play(d.look.sound!.id, d.look.sound!.volume) } }] : []),
+    ...(d.look.sound && canPreview(d.look.sound.id) ? [{ label: `Play ${soundLabel(d.look.sound.id)}`, icon: 'fas fa-play', action: () => { play(d.look.sound!.id, d.look.sound!.volume) } }] : []),
     ...(canOwn && d.visibility === 'Hide' ? [{ label: `Always show ${base}`, icon: 'fas fa-eye', action: own('Show', `${base} now shows`) }] : []),
     ...(canOwn && d.visibility !== 'Hide' ? [{ label: `Hide ${base}`, icon: 'fas fa-eye-slash', action: own('Hide', `${base} is hidden`) }] : [])
   ])
