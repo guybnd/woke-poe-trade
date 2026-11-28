@@ -258,7 +258,13 @@ const rarityOf = (it: WeightItem): WeightRarity => it.rarity ?? 'Rare'
 const termHas = (k: WeightKey) => (it: WeightItem) => termsOf(it).includes(k)
 const mark = (k: WeightKey, yes: FilterCondition[], rgb: [number, number, number]): Alt => ({ conds: yes, rgb: op(rgb), has: termHas(k) })
 
-function lookAlts (k: Exclude<LookKey, 'score'>, ch: LookChannel, exotic: string[]): Alt[] {
+// Exotic bases' text (Guy, 2026-11-28): the valuable ones (rank x1, worth
+// about a divine or more) apart from the rest (x2).
+export const EXOTIC_RGB: Record<'x1' | 'x2', [number, number, number]> = { x1: [255, 50, 200], x2: [255, 120, 180] }
+export interface ExoticLists { x1: string[], x2: string[] }
+const ANY_EXOTIC: ExoticLists = { x1: ['x'], x2: ['x'] }
+
+function lookAlts (k: Exclude<LookKey, 'score'>, ch: LookChannel, exotic: ExoticLists): Alt[] {
   switch (k) {
     case 'qual': return ([[24, [200, 110, 175]], [26, [235, 115, 200]], [28, [255, 122, 217]], [30, [255, 60, 210]]] as Array<[number, [number, number, number]]>)
       .map(([q, rgb]) => ({ conds: [c('Quality', '>=', [q])], rgb: op(rgb), has: (it: WeightItem) => it.quality >= q }))
@@ -275,7 +281,8 @@ function lookAlts (k: Exclude<LookKey, 'score'>, ch: LookChannel, exotic: string
     case 'fated': return [mark('fated', [T('Fated')], [255, 205, 130])]
     case 'mirr': return [mark('mirr', [T('Mirrored')], [160, 200, 255])]
     case 'corr': return [{ conds: [T('Corrupted')], rgb: ch === 'border' ? [210, 40, 40, 255] : [90, 0, 0, 255], has: it => it.corruption !== 'no' }]
-    case 'exotic': return exotic.length ? [{ conds: [c('BaseType', '==', exotic)], rgb: [255, 120, 180, 255], has: it => it.rank === 'x1' || it.rank === 'x2' }] : []
+    case 'exotic': return (['x2', 'x1'] as const).filter(r => exotic[r].length)
+      .map(r => ({ conds: [c('BaseType', '==', exotic[r])], rgb: op(EXOTIC_RGB[r]), has: (it: WeightItem) => it.rank === r }))
     case 'rarity': return (['Normal', 'Magic', 'Rare'] as WeightRarity[]).map(r => ({ conds: [c('Rarity', '', [r])], rgb: ch === 'bg' ? RARITY_BG[r] : RARITY_TEXT[r], has: (it: WeightItem) => rarityOf(it) === r }))
   }
 }
@@ -299,7 +306,7 @@ function lookOf (it: WeightItem, ch: LookChannel, list: readonly LookKey[], step
       if (s) return s
       continue
     }
-    const hits = lookAlts(k, ch, ['x']).filter(x => x.has(it))
+    const hits = lookAlts(k, ch, ANY_EXOTIC).filter(x => x.has(it))
     if (hits.length) return hits[hits.length - 1].rgb
   }
   return null
@@ -330,7 +337,7 @@ export function weightLook (it: WeightItem, look: Record<LookChannel, readonly L
 export function lookKeyOf (it: WeightItem, look: Record<LookChannel, readonly LookKey[]>, ch: LookChannel, step: Step): LookKey | null {
   for (const k of look[ch]) {
     if (k === 'score') { if (STEP_PAINT[ch][step]) return k; continue }
-    if (lookAlts(k, ch, ['x']).some(x => x.has(it))) return k
+    if (lookAlts(k, ch, ANY_EXOTIC).some(x => x.has(it))) return k
   }
   return null
 }
@@ -549,7 +556,7 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
   const perStep = [0, 0, 0, 0, 0]
   let chars = 0
   const look = w.look
-  const exotic = bases.filter(b => b.rank === 'x1' || b.rank === 'x2').map(b => b.name)
+  const exotic: ExoticLists = { x1: bases.filter(b => b.rank === 'x1').map(b => b.name), x2: bases.filter(b => b.rank === 'x2').map(b => b.name) }
   // Where the step rules paint a channel themselves ('score' on its list),
   // rows ranked above it: an item that has one gets that colour instead. A
   // rule that can't tell is split: first the ones that have it, then the rest.
