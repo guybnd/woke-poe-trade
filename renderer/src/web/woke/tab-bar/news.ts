@@ -32,9 +32,10 @@ export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
   { id: 'price-check-card-set', since: '1.330.24', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a div card\'s quick price card shows what its full set gives, and both prices' },
+  { id: 'loot-filter-valuable-exotics', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Base ranks splits Exotic into valuable (about 1 div+) and the rest, each with its own text colour' },
   { id: 'loot-filter-gold-page', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Gold has its own page on the Loot tab, and each loot class shows its item art' },
   { id: 'loot-filter-section-ruler', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: give a Loot section its own step ruler (Own ruler in the section); Strictness still moves it' },
-  { id: 'loot-filter-section-steps', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: each Loot section can turn its own steps off (Steps row); the ruler\'s Show is that page only' },
+  { id: 'loot-filter-section-steps', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: turn Small, Normal, Decent or Big off for every Loot page, one page, or one section (Steps rows)' },
   { id: 'loot-filter-map-looks', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: maps look like maps again, black on white, each special kind with its own edge colour and square map icon' },
   { id: 'loot-filter-league-always', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Chronicles, Viscera, Reliquary keys, Ultimatums, warrants and logbooks always show; Hide is one click' },
   { id: 'search-mod-filter-words', since: '1.330.24', wmType: 'woke-search', name: 'Search', note: 'New: add "vestigial", "foulborn" or a slot ("rarity boots") to a mod search; short names like "iir" work' },
@@ -61,9 +62,6 @@ export const NEWS: NewsItem[] = [
   { id: 'price-check-conquest-keystones', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a Timeless jewel lists each conqueror\'s keystone beside it. Click one to search it, any number' },
   { id: 'essence-tip-slots', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Tooltips', note: 'New: an essence\'s tooltip lists the mod it forces on each slot' },
   { id: 'price-check-mod-tiers', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Tooltips', note: 'New: hover a mod for its tiers, the item level each needs, and the bench craft for it' },
-  { id: 'search-recent-save', since: '1.330.21', wmType: 'woke-search', name: 'Search', note: 'New: hover a Recent line to save it on top (bookmark) or remove it (×, or Delete)' },
-  { id: 'search-type-to-open', since: '1.330.21', wmType: 'woke-search', name: 'Search', note: 'New: with the overlay open, just start typing to search' },
-  { id: 'item-menu-more', since: '1.330.21', wmType: 'woke-search', name: 'Search', note: 'New: right-click any item, then More, to search it: where it drops, recipes, your sales' },
   { id: 'search-keys-list', since: '1.330.21', wmType: 'woke-search', name: 'Search', note: 'New: type "keys" for every hotkey you have set and every mouse trick, in one list' },
   { id: 'price-check-gem-kinds', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a gem, its transfigured kinds, priced' },
   { id: 'price-check-chance-uniques', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a normal base, the uniques an Orb of Chance can make' },
