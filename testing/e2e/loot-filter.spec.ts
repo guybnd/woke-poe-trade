@@ -1775,7 +1775,7 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await page.keyboard.press('Escape')
   await expect(oilChip).toHaveAccessibleName('Oils: By price')
   // Faint: piles under the line show small and see-through, while it's on.
-  await page.getByRole('button', { name: 'Faint settings' }).click()
+  await page.getByRole('button', { name: 'Faint settings', exact: true }).click()
   await page.locator('[data-loot-faint]').check()
   await expect(page.locator('[data-loot-faint-until]')).toBeEnabled()
   await overlay.snap('loot tab, faint on')
