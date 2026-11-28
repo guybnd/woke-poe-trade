@@ -4,9 +4,10 @@
 // only holds what is left once ours have had their say:
 //   - plain and magic gear in maps hides (the Loot tab, rare weights and
 //     levelling rules above show what's worth it, the safety net the rest)
-//   - plain life, mana and hybrid flasks and normal and magic jewels in maps
+//   - plain life, mana and hybrid flasks and plain normal and magic jewels in maps
 //     hide too (NeverSink hides them; the Loot tab's rows show the good ones)
-//   - maps, uniques and rare jewels no row of ours took still show, in their
+//   - uniques, maps (blighted ones above the map floor) and rare and abyss
+//     jewels no row of ours took still show, in their
 //     usual look: a price we don't have never hides one (M8 proof)
 //   - anything else shows pink, so an item no rule of ours knows stands out
 //     instead of falling to the game's own plain label.
@@ -34,9 +35,12 @@ export function ownBottom (doc: FilterDoc): number {
 
 // Uniques a price never hides, kept above the priced unique rows as
 // NeverSink's own "special" unique tiers are (its exjewels, idols, heist,
-// replicas, corrupted, abyss, over-quality, 5-link and Vestigial ones): a
+// replicas, 6-link, synthesised, corrupted, abyss, over-quality, 5-link and
+// Vestigial ones): a
 // base shared by many cheap uniques, or a roll the price can't see.
 const UNIQUE_SPECIALS: Array<[tier: string, conds: string[]]> = [
+  ['6link', ['LinkedSockets 6']],
+  ['synth', ['SynthesisedItem True']],
   ['jewels', ['BaseType == "Cobalt Jewel" "Crimson Jewel" "Viridian Jewel"']],
   ['idols', ['Class == "Idols"']],
   ['heist', ['Class == "Blueprints" "Contracts"']],
@@ -117,8 +121,8 @@ export function ownBaseText (strictness: string | null): string {
     '\tAreaLevel >= 68',
     '\tRarity <= Magic',
     '\tIdentified False',
-    '\tClass == "Abyss Jewels" "Jewels"',
-    '\tBaseType == "Cobalt Jewel" "Crimson Jewel" "Viridian Jewel" "Ghastly Eye Jewel" "Hypnotic Eye Jewel" "Murderous Eye Jewel" "Searching Eye Jewel"',
+    '\tClass == "Jewels"',
+    '\tBaseType == "Cobalt Jewel" "Crimson Jewel" "Viridian Jewel"',
     '\tSetFontSize 18',
     '',
     `Show # $type->${OWN_REST_TYPE} $tier->rarejewels`,
@@ -129,7 +133,14 @@ export function ownBaseText (strictness: string | null): string {
     '\tSetBorderColor 220 220 0 255',
     '\tSetBackgroundColor 120 120 0 225',
     '',
-    ...mapBlocks(),
+    `Show # $type->${OWN_REST_TYPE} $tier->magicabyss`,
+    '\tRarity Magic',
+    '\tClass == "Abyss Jewels"',
+    '\tSetFontSize 36',
+    '\tSetTextColor 0 75 250 255',
+    '\tSetBorderColor 0 75 250 255',
+    '\tSetBackgroundColor 0 20 40 255',
+    '',
     `Show # $type->${OWN_REST_TYPE} $tier->uniques`,
     '\tRarity Unique',
     '\tSetFontSize 40',
@@ -138,6 +149,27 @@ export function ownBaseText (strictness: string | null): string {
     '\tSetBackgroundColor 53 13 13 255',
     '\tMinimapIcon 2 Brown Star',
     '',
+    // Blighted and blight-ravaged maps, above the map floor's tiers.
+    `Show # $type->${OWN_REST_TYPE} $tier->blightravaged`,
+    '\tClass == "Maps"',
+    '\tUberBlightedMap True',
+    '\tSetFontSize 45',
+    '\tSetTextColor 145 30 220 255',
+    '\tSetBorderColor 145 30 220 255',
+    '\tSetBackgroundColor 235 220 245 255',
+    '\tPlayAlertSound 5 300',
+    '\tMinimapIcon 1 Purple Square',
+    '',
+    `Show # $type->${OWN_REST_TYPE} $tier->blightedmaps`,
+    '\tClass == "Maps"',
+    '\tBlightedMap True',
+    '\tSetFontSize 40',
+    '\tSetTextColor 145 30 220 255',
+    '\tSetBorderColor 145 30 220 255',
+    '\tSetBackgroundColor 235 220 245 255',
+    '\tMinimapIcon 2 Purple Square',
+    '',
+    ...mapBlocks(),
     `Show # $type->${OWN_REST_TYPE} $tier->unknown`,
     '\tSetFontSize 36',
     '\tSetTextColor 255 0 255 255',

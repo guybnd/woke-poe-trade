@@ -3,8 +3,9 @@
 // way NeverSink 8.21 Very strict does, or better. Every base, unique, gem,
 // map and stackable the game data knows, plus one item made from each of
 // NeverSink's rules, goes through both filters at several area levels and
-// under three kinds of prices: real ones (the day-1 table), none at all (a
-// fresh install), and hostile ones (everything nearly worthless).
+// under real prices (the day-1 table) and none at all (a fresh install);
+// the full report (WOKE_PROOF_OUT) adds hostile ones (everything nearly
+// worthless) and two more area levels.
 //
 // The hard rule: a valuable item never hides. Valuable = worth 20c or more
 // by the price table, or, unpriced, NeverSink gives it a sound or a beam.
@@ -32,7 +33,7 @@ import type { PriceItem } from '@/web/woke/market/types'
 import type { TipPack } from '@/web/woke/ui/tooltip/tip-content'
 import { neverSink } from '../helpers/neversink'
 import { loadGameData } from '../helpers/game-data'
-import { lookOf } from '../helpers/filter-guard'
+import { facts, lookOf } from '../helpers/filter-guard'
 import type { Look } from '../helpers/filter-guard'
 import { catalog, itemForBlock } from '../helpers/proof-items'
 import type { ProofItem } from '../helpers/proof-items'
@@ -68,9 +69,10 @@ function pricesFor (kind: Prices): ComposeInput['prices'] {
 
 // What Guy's players get once M7 switches it on: Loot and Equipment on,
 // everything else as shipped, the safety net on.
-function ours (kind: Prices, ownBase = true, net = true): FilterDoc {
+function ours (kind: Prices, ownBase = true, net = true, mapFrom = 1): FilterDoc {
   const p = defaultPresets()
   p.currency.on = true
+  p.currency.mapFrom = mapFrom
   p.weights.on = true
   return composeFilter(neverSink(LEVEL), {
     presets: normalizePresets(p),
@@ -188,6 +190,16 @@ describe('our own filter against NeverSink Very strict', () => {
   it.each(['real', 'none'] as Prices[])('never hides a valuable item today\'s filter shows (%s prices)', kind => {
     const lost = [...rows[kind], ...ruleRows[kind]].filter(r => valuable(r) && r.today.shown && !r.ours.shown).map(show)
     expect(lost).toEqual([])
+  })
+
+  // The Loot tab's map floor hides plain maps only (reviewer, 2026-11-28).
+  it('keeps unique and blighted maps under the map floor', () => {
+    const doc = ours('real', true, true, 12)
+    const map = (f: Partial<ProofItem['facts']>) => matchItem(doc, facts({ itemClass: 'Maps', baseType: 'Map (Tier 5)', mapTier: 5, width: 1, height: 1, ...f })).visibility
+    expect(map({ rarity: 'Normal' })).toBe('Hide')
+    expect(map({ rarity: 'Unique', identified: false })).toBe('Show')
+    expect(map({ rarity: 'Normal', blightedMap: true })).toBe('Show')
+    expect(map({ rarity: 'Normal', uberBlightedMap: true })).toBe('Show')
   })
 
   it('has a rule of its own for every unique and every map', () => {

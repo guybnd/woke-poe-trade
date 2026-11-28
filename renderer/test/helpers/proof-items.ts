@@ -164,6 +164,10 @@ export function catalog (areaLevel: number): ProofItem[] {
     }
     push(`Blighted Map T${t}`, 'Maps', `Blighted Map (Tier ${t})`, { itemClass: 'Maps', baseType: `Map (Tier ${t})`, rarity: 'Normal', mapTier: t, blightedMap: true, width: 1, height: 1 })
   }
+  // Uniques with a roll their price can't see.
+  for (const [label, f] of [['6-link', { socketGroups: ['RGBRGB'] }], ['synthesised', { synthesised: true }], ['double corrupted', { corrupted: true, corruptedMods: 2 }], ['replica', { replica: true }]] as Array<[string, Partial<ItemFacts>]>) {
+    push(`unique Simple Robe (${label})`, 'Uniques: special rolls', 'Simple Robe', { itemClass: 'Body Armours', baseType: 'Simple Robe', rarity: 'Unique', identified: false, ...size('Simple Robe'), ...f })
+  }
   // Links and sockets, the gear NeverSink beams for.
   for (const [base, c] of [['Astral Plate', 'Body Armours'], ['Vaal Regalia', 'Body Armours'], ['Imperial Bow', 'Bows']]) {
     push(`${base} 6-link (normal)`, '6-links and 6-sockets', base, { itemClass: c, baseType: base, rarity: 'Normal', socketGroups: ['RGBRGB'], ...size(base) })
@@ -261,8 +265,11 @@ export function itemForBlock (b: FilterBlock): ItemFacts | null {
   if (f.itemClass == null && f.baseType) f.itemClass = cls.get(f.baseType)
   if (f.baseType == null) {
     // A class-only rule: any base of that class.
+    // No class either (a rule on sockets or a mark): a body armour, which
+    // can carry six sockets.
+    if (f.itemClass == null) f.itemClass = 'Body Armours'
     const any = [...cls.entries()].find(([, c]) => c === f.itemClass)
-    f.baseType = any?.[0] ?? f.itemClass ?? 'Unknown'
+    f.baseType = any?.[0] ?? f.itemClass
   }
   const bf = BASE_FACTS[f.baseType]
   if (bf) Object.assign(f, { dropLevel: bf[0], width: bf[1], height: bf[2] })

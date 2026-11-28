@@ -495,12 +495,14 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   }
   // Gold (Guy 2026-11-28, "we also missing a gold section"): no trade price,
   // so one row, its piles stepped by size on the Gold ruler.
-  if (doc.blocks.some(b => b.conditions.some(x => x.key === 'BaseType' && x.values.includes('Gold')))) {
+  // Our own skeleton (no NeverSink file) has every section below.
+  const ownSkeleton = ownBottom(doc) >= 0
+  if (ownSkeleton || doc.blocks.some(b => b.conditions.some(x => x.key === 'BaseType' && x.values.includes('Gold')))) {
     seen.set(GOLD_NAME, { name: GOLD_NAME, cls: '', type: 'gold', tier: null, cat: 'gold', chaos: 0, est: true, full: 1e7, bt: 'Gold' })
   }
   // Special maps (Guy 2026-11-28): endgame and guardian maps priced by
   // poe.ninja, the rest from a guess.
-  if (lookup && doc.blocks.some(b => b.type?.startsWith('maps'))) {
+  if (lookup && (ownSkeleton || doc.blocks.some(b => b.type?.startsWith('maps')))) {
     const group: EconomyGroup = { type: 'maps', label: 'Maps', ninja: ['Map'] }
     for (const m of SPECIAL_MAPS) {
       const prices = (m.ninja ?? []).map(n => lookup(group, n)).filter((p): p is NonNullable<typeof p> => !!p && p.chaos > 0)
@@ -545,7 +547,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   // Abyss and plain jewels (Guy's Jewels A, 2026-11-28): a row per rarity and
   // item level band; most have a fixed step (no price can judge them), the
   // low abyss bands a guess you set the step or price of.
-  if (doc.blocks.some(b => b.type != null && JEWEL_TYPE.test(b.type))) {
+  if (ownSkeleton || doc.blocks.some(b => b.type != null && JEWEL_TYPE.test(b.type))) {
     for (const j of JEWEL_ROWS) setRow(j, 'jewels', j.bts[0])
   }
   // Special gear (special-gear.ts): a row per thing a filter can see (a
@@ -553,7 +555,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   for (const r of SPECIAL_ROWS) setRow(r, 'special', r.tip)
   // League items (Guy's League A, 2026-11-28): priced sections by name, the
   // rest a row per thing a filter can see, each a guess you can change.
-  if (doc.blocks.some(b => b.type === 'expedition->logbook' || b.type?.startsWith('heist->') || b.type === 'viscera' || b.type === 'miscmapitemsextra')) {
+  if (ownSkeleton || doc.blocks.some(b => b.type === 'expedition->logbook' || b.type?.startsWith('heist->') || b.type === 'viscera' || b.type === 'miscmapitemsextra')) {
     const guessed = (name: string, cat: string, cls: string, bts: string[], guess: number, conds: FilterCondition[], tip?: string) => {
       const own = edits[name]?.price
       seen.set(name, {
@@ -1203,7 +1205,9 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   // The 6-link one under NeverSink's top-base 6-links, above its other 6-links.
   const recipes = recipeBlocks(eff, lookup)
   const ns = doc.chunks.findIndex(ch => ch.kind === 'block' && !(ch as FilterBlock).type?.startsWith('woke->'))
-  const anchor = (b?: FilterBlock) => b ? doc.chunks.indexOf(b) : ns < 0 ? doc.chunks.length : ns
+  // On our own skeleton: above its rest rules, not under its catch-all.
+  const bottom = ownBottom(doc)
+  const anchor = (b?: FilterBlock) => b ? doc.chunks.indexOf(b) : ns >= 0 ? ns : bottom >= 0 ? bottom : doc.chunks.length
   const link6 = recipes.filter(b => b.comment.endsWith(': recipe: 6-link'))
   insertBlocks(doc, anchor(doc.blocks.find(b => b.type === '6l' && b.tier === 'others') ?? doc.blocks.find(b => b.type === '6l')), link6)
   insertBlocks(doc, anchor(doc.blocks.find(b => b.type === 'socketslinks')), recipes.filter(b => !link6.includes(b)))
