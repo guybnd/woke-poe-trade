@@ -629,7 +629,7 @@ const moves = computed(() => priceMoves(v.value?.lines ?? [], k => changes.value
 
 // ---------- worth selling ----------
 // The Falling chip on the table: only these rows, with a 7d column.
-const SELL_RULE = 'Down 5% today and 15% this week (or 20% today), 1 div+ held. Thin markets, held and own prices left out'
+const SELL_RULE = 'Down 5% today and 15% in 7 days (or 20% today, week down), 1 div+ held. No thin markets, held or own prices'
 const selling = computed(() => worthSelling(v.value?.lines ?? [], sellMinChaos(divine.value)))
 const sellingLost = computed(() => selling.value.reduce((s, x) => s + x.lostChaos, 0))
 const fallingKeys = computed(() => new Set(selling.value.map(x => x.key)))
@@ -637,8 +637,8 @@ const fallingWeek = computed(() => new Map(selling.value.map(x => [x.key, x.d7])
 const onlyFalling = shallowRef(false)
 watch(() => selling.value.length, (n) => { if (!n) onlyFalling.value = false })
 const fallingTitle = computed(() => selling.value.length
-  ? `${onlyFalling.value ? 'Show every item' : 'Only worth selling'}: ${div(sellingLost.value)} ${unit.value} lost this week. ${SELL_RULE}`
-  : `Nothing you hold much of is falling. ${SELL_RULE}`)
+  ? `${onlyFalling.value ? 'Show every item' : 'Only worth selling'}: ${div(sellingLost.value)} ${unit.value} lost in 7 days. ${SELL_RULE}`
+  : `Nothing worth selling. ${SELL_RULE}`)
 // Show me (What's new) shows the chip for a minute even when nothing qualifies.
 const sellRevealed = computed(() => now.value - sellingRevealedAt.value < SELL_REVEAL_MS)
 

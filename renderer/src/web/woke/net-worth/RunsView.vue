@@ -295,7 +295,7 @@ const listedSub = (l: Sale) => {
   const ninja = stale(l) ? ninjaOf(l) : null
   return `listed ${when(l.at)}${stale(l) ? ` · ninja ${ninja != null ? amount(ninja) : '—'}` : ''}`
 }
-const faustusInfo = 'Listed at Faustus (your asking price), sold but not collected, and items you hold. A sale counts in Profit once its currency is in your stash.'
+const faustusInfo = 'Listed at Faustus during the run (your price), sold but not collected, and items you hold. A sale counts in Profit once its currency is in your stash.'
 
 // ---------- your edits (L1): leave out, count and price, added by hand ----------
 const editOf = (key: string) => shownRun.value?.edits?.[key]

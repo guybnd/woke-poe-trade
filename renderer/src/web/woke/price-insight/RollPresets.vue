@@ -69,7 +69,7 @@ const sourceText = computed(() => {
 // A ≈ on By value marks worth that isn't measured; the source is on hover.
 const valueTitle = computed(() => {
   const known = Array.from(sources.value).map(s => WORTH_SOURCE_LABEL[s]).join(', ')
-  return 'Tight on mods that carry the price, loose on the rest. Worth: ' + (known || sourceText.value) + '.'
+  return 'Tight on mods that carry the price, loose on the rest, worthless ones unticked. Worth: ' + (known || sourceText.value) + '.'
 })
 
 // "By value" stays highlighted until a box or tick is changed by hand.
