@@ -183,6 +183,19 @@ describe('currency weights', () => {
     expect(serializeFilter(doc)).toBe(serializeFilter(parseFilter(SEMI)))
   })
 
+  it('a step turned off keeps its look on the hidden piles, quiet, for Alt (Guy 2026-11-28)', () => {
+    const compiled = applyCurrency(parseFilter(SEMI), on(c => { c.line = 0.5; c.offBy = { currency: [2] } }), lookup)!
+    const off = compiled.blocks.filter(b => b.comment.includes('Normal off'))
+    expect(off.length).toBeGreaterThan(0)
+    for (const b of off) {
+      expect(b.visibility).toBe('Hide')
+      const keys = b.actions.map(a => a.key)
+      expect(keys).toEqual(expect.arrayContaining(['SetTextColor', 'SetBorderColor', 'SetBackgroundColor']))
+      expect(b.actions.find(a => a.key === 'SetFontSize')?.args[0]).toBe('37')
+      for (const k of ['PlayAlertSound', 'PlayEffect', 'MinimapIcon']) expect(keys).not.toContain(k)
+    }
+  })
+
   it('a step turned off in the middle hides its piles instead of showing them quieter (Guy 2026-11-28)', () => {
     for (const off of [[3], [2, 4], [1]]) {
       const cfg = on(c => { c.line = 0.5; c.offBy = Object.fromEntries(['currency', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels', 'league'].map(k => [k, off])) })

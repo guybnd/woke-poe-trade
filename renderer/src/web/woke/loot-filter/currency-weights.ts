@@ -918,6 +918,15 @@ function block (step: CStep, conds: FilterCondition[], note: string, look?: Item
   return b
 }
 
+// A step turned off hides its piles, but they keep that step's colours and
+// size, quiet (no sound, beam or map icon), so holding Alt shows them
+// labelled as they would be (Guy 2026-11-28). No extra rules.
+function offBlock (step: CStep, conds: FilterCondition[], note: string, look: StylePatch): FilterBlock {
+  const b = block(0, conds, note)
+  applyStyle(b, { fontSize: readStyle(currencyActions(step)).fontSize, ...look, sound: null, effect: null, icon: null })
+  return b
+}
+
 function faintBlock (conds: FilterCondition[], cat: string, rgb: readonly number[]): FilterBlock {
   const b = block(1, conds, '')
   b.tier = 'faint'
@@ -999,7 +1008,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
       if (k > 1) conds.push(c('StackSize', '>=', [k]))
       if (hidden) {
         rescue([it])
-        blocks.push(block(0, conds, `${it.name}, ${CSTEP_NAMES[s]} off${k > 1 ? `, ${k}+` : ''}`))
+        blocks.push(offBlock(s, conds, `${it.name}, ${CSTEP_NAMES[s]} off${k > 1 ? `, ${k}+` : ''}`, { ...currencyLook(s, it.cat, cfg), ...cfg.items[it.name]!.look }))
       } else blocks.push(block(s, conds, `${it.name}, own look${k > 1 ? `, ${k}+` : ''}`, { ...currencyLook(s, it.cat, cfg), ...cfg.items[it.name]!.look }))
     }
   }
@@ -1022,7 +1031,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
     if (g.k > 1) conds.push(c('StackSize', '>=', [g.k]))
     if (g.hidden) {
       rescue(g.list, g.step)
-      blocks.push(block(0, conds, [g.cat, `${CSTEP_NAMES[g.step]} off`, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', ')))
+      blocks.push(offBlock(g.step, conds, [g.cat, `${CSTEP_NAMES[g.step]} off`, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', '), currencyLook(g.step, g.cat, cfg)))
     } else blocks.push(block(g.step, conds, [g.cat, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', '), currencyLook(g.step, g.cat, cfg)))
   }
   // What was hidden by hand (its own Off, or its section's) hides before the
