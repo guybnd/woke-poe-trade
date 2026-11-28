@@ -2,7 +2,6 @@
   <div :class="$style.wrap" class="w-scroll" @paste="onPaste">
     <div :class="$style.top">
       <WToggle v-model="w.on">Weights decide endgame gear</WToggle>
-      <span :class="$style.beta">Beta</span>
       <WInfo text="Scores white, unidentified magic and unidentified rare gear of item level 68+.
 - Its rarity and base rank give points, times each thing it has: drop tier, item level, corruption, size, best mark.
 - Under the **line** it hides. Above it, **Normal**, **Big** and **Beam** start at scores you set.
@@ -686,13 +685,6 @@ function reset () {
 }
 :global([data-w-sized]) .wrap { max-height: none; }
 .top { display: flex; align-items: center; gap: 8px; }
-.beta {
-  font-size: var(--w-fs-xs);
-  color: var(--w-dim);
-  border: 1px solid var(--w-line);
-  border-radius: var(--w-r-sm);
-  padding: 0 4px;
-}
 .group {
   background: var(--w-panel-2);
   border-radius: var(--w-r-sm);
