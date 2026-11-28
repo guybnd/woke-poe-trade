@@ -1,5 +1,6 @@
 # Next release notes
 
+- Loot filter: on our own rules, nothing a Loot row doesn't take shows pink any more. Unpriced currency, cards and gems, small gold piles, Wombgifts, maps with no tier (Valdo, Nightmare) and rares the weights don't score each show in their plain look. The cheapest shards and essences hide in maps. The Loot tab's Gold rows were also being dropped from the filter, and now work.
 - Loot filter: changing a setting is much faster again. Each change rebuilds the filter, and with our own rules in it that had grown to 2 to 4 seconds; it now takes well under a second.
 - Loot filter: on our own rules alone (no NeverSink file underneath), uniques, maps, jewels, special gear and the special unique kinds (unique jewels and idols, heist uniques, replicas, double corrupted, abyss sockets, over-quality, 5-link, Vestigial) keep their Loot rules and looks. Before prices load, last league's prices decide instead of nothing. A unique, map or rare jewel no rule took still shows in its usual look; plain life, mana and hybrid flasks and plain jewels hide in maps.
 - Loot filter: Alt+F on a magic, rare or white Crimson or Viridian Jewel, or an abyss jewel, showed the unique jewel card for that base, with its uniques and price. It now shows the jewel's own Loot row (Magic or white jewel, Rare jewel...) and its step.
