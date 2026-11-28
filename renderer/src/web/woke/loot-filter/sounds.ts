@@ -127,9 +127,10 @@ async function gameGain (): Promise<number> {
 }
 
 // Plays a custom, pack or game sound at the filter's volume (0-300, 300 =
-// full), times the game's own sound volume, so it's as loud as in game. Returns what to tell the player when it can't, else null. Only the
-// last click plays: an earlier one still loading (the first game sound
-// decodes for a second or two) is dropped.
+// full), times the game's own sound volume, so it's as loud as in game.
+// Returns what to tell the player when it can't, else null. Only the last
+// click plays: an earlier one still loading (the first game sound decodes
+// for a second or two) is dropped.
 export async function playSound (id: string, volume: number, dir: string): Promise<string | null> {
   const mine = ++latest
   const why: Why = { error: '' }
@@ -139,6 +140,7 @@ export async function playSound (id: string, volume: number, dir: string): Promi
   if (!url) return failed
   const gain = await gameGain()
   if (mine !== latest) return null
+  if (gain === 0) return 'The game\'s sound is muted (Options › Sound: Master or Item filter alert)'
   playing?.pause()
   const audio = new Audio(url)
   audio.volume = Math.max(0, Math.min(1, volume / 300 * gain))
