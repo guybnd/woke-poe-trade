@@ -4,7 +4,7 @@
       <w-segmented v-if="ranges.length > 1" :model-value="range" :options="options" @update:model-value="pick" />
       <span v-else class="w-dim text-xs">{{ RANGE_LABEL[range] }}</span>
       <span v-if="fromNinja && range !== 'mine'" class="w-faint text-xs"
-        title="poe.ninja's price for this unique or base with typical rolls. It does not know the rolls and filters of this search, so it can sit far from the listings below.">poe.ninja, typical rolls</span>
+        title="poe.ninja's price for this item with typical rolls. It doesn't know this search's rolls and filters, so it can sit far from the listings below.">poe.ninja, typical rolls</span>
       <span class="flex-1" />
       <span v-if="change != null" class="text-xs w-num" :class="change >= 0 ? 'w-up' : 'w-down'">
         {{ change >= 0 ? '+' : '' }}{{ Math.round(change * 100) }}%

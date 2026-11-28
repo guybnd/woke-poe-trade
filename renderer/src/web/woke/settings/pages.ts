@@ -94,7 +94,7 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     name: 'Search',
     group: 'general',
     icon: { fa: 'fas fa-search' },
-    description: 'Which kinds of results the search box (Ctrl Space) shows: every row, the top 3 with "+N more", or none. The cog in the search bar opens the same list.',
+    description: 'What the search box (Ctrl Space) shows of each kind: every row, the top 3 with "+N more", or none. Also under its cog.',
     widgets: ['woke-search'],
     find: ['Search', 'Ctrl Space', 'Ctrl + Space', 'Search results', 'Result groups', 'What search shows', 'Folded', 'Search the web']
   },

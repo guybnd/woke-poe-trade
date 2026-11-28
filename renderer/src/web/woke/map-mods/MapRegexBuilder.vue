@@ -225,8 +225,8 @@ const MINS_MODE_OPTIONS = [
 ]
 const MIN_KEYS: MinStat[] = ['quantity', 'rarity', 'packSize', 'currency', 'scarabs', 'maps', 'divCards', 'quality']
 const REWARDS_HELP = 'What each column does.\n' +
-  '- **Map must have**: the lowest roll you accept, like 40 under More currency. Blank means no minimum. ' +
-  'The [[Alt + M]] card ticks or crosses each one, and the stash search lights up only maps that have them.\n' +
+  '- **Map must have**: the lowest roll you accept, like 40 under More currency. Blank: no minimum.\n' +
+  '- The [[Alt + M]] card ticks or crosses each minimum; the stash search lights only maps that meet them.\n' +
   '- **Juice score**: how much the stat counts toward the 0-100 score on the [[Alt + M]] card.\n' +
   '- **Every / any one**: a map must meet all the minimums you set, or just one of them.'
 const JUICE_HELP = 'The [[Alt + M]] card scores each map from 0 to 100 on how rewarding it is. These squares set how much each stat counts.\n' +

@@ -9,7 +9,7 @@
       <WBackLink v-if="trail.length" :to="backTo" title="Back to where you were (mouse back button)" @back="goBack" />
       <WSelect :model-value="sourceKey" :options="fileOptions" style="max-width: 20rem;" @update:model-value="pickSource" />
       <WButton size="sm" variant="ghost" icon="fas fa-sync" title="Reload the file list and the filter" @click="refresh" />
-      <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule. Works on your inventory, stash and labels on the ground. Hold Alt to reach items your filter hides.` : undefined" @paste.capture="onSearchPaste">
+      <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule: inventory, stash or ground labels. Hold Alt for items your filter hides.` : undefined" @paste.capture="onSearchPaste">
         <ItemSearchField v-model="search" :doc="store.doc.value" :area-level="searchAreaLevel" :drop="tab === 'preview'" @open-rule="openRule" @drop-item="dropPick" />
       </span>
     </template>
@@ -296,7 +296,9 @@
       <template v-else>
         <div class="w-dim text-sm flex items-center gap-2" :class="$style.buildIntro">
           <span>Rules for <span class="w-accent">{{ buildInput.buildName }}</span></span>
-          <WInfo text="They go at the top of your saved copy, ahead of NeverSink's own. They follow the active build, and you can restyle them under Rules › Your build." />
+          <WInfo text="Rules for your active build's gems, link colours and uniques.
+- They go at the top of your saved copy, ahead of NeverSink's.
+- Restyle them under **Rules › Your build**." />
         </div>
         <div v-for="r in buildRows" :key="r.key" :class="$style.changeRow">
           <WChip clickable :active="config.buildRules[r.key]" :title="config.buildRules[r.key] ? 'Turn off' : 'Turn on'" @click="config.buildRules[r.key] = !config.buildRules[r.key]">
@@ -395,7 +397,7 @@
           <template v-if="store.error.value">{{ store.error.value }}</template>
           <template v-else>
             <template v-if="unsaved">Not in the game until you save · </template>Saves to <span class="w-num">{{ outName }}</span>
-            <span v-if="config.sourceOnline" style="color: var(--w-warn);" title="Edits can't be written into an online filter, so they go into a local copy. Pick that copy in game. When the online filter updates, reopen the editor and save again."> (local copy: won't auto-update)</span>
+            <span v-if="config.sourceOnline" style="color: var(--w-warn);" title="Online filters can't be edited, so edits go into a local copy: pick it in game. When the online filter updates, open the editor and save again."> (local copy: won't auto-update)</span>
             <template v-if="!store.dirty.value && store.lastSaved.value"> · saved</template>
             <template v-if="store.pendingReload.value && !unsaved"> · press Reload now to use it</template>
           </template>
