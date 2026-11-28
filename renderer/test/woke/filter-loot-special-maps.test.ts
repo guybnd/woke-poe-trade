@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency, kindOf } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency, kindOf, offSteps } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { neverSink } from '../helpers/neversink'
 
@@ -149,5 +149,24 @@ describe('Originator maps from the clipboard', () => {
       const text = fs.readFileSync(`../testing/fixtures/items/${f}.txt`, 'utf8')
       expect(itemFacts(text, null).zanaMemory, f).toBe(true)
     }
+  })
+})
+
+describe('a guessed special map on a step turned off', () => {
+  it('still shows: Originator T16 with every step off', () => {
+    const cfg = defaultCurrency()
+    cfg.on = true
+    cfg.offBy = { all: [1, 2, 3, 4] }
+    const doc = parseFilter(REGULAR)
+    applyCurrency(doc, cfg, lookup)
+    const orig = map(16, { rarity: 'Rare', zanaMemory: true, hasImplicitMod: true })
+    const hit = matchItem(doc, orig)
+    expect(hit.visibility).toBe('Show')
+    expect(hit.final?.block.type).toBe(CURRENCY_TYPE)
+    // At its own step, not the guessed-under-the-line fallback, and the tab
+    // doesn't call it hidden.
+    expect(hit.final?.block.comment).not.toMatch(/under the line/)
+    const it = currencyItems(parseFilter(REGULAR), lookup).find(i => i.name === 'Originator Map (Tier 16)')!
+    expect(offSteps(it, cfg)).toEqual([])
   })
 })
