@@ -378,6 +378,15 @@ describe('currency weights', () => {
     const dark = { ...c, cats: { ...c.cats, mapguard: { text: [60, 30, 90] } } } as typeof c
     expect(currencyLook(4, 'mapguard', dark).text?.slice(0, 3)).toEqual([255, 255, 255])
     expect(currencyLook(4, 'mapguard', c).text?.slice(0, 3)).toEqual([0, 0, 0])
+    // The Style picker: a dark card, or white with the tint on the edge.
+    const dk = currencyLook(4, 'maporig', { ...c, mapLook: 'dark' })
+    expect(dk.text?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(dk.border?.slice(0, 3)).toEqual([255, 225, 120])
+    const wh = currencyLook(3, 'maporig', { ...c, mapLook: 'edge' })
+    expect(wh.background?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(wh.border?.slice(0, 3)).toEqual([255, 225, 120])
+    expect(normalizeCurrency({ mapLook: 'dark' } as never).mapLook).toBe('dark')
+    expect(normalizeCurrency({ mapLook: 'bogus' } as never).mapLook).toBeUndefined()
     expect(new Set(all).size).toBe(all.length)
     expect(fills('gemsup')).toEqual(fills('gemskill'))
     expect(currencyLook(4, 'gemskill', c).text?.slice(0, 3)).toEqual([255, 255, 255])

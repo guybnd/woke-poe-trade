@@ -105,6 +105,13 @@
               <option v-for="l in CHASE_LOOKS" :key="l.id" :value="l.id">{{ l.name }}</option>
             </select>
           </template>
+          <template v-if="kindOf(g.cat.id) === 'maps'">
+            <span :class="$style.lookLab">Style</span>
+            <select :value="c.mapLook ?? 'tint'" :class="$style.sel2" aria-label="Special maps style" :title="MAP_STYLES.find(m => m.id === (c.mapLook ?? 'tint'))!.desc + '. One style for every special map.'" data-loot-map-look
+              @change="setMapLook(($event.target as HTMLSelectElement).value as MapStyle)">
+              <option v-for="m in MAP_STYLES" :key="m.id" :value="m.id" :title="m.desc">{{ m.name }}</option>
+            </select>
+          </template>
           <span :class="$style.lookLab">Colour</span>
           <input type="color" :value="hexOf(catColour(g.cat.id, c).rgb)" :class="$style.swatch" :aria-label="`${g.cat.name} colour`" :title="`${g.cat.name} colour`"
             @change="setCatLook(g.cat.id, { text: [...rgbOf(($event.target as HTMLInputElement).value), 255] })">
@@ -203,6 +210,8 @@ import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import { CHASE_LOOKS, chaseLookOf } from './unique-classes'
 import { toggleNotAvg } from './currency-settings'
+import { MAP_STYLES } from './currency-weights'
+import type { MapStyle } from './currency-weights'
 import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, FAINT_UNTIL, faintLook, faintOn, forcedHidden, fixedOf, sectionMode, sizeCutNow, stepStarts, stepsOffIn } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
 import { experimentalUnlocked } from '../personal'
@@ -540,6 +549,11 @@ const SIZE_CUTS = [
 function setChaseLook (id: string) {
   c.value.chaseLook = id
   setCatLook('uniqchase', null)
+}
+// The special maps style, one for every map kind; the tinted card is the default.
+function setMapLook (id: MapStyle) {
+  if (id === 'tint') delete c.value.mapLook
+  else c.value.mapLook = id
 }
 function setCatIcon (id: string, p: { shape?: string, color?: string }) {
   const cur = catColour(id, c.value)
