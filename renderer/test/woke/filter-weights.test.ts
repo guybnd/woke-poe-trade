@@ -8,6 +8,7 @@ import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
 import { WEIGHT_ROWS, WEIGHT_TYPE, MULT_STEPS, applyWeights, baseRanks, defaultWeights, filterBases, normalizeWeights, stepFor, weightLook, LOOK_KEYS, RANK_KEYS } from '@/web/woke/loot-filter/weights'
 import type { WeightItem, WeightSettings, BaseRow, LookChannel, LookKey, RankKey } from '@/web/woke/loot-filter/weights'
+import { WEIGHTS_V } from '@/web/woke/loot-filter/weight-settings'
 import { BASE_FACTS } from '@/web/woke/loot-filter/base-facts'
 import { neverSink } from '../helpers/neversink'
 import { loadGameData } from '../helpers/game-data'
@@ -193,8 +194,8 @@ describe('rare weights', () => {
     expect(stepFor({ ...it, fractured: true }, w)).toBeGreaterThan(0)
     // A few dozen bases moved down cost few rules.
     const many = Object.fromEntries(filterBases(parseFilter(SEMI)).filter(b => b.rank === 'r0').slice(0, 40).map(b => [b.name, 'rj' as const]))
-    const plain = applyWeights(parseFilter(SEMI), on())!.blocks.length
-    const junked = applyWeights(parseFilter(SEMI), on(x => { x.ranks = many }))!.blocks.length
+    const plain = applyWeights(parseFilter(SEMI), on(x => { x.always = [] }))!.blocks.length
+    const junked = applyWeights(parseFilter(SEMI), on(x => { x.ranks = many; x.always = [] }))!.blocks.length
     expect(junked).toBeLessThan(plain * 1.3)
   })
 
@@ -257,11 +258,35 @@ describe('rare weights: No rank and Large penalties (Guy, 2026-11-28)', () => {
     const moved = normalizeWeights(old)
     expect(moved.mult.r0).toBe(0.5)
     expect(moved.mult.big).toBe(0.7)
-    expect(moved.v).toBe(1)
+    expect(moved.v).toBe(WEIGHTS_V)
     const tuned = normalizeWeights({ ...old, mult: { ...old.mult, r0: 2, big: 1.2 } })
     expect(tuned.mult.r0).toBe(2)
     expect(tuned.mult.big).toBe(1.2)
     // Already moved: back at 0 by hand stays 0.
     expect(normalizeWeights({ ...moved, mult: { ...moved.mult, r0: 1 } }).mult.r0).toBe(1)
+  })
+
+  it('white and magic at the old ×0.1 move to ×1 once (NeverSink retirement M8), tuned ones stay', () => {
+    const old = { ...defaultWeights(), v: 1 }
+    old.mult = { ...old.mult, wm: 0.1, wn: 0.1, idm: 1 }
+    const moved = normalizeWeights(old)
+    expect([moved.mult.wm, moved.mult.wn, moved.mult.idm]).toEqual([1, 1, 1.5])
+    expect(normalizeWeights({ ...old, mult: { ...old.mult, wm: 0.25 } }).mult.wm).toBe(0.25)
+    expect(normalizeWeights({ ...moved, mult: { ...moved.mult, wn: 0.1 } }).mult.wn).toBe(0.1)
+  })
+
+  it('white and magic are worth their base and marks; plain crafting bases take a cut', () => {
+    const w = on()
+    const rows = filterBases(parseFilter(SEMI))
+    const row = (rank: string) => rows.find(b => b.rank === rank && b.width * b.height <= 4 && !b.old)!
+    const white = (b: BaseRow, more: Partial<WeightItem> = {}): WeightItem => ({ rank: b.rank, cls: b.cls, width: b.width, height: b.height, old: b.old, rarity: 'Normal', tier: 1, itemLevel: 84, corruption: 'no', mirrored: false, links: 0, rgb: false, influenced: false, eldritch: false, quality: 0, fractured: false, synthesised: false, fated: false, abyssal: false, strands: 0, enchanted: false, crucible: false, ...more } as WeightItem)
+    // An exotic base or a mark shows, as NeverSink showed it.
+    expect(stepFor(white(row('x2')), w)).toBeGreaterThan(0)
+    expect(stepFor(white(row('r0'), { fractured: true }), w)).toBeGreaterThan(0)
+    expect(stepFor(white(row('r0'), { links: 6 }), w)).toBeGreaterThan(0)
+    // The best crafting base at item level 86, not lower; plain bases never.
+    expect(stepFor(white(row('r1'), { itemLevel: 86 }), w)).toBeGreaterThan(0)
+    expect(stepFor(white(row('r1')), w)).toBe(0)
+    expect(stepFor(white(row('r0'), { itemLevel: 86, tier: 5 }), w)).toBe(0)
   })
 })

@@ -29,6 +29,8 @@ const pts = (m: number) => 10 * Math.log2(m)
 function on (change: (w: WeightSettings) => void = () => {}): WeightSettings {
   const w = defaultWeights()
   w.on = true
+  // The score alone (pins are tested on their own).
+  w.always = []
   change(w)
   return w
 }
