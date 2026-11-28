@@ -5,7 +5,8 @@
 import { applyFlasks } from './flask-weights'
 import { parseFilterCopy } from './parse'
 import type { FilterDoc } from './parse'
-import { nameCheck, ruleBlocks } from './rules'
+import { ownBaseText } from './own-base'
+import { gameNameCheck, nameCheck, ruleBlocks } from './rules'
 import type { OwnRule } from './rules'
 import { applyPresetChanges, colourBlindActions, presetBlocks, scaleVolume } from './presets'
 import { levellingOnly, lootPresets, migratedPresets } from './loot-presets'
@@ -75,6 +76,9 @@ export interface ComposeInput {
   own?: OwnTables | null
   // Identified gear's mod lists for Rare weights (id-mods.ts), once read.
   ids?: IdGroup[] | null
+  // Write onto our own skeleton (own-base.ts) instead of NeverSink's file,
+  // at the strictness NeverSink's file has (NeverSink retirement M3).
+  ownBase?: boolean
 }
 
 export interface Composed {
@@ -109,10 +113,11 @@ export interface Composed {
 
 // One name the game doesn't know in a BaseType list and it refuses the whole
 // filter (Guy 2026-11-28: "Vaal Absolution (Absolution of ..." from a price
-// list). The rules woke writes keep only names the game knows; a rule left
-// with an empty list is written commented out.
-export function dropUnknownBases (doc: FilterDoc): number {
-  const known = nameCheck({ ...doc, blocks: doc.blocks.filter(b => !b.type?.startsWith('woke->')) })
+// list). The rules woke writes keep only names the game data knows (or our
+// own item lists, from the same data), not ones only NeverSink's file names;
+// a rule left with an empty list is written commented out.
+export function dropUnknownBases (doc: FilterDoc, own?: OwnTables | null): number {
+  const known = gameNameCheck(own?.lists)
   let dropped = 0
   for (const b of doc.blocks) {
     if (!b.type?.startsWith('woke->') || b.disabled) continue
@@ -130,7 +135,7 @@ export function dropUnknownBases (doc: FilterDoc): number {
 }
 
 export function composeFilter (text: string, cfg: ComposeInput): Composed {
-  const next = parseFilterCopy(text)
+  const next = parseFilterCopy(cfg.ownBase ? ownBaseText(/^#\s*TYPE:\s*(\S+)/m.exec(text.slice(0, 4000))?.[1] ?? null) : text)
   // The Loot tab's first-time carry-over, even before the tab is opened.
   const migrated = migratedPresets(cfg.presets)
   // Rare weights (beta) first, so everything below goes on top of them.
@@ -244,6 +249,6 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Again over the net's and restyled rules: one transfigured gem name in a
   // BaseType list and the game refuses to load the whole filter.
   renameBases(next, renameBase)
-  dropUnknownBases(next)
+  dropUnknownBases(next, cfg.own)
   return { doc: next, results, buildCount, netCount, netStackCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)), gearBlocks: gear.blocks, gearReplaced: gear.replaced, clusterSig, weightRules: weights?.blocks.length ?? 0, weightChars: weights?.chars ?? 0, weightBases, currencyRules: currency?.blocks.length ?? 0, currencyChars: currency?.chars ?? 0, currencyItems: currency?.items ?? [] }
 }

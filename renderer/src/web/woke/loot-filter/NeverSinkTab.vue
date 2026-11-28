@@ -12,6 +12,13 @@
       </div>
     </div>
 
+    <div v-if="experimentalUnlocked || config.ownBase" :class="$style.card">
+      <div class="flex items-center gap-3">
+        <WToggle :model-value="config.ownBase === true" @update:model-value="config.ownBase = $event">Test: only our own rules, no NeverSink rules underneath</WToggle>
+        <WInfo :text="'For testing the filter without NeverSink: your Loot, Equipment and own rules go onto a short base of ours.\n- Plain and magic gear hides in maps.\n- An item none of our rules knows shows pink.'" />
+      </div>
+    </div>
+
     <template v-if="ns.on">
       <div v-if="store.updateReady.value" :class="[$style.card, $style.update]">
         <div class="flex items-center gap-2">
@@ -72,6 +79,7 @@ import { WButton, WInfo, WKbd, WSelect, WToggle, agoPhrase, toast } from '../ui'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import { outputName } from './widget'
+import { experimentalUnlocked } from '../personal'
 import { LEVEL_NAMES, RECENT_MAPS, stepLabel } from './strictness'
 
 const props = defineProps<{
