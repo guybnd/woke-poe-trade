@@ -243,6 +243,33 @@ test('history: a change shows before and after, a dot resets it, Ctrl + Z and th
   await expect(slider).toHaveValue(start)
 })
 
+test('history: a Loot tab change says what moved and on which item, and opens to every value', async ({ overlay, fakeApp }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters/neversink/3-STRICT.filter.gz'))))
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), presets: { currency: { on: true } } }] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await page.getByRole('tab', { name: /^Loot/ }).click()
+  await page.locator('[data-loot-class="cards"]').click()
+  const uniq = page.locator('[data-currency-cat="carduniq"]')
+  await uniq.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
+  const star = uniq.locator('[data-loot-collect]').first()
+  const card = (await star.getAttribute('aria-label'))!.replace(/^Collecting /, '')
+  await star.click()
+  await expect(star).toHaveAttribute('aria-pressed', 'true')
+  await page.waitForTimeout(700)
+
+  await page.getByRole('tab', { name: /^Changes/ }).click()
+  const row = page.locator('[data-history-row]').first()
+  await expect(row).toContainText(`${card} · Collecting (at least Normal)`)
+  await expect(page.getByText('Changed currency weights')).toHaveCount(0)
+  await row.click({ position: { x: 40, y: 10 } })
+  await expect(page.locator('[data-history-detail]')).toContainText('Collecting')
+  await overlay.snap('history, loot change open')
+  await row.getByRole('button', { name: 'Undo', exact: true }).click()
+  await expect(row.getByRole('button', { name: 'Redo to here' })).toBeVisible()
+})
+
 test('rules: pick several chips, move them together, hide them together, and see prices', async ({ overlay, fakeApp }) => {
   const folder = filterFolder()
   await overlay.boot({ widgets: [lootFilter(folder)] })

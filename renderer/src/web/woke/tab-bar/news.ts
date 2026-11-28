@@ -31,6 +31,7 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
+  { id: 'loot-filter-readable-history', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Changes › History says what each change moved, from what to what; repeats fold into one row' },
   { id: 'loot-filter-valuable-exotics', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Base ranks splits Exotic into valuable (about 1 div+) and the rest, each with its own text colour' },
   { id: 'loot-filter-gold-page', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Gold has its own page on the Loot tab, and each loot class shows its item art' },
   { id: 'loot-filter-section-ruler', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: give a Loot section its own step ruler (Own ruler in the section); Strictness still moves it' },
