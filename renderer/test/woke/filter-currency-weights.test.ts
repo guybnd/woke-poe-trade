@@ -305,6 +305,23 @@ describe('currency weights', () => {
     expect(validateFilter(doc).map(p => p.message)).toEqual([])
   })
 
+  it('gives every class its own Decent and Big, red stays Tink', () => {
+    const c = on(() => {})
+    const fills = (cat: string) => [3, 4].map(s => currencyLook(s as 3 | 4, cat, c).background?.slice(0, 3))
+    const kinds = ['orbs', 'gemskill', 'uniqplain', 'cardcur', 'invites', 'mapblight']
+    const all = kinds.flatMap(fills).map(x => x!.join(','))
+    expect(new Set(all).size).toBe(all.length)
+    expect(fills('gemsup')).toEqual(fills('gemskill'))
+    expect(currencyLook(4, 'gemskill', c).text?.slice(0, 3)).toEqual([255, 255, 255])
+    for (const cat of kinds) {
+      for (const s of [1, 2, 3, 4] as const) {
+        const l = currencyLook(s, cat, c)
+        expect(l.effect?.color ?? '').not.toBe('Red')
+        expect(l.icon?.color ?? '').not.toBe('Red')
+      }
+    }
+  })
+
   it('sorts essences into their tiers', () => {
     expect(subgroupOf('Deafening Essence of Greed', 'essences')).toBe('Deafening')
     expect(subgroupOf('Whispering Essence of Hatred', 'essences')).toBe('Whispering')

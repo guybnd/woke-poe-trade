@@ -41,10 +41,11 @@ import { AppConfig, pushHostConfig, saveConfig } from '@/web/Config'
 import { useZone } from '../shared/zone'
 import { MODULES, ensureWokeConfig, setModuleOn } from '../modules'
 import { toast } from '../ui'
-import { DOCK_NAMES, DOCK_PEEKS, dismissIcons, dockConfig, dockIcon, dockIconEl, dockPinId, ensureDockConfig, openOverlay, saveDock } from './dock'
+import { DOCK_NAMES, DOCK_PEEKS, dismissIcons, dockConfig, dockEntries, dockIcon, dockIconEl, dockPinId, ensureDockConfig, openOverlay, saveDock } from './dock'
 import { addPin, isPinned, removePin } from '../pins/pins'
 import type { DismissFor, DockEntry } from './dock'
 import { hereScope } from './dismiss-rules'
+import { markAllNewsSeen } from '../tab-bar/news'
 
 const props = defineProps<{
   host: DockEntry
@@ -94,10 +95,17 @@ function dismiss (what: DismissFor) {
   emit('close')
   // The note takes its place from the icon, still on screen until the next tick.
   const el = dockIconEl(id.value)
-  const ids = [id.value, ...props.extras.map(e => e.props.id)]
+  // For good, also what folds into it but isn't showing now (Lab gems outside
+  // the lab), which would otherwise turn up later as its own icon.
+  const folded = what === 'always' ? dockEntries.value.filter(e => e.props.into === id.value) : []
+  const ids = [...new Set([id.value, ...props.extras.map(e => e.props.id), ...folded.map(e => e.props.id)])]
   const title = props.host.props.title
+  // What's new for good is What's new off: bringing it back shows only what came after.
+  const woke = ensureWokeConfig(AppConfig()).woke
+  const seen = woke.seenNews
+  if (what === 'always' && id.value === 'whats-new') markAllNewsSeen(woke)
   const done = dismissIcons(ids, what)
-  toast(`${title} dismissed ${done.phrase}`, { anchor: el, dock: true, undo: done.restore })
+  toast(`${title} dismissed ${done.phrase}`, { anchor: el, dock: true, undo: () => { woke.seenNews = seen; done.restore() } })
 }
 
 const canPeek = computed(() => DOCK_PEEKS.has(id.value) && dockConfig().peeks)
