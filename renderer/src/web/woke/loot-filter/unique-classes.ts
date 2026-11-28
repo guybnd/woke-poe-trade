@@ -14,7 +14,7 @@ export const UNIQUE_CATEGORIES: LootCategory[] = [
   { id: 'uniqplain', name: 'Uniques', art: 'Sadist Garb' },
   { id: 'uniqvar', name: 'High variance', art: 'Small Cluster Jewel' },
   { id: 'uniqearly', name: 'Early league', art: 'Bone Helmet' },
-  { id: 'uniqboss', name: 'Boss drops', art: 'Hubris Circlet' },
+  { id: 'uniqboss', name: 'Boss and special drops', art: 'Cabalist Regalia' },
   // A boss base that also has uniques dropping anywhere (Guy 2026-11-28: its
   // own section, apart from boss-only): priced by those world drops.
   { id: 'uniqbossmix', name: 'Boss drops, also world drops', art: 'Agate Amulet' },

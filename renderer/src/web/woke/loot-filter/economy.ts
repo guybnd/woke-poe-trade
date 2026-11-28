@@ -91,6 +91,9 @@ export interface PricePoint {
   // the chase line or more), most valuable first.
   // `uniques`: every priced unique on the base, cheapest last, with whether
   // the average counts it (`out`: you left it out, notAvg).
+  // No unique on the base drops in the world (boss, league reward, vendor,
+  // replica only): the Loot tab puts it with the boss drops.
+  noWorld?: true
   drop?: { of: number, chase: Array<{ name: string, chaos: number }>, uniques: DropUnique[] }
 }
 
@@ -257,8 +260,10 @@ export function dropLookup (
   const find = priceFinder(items, 'market')
   return (group, base) => {
     if (!group.unique || group.foulborn || group.links || group.special) return max(group, base)
-    const all = uniquesOnBase(base)
-      .filter(name => !isReplica(name))
+    const world = uniquesOnBase(base).filter(name => !isReplica(name))
+    // No price of its own: NeverSink's tier guesses, as for boss drops.
+    if (!world.length) return { chaos: 0, thin: true, noWorld: true }
+    const all = world
       .map(name => ({ name, hit: find(group.ninja, name, base) }))
       .filter((x): x is { name: string, hit: PriceItem } => Boolean(x.hit))
     if (!all.length) return null

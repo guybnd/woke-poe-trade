@@ -70,6 +70,8 @@ describe('unique bases by their average drop', () => {
     expect(items.get('Leather Belt')).toMatchObject({ cat: 'uniqchase', avg: true, of: 3, chase: [{ name: 'Headhunter', chaos: 50000 }] })
     expect(items.get('Coral Amulet')?.cat).not.toBe('uniqchase')
     expect(items.get('Agate Amulet')?.cat).toBe('uniqbossmix')
+    // No world-drop unique on it (none in ON): boss and special drops, whatever NeverSink's tier.
+    expect(items.get('Cabalist Regalia')?.cat).toBe('uniqboss')
     const cfg = defaultCurrency()
     expect(sectionMode(cfg, 'uniqchase')).toBe('always')
     const small = currencyLook(1, 'uniqchase', cfg)
