@@ -1,7 +1,7 @@
 // Special gear on the Loot tab (NeverSink retirement M4b): our own rules for
 // exotic mods, item kinds, variations, influenced gear, enshrouded items and
 // idols; NeverSink's copies stop in maps.
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import type { FilterDoc } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
@@ -11,6 +11,12 @@ import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency, kindOf, s
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { SPECIAL_CATEGORIES, SPECIAL_NS_TYPE, SPECIAL_ROWS } from '@/web/woke/loot-filter/special-gear'
 import { LEVELS, neverSink } from '../helpers/neversink'
+import { loadGameData } from '../helpers/game-data'
+import { WEIGHT_TYPE, applyWeights, defaultWeights, filterBases } from '@/web/woke/loot-filter/weights'
+import { idGroups } from '@/web/woke/loot-filter/id-mods'
+import type { AffixTable } from '@/web/woke/loot-filter/id-mods'
+import fs from 'node:fs'
+import path from 'node:path'
 
 const lookup: PriceLookup = (_g, base) => base === 'Divine Orb' ? { chaos: 160, thin: false } : null
 const gear = (baseType: string, itemClass: string, more: Partial<ItemFacts> = {}): ItemFacts => ({
@@ -44,6 +50,28 @@ const CASES: Array<[string, ItemFacts, number]> = [
 ]
 
 describe('special gear on the Loot tab', () => {
+  beforeAll(loadGameData, 60000)
+
+  it("shows over Rare weights' Hide: white, magic and identified gear at its row's step or louder", () => {
+    const table = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../public/data/affix-tiers.json'), 'utf8')) as AffixTable
+    for (const need of [4, 64]) {
+      const doc = parseFilter(neverSink('4-VERY-STRICT'))
+      const w = { ...defaultWeights(), on: true, need }
+      applyWeights(doc, w, filterBases(doc), idGroups(table, [], w.mult))
+      applyCurrency(doc, { ...defaultCurrency(), on: true }, lookup)
+      for (const [what, f, s] of CASES) {
+        // Unidentified rares are the weights' own call; jewels, idols and
+        // the like aren't theirs at all.
+        if (f.rarity === 'Rare' && f.identified === false) continue
+        const m = matchItem(doc, { ...f, quality: 0, memoryStrands: 0, socketGroups: f.socketGroups ?? [], corruptedMods: f.corruptedMods ?? 0 } as ItemFacts)
+        expect(m.visibility, `${need}: ${what} (${m.final?.block.comment})`).toBe('Show')
+        if (m.final?.block.type === WEIGHT_TYPE) continue
+        expect(Number(m.final?.block.tier?.slice(1)), `${need}: ${what}`).toBeGreaterThanOrEqual(s)
+      }
+      expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
+    }
+  })
+
   it('is one class with a fold per kind, every section Always, every row a fixed step', () => {
     const items = currencyItems(parseFilter(neverSink('1-REGULAR')), lookup).filter(i => i.type === 'special')
     expect(items.length).toBe(SPECIAL_ROWS.length)
