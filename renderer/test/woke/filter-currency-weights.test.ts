@@ -375,7 +375,7 @@ describe('currency weights', () => {
       for (const s of [2, 3, 4] as const) expect(currencyLook(s, cat, c).background?.slice(0, 3)).not.toEqual([255, 255, 255])
     }
     // A dark colour you pick for a section gets white text on Big.
-    const dark = { ...c, cats: { ...c.cats, mapguard: { text: [60, 30, 90] } } } as typeof c
+    const dark = { ...c, cats: { ...c.cats, mapguard: { text: [60, 30, 90, 255] } } } as typeof c
     expect(currencyLook(4, 'mapguard', dark).text?.slice(0, 3)).toEqual([255, 255, 255])
     expect(currencyLook(4, 'mapguard', c).text?.slice(0, 3)).toEqual([0, 0, 0])
     // The Style picker: a dark card, or white with the tint on the edge.
