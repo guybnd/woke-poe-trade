@@ -84,11 +84,11 @@
     </div>
     <label v-if="kindOf(it.cat) === 'cards'" :class="$style.row" data-currency-card-collect>
       <span :class="$style.lab">Collecting</span>
-      <input type="checkbox" :checked="!!edit.min" @change="toggleCollect"> <span class="text-xs w-dim">every stack shows at least Normal</span>
+      <input type="checkbox" :checked="!!edit.min" @change="toggleCollect"> <span class="text-xs w-dim">every stack shows as at least Normal</span>
     </label>
     <label v-if="LV_KINDS.has(kindOf(it.cat))" :class="$style.row" data-currency-card-levelling>
       <span :class="$style.lab">Levelling</span>
-      <input type="checkbox" :checked="!!lvCurrencyOf(cfg, it.name)" @change="setLvCurrency(cfg, it.name, !lvCurrencyOf(cfg, it.name))"> <span class="text-xs w-dim">shows at least Normal below maps</span>
+      <input type="checkbox" :checked="!!lvCurrencyOf(cfg, it.name)" @change="setLvCurrency(cfg, it.name, !lvCurrencyOf(cfg, it.name))"> <span class="text-xs w-dim">shows as at least Normal below maps</span>
     </label>
     <div v-if="floorLine" class="text-xs w-dim" data-currency-card-floor>{{ floorLine }}</div>
 
@@ -114,7 +114,7 @@ import BiasSlider from './BiasSlider.vue'
 import type { ChipOption } from './StateChip.vue'
 import { SECTION_MODES } from './section-modes'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
-import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, catColour, currencyFullLook, currencyItems, faintOn, fixedOf, forcedHidden, minStack, offSteps, pileWorth, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, catColour, currencyFullLook, currencyItems, faintOn, fixedOf, forcedHidden, minStack, offSteps, pileWorth, rowForBase, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
 import { toggleNotAvg } from './currency-settings'
 import { lvCurrencyOf, setLvCurrency } from './levelling'
 import { DEFAULT_BG, DEFAULT_TEXT } from './edits'
@@ -160,7 +160,7 @@ const ITEM_CHIPS = computed<ChipOption[]>(() => [
   edit.value.mult != null || edit.value.price != null || edit.value.look
     ? { value: 'auto', label: 'Custom', desc: 'Its section decides, with your bias, price or look.', dot: 'var(--w-gold)' }
     : { value: 'auto', label: 'Same as section', desc: 'Its section decides.', dot: 'var(--w-gold)' },
-  { value: 'always', label: 'Always', desc: 'Shows at least Small, whatever the price.', dot: 'var(--w-gold-hi)', glow: true }
+  { value: 'always', label: 'Always', desc: 'Shows as at least Small, whatever the price.', dot: 'var(--w-gold-hi)', glow: true }
 ])
 const BIAS_HELP = `Makes this item count above or below its price, so it shows louder or quieter.
 - Pick This item (only this one) or its section (every item in it). Both apply.
@@ -185,7 +185,8 @@ const raw = computed<CurrencyItem | null>(() => {
   const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null, ownTables.value)
   if (!props.gem) {
     const hit = itemFor(all, props.name, props.rule)
-    return (hit && !wrongRarity(hit) ? hit : null) ?? rowFor(all) ?? null
+    const row = (hit && !wrongRarity(hit) ? hit : null) ?? rowFor(all) ?? null
+    return row && props.facts?.baseType ? rowForBase(row, props.facts.baseType, cfg.value) : row
   }
   return gemItemFor(all, props.name, props.gem, props.rule)
 })
