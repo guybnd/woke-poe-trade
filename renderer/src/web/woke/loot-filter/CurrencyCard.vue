@@ -43,7 +43,7 @@
             @keydown.enter.prevent="savePrice" @keydown.esc.prevent="typing = false" @blur="savePrice">c
         </template>
         <template v-else>
-          <button type="button" :class="$style.priceBtn" title="Click to type your own price" data-currency-card-price-edit @click="editPrice"><template v-if="raw?.none && edit.price == null">No price</template><template v-else>~{{ chaosText(base) }} {{ it.uniques?.length ? 'avg' : 'each' }}</template> <i class="fas fa-pen" aria-hidden="true" /></button>
+          <button type="button" :class="$style.priceBtn" title="Click to type your own price" data-currency-card-price-edit @click="editPrice"><WPrice v-if="raw?.none && edit.price == null" :chaos="null" /><template v-else>~{{ chaosText(base) }} {{ it.uniques?.length ? 'avg' : 'each' }}</template> <i class="fas fa-pen" aria-hidden="true" /></button>
           <small class="w-faint">{{ priceFrom }}</small>
           <button v-if="edit.price != null" type="button" :class="$style.link" data-currency-card-price-reset @click="put({ price: undefined })">↺ {{ raw?.est ? 'guess' : 'poe.ninja' }}</button>
         </template>
