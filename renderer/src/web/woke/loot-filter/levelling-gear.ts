@@ -193,6 +193,7 @@ function flaskBlocks (cfg: CurrencySettings, push: (conds: FilterCondition[] | n
   for (const r of ['Normal', 'Magic']) {
     push(lv && [...lv, cond('Rarity', '', [r]), cond('Class', '==', ['Utility Flasks']), cond('BaseType', '==', ['Quicksilver Flask'])], 3, 'Quicksilver Flasks', rgbOf(r))
     push(lv && [...lv, cond('Rarity', '', [r]), cond('Class', '==', ['Utility Flasks'])], 2, 'utility flasks', rgbOf(r))
+    push(lv && [...lv, cond('Rarity', '', [r]), cond('Class', '==', ['Tinctures'])], 2, 'tinctures', rgbOf(r))
   }
 }
 
@@ -276,10 +277,48 @@ export function levellingGearBlocks (cfg: CurrencySettings, weapons: Presets['we
   }
   if (notMine.length) push(lv && [...lv, cond('Rarity', '', plain), cond('Class', '==', notMine)], 0, 'white and blue gear for other builds', RARITY_RGB.Normal)
   if (offBases.length) push(from(ACT_END[1] + 1) && [...from(ACT_END[1] + 1)!, cond('Rarity', '', plain), cond('BaseType', '==', offBases)], 0, 'white and blue armour in other defences', RARITY_RGB.Normal)
+  // Your armour (and quivers for bows): every white and blue piece in Act 1,
+  // then on a new base. NeverSink's levelling rules are off (retireNeverSink),
+  // so what nothing here shows is hidden by its last layer.
+  const myArmour = [...ARMOUR.filter(c => !offHands.includes(c)), ...(t.quivers ? ['Quivers'] : [])]
+  byRarity(until(ACT_END[1]), plain, 1, 'your armour in Act 1', [cond('Class', '==', myArmour)])
+  for (const [lo, hi] of bands(ACT_END[1] + 1, 67)) {
+    byRarity(from(lo, hi), plain, 1, `your armour on a new base (area ${lo} to ${hi})`, [cond('Class', '==', myArmour), cond('DropLevel', '>=', [lo - WEAPON_RECENT])])
+  }
 
   // Jewellery (pick A): every white and blue piece until Act 2, the useful
   // bases until Act 6.
   byRarity(until(ACT_END[2]), plain, 2, 'jewellery until Act 2', [cond('Class', '==', JEWELLERY)])
   byRarity(until(ACT_END[6]), plain, 2, 'useful jewellery bases until Act 6', [cond('Class', '==', JEWELLERY), cond('BaseType', '==', LV_JEWELLERY_BASES)])
   return out
+}
+
+// Quest-like items (pick A): one green look everywhere, with the minimap's
+// moon, which no other class uses. Quest items themselves are the game's.
+export const QUESTLIKE_CLASSES = ['Heist Targets', 'Labyrinth Items', 'Labyrinth Trinkets', 'Incursion Items']
+const QUEST_RGB = [74, 230, 58]
+export function questlikeBlocks (): FilterBlock[] {
+  return [gearBlock(4, [cond('Class', '==', QUESTLIKE_CLASSES)], 'quest-like items', QUEST_RGB, [
+    a('SetFontSize', 45), a('SetTextColor', ...QUEST_RGB, 255), a('SetBorderColor', ...QUEST_RGB, 255), a('SetBackgroundColor', 20, 20, 0, 255),
+    a('PlayAlertSound', 3, 300), a('PlayEffect', 'Green'), a('MinimapIcon', 0, 'Green', 'Moon')
+  ])]
+}
+
+// NeverSink's own levelling sections, which the rules above replace (M5,
+// milestone 707). Its last layers (hide every known item, show the unknown)
+// stay. With the Loot rules from the hideout, they keep acts 1 to 8.
+const NS_LEVELLING = new Set(['Hide outdated leveling flasks', 'Leveling - Utility Flasks and Tinctures', 'Leveling - Life, Mana, Hybrid', 'Leveling - Rules', 'Leveling - Useful magic and normal items'])
+const NS_LAST_LAYERS = /^(Hide All known|Show All unknown)/i
+export function retireNeverSinkLevelling (doc: { blocks: FilterBlock[] }, cfg: CurrencySettings): number {
+  if (!lvConds(cfg)) return 0
+  const fromHideout = lvConds(cfg)!.some(x => x.key === 'AreaLevel' && x.op === '>=')
+  let n = 0
+  for (const b of doc.blocks) {
+    if (b.added || b.disabled || !NS_LEVELLING.has(b.section.replace(/^\[\[\d+\]\]\s*/, '')) || NS_LAST_LAYERS.test(b.subsection)) continue
+    if (fromHideout) b.conditions = [...b.conditions, cond('AreaLevel', '<', [60])]
+    else b.disabled = true
+    b.dirty = true
+    n++
+  }
+  return n
 }
