@@ -33,6 +33,12 @@ describe('item lists from the game data', () => {
     ])
   })
 
+  it('lists corpses by their filter class', async () => {
+    const { listItems } = await load()
+    const rows = listItems({ a: base('Wretched Defiler', 'ItemisedCorpse', 'Currency/Necropolis/Corpse1') }, { ItemisedCorpse: { name: 'Corpses' } })
+    expect(rows).toEqual([['Wretched Defiler', 'Corpses', 'Currency/Necropolis/Corpse1']])
+  })
+
   it('refuses a table without the items every league has', async () => {
     const { checkItems } = await load()
     expect(() => checkItems([['Chaos Orb', 'Stackable Currency', '']])).toThrow(/Not writing/)

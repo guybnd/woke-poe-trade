@@ -373,4 +373,16 @@ describe('a name the game does not know never reaches the filter', () => {
     expect(b.disabled).toBe(true)
     expect(doc.blocks.find(x => x.type === 'currency' && !x.disabled)?.conditions.find(c => c.key === 'BaseType')?.values.length).toBeGreaterThan(0)
   })
+
+  it('trusts the game data and our own lists, not a name only NeverSink lists (M3)', async () => {
+    const { dropUnknownBases } = await import('@/web/woke/loot-filter/compose')
+    const doc = parseFilter(SEMI)
+    const ns = { ...doc.blocks[0], type: 'currency', tier: 'zz', disabled: false, conditions: [{ key: 'BaseType', op: '==', count: null, values: ['Imaginary Orb'] }] }
+    const mk = (values: string[]) => ({ ...doc.blocks[0], type: 'woke->currency', tier: 's1', disabled: false, conditions: [{ key: 'BaseType', op: '==', count: null, values }] })
+    const a = mk(['Imaginary Orb', 'Chaos Orb', 'Map (Tier 3)', 'Own List Orb'])
+    doc.blocks.unshift(a, ns)
+    expect(dropUnknownBases(doc, { lists: [['Own List Orb', 'Stackable Currency', '']], guesses: new Map() })).toBe(1)
+    expect(a.conditions[0].values).toEqual(['Chaos Orb', 'Map (Tier 3)', 'Own List Orb'])
+    expect(ns.conditions[0].values).toEqual(['Imaginary Orb'])
+  })
 })

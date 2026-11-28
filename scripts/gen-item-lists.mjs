@@ -36,6 +36,9 @@ export const CLASSES = new Set([
   'DivinationCard',
   'VaultKey'
 ])
+// And by the filter's Class name, for classes whose RePoE id isn't certain
+// (corpses came in 3.24 as "Corpses").
+export const CLASS_NAMES = new Set(['Corpses'])
 
 // A name the game's filter takes: plain text, no test or unused items.
 const BAD_NAME = /\[|\]|^$|UNUSED|DNT|^Test |PlaceHolder|Placeholder/
@@ -45,7 +48,8 @@ const BAD_NAME = /\[|\]|^$|UNUSED|DNT|^Test |PlaceHolder|Placeholder/
 export function listItems (bases, classes) {
   const seen = new Map()
   for (const b of Object.values(bases ?? {})) {
-    if (!b || b.release_state !== 'released' || !CLASSES.has(b.item_class)) continue
+    if (!b || b.release_state !== 'released') continue
+    if (!CLASSES.has(b.item_class) && !CLASS_NAMES.has(classes?.[b.item_class]?.name)) continue
     const name = typeof b.name === 'string' ? b.name.trim() : ''
     if (BAD_NAME.test(name) || seen.has(name)) continue
     const cls = classes?.[b.item_class]?.name
