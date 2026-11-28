@@ -1529,11 +1529,12 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()
   await expect(page.locator('[data-currency-cat="orbs"]')).toBeVisible()
-  // The strictness slider multiplies every step's price, every category.
-  await page.getByRole('slider', { name: /Strictness/ }).fill('2')
-  await expect(page.locator('[data-currency-min]')).toContainText('×2.00')
+  // Strictness by level name (Guy's H1): one level up, every step's price 25% higher.
+  await page.getByRole('slider', { name: 'Strictness' }).fill('3')
+  await expect(page.locator('[data-currency-strict-level]')).toHaveText('Strict')
+  await expect(page.locator('[data-currency-strict-line]')).toContainText('25% higher')
   // The steps sit on one price ruler; a handle's value is the price after Strictness.
-  await expect(page.getByRole('spinbutton', { name: 'Normal from this many chaos' })).toHaveValue('2')
+  await expect(page.getByRole('spinbutton', { name: 'Normal from this many chaos' })).toHaveValue('1.3')
   await expect(page.locator('[data-currency-cat="orbs"] [data-loot-section-mode]').getByRole('button')).toHaveAccessibleName('Orbs: By price')
   await page.waitForTimeout(500)
   await overlay.snap('currency weights tab')
