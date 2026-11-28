@@ -26,7 +26,7 @@ import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
-import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
+import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, chaseLookOf, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
 import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_PRICED, LEAGUE_ROWS } from './league-classes'
 import { JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_ROWS, JEWEL_TYPE } from './jewel-classes'
@@ -798,8 +798,8 @@ export const CAT_FILL: Record<string, NonNullable<typeof CLASS_FILL[LootKind]>> 
 }
 const fillOf = (cat: string) => CAT_FILL[cat] ?? CLASS_FILL[kindOf(cat)]
 
-export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rgb: [number, number, number], color: string, shape: string } {
-  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? JEWEL_LOOK[cat] ?? LEAGUE_LOOK[cat] ?? CAT_LOOK.other
+export function catColour (cat: string, c: Pick<CurrencySettings, 'cats' | 'chaseLook'>): { rgb: [number, number, number], color: string, shape: string } {
+  const d = cat === 'uniqchase' ? { ...UNIQUE_LOOK.uniqchase, text: chaseLookOf(c.chaseLook).text as [number, number, number], color: chaseLookOf(c.chaseLook).color } : CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? JEWEL_LOOK[cat] ?? LEAGUE_LOOK[cat] ?? CAT_LOOK.other
   const own = c.cats[cat]
   return {
     rgb: own?.text ? [own.text[0], own.text[1], own.text[2]] : d.text,
@@ -808,7 +808,7 @@ export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rg
   }
 }
 
-export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats'>): StylePatch {
+export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats' | 'chaseLook'>): StylePatch {
   if (step === 0) return {}
   const { rgb, color, shape } = catColour(cat, c)
   const own = c.steps[String(step)] ?? {}
@@ -830,26 +830,27 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
   out.icon = size == null ? null : { size, color: step === 5 ? 'Red' : color, shape }
   out.effect = effect ? { ...effect, color: step === 5 ? 'Red' : color } : null
   // Chase uniques (Guy 2026-11-28: "the T0 unique container", "needs a
-  // special look for itself", and gold on dark read as currency): one look
-  // below Tink whatever the price, unique brown on cream with a brown edge,
-  // a yellow Kite and its own sound. Your own colour for the section wins.
+  // special look for itself"): one look below Tink whatever the price, picked
+  // from CHASE_LOOKS on the section's header, with its own sound. Your own
+  // colour and icon for the section win.
   if (cat === 'uniqchase' && step < 5) {
+    const l = chaseLookOf(c.chaseLook)
     const t = c.cats[cat]?.text
     Object.assign(out, {
       fontSize: own.fontSize ?? 45,
-      text: col(t ?? [120, 52, 12]),
-      border: col(t ?? [175, 96, 37]),
-      background: col([255, 228, 175])
+      text: col(t ?? l.text),
+      border: col(t ?? l.edge),
+      background: col(l.bg)
     })
     out.icon = { size: 1, color, shape }
-    out.effect = { color: 'Yellow', temp: true }
+    out.effect = { color, temp: true }
     if (own.sound === undefined) out.sound = { id: '3', volume: 250 }
   }
   return out
 }
 
 // The whole look of a pile, for the tab's previews.
-export function currencyFullLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats'>): StylePatch {
+export function currencyFullLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats' | 'chaseLook'>): StylePatch {
   return { ...readStyle(currencyActions(step)), ...currencyLook(step, cat, c) }
 }
 

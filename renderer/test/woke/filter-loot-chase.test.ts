@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
 import { currencyItems, currencyLook, defaultCurrency, sectionMode } from '@/web/woke/loot-filter/currency-weights'
+import { normalizeCurrency } from '@/web/woke/loot-filter/currency-settings'
 import { NET_GROUPS, dropLookup } from '@/web/woke/loot-filter/economy'
 import type { PriceItem } from '@/web/woke/market/types'
 import { neverSink } from '../helpers/neversink'
@@ -58,7 +59,13 @@ describe('unique bases by their average drop', () => {
     const cfg = defaultCurrency()
     expect(sectionMode(cfg, 'uniqchase')).toBe('always')
     const small = currencyLook(1, 'uniqchase', cfg)
-    expect(small.icon).toMatchObject({ shape: 'Kite', color: 'Yellow' })
-    expect(small.background?.slice(0, 3)).toEqual([255, 228, 175])
+    // Default style T1 ice blue; a picked style changes ground and icon.
+    expect(small.icon).toMatchObject({ shape: 'Kite', color: 'Brown' })
+    expect(small.background?.slice(0, 3)).toEqual([215, 232, 255])
+    const teal = currencyLook(1, 'uniqchase', { ...cfg, chaseLook: 'T4' })
+    expect(teal.icon).toMatchObject({ shape: 'Kite', color: 'Cyan' })
+    expect(teal.background?.slice(0, 3)).toEqual([200, 240, 232])
+    expect(normalizeCurrency({ ...cfg, chaseLook: 'T4' }).chaseLook).toBe('T4')
+    expect(normalizeCurrency({ ...cfg, chaseLook: 'bad' }).chaseLook).toBeUndefined()
   })
 })

@@ -24,7 +24,7 @@ export const UNIQUE_IDS = new Set(UNIQUE_CATEGORIES.map(x => x.id))
 export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
   // A base with a rare jackpot on it (Headhunter on Leather Belt): its step
   // from the average drop, plus a gold edge and a Kite icon (Guy's K1).
-  uniqchase: { text: [175, 96, 37], color: 'Yellow', shape: 'Kite' },
+  uniqchase: { text: [175, 96, 37], color: 'Brown', shape: 'Kite' },
   uniqplain: { text: [175, 96, 37], color: 'Brown', shape: 'Star' },
   uniqvar: { text: [210, 130, 60], color: 'Orange', shape: 'Star' },
   uniqearly: { text: [200, 150, 90], color: 'Yellow', shape: 'Star' },
@@ -37,6 +37,24 @@ export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color
 // Boss-only bases show whatever they are (Guy: "boss-only likely always on"),
 // and so do chase bases (Guy 2026-11-28: "a chase unique section that has
 // always on by default").
+// The Chase uniques looks (Guy 2026-11-28, picked on the section's header):
+// unique brown text and edge on a ground no other look uses, a Kite icon and
+// beam in `color`. T1 is the default.
+export interface ChaseLook { id: string, name: string, text: number[], edge: number[], bg: number[], color: string }
+export const CHASE_LOOKS: ChaseLook[] = [
+  { id: 'T1', name: 'Ice blue', text: [175, 96, 37], edge: [175, 96, 37], bg: [215, 232, 255], color: 'Brown' },
+  { id: 'T2', name: 'Ice blue, blue edge', text: [175, 96, 37], edge: [70, 120, 200], bg: [215, 232, 255], color: 'Cyan' },
+  { id: 'T3', name: 'Steel blue', text: [150, 75, 20], edge: [150, 75, 20], bg: [180, 205, 235], color: 'Brown' },
+  { id: 'T4', name: 'Teal', text: [165, 85, 30], edge: [165, 85, 30], bg: [200, 240, 232], color: 'Cyan' },
+  { id: 'T5', name: 'Lavender', text: [165, 85, 30], edge: [165, 85, 30], bg: [232, 222, 255], color: 'Purple' },
+  { id: 'T6', name: 'Sage', text: [150, 80, 25], edge: [150, 80, 25], bg: [220, 235, 210], color: 'Green' },
+  { id: 'C1', name: 'Cream', text: [120, 52, 12], edge: [175, 96, 37], bg: [255, 228, 175], color: 'Yellow' },
+  { id: 'C2', name: 'White (T1 unique)', text: [175, 96, 37], edge: [175, 96, 37], bg: [255, 255, 255], color: 'Brown' },
+  { id: 'C3', name: 'Brown slab', text: [255, 255, 255], edge: [255, 255, 255], bg: [175, 96, 37], color: 'Orange' },
+  { id: 'C4', name: 'Ember', text: [255, 140, 40], edge: [255, 140, 40], bg: [20, 8, 2], color: 'Pink' }
+]
+export const chaseLookOf = (id?: string) => CHASE_LOOKS.find(l => l.id === id) ?? CHASE_LOOKS[0]
+
 export const UNIQUE_MODES: Record<string, SectionMode> = { uniqboss: 'always', uniqchase: 'always' }
 
 // NeverSink's tiers that list bases by price. Every other unique tier is a

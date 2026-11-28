@@ -68,6 +68,9 @@ export interface CurrencySettings {
   // Gold: the pile size where Small, Normal, Decent, Big and Tink start
   // (Guy 2026-11-28: its own sections to slide).
   gold: number[]
+  // The Chase uniques look, a CHASE_LOOKS id (unique-classes.ts); unset is
+  // the default one (Guy 2026-11-28: a picker on the section's header).
+  chaseLook?: string
 }
 
 export type SectionMode = 'off' | 'auto' | 'always'
@@ -146,6 +149,7 @@ export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): Cu
     catMode: { ...c?.catMode },
     faint: { on: c?.faint?.on === true, until: Number(c?.faint?.until) || FAINT_UNTIL },
     mapFrom: int(c?.mapFrom, 1, 17) ?? 1,
+    ...(typeof c?.chaseLook === 'string' && /^[A-Z][0-9]$/.test(c.chaseLook) ? { chaseLook: c.chaseLook } : {}),
     gold: Array.isArray(c?.gold) && c.gold.length === 5 && c.gold.every((g, i) => int(g, 1, 1e7) != null && (!i || g >= c.gold![i - 1])) ? [...c.gold] : d.gold
   }
 }

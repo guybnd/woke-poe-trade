@@ -81,6 +81,13 @@
         <div :class="$style.catLook" data-currency-cat-look>
           <span :class="$style.lookLab">Look</span>
           <span :class="$style.catSample" :title="`How a Normal ${g.cat.name} label looks`"><LabelPreview :text="catArt(g.cat.id)" :actions="[]" :style-override="currencyFullLook(2, g.cat.id, c)" visibility="Show" :extras="false" :scale="0.75" /></span>
+          <template v-if="g.cat.id === 'uniqchase'">
+            <span :class="$style.lookLab">Style</span>
+            <select :value="chaseLookOf(c.chaseLook).id" :class="$style.sel2" aria-label="Chase uniques style" title="The ground, edge and icon colour every chase base gets" data-loot-chase-look
+              @change="setChaseLook(($event.target as HTMLSelectElement).value)">
+              <option v-for="l in CHASE_LOOKS" :key="l.id" :value="l.id">{{ l.name }}</option>
+            </select>
+          </template>
           <span :class="$style.lookLab">Colour</span>
           <input type="color" :value="hexOf(catColour(g.cat.id, c).rgb)" :class="$style.swatch" :aria-label="`${g.cat.name} colour`" :title="`${g.cat.name} colour`"
             @change="setCatLook(g.cat.id, { text: [...rgbOf(($event.target as HTMLInputElement).value), 255] })">
@@ -160,6 +167,7 @@ import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
+import { CHASE_LOOKS, chaseLookOf } from './unique-classes'
 import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
@@ -411,6 +419,11 @@ function setCatLook (id: string, p: StylePatch | null) {
   const next = Object.fromEntries(Object.entries(c.value.cats).filter(([k]) => k !== id))
   if (p) next[id] = { ...c.value.cats[id], ...p }
   c.value.cats = next
+}
+// The Chase uniques style: a picked style drops your own colours for the section.
+function setChaseLook (id: string) {
+  c.value.chaseLook = id
+  setCatLook('uniqchase', null)
 }
 function setCatIcon (id: string, p: { shape?: string, color?: string }) {
   const cur = catColour(id, c.value)
