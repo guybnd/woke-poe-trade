@@ -24,7 +24,7 @@ describe('stepChanges', () => {
     const b = settings()
     const a = settings(p => { p.currency.items = { 'Divine Orb': { mult: 1.25 } } })
     const cs = stepChanges(b, a)
-    expect(cs.map(changeText)).toEqual(['Divine Orb · price bias 0% → +25%'])
+    expect(cs.map(changeText)).toEqual(['Divine Orb · price bias 100% → 125%'])
     expect(cs[0].item).toBe('Divine Orb')
   })
 
