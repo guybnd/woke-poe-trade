@@ -40,7 +40,7 @@ jobs:
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git add renderer/src/web/woke/loot-filter/day1-prices.json renderer/src/web/woke/loot-filter/day1-prices.meta.json
+        git add renderer/src/web/woke/loot-filter/day1-prices.json renderer/src/web/woke/loot-filter/day1-prices.meta.json renderer/src/web/woke/loot-filter/item-guesses.json
         if git diff --cached --quiet; then echo "No change."; exit 0; fi
         git commit -m "Day-1 prices from poe.ninja"
         git push origin "HEAD:$BRANCH"
