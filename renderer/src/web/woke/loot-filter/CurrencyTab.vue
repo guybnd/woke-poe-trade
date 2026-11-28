@@ -5,10 +5,6 @@
       <WInfo :text="INFO" />
       <span class="w-faint text-xs">{{ statusText }}</span>
       <span class="flex-1" />
-      <span v-if="experimentalUnlocked || config.ownBase" class="flex items-center gap-2" data-loot-own-base>
-        <WToggle :model-value="config.ownBase === true" @update:model-value="config.ownBase = $event">Test: only our rules</WToggle>
-        <WInfo :text="'For testing the filter without NeverSink: your Loot, Equipment and own rules go onto a short base of ours.\n- Plain and magic gear hides in maps.\n- An item none of our rules knows shows pink.'" />
-      </span>
       <span v-if="kind === 'uniques'" :class="$style.minLab" data-loot-size-cut title="Big uniques count part of their price: 2x2 75%, 2x3 60%, 2x4 50%. Chase and Always sections skip it.">Size cut
         <StateChip :model-value="c.sizeCut ?? 'auto'" :options="SIZE_CUTS" title="Size cut" dflt="auto" @update:model-value="v => c.sizeCut = v === 'auto' ? undefined : v as 'on' | 'off'" />
         <span class="w-faint text-xs">{{ eff.sizeOn ? 'on now' : 'off now' }}</span></span>
@@ -20,7 +16,7 @@
     <Teleport :to="topTo || 'body'" :disabled="!topTo" defer>
     <div :class="$style.allCard" data-loot-all>
     <!-- One line unless opened (Guy 2026-11-28: it took too much room): Strictness, Maps and the step prices; open it to drag the ruler. -->
-    <div :class="$style.allLine" data-currency-main-ruler data-currency-all-steps data-currency-min>
+    <div :class="$style.allLine" data-currency-main-ruler data-currency-all-steps data-currency-min data-goto-spot="own-filter">
       <button type="button" :class="$style.allFold" :aria-expanded="allOpen" :title="`All loot: every page and section, unless a section has its own${ownCount ? ` (${ownCount} on this page have their own)` : ''}. Click to ${allOpen ? 'fold' : 'open'} the ruler`" data-loot-all-open @click="allOpen = !allOpen"><i class="fas text-xs" :class="allOpen ? 'fa-chevron-down' : 'fa-chevron-right'" /> <b>All loot</b></button>
       <span :class="$style.minLab">Strictness</span>
       <input type="range" min="0" max="6" step="1" :value="dragLvl ?? lvlNow" :class="$style.range" aria-label="Strictness" :aria-valuetext="LEVEL_NAMES[dragLvl ?? lvlNow]" :title="strictLine"
@@ -238,13 +234,13 @@ import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
+import { levelsOn } from './widget'
 import { CHASE_LOOKS, chaseLookOf } from './unique-classes'
 import { toggleNotAvg } from './currency-settings'
 import { MAP_STYLES } from './currency-weights'
 import type { MapStyle } from './currency-weights'
 import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, FAINT_UNTIL, faintLook, faintOn, forcedHidden, fixedOf, sectionMode, sizeCutNow, stepStarts, stepsOffIn } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
-import { experimentalUnlocked } from '../personal'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { loadOwnTables, ownTables } from './own-lists'
@@ -489,7 +485,7 @@ const dragLvl = ref<number | null>(null)
 // the Loot prices alone.
 async function setLevel (n: number) {
   const ns = props.config.neversink
-  if (!ns?.on) {
+  if (!levelsOn(props.config)) {
     dragLvl.value = null
     c.value.mult = n === level.value ? null : strictMult(n)
     return

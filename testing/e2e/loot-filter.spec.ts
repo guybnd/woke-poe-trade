@@ -1787,3 +1787,22 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(editor).toBeVisible()
   expect(label).toBeTruthy()
 })
+
+// NeverSink retired (Guy's full cut, 2026-11-28): with no filter file at all,
+// our own filter loads, strictness works on it, and a save writes our file.
+test('our own filter: no file needed, strictness on the Loot tab, saved as our file', async ({ overlay, fakeApp }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), sourceName: '', ownBase: true, reloadWhenSafe: false, presets: { currency: { on: true } } }] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await expect(page.getByText('Saves to Loot filter (woke).filter').first()).toBeVisible()
+  await page.getByRole('tab', { name: /^Loot/ }).click()
+  await expect(page.locator('[data-loot-strictness]')).toBeVisible()
+  await expect(page.locator('[data-loot-strict-maps]')).toBeVisible()
+  await expect(page.getByRole('tab', { name: /^NeverSink/ })).toHaveCount(0)
+  await page.getByRole('button', { name: /^Save/ }).click()
+  await expect.poll(() => fs.existsSync(path.join(folder, 'Loot filter (woke).filter')), { timeout: 20_000 }).toBe(true)
+  const text = fs.readFileSync(path.join(folder, 'Loot filter (woke).filter'), 'utf8')
+  expect(text).toContain("woke-poe-trade's own loot filter")
+  expect(text).toContain('$type->woke->rest')
+})

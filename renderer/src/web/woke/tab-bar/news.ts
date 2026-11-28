@@ -31,6 +31,7 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
+  { id: 'loot-filter-own-filter', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: our own loot filter replaces NeverSink: no download, same strictness and hotkeys' },
   { id: 'loot-filter-equip-tinctures', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Equipment › Tinctures ranks each tincture base by quality and item level, like Flasks' },
   { id: 'loot-filter-game-sounds', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: the sound picker plays the game\'s own alert sounds 1-16 and ShAlchemy and friends' },
   { id: 'loot-filter-loot-on', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot and Equipment are on for every filter and out of beta; the NeverSink tab is gone' },
