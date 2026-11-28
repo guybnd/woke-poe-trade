@@ -6,7 +6,6 @@
 // search, ranked by an editable seed list of known valuable mods and by how
 // well each one rolled. The searches then measure what each mod is worth.
 
-import { shallowRef, watch } from 'vue'
 import type { ItemFilters, FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import { createTradeRequest, requestTradeResultList, requestResults } from '@/web/price-check/trade/pathofexile-trade'
 import { AppConfig } from '@/web/Config'
@@ -14,49 +13,7 @@ import { RATE_LIMIT_RULES, restrictedMs } from '@/web/price-check/trade/common'
 import { RateLimiter } from '@/web/price-check/trade/RateLimiter'
 import { buildInsight, InsightOptions, Insight } from './insight'
 
-// Matched case-insensitively as a substring of the stat's reference text,
-// where numbers are written as '#' (e.g. '+# to maximum Life').
-export const DEFAULT_SEED = [
-  '+# to Level of all',
-  'to Level of Socketed',
-  'increased Movement Speed',
-  // A rare's life usually reaches the search as its total.
-  'total maximum Life',
-  'to maximum Life',
-  'total maximum Energy Shield',
-  'to maximum Energy Shield',
-  'increased maximum Energy Shield',
-  'to all Elemental Resistances',
-  'Resistance',
-  'increased Spell Damage',
-  'Critical Strike Multiplier',
-  'increased Critical Strike Chance',
-  'increased Attack Speed',
-  'increased Cast Speed',
-  'increased Physical Damage',
-  'Adds # to # Physical Damage',
-  'to Strength',
-  'to Dexterity',
-  'to Intelligence',
-  'to all Attributes',
-  'Suppress Spell Damage',
-  'to Accuracy Rating'
-]
-
-const SEED_KEY = 'woke.priceDriverSeed'
-
-function readSeed (): string[] {
-  try {
-    const v = JSON.parse(localStorage.getItem(SEED_KEY) ?? 'null')
-    if (Array.isArray(v) && v.every(s => typeof s === 'string')) return v
-  } catch {}
-  return DEFAULT_SEED
-}
-
-export const driverSeed = shallowRef<string[]>(readSeed())
-watch(driverSeed, (v) => {
-  try { localStorage.setItem(SEED_KEY, JSON.stringify(v)) } catch {}
-})
+export { DEFAULT_SEED, driverSeed } from './seed'
 
 function seedRank (statRef: string, seed: string[]): number {
   const t = statRef.toLowerCase()

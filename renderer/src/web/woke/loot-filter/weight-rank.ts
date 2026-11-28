@@ -2,7 +2,7 @@
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
-import { RANK_KEYS, baseRanks, filterBases } from './weights'
+import { RANK_KEYS, baseRanks, filterBases, idMarked } from './weights'
 import type { FilterDoc } from './parse'
 import type { BaseRow, RankKey, WeightItem } from './weights'
 import { pastedRare } from './weight-samples'
@@ -10,9 +10,13 @@ import { pastedRare } from './weight-samples'
 // The item as the weights see it, or null when they don't decide it.
 export function weightRow (store: LootFilterStore, config: LootFilterWidget, facts: ItemFacts): { row: BaseRow, it: WeightItem } | null {
   const w = config.presets.weights
-  if (!w.on || (facts.rarity === 'Rare' && facts.identified) || (facts.itemLevel ?? 0) < 68) return null
+  if (!w.on || (facts.itemLevel ?? 0) < 68) return null
   const bases = store.weightBases.value.length ? store.weightBases.value : (store.doc.value ? filterBases(store.doc.value, w.ranks) : [])
-  return pastedRare(facts, bases)
+  const got = pastedRare(facts, bases)
+  // An identified rare scores by its mods, unless a mark that counts
+  // (6-link, influence...) scores it like an unidentified one.
+  if (got && facts.rarity === 'Rare' && facts.identified && !idMarked(got.it, w.mult)) return null
+  return got
 }
 
 // One rank list (Guy's pick, 2026-11-28): a move on Loot filter › Base ranks
@@ -48,14 +52,14 @@ export type ExoticLane = 'exotichi' | 'exotic'
 export const isExoticLane = (lane: string): lane is ExoticLane => lane === 'exotichi' || lane === 'exotic'
 
 export function valuableExotics (doc: FilterDoc, own: Record<string, RankKey>, exotics: Iterable<string>): Set<string> {
-  const top = new Set(baseRanks(doc).x1)
+  const top = new Set(baseRanks().x1)
   return new Set([...exotics].filter(b => (own[b] ?? (top.has(b) ? 'x1' : 'x2')) === 'x1'))
 }
 
 export function moveExotics (store: LootFilterStore, config: LootFilterWidget, bases: readonly string[], lane: ExoticLane) {
   const doc = store.doc.value
   if (!doc) return
-  const top = new Set(baseRanks(doc).x1)
+  const top = new Set(baseRanks().x1)
   const to: RankKey = lane === 'exotichi' ? 'x1' : 'x2'
   const w = config.presets.weights
   const rest = Object.entries(w.ranks).filter(([n]) => !bases.includes(n))

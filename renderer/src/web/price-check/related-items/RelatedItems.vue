@@ -125,6 +125,7 @@ import { conquestPick } from '@/web/woke/related-family/conquest-pick'
 import type { ChanceInfo, FoulKindRow, UniqueInfo, VersionRow } from '@/web/woke/related-family/unique-info'
 import { useLeagues } from '@/web/background/Leagues'
 import { AppConfig, poeWebApi } from '@/web/Config'
+import { isModuleOn } from '@/web/woke/modules'
 import { Host } from '@/web/background/IPC'
 import type { PriceCheckWidget } from '@/web/overlay/widgets'
 import { storedPref } from '@/web/woke/ui/stored-pref'
@@ -336,9 +337,12 @@ function getChanceTargets (item: ParsedItem, drops: TipPack['drops'], dropTiers:
 // woke: a Templar Vault reward: the vault that gives it and its other
 // rewards that are one item, each priced as the vault table prices it
 // (gems at level 1). A vault with no other such reward (Machinist's: only
-// Stacked Decks) adds nothing, so it isn't listed.
+// Stacked Decks) adds nothing, so it isn't listed. A Nightmare Map gets
+// none while Boss runs is on: its map check's Worth running shows the vaults
+// (Guy, 2026-11-28: Arkhon's rewards beside it were a duplicate).
 function getVaults (item: ParsedItem, vaults: Vault[]) {
   const own = item.info.refName
+  if (own === 'Nightmare Map' && isModuleOn(AppConfig(), 'boss-runs')) return []
   return vaults.flatMap(v => {
     const rows: SideRow[] = []
     const seen = new Set<string>()
@@ -354,13 +358,15 @@ function getVaults (item: ParsedItem, vaults: Vault[]) {
     }
     if (!rows.some(r => !r.highlight)) return []
     rows.sort((a, b) => chaosOfPrice(b.price) - chaosOfPrice(a.price))
-    const others = v.rewards.filter(r => !r.items?.length).length
+    // The rewards that aren't one item, named ("Threads"), not counted:
+    // no count ("#x"), and "Valuable" isn't a name mid-sentence.
+    const others = v.rewards.filter(r => !r.items?.length).map(r => r.text.replace(/^[\d#-]+x\s+/, '').replace(/^Valuable /, 'valuable '))
     const gems = rows.some(r => r.info.namespace === 'GEM')
     return [{
       key: `vault:${v.id}`,
       title: `Drops from ${v.name}`,
       rows,
-      note: `The vault offers four rewards and you take one${others ? `. It has ${others} more kinds that vary` : ''}.${gems ? ' Gems are priced at level 1.' : ''}`
+      note: `The vault offers four rewards and you take one.${others.length ? ` It can also give ${others.join('; ')}.` : ''}${gems ? ' Gems are priced at level 1.' : ''}`
     }]
   })
 }

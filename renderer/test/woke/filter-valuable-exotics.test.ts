@@ -13,7 +13,7 @@ const doc = parseFilter(neverSink('2-SEMI-STRICT'))
 
 describe('valuable exotic bases', () => {
   it('starts from NeverSink\'s top exotic tiers', () => {
-    const ranks = baseRanks(doc)
+    const ranks = baseRanks()
     const all = [...ranks.x1, ...ranks.x2]
     const hi = valuableExotics(doc, {}, all)
     expect(hi.has('Simplex Amulet')).toBe(true)
@@ -21,7 +21,7 @@ describe('valuable exotic bases', () => {
   })
 
   it('a move between the lanes is your own x1/x2 rank, and back clears it', () => {
-    const ranks = baseRanks(doc)
+    const ranks = baseRanks()
     const lo = ranks.x2[0]
     const config = { presets: { weights: { ...defaultWeights(), ranks: {} } } } as unknown as LootFilterWidget
     const store = { doc: { value: doc } } as unknown as LootFilterStore
@@ -34,13 +34,16 @@ describe('valuable exotic bases', () => {
     expect(config.presets.weights.ranks).toEqual({ [lo]: 'x1' })
   })
 
-  it('gives valuable and other exotics their own text colour', () => {
+  it('gives valuable exotics the Tink look (magenta on white, magenta edge), other exotics rose text', () => {
     const w = defaultWeights()
-    const text = (rank: 'x1' | 'x2') => {
+    const paint = (rank: 'x1' | 'x2', key: string) => {
       const it = { rank, rarity: 'Rare', tier: 3, itemLevel: 84, corruption: 'no', quality: 0, width: 1, height: 1 } as unknown as WeightItem
-      return weightLook(it, w.look, 3).find(a => a.key === 'SetTextColor')?.args.slice(0, 3).map(Number)
+      return weightLook(it, w.look, 3).find(a => a.key === key)?.args.slice(0, 3).map(Number)
     }
-    expect(text('x1')).toEqual(EXOTIC_RGB.x1)
-    expect(text('x2')).toEqual(EXOTIC_RGB.x2)
+    expect(paint('x1', 'SetTextColor')).toEqual(EXOTIC_RGB.x1)
+    expect(paint('x1', 'SetBorderColor')).toEqual(EXOTIC_RGB.x1)
+    expect(paint('x1', 'SetBackgroundColor')).toEqual([255, 255, 255])
+    expect(paint('x2', 'SetTextColor')).toEqual(EXOTIC_RGB.x2)
+    expect(paint('x2', 'SetBackgroundColor')).not.toEqual([255, 255, 255])
   })
 })

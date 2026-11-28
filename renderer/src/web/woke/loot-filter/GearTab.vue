@@ -1,13 +1,12 @@
 <template>
   <div :class="$style.wrap" class="w-scroll" data-w-switches>
     <div class="flex items-center gap-2 text-sm">
-      <span v-if="g.on" class="w-dim">Your table replaces {{ store.gearReplaced.value }} of NeverSink's gear rules.</span>
-      <span v-else class="w-dim">Showing NeverSink's gear rules as they are. Change anything to take them over.</span>
+      <span v-if="g.on" class="w-dim">Your table decides magic and rare gear.</span>
+      <span v-else class="w-dim">Showing the default gear rules. Change anything to take them over.</span>
       <WInfo text="Magic and rare gear that drops with a 3.30 item tier.
 - Each cell is the lowest drop tier that shows.
-- Influenced, fractured, veiled and other special gear keeps NeverSink's own rules, which come first." />
+- Influenced, fractured, veiled and other special gear keeps its own rules, which come first." />
       <WButton size="sm" variant="ghost" icon="fas fa-magic" style="margin-left: auto;" title="One-click setups for the whole table" @click="quickMenu">Quick setups ▾</WButton>
-      <WButton v-if="g.on" size="sm" variant="ghost" @click="backToNeverSink">Back to NeverSink</WButton>
     </div>
 
     <template v-if="view === 'table'">
@@ -70,8 +69,8 @@
         <div class="flex items-center gap-2">
           <span>Looks</span>
           <WInfo text="How the table's labels look.
-- NeverSink gives magic and rare gear the same colours; here each rarity can look its own way.
-- Each row and drop tier keeps NeverSink's size and sound." />
+- Magic and rare gear share colours by default; here each rarity can look its own way.
+- Each row and drop tier keeps its default size and sound." />
           <WToggle :model-value="g.look.rarityText" style="margin-left: 8px;" @update:model-value="v => change(x => { x.look.rarityText = v })">Game's rarity colour for the text</WToggle>
         </div>
         <div :class="$style.looks">
@@ -123,7 +122,7 @@
               :aria-pressed="g.quality.min[row] === v" :aria-label="qualityTitle(row, v)" :title="qualityTitle(row, v)" @click="setQuality(row, v)">{{ v && g.quality.min[row] && v >= g.quality.min[row] ? '✓' : '' }}</button>
           </template>
         </div>
-        <div v-else class="w-faint text-xs">Using NeverSink's own over-quality lists. Switch on to pick a line per row.</div>
+        <div v-else class="w-faint text-xs">Using the default over-quality lists. Switch on to pick a line per row.</div>
       </div>
 
       <div :class="$style.card">
@@ -215,15 +214,17 @@
               <span>{{ k.label }}</span>
             </button>
           </div>
+          <div v-if="grp.label === 'Armour'" class="flex flex-wrap gap-1" data-gear-defences>
+            <button v-for="d in DEFENCES" :key="d" type="button" :class="[$style.kind, defences.includes(d) && $style.kindOn]" :aria-pressed="defences.includes(d)"
+              :title="`${d} armour: needs ${DEFENCE_ATTR[d]}. Weapons and jewellery stay as they are.`" @click="toggle(defences, d)">
+              <span v-for="part in d.split('/')" :key="part" :class="$style.defDot" :style="{ background: DEFENCE_COLOURS[part] }" />
+              <span>{{ d }}</span>
+            </button>
+          </div>
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-1">
         <WField v-model="search" placeholder="Find a base…" style="width: 12rem;" aria-label="Find a base" />
-        <button v-for="d in DEFENCES" :key="d" type="button" :class="[$style.kind, defences.includes(d) && $style.kindOn]" :aria-pressed="defences.includes(d)"
-          :title="`${d}: needs ${DEFENCE_ATTR[d]}`" @click="toggle(defences, d)">
-          <span v-for="part in d.split('/')" :key="part" :class="$style.defDot" :style="{ background: DEFENCE_COLOURS[part] }" />
-          <span>{{ d }}</span>
-        </button>
         <span class="w-dim text-xs" style="margin-left: 6px;">Drop level</span>
         <WField v-model.number="minLevel" type="number" style="width: 4.5rem;" aria-label="Lowest base drop level" />
         <span class="w-dim text-xs">and up</span>
@@ -244,21 +245,30 @@
             <span class="w-faint text-xs">{{ lane.bases.length }}</span>
           </div>
           <div :class="$style.laneBody" class="w-scroll">
-            <button v-for="b in lane.bases.slice(0, LANE_CAP)" :key="b" v-item-tip="{ name: b, note: baseTitle(b, lane.key) }" type="button" :class="[$style.base, picked.includes(b) && $style.picked, drag?.bases.includes(b) && $style.dragging]"
-              :aria-label="baseTitle(b, lane.key)" :aria-pressed="picked.includes(b)" draggable="true" @click="pick(b, $event)" @dragstart="onDragStart($event, b, lane.key)" @dragend="onDragEnd">
-              <img v-if="info(b).icon" :src="info(b).icon!" alt="" :class="$style.icon">
-              <span :class="$style.baseText">
-                <span>{{ b }}</span>
-                <span class="w-faint" style="font-size: var(--w-fs-xs, 10px);">{{ [info(b).slot, info(b).defence].filter(Boolean).join(' · ') }}<template v-if="wasRank(b, lane.key)"> · was {{ wasRank(b, lane.key) }}</template><template v-if="!isExoticLane(lane.key) && exotics.has(b)"> · <span style="color: #e0b860;">exotic</span></template></span>
-              </span>
-            </button>
+            <template v-for="row in laneItems(lane).slice(0, LANE_CAP)" :key="row.kind === 'base' ? row.base : `fam:${row.family.id}`">
+              <div v-if="row.kind === 'family'" role="button" tabindex="0" :class="[$style.base, $style.famRow, row.bases.every(b => drag?.bases.includes(b)) && $style.dragging]" draggable="true" :data-family="row.family.id"
+                :aria-expanded="famOpen(lane.key, row.family.id)" :title="`${row.family.label}: ${row.bases.length} bases. Drag to move them all; click to open and move single ones.`"
+                @click="toggleFam(lane.key, row.family.id)" @keydown.enter.prevent="toggleFam(lane.key, row.family.id)" @dragstart="onDragStartSet($event, row.bases, lane.key)" @dragend="onDragEnd">
+                <WFoldCaret :open="famOpen(lane.key, row.family.id)" />
+                <img v-if="info(row.bases[0]).icon" :src="info(row.bases[0]).icon!" alt="" :class="$style.icon">
+                <span :class="$style.baseText"><span>{{ row.family.label }}</span><span class="w-faint" style="font-size: var(--w-fs-xs, 10px);">{{ row.bases.length }} bases</span></span>
+              </div>
+              <button v-else v-item-tip="{ name: row.base, note: baseTitle(row.base, lane.key) }" type="button" :class="[$style.base, row.inFam && $style.famMember, picked.includes(row.base) && $style.picked, drag?.bases.includes(row.base) && $style.dragging]"
+                :aria-label="baseTitle(row.base, lane.key)" :aria-pressed="picked.includes(row.base)" draggable="true" @click="pick(row.base, $event)" @dragstart="onDragStart($event, row.base, lane.key)" @dragend="onDragEnd">
+                <img v-if="info(row.base).icon" :src="info(row.base).icon!" alt="" :class="$style.icon">
+                <span :class="$style.baseText">
+                  <span>{{ row.base }}</span>
+                  <span class="w-faint" style="font-size: var(--w-fs-xs, 10px);">{{ [info(row.base).slot, info(row.base).defence].filter(Boolean).join(' · ') }}<template v-if="wasRank(row.base, lane.key)"> · was {{ wasRank(row.base, lane.key) }}</template><template v-if="!isExoticLane(lane.key) && exotics.has(row.base)"> · <span style="color: #e0b860;">exotic</span></template></span>
+                </span>
+              </button>
+            </template>
             <span v-if="lane.bases.length > LANE_CAP" class="w-faint text-xs">+{{ lane.bases.length - LANE_CAP }} more, narrow with search</span>
           </div>
         </div>
       </div>
-      <div class="w-faint text-xs">Click to pick, shift-click for a run. Drag a base, or the picked ones, onto a column to move them. A move applies to every drop tier. "was R2" marks a base moved off NeverSink's rank. Exotic: talismans, experimented and other special bases NeverSink shows with their own rules, before this table; they only reach the table when those rules pass them by. Exotic, valuable: the ones worth about a divine or more (NeverSink's top exotic tiers). Drag between the two exotic columns to change it; Rare gear's score and text colour follow.</div>
+      <div class="w-faint text-xs">Click to pick, shift-click for a run. Drag a base, or the picked ones, onto a column to move them. A move applies to every drop tier. "was R2" marks a base moved off its default rank. Exotic: talismans, experimented and other special bases shown by their own rules, before this table; they only reach the table when those rules pass them by. Exotic, valuable: the ones worth about a divine or more. Drag between the two exotic columns to change it; Rare gear's score and text colour follow.</div>
       <div class="flex gap-1">
-        <WButton size="sm" variant="ghost" :disabled="!movedCount" @click="change(x => { x.moves = {} })">Reset ranks to NeverSink</WButton>
+        <WButton size="sm" variant="ghost" :disabled="!movedCount" @click="change(x => { x.moves = {} })">Reset ranks</WButton>
       </div>
     </template>
   </div>
@@ -271,7 +281,7 @@ import { WButton, WChip, WField, WInfo, WToggle, openMenu, vItemTip } from '../u
 import { hideTip } from '../ui/tooltip/tooltip'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { cleanMark, DROP_TIERS, GEAR_ROWS, GEAR_TYPE, NO_TIER, QUALITY_ROWS, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, markOf, qualityLookFrom, rankLists, readTiered, shiftAll, takeOver, SLOT_GROUPS, SLOT_ROWS } from './gear'
+import { cleanMark, DROP_TIERS, GEAR_ROWS, GEAR_TYPE, NO_TIER, QUALITY_ROWS, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, markOf, qualityLookFrom, rankLists, rankSource, shiftAll, takeOver, SLOT_GROUPS, SLOT_ROWS } from './gear'
 import type { GearRarity, GearRow, GearSettings, Lane, SlotGroup } from './gear'
 import { DEFENCES, DEFENCE_ATTR, DEFENCE_COLOURS, KIND_GROUPS, allGearBases, baseInfo, kindIcon } from './gear-bases'
 import type { BaseInfo, Defence } from './gear-bases'
@@ -289,6 +299,8 @@ import type { FilterAction } from './parse'
 import { clickOf, togglePick } from '../shared/picks'
 import WFoldCaret from '../ui/WFoldCaret.vue'
 import { canDrop, dragSet, dropMoves } from './gear-drop'
+import { familyOf, foldFamilies } from './base-families'
+import type { Family } from './base-families'
 import type { GearMove } from './gear-drop'
 
 const props = defineProps<{
@@ -323,7 +335,7 @@ const moveButtons = computed(() => MOVE_TO.filter(l => !isExoticLane(l.lane) || 
 // the table is off, since on it they are commented out.
 const source = computed(() => {
   const doc = props.store.doc.value
-  return doc ? readTiered(doc) : null
+  return doc ? rankSource(doc) : null
 })
 const defaults = computed(() => {
   const doc = props.store.doc.value
@@ -374,24 +386,17 @@ function onlyBuild (x: GearSettings) {
   }
   if (!x.show.build.rare) x.show.build.rare = 2
 }
-function backToNeverSink () {
-  const x = g.value
-  x.on = false
-  x.quality.on = false
-  // Slot lines belong to the rows NeverSink's numbers replace next time.
-  x.slots = {}
-}
 
 function rowSub (row: GearRow): string {
   if (row === 'build') return buildCount.value ? `${buildCount.value} from your build` : 'link a PoB build'
-  if (row === 'exotic') return `${exotics.value.size} · NeverSink's rules first`
+  if (row === 'exotic') return `${exotics.value.size} · own rules first`
   if (row === 'any') return 'every other base'
   return `${lists.value[row].length} bases`
 }
 function stepTitle (row: GearRow, r: GearRarity, v: number): string {
   if (!v) {
     if (row === 'build') return `${r === 'magic' ? 'Magic' : 'Rare'} build bases follow their rank`
-    if (row === 'exotic') return `Only NeverSink's exotic rules decide ${r} exotic bases`
+    if (row === 'exotic') return `Only the exotic rules decide ${r} exotic bases`
     return `Never show ${r} ${ROW_LABEL[row].toLowerCase()} for its drop tier`
   }
   if (v === NO_TIER) return `Show ${r} ${ROW_LABEL[row].toLowerCase()} at every drop tier, and with no tier`
@@ -608,7 +613,7 @@ const pile = computed(() => {
       ? 'no rule matched'
       : rule.type === GEAR_TYPE
         ? 'your Gear table'
-        : rule.type?.startsWith('woke->') ? ruleLabel(rule.type, rule.tier) : `NeverSink: ${ruleLabel(rule.type, rule.tier)}`
+        : ruleLabel(rule.type, rule.tier)
     return {
       id: d.id,
       label: d.facts.baseType!,
@@ -668,6 +673,7 @@ const kindCounts = computed(() => {
 })
 const kindCount = (cat: string) => kindCounts.value.get(cat) ?? 0
 const defences = ref<Defence[]>([])
+const ARMOUR_CATS = new Set(KIND_GROUPS.find(g => g.label === 'Armour')?.kinds.map(k => k.category) ?? [])
 const minLevel = ref(0)
 const picked = ref<string[]>([])
 let lastPick: string | null = null
@@ -682,7 +688,8 @@ function visible (b: string): boolean {
   const i = info(b)
   if (search.value.trim() && !b.toLowerCase().includes(search.value.trim().toLowerCase())) return false
   if (kinds.value.length && (!i.category || !kinds.value.includes(i.category))) return false
-  if (defences.value.length && (!i.defence || !defences.value.includes(i.defence))) return false
+  // Defence picks narrow armour only: weapons and jewellery keep showing.
+  if (defences.value.length && ARMOUR_CATS.has(i.category ?? '') && (!i.defence || !defences.value.includes(i.defence))) return false
   if (minLevel.value > 0 && (i.dropLevel ?? 0) < minLevel.value) return false
   return true
 }
@@ -720,9 +727,9 @@ function baseTitle (b: string, lane: string): string {
   const i = info(b)
   const parts = [b, i.slot, i.defence && `${i.defence} (${DEFENCE_ATTR[i.defence]})`, i.dropLevel != null ? `drop level ${i.dropLevel}` : null]
   const was = wasRank(b, lane)
-  if (was) parts.push(`NeverSink: ${was}`)
+  if (was) parts.push(`Default: ${was}`)
   const ex = exotics.value.get(b)
-  if (ex) parts.push(`NeverSink's Exotic bases show it first (${ex.map(tierLabel).join(', ')}); change those under Rules`)
+  if (ex) parts.push(`The Exotic bases rules show it first (${ex.map(tierLabel).join(', ')}); change those under Rules`)
   return parts.filter(Boolean).join(' · ')
 }
 function moveTo (lane: GearMove) {
@@ -761,9 +768,27 @@ function applyMove (x: GearSettings, lane: GearMove, bases: string[]) {
 // Drag a base, or the picked set it's in, onto another column.
 const drag = ref<{ bases: string[], from: string } | null>(null)
 const dropOver = ref<string | null>(null)
+// Families fold in each column (Guy, 2026-11-28); open ones per column.
+const openFams = ref<Set<string>>(new Set())
+const famOpen = (lane: string, fam: string) => openFams.value.has(`${lane}:${fam}`)
+function toggleFam (lane: string, fam: string) {
+  const k = `${lane}:${fam}`
+  const next = new Set(openFams.value)
+  if (!next.delete(k)) next.add(k)
+  openFams.value = next
+}
+// A column's cards: families folded, an open one followed by its bases.
+type LaneItem = { kind: 'base', base: string, inFam: boolean } | { kind: 'family', family: Family, bases: string[] }
+function laneItems (lane: { key: string, bases: string[] }): LaneItem[] {
+  return foldFamilies(lane.bases, b => familyOf(b, info(b).icon)).flatMap((r): LaneItem[] => r.kind === 'base'
+    ? [{ kind: 'base', base: r.base, inFam: false }]
+    : [r, ...(famOpen(lane.key, r.family.id) ? r.bases.map(base => ({ kind: 'base' as const, base, inFam: true })) : [])])
+}
 function onDragStart (e: DragEvent, b: string, from: string) {
+  onDragStartSet(e, dragSet(picked.value, b), from)
+}
+function onDragStartSet (e: DragEvent, bases: string[], from: string) {
   hideTip()
-  const bases = dragSet(picked.value, b)
   drag.value = { bases, from }
   if (!e.dataTransfer) return
   e.dataTransfer.effectAllowed = 'move'
@@ -1126,6 +1151,9 @@ function neverOffBuild () {
 .base:hover { border-color: var(--w-border); }
 .picked { border-color: var(--w-accent, #e0b860); background: rgb(224 184 96 / 14%); }
 .dragging { opacity: 0.45; }
+.famRow { border-color: var(--w-line); background: var(--w-panel-2); }
+.famRow:focus-visible { outline: 2px solid var(--w-accent, #e0b860); }
+.famMember { margin-left: 10px; }
 .laneCan { outline: 1px dashed rgb(224 184 96 / 55%); }
 .laneOver { outline: 2px solid var(--w-accent, #e0b860); background: rgb(224 184 96 / 12%); }
 .laneNo { opacity: 0.5; }

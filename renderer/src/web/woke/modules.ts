@@ -152,6 +152,11 @@ export interface WokeModulesConfig {
   hideAllHotkey?: string | null
   // The loot filter editor has been put on the overlay once (Config.ts).
   lootFilterSeeded?: boolean
+  // The Loot tab has been switched on once for every filter profile, when
+  // NeverSink's tab was retired (Config.ts, loot-filter/widget.ts lootOnForAll).
+  lootOnByDefault?: boolean
+  // Every loot filter has been moved onto our own base once (Config.ts).
+  ownBaseByDefault?: boolean
   // The essence scan widget has been put on the overlay once (Config.ts).
   essenceScanSeeded?: boolean
   // Icon dock position and switches (dock/dock.ts).

@@ -1,7 +1,7 @@
 // Plain names for tags, and the add-item box on a tier.
 import { describe, it, expect } from 'vitest'
 import { groupLabel, sectionLabel, tierLabel } from '@/web/woke/loot-filter/names'
-import { addSearch, byPrice, groupName, pickBases } from '@/web/woke/loot-filter/groups'
+import { addResults, addSearch, byPrice, groupName, pickBases } from '@/web/woke/loot-filter/groups'
 import { addEdit, applyEdits, describeEdit, moveTargets } from '@/web/woke/loot-filter/edits'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import { parseFilter, ruleLabel, serializeFilter } from '@/web/woke/loot-filter/parse'
@@ -115,6 +115,13 @@ describe('adding an item to a tier', () => {
     const doc = parseFilter(source)
     const found = addSearch(doc, 'scarabs', 't2', 'ambush', ['Ambush Ring', 'Ambush Mitts'])
     expect(found.map(r => [r.base, r.block?.tier ?? null])).toEqual([['Ambush Mitts', 'x'], ['Ambush Ring', null], ['Rusted Ambush Scarab', 't4']])
+  })
+
+  it('a family adds by name, leaving out what the tier lists', () => {
+    const doc = parseFilter(source)
+    const rs = addResults(doc, 'scarabs', 't2', ['Rusted Ambush Scarab', 'Ambush Mitts', 'Ambush Ring'])
+    expect(rs.map(r => [r.base, r.sameGroup, r.block?.tier ?? null])).toEqual([['Rusted Ambush Scarab', true, 't4'], ['Ambush Mitts', false, 'x'], ['Ambush Ring', false, null]])
+    expect(addResults(doc, 'scarabs', 't4', ['Rusted Ambush Scarab'])).toEqual([])
   })
 
   it('moving one in takes it out of its old tier', () => {

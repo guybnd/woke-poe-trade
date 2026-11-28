@@ -19,9 +19,9 @@ export const SHARE_PARTS = [
   { key: 'maps', label: 'Maps' },
   { key: 'jewels', label: 'Jewels' },
   { key: 'league', label: 'League' },
-  { key: 'gear', label: 'Gear, rare weights, recipes' },
+  { key: 'gear', label: 'Equipment, flasks, recipes' },
   { key: 'presets', label: 'Looks, sounds, presets' },
-  { key: 'changes', label: 'NeverSink changes, own rules' }
+  { key: 'changes', label: 'Rule changes, own rules' }
 ] as const
 
 export type SharePart = typeof SHARE_PARTS[number]['key']
@@ -37,7 +37,8 @@ const RECIPE_IDS = new Set<string>(RECIPES.map(r => r.id))
 
 function pageOfCat (cat: string): SharePart {
   const k = kindOf(cat)
-  return k === 'gold' ? 'currency' : k
+  // Special gear and flasks live with the Equipment tab.
+  return k === 'gold' ? 'currency' : k === 'special' || k === 'flasks' ? 'gear' : k
 }
 
 // The page a key of a per-section record belongs to ('all' and anything

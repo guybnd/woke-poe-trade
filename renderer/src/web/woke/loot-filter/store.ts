@@ -16,6 +16,9 @@ import { parseFilter, parseFilterCopy, serializeFilter } from './parse'
 import { composeFilter } from './compose'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { loadOwnTables, ownTables } from './own-lists'
+import { affixTable, idGroups, loadAffixTable } from './id-mods'
+import { driverSeed } from '../price-insight/seed'
+import { loadBaseRanks } from './base-ranks'
 import { gemLinesOf } from './gem-classes'
 import type { FilterDoc, Visibility } from './parse'
 import { addEdit, blocksOf, nextEditId, readStyle } from './edits'
@@ -25,7 +28,8 @@ import { numberChecks } from './numbers'
 import { clusterPrices, clusterPricesFor, loadClusterPrices } from './cluster-ninja'
 import { describeStep, measureSteps, observe, settingsAt } from './timeline'
 import type { Settings } from './timeline'
-import { HISTORY_SIZE, baseFromCopy, isWokeCopy, outputName } from './widget'
+import { HISTORY_SIZE, baseFromCopy, isWokeCopy, levelsOn, nsDownload, outputName } from './widget'
+import { ownBaseText } from './own-base'
 import { historyDocFor, useFilterHistory } from './history-file'
 import { deleteProfile as dropProfile, switchProfileData } from './profiles'
 import type { LootFilterWidget } from './widget'
@@ -39,7 +43,7 @@ import { describeProblem, validateFilter } from './validate'
 import type { FilterProblem } from './validate'
 import { useFilterPrices } from './prices'
 import { publishActiveFilter } from './active-filter'
-import { LEVEL_NAMES, clampLevel, ladderTarget, ladderZone, levelForArea, pushArea } from './strictness'
+import { LEVEL_IDS, LEVEL_NAMES, clampLevel, ladderTarget, ladderZone, levelForArea, pushArea } from './strictness'
 import { toast } from '../ui'
 
 // "1 change", "3 changes".
@@ -111,6 +115,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // of the file as well (a new style used to read "saved" until you saved).
   const sourceSig = () => {
     const ns = cfg().neversink
+    if (cfg().ownBase) return ['own', ns.level]
     return ns.on ? [ns.version, ns.style, ns.level] : []
   }
   // With no league known yet (leagues still loading, or the fetch failed) a move
@@ -276,7 +281,15 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     return ownTables.value
   }
 
-  const sourceStamp = (text: string) => `${cfg().sourceName}|${hash(text)}`
+  // Identified gear's mod lists (Rare weights): starts the read, gives what's
+  // there, from the price check's list of valuable mods.
+  function idsNow () {
+    loadAffixTable()
+    const t = affixTable.value
+    return t ? idGroups(t, driverSeed.value, cfg().presets.weights.mult) : null
+  }
+
+  const sourceStamp = (text: string) => `${cfg().ownBase ? 'own' : cfg().sourceName}|${hash(text)}`
 
   // What the net leaves hidden because you said so: "Not for me" on a hidden
   // item, or moving it down yourself.
@@ -312,7 +325,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       // Read when the Loot tab's prices are on (a rebuild follows the read).
       cards: cfg().presets.currency.on ? cardsNow() : null,
       gems: cfg().presets.currency.on ? gemLines.value : null,
-      own: cfg().presets.currency.on ? ownNow() : null
+      own: cfg().presets.currency.on ? ownNow() : null,
+      ids: cfg().presets.weights.on ? idsNow() : null,
+      ownBase: cfg().ownBase === true
     })
   }
 
@@ -341,6 +356,16 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     clusterSig.value = c.clusterSig
     presetList.value = c.presetSig
     statuses.value = cfg().edits.map(e => c.results.get(e.id)!)
+    // Our own filter has no NeverSink tiers: a change saved against one never
+    // fits again, so it goes (Guy 2026-11-28: a clean slate, no new homes).
+    // Changes on our own rules (woke->...) stay: those come and go with prices.
+    if (cfg().ownBase) {
+      const stale = new Set(statuses.value.filter(s => !s.ok && !s.edit.type.startsWith('woke->')).map(s => s.edit.id))
+      if (stale.size) {
+        cfg().edits = cfg().edits.filter(e => !stale.has(e.id))
+        statuses.value = statuses.value.filter(s => !stale.has(s.edit.id))
+      }
+    }
     priceMoved = c.outOfPlace
     doc.value = c.doc
     publishActiveFilter(api)
@@ -351,6 +376,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   async function compareDoc (against: 'untouched' | number): Promise<FilterDoc | null> {
     if (against === 'untouched') return baseText.value != null ? parseFilterCopy(baseText.value) : null
     const ns = cfg().neversink
+    if (cfg().ownBase) return compose(ownBaseText(LEVEL_IDS[clampLevel(against)])).doc
     if (!ns.on) return null
     const { text } = await readNeverSink(ns.version, against)
     return compose(text).doc
@@ -562,7 +588,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
 
   // Cluster jewel prices come in their own request.
   watch(clusterPrices, () => { if (baseText.value != null) rebuild() })
+  watch(() => cfg().ownBase, () => { if (!switching.value) load().catch(() => {}) })
   watch(ownTables, () => { if (baseText.value != null && cfg().presets.currency.on) rebuild() })
+  watch([affixTable, driverSeed], () => { if (baseText.value != null && cfg().presets.weights.on) rebuild() })
   watch([prices.currentLeague, () => baseText.value != null], ([league, loaded]) => { if (loaded) loadClusterPrices(league) })
 
   // Price index updates, or settings that change the net: refresh.
@@ -615,7 +643,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
 
   async function checkForUpdate (force = false) {
     const ns = cfg().neversink
-    if (!ns.on || checking.value) return
+    if (!nsDownload(cfg()) || checking.value) return
     const fresh = !force && ns.checkedAt != null && Date.now() - ns.checkedAt < 20 * 3600 * 1000
     if (fresh && !(ns.latest && ns.latest !== ns.version)) return
     checking.value = true
@@ -691,7 +719,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   let levelSwitch = 0
   async function setLevel (level: number, opts: { auto?: boolean } = {}): Promise<(() => void) | null> {
     const ns = cfg().neversink
-    if (!ns.on || switching.value) return null
+    if (!levelsOn(cfg()) || switching.value) return null
     const profile = cfg().activeProfile
     const before = ns.level
     const next = clampLevel(level)
@@ -710,8 +738,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   async function stepLevel (dir: 1 | -1) {
     if (switching.value) return
     const ns = cfg().neversink
-    if (!ns.on) {
-      toast('Strictness keys need NeverSink from GitHub. Turn it on in the loot filter editor.')
+    if (!levelsOn(cfg())) {
+      toast('Strictness keys need our own filter. Pick it in the loot filter editor\'s file list.')
       return
     }
     const next = clampLevel(ns.level + dir)
@@ -753,7 +781,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     const ns = cfg().neversink
     const auto = cfg().strictAuto
     const next = clampLevel(level)
-    if (!ns.on) return
+    if (!levelsOn(cfg())) return
     if (next === ns.level) {
       if (auto.on && auto.paused && ladderPick.value === next) auto.paused = false
       return
@@ -793,7 +821,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // for you to press Reload now.
   function followLadder (): boolean {
     const ns = cfg().neversink
-    if (!ns.on || !doc.value || saving.value || switching.value) return false
+    if (!levelsOn(cfg()) || !doc.value || saving.value || switching.value) return false
     const target = ladderTarget(cfg().strictAuto, recentAreas.value)
     if (target == null || target === ns.level) return false
     // woke: a switch saves, and you haven't said these are ready for the game.
@@ -899,6 +927,31 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   async function load () {
     const seq = ++loadSeq
     forgetGameFile()
+    // Our own base ranks, read by the gear rules: there before the first build.
+    await loadBaseRanks()
+    if (seq !== loadSeq) return
+    if (cfg().ownBase) {
+      // Our own filter: nothing to read or download, the skeleton at the
+      // level you picked, with every woke rule on top.
+      error.value = null
+      prices.wantPrices()
+      loadClusterPrices(prices.currentLeague.value)
+      baseNeedsBackup.value = false
+      updateReady.value = null
+      sourceChanged.value = false
+      loading.value = false
+      baseText.value = ownBaseText(LEVEL_IDS[clampLevel(cfg().neversink.level)])
+      rebuild()
+      baseVersion.value = null
+      readGameFilter().catch(() => {})
+      // Just moved onto our base: write it once, so the game's file (reloaded
+      // when you next reload) is our filter, not the old NeverSink one.
+      if (cfg().ownBaseSavePending) {
+        delete cfg().ownBaseSavePending
+        if (cfg().savedExtraSig != null) save({ auto: true }).catch(() => {})
+      }
+      return
+    }
     if (cfg().neversink.on) {
       loading.value = true
       error.value = null
@@ -926,20 +979,10 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       return
     }
     if (!cfg().sourceName) {
+      // NeverSink is retired: nothing is picked for you. The editor offers our
+      // own filter (or a file from the list).
       await listFiles()
-      if (seq !== loadSeq) return
-      // Start from what the game is using, else the most recently changed
-      // NeverSink file.
-      await readGameFilter()
-      if (seq !== loadSeq) return
-      const inGame = gameFilter.value.name
-      const ns = files.value.find(f => inGame != null && f.name === inGame) ??
-        files.value.find(f => !f.online && /neversink/i.test(f.name) && !/\(woke\)/i.test(f.name)) ??
-        files.value.find(f => f.online && /neversink/i.test(f.title ?? ''))
-      if (!ns) return
-      cfg().sourceName = ns.name
-      cfg().sourceOnline = Boolean(ns.online)
-      cfg().sourceTitle = ns.title ?? ''
+      return
     }
     loading.value = true
     error.value = null
@@ -1094,9 +1137,11 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     const d = doc.value!
     return [
       WOKE_MARK,
-      cfg().neversink.on
-        ? `# Made from NeverSink ${d.version ?? ''} ${LEVEL_NAMES[cfg().neversink.level]}${cfg().neversink.style ? ` (${cfg().neversink.style.toLowerCase()} style)` : ''}, downloaded from GitHub, with ${countOf(cfg().edits.length, 'change')}.`
-        : `# Made from "${cfg().sourceOnline ? `${cfg().sourceTitle} (online filter, this copy doesn't auto-update)` : cfg().sourceName}"${d.version ? ` (NeverSink ${d.version})` : ''} with ${countOf(cfg().edits.length, 'change')}${buildBlockCount.value ? ` and ${countOf(buildBlockCount.value, 'build rule')} for ${buildInput.value?.buildName ?? 'your build'}` : ''}.`,
+      cfg().ownBase
+        ? `# woke-poe-trade's own loot filter, ${LEVEL_NAMES[cfg().neversink.level]}, with ${countOf(cfg().edits.length, 'change')}.`
+        : cfg().neversink.on
+          ? `# Made from NeverSink ${d.version ?? ''} ${LEVEL_NAMES[cfg().neversink.level]}${cfg().neversink.style ? ` (${cfg().neversink.style.toLowerCase()} style)` : ''}, downloaded from GitHub, with ${countOf(cfg().edits.length, 'change')}.`
+          : `# Made from "${cfg().sourceOnline ? `${cfg().sourceTitle} (online filter, this copy doesn't auto-update)` : cfg().sourceName}"${d.version ? ` (NeverSink ${d.version})` : ''} with ${countOf(cfg().edits.length, 'change')}${buildBlockCount.value ? ` and ${countOf(buildBlockCount.value, 'build rule')} for ${buildInput.value?.buildName ?? 'your build'}` : ''}.`,
       '# This file is rewritten on every save from the loot filter editor; change it there.',
       ''
     ]

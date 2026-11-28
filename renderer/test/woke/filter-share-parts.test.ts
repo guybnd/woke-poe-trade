@@ -11,7 +11,7 @@ function mine (): Presets {
   const p = defaultPresets()
   p.currency.on = true
   p.currency.line = 0.5
-  p.currency.nudge = { orbs: 1, carduniq: -1 }
+  p.currency.bias = { orbs: 120, carduniq: 80 }
   p.currency.rulers = { orbs: [1, 2, 3, 4, 5] }
   p.currency.offBy = { all: [1], cards: [2] }
   p.currency.items = { 'Divine Orb': { step: 4 }, 'The Doctor': { min: 2 }, 'Odd Thing': { price: 3 } }
@@ -37,7 +37,7 @@ describe('share parts', () => {
 
   it('takes only the Cards page', () => {
     const got = mergeParts(defaultPresets(), mine(), ['cards'], catOf)
-    expect(got.currency.nudge).toEqual({ carduniq: -1 })
+    expect(got.currency.bias).toEqual({ carduniq: 80 })
     expect(got.currency.items).toEqual({ 'The Doctor': { min: 2 } })
     expect(got.currency.offBy).toEqual({ all: [], cards: [2] })
     expect(got.currency.rulers).toEqual({})
@@ -68,10 +68,10 @@ describe('share parts', () => {
   it('importing a page replaces it and keeps the rest of mine', () => {
     const theirs = defaultPresets()
     theirs.currency.items = { 'Divine Orb': { step: 1 } }
-    theirs.currency.nudge = { essences: 2 }
+    theirs.currency.bias = { essences: 150 }
     const got = mergeParts(mine(), theirs, ['currency'], catOf)
     expect(got.currency.items).toEqual({ 'Divine Orb': { step: 1 }, 'The Doctor': { min: 2 }, 'Odd Thing': { price: 3 } })
-    expect(got.currency.nudge).toEqual({ essences: 2, carduniq: -1 })
+    expect(got.currency.bias).toEqual({ essences: 150, carduniq: 80 })
     expect(got.currency.rulers).toEqual({})
     expect(got.currency.line).toBe(0.5)
     expect(got.quiet.on).toBe(true)

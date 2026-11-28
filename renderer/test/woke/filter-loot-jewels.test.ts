@@ -17,8 +17,8 @@ const jewel = (base: string, cls: string, rarity: ItemFacts['rarity'], itemLevel
 
 describe('jewels on the Loot tab', () => {
   it('lists the Abyss and Jewels rows as the jewels kind', () => {
-    const items = currencyItems(parseFilter(SEMI), lookup).filter(i => i.type === 'jewels')
-    expect(items.length).toBe(12)
+    const items = currencyItems(parseFilter(SEMI), lookup).filter(i => i.type === 'jewels' && i.cat !== 'jewclus')
+    expect(items.length).toBe(14)
     expect(new Set(items.map(i => kindOf(i.cat)))).toEqual(new Set(['jewels']))
     expect(items.every(i => i.est)).toBe(true)
   })
@@ -45,8 +45,8 @@ describe('jewels on the Loot tab', () => {
     expect(hit(jewel('Hypnotic Eye Jewel', 'Abyss Jewels', 'Rare', 75, { corrupted: true, corruptedMods: 1 })).visibility).toBe('Show')
     // Corrupted implicit beats the plain magic row.
     expect(hit(jewel('Viridian Jewel', 'Jewels', 'Magic', 84, { corrupted: true, corruptedMods: 1 })).visibility).toBe('Show')
-    // Cluster jewels stay NeverSink's; unique jewels stay the Uniques page's.
-    expect(hit(jewel('Large Cluster Jewel', 'Jewels', 'Rare', 84)).final?.block.type).not.toBe(CURRENCY_TYPE)
+    // Cluster jewels go to their own base rows; unique jewels stay the Uniques page's.
+    expect(hit(jewel('Large Cluster Jewel', 'Jewels', 'Rare', 84, { enchantmentPassiveNum: 8 })).final?.block.type).toBe(CURRENCY_TYPE)
     expect(hit(jewel('Prismatic Jewel', 'Jewels', 'Unique', 84)).final?.block.comment).toMatch(/uniq/)
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
   })
@@ -76,7 +76,7 @@ describe('jewels on the Loot tab', () => {
     expect(matchItem(off, jewel('Crimson Jewel', 'Jewels', 'Magic', 84)).visibility).toBe('Hide')
   })
 
-  it('a fixed row goes by price once you say so', () => {
+  it('the section on By price puts its rows on the price ladder', () => {
     const cfg = defaultCurrency()
     cfg.on = true
     cfg.line = 1
@@ -84,21 +84,24 @@ describe('jewels on the Loot tab', () => {
     let doc = parseFilter(SEMI)
     applyCurrency(doc, cfg, lookup)
     expect(matchItem(doc, rare).visibility).toBe('Show')
-    cfg.items = { 'Rare jewel': { priced: true } }
+    cfg.catMode = { jewplain: 'auto' }
     doc = parseFilter(SEMI)
     applyCurrency(doc, cfg, lookup)
     // Its 0.5c guess is under a 1c line.
     expect(matchItem(doc, jewel('Crimson Jewel', 'Jewels', 'Rare', 84)).visibility).toBe('Hide')
   })
 
-  it('a section set Off hides its jewels; below area level 68 NeverSink decides', () => {
+  it('a section set Off hides its jewels, while levelling too unless the Loot rules are maps only', () => {
     const cfg = defaultCurrency()
     cfg.on = true
     cfg.catMode = { jewabyss: 'off' }
     const doc = parseFilter(SEMI)
     applyCurrency(doc, cfg, lookup)
     expect(matchItem(doc, jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 86)).visibility).toBe('Hide')
-    const low = matchItem(doc, jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 86, { areaLevel: 40 }))
+    expect(matchItem(doc, jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 86, { areaLevel: 40 })).visibility).toBe('Hide')
+    const maps = parseFilter(SEMI)
+    applyCurrency(maps, { ...cfg, catMode: { ...cfg.catMode, lvgate: 0 as unknown as 'auto' } }, lookup)
+    const low = matchItem(maps, jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 86, { areaLevel: 40 }))
     expect(low.final?.block.type).not.toBe(CURRENCY_TYPE)
   })
 

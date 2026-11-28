@@ -12,7 +12,9 @@
 // downloads RePoE's current export.
 //
 // Writes renderer/src/web/woke/loot-filter/item-lists.json:
-//   { made, source, items: [[name, class, art], ...] }
+//   { made, source, classes: [class, ...], items: [[name, classIndex, art], ...] }
+// Each Class is written once and the rows name it by index (all JS is on a
+// budget, and "Divination Cards" on 455 rows is 9 KB).
 // `art`: the icon's path under Art/2DItems, without .dds ("Currency/Essence/
 // GreedEssence5"). The Loot tab sorts items into its sections by it.
 import fs from 'node:fs/promises'
@@ -36,6 +38,9 @@ export const CLASSES = new Set([
   'DivinationCard',
   'VaultKey'
 ])
+// And by the filter's Class name, for classes whose RePoE id isn't certain
+// (corpses came in 3.24 as "Corpses").
+export const CLASS_NAMES = new Set(['Corpses'])
 
 // A name the game's filter takes: plain text, no test or unused items.
 const BAD_NAME = /\[|\]|^$|UNUSED|DNT|^Test |PlaceHolder|Placeholder/
@@ -45,7 +50,8 @@ const BAD_NAME = /\[|\]|^$|UNUSED|DNT|^Test |PlaceHolder|Placeholder/
 export function listItems (bases, classes) {
   const seen = new Map()
   for (const b of Object.values(bases ?? {})) {
-    if (!b || b.release_state !== 'released' || !CLASSES.has(b.item_class)) continue
+    if (!b || b.release_state !== 'released') continue
+    if (!CLASSES.has(b.item_class) && !CLASS_NAMES.has(classes?.[b.item_class]?.name)) continue
     const name = typeof b.name === 'string' ? b.name.trim() : ''
     if (BAD_NAME.test(name) || seen.has(name)) continue
     const cls = classes?.[b.item_class]?.name
@@ -66,6 +72,13 @@ export function checkItems (items) {
   if (items.length < 600) throw new Error(`Only ${items.length} items: RePoE's export may have changed. Not writing.`)
   const cards = items.filter(r => r[1] === 'Divination Cards').length
   if (cards < 300) throw new Error(`Only ${cards} divination cards. Not writing.`)
+}
+
+// The file's text: classes once, rows by class index, one row per line.
+export function packItems (items, made, source) {
+  const classes = [...new Set(items.map(r => r[1]))]
+  const at = new Map(classes.map((c, i) => [c, i]))
+  return `{"made":${JSON.stringify(made)},"source":${JSON.stringify(source)},"classes":${JSON.stringify(classes)},"items":[\n${items.map(([n, c, a]) => JSON.stringify([n, at.get(c), a])).join(',\n')}\n]}\n`
 }
 
 async function get (url) {
@@ -96,7 +109,7 @@ async function main () {
   checkItems(items)
   const made = new Date().toISOString().slice(0, 10)
   // One row per line: the diff of a new league's table reads as a list.
-  const text = `{"made":${JSON.stringify(made)},"source":${JSON.stringify(source)},"items":[\n${items.map(r => JSON.stringify(r)).join(',\n')}\n]}\n`
+  const text = packItems(items, made, source)
   await fs.writeFile(OUT, text)
   const by = {}
   for (const r of items) by[r[1]] = (by[r[1]] ?? 0) + 1

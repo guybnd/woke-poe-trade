@@ -723,3 +723,25 @@ test('map: Exclude my bad mods searches the template\'s Not mods on every map', 
   await expect(exclude).toHaveAttribute('aria-pressed', 'true')
   expect(overlay.errors).toEqual([])
 })
+
+test('map: Trade search opens on every check, even after folding it on the last map', async ({ overlay }) => {
+  await fakeTrade(overlay.page)
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.copyItem('items/map-rare-t16-deadly.txt')
+  const panel = overlay.widget('price-check')
+  const head = panel.locator('[data-map-trade] > button').first()
+  await expect(head).toHaveAttribute('aria-expanded', 'true', { timeout: 20_000 })
+  await expect(panel.locator('[data-map-mod]').first()).toBeVisible()
+  // Folded by hand: the mods' place says so, and opens them.
+  await head.click()
+  await expect(panel.locator('[data-map-mod]')).toHaveCount(0)
+  await expect(panel.locator('[data-map-unfold]')).toContainText('Show the map mods')
+  await panel.locator('[data-map-unfold]').click()
+  await expect(head).toHaveAttribute('aria-expanded', 'true')
+  // Folded again, then the next map: open again (Guy, 2026-11-28).
+  await head.click()
+  await overlay.copyItem('items/map-rare-t16.txt')
+  await expect(head).toHaveAttribute('aria-expanded', 'true', { timeout: 20_000 })
+  await expect(panel.locator('[data-map-mod]').first()).toBeVisible()
+  expect(overlay.errors).toEqual([])
+})

@@ -8,7 +8,8 @@ import type { CurrencyItem } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { loadOwnTables, ownTables } from './own-lists'
 import { gemLinesOf } from './gem-classes'
-import { gemItemFor, itemFor } from './loot-focus'
+import { clusterPricesFor } from './cluster-ninja'
+import { gemItemFor, itemFor, notItsRarity } from './loot-focus'
 import { evalCondition } from './match'
 import type { ItemFacts } from './item-facts'
 import type { FilterBlock } from './parse'
@@ -25,12 +26,12 @@ export function lootPlaceOf (store: LootFilterStore, facts: ItemFacts, block: Fi
   loadOwnTables()
   const name = facts.baseType ?? facts.name
   const gem = / Gems$/.test(facts.itemClass ?? '') ? { level: facts.gemLevel ?? 1, quality: facts.quality ?? 0, corrupted: !!facts.corrupted } : null
-  const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, gem ? gemLinesOf(store.prices.items.value) : null, ownTables.value)
+  const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, gem ? gemLinesOf(store.prices.items.value) : null, ownTables.value, clusterPricesFor(store.prices.currentLeague.value))
   const it: CurrencyItem | null | undefined = gem
     ? gemItemFor(all, name, gem, block.conditions)
-    : itemFor(all, name, block.conditions) ?? all
-      .filter(i => (i.bts?.length === 0 ? i.cls === facts.itemClass : (i.bts ?? [i.bt ?? i.name]).includes(name)) && (i.conds ?? []).every(x => evalCondition(x, facts) !== false))
-      .sort((a, b) => b.chaos - a.chaos)[0]
+    : [itemFor(all, name, block.conditions)].find(i => i && !notItsRarity(i, facts.rarity)) ?? all
+        .filter(i => !notItsRarity(i, facts.rarity) && (i.bts?.length === 0 ? i.cls === facts.itemClass : (i.bts ?? [i.bt ?? i.name]).includes(name)) && (i.conds ?? []).every(x => evalCondition(x, facts) !== false))
+        .sort((a, b) => b.chaos - a.chaos)[0]
   if (!it) return null
   const catName = ALL_CATEGORIES.find(x => x.id === it.cat)?.name ?? 'Other'
   return { cat: it.cat, catName, name: it.name, label: `Loot › ${catName}, ${CSTEP_NAMES[Number(step[1])]}` }
