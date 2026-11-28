@@ -3,7 +3,7 @@ id: WOKEPOET-687
 title: >-
   Calmer filter controls (replace Off/Weighted/Always buttons and the Strictness
   dropdown)
-status: In Progress
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -41,7 +41,41 @@ history:
     date: '2026-11-28T01:48:35.389Z'
     comment: Updated implementation link.
     id: a-2026-11-28t01-48-35-389z
+  - type: comment
+    user: Agent
+    comment: PR 1038 merged (8fded98).
+    date: '2026-11-28T02:02:36.791Z'
+    completionComment: true
+    id: c-2026-11-28t02-02-36-791z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-28T02:02:36.791Z'
+  - type: comment
+    user: Agent
+    comment: Merged at 8fded98; dev build reloaded.
+    completionComment: true
+    date: '2026-11-28T02:02:41.542Z'
+    id: c-2026-11-28t02-02-41-542z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-28T02:02:42.435Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/1038'
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Replace the Off/Weighted/Always buttons and the Strictness dropdown in the loot filter with calmer controls.
