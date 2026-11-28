@@ -1,5 +1,5 @@
 <template>
-  <div v-if="show" :class="$style.row" data-roll-presets>
+  <div v-if="show" :class="$style.row" data-roll-presets :data-goto-spot="showBase ? 'base-preset' : undefined">
     <w-segmented :model-value="active" :options="options"
       :title="title"
       @update:model-value="pick" />
@@ -11,20 +11,27 @@ import { computed, shallowRef, watch, onUnmounted } from 'vue'
 import { ItemRarity, ParsedItem } from '@/parser'
 import { useLeagues } from '@/web/background/Leagues'
 import { WSegmented } from '../ui'
-import type { FilterOrGroup } from '@/web/price-check/filters/interfaces'
+import type { FilterOrGroup, ItemFilters } from '@/web/price-check/filters/interfaces'
 import { applyRollPreset, activeRollPreset, canUseHighRolls, canUseRollPresets, RollPreset } from './roll-presets'
 import { estimateWorth, valueChanges, applyValueChanges, WORTH_SOURCE_LABEL } from './mod-worth'
 import { driverSeed } from './drivers'
 import { priceView } from './view'
 import { poepricesState, measuredDrivers, checkedFair, modWorth, loadPoeprices } from './check-state'
+import { isValuableBasetype } from '@/web/price-check/trends/getDetailsId'
+import type { BaseState } from './base-preset'
 
-const props = defineProps<{ stats: FilterOrGroup[], item: ParsedItem, league: string }>()
+const props = defineProps<{ stats: FilterOrGroup[], item: ParsedItem, league: string, filters?: ItemFilters }>()
 const { selectedId } = useLeagues()
-const emit = defineEmits<{ (e: 'apply', preset: RollPreset | 'value'): void }>()
+const emit = defineEmits<{ (e: 'apply', preset: RollPreset | 'value' | 'base'): void }>()
 
 const showValue = computed(() => priceView.value === 'improved' && props.item.rarity === ItemRarity.Rare)
 
+// Gear that isn't unique (base-preset.ts, loaded on the first click).
+const showBase = computed(() => props.filters != null && !props.item.isUnidentified && isValuableBasetype(props.item))
+const BASE_TITLE = 'Price it as its base: base, item level, influence, quality over 20; mods off. Click again to undo.'
+
 const options = computed(() => [
+  ...(showBase.value ? [{ value: 'base', label: 'Base', title: BASE_TITLE, attrs: { 'data-base-preset': '' } }] : []),
   { value: 'low', label: 'Low' },
   { value: 'current', label: 'Approx' },
   ...(canUseHighRolls(props.stats) ? [{ value: 'high', label: 'High' }] : []),
@@ -36,7 +43,7 @@ const title = computed(() => 'For every ticked mod. Low: any roll of its range. 
   (showValue.value ? ' ' + sourceTitle.value : '') +
   ' Runs the search.')
 
-const show = computed(() => canUseRollPresets(props.stats))
+const show = computed(() => showBase.value || canUseRollPresets(props.stats))
 
 // poeprices is free, so ask as soon as a rare is opened; the worth tags use it.
 watch(() => props.item, (it) => { if (showValue.value) loadPoeprices(it) }, { immediate: true })
@@ -81,14 +88,43 @@ const sourceTitle = computed(() => {
 // "By value" stays highlighted until a box or tick is changed by hand.
 const valueSig = shallowRef<string | null>(null)
 const sig = () => JSON.stringify(props.stats)
-watch(() => props.item, () => { valueSig.value = null })
+watch(() => props.item, () => { valueSig.value = null; base.value = null })
+
+// "Base" stays lit until a box or tick is changed by hand; a second click puts the old ticks back.
+let baseMod: typeof import('./base-preset') | undefined
+const base = shallowRef<BaseState | null>(null)
+const baseOn = computed(() => !!(base.value && props.filters && baseMod?.isBaseOn(base.value, props.filters, props.stats)))
 
 const active = computed(() => {
+  if (baseOn.value) return 'base'
   if (valueSig.value && valueSig.value === sig()) return 'value'
   return activeRollPreset(props.stats)
 })
 
+let baseBusy = false
+async function pickBase (keepOn = false) {
+  const { filters, item } = props
+  if (!filters || baseBusy) return
+  baseBusy = true
+  try {
+    baseMod ??= await import('./base-preset')
+    // Another item or preset came up while the code loaded.
+    if (props.item !== item || props.filters !== filters) return
+    if (!(keepOn && baseOn.value)) base.value = baseMod.toggleBase(base.value, item, filters, props.stats)
+    valueSig.value = null
+    emit('apply', 'base')
+  } finally { baseBusy = false }
+}
+
+// The base price chip's click: turn the Base step on (never off) and search.
+defineExpose({ runBase: () => pickBase(true).catch(() => {}) })
+
 function pick (value: string) {
+  if (value === 'base') {
+    pickBase().catch(() => {})
+    return
+  }
+  base.value = null
   if (value === 'value') {
     if (!worth.value) return
     applyValueChanges(props.stats, valueChanges(props.stats, worth.value))
