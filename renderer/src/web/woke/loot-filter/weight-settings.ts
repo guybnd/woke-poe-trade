@@ -168,6 +168,9 @@ export interface WeightSettings {
   look: Record<LookChannel, LookKey[]>
   // Your own rank for a base (by name), over the filter's.
   ranks: Record<string, RankKey>
+  // The score a utility flask needs to show (Guy's flasks A, 2026-11-28):
+  // its own, since rares' line is set for scores in the hundreds.
+  flaskLine: number
 }
 
 export type RankKey = 'x1' | 'x2' | 'r1' | 'r2' | 'r3' | 'r0' | 'rj'
@@ -231,7 +234,7 @@ export function normalizeLook (v: unknown): Record<LookChannel, LookKey[]> {
 export const LOUD_DEFAULT: readonly number[] = [16, 64, 256]
 
 export function defaultWeights (): WeightSettings {
-  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT], look: lookDefault(), ranks: {} }
+  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT], look: lookDefault(), ranks: {}, flaskLine: 8 }
 }
 
 // The rows a pin (always show) can go on: ones a rule can name on their own.
@@ -260,6 +263,7 @@ export function normalizeWeights (w: Partial<WeightSettings> | undefined): Weigh
     loud: Array.isArray(w?.loud) && w.loud.length === 3 && w.loud.every((v, i) => ok(v, NEED_MIN, NEED_MAX * 64) && (i === 0 || v >= w.loud![i - 1])) ? [...w.loud] : [...LOUD_DEFAULT],
     always: Array.isArray(w?.always) ? [...new Set(w.always.filter(k => PIN_ROWS.has(k)))] : [],
     look: normalizeLook(w?.look),
+    flaskLine: ok(w?.flaskLine, NEED_MIN, NEED_MAX) ? w.flaskLine : d.flaskLine,
     ranks: w?.ranks && typeof w.ranks === 'object'
       ? Object.fromEntries(Object.entries(w.ranks).filter(([n, r]) => typeof n === 'string' && n.length < 80 && RANK_KEYS.includes(r)))
       : {}

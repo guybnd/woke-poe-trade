@@ -53,7 +53,7 @@
       </div>
       <div :class="$style.sum">
         Score <b :style="{ color: STEP_CSS[Math.max(1, flask.step)] }">{{ pointsText(points(flask.weight)) }}</b>
-        <span class="w-dim">· line {{ pointsText(points(w.need)) }}</span>
+        <span class="w-dim">· flask line {{ pointsText(points(w.flaskLine)) }}</span>
       </div>
       <div :class="$style.terms" data-no-item-tip="the parts of the flask's score; the flask itself is named in the card title">
         <div v-for="t in flask.terms" :key="t.label" :class="$style.term">

@@ -1381,6 +1381,9 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   await expect(qs).toBeVisible()
   await qs.getByRole('button', { name: "Don't care" }).click()
   await expect(qs.getByRole('button', { name: "Don't care" })).toHaveAttribute('aria-pressed', 'true')
+  // Flasks have their own line: a Good flask shows at item level 85.
+  const ruby = page.locator('[data-equip-flask="Ruby Flask"]')
+  await expect(ruby).toContainText('Small')
   await overlay.snap('equipment tab, flasks')
 })
 

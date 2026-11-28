@@ -1,12 +1,22 @@
 <template>
   <!-- Flasks on the Equipment tab (Guy's F1, 2026-11-27): base rank ×
-       quality × item level, on Rare weights' line and steps. -->
+       quality × item level. Their own line (Guy's flasks A, 2026-11-28), so
+       Good and Low can show; columns say what they mean. -->
   <div :class="$style.wrap" class="w-scroll" data-equip-flasks>
     <div :class="$style.top">
       <WToggle v-model="w.on">Score endgame rares and flasks</WToggle>
       <span :class="$style.beta">Beta</span>
-      <WInfo text="In maps (area level 68+), a white or magic utility flask scores its base rank × quality (×2 at 20%, ×4 at 26%) × item level (×2 at 85+, where the top mods roll), on the same line and steps as rares. Under the line it hides. Life and mana flasks, tinctures and levelling stay NeverSink's. The same switch as Rare gear." />
+      <WInfo text="In maps (area level 68+), a white or magic utility flask scores its base rank × quality (×2 at 20%, ×4 at 26%) × item level (×2 at 85+, where the top mods roll), against its own flask line. Under the line it hides. Life and mana flasks, tinctures and levelling stay NeverSink's. The same switch as Rare gear." />
     </div>
+    <div :class="$style.lineBar" data-flask-line>
+      <span :class="$style.lab">Flask line</span>
+      <input type="range" min="0" :max="LINES.length - 1" step="1" :value="dragIdx ?? lineIdx" :class="$style.range" aria-label="Flask line: the score a flask needs to show"
+        @input="dragIdx = Number(($event.target as HTMLInputElement).value)"
+        @change="w.flaskLine = LINES[Number(($event.target as HTMLInputElement).value)]; dragIdx = null">
+      <b :class="$style.val">{{ LINES[dragIdx ?? lineIdx] }}</b>
+      <span class="w-dim text-xs">Top {{ w.mult.r1 }}, Good {{ w.mult.r2 }}, Low {{ w.mult.r3 }}, times quality and item level. Normal at ×2 the line, Big ×4, Beam ×8.</span>
+    </div>
+    <p class="w-dim text-xs" :class="$style.what">White or magic utility flasks, in maps (area level 68+).</p>
     <div :class="$style.head" aria-hidden="true">
       <span :class="$style.name" />
       <span :class="$style.rank">Rank</span>
@@ -21,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { WInfo, WSegmented, WToggle, vItemTip } from '../ui'
 import { FLASK_BASES, flaskRank, flaskStep } from './flask-weights'
 import { STEP_NAMES } from './weights'
@@ -31,7 +41,14 @@ import type { LootFilterWidget } from './widget'
 const props = defineProps<{ config: LootFilterWidget }>()
 const w = computed(() => props.config.presets.weights)
 const RANKS = [{ value: 'r1', label: 'Top' }, { value: 'r2', label: 'Good' }, { value: 'r3', label: 'Low' }, { value: 'rj', label: "Don't care" }]
-const BANDS = [{ label: 'Plain', q: 0, i: 0 }, { label: 'ilvl 85', q: 0, i: 85 }, { label: '20%', q: 20, i: 0 }, { label: '20%, ilvl 85', q: 20, i: 85 }, { label: '26%, ilvl 85', q: 26, i: 85 }]
+const BANDS = [{ label: 'Under 20%', q: 0, i: 0 }, { label: 'ilvl 85+', q: 0, i: 85 }, { label: '20%+', q: 20, i: 0 }, { label: '20%+ · ilvl 85+', q: 20, i: 85 }, { label: '26%+ · ilvl 85+', q: 26, i: 85 }]
+// The flask line's notches (a score; Top is 8 before quality and item level).
+const LINES = [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64]
+const lineIdx = computed(() => {
+  const v = w.value.flaskLine
+  return LINES.reduce((best, x, i) => Math.abs(x - v) < Math.abs(LINES[best] - v) ? i : best, 0)
+})
+const dragIdx = ref<number | null>(null)
 // The same step colours as Rare gear's (Beam blue, as in game).
 const STEP_CSS = ['#3a3a3a', '#8a8a8a', '#d8d877', '#29d2a0', '#5a9cff']
 const rows = computed(() => FLASK_BASES.map(name => ({
@@ -50,6 +67,11 @@ function setRank (name: string, v: string) {
 .beta { font-size: var(--w-fs-xs); color: var(--w-dim); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); padding: 0 4px; }
 .head, .row { display: grid; grid-template-columns: minmax(8rem, 1fr) auto repeat(5, 6.5rem); align-items: center; gap: 8px; }
 .head { font-size: var(--w-fs-xs); color: var(--w-dim); }
+.lineBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lab { font-size: var(--w-fs-sm); color: #e2d3ad; }
+.range { width: 12rem; accent-color: var(--w-accent); }
+.val { min-width: 2ch; font-variant-numeric: tabular-nums; }
+.what { margin: 0 0 2px; }
 .row { padding: 2px 6px; border-bottom: 1px solid var(--w-line); }
 .name { min-width: 0; color: #8888ff; font-size: var(--w-fs-sm); }
 .rank { justify-self: start; }

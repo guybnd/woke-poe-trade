@@ -36,4 +36,17 @@ describe('flasks on the Equipment tab', () => {
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
     expect(applyFlasks(parseFilter(SEMI), defaultWeights())).toEqual([])
   })
+
+  it('has its own line, so Good and Low flasks can show (Guy 2026-11-28)', () => {
+    const w = defaultWeights()
+    expect(w.flaskLine).toBe(8)
+    // A Good Ruby Flask: 4 plain, 8 at ilvl 85, 16 at 20% and 85, 32 at 26% and 85.
+    w.ranks = { 'Ruby Flask': 'r2' }
+    expect(flaskStep(w, 'Ruby Flask', 0, 70)).toBe(0)
+    expect(flaskStep(w, 'Ruby Flask', 0, 85)).toBe(1)
+    expect(flaskStep(w, 'Ruby Flask', 20, 85)).toBe(2)
+    // The rares' line doesn't move it.
+    expect(flaskStep({ ...w, need: 500 }, 'Ruby Flask', 0, 85)).toBe(1)
+    expect(flaskStep({ ...w, flaskLine: 2 }, 'Ruby Flask', 0, 70)).toBe(2)
+  })
 })
