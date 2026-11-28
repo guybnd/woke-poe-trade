@@ -1,5 +1,7 @@
 # Next release notes
 
+- Loot filter, Loot tab: All loot takes one line: Strictness, Maps and where each step starts (Normal 2.5c · Decent 5.6c...). Click All loot or the prices to open the ruler. What Strictness does is in its tooltip, and the page's Size cut and "never show" count sit on its top row.
+- Loot filter, Loot tab: each page has its own bar again, under All loot (Currency, Uniques...). It follows All loot until you change it: turn a step off for that page only, or give the page its own ruler. A section can still have its own.
 - Loot filter: Equipment › Base ranks fills its Rank 1-3 and Exotic lanes on our own filter too (every base read Unranked there).
 - Loot filter, Base ranks: the AR / EV / ES / Ward chips sit inside Armour and narrow armour only. Picking a weapon or jewellery kind no longer hides it.
 - Loot filter, Loot tab: a section set to Always now has a green dot on its chip, so it no longer looks like By price (gold). Hide stays a hollow grey dot.

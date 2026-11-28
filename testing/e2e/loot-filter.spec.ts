@@ -1658,6 +1658,12 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await overlay.snap('loot tab, levelling build')
   await page.locator('[data-levelling-build]').getByRole('button', { name: 'Auto (PoB)' }).click()
   await page.locator('[data-loot-class="currency"]').click()
+  // All loot is one line until opened (Guy 2026-11-28): its step prices show folded.
+  const allOpenBtn = page.locator('[data-loot-all-open]')
+  if (await allOpenBtn.getAttribute('aria-expanded') === 'false') {
+    await expect(page.locator('[data-loot-all-prices]')).toContainText('Decent')
+    await allOpenBtn.click()
+  }
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()
   await expect(page.locator('[data-currency-cat="orbs"]')).toBeVisible()
@@ -1704,6 +1710,13 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-currency-cat="orbs"]')).toContainText('own ruler')
   await orbRuler.getByRole('button', { name: "Orbs back to All loot's ruler" }).click()
   await expect(orbRuler.locator('[data-currency-ruler]')).toHaveCount(0)
+  // The page's own bar (Guy 2026-11-28): follows All loot until it gets its own ruler.
+  const pageBar = page.locator('[data-currency-page-ruler]')
+  await expect(pageBar).toContainText('Currency')
+  await pageBar.locator('[data-currency-page-own]').click()
+  await expect(pageBar.locator('[data-currency-ruler]')).toBeVisible()
+  await pageBar.getByRole('button', { name: "Currency back to All loot's ruler" }).click()
+  await expect(pageBar.locator('[data-currency-ruler]')).toHaveCount(0)
   const alch = page.locator('[data-currency-item="Orb of Alchemy"]')
   await expect(alch).toBeVisible()
   // Every row has the Jewels tick box (Guy 2026-11-28): untick hides this
