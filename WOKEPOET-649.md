@@ -164,6 +164,14 @@ history:
     date: '2026-11-28T02:52:00.852Z'
     selfAttested: true
     id: c-2026-11-28t02-52-00-852z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 1047 merged (https://github.com/guybnd/woke-poe-trade/pull/1047):
+      League items Always by default.
+    date: '2026-11-28T03:40:54.325Z'
+    selfAttested: true
+    id: c-2026-11-28t03-40-54-325z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/976'
 subtasks:
   - WOKEPOET-687
