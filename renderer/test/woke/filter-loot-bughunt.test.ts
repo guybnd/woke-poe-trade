@@ -118,7 +118,7 @@ describe('a step turned off, with gems', () => {
     const step = (matchItem(doc, gem('Arc', 5, 0)).final?.block.tier ?? '')
     expect(step).toMatch(/^s[1-4]$/)
     const doc2 = parseFilter(SEMI)
-    applyCurrency(doc2, on(c => { c.items = { 'Arc 21/20': { step: 3 } }; c.off = [Number(step.slice(1))] }), lookup, null, lines)
+    applyCurrency(doc2, on(c => { c.items = { 'Arc 21/20': { step: 3 } }; c.offBy = { gems: [Number(step.slice(1))] } }), lookup, null, lines)
     expect(matchItem(doc2, gem('Arc', 5, 0)).visibility).toBe('Hide')
     expect(matchItem(doc2, gem('Arc', 21, 20)).visibility).toBe('Show')
   })
@@ -130,7 +130,7 @@ describe('a step turned off, with gems', () => {
     const lo = matchItem(doc, gem('Arc', 20, 20)).final?.block.tier ?? ''
     expect(hi > lo && /^s[1-4]$/.test(hi)).toBe(true)
     const doc2 = parseFilter(SEMI)
-    applyCurrency(doc2, on(c => { c.off = [Number(hi.slice(1))] }), lookup, null, lines)
+    applyCurrency(doc2, on(c => { c.offBy = { gems: [Number(hi.slice(1))] } }), lookup, null, lines)
     expect(matchItem(doc2, gem('Arc', 21, 20)).visibility).toBe('Hide')
     expect(matchItem(doc2, gem('Arc', 20, 20)).visibility).toBe('Show')
   })
