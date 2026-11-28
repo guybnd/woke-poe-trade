@@ -44,7 +44,7 @@ describe('our own filter skeleton', () => {
   it('is a filter the game reads, at the strictness given', () => {
     const doc = parseFilter(ownBaseText('4-VERY-STRICT'))
     expect(doc.strictness).toBe('4-VERY-STRICT')
-    expect(doc.blocks.map(b => [b.type, b.tier, b.visibility])).toEqual([[OWN_REST_TYPE, 'plaingear', 'Hide'], [OWN_REST_TYPE, 'unknown', 'Show']])
+    expect(doc.blocks.map(b => [b.type, b.tier, b.visibility])).toEqual([[OWN_REST_TYPE, 'plaingear', 'Hide'], [OWN_REST_TYPE, 'qualityflasks', 'Show'], [OWN_REST_TYPE, 'unknown', 'Show']])
     expect(parseFilter(ownBaseText(null)).strictness).toBe('2-SEMI-STRICT')
   })
 
@@ -64,5 +64,23 @@ describe('our own filter skeleton', () => {
     expect(plain.visibility).toBe('Hide')
     const odd = matchItem(doc, item({ baseType: 'Some Future Item', itemClass: 'Misc Odd Things' }))
     expect([odd.final?.block.type, odd.final?.block.tier, odd.visibility]).toEqual([OWN_REST_TYPE, 'unknown', 'Show'])
+  })
+
+  it('while levelling, gear and flasks no rule of ours shows hide, not pink', () => {
+    const doc = compose(true)
+    const at = (f: Partial<ItemFacts>) => matchItem(doc, item({ areaLevel: 45, itemLevel: 45, ...f }))
+    const oldHat = at({ baseType: 'Iron Hat', dropLevel: 1, itemClass: 'Helmets', rarity: 'Magic' })
+    expect([oldHat.final?.block.tier, oldHat.visibility]).toEqual(['plaingear', 'Hide'])
+    const oldSword = at({ baseType: 'Rusted Sword', dropLevel: 1, itemClass: 'One Hand Swords', rarity: 'Normal' })
+    expect(oldSword.visibility).toBe('Hide')
+    const newSword = at({ baseType: 'Footman Sword', dropLevel: 40, itemClass: 'One Hand Swords', rarity: 'Normal' })
+    expect([newSword.final?.block.type, newSword.visibility]).toEqual(['woke->levelling', 'Show'])
+    const rare = at({ baseType: 'Iron Hat', dropLevel: 1, itemClass: 'Helmets', rarity: 'Rare', identified: false })
+    expect(rare.visibility).toBe('Show')
+    expect(rare.final?.block.tier).not.toBe('unknown')
+    const oldFlask = at({ baseType: 'Small Life Flask', dropLevel: 1, itemClass: 'Life Flasks', rarity: 'Magic', quality: 0 })
+    expect(oldFlask.visibility).toBe('Hide')
+    const qFlask = at({ baseType: 'Small Life Flask', dropLevel: 1, itemClass: 'Life Flasks', rarity: 'Normal', quality: 12 })
+    expect([qFlask.final?.block.tier, qFlask.visibility]).toEqual(['qualityflasks', 'Show'])
   })
 })
