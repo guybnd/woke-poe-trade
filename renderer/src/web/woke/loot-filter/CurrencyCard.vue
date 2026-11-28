@@ -30,7 +30,7 @@
     </div>
 
     <div v-if="mode !== 'off'" :class="$style.row">
-      <span :class="$style.lab">Price bias</span>
+      <span :class="$style.lab">Price bias<WInfo :text="BIAS_HELP" /></span>
       <span class="text-xs w-faint">Penalty</span>
       <input type="range" :min="-NUDGE_MAX" :max="NUDGE_MAX" step="1" :value="dragNotch ?? notch" :class="$style.range" :disabled="mode !== 'auto' || secMode === 'off'"
         aria-label="Price bias for this item" data-currency-card-mult
@@ -141,6 +141,10 @@ const ITEM_CHIPS: ChipOption[] = [
   { value: 'auto', label: 'Same as section', desc: 'Its section decides.', dot: 'var(--w-gold)' },
   { value: 'always', label: 'Always', desc: 'Shows at least Small, whatever the price.', dot: 'var(--w-gold-hi)', glow: true }
 ]
+const BIAS_HELP = `Makes this item count above or below its price, so it shows louder or quieter.
+- Only this item (a unique base: only this base). Other items keep theirs.
+- Its section has its own bias, on the section chip. Both apply.
+- The mark and step move as you drag; it applies when you let go.`
 const UNIQUES_HELP = `Every unique this base can drop as, with its chance, price and the step that price gets.
 - The base is priced by the average drop.
 - Untick a unique to leave it out of the average (a special drop you never see).
@@ -379,7 +383,7 @@ function chaosText (v: number): string {
 }
 .cat i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
 .row { display: flex; align-items: center; gap: 8px; font-size: var(--w-fs-sm); }
-.lab { color: var(--w-dim); min-width: 4.5rem; font-size: var(--w-fs-xs); }
+.lab { display: inline-flex; align-items: center; gap: 3px; color: var(--w-dim); min-width: 4.5rem; font-size: var(--w-fs-xs); }
 .range { flex: 1; min-width: 6rem; accent-color: var(--w-accent); }
 .mx { font-variant-numeric: tabular-nums; color: var(--w-accent); min-width: 3.2em; text-align: right; font-weight: 400; }
 .ruler { display: flex; flex-direction: column; gap: 3px; }
