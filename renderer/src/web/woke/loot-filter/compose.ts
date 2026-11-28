@@ -145,7 +145,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Utility flasks score on the same line (Equipment › Flasks).
   applyFlasks(next, cfg.presets.weights)
   // Currency weights (beta) the same way: above everything NeverSink has.
-  const currency = applyCurrency(next, migrated.currency, cfg.prices.loot ?? cfg.prices.lookup, cfg.cards, cfg.gems, cfg.own)
+  const currency = applyCurrency(next, migrated.currency, cfg.prices.loot ?? cfg.prices.lookup, cfg.cards, cfg.gems, cfg.own, cfg.clusterPrices)
   // Maps under the Loot tab's tier slider hide.
   applyMapFloor(next, migrated.currency)
   applyMapLooks(next, migrated.currency)
