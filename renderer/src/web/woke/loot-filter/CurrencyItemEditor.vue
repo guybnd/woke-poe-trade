@@ -17,6 +17,14 @@
       <button type="button" class="w-icon-btn" :disabled="!Object.keys(edit).length" title="Let the price decide again: clears your step, price, stack and look" aria-label="Let the price decide again"
         @click="emit('change', null)"><i class="fas fa-undo" aria-hidden="true" /></button>
     </div>
+    <div v-if="!noAvg && it.uniques && it.uniques.length > 1" :class="$style.line" data-loot-avg-uniques>
+      <span :class="$style.lab" title="Untick a unique to leave it out of this base's average drop (a special drop you never see)">In the average</span>
+      <label v-for="u in it.uniques" :key="u.name" :class="[$style.uq, { [$style.uqOut]: !u.counted }]" :title="u.chase ? 'Chase (T0): never in the average, the base shows in Chase uniques' : u.out ? 'Left out of the average' : u.counted ? 'Counted in the average' : 'Not counted'">
+        <input type="checkbox" :checked="!u.out" :disabled="u.chase && !u.out" :aria-label="`Count ${u.name} in the average`" data-loot-not-avg @change="emit('notAvg', u.name)">
+        <span v-item-tip="{ name: u.name, type: it.name }" :class="$style.uqName">{{ u.name }}</span>
+        <span :class="$style.unit">{{ u.chase ? 'chase' : rarity(u.tier) }} · {{ chaosText(u.chaos) }}</span>
+      </label>
+    </div>
     <StyleEditor v-if="edit.look" look-only :look="{ ...stepLook, ...edit.look }" visibility="Show" :preview-text="it.name" @patch="p => setLook({ ...edit.look, ...p })" />
   </div>
 </template>
@@ -38,8 +46,13 @@ const props = defineProps<{
   basePrice: number
   // How its step and category look, for the own look to start from.
   baseLook: StylePatch
+  // The Alt+F card lists the uniques itself.
+  noAvg?: boolean
 }>()
-const emit = defineEmits<{ change: [edit: ItemEdit | null] }>()
+const emit = defineEmits<{ change: [edit: ItemEdit | null], notAvg: [name: string] }>()
+const RARITY = ['extremely rare', 'very rare', 'very rare', 'rare', 'uncommon', 'common']
+const rarity = (t: number | null) => t == null ? 'untiered' : RARITY[t] ?? ''
+const chaosText = (v: number) => `${v >= 10 ? Math.round(v) : Number(v.toPrecision(2))}c`
 
 // The Loot tab's step colours.
 const STEP_CSS = ['#3b372f', '#6d6250', '#a08d5e', '#cdb27a', '#ffe196', '#ff4040']
@@ -101,4 +114,8 @@ function setLook (look: StylePatch | undefined) { put({ look }) }
 .numIn:hover, .numIn:focus { border-color: var(--w-line); background: var(--w-panel-2); }
 .short { width: 3.2em; }
 .moved { border-color: var(--w-frame); }
+.uq { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.uq input { accent-color: #c8a565; margin: 0; }
+.uqName { color: #af6025; }
+.uqOut .uqName { color: var(--w-faint); text-decoration: line-through; }
 </style>

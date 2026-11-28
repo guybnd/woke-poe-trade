@@ -99,7 +99,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // NeverSink rules the Gear page's table replaced (0 while it's off).
   const gearReplaced = ref(0)
   const clusterSig = ref('')
-  const prices = useFilterPrices(() => cfg().priceTiers.uniqueRule)
+  const prices = useFilterPrices(() => cfg().priceTiers.uniqueRule, () => cfg().presets.currency.notAvg ?? [])
   // Bases for the dust preset's price rule, only while it's on.
   const dustList = computed(() => {
     const d = cfg().presets.dust

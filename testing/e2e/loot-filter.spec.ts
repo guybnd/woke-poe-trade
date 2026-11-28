@@ -1315,7 +1315,7 @@ test('Base ranks: drag a base, then the picked set, onto another column', async 
   await overlay.snap('dragged to Never')
 })
 
-test('Currency weights: Alt + F on currency shows its category, Show switch, Worth slider and the stack each step starts at', async ({ overlay, fakeApp }) => {
+test('Currency weights: Alt + F on currency shows its step first, a Shows switch, the step ruler and a Price bias', async ({ overlay, fakeApp }) => {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
   fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters/neversink/3-STRICT.filter.gz'))))
   await overlay.boot({ widgets: [{ ...lootFilter(folder), presets: { currency: { on: true } } }] })
@@ -1325,19 +1325,26 @@ test('Currency weights: Alt + F on currency shows its category, Show switch, Wor
   const card = page.locator('[data-currency-card]')
   await expect(card).toBeVisible()
   await expect(page.locator('[data-currency-card-cat]')).toContainText('Orbs')
-  await expect(card.getByRole('table', { name: 'The stack each step starts at' })).toBeVisible()
+  // The ruler names all five steps.
+  for (const n of ['Small', 'Normal', 'Decent', 'Big', 'Tink']) await expect(card.locator('[data-currency-card-ruler]')).toContainText(n)
   await overlay.snap('currency card')
-  // Worth × applies on release; Off hides every pile.
+  // Price bias applies on release, in the sections' words.
   await page.locator('[data-currency-card-mult]').fill('2')
-  await expect(card).toContainText('×2.00')
-  await card.locator('[data-currency-card-item]').getByRole('button', { name: 'Hide', exact: true }).click()
+  await expect(card).toContainText('+56%')
+  // The Shows switch hides every pile.
+  await card.locator('[data-currency-card-shows]').click()
   await expect(page.locator('[data-currency-card-now]')).toContainText('Hidden')
   await overlay.snap('currency card, off')
   // The whole section from the same card (Guy: Alt+F sets the section or just the item).
-  await card.locator('[data-currency-card-item]').getByRole('button', { name: 'Same as section', exact: true }).click()
-  await card.locator('[data-currency-card-section]').getByRole('button', { name: 'Hide', exact: true }).click()
+  await card.locator('[data-currency-card-shows]').click()
+  await card.locator('[data-currency-card-section]').getByRole('button', { name: /^Orbs:/ }).click()
+  await page.getByRole('menuitemradio', { name: /^Hide/ }).click()
+  // The section's menu stays open for its Price bias; Esc closes it.
+  await page.keyboard.press('Escape')
+  await expect(page.locator('[data-state-chip-menu]')).toHaveCount(0)
   await expect(page.locator('[data-currency-card-now]')).toContainText('Orbs is set to Hide')
-  await card.locator('[data-currency-card-item]').getByRole('button', { name: 'Always', exact: true }).click()
+  await card.locator('[data-currency-card-item]').getByRole('button', { name: /^Chaos Orb:/ }).click()
+  await page.getByRole('menuitemradio', { name: /^Always/ }).click()
   await expect(page.locator('[data-currency-card-now]')).not.toContainText('Hidden')
   await overlay.snap('currency card, section off, item always')
 })

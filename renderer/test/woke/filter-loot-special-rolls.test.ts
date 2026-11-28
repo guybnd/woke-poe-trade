@@ -27,7 +27,10 @@ describe('special unique rolls on the Loot tab', () => {
   it('prices each special rule per base, a 6-link at least 20 Fusings', () => {
     const items = new Map(currencyItems(parseFilter(REGULAR), lookup).filter(i => i.cat === 'uniqspec').map(i => [i.name, i]))
     expect(items.get('Simple Robe, 6-link')).toMatchObject({ chaos: 10, bt: 'Simple Robe' })
-    expect(items.get('Vaal Regalia, 6-link')?.chaos).toBe(400)
+    // Any other 6-linked unique: one row (Guy's R1), at its best base's price.
+    expect(items.get('Vaal Regalia, 6-link')).toBeUndefined()
+    expect(items.get('Any unique, 6-link')).toMatchObject({ chaos: 400 })
+    expect(items.get('Any unique, 6-link')?.bts).toContain('Vaal Regalia')
     expect(items.get('Onyx Amulet, Shaper and Elder')?.chaos).toBe(5000)
     expect(items.get('Glorious Plate, no sockets')?.chaos).toBe(0.1)
   })

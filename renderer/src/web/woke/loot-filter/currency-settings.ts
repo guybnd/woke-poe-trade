@@ -68,6 +68,17 @@ export interface CurrencySettings {
   // Gold: the pile size where Small, Normal, Decent, Big and Tink start
   // (Guy 2026-11-28: its own sections to slide).
   gold: number[]
+  // The Chase uniques look, a CHASE_LOOKS id (unique-classes.ts); unset is
+  // the default one (Guy 2026-11-28: a picker on the section's header).
+  chaseLook?: string
+  // Uniques left out of their base's average drop (Guy 2026-11-28: a special
+  // drop like Precursor's Emblem); toggleNotAvg flips one.
+  notAvg?: string[]
+  // Size cut on big uniques (Guy's picks S2, Z1, W2, E1, 2026-11-28): 'on',
+  // 'off', or unset for Auto (on from Strict, ×1.25, up).
+  sizeCut?: 'on' | 'off'
+  // Worked out by scaled() from sizeCut and the strictness; never saved.
+  sizeOn?: boolean
 }
 
 export type SectionMode = 'off' | 'auto' | 'always'
@@ -75,6 +86,14 @@ export interface FaintSettings { on: boolean, until: number }
 // Faint shows below Strict (×1.25) unless set otherwise. Off by default:
 // the rules are maps-only, and T1 said off in maps until you turn it on.
 export const FAINT_UNTIL = 1.25
+
+// Leave a unique out of its base's average drop, or count it again.
+export function toggleNotAvg (c: Pick<CurrencySettings, 'notAvg'>, name: string): string[] {
+  const now = new Set(c.notAvg ?? [])
+  if (now.has(name)) now.delete(name)
+  else now.add(name)
+  return [...now].sort()
+}
 
 export function defaultCurrency (): CurrencySettings {
   return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, off: [], mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1, gold: [1, 500, 3000, 10000, 50000] }
@@ -146,6 +165,9 @@ export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): Cu
     catMode: { ...c?.catMode },
     faint: { on: c?.faint?.on === true, until: Number(c?.faint?.until) || FAINT_UNTIL },
     mapFrom: int(c?.mapFrom, 1, 17) ?? 1,
+    ...(Array.isArray(c?.notAvg) && c.notAvg.length ? { notAvg: [...new Set(c.notAvg.filter(n => typeof n === 'string' && NAME.test(n)))].sort() } : {}),
+    ...(c?.sizeCut === 'on' || c?.sizeCut === 'off' ? { sizeCut: c.sizeCut } : {}),
+    ...(typeof c?.chaseLook === 'string' && /^[A-Z][0-9]$/.test(c.chaseLook) ? { chaseLook: c.chaseLook } : {}),
     gold: Array.isArray(c?.gold) && c.gold.length === 5 && c.gold.every((g, i) => int(g, 1, 1e7) != null && (!i || g >= c.gold![i - 1])) ? [...c.gold] : d.gold
   }
 }
