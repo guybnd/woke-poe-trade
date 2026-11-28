@@ -522,49 +522,34 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       })
     }
   }
-  // Abyss and plain jewels (Guy's Jewels A, 2026-11-28): a row per rarity and
-  // item level band; most have a fixed step (no price can judge them), the
-  // low abyss bands a guess you set the step or price of.
-  if (doc.blocks.some(b => b.type != null && JEWEL_TYPE.test(b.type))) {
-    for (const j of JEWEL_ROWS) {
-      const own = edits[j.name]?.price
-      seen.set(j.name, {
-        name: j.name,
-        cls: j.cls,
-        type: 'jewels',
-        tier: null,
-        cat: j.cat,
-        chaos: (own ?? j.guess) * (edits[j.name]?.mult ?? 1),
-        est: own == null,
-        ...(own != null ? { own: true } : {}),
-        full: 1,
-        ...(j.fixed != null ? { fixed: j.fixed } : {}),
-        bt: j.bts[0],
-        bts: j.bts,
-        conds: j.conds.map(x => ({ ...x, values: [...x.values] }))
-      })
-    }
-  }
-  // Special gear (special-gear.ts): a row per thing a filter can see (a
-  // mod's name, fractured, influence...), each at a fixed step you can change.
-  for (const r of SPECIAL_ROWS) {
+  // A row of conditions with a guess or a fixed step (jewels, special gear).
+  const setRow = (r: { name: string, cls: string, cat: string, guess: number, fixed?: CStep, bts: string[], conds: FilterCondition[] }, type: string, bt: string) => {
     const own = edits[r.name]?.price
     seen.set(r.name, {
       name: r.name,
       cls: r.cls,
-      type: 'special',
+      type,
       tier: null,
       cat: r.cat,
       chaos: (own ?? r.guess) * (edits[r.name]?.mult ?? 1),
       est: own == null,
       ...(own != null ? { own: true } : {}),
       full: 1,
-      fixed: r.fixed,
-      bt: r.tip,
+      ...(r.fixed != null ? { fixed: r.fixed } : {}),
+      bt,
       bts: [...r.bts],
       conds: r.conds.map(x => ({ ...x, values: [...x.values] }))
     })
   }
+  // Abyss and plain jewels (Guy's Jewels A, 2026-11-28): a row per rarity and
+  // item level band; most have a fixed step (no price can judge them), the
+  // low abyss bands a guess you set the step or price of.
+  if (doc.blocks.some(b => b.type != null && JEWEL_TYPE.test(b.type))) {
+    for (const j of JEWEL_ROWS) setRow(j, 'jewels', j.bts[0])
+  }
+  // Special gear (special-gear.ts): a row per thing a filter can see (a
+  // mod's name, fractured, influence...), each at a fixed step you can change.
+  for (const r of SPECIAL_ROWS) setRow(r, 'special', r.tip)
   // League items (Guy's League A, 2026-11-28): priced sections by name, the
   // rest a row per thing a filter can see, each a guess you can change.
   if (doc.blocks.some(b => b.type === 'expedition->logbook' || b.type?.startsWith('heist->') || b.type === 'viscera' || b.type === 'miscmapitemsextra')) {
