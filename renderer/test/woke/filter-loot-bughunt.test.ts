@@ -309,14 +309,15 @@ describe('Recipes and the presets the Loot tab covers', () => {
   it('carries the old preset settings over the first time', async () => {
     const { migrateLootPresets } = await import('@/web/woke/loot-filter/loot-presets')
     const { normalizePresets } = await import('@/web/woke/loot-filter/presets')
-    const { recipeStep } = await import('@/web/woke/loot-filter/currency-weights')
+    const { recipePicked } = await import('@/web/woke/loot-filter/currency-weights')
     const p = normalizePresets({ cheapCurrency: { on: true, chaos: 2 }, lowMaps: { on: true, tier: 12 } })
     p.currency.on = true
     migrateLootPresets(p)
     expect(p.currency.line).toBe(2)
     expect(p.currency.mapFrom).toBe(12)
-    expect(recipeStep(p.currency, 'rgb')).toBe(1)
-    expect(recipeStep(p.currency, 'six')).toBe(0)
+    // Presets left at their defaults pin no recipe: the price decides.
+    expect(recipePicked(p.currency, 'rgb')).toBeNull()
+    expect(recipePicked(p.currency, 'six')).toBeNull()
     p.currency.line = 0.5
     migrateLootPresets(p)
     expect(p.currency.line).toBe(0.5)

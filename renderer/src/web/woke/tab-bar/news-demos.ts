@@ -67,7 +67,6 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   // A Timeless jewel: its conquerors' keystones in the side list.
   'price-check-conquest-keystones': { check: { name: 'Elegant Hubris', rarity: 'unique' }, spot: 'related' },
   // A Shaper's Exalted Orb: its family and two fragment groups, folded to fit.
-  'related-folded-groups': { check: { name: "Shaper's Exalted Orb" }, spot: 'related' },
   // A unique with two Foulborn kinds and a Vestigial mod.
   'price-check-unique-foulborn': { check: { name: 'Carcass Jack', rarity: 'unique' }, spot: 'foulborn' },
   // A unique: its drop tier (and its loot filter tier, with a filter loaded) heads the side list.
@@ -88,7 +87,6 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   // A rare with tiered mods: hover one for its ladder.
   'price-check-mod-tiers': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' },
   // A rare armour: its base roll % beside its defence, to search.
-  'price-check-base-percentile': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'base-percentile' },
   // Worth knowing lines (worth-knowing.ts).
   'wk-mod-ctrl-click': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' },
   'wk-search-sums': { search: '2 div + 30c' },
