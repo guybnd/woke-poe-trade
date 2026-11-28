@@ -83,7 +83,28 @@ const picks = computed(() => {
   return out
 })
 
-const drops = computed(() => picks.value.map(p => {
+// One pile for each step on the ruler (Guy 2026-11-28: "why dont example
+// piles show of all sizes"), so every look lies on the ground, a step turned
+// off struck through. Each is the smallest pile of a random item that
+// reaches that step; a step no item reaches has none.
+const examples = computed(() => {
+  const pool = props.items
+  const r = rng(seed.value * 7 + 3)
+  const out: Array<{ id: number, it: CurrencyItem, stack: number }> = []
+  const have = new Set(picks.value.map(p => stepOfPile(stacksFor(p.it, props.cfg), p.stack)))
+  if ([1, 2, 3, 4, 5].every(s => have.has(s as CStep))) return out
+  const all = pool.map(it => ({ it, stacks: stacksFor(it, props.cfg) }))
+  for (let s = 1; s <= 5; s++) {
+    if (have.has(s as CStep)) continue
+    const can = all.filter(c => c.stacks[s - 1] != null && stepOfPile(c.stacks, c.stacks[s - 1]!) === s)
+    if (!can.length) continue
+    const c = can[Math.floor(r() * can.length)]
+    out.push({ id: 1000 + s, it: c.it, stack: c.stacks[s - 1]! })
+  }
+  return out
+})
+
+const drops = computed(() => [...picks.value, ...examples.value].map(p => {
   const stacks = stacksFor(p.it, props.cfg)
   // A pile on a step turned off hides (never Faint).
   const offBand = stepOfPile(stacks, p.stack) !== stepOfPile(stacks, p.stack, offSteps(p.it, props.cfg))
@@ -93,7 +114,7 @@ const drops = computed(() => picks.value.map(p => {
   const look: StylePatch = faint
     ? { ...currencyFullLook(0, p.it.cat, props.cfg), ...faintLook(catColour(p.it.cat, props.cfg).rgb) }
     : { ...currencyFullLook(step, p.it.cat, props.cfg), ...(step > 0 ? own ?? {} : {}) }
-  return { ...p, step, faint, look, label: p.stack > 1 ? `${p.stack}x ${p.it.name}` : p.it.name }
+  return { ...p, step, faint, look, label: p.it.type === 'gold' && p.stack > 1 ? `${p.stack} ${p.it.name}` : p.stack > 1 ? `${p.stack}x ${p.it.name}` : p.it.name }
 }))
 const hiddenCount = computed(() => drops.value.filter(d => d.step === 0 && !d.faint).length)
 
