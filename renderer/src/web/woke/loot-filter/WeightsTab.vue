@@ -43,7 +43,12 @@ Only this profile. Your own rules, build rules and presets still win." />
     </div>
 
     <div v-if="ownRanks.length" :class="$style.ownRanks" data-weights-own-ranks>
-      <span class="text-xs w-dim">Your ranks: {{ ownRanks.length }} {{ ownRanks.length === 1 ? 'base' : 'bases' }} moved</span>
+      <span class="text-xs w-dim">Your ranks</span>
+      <!-- Score ranks set here or from Alt+F (Base ranks moves land here too). -->
+      <span v-for="r in ownRanks" :key="r.name" v-item-tip="{ name: r.name }" :class="$style.ownRank">
+        {{ r.name }} <span class="w-faint">{{ RANK_TEXT[r.from] }} →</span> <b>{{ RANK_TEXT[r.to] }}</b>
+        <button type="button" :class="$style.step" :aria-label="`Back to the filter's rank for ${r.name}`" @click="setRank(r.name, null)"><i class="fas fa-times" /></button>
+      </span>
       <WButton size="sm" variant="ghost" icon="fas fa-layer-group" @click="emit('open-ranks')">Open Base ranks</WButton>
       <WButton size="sm" variant="ghost" icon="fas fa-undo" @click="w.ranks = {}">Reset all</WButton>
     </div>
