@@ -87,9 +87,9 @@ describe('unique bases by their average drop', () => {
     const cfg = defaultCurrency()
     expect(sectionMode(cfg, 'uniqchase')).toBe('always')
     const small = currencyLook(1, 'uniqchase', cfg)
-    // Default style T1 ice blue; a picked style changes ground and icon.
-    expect(small.icon).toMatchObject({ shape: 'Kite', color: 'Brown' })
-    expect(small.background?.slice(0, 3)).toEqual([215, 232, 255])
+    // Default style T6 sage (Guy's pick); a picked style changes ground and icon.
+    expect(small.icon).toMatchObject({ shape: 'Kite', color: 'Green' })
+    expect(small.background?.slice(0, 3)).toEqual([220, 235, 210])
     const teal = currencyLook(1, 'uniqchase', { ...cfg, chaseLook: 'T4' })
     expect(teal.icon).toMatchObject({ shape: 'Kite', color: 'Cyan' })
     expect(teal.background?.slice(0, 3)).toEqual([200, 240, 232])
