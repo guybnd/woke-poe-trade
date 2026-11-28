@@ -39,6 +39,7 @@ import { LV_GEMS_UNTIL, LV_UNIQUE_STEP, gateConds, lvConds, lvCurrencyOf } from 
 import type { CStep, CurrencySettings, ItemEdit, SectionMode } from './currency-settings'
 import { itemSource } from './own-lists'
 import type { OwnTables } from './own-lists'
+import { ownBottom, ownUniqueSpecials } from './own-base'
 
 export { CURRENCY_TYPE, CSTEP_NAMES, FAINT_UNTIL, LINE_MIN, LINE_MAX, NUDGE_MAX, MULT_MIN, MULT_MAX, defaultCurrency, normalizeCurrency } from './currency-settings'
 export type { CStep, CurrencySettings, FaintSettings, ItemEdit, SectionMode } from './currency-settings'
@@ -494,12 +495,14 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   }
   // Gold (Guy 2026-11-28, "we also missing a gold section"): no trade price,
   // so one row, its piles stepped by size on the Gold ruler.
-  if (doc.blocks.some(b => b.conditions.some(x => x.key === 'BaseType' && x.values.includes('Gold')))) {
+  // Our own skeleton (no NeverSink file) has every section below.
+  const ownSkeleton = ownBottom(doc) >= 0
+  if (ownSkeleton || doc.blocks.some(b => b.conditions.some(x => x.key === 'BaseType' && x.values.includes('Gold')))) {
     seen.set(GOLD_NAME, { name: GOLD_NAME, cls: '', type: 'gold', tier: null, cat: 'gold', chaos: 0, est: true, full: 1e7, bt: 'Gold' })
   }
   // Special maps (Guy 2026-11-28): endgame and guardian maps priced by
   // poe.ninja, the rest from a guess.
-  if (lookup && doc.blocks.some(b => b.type?.startsWith('maps'))) {
+  if (lookup && (ownSkeleton || doc.blocks.some(b => b.type?.startsWith('maps')))) {
     const group: EconomyGroup = { type: 'maps', label: 'Maps', ninja: ['Map'] }
     for (const m of SPECIAL_MAPS) {
       const prices = (m.ninja ?? []).map(n => lookup(group, n)).filter((p): p is NonNullable<typeof p> => !!p && p.chaos > 0)
@@ -544,7 +547,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   // Abyss and plain jewels (Guy's Jewels A, 2026-11-28): a row per rarity and
   // item level band; most have a fixed step (no price can judge them), the
   // low abyss bands a guess you set the step or price of.
-  if (doc.blocks.some(b => b.type != null && JEWEL_TYPE.test(b.type))) {
+  if (ownSkeleton || doc.blocks.some(b => b.type != null && JEWEL_TYPE.test(b.type))) {
     for (const j of JEWEL_ROWS) setRow(j, 'jewels', j.bts[0])
   }
   // Special gear (special-gear.ts): a row per thing a filter can see (a
@@ -552,7 +555,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   for (const r of SPECIAL_ROWS) setRow(r, 'special', r.tip)
   // League items (Guy's League A, 2026-11-28): priced sections by name, the
   // rest a row per thing a filter can see, each a guess you can change.
-  if (doc.blocks.some(b => b.type === 'expedition->logbook' || b.type?.startsWith('heist->') || b.type === 'viscera' || b.type === 'miscmapitemsextra')) {
+  if (ownSkeleton || doc.blocks.some(b => b.type === 'expedition->logbook' || b.type?.startsWith('heist->') || b.type === 'viscera' || b.type === 'miscmapitemsextra')) {
     const guessed = (name: string, cat: string, cls: string, bts: string[], guess: number, conds: FilterCondition[], tip?: string) => {
       const own = edits[name]?.price
       seen.set(name, {
@@ -1200,8 +1203,14 @@ function lvFloor (blocks: FilterBlock[], f: LvFloor, list: CurrencyItem[], cfg: 
 // Writes the rules above everything else in the filter (like the rare
 // weights: build rules, presets and your own rules then go on top).
 export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: PriceLookup | null, cards: CardFacts | null = null, gems: readonly GemLine[] | null = null, lists: OwnTables | null = null): CurrencyCompiled | null {
-  // Without prices every item would be a guess: leave it to NeverSink.
-  if (!cfg.on || !lookup) return null
+  // Without prices every item would be a guess: leave it to NeverSink. On
+  // our own skeleton there's no NeverSink to leave it to, so the guesses
+  // (item-guesses.json, day-1 prices) decide until prices come.
+  if (!cfg.on) return null
+  if (!lookup) {
+    if (ownBottom(doc) < 0) return null
+    lookup = () => null
+  }
   const all = currencyItems(doc, lookup, cfg.items, cards, gems, lists)
   if (!all.length) return null
   const eff = scaled(cfg, doc.strictness)
@@ -1222,7 +1231,9 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   // The 6-link one under NeverSink's top-base 6-links, above its other 6-links.
   const recipes = recipeBlocks(eff, lookup)
   const ns = doc.chunks.findIndex(ch => ch.kind === 'block' && !(ch as FilterBlock).type?.startsWith('woke->'))
-  const anchor = (b?: FilterBlock) => b ? doc.chunks.indexOf(b) : ns < 0 ? doc.chunks.length : ns
+  // On our own skeleton: above its rest rules, not under its catch-all.
+  const bottom = ownBottom(doc)
+  const anchor = (b?: FilterBlock) => b ? doc.chunks.indexOf(b) : ns >= 0 ? ns : bottom >= 0 ? bottom : doc.chunks.length
   const link6 = recipes.filter(b => b.comment.endsWith(': recipe: 6-link'))
   insertBlocks(doc, anchor(doc.blocks.find(b => b.type === '6l' && b.tier === 'others') ?? doc.blocks.find(b => b.type === '6l')), link6)
   insertBlocks(doc, anchor(doc.blocks.find(b => b.type === 'socketslinks')), recipes.filter(b => !link6.includes(b)))
@@ -1370,9 +1381,10 @@ function applySpecialMaps (doc: FilterDoc, cfg: CurrencySettings, items: Currenc
   if (!items.length) return null
   const out: CurrencyCompiled[] = []
   const anchor = doc.blocks.find(b => b.type === BLIGHT_TYPE)
-  if (anchor) {
+  const blightAt = anchor ? doc.chunks.indexOf(anchor) : ownBottom(doc)
+  if (blightAt >= 0) {
     const parts = MAP_KINDS.map(k => items.filter(it => it.cat === k.cat)).filter(l => l.length).map(l => compileCurrency(cfg, l, { faint }))
-    insertBlocks(doc, doc.chunks.indexOf(anchor), parts.flatMap(x => x.blocks))
+    insertBlocks(doc, blightAt, parts.flatMap(x => x.blocks))
     out.push(...parts)
   }
   // The special map folds go above NeverSink's first map rule (its
@@ -1382,7 +1394,8 @@ function applySpecialMaps (doc: FilterDoc, cfg: CurrencySettings, items: Currenc
   // Originator map with a Mirage) gets the louder one.
   const special = items.filter(it => SPECIAL_MAP_CATS.has(it.cat))
   const first = doc.blocks.find(b => b.type?.startsWith('maps'))
-  if (special.length && first) {
+  const firstAt = first ? doc.chunks.indexOf(first) : ownBottom(doc)
+  if (special.length && firstAt >= 0) {
     // A guessed price never hides a map. Under the line it shows Small in
     // its kind's tint from the tier normal maps show from (Guy 2026-11-28:
     // they fell to NeverSink's purple and all looked alike); lower tiers
@@ -1401,7 +1414,7 @@ function applySpecialMaps (doc: FilterDoc, cfg: CurrencySettings, items: Currenc
     const blocks = parts.flatMap(x => x.blocks)
     const shown = blocks.filter(b => b.visibility === 'Show' && b.tier !== 'faint').sort((x, y) => Number(y.tier?.slice(1) ?? 0) - Number(x.tier?.slice(1) ?? 0))
     const rest = blocks.filter(b => !shown.includes(b))
-    insertBlocks(doc, doc.chunks.indexOf(first), [...shown, ...rest])
+    insertBlocks(doc, firstAt, [...shown, ...rest])
     out.push(...parts)
   }
   if (!out.length) return null
@@ -1415,12 +1428,13 @@ function applySpecialMaps (doc: FilterDoc, cfg: CurrencySettings, items: Currenc
 function applyJewels (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
   if (!items.length) return null
   const first = doc.blocks.find(b => b.type != null && JEWEL_TYPE.test(b.type))
-  if (!first) return null
+  const at = first ? doc.chunks.indexOf(first) : ownBottom(doc)
+  if (at < 0) return null
   const parts = items.map(it => compileCurrency(cfg, [it], { faint }))
   const blocks = parts.flatMap(x => x.blocks)
   const shown = blocks.filter(b => b.visibility === 'Show' && b.tier !== 'faint').sort((x, y) => Number(y.tier?.slice(1) ?? 0) - Number(x.tier?.slice(1) ?? 0))
   const rest = blocks.filter(b => !shown.includes(b))
-  insertBlocks(doc, doc.chunks.indexOf(first), [...shown, ...rest])
+  insertBlocks(doc, at, [...shown, ...rest])
   return { blocks: [...shown, ...rest], items, chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 
@@ -1461,12 +1475,13 @@ function applySpecial (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyIte
 function applySpecialRolls (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
   if (!items.length) return null
   const anchor = doc.blocks.find(b => b.type === 'uniques' && b.tier != null && b.tier in SPECIAL_ROLLS)
-  if (!anchor) return null
+  const at = anchor ? doc.chunks.indexOf(anchor) : ownBottom(doc)
+  if (at < 0) return null
   const byTier = new Map<string, CurrencyItem[]>()
   for (const it of items) pushTo(byTier, it.tier ?? '', it)
   const parts = [...byTier.values()].map(l => compileCurrency(cfg, l, { faint }))
   const blocks = parts.flatMap(x => x.blocks)
-  insertBlocks(doc, doc.chunks.indexOf(anchor), blocks)
+  insertBlocks(doc, at, blocks)
   return { blocks, items, chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 
@@ -1475,9 +1490,10 @@ function applySpecialRolls (doc: FilterDoc, cfg: CurrencySettings, items: Curren
 function applyFoulborn (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
   if (!items.length) return null
   const anchor = doc.blocks.find(b => b.type === FOULBORN_TYPE)
-  if (!anchor) return null
+  const at = anchor ? doc.chunks.indexOf(anchor) : ownBottom(doc)
+  if (at < 0) return null
   const compiled = compileCurrency(cfg, items, { faint })
-  insertBlocks(doc, doc.chunks.indexOf(anchor), compiled.blocks)
+  insertBlocks(doc, at, compiled.blocks)
   return compiled
 }
 
@@ -1491,14 +1507,16 @@ function applyFoulborn (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyIt
 function applyUniques (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
   if (!items.length) return null
   const anchor = doc.blocks.find(b => b.type === 'uniques' && uniqueCategoryOf(b.tier) != null)
-  if (!anchor) return null
+  const at = anchor ? doc.chunks.indexOf(anchor) : ownBottom(doc)
+  if (at < 0) return null
   const lv = lvConds(cfg)
   const compiled = compileCurrency(cfg, items, { faint, lvl: lv ? [{ step: LV_UNIQUE_STEP, conds: lv, names: null }] : [] })
   const loud = compiled.blocks.filter(b => b.visibility === 'Show' && Number(b.tier?.slice(1)) >= 3)
   const quiet = compiled.blocks.filter(b => !loud.includes(b))
   const area = gateConds(cfg)
-  const specials = doc.blocks
-    .filter(b => b.index > anchor.index && b.type === 'uniques' && uniqueCategoryOf(b.tier) == null && b.visibility === 'Show' && !b.disabled)
+  // NeverSink's special unique tiers below the anchor; on our own skeleton
+  // our own (own-base.ts).
+  const specials = (anchor ? doc.blocks.filter(b => b.index > anchor.index && b.type === 'uniques' && uniqueCategoryOf(b.tier) == null && b.visibility === 'Show' && !b.disabled) : ownUniqueSpecials())
     .map(b => ({
       ...b,
       comment: `$type->${CURRENCY_TYPE} $tier->u-${b.tier} woke: currency weights, NeverSink's ${b.tier} uniques kept above the priced ones`,
@@ -1511,6 +1529,6 @@ function applyUniques (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyIte
       inherited: true
     }) as FilterBlock)
   const blocks = [...loud, ...specials, ...quiet]
-  insertBlocks(doc, doc.chunks.indexOf(anchor), blocks)
+  insertBlocks(doc, at, blocks)
   return { ...compiled, blocks }
 }
