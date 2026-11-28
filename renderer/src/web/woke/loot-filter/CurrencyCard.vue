@@ -31,7 +31,10 @@
 
     <div :class="$style.verdict">
       <LabelPreview :text="it.name" :actions="[]" :style-override="currencyFullLook(shown === 0 ? 1 : shown, it.cat, cfg)" :visibility="shown === 0 ? 'Hide' : 'Show'" :extras="false" :scale="0.6" />
-      <span :class="[$style.big, shown === 0 && verdict !== 'Faint' ? $style.down : $style.up]" data-currency-card-now>{{ verdict }}</span>
+      <span :class="[$style.big, shown === 0 && verdict !== 'Faint' ? $style.down : $style.up]" data-currency-card-now>
+        <button v-if="allHides" type="button" :class="$style.why" :title="`${decides}.\n${ALL_HELP}\nClick to open it on the Loot tab.`" data-currency-card-all @click="emit('open-tab', it.cat, it.name)">{{ verdict }}</button>
+        <template v-else>{{ verdict }}</template>
+      </span>
       <span class="grow" />
       <span :class="$style.price" data-currency-card-price>
         <WPrice v-if="fixed != null" :chaos="null" none="No price: a filter can't see which implicit or mods a jewel has, so it shows at a set step" />
@@ -82,6 +85,13 @@
           <span :class="$style.uqNum">{{ chaosText(u.chaos) }}</span>
           <span :class="$style.uqStep">{{ CSTEP_NAMES[u.step] }}</span>
         </div>
+        <div v-else-if="u.noDrop" :class="[$style.uqRow, $style.noDrop]" data-currency-card-no-drop>
+          <span />
+          <span v-item-tip="{ name: u.name, type: it.name }" :class="$style.uqName">{{ u.name }}</span>
+          <span :class="$style.uqNum"><span :class="$style.chip" title="Drops only from a boss or a special source, never at random, so it's not in the average">can't drop</span></span>
+          <span :class="$style.uqNum">{{ u.chaos > 0 ? chaosText(u.chaos) : '–' }}</span>
+          <span :class="$style.uqStep" />
+        </div>
         <label v-else :class="[$style.uqRow, { [$style.uqOut]: !u.counted }]">
           <input type="checkbox" :checked="!u.out" :disabled="u.chase && !u.out" :aria-label="`Count ${u.name} in the average`" data-loot-not-avg @change="cfg.notAvg = toggleNotAvg(cfg, u.name)">
           <span v-item-tip="{ name: u.name, type: it.name }" :class="$style.uqName">{{ u.name }}</span>
@@ -92,10 +102,9 @@
       </template>
     </div>
 
-    <div v-if="decides" :class="$style.decides" data-currency-card-decides>
+    <div v-if="decides && layer !== 'all'" :class="$style.decides" data-currency-card-decides>
       <span :class="$style.tag">Decides</span><span class="grow">{{ decides }}</span>
-      <WInfo v-if="layer === 'all' && shown === 0" :text="ALL_HELP" />
-      <button v-if="layer === 'all' || ownRuler" type="button" :class="$style.link" data-currency-card-all @click="emit('open-tab', it.cat, it.name)">Open on Loot tab ›</button>
+      <button v-if="ownRuler" type="button" :class="$style.link" data-currency-card-ruler-open @click="emit('open-tab', it.cat, it.name)">Open on Loot tab ›</button>
     </div>
     <label v-if="kindOf(it.cat) === 'cards'" :class="$style.line" data-currency-card-collect>
       <input type="checkbox" :checked="!!edit.min" @change="toggleCollect"> <span class="text-xs">Collecting: every stack shows as at least Normal</span>
@@ -184,8 +193,7 @@ const PRICE_HELP = `The price the filter uses: poe.ninja's, yours if you set one
 - A stack counts for more than one, up to a full stack.
 - Click it to type your own; ↺ goes back.
 - The bias changes what it counts as.`
-const ALL_HELP = `This is why it's hidden: its worth lands on a step All loot turns off.
-- Turn that step on in the Loot tab, or set this item to Always show.`
+const ALL_HELP = 'Its worth lands on a step All loot turns off. Turn that step on in the Loot tab, or set this item to Always show.'
 const UNIQUES_HELP = `Every unique this base can drop as, with its chance, price and the step that price gets.
 - The base is priced by the average drop.
 - Untick a unique to leave it out of the average (a special drop you never see).
@@ -428,6 +436,9 @@ const decides = computed(() => {
 })
 // What the rule path's level shows on Show it: its own say, or (the item)
 // its section's while it has none.
+// All loot hides it: "Hidden" says why on hover and opens the Loot tab
+// (Guy 2026-11-28: no separate All loot line).
+const allHides = computed(() => layer.value === 'all' && shown.value === 0 && verdict.value === 'Hidden')
 const levelMode = computed(() => level.value === 'sec' || mode.value === 'auto' ? secMode.value : mode.value)
 function setLevelMode (v: string) {
   if (level.value === 'sec') setSecMode(v)
@@ -516,16 +527,16 @@ function commitPct (v: number) {
 
 // What the base can be (Guy 2026-11-28: every unique with its price and
 // step, and the average the filter prices it by, between them by price).
-interface CanBe { key: string, avg?: boolean, name: string, chaos: number, step: CStep, chance: string, counted: boolean, chase: boolean, out: boolean }
+interface CanBe { key: string, avg?: boolean, name: string, chaos: number, step: CStep, chance: string, counted: boolean, chase: boolean, out: boolean, noDrop?: boolean }
 const canBe = computed<CanBe[]>(() => {
   const list = it.value?.uniques ?? []
-  if (!list.length) return []
+  if (!list.some(u => !u.noDrop)) return []
   const w = (t: number | null) => t == null ? 45 : DROP_WEIGHT[t] ?? 45
   const sum = list.filter(u => u.counted).reduce((a, u) => a + w(u.tier), 0)
   const m = liveMult.value
   const out: CanBe[] = list.map(u => {
     const p = sum && u.counted ? w(u.tier) / sum * 100 : 0
-    return { key: u.name, name: u.name, chaos: u.chaos * m, step: stepAt(u.chaos * m), chance: p >= 10 ? `${Math.round(p)}%` : `${Number(p.toPrecision(1))}%`, counted: u.counted, chase: u.chase, out: u.out }
+    return { key: u.name, name: u.name, chaos: u.chaos * m, step: stepAt(u.chaos * m), chance: p >= 10 ? `${Math.round(p)}%` : `${Number(p.toPrecision(1))}%`, counted: u.counted, chase: u.chase, out: u.out, noDrop: u.noDrop }
   }).sort((a, b) => b.chaos - a.chaos)
   const avg = base.value * m
   const at = out.findIndex(u => u.chaos < avg)
@@ -631,6 +642,9 @@ function chaosText (v: number): string {
 .uqNum { text-align: right; color: var(--w-dim); font-variant-numeric: tabular-nums; font-size: var(--w-fs-xs); }
 .uqStep { color: var(--w-fg); font-size: var(--w-fs-xs); }
 .uqOut .uqName { color: var(--w-faint); text-decoration: line-through; }
+.noDrop .uqName { color: var(--w-dim); }
+.chip { padding: 0 5px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); color: var(--w-faint); white-space: nowrap; }
+.why { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
 .avg { cursor: default; border-top: 1px dashed var(--w-line); border-bottom: 1px dashed var(--w-line); }
 .avg .uqName { color: var(--w-fg); }
 .fold { border-top: 1px solid var(--w-line); padding-top: 6px; }
