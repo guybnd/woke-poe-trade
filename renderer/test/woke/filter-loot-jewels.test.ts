@@ -57,7 +57,7 @@ describe('jewels on the Loot tab', () => {
   it('shows the rows no price can judge whatever steps are off', () => {
     const cfg = defaultCurrency()
     cfg.on = true
-    cfg.off = [1, 2]
+    cfg.offBy = { jewels: [1, 2] }
     const doc = parseFilter(SEMI)
     applyCurrency(doc, cfg, lookup)
     const hit = (f: ItemFacts) => matchItem(doc, f)
