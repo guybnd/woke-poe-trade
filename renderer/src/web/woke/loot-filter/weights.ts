@@ -701,18 +701,6 @@ export function filterBases (doc: FilterDoc, own: Record<string, Rank> = {}): Ba
   return withRanks(baseTable(baseRanks(doc), allGearBases(), n => ({ cls: baseInfo(n).cls, facts: BASE_FACTS[n] })), own)
 }
 
-// One rank list (Guy's pick, 2026-11-28): a base moved on Loot filter ›
-// Base ranks counts for Equipment too, unless Equipment gives it a rank of
-// its own. Never stays a Drop tiers move.
-export function ranksWithMoves (own: Record<string, Rank>, moves: Record<string, string> | undefined): Record<string, Rank> {
-  const out: Record<string, Rank> = {}
-  for (const [b, lane] of Object.entries(moves ?? {})) {
-    if (lane === 'r1' || lane === 'r2' || lane === 'r3') out[b] = lane
-    else if (lane === 'none') out[b] = 'r0'
-  }
-  return { ...out, ...own }
-}
-
 // Your own ranks over the filter's.
 export function withRanks (rows: BaseRow[], own: Record<string, Rank>): BaseRow[] {
   return rows.map(b => own[b.name] && own[b.name] !== b.rank ? { ...b, rank: own[b.name], was: b.rank } : b)

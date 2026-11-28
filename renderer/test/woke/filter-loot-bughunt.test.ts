@@ -1,5 +1,5 @@
 // Loot tab bugs found in the overnight hunt (2026-11-27), one test each.
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
@@ -15,6 +15,9 @@ import { defaultPresets } from '@/web/woke/loot-filter/presets'
 import { WEIGHT_TYPE } from '@/web/woke/loot-filter/weights'
 import { cardCategoryOf } from '@/web/woke/loot-filter/card-classes'
 import { neverSink } from '../helpers/neversink'
+import { loadGameData } from '../helpers/game-data'
+
+beforeAll(loadGameData, 60000)
 
 const SEMI = neverSink('2-SEMI-STRICT')
 const lookup: PriceLookup = (_g, base) => base === 'Divine Orb' ? { chaos: 160, thin: false } : null
@@ -230,15 +233,28 @@ describe('quiet mode and fewer beams reach the Loot and Equipment tabs', () => {
 })
 
 describe('one rank list for Base ranks and Equipment', () => {
-  it('a Base ranks move counts for Equipment unless Equipment ranks the base itself', async () => {
-    const { ranksWithMoves } = await import('@/web/woke/loot-filter/weights')
-    expect(ranksWithMoves({}, { 'Vaal Regalia': 'r1', 'Iron Hat': 'none', 'Plate Vest': 'never' })).toEqual({ 'Vaal Regalia': 'r1', 'Iron Hat': 'r0' })
-    expect(ranksWithMoves({ 'Vaal Regalia': 'r3' }, { 'Vaal Regalia': 'r1' })).toEqual({ 'Vaal Regalia': 'r3' })
-  })
-  it('a Base ranks move drops the Equipment rank of that base', async () => {
-    const { clearWeightRanks } = await import('@/web/woke/loot-filter/weight-rank')
-    const config = { presets: { weights: { ranks: { 'Vaal Regalia': 'r3', 'Iron Hat': 'r1' } } } } as unknown as Parameters<typeof clearWeightRanks>[0]
-    clearWeightRanks(config, ['Vaal Regalia'])
-    expect(config.presets.weights.ranks).toEqual({ 'Iron Hat': 'r1' })
+  it('a Base ranks move sets the Equipment rank; exotic bases and Never keep theirs', async () => {
+    const { moveWeightRanks } = await import('@/web/woke/loot-filter/weight-rank')
+    const { filterBases } = await import('@/web/woke/loot-filter/weights')
+    const doc = parseFilter(SEMI)
+    const rows = filterBases(doc)
+    const r1 = rows.find(r => r.rank === 'r1')!.name
+    const r3 = rows.find(r => r.rank === 'r3')!.name
+    const ex = rows.find(r => r.rank === 'x1')?.name
+    type Cfg = Parameters<typeof moveWeightRanks>[1]
+    const config = { presets: { weights: { ranks: { [r3]: 'rj' } } } } as unknown as Cfg
+    const store = { doc: { value: doc } } as unknown as Parameters<typeof moveWeightRanks>[0]
+    moveWeightRanks(store, config, [r1], 'r3')
+    expect(config.presets.weights.ranks[r1]).toBe('r3')
+    moveWeightRanks(store, config, [r1], 'r1')
+    expect(r1 in config.presets.weights.ranks).toBe(false)
+    moveWeightRanks(store, config, [r3], 'never')
+    expect(config.presets.weights.ranks[r3]).toBe('rj')
+    moveWeightRanks(store, config, [r3], 'none')
+    expect(config.presets.weights.ranks[r3]).toBe('r0')
+    if (ex) {
+      moveWeightRanks(store, config, [ex], 'r2')
+      expect(ex in config.presets.weights.ranks).toBe(false)
+    }
   })
 })

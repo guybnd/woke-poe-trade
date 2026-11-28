@@ -23,7 +23,7 @@ import { gemBaseName, renameBases } from './gem-bases'
 import { CLUSTER_PRICE_TYPE, applyClusterPrices } from './cluster-prices'
 import type { ClusterPrice } from './cluster-prices'
 import type { BaseRename } from './gem-bases'
-import { applyWeights, filterBases, ranksWithMoves } from './weights'
+import { applyWeights, filterBases } from './weights'
 import { applyCurrency } from './currency-weights'
 import { applyMapFloor } from './map-floor'
 import { applyLeagueOff } from './league-classes'
@@ -103,7 +103,7 @@ export interface Composed {
 export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const next = parseFilterCopy(text)
   // Rare weights (beta) first, so everything below goes on top of them.
-  const weightBases = cfg.presets.weights.on ? filterBases(next, ranksWithMoves(cfg.presets.weights.ranks, cfg.presets.gear.moves)) : []
+  const weightBases = cfg.presets.weights.on ? filterBases(next, cfg.presets.weights.ranks) : []
   const weights = applyWeights(next, cfg.presets.weights, weightBases)
   // Utility flasks score on the same line (Equipment › Flasks).
   applyFlasks(next, cfg.presets.weights)
