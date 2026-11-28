@@ -1100,7 +1100,7 @@ watch(() => props.openTab, (t) => {
   if (!t) return
   if (t.tab === 'weights') {
     // Rare gear (What's new "Show me"), whichever Equipment section was open.
-    if (equipShown.value) { tabFocus.value = 'rares'; tab.value = 'weights'; nextTick(() => { tabFocus.value = null }).catch(() => {}) }
+    tabFocus.value = 'rares'; tab.value = 'weights'; nextTick(() => { tabFocus.value = null }).catch(() => {})
     emit('tab-opened')
     return
   }
