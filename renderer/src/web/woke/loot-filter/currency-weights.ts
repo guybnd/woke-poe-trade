@@ -24,7 +24,7 @@ import type { DropUnique, EconomyGroup, PriceLookup } from './economy'
 import { applyStyle, readStyle } from './edits'
 import type { StylePatch } from './edits'
 import { fullStack } from './stack-sizes'
-import { ITEM_BY_REF } from '@/assets/data'
+import { ITEMS_ITERATOR, ITEM_BY_REF } from '@/assets/data'
 import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
@@ -235,6 +235,13 @@ function isFree (name: string, type: string, tier: string | null): boolean {
   return categoryOf(name, type) === 'other' && !/(Shard|Fragment|Splinter|Scrap)$/.test(name) && !(tier && HIDDEN_TIERS.test(tier))
 }
 
+// Names from the game data (empty before it loads, as in some tests).
+function gameNames (q: string, keep: (b: { gem?: { transfigured?: boolean } }) => boolean = () => true): string[] {
+  try {
+    return [...new Set([...ITEMS_ITERATOR(q)].filter(keep).map(b => b.refName))]
+  } catch { return [] }
+}
+
 export function tierGuess (tier: string | null): number {
   if (tier && HIDDEN_TIERS.test(tier)) return 0.05
   const m = tier?.match(/^t(\d)/)
@@ -414,6 +421,26 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         full: 1,
         bt: g.name,
         conds
+      })
+    }
+    // A gem poe.ninja has no band for (Guy 2026-11-28: Vaal and Awakened
+    // gems fell to our fallback rule, so Alt+F showed the old card): one
+    // row by name from the game data, shown until it has a price.
+    for (const name of gameNames('"namespace":"GEM"', b => !b.gem?.transfigured)) {
+      if (names.has(name) || seen.has(name)) continue
+      const own = edits[name]?.price
+      seen.set(name, {
+        name,
+        cls: name.endsWith(' Support') ? 'Support Gems' : 'Skill Gems',
+        type: 'gems',
+        tier: null,
+        cat: gemCategoryOf(name, names),
+        chaos: (own ?? 1) * (edits[name]?.mult ?? 1),
+        est: own == null,
+        ...(own != null ? { own: true } : { free: true }),
+        full: 1,
+        bt: name,
+        conds: [c('TransfiguredGem', '', ['False'])]
       })
     }
   }
@@ -750,7 +777,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   if (lists?.lists.length) {
     for (const sec of LEAGUE_PRICED) {
       const cls = sec.cat === 'lgkeys' ? 'Vault Keys' : sec.cls
-      byName(cls, sec.cat, { type: sec.cat, label: sec.cat, ninja: sec.ninja }, () => sec.guess(null), [])
+      byName(cls, sec.cat, { type: sec.cat, label: sec.cat, ninja: sec.ninja }, () => sec.guess(null), sec.cat === 'lgviscera' ? gameNames('"category":"Viscera"') : [])
     }
   }
   return [...seen.values()]
