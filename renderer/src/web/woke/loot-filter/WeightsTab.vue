@@ -436,7 +436,7 @@ function measureDrawn () {
     const x = samples.value[Number(node.dataset.drop)]
     const tags = node.firstElementChild as HTMLElement | null
     const row = node.lastElementChild as HTMLElement | null
-    const label = row?.querySelector<HTMLElement>('[data-no-item-tip] > span')
+    const label = row?.querySelector<HTMLElement>('[data-label-preview] > span')
     if (!x || !tags || !row || !label) continue
     // The label clips its text to the slot, so its scroll width is the real one.
     const labelW = label.scrollWidth + (label.offsetWidth - label.clientWidth)

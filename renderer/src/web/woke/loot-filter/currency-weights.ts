@@ -74,11 +74,12 @@ export const CURRENCY_CATEGORIES: CurrencyCategory[] = [
 
 // Gold piles by size, larger first (NeverSink's own sizes). The guesses put
 // them on Decent, Normal, Small and Small at the default steps.
-export const GOLD_PILES: Array<{ name: string, min: number | null, guess: number }> = [
-  { name: 'Gold 3,000+', min: 3000, guess: 4 },
-  { name: 'Gold 500+', min: 500, guess: 1.5 },
-  { name: 'Gold 150+', min: 150, guess: 0.4 },
-  { name: 'Gold under 150', min: null, guess: 0.25 }
+// Each row a band, so setting a bigger pile Off never leaves it to a smaller row.
+export const GOLD_PILES: Array<{ name: string, min: number | null, max: number | null, guess: number }> = [
+  { name: 'Gold 3,000+', min: 3001, max: null, guess: 4 },
+  { name: 'Gold 500+', min: 500, max: 3000, guess: 1.5 },
+  { name: 'Gold 150+', min: 150, max: 499, guess: 0.4 },
+  { name: 'Gold under 150', min: null, max: 149, guess: 0.25 }
 ]
 // Every class's categories (the Loot tab's rail shows one class at a time).
 export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES, ...MAP_CATEGORIES]
@@ -437,7 +438,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         ...(own != null ? { own: true } : {}),
         full: 1,
         bt: 'Gold',
-        conds: [g.min ? c('StackSize', '>=', [g.min]) : c('StackSize', '<', [150])]
+        conds: [...(g.min ? [c('StackSize', '>=', [g.min])] : []), ...(g.max ? [c('StackSize', '<=', [g.max])] : [])]
       })
     }
   }

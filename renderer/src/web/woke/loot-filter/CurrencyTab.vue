@@ -52,7 +52,7 @@
     </div>
 
     <MapsPile v-if="kind === 'maps'" :doc="store.doc.value" :priced="pricedNames" @go="goTo" />
-    <CurrencyPile v-else-if="baseItems.length" :items="items" :cfg="eff" :faint="faintActive" @go="goTo" />
+    <CurrencyPile v-else-if="baseItems.length" :items="items" :cfg="eff" :faint="faintActive" :tip="tipOf" @go="goTo" />
 
     <div :class="$style.tools">
       <input v-model="query" type="search" placeholder="Find an item" :class="$style.search" aria-label="Find an item">
@@ -116,7 +116,7 @@
             </select></label>
         </div>
         <template v-for="r in (sg.name && !isOpen(`${g.cat.id}/${sg.name}`) ? [] : sg.rows)" :key="r.it.name">
-          <WItemRow :item="r.it.top ? { name: r.it.top, type: r.it.name } : { name: r.it.bt ?? r.it.name }" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
+          <WItemRow :item="tipOf(r.it)" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
             <span :class="$style.name"><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
               :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ rowName(r.it) }}<span v-if="gemCorrupted(r.it)" :class="$style.corr" title="Corrupted: this price is for a corrupted gem of this level and quality"><WIcon currency="Vaal Orb" size="sm" />Corrupted</span><span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.edited" :class="$style.edited"> edited</span></span>
             <span :class="$style.price" :title="r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows at least Small' : r.it.est ? `No usable price: a guess from NeverSink's ${r.it.tier ? `tier ${r.it.tier}` : 'tiers'}` : 'poe.ninja'">
@@ -142,6 +142,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { WButton, WChip, WIcon, WInfo, WItemRow, WSegmented, WToggle } from '../ui'
 import CurrencyPile from './CurrencyPile.vue'
+import { lootTipRef } from './base-tip'
 import MapsPile from './MapsPile.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import LabelPreview from './LabelPreview.vue'
@@ -200,6 +201,8 @@ const baseByName = computed(() => new Map(baseItems.value.map(i => [i.name, i]))
 const baseChaos = (name: string) => baseByName.value.get(name)?.chaos ?? 0
 // With your own prices on top.
 const items = computed<CurrencyItem[]>(() => baseItems.value.map(it => withEdit(it, c.value.items[it.name])))
+// Each row's and ground label's tooltip: a unique base lists its uniques.
+const tipOf = (it: CurrencyItem) => lootTipRef(it, props.store.prices.breakdown.value, props.config.safetyNet.minChaos)
 // The Maps page's ground opens a priced map (a blighted tier) on click.
 const pricedNames = computed(() => new Set(baseItems.value.map(it => it.name)))
 // A gem row: "Eclipse Support 4/23", with a Corrupted mark instead of a bare "c".

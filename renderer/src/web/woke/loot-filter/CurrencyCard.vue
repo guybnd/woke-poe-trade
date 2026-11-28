@@ -65,6 +65,8 @@ import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN,
 import { cardFacts, loadCardFacts } from './card-facts'
 import { gemLinesOf } from './gem-classes'
 import { gemItemFor } from './loot-focus'
+import { evalCondition } from './match'
+import type { ItemFacts } from './item-facts'
 import type { CStep, CurrencyItem, ItemEdit, SectionMode } from './currency-weights'
 import type { StylePatch } from './edits'
 import type { FilterCondition } from './parse'
@@ -80,6 +82,9 @@ const props = defineProps<{
   gem?: { level: number, quality: number, corrupted: boolean } | null
   // The rule that caught it (a gem's band rule says which band it is).
   rule?: FilterCondition[] | null
+  // The item itself: finds a row named for its kind, not its base (gold by
+  // pile size, a special map, a blighted tier).
+  facts?: ItemFacts | null
 }>()
 // The item's category and the name its row has on the Loot tab.
 const emit = defineEmits<{ 'open-tab': [cat: string, name: string] }>()
@@ -99,9 +104,18 @@ const raw = computed<CurrencyItem | null>(() => {
   if (!doc || !lookup) return null
   loadCardFacts()
   const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null)
-  if (!props.gem) return all.find(i => i.name === props.name) ?? null
+  if (!props.gem) return all.find(i => i.name === props.name) ?? rowFor(all) ?? null
   return gemItemFor(all, props.name, props.gem, props.rule)
 })
+// A row whose BaseTypes and conditions fit the item; the dearest first, as
+// the rules go loudest first.
+function rowFor (all: CurrencyItem[]): CurrencyItem | undefined {
+  const f = props.facts
+  if (!f) return undefined
+  return all
+    .filter(i => (i.bts ?? [i.bt ?? i.name]).includes(props.name) && (i.conds ?? []).every(x => evalCondition(x, f) !== false))
+    .sort((a, b) => b.chaos - a.chaos)[0]
+}
 // The row's name on the Loot tab ("Arc 20/20" for a gem band).
 const itemName = computed(() => raw.value?.name ?? props.name)
 const edit = computed<ItemEdit>(() => cfg.value.items[itemName.value] ?? {})

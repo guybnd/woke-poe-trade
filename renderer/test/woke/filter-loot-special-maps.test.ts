@@ -108,4 +108,16 @@ describe('special maps on the Loot tab', () => {
     expect(matchItem(doc, map(16, { zanaMemory: true })).visibility).toBe('Hide')
     expect(matchItem(doc, map(16)).visibility).toBe('Show')
   })
+
+  it('leaves a corrupted or anointed blighted map to its own priced rule', () => {
+    const cfg = defaultCurrency()
+    cfg.on = true
+    cfg.catMode = { mapcorr: 'off' }
+    const doc = parseFilter(REGULAR)
+    applyCurrency(doc, cfg, lookup)
+    const ravaged = matchItem(doc, map(16, { rarity: 'Rare', uberBlightedMap: true, corrupted: true, corruptedMods: 1, anyEnchantment: true } as Partial<ItemFacts>))
+    expect(ravaged.visibility).toBe('Show')
+    expect(ravaged.final?.block.comment).not.toContain('mapcorr')
+    expect(Number(ravaged.final?.block.tier?.slice(1))).toBeGreaterThanOrEqual(4)
+  })
 })

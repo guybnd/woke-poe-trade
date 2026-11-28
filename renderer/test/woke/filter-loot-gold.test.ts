@@ -39,4 +39,14 @@ describe('gold on the Loot tab', () => {
       expect(b.conditions.find(k => k.key === 'BaseType')?.values).toEqual(['Gold'])
     }
   })
+
+  it('hides a bigger pile set Off, never leaving it to a smaller row', () => {
+    const cfg = defaultCurrency()
+    cfg.on = true
+    cfg.items = { 'Gold 3,000+': { step: 0 } }
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, cfg, lookup)
+    expect(matchItem(doc, gold(4000)).visibility).toBe('Hide')
+    expect(matchItem(doc, gold(600)).visibility).toBe('Show')
+  })
 })

@@ -60,6 +60,9 @@ const cnd = (key: string, op: string, values: string[], count: number | null = n
 const tiers = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => `Map (Tier ${from + i})`)
 const NOT_UNIQUE = cnd('Rarity', '', ['Normal', 'Magic', 'Rare'])
 const IDENTIFIED = cnd('Identified', '', ['True'])
+// A blighted map's own price rules sit lower (at NeverSink's blighted
+// section), and anointing one counts as an enchantment: these rows skip them.
+const NOT_BLIGHT = [cnd('BlightedMap', '', ['False']), cnd('UberBlightedMap', '', ['False'])]
 
 export const SPECIAL_MAPS: SpecialMap[] = [
   { cat: 'mapend', name: 'Nightmare Map', bts: ['Nightmare Map'], ninja: ['Nightmare Map'], conds: [NOT_UNIQUE] },
@@ -67,17 +70,17 @@ export const SPECIAL_MAPS: SpecialMap[] = [
   { cat: 'mapend', name: 'Shaper Guardian Map', bts: ['Shaper Guardian Map'], ninja: ['Shaper Guardian Map'], conds: [NOT_UNIQUE] },
   { cat: 'mapguard', name: 'Elder guardian maps (Tier 16)', bts: ['Map (Tier 16)'], ninja: ['The Enslaver Map (Tier 16)', 'The Eradicator Map (Tier 16)', 'The Constrictor Map (Tier 16)', 'The Purifier Map (Tier 16)'], conds: [NOT_UNIQUE, cnd('HasInfluence', '', ['Elder'])] },
   { cat: 'mapguard', name: 'Citadel maps (Tier 16)', bts: ['Map (Tier 16)'], ninja: ['Al-Hezmin Map (Tier 16)', 'Baran Map (Tier 16)', 'Drox Map (Tier 16)', 'Veritania Map (Tier 16)'], conds: [NOT_UNIQUE, cnd('HasInfluence', '', ['Crusader', 'Hunter', 'Redeemer', 'Warlord'])] },
-  { cat: 'maporig', name: 'Originator Map (Tier 16)', bts: ['Map (Tier 16)'], guess: 4, conds: [NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
-  { cat: 'maporig', name: 'Originator Map (Tier 15)', bts: ['Map (Tier 15)'], guess: 2, conds: [NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
-  { cat: 'maporig', name: 'Originator Map (Tier 14)', bts: ['Map (Tier 14)'], guess: 1.5, conds: [NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
-  { cat: 'maporig', name: 'Originator maps (Tier 1-13)', bts: tiers(1, 13), guess: 0.5, conds: [NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
-  { cat: 'mapmods', name: 'Mirage (of Zarokh)', bts: tiers(1, 16), guess: 10, conds: [IDENTIFIED, cnd('HasExplicitMod', '', ['of Zarokh'])] },
-  { cat: 'mapmods', name: 'Wildwood (of the Woods)', bts: tiers(1, 16), guess: 10, conds: [IDENTIFIED, cnd('HasExplicitMod', '', ['of the Woods'])] },
-  { cat: 'mapmods', name: 'Sentinel (of Unearthed Technology)', bts: tiers(1, 16), guess: 4, conds: [IDENTIFIED, cnd('HasExplicitMod', '', ['of Unearthed Technology'])] },
-  { cat: 'mapmods', name: 'Delirium mirror (of Insanity)', bts: tiers(1, 16), guess: 4, conds: [IDENTIFIED, cnd('HasExplicitMod', '', ['of Insanity'])] },
-  { cat: 'mapmods', name: "Beidat, Ghorr or K'Tash", bts: tiers(1, 16), guess: 4, conds: [IDENTIFIED, cnd('HasExplicitMod', '', ['of Beidat', 'of Ghorr', "of K'Tash"])] },
-  { cat: 'mapcorr', name: '8 mods', bts: tiers(1, 16), guess: 4, conds: [IDENTIFIED, cnd('Corrupted', '', ['True']), cnd('HasExplicitMod', '>=', ['a', 'e', 'i', 'o', 'u', 'y'], 7)] },
-  { cat: 'mapcorr', name: 'Corrupted implicit', bts: tiers(1, 16), guess: 1, conds: [NOT_UNIQUE, cnd('CorruptedMods', '>=', ['1'])] },
-  { cat: 'mapcorr', name: 'Enchanted', bts: tiers(1, 16), guess: 1, conds: [NOT_UNIQUE, cnd('AnyEnchantment', '', ['True'])] }
+  { cat: 'maporig', name: 'Originator Map (Tier 16)', bts: ['Map (Tier 16)'], guess: 4, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
+  { cat: 'maporig', name: 'Originator Map (Tier 15)', bts: ['Map (Tier 15)'], guess: 2, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
+  { cat: 'maporig', name: 'Originator Map (Tier 14)', bts: ['Map (Tier 14)'], guess: 1.5, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
+  { cat: 'maporig', name: 'Originator maps (Tier 1-13)', bts: tiers(1, 13), guess: 0.5, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('ZanaMemory', '', ['True'])] },
+  { cat: 'mapmods', name: 'Mirage (of Zarokh)', bts: tiers(1, 16), guess: 10, conds: [...NOT_BLIGHT, IDENTIFIED, cnd('HasExplicitMod', '', ['of Zarokh'])] },
+  { cat: 'mapmods', name: 'Wildwood (of the Woods)', bts: tiers(1, 16), guess: 10, conds: [...NOT_BLIGHT, IDENTIFIED, cnd('HasExplicitMod', '', ['of the Woods'])] },
+  { cat: 'mapmods', name: 'Sentinel (of Unearthed Technology)', bts: tiers(1, 16), guess: 4, conds: [...NOT_BLIGHT, IDENTIFIED, cnd('HasExplicitMod', '', ['of Unearthed Technology'])] },
+  { cat: 'mapmods', name: 'Delirium mirror (of Insanity)', bts: tiers(1, 16), guess: 4, conds: [...NOT_BLIGHT, IDENTIFIED, cnd('HasExplicitMod', '', ['of Insanity'])] },
+  { cat: 'mapmods', name: "Beidat, Ghorr or K'Tash", bts: tiers(1, 16), guess: 4, conds: [...NOT_BLIGHT, IDENTIFIED, cnd('HasExplicitMod', '', ['of Beidat', 'of Ghorr', "of K'Tash"])] },
+  { cat: 'mapcorr', name: '8 mods', bts: tiers(1, 16), guess: 4, conds: [...NOT_BLIGHT, IDENTIFIED, cnd('Corrupted', '', ['True']), cnd('HasExplicitMod', '>=', ['a', 'e', 'i', 'o', 'u', 'y'], 7)] },
+  { cat: 'mapcorr', name: 'Corrupted implicit', bts: tiers(1, 16), guess: 1, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('CorruptedMods', '>=', ['1'])] },
+  { cat: 'mapcorr', name: 'Enchanted', bts: tiers(1, 16), guess: 1, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('AnyEnchantment', '', ['True'])] }
 ]
 export const SPECIAL_MAP_CATS = new Set(SPECIAL_MAPS.map(m => m.cat))
