@@ -86,6 +86,10 @@ export interface PricePoint {
   note?: string
   // A day-1 price standing in for a live one (day1-prices.ts).
   day1?: boolean
+  // Uniques priced by their average drop (dropLookup): how many uniques
+  // counted, and the chase uniques left out of the average (rare and worth
+  // the chase line or more), most valuable first.
+  drop?: { of: number, chase: Array<{ name: string, chaos: number }> }
 }
 
 // Price of a base type in one group, or null when poe.ninja has none.
@@ -211,6 +215,65 @@ export function swingText (chaos: number, swing: PriceSwing): { label: string, t
   return {
     label: `${up ? 'spiked +' : 'crashed −'}${pct}% in ${span}`,
     title: `${c(swing.was)} ${span} ago, ${c(chaos)} now. A move this fast is as often a price fixer as a real change, so it waits until the price settles.`
+  }
+}
+
+// How often a unique turns up, by its drop tier (T0 rarest .. T5 most
+// common). No real odds exist; each tier counts about half to a third of the
+// one above (Guy's pick A, 2026-11-28). A unique with no tier counts as T4.
+export const DROP_WEIGHT = [1, 3, 8, 20, 45, 100]
+const NO_TIER_WEIGHT = 45
+// A unique this rare (very or extremely rare) and worth the chase line is a chase.
+export const CHASE_TIER = 2
+
+export function dropWeight (tiers: Record<string, number> | null, name: string): number {
+  const t = tiers?.[name]
+  return t == null ? NO_TIER_WEIGHT : DROP_WEIGHT[t] ?? NO_TIER_WEIGHT
+}
+
+// The Loot tab's unique prices (Guy's picks A + K1, 2026-11-28): a base is
+// worth what an average drop on it is worth, each unique counted by how often
+// it turns up. A chase unique (very or extremely rare, worth `chaseFrom` or
+// more) doesn't count; it's listed instead, and the base gets the chase look.
+// A base whose uniques are all chases is simply worth their average.
+// Everything that isn't a plain unique base (Foulborn, special rolls) is
+// priced by its best line, as before.
+export function dropLookup (
+  items: PriceItem[],
+  uniquesOnBase: (base: string) => string[],
+  tiers: Record<string, number> | null,
+  chaseFrom: number
+): PriceLookup {
+  const max = priceLookup(items, uniquesOnBase, 'max')
+  const find = priceFinder(items, 'market')
+  return (group, base) => {
+    if (!group.unique || group.foulborn || group.links || group.special) return max(group, base)
+    const priced = uniquesOnBase(base)
+      .filter(name => !isReplica(name))
+      .map(name => ({ name, hit: find(group.ninja, name, base) }))
+      .filter((x): x is { name: string, hit: PriceItem } => Boolean(x.hit))
+    if (!priced.length) return null
+    const isChase = (x: { name: string, hit: PriceItem }) => (tiers?.[x.name] ?? 9) <= CHASE_TIER && x.hit.chaos >= chaseFrom
+    const chase = priced.filter(isChase)
+    const counted = chase.length < priced.length ? priced.filter(x => !isChase(x)) : priced
+    const w = (x: { name: string }) => dropWeight(tiers, x.name)
+    const total = counted.reduce((n, x) => n + w(x), 0)
+    const avg = counted.reduce((n, x) => n + w(x) * x.hit.chaos, 0) / total
+    // The line that weighs most in the average speaks for thin and volatile.
+    const lead = counted.reduce((a, b) => w(b) * b.hit.chaos > w(a) * a.hit.chaos ? b : a)
+    const swing = priceSwing(lead.hit)
+    return {
+      chaos: avg,
+      thin: counted.every(x => isThin(x.hit)),
+      volatile: swing != null,
+      ...(swing ? { swing } : {}),
+      ...(lead.hit.day1 ? { day1: true } : {}),
+      note: counted.length > 1 ? `average of ${counted.length}` : lead.name,
+      drop: {
+        of: counted.length,
+        chase: (chase.length < priced.length ? chase : []).map(x => ({ name: x.name, chaos: x.hit.chaos })).sort((a, b) => b.chaos - a.chaos)
+      }
+    }
   }
 }
 

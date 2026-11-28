@@ -4,11 +4,11 @@ import { computed, shallowRef, watch } from 'vue'
 import { usePoeninja } from '@/web/background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
 import { usePriceIndex } from '../market/price-index'
-import { priceBreakdown, priceLookup, safetyLookup } from './economy'
+import { dropLookup, priceBreakdown, priceLookup, safetyLookup } from './economy'
 import type { PriceLookup, UniqueRule } from './economy'
 
 import { uniquesOnBase } from '../shared/uniques-on-base'
-import { loadTipDrops } from '../ui/tooltip/item-tip'
+import { loadTipDrops, loadTipDropTiers } from '../ui/tooltip/item-tip'
 import { onSharedDataChange } from '../app/live-data'
 import { randomDropsOnBase } from './random-drops'
 import type { TipPack } from '../ui/tooltip/tip-content'
@@ -33,6 +33,10 @@ export function useFilterPrices (rule: () => UniqueRule) {
     })
   }
   loadDrops()
+  // How often each unique drops (the wiki's drop tiers), for the Loot tab's
+  // average-drop prices. Until it loads every unique counts the same.
+  const dropTiers = shallowRef<Record<string, number> | null>(null)
+  loadTipDropTiers().then(t => { dropTiers.value = t ?? null }).catch(() => {})
   // New data from GitHub, or a load that failed: try again.
   onSharedDataChange(loadDrops)
   const randomOnBase = computed(() => randomDropsOnBase(drops.value))
@@ -48,14 +52,14 @@ export function useFilterPrices (rule: () => UniqueRule) {
     if (!snap?.items.length || !dropsReady.value) return null
     return priceLookup(liveItems.value, randomOnBase.value, rule())
   })
-  // The Loot tab's rules: always a base's best unique, whatever the Prices
-  // tab's "cheapest unique" setting says, so a cheap unique on the same base
-  // never hides a valuable one there.
+  // One divine rate in every window: live poe.ninja's, else the saved prices'.
+  const divine = computed(() => divineRate(ninja.xchgRate.value, index.snapshot.value?.divine))
+  // The Loot tab's rules: a unique base is worth its average drop, a rare
+  // valuable unique on it (1 div+) is a chase (dropLookup). The Prices tab's
+  // "cheapest unique" setting never applies here.
   const lootLookup = computed<PriceLookup | null>(() => {
-    if (rule() === 'max') return lookup.value
-    const snap = index.snapshot.value
-    if (!snap?.items.length || !dropsReady.value) return null
-    return priceLookup(snap.items, randomOnBase.value, 'max')
+    if (!index.snapshot.value?.items.length || !dropsReady.value) return null
+    return dropLookup(liveItems.value, randomOnBase.value, dropTiers.value, divine.value ?? 150)
   })
   // What this snapshot has at all: a type it lacks isn't priced at zero.
   const pricedTypes = computed(() => new Set((index.snapshot.value?.items ?? []).map(i => i.type)))
@@ -70,8 +74,6 @@ export function useFilterPrices (rule: () => UniqueRule) {
   const items = computed(() => index.snapshot.value?.items ?? [])
   const updatedAt = computed(() => index.snapshot.value?.ts ?? null)
   const league = computed(() => index.snapshot.value?.league ?? null)
-  // One divine rate in every window: live poe.ninja's, else the saved prices'.
-  const divine = computed(() => divineRate(ninja.xchgRate.value, index.snapshot.value?.divine))
   // poe.ninja is only downloaded while something wants prices.
   function wantPrices () {
     try { ninja.queuePricesFetch() } catch {}

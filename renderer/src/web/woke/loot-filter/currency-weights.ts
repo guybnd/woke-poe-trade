@@ -26,7 +26,7 @@ import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
-import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
+import { CHASE_EDGE, FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
 import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK } from './map-classes'
 import type { GemLine } from './gem-classes'
@@ -146,9 +146,15 @@ export interface CurrencyItem {
   // uniques drop on it.
   top?: string
   of?: number
+  // Priced by its average drop over `of` uniques (dropLookup), and the rare
+  // valuable uniques left out of that average, most valuable first.
+  avg?: true
+  chase?: Array<{ name: string, chaos: number }>
   // A gem band: the gem's name (BaseType) and its level, quality and
   // corruption conditions; `name` is the band ("Arc 20/20").
   bt?: string
+  // Several bases on one row ("Any unique, 6-link"): its BaseType list.
+  bts?: string[]
   conds?: FilterCondition[]
 }
 
@@ -217,18 +223,23 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         // Early league: a thin price never takes it below the guess.
         const thin = p != null && p.chaos > 0 ? (ucat === 'uniqearly' ? Math.max(guess, p.chaos) : thinPrice(p.chaos, guess)) : guess
         const own = edits[name]?.price
-        const m = p?.note?.match(/^(.*?)(?:, 1 of (\d+))?$/)
+        const m = p?.drop ? null : p?.note?.match(/^(.*?)(?:, 1 of (\d+))?$/)
+        // Guy's S1: a boss base that also drops world uniques is priced by
+        // those (the boss's own unique is left out); a boss-only one stays
+        // Boss drops. A base with a chase unique on it goes to Chase uniques.
+        const cat = ucat === 'uniqboss' && p?.drop ? 'uniqplain' : ucat
         seen.set(name, {
           name,
           cls: UNIQUE_CLS,
           type: 'uniques',
           tier: b.tier,
-          cat: ucat,
+          cat: p?.drop?.chase.length && cat !== 'uniqboss' ? 'uniqchase' : cat,
           chaos: (own ?? (priced ? p.chaos : thin)) * (edits[name]?.mult ?? 1),
           est: own == null && (!priced || Boolean(p?.day1)),
           ...(own != null ? { own: true } : {}),
           full: 1,
-          ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {})
+          ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {}),
+          ...(p?.drop ? { of: p.drop.of, avg: true, ...(p.drop.chase.length ? { chase: p.drop.chase } : {}) } : {})
         })
       }
       continue
@@ -344,7 +355,33 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       const conds = b.conditions.filter(x => x !== bt && x.key !== 'Rarity').map(x => ({ ...x, values: [...x.values] }))
       const links = conds.some(x => x.key === 'LinkedSockets')
       const group: EconomyGroup = { ...UNIQUE_PAGE, special: true, links }
-      for (const base of bt?.values ?? plainBases) {
+      // NeverSink's any-base 6-link rule is one row (Guy's R1, 2026-11-28),
+      // priced by the most valuable 6-linked unique, so it shows the way
+      // NeverSink shows every 6-linked unique (Tink) unless you set its step.
+      if (!bt) {
+        const name = `Any unique, ${label}`
+        if (seen.has(name)) continue
+        const lines = plainBases.map(base => ({ base, p: lookup(group, base) })).filter(x => x.p && x.p.chaos > 0)
+        if (!lines.length) continue
+        const low = lines.reduce((x, y) => y.p!.chaos > x.p!.chaos ? y : x)
+        const own = edits[name]?.price
+        seen.set(name, {
+          name,
+          cls: UNIQUE_CLS,
+          type: 'uniques',
+          tier: b.tier,
+          cat: 'uniqspec',
+          chaos: (own ?? (links ? Math.max(low.p!.chaos, linkFloor) : low.p!.chaos)) * (edits[name]?.mult ?? 1),
+          est: own == null && (low.p!.thin || Boolean(low.p!.day1)),
+          ...(own != null ? { own: true } : {}),
+          full: 1,
+          bts: lines.map(x => x.base),
+          conds,
+          of: lines.length
+        })
+        continue
+      }
+      for (const base of bt.values) {
         const name = `${base}, ${label}`
         if (seen.has(name)) continue
         const p = lookup(group, base)
@@ -638,6 +675,22 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
   // Tink's icon is red, in the category's shape (Guy 2026-11-27).
   out.icon = size == null ? null : { size, color: step === 5 ? 'Red' : color, shape }
   out.effect = effect ? { ...effect, color: step === 5 ? 'Red' : color } : null
+  // Chase uniques (Guy 2026-11-28: "the T0 unique container", "needs a
+  // special look for itself"): one look below Tink whatever the price, gold
+  // on dark brown with a gold edge, a yellow Kite and its own sound. Your
+  // own colour for the section still wins.
+  if (cat === 'uniqchase' && step < 5) {
+    const t = c.cats[cat]?.text
+    Object.assign(out, {
+      fontSize: own.fontSize ?? 45,
+      text: col(t ?? CHASE_EDGE),
+      border: col(t ?? CHASE_EDGE),
+      background: col([42, 22, 6])
+    })
+    out.icon = { size: 1, color, shape }
+    out.effect = { color: 'Yellow', temp: true }
+    if (own.sound === undefined) out.sound = { id: '3', volume: 250 }
+  }
   return out
 }
 
@@ -713,7 +766,7 @@ function bandOfConds (it: CurrencyItem): { level: number, quality: number, corru
 
 export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], opts: { faint?: boolean, floors?: FilterBlock[] } = {}): CurrencyCompiled {
   const blocks: FilterBlock[] = []
-  const bts = (list: CurrencyItem[]) => [...new Set(list.map(i => i.bt ?? i.name))].sort()
+  const bts = (list: CurrencyItem[]) => [...new Set(list.flatMap(i => i.bts ?? [i.bt ?? i.name]))].sort()
   const stacks = new Map(items.map(it => [it.name, stacksFor(it, cfg)]))
   const area = c('AreaLevel', '>=', [68])
   const clsCond = (list: CurrencyItem[]) => list[0]?.cls === UNIQUE_CLS ? c('Rarity', '', ['Unique']) : c('Class', '==', [...new Set(list.flatMap(i => i.cls.split('|')))].sort())

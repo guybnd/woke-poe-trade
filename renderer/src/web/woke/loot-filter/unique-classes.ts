@@ -1,14 +1,17 @@
-// Uniques on the Loot tab (Guy's picks, 2026-11-27: Uniques A, bossmix M1).
-// A filter can't tell uniques apart on one base, so a base is priced by the
-// most valuable unique that drops on it naturally (poe.ninja, boss-only
-// uniques left out). The bases come from NeverSink's plain unique tiers;
+// Uniques on the Loot tab (Guy's picks, 2026-11-27: Uniques A, bossmix M1;
+// 2026-11-28: A, K1, S1, R1). A filter can't tell uniques apart on one base,
+// so a base is priced by its average drop: each unique that drops on it
+// naturally (boss-only uniques left out) counted by how often it turns up.
+// A rare unique worth 1 div+ is a chase: the base goes to Chase uniques
+// (Always) instead of being priced by it. The bases come from NeverSink's plain unique tiers;
 // its special rules (6-link, corrupted implicits, abyss sockets,
 // replicas) keep deciding those items, above the priced ones.
 import type { LootCategory } from './fragment-classes'
 import type { SectionMode } from './currency-settings'
 
 export const UNIQUE_CATEGORIES: LootCategory[] = [
-  { id: 'uniqplain', name: 'Uniques', art: 'Leather Belt' },
+  { id: 'uniqchase', name: 'Chase uniques', art: 'Leather Belt' },
+  { id: 'uniqplain', name: 'Uniques', art: 'Sadist Garb' },
   { id: 'uniqvar', name: 'High variance', art: 'Small Cluster Jewel' },
   { id: 'uniqearly', name: 'Early league', art: 'Bone Helmet' },
   { id: 'uniqboss', name: 'Boss drops', art: 'Hubris Circlet' },
@@ -19,6 +22,9 @@ export const UNIQUE_IDS = new Set(UNIQUE_CATEGORIES.map(x => x.id))
 
 // The unique brown, a shade per fold.
 export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
+  // A base with a rare jackpot on it (Headhunter on Leather Belt): its step
+  // from the average drop, plus a gold edge and a Kite icon (Guy's K1).
+  uniqchase: { text: [175, 96, 37], color: 'Yellow', shape: 'Kite' },
   uniqplain: { text: [175, 96, 37], color: 'Brown', shape: 'Star' },
   uniqvar: { text: [210, 130, 60], color: 'Orange', shape: 'Star' },
   uniqearly: { text: [200, 150, 90], color: 'Yellow', shape: 'Star' },
@@ -28,8 +34,12 @@ export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color
   uniqspec: { text: [230, 160, 80], color: 'Brown', shape: 'Cross' }
 }
 
-// Boss-only bases show whatever they are (Guy: "boss-only likely always on").
-export const UNIQUE_MODES: Record<string, SectionMode> = { uniqboss: 'always' }
+// Boss-only bases show whatever they are (Guy: "boss-only likely always on"),
+// and so do chase bases (Guy 2026-11-28: "a chase unique section that has
+// always on by default").
+export const UNIQUE_MODES: Record<string, SectionMode> = { uniqboss: 'always', uniqchase: 'always' }
+// The chase look's edge, on every step below Tink.
+export const CHASE_EDGE: [number, number, number] = [255, 215, 106]
 
 // NeverSink's tiers that list bases by price. Every other unique tier is a
 // special rule and stays NeverSink's.
