@@ -7,8 +7,16 @@
         <template v-else>waiting for prices</template>
       </span>
       <span class="grow" />
-      <WSegmented :model-value="config.priceTiers.uniqueRule" :options="uniqueOptions" title="A base type can hold several uniques: price it by its best one (never hides a valuable unique) or its cheapest"
+      <WSegmented v-if="!lootOn" :model-value="config.priceTiers.uniqueRule" :options="uniqueOptions" title="A base type can hold several uniques: price it by its best one (never hides a valuable unique) or its cheapest"
         @update:model-value="v => config.priceTiers.uniqueRule = v === 'min' ? 'min' : 'max'" />
+    </div>
+
+    <!-- Guy's pick (prices-tab A, 2026-11-28): with the Loot tab on it prices
+         these in maps itself, so moves here only reach levelling. -->
+    <div v-if="lootOn" :class="$style.lootNote" data-prices-loot-note>
+      <span class="text-xs w-dim">The Loot tab is on: in maps it prices these items itself. Moves here only change levelling (area level under 68).</span>
+      <span class="grow" />
+      <WButton size="sm" variant="ghost" @click="emit('open-loot')">Open Loot ›</WButton>
     </div>
 
     <WEmpty v-if="!store.prices.lookup.value" :art="{ item: 'Chaos Orb' }">
@@ -40,7 +48,7 @@
       </template>
       <div v-if="moves.length" :class="$style.pickBar">
         <input type="checkbox" :class="$style.check" :checked="allPicked" :indeterminate="somePicked" aria-label="Pick every item that would move" title="Pick all or none" @change="pickAllOrNone">
-        <span class="w-group-label">Would move · {{ pickedMoves.length }} of {{ moves.length }} picked</span>
+        <span class="w-group-label">Would move · {{ pickedMoves.length }} of {{ moves.length }} picked<template v-if="lootOn"> · levelling only</template></span>
         <span class="grow" />
         <span class="text-xs w-dim" :class="$style.quick">
           Pick
@@ -204,7 +212,9 @@ const plan = computed(() => props.store.plan.value)
 const moves = computed(() => plan.value?.moves ?? [])
 const allSkipped = computed(() => plan.value?.skipped ?? [])
 
-const emit = defineEmits<{ (e: 'open-rule', rule: { type: string, tier: string, base: string }): void }>()
+const emit = defineEmits<{ (e: 'open-rule', rule: { type: string, tier: string, base: string }): void, (e: 'open-loot'): void }>()
+// The Loot tab prices every class here in maps (and always by a base's best unique).
+const lootOn = computed(() => props.config.presets.currency.on)
 
 const SKIP_WHY = {
   locked: { label: 'kept by you', short: 'you pressed Keep, or moved it by hand', title: 'You pressed Keep, or moved it yourself in Rules. Unlock lets prices move it again.' },
@@ -574,6 +584,7 @@ function undoEditStep<T extends { id: number }> (now: T[], step: EditStep<T>): T
 </script>
 
 <style module>
+.lootNote { display: flex; align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 6px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .wrap {
   max-height: min(36rem, calc(70vh / var(--w-ui-scale, 1)));
   /* Fills the window once it's resized (WPanel's data-w-sized). */

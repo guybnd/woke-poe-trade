@@ -1383,6 +1383,11 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   await page.getByRole('menuitemradio', { name: /^Don't care/ }).click()
   await expect(qs.getByRole('button', { name: /rank: Don't care/ })).toBeVisible()
   await overlay.snap('equipment tab, flasks')
+  // Base ranks is Equipment's section while Equipment shows; the top tab goes.
+  await page.locator('[data-equip-class="ranks"]').click()
+  await expect(page.locator('[data-equip-ranks] [data-lane="r1"]')).toBeVisible()
+  await expect(page.getByRole('tab', { name: /Base ranks/ })).toHaveCount(0)
+  await overlay.snap('equipment tab, base ranks')
 })
 
 test('Currency weights: categories fold open, an item opens its editor, and the ground pile opens an item', async ({ overlay, fakeApp }) => {
