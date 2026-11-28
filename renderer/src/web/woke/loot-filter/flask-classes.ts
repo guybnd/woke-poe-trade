@@ -38,8 +38,9 @@ export interface FlaskRow {
   // The base its tooltip shows.
   tip: string
   guess: number
-  // Shows at least Small whatever the line, until you set it Off.
-  free?: boolean
+  // Shows at least this step whatever the line or steps turned off, until
+  // you set a step or price (over-quality: Guy 2026-11-28).
+  floor?: 1 | 2 | 3 | 4 | 5
   conds: FilterCondition[]
 }
 
@@ -58,6 +59,6 @@ export const FLASK_ROWS: FlaskRow[] = [
   { cat: 'flasklife', name: 'Top life or mana flask, quality 21-29%', cls: LIFE_CLS, bts: TOP_LIFE_MANA, tip: 'Divine Life Flask', guess: 1.5, conds: [...PLAIN, q('>=', 21), q('<=', 29), ilvl('>=', 82)] },
   // Any other base or item level over 20% quality (3.30's over-quality
   // flasks, Guy 2026-11-28): always shows.
-  { cat: 'flasklife', name: 'Life or mana flask, quality 21%+', cls: LIFE_CLS, bts: LIFE_MANA, tip: 'Divine Life Flask', guess: 1.5, free: true, conds: [...PLAIN, q('>=', 21)] },
+  { cat: 'flasklife', name: 'Life or mana flask, quality 21%+', cls: LIFE_CLS, bts: LIFE_MANA, tip: 'Divine Life Flask', guess: 1.5, floor: 3, conds: [...PLAIN, q('>=', 21)] },
   { cat: 'flasklife', name: 'White top life or mana flask, item level 82+', cls: LIFE_CLS, bts: TOP_LIFE_MANA, tip: 'Eternal Life Flask', guess: 0.1, conds: [...WHITE, q('<=', 20), ilvl('>=', 82)] }
 ]

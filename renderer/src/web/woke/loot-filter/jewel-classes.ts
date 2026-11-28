@@ -30,7 +30,7 @@ export const JEWEL_LOOK: Record<string, { text: [number, number, number], color:
   jewclus: { text: [225, 195, 120], color: 'Yellow', shape: 'Raindrop' }
 }
 
-export const ABYSS_BASES = ['Ghastly Eye Jewel', 'Hypnotic Eye Jewel', 'Murderous Eye Jewel', 'Searching Eye Jewel']
+export const ABYSS_BASES = ['Assembled Eye Jewel', 'Ghastly Eye Jewel', 'Hypnotic Eye Jewel', 'Murderous Eye Jewel', 'Searching Eye Jewel']
 export const PLAIN_BASES = ['Cobalt Jewel', 'Crimson Jewel', 'Viridian Jewel']
 
 export interface JewelRow {
@@ -44,9 +44,10 @@ export interface JewelRow {
   guess: number
   // No price: this step at any stack (0: Off) until you set a step or price.
   fixed?: CStep
-  // Shows at least Small whatever the section's mode or line, until you set
-  // it Off (fractured jewels: Guy 2026-11-28, "should have a always on default").
-  free?: boolean
+  // Shows at least this step whatever the section's mode, line or steps
+  // turned off, until you set a step or price (fractured jewels: Guy
+  // 2026-11-28, "should have a always on default").
+  floor?: CStep
   conds: FilterCondition[]
 }
 
@@ -68,9 +69,9 @@ const NOT_UNIQUE = cnd('Rarity', '', ['Normal', 'Magic', 'Rare'])
 export const JEWEL_ROWS: JewelRow[] = [
   // Fractured jewels of any kind (Guy 2026-11-28): a row of their own, on
   // top of the item level rows, that always shows.
-  { cat: 'jewabyss', name: 'Fractured abyss jewel', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 5, fixed: 3, free: true, conds: [NOT_UNIQUE, FRACTURED] },
-  { cat: 'jewplain', name: 'Fractured jewel', cls: 'Jewels', bts: PLAIN_BASES, guess: 5, fixed: 3, free: true, conds: [NOT_UNIQUE, FRACTURED] },
-  { cat: 'jewclus', name: 'Fractured cluster jewel', cls: 'Jewels', bts: CLUSTER_BASES, guess: 5, fixed: 3, free: true, conds: [NOT_UNIQUE, FRACTURED] },
+  { cat: 'jewabyss', name: 'Fractured abyss jewel', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 5, fixed: 3, floor: 3, conds: [NOT_UNIQUE, FRACTURED] },
+  { cat: 'jewplain', name: 'Fractured jewel', cls: 'Jewels', bts: PLAIN_BASES, guess: 5, fixed: 3, floor: 3, conds: [NOT_UNIQUE, FRACTURED] },
+  { cat: 'jewclus', name: 'Fractured cluster jewel', cls: 'Jewels', bts: CLUSTER_BASES, guess: 5, fixed: 3, floor: 3, conds: [NOT_UNIQUE, FRACTURED] },
   { cat: 'jewabyss', name: 'Rare abyss jewel, corrupted, 5 mods', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 20, fixed: 4, conds: [RARE, cnd('Corrupted', '', ['True']), cnd('HasExplicitMod', '>=', ['a', 'e', 'i', 'o', 'u', 'y'], 5)] },
   { cat: 'jewabyss', name: 'Rare abyss jewel, corrupted', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 5, fixed: 3, conds: [RARE, cnd('Corrupted', '', ['True'])] },
   { cat: 'jewabyss', name: 'Magic abyss jewel with a corrupted implicit', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 1.5, fixed: 2, conds: [MAGIC, IMPLICIT] },

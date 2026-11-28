@@ -105,7 +105,8 @@ describe('Loot sections for NeverSink\'s last gaps', () => {
     applyCurrency(doc, on(), () => null)
     const step = (f: ItemFacts) => matchItem(doc, { corrupted: false, mirrored: false, quality: 0, ...f })
     expect(step(facts('Divine Life Flask', 'Life Flasks', 'Magic', 84, { quality: 30 })).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's3' })
-    expect(step(facts('Divine Life Flask', 'Life Flasks', 'Magic', 84, { quality: 23 })).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's2' })
+    // Any flask over 20% shows at least Decent (Guy 2026-11-28).
+    expect(step(facts('Divine Life Flask', 'Life Flasks', 'Magic', 84, { quality: 23 })).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's3' })
     expect(step(facts('Eternal Mana Flask', 'Mana Flasks', 'Normal', 84, { quality: 5 })).final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Hide' })
     // Tinctures score on Equipment, not here.
     expect(matchItem(doc, facts('Oakbranch Tincture', 'Tinctures', 'Normal', 84, { quality: 27 })).final?.block.comment ?? '').not.toMatch(/flasktinc/)
