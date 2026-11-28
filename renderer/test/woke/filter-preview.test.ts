@@ -10,7 +10,7 @@ import { rollDrops, defaultTextColour } from '@/web/woke/loot-filter/drops'
 import type { Drop } from '@/web/woke/loot-filter/drops'
 import { labelBox, layoutLabels, runDrops, soundsOf, summarize } from '@/web/woke/loot-filter/shower'
 import type { Rect } from '@/web/woke/loot-filter/shower'
-import { canPreview, customSoundsIn, isCustomSound, isGameSound, isPackSound, soundLabel, soundUses } from '@/web/woke/loot-filter/sounds'
+import { SH_SOUNDS, canPreview, customSoundsIn, gameUrl, isCustomSound, isGameSound, isPackSound, soundLabel, soundUses } from '@/web/woke/loot-filter/sounds'
 
 const SOURCE = fs.readFileSync(path.join(FIXTURES, 'filters/neversink-sample.filter'), 'utf8')
 
@@ -188,5 +188,12 @@ describe('custom sounds', () => {
     expect(canPreview('16')).toBe(true)
     expect(canPreview('None')).toBe(false)
     expect(soundLabel('ShDivine')).toBe('Game sound ShDivine')
+  })
+
+  it('ships a copy of every game sound', () => {
+    expect(gameUrl('shalchemy')).toMatch(/sounds\/game\/ShAlchemy\.ogg$/)
+    expect(gameUrl('6')).toMatch(/sounds\/game\/6\.ogg$/)
+    const dir = path.join(__dirname, '../../public/sounds/game')
+    for (const id of [...Array.from({ length: 16 }, (_, i) => String(i + 1)), ...SH_SOUNDS]) expect(fs.existsSync(path.join(dir, `${id}.ogg`))).toBe(true)
   })
 })

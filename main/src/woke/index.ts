@@ -8,7 +8,6 @@ import type { GameWindow } from '../windowing/GameWindow'
 import { deleteBuild, duplicateBuild, importBuild, listBuilds, moveBuild, moveBuildFolder, openBuild, readBuild, renameBuild, restoreBuild, saveLiveBuild, showBuild } from './pob-builds'
 import { timelessRewrites } from './pob-timeless'
 import { listFilters, readFilter, writeFilter, showFilterFolder, listSounds, readSound, installSound } from './loot-filter'
-import { readGameSound } from './game-sounds'
 import { cachedNeverSink, downloadNeverSink, latestNeverSink, pruneNeverSink, readNeverSink } from './neversink'
 import { ScreenScanner, MAP_SCAN, ESSENCE_SCAN, ensureOcr, readAllEssenceLabels, readAreaMods } from './map-scan'
 import { WokeHoverTracker } from './hover'
@@ -60,7 +59,6 @@ const handlers: Partial<WokeHandlers> = {
   'filter-sounds': listSounds,
   'filter-sound-read': readSound,
   'filter-sound-install': installSound,
-  'filter-game-sound': readGameSound,
   'ns-latest': async () => await latestNeverSink(),
   'ns-download': downloadNeverSink,
   'ns-read': readNeverSink,
