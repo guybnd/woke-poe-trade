@@ -41,7 +41,7 @@ const INFO = `Items worth vendoring for currency, shown in maps (area level 68+)
 const STEPS = [0, 1, 2, 3, 4].map(s => ({ value: String(s), label: s ? CSTEP_NAMES[s] : 'Off' }))
 const lookup = computed(() => props.store.prices.lootLookup.value)
 const eff = computed(() => scaled(c.value, props.store.doc.value?.strictness ?? null))
-const rows = computed(() => RECIPES.map(r => ({ ...r, picked: recipePicked(c.value, r.id), worth: recipeWorth(lookup.value, r.id), step: recipeStep(eff.value, r.id, lookup.value) })))
+const rows = computed(() => RECIPES.map(r => ({ ...r, picked: recipePicked(c.value, r.id), worth: recipeWorth(lookup.value, r.id, c.value.items), step: recipeStep(eff.value, r.id, lookup.value) })))
 function chaosText (v: number): string {
   if (v >= 10) return `${Math.round(v)}c`
   if (v >= 1) return `${Number(v.toFixed(1))}c`

@@ -49,23 +49,30 @@ export function levellingOnly (doc: FilterDoc) {
 
 // The first time the Loot tab is on, the covered presets' settings carry
 // over (Guy's pick: "your old setting carries over the first time"): the
-// cheap currency line, the low maps tier, R-G-B and 6 sockets. Marked done
-// in catMode (`rcmig`), like the recipes. A line or maps tier already moved
-// off its default is yours and stays. `migratedPresets` is the same without
-// writing, so a filter saved before the Loot tab is opened gets it too.
+// cheap currency line, the low maps tier, and Hide R-G-B (R-G-B Off). Marked
+// done in catMode (`rcmig` 2), like the recipes. A line or maps tier already
+// moved off its default is yours and stays. The other recipes follow their
+// reward's price (Guy 2026-11-28), so an untouched preset pins nothing; a
+// carry-over from before (`rcmig` 1) that pinned R-G-B Small or 6 sockets Off
+// from presets left at their defaults is undone once. `migratedPresets` is
+// the same without writing, so a filter saved before the Loot tab is opened
+// gets it too.
 const LINE_DEFAULT = 0.2
+const MIGRATED = 2
 export function migratedPresets (p: Presets): Presets {
   const c = p.currency
   const mode = c.catMode as Record<string, unknown>
-  if (!c.on || mode.rcmig) return p
-  const next: Record<string, unknown> = { ...mode, rcmig: 1, rcrgb: p.hideRgb.on ? 0 : 1 }
-  if (!p.sixSockets.on) next.rcsix = 0
+  if (!c.on || mode.rcmig === MIGRATED) return p
+  const drop = (k: string, v: unknown) => mode.rcmig && mode[k] === v
+  const next: Record<string, unknown> = Object.fromEntries(Object.entries(mode).filter(([k]) => !(k === 'rcrgb' && !p.hideRgb.on && drop(k, 1)) && !(k === 'rcsix' && !p.sixSockets.on && drop(k, 0))))
+  next.rcmig = MIGRATED
+  if (!mode.rcmig && p.hideRgb.on) next.rcrgb = 0
   return {
     ...p,
     currency: {
       ...c,
-      line: p.cheapCurrency.on && c.line === LINE_DEFAULT ? Math.min(LINE_MAX, Math.max(LINE_MIN, p.cheapCurrency.chaos)) : c.line,
-      mapFrom: p.lowMaps.on && c.mapFrom === 1 ? p.lowMaps.tier : c.mapFrom,
+      line: !mode.rcmig && p.cheapCurrency.on && c.line === LINE_DEFAULT ? Math.min(LINE_MAX, Math.max(LINE_MIN, p.cheapCurrency.chaos)) : c.line,
+      mapFrom: !mode.rcmig && p.lowMaps.on && c.mapFrom === 1 ? p.lowMaps.tier : c.mapFrom,
       catMode: next as typeof c.catMode
     }
   }

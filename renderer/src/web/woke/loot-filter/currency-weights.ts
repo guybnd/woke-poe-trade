@@ -1136,27 +1136,33 @@ export function recipePicked (c: Pick<CurrencySettings, 'catMode'>, id: RecipeId
   const v = (c.catMode as Record<string, unknown>)[`rc${id}`]
   return Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 5 ? v as CStep : null
 }
-// What the vendor gives for it today, in chaos (null: no price).
-export function recipeWorth (lookup: PriceLookup | null, id: RecipeId): number | null {
+// What the vendor gives for it today, in chaos (null: no price): your own
+// price and Worth × on the reward (Currency's row) when you set them.
+export function recipeWorth (lookup: PriceLookup | null, id: RecipeId, edits: Record<string, ItemEdit> = {}): number | null {
   const r = recipeOf(id)
-  const p = basePrice(lookup, 'currency', r.art)
-  return p == null ? null : p * r.count
+  const e = edits[r.art]
+  const p = e?.price ?? basePrice(lookup, 'currency', r.art)
+  return p == null ? null : p * (e?.mult ?? 1) * r.count
 }
-// The step that price reaches, Small to Big, on the steps of the given
-// currency's section (its strictness too): Off under the line. `c`: the
+type PriceSteps = Pick<CurrencySettings, 'line' | 'from' | 'nudge'> & Partial<Pick<CurrencySettings, 'rulers' | 'items' | 'offBy' | 'catMode'>>
+// The step that price reaches, Small to Big, on the steps of the reward's
+// currency section (its strictness and bias too): Off under the line, and
+// Off on a step turned off there, as the reward itself hides. `c`: the
 // settings as they apply (scaled).
-export function recipePriceStep (c: Pick<CurrencySettings, 'line' | 'from' | 'nudge'> & Partial<Pick<CurrencySettings, 'rulers'>>, id: RecipeId, worth: number): CStep {
-  const starts = stepStarts(c, categoryOf(recipeOf(id).art, 'currency'))
+export function recipePriceStep (c: PriceSteps, id: RecipeId, worth: number): CStep {
+  const art = recipeOf(id).art
+  const cat = categoryOf(art, 'currency')
+  const starts = stepStarts(c, cat)
   let s = 0
   for (let i = 0; i < 4; i++) if (worth >= starts[i]) s = i + 1
-  return s as CStep
+  return (s && offSteps({ name: art, cat }, { items: c.items ?? {}, offBy: c.offBy ?? {}, catMode: c.catMode }).includes(s) ? 0 : s) as CStep
 }
 // The step a recipe shows at: picked by hand, else its price's (with
 // `lookup`; `c` scaled then), else its default.
 export function recipeStep (c: CurrencySettings | Pick<CurrencySettings, 'catMode'>, id: RecipeId, lookup: PriceLookup | null = null): CStep {
   const picked = recipePicked(c, id)
   if (picked != null) return picked
-  const worth = recipeWorth(lookup, id)
+  const worth = 'line' in c ? recipeWorth(lookup, id, c.items) : null
   if (worth != null && 'line' in c) return recipePriceStep(c, id, worth)
   return recipeOf(id).dflt as CStep
 }

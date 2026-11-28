@@ -7,7 +7,7 @@ import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { applyCurrency, defaultCurrency, recipePicked, recipeStep, recipeWorth, scaled, setRecipeStep } from '@/web/woke/loot-filter/currency-weights'
 import type { CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
-import { lootPresets } from '@/web/woke/loot-filter/loot-presets'
+import { lootPresets, migratedPresets } from '@/web/woke/loot-filter/loot-presets'
 import { defaultPresets } from '@/web/woke/loot-filter/presets'
 import { neverSink } from '../helpers/neversink'
 import { loadGameData } from '../helpers/game-data'
@@ -72,5 +72,24 @@ describe('recipe steps by price', () => {
     p.currency.on = true
     expect(lootPresets(p, true, recipeStep(p.currency, 'rgb', lookup)).hideRgb.on).toBe(true)
     expect(lootPresets(p, true, 1).hideRgb.on).toBe(false)
+  })
+  it('uses your own price on the reward, and hides on a step turned off there', () => {
+    expect(recipeStep(on(c => { c.items['Jeweller\'s Orb'] = { price: 0.5 } }), 'six', lookup)).toBe(3)
+    expect(recipeStep(on(c => { c.offBy = { orbs: [2] } }), 'gem20', lookup)).toBe(0)
+  })
+  it('undoes an earlier carry-over that pinned R-G-B and 6 sockets from untouched presets, once', () => {
+    const p = defaultPresets()
+    p.currency.on = true
+    p.currency.catMode = { rcmig: 1, rcrgb: 1, rcsix: 0, rclink6: 1 } as unknown as CurrencySettings['catMode']
+    const m = migratedPresets(p)
+    expect(recipePicked(m.currency, 'rgb')).toBeNull()
+    expect(recipePicked(m.currency, 'six')).toBeNull()
+    expect(recipePicked(m.currency, 'link6')).toBe(1)
+    expect(migratedPresets(m)).toBe(m)
+    // A Hide R-G-B you had on still carries over as Off.
+    const q = defaultPresets()
+    q.currency.on = true
+    q.hideRgb.on = true
+    expect(recipePicked(migratedPresets(q).currency, 'rgb')).toBe(0)
   })
 })
