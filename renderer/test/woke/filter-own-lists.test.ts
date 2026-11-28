@@ -6,13 +6,14 @@ import { describe, expect, it } from 'vitest'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
 import { currencyItems } from '@/web/woke/loot-filter/currency-weights'
 import * as rules from '@/web/woke/loot-filter/own-rules'
-import type { ListRow, OwnTables } from '@/web/woke/loot-filter/own-lists'
+import type { OwnTables } from '@/web/woke/loot-filter/own-lists'
+import { readLists } from '@/web/woke/loot-filter/own-lists'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import table from '@/web/woke/loot-filter/item-lists.json'
 import { neverSink } from '../helpers/neversink'
 
 const doc = parseFilter(neverSink('0-SOFT'))
-const lists = (table as unknown as { items: ListRow[] }).items
+const lists = readLists(table)
 const tables = (guesses: Record<string, number> = {}): OwnTables => ({ lists, guesses: new Map(Object.entries(guesses)), rules })
 const SCOPE_KINDS = new Set(['currency', 'fragments', 'cards'])
 const plain = (items: ReturnType<typeof currencyItems>) => items.filter(i => !i.conds && !i.bts && i.cls !== 'Unique' && i.type !== 'uniques' && i.type !== 'gems' && i.type !== 'maps' && i.type !== 'jewels' && i.type !== 'league' && i.type !== 'gold')

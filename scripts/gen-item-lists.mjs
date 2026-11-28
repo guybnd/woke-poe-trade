@@ -12,7 +12,9 @@
 // downloads RePoE's current export.
 //
 // Writes renderer/src/web/woke/loot-filter/item-lists.json:
-//   { made, source, items: [[name, class, art], ...] }
+//   { made, source, classes: [class, ...], items: [[name, classIndex, art], ...] }
+// Each Class is written once and the rows name it by index (all JS is on a
+// budget, and "Divination Cards" on 455 rows is 9 KB).
 // `art`: the icon's path under Art/2DItems, without .dds ("Currency/Essence/
 // GreedEssence5"). The Loot tab sorts items into its sections by it.
 import fs from 'node:fs/promises'
@@ -72,6 +74,13 @@ export function checkItems (items) {
   if (cards < 300) throw new Error(`Only ${cards} divination cards. Not writing.`)
 }
 
+// The file's text: classes once, rows by class index, one row per line.
+export function packItems (items, made, source) {
+  const classes = [...new Set(items.map(r => r[1]))]
+  const at = new Map(classes.map((c, i) => [c, i]))
+  return `{"made":${JSON.stringify(made)},"source":${JSON.stringify(source)},"classes":${JSON.stringify(classes)},"items":[\n${items.map(([n, c, a]) => JSON.stringify([n, at.get(c), a])).join(',\n')}\n]}\n`
+}
+
 async function get (url) {
   const res = await fetch(url, { headers: UA })
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`)
@@ -100,7 +109,7 @@ async function main () {
   checkItems(items)
   const made = new Date().toISOString().slice(0, 10)
   // One row per line: the diff of a new league's table reads as a list.
-  const text = `{"made":${JSON.stringify(made)},"source":${JSON.stringify(source)},"items":[\n${items.map(r => JSON.stringify(r)).join(',\n')}\n]}\n`
+  const text = packItems(items, made, source)
   await fs.writeFile(OUT, text)
   const by = {}
   for (const r of items) by[r[1]] = (by[r[1]] ?? 0) + 1
