@@ -209,6 +209,8 @@ test('side window: a Templar Vault reward lists its vault and the other rewards'
     await expect(side.locator('button[data-item-row]', { hasText: other })).toBeVisible()
   }
   await expect(side.getByText(/offers four rewards and you take one/)).toBeVisible()
+  // The rewards that aren't one item are named, not counted.
+  await expect(side.getByText(/It can also give valuable currency; regular currency\./)).toBeVisible()
 })
 
 test('side window: a Delve boss unique drops from its boss, with the boss\'s others', async ({ overlay }) => {
