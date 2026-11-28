@@ -628,7 +628,7 @@ export function scaled (c: CurrencySettings, strictness: string | null): Currenc
   const m = c.mult ?? strictMult(levelOf(strictness))
   // The size cut: Auto turns it on from Strict (×1.25) up (Guy's W2).
   const sizeOn = c.sizeCut === 'on' || (c.sizeCut !== 'off' && m >= 1.25)
-  if (m === 1) return { ...c, sizeOn }
+  if (m === 1) return sizeOn === Boolean(c.sizeOn) ? c : { ...c, sizeOn }
   return { ...c, sizeOn, line: c.line * m, from: c.from.map(f => f * m) as CurrencySettings['from'], gold: c.gold.map(g => Math.max(1, Math.round(g * m))) }
 }
 
