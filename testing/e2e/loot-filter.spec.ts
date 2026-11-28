@@ -1606,6 +1606,7 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await large.locator('[aria-expanded]').click()
   await expect(clus.locator('[data-currency-item="Large Cluster Jewel, 12 passives, item level 84+"]')).toContainText('12 passives, item level 84+')
   await expect(clus.locator('[data-currency-item="Large Cluster Jewel, 12 passives, item level 84+"]')).not.toContainText('Large Cluster Jewel,')
+  await expect(clus.locator('[data-currency-item="Large Cluster Jewel, 12 passives, item level 84+"] [data-loot-row-on]')).toBeChecked()
   await clus.scrollIntoViewIfNeeded()
   await test.info().attach('loot tab, cluster jewels', { body: await clus.screenshot(), contentType: 'image/png' })
   const ujewel = page.locator('[data-unique-jewel]').first()
