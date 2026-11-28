@@ -205,6 +205,30 @@ describe('our own filter against NeverSink Very strict', () => {
     expect(map({ rarity: 'Normal', uberBlightedMap: true })).toBe('Show')
   })
 
+  // Fractured jewels of any kind and over-quality life and mana flasks always
+  // show (Guy 2026-11-28), even when every price says they're worthless.
+  it.each(KINDS)('always shows fractured jewels and over-quality flasks (%s prices)', kind => {
+    const hidden = rows[kind].filter(r => r.group === 'Over-quality and fractured' && /fractured|(Life|Mana|Hybrid) Flask/.test(r.label) && !r.ours.shown).map(show)
+    expect(hidden).toEqual([])
+  })
+
+  // Guy's walk: a strict line and the jewel sections By price hid a fractured
+  // rare abyss jewel and a 26% magic life flask.
+  it('shows them on a strict line too', () => {
+    const p = defaultPresets()
+    p.currency.on = true
+    p.weights.on = true
+    p.currency.line = 50
+    p.currency.catMode = { ...p.currency.catMode, jewabyss: 'auto', jewplain: 'auto', jewclus: 'auto' }
+    const doc = composeFilter(neverSink(LEVEL), { presets: normalizePresets(p), rules: [], edits: [], buildRules: { ...DEFAULT_BUILD_RULES }, build: null, moves: [], safetyNet: { on: true, minChaos: 20 }, prices: pricesFor('real'), dustList: null, heldBack: () => false, stackHeld: () => false, gems: null, own: ownTables.value, ids, ownBase: true } as ComposeInput).doc
+    const at = (f: Partial<ProofItem['facts']>) => matchItem(doc, facts({ areaLevel: 83, width: 1, height: 1, ...f })).visibility
+    const eye = { itemClass: 'Abyss Jewels', baseType: 'Searching Eye Jewel', rarity: 'Rare' as const, identified: false, itemLevel: 85 }
+    expect(at({ ...eye, fractured: true })).toBe('Show')
+    expect(at({ itemClass: 'Jewels', baseType: 'Cobalt Jewel', rarity: 'Magic', identified: false, fractured: true })).toBe('Show')
+    expect(at({ itemClass: 'Jewels', baseType: 'Large Cluster Jewel', rarity: 'Rare', identified: false, itemLevel: 84, fractured: true, enchantmentPassiveNum: 8 })).toBe('Show')
+    expect(at({ itemClass: 'Life Flasks', baseType: 'Divine Life Flask', rarity: 'Magic', identified: false, quality: 26, itemLevel: 70, width: 1, height: 2 })).toBe('Show')
+  })
+
   // Pink is for an item no rule of ours knows. Every class the game data or
   // NeverSink's file names has one, at every stack size (Guy's walk,
   // 2026-11-28: 6 Alchemy Shards, 16 Gold, a Wombgift, an unpriced card).

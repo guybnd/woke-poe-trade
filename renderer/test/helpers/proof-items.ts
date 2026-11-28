@@ -126,17 +126,21 @@ export function catalog (areaLevel: number, ns?: FilterDoc): ProofItem[] {
       push(`${base} (normal)`, c, base, { itemClass: c, baseType: base, rarity: 'Normal', ...s })
       push(`${base} (20% quality)`, c, base, { itemClass: c, baseType: base, rarity: 'Normal', quality: 20, ...s })
       push(`${base} (magic)`, c, base, { itemClass: c, baseType: base, rarity: 'Magic', ...s })
+      // 3.30's over-quality (Guy's walk: a magic Divine Life Flask at 26%).
+      push(`${base} (magic, 26% quality)`, 'Over-quality and fractured', base, { itemClass: c, baseType: base, rarity: 'Magic', identified: false, quality: 26, unidentifiedItemTier: 5, ...s })
       continue
     }
     if (c === 'Jewels' || c === 'Abyss Jewels') {
       if (/Cluster Jewel$/.test(base)) {
         for (const n of /^Large/.test(base) ? [8, 12] : /^Medium/.test(base) ? [4, 6] : [2, 3]) {
+          push(`${base} (${n} passives, rare, fractured)`, 'Over-quality and fractured', base, { itemClass: c, baseType: base, rarity: 'Rare', identified: false, fractured: true, itemLevel: 84, enchantmentPassiveNum: n, anyEnchantment: true, enchantPassiveNodes: ['12% increased Fire Damage'], enchantments: [`Adds ${n} Passive Skills`] })
           push(`${base} (${n} passives, rare)`, c, base, { itemClass: c, baseType: base, rarity: 'Rare', identified: false, itemLevel: 84, enchantmentPassiveNum: n, anyEnchantment: true, enchantPassiveNodes: ['12% increased Fire Damage'], enchantments: [`Adds ${n} Passive Skills`] })
         }
         continue
       }
       push(`${base} (magic)`, c, base, { itemClass: c, baseType: base, rarity: 'Magic', identified: false })
       push(`${base} (rare)`, c, base, { itemClass: c, baseType: base, rarity: 'Rare', identified: false })
+      push(`${base} (rare, fractured)`, 'Over-quality and fractured', base, { itemClass: c, baseType: base, rarity: 'Rare', identified: false, fractured: true, itemLevel: 85 })
       continue
     }
     // Stackables and the rest: one, a few and a pile (Guy's walk: 6 shards).

@@ -44,6 +44,9 @@ export interface JewelRow {
   guess: number
   // No price: this step at any stack (0: Off) until you set a step or price.
   fixed?: CStep
+  // Shows at least Small whatever the section's mode or line, until you set
+  // it Off (fractured jewels: Guy 2026-11-28, "should have a always on default").
+  free?: boolean
   conds: FilterCondition[]
 }
 
@@ -58,7 +61,16 @@ const ilvl = (op: string, n: number) => cnd('ItemLevel', op, [String(n)])
 // of them: the louder row wins (applyJewels puts it first). Steps: 1 Small,
 // 2 Normal, 3 Decent, 4 Big. Below area level 68 NeverSink decides, so
 // levelling still shows magic jewels.
+export const CLUSTER_BASES = ['Large Cluster Jewel', 'Medium Cluster Jewel', 'Small Cluster Jewel']
+const FRACTURED = cnd('FracturedItem', '', ['True'])
+const NOT_UNIQUE = cnd('Rarity', '', ['Normal', 'Magic', 'Rare'])
+
 export const JEWEL_ROWS: JewelRow[] = [
+  // Fractured jewels of any kind (Guy 2026-11-28): a row of their own, on
+  // top of the item level rows, that always shows.
+  { cat: 'jewabyss', name: 'Fractured abyss jewel', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 5, fixed: 3, free: true, conds: [NOT_UNIQUE, FRACTURED] },
+  { cat: 'jewplain', name: 'Fractured jewel', cls: 'Jewels', bts: PLAIN_BASES, guess: 5, fixed: 3, free: true, conds: [NOT_UNIQUE, FRACTURED] },
+  { cat: 'jewclus', name: 'Fractured cluster jewel', cls: 'Jewels', bts: CLUSTER_BASES, guess: 5, fixed: 3, free: true, conds: [NOT_UNIQUE, FRACTURED] },
   { cat: 'jewabyss', name: 'Rare abyss jewel, corrupted, 5 mods', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 20, fixed: 4, conds: [RARE, cnd('Corrupted', '', ['True']), cnd('HasExplicitMod', '>=', ['a', 'e', 'i', 'o', 'u', 'y'], 5)] },
   { cat: 'jewabyss', name: 'Rare abyss jewel, corrupted', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 5, fixed: 3, conds: [RARE, cnd('Corrupted', '', ['True'])] },
   { cat: 'jewabyss', name: 'Magic abyss jewel with a corrupted implicit', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 1.5, fixed: 2, conds: [MAGIC, IMPLICIT] },
@@ -94,7 +106,6 @@ export interface ClusterRow extends JewelRow {
   passives: [number, number]
   ilvl: [number, number]
 }
-const NOT_UNIQUE = cnd('Rarity', '', ['Normal', 'Magic', 'Rare'])
 const passives = (op: string, n: number) => cnd('EnchantmentPassiveNum', op, [String(n)])
 const cluster = (size: ClusterRow['size'], name: string, guess: number, pas: [number, number], lv: [number, number], conds: FilterCondition[]): ClusterRow =>
   ({ cat: 'jewclus', name, cls: '', bts: [`${size} Cluster Jewel`], size, guess, passives: pas, ilvl: lv, conds: [NOT_UNIQUE, ...conds] })

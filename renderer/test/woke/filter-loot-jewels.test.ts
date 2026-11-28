@@ -18,7 +18,7 @@ const jewel = (base: string, cls: string, rarity: ItemFacts['rarity'], itemLevel
 describe('jewels on the Loot tab', () => {
   it('lists the Abyss and Jewels rows as the jewels kind', () => {
     const items = currencyItems(parseFilter(SEMI), lookup).filter(i => i.type === 'jewels' && i.cat !== 'jewclus')
-    expect(items.length).toBe(12)
+    expect(items.length).toBe(14)
     expect(new Set(items.map(i => kindOf(i.cat)))).toEqual(new Set(['jewels']))
     expect(items.every(i => i.est)).toBe(true)
   })
