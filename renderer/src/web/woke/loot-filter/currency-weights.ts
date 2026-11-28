@@ -68,7 +68,17 @@ export const CURRENCY_CATEGORIES: CurrencyCategory[] = [
   { id: 'harvest', name: 'Lifeforce', art: 'Sacred Crystallised Lifeforce' },
   { id: 'embers', name: 'Allflame Embers', art: 'Allflame Ember of Kulemak' },
   { id: 'runegrafts', name: 'Runegrafts', art: 'Runegraft of Bellows' },
+  { id: 'gold', name: 'Gold', art: 'Gold' },
   { id: 'other', name: 'Other', art: 'Scrying Orb' }
+]
+
+// Gold piles by size, larger first (NeverSink's own sizes). The guesses put
+// them on Decent, Normal, Small and Small at the default steps.
+export const GOLD_PILES: Array<{ name: string, min: number | null, guess: number }> = [
+  { name: 'Gold 3,000+', min: 3000, guess: 4 },
+  { name: 'Gold 500+', min: 500, guess: 1.5 },
+  { name: 'Gold 150+', min: 150, guess: 0.4 },
+  { name: 'Gold under 150', min: null, guess: 0.25 }
 ]
 // Every class's categories (the Loot tab's rail shows one class at a time).
 export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES, ...MAP_CATEGORIES]
@@ -411,6 +421,26 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       }
     }
   }
+  // Gold (Guy 2026-11-28, "we also missing a gold section"): no trade price,
+  // so a row per pile size, each a guess (est.) you set the step or price of.
+  if (doc.blocks.some(b => b.conditions.some(x => x.key === 'BaseType' && x.values.includes('Gold')))) {
+    for (const g of GOLD_PILES) {
+      const own = edits[g.name]?.price
+      seen.set(g.name, {
+        name: g.name,
+        cls: '',
+        type: 'gold',
+        tier: null,
+        cat: 'gold',
+        chaos: (own ?? g.guess) * (edits[g.name]?.mult ?? 1),
+        est: own == null,
+        ...(own != null ? { own: true } : {}),
+        full: 1,
+        bt: 'Gold',
+        conds: [g.min ? c('StackSize', '>=', [g.min]) : c('StackSize', '<', [150])]
+      })
+    }
+  }
   // Special maps (Guy 2026-11-28): endgame and guardian maps priced by
   // poe.ninja, the rest from a guess.
   if (lookup && doc.blocks.some(b => b.type?.startsWith('maps'))) {
@@ -603,6 +633,7 @@ export const CAT_LOOK: Record<string, { text: [number, number, number], color: s
   harvest: { text: [130, 230, 110], color: 'Green', shape: 'Raindrop' },
   embers: { text: [255, 130, 60], color: 'Orange', shape: 'Triangle' },
   runegrafts: { text: [255, 120, 160], color: 'Pink', shape: 'Hexagon' },
+  gold: { text: [255, 211, 90], color: 'Yellow', shape: 'Star' },
   other: { text: [210, 190, 140], color: 'Grey', shape: 'Circle' }
 }
 
@@ -703,7 +734,10 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   const bts = (list: CurrencyItem[]) => [...new Set(list.flatMap(i => i.bts ?? [i.bt ?? i.name]))].sort()
   const stacks = new Map(items.map(it => [it.name, stacksFor(it, cfg)]))
   const area = c('AreaLevel', '>=', [68])
-  const clsCond = (list: CurrencyItem[]) => list[0]?.cls === UNIQUE_CLS ? c('Rarity', '', ['Unique']) : c('Class', '==', [...new Set(list.flatMap(i => i.cls.split('|')))].sort())
+  // No class (gold, whose BaseType is its own): no Class condition.
+  const clsCond = (list: CurrencyItem[]): FilterCondition[] => list[0]?.cls === UNIQUE_CLS
+    ? [c('Rarity', '', ['Unique'])]
+    : list.some(i => !i.cls) ? [] : [c('Class', '==', [...new Set(list.flatMap(i => i.cls.split('|')))].sort())]
   // The piles of one item that reach each step, loudest first: [step, stack].
   const steps = (it: CurrencyItem): Array<[CStep, number]> => {
     const st = stacks.get(it.name)!
@@ -722,7 +756,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   const own = items.filter(it => cfg.items[it.name]?.look)
   for (const it of own) {
     for (const [s, k] of steps(it)) {
-      const conds = [area, clsCond([it]), c('BaseType', '==', bts([it])), ...(it.conds ?? [])]
+      const conds = [area, ...clsCond([it]), c('BaseType', '==', bts([it])), ...(it.conds ?? [])]
       if (k > 1) conds.push(c('StackSize', '>=', [k]))
       blocks.push(block(s, conds, `${it.name}, own look${k > 1 ? `, ${k}+` : ''}`, { ...currencyLook(s, it.cat, cfg), ...cfg.items[it.name]!.look }))
     }
@@ -742,7 +776,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
     }
   }
   for (const g of [...groups.values()].sort((x, y) => y.step - x.step || y.k - x.k)) {
-    const conds = [area, clsCond(g.list), c('BaseType', '==', bts(g.list)), ...(g.list[0].conds ?? [])]
+    const conds = [area, ...clsCond(g.list), c('BaseType', '==', bts(g.list)), ...(g.list[0].conds ?? [])]
     if (g.k > 1) conds.push(c('StackSize', '>=', [g.k]))
     blocks.push(block(g.step, conds, [g.cat, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', '), currencyLook(g.step, g.cat, cfg)))
   }
@@ -757,7 +791,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
       const k = it.conds ? JSON.stringify(it.conds) : ''
       byConds.set(k, [...(byConds.get(k) ?? []), it])
     }
-    for (const list of byConds.values()) blocks.push(block(0, [area, clsCond(list), c('BaseType', '==', bts(list)), ...(list[0].conds ?? [])], 'off, set by hand'))
+    for (const list of byConds.values()) blocks.push(block(0, [area, ...clsCond(list), c('BaseType', '==', bts(list)), ...(list[0].conds ?? [])], 'off, set by hand'))
   }
   // Floors (gems at 20% quality, transfigured gems): above the line.
   blocks.push(...(opts.floors ?? []))
@@ -772,8 +806,8 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   if (opts.faint) {
     const byCat = new Map<string, CurrencyItem[]>()
     for (const it of items) if (!forcedHidden(it, cfg)) byCat.set(it.cat, [...(byCat.get(it.cat) ?? []), it])
-    for (const [cat, list] of byCat) blocks.push(faintBlock([area, clsCond(list), c('BaseType', '==', bts(list)), ...shared(list)], cat, catColour(cat, cfg).rgb))
-  } else if (items.length) blocks.push(block(0, [area, clsCond(items), c('BaseType', '==', bts(items)), ...shared(items)], 'under the line'))
+    for (const [cat, list] of byCat) blocks.push(faintBlock([area, ...clsCond(list), c('BaseType', '==', bts(list)), ...shared(list)], cat, catColour(cat, cfg).rgb))
+  } else if (items.length) blocks.push(block(0, [area, ...clsCond(items), c('BaseType', '==', bts(items)), ...shared(items)], 'under the line'))
   const chars = blocks.reduce((n, b) => n + 160 + b.conditions.reduce((m, x) => m + x.key.length + 12 + x.values.reduce((k, v) => k + v.length + 3, 0), 0), 0)
   return { blocks, items, chars }
 }
@@ -788,17 +822,20 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const eff = scaled(cfg, doc.strictness)
   const faint = faintOn(cfg, doc.strictness)
   const gemItems = all.filter(it => it.type === 'gems')
-  const items = all.filter(it => it.cls !== UNIQUE_CLS && it.type !== 'gems' && it.type !== 'maps')
+  const items = all.filter(it => it.cls !== UNIQUE_CLS && it.type !== 'gems' && it.type !== 'maps' && it.type !== 'gold')
+  const goldItems = all.filter(it => it.type === 'gold')
   const none: CurrencyCompiled = { blocks: [], items: [], chars: 0 }
   const compiled = items.length ? compileCurrency(eff, items, { faint }) : none
   const gemsOut = gemItems.length ? compileCurrency(eff, gemItems, { faint, floors: gemFloors(eff) }) : none
+  // Gold on its own, so its rules (the line's too) only ever name Gold.
+  const goldOut = goldItems.length ? compileCurrency(eff, goldItems, { faint }) : none
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
-  insertBlocks(doc, first < 0 ? doc.chunks.length : first, [...compiled.blocks, ...gemsOut.blocks])
+  insertBlocks(doc, first < 0 ? doc.chunks.length : first, [...compiled.blocks, ...gemsOut.blocks, ...goldOut.blocks])
   const foul = applyFoulborn(doc, eff, all.filter(it => it.cat === 'uniqfoul'), faint) ?? none
   const spec = applySpecialRolls(doc, eff, all.filter(it => it.cat === 'uniqspec'), faint) ?? none
   const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec'), faint) ?? none
   const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
-  const parts = [compiled, gemsOut, foul, spec, uniq, maps]
+  const parts = [compiled, gemsOut, goldOut, foul, spec, uniq, maps]
   return { blocks: parts.flatMap(x => x.blocks), items: parts.flatMap(x => x.items), chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 

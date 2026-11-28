@@ -170,7 +170,7 @@ describe('currency weights', () => {
       const compiled = applyCurrency(doc, cfg, lookup)!
       // Uniques are matched by rarity (filter-loot-uniques.test.ts), maps by
       // their own conditions (filter-loot-special-maps.test.ts).
-      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps')) {
+      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold')) {
         const stacks = stacksFor(it, cfg)
         for (const n of [1, 2, 3, 5, 10, 20, 40]) {
           if (n > it.full) continue
