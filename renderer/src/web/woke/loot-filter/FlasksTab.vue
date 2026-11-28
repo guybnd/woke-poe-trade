@@ -19,7 +19,7 @@ The same switch as Rare gear." />
     </div>
     <div v-for="r in rows" :key="r.name" :class="$style.row" :data-equip-flask="r.name">
       <span v-item-tip="{ name: r.name }" :class="$style.name">{{ r.name }}</span>
-      <WSegmented :class="$style.rank" :model-value="r.rank" :options="RANKS" role="group" :aria-label="`${r.name}: rank`" @update:model-value="v => setRank(r.name, v)" />
+      <span :class="$style.rank"><StateChip :model-value="r.rank" :options="RANKS" :title="`${r.name} rank`" @update:model-value="v => setRank(r.name, v)" /></span>
       <span v-for="(s, i) in r.steps" :key="i" :class="$style.cell"><span :class="$style.pill" :style="{ background: STEP_CSS[s], color: s >= 1 ? '#140f08' : '#efe4cc' }">{{ STEP_NAMES[s] }}</span></span>
     </div>
   </div>
@@ -27,7 +27,8 @@ The same switch as Rare gear." />
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { WInfo, WSegmented, WToggle, vItemTip } from '../ui'
+import { WInfo, WToggle, vItemTip } from '../ui'
+import StateChip from './StateChip.vue'
 import { FLASK_BASES, flaskRank, flaskStep } from './flask-weights'
 import { STEP_NAMES } from './weights'
 import type { RankKey } from './weight-settings'
@@ -35,7 +36,14 @@ import type { LootFilterWidget } from './widget'
 
 const props = defineProps<{ config: LootFilterWidget }>()
 const w = computed(() => props.config.presets.weights)
-const RANKS = [{ value: 'r1', label: 'Top' }, { value: 'r2', label: 'Good' }, { value: 'r3', label: 'Low' }, { value: 'rj', label: "Don't care" }]
+// Guy's R1 (2026-11-28): a rank chip, coloured like the steps it leads to.
+const RANK_LOOK = [
+  { value: 'r1', label: 'Top', dot: '#5a9cff' },
+  { value: 'r2', label: 'Good', dot: '#29d2a0' },
+  { value: 'r3', label: 'Low', dot: '#d8d877' },
+  { value: 'rj', label: "Don't care", dot: 'var(--w-faint)', hollow: true }
+] as const
+const RANKS = computed(() => RANK_LOOK.map(r => ({ ...r, desc: `Base score ×${w.value.mult[r.value as RankKey]}.` })))
 const BANDS = [{ label: 'Plain', q: 0, i: 0 }, { label: 'ilvl 85', q: 0, i: 85 }, { label: '20%', q: 20, i: 0 }, { label: '20%, ilvl 85', q: 20, i: 85 }, { label: '26%, ilvl 85', q: 26, i: 85 }]
 // The same step colours as Rare gear's (Beam blue, as in game).
 const STEP_CSS = ['#3a3a3a', '#8a8a8a', '#d8d877', '#29d2a0', '#5a9cff']
