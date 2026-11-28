@@ -5,6 +5,7 @@
 import { applyFlasks } from './flask-weights'
 import { parseFilterCopy } from './parse'
 import type { FilterDoc } from './parse'
+import { ownBaseText } from './own-base'
 import { gameNameCheck, nameCheck, ruleBlocks } from './rules'
 import type { OwnRule } from './rules'
 import { applyPresetChanges, colourBlindActions, presetBlocks, scaleVolume } from './presets'
@@ -72,6 +73,9 @@ export interface ComposeInput {
   gems?: readonly GemLine[] | null
   // The Loot tab's own item lists and guesses (own-lists.ts), once read.
   own?: OwnTables | null
+  // Write onto our own skeleton (own-base.ts) instead of NeverSink's file,
+  // at the strictness NeverSink's file has (NeverSink retirement M3).
+  ownBase?: boolean
 }
 
 export interface Composed {
@@ -128,7 +132,7 @@ export function dropUnknownBases (doc: FilterDoc, own?: OwnTables | null): numbe
 }
 
 export function composeFilter (text: string, cfg: ComposeInput): Composed {
-  const next = parseFilterCopy(text)
+  const next = parseFilterCopy(cfg.ownBase ? ownBaseText(/^#\s*TYPE:\s*(\S+)/m.exec(text.slice(0, 4000))?.[1] ?? null) : text)
   // The Loot tab's first-time carry-over, even before the tab is opened.
   const migrated = migratedPresets(cfg.presets)
   // Rare weights (beta) first, so everything below goes on top of them.

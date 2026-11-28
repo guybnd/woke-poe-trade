@@ -133,6 +133,9 @@ export interface LootFilterWidget extends Widget {
   // and these are moved there on first start.
   history?: unknown
   neversink: NeverSinkSource
+  // Test (NeverSink retirement M3): write only woke's rules, onto our own
+  // skeleton (own-base.ts), with no NeverSink rules underneath.
+  ownBase?: boolean
   strictAuto: StrictnessAuto
   // Rules from the rule builder, on top of NeverSink's.
   rules: OwnRule[]
