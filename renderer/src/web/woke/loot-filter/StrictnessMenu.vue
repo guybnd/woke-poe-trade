@@ -68,7 +68,7 @@ const levelOptions = LEVEL_NAMES.map((name, i) => ({ value: String(i), label: na
 .on { color: var(--w-fg); border-color: var(--w-accent); }
 .paused { color: var(--w-warn); }
 .fold {
-  flex-basis: 100%; order: 10;
+  order: 10;
   flex-basis: 100%;
   display: flex; flex-direction: column; gap: 6px;
   padding: 6px 8px;
