@@ -58,3 +58,10 @@ export function uniqueBases (): ReadonlyMap<string, string[]> {
 export function hasUniques (base: string): boolean {
   return uniquesOnBase(base).length > 0
 }
+
+// Bases that drop as a Replica unique (Heist's reward rooms), by name.
+export function replicaBases (): string[] {
+  const out: string[] = []
+  for (const [base, names] of loaded().byBase) if (names.some(n => n.startsWith('Replica '))) out.push(base)
+  return out.sort()
+}

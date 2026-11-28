@@ -219,7 +219,7 @@ describe('currency weights', () => {
       const compiled = applyCurrency(doc, cfg, lookup)!
       let hidden = 0
       // Map, gold, jewel and league rows are named for their kind, not a base: tested on their own.
-      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold' && i.type !== 'jewels' && i.type !== 'league' && i.type !== 'special')) {
+      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold' && i.type !== 'jewels' && i.type !== 'league' && i.type !== 'special' && i.type !== 'flasks')) {
         const stacks = stacksFor(it, cfg)
         for (const n of [1, 2, 5, 10, 20, 40]) {
           if (n > it.full) continue
@@ -242,7 +242,7 @@ describe('currency weights', () => {
       const compiled = applyCurrency(doc, cfg, lookup)!
       // Uniques are matched by rarity (filter-loot-uniques.test.ts), maps by
       // their own conditions (filter-loot-special-maps.test.ts).
-      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold' && i.type !== 'jewels' && i.type !== 'league' && i.type !== 'special')) {
+      for (const it of compiled.items.filter(i => kindOf(i.cat) !== 'uniques' && kindOf(i.cat) !== 'maps' && i.type !== 'gold' && i.type !== 'jewels' && i.type !== 'league' && i.type !== 'special' && i.type !== 'flasks')) {
         const stacks = stacksFor(it, cfg)
         for (const n of [1, 2, 3, 5, 10, 20, 40]) {
           if (n > it.full) continue
@@ -366,9 +366,27 @@ describe('currency weights', () => {
     const fills = (cat: string) => [3, 4].map(s => currencyLook(s as 3 | 4, cat, c).background?.slice(0, 3))
     const kinds = ['orbs', 'gemskill', 'uniqplain', 'cardcur', 'invites', 'mapblight']
     const all = kinds.filter(k => k !== 'mapblight').flatMap(fills).map(x => x!.join(','))
-    // Maps (Guy's B): black on white at Decent and Big, told apart by their tint's edge.
-    expect(fills('mapblight')).toEqual([[255, 255, 255], [255, 255, 255]])
-    expect(currencyLook(4, 'mapblight', c).border).not.toEqual(currencyLook(4, 'maporig', c).border)
+    // Special maps (pick A): a pale tint card on Decent, the full tint on Big
+    // with a white edge, never a plain map's white.
+    expect(fills('mapblight')).toEqual([[182, 227, 143], [150, 215, 95]])
+    expect(currencyLook(4, 'mapblight', c).border?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(currencyLook(4, 'mapblight', c).background).not.toEqual(currencyLook(4, 'maporig', c).background)
+    for (const cat of ['mapend', 'mapguard', 'maporig', 'mapmods', 'mapcorr', 'mapblight', 'mapravaged']) {
+      for (const s of [2, 3, 4] as const) expect(currencyLook(s, cat, c).background?.slice(0, 3)).not.toEqual([255, 255, 255])
+    }
+    // A dark colour you pick for a section gets white text on Big.
+    const dark = { ...c, cats: { ...c.cats, mapguard: { text: [60, 30, 90, 255] } } } as typeof c
+    expect(currencyLook(4, 'mapguard', dark).text?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(currencyLook(4, 'mapguard', c).text?.slice(0, 3)).toEqual([0, 0, 0])
+    // The Style picker: a dark card, or white with the tint on the edge.
+    const dk = currencyLook(4, 'maporig', { ...c, mapLook: 'dark' })
+    expect(dk.text?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(dk.border?.slice(0, 3)).toEqual([255, 225, 120])
+    const wh = currencyLook(3, 'maporig', { ...c, mapLook: 'edge' })
+    expect(wh.background?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(wh.border?.slice(0, 3)).toEqual([255, 225, 120])
+    expect(normalizeCurrency({ mapLook: 'dark' } as never).mapLook).toBe('dark')
+    expect(normalizeCurrency({ mapLook: 'bogus' } as never).mapLook).toBeUndefined()
     expect(new Set(all).size).toBe(all.length)
     expect(fills('gemsup')).toEqual(fills('gemskill'))
     expect(currencyLook(4, 'gemskill', c).text?.slice(0, 3)).toEqual([255, 255, 255])
@@ -421,14 +439,15 @@ describe('currency weights', () => {
     for (const line of [0.1, 1, 5]) {
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, on(c => { c.line = line }), lookup)!
-      // Jewel, league and special gear rows are a compile each (they
-      // overlap), so a few more.
-      expect(compiled.blocks.length).toBeLessThan(360)
+      // Jewel, league, special gear, cluster base and flask rows are a
+      // compile each (they overlap), so a few more.
+      expect(compiled.blocks.length).toBeLessThan(400)
       const text = serializeFilter(doc)
       // About 100k for currency, fragments and cards, 25k for uniques, 25k
       // for jewels and league items (Viscera's long base lists), 25k for
-      // special gear (its rows name every gear class).
-      expect(text.length - SEMI.length).toBeLessThan(230_000)
+      // special gear (its rows name every gear class), 15k for replicas,
+      // corpses, cluster bases and flasks.
+      expect(text.length - SEMI.length).toBeLessThan(250_000)
       expect(validateFilter(parseFilter(text)).map(p => p.message)).toEqual([])
     }
   })
