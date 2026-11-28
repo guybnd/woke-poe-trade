@@ -29,7 +29,7 @@ import type { CardFacts } from './card-classes'
 import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
 import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK } from './map-classes'
-import type { GemLine } from './gem-classes'
+import type { GemBand, GemLine } from './gem-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
 import type { CStep, CurrencySettings, ItemEdit, SectionMode } from './currency-settings'
 
@@ -305,9 +305,19 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
     const names = new Set(gems.map(g => g.name))
     // A thin band (poe.ninja had no price most days) is often a few hand-set
     // listings: "More Duration Support 21/23c" at 150 div (Guy 2026-11-28).
-    // It counts at most 3× the gem's most valuable solid band, when it has one.
-    const solid = new Map<string, number>()
-    for (const g of gems) if (!g.thin && g.chaos > 0) solid.set(g.name, Math.max(solid.get(g.name) ?? 0, g.chaos))
+    // It counts at most 3× the most valuable solid band of the same gem that
+    // is at least as good (level and quality as high, corrupted or not the
+    // same): a better copy can't be worth less than a worse one.
+    const solidBands = new Map<string, Array<{ band: GemBand, chaos: number }>>()
+    for (const g of gems) {
+      const band = gemBand(g.variant)
+      if (g.thin || !band || !(g.chaos > 0)) continue
+      solidBands.set(g.name, [...(solidBands.get(g.name) ?? []), { band, chaos: g.chaos }])
+    }
+    const thinCap = (g: GemLine, b: GemBand): number | null => {
+      const better = (solidBands.get(g.name) ?? []).filter(x => x.band.level >= b.level && x.band.quality >= b.quality && x.band.corrupted === b.corrupted)
+      return better.length ? Math.max(...better.map(x => x.chaos)) * 3 : null
+    }
     for (const g of gems) {
       const band = gemBand(g.variant)
       const name = `${g.name} ${g.variant}`
@@ -326,7 +336,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         type: 'gems',
         tier: null,
         cat,
-        chaos: (own ?? (g.thin && solid.has(g.name) ? Math.min(g.chaos, solid.get(g.name)! * 3) : g.chaos)) * (edits[name]?.mult ?? 1),
+        chaos: (own ?? Math.min(g.chaos, (g.thin ? thinCap(g, band) : null) ?? Infinity)) * (edits[name]?.mult ?? 1),
         est: own == null && g.thin,
         ...(own != null ? { own: true } : {}),
         full: 1,
