@@ -46,7 +46,7 @@ describe('flasks on the Equipment tab', () => {
     expect(flaskStep(w, 'Ruby Flask', 0, 85)).toBe(1)
     expect(flaskStep(w, 'Ruby Flask', 20, 85)).toBe(2)
     // The rares' line doesn't move it.
-    expect(flaskStep({ ...w, need: 500 }, 'Ruby Flask', 0, 85)).toBe(1)
+    expect(flaskStep({ ...w, need: 500 } as typeof w, 'Ruby Flask', 0, 85)).toBe(1)
     expect(flaskStep({ ...w, flaskLine: 2 }, 'Ruby Flask', 0, 70)).toBe(2)
   })
 })
