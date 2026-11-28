@@ -364,7 +364,7 @@ async function withBaseExtras (model: TipModel, ref: ItemTipRef, market: TipMark
     return { name, chaos: found?.chaos ?? null, grade: 'unknown', label: '', thin: false }
   }).sort((a, b) => (b.chaos ?? -1) - (a.chaos ?? -1))
   // How often each turns up and which is the chase (Guy's V1, 2026-11-28).
-  const marked = (await extras)?.rarityLabels(listed, pack['unique-drop-tiers'], p.divine.value ?? 150) ?? listed
+  const marked = (await extras)?.rarityLabels(listed, pack['unique-drop-tiers']) ?? listed
   return { model, market, uniques: withDrops(marked, pack.drops) }
 }
 

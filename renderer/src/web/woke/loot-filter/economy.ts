@@ -223,8 +223,9 @@ export function swingText (chaos: number, swing: PriceSwing): { label: string, t
 // one above (Guy's pick A, 2026-11-28). A unique with no tier counts as T4.
 export const DROP_WEIGHT = [1, 3, 8, 20, 45, 100]
 const NO_TIER_WEIGHT = 45
-// A unique this rare (very or extremely rare) and worth the chase line is a chase.
-export const CHASE_TIER = 2
+// A T0 unique (the rarest) is a chase, whatever it's worth (Guy 2026-11-28:
+// "we want just t0").
+export const CHASE_TIER = 0
 
 export function dropWeight (tiers: Record<string, number> | null, name: string): number {
   const t = tiers?.[name]
@@ -233,16 +234,15 @@ export function dropWeight (tiers: Record<string, number> | null, name: string):
 
 // The Loot tab's unique prices (Guy's picks A + K1, 2026-11-28): a base is
 // worth what an average drop on it is worth, each unique counted by how often
-// it turns up. A chase unique (very or extremely rare, worth `chaseFrom` or
-// more) doesn't count; it's listed instead, and the base gets the chase look.
-// A base whose uniques are all chases is simply worth their average.
+// it turns up. A chase unique (T0) doesn't count; it's listed instead, and the
+// base goes to Chase uniques. A base whose uniques are all chases is worth
+// their average, and is a chase base too.
 // Everything that isn't a plain unique base (Foulborn, special rolls) is
 // priced by its best line, as before.
 export function dropLookup (
   items: PriceItem[],
   uniquesOnBase: (base: string) => string[],
-  tiers: Record<string, number> | null,
-  chaseFrom: number
+  tiers: Record<string, number> | null
 ): PriceLookup {
   const max = priceLookup(items, uniquesOnBase, 'max')
   const find = priceFinder(items, 'market')
@@ -253,7 +253,7 @@ export function dropLookup (
       .map(name => ({ name, hit: find(group.ninja, name, base) }))
       .filter((x): x is { name: string, hit: PriceItem } => Boolean(x.hit))
     if (!priced.length) return null
-    const isChase = (x: { name: string, hit: PriceItem }) => (tiers?.[x.name] ?? 9) <= CHASE_TIER && x.hit.chaos >= chaseFrom
+    const isChase = (x: { name: string }) => (tiers?.[x.name] ?? 9) <= CHASE_TIER
     const chase = priced.filter(isChase)
     const counted = chase.length < priced.length ? priced.filter(x => !isChase(x)) : priced
     const w = (x: { name: string }) => dropWeight(tiers, x.name)
@@ -271,7 +271,7 @@ export function dropLookup (
       note: counted.length > 1 ? `average of ${counted.length}` : lead.name,
       drop: {
         of: counted.length,
-        chase: (chase.length < priced.length ? chase : []).map(x => ({ name: x.name, chaos: x.hit.chaos })).sort((a, b) => b.chaos - a.chaos)
+        chase: chase.map(x => ({ name: x.name, chaos: x.hit.chaos })).sort((a, b) => b.chaos - a.chaos)
       }
     }
   }

@@ -61,15 +61,15 @@ export function topTierLine (data: TierData, key: string): TipLine | null {
 // The game's words for the drop tiers T0..T5 (loot-filter/drop-tier.ts).
 const RARITY_WORD = ['extremely rare', 'very rare', 'very rare', 'rare', 'uncommon', 'common']
 
-// Each unique on a base says how often it turns up, and a very or extremely
-// rare one worth 1 div or more says "chase": the Loot tab leaves it out of
-// the base's average-drop price and shows the base as a chase base.
-export function rarityLabels (list: TipBaseUnique[], tiers: Record<string, number> | undefined, divine: number): TipBaseUnique[] {
+// Each unique on a base says how often it turns up, and a T0 one says
+// "chase": the Loot tab leaves it out of the base's average-drop price and
+// shows the base in Chase uniques.
+export function rarityLabels (list: TipBaseUnique[], tiers: Record<string, number> | undefined): TipBaseUnique[] {
   if (!tiers) return list
   return list.map(u => {
     const t = tiers[u.name]
     if (t == null) return u
-    const chase = t <= 2 && u.chaos != null && u.chaos >= divine
+    const chase = t === 0
     return { ...u, grade: chase ? 'high' : 'unknown', label: chase ? 'chase' : RARITY_WORD[t] ?? '' }
   })
 }

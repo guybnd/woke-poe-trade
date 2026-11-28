@@ -2,7 +2,7 @@
 // 2026-11-28: A, K1, S1, R1). A filter can't tell uniques apart on one base,
 // so a base is priced by its average drop: each unique that drops on it
 // naturally (boss-only uniques left out) counted by how often it turns up.
-// A rare unique worth 1 div+ is a chase: the base goes to Chase uniques
+// A T0 unique (the rarest) is a chase: the base goes to Chase uniques
 // (Always) instead of being priced by it. The bases come from NeverSink's plain unique tiers;
 // its special rules (6-link, corrupted implicits, abyss sockets,
 // replicas) keep deciding those items, above the priced ones.

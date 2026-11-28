@@ -1,6 +1,6 @@
 // Unique bases by their average drop, and Chase uniques (Guy's picks A, K1,
 // S1, 2026-11-28): Leather Belt is mostly 1c uniques plus a rare Headhunter,
-// so it's worth its average and goes to Chase uniques (Always, own look); a
+// so it's worth its average (only T0 is a chase) and goes to Chase uniques (Always, own look); a
 // boss base that also drops world uniques is priced by those.
 import { describe, it, expect } from 'vitest'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
@@ -23,7 +23,7 @@ const ON: Record<string, string[]> = {
 }
 const TIERS: Record<string, number> = { 'Headhunter': 0, 'Wurm\'s Molt': 5, 'Immortal Flesh': 5, 'Leash of Oblation': 3, 'The Primordial Chain': 4, 'Araku Tiki': 5, 'Tavukai': 3, 'Voll\'s Devotion': 2 }
 const U = NET_GROUPS.find(g => g.unique)!
-const look = dropLookup(ITEMS, b => ON[b] ?? [], TIERS, 160)
+const look = dropLookup(ITEMS, b => ON[b] ?? [], TIERS)
 
 describe('unique bases by their average drop', () => {
   it('a rare jackpot is a chase, left out of the average', () => {
@@ -39,8 +39,14 @@ describe('unique bases by their average drop', () => {
     expect(p.drop?.chase).toEqual([])
   })
 
-  it('a valuable but rare unique under the chase line still counts', () => {
+  it('only T0 is a chase: a valuable T2 unique still counts', () => {
     expect(look(U, 'Agate Amulet')?.chaos).toBe(7)
+    expect(look(U, 'Agate Amulet')?.drop?.chase).toEqual([])
+  })
+
+  it('a base whose only unique is T0 is a chase base at that price', () => {
+    const one = dropLookup([line('Kalandra\'s Touch', 4000)], () => ['Kalandra\'s Touch'], { 'Kalandra\'s Touch': 0 })
+    expect(one(U, 'Ring')).toMatchObject({ chaos: 4000, drop: { of: 1, chase: [{ name: 'Kalandra\'s Touch', chaos: 4000 }] } })
   })
 
   it('chase bases go to Chase uniques, Always, with their own look; boss bases with world drops are priced', () => {

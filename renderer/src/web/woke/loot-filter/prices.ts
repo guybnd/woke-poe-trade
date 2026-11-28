@@ -54,12 +54,12 @@ export function useFilterPrices (rule: () => UniqueRule) {
   })
   // One divine rate in every window: live poe.ninja's, else the saved prices'.
   const divine = computed(() => divineRate(ninja.xchgRate.value, index.snapshot.value?.divine))
-  // The Loot tab's rules: a unique base is worth its average drop, a rare
-  // valuable unique on it (1 div+) is a chase (dropLookup). The Prices tab's
+  // The Loot tab's rules: a unique base is worth its average drop, a T0
+  // unique on it is a chase (dropLookup). The Prices tab's
   // "cheapest unique" setting never applies here.
   const lootLookup = computed<PriceLookup | null>(() => {
     if (!index.snapshot.value?.items.length || !dropsReady.value) return null
-    return dropLookup(liveItems.value, randomOnBase.value, dropTiers.value, divine.value ?? 150)
+    return dropLookup(liveItems.value, randomOnBase.value, dropTiers.value)
   })
   // What this snapshot has at all: a type it lacks isn't priced at zero.
   const pricedTypes = computed(() => new Set((index.snapshot.value?.items ?? []).map(i => i.type)))
