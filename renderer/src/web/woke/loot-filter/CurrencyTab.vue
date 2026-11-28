@@ -6,7 +6,7 @@
       <WInfo text="In maps (area level 68+), each pile of currency, essences, fossils, oils, delirium orbs, omens, tattoos and ducats counts as its poe.ninja price × stack (10 Chaos is 10c); an item whose full stack is worth less than Decent counts × stack^0.75, so piles of cheap shards stay quiet. Under the line it hides; over it it shows Small, and Normal, Decent, Big and Tink start at the prices you set; untick Show on a step to hide everything that would get it. Each category has its own Strictness (×1.25 a notch on top of the main one); click an item to set its step, price, supply stack or look by hand. Items with no price get a guess from NeverSink's tier (est.). Only this profile. Your own rules, build rules and presets still go on top. In maps these rules replace NeverSink's for these items, so price moves and tier edits for them apply only below area level 68." />
       <span class="w-faint text-xs">{{ statusText }}</span>
       <span class="flex-1" />
-      <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" title="Line, step prices and category strictness back to the start; your item edits stay" @click="reset">Defaults</WButton>
+      <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" title="Line, step prices and category price bias back to the start; your item edits stay" @click="reset">Defaults</WButton>
     </div>
 
     <div :class="$style.minBar" data-currency-min>
@@ -71,13 +71,10 @@
         <span :class="$style.count">{{ g.shown }} of {{ g.all }} show</span>
         <span :class="$style.dots" aria-hidden="true"><i v-for="r in g.rows" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
         <span class="flex-1" />
-        <span :class="$style.secMode" data-loot-section-mode @click.stop @keydown.stop>
-          <WSegmented :model-value="sectionMode(c, g.cat.id)" :options="SECTION_MODES" role="group" :aria-label="`${g.cat.name}: Off, Weighted or Always`" @update:model-value="v => setCatMode(g.cat.id, v)" />
+        <span data-loot-section-mode>
+          <StateChip :model-value="sectionMode(c, g.cat.id)" :options="SECTION_MODES" :title="g.cat.name" :dflt="sectionMode({ catMode: {} }, g.cat.id)"
+            :bias="c.nudge[g.cat.id] ?? 0" bias-mode="auto" @update:model-value="v => setCatMode(g.cat.id, v)" @update:bias="n => setNudge(g.cat.id, n)" />
         </span>
-        <label :class="$style.whole" :title="`${g.cat.name}' own strictness: multiplies every step's price for them, on top of the main Strictness`" @click.stop @keydown.stop>Strictness
-          <select :value="c.nudge[g.cat.id] ?? 0" :class="$style.sel2" :aria-label="`${g.cat.name} strictness`" @change="setNudge(g.cat.id, Number(($event.target as HTMLSelectElement).value))">
-            <option v-for="n in NUDGES" :key="n" :value="n">×{{ (1.25 ** n).toFixed(2) }} · Small {{ chaosText(eff.line * 1.25 ** n) }}</option>
-          </select></label>
       </div>
       <div v-if="isOpen(g.cat.id)" :class="$style.catBody" role="table" :aria-label="`${g.cat.name} and when they show`">
         <div :class="$style.catLook" data-currency-cat-look>
@@ -139,8 +136,10 @@
 // the steps and where they start, one ground pile, then every item in its
 // category, each with the stack it needs for each step and an editor.
 import { computed, nextTick, ref, watch } from 'vue'
-import { WButton, WChip, WIcon, WInfo, WItemRow, WSegmented, WToggle } from '../ui'
+import { WButton, WChip, WIcon, WInfo, WItemRow, WToggle } from '../ui'
 import CurrencyPile from './CurrencyPile.vue'
+import StateChip from './StateChip.vue'
+import { SECTION_MODES } from './section-modes'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import LabelPreview from './LabelPreview.vue'
 import StyleEditor from './StyleEditor.vue'
@@ -149,7 +148,7 @@ import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode } from './currency-weights'
+import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
@@ -200,8 +199,7 @@ const baseChaos = (name: string) => baseByName.value.get(name)?.chaos ?? 0
 // With your own prices on top.
 const items = computed<CurrencyItem[]>(() => baseItems.value.map(it => withEdit(it, c.value.items[it.name])))
 
-// Every section: Off / Weighted / Always (Guy 2026-11-27).
-const SECTION_MODES = [{ value: 'off', label: 'Off' }, { value: 'auto', label: 'Weighted' }, { value: 'always', label: 'Always' }]
+// Every section: Hide / By price / Always (Guy 2026-11-27; words W1 2026-11-28).
 function setCatMode (cat: string, v: string) {
   const next = Object.fromEntries(Object.entries(c.value.catMode).filter(([k]) => k !== cat))
   if (v !== sectionMode({ catMode: {} }, cat)) next[cat] = v as SectionMode
@@ -372,7 +370,6 @@ function setCatIcon (id: string, p: { shape?: string, color?: string }) {
 const hexOf = (rgb: number[]) => '#' + rgb.slice(0, 3).map(v => v.toString(16).padStart(2, '0')).join('')
 const rgbOf = (hex: string): [number, number, number] => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number]
 
-const NUDGES = Array.from({ length: NUDGE_MAX * 2 + 1 }, (_, i) => i - NUDGE_MAX)
 function setNudge (cat: string, v: number) {
   const next = Object.fromEntries(Object.entries(c.value.nudge).filter(([k]) => k !== cat))
   if (v !== 0) next[cat] = v
@@ -442,7 +439,6 @@ function chaosText (v: number): string {
 }
 :global([data-w-sized]) .wrap { max-height: none; }
 .top, .tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.secMode { display: inline-flex; }
 .beta {
   font-size: var(--w-fs-xs);
   color: var(--w-dim);
