@@ -411,7 +411,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip, itemRefFromName } from '../ui'
 import WBackLink from '../ui/WBackLink.vue'
 import ProfileSwitcher from './ProfileSwitcher.vue'
@@ -427,9 +427,11 @@ import PreviewTab from './PreviewTab.vue'
 import PresetsTab from './PresetsTab.vue'
 import GearTab from './GearTab.vue'
 import EquipmentTab from './EquipmentTab.vue'
-import LootTab from './LootTab.vue'
 import { CURRENCY_TYPE } from './currency-settings'
 import { experimentalUnlocked } from '../personal'
+// The Loot tab loads when opened: the price check's score card shares this
+// chunk, and the Loot tab's pages and grounds would ride along into memory.
+const LootTab = defineAsyncComponent(() => import('./LootTab.vue'))
 import { WEIGHT_TYPE } from './weights'
 import { gearRanksAsk, takeRanksAsk } from './gear-drag'
 import { GEAR_TYPE } from './gear'
