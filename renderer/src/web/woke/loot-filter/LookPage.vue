@@ -15,7 +15,9 @@ import type { LootFilterWidget } from './widget'
 import type { Presets } from './presets'
 
 defineProps<{ store: LootFilterStore, config: LootFilterWidget }>()
-const LOOK_PRESETS: ReadonlyArray<keyof Presets> = ['bigger', 'colourBlind', 'volume', 'beams', 'quiet']
+// Quiet mode and Beams only for tiers 1 to N count NeverSink's tiers, so
+// they stay with a filter file's Presets tab.
+const LOOK_PRESETS: ReadonlyArray<keyof Presets> = ['bigger', 'colourBlind', 'volume']
 </script>
 
 <style module>

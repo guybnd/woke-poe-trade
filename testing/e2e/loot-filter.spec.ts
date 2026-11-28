@@ -1093,7 +1093,9 @@ test('a window never resized keeps a short tab short', async ({ overlay, fakeApp
   await expect(page.locator('[data-filter-history-tab]')).toBeVisible()
   expect(await buildGap(page)).toBeLessThan(4)
   const panel = (await page.locator('[data-w-panel]').filter({ has: page.locator('[data-filter-history-tab]') }).first().boundingBox())!
-  expect(panel.height).toBeLessThan(500)
+  // Its own rows' height, not stretched to the window's 85vh.
+  const vh = page.viewportSize()!.height
+  expect(panel.height).toBeLessThan(vh * 0.85 - 40)
 })
 
 test('prices: kept items list under Not moved, unlock in bulk, and both steps undo', async ({ overlay, fakeApp }) => {
@@ -1851,6 +1853,16 @@ test('our own filter: no file needed, strictness on the Loot tab, saved as our f
   await expect(page.locator('[data-loot-strictness]')).toBeVisible()
   await expect(page.locator('[data-loot-strict-maps]')).toBeVisible()
   await expect(page.getByRole('tab', { name: /^NeverSink/ })).toHaveCount(0)
+  // Our own filter's window: Loot, Gear, Style, Preview and History, no file tabs.
+  await expect(page.getByRole('tab')).toHaveText([/^Loot/, /^Gear/, /^Style/, /^Preview/, /^History/])
+  await expect(page.locator('[data-loot-class="own"]')).toBeVisible()
+  await overlay.snap('our own filter window')
+  await page.getByRole('tab', { name: /^Style/ }).click()
+  await expect(page.locator('[data-loot-look]')).toBeVisible()
+  await overlay.snap('style tab')
+  await page.getByRole('tab', { name: /^Loot/ }).click()
+  await page.locator('[data-loot-class="own"]').click()
+  await expect(page.locator('[data-own-rules]')).toBeVisible()
   await page.getByRole('button', { name: /^Save/ }).click()
   await expect.poll(() => fs.existsSync(path.join(folder, 'Loot filter (woke).filter')), { timeout: 20_000 }).toBe(true)
   const text = fs.readFileSync(path.join(folder, 'Loot filter (woke).filter'), 'utf8')

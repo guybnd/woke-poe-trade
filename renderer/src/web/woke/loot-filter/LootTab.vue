@@ -66,8 +66,9 @@ const emit = defineEmits<{
 // The classes, in the order Guy picked (round 1 and 2 mockups), each with an
 // item's art that stands for it (Guy 2026-11-28: "this needs icons").
 type Ns = 'ITEM' | 'UNIQUE' | 'GEM' | 'DIVINATION_CARD'
-interface Row { id: string, name: string, art?: string, ns?: Ns, fa: string }
-const GROUPS = [
+type ClassId = 'own' | 'currency' | 'gold' | 'fragments' | 'cards' | 'league' | 'uniques' | 'gems' | 'maps' | 'jewels' | 'flasks' | 'recipes' | 'levelling'
+interface Row { id: ClassId, name: string, art?: string, ns?: Ns, fa: string }
+const GROUPS: ReadonlyArray<{ id: string, name: string, rows: readonly Row[] }> = [
   { id: 'own', name: '', rows: [{ id: 'own', name: 'Your rules', fa: 'fas fa-sliders-h' }] },
   {
     id: 'drops',
@@ -94,13 +95,12 @@ const GROUPS = [
     id: 'other',
     name: 'Other',
     rows: [
-      { id: 'flasks', name: 'Life and mana flasks', art: 'Divine Life Flask', ns: 'ITEM', fa: 'fas fa-flask' },
+      { id: 'flasks', name: 'Life & mana flasks', art: 'Divine Life Flask', ns: 'ITEM', fa: 'fas fa-flask' },
       { id: 'recipes', name: 'Recipes', art: 'Chromatic Orb', ns: 'ITEM', fa: 'fas fa-flask' },
       { id: 'levelling', name: 'Levelling & build', art: 'Scroll of Wisdom', ns: 'ITEM', fa: 'fas fa-seedling' }
     ]
   }
-] as const satisfies ReadonlyArray<{ id: string, name: string, rows: readonly Row[] }>
-type ClassId = (typeof GROUPS)[number]['rows'][number]['id']
+]
 
 // Classes prices decide already: one engine and one switch for both.
 const PRICED = new Set<ClassId>(['currency', 'gold', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels', 'league', 'flasks'])
