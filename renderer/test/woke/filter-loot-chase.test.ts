@@ -59,6 +59,13 @@ describe('unique bases by their average drop', () => {
     expect(v(U, 'Large Cluster Jewel')).toMatchObject({ chaos: 1200, noWorld: true })
   })
 
+  it('a unique with only variant lines is worth its cheapest real one (what most drops are)', () => {
+    const v1 = { ...line('Voices', 164000, 'UniqueJewel'), variant: '1 passive' } as PriceItem
+    const v7 = { ...line('Voices', 300, 'UniqueJewel'), variant: '7 passives' } as PriceItem
+    const v = dropLookup([v1, v7], () => [], null, new Set(), () => ['Voices'])
+    expect(v(U, 'Large Cluster Jewel')?.chaos).toBe(300)
+  })
+
   it('only T0 is a chase: a valuable T2 unique still counts', () => {
     expect(look(U, 'Agate Amulet')?.chaos).toBe(7)
     expect(look(U, 'Agate Amulet')?.drop?.chase).toEqual([])
@@ -80,9 +87,9 @@ describe('unique bases by their average drop', () => {
     const cfg = defaultCurrency()
     expect(sectionMode(cfg, 'uniqchase')).toBe('always')
     const small = currencyLook(1, 'uniqchase', cfg)
-    // Default style T1 ice blue; a picked style changes ground and icon.
-    expect(small.icon).toMatchObject({ shape: 'Kite', color: 'Brown' })
-    expect(small.background?.slice(0, 3)).toEqual([215, 232, 255])
+    // Default style T6 sage (Guy's pick); a picked style changes ground and icon.
+    expect(small.icon).toMatchObject({ shape: 'Kite', color: 'Green' })
+    expect(small.background?.slice(0, 3)).toEqual([220, 235, 210])
     const teal = currencyLook(1, 'uniqchase', { ...cfg, chaseLook: 'T4' })
     expect(teal.icon).toMatchObject({ shape: 'Kite', color: 'Cyan' })
     expect(teal.background?.slice(0, 3)).toEqual([200, 240, 232])

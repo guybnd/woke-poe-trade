@@ -185,7 +185,7 @@ if (props.config.sourceName || props.config.neversink.on || props.config.wmWants
 // What's new's Show me: the editor, with its profile chip.
 useGoto(props.config, 'woke-loot-filter', {
   editor: () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}) },
-  spots: { 'profiles': () => {}, 'gear-ranks': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); askGearRanks() }, 'over-quality-look': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); openTab.value = { tab: 'gear' } }, 'league-always': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); focus.value = { type: 'woke->currency', tier: 'lgchron' } }, 'jewels-no-price': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); focus.value = { type: 'woke->currency', tier: 'jewplain' } } }
+  spots: { 'profiles': () => {}, 'gear-ranks': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); askGearRanks() }, 'over-quality-look': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); openTab.value = { tab: 'gear' } }, 'league-always': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); focus.value = { type: 'woke->currency', tier: 'lgchron' } }, 'map-looks': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); focus.value = { type: 'woke->currency', tier: 'mapfloor' } }, 'jewels-no-price': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); focus.value = { type: 'woke->currency', tier: 'jewplain' } } }
 })
 
 // A change Claude suggested, applied from the Suggestions card: added like an

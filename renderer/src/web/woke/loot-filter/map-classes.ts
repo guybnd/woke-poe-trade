@@ -19,14 +19,18 @@ export const MAP_CATEGORIES: LootCategory[] = [
 ]
 export const MAP_IDS = new Set(MAP_CATEGORIES.map(x => x.id))
 
+// Each kind's tint (Guy's B, 2026-11-28): the map look players know, black on
+// white, with the kind on the border, beam and minimap icon. Map icons are
+// always squares in the kind's tint (Guy: "always square with content
+// tint"). Red stays Tink's.
 export const MAP_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
-  mapend: { text: [235, 235, 235], color: 'White', shape: 'Square' },
-  mapguard: { text: [215, 205, 255], color: 'Purple', shape: 'Square' },
-  maporig: { text: [255, 225, 140], color: 'Yellow', shape: 'Square' },
-  mapmods: { text: [120, 220, 230], color: 'Cyan', shape: 'Square' },
-  mapcorr: { text: [225, 120, 120], color: 'Pink', shape: 'Square' },
-  mapblight: { text: [150, 200, 110], color: 'Green', shape: 'Hexagon' },
-  mapravaged: { text: [210, 170, 90], color: 'Orange', shape: 'Hexagon' }
+  mapend: { text: [255, 175, 70], color: 'Orange', shape: 'Square' },
+  mapguard: { text: [200, 165, 255], color: 'Purple', shape: 'Square' },
+  maporig: { text: [255, 225, 120], color: 'Yellow', shape: 'Square' },
+  mapmods: { text: [110, 220, 235], color: 'Cyan', shape: 'Square' },
+  mapcorr: { text: [255, 120, 165], color: 'Pink', shape: 'Square' },
+  mapblight: { text: [150, 215, 95], color: 'Green', shape: 'Square' },
+  mapravaged: { text: [220, 150, 70], color: 'Brown', shape: 'Square' }
 }
 
 // NeverSink's blighted section, where the rules go.

@@ -47,7 +47,7 @@
         :gem="/ Gems$/.test(facts.itemClass ?? '') ? { level: facts.gemLevel ?? 1, quality: facts.quality ?? 0, corrupted: !!facts.corrupted } : null" :rule="match.final?.block.conditions ?? null" :facts="facts"
         :tier="match.final?.block.tier ?? null" :note="match.final?.block.comment ?? null"
         @open-tab="(cat, name) => emit('open-editor', { type: CURRENCY_TYPE, tier: `cat:${cat}:${name}` })"
-        @open-rule="tier => emit('open-editor', { type: CURRENCY_TYPE, tier })" @place="p => lootPlace = p" />
+        @open-rule="tier => emit('open-editor', { type: CURRENCY_TYPE, tier })" @place="p => lootPlace = p" @uniques="v => cardUniques = v" />
       <div v-if="match.final && !isCurrency" :class="$style.keys" role="toolbar" aria-label="Quick fixes">
         <button v-for="q in quick" :key="q.key" type="button" class="w-focusable" :class="[$style.key, { [$style.keyOff]: q.disabled }]"
           :disabled="q.disabled" :title="q.title" @click="q.run()">
@@ -59,7 +59,7 @@
 
       <WeightRankStrip :store="store" :config="config" :facts="facts" />
       <GearRankStrip v-if="!config.presets.weights.on" :store="store" :config="config" :facts="facts" />
-      <DropUniques :store="store" :config="config" :facts="facts" />
+      <DropUniques v-if="!cardUniques" :store="store" :config="config" :facts="facts" />
 
       <template v-if="match.final">
         <div v-if="ladderRows.length" :class="$style.section">
@@ -259,6 +259,8 @@ const areaLevelModel = computed({
 // the item's section, as the card below finds it (a unique base read
 // "Currency weights › S0").
 const lootPlace = ref<{ cat: string, catName: string, name: string } | null>(null)
+// The card below lists what the base can be: no second list.
+const cardUniques = ref(false)
 const lootStep = (r: { type: string | null, tier: string | null }) => r.type === CURRENCY_TYPE && lootPlace.value ? /^s([0-5])$/.exec(r.tier ?? '') : null
 const placeOf = (r: { type: string | null, tier: string | null }) => {
   const m = lootStep(r)

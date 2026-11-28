@@ -67,7 +67,7 @@
 
     <div v-if="!rows.length" class="w-faint text-sm">{{ emptyText }}</div>
     <div v-for="g in groups" v-else :key="g.cat.id" :class="$style.cat" :data-currency-cat="g.cat.id">
-      <div :class="$style.catHead" role="button" tabindex="0" :aria-expanded="isOpen(g.cat.id)" :data-goto-spot="g.cat.id === 'lgchron' ? 'league-always' : g.cat.id === 'jewplain' ? 'jewels-no-price' : undefined" @click="toggle(g.cat.id)" @keydown.enter.prevent="toggle(g.cat.id)" @keydown.space.prevent="toggle(g.cat.id)">
+      <div :class="$style.catHead" role="button" tabindex="0" :aria-expanded="isOpen(g.cat.id)" :data-goto-spot="g.cat.id === 'lgchron' ? 'league-always' : g.cat.id === 'mapend' ? 'map-looks' : g.cat.id === 'jewplain' ? 'jewels-no-price' : undefined" @click="toggle(g.cat.id)" @keydown.enter.prevent="toggle(g.cat.id)" @keydown.space.prevent="toggle(g.cat.id)">
         <i class="fas text-xs w-dim" :class="isOpen(g.cat.id) ? 'fa-chevron-down' : 'fa-chevron-right'" />
         <WIcon :item="g.cat.art" size="sm" />
         <span :class="$style.catName">{{ g.cat.name }}</span>
