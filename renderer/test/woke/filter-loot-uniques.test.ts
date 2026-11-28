@@ -61,8 +61,8 @@ describe('uniques on the Loot tab', () => {
     expect(corr?.visibility).toBe('Show')
     // Headhunter corrupted keeps its loud price look.
     expect(hit('Leather Belt', { corrupted: true, corruptedMods: 1 })?.tier).toBe('s5')
-    // Foulborn and non-uniques are untouched.
-    expect(hit('Leather Belt', { foulborn: true })?.type).not.toBe(CURRENCY_TYPE)
+    // A Foulborn one goes to the Foulborn section (filter-loot-foulborn).
+    expect(hit('Leather Belt', { foulborn: true })?.tier).toMatch(/^s|^faint$/)
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
   })
 })

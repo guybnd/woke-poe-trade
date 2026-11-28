@@ -30,6 +30,8 @@ export interface EconomyGroup {
   ninja: string[]
   // Bases hold several uniques; the price is judged over all of them.
   unique?: boolean
+  // Uniques priced by their Foulborn lines ("Foulborn Doryani's Fist").
+  foulborn?: boolean
   // Extra non-`tN` tiers that take part, with their rank.
   extraTiers?: Record<string, number>
 }
@@ -158,7 +160,7 @@ export function priceLookup (
     // they never land in them and must not set the base's price.
     const priced = uniquesOnBase(base)
       .filter(name => !isReplica(name))
-      .map(name => find(group.ninja, name, base))
+      .map(name => find(group.ninja, group.foulborn ? `Foulborn ${name}` : name, base))
       .filter((x): x is PriceItem => Boolean(x))
     if (!priced.length) return null
     // "max": the base is worth what its best unique is worth, so a valuable
