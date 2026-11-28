@@ -109,7 +109,7 @@
             <span :class="$style.dots" aria-hidden="true"><i v-for="r in sg.all" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
           </span>
           <span class="flex-1" />
-          <label :class="$style.whole">Whole tier
+          <label :class="$style.whole">{{ kind === 'gems' ? 'Whole band' : 'Whole tier' }}
             <select :value="sg.step" :class="$style.sel2" :aria-label="`Step for every ${sg.name} item`" @change="setSubStep(sg.all, ($event.target as HTMLSelectElement).value)">
               <option v-if="sg.step === 'mixed'" value="mixed" disabled>Mixed</option>
               <option value="auto">Price decides</option>

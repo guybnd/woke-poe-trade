@@ -122,10 +122,28 @@ export function categoryOf (name: string, type: string): string {
 // Sub-groups inside a category, loudest first (Guy 2026-11-27: essences by
 // tier, so a whole tier can be looked over or switched off at once).
 export const ESSENCE_TIERS = ['Deafening', 'Shrieking', 'Screaming', 'Wailing', 'Weeping', 'Muttering', 'Whispering'] as const
+// Gems by level and quality (Guy 2026-11-28: "these sections very dense").
+// Level 21 and 23% only come from a Vaal Orb, so they are the corrupted
+// bands; a gem corrupted with no change gets a band of its own.
+export const GEM_BANDS = ['21/23', '21/20', '20/23', '20/20', '20/0', '1/20', '1/0+', 'Corrupted, no change'] as const
+const GEM_BANDED = new Set(['gemtrans', 'gemvaal', 'gemsup', 'gemskill'])
 export const SUBGROUPS: Record<string, readonly string[]> = {
-  essences: [...ESSENCE_TIERS, 'Special']
+  essences: [...ESSENCE_TIERS, 'Special'],
+  ...Object.fromEntries([...GEM_BANDED].map(id => [id, GEM_BANDS]))
+}
+function gemBandOf (name: string, cat: string): string {
+  const m = / (\d+)(?:\/(\d+))?(c)?$/.exec(name)
+  const lv = Number(m?.[1] ?? 1)
+  const q = Number(m?.[2] ?? 0)
+  if (lv >= 21) return q >= 21 ? '21/23' : '21/20'
+  if (q >= 21) return '20/23'
+  // Vaal gems are always corrupted: their c says nothing.
+  if (m?.[3] && cat !== 'gemvaal') return 'Corrupted, no change'
+  if (lv >= 20) return q >= 20 ? '20/20' : '20/0'
+  return q >= 20 ? '1/20' : '1/0+'
 }
 export function subgroupOf (name: string, cat: string): string | null {
+  if (GEM_BANDED.has(cat)) return gemBandOf(name, cat)
   if (cat !== 'essences') return null
   const tier = ESSENCE_TIERS.find(t => name.startsWith(`${t} Essence of `))
   return tier ?? 'Special'
