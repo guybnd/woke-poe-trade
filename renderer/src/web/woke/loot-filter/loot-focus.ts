@@ -56,8 +56,11 @@ export function notItsRarity (i: { type?: string }, rarity: string | null | unde
 // first base, never the unique Crimson Jewel row (Guy 2026-11-28).
 export function itemFor<T extends { name: string, bt?: string, bts?: string[], conds?: FilterCondition[] }> (items: readonly T[], name: string, rule?: readonly FilterCondition[] | null): T | null {
   const has = new Set((rule ?? []).map(condKey))
+  const own = (i: T) => (i.bt ?? i.name) === name ? 1 : 0
   const fits = items
     .filter(i => ((i.bt ?? i.name) === name || i.bts?.includes(name)) && i.conds?.length && i.conds.every(c => has.has(condKey(c))))
-    .sort((a, b) => (b.conds?.length ?? 0) - (a.conds?.length ?? 0))
+    // On a tie the row of this one base wins ("Simple Robe, 6-link" over
+    // "Any unique, 6-link").
+    .sort((a, b) => (b.conds?.length ?? 0) - (a.conds?.length ?? 0) || own(b) - own(a))
   return fits[0] ?? items.find(i => i.name === name && !i.conds?.length) ?? null
 }

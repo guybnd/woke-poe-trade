@@ -376,6 +376,11 @@ describe('Alt+F on the Loot tab\'s own rows', () => {
     expect(notItsRarity(rows[0], 'Magic')).toBe(true)
     expect(notItsRarity(rows[0], 'Unique')).toBe(false)
     expect(notItsRarity(rows[1], 'Magic')).toBe(false)
+    // A row of one base beats a row of many with the same conditions.
+    const six = { key: 'LinkedSockets', op: '>=', count: null, values: ['6'] }
+    const any = { name: 'Any unique, 6-link', type: 'uniques', cat: 'uniqspec', bts: ['Astral Plate', 'Simple Robe'], conds: [six] }
+    const robe = { name: 'Simple Robe, 6-link', type: 'uniques', cat: 'uniqspec', bt: 'Simple Robe', conds: [six] }
+    expect(itemFor([any, robe], 'Simple Robe', [six])?.name).toBe('Simple Robe, 6-link')
   })
 })
 
