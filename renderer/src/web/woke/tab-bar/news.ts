@@ -31,6 +31,7 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
+  { id: 'loot-filter-gold-page', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Gold has its own page on the Loot tab, and each loot class shows its item art' },
   { id: 'loot-filter-section-ruler', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: give a Loot section its own step ruler (Own ruler in the section); Strictness still moves it' },
   { id: 'loot-filter-section-steps', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: each Loot section can turn its own steps off (Steps row); the ruler\'s Show is that page only' },
   { id: 'loot-filter-map-looks', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: maps look like maps again, black on white, each special kind with its own edge colour and square map icon' },
