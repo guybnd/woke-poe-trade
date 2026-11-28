@@ -23,7 +23,12 @@
 
     <slot name="extra" />
 
-    <StepRuler :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :edit="stepEdit" :samples="stepSample"
+    <!-- Gold has no price: its page's ruler steps piles by size. -->
+    <div v-if="kind === 'gold'" :class="$style.goldRuler">
+      <span :class="$style.lookLab">Pile size for each step</span>
+      <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
+    </div>
+    <StepRuler v-else :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :edit="stepEdit" :samples="stepSample"
       @edit="s => stepEdit = s" @set="setShown" />
 
     <div v-if="stepEdit === 0" :class="$style.stepEd" data-currency-step-editor>
@@ -94,10 +99,6 @@
             <option v-for="col in POE_COLOURS" :key="col" :value="col" :style="{ color: col.toLowerCase() }">● {{ col }}</option>
           </select>
           <button v-if="c.cats[g.cat.id]" type="button" class="w-icon-btn" :title="`${g.cat.name} back to its own colours`" :aria-label="`Reset ${g.cat.name} colours`" @click="setCatLook(g.cat.id, null)"><i class="fas fa-undo" /></button>
-        </div>
-        <div v-if="g.cat.id === 'gold'" :class="$style.goldRuler">
-          <span :class="$style.lookLab">Pile size for each step</span>
-          <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
         </div>
         <template v-for="sg in g.subs" :key="sg.id">
         <div v-if="sg.name" :class="$style.subHead" :data-currency-sub="sg.name">
@@ -173,10 +174,18 @@ const props = withDefaults(defineProps<{
   // An item to open and scroll to (Alt+F's "Open on the Loot tab").
   focusItem?: string | null
 }>(), { kind: 'currency', focusItem: null })
-const KIND_NAME: Record<LootKind, string> = { currency: 'currency', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems', maps: 'special maps', jewels: 'jewels', league: 'league items' }
+const KIND_NAME: Record<LootKind, string> = { currency: 'currency', gold: 'gold', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems', maps: 'special maps', jewels: 'jewels', league: 'league items' }
 const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.kind))
 // The "?" (help format A: a lead line and bullets, checked by help-format.test.ts).
-const INFO = `In maps (area level 68+), ${KIND_NAME[props.kind]} show by poe.ninja price, in place of NeverSink's tiers.
+const INFO = props.kind === 'gold'
+  ? `In maps (area level 68+), a gold pile shows by its size, in place of NeverSink's tiers.
+- Slide where each step starts on the **ruler**: bigger piles get a louder step.
+- **Strictness** scales every size.
+- Untick **Show** on a step to hide its piles.
+- The section's chip sets **Hide**, **By price** or **Always**.
+
+Only this profile. Your own rules, build rules and presets still win.`
+  : `In maps (area level 68+), ${KIND_NAME[props.kind]} show by poe.ninja price, in place of NeverSink's tiers.
 ${props.kind === 'currency' || props.kind === 'fragments' || props.kind === 'cards' ? '- A stack counts at its whole price. Big stacks of cheap items count less.' : ''}
 - Under the **line** it hides. Above it, each step starts at the price you set.
 - Untick **Show** on a step to hide everything on it.
@@ -334,7 +343,7 @@ function setSubStep (list: Row[], v: string) {
 }
 
 // Folded by default; a search or a filter chip opens what it finds.
-const open = ref(new Set<string>())
+const open = ref(new Set<string>(props.kind === 'gold' ? ['gold'] : []))
 const filtering = computed(() => query.value.trim() !== '' || only.value !== 'all')
 const isOpen = (id: string) => filtering.value || open.value.has(id)
 function toggle (id: string) {
@@ -372,7 +381,7 @@ const level = computed(() => levelOf(props.store.doc.value?.strictness ?? null))
 const mult = computed(() => c.value.mult ?? strictMult(level.value))
 const eff = computed(() => scaled(c.value, props.store.doc.value?.strictness ?? null))
 const dragMult = ref<number | null>(null)
-const SAMPLE_CATS = props.kind === 'maps' ? ['mapblight', 'mapravaged'] : props.kind === 'jewels' ? ['jewabyss', 'jewplain'] : props.kind === 'league' ? ['lgexped', 'lgheist', 'lgviscera'] : props.kind === 'gems' ? ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'] : props.kind === 'uniques' ? ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss', 'uniqfoul'] : props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
+const SAMPLE_CATS = props.kind === 'gold' ? ['gold'] : props.kind === 'maps' ? ['mapblight', 'mapravaged'] : props.kind === 'jewels' ? ['jewabyss', 'jewplain'] : props.kind === 'league' ? ['lgexped', 'lgheist', 'lgviscera'] : props.kind === 'gems' ? ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'] : props.kind === 'uniques' ? ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss', 'uniqfoul'] : props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
 // The colours the step ruler shows.
 const sampleCat = ref(SAMPLE_CATS[0])
 // Each step card's sample: an item of the picked category that one of shows
