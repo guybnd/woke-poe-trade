@@ -112,7 +112,7 @@ import { cardFacts, loadCardFacts } from './card-facts'
 import { loadOwnTables, ownTables } from './own-lists'
 import { gemLinesOf } from './gem-classes'
 import { LEAGUE_SECTIONS } from './league-classes'
-import { gemItemFor, itemFor, lootFocus } from './loot-focus'
+import { gemItemFor, itemFor, lootFocus, notItsRarity } from './loot-focus'
 import { evalCondition } from './match'
 import type { ItemFacts } from './item-facts'
 import type { CStep, CurrencyItem, ItemEdit, SectionMode } from './currency-weights'
@@ -171,9 +171,13 @@ const raw = computed<CurrencyItem | null>(() => {
   loadCardFacts()
   loadOwnTables()
   const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null, ownTables.value)
-  if (!props.gem) return itemFor(all, props.name, props.rule) ?? rowFor(all) ?? null
+  if (!props.gem) {
+    const hit = itemFor(all, props.name, props.rule)
+    return (hit && !wrongRarity(hit) ? hit : null) ?? rowFor(all) ?? null
+  }
   return gemItemFor(all, props.name, props.gem, props.rule)
 })
+const wrongRarity = (i: CurrencyItem) => notItsRarity(i, props.facts?.rarity)
 // A row whose BaseTypes and conditions fit the item; the dearest first, as
 // the rules go loudest first.
 function rowFor (all: CurrencyItem[]): CurrencyItem | undefined {
@@ -181,7 +185,7 @@ function rowFor (all: CurrencyItem[]): CurrencyItem | undefined {
   if (!f) return undefined
   return all
     // A row for a whole class (Sanctum research, charts) has no BaseTypes.
-    .filter(i => (i.bts?.length === 0 ? i.cls === f.itemClass : (i.bts ?? [i.bt ?? i.name]).includes(props.name)) && (i.conds ?? []).every(x => evalCondition(x, f) !== false))
+    .filter(i => !wrongRarity(i) && (i.bts?.length === 0 ? i.cls === f.itemClass : (i.bts ?? [i.bt ?? i.name]).includes(props.name)) && (i.conds ?? []).every(x => evalCondition(x, f) !== false))
     .sort((a, b) => b.chaos - a.chaos)[0]
 }
 // The row's name on the Loot tab ("Arc 20/20" for a gem band).
