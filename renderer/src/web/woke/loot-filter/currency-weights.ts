@@ -26,8 +26,9 @@ import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
-import { UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, uniqueCategoryOf, uniqueGuess } from './unique-classes'
+import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
+import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK } from './map-classes'
 import type { GemLine } from './gem-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
 import type { CStep, CurrencySettings, ItemEdit, SectionMode } from './currency-settings'
@@ -70,9 +71,9 @@ export const CURRENCY_CATEGORIES: CurrencyCategory[] = [
   { id: 'other', name: 'Other', art: 'Scrying Orb' }
 ]
 // Every class's categories (the Loot tab's rail shows one class at a time).
-export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES]
-export type LootKind = 'currency' | 'fragments' | 'cards' | 'uniques' | 'gems'
-export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : 'currency'
+export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES, ...MAP_CATEGORIES]
+export type LootKind = 'currency' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps'
+export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : MAP_IDS.has(cat) ? 'maps' : 'currency'
 // A section's Off / Weighted / Always: yours, else its default (boss-only
 // uniques: Always).
 export const sectionMode = (c: Pick<CurrencySettings, 'catMode'>, cat: string): SectionMode => c.catMode?.[cat] ?? UNIQUE_MODES[cat] ?? GEM_MODES[cat] ?? 'auto'
@@ -168,6 +169,7 @@ const SHARD_OF: Record<string, string> = {
 }
 const ANY_PAGE: EconomyGroup = { type: 'any', label: 'Any', ninja: ['*'] }
 const UNIQUE_PAGE = NET_GROUPS.find(g => g.unique)!
+const FOULBORN_PAGE: EconomyGroup = { ...UNIQUE_PAGE, foulborn: true }
 function groupOf (type: string): EconomyGroup {
   return NET_GROUPS.find(g => g.type === type) ?? NET_GROUPS[0]
 }
@@ -226,6 +228,37 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
           est: own == null && (!priced || Boolean(p?.day1)),
           ...(own != null ? { own: true } : {}),
           full: 1,
+          ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {})
+        })
+      }
+      continue
+    }
+    // Foulborn uniques: NeverSink's Foulborn tiers, a list of bases. Named
+    // "Foulborn <base>" so they never meet the plain unique on that base.
+    const fcat = b.type === FOULBORN_TYPE ? foulCategoryOf(b.tier) : null
+    if (fcat) {
+      const bt = b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))
+      if (!bt || b.conditions.some(x => x !== bt && x.key !== 'Rarity' && x.key !== 'Foulborn')) continue
+      for (const base of bt.values) {
+        const name = FOULBORN_PREFIX + base
+        if (seen.has(name)) continue
+        const p = lookup?.(FOULBORN_PAGE, base) ?? null
+        const guess = foulGuess(b.tier)
+        const priced = p != null && !p.thin && p.chaos > 0
+        const own = edits[name]?.price
+        const m = p?.note?.match(/^(.*?)(?:, 1 of (\d+))?$/)
+        seen.set(name, {
+          name,
+          cls: UNIQUE_CLS,
+          type: 'uniques',
+          tier: b.tier,
+          cat: fcat,
+          chaos: (own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess)) * (edits[name]?.mult ?? 1),
+          est: own == null && (!priced || Boolean(p?.day1)),
+          ...(own != null ? { own: true } : {}),
+          full: 1,
+          bt: base,
+          conds: [c('Foulborn', '', ['True'])],
           ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {})
         })
       }
@@ -295,6 +328,70 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         bt: g.name,
         conds
       })
+    }
+  }
+  // Special unique rolls: each base of each of NeverSink's special rules,
+  // with that rule's conditions (6 links, both influences, no sockets...).
+  if (lookup) {
+    const fusing = find('currency', 'Orb of Fusing')
+    // No Fusing price yet: about what 20 have cost in past leagues.
+    const linkFloor = fusing && fusing.chaos > 0 ? fusing.chaos * 20 : 10
+    const plainBases = [...seen.values()].filter(it => it.cls === UNIQUE_CLS && it.type === 'uniques' && !it.conds).map(it => it.name)
+    for (const b of doc.blocks) {
+      const label = b.type === 'uniques' && b.tier ? SPECIAL_ROLLS[b.tier] : undefined
+      if (!label || b.visibility !== 'Show' || b.disabled) continue
+      const bt = b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))
+      const conds = b.conditions.filter(x => x !== bt && x.key !== 'Rarity').map(x => ({ ...x, values: [...x.values] }))
+      const links = conds.some(x => x.key === 'LinkedSockets')
+      const group: EconomyGroup = { ...UNIQUE_PAGE, special: true, links }
+      for (const base of bt?.values ?? plainBases) {
+        const name = `${base}, ${label}`
+        if (seen.has(name)) continue
+        const p = lookup(group, base)
+        if (!p || !(p.chaos > 0)) continue
+        const own = edits[name]?.price
+        const m = p.note?.match(/^(.*?)(?:, 1 of (\d+))?$/)
+        seen.set(name, {
+          name,
+          cls: UNIQUE_CLS,
+          type: 'uniques',
+          tier: b.tier,
+          cat: 'uniqspec',
+          chaos: (own ?? (links ? Math.max(p.chaos, linkFloor) : p.chaos)) * (edits[name]?.mult ?? 1),
+          est: own == null && (p.thin || Boolean(p.day1)),
+          ...(own != null ? { own: true } : {}),
+          full: 1,
+          bt: base,
+          conds,
+          ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {})
+        })
+      }
+    }
+  }
+  // Blighted and blight-ravaged maps: a tier poe.ninja prices is an item;
+  // one it doesn't stays NeverSink's.
+  if (lookup && doc.blocks.some(b => b.type === BLIGHT_TYPE)) {
+    for (const k of MAP_KINDS) {
+      const group: EconomyGroup = { type: k.cat, label: k.prefix, ninja: [k.ninja] }
+      for (let t = 1; t <= 17; t++) {
+        const name = `${k.prefix} (Tier ${t})`
+        const p = lookup(group, name)
+        if (!p || !(p.chaos > 0)) continue
+        const own = edits[name]?.price
+        seen.set(name, {
+          name,
+          cls: 'Maps',
+          type: 'maps',
+          tier: null,
+          cat: k.cat,
+          chaos: (own ?? p.chaos) * (edits[name]?.mult ?? 1),
+          est: own == null && (p.thin || Boolean(p.day1)),
+          ...(own != null ? { own: true } : {}),
+          full: 1,
+          bt: `Map (Tier ${t})`,
+          conds: [c(k.cond, '', ['True'])]
+        })
+      }
     }
   }
   return [...seen.values()]
@@ -486,7 +583,7 @@ const mixTo = (c: number[], to: number, f: number) => c.map(v => Math.round(v + 
 // The colour pushed 80% further from grey (Normal: "as now but more saturated").
 const vivid = (c: number[]) => { const g = (c[0] + c[1] + c[2]) / 3; return c.map(v => Math.max(0, Math.min(255, Math.round(v + (v - g) * 0.8)))) }
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rgb: [number, number, number], color: string, shape: string } {
-  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? CAT_LOOK.other
+  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? CAT_LOOK.other
   const own = c.cats[cat]
   return {
     rgb: own?.text ? [own.text[0], own.text[1], own.text[2]] : d.text,
@@ -669,11 +766,17 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   blocks.push(...(opts.floors ?? []))
   // Under the line: Faint in the category colour (Guy's T1, X1) while it's
   // on, except what was hidden by hand; otherwise hidden.
+  // A list whose items all carry the same extra conditions (Foulborn True)
+  // keeps them, so it never catches the plain items on those bases.
+  const shared = (list: CurrencyItem[]) => {
+    const k = list[0]?.conds ? JSON.stringify(list[0].conds) : ''
+    return k && list.every(it => it.conds && JSON.stringify(it.conds) === k) ? list[0].conds! : []
+  }
   if (opts.faint) {
     const byCat = new Map<string, CurrencyItem[]>()
     for (const it of items) if (!forcedHidden(it, cfg)) byCat.set(it.cat, [...(byCat.get(it.cat) ?? []), it])
-    for (const [cat, list] of byCat) blocks.push(faintBlock([area, clsCond(list), c('BaseType', '==', bts(list))], cat, catColour(cat, cfg).rgb))
-  } else if (items.length) blocks.push(block(0, [area, clsCond(items), c('BaseType', '==', bts(items))], 'under the line'))
+    for (const [cat, list] of byCat) blocks.push(faintBlock([area, clsCond(list), c('BaseType', '==', bts(list)), ...shared(list)], cat, catColour(cat, cfg).rgb))
+  } else if (items.length) blocks.push(block(0, [area, clsCond(items), c('BaseType', '==', bts(items)), ...shared(items)], 'under the line'))
   const chars = blocks.reduce((n, b) => n + 160 + b.conditions.reduce((m, x) => m + x.key.length + 12 + x.values.reduce((k, v) => k + v.length + 3, 0), 0), 0)
   return { blocks, items, chars }
 }
@@ -688,14 +791,17 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const eff = scaled(cfg, doc.strictness)
   const faint = faintOn(cfg, doc.strictness)
   const gemItems = all.filter(it => it.type === 'gems')
-  const items = all.filter(it => it.cls !== UNIQUE_CLS && it.type !== 'gems')
+  const items = all.filter(it => it.cls !== UNIQUE_CLS && it.type !== 'gems' && it.type !== 'maps')
   const none: CurrencyCompiled = { blocks: [], items: [], chars: 0 }
   const compiled = items.length ? compileCurrency(eff, items, { faint }) : none
   const gemsOut = gemItems.length ? compileCurrency(eff, gemItems, { faint, floors: gemFloors(eff) }) : none
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
   insertBlocks(doc, first < 0 ? doc.chunks.length : first, [...compiled.blocks, ...gemsOut.blocks])
-  const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS), faint) ?? none
-  const parts = [compiled, gemsOut, uniq]
+  const foul = applyFoulborn(doc, eff, all.filter(it => it.cat === 'uniqfoul'), faint) ?? none
+  const spec = applySpecialRolls(doc, eff, all.filter(it => it.cat === 'uniqspec'), faint) ?? none
+  const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec'), faint) ?? none
+  const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
+  const parts = [compiled, gemsOut, foul, spec, uniq, maps]
   return { blocks: parts.flatMap(x => x.blocks), items: parts.flatMap(x => x.items), chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 
@@ -744,6 +850,45 @@ function insertBlocks (doc: FilterDoc, at: number, blocks: FilterBlock[]) {
   const i = after ? doc.blocks.indexOf(after) : doc.blocks.length
   doc.blocks.splice(i < 0 ? doc.blocks.length : i, 0, ...blocks)
   doc.blocks.forEach((b, k) => { b.index = k })
+}
+
+// Blighted and blight-ravaged maps go where NeverSink's blighted maps start,
+// one compile per kind so each rule, the line's too, keeps its BlightedMap or
+// UberBlightedMap condition and never touches plain maps of those tiers.
+function applySpecialMaps (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
+  if (!items.length) return null
+  const anchor = doc.blocks.find(b => b.type === BLIGHT_TYPE)
+  if (!anchor) return null
+  const parts = MAP_KINDS.map(k => items.filter(it => it.cat === k.cat)).filter(l => l.length).map(l => compileCurrency(cfg, l, { faint }))
+  const blocks = parts.flatMap(x => x.blocks)
+  insertBlocks(doc, doc.chunks.indexOf(anchor), blocks)
+  return { blocks, items, chars: parts.reduce((n, x) => n + x.chars, 0) }
+}
+
+// Special unique rolls go just above NeverSink's own special rules, one
+// compile per rule so each of its rules, the line's too, keeps that rule's
+// conditions. NeverSink's rules stay below for whatever poe.ninja can't price.
+function applySpecialRolls (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
+  if (!items.length) return null
+  const anchor = doc.blocks.find(b => b.type === 'uniques' && b.tier != null && b.tier in SPECIAL_ROLLS)
+  if (!anchor) return null
+  const byTier = new Map<string, CurrencyItem[]>()
+  for (const it of items) byTier.set(it.tier ?? '', [...(byTier.get(it.tier ?? '') ?? []), it])
+  const parts = [...byTier.values()].map(l => compileCurrency(cfg, l, { faint }))
+  const blocks = parts.flatMap(x => x.blocks)
+  insertBlocks(doc, doc.chunks.indexOf(anchor), blocks)
+  return { blocks, items, chars: parts.reduce((n, x) => n + x.chars, 0) }
+}
+
+// Foulborn uniques go where NeverSink's Foulborn tiers start, so the plain
+// unique rules below never see them. Every rule matches `Foulborn True`.
+function applyFoulborn (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
+  if (!items.length) return null
+  const anchor = doc.blocks.find(b => b.type === FOULBORN_TYPE)
+  if (!anchor) return null
+  const compiled = compileCurrency(cfg, items, { faint })
+  insertBlocks(doc, doc.chunks.indexOf(anchor), compiled.blocks)
+  return compiled
 }
 
 // Uniques go where NeverSink's unique tiers start, under its special rules

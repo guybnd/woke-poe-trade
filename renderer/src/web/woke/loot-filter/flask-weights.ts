@@ -22,9 +22,10 @@ const DEFAULT_RANK: Record<string, RankKey> = {
   'Quartz Flask': 'r2',
   'Sulphur Flask': 'r2',
   'Amethyst Flask': 'r2',
-  'Ruby Flask': 'r3',
-  'Sapphire Flask': 'r3',
-  'Topaz Flask': 'r3',
+  // Resist flasks are Good by default (Guy, 2026-11-28).
+  'Ruby Flask': 'r2',
+  'Sapphire Flask': 'r2',
+  'Topaz Flask': 'r2',
   'Bismuth Flask': 'r3',
   'Stibnite Flask': 'r3',
   'Iron Flask': 'r3'
