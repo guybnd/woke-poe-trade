@@ -448,6 +448,20 @@ describe('sources', () => {
     expect(store.doc.value?.strictness).toBe(LEVEL_IDS[config.neversink.level])
   })
 
+  it('on our own filter, changes saved against NeverSink tiers go; ones that fit stay (clean slate)', async () => {
+    const stale: FilterEdit[] = [
+      { id: 1, kind: 'visibility', type: 'currency', tier: 't7chance', visibility: 'Hide' },
+      { id: 2, kind: 'stack', type: 'gold', tier: 'stack1', size: 170 },
+      { id: 3, kind: 'move', type: 'currency', base: "Blacksmith's Whetstone", from: 't6chrom', to: 't7chance' }
+    ]
+    const config = widget({ ownBase: true, edits: [...stale, { id: 4, kind: 'group', type: 'woke->rest', hidden: true }] })
+    const store = useLootFilter(() => config)
+    await store.load()
+    expect(store.doc.value?.blocks.some(b => b.type === 'woke->rest')).toBe(true)
+    expect(config.edits.map(e => e.id)).toEqual([4])
+    expect(store.failed.value).toEqual([])
+  })
+
   it('a level picked on the dock card saves, keeps your changes, pauses auto and waits for your reload', async () => {
     for (let i = 0; i < 7; i++) host.neversink.set(`8.20.1//${i}`, neverSink(LEVELS[i]))
     const config = widget({ neversink: { on: true, version: '8.20.1', prevVersion: null, style: '', level: 1, latest: null, latestChanges: '', checkedAt: Date.now() } })
