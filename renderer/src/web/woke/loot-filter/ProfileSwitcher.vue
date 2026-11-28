@@ -19,20 +19,24 @@
       <WButton size="sm" variant="ghost" @click="deleting = null">Cancel</WButton>
     </template>
     <button v-else type="button" class="w-focusable" :class="[$style.tab, $style.add]" :disabled="store.switching.value"
-      aria-label="New profile" title="New profile: a fresh one, or a copy of the one in use" @click="addMenu">
+      aria-label="New profile" title="New profile: a fresh one, a copy of the one in use, or one shared with you" @click="addMenu">
       <i class="fas fa-plus" aria-hidden="true" />
     </button>
   </div>
+  <ShareBox v-if="sharing" :key="`${sharing.mode}-${sharing.id ?? ''}`" :config="config" :store="store" :mode="sharing.mode" :profile-id="sharing.id" :anchor="anchor()" @close="sharing = null" />
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, defineAsyncComponent, nextTick, ref } from 'vue'
 import { WButton, openMenu, toast } from '../ui'
 import type { LootFilterStore } from './store'
 import type { FilterProfile, LootFilterWidget } from './widget'
 import { PROFILE_NAME_MAX } from './widget'
 import { activeProfile, addProfile, copyName, newProfileName, profileFile, profileNameProblem, renameProfile } from './profiles'
 import { LEVEL_NAMES } from './strictness'
+
+// Loaded when opened: it pulls in the Loot tab's item list.
+const ShareBox = defineAsyncComponent(() => import('./ShareBox.vue'))
 
 // Profiles as a row of tabs above the editor's own (Guy's pick B): click one to
 // switch, + to add, right-click for duplicate, rename and remove.
@@ -47,6 +51,7 @@ const naming = ref<{ kind: 'new' | 'copy' | 'rename', id?: number, from?: number
 const draft = ref('')
 const deleting = ref<FilterProfile | null>(null)
 const switchingTo = ref<number | null>(null)
+const sharing = ref<{ mode: 'share' | 'import', id?: number } | null>(null)
 
 const current = computed(() => activeProfile(props.config))
 const byId = (id: number) => props.config.profiles.find(p => p.id === id)
@@ -62,7 +67,7 @@ function sourceOf (p: FilterProfile): string {
 
 function tipOf (p: FilterProfile): string {
   const lead = p.id === props.config.activeProfile ? 'In use' : 'Click to switch to it; the game loads it too'
-  return `${p.name} · ${sourceOf(p)}\nSaves to ${fileOf(p)}\n${lead}. Right-click to duplicate, rename or remove.`
+  return `${p.name} · ${sourceOf(p)}\nSaves to ${fileOf(p)}\n${lead}. Right-click to duplicate, rename, share or remove.`
 }
 
 function addMenu (e: MouseEvent) {
@@ -70,7 +75,8 @@ function addMenu (e: MouseEvent) {
   const r = el.getBoundingClientRect()
   openMenu({ x: r.left, y: r.bottom + 2, from: el }, [
     { label: 'New profile', icon: 'fas fa-plus', action: () => { startNaming('new') } },
-    { label: `Copy of “${current.value.name}”`, icon: 'far fa-clone', action: () => { startNaming('copy', undefined, current.value.id) } }
+    { label: `Copy of “${current.value.name}”`, icon: 'far fa-clone', action: () => { startNaming('copy', undefined, current.value.id) } },
+    { label: 'Import…', icon: 'fas fa-file-import', action: () => { sharing.value = { mode: 'import' } } }
   ])
 }
 
@@ -80,6 +86,7 @@ function tabMenu (e: MouseEvent, p: FilterProfile) {
     ...(p.id === props.config.activeProfile ? [] : [{ label: 'Switch to it', icon: 'fas fa-exchange-alt', action: () => { swap(p.id) } }]),
     { label: 'Duplicate', icon: 'far fa-clone', action: () => { startNaming('copy', undefined, p.id) } },
     { label: 'Rename', icon: 'fas fa-pen', action: () => { startNaming('rename', p.id) } },
+    { label: 'Share…', icon: 'fas fa-share-alt', action: () => { sharing.value = { mode: 'share', id: p.id } } },
     { label: 'Remove', icon: 'fas fa-trash', danger: true, disabled: props.config.profiles.length < 2, action: () => { deleting.value = p } }
   ])
 }

@@ -28,7 +28,7 @@ import { sessionHandlers } from './session-store'
 import { tradeLogHandlers } from './trade-log'
 import { deathRecapHandlers } from './death-recap-store'
 import { docHandlers } from './data-files'
-import { browsePath, pathStat } from './settings-files'
+import { browsePath, openTextFile, pathStat, saveTextFile } from './settings-files'
 import { cachedLiveData, checkLiveData } from './live-data'
 import { initPersonal } from './personal'
 import { guessUnidArt } from './unid-art'
@@ -71,6 +71,8 @@ const handlers: Partial<WokeHandlers> = {
   'live-data-cached': cachedLiveData,
   'live-data-check': async (args) => await checkLiveData(args, async (url, signal) => await net.fetch(url, { signal })),
   'browse-path': browsePath,
+  'text-file-save': saveTextFile,
+  'text-file-open': openTextFile,
   'unid-art-guess': guessUnidArt,
   ...marketHandlers,
   ...sessionHandlers,

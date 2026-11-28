@@ -46,6 +46,7 @@ export const NEWS_SPOTS: Record<string, string> = {
   'atlas-tree-planner-links': 'import',
   'pob-import-all-sites': 'import',
   'loot-filter-profiles': 'profiles',
+  'loot-filter-share-profile': 'profiles',
   'loot-filter-over-quality-look': 'over-quality-look',
   'loot-filter-drag-bases': 'gear-ranks',
   'loot-filter-valuable-exotics': 'gear-ranks',

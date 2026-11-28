@@ -358,19 +358,7 @@
       <div class="w-group-label" :class="$style.historyLabel">Share</div>
       <div :class="$style.changeRow">
         <i class="fas fa-share-alt w-dim" />
-        <span class="grow min-w-0 text-sm w-dim">Share your changes as a code <WInfo text="Your changes, own rules and presets as one code, for a friend or your other PC." /></span>
-        <WButton size="sm" :icon="copied === 'share' ? 'fas fa-check' : 'fas fa-copy'" @click="copyShareCode">{{ copied === 'share' ? 'Copied' : 'Copy code' }}</WButton>
-      </div>
-      <div :class="$style.changeRow">
-        <i class="fas fa-paste w-dim" />
-        <WField v-model="shareInput" placeholder="Paste a code (WOKEF1.…)" aria-label="Changes code" style="flex: 1; min-width: 0;" />
-        <WButton size="sm" :disabled="!shareInput.trim()" @click="readShareCode">Read</WButton>
-      </div>
-      <div v-if="shared" :class="$style.changeRow">
-        <i class="fas fa-box-open w-dim" />
-        <span class="grow min-w-0 text-sm">This code has {{ describeShared(shared) }}.</span>
-        <WButton size="sm" variant="ghost" @click="useShared('add')">Add to mine</WButton>
-        <WButton size="sm" variant="primary" @click="useShared('replace')">Replace mine</WButton>
+        <span class="grow min-w-0 text-sm w-dim">To share this profile, right-click its tab at the top: Share…. To bring one in: + then Import….</span>
       </div>
       <template v-if="store.saves.value.length">
         <div class="w-group-label" :class="$style.historyLabel">Earlier saves</div>
@@ -412,7 +400,7 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
-import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip, itemRefFromName } from '../ui'
+import { WPanel, WButton, WSelect, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, vItemTip, itemRefFromName } from '../ui'
 import WBackLink from '../ui/WBackLink.vue'
 import ProfileSwitcher from './ProfileSwitcher.vue'
 import { useWindowKeys } from '../ui/window-keys'
@@ -440,8 +428,6 @@ import { ownActions } from './look'
 import RuleBuilder from './RuleBuilder.vue'
 import { RULE_TYPE, nameCheck, newRule, ruleProblem, ruleSummary } from './rules'
 import type { OwnRule } from './rules'
-import { decodeChanges, describeShared, encodeChanges } from './share'
-import type { SharedChanges } from './share'
 import NeverSinkTab from './NeverSinkTab.vue'
 import { LEVEL_NAMES } from './strictness'
 import { describeSavedStep } from './timeline'
@@ -1463,52 +1449,6 @@ function ruleMenu (e: MouseEvent, r: OwnRule) {
     { separator: true },
     { label: 'Remove', icon: 'fas fa-trash', danger: true, action: () => deleteRule(r) }
   ])
-}
-
-// ---- share ----
-
-const { copied, copy } = useCopy()
-const shareInput = ref('')
-const shared = ref<SharedChanges | null>(null)
-
-async function copyShareCode () {
-  const c = props.config
-  const code = await encodeChanges({ edits: c.edits, rules: c.rules, presets: c.presets, locks: c.priceTiers.locks })
-  if (!await copy(code, 'share')) toast('Couldn\'t copy to the clipboard', { anchor: panel.value?.el })
-}
-
-async function readShareCode () {
-  try {
-    shared.value = await decodeChanges(shareInput.value)
-  } catch (e) {
-    shared.value = null
-    toast((e as Error).message, { anchor: panel.value?.el })
-  }
-}
-
-function useShared (how: 'add' | 'replace') {
-  const s = shared.value
-  if (!s) return
-  const undo = props.store.changeWithUndo(c => {
-    // Fresh ids, so added changes never collide with yours.
-    const edits = s.edits.map(e => ({ ...e, id: nextEditId() }))
-    const rules = s.rules.map(r => ({ ...r, id: nextEditId() }))
-    if (how === 'replace') {
-      c.edits = edits
-      c.rules = rules
-      c.presets = s.presets
-      c.priceTiers.locks = s.locks
-    } else {
-      // Folded like edits made here: a second "Hide whole group" of the same
-      // group would take two clicks of Show group again to undo.
-      c.edits = edits.reduce<FilterEdit[]>((list, e) => addEdit(list, e, { separateMoves: props.store.separateMoves(e) }), c.edits)
-      c.rules = [...c.rules, ...rules]
-      c.priceTiers.locks = [...new Set([...c.priceTiers.locks, ...s.locks])]
-    }
-  })
-  toast(how === 'replace' ? 'Replaced your changes with the code\'s' : `Added ${describeShared(s)}`, { anchor: panel.value?.el, undo })
-  shared.value = null
-  shareInput.value = ''
 }
 
 // Newest first, with each step's place in the list.

@@ -32,3 +32,31 @@ export async function browsePath (args: { kind?: 'file' | 'dir', title?: string,
   const res = await dialog.showOpenDialog(opts)
   return res.canceled ? null : res.filePaths[0] ?? null
 }
+
+const TEXT_FILE_MAX = 2_000_000
+
+// Saves a small text file where the player picks (a loot filter share code).
+export async function saveTextFile (args: { name?: string, text?: string, title?: string, extensions?: string[] }): Promise<string | null> {
+  const text = typeof args?.text === 'string' ? args.text : ''
+  if (!text || text.length > TEXT_FILE_MAX) return null
+  const exts = args?.extensions?.length ? args.extensions : ['txt']
+  // eslint-disable-next-line no-control-regex
+  const bad = /[<>:"/\\|?*\u0000-\u001f]+/g
+  const res = await dialog.showSaveDialog({
+    title: args?.title,
+    defaultPath: typeof args?.name === 'string' ? args.name.replace(bad, ' ').trim() : undefined,
+    filters: [{ name: exts.join(', '), extensions: exts }]
+  })
+  if (res.canceled || !res.filePath) return null
+  await fs.writeFile(res.filePath, text, 'utf8')
+  return res.filePath
+}
+
+// Reads a small text file the player picks; null if cancelled.
+export async function openTextFile (args: { title?: string, extensions?: string[] }): Promise<{ path: string, text: string } | null> {
+  const path = await browsePath({ kind: 'file', title: args?.title, extensions: args?.extensions })
+  if (!path) return null
+  const st = await fs.stat(path)
+  if (st.size > TEXT_FILE_MAX) throw new Error('That file is too big')
+  return { path, text: await fs.readFile(path, 'utf8') }
+}
