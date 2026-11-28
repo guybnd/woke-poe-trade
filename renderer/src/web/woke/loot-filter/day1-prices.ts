@@ -12,14 +12,21 @@ export interface Day1Table {
   items: Array<[type: string, name: string, variant: string, chaos: number]>
 }
 
-// The table is a few hundred KB, so it's only loaded in a league other than
-// the one it was read from (a new league, where live prices are missing):
-// the tiny meta file says which league that is. Within that league nothing
-// loads (startup JS and the overlay's memory stay as they were).
+// The table holds about a megabyte once read, so it's only loaded in a new
+// league's first week (GGG's start date, as the leagues list gives it), and
+// not in the league it was read from (the tiny meta file says which). In
+// Standard, an older league or with no start date nothing loads.
+export const DAY1_DAYS = 7
+export function day1Applies (liveLeague: string, tableLeague: string | undefined, startedAt: number | null, now = Date.now()): boolean {
+  if (!tableLeague || tableLeague === liveLeague || startedAt == null) return false
+  return now >= startedAt && now - startedAt < DAY1_DAYS * 86400e3
+}
+
 let loading: Promise<Day1Table | null> | null = null
-export async function loadDay1 (liveLeague: string): Promise<Day1Table | null> {
+export async function loadDay1 (liveLeague: string, startedAt: number | null): Promise<Day1Table | null> {
+  if (startedAt == null) return null
   const meta = await import('./day1-prices.meta.json').then(m => m.default as { league: string }).catch(() => null)
-  if (!meta?.league || meta.league === liveLeague) return null
+  if (!day1Applies(liveLeague, meta?.league, startedAt)) return null
   loading ??= import('./day1-prices.json')
     .then(m => (m.default as unknown as Day1Table))
     .catch(() => null)

@@ -32,6 +32,7 @@ export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
   { id: 'loot-filter-levelling', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Levelling: Loot looks in the acts and hideout, gear for your build type, flasks, supplies' },
+  { id: 'loot-filter-readable-history', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Changes › History says what each change moved, from what to what; repeats fold into one row' },
   { id: 'loot-filter-own-lists', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot lists items from the game data; unpriced ones are guessed from last league' },
   { id: 'loot-filter-jewels-no-price', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: every jewel shows, corrupted implicits louder; no guessed price hides them' },
   { id: 'loot-filter-valuable-exotics', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Base ranks splits Exotic into valuable (about 1 div+) and the rest, each with its own text colour' },
@@ -41,6 +42,7 @@ export const NEWS: NewsItem[] = [
   { id: 'loot-filter-map-looks', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: maps look like maps again, black on white, each special kind with its own edge colour and square map icon' },
   { id: 'loot-filter-league-always', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Chronicles, Viscera, Reliquary keys, Ultimatums, warrants and logbooks always show; Hide is one click' },
   { id: 'search-mod-filter-words', since: '1.330.24', wmType: 'woke-search', name: 'Search', note: 'New: add "vestigial", "foulborn" or a slot ("rarity boots") to a mod search; short names like "iir" work' },
+  { id: 'price-check-card-set', since: '1.330.24', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a div card\'s quick price card shows what its full set gives, and both prices' },
   { id: 'price-check-unique-filter-tier', since: '1.330.24', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a unique, how rare a drop it is (T0 to T5) and the tier your loot filter puts it in' },
   { id: 'watchers-eye-finder', since: '1.330.24', wmType: 'woke-watchers-eye', name: "Watcher's Eye finder", note: "New: tick your auras, pick Watcher's Eye mods from the full list, and price that jewel in one search" },
   { id: 'loot-filter-over-quality-look', since: '1.330.23', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: over-quality gear keeps its tier look with a pink mark on top; Change mark on Drop tiers' },
