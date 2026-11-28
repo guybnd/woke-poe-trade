@@ -6,8 +6,9 @@
 // corruption implicit a jewel has (Guy 2026-11-28: "sometimes jewels can have
 // powerful implicits and you cant price them"). So rows a price can't judge
 // have a fixed step instead (Guy's Jewels A + Abyss A): corrupted ones with an
-// implicit and rare plain jewels always show, cheap ones are Off, and only the
-// low abyss bands stay on a guessed price. Cluster jewels keep their own
+// implicit are loud, and every other jewel shows at least Small (Guy: "Why
+// hide the lower ones? Users can turn it off if they wish"). Set a row Off,
+// a step or By price to change it. Cluster jewels keep their own
 // priced band (ClusterPriceBand).
 import type { LootCategory } from './fragment-classes'
 import type { FilterCondition } from './parse'
@@ -58,13 +59,13 @@ export const JEWEL_ROWS: JewelRow[] = [
   { cat: 'jewabyss', name: 'Magic abyss jewel with a corrupted implicit', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 1.5, fixed: 2, conds: [MAGIC, IMPLICIT] },
   { cat: 'jewabyss', name: 'Rare abyss jewel, item level 86+', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 1.5, fixed: 2, conds: [RARE, ilvl('>=', 86)] },
   { cat: 'jewabyss', name: 'Rare abyss jewel, item level 82-85', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 0.5, fixed: 1, conds: [RARE, ilvl('>=', 82), ilvl('<=', 85)] },
-  { cat: 'jewabyss', name: 'Rare abyss jewel, item level under 82', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 0.1, conds: [RARE, ilvl('<', 82)] },
-  { cat: 'jewabyss', name: 'Magic or white abyss jewel, item level 86+', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 0.4, conds: [LOW, ilvl('>=', 86)] },
-  { cat: 'jewabyss', name: 'Magic or white abyss jewel, item level under 86', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 0.1, fixed: 0, conds: [LOW, ilvl('<', 86)] },
+  { cat: 'jewabyss', name: 'Rare abyss jewel, item level under 82', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 0.1, fixed: 1, conds: [RARE, ilvl('<', 82)] },
+  { cat: 'jewabyss', name: 'Magic or white abyss jewel, item level 86+', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 0.4, fixed: 1, conds: [LOW, ilvl('>=', 86)] },
+  { cat: 'jewabyss', name: 'Magic or white abyss jewel, item level under 86', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 0.1, fixed: 1, conds: [LOW, ilvl('<', 86)] },
   { cat: 'jewplain', name: 'Rare jewel with a corrupted implicit', cls: 'Jewels', bts: PLAIN_BASES, guess: 5, fixed: 3, conds: [RARE, IMPLICIT] },
   { cat: 'jewplain', name: 'Magic jewel with a corrupted implicit', cls: 'Jewels', bts: PLAIN_BASES, guess: 1.5, fixed: 2, conds: [MAGIC, IMPLICIT] },
   { cat: 'jewplain', name: 'Rare jewel', cls: 'Jewels', bts: PLAIN_BASES, guess: 0.5, fixed: 1, conds: [RARE] },
-  { cat: 'jewplain', name: 'Magic or white jewel', cls: 'Jewels', bts: PLAIN_BASES, guess: 0.1, fixed: 0, conds: [LOW] }
+  { cat: 'jewplain', name: 'Magic or white jewel', cls: 'Jewels', bts: PLAIN_BASES, guess: 0.1, fixed: 1, conds: [LOW] }
 ]
 
 // NeverSink's jewel rules; ours go above the first of them.

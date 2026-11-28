@@ -23,7 +23,7 @@ describe('jewels on the Loot tab', () => {
     expect(items.every(i => i.est)).toBe(true)
   })
 
-  it('shows each band at its own step and hides the cheap ones', () => {
+  it('shows each band at its own step, the cheap ones at Small', () => {
     const cfg = defaultCurrency()
     cfg.on = true
     const doc = parseFilter(SEMI)
@@ -33,8 +33,9 @@ describe('jewels on the Loot tab', () => {
     const high = jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 86)
     expect(hit(high).final?.block.type).toBe(CURRENCY_TYPE)
     expect(step(high)).toBeGreaterThan(step(jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 83)))
-    expect(hit(jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 75)).visibility).toBe('Hide')
-    expect(hit(jewel('Cobalt Jewel', 'Jewels', 'Magic', 84)).visibility).toBe('Hide')
+    // Guy 04:41Z: nothing hides by default; you turn a row off yourself.
+    expect(step(jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 75))).toBe(1)
+    expect(step(jewel('Cobalt Jewel', 'Jewels', 'Magic', 84))).toBe(1)
     // Corrupted 5 mods beats its item level row.
     const five = jewel('Ghastly Eye Jewel', 'Abyss Jewels', 'Rare', 86, { identified: true, corrupted: true, explicitModNames: ['a1', 'b2e', 'ci', 'do', 'eu'] })
     expect(step(five)).toBeGreaterThan(step(high))
@@ -64,10 +65,15 @@ describe('jewels on the Loot tab', () => {
     expect(step(jewel('Cobalt Jewel', 'Jewels', 'Rare', 84, { corrupted: true, corruptedMods: 1 }))).toBe(3)
     expect(step(jewel('Viridian Jewel', 'Jewels', 'Magic', 84, { corrupted: true, corruptedMods: 1 }))).toBe(2)
     expect(step(jewel('Crimson Jewel', 'Jewels', 'Rare', 84))).toBe(1)
-    expect(hit(jewel('Crimson Jewel', 'Jewels', 'Magic', 84)).visibility).toBe('Hide')
+    expect(step(jewel('Crimson Jewel', 'Jewels', 'Magic', 84))).toBe(1)
     expect(step(jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 83))).toBe(1)
     expect(step(jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Magic', 70, { corrupted: true, corruptedMods: 1 }))).toBe(2)
-    expect(hit(jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 75)).visibility).toBe('Hide')
+    expect(step(jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 75))).toBe(1)
+    // A row you set Off hides.
+    cfg.items = { 'Magic or white jewel': { step: 0 } }
+    const off = parseFilter(SEMI)
+    applyCurrency(off, cfg, lookup)
+    expect(matchItem(off, jewel('Crimson Jewel', 'Jewels', 'Magic', 84)).visibility).toBe('Hide')
   })
 
   it('a fixed row goes by price once you say so', () => {
