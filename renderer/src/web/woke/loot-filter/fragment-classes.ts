@@ -19,12 +19,12 @@ export const FRAGMENT_IDS = new Set(FRAGMENT_CATEGORIES.map(x => x.id))
 // The purple family, a shade per fold.
 export const FRAGMENT_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
   invites: { text: [205, 140, 255], color: 'Purple', shape: 'Kite' },
-  uber: { text: [235, 120, 235], color: 'Purple', shape: 'Star' },
-  shaper: { text: [160, 130, 255], color: 'Purple', shape: 'Hexagon' },
-  crests: { text: [200, 170, 255], color: 'Purple', shape: 'Diamond' },
-  emblems: { text: [190, 110, 210], color: 'Purple', shape: 'Moon' },
-  lab: { text: [215, 185, 235], color: 'Purple', shape: 'Circle' },
-  fragother: { text: [180, 120, 240], color: 'Purple', shape: 'Square' }
+  uber: { text: [235, 120, 235], color: 'Purple', shape: 'Kite' },
+  shaper: { text: [160, 130, 255], color: 'Purple', shape: 'Kite' },
+  crests: { text: [200, 170, 255], color: 'Purple', shape: 'Kite' },
+  emblems: { text: [190, 110, 210], color: 'Purple', shape: 'Kite' },
+  lab: { text: [215, 185, 235], color: 'Purple', shape: 'Kite' },
+  fragother: { text: [180, 120, 240], color: 'Purple', shape: 'Kite' }
 }
 
 // A fragment's fold, by its name.

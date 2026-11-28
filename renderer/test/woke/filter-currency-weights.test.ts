@@ -92,7 +92,7 @@ describe('currency weights', () => {
     expect(s).toEqual(all)
     expect(stepOfPile(s, 1, offSteps(it, c))).toBe(0)
     expect(stepOfPile(s, 10, offSteps(it, c))).toBe(stepOfPile(all, 10))
-    expect(normalizeCurrency(JSON.parse('{"offBy":{"currency":[1,1,5,"x",2]}}')).offBy).toEqual({ currency: [1, 2] })
+    expect(normalizeCurrency(JSON.parse('{"offBy":{"all":[],"currency":[1,1,5,"x",2]}}')).offBy).toEqual({ all: [], currency: [1, 2] })
   })
 
   it('a step turned off on one page or section stays there (Guy 2026-11-28)', () => {
@@ -109,9 +109,14 @@ describe('currency weights', () => {
     expect(offSteps(orb, c)).toEqual([2])
     expect(offSteps(ess, c)).toEqual([])
     expect(offSteps(uniq, c)).toEqual([1])
-    // The old one list for every page was set on the Currency page.
-    expect(normalizeCurrency(JSON.parse('{"off":[2]}')).offBy).toEqual({ currency: [2] })
-    expect(normalizeCurrency({}).offBy).toEqual({})
+    // Every page, then a page, then a section.
+    c.offBy = { all: [1], uniques: [] }
+    expect(offSteps(orb, c)).toEqual([1])
+    expect(offSteps(uniq, c)).toEqual([])
+    // The old one list was every page's; saved before 'all', it sat on Currency.
+    expect(normalizeCurrency(JSON.parse('{"off":[2]}')).offBy).toEqual({ all: [2] })
+    expect(normalizeCurrency(JSON.parse('{"offBy":{"currency":[2],"essences":[]}}')).offBy).toEqual({ all: [2], essences: [] })
+    expect(normalizeCurrency({}).offBy).toEqual({ all: [] })
   })
 
   it('guesses a price from NeverSink tiers', () => {
@@ -338,13 +343,13 @@ describe('currency weights', () => {
     expect(big.background?.slice(0, 3)).toEqual([255, 93, 27])
     expect(big.border?.slice(0, 3)).toEqual([230, 140, 240])
     expect(big.sound).toEqual({ id: '7', volume: 250 })
-    expect(big.icon).toMatchObject({ size: 0, color: 'Pink', shape: 'Moon' })
+    expect(big.icon).toMatchObject({ size: 0, color: 'Pink', shape: 'Circle' })
     expect(big.effect?.color).toBe('Pink')
     expect(currencyLook(3, 'oils', c).border?.slice(0, 3)).toEqual([10, 200, 20])
     const tink = currencyLook(5, 'essences', c)
     expect(tink.border?.slice(0, 3)).toEqual([230, 140, 240])
     expect(tink.effect?.color).toBe('Red')
-    expect(tink.icon).toMatchObject({ color: 'Red', shape: 'Moon' })
+    expect(tink.icon).toMatchObject({ color: 'Red', shape: 'Circle' })
     const doc = parseFilter(SEMI)
     applyCurrency(doc, c, lookup)
     expect(validateFilter(doc).map(p => p.message)).toEqual([])
