@@ -45,7 +45,7 @@
       <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, 'gold')" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
     </div>
     <template v-else>
-    <div :class="$style.mainLab" data-currency-main-ruler><b>Main ruler</b><span class="w-faint text-xs">every Loot page{{ ownRulers.length ? ` · ${ownRulers.length === 1 ? `${ownRulers[0]} has its own` : `${ownRulers.length} sections have their own`}` : '' }}</span></div>
+    <div :class="$style.mainLab" data-currency-main-ruler><b>Main ruler</b><span class="w-faint text-xs">every Loot page{{ ownRulers.length ? ` · ${ownRulers.length === 1 ? `${ownRulers[0]} has its own` : `${ownRulers.length} sections have their own`}` : '' }}</span><span class="flex-1" /><StrictnessMenu :store="store" :config="config" /></div>
     <StepRuler main :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="stepSample"
       @edit="s => stepEdit = s" @set="setShown" />
     </template>
@@ -204,6 +204,7 @@ import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import LabelPreview from './LabelPreview.vue'
 import StyleEditor from './StyleEditor.vue'
 import StepRuler from './StepRuler.vue'
+import StrictnessMenu from './StrictnessMenu.vue'
 import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
@@ -660,7 +661,7 @@ function chaosText (v: number): string {
 .stepRows { display: flex; flex-direction: column; gap: 2px; font-size: var(--w-fs-sm); }
 .stepRow { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
 .rowLab { min-width: 6.5rem; }
-.mainLab { display: flex; align-items: baseline; gap: 8px; font-size: var(--w-fs-sm); }
+.mainLab { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--w-fs-sm); }
 .goldRuler { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 2px; border-bottom: 1px solid var(--w-line); }
 .catLook { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 2px 2px 4px; border-bottom: 1px solid var(--w-line); }
 .swatch { flex-shrink: 0; width: 20px; height: 18px; padding: 0; border: 1px solid var(--w-line); background: none; cursor: pointer; }
