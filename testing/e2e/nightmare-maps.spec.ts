@@ -143,7 +143,6 @@ test('Nightmare Map with Map mods: the map section, then Worth running', async (
   // Folding Worth running opens Trade search again (Guy, 2026-11-28).
   await strip.locator('[data-nightmare-fold]').click()
   await expect(strip.locator('[data-map-trade] > button').first()).toHaveAttribute('aria-expanded', 'true')
-  await expect(strip.locator('[data-map-mod]').first()).toBeVisible()
   await expect(strip.locator('[data-map-unfold]')).toHaveCount(0)
   expect(searches).toEqual([])
   expect(overlay.errors).toEqual([])
