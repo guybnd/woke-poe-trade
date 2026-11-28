@@ -288,8 +288,8 @@ import type { StylePatch } from './edits'
 import type { FilterAction } from './parse'
 import { clickOf, togglePick } from '../shared/picks'
 import WFoldCaret from '../ui/WFoldCaret.vue'
-import { canDrop, dragSet, dropMoves } from './gear-drag'
-import type { GearMove } from './gear-drag'
+import { canDrop, dragSet, dropMoves } from './gear-drop'
+import type { GearMove } from './gear-drop'
 
 const props = defineProps<{
   store: LootFilterStore
