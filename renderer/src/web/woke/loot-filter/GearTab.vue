@@ -69,8 +69,8 @@
         <div class="flex items-center gap-2">
           <span>Looks</span>
           <WInfo text="How the table's labels look.
-- NeverSink gives magic and rare gear the same colours; here each rarity can look its own way.
-- Each row and drop tier keeps NeverSink's size and sound." />
+- Magic and rare gear share colours by default; here each rarity can look its own way.
+- Each row and drop tier keeps its default size and sound." />
           <WToggle :model-value="g.look.rarityText" style="margin-left: 8px;" @update:model-value="v => change(x => { x.look.rarityText = v })">Game's rarity colour for the text</WToggle>
         </div>
         <div :class="$style.looks">
@@ -122,7 +122,7 @@
               :aria-pressed="g.quality.min[row] === v" :aria-label="qualityTitle(row, v)" :title="qualityTitle(row, v)" @click="setQuality(row, v)">{{ v && g.quality.min[row] && v >= g.quality.min[row] ? '✓' : '' }}</button>
           </template>
         </div>
-        <div v-else class="w-faint text-xs">Using NeverSink's own over-quality lists. Switch on to pick a line per row.</div>
+        <div v-else class="w-faint text-xs">Using the default over-quality lists. Switch on to pick a line per row.</div>
       </div>
 
       <div :class="$style.card">
@@ -385,7 +385,7 @@ function rowSub (row: GearRow): string {
 function stepTitle (row: GearRow, r: GearRarity, v: number): string {
   if (!v) {
     if (row === 'build') return `${r === 'magic' ? 'Magic' : 'Rare'} build bases follow their rank`
-    if (row === 'exotic') return `Only NeverSink's exotic rules decide ${r} exotic bases`
+    if (row === 'exotic') return `Only the exotic rules decide ${r} exotic bases`
     return `Never show ${r} ${ROW_LABEL[row].toLowerCase()} for its drop tier`
   }
   if (v === NO_TIER) return `Show ${r} ${ROW_LABEL[row].toLowerCase()} at every drop tier, and with no tier`
@@ -602,7 +602,7 @@ const pile = computed(() => {
       ? 'no rule matched'
       : rule.type === GEAR_TYPE
         ? 'your Gear table'
-        : rule.type?.startsWith('woke->') ? ruleLabel(rule.type, rule.tier) : `NeverSink: ${ruleLabel(rule.type, rule.tier)}`
+        : ruleLabel(rule.type, rule.tier)
     return {
       id: d.id,
       label: d.facts.baseType!,
@@ -716,9 +716,9 @@ function baseTitle (b: string, lane: string): string {
   const i = info(b)
   const parts = [b, i.slot, i.defence && `${i.defence} (${DEFENCE_ATTR[i.defence]})`, i.dropLevel != null ? `drop level ${i.dropLevel}` : null]
   const was = wasRank(b, lane)
-  if (was) parts.push(`NeverSink: ${was}`)
+  if (was) parts.push(`Default: ${was}`)
   const ex = exotics.value.get(b)
-  if (ex) parts.push(`NeverSink's Exotic bases show it first (${ex.map(tierLabel).join(', ')}); change those under Rules`)
+  if (ex) parts.push(`The Exotic bases rules show it first (${ex.map(tierLabel).join(', ')}); change those under Rules`)
   return parts.filter(Boolean).join(' · ')
 }
 function moveTo (lane: GearMove) {
