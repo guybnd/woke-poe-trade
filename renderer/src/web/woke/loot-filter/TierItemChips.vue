@@ -8,7 +8,7 @@
           @click="toggleFam(row.family.id)" @contextmenu="onFamMenu($event, row.bases)"
           @dragstart="onFamDrag($event, row.bases)" @dragend="emit('dragend')">
           <span data-no-item-tip="family of bases, each base has its own tooltip when opened" class="flex items-center gap-1">
-            <i class="fas w-faint" :class="famOpen(row.family.id) ? 'fa-caret-down' : 'fa-caret-right'" style="font-size: 0.8em;" />
+            <WFoldCaret :open="famOpen(row.family.id)" />
             <img v-if="baseIcon(row.bases[0])" :src="baseIcon(row.bases[0])!" :class="$style.chipArt" alt="">
             <span>{{ row.family.label }}</span>
             <span class="w-faint w-num">{{ row.bases.length }}</span>
@@ -39,6 +39,7 @@
 // A family of 3+ bases (Talismans, Runic...) folds into one chip that picks,
 // moves or takes off all of them; click it to open and handle single bases.
 import { computed, ref } from 'vue'
+import WFoldCaret from '../ui/WFoldCaret.vue'
 import { WChip, WPriceText, vItemTip } from '../ui'
 import { formatAmount } from '../ui/format'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'

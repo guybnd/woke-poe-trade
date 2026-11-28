@@ -248,7 +248,7 @@
               <div v-if="row.kind === 'family'" role="button" tabindex="0" :class="[$style.base, $style.famRow, row.bases.every(b => drag?.bases.includes(b)) && $style.dragging]" draggable="true" :data-family="row.family.id"
                 :aria-expanded="famOpen(lane.key, row.family.id)" :title="`${row.family.label}: ${row.bases.length} bases. Drag to move them all; click to open and move single ones.`"
                 @click="toggleFam(lane.key, row.family.id)" @keydown.enter.prevent="toggleFam(lane.key, row.family.id)" @dragstart="onDragStartSet($event, row.bases, lane.key)" @dragend="onDragEnd">
-                <i :class="['fas', famOpen(lane.key, row.family.id) ? 'fa-caret-down' : 'fa-caret-right', $style.famCaret]" aria-hidden="true" />
+                <WFoldCaret :open="famOpen(lane.key, row.family.id)" />
                 <img v-if="info(row.bases[0]).icon" :src="info(row.bases[0]).icon!" alt="" :class="$style.icon">
                 <span :class="$style.baseText"><span>{{ row.family.label }}</span><span class="w-faint" style="font-size: var(--w-fs-xs, 10px);">{{ row.bases.length }} bases</span></span>
               </div>
@@ -1157,7 +1157,6 @@ function neverOffBuild () {
 .dragging { opacity: 0.45; }
 .famRow { border-color: var(--w-line); background: var(--w-panel-2); }
 .famRow:focus-visible { outline: 2px solid var(--w-accent, #e0b860); }
-.famCaret { width: 9px; color: var(--w-dim); font-size: calc(10px * var(--w-text-scale, 1)); }
 .famMember { margin-left: 10px; }
 .laneCan { outline: 1px dashed rgb(224 184 96 / 55%); }
 .laneOver { outline: 2px solid var(--w-accent, #e0b860); background: rgb(224 184 96 / 12%); }
