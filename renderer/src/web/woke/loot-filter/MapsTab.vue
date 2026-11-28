@@ -5,7 +5,13 @@
   <div :class="$style.wrap" data-loot-maps>
     <div :class="$style.bar" data-loot-map-from>
       <span :class="$style.lab">Show normal maps from</span>
-      <WInfo text="Normal maps are almost all worth under a chaos, so they show by tier instead of price: maps under the tier you pick hide. Special maps have folds below: Endgame, Guardian and Citadel, and Blighted maps are priced by poe.ninja; Originator, Content mods and Corrupted have no price anywhere, so they start from a guess (est.) and you set the step or price. A guess under the line never hides a map: NeverSink shows it as before. Unique and Valdo maps stay with Uniques and NeverSink. Past tier 16, only special maps show." />
+      <WInfo text="Normal maps show by tier, not price: most are worth under a chaos.
+- Maps under the tier you pick hide. Past tier 16, only special maps show.
+- **Endgame**, **Guardian and Citadel** and **Blighted** maps are priced by poe.ninja.
+- **Originator**, **Content mods** and **Corrupted** have no price: they start from a guess (**est.**), and you set the step or price.
+- A guess under the line never hides a map: NeverSink shows it as before.
+
+Unique and Valdo maps stay with Uniques and NeverSink." />
       <input type="range" min="1" max="17" step="1" :value="drag ?? c.mapFrom" :class="$style.range" aria-label="Show maps from tier"
         @input="drag = Number(($event.target as HTMLInputElement).value)"
         @change="c.mapFrom = Number(($event.target as HTMLInputElement).value); drag = null">

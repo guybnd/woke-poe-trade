@@ -11,10 +11,7 @@ const ROOT = path.resolve(__dirname, '../../src/web/woke')
 
 // Help text other threads are rewriting right now. Each entry is temporary:
 // take it out once that file's "?" texts are converted.
-const PENDING: string[] = [
-  // The special map folds' text, in the loot filter walk-through's PR 1036.
-  'loot-filter/MapsTab.vue'
-]
+const PENDING: string[] = []
 
 // A help text built at run time from data, so the scan can't read it whole.
 // Name the file and the expression, and why it stays short.
