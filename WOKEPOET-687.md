@@ -63,6 +63,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-28T02:02:42.435Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up PR 1042 done
+      (https://github.com/guybnd/woke-poe-trade/pull/1042, a83d81a): per-item
+      editor as one line of chips.
+    date: '2026-11-28T02:20:42.647Z'
+    selfAttested: true
+    id: c-2026-11-28t02-20-42-647z
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/1038'
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
