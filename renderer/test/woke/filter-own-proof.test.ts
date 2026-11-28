@@ -7,6 +7,8 @@
 // the full report (WOKE_PROOF_OUT) adds hostile ones (everything nearly
 // worthless) and two more area levels.
 //
+// No item falls to the pink catch-all, whatever its class or stack size.
+//
 // The hard rule: a valuable item never hides. Valuable = worth 20c or more
 // by the price table, or, unpriced, NeverSink gives it a sound or a beam.
 // WOKE_PROOF_OUT=<file> writes the whole diff as JSON for the report.
@@ -156,12 +158,13 @@ beforeAll(async () => {
     if (m.affixTable.value) ids = m.idGroups(m.affixTable.value, DEFAULT_SEED, defaultPresets().weights.mult)
   } catch {}
   nsDoc = parseFilter(neverSink(LEVEL))
-  const samples = AREAS.map(area => ({ area, items: catalog(area) }))
+  const samples = AREAS.map(area => ({ area, items: catalog(area, nsDoc) }))
   const nsRules = nsDoc.blocks.filter(b => !b.disabled && b.visibility !== 'Hide')
   const ruleItems: ProofItem[] = []
   for (const b of nsRules) {
     const f = itemForBlock(b)
-    if (!f) continue
+    // No class and not gold: a base that never drops (Voidstones).
+    if (!f || (!f.itemClass && f.baseType !== 'Gold')) continue
     // Only items NeverSink's own walk gives to this rule (not shadowed).
     const m = matchItem(nsDoc, f, { brief: true })
     if (m.final?.block !== b) continue
@@ -202,8 +205,11 @@ describe('our own filter against NeverSink Very strict', () => {
     expect(map({ rarity: 'Normal', uberBlightedMap: true })).toBe('Show')
   })
 
-  it('has a rule of its own for every unique and every map', () => {
-    const pink = rows.real.filter(r => r.unknown && (r.group.startsWith('Uniques: ') || r.group === 'Maps')).map(show)
+  // Pink is for an item no rule of ours knows. Every class the game data or
+  // NeverSink's file names has one, at every stack size (Guy's walk,
+  // 2026-11-28: 6 Alchemy Shards, 16 Gold, a Wombgift, an unpriced card).
+  it.each(['real', 'none'] as Prices[])('has a rule of its own for every item (%s prices)', kind => {
+    const pink = [...rows[kind], ...ruleRows[kind]].filter(r => r.unknown).map(show)
     expect(pink).toEqual([])
   })
 })
