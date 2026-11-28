@@ -583,7 +583,8 @@ const focused = ref(document.hasFocus())
 const onFocus = () => { focused.value = true }
 // The last click landed in another overlay window: keys are for that one now.
 let clickedAway = false
-const onPointer = (e: PointerEvent) => { clickedAway = !panel.value?.el?.contains(e.target as Node) }
+// A chip's menu (StateChip) is drawn outside the card but belongs to it.
+const onPointer = (e: PointerEvent) => { clickedAway = !panel.value?.el?.contains(e.target as Node) && !(e.target as Element | null)?.closest?.('[data-state-chip-menu]') }
 const onBlur = () => { focused.value = false }
 
 // The rule that decided the item, in the editor: the Drop tiers tab for the

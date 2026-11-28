@@ -14,6 +14,7 @@
       <template v-if="sel === 'maps'" #extra><MapsTab :config="config" /></template>
       <template v-if="sel === 'jewels'" #after><JewelsTab :store="store" :config="config" @open-rule="r => emit('open-rule', r)" @open-unique="openUnique" /></template>
     </CurrencyTab>
+    <RecipesTab v-else-if="sel === 'recipes'" :config="config" :class="$style.main" />
   </div>
 </template>
 
@@ -22,10 +23,12 @@ import { computed, ref, watch } from 'vue'
 import CurrencyTab from './CurrencyTab.vue'
 import MapsTab from './MapsTab.vue'
 import JewelsTab from './JewelsTab.vue'
+import RecipesTab from './RecipesTab.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { LootKind } from './currency-weights'
 import { lootFocus } from './loot-focus'
+import { migrateLootPresets } from './loot-presets'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -46,7 +49,8 @@ const LOOT_CLASSES = [
   { id: 'gems', name: 'Gems', rgb: [27, 200, 190] },
   { id: 'maps', name: 'Maps', rgb: [235, 235, 235] },
   { id: 'jewels', name: 'Jewels', rgb: [90, 200, 110] },
-  { id: 'league', name: 'League items', rgb: [220, 170, 120] }
+  { id: 'league', name: 'League items', rgb: [220, 170, 120] },
+  { id: 'recipes', name: 'Recipes', rgb: [200, 200, 200] }
 ] as const
 type ClassId = (typeof LOOT_CLASSES)[number]['id']
 
@@ -66,6 +70,8 @@ function openUnique (name: string) {
   sel.value = 'uniques'
   focusItem.value = name
 }
+// The presets the Loot tab covers carry over the first time it's on.
+watch(() => props.config.presets.currency.on, () => migrateLootPresets(props.config.presets), { immediate: true })
 // The priced classes' ids are the engine's kinds.
 const lootKind = computed(() => sel.value as LootKind)
 </script>

@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-xl p-2 flex flex-col gap-3">
     <WSettingRow label="Lifeforce per item for Harvest rerolls"
-      :hint="`What one item costs at the Horticrafting bench, in the craft's colour. Blank uses ${defaultCost}, from the wiki. Flips multiplies this by poe.ninja's lifeforce price.`">
+      :hint="`Lifeforce one item costs at the Horticrafting bench, in the craft's colour.\n- Blank uses ${defaultCost}, from the wiki.\n- Flips times it by poe.ninja's lifeforce price.`">
       <!-- A plain input: WField's number mode turns a cleared field into 0. -->
       <input :value="cost" type="number" min="1" :placeholder="String(defaultCost)" class="rounded w-input px-1 block" style="width: 6rem;" @input="setCost">
     </WSettingRow>
@@ -23,7 +23,9 @@
 Nothing reads the screen until you press it.">
       <w-hotkey-cell v-model="stashHotkey" />
     </WSettingRow>
-    <WSettingRow label="Show stack total on stash outlines" hint="Adds the whole stack's profit under the per item figure, counting whole recipes: threes for a vendor recipe, every item for a Harvest reroll. Needs a game window 1080p or taller.">
+    <WSettingRow label="Show stack total on stash outlines" hint="Adds the whole stack's profit under the per item figure.
+- Counts whole recipes: threes for a vendor recipe, every item for a Harvest reroll.
+- Needs a game window 1080p or taller.">
       <WToggle v-model="stashTotals" />
     </WSettingRow>
     <FlipsWeights :config-widget="configWidget" />

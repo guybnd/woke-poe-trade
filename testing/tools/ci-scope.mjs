@@ -16,7 +16,7 @@ const SCOPE = JSON.parse(fs.readFileSync(fileURLToPath(new URL('../e2e/scope.jso
 // trace them, so a pull request that changes renderer code always runs them.
 export const SCANS = [
   'test/woke/app-icon.test.ts', 'test/woke/cluster-graph.test.ts', 'test/woke/dock-order.test.ts',
-  'test/woke/filter-tag-words.test.ts', 'test/woke/live-data.test.ts', 'test/woke/panel-drag.test.ts',
+  'test/woke/filter-tag-words.test.ts', 'test/woke/help-format.test.ts', 'test/woke/live-data.test.ts', 'test/woke/panel-drag.test.ts',
   'test/woke/panel-opacity.test.ts', 'test/woke/readme.test.ts', 'test/woke/text-scale.test.ts'
 ]
 

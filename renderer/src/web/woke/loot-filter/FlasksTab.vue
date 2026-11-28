@@ -6,7 +6,12 @@
     <div :class="$style.top">
       <WToggle v-model="w.on">Score endgame rares and flasks</WToggle>
       <span :class="$style.beta">Beta</span>
-      <WInfo text="In maps (area level 68+), a white or magic utility flask scores its base rank × quality (×2 at 20%, ×4 at 26%) × item level (×2 at 85+, where the top mods roll), against its own flask line. Under the line it hides. Life and mana flasks, tinctures and levelling stay NeverSink's. The same switch as Rare gear." />
+      <WInfo text="In maps (area level 68+), white and magic utility flasks get a score and a step.
+- The score is the base rank, raised by quality (20% and 26%) and item level 85+, where the top mods roll.
+- It counts against the **flask line**, not the rare gear line: under it, the flask hides.
+- Life and mana flasks, tinctures and levelling stay NeverSink's.
+
+The same switch as Rare gear." />
     </div>
     <div :class="$style.lineBar" data-flask-line>
       <span :class="$style.lab">Flask line</span>
@@ -24,7 +29,7 @@
     </div>
     <div v-for="r in rows" :key="r.name" :class="$style.row" :data-equip-flask="r.name">
       <span v-item-tip="{ name: r.name }" :class="$style.name">{{ r.name }}</span>
-      <WSegmented :class="$style.rank" :model-value="r.rank" :options="RANKS" role="group" :aria-label="`${r.name}: rank`" @update:model-value="v => setRank(r.name, v)" />
+      <span :class="$style.rank"><StateChip :model-value="r.rank" :options="RANKS" :title="`${r.name} rank`" @update:model-value="v => setRank(r.name, v)" /></span>
       <span v-for="(s, i) in r.steps" :key="i" :class="$style.cell"><span :class="$style.pill" :style="{ background: STEP_CSS[s], color: s >= 1 ? '#140f08' : '#efe4cc' }">{{ STEP_NAMES[s] }}</span></span>
     </div>
   </div>
@@ -32,7 +37,8 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { WInfo, WSegmented, WToggle, vItemTip } from '../ui'
+import { WInfo, WToggle, vItemTip } from '../ui'
+import StateChip from './StateChip.vue'
 import { FLASK_BASES, flaskRank, flaskStep } from './flask-weights'
 import { STEP_NAMES } from './weights'
 import type { RankKey } from './weight-settings'
@@ -40,7 +46,14 @@ import type { LootFilterWidget } from './widget'
 
 const props = defineProps<{ config: LootFilterWidget }>()
 const w = computed(() => props.config.presets.weights)
-const RANKS = [{ value: 'r1', label: 'Top' }, { value: 'r2', label: 'Good' }, { value: 'r3', label: 'Low' }, { value: 'rj', label: "Don't care" }]
+// Guy's R1 (2026-11-28): a rank chip, coloured like the steps it leads to.
+const RANK_LOOK = [
+  { value: 'r1', label: 'Top', dot: '#5a9cff' },
+  { value: 'r2', label: 'Good', dot: '#29d2a0' },
+  { value: 'r3', label: 'Low', dot: '#d8d877' },
+  { value: 'rj', label: "Don't care", dot: 'var(--w-faint)', hollow: true }
+] as const
+const RANKS = computed(() => RANK_LOOK.map(r => ({ ...r, desc: `Base score ×${w.value.mult[r.value as RankKey]}.` })))
 const BANDS = [{ label: 'Under 20%', q: 0, i: 0 }, { label: 'ilvl 85+', q: 0, i: 85 }, { label: '20%+', q: 20, i: 0 }, { label: '20%+ · ilvl 85+', q: 20, i: 85 }, { label: '26%+ · ilvl 85+', q: 26, i: 85 }]
 // The flask line's notches (a score; Top is 8 before quality and item level).
 const LINES = [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64]
