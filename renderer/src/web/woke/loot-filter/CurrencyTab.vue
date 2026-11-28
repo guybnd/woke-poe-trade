@@ -56,6 +56,29 @@
     </div>
     </Teleport>
 
+    <!-- The page's own bar (Guy 2026-11-28): under All loot, in the page's
+         look. Its steps and ruler follow All loot until you change them;
+         a section can still have its own. -->
+    <div v-if="kind !== 'gold'" :class="$style.goldRuler" data-currency-page-ruler>
+      <span :class="$style.ownHead">
+        <b>{{ PAGE_LABEL }}</b>
+        <span :class="$style.lookLab" :title="`Untick a step to hide what lands on it on the ${PAGE_LABEL} page`">Steps</span>
+        <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!pageOff.includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} on the ${PAGE_LABEL} page`" @change="togglePageOff(s)"> {{ CSTEP_NAMES[s] }}</label>
+        <span v-if="c.offBy[kind] == null" class="w-faint text-xs">as All loot</span>
+        <button v-else type="button" class="w-icon-btn" :title="`${PAGE_LABEL} steps back to All loot's`" :aria-label="`${PAGE_LABEL} steps back to All loot's`" @click="setOff(kind, null)"><i class="fas fa-undo" /></button>
+        <span :class="$style.lookLab">Prices</span>
+        <template v-if="c.rulers[kind]">
+          <span class="text-xs">Own ruler, Strictness still moves it</span>
+          <button type="button" class="w-icon-btn" :title="`${PAGE_LABEL} back to All loot's ruler`" :aria-label="`${PAGE_LABEL} back to All loot's ruler`" @click="setRuler(kind, null)"><i class="fas fa-undo" /></button>
+        </template>
+        <template v-else>
+          <span class="w-faint text-xs">as All loot</span>
+          <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" :title="`Give the ${PAGE_LABEL} page its own ruler, starting where All loot's steps are now`" data-currency-page-own @click="ownPageRuler">Own ruler</WButton>
+        </template>
+      </span>
+      <StepRuler v-if="c.rulers[kind]" :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="(i, v) => setOwn(kind, i, v)" />
+    </div>
+
     <div :class="$style.pageBar" data-currency-page-bar>
       <span v-if="kind === 'uniques'" :class="$style.minLab" data-loot-size-cut title="Big uniques count part of their price: 2x2 75%, 2x3 60%, 2x4 50%. Chase and Always sections skip it.">Size cut
         <StateChip :model-value="c.sizeCut ?? 'auto'" :options="SIZE_CUTS" title="Size cut" dflt="auto" @update:model-value="v => c.sizeCut = v === 'auto' ? undefined : v as 'on' | 'off'" />
@@ -128,7 +151,7 @@
         <div :class="$style.catLook" data-currency-cat-steps :data-goto-spot="g.cat.id === 'orbs' ? 'section-steps' : undefined">
           <span :class="$style.lookLab" :title="`Untick a step to hide what lands on it, in ${g.cat.name} only`">Steps</span>
           <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!stepsOffIn(c, g.cat.id).includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} in ${g.cat.name}`" @change="toggleSecOff(g.cat.id, s)"> {{ CSTEP_NAMES[s] }}</label>
-          <span v-if="c.offBy[g.cat.id] == null" class="w-faint text-xs">as All loot</span>
+          <span v-if="c.offBy[g.cat.id] == null" class="w-faint text-xs">{{ c.offBy[kind] != null ? `as ${PAGE_LABEL}` : 'as All loot' }}</span>
           <button v-else type="button" class="w-icon-btn" :title="`${g.cat.name} steps back to All loot's`" :aria-label="`${g.cat.name} steps back to All loot's`" @click="setOff(g.cat.id, null)"><i class="fas fa-undo" /></button>
         </div>
         <div v-if="g.cat.id !== 'gold'" :class="$style.goldRuler" data-currency-own-ruler :data-goto-spot="g.cat.id === 'orbs' ? 'section-ruler' : undefined">
@@ -139,7 +162,7 @@
               <button type="button" class="w-icon-btn" :title="`${g.cat.name} back to All loot's ruler`" :aria-label="`${g.cat.name} back to All loot's ruler`" @click="setRuler(g.cat.id, null)"><i class="fas fa-undo" /></button>
             </template>
             <template v-else>
-              <span class="w-faint text-xs">All loot's ruler{{ c.bias[g.cat.id] ? `, items count at ${c.bias[g.cat.id]}%` : '' }}</span>
+              <span class="w-faint text-xs">{{ c.rulers[kind] ? `${PAGE_LABEL}'s ruler` : "All loot's ruler" }}{{ c.bias[g.cat.id] ? `, items count at ${c.bias[g.cat.id]}%` : '' }}</span>
               <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" :title="`Give ${g.cat.name} its own ruler, starting where its steps are now`" @click="ownRuler(g.cat.id)">Own ruler</WButton>
             </template>
           </span>
@@ -508,7 +531,8 @@ function setRuler (cat: string, r: number[] | null) {
   c.value.rulers = next
 }
 function ownRuler (cat: string) {
-  setRuler(cat, stepStarts({ ...c.value, rulers: {} }, cat).map(v => Number(v.toPrecision(3))))
+  const { [cat]: _, ...rest } = c.value.rulers
+  setRuler(cat, stepStarts({ ...c.value, rulers: rest }, cat).map(v => Number(v.toPrecision(3))))
 }
 // The ruler hands back a price after Strictness: stored before it.
 function setOwn (cat: string, i: number, shown: number) {
@@ -527,12 +551,17 @@ const allOff = computed(() => c.value.offBy.all ?? [])
 function toggleAll (s: number) {
   setOff('all', flip(allOff.value, s))
 }
-watch(() => c.value.offBy[props.kind], v => {
-  if (!v || CATS.value.some(x => x.id === props.kind)) return
-  const next = Object.fromEntries(Object.entries(c.value.offBy).filter(([k]) => k !== props.kind))
-  if (v.join() !== allOff.value.join()) for (const x of CATS.value) next[x.id] ??= [...v]
-  c.value.offBy = next
-}, { immediate: true })
+// The page's own steps (Guy 2026-11-28 brought the page bar back): All
+// loot's until you change them; back to the same as All loot follows it again.
+const PAGE_LABEL = KIND_NAME[props.kind].replace(/^./, x => x.toUpperCase())
+const pageOff = computed(() => c.value.offBy[props.kind] ?? allOff.value)
+function togglePageOff (s: number) {
+  const list = flip(pageOff.value, s)
+  setOff(props.kind, list.join() === allOff.value.join() ? null : list)
+}
+function ownPageRuler () {
+  setRuler(props.kind, stepStarts({ ...c.value, rulers: {} }).map(v => Number(v.toPrecision(3))))
+}
 const ownCount = computed(() => CATS.value.filter(x => c.value.offBy[x.id] != null || c.value.rulers[x.id]).length)
 const flip = (list: readonly number[], s: number) => list.includes(s) ? list.filter(x => x !== s) : [...list, s].sort((a, b) => a - b)
 function setOff (key: string, list: number[] | null) {
@@ -543,7 +572,7 @@ function setOff (key: string, list: number[] | null) {
 // Back to the same steps as All loot: follows it again.
 function toggleSecOff (cat: string, s: number) {
   const list = flip(stepsOffIn(c.value, cat), s)
-  setOff(cat, list.join() === allOff.value.join() ? null : list)
+  setOff(cat, list.join() === pageOff.value.join() ? null : list)
 }
 function setStepLook (s: number, p: StylePatch | null) {
   const next = Object.fromEntries(Object.entries(c.value.steps).filter(([k]) => k !== String(s)))

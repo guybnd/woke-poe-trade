@@ -687,7 +687,9 @@ export function catLine (c: Pick<CurrencySettings, 'line' | 'bias'>, cat: string
 // Small at the line, the louder ones at their own price, never under it.
 // A section with its own ruler starts its steps there, without its bias.
 export function stepStarts (c: Pick<CurrencySettings, 'line' | 'from' | 'bias'> & Partial<Pick<CurrencySettings, 'rulers'>>, cat = ''): number[] {
-  const own = c.rulers?.[cat]
+  // A section's own ruler, else its page's (Guy 2026-11-28: a Currency bar
+  // under All loot), else All loot's with the section's bias.
+  const own = c.rulers?.[cat] ?? (cat ? c.rulers?.[kindOf(cat)] : undefined)
   if (own) return own.map(v => Math.max(own[0], v))
   const k = catMult(c, cat)
   const line = c.line * k

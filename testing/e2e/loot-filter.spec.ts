@@ -1698,6 +1698,13 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-currency-cat="orbs"]')).toContainText('own ruler')
   await orbRuler.getByRole('button', { name: "Orbs back to All loot's ruler" }).click()
   await expect(orbRuler.locator('[data-currency-ruler]')).toHaveCount(0)
+  // The page's own bar (Guy 2026-11-28): follows All loot until it gets its own ruler.
+  const pageBar = page.locator('[data-currency-page-ruler]')
+  await expect(pageBar).toContainText('Currency')
+  await pageBar.locator('[data-currency-page-own]').click()
+  await expect(pageBar.locator('[data-currency-ruler]')).toBeVisible()
+  await pageBar.getByRole('button', { name: "Currency back to All loot's ruler" }).click()
+  await expect(pageBar.locator('[data-currency-ruler]')).toHaveCount(0)
   const alch = page.locator('[data-currency-item="Orb of Alchemy"]')
   await expect(alch).toBeVisible()
   await alch.click()
