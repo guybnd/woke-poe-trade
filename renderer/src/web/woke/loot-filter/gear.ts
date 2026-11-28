@@ -8,6 +8,7 @@
 // any-base rules in gear->tiered (and its over-quality rules, when that table
 // is on) are commented out and rules built from the table take their place,
 // with NeverSink's own looks (your restyles included) for each rank and tier.
+import { baseRankTable } from './base-ranks'
 import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './parse'
 import { applyStyle, isPatch } from './edits'
 import type { StylePatch } from './edits'
@@ -173,7 +174,10 @@ function anyTierMin (tier: string): number | null {
 }
 
 export function readTiered (doc: FilterDoc): TieredSource | null {
-  const ranks: Record<Rank, string[]> = { r1: [], r2: [], r3: [] }
+  // The ranks are our own table (base-ranks.ts); NeverSink's rules still
+  // give the cells.
+  const t = baseRankTable()
+  const ranks: Record<Rank, string[]> = { r1: [...t.r1], r2: [...t.r2], r3: [...t.r3] }
   const cells = new Map<string, CellSource>()
   const any: TieredSource['any'] = []
   const replaced: FilterBlock[] = []
@@ -182,9 +186,6 @@ export function readTiered (doc: FilterDoc): TieredSource | null {
     const m = RANK_TIER.exec(b.tier)
     if (m) {
       const rank = `r${m[2]}` as Rank
-      for (const v of b.conditions.find(c => c.key === 'BaseType' && c.op === '==')?.values ?? []) {
-        if (!ranks[rank].includes(v)) ranks[rank].push(v)
-      }
       cells.set(key(rank, Number(m[1])), { block: b, live: !b.disabled })
       replaced.push(b)
       continue
