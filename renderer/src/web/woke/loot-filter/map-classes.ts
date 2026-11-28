@@ -19,8 +19,9 @@ export const MAP_CATEGORIES: LootCategory[] = [
 ]
 export const MAP_IDS = new Set(MAP_CATEGORIES.map(x => x.id))
 
-// Each kind's tint (Guy's B, 2026-11-28): the map look players know, black on
-// white, with the kind on the border, beam and minimap icon. Map icons are
+// Each kind's tint (Guy 2026-11-28): the card's fill from Normal up
+// (currency-weights.ts mapCard; plain maps stay white), the beam and the
+// minimap icon. Map icons are
 // always squares in the kind's tint (Guy: "always square with content
 // tint"). Red stays Tink's.
 export const MAP_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {

@@ -882,7 +882,7 @@ const vivid = (c: number[]) => { const g = (c[0] + c[1] + c[2]) / 3; return c.ma
 // Each class's own Decent and Big (Guy 2026-11-28: "it all looks the same as
 // currency"). Currency keeps the amber and orange boxes players know; every
 // other class fills with its own colour, so a gem reads teal, a unique brown,
-// a card blue, a map white and a fragment purple at a glance. Decent: dark
+// a card blue, a special map its kind's tint and a fragment purple at a glance. Decent: dark
 // text on the class colour. Big: light text on the class colour deepened,
 // with a light edge. Loudness still comes from size, sound, beam and icon.
 // Red stays Tink's.
@@ -892,8 +892,8 @@ export const CLASS_FILL: Partial<Record<LootKind, { decent: { bg: Rgb, text: Rgb
   uniques: { decent: { bg: [185, 125, 75], text: [0, 0, 0] }, big: { bg: [125, 55, 15], text: [255, 255, 255], edge: [255, 225, 190] } },
   cards: { decent: { bg: [120, 200, 255], text: [0, 0, 0] }, big: { bg: [0, 75, 190], text: [255, 255, 255], edge: [205, 235, 255] } },
   fragments: { decent: { bg: [195, 145, 255], text: [0, 0, 0] }, big: { bg: [90, 30, 150], text: [255, 255, 255], edge: [235, 215, 255] } },
-  // Maps (Guy's B, 2026-11-28): black on white, edged in the kind's tint
-  // (MAP_STEP below; Tink is red text on white with a red beam).
+  // Maps: mapCard below always sets a special map's card (its kind's tint);
+  // this entry only keeps fillOf defined. Tink is red text on white.
   maps: { decent: { bg: [255, 255, 255], text: [0, 0, 0] }, big: { bg: [255, 255, 255], text: [0, 0, 0], edge: [255, 255, 255] } },
   // Special gear: a green no other class uses.
   special: { decent: { bg: [110, 225, 160], text: [0, 0, 0] }, big: { bg: [10, 95, 55], text: [255, 255, 255], edge: [200, 255, 220] } }
@@ -905,10 +905,30 @@ export const CAT_FILL: Record<string, NonNullable<typeof CLASS_FILL[LootKind]>> 
   gold: { decent: { bg: [255, 215, 90], text: [0, 0, 0] }, big: { bg: [120, 95, 10], text: [255, 255, 255], edge: [255, 240, 190] } }
 }
 const fillOf = (cat: string) => CAT_FILL[cat] ?? CLASS_FILL[kindOf(cat)]
-// Maps from Normal to Big: black on light grey, then on white, always edged
-// in the kind's tint, so an 8-mod and an Originator map differ by border,
-// beam and icon (Guy's B). Size, sound and beam make the step louder.
-const MAP_STEP: Partial<Record<CStep, Rgb>> = { 2: [205, 205, 205], 3: [255, 255, 255], 4: [255, 255, 255] }
+// Special maps from Normal to Big (Guy 2026-11-28, "too similar to a normal
+// T16"; picked A and "a style picker in the maps category"): MAP_STYLES,
+// one for every map kind. Plain maps stay black on white with a grey edge
+// (map-floor.ts), so a coloured card or edge says "special". Size, sound and
+// beam make the step louder.
+export const MAP_STYLES = [
+  { id: 'tint', name: 'Tinted card', desc: 'Black on the kind’s colour: pale on Normal and Decent, full with a white edge on Big' },
+  { id: 'dark', name: 'Dark card', desc: 'The kind’s colour on a dark card of the same hue, white text on Big' },
+  { id: 'edge', name: 'White card', desc: 'Black on white, the kind’s colour only on the edge' }
+] as const
+export type MapStyle = typeof MAP_STYLES[number]['id']
+const lum = (c: number[]) => (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255
+// Black text, or white on a dark colour you picked for the section.
+const ink = (bg: number[]) => lum(bg) < 0.4 ? [255, 255, 255] : [0, 0, 0]
+const mapCard = (step: CStep, rgb: number[], style: MapStyle | undefined): { bg: number[], edge: number[], text: number[] } | undefined => {
+  if (step < 2 || step > 4) return undefined
+  if (style === 'edge') { const bg = step === 2 ? [205, 205, 205] : [255, 255, 255]; return { bg, edge: rgb, text: [0, 0, 0] } }
+  if (style === 'dark') {
+    const bg = mixTo(rgb, 0, step === 4 ? 0.62 : step === 3 ? 0.8 : 0.85)
+    return { bg, edge: rgb, text: step === 4 ? [255, 255, 255] : lum(rgb) < 0.45 ? [255, 255, 255] : rgb }
+  }
+  const bg = step === 4 ? rgb : mixTo(rgb, 255, step === 3 ? 0.3 : 0.5)
+  return { bg, edge: step === 4 ? [255, 255, 255] : mixTo(rgb, 0, step === 3 ? 0.45 : 0.35), text: ink(bg) }
+}
 
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats' | 'chaseLook'>): { rgb: [number, number, number], color: string, shape: string } {
   const d = cat === 'uniqchase' ? { ...UNIQUE_LOOK.uniqchase, text: chaseLookOf(c.chaseLook).text as [number, number, number], color: chaseLookOf(c.chaseLook).color } : CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? JEWEL_LOOK[cat] ?? LEAGUE_LOOK[cat] ?? SPECIAL_LOOK[cat] ?? CAT_LOOK.other
@@ -920,7 +940,7 @@ export function catColour (cat: string, c: Pick<CurrencySettings, 'cats' | 'chas
   }
 }
 
-export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats' | 'chaseLook'>): StylePatch {
+export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats' | 'chaseLook' | 'mapLook'>): StylePatch {
   if (step === 0) return {}
   const { rgb, color, shape } = catColour(cat, c)
   const own = c.steps[String(step)] ?? {}
@@ -938,8 +958,8 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
     case 4: { const f = fillOf(cat); Object.assign(out, f ? { text: col(f.big.text), border: col(c.cats[cat]?.text ? rgb : f.big.edge), background: col(f.big.bg) } : { text: col([0, 0, 0]), border: col(rgb), background: col([255, 93, 27]) }); break }
     case 5: Object.assign(out, { border: col(rgb) }); break
   }
-  const mapBg = kindOf(cat) === 'maps' ? MAP_STEP[step] : undefined
-  if (mapBg) Object.assign(out, { text: col([0, 0, 0]), border: col(rgb), background: col(mapBg) })
+  const card = kindOf(cat) === 'maps' ? mapCard(step, rgb, c.mapLook) : undefined
+  if (card) Object.assign(out, { text: col(card.text), border: col(card.edge), background: col(card.bg) })
   // Tink's icon is red, in the category's shape (Guy 2026-11-27).
   out.icon = size == null ? null : { size, color: step === 5 ? 'Red' : color, shape }
   out.effect = effect ? { ...effect, color: step === 5 ? 'Red' : color } : null
@@ -978,7 +998,7 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
 }
 
 // The whole look of a pile, for the tab's previews.
-export function currencyFullLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats' | 'chaseLook'>): StylePatch {
+export function currencyFullLook (step: CStep, cat: string, c: Pick<CurrencySettings, 'steps' | 'cats' | 'chaseLook' | 'mapLook'>): StylePatch {
   return { ...readStyle(currencyActions(step)), ...currencyLook(step, cat, c) }
 }
 
