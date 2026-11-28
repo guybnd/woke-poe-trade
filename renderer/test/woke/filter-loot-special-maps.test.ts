@@ -86,17 +86,36 @@ describe('special maps on the Loot tab', () => {
     // 8 mods: counted the way the game counts.
     const eight = ['Magnifying', 'Fecund', 'Chaining', 'Savage', 'of Balance', 'of Exposure', 'of Stasis', 'of Toughness']
     expect(hit(map(16, { rarity: 'Rare', identified: true, corrupted: true, explicitModNames: eight }))?.tier).toMatch(/^s[1-5]$/)
-    // A guess under the line falls through to NeverSink's rules, never hides.
+    // A guess under the line never hides: from the normal maps' floor it
+    // shows Small in its kind's tint, below it NeverSink decides.
     const strict = parseFilter(REGULAR)
-    applyCurrency(strict, { ...cfg, mult: 50 }, lookup)
+    applyCurrency(strict, { ...cfg, mult: 50, mapFrom: 14 }, lookup)
     const corr = matchItem(strict, map(16, { corruptedMods: 1, corrupted: true }))
     expect(corr.visibility).toBe('Show')
-    expect(corr.final?.block.type).not.toBe(CURRENCY_TYPE)
+    expect(corr.final?.block.tier).toBe('s1')
+    expect(corr.final?.block.actions.find(a => a.key === 'SetTextColor')?.args.slice(0, 3)).toEqual(['255', '120', '165'])
+    const low = matchItem(strict, map(10, { corruptedMods: 1, corrupted: true }))
+    expect(low.final?.block.type).not.toBe(CURRENCY_TYPE)
     // A unique map is never caught.
     expect(hit(map(16, { rarity: 'Unique', zanaMemory: true }))?.type).not.toBe(CURRENCY_TYPE)
     // Plain maps are still NeverSink's.
     expect(hit(map(16))?.type).not.toBe(CURRENCY_TYPE)
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
+  })
+
+  it('special maps are black on white from Normal up, edged in their tint, with a square icon', () => {
+    const cfg = defaultCurrency()
+    cfg.on = true
+    const doc = parseFilter(REGULAR)
+    applyCurrency(doc, cfg, lookup)
+    // Citadel maps at 15c: Big.
+    const m = matchItem(doc, map(16, { rarity: 'Rare', influences: ['Warlord'] }))
+    expect(m.final?.block.tier).toBe('s4')
+    const act = (k: string) => m.final?.block.actions.find(a => a.key === k)?.args
+    expect(act('SetTextColor')?.slice(0, 3)).toEqual(['0', '0', '0'])
+    expect(act('SetBackgroundColor')?.slice(0, 3)).toEqual(['255', '255', '255'])
+    expect(act('SetBorderColor')?.slice(0, 3)).toEqual(['200', '165', '255'])
+    expect(act('MinimapIcon')?.slice(1)).toEqual(['Purple', 'Square'])
   })
 
   it('hides a special map only when its section is Off', () => {
