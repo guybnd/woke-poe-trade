@@ -86,7 +86,6 @@
       <StepRuler v-if="c.rulers[kind]" :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="(i, v) => setOwn(kind, i, v)" />
     </div>
 
-
     <slot name="extra" />
 
     <!-- Gold has no price: its page's ruler steps piles by size. -->
@@ -532,7 +531,7 @@ function setRuler (cat: string, r: number[] | null) {
   c.value.rulers = next
 }
 function ownRuler (cat: string) {
-  const { [cat]: _, ...rest } = c.value.rulers
+  const rest = Object.fromEntries(Object.entries(c.value.rulers).filter(([k]) => k !== cat))
   setRuler(cat, stepStarts({ ...c.value, rulers: rest }, cat).map(v => Number(v.toPrecision(3))))
 }
 // The ruler hands back a price after Strictness: stored before it.
