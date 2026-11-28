@@ -59,8 +59,8 @@ function catName (id: string): string {
   catNames ??= new Map(ALL_CATEGORIES.map(c => [c.id, c.name]))
   return catNames.get(id) ?? PAGE_NAMES[id] ?? id
 }
-const MODE_NAME: Record<string, string> = { off: 'Hide', auto: 'By price', always: 'Always' }
-const modeName = (m: unknown) => m == null ? 'By price' : MODE_NAME[String(m)] ?? plain(m)
+const MODE_NAME: Record<string, string> = { off: 'Always hide', auto: 'By price estimate', always: 'Always show' }
+const modeName = (m: unknown) => m == null ? 'By price estimate' : MODE_NAME[String(m)] ?? plain(m)
 const offNames = (xs: unknown) => Array.isArray(xs) && xs.length ? xs.map(n => CSTEP_NAMES[n] ?? String(n)).join(', ') : 'none'
 
 // Set additions and removals, by name.

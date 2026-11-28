@@ -36,7 +36,7 @@ describe('stepChanges', () => {
       p.currency.offBy = { all: [1] }
     })
     expect(texts(b, a)).toEqual(expect.arrayContaining(['Main ruler · Small starts 0.2c → 0.5c', 'Every page steps · Small turned off']))
-    expect(texts(b, a).some(t => /· shows By price → Always$/.test(t))).toBe(true)
+    expect(texts(b, a).some(t => /· shows By price estimate → Always show$/.test(t))).toBe(true)
   })
 
   it('says rare weight values', () => {
