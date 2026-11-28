@@ -322,7 +322,7 @@
           <WButton v-if="p.block.type && p.block.tier" size="sm" variant="ghost" @click="jumpTo(p.block.type!, p.block.tier!)">Open rule</WButton>
         </div>
       </div>
-      <HistoryList v-if="store.timeline.value.steps.length" :store="store" data-goto-spot="history" />
+      <HistoryList :store="store" data-goto-spot="history" />
       <div class="w-group-label" v-if="config.edits.length || activePriceMoves" :class="$style.historyLabel">In effect now</div>
       <div v-if="activePriceMoves" :class="$style.changeRow">
         <i class="fas fa-chart-line w-dim" />
@@ -1496,9 +1496,6 @@ function useShared (how: 'add' | 'replace') {
   shared.value = null
   shareInput.value = ''
 }
-
-// Newest first, with each step's place in the list.
-// Worked out again from each step's change, so older steps name their items too.
 
 const unsaved = computed(() => props.store.dirty.value && !props.store.error.value)
 const groupHiddenByMe = computed(() => props.config.edits.some(e => e.kind === 'group' && e.type === selType.value))

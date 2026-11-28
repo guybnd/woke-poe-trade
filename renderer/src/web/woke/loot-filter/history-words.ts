@@ -146,8 +146,8 @@ function currencyChanges (b: Partial<CurrencySettings>, a: Partial<CurrencySetti
   for (const c of keysOf(b.cats, a.cats)) {
     if (!same(b.cats?.[c], a.cats?.[c])) out.push(lookChange(L, `cur.catlook.${c}`, catName(c), b.cats?.[c], a.cats?.[c]))
   }
-  if (!same(b.faint?.on, a.faint?.on)) out.push({ tab: L, key: 'cur.faint.on', where: 'Faint step', what: a.faint?.on ? 'turned on' : 'turned off' })
-  if (!same(b.faint?.until, a.faint?.until)) out.push({ tab: L, key: 'cur.faint.until', where: 'Faint step', what: 'shows below Strictness', from: `×${num(Number(b.faint?.until))}`, to: `×${num(Number(a.faint?.until))}` })
+  if (b.faint && a.faint && !same(b.faint.on, a.faint.on)) out.push({ tab: L, key: 'cur.faint.on', where: 'Faint step', what: a.faint?.on ? 'turned on' : 'turned off' })
+  if (b.faint?.until != null && a.faint?.until != null && !same(b.faint.until, a.faint.until)) out.push({ tab: L, key: 'cur.faint.until', where: 'Faint step', what: 'shows below Strictness', from: `×${num(Number(b.faint?.until))}`, to: `×${num(Number(a.faint?.until))}` })
   if (!same(b.mapFrom, a.mapFrom)) out.push({ tab: L, key: 'cur.mapFrom', where: 'Maps', what: 'normal maps shown from tier', from: plain(b.mapFrom), to: plain(a.mapFrom) })
   for (let i = 0; i < 5; i++) {
     if (!same(b.gold?.[i], a.gold?.[i])) out.push({ tab: L, key: `cur.gold.${i}`, where: 'Gold ruler', what: `${CSTEP_NAMES[i + 1]} from pile`, from: plain(b.gold?.[i]), to: plain(a.gold?.[i]) })
@@ -280,8 +280,17 @@ export function stepChanges (before: Partial<Settings>, after: Partial<Settings>
   }
   if (!same(b.edits, a.edits)) out.push({ tab: 'rules', key: `edits:${ids(b.edits, a.edits)}`, where: 'Drop tiers', what: only('edits') })
   if (!same(b.rules, a.rules)) out.push({ tab: 'rules', key: `rules:${ids(b.rules, a.rules)}`, where: 'Your rules', what: only('rules') })
-  if (!same(b.moves, a.moves)) out.push({ tab: 'prices', key: 'moves', where: 'Prices', what: only('moves') })
-  if (!same(b.locks, a.locks)) out.push({ tab: 'prices', key: 'locks', where: 'Prices', what: only('locks') })
+  if (!same(b.moves, a.moves)) {
+    const k = (m: { type: string, base: string, to?: unknown }) => `${m.type}|${m.base}|${String(m.to)}`
+    const was = new Set(b.moves.map(k))
+    const now = new Set(a.moves.map(k))
+    const moved = [...new Set([...was, ...now])].filter(x => was.has(x) !== now.has(x)).sort().join(',')
+    out.push({ tab: 'prices', key: `moves:${moved}`, where: 'Prices', what: only('moves') })
+  }
+  if (!same(b.locks, a.locks)) {
+    const { added, removed } = setDiff(b.locks, a.locks)
+    out.push({ tab: 'prices', key: `locks:${[...added, ...removed].sort().join(',')}`, where: 'Prices', what: only('locks') })
+  }
   if (!same(b.presets, a.presets)) {
     try {
       out.push(...presetChanges(b.presets, a.presets))
@@ -311,16 +320,20 @@ export interface HistoryRow {
 // Steps this close together that move the same control fold into one row.
 export const FOLD_GAP_MS = 10 * 60_000
 
-const signature = (cs: Change[]) => cs.map(c => c.key).sort().join('|')
+// Only steps whose every line is a value from → to fold: words like "Small
+// turned off" or a look would lose the earlier steps' part.
+const signature = (cs: Change[]) => cs.length && cs.every(c => c.from != null && c.to != null) ? cs.map(c => c.key).sort().join('|') : ''
 
-// The rows, newest first. `changesOf` is cached by the caller (a step never changes).
-export function historyRows (steps: readonly TimelineStep[], changesOf: (s: TimelineStep) => Change[]): HistoryRow[] {
+// The rows, newest first. `changesOf` is cached by the caller (a step never
+// changes). `at` is how many steps are in effect: a row never spans it, so
+// each row is either all in effect or all undone.
+export function historyRows (steps: readonly TimelineStep[], changesOf: (s: TimelineStep) => Change[], at = steps.length): HistoryRow[] {
   const groups: Array<{ n: number, first: number, ts: number, firstTs: number, sig: string, all: Change[][] }> = []
   steps.forEach((step, n) => {
     const cs = changesOf(step)
     const sig = signature(cs)
     const last = groups[groups.length - 1]
-    if (last && cs.length && sig === last.sig && step.ts - last.ts <= FOLD_GAP_MS) {
+    if (last && sig && sig === last.sig && n !== at && step.ts - last.ts <= FOLD_GAP_MS) {
       last.n = n
       last.ts = step.ts
       last.all.push(cs)

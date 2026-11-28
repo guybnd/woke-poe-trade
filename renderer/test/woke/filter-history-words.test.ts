@@ -84,7 +84,32 @@ describe('historyRows', () => {
   })
 })
 
+describe('historyRows keeps apart what folding would hide', () => {
+  const step = (b: Settings, a: Settings, ts: number): TimelineStep => ({ ts, label: 'x', before: { presets: b.presets }, after: { presets: a.presets } })
+  const changesOf = (s: TimelineStep) => stepChanges(s.before, s.after)
+  const off = (xs: number[]) => settings(p => { p.currency.offBy = { all: xs } })
+  const at = (line: number) => settings(p => { p.currency.line = line })
+
+  it('never folds lines without a from and to', () => {
+    const rows = historyRows([step(off([]), off([1]), 1000), step(off([1]), off([1, 2]), 2000)], changesOf)
+    expect(rows).toHaveLength(2)
+  })
+
+  it('never folds across the undo point', () => {
+    const steps = [step(at(0.2), at(0.3), 1000), step(at(0.3), at(0.4), 2000), step(at(0.4), at(0.5), 3000)]
+    const rows = historyRows(steps, changesOf, 2)
+    expect(rows.map(r => [r.first, r.n])).toEqual([[2, 2], [0, 1]])
+  })
+})
+
 describe('observe merges a quick burst on one control', () => {
+  it('never merges two clicks on a list of steps turned off', () => {
+    const off = (xs: number[]) => settings(p => { p.currency.offBy = { all: xs } })
+    let t = observe(emptyTimeline(), off([1, 3]), off([3]), 'a', 1000)
+    t = observe(t, off([3]), off([2, 3]), 'b', 1100)
+    expect(t.steps).toHaveLength(2)
+  })
+
   const at = (line: number) => settings(p => { p.currency.line = line })
 
   it('grows the last step within the burst time', () => {

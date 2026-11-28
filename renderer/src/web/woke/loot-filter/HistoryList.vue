@@ -7,17 +7,17 @@
       <WButton size="sm" variant="ghost" icon="fas fa-undo" :disabled="at === 0" title="Undo" data-tip-keys="Ctrl + Z" @click="store.undoStep()">Undo</WButton>
       <WButton size="sm" variant="ghost" icon="fas fa-redo" :disabled="at >= stepCount" title="Redo" data-tip-keys="Ctrl + Y" @click="store.redoStep()">Redo</WButton>
     </div>
-    <div v-if="tabCounts.length > 1" class="flex flex-wrap gap-1" :class="$style.chips">
+    <div v-if="tabCounts.length > 1 || only" class="flex flex-wrap gap-1" :class="$style.chips">
       <WChip clickable :active="only === null" @click="only = null">All</WChip>
       <WChip v-for="t in tabCounts" :key="t.key" clickable :active="only === t.key" :data-history-tab="t.key" @click="only = only === t.key ? null : t.key">
         <i :class="t.icon" aria-hidden="true" /> {{ t.label }} <span class="w-faint">{{ t.count }}</span>
       </WChip>
     </div>
-    <template v-for="r in shown" :key="r.n">
-      <div :class="[$style.row, { [$style.undone]: r.n >= at, [$style.open]: open === r.n }]" data-history-row @click="toggle(r.n)">
+    <template v-for="r in shown" :key="r.firstTs + ':' + r.first">
+      <div :class="[$style.row, { [$style.undone]: r.n >= at, [$style.open]: open === r.firstTs }]" data-history-row @click="toggle(r.firstTs)">
         <i :class="iconOf(r)" class="w-dim" :title="tabLabel(r)" aria-hidden="true" />
-        <span class="grow min-w-0 w-trunc" :title="rowSummary(r)" role="button" tabindex="0" :aria-expanded="open === r.n"
-          @keydown.enter.prevent="toggle(r.n)" @keydown.space.prevent="toggle(r.n)">
+        <span class="grow min-w-0 w-trunc" :title="rowSummary(r)" role="button" tabindex="0" :aria-expanded="open === r.firstTs"
+          @keydown.enter.prevent="toggle(r.firstTs)" @keydown.space.prevent="toggle(r.firstTs)">
           <template v-if="r.changes[0]">
             <span v-if="r.changes[0].item" v-item-tip="itemRefFromName(r.changes[0].item)" class="w-dim">{{ r.changes[0].where }}</span>
             <span v-else class="w-dim">{{ r.changes[0].where }}</span>
@@ -35,7 +35,7 @@
         <WButton v-if="r.n + 1 !== at" size="sm" variant="ghost" title="Your settings go back to right after this change. You can redo." @click.stop="store.goToStep(r.n + 1)">{{ r.n >= at ? 'Redo to here' : 'Back to here' }}</WButton>
         <WButton v-else size="sm" variant="ghost" :title="r.count > 1 ? `Undoes the last of these ${r.count}` : undefined" @click.stop="store.undoStep()">Undo</WButton>
       </div>
-      <div v-if="open === r.n" :class="$style.detail" data-history-detail>
+      <div v-if="open === r.firstTs" :class="$style.detail" data-history-detail>
         <div v-for="c in r.changes" :key="c.key" :class="$style.line">
           <span v-if="c.item" v-item-tip="itemRefFromName(c.item)" class="w-dim">{{ c.where }}</span>
           <span v-else class="w-dim">{{ c.where }}</span>
@@ -52,7 +52,7 @@
         <div v-if="r.count > 1" class="w-faint text-xs" :class="$style.line">{{ r.count }} changes from {{ clock(r.firstTs) }} to {{ clock(r.ts) }}. Back to here goes to after the last one.</div>
       </div>
     </template>
-    <div v-if="!shown.length" class="w-faint text-sm" :class="$style.line">No changes on this tab yet.</div>
+    <div v-if="!shown.length" class="w-faint text-sm" :class="$style.empty">{{ rows.length ? 'No changes on this tab yet.' : 'No changes yet. Each change you make shows here, with what it moved.' }}</div>
   </div>
 </template>
 
@@ -85,7 +85,7 @@ function changesOf (step: TimelineStep): Change[] {
   return cs
 }
 
-const rows = computed(() => historyRows(props.store.timeline.value.steps, changesOf))
+const rows = computed(() => historyRows(props.store.timeline.value.steps, changesOf, at.value))
 const only = ref<HistoryTab | null>(null)
 const open = ref<number | null>(null)
 
@@ -94,8 +94,9 @@ const tabCounts = computed(() => HISTORY_TABS
   .filter(t => t.count))
 const shown = computed(() => only.value ? rows.value.filter(r => r.tabs.includes(only.value!)) : rows.value)
 
-function toggle (n: number) {
-  open.value = open.value === n ? null : n
+// The open row, by its oldest step's time: indexes shift when old steps drop off.
+function toggle (ts: number) {
+  open.value = open.value === ts ? null : ts
 }
 function iconOf (r: HistoryRow) {
   return HISTORY_TABS.find(t => t.key === r.tabs[0])?.icon ?? 'fas fa-history'
@@ -148,6 +149,9 @@ function timeTitle (r: HistoryRow) {
   padding: 4px var(--w-pad) 8px calc(var(--w-pad) + 24px);
   border-bottom: 1px solid var(--w-line-soft);
   background: rgba(0, 0, 0, 0.18);
+}
+.empty {
+  padding: 4px var(--w-pad);
 }
 .line {
   padding: 2px 0;
