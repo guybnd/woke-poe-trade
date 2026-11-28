@@ -2,7 +2,7 @@
 import fs from 'fs'
 import path from 'path'
 import { describe, it, expect } from 'vitest'
-import { familyOf, foldFamilies } from '@/web/woke/loot-filter/base-families'
+import { familyIndex, familyOf, foldFamilies, matchFamilies } from '@/web/woke/loot-filter/base-families'
 
 const icons = new Map<string, string>()
 for (const line of fs.readFileSync(path.resolve(__dirname, '../../public/data/en/items.ndjson'), 'utf8').split('\n')) {
@@ -36,5 +36,15 @@ describe('base families', () => {
     ])
     // Two aren't folded.
     expect(foldFamilies(['T1', 'B', 'T2'], f).every(r => r.kind === 'base')).toBe(true)
+  })
+
+  it('the add box offers a family by its name or by a base of it', () => {
+    const f = (b: string) => familyOf(b, icons.get(b))
+    const index = familyIndex([...icons.keys()], f)
+    expect(index.get('talisman')!.bases).toContain('Mandible Talisman')
+    expect(matchFamilies('talis', [], index, f).map(x => x.id)).toEqual(['talisman'])
+    expect(matchFamilies('mandible', ['Mandible Talisman'], index, f).map(x => x.id)).toEqual(['talisman'])
+    expect(matchFamilies('regalia', ['Vaal Regalia'], index, f)).toEqual([])
+    expect(matchFamilies('t', [], index, f)).toEqual([])
   })
 })

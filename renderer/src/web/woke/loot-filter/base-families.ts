@@ -55,3 +55,27 @@ export function foldFamilies (bases: readonly string[], fam: (b: string) => Fami
   }
   return out
 }
+
+// Every family's bases among `bases`, in their order.
+export function familyIndex (bases: readonly string[], fam: (b: string) => Family | null): Map<string, { family: Family, bases: string[] }> {
+  const out = new Map<string, { family: Family, bases: string[] }>()
+  for (const b of bases) {
+    const f = fam(b)
+    if (!f) continue
+    const g = out.get(f.id)
+    if (g) g.bases.push(b); else out.set(f.id, { family: f, bases: [b] })
+  }
+  return out
+}
+
+// The add box: families whose name matches the text, then those of bases it
+// found (typing "Mandible" offers all Talismans too).
+export function matchFamilies (query: string, found: readonly string[], index: Map<string, { family: Family, bases: string[] }>, fam: (b: string) => Family | null, limit = 2): Family[] {
+  const q = query.trim().toLowerCase()
+  if (q.length < 2) return []
+  const out: Family[] = []
+  const push = (f: Family | null | undefined) => { if (f && index.has(f.id) && !out.some(x => x.id === f.id)) out.push(f) }
+  for (const { family } of index.values()) if (family.label.toLowerCase().includes(q)) push(family)
+  for (const b of found) push(fam(b))
+  return out.slice(0, limit)
+}

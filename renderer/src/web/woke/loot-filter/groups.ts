@@ -116,11 +116,8 @@ export interface AddResult {
   caughtBy: FilterBlock | null
 }
 
-// The add-item box: bases matching the text, best first, without what the tier
-// already lists. `extra` is every base in the game, for ones no rule names yet.
-export function addSearch (doc: FilterDoc, type: string, tier: string, query: string, extra: string[] = [], limit = 8): AddResult[] {
-  const q = query.trim().toLowerCase()
-  if (q.length < 2) return []
+// Where each base the test matches sits now, for adding it to this tier.
+function addScan (doc: FilterDoc, type: string, tier: string, match: (v: string) => boolean) {
   const here = doc.blocks.filter(b => b.type === type && b.tier === tier)
   const inTier = new Set(here.flatMap(b => b.conditions.filter(c => c.key === 'BaseType' && c.op === '==').flatMap(c => c.values)))
   const live = here.filter(b => !b.disabled)
@@ -134,13 +131,31 @@ export function addSearch (doc: FilterDoc, type: string, tier: string, query: st
     for (const c of b.conditions) {
       if (c.key !== 'BaseType' || c.op !== '==') continue
       for (const v of c.values) {
-        if (inTier.has(v) || !v.toLowerCase().includes(q)) continue
+        if (inTier.has(v) || !match(v)) continue
         if (!first.has(v)) first.set(v, b)
         const list = b.type === type ? inGroup : b.type?.startsWith('woke->') ? editors : elsewhere
         if (!list.has(v)) list.set(v, b)
       }
     }
   }
+  const result = (base: string): AddResult => {
+    const earliest = first.get(base)
+    return {
+      base,
+      block: inGroup.get(base) ?? elsewhere.get(base) ?? editors.get(base) ?? null,
+      sameGroup: inGroup.has(base),
+      caughtBy: earliest && earliest.index < firstHere ? earliest : null
+    }
+  }
+  return { inTier, first, result }
+}
+
+// The add-item box: bases matching the text, best first, without what the tier
+// already lists. `extra` is every base in the game, for ones no rule names yet.
+export function addSearch (doc: FilterDoc, type: string, tier: string, query: string, extra: string[] = [], limit = 8): AddResult[] {
+  const q = query.trim().toLowerCase()
+  if (q.length < 2) return []
+  const { inTier, first, result } = addScan(doc, type, tier, v => v.toLowerCase().includes(q))
   const names = new Set<string>(first.keys())
   for (const v of extra) if (!inTier.has(v) && v.toLowerCase().includes(q)) names.add(v)
   const score = (name: string) => {
@@ -152,15 +167,14 @@ export function addSearch (doc: FilterDoc, type: string, tier: string, query: st
   return [...names]
     .sort((a, b) => score(a) - score(b) || Number(!first.has(a)) - Number(!first.has(b)) || a.localeCompare(b))
     .slice(0, limit)
-    .map(base => {
-      const earliest = first.get(base)
-      return {
-        base,
-        block: inGroup.get(base) ?? elsewhere.get(base) ?? editors.get(base) ?? null,
-        sameGroup: inGroup.has(base),
-        caughtBy: earliest && earliest.index < firstHere ? earliest : null
-      }
-    })
+    .map(result)
+}
+
+// The same for named bases (a whole family), leaving out what the tier lists.
+export function addResults (doc: FilterDoc, type: string, tier: string, names: readonly string[]): AddResult[] {
+  const want = new Set(names)
+  const { inTier, result } = addScan(doc, type, tier, v => want.has(v))
+  return names.filter(n => !inTier.has(n)).map(result)
 }
 
 // Clicking a chip: a plain click picks or unpicks it, shift picks the run from
