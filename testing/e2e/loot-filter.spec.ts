@@ -1455,9 +1455,10 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   const page = overlay.page
   await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+F')
   await overlay.copyItem('items/rare-unid-gloves.txt', 'Alt + F')
-  await expect(page.getByText('Item score')).toBeVisible()
+  await expect(page.getByText('Filter rule for this item')).toBeVisible()
   await expect(page.getByText('Total')).toBeVisible()
-  // The answer first, a ruler with the score's needle, one row of ranks, no NeverSink view.
+  // Guy's R1: the rule path (Rare gear › the base), the answer, a ruler with the score's needle, no NeverSink view.
+  await expect(page.locator('[data-score-level="base"]')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.locator('[data-score-answer]')).toContainText(/Shows|Hidden/)
   await expect(page.locator('[data-score-ruler] [data-score-needle]')).toBeVisible()
   await expect(page.getByRole('button', { name: /NeverSink view/ })).toHaveCount(0)
@@ -1466,29 +1467,38 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   await page.locator('[data-score-look]').hover()
   await expect(page.locator('[data-score-look-why]')).toContainText('Background')
   await overlay.snap('score card, why this look')
-  // A row's ‹ › changes it for every rare, says so, and undoes.
-  const tier = page.locator('[data-score-term="t4"]')
-  await tier.hover()
-  await tier.locator('[data-score-raise]').click()
-  await expect(page.locator('[data-score-changed]')).toContainText('every rare')
-  await overlay.snap('score card, a row raised')
-  await page.locator('[data-score-changed]').getByRole('button', { name: 'Undo' }).click()
-  await expect(page.locator('[data-score-changed]')).toHaveCount(0)
-  // Clicking a row opens its whole section; raising a tier past the next pushes that one up too.
+  // Show it on the base: Always hide hides it and says what decides.
+  await page.locator('[data-score-mode-off]').click()
+  await expect(page.locator('[data-score-answer]')).toContainText('Hidden')
+  await expect(page.locator('[data-score-decides]')).toContainText('Always hide')
+  await overlay.snap('score card, base set to Always hide')
+  await page.locator('[data-score-mode-auto]').click()
+  await expect(page.locator('[data-score-decides]')).toHaveCount(0)
+  // A score row opens to all its options; on the base level they can't be changed.
   await page.locator('[data-score-open="t4"]').click()
   const sec = page.locator('[data-score-section]')
   await expect(sec.locator('[data-score-section-row="t5"]')).toBeVisible()
-  for (let i = 0; i < 3; i++) await sec.locator('[data-score-section-row="t4"]').getByRole('button', { name: /^Raise/ }).click()
+  await expect(sec.getByRole('button', { name: /^Raise/ })).toHaveCount(0)
+  // On Rare gear ‹ › changes it for every rare, says so, and undoes; raising a tier past the next pushes that one up too.
+  await page.locator('[data-score-level="all"]').click()
+  await expect(page.locator('[data-score-line]')).toBeVisible()
+  await sec.locator('[data-score-section-row="t4"]').getByRole('button', { name: /^Raise/ }).click()
+  await expect(page.locator('[data-score-changed]')).toContainText('every rare')
+  for (let i = 0; i < 2; i++) await sec.locator('[data-score-section-row="t4"]').getByRole('button', { name: /^Raise/ }).click()
   await expect(page.locator('[data-score-changed]')).toContainText('Tier 5')
   await overlay.snap('score card, drop tiers open')
   await page.locator('[data-score-changed]').getByRole('button', { name: 'Undo' }).click()
+  await expect(page.locator('[data-score-changed]')).toHaveCount(0)
+  // Back on the base: its rank.
+  await page.locator('[data-score-level="base"]').click()
   await page.locator('[data-score-rank="rj"]').click()
   await expect(page.locator('[data-score-rank="rj"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('[data-score-base-rank]')).toContainText("Don't care")
   await expect(page.locator('[data-score-rank-reset]')).toBeVisible()
   await overlay.snap('score card, base set to Don\'t care')
 
-  // Tune opens the Rare weights tab.
-  await page.getByRole('button', { name: /Tune/ }).click()
+  // Go to rule opens the Rare weights tab.
+  await page.locator('[data-score-go]').click()
   await expect(page.getByText(/\d+ of \d+ shown/).first()).toBeVisible()
   await expect(page.getByRole('button', { name: /^Line: / })).toBeVisible()
   // Dragging the line only previews; the setting changes on release.

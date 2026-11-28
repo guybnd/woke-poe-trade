@@ -730,6 +730,10 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[], ids: IdGrou
     }
   }
 
+  // A base set to Always hide (Guy's R1 card): its rares hide before any
+  // score rule sees them.
+  const baseOff = Object.keys(w.bases ?? {}).filter(n => w.bases[n] === 'off')
+  if (baseOff.length) emit([c('Rarity', '', ['Rare']), c('BaseType', '==', baseOff)], 0, 'always hide: these bases')
   // Identified gear: its mods' points over the rarity's own, loudest step
   // first. A rare that reaches no step hides with the rest at the end; magic
   // goes on to the base rules below (its base can still make it worth it).
@@ -765,21 +769,24 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[], ids: IdGrou
   const ss = splits(bases, m)
   // Pinned rows ("always show"): what reaches a Hide with one of them shows
   // Small instead (louder ones were shown above already).
-  const pins = w.always.flatMap(k => pinConds(k, bases).map(conds => ({ k, conds })))
+  const pins: Array<{ k: WeightKey | null, conds: FilterCondition[], label: string }> = w.always.flatMap(k => pinConds(k, bases).map(conds => ({ k, conds, label: WEIGHT_LABEL[k].toLowerCase() })))
+  // A base set to Always show (Guy's R1 card): its rares pin like a row.
+  const baseAlways = Object.keys(w.bases ?? {}).filter(n => w.bases[n] === 'always')
+  if (baseAlways.length) pins.push({ k: null, conds: [c('Rarity', '', ['Rare']), c('BaseType', '==', baseAlways)], label: 'this base' })
   const bare = new Set<WeightKey>()
   const hide = (pre: FilterCondition[], note: string) => {
     const plain = pre.some(x => x.key === 'Corrupted' && x.values[0] === 'False') && pre.some(x => x.key === 'Mirrored' && x.values[0] === 'False') && !pre.some(x => x.key === 'Identified' && x.values[0] === 'True')
-    const always = (k: WeightKey) => `${note ? `${note}, ` : ''}always: ${WEIGHT_LABEL[k].toLowerCase()}`
+    const always = (label: string) => `${note ? `${note}, ` : ''}always: ${label}`
     for (const p of pins) {
       // A mark's pin after its own rules (below) already took what reaches here.
-      if (plain && bare.has(p.k)) continue
+      if (plain && p.k && bare.has(p.k)) continue
       // Only where the pin can meet this Hide (a 5-link pin never meets a
       // 6-link Hide, an exotic base never a plain base's list).
       const conds = joinConds(pre, p.conds)
       if (!conds) continue
       // Everything here has it: Small instead of the Hide.
-      if (JSON.stringify(conds) === JSON.stringify(pre)) { emit(pre, 1, always(p.k)); return }
-      emit(conds, 1, always(p.k))
+      if (JSON.stringify(conds) === JSON.stringify(pre)) { emit(pre, 1, always(p.label)); return }
+      emit(conds, 1, always(p.label))
     }
     emit(pre, 0, note)
   }
