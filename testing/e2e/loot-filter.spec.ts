@@ -1091,6 +1091,8 @@ test('a window never resized keeps a short tab short', async ({ overlay, fakeApp
   const page = overlay.page
   await page.getByRole('tab', { name: /^Build/ }).click()
   await expect(page.locator('[data-filter-build-tab]')).toBeVisible()
+  // The build section, the same as on Loot › Levelling.
+  await expect(page.locator('[data-filter-build-tab] [data-levelling-build]')).toBeVisible()
   expect(await buildGap(page)).toBeLessThan(4)
   const panel = (await page.locator('[data-w-panel]').filter({ has: page.locator('[data-filter-build-tab]') }).first().boundingBox())!
   expect(panel.height).toBeLessThan(500)
@@ -1645,6 +1647,8 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   const wisdom = page.locator('[data-levelling-item="Scroll of Wisdom"]')
   await expect(wisdom).toContainText('Normal')
   await expect(wisdom.getByRole('checkbox')).toBeChecked()
+  // The rules below maps as an act timeline, the build section under it.
+  await expect(page.locator('[data-levelling-timeline] [data-levelling-rule="Quest-like items"]')).toBeVisible()
   await gate.getByRole('button', { name: 'Maps only' }).click()
   await expect(page.locator('[data-levelling-on]')).toBeDisabled()
   await overlay.snap('loot tab, levelling')

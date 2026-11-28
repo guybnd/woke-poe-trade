@@ -290,28 +290,7 @@
 
     <!-- build rules -->
     <div v-else-if="tab === 'build'" :class="$style.changes" class="w-scroll" data-filter-build-tab>
-      <WEmpty v-if="!buildInput" icon="fas fa-user-cog">
-        No active build. Pick one in PoB builds. <WInfo text="Press Use build there, and its gems, link colours and uniques can be added to your filter here." />
-      </WEmpty>
-      <template v-else>
-        <div class="w-dim text-sm flex items-center gap-2" :class="$style.buildIntro">
-          <span>Rules for <span class="w-accent">{{ buildInput.buildName }}</span></span>
-          <WInfo text="Rules for your active build's gems, link colours and uniques.
-- They go at the top of your saved copy, ahead of NeverSink's.
-- Restyle them under **Rules › Your build**." />
-        </div>
-        <div v-for="r in buildRows" :key="r.key" :class="$style.changeRow">
-          <WChip clickable :active="config.buildRules[r.key]" :title="config.buildRules[r.key] ? 'Turn off' : 'Turn on'" @click="config.buildRules[r.key] = !config.buildRules[r.key]">
-            {{ config.buildRules[r.key] ? 'On' : 'Off' }}
-          </WChip>
-          <span class="grow min-w-0 flex flex-col">
-            <span>{{ r.label }}</span>
-            <span class="w-dim text-xs w-trunc" :title="r.detail">{{ r.detail }}</span>
-          </span>
-          <LabelPreview v-if="r.block" :text="r.sample" :actions="r.block.actions" :visibility="r.block.visibility" />
-          <span v-else-if="config.buildRules[r.key]" class="w-faint text-xs">nothing to add</span>
-        </div>
-      </template>
+      <BuildSection :config="config" :store="store" :class="$style.buildBody" />
     </div>
 
     <!-- changes -->
@@ -404,6 +383,7 @@ import ProfileSwitcher from './ProfileSwitcher.vue'
 import { useWindowKeys } from '../ui/window-keys'
 import { copyText } from '../ui/copy'
 import LabelPreview from './LabelPreview.vue'
+import BuildSection from './BuildSection.vue'
 import ItemSearchField from './ItemSearchField.vue'
 import type { SearchItem } from './item-search'
 import { itemCatalog } from './item-search'
@@ -463,9 +443,6 @@ import type { AddResult } from './groups'
 import { alsoShownBy, buildTree, byPrice, groupName, pickBases } from './groups'
 import type { GroupNode, TierNode } from './groups'
 import { hostRequest } from '../shared/host'
-import { BUILD_RULE_TYPE, LEVELLING_BELOW, WEAPON_CLASSES } from './build-rules'
-import type { BuildRuleSwitches } from './build-rules'
-import { COLOUR_NAME } from '../pob-builds/build-model'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -568,29 +545,6 @@ const tabOptions = computed(() => [
   // Price moves are changes to your filter too.
   { value: 'changes', label: 'Changes', count: props.config.edits.length + activePriceMoves.value }
 ])
-
-// ---- build rules ----
-
-const buildInput = computed(() => props.store.buildInput.value)
-
-function buildBlock (tier: string) {
-  return props.store.doc.value?.blocks.find(b => b.type === BUILD_RULE_TYPE && b.tier === tier) ?? null
-}
-
-const buildRows = computed(() => {
-  const input = buildInput.value
-  if (!input) return []
-  const list = (xs: string[]) => xs.length > 4 ? `${xs.slice(0, 4).join(', ')} +${xs.length - 4}` : xs.join(', ')
-  const coloured = input.linkColours.filter(c => c !== 'w')
-  const rows: Array<{ key: keyof BuildRuleSwitches, label: string, detail: string, tier: string, sample: string }> = [
-    { key: 'gems', label: 'Show my gems', tier: 'gems', sample: input.gems[0] ?? 'Gem', detail: `${input.gems.length} gems, while levelling (area level below ${LEVELLING_BELOW})` },
-    { key: 'links', label: 'Linked items in my colours', tier: coloured.length >= 4 ? 'links4' : 'links3', sample: 'Linked item', detail: coloured.length >= 2 ? `${coloured.map(c => COLOUR_NAME[c]).join('-')} main link, 3- and 4-links, while levelling` : 'The main link needs 2+ coloured gems' },
-    { key: 'uniques', label: 'My uniques', tier: 'uniques', sample: input.uniqueBases[0] ?? 'Unique', detail: input.uniqueBases.length ? `Bases: ${list(input.uniqueBases)}` : 'No uniques in the build' },
-    { key: 'bases', label: 'My rare bases', tier: 'bases', sample: input.rareBases[0] ?? 'Rare', detail: input.rareBases.length ? list(input.rareBases) : 'No rare items in the item set for your level' },
-    { key: 'hideWeapons', label: 'Hide other weapon types while levelling', tier: 'otherweapons', sample: 'Other weapon', detail: input.weaponClasses.length ? `White and blue only; keeps ${input.weaponClasses.join(', ')} (${WEAPON_CLASSES.length - input.weaponClasses.length} types hidden)` : 'No weapon in the build' }
-  ]
-  return rows.map(r => ({ ...r, block: props.config.buildRules[r.key] ? buildBlock(r.tier) : null }))
-})
 
 // Online filters are keyed "online:<id>" in the picker; GitHub is "github",
 // our own filter "own".
@@ -1898,9 +1852,8 @@ function openFolder () {
   padding: 6px 0;
 }
 :global([data-w-sized]) .changes { max-height: none; }
-.buildIntro {
-  padding: 4px var(--w-pad) 8px;
-  max-width: 60rem;
+.buildBody {
+  padding-top: 4px;
 }
 .changeRow {
   display: flex;
