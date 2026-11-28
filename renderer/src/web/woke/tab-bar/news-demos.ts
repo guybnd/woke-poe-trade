@@ -47,6 +47,7 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-boss-uniques': { check: { name: 'Hale Negator', rarity: 'unique' }, spot: 'related' },
   'price-check-related-exalts': { check: { name: 'Exalted Orb' }, spot: 'related' },
   // A Breach unique and its blessed upgrade.
+  'price-check-related-upgrades': { check: { name: "Xoph's Inception", rarity: 'unique' }, spot: 'related' },
   // A Timeless jewel: its conquerors' keystones in the side list.
   'price-check-conquest-keystones': { check: { name: 'Elegant Hubris', rarity: 'unique' }, spot: 'related' },
   // A Shaper's Exalted Orb: its family and two fragment groups, folded to fit.
@@ -55,6 +56,7 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'price-check-unique-foulborn': { check: { name: 'Carcass Jack', rarity: 'unique' }, spot: 'foulborn' },
   // A unique: its drop tier (and its loot filter tier, with a filter loaded) heads the side list.
   'price-check-unique-filter-tier': { check: { name: 'Carcass Jack', rarity: 'unique' }, spot: 'unique-tier' },
+  'price-check-unique-recipe': { check: { name: 'The Will of Uul-Netol', rarity: 'unique' }, spot: 'related' },
   'div-card-map-chance': { search: 'Strand Map' },
   // A rolled jewel, unidentified: the unid price card (nothing searched until a click).
   'search-keys-list': { search: 'keys' },

@@ -38,6 +38,8 @@ export const NEWS_SPOTS: Record<string, string> = {
   'loot-filter-league-always': 'league-always',
   'loot-filter-jewels-no-price': 'jewels-no-price',
   'loot-filter-map-looks': 'map-looks',
+  'listed-still-cheapest': 'still-cheapest',
+  'net-worth-listed': 'stale',
   'net-worth-worth-selling': 'worth-selling',
   'net-worth-rename-runs': 'past-runs',
   'atlas-results-from-runs': 'results',
