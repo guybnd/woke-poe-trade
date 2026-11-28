@@ -1,11 +1,14 @@
 <template>
   <div :class="$style.wrap" class="w-scroll">
-    <div :class="$style.top">
+    <div :class="$style.top" data-goto-spot="loot-on">
       <WToggle v-model="c.on">{{ kind === 'currency' ? 'Prices decide endgame currency' : `Prices decide endgame currency and ${KIND_NAME[kind]}` }}</WToggle>
-      <span :class="$style.beta">Beta</span>
       <WInfo :text="INFO" />
       <span class="w-faint text-xs">{{ statusText }}</span>
       <span class="flex-1" />
+      <span v-if="experimentalUnlocked || config.ownBase" class="flex items-center gap-2" data-loot-own-base>
+        <WToggle :model-value="config.ownBase === true" @update:model-value="config.ownBase = $event">Test: only our rules</WToggle>
+        <WInfo :text="'For testing the filter without NeverSink: your Loot, Equipment and own rules go onto a short base of ours.\n- Plain and magic gear hides in maps.\n- An item none of our rules knows shows pink.'" />
+      </span>
       <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" title="Line, step prices and category price bias back to the start; your item edits stay" @click="reset">Defaults</WButton>
     </div>
 
@@ -213,6 +216,7 @@ import { CHASE_LOOKS, chaseLookOf } from './unique-classes'
 import { toggleNotAvg } from './currency-settings'
 import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, fixedOf, sectionMode, sizeCutNow, stepStarts, stepsOffIn } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
+import { experimentalUnlocked } from '../personal'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { loadOwnTables, ownTables } from './own-lists'
@@ -616,13 +620,6 @@ function chaosText (v: number): string {
 }
 :global([data-w-sized]) .wrap { max-height: none; }
 .top, .tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.beta {
-  font-size: var(--w-fs-xs);
-  color: var(--w-dim);
-  border: 1px solid var(--w-line);
-  border-radius: var(--w-r-sm);
-  padding: 0 4px;
-}
 .search {
   flex: 0 1 12rem;
   background: var(--w-panel-2);
