@@ -3,7 +3,8 @@
 // under their own category"). Abyss and plain jewels get folds on the same
 // steps. poe.ninja prices neither by item level or rarity (the only things a
 // filter sees on an unidentified jewel), so every row starts from a guess
-// (est.) near NeverSink's look and you set its step or price by hand. Cluster
+// (est.) and you set its step or price by hand. Corrupted ones start loud,
+// as NeverSink shows them; plain low rolls start under the line. Cluster
 // jewels keep their own priced band (ClusterPriceBand).
 import type { LootCategory } from './fragment-classes'
 import type { FilterCondition } from './parse'
@@ -40,9 +41,11 @@ const ilvl = (op: string, n: number) => cnd('ItemLevel', op, [String(n)])
 
 // The item level rows of a rarity never overlap. Corrupted 5-mod abyss
 // jewels and corrupted implicits are on top of them: the louder row wins.
-// Guesses at the default steps: 5 Decent, 1.5 Normal, 0.4 Small, 0.1 hidden.
+// Guesses at the default steps: 20 Big, 5 Decent, 1.5 Normal, 0.4 Small, 0.1 hidden.
 export const JEWEL_ROWS: JewelRow[] = [
-  { cat: 'jewabyss', name: 'Rare abyss jewel, corrupted, 5 mods', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 5, conds: [RARE, cnd('Corrupted', '', ['True']), cnd('HasExplicitMod', '>=', ['a', 'e', 'i', 'o', 'u', 'y'], 5)] },
+  { cat: 'jewabyss', name: 'Rare abyss jewel, corrupted, 5 mods', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 20, conds: [RARE, cnd('Corrupted', '', ['True']), cnd('HasExplicitMod', '>=', ['a', 'e', 'i', 'o', 'u', 'y'], 5)] },
+  { cat: 'jewabyss', name: 'Rare abyss jewel, corrupted', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 5, conds: [RARE, cnd('Corrupted', '', ['True'])] },
+  { cat: 'jewabyss', name: 'Abyss jewel with a corrupted implicit', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 1.5, conds: [cnd('Rarity', '', ['Magic', 'Rare']), cnd('CorruptedMods', '>=', ['1'])] },
   { cat: 'jewabyss', name: 'Rare abyss jewel, item level 86+', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 1.5, conds: [RARE, ilvl('>=', 86)] },
   { cat: 'jewabyss', name: 'Rare abyss jewel, item level 82-85', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 0.4, conds: [RARE, ilvl('>=', 82), ilvl('<=', 85)] },
   { cat: 'jewabyss', name: 'Rare abyss jewel, item level under 82', cls: 'Abyss Jewels', bts: ABYSS_BASES, guess: 0.1, conds: [RARE, ilvl('<', 82)] },

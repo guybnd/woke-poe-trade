@@ -5,7 +5,6 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { applyLeagueOff } from '@/web/woke/loot-filter/league-classes'
 import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency, kindOf } from '@/web/woke/loot-filter/currency-weights'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { leaguePile } from '@/web/woke/loot-filter/league-pile'
@@ -17,18 +16,15 @@ const item = (baseType: string, itemClass: string, areaLevel = 83): ItemFacts =>
 } as ItemFacts)
 
 describe('league items on the Loot tab', () => {
-  it('hides a mechanic set Off, in maps only', () => {
+  it('hides a mechanic set Off, but not a row set by hand in it', () => {
     const doc = parseFilter(REGULAR)
-    expect(applyLeagueOff(doc, { ...defaultCurrency(), on: true, catMode: { lgexped: 'off' } })).toHaveLength(1)
+    const cfg = { ...defaultCurrency(), on: true, catMode: { lgexped: 'off' as const, lgheist: 'off' as const }, items: { 'Blueprint, enchanted': { step: 4 as const } } }
+    applyCurrency(doc, cfg, () => null)
     expect(matchItem(doc, item('Expedition Logbook', 'Expedition Logbooks')).visibility).toBe('Hide')
-    expect(matchItem(doc, item('Expedition Logbook', 'Expedition Logbooks', 60)).visibility).toBe('Show')
     expect(matchItem(doc, item('Chronicle of Atzoatl', 'Misc Map Items')).visibility).toBe('Show')
+    const bp = { ...item('Blueprint: Bunker', 'Blueprints'), rarity: 'Rare', anyEnchantment: true } as ItemFacts
+    expect(matchItem(doc, bp).visibility).toBe('Show')
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
-  })
-
-  it('writes nothing while off or with every mechanic shown', () => {
-    expect(applyLeagueOff(parseFilter(REGULAR), { ...defaultCurrency(), catMode: { lgexped: 'off' } })).toEqual([])
-    expect(applyLeagueOff(parseFilter(REGULAR), { ...defaultCurrency(), on: true })).toEqual([])
   })
 
   it('has a fold per mechanic: priced Viscera and keys, a row per item level band for the rest', () => {

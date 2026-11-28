@@ -22,38 +22,6 @@ export const LEAGUE_SECTIONS: LeagueSection[] = [
   { id: 'lgmerc', name: 'Mercenary warrants', conds: [cond('BaseType', '==', ['Mercenary Warrant'])] }
 ]
 
-// A Hide rule at the top for each section set Off, in maps only.
-export function applyLeagueOff (doc: FilterDoc, cfg: Pick<CurrencySettings, 'on' | 'catMode'>): FilterBlock[] {
-  if (!cfg.on) return []
-  const out = LEAGUE_SECTIONS.filter(s => cfg.catMode[s.id] === 'off').map(s => ({
-    kind: 'block',
-    index: -1,
-    line: 1,
-    visibility: 'Hide',
-    disabled: false,
-    comment: `$type->${CURRENCY_TYPE} $tier->${s.id} woke: league items off: ${s.name}`,
-    type: CURRENCY_TYPE,
-    tier: s.id,
-    conditions: [cond('AreaLevel', '>=', ['68']), ...s.conds.map(x => ({ ...x, values: [...x.values] }))],
-    actions: [{ key: 'SetFontSize', args: ['18'] }, { key: 'DisableDropSound', args: ['True'] }],
-    continue: false,
-    section: '[[0051]] Currency weights (woke)',
-    subsection: '',
-    raw: [],
-    dirty: true,
-    added: true
-  }) as FilterBlock)
-  if (!out.length) return out
-  const first = doc.chunks.findIndex(ch => ch.kind === 'block')
-  const at = first < 0 ? doc.chunks.length : first
-  const line = doc.blocks[0]?.line ?? 1
-  out.forEach(b => { b.line = line })
-  doc.chunks.splice(at, 0, ...out)
-  doc.blocks.unshift(...out)
-  doc.blocks.forEach((b, i) => { b.index = i })
-  return out
-}
-
 // League items as Loot tab folds (Guy's League A, 2026-11-28: "sections like
 // currency"). Viscera, Reliquary keys and Chronicles are priced by poe.ninja;
 // the rest get a row per thing a filter can see on them (item level,
@@ -67,7 +35,7 @@ export const LEAGUE_CATEGORIES: LootCategory[] = [
   { id: 'lgkeys', name: 'Reliquary keys', art: 'Ancient Reliquary Key' },
   { id: 'lgult', name: 'Inscribed Ultimatums', art: 'Inscribed Ultimatum' },
   { id: 'lgsanctum', name: 'Sanctum research', art: 'Forbidden Tome' },
-  { id: 'lgcharts', name: 'Charts', art: 'Chart' },
+  { id: 'lgcharts', name: 'Charts', art: 'Coral Reef Chart' },
   { id: 'lgmerc', name: 'Mercenary warrants', art: 'Mercenary Warrant' }
 ]
 export const LEAGUE_IDS = new Set(LEAGUE_CATEGORIES.map(x => x.id))
@@ -115,7 +83,7 @@ export const LEAGUE_ROWS: LeagueRow[] = [
   { cat: 'lgult', name: 'Inscribed Ultimatum', cls: '', bts: ['Inscribed Ultimatum'], guess: 1.5, conds: [] },
   { cat: 'lgsanctum', name: 'Sanctum research, item level 83+', cls: 'Sanctum Research', bts: [], tip: 'Forbidden Tome', guess: 1.5, conds: [ilvl('>=', 83)] },
   { cat: 'lgsanctum', name: 'Sanctum research, item level under 83', cls: 'Sanctum Research', bts: [], tip: 'Forbidden Tome', guess: 0.4, conds: [ilvl('<', 83)] },
-  { cat: 'lgcharts', name: 'Chart', cls: 'Chart', bts: [], guess: 1.5, conds: [NOT_UNIQUE] },
+  { cat: 'lgcharts', name: 'Chart', cls: 'Chart', bts: [], tip: 'Coral Reef Chart', guess: 1.5, conds: [NOT_UNIQUE] },
   { cat: 'lgmerc', name: 'Mercenary Warrant', cls: '', bts: ['Mercenary Warrant'], guess: 1.5, conds: [] }
 ]
 

@@ -34,7 +34,7 @@ const KINDS: Array<{ id: string, w: number, make: Make }> = [
   { id: 'key', w: 2, make: r => { const b = one(KEYS, r); return { key: `key-${b}`, label: b, kind: null, tip: b, facts: facts(b, 'Vault Keys', 'Normal', 83), priced: b } } },
   { id: 'ultimatum', w: 2, make: () => ({ key: 'ult', label: 'Inscribed Ultimatum', kind: null, tip: 'Inscribed Ultimatum', facts: facts('Inscribed Ultimatum', 'Inscribed Ultimatum', 'Normal', 83), priced: 'Inscribed Ultimatum' }) },
   { id: 'sanctum', w: 2, make: r => { const n = one(ILVLS, r); return { key: `sa-${n}`, label: 'Forbidden Tome', kind: `ilvl ${n}`, tip: 'Forbidden Tome', facts: facts('Forbidden Tome', 'Sanctum Research', 'Normal', n), priced: `Sanctum research, ${band(n)}` } } },
-  { id: 'chart', w: 1, make: () => ({ key: 'chart', label: 'Chart', kind: null, tip: 'Chart', facts: facts('Chart', 'Chart', 'Normal', 83), priced: 'Chart' }) },
+  { id: 'chart', w: 1, make: () => ({ key: 'chart', label: 'Coral Reef Chart', kind: null, tip: 'Coral Reef Chart', facts: facts('Coral Reef Chart', 'Chart', 'Normal', 83), priced: 'Chart' }) },
   { id: 'warrant', w: 1, make: () => ({ key: 'merc', label: 'Mercenary Warrant', kind: null, tip: 'Mercenary Warrant', facts: facts('Mercenary Warrant', 'Mercenary Warrant', 'Normal', 83), priced: 'Mercenary Warrant' }) }
 ]
 const ALWAYS = ['logbook', 'contract', 'blueprint', 'enchanted', 'chronicle', 'viscera', 'key', 'ultimatum', 'sanctum']

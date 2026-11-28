@@ -18,7 +18,7 @@ const jewel = (base: string, cls: string, rarity: ItemFacts['rarity'], itemLevel
 describe('jewels on the Loot tab', () => {
   it('lists the Abyss and Jewels rows as the jewels kind', () => {
     const items = currencyItems(parseFilter(SEMI), lookup).filter(i => i.type === 'jewels')
-    expect(items.length).toBe(9)
+    expect(items.length).toBe(11)
     expect(new Set(items.map(i => kindOf(i.cat)))).toEqual(new Set(['jewels']))
     expect(items.every(i => i.est)).toBe(true)
   })
@@ -38,6 +38,10 @@ describe('jewels on the Loot tab', () => {
     // Corrupted 5 mods beats its item level row.
     const five = jewel('Ghastly Eye Jewel', 'Abyss Jewels', 'Rare', 86, { identified: true, corrupted: true, explicitModNames: ['a1', 'b2e', 'ci', 'do', 'eu'] })
     expect(step(five)).toBeGreaterThan(step(high))
+    // Corrupted rare abyss jewels show at any item level, as NeverSink's do.
+    const corrupt = jewel('Murderous Eye Jewel', 'Abyss Jewels', 'Rare', 75, { corrupted: true })
+    expect(step(corrupt)).toBeGreaterThan(step(high))
+    expect(hit(jewel('Hypnotic Eye Jewel', 'Abyss Jewels', 'Rare', 75, { corrupted: true, corruptedMods: 1 })).visibility).toBe('Show')
     // Corrupted implicit beats the plain magic row.
     expect(hit(jewel('Viridian Jewel', 'Jewels', 'Magic', 84, { corrupted: true, corruptedMods: 1 })).visibility).toBe('Show')
     // Cluster jewels stay NeverSink's; unique jewels stay the Uniques page's.

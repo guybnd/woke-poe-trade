@@ -26,7 +26,6 @@ import type { BaseRename } from './gem-bases'
 import { applyWeights, filterBases } from './weights'
 import { applyCurrency } from './currency-weights'
 import { applyMapFloor } from './map-floor'
-import { applyLeagueOff } from './league-classes'
 import type { CardFacts } from './card-classes'
 import type { GemLine } from './gem-classes'
 import type { CurrencyItem } from './currency-weights'
@@ -111,8 +110,6 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const currency = applyCurrency(next, cfg.presets.currency, cfg.prices.loot ?? cfg.prices.lookup, cfg.cards, cfg.gems)
   // Maps under the Loot tab's tier slider hide.
   applyMapFloor(next, cfg.presets.currency)
-  // League mechanics set Off on the Loot tab hide in maps.
-  applyLeagueOff(next, cfg.presets.currency)
   // Build rules go in first, so edits to them (restyles) apply on top.
   const input = cfg.build
   let buildCount = 0

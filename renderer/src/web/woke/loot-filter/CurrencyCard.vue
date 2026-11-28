@@ -122,7 +122,8 @@ function rowFor (all: CurrencyItem[]): CurrencyItem | undefined {
   const f = props.facts
   if (!f) return undefined
   return all
-    .filter(i => (i.bts ?? [i.bt ?? i.name]).includes(props.name) && (i.conds ?? []).every(x => evalCondition(x, f) !== false))
+    // A row for a whole class (Sanctum research, charts) has no BaseTypes.
+    .filter(i => (i.bts?.length === 0 ? i.cls === f.itemClass : (i.bts ?? [i.bt ?? i.name]).includes(props.name)) && (i.conds ?? []).every(x => evalCondition(x, f) !== false))
     .sort((a, b) => b.chaos - a.chaos)[0]
 }
 // The row's name on the Loot tab ("Arc 20/20" for a gem band).
