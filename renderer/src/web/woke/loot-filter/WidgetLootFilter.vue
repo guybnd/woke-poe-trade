@@ -47,7 +47,7 @@
     </DockItem>
     <template v-if="mode === 'card'">
       <ScoreCard v-if="sample && match && scoreView" :store="store" :config="config" :facts="sample" :match="match"
-        @close="close" @open-editor="openEditorFromCard" @neversink="nsView = true" />
+        @close="close" @open-editor="openEditorFromCard" />
       <SampleCard v-else-if="sample && match" :store="store" :config="config" :facts="sample" :match="match" :game-match="gameMatch" :area-level="effectiveAreaLevel"
         @close="close" @open-editor="openEditorFromCard" @area-level="areaOverride = $event" />
       <WPanel v-else title="Filter rule for this item" icon="wisdom" width="24rem" :resizable="false">
