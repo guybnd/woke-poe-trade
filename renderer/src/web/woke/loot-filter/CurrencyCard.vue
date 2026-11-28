@@ -8,7 +8,7 @@
       <LabelPreview :text="it.name" :actions="[]" :style-override="currencyFullLook(shown === 0 ? 1 : shown, it.cat, cfg)" :visibility="shown === 0 ? 'Hide' : 'Show'" :extras="false" :scale="0.6" />
       <span :class="$style.big" data-currency-card-now>{{ verdict }}</span>
       <span class="grow" />
-      <span class="text-xs w-dim" :title="edit.price != null ? 'Your price' : it.est ? 'A guess from NeverSink\'s tiers' : 'poe.ninja'">{{ chaosText(base) }} {{ it.uniques?.length ? 'avg' : 'each' }}<template v-if="edit.price != null"> · yours</template><template v-else-if="it.est"> · guess</template><template v-if="liveMult !== 1"> · counts {{ chaosText(base * liveMult) }} with bias</template></span>
+      <span class="text-xs w-dim" :title="edit.price != null ? 'Your price' : it.est ? 'A guess from NeverSink\'s tiers' : 'poe.ninja'"><WPrice v-if="fixed != null" :chaos="null" none="No price: a filter can't see which implicit or mods a jewel has, so it shows at a set step" /><template v-else>{{ chaosText(base) }} {{ it.uniques?.length ? 'avg' : 'each' }}<template v-if="edit.price != null"> · yours</template><template v-else-if="it.est"> · guess</template><template v-if="liveMult !== 1"> · counts {{ chaosText(base * liveMult) }} with bias</template></template></span>
       <WToggle :model-value="mode !== 'off'" data-currency-card-shows @update:model-value="v => setMode(v ? 'auto' : 'off')">Shows</WToggle>
     </div>
 
@@ -96,13 +96,13 @@
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useFold } from '../ui/fold'
 import WFoldHead from '../ui/WFoldHead.vue'
-import { WButton, WInfo, WToggle } from '../ui'
+import { WButton, WInfo, WPrice, WToggle } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import StateChip from './StateChip.vue'
 import type { ChipOption } from './StateChip.vue'
 import { SECTION_MODES } from './section-modes'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
-import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, NUDGE_MAX, catColour, currencyFullLook, currencyItems, faintOn, forcedHidden, minStack, offSteps, pileWorth, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, NUDGE_MAX, catColour, currencyFullLook, currencyItems, faintOn, fixedOf, forcedHidden, minStack, offSteps, pileWorth, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
 import { toggleNotAvg } from './currency-settings'
 import { lvCurrencyOf, setLvCurrency } from './levelling'
 import { DEFAULT_BG, DEFAULT_TEXT } from './edits'
@@ -215,7 +215,9 @@ function setSecMode (v: string) {
   if (v !== sectionMode({ catMode: {} }, cat)) next[cat] = v as SectionMode
   cfg.value.catMode = next
 }
-const mode = computed(() => edit.value.step === 0 ? 'off' : edit.value.supply === 1 && edit.value.step == null ? 'always' : 'auto')
+// A jewel row's fixed step (no price) reads as Always, or Off for step 0.
+const fixed = computed(() => it.value ? fixedOf(it.value, edit.value) : undefined)
+const mode = computed(() => edit.value.step === 0 || fixed.value === 0 ? 'off' : (edit.value.supply === 1 && edit.value.step == null) || fixed.value != null ? 'always' : 'auto')
 const stacks = computed(() => it.value ? stacksFor(it.value, eff.value) : [null, null, null, null, null])
 const off = computed(() => it.value ? offSteps(it.value, cfg.value) : [])
 const now = computed<CStep>(() => stepOfPile(stacks.value, props.stack, off.value))
@@ -355,9 +357,13 @@ function put (patch: Partial<ItemEdit>) {
   setEdit(Object.fromEntries(Object.entries({ ...edit.value, ...patch }).filter(([, v]) => v !== undefined)) as ItemEdit)
 }
 function setMode (v: string) {
-  if (v === 'off') put({ step: 0, supply: undefined })
-  else if (v === 'always') put({ step: undefined, supply: 1 })
-  else put({ step: undefined, supply: edit.value.supply === 1 ? undefined : edit.value.supply })
+  const fx = it.value?.fixed
+  // A row with a fixed step (no price): Always, or Shows back on, returns
+  // to it; By price leaves it.
+  if (fx && (v === 'always' || (v === 'auto' && mode.value === 'off'))) put({ step: undefined, supply: undefined, priced: undefined })
+  else if (v === 'off') put({ step: 0, supply: undefined, priced: undefined })
+  else if (v === 'always') put({ step: undefined, supply: 1, priced: undefined })
+  else put({ step: undefined, supply: edit.value.supply === 1 ? undefined : edit.value.supply, priced: fx != null ? true : undefined })
 }
 // Applies on release (Guy: sliders apply when you let go).
 function commitNotch (k: number) {
