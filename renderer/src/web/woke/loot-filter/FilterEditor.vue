@@ -1086,7 +1086,8 @@ watch(() => props.focus, (f) => {
     // The rule's tier says which class of the tab to open (Alt+F's "Open on
     // the Loot tab"); once, so opening the tab later starts where it always does.
     tabFocus.value = f.tier || null
-    tab.value = f.type === WEIGHT_TYPE ? 'weights' : 'currency'
+    // Special gear's rows are on the Equipment tab (Guy's pick B).
+    tab.value = f.type === WEIGHT_TYPE || /^cat:sg[a-z]+:/.test(f.tier ?? '') ? 'weights' : 'currency'
     focusTab = tab.value
     return
   }
