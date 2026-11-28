@@ -1,5 +1,6 @@
 # Next release notes
 
+- Loot filter, Loot tab: gems poe.ninja has no price for (many Vaal and Awakened gems) get a row of their own on the Gems page, and every Viscera from the game data gets one on League items. Each shows until it has a price, and Alt+F on one opens its Loot card.
 - Loot filter, Loot tab: every item the game has gets a Loot row, even one with no price this league or last (shards, new currency, Breachstones, Maven's Invitations, Viscera, Reliquary keys...), priced by a guess until poe.ninja has it. Items that no longer drop (scarabs, sextants, nets, Blessings) still get none.
 - Loot filter, Loot tab League items: Wombgifts have their own section, one row per Wombgift priced from poe.ninja (a guess when it has no price), so Alt+F on one opens its Loot card instead of the old rule card. The Alt+F card's header no longer shows the NeverSink strictness name.
 - Loot filter, Loot tab: each category (Currency, Uniques, Gems...) now shows its own full ruler under All loot. It follows All loot until you drag a handle or click a step's dot there, then it is that category's own; undo puts it back. The folded All loot line shows the step labels in their colours, with steps that are off struck through.
