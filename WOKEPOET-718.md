@@ -3,7 +3,7 @@ id: WOKEPOET-718
 title: >-
   NeverSink retirement M4b: special rules (exotic mods, variations/classes,
   influenced normal/magic, idols, enshrouded)
-status: In Progress
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -41,7 +41,41 @@ history:
     date: '2026-11-28T08:04:43.145Z'
     comment: Updated implementation link.
     id: a-2026-11-28t08-04-43-145z
+  - type: comment
+    user: Agent
+    comment: PR 1082 merged as f02f70e.
+    date: '2026-11-28T08:40:37.192Z'
+    completionComment: true
+    id: c-2026-11-28t08-40-37-192z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-28T08:40:37.193Z'
+  - type: comment
+    user: Agent
+    comment: PR 1082 merged as f02f70e.
+    completionComment: true
+    date: '2026-11-28T08:40:40.991Z'
+    id: c-2026-11-28t08-40-40-991z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-28T08:40:41.711Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/1082'
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 
