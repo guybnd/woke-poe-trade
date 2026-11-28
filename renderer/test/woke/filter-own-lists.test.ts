@@ -61,7 +61,9 @@ describe('own item lists', () => {
   })
 
   it('keeps NeverSink\'s lists without prices', () => {
-    expect(currencyItems(doc, null, {}, null, null, tables()).map(i => i.name)).toEqual(currencyItems(doc, null).map(i => i.name))
+    // Corpses come from the game's list either way, which has more than NeverSink's.
+    const names = (xs: ReturnType<typeof currencyItems>) => xs.filter(i => i.cat !== 'lgcorpse').map(i => i.name)
+    expect(names(currencyItems(doc, null, {}, null, null, tables()))).toEqual(names(currencyItems(doc, null)))
   })
 
   it('sorts by art and name', () => {

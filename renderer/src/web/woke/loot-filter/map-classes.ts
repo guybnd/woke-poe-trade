@@ -3,8 +3,8 @@
 // on the same steps. A filter names them "Map (Tier 14)" plus BlightedMap or
 // UberBlightedMap, so a step's rule lists its tiers and the rule count stays
 // small. The rules go where NeverSink's blighted maps start, under its unique,
-// Valdo and Originator maps. Unique maps stay NeverSink's: poe.ninja gives
-// them no tier, and a filter can tell them apart only by tier.
+// Valdo and Originator maps. Unique maps are one row (a filter can't tell
+// them apart): what the cheapest one sells for on poe.ninja, Always shown.
 import type { LootCategory } from './fragment-classes'
 import type { FilterCondition } from './parse'
 
@@ -15,7 +15,8 @@ export const MAP_CATEGORIES: LootCategory[] = [
   { id: 'mapmods', name: 'Content mods', art: 'Map' },
   { id: 'mapcorr', name: 'Corrupted', art: 'Map' },
   { id: 'mapblight', name: 'Blighted maps', art: 'Blighted Map' },
-  { id: 'mapravaged', name: 'Blight-ravaged maps', art: 'Blight-ravaged Map' }
+  { id: 'mapravaged', name: 'Blight-ravaged maps', art: 'Blight-ravaged Map' },
+  { id: 'mapuniq', name: 'Unique maps', art: "Acton's Nightmare" }
 ]
 export const MAP_IDS = new Set(MAP_CATEGORIES.map(x => x.id))
 
@@ -31,8 +32,11 @@ export const MAP_LOOK: Record<string, { text: [number, number, number], color: s
   mapmods: { text: [110, 220, 235], color: 'Cyan', shape: 'Square' },
   mapcorr: { text: [255, 120, 165], color: 'Pink', shape: 'Square' },
   mapblight: { text: [150, 215, 95], color: 'Green', shape: 'Square' },
-  mapravaged: { text: [220, 150, 70], color: 'Brown', shape: 'Square' }
+  mapravaged: { text: [220, 150, 70], color: 'Brown', shape: 'Square' },
+  mapuniq: { text: [175, 96, 37], color: 'Brown', shape: 'Square' }
 }
+// A unique map is a rare drop: Always, its price lifts it above Small.
+export const MAP_MODES: Record<string, 'always'> = { mapuniq: 'always' }
 
 // NeverSink's blighted section, where the rules go.
 export const BLIGHT_TYPE = 'maps->blighted'
@@ -58,6 +62,8 @@ export interface SpecialMap {
   bts: string[]
   // poe.ninja lines to price it by (the cheapest wins); none: `guess`.
   ninja?: string[]
+  // Priced by every unique map in the item data (the cheapest solid line).
+  uniqueMaps?: true
   guess?: number
   conds: FilterCondition[]
 }
@@ -87,6 +93,7 @@ export const SPECIAL_MAPS: SpecialMap[] = [
   { cat: 'mapmods', name: "Beidat, Ghorr or K'Tash", bts: tiers(1, 16), guess: 4, conds: [...NOT_BLIGHT, IDENTIFIED, cnd('HasExplicitMod', '', ['of Beidat', 'of Ghorr', "of K'Tash"])] },
   { cat: 'mapcorr', name: '8 mods', bts: tiers(1, 16), guess: 4, conds: [...NOT_BLIGHT, IDENTIFIED, cnd('Corrupted', '', ['True']), cnd('HasExplicitMod', '>=', ['a', 'e', 'i', 'o', 'u', 'y'], 7)] },
   { cat: 'mapcorr', name: 'Corrupted implicit', bts: tiers(1, 16), guess: 1, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('CorruptedMods', '>=', ['1'])] },
-  { cat: 'mapcorr', name: 'Enchanted', bts: tiers(1, 16), guess: 1, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('AnyEnchantment', '', ['True'])] }
+  { cat: 'mapcorr', name: 'Enchanted', bts: tiers(1, 16), guess: 1, conds: [...NOT_BLIGHT, NOT_UNIQUE, cnd('AnyEnchantment', '', ['True'])] },
+  { cat: 'mapuniq', name: 'Unique map', bts: [], uniqueMaps: true, guess: 5, conds: [cnd('Rarity', '', ['Unique'])] }
 ]
 export const SPECIAL_MAP_CATS = new Set(SPECIAL_MAPS.map(m => m.cat))
