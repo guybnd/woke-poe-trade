@@ -32,6 +32,7 @@ export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
   { id: 'loot-filter-identified-mods', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Rare gear scores identified rares and magic items by their mods' },
+  { id: 'loot-filter-special-gear', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Special gear: veiled, temple and league mods, fractured, influenced, idols, each with its own look' },
   { id: 'loot-filter-recipes-by-price', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Recipes steps follow the price of what the vendor gives' },
   { id: 'price-check-base-step', since: '1.330.24', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a Base step beside Low / Approx / High prices gear as its base in one click' },
   { id: 'loot-filter-levelling', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Levelling: Loot looks in the acts and hideout, gear for your build type, flasks, supplies' },
