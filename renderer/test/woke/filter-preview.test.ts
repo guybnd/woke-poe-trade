@@ -115,6 +115,40 @@ describe('loot shower', () => {
     // A small pile keeps the ground's height.
     expect(layoutLabels(sizes.slice(0, 8), 1000, 380, 9, 40, [minimap]).height).toBe(380)
   })
+
+  it('never overlaps, even with a crowded pile on a narrow ground', () => {
+    // Mixed sizes like the Rare weights pile: a chip row over each label and
+    // chips beside it, some wider than the ground itself.
+    let a = 12345
+    const r = () => { a = (a * 16807) % 2147483647; return a / 2147483647 }
+    const sizes = Array.from({ length: 40 }, () => ({ w: Math.round(60 + r() * 260), h: Math.round(16 + r() * 22) }))
+    sizes[5] = { w: 500, h: 30 }
+    const check = (width: number, height: number, seed: number, top: number, obstacles: Rect[]) => {
+      const { rects, height: h } = layoutLabels(sizes, width, height, seed, top, obstacles)
+      expect(rects).toHaveLength(sizes.length)
+      expect(h).toBeGreaterThanOrEqual(height)
+      for (let i = 0; i < rects.length; i++) {
+        const q = rects[i]
+        expect(q.x).toBeGreaterThanOrEqual(0)
+        expect(q.y).toBeGreaterThanOrEqual(top)
+        expect(q.x + q.w).toBeLessThanOrEqual(width)
+        expect(q.y + q.h).toBeLessThanOrEqual(h)
+        for (const o of obstacles) expect(overlap(q, o)).toBe(false)
+        for (let j = i + 1; j < rects.length; j++) expect(overlap(q, rects[j]), `${i} and ${j}`).toBe(false)
+      }
+      expect(layoutLabels(sizes, width, height, seed, top, obstacles)).toEqual({ rects, height: h })
+    }
+    for (const seed of [1, 3, 7, 42]) {
+      check(320, 220, seed, 34, [])
+      check(420, 220, seed, 34, [{ x: 316, y: 0, w: 104, h: 82 }])
+      check(900, 200, seed, 36, [])
+    }
+  })
+
+  it('sizes a label as LabelPreview draws it', () => {
+    // LabelPreview: (11 + (size - 18) * 0.28) * scale px, 7px padding and a 1px border a side.
+    expect(labelBox('x', 18, 1, () => 10)).toEqual({ w: 28, h: Math.ceil(11 * 1.35 + 4) })
+  })
 })
 
 describe('custom sounds', () => {

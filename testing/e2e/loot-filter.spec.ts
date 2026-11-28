@@ -1382,6 +1382,9 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   await qs.getByRole('button', { name: /rank:/ }).click()
   await page.getByRole('menuitemradio', { name: /^Don't care/ }).click()
   await expect(qs.getByRole('button', { name: /rank: Don't care/ })).toBeVisible()
+  // Flasks have their own line: a Good flask shows at item level 85.
+  const ruby = page.locator('[data-equip-flask="Ruby Flask"]')
+  await expect(ruby).toContainText('Small')
   await overlay.snap('equipment tab, flasks')
   // Base ranks is Equipment's section while Equipment shows; the top tab goes.
   await page.locator('[data-equip-class="ranks"]').click()
@@ -1439,18 +1442,36 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-loot-maps]')).toContainText('under tier 14 hide')
   await overlay.snap('loot tab, maps')
   await from.fill('1')
-  // Jewels: the cluster price rules, as on the Rules tab's Cluster page.
+  // Jewels: Abyss and Jewels folds, the unique jewels (set in Uniques), and
+  // the cluster price rules, as on the Rules tab's Cluster page.
   await page.locator('[data-loot-class="jewels"]').click()
+  const abyss = page.locator('[data-currency-cat="jewabyss"]')
+  await expect(abyss).toBeVisible()
+  await abyss.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
+  await expect(abyss.locator('[data-currency-item="Rare abyss jewel, item level 86+"]')).toBeVisible()
+  await expect(page.locator('[data-maps-pile] [data-map-drop]').first()).toBeVisible()
   await expect(page.locator('[data-loot-jewels]')).toContainText('Follow poe.ninja')
   await overlay.snap('loot tab, jewels')
-  // League items: a mechanic you don't run goes Off in one click.
+  const ujewel = page.locator('[data-unique-jewel]').first()
+  if (await ujewel.count()) {
+    const name = await ujewel.getAttribute('data-unique-jewel')
+    await ujewel.click()
+    await expect(page.locator('[data-loot-class="uniques"]')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator(`[data-currency-item="${name}"]`)).toBeVisible()
+  }
+  // League items: a fold per mechanic, rows by item level; a mechanic you
+  // don't run goes Off in one click.
   await page.locator('[data-loot-class="league"]').click()
-  await page.locator('[data-loot-league-section="lgexped"]').getByRole('button').click()
+  const logs = page.locator('[data-currency-cat="lgexped"]')
+  await expect(logs).toBeVisible()
+  await logs.locator('[data-loot-section-mode]').getByRole('button').click()
   await page.getByRole('menuitemradio', { name: /^Hide/ }).click()
-  await expect(page.locator('[data-loot-league]')).toContainText('1 hidden in maps')
+  await logs.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
+  await expect(logs.locator('[data-currency-item="Logbook, item level 83+"]')).toContainText('Hidden')
+  await expect(page.locator('[data-maps-pile] [data-map-drop]').first()).toBeVisible()
   await overlay.snap('loot tab, league')
-  await page.locator('[data-loot-league-section="lgexped"]').getByRole('button').click()
-  await page.getByRole('menuitemradio', { name: /^NeverSink/ }).click()
+  await logs.locator('[data-loot-section-mode]').getByRole('button').click()
+  await page.getByRole('menuitemradio', { name: /^By price/ }).click()
   // Recipes: each vendor recipe Off or the step it shows at in maps.
   await page.locator('[data-loot-class="recipes"]').click()
   // (Its start carries over the 6 sockets preset, off here: Off.)

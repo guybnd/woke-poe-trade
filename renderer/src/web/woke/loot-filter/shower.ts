@@ -24,9 +24,10 @@ export function runDrops (doc: FilterDoc, drops: Drop[]): ShownDrop[] {
   })
 }
 
-// Label font in px for a game font size, matching LabelPreview.
+// Label font in px for a game font size: the same formula LabelPreview draws
+// with, so a box is as big as the label on screen.
 export function labelPx (fontSize: number | undefined, scale: number): number {
-  return (9 + ((fontSize ?? DEFAULT_FONT) - 18) * 0.28) * scale
+  return (11 + ((fontSize ?? DEFAULT_FONT) - 18) * 0.28) * scale
 }
 
 export interface Rect { x: number, y: number, w: number, h: number }
@@ -39,28 +40,88 @@ export function labelBox (text: string, fontSize: number | undefined, scale: num
   return { w: Math.ceil(textW + 18), h: Math.ceil(px * 1.35 + 4) }
 }
 
-function overlaps (a: Rect, b: Rect, gap = 2): boolean {
+// Space kept between two labels.
+const GAP = 2
+
+export function overlaps (a: Rect, b: Rect, gap = GAP): boolean {
   return a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap
 }
 
 // Places each label near where it fell, nudging it up or down (then sideways)
 // past labels already placed, like the game does. A pile too big for the
 // ground makes the ground taller rather than stacking labels on each other.
+// If scattering still can't fit them, the labels go in rows instead: never
+// one label on another.
 export function layoutLabels (sizes: Array<{ w: number, h: number }>, width: number, height: number, seed: number, top = 0, obstacles: Rect[] = []): { rects: Rect[], height: number } {
-  for (let h = height; ; h += 60) {
+  for (let h = height; h <= height * 2; h += 60) {
     const res = tryLayout(sizes, width, h, seed, top, obstacles)
-    if (res.fits || h >= height * 3) return { rects: res.rects, height: h }
+    if (res.fits) return { rects: res.rects, height: h }
   }
+  return rowLayout(sizes, width, height, seed, top, obstacles)
 }
 
-function tryLayout (sizes: Array<{ w: number, h: number }>, width: number, height: number, seed: number, top: number, obstacles: Rect[]): { rects: Rect[], fits: boolean } {
-  let a = (seed * 2654435761) >>> 0
-  const r = () => {
+function xorshift (seed: number): () => number {
+  let a = (seed * 2654435761) >>> 0 || 1
+  return () => {
     a ^= a << 13; a >>>= 0
     a ^= a >>> 17
     a ^= a << 5; a >>>= 0
     return a / 4294967296
   }
+}
+
+// The sure fallback: rows top to bottom, left to right, stepping past the
+// obstacles. Each row's spare width is shared out at random between its
+// labels, and a short label sits anywhere in its row's height, so it still
+// looks dropped rather than listed.
+function rowLayout (sizes: Array<{ w: number, h: number }>, width: number, height: number, seed: number, top: number, obstacles: Rect[]): { rects: Rect[], height: number } {
+  const r = xorshift(seed + 7919)
+  const out: Rect[] = new Array(sizes.length)
+  const hits = (c: Rect) => obstacles.some(o => overlaps(o, c))
+  let y = top
+  let i = 0
+  while (i < sizes.length) {
+    // Fill one row.
+    const row: Array<{ k: number, rect: Rect }> = []
+    let x = 0
+    let rowH = 0
+    for (; i < sizes.length; i++) {
+      const w = Math.min(sizes[i].w, width)
+      const h = sizes[i].h
+      let cand: Rect = { x, y, w, h }
+      // Step right past any obstacle in the way.
+      for (let o = obstacles.find(b => overlaps(b, cand)); o; o = obstacles.find(b => overlaps(b, cand))) cand = { ...cand, x: o.x + o.w + GAP }
+      // Full, or (alone) an obstacle fills the row: the next row down.
+      if (cand.x + w > width) break
+      row.push({ k: i, rect: cand })
+      x = cand.x + w + GAP
+      rowH = Math.max(rowH, h)
+    }
+    if (!row.length) { y += 4; continue }
+    // Spread the row's spare width at random between its labels: each moves
+    // right at least as far as the one before, so they keep their gaps. If
+    // that runs one into an obstacle, the row stays packed.
+    const spare = width - (row[row.length - 1].rect.x + row[row.length - 1].rect.w)
+    const cuts = row.map(() => r())
+    const total = cuts.reduce((n, c) => n + c, 0) + r()
+    let shift = 0
+    const spread = row.map((c, n) => {
+      shift += Math.floor(spare * cuts[n] / total)
+      return { ...c.rect, x: c.rect.x + shift }
+    })
+    const use = spread.some(hits) ? row.map(c => c.rect) : spread
+    // Then each label anywhere in the row's height.
+    use.forEach((p, n) => {
+      const dropped = { ...p, y: p.y + Math.floor(r() * (rowH - p.h + 1)) }
+      out[row[n].k] = hits(dropped) ? p : dropped
+    })
+    y += rowH + GAP
+  }
+  return { rects: out, height: Math.max(height, y) }
+}
+
+function tryLayout (sizes: Array<{ w: number, h: number }>, width: number, height: number, seed: number, top: number, obstacles: Rect[]): { rects: Rect[], fits: boolean } {
+  const r = xorshift(seed)
   const placed: Rect[] = [...obstacles]
   const out: Rect[] = []
   let fits = true
@@ -95,7 +156,7 @@ function tryLayout (sizes: Array<{ w: number, h: number }>, width: number, heigh
         }
       }
     }
-    if (placed.some(p => overlaps(p, best))) fits = false
+    if (best.y + best.h > height || placed.some(p => overlaps(p, best))) fits = false
     placed.push(best)
     out.push(best)
   }

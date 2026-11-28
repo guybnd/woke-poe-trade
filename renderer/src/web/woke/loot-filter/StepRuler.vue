@@ -2,7 +2,7 @@
   <!-- The steps as one price ruler (Guy's pick B): a log bar coloured by step,
        a handle where each step starts, its name in its look over it. Hover a
        name for the pencil; click it for that step's look and switch. -->
-  <div :class="$style.ruler" role="group" aria-label="Where each step starts" data-currency-ruler>
+  <div :class="$style.ruler" role="group" :aria-label="gold ? 'Gold pile size where each step starts' : 'Where each step starts'" :data-currency-ruler="gold ? undefined : ''" :data-gold-ruler="gold ? '' : undefined">
     <div :class="$style.names">
       <span v-for="s in STEPS" :key="s" :class="[$style.name, { [$style.off]: isOff(s), [$style.cur]: edit === s }]"
         :style="{ left: `min(${at(s)}%, calc(100% - 4.5rem))`, top: s % 2 ? '0' : '26px' }">
@@ -27,8 +27,8 @@
     </div>
     <div :class="$style.vals">
       <label v-for="(v, i) in vals" :key="i" :class="$style.val" :style="{ left: `${x(v)}%` }">
-        <input :value="round(v)" type="number" min="0.01" step="any" :class="$style.num" :aria-label="`${CSTEP_NAMES[i + 1]} from this many chaos`"
-          @change="typed(i, $event.target as HTMLInputElement)">c
+        <input :value="round(v)" type="number" :min="gold ? 1 : 0.01" :step="gold ? 1 : 'any'" :class="$style.num" :aria-label="`${CSTEP_NAMES[i + 1]} from this many ${unit}`"
+          @change="typed(i, $event.target as HTMLInputElement)">{{ gold ? '' : 'c' }}
       </label>
     </div>
   </div>
@@ -52,6 +52,8 @@ const props = defineProps<{
   faintOn: boolean
   edit: CStep | null
   samples: Record<number, string>
+  // The Gold ruler: pile sizes instead of chaos (CurrencySettings.gold).
+  gold?: boolean
 }>()
 // Prices come back as shown (after Strictness); the tab turns them into yours.
 const emit = defineEmits<{ edit: [CStep | null], set: [step: number, chaos: number] }>()
@@ -68,14 +70,15 @@ const title = (s: CStep) => s === 0
 
 const drag = ref<{ i: number, v: number, id: number } | null>(null)
 // The picked section's real prices: its own Strictness on top (Guy 2026-11-28).
-const shown = computed(() => stepStarts(props.eff, props.cat))
+const unit = props.gold ? 'gold' : 'chaos'
+const shown = computed(() => props.gold ? props.eff.gold : stepStarts(props.eff, props.cat))
 const vals = computed(() => shown.value.map((v, i) => drag.value?.i === i ? drag.value.v : v))
 
 // Log scale, wide enough for the line and Tink with room either side.
-const lo = computed(() => Math.log10(Math.min(0.1, vals.value[0] / 2)))
-const hi = computed(() => Math.log10(Math.max(150, vals.value[4] * 1.6)))
+const lo = computed(() => Math.log10(Math.min(props.gold ? 1 : 0.1, vals.value[0] / 2)))
+const hi = computed(() => Math.log10(Math.max(props.gold ? 1e5 : 150, vals.value[4] * 1.6)))
 const x = (v: number) => (Math.log10(Math.max(v, 1e-3)) - lo.value) / (hi.value - lo.value) * 100
-const ticks = computed(() => [0.1, 1, 10, 100, 1000, 10000].filter(t => x(t) >= 0 && x(t) <= 100))
+const ticks = computed(() => [0.1, 1, 10, 100, 1000, 10000, 1e5, 1e6].filter(t => x(t) >= 0 && x(t) <= 100))
 const at = (s: CStep) => s === 0 ? 0 : x(vals.value[s - 1])
 
 function segColour (s: CStep): string {
@@ -89,12 +92,13 @@ const segs = computed(() => STEPS.map(s => ({ s, a: at(s), b: s === 5 ? 100 : at
 
 // Two significant figures under 10c, whole chaos above.
 function round (v: number): number {
+  if (props.gold) return Math.max(1, Math.round(v))
   if (v >= 10) return Math.round(v)
   return Number(v.toPrecision(2))
 }
 function clampAt (i: number, v: number): number {
-  const lo = i > 0 ? shown.value[i - 1] : 0.01
-  const hi = i < 4 ? shown.value[i + 1] : 1e6
+  const lo = i > 0 ? shown.value[i - 1] : props.gold ? 1 : 0.01
+  const hi = i < 4 ? shown.value[i + 1] : props.gold ? 1e7 : 1e6
   return Math.min(hi, Math.max(lo, v))
 }
 const bar = ref<HTMLElement | null>(null)
@@ -119,7 +123,8 @@ function endDrag () {
 }
 function bump (i: number, dir: 1 | -1) {
   const v = shown.value[i]
-  emit('set', i, clampAt(i, round(dir > 0 ? Math.max(v * 1.1, v + 0.01) : Math.min(v / 1.1, v - 0.01))))
+  const d = props.gold ? 1 : 0.01
+  emit('set', i, clampAt(i, round(dir > 0 ? Math.max(v * 1.1, v + d) : Math.min(v / 1.1, v - d))))
 }
 function typed (i: number, el: HTMLInputElement) {
   const n = Number(el.value)
@@ -127,7 +132,10 @@ function typed (i: number, el: HTMLInputElement) {
   if (el.value.trim() && Number.isFinite(n) && n > 0) emit('set', i, n)
 }
 
-const chaosText = (v: number) => v >= 1000 ? `${Math.round(v / 1000)}kc` : `${round(v)}c`
+const chaosText = (v: number) => {
+  const c = props.gold ? '' : 'c'
+  return v >= 1000 ? `${Number((v / 1000).toPrecision(2))}k${c}` : `${round(v)}${c}`
+}
 </script>
 
 <style module>

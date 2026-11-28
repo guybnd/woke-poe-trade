@@ -71,6 +71,8 @@ import { cardFacts, loadCardFacts } from './card-facts'
 import { gemLinesOf } from './gem-classes'
 import { LEAGUE_SECTIONS } from './league-classes'
 import { gemItemFor, itemFor, lootFocus } from './loot-focus'
+import { evalCondition } from './match'
+import type { ItemFacts } from './item-facts'
 import type { CStep, CurrencyItem, ItemEdit, SectionMode } from './currency-weights'
 import type { StylePatch } from './edits'
 import type { FilterCondition } from './parse'
@@ -90,6 +92,9 @@ const props = defineProps<{
   // slider, a League section, a gem floor, a unique special).
   tier?: string | null
   note?: string | null
+  // The item itself: finds a row named for its kind, not its base (gold by
+  // pile size, a special map, a blighted tier).
+  facts?: ItemFacts | null
 }>()
 // The item's category and the name its row has on the Loot tab.
 const emit = defineEmits<{ 'open-tab': [cat: string, name: string], 'open-rule': [tier: string] }>()
@@ -108,9 +113,19 @@ const raw = computed<CurrencyItem | null>(() => {
   if (!doc || !lookup) return null
   loadCardFacts()
   const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null)
-  if (!props.gem) return itemFor(all, props.name, props.rule)
+  if (!props.gem) return itemFor(all, props.name, props.rule) ?? rowFor(all) ?? null
   return gemItemFor(all, props.name, props.gem, props.rule)
 })
+// A row whose BaseTypes and conditions fit the item; the dearest first, as
+// the rules go loudest first.
+function rowFor (all: CurrencyItem[]): CurrencyItem | undefined {
+  const f = props.facts
+  if (!f) return undefined
+  return all
+    // A row for a whole class (Sanctum research, charts) has no BaseTypes.
+    .filter(i => (i.bts?.length === 0 ? i.cls === f.itemClass : (i.bts ?? [i.bt ?? i.name]).includes(props.name)) && (i.conds ?? []).every(x => evalCondition(x, f) !== false))
+    .sort((a, b) => b.chaos - a.chaos)[0]
+}
 // The row's name on the Loot tab ("Arc 20/20" for a gem band).
 const itemName = computed(() => raw.value?.name ?? props.name)
 const edit = computed<ItemEdit>(() => cfg.value.items[itemName.value] ?? {})

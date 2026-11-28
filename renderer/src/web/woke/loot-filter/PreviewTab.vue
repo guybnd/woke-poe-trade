@@ -349,6 +349,8 @@ function dropMenu (e: MouseEvent, d: ShownDrop) {
 }
 .drop {
   position: absolute;
+  /* Flex, so no line box makes it taller than the label it was laid out for. */
+  display: flex;
   cursor: pointer;
   animation: fall 0.28s ease-out both;
 }

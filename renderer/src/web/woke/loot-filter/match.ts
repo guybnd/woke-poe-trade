@@ -64,9 +64,11 @@ function bool (c: FilterCondition, actual: boolean | undefined): Tri {
 function strings (c: FilterCondition, actual: string | string[] | undefined): Tri {
   if (actual == null) return null
   const list = Array.isArray(actual) ? actual : [actual]
-  // With a count (`HasExplicitMod <2 "A" "B"`) the operator is for the count.
+  // With a count (`HasExplicitMod <2 "A" "B"`) the operator is for the count:
+  // how many of the item's mods match any name, as the game counts it
+  // (NeverSink's 8-mod rule is `HasExplicitMod >=7 "a" "e" "i" "o" "u" "y"`).
   if (c.count != null) {
-    const hits = c.values.filter(v => list.some(a => a.includes(v))).length
+    const hits = list.filter(a => c.values.some(v => a.includes(v))).length
     return compareNum(c.op || '>=', hits, c.count)
   }
   const exact = c.op === '=='
