@@ -73,6 +73,7 @@ export const NET_GROUPS: EconomyGroup[] = [
     return g
   }),
   { type: 'corpses', label: 'Corpses', ninja: ['Corpse'] },
+  { type: 'wombgifts', label: 'Wombgifts', ninja: ['Wombgift'] },
   { type: 'runesgrafts', label: 'Runegrafts', ninja: ['Runegraft'] },
   { type: 'miscmapitemsextra', label: 'Reliquary keys', ninja: ['Fragment'] }
 ]

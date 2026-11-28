@@ -135,7 +135,17 @@ export function ownBaseText (strictness: string | null): string {
     `\tClass == ${quoted(FLASK_CLASSES)}`,
     '\tSetFontSize 18',
     '',
-    // Identified magic ones can carry the mods worth keeping.
+    // Identified magic ones can carry the mods worth keeping: small.
+    `Show # $type->${OWN_REST_TYPE} $tier->idflasks`,
+    '\tAreaLevel >= 68',
+    '\tRarity Magic',
+    '\tIdentified True',
+    `\tClass == ${quoted(FLASK_CLASSES)}`,
+    '\tSetFontSize 30',
+    '\tSetTextColor 136 136 255 255',
+    '\tSetBorderColor 0 0 0 0',
+    '\tSetBackgroundColor 0 0 0 180',
+    '',
     `Hide # $type->${OWN_REST_TYPE} $tier->magicflasks`,
     '\tAreaLevel >= 68',
     '\tRarity Magic',

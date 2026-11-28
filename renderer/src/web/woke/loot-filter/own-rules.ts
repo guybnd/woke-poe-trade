@@ -59,6 +59,11 @@ export function ownUniqueBlocks (t: OwnTables, find: (base: string) => number | 
   }))
 }
 
+// Items the game data still lists that no longer drop: no row unless priced
+// (sextants, nets, Blessings, prophecies, Bestiary orbs, seals, coins, the
+// legacy Eternal Orb and its Imprint).
+export const RETIRED = /Sextant$| Net$|^Blessing of |^Prophecy$|Bestiary Orb$|Cartographer's Seal$|^(Perandus|Silver) Coin$|^Lycia's Invocation of |^Eternal Orb$|^Imprint$/
+
 // Odd items poe.ninja doesn't price that still drop: always a row.
 export const ALWAYS = new Set(["Facetor's Lens", 'Scrying Orb', 'Albino Rhoa Feather'])
 
@@ -97,8 +102,11 @@ export function ownBlocks (t: OwnTables, find: (type: string, name: string) => n
   for (const [name, cls, art] of t.lists) {
     const type = ownType(name, cls, art)
     if (!type) continue
-    const live = name === 'Chaos Orb' ? 1 : find(type, name)
-    if (!(live != null && live > 0) && !t.guesses.has(name) && !ALWAYS.has(name) && !listed.has(name)) continue
+    // Every item the game data has gets a row (Guy 2026-11-28: one with no
+    // price this league or last fell to our fallback rule, so Alt+F showed
+    // the old card), but the ones that no longer drop.
+    // (A card named like one, Blessing of God, still drops.)
+    if (cls !== 'Divination Cards' && RETIRED.test(name) && !ALWAYS.has(name) && !listed.has(name) && !(find(type, name) ?? 0) && !t.guesses.has(name)) continue
     const key = `${type}|${cls}`
     const g = by.get(key) ?? { type, cls, names: [] }
     g.names.push(name)

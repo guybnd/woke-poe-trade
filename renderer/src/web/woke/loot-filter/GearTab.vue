@@ -1,13 +1,12 @@
 <template>
   <div :class="$style.wrap" class="w-scroll" data-w-switches>
     <div class="flex items-center gap-2 text-sm">
-      <span v-if="g.on" class="w-dim">Your table replaces {{ store.gearReplaced.value }} of NeverSink's gear rules.</span>
-      <span v-else class="w-dim">Showing NeverSink's gear rules as they are. Change anything to take them over.</span>
+      <span v-if="g.on" class="w-dim">Your table decides magic and rare gear.</span>
+      <span v-else class="w-dim">Showing the default gear rules. Change anything to take them over.</span>
       <WInfo text="Magic and rare gear that drops with a 3.30 item tier.
 - Each cell is the lowest drop tier that shows.
-- Influenced, fractured, veiled and other special gear keeps NeverSink's own rules, which come first." />
+- Influenced, fractured, veiled and other special gear keeps its own rules, which come first." />
       <WButton size="sm" variant="ghost" icon="fas fa-magic" style="margin-left: auto;" title="One-click setups for the whole table" @click="quickMenu">Quick setups ▾</WButton>
-      <WButton v-if="g.on" size="sm" variant="ghost" @click="backToNeverSink">Back to NeverSink</WButton>
     </div>
 
     <template v-if="view === 'table'">
@@ -70,8 +69,8 @@
         <div class="flex items-center gap-2">
           <span>Looks</span>
           <WInfo text="How the table's labels look.
-- NeverSink gives magic and rare gear the same colours; here each rarity can look its own way.
-- Each row and drop tier keeps NeverSink's size and sound." />
+- Magic and rare gear share colours by default; here each rarity can look its own way.
+- Each row and drop tier keeps its default size and sound." />
           <WToggle :model-value="g.look.rarityText" style="margin-left: 8px;" @update:model-value="v => change(x => { x.look.rarityText = v })">Game's rarity colour for the text</WToggle>
         </div>
         <div :class="$style.looks">
@@ -123,7 +122,7 @@
               :aria-pressed="g.quality.min[row] === v" :aria-label="qualityTitle(row, v)" :title="qualityTitle(row, v)" @click="setQuality(row, v)">{{ v && g.quality.min[row] && v >= g.quality.min[row] ? '✓' : '' }}</button>
           </template>
         </div>
-        <div v-else class="w-faint text-xs">Using NeverSink's own over-quality lists. Switch on to pick a line per row.</div>
+        <div v-else class="w-faint text-xs">Using the default over-quality lists. Switch on to pick a line per row.</div>
       </div>
 
       <div :class="$style.card">
@@ -258,9 +257,9 @@
           </div>
         </div>
       </div>
-      <div class="w-faint text-xs">Click to pick, shift-click for a run. Drag a base, or the picked ones, onto a column to move them. A move applies to every drop tier. "was R2" marks a base moved off NeverSink's rank. Exotic: talismans, experimented and other special bases NeverSink shows with their own rules, before this table; they only reach the table when those rules pass them by. Exotic, valuable: the ones worth about a divine or more (NeverSink's top exotic tiers). Drag between the two exotic columns to change it; Rare gear's score and text colour follow.</div>
+      <div class="w-faint text-xs">Click to pick, shift-click for a run. Drag a base, or the picked ones, onto a column to move them. A move applies to every drop tier. "was R2" marks a base moved off its default rank. Exotic: talismans, experimented and other special bases shown by their own rules, before this table; they only reach the table when those rules pass them by. Exotic, valuable: the ones worth about a divine or more. Drag between the two exotic columns to change it; Rare gear's score and text colour follow.</div>
       <div class="flex gap-1">
-        <WButton size="sm" variant="ghost" :disabled="!movedCount" @click="change(x => { x.moves = {} })">Reset ranks to NeverSink</WButton>
+        <WButton size="sm" variant="ghost" :disabled="!movedCount" @click="change(x => { x.moves = {} })">Reset ranks</WButton>
       </div>
     </template>
   </div>
@@ -376,24 +375,17 @@ function onlyBuild (x: GearSettings) {
   }
   if (!x.show.build.rare) x.show.build.rare = 2
 }
-function backToNeverSink () {
-  const x = g.value
-  x.on = false
-  x.quality.on = false
-  // Slot lines belong to the rows NeverSink's numbers replace next time.
-  x.slots = {}
-}
 
 function rowSub (row: GearRow): string {
   if (row === 'build') return buildCount.value ? `${buildCount.value} from your build` : 'link a PoB build'
-  if (row === 'exotic') return `${exotics.value.size} · NeverSink's rules first`
+  if (row === 'exotic') return `${exotics.value.size} · own rules first`
   if (row === 'any') return 'every other base'
   return `${lists.value[row].length} bases`
 }
 function stepTitle (row: GearRow, r: GearRarity, v: number): string {
   if (!v) {
     if (row === 'build') return `${r === 'magic' ? 'Magic' : 'Rare'} build bases follow their rank`
-    if (row === 'exotic') return `Only NeverSink's exotic rules decide ${r} exotic bases`
+    if (row === 'exotic') return `Only the exotic rules decide ${r} exotic bases`
     return `Never show ${r} ${ROW_LABEL[row].toLowerCase()} for its drop tier`
   }
   if (v === NO_TIER) return `Show ${r} ${ROW_LABEL[row].toLowerCase()} at every drop tier, and with no tier`
@@ -610,7 +602,7 @@ const pile = computed(() => {
       ? 'no rule matched'
       : rule.type === GEAR_TYPE
         ? 'your Gear table'
-        : rule.type?.startsWith('woke->') ? ruleLabel(rule.type, rule.tier) : `NeverSink: ${ruleLabel(rule.type, rule.tier)}`
+        : ruleLabel(rule.type, rule.tier)
     return {
       id: d.id,
       label: d.facts.baseType!,
@@ -724,9 +716,9 @@ function baseTitle (b: string, lane: string): string {
   const i = info(b)
   const parts = [b, i.slot, i.defence && `${i.defence} (${DEFENCE_ATTR[i.defence]})`, i.dropLevel != null ? `drop level ${i.dropLevel}` : null]
   const was = wasRank(b, lane)
-  if (was) parts.push(`NeverSink: ${was}`)
+  if (was) parts.push(`Default: ${was}`)
   const ex = exotics.value.get(b)
-  if (ex) parts.push(`NeverSink's Exotic bases show it first (${ex.map(tierLabel).join(', ')}); change those under Rules`)
+  if (ex) parts.push(`The Exotic bases rules show it first (${ex.map(tierLabel).join(', ')}); change those under Rules`)
   return parts.filter(Boolean).join(' · ')
 }
 function moveTo (lane: GearMove) {

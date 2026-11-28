@@ -1,7 +1,7 @@
 <template>
   <WPanel ref="panel" title="Filter rule for this item" size-key="sample" width="27rem" max-height="85vh">
     <template #actions>
-      <span class="w-faint text-xs">{{ store.doc.value?.strictness ?? '' }} {{ store.doc.value?.version ?? '' }}</span>
+      <span class="w-faint text-xs">{{ store.doc.value?.version ?? '' }}</span>
     </template>
 
     <template v-if="store.wrongFilterInGame.value" #banner>

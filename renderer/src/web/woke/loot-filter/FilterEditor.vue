@@ -7,8 +7,6 @@
     </template>
     <template #toolbar>
       <WBackLink v-if="trail.length" :to="backTo" title="Back to where you were (mouse back button)" @back="goBack" />
-      <WSelect :model-value="sourceKey" :options="fileOptions" style="max-width: 20rem;" @update:model-value="pickSource" />
-      <WButton size="sm" variant="ghost" icon="fas fa-sync" :title="config.neversink.on ? 'Reload the file list and the filter, and check for a NeverSink update' : 'Reload the file list and the filter'" @click="refresh" />
       <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule: inventory, stash or ground labels. Hold Alt for items your filter hides.` : undefined" @paste.capture="onSearchPaste">
         <ItemSearchField v-model="search" :doc="store.doc.value" :area-level="searchAreaLevel" :drop="tab === 'preview'" @open-rule="openRule" @drop-item="dropPick" />
       </span>
@@ -29,8 +27,11 @@
     </div>
     <WEmpty v-else-if="!store.doc.value" :art="{ item: 'Orb of Scouring' }">
       <template v-if="store.error.value">The filter couldn't be read. Pick another one above, or fix the file and press Retry.</template>
-      <template v-else>Pick a NeverSink filter from your filter folder above. If the list is empty, download one from FilterBlade or NeverSink's GitHub first.</template>
-      <template #actions><WButton size="sm" icon="fas fa-folder-open" @click="openFolder">Open filter folder</WButton></template>
+      <template v-else>Start with our own filter, or pick a filter file from the list above.</template>
+      <template #actions>
+        <WButton v-if="!store.error.value" size="sm" variant="primary" icon="fas fa-filter" @click="pickSource('own')">Use our own filter</WButton>
+        <WButton size="sm" icon="fas fa-folder-open" @click="openFolder">Open filter folder</WButton>
+      </template>
     </WEmpty>
 
     <div v-else-if="tab === 'rules'" :class="$style.rulesPage">
@@ -289,28 +290,7 @@
 
     <!-- build rules -->
     <div v-else-if="tab === 'build'" :class="$style.changes" class="w-scroll" data-filter-build-tab>
-      <WEmpty v-if="!buildInput" icon="fas fa-user-cog">
-        No active build. Pick one in PoB builds. <WInfo text="Press Use build there, and its gems, link colours and uniques can be added to your filter here." />
-      </WEmpty>
-      <template v-else>
-        <div class="w-dim text-sm flex items-center gap-2" :class="$style.buildIntro">
-          <span>Rules for <span class="w-accent">{{ buildInput.buildName }}</span></span>
-          <WInfo text="Rules for your active build's gems, link colours and uniques.
-- They go at the top of your saved copy, ahead of NeverSink's.
-- Restyle them under **Rules › Your build**." />
-        </div>
-        <div v-for="r in buildRows" :key="r.key" :class="$style.changeRow">
-          <WChip clickable :active="config.buildRules[r.key]" :title="config.buildRules[r.key] ? 'Turn off' : 'Turn on'" @click="config.buildRules[r.key] = !config.buildRules[r.key]">
-            {{ config.buildRules[r.key] ? 'On' : 'Off' }}
-          </WChip>
-          <span class="grow min-w-0 flex flex-col">
-            <span>{{ r.label }}</span>
-            <span class="w-dim text-xs w-trunc" :title="r.detail">{{ r.detail }}</span>
-          </span>
-          <LabelPreview v-if="r.block" :text="r.sample" :actions="r.block.actions" :visibility="r.block.visibility" />
-          <span v-else-if="config.buildRules[r.key]" class="w-faint text-xs">nothing to add</span>
-        </div>
-      </template>
+      <BuildSection :config="config" :store="store" :class="$style.buildBody" />
     </div>
 
     <!-- changes -->
@@ -403,6 +383,7 @@ import ProfileSwitcher from './ProfileSwitcher.vue'
 import { useWindowKeys } from '../ui/window-keys'
 import { copyText } from '../ui/copy'
 import LabelPreview from './LabelPreview.vue'
+import BuildSection from './BuildSection.vue'
 import ItemSearchField from './ItemSearchField.vue'
 import type { SearchItem } from './item-search'
 import { itemCatalog } from './item-search'
@@ -432,7 +413,7 @@ import { exampleItem } from './example-item'
 import { describeProblem } from './validate'
 import StyleEditor from './StyleEditor.vue'
 import type { LootFilterStore } from './store'
-import { outputName } from './widget'
+import { levelsOn, nsDownload, outputName } from './widget'
 import type { LootFilterWidget } from './widget'
 import { OWN_RULE_TYPE, addEdit, conditionSignature, describeEdit, moveTargets, nextEditId, readStyle, rehome, rehomeOptions } from './edits'
 import { basePrice, livePriceMoves } from './economy'
@@ -462,9 +443,6 @@ import type { AddResult } from './groups'
 import { alsoShownBy, buildTree, byPrice, groupName, pickBases } from './groups'
 import type { GroupNode, TierNode } from './groups'
 import { hostRequest } from '../shared/host'
-import { BUILD_RULE_TYPE, LEVELLING_BELOW, WEAPON_CLASSES } from './build-rules'
-import type { BuildRuleSwitches } from './build-rules'
-import { COLOUR_NAME } from '../pob-builds/build-model'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -547,7 +525,7 @@ function dropPick (p: { item: SearchItem, rarity: FilterRarity, facts?: ItemFact
   previewPicks.value = [{ key, ...p }, ...previewPicks.value.filter(x => x.key !== key)].slice(0, 6)
 }
 const targets = computed(() => props.store.doc.value && selType.value ? moveTargets(props.store.doc.value, selType.value) : [])
-const outName = computed(() => props.config.sourceName ? outputName(props.config) : '—')
+const outName = computed(() => props.config.sourceName || levelsOn(props.config) ? outputName(props.config) : '—')
 
 // Stored moves only count while re-tiering is on: otherwise they aren't applied.
 const activePriceMoves = computed(() => props.config.priceTiers.on ? livePriceMoves(props.config.priceTiers.moves).length : 0)
@@ -568,44 +546,9 @@ const tabOptions = computed(() => [
   { value: 'changes', label: 'Changes', count: props.config.edits.length + activePriceMoves.value }
 ])
 
-// ---- build rules ----
-
-const buildInput = computed(() => props.store.buildInput.value)
-
-function buildBlock (tier: string) {
-  return props.store.doc.value?.blocks.find(b => b.type === BUILD_RULE_TYPE && b.tier === tier) ?? null
-}
-
-const buildRows = computed(() => {
-  const input = buildInput.value
-  if (!input) return []
-  const list = (xs: string[]) => xs.length > 4 ? `${xs.slice(0, 4).join(', ')} +${xs.length - 4}` : xs.join(', ')
-  const coloured = input.linkColours.filter(c => c !== 'w')
-  const rows: Array<{ key: keyof BuildRuleSwitches, label: string, detail: string, tier: string, sample: string }> = [
-    { key: 'gems', label: 'Show my gems', tier: 'gems', sample: input.gems[0] ?? 'Gem', detail: `${input.gems.length} gems, while levelling (area level below ${LEVELLING_BELOW})` },
-    { key: 'links', label: 'Linked items in my colours', tier: coloured.length >= 4 ? 'links4' : 'links3', sample: 'Linked item', detail: coloured.length >= 2 ? `${coloured.map(c => COLOUR_NAME[c]).join('-')} main link, 3- and 4-links, while levelling` : 'The main link needs 2+ coloured gems' },
-    { key: 'uniques', label: 'My uniques', tier: 'uniques', sample: input.uniqueBases[0] ?? 'Unique', detail: input.uniqueBases.length ? `Bases: ${list(input.uniqueBases)}` : 'No uniques in the build' },
-    { key: 'bases', label: 'My rare bases', tier: 'bases', sample: input.rareBases[0] ?? 'Rare', detail: input.rareBases.length ? list(input.rareBases) : 'No rare items in the item set for your level' },
-    { key: 'hideWeapons', label: 'Hide other weapon types while levelling', tier: 'otherweapons', sample: 'Other weapon', detail: input.weaponClasses.length ? `White and blue only; keeps ${input.weaponClasses.join(', ')} (${WEAPON_CLASSES.length - input.weaponClasses.length} types hidden)` : 'No weapon in the build' }
-  ]
-  return rows.map(r => ({ ...r, block: props.config.buildRules[r.key] ? buildBlock(r.tier) : null }))
-})
-
-// Online filters are keyed "online:<id>" in the picker; GitHub is "github".
-const sourceKey = computed(() => props.config.neversink.on ? 'github' : props.config.sourceOnline ? `online:${props.config.sourceName}` : props.config.sourceName)
-
-const fileOptions = computed(() => {
-  const opts = props.store.files.value
-    .map(f => f.online
-      ? { value: `online:${f.name}`, label: `${f.title ?? f.name} (online, read only)` }
-      : { value: f.name, label: f.name.replace(/\.filter$/i, '') })
-  opts.unshift({ value: 'github', label: 'NeverSink from GitHub (keeps itself up to date)' })
-  if (props.config.sourceName && !props.config.neversink.on && !opts.some(o => o.value === sourceKey.value)) {
-    opts.unshift({ value: sourceKey.value, label: props.config.sourceOnline ? `${props.config.sourceTitle} (online)` : props.config.sourceName.replace(/\.filter$/i, '') })
-  }
-
-  return opts
-})
+// Online filters are keyed "online:<id>" in the picker; GitHub is "github",
+// our own filter "own".
+const sourceKey = computed(() => props.config.ownBase ? 'own' : props.config.neversink.on ? 'github' : props.config.sourceOnline ? `online:${props.config.sourceName}` : props.config.sourceName)
 
 interface BannerAction { label: string, run: () => void, primary?: boolean }
 const banner = computed<{ text: string, tone: 'warn' | 'info', actions: BannerAction[] } | null>(() => {
@@ -624,7 +567,7 @@ function bannerOf (): { text: string, tone: 'warn' | 'info', actions: BannerActi
     const found = s.baseVersion.value
     // An older NeverSink than you saved against is never an update: it came
     // from an Undo of one. Say so, and offer the way back.
-    if (last && found && found.localeCompare(last, 'en', { numeric: true, sensitivity: 'base' }) < 0 && props.config.neversink.on) {
+    if (last && found && found.localeCompare(last, 'en', { numeric: true, sensitivity: 'base' }) < 0 && nsDownload(props.config)) {
       return {
         tone: 'warn',
         text: `This is NeverSink ${found}, older than the ${last} you last saved (an update was undone). Your game copy is still ${last}.`,
@@ -957,7 +900,7 @@ function offWhy (t: TierNode): string {
   const type = selType.value
   if (emptied(t)) return 'Every item was moved out of it'
   if (type && props.config.edits.some(e => e.kind === 'visibility' && e.type === type && e.tier === t.tier && e.on === false)) return 'You turned this off'
-  if (props.config.neversink.on) return `NeverSink leaves this out at ${LEVEL_NAMES[props.config.neversink.level]}`
+  if (levelsOn(props.config)) return `${props.config.ownBase ? 'Our filter' : 'NeverSink'} leaves this out at ${LEVEL_NAMES[props.config.neversink.level]}`
   return 'Off in the filter file'
 }
 
@@ -1563,11 +1506,13 @@ function iconFor (kind: FilterEdit['kind']): string {
 
 async function pickSource (key: string) {
   if (!key || key === sourceKey.value) return
-  if (key === 'github') {
-    await props.store.useGitHub(true)
+  if (key === 'own') {
+    props.config.ownBase = true
     tab.value = 'currency'
     return
   }
+  if (key === 'github') return
+  props.config.ownBase = false
   if (props.config.neversink.on) props.config.neversink.on = false
   const online = key.startsWith('online:')
   const name = online ? key.slice('online:'.length) : key
@@ -1581,7 +1526,7 @@ async function refresh () {
   await props.store.listFiles()
   await props.store.load()
   // The NeverSink tab's Check now lives here now.
-  if (props.config.neversink.on) props.store.checkForUpdate(true).catch(() => {})
+  if (nsDownload(props.config)) props.store.checkForUpdate(true).catch(() => {})
 }
 
 function openFolder () {
@@ -1907,9 +1852,8 @@ function openFolder () {
   padding: 6px 0;
 }
 :global([data-w-sized]) .changes { max-height: none; }
-.buildIntro {
-  padding: 4px var(--w-pad) 8px;
-  max-width: 60rem;
+.buildBody {
+  padding-top: 4px;
 }
 .changeRow {
   display: flex;

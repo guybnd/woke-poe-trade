@@ -24,14 +24,14 @@ import type { DropUnique, EconomyGroup, PriceLookup } from './economy'
 import { applyStyle, readStyle } from './edits'
 import type { StylePatch } from './edits'
 import { fullStack } from './stack-sizes'
-import { ITEM_BY_REF } from '@/assets/data'
+import { ITEMS_ITERATOR, ITEM_BY_REF } from '@/assets/data'
 import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
 import { FOULBORN_PREFIX, FOULBORN_TYPE, REPLICA_GUESS, REPLICA_PREFIX, REPLICA_TYPE, SIXLINK_CAT, SIXLINK_LOOK, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, chaseLookOf, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
-import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS, corpseGuess } from './league-classes'
+import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS, WOMBGIFTS, corpseGuess, wombgiftGuess } from './league-classes'
 import { CLUSTER_BASE_TYPE, CLUSTER_ROWS, CLUSTER_SIZES, JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_MODES, JEWEL_ROWS, JEWEL_TYPE, clusterEnchantRows, clusterFloor, clusterSizeOf } from './jewel-classes'
 import { FLASK_CATEGORIES, FLASK_IDS, FLASK_LOOK, FLASK_ROWS, FLASK_RULE_TYPE } from './flask-classes'
 import type { ClusterPrice } from './cluster-prices'
@@ -144,7 +144,8 @@ export const SUBGROUPS: Record<string, readonly string[]> = {
   ...Object.fromEntries([...GEM_BANDED].map(id => [id, GEM_BANDS])),
   gemvaal: ['21/23', '21/20', '20/23', ...PLAIN_BANDS],
   // Cluster jewels fold by size (WOKEPOET-726).
-  jewclus: CLUSTER_SIZES.map(s => `${s} Cluster Jewel`)
+  // Rows for every size (fractured) first.
+  jewclus: ['Any size', ...CLUSTER_SIZES.map(s => `${s} Cluster Jewel`)]
 }
 function gemBandOf (name: string, cat: string): string {
   const m = / (\d+)(?:\/(\d+))?(c)?$/.exec(name)
@@ -155,7 +156,7 @@ function gemBandOf (name: string, cat: string): string {
 }
 export function subgroupOf (name: string, cat: string): string | null {
   if (GEM_BANDED.has(cat)) return gemBandOf(name, cat)
-  if (cat === 'jewclus') { const size = clusterSizeOf(name); return size ? `${size} Cluster Jewel` : null }
+  if (cat === 'jewclus') { const size = clusterSizeOf(name); return size ? `${size} Cluster Jewel` : 'Any size' }
   if (cat !== 'essences') return null
   const tier = ESSENCE_TIERS.find(t => name.startsWith(`${t} Essence of `))
   return tier ?? 'Special'
@@ -236,6 +237,13 @@ function groupOf (type: string): EconomyGroup {
 // Orb): the Other category, not shards or scraps, and not hidden by NeverSink.
 function isFree (name: string, type: string, tier: string | null): boolean {
   return categoryOf(name, type) === 'other' && !/(Shard|Fragment|Splinter|Scrap)$/.test(name) && !(tier && HIDDEN_TIERS.test(tier))
+}
+
+// Names from the game data (empty before it loads, as in some tests).
+function gameNames (q: string, keep: (b: { gem?: { transfigured?: boolean } }) => boolean = () => true): string[] {
+  try {
+    return [...new Set([...ITEMS_ITERATOR(q)].filter(keep).map(b => b.refName))]
+  } catch { return [] }
 }
 
 export function tierGuess (tier: string | null): number {
@@ -366,8 +374,10 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         chaos: (own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess)) * (edits[name]?.mult ?? 1),
         est: own == null && (!priced || Boolean(p?.day1)),
         ...(own != null ? { own: true } : {}),
-        // Odd items with no solid price (none, or a thin one) always show.
-        ...(!card && own == null && !priced && isFree(name, b.type, b.tier) ? { free: true } : {}),
+        // Odd items with no solid price (none, or a thin one) always show, and
+        // so does one with no price now or last league (Guy 2026-11-28: it
+        // used to fall to our fallback rule, which showed it).
+        ...(own == null && (!priced || (orb != null && !(listed != null && listed.chaos > 0))) && ((!card && isFree(name, b.type, b.tier)) || (lists != null && !lists.guesses.has(name) && !(listed != null && listed.chaos > 0))) ? { free: true } : {}),
         // Fragments don't stack: one is the whole pile. A card's pile is at
         // most a set (10 until the sizes are read).
         full: card ? cards?.get(name)?.stack ?? 10 : frags && !thread ? 1 : fullStack(name)
@@ -415,6 +425,26 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         full: 1,
         bt: g.name,
         conds
+      })
+    }
+    // A gem poe.ninja has no band for (Guy 2026-11-28: Vaal and Awakened
+    // gems fell to our fallback rule, so Alt+F showed the old card): one
+    // row by name from the game data, shown until it has a price.
+    for (const name of gameNames('"namespace":"GEM"', b => !b.gem?.transfigured)) {
+      if (names.has(name) || seen.has(name)) continue
+      const own = edits[name]?.price
+      seen.set(name, {
+        name,
+        cls: name.endsWith(' Support') ? 'Support Gems' : 'Skill Gems',
+        type: 'gems',
+        tier: null,
+        cat: gemCategoryOf(name, names),
+        chaos: (own ?? 1) * (edits[name]?.mult ?? 1),
+        est: own == null,
+        ...(own != null ? { own: true } : { free: true }),
+        full: 1,
+        bt: name,
+        conds: [c('TransfiguredGem', '', ['False'])]
       })
     }
   }
@@ -590,7 +620,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
     }
   }
   // A row of conditions with a guess or a fixed step (jewels, special gear).
-  const setRow = (r: { name: string, cls: string, cat: string, guess: number, fixed?: CStep, bts: string[], conds: FilterCondition[] }, type: string, bt: string) => {
+  const setRow = (r: { name: string, cls: string, cat: string, guess: number, fixed?: CStep, floor?: CStep, bts: string[], conds: FilterCondition[] }, type: string, bt: string) => {
     const own = edits[r.name]?.price
     seen.set(r.name, {
       name: r.name,
@@ -603,6 +633,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       ...(own != null ? { own: true } : {}),
       full: 1,
       ...(r.fixed != null ? { fixed: r.fixed } : {}),
+      ...(r.floor ? { floor: r.floor } : {}),
       bt,
       bts: [...r.bts],
       conds: r.conds.map(x => ({ ...x, values: [...x.values] }))
@@ -647,37 +678,44 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       chaos: (own ?? r.guess) * (edits[r.name]?.mult ?? 1),
       est: own == null,
       ...(own != null ? { own: true } : {}),
+      ...(r.floor ? { floor: r.floor } : {}),
       full: 1,
       bt: r.tip,
       bts: r.bts,
       conds: r.conds.map(x => ({ ...x, values: [...x.values] }))
     })
   }
-  // Corpses (M4a): priced by name; the names from the game data's lists,
-  // else the filter's own corpse rules.
-  {
-    const fromLists = lists?.lists.filter(r => r[1] === 'Corpses').map(r => r[0]) ?? []
-    const names = fromLists.length ? fromLists : [...new Set(doc.blocks.filter(b => b.type === 'corpses').flatMap(b => b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))?.values ?? []))]
-    const group = groupOf('corpses')
+  // Corpses (M4a) and Wombgifts (Guy 2026-11-28: they only had our fallback
+  // rule, so Alt+F showed the old card): priced by name; the names from the
+  // game data's lists, else the filter's own rules, else a known list.
+  const byName = (cls: string, cat: string, groupType: string | EconomyGroup, guessOf: (name: string) => number, fallback: string[]) => {
+    const fromLists = lists?.lists.filter(r => r[1] === cls).map(r => r[0]) ?? []
+    const fromRules = typeof groupType !== 'string' ? [] : [...new Set(doc.blocks.filter(b => b.type === groupType).flatMap(b => b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))?.values ?? []))]
+    const names = fromLists.length ? fromLists : fromRules.length ? fromRules : fallback
+    const group = typeof groupType === 'string' ? groupOf(groupType) : groupType
     for (const name of names) {
       if (seen.has(name)) continue
       const p = lookup?.(group, name) ?? null
       const priced = p != null && !p.thin && p.chaos > 0
-      const guess = corpseGuess(name)
+      const guess = guessOf(name)
       const own = edits[name]?.price
       seen.set(name, {
         name,
-        cls: 'Corpses',
+        cls,
         type: 'league',
         tier: null,
-        cat: 'lgcorpse',
+        cat,
         chaos: (own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess)) * (edits[name]?.mult ?? 1),
         est: own == null && (!priced || Boolean(p?.day1)),
         ...(own != null ? { own: true } : {}),
+        // No price at all: it always shows, as our fallback rule showed it.
+        ...(own == null && !(p != null && p.chaos > 0) ? { free: true } : {}),
         full: 1
       })
     }
   }
+  byName('Corpses', 'lgcorpse', 'corpses', corpseGuess, [])
+  byName('Wombgifts', 'lgwomb', 'wombgifts', wombgiftGuess, WOMBGIFTS)
   // Special gear (special-gear.ts): a row per thing a filter can see (a
   // mod's name, fractured, influence...), each at a fixed step you can change.
   for (const r of SPECIAL_ROWS) setRow(r, 'special', r.tip)
@@ -739,6 +777,15 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       ...(own != null ? { own: true } : {}),
       full: 1
     })
+  }
+  // Viscera and Reliquary keys the base filter's tiers didn't list (our own
+  // skeleton has none): a row each from the game data, priced by name
+  // (Guy 2026-11-28: every item gets a Loot row, so Alt+F's Loot card).
+  if (lists?.lists.length) {
+    for (const sec of LEAGUE_PRICED) {
+      const cls = sec.cat === 'lgkeys' ? 'Vault Keys' : sec.cls
+      byName(cls, sec.cat, { type: sec.cat, label: sec.cat, ninja: sec.ninja }, () => sec.guess(null), sec.cat === 'lgviscera' ? gameNames('"category":"Viscera"') : [])
+    }
   }
   return [...seen.values()]
 }

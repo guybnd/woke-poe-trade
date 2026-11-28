@@ -5,10 +5,6 @@
       <WInfo :text="INFO" />
       <span class="w-faint text-xs">{{ statusText }}</span>
       <span class="flex-1" />
-      <span v-if="experimentalUnlocked || config.ownBase" class="flex items-center gap-2" data-loot-own-base>
-        <WToggle :model-value="config.ownBase === true" @update:model-value="config.ownBase = $event">Test: only our rules</WToggle>
-        <WInfo :text="'For testing the filter without NeverSink: your Loot, Equipment and own rules go onto a short base of ours.\n- Plain and magic gear hides in maps.\n- An item none of our rules knows shows pink.'" />
-      </span>
       <span v-if="kind === 'uniques'" :class="$style.minLab" data-loot-size-cut title="Big uniques count part of their price: 2x2 75%, 2x3 60%, 2x4 50%. Chase and Always sections skip it.">Size cut
         <StateChip :model-value="c.sizeCut ?? 'auto'" :options="SIZE_CUTS" title="Size cut" dflt="auto" @update:model-value="v => c.sizeCut = v === 'auto' ? undefined : v as 'on' | 'off'" />
         <span class="w-faint text-xs">{{ eff.sizeOn ? 'on now' : 'off now' }}</span></span>
@@ -20,7 +16,7 @@
     <Teleport :to="topTo || 'body'" :disabled="!topTo" defer>
     <div :class="$style.allCard" data-loot-all>
     <!-- One line unless opened (Guy 2026-11-28: it took too much room): Strictness, Maps and the step prices; open it to drag the ruler. -->
-    <div :class="$style.allLine" data-currency-main-ruler data-currency-all-steps data-currency-min>
+    <div :class="$style.allLine" data-currency-main-ruler data-currency-all-steps data-currency-min data-goto-spot="own-filter">
       <button type="button" :class="$style.allFold" :aria-expanded="allOpen" :title="`All loot: every page and section, unless a section has its own${ownCount ? ` (${ownCount} on this page have their own)` : ''}. Click to ${allOpen ? 'fold' : 'open'} the ruler`" data-loot-all-open @click="allOpen = !allOpen"><i class="fas text-xs" :class="allOpen ? 'fa-chevron-down' : 'fa-chevron-right'" /> <b>All loot</b></button>
       <span :class="$style.minLab">Strictness</span>
       <input type="range" min="0" max="6" step="1" :value="dragLvl ?? lvlNow" :class="$style.range" aria-label="Strictness" :aria-valuetext="LEVEL_NAMES[dragLvl ?? lvlNow]" :title="strictLine"
@@ -30,7 +26,9 @@
       <WButton v-if="c.mult != null" size="sm" variant="ghost" icon="fas fa-undo" :title="`Back to the filter's strictness, ${LEVEL_NAMES[level]} now`" @click="c.mult = null">Default</WButton>
       <StrictnessMenu :store="store" :config="config" />
       <span class="flex-1" />
-      <button v-if="!allOpen" type="button" :class="$style.allPrices" title="Where each step starts, after Strictness. Click to open the ruler" data-loot-all-prices @click="allOpen = true">{{ allPrices }}</button>
+      <button v-if="!allOpen" type="button" :class="$style.allPrices" :title="`Where each step starts, after Strictness: ${allPrices.map(p => `${p.name} ${p.off ? 'off' : p.price}`).join(', ')}. Click to open the ruler`" data-loot-all-prices @click="allOpen = true">
+        <span v-for="p in allPrices" :key="p.step" :class="{ [$style.allOff]: p.off }" :title="p.off ? `${p.name}: off everywhere` : `${p.name} from ${p.price}`"><LabelPreview :text="p.name" :actions="[]" :style-override="currencyFullLook(p.step, sampleCat, c)" visibility="Show" :extras="false" :scale="0.6" /></span>
+      </button>
     </div>
     <template v-if="allOpen">
     <div class="w-faint text-xs" data-currency-strict-line>{{ strictLine }}</div>
@@ -63,27 +61,17 @@
     </div>
     </Teleport>
 
-    <!-- The page's own bar (Guy 2026-11-28): under All loot, in the page's
-         look. Its steps and ruler follow All loot until you change them;
-         a section can still have its own. -->
-    <div v-if="kind !== 'gold'" :class="$style.goldRuler" data-currency-page-ruler>
+    <!-- The category's own bar (Guy 2026-11-28: "1 bar at the top for all loot, then one per category that override it"): a full ruler, All loot's until you drag a handle or click a dot here. -->
+    <div v-if="kind !== 'gold'" :class="$style.pageCard" data-currency-page-ruler>
       <span :class="$style.ownHead">
         <b>{{ PAGE_LABEL }}</b>
-        <span :class="$style.lookLab" :title="`Untick a step to hide what lands on it on the ${PAGE_LABEL} page`">Steps</span>
-        <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!pageOff.includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} on the ${PAGE_LABEL} page`" @change="togglePageOff(s)"> {{ CSTEP_NAMES[s] }}</label>
-        <span v-if="c.offBy[kind] == null" class="w-faint text-xs">as All loot</span>
-        <button v-else type="button" class="w-icon-btn" :title="`${PAGE_LABEL} steps back to All loot's`" :aria-label="`${PAGE_LABEL} steps back to All loot's`" @click="setOff(kind, null)"><i class="fas fa-undo" /></button>
-        <span :class="$style.lookLab">Prices</span>
-        <template v-if="c.rulers[kind]">
-          <span class="text-xs">Own ruler, Strictness still moves it</span>
-          <button type="button" class="w-icon-btn" :title="`${PAGE_LABEL} back to All loot's ruler`" :aria-label="`${PAGE_LABEL} back to All loot's ruler`" @click="setRuler(kind, null)"><i class="fas fa-undo" /></button>
-        </template>
-        <template v-else>
-          <span class="w-faint text-xs">as All loot</span>
-          <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" :title="`Give the ${PAGE_LABEL} page its own ruler, starting where All loot's steps are now`" data-currency-page-own @click="ownPageRuler">Own ruler</WButton>
-        </template>
+        <span v-if="!c.rulers[kind] && c.offBy[kind] == null" class="w-faint text-xs">as All loot: drag a handle or click a dot to change it for {{ KIND_NAME[kind] }} only</span>
+        <span v-else class="text-xs">its own, over All loot{{ c.rulers[kind] ? '; Strictness still moves it' : '' }}</span>
+        <button v-if="c.offBy[kind] != null" type="button" class="w-icon-btn" :title="`${PAGE_LABEL} steps back to All loot's`" :aria-label="`${PAGE_LABEL} steps back to All loot's`" @click="setOff(kind, null)"><i class="fas fa-undo" /></button>
+        <button v-if="c.rulers[kind]" type="button" class="w-icon-btn" :title="`${PAGE_LABEL} back to All loot's ruler`" :aria-label="`${PAGE_LABEL} back to All loot's ruler`" data-currency-page-undo @click="setRuler(kind, null)"><i class="fas fa-sliders-h" /></button>
       </span>
-      <StepRuler v-if="c.rulers[kind]" :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="(i, v) => setOwn(kind, i, v)" />
+      <StepRuler toggles :page="kind" :page-name="PAGE_LABEL" :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="{}"
+        @edit="s => stepEdit = s" @set="(i, v) => setOwn(kind, i, v)" @toggle="togglePageOff" />
     </div>
 
     <slot name="extra" />
@@ -179,7 +167,7 @@
           <span :class="$style.subFold" role="button" tabindex="0" :aria-expanded="isOpen(`${g.cat.id}/${sg.name}`)"
             @click="toggle(`${g.cat.id}/${sg.name}`)" @keydown.enter.prevent="toggle(`${g.cat.id}/${sg.name}`)" @keydown.space.prevent="toggle(`${g.cat.id}/${sg.name}`)">
             <i class="fas text-xs w-dim" :class="isOpen(`${g.cat.id}/${sg.name}`) ? 'fa-chevron-down' : 'fa-chevron-right'" />
-            <span v-item-tip="g.cat.id === 'jewclus' ? { name: sg.name } : null" :class="$style.subName">{{ sg.name }}</span>
+            <span v-item-tip="g.cat.id === 'jewclus' && sg.name !== 'Any size' ? { name: sg.name } : null" :class="$style.subName">{{ sg.name }}</span>
             <span :class="$style.count">{{ sg.shown }} of {{ sg.all.length }} show</span>
             <span :class="$style.dots" aria-hidden="true"><i v-for="r in sg.all" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
           </span>
@@ -238,13 +226,13 @@ import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
+import { levelsOn } from './widget'
 import { CHASE_LOOKS, chaseLookOf } from './unique-classes'
 import { toggleNotAvg } from './currency-settings'
 import { MAP_STYLES } from './currency-weights'
 import type { MapStyle } from './currency-weights'
 import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, FAINT_UNTIL, faintLook, faintOn, forcedHidden, fixedOf, sectionMode, sizeCutNow, stepStarts, stepsOffIn } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
-import { experimentalUnlocked } from '../personal'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { loadOwnTables, ownTables } from './own-lists'
@@ -491,7 +479,7 @@ const dragLvl = ref<number | null>(null)
 // the Loot prices alone.
 async function setLevel (n: number) {
   const ns = props.config.neversink
-  if (!ns?.on) {
+  if (!levelsOn(props.config)) {
     dragLvl.value = null
     c.value.mult = n === level.value ? null : strictMult(n)
     return
@@ -564,7 +552,9 @@ function setOwn (cat: string, i: number, shown: number) {
 const allOff = computed(() => c.value.offBy.all ?? [])
 // The folded All loot line's step prices, after Strictness; a step turned
 // off everywhere is left out.
-const allPrices = computed(() => stepStarts({ ...eff.value, rulers: {} }).map((v, i) => allOff.value.includes(i + 1) ? null : `${CSTEP_NAMES[i + 1]} ${chaosText(v)}`).filter(Boolean).join(' · '))
+// Each shows as its own label (Guy 2026-11-28: colour coded, labels not
+// numbers); a step off everywhere is struck through, as on the ruler.
+const allPrices = computed(() => stepStarts({ ...eff.value, rulers: {} }).map((v, i) => ({ step: (i + 1) as CStep, name: CSTEP_NAMES[i + 1], price: chaosText(v), off: allOff.value.includes(i + 1) })))
 // Picking a step's look opens the card, where its editor shows.
 watch(stepEdit, v => { if (v != null) allOpen.value = true })
 function toggleAll (s: number) {
@@ -577,9 +567,6 @@ const pageOff = computed(() => c.value.offBy[props.kind] ?? allOff.value)
 function togglePageOff (s: number) {
   const list = flip(pageOff.value, s)
   setOff(props.kind, list.join() === allOff.value.join() ? null : list)
-}
-function ownPageRuler () {
-  setRuler(props.kind, stepStarts({ ...c.value, rulers: {} }).map(v => Number(v.toPrecision(3))))
 }
 const ownCount = computed(() => CATS.value.filter(x => c.value.offBy[x.id] != null || c.value.rulers[x.id]).length)
 const flip = (list: readonly number[], s: number) => list.includes(s) ? list.filter(x => x !== s) : [...list, s].sort((a, b) => a - b)
@@ -707,8 +694,10 @@ function chaosText (v: number): string {
 <style module>
 .allLine { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; }
 .allFold { display: inline-flex; align-items: center; gap: 5px; background: none; border: 0; padding: 0; color: var(--w-text); cursor: pointer; font-size: var(--w-fs-sm); }
-.allPrices { background: none; border: 0; padding: 0; color: var(--w-dim); font-size: var(--w-fs-xs); cursor: pointer; font-variant-numeric: tabular-nums; }
-.allPrices:hover { color: var(--w-text); }
+.allPrices { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; cursor: pointer; }
+.allPrices > span { display: inline-flex; pointer-events: none; }
+.allOff { opacity: .45; text-decoration: line-through; }
+.pageCard { display: flex; flex-direction: column; gap: 2px; padding: 4px 8px 2px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .allCard { display: flex; flex-direction: column; gap: 6px; padding: 5px 10px; border: 1px solid var(--w-accent, #c8a565); border-radius: var(--w-r-sm); background: var(--w-panel); }
 .wrap {
   max-height: min(40rem, calc(78vh / var(--w-ui-scale, 1)));
