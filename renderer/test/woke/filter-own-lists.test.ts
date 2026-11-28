@@ -46,6 +46,9 @@ describe('own item lists', () => {
     const names = (t: OwnTables) => plain(currencyItems(doc, lookup, {}, null, null, t)).map(i => i.name)
     expect(names(tables())).toContain('Divine Orb')
     expect(names(tables())).not.toContain('Simple Sextant')
+    // No guesses read yet: what the base filter lists keeps its row.
+    expect(names(tables())).toContain('Orb of Unmaking')
+    expect(names(tables({ 'Divine Orb': 200 }))).not.toContain('Orb of Unmaking')
     expect(names(tables())).not.toContain('Abyss Scarab')
     expect(names(tables({ 'Orb of Binding': 0.5 }))).toContain('Orb of Binding')
   })

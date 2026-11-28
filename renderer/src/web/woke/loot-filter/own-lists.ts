@@ -72,13 +72,14 @@ const cond = (key: string, values: string[]): FilterCondition => ({ key, op: '==
 
 // The lists as rules the Loot tab reads in place of NeverSink's, one per type
 // and class, with only the items that still drop. `find`: a live price.
-export function ownBlocks (t: OwnTables, find: (type: string, name: string) => number | null): FilterBlock[] {
+// `listed`: names that also count as still dropping (see itemSource).
+export function ownBlocks (t: OwnTables, find: (type: string, name: string) => number | null, listed: ReadonlySet<string> = new Set()): FilterBlock[] {
   const by = new Map<string, { type: string, cls: string, names: string[] }>()
   for (const [name, cls, art] of t.lists) {
     const type = ownType(name, cls, art)
     if (!type) continue
     const live = name === 'Chaos Orb' ? 1 : find(type, name)
-    if (!(live != null && live > 0) && !t.guesses.has(name) && !ALWAYS.has(name)) continue
+    if (!(live != null && live > 0) && !t.guesses.has(name) && !ALWAYS.has(name) && !listed.has(name)) continue
     const key = `${type}|${cls}`
     const g = by.get(key) ?? { type, cls, names: [] }
     g.names.push(name)
@@ -112,5 +113,9 @@ export const OWN_TYPES = /^(currency(->(essence|fossil|oil|deliriumorbs|trial->o
 export function itemSource (blocks: FilterBlock[], t: OwnTables | null, lookup: PriceLookup | null, groupOf: (type: string) => EconomyGroup, any: EconomyGroup): FilterBlock[] {
   if (!t?.lists.length || !lookup) return blocks
   const find = (type: string, name: string) => (lookup(groupOf(type), name) ?? lookup(any, name))?.chaos ?? null
-  return [...ownBlocks(t, find), ...blocks.filter(b => !b.type || !OWN_TYPES.test(b.type))]
+  const own = (b: FilterBlock) => b.type != null && OWN_TYPES.test(b.type)
+  // Until last league's prices are read (no guesses yet), an unpriced item
+  // the base filter lists keeps its row, so nothing drops off the tab.
+  const listed = new Set(t.guesses.size ? [] : blocks.filter(own).flatMap(b => b.conditions.flatMap(c => c.key === 'BaseType' ? c.values : [])))
+  return [...ownBlocks(t, find, listed), ...blocks.filter(b => !own(b))]
 }
