@@ -93,7 +93,6 @@ describe('identified mods', () => {
       const bases = filterBases(doc).filter((b): b is BaseRow & { cls: string } => !!b.cls && !!TABLE.classes[b.cls])
       const compiled = applyWeights(doc, w, bases, groups)!
       const idRules = compiled.blocks.filter(b => /identified/.test(b.comment ?? ''))
-      console.log(need, groups.length, idRules.length, idRules.reduce((s, b) => s + b.conditions.reduce((k, c) => k + c.values.join('" "').length + 20, 60), 0))
       expect(idRules.length).toBeLessThan(2000)
       for (let n = 0; n < 800; n++) {
         const row = bases[Math.floor(r() * bases.length)]
