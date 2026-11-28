@@ -46,7 +46,6 @@ const props = defineProps<{
 }>()
 
 const open = ref(false)
-const ns = computed(() => props.config.neversink)
 const levels = computed(() => levelsOn(props.config))
 const auto = computed(() => props.config.strictAuto)
 const sortedLadder = computed(() => [...auto.value.ladder].sort((a, b) => a.from - b.from))
