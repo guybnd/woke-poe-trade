@@ -1062,7 +1062,12 @@ test('prices: Apply only stages the moves; Save + reload writes them once', asyn
 // A window made taller than a tab's usual height: the tab's list fills it, no
 // blank band under it (Prices drew a few rows, then empty floor). A window
 // never resized keeps a short tab short.
-const tabGap = (page: Overlay['page'], inTab: string | RegExp) => page.getByText(inTab, { exact: typeof inTab === 'string' }).first().evaluate(el => {
+// The Build tab's list (a short tab, whatever build is active).
+const buildGap = (page: Overlay['page']) => page.locator('[data-filter-build-tab]').evaluate(list => {
+  const body = list.parentElement!
+  return Math.round(body.getBoundingClientRect().bottom - list.getBoundingClientRect().bottom)
+})
+const tabGap = (page: Overlay['page'], inTab: string) => page.getByText(inTab, { exact: true }).first().evaluate(el => {
   const list = el.closest('.w-scroll')!
   const body = list.parentElement!
   return Math.round(body.getBoundingClientRect().bottom - list.getBoundingClientRect().bottom)
@@ -1077,7 +1082,7 @@ test('prices: a taller window, the list fills it to the bottom', async ({ overla
   await expect.poll(() => tabGap(page, 'Re-tier from poe.ninja prices')).toBeLessThan(4)
   await overlay.snap('prices tab in a tall window')
   await page.getByRole('tab', { name: /^Build/ }).click()
-  await expect.poll(() => tabGap(page, /^No active build/)).toBeLessThan(4)
+  await expect.poll(() => buildGap(page)).toBeLessThan(4)
 })
 
 test('a window never resized keeps a short tab short', async ({ overlay, fakeApp }) => {
@@ -1085,9 +1090,9 @@ test('a window never resized keeps a short tab short', async ({ overlay, fakeApp
   await openEditor(overlay, fakeApp)
   const page = overlay.page
   await page.getByRole('tab', { name: /^Build/ }).click()
-  await expect(page.getByText(/^No active build/).first()).toBeVisible()
-  expect(await tabGap(page, /^No active build/)).toBeLessThan(4)
-  const panel = (await page.locator('[data-w-panel]').filter({ hasText: 'No active build' }).first().boundingBox())!
+  await expect(page.locator('[data-filter-build-tab]')).toBeVisible()
+  expect(await buildGap(page)).toBeLessThan(4)
+  const panel = (await page.locator('[data-w-panel]').filter({ has: page.locator('[data-filter-build-tab]') }).first().boundingBox())!
   expect(panel.height).toBeLessThan(500)
 })
 

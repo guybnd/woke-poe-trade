@@ -288,7 +288,7 @@
     <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" @open-loot="tab = 'currency'" />
 
     <!-- build rules -->
-    <div v-else-if="tab === 'build'" :class="$style.changes" class="w-scroll">
+    <div v-else-if="tab === 'build'" :class="$style.changes" class="w-scroll" data-filter-build-tab>
       <WEmpty v-if="!buildInput" icon="fas fa-user-cog">
         No active build. Pick one in PoB builds. <WInfo text="Press Use build there, and its gems, link colours and uniques can be added to your filter here." />
       </WEmpty>
