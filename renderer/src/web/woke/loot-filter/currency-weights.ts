@@ -28,6 +28,7 @@ import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
 import { FOULBORN_PREFIX, FOULBORN_TYPE, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
+import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK } from './map-classes'
 import type { GemLine } from './gem-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
 import type { CStep, CurrencySettings, ItemEdit, SectionMode } from './currency-settings'
@@ -70,9 +71,9 @@ export const CURRENCY_CATEGORIES: CurrencyCategory[] = [
   { id: 'other', name: 'Other', art: 'Scrying Orb' }
 ]
 // Every class's categories (the Loot tab's rail shows one class at a time).
-export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES]
-export type LootKind = 'currency' | 'fragments' | 'cards' | 'uniques' | 'gems'
-export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : 'currency'
+export const ALL_CATEGORIES: CurrencyCategory[] = [...CURRENCY_CATEGORIES, ...FRAGMENT_CATEGORIES, ...CARD_CATEGORIES, ...UNIQUE_CATEGORIES, ...GEM_CATEGORIES, ...MAP_CATEGORIES]
+export type LootKind = 'currency' | 'fragments' | 'cards' | 'uniques' | 'gems' | 'maps'
+export const kindOf = (cat: string): LootKind => FRAGMENT_IDS.has(cat) ? 'fragments' : CARD_IDS.has(cat) ? 'cards' : UNIQUE_IDS.has(cat) ? 'uniques' : GEM_IDS.has(cat) ? 'gems' : MAP_IDS.has(cat) ? 'maps' : 'currency'
 // A section's Off / Weighted / Always: yours, else its default (boss-only
 // uniques: Always).
 export const sectionMode = (c: Pick<CurrencySettings, 'catMode'>, cat: string): SectionMode => c.catMode?.[cat] ?? UNIQUE_MODES[cat] ?? GEM_MODES[cat] ?? 'auto'
@@ -329,6 +330,32 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       })
     }
   }
+  // Blighted and blight-ravaged maps: a tier poe.ninja prices is an item;
+  // one it doesn't stays NeverSink's.
+  if (lookup && doc.blocks.some(b => b.type === BLIGHT_TYPE)) {
+    for (const k of MAP_KINDS) {
+      const group: EconomyGroup = { type: k.cat, label: k.prefix, ninja: [k.ninja] }
+      for (let t = 1; t <= 17; t++) {
+        const name = `${k.prefix} (Tier ${t})`
+        const p = lookup(group, name)
+        if (!p || !(p.chaos > 0)) continue
+        const own = edits[name]?.price
+        seen.set(name, {
+          name,
+          cls: 'Maps',
+          type: 'maps',
+          tier: null,
+          cat: k.cat,
+          chaos: (own ?? p.chaos) * (edits[name]?.mult ?? 1),
+          est: own == null && (p.thin || Boolean(p.day1)),
+          ...(own != null ? { own: true } : {}),
+          full: 1,
+          bt: `Map (Tier ${t})`,
+          conds: [c(k.cond, '', ['True'])]
+        })
+      }
+    }
+  }
   return [...seen.values()]
 }
 
@@ -510,7 +537,7 @@ const mixTo = (c: number[], to: number, f: number) => c.map(v => Math.round(v + 
 // The colour pushed 80% further from grey (Normal: "as now but more saturated").
 const vivid = (c: number[]) => { const g = (c[0] + c[1] + c[2]) / 3; return c.map(v => Math.max(0, Math.min(255, Math.round(v + (v - g) * 0.8)))) }
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rgb: [number, number, number], color: string, shape: string } {
-  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? CAT_LOOK.other
+  const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? CAT_LOOK.other
   const own = c.cats[cat]
   return {
     rgb: own?.text ? [own.text[0], own.text[1], own.text[2]] : d.text,
@@ -681,7 +708,7 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const eff = scaled(cfg, doc.strictness)
   const faint = faintOn(cfg, doc.strictness)
   const gemItems = all.filter(it => it.type === 'gems')
-  const items = all.filter(it => it.cls !== UNIQUE_CLS && it.type !== 'gems')
+  const items = all.filter(it => it.cls !== UNIQUE_CLS && it.type !== 'gems' && it.type !== 'maps')
   const none: CurrencyCompiled = { blocks: [], items: [], chars: 0 }
   const compiled = items.length ? compileCurrency(eff, items, { faint }) : none
   const gemsOut = gemItems.length ? compileCurrency(eff, gemItems, { faint, floors: gemFloors(eff) }) : none
@@ -689,7 +716,8 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   insertBlocks(doc, first < 0 ? doc.chunks.length : first, [...compiled.blocks, ...gemsOut.blocks])
   const foul = applyFoulborn(doc, eff, all.filter(it => it.cat === 'uniqfoul'), faint) ?? none
   const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul'), faint) ?? none
-  const parts = [compiled, gemsOut, foul, uniq]
+  const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
+  const parts = [compiled, gemsOut, foul, uniq, maps]
   return { blocks: parts.flatMap(x => x.blocks), items: parts.flatMap(x => x.items), chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 
@@ -718,6 +746,19 @@ function insertBlocks (doc: FilterDoc, at: number, blocks: FilterBlock[]) {
   const i = after ? doc.blocks.indexOf(after) : doc.blocks.length
   doc.blocks.splice(i < 0 ? doc.blocks.length : i, 0, ...blocks)
   doc.blocks.forEach((b, k) => { b.index = k })
+}
+
+// Blighted and blight-ravaged maps go where NeverSink's blighted maps start,
+// one compile per kind so each rule, the line's too, keeps its BlightedMap or
+// UberBlightedMap condition and never touches plain maps of those tiers.
+function applySpecialMaps (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem[], faint: boolean): CurrencyCompiled | null {
+  if (!items.length) return null
+  const anchor = doc.blocks.find(b => b.type === BLIGHT_TYPE)
+  if (!anchor) return null
+  const parts = MAP_KINDS.map(k => items.filter(it => it.cat === k.cat)).filter(l => l.length).map(l => compileCurrency(cfg, l, { faint }))
+  const blocks = parts.flatMap(x => x.blocks)
+  insertBlocks(doc, doc.chunks.indexOf(anchor), blocks)
+  return { blocks, items, chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 
 // Foulborn uniques go where NeverSink's Foulborn tiers start, so the plain

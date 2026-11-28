@@ -21,6 +21,8 @@
       <button type="button" :class="$style.hidChip" title="List the items that never show" data-currency-hidden @click="only = 'hidden'">{{ rows.length - shownCount }} of {{ rows.length }} never show</button>
     </div>
 
+    <slot name="extra" />
+
     <StepRuler :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :edit="stepEdit" :samples="stepSample"
       @edit="s => stepEdit = s" @set="setShown" />
 
@@ -161,7 +163,7 @@ const props = withDefaults(defineProps<{
   // An item to open and scroll to (Alt+F's "Open on the Loot tab").
   focusItem?: string | null
 }>(), { kind: 'currency', focusItem: null })
-const KIND_NAME: Record<LootKind, string> = { currency: 'currency', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems' }
+const KIND_NAME: Record<LootKind, string> = { currency: 'currency', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems', maps: 'special maps' }
 const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.kind))
 
 const c = computed(() => props.config.presets.currency)
@@ -319,7 +321,7 @@ const level = computed(() => levelOf(props.store.doc.value?.strictness ?? null))
 const mult = computed(() => c.value.mult ?? strictMult(level.value))
 const eff = computed(() => scaled(c.value, props.store.doc.value?.strictness ?? null))
 const dragMult = ref<number | null>(null)
-const SAMPLE_CATS = props.kind === 'gems' ? ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'] : props.kind === 'uniques' ? ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss', 'uniqfoul'] : props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
+const SAMPLE_CATS = props.kind === 'maps' ? ['mapblight', 'mapravaged'] : props.kind === 'gems' ? ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'] : props.kind === 'uniques' ? ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss', 'uniqfoul'] : props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
 // The colours the step ruler shows.
 const sampleCat = ref(SAMPLE_CATS[0])
 // Each step card's sample: an item of the picked category that one of shows
@@ -389,6 +391,7 @@ const emptyText = computed(() => {
   if (!props.store.prices.lookup.value) return 'Waiting for prices from poe.ninja.'
   // Gem rows come from poe.ninja's gem prices, not from the filter.
   if (props.kind === 'gems') return 'No gem prices from poe.ninja yet.'
+  if (props.kind === 'maps') return 'No blighted map prices from poe.ninja yet.'
   return `No ${what} found in this filter.`
 })
 const statusText = computed(() => {

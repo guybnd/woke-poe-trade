@@ -10,8 +10,9 @@
         <span :class="$style.state">{{ (k.id === 'jewels' ? config.presets.clusterPrices.on : config.presets.currency.on) ? 'On' : 'Off' }}</span>
       </button>
     </nav>
-    <CurrencyTab v-if="PRICED.has(sel)" :key="sel" :kind="lootKind" :store="store" :config="config" :focus-item="focusItem" :class="$style.main" />
-    <MapsTab v-else-if="sel === 'maps'" :config="config" :class="$style.main" />
+    <CurrencyTab v-if="PRICED.has(sel)" :key="sel" :kind="lootKind" :store="store" :config="config" :focus-item="focusItem" :class="$style.main">
+      <template v-if="sel === 'maps'" #extra><MapsTab :config="config" /></template>
+    </CurrencyTab>
     <LeagueTab v-else-if="sel === 'league'" :config="config" :class="$style.main" />
     <JewelsTab v-else :store="store" :config="config" :class="$style.main" @open-rule="r => emit('open-rule', r)" />
   </div>
@@ -52,7 +53,7 @@ const LOOT_CLASSES = [
 type ClassId = (typeof LOOT_CLASSES)[number]['id']
 
 // Classes prices decide already: one engine and one switch for both.
-const PRICED = new Set<ClassId>(['currency', 'fragments', 'cards', 'uniques', 'gems'])
+const PRICED = new Set<ClassId>(['currency', 'fragments', 'cards', 'uniques', 'gems', 'maps'])
 const sel = ref<ClassId>('currency')
 const focusItem = ref<string | null>(null)
 watch(() => props.focus, f => {
