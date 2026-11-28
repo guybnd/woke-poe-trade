@@ -31,6 +31,7 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
+  { id: 'loot-filter-recipes-by-price', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Recipes steps follow the price of what the vendor gives' },
   { id: 'loot-filter-levelling', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Levelling: Loot looks in the acts and hideout, gear for your build type, flasks, supplies' },
   { id: 'loot-filter-readable-history', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Changes › History says what each change moved, from what to what; repeats fold into one row' },
   { id: 'loot-filter-own-lists', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot lists items from the game data; unpriced ones are guessed from last league' },
@@ -61,10 +62,8 @@ export const NEWS: NewsItem[] = [
   { id: 'map-price-check-exclude-bad-mods', since: '1.330.22', wmType: 'price-check', name: 'Price check', topic: 'Maps', note: 'New: Exclude my bad mods on a map\'s Farming template leaves out maps with any of its Not mods' },
   { id: 'flips-tattoo-tribes', since: '1.330.22', wmType: 'woke-scarab-flip', goto: 'tattoos', name: 'Flips', note: 'New: Tattoos tab, each tribe\'s average Tattoo and whether 3 of its cheapest are worth vendoring for 1' },
   { id: 'mechanics-settlers', since: '1.330.22', wmType: 'woke-mechanics', goto: 'settlers', name: 'League mechanics', note: 'New: Settlers tab, Tattoos by tribe and Runegrafts, priced' },
-  { id: 'price-check-base-percentile', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: rare and magic armour show their base roll ("92% base") by its defence; click it to add it to the search' },
-  { id: 'related-folded-groups', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: the list beside a price check folds into groups that fit your screen; click a group to open it' },
-  { id: 'price-check-conquest-keystones', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a Timeless jewel lists each conqueror\'s keystone beside it. Click one to search it, any number' },
   { id: 'essence-tip-slots', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Tooltips', note: 'New: an essence\'s tooltip lists the mod it forces on each slot' },
+  { id: 'price-check-conquest-keystones', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a Timeless jewel lists each conqueror\'s keystone beside it. Click one to search it, any number' },
   { id: 'price-check-mod-tiers', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Tooltips', note: 'New: hover a mod for its tiers, the item level each needs, and the bench craft for it' },
   { id: 'search-keys-list', since: '1.330.21', wmType: 'woke-search', name: 'Search', note: 'New: type "keys" for every hotkey you have set and every mouse trick, in one list' },
   { id: 'price-check-gem-kinds', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a gem, its transfigured kinds, priced' },

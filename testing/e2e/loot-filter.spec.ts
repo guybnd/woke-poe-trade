@@ -1557,6 +1557,22 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(abyss).toBeVisible()
   await abyss.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
   await expect(abyss.locator('[data-currency-item="Rare abyss jewel, item level 86+"]')).toBeVisible()
+  // Jewels start Always: each row at its set look, no price. By price on the
+  // header puts every row on the price ladder (Guy 2026-11-28).
+  const row86 = abyss.locator('[data-currency-item="Rare abyss jewel, item level 86+"]')
+  const head = abyss.locator('[data-loot-section-mode] button').first()
+  await expect(head).toContainText('Always')
+  await expect(row86).toContainText('Normal')
+  await expect(row86.locator('[data-loot-row-on]')).toBeChecked()
+  await overlay.snap('loot tab, abyss jewel rows')
+  await head.click()
+  await page.locator('[data-state-chip-menu]').getByRole('menuitemradio', { name: /By price/ }).click()
+  await expect(head).toContainText('By price')
+  await expect(row86).toContainText('est.')
+  // The menu stays open: pick Always again from it.
+  await page.locator('[data-state-chip-menu]').getByRole('menuitemradio', { name: /Always/ }).click()
+  await expect(row86).not.toContainText('est.')
+  await page.keyboard.press('Escape')
   await expect(page.locator('[data-maps-pile] [data-map-drop]').first()).toBeVisible()
   await expect(page.locator('[data-loot-jewels]')).toContainText('Follow poe.ninja')
   await overlay.snap('loot tab, jewels')
@@ -1580,15 +1596,18 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await overlay.snap('loot tab, league')
   await logs.locator('[data-loot-section-mode]').getByRole('button').click()
   await page.getByRole('menuitemradio', { name: /^By price/ }).click()
-  // Recipes: each vendor recipe Off or the step it shows at in maps.
+  // Recipes: each vendor recipe Off or the step it shows at in maps, by
+  // default the step its reward's price reaches (By price).
   await page.locator('[data-loot-class="recipes"]').click()
-  // (Its start carries over the 6 sockets preset, off here: Off.)
   const six = page.locator('[data-loot-recipe="six"]')
-  await expect(six.getByRole('button', { name: 'Off', pressed: true })).toBeVisible()
+  const byPrice = six.locator('[data-recipe-auto]')
+  await expect(byPrice).toHaveAttribute('aria-pressed', 'true')
   await six.getByRole('button', { name: 'Normal' }).click()
   await expect(six.getByRole('button', { name: 'Normal', pressed: true })).toBeVisible()
+  await expect(byPrice).toHaveAttribute('aria-pressed', 'false')
   await overlay.snap('loot tab, recipes')
-  await six.getByRole('button', { name: 'Off' }).click()
+  await byPrice.click()
+  await expect(byPrice).toHaveAttribute('aria-pressed', 'true')
   // Levelling: where the Loot looks apply (everywhere by default) and the
   // currency that shows while levelling, each with its item tooltip.
   await page.locator('[data-loot-class="levelling"]').click()
