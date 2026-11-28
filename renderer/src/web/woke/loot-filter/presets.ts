@@ -602,18 +602,22 @@ export function tierNumber (b: Pick<FilterBlock, 'type' | 'tier' | 'comment'>): 
     const look = /!exotics_t(\d+)\b/.exec(b.comment ?? '')
     return look ? Number(look[1]) : null
   }
+  // The Loot and Equipment tabs' steps: Tink and Beam count as tier 1.
+  const w = /^s([1-5])$/.exec(b.tier ?? '')
+  // (NaN for any other rule named s1-s5: never above a kept tier.)
+  if (w) return (b.type === CURRENCY_TYPE ? 6 : b.type === WEIGHT_TYPE ? 5 : NaN) - +w[1]
   const m = /^t(\d+)/.exec(b.tier ?? '')
   return m ? Number(m[1]) : null
 }
 
-// The tier a Loot or Equipment tab rule counts as for quiet mode and fewer
-// beams: Tink (Loot) and Beam (Equipment) are tier 1. NeverSink's special
-// unique rules copied onto the Loot tab (u-*) stay untiered, as in NeverSink.
-export function wokeTier (b: Pick<FilterBlock, 'type' | 'tier'>): number | null {
-  if (b.type !== CURRENCY_TYPE && b.type !== WEIGHT_TYPE) return null
-  const m = /^s([1-5])$/.exec(b.tier ?? '')
-  if (!m) return null
-  return (b.type === CURRENCY_TYPE ? 6 : 5) - Number(m[1])
+// Quiet mode drops the sounds and fewer beams the beams and map icons of
+// rules below the tiers they keep.
+function quietBeams (b: FilterBlock, n: number | null, p: Presets): boolean {
+  const had = b.actions.length
+  for (const [on, keep, keys] of [[p.quiet.on, p.quiet.keepTiers, SOUND_KEYS], [p.beams.on, p.beams.keepTiers, BEAM_KEYS]] as const) {
+    if (on && n != null && n > keep) b.actions = b.actions.filter(a => !keys.includes(a.key))
+  }
+  return b.actions.length < had
 }
 
 // The highest map tier a block can catch, or null when it has no cap.
@@ -847,32 +851,11 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
       if (p.colourBlind.on && (b.type === BUILD_RULE_TYPE || b.type === PRESET_TYPE || b.type === CURRENCY_TYPE || b.type === WEIGHT_TYPE) && colourBlindActions(b)) touched = true
       // Quiet mode and fewer beams reach the Loot and Equipment tabs' steps
       // too (Guy's pick, 2026-11-28): their loudest step counts as tier 1.
-      const n = wokeTier(b)
-      if (n != null && p.quiet.on && n > p.quiet.keepTiers && b.actions.some(a => SOUND_KEYS.includes(a.key))) {
-        b.actions = b.actions.filter(a => !SOUND_KEYS.includes(a.key))
-        touched = true
-      }
-      if (n != null && p.beams.on && n > p.beams.keepTiers && b.actions.some(a => BEAM_KEYS.includes(a.key))) {
-        b.actions = b.actions.filter(a => !BEAM_KEYS.includes(a.key))
-        touched = true
-      }
+      if (quietBeams(b, tierNumber(b), p)) touched = true
       if (touched) { b.dirty = true; changed++ }
       continue
     }
-    if (p.quiet.on) {
-      const n = tierNumber(b)
-      if (n != null && n > p.quiet.keepTiers && b.actions.some(a => SOUND_KEYS.includes(a.key))) {
-        b.actions = b.actions.filter(a => !SOUND_KEYS.includes(a.key))
-        touched = true
-      }
-    }
-    if (p.beams.on) {
-      const n = tierNumber(b)
-      if (n != null && n > p.beams.keepTiers && b.actions.some(a => BEAM_KEYS.includes(a.key))) {
-        b.actions = b.actions.filter(a => !BEAM_KEYS.includes(a.key))
-        touched = true
-      }
-    }
+    if (quietBeams(b, tierNumber(b), p)) touched = true
     if (p.hideGear.on) {
       // The catch-all for white and blue gear in maps.
       if (b.type === 'hidelayer' && b.tier === 'normalmagicendgame' && b.visibility !== 'Hide') {
