@@ -587,7 +587,7 @@ function upgradeConfig (_config: Config): Config {
   // woke: the Loot tab is on for everyone once NeverSink's tab is gone.
   // Once only, so one you switch off stays off.
   const lootWidgets = config.widgets.filter(w => w.wmType === LOOT_FILTER_TYPE)
-  if (!modules.woke?.lootOnByDefault && lootWidgets.length) {
+  if (!modules.woke?.lootOnByDefault && (lootWidgets.length || modules.woke)) {
     for (const w of lootWidgets) lootOnForAll(w as unknown as Parameters<typeof lootOnForAll>[0])
     ensureWokeConfig(modules).woke.lootOnByDefault = true
   }

@@ -8,7 +8,7 @@
     <template #toolbar>
       <WBackLink v-if="trail.length" :to="backTo" title="Back to where you were (mouse back button)" @back="goBack" />
       <WSelect :model-value="sourceKey" :options="fileOptions" style="max-width: 20rem;" @update:model-value="pickSource" />
-      <WButton size="sm" variant="ghost" icon="fas fa-sync" title="Reload the file list and the filter" @click="refresh" />
+      <WButton size="sm" variant="ghost" icon="fas fa-sync" :title="config.neversink.on ? 'Reload the file list and the filter, and check for a NeverSink update' : 'Reload the file list and the filter'" @click="refresh" />
       <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule: inventory, stash or ground labels. Hold Alt for items your filter hides.` : undefined" @paste.capture="onSearchPaste">
         <ItemSearchField v-model="search" :doc="store.doc.value" :area-level="searchAreaLevel" :drop="tab === 'preview'" @open-rule="openRule" @drop-item="dropPick" />
       </span>
@@ -17,7 +17,7 @@
       <WBanner v-if="store.error.value">{{ store.error.value }}
         <template #actions><WButton size="sm" @click="refresh">Retry</WButton></template>
       </WBanner>
-      <WBanner v-else-if="banner" :tone="banner.tone">{{ banner.text }}
+      <WBanner v-else-if="banner" :tone="banner.tone" :title="store.updateReady.value && config.neversink.latestChanges ? config.neversink.latestChanges : undefined">{{ banner.text }}
         <template #actions><WButton v-for="a in banner.actions" :key="a.label" size="sm" :variant="a.primary ? 'primary' : 'ghost'" @click="a.run()">{{ a.label }}</WButton></template>
       </WBanner>
     </template>
@@ -614,6 +614,13 @@ const fileOptions = computed(() => {
 
 interface BannerAction { label: string, run: () => void, primary?: boolean }
 const banner = computed<{ text: string, tone: 'warn' | 'info', actions: BannerAction[] } | null>(() => {
+  const b = bannerOf()
+  // With the NeverSink tab gone, the banner is where an update is applied:
+  // a warning above it still offers Update.
+  if (b && props.store.updateReady.value && !b.actions.some(a => a.label === 'Update')) b.actions.push({ label: 'Update', run: updateNow })
+  return b
+})
+function bannerOf (): { text: string, tone: 'warn' | 'info', actions: BannerAction[] } | null {
   const s = props.store
   const failed = s.failed.value.length
   const review = { label: 'Review changes', run: () => { tab.value = 'changes' } }
@@ -636,9 +643,10 @@ const banner = computed<{ text: string, tone: 'warn' | 'info', actions: BannerAc
   if (s.problems.value.length) return { tone: 'warn', actions: [review], text: 'The game would reject this filter as it is. See Changes for the rule to fix.' }
   const ready = s.updateReady.value
   if (ready) {
+    const homeless = ready.total - ready.ok
     return {
       tone: 'info',
-      text: `NeverSink ${ready.version} is ready. ${ready.ok} of ${ready.total} of your changes fit.`,
+      text: `NeverSink ${ready.version} is ready. ${ready.ok} of ${ready.total} of your changes fit${homeless ? ` (${homeless} will need a new home)` : ''}.`,
       actions: [{ label: 'Update', primary: true, run: updateNow }]
     }
   }
@@ -653,7 +661,7 @@ const banner = computed<{ text: string, tone: 'warn' | 'info', actions: BannerAc
     }
   }
   return null
-})
+}
 
 async function updateNow () {
   const undo = await props.store.updateNeverSink()
@@ -1571,6 +1579,8 @@ async function pickSource (key: string) {
 async function refresh () {
   await props.store.listFiles()
   await props.store.load()
+  // The NeverSink tab's Check now lives here now.
+  if (props.config.neversink.on) props.store.checkForUpdate(true).catch(() => {})
 }
 
 function openFolder () {

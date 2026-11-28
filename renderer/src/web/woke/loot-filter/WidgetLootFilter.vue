@@ -110,6 +110,8 @@ const wm = inject<WidgetManager>('wm')!
 
 if (props.config.wmFlags[0] === 'uninitialized') {
   initLootFilterWidget(props.config)
+  // A new filter starts with the Loot tab on.
+  props.config.presets.currency.on = true
   wm.show(props.config.wmId)
 }
 normalizeLootFilterWidget(props.config)
