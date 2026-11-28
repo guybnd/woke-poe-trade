@@ -23,13 +23,13 @@ export const GEM_IDS = new Set(GEM_CATEGORIES.map(x => x.id))
 
 // The gem cyan, a shade per fold.
 export const GEM_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
-  gemexc: { text: [60, 230, 230], color: 'Cyan', shape: 'Star' },
-  gemawk: { text: [110, 210, 255], color: 'Cyan', shape: 'Diamond' },
-  gemtrans: { text: [120, 240, 200], color: 'Cyan', shape: 'Hexagon' },
+  gemexc: { text: [60, 230, 230], color: 'Cyan', shape: 'Triangle' },
+  gemawk: { text: [110, 210, 255], color: 'Cyan', shape: 'Triangle' },
+  gemtrans: { text: [120, 240, 200], color: 'Cyan', shape: 'Triangle' },
   // Not red: red beams and map icons are kept for Tink (Guy 2026-11-27).
   gemvaal: { text: [220, 90, 90], color: 'Pink', shape: 'Triangle' },
   gemsup: { text: [27, 200, 190], color: 'Cyan', shape: 'Triangle' },
-  gemskill: { text: [27, 162, 155], color: 'Cyan', shape: 'Circle' }
+  gemskill: { text: [27, 162, 155], color: 'Cyan', shape: 'Triangle' }
 }
 
 export const GEM_MODES: Record<string, SectionMode> = { gemexc: 'always', gemawk: 'always', gemtrans: 'always' }
