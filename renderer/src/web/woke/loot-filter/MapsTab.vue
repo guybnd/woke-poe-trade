@@ -9,7 +9,7 @@
 - Maps under the tier you pick hide. Past tier 16, only special maps show.
 - **Endgame**, **Guardian and Citadel** and **Blighted** maps are priced by poe.ninja.
 - **Originator**, **Content mods** and **Corrupted** have no price: they start from a guess (**est.**), and you set the step or price.
-- A guess under the line never hides a map: NeverSink shows it as before.
+- A guess under the line never hides a map: it shows small in its colour from your tier.
 
 Unique and Valdo maps stay with Uniques and NeverSink." />
       <input type="range" min="1" max="17" step="1" :value="drag ?? c.mapFrom" :class="$style.range" aria-label="Show maps from tier"
