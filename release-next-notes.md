@@ -1,5 +1,7 @@
 # Next release notes
 
+- Loot filter, Loot tab: a section set to Always now has a green dot on its chip, so it no longer looks like By price (gold). Hide stays a hollow grey dot.
+- Loot filter, Loot tab: every row now has the tick box Uniques and Jewels had. The section header decides for all its rows; untick one to hide just it, tick it again to follow the header. In a section on Hide the boxes grey out.
 - Loot filter: the sound picker now plays the game's own alert sounds, 1 to 16 and the named ones (ShAlchemy, ShDivine...), which are new in the list. They are read from your Path of Exile install the first time you press play (a second or two), so they sound exactly as in game; nothing of the game's is shipped with the app. The Preview tab's sound buttons play them too.
 - Price check, maps: Trade search (the map's mods) is open on every map check again, unless Worth running is open on a Nightmare Map. Folding Worth running opens it, and a map you folded it on no longer leaves it folded for the next one. Folded, it shows a "Show the map mods" bar where the mods go.
 - Price check, Nightmare Map: the side window no longer lists a "Drops from Arkhon's Vault" panel beside the map check. Worth running already shows the four vaults and their rewards (with Boss runs off, the panel stays). On other vault rewards (an Orb of Intention, a Valdo's Puzzle Box) the vault panel now names the rewards it can also give (Threads, Synthesised maps...) instead of "3 more kinds that vary".
