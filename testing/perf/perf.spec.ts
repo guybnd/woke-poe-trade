@@ -20,8 +20,9 @@ import { installProbe, resetProbe, readProbe, total } from './probe'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const RESULTS = path.resolve(here, '../perf-results')
 const BUDGETS = path.join(here, 'budgets.json')
-// All JS (lazy chunks too): a fixed 5 MB target. Startup JS is the strict one.
-const ALL_JS_TARGET_KB = 5120
+// All JS (lazy chunks too): a fixed target (Guy raised 5120 to 5600 KB on
+// 2026-11-28, for the loot filter work). Startup JS is the strict one.
+const ALL_JS_TARGET_KB = 5600
 const RENDERER_DIST = path.resolve(here, '../../renderer/dist')
 
 const WINDOW_MS = 10_000

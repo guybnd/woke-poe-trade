@@ -78,7 +78,11 @@ const TIER_CAT: Record<string, string> = {
   multispecialhigh: 'uniqvar',
   multispecial: 'uniqvar',
   earlyleague: 'uniqearly',
-  t3boss: 'uniqboss'
+  t3boss: 'uniqboss',
+  // The Loot tab's own unique lists (own-lists.ts).
+  own: 'uniqplain',
+  ownvar: 'uniqvar',
+  ownearly: 'uniqearly'
 }
 export const uniqueCategoryOf = (tier: string | null): string | null => tier ? TIER_CAT[tier] ?? null : null
 
