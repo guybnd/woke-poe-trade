@@ -357,6 +357,26 @@ describe('Alt+F on the Loot tab\'s own rows', () => {
     expect(itemFor(items, 'Map (Tier 14)', [])).toBe(null)
     expect(lootFocus('recipes')?.cls).toBe('recipes')
   })
+
+  // Guy 2026-11-28: Alt+F on a magic Crimson Jewel showed the unique Crimson
+  // Jewel's card. The jewel rows name every plain base, but `bt` only Cobalt.
+  it('finds a magic or rare jewel row on any of its bases, never the unique of that base', async () => {
+    const { itemFor, notItsRarity } = await import('@/web/woke/loot-filter/loot-focus')
+    const { JEWEL_ROWS } = await import('@/web/woke/loot-filter/jewel-classes')
+    const rows = [
+      { name: 'Crimson Jewel', type: 'uniques', cat: 'uniqjewel' },
+      ...JEWEL_ROWS.map(j => ({ name: j.name, type: 'jewels', cat: j.cat, bt: j.bts[0], bts: j.bts, conds: j.conds }))
+    ]
+    for (const j of JEWEL_ROWS) {
+      for (const base of j.bts) {
+        const rule = [{ key: 'Class', op: '==', count: null, values: [j.cls] }, { key: 'BaseType', op: '==', count: null, values: j.bts }, ...j.conds]
+        expect(itemFor(rows, base, rule)?.name, `${j.name} on ${base}`).toBe(j.name)
+      }
+    }
+    expect(notItsRarity(rows[0], 'Magic')).toBe(true)
+    expect(notItsRarity(rows[0], 'Unique')).toBe(false)
+    expect(notItsRarity(rows[1], 'Magic')).toBe(false)
+  })
 })
 
 describe('a name the game does not know never reaches the filter', () => {
