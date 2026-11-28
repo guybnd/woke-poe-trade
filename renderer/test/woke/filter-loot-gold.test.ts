@@ -1,4 +1,4 @@
-// Gold on the Loot tab (Guy 2026-11-28): one row in Currency, its piles
+// Gold on the Loot tab (Guy 2026-11-28): its own page, one row, its piles
 // stepped by size on its own ruler; its rules only ever name Gold.
 import { describe, it, expect } from 'vitest'
 import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
@@ -14,10 +14,10 @@ const lookup: PriceLookup = (_g, base) => base === 'Divine Orb' ? { chaos: 160, 
 const gold = (n: number): ItemFacts => ({ name: 'Gold', baseType: 'Gold', stackSize: n, areaLevel: 83, influences: [], explicitModNames: [] } as ItemFacts)
 
 describe('gold on the Loot tab', () => {
-  it('has one row in Currency', () => {
+  it('has one row on its own page', () => {
     const items = currencyItems(parseFilter(SEMI), lookup).filter(i => i.cat === 'gold')
     expect(items.map(i => i.name)).toEqual(['Gold'])
-    expect(kindOf('gold')).toBe('currency')
+    expect(kindOf('gold')).toBe('gold')
   })
 
   it('steps a pile by its size on the gold ruler', () => {
