@@ -18,6 +18,7 @@
       <WSegmented :model-value="String(r.step)" :options="STEPS" role="group" :aria-label="`${r.name}: Off or the step it shows at`" @update:model-value="v => setRecipeStep(c, r.id, Number(v) as CStep)" />
     </div>
     <p class="text-sm w-dim">{{ note }}</p>
+    <slot />
   </div>
 </template>
 

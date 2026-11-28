@@ -1,11 +1,7 @@
 <template>
-  <div ref="root" :class="$style.strip" data-goto-spot="profiles" role="tablist" aria-label="Profiles">
-    <button v-for="p in config.profiles" :key="p.id" type="button" role="tab" class="w-focusable" :aria-selected="p.id === config.activeProfile" :aria-label="`Profile ${p.name}`"
-      :class="[$style.tab, { [$style.on]: p.id === config.activeProfile }]" :disabled="store.switching.value && p.id !== config.activeProfile"
-      :title="tipOf(p)" @click="swap(p.id)" @contextmenu="tabMenu($event, p)">
-      <i v-if="switchingTo === p.id" class="fas fa-spinner fa-spin" aria-hidden="true" />
-      <span class="w-trunc">{{ p.name }}</span>
-    </button>
+  <!-- Profiles as one chip in the title bar (Guy's P1, 2026-11-28): the one in
+       use, ▾ for the others and for new, copy, rename and remove. -->
+  <div ref="root" :class="$style.strip" data-goto-spot="profiles">
     <template v-if="naming">
       <input ref="field" v-model="draft" class="w-input" :class="[$style.field, { 'w-input-bad': draft && problem }]" :maxlength="PROFILE_NAME_MAX"
         :aria-label="naming.kind === 'rename' ? 'New name' : 'Name of the new profile'" @keydown.enter.prevent="commit" @keydown.esc.prevent.stop="naming = null">
@@ -18,12 +14,16 @@
       <WButton size="sm" variant="danger" @click="confirmDelete">Remove</WButton>
       <WButton size="sm" variant="ghost" @click="deleting = null">Cancel</WButton>
     </template>
-    <button v-else type="button" class="w-focusable" :class="[$style.tab, $style.add]" :disabled="store.switching.value"
-      aria-label="New profile" title="New profile: a fresh one, a copy of the one in use, or one shared with you" @click="addMenu">
-      <i class="fas fa-plus" aria-hidden="true" />
+    <button v-else type="button" class="w-focusable" :class="$style.chip" :disabled="store.switching.value" aria-haspopup="menu"
+      :aria-label="`Profile ${current.name}: switch, add, rename, share or remove`" :title="tipOf(current)" data-profile-chip @click="profileMenu" @contextmenu.prevent="profileMenu">
+      <i v-if="switchingTo != null" class="fas fa-spinner fa-spin" aria-hidden="true" />
+      <span class="w-trunc">{{ current.name }}</span>
+      <i class="fas fa-caret-down" aria-hidden="true" />
     </button>
+    <div v-if="sharing" :class="$style.pop">
+      <ShareBox :key="`${sharing.mode}-${sharing.id ?? ''}`" :config="config" :store="store" :mode="sharing.mode" :profile-id="sharing.id" :anchor="anchor()" @close="sharing = null" />
+    </div>
   </div>
-  <ShareBox v-if="sharing" :key="`${sharing.mode}-${sharing.id ?? ''}`" :config="config" :store="store" :mode="sharing.mode" :profile-id="sharing.id" :anchor="anchor()" @close="sharing = null" />
 </template>
 
 <script setup lang="ts">
@@ -38,8 +38,6 @@ import { LEVEL_NAMES } from './strictness'
 // Loaded when opened: it pulls in the Loot tab's item list.
 const ShareBox = defineAsyncComponent(() => import('./ShareBox.vue'))
 
-// Profiles as a row of tabs above the editor's own (Guy's pick B): click one to
-// switch, + to add, right-click for duplicate, rename and remove.
 const props = defineProps<{
   config: LootFilterWidget
   store: LootFilterStore
@@ -67,28 +65,30 @@ function sourceOf (p: FilterProfile): string {
 }
 
 function tipOf (p: FilterProfile): string {
-  const lead = p.id === props.config.activeProfile ? 'In use' : 'Click to switch to it; the game loads it too'
-  return `${p.name} · ${sourceOf(p)}\nSaves to ${fileOf(p)}\n${lead}. Right-click to duplicate, rename, share or remove.`
+  const lead = p.id === props.config.activeProfile ? 'In use. Click for your other profiles, or to add, rename, share or remove one.' : 'Switch to it; the game loads it too.'
+  return `${p.name} · ${sourceOf(p)}\nSaves to ${fileOf(p)}\n${lead}`
 }
 
-function addMenu (e: MouseEvent) {
+function profileMenu (e: MouseEvent) {
+  if (props.store.switching.value) return
   const el = e.currentTarget as HTMLElement
   const r = el.getBoundingClientRect()
+  const me = current.value
   openMenu({ x: r.left, y: r.bottom + 2, from: el }, [
+    ...props.config.profiles.map(p => ({
+      label: p.name,
+      icon: p.id === me.id ? 'fas fa-check' : 'fas fa-exchange-alt',
+      title: tipOf(p),
+      disabled: p.id === me.id,
+      action: () => { swap(p.id) }
+    })),
+    { separator: true },
     { label: 'New profile', icon: 'fas fa-plus', action: () => { startNaming('new') } },
-    { label: `Copy of “${current.value.name}”`, icon: 'far fa-clone', action: () => { startNaming('copy', undefined, current.value.id) } },
-    { label: 'Import…', icon: 'fas fa-file-import', action: () => { sharing.value = { mode: 'import' } } }
-  ])
-}
-
-function tabMenu (e: MouseEvent, p: FilterProfile) {
-  if (props.store.switching.value) return
-  openMenu(e, [
-    ...(p.id === props.config.activeProfile ? [] : [{ label: 'Switch to it', icon: 'fas fa-exchange-alt', action: () => { swap(p.id) } }]),
-    { label: 'Duplicate', icon: 'far fa-clone', action: () => { startNaming('copy', undefined, p.id) } },
-    { label: 'Rename', icon: 'fas fa-pen', action: () => { startNaming('rename', p.id) } },
-    { label: 'Share…', icon: 'fas fa-share-alt', action: () => { sharing.value = { mode: 'share', id: p.id } } },
-    { label: 'Remove', icon: 'fas fa-trash', danger: true, disabled: props.config.profiles.length < 2, action: () => { deleting.value = p } }
+    { label: `Copy of “${me.name}”`, icon: 'far fa-clone', action: () => { startNaming('copy', undefined, me.id) } },
+    { label: `Rename “${me.name}”`, icon: 'fas fa-pen', action: () => { startNaming('rename', me.id) } },
+    { label: `Share “${me.name}”…`, icon: 'fas fa-share-alt', action: () => { sharing.value = { mode: 'share', id: me.id } } },
+    { label: 'Import a shared filter…', icon: 'fas fa-file-import', action: () => { sharing.value = { mode: 'import' } } },
+    { label: `Remove “${me.name}”`, icon: 'fas fa-trash', danger: true, disabled: props.config.profiles.length < 2, action: () => { deleting.value = me } }
   ])
 }
 
@@ -157,35 +157,32 @@ async function confirmDelete () {
 </script>
 
 <style module>
-/* A slim row of tabs over the editor's own: smaller, so the two rows read as
-   "which filter" above "which part of it". */
-.strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 3px;
-  padding-bottom: 6px;
-  min-width: 0;
+.strip { position: relative; display: flex; align-items: center; gap: 4px; min-width: 0; }
+/* The share box opens under the chip, over the editor. */
+.pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  width: 34rem;
+  max-width: 80vw;
+  background: var(--w-panel-solid);
+  border-radius: var(--w-r-md);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.5);
 }
-.tab {
+.chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  max-width: 12rem;
-  padding: 2px 10px;
+  gap: 6px;
+  max-width: 14rem;
+  padding: 1px 9px;
   font-size: var(--w-fs-sm);
-  color: var(--w-dim);
-  background: var(--w-panel-2);
-  border: 1px solid var(--w-line);
+  color: var(--w-tab-on, #f2d79e);
+  background: color-mix(in srgb, var(--w-accent) 18%, var(--w-panel-solid));
+  border: 1px solid color-mix(in srgb, var(--w-accent) 70%, transparent);
   border-radius: var(--w-r-md);
 }
-.tab:hover:not(:disabled) { color: var(--w-fg); border-color: var(--w-line-strong); }
-.tab:disabled { opacity: 0.6; cursor: default; }
-.on, .on:hover {
-  color: var(--w-tab-on, #f2d79e);
-  border-color: color-mix(in srgb, var(--w-accent) 70%, transparent);
-  background: color-mix(in srgb, var(--w-accent) 22%, var(--w-panel-solid));
-}
-.add { color: var(--w-accent); padding: 2px 8px; }
+.chip:hover:not(:disabled) { border-color: var(--w-accent); }
+.chip:disabled { opacity: 0.6; cursor: default; }
 .field { width: 11rem; }
 </style>

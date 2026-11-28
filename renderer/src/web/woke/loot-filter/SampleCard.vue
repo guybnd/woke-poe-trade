@@ -1,5 +1,5 @@
 <template>
-  <WPanel ref="panel" title="Filter rule for this item" size-key="sample" width="27rem" max-height="85vh">
+  <WPanel ref="panel" :keys="windowKeys.help" title="Filter rule for this item" size-key="sample" width="27rem" max-height="85vh">
     <template #actions>
       <span class="w-faint text-xs">{{ store.doc.value?.version ?? '' }}</span>
     </template>
@@ -198,6 +198,7 @@ import { computed, defineAsyncComponent, onMounted, onUnmounted, reactive, ref, 
 import { CSTEP_NAMES, CURRENCY_TYPE } from './currency-settings'
 import { useFold } from '../ui/fold'
 import WFoldHead from '../ui/WFoldHead.vue'
+import { useWindowKeys } from '../ui/window-keys'
 import { WPanel, WBanner, WButton, WSegmented, WChip, openMenu, toast } from '../ui'
 import TierItemChips from './TierItemChips.vue'
 import { basePrice } from './economy'
@@ -603,6 +604,15 @@ const baseQuick = computed(() => {
 
 const lookSection = ref<HTMLElement | null>(null)
 const panel = ref<InstanceType<typeof WPanel> | null>(null)
+// Ctrl + Z / Ctrl + Y step through the same undo steps as the editor's
+// Changes tab, and Ctrl + S saves (Guy 2026-11-28).
+const windowKeys = useWindowKeys(() => panel.value?.el, {
+  undo: () => { props.store.undoStep() },
+  redo: () => { props.store.redoStep() },
+  save (repeat) {
+    if (!repeat && props.store.dirty.value && !props.store.saving.value) props.store.save({ reloadNow: true }).catch(() => {})
+  }
+})
 const focused = ref(document.hasFocus())
 const onFocus = () => { focused.value = true }
 // The last click landed in another overlay window: keys are for that one now.

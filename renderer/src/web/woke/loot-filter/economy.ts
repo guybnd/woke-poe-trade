@@ -268,7 +268,10 @@ export function dropWeight (tiers: Record<string, number> | null, name: string):
 // their average, and is a chase base too.
 // Everything that isn't a plain unique base (Foulborn, special rolls) is
 // priced by its best line, as before.
-export interface DropUnique { name: string, chaos: number, tier: number | null, counted: boolean, chase: boolean, out: boolean }
+// `noDrop`: a boss or special unique on the base that never drops at random,
+// listed so the Alt+F card shows everything the base can be (Guy 2026-11-28),
+// never in the average.
+export interface DropUnique { name: string, chaos: number, tier: number | null, counted: boolean, chase: boolean, out: boolean, noDrop?: boolean }
 
 export function dropLookup (
   items: PriceItem[],
@@ -321,7 +324,11 @@ export function dropLookup (
           counted: counted.includes(x),
           chase: chase.includes(x),
           out: !priced.includes(x)
-        })).sort((a, b) => b.chaos - a.chaos)
+        } as DropUnique)).concat(allOnBase(base)
+          .filter(name => !world.includes(name) && !isReplica(name))
+          .map(name => ({ name, hit: find(group.ninja, name, base) }))
+          .map(x => ({ name: x.name, chaos: x.hit?.chaos ?? 0, tier: tiers?.[x.name] ?? null, counted: false, chase: false, out: false, noDrop: true }))
+        ).sort((a, b) => b.chaos - a.chaos)
       }
     }
   })

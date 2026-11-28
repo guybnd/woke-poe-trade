@@ -31,15 +31,16 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
+  { id: 'loot-filter-window-tabs', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: the editor now has Loot, Gear, Style, Preview and History tabs, with your own rules first on Loot' },
   { id: 'loot-filter-own-filter', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: our own loot filter replaces NeverSink: no download, same strictness and hotkeys' },
-  { id: 'loot-filter-share-profile', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: share a profile, or just some Loot pages, as a code or file; right-click a profile tab' },
-  { id: 'loot-filter-equip-tinctures', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Equipment › Tinctures ranks each tincture base by quality and item level, like Flasks' },
+  { id: 'loot-filter-equip-tinctures', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Gear › Tinctures ranks each tincture base by quality and item level, like Flasks' },
+  { id: 'loot-filter-share-profile', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: share a profile, or some Loot pages, as a code or file (profile menu, Share)' },
   { id: 'loot-filter-game-sounds', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: the sound picker plays the game\'s own alert sounds 1-16 and ShAlchemy and friends' },
   { id: 'loot-filter-loot-on', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot and Equipment are on for every filter and out of beta; the NeverSink tab is gone' },
   { id: 'loot-filter-identified-mods', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Rare gear scores identified rares and magic items by their mods' },
   { id: 'loot-filter-strictness-menu', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: pick strictness and follow your maps from the Loot tab\'s Main ruler' },
   { id: 'loot-filter-gap-sections', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot sections for replicas, unique maps, heist gear, corpses, cluster bases, life and mana flasks' },
-  { id: 'loot-filter-special-gear', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Equipment › Special gear: veiled, temple and league mods, fractured, influenced gear, idols' },
+  { id: 'loot-filter-special-gear', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Gear › Special gear: veiled, temple and league mods, fractured, influenced gear, idols' },
   { id: 'loot-filter-recipes-by-price', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Recipes steps follow the price of what the vendor gives' },
   { id: 'price-check-base-step', since: '1.330.24', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a Base step beside Low / Approx / High prices gear as its base in one click' },
   { id: 'loot-levelling', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Levelling: Loot looks while levelling, gear for your build' },
@@ -57,7 +58,6 @@ export const NEWS: NewsItem[] = [
   { id: 'price-check-card-set', since: '1.330.24', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a div card\'s quick price card shows what its full set gives, and both prices' },
   { id: 'price-check-unique-filter-tier', since: '1.330.24', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a unique, how rare a drop it is (T0 to T5) and the tier your loot filter puts it in' },
   { id: 'watchers-eye-finder', since: '1.330.24', wmType: 'woke-watchers-eye', name: "Watcher's Eye finder", note: "New: tick your auras, pick Watcher's Eye mods from the full list, and price that jewel in one search" },
-  { id: 'loot-filter-over-quality-look', since: '1.330.23', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: over-quality gear keeps its tier look with a pink mark on top; Change mark on Drop tiers' },
   { id: 'search-tree-by-stat', since: '1.330.23', wmType: 'woke-search', name: 'Search', note: 'New: type what a passive does ("onslaught") for the keystones and notables that do it' },
   { id: 'search-unique-mods', since: '1.330.23', wmType: 'woke-search', name: 'Search', note: 'New: type part of a mod ("item rarity 50") for every unique with it, priced; Foulborn and Vestigial too' },
   { id: 'loot-filter-drag-bases', since: '1.330.23', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: drag bases between rank columns on Base ranks; drag one or all the picked ones' },

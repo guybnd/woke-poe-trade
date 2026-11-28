@@ -61,29 +61,36 @@
     </div>
     </Teleport>
 
-    <!-- The category's own bar (Guy 2026-11-28: "1 bar at the top for all loot, then one per category that override it"): a full ruler, All loot's until you drag a handle or click a dot here. -->
-    <div v-if="kind !== 'gold'" :class="$style.pageCard" data-currency-page-ruler>
-      <span :class="$style.ownHead">
-        <b>{{ PAGE_LABEL }}</b>
-        <span v-if="!c.rulers[kind] && c.offBy[kind] == null" class="w-faint text-xs">as All loot: drag a handle or click a dot to change it for {{ KIND_NAME[kind] }} only</span>
-        <span v-else class="text-xs">its own, over All loot{{ c.rulers[kind] ? '; Strictness still moves it' : '' }}</span>
-        <button v-if="c.offBy[kind] != null" type="button" class="w-icon-btn" :title="`${PAGE_LABEL} steps back to All loot's`" :aria-label="`${PAGE_LABEL} steps back to All loot's`" @click="setOff(kind, null)"><i class="fas fa-undo" /></button>
-        <button v-if="c.rulers[kind]" type="button" class="w-icon-btn" :title="`${PAGE_LABEL} back to All loot's ruler`" :aria-label="`${PAGE_LABEL} back to All loot's ruler`" data-currency-page-undo @click="setRuler(kind, null)"><i class="fas fa-sliders-h" /></button>
-      </span>
-      <StepRuler toggles :page="kind" :page-name="PAGE_LABEL" :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="{}"
-        @edit="s => stepEdit = s" @set="(i, v) => setOwn(kind, i, v)" @toggle="togglePageOff" />
+    <!-- The page's ruler with its ground beside it (Guy's V1, 2026-11-28):
+         the drilldown on the left, how this page's loot drops on the right. -->
+    <div :class="$style.pageRow">
+      <div :class="$style.pageLeft">
+        <!-- The category's own bar (Guy 2026-11-28: "1 bar at the top for all loot, then one per category that override it"): a full ruler, All loot's until you drag a handle or click a dot here. -->
+        <div v-if="kind !== 'gold'" :class="$style.pageCard" data-currency-page-ruler>
+          <span :class="$style.ownHead">
+            <b>{{ PAGE_LABEL }}</b>
+            <span v-if="!c.rulers[kind] && c.offBy[kind] == null" class="w-faint text-xs">as All loot: drag a handle or click a dot to change it for {{ KIND_NAME[kind] }} only</span>
+            <span v-else class="text-xs">its own, over All loot{{ c.rulers[kind] ? '; Strictness still moves it' : '' }}</span>
+            <button v-if="c.offBy[kind] != null" type="button" class="w-icon-btn" :title="`${PAGE_LABEL} steps back to All loot's`" :aria-label="`${PAGE_LABEL} steps back to All loot's`" @click="setOff(kind, null)"><i class="fas fa-undo" /></button>
+            <button v-if="c.rulers[kind]" type="button" class="w-icon-btn" :title="`${PAGE_LABEL} back to All loot's ruler`" :aria-label="`${PAGE_LABEL} back to All loot's ruler`" data-currency-page-undo @click="setRuler(kind, null)"><i class="fas fa-sliders-h" /></button>
+          </span>
+          <StepRuler toggles :page="kind" :page-name="PAGE_LABEL" :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="{}"
+            @edit="s => stepEdit = s" @set="(i, v) => setOwn(kind, i, v)" @toggle="togglePageOff" />
+        </div>
+
+        <!-- Gold has no price: its page's ruler steps piles by size. -->
+        <div v-if="kind === 'gold'" :class="$style.goldRuler">
+          <span :class="$style.lookLab">Pile size for each step</span>
+          <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, 'gold')" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
+        </div>
+      </div>
+      <div :class="$style.pagePreview" class="w-scroll" data-loot-page-preview>
+        <MapsPile v-if="PILES[kind]" :doc="store.doc.value" :priced="pricedNames" :pile="PILES[kind]!.pile" :hint="PILES[kind]!.hint" @go="goTo" />
+        <CurrencyPile v-else-if="baseItems.length" :items="items" :cfg="eff" :faint="faintActive" :tip="tipOf" @go="goTo" />
+      </div>
     </div>
 
     <slot name="extra" />
-
-    <!-- Gold has no price: its page's ruler steps piles by size. -->
-    <div v-if="kind === 'gold'" :class="$style.goldRuler">
-      <span :class="$style.lookLab">Pile size for each step</span>
-      <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, 'gold')" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
-    </div>
-
-    <MapsPile v-if="PILES[kind]" :doc="store.doc.value" :priced="pricedNames" :pile="PILES[kind]!.pile" :hint="PILES[kind]!.hint" @go="goTo" />
-    <CurrencyPile v-else-if="baseItems.length" :items="items" :cfg="eff" :faint="faintActive" :tip="tipOf" @go="goTo" />
 
     <div :class="$style.tools">
       <input v-model="query" type="search" placeholder="Find an item" :class="$style.search" aria-label="Find an item">
@@ -697,6 +704,11 @@ function chaosText (v: number): string {
 .allPrices { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; cursor: pointer; }
 .allPrices > span { display: inline-flex; pointer-events: none; }
 .allOff { opacity: .45; text-decoration: line-through; }
+.pageRow { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.pageLeft { flex: 1 1 36rem; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+/* The ruler needs 34rem; the ground takes the rest and scrolls past 18rem. */
+.pagePreview { flex: 1 1 16rem; min-width: 0; max-height: 18rem; overflow-y: auto; }
+.pageLeft:empty, .pagePreview:empty { display: none; }
 .pageCard { display: flex; flex-direction: column; gap: 2px; padding: 4px 8px 2px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .allCard { display: flex; flex-direction: column; gap: 6px; padding: 5px 10px; border: 1px solid var(--w-accent, #c8a565); border-radius: var(--w-r-sm); background: var(--w-panel); }
 .wrap {
