@@ -1362,11 +1362,17 @@ test('Currency weights: Alt + F on currency shows its step first, a Shows switch
   // The ruler names all five steps.
   for (const n of ['Small', 'Normal', 'Decent', 'Big', 'Tink']) await expect(card.locator('[data-currency-card-ruler]')).toContainText(n)
   await overlay.snap('currency card')
-  // Price bias applies on release, in the sections' words.
-  await page.locator('[data-currency-card-mult]').fill('2')
-  await expect(card).toContainText('+56%')
+  // One Price bias (Guy's F1): this item's by default, in %; it applies on
+  // release, and the Steps from line turns This item gold.
+  await page.locator('[data-currency-card-mult] [data-bias-range]').fill('150')
+  await expect(card.locator('[data-currency-card-item]')).toContainText('150%')
   // Its own bias makes This item Custom (Guy 2026-11-28).
   await expect(card.locator('[data-currency-card-item]')).toContainText('Custom')
+  // The dropdown moves the whole section's bias instead.
+  await card.locator('[data-currency-card-bias-of]').selectOption('sec')
+  await page.locator('[data-currency-card-sec-bias] [data-bias-num]').fill('80')
+  await page.locator('[data-currency-card-sec-bias] [data-bias-num]').press('Enter')
+  await expect(card.locator('[data-currency-card-section]')).toContainText('80%')
   // The Shows switch hides every pile.
   await card.locator('[data-currency-card-shows]').click()
   await expect(page.locator('[data-currency-card-now]')).toContainText('Hidden')
@@ -1375,8 +1381,7 @@ test('Currency weights: Alt + F on currency shows its step first, a Shows switch
   await card.locator('[data-currency-card-shows]').click()
   await card.locator('[data-currency-card-section]').getByRole('button', { name: /^Orbs:/ }).click()
   await page.getByRole('menuitemradio', { name: /^Hide/ }).click()
-  // The section's menu stays open for its Price bias; Esc closes it.
-  await page.keyboard.press('Escape')
+  // Its bias is on the card's one slider now, so the menu closes on a pick.
   await expect(page.locator('[data-state-chip-menu]')).toHaveCount(0)
   await expect(page.locator('[data-currency-card-now]')).toContainText('Orbs is set to Hide')
   await card.locator('[data-currency-card-item]').getByRole('button', { name: /^Chaos Orb:/ }).click()
@@ -1650,11 +1655,12 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()
   await expect(page.locator('[data-currency-cat="orbs"]')).toBeVisible()
-  // The strictness slider multiplies every step's price, every category.
-  await page.getByRole('slider', { name: /Strictness/ }).fill('2')
-  await expect(page.locator('[data-currency-min]')).toContainText('×2.00')
+  // Strictness by level name (Guy's H1): one level up, every step's price 25% higher.
+  await page.getByRole('slider', { name: 'Strictness' }).fill('3')
+  await expect(page.locator('[data-currency-strict-level]')).toHaveText('Strict')
+  await expect(page.locator('[data-currency-strict-line]')).toContainText('25% higher')
   // The steps sit on one price ruler; a handle's value is the price after Strictness.
-  await expect(page.getByRole('spinbutton', { name: 'Normal from this many chaos' })).toHaveValue('2')
+  await expect(page.getByRole('spinbutton', { name: 'Normal from this many chaos' })).toHaveValue('1.3')
   await expect(page.locator('[data-currency-cat="orbs"] [data-loot-section-mode]').getByRole('button')).toHaveAccessibleName('Orbs: By price')
   await page.waitForTimeout(500)
   await overlay.snap('currency weights tab')
@@ -1674,21 +1680,23 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
 
   // A category folds open; an item opens its editor under it.
   await page.locator('[data-currency-cat="orbs"] [aria-expanded]').first().click({ position: { x: 12, y: 10 } })
-  // Every page's steps sit above the ruler, then this page's.
-  await expect(page.locator('[data-currency-all-steps]').getByRole('checkbox', { name: 'Show Small on every page' })).toBeChecked()
-  await expect(page.locator('[data-currency-page-steps]')).toContainText('as every page')
+  // Guy's H1: the ruler is All loot's, its dots turn a step off everywhere;
+  // Strictness shows its level's name and one line on what it does.
+  await expect(page.locator('[data-currency-all-steps]')).toContainText('All loot')
+  await expect(page.locator('[data-currency-step-dot="1"]').first()).toHaveAttribute('aria-checked', 'true')
+  await expect(page.locator('[data-currency-strict-line]')).toContainText('all pages and sections')
   // A section's own Steps row turns a step off there only, and follows the ruler again on undo.
   const orbSteps = page.locator('[data-currency-cat="orbs"] [data-currency-cat-steps]')
   await orbSteps.getByRole('checkbox', { name: 'Show Normal in Orbs' }).uncheck()
   await expect(page.locator('[data-currency-step="2"]').locator('..')).not.toHaveClass(/off/)
-  await orbSteps.getByRole('button', { name: "Orbs steps back to the page's" }).click()
-  await expect(orbSteps).toContainText('as the page')
+  await orbSteps.getByRole('button', { name: "Orbs steps back to All loot's" }).click()
+  await expect(orbSteps).toContainText('as All loot')
   // Own ruler (Guy's A): a section gets a ruler of its own, then goes back to the main one.
   const orbRuler = page.locator('[data-currency-cat="orbs"] [data-currency-own-ruler]')
   await orbRuler.getByRole('button', { name: 'Own ruler' }).click()
   await expect(orbRuler.locator('[data-currency-ruler]')).toBeVisible()
   await expect(page.locator('[data-currency-cat="orbs"]')).toContainText('own ruler')
-  await orbRuler.getByRole('button', { name: 'Orbs back to the main ruler' }).click()
+  await orbRuler.getByRole('button', { name: "Orbs back to All loot's ruler" }).click()
   await expect(orbRuler.locator('[data-currency-ruler]')).toHaveCount(0)
   const alch = page.locator('[data-currency-item="Orb of Alchemy"]')
   await expect(alch).toBeVisible()
@@ -1734,12 +1742,12 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await page.getByRole('menuitemradio', { name: /^By price/ }).click()
   await expect(oils).not.toContainText(/(^|\D)0 of \d+ show/)
   // A penalty: oils count under their price, and the chip says so.
-  await page.locator('[data-state-chip-bias]').fill('-1')
-  await expect(oilChip).toHaveAccessibleName(/price bias −20%/)
+  await page.locator('[data-state-chip-bias] [data-bias-range]').fill('80')
+  await expect(oilChip).toHaveAccessibleName(/price bias 80%/)
   await page.keyboard.press('Escape')
   await expect(page.locator('[data-state-chip-menu]')).toHaveCount(0)
   await oilChip.click()
-  await page.getByRole('button', { name: 'No bias' }).click()
+  await page.getByRole('button', { name: 'Price bias back to none' }).click()
   await page.keyboard.press('Escape')
   await expect(oilChip).toHaveAccessibleName('Oils: By price')
   // Faint: piles under the line show small and see-through, while it's on.
