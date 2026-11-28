@@ -121,6 +121,6 @@ const placed = computed(() => {
 .click { cursor: pointer; }
 .drop:hover, .drop:focus-visible { filter: brightness(1.25); z-index: 2; outline: 1px solid var(--w-accent); outline-offset: 1px; }
 .ghost { opacity: 0.55; text-decoration: line-through; filter: grayscale(0.7); }
-.kind { font-size: 10px; line-height: 12px; color: #b9ab8a; white-space: nowrap; letter-spacing: 0.02em; }
+.kind { font-size: var(--w-fs-xs); line-height: 1.2; color: #b9ab8a; white-space: nowrap; letter-spacing: 0.02em; }
 .beam { position: absolute; top: 0; width: 3px; opacity: 0.85; pointer-events: none; }
 </style>
