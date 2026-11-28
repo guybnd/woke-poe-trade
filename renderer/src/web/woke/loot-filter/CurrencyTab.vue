@@ -9,27 +9,34 @@
         <WToggle :model-value="config.ownBase === true" @update:model-value="config.ownBase = $event">Test: only our rules</WToggle>
         <WInfo :text="'For testing the filter without NeverSink: your Loot, Equipment and own rules go onto a short base of ours.\n- Plain and magic gear hides in maps.\n- An item none of our rules knows shows pink.'" />
       </span>
+      <span v-if="kind === 'uniques'" :class="$style.minLab" data-loot-size-cut title="Big uniques count part of their price: 2x2 75%, 2x3 60%, 2x4 50%. Chase and Always sections skip it.">Size cut
+        <StateChip :model-value="c.sizeCut ?? 'auto'" :options="SIZE_CUTS" title="Size cut" dflt="auto" @update:model-value="v => c.sizeCut = v === 'auto' ? undefined : v as 'on' | 'off'" />
+        <span class="w-faint text-xs">{{ eff.sizeOn ? 'on now' : 'off now' }}</span></span>
+      <button type="button" :class="$style.hidChip" title="List the items that never show" data-currency-hidden @click="only = 'hidden'">{{ rows.length - shownCount }} of {{ rows.length }} never show</button>
       <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" title="Line, step prices and category price bias back to the start; your item edits stay" @click="reset">Defaults</WButton>
     </div>
 
     <!-- All loot (Guy's H1, 2026-11-28): one card above the page list and the page, so it reads as the global one: Strictness, Maps and the ruler every page and section follows. -->
     <Teleport :to="topTo || 'body'" :disabled="!topTo" defer>
     <div :class="$style.allCard" data-loot-all>
-    <div :class="$style.mainLab" data-currency-main-ruler data-currency-all-steps><b>All loot</b><span class="w-faint text-xs">every page and section, unless a section has its own{{ ownCount ? ` · ${ownCount === 1 ? '1 section here has' : `${ownCount} sections here have`} its own` : '' }}</span></div>
-    <div :class="$style.minBar" data-currency-min>
+    <!-- One line unless opened (Guy 2026-11-28: it took too much room): Strictness, Maps and the step prices; open it to drag the ruler. -->
+    <div :class="$style.allLine" data-currency-main-ruler data-currency-all-steps data-currency-min>
+      <button type="button" :class="$style.allFold" :aria-expanded="allOpen" :title="`All loot: every page and section, unless a section has its own${ownCount ? ` (${ownCount} on this page have their own)` : ''}. Click to ${allOpen ? 'fold' : 'open'} the ruler`" data-loot-all-open @click="allOpen = !allOpen"><i class="fas text-xs" :class="allOpen ? 'fa-chevron-down' : 'fa-chevron-right'" /> <b>All loot</b></button>
       <span :class="$style.minLab">Strictness</span>
-      <input type="range" min="0" max="6" step="1" :value="dragLvl ?? lvlNow" :class="$style.range" aria-label="Strictness" :aria-valuetext="LEVEL_NAMES[dragLvl ?? lvlNow]"
+      <input type="range" min="0" max="6" step="1" :value="dragLvl ?? lvlNow" :class="$style.range" aria-label="Strictness" :aria-valuetext="LEVEL_NAMES[dragLvl ?? lvlNow]" :title="strictLine"
         @input="dragLvl = Number(($event.target as HTMLInputElement).value)"
         @change="setLevel(Number(($event.target as HTMLInputElement).value))">
-      <b :class="$style.minVal" data-currency-strict-level>{{ LEVEL_NAMES[dragLvl ?? lvlNow] }}</b>
+      <b :class="$style.minVal" data-currency-strict-level :title="strictLine">{{ LEVEL_NAMES[dragLvl ?? lvlNow] }}</b>
       <WButton v-if="c.mult != null" size="sm" variant="ghost" icon="fas fa-undo" :title="`Back to the filter's strictness, ${LEVEL_NAMES[level]} now`" @click="c.mult = null">Default</WButton>
-      <span v-else class="w-faint text-xs">default</span>
       <StrictnessMenu :store="store" :config="config" />
+      <span class="flex-1" />
+      <button v-if="!allOpen" type="button" :class="$style.allPrices" title="Where each step starts, after Strictness. Click to open the ruler" data-loot-all-prices @click="allOpen = true">{{ allPrices }}</button>
     </div>
-
+    <template v-if="allOpen">
     <div class="w-faint text-xs" data-currency-strict-line>{{ strictLine }}</div>
     <StepRuler main toggles :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="allOff" :edit="stepEdit" :samples="stepSample"
       @edit="s => stepEdit = s" @set="setShown" @toggle="toggleAll" />
+    </template>
     <div v-if="stepEdit === 0" :class="$style.stepEd" data-currency-step-editor>
       <div :class="$style.stepEdHead">
         <b>Faint</b>
@@ -56,12 +63,27 @@
     </div>
     </Teleport>
 
-    <div :class="$style.pageBar" data-currency-page-bar>
-      <span v-if="kind === 'uniques'" :class="$style.minLab" data-loot-size-cut title="Big uniques count part of their price: 2x2 75%, 2x3 60%, 2x4 50%. Chase and Always sections skip it.">Size cut
-        <StateChip :model-value="c.sizeCut ?? 'auto'" :options="SIZE_CUTS" title="Size cut" dflt="auto" @update:model-value="v => c.sizeCut = v === 'auto' ? undefined : v as 'on' | 'off'" />
-        <span class="w-faint text-xs">{{ eff.sizeOn ? 'on now' : 'off now' }}</span></span>
-      <span class="flex-1" />
-      <button type="button" :class="$style.hidChip" title="List the items that never show" data-currency-hidden @click="only = 'hidden'">{{ rows.length - shownCount }} of {{ rows.length }} never show</button>
+    <!-- The page's own bar (Guy 2026-11-28): under All loot, in the page's
+         look. Its steps and ruler follow All loot until you change them;
+         a section can still have its own. -->
+    <div v-if="kind !== 'gold'" :class="$style.goldRuler" data-currency-page-ruler>
+      <span :class="$style.ownHead">
+        <b>{{ PAGE_LABEL }}</b>
+        <span :class="$style.lookLab" :title="`Untick a step to hide what lands on it on the ${PAGE_LABEL} page`">Steps</span>
+        <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!pageOff.includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} on the ${PAGE_LABEL} page`" @change="togglePageOff(s)"> {{ CSTEP_NAMES[s] }}</label>
+        <span v-if="c.offBy[kind] == null" class="w-faint text-xs">as All loot</span>
+        <button v-else type="button" class="w-icon-btn" :title="`${PAGE_LABEL} steps back to All loot's`" :aria-label="`${PAGE_LABEL} steps back to All loot's`" @click="setOff(kind, null)"><i class="fas fa-undo" /></button>
+        <span :class="$style.lookLab">Prices</span>
+        <template v-if="c.rulers[kind]">
+          <span class="text-xs">Own ruler, Strictness still moves it</span>
+          <button type="button" class="w-icon-btn" :title="`${PAGE_LABEL} back to All loot's ruler`" :aria-label="`${PAGE_LABEL} back to All loot's ruler`" @click="setRuler(kind, null)"><i class="fas fa-undo" /></button>
+        </template>
+        <template v-else>
+          <span class="w-faint text-xs">as All loot</span>
+          <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" :title="`Give the ${PAGE_LABEL} page its own ruler, starting where All loot's steps are now`" data-currency-page-own @click="ownPageRuler">Own ruler</WButton>
+        </template>
+      </span>
+      <StepRuler v-if="c.rulers[kind]" :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="(i, v) => setOwn(kind, i, v)" />
     </div>
 
     <slot name="extra" />
@@ -135,7 +157,7 @@
         <div :class="$style.catLook" data-currency-cat-steps :data-goto-spot="g.cat.id === 'orbs' ? 'section-steps' : undefined">
           <span :class="$style.lookLab" :title="`Untick a step to hide what lands on it, in ${g.cat.name} only`">Steps</span>
           <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!stepsOffIn(c, g.cat.id).includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} in ${g.cat.name}`" @change="toggleSecOff(g.cat.id, s)"> {{ CSTEP_NAMES[s] }}</label>
-          <span v-if="c.offBy[g.cat.id] == null" class="w-faint text-xs">as All loot</span>
+          <span v-if="c.offBy[g.cat.id] == null" class="w-faint text-xs">{{ c.offBy[kind] != null ? `as ${PAGE_LABEL}` : 'as All loot' }}</span>
           <button v-else type="button" class="w-icon-btn" :title="`${g.cat.name} steps back to All loot's`" :aria-label="`${g.cat.name} steps back to All loot's`" @click="setOff(g.cat.id, null)"><i class="fas fa-undo" /></button>
         </div>
         <div v-if="g.cat.id !== 'gold'" :class="$style.goldRuler" data-currency-own-ruler :data-goto-spot="g.cat.id === 'orbs' ? 'section-ruler' : undefined">
@@ -146,7 +168,7 @@
               <button type="button" class="w-icon-btn" :title="`${g.cat.name} back to All loot's ruler`" :aria-label="`${g.cat.name} back to All loot's ruler`" @click="setRuler(g.cat.id, null)"><i class="fas fa-undo" /></button>
             </template>
             <template v-else>
-              <span class="w-faint text-xs">All loot's ruler{{ c.bias[g.cat.id] ? `, items count at ${c.bias[g.cat.id]}%` : '' }}</span>
+              <span class="w-faint text-xs">{{ c.rulers[kind] ? `${PAGE_LABEL}'s ruler` : "All loot's ruler" }}{{ c.bias[g.cat.id] ? `, items count at ${c.bias[g.cat.id]}%` : '' }}</span>
               <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" :title="`Give ${g.cat.name} its own ruler, starting where its steps are now`" @click="ownRuler(g.cat.id)">Own ruler</WButton>
             </template>
           </span>
@@ -171,8 +193,8 @@
         </div>
         <template v-for="r in (sg.name && !isOpen(`${g.cat.id}/${sg.name}`) ? [] : sg.rows)" :key="r.it.name">
           <WItemRow :item="tipOf(r.it)" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
-            <span :class="$style.name"><input v-if="kind === 'uniques' || r.it.fixed != null || r.it.cat === 'jewclus'" type="checkbox" :class="$style.onBox" :checked="c.items[r.it.name]?.step !== 0" :aria-label="`Show ${rowName(r.it)}`"
-              :title="r.it.fixed != null || r.it.cat === 'jewclus' ? 'Shows in maps. Untick to hide these jewels' : 'Untick to hide this base in maps (you don\'t care about it)'" :data-loot-unique-on="kind === 'uniques' ? '' : undefined" :data-loot-row-on="r.it.fixed != null || r.it.cat === 'jewclus' ? '' : undefined" @click.stop="toggleOn(r.it.name)" @keydown.stop><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
+            <span :class="$style.name"><input v-if="r.it.type !== 'gold'" type="checkbox" :class="$style.onBox" :checked="rowOn(r.it)" :disabled="rowLocked(r.it)" :aria-label="`Show ${rowName(r.it)}`"
+              :title="rowTip(r.it)" :data-loot-unique-on="kind === 'uniques' ? '' : undefined" data-loot-row-on @click.stop="toggleOn(r.it.name)" @keydown.stop><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
               :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows as at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ rowName(r.it) }}<span v-if="gemCorrupted(r.it)" :class="$style.corr" title="Corrupted: this price is for a corrupted gem of this level and quality"><WIcon currency="Vaal Orb" size="sm" />Corrupted</span><span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.it.avg && r.it.of && r.it.of > 1" :class="$style.uniqTop" :title="`Priced by an average drop: each of the ${r.it.of} uniques that drop on it, counted by how often it turns up`"> · average of {{ r.it.of }}</span><span v-if="r.it.uniques?.some(u => u.out)" :class="$style.uniqTop" title="You left these out of the average"> · left out: {{ r.it.uniques.filter(u => u.out).map(u => u.name).join(', ') }}</span><span v-if="r.it.chase" :class="$style.uniqTop" :title="`The rarest kind of unique (T0): it doesn't count in the average; the base shows in Chase uniques with its own look`"> · chase: {{ r.it.chase.map(x => `${x.name} ${chaosText(x.chaos)}`).join(', ') }}</span><span v-if="sizeCutNow(r.it, eff) < 1" :class="$style.uniqTop" :title="`Size cut: a ${r.it.size} item counts ${Math.round(sizeCutNow(r.it, eff) * 100)}% of its price`"> · {{ r.it.size }} · {{ Math.round(sizeCutNow(r.it, eff) * 100) }}%</span><span v-if="r.bias" :class="$style.edited"> · bias {{ r.bias }}</span><span v-else-if="r.edited" :class="$style.edited"> edited</span></span>
             <span :class="$style.price" :title="fixedOf(r.it, c.items[r.it.name], sectionMode(c, r.it.cat)) != null ? 'No price: a filter can\'t see which implicit or mods it has, so it shows at a set step. Set a step or price to change it' : r.it.type === 'gold' ? 'No price: the Gold ruler steps each pile by its size' : r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows as at least Small' : r.it.est ? (r.it.tier ? `No usable price: a guess from NeverSink's tier ${r.it.tier}` : 'No usable price: a guess. Set a step or price to change it') : 'poe.ninja'">
               <template v-if="r.it.type === 'gold'">by size</template><template v-else-if="fixedOf(r.it, c.items[r.it.name], sectionMode(c, r.it.cat)) != null"><WPrice :chaos="null" none="No price: a filter can't see which implicit or mods a jewel has, so it shows at a set step" /></template><template v-else>{{ chaosText(r.it.chaos) }}<span v-if="r.it.est" :class="$style.est"> est.</span></template>
@@ -211,6 +233,7 @@ import LabelPreview from './LabelPreview.vue'
 import StyleEditor from './StyleEditor.vue'
 import StepRuler from './StepRuler.vue'
 import StrictnessMenu from './StrictnessMenu.vue'
+import { allOpen } from './all-open'
 import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
@@ -238,7 +261,7 @@ const props = withDefaults(defineProps<{
   // unset, it stays at the top of this page (Equipment's Special gear).
   topTo?: string
 }>(), { kind: 'currency', focusItem: null, topTo: undefined })
-const KIND_NAME: Record<LootKind, string> = { currency: 'currency', gold: 'gold', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems', maps: 'special maps', jewels: 'jewels', league: 'league items', special: 'special gear', flasks: 'flasks and tinctures' }
+const KIND_NAME: Record<LootKind, string> = { currency: 'currency', gold: 'gold', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems', maps: 'special maps', jewels: 'jewels', league: 'league items', special: 'special gear', flasks: 'life and mana flasks' }
 const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.kind))
 // The "?" (help format A: a lead line and bullets, checked by help-format.test.ts).
 // poe.ninja prices no flask or tincture.
@@ -489,7 +512,7 @@ const strictLine = computed(() => {
   const at = n === 2 ? 'Semi-strict: every step price as you set it' : `${LEVEL_NAMES[n]}: every step price ${p}% ${n > 2 ? 'higher, so less shows' : 'lower, so more shows'}`
   return `${at}. It moves all pages and sections together, own rulers too.`
 })
-const SAMPLE_CATS = ({ gold: ['gold'], maps: ['mapblight', 'mapravaged'], jewels: ['jewabyss', 'jewplain'], league: ['lgexped', 'lgheist', 'lgviscera'], special: ['sgveil', 'sgmods', 'sginfl'], flasks: ['flasklife', 'flasktinc'], gems: ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'], uniques: ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss', 'uniqfoul'], cards: ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'], fragments: ['invites', 'uber', 'shaper', 'crests', 'emblems'] } as Partial<Record<LootKind, string[]>>)[props.kind] ?? ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
+const SAMPLE_CATS = ({ gold: ['gold'], maps: ['mapblight', 'mapravaged'], jewels: ['jewabyss', 'jewplain'], league: ['lgexped', 'lgheist', 'lgviscera'], special: ['sgveil', 'sgmods', 'sginfl'], flasks: ['flasklife'], gems: ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'], uniques: ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss', 'uniqfoul'], cards: ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'], fragments: ['invites', 'uber', 'shaper', 'crests', 'emblems'] } as Partial<Record<LootKind, string[]>>)[props.kind] ?? ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
 // The colours the step ruler shows.
 const sampleCat = ref(SAMPLE_CATS[0])
 // Each step card's sample: an item of the picked category that one of shows
@@ -522,7 +545,8 @@ function setRuler (cat: string, r: number[] | null) {
   c.value.rulers = next
 }
 function ownRuler (cat: string) {
-  setRuler(cat, stepStarts({ ...c.value, rulers: {} }, cat).map(v => Number(v.toPrecision(3))))
+  const rest = Object.fromEntries(Object.entries(c.value.rulers).filter(([k]) => k !== cat))
+  setRuler(cat, stepStarts({ ...c.value, rulers: rest }, cat).map(v => Number(v.toPrecision(3))))
 }
 // The ruler hands back a price after Strictness: stored before it.
 function setOwn (cat: string, i: number, shown: number) {
@@ -538,15 +562,25 @@ function setOwn (cat: string, i: number, shown: number) {
 // page level: a page's steps saved before go to each of its sections that
 // had none, the first time the page opens.
 const allOff = computed(() => c.value.offBy.all ?? [])
+// The folded All loot line's step prices, after Strictness; a step turned
+// off everywhere is left out.
+const allPrices = computed(() => stepStarts({ ...eff.value, rulers: {} }).map((v, i) => allOff.value.includes(i + 1) ? null : `${CSTEP_NAMES[i + 1]} ${chaosText(v)}`).filter(Boolean).join(' · '))
+// Picking a step's look opens the card, where its editor shows.
+watch(stepEdit, v => { if (v != null) allOpen.value = true })
 function toggleAll (s: number) {
   setOff('all', flip(allOff.value, s))
 }
-watch(() => c.value.offBy[props.kind], v => {
-  if (!v || CATS.value.some(x => x.id === props.kind)) return
-  const next = Object.fromEntries(Object.entries(c.value.offBy).filter(([k]) => k !== props.kind))
-  if (v.join() !== allOff.value.join()) for (const x of CATS.value) next[x.id] ??= [...v]
-  c.value.offBy = next
-}, { immediate: true })
+// The page's own steps (Guy 2026-11-28 brought the page bar back): All
+// loot's until you change them; back to the same as All loot follows it again.
+const PAGE_LABEL = KIND_NAME[props.kind].replace(/^./, x => x.toUpperCase())
+const pageOff = computed(() => c.value.offBy[props.kind] ?? allOff.value)
+function togglePageOff (s: number) {
+  const list = flip(pageOff.value, s)
+  setOff(props.kind, list.join() === allOff.value.join() ? null : list)
+}
+function ownPageRuler () {
+  setRuler(props.kind, stepStarts({ ...c.value, rulers: {} }).map(v => Number(v.toPrecision(3))))
+}
 const ownCount = computed(() => CATS.value.filter(x => c.value.offBy[x.id] != null || c.value.rulers[x.id]).length)
 const flip = (list: readonly number[], s: number) => list.includes(s) ? list.filter(x => x !== s) : [...list, s].sort((a, b) => a - b)
 function setOff (key: string, list: number[] | null) {
@@ -557,7 +591,7 @@ function setOff (key: string, list: number[] | null) {
 // Back to the same steps as All loot: follows it again.
 function toggleSecOff (cat: string, s: number) {
   const list = flip(stepsOffIn(c.value, cat), s)
-  setOff(cat, list.join() === allOff.value.join() ? null : list)
+  setOff(cat, list.join() === pageOff.value.join() ? null : list)
 }
 function setStepLook (s: number, p: StylePatch | null) {
   const next = Object.fromEntries(Object.entries(c.value.steps).filter(([k]) => k !== String(s)))
@@ -603,8 +637,23 @@ function toggleCollect (name: string) {
   const { min, ...rest } = c.value.items[name] ?? {}
   setEdit(name, min ? (Object.keys(rest).length ? rest : null) : { ...rest, min: 2 })
 }
-// A unique base ticked off (Guy 2026-11-28): its own Off, which wins over
-// the section's Always; ticked again it goes back to the price.
+// Every row's tick box (Guy 2026-11-28, the Jewels way on every section):
+// the header decides for all rows; untick hides this one (its own Off,
+// which wins over the section's Always), ticked again it follows the
+// header. A section on Hide greys the boxes out, unless the row has its
+// own rule that shows it (its own step, Always or Collecting).
+const ownShow = (e: ItemEdit | undefined) => e?.supply === 1 || (e?.step != null && e.step !== 0) || !!e?.min
+function rowLocked (it: CurrencyItem): boolean {
+  const e = c.value.items[it.name]
+  return sectionMode(c.value, it.cat) === 'off' && e?.step !== 0 && !ownShow(e)
+}
+function rowOn (it: CurrencyItem): boolean {
+  return c.value.items[it.name]?.step !== 0 && !rowLocked(it)
+}
+function rowTip (it: CurrencyItem): string {
+  if (rowLocked(it)) return 'This section is on Hide. Set its header to show its rows'
+  return c.value.items[it.name]?.step === 0 ? 'Hidden by you. Tick to follow the section again' : 'Shows in maps. Untick to hide this one'
+}
 function toggleOn (name: string) {
   const { step, ...rest } = c.value.items[name] ?? {}
   setEdit(name, step === 0 ? (Object.keys(rest).length ? rest : null) : { ...rest, step: 0 })
@@ -656,8 +705,11 @@ function chaosText (v: number): string {
 </script>
 
 <style module>
-.allCard { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--w-accent, #c8a565); border-radius: var(--w-r-sm); background: var(--w-panel); }
-.pageBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.allLine { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; }
+.allFold { display: inline-flex; align-items: center; gap: 5px; background: none; border: 0; padding: 0; color: var(--w-text); cursor: pointer; font-size: var(--w-fs-sm); }
+.allPrices { background: none; border: 0; padding: 0; color: var(--w-dim); font-size: var(--w-fs-xs); cursor: pointer; font-variant-numeric: tabular-nums; }
+.allPrices:hover { color: var(--w-text); }
+.allCard { display: flex; flex-direction: column; gap: 6px; padding: 5px 10px; border: 1px solid var(--w-accent, #c8a565); border-radius: var(--w-r-sm); background: var(--w-panel); }
 .wrap {
   max-height: min(40rem, calc(78vh / var(--w-ui-scale, 1)));
   flex: 1 1 auto;
@@ -691,7 +743,6 @@ function chaosText (v: number): string {
 .subName { font-size: var(--w-fs-sm); color: #d8c89c; min-width: 5.5rem; }
 .whole { display: inline-flex; align-items: center; gap: 6px; color: var(--w-dim); font-size: var(--w-fs-xs); }
 .sel2 { max-width: 7.5rem; background: var(--w-panel); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); color: inherit; padding: 0 4px; }
-.minBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 10px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .minLab { color: #e2d3ad; font-size: var(--w-fs-sm); }
 .range { width: min(22rem, 100%); accent-color: var(--w-accent, #c8a565); }
 .hidChip { font-size: var(--w-fs-xs); color: var(--w-dim); background: var(--w-panel); border: 1px solid var(--w-line); border-radius: 10px; padding: 0 8px; cursor: pointer; white-space: nowrap; }
@@ -730,6 +781,7 @@ function chaosText (v: number): string {
 .corr :global(img) { width: 14px; height: 14px; }
 .pen { font-size: var(--w-fs-xs); }
 .onBox { margin: 0 6px 0 0; vertical-align: middle; accent-color: #c8a565; cursor: pointer; }
+.onBox:disabled { cursor: default; opacity: .4; }
 .star { background: none; border: 0; padding: 0 5px 0 0; color: var(--w-faint); cursor: pointer; font-size: var(--w-fs-xs); }
 .star:hover { color: #e8c96a; }
 .starOn { color: #f0c040; }

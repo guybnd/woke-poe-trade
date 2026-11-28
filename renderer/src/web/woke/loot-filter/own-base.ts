@@ -31,6 +31,12 @@ const GEAR_CLASSES = [...WEAPON_CLASSES, 'Body Armours', 'Helmets', 'Gloves', 'B
 
 const FLASK_CLASSES = ['Life Flasks', 'Mana Flasks', 'Hybrid Flasks']
 
+// Item classes the skeleton shows in a plain look when no Loot row took them.
+const CURRENCY_LIKE = ['Stackable Currency', 'Delve Stackable Socketable Currency', 'Map Fragments', 'Misc Map Items', 'Vault Keys', 'Cursed Ducat', 'Corpses', 'Viscera', 'Incursion Items', 'Sanctum Research', 'Expedition Logbooks', 'Pieces', 'Memories', 'Atlas Upgrade Items']
+const OTHER_CLASSES = [...FLASK_CLASSES, 'Utility Flasks', 'Tinctures', 'Jewels', 'Abyss Jewels', 'Heist Gear', 'Heist Tools', 'Heist Brooches', 'Heist Cloaks', 'Heist Targets', 'Contracts', 'Blueprints', 'Quest Items', 'Labyrinth Items', 'Labyrinth Trinkets', 'Labyrinth Map Items', 'Pantheon Souls', 'Trinkets', 'Chart', 'Idols', 'Relics', 'Fishing Rods', 'Sentinels', 'Embers of the Allflame', 'Instance Local Items', 'Hideout Doodads', 'Microtransactions']
+// The cheapest stacks NeverSink hid in maps: low shards and essences.
+const CHEAP_STACKS = ['Transmutation Shard', 'Alteration Shard', 'Alchemy Shard', 'Scroll Fragment', 'Whispering Essence of Greed', 'Whispering Essence of Hatred', 'Whispering Essence of Woe', 'Whispering Essence of Contempt', 'Muttering Essence of Torment', 'Muttering Essence of Woe', 'Muttering Essence of Anger', 'Muttering Essence of Hatred', 'Muttering Essence of Contempt', 'Muttering Essence of Fear', 'Muttering Essence of Greed', 'Muttering Essence of Sorrow', 'Weeping Essence of Anger', 'Weeping Essence of Doubt', 'Weeping Essence of Rage', 'Weeping Essence of Suffering', 'Wailing Essence of Doubt', 'Wailing Essence of Suffering']
+
 // Where a section that goes above one of NeverSink's rules goes when the
 // filter is our own skeleton: above its rest rules. -1 on NeverSink's file.
 export function ownBottom (doc: FilterDoc): number {
@@ -84,6 +90,17 @@ function mapBlocks (): string[] {
     `\tSetBorderColor ${rgba(band.style.border!)}`,
     `\tSetBackgroundColor ${rgba(band.style.background!)}`,
     ...(band.from >= 6 ? [`\tPlayAlertSound ${band.from >= 11 ? 5 : 4} 300`, `\tMinimapIcon ${band.from >= 11 ? 1 : 2} White Square`] : []),
+    ''
+  ]).concat([
+    // Maps with no tier (Valdo, Nightmare, Shaper guardian, Vaal Temple...).
+    `Show # $type->${OWN_REST_TYPE} $tier->mapsother`,
+    '\tClass == "Maps"',
+    '\tSetFontSize 45',
+    `\tSetTextColor ${rgba(MAP_BANDS[0].style.text!)}`,
+    `\tSetBorderColor ${rgba(MAP_BANDS[0].style.border!)}`,
+    `\tSetBackgroundColor ${rgba(MAP_BANDS[0].style.background!)}`,
+    '\tPlayAlertSound 5 300',
+    '\tMinimapIcon 1 White Square',
     ''
   ])
 }
@@ -180,6 +197,70 @@ export function ownBaseText (strictness: string | null): string {
     '\tMinimapIcon 2 Purple Square',
     '',
     ...mapBlocks(),
+    // Gold piles under the Gold ruler's first step, and anything a class of
+    // the game's has that no Loot row took (unpriced, or a kind the tab has
+    // no section for yet): shown in their class's plain look, not the pink
+    // catch-all (Guy's walk, 2026-11-28: shards, small gold, Wombgifts).
+    // The cheapest shards and essences hide in maps, as NeverSink's did.
+    // Rare gear no rule above took (the rare weights off, or a mark they
+    // don't score): the game's rare look.
+    `Show # $type->${OWN_REST_TYPE} $tier->rares`,
+    '\tRarity Rare',
+    `\tClass == ${quoted(GEAR_CLASSES)}`,
+    '\tSetFontSize 35',
+    '\tSetTextColor 255 255 119 255',
+    '\tSetBorderColor 0 0 0 0',
+    '\tSetBackgroundColor 0 0 0 200',
+    '',
+    `Hide # $type->${OWN_REST_TYPE} $tier->cheapstack`,
+    '\tAreaLevel >= 68',
+    `\tBaseType == ${quoted(CHEAP_STACKS)}`,
+    '\tSetFontSize 18',
+    '',
+    `Show # $type->${OWN_REST_TYPE} $tier->gold`,
+    '\tBaseType == "Gold"',
+    '\tSetFontSize 32',
+    '\tSetTextColor 255 211 90 255',
+    '\tSetBorderColor 0 0 0 0',
+    '\tSetBackgroundColor 0 0 0 180',
+    '',
+    `Show # $type->${OWN_REST_TYPE} $tier->wombgifts`,
+    '\tClass == "Wombgifts"',
+    '\tSetFontSize 42',
+    '\tSetTextColor 0 0 0 255',
+    '\tSetBorderColor 0 0 0 255',
+    '\tSetBackgroundColor 249 150 25 255',
+    '\tPlayAlertSound 2 300',
+    '\tMinimapIcon 2 Orange Circle',
+    '',
+    `Show # $type->${OWN_REST_TYPE} $tier->currency`,
+    `\tClass == ${quoted(CURRENCY_LIKE)}`,
+    '\tSetFontSize 38',
+    '\tSetTextColor 190 178 135 255',
+    '\tSetBorderColor 190 178 135 255',
+    '\tSetBackgroundColor 0 0 0 240',
+    '',
+    `Show # $type->${OWN_REST_TYPE} $tier->cards`,
+    '\tClass == "Divination Cards"',
+    '\tSetFontSize 36',
+    '\tSetTextColor 14 186 255 255',
+    '\tSetBorderColor 14 186 255 255',
+    '\tSetBackgroundColor 0 0 0 240',
+    '',
+    `Show # $type->${OWN_REST_TYPE} $tier->gems`,
+    '\tClass == "Skill Gems" "Support Gems"',
+    '\tSetFontSize 34',
+    '\tSetTextColor 27 162 155 255',
+    '\tSetBorderColor 27 162 155 255',
+    '\tSetBackgroundColor 0 0 0 220',
+    '',
+    `Show # $type->${OWN_REST_TYPE} $tier->other`,
+    `\tClass == ${quoted(OTHER_CLASSES)}`,
+    '\tSetFontSize 32',
+    '\tSetTextColor 200 200 200 255',
+    '\tSetBorderColor 120 120 120 255',
+    '\tSetBackgroundColor 0 0 0 200',
+    '',
     `Show # $type->${OWN_REST_TYPE} $tier->unknown`,
     '\tSetFontSize 36',
     '\tSetTextColor 255 0 255 255',

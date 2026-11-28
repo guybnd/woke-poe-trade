@@ -1,6 +1,6 @@
 // The Loot tab's sections for what NeverSink still decided (NeverSink
 // retirement M4a, 2026-11-28): replicas, unique maps, cluster jewel bases,
-// heist gear, corpses, life and mana flasks and tinctures.
+// heist gear, corpses, life and mana flasks.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
@@ -118,7 +118,7 @@ describe('Loot sections for NeverSink\'s last gaps', () => {
     expect(matchItem(doc, facts('Imperfect Warlord', 'Corpses', 'Normal', 83)).final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Show', tier: 's1' })
   })
 
-  it('life and mana flasks and tinctures by quality and item level', () => {
+  it('life and mana flasks by quality and item level', () => {
     for (const b of TOP_LIFE_MANA) expect(BASE_FACTS[b][0]).toBeGreaterThanOrEqual(60)
     const top = Object.keys(BASE_FACTS).filter(b => / (Life|Mana|Hybrid) Flask$/.test(b) && BASE_FACTS[b][0] >= 60).sort()
     expect(TOP_LIFE_MANA).toEqual(top)
@@ -128,12 +128,28 @@ describe('Loot sections for NeverSink\'s last gaps', () => {
     expect(step(facts('Divine Life Flask', 'Life Flasks', 'Magic', 84, { quality: 30 })).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's3' })
     expect(step(facts('Divine Life Flask', 'Life Flasks', 'Magic', 84, { quality: 23 })).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's2' })
     expect(step(facts('Eternal Mana Flask', 'Mana Flasks', 'Normal', 84, { quality: 5 })).final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Hide' })
-    expect(step(facts('Oakbranch Tincture', 'Tinctures', 'Normal', 84, { quality: 27 })).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's4' })
-    expect(step(facts('Oakbranch Tincture', 'Tinctures', 'Normal', 86)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's2' })
-    expect(step(facts('Oakbranch Tincture', 'Tinctures', 'Normal', 83)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's1' })
+    // Tinctures score on Equipment, not here.
+    expect(matchItem(doc, facts('Oakbranch Tincture', 'Tinctures', 'Normal', 84, { quality: 27 })).final?.block.comment ?? '').not.toMatch(/flasktinc/)
     // A corrupted one is NeverSink's (or Equipment's) to decide.
     expect(step(facts('Divine Life Flask', 'Life Flasks', 'Magic', 84, { quality: 30, corrupted: true })).final?.block.comment ?? '').not.toMatch(/flasklife/)
     expect(kindOf('flasklife')).toBe('flasks')
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
+  })
+})
+
+describe('Equipment tinctures', () => {
+  it('lists every tincture base and scores it like a utility flask', async () => {
+    const { TINCTURE_BASES, compileFlasks } = await import('@/web/woke/loot-filter/flask-weights')
+    const { defaultWeights } = await import('@/web/woke/loot-filter/weight-settings')
+    expect([...TINCTURE_BASES]).toEqual(Object.keys(BASE_FACTS).filter(b => / Tincture$/.test(b)).sort())
+    const w = { ...defaultWeights(), on: true }
+    const blocks = compileFlasks(w)
+    const tinc = blocks.filter(b => b.conditions.some(c => c.key === 'Class' && c.values.includes('Tinctures')))
+    expect(tinc.length).toBeGreaterThan(1)
+    expect(tinc.every(b => b.tier!.startsWith('flasktinc'))).toBe(true)
+    // Good at 26%+ and item level 85: far over the line.
+    const top = tinc.find(b => b.conditions.some(c => c.key === 'Quality' && c.values[0] === '26') && b.conditions.some(c => c.key === 'ItemLevel'))!
+    expect(top.visibility).toBe('Show')
+    expect(tinc.at(-1)).toMatchObject({ visibility: 'Hide', tier: 'flasktinc0' })
   })
 })
