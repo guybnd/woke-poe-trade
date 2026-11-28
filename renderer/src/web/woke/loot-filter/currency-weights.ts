@@ -1426,7 +1426,7 @@ function applySpecial (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyIte
   const shown = parts.flatMap(x => x.blocks).filter(b => b.visibility === 'Show' && b.tier !== 'faint').sort((x, y) => Number(y.tier?.slice(1) ?? 0) - Number(x.tier?.slice(1) ?? 0))
   insertBlocks(doc, specialAnchor(doc), shown)
   retireSpecial(doc, gateConds(cfg))
-  return { blocks: shown, items, chars: shown.reduce((n, b) => n + 160 + b.conditions.reduce((m, x) => m + x.key.length + 12 + x.values.reduce((k, v) => k + v.length + 3, 0), 0), 0) }
+  return { blocks: shown, items, chars: shown.length * 400 }
 }
 
 // Special unique rolls go just above NeverSink's own special rules, one

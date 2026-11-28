@@ -61,11 +61,13 @@ const MAGIC = cnd('Rarity', '', ['Magic'])
 const NOT_UNIQUE = cnd('Rarity', '', ['Normal', 'Magic', 'Rare'])
 const ID = T('Identified')
 // Fractured, neither mirrored nor corrupted.
-const FRACT = [T('FracturedItem'), F('Mirrored'), F('Corrupted')]
+const CLEAN = [F('Mirrored'), F('Corrupted')]
+const FRACT = [T('FracturedItem'), ...CLEAN]
 const DOUBLE = [T('Corrupted'), cnd('CorruptedMods', '>=', ['2']), RARE]
 const mod = (...names: string[]) => cnd('HasExplicitMod', '', names)
+// Identified rares with one of these mods.
+const idr = (...names: string[]) => [ID, RARE, mod(...names)]
 const ilvl = (op: string, n: number) => cnd('ItemLevel', op, [String(n)])
-const cls = (...list: string[]) => list.join('|')
 
 const JEWELLERY = ['Amulets', 'Belts', 'Rings']
 const ARMOUR = ['Body Armours', 'Boots', 'Gloves', 'Helmets', 'Shields', 'Quivers']
@@ -76,6 +78,8 @@ const INFLUENCES = ['Crusader', 'Elder', 'Hunter', 'Redeemer', 'Shaper', 'Warlor
 const INFL = cnd('HasInfluence', '', INFLUENCES)
 const ENSHROUDED = ['Enshrouded Body Armour', 'Enshrouded Boots', 'Enshrouded Gloves', 'Enshrouded Helmet', 'Enshrouded Quiver', 'Enshrouded Shield']
 const VOIDSTONES = ['Ceremonial Voidstone', 'Decayed Voidstone', 'Eldritch Voidstone', 'Originator Voidstone']
+const ROD = 'Fishing Rod'
+const URN = 'Urn Relic'
 const RELICS = ['Candlestick Relic', 'Censer Relic', 'Coffer Relic', 'Papyrus Relic', 'Processional Relic', 'Tome Relic', 'Urn Relic']
 // Weapons but a few: the attack ones, the minion ones, caster and bow.
 const but = (...out: string[]) => WEAPONS.filter(w => !out.includes(w))
@@ -91,63 +95,70 @@ const BOW = 'Spine Bow'
 // Steps: 1 Small, 2 Normal, 3 Decent, 4 Big; guesses at the default steps
 // (20 Big, 5 Decent, 1.5 Normal, 0.4 Small). Rows of a section can overlap:
 // the louder one wins (applySpecial puts it first).
-const row = (cat: string, name: string, c: string, tip: string, fixed: CStep, conds: FilterCondition[], bts: string[] = []): SpecialRow =>
-  ({ cat, name, cls: c, bts, tip, fixed, guess: [0, 0.4, 1.5, 5, 20][fixed] ?? 0, conds })
+type Row = [name: string, cls: string | string[], tip: string, fixed: CStep, conds: FilterCondition[], bts?: string[]]
+const sec = (cat: string, ...rows: Row[]): SpecialRow[] => rows.map(([name, c, tip, fixed, conds, bts = []]) =>
+  ({ cat, name, cls: typeof c === 'string' ? c : c.join('|'), bts, tip, fixed, guess: [0, 0.4, 1.5, 5, 20][fixed] ?? 0, conds }))
 
 export const SPECIAL_ROWS: SpecialRow[] = [
-  // Veiled (Betrayal): identified drops, so the mod's name shows.
-  row('sgveil', 'Fractured with a veiled mod', cls(...GEAR), RING, 4, [...FRACT, ID, RARE, mod('Veil')]),
-  row('sgveil', 'Jewel with a veiled mod', cls('Abyss Jewels', 'Jewels'), JEWEL, 3, [ID, RARE, mod('Veil')]),
-  row('sgveil', 'Veiled prefix and suffix', cls(...GEAR), RING, 2, [F('Mirrored'), F('Corrupted'), ID, RARE, mod('Veiled'), mod('of the Veil')]),
-  // Incursion temple mods, by what each is good on.
-  row('sgmods', 'Fractured with a temple mod', cls(...GEAR), BOOTS, 3, [...FRACT, ID, RARE, mod(...INCURSION)]),
-  row('sgmods', 'Temple boots: Matatl\'s speed and traps', 'Boots', BOOTS, 3, [ID, RARE, mod("Matatl's")]),
-  row('sgmods', 'Temple caster weapon or shield', cls('Rune Daggers', 'Sceptres', 'Shields', 'Staves', 'Wands'), BOW, 3, [ID, RARE, mod("Matatl's", 'Tacati', "Topotante's")]),
-  row('sgmods', 'Temple elemental weapon: Topotante\'s', cls('Bows', 'Claws', 'Daggers', 'Thrusting One Hand Swords', 'Wands'), BOW, 3, [ID, RARE, mod("Topotante's")]),
-  row('sgmods', 'Temple jewellery', cls(...JEWELLERY), AMULET, 3, [ID, RARE, mod(...INCURSION)]),
-  row('sgmods', 'Temple gloves or helmet', cls('Gloves', 'Helmets'), HELMET, 3, [ID, RARE, mod('Puhuarte', 'Topotante')]),
-  row('sgmods', 'Temple attack weapon: Tacati\'s', cls(...but('Rune Daggers', 'Sceptres', 'Staves')), BOW, 3, [ID, RARE, mod('of Tacati', "Tacati's")]),
-  row('sgmods', 'Temple body armour: Guatelitzi\'s life', 'Body Armours', BODY, 2, [ID, RARE, mod("Guatelitzi's")]),
-  row('sgmods', 'Temple minion weapon: Citaqualotl\'s', cls(...but('Bows', 'Two Hand Axes', 'Two Hand Maces', 'Two Hand Swords', 'Warstaves')), BOW, 2, [ID, RARE, mod("Citaqualotl's")]),
-  row('sgmods', 'Magic item with a temple mod', '', BOOTS, 2, [ID, MAGIC, mod(...INCURSION)]),
-  // Necropolis, Bestiary, Delve and mercenary mods.
-  row('sgmods', 'Haunted mods (Necropolis)', '', RING, 4, [ID, RARE, mod('Haunted', 'of Haunting')]),
-  row('sgmods', 'Fractured with a Delve mod', '', AMULET, 4, [T('FracturedItem'), ID, NOT_UNIQUE, mod('of the Underground', 'Subterranean')]),
-  row('sgmods', 'Delve mod', '', AMULET, 4, [ID, NOT_UNIQUE, mod('of the Underground', 'Subterranean')]),
-  row('sgmods', 'Beast mods: Farrul or Fenumus', '', HELMET, 3, [ID, RARE, mod('of Farrul', 'of Fenumus')]),
-  row('sgmods', 'Beast mods: Craiceann or Saqawal', '', HELMET, 2, [ID, RARE, mod('of Craiceann', 'of Saqawal')]),
-  row('sgmods', 'Mercenary mods on armour or jewellery', cls(...JEWELLERY, ...ARMOUR), BODY, 3, [ID, NOT_UNIQUE, mod('Infamous', 'of Infamy')]),
-  row('sgmods', 'Mercenary mods on a caster or bow weapon', cls('Bows', 'Staves', 'Wands', 'Warstaves'), BOW, 3, [ID, NOT_UNIQUE, mod('Infamous')]),
-  // Variations.
-  row('sgvar', 'Double corrupted jewellery, gloves or jewel', cls('Abyss Jewels', 'Amulets', 'Belts', 'Gloves', 'Jewels', 'Quivers', 'Rings'), AMULET, 4, DOUBLE),
-  row('sgvar', 'Double corrupted', '', BODY, 3, DOUBLE),
-  row('sgvar', 'Ring with a corrupted implicit, item level 75+', 'Rings', RING, 3, [T('Corrupted'), cnd('CorruptedMods', '>=', ['1']), ilvl('>=', 75), NOT_UNIQUE]),
-  row('sgvar', 'Enchanted armour or weapon', cls(...ARMOUR, ...WEAPONS), HELMET, 4, [T('AnyEnchantment'), NOT_UNIQUE]),
-  row('sgvar', 'Anointed amulet', 'Amulets', AMULET, 3, [T('AnyEnchantment'), F('Mirrored'), F('Corrupted'), NOT_UNIQUE]),
-  row('sgvar', 'Fractured jewel, flask or heist gear', cls('Abyss Jewels', 'Heist Brooches', 'Heist Cloaks', 'Heist Gear', 'Heist Tools', 'Jewels', 'Utility Flasks'), JEWEL, 3, [...FRACT, NOT_UNIQUE]),
-  row('sgvar', 'Fractured jewellery', cls(...JEWELLERY), RING, 3, [...FRACT, NOT_UNIQUE]),
-  row('sgvar', 'Fractured armour or weapon, item level 84+', cls(...ARMOUR, ...WEAPONS), HELMET, 2, [...FRACT, NOT_UNIQUE, ilvl('>=', 84)]),
-  row('sgvar', 'Abyss socket', cls(...ARMOUR.filter(x => x !== 'Quivers'), ...WEAPONS), HELMET, 3, [NOT_UNIQUE, cnd('SocketGroup', '', ['A'])]),
-  // Influenced: any rarity, so a white or magic base for crafting shows too.
-  // Unidentified rares of item level 68+ meet the rare weights first.
-  row('sginfl', 'Influenced jewellery, item level 82+', cls(...JEWELLERY), AMULET, 3, [INFL, NOT_UNIQUE, ilvl('>=', 82)]),
-  row('sginfl', 'Influenced, item level 86+', cls(...GEAR), HELMET, 3, [INFL, NOT_UNIQUE, ilvl('>=', 86)]),
-  row('sginfl', 'Influenced, item level 84-85', cls(...GEAR), HELMET, 2, [INFL, NOT_UNIQUE, ilvl('>=', 84), ilvl('<=', 85)]),
-  row('sginfl', 'Influenced, item level under 84', cls(...GEAR), HELMET, 1, [INFL, NOT_UNIQUE, ilvl('<', 84)]),
-  // Item kinds of their own.
-  row('sgclass', 'Imbued', '', HELMET, 4, [T('Imbued'), NOT_UNIQUE]),
-  row('sgclass', 'Synthesised', '', RING, 4, [T('SynthesisedItem'), NOT_UNIQUE]),
-  row('sgclass', 'Voidstone', '', 'Ceremonial Voidstone', 4, [], VOIDSTONES),
-  row('sgclass', 'Trinket', 'Trinkets', 'Thief\'s Trinket', 4, []),
-  row('sgclass', 'Fishing rod', 'Fishing Rods', 'Fishing Rod', 4, []),
-  row('sgclass', 'Unique piece', 'Pieces', 'Fishing Rod', 4, [cnd('Rarity', '', ['Unique'])]),
-  row('sgclass', 'Relic, the good kinds', 'Relics', 'Urn Relic', 4, [NOT_UNIQUE], RELICS),
-  row('sgclass', 'Relic', 'Relics', 'Urn Relic', 2, [NOT_UNIQUE]),
-  // Event and league bases.
-  row('sgshroud', 'Enshrouded item', '', 'Enshrouded Quiver', 4, [], ENSHROUDED),
-  row('sgidol', 'Rare idol', 'Idols', 'Minor Idol', 3, [RARE]),
-  row('sgidol', 'Magic idol', 'Idols', 'Minor Idol', 2, [MAGIC]),
-  row('sgidol', 'White idol', 'Idols', 'Minor Idol', 3, [cnd('Rarity', '', ['Normal'])])
+  ...sec('sgveil',
+    // Veiled (Betrayal): identified drops, so the mod's name shows.
+    ['Fractured with a veiled mod', GEAR, RING, 4, [...FRACT, ID, RARE, mod('Veil')]],
+    ['Jewel with a veiled mod', ['Abyss Jewels', 'Jewels'], JEWEL, 3, idr('Veil')],
+    ['Veiled prefix and suffix', GEAR, RING, 2, [...CLEAN, ID, RARE, mod('Veiled'), mod('of the Veil')]]),
+  ...sec('sgmods',
+    // Incursion temple mods, by what each is good on.
+    ['Fractured with a temple mod', GEAR, BOOTS, 3, [...FRACT, ID, RARE, mod(...INCURSION)]],
+    ['Temple boots: Matatl\'s speed and traps', 'Boots', BOOTS, 3, idr("Matatl's")],
+    ['Temple caster weapon or shield', ['Rune Daggers', 'Sceptres', 'Shields', 'Staves', 'Wands'], BOW, 3, idr("Matatl's", 'Tacati', "Topotante's")],
+    ['Temple elemental weapon: Topotante\'s', ['Bows', 'Claws', 'Daggers', 'Thrusting One Hand Swords', 'Wands'], BOW, 3, idr("Topotante's")],
+    ['Temple jewellery', JEWELLERY, AMULET, 3, idr(...INCURSION)],
+    ['Temple gloves or helmet', ['Gloves', 'Helmets'], HELMET, 3, idr('Puhuarte', 'Topotante')],
+    ['Temple attack weapon: Tacati\'s', but('Rune Daggers', 'Sceptres', 'Staves'), BOW, 3, idr('of Tacati', "Tacati's")],
+    ['Temple body armour: Guatelitzi\'s life', 'Body Armours', BODY, 2, idr("Guatelitzi's")],
+    ['Temple minion weapon: Citaqualotl\'s', but('Bows', 'Two Hand Axes', 'Two Hand Maces', 'Two Hand Swords', 'Warstaves'), BOW, 2, idr("Citaqualotl's")],
+    ['Magic item with a temple mod', '', BOOTS, 2, [ID, MAGIC, mod(...INCURSION)]],
+    // Necropolis, Bestiary, Delve and mercenary mods.
+    ['Haunted mods (Necropolis)', '', RING, 4, idr('Haunted', 'of Haunting')],
+    ['Fractured with a Delve mod', '', AMULET, 4, [T('FracturedItem'), ID, NOT_UNIQUE, mod('of the Underground', 'Subterranean')]],
+    ['Delve mod', '', AMULET, 4, [ID, NOT_UNIQUE, mod('of the Underground', 'Subterranean')]],
+    ['Beast mods: Farrul or Fenumus', '', HELMET, 3, idr('of Farrul', 'of Fenumus')],
+    ['Beast mods: Craiceann or Saqawal', '', HELMET, 2, idr('of Craiceann', 'of Saqawal')],
+    ['Mercenary mods on armour or jewellery', [...JEWELLERY, ...ARMOUR], BODY, 3, [ID, NOT_UNIQUE, mod('Infamous', 'of Infamy')]],
+    ['Mercenary mods on a caster or bow weapon', ['Bows', 'Staves', 'Wands', 'Warstaves'], BOW, 3, [ID, NOT_UNIQUE, mod('Infamous')]]),
+  ...sec('sgvar',
+    // Variations.
+    ['Double corrupted jewellery, gloves or jewel', ['Abyss Jewels', 'Amulets', 'Belts', 'Gloves', 'Jewels', 'Quivers', 'Rings'], AMULET, 4, DOUBLE],
+    ['Double corrupted', '', BODY, 3, DOUBLE],
+    ['Ring with a corrupted implicit, item level 75+', 'Rings', RING, 3, [T('Corrupted'), cnd('CorruptedMods', '>=', ['1']), ilvl('>=', 75), NOT_UNIQUE]],
+    ['Enchanted armour or weapon', [...ARMOUR, ...WEAPONS], HELMET, 4, [T('AnyEnchantment'), NOT_UNIQUE]],
+    ['Anointed amulet', 'Amulets', AMULET, 3, [T('AnyEnchantment'), ...CLEAN, NOT_UNIQUE]],
+    ['Fractured jewel, flask or heist gear', ['Abyss Jewels', 'Heist Brooches', 'Heist Cloaks', 'Heist Gear', 'Heist Tools', 'Jewels', 'Utility Flasks'], JEWEL, 3, [...FRACT, NOT_UNIQUE]],
+    ['Fractured jewellery', JEWELLERY, RING, 3, [...FRACT, NOT_UNIQUE]],
+    ['Fractured armour or weapon, item level 84+', [...ARMOUR, ...WEAPONS], HELMET, 2, [...FRACT, NOT_UNIQUE, ilvl('>=', 84)]],
+    ['Abyss socket', [...ARMOUR.filter(x => x !== 'Quivers'), ...WEAPONS], HELMET, 3, [NOT_UNIQUE, cnd('SocketGroup', '', ['A'])]]),
+  ...sec('sginfl',
+    // Influenced: any rarity, so a white or magic base for crafting shows too.
+    // Unidentified rares of item level 68+ meet the rare weights first.
+    ['Influenced jewellery, item level 82+', JEWELLERY, AMULET, 3, [INFL, NOT_UNIQUE, ilvl('>=', 82)]],
+    ['Influenced, item level 86+', GEAR, HELMET, 3, [INFL, NOT_UNIQUE, ilvl('>=', 86)]],
+    ['Influenced, item level 84-85', GEAR, HELMET, 2, [INFL, NOT_UNIQUE, ilvl('>=', 84), ilvl('<=', 85)]],
+    ['Influenced, item level under 84', GEAR, HELMET, 1, [INFL, NOT_UNIQUE, ilvl('<', 84)]]),
+  ...sec('sgclass',
+    // Item kinds of their own.
+    ['Imbued', '', HELMET, 4, [T('Imbued'), NOT_UNIQUE]],
+    ['Synthesised', '', RING, 4, [T('SynthesisedItem'), NOT_UNIQUE]],
+    ['Voidstone', '', 'Ceremonial Voidstone', 4, [], VOIDSTONES],
+    ['Trinket', 'Trinkets', 'Thief\'s Trinket', 4, []],
+    ['Fishing rod', 'Fishing Rods', ROD, 4, []],
+    ['Unique piece', 'Pieces', ROD, 4, [cnd('Rarity', '', ['Unique'])]],
+    ['Relic, the good kinds', 'Relics', URN, 4, [NOT_UNIQUE], RELICS],
+    ['Relic', 'Relics', URN, 2, [NOT_UNIQUE]]),
+  ...sec('sgshroud',
+    // Event and league bases.
+    ['Enshrouded item', '', 'Enshrouded Quiver', 4, [], ENSHROUDED]),
+  ...sec('sgidol',
+    ['Rare or white idol', 'Idols', 'Minor Idol', 3, [cnd('Rarity', '', ['Normal', 'Rare'])]],
+    ['Magic idol', 'Idols', 'Minor Idol', 2, [MAGIC]])
 ]
 
 // NeverSink's rules ours take over. Quest-like items (questlikeexception)

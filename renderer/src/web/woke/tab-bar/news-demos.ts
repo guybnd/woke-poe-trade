@@ -73,7 +73,6 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'search-tree-by-stat': { search: 'onslaught' },
   // A base with no saved price: its Price check button leads.
   'search-price-check-bases': { search: 'manifold ring' },
-  // A rare with tiered mods: hover one for its ladder.
   // A rare: the roll strip's Base step prices it as its base.
   'price-check-base-step': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'base-preset' },
   // Worth knowing lines (worth-knowing.ts).
