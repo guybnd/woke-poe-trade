@@ -19,9 +19,10 @@ beforeAll(async () => { await loadGameData(); await loadOwnTables() }, 60000)
 const lookup: PriceLookup = (_g, base) => ({ 'Divine Orb': 160, 'Chaos Orb': 1 } as Record<string, number>)[base] != null ? { chaos: ({ 'Divine Orb': 160, 'Chaos Orb': 1 } as Record<string, number>)[base], thin: false } : null
 const item = (f: Partial<ItemFacts>): ItemFacts => ({ name: f.baseType ?? '', areaLevel: 83, influences: [], explicitModNames: [], corrupted: false, ...f } as ItemFacts)
 
-function compose (ownBase: boolean) {
+function compose (ownBase: boolean, catMode: Record<string, number> = {}) {
   const p = defaultPresets()
   p.currency.on = true
+  Object.assign(p.currency.catMode, catMode)
   p.weights.on = true
   return composeFilter(neverSink('3-STRICT'), {
     presets: p,
@@ -82,5 +83,18 @@ describe('our own filter skeleton', () => {
     expect(oldFlask.visibility).toBe('Hide')
     const qFlask = at({ baseType: 'Small Life Flask', dropLevel: 1, itemClass: 'Life Flasks', rarity: 'Normal', quality: 12 })
     expect([qFlask.final?.block.tier, qFlask.visibility]).toEqual(['qualityflasks', 'Show'])
+  })
+
+  it('with the levelling rules off or from the hideout, plain gear in the acts still shows', () => {
+    const hat = (doc: ReturnType<typeof compose>, areaLevel: number) => matchItem(doc, item({ baseType: 'Iron Hat', dropLevel: 1, itemClass: 'Helmets', rarity: 'Normal', areaLevel, itemLevel: areaLevel }))
+    const off = compose(true, { lvon: 0 })
+    expect(hat(off, 45).visibility).toBe('Show')
+    expect(hat(off, 70).visibility).toBe('Hide')
+    const maps = compose(true, { lvgate: 0 })
+    expect(hat(maps, 45).visibility).toBe('Show')
+    const hideout = compose(true, { lvgate: 1 })
+    expect(hat(hideout, 45).visibility).toBe('Show')
+    expect(hat(hideout, 62).visibility).toBe('Hide')
+    expect(hat(compose(true), 45).visibility).toBe('Hide')
   })
 })
