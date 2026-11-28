@@ -27,15 +27,15 @@ export const UNIQUE_IDS = new Set(UNIQUE_CATEGORIES.map(x => x.id))
 export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
   // A base with a rare jackpot on it (Headhunter on Leather Belt): its step
   // from the average drop, plus a gold edge and a Kite icon (Guy's K1).
-  uniqchase: { text: [175, 96, 37], color: 'Brown', shape: 'Kite' },
+  uniqchase: { text: [175, 96, 37], color: 'Brown', shape: 'Star' },
   uniqplain: { text: [175, 96, 37], color: 'Brown', shape: 'Star' },
   uniqvar: { text: [210, 130, 60], color: 'Orange', shape: 'Star' },
   uniqearly: { text: [200, 150, 90], color: 'Yellow', shape: 'Star' },
   // Not red: red beams and map icons are kept for Tink (Guy 2026-11-27).
-  uniqboss: { text: [190, 80, 40], color: 'Orange', shape: 'Pentagon' },
-  uniqbossmix: { text: [200, 125, 70], color: 'Orange', shape: 'Hexagon' },
+  uniqboss: { text: [190, 80, 40], color: 'Orange', shape: 'Star' },
+  uniqbossmix: { text: [200, 125, 70], color: 'Orange', shape: 'Star' },
   uniqfoul: { text: [190, 110, 200], color: 'Purple', shape: 'Star' },
-  uniqspec: { text: [230, 160, 80], color: 'Brown', shape: 'Cross' }
+  uniqspec: { text: [230, 160, 80], color: 'Brown', shape: 'Star' }
 }
 
 // Boss-only bases show whatever they are (Guy: "boss-only likely always on"),
