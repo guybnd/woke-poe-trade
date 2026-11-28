@@ -26,6 +26,15 @@ history:
     to: In Progress
     user: Agent
     date: '2026-11-28T09:17:11.255Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Part 1 merged: https://github.com/guybnd/woke-poe-trade/pull/1089
+      (168d796). NeverSink tab removed, Loot and Equipment out of beta for
+      everyone. Full cut still to come.
+    date: '2026-11-28T09:54:03.842Z'
+    selfAttested: true
+    id: c-2026-11-28t09-54-03-842z
 needsAction: null
 ---
 
