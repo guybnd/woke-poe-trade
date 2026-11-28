@@ -97,7 +97,7 @@ const props = defineProps<{
   facts?: ItemFacts | null
 }>()
 // The item's category and the name its row has on the Loot tab.
-const emit = defineEmits<{ 'open-tab': [cat: string, name: string], 'open-rule': [tier: string], place: [p: { cat: string, catName: string, name: string } | null] }>()
+const emit = defineEmits<{ 'open-tab': [cat: string, name: string], 'open-rule': [tier: string], 'place': [p: { cat: string, catName: string, name: string } | null] }>()
 
 const open = reactive({ more: useFold('alt-f.currency-more') })
 // The whole category (Guy 2026-11-27: every section has Hide / By price /
