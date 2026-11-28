@@ -283,7 +283,7 @@
     <template v-else-if="tab === 'preview'" />
     <PresetsTab v-else-if="tab === 'presets'" :store="store" :config="config" />
     <GearTab v-else-if="tab === 'gear' || tab === 'ranks'" :key="tab" :store="store" :config="config" :view="tab === 'ranks' ? 'ranks' : 'table'" @open-rule="openRule" />
-    <EquipmentTab v-else-if="tab === 'weights'" :store="store" :config="config" :focus="tabFocus" />
+    <EquipmentTab v-else-if="tab === 'weights'" :store="store" :config="config" :focus="tabFocus" @open-rule="openRule" />
     <LootTab v-else-if="tab === 'currency'" :store="store" :config="config" :focus="tabFocus" @open-rule="r => jumpTo(r.type, r.tier)" />
     <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" />
     <NeverSinkTab v-else-if="tab === 'neversink'" :store="store" :config="config" :anchor="panel?.el" />
@@ -502,7 +502,16 @@ function onSearchPaste (e: ClipboardEvent) {
 
 const tabFocus = ref<string | null>(null)
 const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'ranks' | 'weights' | 'currency' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
-watch(gearRanksAsk, () => { if (takeRanksAsk('tab')) tab.value = 'ranks' }, { immediate: true })
+// Equipment shows (beta): Base ranks is its section, else a top tab.
+const equipShown = computed(() => experimentalUnlocked.value || props.config.presets.weights.on)
+function openRanks () {
+  if (!equipShown.value) { tab.value = 'ranks'; return }
+  tabFocus.value = 'ranks'
+  tab.value = 'weights'
+  nextTick(() => { tabFocus.value = null }).catch(() => {})
+}
+watch(gearRanksAsk, () => { if (takeRanksAsk('tab')) openRanks() }, { immediate: true })
+watch(equipShown, v => { if (v && tab.value === 'ranks') openRanks() })
 const search = ref('')
 const selType = ref<string | null>(null)
 const selTier = ref<string | null>(null)
@@ -561,9 +570,9 @@ const tabOptions = computed(() => [
   { value: 'rules', label: 'Rules' },
   // Gear: two screens of their own, what shows (by rank and drop tier) and which bases sit in which rank.
   { value: 'gear', label: 'Drop tiers', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear shows, by rank, rarity and drop tier' },
-  { value: 'ranks', label: 'Base ranks', count: Object.keys(props.config.presets.gear.moves).length || undefined, title: 'Which gear bases sit in which rank' },
+  ...(equipShown.value ? [] : [{ value: 'ranks', label: 'Base ranks', count: Object.keys(props.config.presets.gear.moves).length || undefined, title: 'Which gear bases sit in which rank' }]),
   // Beta: shown with the experimental tools, or while this profile uses it.
-  ...(experimentalUnlocked.value || props.config.presets.weights.on ? [{ value: 'weights', label: 'Equipment', count: props.config.presets.weights.on ? '✓' : undefined, title: 'Beta: decide endgame rares and flasks by a score you tune' }] : []),
+  ...(equipShown.value ? [{ value: 'weights', label: 'Equipment', count: props.config.presets.weights.on ? '✓' : undefined, title: 'Beta: decide endgame rares and flasks by a score you tune' }] : []),
   ...(experimentalUnlocked.value || props.config.presets.currency.on ? [{ value: 'currency', label: 'Loot', count: props.config.presets.currency.on ? '✓' : undefined, title: 'Beta: show endgame loot by what it is worth, class by class' }] : []),
   { value: 'preview', label: 'Preview' },
   // The look strip lives on Rules, so it isn't counted here.
