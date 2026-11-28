@@ -26,5 +26,6 @@ subtasks:
   - WOKEPOET-693
   - WOKEPOET-694
   - WOKEPOET-695
+  - WOKEPOET-697
 ---
 Epic, milestone 1 of retiring NeverSink: our own item lists from game data and our own price guesses, so the Loot tab no longer depends on NeverSink's BaseType lists or tier guesses.
