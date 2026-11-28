@@ -1,5 +1,6 @@
 # Next release notes
 
+- Loot filter, Loot tab: a section set to Always now has a green dot on its chip, so it no longer looks like By price (gold). Hide stays a hollow grey dot.
 - Loot filter, Loot tab: every row now has the tick box Uniques and Jewels had. The section header decides for all its rows; untick one to hide just it, tick it again to follow the header. In a section on Hide the boxes grey out.
 - Price check, Nightmare Map: the side window no longer lists a "Drops from Arkhon's Vault" panel beside the map check. Worth running already shows the four vaults and their rewards (with Boss runs off, the panel stays). On other vault rewards (an Orb of Intention, a Valdo's Puzzle Box) the vault panel now names the rewards it can also give (Threads, Synthesised maps...) instead of "3 more kinds that vary".
 - Loot filter, Loot tab maps: special maps (Originator, Nightmare and other endgame maps, guardian and Citadel, content mods, corrupted, blighted, blight-ravaged) now drop on a card filled with their kind's colour, pale from Normal and Decent, full with a white edge at Big, so they no longer look like a normal T16. Normal maps stay black on white, and the T16's edge is grey instead of gold. A Style picker on each map section's Look row switches every special map to a dark card or back to white with a coloured edge.
