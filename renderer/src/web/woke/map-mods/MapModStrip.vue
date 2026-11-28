@@ -748,7 +748,7 @@ function toggleBase () {
 }
 const baseTitle = computed(() => baseOnly.value
   ? (clearedRef.value ? 'Searching the plain map. Click to bring back the numbers and mods you had ticked.' : 'Searching the plain map: no number or mod is ticked.')
-  : 'Untick every number, mod and line below, to search the plain map (its kind stays). Click again to bring them back. Searches only when you press Search.')
+  : 'Plain map: unticks every number, mod and line below (its kind stays). Click again to undo. Press Search to run it.')
 
 const picked = computed(() => {
   // The influence is what the map is, not a pick.

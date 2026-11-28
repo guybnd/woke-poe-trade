@@ -378,9 +378,9 @@ const views = computed(() => {
 })
 const view = computed(() => views.value.some(v => v.value === props.config.tab) ? props.config.tab : 'buy')
 
-const SUPPLY_TITLE = `How much of this item trades a day on the in-game currency exchange, from poe.ninja: High is ${SUPPLY_HIGH} or more, Medium ${SUPPLY_MEDIUM} or more. Trade site sales aren't counted.`
+const SUPPLY_TITLE = `Trades a day on the in-game currency exchange (poe.ninja). High: ${SUPPLY_HIGH}+, Medium: ${SUPPLY_MEDIUM}+.`
 const supplyTitle = computed(() => flip.value?.kind === 'upgrade'
-  ? `${SUPPLY_TITLE} A recipe needs buyers for the next tier too, so the thinner side counts.`
+  ? `${SUPPLY_TITLE} For a recipe, the thinner of its two tiers counts.`
   : SUPPLY_TITLE)
 const panelIcon = moduleIcon('scarab-flip').art ?? undefined
 const hasVolume = computed(() => rows.value.some(r => r.tradedChaos != null))

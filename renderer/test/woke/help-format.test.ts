@@ -38,7 +38,32 @@ function sources (dir: string): string[] {
 // could hold (a nested literal) or a short stand-in number.
 // The script of the file being scanned, for ${name} in a template.
 let SCRIPT = ''
+// The file being scanned, to follow a name imported from a sibling file.
+let FILE = ''
 const resolving = new Set<string>()
+
+// What a name joined with + can hold: a const in this script, or one imported
+// from a relative file.
+function nameText (name: string): string | null {
+  if (resolving.has(name) || resolving.size > 4) return null
+  resolving.add(name)
+  try {
+    const here = resolveName(SCRIPT, name)
+    if (here?.length) return here.sort((a, b) => b.length - a.length)[0]
+    const imp = new RegExp(`import\\s*(?:type\\s*)?\\{[^}]*\\b${name}\\b[^}]*\\}\\s*from\\s*'(\\.[^']+)'`).exec(SCRIPT)
+    if (!imp || !FILE) return null
+    const base = path.resolve(path.dirname(FILE), imp[1])
+    const file = [base, base + '.ts', base + '.vue', path.join(base, 'index.ts')].find(f => { try { return statSync(f).isFile() } catch { return false } })
+    if (!file) return null
+    const saved = SCRIPT
+    SCRIPT = readFileSync(file, 'utf8')
+    const there = resolveName(SCRIPT, name)
+    SCRIPT = saved
+    return there?.length ? there.sort((a, b) => b.length - a.length)[0] : null
+  } finally {
+    resolving.delete(name)
+  }
+}
 
 function literals (expr: string): string[] {
   const out: string[] = []
@@ -99,7 +124,17 @@ function literals (expr: string): string[] {
     start = i
     if (c === '\'' || c === '"') push(readQuoted(c))
     else if (c === '`') push(readTemplate())
-    else if (c === '/' && expr[i + 1] === '/') { while (i < expr.length && expr[i] !== '\n') i++ } else i++
+    else if (c === '/' && expr[i + 1] === '/') { while (i < expr.length && expr[i] !== '\n') i++ } else if (/[A-Za-z_$]/.test(c) && !/[\w$.]/.test(expr[i - 1] ?? '')) {
+      // A name joined with + ('a' + CREDIT): count what it holds.
+      const name = /^[A-Za-z_$][\w$]*/.exec(expr.slice(i))![0]
+      const before = expr.slice(0, i).trimEnd()
+      const after = expr.slice(i + name.length)
+      i += name.length
+      if ((before.endsWith('+') || /^\s*\+/.test(after)) && !/^\s*[.([]/.test(after)) {
+        const text = nameText(name)
+        if (text != null) push(text)
+      }
+    } else i++
   }
   return out
 }
@@ -245,6 +280,90 @@ function collect () {
   return { found, unread, dynamicSeen }
 }
 
+// The whole statement or function that starts at `at`: up to a line break
+// outside brackets and strings that doesn't continue the expression, or the
+// closing brace of a function body.
+function statementAt (src: string, at: number, valueOnly = false): string {
+  let depth = 0
+  let i = at
+  let opened = false
+  while (i < src.length) {
+    const c = src[i]
+    if (c === '\'' || c === '"' || c === '`') { i = skipString(src, i); continue }
+    if (c === '/' && src[i + 1] === '/') { while (i < src.length && src[i] !== '\n') i++; continue }
+    if (valueOnly && depth === 0 && c === ',') return src.slice(at, i)
+    if (c === '(' || c === '[' || c === '{') { depth++; if (c === '{') opened = true } else if (c === ')' || c === ']' || c === '}') {
+      depth--
+      if (valueOnly && depth < 0) return src.slice(at, i)
+      if (depth === 0 && c === '}' && opened && /^\s*\n/.test(src.slice(i + 1)) && !/^\s*[?:+.)|&]/.test(src.slice(i + 1).replace(/^\s*\n/, ''))) return src.slice(at, i + 1)
+    } else if (c === '\n' && depth <= 0) {
+      const before = src.slice(at, i).trimEnd()
+      const after = src.slice(i + 1).trimStart()
+      if (!/[?:+,(=>|&[{]$/.test(before) && !/^[?:+.|&)\]}]/.test(after)) return src.slice(at, i)
+    }
+    i++
+  }
+  return src.slice(at)
+}
+
+// Every text the names in an expression can hold: a const, a computed, a
+// function written in the same script.
+function namedTexts (script: string, expr: string, seen = new Set<string>()): string[] {
+  const out: string[] = []
+  for (const m of expr.matchAll(/(?<![.\w$])([A-Za-z_$][\w$]*)/g)) {
+    const name = m[1]
+    if (seen.has(name) || seen.size > 12) continue
+    seen.add(name)
+    const def = new RegExp(`(?:^|\\n)\\s*(?:export\\s+)?(?:(?:const|let)\\s+${name}\\s*(?::[^=\\n]+)?=|function\\s+${name}\\s*[(<])`).exec(script)
+    if (!def) continue
+    const body = statementAt(script, def.index + def[0].length)
+    SCRIPT = script
+    out.push(...literals(body))
+  }
+  return out
+}
+
+// Every hover title the scan can read: `title="…"` and `:title="…"` in
+// templates (following names into the script), `title:` in option objects, and
+// `.title =` set by hand, in .vue scripts and .ts files.
+function hoverTitles (): Found[] {
+  const out: Found[] = []
+  for (const file of sources(ROOT)) {
+    const rel = path.relative(ROOT, file).replace(/\\/g, '/')
+    const src = readFileSync(file, 'utf8')
+    const isVue = file.endsWith('.vue')
+    const script = isVue ? (src.match(/<script[\s\S]*?<\/script>/g)?.join('\n') ?? '') : src
+    SCRIPT = script
+    FILE = file
+    if (isVue) {
+      const template = src.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, '')
+      for (const m of template.matchAll(/(?:^|\s)(:|v-bind:)?title="([^"]*)"/g)) {
+        const expr = m[2].replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+        if (!m[1]) { out.push({ where: rel, text: expr }); continue }
+        SCRIPT = script
+        for (const text of [...literals(expr), ...namedTexts(script, expr)]) out.push({ where: `${rel} :title="${m[2].slice(0, 40)}"`, text })
+      }
+    }
+    for (const m of script.matchAll(/(?<![\w$.'"])title\s*:\s*|\.title\s*=(?!=)\s*/g)) {
+      // Not a key: in a comment or a string ('The title: minimize').
+      const line = script.slice(script.lastIndexOf('\n', m.index!) + 1, m.index!)
+      if (line.includes('//') || /^\s*\*/.test(line) || ['\'', '"', '`'].some(q => line.split(q).length % 2 === 0)) continue
+      const body = statementAt(script, m.index! + m[0].length, true)
+      SCRIPT = script
+      const lits = literals(body)
+      const texts = [...lits, ...namedTexts(script, body)]
+      for (const text of texts) out.push({ where: `${rel} title:`, text })
+    }
+    // A const or function named for a title (blendTitle, SUPPLY_TITLE), used
+    // from anywhere.
+    for (const m of script.matchAll(/(?:^|\n)\s*(?:export\s+)?(?:(?:const|let)\s+([\w$]*(?:Title|TITLE))\s*(?::[^=\n]+)?=|function\s+([\w$]*Title)\s*[(<])/g)) {
+      SCRIPT = script
+      for (const text of literals(statementAt(script, m.index! + m[0].length))) out.push({ where: `${rel} ${m[1] ?? m[2]}`, text })
+    }
+  }
+  return out
+}
+
 describe('help format A', () => {
   const { found, unread, dynamicSeen } = collect()
 
@@ -267,15 +386,12 @@ describe('help format A', () => {
   })
 
   it('keeps every hover title a short label', () => {
-    // A title that needs more words than this is help: put it in a WInfo.
-    const long: string[] = []
-    for (const file of sources(ROOT).filter(f => f.endsWith('.vue'))) {
-      const src = readFileSync(file, 'utf8').replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, '')
-      for (const m of src.matchAll(/(?:^|\s)(:|v-bind:)?title="([^"]*)"/g)) {
-        const texts = m[1] ? literals(m[2]) : [m[2]]
-        for (const t of texts) if (t.length > HELP_LIMITS.title) long.push(`${path.relative(ROOT, file)}: ${t.length} characters: "${t.slice(0, 60)}…"`)
-      }
-    }
+    // A title that needs more words than this is help: put it in a WInfo, or
+    // give each button its own short title.
+    expect(hoverTitles().length).toBeGreaterThan(300)
+    const long = hoverTitles()
+      .filter(t => t.text.trim().length > HELP_LIMITS.title)
+      .map(t => `${t.where}: ${t.text.trim().length} characters: "${t.text.trim().slice(0, 60)}…"`)
     expect(long).toEqual([])
   })
 
