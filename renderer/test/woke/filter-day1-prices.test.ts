@@ -53,4 +53,23 @@ describe('day-1 prices', () => {
     expect(typical([{ daysAgo: 2, value: 6 }, { daysAgo: 1, value: 2 }])).toBe(4)
     expect(typical([])).toBeNull()
   })
+
+  it('reads an exchange details answer as dated points', async () => {
+    const { exchangePoints, firstDays } = await import(/* @vite-ignore */ SCRIPT) as {
+      exchangePoints: (d: unknown, now: number) => Array<{ daysAgo: number, value: number }>
+      firstDays: (p: Array<{ daysAgo: number, value: number }>) => number | null
+    }
+    const now = Date.parse('2026-11-28T06:00:00Z')
+    const d = { pairs: [{ id: 'divine', history: [] }, { id: 'chaos', history: [
+      { timestamp: '2026-11-28T00:00:00Z', rate: 9 },
+      { timestamp: '2026-10-31T00:00:00Z', rate: 30 },
+      { timestamp: '2026-10-30T00:00:00Z', rate: 50 },
+      { timestamp: '2026-10-29T00:00:00Z', rate: 40 }
+    ] }] }
+    const pts = exchangePoints(d, now)
+    expect(pts[0]).toEqual({ daysAgo: 0, value: 9 })
+    expect(firstDays(pts)).toBe(40)
+    expect(exchangePoints(null, now)).toEqual([])
+  })
 })
+
