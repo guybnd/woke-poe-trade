@@ -2,7 +2,8 @@
 // score is its base rank × quality × item level, on its own line (Guy's
 // flasks A, 2026-11-28) and Rare weights' steps. Ranks are yours (saved with the rare base ranks); quality matters
 // because 20% is worth crafting on, item level because 85+ rolls the top
-// mods. Life and mana flasks, tinctures and levelling stay NeverSink's.
+// mods. Tinctures score the same way (Guy 2026-11-28), on the same line.
+// Life and mana flasks are Loot's; levelling stays the levelling rules'.
 import type { FilterBlock, FilterCondition, FilterDoc } from './parse'
 import { stepActions, stepOf } from './weights'
 import type { Step } from './weights'
@@ -10,12 +11,24 @@ import { WEIGHT_TYPE } from './weight-settings'
 import type { RankKey, WeightSettings } from './weight-settings'
 
 export const FLASK_BASES = ['Amethyst Flask', 'Basalt Flask', 'Bismuth Flask', 'Diamond Flask', 'Gold Flask', 'Granite Flask', 'Iron Flask', 'Jade Flask', 'Quartz Flask', 'Quicksilver Flask', 'Ruby Flask', 'Sapphire Flask', 'Silver Flask', 'Stibnite Flask', 'Sulphur Flask', 'Topaz Flask'] as const
-// A first guess at what players run most; yours replace it.
+// Every tincture base (base-facts.ts; flask-weights.test checks the list).
+export const TINCTURE_BASES = ['Ashbark Tincture', 'Blood Sap Tincture', 'Borealwood Tincture', 'Fulgurite Tincture', 'Ironwood Tincture', 'Oakbranch Tincture', 'Poisonberry Tincture', 'Prismatic Tincture', 'Rosethorn Tincture', 'Sporebloom Tincture'] as const
+// The two sets, each a page on Equipment: its rules' class and name.
+export const FLASK_SETS = [
+  { id: 'flasks', cls: 'Utility Flasks', bases: FLASK_BASES as readonly string[], what: 'flasks', tier: 'flask' },
+  { id: 'tinctures', cls: 'Tinctures', bases: TINCTURE_BASES as readonly string[], what: 'tinctures', tier: 'flasktinc' }
+] as const
+export type FlaskSetId = (typeof FLASK_SETS)[number]['id']
+// A first guess at what players run most; yours replace it. A tincture is
+// Good until you rank it.
 const DEFAULT_RANK: Record<string, RankKey> = {
+  ...Object.fromEntries(TINCTURE_BASES.map(b => [b, 'r2' as RankKey])),
   'Quicksilver Flask': 'r1',
   'Diamond Flask': 'r1',
   'Gold Flask': 'r1',
   'Silver Flask': 'r1',
+  // On NeverSink's exotic list (M8): Top.
+  'Iron Flask': 'r1',
   'Jade Flask': 'r2',
   'Granite Flask': 'r2',
   'Basalt Flask': 'r2',
@@ -27,8 +40,7 @@ const DEFAULT_RANK: Record<string, RankKey> = {
   'Sapphire Flask': 'r2',
   'Topaz Flask': 'r2',
   'Bismuth Flask': 'r3',
-  'Stibnite Flask': 'r3',
-  'Iron Flask': 'r3'
+  'Stibnite Flask': 'r3'
 }
 export const FLASK_RANKS: RankKey[] = ['r1', 'r2', 'r3', 'rj']
 export const flaskRank = (w: Pick<WeightSettings, 'ranks'>, base: string): RankKey => {
@@ -58,35 +70,37 @@ const c = (key: string, op: string, values: Array<string | number>): FilterCondi
 // there, loudest band first; then the rest hide. Maps only.
 export function compileFlasks (w: WeightSettings): FilterBlock[] {
   const out: FilterBlock[] = []
-  const base = [c('AreaLevel', '>=', [68]), c('Class', '==', ['Utility Flasks']), c('Rarity', '', ['Normal', 'Magic'])]
   const bands = FLASK_QUALITY.flatMap(q => FLASK_ILVL.map(i => ({ q: q.at, i: i.at, x: q.x * i.x }))).sort((a, b) => b.x - a.x || b.q - a.q)
-  for (const band of bands) {
-    const by = new Map<Step, string[]>()
-    for (const name of FLASK_BASES) {
-      const s = flaskStep(w, name, band.q, band.i)
-      if (s > 0) by.set(s, [...(by.get(s) ?? []), name])
+  for (const set of FLASK_SETS) {
+    const base = [c('AreaLevel', '>=', [68]), c('Class', '==', [set.cls]), c('Rarity', '', ['Normal', 'Magic'])]
+    for (const band of bands) {
+      const by = new Map<Step, string[]>()
+      for (const name of set.bases) {
+        const s = flaskStep(w, name, band.q, band.i)
+        if (s > 0) by.set(s, [...(by.get(s) ?? []), name])
+      }
+      for (const [s, names] of [...by].sort((a, b) => b[0] - a[0])) {
+        const conds = [...base, c('BaseType', '==', names)]
+        if (band.q) conds.push(c('Quality', '>=', [band.q]))
+        if (band.i) conds.push(c('ItemLevel', '>=', [band.i]))
+        out.push(block(set.tier, s, conds, `${set.what}, quality ${band.q}+, item level ${band.i || 'any'}`))
+      }
     }
-    for (const [s, names] of [...by].sort((a, b) => b[0] - a[0])) {
-      const conds = [...base, c('BaseType', '==', names)]
-      if (band.q) conds.push(c('Quality', '>=', [band.q]))
-      if (band.i) conds.push(c('ItemLevel', '>=', [band.i]))
-      out.push(block(s, conds, `flasks, quality ${band.q}+, item level ${band.i || 'any'}`))
-    }
+    out.push(block(set.tier, 0, [...base, c('BaseType', '==', [...set.bases])], `${set.what} under the line`))
   }
-  out.push(block(0, [...base, c('BaseType', '==', [...FLASK_BASES])], 'flasks under the line'))
   return out
 }
 
-function block (step: Step, conds: FilterCondition[], note: string): FilterBlock {
+function block (tier: string, step: Step, conds: FilterCondition[], note: string): FilterBlock {
   return {
     kind: 'block',
     index: -1,
     line: 1,
     visibility: step === 0 ? 'Hide' : 'Show',
     disabled: false,
-    comment: `$type->${WEIGHT_TYPE} $tier->flask${step} woke: rare weights, ${note}`,
+    comment: `$type->${WEIGHT_TYPE} $tier->${tier}${step} woke: rare weights, ${note}`,
     type: WEIGHT_TYPE,
-    tier: `flask${step}`,
+    tier: `${tier}${step}`,
     conditions: conds,
     actions: stepActions(step),
     continue: false,

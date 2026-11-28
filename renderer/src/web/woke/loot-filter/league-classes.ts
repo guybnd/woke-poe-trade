@@ -35,13 +35,15 @@ export const LEAGUE_CATEGORIES: LootCategory[] = [
   { id: 'lgult', name: 'Inscribed Ultimatums', art: 'Inscribed Ultimatum' },
   { id: 'lgsanctum', name: 'Sanctum research', art: 'Forbidden Tome' },
   { id: 'lgcharts', name: 'Charts', art: 'Coral Reef Chart' },
-  { id: 'lgmerc', name: 'Mercenary warrants', art: 'Mercenary Warrant' }
+  { id: 'lgmerc', name: 'Mercenary warrants', art: 'Mercenary Warrant' },
+  { id: 'lgheistgear', name: 'Heist gear', art: 'Whisper-woven Cloak' },
+  { id: 'lgcorpse', name: 'Corpses', art: 'Perfect Forest Tiger' }
 ]
 export const LEAGUE_IDS = new Set(LEAGUE_CATEGORIES.map(x => x.id))
 
 // Always by default (Guy, 2026-11-28): one drop a run, from an encounter you
 // chose to do, not ground litter, so price only lifts them above Small.
-export const LEAGUE_MODES: Record<string, SectionMode> = { lgchron: 'always', lgviscera: 'always', lgkeys: 'always', lgult: 'always', lgmerc: 'always', lgexped: 'always' }
+export const LEAGUE_MODES: Record<string, SectionMode> = { lgchron: 'always', lgviscera: 'always', lgkeys: 'always', lgult: 'always', lgmerc: 'always', lgexped: 'always', lgcorpse: 'always' }
 
 export const LEAGUE_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
   lgexped: { text: [220, 170, 120], color: 'Orange', shape: 'Pentagon' },
@@ -52,13 +54,21 @@ export const LEAGUE_LOOK: Record<string, { text: [number, number, number], color
   lgult: { text: [235, 200, 120], color: 'Yellow', shape: 'Pentagon' },
   lgsanctum: { text: [140, 200, 230], color: 'Cyan', shape: 'Pentagon' },
   lgcharts: { text: [170, 200, 255], color: 'Blue', shape: 'Pentagon' },
-  lgmerc: { text: [235, 235, 235], color: 'White', shape: 'Pentagon' }
+  lgmerc: { text: [235, 235, 235], color: 'White', shape: 'Pentagon' },
+  lgheistgear: { text: [200, 160, 130], color: 'Brown', shape: 'Pentagon' },
+  lgcorpse: { text: [190, 210, 180], color: 'Grey', shape: 'Pentagon' }
 }
 
 const JOBS = ['Bunker', 'Laboratory', 'Mansion', 'Prohibited Library', 'Records Office', 'Repository', "Smuggler's Den", 'Tunnels', 'Underbelly']
 const NOT_UNIQUE = cond('Rarity', '', ['Normal', 'Magic', 'Rare'])
 const ENCHANTED = cond('AnyEnchantment', '', ['True'])
 const ilvl = (op: string, n: number) => cond('ItemLevel', op, [String(n)])
+const HEIST_GEAR = [
+  { name: 'Heist cloak', cls: 'Heist Cloaks', tip: 'Whisper-woven Cloak' },
+  { name: 'Heist brooch', cls: 'Heist Brooches', tip: 'Foliate Brooch' },
+  { name: 'Heist gear', cls: 'Heist Gear', tip: 'Precise Arrowhead' },
+  { name: 'Heist tool', cls: 'Heist Tools', tip: 'Master Lockpick' }
+]
 
 export interface LeagueRow {
   cat: string
@@ -87,8 +97,23 @@ export const LEAGUE_ROWS: LeagueRow[] = [
   { cat: 'lgsanctum', name: 'Sanctum research, item level 83+', cls: 'Sanctum Research', bts: [], tip: 'Forbidden Tome', guess: 1.5, conds: [ilvl('>=', 83)] },
   { cat: 'lgsanctum', name: 'Sanctum research, item level under 83', cls: 'Sanctum Research', bts: [], tip: 'Forbidden Tome', guess: 0.4, conds: [ilvl('<', 83)] },
   { cat: 'lgcharts', name: 'Chart', cls: 'Chart', bts: [], tip: 'Coral Reef Chart', guess: 1.5, conds: [NOT_UNIQUE] },
-  { cat: 'lgmerc', name: 'Mercenary Warrant', cls: '', bts: ['Mercenary Warrant'], guess: 1.5, conds: [] }
+  { cat: 'lgmerc', name: 'Mercenary Warrant', cls: '', bts: ['Mercenary Warrant'], guess: 1.5, conds: [] },
+  // Unique contracts and blueprints (the Heist reward chests' own).
+  { cat: 'lgheist', name: 'Unique contract or blueprint', cls: 'Contracts|Blueprints', bts: [], tip: 'Contract: Bunker', guess: 5, conds: [cond('Rarity', '', ['Unique'])] },
+  // Rogue gear (NeverSink retirement M4a): poe.ninja prices none of it, and
+  // it's worth crafting on only at item level 83+, where the top mods roll.
+  ...HEIST_GEAR.flatMap(g => [
+    { cat: 'lgheistgear', name: `${g.name}, item level 83+`, cls: g.cls, bts: [], tip: g.tip, guess: 1.5, conds: [NOT_UNIQUE, ilvl('>=', 83)] },
+    { cat: 'lgheistgear', name: `${g.name}, item level under 83`, cls: g.cls, bts: [], tip: g.tip, guess: 0.4, conds: [NOT_UNIQUE, ilvl('<', 83)] }
+  ])
 ]
+
+// Corpses (NeverSink retirement M4a): priced by name on poe.ninja's Corpse
+// page; the names from the game data's lists, else the filter's. A guess by
+// its grade while poe.ninja has no line.
+export function corpseGuess (name: string): number {
+  return /^Perfect /.test(name) ? 5 : /^Imperfect /.test(name) ? 0.3 : 1
+}
 
 // The priced sections: NeverSink's lists of their bases, priced by name.
 // Chronicles poe.ninja lists by rooms, which a filter can't see: the cheapest

@@ -103,6 +103,8 @@ test('Nightmare Map price check: five maps ranked by fragment value', async ({ o
   await vaults.locator('[data-nightmare-vault-pick="MapWorldsMemoryVault2"]').click()
   await expect(vaults.locator('[data-nightmare-vault-block]')).toContainText("Zealot's Vault")
   await expect(vaults.locator('[data-vault-reward="Greater Multistrike Support"]')).toContainText('rare')
+  // Worth running covers the vaults, so the side window lists no Arkhon's Vault drops.
+  await expect(overlay.page.getByText("Drops from Arkhon's Vault")).toHaveCount(0)
   await tabs.getByRole('button', { name: 'Fragments' }).click()
   await expect(maps).toHaveCount(5)
   // Folds to one line with the best map, and opens again.
@@ -136,6 +138,12 @@ test('Nightmare Map with Map mods: the map section, then Worth running', async (
   await expect(strip.locator('[data-nightmare-bars]')).toBeVisible()
   await expect(strip.locator('[data-map-trade] > button').first()).toHaveAttribute('aria-expanded', 'false')
   await overlay.snap('nightmare map one section')
+  // Folded, the mods' place says so and opens them.
+  await expect(strip.locator('[data-map-unfold]')).toContainText('Show the map mods')
+  // Folding Worth running opens Trade search again (Guy, 2026-11-28).
+  await strip.locator('[data-nightmare-fold]').click()
+  await expect(strip.locator('[data-map-trade] > button').first()).toHaveAttribute('aria-expanded', 'true')
+  await expect(strip.locator('[data-map-unfold]')).toHaveCount(0)
   expect(searches).toEqual([])
   expect(overlay.errors).toEqual([])
 })

@@ -193,9 +193,11 @@ export function baseTable (ranks: BaseRanks, gear: string[], known: (name: strin
 // The multipliers a base brings (rank, size, age).
 export function baseTerms (b: Pick<BaseRow, 'rank' | 'width' | 'height' | 'old'>): WeightKey[] {
   const out: WeightKey[] = [b.rank]
-  if (b.width >= 2 && b.height >= 3) out.push('big')
-  else if (b.height === 1) out.push('tiny')
-  if (b.old) out.push('old')
+  // An exotic base is worth its implicit, not its size or defences: never
+  // Large or old (NeverSink shows them loud at any size, M8).
+  const exotic = b.rank === 'x1' || b.rank === 'x2'
+  if (b.width >= 2 && b.height >= 3) { if (!exotic) out.push('big') } else if (b.height === 1) out.push('tiny')
+  if (b.old && !exotic) out.push('old')
   return out
 }
 
@@ -380,7 +382,10 @@ export function countedTerms (it: WeightItem, mult: Record<WeightKey, number>): 
   const plain = it.corruption === 'no' && !it.mirrored
   const ups = plain ? all.filter(k => up.includes(k)) : []
   const best = ups.length ? ups.reduce((x, k) => mult[k] > mult[x] ? k : x) : null
-  return all.filter(k => !MARK_KEYS.has(k) || k === best)
+  const out = all.filter(k => !MARK_KEYS.has(k) || k === best)
+  // A plain crafting base, white or magic: no mark counts, not an exotic.
+  if ((it.rarity ?? 'Rare') !== 'Rare' && !best && it.rank !== 'x1' && it.rank !== 'x2') out.push('wc')
+  return out
 }
 
 export function weightOf (it: WeightItem, mult: Record<WeightKey, number>): number {
@@ -740,6 +745,12 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[], ids: IdGrou
           emit([c('Rarity', '', [rarity]), T('Identified'), c('Class', '==', g.classes), ...unmarked, ...(rarity === 'Magic' && m.w86 > 1 ? [c('ItemLevel', '<', [86])] : []), ...countConds(g, counts)], step, `identified ${rarity.toLowerCase()}, ${n} mod${n === 1 ? '' : 's'}`)
         }
       }
+      // Great mod pinned: one is enough for Small (louder ones went above).
+      const k = g.levels.filter(l => l.pts >= ptsOf(m.ig1) - 1e-6).length
+      if (w.always.includes('ig1') && k) {
+        const counts = g.levels.slice(0, k).map((_, j) => j === k - 1 ? 1 : 0)
+        emit([c('Rarity', '', [rarity]), T('Identified'), c('Class', '==', g.classes), ...unmarked, ...countConds({ ...g, levels: g.levels.slice(0, k) }, counts)], 1, `identified ${rarity.toLowerCase()}, always: ${WEIGHT_LABEL.ig1.toLowerCase()}`)
+      }
     }
   }
 
@@ -747,8 +758,21 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[], ids: IdGrou
   // Pinned rows ("always show"): what reaches a Hide with one of them shows
   // Small instead (louder ones were shown above already).
   const pins = w.always.flatMap(k => pinConds(k, bases).map(conds => ({ k, conds })))
+  const bare = new Set<WeightKey>()
   const hide = (pre: FilterCondition[], note: string) => {
-    for (const p of pins) emit([...pre, ...p.conds], 1, `${note ? `${note}, ` : ''}always: ${WEIGHT_LABEL[p.k].toLowerCase()}`)
+    const plain = pre.some(x => x.key === 'Corrupted' && x.values[0] === 'False') && pre.some(x => x.key === 'Mirrored' && x.values[0] === 'False') && !pre.some(x => x.key === 'Identified' && x.values[0] === 'True')
+    const always = (k: WeightKey) => `${note ? `${note}, ` : ''}always: ${WEIGHT_LABEL[k].toLowerCase()}`
+    for (const p of pins) {
+      // A mark's pin after its own rules (below) already took what reaches here.
+      if (plain && bare.has(p.k)) continue
+      // Only where the pin can meet this Hide (a 5-link pin never meets a
+      // 6-link Hide, an exotic base never a plain base's list).
+      const conds = joinConds(pre, p.conds)
+      if (!conds) continue
+      // Everything here has it: Small instead of the Hide.
+      if (JSON.stringify(conds) === JSON.stringify(pre)) { emit(pre, 1, always(p.k)); return }
+      emit(conds, 1, always(p.k))
+    }
     emit(pre, 0, note)
   }
   const rareDims = dimsFor(RARE_TIERS)
@@ -767,9 +791,17 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[], ids: IdGrou
   // Rares with a mark over ×1 (not corrupted or mirrored), biggest mark
   // first. One that doesn't show here is never heavier further down.
   const ups = MARKS.filter(x => up.includes(x.key)).sort((p, q) => m[q.key] - m[p.key])
-  for (const x of ups) {
+  ups.forEach((x, i) => {
     walkSplits([ss[0], ...ss.slice(3)], 0, [...x.yes, F('Corrupted'), F('Mirrored')], m[x.key], [WEIGHT_LABEL[x.key].toLowerCase()])
-  }
+    // A pinned mark, after its last rules: whatever has it and wasn't shown
+    // scores less everywhere below (marks go biggest first, the rest has
+    // none), so it shows Small here instead of at every Hide below.
+    if (!w.always.includes(x.key) || ups[i + 1]?.key === x.key) return
+    for (const y of MARKS.filter(z => z.key === x.key)) {
+      for (const p of ss[0].parts) emit([...y.yes, F('Corrupted'), F('Mirrored'), ...p.conds], 1, `${p.note ? `${p.note}, ` : ''}always: ${WEIGHT_LABEL[x.key].toLowerCase()}`)
+    }
+    bare.add(x.key)
+  })
   // Identified rares with a mark: as unidentified ones (no drop tier).
   if (ids.length) {
     const idRare: Split = { parts: [{ conds: [c('Rarity', '', ['Rare']), T('Identified')], factor: m.wr, note: 'identified', tiers: RARE_TIERS, noTier: true }] }
@@ -778,9 +810,59 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[], ids: IdGrou
       walkSplits([idRare, ...ss.slice(3)], 0, [...x.yes, F('Corrupted'), F('Mirrored')], m[x.key], [WEIGHT_LABEL[x.key].toLowerCase()])
     }
   }
-  walkSplits(ss, 0, [], 1, [])
+  // The rest (no mark counts): rares, then white and magic, whose plain
+  // crafting bases (not the exotic ones) take their own cut.
+  const [rare, ...low] = ss[0].parts
+  walkSplits([{ parts: [rare] }, ...ss.slice(1)], 0, [], 1, [])
+  const craft = splits(bases, { ...m, ...Object.fromEntries((['r0', 'r1', 'r2', 'r3', 'rj'] as WeightKey[]).map(k => [k, m[k] * m.wc])) })
+  walkSplits([{ parts: low }, ...craft.slice(1)], 0, [], 1, [])
   for (const scope of SCOPES(ids.length > 0)) hide(scope, 'the rest')
   return { blocks, perStep, chars }
+}
+
+// Conditions `add` on top of `pre`, or null when no item can meet both:
+// base lists and rarities are intersected, numbers kept to the range both
+// allow, a True/False the other contradicts drops the pair.
+const NUMERIC = new Set(['LinkedSockets', 'ItemLevel', 'Quality', 'MemoryStrands', 'CorruptedMods', 'AreaLevel', 'HasSearingExarchImplicit', 'HasEaterOfWorldsImplicit'])
+function range (cs: readonly FilterCondition[]): [number, number] {
+  let lo = -Infinity
+  let hi = Infinity
+  for (const x of cs) {
+    const v = Number(x.values[0])
+    if (x.op === '>=') lo = Math.max(lo, v)
+    else if (x.op === '>') lo = Math.max(lo, v + 1)
+    else if (x.op === '<=') hi = Math.min(hi, v)
+    else if (x.op === '<') hi = Math.min(hi, v - 1)
+    else { lo = Math.max(lo, v); hi = Math.min(hi, v) }
+  }
+  return [lo, hi]
+}
+export function joinConds (pre: readonly FilterCondition[], add: readonly FilterCondition[]): FilterCondition[] | null {
+  const out = pre.map(x => ({ ...x, values: [...x.values] }))
+  for (const a of add) {
+    const same = out.filter(x => x.key === a.key)
+    if ((a.key === 'BaseType' && a.op === '==') || (a.key === 'Rarity' && a.op === '')) {
+      const lists = same.filter(x => x.op === a.op)
+      if (lists.length) {
+        for (const x of lists) {
+          x.values = x.values.filter(v => a.values.includes(v))
+          if (!x.values.length) return null
+        }
+        continue
+      }
+    } else if (NUMERIC.has(a.key)) {
+      const [lo, hi] = range([...same, a])
+      if (lo > hi) return null
+    } else if (a.values.length === 1 && (a.values[0] === 'True' || a.values[0] === 'False')) {
+      if (same.some(x => x.values.length === 1 && x.values[0] !== a.values[0])) return null
+      if (same.some(x => x.values[0] === a.values[0])) continue
+    } else if (a.key === 'HasInfluence') {
+      const none = (x: FilterCondition) => x.values.length === 1 && x.values[0] === 'None'
+      if (same.some(x => none(x) !== none(a))) return null
+    }
+    out.push({ ...a, values: [...a.values] })
+  }
+  return out
 }
 
 function popcount (x: number): number {

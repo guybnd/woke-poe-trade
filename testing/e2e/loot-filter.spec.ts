@@ -1484,6 +1484,12 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   const ruby = page.locator('[data-equip-flask="Ruby Flask"]')
   await expect(ruby).toContainText('Small')
   await overlay.snap('equipment tab, flasks')
+  // Tinctures: the same table, a row per tincture base, each with its icon.
+  await page.locator('[data-equip-class="tinctures"]').click()
+  const oak = page.locator('[data-equip-flask="Oakbranch Tincture"]')
+  await expect(oak).toBeVisible()
+  await expect(oak.getByRole('button', { name: /rank: Good/ })).toBeVisible()
+  await overlay.snap('equipment tab, tinctures')
   // Base ranks is Equipment's section while Equipment shows; the top tab goes.
   await page.locator('[data-equip-class="ranks"]').click()
   await expect(page.locator('[data-equip-ranks] [data-lane="r1"]')).toBeVisible()
@@ -1713,6 +1719,14 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(pageBar.locator('[data-currency-ruler]')).toHaveCount(0)
   const alch = page.locator('[data-currency-item="Orb of Alchemy"]')
   await expect(alch).toBeVisible()
+  // Every row has the Jewels tick box (Guy 2026-11-28): untick hides this
+  // one, tick again follows the section.
+  const alchOn = alch.locator('[data-loot-row-on]')
+  await expect(alchOn).toBeChecked()
+  await alchOn.click()
+  await expect(alch).toContainText('Hidden, set by you')
+  await alchOn.click()
+  await expect(alchOn).toBeChecked()
   await alch.click()
   const editor = page.locator('[data-currency-editor]')
   await expect(editor).toBeVisible()

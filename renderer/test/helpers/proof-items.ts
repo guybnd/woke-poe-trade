@@ -5,7 +5,7 @@
 import fs from 'fs'
 import path from 'path'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
-import type { FilterBlock, FilterCondition } from '@/web/woke/loot-filter/parse'
+import type { FilterBlock, FilterCondition, FilterDoc } from '@/web/woke/loot-filter/parse'
 import { BASE_FACTS } from '@/web/woke/loot-filter/base-facts'
 import { facts } from './filter-guard'
 
@@ -99,13 +99,15 @@ export function baseClasses (): Map<string, string> {
   return classes
 }
 
+const STACKS = [1, 6, 40]
+
 const size = (base: string): Partial<ItemFacts> => {
   const f = BASE_FACTS[base]
   return f ? { dropLevel: f[0], width: f[1], height: f[2] } : {}
 }
 
 // Every base, unique, gem, map and stackable the game data knows, as drops.
-export function catalog (areaLevel: number): ProofItem[] {
+export function catalog (areaLevel: number, ns?: FilterDoc): ProofItem[] {
   const out: ProofItem[] = []
   const push = (label: string, group: string, priceName: string, f: Partial<ItemFacts>) =>
     out.push({ label, group, priceName, facts: facts({ areaLevel, itemLevel: Math.max(1, Math.min(86, areaLevel + 1)), ...f }) })
@@ -137,8 +139,25 @@ export function catalog (areaLevel: number): ProofItem[] {
       push(`${base} (rare)`, c, base, { itemClass: c, baseType: base, rarity: 'Rare', identified: false })
       continue
     }
-    // Stackables and the rest: one of each.
-    push(base, c, base, { itemClass: c, baseType: base, rarity: 'Normal', stackSize: 1, ...size(base) })
+    // Stackables and the rest: one, a few and a pile (Guy's walk: 6 shards).
+    for (const n of STACKS) push(n === 1 ? base : `${n}x ${base}`, c, base, { itemClass: c, baseType: base, rarity: 'Normal', stackSize: n, ...size(base) })
+  }
+  // Gold, small piles to big (Guy's walk: 16 and 387 gold).
+  for (const n of [1, 16, 387, 2500, 20000]) push(`${n} Gold`, 'Gold', 'Gold', { itemClass: 'Gold', baseType: 'Gold', rarity: 'Normal', stackSize: n, width: 1, height: 1 })
+  // Whatever NeverSink names by class and base that the game data above has
+  // no class for (Wombgifts, league items): one of each.
+  if (ns) {
+    const seen = new Set(cls.keys())
+    for (const b of ns.blocks) {
+      const c = b.conditions.find(x => x.key === 'Class' && x.op === '==')?.values
+      const bases = b.conditions.find(x => x.key === 'BaseType' && x.op === '==')?.values
+      if (c?.length !== 1 || !bases || isGearClass(c[0])) continue
+      for (const base of bases) {
+        if (seen.has(base) || base === 'Gold') continue
+        seen.add(base)
+        for (const n of STACKS) push(n === 1 ? base : `${n}x ${base}`, c[0], base, { itemClass: c[0], baseType: base, rarity: 'Normal', stackSize: n, width: 1, height: 1 })
+      }
+    }
   }
   for (const i of items()) {
     if (i.namespace === 'UNIQUE' && i.unique?.base) {
