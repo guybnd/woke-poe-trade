@@ -54,8 +54,8 @@ describe('uniques on the Loot tab', () => {
     // Cheap base: hidden in maps, shown while levelling.
     expect(hit('Simple Robe', { itemClass: 'Body Armours' })?.visibility).toBe('Hide')
     expect(hit('Simple Robe', { itemClass: 'Body Armours', areaLevel: 40 })?.visibility).toBe('Show')
-    // A 6-link Tabula keeps NeverSink's own rule.
-    expect(hit('Simple Robe', { itemClass: 'Body Armours', socketGroups: ['RRRRRR'] } as Partial<ItemFacts>)?.type).toBe('uniques')
+    // A 6-link Tabula is a special roll, worth at least 20 Fusings: it shows.
+    expect(hit('Simple Robe', { itemClass: 'Body Armours', socketGroups: ['RRRRRR'] } as Partial<ItemFacts>)?.visibility).toBe('Show')
     // A corrupted implicit on a cheap base: NeverSink's copied rule shows it.
     const corr = hit('Simple Robe', { itemClass: 'Belts', corrupted: true, corruptedMods: 1 })
     expect(corr?.visibility).toBe('Show')

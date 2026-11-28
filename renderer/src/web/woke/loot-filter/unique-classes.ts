@@ -12,7 +12,8 @@ export const UNIQUE_CATEGORIES: LootCategory[] = [
   { id: 'uniqvar', name: 'High variance', art: 'Small Cluster Jewel' },
   { id: 'uniqearly', name: 'Early league', art: 'Bone Helmet' },
   { id: 'uniqboss', name: 'Boss drops', art: 'Hubris Circlet' },
-  { id: 'uniqfoul', name: 'Foulborn', art: 'Paua Amulet' }
+  { id: 'uniqfoul', name: 'Foulborn', art: 'Paua Amulet' },
+  { id: 'uniqspec', name: 'Special rolls', art: 'Simple Robe' }
 ]
 export const UNIQUE_IDS = new Set(UNIQUE_CATEGORIES.map(x => x.id))
 
@@ -23,7 +24,8 @@ export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color
   uniqearly: { text: [200, 150, 90], color: 'Yellow', shape: 'Star' },
   // Not red: red beams and map icons are kept for Tink (Guy 2026-11-27).
   uniqboss: { text: [190, 80, 40], color: 'Orange', shape: 'Pentagon' },
-  uniqfoul: { text: [190, 110, 200], color: 'Purple', shape: 'Star' }
+  uniqfoul: { text: [190, 110, 200], color: 'Purple', shape: 'Star' },
+  uniqspec: { text: [230, 160, 80], color: 'Brown', shape: 'Cross' }
 }
 
 // Boss-only bases show whatever they are (Guy: "boss-only likely always on").
@@ -55,6 +57,24 @@ export const foulCategoryOf = (tier: string | null): string | null => tier && FO
 const FOUL_GUESS: Record<string, number> = { t1: 300, t2: 50, multi: 10, t3: 2 }
 export const foulGuess = (tier: string | null): number => (tier && FOUL_GUESS[tier]) || 1
 export const FOULBORN_PREFIX = 'Foulborn '
+
+// NeverSink's special unique rolls above its tiers (Guy's spec A, 2026-11-28):
+// priced per base. A fixed outcome (a 6-link Tabula, a socketless Kaom's
+// Heart) by its price, a variable one (Impresence with both influences,
+// synthesised rings, abyss sockets) by its best line on poe.ninja. A 6-link
+// is worth at least the 20 Orbs of Fusing a vendor gives for it. A base
+// poe.ninja has nothing for stays NeverSink's.
+export const SPECIAL_ROLLS: Record<string, string> = {
+  'exuberimpresence': 'Shaper and Elder',
+  'exkaom': 'no sockets',
+  'extabula': '6-link',
+  'exforgesword': 'Shaper or Elder',
+  'exrationaljewel': 'synthesised',
+  'exsynth': 'synthesised',
+  'ex6link': '6-link',
+  '4xabysshelmet': '4 abyss sockets',
+  '3xabyss': '3 abyss sockets'
+}
 
 // A guess where poe.ninja has no usable price. Early league bases start
 // high and give way to the real price once there's a market (Guy).
