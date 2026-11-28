@@ -479,8 +479,8 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   }
   // A louder step never starts below a quieter one.
   for (let i = out.length - 2; i >= 0; i--) if (out[i + 1] != null && (out[i] == null || out[i]! > out[i + 1]!)) out[i] = out[i + 1]
-  // A step turned off: piles that would get it hide (an item's own step stays).
-  for (const s of c.off ?? []) if (s >= 1 && s <= 4) out[s - 1] = null
+  // A step turned off keeps where it starts: piles that would get it hide
+  // (stepOfPile with offSteps), not fall to the quieter step.
   // Collecting (a floor step): every pile gets at least it, whatever hides
   // the rest (Guy's star, 2026-11-27).
   if (e?.min) out[e.min - 1] = 1
@@ -515,9 +515,17 @@ export function faintLook (rgb: readonly number[]): StylePatch {
   }
 }
 
-// The step a pile of `stack` gets.
-export function stepOfPile (stacks: ReadonlyArray<number | null>, stack: number): CStep {
-  for (let s = stacks.length - 1; s >= 0; s--) if (stacks[s] != null && stack >= stacks[s]!) return (s + 1) as CStep
+// Steps turned off (Guy 2026-11-28: they hide, they don't fall to the
+// quieter step) for this item: never its own step or its Collecting floor.
+export function offSteps (it: Pick<CurrencyItem, 'name'>, c: Pick<CurrencySettings, 'items' | 'off'>): number[] {
+  const e = c.items[it.name]
+  if (e?.step != null) return []
+  return (c.off ?? []).filter(s => s >= 1 && s <= 4 && s !== e?.min)
+}
+
+// The step a pile of `stack` gets: Hidden when it lands on a step turned off.
+export function stepOfPile (stacks: ReadonlyArray<number | null>, stack: number, off: readonly number[] = []): CStep {
+  for (let s = stacks.length - 1; s >= 0; s--) if (stacks[s] != null && stack >= stacks[s]!) return off.includes(s + 1) ? 0 : (s + 1) as CStep
   return 0
 }
 
@@ -656,45 +664,79 @@ export function divineChaos (items: CurrencyItem[]): number {
   return d && !d.est ? d.chaos : 150
 }
 
+// The piles of one item that reach each step, loudest first: [step, stack,
+// hidden]. A step that starts where the next louder one does never applies;
+// a step turned off keeps its place in the order but hides.
+export function pileSteps (stacks: ReadonlyArray<number | null>, off: readonly number[] = []): Array<[CStep, number, boolean]> {
+  const out: Array<[CStep, number, boolean]> = []
+  for (let s = 5; s >= 1; s--) {
+    const k = stacks[s - 1]
+    if (k == null) continue
+    const louder = s < 5 ? stacks[s] : null
+    if (louder != null && louder <= k) continue
+    out.push([s as CStep, k, off.includes(s)])
+  }
+  return out
+}
+
+// A gem band's thresholds, from its conditions (null for other items).
+function bandOfConds (it: CurrencyItem): { level: number, quality: number, corrupted: boolean, trans: boolean } | null {
+  if (it.type !== 'gems' || !it.conds) return null
+  const num = (key: string) => Number(it.conds!.find(x => x.key === key)?.values[0] ?? 0)
+  return { level: num('GemLevel'), quality: num('Quality'), corrupted: it.conds.some(x => x.key === 'Corrupted'), trans: !it.conds.some(x => x.key === 'TransfiguredGem') }
+}
+
 export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], opts: { faint?: boolean, floors?: FilterBlock[] } = {}): CurrencyCompiled {
   const blocks: FilterBlock[] = []
   const bts = (list: CurrencyItem[]) => [...new Set(list.map(i => i.bt ?? i.name))].sort()
   const stacks = new Map(items.map(it => [it.name, stacksFor(it, cfg)]))
   const area = c('AreaLevel', '>=', [68])
   const clsCond = (list: CurrencyItem[]) => list[0]?.cls === UNIQUE_CLS ? c('Rarity', '', ['Unique']) : c('Class', '==', [...new Set(list.flatMap(i => i.cls.split('|')))].sort())
-  // The piles of one item that reach each step, loudest first: [step, stack].
-  const steps = (it: CurrencyItem): Array<[CStep, number]> => {
-    const st = stacks.get(it.name)!
-    const out: Array<[CStep, number]> = []
-    for (let s = 5; s >= 1; s--) {
-      const k = st[s - 1]
-      if (k == null) continue
-      // A step that starts where the next louder one does never applies.
-      const louder = s < 5 ? st[s] : null
-      if (louder != null && louder <= k) continue
-      out.push([s as CStep, k])
+  const steps = (it: CurrencyItem) => pileSteps(stacks.get(it.name)!, offSteps(it, cfg))
+  // A gem band hidden by an Off step also matches the narrower bands of its
+  // gem (Arc 1 catches Arc 21/20): a narrower band that shows gets its rule
+  // again just above the Hide, so it keeps its own step.
+  const rescued = new Set<string>()
+  const rescue = (list: CurrencyItem[], step: CStep = 5) => {
+    for (const it of list) {
+      const a = bandOfConds(it)
+      if (!a) continue
+      for (const n of items) {
+        const b = bandOfConds(n)
+        if (n === it || !b || n.bt !== it.bt || rescued.has(`${it.name}|${n.name}`) || forcedHidden(n, cfg)) continue
+        if (!(b.level >= a.level && b.quality >= a.quality && (b.corrupted || !a.corrupted) && b.trans === a.trans)) continue
+        const top = steps(n)[0]
+        // A louder one's rule is above the Hide already.
+        if (!top || top[2] || top[0] > step) continue
+        rescued.add(`${it.name}|${n.name}`)
+        const conds = [area, clsCond([n]), c('BaseType', '==', bts([n])), ...(n.conds ?? [])]
+        const look = cfg.items[n.name]?.look
+        blocks.push(block(top[0], conds, `${n.name}, above ${it.name}`, { ...currencyLook(top[0], n.cat, cfg), ...look }))
+      }
     }
-    return out
   }
   // Items with their own look get rules of their own, first.
   const own = items.filter(it => cfg.items[it.name]?.look)
   for (const it of own) {
-    for (const [s, k] of steps(it)) {
+    for (const [s, k, hidden] of steps(it)) {
       const conds = [area, clsCond([it]), c('BaseType', '==', bts([it])), ...(it.conds ?? [])]
       if (k > 1) conds.push(c('StackSize', '>=', [k]))
-      blocks.push(block(s, conds, `${it.name}, own look${k > 1 ? `, ${k}+` : ''}`, { ...currencyLook(s, it.cat, cfg), ...cfg.items[it.name]!.look }))
+      if (hidden) {
+        rescue([it])
+        blocks.push(block(0, conds, `${it.name}, ${CSTEP_NAMES[s]} off${k > 1 ? `, ${k}+` : ''}`))
+      } else blocks.push(block(s, conds, `${it.name}, own look${k > 1 ? `, ${k}+` : ''}`, { ...currencyLook(s, it.cat, cfg), ...cfg.items[it.name]!.look }))
     }
   }
   // The rest grouped: loudest first (the first rule that matches wins, so a
   // big pile meets its louder rule before a quieter one), then by stack.
   const rest = items.filter(it => !cfg.items[it.name]?.look)
-  const groups = new Map<string, { step: CStep, k: number, cat: string, list: CurrencyItem[] }>()
+  const groups = new Map<string, { step: CStep, k: number, cat: string, hidden: boolean, list: CurrencyItem[] }>()
   for (const it of rest) {
-    for (const [s, k] of steps(it)) {
+    for (const [s, k, hidden] of steps(it)) {
       // Tink looks the same for every category: one rule for all of them.
       const cat = it.cat
-      const key = `${s}|${k}|${cat}|${it.conds ? JSON.stringify(it.conds) : ''}`
-      const g = groups.get(key) ?? { step: s, k, cat, list: [] }
+      const key = `${s}|${k}|${cat}|${hidden ? 'off' : ''}|${it.conds ? JSON.stringify(it.conds) : ''}`
+      const g = groups.get(key) ?? { step: s, k, cat, hidden, list: [] }
       g.list.push(it)
       groups.set(key, g)
     }
@@ -702,7 +744,10 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   for (const g of [...groups.values()].sort((x, y) => y.step - x.step || y.k - x.k)) {
     const conds = [area, clsCond(g.list), c('BaseType', '==', bts(g.list)), ...(g.list[0].conds ?? [])]
     if (g.k > 1) conds.push(c('StackSize', '>=', [g.k]))
-    blocks.push(block(g.step, conds, [g.cat, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', '), currencyLook(g.step, g.cat, cfg)))
+    if (g.hidden) {
+      rescue(g.list, g.step)
+      blocks.push(block(0, conds, [g.cat, `${CSTEP_NAMES[g.step]} off`, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', ')))
+    } else blocks.push(block(g.step, conds, [g.cat, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', '), currencyLook(g.step, g.cat, cfg)))
   }
   // What was hidden by hand (its own Off, or its section's) hides before the
   // floors and Faint: a section set Off doesn't come back at 20% quality.
@@ -766,13 +811,33 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
 function gemFloors (cfg: CurrencySettings): FilterBlock[] {
   const area = c('AreaLevel', '>=', [68])
   const cls = c('Class', '==', ['Skill Gems', 'Support Gems'])
-  const out = [block(1, [area, cls, c('Quality', '>=', [20])], 'gems at 20% quality', currencyLook(1, 'gemskill', cfg))]
-  const floor = (cat: string, cond: FilterCondition) => {
-    if (sectionMode(cfg, cat) === 'always') out.unshift(block(1, [area, cls, cond], `${cat}, always`, currencyLook(1, cat, cfg)))
-  }
-  floor('gemexc', c('BaseType', '', ['Enlighten Support', 'Empower Support', 'Enhance Support']))
-  floor('gemawk', c('BaseType', '', ['Awakened ']))
-  floor('gemtrans', c('TransfiguredGem', '', ['True']))
+  const q20 = c('Quality', '>=', [20])
+  const look = currencyLook(1, 'gemskill', cfg)
+  // Sections in gemCategoryOf's order, so a narrower one (Awakened Enlighten,
+  // Awakened Multistrike) is settled before a broader one can catch it.
+  const cats: Array<[string, FilterCondition]> = [
+    ['gemexc', c('BaseType', '', ['Enlighten Support', 'Empower Support', 'Enhance Support'])],
+    ['gemawk', c('BaseType', '', ['Awakened '])],
+    ['gemtrans', c('TransfiguredGem', '', ['True'])],
+    ['gemvaal', c('BaseType', '', ['Vaal '])],
+    ['gemsup', c('Class', '==', ['Support Gems'])],
+    ['gemskill', c('Class', '==', ['Skill Gems'])]
+  ]
+  // Always (Exceptional, Awakened, Transfigured) shows the section's gems
+  // poe.ninja doesn't list too. Off hides its 20% gems, also unlisted ones
+  // (Guy's pick); with an Always section below it, every gem of it, or that
+  // section would catch them. The filter has no "not", so a section above an
+  // Off or Always one settles its own 20% gems first.
+  const ALWAYS = ['gemexc', 'gemawk', 'gemtrans']
+  const mode = cats.map(([cat]) => sectionMode(cfg, cat) === 'off' ? 'off' : ALWAYS.includes(cat) && sectionMode(cfg, cat) === 'always' ? 'always' : '')
+  const last = Math.max(mode.lastIndexOf('off'), mode.lastIndexOf('always'))
+  const out: FilterBlock[] = []
+  cats.slice(0, last + 1).forEach(([cat, cond], i) => {
+    if (mode[i] === 'always') out.push(block(1, [area, cls, cond], `${cat}, always`, currencyLook(1, cat, cfg)))
+    else if (mode[i] === 'off') out.push(block(0, [area, cls, cond, ...(mode.indexOf('always', i) > i ? [] : [q20])], `${cat}, off`))
+    else out.push(block(1, [area, cls, cond, q20], `${cat}, 20% quality`, look))
+  })
+  out.push(block(1, [area, cls, q20], 'gems at 20% quality', look))
   return out
 }
 

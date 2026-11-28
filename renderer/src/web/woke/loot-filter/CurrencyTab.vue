@@ -149,7 +149,7 @@ import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, currencyItems, defaultCurrency, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode } from './currency-weights'
+import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, NUDGE_MAX, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
@@ -171,7 +171,8 @@ const STEP_CSS = ['#3b372f', '#6d6250', '#a08d5e', '#cdb27a', '#ffe196', '#ff404
 
 // The ruler hands back a price as shown (after Strictness); store it as yours.
 function setShown (i: number, shown: number) {
-  const n = Number((shown / mult.value).toPrecision(3))
+  // The ruler shows the picked section's prices: take its Strictness off too.
+  const n = Number((shown / mult.value / catMult(c.value, sampleCat.value)).toPrecision(3))
   if (i === 0) {
     c.value.line = Math.min(LINE_MAX, Math.max(LINE_MIN, n))
     return
@@ -212,7 +213,7 @@ const faintActive = computed(() => faintOn(c.value, props.store.doc.value?.stric
 const faintSample = computed(() => faintLook(catColour(sampleCat.value, c.value).rgb))
 
 interface Pill { step: CStep, text: string }
-function pillsOf (stacks: Array<number | null>, edit: ItemEdit | undefined, it: CurrencyItem): Pill[] {
+function pillsOf (stacks: Array<number | null>, edit: ItemEdit | undefined, it: CurrencyItem, off: number[]): Pill[] {
   const under = forcedHidden(it, c.value) || !faintActive.value ? 'Hidden' : 'Faint'
   if (stacks.every(k => k == null)) return [{ step: 0, text: edit?.step === 0 ? 'Hidden, set by you' : sectionMode(c.value, it.cat) === 'off' && under === 'Hidden' ? 'Hidden, section off' : `${under} at any stack` }]
   if (edit?.step != null) return [{ step: edit.step, text: `${CSTEP_NAMES[edit.step]} at any stack, set by you` }]
@@ -222,7 +223,10 @@ function pillsOf (stacks: Array<number | null>, edit: ItemEdit | undefined, it: 
     if (k == null) return
     const next = stacks.slice(i + 1).find(v => v != null)
     if (next === k) return
-    out.push({ step: (i + 1) as CStep, text: `${CSTEP_NAMES[i + 1]} ${k === 1 ? 'any' : `${k.toLocaleString()}+`}` })
+    const from = k === 1 ? 'any' : `${k.toLocaleString()}+`
+    // A step turned off: those piles hide.
+    if (off.includes(i + 1)) out.push({ step: 0, text: `Hidden ${from} (${CSTEP_NAMES[i + 1]} off)` })
+    else out.push({ step: (i + 1) as CStep, text: `${CSTEP_NAMES[i + 1]} ${from}` })
   })
   return out
 }
@@ -231,7 +235,8 @@ const rows = computed(() => items.value
   .map(it => {
     const stacks = stacksFor(it, eff.value)
     const edit = c.value.items[it.name]
-    return { it, one: stepOfPile(stacks, 1), shows: stacks.some(k => k != null), pills: pillsOf(stacks, edit, it), edited: edit != null }
+    const off = offSteps(it, c.value)
+    return { it, one: stepOfPile(stacks, 1, off), shows: pileSteps(stacks, off).some(([, , hidden]) => !hidden), pills: pillsOf(stacks, edit, it, off), edited: edit != null }
   })
   .sort((x, y) => y.it.chaos - x.it.chaos || x.it.name.localeCompare(y.it.name)))
 const shownCount = computed(() => rows.value.filter(r => r.shows).length)
