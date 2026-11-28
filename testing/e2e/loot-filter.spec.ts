@@ -1384,7 +1384,6 @@ test('Currency weights: Alt + F on currency: the rule path picks the level, Show
   await expect(page.getByText('Pick a tier below to move it there.')).toHaveCount(0)
   await expect(page.getByText('By strictness')).toHaveCount(0)
   for (const n of ['Small', 'Normal', 'Decent', 'Big', 'Tink']) await expect(card.locator('[data-currency-card-ruler]')).toContainText(n)
-  await expect(card.locator('[data-currency-card-decides]')).toBeVisible()
   await overlay.snap('currency card')
   // Dragging the needle sets this item's bias, applied on release.
   const bar = card.locator('[data-currency-card-bar]')
@@ -1420,6 +1419,13 @@ test('Currency weights: Alt + F on currency: the rule path picks the level, Show
   await card.locator('[data-currency-card-mode-always]').click()
   await expect(page.locator('[data-currency-card-now]')).not.toContainText('Hidden')
   await overlay.snap('currency card, section off, item always')
+  // Always show at a step you pick (the fold has no Step or Price any more).
+  await card.locator('[data-currency-card-at-4]').click()
+  await expect(page.locator('[data-currency-card-now]')).toContainText('Big')
+  await expect(card.locator('[data-currency-card-mode-always]')).toBeVisible()
+  // Ctrl + Z on the card undoes it.
+  await page.keyboard.press('Control+z')
+  await expect(page.locator('[data-currency-card-now]')).not.toContainText('Big')
 })
 
 test('Currency weights: Go to rule on an Alt + F card opens that item on its own Loot page', async ({ overlay, fakeApp }) => {
