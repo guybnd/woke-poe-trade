@@ -1361,6 +1361,10 @@ test('Currency weights: Alt + F on currency shows its step first, a Shows switch
   const card = page.locator('[data-currency-card]')
   await expect(card).toBeVisible()
   await expect(page.locator('[data-currency-card-cat]')).toContainText('Orbs')
+  // No old tier picker under it: the Loot steps are shared by every section,
+  // so it named the item's tier after another one (Guy: "S3 Corpses").
+  await expect(page.getByText('Pick a tier below to move it there.')).toHaveCount(0)
+  await expect(page.getByText('By strictness')).toHaveCount(0)
   // The ruler names all five steps.
   for (const n of ['Small', 'Normal', 'Decent', 'Big', 'Tink']) await expect(card.locator('[data-currency-card-ruler]')).toContainText(n)
   await overlay.snap('currency card')

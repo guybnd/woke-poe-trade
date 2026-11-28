@@ -302,7 +302,10 @@ function tierInfo (tier: string) {
 
 const moveTiers = computed(() => {
   const doc = props.store.doc.value
-  if (!doc || isOwn.value || !base.value) return []
+  // A Loot tab item has the Loot card (its row and section); the step rules
+  // s0-s5 are shared by every section, so their first block (Corpses...)
+  // would name the item's tier wrongly.
+  if (!doc || isOwn.value || isCurrency.value || !base.value) return []
   const hasBase = final.value.conditions.some(c => c.key === 'BaseType' && c.op === '==' && c.values.includes(base.value))
   if (!hasBase) return []
   return moveTargets(doc, origin.value.type).map(tierInfo)
