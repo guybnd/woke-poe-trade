@@ -64,7 +64,7 @@ const LOOKS = [
   { value: 'step', label: "Its step's look", desc: 'Looks like the rest of its step.', dot: 'var(--w-gold)' },
   { value: 'own', label: 'Its own look', desc: 'Your colours, sound, beam and map icon, on top of its step.', dot: 'var(--w-gold-hi)', glow: true }
 ]
-const source = computed(() => props.it.est ? `a guess from NeverSink's ${props.it.tier ? `tier ${props.it.tier}` : 'tiers'}` : 'poe.ninja')
+const source = computed(() => props.it.none ? 'no price' : props.it.why ? props.it.why.toLowerCase() : props.it.est ? 'a guess' : 'poe.ninja')
 const stepLook = computed<StylePatch>(() => props.baseLook)
 
 function put (patch: Partial<ItemEdit>) {
