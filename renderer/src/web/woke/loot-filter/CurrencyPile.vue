@@ -99,6 +99,9 @@ watch(groundEl, el => {
 }, { immediate: true })
 onBeforeUnmount(() => ro?.disconnect())
 
+// Labels are re-measured once the label font has loaded.
+const fontsReady = ref(0)
+document.fonts?.ready.then(() => { fontsReady.value++ }).catch(() => {})
 const ctx = document.createElement('canvas').getContext('2d')
 function measure (text: string, px: number): number {
   if (!ctx) return text.length * px * 0.68
@@ -108,7 +111,8 @@ function measure (text: string, px: number): number {
 
 const placed = computed(() => {
   const list = drops.value.filter(d => ghosts.value || d.step > 0 || d.faint)
-  const { rects, height } = layoutLabels(list.map(d => labelBox(d.label, d.look.fontSize, SCALE, measure)), width.value, 200, seed.value, BEAM_ROOM)
+  const m = fontsReady.value >= 0 ? measure : undefined
+  const { rects, height } = layoutLabels(list.map(d => labelBox(d.label, d.look.fontSize, SCALE, m)), width.value, 200, seed.value, BEAM_ROOM)
   return { height, list: list.map((d, i) => ({ ...d, rect: rects[i] as Rect })) }
 })
 </script>
@@ -129,7 +133,8 @@ const placed = computed(() => {
     repeating-radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.015) 0 2px, transparent 2px 7px),
     linear-gradient(160deg, #24221d, #191814 60%, #1f1d18);
 }
-.drop { position: absolute; cursor: pointer; }
+/* Flex, so no line box makes it taller than the label it was laid out for. */
+.drop { position: absolute; display: flex; cursor: pointer; }
 .drop:hover, .drop:focus-visible { filter: brightness(1.25); z-index: 2; outline: 1px solid var(--w-accent); outline-offset: 1px; }
 .ghost { opacity: 0.55; text-decoration: line-through; filter: grayscale(0.7); }
 .beam { position: absolute; top: 0; width: 3px; opacity: 0.85; pointer-events: none; }
