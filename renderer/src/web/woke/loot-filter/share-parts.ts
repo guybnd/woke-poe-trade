@@ -43,7 +43,8 @@ function pageOfCat (cat: string): SharePart {
 // The page a key of a per-section record belongs to ('all' and anything
 // unknown: All loot).
 export function partOfKey (k: string): SharePart {
-  if (RECIPE_IDS.has(k)) return 'gear'
+  // Recipe steps are saved as 'rc<id>', with 'rcmig' marking their move there.
+  if (k === 'rcmig' || (k.startsWith('rc') && RECIPE_IDS.has(k.slice(2)))) return 'gear'
   if (CAT_IDS.has(k) || k === 'gold') return pageOfCat(k)
   if (KINDS.has(k)) return k as SharePart
   return 'loot'
@@ -53,6 +54,7 @@ export function partOfKey (k: string): SharePart {
 const FIELD_PAGE: Partial<Record<keyof CurrencySettings, SharePart>> = {
   mapFrom: 'maps',
   gold: 'currency',
+  sizeCut: 'uniques',
   chaseLook: 'uniques',
   notAvg: 'uniques'
 }
@@ -66,6 +68,8 @@ const GEAR_PRESETS = new Set(['gear', 'weights', 'lowTiers', 'hideGear', 'weapon
 
 export function partOfPreset (k: string): SharePart | null {
   if (k === 'currency') return null
+  // The Jewels page's "cluster jewels follow poe.ninja".
+  if (k === 'clusterPrices') return 'jewels'
   return GEAR_PRESETS.has(k) ? 'gear' : 'presets'
 }
 

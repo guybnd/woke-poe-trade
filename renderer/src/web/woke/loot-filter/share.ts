@@ -20,6 +20,9 @@ export interface SharedChanges {
   parts?: SharePart[]
   // The profile it came from, as the name for a new one.
   name?: string
+  // Each item setting's Loot section as the sharer's filter had it, so the
+  // pages split the same way whatever prices the importer has loaded.
+  itemCats?: Record<string, string>
 }
 
 const PREFIX_DEFLATE = 'WOKEF1.'
@@ -76,6 +79,13 @@ export async function decodeChanges (code: string): Promise<SharedChanges> {
   const locks = Array.isArray(raw.locks) ? raw.locks.filter((x): x is string => typeof x === 'string') : []
   const out: SharedChanges = { edits, rules, presets: normalizePresets(raw.presets as Partial<Presets>), locks }
   if (Array.isArray(raw.parts)) out.parts = [...new Set(raw.parts.filter(isSharePart))]
+  if (raw.itemCats && typeof raw.itemCats === 'object') {
+    const cats: Record<string, string> = {}
+    for (const [n, c] of Object.entries(raw.itemCats as Record<string, unknown>)) {
+      if (n in out.presets.currency.items && typeof c === 'string' && /^[a-z]{1,20}$/.test(c)) cats[n] = c
+    }
+    out.itemCats = cats
+  }
   if (typeof raw.name === 'string') {
     // eslint-disable-next-line no-control-regex
     const name = raw.name.replace(/[\u0000-\u001f"]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40)

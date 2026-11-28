@@ -16,7 +16,8 @@ function mine (): Presets {
   p.currency.offBy = { all: [1], cards: [2] }
   p.currency.items = { 'Divine Orb': { step: 4 }, 'The Doctor': { min: 2 }, 'Odd Thing': { price: 3 } }
   p.currency.mapFrom = 11
-  p.currency.catMode = { link6: 'off' }
+  p.currency.catMode = { rclink6: 'off' }
+  p.currency.sizeCut = 'on'
   p.quiet = { on: true, keepTiers: 3 }
   p.gear = { ...p.gear }
   return p
@@ -29,7 +30,8 @@ describe('share parts', () => {
     expect(partOfKey('cards')).toBe('cards')
     expect(partOfKey('gold')).toBe('currency')
     expect(partOfKey('all')).toBe('loot')
-    expect(partOfKey('link6')).toBe('gear')
+    expect(partOfKey('rclink6')).toBe('gear')
+    expect(partOfKey('rcmig')).toBe('gear')
     expect(partOfKey('somethingnew')).toBe('loot')
   })
 
@@ -42,6 +44,16 @@ describe('share parts', () => {
     expect(got.currency.line).toBe(defaultPresets().currency.line)
     expect(got.currency.on).toBe(false)
     expect(got.quiet.on).toBe(false)
+    expect(got.currency.catMode).toEqual({})
+  })
+
+  it('Uniques takes its Size cut, Jewels its cluster prices, Gear the recipes', () => {
+    const p = mine()
+    p.clusterPrices = { ...p.clusterPrices, on: !p.clusterPrices.on }
+    expect(mergeParts(defaultPresets(), p, ['uniques'], catOf).currency.sizeCut).toBe('on')
+    expect(mergeParts(defaultPresets(), p, ['loot'], catOf).currency.sizeCut).toBeUndefined()
+    expect(mergeParts(defaultPresets(), p, ['jewels'], catOf).clusterPrices.on).toBe(p.clusterPrices.on)
+    expect(mergeParts(defaultPresets(), p, ['gear'], catOf).currency.catMode).toEqual({ rclink6: 'off' })
   })
 
   it('All loot carries the main ruler and items it cannot place', () => {
@@ -86,5 +98,9 @@ describe('share parts', () => {
     expect(back.name).toBe('Juicer x')
     const old = await decodeChanges(`WOKEF0.${btoa(JSON.stringify({ v: 1, edits: [], rules: [], locks: [] }))}`)
     expect(old.parts).toBeUndefined()
+    const p = defaultPresets()
+    p.currency.items = { 'The Doctor': { min: 2 } }
+    const withCats = await decodeChanges(await encodeChanges({ edits: [], rules: [], presets: p, locks: [], itemCats: { 'The Doctor': 'carduniq', 'Not There': 'orbs', 'Bad': 'X"' } }))
+    expect(withCats.itemCats).toEqual({ 'The Doctor': 'carduniq' })
   })
 })

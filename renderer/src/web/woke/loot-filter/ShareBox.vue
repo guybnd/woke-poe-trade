@@ -54,7 +54,7 @@ import { defaultPresets, normalizePresets } from './presets'
 import type { Presets } from './presets'
 import { decodeChanges, encodeChanges } from './share'
 import type { SharedChanges } from './share'
-import { ALL_PARTS, SHARE_PARTS, mergeParts, partCounts } from './share-parts'
+import { ALL_PARTS, SHARE_PARTS, mergeParts, partCounts, partOfKey } from './share-parts'
 import type { CatOf, SharePart } from './share-parts'
 import { CURRENCY_TYPE, currencyItems } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
@@ -79,22 +79,30 @@ const props = defineProps<{
 const emit = defineEmits<{ close: [] }>()
 
 const EXT = ['wokefilter', 'txt']
+// A file dialog waits on the player.
+const DIALOG_WAIT = 3_600_000
+const LOOT_PAGES = new Set<SharePart>(['currency', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels', 'league'])
 const { copied, copy } = useCopy()
 const current = computed(() => activeProfile(props.config))
 const profile = computed(() => props.config.profiles.find(p => p.id === props.profileId) ?? current.value)
+// The profile being shared was removed: nothing to share any more.
+watch(() => props.profileId != null && !props.config.profiles.some(p => p.id === props.profileId), gone => { if (gone) emit('close') })
 
 // Item name → Loot section, from the filter in use.
 const cats = computed(() => {
   const doc = props.store.doc.value
-  const lookup = props.store.prices.lootLookup.value
+  // Without prices yet, items still come with their guesses.
+  const lookup = props.store.prices.lootLookup.value ?? null
   const out = new Map<string, string>()
-  if (!doc || !lookup) return out
+  if (!doc) return out
   loadCardFacts()
   const items = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, gemLinesOf(props.store.prices.items.value))
   for (const it of items) if (!out.has(it.name)) out.set(it.name, it.cat)
   return out
 })
 const catOf: CatOf = n => cats.value.get(n)
+// An imported code's own sections first.
+const codeCatOf: CatOf = n => code.value?.itemCats?.[n] ?? cats.value.get(n)
 
 interface Source { presets: Presets, edits: FilterEdit[], rules: OwnRule[], locks: string[] }
 const source = computed<Source>(() => {
@@ -114,7 +122,7 @@ const inCode = computed<SharePart[]>(() => code.value?.parts ?? ALL_PARTS)
 
 const counts = computed(() => props.mode === 'share'
   ? partCounts(source.value.presets, catOf, source.value.edits.length + source.value.rules.length + source.value.locks.length)
-  : code.value ? partCounts(code.value.presets, catOf, code.value.edits.length + code.value.rules.length + code.value.locks.length) : partCounts(defaultPresets(), catOf))
+  : code.value ? partCounts(code.value.presets, codeCatOf, code.value.edits.length + code.value.rules.length + code.value.locks.length) : partCounts(defaultPresets(), catOf))
 const shownParts = computed(() => props.mode === 'share' ? SHARE_PARTS : SHARE_PARTS.filter(p => inCode.value.includes(p.key)))
 
 const picked = ref(new Set<SharePart>())
@@ -135,7 +143,7 @@ function tick (k: SharePart, on: boolean) {
 
 const missing = computed(() => {
   if (!code.value || !cats.value.size) return []
-  return Object.keys(code.value.presets.currency.items).filter(n => !cats.value.has(n)).sort()
+  return Object.keys(code.value.presets.currency.items).filter(n => !cats.value.has(n) && picked.value.has(partOfKey(codeCatOf(n) ?? ''))).sort()
 })
 
 async function read () {
@@ -149,7 +157,7 @@ async function read () {
 
 async function openFile () {
   try {
-    const f = await hostRequest('text-file-open', { title: 'Open a shared loot filter', extensions: EXT }, 120_000)
+    const f = await hostRequest('text-file-open', { title: 'Open a shared loot filter', extensions: EXT }, DIALOG_WAIT)
     if (!f) return
     input.value = f.text.trim()
     await read()
@@ -177,10 +185,13 @@ const fresh = (s: SharedChanges) => ({
 async function asNew () {
   const s = code.value
   if (!s) return
+  if (props.store.switching.value) return
   const parts = [...picked.value]
   const p = addProfile(props.config, unusedName(s.name ?? 'Shared'), 'blank')
   const d = p.data!
-  d.presets = mergeParts(d.presets ?? defaultPresets(), s.presets, parts, catOf)
+  d.presets = mergeParts(d.presets ?? defaultPresets(), s.presets, parts, codeCatOf)
+  // Loot pages without All loot: their Loot tab switch comes along, or they'd do nothing.
+  if (!parts.includes('loot') && parts.some(k => LOOT_PAGES.has(k))) d.presets.currency.on = s.presets.currency.on
   if (picked.value.has('changes')) {
     const f = fresh(s)
     d.edits = f.edits
@@ -189,7 +200,8 @@ async function asNew () {
   }
   props.config.profiles = [...props.config.profiles]
   emit('close')
-  if (await props.store.switchProfile(p.id)) toast(`Added ${p.name} and switched to it`, { anchor: props.anchor })
+  const ok = await props.store.switchProfile(p.id)
+  toast(ok ? `Added ${p.name} and switched to it` : `Added ${p.name}; click its tab to switch to it`, { anchor: props.anchor })
 }
 
 function intoCurrent () {
@@ -197,7 +209,7 @@ function intoCurrent () {
   if (!s) return
   const parts = [...picked.value]
   const undo = props.store.changeWithUndo(c => {
-    c.presets = mergeParts(c.presets, s.presets, parts, catOf)
+    c.presets = mergeParts(c.presets, s.presets, parts, codeCatOf)
     if (parts.includes('changes')) {
       const f = fresh(s)
       c.edits = f.edits
@@ -224,7 +236,8 @@ async function makeCode (): Promise<string> {
     presets: mergeParts(defaultPresets(), src.presets, parts, catOf),
     locks: changes ? src.locks : [],
     parts,
-    name: profile.value.name
+    name: profile.value.name,
+    itemCats: Object.fromEntries(Object.keys(src.presets.currency.items).map(n => [n, catOf(n)]).filter((e): e is [string, string] => typeof e[1] === 'string'))
   })
   lastCode.value = text
   return text
@@ -253,7 +266,7 @@ async function saveFilter () {
     ''
   ]
   try {
-    const path = await hostRequest('text-file-save', { name: `${profile.value.name}.filter`, text: serializeFilter(doc, header), title: 'Save the loot filter for players without Woke', extensions: ['filter'] }, 120_000)
+    const path = await hostRequest('text-file-save', { name: `${profile.value.name}.filter`, text: serializeFilter(doc, header), title: 'Save the loot filter for players without Woke', extensions: ['filter'] }, DIALOG_WAIT)
     if (path) toast(`Saved to ${path}. It plays in game for anyone who puts it in their filter folder.`, { anchor: props.anchor })
   } catch (e) {
     toast(`Couldn't save the file: ${(e as Error).message}`, { anchor: props.anchor })
@@ -262,7 +275,7 @@ async function saveFilter () {
 
 async function saveFile () {
   try {
-    const path = await hostRequest('text-file-save', { name: `${profile.value.name}.wokefilter`, text: await makeCode(), title: 'Save the shared loot filter', extensions: EXT }, 120_000)
+    const path = await hostRequest('text-file-save', { name: `${profile.value.name}.wokefilter`, text: await makeCode(), title: 'Save the shared loot filter', extensions: EXT }, DIALOG_WAIT)
     if (path) toast(`Saved to ${path}`, { anchor: props.anchor })
   } catch (e) {
     toast(`Couldn't save the file: ${(e as Error).message}`, { anchor: props.anchor })
