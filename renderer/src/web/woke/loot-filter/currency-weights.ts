@@ -366,7 +366,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         // Odd items with no solid price (none, or a thin one) always show, and
         // so does one with no price now or last league (Guy 2026-11-28: it
         // used to fall to our fallback rule, which showed it).
-        ...(own == null && !priced && ((!card && isFree(name, b.type, b.tier)) || (lists != null && !lists.guesses.has(name) && !(p != null && p.chaos > 0))) ? { free: true } : {}),
+        ...(own == null && (!priced || (orb != null && !(listed != null && listed.chaos > 0))) && ((!card && isFree(name, b.type, b.tier)) || (lists != null && !lists.guesses.has(name) && !(listed != null && listed.chaos > 0))) ? { free: true } : {}),
         // Fragments don't stack: one is the whole pile. A card's pile is at
         // most a set (10 until the sizes are read).
         full: card ? cards?.get(name)?.stack ?? 10 : frags && !thread ? 1 : fullStack(name)
