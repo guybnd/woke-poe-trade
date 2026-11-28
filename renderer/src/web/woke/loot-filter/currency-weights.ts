@@ -17,6 +17,8 @@
 // levelling floors below maps). The rules sit above everything NeverSink
 // has and end with their own Hide, so NeverSink never sees these items. Off (the default), nothing is written.
 import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './parse'
+import { GEAR_CLASSES } from './weights'
+import { WEIGHT_TYPE } from './weight-settings'
 import { NET_GROUPS, basePrice } from './economy'
 import type { DropUnique, EconomyGroup, PriceLookup } from './economy'
 import { applyStyle, readStyle } from './edits'
@@ -1653,8 +1655,43 @@ function applySpecial (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyIte
   const parts = items.map(it => compileCurrency(cfg, [it]))
   const shown = parts.flatMap(x => x.blocks).filter(b => b.visibility === 'Show' && b.tier !== 'faint').sort((x, y) => Number(y.tier?.slice(1) ?? 0) - Number(x.tier?.slice(1) ?? 0))
   insertBlocks(doc, specialAnchor(doc), shown)
+  floorOverWeights(doc, shown)
   retireSpecial(doc, gateConds(cfg))
   return { blocks: shown, items, chars: shown.length * 400 }
+}
+
+// Special gear over Rare weights' Hide (NeverSink retirement M8, Guy's pick
+// Floor): white, magic and identified rare gear the weights would hide shows
+// at its row's step. White and magic go above the weights (they score low
+// there), identified rares just above the weights' Hide for them (their mod
+// rules above still show them louder). Unidentified rares stay the weights'
+// call; their marks are pinned there. Copies: the rows below still take
+// what the weights leave (low areas, item levels).
+function floorOverWeights (doc: FilterDoc, shown: FilterBlock[]) {
+  const first = doc.blocks.find(b => b.type === WEIGHT_TYPE)
+  if (!first) return
+  const idHide = doc.blocks.find(b => b.type === WEIGHT_TYPE && b.tier === 's0' && b.comment.endsWith(': the rest') && b.conditions.some(x => x.key === 'Identified' && x.values[0] === 'True'))
+  const copy = (b: FilterBlock, rarity: string[], identified: boolean): FilterBlock => ({
+    ...b,
+    comment: `${b.comment}, over the rare weights`,
+    conditions: [...b.conditions.filter(x => x.key !== 'Rarity' && !(identified && x.key === 'Identified')).map(x => ({ ...x, values: [...x.values] })), { key: 'Rarity', op: '', count: null, values: rarity } as FilterCondition, ...(identified ? [{ key: 'Identified', op: '', count: null, values: ['True'] } as FilterCondition] : [])],
+    actions: b.actions.map(a => ({ ...a, args: [...a.args] })),
+    raw: [],
+    dirty: true
+  })
+  const top: FilterBlock[] = []
+  const ids: FilterBlock[] = []
+  for (const b of shown) {
+    const cls = b.conditions.find(x => x.key === 'Class')
+    if (cls && !cls.values.some(v => GEAR_CLASSES.includes(v))) continue
+    const rarity = b.conditions.find(x => x.key === 'Rarity')?.values ?? ['Normal', 'Magic', 'Rare']
+    const id = b.conditions.find(x => x.key === 'Identified')?.values[0]
+    const low = rarity.filter(r => r === 'Normal' || r === 'Magic')
+    if (low.length) top.push(copy(b, low, false))
+    if (idHide && rarity.includes('Rare') && id !== 'False') ids.push(copy(b, ['Rare'], true))
+  }
+  if (idHide) insertBlocks(doc, doc.chunks.indexOf(idHide), ids)
+  insertBlocks(doc, doc.chunks.indexOf(first), top)
 }
 
 // Special unique rolls go just above NeverSink's own special rules, one

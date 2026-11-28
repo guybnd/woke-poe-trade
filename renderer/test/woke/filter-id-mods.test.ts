@@ -8,7 +8,7 @@ import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
 import { WEIGHT_TYPE, applyWeights, defaultWeights, filterBases, stepOf } from '@/web/woke/loot-filter/weights'
 import type { BaseRow, WeightSettings } from '@/web/woke/loot-filter/weights'
-import { DEFAULT_SEED, MAX_MODS, idGroups, itemMods, minimalCounts, modKey, seedIndex } from '@/web/woke/loot-filter/id-mods'
+import { DEFAULT_SEED, MAX_MODS, classSeed, idGroups, itemMods, minimalCounts, modKey, seedIndex } from '@/web/woke/loot-filter/id-mods'
 import type { AffixTable, IdGroup } from '@/web/woke/loot-filter/id-mods'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -29,6 +29,8 @@ const pts = (m: number) => 10 * Math.log2(m)
 function on (change: (w: WeightSettings) => void = () => {}): WeightSettings {
   const w = defaultWeights()
   w.on = true
+  // The score alone (pins are tested on their own).
+  w.always = []
   change(w)
   return w
 }
@@ -61,6 +63,15 @@ describe('identified mods', () => {
         expect(meets, `${JSON.stringify({ levels, need, mods })}`).toBe(score >= need - 1e-6)
       }
     }
+  })
+
+  it('the top 5 are the top mods a class can roll (M8: % physical on a bow is Great)', () => {
+    expect(classSeed(TABLE, 'Bows', DEFAULT_SEED).slice(0, 5)).toContain('increased Physical Damage')
+    expect(classSeed(TABLE, 'Bows', DEFAULT_SEED)).not.toContain('increased Movement Speed')
+    const m = defaultWeights().mult
+    expect(itemMods(TABLE, 'Bows', ['Merciless'], DEFAULT_SEED, m)[0].key).toBe('ig1')
+    const groups = idGroups(TABLE, DEFAULT_SEED, m)
+    expect(groups.find(g => g.classes.includes('Bows'))!.levels[0].names).toContain('Merciless')
   })
 
   it('every gear class has its top mods listed', () => {

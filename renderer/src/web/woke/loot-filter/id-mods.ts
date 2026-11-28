@@ -50,6 +50,14 @@ export function seedIndex (text: string, seed: readonly string[]): number {
   })
 }
 
+// The list as one class sees it: only entries a mod on that class can match,
+// so a bow's top 5 are bow mods (% physical, attack speed...), not life and
+// movement speed it can't roll (M8: magic bows with top % physical graded Good).
+export function classSeed (table: AffixTable, cls: string, seed: readonly string[]): string[] {
+  const texts = [...new Set((table.classes[cls] ?? []).map(r => table.texts[r[1]] ?? ''))]
+  return seed.filter(s => texts.some(t => seedIndex(t, [s]) === 0))
+}
+
 // The row a mod counts for, or null: Great is a top 5 mod at tier 1, Good
 // tier 2 (or another listed mod at tier 1), Fair one tier lower again.
 export function modKey (text: string, tier: number, seed: readonly string[]): WeightKey | null {
@@ -66,6 +74,7 @@ export interface CountedMod { name: string, text: string, tier: number, key: Wei
 // One item's mods, as the card shows them.
 export function itemMods (table: AffixTable, cls: string, names: readonly string[], seed: readonly string[], mult: Record<WeightKey, number>): CountedMod[] {
   const rows = new Map((table.classes[cls] ?? []).map(r => [r[0], r]))
+  seed = classSeed(table, cls, seed)
   return names.map((name) => {
     const r = rows.get(name)
     if (!r) return { name, text: '', tier: 0, key: null, pts: 0 }
@@ -85,8 +94,9 @@ export function idGroups (table: AffixTable, seed: readonly string[], mult: Reco
   // Each class: every name it can roll and its points (0 for most).
   const maps = Object.entries(table.classes).map(([cls, rows]) => {
     const m = new Map<string, number>()
+    const own = classSeed(table, cls, seed)
     for (const [name, ti, tier] of rows) {
-      const key = modKey(table.texts[ti] ?? '', tier, seed)
+      const key = modKey(table.texts[ti] ?? '', tier, own)
       // A name twice (two kinds share it): the lower, so it never counts high.
       const p = key ? points(mult[key]) : 0
       m.set(name, m.has(name) ? Math.min(m.get(name)!, p) : p)

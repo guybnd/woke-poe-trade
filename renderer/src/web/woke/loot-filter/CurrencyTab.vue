@@ -171,8 +171,8 @@
         </div>
         <template v-for="r in (sg.name && !isOpen(`${g.cat.id}/${sg.name}`) ? [] : sg.rows)" :key="r.it.name">
           <WItemRow :item="tipOf(r.it)" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
-            <span :class="$style.name"><input v-if="kind === 'uniques' || r.it.fixed != null" type="checkbox" :class="$style.onBox" :checked="c.items[r.it.name]?.step !== 0" :aria-label="`Show ${rowName(r.it)}`"
-              :title="r.it.fixed != null ? 'Shows in maps. Untick to hide these jewels' : 'Untick to hide this base in maps (you don\'t care about it)'" :data-loot-unique-on="kind === 'uniques' ? '' : undefined" :data-loot-row-on="r.it.fixed != null ? '' : undefined" @click.stop="toggleOn(r.it.name)" @keydown.stop><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
+            <span :class="$style.name"><input v-if="r.it.type !== 'gold'" type="checkbox" :class="$style.onBox" :checked="rowOn(r.it)" :disabled="rowLocked(r.it)" :aria-label="`Show ${rowName(r.it)}`"
+              :title="rowTip(r.it)" :data-loot-unique-on="kind === 'uniques' ? '' : undefined" data-loot-row-on @click.stop="toggleOn(r.it.name)" @keydown.stop><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
               :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows as at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ rowName(r.it) }}<span v-if="gemCorrupted(r.it)" :class="$style.corr" title="Corrupted: this price is for a corrupted gem of this level and quality"><WIcon currency="Vaal Orb" size="sm" />Corrupted</span><span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.it.avg && r.it.of && r.it.of > 1" :class="$style.uniqTop" :title="`Priced by an average drop: each of the ${r.it.of} uniques that drop on it, counted by how often it turns up`"> · average of {{ r.it.of }}</span><span v-if="r.it.uniques?.some(u => u.out)" :class="$style.uniqTop" title="You left these out of the average"> · left out: {{ r.it.uniques.filter(u => u.out).map(u => u.name).join(', ') }}</span><span v-if="r.it.chase" :class="$style.uniqTop" :title="`The rarest kind of unique (T0): it doesn't count in the average; the base shows in Chase uniques with its own look`"> · chase: {{ r.it.chase.map(x => `${x.name} ${chaosText(x.chaos)}`).join(', ') }}</span><span v-if="sizeCutNow(r.it, eff) < 1" :class="$style.uniqTop" :title="`Size cut: a ${r.it.size} item counts ${Math.round(sizeCutNow(r.it, eff) * 100)}% of its price`"> · {{ r.it.size }} · {{ Math.round(sizeCutNow(r.it, eff) * 100) }}%</span><span v-if="r.bias" :class="$style.edited"> · bias {{ r.bias }}</span><span v-else-if="r.edited" :class="$style.edited"> edited</span></span>
             <span :class="$style.price" :title="fixedOf(r.it, c.items[r.it.name], sectionMode(c, r.it.cat)) != null ? 'No price: a filter can\'t see which implicit or mods it has, so it shows at a set step. Set a step or price to change it' : r.it.type === 'gold' ? 'No price: the Gold ruler steps each pile by its size' : r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows as at least Small' : r.it.est ? (r.it.tier ? `No usable price: a guess from NeverSink's tier ${r.it.tier}` : 'No usable price: a guess. Set a step or price to change it') : 'poe.ninja'">
               <template v-if="r.it.type === 'gold'">by size</template><template v-else-if="fixedOf(r.it, c.items[r.it.name], sectionMode(c, r.it.cat)) != null"><WPrice :chaos="null" none="No price: a filter can't see which implicit or mods a jewel has, so it shows at a set step" /></template><template v-else>{{ chaosText(r.it.chaos) }}<span v-if="r.it.est" :class="$style.est"> est.</span></template>
@@ -601,8 +601,23 @@ function toggleCollect (name: string) {
   const { min, ...rest } = c.value.items[name] ?? {}
   setEdit(name, min ? (Object.keys(rest).length ? rest : null) : { ...rest, min: 2 })
 }
-// A unique base ticked off (Guy 2026-11-28): its own Off, which wins over
-// the section's Always; ticked again it goes back to the price.
+// Every row's tick box (Guy 2026-11-28, the Jewels way on every section):
+// the header decides for all rows; untick hides this one (its own Off,
+// which wins over the section's Always), ticked again it follows the
+// header. A section on Hide greys the boxes out, unless the row has its
+// own rule that shows it (its own step, Always or Collecting).
+const ownShow = (e: ItemEdit | undefined) => e?.supply === 1 || (e?.step != null && e.step !== 0) || !!e?.min
+function rowLocked (it: CurrencyItem): boolean {
+  const e = c.value.items[it.name]
+  return sectionMode(c.value, it.cat) === 'off' && e?.step !== 0 && !ownShow(e)
+}
+function rowOn (it: CurrencyItem): boolean {
+  return c.value.items[it.name]?.step !== 0 && !rowLocked(it)
+}
+function rowTip (it: CurrencyItem): string {
+  if (rowLocked(it)) return 'This section is on Hide. Set its header to show its rows'
+  return c.value.items[it.name]?.step === 0 ? 'Hidden by you. Tick to follow the section again' : 'Shows in maps. Untick to hide this one'
+}
 function toggleOn (name: string) {
   const { step, ...rest } = c.value.items[name] ?? {}
   setEdit(name, step === 0 ? (Object.keys(rest).length ? rest : null) : { ...rest, step: 0 })
@@ -728,6 +743,7 @@ function chaosText (v: number): string {
 .corr :global(img) { width: 14px; height: 14px; }
 .pen { font-size: var(--w-fs-xs); }
 .onBox { margin: 0 6px 0 0; vertical-align: middle; accent-color: #c8a565; cursor: pointer; }
+.onBox:disabled { cursor: default; opacity: .4; }
 .star { background: none; border: 0; padding: 0 5px 0 0; color: var(--w-faint); cursor: pointer; font-size: var(--w-fs-xs); }
 .star:hover { color: #e8c96a; }
 .starOn { color: #f0c040; }

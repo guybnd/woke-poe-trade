@@ -27,6 +27,8 @@ const DEFAULT_RANK: Record<string, RankKey> = {
   'Diamond Flask': 'r1',
   'Gold Flask': 'r1',
   'Silver Flask': 'r1',
+  // On NeverSink's exotic list (M8): Top.
+  'Iron Flask': 'r1',
   'Jade Flask': 'r2',
   'Granite Flask': 'r2',
   'Basalt Flask': 'r2',
@@ -38,8 +40,7 @@ const DEFAULT_RANK: Record<string, RankKey> = {
   'Sapphire Flask': 'r2',
   'Topaz Flask': 'r2',
   'Bismuth Flask': 'r3',
-  'Stibnite Flask': 'r3',
-  'Iron Flask': 'r3'
+  'Stibnite Flask': 'r3'
 }
 export const FLASK_RANKS: RankKey[] = ['r1', 'r2', 'r3', 'rj']
 export const flaskRank = (w: Pick<WeightSettings, 'ranks'>, base: string): RankKey => {

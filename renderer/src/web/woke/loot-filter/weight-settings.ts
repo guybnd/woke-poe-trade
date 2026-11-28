@@ -6,7 +6,7 @@ export const WEIGHT_TYPE = 'woke->weights'
 
 export type WeightKey =
   | 'x1' | 'x2' | 'r1' | 'r2' | 'r3' | 'r0' | 'rj'
-  | 'wr' | 'wm' | 'wn' | 'w86'
+  | 'wr' | 'wm' | 'wn' | 'wc' | 'w86'
   | 't1' | 't2' | 't3' | 't4' | 't5'
   | 'mt1' | 'mt2' | 'mt3' | 'mt4' | 'mt5'
   | 'i68' | 'i75' | 'i83' | 'i86'
@@ -47,8 +47,12 @@ export const WEIGHT_GROUPS: WeightGroup[] = [
     icon: 'fas fa-star',
     rows: [
       { key: 'wr', label: 'Rare', dflt: 1 },
-      { key: 'wm', label: 'Magic', dflt: 0.1 },
-      { key: 'wn', label: 'White', dflt: 0.1 },
+      // White and magic are worth their base, item level and marks (Guy
+      // 2026-11-28): no cut of their own. Plain crafting bases are many, so
+      // they take one (an exotic base or a mark counts in full).
+      { key: 'wm', label: 'Magic', dflt: 1 },
+      { key: 'wn', label: 'White', dflt: 1 },
+      { key: 'wc', label: 'Plain crafting base, white or magic', dflt: 0.25 },
       // Crafting bases: raise (or pin) when hunting ilvl 86 white or magic bases.
       { key: 'w86', label: 'White or magic, ilvl 86', dflt: 1 }
     ]
@@ -159,7 +163,7 @@ export const WEIGHT_GROUPS: WeightGroup[] = [
       { key: 'ig2', label: 'Good mod', dflt: 2 },
       { key: 'ig3', label: 'Fair mod', dflt: 1.4 },
       { key: 'idr', label: 'Identified rare', dflt: 1.5 },
-      { key: 'idm', label: 'Identified magic', dflt: 1 }
+      { key: 'idm', label: 'Identified magic', dflt: 1.5 }
     ]
   }
 ]
@@ -254,14 +258,14 @@ export function normalizeLook (v: unknown): Record<LookChannel, LookKey[]> {
 export const LOUD_DEFAULT: readonly number[] = [16, 64, 256]
 
 export function defaultWeights (): WeightSettings {
-  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT], look: lookDefault(), ranks: {}, flaskLine: 8, v: WEIGHTS_V }
+  return { on: false, need: 4, mult: Object.fromEntries(WEIGHT_ROWS.map(r => [r.key, r.dflt])) as Record<WeightKey, number>, always: [], loud: [...LOUD_DEFAULT], look: lookDefault(), ranks: {}, flaskLine: 4, v: WEIGHTS_V }
 }
 
 // Bumped when a saved setting is moved once on load.
-export const WEIGHTS_V = 1
+export const WEIGHTS_V = 3
 
 // The rows a pin (always show) can go on: ones a rule can name on their own.
-export const PIN_ROWS: ReadonlySet<WeightKey> = new Set<WeightKey>(['w86', 'x1', 'x2', 'r1', 'r2', 'r3', 'l6', 'l5', 'l4', 'rgb', 'infl', 'eld', 'qual', 'fract', 'synth', 'fated', 'mirr', 'abyss', 'strand', 'ench', 'cruc', 'cp', 'ci', 'dc'])
+export const PIN_ROWS: ReadonlySet<WeightKey> = new Set<WeightKey>(['w86', 'x1', 'x2', 'r1', 'r2', 'r3', 'l6', 'l5', 'l4', 'rgb', 'infl', 'eld', 'qual', 'fract', 'synth', 'fated', 'mirr', 'abyss', 'strand', 'ench', 'cruc', 'cp', 'ci', 'dc', 'ig1'])
 
 // Marks only add (×1 or more): a mark under ×1 would split every rule.
 export const MARK_ROWS: WeightKey[] = ['w86', 'l6', 'l5', 'l4', 'infl', 'eld', 'qual', 'fract', 'synth', 'fated', 'ench', 'strand', 'cruc', 'abyss', 'rgb']
@@ -285,6 +289,14 @@ export function normalizeWeights (w: Partial<WeightSettings> | undefined): Weigh
     if (mult.r0 === 1) mult.r0 = 0.5
     if (mult.big === 1 || mult.big === 0.85) mult.big = 0.7
   }
+  // v2 (Guy 2026-11-28, NeverSink retirement M8): white and magic at the old
+  // ×0.1 go to ×1 (plain crafting bases take the new row instead), and
+  // identified magic at ×1 to ×1.5, once.
+  if (w?.mult && !((w.v ?? 0) >= 2)) {
+    if (mult.wm === 0.1) mult.wm = 1
+    if (mult.wn === 0.1) mult.wn = 1
+    if (mult.idm === 1) mult.idm = 1.5
+  }
   for (const k of [...MARK_ROWS, ...ID_ROWS]) mult[k] = Math.max(1, mult[k])
   for (const row of ORDERED_ROWS) for (let i = 1; i < row.length; i++) mult[row[i]] = Math.max(mult[row[i]], mult[row[i - 1]])
   return {
@@ -294,7 +306,9 @@ export function normalizeWeights (w: Partial<WeightSettings> | undefined): Weigh
     loud: Array.isArray(w?.loud) && w.loud.length === 3 && w.loud.every((v, i) => ok(v, NEED_MIN, NEED_MAX * 64) && (i === 0 || v >= w.loud![i - 1])) ? [...w.loud] : [...LOUD_DEFAULT],
     always: Array.isArray(w?.always) ? [...new Set(w.always.filter(k => PIN_ROWS.has(k)))] : [],
     look: normalizeLook(w?.look),
-    flaskLine: ok(w?.flaskLine, NEED_MIN, NEED_MAX) ? w.flaskLine : d.flaskLine,
+    // v3 (NeverSink retirement M8): the flask line at the old 8 goes to 4,
+    // so Good flasks show and Low ones show with quality or item level 85+.
+    flaskLine: ok(w?.flaskLine, NEED_MIN, NEED_MAX) ? (w.flaskLine === 8 && !((w.v ?? 0) >= 3) ? d.flaskLine : w.flaskLine) : d.flaskLine,
     v: WEIGHTS_V,
     ranks: w?.ranks && typeof w.ranks === 'object'
       ? Object.fromEntries(Object.entries(w.ranks).filter(([n, r]) => typeof n === 'string' && n.length < 80 && RANK_KEYS.includes(r)))

@@ -126,7 +126,7 @@ describe('Equipment tinctures', () => {
     const tinc = blocks.filter(b => b.conditions.some(c => c.key === 'Class' && c.values.includes('Tinctures')))
     expect(tinc.length).toBeGreaterThan(1)
     expect(tinc.every(b => b.tier!.startsWith('flasktinc'))).toBe(true)
-    // Good at 26%+ and item level 85: 2 x 4 x 2 = 16, Big against line 8.
+    // Good at 26%+ and item level 85: far over the line.
     const top = tinc.find(b => b.conditions.some(c => c.key === 'Quality' && c.values[0] === '26') && b.conditions.some(c => c.key === 'ItemLevel'))!
     expect(top.visibility).toBe('Show')
     expect(tinc.at(-1)).toMatchObject({ visibility: 'Hide', tier: 'flasktinc0' })

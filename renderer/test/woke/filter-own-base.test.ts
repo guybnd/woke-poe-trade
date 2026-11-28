@@ -48,7 +48,9 @@ describe('our own filter skeleton', () => {
     expect(doc.blocks.map(b => [b.type, b.tier, b.visibility])).toEqual([
       [OWN_REST_TYPE, 'plaingear', 'Hide'], [OWN_REST_TYPE, 'qualityflasks', 'Show'], [OWN_REST_TYPE, 'plainflasks', 'Hide'], [OWN_REST_TYPE, 'magicflasks', 'Hide'], [OWN_REST_TYPE, 'plainjewels', 'Hide'], [OWN_REST_TYPE, 'rarejewels', 'Show'], [OWN_REST_TYPE, 'magicabyss', 'Show'],
       [OWN_REST_TYPE, 'uniques', 'Show'], [OWN_REST_TYPE, 'blightravaged', 'Show'], [OWN_REST_TYPE, 'blightedmaps', 'Show'],
-      [OWN_REST_TYPE, 'maps16', 'Show'], [OWN_REST_TYPE, 'maps11', 'Show'], [OWN_REST_TYPE, 'maps6', 'Show'], [OWN_REST_TYPE, 'maps1', 'Show'], [OWN_REST_TYPE, 'unknown', 'Show']
+      [OWN_REST_TYPE, 'maps16', 'Show'], [OWN_REST_TYPE, 'maps11', 'Show'], [OWN_REST_TYPE, 'maps6', 'Show'], [OWN_REST_TYPE, 'maps1', 'Show'], [OWN_REST_TYPE, 'mapsother', 'Show'],
+      [OWN_REST_TYPE, 'rares', 'Show'], [OWN_REST_TYPE, 'cheapstack', 'Hide'], [OWN_REST_TYPE, 'gold', 'Show'], [OWN_REST_TYPE, 'wombgifts', 'Show'],
+      [OWN_REST_TYPE, 'currency', 'Show'], [OWN_REST_TYPE, 'cards', 'Show'], [OWN_REST_TYPE, 'gems', 'Show'], [OWN_REST_TYPE, 'other', 'Show'], [OWN_REST_TYPE, 'unknown', 'Show']
     ])
     expect(parseFilter(ownBaseText(null)).strictness).toBe('2-SEMI-STRICT')
   })
