@@ -74,6 +74,11 @@ export interface CurrencySettings {
   // Uniques left out of their base's average drop (Guy 2026-11-28: a special
   // drop like Precursor's Emblem); toggleNotAvg flips one.
   notAvg?: string[]
+  // Size cut on big uniques (Guy's picks S2, Z1, W2, E1, 2026-11-28): 'on',
+  // 'off', or unset for Auto (on from Strict, ×1.25, up).
+  sizeCut?: 'on' | 'off'
+  // Worked out by scaled() from sizeCut and the strictness; never saved.
+  sizeOn?: boolean
 }
 
 export type SectionMode = 'off' | 'auto' | 'always'
@@ -161,6 +166,7 @@ export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): Cu
     faint: { on: c?.faint?.on === true, until: Number(c?.faint?.until) || FAINT_UNTIL },
     mapFrom: int(c?.mapFrom, 1, 17) ?? 1,
     ...(Array.isArray(c?.notAvg) && c.notAvg.length ? { notAvg: [...new Set(c.notAvg.filter(n => typeof n === 'string' && NAME.test(n)))].sort() } : {}),
+    ...(c?.sizeCut === 'on' || c?.sizeCut === 'off' ? { sizeCut: c.sizeCut } : {}),
     ...(typeof c?.chaseLook === 'string' && /^[A-Z][0-9]$/.test(c.chaseLook) ? { chaseLook: c.chaseLook } : {}),
     gold: Array.isArray(c?.gold) && c.gold.length === 5 && c.gold.every((g, i) => int(g, 1, 1e7) != null && (!i || g >= c.gold![i - 1])) ? [...c.gold] : d.gold
   }

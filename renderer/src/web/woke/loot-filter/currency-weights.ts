@@ -22,6 +22,7 @@ import type { DropUnique, EconomyGroup, PriceLookup } from './economy'
 import { applyStyle, readStyle } from './edits'
 import type { StylePatch } from './edits'
 import { fullStack } from './stack-sizes'
+import { ITEM_BY_REF } from '@/assets/data'
 import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
@@ -175,6 +176,8 @@ export interface CurrencyItem {
   chase?: Array<{ name: string, chaos: number }>
   // Every priced unique on the base and how the average treats it.
   uniques?: DropUnique[]
+  // A unique base's inventory size ("2x3"), for the size cut.
+  size?: string
   // A gem band: the gem's name (BaseType) and its level, quality and
   // corruption conditions; `name` is the band ("Arc 20/20").
   bt?: string
@@ -266,6 +269,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
           ...(own != null ? { own: true } : {}),
           full: 1,
           ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {}),
+          ...sizeOf(name),
           ...(p?.drop ? { of: p.drop.of, avg: true, uniques: p.drop.uniques, ...(p.drop.chase.length ? { chase: p.drop.chase } : {}) } : {})
         })
       }
@@ -441,6 +445,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
           ...(own != null ? { own: true } : {}),
           full: 1,
           bt: base,
+          ...sizeOf(base),
           conds,
           ...(m?.[1] ? { top: m[1], of: Number(m[2] ?? 1) } : {})
         })
@@ -621,8 +626,10 @@ export function strictMult (level: number): number {
 // player's own, or the filter's strictness).
 export function scaled (c: CurrencySettings, strictness: string | null): CurrencySettings {
   const m = c.mult ?? strictMult(levelOf(strictness))
-  if (m === 1) return c
-  return { ...c, line: c.line * m, from: c.from.map(f => f * m) as CurrencySettings['from'], gold: c.gold.map(g => Math.max(1, Math.round(g * m))) }
+  // The size cut: Auto turns it on from Strict (×1.25) up (Guy's W2).
+  const sizeOn = c.sizeCut === 'on' || (c.sizeCut !== 'off' && m >= 1.25)
+  if (m === 1) return { ...c, sizeOn }
+  return { ...c, sizeOn, line: c.line * m, from: c.from.map(f => f * m) as CurrencySettings['from'], gold: c.gold.map(g => Math.max(1, Math.round(g * m))) }
 }
 
 // The line for a category, after its nudge.
@@ -654,6 +661,25 @@ export function minStack (it: Pick<CurrencyItem, 'chaos' | 'full'>, at: number, 
 
 // For each step 1..5, the smallest pile that reaches it (null: never).
 // A step set by hand gives every pile that step; a supply lowers Small.
+// A unique base's size, from the item data (none until it has loaded).
+function sizeOf (base: string): { size?: string } {
+  const b = ITEM_BY_REF('ITEM', base)?.[0]
+  return b ? { size: `${b.w ?? 1}x${b.h ?? 1}` } : {}
+}
+// The size cut (Guy's S2 and Z1): 2x2 counts 75% of its price, 2x3 60%,
+// 2x4 50%; smaller items keep all of it.
+export function sizeCut (size: string | undefined): number {
+  const m = /^(\d)x(\d)$/.exec(size ?? '')
+  const cells = m ? Number(m[1]) * Number(m[2]) : 1
+  return cells >= 8 ? 0.5 : cells >= 6 ? 0.6 : cells >= 4 ? 0.75 : 1
+}
+// The cut an item gets now: only with the cut on, never in an Always
+// section (Guy's E1: chase and boss-only bases show whatever their size).
+export function sizeCutNow (it: Pick<CurrencyItem, 'size' | 'cat'>, c: Pick<CurrencySettings, 'sizeOn' | 'catMode'>): number {
+  if (!c.sizeOn || !it.size || sectionMode(c, it.cat) === 'always') return 1
+  return sizeCut(it.size)
+}
+
 export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number | null> {
   const e = c.items[it.name]
   if (e?.step != null) return [1, 2, 3, 4, 5].map(s => s === e.step ? 1 : null)
@@ -661,7 +687,9 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   // Always; Always shows every pile at least Small.
   const mode = sectionMode(c, it.cat)
   if (mode === 'off' && e?.supply !== 1 && !e?.min) return [null, null, null, null, null]
-  const out = it.type === 'gold' ? [...c.gold] as Array<number | null> : stepStarts(c, it.cat).map(at => minStack(it, at, c.from[1]))
+  const cut = sizeCutNow(it, c)
+  const worth = cut < 1 ? { ...it, chaos: it.chaos * cut } : it
+  const out = it.type === 'gold' ? [...c.gold] as Array<number | null> : stepStarts(c, it.cat).map(at => minStack(worth, at, c.from[1]))
   const supply = e?.supply ?? (it.free || mode === 'always' ? 1 : null)
   if (supply != null) {
     const f = Math.min(supply, it.full)

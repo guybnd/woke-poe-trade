@@ -17,6 +17,9 @@
       <b :class="$style.minVal">×{{ (dragMult ?? mult).toFixed(2) }}</b>
       <WButton v-if="c.mult != null" size="sm" variant="ghost" icon="fas fa-undo" :title="`Back to ×${strictMult(level).toFixed(2)}, from NeverSink's ${LEVEL_NAMES[level]}`" @click="c.mult = null">Follow {{ LEVEL_NAMES[level] }}</WButton>
       <span v-else class="w-faint text-xs">follows {{ LEVEL_NAMES[level] }}</span>
+      <span v-if="kind === 'uniques'" :class="$style.minLab" data-loot-size-cut title="Big uniques count part of their price: 2x2 75%, 2x3 60%, 2x4 50%. Chase and Always sections skip it.">Size cut
+        <StateChip :model-value="c.sizeCut ?? 'auto'" :options="SIZE_CUTS" title="Size cut" dflt="auto" @update:model-value="v => c.sizeCut = v === 'auto' ? undefined : v as 'on' | 'off'" />
+        <span class="w-faint text-xs">{{ eff.sizeOn ? 'on now' : 'off now' }}</span></span>
       <span class="flex-1" />
       <button type="button" :class="$style.hidChip" title="List the items that never show" data-currency-hidden @click="only = 'hidden'">{{ rows.length - shownCount }} of {{ rows.length }} never show</button>
     </div>
@@ -127,7 +130,7 @@
           <WItemRow :item="tipOf(r.it)" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
             <span :class="$style.name"><input v-if="kind === 'uniques'" type="checkbox" :class="$style.onBox" :checked="c.items[r.it.name]?.step !== 0" :aria-label="`Show ${r.it.name}`"
               title="Untick to hide this base in maps (you don't care about it)" data-loot-unique-on @click.stop="toggleOn(r.it.name)" @keydown.stop><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
-              :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ rowName(r.it) }}<span v-if="gemCorrupted(r.it)" :class="$style.corr" title="Corrupted: this price is for a corrupted gem of this level and quality"><WIcon currency="Vaal Orb" size="sm" />Corrupted</span><span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.it.avg && r.it.of && r.it.of > 1" :class="$style.uniqTop" :title="`Priced by an average drop: each of the ${r.it.of} uniques that drop on it, counted by how often it turns up`"> · average of {{ r.it.of }}</span><span v-if="r.it.uniques?.some(u => u.out)" :class="$style.uniqTop" title="You left these out of the average"> · left out: {{ r.it.uniques.filter(u => u.out).map(u => u.name).join(', ') }}</span><span v-if="r.it.chase" :class="$style.uniqTop" :title="`The rarest kind of unique (T0): it doesn't count in the average; the base shows in Chase uniques with its own look`"> · chase: {{ r.it.chase.map(x => `${x.name} ${chaosText(x.chaos)}`).join(', ') }}</span><span v-if="r.edited" :class="$style.edited"> edited</span></span>
+              :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ rowName(r.it) }}<span v-if="gemCorrupted(r.it)" :class="$style.corr" title="Corrupted: this price is for a corrupted gem of this level and quality"><WIcon currency="Vaal Orb" size="sm" />Corrupted</span><span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.it.avg && r.it.of && r.it.of > 1" :class="$style.uniqTop" :title="`Priced by an average drop: each of the ${r.it.of} uniques that drop on it, counted by how often it turns up`"> · average of {{ r.it.of }}</span><span v-if="r.it.uniques?.some(u => u.out)" :class="$style.uniqTop" title="You left these out of the average"> · left out: {{ r.it.uniques.filter(u => u.out).map(u => u.name).join(', ') }}</span><span v-if="r.it.chase" :class="$style.uniqTop" :title="`The rarest kind of unique (T0): it doesn't count in the average; the base shows in Chase uniques with its own look`"> · chase: {{ r.it.chase.map(x => `${x.name} ${chaosText(x.chaos)}`).join(', ') }}</span><span v-if="sizeCutNow(r.it, eff) < 1" :class="$style.uniqTop" :title="`Size cut: a ${r.it.size} item counts ${Math.round(sizeCutNow(r.it, eff) * 100)}% of its price`"> · {{ r.it.size }} · {{ Math.round(sizeCutNow(r.it, eff) * 100) }}%</span><span v-if="r.edited" :class="$style.edited"> edited</span></span>
             <span :class="$style.price" :title="r.it.type === 'gold' ? 'No price: the Gold ruler steps each pile by its size' : r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows at least Small' : r.it.est ? `No usable price: a guess from NeverSink's ${r.it.tier ? `tier ${r.it.tier}` : 'tiers'}` : 'poe.ninja'">
               <template v-if="r.it.type === 'gold'">by size</template><template v-else>{{ chaosText(r.it.chaos) }}<span v-if="r.it.est" :class="$style.est"> est.</span></template>
             </span>
@@ -169,7 +172,7 @@ import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import { CHASE_LOOKS, chaseLookOf } from './unique-classes'
 import { toggleNotAvg } from './currency-settings'
-import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode } from './currency-weights'
+import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode, sizeCutNow } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
@@ -421,6 +424,11 @@ function setCatLook (id: string, p: StylePatch | null) {
   if (p) next[id] = { ...c.value.cats[id], ...p }
   c.value.cats = next
 }
+const SIZE_CUTS = [
+  { value: 'auto', label: 'Auto', desc: 'On from Strict (×1.25) up.', dot: 'var(--w-gold)' },
+  { value: 'on', label: 'On', desc: 'Big uniques always count part of their price.', dot: 'var(--w-gold-hi)' },
+  { value: 'off', label: 'Off', desc: 'Every unique counts its whole price.', dot: 'var(--w-faint)', hollow: true }
+]
 // The Chase uniques style: a picked style drops your own colours for the section.
 function setChaseLook (id: string) {
   c.value.chaseLook = id
