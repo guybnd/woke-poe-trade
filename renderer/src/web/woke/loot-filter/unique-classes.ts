@@ -38,8 +38,7 @@ export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color
 // and so do chase bases (Guy 2026-11-28: "a chase unique section that has
 // always on by default").
 export const UNIQUE_MODES: Record<string, SectionMode> = { uniqboss: 'always', uniqchase: 'always' }
-// The chase look's edge, on every step below Tink.
-export const CHASE_EDGE: [number, number, number] = [255, 215, 106]
+
 
 // NeverSink's tiers that list bases by price. Every other unique tier is a
 // special rule and stays NeverSink's.

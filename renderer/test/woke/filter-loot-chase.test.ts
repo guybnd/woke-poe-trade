@@ -59,6 +59,6 @@ describe('unique bases by their average drop', () => {
     expect(sectionMode(cfg, 'uniqchase')).toBe('always')
     const small = currencyLook(1, 'uniqchase', cfg)
     expect(small.icon).toMatchObject({ shape: 'Kite', color: 'Yellow' })
-    expect(small.background?.slice(0, 3)).toEqual([42, 22, 6])
+    expect(small.background?.slice(0, 3)).toEqual([255, 228, 175])
   })
 })

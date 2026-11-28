@@ -26,7 +26,7 @@ import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
-import { CHASE_EDGE, FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
+import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
 import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK } from './map-classes'
 import type { GemLine } from './gem-classes'
@@ -680,16 +680,16 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
   out.icon = size == null ? null : { size, color: step === 5 ? 'Red' : color, shape }
   out.effect = effect ? { ...effect, color: step === 5 ? 'Red' : color } : null
   // Chase uniques (Guy 2026-11-28: "the T0 unique container", "needs a
-  // special look for itself"): one look below Tink whatever the price, gold
-  // on dark brown with a gold edge, a yellow Kite and its own sound. Your
-  // own colour for the section still wins.
+  // special look for itself", and gold on dark read as currency): one look
+  // below Tink whatever the price, unique brown on cream with a brown edge,
+  // a yellow Kite and its own sound. Your own colour for the section wins.
   if (cat === 'uniqchase' && step < 5) {
     const t = c.cats[cat]?.text
     Object.assign(out, {
       fontSize: own.fontSize ?? 45,
-      text: col(t ?? CHASE_EDGE),
-      border: col(t ?? CHASE_EDGE),
-      background: col([42, 22, 6])
+      text: col(t ?? [120, 52, 12]),
+      border: col(t ?? [175, 96, 37]),
+      background: col([255, 228, 175])
     })
     out.icon = { size: 1, color, shape }
     out.effect = { color: 'Yellow', temp: true }
