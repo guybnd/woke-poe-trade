@@ -9,7 +9,7 @@ export interface Notice {
   value: string | number
   warn?: boolean
   // The editor tab that deals with it.
-  tab?: 'prices' | 'neversink' | 'changes'
+  tab?: 'prices' | 'currency' | 'changes'
   // Goes away by itself, so there's nothing to dismiss.
   passing?: boolean
 }
