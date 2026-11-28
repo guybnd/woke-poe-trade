@@ -582,6 +582,24 @@ export const CAT_LOOK: Record<string, { text: [number, number, number], color: s
 const mixTo = (c: number[], to: number, f: number) => c.map(v => Math.round(v + (to - v) * f))
 // The colour pushed 80% further from grey (Normal: "as now but more saturated").
 const vivid = (c: number[]) => { const g = (c[0] + c[1] + c[2]) / 3; return c.map(v => Math.max(0, Math.min(255, Math.round(v + (v - g) * 0.8)))) }
+// Each class's own Decent and Big (Guy 2026-11-28: "it all looks the same as
+// currency"). Currency keeps the amber and orange boxes players know; every
+// other class fills with its own colour, so a gem reads teal, a unique brown,
+// a card blue, a map white and a fragment purple at a glance. Decent: dark
+// text on the class colour. Big: light text on the class colour deepened,
+// with a light edge. Loudness still comes from size, sound, beam and icon.
+// Red stays Tink's.
+type Rgb = [number, number, number]
+export const CLASS_FILL: Partial<Record<LootKind, { decent: { bg: Rgb, text: Rgb }, big: { bg: Rgb, text: Rgb, edge: Rgb } }>> = {
+  gems: { decent: { bg: [27, 200, 190], text: [0, 0, 0] }, big: { bg: [0, 100, 95], text: [255, 255, 255], edge: [190, 255, 250] } },
+  uniques: { decent: { bg: [215, 130, 55], text: [0, 0, 0] }, big: { bg: [125, 55, 15], text: [255, 255, 255], edge: [255, 225, 190] } },
+  cards: { decent: { bg: [120, 200, 255], text: [0, 0, 0] }, big: { bg: [0, 75, 190], text: [255, 255, 255], edge: [205, 235, 255] } },
+  fragments: { decent: { bg: [195, 145, 255], text: [0, 0, 0] }, big: { bg: [90, 30, 150], text: [255, 255, 255], edge: [235, 215, 255] } },
+  // Maps: grey, then the black on white map players know, edged in map gold
+  // (Tink is red text on white with a red beam).
+  maps: { decent: { bg: [205, 205, 205], text: [0, 0, 0] }, big: { bg: [255, 255, 255], text: [0, 0, 0], edge: [230, 190, 40] } }
+}
+
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats'>): { rgb: [number, number, number], color: string, shape: string } {
   const d = CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? CAT_LOOK.other
   const own = c.cats[cat]
@@ -606,8 +624,8 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
   switch (step) {
     case 1: Object.assign(out, { text: col(rgb), border: col(mixTo(rgb, 0, 0.55)), background: col([0, 0, 0], 215) }); break
     case 2: { const k = vivid(rgb); Object.assign(out, { text: col(k), border: col(k), background: col(mixTo(k, 0, 0.8)) }); break }
-    case 3: Object.assign(out, { text: col([0, 0, 0]), border: col(rgb), background: col([255, 190, 0]) }); break
-    case 4: Object.assign(out, { text: col([0, 0, 0]), border: col(rgb), background: col([255, 93, 27]) }); break
+    case 3: { const f = CLASS_FILL[kindOf(cat)]; Object.assign(out, f ? { text: col(f.decent.text), border: col(mixTo(rgb, 255, 0.45)), background: col(f.decent.bg) } : { text: col([0, 0, 0]), border: col(rgb), background: col([255, 190, 0]) }); break }
+    case 4: { const f = CLASS_FILL[kindOf(cat)]; Object.assign(out, f ? { text: col(f.big.text), border: col(f.big.edge), background: col(f.big.bg) } : { text: col([0, 0, 0]), border: col(rgb), background: col([255, 93, 27]) }); break }
     case 5: Object.assign(out, { border: col(rgb) }); break
   }
   // Tink's icon is red, in the category's shape (Guy 2026-11-27).
