@@ -56,16 +56,8 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   // A corpse: the quick price card (the window when poe.ninja has no row).
   'price-check-corpse-card': { check: { name: 'Perfect Hydra', text: CORPSE_ITEM }, spot: 'ninja-card' },
   'price-check-seller-spread': { check: { name: 'Exalted Orb' }, spot: 'seller-spread' },
-  'price-check-gem-kinds': { check: { name: 'Ice Nova of Frostbolts' }, spot: 'related' },
-  // A base has no check by name: the game's text of a plain one.
-  'price-check-chance-uniques': { check: { name: 'Glorious Plate', rarity: 'normal', text: 'Item Class: Body Armours\nRarity: Normal\nGlorious Plate\n--------\nArmour: 776\n--------\nItem Level: 84\n' }, spot: 'related' },
-  'price-check-boss-uniques': { check: { name: 'Hale Negator', rarity: 'unique' }, spot: 'related' },
-  'price-check-related-exalts': { check: { name: 'Exalted Orb' }, spot: 'related' },
   // A Breach unique and its blessed upgrade.
   'price-check-related-upgrades': { check: { name: "Xoph's Inception", rarity: 'unique' }, spot: 'related' },
-  // A Timeless jewel: its conquerors' keystones in the side list.
-  'price-check-conquest-keystones': { check: { name: 'Elegant Hubris', rarity: 'unique' }, spot: 'related' },
-  // A Shaper's Exalted Orb: its family and two fragment groups, folded to fit.
   // A unique with two Foulborn kinds and a Vestigial mod.
   'price-check-unique-foulborn': { check: { name: 'Carcass Jack', rarity: 'unique' }, spot: 'foulborn' },
   // A unique: its drop tier (and its loot filter tier, with a filter loaded) heads the side list.
@@ -85,7 +77,8 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   'search-price-check-bases': { search: 'manifold ring' },
   // A rare with tiered mods: hover one for its ladder.
   'price-check-mod-tiers': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' },
-  // A rare armour: its base roll % beside its defence, to search.
+  // A rare: the roll strip's Base step prices it as its base.
+  'price-check-base-step': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'base-preset' },
   // Worth knowing lines (worth-knowing.ts).
   'wk-mod-ctrl-click': { check: { name: 'Twilight Regalia', rarity: 'rare', base: 'Twilight Regalia', text: MOD_TIERS_ITEM }, spot: 'mod-tiers' },
   'wk-search-sums': { search: '2 div + 30c' },

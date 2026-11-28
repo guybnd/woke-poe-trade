@@ -32,6 +32,7 @@ export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
   { id: 'loot-filter-recipes-by-price', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Recipes steps follow the price of what the vendor gives' },
+  { id: 'price-check-base-step', since: '1.330.24', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a Base step beside Low / Approx / High prices gear as its base in one click' },
   { id: 'loot-filter-levelling', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot › Levelling: Loot looks in the acts and hideout, gear for your build type, flasks, supplies' },
   { id: 'loot-filter-readable-history', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Changes › History says what each change moved, from what to what; repeats fold into one row' },
   { id: 'loot-filter-own-lists', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Loot lists items from the game data; unpriced ones are guessed from last league' },
@@ -66,10 +67,6 @@ export const NEWS: NewsItem[] = [
   { id: 'price-check-conquest-keystones', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a Timeless jewel lists each conqueror\'s keystone beside it. Click one to search it, any number' },
   { id: 'price-check-mod-tiers', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Tooltips', note: 'New: hover a mod for its tiers, the item level each needs, and the bench craft for it' },
   { id: 'search-keys-list', since: '1.330.21', wmType: 'woke-search', name: 'Search', note: 'New: type "keys" for every hotkey you have set and every mouse trick, in one list' },
-  { id: 'price-check-gem-kinds', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a gem, its transfigured kinds, priced' },
-  { id: 'price-check-chance-uniques', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a normal base, the uniques an Orb of Chance can make' },
-  { id: 'price-check-boss-uniques', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: "New: beside a Delve, Abyss or league boss's unique, the boss and its other uniques" },
-  { id: 'price-check-related-exalts', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a currency, every kind of it (all the exalts) and the cards that give a stack of it' },
   { id: 'search-recent-queries', since: '1.330.20', wmType: 'woke-search', name: 'Search', note: 'New: your last 3 searches wait under Recent, even ones you only looked at. Enter or a click puts one back' },
   { id: 'valdo-map-skips', since: '1.330.20', wmType: 'price-check', name: 'Price check', topic: 'Maps', note: 'New: on a Valdo map, set a mod Not and listings with it are hidden; remembered per profile' },
   { id: 'price-check-related-upgrades', since: '1.330.20', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: beside a unique, its upgrade, where it drops and the cards that give it, with prices' },
