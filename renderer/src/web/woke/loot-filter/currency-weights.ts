@@ -882,7 +882,7 @@ const vivid = (c: number[]) => { const g = (c[0] + c[1] + c[2]) / 3; return c.ma
 // Each class's own Decent and Big (Guy 2026-11-28: "it all looks the same as
 // currency"). Currency keeps the amber and orange boxes players know; every
 // other class fills with its own colour, so a gem reads teal, a unique brown,
-// a card blue, a map white and a fragment purple at a glance. Decent: dark
+// a card blue, a special map its kind's tint and a fragment purple at a glance. Decent: dark
 // text on the class colour. Big: light text on the class colour deepened,
 // with a light edge. Loudness still comes from size, sound, beam and icon.
 // Red stays Tink's.
@@ -892,8 +892,8 @@ export const CLASS_FILL: Partial<Record<LootKind, { decent: { bg: Rgb, text: Rgb
   uniques: { decent: { bg: [185, 125, 75], text: [0, 0, 0] }, big: { bg: [125, 55, 15], text: [255, 255, 255], edge: [255, 225, 190] } },
   cards: { decent: { bg: [120, 200, 255], text: [0, 0, 0] }, big: { bg: [0, 75, 190], text: [255, 255, 255], edge: [205, 235, 255] } },
   fragments: { decent: { bg: [195, 145, 255], text: [0, 0, 0] }, big: { bg: [90, 30, 150], text: [255, 255, 255], edge: [235, 215, 255] } },
-  // Maps (Guy's B, 2026-11-28): black on white, edged in the kind's tint
-  // (mapCard below; Tink is red text on white with a red beam).
+  // Maps: mapCard below always sets a special map's card (its kind's tint);
+  // this entry only keeps fillOf defined. Tink is red text on white.
   maps: { decent: { bg: [255, 255, 255], text: [0, 0, 0] }, big: { bg: [255, 255, 255], text: [0, 0, 0], edge: [255, 255, 255] } },
   // Special gear: a green no other class uses.
   special: { decent: { bg: [110, 225, 160], text: [0, 0, 0] }, big: { bg: [10, 95, 55], text: [255, 255, 255], edge: [200, 255, 220] } }
@@ -910,9 +910,10 @@ const fillOf = (cat: string) => CAT_FILL[cat] ?? CLASS_FILL[kindOf(cat)]
 // Normal and Decent, full on Big with a white edge. Plain maps stay black on
 // white with a grey edge (map-floor.ts), so the fill alone says "special".
 // Size, sound and beam make the step louder.
+const lum = (c: number[]) => (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255
 const mapCard = (step: CStep, rgb: number[]): { bg: number[], edge: number[] } | undefined =>
-  step === 2 ? { bg: mixTo(rgb, 255, 0.65), edge: mixTo(rgb, 0, 0.35) }
-    : step === 3 ? { bg: mixTo(rgb, 255, 0.45), edge: mixTo(rgb, 0, 0.45) }
+  step === 2 ? { bg: mixTo(rgb, 255, 0.5), edge: mixTo(rgb, 0, 0.35) }
+    : step === 3 ? { bg: mixTo(rgb, 255, 0.3), edge: mixTo(rgb, 0, 0.45) }
       : step === 4 ? { bg: rgb, edge: [255, 255, 255] }
         : undefined
 
@@ -945,7 +946,8 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
     case 5: Object.assign(out, { border: col(rgb) }); break
   }
   const card = kindOf(cat) === 'maps' ? mapCard(step, rgb) : undefined
-  if (card) Object.assign(out, { text: col([0, 0, 0]), border: col(card.edge), background: col(card.bg) })
+  // Black text, or white on a dark colour you picked for the section.
+  if (card) Object.assign(out, { text: col(lum(card.bg) < 0.4 ? [255, 255, 255] : [0, 0, 0]), border: col(card.edge), background: col(card.bg) })
   // Tink's icon is red, in the category's shape (Guy 2026-11-27).
   out.icon = size == null ? null : { size, color: step === 5 ? 'Red' : color, shape }
   out.effect = effect ? { ...effect, color: step === 5 ? 'Red' : color } : null

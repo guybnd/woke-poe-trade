@@ -368,12 +368,16 @@ describe('currency weights', () => {
     const all = kinds.filter(k => k !== 'mapblight').flatMap(fills).map(x => x!.join(','))
     // Special maps (pick A): a pale tint card on Decent, the full tint on Big
     // with a white edge, never a plain map's white.
-    expect(fills('mapblight')).toEqual([[197, 233, 167], [150, 215, 95]])
+    expect(fills('mapblight')).toEqual([[182, 227, 143], [150, 215, 95]])
     expect(currencyLook(4, 'mapblight', c).border?.slice(0, 3)).toEqual([255, 255, 255])
     expect(currencyLook(4, 'mapblight', c).background).not.toEqual(currencyLook(4, 'maporig', c).background)
     for (const cat of ['mapend', 'mapguard', 'maporig', 'mapmods', 'mapcorr', 'mapblight', 'mapravaged']) {
       for (const s of [2, 3, 4] as const) expect(currencyLook(s, cat, c).background?.slice(0, 3)).not.toEqual([255, 255, 255])
     }
+    // A dark colour you pick for a section gets white text on Big.
+    const dark = { ...c, cats: { ...c.cats, mapguard: { text: [60, 30, 90] } } } as typeof c
+    expect(currencyLook(4, 'mapguard', dark).text?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(currencyLook(4, 'mapguard', c).text?.slice(0, 3)).toEqual([0, 0, 0])
     expect(new Set(all).size).toBe(all.length)
     expect(fills('gemsup')).toEqual(fills('gemskill'))
     expect(currencyLook(4, 'gemskill', c).text?.slice(0, 3)).toEqual([255, 255, 255])
