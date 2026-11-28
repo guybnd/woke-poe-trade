@@ -4,6 +4,8 @@ import { isMapArea } from '../shared/map-areas'
 import { actFromAreaId } from '../campaign/log-parse'
 
 export const LEVEL_NAMES = ['Soft', 'Regular', 'Semi-strict', 'Strict', 'Very strict', 'Uber strict', 'Uber plus']
+// The #TYPE header each level has in a filter file (levelOf reads its digit).
+export const LEVEL_IDS = ['0-SOFT', '1-REGULAR', '2-SEMI-STRICT', '3-STRICT', '4-VERY-STRICT', '5-UBER-STRICT', '6-UBER-PLUS-STRICT']
 export const LEVEL_SHORT = ['So', 'R', 'SS', 'S', 'VS', 'U', 'U+']
 
 export interface LadderStep {

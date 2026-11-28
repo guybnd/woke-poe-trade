@@ -1,13 +1,13 @@
 <template>
   <span :class="$style.wrap" data-goto-spot="loot-strictness" data-loot-strictness>
-    <WSelect v-if="ns.on" :model-value="String(ns.level)" :options="levelOptions" :class="$style.sel" aria-label="Strictness" @update:model-value="v => pick(Number(v))" />
+    <WSelect v-if="levels" :model-value="String(ns.level)" :options="levelOptions" :class="$style.sel" aria-label="Strictness" @update:model-value="v => pick(Number(v))" />
     <span v-else class="w-faint text-xs" title="Strictness comes from the filter file you picked">{{ fileLevel }}</span>
-    <button v-if="ns.on" type="button" :class="[$style.maps, { [$style.on]: auto.on }]" :aria-expanded="open" data-loot-strict-maps
+    <button v-if="levels" type="button" :class="[$style.maps, { [$style.on]: auto.on }]" :aria-expanded="open" data-loot-strict-maps
       :title="auto.on ? 'Strictness follows your maps: click for the ladder' : 'Strictness stays put: click to follow your maps'" @click="open = !open">
       <i class="fas fa-sync-alt" /> Maps<span v-if="auto.on && auto.paused" :class="$style.paused">paused</span>
     </button>
   </span>
-  <div v-if="open && ns.on" :class="$style.fold" data-loot-strict-ladder>
+  <div v-if="open && levels" :class="$style.fold" data-loot-strict-ladder>
     <div class="flex items-center gap-2">
       <WToggle v-model="auto.on">Follow my last {{ RECENT_MAPS }} maps</WToggle>
       <WInfo :text="'Strictness changes by the area level of your last maps.\n- It switches only in town or your hideout, never mid-map, with Undo.\n- Press Reload now to use the new strictness.'" />
@@ -39,6 +39,7 @@ import { computed, ref } from 'vue'
 import { WButton, WInfo, WKbd, WSelect, WToggle, toast } from '../ui'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
+import { levelsOn } from './widget'
 import { LEVEL_NAMES, RECENT_MAPS, stepLabel } from './strictness'
 import { levelOf } from './currency-weights'
 
@@ -49,6 +50,7 @@ const props = defineProps<{
 
 const open = ref(false)
 const ns = computed(() => props.config.neversink)
+const levels = computed(() => levelsOn(props.config))
 const auto = computed(() => props.config.strictAuto)
 const sortedLadder = computed(() => [...auto.value.ladder].sort((a, b) => a.from - b.from))
 const levelOptions = LEVEL_NAMES.map((name, i) => ({ value: String(i), label: name }))

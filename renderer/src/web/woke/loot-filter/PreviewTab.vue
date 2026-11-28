@@ -65,6 +65,7 @@ import type { ItemTipRef } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
+import { levelsOn } from './widget'
 import type { FilterDoc } from './parse'
 import { defaultTextColour, rollDrops } from './drops'
 import type { Drop } from './drops'
@@ -118,10 +119,10 @@ const areaOptions = computed(() => {
 const compareOptions = computed(() => {
   const list = [
     { value: 'off', label: 'No comparison' },
-    { value: 'untouched', label: 'vs NeverSink as it came' }
+    { value: 'untouched', label: props.config.ownBase ? 'vs our base, no rules on it' : 'vs NeverSink as it came' }
   ]
   const ns = props.config.neversink
-  if (ns.on) {
+  if (levelsOn(props.config)) {
     LEVEL_NAMES.forEach((name, i) => { if (i !== ns.level) list.push({ value: String(i), label: `vs ${name}, with your changes` }) })
   }
   return list

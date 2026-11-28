@@ -56,6 +56,7 @@ const problem = computed(() => naming.value ? profileNameProblem(props.config, d
 // What a profile is made from: NeverSink and its strictness, or the file.
 function sourceOf (p: FilterProfile): string {
   const d = p.id === props.config.activeProfile ? props.config : (p.data ?? {})
+  if (d.ownBase) return `Our filter · ${LEVEL_NAMES[d.neversink?.level ?? 2] ?? ''}`
   if (d.neversink?.on) return `NeverSink · ${LEVEL_NAMES[d.neversink.level] ?? ''}`
   return d.sourceOnline ? (d.sourceTitle || 'Online filter') : (d.sourceName?.replace(/\.filter$/i, '') || 'No filter picked')
 }

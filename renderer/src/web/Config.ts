@@ -591,6 +591,16 @@ function upgradeConfig (_config: Config): Config {
     for (const w of lootWidgets) lootOnForAll(w as unknown as Parameters<typeof lootOnForAll>[0])
     ensureWokeConfig(modules).woke.lootOnByDefault = true
   }
+  // woke: NeverSink retired (Guy's full cut, 2026-11-28): every loot filter
+  // moves onto our own base once. Picking a filter file switches it back off.
+  if (!modules.woke?.ownBaseByDefault && (lootWidgets.length || modules.woke)) {
+    for (const w of lootWidgets) {
+      const lw = w as unknown as { ownBase?: boolean, profiles?: Array<{ data?: { ownBase?: boolean } }> }
+      lw.ownBase = true
+      for (const p of Array.isArray(lw.profiles) ? lw.profiles : []) if (p?.data && typeof p.data === 'object') p.data.ownBase = true
+    }
+    ensureWokeConfig(modules).woke.ownBaseByDefault = true
+  }
   // woke: essence scan's on/off hotkey works once the module is on, without
   // adding the panel first. Once only, so one you removed stays removed.
   if (!modules.woke?.essenceScanSeeded && isModuleOn(modules, 'essence-scan')) {

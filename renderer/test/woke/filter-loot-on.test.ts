@@ -3,7 +3,9 @@
 // config gets it switched on once (Config.ts, woke.lootOnByDefault), for the
 // profile in use and every stored one.
 import { describe, expect, it } from 'vitest'
-import { lootOnForAll, normalizeLootFilterWidget, seedLootFilterWidget } from '@/web/woke/loot-filter/widget'
+import { levelsOn, lootOnForAll, normalizeLootFilterWidget, nsDownload, seedLootFilterWidget } from '@/web/woke/loot-filter/widget'
+import { LEVEL_IDS, LEVEL_NAMES } from '@/web/woke/loot-filter/strictness'
+import { levelOf } from '@/web/woke/loot-filter/currency-weights'
 import type { LootFilterWidget } from '@/web/woke/loot-filter/widget'
 import { blankProfileData } from '@/web/woke/loot-filter/profiles'
 import { normalizePresets } from '@/web/woke/loot-filter/presets'
@@ -46,5 +48,26 @@ describe('Loot tab on by default', () => {
     normalizeLootFilterWidget(raw)
     expect(raw.presets.currency.on).toBe(true)
     expect(raw.presets.weights.on).toBe(true)
+  })
+})
+
+// Guy's full cut (2026-11-28): our own filter is the default source.
+describe('own filter by default', () => {
+  it('a new filter starts on our own base, with strictness and no download', () => {
+    const w = seedLootFilterWidget(1)
+    expect(w.ownBase).toBe(true)
+    expect(levelsOn(w)).toBe(true)
+    expect(nsDownload(w)).toBe(false)
+  })
+
+  it('NeverSink from GitHub downloads only while our base is off', () => {
+    expect(nsDownload({ neversink: { on: true } })).toBe(true)
+    expect(nsDownload({ neversink: { on: true }, ownBase: true })).toBe(false)
+    expect(levelsOn({ neversink: { on: false } })).toBe(false)
+  })
+
+  it('every level has its #TYPE header', () => {
+    expect(LEVEL_IDS.map(levelOf)).toEqual([0, 1, 2, 3, 4, 5, 6])
+    expect(LEVEL_IDS).toHaveLength(LEVEL_NAMES.length)
   })
 })

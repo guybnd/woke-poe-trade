@@ -67,6 +67,8 @@ export function defaultNeverSink (): NeverSinkSource {
 }
 
 export const NEVERSINK_OUTPUT = 'NeverSink (woke).filter'
+// What our own filter saves to when no filter file was ever picked.
+export const OWN_OUTPUT = 'Loot filter (woke).filter'
 
 // A named whole filter (profiles.ts). The one in use keeps its settings on the
 // widget; the others carry them in `data`.
@@ -133,8 +135,9 @@ export interface LootFilterWidget extends Widget {
   // and these are moved there on first start.
   history?: unknown
   neversink: NeverSinkSource
-  // Test (NeverSink retirement M3): write only woke's rules, onto our own
-  // skeleton (own-base.ts), with no NeverSink rules underneath.
+  // Our own filter (own-base.ts) under woke's rules, with no NeverSink rules
+  // and no file to read: the default since NeverSink was retired (M7). Off
+  // when you pick another filter file. Each profile has its own.
   ownBase?: boolean
   strictAuto: StrictnessAuto
   // Rules from the rule builder, on top of NeverSink's.
@@ -205,9 +208,10 @@ export function initLootFilterWidget (w: LootFilterWidget) {
 export function seedLootFilterWidget (wmId: number, taken: string[] = []): LootFilterWidget {
   const w = { wmId, wmType: LOOT_FILTER_TYPE, wmTitle: '', wmWants: 'hide', wmZorder: null, wmFlags: [] } as unknown as LootFilterWidget
   initLootFilterWidget(w)
-  // A new filter starts with the Loot and Equipment tabs on.
+  // A new filter starts with the Loot and Equipment tabs on, on our own base.
   w.presets.currency.on = true
   w.presets.weights.on = true
+  w.ownBase = true
   // Order doesn't matter: 'Shift + Alt + F' is 'Alt + Shift + F'.
   const used = new Set(taken.map(sortKeys))
   const free = (key: string | null) => key && !used.has(sortKeys(key)) ? key : null
@@ -218,6 +222,11 @@ export function seedLootFilterWidget (wmId: number, taken: string[] = []): LootF
   w.looserHotkey = free(w.looserHotkey)
   return w
 }
+
+// Strictness levels, their hotkeys and the ladder work on our own filter and
+// on NeverSink from GitHub; only the latter downloads anything.
+export const levelsOn = (w: { neversink?: { on?: boolean }, ownBase?: boolean }): boolean => w.ownBase === true || w.neversink?.on === true
+export const nsDownload = (w: { neversink?: { on?: boolean }, ownBase?: boolean }): boolean => w.ownBase !== true && w.neversink?.on === true
 
 // Once per config (Config.ts, woke.lootOnByDefault): the Loot and Equipment tabs go on for
 // the profile in use and every stored one, as NeverSink's tab is retired.
@@ -405,6 +414,8 @@ export function baseFromCopy (text: string): string {
 
 type OutputOf = Pick<LootFilterWidget, 'sourceName' | 'saveMode' | 'sourceOnline' | 'sourceTitle'> & {
   neversink?: { on: boolean }
+  // Our own filter: never written over the picked file (overwrite mode).
+  ownBase?: boolean
   // The profile it saves for; without one, the profile in use (if any).
   profile?: Pick<FilterProfile, 'name' | 'legacyFile'> | null
   profiles?: FilterProfile[]
@@ -427,12 +438,14 @@ export function outputName (w: OutputOf): string {
 
 function legacyOutput (w: OutputOf): string {
   if (w.neversink?.on) return NEVERSINK_OUTPUT
+  // Our own filter with no file ever picked (a new install).
+  if (!w.sourceName) return OWN_OUTPUT
   // Working on an edited copy itself: it stays the copy.
   if (!w.sourceOnline && isWokeCopy(w.sourceName)) return w.sourceName
   if (w.sourceOnline) {
     const safe = (w.sourceTitle || w.sourceName).replace(/[<>:"/\\|?*]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
     return `${safe || 'Online filter'} (woke).filter`
   }
-  if (w.saveMode === 'overwrite') return w.sourceName
+  if (w.saveMode === 'overwrite' && !w.ownBase) return w.sourceName
   return w.sourceName.replace(/\.filter$/i, '') + ' (woke).filter'
 }
