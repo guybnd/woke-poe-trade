@@ -45,7 +45,11 @@ describe('our own filter skeleton', () => {
   it('is a filter the game reads, at the strictness given', () => {
     const doc = parseFilter(ownBaseText('4-VERY-STRICT'))
     expect(doc.strictness).toBe('4-VERY-STRICT')
-    expect(doc.blocks.map(b => [b.type, b.tier, b.visibility])).toEqual([[OWN_REST_TYPE, 'plaingear', 'Hide'], [OWN_REST_TYPE, 'qualityflasks', 'Show'], [OWN_REST_TYPE, 'unknown', 'Show']])
+    expect(doc.blocks.map(b => [b.type, b.tier, b.visibility])).toEqual([
+      [OWN_REST_TYPE, 'plaingear', 'Hide'], [OWN_REST_TYPE, 'qualityflasks', 'Show'], [OWN_REST_TYPE, 'plainflasks', 'Hide'], [OWN_REST_TYPE, 'magicflasks', 'Hide'], [OWN_REST_TYPE, 'plainjewels', 'Hide'], [OWN_REST_TYPE, 'rarejewels', 'Show'], [OWN_REST_TYPE, 'magicabyss', 'Show'],
+      [OWN_REST_TYPE, 'uniques', 'Show'], [OWN_REST_TYPE, 'blightravaged', 'Show'], [OWN_REST_TYPE, 'blightedmaps', 'Show'],
+      [OWN_REST_TYPE, 'maps16', 'Show'], [OWN_REST_TYPE, 'maps11', 'Show'], [OWN_REST_TYPE, 'maps6', 'Show'], [OWN_REST_TYPE, 'maps1', 'Show'], [OWN_REST_TYPE, 'unknown', 'Show']
+    ])
     expect(parseFilter(ownBaseText(null)).strictness).toBe('2-SEMI-STRICT')
   })
 
