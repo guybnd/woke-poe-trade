@@ -34,20 +34,22 @@
       </label>
 
       <div :class="$style.terms" data-no-item-tip="the parts of the item's score; the item itself is named in the card title">
-        <div :class="$style.term" data-score-rank-row>
+        <div :class="[$style.term, { [$style.opener]: !flask }]" data-score-rank-row :title="flask ? undefined : 'Click for every rank\'s points'" @click.self="!flask && toggle('rank')">
           <i class="fas fa-shield-alt" aria-hidden="true" />
-          <span class="grow">{{ view.rankLabel }} <small>· Base rank</small>
+          <span class="grow" @click="!flask && toggle('rank')">{{ view.rankLabel }} <small>· Base rank</small><i v-if="!flask" :class="['fas', open === 'rank' ? 'fa-caret-up' : 'fa-caret-down', $style.caret]" aria-hidden="true" />
             <small v-if="wasLabel"> · default {{ wasLabel }} · <button type="button" :class="$style.link" data-score-rank-reset @click="setRank(got!.row.was!)">reset</button></small>
           </span>
           <span :class="[$style.pts, $style[signOf(view.rankPts)]]">{{ pointsText(view.rankPts) }}</span>
         </div>
+        <ScoreSection v-if="open === 'rank'" :rows="sectionRows('rank')" :step-to="stepTo" @bump="bump" />
         <div :class="$style.ranks" role="group" aria-label="Base rank">
           <button v-for="r in view.ranks" :key="r.key" type="button" :class="$style.lane" :aria-pressed="r.key === view.rank" :style="{ '--dot': STEP_CSS[r.step] }"
             :title="`${r.label}: lands ${STEP_SHORT[r.step]} (${pointsText(r.pts)})`" :data-score-rank="r.key" @click="setRank(r.key)">{{ r.label }}</button>
         </div>
-        <div v-for="t in view.rows" :key="t.key" :class="[$style.term, { [$style.off]: !t.counts, [$style.tunable]: t.tunable }]" :title="t.title" :data-score-term="t.key">
+        <template v-for="t in view.rows" :key="t.key">
+        <div :class="[$style.term, { [$style.off]: !t.counts, [$style.tunable]: t.tunable, [$style.opener]: t.tunable }]" :title="t.title" :data-score-term="t.key">
           <i :class="t.icon" aria-hidden="true" />
-          <span class="grow">{{ t.label }} <small>· {{ t.group }}</small><small v-if="t.hint" :class="$style.hint"> {{ t.hint }}</small></span>
+          <span class="grow" :data-score-open="t.tunable ? t.key : undefined" @click="t.tunable && toggle(t.key)">{{ t.label }} <small>· {{ t.group }}</small><small v-if="t.hint" :class="$style.hint"> {{ t.hint }}</small><i v-if="t.tunable" :class="['fas', open === t.key ? 'fa-caret-up' : 'fa-caret-down', $style.caret]" aria-hidden="true" /></span>
           <span :class="[$style.pts, $style[signOf(t.pts)]]">{{ pointsText(t.pts) }}</span>
           <span v-if="t.tunable" :class="$style.stp">
             <button type="button" :disabled="!stepTo(t.key, -1)" :aria-label="`Lower ${t.label}, every rare`" data-score-lower @click="bump(t.key, -1)">‹</button>
@@ -55,9 +57,11 @@
             <button type="button" :disabled="!stepTo(t.key, 1)" :aria-label="`Raise ${t.label}, every rare`" data-score-raise @click="bump(t.key, 1)">›</button>
           </span>
         </div>
+        <ScoreSection v-if="open === t.key" :rows="sectionRows(t.key)" :step-to="stepTo" @bump="bump" />
+        </template>
         <div :class="$style.total"><span class="grow">Total</span><b>{{ pointsText(view.pts) }}</b></div>
         <div v-if="last" :class="$style.chg" data-score-changed>
-          {{ last.label }}: {{ pointsText(points(last.from)) }} → {{ pointsText(points(last.to)) }}, for every rare with it.
+          {{ last.label }}, for every rare with it.
           <button type="button" :class="$style.link" @click="undo">Undo</button>
         </div>
       </div>
@@ -86,11 +90,12 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { WPanel } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import ScoreRuler from './ScoreRuler.vue'
+import ScoreSection from './ScoreSection.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
 import type { MatchResult } from './match'
-import { MULT_STEPS, NEED_MAX, NEED_MIN, RANK_KEYS, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, lookKeyOf, LOOK_LABEL, multRange, stepFor, stepOf, termsOf, weightOf } from './weights'
+import { MULT_STEPS, NEED_MAX, NEED_MIN, RANK_KEYS, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, lookKeyOf, LOOK_LABEL, MARK_ROWS, ORDERED_ROWS, stepFor, stepOf, termsOf, weightOf } from './weights'
 import type { LookChannel, Step, WeightKey } from './weights'
 import { fromPoints, points, pointsText } from './weight-samples'
 import { setWeightRank, weightRow } from './weight-rank'
@@ -246,31 +251,50 @@ function moveRank (dir: 1 | -1) {
   if (to) setRank(to)
 }
 
-// A row's multiplier, one step of the editor's up or down (it changes every
-// rare with that mark, so the card says so and offers an undo).
-const last = ref<{ key: WeightKey, label: string, from: number, to: number } | null>(null)
-watch(() => props.facts, () => { last.value = null; dragLine.value = null })
+// A row's multiplier, one step of the editor's up or down. It changes every
+// rare with that mark, so the card says so and offers an undo. Rows kept in
+// order (drop tiers, item levels) push their neighbours along (Guy,
+// 2026-11-28): raise Tier 3 past Tier 4 and Tier 4 rises with it.
+const last = ref<{ label: string, before: Record<WeightKey, number> } | null>(null)
+// The section whose rows are open for editing (a row's key, or 'rank').
+const open = ref<string | null>(null)
+watch(() => props.facts, () => { last.value = null; dragLine.value = null; open.value = null })
+const MARK_SET = new Set<string>(MARK_ROWS)
 function stepTo (key: WeightKey | string, dir: 1 | -1): number | null {
   if (!(key in w.value.mult)) return null
   const k = key as WeightKey
-  const [lo, hi] = multRange(w.value.mult, k)
+  const lo = MARK_SET.has(k) ? 1 : 0
   const cur = w.value.mult[k]
-  const ok = MULT_STEPS.filter(s => s >= lo && s <= hi && (dir > 0 ? s > cur + 1e-9 : s < cur - 1e-9))
+  const ok = MULT_STEPS.filter(s => s >= lo && (dir > 0 ? s > cur + 1e-9 : s < cur - 1e-9))
   return ok.length ? (dir > 0 ? ok[0] : ok[ok.length - 1]) : null
 }
 function bump (key: WeightKey | string, dir: 1 | -1) {
   const to = stepTo(key, dir)
   if (to == null) return
   const k = key as WeightKey
-  const from = last.value?.key === k ? last.value.from : w.value.mult[k]
-  w.value.mult = { ...w.value.mult, [k]: to }
-  last.value = { key: k, label: `${WEIGHT_LABEL[k]} (${GROUP_OF[k]?.label ?? ''})`, from, to }
+  const before = last.value?.before ?? { ...w.value.mult }
+  const m = { ...w.value.mult, [k]: to }
+  for (const row of ORDERED_ROWS) {
+    const i = row.indexOf(k)
+    if (i < 0) continue
+    for (let j = i + 1; j < row.length; j++) m[row[j]] = Math.max(m[row[j]], to)
+    for (let j = 0; j < i; j++) m[row[j]] = Math.min(m[row[j]], to)
+  }
+  w.value.mult = m
+  const moved = (Object.keys(m) as WeightKey[]).filter(x => m[x] !== before[x])
+  last.value = moved.length ? { label: moved.map(x => `${WEIGHT_LABEL[x]} ${pointsText(points(before[x]))} → ${pointsText(points(m[x]))}`).join(', '), before } : null
 }
 function undo () {
   if (!last.value) return
-  w.value.mult = { ...w.value.mult, [last.value.key]: last.value.from }
+  w.value.mult = { ...w.value.mult, ...last.value.before }
   last.value = null
 }
+// Every row of a section, for the open dropdown.
+function sectionRows (key: string) {
+  const g = key === 'rank' ? WEIGHT_GROUPS.find(x => x.rows.some(r => r.key === 'r1')) : GROUP_OF[key as WeightKey]
+  return (g?.rows ?? []).map(r => ({ key: r.key, label: r.label, pts: points(w.value.mult[r.key]), dflt: points(r.dflt), mine: key === 'rank' ? r.key === view.value?.rank : r.key === key }))
+}
+function toggle (key: string) { open.value = open.value === key ? null : key }
 function tune () {
   emit('open-editor', { type: WEIGHT_TYPE, tier: flask.value ? 'flask' : 'weights' })
 }
@@ -315,6 +339,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 .term .hint { color: var(--w-dim); margin-left: 6px; }
 .term.off { opacity: 0.5; }
 .term.off .pts { text-decoration: line-through; }
+.opener > .grow { cursor: pointer; }
+.caret { margin-left: 5px; color: var(--w-faint); font-size: var(--w-fs-xs); }
 .tunable:hover, .tunable:focus-within { background: rgb(255 255 255 / 4%); }
 .stp { position: absolute; right: 0; top: 50%; transform: translateY(-50%); display: none; align-items: center; gap: 2px; background: var(--w-panel); border: 1px solid var(--w-border); border-radius: 10px; padding: 0 2px; }
 .tunable:hover .stp, .tunable:focus-within .stp { display: flex; }
