@@ -1030,13 +1030,25 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   // gem (Arc 1 catches Arc 21/20): a narrower band that shows gets its rule
   // again just above the Hide, so it keeps its own step.
   const rescued = new Set<string>()
+  // Each gem band's thresholds once, by base: a rescue only looks at bands
+  // of the same gem (it ran over every item for every hidden one).
+  const bands = new Map<CurrencyItem, NonNullable<ReturnType<typeof bandOfConds>>>()
+  const bandsByBt = new Map<string | undefined, CurrencyItem[]>()
+  for (const it of items) {
+    const b = bandOfConds(it)
+    if (!b) continue
+    bands.set(it, b)
+    const list = bandsByBt.get(it.bt)
+    if (list) list.push(it)
+    else bandsByBt.set(it.bt, [it])
+  }
   const rescue = (list: CurrencyItem[], step: CStep = 5) => {
     for (const it of list) {
-      const a = bandOfConds(it)
+      const a = bands.get(it)
       if (!a) continue
-      for (const n of items) {
-        const b = bandOfConds(n)
-        if (n === it || !b || n.bt !== it.bt || rescued.has(`${it.name}|${n.name}`) || forcedHidden(n, cfg)) continue
+      for (const n of bandsByBt.get(it.bt) ?? []) {
+        const b = bands.get(n)!
+        if (n === it || rescued.has(`${it.name}|${n.name}`) || forcedHidden(n, cfg)) continue
         if (!(b.level >= a.level && b.quality >= a.quality && (b.corrupted || !a.corrupted) && b.trans === a.trans)) continue
         const top = steps(n)[0]
         // A louder one's rule is above the Hide already.
@@ -1146,9 +1158,16 @@ function gemLvFloors (cfg: CurrencySettings): LvFloor[] {
 function lvFloor (blocks: FilterBlock[], f: LvFloor, list: CurrencyItem[], cfg: CurrencySettings, clsCond: (l: CurrencyItem[]) => FilterCondition[], btCond: (l: CurrencyItem[]) => FilterCondition[]) {
   if (!list.length) return
   const names = new Set(list.flatMap(i => i.bts ?? [i.bt ?? i.name]))
+  // Asked of the same blocks for every put: once each.
+  const touched = new WeakMap<FilterBlock, boolean>()
   const touches = (b: FilterBlock) => {
-    const bt = b.conditions.find(x => x.key === 'BaseType')
-    return !f.names || !bt || bt.values.some(v => names.has(v))
+    if (!f.names) return true
+    let t = touched.get(b)
+    if (t === undefined) {
+      const bt = b.conditions.find(x => x.key === 'BaseType')
+      touched.set(b, t = !bt || bt.values.some(v => names.has(v)))
+    }
+    return t
   }
   const stepOf = (b: FilterBlock) => b.visibility === 'Hide' || b.tier === 'faint' ? 0 : Number(b.tier?.slice(1)) || 0
   const put = (step: CStep, conds: FilterCondition[], note: string, cat: string) => {

@@ -102,6 +102,21 @@ export type PriceLookup = (group: EconomyGroup, base: string) => PricePoint | nu
 
 export type UniqueRule = 'max' | 'min'
 
+// A lookup remembers what it found: one snapshot gives one answer per group
+// and base, and a rebuild asks for the same thousands of bases again and
+// again (every rule's BaseType list, for every group). The lookup is made
+// anew when prices change, so the memory never goes stale.
+export function memoLookup (lookup: PriceLookup): PriceLookup {
+  const seen = new WeakMap<EconomyGroup, Map<string, PricePoint | null>>()
+  return (group, base) => {
+    let m = seen.get(group)
+    if (!m) seen.set(group, m = new Map())
+    let hit = m.get(base)
+    if (hit === undefined) m.set(base, hit = lookup(group, base))
+    return hit
+  }
+}
+
 // One price per (type, name, base). 5-link, 6-link and relic lines of uniques are
 // not what drops. A plain line is the price; when there are only variants
 // (passives on a cluster jewel, sockets, the base it rolled on), the drop could
@@ -175,7 +190,7 @@ export function priceLookup (
     const swing = priceSwing(i)
     return { chaos: i.chaos, thin: isThin(i), volatile: swing != null, ...(swing ? { swing } : {}), ...(i.day1 ? { day1: true } : {}) }
   }
-  return (group, base) => {
+  return memoLookup((group, base) => {
     if (!group.unique) {
       const hit = find(group.ninja, base)
       return hit ? point(hit) : null
@@ -191,7 +206,7 @@ export function priceLookup (
     // unique is never hidden because it shares a base with junk.
     const pick = priced.reduce((a, b) => (rule === 'max' ? b.chaos > a.chaos : b.chaos < a.chaos) ? b : a)
     return { ...point(pick), note: priced.length > 1 ? `${pick.name}, 1 of ${priced.length}` : pick.name }
-  }
+  })
 }
 
 // How far a price moved: what it was a day or a week ago.
@@ -266,7 +281,7 @@ export function dropLookup (
   const max = priceLookup(items, uniquesOnBase, 'max', 'drop')
   const best = priceLookup(items, allOnBase, 'max', 'drop')
   const find = priceFinder(items, 'drop')
-  return (group, base) => {
+  return memoLookup((group, base) => {
     if (!group.unique || group.foulborn || group.links || group.special) return max(group, base)
     const world = uniquesOnBase(base).filter(name => !isReplica(name))
     if (!world.length) return { ...(best(group, base) ?? { chaos: 0, thin: true }), noWorld: true }
@@ -305,7 +320,7 @@ export function dropLookup (
         })).sort((a, b) => b.chaos - a.chaos)
       }
     }
-  }
+  })
 }
 
 // What the net and the health list judge by: always a base's best unique, and
