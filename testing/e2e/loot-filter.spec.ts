@@ -1339,6 +1339,9 @@ test('Currency weights: Alt + F on currency shows its step first, a Shows switch
   await card.locator('[data-currency-card-shows]').click()
   await card.locator('[data-currency-card-section]').getByRole('button', { name: /^Orbs:/ }).click()
   await page.getByRole('menuitemradio', { name: /^Hide/ }).click()
+  // The section's menu stays open for its Price bias; Esc closes it.
+  await page.keyboard.press('Escape')
+  await expect(page.locator('[data-state-chip-menu]')).toHaveCount(0)
   await expect(page.locator('[data-currency-card-now]')).toContainText('Orbs is set to Hide')
   await card.locator('[data-currency-card-item]').getByRole('button', { name: /^Chaos Orb:/ }).click()
   await page.getByRole('menuitemradio', { name: /^Always/ }).click()
