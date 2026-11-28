@@ -356,6 +356,16 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     clusterSig.value = c.clusterSig
     presetList.value = c.presetSig
     statuses.value = cfg().edits.map(e => c.results.get(e.id)!)
+    // Our own filter has no NeverSink tiers: a change saved against one never
+    // fits again, so it goes (Guy 2026-11-28: a clean slate, no new homes).
+    // Changes on our own rules (woke->...) stay: those come and go with prices.
+    if (cfg().ownBase) {
+      const stale = new Set(statuses.value.filter(s => !s.ok && !s.edit.type.startsWith('woke->')).map(s => s.edit.id))
+      if (stale.size) {
+        cfg().edits = cfg().edits.filter(e => !stale.has(e.id))
+        statuses.value = statuses.value.filter(s => !stale.has(s.edit.id))
+      }
+    }
     priceMoved = c.outOfPlace
     doc.value = c.doc
     publishActiveFilter(api)

@@ -37,7 +37,8 @@ export const LEAGUE_CATEGORIES: LootCategory[] = [
   { id: 'lgcharts', name: 'Charts', art: 'Coral Reef Chart' },
   { id: 'lgmerc', name: 'Mercenary warrants', art: 'Mercenary Warrant' },
   { id: 'lgheistgear', name: 'Heist gear', art: 'Whisper-woven Cloak' },
-  { id: 'lgcorpse', name: 'Corpses', art: 'Perfect Forest Tiger' }
+  { id: 'lgcorpse', name: 'Corpses', art: 'Perfect Forest Tiger' },
+  { id: 'lgwomb', name: 'Wombgifts', art: 'Ancient Wombgift' }
 ]
 export const LEAGUE_IDS = new Set(LEAGUE_CATEGORIES.map(x => x.id))
 
@@ -56,7 +57,8 @@ export const LEAGUE_LOOK: Record<string, { text: [number, number, number], color
   lgcharts: { text: [170, 200, 255], color: 'Blue', shape: 'Pentagon' },
   lgmerc: { text: [235, 235, 235], color: 'White', shape: 'Pentagon' },
   lgheistgear: { text: [200, 160, 130], color: 'Brown', shape: 'Pentagon' },
-  lgcorpse: { text: [190, 210, 180], color: 'Grey', shape: 'Pentagon' }
+  lgcorpse: { text: [190, 210, 180], color: 'Grey', shape: 'Pentagon' },
+  lgwomb: { text: [249, 150, 25], color: 'Orange', shape: 'Pentagon' }
 }
 
 const JOBS = ['Bunker', 'Laboratory', 'Mansion', 'Prohibited Library', 'Records Office', 'Repository', "Smuggler's Den", 'Tunnels', 'Underbelly']
@@ -111,6 +113,14 @@ export const LEAGUE_ROWS: LeagueRow[] = [
 // Corpses (NeverSink retirement M4a): priced by name on poe.ninja's Corpse
 // page; the names from the game data's lists, else the filter's. A guess by
 // its grade while poe.ninja has no line.
+// Wombgifts (Guy 2026-11-28): priced by name on poe.ninja's Wombgift page
+// (its cheapest item level band), else a guess. The game data's list wins
+// over this one.
+export const WOMBGIFTS = ['Mysterious Wombgift', 'Lavish Wombgift', 'Provisioning Wombgift', 'Ancient Wombgift']
+export function wombgiftGuess (name: string): number {
+  return /^Ancient /.test(name) ? 3 : 1
+}
+
 export function corpseGuess (name: string): number {
   return /^Perfect /.test(name) ? 5 : /^Imperfect /.test(name) ? 0.3 : 1
 }
