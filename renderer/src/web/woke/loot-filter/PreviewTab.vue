@@ -1,5 +1,5 @@
 <template>
-  <div :class="$style.wrap" class="w-scroll">
+  <div :class="$style.wrap" class="w-scroll" data-filter-preview>
     <div :class="$style.head">
       <WSegmented :model-value="String(area)" :options="areaOptions" title="Area level the pile drops in" @update:model-value="v => area = Number(v)" />
       <WSelect :model-value="compare" :options="compareOptions" style="width: 14rem;" aria-label="Compare with" @update:model-value="v => compare = String(v)" />

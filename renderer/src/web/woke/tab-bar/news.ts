@@ -31,6 +31,7 @@ export interface NewsItem {
 export type NewsTopic = 'Tooltips' | 'Maps' | 'Prices & search' | 'Related'
 
 export const NEWS: NewsItem[] = [
+  { id: 'loot-filter-tutorial', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: a short tour of the loot filter, and ? in its title bar explains each part.' },
   { id: 'loot-filter-window-tabs', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: the editor now has Loot, Gear, Style, Preview and History tabs, with your own rules first on Loot' },
   { id: 'loot-filter-own-filter', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: our own loot filter replaces NeverSink: no download, same strictness and hotkeys' },
   { id: 'loot-filter-equip-tinctures', since: '1.330.24', wmType: 'woke-loot-filter', goto: 'editor', name: 'Loot filter', note: 'New: Gear › Tinctures ranks each tincture base by quality and item level, like Flasks' },

@@ -1894,3 +1894,72 @@ test('our own filter: no file needed, strictness on the Loot tab, saved as our f
   expect(text).toContain("woke-poe-trade's own loot filter")
   expect(text).toContain('$type->woke->rest')
 })
+
+test('tutorial: the first window shows a six-card tour, ? explains each part with Show me, and the first Alt + F has three cards', async ({ overlay, fakeApp }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  await overlay.boot({ tips: true, widgets: [{ ...lootFilter(folder), sourceName: '', ownBase: true, reloadWhenSafe: false, presets: { currency: { on: true } } }] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  // A: the tour, from All loot to Preview.
+  const tour = page.locator('[data-filter-tour]')
+  await expect(tour).toHaveAttribute('data-step', 'all')
+  await expect(tour).toContainText('1 of 6')
+  await expect(tour).toContainText('One ruler for everything')
+  await expect(page.locator('[data-tour-ring]')).toBeVisible()
+  await overlay.snap('tour card, All loot')
+  for (const id of ['section', 'steps', 'mode', 'gear', 'preview']) {
+    await tour.locator('[data-tour-next]').click()
+    await expect(tour).toHaveAttribute('data-step', id)
+  }
+  await expect(tour).toContainText('6 of 6')
+  await expect(tour.locator('[data-tour-next]')).toHaveCount(0)
+  await tour.locator('[data-tour-done]').click()
+  await expect(tour).toHaveCount(0)
+
+  // C: the ? is lit until first opened; its page has a tile per part.
+  const q = page.locator('[data-filter-help-btn]')
+  await expect(q).toHaveAttribute('data-lit', '')
+  await q.click()
+  const help = page.locator('[data-filter-help]')
+  await expect(help.locator('[data-help-tile]')).toHaveCount(7)
+  await expect(q).not.toHaveAttribute('data-lit', '')
+  await expect(help.locator('[data-help-tile="altf"]')).toContainText('Ctrl')
+  await overlay.snap('how the filter works')
+  // Show me closes the page and flashes the part.
+  await help.locator('[data-help-tile="mode"] [data-help-show]').click()
+  await expect(help).toHaveCount(0)
+  await expect(page.locator('[data-loot-section-mode]').first()).toHaveAttribute('data-goto-flashed', '')
+  // Esc closes it, and Replay tour plays the tour again.
+  await q.click()
+  await expect(help).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(help).toHaveCount(0)
+  await q.click()
+  await help.locator('[data-filter-help-replay]').click()
+  await expect(tour).toHaveAttribute('data-step', 'all')
+  await tour.getByRole('button', { name: 'End the tour' }).click()
+  await expect(tour).toHaveCount(0)
+
+  // F1: the first Alt + F gets the rule path, the needle and Ctrl + Z.
+  fakeApp.focusGame(true)
+  await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+F')
+  await overlay.copyItem('items/currency-chaos.txt', 'Alt + F')
+  await expect(page.locator('[data-currency-card]')).toBeVisible()
+  const altf = page.locator('[data-altf-tour]')
+  await expect(altf).toHaveAttribute('data-step', 'path')
+  await expect(altf).toContainText('1 of 3')
+  await overlay.snap('alt f card, rule path')
+  await altf.locator('[data-tour-next]').click()
+  await expect(altf).toHaveAttribute('data-step', 'needle')
+  await altf.locator('[data-tour-next]').click()
+  await expect(altf).toHaveAttribute('data-step', 'undo')
+  await expect(altf).toContainText('undoes the last change')
+  await altf.locator('[data-tour-done]').click()
+  await expect(altf).toHaveCount(0)
+  // Once only.
+  fakeApp.focusGame(true)
+  await overlay.copyItem('items/currency-chaos.txt', 'Alt + F')
+  await expect(page.locator('[data-currency-card]')).toBeVisible()
+  await page.waitForTimeout(800)
+  await expect(altf).toHaveCount(0)
+})

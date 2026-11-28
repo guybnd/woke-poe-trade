@@ -5,7 +5,9 @@
        it) with Show it; where it lands and its score; the ruler (drag the
        needle through the base ranks); what decides when it isn't the score;
        the ranks; every part of the score, each opening to all its options. -->
-  <WPanel title="Filter rule for this item" size-key="score" width="29rem" max-height="85vh">
+  <WPanel ref="panel" :keys="windowKeys.help" title="Filter rule for this item" size-key="score" width="29rem" max-height="85vh">
+    <!-- The first Alt+F's three cards (filter-tour.ts, Guy's F1). -->
+    <TourCard v-if="altfTour" :steps="ALTF_TOUR_STEPS" :tour="ALTF_TOUR" label="Alt+F tour" :scope="`#widget-${config.wmId} `" need-first data-altf-tour @end="altfTour = false" />
     <div v-if="view" :class="$style.body" :data-score-flask="flask ? '' : undefined" data-score-card>
       <div :class="$style.hd">
         <span :class="$style.nm" data-no-item-tip="the item the player is checking, named in its own price check">{{ facts.name }}
@@ -98,7 +100,7 @@
         <span class="text-xs grow" :class="store.error.value ? '' : 'w-dim'" :style="store.error.value ? 'color: var(--w-down)' : ''">
           {{ store.error.value ?? (store.dirty.value ? 'Unsaved changes' : (store.pendingReload.value ? 'Saved, not in the game until you reload' : (store.lastSaved.value ? 'Saved' : ''))) }}
         </span>
-        <WButton size="sm" variant="primary" :disabled="store.saving.value" data-score-save @click="store.save({ reloadNow: true })">{{ config.reloadViaChat ? 'Save + reload' : 'Save' }}</WButton>
+        <WButton size="sm" variant="primary" :disabled="store.saving.value" data-score-save data-filter-card-save @click="store.save({ reloadNow: true })">{{ config.reloadViaChat ? 'Save + reload' : 'Save' }}</WButton>
       </div>
     </template>
   </WPanel>
@@ -107,7 +109,7 @@
 <script setup lang="ts">
 // Alt+F for an item Rare weights decide: its score, part by part, where it
 // lands against the line, and what to change to move it.
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { WButton, WInfo, WPanel, WSegmented } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import ScoreRuler from './ScoreRuler.vue'
@@ -128,6 +130,10 @@ import { MODE_WORDS } from './section-modes'
 import { STEP_CSS, STEP_SHORT } from './score-steps'
 import { readStyle } from './edits'
 import { cssColour } from './label-style'
+import { useWindowKeys } from '../ui/window-keys'
+import { hintsOff, isHintDone } from '../shared/hints'
+import { ALTF_TOUR, ALTF_TOUR_STEPS } from './filter-tour'
+const TourCard = defineAsyncComponent(() => import('../shared/TourCard.vue'))
 
 const props = defineProps<{
   store: LootFilterStore
@@ -138,6 +144,19 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'open-editor', at?: { type: string, tier: string }): void
 }>()
+
+// Ctrl + Z / Ctrl + Y step through the editor's undo steps, as on the
+// Alt+F card for the Loot tab (SampleCard), and Ctrl + S saves.
+const panel = ref<InstanceType<typeof WPanel> | null>(null)
+const windowKeys = useWindowKeys(() => panel.value?.el, {
+  undo: () => { props.store.undoStep() },
+  redo: () => { props.store.redoStep() },
+  save (repeat) {
+    if (!repeat && props.store.dirty.value && !props.store.saving.value) props.store.save({ reloadNow: true }).catch(() => {})
+  }
+})
+// The first Alt+F's cards: once, then never again.
+const altfTour = ref(!hintsOff() && !isHintDone(ALTF_TOUR))
 
 const w = computed(() => props.config.presets.weights)
 const got = computed(() => weightRow(props.store, props.config, props.facts))

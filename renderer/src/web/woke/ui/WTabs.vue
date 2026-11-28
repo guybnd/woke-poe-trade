@@ -1,7 +1,7 @@
 <template>
   <div :class="[$style.tabs, 'w-tabs']" role="tablist">
     <button v-for="opt in options" :key="opt.value" type="button" role="tab"
-      :aria-selected="opt.value === modelValue"
+      :aria-selected="opt.value === modelValue" :data-tab="opt.value"
       :class="[$style.tab, { [$style.active]: opt.value === modelValue, [$style.tinted]: !!opt.colour }]"
       :style="opt.colour ? { '--tab-colour': opt.colour } : undefined" :title="opt.title"
       @click="emit('update:modelValue', opt.value)">
