@@ -360,7 +360,7 @@ function getVaults (item: ParsedItem, vaults: Vault[]) {
     rows.sort((a, b) => chaosOfPrice(b.price) - chaosOfPrice(a.price))
     // The rewards that aren't one item, named ("Threads"), not counted:
     // no count ("#x"), and "Valuable" isn't a name mid-sentence.
-    const others = v.rewards.filter(r => !r.items?.length).map(r => r.text.replace(/^[\d#-]+x\s+/, '').replace(/^Valuableb/, 'valuable'))
+    const others = v.rewards.filter(r => !r.items?.length).map(r => r.text.replace(/^[\d#-]+x\s+/, '').replace(/^Valuable /, 'valuable '))
     const gems = rows.some(r => r.info.namespace === 'GEM')
     return [{
       key: `vault:${v.id}`,
