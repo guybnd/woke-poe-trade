@@ -32,7 +32,9 @@ const cache = new Map<string, Family | null>()
 export function familyOf (name: string, icon: string | null | undefined): Family | null {
   if (cache.has(name)) return cache.get(name)!
   const path = artPath(icon)
-  const fam = path ? RULES.find(([re]) => re.test(path))?.[1] ?? null : null
+  let fam = path ? RULES.find(([re]) => re.test(path))?.[1] ?? null : null
+  // Jet Amulet and an orb share talisman art.
+  if (fam?.id === 'talisman' && !/Talisman$/.test(name)) fam = null
   cache.set(name, fam)
   return fam
 }
