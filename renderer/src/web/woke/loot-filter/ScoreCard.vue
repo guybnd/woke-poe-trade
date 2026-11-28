@@ -4,7 +4,7 @@
        line, every part of the score (the base rank's choices in its own row,
        the rest tunable on hover), and what moves it a step. -->
   <WPanel title="Item score" size-key="score" width="25rem" max-height="85vh">
-    <template #actions><span class="w-faint text-xs">{{ flask ? 'Flasks' : 'Rare weights' }}</span></template>
+    <template #actions><span class="w-faint text-xs">{{ flask ? 'Flasks' : idItem ? 'Rare weights · identified' : 'Rare weights' }}</span></template>
     <div v-if="view" :class="$style.body" :data-score-flask="flask ? '' : undefined">
       <div :class="$style.top">
         <span :class="$style.lookWrap" tabindex="0" data-score-look>
@@ -34,6 +34,7 @@
       </label>
 
       <div :class="$style.terms" data-no-item-tip="the parts of the item's score; the item itself is named in the card title">
+        <template v-if="!view.id">
         <div :class="[$style.term, { [$style.opener]: !flask }]" data-score-rank-row :title="flask ? undefined : 'Click for every rank\'s points'" @click.self="!flask && toggle('rank')">
           <i class="fas fa-shield-alt" aria-hidden="true" />
           <span class="grow" @click="!flask && toggle('rank')">{{ view.rankLabel }} <small>· Base rank</small><i v-if="!flask" :class="['fas', open === 'rank' ? 'fa-caret-up' : 'fa-caret-down', $style.caret]" aria-hidden="true" />
@@ -46,7 +47,9 @@
           <button v-for="r in view.ranks" :key="r.key" type="button" :class="$style.lane" :aria-pressed="r.key === view.rank" :style="{ '--dot': STEP_CSS[r.step] }"
             :title="`${r.label}: lands ${STEP_SHORT[r.step]} (${pointsText(r.pts)})`" :data-score-rank="r.key" @click="setRank(r.key)">{{ r.label }}</button>
         </div>
-        <template v-for="t in view.rows" :key="t.key">
+        </template>
+        <div v-else-if="!view.rows.length" class="w-faint text-xs" data-score-no-mods>No mod names in the copied item: copy it with Ctrl+Alt+C.</div>
+        <template v-for="(t, ti) in view.rows" :key="`${t.key}-${ti}`">
         <div :class="[$style.term, { [$style.off]: !t.counts, [$style.tunable]: t.tunable, [$style.opener]: t.tunable }]" :title="t.title" :data-score-term="t.key">
           <i :class="t.icon" aria-hidden="true" />
           <span class="grow" :data-score-open="t.tunable ? t.key : undefined" @click="t.tunable && toggle(t.key)">{{ t.label }} <small>· {{ t.group }}</small><small v-if="t.hint" :class="$style.hint"> {{ t.hint }}</small><i v-if="t.tunable" :class="['fas', open === t.key ? 'fa-caret-up' : 'fa-caret-down', $style.caret]" aria-hidden="true" /></span>
@@ -74,7 +77,8 @@
       </div>
 
       <div :class="$style.foot">
-        <span><span :class="$style.cap">1</span>Don't care <span :class="$style.cap">2</span>Lower <span :class="$style.cap">3</span>Raise <span :class="$style.cap">4</span>Tune</span>
+        <span v-if="!view.id"><span :class="$style.cap">1</span>Don't care <span :class="$style.cap">2</span>Lower <span :class="$style.cap">3</span>Raise <span :class="$style.cap">4</span>Tune</span>
+        <span v-else class="w-faint">Mods from Price check › valuable mods, top 5 most</span>
         <span class="grow" />
         <button type="button" :class="$style.link" data-score-tune @click="tune">Tune ›</button>
       </div>
@@ -95,10 +99,12 @@ import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
 import type { MatchResult } from './match'
-import { MULT_STEPS, NEED_MAX, NEED_MIN, RANK_KEYS, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, lookKeyOf, LOOK_LABEL, MARK_ROWS, ORDERED_ROWS, stepFor, stepOf, termsOf, weightOf } from './weights'
+import { MULT_STEPS, NEED_MAX, NEED_MIN, RANK_KEYS, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, GEAR_CLASSES, lookKeyOf, LOOK_LABEL, MARK_ROWS, ID_ROWS, ORDERED_ROWS, stepFor, stepOf, termsOf, weightOf } from './weights'
 import type { LookChannel, Step, WeightKey } from './weights'
 import { fromPoints, points, pointsText } from './weight-samples'
 import { setWeightRank, weightRow } from './weight-rank'
+import { affixTable, itemMods, loadAffixTable } from './id-mods'
+import { driverSeed } from '../price-insight/seed'
 import { FLASK_ILVL, FLASK_QUALITY, FLASK_RANKS, flaskLoud, flaskRank, flaskWeight } from './flask-weights'
 import type { RankKey } from './weight-settings'
 import { STEP_CSS, STEP_SHORT } from './score-steps'
@@ -137,9 +143,39 @@ const GROUP_OF = Object.fromEntries(WEIGHT_GROUPS.flatMap(g => g.rows.map(r => [
 const RANK_SET = new Set<string>(RANK_KEYS)
 
 interface Row { key: WeightKey | string, icon: string, label: string, group: string, pts: number, counts: boolean, tunable: boolean, title: string, hint?: string }
-interface View { pts: number, line: number, loud: number[], step: number, rank: RankKey, rankLabel: string, rankPts: number, ranks: Array<{ key: RankKey, label: string, pts: number, step: number }>, rows: Row[] }
+interface View { id?: boolean, pts: number, line: number, loud: number[], step: number, rank: RankKey, rankLabel: string, rankPts: number, ranks: Array<{ key: RankKey, label: string, pts: number, step: number }>, rows: Row[] }
+
+// Identified gear (Guy's pick A, 2026-11-28): its mods' points, not its base.
+const idItem = computed(() => {
+  const f = props.facts
+  if (!w.value.on || !f.identified || (f.itemLevel ?? 0) < 68 || !f.itemClass || !GEAR_CLASSES.includes(f.itemClass)) return null
+  if (f.rarity === 'Rare') return got.value ? null : 'Rare' as const
+  // Magic decided by its mods (it may go on to its base's rule instead).
+  return f.rarity === 'Magic' && /: identified magic/.test(props.match.final?.block.comment ?? '') ? 'Magic' as const : null
+})
+onMounted(() => { loadAffixTable() })
+const ID_ICON = WEIGHT_GROUPS.find(g => g.key === 'idmods')?.icon ?? ''
 
 const view = computed<View | null>(() => {
+  const idr = idItem.value
+  if (idr && affixTable.value) {
+    const need = dragLine.value != null ? fromPoints(dragLine.value) : w.value.need
+    const m = w.value.mult
+    const bonus: WeightKey = idr === 'Rare' ? 'idr' : 'idm'
+    const mods = itemMods(affixTable.value, props.facts.itemClass!, props.facts.explicitModNames, driverSeed.value, m)
+    const weight = mods.reduce((x, d) => x * (d.key ? m[d.key] : 1), m[bonus])
+    const rows: Row[] = [
+      { key: bonus, icon: ID_ICON, label: WEIGHT_LABEL[bonus], group: 'Rarity', pts: points(m[bonus]), counts: true, tunable: true, title: `‹ › changes it for every ${WEIGHT_LABEL[bonus].toLowerCase()}` },
+      ...mods.map(d => {
+        const line = d.text.split('\n')[0]
+        const what = d.tier ? `T${d.tier} ${line}` : 'not in the mod data'
+        return d.key
+          ? { key: d.key, icon: ID_ICON, label: d.name, group: what, pts: points(m[d.key]), counts: true, tunable: true, title: `${WEIGHT_LABEL[d.key]}: ‹ › changes it for every one` }
+          : { key: `mod:${d.name}`, icon: ID_ICON, label: d.name, group: what, pts: 0, counts: false, tunable: false, title: d.tier > 3 ? 'Tier 4 and lower add nothing' : 'Not on the price check\'s list of valuable mods' }
+      })
+    ]
+    return { id: true, pts: points(weight), line: points(need), loud: w.value.loud.map(points), step: stepOf(weight, need, w.value.loud), rank: 'r0', rankLabel: '', rankPts: 0, ranks: [], rows }
+  }
   if (got.value) {
     const { it } = got.value
     const need = dragLine.value != null ? fromPoints(dragLine.value) : w.value.need
@@ -259,7 +295,7 @@ const last = ref<{ label: string, before: Record<WeightKey, number> } | null>(nu
 // The section whose rows are open for editing (a row's key, or 'rank').
 const open = ref<string | null>(null)
 watch(() => props.facts, () => { last.value = null; dragLine.value = null; open.value = null })
-const MARK_SET = new Set<string>(MARK_ROWS)
+const MARK_SET = new Set<string>([...MARK_ROWS, ...ID_ROWS])
 function stepTo (key: WeightKey | string, dir: 1 | -1): number | null {
   if (!(key in w.value.mult)) return null
   const k = key as WeightKey
