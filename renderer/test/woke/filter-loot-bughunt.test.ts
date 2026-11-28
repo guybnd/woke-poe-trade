@@ -337,3 +337,23 @@ describe('Recipes and the presets the Loot tab covers', () => {
     expect(migratedPresets(m)).toBe(m)
   })
 })
+
+describe('Alt+F on the Loot tab\'s own rows', () => {
+  it('finds the Foulborn, special-roll and blighted rows by the rule that caught the item', async () => {
+    const { itemFor, lootFocus } = await import('@/web/woke/loot-filter/loot-focus')
+    const cond = (key: string, op: string, values: string[]) => ({ key, op, count: null, values })
+    const items = [
+      { name: 'Simple Robe', cat: 'uniqbody' },
+      { name: 'Foulborn Simple Robe', bt: 'Simple Robe', cat: 'uniqfoul', conds: [cond('Foulborn', '', ['True'])] },
+      { name: 'Simple Robe, 6-link', bt: 'Simple Robe', cat: 'uniqspec', conds: [cond('LinkedSockets', '>=', ['6'])] },
+      { name: 'Blighted Map (Tier 14)', bt: 'Map (Tier 14)', cat: 'mapblight', conds: [cond('BlightedMap', '', ['True'])] }
+    ]
+    const bt = cond('BaseType', '==', ['Simple Robe'])
+    expect(itemFor(items, 'Simple Robe', [bt])?.cat).toBe('uniqbody')
+    expect(itemFor(items, 'Simple Robe', [bt, cond('Foulborn', '==', ['True'])])?.cat).toBe('uniqfoul')
+    expect(itemFor(items, 'Simple Robe', [bt, cond('LinkedSockets', '>=', ['6'])])?.cat).toBe('uniqspec')
+    expect(itemFor(items, 'Map (Tier 14)', [cond('BlightedMap', '', ['True'])])?.cat).toBe('mapblight')
+    expect(itemFor(items, 'Map (Tier 14)', [])).toBe(null)
+    expect(lootFocus('recipes')?.cls).toBe('recipes')
+  })
+})

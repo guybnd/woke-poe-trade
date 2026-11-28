@@ -54,7 +54,7 @@
   </div>
   <div v-else class="flex items-center gap-2 text-xs w-dim" data-currency-card-place>
     <span class="grow">{{ placeLine }}</span>
-    <WButton v-if="tier && lootFocus(tier)" size="sm" data-currency-card-open @click="emit('open-rule', tier)">Open</WButton>
+    <WButton v-if="openTier" size="sm" data-currency-card-open @click="emit('open-rule', openTier)">Open</WButton>
   </div>
 </template>
 
@@ -69,7 +69,7 @@ import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN,
 import { cardFacts, loadCardFacts } from './card-facts'
 import { gemLinesOf } from './gem-classes'
 import { LEAGUE_SECTIONS } from './league-classes'
-import { gemItemFor, lootFocus } from './loot-focus'
+import { gemItemFor, itemFor, lootFocus } from './loot-focus'
 import type { CStep, CurrencyItem, ItemEdit, SectionMode } from './currency-weights'
 import type { StylePatch } from './edits'
 import type { FilterCondition } from './parse'
@@ -108,7 +108,7 @@ const raw = computed<CurrencyItem | null>(() => {
   if (!doc || !lookup) return null
   loadCardFacts()
   const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null)
-  if (!props.gem) return all.find(i => i.name === props.name) ?? null
+  if (!props.gem) return itemFor(all, props.name, props.rule)
   return gemItemFor(all, props.name, props.gem, props.rule)
 })
 // The row's name on the Loot tab ("Arc 20/20" for a gem band).
@@ -162,6 +162,9 @@ const placeLine = computed(() => {
   if (t.startsWith('u-')) return `Uniques: NeverSink's ${t.slice(2)} rule, kept above the priced uniques.`
   return floorLine.value || 'The Loot tab writes this rule; open it to see its items.'
 })
+
+// Where Open goes: the rule's own section, or Recipes for a recipe rule.
+const openTier = computed(() => /: recipe: /.test(props.note ?? '') ? 'recipes' : props.tier && lootFocus(props.tier) ? props.tier : null)
 
 interface Row { step: CStep, from: number | null, note: string, look: StylePatch }
 const rows = computed<Row[]>(() => !it.value
