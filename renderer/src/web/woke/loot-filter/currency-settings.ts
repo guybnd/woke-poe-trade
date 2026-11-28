@@ -82,6 +82,9 @@ export interface CurrencySettings {
   // The Chase uniques look, a CHASE_LOOKS id (unique-classes.ts); unset is
   // the default one (Guy 2026-11-28: a picker on the section's header).
   chaseLook?: string
+  // Special maps' style, a MAP_STYLES id (currency-weights.ts); unset is the
+  // tinted card (Guy 2026-11-28: a style picker in the maps category).
+  mapLook?: 'tint' | 'dark' | 'edge'
   // Uniques left out of their base's average drop (Guy 2026-11-28: a special
   // drop like Precursor's Emblem); toggleNotAvg flips one.
   notAvg?: string[]
@@ -199,6 +202,7 @@ export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): Cu
     ...(Array.isArray(c?.notAvg) && c.notAvg.length ? { notAvg: [...new Set(c.notAvg.filter(n => typeof n === 'string' && NAME.test(n)))].sort() } : {}),
     ...(c?.sizeCut === 'on' || c?.sizeCut === 'off' ? { sizeCut: c.sizeCut } : {}),
     ...(typeof c?.chaseLook === 'string' && /^[A-Z][0-9]$/.test(c.chaseLook) ? { chaseLook: c.chaseLook } : {}),
+    ...(c?.mapLook === 'dark' || c?.mapLook === 'edge' ? { mapLook: c.mapLook } : {}),
     gold: Array.isArray(c?.gold) && c.gold.length === 5 && c.gold.every((g, i) => int(g, 1, 1e7) != null && (!i || g >= c.gold![i - 1])) ? [...c.gold] : d.gold
   }
 }
