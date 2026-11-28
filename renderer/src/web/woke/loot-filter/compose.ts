@@ -25,7 +25,7 @@ import { CLUSTER_PRICE_TYPE, applyClusterPrices } from './cluster-prices'
 import type { ClusterPrice } from './cluster-prices'
 import type { BaseRename } from './gem-bases'
 import { applyWeights, filterBases } from './weights'
-import { applyCurrency } from './currency-weights'
+import { applyCurrency, recipeStep, scaled } from './currency-weights'
 import { levellingGearBlocks } from './levelling-gear'
 import { applyMapFloor, applyMapLooks } from './map-floor'
 import type { CardFacts } from './card-classes'
@@ -152,7 +152,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
     buildCount = blocks.length
   }
   // Presets the Loot tab covers leave maps to it (lootPresets).
-  const presets = lootPresets(migrated, currency != null)
+  const presets = lootPresets(migrated, currency != null, recipeStep(scaled(migrated.currency, next.strictness), 'rgb', cfg.prices.loot ?? cfg.prices.lookup))
   // Presets' rules, then your own rules above them: yours win.
   const presetTop = presetBlocks(next, presets, cfg.prices.lookup, cfg.dustList, {
     breakdown: cfg.presets.cheapUniques.on ? cfg.prices.breakdown : null,
