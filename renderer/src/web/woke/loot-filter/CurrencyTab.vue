@@ -12,6 +12,10 @@
       <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" title="Line, step prices and category price bias back to the start; your item edits stay" @click="reset">Defaults</WButton>
     </div>
 
+    <!-- All loot (Guy's H1, 2026-11-28): one card above the page list and the page, so it reads as the global one: Strictness, Maps and the ruler every page and section follows. -->
+    <Teleport :to="topTo || 'body'" :disabled="!topTo" defer>
+    <div :class="$style.allCard" data-loot-all>
+    <div :class="$style.mainLab" data-currency-main-ruler data-currency-all-steps><b>All loot</b><span class="w-faint text-xs">every page and section, unless a section has its own{{ ownCount ? ` · ${ownCount === 1 ? '1 section here has' : `${ownCount} sections here have`} its own` : '' }}</span></div>
     <div :class="$style.minBar" data-currency-min>
       <span :class="$style.minLab">Strictness</span>
       <input type="range" min="0" max="6" step="1" :value="dragLvl ?? lvlNow" :class="$style.range" aria-label="Strictness" :aria-valuetext="LEVEL_NAMES[dragLvl ?? lvlNow]"
@@ -21,28 +25,11 @@
       <WButton v-if="c.mult != null" size="sm" variant="ghost" icon="fas fa-undo" :title="`Back to the filter's strictness, ${LEVEL_NAMES[level]} now`" @click="c.mult = null">Default</WButton>
       <span v-else class="w-faint text-xs">default</span>
       <StrictnessMenu :store="store" :config="config" />
-      <span v-if="kind === 'uniques'" :class="$style.minLab" data-loot-size-cut title="Big uniques count part of their price: 2x2 75%, 2x3 60%, 2x4 50%. Chase and Always sections skip it.">Size cut
-        <StateChip :model-value="c.sizeCut ?? 'auto'" :options="SIZE_CUTS" title="Size cut" dflt="auto" @update:model-value="v => c.sizeCut = v === 'auto' ? undefined : v as 'on' | 'off'" />
-        <span class="w-faint text-xs">{{ eff.sizeOn ? 'on now' : 'off now' }}</span></span>
-      <span class="flex-1" />
-      <button type="button" :class="$style.hidChip" title="List the items that never show" data-currency-hidden @click="only = 'hidden'">{{ rows.length - shownCount }} of {{ rows.length }} never show</button>
     </div>
 
     <div class="w-faint text-xs" data-currency-strict-line>{{ strictLine }}</div>
-
-    <slot name="extra" />
-
-    <!-- Gold has no price: its page's ruler steps piles by size. -->
-    <div v-if="kind === 'gold'" :class="$style.goldRuler">
-      <span :class="$style.lookLab">Pile size for each step</span>
-      <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, 'gold')" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
-    </div>
-    <template v-else>
-    <div :class="$style.mainLab" data-currency-main-ruler data-currency-all-steps><b>All loot</b><span class="w-faint text-xs">every page and section, unless a section has its own{{ ownCount ? ` · ${ownCount === 1 ? '1 section here has' : `${ownCount} sections here have`} its own` : '' }}</span></div>
     <StepRuler main toggles :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="allOff" :edit="stepEdit" :samples="stepSample"
       @edit="s => stepEdit = s" @set="setShown" @toggle="toggleAll" />
-    </template>
-
     <div v-if="stepEdit === 0" :class="$style.stepEd" data-currency-step-editor>
       <div :class="$style.stepEdHead">
         <b>Faint</b>
@@ -65,6 +52,24 @@
       </div>
       <StyleEditor look-only no-colours :look="currencyFullLook(stepEdit, SAMPLE_CATS[0], c)" visibility="Show" :preview-text="catArt(SAMPLE_CATS[0])"
         @patch="p => setStepLook(stepEdit!, { ...c.steps[stepEdit!], ...loudOnly(p) })" />
+    </div>
+    </div>
+    </Teleport>
+
+    <div :class="$style.pageBar" data-currency-page-bar>
+      <span v-if="kind === 'uniques'" :class="$style.minLab" data-loot-size-cut title="Big uniques count part of their price: 2x2 75%, 2x3 60%, 2x4 50%. Chase and Always sections skip it.">Size cut
+        <StateChip :model-value="c.sizeCut ?? 'auto'" :options="SIZE_CUTS" title="Size cut" dflt="auto" @update:model-value="v => c.sizeCut = v === 'auto' ? undefined : v as 'on' | 'off'" />
+        <span class="w-faint text-xs">{{ eff.sizeOn ? 'on now' : 'off now' }}</span></span>
+      <span class="flex-1" />
+      <button type="button" :class="$style.hidChip" title="List the items that never show" data-currency-hidden @click="only = 'hidden'">{{ rows.length - shownCount }} of {{ rows.length }} never show</button>
+    </div>
+
+    <slot name="extra" />
+
+    <!-- Gold has no price: its page's ruler steps piles by size. -->
+    <div v-if="kind === 'gold'" :class="$style.goldRuler">
+      <span :class="$style.lookLab">Pile size for each step</span>
+      <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, 'gold')" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
     </div>
 
     <MapsPile v-if="PILES[kind]" :doc="store.doc.value" :priced="pricedNames" :pile="PILES[kind]!.pile" :hint="PILES[kind]!.hint" @go="goTo" />
@@ -219,7 +224,10 @@ const props = withDefaults(defineProps<{
   kind?: LootKind
   // An item to open and scroll to (Alt+F's "Open on the Loot tab").
   focusItem?: string | null
-}>(), { kind: 'currency', focusItem: null })
+  // Where the All loot card goes (the Loot tab's top, above its page list);
+  // unset, it stays at the top of this page (Equipment's Special gear).
+  topTo?: string
+}>(), { kind: 'currency', focusItem: null, topTo: undefined })
 const KIND_NAME: Record<LootKind, string> = { currency: 'currency', gold: 'gold', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems', maps: 'special maps', jewels: 'jewels', league: 'league items', special: 'special gear' }
 const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.kind))
 // The "?" (help format A: a lead line and bullets, checked by help-format.test.ts).
@@ -629,6 +637,8 @@ function chaosText (v: number): string {
 </script>
 
 <style module>
+.allCard { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--w-accent, #c8a565); border-radius: var(--w-r-sm); background: var(--w-panel); }
+.pageBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .wrap {
   max-height: min(40rem, calc(78vh / var(--w-ui-scale, 1)));
   flex: 1 1 auto;
