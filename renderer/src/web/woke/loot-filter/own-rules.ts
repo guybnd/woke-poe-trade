@@ -61,8 +61,19 @@ export function ownUniqueBlocks (t: OwnTables, find: (base: string) => number | 
 
 // Items the game data still lists that no longer drop: no row unless priced
 // (sextants, nets, Blessings, prophecies, Bestiary orbs, seals, coins, the
-// legacy Eternal Orb and its Imprint).
-export const RETIRED = /Sextant$| Net$|^Blessing of |^Prophecy$|Bestiary Orb$|Cartographer's Seal$|^(Perandus|Silver) Coin$|^Lycia's Invocation of |^Eternal Orb$|^Imprint$/
+// legacy Eternal Orb and its Imprint). Guy's price audit (2026-11-28) added
+// the old league items with no poe.ninja line this league or last: Harbinger
+// orbs and shards, Incursion vials, Kirac's scouting reports, the sized
+// Expedition artifacts, recombinators, Sentinel power cores, Necropolis
+// coffins, Affliction wisps and retired Delirium orbs. Any of them that turns
+// out to drop still shows, by the fallback rule.
+export const RETIRED = new RegExp([
+  /Sextant$| Net$|^Blessing of |^Prophecy$|Bestiary Orb$|Cartographer's Seal$|^(Perandus|Silver) Coin$|^Lycia's Invocation of |^Eternal Orb$|^Imprint$/.source,
+  /^(Harbinger's|Engineer's|Infused Engineer's) (Orb|Shard)$|^(Orb of )?(Binding|Horizons?)( Shard)?$|^Vial of |Scouting Report$|^(Lesser|Greater|Grand|Exceptional) .+ Artifact$/.source,
+  /Recombinator$|^(Amplifying |Augmenting |Transforming )?Power Core$|^(Empty|Filled) Coffin$|^(Primal|Vivid|Wild) Wisps$/.source,
+  // The Delirium orbs 3.30 dropped (scarab-flip/families.ts keeps the same list).
+  /^(Abyssal|Challenging|Foreboding|Fossilised|Fragmented|Imperial|Kalguuran|Obscured|Portentous|Primal|Skittering|Timeless) Delirium Orb$/.source
+].join('|'))
 
 // Odd items poe.ninja doesn't price that still drop: always a row.
 export const ALWAYS = new Set(["Facetor's Lens", 'Scrying Orb', 'Albino Rhoa Feather'])

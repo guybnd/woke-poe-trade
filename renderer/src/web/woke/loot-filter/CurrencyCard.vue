@@ -43,7 +43,7 @@
             @keydown.enter.prevent="savePrice" @keydown.esc.prevent="typing = false" @blur="savePrice">c
         </template>
         <template v-else>
-          <button type="button" :class="$style.priceBtn" title="Click to type your own price" data-currency-card-price-edit @click="editPrice">~{{ chaosText(base) }} {{ it.uniques?.length ? 'avg' : 'each' }} <i class="fas fa-pen" aria-hidden="true" /></button>
+          <button type="button" :class="$style.priceBtn" title="Click to type your own price" data-currency-card-price-edit @click="editPrice"><template v-if="raw?.none && edit.price == null">No price</template><template v-else>~{{ chaosText(base) }} {{ it.uniques?.length ? 'avg' : 'each' }}</template> <i class="fas fa-pen" aria-hidden="true" /></button>
           <small class="w-faint">{{ priceFrom }}</small>
           <button v-if="edit.price != null" type="button" :class="$style.link" data-currency-card-price-reset @click="put({ price: undefined })">↺ {{ raw?.est ? 'guess' : 'poe.ninja' }}</button>
         </template>
@@ -454,7 +454,7 @@ const priceFrom = computed(() => {
   if (edit.value.price != null) return 'yours'
   const n = it.value?.uniques?.filter(u => u.counted).length ?? 0
   if (n) return `of ${n} unique${n === 1 ? '' : 's'}`
-  return raw.value?.est ? 'a guess' : 'poe.ninja'
+  return raw.value?.none ? 'not on poe.ninja' : raw.value?.why ? 'base price' : raw.value?.est ? 'a guess' : 'poe.ninja'
 })
 // Your own price, typed where the price is (Guy 2026-11-28).
 const typing = ref(false)

@@ -33,7 +33,7 @@ import { FOULBORN_PREFIX, FOULBORN_TYPE, REPLICA_GUESS, REPLICA_PREFIX, REPLICA_
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
 import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS, WOMBGIFTS, corpseGuess, wombgiftGuess } from './league-classes'
 import { CLUSTER_BASE_TYPE, CLUSTER_ROWS, CLUSTER_SIZES, JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_MODES, JEWEL_ROWS, JEWEL_TYPE, clusterEnchantRows, clusterFloor, clusterSizeOf } from './jewel-classes'
-import { FLASK_CATEGORIES, FLASK_IDS, FLASK_LOOK, FLASK_ROWS, FLASK_RULE_TYPE } from './flask-classes'
+import { FLASK_CATEGORIES, FLASK_IDS, FLASK_LOOK, FLASK_PAGE, FLASK_ROWS, FLASK_RULE_TYPE } from './flask-classes'
 import type { ClusterPrice } from './cluster-prices'
 import { replicaBases, uniquesOnBase } from '../shared/uniques-on-base'
 import { SPECIAL_CATEGORIES, SPECIAL_IDS, SPECIAL_LOOK, SPECIAL_MODES, SPECIAL_ROWS, retireSpecial, specialAnchor } from './special-gear'
@@ -179,6 +179,12 @@ export interface CurrencyItem {
   // An odd item poe.ninja has no price for at all (Facetor's Lens, Imprint,
   // Scrying Orb): it shows at least Small (Guy 2026-11-27).
   free?: boolean
+  // No price now or last league: `chaos` is only a placeholder, shown as
+  // "no price" (Guy's price audit, 2026-11-28).
+  none?: true
+  // Where an est. price comes from, when not a plain guess ("Its cheapest
+  // base on poe.ninja; quality not counted").
+  why?: string
   full: number
   // A unique base: the unique whose price it carries, and how many priced
   // uniques drop on it.
@@ -374,6 +380,8 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         chaos: (own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess)) * (edits[name]?.mult ?? 1),
         est: own == null && (!priced || Boolean(p?.day1)),
         ...(own != null ? { own: true } : {}),
+        // No price now or last league: the number is a placeholder.
+        ...(own == null && !priced && lists != null && !lists.guesses.has(name) && !(listed != null && listed.chaos > 0) ? { none: true as const } : {}),
         // Odd items with no solid price (none, or a thin one) always show, and
         // so does one with no price now or last league (Guy 2026-11-28: it
         // used to fall to our fallback rule, which showed it).
@@ -667,16 +675,24 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
     })
   }
   // Life and mana flasks and tinctures (M4a): a guess each.
+  // White rows at their base's poe.ninja price; quality rows at their
+  // cheapest base's as a floor (poe.ninja doesn't split by quality), est.
+  const flaskGroup: EconomyGroup = { type: 'flasks', label: 'Flasks', ninja: [FLASK_PAGE] }
   for (const r of FLASK_ROWS) {
     const own = edits[r.name]?.price
+    const lines = (r.ninja?.bases ?? []).map(b => lookup?.(flaskGroup, b) ?? null).filter((p): p is NonNullable<typeof p> => p != null && !p.thin && p.chaos > 0)
+    const base = lines.length ? Math.min(...lines.map(p => p.chaos)) : null
+    const quality = r.conds.some(x => x.key === 'Quality' && x.op === '>=')
+    const price = base == null ? null : r.ninja?.max ? Math.max(base, r.guess) : base
     seen.set(r.name, {
       name: r.name,
       cls: r.cls,
       type: 'flasks',
       tier: null,
       cat: r.cat,
-      chaos: (own ?? r.guess) * (edits[r.name]?.mult ?? 1),
-      est: own == null,
+      chaos: (own ?? price ?? r.guess) * (edits[r.name]?.mult ?? 1),
+      est: own == null && (price == null || quality),
+      ...(own == null && price != null && quality ? { why: r.ninja?.max && price === r.guess ? 'A guess: its base sells for less on poe.ninja, and poe.ninja doesn\'t count quality' : 'Its cheapest base on poe.ninja; quality not counted' } : {}),
       ...(own != null ? { own: true } : {}),
       ...(r.floor ? { floor: r.floor } : {}),
       full: 1,
@@ -764,7 +780,10 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         }
       }
     }
-    const p = lookup?.({ type: CHRONICLE.cat, label: CHRONICLE.cat, ninja: CHRONICLE.ninja }, CHRONICLE.name) ?? null
+    const chronGroup: EconomyGroup = { type: CHRONICLE.cat, label: CHRONICLE.cat, ninja: CHRONICLE.ninja }
+    const rooms = CHRONICLE.rooms.map(n => lookup?.(chronGroup, n) ?? null).filter((x): x is NonNullable<typeof x> => x != null && !x.thin && x.chaos > 0)
+    const named = lookup?.(chronGroup, CHRONICLE.name) ?? null
+    const p = named ?? (rooms.length ? rooms.reduce((a, b) => (b.chaos < a.chaos ? b : a)) : null)
     const own = edits[CHRONICLE.name]?.price
     seen.set(CHRONICLE.name, {
       name: CHRONICLE.name,
@@ -774,6 +793,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       cat: CHRONICLE.cat,
       chaos: (own ?? (p && p.chaos > 0 ? p.chaos : CHRONICLE.guess)) * (edits[CHRONICLE.name]?.mult ?? 1),
       est: own == null && (!p || !(p.chaos > 0) || p.thin || Boolean(p.day1)),
+      ...(own == null && !named && p ? { why: 'The cheapest Chronicle on poe.ninja, which lists them by room' } : {}),
       ...(own != null ? { own: true } : {}),
       full: 1
     })
@@ -793,7 +813,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
 // An item with the player's own price and Worth × on top.
 export function withEdit (it: CurrencyItem, e: ItemEdit | undefined): CurrencyItem {
   if (e?.price == null && !e?.mult) return it
-  return { ...it, chaos: (e.price ?? it.chaos) * (e.mult ?? 1), ...(e.price != null ? { est: false, own: true } : {}) }
+  return { ...it, chaos: (e.price ?? it.chaos) * (e.mult ?? 1), ...(e.price != null ? { est: false, own: true, none: undefined, why: undefined } : {}) }
 }
 
 // What a pile of `stack` counts for, in chaos (Guy 2026-11-27): its full

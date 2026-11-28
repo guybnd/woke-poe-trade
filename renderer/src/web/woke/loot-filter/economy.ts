@@ -135,7 +135,9 @@ type VariantRule = 'market' | 'safety' | 'drop'
 function priceFinder (items: PriceItem[], rule: VariantRule = 'market', links = false, all = false) {
   const byName = new Map<string, PriceItem[]>()
   for (const i of items) {
-    if (links ? !/\b6L\b|6 links?/i.test(i.variant) : /\b[56]L\b|links?|^relic$/i.test(i.variant)) continue
+    // A "relic" line is a unique's relic copy, not what drops, except on
+    // the UniqueRelic page, which lists the Sanctum relics themselves.
+    if (links ? !/\b6L\b|6 links?/i.test(i.variant) : /\b[56]L\b|links?/i.test(i.variant) || (/^relic$/i.test(i.variant) && i.type !== 'UniqueRelic')) continue
     // '*' finds a name under any type (poe.ninja moves things between pages).
     for (const key of [`${i.type}\u0000${i.name}`, `*\u0000${i.name}`]) {
       const list = byName.get(key)

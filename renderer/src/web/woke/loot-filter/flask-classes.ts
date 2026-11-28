@@ -2,9 +2,12 @@
 // 2026-11-28). Utility flasks and tinctures score on Equipment; these are
 // the ones worth picking up in maps for crafting: the top bases with
 // quality over 20% (only a corrupted or Harvest flask gets there) or a high
-// item level, where the top mods roll. poe.ninja prices none of them, so
-// each row starts from a guess on the same steps, and you set its step or
-// price. Rows never overlap. Below area level 68 the levelling rules decide.
+// item level, where the top mods roll. poe.ninja's Flask page prices the
+// white bases by item level (82, 83, 84+), so a white row is worth its base
+// there (Guy's price audit, 2026-11-28: a 9c Divine Life Flask was hidden at
+// a 0.1c guess). It doesn't split by quality: a quality row counts its
+// cheapest base as a floor, marked est. A row with no line keeps its guess.
+// Rows never overlap. Below area level 68 the levelling rules decide.
 import type { LootCategory } from './fragment-classes'
 import type { FilterCondition } from './parse'
 
@@ -38,6 +41,9 @@ export interface FlaskRow {
   // The base its tooltip shows.
   tip: string
   guess: number
+  // Priced from poe.ninja's Flask page: the cheapest solid line of these
+  // bases at item level 82+ (`max`: never below the guess).
+  ninja?: { bases: string[], max?: boolean }
   // Shows at least this step whatever the line or steps turned off, until
   // you set a step or price (over-quality: Guy 2026-11-28).
   floor?: 1 | 2 | 3 | 4 | 5
@@ -53,12 +59,22 @@ const ilvl = (op: string, n: number) => cnd('ItemLevel', op, [String(n)])
 const LIFE_CLS = 'Life Flasks|Mana Flasks|Hybrid Flasks'
 
 // Guesses at the default steps: 20 Big, 5 Decent, 1.5 Normal, 0.4 Small;
-// 0.1 hides.
+// 0.1 hides. Used when poe.ninja has no line.
+const white = (name: string, bases: string[], guess: number): FlaskRow =>
+  ({ cat: 'flasklife', name, cls: LIFE_CLS, bts: bases, tip: bases[0], guess, ninja: { bases }, conds: [...WHITE, q('<=', 20), ilvl('>=', 82)] })
 export const FLASK_ROWS: FlaskRow[] = [
-  { cat: 'flasklife', name: 'Top life or mana flask, quality 30%', cls: LIFE_CLS, bts: TOP_LIFE_MANA, tip: 'Divine Life Flask', guess: 5, conds: [...PLAIN, q('>=', 30), ilvl('>=', 82)] },
-  { cat: 'flasklife', name: 'Top life or mana flask, quality 21-29%', cls: LIFE_CLS, bts: TOP_LIFE_MANA, tip: 'Divine Life Flask', guess: 1.5, conds: [...PLAIN, q('>=', 21), q('<=', 29), ilvl('>=', 82)] },
+  { cat: 'flasklife', name: 'Top life or mana flask, quality 30%', cls: LIFE_CLS, bts: TOP_LIFE_MANA, tip: 'Divine Life Flask', guess: 5, ninja: { bases: TOP_LIFE_MANA, max: true }, conds: [...PLAIN, q('>=', 30), ilvl('>=', 82)] },
+  { cat: 'flasklife', name: 'Top life or mana flask, quality 21-29%', cls: LIFE_CLS, bts: TOP_LIFE_MANA, tip: 'Divine Life Flask', guess: 1.5, ninja: { bases: TOP_LIFE_MANA }, conds: [...PLAIN, q('>=', 21), q('<=', 29), ilvl('>=', 82)] },
   // Any other base or item level over 20% quality (3.30's over-quality
   // flasks, Guy 2026-11-28): always shows.
   { cat: 'flasklife', name: 'Life or mana flask, quality 21%+', cls: LIFE_CLS, bts: LIFE_MANA, tip: 'Divine Life Flask', guess: 1.5, floor: 3, conds: [...PLAIN, q('>=', 21)] },
-  { cat: 'flasklife', name: 'White top life or mana flask, item level 82+', cls: LIFE_CLS, bts: TOP_LIFE_MANA, tip: 'Eternal Life Flask', guess: 0.1, conds: [...WHITE, q('<=', 20), ilvl('>=', 82)] }
+  // White top bases, a row each (the mana ones sell alike).
+  white('White Divine Life Flask, item level 82+', ['Divine Life Flask'], 0.1),
+  white('White Eternal Life Flask, item level 82+', ['Eternal Life Flask'], 0.1),
+  white('White Hallowed Hybrid Flask, item level 82+', ['Hallowed Hybrid Flask'], 0.1),
+  white('White Divine or Eternal Mana Flask, item level 82+', ['Divine Mana Flask', 'Eternal Mana Flask'], 0.1)
 ]
+
+// poe.ninja's Flask page: one line per base and item level ("82", "83",
+// "84+"; it tracks nothing lower), white bases.
+export const FLASK_PAGE = 'Flask'
