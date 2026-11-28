@@ -85,21 +85,20 @@ const picks = computed(() => {
 
 // One pile for each step on the ruler (Guy 2026-11-28: "why dont example
 // piles show of all sizes"), so every look lies on the ground, a step turned
-// off struck through. Each is the smallest pile of a random item that
-// reaches that step; a step no item reaches has none.
-const examples = computed(() => {
-  const pool = props.items
+// off struck through. Each is the smallest pile of an item that reaches that
+// step; a step no item reaches has none.
+// One order of the items per pile, from the seed alone, so changing a setting
+// keeps the same examples (only their pile size follows the ruler).
+const exampleOrder = computed(() => {
   const r = rng(seed.value * 7 + 3)
+  return props.items.map(it => ({ it, k: r() })).sort((x, y) => x.k - y.k).map(x => x.it)
+})
+const examples = computed(() => {
   const out: Array<{ id: number, it: CurrencyItem, stack: number }> = []
-  const have = new Set(picks.value.map(p => stepOfPile(stacksFor(p.it, props.cfg), p.stack)))
-  if ([1, 2, 3, 4, 5].every(s => have.has(s as CStep))) return out
-  const all = pool.map(it => ({ it, stacks: stacksFor(it, props.cfg) }))
+  const all = exampleOrder.value.map(it => ({ it, stacks: stacksFor(it, props.cfg) }))
   for (let s = 1; s <= 5; s++) {
-    if (have.has(s as CStep)) continue
-    const can = all.filter(c => c.stacks[s - 1] != null && stepOfPile(c.stacks, c.stacks[s - 1]!) === s)
-    if (!can.length) continue
-    const c = can[Math.floor(r() * can.length)]
-    out.push({ id: 1000 + s, it: c.it, stack: c.stacks[s - 1]! })
+    const c = all.find(c => c.stacks[s - 1] != null && stepOfPile(c.stacks, c.stacks[s - 1]!) === s)
+    if (c) out.push({ id: 1000 + s, it: c.it, stack: c.stacks[s - 1]! })
   }
   return out
 })
