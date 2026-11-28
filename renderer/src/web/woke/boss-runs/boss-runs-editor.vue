@@ -1,6 +1,8 @@
 <template>
   <div class="max-w-xl p-2 flex flex-col gap-3">
-    <WSettingRow label="Planned runs" hint="Drops rarer than 1 in this many runs stay out of the loot, so a short session is not judged on a jackpot it will probably never see. 0 counts every drop.">
+    <WSettingRow label="Planned runs" hint="Drops rarer than 1 in this many runs stay out of the loot.
+- A short session isn't judged on a jackpot it will likely never see.
+- **0** counts every drop.">
       <WField :model-value="configWidget.plannedRuns" type="number" style="width: 6rem;" @update:model-value="setRuns" />
     </WSettingRow>
     <WSettingRow label="I own the entry items" hint="Count the entry cost as free.">

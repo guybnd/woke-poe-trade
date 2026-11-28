@@ -97,7 +97,7 @@
         <div class="flex items-center gap-2">
           <WToggle :model-value="g.quality.on" @update:model-value="setQualityOn">Over-quality bases</WToggle>
           <WInfo text="White, magic or rare gear with at least this much quality, from each row's bases. Off hands it to the rules further down.
-- They keep the Magic or Rare look of their row and drop tier, with a mark on top that wins over it: a pink border and beam until you change it.
+- They keep their row's Magic or Rare look, with a mark on top: a pink border and beam until you change it.
 - They show even where the table hides that tier. Change mark sets the border, sound, beam and map icon." />
           <template v-if="g.quality.on">
             <WButton size="sm" @click="editing = editing === 'quality' ? null : 'quality'">{{ editing === 'quality' ? 'Done' : 'Change mark' }}</WButton>

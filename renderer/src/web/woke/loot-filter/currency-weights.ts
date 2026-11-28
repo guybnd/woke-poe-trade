@@ -822,12 +822,60 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const gemsOut = gemItems.length ? compileCurrency(eff, gemItems, { faint, floors: gemFloors(eff) }) : none
   const first = doc.chunks.findIndex(ch => ch.kind === 'block')
   insertBlocks(doc, first < 0 ? doc.chunks.length : first, [...compiled.blocks, ...gemsOut.blocks])
+  // Recipes go where NeverSink's own socket recipes start: below Equipment
+  // (rares, flasks) and NeverSink's valuable rules (influenced, top bases),
+  // so a recipe never caps something worth more.
+  // The 6-link one under NeverSink's top-base 6-links, above its other 6-links.
+  const recipes = recipeBlocks(eff)
+  const ns = doc.chunks.findIndex(ch => ch.kind === 'block' && !(ch as FilterBlock).type?.startsWith('woke->'))
+  const anchor = (b?: FilterBlock) => b ? doc.chunks.indexOf(b) : ns < 0 ? doc.chunks.length : ns
+  const link6 = recipes.filter(b => b.comment.endsWith(': recipe: 6-link'))
+  insertBlocks(doc, anchor(doc.blocks.find(b => b.type === '6l' && b.tier === 'others') ?? doc.blocks.find(b => b.type === '6l')), link6)
+  insertBlocks(doc, anchor(doc.blocks.find(b => b.type === 'socketslinks')), recipes.filter(b => !link6.includes(b)))
   const foul = applyFoulborn(doc, eff, all.filter(it => it.cat === 'uniqfoul'), faint) ?? none
   const spec = applySpecialRolls(doc, eff, all.filter(it => it.cat === 'uniqspec'), faint) ?? none
   const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec'), faint) ?? none
   const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
-  const parts = [compiled, gemsOut, foul, spec, uniq, maps]
+  const parts = [{ blocks: recipes, items: [], chars: recipes.length * 220 }, compiled, gemsOut, foul, spec, uniq, maps]
   return { blocks: parts.flatMap(x => x.blocks), items: parts.flatMap(x => x.items), chars: parts.reduce((n, x) => n + x.chars, 0) }
+}
+
+// Vendor recipes (Guy's pick, 2026-11-28: a Recipes fold on the Loot tab):
+// each shows its items in maps at its step, or not at all (0). Kept in
+// catMode as `rc<id>`: a number, so the settings that load at startup
+// don't grow. R-G-B at 0 also stops NeverSink's chromatic rules in maps.
+export const RECIPES = [
+  { id: 'link6', name: '6-link', gives: '20 Orbs of Fusing', art: 'Orb of Fusing', dflt: 4 },
+  { id: 'six', name: '6 sockets', gives: '7 Jeweller\'s Orbs', art: 'Jeweller\'s Orb', dflt: 2 },
+  { id: 'gem20', name: '20% quality gems', gives: 'Gemcutter\'s Prism', art: 'Gemcutter\'s Prism', dflt: 1 },
+  { id: 'flask20', name: '20% quality flasks', gives: 'Glassblower\'s Bauble', art: 'Glassblower\'s Bauble', dflt: 1 },
+  { id: 'rgb', name: 'R-G-B linked', gives: 'Chromatic Orb', art: 'Chromatic Orb', dflt: 0 }
+] as const
+export type RecipeId = (typeof RECIPES)[number]['id']
+export function recipeStep (c: Pick<CurrencySettings, 'catMode'>, id: RecipeId): CStep {
+  const v = (c.catMode as Record<string, unknown>)[`rc${id}`]
+  return (Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 5 ? v : RECIPES.find(r => r.id === id)!.dflt) as CStep
+}
+export function setRecipeStep (c: Pick<CurrencySettings, 'catMode'>, id: RecipeId, step: CStep) {
+  c.catMode = { ...c.catMode, [`rc${id}`]: step as unknown as SectionMode }
+}
+
+function recipeBlocks (cfg: CurrencySettings): FilterBlock[] {
+  const area = c('AreaLevel', '>=', [68])
+  const gear = c('Rarity', '<=', ['Rare'])
+  const conds: Partial<Record<RecipeId, FilterCondition[]>> = {
+    link6: [c('LinkedSockets', '>=', [6]), gear],
+    six: [c('Sockets', '>=', [6]), gear],
+    flask20: [c('Quality', '>=', [20]), c('Rarity', '', ['Normal', 'Magic']), c('Class', '==', ['Life Flasks', 'Mana Flasks', 'Hybrid Flasks', 'Utility Flasks'])],
+    rgb: [c('SocketGroup', '', ['RGB']), gear]
+  }
+  const out: FilterBlock[] = []
+  for (const r of RECIPES) {
+    const s = recipeStep(cfg, r.id)
+    const cs = conds[r.id]
+    if (s && cs) out.push(block(s, [area, ...cs], `recipe: ${r.name}`, currencyLook(s, 'other', cfg)))
+  }
+  return out
 }
 
 // Gems that show at least Small whatever their band says: 20% quality (a
@@ -837,7 +885,6 @@ function gemFloors (cfg: CurrencySettings): FilterBlock[] {
   const area = c('AreaLevel', '>=', [68])
   const cls = c('Class', '==', ['Skill Gems', 'Support Gems'])
   const q20 = c('Quality', '>=', [20])
-  const look = currencyLook(1, 'gemskill', cfg)
   // Sections in gemCategoryOf's order, so a narrower one (Awakened Enlighten,
   // Awakened Multistrike) is settled before a broader one can catch it.
   const cats: Array<[string, FilterCondition]> = [
@@ -856,13 +903,17 @@ function gemFloors (cfg: CurrencySettings): FilterBlock[] {
   const ALWAYS = ['gemexc', 'gemawk', 'gemtrans']
   const mode = cats.map(([cat]) => sectionMode(cfg, cat) === 'off' ? 'off' : ALWAYS.includes(cat) && sectionMode(cfg, cat) === 'always' ? 'always' : '')
   const last = Math.max(mode.lastIndexOf('off'), mode.lastIndexOf('always'))
+  // The 20% floor is the Gemcutter's recipe (Loot › Recipes): its step, or
+  // none, and then nothing at 20% needs settling either.
+  const g = recipeStep(cfg, 'gem20')
+  const look = currencyLook(g, 'gemskill', cfg)
   const out: FilterBlock[] = []
   cats.slice(0, last + 1).forEach(([cat, cond], i) => {
+    const all = mode.indexOf('always', i) > i
     if (mode[i] === 'always') out.push(block(1, [area, cls, cond], `${cat}, always`, currencyLook(1, cat, cfg)))
-    else if (mode[i] === 'off') out.push(block(0, [area, cls, cond, ...(mode.indexOf('always', i) > i ? [] : [q20])], `${cat}, off`))
-    else out.push(block(1, [area, cls, cond, q20], `${cat}, 20% quality`, look))
+    else if (mode[i] === 'off') { if (g || all) out.push(block(0, [area, cls, cond, ...(all ? [] : [q20])], `${cat}, off`)) } else if (g) out.push(block(g, [area, cls, cond, q20], `${cat}, 20% quality`, look))
   })
-  out.push(block(1, [area, cls, q20], 'gems at 20% quality', look))
+  if (g) out.push(block(g, [area, cls, q20], 'gems at 20% quality', look))
   return out
 }
 

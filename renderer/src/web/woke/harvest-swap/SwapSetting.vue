@@ -1,6 +1,8 @@
 <template>
   <div class="max-w-xl p-2 flex flex-col gap-3">
-    <WSettingRow label="Swappable mods" hint="Price check puts a ⇄ on mods a Harvest craft or Genteel's Ducat can change, and adds a Flip tab with what the item sells for after each swap. Swap prices are only searched when you press a button.">
+    <WSettingRow label="Swappable mods" hint="Price check puts a ⇄ on mods a Harvest craft or Genteel's Ducat can change.
+- A **Flip** tab shows what the item sells for after each swap.
+- Swap prices are only searched when you press a button.">
       <div class="flex flex-col gap-1">
         <WToggle v-for="f of families" :key="f.id" :model-value="isOn(f)" @update:model-value="v => setOn(f, v)">{{ f.label }}</WToggle>
       </div>

@@ -21,7 +21,8 @@
     </div>
     <div class="flex items-center gap-3">
       <div class="flex-1">
-        <div class="flex items-center gap-2">Hide all toolkit panels <w-info text="Press once to hide every panel, again to bring them back. While the game has focus, panels don't take clicks anyway; this is for clearing the screen." /></div>
+        <div class="flex items-center gap-2">Hide all toolkit panels <w-info text="Press once to hide every panel, again to bring them back.
+- For clearing the screen: panels never take clicks while the game has focus." /></div>
       </div>
       <w-hotkey-cell v-model="hideAllHotkey" />
     </div>
