@@ -15,7 +15,7 @@
       <template v-if="sel === 'jewels'" #after><JewelsTab :store="store" :config="config" @open-rule="r => emit('open-rule', r)" @open-unique="openUnique" /></template>
     </CurrencyTab>
     <RecipesTab v-else-if="sel === 'recipes'" :config="config" :class="$style.main" />
-    <LevellingTab v-else-if="sel === 'levelling'" :config="config" :class="$style.main" />
+    <LevellingTab v-else-if="sel === 'levelling'" :config="config" :store="store" :class="$style.main" />
   </div>
 </template>
 

@@ -47,7 +47,8 @@ export const NEWS_SPOTS: Record<string, string> = {
   'loot-filter-drag-bases': 'gear-ranks',
   'loot-filter-valuable-exotics': 'gear-ranks',
   'loot-filter-gold-page': 'loot-gold',
-  'loot-filter-levelling': 'loot-levelling'
+  'loot-filter-levelling': 'loot-levelling',
+  'loot-filter-levelling-gear': 'loot-levelling'
 }
 
 export function gotoSpots (wmType: string): Record<string, string> | null {

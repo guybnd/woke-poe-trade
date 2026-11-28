@@ -18,6 +18,26 @@
       <span class="text-xs w-dim">{{ layerNote }}</span>
     </div>
 
+    <h3 :class="$style.head">Your build</h3>
+    <p class="text-xs w-dim">Picks the weapons and armour that show while levelling. Other builds' white and blue gear hides; their rares show Small.</p>
+    <div :class="$style.row" data-levelling-build>
+      <span :class="$style.lab">Build type</span>
+      <WSegmented :model-value="w.archetype" :options="ARCH" role="group" aria-label="Build type" @update:model-value="setArchetype" />
+    </div>
+    <div :class="$style.row">
+      <span :class="$style.lab">Weapons</span>
+      <div :class="$style.chips" data-levelling-weapons>
+        <WChip v-for="k in WEAPON_CLASSES" :key="k" clickable :active="kept.includes(k)" :aria-pressed="kept.includes(k)" @click="toggleWeapon(k)">{{ k }}</WChip>
+      </div>
+    </div>
+    <div :class="$style.row">
+      <span :class="$style.lab">Armour</span>
+      <div :class="$style.chips" style="flex: 0 1 auto;" data-levelling-defences>
+        <WChip v-for="d in DEFENCE_CHIPS" :key="d.bit" clickable :active="(defs & d.bit) !== 0" :aria-pressed="(defs & d.bit) !== 0" @click="toggleDef(d.bit)">{{ d.label }}</WChip>
+      </div>
+      <span class="text-xs w-dim">{{ buildNote }}</span>
+    </div>
+
     <h3 :class="$style.head">Currency while levelling</h3>
     <p class="text-xs w-dim">At least Normal below maps, whatever it's worth. Alt+F on any currency adds it or takes it off.</p>
     <div :class="$style.grid">
@@ -33,6 +53,11 @@
 
     <h3 :class="$style.head">Also below maps</h3>
     <ul :class="$style.list" class="text-sm">
+      <li>5- and 6-links Big, 4-links Decent, 3-links Normal until Act 3, small R-G-B items Small until Act 3. Links in your build's colours stay on the Build tab, louder.</li>
+      <li>Movement speed boots Decent with a sound: 10 to 15% until Act 5, 20% or more until maps.</li>
+      <li>White and blue weapons of your build on a base that drops within 5 levels of the area at Normal.</li>
+      <li>Every rare Normal until Act 3, then rares on a base within 10 levels of the area. Big rares (2x3 and up) one step quieter. Rare boots and jewellery always Normal.</li>
+      <li>Every white and blue ring, amulet and belt until Act 2, then Ruby, Sapphire, Topaz and Two-Stone rings, Leather and Heavy belts, Amber, Jade, Lapis and Onyx amulets until Act 6.</li>
       <li>Every unique at least Normal; prices make it louder.</li>
       <li>Every gem at least Normal before Act 4, gems with quality Small until maps. Your build's gems stay on the Build tab, louder.</li>
     </ul>
@@ -41,12 +66,16 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { WIcon, WInfo, WSegmented, WToggle, vItemTip } from '../ui'
+import { WChip, WIcon, WInfo, WSegmented, WToggle, vItemTip } from '../ui'
 import { LV_CURRENCY, LV_GATES, isLvDefault, lvAdded, lvConds, lvCurrencyOf, lvEssences, lvGate, lvOn, setLvCurrency, setLvEssences, setLvGate, setLvOn } from './levelling'
 import type { LvGate } from './levelling'
 import type { LootFilterWidget } from './widget'
+import type { LootFilterStore } from './store'
+import { ARCHETYPES, archetypeClasses, toggleWeaponClass } from './presets'
+import { WEAPON_CLASSES } from './build-rules'
+import { DEFENCE_CHIPS, DEF_ALL, clearLvDefences, lvDefences, setLvDefences } from './levelling-gear'
 
-const props = defineProps<{ config: LootFilterWidget }>()
+const props = defineProps<{ config: LootFilterWidget, store: LootFilterStore }>()
 const c = computed(() => props.config.presets.currency)
 const INFO = `The Loot tab's rules for acts 1 to 10 and the hideout, which is always area level 60.
 - Everywhere: one look from Act 1 to the endgame.
@@ -60,6 +89,32 @@ const lvOk = computed(() => lvConds(c.value) != null)
 const layerNote = computed(() => gate.value === 0
   ? 'Only with the Loot looks below maps.'
   : layer.value ? 'On: supplies, uniques and gems below maps.' : 'Off: prices alone decide below maps.')
+
+// The build template (pick "weapons" A and Guy's note: templates by build
+// type). Shared with the Presets tab's "only weapons for" switch.
+const ARCH = ARCHETYPES.filter(a => a.key !== 'custom').map(a => ({ value: a.key, label: a.key === 'auto' ? 'Auto (PoB)' : a.label === 'Melee attack' ? 'Melee' : a.label }))
+const p = computed(() => props.config.presets)
+const w = computed(() => p.value.weapons)
+const build = props.store.buildInput
+const kept = computed(() => archetypeClasses(p.value, build.value?.weaponClasses ?? null) ?? WEAPON_CLASSES)
+const defs = computed(() => lvDefences(c.value, w.value, build.value?.rareBases ?? []))
+function setArchetype (v: string) {
+  const a = ARCHETYPES.find(x => x.key === v)
+  if (!a || a.key === 'custom') return
+  p.value.weapons = { on: w.value.on, archetype: a.key, classes: [] }
+  clearLvDefences(c.value)
+}
+function toggleWeapon (k: string) {
+  p.value.weapons = toggleWeaponClass(p.value, build.value?.weaponClasses ?? null, k)
+}
+function toggleDef (bit: number) {
+  const next = defs.value ^ bit
+  if (next) setLvDefences(c.value, next)
+}
+const buildNote = computed(() => {
+  if (w.value.archetype === 'auto' && !build.value) return 'No PoB build yet: every weapon and armour type shows.'
+  return defs.value === DEF_ALL ? 'Every armour type shows.' : ''
+})
 
 interface Row { name: string, art: string, tip: boolean, stack?: number, on: boolean, essence?: true }
 const ESSENCE = 'Low essences (Whispering to Wailing)'
@@ -86,5 +141,6 @@ function toggle (r: Row, on: boolean) {
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 4px; }
 .item { display: flex; align-items: center; gap: 10px; padding: 3px 10px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .name { color: #e2d3ad; font-size: var(--w-fs-sm); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chips { flex: 1 1 0; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; }
 .list { margin: 0; padding-left: 18px; color: var(--w-dim); display: grid; gap: 2px; }
 </style>

@@ -1,7 +1,7 @@
 // Levelling (levelling.ts, Guy's picks 2026-11-28): the Loot tab's rules
 // apply everywhere by default, the hideout (area level 60) too, and below
 // maps a leveller's supplies, gems and uniques never hide by price.
-import { describe, it, expect } from 'vitest'
+import { beforeAll, describe, it, expect } from 'vitest'
 import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
@@ -11,6 +11,10 @@ import type { CurrencySettings } from '@/web/woke/loot-filter/currency-weights'
 import { gateConds, isLvDefault, lvAdded, lvConds, lvCurrencyOf, lvGate, lvOn, setLvCurrency, setLvGate, setLvOn } from '@/web/woke/loot-filter/levelling'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import { neverSink } from '../helpers/neversink'
+import { loadGameData } from '../helpers/game-data'
+import { insertBuildBlocks } from '@/web/woke/loot-filter/build-rules'
+import { DEF_ALL, DEF_AR, DEF_ES, DEF_EV, LV_GEAR_TYPE, levellingGearBlocks, lvDefences, setLvDefences } from '@/web/woke/loot-filter/levelling-gear'
+import type { Presets } from '@/web/woke/loot-filter/presets'
 
 const SEMI = neverSink('2-SEMI-STRICT')
 const PRICES: Record<string, number> = {
@@ -138,5 +142,93 @@ describe('levelling', () => {
     applyCurrency(doc, on(c => setLvOn(c, false)), lookup)
     expect(matchItem(doc, pile('Portal Scroll', 1, 20)).visibility).toBe('Hide')
     expect(matchItem(doc, unique('Simple Robe', 20)).visibility).toBe('Hide')
+  })
+})
+
+describe('levelling gear', () => {
+  beforeAll(() => loadGameData(), 60_000)
+  const gearDoc = (f?: (c: CurrencySettings) => void, archetype: Presets['weapons']['archetype'] = 'caster') => {
+    const doc = parseFilter(SEMI)
+    const cfg = on(f)
+    applyCurrency(doc, cfg, lookup)
+    insertBuildBlocks(doc, levellingGearBlocks(cfg, { on: false, archetype, classes: [] }, null))
+    return doc
+  }
+  const gear = (itemClass: string, baseType: string, rarity: string, areaLevel: number, more: Partial<ItemFacts> = {}): ItemFacts => ({
+    name: baseType, baseType, itemClass, rarity, areaLevel, itemLevel: areaLevel, influences: [], explicitModNames: [], identified: true, ...more
+  } as ItemFacts)
+  const lv = (doc: ReturnType<typeof parseFilter>, f: ItemFacts) => {
+    const m = matchItem(doc, f)
+    return m.final?.block.type === LV_GEAR_TYPE ? (m.visibility === 'Hide' ? 0 : Number(m.final.block.tier?.slice(1))) : null
+  }
+
+  it('links: 3-links until Act 3, 4-links until maps, 5-links loud', () => {
+    const doc = gearDoc()
+    const wand = (area: number, groups: string[]) => gear('Wands', 'Driftwood Wand', 'Normal', area, { socketGroups: groups, dropLevel: 1, width: 1, height: 3 })
+    expect(lv(doc, wand(20, ['RRB']))).toBe(2)
+    expect(lv(doc, wand(40, ['RRB']))).not.toBe(2)
+    expect(lv(doc, wand(50, ['RRBB']))).toBe(3)
+    expect(lv(doc, wand(50, ['RRBBG']))).toBe(4)
+    expect(lv(doc, wand(70, ['RRBB']))).toBeNull()
+  })
+
+  it('movement speed boots: 10 to 15% until Act 5, 20%+ until maps', () => {
+    const doc = gearDoc()
+    const boots = (area: number, mod: string) => gear('Boots', 'Leather Boots', 'Magic', area, { explicitModNames: [mod], dropLevel: 1, width: 2, height: 2 })
+    expect(lv(doc, boots(30, "Runner's"))).toBe(3)
+    expect(lv(doc, boots(50, "Runner's"))).not.toBe(3)
+    expect(lv(doc, boots(50, "Stallion's"))).toBe(3)
+  })
+
+  it('weapons of your type on a new base show; other types hide', () => {
+    const doc = gearDoc()
+    expect(lv(doc, gear('Wands', 'Driftwood Wand', 'Normal', 3, { dropLevel: 1, width: 1, height: 3 }))).toBe(2)
+    expect(lv(doc, gear('Wands', 'Driftwood Wand', 'Normal', 30, { dropLevel: 1, width: 1, height: 3 }))).toBeNull()
+    expect(lv(doc, gear('Wands', 'Carved Wand', 'Magic', 30, { dropLevel: 27, width: 1, height: 3 }))).toBe(2)
+    expect(lv(doc, gear('Two Hand Axes', 'Stone Axe', 'Normal', 30, { dropLevel: 30, width: 2, height: 4 }))).toBe(0)
+    // Bows have quivers; casters don't.
+    expect(lv(doc, gear('Quivers', 'Serrated Arrow Quiver', 'Normal', 30, { dropLevel: 30, width: 2, height: 3 }))).toBe(0)
+    const bow = gearDoc(undefined, 'bow')
+    expect(lv(bow, gear('Bows', 'Recurve Bow', 'Normal', 20, { dropLevel: 18, width: 2, height: 4 }))).toBe(2)
+    expect(lv(bow, gear('Wands', 'Carved Wand', 'Magic', 30, { dropLevel: 27, width: 1, height: 3 }))).toBe(0)
+  })
+
+  it('rares: every one until Act 3, then recent bases louder; big ones quieter; boots and jewellery always', () => {
+    const doc = gearDoc()
+    const helm = (area: number, dropLevel: number) => gear('Helmets', 'Vine Circlet', 'Rare', area, { dropLevel, width: 2, height: 2 })
+    expect(lv(doc, helm(20, 5))).toBe(2)
+    expect(lv(doc, helm(50, 45))).toBe(2)
+    expect(lv(doc, helm(50, 5))).toBe(1)
+    expect(lv(doc, gear('Body Armours', 'Simple Robe', 'Rare', 20, { dropLevel: 1, width: 2, height: 3 }))).toBe(1)
+    expect(lv(doc, gear('Rings', 'Iron Ring', 'Rare', 60, { dropLevel: 1, width: 1, height: 1 }))).toBe(2)
+    expect(lv(doc, gear('Two Hand Axes', 'Stone Axe', 'Rare', 20, { dropLevel: 1, width: 2, height: 4 }))).toBe(1)
+  })
+
+  it('armour in other defences: rares dimmed after Act 3, whites hidden after Act 1', () => {
+    const doc = gearDoc()
+    // A caster keeps energy shield; Iron Hat is armour.
+    expect(lv(doc, gear('Helmets', 'Iron Hat', 'Rare', 50, { dropLevel: 1, width: 2, height: 2 }))).toBe(1)
+    expect(lv(doc, gear('Helmets', 'Iron Hat', 'Normal', 30, { dropLevel: 1, width: 2, height: 2 }))).toBe(0)
+    expect(lv(doc, gear('Helmets', 'Iron Hat', 'Normal', 5, { dropLevel: 1, width: 2, height: 2 }))).not.toBe(0)
+    // Your own defences pick: armour kept.
+    const ar = gearDoc(c => setLvDefences(c, DEF_AR | DEF_ES))
+    expect(lv(ar, gear('Helmets', 'Iron Hat', 'Normal', 30, { dropLevel: 1, width: 2, height: 2 }))).not.toBe(0)
+  })
+
+  it('jewellery: every white and blue until Act 2, useful bases until Act 6', () => {
+    const doc = gearDoc()
+    expect(lv(doc, gear('Rings', 'Iron Ring', 'Normal', 10, { dropLevel: 1, width: 1, height: 1 }))).toBe(2)
+    expect(lv(doc, gear('Rings', 'Iron Ring', 'Normal', 30, { dropLevel: 1, width: 1, height: 1 }))).toBeNull()
+    expect(lv(doc, gear('Rings', 'Ruby Ring', 'Magic', 50, { dropLevel: 1, width: 1, height: 1 }))).toBe(2)
+  })
+
+  it('writes a valid filter, and nothing with the layer off or maps only', () => {
+    const doc = gearDoc()
+    expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
+    expect(levellingGearBlocks(on(c => setLvOn(c, false)), { on: false, archetype: 'auto', classes: [] }, null)).toEqual([])
+    expect(levellingGearBlocks(on(c => setLvGate(c, 0)), { on: false, archetype: 'auto', classes: [] }, null)).toEqual([])
+    // Template defaults and picks.
+    expect(lvDefences(defaultCurrency(), { on: false, archetype: 'bow', classes: [] })).toBe(DEF_EV)
+    expect(lvDefences(defaultCurrency(), { on: false, archetype: 'auto', classes: [] })).toBe(DEF_ALL)
   })
 })
