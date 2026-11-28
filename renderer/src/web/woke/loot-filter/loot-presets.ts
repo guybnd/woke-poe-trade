@@ -7,6 +7,7 @@ import { PRESET_TYPE } from './presets'
 import type { FilterDoc } from './parse'
 import { recipeStep } from './currency-weights'
 import { LINE_MAX, LINE_MIN } from './currency-settings'
+import type { CStep } from './currency-settings'
 
 // What each covered preset is now, on the Loot tab (Presets tab's note).
 export const LOOT_COVERS: ReadonlyArray<{ key: keyof Presets, now: string, equipment?: true }> = [
@@ -25,12 +26,13 @@ const OFF_IN_MAPS = ['cheapCurrency', 'cheapSplinters', 'cheapUniques', 'lowMaps
 // The presets as compose should use them. `loot`: the Loot tab's rules are
 // in. (Hide flasks keeps working with Equipment on: Equipment › Flasks
 // scores utility flasks only, and its rules come first anyway.)
-export function lootPresets (p: Presets, loot: boolean): Presets {
+// `rgb`: the R-G-B recipe's step as it applies (its price's, unless picked).
+export function lootPresets (p: Presets, loot: boolean, rgb: CStep = recipeStep(p.currency, 'rgb')): Presets {
   if (!loot) return p
   const out = { ...p } as Record<string, unknown>
   for (const k of OFF_IN_MAPS) out[k] = { ...(p[k as keyof Presets] as object), on: false }
   // R-G-B at 0 on Recipes: NeverSink's chromatic rules stop in maps.
-  out.hideRgb = { on: recipeStep(p.currency, 'rgb') === 0 }
+  out.hideRgb = { on: rgb === 0 }
   return out as unknown as Presets
 }
 
