@@ -1,0 +1,9 @@
+Item Class: Divination Cards
+Rarity: Divination Card
+The Calling
+--------
+Stack Size: 1/6
+--------
+Beyond Item
+--------
+Blood flows not just through veins, but through worlds.
