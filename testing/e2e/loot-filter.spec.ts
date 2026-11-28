@@ -1509,6 +1509,12 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
 
   // A category folds open; an item opens its editor under it.
   await page.locator('[data-currency-cat="orbs"] [aria-expanded]').first().click({ position: { x: 12, y: 10 } })
+  // A section's own Steps row turns a step off there only, and follows the ruler again on undo.
+  const orbSteps = page.locator('[data-currency-cat="orbs"] [data-currency-cat-steps]')
+  await orbSteps.getByRole('checkbox', { name: 'Show Normal in Orbs' }).uncheck()
+  await expect(page.locator('[data-currency-step="2"]').locator('..')).not.toHaveClass(/off/)
+  await orbSteps.getByRole('button', { name: "Orbs steps back to the ruler's" }).click()
+  await expect(orbSteps).toContainText('as the ruler')
   const alch = page.locator('[data-currency-item="Orb of Alchemy"]')
   await expect(alch).toBeVisible()
   await alch.click()

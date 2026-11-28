@@ -23,7 +23,7 @@
 
     <slot name="extra" />
 
-    <StepRuler :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :edit="stepEdit" :samples="stepSample"
+    <StepRuler :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="stepSample"
       @edit="s => stepEdit = s" @set="setShown" />
 
     <div v-if="stepEdit === 0" :class="$style.stepEd" data-currency-step-editor>
@@ -40,7 +40,8 @@
     <div v-else-if="stepEdit" :class="$style.stepEd" data-currency-step-editor>
       <div :class="$style.stepEdHead">
         <b>{{ CSTEP_NAMES[stepEdit] }}</b>
-        <label v-if="stepEdit <= 4" :class="$style.offTog"><input type="checkbox" :checked="!c.off.includes(stepEdit)" :aria-label="`Show ${CSTEP_NAMES[stepEdit]}`" @change="toggleOff(stepEdit)"> Show</label>
+        <label v-if="stepEdit <= 4" :class="$style.offTog" :title="`Every ${KIND_NAME[kind]} section that doesn't set its own steps. Other pages keep theirs.`"><input type="checkbox" :checked="!pageOff.includes(stepEdit)" :aria-label="`Show ${CSTEP_NAMES[stepEdit]} in all ${KIND_NAME[kind]}`" @change="toggleOff(stepEdit)"> Show in all {{ KIND_NAME[kind] }}</label>
+        <span v-if="stepEdit <= 4 && ownSteps.length" class="w-faint text-xs" :title="ownSteps.join(', ')">{{ ownSteps.length === 1 ? `${ownSteps[0]} sets its own` : `${ownSteps.length} sections set their own` }}</span>
         <span class="flex-1" />
         <WButton size="sm" variant="ghost" icon="fas fa-undo" :disabled="!c.steps[stepEdit]" @click="setStepLook(stepEdit, null)">Back to built-in</WButton>
       </div>
@@ -95,9 +96,15 @@
           </select>
           <button v-if="c.cats[g.cat.id]" type="button" class="w-icon-btn" :title="`${g.cat.name} back to its own colours`" :aria-label="`Reset ${g.cat.name} colours`" @click="setCatLook(g.cat.id, null)"><i class="fas fa-undo" /></button>
         </div>
+        <div :class="$style.catLook" data-currency-cat-steps :data-goto-spot="g.cat.id === 'orbs' ? 'section-steps' : undefined">
+          <span :class="$style.lookLab" :title="`Untick a step to hide what lands on it, in ${g.cat.name} only`">Steps</span>
+          <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!stepsOffIn(c, g.cat.id).includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} in ${g.cat.name}`" @change="toggleSecOff(g.cat.id, s)"> {{ CSTEP_NAMES[s] }}</label>
+          <span v-if="c.offBy[g.cat.id] == null" class="w-faint text-xs">as the ruler</span>
+          <button v-else type="button" class="w-icon-btn" :title="`${g.cat.name} steps back to the ruler's`" :aria-label="`${g.cat.name} steps back to the ruler's`" @click="setOff(g.cat.id, null)"><i class="fas fa-undo" /></button>
+        </div>
         <div v-if="g.cat.id === 'gold'" :class="$style.goldRuler">
           <span :class="$style.lookLab">Pile size for each step</span>
-          <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
+          <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, 'gold')" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
         </div>
         <template v-for="sg in g.subs" :key="sg.id">
         <div v-if="sg.name" :class="$style.subHead" :data-currency-sub="sg.name">
@@ -159,7 +166,7 @@ import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode } from './currency-weights'
+import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode, stepsOffIn } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
@@ -179,7 +186,7 @@ const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.ki
 const INFO = `In maps (area level 68+), ${KIND_NAME[props.kind]} show by poe.ninja price, in place of NeverSink's tiers.
 ${props.kind === 'currency' || props.kind === 'fragments' || props.kind === 'cards' ? '- A stack counts at its whole price. Big stacks of cheap items count less.' : ''}
 - Under the **line** it hides. Above it, each step starts at the price you set.
-- Untick **Show** on a step to hide everything on it.
+- Untick **Show** on a step to hide it here; a section's **Steps** can differ.
 - Each section's chip sets **Hide**, **By price** or **Always**, and a **Price bias** on top of **Strictness**.
 - [[Click]] an item to set its step, price or look by hand.
 - No price: a guess from NeverSink's tier, marked **est.**
@@ -397,8 +404,24 @@ function loudOnly (p: StylePatch): StylePatch {
   if (p.icon !== undefined) out.icon = p.icon
   return out
 }
+// Steps off: the ruler's switch is this page's (every section that doesn't
+// set its own); a section's own row is that section's only (Guy 2026-11-28).
+const pageOff = computed(() => c.value.offBy[props.kind] ?? [])
+const ownSteps = computed(() => CATS.value.filter(x => c.value.offBy[x.id] != null).map(x => x.name))
+const flip = (list: readonly number[], s: number) => list.includes(s) ? list.filter(x => x !== s) : [...list, s].sort((a, b) => a - b)
+function setOff (key: string, list: number[] | null) {
+  const next = Object.fromEntries(Object.entries(c.value.offBy).filter(([k]) => k !== key))
+  if (list) next[key] = list
+  c.value.offBy = next
+}
 function toggleOff (s: number) {
-  c.value.off = c.value.off.includes(s) ? c.value.off.filter(x => x !== s) : [...c.value.off, s].sort((a, b) => a - b)
+  const list = flip(pageOff.value, s)
+  setOff(props.kind, list.length ? list : null)
+}
+// Back to the same steps as the ruler: follows it again.
+function toggleSecOff (cat: string, s: number) {
+  const list = flip(stepsOffIn(c.value, cat), s)
+  setOff(cat, list.join() === pageOff.value.join() ? null : list)
 }
 function setStepLook (s: number, p: StylePatch | null) {
   const next = Object.fromEntries(Object.entries(c.value.steps).filter(([k]) => k !== String(s)))
@@ -455,7 +478,7 @@ const statusText = computed(() => {
 const changed = computed(() => {
   const d = defaultCurrency()
   const mine = (o: Record<string, unknown>) => Object.keys(o).some(k => catIds.value.has(k))
-  return mine(c.value.catMode) || c.value.faint.on !== d.faint.on || c.value.faint.until !== d.faint.until || c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || mine(c.value.nudge) || Object.keys(c.value.steps).length > 0 || mine(c.value.cats) || c.value.off.length > 0 || c.value.mult != null
+  return mine(c.value.catMode) || c.value.faint.on !== d.faint.on || c.value.faint.until !== d.faint.until || c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || mine(c.value.nudge) || Object.keys(c.value.steps).length > 0 || mine(c.value.cats) || pageOff.value.length > 0 || mine(c.value.offBy) || c.value.mult != null
 })
 // This class's categories: Defaults leaves the other classes' sections (and
 // the League items' Offs) as they are.
@@ -464,7 +487,7 @@ function reset () {
   const d = defaultCurrency()
   const others = <T>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).filter(([k]) => !catIds.value.has(k)))
   // Your item edits are a list you built: Defaults keeps them. The steps are shared by every class.
-  Object.assign(c.value, { line: d.line, from: d.from, nudge: others(c.value.nudge), steps: d.steps, cats: others(c.value.cats), off: d.off, mult: d.mult, catMode: others(c.value.catMode), faint: d.faint })
+  Object.assign(c.value, { line: d.line, from: d.from, nudge: others(c.value.nudge), steps: d.steps, cats: others(c.value.cats), offBy: others(Object.fromEntries(Object.entries(c.value.offBy).filter(([k]) => k !== props.kind))), mult: d.mult, catMode: others(c.value.catMode), faint: d.faint })
 }
 
 function chaosText (v: number): string {

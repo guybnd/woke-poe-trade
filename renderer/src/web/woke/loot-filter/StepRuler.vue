@@ -50,6 +50,8 @@ const props = defineProps<{
   cat: string
   faintLook: StylePatch
   faintOn: boolean
+  // The steps turned off here (this page's, or this section's).
+  off: readonly number[]
   edit: CStep | null
   samples: Record<number, string>
   // The Gold ruler: pile sizes instead of chaos (CurrencySettings.gold).
@@ -59,7 +61,7 @@ const props = defineProps<{
 const emit = defineEmits<{ edit: [CStep | null], set: [step: number, chaos: number] }>()
 
 const STEPS: CStep[] = [0, 1, 2, 3, 4, 5]
-const isOff = (s: CStep) => s === 0 ? !props.faintOn : props.c.off.includes(s)
+const isOff = (s: CStep) => s === 0 ? !props.faintOn : props.off.includes(s)
 // Faint's own text is too see-through to read as a name: a bit stronger here.
 const look = (s: CStep): StylePatch => s === 0
   ? { ...props.faintLook, text: props.faintLook.text && [props.faintLook.text[0], props.faintLook.text[1], props.faintLook.text[2], 170] }

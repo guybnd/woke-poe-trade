@@ -27,12 +27,13 @@ export const GOTO_SPOTS = {
   'woke-net-worth': { 'per-hour': 'holdings', 'faustus-box': 'holdings', 'worth-selling': 'holdings', 'still-cheapest': 'listed', 'stale': 'listed', 'past-runs': 'runs' },
   'woke-atlas-strategies': { results: 'strategies', import: 'strategies' },
   'woke-pob-builds': { import: 'builds' },
-  'woke-loot-filter': { 'profiles': 'editor', 'gear-ranks': 'editor', 'over-quality-look': 'editor', 'league-always': 'editor' }
+  'woke-loot-filter': { 'profiles': 'editor', 'gear-ranks': 'editor', 'over-quality-look': 'editor', 'league-always': 'editor', 'section-steps': 'editor' }
 } as const satisfies { [T in keyof typeof GOTO_TARGETS]?: Record<string, keyof typeof GOTO_TARGETS[T]> }
 
 // What's new lines whose feature is a spot, by line id (news.ts). Kept here,
 // not on the line: NEWS loads at startup, this only with the dock's card.
 export const NEWS_SPOTS: Record<string, string> = {
+  'loot-filter-section-steps': 'section-steps',
   'loot-filter-league-always': 'league-always',
   'listed-still-cheapest': 'still-cheapest',
   'net-worth-listed': 'stale',

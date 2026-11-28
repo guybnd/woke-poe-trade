@@ -21,7 +21,7 @@
           <span><b>{{ o.label }}</b><span v-if="o.desc" :class="$style.desc">{{ o.desc }}</span></span>
         </button>
         <div v-if="bias !== undefined" :class="[$style.biasBox, { [$style.dead]: biasOff }]">
-          <div :class="$style.biasTop"><span>Price bias</span><b>{{ pctText(dragBias ?? bias) }}</b></div>
+          <div :class="$style.biasTop"><span title="Every item in this section; an item's own price or Worth × is set on its row">Price bias, whole section</span><b>{{ pctText(dragBias ?? bias) }}</b></div>
           <input type="range" :min="-NUDGE_MAX" :max="NUDGE_MAX" step="1" :value="-(dragBias ?? bias)" :disabled="biasOff" :class="$style.range" aria-label="Price bias"
             data-state-chip-bias
             @input="dragBias = -Number(($event.target as HTMLInputElement).value)"
@@ -70,7 +70,7 @@ function pct (n: number) { return Math.round((1.25 ** -n - 1) * 100) }
 function pctText (n: number) { const p = pct(n); return p === 0 ? 'none' : `${p > 0 ? '+' : '−'}${Math.abs(p)}%` }
 function biasLine (n: number) {
   const p = pct(n)
-  return p === 0 ? 'Priced as poe.ninja says.' : `Counts at ${100 + p}% of its price, so it shows ${p < 0 ? 'less' : 'more'}.`
+  return p === 0 ? 'Priced as poe.ninja says.' : `Every item here counts at ${100 + p}% of its price, so it shows ${p < 0 ? 'less' : 'more'}.`
 }
 const biasText = computed(() => props.bias && !biasOff.value ? pctText(props.bias) : '')
 const moved = computed(() => (props.dflt != null && props.modelValue !== props.dflt) || !!biasText.value)

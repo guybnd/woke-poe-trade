@@ -1,5 +1,6 @@
 # Next release notes
 
+- Loot filter (beta), Loot tab: turning a step off (say Normal) on one page's ruler no longer turns it off on every page. The ruler's Show now reads "Show in all currency" (or uniques, gems...) and only covers that page. Each section also has its own Steps row (Small, Normal, Decent, Big) to turn a step off there only; undo puts it back on the ruler's. Steps you had off before stay off on the Currency page. The Price bias menu says it applies to the whole section.
 - Loot filter (beta), Loot tab League items: Chronicles of Atzoatl, Viscera, Reliquary keys, Inscribed Ultimatums, Mercenary warrants and Expedition logbooks are Always by default. They drop once, from an encounter you chose to run, so they always show at least Small and their price only makes them louder. Set one to Hide on its chip if you don't want it.
 - Loot filter (beta): Alt+F on a Loot tab item names its section ("Loot › Early league, Hidden" instead of "Currency weights › S0"), and Go to rule opens that item on the Loot tab.
 - Loot filter, Loot tab Gems: Transfigured, Vaal, Supports and Skill gems fold by level and quality: corrupted ones first (21/23, 21/20, 20/23, 20/20, 20/0, 1/20, 1/0+), then the rest (20/20, 20/0, 1/20, 1/0+), each with a Whole band step.

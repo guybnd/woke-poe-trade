@@ -51,8 +51,10 @@ export interface CurrencySettings {
   // A category's look changed by hand (text colour, map icon), on Small to Big.
   cats: Record<string, StylePatch>
   // Steps turned off (1..4): piles that would get one hide instead (Guy
-  // 2026-11-27: "turn an entire section off like small off").
-  off: number[]
+  // 2026-11-27: "turn an entire section off like small off"). Keyed by a
+  // class page (its ruler: 'currency', 'uniques'...) or a section that sets
+  // its own (Guy 2026-11-28: Normal off on Currency hid it on every page).
+  offBy: Record<string, number[]>
   // Every step's price × this; null follows the filter's strictness.
   mult: number | null
   // A whole category set by hand (Guy 2026-11-27, Loot tab: Off / Weighted /
@@ -77,7 +79,7 @@ export interface FaintSettings { on: boolean, until: number }
 export const FAINT_UNTIL = 1.25
 
 export function defaultCurrency (): CurrencySettings {
-  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, off: [], mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1, gold: [1, 500, 3000, 10000, 50000] }
+  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, offBy: {}, mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1, gold: [1, 500, 3000, 10000, 50000] }
 }
 
 const NAME = /^[^"\n]{1,80}$/
@@ -110,6 +112,14 @@ export function normalizeItemEdit (e: unknown): ItemEdit | null {
   return Object.keys(out).length ? out : null
 }
 
+// The old one list for every page was set on the Currency page: it stays there.
+function offOf (c: Partial<CurrencySettings> & { off?: unknown } | undefined): Record<string, number[]> {
+  const src = c?.offBy && typeof c.offBy === 'object' ? c.offBy : { currency: c?.off }
+  const out: Record<string, number[]> = {}
+  for (const [k, v] of Object.entries(src)) if (/^[a-z]{1,20}$/.test(k) && Array.isArray(v)) out[k] = [1, 2, 3, 4].filter(n => v.includes(n))
+  return out
+}
+
 export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): CurrencySettings {
   const d = defaultCurrency()
   const from = [...d.from] as CurrencySettings['from']
@@ -140,7 +150,7 @@ export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): Cu
     steps: patches(c?.steps, /^[1-5]$/),
     cats: patches(c?.cats, /^[a-z]{1,20}$/),
     mult: num(c?.mult, MULT_MIN, MULT_MAX) ?? null,
-    off: [1, 2, 3, 4].filter(n => Array.isArray(c?.off) && c.off.includes(n)),
+    offBy: offOf(c),
     // Kept light (this runs at startup): what reads them takes only 'off',
     // 'always', true and a number (currency-weights.ts).
     catMode: { ...c?.catMode },

@@ -86,13 +86,32 @@ describe('currency weights', () => {
     const c = defaultCurrency()
     const it = { name: 'Chaos Orb', cat: 'orbs', chaos: 0.3, full: 20, est: false } as never
     const all = stacksFor(it, c)
-    c.off = [1]
+    c.offBy = { currency: [1] }
     const s = stacksFor(it, c)
     // Where each step starts stays; the piles on a step turned off hide.
     expect(s).toEqual(all)
     expect(stepOfPile(s, 1, offSteps(it, c))).toBe(0)
     expect(stepOfPile(s, 10, offSteps(it, c))).toBe(stepOfPile(all, 10))
-    expect(normalizeCurrency(JSON.parse('{"off":[1,1,5,"x",2]}')).off).toEqual([1, 2])
+    expect(normalizeCurrency(JSON.parse('{"offBy":{"currency":[1,1,5,"x",2]}}')).offBy).toEqual({ currency: [1, 2] })
+  })
+
+  it('a step turned off on one page or section stays there (Guy 2026-11-28)', () => {
+    const c = defaultCurrency()
+    const orb = { name: 'Chaos Orb', cat: 'orbs' } as never
+    const ess = { name: 'Essence of Greed', cat: 'essences' } as never
+    const uniq = { name: 'Leather Belt', cat: 'uniqplain' } as never
+    c.offBy = { currency: [2] }
+    expect(offSteps(orb, c)).toEqual([2])
+    expect(offSteps(ess, c)).toEqual([2])
+    expect(offSteps(uniq, c)).toEqual([])
+    // A section's own steps win over its page's, both ways.
+    c.offBy = { currency: [2], essences: [], uniqplain: [1] }
+    expect(offSteps(orb, c)).toEqual([2])
+    expect(offSteps(ess, c)).toEqual([])
+    expect(offSteps(uniq, c)).toEqual([1])
+    // The old one list for every page was set on the Currency page.
+    expect(normalizeCurrency(JSON.parse('{"off":[2]}')).offBy).toEqual({ currency: [2] })
+    expect(normalizeCurrency({}).offBy).toEqual({})
   })
 
   it('guesses a price from NeverSink tiers', () => {
@@ -166,7 +185,7 @@ describe('currency weights', () => {
 
   it('a step turned off in the middle hides its piles instead of showing them quieter (Guy 2026-11-28)', () => {
     for (const off of [[3], [2, 4], [1]]) {
-      const cfg = on(c => { c.line = 0.5; c.off = off })
+      const cfg = on(c => { c.line = 0.5; c.offBy = Object.fromEntries(['currency', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels', 'league'].map(k => [k, off])) })
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, cfg, lookup)!
       let hidden = 0
