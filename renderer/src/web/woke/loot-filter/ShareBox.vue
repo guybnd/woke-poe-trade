@@ -32,6 +32,7 @@
     <div v-if="mode === 'share'" class="flex items-center gap-2 flex-wrap">
       <WButton size="sm" variant="primary" :icon="copied === 'code' ? 'fas fa-check' : 'fas fa-copy'" :disabled="!picked.size" @click="copyCode">{{ copied === 'code' ? 'Copied' : 'Copy code' }}</WButton>
       <WButton size="sm" icon="far fa-save" :disabled="!picked.size" @click="saveFile">Save file…</WButton>
+      <WButton v-if="profile.id === config.activeProfile" size="sm" variant="ghost" icon="fas fa-file-export" :disabled="!store.doc.value" title="The finished .filter as it is now, for players without Woke. Its prices stay as they are today, and it doesn't follow your later changes." @click="saveFilter">Save .filter…</WButton>
       <span v-if="size" class="text-xs w-faint w-num">{{ size }}</span>
     </div>
     <div v-else-if="code" class="flex items-center gap-2 flex-wrap">
@@ -61,6 +62,9 @@ import { gemLinesOf } from './gem-classes'
 import { nextEditId } from './edits'
 import type { FilterEdit } from './edits'
 import type { OwnRule } from './rules'
+import { serializeFilter } from './parse'
+import { describeProblem, validateFilter } from './validate'
+import { customSoundsIn } from './sounds'
 
 // Share a profile (or some of its parts) as a code or file, or bring one in
 // as a new profile or into the one in use. Opened from the profile tabs.
@@ -228,6 +232,32 @@ async function makeCode (): Promise<string> {
 
 async function copyCode () {
   if (!await copy(await makeCode(), 'code')) toast('Couldn\'t copy to the clipboard', { anchor: props.anchor })
+}
+
+// The whole filter as one .filter, for players without Woke: what the game
+// would load now, prices as of today.
+async function saveFilter () {
+  const doc = props.store.doc.value
+  if (!doc) return
+  const problems = validateFilter(doc)
+  if (problems.length) {
+    toast(`Not saved, the game would reject it: ${describeProblem(problems[0])}`, { anchor: props.anchor })
+    return
+  }
+  const day = new Date().toISOString().slice(0, 10)
+  const sounds = customSoundsIn(doc).length
+  const header = [
+    `# "${profile.value.name}", exported from the Woke loot filter on ${day}.`,
+    '# Prices and tiers are as they were that day; this file does not update itself.',
+    ...(sounds ? [`# ${sounds} custom sound${sounds === 1 ? '' : 's'} play only if the sound files are in the same folder.`] : []),
+    ''
+  ]
+  try {
+    const path = await hostRequest('text-file-save', { name: `${profile.value.name}.filter`, text: serializeFilter(doc, header), title: 'Save the loot filter for players without Woke', extensions: ['filter'] }, 120_000)
+    if (path) toast(`Saved to ${path}. It plays in game for anyone who puts it in their filter folder.`, { anchor: props.anchor })
+  } catch (e) {
+    toast(`Couldn't save the file: ${(e as Error).message}`, { anchor: props.anchor })
+  }
 }
 
 async function saveFile () {
