@@ -14,7 +14,7 @@ import { isModuleOn } from '../modules'
 import { formatChaos } from '../ui/format'
 import { MIN_OWN_DECKS, STACKED_DECK, expectedValue, openOrSell, ownAverage } from './deck'
 import { useDeckPrices } from './prices'
-import { WEIGHTS, WEIGHTS_CREDIT } from './weights'
+import { WEIGHTS } from './weights'
 import { useDeckStore } from './store'
 
 const props = defineProps<{ item: ParsedItem }>()
@@ -37,8 +37,8 @@ const v = computed(() => {
       verdict,
       label: LABEL[verdict],
       perDeck: money(own.perDeck),
-      title: `Your ${own.decks.toLocaleString('en-US')} decks give ${money(own.perDeck)} each at today's prices, ` +
-        `${money(own.perDeckTrimmed)} without your luckiest 1%. A deck sells for ${money(deck)}.` +
+      title: `Your ${own.decks.toLocaleString('en-US')} decks give ${money(own.perDeck)} each at today's prices ` +
+        `(${money(own.perDeckTrimmed)} without your luckiest 1%). A deck sells for ${money(deck)}.` +
         (verdict === 'luck' ? ' Opening only pays with a lucky hit.' : '')
     }
   }
@@ -50,8 +50,9 @@ const v = computed(() => {
     verdict,
     label: LABEL[verdict],
     perDeck: `~${money(e.perDeck)}`,
-    title: `An estimate: a deck is worth about ${money(e.perDeck)} by how often each card drops, at today's poe.ninja prices; it sells for ${money(deck)}. ` +
-      `The weights are known to expect a little too little. After ${MIN_OWN_DECKS} decks of your own this uses what you got instead.\n${WEIGHTS_CREDIT}`
+    // The full weights credit is on the Stacked decks summary.
+    title: `About ${money(e.perDeck)} a deck by card drop rates (a little low); sells for ${money(deck)}. ` +
+      `Your own after ${MIN_OWN_DECKS} decks.\nWeights: Prohibited Library`
   }
 })
 </script>

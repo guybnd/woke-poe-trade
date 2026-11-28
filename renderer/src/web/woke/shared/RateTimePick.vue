@@ -11,11 +11,11 @@ import { ensureWokeConfig } from '../modules'
 import { rateTimeOf } from './rate-time'
 import type { RateTime, RateTimeHolder } from './rate-time'
 
-const SYNCED = 'Every per hour uses this choice: Net worth, strategy runs, Session story, Session analytics and Ctrl+Space'
+const SYNCED = 'Every per hour in the app uses this.'
 const OPTIONS = [
-  { value: 'play', label: 'Play', title: `Per hour of maps and other areas: hideout, town, AFK and game closed left out.\n${SYNCED}` },
-  { value: 'hub', label: '+ Hideout', title: `Per hour counts hideout and town too: AFK and game closed left out.\n${SYNCED}` },
-  { value: 'all', label: 'All', title: `Per hour of all time, AFK and game closed included.\n${SYNCED}` }
+  { value: 'play', label: 'Play', title: `Maps and other areas. Hideout, town, AFK and game closed left out.\n${SYNCED}` },
+  { value: 'hub', label: '+ Hideout', title: `Hideout and town count too. AFK and game closed left out.\n${SYNCED}` },
+  { value: 'all', label: 'All', title: `All time, AFK and game closed included.\n${SYNCED}` }
 ]
 const now = computed(() => rateTimeOf(AppConfig() as unknown as RateTimeHolder))
 function pick (t: RateTime) {
