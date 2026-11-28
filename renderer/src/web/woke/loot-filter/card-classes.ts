@@ -18,12 +18,12 @@ export const CARD_IDS = new Set(CARD_CATEGORIES.map(x => x.id))
 
 // The card blue, a shade per fold.
 export const CARD_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
-  cardcur: { text: [120, 200, 255], color: 'Blue', shape: 'Square' },
-  carduniq: { text: [235, 150, 80], color: 'Orange', shape: 'Square' },
-  cardgem: { text: [60, 220, 200], color: 'Cyan', shape: 'Square' },
+  cardcur: { text: [120, 200, 255], color: 'Blue', shape: 'Diamond' },
+  carduniq: { text: [235, 150, 80], color: 'Orange', shape: 'Diamond' },
+  cardgem: { text: [60, 220, 200], color: 'Cyan', shape: 'Diamond' },
   cardgear: { text: [150, 175, 255], color: 'Blue', shape: 'Diamond' },
-  cardmap: { text: [220, 220, 235], color: 'White', shape: 'Square' },
-  cardother: { text: [14, 186, 255], color: 'Blue', shape: 'Circle' }
+  cardmap: { text: [220, 220, 235], color: 'White', shape: 'Diamond' },
+  cardother: { text: [14, 186, 255], color: 'Blue', shape: 'Diamond' }
 }
 
 // What a set turns into, from the first line of its reward text
