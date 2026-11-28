@@ -21,13 +21,17 @@
     <div :class="$style.body">
       <div class="flex items-center gap-2">
         <span :class="$style.itemName" class="w-trunc grow" data-no-item-tip="the item the player is checking, which they are hovering in game">{{ facts.name || facts.baseType }}</span>
-        <label class="flex items-center gap-1 text-xs w-dim" title="AreaLevel conditions use this. It follows the last map or zone you entered.">
+        <button v-if="cardRow && canGoTo" type="button" :class="$style.goTo" class="w-focusable" :title="`Open the editor on ${goToLabel} (G)`" data-currency-card-goto @click="goToRule">
+          <span :class="$style.cap" :style="focused ? '' : 'opacity: .55'">G</span> Go to rule ›
+        </button>
+        <label v-else class="flex items-center gap-1 text-xs w-dim" title="AreaLevel conditions use this. It follows the last map or zone you entered.">
           Area lvl
           <input class="w-input" v-model.number="areaLevelModel" type="number" min="1" max="86" :class="$style.num">
         </label>
       </div>
 
-      <div :class="$style.verdict">
+      <!-- A Loot tab row's card says all of this itself (Guy's M4). -->
+      <div v-if="!cardRow" :class="$style.verdict">
         <div class="flex items-center gap-2">
           <span v-if="maybeShown" :style="{ fontSize: 'var(--w-fs-lg)', color: 'var(--w-warn)' }" title="A rule above may show it, but the copy doesn't say enough to be sure">? Probably shows</span>
           <span v-else :class="verdict.shown ? 'w-up' : 'w-down'" :style="{ fontSize: 'var(--w-fs-lg)' }">{{ verdict.shown ? '✓ Shows' : '✗ Hidden' }}</span>
@@ -42,12 +46,17 @@
           Might be caught earlier by {{ placeOf(u.block) }} (can't tell {{ unknownKeys(u).join(', ') }} from the copy).
         </div>
       </div>
+      <template v-else>
+        <div v-for="u in match.uncertain.slice(0, 2)" :key="u.block.index" class="text-xs" style="color: var(--w-warn);">
+          Might be caught earlier by {{ placeOf(u.block) }} (can't tell {{ unknownKeys(u).join(', ') }} from the copy).
+        </div>
+      </template>
 
       <CurrencyCard v-if="isCurrency" :store="store" :config="config" :name="facts.baseType ?? facts.name" :stack="facts.stackSize ?? 1"
         :gem="/ Gems$/.test(facts.itemClass ?? '') ? { level: facts.gemLevel ?? 1, quality: facts.quality ?? 0, corrupted: !!facts.corrupted } : null" :rule="match.final?.block.conditions ?? null" :facts="facts"
         :tier="match.final?.block.tier ?? null" :note="match.final?.block.comment ?? null"
         @open-tab="(cat, name) => emit('open-editor', { type: CURRENCY_TYPE, tier: `cat:${cat}:${name}` })"
-        @open-rule="tier => emit('open-editor', { type: CURRENCY_TYPE, tier })" @place="p => lootPlace = p" @uniques="v => cardUniques = v" />
+        @open-rule="tier => emit('open-editor', { type: CURRENCY_TYPE, tier })" @place="p => lootPlace = p" @uniques="v => cardUniques = v" @row="v => cardRow = v" />
       <div v-if="match.final && !isCurrency" :class="$style.keys" role="toolbar" aria-label="Quick fixes">
         <button v-for="q in quick" :key="q.key" type="button" class="w-focusable" :class="[$style.key, { [$style.keyOff]: q.disabled }]"
           :disabled="q.disabled" :title="q.title" @click="q.run()">
@@ -121,7 +130,7 @@
           </template>
         </div>
 
-        <div :class="$style.fold">
+        <div v-if="!cardRow" :class="$style.fold">
           <WFoldHead fold="alt-f.rule" :class="$style.foldHead">
             <span>Rule: {{ final.type?.startsWith('woke->') || isOwn ? placeOf(final) : `${groupName(final.type)} › ${currentLabel}` }}</span><span class="w-faint ml-auto">{{ final.added ? 'added' : `line ${final.line}` }}</span>
           </WFoldHead>
@@ -140,7 +149,7 @@
           </template>
         </div>
 
-        <div v-if="alsoIn.length" :class="$style.fold">
+        <div v-if="alsoIn.length && !cardRow" :class="$style.fold">
           <WFoldHead fold="alt-f.also" :class="$style.foldHead"><span>Also listed in {{ alsoIn.length }} other {{ alsoIn.length === 1 ? 'rule' : 'rules' }}</span></WFoldHead>
           <div v-if="open.also" class="flex flex-wrap items-center gap-1">
             <WChip v-for="a in alsoIn" :key="a.type + a.tier" clickable @click="emit('open-editor', { type: a.type, tier: a.tier })">{{ placeOf(a) }}</WChip>
@@ -173,10 +182,10 @@
     <template #footer>
       <div class="flex items-center gap-2 w-full">
         <span class="text-xs grow" :class="store.error.value ? '' : 'w-dim'" :style="store.error.value ? 'color: var(--w-down)' : ''">
-          {{ store.error.value ?? (store.dirty.value ? 'Unsaved changes' : (store.pendingReload.value ? 'Saved, press Reload now to use it' : (store.lastSaved.value ? 'Saved' : ''))) }}
+          {{ store.error.value ?? (store.dirty.value ? 'Unsaved changes' : (store.pendingReload.value ? 'Saved, not in the game until you reload' : (store.lastSaved.value ? 'Saved' : ''))) }}
         </span>
-        <WButton size="sm" variant="ghost" @click="emit('open-editor')">Open editor</WButton>
-        <WButton v-if="config.reloadViaChat && store.outputSaved.value" size="sm" variant="ghost" title="Type /itemfilter in chat now to reload the saved filter" @click="store.reloadInGame(true)">Reload now</WButton>
+        <!-- Go to rule opens the editor, and Save + reload reloads (Guy's M4). -->
+        <WButton v-if="!canGoTo" size="sm" variant="ghost" @click="emit('open-editor')">Open editor</WButton>
         <WButton size="sm" variant="primary" :disabled="store.saving.value" @click="store.save({ reloadNow: true })">{{ config.reloadViaChat ? 'Save + reload' : 'Save' }}</WButton>
       </div>
     </template>
@@ -261,6 +270,8 @@ const areaLevelModel = computed({
 const lootPlace = ref<{ cat: string, catName: string, name: string } | null>(null)
 // The card below lists what the base can be: no second list.
 const cardUniques = ref(false)
+// The card below has the item's Loot row: it says where it lands and why.
+const cardRow = ref(false)
 const lootStep = (r: { type: string | null, tier: string | null }) => r.type === CURRENCY_TYPE && lootPlace.value ? /^s([0-5])$/.exec(r.tier ?? '') : null
 const placeOf = (r: { type: string | null, tier: string | null }) => {
   const m = lootStep(r)
